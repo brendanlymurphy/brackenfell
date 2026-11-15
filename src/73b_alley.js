@@ -41,7 +41,7 @@ function GP() {
     for (const k in prims) { const p = prims[k]; if (!p.idx.length) continue; for (let i = 0; i < p.pos.length; i++) { const a = i % 3; if (p.pos[i] < min[a]) min[a] = p.pos[i]; if (p.pos[i] > max[a]) max[a] = p.pos[i]; } out.push({ mat: p.mat, pos: Float32Array.from(p.pos), nrm: Float32Array.from(p.nrm), uv: Float32Array.from(p.uv), col: Float32Array.from(p.col), idx: Uint32Array.from(p.idx), n: p.pos.length / 3 }); }
     Kit.pieces[name] = { name, prims: out, min, max, pack: 'gen' }; return name;
   };
-  return { quad, tri, box, beam, make };
+  return { quad, tri, box, beam, make, _prim: pr };
 }
 const W_ = 'MI_WoodTrim', C_ = 'MI_Trim_Cloth', DARKW = [0.62, 0.55, 0.5];
 
@@ -171,13 +171,21 @@ function buildAlley() {
         for (let i = 0; i < w / 2; i++) addP(MS, 'Roof_Support2', F0.front, i * 2 + 0.55, jy - 0.01, 0.03, [1, 1, 0.65]), addP(MS, 'Roof_Support2', F0.front, i * 2 + 1.45, jy - 0.01, 0.03, [1, 1, 0.65]);
       }
     }
-    const Ytop = fl * H, rise = w / 2 * tanP, zc = -0.5;       // roof centre shifts with the overhang
-    // ── roof and gables ──
-    const span = w, lens = span === 4 ? [4, 6, 8] : [4, 6, 8, 10, 12, 14], len = lens.reduce((b2, l) => Math.abs(l - d) < Math.abs(b2 - d) ? l : b2, lens[0]), rn = 'Roof_RoundTiles_' + span + 'x' + len, ridge = Kit.info(rn).max[1], gr = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1];
-    B.add(rn, KH.xf(MS, 0, Ytop, zc, [w / span, rise / ridge, d / len]), { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
+    // ── roof: one scheme for the whole terrace: ridge parallel to the street (eaves to the street), each roof exactly as long as its own shop,
+    //    no side overhang, so neighbours meet at party walls. The jetty of the upper storeys sits under the front eave. ──
+    const Ytop = fl * H, hd = d / 2, rise = hd * tanP, zc = -0.5;
+    const span = d <= 5 ? 4 : 6, lens = span === 4 ? [4, 6, 8] : [4, 6, 8, 10, 12, 14], len = lens.reduce((b2, l) => Math.abs(l - w) < Math.abs(b2 - w) ? l : b2, lens[0]), rn = 'Roof_RoundTiles_' + span + 'x' + len, ri = Kit.info(rn), ridge = ri.max[1], gr = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1];
+    const RF = new THREE.Matrix4().makeBasis(V([0, 0, -1]), V(up), V([1, 0, 0])).setPosition(0, Ytop, zc).premultiply(MS);
+    B.add(rn, KH.xf(RF, 0, 0, 0, [d / span, rise / ridge, (w + 0.14) / ri.size[2]]), { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
     const Fg = frames(fl - 1);
-    for (const wn of ['front', 'back']) addP(MS, 'Roof_Front_Brick' + span, Fg[wn], w / 2, H, 0, [w / span, rise / gr, 1], 0, { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
-    if (a.kind === 'books' || a.kind === 'grocer') { const cx = w * 0.28; B.add('Prop_Chimney', KH.xf(MS, cx, Ytop + rise * 0.44 - 1.2, -0.5, [1, 1.25, 1]), OUT); }
+    for (const [wn, east] of [['left', false], ['right', true]]) {          // timber gable closes the roof over an exposed end wall
+      const sEast = site.yaw === PI ? wn === 'left' : wn === 'right', nb = neighbourFloors(a, sEast); if (nb >= fl) continue;
+      addP(MS, 'Roof_Front_Brick' + span, Fg[wn], WALLS[wn].len(w, d) / 2, H, 0, [d / span, rise / gr, 1], 0, { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
+    }
+    if (a.kind === 'books' || a.kind === 'grocer') {          // a chimney standing on the ridge
+      const cx = (a.kind === 'books' ? -1 : 1) * w * 0.25, cb = Ytop + rise - 2.1; B.add('Prop_Chimney', KH.xf(MS, cx, cb, zc, [0.9, 3.0 / 3.18, 0.9]), OUT);
+      World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, cb + 3.2, zc).applyMatrix4(MS).toArray(), zone: 0 });
+    }
     // ── dressing on the front ──
     const Ff = F0.front, Fu = frames(1).front, nF = Math.round(w / 2);
     const cols1 = a.awn[0], cols2 = a.awn[1];
@@ -200,7 +208,7 @@ function buildAlley() {
     // collision: the shop's footprint, with a little off the front so the doorstep is a stand-in for the sill
     World.colliders.push({ x: site.x, z: site.z, hx: w / 2, hz: d / 2, ax: 1, az: 0, bx: 0, bz: 1, y0: site.y - 1, y1: site.y + 14 });
     // shadow stand-in (prism)
-    AL.proxies.push({ Ms: siteMatrix(site, site.y + 0.02), w, d, top: Ytop, rise });
+    AL.proxies.push({ Ms: siteMatrix(site, site.y + 0.02), w, d, top: Ytop, rise, rx: true, zc });
   }
   alleyDress(B, B2, R);
 }
