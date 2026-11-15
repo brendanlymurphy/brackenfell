@@ -3,7 +3,7 @@
 // because TSL names such as clamp, mix or length would collide with the game's own maths helpers at the top level.
 const SH = { U: null };
 SH.init = function () {
-  const { Fn, If, Loop, float, int, vec2, vec3, uniform, uniformArray, texture, positionWorld, mix, smoothstep, clamp, max, pow, exp, abs, dot, normalize, length, sqrt, select, dFdx, dFdy } = TSL;
+  const { Fn, If, Loop, float, int, vec2, vec3, step, uniform, uniformArray, texture, positionWorld, mix, smoothstep, clamp, max, pow, exp, abs, dot, normalize, length, sqrt, select, dFdx, dFdy } = TSL;
   const V3 = () => new THREE.Vector3(), V4 = () => new THREE.Vector4();
   // one set of uniforms for the whole frame, written by renderFrame() from ENV
   const U = SH.U = {
@@ -37,7 +37,7 @@ SH.init = function () {
   SH.hemi = Fn(([N, skyVis, zone]) => {
     const h = mix(U.ambGnd, U.ambSky, N.y.mul(0.5).add(0.5)).mul(skyVis);
     const room = mix(vec3(dot(h, vec3(0.3333))), h, 0.25).mul(vec3(1.10, 1.0, 0.88));
-    return select(zone.greaterThan(0.5), room, h);
+    return mix(h, room, step(0.5, zone));      // arithmetic, not select(): select() with these branches makes Three r187 emit a redeclared variable
   });
   // the eight nearest point lights (hearths, lanterns). A light only reaches surfaces of its own zone, so it cannot leak through walls.
   SH.pointLights = Fn(([wp, N, zone, wrap]) => {
@@ -61,12 +61,12 @@ SH.init = function () {
     const T = T0.sub(N.mul(dot(N, T0))), B = B0.sub(N.mul(dot(N, B0)));
     const tl = dot(T, T), bl = dot(B, B), n2 = nxy.mul(2).sub(1).mul(strength);
     const out = normalize(T.mul(max(tl, 1e-20).inverseSqrt().mul(n2.x)).add(B.mul(max(bl, 1e-20).inverseSqrt().mul(n2.y))).add(N.mul(sqrt(max(float(1).sub(dot(n2, n2)), 0.05)))));
-    return select(tl.lessThan(1e-14).or(bl.lessThan(1e-14)), N, out);
+    return mix(N, out, step(1e-14, tl).mul(step(1e-14, bl)));
   });
   // height fog with a sun-side glow; use as scene.fogNode = TSL.fog(SH.fogColor(), SH.fogAmount())
   SH.fogAmount = Fn(() => {
     const d = positionWorld.sub(U.camPos), dist = length(d), k = U.fogFall.mul(d.y);
-    const integ = select(abs(k).greaterThan(0.002), dist.mul(float(1).sub(exp(k.negate()))).div(k), dist);
+    const ks = mix(k, float(0.002), step(abs(k), 0.002)), integ = dist.mul(float(1).sub(exp(ks.negate()))).div(ks);
     const dens = U.fogDens.mul(exp(U.fogFall.negate().mul(max(U.camPos.y.sub(K.fogBase), 0))));
     return float(1).sub(exp(dens.negate().mul(integ)));
   });

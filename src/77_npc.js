@@ -88,7 +88,7 @@ function buildNPCs() {
   for (const def of NPC_DEFS) {
     const mesh = buildCharacter(def), item = World.skinPack.add(mesh);
     const npc = { def, id: def.id, name: def.name, scale: def.scale || 1, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, wander: 0, dwell: 0, talking: false, look: [0, 0], ang: new Float32Array(33) };
-    npc.obj = addSkinned(item, { r: 1.4, zone: 0 });
+    npc.obj = addSkinned(item, { r: 1.4, zone: 0, npc: true });
     NPCS.push(npc); NPC[def.id] = npc;
   }
   // chickens
