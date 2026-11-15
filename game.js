@@ -6259,6 +6259,12 @@ PLANS.chapel = (P, c, info) => {
   if (rel) pInteract(P, rel.cx, 0.5, rel.cz, { kind: 'chest', id: 'chapel.relic', loot: [['gold', 40], ['potion', 2]], r: 1.8 }, -1);
   for (const [sd, u] of [['n', -2], ['n', 2], ['s', -2], ['s', 2], ['w', 3], ['w', 9], ['e', 3], ['e', 9]]) pTorch(P, crypt, sd, u, 1.7, 8.5);
   const g = P.doors.find(d => d.gate); if (g) P.gate = pGate(P, g, 'chapel.gate', 'cryptkey', 'Iron gate');
+  /* the density pass (D): shrines, hangings, niches and cupboards on every free wall run, tomb-side furnishings in the crypt */
+  PD.dense(P, nave, { pool: ['shrine', 'tapestry', 'hooks', 'tapestry', 'niche', 'bench'], corners: true, corner: ['stack', 'broom', 'sacks'], mid: { kinds: ['rug'], max: 1, min: 1.6 } });
+  PD.dense(P, sac, { pool: ['cupboard', 'books', 'cabinet', 'hooks', 'paint', 'shelf'], corner: ['broom', 'sacks', 'stack'], mid: { kinds: ['table', 'rug'], max: 2 } });
+  PD.dense(P, P.rooms.tower, { pool: ['hooks', 'cask', 'cupboard', 'shelf'], corner: ['stack', 'sacks', 'broom'], mid: { kinds: ['sacks'], max: 1 } });
+  PD.dense(P, crypt, { pool: ['niche', 'niche', 'niche'], corner: ['cask', 'sacks'], middle: false });
+  PD.dense(P, vault, { pool: ['cask', 'sacks', 'niche', 'shelf'], corner: ['cask', 'sacks', 'stack'], mid: { kinds: ['casks', 'sacks'], max: 2, min: 0.8 } });
   pPier; // no hearth in a chapel
 };
 
