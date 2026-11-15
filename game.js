@@ -1261,12 +1261,13 @@ function renderFrame(time, env) {
 // and shadow, plus ambient and the zone-aware point lights in the emissive term (see 40_shade.js).
 const Kit = (() => {
   const { Fn, float, vec2, vec3, vec4, uniform, attribute, texture, uv, positionWorld, positionLocal, positionGeometry, normalWorld, normalMap,
-    mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs } = TSL;
+    mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs, step } = TSL;
   const K_ = {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
     pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
-    grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
+    fill: null, fill2: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
     lodMeshes: [],
+    ROOF: /^(S_|T_)?(Roof_(RoundTile|Modular|Tower|Wooden|2x4|Log|Dormer)|Overhang_Roof)|^gen_/,       // slope pieces and generated pieces: outside faces are marked by their own normals (down = room side), not by the kit wall convention (outside = +z)
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
 
@@ -1344,6 +1345,7 @@ const Kit = (() => {
     const g = K_.gradeInit;
     K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };
     if (K_.skin !== 'realistic') { K_.grade.sat.value = 1; K_.grade.gain.value = 1; K_.grade.tint.value.set(1, 1, 1); K_.grade.weather.value = 0; }
+    K_.fill = uniform(new THREE.Vector3(0.0, 0.02, 0.012)); K_.fill2 = uniform(new THREE.Vector3(0.25, 0.3, 0.02));
     K_.ready = true; if (progress) progress(1);
   };
   // one knob set for the whole kit look: saturation, brightness, a colour cast, and weathering (large soft stains so no two walls match)
@@ -1448,6 +1450,12 @@ const Kit = (() => {
     const aoR = rm ? rm.x : float(1);
     let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35))));
     em = em.add(alb.mul(glow));
+    if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
+      const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
+      em = em.add(alb.mul(U.sunCol.mul(F.x.add(F2.x.mul(wallK))).add(U.ambSky.mul(F.y.add(F2.y.mul(wallK))))).mul(skyVis).mul(outM));
+      const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM);
+      em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
+    }
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
     else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));
     m.emissiveNode = em;
@@ -1485,7 +1493,7 @@ const Kit = (() => {
       for (const prim of p.prims) {
         const key = prim.mat + '|' + ck + '|' + cast; let b = buckets.get(key);
         if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
-        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
+        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name) }); b.nv += prim.n; b.ni += prim.idx.length;
       }
       // the far copy of this piece: its own light version if the pack has one, nothing for small things (under FAR_KEEP metres across), else the piece itself
       if (opts.far) {
@@ -1493,7 +1501,7 @@ const Kit = (() => {
         for (const prim of fp) {
           const key = prim.mat + '|' + ck + '|far'; let b = buckets.get(key);
           if (!b) buckets.set(key, b = { mat: prim.mat, cast: 0, far: true, items: [], nv: 0, ni: 0 });
-          b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: 0, lit: 0, lights: null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
+          b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: 0, lit: 0, lights: null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name) }); b.nv += prim.n; b.ni += prim.idx.length;
         }
       }
       B.count++; B.tally[name] = (B.tally[name] || 0) + 1; return B;
@@ -1522,7 +1530,7 @@ const Kit = (() => {
             const c = pr.col;
             kc[o * 4] = Math.min(255, Math.round((c ? c[i * 3] : 1) * tr * 255)); kc[o * 4 + 1] = Math.min(255, Math.round((c ? c[i * 3 + 1] : 1) * tg * 255)); kc[o * 4 + 2] = Math.min(255, Math.round((c ? c[i * 3 + 2] : 1) * tb * 255));
             // faces modelled toward the room (inner plaster, the ceiling beam, reveals) are indoors outright; single sheets switch by facing in the shader
-            const inside = split && (pr.nrm[i * 3 + 2] < -0.5 || (pr.nrm[i * 3 + 2] < 0.5 && pr.pos[i * 3 + 2] < -0.12));
+            const inside = split && (it.rf ? nrm[o * 4 + 1] < -38 : (pr.nrm[i * 3 + 2] < -0.5 || (pr.nrm[i * 3 + 2] < 0.5 && pr.pos[i * 3 + 2] < -0.12)));
             kc[o * 4 + 3] = inside ? skyIn : sky; kz[o * 4] = inside ? it.inZone : it.zone;
             let g1 = gl;
             if (it.lights) { let best = 9; for (const L of it.lights) { const dx = pr.pos[i * 3] - L[0], dy = pr.pos[i * 3 + 1] - L[1], dz = pr.pos[i * 3 + 2] - L[2]; best = Math.min(best, Math.sqrt(dx * dx + dy * dy * 0.5 + dz * dz)); } g1 = Math.min(255, gl + Math.round(Math.max(0, 1 - best / 0.11) * it.lit * 40)); }
@@ -3908,7 +3916,7 @@ function kitShellPass(c, pass) {
       if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT), pass, ext); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.45, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: [1, 1, 1] }); }
+  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: [1, 1, 1] }); }
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
@@ -3962,10 +3970,9 @@ function kitShellPass(c, pass) {
 }
 // a kit chimney above a hearth at house-local (lx, lz), rising clear of the ridge
 function kitChimney(c, lx, lz) {
-  lz = Math.max(-c.hd * 0.3, Math.min(c.hd * 0.3, lz));          // keep it near the ridge: out on the slope its stretched base hangs below the eave
-  const ridge = c.kYtop + c.hd * c.tanP, base = c.kYtop + (c.hd - Math.abs(lz)) * c.tanP - 1.0, hgt = Math.max(3.18, ridge + 1.1 - base);
-  c.kb.add('Prop_Chimney', KH.xf(c.kMX, lx, base, lz, [1.1, hgt / 3.18, 1.1]), { zone: 0, skyVis: 1 });
-  World.emitters.push({ type: 'smoke', p: m4.tp(c.Mx, [lx, base + hgt + 0.2, lz]), zone: 0 });
+  lx = clamp(lx, -c.w / 2 + 0.6, c.w / 2 - 0.6); lz = clamp(lz, -c.hd * 0.3, c.hd * 0.3);          // inside the footprint, near the ridge
+  const top = infChimney(c.kb, c.kMX, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0, lift: 0.14 });
+  World.emitters.push({ type: 'smoke', p: m4.tp(c.Mx, [lx, top + 0.2, lz]), zone: 0 });
 }
 
 // ── furnishing: Props.* calls land here while kits are loaded and are answered with kit pieces at the same spot ──
@@ -5353,6 +5360,8 @@ function furnishHouse(c) {
 // ---- 72c_infill.js ----
 // ───────────────────────── the enterable infill houses: generic cottage interiors, each furnished a little differently ─────────────────────────
 // Sites are chosen in 55b_infill.js (INF.enterIds); the shell is kit-built (71_kithouse.js, shared 'infill' batch, plank walls and shingle roof).
+// every roof of the town is the generated shingle roof (one texel density, one overhang, one ridge cap): the three buildings that still used the stretched kit roof tiles join it
+for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].shingle = true;
 (function infillSpecs() {
   const VARIANTS = [
     { opt: { blanket: [0.45, 0.3, 0.2], shelfItems: ['jug', 'bowl', 'pot', 'bowl', 'cheese', 'jug'], rug: [0.45, 0.3, 0.2], tableItems: ['bowl', 'loaf', 'mug', 'cheese'], seats: 'stools' }, up: 0, ground: 'plaster' },
@@ -5772,7 +5781,7 @@ function GP() {
     // both may be an outward direction: one face only, wound to face that way (kit materials draw both sides themselves; two coincident faces fight for depth and one side goes dark)
     if (Array.isArray(both)) { if (n[0] * both[0] + n[1] * both[1] + n[2] * both[2] < 0) emit([d, c, b, a], [uvs[3], uvs[2], uvs[1], uvs[0]], [-n[0], -n[1], -n[2]]); else emit([a, b, c, d], uvs, n); return; }
     emit([a, b, c, d], uvs, n);
-    if (both) emit([d, c, b, a], [uvs[3], uvs[2], uvs[1], uvs[0]], [-n[0], -n[1], -n[2]]);
+    // both === true used to add a second, reversed face; every kit material draws both sides itself, so the pair was coincident (z-fighting) and doubled the triangles: one face now
   };
   const tri = (mat, a, b, c, col, uv, both) => quad(mat, a, b, c, c, col, uv, both);
   const box = (mat, x0, y0, z0, x1, y1, z1, col, uv) => {
@@ -5929,17 +5938,11 @@ function buildAlley() {
     // ── roof: one scheme for the whole terrace: ridge parallel to the street (eaves to the street), each roof exactly as long as its own shop,
     //    no side overhang, so neighbours meet at party walls. The jetty of the upper storeys sits under the front eave. ──
     const Ytop = fl * H, hd = d / 2, rise = hd * tanP, zc = -0.5;
-    let span = d <= 5 ? 4 : 6, lens = span === 4 ? [4, 6, 8] : [4, 6, 8, 10, 12, 14], len = lens.reduce((b2, l) => Math.abs(l - w) < Math.abs(b2 - w) ? l : b2, lens[0]), rn = 'Roof_RoundTiles_' + span + 'x' + len; const rn0 = rn; if (a.shingle && typeof infR === 'function') rn = infR(rn); const ri = Kit.info(rn), ridge = ri.max[1], gr = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1];
-    const RF = new THREE.Matrix4().makeBasis(V([0, 0, -1]), V(up), V([1, 0, 0])).setPosition(0, Ytop, zc).premultiply(MS);
-    B.add(rn, KH.xf(RF, 0, 0, 0, [d / span, rise / ridge, (w + 0.14) / ri.size[2]]), { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
-    const Fg = frames(fl - 1);
-    for (const [wn, east] of [['left', false], ['right', true]]) {          // timber gable closes the roof over an exposed end wall
-      const sEast = site.yaw === PI ? wn === 'left' : wn === 'right', nb = neighbourFloors(a, sEast); if (nb >= fl) continue;
-      addP(MS, 'Roof_Front_Brick' + span, Fg[wn], WALLS[wn].len(w, d) / 2, H, 0, [d / span, rise / gr, 1], 0, { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
-    }
+    // the generated shingle roof (73d_infill.js: slab thickness, soffits, ridge cap, one outward face per surface), the same on every house of the town
+    infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc, ov: 0.5, nl: neighbourFloors(a, site.yaw === PI) > 0, nr: neighbourFloors(a, site.yaw !== PI) > 0, tint: [0.97, 0.97, 0.97] });
     if (a.kind === 'books' || a.kind === 'grocer') {          // a chimney standing on the ridge
-      const cx = (a.kind === 'books' ? -1 : 1) * w * 0.25, cb = Ytop + rise - 2.1; B.add('Prop_Chimney', KH.xf(MS, cx, cb, zc, [0.9, 3.0 / 3.18, 0.9]), OUT);
-      World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, cb + 3.2, zc).applyMatrix4(MS).toArray(), zone: 0 });
+      const cx = (a.kind === 'books' ? -1 : 1) * w * 0.25, ct = infChimney(B, MS, { x: cx, z: zc, top: Ytop, tanP, hs: hd, ridgeX: true, zc });
+      World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, ct + 0.2, zc).applyMatrix4(MS).toArray(), zone: 0 });
     }
     // ── dressing on the front ──
     const Ff = F0.front, Fu = frames(1).front, nF = Math.round(w / 2);
@@ -6662,10 +6665,11 @@ function splat2Dress(blob, A, B) {
 // in the same way as the market alley (2 m wall panels scaled to the wall, kit window and door modules, jettied upper storeys, kit roof turned to a ridge
 // that suits the street). All of it goes into ONE batch (one draw per material) which is hidden when the camera is far away or indoors and does not
 // cast into the sun-shadow maps: one prism stand-in per house does that.
+const ROOFS = [];       // every generated roof (for test/town.js: slope sample points against the neighbours' volumes)
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
 const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof';
 function infBatch() {
-  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 4096, off: 2048 }), add = b.add; b.add = (n, x, o) => add(n, x, Object.assign({ cast: false }, o || {})); }       // nothing in the batch casts: one mesh per material, not two
+  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 24, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 24 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
   return INFS.batch;
 }
 
@@ -6743,34 +6747,70 @@ function infWalls(B, MS, o) {
     }
     // corner posts
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.box(W_, sx * w / 2 - 0.09 - (sx > 0 ? 0.0 : 0.0), yb, sz * d / 2 - off - 0.09, sx * w / 2 + 0.09, yt, sz * d / 2 - off + 0.09, DK);
-    B.add(g.make('gen_walls_' + (_gn++)), MS, o.optsOf ? o.optsOf(k) : { zone: 0, skyVis: 1, cast: false });
+    { const nm = g.make('gen_walls_' + (_gn++)), gf = GP();           // the far copy: four plain wall faces
+      for (const wn of ['front', 'back', 'left', 'right']) {
+        if ((wn === 'left' || wn === 'right') && k < ((o.skip && o.skip[wn]) || 0)) continue;
+        const W = WALLS[wn], L = W.len(w, d), s0 = W.start(w, d), Q = (u, y) => [s0[0] + W.u[0] * u, y, s0[2] + W.u[2] * u - off];
+        gf.quad(mat, Q(0, yb), Q(L, yb), Q(L, yt), Q(0, yt), col, [0, 0, L / ts, (yt - yb) / ts], W.n);
+      }
+      const fn = gf.make('gen_wallsF_' + (_gn++)); Kit.far[nm] = Kit.pieces[fn].prims; delete Kit.pieces[fn];
+      B.add(nm, MS, o.optsOf ? o.optsOf(k) : { zone: 0, skyVis: 1, cast: false }); }
   }
 }
-// A generated shingle roof: two planes (double-sided), deep eaves, fascia and ridge boards, barge boards and plank gables, about 100 triangles
-// (the kit's round-tile roofs cost 2500-4700). o: w d (footprint), top (wall top y), tanP, ridgeX (ridge along the width), zc (roof centre offset along z), ov (eaves), gov (overhang at an exposed gable),
-// gl / gr: gable at the two ends of the ridge (false: party wall), tint, moss (0..1 darker patches in the vertex colour)
+// A generated shingle roof, one outward face per surface (every kit material draws both sides itself: two faces on one plane fight for depth).
+// Two pieces: the slopes and plank gables (they take the room's zone on their underside), and the slab's thickness at the eaves and rakes, the soffits under the overhang and the ridge cap
+// (outdoors on every face). o: w d (footprint), top (wall top y), tanP, ridgeX (ridge along the width), zc (roof centre offset along z), ov (eaves), gov (rake overhang at an exposed gable),
+// nl / nr: a neighbour stands against that gable end (rake overhang 4 cm, so the roof never reaches into the next house), tint, thick (slab thickness)
 function infRoofGen(B, MS, o) {
-  const g = GP(), w = o.w, d = o.d, tanP = o.tanP, ridgeX = o.ridgeX !== false, len = ridgeX ? w : d, span = ridgeX ? d : w, ov = o.ov === undefined ? 0.5 : o.ov, gov = o.gov === undefined ? 0.2 : o.gov, zc = o.zc || 0, top = o.top;
-  const hs = span / 2, yR = top + hs * tanP, yE = top - ov * tanP, a0 = -len / 2 - (o.gl === false ? 0.04 : gov), a1 = len / 2 + (o.gr === false ? 0.04 : gov), ve = hs + ov;
+  const g = GP(), g2 = GP(), gf = GP(), w = o.w, d = o.d, tanP = o.tanP, ridgeX = o.ridgeX !== false, len = ridgeX ? w : d, span = ridgeX ? d : w, ov = o.ov === undefined ? 0.5 : o.ov, zc = o.zc || 0, top = o.top, T = o.thick || 0.1;
+  const lift = o.lift || 0, gov = o.gov === undefined ? 0.2 : o.gov, hs = span / 2, yR = top + lift + hs * tanP, yE = top + lift - ov * tanP, a0 = -len / 2 - (o.nl ? 0.04 : gov), a1 = len / 2 + (o.nr ? 0.04 : gov), ve = hs + ov;
   const P = (u, v, y) => ridgeX ? [u, y, zc + v] : [v, y, zc + u];
-  const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE);
-  const plane = (v0, y0, v1, y1) => {
-    const A = P(a0, v0, y0), Bp = P(a1, v0, y0), C = P(a1, v1, y1), D = P(a0, v1, y1);
-    const uv = [0, 0, (a1 - a0) / 1.25, slopeLen / 1.25];
-    g.quad(INF_S, A, Bp, C, D, col, uv, [0, 1, 0]);
+  const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE), dark = col.map(v => v * 0.7), wood = [0.24, 0.2, 0.17];
+  const OUTV = (u, v, y) => ridgeX ? [u, y, v] : [v, y, u];            // a direction in the roof's own frame -> the house frame
+  const planes = G => {
+    for (const s of [-1, 1]) {
+      const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE), C = P(a1, 0, yR), D = P(a0, 0, yR), up = [0, 1, 0];
+      G.quad(INF_S, A, Bp, C, D, col, [0, 0, (a1 - a0) / 1.25, slopeLen / 1.25], up);
+    }
+    for (const [u, sg] of [[-len / 2, -1], [len / 2, 1]]) {
+      const A = P(u, -hs, top), Bp = P(u, hs, top), C = P(u, 0, yR - T * 0.5);
+      G.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], OUTV(sg, 0, 0));
+    }
   };
-  plane(-ve, yE, 0, yR); plane(ve, yE, 0, yR);
-  const wood = [0.2, 0.17, 0.15];
-  // fascia boards along both eaves, ridge cap, barge boards up the rakes
-  for (const s of [-1, 1]) { const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE); g.beam(W_, [A[0], A[1] - 0.04, A[2]], [Bp[0], Bp[1] - 0.04, Bp[2]], 0.09, wood); }
-  { const A = P(a0, 0, yR + 0.04), Bp = P(a1, 0, yR + 0.04); g.beam(W_, A, Bp, 0.14, [0.24, 0.2, 0.17]); }
-  for (const [u, on] of [[a0, o.gl !== false], [a1, o.gr !== false]]) if (on) for (const s of [-1, 1]) { const A = P(u, s * ve, yE), Bp = P(u, 0, yR + 0.02); g.beam(W_, A, Bp, 0.08, wood); }
-  // plank gables on the wall plane, closing the roof over an exposed end wall
-  for (const [u, on, sg] of [[-len / 2, o.gl !== false, -1], [len / 2, o.gr !== false, 1]]) if (on) {
-    const A = P(u, -hs, top), Bp = P(u, hs, top), C = P(u, 0, yR);
-    { const O = P(u + sg, 0, top), Z = P(u, 0, top); g.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], [O[0] - Z[0], 0, O[2] - Z[2]]); }
+  planes(g); planes(gf);
+  // thickness: the shingle edge at each eave and rake, a soffit under the overhang, a ridge cap
+  for (const s of [-1, 1]) {
+    { const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE), A2 = P(a0, s * ve, yE - T), B2 = P(a1, s * ve, yE - T); g2.quad(INF_S, A, Bp, B2, A2, dark, [0, 0, (a1 - a0) / 1.25, 0.1], OUTV(0, s, -0.4)); }
+    for (const [u, sg, nb] of [[a0, -1, o.nl], [a1, 1, o.nr]]) {
+      const A = P(u, 0, yR), Bp = P(u, s * ve, yE), B2 = P(u, s * ve, yE - T), A2 = P(u, 0, yR - T);
+      g2.quad(INF_S, A, Bp, B2, A2, dark, [0, 0, slopeLen / 1.25, 0.1], OUTV(sg, 0, 0));
+    }
+    // soffit under the eave: from the wall line out to the tip
+    { const A = P(a0, s * hs, top + lift - T), Bp = P(a1, s * hs, top + lift - T), C = P(a1, s * ve, yE - T), D = P(a0, s * ve, yE - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
+    // soffit under the rake overhang
+    for (const [u, un, ex] of [[-len / 2, a0, !o.nl], [len / 2, a1, !o.nr]]) if (ex) { const A = P(u, 0, yR - T), Bp = P(un, 0, yR - T), C = P(un, s * ve, yE - T), D = P(u, s * hs, top + lift - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
   }
-  B.add(g.make('gen_roof_' + (_gn++)), MS, { zone: 0, skyVis: 1, cast: false, inZone: o.inZone || 0, inSkyVis: o.inSky === undefined ? 0.2 : o.inSky });
+  { const A = P(a0, 0, yR + 0.05), Bp = P(a1, 0, yR + 0.05); g2.beam(W_, A, Bp, 0.13, [0.26, 0.22, 0.19]); }
+  ROOFS.push({ M: Array.from(MS.elements || MS), w, d, top, tanP, ridgeX, zc, ov, lift, T, a0, a1, hs, ve, yR, yE });
+  const name = g.make('gen_roof_' + (_gn++)), name2 = g2.make('gen_roofe_' + (_gn++)), fn = gf.make('gen_roofF_' + (_gn++));
+  Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn]; Kit.far[name2] = [];
+  B.add(name, MS, { zone: 0, skyVis: 1, cast: false, inZone: o.inZone || 0, inSkyVis: o.inSky === undefined ? 0.2 : o.inSky });
+  B.add(name2, MS, { zone: 0, skyVis: 1, cast: false });
+}
+// a chimney stack that rises out of the roof: it starts below the slope (so no gap shows from any side), a lead flashing collar sits on the slope and a capped flue ends it.
+// o: x z (house frame), top, tanP, hs (half span), ridgeX, zc. Returns the height of the flue.
+function infChimney(B, MS, o) {
+  const g = GP(), gf = GP(), ridgeX = o.ridgeX !== false, v = ridgeX ? o.z - (o.zc || 0) : o.x, yS = o.top + (o.lift || 0) + (o.hs - Math.abs(v)) * o.tanP, yR = o.top + (o.lift || 0) + o.hs * o.tanP, yT = Math.max(yR + 0.95, yS + 1.5), sw = o.size || 0.46;
+  const st = [0.5, 0.47, 0.43], lead = [0.3, 0.3, 0.32], cap = [0.4, 0.38, 0.35], x = o.x, z = o.z, y0 = yS - 0.35 - sw * o.tanP * 1.1;
+  const uvS = [0, 0, 0.5, 1.2];
+  const stack = G => { G.box(INF_B, x - sw, y0, z - sw, x + sw, yT, z + sw, st, uvS); };
+  stack(g); stack(gf);
+  g.box(INF_B, x - sw - 0.1, yS - 0.03 - sw * o.tanP, z - sw - 0.1, x + sw + 0.1, yS + 0.1 + sw * o.tanP, z + sw + 0.1, lead, [0, 0, 0.3, 0.3]);      // flashing collar
+  g.box(INF_B, x - sw - 0.08, yT, z - sw - 0.08, x + sw + 0.08, yT + 0.1, z + sw + 0.08, cap, [0, 0, 0.3, 0.3]);
+  g.quad(W_, [x - sw * 0.55, yT + 0.101, z + sw * 0.55], [x + sw * 0.55, yT + 0.101, z + sw * 0.55], [x + sw * 0.55, yT + 0.101, z - sw * 0.55], [x - sw * 0.55, yT + 0.101, z - sw * 0.55], [0.03, 0.03, 0.03], GPU.wood, [0, 1, 0]);
+  const name = g.make('gen_chim_' + (_gn++)), fn = gf.make('gen_chimF_' + (_gn++)); Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn];
+  B.add(name, MS, { zone: 0, skyVis: 1, cast: false });
+  return yT + 0.1;
 }
 const hypot2 = Math.hypot;
 
@@ -6836,12 +6876,11 @@ function infShell(B, h, lo) {
   }
   // ── roof: generated shingles; ridge parallel to the street (eaves to the street) or gable to the street ──
   const Ytop = fl * H, rx = !gableFront, zc = -sh, rise = (rx ? d : w) / 2 * tanP;
-  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: 0.5, gl: rx ? nbW < fl : true, gr: rx ? nbE < fl : true, tint: [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
+  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: 0.5, nl: rx && nbW > 0, nr: rx && nbE > 0, tint: [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
   if (!lo) {
-    if (h.chimney) {          // a chimney standing on the ridge
-      const cx = rx ? (h.chimney > 0 ? 1 : -1) * w * 0.28 : 0, cz = rx ? zc : d * 0.2 * (h.chimney > 0 ? 1 : -1), cb = Ytop + rise - 2.1;
-      B.add('Prop_Chimney', KH.xf(MS, cx, cb, cz, [0.9, 3.0 / 3.18, 0.9], 0), OUT);
-      if (INFS.nChim++ % 3 === 0) World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, cb + 3.2, cz).applyMatrix4(MS).toArray(), zone: 0 });
+    if (h.chimney) {          // a chimney that rises through the roof (stack, flashing, cap)
+      const cx = rx ? (h.chimney > 0 ? 1 : -1) * w * 0.28 : 0, cz = rx ? zc : d * 0.2 * (h.chimney > 0 ? 1 : -1) + zc * 0, top = infChimney(B, MS, { x: cx, z: cz, top: Ytop, tanP, hs: (rx ? d : w) / 2, ridgeX: rx, zc: rx ? zc : 0 });
+      if (INFS.nChim++ % 3 === 0) World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, top + 0.2, cz).applyMatrix4(MS).toArray(), zone: 0 });
     }
     // front: flower boxes under upper windows, a lantern by the door, a sheltering gallery with an outside stair on some
     const Ff = F0.front, nF = Math.max(1, Math.round(w / 2)), mF = w / nF;
@@ -8893,7 +8932,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 21 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 22 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
