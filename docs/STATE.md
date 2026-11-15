@@ -47,7 +47,17 @@ The user wants it as realistic as possible, like Skyrim: simple shapes, photogra
 - The user's phone (iPhone, Safari) cannot be tested here. Keep the WebGL 2 fallback and the classic link working.
 - See `ROADMAP.md` for what comes next.
 
+<<<<<<< HEAD
 ## Publishing checklist (learned the hard way)
 
 - No symlinks may be tracked: the GitHub Pages deployment fails on them (`git ls-tree -r main | grep ^120000` must print nothing).
 - After pushing `main`, confirm the deployment: `gh run list -R brendanlymurphy/brackenfell -L 1` shows success, and the live page's `game.js?v=` hash matches the local `index.html`. Builds 10 and 11 were announced as live while their deployments had failed.
+=======
+## Performance (fork-x3)
+- Tiers (QUALITY in 43_render.js): flags maxLong, houseFar, farStatics, nearStatics, rockCast, grassThin, far1, shadowRes. Medium/low trade shadow reach and prop casters for triangles.
+- Character LOD: tools/chars_lod.mjs adds `@lod` skinned copies (about 2200 tris) to chars/real/*.glb; 49_chars.js swaps by distance, low copy also casts shadows (layer 3, near map only).
+- Kit LOD: tools/kits_budget.mjs (per-piece budgets, kit_budget.json) and tools/kits_far.mjs (`@far` hull-roof copies of houses); 44_kit.js swaps per mesh by `houseFar`; far buckets batch by cell.
+- Interiors of other houses cost nothing (interiorShown in 42_scene.js). Terrain flat blocks merge into fans (60_terrain.js); grass thins per tier.
+- Point lights loop is bounded by U.lightN / U.lightNOut. Add `?perf` for the overlay (86_perf.js).
+- Rebuild order after kit edits: kits_budget, kits_far, then tools/build.mjs.
+>>>>>>> 7491e44
