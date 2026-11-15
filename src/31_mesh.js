@@ -12,6 +12,14 @@ class Mesh {
     this.seed = 12345;
   }
   _growV() { const nb = new ArrayBuffer(this.cap * 64); new Uint8Array(nb).set(this.u8); this.cap *= 2; this.buf = nb; this.f = new Float32Array(nb); this.u8 = new Uint8Array(nb); this.i8 = new Int8Array(nb); }
+  // add everything another mesh holds (already in world space) to this one
+  append(o) {
+    while (this.nv + o.nv > this.cap) this._growV(); this._growI(o.ni);
+    this.u8.set(o.u8.subarray(0, o.nv * 32), this.nv * 32);
+    for (let i = 0; i < o.ni; i++) this.idx[this.ni + i] = o.idx[i] + this.nv;
+    for (let k = 0; k < 3; k++) { this.min[k] = Math.min(this.min[k], o.min[k]); this.max[k] = Math.max(this.max[k], o.max[k]); }
+    this.nv += o.nv; this.ni += o.ni; return this;
+  }
   _growI(n) { while (this.ni + n > this.icap) this.icap *= 2; const ni = new Uint32Array(this.icap); ni.set(this.idx.subarray(0, this.ni)); this.idx = ni; }
   rnd() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) | 0; return (this.seed >>> 8) / 16777216; }
   // ── state ──

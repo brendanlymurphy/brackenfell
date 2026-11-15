@@ -176,6 +176,38 @@ const K = {
   grassCell: 0.30,
 };
 
+
+// ── texture memory: one place that caps decoded texture size and shares identical images ──
+// Uncompressed textures cost width x height x 4 x 1.33 bytes of GPU memory (a 1024 map is 5.3 MB), and a phone's Safari tab is killed long before a
+// desktop would notice. Every loader of kit, scanned-prop and character textures passes its textures through gfxTex(), before the first upload.
+// Colour maps are capped at GFX_TEX.color, normal / ORM maps at GFX_TEX.data (pixels per side). The cap is lower on phones, low-memory devices and
+// the Low and Medium tiers; ?texcap=N or --opt texcap=N overrides it. Textures with the same size and content are uploaded once.
+const GFX_TEX = { color: 1024, data: 1024, seen: new Map(), shrunk: 0, shared: 0 };
+function gfxTexInit(settingTier) {
+  const phone = (typeof window !== 'undefined' && window.matchMedia && matchMedia('(pointer: coarse)').matches) || Math.min(innerWidth, innerHeight) < 520 || (navigator.deviceMemory || 8) <= 3;
+  const small = phone || settingTier === 'low' || settingTier === 'medium';
+  const o = TEST && TEST.texcap || +((location.search.match(/[?&]texcap=(\d+)/) || [])[1]) || 0;
+  const tiny = settingTier === 'low' || (navigator.deviceMemory || 8) <= 3;
+  GFX_TEX.tiny = !o && tiny; GFX_TEX.color = o || (small ? 512 : 1024); GFX_TEX.data = o || (tiny ? 256 : small ? 512 : 1024);
+}
+async function gfxTex(t, kind, max) {
+  if (!t || !t.image) return t;
+  const im = t.image, w = im.width || im.naturalWidth || 0, h = im.height || im.naturalHeight || 0; if (!w || !h || t.isCompressedTexture || t.isDataTexture) return t;
+  let cap = kind === 'data' ? GFX_TEX.data : GFX_TEX.color; if (max) cap = Math.min(cap, GFX_TEX.tiny ? Math.max(32, max >> 1) : max);      // max: this texture's own ceiling (half of it on the Low tier)
+  if (Math.max(w, h) > cap) {
+    const k = cap / Math.max(w, h), nw = Math.max(4, Math.round(w * k)), nh = Math.max(4, Math.round(h * k));
+    try { const bmp = await createImageBitmap(im, { resizeWidth: nw, resizeHeight: nh, resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' }); if (im.close) im.close(); t.image = bmp; t.needsUpdate = true; GFX_TEX.shrunk++; } catch (e) { }
+  }
+  // identical content under another name (the same image in two GLB files): keep the first texture object
+  try {
+    const cw = t.image.width, ch = t.image.height, c = gfxTex.cv || (gfxTex.cv = document.createElement('canvas')); c.width = c.height = 8;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(t.image, 0, 0, 8, 8); const d = x.getImageData(0, 0, 8, 8).data;
+    const key = cw + 'x' + ch + '|' + t.colorSpace + '|' + t.wrapS + '|' + t.flipY + '|' + Array.from(d).join(',');
+    const prev = GFX_TEX.seen.get(key); if (prev && prev !== t) { GFX_TEX.shared++; return prev; } GFX_TEX.seen.set(key, t);
+  } catch (e) { }
+  return t;
+}
+
 // Which graphics backend to start: WebGPU unless this device has already shown it cannot run it (remembered in localStorage),
 // or the address says otherwise (?webgl or ?webgpu).
 const GFX_KEY = 'brackenfell.gfx';
@@ -200,6 +232,8 @@ async function gfxInit(canvas) {
     r = await make(canvas, true);
   }
   G.renderer = r; G.canvas = canvas; G.t0 = performance.now();
+  // test hook: record every texture the backend uploads (window.__texLog: Map texture -> { w, h, mb }); ?texlog or --opt texlog=1
+  if (TEST && TEST.texlog) { const be = r.backend, ct = be.createTexture.bind(be), log = window.__texLog = new Map(); be.createTexture = function (t, o) { try { const im = t.image || {}, w = (o && o.width) || im.width || (t.mipmaps && t.mipmaps[0] && t.mipmaps[0].width) || 0, h = (o && o.height) || im.height || 0, d = (o && o.depth) || im.depth || 1; let b = w * h * d * 4 * (t.generateMipmaps === false && !(o && o.levels > 1) ? 1 : 1.33); if (t.isCompressedTexture && t.mipmaps) b = t.mipmaps.reduce((a, m) => a + (m.data ? m.data.byteLength : 0), 0) * (t.isCompressedArrayTexture ? 1 : 1); log.set(t, { name: t.name || t.source && t.source.data && (t.source.data.src || '').slice(-40) || t.constructor.name, w, h, d, mb: b / 1048576, comp: !!t.isCompressedTexture }); } catch (e) { } return ct(t, o); }; }
   G.backend = r.backend.isWebGPUBackend ? 'WebGPU' : 'WebGL 2';
   if (G.backend === 'WebGL 2' && want === 'webgpu' && !G.gfxWhy) G.gfxWhy = 'WebGPU is not available here';
   G.astc = !!r.hasFeature('texture-compression-astc') && !(TEST && TEST.noAstc);
@@ -335,6 +369,14 @@ class Mesh {
     this.seed = 12345;
   }
   _growV() { const nb = new ArrayBuffer(this.cap * 64); new Uint8Array(nb).set(this.u8); this.cap *= 2; this.buf = nb; this.f = new Float32Array(nb); this.u8 = new Uint8Array(nb); this.i8 = new Int8Array(nb); }
+  // add everything another mesh holds (already in world space) to this one
+  append(o) {
+    while (this.nv + o.nv > this.cap) this._growV(); this._growI(o.ni);
+    this.u8.set(o.u8.subarray(0, o.nv * 32), this.nv * 32);
+    for (let i = 0; i < o.ni; i++) this.idx[this.ni + i] = o.idx[i] + this.nv;
+    for (let k = 0; k < 3; k++) { this.min[k] = Math.min(this.min[k], o.min[k]); this.max[k] = Math.max(this.max[k], o.max[k]); }
+    this.nv += o.nv; this.ni += o.ni; return this;
+  }
   _growI(n) { while (this.ni + n > this.icap) this.icap *= 2; const ni = new Uint32Array(this.icap); ni.set(this.idx.subarray(0, this.ni)); this.idx = ni; }
   rnd() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) | 0; return (this.seed >>> 8) / 16777216; }
   // ── state ──
@@ -659,7 +701,9 @@ function instNodes(noLod) {
   const { Fn, vec3, attribute, positionLocal, normalLocal, cos, sin, distance, select, float } = TSL, U = SH.U;
   const ipos = attribute('ipos', 'vec4'), iprm = attribute('iprm', 'vec4'), lod = attribute('mm', 'vec4').w.mul(255).round();
   const pos = Fn(() => {
-    const c = cos(iprm.x), s = sin(iprm.x), lp = positionLocal.mul(ipos.w), ww = attribute('wind', 'float');
+    const c = cos(iprm.x), s = sin(iprm.x), ww = attribute('wind', 'float');
+    // vertex lod 3 marks the one boulder shape: every instance squashes it by its own random amounts (iprm.y, iprm.z), so one mesh gives many shapes
+    const sq = TSL.mix(vec3(1, 1, 1), vec3(iprm.y.mul(0.55).add(0.8), iprm.z.mul(0.4).add(0.8), float(1.3).sub(iprm.y.mul(0.55))), TSL.step(2.5, lod)), lp = positionLocal.mul(ipos.w).mul(sq);
     const p = vec3(lp.x.mul(c).add(lp.z.mul(s)), lp.y, lp.x.negate().mul(s).add(lp.z.mul(c)));
     const wt = U.wind.w, ph = iprm.z.mul(40);
     const sway = sin(wt.mul(1.1).add(ph).add(p.y.mul(0.2))).mul(0.6).add(sin(wt.mul(2.3).add(ph.mul(1.7)).add(lp.x.mul(1.3))).mul(0.4));
@@ -809,6 +853,25 @@ function terrainMaterial() {
 // Layers: 0 = seen by the camera and both sun shadow maps; 1 = camera and the near shadow map only (interiors, full trees,
 // villagers, small props); 2 = the wide shadow map only (flat tree stand-ins that cast for every tree out there).
 const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {} };
+// Draw distances (m) for small things. vis: drawn by the camera up to here; cast: drawn into the near sun-shadow map up to here; near: a chicken
+// is drawn as separate parts up to this distance and as one rigid body beyond it. indoor: while the camera is inside a building, outdoor
+// meshes whose bounding sphere lies beyond this are not drawn at all (they can only show through a window). Raise a number to back a cut out.
+const DRAW = {
+  door: { vis: 90, cast: 22 }, chicken: { vis: 60, cast: 14, near: 14 }, pickup: { vis: 45, cast: 0 }, mill: { vis: 160, cast: 40 }, misc: { vis: 160, cast: 160 },
+  indoor: 45, indoorCast: 18, doorSee: 14,
+};
+// true while the camera is inside a building and no open door within DRAW.doorSee metres is in front of it: then little outside can be seen (only through a
+// window), so grass, scatter and small outdoor things are not drawn, the outdoors is drawn short and the far sun-shadow map is left as it was
+function deepIndoors(e) {
+  if (!World.camZone) return false;
+  const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw);
+  for (const d of World.doors) {         // an open door that is behind the camera shows nothing of the outdoors
+    if (!(d.open > 0.02)) continue;
+    const dx = d.c[0] - e[0], dz = d.c[2] - e[2], l = hyp(dx, dz);
+    if (l < DRAW.doorSee && (l < 2.5 || (dx * fx + dz * fz) / l > 0.3)) return false;
+  }
+  return true;
+}
 function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
@@ -873,14 +936,26 @@ function sceneBuild() {
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos;
-  for (const s of SC.statics) { const it = s.it; if (it.maxDist) s.mesh.visible = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]) <= it.maxDist + it.r; }
+  const inside = World.deepIn = deepIndoors(e), ind = DRAW.indoor;
+  for (const s of SC.statics) {
+    const it = s.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
+    s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && far > ind);
+    if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
+    s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast);
+  }
   for (const s of SC.cells) {
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
-    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > grp.maxDist + c.r));
+    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > Math.min(grp.maxDist, q.rockDist) + c.r) || (inside && grp.lod === 0 && dc - c.r > ind));
+    if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
+    s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast);
   }
+  if (Grass.mesh) Grass.mesh.visible = !inside;
   for (const r of SC.rigid) {
-    const o = r.obj, vis = o.visible && hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]) < 160;
+    const o = r.obj, dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
+    let vis = o.visible && d < dr.vis && !(inside && d > ind);
+    if (dr.near) vis = vis && (r.whole ? d >= dr.near : d < dr.near);
     r.mesh.visible = vis; if (!vis) continue;
+    r.mesh.castShadow = !r.whole && d < Math.min(dr.cast, inside ? DRAW.indoorCast : 1e9);
     r.mesh.matrix.fromArray(bd, r.o); r.mesh.matrixWorld.copy(r.mesh.matrix);
   }
   for (const b of SC.bodies) {
@@ -895,9 +970,9 @@ function sceneUpdate(camPos, q) {
 // ---- 43_render.js ----
 // ───────────────────────── renderer: quality tiers, camera, sun and shadows, post, frame ─────────────────────────
 const QUALITY = {
-  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassDensity: 0.30, treeLod: 40, lights: 4, aniso: 2, far1: 3 },
-  medium: { name: 'Medium', pr: 1.5, msaa: 4, shadowRes: 1536, bloom: true,  grassRange: 30, grassDensity: 0.60, treeLod: 65, lights: 6, aniso: 4, far1: 2 },
-  high:   { name: 'High',   pr: 2.0, msaa: 4, shadowRes: 2048, bloom: true,  grassRange: 36, grassDensity: 1.00, treeLod: 90, lights: 8, aniso: 8, far1: 2 },
+  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassDensity: 0.30, treeLod: 40, lights: 4, aniso: 2, far1: 3, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16 },
+  medium: { name: 'Medium', pr: 1.5, msaa: 4, shadowRes: 1536, bloom: true,  grassRange: 30, grassDensity: 0.60, treeLod: 65, lights: 6, aniso: 4, far1: 2, shadowNear: 20, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32 },
+  high:   { name: 'High',   pr: 2.0, msaa: 4, shadowRes: 2048, bloom: true,  grassRange: 36, grassDensity: 1.00, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32 },
 };
 const R = {
   q: QUALITY.high, qName: 'high', scale: 1, frame: 0, P: null, busy: false,
@@ -1040,8 +1115,8 @@ function renderFrame(time, env) {
   const L = env.keyDir, sun = R.sun;
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
   // near map every frame, far map every few frames (its centre only moves when it is redrawn)
-  const fh = v3.norm([f[0], 0, f[2]]), r0 = 24, r1 = 92, S = R.shadows;
-  const upd1 = (R.frame % q.far1) === 1 || !R.shadow1Ready || !!TEST;
+  const fh = v3.norm([f[0], 0, f[2]]), r0 = q.shadowNear, r1 = 92, S = R.shadows;      // r0: radius (m) of the tight shadow map, which is drawn every frame
+  const upd1 = !R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || !!TEST));      // deep inside a building the far map keeps what it last saw (see deepIndoors)
   shadowPlace(0, [e[0] + fh[0] * r0 * 0.72, e[1], e[2] + fh[2] * r0 * 0.72], r0, L, env);
   if (upd1) { shadowPlace(1, [e[0] + fh[0] * r1 * 0.6, e[1], e[2] + fh[2] * r1 * 0.6], r1, L, env); R.shadow1Ready = true; }
   S.lights[1].shadow.needsUpdate = upd1;
@@ -1076,7 +1151,7 @@ const Kit = (() => {
     mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs } = TSL;
   const K_ = {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
-    pieces: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [],
+    pieces: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
     grade: null,
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
@@ -1107,6 +1182,7 @@ const Kit = (() => {
       uvScale: [1, 1], gain: 1, nScale: 1,
     };
     for (const t of [m.map, m.normalMap, orm, m.emissiveMap]) if (t) { t.anisotropy = 4; }
+    const d = K_.defs[name]; K_.pending.push(Promise.all([['map', 'color'], ['normalMap', 'data'], ['orm', 'data'], ['emissiveMap', 'color']].map(async ([k, kind]) => { if (d[k]) d[k] = await gfxTex(d[k], kind); })));
   }
   async function loadPack(pack, progress) {
     const loader = new T3X.GLTFLoader();
@@ -1124,8 +1200,10 @@ const Kit = (() => {
     }
     return true;
   }
-  const texLoad = url => new Promise((res, rej) => new THREE.TextureLoader().load(url, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = 4; res(t); }, undefined, () => rej(new Error('texture ' + url))));
+  const texLoad = (url, kind) => new Promise((res, rej) => new THREE.TextureLoader().load(url, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = 4; t.colorSpace = kind === 'data' ? THREE.NoColorSpace : THREE.SRGBColorSpace; gfxTex(t, kind).then(res, () => res(t)); }, undefined, () => rej(new Error('texture ' + url))));
   // the realistic skin: scanned or re-worked texture sets that replace the kit's painted ones, material by material (kits/skin/SKIN.json)
+  // a painted texture the realistic skin replaces is never uploaded: free its decoded image too
+  const dropPainted = (old, now) => { if (old && old !== now) { if (old.image && old.image.close) old.image.close(); old.dispose(); } };
   async function loadSkin() {
     const S = await fetchJson('kits/skin/SKIN.json', true); if (!S) { K_.skin = 'painted'; return; }
     K_.skinDef = S;
@@ -1134,9 +1212,9 @@ const Kit = (() => {
     for (const name of Object.keys(S.materials || {})) {
       const s = S.materials[name], d = K_.defs[name]; if (!d) continue;
       if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
-      if (s.a) jobs.push(texLoad('kits/skin/' + s.a).then(t => { t.colorSpace = THREE.SRGBColorSpace; d.map = t; }));
-      if (s.n) jobs.push(texLoad('kits/skin/' + s.n).then(t => { t.colorSpace = THREE.NoColorSpace; d.normalMap = t; }));
-      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm).then(t => { t.colorSpace = THREE.NoColorSpace; d.orm = t; d.aoInOrm = s.ao !== false; }));
+      if (s.a) jobs.push(texLoad('kits/skin/' + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
+      if (s.n) jobs.push(texLoad('kits/skin/' + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
+      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
     }
     await Promise.all(jobs);
   }
@@ -1146,6 +1224,7 @@ const Kit = (() => {
     opts = opts || {};
     const packs = opts.packs || K_.PACKS; K_.skin = opts.skin || (TEST && TEST.skin) || 'realistic';
     for (let i = 0; i < packs.length; i++) await loadPack(packs[i], f => progress && progress((i + f) / (packs.length + 1)));
+    await Promise.all(K_.pending); K_.pending.length = 0;
     if (K_.skin === 'realistic') await loadSkin();
     const g = K_.gradeInit;
     K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };
@@ -1731,9 +1810,9 @@ const Particles = { mesh: null };
 //
 // Game conventions kept: feet at pos, yaw 0 faces -Z and grows clockwise seen from above, animation names as in 77_npc.js.
 const Chars = (() => {
-  const { vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap } = TSL;
+  const { vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap, Fn } = TSL;
   const SETS = {};
-  const C = { group: new THREE.Group(), set: null, cfg: null, list: [], ready: false, normalMaps: true };
+  const C = { group: new THREE.Group(), set: null, cfg: null, list: [], ready: false, normalMaps: true, merge: !(TEST && TEST.chars === 'split') };   // merge: one mesh and material per villager; false = one per texture (the old way)
   C.group.name = 'villagers';
 
   // ── character sets ──
@@ -1838,6 +1917,7 @@ const Chars = (() => {
         const part = (PART.find(p => p[0].test(n)) || [0, 'cloth'])[1];
         return { kind: 'cloth', part, gltf: true, rough: 0.88 };
       },
+      texMax(md) { return md.kind === 'skin' ? 512 : md.kind === 'hair' ? 256 : md.kind === 'brow' ? 64 : md.kind === 'eye' ? 128 : /tunic|robe|skirt/.test(md.part) ? 384 : md.part === 'pants' ? 128 : 256; },      // pixel ceiling per texture, on top of gfxTex's tier caps (halved on Low)
       faces: 1, scale: 1,
       bones: { hips: 'pelvis', head: 'head', neck: 'neck_01', handR: 'hand_r', handL: 'hand_l', footR: 'foot_r', footL: 'foot_l' },
       anims: ANIMS, once: SETS.quaternius.once.slice(), rate: { hammer: 0.9 }, maxRate: 2.6,
@@ -1859,13 +1939,13 @@ const Chars = (() => {
     const get = async f => { const g = await GL().loadAsync(cfg.dir + f); tick(); return g; };
     const tex = async k => {
       const d = cfg.textures[k], t = await TL.loadAsync(cfg.dir + (d.file || d));
-      t.flipY = false; t.colorSpace = d.data ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.needsUpdate = true; tick(); return [k, t];
+      t.flipY = false; t.colorSpace = d.data ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.needsUpdate = true; tick(); return [k, await gfxTex(t, d.data ? 'data' : 'color')];
     };
     const [clipFile, bodyFiles, texList] = await Promise.all([get(cfg.clips), Promise.all(bodyNames.map(n => get(cfg.bodies[n]))), Promise.all(texKeys.map(tex))]);
     const S = { name: setName, cfg, clips: {}, bodies: {}, tex: Object.fromEntries(texList), measure: {}, fitted: new Map(), geo: new Map() };
     for (const c of clipFile.animations) S.clips[c.name] = c;
     S.src = restPose(clipFile.scene);
-    bodyNames.forEach((n, i) => addBody(S, n, bodyFiles[i]));
+    for (let i = 0; i < bodyNames.length; i++) await addBody(S, bodyNames[i], bodyFiles[i]);
     for (const key of Object.keys(cfg.anims)) for (const cn of [].concat(cfg.anims[key])) if (!S.clips[cn]) console.warn('character set ' + setName + ': no clip "' + cn + '" for ' + key);
     C.set = S; C.cfg = cfg; C.ready = true; C.name = setName;
     return S;
@@ -1875,10 +1955,19 @@ const Chars = (() => {
     const S = C.set; if (!S) throw new Error('Chars.load first');
     const need = [...new Set(names)].filter(n => !S.bodies[n] && S.cfg.bodies[n]);
     const files = await Promise.all(need.map(n => GL().loadAsync(S.cfg.dir + S.cfg.bodies[n])));
-    need.forEach((n, i) => addBody(S, n, files[i]));
+    for (let i = 0; i < need.length; i++) await addBody(S, need[i], files[i]);
   };
-  function addBody(S, n, gltf) {
+  async function addBody(S, n, gltf) {
     const cfg = S.cfg, scene = gltf.scene; scene.updateMatrixWorld(true);
+    if (cfg.matOf) {      // textures that came inside the GLB: capped and shared through gfxTex like every other character texture
+      const seen = new Set();
+      scene.traverse(o => { if (o.isMesh && o.material) seen.add(o.material); });
+      for (const m of seen) {
+        if (!m.map) continue;
+        const md = cfg.matOf(m) || {}; m.map.anisotropy = 4;
+        m.map = await gfxTex(m.map, 'color', cfg.texMax ? cfg.texMax(md, m) : 0);
+      }
+    }
     for (const c of gltf.animations || []) if (!S.clips[c.name]) S.clips[c.name] = c;       // a body file may bring its own clips
     const B = { scene, rest: restPose(scene), parts: {}, skel: null, armature: null };
     scene.traverse(o => {
@@ -1935,9 +2024,9 @@ const Chars = (() => {
 
   // ── geometry: the chosen parts of a body, merged per material so a villager costs a handful of draws ──
   const ATTR = [['position', 3], ['normal', 3], ['uv', 2], ['skinIndex', 4], ['skinWeight', 4]];
-  function mergedGeometry(S, body, parts, matName) {
-    const key = body + '|' + matName + '|' + parts.join(','); let g = S.geo.get(key); if (g !== undefined) return g;
-    const src = []; for (const p of parts) for (const m of S.bodies[body].parts[p] || []) if (m.material.name === matName) src.push(m.geometry);
+  function mergedGeometry(S, body, parts, matName, names) {
+    const key = body + '|' + (matName || '*') + '|' + parts.join(','); let g = S.geo.get(key); if (g !== undefined) return g;
+    const src = [], mids = []; for (const p of parts) for (const m of S.bodies[body].parts[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
     if (!src.length) { S.geo.set(key, null); return null; }
     let nv = 0, ni = 0; for (const s of src) { nv += s.attributes.position.count; ni += s.index ? s.index.count : s.attributes.position.count; }
     g = new THREE.BufferGeometry(); const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
@@ -1946,6 +2035,7 @@ const Chars = (() => {
       for (const s of src) { const a = s.attributes[name], c = s.attributes.position.count; for (let v = 0; v < c; v++) for (let k = 0; k < size; k++) arr[o++] = a ? a.getComponent(v, k) : 0; }
       g.setAttribute(name, new THREE.BufferAttribute(arr, size));
     }
+    if (names) { const mid = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; mid.fill(mids[i], o, o + c); o += c; }); g.setAttribute('mid', new THREE.BufferAttribute(mid, 1)); }
     let io = 0, base = 0; for (const s of src) { const c = s.attributes.position.count; if (s.index) for (let i = 0; i < s.index.count; i++) idx[io++] = s.index.getX(i) + base; else for (let i = 0; i < c; i++) idx[io++] = i + base; base += c; }
     g.setIndex(new THREE.BufferAttribute(idx, 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.6);
     S.geo.set(key, g); return g;
@@ -1969,6 +2059,34 @@ const Chars = (() => {
     return m;
   }
 
+  // One material for a whole villager (skin, face, eyes, hair, clothes): a per-vertex 'mid' picks which of the pack's textures, tint and
+  // roughness a fragment uses, so the villager is one draw call (and one shadow draw) instead of five or six. Textures keep their own UVs.
+  function makeMergedMaterial(S, H, names, look, srcOf) {
+    const { attribute, abs, Discard, If, frontFacing, normalView, clamp } = TSL;
+    const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
+    const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
+    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false;
+    names.forEach((mn, i) => {
+      const src = srcOf && srcOf[mn], md = S.cfg.materials[mn] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
+      let key = (look.maps && look.maps[mn]) || md.map; if (key && typeof key === 'object') key = key[H.body];
+      const map = key ? S.tex[key] : (md.gltf && src && src.map) || null, tint = look.tint && (look.tint[mn] || (md.part && look.tint[md.part]) || (md.kind && look.tint[md.kind])) || [1, 1, 1];
+      const tx = map ? texture(map, U) : null;
+      albedo = albedo.add((tx ? tx.rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
+      rough = rough.add(w.mul(md.rough === undefined ? 0.85 : md.rough));
+      if (md.oneSided) one = one.add(w);
+      if (md.alpha && tx) { anyAlpha = true; alpha = alpha.add(w.mul(tx.a.sub(1))); cut = cut.add(w.mul(md.alpha)); }      // cut-out hair and brows: this fragment's alpha and threshold
+      const wm = md.warm || [1, 1, 1]; if (md.warm) anyWarm = true; warm = warm.add(vec3(wm[0], wm[1], wm[2]).mul(w));
+      if (C.normalMaps && md.normal && S.tex[md.normal]) { const nm = normalMap(texture(S.tex[md.normal], U)); nrm = nrm ? nrm.add(nm.mul(w)) : nm.mul(w); nw = nw.add(w); }
+    });
+    m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
+    m.roughnessNode = rough;
+    if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
+    let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
+    if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
+    m.emissiveNode = albedo.mul(lit);
+    return m;
+  }
+
   // ── spawning ──
   const cloneBones = o => { const c = o.clone(false); for (const ch of o.children) if (ch.isBone) c.add(cloneBones(ch)); return c; };
   C.spawn = function (def) {
@@ -1981,10 +2099,19 @@ const Chars = (() => {
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p]).sort(), names = new Set();
     for (const p of parts) for (const m of B.parts[p]) names.add(m.material.name);
     H.fit = look.fit || 1;
-    for (const mn of names) {
+    const nameList = [...names].sort(), srcOf = {};      // the body's own glTF material per name (the 'real' set keeps its textures and kinds there)
+    for (const p of parts) for (const m of B.parts[p]) if (!srcOf[m.material.name]) srcOf[m.material.name] = m.material;
+    if (C.merge && nameList.length > 1) {
+      const g = mergedGeometry(S, body, parts, null, nameList);
+      if (g) {
+        const mat = makeMergedMaterial(S, H, nameList, look, srcOf), mesh = new THREE.SkinnedMesh(g, mat);
+        mesh.name = 'villager'; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
+        mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;
+        H.mats.push(mat); H.meshes.push(mesh);
+      }
+    } else for (const mn of nameList) {
       const g = mergedGeometry(S, body, parts, mn); if (!g) continue;
-      let src = null; for (const p of parts) for (const m of B.parts[p]) if (!src && m.material.name === mn) src = m.material;
-      const mat = makeMaterial(S, H, mn, look, src), mesh = new THREE.SkinnedMesh(g, mat);
+      const mat = makeMaterial(S, H, mn, look, srcOf[mn]), mesh = new THREE.SkinnedMesh(g, mat);
       mesh.name = mn; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
       mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;      // a fixed sphere: each pass (camera, shadow maps) culls villagers itself
       H.mats.push(mat); H.meshes.push(mesh);
@@ -2304,6 +2431,7 @@ const Terrain = {
 };
 World.groundY = (x, z) => Terrain.y(x, z);
 
+const TERRAIN_FINE = 96;
 function buildTerrain() {
   // site heights from the untouched land
   for (const s of SITES) {
@@ -2314,7 +2442,10 @@ function buildTerrain() {
     const d = River.dist(s.x, s.z, 14); if (d < 14) s.y = riverY(River.at) + 0.78;
     if (hyp(s.x - SQUARE.x, s.z - SQUARE.z) < 30) s.y = lerp(s.y, 0, 0.7);
   }
-  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 32 }, { cell: 6, half: 432, hole: 144, tile: 48 }, { cell: 24, half: 1440, hole: 432, tile: 40 }, { cell: 96, half: 4800, hole: 1440, tile: 50 }];
+  // TERRAIN_FINE: the ground is drawn with 1.5 m cells out to this distance from the centre and with 3 m cells (a quarter of the triangles) from there to the
+  // edge of the height grid. Terrain.y still reads the 1.5 m grid. 144 puts the whole grid back on 1.5 m cells.
+  const FINE = TERRAIN_FINE, ring = FINE < K.terrainHalf;
+  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: 144, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: 144, tile: 48 }, { cell: 24, half: 1440, hole: 432, tile: 40 }, { cell: 96, half: 4800, hole: 1440, tile: 50 }]);
   const pack = new MeshPack(); pack.shadow = true;
   let prev = null;
   for (let li = levels.length - 1; li >= 0; li--) {            // coarse first so fine borders can be stitched to them
@@ -2330,7 +2461,12 @@ function buildTerrain() {
         hgt[k * W] = lerp(ch(c0, c0 + q), ch(c0, c0 + q1), t); hgt[k * W + n] = lerp(ch(cE, c0 + q), ch(cE, c0 + q1), t);
       }
     }
+    if (L.mesh && ring) {       // the fine level ends at |x| or |z| = L.mesh: its border vertices between ring vertices take the ring's straight edge
+      const e0 = Math.round((L.half - L.mesh) / L.cell), e1 = n - e0;
+      for (let k = e0; k <= e1; k++) if ((k - e0) & 1) { hgt[e0 * W + k] = (hgt[e0 * W + k - 1] + hgt[e0 * W + k + 1]) / 2; hgt[e1 * W + k] = (hgt[e1 * W + k - 1] + hgt[e1 * W + k + 1]) / 2; hgt[k * W + e0] = (hgt[(k - 1) * W + e0] + hgt[(k + 1) * W + e0]) / 2; hgt[k * W + e1] = (hgt[(k - 1) * W + e1] + hgt[(k + 1) * W + e1]) / 2; }
+    }
     const holeC = Math.round((L.half - L.hole) / L.cell);       // cells from the edge to the hole
+    const meshC = L.mesh && ring ? Math.round((L.half - L.mesh) / L.cell) : 0;       // cells from the edge that are not drawn at this level
     for (let tj = 0; tj < n; tj += L.tile) for (let ti = 0; ti < n; ti += L.tile) {
       const m = new Mesh(2048), ids = new Map();
       const vid = (i, j) => {
@@ -2341,6 +2477,7 @@ function buildTerrain() {
       };
       for (let j = tj; j < Math.min(tj + L.tile, n); j++) for (let i = ti; i < Math.min(ti + L.tile, n); i++) {
         if (L.hole && i >= holeC && i < n - holeC && j >= holeC && j < n - holeC) continue;
+        if (meshC && (i < meshC || i >= n - meshC || j < meshC || j >= n - meshC)) continue;
         const a = vid(i, j), b = vid(i, j + 1), c = vid(i + 1, j + 1), d = vid(i + 1, j);
         m.tri(a, b, c); m.tri(a, c, d);
       }
@@ -3161,10 +3298,14 @@ function kplace(m, name, x, y, z, s, ry) {
   const loc = new THREE.Matrix4().makeTranslation(-cx, -Q.min[1], -cz);
   return { name: sn, M: new THREE.Matrix4().multiplyMatrices(L, _sm).multiply(loc), tint: E.tint };
 }
+// outdoor props too small to leave a shadow worth a draw call in the sun-shadow maps stay out of them (and so out of a second mesh per material)
+const YARD_CELL = 40;        // m: yard props are merged into one mesh per material per cell
+const YARD_CAST_MIN = 0.6;        // m: the largest side a yard prop needs to cast. 0 = every prop casts
+function yardCasts(P) { if (!(YARD_CAST_MIN > 0)) return true; const b = Kit.box(P.name, P.M); return !b || Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) >= YARD_CAST_MIN; }
 function kadd(m, P, extra) {
   const zone = m.m1 | 0;
-  let B; if (zone) B = kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: 40 }); B = World.kitYard; }
-  const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
+  let B; if (zone) B = kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: YARD_CELL }); B = World.kitYard; }
+  const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone && yardCasts(P) }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
   B.add(P.name, P.M, o);
 }
 // place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
@@ -3388,7 +3529,7 @@ function kitAttach() {
   const tri = [], V = (M, x, y, z) => { const p = m4.tp(M, [x, y, z]); tri.push(p[0], p[1], p[2]); }, Q = (M, a, b2, c2, d2) => { for (const q of [a, b2, c2, a, c2, d2]) V(M, q[0], q[1], q[2]); };
   for (const id in World.kitExt) {
     let k = World.kitExt[id]; if (!k.batch.count) continue;
-    const g = k.batch.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g, { site: k.site });
+    const g = k.batch.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g, { site: k.site, ext: true });
     const M = k.Ms, x = k.w / 2 + 0.3, xw = k.w / 2 - 0.12, z = k.hd + 0.4, y = k.top, r = y + k.rise + 0.4 * k.rise / k.hd - 0.25; k = Object.assign({}, k, { hd: k.hd - 0.12 });
     Q(M, [-xw, -1, -k.hd], [xw, -1, -k.hd], [xw, y, -k.hd], [-xw, y, -k.hd]); Q(M, [-xw, -1, k.hd], [xw, -1, k.hd], [xw, y, k.hd], [-xw, y, k.hd]);
     Q(M, [-xw, -1, -k.hd], [-xw, -1, k.hd], [-xw, y, k.hd], [-xw, y, -k.hd]); Q(M, [xw, -1, -k.hd], [xw, -1, k.hd], [xw, y, k.hd], [xw, y, -k.hd]);
@@ -3409,7 +3550,10 @@ function kitAttach() {
     // furniture only shows through an open door or a window, so it is drawn for the nearest buildings alone
     for (const k of World.kitGroups) {
       if (k.interior && k.site) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < 9 + Math.max(k.site.w, k.site.d) * 0.5;
-      else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) o.visible = hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < 58 + bs.radius; }
+      else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
+      else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
+      else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) { o.visible = !World.deepIn && hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < q.yardRange + bs.radius; if (o.userData.cast0 === undefined) o.userData.cast0 = o.castShadow; o.castShadow = q.yardCast && o.userData.cast0; } }
+      else k.g.visible = true;
     }
     if (Kit.update) Kit.update(camPos);
   };
@@ -3769,18 +3913,21 @@ for (const id of ['elder', 'herbalist', 'guardhouse', 'weaver', 'farm', 'hunter'
 // ───────────────────────── the village: houses, square, bridge, ruin, fences, dock ─────────────────────────
 const headingTo = (x, z, tx, tz) => Math.atan2(tx - x, -(tz - z));
 World.pickups = [];
+const VILLAGE_CELL = 80;        // m: the generated props (walls, fences, bridges, wells ...) are merged into one mesh per cell
 function buildVillage() {
   const pack = new MeshPack(); pack.shadow = true;
   const buckets = new Map(), R = rng(777), OUT = { zone: 0 };
-  const bucket = (x, z) => { const k = Math.floor(x / 40) + ',' + Math.floor(z / 40); let m = buckets.get(k); if (!m) { m = new Mesh(2048); m.seed = buckets.size * 7919 + 13; buckets.set(k, m); } return m; };
+  const bucket = (x, z) => { const k = Math.floor(x / VILLAGE_CELL) + ',' + Math.floor(z / VILLAGE_CELL); let m = buckets.get(k); if (!m) { m = new Mesh(2048); m.seed = buckets.size * 7919 + 13; buckets.set(k, m); } return m; };
   // place something on the ground. rot is a heading: the prop's local -Z ends up facing that way
   const put = (x, z, yaw, fn, dy) => { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z) + (dy || 0), z); if (yaw) m.RY(-yaw); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); };
   const spot = (name, x, z, yaw, extra) => { World.spots[name] = Object.assign({ p: [x, Terrain.y(x, z), z], yaw: yaw || 0, zone: 0 }, extra || {}); };
 
+  const houseExt = new Map();
   for (const site of SITES) {
     const spec = HOUSES[site.id]; if (!spec) continue;
     const h = buildHouse(site, spec);
-    if (h.ext.ni) pack.add(h.ext, { kind: 'opaque' }); if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
+    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
   }
@@ -4000,7 +4147,7 @@ function buildVillage() {
   leaf.mat(MAT.METAL, COL.black); for (const y of [0.18, 0.82]) { leaf.box(0, y - 0.03, -0.04, 0.82, y + 0.03, -0.03, 32); leaf.box(0, y - 0.03, 0.03, 0.82, y + 0.03, 0.04, 16); }
   leaf.box(0.86, 0.48, -0.07, 0.9, 0.54, 0.07);
   const leafItem = skin.add(leaf);
-  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: 0 }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: 0, kind: 'door' }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;
@@ -4009,7 +4156,7 @@ function buildVillage() {
     wm.mat(MAT.TIMBER, COL.woodDark); wm.push().RX(PI / 2).T(0, -2.0, 0); wm.cyl(0, 0, 0, 0.16, 0.16, 3.5, 10, 3); wm.pop();
     wm.m1 = 0; const pz = -1.8; wm.push().T(0, 0, pz).RX(PI / 2).T(0, -0.05, 0); wm.cyl(0, 0, 0, 0.5, 0.5, 0.1, 14, 3); wm.pop(); for (let i = 0; i < 12; i++) { const a = i * TAU / 12; wm.box(Math.cos(a) * 0.46 - 0.03, Math.sin(a) * 0.46 - 0.03, pz - 0.2, Math.cos(a) * 0.46 + 0.03, Math.sin(a) * 0.46 + 0.03, pz + 0.05); }
     const base = siteMatrix(M, M.y + 0.32); m4.translate(base, 0, 0.62, M.d / 2);
-    World.millWheel = { obj: addSkinned(skin.add(wm), { c: m4.tp(base, [0, 0, 0.8]), r: 3.2, zone: 0 }), base, angle: 0 };
+    World.millWheel = { obj: addSkinned(skin.add(wm), { c: m4.tp(base, [0, 0, 0.8]), r: 3.2, zone: 0, kind: 'mill' }), base, angle: 0 };
     World.millPos = m4.tp(base, [0, 0, 0.8]);
   }
   World.skinPack = skin; World.skinItems = { leaf: leafItem };
@@ -4071,6 +4218,7 @@ function buildVillage() {
     for (let i = 0; i < m.nv; i++) { if (m.u8[i * 32 + 29] !== 0 || m.u8[i * 32 + 27] < 250) continue; const y = m.f[i * 8 + 1] - Terrain.y(m.f[i * 8], m.f[i * 8 + 2]); if (y < 0.45) m.u8[i * 32 + 27] = Math.round(255 * lerp(0.62, 1, sat(y / 0.45))); }
     if (m.ni) pack.add(m, { kind: 'opaque' });
   }
+  for (const m of houseExt.values()) pack.add(m, { kind: 'opaque' });
   World.villagePack = pack;
   World.packs.push(pack);
 }
@@ -4086,6 +4234,8 @@ function addSkinned(item, o) {
 
 // ---- 74_vegetation.js ----
 // ───────────────────────── trees, bushes and boulders (instanced) ─────────────────────────
+// cell sizes (m) of the instanced groups: one draw per model per cell, so bigger cells mean fewer draws and coarser culling
+const FAR_TREE_CELL = 400, ROCK_CELL = 110;
 function buildVegetation() {
   const R = rng(9001), pack = new MeshPack();
   // leaf card helper: quad at centre c spanned by half-vectors a (u) and b (v), blob normal n
@@ -4161,8 +4311,10 @@ function buildVegetation() {
   const bushL = new Mesh(512); bushL.mat(MAT.LEAVES, [1, 1, 1]);
   leafBlob(bushL, rng(5), 0, 0.55, 0, 0.75, 0.5, 0.75, 9, 0.62, [0.40, 0.55, 0.22], 0.3);
   // ── boulders ──
-  const rockM = [1, 2, 3].map(seed => {
-    const m = new Mesh(256), nu = 9, nv = 6; m.mat(MAT.ROCK, [1, 1, 1], 0.7);
+  // one boulder shape (vertex lod 3: the instance shader squashes it differently for every boulder), so boulders are one draw per cell, not three
+  const rockAll = new Mesh(256);
+  const rockM = [1].map((seed, kk) => {
+    const m = rockAll, nu = 9, nv = 6; m.mat(MAT.ROCK, [1, 1, 1], 0.7); m.m3 = 3 + kk;
     const rad = (a, b) => 1 + 0.32 * gnoise(Math.cos(a) * Math.sin(b) * 1.6 + seed * 7.1, Math.cos(b) * 1.6 + Math.sin(a) * Math.sin(b) * 1.6, seed) + 0.12 * gnoise(Math.cos(a) * Math.sin(b) * 4 + 3, Math.sin(a) * Math.sin(b) * 4 + Math.cos(b) * 4, seed + 9);
     const pos = (i, j) => { const a = -(i % nu) / nu * TAU, b = clamp(j / nv, 0.001, 0.999) * PI, r = rad(a, b); return [Math.sin(b) * Math.cos(a) * r, Math.cos(b) * r * 0.62, Math.sin(b) * Math.sin(a) * r * 0.85]; };
     m.grid(nu, nv, (i, j) => { const p = pos(i, j), pa = pos(i + 1, j), pb = pos(i, Math.min(j + 1, nv)), pc = pos(i + nu - 1, j), pd = pos(i, Math.max(j - 1, 0));
@@ -4170,11 +4322,11 @@ function buildVegetation() {
       return m.vert(p[0], p[1], p[2], n[0], n[1], n[2], i / nu * 3, j / nv * 1.5, lerp(0.55, 1, sat(p[1] * 1.2 + 0.6))); });
     return m;
   });
-  const I = { pineT: pack.add(pineT), pineL: pack.add(pineL), pineF: pack.add(pineF), birchT: pack.add(birchT), birchL: pack.add(birchL), birchF: pack.add(birchF), oakT: pack.add(oakT), oakL: pack.add(oakL), bush: pack.add(bushL), rocks: rockM.map(m => pack.add(m)) };
+  const I = { pineT: pack.add(pineT), pineL: pack.add(pineL), pineF: pack.add(pineF), birchT: pack.add(birchT), birchL: pack.add(birchL), birchF: pack.add(birchF), oakT: pack.add(oakT), oakL: pack.add(oakL), bush: pack.add(bushL), rocks: pack.add(rockAll) };
   pack.upload('veg'); World.instPack = pack;
 
   // ── placement ──
-  const inst = { pine: [], birch: [], oak: [], bush: [], rock0: [], rock1: [], rock2: [] };
+  const inst = { pine: [], birch: [], oak: [], bush: [], rock: [] };
   const blocked = (x, z, pad) => {
     for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + pad + (s.porch || 0) + 2 && Math.abs(l[1]) < s.d / 2 + pad + 2) return true; }
     for (const r of Roads) if (r.line.dist(x, z, r.w / 2 + pad) < r.w / 2 + pad) return true;
@@ -4215,7 +4367,7 @@ function buildVegetation() {
   }
   for (const s of SITES) { if (!HOUSES[s.id] || s.id === 'barn') continue; for (let k = 0; k < 5; k++) { const side = R() < 0.5 ? -1 : 1, lx = R.s() * s.w * 0.45, p = siteToWorld(s, lx, side * (s.d / 2 + 0.8)); const dl = siteDoorLocal(s, 0); if (hyp(lx - dl[0], side * (s.d / 2) - dl[1]) < 1.8 || s.id === 'smithy' && side < 0) continue; inst.bush.push([p[0], Terrain.y(p[0], p[1]) - 0.05, p[1], 0.45 + R() * 0.4, R() * TAU, R(), R(), 0]); } }
   for (const g of World.gardenPlants || []) inst.bush.push([g[0], Terrain.y(g[0], g[1]) - 0.02, g[1], 0.42 + R() * 0.15, R() * TAU, g[2] * 0.45, R(), 0]);
-  const addRock = (x, z, s) => { const y = gy(x, z), k = R.i(0, 2); inst['rock' + k].push([x, y - 0.22 * s, z, s, R() * TAU, R(), 0, 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
+  const addRock = (x, z, s) => { const y = gy(x, z); inst.rock.push([x, y - 0.22 * s, z, s, R() * TAU, R(), R(), 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
   for (let i = 0; i < 420; i++) {
     const a = R() * TAU, r = 30 + R() * 210, x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (r < 160 && blocked(x, z, 1.0)) continue;
@@ -4241,12 +4393,12 @@ function buildVegetation() {
     for (const g of defs) World.instGroups.push(Object.assign({ ibuf, cells: list, first: g.item.first, count: g.item.count, base: g.item.base, shadow: true }, g));
   };
   mkGroups(inst.pine, [{ item: I.pineT, kind: 'opaque', lod: 1 }, { item: I.pineL, kind: 'leaf', lod: 1 }], 48);
-  mkGroups(inst.pine, [{ item: I.pineF, kind: 'leaf', lod: 2, nearOnly: false }], 130);
+  mkGroups(inst.pine, [{ item: I.pineF, kind: 'leaf', lod: 2, nearOnly: false }], FAR_TREE_CELL);
   mkGroups(inst.birch, [{ item: I.birchT, kind: 'opaque', lod: 1 }, { item: I.birchL, kind: 'leaf', lod: 1 }], 48);
-  mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], 130);
+  mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
   mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
-  for (let k = 0; k < 3; k++) mkGroups(inst['rock' + k], [{ item: I.rocks[k], kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], 110);
+  mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;
 }
 
@@ -4576,7 +4728,7 @@ function buildNPCs() {
   World.chickens = [];
   const cm = [buildChicken([0.92, 0.9, 0.85]), buildChicken([0.62, 0.36, 0.2]), buildChicken([0.25, 0.22, 0.2])].map(m => World.skinPack.add(m));
   const homes = [[World.coop[0] + 1.5, World.coop[1] + 2], [World.coop[0] - 1, World.coop[1] + 3], [World.coop[0] + 2.5, World.coop[1] + 0.5], [World.coop[0] + 0.5, World.coop[1] + 4.2], [100.5, -13.5], [-13, 13.5], [-15.5, 15], [13.5, 17]];
-  homes.forEach((h, i) => World.chickens.push({ home: h, pos: [h[0], 0, h[1]], yaw: i * 1.7, st: 'idle', t: i, tt: 1 + i * 0.3, obj: addSkinned(cm[i % 3], { r: 0.5, zone: 0 }), ph: i * 2.1 }));
+  homes.forEach((h, i) => World.chickens.push({ home: h, pos: [h[0], 0, h[1]], yaw: i * 1.7, st: 'idle', t: i, tt: 1 + i * 0.3, obj: addSkinned(cm[i % 3], { r: 0.5, zone: 0, kind: 'chicken' }), ph: i * 2.1 }));
   // things to pick up
   const hm = new Mesh(128); hm.push().RZ(PI / 2 - 0.25).RY(0.4); Props.hammer(hm); hm.pop();
   const herb = new Mesh(256);
@@ -4584,7 +4736,7 @@ function buildNPCs() {
   for (let i = 0; i < 4; i++) { const a = i * TAU / 4; herb.quad2([Math.cos(a) * 0.16, 0.07, Math.sin(a) * 0.16], [Math.cos(a + 0.5) * 0.05, 0.02, Math.sin(a + 0.5) * 0.05], [0, 0.03, 0], [Math.cos(a - 0.5) * 0.05, 0.02, Math.sin(a - 0.5) * 0.05]); }
   herb.mat(MAT.PLAIN, [0.72, 0.88, 1.0]); herb.lathe([[0.008, 0.2], [0.07, 0.235], [0.075, 0.25], [0.0, 0.29]], 7, 0); herb.mat(MAT.PLAIN, [0.9, 0.95, 1.0]); herb.lathe([[0.075, 0.25], [0.008, 0.2]], 7, 0);
   const hmItem = World.skinPack.add(hm), herbItem = World.skinPack.add(herb);
-  const pick = (id, item, p, label, itemId, glow) => { const obj = addSkinned(item, { c: p, r: 0.6, zone: 0 }); R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256); const it = { kind: 'pickup', id, item: itemId, p: [p[0], p[1] + 0.2, p[2]], r: 1.9, zone: 0, obj, label }; World.interact.push(it); World.pickups.push(it); if (glow) { it.em = { type: 'herb', p, zone: 0 }; World.emitters.push(it.em); } };
+  const pick = (id, item, p, label, itemId, glow) => { const obj = addSkinned(item, { c: p, r: 0.6, zone: 0, kind: 'pickup' }); R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256); const it = { kind: 'pickup', id, item: itemId, p: [p[0], p[1] + 0.2, p[2]], r: 1.9, zone: 0, obj, label }; World.interact.push(it); World.pickups.push(it); if (glow) { it.em = { type: 'herb', p, zone: 0 }; World.emitters.push(it.em); } };
   pick('hammer', hmItem, World.pickupSpot.hammer, 'Take the hammer', 'hammer');
   [[-3.5, 93.5], [-57, -47], [45, -57], [5.5, -91], [84, -42], [-46, 63], [12, -98], [-30, 40]].forEach((p, i) => pick('frostcap' + i, herbItem, [p[0], World.groundY(p[0], p[1]), p[1]], 'Pick frostcap', 'frostcap', true));
 }
@@ -4648,7 +4800,7 @@ function npcUpdate(dt, playerPos) {
     poseWrite(n.obj.slot, root, n.ang);
     const o = n.obj; o.c = [n.pos[0], n.pos[1] + 0.9, n.pos[2]]; o.visible = dPlayer < 170 && !n.ch;
     const zn = World.zoneAt(n.pos[0], n.pos[1] + 0.5, n.pos[2]); R.boneData[o.slot * 256 + 240] = zn; R.boneData[o.slot * 256 + 241] = zn ? 0.34 : 1;
-    if (n.ch) Chars.update(n.ch, { pos: n.pos, yaw: n.yaw, anim: n.anim, scale: s, zone: zn, light: zn ? 0.34 : 1, visible: dPlayer < 95, cast: dPlayer < 32, look: n.look, talking: n.talking, seatHeight: n.spot && n.spot.sit, speed: n.anim === 'run' ? 2.7 * (0.9 + s * 0.1) : n.anim === 'walk' ? 1.35 * (0.9 + s * 0.1) : 0 }, dt);
+    if (n.ch) Chars.update(n.ch, { pos: n.pos, yaw: n.yaw, anim: n.anim, scale: s, zone: zn, light: zn ? 0.34 : 1, visible: dPlayer < 95, cast: dPlayer < R.q.villagerCast, look: n.look, talking: n.talking, seatHeight: n.spot && n.spot.sit, speed: n.anim === 'run' ? 2.7 * (0.9 + s * 0.1) : n.anim === 'walk' ? 1.35 * (0.9 + s * 0.1) : 0 }, dt);
   }
   // chickens potter about and scatter when approached
   for (const c of World.chickens) {
@@ -5104,7 +5256,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 8 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 9 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
@@ -5748,8 +5900,8 @@ const Foes = (() => {
           spot: sp, pos: sp.p.slice(), yaw: sp.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0 };
         f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
         f.h = Chars.spawn({ id: 'foe.' + id, foe: look });
-        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.frustumCulled = false; sw.layers.set(1);
-        const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw;
+        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.layers.set(1);
+        const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });      // near sun-shadow map only, like the villagers
         if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
         F.list.push(f);
       }
@@ -5757,6 +5909,7 @@ const Foes = (() => {
     if (!Chars.group.parent) SC.scene.add(Chars.group);
     F.ready = true; campState();
   }
+  const FOE_DRAW = 110;        // outlaws farther than this are not drawn at all (and stop posing)
   F.grip = [PI / 2, 0, 0, 0, 0.02, 0.03];       // how a sword sits in the rig's right hand: rotation xyz, offset xyz (hand space)
   F.init = function () {
     buildCamps();
@@ -5879,7 +6032,7 @@ const Foes = (() => {
     for (const f of F.list) {
       if (f.state === 'gone') continue;
       const d = hyp(f.pos[0] - P[0], f.pos[2] - P[2]);
-      f.vis = d < 135;
+      f.vis = d < FOE_DRAW;
       if (!f.vis) { if (f.h.pivot.visible) f.h.pivot.visible = false; if (f.alive && f.state !== 'idle') { f.acc += dt; if (f.acc > 0.25) { think(f, f.acc, P, d, live); f.acc = 0; } } continue; }
       // far away, think and pose less often
       f.acc += dt; const every = d > 90 ? 0.2 : d > 48 ? 0.09 : 0; if (f.acc < every) continue; const fdt = f.acc; f.acc = 0;
@@ -5893,7 +6046,7 @@ const Foes = (() => {
         f.t += fdt;
         if (f.state === 'dead' && (f.t > (f.looted ? 40 : 300)) && d > 30) { f.state = 'gone'; f.h.pivot.visible = false; if (f.lootIt) { const i = World.interact.indexOf(f.lootIt); if (i >= 0) World.interact.splice(i, 1); } continue; }
       }
-      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = 1; st.visible = true;
+      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = 1; st.visible = true; st.cast = d < 32; f.sword.castShadow = st.cast;
       st.look[0] = 0; st.look[1] = 0;
       Chars.update(f.h, st, fdt * (f.state === 'attack' && f.atk ? f.atk.rate : 1));
     }
@@ -6128,7 +6281,7 @@ function startGame(cont) {
   const load = (t, f) => { $('loadText').textContent = t; $('barFill').style.width = Math.round(f * 100) + '%'; return new Promise(r => setTimeout(r, TEST ? 0 : 30)); };
   let t0 = performance.now(); const laps = game.laps = {}, lap = n => { const t = performance.now(); laps[n] = Math.round(t - t0); t0 = t; };
   try {
-    loadSettings();
+    loadSettings(); gfxTexInit(game.qualitySetting === 'auto' ? (TEST && TEST.quality) : game.qualitySetting);
     const canvas = $('view');
     try { await gfxInit(canvas); }
     catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'; console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
