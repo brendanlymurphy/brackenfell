@@ -9,7 +9,7 @@ const Kit = (() => {
   const K_ = {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
     pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
-    fill: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
+    fill: null, fill2: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
     lodMeshes: [],
     ROOF: /^(S_|T_)?(Roof_(RoundTile|Modular|Tower|Wooden|2x4|Log|Dormer)|Overhang_Roof)|^gen_/,       // slope pieces and generated pieces: outside faces are marked by their own normals (down = room side), not by the kit wall convention (outside = +z)
   };
@@ -89,7 +89,7 @@ const Kit = (() => {
     const g = K_.gradeInit;
     K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };
     if (K_.skin !== 'realistic') { K_.grade.sat.value = 1; K_.grade.gain.value = 1; K_.grade.tint.value.set(1, 1, 1); K_.grade.weather.value = 0; }
-    K_.fill = uniform(new THREE.Vector3(0.16, 0.22, 0.05));
+    K_.fill = uniform(new THREE.Vector3(0.0, 0.02, 0.012)); K_.fill2 = uniform(new THREE.Vector3(0.25, 0.3, 0.02));
     K_.ready = true; if (progress) progress(1);
   };
   // one knob set for the whole kit look: saturation, brightness, a colour cast, and weathering (large soft stains so no two walls match)
@@ -195,9 +195,10 @@ const Kit = (() => {
     let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35))));
     em = em.add(alb.mul(glow));
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
-      const outM = float(1).sub(step(0.5, zone)), F = K_.fill;
-      em = em.add(alb.mul(U.sunCol.mul(F.x).add(U.ambSky.mul(F.y))).mul(skyVis).mul(outM));
-      em = max(em, vec3(F.z).mul(skyVis).mul(outM));
+      const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
+      em = em.add(alb.mul(U.sunCol.mul(F.x.add(F2.x.mul(wallK))).add(U.ambSky.mul(F.y.add(F2.y.mul(wallK))))).mul(skyVis).mul(outM));
+      const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM);
+      em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
     }
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
     else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));

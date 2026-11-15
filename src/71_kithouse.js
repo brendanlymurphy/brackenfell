@@ -140,7 +140,7 @@ function kitShell(c) {
       if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT)); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: st.up ? 0 : zone, inSky: st.up ? 0.2 : INT_AO, tint: st.timber ? [1, 1, 1] : [1, 1, 1] });
+  if (st.shingle && typeof infRoofGen === 'function') infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: st.up ? 0 : zone, inSky: st.up ? 0.2 : INT_AO, tint: st.timber ? [1, 1, 1] : [1, 1, 1] });
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
@@ -195,7 +195,7 @@ function kitShell(c) {
 // a kit chimney above a hearth at house-local (lx, lz), rising clear of the ridge
 function kitChimney(c, lx, lz) {
   lx = clamp(lx, -c.w / 2 + 0.6, c.w / 2 - 0.6); lz = clamp(lz, -c.hd * 0.3, c.hd * 0.3);          // inside the footprint, near the ridge
-  const top = infChimney(c.kb, c.kMS, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0 });
+  const top = infChimney(c.kb, c.kMS, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0, lift: 0.14 });
   World.emitters.push({ type: 'smoke', p: m4.tp(c.Ms, [lx, top + 0.2, lz]), zone: 0 });
 }
 

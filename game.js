@@ -1259,7 +1259,7 @@ const Kit = (() => {
   const K_ = {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
     pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
-    fill: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
+    fill: null, fill2: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
     lodMeshes: [],
     ROOF: /^(S_|T_)?(Roof_(RoundTile|Modular|Tower|Wooden|2x4|Log|Dormer)|Overhang_Roof)|^gen_/,       // slope pieces and generated pieces: outside faces are marked by their own normals (down = room side), not by the kit wall convention (outside = +z)
   };
@@ -1339,7 +1339,7 @@ const Kit = (() => {
     const g = K_.gradeInit;
     K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };
     if (K_.skin !== 'realistic') { K_.grade.sat.value = 1; K_.grade.gain.value = 1; K_.grade.tint.value.set(1, 1, 1); K_.grade.weather.value = 0; }
-    K_.fill = uniform(new THREE.Vector3(0.16, 0.22, 0.05));
+    K_.fill = uniform(new THREE.Vector3(0.0, 0.02, 0.012)); K_.fill2 = uniform(new THREE.Vector3(0.25, 0.3, 0.02));
     K_.ready = true; if (progress) progress(1);
   };
   // one knob set for the whole kit look: saturation, brightness, a colour cast, and weathering (large soft stains so no two walls match)
@@ -1445,9 +1445,10 @@ const Kit = (() => {
     let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35))));
     em = em.add(alb.mul(glow));
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
-      const outM = float(1).sub(step(0.5, zone)), F = K_.fill;
-      em = em.add(alb.mul(U.sunCol.mul(F.x).add(U.ambSky.mul(F.y))).mul(skyVis).mul(outM));
-      em = max(em, vec3(F.z).mul(skyVis).mul(outM));
+      const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
+      em = em.add(alb.mul(U.sunCol.mul(F.x.add(F2.x.mul(wallK))).add(U.ambSky.mul(F.y.add(F2.y.mul(wallK))))).mul(skyVis).mul(outM));
+      const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM);
+      em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
     }
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
     else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));
@@ -3753,7 +3754,7 @@ function kitShell(c) {
       if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT)); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: st.up ? 0 : zone, inSky: st.up ? 0.2 : INT_AO, tint: st.timber ? [1, 1, 1] : [1, 1, 1] });
+  if (st.shingle && typeof infRoofGen === 'function') infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: st.up ? 0 : zone, inSky: st.up ? 0.2 : INT_AO, tint: st.timber ? [1, 1, 1] : [1, 1, 1] });
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
@@ -3808,7 +3809,7 @@ function kitShell(c) {
 // a kit chimney above a hearth at house-local (lx, lz), rising clear of the ridge
 function kitChimney(c, lx, lz) {
   lx = clamp(lx, -c.w / 2 + 0.6, c.w / 2 - 0.6); lz = clamp(lz, -c.hd * 0.3, c.hd * 0.3);          // inside the footprint, near the ridge
-  const top = infChimney(c.kb, c.kMS, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0 });
+  const top = infChimney(c.kb, c.kMS, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0, lift: 0.14 });
   World.emitters.push({ type: 'smoke', p: m4.tp(c.Ms, [lx, top + 0.2, lz]), zone: 0 });
 }
 
@@ -6499,10 +6500,11 @@ function splat2Dress(blob, A, B) {
 // in the same way as the market alley (2 m wall panels scaled to the wall, kit window and door modules, jettied upper storeys, kit roof turned to a ridge
 // that suits the street). All of it goes into ONE batch (one draw per material) which is hidden when the camera is far away or indoors and does not
 // cast into the sun-shadow maps: one prism stand-in per house does that.
+const ROOFS = [];       // every generated roof (for test/town.js: slope sample points against the neighbours' volumes)
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
 const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof';
 function infBatch() {
-  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 4096, off: 2048 }), add = b.add; b.add = (n, x, o) => add(n, x, Object.assign({ cast: false }, o || {})); }       // nothing in the batch casts: one mesh per material, not two
+  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 24, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 24 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
   return INFS.batch;
 }
 
@@ -6580,7 +6582,14 @@ function infWalls(B, MS, o) {
     }
     // corner posts
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.box(W_, sx * w / 2 - 0.09 - (sx > 0 ? 0.0 : 0.0), yb, sz * d / 2 - off - 0.09, sx * w / 2 + 0.09, yt, sz * d / 2 - off + 0.09, DK);
-    B.add(g.make('gen_walls_' + (_gn++)), MS, o.optsOf ? o.optsOf(k) : { zone: 0, skyVis: 1, cast: false });
+    { const nm = g.make('gen_walls_' + (_gn++)), gf = GP();           // the far copy: four plain wall faces
+      for (const wn of ['front', 'back', 'left', 'right']) {
+        if ((wn === 'left' || wn === 'right') && k < ((o.skip && o.skip[wn]) || 0)) continue;
+        const W = WALLS[wn], L = W.len(w, d), s0 = W.start(w, d), Q = (u, y) => [s0[0] + W.u[0] * u, y, s0[2] + W.u[2] * u - off];
+        gf.quad(mat, Q(0, yb), Q(L, yb), Q(L, yt), Q(0, yt), col, [0, 0, L / ts, (yt - yb) / ts], W.n);
+      }
+      const fn = gf.make('gen_wallsF_' + (_gn++)); Kit.far[nm] = Kit.pieces[fn].prims; delete Kit.pieces[fn];
+      B.add(nm, MS, o.optsOf ? o.optsOf(k) : { zone: 0, skyVis: 1, cast: false }); }
   }
 }
 // A generated shingle roof, one outward face per surface (every kit material draws both sides itself: two faces on one plane fight for depth).
@@ -6589,7 +6598,7 @@ function infWalls(B, MS, o) {
 // nl / nr: a neighbour stands against that gable end (rake overhang 4 cm, so the roof never reaches into the next house), tint, thick (slab thickness)
 function infRoofGen(B, MS, o) {
   const g = GP(), g2 = GP(), gf = GP(), w = o.w, d = o.d, tanP = o.tanP, ridgeX = o.ridgeX !== false, len = ridgeX ? w : d, span = ridgeX ? d : w, ov = o.ov === undefined ? 0.5 : o.ov, zc = o.zc || 0, top = o.top, T = o.thick || 0.1;
-  const gov = o.gov === undefined ? 0.2 : o.gov, hs = span / 2, yR = top + hs * tanP, yE = top - ov * tanP, a0 = -len / 2 - (o.nl ? 0.04 : gov), a1 = len / 2 + (o.nr ? 0.04 : gov), ve = hs + ov;
+  const lift = o.lift || 0, gov = o.gov === undefined ? 0.2 : o.gov, hs = span / 2, yR = top + lift + hs * tanP, yE = top + lift - ov * tanP, a0 = -len / 2 - (o.nl ? 0.04 : gov), a1 = len / 2 + (o.nr ? 0.04 : gov), ve = hs + ov;
   const P = (u, v, y) => ridgeX ? [u, y, zc + v] : [v, y, zc + u];
   const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE), dark = col.map(v => v * 0.7), wood = [0.24, 0.2, 0.17];
   const OUTV = (u, v, y) => ridgeX ? [u, y, v] : [v, y, u];            // a direction in the roof's own frame -> the house frame
@@ -6599,7 +6608,7 @@ function infRoofGen(B, MS, o) {
       G.quad(INF_S, A, Bp, C, D, col, [0, 0, (a1 - a0) / 1.25, slopeLen / 1.25], up);
     }
     for (const [u, sg] of [[-len / 2, -1], [len / 2, 1]]) {
-      const A = P(u, -hs, top), Bp = P(u, hs, top), C = P(u, 0, yR);
+      const A = P(u, -hs, top), Bp = P(u, hs, top), C = P(u, 0, yR - T * 0.5);
       G.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], OUTV(sg, 0, 0));
     }
   };
@@ -6612,11 +6621,12 @@ function infRoofGen(B, MS, o) {
       g2.quad(INF_S, A, Bp, B2, A2, dark, [0, 0, slopeLen / 1.25, 0.1], OUTV(sg, 0, 0));
     }
     // soffit under the eave: from the wall line out to the tip
-    { const A = P(a0, s * hs, top - T), Bp = P(a1, s * hs, top - T), C = P(a1, s * ve, yE - T), D = P(a0, s * ve, yE - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
+    { const A = P(a0, s * hs, top + lift - T), Bp = P(a1, s * hs, top + lift - T), C = P(a1, s * ve, yE - T), D = P(a0, s * ve, yE - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
     // soffit under the rake overhang
-    for (const [u, un, ex] of [[-len / 2, a0, !o.nl], [len / 2, a1, !o.nr]]) if (ex) { const A = P(u, 0, yR - T), Bp = P(un, 0, yR - T), C = P(un, s * ve, yE - T), D = P(u, s * hs, top - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
+    for (const [u, un, ex] of [[-len / 2, a0, !o.nl], [len / 2, a1, !o.nr]]) if (ex) { const A = P(u, 0, yR - T), Bp = P(un, 0, yR - T), C = P(un, s * ve, yE - T), D = P(u, s * hs, top + lift - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
   }
   { const A = P(a0, 0, yR + 0.05), Bp = P(a1, 0, yR + 0.05); g2.beam(W_, A, Bp, 0.13, [0.26, 0.22, 0.19]); }
+  ROOFS.push({ M: Array.from(MS.elements || MS), w, d, top, tanP, ridgeX, zc, ov, lift, T, a0, a1, hs, ve, yR, yE });
   const name = g.make('gen_roof_' + (_gn++)), name2 = g2.make('gen_roofe_' + (_gn++)), fn = gf.make('gen_roofF_' + (_gn++));
   Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn]; Kit.far[name2] = [];
   B.add(name, MS, { zone: 0, skyVis: 1, cast: false, inZone: o.inZone || 0, inSkyVis: o.inSky === undefined ? 0.2 : o.inSky });
@@ -6625,7 +6635,7 @@ function infRoofGen(B, MS, o) {
 // a chimney stack that rises out of the roof: it starts below the slope (so no gap shows from any side), a lead flashing collar sits on the slope and a capped flue ends it.
 // o: x z (house frame), top, tanP, hs (half span), ridgeX, zc. Returns the height of the flue.
 function infChimney(B, MS, o) {
-  const g = GP(), gf = GP(), ridgeX = o.ridgeX !== false, v = ridgeX ? o.z - (o.zc || 0) : o.x, yS = o.top + (o.hs - Math.abs(v)) * o.tanP, yR = o.top + o.hs * o.tanP, yT = Math.max(yR + 0.95, yS + 1.5), sw = o.size || 0.46;
+  const g = GP(), gf = GP(), ridgeX = o.ridgeX !== false, v = ridgeX ? o.z - (o.zc || 0) : o.x, yS = o.top + (o.lift || 0) + (o.hs - Math.abs(v)) * o.tanP, yR = o.top + (o.lift || 0) + o.hs * o.tanP, yT = Math.max(yR + 0.95, yS + 1.5), sw = o.size || 0.46;
   const st = [0.5, 0.47, 0.43], lead = [0.3, 0.3, 0.32], cap = [0.4, 0.38, 0.35], x = o.x, z = o.z, y0 = yS - 0.35 - sw * o.tanP * 1.1;
   const uvS = [0, 0, 0.5, 1.2];
   const stack = G => { G.box(INF_B, x - sw, y0, z - sw, x + sw, yT, z + sw, st, uvS); };
