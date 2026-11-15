@@ -10,7 +10,7 @@ if (!World.cell || World.camZone !== World.houses.inn.zone) throw new Error('not
 __game.leave(); __game.tp(-4, -13.5, 0); hold(['KeyW'], 3);
 out.wall = { pos: Player.pos.map(v => +v.toFixed(2)), zone: World.camZone };
 // 3. climb the inn stairs from their foot (inside the cell)
-{ const st = World.stairs.find(q => q.id === 'inn.stairs'), a = World.spots[st.bottom], b = World.spots[st.top]; __game.tp(a.p[0], a.p[2], Math.atan2(b.p[0] - a.p[0], -(b.p[2] - a.p[2])) * 180 / Math.PI, 0, a.p[1]); hold(['KeyW'], 4); out.stairs = { pos: Player.pos.map(v => +v.toFixed(2)), top: b.p[1] }; if (Player.pos[1] < b.p[1] - 0.6) throw new Error('did not climb the stairs'); }
+{ const st = World.stairs.find(q => q.id === 'inn.up' || q.id === 'inn.stairs'), a = World.spots[st.bottom], b = World.spots[st.top]; __game.tp(a.p[0], a.p[2], Math.atan2(b.p[0] - a.p[0], -(b.p[2] - a.p[2])) * 180 / Math.PI, 0, a.p[1]); hold(['KeyW'], 4); out.stairs = { pos: Player.pos.map(v => +v.toFixed(2)), top: b.p[1] }; if (Player.pos[1] < b.p[1] - 0.6) throw new Error('did not climb the stairs'); }
 __game.leave();
 // 4. cross the bridge heading east
 __game.tp(48, 2, 90); hold(['KeyW', 'ShiftLeft'], 5);

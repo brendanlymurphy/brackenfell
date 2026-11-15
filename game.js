@@ -5725,7 +5725,11 @@ function planNav(P, add, link, doorNode) {
   for (const s of P.stairs) {
     const a = Nav.spot[P.id + '.' + s.name + '0'], b = Nav.spot[P.id + '.' + s.name + '1']; if (a === undefined || b === undefined) continue;
     const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]);
-    link(a, b); if (ra) link(a, hub[ra.id]); if (rb) link(b, hub[rb.id]);
+    link(a, b);
+    // a walker leaves a stair by stepping aside first (never straight across the stairwell)
+    const side = (pt, r, k) => { if (!r) return null; const c = pCentre(r), sg = s.axis === 'x' ? (c[1] > s.lat ? 1 : -1) : (c[0] > s.lat ? 1 : -1), off = s.hw + 0.95, L = P.lv[k]; return add(...P.w2(s.axis === 'x' ? pt[0] : pt[0] + sg * off, L.y + 0.02, s.axis === 'x' ? pt[1] + sg * off : pt[1])); };
+    const wa = side(s.lowPt, ra, s.k0), wb = side(s.highPt, rb, s.k1);
+    if (wa) { link(a, wa); link(wa, hub[ra.id]); } if (wb) { link(b, wb); link(wb, hub[rb.id]); }
   }
   P.hub = hub;
 }
@@ -5929,7 +5933,7 @@ function dressBedroom(P, room, o) {
   let placed = 0;
   for (const nm of beds) {
     let it = null;
-    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { const s = pWallSlot(P, room, sd, 1.1, 2.1, { h: 0.95, at: o.bedAt }); if (!s) continue; it = pPut(P, room, P.id + '.' + nm, s.cx, s.cz, rotBack(sd, -1), 1.1, 2.1, 0.95, pdBed(1.0, col, !!o.fur), { back: sd }); if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
+    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { const s = pWallSlot(P, room, sd, 1.1, 2.1, { h: 0.95, at: o.bedAt }); if (!s) continue; it = pPut(P, room, P.id + '.' + nm, s.cx, s.cz, rotBack(sd, -1), 1.1, 2.1, 0.95, pdBed(1.0, col, !!o.fur), { back: sd }); if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
     if (!it && nm === 'bed') P.err.push('no room for ' + nm + ' in ' + room.id);
   }
   // a chest at the foot of the first bed (or against any free wall)
@@ -6048,7 +6052,7 @@ function planHouse(P, c, info) {
   if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id] });
   dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
   if (up) {
-    if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
+    if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
     else { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false }); dressBedroom(P, P.rooms.chamber2, { beds: [], chest: false }); dressBedroom(P, P.rooms.loft, { beds: ['bed3'], chestId: 'chest3', chest: false }); }
   }
   if (!hh) P.err.push('no hearth fits in the hall');
@@ -6057,7 +6061,7 @@ function planHouse(P, c, info) {
 
 // Until every building has a designed plan, only those listed here use the plan engine in the published game: the generic plan gives every house the same hall
 // (a shop without its counter, a smithy without its forge). ?plans=all or --opt plans=all builds every house from a plan (work in progress).
-const PLAN_SHIP = {};          // none yet: the inn and chapel plans lose quest interacts (bell, inn.bed); add ids here when their plans pass test/quest.js
+const PLAN_SHIP = { inn: 1, chapel: 1 };          // designed and dressed plans only (test/parity.mjs checks nothing the old interior offered is lost)
 const PLAN_ALL = (TEST && TEST.plans === 'all') || (typeof location !== 'undefined' && /[?&]plans=all\b/.test(location.search));
 function planWanted(site, spec) { return PLAN_ON && !(TEST && TEST.plans === 0) && !!site && (!TEST || TEST.cells !== 0) && (PLAN_ALL || !!PLAN_SHIP[site.id]); }
 
@@ -6076,7 +6080,11 @@ function planBuild(c) {
   if (P.hearths && P.hearths[0]) { const h = P.hearths[0], hp = P.w2(h.x, 0, h.z); zi.hearth = [hp[0], hp[2], h.wid]; }
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
   const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
-  for (const n of P.need) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });
+  for (const n of new Set([...P.need, 'fire1', 'stand2', 'guestbed', 'barfront', 'front', 'pew1', 'pew2', 'sit', 'bed2', 'home'])) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });
+  // what the old interior offered to read or buy: a book or note on the nearest table, the rope on the counter
+  { const tab = P.items.find(i => i.k === 0 && i.kind === 'floor' && i.top > 0 && /table|counter|bar$|lectern/i.test(i.id)) || P.items.find(i => i.k === 0 && i.kind === 'floor' && i.top > 0), pos = tab ? [tab.cx, tab.top + 0.05, tab.cz] : [home ? home.x : 0, 1.0, home ? home.z : 1];
+    for (const id in READS) if (id.startsWith(P.id + '.') && !World.interact.some(i => i.id === id)) pInteract(P, pos[0], pos[1] + 0.2, pos[2], Object.assign({ kind: 'read', id, r: 1.8 }, READS[id]), 0);
+    if (P.id === 'store' && !World.interact.some(i => i.id === 'rope')) pInteract(P, pos[0], pos[1] + 0.2, pos[2], { kind: 'shopitem', id: 'rope', r: 1.6 }, 0); }
   { const fy = dd.sill[1]; c.cell.daylightFn = () => Player.pos[1] < fy - 1.0 ? 0 : undefined; }          // below the ground floor no daylight comes in
   c.planDone = P; return P;
 }
@@ -6134,8 +6142,8 @@ PLANS.chapel = (P, c, info) => {
   P.dims = { W: 14, D: 12 };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H_GROUND + 0.6);
   // nave (west, long) and the sacristy (east, with the stair to the crypt)
-  pRoom(P, 0, 'nave', 'nave', -5, 0, 5, 12); pRoom(P, 0, 'sacristy', 'sacristy', 5, 0, 9, 7);
-  pDoor(P, 'nave', null, 0, 0); pDoor(P, 'nave', 'sacristy', 5, 3.5);
+  pRoom(P, 0, 'nave', 'nave', -5, 0, 5, 12); pRoom(P, 0, 'sacristy', 'sacristy', 5, 0, 9, 7); pRoom(P, 0, 'tower', 'tower', -9, 0, -5, 5, { win: false });
+  pDoor(P, 'nave', null, 0, 0); pDoor(P, 'nave', 'sacristy', 5, 3.5); pDoor(P, 'nave', 'tower', -5, 2.5);
   // crypt: the stair arrives in the east vault; a gate leads west under the nave; a second gate-less arch to the ossuary
   pRoom(P, -1, 'vault', 'cellar', 5, 0, 9, 7, { floor: 'stone', win: false }); pRoom(P, -1, 'crypt', 'cellar', -5, 0, 5, 12, { floor: 'stone', win: false });
   pDoor(P, 'vault', 'crypt', 5, 3.5, { gate: true });
@@ -6161,6 +6169,19 @@ PLANS.chapel = (P, c, info) => {
   pFree(P, sac, P.id + '.sactable', 1.4, 0.7, 0.8, 0, pdTable(1.4, 0.7, ['candle', 'book', 'mug'], 3, c), { near: [6.5, 5.4], surface: true });
   pAgainst(P, sac, 'n', P.id + '.sacshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, ['book', 'candle', 'jug'])), {}) || pAgainst(P, sac, 'w', P.id + '.sacshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, null), {});
   pLamp(P, sac, 7, 3.2);
+  // the bell tower: a stone chamber west of the nave with the bell high above and the rope hanging down its middle
+  { const tw = P.rooms.tower, m = P.c.int, L0 = P.lv[0], cx = -7, cz = 2.5;
+    m.m1 = P.zone; m.ao = INT_AO;
+    at(m, cx, L0.y + 0.02, cz, 0, () => {
+      m.mat(MAT.TIMBER, COL.timberDark); m.box(-1.5, 2.55, -0.09, 1.5, 2.73, 0.09);
+      m.mat(MAT.METAL, COL.bronze); m.push().T(0, 2.0, 0); m.lathe([[0.48, 0], [0.42, 0.06], [0.33, 0.3], [0.27, 0.62], [0.17, 0.85], [0.03, 0.93]], 12, 0); m.mat(MAT.METAL, COL.black); m.box(-0.02, -0.12, -0.02, 0.02, 0.6, 0.02); m.ball(0, -0.12, 0, 0.07); m.pop();
+      m.mat(MAT.CLOTH, [0.75, 0.62, 0.4], 0.3); m.box(0.7 - 0.012, 0.9, -0.012, 0.7 + 0.012, 2.0, 0.012);
+    });
+    World.bell = { p: P.w2(cx, L0.y + 2.4, cz) };
+    pInteract(P, cx + 0.7, 1.4, cz, { kind: 'bell', id: 'bell', r: 1.9 }, 0);
+    pLamp(P, tw, -7, 3.5); pTorch(P, tw, 'w', 2.5, 1.7, 6.5);
+    P.occ(0, { x0: cx + 0.55, x1: cx + 0.85, z0: cz - 0.15, z1: cz + 0.15 }, 'floor', P.id + '.rope', { h: 1.0, room: 'tower', y0: L0.y });
+  }
   // the crypt: the vault is a landing, behind the gate the tombs
   pTorch(P, vault, 'n', 7.5, 1.7, 6.5) || pTorch(P, vault, 's', 7.5, 1.7, 6.5);
   pFree(P, vault, P.id + '.vbarrel', 0.9, 0.9, 0.9, 0, m => Props.barrel(m, 0.33, 0.9), { near: [5.7, 5.5] });

@@ -21,8 +21,8 @@ PLANS.chapel = (P, c, info) => {
   P.dims = { W: 14, D: 12 };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H_GROUND + 0.6);
   // nave (west, long) and the sacristy (east, with the stair to the crypt)
-  pRoom(P, 0, 'nave', 'nave', -5, 0, 5, 12); pRoom(P, 0, 'sacristy', 'sacristy', 5, 0, 9, 7);
-  pDoor(P, 'nave', null, 0, 0); pDoor(P, 'nave', 'sacristy', 5, 3.5);
+  pRoom(P, 0, 'nave', 'nave', -5, 0, 5, 12); pRoom(P, 0, 'sacristy', 'sacristy', 5, 0, 9, 7); pRoom(P, 0, 'tower', 'tower', -9, 0, -5, 5, { win: false });
+  pDoor(P, 'nave', null, 0, 0); pDoor(P, 'nave', 'sacristy', 5, 3.5); pDoor(P, 'nave', 'tower', -5, 2.5);
   // crypt: the stair arrives in the east vault; a gate leads west under the nave; a second gate-less arch to the ossuary
   pRoom(P, -1, 'vault', 'cellar', 5, 0, 9, 7, { floor: 'stone', win: false }); pRoom(P, -1, 'crypt', 'cellar', -5, 0, 5, 12, { floor: 'stone', win: false });
   pDoor(P, 'vault', 'crypt', 5, 3.5, { gate: true });
@@ -48,6 +48,19 @@ PLANS.chapel = (P, c, info) => {
   pFree(P, sac, P.id + '.sactable', 1.4, 0.7, 0.8, 0, pdTable(1.4, 0.7, ['candle', 'book', 'mug'], 3, c), { near: [6.5, 5.4], surface: true });
   pAgainst(P, sac, 'n', P.id + '.sacshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, ['book', 'candle', 'jug'])), {}) || pAgainst(P, sac, 'w', P.id + '.sacshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, null), {});
   pLamp(P, sac, 7, 3.2);
+  // the bell tower: a stone chamber west of the nave with the bell high above and the rope hanging down its middle
+  { const tw = P.rooms.tower, m = P.c.int, L0 = P.lv[0], cx = -7, cz = 2.5;
+    m.m1 = P.zone; m.ao = INT_AO;
+    at(m, cx, L0.y + 0.02, cz, 0, () => {
+      m.mat(MAT.TIMBER, COL.timberDark); m.box(-1.5, 2.55, -0.09, 1.5, 2.73, 0.09);
+      m.mat(MAT.METAL, COL.bronze); m.push().T(0, 2.0, 0); m.lathe([[0.48, 0], [0.42, 0.06], [0.33, 0.3], [0.27, 0.62], [0.17, 0.85], [0.03, 0.93]], 12, 0); m.mat(MAT.METAL, COL.black); m.box(-0.02, -0.12, -0.02, 0.02, 0.6, 0.02); m.ball(0, -0.12, 0, 0.07); m.pop();
+      m.mat(MAT.CLOTH, [0.75, 0.62, 0.4], 0.3); m.box(0.7 - 0.012, 0.9, -0.012, 0.7 + 0.012, 2.0, 0.012);
+    });
+    World.bell = { p: P.w2(cx, L0.y + 2.4, cz) };
+    pInteract(P, cx + 0.7, 1.4, cz, { kind: 'bell', id: 'bell', r: 1.9 }, 0);
+    pLamp(P, tw, -7, 3.5); pTorch(P, tw, 'w', 2.5, 1.7, 6.5);
+    P.occ(0, { x0: cx + 0.55, x1: cx + 0.85, z0: cz - 0.15, z1: cz + 0.15 }, 'floor', P.id + '.rope', { h: 1.0, room: 'tower', y0: L0.y });
+  }
   // the crypt: the vault is a landing, behind the gate the tombs
   pTorch(P, vault, 'n', 7.5, 1.7, 6.5) || pTorch(P, vault, 's', 7.5, 1.7, 6.5);
   pFree(P, vault, P.id + '.vbarrel', 0.9, 0.9, 0.9, 0, m => Props.barrel(m, 0.33, 0.9), { near: [5.7, 5.5] });

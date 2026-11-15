@@ -321,7 +321,11 @@ function planNav(P, add, link, doorNode) {
   for (const s of P.stairs) {
     const a = Nav.spot[P.id + '.' + s.name + '0'], b = Nav.spot[P.id + '.' + s.name + '1']; if (a === undefined || b === undefined) continue;
     const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]);
-    link(a, b); if (ra) link(a, hub[ra.id]); if (rb) link(b, hub[rb.id]);
+    link(a, b);
+    // a walker leaves a stair by stepping aside first (never straight across the stairwell)
+    const side = (pt, r, k) => { if (!r) return null; const c = pCentre(r), sg = s.axis === 'x' ? (c[1] > s.lat ? 1 : -1) : (c[0] > s.lat ? 1 : -1), off = s.hw + 0.95, L = P.lv[k]; return add(...P.w2(s.axis === 'x' ? pt[0] : pt[0] + sg * off, L.y + 0.02, s.axis === 'x' ? pt[1] + sg * off : pt[1])); };
+    const wa = side(s.lowPt, ra, s.k0), wb = side(s.highPt, rb, s.k1);
+    if (wa) { link(a, wa); link(wa, hub[ra.id]); } if (wb) { link(b, wb); link(wb, hub[rb.id]); }
   }
   P.hub = hub;
 }
