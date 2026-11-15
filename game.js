@@ -9985,7 +9985,7 @@ function uiFrame(dt) {
   const lab = best ? interactLabel(best) : null;
   if (best !== UI.prompt || (best && lab !== UI.promptLab)) {
     UI.prompt = best; UI.promptLab = lab; const a = $('act'); a.hidden = !best;
-    if (best) { const [v, rest] = promptParts(lab); $('actVerb').textContent = v; $('actLabel').textContent = rest; $('actKey').textContent = 'E'; }
+    if (best) { const [v, rest] = promptParts(lab); $('actVerb').textContent = v; $('actName').textContent = rest; $('actLabel').textContent = lab; $('actKey').textContent = 'E'; }
   }
   UI.promptPos = bp;
   // compass: the cardinal points, a gold diamond for each active quest, a small mark and name for places you have found
