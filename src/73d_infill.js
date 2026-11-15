@@ -98,7 +98,7 @@ function infRoofGen(B, MS, o) {
   const plane = (v0, y0, v1, y1) => {
     const A = P(a0, v0, y0), Bp = P(a1, v0, y0), C = P(a1, v1, y1), D = P(a0, v1, y1);
     const uv = [0, 0, (a1 - a0) / 1.25, slopeLen / 1.25];
-    g.quad(INF_S, A, Bp, C, D, col, uv, true);
+    g.quad(INF_S, A, Bp, C, D, col, uv, [0, 1, 0]);
   };
   plane(-ve, yE, 0, yR); plane(ve, yE, 0, yR);
   const wood = [0.2, 0.17, 0.15];
@@ -109,7 +109,7 @@ function infRoofGen(B, MS, o) {
   // plank gables on the wall plane, closing the roof over an exposed end wall
   for (const [u, on, sg] of [[-len / 2, o.gl !== false, -1], [len / 2, o.gr !== false, 1]]) if (on) {
     const A = P(u, -hs, top), Bp = P(u, hs, top), C = P(u, 0, yR);
-    g.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], true);
+    { const O = P(u + sg, 0, top), Z = P(u, 0, top); g.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], [O[0] - Z[0], 0, O[2] - Z[2]]); }
   }
   B.add(g.make('gen_roof_' + (_gn++)), MS, { zone: 0, skyVis: 1, cast: false, inZone: o.inZone || 0, inSkyVis: o.inSky === undefined ? 0.2 : o.inSky });
 }
