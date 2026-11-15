@@ -5,7 +5,7 @@
 // buildings a second storey with a balcony. Props.* calls made while furnishing are swapped for kit props at the same place.
 const HOUSE_STYLE = (TEST && TEST.house) || 'kit';        // 'kit' | 'legacy' (the generated houses)
 const KIT_STYLE = {
-  inn: { ground: 'stone', pitch: 50, vines: 4, banner: true, round: true },
+  inn: { ground: 'stone', pitch: 50, vines: 4, banner: true, round: true, dormers: [-4.2, 4.2] },
   smithy: { ground: 'stone', vines: 1 },
   store: { ground: 'plaster', up: 1, balcony: 'front', vines: 2 },
   elder: { ground: 'stone', up: 1, vines: 3 },
@@ -248,18 +248,18 @@ const KIT_WALL = {            // width, height of the pivot above the floor, sta
   Shield_Wooden: [0.7, 1.9, 0.01], Banner_1_Cloth: [0.85, 2.7, 0.05], Banner_2_Cloth: [0.85, 2.6, 0.05], Axe_Bronze: [0.4, 1.75, 0.04], Pickaxe_Bronze: [0.85, 1.8, 0.08], Sword_Bronze: [0.35, 1.5, 0.04],
 };
 const KIT_DRESS = {
-  inn: { floor: ['CandleStick_Stand', 'Barrel_Holder', 'Cabinet', 'Barrel', 'Crate_Wooden', 'Bag', 'Barrel'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Shield_Wooden', 'Torch_Metal', 'Banner_2_Cloth', 'Peg_Rack', 'Shelf_Simple', 'Torch_Metal'] },
+  inn: { floor: ['CandleStick_Stand', 'Barrel_Holder', 'Cabinet', 'Barrel', 'Crate_Wooden', 'Bag', 'Barrel'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Shield_Wooden', 'Torch_Metal', 'Banner_1_Cloth', 'Peg_Rack', 'Shelf_Simple', 'Torch_Metal'] },
   smithy: { floor: ['Workbench', 'WeaponStand', 'Barrel', 'Whetstone', 'Crate_Wooden', 'Bucket_Wooden_1'], wall: ['Torch_Metal', 'Peg_Rack', 'Pickaxe_Bronze', 'Axe_Bronze', 'Shield_Wooden', 'Torch_Metal'] },
   store: { floor: ['Cabinet', 'Bookcase_2', 'Crate_Wooden', 'FarmCrate_Apple', 'Barrel', 'FarmCrate_Carrot', 'Bag', 'Vase_2', 'Nightstand_Shelf', 'Barrel_Apples'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch', 'Torch_Metal', 'Peg_Rack'] },
-  elder: { floor: ['Bookcase_2', 'BookStand', 'Bookcase_2', 'CandleStick_Stand', 'Cabinet', 'Nightstand_Shelf'], wall: ['Shelf_Arch', 'Torch_Metal', 'Banner_2_Cloth', 'Shelf_Simple'] },
+  elder: { floor: ['Bookcase_2', 'BookStand', 'Bookcase_2', 'CandleStick_Stand', 'Cabinet', 'Nightstand_Shelf'], wall: ['Shelf_Arch', 'Torch_Metal', 'Banner_1_Cloth', 'Shelf_Simple'] },
   herbalist: { floor: ['Cabinet', 'Nightstand_Shelf', 'Vase_2', 'Bucket_Wooden_1', 'Bag', 'Crate_Wooden'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch'] },
   guardhouse: { floor: ['WeaponStand', 'Dummy', 'Barrel', 'Crate_Wooden', 'Nightstand_Shelf'], wall: ['Shield_Wooden', 'Torch_Metal', 'Peg_Rack', 'Banner_1_Cloth', 'Sword_Bronze', 'Torch_Metal'] },
-  weaver: { floor: ['Cabinet', 'Nightstand_Shelf', 'Bag', 'Crate_Wooden', 'Vase_2'], wall: ['Shelf_Simple', 'Torch_Metal', 'Banner_2_Cloth', 'Peg_Rack'] },
+  weaver: { floor: ['Cabinet', 'Nightstand_Shelf', 'Bag', 'Crate_Wooden', 'Vase_2'], wall: ['Shelf_Simple', 'Torch_Metal', 'Banner_1_Cloth', 'Peg_Rack'] },
   mill: { floor: ['Bag', 'Barrel', 'Bag', 'Crate_Wooden', 'Bag', 'Bucket_Wooden_1', 'Nightstand_Shelf'], wall: ['Torch_Metal', 'Peg_Rack', 'Shelf_Simple'] },
   farm: { floor: ['FarmCrate_Apple', 'Barrel_Apples', 'FarmCrate_Carrot', 'Bag', 'Cabinet', 'Bucket_Wooden_1'], wall: ['Shelf_Simple', 'Torch_Metal', 'Peg_Rack'] },
   hunter: { floor: ['Crate_Wooden', 'Barrel', 'Bag', 'WeaponStand'], wall: ['Torch_Metal', 'Peg_Rack', 'Axe_Bronze', 'Shield_Wooden'] },
   fisher: { floor: ['Barrel', 'Bucket_Wooden_1', 'Crate_Wooden'], wall: ['Torch_Metal', 'Peg_Rack'] },
-  chapel: { floor: ['CandleStick_Stand', 'CandleStick_Stand', 'BookStand', 'CandleStick_Stand', 'CandleStick_Stand'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'Banner_2_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal'] },
+  chapel: { floor: ['CandleStick_Stand', 'CandleStick_Stand', 'BookStand', 'CandleStick_Stand', 'CandleStick_Stand'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal'] },
 };
 // extra dressing per building, once its own interior has been laid out
 function kitDress(c) {
@@ -322,8 +322,10 @@ function kitDress(c) {
   for (let i = 0; i < (st.vines || 0); i++) {
     const wn = R.pick(['back', 'left', 'right', 'front', 'back']), L = WALLS[wn].len(w, d), u = 0.9 + R() * (L - 1.8), up = !!st.up && R() < 0.6;
     if (!up && c.openings[wn].some(o => Math.abs((o.u0 + o.u1) / 2 - u) < 1.5)) continue;
+    if (up && st.balcony === wn && Math.abs(u - L / 2) < 2.6) continue;
     c.kb.add(R.pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine1', 'Prop_Vine4']), KH.xf(c.kFrames[wn], u, up ? H + 2.45 : H * 0.84, 0.1, [1.2, up ? 1.2 : Math.min(1.2, H * 0.84 / 2.2), 1]), EXT);
   }
+  if (st.dormers) for (const x of st.dormers) { const z = -hd * 0.5, y = c.kYtop + hd * 0.5 * c.tanP - 0.35; c.kb.add('Roof_Dormer_RoundTile', KH.xf(c.kMS, x, y, z, 1.25, PI), { zone: 0, skyVis: 1 }); }
   if (st.banner) { const dw = spec.doors[0].wall, o = c.openings[dw].find(q => q.door), L = WALLS[dw].len(w, d); if (o) for (const sg of [-1, 1]) { const u = (o.u0 + o.u1) / 2 + sg * 2.3; if (u > 0.6 && u < L - 0.6) c.kb.add(sg < 0 ? 'Banner_1' : 'Banner_2', KH.xf(c.kFrames[dw], u, Math.min(3.1 * sy, H + 0.5), 0.12, 1, -PI / 2), EXT); } }
 }
 
