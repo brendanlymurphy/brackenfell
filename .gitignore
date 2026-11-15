@@ -6,3 +6,7 @@ shots/
 /game.js
 /index.html
 /chars/
+
+# local link to the conversion tool dependencies (kept outside the repo)
+tools/scan/node_modules
+/node_modules

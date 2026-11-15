@@ -1,0 +1,5779 @@
+{
+ "metal_jug": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "metal_jug",
+  "category": "container",
+  "min": [
+   -0.098,
+   0,
+   -0.098
+  ],
+  "max": [
+   0.098,
+   0.287,
+   0.098
+  ],
+  "size": [
+   0.196,
+   0.288,
+   0.195
+  ],
+  "tris": 948,
+  "materials": [
+   "metal_jug"
+  ],
+  "alpha": false
+ },
+ "planter_pot_clay": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "planter_pot_clay",
+  "category": "container",
+  "min": [
+   -0.134,
+   0,
+   -0.12
+  ],
+  "max": [
+   0.132,
+   0.222,
+   0.143
+  ],
+  "size": [
+   0.266,
+   0.222,
+   0.263
+  ],
+  "tris": 990,
+  "materials": [
+   "planter_pot_clay"
+  ],
+  "alpha": false
+ },
+ "treasure_chest": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "treasure_chest",
+  "category": "container",
+  "min": [
+   -0.475,
+   -0.001,
+   -0.26
+  ],
+  "max": [
+   0.474,
+   0.615,
+   0.262
+  ],
+  "size": [
+   0.949,
+   0.616,
+   0.522
+  ],
+  "tris": 2664,
+  "materials": [
+   "treasure_chest"
+  ],
+  "alpha": false,
+  "metal": 0.36
+ },
+ "wicker_basket_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wicker_basket_02",
+  "category": "container",
+  "min": [
+   -0.107,
+   0,
+   -0.145
+  ],
+  "max": [
+   0.238,
+   0.2,
+   0.109
+  ],
+  "size": [
+   0.344,
+   0.2,
+   0.254
+  ],
+  "tris": 1032,
+  "materials": [
+   "wicker_basket_02"
+  ],
+  "alpha": false
+ },
+ "wine_barrel_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wine_barrel_01",
+  "category": "container",
+  "min": [
+   -0.371,
+   0.002,
+   -0.371
+  ],
+  "max": [
+   0.371,
+   0.871,
+   0.381
+  ],
+  "size": [
+   0.742,
+   0.87,
+   0.752
+  ],
+  "tris": 2293,
+  "materials": [
+   "wine_barrel_01"
+  ],
+  "alpha": false
+ },
+ "wooden_barrels_01_a": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_barrels_01",
+  "category": "container",
+  "min": [
+   -0.369,
+   0,
+   -0.369
+  ],
+  "max": [
+   0.369,
+   0.917,
+   0.369
+  ],
+  "size": [
+   0.738,
+   0.917,
+   0.738
+  ],
+  "tris": 2530,
+  "materials": [
+   "wooden_barrels_01_barrel02"
+  ],
+  "alpha": false
+ },
+ "wooden_barrels_01_b": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_barrels_01",
+  "category": "container",
+  "min": [
+   -0.369,
+   0,
+   -0.369
+  ],
+  "max": [
+   0.369,
+   0.911,
+   0.369
+  ],
+  "size": [
+   0.738,
+   0.911,
+   0.738
+  ],
+  "tris": 2486,
+  "materials": [
+   "wooden_barrels_01_barrel01"
+  ],
+  "alpha": false
+ },
+ "wooden_barrels_01_c": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_barrels_01",
+  "category": "container",
+  "min": [
+   -0.374,
+   0,
+   -0.438
+  ],
+  "max": [
+   0.374,
+   0.354,
+   0.438
+  ],
+  "size": [
+   0.748,
+   0.354,
+   0.876
+  ],
+  "tris": 4160,
+  "materials": [
+   "wooden_barrels_01_pieces"
+  ],
+  "alpha": false
+ },
+ "wooden_barrels_01_d": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_barrels_01",
+  "category": "container",
+  "min": [
+   -0.291,
+   0,
+   -0.437
+  ],
+  "max": [
+   0.291,
+   0.196,
+   0.437
+  ],
+  "size": [
+   0.581,
+   0.196,
+   0.874
+  ],
+  "tris": 2240,
+  "materials": [
+   "wooden_barrels_01_pieces"
+  ],
+  "alpha": false
+ },
+ "wooden_barrels_01_e": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_barrels_01",
+  "category": "container",
+  "min": [
+   -0.281,
+   0,
+   -0.438
+  ],
+  "max": [
+   0.281,
+   0.188,
+   0.438
+  ],
+  "size": [
+   0.561,
+   0.188,
+   0.877
+  ],
+  "tris": 2184,
+  "materials": [
+   "wooden_barrels_01_pieces"
+  ],
+  "alpha": false
+ },
+ "wooden_barrels_01_f": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_barrels_01",
+  "category": "container",
+  "min": [
+   -0.038,
+   0,
+   -0.436
+  ],
+  "max": [
+   0.038,
+   0.101,
+   0.436
+  ],
+  "size": [
+   0.076,
+   0.101,
+   0.871
+  ],
+  "tris": 198,
+  "materials": [
+   "wooden_barrels_01_pieces"
+  ],
+  "alpha": false
+ },
+ "wooden_barrels_01_g": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_barrels_01",
+  "category": "container",
+  "min": [
+   -0.031,
+   0,
+   -0.435
+  ],
+  "max": [
+   0.031,
+   0.104,
+   0.435
+  ],
+  "size": [
+   0.062,
+   0.104,
+   0.871
+  ],
+  "tris": 202,
+  "materials": [
+   "wooden_barrels_01_pieces"
+  ],
+  "alpha": false
+ },
+ "wooden_barrels_01_h": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_barrels_01",
+  "category": "container",
+  "min": [
+   -0.041,
+   0,
+   -0.345
+  ],
+  "max": [
+   0.041,
+   0.1,
+   0.345
+  ],
+  "size": [
+   0.083,
+   0.1,
+   0.691
+  ],
+  "tris": 206,
+  "materials": [
+   "wooden_barrels_01_pieces"
+  ],
+  "alpha": false
+ },
+ "wooden_bucket_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_bucket_01",
+  "category": "container",
+  "min": [
+   -0.184,
+   0,
+   -0.169
+  ],
+  "max": [
+   0.183,
+   0.548,
+   0.171
+  ],
+  "size": [
+   0.366,
+   0.548,
+   0.341
+  ],
+  "tris": 1294,
+  "materials": [
+   "wooden_bucket_01"
+  ],
+  "alpha": false
+ },
+ "wooden_bucket_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_bucket_02",
+  "category": "container",
+  "min": [
+   -0.306,
+   0,
+   -0.306
+  ],
+  "max": [
+   0.305,
+   0.351,
+   0.306
+  ],
+  "size": [
+   0.611,
+   0.35,
+   0.612
+  ],
+  "tris": 1452,
+  "materials": [
+   "wooden_bucket_02"
+  ],
+  "alpha": false
+ },
+ "wooden_crate_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_crate_01",
+  "category": "container",
+  "min": [
+   -0.412,
+   -0.006,
+   -0.195
+  ],
+  "max": [
+   0.412,
+   0.341,
+   0.212
+  ],
+  "size": [
+   0.824,
+   0.347,
+   0.407
+  ],
+  "tris": 1488,
+  "materials": [
+   "wooden_crate_01"
+  ],
+  "alpha": false
+ },
+ "wooden_crate_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_crate_02",
+  "category": "container",
+  "min": [
+   -0.265,
+   -0.01,
+   -0.58
+  ],
+  "max": [
+   0.265,
+   0.454,
+   0.583
+  ],
+  "size": [
+   0.529,
+   0.464,
+   1.163
+  ],
+  "tris": 1750,
+  "materials": [
+   "wooden_crate_02"
+  ],
+  "alpha": false
+ },
+ "concrete_cat_statue": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "concrete_cat_statue",
+  "category": "decor",
+  "min": [
+   -0.078,
+   0,
+   -0.15
+  ],
+  "max": [
+   0.075,
+   0.283,
+   0.1
+  ],
+  "size": [
+   0.152,
+   0.283,
+   0.25
+  ],
+  "tris": 1532,
+  "materials": [
+   "concrete_cat_statue"
+  ],
+  "alpha": false
+ },
+ "fancy_picture_frame_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "fancy_picture_frame_01",
+  "category": "decor",
+  "min": [
+   -0.302,
+   -0.232,
+   0.002
+  ],
+  "max": [
+   0.302,
+   0.232,
+   0.022
+  ],
+  "size": [
+   0.603,
+   0.464,
+   0.02
+  ],
+  "tris": 938,
+  "materials": [
+   "fancy_picture_frame_01",
+   "fancy_picture_frame_01_canvas"
+  ],
+  "alpha": false
+ },
+ "fancy_picture_frame_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "fancy_picture_frame_02",
+  "category": "decor",
+  "min": [
+   -0.332,
+   -0.391,
+   0.001
+  ],
+  "max": [
+   0.328,
+   0.38,
+   0.09
+  ],
+  "size": [
+   0.66,
+   0.771,
+   0.089
+  ],
+  "tris": 2424,
+  "materials": [
+   "fancy_picture_frame_02",
+   "fancy_picture_frame_02_canvas"
+  ],
+  "alpha": false
+ },
+ "gothic_statue": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "gothic_statue",
+  "category": "decor",
+  "min": [
+   -0.78,
+   -0.008,
+   -1.189
+  ],
+  "max": [
+   0.68,
+   1.722,
+   0.374
+  ],
+  "size": [
+   1.46,
+   1.73,
+   1.564
+  ],
+  "tris": 3151,
+  "materials": [
+   "gothic_statue"
+  ],
+  "alpha": false
+ },
+ "marble_bust_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "marble_bust_01",
+  "category": "decor",
+  "min": [
+   -0.123,
+   0,
+   -0.144
+  ],
+  "max": [
+   0.149,
+   0.515,
+   0.154
+  ],
+  "size": [
+   0.272,
+   0.515,
+   0.298
+  ],
+  "tris": 1942,
+  "materials": [
+   "marble_bust_01"
+  ],
+  "alpha": false
+ },
+ "ornate_mirror_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "ornate_mirror_01",
+  "category": "decor",
+  "min": [
+   -0.243,
+   -0.41,
+   0
+  ],
+  "max": [
+   0.243,
+   0.333,
+   0.026
+  ],
+  "size": [
+   0.486,
+   0.744,
+   0.026
+  ],
+  "tris": 2262,
+  "materials": [
+   "ornate_mirror_01"
+  ],
+  "alpha": false,
+  "metal": 0.72
+ },
+ "croissant": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "croissant",
+  "category": "food",
+  "min": [
+   -0.102,
+   -0.001,
+   -0.032
+  ],
+  "max": [
+   0.098,
+   0.061,
+   0.043
+  ],
+  "size": [
+   0.2,
+   0.062,
+   0.076
+  ],
+  "tris": 1990,
+  "materials": [
+   "croissant"
+  ],
+  "alpha": false
+ },
+ "food_apple_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "food_apple_01",
+  "category": "food",
+  "min": [
+   -0.048,
+   0,
+   -0.046
+  ],
+  "max": [
+   0.049,
+   0.085,
+   0.05
+  ],
+  "size": [
+   0.097,
+   0.085,
+   0.096
+  ],
+  "tris": 842,
+  "materials": [
+   "food_apple_01"
+  ],
+  "alpha": false
+ },
+ "food_pears_asian_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "food_pears_asian_01",
+  "category": "food",
+  "min": [
+   -0.08,
+   0,
+   -0.101
+  ],
+  "max": [
+   0.046,
+   0.071,
+   0.066
+  ],
+  "size": [
+   0.126,
+   0.071,
+   0.167
+  ],
+  "tris": 986,
+  "materials": [
+   "food_pears_asian_01"
+  ],
+  "alpha": false
+ },
+ "food_pomegranate_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "food_pomegranate_01",
+  "category": "food",
+  "min": [
+   -0.06,
+   0,
+   -0.058
+  ],
+  "max": [
+   0.054,
+   0.115,
+   0.058
+  ],
+  "size": [
+   0.114,
+   0.115,
+   0.115
+  ],
+  "tris": 1106,
+  "materials": [
+   "food_pomegranate_01"
+  ],
+  "alpha": false
+ },
+ "hamburger_buns_a": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "hamburger_buns",
+  "category": "food",
+  "min": [
+   -0.052,
+   0,
+   -0.057
+  ],
+  "max": [
+   0.052,
+   0.063,
+   0.057
+  ],
+  "size": [
+   0.104,
+   0.063,
+   0.114
+  ],
+  "tris": 858,
+  "materials": [
+   "hamburger_buns"
+  ],
+  "alpha": false
+ },
+ "hamburger_buns_b": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "hamburger_buns",
+  "category": "food",
+  "min": [
+   -0.055,
+   0,
+   -0.053
+  ],
+  "max": [
+   0.055,
+   0.058,
+   0.053
+  ],
+  "size": [
+   0.111,
+   0.058,
+   0.106
+  ],
+  "tris": 850,
+  "materials": [
+   "hamburger_buns"
+  ],
+  "alpha": false
+ },
+ "hamburger_buns_c": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "hamburger_buns",
+  "category": "food",
+  "min": [
+   -0.054,
+   0,
+   -0.049
+  ],
+  "max": [
+   0.054,
+   0.057,
+   0.049
+  ],
+  "size": [
+   0.107,
+   0.057,
+   0.098
+  ],
+  "tris": 830,
+  "materials": [
+   "hamburger_buns"
+  ],
+  "alpha": false
+ },
+ "sweet_potato": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "sweet_potato",
+  "category": "food",
+  "min": [
+   -0.028,
+   -0.052,
+   -0.031
+  ],
+  "max": [
+   0.03,
+   0.048,
+   0.03
+  ],
+  "size": [
+   0.058,
+   0.1,
+   0.061
+  ],
+  "tris": 760,
+  "materials": [
+   "sweet_potato"
+  ],
+  "alpha": false
+ },
+ "yellow_onion": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "yellow_onion",
+  "category": "food",
+  "min": [
+   -0.037,
+   0,
+   -0.037
+  ],
+  "max": [
+   0.036,
+   0.086,
+   0.031
+  ],
+  "size": [
+   0.072,
+   0.086,
+   0.069
+  ],
+  "tris": 920,
+  "materials": [
+   "yellow_onion"
+  ],
+  "alpha": false
+ },
+ "bark_debris_01_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "bark_debris_01",
+  "category": "ground-cover",
+  "min": [
+   -0.068,
+   0,
+   -0.301
+  ],
+  "max": [
+   0.063,
+   0.106,
+   0.303
+  ],
+  "size": [
+   0.131,
+   0.106,
+   0.604
+  ],
+  "tris": 874,
+  "materials": [
+   "bark_debris_01"
+  ],
+  "alpha": false
+ },
+ "bark_debris_01_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "bark_debris_01",
+  "category": "ground-cover",
+  "min": [
+   -0.073,
+   0,
+   -0.286
+  ],
+  "max": [
+   0.071,
+   0.089,
+   0.281
+  ],
+  "size": [
+   0.143,
+   0.089,
+   0.566
+  ],
+  "tris": 1134,
+  "materials": [
+   "bark_debris_01"
+  ],
+  "alpha": false
+ },
+ "bark_debris_01_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "bark_debris_01",
+  "category": "ground-cover",
+  "min": [
+   -0.099,
+   0.002,
+   -0.232
+  ],
+  "max": [
+   0.098,
+   0.083,
+   0.23
+  ],
+  "size": [
+   0.197,
+   0.082,
+   0.461
+  ],
+  "tris": 806,
+  "materials": [
+   "bark_debris_01"
+  ],
+  "alpha": false
+ },
+ "bark_debris_01_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "bark_debris_01",
+  "category": "ground-cover",
+  "min": [
+   -0.093,
+   0.002,
+   -0.196
+  ],
+  "max": [
+   0.093,
+   0.061,
+   0.198
+  ],
+  "size": [
+   0.186,
+   0.059,
+   0.393
+  ],
+  "tris": 734,
+  "materials": [
+   "bark_debris_01"
+  ],
+  "alpha": false
+ },
+ "dead_tree_trunk": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "dead_tree_trunk",
+  "category": "ground-cover",
+  "min": [
+   -1.535,
+   -0.027,
+   -0.169
+  ],
+  "max": [
+   1.51,
+   0.26,
+   0.105
+  ],
+  "size": [
+   3.044,
+   0.287,
+   0.274
+  ],
+  "tris": 1930,
+  "materials": [
+   "dead_tree_trunk"
+  ],
+  "alpha": false
+ },
+ "dead_tree_trunk_02": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "dead_tree_trunk_02",
+  "category": "ground-cover",
+  "min": [
+   -1.923,
+   -0.327,
+   -0.499
+  ],
+  "max": [
+   2.125,
+   0.72,
+   0.55
+  ],
+  "size": [
+   4.048,
+   1.048,
+   1.049
+  ],
+  "tris": 2000,
+  "materials": [
+   "dead_tree_trunk_02"
+  ],
+  "alpha": false
+ },
+ "dry_branches_medium_01_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "dry_branches_medium_01",
+  "category": "ground-cover",
+  "min": [
+   -0.16,
+   0.001,
+   -0.65
+  ],
+  "max": [
+   0.162,
+   0.341,
+   0.647
+  ],
+  "size": [
+   0.322,
+   0.34,
+   1.296
+  ],
+  "tris": 1293,
+  "materials": [
+   "dry_branches_medium_01"
+  ],
+  "alpha": false
+ },
+ "dry_branches_medium_01_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "dry_branches_medium_01",
+  "category": "ground-cover",
+  "min": [
+   -0.076,
+   0,
+   -0.519
+  ],
+  "max": [
+   0.076,
+   0.141,
+   0.519
+  ],
+  "size": [
+   0.151,
+   0.141,
+   1.039
+  ],
+  "tris": 1132,
+  "materials": [
+   "dry_branches_medium_01"
+  ],
+  "alpha": false
+ },
+ "dry_branches_medium_01_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "dry_branches_medium_01",
+  "category": "ground-cover",
+  "min": [
+   -0.064,
+   0,
+   -0.387
+  ],
+  "max": [
+   0.064,
+   0.143,
+   0.388
+  ],
+  "size": [
+   0.128,
+   0.143,
+   0.775
+  ],
+  "tris": 984,
+  "materials": [
+   "dry_branches_medium_01"
+  ],
+  "alpha": false
+ },
+ "pine_roots_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "pine_roots",
+  "category": "ground-cover",
+  "min": [
+   -0.865,
+   0.002,
+   -0.41
+  ],
+  "max": [
+   0.868,
+   0.144,
+   0.412
+  ],
+  "size": [
+   1.733,
+   0.142,
+   0.823
+  ],
+  "tris": 1524,
+  "materials": [
+   "pine_roots_a"
+  ],
+  "alpha": false
+ },
+ "pine_roots_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "pine_roots",
+  "category": "ground-cover",
+  "min": [
+   -0.813,
+   0.001,
+   -0.494
+  ],
+  "max": [
+   0.814,
+   0.145,
+   0.496
+  ],
+  "size": [
+   1.628,
+   0.144,
+   0.99
+  ],
+  "tris": 1517,
+  "materials": [
+   "pine_roots_b"
+  ],
+  "alpha": false
+ },
+ "root_cluster_01": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "root_cluster_01",
+  "category": "ground-cover",
+  "min": [
+   -2.062,
+   -0.044,
+   -0.992
+  ],
+  "max": [
+   2.028,
+   1.464,
+   1.684
+  ],
+  "size": [
+   4.09,
+   1.508,
+   2.676
+  ],
+  "tris": 1995,
+  "materials": [
+   "root_cluster_01"
+  ],
+  "alpha": false
+ },
+ "single_root": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "single_root",
+  "category": "ground-cover",
+  "min": [
+   -0.226,
+   -0.08,
+   0.253
+  ],
+  "max": [
+   0.327,
+   0.095,
+   2.089
+  ],
+  "size": [
+   0.554,
+   0.175,
+   1.836
+  ],
+  "tris": 1522,
+  "materials": [
+   "single_root"
+  ],
+  "alpha": false
+ },
+ "tree_stump_01": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "tree_stump_01",
+  "category": "ground-cover",
+  "min": [
+   -0.784,
+   -0.193,
+   -0.759
+  ],
+  "max": [
+   0.641,
+   0.378,
+   0.829
+  ],
+  "size": [
+   1.426,
+   0.571,
+   1.587
+  ],
+  "tris": 1634,
+  "materials": [
+   "tree_stump_01"
+  ],
+  "alpha": false
+ },
+ "tree_stump_02": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "tree_stump_02",
+  "category": "ground-cover",
+  "min": [
+   -0.717,
+   -0.232,
+   -0.673
+  ],
+  "max": [
+   0.8,
+   0.286,
+   0.718
+  ],
+  "size": [
+   1.517,
+   0.518,
+   1.391
+  ],
+  "tris": 1603,
+  "materials": [
+   "tree_stump_02"
+  ],
+  "alpha": false
+ },
+ "brass_candleholders_a": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_candleholders",
+  "category": "light-source",
+  "min": [
+   -0.202,
+   0,
+   -0.182
+  ],
+  "max": [
+   0.204,
+   0.802,
+   0.182
+  ],
+  "size": [
+   0.405,
+   0.802,
+   0.365
+  ],
+  "tris": 1999,
+  "materials": [
+   "brass_candleholders_03"
+  ],
+  "alpha": false,
+  "lights": [
+   [
+    0.001,
+    0.818,
+    0
+   ],
+   [
+    0.001,
+    0.818,
+    0
+   ],
+   [
+    0.001,
+    0.818,
+    0
+   ],
+   [
+    0.001,
+    0.818,
+    0
+   ],
+   [
+    0.172,
+    0.734,
+    0
+   ],
+   [
+    0.172,
+    0.734,
+    0
+   ],
+   [
+    0.172,
+    0.734,
+    0
+   ],
+   [
+    0.172,
+    0.734,
+    0
+   ],
+   [
+    -0.172,
+    0.734,
+    0
+   ],
+   [
+    -0.172,
+    0.734,
+    0
+   ],
+   [
+    -0.172,
+    0.734,
+    0
+   ],
+   [
+    -0.172,
+    0.734,
+    0
+   ],
+   [
+    0.088,
+    0.739,
+    0.149
+   ],
+   [
+    0.088,
+    0.739,
+    0.149
+   ],
+   [
+    0.088,
+    0.739,
+    0.149
+   ],
+   [
+    0.088,
+    0.739,
+    0.149
+   ],
+   [
+    -0.088,
+    0.739,
+    -0.149
+   ],
+   [
+    -0.088,
+    0.739,
+    -0.149
+   ],
+   [
+    -0.088,
+    0.739,
+    -0.149
+   ],
+   [
+    -0.088,
+    0.739,
+    -0.149
+   ],
+   [
+    0.086,
+    0.739,
+    -0.151
+   ],
+   [
+    0.086,
+    0.739,
+    -0.151
+   ],
+   [
+    0.086,
+    0.739,
+    -0.151
+   ],
+   [
+    0.086,
+    0.739,
+    -0.151
+   ],
+   [
+    -0.088,
+    0.741,
+    0.147
+   ],
+   [
+    -0.088,
+    0.741,
+    0.147
+   ],
+   [
+    -0.088,
+    0.741,
+    0.147
+   ],
+   [
+    -0.088,
+    0.741,
+    0.147
+   ]
+  ],
+  "metal": 0.99
+ },
+ "brass_candleholders_b": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_candleholders",
+  "category": "light-source",
+  "min": [
+   -0.131,
+   0,
+   -0.049
+  ],
+  "max": [
+   0.131,
+   0.379,
+   0.049
+  ],
+  "size": [
+   0.261,
+   0.379,
+   0.097
+  ],
+  "tris": 1796,
+  "materials": [
+   "brass_candleholders_02",
+   "brass_candleholders_candles"
+  ],
+  "alpha": false,
+  "lights": [
+   [
+    0,
+    0.389,
+    0
+   ],
+   [
+    0,
+    0.389,
+    0
+   ],
+   [
+    0,
+    0.389,
+    0
+   ],
+   [
+    0,
+    0.389,
+    0
+   ],
+   [
+    -0.106,
+    0.371,
+    0
+   ],
+   [
+    -0.106,
+    0.371,
+    0
+   ],
+   [
+    -0.106,
+    0.371,
+    0
+   ],
+   [
+    -0.106,
+    0.371,
+    0
+   ],
+   [
+    0.106,
+    0.37,
+    0
+   ],
+   [
+    0.106,
+    0.37,
+    0
+   ],
+   [
+    0.106,
+    0.37,
+    0
+   ],
+   [
+    0.106,
+    0.37,
+    0
+   ]
+  ],
+  "metal": 0.99
+ },
+ "brass_candleholders_c": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_candleholders",
+  "category": "light-source",
+  "min": [
+   -0.049,
+   0,
+   -0.049
+  ],
+  "max": [
+   0.049,
+   0.348,
+   0.049
+  ],
+  "size": [
+   0.097,
+   0.348,
+   0.097
+  ],
+  "tris": 2364,
+  "materials": [
+   "brass_candleholders_01"
+  ],
+  "alpha": false,
+  "lights": [
+   [
+    0,
+    0.354,
+    0
+   ],
+   [
+    0,
+    0.354,
+    0
+   ],
+   [
+    0,
+    0.354,
+    0
+   ],
+   [
+    0,
+    0.354,
+    0
+   ]
+  ],
+  "metal": 0.99
+ },
+ "brass_diya_lantern": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_diya_lantern",
+  "category": "light-source",
+  "min": [
+   -0.056,
+   0,
+   -0.068
+  ],
+  "max": [
+   0.067,
+   0.381,
+   0.055
+  ],
+  "size": [
+   0.122,
+   0.381,
+   0.123
+  ],
+  "tris": 1545,
+  "materials": [
+   "brass_diya_lantern",
+   "Lantern_01_glass"
+  ],
+  "alpha": true,
+  "lights": [
+   [
+    0.006,
+    0.066,
+    -0.004
+   ],
+   [
+    0.006,
+    0.066,
+    -0.004
+   ]
+  ],
+  "metal": 0.83
+ },
+ "lantern_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "Lantern_01",
+  "category": "light-source",
+  "min": [
+   -0.061,
+   0.002,
+   -0.048
+  ],
+  "max": [
+   0.06,
+   0.291,
+   0.047
+  ],
+  "size": [
+   0.121,
+   0.289,
+   0.095
+  ],
+  "tris": 1676,
+  "materials": [
+   "Lantern_01_brass",
+   "Lantern_01_glass"
+  ],
+  "alpha": true,
+  "lights": [
+   [
+    0,
+    0.138,
+    0
+   ]
+  ],
+  "metal": 0.63
+ },
+ "wooden_candlestick": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_candlestick",
+  "category": "light-source",
+  "min": [
+   -0.049,
+   0,
+   -0.049
+  ],
+  "max": [
+   0.048,
+   0.219,
+   0.049
+  ],
+  "size": [
+   0.097,
+   0.219,
+   0.099
+  ],
+  "tris": 1223,
+  "materials": [
+   "wooden_candlestick"
+  ],
+  "alpha": false,
+  "lights": [
+   [
+    0,
+    0.228,
+    0
+   ]
+  ]
+ },
+ "wooden_lantern_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_lantern_01",
+  "category": "light-source",
+  "min": [
+   -0.11,
+   -0.01,
+   -0.11
+  ],
+  "max": [
+   0.111,
+   0.518,
+   0.124
+  ],
+  "size": [
+   0.221,
+   0.529,
+   0.234
+  ],
+  "tris": 1927,
+  "materials": [
+   "wooden_lantern_01",
+   "Lantern_01_glass"
+  ],
+  "alpha": true,
+  "lights": [
+   [
+    0,
+    0.164,
+    0.007
+   ]
+  ]
+ },
+ "dandelion_01_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "dandelion_01",
+  "category": "plant",
+  "min": [
+   -0.11,
+   0,
+   -0.129
+  ],
+  "max": [
+   0.11,
+   0.163,
+   0.129
+  ],
+  "size": [
+   0.22,
+   0.163,
+   0.258
+  ],
+  "tris": 921,
+  "materials": [
+   "dandelion_01"
+  ],
+  "alpha": true
+ },
+ "dandelion_01_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "dandelion_01",
+  "category": "plant",
+  "min": [
+   -0.101,
+   0,
+   -0.109
+  ],
+  "max": [
+   0.101,
+   0.113,
+   0.109
+  ],
+  "size": [
+   0.202,
+   0.113,
+   0.218
+  ],
+  "tris": 845,
+  "materials": [
+   "dandelion_01"
+  ],
+  "alpha": true
+ },
+ "dandelion_01_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "dandelion_01",
+  "category": "plant",
+  "min": [
+   -0.107,
+   0,
+   -0.103
+  ],
+  "max": [
+   0.107,
+   0.047,
+   0.103
+  ],
+  "size": [
+   0.214,
+   0.047,
+   0.205
+  ],
+  "tris": 2080,
+  "materials": [
+   "dandelion_01"
+  ],
+  "alpha": true
+ },
+ "dandelion_01_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "dandelion_01",
+  "category": "plant",
+  "min": [
+   -0.085,
+   0,
+   -0.084
+  ],
+  "max": [
+   0.085,
+   0.101,
+   0.084
+  ],
+  "size": [
+   0.17,
+   0.101,
+   0.167
+  ],
+  "tris": 763,
+  "materials": [
+   "dandelion_01"
+  ],
+  "alpha": true
+ },
+ "dandelion_01_e": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "dandelion_01",
+  "category": "plant",
+  "min": [
+   -0.061,
+   0,
+   -0.072
+  ],
+  "max": [
+   0.061,
+   0.055,
+   0.072
+  ],
+  "size": [
+   0.122,
+   0.055,
+   0.144
+  ],
+  "tris": 665,
+  "materials": [
+   "dandelion_01"
+  ],
+  "alpha": true
+ },
+ "fern_02_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "fern_02",
+  "category": "plant",
+  "min": [
+   -0.495,
+   0,
+   -0.447
+  ],
+  "max": [
+   0.495,
+   0.428,
+   0.447
+  ],
+  "size": [
+   0.99,
+   0.428,
+   0.894
+  ],
+  "tris": 2384,
+  "materials": [
+   "fern_02"
+  ],
+  "alpha": true
+ },
+ "fern_02_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "fern_02",
+  "category": "plant",
+  "min": [
+   -0.437,
+   0,
+   -0.383
+  ],
+  "max": [
+   0.437,
+   0.349,
+   0.383
+  ],
+  "size": [
+   0.874,
+   0.349,
+   0.765
+  ],
+  "tris": 2248,
+  "materials": [
+   "fern_02"
+  ],
+  "alpha": true
+ },
+ "fern_02_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "fern_02",
+  "category": "plant",
+  "min": [
+   -0.276,
+   0,
+   -0.307
+  ],
+  "max": [
+   0.276,
+   0.287,
+   0.307
+  ],
+  "size": [
+   0.552,
+   0.287,
+   0.613
+  ],
+  "tris": 784,
+  "materials": [
+   "fern_02"
+  ],
+  "alpha": true
+ },
+ "fern_02_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "fern_02",
+  "category": "plant",
+  "min": [
+   -0.286,
+   0,
+   -0.297
+  ],
+  "max": [
+   0.286,
+   0.213,
+   0.297
+  ],
+  "size": [
+   0.573,
+   0.213,
+   0.593
+  ],
+  "tris": 816,
+  "materials": [
+   "fern_02"
+  ],
+  "alpha": true
+ },
+ "flower_ursinia_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "flower_ursinia",
+  "category": "plant",
+  "min": [
+   -0.213,
+   0,
+   -0.172
+  ],
+  "max": [
+   0.213,
+   0.164,
+   0.172
+  ],
+  "size": [
+   0.425,
+   0.164,
+   0.343
+  ],
+  "tris": 1084,
+  "materials": [
+   "flower_ursinia"
+  ],
+  "alpha": true
+ },
+ "flower_ursinia_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "flower_ursinia",
+  "category": "plant",
+  "min": [
+   -0.139,
+   0,
+   -0.13
+  ],
+  "max": [
+   0.138,
+   0.13,
+   0.13
+  ],
+  "size": [
+   0.277,
+   0.13,
+   0.26
+  ],
+  "tris": 890,
+  "materials": [
+   "flower_ursinia"
+  ],
+  "alpha": true
+ },
+ "flower_ursinia_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "flower_ursinia",
+  "category": "plant",
+  "min": [
+   -0.13,
+   0,
+   -0.099
+  ],
+  "max": [
+   0.13,
+   0.15,
+   0.099
+  ],
+  "size": [
+   0.261,
+   0.15,
+   0.199
+  ],
+  "tris": 853,
+  "materials": [
+   "flower_ursinia"
+  ],
+  "alpha": true
+ },
+ "flower_ursinia_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "flower_ursinia",
+  "category": "plant",
+  "min": [
+   -0.093,
+   0,
+   -0.075
+  ],
+  "max": [
+   0.093,
+   0.133,
+   0.075
+  ],
+  "size": [
+   0.186,
+   0.133,
+   0.151
+  ],
+  "tris": 785,
+  "materials": [
+   "flower_ursinia"
+  ],
+  "alpha": true
+ },
+ "flower_ursinia_e": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "flower_ursinia",
+  "category": "plant",
+  "min": [
+   -0.069,
+   0,
+   -0.079
+  ],
+  "max": [
+   0.069,
+   0.074,
+   0.079
+  ],
+  "size": [
+   0.138,
+   0.074,
+   0.157
+  ],
+  "tris": 696,
+  "materials": [
+   "flower_ursinia"
+  ],
+  "alpha": true
+ },
+ "nettle_plant_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "nettle_plant",
+  "category": "plant",
+  "min": [
+   -0.051,
+   0,
+   -0.045
+  ],
+  "max": [
+   0.052,
+   0.214,
+   0.045
+  ],
+  "size": [
+   0.103,
+   0.214,
+   0.09
+  ],
+  "tris": 865,
+  "materials": [
+   "nettle_plant"
+  ],
+  "alpha": true
+ },
+ "nettle_plant_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "nettle_plant",
+  "category": "plant",
+  "min": [
+   -0.041,
+   0,
+   -0.047
+  ],
+  "max": [
+   0.041,
+   0.188,
+   0.047
+  ],
+  "size": [
+   0.082,
+   0.187,
+   0.095
+  ],
+  "tris": 718,
+  "materials": [
+   "nettle_plant"
+  ],
+  "alpha": true
+ },
+ "nettle_plant_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "nettle_plant",
+  "category": "plant",
+  "min": [
+   -0.039,
+   0,
+   -0.045
+  ],
+  "max": [
+   0.039,
+   0.131,
+   0.044
+  ],
+  "size": [
+   0.077,
+   0.131,
+   0.089
+  ],
+  "tris": 629,
+  "materials": [
+   "nettle_plant"
+  ],
+  "alpha": true
+ },
+ "nettle_plant_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "nettle_plant",
+  "category": "plant",
+  "min": [
+   -0.033,
+   0,
+   -0.033
+  ],
+  "max": [
+   0.032,
+   0.104,
+   0.033
+  ],
+  "size": [
+   0.065,
+   0.104,
+   0.066
+  ],
+  "tris": 561,
+  "materials": [
+   "nettle_plant"
+  ],
+  "alpha": true
+ },
+ "nettle_plant_e": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "nettle_plant",
+  "category": "plant",
+  "min": [
+   -0.032,
+   0,
+   -0.022
+  ],
+  "max": [
+   0.032,
+   0.063,
+   0.021
+  ],
+  "size": [
+   0.064,
+   0.063,
+   0.043
+  ],
+  "tris": 581,
+  "materials": [
+   "nettle_plant"
+  ],
+  "alpha": true
+ },
+ "nettle_plant_f": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "nettle_plant",
+  "category": "plant",
+  "min": [
+   -0.03,
+   0,
+   -0.019
+  ],
+  "max": [
+   0.03,
+   0.022,
+   0.019
+  ],
+  "size": [
+   0.06,
+   0.022,
+   0.038
+  ],
+  "tris": 408,
+  "materials": [
+   "nettle_plant"
+  ],
+  "alpha": true
+ },
+ "periwinkle_plant_e": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "periwinkle_plant",
+  "category": "plant",
+  "min": [
+   -0.055,
+   0,
+   -0.07
+  ],
+  "max": [
+   0.056,
+   0.206,
+   0.07
+  ],
+  "size": [
+   0.111,
+   0.206,
+   0.139
+  ],
+  "tris": 779,
+  "materials": [
+   "periwinkle_plant"
+  ],
+  "alpha": true
+ },
+ "periwinkle_plant_f": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "periwinkle_plant",
+  "category": "plant",
+  "min": [
+   -0.051,
+   0,
+   -0.045
+  ],
+  "max": [
+   0.051,
+   0.16,
+   0.045
+  ],
+  "size": [
+   0.103,
+   0.16,
+   0.089
+  ],
+  "tris": 1478,
+  "materials": [
+   "periwinkle_plant"
+  ],
+  "alpha": true
+ },
+ "shrub_02_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_02",
+  "category": "plant",
+  "min": [
+   -0.883,
+   0.002,
+   -1.143
+  ],
+  "max": [
+   0.882,
+   1.315,
+   1.143
+  ],
+  "size": [
+   1.765,
+   1.313,
+   2.285
+  ],
+  "tris": 1464,
+  "materials": [
+   "shrub_02"
+  ],
+  "alpha": true
+ },
+ "shrub_02_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_02",
+  "category": "plant",
+  "min": [
+   -0.656,
+   0.001,
+   -0.821
+  ],
+  "max": [
+   0.656,
+   1.687,
+   0.821
+  ],
+  "size": [
+   1.312,
+   1.687,
+   1.641
+  ],
+  "tris": 1487,
+  "materials": [
+   "shrub_02"
+  ],
+  "alpha": true
+ },
+ "shrub_02_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_02",
+  "category": "plant",
+  "min": [
+   -0.555,
+   0,
+   -0.639
+  ],
+  "max": [
+   0.555,
+   1.506,
+   0.64
+  ],
+  "size": [
+   1.11,
+   1.506,
+   1.279
+  ],
+  "tris": 1496,
+  "materials": [
+   "shrub_02"
+  ],
+  "alpha": true
+ },
+ "shrub_02_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_02",
+  "category": "plant",
+  "min": [
+   -0.54,
+   0.002,
+   -0.549
+  ],
+  "max": [
+   0.54,
+   1.229,
+   0.549
+  ],
+  "size": [
+   1.08,
+   1.227,
+   1.098
+  ],
+  "tris": 1500,
+  "materials": [
+   "shrub_02"
+  ],
+  "alpha": true
+ },
+ "shrub_03_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_03",
+  "category": "plant",
+  "min": [
+   -0.1,
+   0,
+   -0.076
+  ],
+  "max": [
+   0.1,
+   0.403,
+   0.076
+  ],
+  "size": [
+   0.201,
+   0.403,
+   0.151
+  ],
+  "tris": 2385,
+  "materials": [
+   "shrub_03"
+  ],
+  "alpha": true
+ },
+ "shrub_03_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_03",
+  "category": "plant",
+  "min": [
+   -0.092,
+   0,
+   -0.061
+  ],
+  "max": [
+   0.092,
+   0.353,
+   0.061
+  ],
+  "size": [
+   0.184,
+   0.353,
+   0.123
+  ],
+  "tris": 2134,
+  "materials": [
+   "shrub_03"
+  ],
+  "alpha": true
+ },
+ "shrub_03_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_03",
+  "category": "plant",
+  "min": [
+   -0.048,
+   0,
+   -0.057
+  ],
+  "max": [
+   0.048,
+   0.304,
+   0.057
+  ],
+  "size": [
+   0.096,
+   0.304,
+   0.113
+  ],
+  "tris": 1790,
+  "materials": [
+   "shrub_03"
+  ],
+  "alpha": true
+ },
+ "shrub_03_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_03",
+  "category": "plant",
+  "min": [
+   -0.056,
+   0,
+   -0.045
+  ],
+  "max": [
+   0.056,
+   0.256,
+   0.045
+  ],
+  "size": [
+   0.113,
+   0.256,
+   0.089
+  ],
+  "tris": 1978,
+  "materials": [
+   "shrub_03"
+  ],
+  "alpha": true
+ },
+ "shrub_04": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_04",
+  "category": "plant",
+  "min": [
+   -0.024,
+   -0.005,
+   -0.075
+  ],
+  "max": [
+   0.559,
+   0.213,
+   0.071
+  ],
+  "size": [
+   0.584,
+   0.218,
+   0.146
+  ],
+  "tris": 1167,
+  "materials": [
+   "shrub_04"
+  ],
+  "alpha": true
+ },
+ "shrub_sorrel_01_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_sorrel_01",
+  "category": "plant",
+  "min": [
+   -0.036,
+   0,
+   -0.03
+  ],
+  "max": [
+   0.036,
+   0.049,
+   0.03
+  ],
+  "size": [
+   0.073,
+   0.049,
+   0.059
+  ],
+  "tris": 414,
+  "materials": [
+   "shrub_sorrel_01"
+  ],
+  "alpha": true
+ },
+ "shrub_sorrel_01_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_sorrel_01",
+  "category": "plant",
+  "min": [
+   -0.03,
+   0,
+   -0.024
+  ],
+  "max": [
+   0.03,
+   0.054,
+   0.024
+  ],
+  "size": [
+   0.061,
+   0.054,
+   0.049
+  ],
+  "tris": 990,
+  "materials": [
+   "shrub_sorrel_01"
+  ],
+  "alpha": true
+ },
+ "shrub_sorrel_01_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_sorrel_01",
+  "category": "plant",
+  "min": [
+   -0.032,
+   0,
+   -0.026
+  ],
+  "max": [
+   0.032,
+   0.045,
+   0.026
+  ],
+  "size": [
+   0.064,
+   0.045,
+   0.051
+  ],
+  "tris": 503,
+  "materials": [
+   "shrub_sorrel_01"
+  ],
+  "alpha": true
+ },
+ "shrub_sorrel_01_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_sorrel_01",
+  "category": "plant",
+  "min": [
+   -0.019,
+   0,
+   -0.028
+  ],
+  "max": [
+   0.019,
+   0.056,
+   0.028
+  ],
+  "size": [
+   0.038,
+   0.056,
+   0.055
+  ],
+  "tris": 353,
+  "materials": [
+   "shrub_sorrel_01"
+  ],
+  "alpha": true
+ },
+ "shrub_sorrel_01_e": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_sorrel_01",
+  "category": "plant",
+  "min": [
+   -0.021,
+   0,
+   -0.02
+  ],
+  "max": [
+   0.021,
+   0.035,
+   0.02
+  ],
+  "size": [
+   0.042,
+   0.035,
+   0.039
+  ],
+  "tris": 284,
+  "materials": [
+   "shrub_sorrel_01"
+  ],
+  "alpha": true
+ },
+ "shrub_sorrel_01_g": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "shrub_sorrel_01",
+  "category": "plant",
+  "min": [
+   -0.016,
+   0,
+   -0.023
+  ],
+  "max": [
+   0.016,
+   0.023,
+   0.023
+  ],
+  "size": [
+   0.032,
+   0.023,
+   0.045
+  ],
+  "tris": 355,
+  "materials": [
+   "shrub_sorrel_01"
+  ],
+  "alpha": true
+ },
+ "weed_plant_02_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "weed_plant_02",
+  "category": "plant",
+  "min": [
+   -0.11,
+   0,
+   -0.145
+  ],
+  "max": [
+   0.11,
+   0.072,
+   0.145
+  ],
+  "size": [
+   0.219,
+   0.072,
+   0.291
+  ],
+  "tris": 914,
+  "materials": [
+   "weed_plant_02"
+  ],
+  "alpha": true
+ },
+ "weed_plant_02_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "weed_plant_02",
+  "category": "plant",
+  "min": [
+   -0.094,
+   0,
+   -0.099
+  ],
+  "max": [
+   0.094,
+   0.068,
+   0.099
+  ],
+  "size": [
+   0.188,
+   0.068,
+   0.199
+  ],
+  "tris": 796,
+  "materials": [
+   "weed_plant_02"
+  ],
+  "alpha": true
+ },
+ "weed_plant_02_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "weed_plant_02",
+  "category": "plant",
+  "min": [
+   -0.071,
+   0,
+   -0.072
+  ],
+  "max": [
+   0.071,
+   0.055,
+   0.072
+  ],
+  "size": [
+   0.142,
+   0.055,
+   0.143
+  ],
+  "tris": 1766,
+  "materials": [
+   "weed_plant_02"
+  ],
+  "alpha": true
+ },
+ "weed_plant_02_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "weed_plant_02",
+  "category": "plant",
+  "min": [
+   -0.077,
+   0,
+   -0.054
+  ],
+  "max": [
+   0.077,
+   0.039,
+   0.054
+  ],
+  "size": [
+   0.154,
+   0.039,
+   0.108
+  ],
+  "tris": 657,
+  "materials": [
+   "weed_plant_02"
+  ],
+  "alpha": true
+ },
+ "weed_plant_02_e": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "weed_plant_02",
+  "category": "plant",
+  "min": [
+   -0.06,
+   0,
+   -0.03
+  ],
+  "max": [
+   0.06,
+   0.04,
+   0.03
+  ],
+  "size": [
+   0.119,
+   0.04,
+   0.061
+  ],
+  "tris": 561,
+  "materials": [
+   "weed_plant_02"
+  ],
+  "alpha": true
+ },
+ "wild_rooibos_bush_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "wild_rooibos_bush",
+  "category": "plant",
+  "min": [
+   -0.588,
+   0,
+   -0.406
+  ],
+  "max": [
+   0.579,
+   0.528,
+   0.417
+  ],
+  "size": [
+   1.168,
+   0.528,
+   0.823
+  ],
+  "tris": 1483,
+  "materials": [
+   "wild_rooibos_bush_twigs",
+   "wild_rooibos_bush"
+  ],
+  "alpha": true
+ },
+ "wild_rooibos_bush_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "wild_rooibos_bush",
+  "category": "plant",
+  "min": [
+   -0.377,
+   0.001,
+   -0.236
+  ],
+  "max": [
+   0.382,
+   0.448,
+   0.236
+  ],
+  "size": [
+   0.758,
+   0.447,
+   0.472
+  ],
+  "tris": 1425,
+  "materials": [
+   "wild_rooibos_bush_twigs",
+   "wild_rooibos_bush"
+  ],
+  "alpha": true
+ },
+ "wild_rooibos_bush_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "wild_rooibos_bush",
+  "category": "plant",
+  "min": [
+   -0.139,
+   0,
+   -0.083
+  ],
+  "max": [
+   0.139,
+   0.306,
+   0.083
+  ],
+  "size": [
+   0.278,
+   0.306,
+   0.166
+  ],
+  "tris": 1193,
+  "materials": [
+   "wild_rooibos_bush_twigs",
+   "wild_rooibos_bush"
+  ],
+  "alpha": true
+ },
+ "classicnightstand_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "ClassicNightstand_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.284,
+   0,
+   -0.212
+  ],
+  "max": [
+   0.284,
+   0.7,
+   0.212
+  ],
+  "size": [
+   0.568,
+   0.7,
+   0.424
+  ],
+  "tris": 2002,
+  "materials": [
+   "ClassicNightstand_01"
+  ],
+  "alpha": false
+ },
+ "dining_table": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "dining_table",
+  "category": "prop-furniture",
+  "min": [
+   -1.133,
+   -0.004,
+   -0.678
+  ],
+  "max": [
+   1.123,
+   0.873,
+   0.712
+  ],
+  "size": [
+   2.256,
+   0.877,
+   1.39
+  ],
+  "tris": 1048,
+  "materials": [
+   "dining_table"
+  ],
+  "alpha": false
+ },
+ "folding_wooden_stool": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "folding_wooden_stool",
+  "category": "prop-furniture",
+  "min": [
+   -0.263,
+   0.001,
+   -0.272
+  ],
+  "max": [
+   0.264,
+   0.442,
+   0.275
+  ],
+  "size": [
+   0.527,
+   0.441,
+   0.547
+  ],
+  "tris": 1874,
+  "materials": [
+   "folding_wooden_stool"
+  ],
+  "alpha": false
+ },
+ "gothic_coffee_table": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "gothic_coffee_table",
+  "category": "prop-furniture",
+  "min": [
+   -0.72,
+   0.001,
+   -0.719
+  ],
+  "max": [
+   0.72,
+   0.558,
+   0.721
+  ],
+  "size": [
+   1.44,
+   0.557,
+   1.44
+  ],
+  "tris": 3628,
+  "materials": [
+   "gothic_coffee_table"
+  ],
+  "alpha": false
+ },
+ "gothicbed_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "GothicBed_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.71,
+   0,
+   -1.053
+  ],
+  "max": [
+   0.781,
+   1.534,
+   0.987
+  ],
+  "size": [
+   1.491,
+   1.534,
+   2.04
+  ],
+  "tris": 3019,
+  "materials": [
+   "GothicBed_01"
+  ],
+  "alpha": false
+ },
+ "gothiccabinet_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "GothicCabinet_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.86,
+   0,
+   -0.457
+  ],
+  "max": [
+   0.86,
+   2.361,
+   0.659
+  ],
+  "size": [
+   1.719,
+   2.361,
+   1.117
+  ],
+  "tris": 2999,
+  "materials": [
+   "GothicCabinet_01"
+  ],
+  "alpha": false
+ },
+ "gothiccommode_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "GothicCommode_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.602,
+   0,
+   -0.289
+  ],
+  "max": [
+   0.6,
+   1.212,
+   0.292
+  ],
+  "size": [
+   1.201,
+   1.212,
+   0.581
+  ],
+  "tris": 3897,
+  "materials": [
+   "GothicCommode_01"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_bench": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "painted_wooden_bench",
+  "category": "prop-furniture",
+  "min": [
+   -0.576,
+   0,
+   -0.254
+  ],
+  "max": [
+   0.589,
+   0.889,
+   0.243
+  ],
+  "size": [
+   1.165,
+   0.889,
+   0.497
+  ],
+  "tris": 630,
+  "materials": [
+   "painted_wooden_bench"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_cabinet": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "painted_wooden_cabinet",
+  "category": "prop-furniture",
+  "min": [
+   -0.595,
+   0,
+   -0.282
+  ],
+  "max": [
+   0.6,
+   1.181,
+   0.334
+  ],
+  "size": [
+   1.195,
+   1.182,
+   0.617
+  ],
+  "tris": 2227,
+  "materials": [
+   "painted_wooden_cabinet"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_cabinet_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "painted_wooden_cabinet_02",
+  "category": "prop-furniture",
+  "min": [
+   -0.498,
+   -0.001,
+   -0.322
+  ],
+  "max": [
+   0.498,
+   2.568,
+   0.4
+  ],
+  "size": [
+   0.997,
+   2.569,
+   0.722
+  ],
+  "tris": 966,
+  "materials": [
+   "painted_wooden_cabinet_02"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_chair_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "painted_wooden_chair_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.217,
+   -0.001,
+   -0.301
+  ],
+  "max": [
+   0.214,
+   0.956,
+   0.239
+  ],
+  "size": [
+   0.432,
+   0.956,
+   0.54
+  ],
+  "tris": 724,
+  "materials": [
+   "painted_wooden_chair_01"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_chair_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "painted_wooden_chair_02",
+  "category": "prop-furniture",
+  "min": [
+   -0.335,
+   0,
+   -0.363
+  ],
+  "max": [
+   0.305,
+   1.264,
+   0.299
+  ],
+  "size": [
+   0.639,
+   1.264,
+   0.662
+  ],
+  "tris": 1246,
+  "materials": [
+   "painted_wooden_chair_02"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_nightstand": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "painted_wooden_nightstand",
+  "category": "prop-furniture",
+  "min": [
+   -0.253,
+   0,
+   -0.249
+  ],
+  "max": [
+   0.251,
+   0.616,
+   0.259
+  ],
+  "size": [
+   0.505,
+   0.616,
+   0.509
+  ],
+  "tris": 470,
+  "materials": [
+   "painted_wooden_nightstand"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_shelves": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "painted_wooden_shelves",
+  "category": "prop-furniture",
+  "min": [
+   -0.256,
+   -0.001,
+   0
+  ],
+  "max": [
+   0.256,
+   1.124,
+   0.367
+  ],
+  "size": [
+   0.511,
+   1.125,
+   0.367
+  ],
+  "tris": 524,
+  "materials": [
+   "painted_wooden_shelves"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_stool": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "painted_wooden_stool",
+  "category": "prop-furniture",
+  "min": [
+   -0.187,
+   -0.001,
+   -0.19
+  ],
+  "max": [
+   0.197,
+   0.578,
+   0.216
+  ],
+  "size": [
+   0.385,
+   0.579,
+   0.406
+  ],
+  "tris": 676,
+  "materials": [
+   "painted_wooden_stool"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_table": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "painted_wooden_table",
+  "category": "prop-furniture",
+  "min": [
+   -1.203,
+   0,
+   -0.571
+  ],
+  "max": [
+   1.202,
+   0.958,
+   0.566
+  ],
+  "size": [
+   2.406,
+   0.959,
+   1.137
+  ],
+  "tris": 600,
+  "materials": [
+   "painted_wooden_table"
+  ],
+  "alpha": false
+ },
+ "rockingchair_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "Rockingchair_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.354,
+   0.102,
+   -0.354
+  ],
+  "max": [
+   0.354,
+   1.097,
+   0.479
+  ],
+  "size": [
+   0.708,
+   0.995,
+   0.833
+  ],
+  "tris": 2432,
+  "materials": [
+   "Rockingchair_01"
+  ],
+  "alpha": false
+ },
+ "round_wooden_table_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "round_wooden_table_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.7,
+   -0.001,
+   -0.698
+  ],
+  "max": [
+   0.7,
+   1.004,
+   0.7
+  ],
+  "size": [
+   1.399,
+   1.004,
+   1.398
+  ],
+  "tris": 2980,
+  "materials": [
+   "round_wooden_table_01"
+  ],
+  "alpha": false
+ },
+ "shelf_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "Shelf_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.502,
+   0,
+   0
+  ],
+  "max": [
+   0.502,
+   2.08,
+   0.257
+  ],
+  "size": [
+   1.003,
+   2.08,
+   0.257
+  ],
+  "tris": 182,
+  "materials": [
+   "Shelf_01"
+  ],
+  "alpha": false
+ },
+ "vintage_cabinet_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "vintage_cabinet_01",
+  "category": "prop-furniture",
+  "min": [
+   -1.01,
+   -0.001,
+   -0.278
+  ],
+  "max": [
+   1.01,
+   2.234,
+   0.392
+  ],
+  "size": [
+   2.02,
+   2.235,
+   0.67
+  ],
+  "tris": 3072,
+  "materials": [
+   "vintage_cabinet_01_a",
+   "vintage_cabinet_01_b",
+   "Lantern_01_glass"
+  ],
+  "alpha": true
+ },
+ "wooden_bookshelf_worn": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_bookshelf_worn",
+  "category": "prop-furniture",
+  "min": [
+   -0.687,
+   0,
+   -0.291
+  ],
+  "max": [
+   0.687,
+   2.063,
+   0.291
+  ],
+  "size": [
+   1.374,
+   2.063,
+   0.581
+  ],
+  "tris": 3000,
+  "materials": [
+   "wooden_bookshelf_worn"
+  ],
+  "alpha": false
+ },
+ "wooden_picnic_table": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_picnic_table",
+  "category": "prop-furniture",
+  "min": [
+   -1.119,
+   0,
+   -1.5
+  ],
+  "max": [
+   1.12,
+   0.746,
+   1.521
+  ],
+  "size": [
+   2.239,
+   0.746,
+   3.021
+  ],
+  "tris": 2998,
+  "materials": [
+   "wooden_picnic_table_bottom",
+   "wooden_picnic_table_table"
+  ],
+  "alpha": false
+ },
+ "wooden_stool_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_stool_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.212,
+   0.001,
+   -0.221
+  ],
+  "max": [
+   0.212,
+   0.437,
+   0.221
+  ],
+  "size": [
+   0.425,
+   0.437,
+   0.442
+  ],
+  "tris": 1736,
+  "materials": [
+   "wooden_stool_01"
+  ],
+  "alpha": false
+ },
+ "wooden_stool_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_stool_02",
+  "category": "prop-furniture",
+  "min": [
+   -0.133,
+   0,
+   -0.096
+  ],
+  "max": [
+   0.132,
+   0.182,
+   0.087
+  ],
+  "size": [
+   0.265,
+   0.182,
+   0.183
+  ],
+  "tris": 1216,
+  "materials": [
+   "wooden_stool_02"
+  ],
+  "alpha": false
+ },
+ "wooden_table_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_table_02",
+  "category": "prop-furniture",
+  "min": [
+   -0.567,
+   0,
+   -0.353
+  ],
+  "max": [
+   0.567,
+   0.799,
+   0.353
+  ],
+  "size": [
+   1.134,
+   0.8,
+   0.706
+  ],
+  "tris": 196,
+  "materials": [
+   "wooden_table_02"
+  ],
+  "alpha": false
+ },
+ "woodenchair_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "WoodenChair_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.344,
+   -0.001,
+   -0.367
+  ],
+  "max": [
+   0.344,
+   2.272,
+   0.288
+  ],
+  "size": [
+   0.687,
+   2.274,
+   0.656
+  ],
+  "tris": 2999,
+  "materials": [
+   "WoodenChair_01"
+  ],
+  "alpha": false
+ },
+ "woodentable_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "WoodenTable_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.9,
+   0,
+   -0.329
+  ],
+  "max": [
+   0.9,
+   0.549,
+   0.329
+  ],
+  "size": [
+   1.8,
+   0.549,
+   0.657
+  ],
+  "tris": 952,
+  "materials": [
+   "WoodenTable_01"
+  ],
+  "alpha": false
+ },
+ "woodentable_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "WoodenTable_02",
+  "category": "prop-furniture",
+  "min": [
+   -0.15,
+   0,
+   -0.15
+  ],
+  "max": [
+   0.15,
+   0.418,
+   0.15
+  ],
+  "size": [
+   0.301,
+   0.418,
+   0.301
+  ],
+  "tris": 1514,
+  "materials": [
+   "WoodenTable_02"
+  ],
+  "alpha": false
+ },
+ "antique_ceramic_vase_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "antique_ceramic_vase_01",
+  "category": "prop-small",
+  "min": [
+   -0.128,
+   0,
+   -0.128
+  ],
+  "max": [
+   0.126,
+   0.439,
+   0.128
+  ],
+  "size": [
+   0.254,
+   0.44,
+   0.255
+  ],
+  "tris": 1500,
+  "materials": [
+   "antique_ceramic_vase_01"
+  ],
+  "alpha": false
+ },
+ "book_encyclopedia_set_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "book_encyclopedia_set_01",
+  "category": "prop-small",
+  "min": [
+   -0.019,
+   0,
+   -0.062
+  ],
+  "max": [
+   0.532,
+   0.237,
+   0.101
+  ],
+  "size": [
+   0.551,
+   0.237,
+   0.163
+  ],
+  "tris": 1490,
+  "materials": [
+   "book_encyclopedia_set_01_cover",
+   "book_encyclopedia_set_01_paper"
+  ],
+  "alpha": false
+ },
+ "brass_goblets": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_goblets",
+  "category": "prop-small",
+  "min": [
+   -0.22,
+   0.005,
+   -0.102
+  ],
+  "max": [
+   0.231,
+   0.278,
+   0.195
+  ],
+  "size": [
+   0.451,
+   0.273,
+   0.297
+  ],
+  "tris": 1500,
+  "materials": [
+   "brass_goblets_01",
+   "brass_goblets_02",
+   "brass_goblets_03"
+  ],
+  "alpha": false,
+  "metal": 1
+ },
+ "brass_pan_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_pan_01",
+  "category": "prop-small",
+  "min": [
+   -0.095,
+   0,
+   -0.352
+  ],
+  "max": [
+   0.096,
+   0.053,
+   0.097
+  ],
+  "size": [
+   0.191,
+   0.052,
+   0.45
+  ],
+  "tris": 1472,
+  "materials": [
+   "brass_pan_01"
+  ],
+  "alpha": false,
+  "metal": 0.89
+ },
+ "brass_pot_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_pot_01",
+  "category": "prop-small",
+  "min": [
+   -0.151,
+   -0.001,
+   -0.151
+  ],
+  "max": [
+   0.151,
+   0.29,
+   0.151
+  ],
+  "size": [
+   0.302,
+   0.291,
+   0.302
+  ],
+  "tris": 3760,
+  "materials": [
+   "brass_pot_01"
+  ],
+  "alpha": false,
+  "metal": 0.95
+ },
+ "brass_pot_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_pot_02",
+  "category": "prop-small",
+  "min": [
+   -0.183,
+   0,
+   -0.151
+  ],
+  "max": [
+   0.183,
+   0.108,
+   0.151
+  ],
+  "size": [
+   0.367,
+   0.109,
+   0.302
+  ],
+  "tris": 3344,
+  "materials": [
+   "brass_pot_02"
+  ],
+  "alpha": false,
+  "metal": 0.92
+ },
+ "brass_vase_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_vase_01",
+  "category": "prop-small",
+  "min": [
+   -0.114,
+   0.001,
+   -0.113
+  ],
+  "max": [
+   0.114,
+   0.694,
+   0.114
+  ],
+  "size": [
+   0.227,
+   0.692,
+   0.227
+  ],
+  "tris": 1499,
+  "materials": [
+   "brass_vase_001"
+  ],
+  "alpha": false,
+  "metal": 1
+ },
+ "brass_vase_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_vase_02",
+  "category": "prop-small",
+  "min": [
+   -0.104,
+   0,
+   -0.105
+  ],
+  "max": [
+   0.106,
+   0.529,
+   0.105
+  ],
+  "size": [
+   0.21,
+   0.529,
+   0.21
+  ],
+  "tris": 1500,
+  "materials": [
+   "brass_vase_02"
+  ],
+  "alpha": false,
+  "metal": 0.91
+ },
+ "brass_vase_03": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_vase_03",
+  "category": "prop-small",
+  "min": [
+   -0.041,
+   0.001,
+   -0.041
+  ],
+  "max": [
+   0.041,
+   0.201,
+   0.041
+  ],
+  "size": [
+   0.083,
+   0.2,
+   0.083
+  ],
+  "tris": 2616,
+  "materials": [
+   "brass_vase_03"
+  ],
+  "alpha": false,
+  "metal": 0.96
+ },
+ "brass_vase_04": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "brass_vase_04",
+  "category": "prop-small",
+  "min": [
+   -0.051,
+   0,
+   -0.031
+  ],
+  "max": [
+   0.03,
+   0.17,
+   0.03
+  ],
+  "size": [
+   0.082,
+   0.17,
+   0.061
+  ],
+  "tris": 935,
+  "materials": [
+   "brass_vase_04"
+  ],
+  "alpha": false,
+  "metal": 0.95
+ },
+ "carved_wooden_plate": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "carved_wooden_plate",
+  "category": "prop-small",
+  "min": [
+   -0.137,
+   -0.002,
+   -0.142
+  ],
+  "max": [
+   0.134,
+   0.036,
+   0.127
+  ],
+  "size": [
+   0.272,
+   0.038,
+   0.269
+  ],
+  "tris": 2112,
+  "materials": [
+   "carved_wooden_plate"
+  ],
+  "alpha": false
+ },
+ "ceramic_pot": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "ceramic_pot",
+  "category": "prop-small",
+  "min": [
+   -0.328,
+   -0.001,
+   -0.251
+  ],
+  "max": [
+   0.328,
+   0.371,
+   0.251
+  ],
+  "size": [
+   0.656,
+   0.372,
+   0.502
+  ],
+  "tris": 3592,
+  "materials": [
+   "ceramic_pot"
+  ],
+  "alpha": false
+ },
+ "ceramic_vase_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "ceramic_vase_01",
+  "category": "prop-small",
+  "min": [
+   -0.101,
+   0.002,
+   -0.101
+  ],
+  "max": [
+   0.101,
+   0.401,
+   0.101
+  ],
+  "size": [
+   0.202,
+   0.4,
+   0.202
+  ],
+  "tris": 1474,
+  "materials": [
+   "ceramic_vase_01"
+  ],
+  "alpha": false
+ },
+ "ceramic_vase_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "ceramic_vase_02",
+  "category": "prop-small",
+  "min": [
+   -0.108,
+   0.001,
+   -0.109
+  ],
+  "max": [
+   0.108,
+   0.309,
+   0.109
+  ],
+  "size": [
+   0.216,
+   0.308,
+   0.218
+  ],
+  "tris": 1702,
+  "materials": [
+   "ceramic_vase_02"
+  ],
+  "alpha": false
+ },
+ "ceramic_vase_04": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "ceramic_vase_04",
+  "category": "prop-small",
+  "min": [
+   -0.089,
+   0.001,
+   -0.089
+  ],
+  "max": [
+   0.09,
+   0.342,
+   0.091
+  ],
+  "size": [
+   0.179,
+   0.341,
+   0.18
+  ],
+  "tris": 1474,
+  "materials": [
+   "ceramic_vase_04"
+  ],
+  "alpha": false
+ },
+ "wooden_bowl_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_bowl_01",
+  "category": "prop-small",
+  "min": [
+   -0.157,
+   0.001,
+   -0.153
+  ],
+  "max": [
+   0.156,
+   0.094,
+   0.155
+  ],
+  "size": [
+   0.313,
+   0.093,
+   0.308
+  ],
+  "tris": 1408,
+  "materials": [
+   "wooden_bowl_01"
+  ],
+  "alpha": false
+ },
+ "wooden_bowl_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_bowl_02",
+  "category": "prop-small",
+  "min": [
+   -0.065,
+   0,
+   -0.062
+  ],
+  "max": [
+   0.065,
+   0.073,
+   0.062
+  ],
+  "size": [
+   0.13,
+   0.073,
+   0.124
+  ],
+  "tris": 1022,
+  "materials": [
+   "wooden_bowl_02"
+  ],
+  "alpha": false
+ },
+ "wooden_cutting_board": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_cutting_board",
+  "category": "prop-small",
+  "min": [
+   -0.224,
+   0,
+   -0.123
+  ],
+  "max": [
+   0.226,
+   0.041,
+   0.123
+  ],
+  "size": [
+   0.45,
+   0.041,
+   0.247
+  ],
+  "tris": 3520,
+  "materials": [
+   "wooden_cutting_board"
+  ],
+  "alpha": false
+ },
+ "wooden_spoon": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_spoon",
+  "category": "prop-small",
+  "min": [
+   -0.044,
+   -0.016,
+   -0.194
+  ],
+  "max": [
+   0.043,
+   0.009,
+   0.084
+  ],
+  "size": [
+   0.086,
+   0.025,
+   0.278
+  ],
+  "tris": 1134,
+  "materials": [
+   "wooden_spoon"
+  ],
+  "alpha": false
+ },
+ "boulder_01": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "boulder_01",
+  "category": "rock",
+  "min": [
+   -0.746,
+   -0.073,
+   -0.944
+  ],
+  "max": [
+   0.523,
+   0.922,
+   0.878
+  ],
+  "size": [
+   1.269,
+   0.995,
+   1.822
+  ],
+  "tris": 1720,
+  "materials": [
+   "boulder_01"
+  ],
+  "alpha": false
+ },
+ "mountainside": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "mountainside",
+  "category": "rock",
+  "min": [
+   -5.022,
+   -0.2,
+   -3.681
+  ],
+  "max": [
+   5.17,
+   10.32,
+   1.566
+  ],
+  "size": [
+   10.192,
+   10.52,
+   5.247
+  ],
+  "tris": 2500,
+  "materials": [
+   "mountainside"
+  ],
+  "alpha": false
+ },
+ "namaqualand_boulder_02": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_boulder_02",
+  "category": "rock",
+  "min": [
+   -1.176,
+   -0.059,
+   -0.607
+  ],
+  "max": [
+   1.339,
+   0.819,
+   0.626
+  ],
+  "size": [
+   2.514,
+   0.879,
+   1.232
+  ],
+  "tris": 1888,
+  "materials": [
+   "boulder_02"
+  ],
+  "alpha": false
+ },
+ "namaqualand_boulder_03": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_boulder_03",
+  "category": "rock",
+  "min": [
+   -1.043,
+   -0.015,
+   -1.39
+  ],
+  "max": [
+   1.352,
+   1.458,
+   1.672
+  ],
+  "size": [
+   2.396,
+   1.473,
+   3.062
+  ],
+  "tris": 2244,
+  "materials": [
+   "boulder_03"
+  ],
+  "alpha": false
+ },
+ "namaqualand_boulder_05": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_boulder_05",
+  "category": "rock",
+  "min": [
+   -0.631,
+   -0.005,
+   -0.394
+  ],
+  "max": [
+   0.726,
+   0.528,
+   0.35
+  ],
+  "size": [
+   1.357,
+   0.534,
+   0.744
+  ],
+  "tris": 1410,
+  "materials": [
+   "namaqualand_boulder_05"
+  ],
+  "alpha": false
+ },
+ "namaqualand_boulder_06": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_boulder_06",
+  "category": "rock",
+  "min": [
+   -0.32,
+   -0.018,
+   -0.66
+  ],
+  "max": [
+   0.352,
+   0.63,
+   0.551
+  ],
+  "size": [
+   0.672,
+   0.648,
+   1.211
+  ],
+  "tris": 1362,
+  "materials": [
+   "namaqualand_boulder_06"
+  ],
+  "alpha": false
+ },
+ "namaqualand_boulders_01_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_boulders_01",
+  "category": "rock",
+  "min": [
+   -0.17,
+   0.001,
+   -0.292
+  ],
+  "max": [
+   0.166,
+   0.209,
+   0.292
+  ],
+  "size": [
+   0.336,
+   0.208,
+   0.584
+  ],
+  "tris": 924,
+  "materials": [
+   "namaqualand_rocks_01"
+  ],
+  "alpha": false
+ },
+ "namaqualand_boulders_01_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_boulders_01",
+  "category": "rock",
+  "min": [
+   -0.181,
+   0.001,
+   -0.275
+  ],
+  "max": [
+   0.181,
+   0.25,
+   0.275
+  ],
+  "size": [
+   0.363,
+   0.249,
+   0.551
+  ],
+  "tris": 924,
+  "materials": [
+   "namaqualand_rocks_01"
+  ],
+  "alpha": false
+ },
+ "namaqualand_cliff_01": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_cliff_01",
+  "category": "rock",
+  "min": [
+   -3.861,
+   -0.419,
+   -3.611
+  ],
+  "max": [
+   4.407,
+   4.542,
+   0.772
+  ],
+  "size": [
+   8.268,
+   4.961,
+   4.383
+  ],
+  "tris": 2496,
+  "materials": [
+   "drone_rock_01"
+  ],
+  "alpha": false
+ },
+ "namaqualand_cliff_02": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_cliff_02",
+  "category": "rock",
+  "min": [
+   -9.681,
+   -0.16,
+   -4.302
+  ],
+  "max": [
+   10.517,
+   7.018,
+   2.181
+  ],
+  "size": [
+   20.199,
+   7.178,
+   6.482
+  ],
+  "tris": 2500,
+  "materials": [
+   "drone_rock_02"
+  ],
+  "alpha": false
+ },
+ "namaqualand_rocks_01_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_rocks_01",
+  "category": "rock",
+  "min": [
+   -0.112,
+   0,
+   -0.107
+  ],
+  "max": [
+   0.112,
+   0.152,
+   0.107
+  ],
+  "size": [
+   0.224,
+   0.152,
+   0.214
+  ],
+  "tris": 650,
+  "materials": [
+   "namaqualand_rocks_02"
+  ],
+  "alpha": false
+ },
+ "namaqualand_rocks_01_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_rocks_01",
+  "category": "rock",
+  "min": [
+   -0.109,
+   0.001,
+   -0.081
+  ],
+  "max": [
+   0.109,
+   0.083,
+   0.08
+  ],
+  "size": [
+   0.217,
+   0.082,
+   0.161
+  ],
+  "tris": 588,
+  "materials": [
+   "namaqualand_rocks_02"
+  ],
+  "alpha": false
+ },
+ "namaqualand_rocks_01_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_rocks_01",
+  "category": "rock",
+  "min": [
+   -0.107,
+   0,
+   -0.084
+  ],
+  "max": [
+   0.106,
+   0.084,
+   0.084
+  ],
+  "size": [
+   0.214,
+   0.083,
+   0.167
+  ],
+  "tris": 588,
+  "materials": [
+   "namaqualand_rocks_02"
+  ],
+  "alpha": false
+ },
+ "namaqualand_rocks_01_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "namaqualand_rocks_01",
+  "category": "rock",
+  "min": [
+   -0.099,
+   0,
+   -0.078
+  ],
+  "max": [
+   0.1,
+   0.123,
+   0.079
+  ],
+  "size": [
+   0.198,
+   0.123,
+   0.157
+  ],
+  "tris": 584,
+  "materials": [
+   "namaqualand_rocks_02"
+  ],
+  "alpha": false
+ },
+ "rock_07": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_07",
+  "category": "rock",
+  "min": [
+   -0.087,
+   -0.002,
+   -0.177
+  ],
+  "max": [
+   0.08,
+   0.142,
+   0.142
+  ],
+  "size": [
+   0.167,
+   0.143,
+   0.319
+  ],
+  "tris": 686,
+  "materials": [
+   "rock_07"
+  ],
+  "alpha": false
+ },
+ "rock_09": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_09",
+  "category": "rock",
+  "min": [
+   -0.037,
+   0,
+   -0.061
+  ],
+  "max": [
+   0.037,
+   0.032,
+   0.083
+  ],
+  "size": [
+   0.074,
+   0.033,
+   0.144
+  ],
+  "tris": 446,
+  "materials": [
+   "rock_09"
+  ],
+  "alpha": false
+ },
+ "rock_face_01": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_face_01",
+  "category": "rock",
+  "min": [
+   -2.134,
+   -0.034,
+   -3.46
+  ],
+  "max": [
+   2.809,
+   3.528,
+   0.361
+  ],
+  "size": [
+   4.943,
+   3.563,
+   3.821
+  ],
+  "tris": 2499,
+  "materials": [
+   "rock_face_01"
+  ],
+  "alpha": false
+ },
+ "rock_face_02": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_face_02",
+  "category": "rock",
+  "min": [
+   -2.261,
+   -0.139,
+   -1.188
+  ],
+  "max": [
+   0.45,
+   2.332,
+   0.939
+  ],
+  "size": [
+   2.71,
+   2.471,
+   2.127
+  ],
+  "tris": 2264,
+  "materials": [
+   "rock_face_02"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_01_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_01",
+  "category": "rock",
+  "min": [
+   -1.32,
+   0,
+   -1.616
+  ],
+  "max": [
+   1.328,
+   1.262,
+   1.622
+  ],
+  "size": [
+   2.648,
+   1.262,
+   3.238
+  ],
+  "tris": 2304,
+  "materials": [
+   "rock_moss_set_01"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_01_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_01",
+  "category": "rock",
+  "min": [
+   -1.119,
+   0,
+   -1.68
+  ],
+  "max": [
+   1.119,
+   1.473,
+   1.684
+  ],
+  "size": [
+   2.238,
+   1.473,
+   3.364
+  ],
+  "tris": 2282,
+  "materials": [
+   "rock_moss_set_01"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_01_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_01",
+  "category": "rock",
+  "min": [
+   -0.906,
+   0.004,
+   -1.498
+  ],
+  "max": [
+   0.905,
+   1.205,
+   1.499
+  ],
+  "size": [
+   1.811,
+   1.201,
+   2.997
+  ],
+  "tris": 2118,
+  "materials": [
+   "rock_moss_set_01"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_01_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_01",
+  "category": "rock",
+  "min": [
+   -1.063,
+   0,
+   -1.375
+  ],
+  "max": [
+   1.063,
+   1.259,
+   1.379
+  ],
+  "size": [
+   2.126,
+   1.259,
+   2.753
+  ],
+  "tris": 2112,
+  "materials": [
+   "rock_moss_set_01"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_01_e": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_01",
+  "category": "rock",
+  "min": [
+   -1.064,
+   0.005,
+   -0.982
+  ],
+  "max": [
+   1.064,
+   1.768,
+   0.98
+  ],
+  "size": [
+   2.128,
+   1.763,
+   1.962
+  ],
+  "tris": 2026,
+  "materials": [
+   "rock_moss_set_01"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_01_f": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_01",
+  "category": "rock",
+  "min": [
+   -1.054,
+   0,
+   -1.04
+  ],
+  "max": [
+   1.054,
+   1.1,
+   1.04
+  ],
+  "size": [
+   2.109,
+   1.1,
+   2.08
+  ],
+  "tris": 5000,
+  "materials": [
+   "rock_moss_set_01"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_02_a": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_02",
+  "category": "rock",
+  "min": [
+   -0.977,
+   0,
+   -0.764
+  ],
+  "max": [
+   0.977,
+   1.308,
+   0.762
+  ],
+  "size": [
+   1.954,
+   1.308,
+   1.527
+  ],
+  "tris": 1842,
+  "materials": [
+   "rock_moss_set_02"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_02_b": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_02",
+  "category": "rock",
+  "min": [
+   -1.1,
+   0,
+   -0.776
+  ],
+  "max": [
+   1.099,
+   0.765,
+   0.776
+  ],
+  "size": [
+   2.199,
+   0.765,
+   1.552
+  ],
+  "tris": 1840,
+  "materials": [
+   "rock_moss_set_02"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_02_c": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_02",
+  "category": "rock",
+  "min": [
+   -1.046,
+   0,
+   -0.569
+  ],
+  "max": [
+   1.046,
+   1.256,
+   0.569
+  ],
+  "size": [
+   2.091,
+   1.256,
+   1.138
+  ],
+  "tris": 1804,
+  "materials": [
+   "rock_moss_set_02"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_02_d": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_02",
+  "category": "rock",
+  "min": [
+   -0.79,
+   0,
+   -0.719
+  ],
+  "max": [
+   0.79,
+   0.736,
+   0.722
+  ],
+  "size": [
+   1.58,
+   0.736,
+   1.441
+  ],
+  "tris": 1654,
+  "materials": [
+   "rock_moss_set_02"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_02_e": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_02",
+  "category": "rock",
+  "min": [
+   -0.847,
+   0.001,
+   -0.608
+  ],
+  "max": [
+   0.846,
+   0.742,
+   0.605
+  ],
+  "size": [
+   1.692,
+   0.741,
+   1.212
+  ],
+  "tris": 1636,
+  "materials": [
+   "rock_moss_set_02"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_02_f": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_02",
+  "category": "rock",
+  "min": [
+   -0.814,
+   0.009,
+   -0.505
+  ],
+  "max": [
+   0.814,
+   0.61,
+   0.506
+  ],
+  "size": [
+   1.629,
+   0.601,
+   1.01
+  ],
+  "tris": 1560,
+  "materials": [
+   "rock_moss_set_02"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_02_g": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "rock_moss_set_02",
+  "category": "rock",
+  "min": [
+   -0.603,
+   0,
+   -0.492
+  ],
+  "max": [
+   0.602,
+   0.525,
+   0.491
+  ],
+  "size": [
+   1.205,
+   0.525,
+   0.983
+  ],
+  "tris": 1410,
+  "materials": [
+   "rock_moss_set_02"
+  ],
+  "alpha": false
+ },
+ "stone_01": {
+  "kit": "scan",
+  "file": "scan_nature.glb",
+  "source": "stone_01",
+  "category": "rock",
+  "min": [
+   -0.07,
+   -0.014,
+   -0.045
+  ],
+  "max": [
+   0.076,
+   0.056,
+   0.044
+  ],
+  "size": [
+   0.146,
+   0.071,
+   0.089
+  ],
+  "tris": 474,
+  "materials": [
+   "stone_01"
+  ],
+  "alpha": false
+ },
+ "large_castle_door": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "large_castle_door",
+  "category": "structure",
+  "min": [
+   -1.05,
+   -0.03,
+   -0.085
+  ],
+  "max": [
+   0.962,
+   2.935,
+   0.211
+  ],
+  "size": [
+   2.012,
+   2.965,
+   0.296
+  ],
+  "tris": 4171,
+  "materials": [
+   "large_castle_door"
+  ],
+  "alpha": false
+ },
+ "large_iron_gate": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "large_iron_gate",
+  "category": "structure",
+  "min": [
+   -1.475,
+   -0.008,
+   -0.036
+  ],
+  "max": [
+   1.475,
+   2.92,
+   0.06
+  ],
+  "size": [
+   2.95,
+   2.928,
+   0.096
+  ],
+  "tris": 4485,
+  "materials": [
+   "large_iron_gate"
+  ],
+  "alpha": false
+ },
+ "modular_fort_01_a": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_fort_01",
+  "category": "structure",
+  "min": [
+   -7.919,
+   0,
+   -7.919
+  ],
+  "max": [
+   7.919,
+   13.498,
+   7.919
+  ],
+  "size": [
+   15.838,
+   13.498,
+   15.838
+  ],
+  "tris": 4772,
+  "materials": [
+   "modular_fort_01_wall_1",
+   "modular_fort_01_trim_1"
+  ],
+  "alpha": false
+ },
+ "modular_fort_01_b": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_fort_01",
+  "category": "structure",
+  "min": [
+   -2.114,
+   0,
+   -7.281
+  ],
+  "max": [
+   2.114,
+   8.521,
+   7.281
+  ],
+  "size": [
+   4.228,
+   8.521,
+   14.563
+  ],
+  "tris": 5996,
+  "materials": [
+   "modular_fort_01_wall_1",
+   "modular_fort_01_trim_1"
+  ],
+  "alpha": false
+ },
+ "modular_fort_01_c": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_fort_01",
+  "category": "structure",
+  "min": [
+   -2.086,
+   0,
+   -7.281
+  ],
+  "max": [
+   2.086,
+   8.526,
+   7.281
+  ],
+  "size": [
+   4.172,
+   8.526,
+   14.563
+  ],
+  "tris": 2340,
+  "materials": [
+   "modular_fort_01_wall_1",
+   "modular_fort_01_trim_1"
+  ],
+  "alpha": false
+ },
+ "modular_fort_01_d": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_fort_01",
+  "category": "structure",
+  "min": [
+   -1.275,
+   0,
+   -7.41
+  ],
+  "max": [
+   1.275,
+   8.608,
+   7.41
+  ],
+  "size": [
+   2.55,
+   8.608,
+   14.819
+  ],
+  "tris": 2376,
+  "materials": [
+   "modular_fort_01_wall_1",
+   "modular_fort_01_trim_1"
+  ],
+  "alpha": false
+ },
+ "modular_fort_01_e": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_fort_01",
+  "category": "structure",
+  "min": [
+   -1.275,
+   0,
+   -7.41
+  ],
+  "max": [
+   1.275,
+   8.606,
+   7.41
+  ],
+  "size": [
+   2.55,
+   8.606,
+   14.82
+  ],
+  "tris": 1076,
+  "materials": [
+   "modular_fort_01_wall_1",
+   "modular_fort_01_trim_1"
+  ],
+  "alpha": false
+ },
+ "modular_fort_01_f": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_fort_01",
+  "category": "structure",
+  "min": [
+   -1.769,
+   0,
+   -7.41
+  ],
+  "max": [
+   1.769,
+   7.533,
+   7.41
+  ],
+  "size": [
+   3.539,
+   7.533,
+   14.819
+  ],
+  "tris": 1196,
+  "materials": [
+   "modular_fort_01_wall_1",
+   "modular_fort_01_trim_1"
+  ],
+  "alpha": false
+ },
+ "modular_fort_01_g": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_fort_01",
+  "category": "structure",
+  "min": [
+   -1.683,
+   0,
+   -7.281
+  ],
+  "max": [
+   1.683,
+   7.702,
+   7.281
+  ],
+  "size": [
+   3.366,
+   7.702,
+   14.563
+  ],
+  "tris": 2654,
+  "materials": [
+   "modular_fort_01_wall_1",
+   "modular_fort_01_trim_1",
+   "modular_fort_01_plaster_1"
+  ],
+  "alpha": false
+ },
+ "modular_fort_01_h": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_fort_01",
+  "category": "structure",
+  "min": [
+   -1.56,
+   0,
+   -7.281
+  ],
+  "max": [
+   1.56,
+   7.533,
+   7.281
+  ],
+  "size": [
+   3.12,
+   7.533,
+   14.563
+  ],
+  "tris": 76,
+  "materials": [
+   "modular_fort_01_wall_1",
+   "modular_fort_01_trim_1"
+  ],
+  "alpha": false
+ },
+ "modular_wooden_pier_a": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_wooden_pier",
+  "category": "structure",
+  "min": [
+   -1.544,
+   0,
+   -6.203
+  ],
+  "max": [
+   1.541,
+   7.51,
+   6.196
+  ],
+  "size": [
+   3.085,
+   7.51,
+   12.399
+  ],
+  "tris": 5383,
+  "materials": [
+   "modular_wooden_pier_planks",
+   "modular_wooden_pier_poles"
+  ],
+  "alpha": false
+ },
+ "modular_wooden_pier_b": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_wooden_pier",
+  "category": "structure",
+  "min": [
+   -1.106,
+   0,
+   -1.541
+  ],
+  "max": [
+   1.106,
+   3.849,
+   1.541
+  ],
+  "size": [
+   2.212,
+   3.849,
+   3.081
+  ],
+  "tris": 2460,
+  "materials": [
+   "modular_wooden_pier_poles"
+  ],
+  "alpha": false
+ },
+ "modular_wooden_pier_c": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "modular_wooden_pier",
+  "category": "structure",
+  "min": [
+   -1.262,
+   0,
+   -1.101
+  ],
+  "max": [
+   1.262,
+   0.08,
+   1.101
+  ],
+  "size": [
+   2.524,
+   0.08,
+   2.203
+  ],
+  "tris": 5512,
+  "materials": [
+   "modular_wooden_pier_planks"
+  ],
+  "alpha": false
+ },
+ "stone_fire_pit": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "stone_fire_pit",
+  "category": "structure",
+  "min": [
+   -0.736,
+   -0.193,
+   -0.715
+  ],
+  "max": [
+   0.712,
+   0.195,
+   0.718
+  ],
+  "size": [
+   1.448,
+   0.388,
+   1.433
+  ],
+  "tris": 3887,
+  "materials": [
+   "stone_fire_pit"
+  ],
+  "alpha": false,
+  "lights": [
+   [
+    -0.012,
+    0.098,
+    0.002
+   ]
+  ]
+ },
+ "cross_pein_hammer": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "cross_pein_hammer",
+  "category": "tool",
+  "min": [
+   -0.044,
+   -0.123,
+   -0.01
+  ],
+  "max": [
+   0.054,
+   0.177,
+   0.014
+  ],
+  "size": [
+   0.099,
+   0.3,
+   0.024
+  ],
+  "tris": 732,
+  "materials": [
+   "cross_pein_hammer"
+  ],
+  "alpha": false,
+  "metal": 0.31
+ },
+ "handsaw_wood": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "handsaw_wood",
+  "category": "tool",
+  "min": [
+   -0.021,
+   -0.085,
+   -0.087
+  ],
+  "max": [
+   0.02,
+   0.082,
+   0.546
+  ],
+  "size": [
+   0.041,
+   0.167,
+   0.633
+  ],
+  "tris": 2548,
+  "materials": [
+   "handsaw_wood"
+  ],
+  "alpha": false
+ },
+ "picke_dirty_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "picke_dirty_01",
+  "category": "tool",
+  "min": [
+   -0.265,
+   -0.354,
+   -0.022
+  ],
+  "max": [
+   0.285,
+   0.761,
+   0.046
+  ],
+  "size": [
+   0.55,
+   1.115,
+   0.069
+  ],
+  "tris": 1450,
+  "materials": [
+   "picke_dirty_01"
+  ],
+  "alpha": false
+ },
+ "rusted_spade_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "rusted_spade_01",
+  "category": "tool",
+  "min": [
+   -0.084,
+   -0.503,
+   -0.023
+  ],
+  "max": [
+   0.084,
+   0.598,
+   0.023
+  ],
+  "size": [
+   0.168,
+   1.101,
+   0.046
+  ],
+  "tris": 1372,
+  "materials": [
+   "rusted_spade_01"
+  ],
+  "alpha": false,
+  "metal": 0.36
+ },
+ "spinning_wheel_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "spinning_wheel_01",
+  "category": "tool",
+  "min": [
+   -0.217,
+   0,
+   -0.473
+  ],
+  "max": [
+   0.269,
+   0.966,
+   0.55
+  ],
+  "size": [
+   0.487,
+   0.965,
+   1.022
+  ],
+  "tris": 1479,
+  "materials": [
+   "spinning_wheel_01"
+  ],
+  "alpha": false
+ },
+ "trowel_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "trowel_01",
+  "category": "tool",
+  "min": [
+   -0.049,
+   -0.047,
+   -0.14
+  ],
+  "max": [
+   0.049,
+   0.055,
+   0.207
+  ],
+  "size": [
+   0.099,
+   0.103,
+   0.347
+  ],
+  "tris": 796,
+  "materials": [
+   "trowel_01"
+  ],
+  "alpha": false,
+  "metal": 0.66
+ },
+ "wooden_axe": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_axe",
+  "category": "tool",
+  "min": [
+   -0.024,
+   -0.219,
+   -0.036
+  ],
+  "max": [
+   0.023,
+   0.412,
+   0.178
+  ],
+  "size": [
+   0.047,
+   0.63,
+   0.214
+  ],
+  "tris": 1062,
+  "materials": [
+   "wooden_axe"
+  ],
+  "alpha": false
+ },
+ "wooden_axe_02": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_axe_02",
+  "category": "tool",
+  "min": [
+   -0.026,
+   -0.282,
+   -0.04
+  ],
+  "max": [
+   0.025,
+   0.422,
+   0.186
+  ],
+  "size": [
+   0.051,
+   0.704,
+   0.226
+  ],
+  "tris": 2218,
+  "materials": [
+   "wooden_axe_02"
+  ],
+  "alpha": false,
+  "metal": 0.34
+ },
+ "wooden_axe_03": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_axe_03",
+  "category": "tool",
+  "min": [
+   -0.026,
+   -0.224,
+   -0.036
+  ],
+  "max": [
+   0.025,
+   0.408,
+   0.123
+  ],
+  "size": [
+   0.05,
+   0.632,
+   0.158
+  ],
+  "tris": 1050,
+  "materials": [
+   "axe_03"
+  ],
+  "alpha": false
+ },
+ "wooden_broom": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_broom",
+  "category": "tool",
+  "min": [
+   -0.245,
+   -0.122,
+   -0.056
+  ],
+  "max": [
+   0.245,
+   1.329,
+   0.056
+  ],
+  "size": [
+   0.49,
+   1.452,
+   0.113
+  ],
+  "tris": 2409,
+  "materials": [
+   "wooden_broom_bristles",
+   "wooden_broom"
+  ],
+  "alpha": true
+ },
+ "wooden_hammer_01": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_hammer_01",
+  "category": "tool",
+  "min": [
+   -0.054,
+   -0.124,
+   -0.012
+  ],
+  "max": [
+   0.058,
+   0.155,
+   0.012
+  ],
+  "size": [
+   0.112,
+   0.279,
+   0.023
+  ],
+  "tris": 714,
+  "materials": [
+   "wooden_hammer_01"
+  ],
+  "alpha": false,
+  "metal": 0.57
+ },
+ "wooden_ladder": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_ladder",
+  "category": "tool",
+  "min": [
+   -0.485,
+   0,
+   -0.25
+  ],
+  "max": [
+   0.474,
+   1.335,
+   0.25
+  ],
+  "size": [
+   0.959,
+   1.335,
+   0.5
+  ],
+  "tris": 1500,
+  "materials": [
+   "wooden_ladder"
+  ],
+  "alpha": false
+ },
+ "antique_estoc": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "antique_estoc",
+  "category": "weapon",
+  "min": [
+   -0.186,
+   -0.199,
+   -0.075
+  ],
+  "max": [
+   0.186,
+   1.293,
+   0.074
+  ],
+  "size": [
+   0.372,
+   1.492,
+   0.149
+  ],
+  "tris": 2999,
+  "materials": [
+   "antique_estoc"
+  ],
+  "alpha": false,
+  "metal": 0.66
+ },
+ "kite_shield": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "kite_shield",
+  "category": "weapon",
+  "min": [
+   -0.272,
+   -0.747,
+   -0.052
+  ],
+  "max": [
+   0.272,
+   0.647,
+   0.082
+  ],
+  "size": [
+   0.543,
+   1.394,
+   0.135
+  ],
+  "tris": 2997,
+  "materials": [
+   "kite_shield_body",
+   "kite_shield_clamps_and_trim"
+  ],
+  "alpha": false
+ },
+ "ornate_medieval_dagger": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "ornate_medieval_dagger",
+  "category": "weapon",
+  "min": [
+   -0.04,
+   -0.079,
+   -0.012
+  ],
+  "max": [
+   0.08,
+   0.27,
+   0.012
+  ],
+  "size": [
+   0.119,
+   0.349,
+   0.025
+  ],
+  "tris": 1825,
+  "materials": [
+   "ornate_medieval_dagger"
+  ],
+  "alpha": false,
+  "metal": 0.46
+ },
+ "ornate_medieval_mace": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "ornate_medieval_mace",
+  "category": "weapon",
+  "min": [
+   -0.047,
+   -0.103,
+   -0.051
+  ],
+  "max": [
+   0.047,
+   0.526,
+   0.051
+  ],
+  "size": [
+   0.095,
+   0.629,
+   0.102
+  ],
+  "tris": 2409,
+  "materials": [
+   "ornate_medieval_mace"
+  ],
+  "alpha": false,
+  "metal": 0.79
+ },
+ "ornate_war_hammer": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "ornate_war_hammer",
+  "category": "weapon",
+  "min": [
+   -0.067,
+   -0.15,
+   -0.017
+  ],
+  "max": [
+   0.077,
+   0.561,
+   0.017
+  ],
+  "size": [
+   0.144,
+   0.711,
+   0.035
+  ],
+  "tris": 5192,
+  "materials": [
+   "ornate_war_hammer"
+  ],
+  "alpha": false,
+  "metal": 0.57
+ },
+ "wooden_handle_saber": {
+  "kit": "scan",
+  "file": "scan_props.glb",
+  "source": "wooden_handle_saber",
+  "category": "weapon",
+  "min": [
+   -0.013,
+   -0.096,
+   -0.066
+  ],
+  "max": [
+   0.013,
+   0.839,
+   0.057
+  ],
+  "size": [
+   0.026,
+   0.935,
+   0.123
+  ],
+  "tris": 4031,
+  "materials": [
+   "wooden_handle_saber"
+  ],
+  "alpha": false
+ }
+}

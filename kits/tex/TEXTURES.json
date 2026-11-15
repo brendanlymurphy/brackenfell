@@ -1,0 +1,409 @@
+{
+ "wood_beam": {
+  "source": "rough_wood",
+  "url": "https://polyhaven.com/a/rough_wood",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "rough weathered timber: beams, posts, lintels",
+  "metres": [
+   0.5,
+   0.5
+  ],
+  "bytes": 454156
+ },
+ "wood_planks_dark": {
+  "source": "weathered_planks",
+  "url": "https://polyhaven.com/a/weathered_planks",
+  "authors": [
+   "Dario Barresi",
+   "Dimitrios Savva"
+  ],
+  "use": "dark weathered boards: walls, doors, shutters",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 155108
+ },
+ "wood_planks_brown": {
+  "source": "weathered_brown_planks",
+  "url": "https://polyhaven.com/a/weathered_brown_planks",
+  "authors": [
+   "Dimitrios Savva",
+   "Rico Cilliers"
+  ],
+  "use": "brown weathered boards",
+  "metres": [
+   1.8,
+   1.8
+  ],
+  "bytes": 394268
+ },
+ "wood_door_studded": {
+  "source": "medieval_wood",
+  "url": "https://polyhaven.com/a/medieval_wood",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "studded oak planks: heavy doors, gates",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 574542
+ },
+ "wood_siding": {
+  "source": "dark_planks",
+  "url": "https://polyhaven.com/a/dark_planks",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "overlapping dark clapboards: barn and boathouse walls",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 171750
+ },
+ "plaster_clean": {
+  "source": "plastered_wall_04",
+  "url": "https://polyhaven.com/a/plastered_wall_04",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "smooth lime plaster",
+  "metres": [
+   3.2,
+   3.2
+  ],
+  "bytes": 20670
+ },
+ "plaster_white_worn": {
+  "source": "white_rough_plaster",
+  "url": "https://polyhaven.com/a/white_rough_plaster",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "flaking whitewash",
+  "metres": [
+   1.0,
+   1.0
+  ],
+  "bytes": 586404
+ },
+ "plaster_rough": {
+  "source": "medieval_wall_01",
+  "url": "https://polyhaven.com/a/medieval_wall_01",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "rough white render",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 465636
+ },
+ "plaster_damaged": {
+  "source": "damaged_plaster",
+  "url": "https://polyhaven.com/a/damaged_plaster",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "use": "plaster fallen away over brick",
+  "metres": [
+   1.85,
+   1.85
+  ],
+  "bytes": 416212
+ },
+ "plaster_mossy": {
+  "source": "worn_mossy_plasterwall",
+  "url": "https://polyhaven.com/a/worn_mossy_plasterwall",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "use": "damp stained plaster with moss",
+  "metres": [
+   1.8,
+   1.8
+  ],
+  "bytes": 506598
+ },
+ "plaster_clay": {
+  "source": "clay_plaster",
+  "url": "https://polyhaven.com/a/clay_plaster",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "use": "ochre clay daub",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 146202
+ },
+ "stone_wall_rubble": {
+  "source": "castle_wall_slates",
+  "url": "https://polyhaven.com/a/castle_wall_slates",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "grey rubble masonry",
+  "metres": [
+   2.5,
+   2.5
+  ],
+  "bytes": 733488
+ },
+ "stone_wall_blocks": {
+  "source": "rustic_stone_wall",
+  "url": "https://polyhaven.com/a/rustic_stone_wall",
+  "authors": [
+   "Dimitrios Savva"
+  ],
+  "use": "squared rustic blocks",
+  "metres": [
+   1.52,
+   1.52
+  ],
+  "bytes": 576124
+ },
+ "stone_wall_old": {
+  "source": "old_stone_wall",
+  "url": "https://polyhaven.com/a/old_stone_wall",
+  "authors": [
+   "Charlotte Baglioni"
+  ],
+  "use": "old mortared fieldstone",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 587016
+ },
+ "stone_wall_mossy": {
+  "source": "mossy_stone_wall",
+  "url": "https://polyhaven.com/a/mossy_stone_wall",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "use": "dark stones with mossy joints",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 705520
+ },
+ "stone_wall_drystack": {
+  "source": "rock_wall_10",
+  "url": "https://polyhaven.com/a/rock_wall_10",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "use": "dry-stacked dark rock: field walls, foundations",
+  "metres": [
+   1.8,
+   1.8
+  ],
+  "bytes": 659138
+ },
+ "roof_slate": {
+  "source": "roof_slates_02",
+  "url": "https://polyhaven.com/a/roof_slates_02",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "weathered stone slates",
+  "metres": [
+   3.0,
+   3.0
+  ],
+  "bytes": 489732
+ },
+ "roof_slate_grey": {
+  "source": "roof_slates_03",
+  "url": "https://polyhaven.com/a/roof_slates_03",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "regular grey slates",
+  "metres": [
+   3.0,
+   3.0
+  ],
+  "bytes": 315508
+ },
+ "roof_slate_mossy": {
+  "source": "red_slate_roof_tiles_01",
+  "url": "https://polyhaven.com/a/red_slate_roof_tiles_01",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "slates under moss and lichen",
+  "metres": [
+   2.5,
+   2.5
+  ],
+  "bytes": 321550
+ },
+ "roof_clay_tiles": {
+  "source": "clay_roof_tiles_02",
+  "url": "https://polyhaven.com/a/clay_roof_tiles_02",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "use": "orange clay pantiles",
+  "metres": [
+   2.5,
+   2.5
+  ],
+  "bytes": 433400
+ },
+ "roof_tiles_old": {
+  "source": "roof_07",
+  "url": "https://polyhaven.com/a/roof_07",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "old mossy tiles",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 413448
+ },
+ "roof_thatch": {
+  "source": "reed_roof_03",
+  "url": "https://polyhaven.com/a/reed_roof_03",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "straw thatch",
+  "metres": [
+   2.5,
+   2.5
+  ],
+  "bytes": 816734
+ },
+ "roof_thatch_dark": {
+  "source": "thatch_roof_angled",
+  "url": "https://polyhaven.com/a/thatch_roof_angled",
+  "authors": [
+   "Dimitrios Savva",
+   "Rob Tuytel"
+  ],
+  "use": "old dark thatch",
+  "metres": [
+   0.54,
+   0.54
+  ],
+  "bytes": 691676
+ },
+ "cobble_grey": {
+  "source": "cobblestone_floor_08",
+  "url": "https://polyhaven.com/a/cobblestone_floor_08",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "rounded grey setts",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 580334
+ },
+ "cobble_small": {
+  "source": "cobblestone_05",
+  "url": "https://polyhaven.com/a/cobblestone_05",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "use": "small worn setts",
+  "metres": [
+   2.4,
+   2.4
+  ],
+  "bytes": 326334
+ },
+ "cobble_mossy": {
+  "source": "mossy_cobblestone",
+  "url": "https://polyhaven.com/a/mossy_cobblestone",
+  "authors": [
+   "S\u01a1n Nguy\u1ec5n"
+  ],
+  "use": "setts with moss in the joints",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 584418
+ },
+ "flagstone": {
+  "source": "monastery_stone_floor",
+  "url": "https://polyhaven.com/a/monastery_stone_floor",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "use": "large irregular flagstones",
+  "metres": [
+   1.8,
+   1.8
+  ],
+  "bytes": 457708
+ },
+ "flagstone_tan": {
+  "source": "stone_pathway",
+  "url": "https://polyhaven.com/a/stone_pathway",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "use": "tan crazy paving",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 297528
+ },
+ "floor_boards_dark": {
+  "source": "old_wood_floor",
+  "url": "https://polyhaven.com/a/old_wood_floor",
+  "authors": [
+   "Guillaume Monsergent"
+  ],
+  "use": "dark old floor boards",
+  "metres": [
+   3.0,
+   3.0
+  ],
+  "bytes": 267594
+ },
+ "floor_boards_worn": {
+  "source": "old_wooden_floor_02",
+  "url": "https://polyhaven.com/a/old_wooden_floor_02",
+  "authors": [
+   "Charlotte Baglioni",
+   "Jenelle van Heerden"
+  ],
+  "use": "worn polished boards",
+  "metres": [
+   2.03,
+   2.03
+  ],
+  "bytes": 202668
+ },
+ "floor_boards_raw": {
+  "source": "raw_wooden_floor_01",
+  "url": "https://polyhaven.com/a/raw_wooden_floor_01",
+  "authors": [
+   "Charlotte Baglioni"
+  ],
+  "use": "pale scrubbed boards",
+  "metres": [
+   2.0,
+   2.0
+  ],
+  "bytes": 282514
+ }
+}

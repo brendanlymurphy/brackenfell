@@ -1,0 +1,49 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:#2a2c31;overflow:hidden;font:12px/1.2 sans-serif;color:#eee}
+canvas{position:absolute;left:0;top:0} .l{position:absolute;text-align:center;white-space:nowrap;text-shadow:0 1px 2px #000}
+.l small{color:#9fb0c0}
+</style></head><body><canvas id="c"></canvas><div id="labels"></div>
+<script src="/three.js"></script>
+<script>
+// Contact sheet for the scanned packs. Options (window.__TEST__): cat (category), page, per (cells per page), cols, sel (comma list of names), marks (1 = show light positions)
+(async () => {
+  const T = window.__TEST__ || {}, cols = T.cols || 6, per = T.per || 30, S = 1.0, cell = Math.floor(innerWidth / cols);
+  const cat = await (await fetch('/kits/SCAN_CATALOG.json')).json();
+  let names = Object.keys(cat).filter(n => !T.cat || cat[n].category === T.cat);
+  if (T.sel) { const s = String(T.sel).split(','); names = Object.keys(cat).filter(n => s.some(x => n.startsWith(x))); }
+  names = names.slice((T.page || 0) * per, (T.page || 0) * per + per);
+  const rows = Math.ceil(names.length / cols);
+  const r = new THREE.WebGPURenderer({ canvas: document.getElementById('c'), antialias: true, forceWebGL: true }); await r.init();
+  r.setSize(cols * cell, rows * cell, false); r.domElement.style.width = cols * cell + 'px'; r.domElement.style.height = rows * cell + 'px';
+  r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x2a2c31);
+  scene.add(new THREE.HemisphereLight(0xbcd4ff, 0x4a3d30, 1.2));
+  const sun = new THREE.DirectionalLight(0xfff1dc, 2.6); sun.position.set(-1.2, 2.2, 2.5); scene.add(sun);
+  try {   // a soft studio environment so metal is not black
+    const env = new THREE.Scene(); env.background = new THREE.Color(0x30343c);
+    const mk = (c, x, y, z, sx, sy) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(sx, sy), new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); env.add(m); };
+    mk(new THREE.Color(6, 5.6, 5), -6, 8, 6, 8, 8); mk(new THREE.Color(1.6, 1.9, 2.4), 8, 3, -4, 10, 10); mk(new THREE.Color(0.9, 0.7, 0.5), 0, -8, 0, 20, 20); mk(new THREE.Color(1.2, 1.2, 1.3), 0, 2, 9, 8, 6);
+    const pm = new THREE.PMREMGenerator(r); const rt = pm.fromSceneAsync ? await pm.fromSceneAsync(env, 0.03) : pm.fromScene(env, 0.03); scene.environment = rt.texture; scene.environmentIntensity = 0.9;
+  } catch (e) { console.warn('no env', e.message); }
+  const cam = new THREE.OrthographicCamera(0, cols * S, 0, -rows * S, -50, 50); cam.position.set(0, 0, 10);
+  const loader = new T3X.GLTFLoader(), packs = {};
+  for (const f of new Set(names.map(n => cat[n].file))) packs[f] = (await loader.loadAsync('/kits/' + f)).scene;
+  const L = document.getElementById('labels');
+  names.forEach((n, i) => {
+    const e = cat[n], src = packs[e.file].getObjectByName(n) || packs[e.file].children.find(c => c.name === n);
+    const cx = (i % cols + 0.5) * S, cy = -(Math.floor(i / cols) + 0.46) * S;
+    if (src) {
+      const o = src.clone(), box = new THREE.Box3().setFromObject(o), c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
+      const k = 0.62 * S / Math.max(sz.x, sz.y, sz.z, 1e-3), inner = new THREE.Group(), g = new THREE.Group();
+      o.position.sub(c); inner.add(o);
+      if (T.marks && e.lights) for (const p of e.lights) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.02 / k * 0.6, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3020 })); m.position.set(p[0] - c.x, p[1] - c.y, p[2] - c.z); inner.add(m); }
+      inner.rotation.y = T.yaw !== undefined ? T.yaw : -0.6; g.add(inner); g.rotation.x = 0.36; g.scale.setScalar(k); g.position.set(cx, cy, 0); scene.add(g);
+    }
+    const d = document.createElement('div'); d.className = 'l'; d.style.left = (i % cols) * cell + 'px'; d.style.width = cell + 'px'; d.style.top = (Math.floor(i / cols) + 1) * cell - 34 + 'px';
+    d.innerHTML = (src ? '' : '<b style="color:#f55">MISSING </b>') + n + '<br><small>' + e.size.map(v => v.toFixed(2)).join(' x ') + ' m &middot; ' + e.tris + ' tris' + (e.alpha ? ' &middot; alpha' : '') + '</small>'; L.appendChild(d);
+  });
+  await r.renderAsync ? null : null; r.render(scene, cam);
+  await new Promise(q => setTimeout(q, 300)); r.render(scene, cam);
+  window.__rows = rows; window.__ready = true;
+})().catch(e => { console.error('SHEET FAIL', e.stack || e); window.__ready = true; });
+</script></body></html>
