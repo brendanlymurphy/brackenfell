@@ -28,9 +28,7 @@ const pdPew = len => m => {            // backs to the door (local -z), a kneele
   m.mat(MAT.TIMBER, COL.woodDark); for (const sx of [-1, 1]) { m.box(sx * len / 2 - 0.04, 0, -0.26, sx * len / 2 + 0.04, 1.05, 0.42); m.box(sx * len / 2 - 0.04, 0, -0.5, sx * len / 2 + 0.04, 0.18, -0.26); }
   addBoxCollider(m, -len / 2, -0.5, len / 2, 0.42, 0, 0.5);
 };
-// a bookcase's contents: upright spines of varied colour, height and lean, with gaps
-const pdBookFill = (c, len) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.06;
-  while (x < len / 2 - 0.12) { if (R() < 0.12) { x += 0.1 + R() * 0.15; continue; } const w = 0.05 + R() * 0.09, h = 0.18 + R() * 0.1; m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, COL.leather, COL.purple, [0.3, 0.22, 0.14]]), 0.5); m.box(x, y, -0.11, x + w, y + h, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(x + 0.005, y + 0.005, -0.112, x + w - 0.005, y + h - 0.005, -0.1, 0); x += w + 0.004; } };
+
 
 PLANS.chapel = (P, c, info) => {
   const R = P.R, need = P.need;
@@ -50,14 +48,14 @@ PLANS.chapel = (P, c, info) => {
   { const m = P.c.int, L0 = P.lv[0]; m.m1 = P.zone; m.ao = INT_AO;
     pPut(P, nave, P.id + '.step', 0, 11.0, 0, 6.0, 1.7, 0.14, mm => { mm.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); mm.box(-3, 0, -0.85, 3, 0.14, 0.85); }, { flat: true, noClear: true });
     addFloor(m, -3, 10.15, 3, 11.85, L0.y + 0.16);
-    const al = pPut(P, nave, P.id + '.altar', 0, 11.2, 0, 3.2, 1.12, 1.1, pdAltar(c), { lift: 0.14, back: 's', lowOk: true });
+    const al = pPut(P, nave, P.id + '.altar', 0, 11.2, 0, 3.2, 1.12, 0.84, pdAltar(c), { lift: 0.14, back: 's', lowOk: true });
     if (al) { pSpot(P, 'altar', 0, 9.3, 0, { k: 0 }); P.lightIn.nave = 1;
       at(m, 0, L0.y + 1.3, 11.62, 0, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.05, 0, -0.04, 0.05, 1.5, 0.04); m.box(-0.32, 0.95, -0.04, 0.32, 1.05, 0.04); m.mat(MAT.STONE, [0.6, 0.58, 0.54], 0.8); m.box(-0.14, -0.06, -0.12, 0.14, 0.0, 0.12); }); } }
   let row = 0; for (const z of [2.9, 4.15, 5.4, 6.65, 7.9, 9.15]) for (const x of [-2.5, 2.5]) { const pw = pPut(P, nave, P.id + '.pew' + row++, x, z, 0, 3.0, 1.0, 1.05, pdPew(3.0), {}); if (pw && row <= 2) pSit(P, 'pew' + row, x, z + 0.15, PI, 0); }
   { const f = pAgainst(P, nave, 'n', P.id + '.font', 0.7, 0.7, 0.95, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.cyl(0, 0, 0, 0.16, 0.14, 0.8, 10, 3); m.cyl(0, 0.8, 0, 0.36, 0.2, 0.18, 12, 3); m.mat(MAT.PLAIN, [0.15, 0.25, 0.4]); m.disc(0, 0.95, 0, 0.3, 12, 1); }, { at: nave.in.x1 - 1.0 }); }
   pAgainst(P, nave, 'w', P.id + '.statuebase', 0.8, 0.8, 1.2, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.box(-0.4, 0, -0.4, 0.4, 0.5, 0.4); m.mat(MAT.STONE, [0.72, 0.7, 0.66], 0.8); m.box(-0.14, 0.5, -0.1, 0.14, 1.5, 0.1); m.ball(0, 1.62, 0, 0.14); }, { at: 9.5, noClear: false });
   pSpot(P, 'nave', 0, 3.4, PI, { k: 0 });
-  for (const sx of [-1, 1]) pAgainst(P, nave, sx < 0 ? 'w' : 'e', P.id + '.shelfn' + sx, 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, pdBookFill(c, 1.6)), { at: 9 });
+  for (const sx of [-1, 1]) pAgainst(P, nave, sx < 0 ? 'w' : 'e', P.id + '.shelfn' + sx, 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, PD.books(c, 1.6)), { at: 9 });
   const bk = pFree(P, nave, P.id + '.lectern', 0.5, 0.5, 1.1, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.2, 0, -0.2, 0.2, 1.0, 0.2); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.28, 1.0, -0.22, 0.28, 1.05, 0.22); }, { near: [-3.2, 10.4] });
   if (bk) pInteract(P, bk.cx, 1.1, bk.cz, Object.assign({ kind: 'read', id: 'chapel.book', r: 1.7 }, READS['chapel.book']), 0);
   pLamp(P, nave, 0, 3.0); pLamp(P, nave, 0, 8.0);

@@ -268,10 +268,10 @@ function planHouse(P, c, info) {
   }
   if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
   let kh = null;
-  if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); } else if (KIT_DRESS[P.id] && info.kind) { dressKind(P, c, hall, hh, info); dressStore(P, store); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id] });
+  if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); PD.rack(P, store, -3.5, 10.4, 2.4, 0, ['pot', 'herb', 'ham', 'herb', 'garlic']); } else if (KIT_DRESS[P.id] && info.kind) { dressKind(P, c, hall, hh, info); dressStore(P, store); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id], bedSides: info.inn ? ['s', 'e', 'w', 'n'] : undefined, bedAt: info.inn ? 'mid' : undefined });
   dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
   if (up) {
-    if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
+    if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); PD.gallery(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
     else { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false }); dressBedroom(P, P.rooms.chamber2, { beds: [], chest: false }); dressBedroom(P, P.rooms.loft, { beds: ['bed3'], chestId: 'chest3', chest: false }); }
   }
   if (!hh) P.err.push('no hearth fits in the hall');

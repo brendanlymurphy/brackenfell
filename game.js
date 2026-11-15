@@ -5651,7 +5651,8 @@ function pWallEmit(P, wl, B, IN) {
   const origin = fwd ? a : b, perp = wl.c + 0.11 * ns, O = hor ? [origin, perp] : [perp, origin];
   const nv = hor ? [0, 0, ns] : [ns, 0, 0];          // outward normal; u = up x n = (nz, 0, -nx)
   const F = new THREE.Matrix4().makeBasis(KH.V([nv[2], 0, -nv[0]]), KH.V([0, 1, 0]), KH.V(nv)).setPosition(O[0], L.y, O[1]).premultiply(P.MS);
-  const add = (name, uc, s, o) => B.add(name, KH.xf(F, uc, 0, 0, s), o || IN);
+  const INW = wl.cellar ? Object.assign({}, IN, { tint: [0.42, 0.38, 0.35] }) : IN;          // cellar walls: damp, darker stone
+  const add = (name, uc, s, o) => B.add(name, KH.xf(F, uc, 0, 0, s), o || INW);
   const spans = wl.open.map(o => ({ o, s: sOf(o.pos), w: o.type === 'door' ? (o.d.w >= 1.2 ? 2.0 * o.d.w / PW.DOOR : 2.0) : 2.0 })).sort((p, q) => p.s - q.s);
   let cur = 0;
   const fill = (e) => {
@@ -6051,10 +6052,10 @@ function planHouse(P, c, info) {
   }
   if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
   let kh = null;
-  if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); } else if (KIT_DRESS[P.id] && info.kind) { dressKind(P, c, hall, hh, info); dressStore(P, store); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id] });
+  if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); PD.rack(P, store, -3.5, 10.4, 2.4, 0, ['pot', 'herb', 'ham', 'herb', 'garlic']); } else if (KIT_DRESS[P.id] && info.kind) { dressKind(P, c, hall, hh, info); dressStore(P, store); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id], bedSides: info.inn ? ['s', 'e', 'w', 'n'] : undefined, bedAt: info.inn ? 'mid' : undefined });
   dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
   if (up) {
-    if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
+    if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); PD.gallery(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
     else { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false }); dressBedroom(P, P.rooms.chamber2, { beds: [], chest: false }); dressBedroom(P, P.rooms.loft, { beds: ['bed3'], chestId: 'chest3', chest: false }); }
   }
   if (!hh) P.err.push('no hearth fits in the hall');
@@ -6180,9 +6181,7 @@ const pdPew = len => m => {            // backs to the door (local -z), a kneele
   m.mat(MAT.TIMBER, COL.woodDark); for (const sx of [-1, 1]) { m.box(sx * len / 2 - 0.04, 0, -0.26, sx * len / 2 + 0.04, 1.05, 0.42); m.box(sx * len / 2 - 0.04, 0, -0.5, sx * len / 2 + 0.04, 0.18, -0.26); }
   addBoxCollider(m, -len / 2, -0.5, len / 2, 0.42, 0, 0.5);
 };
-// a bookcase's contents: upright spines of varied colour, height and lean, with gaps
-const pdBookFill = (c, len) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.06;
-  while (x < len / 2 - 0.12) { if (R() < 0.12) { x += 0.1 + R() * 0.15; continue; } const w = 0.05 + R() * 0.09, h = 0.18 + R() * 0.1; m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, COL.leather, COL.purple, [0.3, 0.22, 0.14]]), 0.5); m.box(x, y, -0.11, x + w, y + h, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(x + 0.005, y + 0.005, -0.112, x + w - 0.005, y + h - 0.005, -0.1, 0); x += w + 0.004; } };
+
 
 PLANS.chapel = (P, c, info) => {
   const R = P.R, need = P.need;
@@ -6202,14 +6201,14 @@ PLANS.chapel = (P, c, info) => {
   { const m = P.c.int, L0 = P.lv[0]; m.m1 = P.zone; m.ao = INT_AO;
     pPut(P, nave, P.id + '.step', 0, 11.0, 0, 6.0, 1.7, 0.14, mm => { mm.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); mm.box(-3, 0, -0.85, 3, 0.14, 0.85); }, { flat: true, noClear: true });
     addFloor(m, -3, 10.15, 3, 11.85, L0.y + 0.16);
-    const al = pPut(P, nave, P.id + '.altar', 0, 11.2, 0, 3.2, 1.12, 1.1, pdAltar(c), { lift: 0.14, back: 's', lowOk: true });
+    const al = pPut(P, nave, P.id + '.altar', 0, 11.2, 0, 3.2, 1.12, 0.84, pdAltar(c), { lift: 0.14, back: 's', lowOk: true });
     if (al) { pSpot(P, 'altar', 0, 9.3, 0, { k: 0 }); P.lightIn.nave = 1;
       at(m, 0, L0.y + 1.3, 11.62, 0, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.05, 0, -0.04, 0.05, 1.5, 0.04); m.box(-0.32, 0.95, -0.04, 0.32, 1.05, 0.04); m.mat(MAT.STONE, [0.6, 0.58, 0.54], 0.8); m.box(-0.14, -0.06, -0.12, 0.14, 0.0, 0.12); }); } }
   let row = 0; for (const z of [2.9, 4.15, 5.4, 6.65, 7.9, 9.15]) for (const x of [-2.5, 2.5]) { const pw = pPut(P, nave, P.id + '.pew' + row++, x, z, 0, 3.0, 1.0, 1.05, pdPew(3.0), {}); if (pw && row <= 2) pSit(P, 'pew' + row, x, z + 0.15, PI, 0); }
   { const f = pAgainst(P, nave, 'n', P.id + '.font', 0.7, 0.7, 0.95, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.cyl(0, 0, 0, 0.16, 0.14, 0.8, 10, 3); m.cyl(0, 0.8, 0, 0.36, 0.2, 0.18, 12, 3); m.mat(MAT.PLAIN, [0.15, 0.25, 0.4]); m.disc(0, 0.95, 0, 0.3, 12, 1); }, { at: nave.in.x1 - 1.0 }); }
   pAgainst(P, nave, 'w', P.id + '.statuebase', 0.8, 0.8, 1.2, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.box(-0.4, 0, -0.4, 0.4, 0.5, 0.4); m.mat(MAT.STONE, [0.72, 0.7, 0.66], 0.8); m.box(-0.14, 0.5, -0.1, 0.14, 1.5, 0.1); m.ball(0, 1.62, 0, 0.14); }, { at: 9.5, noClear: false });
   pSpot(P, 'nave', 0, 3.4, PI, { k: 0 });
-  for (const sx of [-1, 1]) pAgainst(P, nave, sx < 0 ? 'w' : 'e', P.id + '.shelfn' + sx, 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, pdBookFill(c, 1.6)), { at: 9 });
+  for (const sx of [-1, 1]) pAgainst(P, nave, sx < 0 ? 'w' : 'e', P.id + '.shelfn' + sx, 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, PD.books(c, 1.6)), { at: 9 });
   const bk = pFree(P, nave, P.id + '.lectern', 0.5, 0.5, 1.1, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.2, 0, -0.2, 0.2, 1.0, 0.2); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.28, 1.0, -0.22, 0.28, 1.05, 0.22); }, { near: [-3.2, 10.4] });
   if (bk) pInteract(P, bk.cx, 1.1, bk.cz, Object.assign({ kind: 'read', id: 'chapel.book', r: 1.7 }, READS['chapel.book']), 0);
   pLamp(P, nave, 0, 3.0); pLamp(P, nave, 0, 8.0);
@@ -6245,6 +6244,51 @@ PLANS.chapel = (P, c, info) => {
   for (const [sd, u] of [['n', -2], ['n', 2], ['s', -2], ['s', 2], ['w', 3], ['w', 9], ['e', 3], ['e', 9]]) pTorch(P, crypt, sd, u, 1.7, 8.5);
   const g = P.doors.find(d => d.gate); if (g) P.gate = pGate(P, g, 'chapel.gate', 'cryptkey', 'Iron gate');
   pPier; // no hearth in a chapel
+};
+
+
+// ---- 72g_dress.js ----
+// ───────────────────────── set dressing shared by the designed plans: things that hang, stand and fill ─────────────────────────
+// Everything here draws into the cell's interior mesh (P.c.int) in the plan's canonical frame and records what it occupies through the placement helpers of 72d_plan.js.
+const PD = {};
+// a bookcase's contents: upright spines of varied colour, height and lean, with gaps
+PD.books = (c, len) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.06;
+  while (x < len / 2 - 0.12) { if (R() < 0.12) { x += 0.1 + R() * 0.15; continue; } const w = 0.05 + R() * 0.09, h = 0.18 + R() * 0.1; m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, COL.leather, COL.purple, [0.3, 0.22, 0.14]]), 0.5); m.box(x, y, -0.11, x + w, y + h, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(x + 0.005, y + 0.005, -0.112, x + w - 0.005, y + h - 0.005, -0.1, 0); x += w + 0.004; } };
+// shelves filled with rolled bolts of cloth lying end-on, in a few colours
+PD.bolts = (c, len, cols) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.1; cols = cols || [COL.red, COL.blue, COL.green, COL.purple, [0.7, 0.62, 0.45], [0.55, 0.5, 0.42], [0.25, 0.3, 0.4]];
+  while (x < len / 2 - 0.12) { const r = 0.07 + R() * 0.03; m.mat(MAT.CLOTH, R.pick(cols), 0.5); m.push().T(x + r, y + r, -0.02).RX(PI / 2); m.lathe([[r, -0.14], [r, 0.14]], 7, 2); m.pop(); x += r * 2 + 0.01; } };
+// sacks and jars on a shelf: a plain row of grain bags and pots, for a store
+PD.goods = (c, len) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.1;
+  while (x < len / 2 - 0.15) { const k = R(), w = 0.12 + R() * 0.1; at(m, x + w / 2, y, R.s() * 0.03, R() * 6, () => { if (k < 0.3) Props.sack(m, 0.12 + R() * 0.04, R.pick([[0.7, 0.62, 0.45], [0.6, 0.55, 0.42], [0.5, 0.45, 0.32]])); else if (k < 0.55) Props.jug(m); else if (k < 0.7) Props.cheese(m); else if (k < 0.85) Props.pot(m, 0.1, R.pick([COL.clay, [0.5, 0.42, 0.3], [0.3, 0.3, 0.32]])); else Props.bottle(m); }); x += w + 0.06; } };
+// a rod hung from the ceiling beams on two chains, with hams, herb bundles, pots and onions; its bottom stays above head height
+PD.rack = function (P, room, x, z, len, rot, kinds) {
+  const L = P.lv[room.k], m = P.c.int, R = P.R, H = Math.min(L.H, 3.4); m.m1 = P.zone; m.ao = INT_AO; kinds = kinds || ['herb', 'ham', 'pot', 'herb', 'garlic', 'pot'];
+  at(m, x, L.y + L.H, z, rot, () => {
+    m.mat(MAT.TIMBER, COL.timberDark); m.box(-len / 2, -0.6, -0.035, len / 2, -0.54, 0.035);
+    m.mat(MAT.METAL, COL.black); for (const sx of [-1, 1]) m.box(sx * len * 0.42 - 0.008, -0.6, -0.008, sx * len * 0.42 + 0.008, 0, 0.008);
+    const n = Math.max(3, Math.round(len / 0.38));
+    for (let i = 0; i < n; i++) {
+      const px = -len / 2 + 0.2 + i * (len - 0.4) / (n - 1), k = R.pick(kinds), j = R.s() * 0.03;
+      m.mat(MAT.METAL, COL.black); m.box(px - 0.006, -0.78, -0.006, px + 0.006, -0.6, 0.006);
+      if (k === 'herb') { m.mat(MAT.CLOTH, R.pick([[0.3, 0.4, 0.18], [0.42, 0.4, 0.2], [0.5, 0.38, 0.2]]), 0.5); m.cyl(px + j, -1.12, 0, 0.1, 0.02, 0.34, 6, 1); }
+      else if (k === 'ham') { m.mat(MAT.PLAIN, [0.5, 0.26, 0.2]); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
+      else if (k === 'pot') { m.mat(MAT.METAL, COL.black); m.cyl(px, -1.0, 0, 0.13, 0.16, 0.2, 8, 2); }
+      else { m.mat(MAT.PLAIN, [0.78, 0.7, 0.5]); m.ball(px, -0.95, 0, 0.06, 0.08, 0.06, 5, 3); m.ball(px + 0.02, -1.08, 0, 0.06, 0.08, 0.06, 5, 3); }
+    }
+  });
+  P.lightIn[room.id] = P.lightIn[room.id] || 0;
+};
+// a runner rug along a line (flat, any room): w x len, centred
+PD.rug = (P, room, x, z, w, l, col, rot) => pPut(P, room, P.id + '.rug' + (P.items.length), x, z, rot || 0, w, l, 0.02, pdRug(w, l, col || COL.red), { flat: true, noClear: true });
+// the landing or gallery of a house: a reading table with chairs by a window, a bookcase, a runner rug, banners
+PD.gallery = function (P, room) {
+  const c = P.c, R = P.R, a = room.in;
+  PD.rug(P, room, (a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2 + 1, 2.0, 5.0, [0.32, 0.2, 0.18], 0);
+  for (const sd of ['w', 'n', 's', 'e']) if (pAgainst(P, room, sd, P.id + '.gbooks', 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, PD.books(c, 1.8)), {})) break;
+  const t = pFree(P, room, P.id + '.gtable', 1.3, 0.75, 0.78, 0, pdTable(1.3, 0.75, ['book', 'candle', 'mug'], 3, c), { near: [a.x0 + 1.4, a.z1 - 2.2], surface: true });
+  if (t) { for (const sg of [-1, 1]) { const ch = pPut(P, room, P.id + '.gchair' + sg, t.cx + sg * 0.1, t.cz + sg * 0.8, sg > 0 ? PI : 0, 0.5, 0.5, 0.95, pdChair, { lowOk: true }); } }
+  pFree(P, room, P.id + '.gchest', 0.85, 0.5, 0.58, 0, pdChest, { near: [a.x0 + 0.8, a.z1 - 0.6], lowOk: true });
+  PD.rack(P, room, (a.x0 + a.x1) / 2, a.z0 + 4.2, 1.6, PI / 2, ['herb', 'herb', 'garlic']);
 };
 
 
