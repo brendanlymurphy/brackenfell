@@ -12,7 +12,7 @@ function buildVillage() {
   for (const site of SITES) {
     const spec = HOUSES[site.id]; if (!spec) continue;
     const h = buildHouse(site, spec);
-    pack.add(h.ext, { kind: 'opaque' }); if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.ext.ni) pack.add(h.ext, { kind: 'opaque' }); if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
   }
@@ -284,6 +284,14 @@ function buildVillage() {
         put(p[0], p[1], s.yaw + out + PI / 2, piles[kind]); k++;
       }
     }
+  }
+
+  // a wagon or two parked beside the busier houses (kit style only)
+  if (typeof kitReady === 'function' && kitReady()) for (const [id, lx, lz, yaw] of [['inn', -11.8, 1.5, 0.25], ['store', 0.5, 6.4, 1.45], ['smithy', 1.5, 7.2, 1.7], ['elder', 0, 6.0, 1.5]]) {
+    const s = SITE[id], p = siteToWorld(s, lx, lz); let ok = Math.abs(Terrain.y(p[0], p[1]) - s.y) < 0.6;
+    for (const rd of Roads) if (rd.line.dist(p[0], p[1], 5) < rd.w / 2 + 2.2) ok = false;
+    for (const c of World.colliders) if (hyp(p[0] - c.x, p[1] - c.z) < (c.r !== undefined ? c.r : Math.max(c.hx, c.hz)) + 2.3) ok = false;
+    if (ok) put(p[0], p[1], s.yaw + yaw, m => { kp(m, 'Prop_Wagon', 0, 0, 1.14, 1); addBoxCollider(m, -1.0, -2.0, 1.0, 2.0, 0, 1.3); });
   }
 
   // ground-contact shading for loose props, then pack everything

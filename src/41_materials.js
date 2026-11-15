@@ -64,7 +64,9 @@ function foliageMaterial(noLod) {
   const I = instNodes(noLod), mm = attribute('mm', 'vec4').mul(255).round(), tint = attribute('tint', 'vec4');
   m.positionNode = I.pos;
   const vN = varying(I.nrm), vTint = varying(tint.rgb.mul(tint.rgb).mul(I.tintK)), sky = varying(tint.a);
-  const a = texture(G.albedoArr, uv()).depth(int(mm.x)), albedo = a.rgb.mul(vTint), N = normalize(vN);
+  const a = texture(G.albedoArr, uv()).depth(int(mm.x)), raw = a.rgb.mul(vTint), N = normalize(vN);
+  // leaves were the brightest, most saturated thing in the valley (and glowed at night): take them down toward the ground's values
+  const albedo = TSL.mix(vec3(dot(raw, vec3(0.2126, 0.7152, 0.0722))), raw, 0.72).mul(0.62);
   const V = normalize(U.camPos.sub(positionWorld)), back = pow(SH.sat(dot(V, U.sunDir.negate())), 3).mul(0.55);
   // sharpen the cut-out to about one pixel so multisampling can smooth the leaf edges
   m.colorNode = albedo; m.opacityNode = SH.sat(a.a.sub(0.45).div(max(TSL.fwidth(a.a), 0.001)).add(0.5)); m.alphaTest = 0.5;

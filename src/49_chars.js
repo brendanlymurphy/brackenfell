@@ -53,7 +53,7 @@ const Chars = (() => {
       lark:   { body: 'male',   parts: [...R, 'Ranger_Body_Belt_2', 'Hair_Long'], tint: { MI_Ranger: [0.74, 0.76, 0.86] } },
       wren:   { body: 'female', parts: [...R, 'Ranger_Arms_Bracer', 'Ranger_Body_Belt_1', 'Ranger_Head_Hood'], tint: { MI_Ranger: [0.86, 0.74, 0.62] } },
       rowan:  { body: 'male',   parts: [...R, 'Ranger_Body_Belt_1', 'Hair_Long', 'Hair_Beard'], maps: { MI_Ranger: 'ranger3' }, tint: { MI_Ranger: [0.86, 0.8, 1.05] } },
-      pip:    { body: 'female', parts: [...P, 'Hair_Buns'], tint: { MI_Peasant: [1.3, 0.9, 0.82] } },
+      pip:    { body: 'male',   parts: [...P, 'Hair_Long'], tint: { MI_Peasant: [1.3, 0.9, 0.82] } },      // a child: the plain tunic, not a scaled-down woman's bodice
       hilda:  { body: 'female', parts: [...P, 'Hair_Buns'], maps: { MI_Peasant: 'peasant2' }, tint: { MI_Peasant: [0.85, 1.05, 1.5] } },
       bram:   { body: 'male',   parts: ['Peasant_Body', 'Peasant_Arms', 'Peasant_Legs', 'Ranger_Feet', 'Hair_SimpleParted'], tint: { MI_Peasant: [1.0, 1.05, 0.82], MI_Ranger: [0.9, 0.85, 0.8] } },
     };
@@ -206,7 +206,8 @@ const Chars = (() => {
     for (const mn of names) {
       const g = mergedGeometry(S, body, parts, mn); if (!g) continue;
       const mat = makeMaterial(S, H, mn, look), mesh = new THREE.SkinnedMesh(g, mat);
-      mesh.name = mn; mesh.castShadow = mesh.receiveShadow = true; mesh.frustumCulled = false; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
+      mesh.name = mn; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
+      mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;      // a fixed sphere: each pass (camera, shadow maps) culls villagers itself
       H.mats.push(mat); H.meshes.push(mesh);
     }
     for (const k of Object.keys(cfg.bones)) H.bones[k] = byName[cfg.bones[k]] || null;
@@ -256,6 +257,20 @@ const Chars = (() => {
     mx.stopAllAction(); mx.uncacheRoot(tmp);
     return m;
   }
+  // ground speed a walking or running clip was animated for, in model units per second: twice the distance one foot covers
+  // front to back, per cycle. Lets the clip be played at the rate that matches how fast the villager really moves.
+  function gait(H, key) {
+    const name = clipNameFor(H, key), id = H.body + '/gait/' + name; let v = H.set.measure[id]; if (v !== undefined) return v;
+    const clip = clipFor(H.set, H.body, name); v = 0;
+    if (clip && clip.duration > 0.05) {
+      const tmp = cloneBones(H.set.bodies[H.body].armature), mx = new THREE.AnimationMixer(tmp), foot = tmp.getObjectByName(H.set.cfg.bones.footL), P = new THREE.Vector3();
+      mx.clipAction(clip).play(); let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+      if (foot) for (let i = 0; i < 24; i++) { mx.setTime(clip.duration * i / 24); tmp.updateMatrixWorld(true); foot.getWorldPosition(P); x0 = Math.min(x0, P.x); x1 = Math.max(x1, P.x); z0 = Math.min(z0, P.z); z1 = Math.max(z1, P.z); }
+      if (foot) v = 2 * Math.max(x1 - x0, z1 - z0) / clip.duration;
+      mx.stopAllAction(); mx.uncacheRoot(tmp);
+    }
+    return H.set.measure[id] = v;
+  }
   // turn a bone by a rotation given in the villager's own space (after the clip has posed it)
   const _q = new THREE.Quaternion(), _p = new THREE.Quaternion(), _pi = new THREE.Quaternion(), _e = new THREE.Euler();
   function turnBone(H, bone, yaw, pitch) {
@@ -272,8 +287,10 @@ const Chars = (() => {
     const base = st.anim || 'idle', seated = base === 'sit', lying = base === 'lie';
     const key = st.talking ? (lying ? 'lie' : seated ? (cfg.anims['sit+talk'] ? 'sit+talk' : 'sit') : 'talk') : base;
     play(H, key);
+    const s = st.scale || 1, k = (cfg.scale || 1) * s;
+    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1; H.cur.setEffectiveTimeScale(st.speed > 0 && g > 0.2 ? Math.min(Math.max(st.speed / g, 0.6), 1.8) : rate); }
     H.mixer.update(dt);
-    const s = st.scale || 1, k = (cfg.scale || 1) * s, p = st.pos, yaw = st.yaw || 0, face = cfg.faces === -1 ? 0 : Math.PI;
+    const p = st.pos, yaw = st.yaw || 0, face = cfg.faces === -1 ? 0 : Math.PI;
     H.root.scale.setScalar(k);
     if (lying) {
       const m = measure(H, 'lie'), th = Math.PI - yaw - m.ang, c = Math.cos(th), sn = Math.sin(th);      // head toward the spot's heading, body centred on it
@@ -286,6 +303,7 @@ const Chars = (() => {
       }
       pv.rotation.y = th; pv.position.set(x, y, z);
     }
+    if (st.cast !== undefined && st.cast !== H.cast) { H.cast = st.cast; for (const m of H.meshes) m.castShadow = st.cast; }
     H.uZone.value = st.zone || 0; H.uLight.value = st.light === undefined ? 1 : st.light;
     // Head look. The mixer only rewrites a joint when its animated value changed, so a turn added last frame may still be in the
     // joint: take it out again before adding this frame's.

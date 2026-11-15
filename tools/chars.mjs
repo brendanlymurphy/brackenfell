@@ -162,7 +162,7 @@ for (const [sex, B] of Object.entries(BODIES)) {
   for (const m of root.listMaterials()) if (![...mats.values()].includes(m)) m.dispose();
   for (const t of root.listTextures()) t.dispose();
   for (const a of root.listAnimations()) { for (const c of a.listChannels()) c.dispose(); for (const s of a.listSamplers()) s.dispose(); a.dispose(); }
-  await main.transform(dedup({ propertyTypes: [PropertyType.ACCESSOR, PropertyType.MESH] }), weld(), simplify({ simplifier: MeshoptSimplifier, ratio: 0.6, error: 0.0008 }), quantize({ pattern: /^(NORMAL|TEXCOORD_0|WEIGHTS_0)$/, quantizeNormal: 10, quantizeTexcoord: 12, quantizeWeight: 8 }), prune({ keepAttributes: true }));
+  await main.transform(dedup({ propertyTypes: [PropertyType.ACCESSOR, PropertyType.MESH] }), weld(), simplify({ simplifier: MeshoptSimplifier, ratio: 0.3, error: 0.004 }), quantize({ pattern: /^(NORMAL|TEXCOORD_0|WEIGHTS_0)$/, quantizeNormal: 10, quantizeTexcoord: 12, quantizeWeight: 8 }), prune({ keepAttributes: true }));
   main.createExtension(KHRMeshQuantization).setRequired(true);
   for (const sk of root.listSkins()) if (sk !== cSkin) sk.dispose();
   // one buffer, so the result is a single .glb
