@@ -94,8 +94,8 @@ function terrainMaterial() {
     const dn = texture(G.noiseTex, wp.xz.mul(0.0013)).zw.sub(0.5);
     const Nv = normalize(vN.add(vec3(dn.x, 0, dn.y).mul(smoothstep(260, 700, r).mul(1.1)))).toVar();
     const slope = Nv.y.oneMinus();
-    const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(2.5).toVar(), uvR = vec2(wp.x.add(wp.z), wp.y.mul(1.3)).mul(0.16).toVar();
-    const dGx = dFdx(uvG).toVar(), dGy = dFdy(uvG).toVar(), dFx = dFdx(uvF).toVar(), dFy = dFdy(uvF).toVar(), dCx = dFdx(uvC).toVar(), dCy = dFdy(uvC).toVar(), dRx = dFdx(uvR).toVar(), dRy = dFdy(uvR).toVar();
+    const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(2.5).toVar(), uvR = vec2(wp.x, wp.y.mul(1.3)).mul(0.16).toVar(), uvR2 = vec2(wp.z.add(7.3), wp.y.mul(1.3)).mul(0.16).toVar();       // rock is mapped on two vertical planes (x-y and z-y) and blended by the facing, so no cliff smears
+    const dGx = dFdx(uvG).toVar(), dGy = dFdy(uvG).toVar(), dFx = dFdx(uvF).toVar(), dFy = dFdy(uvF).toVar(), dCx = dFdx(uvC).toVar(), dCy = dFdy(uvC).toVar(), dRx = dFdx(uvR).toVar(), dRy = dFdy(uvR).toVar(), dR2x = dFdx(uvR2).toVar(), dR2y = dFdy(uvR2).toVar();
     const det = dist.lessThan(56);                              // normal maps only matter near the camera (one sample less per layer beyond that)
     const farK = smoothstep(16, 55, dist).toVar();
     const wRock = sat(slope.sub(0.24).add(mn2.r.sub(0.5).mul(0.22)).sub(smoothstep(120, 300, wp.y).mul(0.12)).mul(7)).toVar();
@@ -141,7 +141,8 @@ function terrainMaterial() {
     const damp = sat(s2.g.mul(0.7).add(pud)).toVar();
     G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, 0.45, damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
     If(wRock.greaterThan(0.004), () => {
-      const q = samp(MAT.ROCK, uvR, dRx, dRy); q.c.mulAssign(vec3(0.97, 0.98, 1.04).mul(mn.g.mul(0.45).add(0.80)));
+      const q = samp(MAT.ROCK, uvR, dRx, dRy), q2 = samp(MAT.ROCK, uvR2, dR2x, dR2y), kx = Nv.z.mul(Nv.z).div(Nv.x.mul(Nv.x).add(Nv.z.mul(Nv.z)).add(0.0001)).toVar();       // kx: weight of the x-y plane (faces looking along z)
+      q.c.assign(mix(q2.c, q.c, kx)); q.ao.assign(mix(q2.ao, q.ao, kx)); q.r.assign(mix(q2.r, q.r, kx)); q.c.mulAssign(vec3(0.97, 0.98, 1.04).mul(mn.g.mul(0.45).add(0.80)));
       G0.c.assign(mix(G0.c, q.c, wRock)); G0.ao.assign(mix(G0.ao, q.ao, wRock)); G0.r.assign(mix(G0.r, q.r, wRock)); G0.n.assign(mix(G0.n, vec2(0.5), wRock));
     });
     G0.c.assign(mix(G0.c, vec3(0.80, 0.84, 0.90), wSnow));

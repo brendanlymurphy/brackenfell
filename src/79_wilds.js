@@ -325,13 +325,20 @@ WBUILD.hermit = (p, m, R) => {
   const bg = wGround(p, -6.8, 3.4); wPick('hm.bog', [bg[0], bg[1] + 0.0, bg[2]], 'Pick bogbean', 'bogbean', { k: 'bogbean', f: mm => PICKMESH.tuft(mm, [0.3, 0.46, 0.28], [0.95, 0.95, 0.98], 5) }, true);
   for (let i = 0; i < 6; i++) { const a = 2.6 + i * 0.62 + R() * 0.3, r = 5.6 + R() * 0.8, c = wGround(p, -10 + Math.cos(a) * r, -4.5 + Math.sin(a) * r); wKit(p, 'rock_moss_set_02_g', c[0] - p.x, c[2] - p.z, { s: 0.5 + R() * 0.8, ry: R() * 6, dy: -0.08 }); }
   for (let i = 0; i < 9; i++) { const a = R() * TAU, r = 5.2 + R() * 2.4; wKit(p, 'Fern_1', -10 + Math.cos(a) * r, -4.5 + Math.sin(a) * r, { s: 1.2 + R() * 0.9, ry: R() * TAU, inst: true, maxDist: 80 }); }
+  // the fall's rock: scanned boulders along the lip and down both sides of the face, dark and half buried, ferns on the ledges
+  { const c = WILDS.cliffs.find(k => k.id === 'fall'), L = (lx, lz) => [c.x + lx - p.x, c.z + c.dz * lz - p.z], rn = ['rock_moss_set_02_g', 'rock_moss_set_02_c', 'rock_moss_set_02_a', 'rock_moss_set_01_e', 'Rock_Medium_1', 'Rock_Medium_2'];
+    for (let i = 0; i < 26; i++) { const side = i % 2 ? 1 : -1, lz = c.at + 0.5 + R() * (c.ramp + 1.5), lx = side * (1.5 + R() * 3.2 + (lz > c.at + c.ramp - 1 ? 0 : 0.8)), q = L(lx, lz), sc = 0.7 + R() * 1.3; wKit(p, R.pick(rn), q[0], q[1], { s: sc, ry: R() * TAU, dy: -0.18 * sc, tint: [0.62, 0.64, 0.66] }); }
+    for (let i = 0; i < 6; i++) { const q = L((i - 2.5) * 0.55, c.at + c.ramp - 0.2 + R() * 0.5); wKit(p, R.pick(rn), q[0], q[1], { s: 0.55 + R() * 0.4, ry: R() * TAU, dy: -0.12, tint: [0.55, 0.58, 0.6] }); }           // the lip
+    for (let i = 0; i < 4; i++) { const a = -0.4 + i * 0.9, q = [20 + Math.cos(a + PI) * 4.9 - p.x, -172.5 + Math.sin(a + PI) * 4.9 - p.z]; wKit(p, R.pick(rn), q[0], q[1], { s: 0.5 + R() * 0.5, ry: R() * TAU, dy: -0.15 }); }
+    for (let i = 0; i < 34; i++) { const q = L(R.s() * 9, c.at - 2 + R() * (c.ramp + 7)); wKit(p, 'Fern_1', q[0], q[1], { s: 1.0 + R() * 1.0, ry: R() * TAU, inst: true, maxDist: 70 }); }
+    for (let i = 0; i < 22; i++) { const q = L(R.s() * 10, c.at + 2 + R() * (c.ramp + 6)); wKit(p, 'Grass_Wispy_Tall', q[0], q[1], { s: 1.0 + R() * 0.8, ry: R() * TAU, inst: true, maxDist: 60 }); } }
   p.npc = null;
 };
 
 WBUILD.stones = (p, m, R) => {
   // a ring of nine standing stones and two fallen ones on a bare hilltop, an altar slab with a carving, a cairn, and a hawthorn bent by the wind
   const N = 9, rr = 6.0;
-  for (let i = 0; i < N; i++) { const a = i / N * TAU + 0.2, h = 2.1 + 1.3 * ((i * 37 + 11) % 10) / 10; wPut(m, p, Math.cos(a) * rr, Math.sin(a) * rr, a, mm => { wStone(mm, 0.95 + 0.25 * ((i * 13) % 5) / 5, h, (R() - 0.5) * 0.12); addCircleCollider(mm, 0, 0, 0.55, 0, 3); }); }
+  for (let i = 0; i < N; i++) { const a = i / N * TAU + 0.2, h = 2.9 + 1.7 * ((i * 37 + 11) % 10) / 10; wPut(m, p, Math.cos(a) * rr, Math.sin(a) * rr, a, mm => { wStone(mm, 0.95 + 0.25 * ((i * 13) % 5) / 5, h, (R() - 0.5) * 0.12); addCircleCollider(mm, 0, 0, 0.55, 0, 3); }); }
   for (const [a, r] of [[0.5 + PI, rr + 0.6], [2.5, rr + 0.2]]) wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, a + 1.2, mm => { mm.push().T(0, 0.45, 0).RZ(PI / 2).T(0, -1.3, 0); mm.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.55); mm.lathe([[0.5, 0], [0.45, 1.4], [0.3, 2.6], [0.05, 2.8]], 6, 0); mm.pop(); addBoxCollider(mm, -1.4, -0.5, 1.4, 0.5, 0, 0.9); });
   const alt = wPut(m, p, 0, 0, 0.2, mm => {
     mm.mat(MAT.ROCK, [0.85, 0.85, 0.82], 0.6); mm.box(-0.9, 0, -0.45, -0.55, 0.55, 0.45); mm.box(0.55, 0, -0.45, 0.9, 0.55, 0.45); mm.box(-1.25, 0.55, -0.7, 1.25, 0.82, 0.7);
@@ -434,7 +441,7 @@ WBUILD.toll = (p, m, R) => {
   wPut(m, p, 9.0, -1.4, PI / 2, mm => { Props.chest(mm); });
 };
 // the brook's surface at a point (or the ground when there is none)
-function wBrookSurface(x, z) { const b = WILDS.brookLine; if (!b) return wy(x, z); b.dist(x, z, 6); return b.at < 0 ? wy(x, z) : wildsBrookY(b.at); }
+function wBrookSurface(x, z) { for (const k of WILDS.brooks) { const b = k.line; if (!b || x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue; b.dist(x, z, 6); if (b.at >= 0) return wildsBrookY(b.at, k); } return wy(x, z); }
 
 // ───────────────────────── Highfold: the hamlet's yard dressing (the houses are kit shells, in wildsAttach) ─────────────────────────
 WBUILD.hamlet = (p, m, R) => {
@@ -498,7 +505,7 @@ function buildWilds() {
   const patch = (cx, cz, hx, hz, cs, yAt, flow) => { const nx = Math.ceil(2 * hx / cs), nz = Math.ceil(2 * hz / cs), ids = new Map(); const v = (i, j) => { const k = j * 4096 + i; let q = ids.get(k); if (q !== undefined) return q; const x = cx - hx + i * cs, z = cz - hz + j * cs, y = yAt(x, z); wm.ao = sat((y - Terrain.y(x, z)) / 0.9); q = wm.vert(x, y, z, 0, 1, 0, flow[0], flow[1]); ids.set(k, q); return q; };
     for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const x = cx - hx + i * cs, z = cz - hz + j * cs; if (Math.min(wy(x, z), wy(x + cs, z), wy(x, z + cs), wy(x + cs, z + cs)) > yAt(x, z) + 0.05) continue; const a = v(i, j), b = v(i, j + 1), c = v(i + 1, j + 1), d = v(i + 1, j); wm.tri(a, b, c); wm.tri(a, c, d); } };
   if (WILDS.pool) { const q = WILDS.pool, yw = wildsBase('pool', q.x, q.z) - 0.35; q.y = yw; patch(q.x, q.z, q.r + 5, q.r + 5, 1.0, () => yw, [0.2, 0.1]); }
-  if (WILDS.brook) { wBrookSurface(-160, 0); const b = WILDS.brookLine; for (let s = 0; s < b.len; s += 6) { const q = b.point(s); patch(q[0], q[1], 5.5, 5.5, 1.0, (x, z) => wBrookSurface(x, z), [-q[3] * 0.6, q[2] * 0.6]); } }
+  for (const k of WILDS.brooks) { const b = k.line || (k.line = new Poly(catmull(k.pts, 2))); for (let s = 0; s < b.len; s += 6) { const q = b.point(s); patch(q[0], q[1], 5.5, 5.5, 1.0, (x, z) => wBrookSurface(x, z), [-q[3] * 0.6, q[2] * 0.6]); } }
   WB.waterTris = 0;
   if (wm.ni) { wp2.add(wm, { kind: 'water', noShadow: true, maxDist: 130 }); WB.waterTris += wm.ni / 3; }
   // the fall: a ribbon hugging the face of the cliff from the lip to the pool
@@ -509,12 +516,12 @@ function buildWilds() {
     const hw = 0.9; let prev = null;
     for (let k = 0; k < pts.length; k++) { const q = pts[k], off = 0.22, x = q[0] - ux * 0.0 - ux * 0, y = q[2] + off * (1 - k / pts.length * 0.5); const l = fm.vert(q[0] - sx * hw, y, q[1] - sz * hw, -ux, 0.4, -uz, 0, k * 0.3, 0), r = fm.vert(q[0] + sx * hw, y, q[1] + sz * hw, -ux, 0.4, -uz, 0, k * 0.3, 0); fm.ao = 0.85; if (prev) { fm.tri(prev[0], prev[1], r); fm.tri(prev[0], r, l); } prev = [l, r]; }
   }
-  if (fm.ni) { wp2.add(fm, { kind: 'water', noShadow: true, maxDist: 130 }); }
+  // (the fall itself is drawn by particles, 79b_life.js: a solid sheet read as a white board)
   pack.upload('wilds'); World.packs.push(pack);
   wp2.upload('wilds-water'); World.packs.push(wp2);
   const wrap = World.waterAt; World.waterAt = (x, z) => {
     if (WILDS.pool && Math.abs(x - WILDS.pool.x) < 12 && Math.abs(z - WILDS.pool.z) < 12 && hyp(x - WILDS.pool.x, z - WILDS.pool.z) < WILDS.pool.r + 3 && Terrain.y(x, z) < WILDS.pool.y) return WILDS.pool.y;
-    if (WILDS.brookLine && x < -150 && x > -185) { const b = WILDS.brookLine, d = b.dist(x, z, 5); if (d < 5) { const y = wildsBrookY(b.at); if (Terrain.y(x, z) < y) return y; } }
+    for (const k of WILDS.brooks) { if (x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue; const b = k.line, d = b.dist(x, z, 5); if (d < 5) { const y = wildsBrookY(b.at, k); if (Terrain.y(x, z) < y) return y; } }
     return wrap(x, z);
   };
   if (typeof wildsLifeBuild === 'function') wildsLifeBuild();
@@ -558,15 +565,16 @@ function wildsAttach() {
 // ───────────────────────── splat painting (called from buildSplat / buildSplat2 in 60_terrain.js) ─────────────────────────
 function wildsSplat(A, B, T) {
   if (!WILDS.on) return; const { ell, stroke, red } = T;
-  for (const c of WILDS.cliffs) { const x = c.x + c.dx * (c.at - 2), z = c.z + c.dz * (c.at - 2); ell(B, x, z, 9, 9, red); }       // bare rock and scree under the cliffs
-  ell(B, WILDS.P.burnt.x, WILDS.P.burnt.z, 4.2, 3.4, red);                                                                 // ash
+  for (const c of WILDS.cliffs) { const x = c.x + c.dx * (c.at - 2), z = c.z + c.dz * (c.at - 2); ell(B, x, z, 8, 8, a => red(a * 0.55)); }       // bare rock and scree under the cliffs
+  ell(B, WILDS.P.burnt.x, WILDS.P.burnt.z, 4.2, 3.4, a => red(a * 0.8));                                                                 // ash
   const st = WILDS.P.stones; ell(B, st.x, st.z, 9, 9, a => red(a * 0.55));                                                  // the hilltop is thin soil
-  ell(B, WILDS.P.mine.x, WILDS.P.mine.z, 6, 6, red);
-  const lc = WILDS.P.lumber; ell(B, lc.x, lc.z, 8, 7, a => red(a * 0.5));
+  ell(B, WILDS.P.mine.x, WILDS.P.mine.z, 5, 5, a => red(a * 0.6));
+  const lc = WILDS.P.lumber; ell(B, lc.x, lc.z, 7, 6, a => red(a * 0.3));
 }
 function wildsSplat2(blob, line, A, B) {
   if (!WILDS.on) return;
   if (WILDS.pool) { const q = WILDS.pool; for (const [r, a] of [[q.r + 4, 0.35], [q.r + 2.4, 0.5], [q.r + 1, 0.7]]) blob(A, 1, q.x, q.z, r, a, 0.5); }
-  if (WILDS.brookLine) line(A, 1, WILDS.brookLine.p, 7, 0.55);
+  for (const k of WILDS.brooks) line(A, 1, k.line.p, 7, 0.55);
+  if (WB.fall) for (const q of WB.fall.pts) blob(A, 1, q[0], q[1], 2.6, 0.85, 0.3);              // the wet dark rock behind the fall
   for (const id of ['lumber', 'fishing', 'bee', 'battle', 'hermit']) { const p = WILDS.P[id]; if (p) blob(B, 2, p.x, p.z, p.r * 0.7, 0.4, 0.3); }
 }

@@ -55,10 +55,11 @@ if (_air) airUpdate = function (put, dt, time, env, cam) {
     const dusk = sat((hr - 17.6) / 1.2) * (hr < 21.5 ? 1 : 0) + night * 0.8;
     if (dusk > 0.05) for (const id of ['hermit', 'bee', 'stones', 'burnt']) { const p = P[id]; if (!p || !near(p, 45)) continue; for (let i = 0; i < 9; i++) { const a = time * 0.2 + i * 2.4, x = p.x + Math.cos(a * 0.8 + i) * (4 + i), z = p.z + Math.sin(a * 0.9 + i * 2) * (4 + i * 0.8), y = Terrain.y(x, z) + 0.9 + Math.sin(time * 0.9 + i * 4) * 0.7, tw = 0.4 + 0.6 * Math.max(0, Math.sin(time * 1.1 + i * 7)); put(x, y, z, 0.05, 0.75, 0.95, 0.4, dusk * tw * 0.9, 0, 3, 1, i + 20); } }
   }
-  // the fall: white streaks sliding down the face, spray and a standing cloud at its foot
-  if (WB.fall && WILDS.pool && near(WB.fall, 90)) { const f = WB.fall, q = WILDS.pool, n = low ? 4 : 9;
-    for (let i = 0; i < n; i++) { const k = (time * 0.55 + i / n) % 1, y = f.top - k * (f.top - q.y), x = f.x + Math.sin(i * 7.1) * 0.7, z = f.z - 0.5 + k * 0.1; put(x, y, z + 0.3, 0.22, 0.92, 0.95, 0.98, 0.35 * (1 - k * 0.4), 0, 1, 2.6, i + 80); }
-    for (let i = 0; i < (low ? 3 : 7); i++) { const k = (time * 0.4 + i * 0.19) % 1; put(f.x + Math.sin(i * 3.7) * 1.6, q.y + 0.4 + k * 1.6, f.z - 3.4 + Math.cos(i * 2.9) * 1.3, 1.2 + k * 1.8, 0.9, 0.93, 0.96, 0.22 * (1 - k), i, 1, 1.0, i + 90); } }
+  // the fall: translucent white-blue streaks sliding down the face (thin, tall, fast), foam at the lip, spray and a standing cloud at its foot
+  if (WB.fall && WILDS.pool && near(WB.fall, 90)) { const f = WB.fall, q = WILDS.pool, n = low ? 6 : 16, H = f.top - q.y;
+    for (let i = 0; i < n; i++) { const k = (time * (0.6 + (i % 4) * 0.08) + i * 0.37) % 1, y = f.top - 0.25 - k * (H - 0.2), x = f.x + Math.sin(i * 12.9) * 0.55, z = f.z - 0.55 - k * 0.55 * 0; put(x, y, z, 0.2 + 0.05 * (i % 3), 0.82, 0.88, 0.94, 0.24 * (1 - k * 0.5), 0, 1, 4.5, i + 80); }
+    for (let i = 0; i < (low ? 2 : 4); i++) put(f.x + Math.sin(i * 5.3) * 0.6, f.top + 0.1, f.z + 0.3, 0.5, 0.9, 0.93, 0.96, 0.3, i, 1, 1.0, i + 85);
+    for (let i = 0; i < (low ? 3 : 8); i++) { const k = (time * 0.4 + i * 0.19) % 1; put(f.x + Math.sin(i * 3.7) * 1.5, q.y + 0.3 + k * 1.6, f.z - 3.4 + Math.cos(i * 2.9) * 1.2, 1.0 + k * 1.8, 0.88, 0.92, 0.96, 0.2 * (1 - k), i, 1, 1.0, i + 90); } }
   // mist lying on the pool, the brook and the lake shore at dawn and dusk; leaves blown through the lumber camp and the hermit's glade
   const mistK = Math.max(sat(1 - Math.abs(hr - 6.2) / 2.2), sat(1 - Math.abs(hr - 19.2) / 1.8)) * 0.7 + (env.fog ? 0 : 0);
   if (mistK > 0.05 && !low) {
