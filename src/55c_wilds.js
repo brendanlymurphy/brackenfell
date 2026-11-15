@@ -70,7 +70,7 @@ const WILDS = { places: [], P: {}, pads: [], bumps: [], cliffs: [], groves: [], 
 
   // ── forest: clearings round each place, denser stands, birch groves ──
   WILDS.groves.push({ x: -150, z: 98, r: 10, n: 18 }, { x: 52, z: -88, r: 10, n: 16 }, { x: 70, z: 128, r: 10, n: 14 }, { x: 126, z: 128, r: 9, n: 14 }, { x: 160, z: -86, r: 10, n: 16 });
-  WILDS.dense.push({ x: -118, z: 60, r: 42, k: 1.9 }, { x: -50, z: 120, r: 30, k: 1.5 });
+  WILDS.dense.push({ x: -118, z: 60, r: 42, k: 1.25 }, { x: -50, z: 120, r: 30, k: 1.0 });
   // (flower meadow, orchard rows and fields are drawn by 79_wilds.js)
 })();
 

@@ -480,7 +480,7 @@ WBUILD.__net = (p, mk, R) => {
 
 // ───────────────────────── build ─────────────────────────
 function buildWilds() {
-  if (!WILDS.on || WB.built) return; WB.built = true;
+  if (!WILDS.on || WB.built || (TEST && TEST.wb === 0)) return; WB.built = true;
   const pack = new MeshPack(); pack.shadow = false;
   for (const p of WILDS.places) {
     const fn = WBUILD[p.id]; if (!fn) continue;
