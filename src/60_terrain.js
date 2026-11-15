@@ -72,6 +72,7 @@ function terrainH(x, z) {
       if (dd < 6) h = lerp(h, s.y, 1 - smooth(0, 6, dd));
     }
   }
+  if (typeof wildsH === 'function') h = wildsH(x, z, h);        // hills, cliffs, yards and the toll-ford brook (55c_wilds.js)
   // river: level banks, then a channel
   const ext = 8 * smooth(125, 230, hyp(x, z));            // far from the village the channel widens so coarse terrain still shows it
   const d = River.dist(x, z, 14 + ext);
