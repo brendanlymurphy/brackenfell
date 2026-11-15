@@ -1,0 +1,28 @@
+<!doctype html><html><body style="margin:0;background:#000"><canvas id="c" width="640" height="360"></canvas>
+<script src="/three.js"></script>
+<script>
+(async () => {
+  const T = window.__TEST__ || {};
+  const { Fn, texture, uv, attribute, vec3, vec4, float, uniform, positionWorld, normalWorld, mix, int } = TSL;
+  const r = new THREE.WebGPURenderer({ canvas: document.getElementById('c'), antialias: true, forceWebGL: !!T.webgl });
+  await r.init();
+  window.__info = { backend: r.backend.constructor.name, astc: r.hasFeature ? r.hasFeature('texture-compression-astc') : null };
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x335577);
+  const cam = new THREE.PerspectiveCamera(60, 640 / 360, 0.1, 100); cam.position.set(2.5, 2, 3.5); cam.lookAt(0, 0.5, 0);
+  // 2-layer data array texture
+  const N = 8, data = new Uint8Array(N * N * 4 * 2);
+  for (let l = 0; l < 2; l++) for (let i = 0; i < N * N; i++) { const o = (l * N * N + i) * 4, ck = ((i % N) + ((i / N) | 0)) & 1; data[o] = l ? 255 : ck * 255; data[o + 1] = l ? ck * 255 : 200; data[o + 2] = 60; data[o + 3] = 255; }
+  const arr = new THREE.DataArrayTexture(data, N, N, 2); arr.colorSpace = THREE.SRGBColorSpace; arr.wrapS = arr.wrapT = THREE.RepeatWrapping; arr.magFilter = THREE.NearestFilter; arr.needsUpdate = true;
+  const g = new THREE.BoxGeometry(1, 1, 1);
+  const layer = new Float32Array(g.attributes.position.count); for (let i = 0; i < layer.length; i++) layer[i] = i < 12 ? 0 : 1;
+  g.setAttribute('layer', new THREE.BufferAttribute(layer, 1));
+  const m = new THREE.MeshStandardNodeMaterial();
+  m.colorNode = texture(arr, uv().mul(2)).depth(int(attribute('layer', 'float')));
+  const cube = new THREE.Mesh(g, m); cube.position.y = 0.5; cube.castShadow = true; scene.add(cube);
+  const gm = new THREE.MeshStandardNodeMaterial({ color: 0x889988 }); const ground = new THREE.Mesh(new THREE.PlaneGeometry(10, 10).rotateX(-Math.PI / 2), gm); ground.receiveShadow = true; scene.add(ground);
+  const sun = new THREE.DirectionalLight(0xfff0dd, 3); sun.position.set(3, 5, 2); sun.castShadow = true; scene.add(sun); scene.add(new THREE.HemisphereLight(0x88aaff, 0x443322, 1));
+  r.shadowMap.enabled = true;
+  await r.renderAsync(scene, cam);
+  window.__ready = true;
+})().catch(e => { console.error('SMOKE FAIL', e.stack || e); window.__ready = true; });
+</script></body></html>

@@ -8,7 +8,7 @@ from PIL import Image
 import astc_encoder as A
 M, OUT = sys.argv[1], sys.argv[2]
 Q = float(sys.argv[3]) if len(sys.argv) > 3 else 60.0
-NAMES = ['plaster', 'timber', 'planks', 'stone', 'cobble', 'thatch', 'shingle', 'dirt', 'grass', 'rock', 'bark', 'grass2', 'forest', 'mud', 'soil', 'gravel', 'moss']
+NAMES = ['plaster', 'timber', 'planks', 'stone', 'cobble', 'thatch', 'shingle', 'dirt', 'grass', 'rock', 'bark', 'grass2', 'forest', 'mud', 'soil', 'gravel', 'moss', 'plain', 'birch', 'pine', 'leaves', 'impostor', 'cloth', 'metal', 'stripes']
 RES = 1020            # a multiple of both block sizes, as compressed textures require
 def png_wrap(data, width=2048):
     """The artifact host only serves web file types, so each blob travels as a grey PNG whose pixel bytes are the data (rows unfiltered, last row zero padded)."""

@@ -866,7 +866,7 @@ async function loadPackImages(resA, resN, progress) {
   const worker = async () => {
     while (next < NA) {
       const l = next++;
-      const [ia, im] = await Promise.all([packImage('tex/a_' + MAT_A[l] + '.webp'), packImage('tex/n_' + MAT_A[l] + '.jpg')]);
+      const [ia, im] = await Promise.all([packImage('../tex/a_' + MAT_A[l] + '.webp'), packImage('../tex/n_' + MAT_A[l] + '.jpg')]);
       if (ia.width !== SRC || im.width !== SRC * 2) throw new Error('unexpected pack image size');
       // everything below runs without yielding, so the shared scratch textures are safe
       const enc = d.createCommandEncoder();
@@ -913,7 +913,7 @@ async function packBlob(url) {
 // compressed variant: every mip level arrives ready-made, so there is nothing to decode and no mips to build
 async function loadPackAstc(progress) {
   const d = G.device, NA = MAT_A.length;
-  const files = await Promise.all([0, 1].map(k => packBlob('tex/' + 'an'[k] + '_' + MAT_A[0] + '.png')));
+  const files = await Promise.all([0, 1].map(k => packBlob('../tex/' + 'an'[k] + '_' + MAT_A[0] + '.png')));
   const head = buf => { const v = new DataView(buf); if (v.getUint32(0, true) !== 0x58544642) throw new Error('bad pack file'); return { bw: v.getUint8(4), bh: v.getUint8(5), res: v.getUint16(6, true), n: v.getUint8(8) }; };
   const mk = (h, srgb, label) => d.createTexture({ size: [h.res, h.res, NA], format: 'astc-' + h.bw + 'x' + h.bh + '-unorm' + (srgb ? '-srgb' : ''), mipLevelCount: h.n, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST, label });
   d.pushErrorScope('validation');
@@ -931,7 +931,7 @@ async function loadPackAstc(progress) {
     while (next < NA && !failed) {
       const l = next++;
       try {
-        const bufs = l === 0 ? files : await Promise.all([0, 1].map(k => packBlob('tex/' + 'an'[k] + '_' + MAT_A[l] + '.png')));
+        const bufs = l === 0 ? files : await Promise.all([0, 1].map(k => packBlob('../tex/' + 'an'[k] + '_' + MAT_A[l] + '.png')));
         put(0, bufs[0], l); put(1, bufs[1], l);
         if (progress) progress(++done / NA);
       } catch (e) { failed = e; }

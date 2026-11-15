@@ -3,9 +3,9 @@
 import sys, os, numpy as np
 from PIL import Image
 M, OUT = sys.argv[1], sys.argv[2]
-NAMES = ['plaster', 'timber', 'planks', 'stone', 'cobble', 'thatch', 'shingle', 'dirt', 'grass', 'rock', 'bark', 'grass2', 'forest', 'mud', 'soil', 'gravel', 'moss']
+NAMES = ['plaster', 'timber', 'planks', 'stone', 'cobble', 'thatch', 'shingle', 'dirt', 'grass', 'rock', 'bark', 'grass2', 'forest', 'mud', 'soil', 'gravel', 'moss', 'plain', 'birch', 'pine', 'leaves', 'impostor', 'cloth', 'metal', 'stripes']
 os.makedirs(OUT, exist_ok=True); tot = 0
-for n in NAMES:
+for n in (sys.argv[3:] or NAMES):
     a = Image.open(os.path.join(M, n + '_a.png')).convert('RGBA')
     nar = np.asarray(Image.open(os.path.join(M, n + '_n.png')).convert('RGBA'))
     fa = os.path.join(OUT, 'a_' + n + '.webp'); a.save(fa, 'WEBP', quality=84, alpha_quality=75, method=6, exact=True)
