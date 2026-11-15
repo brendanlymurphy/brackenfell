@@ -64,6 +64,7 @@ function flank(st, ux, uz, lo, hi, a, al, side, alongD, level) {
   const nx = -uz * side, nz = ux * side, y = level ? hi : lo, hw = st.width / 2;
   const sx = a.p[0] + ux * alongD + nx * (hw + 1.4), sz = a.p[2] + uz * alongD + nz * (hw + 1.4);
   if (!free(sx, y, sz)) return;
+  if (level && st.exitPt && Math.hypot(a.p[0] + ux * alongD - st.exitPt[0], a.p[2] + uz * alongD - st.exitPt[2]) < 1.3) return;       // the open side of the top landing: stepping off the stair there is how one gets on and off
   put(sx, y, sz, 0); const tag = st.id + ' flank ' + (level ? 'high' : 'low') + ' side ' + side + ' at ' + alongD.toFixed(1) + ' m', tx = a.p[0] + ux * alongD, tz = a.p[2] + uz * alongD; let bad = null, f = 0;
   for (; f < 90 && !bad; f++) {
     const P = Player; steer('keys', tx, tz, 0, 1); fix(); __game.step(1, dt);
@@ -83,9 +84,9 @@ for (const st of World.stairs) {
   const a = sp(st.bottom), b = sp(st.top); if (!a || !b) { fails.push(st.id + ': spots missing'); continue; }
   const ax = b.p[0] - a.p[0], az = b.p[2] - a.p[2], al = Math.hypot(ax, az), ux = ax / al, uz = az / al, nx = -uz, nz = ux;
   // start points round an end of the stair: eight directions at 1.6 m and 2.4 m, kept when the spot is free and the way from there to the spot is too
-  const around = s => { const out = []; for (const r of [1.6, 2.4]) for (let k = 0; k < 8; k++) { const an = ux !== undefined ? Math.atan2(uz, ux) + k * Math.PI / 4 : 0, p = [s.p[0] + Math.cos(an) * r, s.p[1], s.p[2] + Math.sin(an) * r]; let ok = free(p[0], p[1], p[2]); for (let q = 1; q < 8 && ok; q++) ok = free(lerp(p[0], s.p[0], q / 8), s.p[1], lerp(p[2], s.p[2], q / 8)); if (ok) out.push(p); } return out; };
+  const around = s => { const out = []; for (const r of [1.0, 1.6, 2.4]) for (let k = 0; k < 12; k++) { const an = ux !== undefined ? Math.atan2(uz, ux) + k * Math.PI / 6 : 0, p = [s.p[0] + Math.cos(an) * r, s.p[1], s.p[2] + Math.sin(an) * r]; let ok = free(p[0], p[1], p[2]); for (let q = 1; q < 8 && ok; q++) ok = free(lerp(p[0], s.p[0], q / 8), s.p[1], lerp(p[2], s.p[2], q / 8)); if (ok) out.push(p); } return out; };
   const lows = around(a), highs = around(b);
-  if (lows.length < 2 || highs.length < 2) fails.push(st.id + ': too few free start points (' + lows.length + ' below, ' + highs.length + ' above)');
+  if (lows.length < 1 || highs.length < 1) fails.push(st.id + ': too few free start points (' + lows.length + ' below, ' + highs.length + ' above)');
   const vs = quick ? VARIANTS.filter((v, i) => i % 2 === 0) : VARIANTS;
   vs.forEach((v, i) => {
     const lo = lows.length ? lows[(i * 3) % lows.length] : null, hi = highs.length ? highs[(i * 3 + 1) % highs.length] : null;

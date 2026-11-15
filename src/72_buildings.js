@@ -22,8 +22,8 @@ const antlers = m => { m.mat(MAT.PLAIN, [0.85, 0.78, 0.62]); for (const s of [-1
 function cottageInterior(c, o) {
   o = o || {}; const m = c.int, R = c.R, B = bounds(c);
   c.fireplace(B.x0, o.fz || 0, 0, { w: 1.7, cauldron: o.cauldron });
-  bedAt(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 1.0, o.blanket, o.fur);
-  if (o.bed2) bedAt(c, 'bed2', B.x1 - 1.9, B.z1 - 1.08, PI, 1.0, o.blanket2 || COL.blue);
+  if (!o.noBed) bedAt(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 1.0, o.blanket, o.fur);
+  if (o.bed2 && !o.noBed) bedAt(c, 'bed2', B.x1 - 1.9, B.z1 - 1.08, PI, 1.0, o.blanket2 || COL.blue);
   chestAt(c, B.x1 - 0.45, B.z1 - 2.5, PI / 2, o.loot || [['gold', 4 + R.i(0, 6)]]);
   tableSet(c, o.tx === undefined ? -0.5 : o.tx, o.tz === undefined ? 0.35 : o.tz, 0, 1.5, 0.8, o.tableItems, 3, o.seats || 'stools');
   at(m, o.tx === undefined ? -0.5 : o.tx, 0.02, o.tz === undefined ? 0.35 : o.tz, 0.2, () => Props.rug(m, 2.2, 1.6, o.rug || COL.red));
@@ -129,33 +129,32 @@ const HOUSES = {
     windows: [{ wall: 'front', pos: 1.3, w: 1.5, shutters: false }, { wall: 'left', pos: 0.3 }, { wall: 'right', pos: -0.6 }, { wall: 'back', pos: -2.9, w: 0.7 }],
     interior(c) {
       const m = c.int, R = c.R, B = bounds(c);
-      m.mat(MAT.PLANKS, COL.woodDark); m.box(-1.2, 0.02, 0.3, 3.4, 0.98, 0.85); m.mat(MAT.PLANKS, COL.wood); m.box(-1.3, 0.98, 0.2, 3.5, 1.05, 0.95);
-      addBoxCollider(m, -1.3, 0.2, 3.5, 0.95, 0, 1.1);
-      at(m, 1.1, 1.05, 0.58, 0, () => { Props.clutter(m, R, -2.0, 2.0, 0, 0, ['candle', 'cheese', 'book', 'bottle', 'pot', 'loaf', 'jug'], 7, c); });
-      at(m, -0.6, 1.05, 0.55, 0.4, () => ropeCoil(m)); at(m, -0.6, 1.14, 0.55, 1.1, () => ropeCoil(m));
-      c.interact(-0.6, 1.2, 0.55, { kind: 'shopitem', id: 'rope', r: 1.6 });
-      at(m, 2.9, 1.05, 0.55, 0, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.012, 0, -0.012, 0.012, 0.32, 0.012); m.box(-0.22, 0.30, -0.01, 0.22, 0.32, 0.01); for (const s of [-1, 1]) { m.box(s * 0.2 - 0.004, 0.14, -0.004, s * 0.2 + 0.004, 0.3, 0.004); m.lathe([[0.02, 0.10], [0.09, 0.14]], 8, 1); m.push().T(s * 0.2, 0, 0); m.lathe([[0.02, 0.10], [0.09, 0.14]], 8, 1); m.pop(); } });
+      m.mat(MAT.PLANKS, COL.woodDark); m.box(-1.2, 0.02, -0.5, 2.0, 0.98, 0.05); m.mat(MAT.PLANKS, COL.wood); m.box(-1.3, 0.98, -0.6, 2.1, 1.05, 0.15);       // (shorter and further forward than it was: the stair to the upper floor runs along the back wall)
+      addBoxCollider(m, -1.3, -0.6, 2.1, 0.15, 0, 1.1);
+      at(m, 0.4, 1.05, -0.22, 0, () => { Props.clutter(m, R, -1.5, 1.5, 0, 0, ['candle', 'cheese', 'book', 'bottle', 'pot', 'loaf', 'jug'], 7, c); });
+      at(m, -0.6, 1.05, -0.25, 0.4, () => ropeCoil(m)); at(m, -0.6, 1.14, -0.25, 1.1, () => ropeCoil(m));
+      c.interact(-0.6, 1.2, -0.25, { kind: 'shopitem', id: 'rope', r: 1.6 });
+      at(m, 1.6, 1.05, -0.25, 0, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.012, 0, -0.012, 0.012, 0.32, 0.012); m.box(-0.22, 0.30, -0.01, 0.22, 0.32, 0.01); for (const s of [-1, 1]) { m.box(s * 0.2 - 0.004, 0.14, -0.004, s * 0.2 + 0.004, 0.3, 0.004); m.lathe([[0.02, 0.10], [0.09, 0.14]], 8, 1); m.push().T(s * 0.2, 0, 0); m.lathe([[0.02, 0.10], [0.09, 0.14]], 8, 1); m.pop(); } });
       const goods = ['pot', 'bottle', 'jug', 'book', 'cheese', 'bowl', 'pot', 'bottle'];
-      at(m, -0.7, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 2.4, 2.1, 4, 0.32, (i, y) => Props.clutter(m, R, -1.05, 1.05, y, 0, goods, 6)));
-      at(m, 2.25, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 2.6, 2.1, 4, 0.32, (i, y) => { if (i < 2) for (let k = 0; k < 4; k++) at(m, -0.9 + k * 0.6, y, 0, PI / 2, () => clothBolt(m, R.pick([COL.red, COL.blue, COL.green, COL.linen, COL.gold, COL.purple]))); else Props.clutter(m, R, -1.1, 1.1, y, 0, goods, 6); }));
+      at(m, B.x0 + 0.17, 0.02, 0.5, -PI / 2, () => Props.shelf(m, 2.0, 2.1, 4, 0.32, (i, y) => Props.clutter(m, R, -0.85, 0.85, y, 0, goods, 6)));
+      at(m, -2.8, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 2.0, 2.1, 4, 0.32, (i, y) => { if (i < 2) for (let k = 0; k < 3; k++) at(m, -0.7 + k * 0.6, y, 0, PI / 2, () => clothBolt(m, R.pick([COL.red, COL.blue, COL.green, COL.linen, COL.gold, COL.purple]))); else Props.clutter(m, R, -1.1, 1.1, y, 0, goods, 6); }));
       at(m, B.x1 - 0.17, 0.02, -1.6, PI / 2, () => Props.shelf(m, 2.0, 2.0, 4, 0.32, (i, y) => Props.clutter(m, R, -0.85, 0.85, y, 0, ['loaf', 'cheese', 'apple', 'cabbage', 'pot', 'jug'], 5)));
       for (const [x, z] of [[3.3, -2.5], [2.5, -2.55]]) at(m, x, 0.02, z, 0, () => { Props.barrel(m); for (let i = 0; i < 7; i++) at(m, R.s() * 0.18, 0.86, R.s() * 0.18, 0, () => Props.apple(m, x > 3 ? COL.apple : [0.62, 0.7, 0.22])); });
       at(m, 0.5, 0.02, -2.5, 0.2, () => Props.crate(m, 0.65)); at(m, 0.45, 0.02 + crateTop(0.65), -2.5, 0.6, () => { for (let i = 0; i < 4; i++) at(m, (i % 2) * 0.24 - 0.12, 0, (i >> 1) * 0.24 - 0.12, 0, () => Props.cabbage(m)); });
-      at(m, -3.3, 0.02, -0.6, 0, () => Props.sack(m, 0.33)); at(m, -3.35, 0.02, 0.1, 0.7, () => Props.sack(m, 0.3, [0.85, 0.82, 0.74])); at(m, -3.2, 0.02, -1.3, 0, () => Props.crate(m, 0.55));
+      at(m, -3.3, 0.02, -1.0, 0, () => Props.sack(m, 0.33)); at(m, -3.35, 0.02, -0.35, 0.7, () => Props.sack(m, 0.3, [0.85, 0.82, 0.74])); at(m, -3.2, 0.02, -1.3, 0, () => Props.crate(m, 0.55));
       at(m, B.x0 + 0.03, 1.5, -1.9, PI / 2, () => { m.push().RZ(PI / 2); ropeCoil(m); m.pop(); });
-      bedAt(c, 'bed', -3.1, 2.0, PI, 1.0, COL.purple);
       at(m, 0.2, c.H, -1.4, 0, () => Props.lantern(m, c));
       at(m, 0, 0.02, -1.6, 0, () => Props.rug(m, 2.4, 1.6, COL.green));
-      c.spot('counter', 1.2, 1.7, 0); c.spot('front', 1.0, -0.6, PI);
+      c.spot('counter', 0.6, 0.55, 0); c.spot('front', 1.0, -1.3, PI);
     },
   },
   elder: {
     H: 2.4, walls: 'timber', roof: 'thatch', plaster: [1, 1, 0.94], shutter: [0.42, 0.52, 0.36],
     doors: [{ wall: 'front', pos: 0.9 }], windows: [{ wall: 'front', pos: -1.7 }, { wall: 'back', pos: -1.3 }, { wall: 'right', pos: -0.9 }],
     interior(c) {
-      cottageInterior(c, { blanket: [0.5, 0.42, 0.3], shelfItems: ['book', 'book', 'book', 'pot', 'candle', 'book'], rug: COL.blue, seats: 'chairs', tableItems: ['book', 'candle', 'mug', 'book'] });
+      cottageInterior(c, { noBed: true, noShelf: true, blanket: [0.5, 0.42, 0.3], shelfItems: ['book', 'book', 'book', 'pot', 'candle', 'book'], rug: COL.blue, seats: 'chairs', tableItems: ['book', 'candle', 'mug', 'book'] });
       const m = c.int, B = bounds(c);
-      at(m, 1.4, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 1.2, 1.9, 4, 0.3, (i, y) => { for (let k = 0; k < 6; k++) at(m, -0.42 + k * 0.17, y + 0.12, 0, 0, () => { m.push().RZ(PI / 2).RY(PI / 2); Props.book(m, c.R.pick([COL.red, COL.blue, COL.green, COL.leather, COL.purple]), 0.035 + c.R() * 0.02); m.pop(); }); }));
+      at(m, B.x0 + 0.17, 0.02, -1.9, -PI / 2, () => Props.shelf(m, 1.4, 1.9, 4, 0.3, (i, y) => { for (let k = 0; k < 7; k++) at(m, -0.5 + k * 0.17, y + 0.12, 0, 0, () => { m.push().RZ(PI / 2).RY(PI / 2); Props.book(m, c.R.pick([COL.red, COL.blue, COL.green, COL.leather, COL.purple]), 0.035 + c.R() * 0.02); m.pop(); }); }));
       c.interact(-0.5, 0.9, 0.35, { kind: 'read', id: 'elder.book', title: 'Rowan’s chronicle', text: 'Year of the long frost. The beacon on the crag has stood dark since my grandfather’s day, yet the valley endures. We kept the Dawn bell ringing through every winter but this one.', r: 1.6 });
     },
   },
@@ -173,9 +172,9 @@ const HOUSES = {
     H: 2.5, walls: 'half', stoneH: 1.0, roof: 'shingle', roofCol: [0.7, 0.66, 0.62],
     doors: [{ wall: 'front', pos: 0.9 }], windows: [{ wall: 'front', pos: -1.7 }, { wall: 'back', pos: -1.2 }, { wall: 'right', pos: -0.8 }],
     interior(c) {
-      cottageInterior(c, { bed2: true, blanket: [0.45, 0.2, 0.18], blanket2: [0.45, 0.2, 0.18], tableItems: ['mug', 'plate', 'candle', 'loaf'], noShelf: true });
+      cottageInterior(c, { noBed: true, bed2: true, blanket: [0.45, 0.2, 0.18], blanket2: [0.45, 0.2, 0.18], tableItems: ['mug', 'plate', 'candle', 'loaf'], noShelf: true });
       const m = c.int, B = bounds(c);
-      at(m, -0.4, 0.02, B.z1 - 0.1, 0, () => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.8, 0.3, -0.04, 0.8, 0.42, 0.04); m.box(-0.8, 1.5, -0.04, 0.8, 1.6, 0.04); for (let i = 0; i < 4; i++) at(m, -0.55 + i * 0.37, 0.36, -0.08, 0, () => Props.sword(m)); });
+      at(m, B.x1 - 0.1, 0.02, -1.9, PI / 2, () => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.8, 0.3, -0.04, 0.8, 0.42, 0.04); m.box(-0.8, 1.5, -0.04, 0.8, 1.6, 0.04); for (let i = 0; i < 4; i++) at(m, -0.55 + i * 0.37, 0.36, -0.08, 0, () => Props.sword(m)); });
       at(m, 1.3, 1.6, B.z0 + 0.04, 0, () => Props.shield(m, [0.55, 0.15, 0.12])); at(m, 2.2, 1.6, B.z0 + 0.04, 0, () => Props.shield(m, [0.55, 0.15, 0.12]));
     },
   },
@@ -183,16 +182,16 @@ const HOUSES = {
     H: 2.4, walls: 'timber', roof: 'thatch', plaster: [1, 0.92, 0.86], shutter: [0.3, 0.42, 0.55],
     doors: [{ wall: 'front', pos: 0.9 }], windows: [{ wall: 'front', pos: -1.8 }, { wall: 'back', pos: -1.3 }, { wall: 'back', pos: 1.4 }, { wall: 'right', pos: -0.8 }],
     interior(c) {
-      cottageInterior(c, { blanket: COL.blue, bed2: true, blanket2: [0.7, 0.4, 0.4], tx: -1.3, tz: 1.2, noShelf: true });
+      cottageInterior(c, { noBed: true, blanket: COL.blue, bed2: true, blanket2: [0.7, 0.4, 0.4], tx: -1.3, tz: 0.1, noShelf: true });
       const m = c.int, B = bounds(c);
-      at(m, 1.2, 0.02, -1.6, 0.25, () => {       // loom
+      at(m, 2.55, 0.02, -1.7, 0.25, () => {       // loom (against the right wall, clear of the door and the stair)
         m.mat(MAT.TIMBER, COL.wood); for (const s of [-1, 1]) { m.cbox(s * 0.7, 0, -0.4, 0.08, 1.7, 0.08, 4); m.cbox(s * 0.7, 0, 0.4, 0.08, 1.0, 0.08, 4); m.beam([s * 0.7, 0.95, 0.4], [s * 0.7, 0.95, -0.4], 0.06, 0.06); }
         m.beam([-0.7, 1.65, -0.4], [0.7, 1.65, -0.4], 0.07, 0.07); m.beam([-0.7, 0.4, -0.4], [0.7, 0.4, -0.4], 0.07, 0.07); m.beam([-0.7, 0.95, 0.4], [0.7, 0.95, 0.4], 0.07, 0.07);
         m.mat(MAT.STRIPES, COL.red, 0.5); m.quad2([-0.6, 1.62, -0.38], [-0.6, 0.97, 0.38], [0.6, 0.97, 0.38], [0.6, 1.62, -0.38]);
         addBoxCollider(m, -0.75, -0.45, 0.75, 0.45, 0, 1.7);
       });
-      at(m, 2.7, 0.02, -2.0, 0, () => Props.sack(m, 0.3, [0.92, 0.9, 0.85])); at(m, 2.1, 0.02, -2.3, 0, () => Props.sack(m, 0.26, [0.92, 0.9, 0.85]));
-      at(m, 0.6, 0.02, B.z1 - 0.2, 0, () => { Props.table(m, 1.3, 0.4, 0.8); for (let k = 0; k < 3; k++) at(m, -0.4 + k * 0.4, 0.8, 0, PI / 2, () => clothBolt(m, [COL.red, COL.gold, COL.green][k])); });
+      at(m, 3.2, 0.02, 0.0, 0, () => Props.sack(m, 0.3, [0.92, 0.9, 0.85])); at(m, 3.15, 0.02, 0.6, 0.5, () => Props.sack(m, 0.26, [0.92, 0.9, 0.85]));
+      at(m, -2.3, 0.02, -2.4, 0, () => { Props.table(m, 1.3, 0.4, 0.8); for (let k = 0; k < 3; k++) at(m, -0.4 + k * 0.4, 0.8, 0, PI / 2, () => clothBolt(m, [COL.red, COL.gold, COL.green][k])); });
     },
   },
   farm: {
@@ -236,22 +235,22 @@ const HOUSES = {
     interior(c) {
       const m = c.int, R = c.R, B = bounds(c), bolt = () => R.pick([COL.red, COL.blue, COL.green, COL.linen, COL.gold, COL.purple, [0.7, 0.45, 0.25]]);
       // counter across the middle, the draper stands behind it
-      m.mat(MAT.PLANKS, COL.woodDark); m.box(-2.6, 0.02, 0.0, 0.8, 0.96, 0.55); m.mat(MAT.PLANKS, COL.wood); m.box(-2.7, 0.96, -0.1, 0.9, 1.03, 0.65);
-      addBoxCollider(m, -2.7, -0.1, 0.9, 0.65, 0, 1.05);
-      at(m, -1.0, 1.03, 0.28, 0, () => { for (let i = 0; i < 3; i++) at(m, -0.7 + i * 0.5, 0, (i % 2) * 0.1 - 0.05, 0.4 * i, () => clothBolt(m, bolt())); });
-      at(m, 0.3, 1.03, 0.3, 0.3, () => ropeCoil(m)); at(m, -2.2, 1.03, 0.3, 0.8, () => Props.clutter(m, R, -0.3, 0.3, 0, 0, ['book', 'pot', 'candle'], 3, c));
-      c.interact(-1.0, 1.2, 0.3, { kind: 'read', id: 'draper.ledger', title: 'The draper’s ledger', text: 'Blue wool, six ells, for the miller’s coat. Red linen for the chapel banners, paid in apples. A bolt of green for Lark, who has promised a song instead of coin.', r: 1.8 });
+      m.mat(MAT.PLANKS, COL.woodDark); m.box(-2.3, 0.02, -0.9, -0.4, 0.96, -0.35); m.mat(MAT.PLANKS, COL.wood); m.box(-2.4, 0.96, -1.0, -0.3, 1.03, -0.25);       // (forward of the middle: the stair takes the back wall)
+      addBoxCollider(m, -2.4, -1.0, -0.3, -0.25, 0, 1.05);
+      at(m, -1.35, 1.03, -0.62, 0, () => { for (let i = 0; i < 3; i++) at(m, -0.5 + i * 0.4, 0, (i % 2) * 0.1 - 0.05, 0.4 * i, () => clothBolt(m, bolt())); });
+      at(m, -0.7, 1.03, -0.6, 0.3, () => ropeCoil(m)); at(m, -2.0, 1.03, -0.6, 0.8, () => Props.clutter(m, R, -0.3, 0.3, 0, 0, ['book', 'pot', 'candle'], 3, c));
+      c.interact(-1.35, 1.2, -0.6, { kind: 'read', id: 'draper.ledger', title: 'The draper’s ledger', text: 'Blue wool, six ells, for the miller’s coat. Red linen for the chapel banners, paid in apples. A bolt of green for Lark, who has promised a song instead of coin.', r: 1.8 });
       // cloth shelves on the back wall and the right wall
-      at(m, -1.0, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 2.6, 2.1, 4, 0.32, (i, y) => { for (let k = 0; k < 4; k++) at(m, -0.95 + k * 0.62, y, 0, PI / 2, () => clothBolt(m, bolt())); }));
-      at(m, 1.7, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 1.6, 2.1, 4, 0.32, (i, y) => { for (let k = 0; k < 3; k++) at(m, -0.5 + k * 0.5, y, 0, PI / 2, () => clothBolt(m, bolt())); }));
-      at(m, B.x1 - 0.17, 0.02, -0.8, PI / 2, () => Props.shelf(m, 1.8, 2.0, 4, 0.32, (i, y) => Props.clutter(m, R, -0.75, 0.75, y, 0, ['pot', 'jug', 'book', 'bowl'], 4)));
+      at(m, B.x0 + 0.17, 0.02, 0.6, -PI / 2, () => Props.shelf(m, 2.6, 2.1, 4, 0.32, (i, y) => { for (let k = 0; k < 4; k++) at(m, -0.95 + k * 0.62, y, 0, PI / 2, () => clothBolt(m, bolt())); }));
+      at(m, B.x1 - 0.17, 0.02, -0.3, PI / 2, () => Props.shelf(m, 1.0, 2.1, 4, 0.32, (i, y) => { for (let k = 0; k < 2; k++) at(m, -0.25 + k * 0.5, y, 0, PI / 2, () => clothBolt(m, bolt())); }));
+      at(m, B.x1 - 0.17, 0.02, -1.8, PI / 2, () => Props.shelf(m, 1.4, 2.0, 4, 0.32, (i, y) => Props.clutter(m, R, -0.55, 0.55, y, 0, ['pot', 'jug', 'book', 'bowl'], 4)));
       // dye barrels and a stack of folded cloth by the door
       at(m, B.x0 + 0.5, 0.02, B.z0 + 0.5, 0, () => Props.barrel(m)); at(m, B.x0 + 1.2, 0.02, B.z0 + 0.45, 0.4, () => Props.barrel(m, 0.28, 0.75));
       at(m, 2.4, 0.02, -2.2, 0.3, () => Props.crate(m, 0.6)); at(m, 2.4, 0.02 + crateTop(0.6), -2.2, 0.5, () => { for (let k = 0; k < 3; k++) at(m, 0, k * 0.12, 0, k * 0.3, () => { m.mat(MAT.CLOTH, bolt(), 0.5); m.box(-0.22, 0, -0.15, 0.22, 0.1, 0.15, 4); }); });
-      at(m, -0.3, 0.02, -1.5, 0.15, () => Props.rug(m, 2.6, 1.8, COL.blue));
-      at(m, 1.6, 0.02, 0.6, 0, () => Props.rug(m, 1.5, 1.2, [0.6, 0.4, 0.2]));
+      at(m, -0.3, 0.02, -1.9, 0.15, () => Props.rug(m, 2.6, 1.4, COL.blue));
+      at(m, 1.7, 0.02, 0.4, 0, () => Props.rug(m, 1.5, 1.2, [0.6, 0.4, 0.2]));
       at(m, 0.0, c.H, -0.9, 0, () => Props.lantern(m, c));
-      c.spot('counter', -1.0, 1.0, 0); c.spot('home', 1.6, 0.0, 0); c.spot('sit', 2.2, 1.2, PI);
+      c.spot('counter', -1.35, 0.2, 0); c.spot('home', 1.6, 0.0, 0); c.spot('sit', 2.2, -0.2, PI);
     },
   },
   chapel: {
@@ -305,7 +304,7 @@ const HOUSES = {
     interior(c) {
       const m = c.int, R = c.R, B = bounds(c);
       // hurst frame with the stones; gearing below (pit wheel is part of the turning water wheel)
-      const hx = 0, hz = 1.0, py = 1.25;
+      const hx = 0, hz = -0.6, py = 1.25;
       m.mat(MAT.TIMBER, COL.timber);
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.cbox(hx + sx * 0.95, 0.02, hz + sz * 0.85, 0.16, py, 0.16, 12);
       m.mat(MAT.PLANKS, COL.wood); m.box(hx - 1.1, py, hz - 1.0, hx + 1.1, py + 0.08, hz + 1.0);
@@ -316,13 +315,12 @@ const HOUSES = {
       m.push().T(hx, 0, hz); m.mat(MAT.PLANKS, COL.wood); m.lathe([[0.12, py + 0.72], [0.52, py + 1.32]], 4, 0); m.pop();
       addBoxCollider(m, hx - 1.1, hz - 1.0, hx + 1.1, hz + 1.0, 0, 2);
       m.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) m.beam([hx - 1.9, 0.02, hz - 0.6 + s * 0.22], [hx - 1.15, py + 0.05, hz - 0.6 + s * 0.22], 0.05, 0.07); for (let i = 1; i < 5; i++) m.box(hx - 1.9 + i * 0.15 - 0.02, i * 0.25, hz - 0.84, hx - 1.9 + i * 0.15 + 0.02, i * 0.25 + 0.03, hz - 0.36);
-      for (const [x, z, s2] of [[-2.9, -2.2, 0.36], [-2.3, -2.4, 0.33], [-2.75, -1.5, 0.3], [2.8, -2.3, 0.36], [2.2, -2.5, 0.3], [2.9, -1.6, 0.32], [2.9, 2.3, 0.34]]) at(m, x, 0.02, z, R() * 3, () => Props.sack(m, s2, R() < 0.5 ? [0.93, 0.91, 0.86] : COL.wool));
+      for (const [x, z, s2] of [[-2.9, -2.2, 0.36], [-2.3, -2.4, 0.33], [-2.75, -1.5, 0.3], [2.8, -2.3, 0.36], [2.2, -2.5, 0.3], [2.9, -1.6, 0.32], [3.1, -0.5, 0.34]]) at(m, x, 0.02, z, R() * 3, () => Props.sack(m, s2, R() < 0.5 ? [0.93, 0.91, 0.86] : COL.wool));
       at(m, -2.55, 0.74, -2.2, 0.3, () => Props.sack(m, 0.3, [0.93, 0.91, 0.86]));
-      bedAt(c, 'bed', B.x0 + 1.05, B.z1 - 0.6, PI / 2, 0.95, COL.wool);
-      at(m, 2.6, 0.02, 0.6, PI / 2, () => { Props.table(m, 1.0, 0.6); Props.clutter(m, R, -0.3, 0.3, 0.76, 0, ['mug', 'loaf', 'candle'], 3, c); });
+      at(m, 2.9, 0.02, 0.7, PI / 2, () => { Props.table(m, 1.0, 0.6); Props.clutter(m, R, -0.3, 0.3, 0.76, 0, ['mug', 'loaf', 'candle'], 3, c); });
       at(m, 0.2, c.H - 0.2, -1.6, 0, () => Props.lantern(m, c));
       at(m, 1.6, 0.02, -2.5, 0, () => Props.crate(m, 0.6)); at(m, -0.6, 0.02, -2.5, 0, () => Props.barrel(m));
-      c.spot('work', -1.2, -1.2, PI * 0.8); c.spot('home', 1.9, 0.6, PI / 2);
+      c.spot('work', -1.9, -1.9, PI * 0.8); c.spot('home', 1.9, 0.3, PI / 2);
     },
   },
   barn: {

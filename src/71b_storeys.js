@@ -15,7 +15,7 @@ const FLOOR_T = 0.12;            // m: thickness of a storey's slab
 function stairGeom(rise, H, runScale, widthScale) {
   const sy = rise / KSTAIR.topY, sz = runScale || 1, sw = widthScale || 1, slope = KSTAIR.slope * sy / sz, b = KSTAIR.y0 * sy - STAIR_SHIFT;
   const Z0 = Math.max(-b / slope, -0.34 * sz), Z1 = (rise - b) / slope, ZE = KSTAIR.endZ * sz;
-  return { sy, sz, sw, slope, b, Y: Z => b + slope * Z, Z0, Z1, ZE, Zh: Math.max(Z0, (H - 0.02 - 2.0 - b) / slope), halfW: KSTAIR.halfW * sw };
+  return { sy, sz, sw, slope, b, Y: Z => b + slope * Z, Z0, Z1, ZE, Zh: Math.max(Z0, (H - 0.02 - 2.0 - b) / slope - 0.45), halfW: KSTAIR.halfW * sw };
 }
 
 // o: { name: 'stairs', axis: 'x'|'z', dir: +1|-1 (the way it climbs), lane: centre line, n0: coordinate of the first nosing, rise: top surface minus 0.02,
@@ -47,7 +47,10 @@ function buildStair(c, o) {
   // side colliders in short pieces following the slope: the player can neither fall off nor walk in under it
   for (let Za = G.Z0; Za < G.ZE - 0.01; Za += 0.45) {
     const Zb = Math.min(G.ZE, Za + 0.45), yTop = base + Math.min(o.rise, G.Y(Zb)) + 1.5;
-    for (const s of [-1, 1]) { if (s === o.exit && Za >= G.Z1 - 0.5) continue; const r = rect(Za, Zb, lane + s * (hw + 0.04) - 0.06, lane + s * (hw + 0.04) + 0.06); addBoxCollider(m, r[0], r[1], r[2], r[3], base, yTop); }
+    for (const s of [-1, 1]) {
+      const r = rect(Za, Zb, lane + s * (hw + 0.04) - 0.06, lane + s * (hw + 0.04) + 0.06), open = s === o.exit && Za >= G.Z1 - 0.5;
+      addBoxCollider(m, r[0], r[1], r[2], r[3], base, open ? top - 0.5 : yTop);       // the exit side stays closed to the floor below (the stair is solid there) and open to the one above
+    }
   }
   // keep furniture off the approaches (a collider that never stops the player but that kitDress's free-floor test respects)
   for (const [Za, Zb] of [[-1.3, -0.1], [G.ZE, G.ZE + 0.9]]) { const r = rect(Za, Zb, lane - hw, lane + hw); addBoxCollider(m, r[0], r[1], r[2], r[3], -50, -49); }
@@ -61,13 +64,18 @@ function buildStair(c, o) {
     m.beam([a[0], base + G.Y(0) + 0.45, a[1]], [b[0], base + G.Y(zEnd) + 0.45, b[1]], 0.04, 0.04);
   }
   // villagers' and the test's way points: a step before the first tread, a step past the top
-  const heading = ax === 'x' ? (dir > 0 ? PI / 2 : -PI / 2) : (dir > 0 ? PI : 0), pb = P(-0.95, lane), pt = P(G.ZE + 0.75, lane), n0s = o.spot0 || name + '0', n1s = o.spot1 || name + '1';
+  const heading = ax === 'x' ? (dir > 0 ? PI / 2 : -PI / 2) : (dir > 0 ? PI : 0), B = bounds(c), clampP = p => ax === 'x' ? [clamp(p[0], B.x0 + 0.45, B.x1 - 0.45), p[1]] : [p[0], clamp(p[1], B.z0 + 0.45, B.z1 - 0.45)], pb = clampP(P(-0.7, lane)), pt = clampP(P(G.ZE + 0.75, lane)), n0s = o.spot0 || name + '0', n1s = o.spot1 || name + '1';
   c.spot(n0s, pb[0], pb[1], heading, base);
   c.spot(n1s, pt[0], pt[1], heading, top + 0.01);
-  World.stairs.push({ id: c.site.id + '.' + name, site: c.site.id, zone: c.zone, bottom: c.site.id + '.' + n0s, top: c.site.id + '.' + n1s, rise: o.rise, width: 2 * hw, upper: o.upper !== false });
+  const exitL = o.exit ? P(G.Z1 - 0.2, lane + o.exit * (hw + 0.3)) : null, exitW = exitL ? m4.tp(c.Ms, [exitL[0], top, exitL[1]]) : null;
+  World.stairs.push({ exitPt: exitW, id: c.site.id + '.' + name, site: c.site.id, zone: c.zone, bottom: c.site.id + '.' + n0s, top: c.site.id + '.' + n1s, rise: o.rise, width: 2 * hw, upper: o.upper !== false });
   // the stairwell in the slab above and the level rails round it: across the near end, along the sides (the exit side stops short of the top so one can step off)
   const hole = rect(G.Zh, G.ZE, lane - hw, lane + hw), railSegs = [[P(G.Zh, lane - hw - 0.05), P(G.Zh, lane + hw + 0.05)]];
   for (const s of [-1, 1]) railSegs.push([P(G.Zh, lane + s * (hw + 0.05)), P(s === o.exit ? G.Z1 - 0.5 : G.ZE + 0.06, lane + s * (hw + 0.05))]);
+  if (o.H) {        // the slab's edge round the stairwell is solid to a head that has risen into its thickness (a jump on the stair, a jump out of the well)
+    const Hs = o.H + FLOOR_T, e = [rect(G.Zh - 0.03, G.Zh + 0.03, lane - hw - 0.09, lane + hw + 0.09), rect(G.Zh, G.ZE, lane - hw - 0.06, lane - hw), rect(G.Zh, G.ZE, lane + hw, lane + hw + 0.06)];
+    for (const r of e) addBoxCollider(m, r[0], r[1], r[2], r[3], o.H - 0.02, Hs);
+  }
   return { hole, rails: railSegs, G, P, rect, lane, hw, top, Hf: top, ax, dir };
 }
 
@@ -78,7 +86,7 @@ function floorRail(c, a, b, y, o) {
   const n = Math.max(1, Math.round(len / 1.1));
   for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); m.cbox(x, y, z, i === 0 || i === n ? 0.1 : 0.06, 1.0, i === 0 || i === n ? 0.1 : 0.06, 4); }
   m.beam([a[0], y + 1.0, a[1]], [b[0], y + 1.0, b[1]], 0.07, 0.06); m.beam([a[0], y + 0.5, a[1]], [b[0], y + 0.5, b[1]], 0.04, 0.04);
-  if (o.collide !== false) { const t = 0.08; addBoxCollider(m, Math.min(a[0], b[0]) - t, Math.min(a[1], b[1]) - t, Math.max(a[0], b[0]) + t, Math.max(a[1], b[1]) + t, y - 0.1, y + 1.5); }
+  if (o.collide !== false) { const t = 0.08; addBoxCollider(m, Math.min(a[0], b[0]) - t, Math.min(a[1], b[1]) - t, Math.max(a[0], b[0]) + t, Math.max(a[1], b[1]) + t, y + 0.05, y + 1.5); /* from the floor up: a head passing under the slab on the stair must not meet it */ }
 }
 
 // the slab of a second storey. holes: local rects [x0, z0, x1, z1] (stairwells); the kit's upper walls, gables and roof are already there.

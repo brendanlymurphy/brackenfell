@@ -217,6 +217,7 @@ function buildHouse(site, spec) {
     interact(x, y, z, o) { const it = Object.assign({ p: m4.tp(Ms, [x, y, z]), r: 2.0, zone }, o); World.interact.push(it); return it; },
   };
   if (kit) kitShell(ctx);
+  if (kit && typeof UPPER !== 'undefined' && UPPER[site.id]) UPPER[site.id](ctx);       // stairs and upper floor first, so the ground-floor furniture goes round them
   if (spec.interior) spec.interior(ctx);
   if (kit) kitDress(ctx);
   if (kit && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
