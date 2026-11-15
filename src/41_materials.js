@@ -11,7 +11,9 @@ function instNodes(noLod) {
   const { Fn, vec3, attribute, positionLocal, normalLocal, cos, sin, distance, select, float } = TSL, U = SH.U;
   const ipos = attribute('ipos', 'vec4'), iprm = attribute('iprm', 'vec4'), lod = attribute('mm', 'vec4').w.mul(255).round();
   const pos = Fn(() => {
-    const c = cos(iprm.x), s = sin(iprm.x), lp = positionLocal.mul(ipos.w), ww = attribute('wind', 'float');
+    const c = cos(iprm.x), s = sin(iprm.x), ww = attribute('wind', 'float');
+    // vertex lod 3 marks the one boulder shape: every instance squashes it by its own random amounts (iprm.y, iprm.z), so one mesh gives many shapes
+    const sq = TSL.mix(vec3(1, 1, 1), vec3(iprm.y.mul(0.55).add(0.8), iprm.z.mul(0.4).add(0.8), float(1.3).sub(iprm.y.mul(0.55))), TSL.step(2.5, lod)), lp = positionLocal.mul(ipos.w).mul(sq);
     const p = vec3(lp.x.mul(c).add(lp.z.mul(s)), lp.y, lp.x.negate().mul(s).add(lp.z.mul(c)));
     const wt = U.wind.w, ph = iprm.z.mul(40);
     const sway = sin(wt.mul(1.1).add(ph).add(p.y.mul(0.2))).mul(0.6).add(sin(wt.mul(2.3).add(ph.mul(1.7)).add(lp.x.mul(1.3))).mul(0.4));

@@ -335,6 +335,14 @@ class Mesh {
     this.seed = 12345;
   }
   _growV() { const nb = new ArrayBuffer(this.cap * 64); new Uint8Array(nb).set(this.u8); this.cap *= 2; this.buf = nb; this.f = new Float32Array(nb); this.u8 = new Uint8Array(nb); this.i8 = new Int8Array(nb); }
+  // add everything another mesh holds (already in world space) to this one
+  append(o) {
+    while (this.nv + o.nv > this.cap) this._growV(); this._growI(o.ni);
+    this.u8.set(o.u8.subarray(0, o.nv * 32), this.nv * 32);
+    for (let i = 0; i < o.ni; i++) this.idx[this.ni + i] = o.idx[i] + this.nv;
+    for (let k = 0; k < 3; k++) { this.min[k] = Math.min(this.min[k], o.min[k]); this.max[k] = Math.max(this.max[k], o.max[k]); }
+    this.nv += o.nv; this.ni += o.ni; return this;
+  }
   _growI(n) { while (this.ni + n > this.icap) this.icap *= 2; const ni = new Uint32Array(this.icap); ni.set(this.idx.subarray(0, this.ni)); this.idx = ni; }
   rnd() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) | 0; return (this.seed >>> 8) / 16777216; }
   // ── state ──
@@ -659,7 +667,9 @@ function instNodes(noLod) {
   const { Fn, vec3, attribute, positionLocal, normalLocal, cos, sin, distance, select, float } = TSL, U = SH.U;
   const ipos = attribute('ipos', 'vec4'), iprm = attribute('iprm', 'vec4'), lod = attribute('mm', 'vec4').w.mul(255).round();
   const pos = Fn(() => {
-    const c = cos(iprm.x), s = sin(iprm.x), lp = positionLocal.mul(ipos.w), ww = attribute('wind', 'float');
+    const c = cos(iprm.x), s = sin(iprm.x), ww = attribute('wind', 'float');
+    // vertex lod 3 marks the one boulder shape: every instance squashes it by its own random amounts (iprm.y, iprm.z), so one mesh gives many shapes
+    const sq = TSL.mix(vec3(1, 1, 1), vec3(iprm.y.mul(0.55).add(0.8), iprm.z.mul(0.4).add(0.8), float(1.3).sub(iprm.y.mul(0.55))), TSL.step(2.5, lod)), lp = positionLocal.mul(ipos.w).mul(sq);
     const p = vec3(lp.x.mul(c).add(lp.z.mul(s)), lp.y, lp.x.negate().mul(s).add(lp.z.mul(c)));
     const wt = U.wind.w, ph = iprm.z.mul(40);
     const sway = sin(wt.mul(1.1).add(ph).add(p.y.mul(0.2))).mul(0.6).add(sin(wt.mul(2.3).add(ph.mul(1.7)).add(lp.x.mul(1.3))).mul(0.4));
@@ -2323,7 +2333,7 @@ function buildTerrain() {
   // TERRAIN_FINE: the ground is drawn with 1.5 m cells out to this distance from the centre and with 3 m cells (a quarter of the triangles) from there to the
   // edge of the height grid. Terrain.y still reads the 1.5 m grid. 144 puts the whole grid back on 1.5 m cells.
   const FINE = TERRAIN_FINE, ring = FINE < K.terrainHalf;
-  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 32, mesh: FINE }].concat(ring ? [{ cell: 3, half: 144, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: 144, tile: 48 }, { cell: 24, half: 1440, hole: 432, tile: 40 }, { cell: 96, half: 4800, hole: 1440, tile: 50 }]);
+  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: 144, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: 144, tile: 48 }, { cell: 24, half: 1440, hole: 432, tile: 40 }, { cell: 96, half: 4800, hole: 1440, tile: 50 }]);
   const pack = new MeshPack(); pack.shadow = true;
   let prev = null;
   for (let li = levels.length - 1; li >= 0; li--) {            // coarse first so fine borders can be stitched to them
@@ -3799,10 +3809,12 @@ function buildVillage() {
   const put = (x, z, yaw, fn, dy) => { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z) + (dy || 0), z); if (yaw) m.RY(-yaw); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); };
   const spot = (name, x, z, yaw, extra) => { World.spots[name] = Object.assign({ p: [x, Terrain.y(x, z), z], yaw: yaw || 0, zone: 0 }, extra || {}); };
 
+  const houseExt = new Map();
   for (const site of SITES) {
     const spec = HOUSES[site.id]; if (!spec) continue;
     const h = buildHouse(site, spec);
-    if (h.ext.ni) pack.add(h.ext, { kind: 'opaque' }); if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
+    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
   }
@@ -4093,6 +4105,7 @@ function buildVillage() {
     for (let i = 0; i < m.nv; i++) { if (m.u8[i * 32 + 29] !== 0 || m.u8[i * 32 + 27] < 250) continue; const y = m.f[i * 8 + 1] - Terrain.y(m.f[i * 8], m.f[i * 8 + 2]); if (y < 0.45) m.u8[i * 32 + 27] = Math.round(255 * lerp(0.62, 1, sat(y / 0.45))); }
     if (m.ni) pack.add(m, { kind: 'opaque' });
   }
+  for (const m of houseExt.values()) pack.add(m, { kind: 'opaque' });
   World.villagePack = pack;
   World.packs.push(pack);
 }
@@ -4185,8 +4198,10 @@ function buildVegetation() {
   const bushL = new Mesh(512); bushL.mat(MAT.LEAVES, [1, 1, 1]);
   leafBlob(bushL, rng(5), 0, 0.55, 0, 0.75, 0.5, 0.75, 9, 0.62, [0.40, 0.55, 0.22], 0.3);
   // ── boulders ──
-  const rockM = [1, 2, 3].map(seed => {
-    const m = new Mesh(256), nu = 9, nv = 6; m.mat(MAT.ROCK, [1, 1, 1], 0.7);
+  // one boulder shape (vertex lod 3: the instance shader squashes it differently for every boulder), so boulders are one draw per cell, not three
+  const rockAll = new Mesh(256);
+  const rockM = [1].map((seed, kk) => {
+    const m = rockAll, nu = 9, nv = 6; m.mat(MAT.ROCK, [1, 1, 1], 0.7); m.m3 = 3 + kk;
     const rad = (a, b) => 1 + 0.32 * gnoise(Math.cos(a) * Math.sin(b) * 1.6 + seed * 7.1, Math.cos(b) * 1.6 + Math.sin(a) * Math.sin(b) * 1.6, seed) + 0.12 * gnoise(Math.cos(a) * Math.sin(b) * 4 + 3, Math.sin(a) * Math.sin(b) * 4 + Math.cos(b) * 4, seed + 9);
     const pos = (i, j) => { const a = -(i % nu) / nu * TAU, b = clamp(j / nv, 0.001, 0.999) * PI, r = rad(a, b); return [Math.sin(b) * Math.cos(a) * r, Math.cos(b) * r * 0.62, Math.sin(b) * Math.sin(a) * r * 0.85]; };
     m.grid(nu, nv, (i, j) => { const p = pos(i, j), pa = pos(i + 1, j), pb = pos(i, Math.min(j + 1, nv)), pc = pos(i + nu - 1, j), pd = pos(i, Math.max(j - 1, 0));
@@ -4194,11 +4209,11 @@ function buildVegetation() {
       return m.vert(p[0], p[1], p[2], n[0], n[1], n[2], i / nu * 3, j / nv * 1.5, lerp(0.55, 1, sat(p[1] * 1.2 + 0.6))); });
     return m;
   });
-  const I = { pineT: pack.add(pineT), pineL: pack.add(pineL), pineF: pack.add(pineF), birchT: pack.add(birchT), birchL: pack.add(birchL), birchF: pack.add(birchF), oakT: pack.add(oakT), oakL: pack.add(oakL), bush: pack.add(bushL), rocks: rockM.map(m => pack.add(m)) };
+  const I = { pineT: pack.add(pineT), pineL: pack.add(pineL), pineF: pack.add(pineF), birchT: pack.add(birchT), birchL: pack.add(birchL), birchF: pack.add(birchF), oakT: pack.add(oakT), oakL: pack.add(oakL), bush: pack.add(bushL), rocks: pack.add(rockAll) };
   pack.upload('veg'); World.instPack = pack;
 
   // ── placement ──
-  const inst = { pine: [], birch: [], oak: [], bush: [], rock0: [], rock1: [], rock2: [] };
+  const inst = { pine: [], birch: [], oak: [], bush: [], rock: [] };
   const blocked = (x, z, pad) => {
     for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + pad + (s.porch || 0) + 2 && Math.abs(l[1]) < s.d / 2 + pad + 2) return true; }
     for (const r of Roads) if (r.line.dist(x, z, r.w / 2 + pad) < r.w / 2 + pad) return true;
@@ -4239,7 +4254,7 @@ function buildVegetation() {
   }
   for (const s of SITES) { if (!HOUSES[s.id] || s.id === 'barn') continue; for (let k = 0; k < 5; k++) { const side = R() < 0.5 ? -1 : 1, lx = R.s() * s.w * 0.45, p = siteToWorld(s, lx, side * (s.d / 2 + 0.8)); const dl = siteDoorLocal(s, 0); if (hyp(lx - dl[0], side * (s.d / 2) - dl[1]) < 1.8 || s.id === 'smithy' && side < 0) continue; inst.bush.push([p[0], Terrain.y(p[0], p[1]) - 0.05, p[1], 0.45 + R() * 0.4, R() * TAU, R(), R(), 0]); } }
   for (const g of World.gardenPlants || []) inst.bush.push([g[0], Terrain.y(g[0], g[1]) - 0.02, g[1], 0.42 + R() * 0.15, R() * TAU, g[2] * 0.45, R(), 0]);
-  const addRock = (x, z, s) => { const y = gy(x, z), k = R.i(0, 2); inst['rock' + k].push([x, y - 0.22 * s, z, s, R() * TAU, R(), 0, 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
+  const addRock = (x, z, s) => { const y = gy(x, z); inst.rock.push([x, y - 0.22 * s, z, s, R() * TAU, R(), R(), 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
   for (let i = 0; i < 420; i++) {
     const a = R() * TAU, r = 30 + R() * 210, x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (r < 160 && blocked(x, z, 1.0)) continue;
@@ -4270,7 +4285,7 @@ function buildVegetation() {
   mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
   mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
-  for (let k = 0; k < 3; k++) mkGroups(inst['rock' + k], [{ item: I.rocks[k], kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
+  mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;
 }
 
