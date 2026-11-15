@@ -108,6 +108,7 @@ const Terrain = {
 };
 World.groundY = (x, z) => Terrain.y(x, z);
 
+const TERRAIN_FINE = 96;
 function buildTerrain() {
   // site heights from the untouched land
   for (const s of SITES) {
@@ -118,7 +119,10 @@ function buildTerrain() {
     const d = River.dist(s.x, s.z, 14); if (d < 14) s.y = riverY(River.at) + 0.78;
     if (hyp(s.x - SQUARE.x, s.z - SQUARE.z) < 30) s.y = lerp(s.y, 0, 0.7);
   }
-  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 32 }, { cell: 6, half: 432, hole: 144, tile: 48 }, { cell: 24, half: 1440, hole: 432, tile: 40 }, { cell: 96, half: 4800, hole: 1440, tile: 50 }];
+  // TERRAIN_FINE: the ground is drawn with 1.5 m cells out to this distance from the centre and with 3 m cells (a quarter of the triangles) from there to the
+  // edge of the height grid. Terrain.y still reads the 1.5 m grid. 144 puts the whole grid back on 1.5 m cells.
+  const FINE = TERRAIN_FINE, ring = FINE < K.terrainHalf;
+  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 32, mesh: FINE }].concat(ring ? [{ cell: 3, half: 144, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: 144, tile: 48 }, { cell: 24, half: 1440, hole: 432, tile: 40 }, { cell: 96, half: 4800, hole: 1440, tile: 50 }]);
   const pack = new MeshPack(); pack.shadow = true;
   let prev = null;
   for (let li = levels.length - 1; li >= 0; li--) {            // coarse first so fine borders can be stitched to them
@@ -134,7 +138,12 @@ function buildTerrain() {
         hgt[k * W] = lerp(ch(c0, c0 + q), ch(c0, c0 + q1), t); hgt[k * W + n] = lerp(ch(cE, c0 + q), ch(cE, c0 + q1), t);
       }
     }
+    if (L.mesh && ring) {       // the fine level ends at |x| or |z| = L.mesh: its border vertices between ring vertices take the ring's straight edge
+      const e0 = Math.round((L.half - L.mesh) / L.cell), e1 = n - e0;
+      for (let k = e0; k <= e1; k++) if ((k - e0) & 1) { hgt[e0 * W + k] = (hgt[e0 * W + k - 1] + hgt[e0 * W + k + 1]) / 2; hgt[e1 * W + k] = (hgt[e1 * W + k - 1] + hgt[e1 * W + k + 1]) / 2; hgt[k * W + e0] = (hgt[(k - 1) * W + e0] + hgt[(k + 1) * W + e0]) / 2; hgt[k * W + e1] = (hgt[(k - 1) * W + e1] + hgt[(k + 1) * W + e1]) / 2; }
+    }
     const holeC = Math.round((L.half - L.hole) / L.cell);       // cells from the edge to the hole
+    const meshC = L.mesh && ring ? Math.round((L.half - L.mesh) / L.cell) : 0;       // cells from the edge that are not drawn at this level
     for (let tj = 0; tj < n; tj += L.tile) for (let ti = 0; ti < n; ti += L.tile) {
       const m = new Mesh(2048), ids = new Map();
       const vid = (i, j) => {
@@ -145,6 +154,7 @@ function buildTerrain() {
       };
       for (let j = tj; j < Math.min(tj + L.tile, n); j++) for (let i = ti; i < Math.min(ti + L.tile, n); i++) {
         if (L.hole && i >= holeC && i < n - holeC && j >= holeC && j < n - holeC) continue;
+        if (meshC && (i < meshC || i >= n - meshC || j < meshC || j >= n - meshC)) continue;
         const a = vid(i, j), b = vid(i, j + 1), c = vid(i + 1, j + 1), d = vid(i + 1, j);
         m.tri(a, b, c); m.tri(a, c, d);
       }

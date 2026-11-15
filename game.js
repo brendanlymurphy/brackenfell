@@ -926,9 +926,9 @@ function sceneUpdate(camPos, q) {
 // ---- 43_render.js ----
 // ───────────────────────── renderer: quality tiers, camera, sun and shadows, post, frame ─────────────────────────
 const QUALITY = {
-  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassDensity: 0.30, treeLod: 40, lights: 4, aniso: 2, far1: 3 },
-  medium: { name: 'Medium', pr: 1.5, msaa: 4, shadowRes: 1536, bloom: true,  grassRange: 30, grassDensity: 0.60, treeLod: 65, lights: 6, aniso: 4, far1: 2 },
-  high:   { name: 'High',   pr: 2.0, msaa: 4, shadowRes: 2048, bloom: true,  grassRange: 36, grassDensity: 1.00, treeLod: 90, lights: 8, aniso: 8, far1: 2 },
+  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassDensity: 0.30, treeLod: 40, lights: 4, aniso: 2, far1: 3, shadowNear: 16 },
+  medium: { name: 'Medium', pr: 1.5, msaa: 4, shadowRes: 1536, bloom: true,  grassRange: 30, grassDensity: 0.60, treeLod: 65, lights: 6, aniso: 4, far1: 2, shadowNear: 20 },
+  high:   { name: 'High',   pr: 2.0, msaa: 4, shadowRes: 2048, bloom: true,  grassRange: 36, grassDensity: 1.00, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24 },
 };
 const R = {
   q: QUALITY.high, qName: 'high', scale: 1, frame: 0, P: null, busy: false,
@@ -1071,7 +1071,7 @@ function renderFrame(time, env) {
   const L = env.keyDir, sun = R.sun;
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
   // near map every frame, far map every few frames (its centre only moves when it is redrawn)
-  const fh = v3.norm([f[0], 0, f[2]]), r0 = 24, r1 = 92, S = R.shadows;
+  const fh = v3.norm([f[0], 0, f[2]]), r0 = q.shadowNear, r1 = 92, S = R.shadows;      // r0: radius (m) of the tight shadow map, which is drawn every frame
   const upd1 = !R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || !!TEST));      // deep inside a building the far map keeps what it last saw (see deepIndoors)
   shadowPlace(0, [e[0] + fh[0] * r0 * 0.72, e[1], e[2] + fh[2] * r0 * 0.72], r0, L, env);
   if (upd1) { shadowPlace(1, [e[0] + fh[0] * r1 * 0.6, e[1], e[2] + fh[2] * r1 * 0.6], r1, L, env); R.shadow1Ready = true; }
@@ -2309,6 +2309,7 @@ const Terrain = {
 };
 World.groundY = (x, z) => Terrain.y(x, z);
 
+const TERRAIN_FINE = 96;
 function buildTerrain() {
   // site heights from the untouched land
   for (const s of SITES) {
@@ -2319,7 +2320,10 @@ function buildTerrain() {
     const d = River.dist(s.x, s.z, 14); if (d < 14) s.y = riverY(River.at) + 0.78;
     if (hyp(s.x - SQUARE.x, s.z - SQUARE.z) < 30) s.y = lerp(s.y, 0, 0.7);
   }
-  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 32 }, { cell: 6, half: 432, hole: 144, tile: 48 }, { cell: 24, half: 1440, hole: 432, tile: 40 }, { cell: 96, half: 4800, hole: 1440, tile: 50 }];
+  // TERRAIN_FINE: the ground is drawn with 1.5 m cells out to this distance from the centre and with 3 m cells (a quarter of the triangles) from there to the
+  // edge of the height grid. Terrain.y still reads the 1.5 m grid. 144 puts the whole grid back on 1.5 m cells.
+  const FINE = TERRAIN_FINE, ring = FINE < K.terrainHalf;
+  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 32, mesh: FINE }].concat(ring ? [{ cell: 3, half: 144, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: 144, tile: 48 }, { cell: 24, half: 1440, hole: 432, tile: 40 }, { cell: 96, half: 4800, hole: 1440, tile: 50 }]);
   const pack = new MeshPack(); pack.shadow = true;
   let prev = null;
   for (let li = levels.length - 1; li >= 0; li--) {            // coarse first so fine borders can be stitched to them
@@ -2335,7 +2339,12 @@ function buildTerrain() {
         hgt[k * W] = lerp(ch(c0, c0 + q), ch(c0, c0 + q1), t); hgt[k * W + n] = lerp(ch(cE, c0 + q), ch(cE, c0 + q1), t);
       }
     }
+    if (L.mesh && ring) {       // the fine level ends at |x| or |z| = L.mesh: its border vertices between ring vertices take the ring's straight edge
+      const e0 = Math.round((L.half - L.mesh) / L.cell), e1 = n - e0;
+      for (let k = e0; k <= e1; k++) if ((k - e0) & 1) { hgt[e0 * W + k] = (hgt[e0 * W + k - 1] + hgt[e0 * W + k + 1]) / 2; hgt[e1 * W + k] = (hgt[e1 * W + k - 1] + hgt[e1 * W + k + 1]) / 2; hgt[k * W + e0] = (hgt[(k - 1) * W + e0] + hgt[(k + 1) * W + e0]) / 2; hgt[k * W + e1] = (hgt[(k - 1) * W + e1] + hgt[(k + 1) * W + e1]) / 2; }
+    }
     const holeC = Math.round((L.half - L.hole) / L.cell);       // cells from the edge to the hole
+    const meshC = L.mesh && ring ? Math.round((L.half - L.mesh) / L.cell) : 0;       // cells from the edge that are not drawn at this level
     for (let tj = 0; tj < n; tj += L.tile) for (let ti = 0; ti < n; ti += L.tile) {
       const m = new Mesh(2048), ids = new Map();
       const vid = (i, j) => {
@@ -2346,6 +2355,7 @@ function buildTerrain() {
       };
       for (let j = tj; j < Math.min(tj + L.tile, n); j++) for (let i = ti; i < Math.min(ti + L.tile, n); i++) {
         if (L.hole && i >= holeC && i < n - holeC && j >= holeC && j < n - holeC) continue;
+        if (meshC && (i < meshC || i >= n - meshC || j < meshC || j >= n - meshC)) continue;
         const a = vid(i, j), b = vid(i, j + 1), c = vid(i + 1, j + 1), d = vid(i + 1, j);
         m.tri(a, b, c); m.tri(a, c, d);
       }
