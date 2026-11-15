@@ -813,9 +813,7 @@ function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
   M.static = surfaceMaterial('static'); M.inst = surfaceMaterial('inst'); M.rigid = surfaceMaterial('rigid'); M.leaf = foliageMaterial(); M.leafFar = foliageMaterial(true); M.terrain = terrainMaterial();
-  if (typeof WaterMat !== 'undefined') M.water = WaterMat();
-  else { M.water = new THREE.MeshBasicNodeMaterial(); M.water.colorNode = SH.U.horizon.mul(0.35).add(TSL.vec3(0.01, 0.03, 0.03)); M.water.opacityNode = TSL.float(0.82); M.water.transparent = true; M.water.depthWrite = false; }
-  M.glow = typeof GlowMat !== 'undefined' ? GlowMat() : null;
+  M.water = WaterMat(); M.glow = GlowMat();
   const sphere = (c, r) => new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r);
   const geo = (pk, first, count, inst) => {
     const g = inst ? new THREE.InstancedBufferGeometry() : new THREE.BufferGeometry();
@@ -931,8 +929,7 @@ async function setQuality(name) {
     const scene = sceneBuild();
     scene.add(R.sun); scene.add(R.sun.target);
     scene.fogNode = TSL.fog(SH.fogColor(), SH.fogAmount());
-    if (typeof Sky !== 'undefined') Sky.build(scene); else scene.backgroundNode = U.horizon;
-    if (typeof Particles !== 'undefined') Particles.build(scene);
+    Sky.build(scene); Particles.build(scene);
     if (G.chars) scene.add(Chars.group);
   }
   // sun shadows: a tight map around the player and a wide one beyond it
@@ -940,7 +937,7 @@ async function setQuality(name) {
   if (!prev || prev.shadowRes !== q.shadowRes) for (const l of R.shadows.lights) { l.shadow.mapSize.set(q.shadowRes, q.shadowRes); if (l.shadow.map) { l.shadow.map.dispose(); l.shadow.map = null; } }
   U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
   { const lf = SC.mats.leaf, a2c = q.msaa > 1; if (lf.alphaToCoverage !== a2c) { lf.alphaToCoverage = a2c; lf.alphaTest = a2c ? 0.06 : 0.5; lf.needsUpdate = true; } }
-  if (typeof Grass !== 'undefined' && (!prev || prev.grassRange !== q.grassRange)) { if (prev && Grass.dispose) Grass.dispose(); Grass.build(SC.scene, q); }
+  if (!prev || prev.grassRange !== q.grassRange) { if (prev) Grass.dispose(); Grass.build(SC.scene, q); }
   if (!prev || prev.msaa !== q.msaa || prev.bloom !== q.bloom) buildPipeline();
   R.P = true; R.camKey = '';
 }
@@ -1050,9 +1047,7 @@ function renderFrame(time, env) {
   S.lights[1].shadow.needsUpdate = upd1;
   // ── world ──
   sceneUpdate(e, q);
-  if (typeof Sky !== 'undefined') Sky.update(e);
-  if (typeof Grass !== 'undefined') Grass.update(e, [f[0], f[2]]);
-  if (typeof Particles !== 'undefined') Particles.update();
+  Sky.update(e); Grass.update(e, [f[0], f[2]]); Particles.update();
   // ── post ──
   if (R.passScale !== R.scale) { R.scenePass.setResolutionScale(R.scale); R.passScale = R.scale; }
   R.pu.exposure.value = env.exposure; R.pu.frame.value = (R.frame % 64) * 1.37;

@@ -6,9 +6,7 @@ function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
   M.static = surfaceMaterial('static'); M.inst = surfaceMaterial('inst'); M.rigid = surfaceMaterial('rigid'); M.leaf = foliageMaterial(); M.leafFar = foliageMaterial(true); M.terrain = terrainMaterial();
-  if (typeof WaterMat !== 'undefined') M.water = WaterMat();
-  else { M.water = new THREE.MeshBasicNodeMaterial(); M.water.colorNode = SH.U.horizon.mul(0.35).add(TSL.vec3(0.01, 0.03, 0.03)); M.water.opacityNode = TSL.float(0.82); M.water.transparent = true; M.water.depthWrite = false; }
-  M.glow = typeof GlowMat !== 'undefined' ? GlowMat() : null;
+  M.water = WaterMat(); M.glow = GlowMat();
   const sphere = (c, r) => new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r);
   const geo = (pk, first, count, inst) => {
     const g = inst ? new THREE.InstancedBufferGeometry() : new THREE.BufferGeometry();
