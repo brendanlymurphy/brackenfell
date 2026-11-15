@@ -1991,7 +1991,7 @@ const Particles = { mesh: null };
       const cr = cos(prm.x), sr = sin(prm.x);
       const cc = vec2(corner.x.mul(cr).sub(corner.y.mul(sr)), corner.x.mul(sr).add(corner.y.mul(cr)));
       // glows and sparks are never drawn larger than a set angle: a firefly at arm's length stays a speck and a lamp's halo near the eye stays a halo
-      const dEye = distance(ps.xyz, U.camPos), lim = select(prm.y.lessThan(0.5), float(0.17), select(prm.y.greaterThan(2.5), float(0.02), float(1e6)));
+      const dEye = distance(ps.xyz, U.camPos), lim = select(prm.y.lessThan(0.5), float(0.11), select(prm.y.greaterThan(2.5), float(0.02), float(1e6)));
       const size = min(ps.w, dEye.mul(lim));
       vNear.assign(select(prm.y.greaterThan(2.5), smoothstep(0.2, 0.9, dEye), select(prm.y.lessThan(0.5), smoothstep(0.1, 0.6, dEye), float(1))));
       const wp = ps.xyz.add(right.mul(cc.x).add(up.mul(cc.y.mul(prm.z))).mul(size));
@@ -8212,7 +8212,7 @@ function fxUpdate(dt, time, env, cam) {
       put(e.p[0], e.p[1] + sz * 0.45, e.p[2], sz, 1, 1, 1, 0.9 * fl, 0, 2, 1.5, e.seed); put(e.p[0], e.p[1] + sz * 0.4, e.p[2], sz * 4.2, 1.0, 0.5, 0.16, 0.2 * fl, 0, 0, 1, e.seed);
     } else if (e.type === 'lantern') {
       if (lit < 0.05 || dist > 170) continue;
-      put(e.p[0], e.p[1], e.p[2], 0.085 + dist * 0.0012, 1.0, 0.66, 0.26, 1.5 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.42 + dist * 0.006, 1.0, 0.50, 0.17, 0.11 * lit, 0, 0, 1, e.seed);      // a small bright flame and a faint halo (it was a white ball a metre across)
+      put(e.p[0], e.p[1], e.p[2], 0.055 + dist * 0.0016, 1.0, 0.66, 0.26, 1.5 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.42 + dist * 0.006, 1.0, 0.50, 0.17, 0.11 * lit, 0, 0, 1, e.seed);      // a small bright flame and a faint halo (it was a white ball a metre across)
     } else if (e.type === 'herb') {
       if (e.gone || dist > 60) continue;
       put(e.p[0], e.p[1] + 0.12, e.p[2], 0.34, 0.55, 0.85, 1.0, 0.16 + 0.10 * Math.sin(time * 2 + e.seed * 20) + env.night * 0.25, 0, 0, 1, e.seed);

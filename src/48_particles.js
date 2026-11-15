@@ -26,7 +26,7 @@ const Particles = { mesh: null };
       const cr = cos(prm.x), sr = sin(prm.x);
       const cc = vec2(corner.x.mul(cr).sub(corner.y.mul(sr)), corner.x.mul(sr).add(corner.y.mul(cr)));
       // glows and sparks are never drawn larger than a set angle: a firefly at arm's length stays a speck and a lamp's halo near the eye stays a halo
-      const dEye = distance(ps.xyz, U.camPos), lim = select(prm.y.lessThan(0.5), float(0.17), select(prm.y.greaterThan(2.5), float(0.02), float(1e6)));
+      const dEye = distance(ps.xyz, U.camPos), lim = select(prm.y.lessThan(0.5), float(0.11), select(prm.y.greaterThan(2.5), float(0.02), float(1e6)));
       const size = min(ps.w, dEye.mul(lim));
       vNear.assign(select(prm.y.greaterThan(2.5), smoothstep(0.2, 0.9, dEye), select(prm.y.lessThan(0.5), smoothstep(0.1, 0.6, dEye), float(1))));
       const wp = ps.xyz.add(right.mul(cc.x).add(up.mul(cc.y.mul(prm.z))).mul(size));
