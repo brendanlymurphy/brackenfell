@@ -41,5 +41,20 @@ if (want('roofs')) {
   rows.push('roofs ' + ROOFS.length + ' samples ' + n + ' intersecting ' + hit);
   fx(hit === 0, hit + ' roof sample points lie inside a neighbour');
 }
+// density: at eye height from 12 points inside the walls, 36 rays of 30 m; a ray is closed when a collider (wall, tree, fence, rock) is hit within 30 m. At least 70% of the horizon must be closed on average, and no point under 45%.
+if (want('density')) {
+  const PTS = window.__densityPoints || [[0, -2], [-30, -3], [35, 1], [-12, -26], [-8, -46], [-1, 30], [3, 56], [45, -1], [52, -14], [-6, -62], [-1, 74], [10, -36]];
+  const res = [];
+  for (const [x, z] of PTS) {
+    const y = World.groundAt(x, z, 99) + 1.6; let closed = 0, n = 36;
+    for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2, dx = Math.sin(a), dz = -Math.cos(a); let hit = false;
+      for (let d = 0.6; d < 30 && !hit; d += 0.45) { const p = [x + dx * d, y, z + dz * d]; if (colResolve(p, 0.04, y - 0.3, y + 0.2)) hit = true; }
+      if (hit) closed++; }
+    res.push(+(closed / n).toFixed(2));
+  }
+  const avg = res.reduce((a, b) => a + b, 0) / res.length;
+  rows.push('density avg ' + avg.toFixed(2) + ' min ' + Math.min(...res) + ' ' + JSON.stringify(res));
+  fx(avg >= 0.7, 'horizon closed within 30 m averages ' + avg.toFixed(2) + ' (need 0.70)'); fx(Math.min(...res) >= 0.45, 'a viewpoint has only ' + Math.min(...res) + ' of its horizon closed');
+}
 if (fails.length) throw new Error('TOWN FAIL ' + JSON.stringify({ rows, fails }));
 return 'town PASS ' + JSON.stringify(rows);

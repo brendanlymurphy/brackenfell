@@ -2634,7 +2634,7 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
     if (free(x, z, y2, w, d, o)) return add(x, z, y2, w, d, Object.assign({ floors: R.pick([2, 2, 3]), pitch: 40 + (R() * 12 | 0), ring: true }, o || {}));
     return null;
   };
-  INF.frontage = frontage; INF.ringPlace = ringPlace;
+  INF.frontage = frontage; INF.ringPlace = ringPlace; INF.add = add; INF.R = R;
   // ── 1. the square: houses standing round it, first row (these are the ones the player sees first) ──
   const ringOrder = [];
   for (let k = 0; k < 28; k++) ringOrder.push(k / 28 * TAU);
@@ -2668,6 +2668,22 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
       chosen.push(best);
     }
     chosen.forEach((h, i) => { h.enter = true; h.name = ['Cooper’s House', 'Tanner’s House', 'Potter’s House', 'Widow Hale’s House', 'Fletcher’s House', 'Dyer’s House'][i]; INF.enterIds.push(h.id); SITES.find(q => q.id === h.id).name = h.name; }); }
+  // ── 5. the dense town: after the first 25 (and the six enterable ones) are fixed, so their ids stay, fill the blocks: the outer streets, then second and third rows on lanes 2.2 to 2.7 m wide ──
+  if (!(TEST && TEST.dense === 0)) {
+    const base = INF.houses.length;
+    frontage('north', 1, [-9, -42], [-6.5, -60], { tier: 0 }); frontage('north', -1, [-9, -42], [-6.5, -60], { tier: 0 });
+    frontage('south', 1, [3, 47], [5, 80], { tier: 0 }); frontage('south', -1, [3, 47], [5, 80], { tier: 0 });
+    frontage('main', -1, [-62, -5], [-50, -5], { tier: 0 }); frontage('main', 1, [-62, -5], [-50, -5], { tier: 0 });
+    for (const h of INF.houses.slice()) {
+      if (h.second || R() < 0.15) continue;
+      const c = Math.cos(h.yaw), sn = Math.sin(h.yaw), back = 2.2 + R() * 0.5;
+      const w = R.pick([4.4, 5, 5.6, 6.4]), d = R.pick([4.6, 5.2, 5.8]), lz = h.d / 2 + back + d / 2, x = h.x + R.s() * 0.8 * c - lz * sn, z = h.z + R.s() * 0.8 * sn + lz * c;
+      if (!free(x, z, h.yaw, w, d, { sq: 3 })) continue;
+      const h2 = add(x, z, h.yaw, w, d, { floors: R.pick([1, 2, 2, 3]), pitch: 40 + (R() * 12 | 0), tier: 1, second: true });
+      if (R() < 0.4) { const w3 = R.pick([4.4, 5, 5.6]), d3 = R.pick([4.4, 5.2]), lz3 = h2.d / 2 + 2.0 + d3 / 2, x3 = h2.x + R.s() * 0.6 * c - lz3 * sn, z3 = h2.z + R.s() * 0.6 * sn + lz3 * c; if (free(x3, z3, h.yaw + PI, w3, d3, { sq: 4 })) add(x3, z3, h.yaw + PI, w3, d3, { floors: R.pick([1, 2]), pitch: 40 + (R() * 12 | 0), tier: 1, second: true }); }
+    }
+    INF.dense = INF.houses.length - base;
+  }
   // per-house features (so the painted door paths know where each door is)
   const nbAt = (h, east) => { const c = Math.cos(h.yaw), sn = Math.sin(h.yaw), lx = (east ? 1 : -1) * (h.w / 2 + 0.3); const x = h.x + lx * c, z = h.z + lx * sn; for (const o of SITES) { if (o === h || !o.w) continue; if (inRect(o, x, z, 0.12)) return 1; } return 0; };
   for (const h of INF.houses) {
@@ -7516,8 +7532,8 @@ function splat2Dress(blob, A, B) {
 
 
 // ---- 73d_infill.js ----
-// Budget: yard props, dressing and the alley are culled nearer on Medium (the town is dense; beyond ~42 m they are small and cost a draw call each)
-QUALITY.medium.yardRange = 30; QUALITY.medium.houseFar = 42; QUALITY.medium.yardCast = false;
+// Budget: yard props, dressing and the alley are culled nearer on Medium (the town is dense; beyond ~24 m they are small and cost a draw call each)
+QUALITY.medium.yardRange = 24; QUALITY.medium.houseFar = 34; QUALITY.medium.yardCast = false;
 // ───────────────────────── infill houses: dark timber walls, grey shingle roofs, built from the village kit ─────────────────────────
 // Sites come from 55b_infill.js. Six of them are enterable (HOUSES specs in 72c_infill.js, shell by kitShell); the rest are shells only, assembled here
 // in the same way as the market alley (2 m wall panels scaled to the wall, kit window and door modules, jettied upper storeys, kit roof turned to a ridge
@@ -7527,7 +7543,7 @@ const ROOFS = [];       // every generated roof (for test/town.js: slope sample 
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
 const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof';
 function infBatch() {
-  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 24, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 24 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
+  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 48, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 48 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
   return INFS.batch;
 }
 
