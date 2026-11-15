@@ -17,6 +17,7 @@ const KIT_STYLE = {
   farm: { ground: 'plaster', vines: 2 },
   hunter: { ground: 'stone', vines: 1 },
   fisher: { ground: 'plaster' },
+  draper: { ground: 'plaster', up: 1, balcony: 'front', vines: 1 },
 };
 World.kitExt = {}; World.kitInt = {}; World.kitYard = null; World.kitGroups = [];
 const kitReady = () => HOUSE_STYLE === 'kit' && typeof Kit !== 'undefined' && !!Kit.ready;
@@ -343,6 +344,7 @@ const KIT_DRESS = {
   farm: { floor: ['FarmCrate_Apple', 'Barrel_Apples', 'wooden_ladder', 'FarmCrate_Carrot', 'Bag', 'Cabinet', 'Bucket_Wooden_1', 'wicker_basket_02'], wall: ['Shelf_Simple', 'Torch_Metal', 'rusted_spade_01', 'Peg_Rack'] },
   hunter: { floor: ['Crate_Wooden', 'Barrel', 'Bag', 'WeaponStand', 'treasure_chest'], wall: ['Torch_Metal', 'Peg_Rack', 'Axe_Bronze', 'kite_shield', 'rusted_spade_01'] },
   fisher: { floor: ['Barrel', 'Bucket_Wooden_1', 'wicker_basket_02', 'Crate_Wooden'], wall: ['Torch_Metal', 'Peg_Rack'] },
+  draper: { floor: ['spinning_wheel_01', 'Dummy', 'Cabinet', 'wicker_basket_02', 'Bag'], wall: ['Banner_1_Cloth', 'Torch_Metal', 'Banner_2_Cloth', 'Shelf_Simple', 'Torch_Metal'] },
   chapel: { floor: ['CandleStick_Stand', 'CandleStick_Stand', 'BookStand', 'CandleStick_Stand', 'CandleStick_Stand'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal'] },
 };
 // extra dressing per building, once its own interior has been laid out
@@ -485,6 +487,12 @@ function kitAttach() {
     Q(M, [-x, y - 0.55, -z], [x, y - 0.55, -z], [x, r, 0], [-x, r, 0]); Q(M, [-x, y - 0.55, z], [x, y - 0.55, z], [x, r, 0], [-x, r, 0]);
     for (const sx of [-xw, xw]) { V(M, sx, y - 0.2, -k.hd); V(M, sx, y - 0.2, k.hd); V(M, sx, r - 0.2, 0); }
   }
+  if (AL.batch && AL.batch.count) {
+    const g = AL.batch.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g, { alley: true });
+    for (const p of AL.proxies) { const M = p.Ms, xw = p.w / 2 - 0.1, x = p.w / 2 + 0.3, z0 = -p.d / 2 - 0.55, z1 = p.d / 2 - 0.1, y = p.top, r = y + p.rise;
+      Q(M, [-xw, -1, z0], [xw, -1, z0], [xw, y, z0], [-xw, y, z0]); Q(M, [xw, -1, z1], [-xw, -1, z1], [-xw, y, z1], [xw, y, z1]); Q(M, [-xw, -1, z1], [-xw, -1, z0], [-xw, y, z0], [-xw, y, z1]); Q(M, [xw, -1, z0], [xw, -1, z1], [xw, y, z1], [xw, y, z0]);
+      Q(M, [-x, y - 0.25, z0 - 0.3], [-x, y - 0.25, z1 + 0.3], [0, r, z1 + 0.3], [0, r, z0 - 0.3]); Q(M, [x, y - 0.25, z1 + 0.3], [x, y - 0.25, z0 - 0.3], [0, r, z0 - 0.3], [0, r, z1 + 0.3]); V(M, -xw, y, z0); V(M, xw, y, z0); V(M, 0, r, z0); V(M, xw, y, z1); V(M, -xw, y, z1); V(M, 0, r, z1); }
+  }
   if (tri.length) {
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(tri), 3));
     const mat = new THREE.MeshBasicNodeMaterial(); mat.side = THREE.DoubleSide; mat.colorWrite = false; mat.depthWrite = false; mat.depthTest = false; mat.fog = false;
@@ -502,6 +510,7 @@ function kitAttach() {
       else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
       else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
       else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) { o.visible = !World.deepIn && hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < q.yardRange + bs.radius; if (o.userData.cast0 === undefined) o.userData.cast0 = o.castShadow; o.castShadow = q.yardCast && o.userData.cast0; } }
+      else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? DRAW.indoor + 6 : q.yardRange * 1.6 + 8); }
       else k.g.visible = true;
     }
     if (Kit.update) Kit.update(camPos);

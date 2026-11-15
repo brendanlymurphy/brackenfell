@@ -196,6 +196,7 @@ function buildSplat() {
   ell(A, SQUARE.x, SQUARE.z, SQUARE.rx, SQUARE.rz, grn);
   stroke(A, [[BRIDGE.x - BRIDGE.len / 2 - 5, BRIDGE.z], [BRIDGE.x + BRIDGE.len / 2 + 5, BRIDGE.z]], BRIDGE.w, grn, 0.6);
   stroke(A, [[-6, -63.6], [-6, -68]], 3.6, grn, 0.6);
+  stroke(A, [[ALLEY.x0 - 2, roadZ(ALLEY.x0 - 2)], [36, 1], [ALLEY.x1 + 1, roadZ(ALLEY.x1 + 1)]], 9.6, grn, 0.75);       // the market alley is cobbled from shop front to shop front
   for (const f of FIELDS) { A.fillStyle = blu(1); const a = P(f.x0, f.z0), b = P(f.x1, f.z1); A.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]); }
   // bare ground: under buildings, river bed, lake
   for (const s of SITES) {

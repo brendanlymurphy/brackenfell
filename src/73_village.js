@@ -211,7 +211,7 @@ function buildVillage() {
   { const p = siteToWorld(H, H.w / 2 + 2.4, 1.0); spot('herbalist.garden', p[0], p[1], H.yaw + PI / 2); }
   for (const [lx, lz] of [[-H.w / 2 - 1.2, 1.2], [-H.w / 2 - 1.9, 0.3]]) { const p = siteToWorld(H, lx, lz); put(p[0], p[1], 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.35, 0, -0.35, 0.35, 0.3, 0.35); m.mat(MAT.THATCH, COL.hay, 0.4); m.lathe([[0.3, 0.3], [0.32, 0.5], [0.24, 0.75], [0.08, 0.9]], 10, 0); addCircleCollider(m, 0, 0, 0.36, 0, 0.9); }); }
   { const E = SITE.elder, p = siteToWorld(E, -E.w / 2 - 0.9, 0.4); put(p[0], p[1], E.yaw + PI / 2, m => Props.woodpile(m, 6, 5, 0.6)); const q = siteToWorld(E, 2.6, -E.d / 2 - 0.5); put(q[0], q[1], E.yaw, m => Props.bench(m, 1.5)); spot('elder.porch', q[0] + Math.sin(E.yaw) * 0.05, q[1] - Math.cos(E.yaw) * 0.05, E.yaw, { sit: 0.46 }); }
-  { const W2 = SITE.weaver, a = siteToWorld(W2, -W2.w / 2 - 0.6, -W2.d / 2 - 2.6), b = siteToWorld(W2, -W2.w / 2 - 5.2, -W2.d / 2 - 1.2);
+  { const W2 = SITE.weaver, a = siteToWorld(W2, -W2.w / 2 - 0.6, W2.d / 2 + 2.4), b = siteToWorld(W2, -W2.w / 2 - 5.2, W2.d / 2 + 1.0);
     for (const p of [a, b]) put(p[0], p[1], 0, m => { m.mat(MAT.TIMBER, COL.timber); m.cbox(0, -0.3, 0, 0.09, 2.2, 0.09, 4); });
     const ya = Terrain.y(a[0], a[1]) + 1.85, yb = Terrain.y(b[0], b[1]) + 1.85, m = bucket(a[0], a[1]); m.m1 = 0; m.ao = 1;
     m.mat(MAT.CLOTH, [0.7, 0.6, 0.4], 0.3); m.beam([a[0], ya, a[1]], [b[0], yb, b[1]], 0.02, 0.02);
@@ -300,6 +300,8 @@ function buildVillage() {
     for (const c of World.colliders) if (hyp(p[0] - c.x, p[1] - c.z) < (c.r !== undefined ? c.r : Math.max(c.hx, c.hz)) + 2.3) ok = false;
     if (ok) put(p[0], p[1], s.yaw + yaw, m => { kp(m, 'Prop_Wagon', 0, 0, 1.14, 1); addBoxCollider(m, -1.0, -2.0, 1.0, 2.0, 0, 1.3); });
   }
+
+  if (typeof buildAlley === 'function') buildAlley();
 
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {
