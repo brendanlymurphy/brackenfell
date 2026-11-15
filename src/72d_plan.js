@@ -116,13 +116,13 @@ function pStairGeom(P, s) {
   const rect = (a, b, la, lb) => ax === 'x' ? { x0: Math.min(a, b), x1: Math.max(a, b), z0: la, z1: lb } : { x0: la, x1: lb, z0: Math.min(a, b), z1: Math.max(a, b) };
   s.p0 = p0; s.p1 = p1; s.lat = lat; s.hw = hw;
   s.low = rect(p0, p1, lat - hw, lat + hw); s.high = s.low;
-  s.hole = rect(p0 - d * 0.4, p1, lat - hw - 0.1, lat + hw + 0.1);        // the opening in the slab of the level above: the whole run
+  s.hole = rect(p0 - d * 0.8, p1, lat - hw - 0.1, lat + hw + 0.1);        // the opening in the slab of the level above: the whole run
   s.lowPt = ax === 'x' ? [p0 - d * 0.7, lat] : [lat, p0 - d * 0.7];       // where one stands to start up
   s.highPt = ax === 'x' ? [p1 + d * 0.8, lat] : [lat, p1 + d * 0.8];      // where one stands when arrived
   P.holes.push({ k: s.k1, r: s.hole, stair: s });
   P.clear.push(Object.assign(rect(p0 - d * 1.3, p0, lat - hw - 0.1, lat + hw + 0.1), { k: s.k0, kind: 'stair' }), Object.assign(rect(p1, p1 + d * 1.3, lat - hw - 0.1, lat + hw + 0.1), { k: s.k1, kind: 'stair' }));
   P.occ(s.k0, rect(p0, p1, lat - hw - 0.08, lat + hw + 0.08), 'stair', s.id);            // the steps and stringers on the lower level
-  P.occ(s.k1, rect(p0, p1, lat - hw - 0.08, lat + hw + 0.08), 'hole', s.id);            // and the opening above them
+  P.occ(s.k1, s.hole, 'hole', s.id);            // and the opening above them
 }
 
 // ── occupancy and placement ──
@@ -190,7 +190,7 @@ function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
   for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
   const m = P.c.int, p = hor ? [u, side === 'n' ? a.z0 : a.z1] : [side === 'w' ? a.x0 : a.x1, u];
   const rot = rotBack(side, +1);
-  at(m, p[0], L.y + y0, p[1], rot, () => draw(m, y1 - y0));
+  at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0));
   P.wallItems.push(rec); return rec;
 }
 const pCentre = r => [(r.in.x0 + r.in.x1) / 2, (r.in.z0 + r.in.z1) / 2];

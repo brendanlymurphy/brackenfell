@@ -72,6 +72,7 @@ function updateDynamics(dt, chars) {
     let near = false;
     for (const c of chars) if (CELLS_ON && c === chars[0]) continue; else if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
     if (near && d.open === 0 && game.playing) { const dd = hyp(pp[0] - d.c[0], pp[2] - d.c[2]); if (dd < 14) Audio2.door(clamp(1.2 - dd / 12, 0.1, 1)); }
+    if (d.gate && !S.opened[d.gate]) near = false;          // a locked gate stays shut until the key has turned
     d.open = clamp(d.open + (near ? dt : -dt) * 2.4, 0, 1);
     if (d.open === d.last) continue; d.last = d.open;
     m4.copy(tmp, d.baseM); m4.rotY(tmp, smooth(0, 1, d.open) * 1.85); m4.mul(tmp, tmp, d.S); bd.set(tmp, d.obj.slot * 256);
