@@ -130,7 +130,7 @@ print('body faces', nb, '->', len(me.polygons))
 # ── layered clothes: take away what an outer garment hides (trousers under a tunic, boots under a robe), so inner cloth cannot poke through and no triangles go to it ──
 def layer(c):
     n = c[0]
-    return 4 if re.search(r'hood|helmet|hat', n) else 3 if re.search(r'bodice', n) else 2.5 if re.search(r'skirt', n) else 2 if re.search(r'tunic|robe|dress|top', n) else 1 if re.search(r'boots|shoes', n) else 0
+    return 4 if re.search(r'hood|helmet|hat', n) else 3 if re.search(r'bodice', n) else 2.5 if re.search(r'skirt', n) else 2.6 if re.search(r'tunic|robe|dress|top', n) else 1 if re.search(r'boots|shoes', n) else 0
 for o, c in clothes:
     outer = [(oo, cc) for oo, cc in clothes if layer(cc) > layer(c)]
     if not outer: continue
@@ -142,7 +142,7 @@ for o, c in clothes:
     cov = np.zeros(len(me2.vertices), bool)
     for v in me2.vertices:
         co = mw2 @ v.co; n = (nm2 @ v.normal).normalized()
-        cov[v.index] = ob.ray_cast(co + n * 0.001, n, 0.08)[0] is not None or ob.ray_cast(co - n * 0.001, -n, 0.035)[0] is not None       # hidden under it, or lying just outside it (poking through)
+        cov[v.index] = ob.ray_cast(co + n * 0.001, n, 0.08)[0] is not None or ob.ray_cast(co - n * 0.001, -n, 0.09 if layer(c) == 2.5 else 0.035)[0] is not None       # hidden under it, or lying just outside it (poking through)
     b2 = bmesh.new(); b2.from_mesh(me2); b2.verts.ensure_lookup_table()
     for _ in range(1):
         nxt = cov.copy()
