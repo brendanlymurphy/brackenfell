@@ -1,6 +1,7 @@
 // ───────────────────────── trees, bushes and boulders (instanced) ─────────────────────────
 // cell sizes (m) of the instanced groups: one draw per model per cell, so bigger cells mean fewer draws and coarser culling
-const FAR_TREE_CELL = 400, ROCK_CELL = 110;
+const PINE_DROOP_TIERS = 0.15;     // fraction of the pine's height below which a bough has two segments (was 1: all of them)
+const FAR_TREE_CELL = 400, ROCK_CELL = 110, ROCK_SEGS = [9, 6];      // boulder: segments round and from top to bottom (108 triangles; 8 x 5 is 80 but a big boulder seen up close shows its facets)
 function buildVegetation() {
   const R = rng(9001), pack = new MeshPack();
   // leaf card helper: quad at centre c spanned by half-vectors a (u) and b (v), blob normal n
@@ -23,8 +24,9 @@ function buildVegetation() {
       const a = a0 + j * TAU / k + R.s() * 0.25, dx = Math.cos(a), dz = Math.sin(a), l2 = len * (0.85 + R() * 0.3);
       const out = [dx, 0, dz], side = [-dz, 0, dx], shade = lerp(0.72, 1.0, t) * (0.9 + R() * 0.2);
       pineL.col([shade, shade, shade]);
-      for (let s = 0; s < 2; s++) {            // two segments so the bough can droop
-        const f0 = s * 0.5, f1 = f0 + 0.5;
+      const segs = t < PINE_DROOP_TIERS ? 2 : 1;       // the lower boughs get two segments so they can droop; the upper ones are one (this changes no random number drawn)
+      for (let s = 0; s < segs; s++) {
+        const f0 = s / segs, f1 = f0 + 1 / segs;
         const c0 = [dx * l2 * f0, y + l2 * (0.10 * Math.sin(f0 * PI) - droop * f0 * f0), dz * l2 * f0], c1 = [dx * l2 * f1, y + l2 * (0.10 * Math.sin(f1 * PI) - droop * f1 * f1), dz * l2 * f1];
         const mid = v3.scale(v3.add(c0, c1), 0.5), hv = v3.scale(v3.sub(c1, c0), 0.5), hw = l2 * 0.36;
         const n = v3.norm([dx * 0.55, 0.75, dz * 0.55]);
@@ -79,7 +81,7 @@ function buildVegetation() {
   // one boulder shape (vertex lod 3: the instance shader squashes it differently for every boulder), so boulders are one draw per cell, not three
   const rockAll = new Mesh(256);
   const rockM = [1].map((seed, kk) => {
-    const m = rockAll, nu = 9, nv = 6; m.mat(MAT.ROCK, [1, 1, 1], 0.7); m.m3 = 3 + kk;
+    const m = rockAll, nu = ROCK_SEGS[0], nv = ROCK_SEGS[1]; m.mat(MAT.ROCK, [1, 1, 1], 0.7); m.m3 = 3 + kk;
     const rad = (a, b) => 1 + 0.32 * gnoise(Math.cos(a) * Math.sin(b) * 1.6 + seed * 7.1, Math.cos(b) * 1.6 + Math.sin(a) * Math.sin(b) * 1.6, seed) + 0.12 * gnoise(Math.cos(a) * Math.sin(b) * 4 + 3, Math.sin(a) * Math.sin(b) * 4 + Math.cos(b) * 4, seed + 9);
     const pos = (i, j) => { const a = -(i % nu) / nu * TAU, b = clamp(j / nv, 0.001, 0.999) * PI, r = rad(a, b); return [Math.sin(b) * Math.cos(a) * r, Math.cos(b) * r * 0.62, Math.sin(b) * Math.sin(a) * r * 0.85]; };
     m.grid(nu, nv, (i, j) => { const p = pos(i, j), pa = pos(i + 1, j), pb = pos(i, Math.min(j + 1, nv)), pc = pos(i + nu - 1, j), pd = pos(i, Math.max(j - 1, 0));

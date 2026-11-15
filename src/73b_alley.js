@@ -124,7 +124,7 @@ function genStripCloth(w, h, cols) {       // a hanging cloth / banner with vert
 const AL = { shops: [], proxies: [], batch: null, lanterns: 0 };
 function buildAlley() {
   if (!kitReady()) return;
-  const R = rng(5150), B = Kit.batch({ name: 'alley', cell: 4096, off: 2048 }), B2 = Kit.batch({ name: 'alley-dress', cell: 4096, off: 2048 }); AL.batch = B; AL.batch2 = B2; AL.shops = []; AL.proxies = [];
+  const R = rng(5150), B = Kit.batch({ name: 'alley', cell: 4096, off: 2048, far: true }), B2 = Kit.batch({ name: 'alley-dress', cell: 4096, off: 2048 }); AL.batch = B; AL.batch2 = B2; AL.shops = []; AL.proxies = [];
   const OUT = { zone: 0, skyVis: 1, cast: false }, V = KH.V, up = [0, 1, 0];
   AL.R = R;
   const shopOf = id => ALLEY_SHOPS.find(a => a.id === id);

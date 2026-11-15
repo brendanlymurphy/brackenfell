@@ -108,7 +108,38 @@ const Terrain = {
 };
 World.groundY = (x, z) => Terrain.y(x, z);
 
-const TERRAIN_FINE = 96;
+const TERRAIN_FINE = 64;      // was 96; the ground beyond this is drawn with 3 m cells (a 3 m cell at 64 m covers about as many pixels as a 1.5 m cell at 32 m)
+const TERRAIN_TILE = [48, 30, 25];      // cells per tile of the three coarse levels (was 48, 40, 50): a tile is culled as a whole, and the big ones were always in view, so smaller tiles draw less
+const TERRAIN_FLAT = 0.08, TERRAIN_BLOCK = 8;       // m: how far ground may stray from a plane before a block is split; cells: the biggest block (a power of two; a level whose tile size it does not divide is drawn cell by cell)
+// Quadtree over one level's grid: returns { corner: Set of (i * 4096 + j) of every leaf corner, byTile: tile key -> [[i, j, size], ...] }.
+function terrainLeaves(L, n, W, hgt, holeC, meshC) {
+  const corner = new Set(), byTile = new Map(), tile = L.tile, H = (i, j) => hgt[j * W + i];
+  const included = (i0, j0, s) => {      // every cell of the block is drawn (none in the hole, none in the border the fine level leaves to the ring)
+    if (L.hole && i0 < n - holeC && i0 + s > holeC && j0 < n - holeC && j0 + s > holeC) return false;
+    if (meshC && (i0 < meshC || i0 + s > n - meshC || j0 < meshC || j0 + s > n - meshC)) return false;
+    return true;
+  };
+  const touches = (i0, j0, s) => {       // some cell of the block is drawn
+    if (L.hole && i0 >= holeC && i0 + s <= n - holeC && j0 >= holeC && j0 + s <= n - holeC) return false;
+    if (meshC && (i0 + s <= meshC || i0 >= n - meshC || j0 + s <= meshC || j0 >= n - meshC)) return false;
+    return true;
+  };
+  const flat = (i0, j0, s) => {
+    const h00 = H(i0, j0), h10 = H(i0 + s, j0), h01 = H(i0, j0 + s), h11 = H(i0 + s, j0 + s);
+    for (let b = 0; b <= s; b++) for (let a = 0; a <= s; a++) { const u = a / s, v = b / s; if (Math.abs(H(i0 + a, j0 + b) - ((h00 * (1 - u) + h10 * u) * (1 - v) + (h01 * (1 - u) + h11 * u) * v)) > TERRAIN_FLAT) return false; }
+    return true;
+  };
+  const put = (i0, j0, s) => { const k = Math.floor(j0 / tile) * 1000 + Math.floor(i0 / tile); let a = byTile.get(k); if (!a) byTile.set(k, a = []); a.push([i0, j0, s]); for (const [x, y] of [[i0, j0], [i0 + s, j0], [i0, j0 + s], [i0 + s, j0 + s]]) corner.add(x * 4096 + y); };
+  const walk = (i0, j0, s) => {
+    if (!touches(i0, j0, s)) return;
+    if (s > 1 && included(i0, j0, s) && flat(i0, j0, s)) { put(i0, j0, s); return; }
+    if (s === 1) { put(i0, j0, 1); return; }
+    const h = s / 2; walk(i0, j0, h); walk(i0 + h, j0, h); walk(i0, j0 + h, h); walk(i0 + h, j0 + h, h);
+  };
+  for (let j = 0; j < n; j += TERRAIN_BLOCK) for (let i = 0; i < n; i += TERRAIN_BLOCK) if (i + TERRAIN_BLOCK <= n && j + TERRAIN_BLOCK <= n) walk(i, j, TERRAIN_BLOCK);
+  // tile key: row * 1000 + column, in tiles
+  return { corner, byTile: new Map([...byTile].map(([k, v]) => [k, v])) };
+}
 function buildTerrain() {
   // site heights from the untouched land
   for (const s of SITES) {
@@ -122,7 +153,7 @@ function buildTerrain() {
   // TERRAIN_FINE: the ground is drawn with 1.5 m cells out to this distance from the centre and with 3 m cells (a quarter of the triangles) from there to the
   // edge of the height grid. Terrain.y still reads the 1.5 m grid. 144 puts the whole grid back on 1.5 m cells.
   const FINE = TERRAIN_FINE, ring = FINE < K.terrainHalf;
-  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: 144, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: 144, tile: 48 }, { cell: 24, half: 1440, hole: 432, tile: 40 }, { cell: 96, half: 4800, hole: 1440, tile: 50 }]);
+  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: 144, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: 144, tile: TERRAIN_TILE[0] }, { cell: 24, half: 1440, hole: 432, tile: TERRAIN_TILE[1] }, { cell: 96, half: 4800, hole: 1440, tile: TERRAIN_TILE[2] }]);
   const pack = new MeshPack(); pack.shadow = true;
   let prev = null;
   for (let li = levels.length - 1; li >= 0; li--) {            // coarse first so fine borders can be stitched to them
@@ -144,6 +175,9 @@ function buildTerrain() {
     }
     const holeC = Math.round((L.half - L.hole) / L.cell);       // cells from the edge to the hole
     const meshC = L.mesh && ring ? Math.round((L.half - L.mesh) / L.cell) : 0;       // cells from the edge that are not drawn at this level
+    // Flat ground is drawn with fewer, bigger triangles: aligned blocks of up to TERRAIN_BLOCK cells whose heights stay within TERRAIN_FLAT of a
+    // plane become one fan of triangles, and a block's edge keeps the corner of every smaller neighbour so no crack can open (see terrainLeaves).
+    const leaves = L.tile % TERRAIN_BLOCK === 0 ? terrainLeaves(L, n, W, hgt, holeC, meshC) : null;
     for (let tj = 0; tj < n; tj += L.tile) for (let ti = 0; ti < n; ti += L.tile) {
       const m = new Mesh(2048), ids = new Map();
       const vid = (i, j) => {
@@ -152,7 +186,17 @@ function buildTerrain() {
         const nx = (hgt[j * W + il] - hgt[j * W + ir]) / ((ir - il) * L.cell), nz = (hgt[ju * W + i] - hgt[jd * W + i]) / ((jd - ju) * L.cell);
         v = m.vert(-L.half + i * L.cell, hgt[key], -L.half + j * L.cell, nx, 1, nz, 0, 0); ids.set(key, v); return v;
       };
-      for (let j = tj; j < Math.min(tj + L.tile, n); j++) for (let i = ti; i < Math.min(ti + L.tile, n); i++) {
+      if (leaves) for (const lf of leaves.byTile.get((tj / L.tile) * 1000 + ti / L.tile) || []) {
+        const [i0, j0, sz] = lf;
+        if (sz === 1) { const a = vid(i0, j0), b = vid(i0, j0 + 1), c = vid(i0 + 1, j0 + 1), d = vid(i0 + 1, j0); m.tri(a, b, c); m.tri(a, c, d); continue; }
+        const ring2 = [];       // the block's outline, turning the same way as the single cells do, with every corner a neighbour has on its edges
+        for (let k = 0; k < sz; k++) if (k === 0 || leaves.corner.has((i0) * 4096 + j0 + k)) ring2.push([i0, j0 + k]);
+        for (let k = 0; k < sz; k++) if (k === 0 || leaves.corner.has((i0 + k) * 4096 + j0 + sz)) ring2.push([i0 + k, j0 + sz]);
+        for (let k = 0; k < sz; k++) if (k === 0 || leaves.corner.has((i0 + sz) * 4096 + j0 + sz - k)) ring2.push([i0 + sz, j0 + sz - k]);
+        for (let k = 0; k < sz; k++) if (k === 0 || leaves.corner.has((i0 + sz - k) * 4096 + j0)) ring2.push([i0 + sz - k, j0]);
+        const ctr = vid(i0 + sz / 2, j0 + sz / 2), ids2 = ring2.map(q => vid(q[0], q[1]));
+        for (let k = 0; k < ids2.length; k++) m.tri(ids2[k], ids2[(k + 1) % ids2.length], ctr);
+      } else for (let j = tj; j < Math.min(tj + L.tile, n); j++) for (let i = ti; i < Math.min(ti + L.tile, n); i++) {
         if (L.hole && i >= holeC && i < n - holeC && j >= holeC && j < n - holeC) continue;
         if (meshC && (i < meshC || i >= n - meshC || j < meshC || j >= n - meshC)) continue;
         const a = vid(i, j), b = vid(i, j + 1), c = vid(i + 1, j + 1), d = vid(i + 1, j);

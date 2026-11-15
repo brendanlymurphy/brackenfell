@@ -1,6 +1,8 @@
 // ───────────────────────── scene: Three objects built from the generated world ─────────────────────────
 // Layers: 0 = seen by the camera and both sun shadow maps; 1 = camera and the near shadow map only (interiors, full trees,
 // villagers, small props); 2 = the wide shadow map only (flat tree stand-ins that cast for every tree out there).
+// Layer 3 = the near sun-shadow map only: casters the camera never draws (the low copy of a villager, the plain pine used for shadows). The near map's camera enables it.
+const SHADOW_ONLY_LAYER = 3;
 const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {} };
 // Draw distances (m) for small things. vis: drawn by the camera up to here; cast: drawn into the near sun-shadow map up to here; near: a chicken
 // is drawn as separate parts up to this distance and as one rigid body beyond it. indoor: while the camera is inside a building, outdoor
@@ -20,6 +22,15 @@ function deepIndoors(e) {
     if (l < DRAW.doorSee && (l < 2.5 || (dx * fx + dz * fz) / l > 0.3)) return false;
   }
   return true;
+}
+// Furniture of a building is drawn only when it can be seen: the camera is inside it, or one of its doors is (opening or) open. Window panes are opaque, so
+// nothing inside shows through them. A building whose doors are open archways (no leaf registered) keeps the old rule: near enough. INTERIOR_NEAR: metres from its centre.
+const INTERIOR_NEAR = 9;
+function interiorShown(site, camPos) {
+  if (hyp(site.x - camPos[0], site.z - camPos[2]) >= INTERIOR_NEAR + Math.max(site.w, site.d) * 0.5) return false;
+  const z = World.camZone; if (z && World.zones[z - 1] && World.zones[z - 1].site === site) return true;
+  let any = false; for (const d of World.doors) if (d.site === site) { if (d.open > 0.02) return true; any = true; }
+  return !any;
 }
 function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
@@ -85,18 +96,22 @@ function sceneBuild() {
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos;
+  if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
   const inside = World.deepIn = deepIndoors(e), ind = DRAW.indoor;
   for (const s of SC.statics) {
     const it = s.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
     s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && far > ind);
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
-    s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast);
+    s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast) && !(s.farCapable && q.nearStatics === false);
+    // generated village props (fences, walls, wells ...) cast into the wide sun-shadow map only on tiers that have q.farStatics; the near map always gets them
+    if (s.farCapable === undefined) s.farCapable = !!s.cast0 && it.kind === 'opaque' && !it.nearOnly && s.mesh.layers.mask === 1;
+    if (s.farCapable) s.mesh.layers.mask = q.farStatics ? 1 : 2;
   }
   for (const s of SC.cells) {
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
     s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > Math.min(grp.maxDist, q.rockDist) + c.r) || (inside && grp.lod === 0 && dc - c.r > ind));
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
-    s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast);
+    s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }
   if (Grass.mesh) Grass.mesh.visible = !inside;
   for (const r of SC.rigid) {

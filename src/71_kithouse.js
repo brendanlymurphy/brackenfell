@@ -56,7 +56,7 @@ function kitShell(c) {
   const { site, spec, w, d, H, t, hd, ext, glow, zone, Ms, openings, tanP } = c, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
   ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
-  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096 }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
+  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
   const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: 0, inSkyVis: 0.12 };
   const frames = {}, wbs = {};
@@ -544,7 +544,7 @@ function kitAttach() {
     inner(camPos, q);
     // furniture only shows through an open door or a window, so it is drawn for the nearest buildings alone
     for (const k of World.kitGroups) {
-      if (k.interior && k.site) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < 9 + Math.max(k.site.w, k.site.d) * 0.5;
+      if (k.interior && k.site) k.g.visible = interiorShown(k.site, camPos);
       else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
       else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
       else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) { o.visible = !World.deepIn && hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < q.yardRange + bs.radius; if (o.userData.cast0 === undefined) o.userData.cast0 = o.castShadow; o.castShadow = q.yardCast && o.userData.cast0; } }

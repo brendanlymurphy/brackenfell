@@ -8,8 +8,9 @@ const Kit = (() => {
     mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs } = TSL;
   const K_ = {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
-    pieces: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
-    grade: null,
+    pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
+    grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
+    lodMeshes: [],
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
 
@@ -49,6 +50,7 @@ const Kit = (() => {
     if (pack.catalog) { const c = await fetchJson(pack.catalog, pack.optional); if (c) Object.assign(K_.cat, c.pieces || c); }
     gltf.scene.updateMatrixWorld(true);
     for (const node of gltf.scene.children) {
+      if (/@far$/.test(node.name)) { const fp = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); fp.push(extract(o)); } }); K_.far[node.name.slice(0, -4)] = fp; continue; }      // the light copy of a piece (tools/kits_far.mjs)
       const prims = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); prims.push(extract(o)); } });
       if (!prims.length) continue;
       const min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9];
@@ -221,6 +223,15 @@ const Kit = (() => {
         if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
         b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
       }
+      // the far copy of this piece: its own light version if the pack has one, nothing for small things (under FAR_KEEP metres across), else the piece itself
+      if (opts.far) {
+        const fp = K_.far[name] || ((Math.max(p.max[0] - p.min[0], p.max[1] - p.min[1], p.max[2] - p.min[2]) >= K_.FAR_KEEP && !(K_.FAR_DROP.test(name))) ? p.prims : []);
+        for (const prim of fp) {
+          const key = prim.mat + '|' + ck + '|far'; let b = buckets.get(key);
+          if (!b) buckets.set(key, b = { mat: prim.mat, cast: 0, far: true, items: [], nv: 0, ni: 0 });
+          b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: 0, lit: 0, lights: null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
+        }
+      }
       B.count++; B.tally[name] = (B.tally[name] || 0) + 1; return B;
     };
     // many copies of one piece (trees, rocks, tufts). matrices: array of Matrix4 / shorthand. o: { tints: [[r,g,b]...], wind, cast, cell, maxDist, zone, skyVis }
@@ -263,6 +274,7 @@ const Kit = (() => {
         g.computeBoundingBox(); g.computeBoundingSphere();
         const mesh = new THREE.Mesh(g, material(b.mat, 'batch'));
         mesh.castShadow = !!b.cast && !isGlass(K_.defs[b.mat] || { name: b.mat }); mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = b.mat;
+        if (opts.far) { mesh.userData.lod = b.far ? 2 : 1; K_.lodMeshes.push(mesh); mesh.visible = !b.far; }       // 1 = the full mesh, 2 = its far copy: K_.update swaps them by distance
         group.add(mesh);
       }
       for (const it of inst) {
@@ -294,7 +306,19 @@ const Kit = (() => {
     return B;
   };
   // hides instanced cells that asked for a draw distance (o.maxDist) once the camera is farther than that
+  // Full or far meshes of batches built with { far: true }: the far copy is drawn from FAR metres (nearest point of the mesh's box) on, with a little hysteresis.
+  K_.farDist = 55;
+  function lodUpdate(camPos) {
+    const F = (typeof R !== 'undefined' && R.q && R.q.houseFar) || K_.farDist;
+    for (const m of K_.lodMeshes) {
+      const g = m.geometry, b = g.boundingBox; if (!b) continue;
+      const dx = Math.max(b.min.x - camPos[0], 0, camPos[0] - b.max.x), dz = Math.max(b.min.z - camPos[2], 0, camPos[2] - b.max.z), d = Math.sqrt(dx * dx + dz * dz);
+      let far = m.userData.far; far = far ? d > F - 3 : d > F + 3; m.userData.far = far;
+      m.visible = m.userData.lod === 2 ? far : !far;
+    }
+  }
   K_.update = function (camPos) {
+    lodUpdate(camPos);
     for (const im of K_.instanced) { const s = im.boundingSphere, dx = s.center.x - camPos[0], dz = s.center.z - camPos[2]; im.visible = Math.sqrt(dx * dx + dz * dz) - s.radius < im.userData.maxDist; }
   };
   return K_;
