@@ -1,0 +1,160 @@
+<!doctype html><html><head><meta charset="utf-8"><base href="/"><style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#view{position:fixed;inset:0;width:100%;height:100%}</style></head><body>
+<canvas id="view"></canvas>
+<script src="/three.js"></script>
+<script src="/src/00_math.js"></script>
+<script src="/src/10_gfx.js"></script>
+<script src="/src/40_shade.js"></script>
+<script src="/src/50_env.js"></script>
+<script>
+// stand-ins for the parts of the game the modules read
+const World = { lakeY: -0.6, indoor: 0 };
+const R = { partMax: 1536, partData: new Float32Array(1536 * 12), partCount: 0, cam: { pos: [0, 2, 0], yaw: 0, pitch: 0 } };
+</script>
+<script src="/src/45_sky.js"></script>
+<script src="/src/46_grass.js"></script>
+<script src="/src/47_water.js"></script>
+<script src="/src/48_particles.js"></script>
+<script>
+// Standalone harness for sky, grass, water, window glow and particles: a stub valley, one sun, the old tone map.
+(async () => {
+  const T = window.__TEST__ || {};
+  const canvas = document.getElementById('view');
+  await gfxInit(canvas);
+  gfxResize(canvas.clientWidth, canvas.clientHeight);
+  await loadPack(false, () => { }); await loadNoise();
+  SH.init();
+  const U = SH.U, r = G.renderer;
+  const { Fn, float, vec3, vec4, pass, uniform, screenUV, dot, mix, smoothstep, max, pow, clamp, attribute, texture, uv, int, positionWorld, normalLocal, varying, transformNormalToView, normalize } = TSL;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, G.w / G.h, 0.09, 12000);
+  scene.fogNode = TSL.fog(SH.fogColor(), SH.fogAmount());
+
+  // ── stub terrain data in the formats the real terrain will use ──
+  const TH = K.terrainHalf, N = K.heightN;
+  const hfn = (x, z) => 2.6 + 1.6 * Math.sin(x * 0.045) * Math.cos(z * 0.038) + 0.8 * Math.sin(x * 0.11 + z * 0.07) - 6.5 * Math.exp(-((x - 30) * (x - 30) + (z + 26) * (z + 26)) / 200);
+  const hh = new Uint16Array(N * N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) hh[j * N + i] = THREE.DataUtils.toHalfFloat(hfn(-TH + i * K.terrainCell, -TH + j * K.terrainCell));
+  const mkT = (data, w, fmt, type) => { const t = new THREE.DataTexture(data, w, w, fmt, type); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; return t; };
+  G.heightTex = mkT(hh, N, THREE.RedFormat, THREE.HalfFloatType);
+  const SR = K.splatRes, s1 = new Uint8Array(SR * SR * 4), s2 = new Uint8Array(SR * SR * 4);
+  for (let j = 0; j < SR; j++) for (let i = 0; i < SR; i++) {
+    const x = (i + 0.5) / SR * 2 * TH - TH, z = (j + 0.5) / SR * 2 * TH - TH, o = (j * SR + i) * 4;
+    s1[o] = 255 * smooth(2.2, 1.2, Math.abs(x - 9 - Math.sin(z * 0.1) * 2));                                   // road
+    s1[o + 1] = 255 * smooth(7, 5.5, hyp(x + 14, z + 20));                                                    // cobbles
+    s1[o + 2] = (x > -40 && x < -18 && z > -6 && z < 18) ? 255 : 0;                                           // field
+    s1[o + 3] = 255 * smooth(13.5, 11, hyp(x - 30, z + 26));                                                  // bare (lake bed)
+    s2[o] = 255 * smooth(6, 2, hyp(x + 2, z + 34));                                                           // under a tree
+    s2[o + 1] = 255 * smooth(16, 12, hyp(x - 30, z + 26));                                                    // wet
+    s2[o + 2] = 255 * smooth(1.6, 0.2, Math.max(Math.abs(x - 3), Math.abs(z + 12)) - 1);                      // contact shade
+    s2[o + 3] = 255 * smooth(3.5, 1, hyp(x + 3, z + 8));                                                      // worn turf
+  }
+  G.splatTex = mkT(s1, SR, THREE.RGBAFormat, THREE.UnsignedByteType); G.splat2Tex = mkT(s2, SR, THREE.RGBAFormat, THREE.UnsignedByteType);
+
+  // ── ground: the meadow scan, lit the way the world will be (sun from Three, ambient through emissive) ──
+  const gg = new THREE.PlaneGeometry(2 * TH, 2 * TH, 192, 192).rotateX(-Math.PI / 2), gp = gg.attributes.position;
+  for (let i = 0; i < gp.count; i++) gp.setY(i, hfn(gp.getX(i), gp.getZ(i)));
+  gg.computeVertexNormals();
+  const gm = new THREE.MeshStandardNodeMaterial();
+  { const wn = normalize(varying(normalLocal)), mn = texture(G.noiseTex, positionWorld.xz.mul(0.0041)), mn2 = texture(G.noiseTex, positionWorld.xz.mul(0.037));
+    const sp = texture(G.splatTex, positionWorld.xz.div(2 * TH).add(0.5));
+    const a = texture(G.albedoArr, positionWorld.xz.div(3)).depth(int(MAT.GRASS)).rgb.mul(SH.groundTint(mn, mn2));
+    const d = texture(G.albedoArr, positionWorld.xz.div(3)).depth(int(MAT.DIRT)).rgb;
+    const alb = mix(a, d, clamp(max(sp.r, sp.a), 0, 1));
+    gm.colorNode = alb; gm.roughnessNode = float(0.9); gm.normalNode = transformNormalToView(wn);
+    gm.emissiveNode = alb.mul(SH.hemi(wn, float(1), float(0)).add(SH.pointLights(positionWorld, wn, float(0), float(0.25)))); }
+  const ground = new THREE.Mesh(gg, gm); ground.receiveShadow = true; scene.add(ground);
+  const lit = col => { const m = new THREE.MeshStandardNodeMaterial(); const wn = normalize(varying(normalLocal)); m.colorNode = vec3(...col); m.emissiveNode = vec3(...col).mul(SH.hemi(wn, float(1), float(0))); return m; };
+  const box = new THREE.Mesh(new THREE.BoxGeometry(2, 3, 2), lit([0.5, 0.42, 0.34])); box.position.set(3, hfn(3, -12) + 1.5, -12); box.castShadow = box.receiveShadow = true; scene.add(box);
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(5, 3.2, 0.3), lit([0.62, 0.58, 0.5])); wall.position.set(-14, hfn(-14, -27) + 1.6, -27); wall.castShadow = wall.receiveShadow = true; scene.add(wall);
+
+  const sun = new THREE.DirectionalLight(0xffffff, Math.PI); sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048); const sc = sun.shadow.camera; sc.left = sc.bottom = -40; sc.right = sc.top = 40; sc.near = 1; sc.far = 400; sc.updateProjectionMatrix(); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.05;
+  scene.add(sun); scene.add(sun.target);
+
+  // ── water sheet (lake in the hollow) and a strip of river with a flow direction ──
+  const waterGeo = (x0, z0, x1, z1, y, n, flow) => {
+    const pos = [], uvs = [], tint = [], idx = [], W = n + 1;
+    for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) { const x = lerp(x0, x1, i / n), z = lerp(z0, z1, j / n); pos.push(x, y, z); uvs.push(flow[0], flow[1]); tint.push(255, 255, 255, Math.round(255 * sat((y - hfn(x, z)) / 0.9))); }
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const a = j * W + i; idx.push(a, a + W, a + W + 1, a, a + W + 1, a + 1); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    g.setAttribute('tint', new THREE.BufferAttribute(new Uint8Array(tint), 4, true)); g.setIndex(idx); return g;
+  };
+  if (typeof WaterMat !== 'undefined') { const w = new THREE.Mesh(waterGeo(12, -44, 48, -8, World.lakeY, 24, [0.25, 0.1]), WaterMat()); w.name = 'water'; scene.add(w); }
+  // ── a lit window pane on the wall ──
+  if (typeof GlowMat !== 'undefined') {
+    const g = new THREE.BufferGeometry(), y0 = hfn(-14, -27) + 1.2, z = -27 + 0.16;
+    g.setAttribute('position', new THREE.Float32BufferAttribute([-15, y0 + 1.1, z, -15, y0, z, -14.1, y0, z, -14.1, y0 + 1.1, z], 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 0, 1.22, 1, 1.22, 1, 0], 2));
+    g.setAttribute('tint', new THREE.BufferAttribute(new Uint8Array([255, 207, 140, 255, 255, 207, 140, 255, 255, 207, 140, 255, 255, 207, 140, 255]), 4, true));
+    g.setAttribute('mm', new THREE.BufferAttribute(new Uint8Array([17, 0, 0, 34, 17, 0, 0, 34, 17, 0, 0, 34, 17, 0, 0, 34]), 4, true));
+    g.setIndex([0, 1, 2, 0, 2, 3]); const gl = new THREE.Mesh(g, GlowMat()); gl.name = 'glow'; scene.add(gl);
+  }
+  if (typeof Sky !== 'undefined' && Sky.build) Sky.build(scene);
+  const quality = { grassRange: T.grassRange || 30 };
+  if (typeof Grass !== 'undefined' && Grass.build && !T.noGrass) Grass.build(scene, quality);
+  if (typeof Particles !== 'undefined' && Particles.build) Particles.build(scene);
+
+  // ── minimal pipeline with the old tone map: exposure, ACES (Narkowicz), gamma ──
+  const pipeline = new THREE.RenderPipeline(r), expo = uniform(0.6);
+  const scenePass = pass(scene, camera, { samples: T.msaa === undefined ? 4 : T.msaa });
+  pipeline.outputNode = Fn(() => {
+    const c = max(scenePass.getTextureNode('output').rgb, vec3(0)).mul(expo).toVar();
+    c.assign(clamp(c.mul(c.mul(2.51).add(0.03)).div(c.mul(c.mul(2.43).add(0.59)).add(0.14)), 0, 1));
+    return vec4(pow(c, vec3(1 / 2.2)), 1);
+  })();
+  pipeline.outputColorTransform = false;
+
+  let time = 30;
+  const putParticles = o => {
+    const d = R.partData; let n = 0;
+    const put = (x, y, z, size, rr, g, b, a, rot, kind, aspect, seed) => { const k = n++ * 12; d[k] = x; d[k + 1] = y; d[k + 2] = z; d[k + 3] = size; d[k + 4] = rr; d[k + 5] = g; d[k + 6] = b; d[k + 7] = a; d[k + 8] = rot; d[k + 9] = kind; d[k + 10] = aspect; d[k + 11] = seed; };
+    if (o) {
+      const bx = -6, bz = -9, by = hfn(bx, bz);
+      // a camp fire: flame tongues, its glow, embers
+      for (let k = 0; k < 5; k++) { const a = k * 2.4, rad = 0.9 * (k ? 0.24 : 0); put(bx + Math.cos(a) * rad, by + 0.9 * (0.5 + (k % 2) * 0.1), bz + Math.sin(a) * rad, 0.9 * (k ? 0.62 : 0.85), 1, 1, 1, 0.9, 0, 2, 1.2, 0.3 + k * 0.37); }
+      put(bx, by + 0.45, bz, 0.9 * 2.6, 1.0, 0.42, 0.12, 0.13, 0, 0, 1, 0.3);
+      for (let k = 0; k < 14; k++) put(bx + Math.sin(k * 1.7) * 0.5, by + 0.6 + k * 0.16, bz + Math.cos(k * 2.3) * 0.5, 0.035, 1.0, 0.5, 0.12, 2.6 * (1 - k / 14), 0, 3, 1, 0);
+      // chimney-style smoke column beside it
+      for (let k = 0; k < 12; k++) { const q = k / 12; put(bx + 3 + q * 1.4, by + 0.6 + q * 5.5, bz + q * 0.6, 0.35 + q * 2.3, 0.62, 0.60, 0.58, Math.min(q * 6, 1) * (1 - q) * 0.5, k * 0.9, 1, 1, (k * 0.618) % 1); }
+      // a lantern glow and fireflies
+      put(bx - 3, by + 2.2, bz, 0.11, 1.0, 0.75, 0.35, 3.0, 0, 0, 1, 0.2); put(bx - 3, by + 2.2, bz, 0.9, 1.0, 0.55, 0.2, 0.26, 0, 0, 1, 0.2);
+      for (let k = 0; k < 10; k++) put(bx - 5 + Math.sin(k * 3.1) * 2.5, by + 0.6 + (k % 4) * 0.4, bz + Math.cos(k * 1.3) * 2.5, 0.07, 0.75, 1.0, 0.35, 2.2 * (0.4 + 0.6 * ((k * 0.37) % 1)), 0, 3, 1, 0);
+    }
+    if (o === 2) {       // close range: a hearth fire and a candle
+      const bx = -6, bz = -9, by = hfn(bx, bz), sz = 0.5, sd = 0.21;
+      for (let k = 0; k < 3; k++) { const a = k * 2.4 + sd * 6, rad = sz * (k ? 0.24 : 0); put(bx + Math.cos(a) * rad, by + sz * (0.5 + (k % 2) * 0.1), bz + Math.sin(a) * rad, sz * (k ? 0.62 : 0.85), 1, 1, 1, 0.9, 0, 2, 1.2, sd + k * 0.37); }
+      put(bx, by + sz * 0.5, bz, sz * 2.6, 1.0, 0.42, 0.12, 0.13, 0, 0, 1, sd);
+      const cx = bx + 1.1, cyy = by + 0.75, cz = bz + 0.3;
+      put(cx, cyy, cz, 0.05, 1, 1, 1, 0.9, 0, 2, 1.7, 0.63); put(cx, cyy + 0.01, cz, 0.2, 1.0, 0.6, 0.22, 0.5, 0, 0, 1, 0.63);
+    }
+    R.partCount = n;
+  };
+  // o: { hour, x, y, z, yaw, pitch (degrees), parts, light:[x,y,z,r, r,g,b], indoor, style, time }
+  window.__shot = async (o) => {
+    o = o || {};
+    if (o.hour !== undefined) Env.hour = o.hour;
+    if (o.time !== undefined) time = o.time;
+    const x = o.x || 0, z = o.z || 0, y = o.y === undefined ? hfn(x, z) + 1.65 : o.y, yaw = (o.yaw || 0) * Math.PI / 180, pitch = (o.pitch || 0) * Math.PI / 180;
+    const env = updateEnv(time, o.indoor || 0);
+    SH.update(env, [x, y, z], time);
+    if (o.grassRange) U.grassRange.value = o.grassRange; else U.grassRange.value = quality.grassRange;
+    for (let i = 0; i < 8; i++) { U.lightPos.array[i].set(0, 0, 0, 0); U.lightCol.array[i].set(0, 0, 0, 0); }
+    if (o.light) { U.lightPos.array[0].set(o.light[0], o.light[1], o.light[2], o.light[3]); U.lightCol.array[0].set(o.light[4], o.light[5], o.light[6], 255); }
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch), f = [sy * cp, sp, -cy * cp];
+    camera.position.set(x, y, z); camera.lookAt(x + f[0], y + f[1], z + f[2]); camera.aspect = G.w / G.h; camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+    R.cam.pos = [x, y, z]; R.cam.yaw = yaw; R.cam.pitch = pitch;
+    sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]); sun.shadow.intensity = env.shadowStrength;
+    sun.target.position.set(x + sy * 14, y - 1.6, z - cy * 14); sun.position.copy(sun.target.position).addScaledVector(new THREE.Vector3(...env.keyDir), 150); sun.target.updateMatrixWorld(); sun.updateMatrixWorld();
+    expo.value = env.exposure;
+    if (typeof Sky !== 'undefined' && Sky.update) Sky.update([x, y, z]);
+    if (typeof Grass !== 'undefined' && Grass.update) { if (o.style !== undefined) Grass.style = o.style; Grass.update([x, y, z], [sy, -cy]); }
+    putParticles(o.parts);
+    if (typeof Particles !== 'undefined' && Particles.update) Particles.update();
+    await gfxCapture(() => pipeline.render());
+    await gfxCapture(() => pipeline.render());
+    const inf = r.info.render; return { backend: G.backend, pack: G.pack, calls: inf.drawCalls, tris: inf.triangles, errors: G.errors.length };
+  };
+  window.__gpuErrors = () => G.errors;
+  window.__ready = true;
+})().catch(e => { console.error('HARNESS FAIL', e && e.stack || e); window.__gpuErrors = () => [String(e)]; window.__ready = true; });
+</script></body></html>
