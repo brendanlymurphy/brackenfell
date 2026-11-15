@@ -42,7 +42,7 @@ const Snd = {
     const S = this; S.ctx = S.ctx || null; S.c = c; S.sr = c.sampleRate; o = o || {};
     S.master = c.createGain(); S.master.gain.value = 0;
     S.shelf = c.createBiquadFilter(); S.shelf.type = 'highshelf'; S.shelf.frequency.value = 7000; S.shelf.gain.value = -2.5;           // phone speakers are bright: take the edge off
-    S.comp = c.createDynamicsCompressor(); S.comp.threshold.value = -9; S.comp.knee.value = 6; S.comp.ratio.value = 12; S.comp.attack.value = 0.004; S.comp.release.value = 0.14;
+    S.comp = c.createDynamicsCompressor(); S.comp.threshold.value = -4; S.comp.knee.value = 3; S.comp.ratio.value = 16;      // a limiter, not a leveller: the browsers add make-up gain to compressors, so keep it near +2 dB S.comp.attack.value = 0.004; S.comp.release.value = 0.14;
     S.clip = c.createWaveShaper();            // the last word: a soft ceiling at 0.89 (-1 dBFS), linear below 0.6, so nothing can leave the chain above -1 dB
     const n = 2048, cv = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1, a = Math.abs(x); cv[i] = (a < 0.6 ? a : 0.6 + 0.29 * Math.tanh((a - 0.6) / 0.29)) * Math.sign(x); } S.clip.curve = cv;
     S.pre = c.createGain(); S.pre.connect(S.master); S.master.connect(S.shelf); S.shelf.connect(S.comp); S.comp.connect(S.clip); S.clip.connect(c.destination);

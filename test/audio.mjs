@@ -66,11 +66,13 @@ if (!only || only === 'sfx') {
   const names = await page.evaluate(() => Object.keys(Snd.lib));
   const keep = new Set(['fs.cobble', 'fs.dirt', 'fs.grass', 'fs.mud', 'fs.water', 'fs.wood', 'fs.plank', 'fs.stone', 'fs.stairs', 'door.open', 'door.close', 'door.locked', 'chest.open', 'pickup.coin', 'hit.flesh', 'hit.metal', 'hit.shield', 'swing.heavy', 'bell.stroke', 'anvil', 'bird.robin', 'bird.chaffinch', 'bird.wren', 'bird.thrush', 'bird.pigeon', 'owl', 'dog', 'rooster', 'q.begin', 'q.done', 'discover', 'hurt', 'heart', 'foe.shout', 'creak', 'drip', 'bellows', 'paddle', 'breath', 'land']);
   for (const nm of names) {
-    const r = await page.evaluate(async (nm) => { const secs = Math.max(1.5, Math.min(7, (Snd.lib[nm].dur || 1) + 0.5)); const buf = await T.renderOffline(secs, S => { S.play(nm, null, 1, { w: 1, v: 9, lo: 0.8 }); }); const m = T.analyze(buf); return { m, wav: T.wavB64(buf, 6), png: T.specPNG(buf, 6) }; }, nm);
+    const r = await page.evaluate(async (nm) => { const secs = Math.max(1.5, Math.min(7, (Snd.lib[nm].dur || 1) + 0.8)); let best = null; const ms = [];
+      for (let k = 0; k < 3; k++) { const buf = await T.renderOffline(secs, S => { S.play(nm, null, 1, { w: 1, v: 9, lo: 0.8, delay: 0.3 }); }); const m = T.analyze(buf); ms.push(m); if (k === 1 || !best) best = { m, wav: T.wavB64(buf, 6), png: T.specPNG(buf, 6) }; }
+      ms.sort((a, b) => a.peakDb - b.peakDb); best.m.peakDb = ms[1].peakDb; best.m.clip = ms.some(x => x.clip); best.m.nan = ms.reduce((a, x) => a + x.nan, 0); return best; }, nm);
     row('sfx', nm, r.m); if (keep.has(nm)) await save('sfx_' + nm.replace(/\./g, '_'), r.wav, r.png);
   }
   // footsteps in a row, as a player would walk, per surface; and the stride test
-  const w = await page.evaluate(async () => { const secs = 22, surf = ['cobble', 'dirt', 'grass', 'mud', 'water', 'wood', 'plank', 'stone', 'stairs']; const buf = await T.renderOffline(secs, S => { surf.forEach((s, i) => { for (let k = 0; k < 6; k++) S.c && S.play('fs.' + s, null, 1, { w: 1, delay: 0.1 + i * 2.4 + k * 0.38 }); }); }); return { wav: T.wavB64(buf), png: T.specPNG(buf), m: T.analyze(buf) }; });
+  const w = await page.evaluate(async () => { const secs = 22, surf = ['cobble', 'dirt', 'grass', 'mud', 'water', 'wood', 'plank', 'stone', 'stairs']; const buf = await T.renderOffline(secs, S => { surf.forEach((s, i) => { for (let k = 0; k < 6; k++) S.c && S.play('fs.' + s, null, 1, { w: 1, free: true, delay: 0.3 + i * 2.4 + k * 0.38 }); }); }); return { wav: T.wavB64(buf), png: T.specPNG(buf), m: T.analyze(buf) }; });
   await save('footsteps_walk', w.wav, w.png); row('sfx', 'footsteps_walk(all)', w.m);
 }
 
