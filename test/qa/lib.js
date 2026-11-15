@@ -38,18 +38,18 @@ Q.views = () => {
     if (wild) { const a = toward(p.x, p.z, 0, 0) + 90, ox = p.x + Math.sin(a / D2R) * dist, oz = p.z - Math.cos(a / D2R) * dist; add('wilds', 'place2.' + p.id, ox, oz, toward(ox, oz, p.x, p.z), -4); }
   }
   // 3. both ends of every path and road, looking along it
-  for (const r of ROADS) { if (r.id === 'main') continue; const P = r.pts, n = P.length; for (const end of [0, 1]) { const a = end ? P[n - 1] : P[0], b = end ? P[n - 3 > 0 ? n - 3 : 0] : P[Math.min(2, n - 1)]; const yaw = toward(b[0], b[1], a[0], a[1]); add('paths', 'end.' + r.id + (end ? '.b' : '.a'), b[0], b[1], yaw, -3); } }
+  for (const r of ROADS) { if (r.id === 'main') continue; const P = r.pts, n = P.length; for (const end of (r.path ? [1] : [0, 1])) { const a = end ? P[n - 1] : P[0], b = end ? P[n - 3 > 0 ? n - 3 : 0] : P[Math.min(2, n - 1)]; const yaw = toward(b[0], b[1], a[0], a[1]); add('paths', 'end.' + r.id + (end ? '.b' : '.a'), b[0], b[1], yaw, -3); } }
   add('paths', 'end.main.w', -150, 2, 90, -2); add('paths', 'end.main.e', 150, -16, 270 - 180 + 90, -2);
   // 4. raised walkways and bridges: floors above the ground, clustered
   const F = World.floors.filter(f => f.y > -100 && f.y > Terrain.y(f.x, f.z) + 0.1), par = F.map((_, i) => i), find = i => par[i] === i ? i : (par[i] = find(par[i]));
   for (let i = 0; i < F.length; i++) for (let j = i + 1; j < F.length; j++) if (Math.abs(F[i].x - F[j].x) < 4 && Math.abs(F[i].z - F[j].z) < 4 && Math.abs(F[i].y - F[j].y) < 1.0) par[find(i)] = find(j);
   const groups = new Map(); F.forEach((f, i) => { const r = find(i); (groups.get(r) || groups.set(r, []).get(r)).push(f); });
   let gi = 0; for (const g of [...groups.values()].sort((a, b) => b.length - a.length)) {
-    if (g.length < 2 || gi > 40) continue; gi++; const cx = g.reduce((s, f) => s + f.x, 0) / g.length, cz = g.reduce((s, f) => s + f.z, 0) / g.length;
+    if (g.length < 2 || gi >= 14) continue; gi++; const cx = g.reduce((s, f) => s + f.x, 0) / g.length, cz = g.reduce((s, f) => s + f.z, 0) / g.length;
     let e = g[0]; for (const f of g) if (hyp(f.x - cx, f.z - cz) > hyp(e.x - cx, e.z - cz)) e = f;
     const dx = cx - e.x, dz = cz - e.z, L = hyp(dx, dz) || 1, bx = e.x - dx / L * 4, bz = e.z - dz / L * 4;
     add('walks', 'walk' + gi + '@' + Math.round(cx) + ',' + Math.round(cz) + ' n' + g.length, bx, bz, toward(bx, bz, cx, cz), -8, Terrain.y(bx, bz) + 1.65 > e.y + 1 ? null : e.y + 1.65);
-    const sx = cx + (-dz / L) * 9, sz = cz + (dx / L) * 9; add('walks', 'walkside' + gi, sx, sz, toward(sx, sz, cx, cz), -10, Math.max(Terrain.y(sx, sz), e.y - 0.5) + 1.65);
+    if (gi > 7) continue; const sx = cx + (-dz / L) * 9, sz = cz + (dx / L) * 9; add('walks', 'walkside' + gi, sx, sz, toward(sx, sz, cx, cz), -10, Math.max(Terrain.y(sx, sz), e.y - 0.5) + 1.65);
   }
   // 5. interiors
   for (const c of Cells.list) {

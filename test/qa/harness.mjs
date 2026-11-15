@@ -17,5 +17,6 @@ export async function open(opts = {}, size = [844, 390], timeout = 400000) {
   await page.goto(`http://localhost:${port}/`);
   await page.waitForFunction(() => window.__ready === true, null, { timeout });
   for (const f of ['lib', 'geo', 'geo2', 'chars', 'player']) await page.evaluate(fs.readFileSync(root + 'test/qa/' + f + '.js', 'utf8'));
+  await page.evaluate('QA.geo(["none"])');
   return { page, msgs, run: async (js) => page.evaluate(`(async()=>{ ${js} })()`), close: async () => { await browser.close(); srv.close(); } };
 }

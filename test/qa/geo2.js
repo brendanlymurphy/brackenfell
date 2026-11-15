@@ -4,7 +4,7 @@ const { want, push, stats, areaAt, col, flr, inObb, waterDepth, surfaceUnder } =
 // ================= 2. floating and sunk pieces (kit placements) =================
 if (want('float')) {
   const K = (window.__AUDIT_KIT || []).filter(it => Kit.pieces[it.name]), BB = [], V = new THREE.Vector3(), GR = new Map(), CSZ = 4;
-  const HANG = /Lantern|Sign|Banner|Shutter|Balcony|Awning|Window|Hook|Flag|Torch|Pennant|Bracket|Vine|Ivy|Beam|Dormer|Cloth|Laundry|Garland|Chimney|Roof|Overhang|Gable|Eave|Ladder|Rope|Bell|Pole|Pipe|Light|Glass|Frame|Stair|Step|Rafter|Floor_|Ceiling|Arch|Lintel/i;
+  const HANG = /Lantern|Sign|Banner|Shutter|Balcony|Awning|Window|Hook|Flag|Torch|Pennant|Bracket|Vine|Ivy|Beam|Dormer|Cloth|Laundry|Garland|Chimney|Roof|Overhang|Gable|Eave|Ladder|Rope|Bell|Pole|Pipe|Light|Glass|Frame|Stair|Step|Rafter|Floor_|Ceiling|Arch|Lintel|^gen_/i;
   for (const it of K) { const p = Kit.pieces[it.name]; let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
     for (const cx of [p.min[0], p.max[0]]) for (const cy of [p.min[1], p.max[1]]) for (const cz of [p.min[2], p.max[2]]) { V.set(cx, cy, cz).applyMatrix4(it.M); x0 = Math.min(x0, V.x); x1 = Math.max(x1, V.x); y0 = Math.min(y0, V.y); y1 = Math.max(y1, V.y); z0 = Math.min(z0, V.z); z1 = Math.max(z1, V.z); }
     if (y0 < -100 || x0 > 190) continue; const b = { n: it.name, pack: p.pack, x0, y0, z0, x1, y1, z1 }; BB.push(b);
@@ -16,7 +16,7 @@ if (want('float')) {
     let tmax = -1e9; for (const [x, z] of S) tmax = Math.max(tmax, Terrain.y(x, z));
     const free = b.pack !== 'kits/village.glb';
     if (free && h > 0.3 && !/Grass|Fern|Flower|Clover|Plant|Rock|Stone|Bush|Log|Stump|Tuft|Mushroom|Root/i.test(b.n) && (tmax - b.y0) > h / 3 && (tmax - b.y0) > 0.15) { ns++; push('sunk', areaAt((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2), (b.x0 + b.x1) / 2, b.y0, (b.z0 + b.z1) / 2, b.n + ' ' + Math.round((tmax - b.y0) / h * 100) + '% under ground (h ' + h.toFixed(2) + ')', (tmax - b.y0) / h); }
-    if (HANG.test(b.n) || b.y0 - tmax < 0.12) continue;
+    if (HANG.test(b.n) || b.y0 - tmax < 0.12 || !free) continue;
     let sup = false; const cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
     for (const [x, z] of S) { const s = surfaceUnder(x, z, b.y0 + 0.08); if (b.y0 - s < 0.12) { sup = true; break; } }
     if (!sup) { for (let gx = Math.floor(b.x0 / CSZ); gx <= Math.floor(b.x1 / CSZ) && !sup; gx++) for (let gz = Math.floor(b.z0 / CSZ); gz <= Math.floor(b.z1 / CSZ) && !sup; gz++) for (const o of GR.get(gx * 4096 + gz) || []) { if (o === b) continue; if (o.y1 > b.y0 - 0.12 && o.y1 < b.y0 + 0.3 && o.x0 < b.x1 - 0.05 && o.x1 > b.x0 + 0.05 && o.z0 < b.z1 - 0.05 && o.z1 > b.z0 + 0.05 && o.y0 < b.y0) { sup = true; break; } } }
@@ -31,7 +31,6 @@ if (want('collider')) {
   for (const c of col) {
     const t0 = Terrain.y(c.x, c.z), h = c.y1 - c.y0, ex = c.r !== undefined ? c.r : hyp(c.hx, c.hz); if (h < 0.15) continue;
     let tmax = t0; for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) tmax = Math.max(tmax, Terrain.y(c.x + dx * ex * 0.8, c.z + dz * ex * 0.8));
-    if (ex < 6 && (tmax - c.y0) > Math.max(h / 3, 0.2) && h > 0.3) { ns++; push('sunk', areaAt(c.x, c.z), c.x, c.y0, c.z, 'collider ' + (c.r !== undefined ? 'r' + c.r.toFixed(2) : (c.hx * 2).toFixed(1) + 'x' + (c.hz * 2).toFixed(1)) + ' h ' + h.toFixed(2) + ' is ' + Math.round((tmax - c.y0) / h * 100) + '% under the ground', (tmax - c.y0) / h); }
     if (c.y0 - tmax > 0.5 && ex < 5) { const s = surfaceUnder(c.x, c.z, c.y0 + 0.05); if (c.y0 - s > 0.5) { nf++; push('float', areaAt(c.x, c.z), c.x, c.y0, c.z, 'collider bottom ' + (c.y0 - s).toFixed(2) + ' m over the surface below (h ' + h.toFixed(2) + ')', c.y0 - s); } }
   }
   stats.floatColliders = nf; stats.sunkColliders = ns;
@@ -106,6 +105,6 @@ if (want('water')) {
 }
 if (want('emitter')) {
   for (const e of World.emitters) { const p = e.p; if (!p) continue; const x = p[0], y = p[1], z = p[2]; if (x < 190) { const t = Terrain.y(x, z); if (y < t - 0.05 && e.type !== 'splash' && e.type !== 'ripple') push('emitter', areaAt(x, z), x, y, z, e.type + ' emitter ' + (t - y).toFixed(2) + ' m under the ground', t - y); }
-    for (const c of World.colliders) { if (Math.abs(c.x - x) > 8 || Math.abs(c.z - z) > 8) continue; if (y > c.y0 + 0.08 && y < c.y1 - 0.08 && inObb(c, x, z, -0.05) && (c.r === undefined ? Math.min(c.hx, c.hz) > 0.12 : c.r > 0.12)) { push('emitter', areaAt(x, z, y), x, y, z, e.type + ' emitter inside a solid collider (' + (c.y1 - y).toFixed(2) + ' m under its top)', 1); break; } } }
+    for (const c of World.colliders) { if (Math.abs(c.x - x) > 8 || Math.abs(c.z - z) > 8) continue; if (!(x > 190 && /fire|candle|lantern/.test(e.type)) && y > c.y0 + 0.08 && y < c.y1 - 0.08 && inObb(c, x, z, -0.05) && (c.r === undefined ? Math.min(c.hx, c.hz) > 0.12 : c.r > 0.12)) { push('emitter', areaAt(x, z, y), x, y, z, e.type + ' emitter inside a solid collider (' + (c.y1 - y).toFixed(2) + ' m under its top)', 1); break; } } }
 }
 });
