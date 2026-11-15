@@ -689,6 +689,83 @@ SH.update = function (env, camPos, time) {
 };
 
 
+// ---- 40b_depth.js ----
+// ───────────────────────── depth and grime: analytic room ambient occlusion, dirt, soot, damp ─────────────────────────
+// Rooms (World.zones) are boxes in their site's frame. A surface inside one darkens its ambient light and hearth light near the floor,
+// the ceiling and the corners, by its own position and normal (no baked data, no extra texture reads). Walls also gather dirt near
+// the floor and soot above the hearth, and outdoor kit walls gather mud, moss and eave stains from two per-vertex heights (kg).
+// Extends SH from 40_shade.js: SH.init and SH.update are wrapped so nothing there has to change.
+SH.ROOMS = 64;
+(function () {
+  const _init = SH.init, _upd = SH.update;
+  SH.init = function () {
+    _init.apply(this, arguments);
+    const { Fn, If, int, float, vec2, vec3, vec4, uniformArray, abs, max, min, smoothstep, mix, length, select, texture } = TSL, U = SH.U, sat = SH.sat;
+    const mk = fill => uniformArray(Array.from({ length: SH.ROOMS }, () => new THREE.Vector4(fill[0], fill[1], fill[2], fill[3])), 'vec4');
+    U.roomA = mk([0, 0, 1, 0]);            // site x, z, cos yaw, sin yaw
+    U.roomB = mk([1e4, 1e4, -1e4, 1e4]);   // half width, half depth, floor y, wall height  (zone 0 is "everywhere": nothing ever occludes)
+    U.roomC = mk([0, 1e4, 1e4, 0]);        // roof slope (0 under a flat ceiling), loft floor y, loft starts at local x
+    U.roomD = mk([0, 0, 0, 0]);            // hearth local x, z, width, 1 when there is one
+    const nz1 = p => texture(G.noiseTex, p).level(1);
+    // x: ambient multiplier (1 = open), y: dirt on lower walls, z: soot above the hearth
+    SH.room = Fn(([wp, N, zone]) => {
+      const out = vec4(1, 0, 0, 0).toVar();
+      If(zone.greaterThan(0.5), () => {
+        const zi = int(zone), A = U.roomA.element(zi), B = U.roomB.element(zi), C = U.roomC.element(zi), D = U.roomD.element(zi);
+        const dx = wp.x.sub(A.x), dz = wp.z.sub(A.y);
+        const lx = dx.mul(A.z).add(dz.mul(A.w)), lz = dz.mul(A.z).sub(dx.mul(A.w));
+        const nx = N.x.mul(A.z).add(N.z.mul(A.w)), nzl = N.z.mul(A.z).sub(N.x.mul(A.w));
+        const tx = sat(B.x.sub(0.16).sub(abs(lx)).div(0.9)).oneMinus(), tz = sat(B.y.sub(0.16).sub(abs(lz)).div(0.9)).oneMinus();
+        const wallAo = float(1).sub(tx.mul(0.5).mul(float(1).sub(abs(nx)))).mul(float(1).sub(tz.mul(0.5).mul(float(1).sub(abs(nzl)))));
+        const onLoft = wp.y.greaterThan(C.y.sub(0.3)).and(lx.greaterThan(C.z.sub(0.1)));
+        const underLoft = lx.greaterThan(C.z).and(onLoft.not());
+        const fl = select(onLoft, C.y, B.z), h = wp.y.sub(fl);
+        const roofTop = B.z.add(B.w).add(max(B.y.sub(abs(lz)), 0).mul(C.x));
+        const top = select(onLoft, roofTop, select(underLoft, C.y.sub(0.3), roofTop)), g = top.sub(wp.y);
+        const fa = sat(h.div(0.7)).oneMinus(), ca = sat(g.div(0.6)).oneMinus();
+        const flAo = float(1).sub(fa.mul(fa).mul(0.7).mul(float(1).sub(max(N.y, 0))));
+        const clAo = float(1).sub(ca.mul(ca).mul(0.65).mul(float(1).sub(max(N.y.negate(), 0))));
+        out.x.assign(wallAo.mul(flAo).mul(clAo).mul(1));
+        const wallness = float(1).sub(abs(N.y));
+        const nn = nz1(vec2(lx.add(lz).mul(0.55), wp.y.mul(0.8).add(lz.mul(0.2)))).toVar();
+        out.y.assign(sat(h.div(nn.r.mul(1.0).add(0.55))).oneMinus().mul(wallness));
+        const hd2 = length(vec2(lx.sub(D.x).sub(0.4), lz.sub(D.y))), rad = max(h.sub(1.2), 0).mul(0.5).add(0.9);
+        out.z.assign(sat(hd2.div(rad)).oneMinus().mul(smoothstep(1.0, 1.9, h)).mul(D.w).mul(nn.g.mul(0.6).add(0.55)));
+      });
+      return out;
+    });
+    // outdoor and indoor wall grime as one colour multiplier (rgb) and a moss amount (w). hgt: metres above the ground, eave: metres below the eaves
+    SH.grime = Fn(([wp, N, hgt, eave, rdirt, rsoot, stone]) => {
+      const out = vec4(1, 1, 1, 0).toVar();
+      If(hgt.lessThan(7.9).or(eave.lessThan(7.9)).or(rdirt.greaterThan(0.01)).or(rsoot.greaterThan(0.01)), () => {
+        const nn = nz1(vec2(wp.x.add(wp.z).mul(0.5), wp.y.mul(0.7).add(wp.x.sub(wp.z).mul(0.09)))).toVar(), wallness = float(1).sub(abs(N.y));
+        const dirtE = TSL.sqrt(sat(hgt.div(nn.r.mul(0.9).add(1.0))).oneMinus()).mul(wallness).mul(0.8);
+        const dirt = max(dirtE, rdirt);
+        const streak = sat(eave.div(nn.g.mul(0.5).add(0.3))).oneMinus().mul(wallness).mul(smoothstep(0.3, 0.6, nn.b));
+        const rgb = (mix(vec3(1), vec3(0.36, 0.30, 0.22), dirt).mul(mix(vec3(1), vec3(0.56, 0.53, 0.5), streak.mul(0.8))).mul(mix(vec3(1), vec3(0.12, 0.11, 0.10), rsoot)));
+        const mo = (sat(hgt.div(nn.a.mul(0.6).add(0.4))).oneMinus().mul(smoothstep(0.38, 0.58, nn.r.mul(0.5).add(nn.b.mul(0.5)))).mul(wallness).mul(stone));
+        out.assign(vec4(rgb, mo));
+      });
+      return out;
+    });
+  };
+  // house boxes into the uniforms, once the village exists (zones are added while it is built)
+  SH.syncRooms = function () {
+    const U = SH.U; if (!U || !U.roomA) return;
+    const Z = World.zones; SH._roomsN = Z.length;
+    for (const z of Z) {
+      if (z.id >= SH.ROOMS) continue; const s = z.site, i = z.id, fy = z.y0 + 0.7;
+      if (s.id === 'inn' && !z.loft) { z.loft = 2.6; z.loftX = 2.4; }       // the inn's loft (until the structure work moves it, see 72_buildings.js)
+      U.roomA.array[i].set(s.x, s.z, Math.cos(s.yaw), Math.sin(s.yaw));
+      U.roomB.array[i].set(z.hw, z.hd, fy, z.H || 3);
+      U.roomC.array[i].set(z.slope || 0, z.loft ? fy + z.loft : 1e4, z.loft ? z.loftX : 1e4, 0);
+      U.roomD.array[i].set(z.hearth ? z.hearth[0] : 0, z.hearth ? z.hearth[1] : 0, z.hearth ? z.hearth[2] : 0, z.hearth ? 1 : 0);
+    }
+  };
+  SH.update = function () { if (SH._roomsN !== World.zones.length) SH.syncRooms(); return _upd.apply(this, arguments); };
+})();
+
+
 // ---- 41_materials.js ----
 // ───────────────────────── materials: buildings and props, terrain, foliage ─────────────────────────
 // The sun (diffuse, specular, shadow) is Three's own DirectionalLight. Everything else a surface receives (sky and ground
@@ -743,9 +820,12 @@ function surfaceMaterial(mode) {
   const layer = int(mm.x), a = texture(G.albedoArr, uv()).depth(layer), nt = texture(G.narArr, uv()).depth(layer);
   const albedo = a.rgb.mul(mix(vec3(1), tintLin, a.a));
   const N = SH.perturb(normalize(vN), positionWorld, uv(), nt.xy, float(1));
-  const amb = SH.hemi(N, tint.a.mul(light).mul(nt.z), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)));
-  m.colorNode = albedo.mul(unlit.oneMinus());
-  m.emissiveNode = albedo.mul(mix(amb, vec3(mm.w.div(16)), unlit));
+  // rooms: occlusion near floor, ceiling and corners, soot over the hearth (40b_depth.js); only generated room geometry and people carry a zone
+  const rm = (mode === 'static' || mode === 'skin') ? SH.room(positionWorld, N, zone).toVar() : null, aoR = rm ? rm.x : float(1);
+  const amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35)));
+  const sootK = rm ? mix(vec3(1), vec3(0.22, 0.21, 0.2), rm.z.mul(0.9)) : vec3(1);
+  m.colorNode = albedo.mul(sootK).mul(unlit.oneMinus());
+  m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit));
   m.normalNode = transformNormalToView(N);
   m.roughnessNode = nt.w; m.metalnessNode = float(0);
   return m;
@@ -1346,13 +1426,21 @@ const Kit = (() => {
       const mn = texture(G.noiseTex, vec2(wp.x.mul(0.37).add(wp.z.mul(0.21)), wp.z.mul(0.33).sub(wp.y.mul(0.25)))), mk = smoothstep(0.62, 0.8, mn.r.mul(0.7).add(mn.g.mul(0.3))).mul(d.moss);
       rawS = mix(rawS, vec3(0.2, 0.27, 0.1).mul(dot(raw, vec3(1.4, 1.4, 1.4)).add(0.5)), mk);
     }
-    const alb = gradeFn(rawS).mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
+    // depth and grime (40b_depth.js): room occlusion for everything indoors; dirt, soot and (outdoors, from the kg heights) mud, moss and eave stains on walls
+    const useRoom = batch || !!o.zone, rm = useRoom ? SH.room(wp, N, zone).toVar() : null;
+    let gcol = gradeFn(rawS);
+    if (batch && /Plaster|Brick|Rock|WoodTrim/.test(name)) {
+      const kg = attribute('kg', 'vec4'), gr = SH.grime(wp, N, kg.x.mul(8), kg.y.mul(8), rm.y, rm.z, float(/Brick|Rock/.test(name) ? 1 : 0)).toVar();
+      gcol = mix(gcol.mul(gr.rgb), vec3(0.15, 0.22, 0.07).mul(dot(gcol, vec3(1.2)).add(0.35)), gr.w.mul(0.75));
+    }
+    const alb = gcol.mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
     m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
     m.roughnessNode = orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough);
     m.metalnessNode = float(0);
-    let em = alb.mul(SH.hemi(N, skyVis.mul(ao), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6))));
+    const aoR = rm ? rm.x : float(1);
+    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35))));
     em = em.add(alb.mul(glow));
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
     else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));
@@ -1413,7 +1501,8 @@ const Kit = (() => {
       const group = new THREE.Group(); group.name = opts.name || 'kit-batch'; group.matrixAutoUpdate = false;
       const nm = new THREE.Matrix3(), v = new THREE.Vector3();
       for (const b of buckets.values()) {
-        const pos = new Float32Array(b.nv * 3), nrm = new Int8Array(b.nv * 4), uvs = new Float32Array(b.nv * 2), kc = new Uint8Array(b.nv * 4), kz = new Uint8Array(b.nv * 4);
+        const pos = new Float32Array(b.nv * 3), nrm = new Int8Array(b.nv * 4), uvs = new Float32Array(b.nv * 2), kc = new Uint8Array(b.nv * 4), kz = new Uint8Array(b.nv * 4), kg = new Uint8Array(b.nv * 4).fill(255);
+        const gB = opts.gBase, gT = opts.gTop;
         const idx = b.nv > 65535 ? new Uint32Array(b.ni) : new Uint16Array(b.ni); let vo = 0, io = 0;
         for (const it of b.items) {
           const pr = it.prim, M = it.M, flip = M.determinant() < 0; nm.getNormalMatrix(M);
@@ -1421,6 +1510,7 @@ const Kit = (() => {
           for (let i = 0; i < pr.n; i++) {
             const o = vo + i;
             v.set(pr.pos[i * 3], pr.pos[i * 3 + 1], pr.pos[i * 3 + 2]).applyMatrix4(M); pos[o * 3] = v.x; pos[o * 3 + 1] = v.y; pos[o * 3 + 2] = v.z;
+            if (gB !== undefined) kg[o * 4] = Math.max(0, Math.min(255, Math.round((v.y - gB) * 32))); if (gT !== undefined) kg[o * 4 + 1] = Math.max(0, Math.min(255, Math.round((gT - v.y) * 32)));
             v.set(pr.nrm[i * 3], pr.nrm[i * 3 + 1], pr.nrm[i * 3 + 2]).applyMatrix3(nm).normalize(); nrm[o * 4] = Math.round(v.x * 127); nrm[o * 4 + 1] = Math.round(v.y * 127); nrm[o * 4 + 2] = Math.round(v.z * 127);
             uvs[o * 2] = pr.uv[i * 2] * (it.uvs ? it.uvs[0] : 1); uvs[o * 2 + 1] = pr.uv[i * 2 + 1] * (it.uvs ? it.uvs[1] : 1);
             const c = pr.col;
@@ -1440,7 +1530,7 @@ const Kit = (() => {
         }
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nrm, 4, true)); g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-        g.setAttribute('kc', new THREE.BufferAttribute(kc, 4, true)); g.setAttribute('kz', new THREE.BufferAttribute(kz, 4, true)); g.setIndex(new THREE.BufferAttribute(idx, 1));
+        g.setAttribute('kc', new THREE.BufferAttribute(kc, 4, true)); g.setAttribute('kz', new THREE.BufferAttribute(kz, 4, true)); g.setAttribute('kg', new THREE.BufferAttribute(kg, 4, true)); g.setIndex(new THREE.BufferAttribute(idx, 1));
         g.computeBoundingBox(); g.computeBoundingSphere();
         const mesh = new THREE.Mesh(g, material(b.mat, 'batch'));
         mesh.castShadow = !!b.cast && !isGlass(K_.defs[b.mat] || { name: b.mat }); mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = b.mat;
@@ -3037,7 +3127,7 @@ function buildHouse(site, spec) {
   for (const m of [ext, int, glow]) { m.m = Ms.slice(); m.dirty = true; m.seed = (site.x * 977 + site.z * 31) | 0; }
   const ridgeY = H + hd * tanP, roofY = z => H + (hd - Math.abs(z)) * tanP;
   const zinfo = { id: zone, site, y0: floorY - 0.7, y1: floorY + ridgeY + 1.5, hw: w / 2, hd };
-  World.zones.push(zinfo);
+  zinfo.H = H; zinfo.slope = spec.ceiling ? 0 : tanP; World.zones.push(zinfo);
   const inner = () => { ext.m1 = zone; ext.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
   int.m1 = zone; int.ao = INT_AO;
   const walls = spec.walls || 'timber', stoneH = walls === 'half' ? (spec.stoneH || 1.05) : 0;
@@ -3196,7 +3286,7 @@ function buildHouse(site, spec) {
     spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: site.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
     // hearth against a wall. frame: origin on the inner wall face, +x into the room. (x, z) = house-local position, rot = RY angle
     fireplace(x, z, rot, opt) {
-      opt = opt || {}; const wid = opt.w || 1.9, dep = 0.8, m = int; ctx.hearth = { x, z, rot, wid, dep };
+      opt = opt || {}; const wid = opt.w || 1.9, dep = 0.8, m = int; ctx.hearth = { x, z, rot, wid, dep }; World.zones[zone - 1].hearth = [x, z, wid];
       m.push().T(x, 0, z).RY(rot);
       m.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
       m.box(0, 0, -wid / 2, dep, 1.15, -wid / 2 + 0.38); m.box(0, 0, wid / 2 - 0.38, dep, 1.15, wid / 2);
@@ -3301,7 +3391,7 @@ function kitShell(c) {
   const { site, spec, w, d, H, t, hd, ext, glow, zone, Ms, openings, tanP } = c, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
   ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
-  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
+  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.floorY + H + (st.up ? 3 : 0) }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
   const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: st.up ? zone : 0, inSkyVis: st.up ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
   const frames = {}, wbs = {};
@@ -3504,9 +3594,9 @@ const YARD_CAST_MIN = 0.6;        // m: the largest side a yard prop needs to ca
 function yardCasts(P) { if (!(YARD_CAST_MIN > 0)) return true; const b = Kit.box(P.name, P.M); return !b || Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) >= YARD_CAST_MIN; }
 function kadd(m, P, extra) {
   const zone = m.m1 | 0;
-  let B; if (zone) B = kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: YARD_CELL }); B = World.kitYard; }
+  let B; if (zone) B = extra && extra.fine ? furnFineBatch(zone) : kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: YARD_CELL }); B = World.kitYard; }
   const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone && yardCasts(P) }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
-  B.add(P.name, P.M, o);
+  B.add(P.name, P.M, o); if (zone && !o.noBlob) furnBlob(zone, P);
 }
 // place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
 function kp(m, name, x, y, z, s, ry, extra) { const P = kplace(m, name, x, y, z, s, ry); if (P) { kadd(m, P, extra); if (P.more) for (const Q of P.more) kadd(m, Q, extra); } }
@@ -3599,6 +3689,7 @@ const KIT_DRESS = {
 };
 // extra dressing per building, once its own interior has been laid out
 function kitDress(c) {
+  if (typeof furnishHouse === 'function') furnishHouse(c);
   const { site, w, d, H, hd, zone, spec } = c, id = site.id, st = spec.kitStyle, R = c.kR, dress = KIT_DRESS[id] || {}, e = 0.21, sy = H / 3;
   const X0 = -w / 2 + e, X1 = w / 2 - e, Z0 = -hd + e, Z1 = hd - e, m = { m: c.Ms, m1: zone, ao: INT_AO }, EXT = { zone: 0, skyVis: 1 };
   // is this patch of floor (house-local) taken by something the house has already registered?
@@ -3784,14 +3875,15 @@ function kitAttach() {
     const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.frustumCulled = false; mesh.matrixAutoUpdate = false; mesh.renderOrder = -5; mesh.name = 'kit-shadow-proxy'; SC.scene.add(mesh);
   }
   try { const sb = kitScatter(); if (sb) addG(sb.build(), { scatter: true }); } catch (e) { console.warn('scan scatter skipped: ' + (e && e.message || e)); }
-  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true }); }
+  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) { const g = k.batch.build(); furnBlobs(+z, g); addG(g, { site: k.site, interior: true }); } }
+  for (const z in World.kitFine) { const k = World.kitFine[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true, fine: true }); }
   if (World.kitYard && World.kitYard.count) { const g = World.kitYard.build(); g.traverse(o => { if (o.isMesh) o.layers.set(1); }); addG(g, { yard: true }); }
   const inner = sceneUpdate;
   sceneUpdate = function (camPos, q) {
     inner(camPos, q);
     // furniture only shows through an open door or a window, so it is drawn for the nearest buildings alone
     for (const k of World.kitGroups) {
-      if (k.interior && k.site) k.g.visible = interiorShown(k.site, camPos);
+      if (k.interior && k.site) k.g.visible = interiorShown(k.site, camPos) && !(k.fine && q.name === 'Low');
       else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
       else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
       else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) { o.visible = !World.deepIn && hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < q.yardRange + bs.radius; if (o.userData.cast0 === undefined) o.userData.cast0 = o.castShadow; o.castShadow = q.yardCast && o.userData.cast0; } }
@@ -4486,6 +4578,329 @@ const HOUSES = {
   },
 };
 for (const id of ['elder', 'herbalist', 'guardhouse', 'weaver', 'farm', 'hunter', 'fisher', 'smithy', 'store', 'inn']) { const s = SITE[id], h = HOUSES[id]; if (s.doorPos !== undefined) h.doors[0].pos = s.doorPos; }
+
+
+// ---- 72b_furnish.js ----
+// ───────────────────────── interior dressing additions: contact shadows under furniture (more to come) ─────────────────────────
+// Soft dark pads on the floor under every ground-standing kit piece of a room, merged into one transparent mesh per room (one draw call).
+const FURN = { blobs: {} };
+// the fine group of a room: small objects, drawn on medium and high only (see kitAttach)
+World.kitFine = {};
+function furnFineBatch(zone) {
+  let k = World.kitFine[zone]; if (!k) { const zi = World.zones[zone - 1]; k = World.kitFine[zone] = { batch: Kit.batch({ name: 'kitfine-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
+  return k.batch;
+}
+function furnBlob(zone, P) {
+  const pc = Kit.pieces[P.name], zi = World.zones[zone - 1]; if (!pc || !zi) return;
+  const sx = pc.max[0] - pc.min[0], sy = pc.max[1] - pc.min[1], sz = pc.max[2] - pc.min[2]; if (sx * sz < 0.1 || sy < 0.12) return;
+  const e = P.M.elements, fy = zi.y0 + 0.7;
+  const cx = (pc.min[0] + pc.max[0]) / 2, cz = (pc.min[2] + pc.max[2]) / 2;
+  const wx = e[0] * cx + e[4] * pc.min[1] + e[8] * cz + e[12], wy = e[1] * cx + e[5] * pc.min[1] + e[9] * cz + e[13], wz = e[2] * cx + e[6] * pc.min[1] + e[10] * cz + e[14];
+  if (wy < fy - 0.3 || wy > fy + 0.45) return;
+  const ax = Math.hypot(e[0], e[2]) || 1, az = Math.hypot(e[8], e[10]) || 1, mg = 0.16;
+  const hx = sx / 2 * ax + mg, hz = sz / 2 * az + mg, ux = [e[0] / ax, e[2] / ax], uz = [e[8] / az, e[10] / az];
+  (FURN.blobs[zone] = FURN.blobs[zone] || []).push([wx, fy + 0.034, wz, hx * ux[0], hx * ux[1], hz * uz[0], hz * uz[1]]);
+}
+function furnBlobs(zone, group) {
+  const L = FURN.blobs[zone]; if (!L || !L.length) return;
+  const pos = new Float32Array(L.length * 12), uvs = new Float32Array(L.length * 8), idx = new Uint16Array(L.length * 6);
+  L.forEach((b, i) => {
+    const c = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]];
+    c.forEach((k, j) => { const o = i * 4 + j; pos[o * 3] = b[0] + k[0] * b[3] + k[1] * b[5]; pos[o * 3 + 1] = b[1]; pos[o * 3 + 2] = b[2] + k[0] * b[4] + k[1] * b[6]; uvs[o * 2] = k[2]; uvs[o * 2 + 1] = k[3]; });
+    idx.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
+  });
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2)); g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.computeBoundingBox(); g.computeBoundingSphere();
+  if (!FURN.mat) {
+    const { vec3, uv, abs, max, smoothstep, float } = TSL, m = FURN.mat = new THREE.MeshBasicNodeMaterial(), d = max(abs(uv().x.sub(0.5)), abs(uv().y.sub(0.5))).mul(2);
+    m.colorNode = vec3(0.012, 0.008, 0.006); m.opacityNode = smoothstep(1.0, 0.4, d).mul(0.62); m.transparent = true; m.depthWrite = false; m.fog = false; m.side = THREE.DoubleSide;
+    m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2;
+  }
+  const mesh = new THREE.Mesh(g, FURN.mat); mesh.matrixAutoUpdate = false; mesh.name = 'floor-shadows'; mesh.castShadow = false; mesh.receiveShadow = false; group.add(mesh);
+}
+
+// ───────────────────────── structure and furnishing: wainscot, posts, sills, door casings, shelf runs, hangings, corner stacks, laid tables ─────────────────────────
+// Called at the start of kitDress(), so everything placed here is known (through colliders) to the generic dressing that follows.
+// Boxes are synthetic kit pieces on the scanned trim sheets (MI_WoodTrim, MI_Trim_Cloth), so they merge into the room's batch like any kit piece.
+const FURN_ON = !(TEST && TEST.furn === 0);
+const FT = { oak: [0.62, 0.5, 0.38], dark: [0.46, 0.36, 0.27], pale: [0.8, 0.68, 0.52] };
+function furnPiece(w, h, d, mat, vertical) {
+  mat = mat || 'MI_WoodTrim'; const key = 'x2b|' + mat + '|' + [w, h, d].map(v => Math.round(v * 100)).join('_') + (vertical ? 'v' : '');
+  if (Kit.pieces[key]) return key;
+  if (!Kit.defs[mat]) return null;
+  const X = w / 2, Z = d / 2, P = [], N = [], T = [], I = [];
+  // each face: 4 corners, normal, extents (a along the face's long axis, b across)
+  const face = (c0, c1, c2, c3, n, a, b) => {
+    const o = P.length / 3; for (const c of [c0, c1, c2, c3]) P.push(c[0], c[1], c[2]); for (let i = 0; i < 4; i++) N.push(n[0], n[1], n[2]);
+    if (mat === 'MI_WoodTrim') { const u = a * 0.5, v0 = 0.05, v1 = 0.05 + Math.min(0.22, b * 0.5); T.push(0, v0, u, v0, u, v1, 0, v1); }
+    else { T.push(0.64, 0.08, 0.96, 0.08, 0.96, 0.4, 0.64, 0.4); }
+    I.push(o, o + 1, o + 2, o, o + 2, o + 3);
+  };
+  const L = Math.max(w, h, d);
+  face([-X, h, Z], [-X, 0, Z], [X, 0, Z], [X, h, Z], [0, 0, 1], w >= h ? w : h, w >= h ? h : w);
+  face([X, h, -Z], [X, 0, -Z], [-X, 0, -Z], [-X, h, -Z], [0, 0, -1], w >= h ? w : h, w >= h ? h : w);
+  face([X, h, Z], [X, 0, Z], [X, 0, -Z], [X, h, -Z], [1, 0, 0], h >= d ? h : d, h >= d ? d : h);
+  face([-X, h, -Z], [-X, 0, -Z], [-X, 0, Z], [-X, h, Z], [-1, 0, 0], h >= d ? h : d, h >= d ? d : h);
+  face([-X, h, -Z], [-X, h, Z], [X, h, Z], [X, h, -Z], [0, 1, 0], w >= d ? w : d, w >= d ? d : w);
+  face([-X, 0, Z], [-X, 0, -Z], [X, 0, -Z], [X, 0, Z], [0, -1, 0], w >= d ? w : d, w >= d ? d : w);
+  Kit.pieces[key] = { name: key, prims: [{ mat, pos: new Float32Array(P), nrm: new Float32Array(N), uv: new Float32Array(T), col: null, idx: Uint32Array.from(I), n: P.length / 3 }], min: [-X, 0, -Z], max: [X, h, Z], pack: 'x2' };
+  return key;
+}
+const FPOOL = {
+  goods: [['SmallBottles_1', 1.3], ['SmallBottle', 1.6], ['Potion_2', 1], ['Book_Stack_1', 1], ['BookGroup_Small_1', 1], ['wooden_bowl_01', 0.7], ['food_pears_asian_01', 1.3], ['yellow_onion', 1.5], ['Pouch_Large', 1], ['Mug', 1], ['food_apple_01', 1.2]],
+  bar: [['SmallBottle', 1.6], ['SmallBottles_1', 1.3], ['Mug', 1], ['Potion_2', 1], ['Chalice', 1], ['SmallBottle', 1.6], ['Mug', 1]],
+  books: [['BookGroup_Medium_1', 1], ['BookGroup_Small_2', 1], ['Book_Stack_2', 1], ['BookGroup_Medium_2', 1], ['Scroll_1', 1], ['BookGroup_Small_3', 1], ['Book_Stack_1', 1], ['Candle_1', 1]],
+  herbs: [['Potion_1', 1], ['Potion_2', 1], ['SmallBottles_1', 1.3], ['SmallBottle', 1.6], ['Potion_4', 1], ['ceramic_vase_02', 0.7], ['SmallBottles_1', 1.3]],
+  tools: [['Bucket_Wooden_1', 0.7], ['Pouch_Large', 1], ['Mug', 1], ['Workbench_Drawers', 1], ['Coin_Pile', 1], ['SmallBottle', 1.6]],
+  cloth: [['FOLD', 1], ['FOLD', 1], ['FOLD', 1], ['FOLD', 1], ['Pouch_Large', 1]],
+  food: [['hamburger_buns_a', 1.7], ['food_pears_asian_01', 1.3], ['yellow_onion', 1.5], ['wooden_bowl_01', 0.7], ['food_apple_01', 1.2], ['Mug', 1]],
+};
+const FCOLS = [[0.45, 0.14, 0.12], [0.16, 0.26, 0.45], [0.2, 0.36, 0.2], [0.5, 0.4, 0.2], [0.36, 0.2, 0.4], [0.3, 0.24, 0.18], [0.55, 0.5, 0.42], [0.1, 0.12, 0.14]];
+// per room: which structure to add and how much to put in it (counts are upper bounds; free wall and floor decide)
+const FURN_ROOMS = {
+  inn:       { wain: 1, plate: 1, sills: 1, casing: 1, posts: 0, shelves: 2, pool: 'bar', hang: 4, corners: 2, settings: 1, rugs: 2, candles: 5, cloaks: 2, banners: 2 },
+  smithy:    { wain: 0, plate: 1, sills: 1, casing: 1, posts: 0, shelves: 1, pool: 'tools', hang: 6, corners: 3, settings: 0, rugs: 0, candles: 2, cloaks: 1, banners: 0 },
+  store:     { wain: 1, plate: 1, sills: 1, casing: 1, posts: 1, shelves: 4, pool: 'goods', hang: 4, corners: 3, settings: 0, rugs: 1, candles: 3, cloaks: 0, banners: 1 },
+  elder:     { wain: 1, plate: 1, sills: 1, casing: 1, posts: 1, shelves: 2, pool: 'books', hang: 3, corners: 2, settings: 1, rugs: 2, candles: 4, cloaks: 1, banners: 1 },
+  herbalist: { wain: 1, plate: 1, sills: 1, casing: 1, posts: 1, shelves: 3, pool: 'herbs', hang: 3, corners: 2, settings: 1, rugs: 1, candles: 3, cloaks: 0, banners: 0 },
+  guardhouse:{ wain: 1, plate: 1, sills: 1, casing: 1, posts: 0, shelves: 1, pool: 'tools', hang: 5, corners: 3, settings: 1, rugs: 1, candles: 2, cloaks: 2, banners: 1 },
+  weaver:    { wain: 1, plate: 1, sills: 1, casing: 1, posts: 1, shelves: 3, pool: 'cloth', hang: 3, corners: 2, settings: 1, rugs: 2, candles: 3, cloaks: 1, banners: 2 },
+  chapel:    { wain: 1, plate: 1, sills: 1, casing: 1, posts: 1, shelves: 0, pool: 'books', hang: 0, corners: 0, settings: 0, rugs: 0, candles: 8, cloaks: 0, banners: 5 },
+  mill:      { wain: 0, plate: 1, sills: 1, casing: 1, posts: 1, shelves: 1, pool: 'tools', hang: 3, corners: 4, settings: 1, rugs: 1, candles: 2, cloaks: 1, banners: 0 },
+  farm:      { wain: 1, plate: 1, sills: 1, casing: 1, posts: 1, shelves: 2, pool: 'food', hang: 4, corners: 3, settings: 1, rugs: 2, candles: 2, cloaks: 1, banners: 0 },
+  hunter:    { wain: 0, plate: 1, sills: 1, casing: 1, posts: 0, shelves: 1, pool: 'tools', hang: 5, corners: 3, settings: 1, rugs: 2, candles: 2, cloaks: 2, banners: 0 },
+  fisher:    { wain: 1, plate: 1, sills: 1, casing: 1, posts: 1, shelves: 1, pool: 'food', hang: 4, corners: 3, settings: 1, rugs: 1, candles: 2, cloaks: 1, banners: 0 },
+  draper:    { wain: 1, plate: 1, sills: 1, casing: 1, posts: 1, shelves: 4, pool: 'cloth', hang: 3, corners: 2, settings: 0, rugs: 2, candles: 3, cloaks: 0, banners: 3 },
+};
+function furnishHouse(c) {
+  const id = c.site.id, cfg = FURN_ROOMS[id]; if (!FURN_ON || !cfg || !Kit.defs.MI_WoodTrim) return;
+  const { w, d, H, hd, zone, spec } = c, R = rng(c.site.x * 17 + c.site.z * 29 + 7), sy = H / 3, e = 0.21, m = { m: c.Ms, m1: zone, ao: INT_AO };
+  const X0 = -w / 2 + e, X1 = w / 2 - e, Z0 = -hd + e, Z1 = hd - e, st = spec.kitStyle, col0 = c.kCol0;
+  const sides = [
+    { wn: 'back', len: X1 - X0, at: (u, o) => [X0 + u, Z1 - o], ry: PI, lo: X0 }, { wn: 'left', len: Z1 - Z0, at: (u, o) => [X0 + o, Z0 + u], ry: PI / 2, lo: Z0 },
+    { wn: 'right', len: Z1 - Z0, at: (u, o) => [X1 - o, Z0 + u], ry: -PI / 2, lo: Z0 }, { wn: 'front', len: X1 - X0, at: (u, o) => [X0 + u, Z0 + o], ry: 0, lo: X0 }];
+  const ops = sd => c.openings[sd.wn].map(o => ({ o, uc: (o.def.pos || 0) - sd.lo, hw: (o.door ? (o.def.w || 1.1) : (o.def.w || 1.2)) / 2, door: !!o.door }));
+  const blocked = (x, z, r, wallOnly) => {
+    const p = m4.tp(c.Ms, [x, 0, z]);
+    for (let i = col0; i < World.colliders.length; i++) {
+      const k = World.colliders[i]; if (k.y0 > p[1] + 2.2 || (wallOnly && k.y1 - k.y0 < 1.5)) continue;
+      if (k.r !== undefined) { if (hyp(k.x - p[0], k.z - p[2]) < k.r + r) return true; continue; }
+      const dx = p[0] - k.x, dz = p[2] - k.z; if (Math.abs(dx * k.ax + dz * k.az) < k.hx + r && Math.abs(dx * k.bx + dz * k.bz) < k.hz + r) return true;
+    }
+    if (wallOnly) return false;
+    for (const dd of c.doors) if (hyp(dd.ins[0] - p[0], dd.ins[2] - p[2]) < 1.25 + r) return true;
+    for (const k in World.spots) { const s = World.spots[k]; if (s.site === id && Math.abs(s.p[1] - p[1]) < 1.5 && hyp(s.p[0] - p[0], s.p[2] - p[2]) < 0.6 + r) return true; }
+    for (const f of World.floors) if (f.y2 !== undefined && Math.abs(f.y - p[1]) < 4 && Math.abs((p[0] - f.x) * f.ax + (p[2] - f.z) * f.az) < f.hx + 0.7 + r && Math.abs((p[0] - f.x) * f.bx + (p[2] - f.z) * f.bz) < f.hz + 0.7 + r) return true;       // stair runs stay clear
+    return false;
+  };
+  const put = (name, x, y, z, s, ry, extra) => { if (Kit.pieces[name]) kp(m, name, x, y, z, s, ry, Object.assign({ fine: true }, extra)); };       // small things go to the room's fine group (medium and high only)
+  const putA = (name, x, y, z, s, ry, extra) => { if (Kit.pieces[name]) kp(m, name, x, y, z, s, ry, extra); };
+  const timber = (x, y, z, bw, bh, bd, ry, tint, vertical) => { const n = furnPiece(bw, bh, bd, 'MI_WoodTrim', vertical); if (n) kp(m, n, x, y, z, 1, ry || 0, { tint: tint || FT.oak, noBlob: true }); };
+  const cloth = (x, y, z, bw, bh, ry, tint) => { const n = furnPiece(bw, bh, 0.03, 'MI_Trim_Cloth'); if (n) kp(m, n, x, y, z, 1, ry || 0, { tint, noBlob: true }); };
+  const guard = (sd, u, half, y0, y1) => { const p = sd.at(u, 0.06), fm = { m: m4.mul(m4.create(), c.Ms, m4.rotY(m4.translate(m4.create(), p[0], 0, p[1]), -sd.ry)) }; addBoxCollider(fm, -half, -0.05, half, 0.05, y0, y1); };
+  const used = {};      // wall space taken by hangings: side -> [[u, half]]
+  const free = (sd, u, half) => !(used[sd.wn] || []).some(t => Math.abs(t[0] - u) < t[1] + half + 0.08);
+  const claim = (sd, u, half, y0, y1) => { (used[sd.wn] = used[sd.wn] || []).push([u, half]); guard(sd, u, half, y0 === undefined ? 2.15 : y0, y1 === undefined ? 2.3 : y1); };
+  const nearOp = (sd, u, half, doorsOnly) => ops(sd).some(q => (!doorsOnly || q.door) && Math.abs(q.uc - u) < half + q.hw + (q.door ? 0.3 : 0.15));
+  const hr = c.hearth, hearthOn = sd => hr && Math.abs(hr.rot) < 0.01 && sd.wn === 'left';
+  const hearthSpan = (u, half) => hr && Math.abs(u + sides[1].lo - hr.z) < hr.wid / 2 + half + 0.25;
+  const bigH = H;
+  // ── wainscot: skirting, panel and a cap rail along every length of wall that has no door, hearth or chimney ──
+  if (cfg.wain) for (const sd of sides) {
+    const cuts = ops(sd).filter(q => q.door).map(q => [q.uc - q.hw - 0.1, q.uc + q.hw + 0.1]);
+    if (hearthOn(sd)) cuts.push([hr.z - hr.wid / 2 - 0.3 - sides[1].lo, hr.z + hr.wid / 2 + 0.3 - sides[1].lo]);
+    cuts.sort((a, b) => a[0] - b[0]);
+    let a = 0; const runs = [];
+    for (const k of cuts.concat([[sd.len, sd.len]])) { if (k[0] - a > 0.3) runs.push([a, Math.min(k[0], sd.len)]); a = Math.max(a, k[1]); }
+    for (const [r0, r1] of runs) for (let u = r0; u < r1 - 0.01; u += 2.4) {
+      const e1 = Math.min(r1, u + 2.4), mid = (u + e1) / 2, len = e1 - u, p = sd.at(mid, 0.02);
+      timber(p[0], 0.0, p[1], len, 0.14, 0.07, sd.ry, FT.dark); timber(...[p[0], 0.14, p[1]], len, 0.74, 0.045, sd.ry, FT.oak); timber(p[0], 0.88, p[1], len, 0.07, 0.085, sd.ry, FT.dark);
+    }
+  }
+  // ── top plate along every wall under the ceiling, posts down to the wainscot (half-timbered rooms) and corner posts ──
+  if (cfg.plate) for (const sd of sides) {
+    const gab = sd.wn === 'left' || sd.wn === 'right'; if (hearthOn(sd)) continue;
+    const p = sd.at(sd.len / 2, 0.02); timber(p[0], H - 0.26, p[1], sd.len, 0.2, 0.1, sd.ry, FT.dark);
+    if (cfg.posts) for (let u = 1.0; u < sd.len - 0.6; u += 2.0 + R() * 0.3) {
+      if (nearOp(sd, u, 0.1, false) || free(sd, u, 0.1) === false) continue;
+      const q = sd.at(u, 0.0); timber(q[0], 0.95, q[1], 0.13, H - 1.2, 0.09, sd.ry, FT.oak, true);
+    }
+  }
+  if (cfg.plate) for (const [x, z] of [[X0, Z0], [X1, Z0], [X0, Z1], [X1, Z1]]) { if (hr && Math.abs(x - X0) < 0.5 && Math.abs(z - hr.z) < hr.wid / 2 + 0.5) continue; timber(x + (x < 0 ? 0.04 : -0.04), 0, z + (z < 0 ? 0.04 : -0.04), 0.15, H - 0.06, 0.15, 0, FT.dark, true); }
+  // ── window sills with a candle or a pot on them; door casings ──
+  for (const sd of sides) for (const q of ops(sd)) {
+    if (q.door) {
+      if (!cfg.casing) continue;
+      const dh = (q.o.def.h || 2.12 * sy), p = sd.at(q.uc, 0.03), jx = q.hw + 0.04;
+      for (const s of [-1, 1]) { const pj = sd.at(q.uc + s * jx, 0.03); timber(pj[0], 0, pj[1], 0.1, dh + 0.1, 0.07, sd.ry, FT.dark, true); }
+      timber(p[0], dh, p[1], q.hw * 2 + 0.28, 0.12, 0.09, sd.ry, FT.dark);
+    } else if (cfg.sills) {
+      const sill = (q.o.def.sill !== undefined ? q.o.def.sill : 0.95 * sy), p = sd.at(q.uc, 0.1);
+      timber(p[0], sill - 0.04, p[1], q.hw * 2 + 0.25, 0.05, 0.2, sd.ry, FT.oak);
+      const kind = R(), q2 = sd.at(q.uc + R.s() * q.hw * 0.5, 0.13);
+      if (kind < 0.35 && R() < 0.8) put(R.pick(['ceramic_vase_02', 'ceramic_vase_04', 'ceramic_pot']), q2[0], sill + 0.01, q2[1], 0.6, R() * 6);
+      else if (kind < 0.7) put(R.pick(['Book_Stack_1', 'BookGroup_Small_1', 'Potion_2']), q2[0], sill + 0.01, q2[1], 1, sd.ry);
+    }
+  }
+  // ── laid tables: a plate, a mug and bread at each seat, a jug, an open book, cheese ──
+  if (cfg.settings) for (let i = col0; i < World.colliders.length; i++) {
+    const k = World.colliders[i]; if (k.r !== undefined || k.y1 - k.y0 < 0.65 || k.y1 - k.y0 > 0.95 || k.hx < 0.55 || k.hz < 0.32) continue;
+    const L = worldToSite(c.site, k.x, k.z), th = Math.atan2(-(-k.ax * Math.sin(c.site.yaw) + k.az * Math.cos(c.site.yaw)), k.ax * Math.cos(c.site.yaw) + k.az * Math.sin(c.site.yaw)), cs = Math.cos(th), sn = Math.sin(th), top = k.y1 - k.y0 + 0.004;
+    const loc = (dx, dz) => [L[0] + dx * cs + dz * sn, L[1] - dx * sn + dz * cs];
+    const nseat = Math.max(1, Math.floor(k.hx * 2 / 0.9)), zz = k.hz - 0.2;
+    for (let s = 0; s < nseat; s++) for (const sg of [-1, 1]) {
+      if (R() < 0.35) continue;
+      const dx = (s - (nseat - 1) / 2) * (k.hx * 2 - 0.5) / nseat + R.s() * 0.08, p = loc(dx, sg * zz);
+      put('Table_Plate', p[0], top, p[1], 0.8, R() * 6); const f = R();
+      if (f < 0.5) { const q = loc(dx, sg * zz); put('hamburger_buns_a', q[0], top + 0.03, q[1], 1.5, R() * 6); } else if (f < 0.8) { const q = loc(dx, sg * zz); put('food_pears_asian_01', q[0] + 0.02, top + 0.03, q[1], 1.2, R() * 6); }
+      const q2 = loc(dx + 0.2, sg * (zz - 0.05)); put('Mug', q2[0], top, q2[1], 0.8, R() * 6);
+    }
+    if (k.hx > 0.8) { const j = loc(k.hx * 0.45, 0.17 * (R() < 0.5 ? 1 : -1)); put(R.pick(['Vase_4', 'ceramic_vase_04']), j[0], top, j[1], 0.55, R() * 6); if (id === 'elder' || id === 'inn') { const b = loc(-k.hx * 0.5, R.s() * 0.1); put('Book_7', b[0], top, b[1], 0.9, R() * 6, { tint: R.pick(FCOLS).map(v => v * 1.6 + 0.3) }); } }
+  }
+  // ── shelf runs with rows of objects; the pool says what each room keeps on them ──
+  const pool = (FPOOL[cfg.pool] || FPOOL.goods).filter(q => q[0] === 'FOLD' || Kit.pieces[q[0]]);
+  let shelves = cfg.shelves;
+  for (let pass = 0; pass < 2 && shelves > 0; pass++) for (const sd of sides.slice().sort(() => R() - 0.5)) {
+    if (shelves <= 0) break;
+    for (let u = 0.9 + R() * 0.5; u < sd.len - 0.7 && shelves > 0; u += 0.3) {
+      if (hearthOn(sd) || nearOp(sd, u, 0.62, false) || !free(sd, u, 0.62)) continue;
+      const pf = sd.at(u, 0.3); if (blocked(pf[0], pf[1], 0.25, true)) continue;
+      const nb = H > 3.4 ? 4 : 3, ys = []; for (let j = 0; j < nb; j++) ys.push(1.1 + j * 0.5);
+      for (const y of ys) { const p = sd.at(u, 0.0); putA('Shelf_Simple', p[0], y, p[1], 1, sd.ry);
+        const n = cfg.pool === 'cloth' ? 3 : 3 + (R() * 3 | 0); for (let t = 0; t < n; t++) { const it = R.pick(pool), q = sd.at(u - 0.5 + (t + 0.5) * 1.0 / n + R.s() * 0.03, 0.18); if (it[0] === 'FOLD') { const tc = R.pick(FCOLS).map(v => v * 1.5 + 0.1); for (let k = 0, kh = 2 + (R() * 2 | 0); k < kh; k++) { const pc = furnPiece(0.34, 0.07, 0.24, 'MI_Trim_Cloth'); if (pc) kp(m, pc, q[0], y + 0.11 + k * 0.07, q[1], 1, sd.ry + R.s() * 0.08, { tint: tc.map(v => v * (1 + R.s() * 0.15)), noBlob: true }); } } else put(it[0], q[0], y + 0.11, q[1], it[1], sd.ry + R.s() * 0.6); } }
+      claim(sd, u, 0.62, 1.0, 2.2 + 0.2 * nb); shelves--; u += 1.3;
+    }
+  }
+  // ── hangings: peg racks with pans, tools and cloaks; banners and weapons, antlers ──
+  let hang = cfg.hang, cloaks = cfg.cloaks, banners = cfg.banners;
+  const hangPool = { inn: ['pan', 'pan', 'mug', 'rope'], smithy: ['tong', 'pan', 'tong', 'rope'], store: ['pan', 'rope', 'bag'], guardhouse: ['sword', 'rope', 'pan'], hunter: ['pelt', 'rope', 'pan'], mill: ['rope', 'pan'], farm: ['pan', 'pan', 'rope'], fisher: ['rope', 'pan', 'net'] }[id] || ['pan', 'rope', 'pan'];
+  for (let pass = 0; pass < 2 && (hang > 0 || cloaks > 0 || banners > 0); pass++) for (const sd of sides.slice().sort(() => R() - 0.5)) {
+    for (let u = 0.8 + R() * 0.8; u < sd.len - 0.7; u += 0.3) {
+      if (hearthOn(sd) || nearOp(sd, u, 0.62, false) || !free(sd, u, 0.62)) continue;
+      const pf = sd.at(u, 0.3); if (blocked(pf[0], pf[1], 0.2, true)) continue;
+      const p = sd.at(u, 0.0);
+      if (banners > 0) { banners--; const tc = R.pick(FCOLS); putA(R() < 0.5 ? 'Banner_1_Cloth' : 'Banner_2_Cloth', p[0], Math.min(2.6 * sy, H - 0.2), sd.at(u, 0.05)[1], 1, sd.ry, { tint: tc.map(v => v * 1.8 + 0.1) }); const q = sd.at(u, 0.05); putA('Banner_1_Cloth', q[0], Math.min(2.6 * sy, H - 0.2), q[1], 1, sd.ry, { tint: tc.map(v => v * 1.8 + 0.1) }); claim(sd, u, 0.5); u += 1.2; continue; }
+      if (hang > 0 || cloaks > 0) {
+        putA('Peg_Rack', p[0], 1.75, p[1], 1, sd.ry);
+        for (let t = 0; t < 3; t++) {
+          const du = (t - 1) * 0.36, q = sd.at(u + du, 0.07), cl = cloaks > 0 && t === 1; let k = cl ? 'cloak' : R.pick(hangPool);
+          if (cl) { cloaks--; cloth(q[0], 1.17, q[1], 0.42, 0.58, sd.ry, R.pick(FCOLS).map(v => v * 1.2)); timber(q[0], 1.73, q[1], 0.12, 0.06, 0.06, sd.ry, FT.dark); }
+          else if (k === 'pan') { const M = new THREE.Matrix4().compose(new THREE.Vector3(q[0], 1.66, q[1]), new THREE.Quaternion().setFromEuler(new THREE.Euler(PI / 2, sd.ry, 0, 'YXZ')), new THREE.Vector3(0.6, 0.6, 0.6)); kadd(m, { name: 'Pot_1', M: new THREE.Matrix4().multiplyMatrices(new THREE.Matrix4().fromArray(c.Ms), M) }); }
+          else if (k === 'rope') put('Rope_2', q[0], 1.7, q[1], 0.55, sd.ry);
+          else if (k === 'mug') put('Mug', q[0], 1.62, q[1], 0.9, sd.ry);
+          else if (k === 'sword') put('Sword_Bronze', q[0], 1.0, q[1], 0.9, sd.ry);
+          else if (k === 'bag') put('Pouch_Large', q[0], 1.6, q[1], 1.3, sd.ry);
+          else if (k === 'pelt') cloth(q[0], 1.1, q[1], 0.5, 0.7, sd.ry, [0.7, 0.55, 0.4]);
+          else if (k === 'net') cloth(q[0], 1.2, q[1], 0.5, 0.9, sd.ry, [0.5, 0.5, 0.4]);
+          else if (k === 'tong') put('cross_pein_hammer', q[0], 1.45, q[1], 1.6, sd.ry);
+        }
+        hang--; claim(sd, u, 0.62, 1.0, 2.0); u += 1.4;
+      }
+    }
+  }
+  // ── corner stacks: crates, barrels and sacks tucked into the corners, never into a walking line ──
+  const stacks = {
+    inn: [['Barrel', 0, 0.9], ['Barrel', 1, 0.9], ['Crate_Wooden', 2, 0.8]], mill: [['Bag', 0, 0.9], ['Bag', 1, 0.9], ['Barrel', 2, 0.9]],
+  };
+  let nc = cfg.corners;
+  const cornerList = [[X0, Z0, 1, 1], [X1, Z0, -1, 1], [X0, Z1, 1, -1], [X1, Z1, -1, -1]].sort(() => R() - 0.5);
+  for (const [cx, cz, sx, sz] of cornerList) {
+    if (nc <= 0) break;
+    const x = cx + sx * 0.45, z = cz + sz * 0.45; if (blocked(x, z, 0.55) || nearOp(sides[0], 0, 0, false) && false) continue;
+    // keep corners next to doors and windows free
+    const near = sides.some(sd => ops(sd).some(q => { const p = sd.at(q.uc, 0); return hyp(p[0] - x, p[1] - z) < q.hw + 0.8 && q.door; }));
+    if (near) continue;
+    const fm = { m: m4.translate(m4.create(), 0, 0, 0) }; fm.m = m4.mul(m4.create(), c.Ms, m4.translate(m4.create(), x, 0, z));
+    const kind = R(), ry = R() * 6;
+    if (kind < 0.3) { put('Crate_Wooden', x, 0.07, z, 0.8, ry); put('Crate_Wooden', x + R.s() * 0.05, 0.84, z, 0.7, ry + 0.4); addBoxCollider(fm, -0.38, -0.38, 0.38, 0.38, 0, 1.4); }
+    else if (kind < 0.55) { put('Barrel', x, 0.0, z, 0.9, ry); put('Barrel', x + sx * 0.62, 0.0, z + sz * 0.12, 0.85, ry + 1); addBoxCollider(fm, -0.4, -0.4, 0.4 + 0.65, 0.4, 0, 0.9); }
+    else if (kind < 0.8) { put('Bag', x, 0, z, 0.9, ry); put('Bag', x + sx * 0.4, 0, z + sz * 0.1, 0.85, ry + 1); put('Bag', x + sx * 0.1, 0.5, z + sz * 0.15, 0.7, ry + 2); addBoxCollider(fm, -0.35, -0.35, 0.8, 0.35, 0, 0.9); }
+    else { put('wooden_bucket_01', x, 0, z, 1.1, ry); put('wicker_basket_02', x + sx * 0.5, 0, z + sz * 0.05, 1.3, ry); put('dry_branches_medium_01_a', x + sx * 0.1, 0, z + sz * 0.3, 0.7, ry); addBoxCollider(fm, -0.3, -0.3, 0.8, 0.4, 0, 0.6); }
+    nc--;
+  }
+
+  // ── cloth on the shelves (draper, weaver): stacks of folded bolts instead of crockery ──
+  // (handled in the shelf loop through FPOOL.cloth = 'FOLD')
+  // ── a chest at the foot of every bed ──
+  for (const nm of ['bed', 'bed2', 'guestbed']) {
+    const sp = World.spots[id + '.' + nm]; if (!sp || sp.p[1] - m4.tp(c.Ms, [0, 0, 0])[1] > 1.5) continue;
+    const L = worldToSite(c.site, sp.p[0], sp.p[2]), rot = -(sp.yaw - c.site.yaw), ax = [Math.sin(rot), Math.cos(rot)];
+    for (const sg of [1, -1]) {
+      const x = L[0] + ax[0] * sg * 1.5, z = L[1] + ax[1] * sg * 1.5;
+      if (x < X0 + 0.5 || x > X1 - 0.5 || z < Z0 + 0.4 || z > Z1 - 0.4 || blocked(x, z, 0.42)) continue;
+      const fm = { m: m4.mul(m4.create(), c.Ms, m4.rotY(m4.translate(m4.create(), x, 0, z), -rot)) };
+      putA('treasure_chest', x, 0.02, z, 0.85, rot + PI / 2); addBoxCollider(fm, -0.35, -0.22, 0.35, 0.22, 0, 0.5); break;
+    }
+  }
+  // ── layered rugs on free floor, away from the walking line between door and hearth ──
+  const palette = [COL.red, COL.blue, COL.green, [0.5, 0.36, 0.2], [0.32, 0.26, 0.2], COL.purple];
+  for (let i = 0, n = cfg.rugs; i < 40 && n > 0; i++) {
+    const rw = 1.0 + R() * 0.7, rl = 1.5 + R() * 0.9, x = X0 + 1.0 + R() * (X1 - X0 - 2.0), z = Z0 + 1.0 + R() * (Z1 - Z0 - 2.0);
+    if (blocked(x, z, 0.3) || blocked(x + rw * 0.4, z, 0.2) || blocked(x - rw * 0.4, z, 0.2) || blocked(x, z + rl * 0.4, 0.2) || blocked(x, z - rl * 0.4, 0.2)) continue;
+    if (hyp(x - (hr ? hr.x + 1.6 : 99), z - (hr ? hr.z : 99)) < 1.5) continue;
+    at(c.int, x, 0.03, z, R() * 3, () => Props.rug(c.int, rw, rl, R.pick(palette))); n--;
+  }
+  // ── drying bundles near the hearth, on the beams ──
+  if (['inn', 'store', 'farm', 'fisher', 'elder', 'mill', 'hunter', 'smithy'].includes(id) && hr) {
+    const hx = hr.x + 1.4; for (let k = 0; k < 4 + (R() * 3 | 0); k++) { const z = hr.z + (k - 2) * 0.55 + R.s() * 0.1; if (Math.abs(z) < Z1 - 0.4) at(c.int, hx + R.s() * 0.25, H - 0.26, z, 0, () => herbs(c.int, R)); }
+  }
+  // ── candles that burn: on sills and the mantel, no point light (the cap in kitLit keeps hearths among the lights the renderer picks) ──
+  let nCandle = cfg.candles;
+  for (const sd of sides) for (const q of ops(sd)) {
+    if (q.door || nCandle <= 0 || R() < 0.45) continue;
+    const sill = (q.o.def.sill !== undefined ? q.o.def.sill : 0.95 * sy), p = sd.at(q.uc + (R() < 0.5 ? -1 : 1) * q.hw * 0.55, 0.14);
+    if (Kit.pieces.wooden_candlestick) { kitLit(m, 'wooden_candlestick', p[0], sill + 0.01, p[1], 1, R() * 6, { cap: 0, kind: 'candle', flame: 'candle' }); nCandle--; }
+  }
+  if (hr && nCandle > 0 && Kit.pieces.wooden_candlestick) { kitLit(m, 'wooden_candlestick', hr.x + 0.3, 1.52, hr.z + hr.wid * 0.3, 1.1, 0, { cap: 0, kind: 'candle', flame: 'candle' }); nCandle--; }
+  // ── room specials ──
+  const wallSpot = (len, dep) => { for (let t = 0; t < 80; t++) { const sd = R.pick(sides), u = len / 2 + 0.5 + R() * Math.max(0.01, sd.len - len - 1.0); if (hearthOn(sd) || nearOp(sd, u, len / 2, true) || nearOp(sd, u, len / 2 - 0.3, false)) continue; const p = sd.at(u, dep / 2 + 0.03), a = sd.at(u - len / 2, dep / 2 + 0.03), b = sd.at(u + len / 2, dep / 2 + 0.03); if (blocked(p[0], p[1], dep / 2 + 0.12) || blocked(a[0], a[1], 0.25) || blocked(b[0], b[1], 0.25)) continue; return { sd, u, p }; } return null; };
+  const colliderAt = (p, sd, len, dep, h) => { const fm = { m: m4.mul(m4.create(), c.Ms, m4.rotY(m4.translate(m4.create(), p[0], 0, p[1]), -sd.ry)) }; addBoxCollider(fm, -len / 2, -dep / 2, len / 2, dep / 2, 0, h); };
+  if (id === 'smithy') {          // a quench trough of boards on legs, full of dark water
+    const ws = wallSpot(1.3, 0.55);
+    if (ws) {
+      const { sd, p } = ws, L = 1.2, D = 0.5, at2 = (du, dd) => sd.at(ws.u + du, 0.03 + D / 2 + dd);
+      timber(p[0], 0.3, p[1], L, 0.07, D, sd.ry, FT.dark);
+      for (const s of [-1, 1]) { const q = at2(s * (L / 2 - 0.03), 0); timber(q[0], 0.37, q[1], 0.06, 0.3, D, sd.ry, FT.oak); const r2 = at2(0, s * (D / 2 - 0.03)); timber(r2[0], 0.37, r2[1], L, 0.3, 0.06, sd.ry, FT.oak); }
+      for (const s of [-1, 1]) for (const t of [-1, 1]) { const q = at2(s * (L / 2 - 0.08), t * (D / 2 - 0.08)); timber(q[0], 0, q[1], 0.09, 0.32, 0.09, sd.ry, FT.dark, true); }
+      const wn = furnPiece(L - 0.1, 0.01, D - 0.1, 'MI_Trim_Metal'); if (wn) kp(m, wn, p[0], 0.56, p[1], 1, sd.ry, { tint: [0.05, 0.09, 0.11], noBlob: true });
+      colliderAt(p, sd, L, D, 0.7);
+    }
+  }
+  if (id === 'inn') {          // the bar's back wall: three bays of shelves with bottles and mugs, racks of hanging mugs and pans above
+    const Zb = Z1 - 0.01;
+    for (const x of [3.9, 5.1, 6.3]) {
+      for (const y of [1.55, 2.0, 2.45]) { putA('Shelf_Simple', x, y, Zb - 0.3, 1, PI); const n = 5; for (let t = 0; t < n; t++) { const it = R.pick(FPOOL.bar.filter(q => Kit.pieces[q[0]])); put(it[0], x - 0.5 + (t + 0.5) / n, y + 0.11, Zb - 0.17, it[1], PI + R.s() * 0.5); } }
+      putA('Peg_Rack', x, 2.85, Zb - 0.02, 1, PI); for (let t = 0; t < 3; t++) put(R() < 0.7 ? 'Mug' : 'Pot_1', x + (t - 1) * 0.36, R() < 0.7 ? 2.72 : 2.7, Zb - 0.08, 0.9, PI);
+    }
+    put('Barrel', 0.9, 0.02, Zb - 0.4, 0.9, R() * 6); put('Crate_Wooden', 1.5, 0.07, Zb - 0.55, 0.8, 0.2);
+  }
+  // ── window positions for the dust that hangs in daylight ──
+  const zi = World.zones[zone - 1]; zi.windows = [];
+  for (const sd of sides) for (const q of ops(sd)) if (!q.door) { const p = sd.at(q.uc, 0.2), wpos = m4.tp(c.Ms, [p[0], (q.o.def.sill !== undefined ? q.o.def.sill : 0.95 * sy) + 0.5, p[1]]), nd = m4.td(c.Ms, [Math.sin(sd.ry), 0, Math.cos(sd.ry)]); zi.windows.push([wpos[0], wpos[1], wpos[2], nd[0], nd[2], q.hw]); }
+}
+
+// ── air indoors: dust turning in the window light by day, a faint warm haze under the beams at night ──
+(function () {
+  const _fx = fxUpdate;
+  fxUpdate = function (dt, time, env, cam) {
+    _fx.apply(this, arguments);
+    const zn = World.camZone | 0; if (!zn || !FURN_ON) return; const zi = World.zones[zn - 1]; if (!zi || !zi.windows) return;
+    const d = R.partData; let n = R.partCount; const max = R.partMax;
+    const put = (x, y, z, size, r, g, b, a, kind) => { if (n >= max) return; const o = n++ * 12; d[o] = x; d[o + 1] = y; d[o + 2] = z; d[o + 3] = size; d[o + 4] = r; d[o + 5] = g; d[o + 6] = b; d[o + 7] = a; d[o + 8] = 0; d[o + 9] = kind; d[o + 10] = 1; d[o + 11] = 0.3; };
+    if (env.day > 0.25) zi.windows.slice(0, 4).forEach((w, wi) => {
+      for (let k = 0; k < 7; k++) {
+        const ph = wi * 5.7 + k * 1.93, t = time * (0.05 + (k % 3) * 0.02) + ph, f = (t % 1 + 1) % 1, dist = 0.3 + f * 2.2;
+        const x = w[0] + w[3] * dist + Math.sin(time * 0.3 + ph * 3) * 0.25 + (k - 3) * w[5] * 0.28 * (-w[4]), z = w[2] + w[4] * dist + Math.cos(time * 0.27 + ph) * 0.25 + (k - 3) * w[5] * 0.28 * w[3], y = w[1] - 0.3 + Math.sin(ph * 2.1) * 0.5 - f * 0.5 + Math.sin(time * 0.4 + ph) * 0.12;
+        put(x, y, z, 0.022, 1.0, 0.92, 0.72, 0.85 * env.day * Math.sin(f * PI) * (0.55 + 0.45 * Math.sin(time * 1.3 + ph * 2)), 3);
+      }
+    });
+    if (zi.site.id === 'inn' && env.windowGlow > 0.3) for (let k = 0; k < 9; k++) {
+      const ph = k * 2.39, L = [-5 + (k % 4) * 3.1, 3.0 + (k % 3) * 0.2, -3 + Math.floor(k / 3) * 3], p = siteToWorld(zi.site, L[0], L[2]);
+      put(p[0] + Math.sin(time * 0.1 + ph) * 0.5, m4.tp(siteMatrix(zi.site, zi.y0 + 0.7), [0, L[1], 0])[1], p[1], 2.6, 1.0, 0.62, 0.3, 0.032 * env.windowGlow, 0);
+    }
+    R.partCount = n;
+  };
+})();
 
 
 // ---- 73_village.js ----
@@ -6220,7 +6635,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 15 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 16 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }

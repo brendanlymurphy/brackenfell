@@ -176,13 +176,21 @@ const Kit = (() => {
       const mn = texture(G.noiseTex, vec2(wp.x.mul(0.37).add(wp.z.mul(0.21)), wp.z.mul(0.33).sub(wp.y.mul(0.25)))), mk = smoothstep(0.62, 0.8, mn.r.mul(0.7).add(mn.g.mul(0.3))).mul(d.moss);
       rawS = mix(rawS, vec3(0.2, 0.27, 0.1).mul(dot(raw, vec3(1.4, 1.4, 1.4)).add(0.5)), mk);
     }
-    const alb = gradeFn(rawS).mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
+    // depth and grime (40b_depth.js): room occlusion for everything indoors; dirt, soot and (outdoors, from the kg heights) mud, moss and eave stains on walls
+    const useRoom = batch || !!o.zone, rm = useRoom ? SH.room(wp, N, zone).toVar() : null;
+    let gcol = gradeFn(rawS);
+    if (batch && /Plaster|Brick|Rock|WoodTrim/.test(name)) {
+      const kg = attribute('kg', 'vec4'), gr = SH.grime(wp, N, kg.x.mul(8), kg.y.mul(8), rm.y, rm.z, float(/Brick|Rock/.test(name) ? 1 : 0)).toVar();
+      gcol = mix(gcol.mul(gr.rgb), vec3(0.15, 0.22, 0.07).mul(dot(gcol, vec3(1.2)).add(0.35)), gr.w.mul(0.75));
+    }
+    const alb = gcol.mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
     m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
     m.roughnessNode = orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough);
     m.metalnessNode = float(0);
-    let em = alb.mul(SH.hemi(N, skyVis.mul(ao), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6))));
+    const aoR = rm ? rm.x : float(1);
+    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35))));
     em = em.add(alb.mul(glow));
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
     else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));
@@ -243,7 +251,8 @@ const Kit = (() => {
       const group = new THREE.Group(); group.name = opts.name || 'kit-batch'; group.matrixAutoUpdate = false;
       const nm = new THREE.Matrix3(), v = new THREE.Vector3();
       for (const b of buckets.values()) {
-        const pos = new Float32Array(b.nv * 3), nrm = new Int8Array(b.nv * 4), uvs = new Float32Array(b.nv * 2), kc = new Uint8Array(b.nv * 4), kz = new Uint8Array(b.nv * 4);
+        const pos = new Float32Array(b.nv * 3), nrm = new Int8Array(b.nv * 4), uvs = new Float32Array(b.nv * 2), kc = new Uint8Array(b.nv * 4), kz = new Uint8Array(b.nv * 4), kg = new Uint8Array(b.nv * 4).fill(255);
+        const gB = opts.gBase, gT = opts.gTop;
         const idx = b.nv > 65535 ? new Uint32Array(b.ni) : new Uint16Array(b.ni); let vo = 0, io = 0;
         for (const it of b.items) {
           const pr = it.prim, M = it.M, flip = M.determinant() < 0; nm.getNormalMatrix(M);
@@ -251,6 +260,7 @@ const Kit = (() => {
           for (let i = 0; i < pr.n; i++) {
             const o = vo + i;
             v.set(pr.pos[i * 3], pr.pos[i * 3 + 1], pr.pos[i * 3 + 2]).applyMatrix4(M); pos[o * 3] = v.x; pos[o * 3 + 1] = v.y; pos[o * 3 + 2] = v.z;
+            if (gB !== undefined) kg[o * 4] = Math.max(0, Math.min(255, Math.round((v.y - gB) * 32))); if (gT !== undefined) kg[o * 4 + 1] = Math.max(0, Math.min(255, Math.round((gT - v.y) * 32)));
             v.set(pr.nrm[i * 3], pr.nrm[i * 3 + 1], pr.nrm[i * 3 + 2]).applyMatrix3(nm).normalize(); nrm[o * 4] = Math.round(v.x * 127); nrm[o * 4 + 1] = Math.round(v.y * 127); nrm[o * 4 + 2] = Math.round(v.z * 127);
             uvs[o * 2] = pr.uv[i * 2] * (it.uvs ? it.uvs[0] : 1); uvs[o * 2 + 1] = pr.uv[i * 2 + 1] * (it.uvs ? it.uvs[1] : 1);
             const c = pr.col;
@@ -270,7 +280,7 @@ const Kit = (() => {
         }
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nrm, 4, true)); g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-        g.setAttribute('kc', new THREE.BufferAttribute(kc, 4, true)); g.setAttribute('kz', new THREE.BufferAttribute(kz, 4, true)); g.setIndex(new THREE.BufferAttribute(idx, 1));
+        g.setAttribute('kc', new THREE.BufferAttribute(kc, 4, true)); g.setAttribute('kz', new THREE.BufferAttribute(kz, 4, true)); g.setAttribute('kg', new THREE.BufferAttribute(kg, 4, true)); g.setIndex(new THREE.BufferAttribute(idx, 1));
         g.computeBoundingBox(); g.computeBoundingSphere();
         const mesh = new THREE.Mesh(g, material(b.mat, 'batch'));
         mesh.castShadow = !!b.cast && !isGlass(K_.defs[b.mat] || { name: b.mat }); mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = b.mat;
