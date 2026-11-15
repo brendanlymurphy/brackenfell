@@ -2362,16 +2362,16 @@ const roadZ = x => x < 36 ? (x - 13) / 23 : 1 + (x - 36) / 14;        // the mai
 const ALLEY = { x0: 22, x1: 51, setback: 5.5 };
 const ALLEY_SHOPS = [
   { id: 'draper', row: 'N', x0: 29.2, w: 6.4, d: 5.6, name: 'Lindqvist’s Draper' },
-  { id: 'shop.n2', row: 'N', x0: 35.9, w: 4, d: 4, floors: 3, pitch: 58, kind: 'apothecary', glyph: 'potion', awn: [[0.28, 0.45, 0.30], [0.85, 0.8, 0.65]], layout: 'DW', balcony: 0 },
-  { id: 'shop.n3', row: 'N', x0: 40.2, w: 6, d: 4, floors: 2, pitch: 46, kind: 'cutler', glyph: 'axes', awn: [[0.55, 0.2, 0.16], [0.85, 0.8, 0.65]], layout: 'WDW', balcony: 1 },
-  { id: 'shop.n4', row: 'N', x0: 46.5, w: 4, d: 4, floors: 3, pitch: 52, kind: 'grocer', glyph: 'herbs', awn: [[0.6, 0.35, 0.14], [0.85, 0.8, 0.65]], layout: 'WD', balcony: 0 },
-  { id: 'shop.s0', row: 'S', x0: 23.4, w: 4, d: 4, floors: 2, pitch: 54, kind: 'baker', glyph: 'mugs', awn: [[0.5, 0.32, 0.18], [0.85, 0.8, 0.65]], layout: 'DW', balcony: 0 },
-  { id: 'shop.s1', row: 'S', x0: 27.7, w: 6, d: 4, floors: 3, pitch: 50, kind: 'books', glyph: 'crest', awn: [[0.22, 0.32, 0.5], [0.85, 0.8, 0.65]], layout: 'WDW', balcony: 1 },
+  { id: 'shop.n2', row: 'N', x0: 35.9, w: 4, d: 4, floors: 3, pitch: 42, kind: 'apothecary', glyph: 'potion', awn: [[0.28, 0.45, 0.30], [0.85, 0.8, 0.65]], layout: 'DW', balcony: 0 },
+  { id: 'shop.n3', row: 'N', x0: 40.2, w: 6, d: 4, floors: 2, pitch: 38, kind: 'cutler', glyph: 'axes', awn: [[0.55, 0.2, 0.16], [0.85, 0.8, 0.65]], layout: 'WDW', balcony: 1 },
+  { id: 'shop.n4', row: 'N', x0: 46.5, w: 4, d: 4, floors: 3, pitch: 44, kind: 'grocer', glyph: 'herbs', awn: [[0.6, 0.35, 0.14], [0.85, 0.8, 0.65]], layout: 'WD', balcony: 0 },
+  { id: 'shop.s0', row: 'S', x0: 23.4, w: 4, d: 4, floors: 2, pitch: 40, kind: 'baker', glyph: 'mugs', awn: [[0.5, 0.32, 0.18], [0.85, 0.8, 0.65]], layout: 'DW', balcony: 0 },
+  { id: 'shop.s1', row: 'S', x0: 27.7, w: 6, d: 4, floors: 3, pitch: 42, kind: 'books', glyph: 'crest', awn: [[0.22, 0.32, 0.5], [0.85, 0.8, 0.65]], layout: 'WDW', balcony: 1 },
   { id: 'shop.s2', row: 'S', x0: 43.4, w: 6, d: 4, floors: 2, pitch: 44, kind: 'tinker', glyph: 'anvil', awn: [[0.4, 0.4, 0.42], [0.8, 0.75, 0.6]], layout: 'WDW', balcony: 0 },
 ];
 for (const a of ALLEY_SHOPS) {
   const xc = a.x0 + a.w / 2, zf = roadZ(xc) + (a.row === 'N' ? -ALLEY.setback : ALLEY.setback);
-  SITES.push({ id: a.id, name: a.name || 'Shop', x: xc, z: a.row === 'N' ? zf - a.d / 2 : zf + a.d / 2, yaw: a.row === 'N' ? PI : 0, w: a.w, d: a.d, doorPos: 0, pad: 0.6, facade: !!a.layout });
+  SITES.push({ id: a.id, name: a.name || 'Shop', x: xc, z: a.row === 'N' ? zf - a.d / 2 : zf + a.d / 2, yaw: a.row === 'N' ? PI : 0, w: a.w, d: a.d, doorPos: 0, pad: 0.6, facade: !!a.layout, alleyRow: true });
 }
 const SITE = {}; for (const s of SITES) SITE[s.id] = s;
 const siteToWorld = (s, lx, lz) => { const c = Math.cos(s.yaw), sn = Math.sin(s.yaw); return [s.x + lx * c - lz * sn, s.z + lx * sn + lz * c]; };
@@ -3288,7 +3288,7 @@ function kitShell(c) {
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
     const name = 'Roof_RoundTiles_' + span + 'x' + len, ridge = Kit.info(name).max[1];
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
-    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, w / len]), { zone: 0, skyVis: 1, inZone: st.up ? 0 : zone, inSkyVis: 0.2 });
+    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), { zone: 0, skyVis: 1, inZone: st.up ? 0 : zone, inSkyVis: 0.2 });
   }
   // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance) ──
   {
@@ -3332,6 +3332,7 @@ function kitShell(c) {
 }
 // a kit chimney above a hearth at house-local (lx, lz), rising clear of the ridge
 function kitChimney(c, lx, lz) {
+  lz = Math.max(-c.hd * 0.3, Math.min(c.hd * 0.3, lz));          // keep it near the ridge: out on the slope its stretched base hangs below the eave
   const ridge = c.kYtop + c.hd * c.tanP, base = c.kYtop + (c.hd - Math.abs(lz)) * c.tanP - 1.0, hgt = Math.max(3.18, ridge + 1.1 - base);
   c.kb.add('Prop_Chimney', KH.xf(c.kMS, lx, base, lz, [1.1, hgt / 3.18, 1.1]), { zone: 0, skyVis: 1 });
   World.emitters.push({ type: 'smoke', p: m4.tp(c.Ms, [lx, base + hgt + 0.2, lz]), zone: 0 });
@@ -3678,6 +3679,7 @@ function kitAttach() {
     if (AL.batch2.count) { const g2 = AL.batch2.build(); g2.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g2, { alley: true, dress: true }); }
     for (const p of AL.proxies) { const M = p.Ms, xw = p.w / 2 - 0.1, x = p.w / 2 + 0.3, z0 = -p.d / 2 - 0.55, z1 = p.d / 2 - 0.1, y = p.top, r = y + p.rise;
       Q(M, [-xw, -1, z0], [xw, -1, z0], [xw, y, z0], [-xw, y, z0]); Q(M, [xw, -1, z1], [-xw, -1, z1], [-xw, y, z1], [xw, y, z1]); Q(M, [-xw, -1, z1], [-xw, -1, z0], [-xw, y, z0], [-xw, y, z1]); Q(M, [xw, -1, z0], [xw, -1, z1], [xw, y, z1], [xw, y, z0]);
+      if (p.rx) { const zc = (z0 + z1) / 2 + (p.zc || 0) * 0 - 0.25, xe = p.w / 2 + 0.05; Q(M, [-xe, y - 0.25, z0 - 0.3], [xe, y - 0.25, z0 - 0.3], [xe, r, zc], [-xe, r, zc]); Q(M, [xe, y - 0.25, z1 + 0.3], [-xe, y - 0.25, z1 + 0.3], [-xe, r, zc], [xe, r, zc]); for (const sx of [-xe, xe]) { V(M, sx, y - 0.2, z0); V(M, sx, y - 0.2, z1); V(M, sx, r - 0.2, zc); } continue; }
       Q(M, [-x, y - 0.25, z0 - 0.3], [-x, y - 0.25, z1 + 0.3], [0, r, z1 + 0.3], [0, r, z0 - 0.3]); Q(M, [x, y - 0.25, z1 + 0.3], [x, y - 0.25, z0 - 0.3], [0, r, z0 - 0.3], [0, r, z1 + 0.3]); V(M, -xw, y, z0); V(M, xw, y, z0); V(M, 0, r, z0); V(M, xw, y, z1); V(M, -xw, y, z1); V(M, 0, r, z1); }
   }
   if (tri.length) {
@@ -4492,7 +4494,7 @@ function GP() {
     for (const k in prims) { const p = prims[k]; if (!p.idx.length) continue; for (let i = 0; i < p.pos.length; i++) { const a = i % 3; if (p.pos[i] < min[a]) min[a] = p.pos[i]; if (p.pos[i] > max[a]) max[a] = p.pos[i]; } out.push({ mat: p.mat, pos: Float32Array.from(p.pos), nrm: Float32Array.from(p.nrm), uv: Float32Array.from(p.uv), col: Float32Array.from(p.col), idx: Uint32Array.from(p.idx), n: p.pos.length / 3 }); }
     Kit.pieces[name] = { name, prims: out, min, max, pack: 'gen' }; return name;
   };
-  return { quad, tri, box, beam, make };
+  return { quad, tri, box, beam, make, _prim: pr };
 }
 const W_ = 'MI_WoodTrim', C_ = 'MI_Trim_Cloth', DARKW = [0.62, 0.55, 0.5];
 
@@ -4622,13 +4624,21 @@ function buildAlley() {
         for (let i = 0; i < w / 2; i++) addP(MS, 'Roof_Support2', F0.front, i * 2 + 0.55, jy - 0.01, 0.03, [1, 1, 0.65]), addP(MS, 'Roof_Support2', F0.front, i * 2 + 1.45, jy - 0.01, 0.03, [1, 1, 0.65]);
       }
     }
-    const Ytop = fl * H, rise = w / 2 * tanP, zc = -0.5;       // roof centre shifts with the overhang
-    // ── roof and gables ──
-    const span = w, lens = span === 4 ? [4, 6, 8] : [4, 6, 8, 10, 12, 14], len = lens.reduce((b2, l) => Math.abs(l - d) < Math.abs(b2 - d) ? l : b2, lens[0]), rn = 'Roof_RoundTiles_' + span + 'x' + len, ridge = Kit.info(rn).max[1], gr = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1];
-    B.add(rn, KH.xf(MS, 0, Ytop, zc, [w / span, rise / ridge, d / len]), { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
+    // ── roof: one scheme for the whole terrace: ridge parallel to the street (eaves to the street), each roof exactly as long as its own shop,
+    //    no side overhang, so neighbours meet at party walls. The jetty of the upper storeys sits under the front eave. ──
+    const Ytop = fl * H, hd = d / 2, rise = hd * tanP, zc = -0.5;
+    const span = d <= 5 ? 4 : 6, lens = span === 4 ? [4, 6, 8] : [4, 6, 8, 10, 12, 14], len = lens.reduce((b2, l) => Math.abs(l - w) < Math.abs(b2 - w) ? l : b2, lens[0]), rn = 'Roof_RoundTiles_' + span + 'x' + len, ri = Kit.info(rn), ridge = ri.max[1], gr = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1];
+    const RF = new THREE.Matrix4().makeBasis(V([0, 0, -1]), V(up), V([1, 0, 0])).setPosition(0, Ytop, zc).premultiply(MS);
+    B.add(rn, KH.xf(RF, 0, 0, 0, [d / span, rise / ridge, (w + 0.14) / ri.size[2]]), { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
     const Fg = frames(fl - 1);
-    for (const wn of ['front', 'back']) addP(MS, 'Roof_Front_Brick' + span, Fg[wn], w / 2, H, 0, [w / span, rise / gr, 1], 0, { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
-    if (a.kind === 'books' || a.kind === 'grocer') { const cx = w * 0.28; B.add('Prop_Chimney', KH.xf(MS, cx, Ytop + rise * 0.44 - 1.2, -0.5, [1, 1.25, 1]), OUT); }
+    for (const [wn, east] of [['left', false], ['right', true]]) {          // timber gable closes the roof over an exposed end wall
+      const sEast = site.yaw === PI ? wn === 'left' : wn === 'right', nb = neighbourFloors(a, sEast); if (nb >= fl) continue;
+      addP(MS, 'Roof_Front_Brick' + span, Fg[wn], WALLS[wn].len(w, d) / 2, H, 0, [d / span, rise / gr, 1], 0, { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
+    }
+    if (a.kind === 'books' || a.kind === 'grocer') {          // a chimney standing on the ridge
+      const cx = (a.kind === 'books' ? -1 : 1) * w * 0.25, cb = Ytop + rise - 2.1; B.add('Prop_Chimney', KH.xf(MS, cx, cb, zc, [0.9, 3.0 / 3.18, 0.9]), OUT);
+      World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, cb + 3.2, zc).applyMatrix4(MS).toArray(), zone: 0 });
+    }
     // ── dressing on the front ──
     const Ff = F0.front, Fu = frames(1).front, nF = Math.round(w / 2);
     const cols1 = a.awn[0], cols2 = a.awn[1];
@@ -4651,7 +4661,7 @@ function buildAlley() {
     // collision: the shop's footprint, with a little off the front so the doorstep is a stand-in for the sill
     World.colliders.push({ x: site.x, z: site.z, hx: w / 2, hz: d / 2, ax: 1, az: 0, bx: 0, bz: 1, y0: site.y - 1, y1: site.y + 14 });
     // shadow stand-in (prism)
-    AL.proxies.push({ Ms: siteMatrix(site, site.y + 0.02), w, d, top: Ytop, rise });
+    AL.proxies.push({ Ms: siteMatrix(site, site.y + 0.02), w, d, top: Ytop, rise, rx: true, zc });
   }
   alleyDress(B, B2, R);
 }
@@ -5777,7 +5787,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 12 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 13 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
