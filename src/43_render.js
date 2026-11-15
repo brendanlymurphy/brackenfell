@@ -41,6 +41,7 @@ async function setQuality(name) {
   if (!R.shadows) { R.shadows = makeSunShadows(R.sun); for (const l of R.shadows.lights) { SC.scene.add(l); SC.scene.add(l.target); } R.sun.shadow.shadowNode = R.shadows; }
   if (!prev || prev.shadowRes !== q.shadowRes) for (const l of R.shadows.lights) { l.shadow.mapSize.set(q.shadowRes, q.shadowRes); if (l.shadow.map) { l.shadow.map.dispose(); l.shadow.map = null; } }
   U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
+  { const lf = SC.mats.leaf, a2c = q.msaa > 1; if (lf.alphaToCoverage !== a2c) { lf.alphaToCoverage = a2c; lf.alphaTest = a2c ? 0.06 : 0.5; lf.needsUpdate = true; } }
   if (typeof Grass !== 'undefined' && (!prev || prev.grassRange !== q.grassRange)) { if (prev && Grass.dispose) Grass.dispose(); Grass.build(SC.scene, q); }
   if (!prev || prev.msaa !== q.msaa || prev.bloom !== q.bloom) buildPipeline();
   R.P = true; R.camKey = '';
@@ -159,6 +160,9 @@ function renderFrame(time, env) {
   R.pu.exposure.value = env.exposure; R.pu.frame.value = (R.frame % 64) * 1.37;
   if (R.bloomNode) R.bloomNode.threshold.value = 1.15 / env.exposure;
   R.stats.n = 0; R.stats.t = 0;
+  // Three advances its frame counter in its own animation loop; this game drives the loop itself, so step it here or
+  // per-frame nodes (the scene pass, shadow maps) would only ever run once
+  const nf = r._nodes && r._nodes.nodeFrame; if (nf) { nf.update(); r.info.frame = nf.frameId; }
   // a headless test browser cannot present a WebGPU canvas (it loses the device), so test frames always go to a target
   const off = TEST && r.backend.isWebGPUBackend && !r.getRenderTarget();
   if (off) { if (!G.testRT) G.testRT = new THREE.RenderTarget(G.w, G.h, { type: THREE.UnsignedByteType, depthBuffer: false }); r.setRenderTarget(G.testRT); }

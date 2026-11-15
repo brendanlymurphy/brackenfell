@@ -65,7 +65,8 @@ function foliageMaterial() {
   const vN = varying(I.nrm), vTint = varying(tint.rgb.mul(tint.rgb).mul(I.tintK)), sky = varying(tint.a);
   const a = texture(G.albedoArr, uv()).depth(int(mm.x)), albedo = a.rgb.mul(vTint), N = normalize(vN);
   const V = normalize(U.camPos.sub(positionWorld)), back = pow(SH.sat(dot(V, U.sunDir.negate())), 3).mul(0.55);
-  m.colorNode = albedo; m.opacityNode = a.a; m.alphaTest = 0.45;
+  // sharpen the cut-out to about one pixel so multisampling can smooth the leaf edges
+  m.colorNode = albedo; m.opacityNode = SH.sat(a.a.sub(0.45).div(max(TSL.fwidth(a.a), 0.001)).add(0.5)); m.alphaTest = 0.5;
   m.normalNode = transformNormalToView(normalize(N.add(U.sunDir.mul(0.6))));      // wrap the sun around the crown
   m.emissiveNode = albedo.mul(SH.hemi(N, sky, float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.6))).add(vec3(1.3, 1.25, 0.6).mul(U.sunCol).mul(back.mul(sky).mul(0.3))));
   m.side = THREE.DoubleSide;
