@@ -1,0 +1,182 @@
+{
+ "grade": {
+  "sat": 0.92,
+  "gain": 1.0,
+  "tint": [
+   1.0,
+   0.985,
+   0.96
+  ],
+  "weather": 0.55
+ },
+ "materials": {
+  "MI_Plaster": {
+   "a": "MI_Plaster_a.webp",
+   "n": "MI_Plaster_n.webp",
+   "orm": "MI_Plaster_orm.webp",
+   "uvScale": [
+    1,
+    1
+   ],
+   "nScale": 1.0,
+   "source": "polyhaven:painted_plaster_wall"
+  },
+  "MI_UnevenBrick": {
+   "a": "MI_UnevenBrick_a.webp",
+   "n": "MI_UnevenBrick_n.webp",
+   "orm": "MI_UnevenBrick_orm.webp",
+   "uvScale": [
+    1,
+    1
+   ],
+   "nScale": 1.0,
+   "source": "polyhaven:old_stone_wall"
+  },
+  "MI_Brick": {
+   "a": "MI_Brick_a.webp",
+   "n": "MI_Brick_n.webp",
+   "orm": "MI_Brick_orm.webp",
+   "uvScale": [
+    1,
+    1
+   ],
+   "nScale": 1.0,
+   "source": "polyhaven:medieval_blocks_03"
+  },
+  "MI_RedBrick": {
+   "a": "MI_RedBrick_a.webp",
+   "n": "MI_RedBrick_n.webp",
+   "orm": "MI_RedBrick_orm.webp",
+   "uvScale": [
+    1,
+    1
+   ],
+   "nScale": 1.0,
+   "source": "polyhaven:medieval_red_brick"
+  },
+  "MI_WoodTrim": {
+   "a": "MI_WoodTrim_a.webp",
+   "n": "MI_WoodTrim_n.webp",
+   "orm": "MI_WoodTrim_orm.webp",
+   "source": "restyled:T_WoodTrim_BaseColor.png + polyhaven:wood_table_worn"
+  },
+  "MI_WoodTrim_Wear": {
+   "a": "MI_WoodTrim_a.webp",
+   "n": "MI_WoodTrim_n.webp",
+   "orm": "MI_WoodTrim_orm.webp",
+   "source": "restyled:T_WoodTrim_BaseColor.png + polyhaven:wood_table_worn"
+  },
+  "MI_RockTrim": {
+   "a": "MI_RockTrim_a.webp",
+   "n": "MI_RockTrim_n.webp",
+   "orm": "MI_RockTrim_orm.webp",
+   "source": "restyled:T_RockTrim_BaseColor.png"
+  },
+  "MI_RoundTiles": {
+   "a": "MI_RoundTiles_a.webp",
+   "n": "MI_RoundTiles_n.webp",
+   "orm": "MI_RoundTiles_orm.webp",
+   "source": "restyled:T_RoundTiles_BaseColor.png"
+  },
+  "MI_MetalOrnaments": {
+   "a": "MI_MetalOrnaments_a.webp",
+   "n": "MI_MetalOrnaments_n.webp",
+   "orm": "MI_MetalOrnaments_orm.webp",
+   "source": "restyled:T_MetalOrnaments_BaseColor.png"
+  },
+  "MI_Trim_Furniture": {
+   "a": "MI_Trim_Furniture_a.webp",
+   "n": "MI_Trim_Furniture_n.webp",
+   "orm": "MI_Trim_Furniture_orm.webp",
+   "source": "restyled:T_Trim_Furniture_BaseColor.png + polyhaven:wood_table_worn"
+  },
+  "MI_Trim_Metal": {
+   "a": "MI_Trim_Metal_a.webp",
+   "n": "MI_Trim_Metal_n.webp",
+   "orm": "MI_Trim_Metal_orm.webp",
+   "source": "restyled:T_Trim_Metal_BaseColor.png"
+  },
+  "MI_Trim_Metal_Vertex": {
+   "a": "MI_Trim_Metal_a.webp",
+   "n": "MI_Trim_Metal_n.webp",
+   "orm": "MI_Trim_Metal_orm.webp",
+   "source": "restyled:T_Trim_Metal_BaseColor.png"
+  },
+  "MI_Trim_Props": {
+   "a": "MI_Trim_Props_a.webp",
+   "n": "MI_Trim_Props_n.webp",
+   "orm": "MI_Trim_Props_orm.webp",
+   "source": "restyled:T_Trim_Props_BaseColor.png + polyhaven:wood_table_worn"
+  },
+  "MI_Trim_Props_Vertex": {
+   "a": "MI_Trim_Props_a.webp",
+   "n": "MI_Trim_Props_n.webp",
+   "orm": "MI_Trim_Props_orm.webp",
+   "source": "restyled:T_Trim_Props_BaseColor.png + polyhaven:wood_table_worn"
+  },
+  "MI_Trim_Cloth": {
+   "a": "MI_Trim_Cloth_a.webp",
+   "n": "MI_Trim_Cloth_n.webp",
+   "orm": "MI_Trim_Cloth_orm.webp",
+   "source": "restyled:T_Trim_Cloth_BaseColor.png"
+  },
+  "MI_Banner": {
+   "a": "MI_Trim_Cloth_a.webp",
+   "n": "MI_Trim_Cloth_n.webp",
+   "orm": "MI_Trim_Cloth_orm.webp",
+   "source": "restyled:T_Trim_Cloth_BaseColor.png"
+  },
+  "Leaves_TwistedTree": {
+   "sat": 0.55,
+   "gain": 0.55
+  },
+  "Leaves_NormalTree": {
+   "sat": 0.55,
+   "gain": 0.55
+  },
+  "Leaves": {
+   "sat": 0.55,
+   "gain": 0.55
+  },
+  "Leaves_Pine": {
+   "sat": 0.55,
+   "gain": 0.55
+  },
+  "Grass": {
+   "sat": 0.55,
+   "gain": 0.55
+  },
+  "Flowers": {
+   "sat": 0.55,
+   "gain": 0.55
+  },
+  "Bark_NormalTree": {
+   "sat": 0.55,
+   "gain": 0.6
+  },
+  "Bark_DeadTree": {
+   "sat": 0.55,
+   "gain": 0.6
+  },
+  "Bark_TwistedTree": {
+   "sat": 0.55,
+   "gain": 0.6
+  },
+  "Rocks": {
+   "sat": 0.5,
+   "gain": 0.7
+  },
+  "PathRocks": {
+   "sat": 0.5,
+   "gain": 0.7
+  },
+  "Mushrooms": {
+   "sat": 0.5,
+   "gain": 0.7
+  },
+  "MI_Vine": {
+   "sat": 0.6,
+   "gain": 0.55
+  }
+ }
+}

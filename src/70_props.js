@@ -4,7 +4,7 @@ const COL = {
   iron: [0.72, 0.72, 0.76], steel: [1, 1, 1.02], bronze: [1.0, 0.80, 0.45], black: [0.22, 0.21, 0.2],
   linen: [0.92, 0.89, 0.80], wool: [0.78, 0.72, 0.62], red: [0.70, 0.17, 0.13], blue: [0.20, 0.32, 0.60], green: [0.24, 0.46, 0.22], gold: [0.92, 0.72, 0.22],
   purple: [0.42, 0.22, 0.50], clay: [0.74, 0.40, 0.26], wax: [0.95, 0.90, 0.75], hay: [1, 0.95, 0.8], leather: [0.45, 0.28, 0.16], fur: [0.42, 0.32, 0.24],
-  bread: [0.80, 0.56, 0.28], cheese: [0.93, 0.76, 0.28], apple: [0.75, 0.14, 0.10], cabbage: [0.42, 0.62, 0.28], glass: [0.35, 0.55, 0.40], parchment: [0.90, 0.82, 0.62],
+  bread: [0.62, 0.44, 0.24], cheese: [0.74, 0.62, 0.30], apple: [0.52, 0.13, 0.10], cabbage: [0.34, 0.46, 0.25], glass: [0.35, 0.55, 0.40], parchment: [0.90, 0.82, 0.62],
 };
 // colliders / lights / emitters are registered in world space using the mesh's current matrix
 function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
