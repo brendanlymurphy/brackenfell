@@ -87,9 +87,13 @@ def merge(D):
         if d['key'] in seen: continue
         seen[d['key']] = 1; res.append(d)
     res.sort(key=lambda d: (SEV[d['sev']], -d.get('n', 1)))
-    c = {}
+    idf = ROOT + '/test/qa/ids.json'; ids = load(idf, {}); nxt = {'B': 1, 'U': 1, 'M': 1}
+    for v in ids.values(): nxt[v[0]] = max(nxt[v[0]], int(v[1:]) + 1)
     for d in res:
-        p = {'breaks play': 'B', 'ugly': 'U', 'minor': 'M'}[d['sev']]; c[p] = c.get(p, 0) + 1; d['id'] = '%s%03d' % (p, c[p])
+        if d['key'] not in ids:
+            p = {'breaks play': 'B', 'ugly': 'U', 'minor': 'M'}[d['sev']]; ids[d['key']] = '%s%03d' % (p, nxt[p]); nxt[p] += 1
+        d['id'] = ids[d['key']]
+    if D == OUT: json.dump(ids, open(idf, 'w'), indent=0, sort_keys=True)
     return res
 if mode == 'merge':
     res = merge(OUT); json.dump(res, open(OUT + '/defects.json', 'w'), indent=0)
