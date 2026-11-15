@@ -21,7 +21,7 @@ function GP() {
     // both may be an outward direction: one face only, wound to face that way (kit materials draw both sides themselves; two coincident faces fight for depth and one side goes dark)
     if (Array.isArray(both)) { if (n[0] * both[0] + n[1] * both[1] + n[2] * both[2] < 0) emit([d, c, b, a], [uvs[3], uvs[2], uvs[1], uvs[0]], [-n[0], -n[1], -n[2]]); else emit([a, b, c, d], uvs, n); return; }
     emit([a, b, c, d], uvs, n);
-    if (both) emit([d, c, b, a], [uvs[3], uvs[2], uvs[1], uvs[0]], [-n[0], -n[1], -n[2]]);
+    // both === true used to add a second, reversed face; every kit material draws both sides itself, so the pair was coincident (z-fighting) and doubled the triangles: one face now
   };
   const tri = (mat, a, b, c, col, uv, both) => quad(mat, a, b, c, c, col, uv, both);
   const box = (mat, x0, y0, z0, x1, y1, z1, col, uv) => {
@@ -178,17 +178,11 @@ function buildAlley() {
     // ── roof: one scheme for the whole terrace: ridge parallel to the street (eaves to the street), each roof exactly as long as its own shop,
     //    no side overhang, so neighbours meet at party walls. The jetty of the upper storeys sits under the front eave. ──
     const Ytop = fl * H, hd = d / 2, rise = hd * tanP, zc = -0.5;
-    let span = d <= 5 ? 4 : 6, lens = span === 4 ? [4, 6, 8] : [4, 6, 8, 10, 12, 14], len = lens.reduce((b2, l) => Math.abs(l - w) < Math.abs(b2 - w) ? l : b2, lens[0]), rn = 'Roof_RoundTiles_' + span + 'x' + len; const rn0 = rn; if (a.shingle && typeof infR === 'function') rn = infR(rn); const ri = Kit.info(rn), ridge = ri.max[1], gr = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1];
-    const RF = new THREE.Matrix4().makeBasis(V([0, 0, -1]), V(up), V([1, 0, 0])).setPosition(0, Ytop, zc).premultiply(MS);
-    B.add(rn, KH.xf(RF, 0, 0, 0, [d / span, rise / ridge, (w + 0.14) / ri.size[2]]), { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
-    const Fg = frames(fl - 1);
-    for (const [wn, east] of [['left', false], ['right', true]]) {          // timber gable closes the roof over an exposed end wall
-      const sEast = site.yaw === PI ? wn === 'left' : wn === 'right', nb = neighbourFloors(a, sEast); if (nb >= fl) continue;
-      addP(MS, 'Roof_Front_Brick' + span, Fg[wn], WALLS[wn].len(w, d) / 2, H, 0, [d / span, rise / gr, 1], 0, { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
-    }
+    // the generated shingle roof (73d_infill.js: slab thickness, soffits, ridge cap, one outward face per surface), the same on every house of the town
+    infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc, ov: 0.5, nl: neighbourFloors(a, site.yaw === PI) > 0, nr: neighbourFloors(a, site.yaw !== PI) > 0, tint: [0.97, 0.97, 0.97] });
     if (a.kind === 'books' || a.kind === 'grocer') {          // a chimney standing on the ridge
-      const cx = (a.kind === 'books' ? -1 : 1) * w * 0.25, cb = Ytop + rise - 2.1; B.add('Prop_Chimney', KH.xf(MS, cx, cb, zc, [0.9, 3.0 / 3.18, 0.9]), OUT);
-      World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, cb + 3.2, zc).applyMatrix4(MS).toArray(), zone: 0 });
+      const cx = (a.kind === 'books' ? -1 : 1) * w * 0.25, ct = infChimney(B, MS, { x: cx, z: zc, top: Ytop, tanP, hs: hd, ridgeX: true, zc });
+      World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, ct + 0.2, zc).applyMatrix4(MS).toArray(), zone: 0 });
     }
     // ── dressing on the front ──
     const Ff = F0.front, Fu = frames(1).front, nF = Math.round(w / 2);
