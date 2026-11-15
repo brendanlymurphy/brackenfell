@@ -77,7 +77,7 @@
     else if (M.cue && M.cueName !== 'combat' && M.cueName !== 'tension' && (now - M.t0 > M.cue.dur || (G.indoor > 0.7 && M.cueName !== 'tavern') )) { stopCue(now, 5); M.silentUntil = now + R(70, 180); }
     if (M.cue) while (M.nextBar < now + 1.5) { M.cue.bar(M.nextBar, M.bar++, M.cg); M.nextBar += M.cue.len(M.bar); }
   });
-  K.discover = () => { M.disc = 1; };
+  K.discover = () => { };      // the discovery flourish is off (see 88c_world.js)
 
   // ── Lark's lute: a tune made up as it goes, in D dorian, played from where Lark stands. Events are [eighths, Hz, velocity] ──
   const lutePhrase = l => { const root = ROOTS.d * 2, mode = 'dorian', out = [], rh = [[1, 1, 1, 1, 1, 1, 1, 1], [2, 1, 1, 2, 1, 1], [1, 1, 2, 1, 1, 2], [3, 1, 2, 2], [2, 2, 1, 1, 2], [1, 2, 1, 2, 2]], k = l.phrase % 4; let d = k === 2 ? 7 : 4;
