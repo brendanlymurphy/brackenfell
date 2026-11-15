@@ -2962,6 +2962,52 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
     h.doorBay = h.stairs ? (h.stairs > 0 ? n - 1 : 0) : (Rh() * n | 0);
     SITE[h.id].doorPos = h.w / 2 - (h.doorBay + 0.5) * (h.w / n);
   }
+  // ── 6. forecourts (Build 33): every original building keeps 9 m of open ground in front of its door, every one of the first 25 infill houses faces 9 m of street, and enterable doors stay reachable.
+  // Houses that stand in a forecourt are nudged back, moved along their street, or deleted (the six enterable ones are only ever moved). test/layout.mjs checks the result in node.
+  INF.fore = { len: 9, wid: 3.2, skip: ['tower', 'barn', 'mill', 'farm', 'hunter', 'fisher'] };
+  const clearDist = (s, wid, max) => {        // how far straight out from the door the way is free of other buildings (a strip `wid` wide)
+    const wall = s.doorWall || 'front', dl = siteDoorLocal(s, 0), others = SITES.filter(o => o !== s && o.w && hyp(o.x - s.x, o.z - s.z) < 22 + max);
+    for (let a = 0.4; a <= max; a += 0.2) for (const b of [0, -wid / 2, wid / 2]) {
+      const e = a + (s.porch || 0), l = wall === 'front' ? [dl[0] + b, -s.d / 2 - e] : wall === 'back' ? [dl[0] + b, s.d / 2 + e] : wall === 'left' ? [-s.w / 2 - e, dl[1] + b] : [s.w / 2 + e, dl[1] + b], w = siteToWorld(s, l[0], l[1]);
+      for (const o of others) if (inRect(o, w[0], w[1], 0.1)) return [a, o];
+    }
+    return [max, null];
+  };
+  INF.clearDist = clearDist;
+  const nudge = (h, dx, dz) => {                // move an infill house by (dx, dz) in its own frame if the spot is free (its own footprint ignored)
+    const st = SITE[h.id], c = Math.cos(h.yaw), sn = Math.sin(h.yaw), nx = h.x + dx * c - dz * sn, nz = h.z + dx * sn + dz * c, ox = st.x, oz = st.z; st.x = 1e5;
+    const ok = free(nx, nz, h.yaw, h.w, h.d, { sq: 1.2 }); st.x = ox;
+    if (ok) { h.x = st.x = nx; h.z = st.z = nz; } return ok;
+  };
+  const nearest = (s, fn) => { let best = null; for (const r of [1, 2, 3, 4, 5, 6, 7, 8]) for (let dx = -r; dx <= r; dx += 0.5) for (let dz = -1; dz <= 3; dz += 1) { if (Math.max(Math.abs(dx), Math.abs(dz)) !== r && dz !== 3 && dz !== -1) continue; if (fn(dx, dz)) return [dx, dz]; } return best; };
+  const F = INF.fore, byDist = (a, b) => a - b;
+  // (a) originals first: whatever infill house stands in the way is moved aside (enterable) or deleted
+  for (const s of SITES.slice()) {
+    if (s.infill || F.skip.includes(s.id)) continue;
+    for (let guard = 0; guard < 12; guard++) {
+      const [d, o] = clearDist(s, F.wid, F.len + 0.4); if (d >= F.len + 0.3 || !o || !o.infill) break;
+      const h = INF.byId[o.id]; if (!h) break;
+      if (h.enter) {            // slide it along its street to the nearest free place that opens the forecourt
+        const old = [h.x, h.z], st = SITE[h.id]; let done = false;
+        for (let r = 1; r <= 9 && !done; r += 0.5) for (const dx of [-r, r]) for (const dz of [0, 1, 2]) { if (nudge(h, dx, dz)) { if (clearDist(s, F.wid, F.len + 0.4)[0] >= F.len + 0.3 && clearDist(st, 1.6, 3)[0] >= 3) { done = true; break; } h.x = st.x = old[0]; h.z = st.z = old[1]; } }
+        if (!done) break;
+      } else drop(h);
+    }
+  }
+  // (b) the first 25 infill houses: at least 9 m between their door and the next wall (a street is 2.5 m of that). Nudge back (both sides share it), else delete the one that is not enterable
+  for (let pass = 0; pass < 3; pass++) for (const h of INF.houses.filter(h => +h.id.slice(3) <= 25)) {
+    const st = SITE[h.id]; if (!st) continue;
+    for (let guard = 0; guard < 4; guard++) {
+      const [d, o] = clearDist(st, 2.4, F.len + 0.4); if (d >= F.len + 0.3 || !o) break;
+      const need = F.len + 0.3 - d, other = o.infill ? INF.byId[o.id] : null;
+      if (nudge(h, 0, need + 0.05)) continue;                                       // back by the whole shortfall (+z is behind the front)
+      if (other && nudge(other, 0, need + 0.05) ) continue;
+      let moved = false; for (const k of [0.8, 0.6, 0.4, 0.2]) { if (nudge(h, 0, k * need)) { moved = true; break; } }
+      if (moved && other && nudge(other, 0, (1 - 0.4) * need)) continue;
+      if (!h.enter) drop(h); else if (other && !other.enter) drop(other); break;
+    }
+  }
+  for (const h of INF.houses.filter(h => +h.id.slice(3) <= 25 && !h.enter)) if (clearDist(SITE[h.id], 2.4, F.len + 0.4)[0] < F.len + 0.3) drop(h);       // whatever could not be nudged goes
   INF.enterIds = INF.houses.filter(h => h.enter).map(h => h.id);
   INF.count = INF.houses.length;
 })();
