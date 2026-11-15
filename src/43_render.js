@@ -1,8 +1,8 @@
 // ───────────────────────── renderer: quality tiers, camera, sun and shadows, post, frame ─────────────────────────
 const QUALITY = {
-  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassThin: 1.45, treeLod: 40, lights: 4, aniso: 2, far1: 4, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 1024, houseFar: 30, farStatics: false, nearStatics: false, rockCast: false },
-  medium: { name: 'Medium', pr: 1.5, msaa: 4, shadowRes: 1280, bloom: true,  grassRange: 30, grassThin: 1.15, treeLod: 65, lights: 6, aniso: 4, far1: 3, shadowNear: 20, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1280, houseFar: 50, farStatics: false },
-  high:   { name: 'High',   pr: 2.0, msaa: 4, shadowRes: 2048, bloom: true,  grassRange: 36, grassThin: 1, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1920, houseFar: 80, farStatics: true },
+  low:    { name: 'Low',    terrLayers: false, pr: 1.0, msaa: 1, shadowRes: 768, bloom: false, grassRange: 18, grassThin: 1.45, treeLod: 40, lights: 4, aniso: 2, far1: 4, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 900, houseFar: 30, farStatics: false, nearStatics: false, rockCast: false },
+  medium: { name: 'Medium', pr: 1.5, msaa: 4, bloomScale: 0.3, bloomMips: 4, shadowRes: 1024, bloom: true,  grassRange: 30, grassThin: 1.15, treeLod: 65, lights: 6, aniso: 4, far1: 3, shadowNear: 20, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1280, houseFar: 50, farStatics: false },
+  high:   { name: 'High',   pr: 2.0, msaa: 4, bloomScale: 0.5, bloomMips: 5, shadowRes: 2048, bloom: true,  grassRange: 36, grassThin: 1, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1920, houseFar: 80, farStatics: true },
 };
 const R = {
   q: QUALITY.high, qName: 'high', scale: 1, frame: 0, P: null, busy: false,
@@ -40,11 +40,17 @@ async function setQuality(name) {
   // sun shadows: a tight map around the player and a wide one beyond it
   if (!R.shadows) { R.shadows = makeSunShadows(R.sun); for (const l of R.shadows.lights) { SC.scene.add(l); SC.scene.add(l.target); } R.sun.shadow.shadowNode = R.shadows; }
   if (!prev || prev.shadowRes !== q.shadowRes) for (const l of R.shadows.lights) { l.shadow.mapSize.set(q.shadowRes, q.shadowRes); if (l.shadow.map) { l.shadow.map.dispose(); l.shadow.map = null; } }
-  U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
+  U.terrLayers.value = q.terrLayers === false ? 0 : 1; U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
   { const lf = SC.mats.leaf, a2c = q.msaa > 1; if (lf.alphaToCoverage !== a2c) { lf.alphaToCoverage = a2c; lf.alphaTest = a2c ? 0.06 : 0.5; lf.needsUpdate = true; } }
   if (!prev || prev.grassRange !== q.grassRange || prev.grassThin !== q.grassThin) { if (prev) Grass.dispose(); Grass.build(SC.scene, q); }
-  if (!prev || prev.msaa !== q.msaa || prev.bloom !== q.bloom) buildPipeline();
+  if (!prev || prev.msaa !== q.msaa || prev.bloom !== q.bloom || prev.bloomScale !== q.bloomScale || prev.bloomMips !== q.bloomMips) buildPipeline();
   R.P = true; R.camKey = '';
+}
+// Bloom cost per tier: blur targets at a fraction of the scene pass and (medium) one mip fewer. The unused fifth mip stays a 1x1
+// black target, so the composite still reads it but it adds nothing.
+function bloomTrim(b, q) {
+  b.setResolutionScale(q.bloomScale || 0.5);
+  if (q.bloomMips && q.bloomMips < 5) b._nMips = q.bloomMips;
 }
 function buildPipeline() {
   const { pass, uniform, Fn, vec2, vec3, vec4, dot, mix, smoothstep, pow, max, clamp, screenUV, screenCoordinate, fract, sin } = TSL;
@@ -54,7 +60,7 @@ function buildPipeline() {
   const col = scenePass.getTextureNode('output');
   let hdr = col.rgb;
   R.bloomNode = null;
-  if (q.bloom) { R.bloomNode = T3X.bloom(col, 0.22, 0.55, 1.6); hdr = hdr.add(R.bloomNode.rgb); }
+  if (q.bloom) { R.bloomNode = T3X.bloom(col, 0.22, 0.55, 1.6); bloomTrim(R.bloomNode, q); hdr = hdr.add(R.bloomNode.rgb); }
   const P = R.pu = { exposure: uniform(0.6), vignette: uniform(0.55), sat: uniform(1.0), frame: uniform(0) };
   const lum = vec3(0.2126, 0.7152, 0.0722);
   const fin = Fn(() => {
@@ -149,7 +155,7 @@ function renderFrame(time, env) {
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
   // near map every frame, far map every few frames (its centre only moves when it is redrawn)
   const fh = v3.norm([f[0], 0, f[2]]), r0 = q.shadowNear, r1 = 92, S = R.shadows;      // r0: radius (m) of the tight shadow map, which is drawn every frame
-  const upd1 = !R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || !!TEST));      // deep inside a building the far map keeps what it last saw (see deepIndoors)
+  const upd1 = !R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || (!!TEST && !TEST.farCadence)));      // (test option farCadence=1 keeps the real cadence) deep inside a building the far map keeps what it last saw (see deepIndoors)
   shadowPlace(0, [e[0] + fh[0] * r0 * 0.72, e[1], e[2] + fh[2] * r0 * 0.72], r0, L, env);
   if (upd1) { shadowPlace(1, [e[0] + fh[0] * r1 * 0.6, e[1], e[2] + fh[2] * r1 * 0.6], r1, L, env); R.shadow1Ready = true; }
   S.lights[1].shadow.needsUpdate = upd1;

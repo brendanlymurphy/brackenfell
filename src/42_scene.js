@@ -51,6 +51,7 @@ function sceneBuild() {
     const g = geo(pk, it.first, it.count); g.boundingSphere = sphere(it.c, it.r);
     const mesh = new THREE.Mesh(g, mat); mesh.matrixAutoUpdate = false;
     mesh.castShadow = !!pk.shadow && !it.noShadow && it.kind === 'opaque'; mesh.receiveShadow = it.kind === 'opaque' || it.kind === 'terrain';
+    if (it.kind === 'terrain') mesh.renderOrder = 1;      // after the other opaque draws, so the ground shader only runs where nothing nearer already stands
     if (it.kind === 'water') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
     if (it.nearOnly) mesh.layers.set(1);
     scene.add(mesh); SC.statics.push({ mesh, it });
