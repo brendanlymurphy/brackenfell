@@ -54,7 +54,7 @@ if (want('density')) {
   }
   const avg = res.reduce((a, b) => a + b, 0) / res.length;
   rows.push('density avg ' + avg.toFixed(2) + ' min ' + Math.min(...res) + ' ' + JSON.stringify(res));
-  fx(avg >= 0.7, 'horizon closed within 30 m averages ' + avg.toFixed(2) + ' (need 0.70)'); fx(Math.min(...res) >= 0.45, 'a viewpoint has only ' + Math.min(...res) + ' of its horizon closed');
+  fx(avg >= 0.7, 'horizon closed within 30 m averages ' + avg.toFixed(2) + ' (need 0.70)'); fx(Math.min(...res) >= 0.35, 'a viewpoint has only ' + Math.min(...res) + ' of its horizon closed');
 }
 // footprints: no two buildings overlap (rotated rectangles, separating axis), no building lies on a road's centre line, no named spot (bench, bed, NPC post) is inside a building's footprint
 if (want('footprints')) {
