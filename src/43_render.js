@@ -122,6 +122,7 @@ function pickLights(camPos, camZone, env) {
     const dx = l.p[0] - camPos[0], dy = l.p[1] - camPos[1], dz = l.p[2] - camPos[2], d2 = dx * dx + dy * dy + dz * dz;
     const reach = l.r + 34; if (d2 > reach * reach) continue;
     let score = inten * l.r / (d2 + 4);
+    if (l.zone !== 0 && (dy > 2.4 || dy < -1.9)) score *= 0.02;      // a light on another storey (a cellar torch under the floor, a loft candle) lights nothing the camera sees: it must not take one of the few slots
     if (l.zone === camZone) score *= 6; else if (l.zone !== 0 && camZone === 0) score *= 0.5; else if (l.zone !== 0) score *= 0.05;
     cand.push([score, l, inten * (1 - smooth(l.r + 20, l.r + 34, Math.sqrt(d2)))]);
   }
