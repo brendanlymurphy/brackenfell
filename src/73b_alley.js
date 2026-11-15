@@ -18,6 +18,8 @@ function GP() {
     let n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]; const l = Math.hypot(n[0], n[1], n[2]) || 1; n = n.map(v => v / l);
     const emit = (vs, uvs, nn) => { const b0 = p.pos.length / 3; vs.forEach((v, i) => { p.pos.push(v[0], v[1], v[2]); p.nrm.push(nn[0], nn[1], nn[2]); p.uv.push(uvs[i][0], uvs[i][1]); p.col.push(col[0], col[1], col[2]); }); p.idx.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3); };
     const uvs = [[u[0], u[1]], [u[2], u[1]], [u[2], u[3]], [u[0], u[3]]];
+    // both may be an outward direction: one face only, wound to face that way (kit materials draw both sides themselves; two coincident faces fight for depth and one side goes dark)
+    if (Array.isArray(both)) { if (n[0] * both[0] + n[1] * both[1] + n[2] * both[2] < 0) emit([d, c, b, a], [uvs[3], uvs[2], uvs[1], uvs[0]], [-n[0], -n[1], -n[2]]); else emit([a, b, c, d], uvs, n); return; }
     emit([a, b, c, d], uvs, n);
     if (both) emit([d, c, b, a], [uvs[3], uvs[2], uvs[1], uvs[0]], [-n[0], -n[1], -n[2]]);
   };
