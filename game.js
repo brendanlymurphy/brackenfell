@@ -5468,7 +5468,7 @@ function pLayout(P) {
     for (const id of [d.a, d.b]) if (id) P.rooms[id].doors.push(d);
   }
   // windows on outside walls (levels at or above the ground; the cellar gets high slits only)
-  const WIN = ['Wide_Flat', 'Thin_Round', 'Wide_Round'];
+  const WIN0 = ['Wide_Flat', 'Thin_Round', 'Wide_Round'];
   for (const wl of P.walls) {
     if (!wl.ext || wl.k < 0) continue;
     for (const rid of wl.rooms) {
@@ -5479,7 +5479,7 @@ function pLayout(P) {
       for (let i = 0; i < n; i++) {
         const p = Math.round((lo + pitch * (i + 0.5)) * 2) / 2;
         if (wl.open.some(o => Math.abs(o.pos - p) < o.hw + 1.45) || p - 0.8 < lo + 0.3 || p + 0.8 > hi - 0.3) continue;
-        const kind = WIN[Math.abs(Math.round(wl.c * 3 + p * 7)) % 3], o = { type: 'win', pos: p, hw: 0.8, kind };
+        const WIN = room.winKinds || WIN0, kind = WIN[Math.abs(Math.round(wl.c * 3 + p * 7)) % WIN.length], o = { type: 'win', pos: p, hw: 0.8, kind, glass: room.glass ? room.glass[P.windows.length % room.glass.length] : null };
         wl.open.push(o); P.windows.push({ wall: wl, pos: p, kind, k: wl.k, room });
       }
     }
@@ -5553,7 +5553,7 @@ function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   o = o || {}; const r = pFoot(cx, cz, w, d, rot);
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
   const L = P.lv[room.k], m = P.c.int; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m));
-  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), top: o.surface ? h : 0, back: o.back });
+  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
   if (o.flat) it.kind = 'rug'; return it;
 }
 // along a wall of the room, w wide (along the wall) and d deep; o.at: 'start' | 'end' | 'mid' | a coordinate along the wall to be near. Tries every 0.25 m.
@@ -5668,9 +5668,10 @@ function pWallEmit(P, wl, B, IN) {
     if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); }
     else {
       const tbl = { Wide_Flat: ['_Window_Wide_Flat', 'Window_Wide_Flat1'], Thin_Round: ['_Window_Thin_Round', 'Window_Thin_Round1'], Wide_Round: ['_Window_Wide_Round', 'Window_Wide_Round1'] }[sp.o.kind] || ['_Window_Wide_Flat', 'Window_Wide_Flat1'];
-      add(G + tbl[0], sp.s, S); add(tbl[1], sp.s, S);
+      const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];
+      add(G + tbl[0], sp.s, S); add(st ? tbl[1] + '_Stained' : tbl[1], sp.s, S, st ? Object.assign({}, IN, { tint: sp.o.glass }) : undefined);
       // the light the window lets in, a little inside it
-      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, [1.5, 1.42, 1.28], 'daylight', wl.k);
+      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, sp.o.glass ? sp.o.glass.map(v => 0.5 + v * 1.4) : [1.5, 1.42, 1.28], 'daylight', wl.k);
     }
     cur = Math.max(cur, s1);
   }
@@ -6142,7 +6143,8 @@ PLANS.chapel = (P, c, info) => {
   P.dims = { W: 14, D: 12 };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H_GROUND + 0.6);
   // nave (west, long) and the sacristy (east, with the stair to the crypt)
-  pRoom(P, 0, 'nave', 'nave', -5, 0, 5, 12); pRoom(P, 0, 'sacristy', 'sacristy', 5, 0, 9, 7); pRoom(P, 0, 'tower', 'tower', -9, 0, -5, 5, { win: false });
+  const GL = [[0.35, 0.55, 1.0], [1.0, 0.42, 0.3], [0.95, 0.8, 0.3], [0.4, 0.85, 0.5]], WK = ['Thin_Round', 'Wide_Round'];
+  pRoom(P, 0, 'nave', 'nave', -5, 0, 5, 12, { floor: 'stone', winKinds: WK, glass: GL }); pRoom(P, 0, 'sacristy', 'sacristy', 5, 0, 9, 7, { floor: 'stone' }); pRoom(P, 0, 'tower', 'tower', -9, 0, -5, 5, { win: false, floor: 'stone' });
   pDoor(P, 'nave', null, 0, 0); pDoor(P, 'nave', 'sacristy', 5, 3.5); pDoor(P, 'nave', 'tower', -5, 2.5);
   // crypt: the stair arrives in the east vault; a gate leads west under the nave; a second gate-less arch to the ossuary
   pRoom(P, -1, 'vault', 'cellar', 5, 0, 9, 7, { floor: 'stone', win: false }); pRoom(P, -1, 'crypt', 'cellar', -5, 0, 5, 12, { floor: 'stone', win: false });
@@ -6150,11 +6152,17 @@ PLANS.chapel = (P, c, info) => {
   pStair(P, { id: 'stCrypt', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: 8.05, z: 1.3, width: 1.0, tread: 0.22 });
   pLayout(P);
   const nave = P.rooms.nave, sac = P.rooms.sacristy, vault = P.rooms.vault, crypt = P.rooms.crypt;
-  // nave: the altar against the far wall, pews facing it, candles
-  const al = pAgainst(P, nave, 's', P.id + '.altar', 2.2, 0.9, 1.0, +1, pdAltar, {});
-  if (al) { pSpot(P, 'altar', al.cx, al.cz - 1.1, 0, { k: 0 }); P.lightIn.nave = 1; }
-  let row = 0; for (const z of [4.0, 5.6, 7.2]) for (const x of [-2.6, 2.6]) { pPut(P, nave, P.id + '.pew' + row++, x, z, 0, 3.4, 0.45, 0.9, pdBench(3.4), {}); }
-  pSpot(P, 'nave', 0, 3.0, PI, { k: 0 });
+  // nave: the altar on a step against the far wall, a cross and candles, rows of pews with a central aisle, the font by the door
+  { const m = P.c.int, L0 = P.lv[0]; m.m1 = P.zone; m.ao = INT_AO;
+    pPut(P, nave, P.id + '.step', 0, 11.0, 0, 6.0, 1.7, 0.14, mm => { mm.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); mm.box(-3, 0, -0.85, 3, 0.14, 0.85); }, { flat: true, noClear: true });
+    addFloor(m, -3, 10.15, 3, 11.85, L0.y + 0.16);
+    const al = pPut(P, nave, P.id + '.altar', 0, 11.3, 0, 2.2, 0.9, 1.0, pdAltar, { lift: 0.14, back: 's' });
+    if (al) { pSpot(P, 'altar', 0, 9.3, 0, { k: 0 }); P.lightIn.nave = 1;
+      at(m, 0, L0.y + 1.16, 11.55, 0, () => { m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.04, 0, -0.04, 0.04, 0.9, 0.04); m.box(-0.22, 0.55, -0.04, 0.22, 0.63, 0.04); }); } }
+  let row = 0; for (const z of [2.8, 4.2, 5.6, 7.0, 8.4]) for (const x of [-2.5, 2.5]) { const pw = pPut(P, nave, P.id + '.pew' + row++, x, z, 0, 3.0, 0.5, 0.95, pdBench(3.0), {}); if (pw && row <= 2) pSit(P, 'pew' + row, x, z + 0.3, PI, 0); }
+  { const f = pAgainst(P, nave, 'n', P.id + '.font', 0.7, 0.7, 0.95, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.cyl(0, 0, 0, 0.16, 0.14, 0.8, 10, 3); m.cyl(0, 0.8, 0, 0.36, 0.2, 0.18, 12, 3); m.mat(MAT.PLAIN, [0.15, 0.25, 0.4]); m.disc(0, 0.95, 0, 0.3, 12, 1); }, { at: nave.in.x1 - 1.0 }); }
+  pAgainst(P, nave, 'w', P.id + '.statuebase', 0.8, 0.8, 1.2, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.box(-0.4, 0, -0.4, 0.4, 0.5, 0.4); m.mat(MAT.STONE, [0.72, 0.7, 0.66], 0.8); m.box(-0.14, 0.5, -0.1, 0.14, 1.5, 0.1); m.ball(0, 1.62, 0, 0.14); }, { at: 9.5, noClear: false });
+  pSpot(P, 'nave', 0, 3.4, PI, { k: 0 });
   for (const sx of [-1, 1]) pAgainst(P, nave, sx < 0 ? 'w' : 'e', P.id + '.shelfn' + sx, 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, null), { at: 9 });
   const bk = pFree(P, nave, P.id + '.lectern', 0.5, 0.5, 1.1, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.2, 0, -0.2, 0.2, 1.0, 0.2); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.28, 1.0, -0.22, 0.28, 1.05, 0.22); }, { near: [-3.2, 10.4] });
   if (bk) pInteract(P, bk.cx, 1.1, bk.cz, Object.assign({ kind: 'read', id: 'chapel.book', r: 1.7 }, READS['chapel.book']), 0);
