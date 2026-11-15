@@ -27,13 +27,14 @@ def tts(text, voice, direction):
     for attempt in range(6):
         try:
             with urllib.request.urlopen(req, timeout=120) as r: j = json.load(r)
-            part = j['candidates'][0]['content']['parts'][0]['inlineData']
-            return np.frombuffer(base64.b64decode(part['data']), dtype='<i2').astype(np.float32) / 32768.0, 24000
+            part = next(q['inlineData'] for q in j['candidates'][0]['content']['parts'] if 'inlineData' in q)       # the audio part (mimeType audio/L16;codec=pcm;rate=24000)
+            rate = int((part.get('mimeType', '').split('rate=') + ['24000'])[1].split(';')[0] or 24000)
+            return np.frombuffer(base64.b64decode(part['data']), dtype='<i2').astype(np.float32) / 32768.0, rate
         except urllib.error.HTTPError as e:
             msg = e.read().decode('utf8', 'replace')[:300]
             if e.code in (429, 500, 503): time.sleep(8 * (attempt + 1)); continue       # rate limit (the free tier is slow) or a hiccup: wait and retry
             sys.exit('Gemini API error %d: %s' % (e.code, msg))
-        except (KeyError, IndexError): time.sleep(4); continue                         # an empty candidate now and then: ask again
+        except (KeyError, IndexError, StopIteration): time.sleep(4); continue                         # an empty candidate now and then: ask again
     sys.exit('gave up on: ' + text[:60])
 
 def encode(x, sr, dst):
