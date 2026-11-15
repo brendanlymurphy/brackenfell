@@ -7,24 +7,24 @@ const HOUSE_STYLE = (TEST && TEST.house) || 'kit';        // 'kit' | 'legacy' (t
 const KIT_STYLE = {
   inn: { ground: 'stone', pitch: 50, vines: 4, banner: true, round: true },
   smithy: { ground: 'stone', vines: 1 },
-  store: { ground: 'plaster', up: 1, balcony: 'front', vines: 2 },
-  elder: { ground: 'stone', up: 1, vines: 3 },
-  herbalist: { ground: 'plaster', vines: 4, round: true },
-  guardhouse: { ground: 'stone', up: 1, balcony: 'front' },
-  weaver: { ground: 'plaster', up: 1, vines: 2 },
+  store: { timber: true, shingle: true, ground: 'plaster', up: 1, balcony: 'front', vines: 2 },
+  elder: { timber: true, shingle: true, ground: 'stone', up: 1, vines: 3 },
+  herbalist: { timber: true, shingle: true, ground: 'plaster', vines: 4, round: true },
+  guardhouse: { shingle: true, ground: 'stone', up: 1, balcony: 'front' },
+  weaver: { timber: true, shingle: true, ground: 'plaster', up: 1, vines: 2 },
   chapel: { ground: 'stone', pitch: 56, thin: true, banner: true, arch: true },
-  mill: { ground: 'stone', up: 1, vines: 2 },
-  farm: { ground: 'plaster', vines: 2 },
-  hunter: { ground: 'stone', vines: 1 },
-  fisher: { ground: 'plaster' },
-  draper: { ground: 'plaster', up: 1, balcony: 'front', vines: 1 },
+  mill: { shingle: true, ground: 'stone', up: 1, vines: 2 },
+  farm: { timber: true, shingle: true, ground: 'plaster', vines: 2 },
+  hunter: { shingle: true, ground: 'stone', vines: 1 },
+  fisher: { timber: true, shingle: true, ground: 'plaster' },
+  draper: { timber: true, shingle: true, ground: 'plaster', up: 1, balcony: 'front', vines: 1 },
 };
 World.kitExt = {}; World.kitInt = {}; World.kitYard = null; World.kitGroups = [];
 const kitReady = () => HOUSE_STYLE === 'kit' && typeof Kit !== 'undefined' && !!Kit.ready;
 function kitWanted(site, spec) { return kitReady() && !!KIT_STYLE[site.id]; }
 async function kitBoot(progress) {
   if (HOUSE_STYLE !== 'kit' || typeof Kit === 'undefined') return;
-  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan/.test(p.glb)) }); kitFixups(); }       // scanned rocks photograph dark; lift them a little
+  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan/.test(p.glb)) }); kitFixups(); if (typeof infillMaterials === 'function') await infillMaterials(); }       // scanned rocks photograph dark; lift them a little
   catch (e) { console.warn('kits unavailable, building the generated houses instead: ' + (e && e.message || e)); G.kitNote = String(e && e.message || e); }
 }
 // pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong
@@ -62,8 +62,8 @@ function kitShellPass(c, pass) {
   const { spec, w, d, H, t, hd, glow, zone, openings, tanP } = c, site = c.xsite, X = pass !== 'int', I = pass !== 'ext', ext = pass === 'int' ? c.ext : c.xext, Ms = pass === 'int' ? c.Ms : c.Mx, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
   if (X) { for (const m of [c.xext, c.ext, glow]) { m.nv = 0; m.ni = 0; m.min = [1e9, 1e9, 1e9]; m.max = [-1e9, -1e9, -1e9]; } }
-  const b = X ? Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.xFloorY + H + (st.up ? 3 : 0) }) : kitIntBatch(zone);
-  if (X) World.kitExt[site.id] = { batch: b, site, Ms: c.Mx, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
+  const b = X ? (site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.xFloorY + H + (st.up ? 3 : 0) })) : kitIntBatch(zone);
+  if (X) World.kitExt[site.id] = { batch: b, site, Ms: c.Mx, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
   const cellExt = pass === 'ext';          // in a cell the village shell knows nothing of the room: its inside faces are plain dark
   const OUT = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : st.up ? zone : 0, inSkyVis: st.up && !cellExt ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
@@ -74,6 +74,7 @@ function kitShellPass(c, pass) {
     o = o || OUT;
     if (pass === 'int') { if (o === EXT) { if (!/^DoorFrame|^Door_1/.test(name)) return; o = IN; } else o = o.tint ? Object.assign({}, IN, { tint: o.tint }) : IN; }
     else if (cellExt && o.inZone !== undefined && o !== OUT && o !== UP) o = Object.assign({}, o, { inZone: 0, inSkyVis: 0.12 });
+    if (st.timber && typeof infTimber === 'function') name = infTimber(name);
     if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] });
     b.add(name, KH.xf(F, x, y, z, s, ry), o);
   };
@@ -97,8 +98,11 @@ function kitShellPass(c, pass) {
     round: ['_Window_Wide_Round', 'Window_Wide_Round1', 'WindowShutters_Wide_Round_Open'],
     wide: ['_Window_Wide_Flat', 'Window_Wide_Flat1', 'WindowShutters_Wide_Flat_Open'],
   };
-  if (X) c.kDoorLamps = [];
+  c.kDoorLamps = [];
+  const infW = site.infill && typeof infKitWalls === 'function' && INFS.mats;
+  if (infW) infKitWalls(c, b, MS, frames, zone, sy, R, pass);
   for (const wn of ['front', 'back', 'left', 'right']) {
+    if (infW) continue;
     const F = frames[wn], L = WALLS[wn].len(w, d);
     // ── ground storey: door and window panels where the openings are, plain panels scaled to fill between them ──
     const slots = openings[wn].map(o => ({ o, c: (o.u0 + o.u1) / 2, hw: o.door ? (o.def.ksx || 1) : (o.def.khw || 1) })).sort((a, e) => a.c - e.c);
@@ -144,15 +148,16 @@ function kitShellPass(c, pass) {
       add(F, 'Corner_Exterior_Wood', 0, H, 0, [1.25, 1, 1.25], EXT);
     }
     // ── gable ends carry the timber triangle of the roof ──
-    if (wn === 'left' || wn === 'right') { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; const gw = spec.gableWin && spec.gableWin[wn] && Kit.pieces['Roof_Front_Brick' + span + '_Open'];
+    if ((wn === 'left' || wn === 'right') && !(st.shingle && typeof infRoofGen === 'function')) { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; const gw = spec.gableWin && spec.gableWin[wn] && Kit.pieces['Roof_Front_Brick' + span + '_Open'];
       add(F, 'Roof_Front_Brick' + span + (gw ? '_Open' : ''), L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO });
       if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT), pass, ext); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  {
+  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.45, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: [1, 1, 1] }); }
+  else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
-    const name = 'Roof_RoundTiles_' + span + 'x' + len, ridge = Kit.info(name).max[1];
+    let name = 'Roof_RoundTiles_' + span + 'x' + len; const ridge = Kit.info(name).max[1]; if (st.shingle && typeof infR === 'function') name = infR(name);
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
     b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), pass === 'int' ? { zone, skyVis: INT_AO, inZone: zone, inSkyVis: 0.2 } : { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : 0.2 });
   }
@@ -190,6 +195,10 @@ function kitShellPass(c, pass) {
   if (I) c.kCol0 = World.colliders.length;
   // lanterns by the doors
   if (X) for (const l of c.kDoorLamps) {
+    if (site.infill && typeof INFS !== 'undefined' && INFS.mats) {          // a small generated bracket lantern instead of the 2800-triangle kit lantern
+      const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), q = KH.xf(l.F, l.u, 2.15, 0.1, 1, 0), p0 = new THREE.Vector3(0, -0.1, 0.42).applyMatrix4(q), p = [p0.x, p0.y, p0.z];
+      b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
+    }
     add(l.F, 'Lantern_Wall', l.u, l.v, 0.03, 0.8, { zone: 0, skyVis: 1, lit: 1 });
     const lp = Kit.lights('Lantern_Wall')[0] || [0, 0.53, 0.76], v = new THREE.Vector3(lp[0] * 0.8, lp[1] * 0.8, lp[2] * 0.8).applyMatrix4(KH.xf(l.F, l.u, l.v, 0.03)), p = [v.x, v.y, v.z];
     World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern');
@@ -497,7 +506,7 @@ function kitScatter() {
   };
   // beside the houses: a few at the foot of the walls, away from the doors
   for (const s of SITES) {
-    if (!HOUSES[s.id] || s.id === 'barn') continue;
+    if (!HOUSES[s.id] || s.id === 'barn' || s.infill) continue;
     const dl = siteDoorLocal(s, 0); let n = 0;
     for (let t = 0; t < 40 && n < 7; t++) {
       const side = R.i(0, 3), u = R.s() * 0.5, off = 0.9 + R() * 1.6;
@@ -533,8 +542,8 @@ function kitAttach() {
   // box-and-prism stand-in per house casts the shadow instead, all in a single mesh the camera does not see (it writes nothing).
   const tri = [], V = (M, x, y, z) => { const p = m4.tp(M, [x, y, z]); tri.push(p[0], p[1], p[2]); }, Q = (M, a, b2, c2, d2) => { for (const q of [a, b2, c2, a, c2, d2]) V(M, q[0], q[1], q[2]); };
   for (const id in World.kitExt) {
-    let k = World.kitExt[id]; if (!k.batch.count) continue;
-    const g = k.batch.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g, { site: k.site, ext: true });
+    let k = World.kitExt[id]; if (!k.batch.count && !k.shared) continue;
+    if (!k.shared) { const g = k.batch.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g, { site: k.site, ext: true }); }
     const M = k.Ms, x = k.w / 2 + 0.3, xw = k.w / 2 - 0.12, z = k.hd + 0.4, y = k.top, r = y + k.rise + 0.4 * k.rise / k.hd - 0.25; k = Object.assign({}, k, { hd: k.hd - 0.12 });
     Q(M, [-xw, -1, -k.hd], [xw, -1, -k.hd], [xw, y, -k.hd], [-xw, y, -k.hd]); Q(M, [-xw, -1, k.hd], [xw, -1, k.hd], [xw, y, k.hd], [-xw, y, k.hd]);
     Q(M, [-xw, -1, -k.hd], [-xw, -1, k.hd], [-xw, y, k.hd], [-xw, y, -k.hd]); Q(M, [xw, -1, -k.hd], [xw, -1, k.hd], [xw, y, k.hd], [xw, y, -k.hd]);

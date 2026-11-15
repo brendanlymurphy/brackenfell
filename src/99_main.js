@@ -62,7 +62,8 @@ function perfUpdate(dtMs, dt) {
   else { P.hold = 0.5; if (r < 1.04) P.raised = false; }
   // out of resolution to give: drop a detail tier (auto only). High detail is not worth keeping below 70% resolution.
   const hi = game.tier === 'high';
-  if (R.scale <= 0.7 + 1e-6 && (hi || r > 1.10)) P.lowT += 1;      // out of resolution to give: below 70% the picture is soft enough that a lighter tier is the better trade else P.lowT = Math.max(0, P.lowT - 0.5);
+  // below 70% resolution the picture is soft enough that a lighter tier is the better trade; the count decays while the frame time is fine
+  if (R.scale <= 0.7 + 1e-6 && (hi || r > 1.10)) P.lowT += 1; else P.lowT = Math.max(0, P.lowT - 0.5);
   if (P.lowT > 5 && game.qualitySetting === 'auto' && game.tier !== 'low') { P.lowT = 0; game.autoTier = hi ? 'medium' : 'low'; R.scale = hi ? 0.9 : 0.8; P.hold = 4; P.raised = false; P.triedHigh = true; game.applyQuality(); toast('Detail lowered to keep things smooth.'); }
 }
 function updateDynamics(dt, chars) {
@@ -189,6 +190,8 @@ function startGame(cont) {
     if (TEST && TEST.quality) game.qualitySetting = TEST.quality;
     await game.applyQuality(); lap('pipelines');
     if (typeof kitAttach === 'function') kitAttach();
+    if (typeof infillAttach === 'function') infillAttach();
+  if (typeof dressAttach === 'function') dressAttach();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
     npcSnapAll(); uiInit(); inputInit(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));

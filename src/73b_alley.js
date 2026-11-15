@@ -132,9 +132,11 @@ function buildAlley() {
   const floorsOf = a => a.floors || 2;
   // storeys of the neighbour touching this shop's world-x edge (0 when there is none)
   const neighbourFloors = (a, east) => { const edge = east ? a.x0 + a.w + 0.15 : a.x0 - 0.15; for (const o of rowShops(a.row)) if (o !== a && edge > o.x0 && edge < o.x0 + o.w) return floorsOf(o); return 0; };
-  const addP = (M, name, F, x, y, z, s, ry, o) => B.add(name, KH.xf(F, x, y, z, s, ry), o || OUT);
+  const addP = (M, name, F, x, y, z, s, ry, o) => B.add(typeof infTimber === 'function' && a_.timber ? infTimber(name) : name, KH.xf(F, x, y, z, s, ry), o || OUT);
+  let a_ = {};
   for (const a of ALLEY_SHOPS) {
     const site = SITE[a.id]; if (!a.layout) { AL.shops.push({ a, site, house: true }); continue; }
+    a_ = a;
     const MS = new THREE.Matrix4().fromArray(siteMatrix(site, site.y + 0.02)), w = a.w, d = a.d, fl = a.floors, H = 3, tanP = Math.tan(a.pitch * PI / 180);
     const frames = (k) => { const o = {}, sh = k > 0 ? 0.5 : 0; for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); o[wn] = new THREE.Matrix4().makeBasis(V(W.u), V(up), V(W.n)).setPosition(s0[0], k * H, s0[2] - sh).premultiply(MS); } return o; };
     const F0 = frames(0);
@@ -174,7 +176,7 @@ function buildAlley() {
     // ── roof: one scheme for the whole terrace: ridge parallel to the street (eaves to the street), each roof exactly as long as its own shop,
     //    no side overhang, so neighbours meet at party walls. The jetty of the upper storeys sits under the front eave. ──
     const Ytop = fl * H, hd = d / 2, rise = hd * tanP, zc = -0.5;
-    const span = d <= 5 ? 4 : 6, lens = span === 4 ? [4, 6, 8] : [4, 6, 8, 10, 12, 14], len = lens.reduce((b2, l) => Math.abs(l - w) < Math.abs(b2 - w) ? l : b2, lens[0]), rn = 'Roof_RoundTiles_' + span + 'x' + len, ri = Kit.info(rn), ridge = ri.max[1], gr = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1];
+    let span = d <= 5 ? 4 : 6, lens = span === 4 ? [4, 6, 8] : [4, 6, 8, 10, 12, 14], len = lens.reduce((b2, l) => Math.abs(l - w) < Math.abs(b2 - w) ? l : b2, lens[0]), rn = 'Roof_RoundTiles_' + span + 'x' + len; const rn0 = rn; if (a.shingle && typeof infR === 'function') rn = infR(rn); const ri = Kit.info(rn), ridge = ri.max[1], gr = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1];
     const RF = new THREE.Matrix4().makeBasis(V([0, 0, -1]), V(up), V([1, 0, 0])).setPosition(0, Ytop, zc).premultiply(MS);
     B.add(rn, KH.xf(RF, 0, 0, 0, [d / span, rise / ridge, (w + 0.14) / ri.size[2]]), { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
     const Fg = frames(fl - 1);

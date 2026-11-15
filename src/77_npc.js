@@ -108,6 +108,7 @@ function buildNPCs() {
   const cm = [buildChicken([0.92, 0.9, 0.85]), buildChicken([0.62, 0.36, 0.2]), buildChicken([0.25, 0.22, 0.2])].map(m => World.skinPack.add(m));
   const homes = [[World.coop[0] + 1.5, World.coop[1] + 2], [World.coop[0] - 1, World.coop[1] + 3], [World.coop[0] + 2.5, World.coop[1] + 0.5], [World.coop[0] + 0.5, World.coop[1] + 4.2], [100.5, -13.5], [-13, 13.5], [-15.5, 15], [13.5, 17]];
   homes.forEach((h, i) => World.chickens.push({ home: h, pos: [h[0], 0, h[1]], yaw: i * 1.7, st: 'idle', t: i, tt: 1 + i * 0.3, obj: addSkinned(cm[i % 3], { r: 0.5, zone: 0, kind: 'chicken' }), ph: i * 2.1 }));
+  if (typeof ambSpots === 'function') { ambSpots(); buildAmbient(); }       // unnamed street people (77b_ambient.js)
   // things to pick up
   const hm = new Mesh(128); hm.push().RZ(PI / 2 - 0.25).RY(0.4); Props.hammer(hm); hm.pop();
   const herb = new Mesh(256);
@@ -185,6 +186,7 @@ function npcUpdate(dt, playerPos) {
     const zn = World.zoneAt(n.pos[0], n.pos[1] + 0.5, n.pos[2]); R.boneData[o.slot * 256 + 240] = zn; R.boneData[o.slot * 256 + 241] = zn ? 0.34 : 1;
     if (n.ch) Chars.update(n.ch, { pos: n.pos, yaw: n.yaw, anim: n.anim, scale: s, zone: zn, light: zn ? 0.34 : 1, visible: dPlayer < 95, cast: dPlayer < R.q.villagerCast, look: n.look, talking: n.talking, seatHeight: n.spot && n.spot.sit, speed: n.anim === 'run' ? 2.7 * (0.9 + s * 0.1) : n.anim === 'walk' ? 1.35 * (0.9 + s * 0.1) : 0 }, dt);
   }
+  if (typeof ambUpdate === 'function') ambUpdate(dt, playerPos);
   // chickens potter about and scatter when approached
   for (const c of World.chickens) {
     c.t += dt; const dp = hyp(c.pos[0] - playerPos[0], c.pos[2] - playerPos[2]);
