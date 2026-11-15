@@ -31,7 +31,8 @@ def tts(text, voice, direction):
             rate = int((part.get('mimeType', '').split('rate=') + ['24000'])[1].split(';')[0] or 24000)
             return np.frombuffer(base64.b64decode(part['data']), dtype='<i2').astype(np.float32) / 32768.0, rate
         except urllib.error.HTTPError as e:
-            msg = e.read().decode('utf8', 'replace')[:300]
+            msg = e.read().decode('utf8', 'replace')[:900]
+            if e.code == 429 and 'per_day' in msg: sys.exit('Daily request limit for this model reached (' + text[:40] + '...). Run again after it resets: finished files are kept. ' + msg[-120:].replace('\n', ' '))
             if e.code in (429, 500, 503): time.sleep(8 * (attempt + 1)); continue       # rate limit (the free tier is slow) or a hiccup: wait and retry
             sys.exit('Gemini API error %d: %s' % (e.code, msg))
         except (KeyError, IndexError, StopIteration): time.sleep(4); continue                         # an empty candidate now and then: ask again
@@ -76,8 +77,9 @@ for p in todo:
         x, sr = tts(p['say'], c['voice'], c['direction']); tmp = dst + '.part.m4a'; encode(x, sr, tmp); os.replace(tmp, dst); done += 1
         print('%s %s [%d]' % (p['speaker'], name, done), flush=True)
     d, e = analyse(dst); man['lines'][p['key']] = { 'f': name, 'd': d, 'e': e, 's': p['speaker'] }
-    json.dump(man, open(mf + '.tmp', 'w'), separators=(',', ':')); os.replace(mf + '.tmp', mf)
+    json.dump(man, open(mf + '.tmp', 'w'), separators=(',', ':')); os.replace(mf + '.tmp', os.path.join(out, 'manifest.partial.json'))      # the game's own manifest is only replaced when the set is complete (below): a half-finished run must not leave lines without a file
 missing = len(todo) - len(man['lines'])
+if not missing and not only: os.replace(os.path.join(out, 'manifest.partial.json'), mf)
 print('done: %d generated, %d of %d lines in the manifest%s' % (done, len(man['lines']), len(todo), '' if missing else '; every line has a file'))
 if not missing and not only:                                                             # only once the set is complete: drop the old engine's files
     for f in os.listdir(out):
