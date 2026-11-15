@@ -854,6 +854,8 @@ function terrainMaterial() {
 // ───────────────────────── scene: Three objects built from the generated world ─────────────────────────
 // Layers: 0 = seen by the camera and both sun shadow maps; 1 = camera and the near shadow map only (interiors, full trees,
 // villagers, small props); 2 = the wide shadow map only (flat tree stand-ins that cast for every tree out there).
+// Layer 3 = the near sun-shadow map only: casters the camera never draws (the low copy of a villager, the plain pine used for shadows). The near map's camera enables it.
+const SHADOW_ONLY_LAYER = 3;
 const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {} };
 // Draw distances (m) for small things. vis: drawn by the camera up to here; cast: drawn into the near sun-shadow map up to here; near: a chicken
 // is drawn as separate parts up to this distance and as one rigid body beyond it. indoor: while the camera is inside a building, outdoor
@@ -947,18 +949,22 @@ function sceneBuild() {
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos;
+  if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
   const inside = World.deepIn = deepIndoors(e), ind = DRAW.indoor;
   for (const s of SC.statics) {
     const it = s.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
     s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && far > ind);
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
-    s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast);
+    s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast) && !(s.farCapable && q.nearStatics === false);
+    // generated village props (fences, walls, wells ...) cast into the wide sun-shadow map only on tiers that have q.farStatics; the near map always gets them
+    if (s.farCapable === undefined) s.farCapable = !!s.cast0 && it.kind === 'opaque' && !it.nearOnly && s.mesh.layers.mask === 1;
+    if (s.farCapable) s.mesh.layers.mask = q.farStatics ? 1 : 2;
   }
   for (const s of SC.cells) {
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
     s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > Math.min(grp.maxDist, q.rockDist) + c.r) || (inside && grp.lod === 0 && dc - c.r > ind));
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
-    s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast);
+    s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }
   if (Grass.mesh) Grass.mesh.visible = !inside;
   for (const r of SC.rigid) {
@@ -981,9 +987,9 @@ function sceneUpdate(camPos, q) {
 // ---- 43_render.js ----
 // ───────────────────────── renderer: quality tiers, camera, sun and shadows, post, frame ─────────────────────────
 const QUALITY = {
-  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassDensity: 0.30, treeLod: 40, lights: 4, aniso: 2, far1: 3, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 1024 },
-  medium: { name: 'Medium', pr: 1.5, msaa: 4, shadowRes: 1536, bloom: true,  grassRange: 30, grassDensity: 0.60, treeLod: 65, lights: 6, aniso: 4, far1: 2, shadowNear: 20, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1280 },
-  high:   { name: 'High',   pr: 2.0, msaa: 4, shadowRes: 2048, bloom: true,  grassRange: 36, grassDensity: 1.00, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1920 },
+  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassThin: 1.45, treeLod: 40, lights: 4, aniso: 2, far1: 4, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 1024, houseFar: 30, farStatics: false, nearStatics: false, rockCast: false },
+  medium: { name: 'Medium', pr: 1.5, msaa: 4, shadowRes: 1280, bloom: true,  grassRange: 30, grassThin: 1.15, treeLod: 65, lights: 6, aniso: 4, far1: 3, shadowNear: 20, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1280, houseFar: 50, farStatics: false },
+  high:   { name: 'High',   pr: 2.0, msaa: 4, shadowRes: 2048, bloom: true,  grassRange: 36, grassThin: 1, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1920, houseFar: 80, farStatics: true },
 };
 const R = {
   q: QUALITY.high, qName: 'high', scale: 1, frame: 0, P: null, busy: false,
@@ -1023,7 +1029,7 @@ async function setQuality(name) {
   if (!prev || prev.shadowRes !== q.shadowRes) for (const l of R.shadows.lights) { l.shadow.mapSize.set(q.shadowRes, q.shadowRes); if (l.shadow.map) { l.shadow.map.dispose(); l.shadow.map = null; } }
   U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
   { const lf = SC.mats.leaf, a2c = q.msaa > 1; if (lf.alphaToCoverage !== a2c) { lf.alphaToCoverage = a2c; lf.alphaTest = a2c ? 0.06 : 0.5; lf.needsUpdate = true; } }
-  if (!prev || prev.grassRange !== q.grassRange) { if (prev) Grass.dispose(); Grass.build(SC.scene, q); }
+  if (!prev || prev.grassRange !== q.grassRange || prev.grassThin !== q.grassThin) { if (prev) Grass.dispose(); Grass.build(SC.scene, q); }
   if (!prev || prev.msaa !== q.msaa || prev.bloom !== q.bloom) buildPipeline();
   R.P = true; R.camKey = '';
 }
@@ -1165,8 +1171,9 @@ const Kit = (() => {
     mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs } = TSL;
   const K_ = {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
-    pieces: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
-    grade: null,
+    pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
+    grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
+    lodMeshes: [],
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
 
@@ -1206,6 +1213,7 @@ const Kit = (() => {
     if (pack.catalog) { const c = await fetchJson(pack.catalog, pack.optional); if (c) Object.assign(K_.cat, c.pieces || c); }
     gltf.scene.updateMatrixWorld(true);
     for (const node of gltf.scene.children) {
+      if (/@far$/.test(node.name)) { const fp = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); fp.push(extract(o)); } }); K_.far[node.name.slice(0, -4)] = fp; continue; }      // the light copy of a piece (tools/kits_far.mjs)
       const prims = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); prims.push(extract(o)); } });
       if (!prims.length) continue;
       const min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9];
@@ -1378,6 +1386,15 @@ const Kit = (() => {
         if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
         b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
       }
+      // the far copy of this piece: its own light version if the pack has one, nothing for small things (under FAR_KEEP metres across), else the piece itself
+      if (opts.far) {
+        const fp = K_.far[name] || ((Math.max(p.max[0] - p.min[0], p.max[1] - p.min[1], p.max[2] - p.min[2]) >= K_.FAR_KEEP && !(K_.FAR_DROP.test(name))) ? p.prims : []);
+        for (const prim of fp) {
+          const key = prim.mat + '|' + ck + '|far'; let b = buckets.get(key);
+          if (!b) buckets.set(key, b = { mat: prim.mat, cast: 0, far: true, items: [], nv: 0, ni: 0 });
+          b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: 0, lit: 0, lights: null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
+        }
+      }
       B.count++; B.tally[name] = (B.tally[name] || 0) + 1; return B;
     };
     // many copies of one piece (trees, rocks, tufts). matrices: array of Matrix4 / shorthand. o: { tints: [[r,g,b]...], wind, cast, cell, maxDist, zone, skyVis }
@@ -1420,6 +1437,7 @@ const Kit = (() => {
         g.computeBoundingBox(); g.computeBoundingSphere();
         const mesh = new THREE.Mesh(g, material(b.mat, 'batch'));
         mesh.castShadow = !!b.cast && !isGlass(K_.defs[b.mat] || { name: b.mat }); mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = b.mat;
+        if (opts.far) { mesh.userData.lod = b.far ? 2 : 1; K_.lodMeshes.push(mesh); mesh.visible = !b.far; }       // 1 = the full mesh, 2 = its far copy: K_.update swaps them by distance
         group.add(mesh);
       }
       for (const it of inst) {
@@ -1451,7 +1469,19 @@ const Kit = (() => {
     return B;
   };
   // hides instanced cells that asked for a draw distance (o.maxDist) once the camera is farther than that
+  // Full or far meshes of batches built with { far: true }: the far copy is drawn from FAR metres (nearest point of the mesh's box) on, with a little hysteresis.
+  K_.farDist = 55;
+  function lodUpdate(camPos) {
+    const F = (typeof R !== 'undefined' && R.q && R.q.houseFar) || K_.farDist;
+    for (const m of K_.lodMeshes) {
+      const g = m.geometry, b = g.boundingBox; if (!b) continue;
+      const dx = Math.max(b.min.x - camPos[0], 0, camPos[0] - b.max.x), dz = Math.max(b.min.z - camPos[2], 0, camPos[2] - b.max.z), d = Math.sqrt(dx * dx + dz * dz);
+      let far = m.userData.far; far = far ? d > F - 3 : d > F + 3; m.userData.far = far;
+      m.visible = m.userData.lod === 2 ? far : !far;
+    }
+  }
   K_.update = function (camPos) {
+    lodUpdate(camPos);
     for (const im of K_.instanced) { const s = im.boundingSphere, dx = s.center.x - camPos[0], dz = s.center.z - camPos[2]; im.visible = Math.sqrt(dx * dx + dz * dz) - s.radius < im.userData.maxDist; }
   };
   return K_;
@@ -1590,7 +1620,7 @@ const Grass = { mesh: null, N: 0, range: 0 };
       const t = new THREE.DataTexture(d, 256, 256, THREE.RGBAFormat, THREE.UnsignedByteType);
       t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; G.hashTex = t;
     }
-    const N = Math.max(8, Math.round(range * WINDOW / K.grassCell)), cellSz = K.grassCell, TH = K.terrainHalf, HN = K.heightN;
+    const cellSz = K.grassCell * ((quality && quality.grassThin) || 1), N = Math.max(8, Math.round(range * WINDOW / cellSz)), TH = K.terrainHalf, HN = K.heightN;
     const uOrg = uniform(new THREE.Vector2());
     const blades = range <= 32 ? 3 : 4;      // kept modest: every blade vertex samples several textures, and phones run the middle tier
     U.grassRange.value = range;
@@ -1671,12 +1701,12 @@ const Grass = { mesh: null, N: 0, range: 0 };
     const mesh = new THREE.Mesh(g, m);
     mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = 'grass';
     scene.add(mesh);
-    Object.assign(Grass, { mesh, N, range, uOrg, scene, blades, tufts: N * N, verts: N * N * blades * 3 });
+    Object.assign(Grass, { mesh, N, range, cellSz, uOrg, scene, blades, tufts: N * N, verts: N * N * blades * 3 });
     return mesh;
   };
   Grass.update = function (camPos, fwdXZ) {
     if (!Grass.mesh) return;
-    const r = Grass.range, c = K.grassCell, fl = Math.hypot(fwdXZ[0], fwdXZ[1]) || 1;
+    const r = Grass.range, c = Grass.cellSz, fl = Math.hypot(fwdXZ[0], fwdXZ[1]) || 1;
     const cx = camPos[0] + fwdXZ[0] / fl * r * AHEAD, cz = camPos[2] + fwdXZ[1] / fl * r * AHEAD;
     Grass.uOrg.value.set(Math.floor(cx / c) - (Grass.N >> 1), Math.floor(cz / c) - (Grass.N >> 1));
   };
@@ -2133,7 +2163,7 @@ const Chars = (() => {
   // material). Beyond LOD.dist[tier] metres the villager is drawn with the copy only. The copy is also what casts the sun shadow, always: close
   // up it sits on a layer only the near shadow map sees (LOD.shadowLayer), so the full mesh never casts and is never drawn twice.
   // Far villagers (beyond LOD.slowDist) advance their animation every LOD.slowEvery frames only.
-  const LOD = C.LOD = { dist: { low: 8, medium: 12, high: 20 }, hyst: 1.5, shadowLayer: 3, slowDist: 45, slowEvery: 3, force: TEST && TEST.charlod !== undefined ? TEST.charlod : -1 };    // force: 0 full mesh only, 1 low only, -1 by distance
+  const LOD = C.LOD = { dist: { low: 8, medium: 12, high: 20 }, hyst: 1.5, shadowLayer: SHADOW_ONLY_LAYER, slowDist: 45, slowEvery: 3, force: TEST && TEST.charlod !== undefined ? TEST.charlod : -1 };    // force: 0 full mesh only, 1 low only, -1 by distance
   function lodMesh(S, H, root, skeleton, B, body, parts, matName, names, mat) {
     if (!B.lodParts) return;
     const g = mergedGeometry(S, body, parts, matName, names, true); if (!g) return;
@@ -2152,7 +2182,6 @@ const Chars = (() => {
         l.lo.visible = far || cast; l.lo.castShadow = cast; l.lo.layers.mask = far ? l.mask : (1 << LOD.shadowLayer);
       }
     }
-    if (!C.shadowLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(LOD.shadowLayer); C.shadowLayerOn = true; }
   }
 
   // ── spawning ──
@@ -2521,7 +2550,7 @@ const Terrain = {
 World.groundY = (x, z) => Terrain.y(x, z);
 
 const TERRAIN_FINE = 64;      // was 96; the ground beyond this is drawn with 3 m cells (a 3 m cell at 64 m covers about as many pixels as a 1.5 m cell at 32 m)
-const TERRAIN_TILE = [24, 24, 20];      // cells per tile of the three coarse levels (was 48, 40, 50): a tile is culled as a whole, and the big ones were always in view, so smaller tiles draw less
+const TERRAIN_TILE = [48, 30, 25];      // cells per tile of the three coarse levels (was 48, 40, 50): a tile is culled as a whole, and the big ones were always in view, so smaller tiles draw less
 const TERRAIN_FLAT = 0.08, TERRAIN_BLOCK = 8;       // m: how far ground may stray from a plane before a block is split; cells: the biggest block (a power of two; a level whose tile size it does not divide is drawn cell by cell)
 // Quadtree over one level's grid: returns { corner: Set of (i * 4096 + j) of every leaf corner, byTile: tile key -> [[i, j, size], ...] }.
 function terrainLeaves(L, n, W, hgt, holeC, meshC) {
@@ -3260,7 +3289,7 @@ function kitShell(c) {
   const { site, spec, w, d, H, t, hd, ext, glow, zone, Ms, openings, tanP } = c, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
   ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
-  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096 }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
+  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
   const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: 0, inSkyVis: 0.12 };
   const frames = {}, wbs = {};
@@ -4628,7 +4657,7 @@ function genStripCloth(w, h, cols) {       // a hanging cloth / banner with vert
 const AL = { shops: [], proxies: [], batch: null, lanterns: 0 };
 function buildAlley() {
   if (!kitReady()) return;
-  const R = rng(5150), B = Kit.batch({ name: 'alley', cell: 4096, off: 2048 }), B2 = Kit.batch({ name: 'alley-dress', cell: 4096, off: 2048 }); AL.batch = B; AL.batch2 = B2; AL.shops = []; AL.proxies = [];
+  const R = rng(5150), B = Kit.batch({ name: 'alley', cell: 4096, off: 2048, far: true }), B2 = Kit.batch({ name: 'alley-dress', cell: 4096, off: 2048 }); AL.batch = B; AL.batch2 = B2; AL.shops = []; AL.proxies = [];
   const OUT = { zone: 0, skyVis: 1, cast: false }, V = KH.V, up = [0, 1, 0];
   AL.R = R;
   const shopOf = id => ALLEY_SHOPS.find(a => a.id === id);
@@ -4809,7 +4838,8 @@ function kitGen(kind, R) {
 // ---- 74_vegetation.js ----
 // ───────────────────────── trees, bushes and boulders (instanced) ─────────────────────────
 // cell sizes (m) of the instanced groups: one draw per model per cell, so bigger cells mean fewer draws and coarser culling
-const FAR_TREE_CELL = 400, ROCK_CELL = 110;
+const PINE_DROOP_TIERS = 0.15;     // fraction of the pine's height below which a bough has two segments (was 1: all of them)
+const FAR_TREE_CELL = 400, ROCK_CELL = 110, ROCK_SEGS = [9, 6];      // boulder: segments round and from top to bottom (108 triangles; 8 x 5 is 80 but a big boulder seen up close shows its facets)
 function buildVegetation() {
   const R = rng(9001), pack = new MeshPack();
   // leaf card helper: quad at centre c spanned by half-vectors a (u) and b (v), blob normal n
@@ -4832,8 +4862,9 @@ function buildVegetation() {
       const a = a0 + j * TAU / k + R.s() * 0.25, dx = Math.cos(a), dz = Math.sin(a), l2 = len * (0.85 + R() * 0.3);
       const out = [dx, 0, dz], side = [-dz, 0, dx], shade = lerp(0.72, 1.0, t) * (0.9 + R() * 0.2);
       pineL.col([shade, shade, shade]);
-      for (let s = 0; s < 2; s++) {            // two segments so the bough can droop
-        const f0 = s * 0.5, f1 = f0 + 0.5;
+      const segs = t < PINE_DROOP_TIERS ? 2 : 1;       // the lower boughs get two segments so they can droop; the upper ones are one (this changes no random number drawn)
+      for (let s = 0; s < segs; s++) {
+        const f0 = s / segs, f1 = f0 + 1 / segs;
         const c0 = [dx * l2 * f0, y + l2 * (0.10 * Math.sin(f0 * PI) - droop * f0 * f0), dz * l2 * f0], c1 = [dx * l2 * f1, y + l2 * (0.10 * Math.sin(f1 * PI) - droop * f1 * f1), dz * l2 * f1];
         const mid = v3.scale(v3.add(c0, c1), 0.5), hv = v3.scale(v3.sub(c1, c0), 0.5), hw = l2 * 0.36;
         const n = v3.norm([dx * 0.55, 0.75, dz * 0.55]);
@@ -4888,7 +4919,7 @@ function buildVegetation() {
   // one boulder shape (vertex lod 3: the instance shader squashes it differently for every boulder), so boulders are one draw per cell, not three
   const rockAll = new Mesh(256);
   const rockM = [1].map((seed, kk) => {
-    const m = rockAll, nu = 9, nv = 6; m.mat(MAT.ROCK, [1, 1, 1], 0.7); m.m3 = 3 + kk;
+    const m = rockAll, nu = ROCK_SEGS[0], nv = ROCK_SEGS[1]; m.mat(MAT.ROCK, [1, 1, 1], 0.7); m.m3 = 3 + kk;
     const rad = (a, b) => 1 + 0.32 * gnoise(Math.cos(a) * Math.sin(b) * 1.6 + seed * 7.1, Math.cos(b) * 1.6 + Math.sin(a) * Math.sin(b) * 1.6, seed) + 0.12 * gnoise(Math.cos(a) * Math.sin(b) * 4 + 3, Math.sin(a) * Math.sin(b) * 4 + Math.cos(b) * 4, seed + 9);
     const pos = (i, j) => { const a = -(i % nu) / nu * TAU, b = clamp(j / nv, 0.001, 0.999) * PI, r = rad(a, b); return [Math.sin(b) * Math.cos(a) * r, Math.cos(b) * r * 0.62, Math.sin(b) * Math.sin(a) * r * 0.85]; };
     m.grid(nu, nv, (i, j) => { const p = pos(i, j), pa = pos(i + 1, j), pb = pos(i, Math.min(j + 1, nv)), pc = pos(i + nu - 1, j), pd = pos(i, Math.max(j - 1, 0));

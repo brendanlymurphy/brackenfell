@@ -56,7 +56,7 @@ function kitShell(c) {
   const { site, spec, w, d, H, t, hd, ext, glow, zone, Ms, openings, tanP } = c, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
   ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
-  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096 }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
+  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
   const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: 0, inSkyVis: 0.12 };
   const frames = {}, wbs = {};

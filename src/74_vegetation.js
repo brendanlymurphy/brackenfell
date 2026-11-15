@@ -1,7 +1,7 @@
 // ───────────────────────── trees, bushes and boulders (instanced) ─────────────────────────
 // cell sizes (m) of the instanced groups: one draw per model per cell, so bigger cells mean fewer draws and coarser culling
 const PINE_DROOP_TIERS = 0.15;     // fraction of the pine's height below which a bough has two segments (was 1: all of them)
-const FAR_TREE_CELL = 400, ROCK_CELL = 110, ROCK_SEGS = [8, 5];      // boulder: segments round and from top to bottom (was 9 x 6: 108 triangles, now 80)
+const FAR_TREE_CELL = 400, ROCK_CELL = 110, ROCK_SEGS = [9, 6];      // boulder: segments round and from top to bottom (108 triangles; 8 x 5 is 80 but a big boulder seen up close shows its facets)
 function buildVegetation() {
   const R = rng(9001), pack = new MeshPack();
   // leaf card helper: quad at centre c spanned by half-vectors a (u) and b (v), blob normal n
