@@ -11,7 +11,7 @@
   const BASE = 'audio/voice/';
   K.set.voices = true; K.set.voiceVol = 0.9; K.set.subs = true; K.load();
   // the slim subtitle strip and the waiting state (styles are injected here so the interface files stay untouched)
-  if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = '/* [voice] subtitle strip while a line is spoken */\nbody.voiced #dialog { padding: 8px 14px 10px; }\nbody.voiced #dname { font-size: 14px; }\nbody.voiced #dtext { font-size: 15px; line-height: 1.32; margin: 2px 0 8px; min-height: 0; max-height: 2.7em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\nbody.voiced.nosubs #dtext { visibility: hidden; }\n#dopts.vwait { visibility: hidden; }\nbody.voiced #dopts button { min-height: 40px; padding: 6px 12px; font-size: 15px; }'; document.head.appendChild(st); }
+  if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = '/* [voice] */\nbody.voiced.nosubs #dtext { visibility: hidden; }\n#dopts.vwait { visibility: hidden; }'; document.head.appendChild(st); }
 
   V.init = function () { if (V.loading || V.man || V.failed) return; V.loading = true;
     fetch(BASE + 'manifest.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { V.man = j; V.loading = false; }).catch(() => { V.failed = true; V.loading = false; }); };
@@ -25,7 +25,14 @@
   // play a decoded buffer from a position (or at the listener) on the voice bus; returns the handle
   V.play = function (buf, speaker, pos, vol, o) {
     const c = K.ctx; if (!c || K.off) return null; const G = K.G; let dest = K.bus.ui.in, g = c.createGain(), src = c.createBufferSource(); src.buffer = buf; g.gain.value = vol * K.set.voiceVol * (o && o.trim || 1);
-    if (pos) { const node = K.route(o && o.bus || 'ui', pos[0], pos[1], pos[2], o && o.zone !== undefined ? o.zone : G.zone, o && o.ref || 3, o && o.max || 40, 1); if (!node) return null; g.connect(node); } else g.connect(dest);
+    // Speech is DRY: straight to the master chain, never through a bus (the buses feed the room reverbs and the outdoor echo, which made every
+    // line sound shouted across a hall). Conversation (o.dry, or no position) is centred at full level, like any game's dialogue. A passing bark
+    // keeps distance fall-off, a little pan and the wall muffle, but still no reverb.
+    dest = K.pre || K.bus.ui.in;
+    if (pos && !(o && o.dry)) { const sp = K._s; if (!K.spat(pos[0], pos[1], pos[2], o && o.zone !== undefined ? o.zone : G.zone, o && o.ref || 3, o && o.max || 40, sp)) return null;
+      g.gain.value *= sp.g; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.max(sp.lp, 2600); lp.Q.value = 0.5; g.connect(lp);
+      if (c.createStereoPanner) { const pn = c.createStereoPanner(); pn.pan.value = sp.pan * 0.45; lp.connect(pn); pn.connect(dest); } else lp.connect(dest);
+    } else g.connect(dest);
     src.connect(g); src.start(K.now() + 0.02); const h = { src, g, t0: K.now(), dur: buf.duration, speaker }; src.onended = () => { if (V.cur === h) { V.cur = null; V.reveal(); } }; return h; };
   // a dialogue node was shown: returns true if the line is voiced. The speaker is an NPC object or id.
   K.say = function (npc, text) {
@@ -34,7 +41,7 @@
     const pos = npc.pos ? [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]] : null;
     V.load(e.f).then(buf => { if (V.key !== key) return; if (!buf) { V.reveal(); document.body.classList.remove('voiced'); return; }
       if (K.ctx.state !== 'running') { V.reveal(); return; }
-      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40 }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; V.lastPlayed = { speaker: id, file: e.f, text }; });
+      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40, dry: true }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; V.lastPlayed = { speaker: id, file: e.f, text }; });
     // do not hold the choices hostage to a slow download
     setTimeout(() => { if (V.key === key && !V.cur) { V.reveal(); } }, 2500);
     return true; };

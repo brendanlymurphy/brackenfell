@@ -6251,7 +6251,7 @@ function buildVillage() {
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
     if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true, cell: h.cell ? h.cell.id : null }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
-    World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
+    World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5, minor: true });      // minor: on the map, but no banner when you walk past a house
   }
 
   // ── fences and low walls ──
@@ -6338,8 +6338,8 @@ function buildVillage() {
     if (i % 4 === 0) { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z), z); addBoxCollider(m, -0.2, -0.2, 0.2, 1.3, 0, 2.5); m.pop(); }
   }
   spot('gate.post', -60.4, -7.6, -PI / 2 + 0.3); spot('gate.post2', -60.2, -2.9, -PI / 2 - 0.2);
-  World.places.push({ id: 'gate', name: 'Brackenfell Gate', x: -62, z: -5.2, r: 7 });
-  World.places.push({ id: 'square', name: 'Market Square', x: 0, z: -2, r: 9 });
+  World.places.push({ id: 'gate', name: 'Brackenfell Gate', x: -62, z: -5.2, r: 7, minor: true });
+  World.places.push({ id: 'square', name: 'Market Square', x: 0, z: -2, r: 9, minor: true });
 
   // ── stone bridge ──
   {
@@ -6366,7 +6366,7 @@ function buildVillage() {
       if (archY(xa) > -8 || archY(xb) > -8) { m.mat(MAT.STONE, [0.8, 0.8, 0.8]); m.ao = 0.5; m.quad([xa, aa, bz + hw + 0.4], [xa, aa, bz - hw - 0.4], [xb, ab, bz - hw - 0.4], [xb, ab, bz + hw + 0.4]); m.ao = 1; }
     }
     for (const s of [-1, 1]) { m.push().T(bx, 0, bz + s * (hw + 0.2)); addBoxCollider(m, -hl - 0.4, -0.22, hl + 0.4, 0.22, Math.min(y0, y1) - 1, Math.max(y0, y1) + 2.6); m.pop(); for (const e of [-1, 1]) { const x = bx + e * (hl + 0.25), y = e < 0 ? y0 : y1; m.mat(MAT.STONE, [0.95, 0.95, 0.95]); m.box(x - 0.36, y - 1.2, bz + s * (hw + 0.2) - 0.36, x + 0.36, y + 1.25, bz + s * (hw + 0.2) + 0.36); m.mat(MAT.STONE, [0.8, 0.8, 0.8], 0.6); m.box(x - 0.43, y + 1.25, bz + s * (hw + 0.2) - 0.43, x + 0.43, y + 1.38, bz + s * (hw + 0.2) + 0.43); } }
-    World.places.push({ id: 'bridge', name: 'Stonewater Bridge', x: bx, z: bz, r: 8 });
+    World.places.push({ id: 'bridge', name: 'Stonewater Bridge', x: bx, z: bz, r: 8, minor: true });
   }
 
   // ── old watchtower on the crag ──
@@ -6438,7 +6438,7 @@ function buildVillage() {
   fence(rect(101.5, -21, 108.5, -13.5).slice(0, 4)); put(102.6, -9.6, 0.2, m => Props.cart(m, false));
   put(95.2, -17, 1.2, m => Props.woodpile(m, 5, 4, 0.7)); put(93.6, -19.8, 0, m => Props.barrel(m));
   spot('farm.field', 93, 16, 2.4); spot('farm.field2', 112, 20, -1.0); spot('farm.yard', 101, -15.5, 1.0); spot('barn.front', 108.2, -3, PI / 2);
-  World.places.push({ id: 'fields', name: 'Fairweather Fields', x: 96, z: 22, r: 16 });
+  World.places.push({ id: 'fields', name: 'Fairweather Fields', x: 96, z: 22, r: 16, minor: true });
 
   // ── cottage yards ──
   const H = SITE.herbalist, hg = [[2.2, 3.4], [7.2, 3.4], [7.2, -2.4], [3.6, -2.4]].map(p => siteToWorld(H, p[0] + H.w / 2 - 2.6, p[1]));
@@ -9907,7 +9907,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 25 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 26 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
@@ -9964,7 +9964,7 @@ function uiFrame(dt) {
     for (; k < UI.marks.length; k++) { UI.marks[k].el.style.display = 'none'; UI.marks[k].d.style.display = 'none'; }
   }
   if ((R.frame & 31) === 0) { const h = Math.floor(Env.hour), m = Math.floor((Env.hour - h) * 60 / 10) * 10; const part = Env.hour < 5 ? 'Night' : Env.hour < 8 ? 'Dawn' : Env.hour < 12 ? 'Morning' : Env.hour < 17 ? 'Afternoon' : Env.hour < 20.5 ? 'Dusk' : 'Night'; $('clock').textContent = part + ' · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); uiObjective();
-    for (const pl of World.places) { if (UI.seen[pl.id] || hyp(pl.x - ex, pl.z - ez) > pl.r) continue; UI.seen[pl.id] = 1; if (game.clock > 4) banner('Discovered', pl.name); break; } }
+    for (const pl of World.places) { if (UI.seen[pl.id] || hyp(pl.x - ex, pl.z - ez) > pl.r) continue; UI.seen[pl.id] = 1; if (game.clock > 4 && !pl.minor) banner('Discovered', pl.name); break; } }
 }
 
 
@@ -10017,7 +10017,7 @@ const Snd = {
   set: { master: 0.8, amb: 0.85, world: 0.85, foot: 0.85, ui: 0.85, music: 0.6, musicOn: true },
   // base trims per bus (dB-ish scaling chosen so that ambience beds sit near -27 dB RMS, footsteps and interactions peak near -12 dB)
   trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 2.5 },
-  rvSend: { amb: 0.1, world: 0.55, foot: 0.7, ui: 0.25, music: 0.4 },
+  rvSend: { amb: 0.08, world: 0.3, foot: 0.35, ui: 0, music: 0.4 },      // modest: rooms colour the world a little; interface sounds and speech are never reverberated
   L: { x: 0, y: 0, z: 0, yaw: 0, fx: 0, fz: -1, rx: 1, rz: 0 },
   G: { x: 0, y: 0, z: 0, zone: 0, zid: '', indoor: 0, space: 'open', hour: 12, night: 0, day: 1, wind: 0.8, rain: 0, forest: 0, playing: false, menu: false, talk: false, dead: false, speed: 0, ground: true, outd: 1, nearTown: 0 },
   dbg: {}, trims: {}, vEnd: new Float64Array(64), vPrio: new Uint8Array(64), vN: 0, last: {}, _s: { g: 0, lp: 16000, pan: 0, d: 0 },
@@ -10110,7 +10110,7 @@ const Snd = {
   applySends(now) {
     const S = this, t = S.now(), tc = now ? 0.001 : 0.25;
     for (const k of S.rvList) {
-      const w = S.sp[k], ret = k === 'open' ? 0.22 : k === 'room' ? 0.9 : k === 'hall' ? 1.0 : 1.0;
+      const w = S.sp[k], ret = k === 'open' ? 0 : k === 'room' ? 0.7 : k === 'hall' ? 0.8 : 1.0;      // open air is dry (the old 130 ms slap-back read as an echo on everything)
       S.rret[k].gain.setTargetAtTime(ret, t, 0.05);
       for (const bn of ['amb', 'world', 'foot', 'ui', 'music']) {
         const b = S.bus[bn]; let lv = S.rvSend[bn] * w;
@@ -10637,7 +10637,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
     else if (M.cue && M.cueName !== 'combat' && M.cueName !== 'tension' && (now - M.t0 > M.cue.dur || (G.indoor > 0.7 && M.cueName !== 'tavern') )) { stopCue(now, 5); M.silentUntil = now + R(70, 180); }
     if (M.cue) while (M.nextBar < now + 1.5) { M.cue.bar(M.nextBar, M.bar++, M.cg); M.nextBar += M.cue.len(M.bar); }
   });
-  K.discover = () => { M.disc = 1; };
+  K.discover = () => { };      // the discovery flourish is off (see 88c_world.js)
 
   // ── Lark's lute: a tune made up as it goes, in D dorian, played from where Lark stands. Events are [eighths, Hz, velocity] ──
   const lutePhrase = l => { const root = ROOTS.d * 2, mode = 'dorian', out = [], rh = [[1, 1, 1, 1, 1, 1, 1, 1], [2, 1, 1, 2, 1, 1], [1, 1, 2, 1, 1, 2], [3, 1, 2, 2], [2, 2, 1, 1, 2], [1, 2, 1, 2, 2]], k = l.phrase % 4; let d = k === 2 ? 7 : 4;
@@ -10798,7 +10798,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
         if (st === 'attack') K.play('foe.effort', pos, 1, { free: true }); else if (st === 'stagger') K.play('foe.hurt', pos, 1, { free: true }); }
     }
     // ─ a place discovered ─
-    if (typeof UI !== 'undefined' && UI.placeT !== q.placeSeen) { q.placeSeen = UI.placeT; const pl = document.getElementById('place'); if (pl && pl.firstChild && /Discovered/.test(pl.firstChild.textContent || '')) K.play('discover'); }
+    if (typeof UI !== 'undefined' && UI.placeT !== q.placeSeen) { q.placeSeen = UI.placeT; const pl = document.getElementById('place'); }      // no sound: a jingle at every named place wore thin at once (the banner alone marks a discovery)
   });
   // the lute and the music are in 88c_music.js
   // remember what was last picked up, so the older pickup() call can choose a material
@@ -10821,7 +10821,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
   const BASE = 'audio/voice/';
   K.set.voices = true; K.set.voiceVol = 0.9; K.set.subs = true; K.load();
   // the slim subtitle strip and the waiting state (styles are injected here so the interface files stay untouched)
-  if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = '/* [voice] subtitle strip while a line is spoken */\nbody.voiced #dialog { padding: 8px 14px 10px; }\nbody.voiced #dname { font-size: 14px; }\nbody.voiced #dtext { font-size: 15px; line-height: 1.32; margin: 2px 0 8px; min-height: 0; max-height: 2.7em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\nbody.voiced.nosubs #dtext { visibility: hidden; }\n#dopts.vwait { visibility: hidden; }\nbody.voiced #dopts button { min-height: 40px; padding: 6px 12px; font-size: 15px; }'; document.head.appendChild(st); }
+  if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = '/* [voice] */\nbody.voiced.nosubs #dtext { visibility: hidden; }\n#dopts.vwait { visibility: hidden; }'; document.head.appendChild(st); }
 
   V.init = function () { if (V.loading || V.man || V.failed) return; V.loading = true;
     fetch(BASE + 'manifest.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { V.man = j; V.loading = false; }).catch(() => { V.failed = true; V.loading = false; }); };
@@ -10835,7 +10835,14 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
   // play a decoded buffer from a position (or at the listener) on the voice bus; returns the handle
   V.play = function (buf, speaker, pos, vol, o) {
     const c = K.ctx; if (!c || K.off) return null; const G = K.G; let dest = K.bus.ui.in, g = c.createGain(), src = c.createBufferSource(); src.buffer = buf; g.gain.value = vol * K.set.voiceVol * (o && o.trim || 1);
-    if (pos) { const node = K.route(o && o.bus || 'ui', pos[0], pos[1], pos[2], o && o.zone !== undefined ? o.zone : G.zone, o && o.ref || 3, o && o.max || 40, 1); if (!node) return null; g.connect(node); } else g.connect(dest);
+    // Speech is DRY: straight to the master chain, never through a bus (the buses feed the room reverbs and the outdoor echo, which made every
+    // line sound shouted across a hall). Conversation (o.dry, or no position) is centred at full level, like any game's dialogue. A passing bark
+    // keeps distance fall-off, a little pan and the wall muffle, but still no reverb.
+    dest = K.pre || K.bus.ui.in;
+    if (pos && !(o && o.dry)) { const sp = K._s; if (!K.spat(pos[0], pos[1], pos[2], o && o.zone !== undefined ? o.zone : G.zone, o && o.ref || 3, o && o.max || 40, sp)) return null;
+      g.gain.value *= sp.g; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.max(sp.lp, 2600); lp.Q.value = 0.5; g.connect(lp);
+      if (c.createStereoPanner) { const pn = c.createStereoPanner(); pn.pan.value = sp.pan * 0.45; lp.connect(pn); pn.connect(dest); } else lp.connect(dest);
+    } else g.connect(dest);
     src.connect(g); src.start(K.now() + 0.02); const h = { src, g, t0: K.now(), dur: buf.duration, speaker }; src.onended = () => { if (V.cur === h) { V.cur = null; V.reveal(); } }; return h; };
   // a dialogue node was shown: returns true if the line is voiced. The speaker is an NPC object or id.
   K.say = function (npc, text) {
@@ -10844,7 +10851,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
     const pos = npc.pos ? [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]] : null;
     V.load(e.f).then(buf => { if (V.key !== key) return; if (!buf) { V.reveal(); document.body.classList.remove('voiced'); return; }
       if (K.ctx.state !== 'running') { V.reveal(); return; }
-      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40 }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; V.lastPlayed = { speaker: id, file: e.f, text }; });
+      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40, dry: true }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; V.lastPlayed = { speaker: id, file: e.f, text }; });
     // do not hold the choices hostage to a slow download
     setTimeout(() => { if (V.key === key && !V.cur) { V.reveal(); } }, 2500);
     return true; };

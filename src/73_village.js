@@ -17,7 +17,7 @@ function buildVillage() {
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
     if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true, cell: h.cell ? h.cell.id : null }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
-    World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
+    World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5, minor: true });      // minor: on the map, but no banner when you walk past a house
   }
 
   // ── fences and low walls ──
@@ -104,8 +104,8 @@ function buildVillage() {
     if (i % 4 === 0) { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z), z); addBoxCollider(m, -0.2, -0.2, 0.2, 1.3, 0, 2.5); m.pop(); }
   }
   spot('gate.post', -60.4, -7.6, -PI / 2 + 0.3); spot('gate.post2', -60.2, -2.9, -PI / 2 - 0.2);
-  World.places.push({ id: 'gate', name: 'Brackenfell Gate', x: -62, z: -5.2, r: 7 });
-  World.places.push({ id: 'square', name: 'Market Square', x: 0, z: -2, r: 9 });
+  World.places.push({ id: 'gate', name: 'Brackenfell Gate', x: -62, z: -5.2, r: 7, minor: true });
+  World.places.push({ id: 'square', name: 'Market Square', x: 0, z: -2, r: 9, minor: true });
 
   // ── stone bridge ──
   {
@@ -132,7 +132,7 @@ function buildVillage() {
       if (archY(xa) > -8 || archY(xb) > -8) { m.mat(MAT.STONE, [0.8, 0.8, 0.8]); m.ao = 0.5; m.quad([xa, aa, bz + hw + 0.4], [xa, aa, bz - hw - 0.4], [xb, ab, bz - hw - 0.4], [xb, ab, bz + hw + 0.4]); m.ao = 1; }
     }
     for (const s of [-1, 1]) { m.push().T(bx, 0, bz + s * (hw + 0.2)); addBoxCollider(m, -hl - 0.4, -0.22, hl + 0.4, 0.22, Math.min(y0, y1) - 1, Math.max(y0, y1) + 2.6); m.pop(); for (const e of [-1, 1]) { const x = bx + e * (hl + 0.25), y = e < 0 ? y0 : y1; m.mat(MAT.STONE, [0.95, 0.95, 0.95]); m.box(x - 0.36, y - 1.2, bz + s * (hw + 0.2) - 0.36, x + 0.36, y + 1.25, bz + s * (hw + 0.2) + 0.36); m.mat(MAT.STONE, [0.8, 0.8, 0.8], 0.6); m.box(x - 0.43, y + 1.25, bz + s * (hw + 0.2) - 0.43, x + 0.43, y + 1.38, bz + s * (hw + 0.2) + 0.43); } }
-    World.places.push({ id: 'bridge', name: 'Stonewater Bridge', x: bx, z: bz, r: 8 });
+    World.places.push({ id: 'bridge', name: 'Stonewater Bridge', x: bx, z: bz, r: 8, minor: true });
   }
 
   // ── old watchtower on the crag ──
@@ -204,7 +204,7 @@ function buildVillage() {
   fence(rect(101.5, -21, 108.5, -13.5).slice(0, 4)); put(102.6, -9.6, 0.2, m => Props.cart(m, false));
   put(95.2, -17, 1.2, m => Props.woodpile(m, 5, 4, 0.7)); put(93.6, -19.8, 0, m => Props.barrel(m));
   spot('farm.field', 93, 16, 2.4); spot('farm.field2', 112, 20, -1.0); spot('farm.yard', 101, -15.5, 1.0); spot('barn.front', 108.2, -3, PI / 2);
-  World.places.push({ id: 'fields', name: 'Fairweather Fields', x: 96, z: 22, r: 16 });
+  World.places.push({ id: 'fields', name: 'Fairweather Fields', x: 96, z: 22, r: 16, minor: true });
 
   // ── cottage yards ──
   const H = SITE.herbalist, hg = [[2.2, 3.4], [7.2, 3.4], [7.2, -2.4], [3.6, -2.4]].map(p => siteToWorld(H, p[0] + H.w / 2 - 2.6, p[1]));

@@ -138,7 +138,7 @@
         if (st === 'attack') K.play('foe.effort', pos, 1, { free: true }); else if (st === 'stagger') K.play('foe.hurt', pos, 1, { free: true }); }
     }
     // ─ a place discovered ─
-    if (typeof UI !== 'undefined' && UI.placeT !== q.placeSeen) { q.placeSeen = UI.placeT; const pl = document.getElementById('place'); if (pl && pl.firstChild && /Discovered/.test(pl.firstChild.textContent || '')) K.play('discover'); }
+    if (typeof UI !== 'undefined' && UI.placeT !== q.placeSeen) { q.placeSeen = UI.placeT; const pl = document.getElementById('place'); }      // no sound: a jingle at every named place wore thin at once (the banner alone marks a discovery)
   });
   // the lute and the music are in 88c_music.js
   // remember what was last picked up, so the older pickup() call can choose a material
