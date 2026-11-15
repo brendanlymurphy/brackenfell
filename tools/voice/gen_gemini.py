@@ -13,7 +13,8 @@ limit = int(args[args.index('--limit') + 1]) if '--limit' in args else 10**9
 only = args[args.index('--only') + 1] if '--only' in args else None
 sample = '--sample' in args
 KEY = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
-if not KEY: sys.exit('set GEMINI_API_KEY in the environment')
+# No key in the environment is fine when the cloud environment has a network secret for generativelanguage.googleapis.com
+# (header x-goog-api-key): the proxy attaches it after the request leaves the machine, and this script never sees it.
 MODEL = os.environ.get('GEMINI_TTS_MODEL', 'gemini-3.1-flash-tts-preview')
 URL = 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent' % MODEL
 plan = json.load(open(planf)); cast = json.load(open(castf)); style = cast.get('_style', ''); os.makedirs(out, exist_ok=True)
@@ -22,7 +23,7 @@ def tts(text, voice, direction):
     prompt = '%s %s Say exactly this line, in character, and nothing else:\n%s' % (style, direction, text)
     body = { 'contents': [{ 'parts': [{ 'text': prompt }] }],
              'generationConfig': { 'responseModalities': ['AUDIO'], 'speechConfig': { 'voiceConfig': { 'prebuiltVoiceConfig': { 'voiceName': voice } } } } }
-    req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers={ 'Content-Type': 'application/json', 'x-goog-api-key': KEY })
+    req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers=dict({ 'Content-Type': 'application/json' }, **({ 'x-goog-api-key': KEY } if KEY else {})))
     for attempt in range(6):
         try:
             with urllib.request.urlopen(req, timeout=120) as r: j = json.load(r)
