@@ -70,8 +70,9 @@ function updateDynamics(dt, chars) {
   const bd = R.boneData, tmp = POSE.S, pp = Player.pos;
   for (const d of World.doors) {
     let near = false;
-    for (const c of chars) if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
+    for (const c of chars) if (CELLS_ON && c === chars[0]) continue; else if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
     if (near && d.open === 0 && game.playing) { const dd = hyp(pp[0] - d.c[0], pp[2] - d.c[2]); if (dd < 14) Audio2.door(clamp(1.2 - dd / 12, 0.1, 1)); }
+    if (d.gate && !S.opened[d.gate]) near = false;          // a locked gate stays shut until the key has turned
     d.open = clamp(d.open + (near ? dt : -dt) * 2.4, 0, 1);
     if (d.open === d.last) continue; d.last = d.open;
     m4.copy(tmp, d.baseM); m4.rotY(tmp, smooth(0, 1, d.open) * 1.85); m4.mul(tmp, tmp, d.S); bd.set(tmp, d.obj.slot * 256);
@@ -91,8 +92,8 @@ function audioState() {
     const wd = River.dist(p[0], p[2], 30), ld = hyp(p[0] - LAKE.x, p[2] - LAKE.z) - LAKE.r, md = World.millPos ? hyp(p[0] - World.millPos[0], p[2] - World.millPos[2]) : 99;
     st.water = Math.max(sat(1 - wd / 26) * 0.8, sat(1 - ld / 20) * 0.35, sat(1 - md / 18));
   }
-  const b = NPC.brandt; st.hammer = b && b.anim === 'hammer' && !b.talking ? b.t : -1; st.hammerDist = b ? hyp(b.pos[0] - p[0], b.pos[2] - p[2]) : 999;
-  const l = NPC.lark; st.lute = !!(l && l.anim === 'lute' && !l.talking); st.luteDist = l ? hyp(l.pos[0] - p[0], l.pos[2] - p[2]) : 999; st.luteWall = !!l && World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]) !== World.camZone;
+  st.cell = !!World.cell; const b = NPC.brandt; st.hammer = b && b.anim === 'hammer' && !b.talking ? b.t : -1; const hb = b ? Cells.hear(b.pos, p) : null; st.hammerDist = b ? (CELLS_ON ? hb.d : hyp(b.pos[0] - p[0], b.pos[2] - p[2])) : 999; st.hammerWall = !!hb && hb.wall;
+  const l = NPC.lark; st.lute = !!(l && l.anim === 'lute' && !l.talking); const hl = l ? Cells.hear(l.pos, p) : null; st.luteDist = l ? (CELLS_ON ? hl.d : hyp(l.pos[0] - p[0], l.pos[2] - p[2])) : 999; st.luteWall = !!l && (CELLS_ON ? hl.wall : World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]) !== World.camZone);
   st.bellOn = !!S.flags.bell; st.bellDist = World.bell ? hyp(World.bell.p[0] - p[0], World.bell.p[2] - p[2]) : 999;
   for (const c of World.chickens) if (c.cluck) { c.cluck = false; Audio2.cluck(clamp(1.2 - hyp(c.pos[0] - p[0], c.pos[2] - p[2]) / 8, 0, 1)); }
   return st;
@@ -104,7 +105,7 @@ function tick(dt) {
   // villagers are obstacles too
   Col.dyn.length = 0; const pp = Player.pos, chars = [pp];
   for (const n of NPCS) { chars.push(n.pos); if (n.anim !== 'lie' && Math.abs(n.pos[0] - pp[0]) < 4 && Math.abs(n.pos[2] - pp[2]) < 4) Col.dyn.push({ x: n.pos[0], z: n.pos[2], r: 0.27 * n.scale, y0: n.pos[1] - 0.3, y1: n.pos[1] + 1.7 }); }
-  if (game.playing) playerUpdate(dt); else attractCamera(game.time);
+  if (game.playing) { playerUpdate(dt); Feel.post(dt); } else attractCamera(game.time);
   npcUpdate(dt, game.playing ? pp : R.cam.pos);
   updateDynamics(dt, chars);
   World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
@@ -125,9 +126,9 @@ function frame(tms) {
   PerfHud.frame(rawMs);
   if (Perf.probeN > 0) { Perf.probeBuf.push(dtMs); if (--Perf.probeN === 0) cadenceDone(); return; }
   try {
-    const env = tick(dtMs / 1000);
+    const env = UI.paused && game.env ? game.env : tick(dtMs / 1000); game.env = env;      // paused: the world is drawn but not stepped
     perfUpdate(dtMs, dtMs / 1000);
-    if (!R.busy) renderFrame(game.time, env);
+    if (!R.busy) { renderFrame(game.time, env); Mark.draw(); }
   } catch (e) { if (!game.crashed) { game.crashed = true; console.error(e); G.errors.push(String(e && e.stack || e)); } }
   // WebGPU that reports errors (or throws) in its first seconds of drawing will not get better: switch this device to WebGL 2
   if (!G.gfxChecked) { if (!G.tDraw) G.tDraw = tms; if (G.errors.length) { G.gfxChecked = true; gfxFallback(G.errors[0]); } else if (tms - G.tDraw > 12000) G.gfxChecked = true; }
@@ -147,10 +148,10 @@ function startGame(cont) {
   Audio2.start();
   const sv = cont && loadSave(); if (sv) applySave(sv); else { clearSave(); }
   npcSnapAll(); uiPurse(); uiObjective();
-  game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + 50);
+  game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + (Cells.inRegion(Player.pos[0]) ? 0.8 : 50)); if (CELLS_ON) { Cells.sync(Player.pos); World.camZone = World.zoneAt(Player.pos[0], Player.pos[1] + 1, Player.pos[2]); }
   if (!Input.touch && !coarse() && !TEST) { try { const p = G.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
-  setTimeout(() => { banner('The Greyspine Valley', 'Brackenfell'); }, 900);
-  if (!sv) setTimeout(() => { if (qAt('welcome') < 0) qStart('welcome'); }, 5200);
+  if (!sv) { if (!TEST || TEST.intro) Feel.begin(); else setTimeout(() => { if (qAt('welcome') < 0) qStart('welcome'); }, 5200); }
+  else { setTimeout(() => { banner('The Greyspine Valley', 'Brackenfell'); }, 900); if (S.q.welcome) Feel.did('move'), Feel.did('look'), Feel.did('use'); }
 }
 // every label the loading screen shows while the valley is made; Load (index.html's inline script) draws the bar and the byte counts
 const bootSay = t => { if (typeof Load !== 'undefined') Load.say(t); else $('loadText').textContent = t; };
@@ -161,8 +162,8 @@ const gfxSync = async () => { try { const b = G.renderer && G.renderer.backend; 
 // ordinary frames of the same pipeline; nothing here is compiled separately. A failed frame is only a skipped warm-up.
 async function warmShaders() {
   const here = [R.cam.pos.slice(), R.cam.yaw, R.cam.pitch], zone0 = World.camZone, ind0 = World.indoor;
-  const sx = SITE.inn, y0 = Terrain.y(sx.x, sx.z);
-  const views = [[-84, null, -6.5, 90, 2], [0, null, 8, 0, 4], [sx.x, y0 + 1.75, sx.z, 150, 0], [10, null, 84, 0, 2], [-40, null, -2, 270, 8]];
+
+  const views = [[-84, null, -6.5, 90, 2], [0, null, 8, 0, 4], [10, null, 84, 0, 2], [-40, null, -2, 270, 8]];
   let i = 0;
   for (const v of views) {
     bootSay('Warming the lanterns'); bootStage(0.84 + 0.14 * (i++ / views.length));
@@ -211,7 +212,7 @@ async function warmShaders() {
     await load('Raising the Greyspine', 0.1); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
     await load('Framing timber, laying thatch', 0.25); buildVillage(); lap('village');
     await load('Waking the villagers', 0.5); buildNPCs(); festivalSpots(); lap('npcs');
-    await load('Planting pine and birch', 0.62); buildVegetation(); lap('veg');
+    await load('Planting pine and birch', 0.62); buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
     World.villagePack.upload('village'); World.skinPack.upload('skin');
     buildSplat2(); colBuild(); navBuild(); fxInit(); lap('nav');
     await load('Lighting the lanterns', 0.74);
@@ -220,6 +221,7 @@ async function warmShaders() {
     if (typeof kitAttach === 'function') kitAttach();
     if (typeof infillAttach === 'function') infillAttach();
   if (typeof dressAttach === 'function') dressAttach();
+    if (typeof wildsAttach === 'function') wildsAttach();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
     npcSnapAll(); uiInit(); inputInit2(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));
@@ -235,12 +237,18 @@ async function warmShaders() {
     // ── test hooks ──
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
         game.step = (n, dt) => { let env; for (let i = 0; i < (n || 1); i++) env = tick(dt || 1 / 30); return env; };
-    game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); return R.stats; };
-    game.tp = (x, z, yawDeg, pitchDeg, y) => { Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180; World.indoor = World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; };
+    game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); Mark.draw(); return R.stats; };
+    game.tp = (x, z, yawDeg, pitchDeg, y) => {       // tp(spotName, yawDeg?) goes to a named spot (inside a cell too); tp(x, z, ...) to coordinates, y optional
+      if (typeof x === 'string') { const sp = World.spots[x]; if (!sp) throw new Error('no spot ' + x); yawDeg = z === undefined ? sp.yaw * 180 / PI : z; pitchDeg = 0; y = sp.p[1]; z = sp.p[2]; x = sp.p[0]; }
+      Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180;
+      if (CELLS_ON) Cells.sync(Player.pos); World.indoor = World.cell || World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; World.camZone = World.zoneAt(x, Player.pos[1] + 1, z); R.cam.pos[0] = x; R.cam.pos[1] = Player.pos[1] + Player.eye; R.cam.pos[2] = z; Player.camY = Player.pos[1];
+    };
+    game.enter = id => { const c = Cells.by[id]; if (!c) throw new Error('no cell ' + id); Cells.teleport(c.enter); return c.id; };         // instant, no fade (tests); the door interaction is Cells.use
+    game.leave = () => { const c = Cells.cur; if (!c) return false; Cells.teleport(c.leave); return true; };
     game.shot = async (x, y, z, yaw, pitch, hour) => {
       if (hour !== undefined) { Env.hour = hour; npcSnapAll(); }
       game.playing = false; const save = attractCamera; R.cam.pos = [x, y === null ? Terrain.y(x, z) + 1.65 : y, z]; R.cam.yaw = yaw * PI / 180; R.cam.pitch = (pitch || 0) * PI / 180;
-      World.camZone = World.zoneAt(x, R.cam.pos[1], z); World.indoor = World.camZone ? 1 : 0;
+      if (CELLS_ON) Cells.sync(R.cam.pos); World.camZone = World.zoneAt(x, R.cam.pos[1], z); World.indoor = World.cell || World.camZone ? 1 : 0;
       game.time += 0.4; npcUpdate(0.4, R.cam.pos); updateDynamics(0.4, [R.cam.pos].concat(NPCS.map(n => n.pos)));
       const env = updateEnv(game.time, World.indoor); env.time = game.time; World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
       fxUpdate(0.4, game.time, env, R.cam.pos); fxUpdate(0.4, game.time, env, R.cam.pos);

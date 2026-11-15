@@ -171,8 +171,8 @@ const MAT_NAMES = ['plaster', 'timber', 'planks', 'stone', 'cobble', 'thatch', '
 // world metres covered by one texture repeat
 const MAT_TILE = [2.5, 1.5, 2, 2, 2.5, 2, 2, 3, 3, 4, 1, 3, 3, 3, 3, 2.5, 3, 1, 1, 1, 1, 1, 0.5, 1, 1];
 const K = {
-  terrainHalf: 144, terrainCell: 1.5, heightN: 193,   // level-0 terrain grid (also the grass / splat region)
-  splatRes: 1024, cloudH: 700, fogBase: -2,
+  terrainHalf: 192, terrainCell: 1.5, heightN: 257,   // level-0 terrain grid (also the grass / splat region); was 144 / 193 until the wilds (79_wilds.js) opened the valley out to 184 m
+  splatRes: 1280, cloudH: 700, fogBase: -2,
   grassCell: 0.30,
 };
 
@@ -863,8 +863,8 @@ function terrainMaterial() {
     const dn = texture(G.noiseTex, wp.xz.mul(0.0013)).zw.sub(0.5);
     const Nv = normalize(vN.add(vec3(dn.x, 0, dn.y).mul(smoothstep(260, 700, r).mul(1.1)))).toVar();
     const slope = Nv.y.oneMinus();
-    const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(2.5).toVar(), uvR = vec2(wp.x.add(wp.z), wp.y.mul(1.3)).mul(0.16).toVar();
-    const dGx = dFdx(uvG).toVar(), dGy = dFdy(uvG).toVar(), dFx = dFdx(uvF).toVar(), dFy = dFdy(uvF).toVar(), dCx = dFdx(uvC).toVar(), dCy = dFdy(uvC).toVar(), dRx = dFdx(uvR).toVar(), dRy = dFdy(uvR).toVar();
+    const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(2.5).toVar(), uvR = vec2(wp.x, wp.y.mul(1.3)).mul(0.16).toVar(), uvR2 = vec2(wp.z.add(7.3), wp.y.mul(1.3)).mul(0.16).toVar();       // rock is mapped on two vertical planes (x-y and z-y) and blended by the facing, so no cliff smears
+    const dGx = dFdx(uvG).toVar(), dGy = dFdy(uvG).toVar(), dFx = dFdx(uvF).toVar(), dFy = dFdy(uvF).toVar(), dCx = dFdx(uvC).toVar(), dCy = dFdy(uvC).toVar(), dRx = dFdx(uvR).toVar(), dRy = dFdy(uvR).toVar(), dR2x = dFdx(uvR2).toVar(), dR2y = dFdy(uvR2).toVar();
     const det = dist.lessThan(56);                              // normal maps only matter near the camera (one sample less per layer beyond that)
     const farK = smoothstep(16, 55, dist).toVar();
     const wRock = sat(slope.sub(0.24).add(mn2.r.sub(0.5).mul(0.22)).sub(smoothstep(120, 300, wp.y).mul(0.12)).mul(7)).toVar();
@@ -910,7 +910,8 @@ function terrainMaterial() {
     const damp = sat(s2.g.mul(0.7).add(pud)).toVar();
     G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, 0.45, damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
     If(wRock.greaterThan(0.004), () => {
-      const q = samp(MAT.ROCK, uvR, dRx, dRy); q.c.mulAssign(vec3(0.97, 0.98, 1.04).mul(mn.g.mul(0.45).add(0.80)));
+      const q = samp(MAT.ROCK, uvR, dRx, dRy), q2 = samp(MAT.ROCK, uvR2, dR2x, dR2y), kx = Nv.z.mul(Nv.z).div(Nv.x.mul(Nv.x).add(Nv.z.mul(Nv.z)).add(0.0001)).toVar();       // kx: weight of the x-y plane (faces looking along z)
+      q.c.assign(mix(q2.c, q.c, kx)); q.ao.assign(mix(q2.ao, q.ao, kx)); q.r.assign(mix(q2.r, q.r, kx)); q.c.mulAssign(vec3(0.97, 0.98, 1.04).mul(mn.g.mul(0.45).add(0.80)));
       G0.c.assign(mix(G0.c, q.c, wRock)); G0.ao.assign(mix(G0.ao, q.ao, wRock)); G0.r.assign(mix(G0.r, q.r, wRock)); G0.n.assign(mix(G0.n, vec2(0.5), wRock));
     });
     G0.c.assign(mix(G0.c, vec3(0.80, 0.84, 0.90), wSnow));
@@ -950,7 +951,7 @@ function deepIndoors(e) {
   if (!World.camZone) return false;
   const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw);
   for (const d of World.doors) {         // an open door that is behind the camera shows nothing of the outdoors
-    if (!(d.open > 0.02)) continue;
+    if (!(d.open > 0.02) || d.internal) continue;
     const dx = d.c[0] - e[0], dz = d.c[2] - e[2], l = hyp(dx, dz);
     if (l < DRAW.doorSee && (l < 2.5 || (dx * fx + dz * fz) / l > 0.3)) return false;
   }
@@ -1029,11 +1030,13 @@ function sceneBuild() {
 }
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
-  const bd = R.boneData, e = camPos;
+  const bd = R.boneData, e = camPos, cur = World.cell;       // cur: the cell the player is in. Then only that cell is drawn (its generated meshes, kit groups, door leaf); outdoors, no cell is
   if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
-  const inside = World.deepIn = deepIndoors(e), ind = DRAW.indoor;
+  World.deepIn = cur ? true : deepIndoors(e); const inside = !cur && World.deepIn, ind = DRAW.indoor;
   for (const s of SC.statics) {
-    const it = s.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
+    const it = s.it;
+    if (cur || it.cell) { s.mesh.visible = !!cur && it.cell === cur.id; if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow; continue; }
+    const d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
     s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && far > ind);
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast) && !(s.farCapable && q.nearStatics === false);
@@ -1042,14 +1045,17 @@ function sceneUpdate(camPos, q) {
     if (s.farCapable) s.mesh.layers.mask = q.farStatics ? 1 : 2;
   }
   for (const s of SC.cells) {
+    if (cur) { s.mesh.visible = false; continue; }
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
     s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > Math.min(grp.maxDist, q.rockDist) + c.r) || (inside && grp.lod === 0 && dc - c.r > ind));
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }
-  if (Grass.mesh) Grass.mesh.visible = !inside;
+  if (Grass.mesh) Grass.mesh.visible = !inside && !cur;
   for (const r of SC.rigid) {
-    const o = r.obj, dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
+    const o = r.obj;
+    if (cur ? o.cell !== cur.id : o.cell) { r.mesh.visible = false; continue; }
+    const dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
     let vis = o.visible && d < dr.vis && !(inside && d > ind);
     if (dr.near) vis = vis && (r.whole ? d >= dr.near : d < dr.near);
     r.mesh.visible = vis; if (!vis) continue;
@@ -1214,7 +1220,7 @@ function renderFrame(time, env) {
   fovy = Math.min(fovy, 1.75); if (aspect > 1) { const hf = 2 * Math.atan(Math.tan(fovy / 2) * aspect); if (hf > 1.62) fovy = 2 * Math.atan(Math.tan(1.62 / 2) / aspect); }
   const key = aspect.toFixed(4) + ':' + fovy.toFixed(4);
   if (key !== R.camKey) { R.camKey = key; c3.aspect = aspect; c3.fov = fovy * 180 / Math.PI; c3.updateProjectionMatrix(); }
-  c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, 0); c3.updateMatrixWorld();
+  c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, cam.roll || 0);   /* [ui] roll from 87_feel.js */ c3.updateMatrixWorld();
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
   SH.update(env, e, time);
@@ -1223,10 +1229,11 @@ function renderFrame(time, env) {
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
   // near map every frame, far map every few frames (its centre only moves when it is redrawn)
   const fh = v3.norm([f[0], 0, f[2]]), r0 = q.shadowNear, r1 = 92, S = R.shadows;      // r0: radius (m) of the tight shadow map, which is drawn every frame
-  const upd1 = !R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || (!!TEST && !TEST.farCadence)));      // (test option farCadence=1 keeps the real cadence) deep inside a building the far map keeps what it last saw (see deepIndoors)
+  const cell = !!World.cell;          // in a cell: no sun, so neither sun-shadow map is drawn at all
+  const upd1 = !cell && (!R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || (!!TEST && !TEST.farCadence))));      // (test option farCadence=1 keeps the real cadence) deep inside a building the far map keeps what it last saw (see deepIndoors)
   shadowPlace(0, [e[0] + fh[0] * r0 * 0.72, e[1], e[2] + fh[2] * r0 * 0.72], r0, L, env);
   if (upd1) { shadowPlace(1, [e[0] + fh[0] * r1 * 0.6, e[1], e[2] + fh[2] * r1 * 0.6], r1, L, env); R.shadow1Ready = true; }
-  S.lights[1].shadow.needsUpdate = upd1;
+  S.lights[1].shadow.needsUpdate = upd1; S.lights[0].shadow.autoUpdate = !cell; if (cell) S.lights[0].shadow.needsUpdate = false;
   // ── world ──
   sceneUpdate(e, q);
   Sky.update(e); Grass.update(e, [f[0], f[2]]); Particles.update();
@@ -1255,12 +1262,13 @@ function renderFrame(time, env) {
 // and shadow, plus ambient and the zone-aware point lights in the emissive term (see 40_shade.js).
 const Kit = (() => {
   const { Fn, float, vec2, vec3, vec4, uniform, attribute, texture, uv, positionWorld, positionLocal, positionGeometry, normalWorld, normalMap,
-    mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs } = TSL;
+    mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs, step } = TSL;
   const K_ = {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
     pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
-    grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
+    fill: null, fill2: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
     lodMeshes: [],
+    ROOF: /^(S_|T_)?(Roof_(RoundTile|Modular|Tower|Wooden|2x4|Log|Dormer)|Overhang_Roof)|^gen_/,       // slope pieces and generated pieces: outside faces are marked by their own normals (down = room side), not by the kit wall convention (outside = +z)
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
 
@@ -1338,6 +1346,7 @@ const Kit = (() => {
     const g = K_.gradeInit;
     K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };
     if (K_.skin !== 'realistic') { K_.grade.sat.value = 1; K_.grade.gain.value = 1; K_.grade.tint.value.set(1, 1, 1); K_.grade.weather.value = 0; }
+    K_.fill = uniform(new THREE.Vector3(0.0, 0.02, 0.012)); K_.fill2 = uniform(new THREE.Vector3(0.25, 0.3, 0.02));
     K_.ready = true; if (progress) progress(1);
   };
   // one knob set for the whole kit look: saturation, brightness, a colour cast, and weathering (large soft stains so no two walls match)
@@ -1442,6 +1451,12 @@ const Kit = (() => {
     const aoR = rm ? rm.x : float(1);
     let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35))));
     em = em.add(alb.mul(glow));
+    if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
+      const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
+      em = em.add(alb.mul(U.sunCol.mul(F.x.add(F2.x.mul(wallK))).add(U.ambSky.mul(F.y.add(F2.y.mul(wallK))))).mul(skyVis).mul(outM));
+      const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM);
+      em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
+    }
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
     else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));
     m.emissiveNode = em;
@@ -1479,7 +1494,7 @@ const Kit = (() => {
       for (const prim of p.prims) {
         const key = prim.mat + '|' + ck + '|' + cast; let b = buckets.get(key);
         if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
-        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
+        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name) }); b.nv += prim.n; b.ni += prim.idx.length;
       }
       // the far copy of this piece: its own light version if the pack has one, nothing for small things (under FAR_KEEP metres across), else the piece itself
       if (opts.far) {
@@ -1487,7 +1502,7 @@ const Kit = (() => {
         for (const prim of fp) {
           const key = prim.mat + '|' + ck + '|far'; let b = buckets.get(key);
           if (!b) buckets.set(key, b = { mat: prim.mat, cast: 0, far: true, items: [], nv: 0, ni: 0 });
-          b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: 0, lit: 0, lights: null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
+          b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: 0, lit: 0, lights: null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name) }); b.nv += prim.n; b.ni += prim.idx.length;
         }
       }
       B.count++; B.tally[name] = (B.tally[name] || 0) + 1; return B;
@@ -1516,7 +1531,7 @@ const Kit = (() => {
             const c = pr.col;
             kc[o * 4] = Math.min(255, Math.round((c ? c[i * 3] : 1) * tr * 255)); kc[o * 4 + 1] = Math.min(255, Math.round((c ? c[i * 3 + 1] : 1) * tg * 255)); kc[o * 4 + 2] = Math.min(255, Math.round((c ? c[i * 3 + 2] : 1) * tb * 255));
             // faces modelled toward the room (inner plaster, the ceiling beam, reveals) are indoors outright; single sheets switch by facing in the shader
-            const inside = split && (pr.nrm[i * 3 + 2] < -0.5 || (pr.nrm[i * 3 + 2] < 0.5 && pr.pos[i * 3 + 2] < -0.12));
+            const inside = split && (it.rf ? nrm[o * 4 + 1] < -38 : (pr.nrm[i * 3 + 2] < -0.5 || (pr.nrm[i * 3 + 2] < 0.5 && pr.pos[i * 3 + 2] < -0.12)));
             kc[o * 4 + 3] = inside ? skyIn : sky; kz[o * 4] = inside ? it.inZone : it.zone;
             let g1 = gl;
             if (it.lights) { let best = 9; for (const L of it.lights) { const dx = pr.pos[i * 3] - L[0], dy = pr.pos[i * 3 + 1] - L[1], dz = pr.pos[i * 3 + 2] - L[2]; best = Math.min(best, Math.sqrt(dx * dx + dy * dy * 0.5 + dz * dz)); } g1 = Math.min(255, gl + Math.round(Math.max(0, 1 - best / 0.11) * it.lit * 40)); }
@@ -2466,7 +2481,8 @@ function updateEnv(time, indoor) {
   const outExp = lerp(lerp(0.56, 0.84, golden), 3.0, night);
   e.exposure = lerp(outExp, lerp(1.05, 1.25, night), indoor || 0);
   // weather: a light overcast with mist that gathers over the valley around dawn (Env.cover / Env.mist set the base amounts)
-  if (typeof Sky !== 'undefined' && Sky.applyWeather) { Sky.setWeather(Env.cover, Env.mist + 0.24 * Math.exp(-Math.pow((Env.hour - 6.6) / 1.5, 2))); Sky.applyWeather(e); }      // overcast and mist reshape the light, see 45_sky.js
+  if (typeof Sky !== 'undefined' && Sky.applyWeather) { Sky.setWeather(Env.cover, Env.mist + 0.24 * Math.exp(-Math.pow((Env.hour - 6.6) / 1.5, 2))); Sky.applyWeather(e); }
+  if (World.cell) Cells.env(e);      // overcast and mist reshape the light, see 45_sky.js
   return e;
 }
 
@@ -2526,7 +2542,7 @@ const ROADS = [
   { id: 'hunter', w: 1.3, pts: [[-62, -4.5], [-63, 10], [-67, 28], [-68.5, 40], [-67.6, 44]] },
   { id: 'fisher', w: 1.3, pts: [[3.5, 70], [-1, 77], [-5.4, 82.2]] },
 ];
-const WORLD_RADIUS = 136;       // how far the player may wander from the square
+const WORLD_RADIUS = 184;       // how far the player may wander from the square (was 136; the fine terrain, splat maps and grass reach 192)
 const SQUARE = { x: 0, z: -2, rx: 15.5, rz: 14 };
 // a point `dist` metres outside a site's main door, in site-local coordinates
 function siteDoorLocal(s, dist) {
@@ -2667,6 +2683,279 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
 })();
 
 
+// ---- 55c_wilds.js ----
+// ───────────────────────── the wilds: where the places outside the village are, the paths that lead to them, and what the land does there ─────────────────────────
+// Data and small pure functions only (loaded before the terrain). Builders are in 79_wilds.js, people and animals in 79b_life.js, quests in 81_wilds_story.js.
+// Twelve places stand between 78 m and 172 m from the square. Every one has a worn footpath to the next (they are added to ROADS, so the splat map, the
+// tree placement, the nav graph and the ground shader treat them like the village roads), a clearing in the forest, and a small patch of terrain of its own.
+const WILDS = { places: [], P: {}, pads: [], bumps: [], cliffs: [], groves: [], dense: [], flowers: [], paths: [], bridges: [], on: !(typeof TEST !== 'undefined' && TEST && TEST.wilds === 0) };
+(function wildsLayout() {
+  const place = (id, name, x, z, yaw, r, o) => { const p = Object.assign({ id, name, x, z, yaw, r, disc: r + 4 }, o || {}); WILDS.places.push(p); WILDS.P[id] = p; return p; };
+  // ── the places (x east, z south; yaw: heading of the place's front, 0 = north, clockwise) ──
+  place('shrine', 'Wayside Shrine', -112, -7, 0, 12, { disc: 12 });
+  place('lumber', 'Hob’s Lumber Camp', -140, -60, 0, 22);
+  place('blind', 'The Hunter’s Blind', -120, 62, 0, 14, { disc: 14 });
+  place('burnt', 'The Burnt Cottage', -108, -108, 0, 14);
+  place('mine', 'The Old Mine', -70, -150, 2.47, 16, { disc: 16 });          // yaw: the portal looks south-east (local +z runs into the hill)
+  place('hermit', 'The Hermit’s Pool', 30, -168, 0, 20, { disc: 18 });
+  place('stones', 'The Standing Stones', 112, -118, 0, 24, { disc: 20 });
+  place('battle', 'The Old Battlefield', 150, -52, 0, 20, { disc: 24 });
+  place('bee', 'The Bee Meadow', 34, -70, 0, 15, { disc: 16 });
+  place('hamlet', 'Highfold', 116, 104, 0, 26, { disc: 32 });
+  place('fishing', 'The Far Shore', 30, 160, 0, 15, { disc: 16 });
+  place('toll', 'The Toll Ford', -160, 1, 0, 14, { disc: 14 });
+
+  // ── paths (id, width, points). Each begins on an existing road or at the end of another path. ──
+  const path = (id, w, pts) => { ROADS.push({ id: 'p.' + id, w, pts, path: true }); WILDS.paths.push(id); };
+  path('lumber', 1.3, [[-110, -8], [-115, -22], [-125, -40], [-136, -54]]);
+  path('burnt', 1.2, [[-139, -66], [-134, -80], [-122, -96], [-114, -102], [-100, -101]]);
+  path('mine', 1.2, [[-100, -101], [-96, -116], [-88, -130], [-80, -141], [-74, -146]]);
+  path('tower', 1.3, [[-66, -142], [-50, -138], [-32, -133], [-10, -127], [12, -120], [19, -116]]);
+  path('hermit', 1.2, [[-32, -133], [-24, -147], [-8, -159], [8, -166], [22, -168], [30, -163], [37, -158]]);
+  path('bridge', 1.2, [[37, -158], [39, -154], [41, -150], [56, -150], [68, -143], [86, -132], [102, -123], [110, -115]]);
+  path('stones', 1.3, [[110, -115], [112, -111], [122, -97], [134, -81], [145, -66], [150, -58]]);
+  path('battle', 1.4, [[150, -46], [146, -34], [138, -24], [128, -15], [124, -13]]);
+  path('hamlet', 1.4, [[78, 0], [74.5, 14], [76, 30], [78, 52], [87, 68], [100, 84], [110, 96], [116, 102]]);
+  path('fishing', 1.3, [[118, 114], [100, 130], [78, 144], [54, 153], [36, 158]]);
+  path('lakeside', 1.2, [[24, 160], [4, 166], [-22, 156], [-40, 134], [-40, 110], [-27, 93], [-8, 83]]);
+  path('bee', 1.2, [[11, -77.5], [20, -74], [29, -71.5]]);
+  path('blind', 1.2, [[-67, 28], [-82, 34], [-98, 46], [-113, 59]]);
+  // every path ends exactly on the road (or path) it springs from, so that the nav graph (nodes 3 m apart join) and the splat painting have no gaps
+  { const segNear = (x, z, skip) => { let best = null, bd = 1e9; for (const r of ROADS) { if (r === skip) continue; for (let i = 0; i < r.pts.length - 1; i++) { const a = r.pts[i], b = r.pts[i + 1], bx = b[0] - a[0], bz = b[1] - a[1], l2 = bx * bx + bz * bz || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * bx + (z - a[1]) * bz) / l2)), px = a[0] + bx * t, pz = a[1] + bz * t, d = Math.hypot(px - x, pz - z); if (d < bd) { bd = d; best = [px, pz]; } } } return [best, bd]; };
+    for (const r of ROADS) { if (!r.path) continue;
+      for (const end of [0, 1]) { const q = end ? r.pts[r.pts.length - 1] : r.pts[0], [b, d] = segNear(q[0], q[1], r); if (b && d > 0.3 && d < 24 && !(r.id === 'p.hermit' && end) && !(r.id === 'p.stones' && end) && !(r.id === 'p.battle' && end) && !(r.id === 'p.lumber' && end) && !(r.id === 'p.bee' && end)) { if (end) r.pts.push([b[0], b[1]]); else r.pts.unshift([b[0], b[1]]); } } } }
+  // navBuild joins roads where their nodes meet, but never the last node of one road to the first of the next in the list: keep paths that spring from each other apart in ROADS
+  { const ord = ['lumber', 'hamlet', 'burnt', 'fishing', 'mine', 'bee', 'tower', 'blind', 'hermit', 'stones', 'bridge', 'battle', 'lakeside'], i0 = ROADS.findIndex(r => r.path), ps = ROADS.splice(i0).sort((a, b) => ord.indexOf(a.id.slice(2)) - ord.indexOf(b.id.slice(2))); ROADS.push(...ps); }
+  // (the Toll Ford stands on the main road itself; the shrine at the turn of the lumber path)
+
+  // ── Highfold: four timber houses and a barn on a hillside green. high.a and high.c are marked `enter` so the cell system can give them interiors later;
+  //    until then they are shells (79_wilds.js builds them with the infill machinery of 73d_infill.js, in a batch of their own that is hidden beyond 120 m) ──
+  WILDS.houses = [];
+  const house = (id, name, x, z, yaw, w, d, o) => {
+    const n = Math.max(1, Math.round(w / 2)), doorBay = (o && o.doorBay) || 0, h = Object.assign({ id, name, x, z, yaw, w, d, floors: 1, pitch: 44, wild: true, doorBay, boxes: true, par: 0 }, o || {});
+    const st = { id, name, x, z, yaw, w, d, doorPos: w / 2 - (doorBay + 0.5) * (w / n), pad: 1.6, wild: true, enter: !!h.enter }; SITES.push(st); SITE[id] = st; WILDS.houses.push(h); return h;
+  };
+  house('high.a', 'Highfold: the Reeve’s House', 104, 100, PI / 2, 6.4, 5.2, { floors: 2, pitch: 42, enter: true, chimney: 1, jetty: true });
+  house('high.b', 'Highfold: Thatcher’s House', 118, 90, PI, 7, 5.4, { floors: 1, pitch: 46, chimney: -1, stone: true });
+  house('high.c', 'Highfold: the Shepherd’s House', 124, 113, -PI / 2, 6, 5, { floors: 2, pitch: 40, enter: true, chimney: 1 });
+  house('high.barn', 'Highfold: Barn', 99, 114, 0, 9, 10.5, { floors: 1, pitch: 36, barn: true, stone: false, boxes: false });
+  // ── fields at Highfold (the village fences every FIELDS entry) ──
+  FIELDS.push({ x0: 126, z0: 80, x1: 144, z1: 96 }, { x0: 134, z0: 98, x1: 152, z1: 114 });
+
+  // ── terrain of their own: hills, cliffs, flattened yards ──
+  WILDS.bumps.push({ x: 112, z: -118, h: 8.5, s: 15, flat: 6.5, flat2: 12 });                      // the hill under the stones
+  WILDS.bumps.push({ x: 150, z: -34, h: 1.6, s: 5.5 }, { x: 160, z: -62, h: 1.4, s: 6 }, { x: 142, z: -70, h: 1.2, s: 5 });      // barrows
+  // cliffs: (dx, dz) points into the hill; g height, ramp: starts rising `at` metres in and takes `ramp` to rise, w0 / w1 half width fade, d0 / d1 depth fade
+  WILDS.cliffs.push({ id: 'mine', x: -70, z: -150, dx: -0.62, dz: -0.78, g: 13, at: 3, ramp: 5.5, w0: 13, w1: 25, d0: 22, d1: 38, pad: 8 });
+  WILDS.cliffs.push({ id: 'fall', x: 20, z: -179, dx: 0, dz: -1, g: 8.5, at: 2.5, ramp: 5, w0: 9, w1: 19, d0: 8, d1: 20, pad: 4 });
+  // flattened yards: [x, z, radius, blend]
+  WILDS.pads.push([-140, -60, 8, 7], [-108, -108, 9, 6], [-120, 62, 5, 5], [34, -70, 6, 6], [30, 160, 6, 6], [38, -166, 5, 5], [-160, -3, 6, 6], [-112, -7, 4, 4]);
+  // the pool under the fall, and the toll-ford brook (water bodies; the meshes are built in 79_wilds.js)
+  WILDS.pool = { x: 20, z: -172.5, r: 4.6, dig: 1.35 };
+  WILDS.brooks = [];
+  Object.defineProperty(WILDS, 'brookLine', { get() { const k = WILDS.brook; return k.line || (k.line = new Poly(catmull(k.pts, 2))); } });
+  WILDS.brook = { pts: [[-171, -60], [-164, -32], [-160, -8], [-159.4, 1.6], [-161, 14], [-166, 38], [-175, 66]], w: 1.9, bank: 3.6, x0: -195, x1: -140, z0: -100, z1: 100, ford: true }; WILDS.brooks.push(WILDS.brook);
+  WILDS.creek = { pts: [[24.5, -171.5], [33, -170.5], [43, -173], [52.5, -177]], w: 1.5, bank: 3.2, x0: 10, x1: 70, z0: -200, z1: -150, ford: false }; WILDS.brooks.push(WILDS.creek);
+
+  // ── forest: clearings round each place, denser stands, birch groves ──
+  WILDS.groves.push({ x: -150, z: 98, r: 10, n: 18 }, { x: 52, z: -88, r: 10, n: 16 }, { x: 70, z: 128, r: 10, n: 14 }, { x: 126, z: 128, r: 9, n: 14 }, { x: 160, z: -86, r: 10, n: 16 });
+  WILDS.dense.push({ x: -118, z: 60, r: 42, k: 1.25 }, { x: -50, z: 120, r: 30, k: 1.0 });
+  // (flower meadow, orchard rows and fields are drawn by 79_wilds.js)
+})();
+
+// how much forest may stand at (x, z): 0 inside a place's clearing, rising to the normal density 9 m outside it, more in the dense stands
+function wildsDens(x, z) {
+  if (!WILDS.on) return 1;
+  let k = 1;
+  for (const p of WILDS.places) { const d = hyp(x - p.x, z - p.z); if (d < p.r + p.disc * 0.0 + 12) k = Math.min(k, smooth(p.r, p.r + 10, d)); }
+  for (const g of WILDS.dense) { const d = hyp(x - g.x, z - g.z); if (d < g.r) k *= 1 + (g.k - 1) * smooth(g.r, g.r * 0.4, d); }
+  return k;
+}
+// true while (x, z) is within `pad` of something the wilds placed that nothing may grow on (a place's yard)
+const wildsBlocked = (x, z, pad) => { if (!WILDS.on) return false; for (const p of WILDS.places) if (hyp(x - p.x, z - p.z) < p.r + (pad || 0)) return true; return false; };
+
+// ground height: called from terrainH after the village pads and before the river. h = the height so far
+const _wc = {};
+function wildsBase(key, x, z) { return _wc[key] !== undefined ? _wc[key] : (_wc[key] = terrainBase(x, z)); }
+function wildsH(x, z, h) {
+  if (!WILDS.on) return h;
+  if (Math.abs(x) < 60 && Math.abs(z) < 60) return h;
+  for (const p of WILDS.pads) {
+    const d = hyp(x - p[0], z - p[1]); if (d > p[2] + p[3]) continue;
+    h = lerp(h, wildsBase('pad' + p[0] + ',' + p[1], p[0], p[1]), 1 - smooth(p[2], p[2] + p[3], d));
+  }
+  for (const b of WILDS.bumps) {
+    const dx = x - b.x, dz = z - b.z, d2 = dx * dx + dz * dz; if (d2 > 9 * b.s * b.s) continue;
+    h += b.h * Math.exp(-d2 / (2 * b.s * b.s));
+    if (b.flat) h = lerp(h, wildsBase('hill' + b.x, b.x, b.z) + b.h * 0.96, 1 - smooth(b.flat, b.flat2, Math.sqrt(d2)));
+  }
+  for (const c of WILDS.cliffs) {
+    const dx = x - c.x, dz = z - c.z; if (Math.abs(dx) > 50 || Math.abs(dz) > 50) continue;
+    const lz = dx * c.dx + dz * c.dz, lx = dx * -c.dz + dz * c.dx, y0 = wildsBase('cl' + c.id, c.x, c.z);
+    if (lz > -12 && lz < 1 + c.at && Math.abs(lx) < c.pad + 8) h = lerp(h, y0, (1 - smooth(0, 8, Math.max(Math.abs(lx) - c.pad, 0) + Math.max(-lz - 2, 0))) * (1 - smooth(c.at - 1, c.at + 1.5, lz)));
+    const g = c.g * smooth(c.at, c.at + c.ramp, lz) * (1 - smooth(c.w0, c.w1, Math.abs(lx))) * (1 - smooth(c.d0, c.d1, lz));
+    if (g > 0) h = Math.max(h, y0 + g * (0.94 + 0.12 * Math.sin(lx * 0.43 + lz * 0.31)));
+  }
+  if (WILDS.pool) {
+    const q = WILDS.pool, d = hyp(x - q.x, z - q.z);
+    if (d < q.r + 5) h = Math.min(h, lerp(wildsBase('pool', q.x, q.z) - q.dig - 0.5 * (1 - (d / q.r) * (d / q.r)), h, smooth(q.r - 0.5, q.r + 4.5, d)));
+  }
+  for (const k of WILDS.brooks) {
+    if (x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue;
+    const b = k.line || (k.line = new Poly(catmull(k.pts, 2))), d = b.dist(x, z, k.bank + 6);
+    if (d < k.bank + 6) {
+      const at = b.at, yw = wildsBrookY(at, k), cr = k.ford ? ford(x, z) : 0, bed = yw - 0.45 + (cr ? 0.25 * cr : 0);
+      h = lerp(h, Math.min(h, yw + 0.5), smooth(k.bank + 6, k.bank, d));
+      h = Math.min(h, lerp(bed, h, smooth(k.w * 0.7, k.bank, d)));
+    }
+  }
+  return h;
+}
+// the toll ford: the road bed lifts to a gravel bar where the main road crosses the brook (1 on the bar, 0 away from it)
+function ford(x, z) { return 1 - smooth(1.5, 5.5, hyp(x - (-159.5), z - 1.4)); }
+// brook surface height along its length: the ground beside it, never rising downstream
+function wildsBrookY(at, k) {
+  k = k || WILDS.brooks[0];
+  if (!k._by) {
+    const b = k.line || (k.line = new Poly(catmull(k.pts, 2))), n = Math.ceil(b.len / 3) + 1, ys = [];
+    let y = k.top === undefined ? 1e9 : k.top; for (let i = 0; i < n; i++) { const p = b.point(i * 3); y = Math.min(y, terrainBase(p[0], p[1]) - 0.5); ys.push(y); }
+    k._by = ys;
+  }
+  const f = Math.min(Math.max(at, 0) / 3, k._by.length - 1.001), i = f | 0; return k._by[i] + (k._by[i + 1] - k._by[i]) * (f - i);
+}
+
+
+// ---- 56_cells.js ----
+// ───────────────────────── cells: every interior is a space of its own, reached through its door ─────────────────────────
+// A cell is built at its own origin in the same world and coordinate system (so colliders, floors, zones, spots, stairs, lights, particles, villagers and
+// saves work as they always did), but far below the terrain and 150 m from the next cell: x = CELL.x0 + col * CELL.step, z = row * CELL.step, y = CELL.y.
+// The village keeps only the shell of each building (closed doors, solid walls, glowing windows). A door is a portal: outside it reads "Enter <place>",
+// inside "Leave to <village>"; using it fades to black, names the place, moves the player to the other side and fades back in (Cells.travel).
+// Which cell the player is in follows from where the player stands (Cells.sync); while in one, 43_render.js draws only that cell: no sun, no sun shadows,
+// no sky, terrain, grass, trees or outdoor props (see sceneUpdate in 42_scene.js and the cell branches in renderFrame), and the fog is short and dark.
+// Villagers cross doors through portal edges of the nav graph (77_npc.js). CELLS_ON = false (test option cells=0) gives back the old seamless houses.
+const CELLS_ON = !(TEST && TEST.cells === 0);
+const CELL = { x0: 3000, y: -400, step: 150, cols: 8, half: 70 };
+const Cells = { list: [], by: {}, cur: null, busy: false, fadeIn: 0.3, fadeOut: 0.3, hold: 0.42 };
+// allocate the next free cell. cs is a site-like frame (x, z, y, yaw 0) that interior code uses where it used the site's
+Cells.make = function (id, name, extra) {
+  const i = Cells.list.length, col = i % CELL.cols, row = (i / CELL.cols) | 0;
+  const origin = [CELL.x0 + col * CELL.step, CELL.y, row * CELL.step];
+  const site = extra && extra.site;
+  const cs = Object.assign({}, site || {}, { id, name, x: origin[0], z: origin[2], y: origin[1], yaw: 0, real: site || null, cellFrame: true });
+  const c = Object.assign({ id, name, index: i, origin, cs, zones: [], floorY: origin[1] + 0.32, exit: 'Brackenfell', door: null, xdoor: null, enter: null, leave: null, kind: 'house' }, extra || {});
+  Cells.list.push(c); Cells.by[id] = c; return c;
+};
+// the cell around a point, or null (everything outdoors lives far above and away from the cell grid)
+Cells.at = function (x, y, z) {
+  if (x < CELL.x0 - CELL.half || y > CELL.y + 150) return null;
+  const col = Math.round((x - CELL.x0) / CELL.step), row = Math.round(z / CELL.step);
+  if (col < 0 || col >= CELL.cols || row < 0) return null;
+  return Cells.list[row * CELL.cols + col] || null;
+};
+Cells.inRegion = x => x >= CELL.x0 - CELL.half;
+Cells.spaceOf = p => { const c = Cells.at(p[0], p[1], p[2]); return c ? c.id : 0; };
+Cells.exitName = function (site) { return site.alleyRow ? 'Market Alley' : site.id === 'tower' ? 'the Greyspine Crag' : 'Brackenfell'; };
+// the two door interaction points of a house cell: outside "Enter ...", inside "Leave to ..."
+Cells.portals = function (cell, site) {
+  const d = cell.door, x = cell.xdoor, yawTo = (a, b) => Math.atan2(b[0] - a[0], -(b[2] - a[2]));
+  cell.exit = Cells.exitName(site);
+  cell.enter = { p: d.ins.slice(), yaw: yawTo(d.c, d.ins), cell: cell.id, name: site.name };
+  cell.leave = { p: x.out.slice(), yaw: yawTo(x.c, x.out), cell: null, name: cell.exit };
+  cell.portalOut = { kind: 'portal', id: 'door.' + cell.id + '.in', p: [x.c[0], x.c[1] + 0.1, x.c[2]], r: 2.7, zone: 0, cell: cell.id, label: 'Enter ' + site.name, dest: cell.enter, side: 'out' };
+  cell.portalIn = { kind: 'portal', id: 'door.' + cell.id + '.out', p: [d.c[0], d.c[1] + 0.1, d.c[2]], r: 2.7, zone: cell.zone, cell: cell.id, label: 'Leave to ' + cell.exit, dest: cell.leave, side: 'in' };
+  World.interact.push(cell.portalOut, cell.portalIn);
+};
+// a door's lock: it.lock() returns a message while the door is shut, or null (none of the village's doors lock yet; 93_ and the dungeons use it)
+Cells.lockMsg = it => (typeof it.lock === 'function' ? it.lock() : null);
+
+// ── which cell the player (or camera) is in ──
+Cells.sync = function (p) {
+  const c = Cells.at(p[0], p[1], p[2]);
+  if (c !== Cells.cur) Cells.change(c);
+  return c;
+};
+Cells.change = function (c) {
+  const prev = Cells.cur; Cells.cur = World.cell = c;
+  World.indoor = c ? 1 : 0;
+  if (c && typeof Foes !== 'undefined' && Foes.ready) Foes.breakOff();         // a fight does not follow through a door
+  if (!c && prev && typeof R !== 'undefined') R.shadow1Ready = false;            // the wide sun-shadow map was not drawn in there: redraw it at once
+  if (typeof Sky !== 'undefined' && Sky.mesh) Sky.mesh.visible = !c;
+};
+// move the player (instantly) to dest = { p: [x, y, z] feet, yaw }
+Cells.teleport = function (dest) {
+  const P = Player, p = dest.p;
+  P.pos = [p[0], World.groundAt(p[0], p[2], p[1] + 1.2), p[2]]; P.vel = [0, 0, 0]; P.yaw = dest.yaw || 0; P.pitch = 0; P.camY = P.pos[1]; P.onGround = true; P.coyote = 0.12;
+  Cells.sync(P.pos); World.camZone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
+  R.cam.pos[0] = P.pos[0]; R.cam.pos[1] = P.camY + P.eye; R.cam.pos[2] = P.pos[2]; R.cam.yaw = P.yaw; R.cam.pitch = 0;
+  if (typeof Input !== 'undefined') { Input.keys = {}; Input.lookX = Input.lookY = 0; }
+};
+// the doorway fade: black in about 0.3 s, the place's name for a moment (the cell's materials compile and upload during it), black out again in 0.3 s
+Cells.travel = function (dest, done) {
+  if (Cells.busy) return false;
+  Cells.busy = true; Player.locked = true; if (typeof RPG !== 'undefined') RPG.iframes = Math.max(RPG.iframes || 0, 2.2);
+  Audio2.door(1);
+  const f = $('portal'), nm = $('portalName'), ms = Cells.fadeIn * 1000;
+  f.classList.add('on');
+  setTimeout(() => {
+    nm.textContent = dest.name || ''; nm.classList.add('on');
+    Cells.teleport(dest);
+    try { game.step(2, 1 / 30); const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); } catch (e) { console.warn('cell warm-up: ' + (e && e.message || e)); }       // first draw of a cell: shaders and buffers are made here, under the black
+    setTimeout(() => {
+      nm.classList.remove('on'); f.classList.remove('on');
+      setTimeout(() => { Cells.busy = false; Player.locked = uiBusy(); if (done) done(); }, Cells.fadeOut * 1000);
+    }, Cells.hold * 1000);
+  }, ms);
+  return true;
+};
+// the E key / interact button on a door
+Cells.use = function (it) {
+  const msg = Cells.lockMsg(it); if (msg) { toast(msg); Audio2.door(0.4); return; }
+  Cells.travel(it.dest);
+};
+// the cell the player is in: the way to the compass's needle and the exit
+Cells.mapTarget = function (t) {
+  if (!t) return t;
+  const here = Cells.cur, there = Cells.at(t[0], t[1] === undefined ? CELL.y : t[1], t[2]);
+  if (here === there) return t;
+  if (here) return here.door ? here.door.c : null;       // inside, anything outside is "through the door"
+  return there && there.xdoor ? there.xdoor.c : t;        // outside, a person in a house is at its door
+};
+// distance for sounds from something in a cell to the listener, and whether a wall is in the way
+Cells.hear = function (pos, from) {
+  const a = Cells.at(pos[0], pos[1], pos[2]), b = Cells.cur;
+  if (a === b) return { d: hyp(pos[0] - from[0], pos[2] - from[2]), wall: false };
+  if (b) return { d: 999, wall: true };
+  const x = a && a.xdoor ? a.xdoor.c : pos;
+  return { d: hyp(x[0] - from[0], x[2] - from[2]) + 3, wall: true };
+};
+// frame environment: no sun, a short dark fog, the day's ambient kept (windows and the hour of day still reach the rooms through emissive panes and daylight lights)
+const CELL_DAYLIGHT = (typeof TEST !== 'undefined' && TEST && TEST.celllight !== undefined) ? +TEST.celllight : 6;
+Cells.env = function (e) {
+  const c = Cells.cur; if (!c) return e;
+  e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
+  // daylight: with the sun off, rooms lost the light that used to come in by day (midday was darker than night). Windows let the sky in: lift the day's ambient. c.daylight: 0 for a cellar or crypt, default for a room with windows.
+  { const k = c.daylight === undefined ? CELL_DAYLIGHT : c.daylight; if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); } else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
+  e.fogCol = c.fog || [0.030, 0.025, 0.020]; e.fogDensity = c.fogDensity || 0.022; e.cloud = 0; e.stars = 0; e.aurora = 0; e.sunDisc = 0; e.moonBright = 0;
+  return e;
+};
+// fell out of a cell (a gap in a floor): back to its door
+Cells.rescue = function () { const c = Cells.cur; if (c && c.enter) Cells.teleport(c.enter); };
+// an old save made inside a building (when interiors stood in the village): the same spot in the same building's cell (cells are built in the building's own frame)
+Cells.migrate = function (pos, yaw) {
+  if (!CELLS_ON || Cells.inRegion(pos[0])) return false;
+  for (const c of Cells.list) {
+    const real = c.cs.real, z = World.zones[c.zones[0] - 1]; if (!real || !z) continue;
+    if (Math.abs(pos[0] - real.x) > 14 || Math.abs(pos[2] - real.z) > 14) continue;
+    const l = worldToSite(real, pos[0], pos[2]);
+    if (Math.abs(l[0]) < z.hw && Math.abs(l[1]) < z.hd && pos[1] > real.y - 0.5 && pos[1] < real.y + (z.y1 - z.y0) + 1) {
+      return { pos: [c.cs.x + l[0], c.floorY + Math.max(0, pos[1] - (real.y + 0.32)), c.cs.z + l[1]], yaw: yaw - real.yaw };
+    }
+  }
+  return false;
+};
+
+
 // ---- 60_terrain.js ----
 // ───────────────────────── terrain: height field, ground mesh, splat map, water ─────────────────────────
 const World = {
@@ -2730,7 +3019,7 @@ function terrainBase(x, z) {
 }
 function terrainH(x, z) {
   let h = terrainBase(x, z);
-  if (Math.abs(x) < 160 && Math.abs(z) < 170) {
+  if (Math.abs(x) < 210 && Math.abs(z) < 210) {
     // village square
     const sq = hyp((x - SQUARE.x) / (SQUARE.rx + 3), (z - SQUARE.z) / (SQUARE.rz + 3));
     if (sq < 2) h = lerp(h, 0, 1 - smooth(1, 1.9, sq));
@@ -2742,6 +3031,7 @@ function terrainH(x, z) {
       if (dd < 6) h = lerp(h, s.y, 1 - smooth(0, 6, dd));
     }
   }
+  if (typeof wildsH === 'function') h = wildsH(x, z, h);        // hills, cliffs, yards and the toll-ford brook (55c_wilds.js)
   // river: level banks, then a channel
   const ext = 8 * smooth(125, 230, hyp(x, z));            // far from the village the channel widens so coarse terrain still shows it
   const d = River.dist(x, z, 14 + ext);
@@ -2823,7 +3113,7 @@ function buildTerrain() {
   // TERRAIN_FINE: the ground is drawn with 1.5 m cells out to this distance from the centre and with 3 m cells (a quarter of the triangles) from there to the
   // edge of the height grid. Terrain.y still reads the 1.5 m grid. 144 puts the whole grid back on 1.5 m cells.
   const FINE = TERRAIN_FINE, ring = FINE < K.terrainHalf;
-  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: 144, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: 144, tile: TERRAIN_TILE[0] }, { cell: 24, half: 1440, hole: 432, tile: TERRAIN_TILE[1] }, { cell: 96, half: 4800, hole: 1440, tile: TERRAIN_TILE[2] }]);
+  const TH = K.terrainHalf, levels = [{ cell: 1.5, half: TH, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: TH, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: TH, tile: TERRAIN_TILE[0] }, { cell: 24, half: 1440, hole: 432, tile: TERRAIN_TILE[1] }, { cell: 96, half: 4800, hole: 1440, tile: TERRAIN_TILE[2] }]);
   const pack = new MeshPack(); pack.shadow = true;
   let prev = null;
   for (let li = levels.length - 1; li >= 0; li--) {            // coarse first so fine borders can be stitched to them
@@ -2923,6 +3213,7 @@ function buildSplat() {
   ell(B, SITE.tower.x, SITE.tower.z, 4.6, 4.6, red);
   stroke(B, River.p, 9.4, red, 1.2);
   ell(B, LAKE.x, LAKE.z, LAKE.r + 4, LAKE.r + 4, red);
+  if (typeof wildsSplat === 'function') wildsSplat(A, B, { P, stroke, ell, red, grn, blu });       // (79_wilds.js: footpath cobbles, scree, ash)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = da[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
   Terrain.splatData = out;
@@ -2974,6 +3265,7 @@ function buildSplat2() {
   blob(B, 0, SQUARE.x, SQUARE.z, Math.max(SQUARE.rx, SQUARE.rz) + 6, 0.5, 0.75);
   // ── outdoor dressing: damp patches on the cobbles, mud and worn turf around troughs, hay, carts, benches (73c_dress.js; this block is separate from the LOD work) ──
   if (typeof splat2Dress === 'function') splat2Dress(blob, A, B);
+  if (typeof wildsSplat2 === 'function') wildsSplat2(blob, line, A, B);       // (79_wilds.js: mud at the pool and brook, trodden ground at the camps)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = db[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
   G.splat2Tex = gfxDataTex(out, Rz, Rz, THREE.RGBAFormat, THREE.UnsignedByteType);
@@ -3241,7 +3533,7 @@ const WALLS = {
   left: { n: [-1, 0, 0], u: [0, 0, 1], start: (w, d) => [-w / 2, 0, -d / 2], len: (w, d) => d, toU: (p, w, d) => p + d / 2 },
   right: { n: [1, 0, 0], u: [0, 0, -1], start: (w, d) => [w / 2, 0, d / 2], len: (w, d) => d, toU: (p, w, d) => d / 2 - p },
 };
-World.doors = []; World.spots = {}; World.houses = {};
+World.doors = []; World.spots = {}; World.houses = {}; World.cell = null;
 const INT_AO = 0.30;       // sky visibility of interior surfaces
 function addFloor(m, x0, z0, x1, z1, y, y2, axis) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
@@ -3254,30 +3546,34 @@ function siteMatrix(site, y) { const M = m4.create(); m4.translate(M, site.x, y,
 function buildHouse(site, spec) {
   const kit = typeof kitWanted === 'function' && kitWanted(site, spec);      // kit-built shell (71_kithouse.js) or the procedural one below
   if (kit) spec = kitSpec(site, spec);
+  const col0 = World.colliders.length, fl0 = World.floors.length, lt0 = World.lights.length;
+  // Cells (56_cells.js): the interior is built in its own frame far from the village (isite, Ms) and only the shell stays on the site (site, Mx). Without cells both are the same.
+  const cell = kit && CELLS_ON ? Cells.make(site.id, site.name, { site }) : null, isite = cell ? cell.cs : site;
   const w = site.w, d = site.d, H = spec.H || 2.6, t = 0.3, P = (spec.pitch || 48) * PI / 180, tanP = Math.tan(P), hd = d / 2;
-  const floorY = site.y + 0.32, zone = World.zones.length + 1, R = rng(site.x * 131 + site.z * 17 + 5);
-  const Ms = siteMatrix(site, floorY);
-  const ext = new Mesh(4096), int = new Mesh(4096), glow = new Mesh(256);
-  for (const m of [ext, int, glow]) { m.m = Ms.slice(); m.dirty = true; m.seed = (site.x * 977 + site.z * 31) | 0; }
+  const floorY = isite.y + 0.32, xFloorY = site.y + 0.32, zone = World.zones.length + 1, R = rng(site.x * 131 + site.z * 17 + 5);
+  const Mx = siteMatrix(site, xFloorY), Ms = cell ? siteMatrix(isite, floorY) : Mx;
+  const ext = new Mesh(4096), ins = cell ? new Mesh(2048) : ext, int = new Mesh(4096), glow = new Mesh(256);
+  for (const m of [ext, ins, int, glow]) { m.m = (m === ext || m === glow ? Mx : Ms).slice(); m.dirty = true; m.seed = (site.x * 977 + site.z * 31) | 0; }
   const ridgeY = H + hd * tanP, roofY = z => H + (hd - Math.abs(z)) * tanP;
-  const zinfo = { id: zone, site, y0: floorY - 0.7, y1: floorY + ridgeY + 1.5, hw: w / 2, hd };
-  zinfo.H = H; zinfo.slope = spec.ceiling ? 0 : tanP; World.zones.push(zinfo);
-  const inner = () => { ext.m1 = zone; ext.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
+  const zinfo = { id: zone, site: isite, y0: floorY - 0.7, y1: floorY + ridgeY + 1.5, hw: w / 2, hd, cell: cell ? cell.id : null };
+  zinfo.H = H; zinfo.slope = spec.ceiling ? 0 : tanP; World.zones.push(zinfo); if (cell) cell.zones.push(zone);
+  const inner = () => { ins.m1 = zone; ins.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
+  const faces = [...new Set([ext, ins, int, glow])];
   int.m1 = zone; int.ao = INT_AO;
   const walls = spec.walls || 'timber', stoneH = walls === 'half' ? (spec.stoneH || 1.05) : 0;
   const plaster = spec.plaster || [1, 1, 1], timberC = spec.timber || COL.timberDark;
   const outerMat = v => { if (walls === 'stone' || v < stoneH) ext.mat(MAT.STONE, spec.stoneCol || [1, 1, 1]); else if (walls === 'log') ext.mat(MAT.TIMBER, [0.9, 0.84, 0.78], 1.6); else ext.mat(MAT.PLASTER, plaster); };
-  const innerMat = () => { if (walls === 'stone') ext.mat(MAT.STONE, [0.95, 0.93, 0.9]); else if (walls === 'log') ext.mat(MAT.TIMBER, [0.95, 0.88, 0.8], 1.6); else ext.mat(MAT.PLASTER, [0.97, 0.93, 0.86]); };
+  const innerMat = () => { if (walls === 'stone') ins.mat(MAT.STONE, [0.95, 0.93, 0.9]); else if (walls === 'log') ins.mat(MAT.TIMBER, [0.95, 0.88, 0.8], 1.6); else ins.mat(MAT.PLASTER, [0.97, 0.93, 0.86]); };
   const openings = { front: [], back: [], left: [], right: [] };
   for (const o of spec.doors || []) openings[o.wall].push({ door: true, pos: o.pos || 0, w: o.w || 1.05, v0: 0, v1: o.h || 2.05, def: o });
   for (const o of spec.windows || []) openings[o.wall].push({ pos: o.pos, w: o.w || 0.9, v0: o.sill === undefined ? 1.0 : o.sill, v1: (o.sill === undefined ? 1.0 : o.sill) + (o.h || 1.0), def: o });
   const aoOut = v => v > H - 0.7 ? lerp(1, 0.55, (v - (H - 0.7)) / 0.7) : v < 0.45 ? lerp(0.7, 1, v / 0.45) : 1;
-  const doorList = [];
+  const doorList = [], xdoorList = [];
 
   for (const wn of ['front', 'back', 'left', 'right']) {
     const W = WALLS[wn], L = W.len(w, d), gable = wn === 'left' || wn === 'right', Hin = gable ? H : H + t * tanP;
     const wb = m4.create(); m4.basis(wb, W.u, [0, 1, 0], W.n, W.start(w, d));
-    for (const m of [ext, int, glow]) { m.push(); m4.mul(m.m, m.m, wb); m.dirty = true; }
+    for (const m of faces) { m.push(); m4.mul(m.m, m.m, wb); m.dirty = true; }
     const ops = openings[wn].map(o => Object.assign(o, { u0: W.toU(o.pos, w, d) - o.w / 2, u1: W.toU(o.pos, w, d) + o.w / 2 })).sort((a, b) => a.u0 - b.u0);
     const inOp = (u, v) => ops.some(o => u > o.u0 && u < o.u1 && v > o.v0 && v < o.v1);
     const ub = [0, t, L - t, L], vb = [0, 0.45, H - 0.7, H]; if (stoneH) vb.push(stoneH);
@@ -3291,16 +3587,16 @@ function buildHouse(site, spec) {
       ext.quad([u0, v1, 0], [u0, v0, 0], [u1, v0, 0], [u1, v1, 0], u0 / ext.tile, (H - v1) / ext.tile, u1 / ext.tile, (H - v0) / ext.tile);
       if (u0 >= t - 0.001 && u1 <= L - t + 0.001) {
         const top = (j === vs.length - 2) ? Hin : v1;
-        inner(); innerMat(); ext.grad = [v1 > H - 0.4 ? 0.8 : 1, v0 < 0.3 ? 0.78 : 1];
-        ext.quad([u1, top, -t], [u1, v0, -t], [u0, v0, -t], [u0, top, -t], u1 / ext.tile, (H - top) / ext.tile, u0 / ext.tile, (H - v0) / ext.tile);
+        inner(); innerMat(); ins.grad = [v1 > H - 0.4 ? 0.8 : 1, v0 < 0.3 ? 0.78 : 1];
+        ins.quad([u1, top, -t], [u1, v0, -t], [u0, v0, -t], [u0, top, -t], u1 / ins.tile, (H - top) / ins.tile, u0 / ins.tile, (H - v0) / ins.tile);
       }
     }
-    ext.grad = null;
+    ext.grad = null; ins.grad = null;
     if (gable) {          // gable triangles
       const ay = H + L / 2 * tanP;
       outer(); outerMat(H + 1); if (walls === 'half' || walls === 'timber') ext.mat(MAT.PLASTER, plaster);
       ext.poly([[0, H, 0], [L, H, 0], [L / 2, ay, 0]]);
-      inner(); innerMat(); ext.poly([[L - t * 0.2, H, -t], [t * 0.2, H, -t], [L / 2, ay, -t]]);
+      inner(); innerMat(); ins.poly([[L - t * 0.2, H, -t], [t * 0.2, H, -t], [L / 2, ay, -t]]);
       if (walls !== 'stone' && walls !== 'log') {     // decorative truss
         outer(); ext.mat(MAT.TIMBER, timberC);
         ext.box(L / 2 - 0.08, H, 0, L / 2 + 0.08, ay - 0.25, 0.035, 16);
@@ -3321,11 +3617,13 @@ function buildHouse(site, spec) {
         ext.box(u0 - 0.13, 0, 0, u0, v1 + 0.14, 0.05, 16); ext.box(u1, 0, 0, u1 + 0.13, v1 + 0.14, 0.05, 16); ext.box(u0, v1, 0, u1, v1 + 0.14, 0.05, 16);
         ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(u0 - 0.35, -0.5, 0, u1 + 0.35, -0.02, 0.5); ext.box(u0 - 0.2, -0.5, 0.5, u1 + 0.2, -0.17, 0.95);
         addFloor(ext, u0 - 0.35, -t, u1 + 0.35, 0.5, -0.01); addFloor(ext, u0 - 0.2, 0.5, u1 + 0.2, 0.95, -0.17);
-        inner(); if (spec.floor === 'stone') ext.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ext.mat(MAT.PLANKS, COL.woodDark);
-        ext.quad([u0, 0.02, -t], [u0, 0.02, 0], [u1, 0.02, 0], [u1, 0.02, -t]);
-        const hinge = m4.tp(ext.m, [u0 + 0.02, 0, -t / 2]), dirU = m4.td(ext.m, [1, 0, 0]);
-        const dd = { site, zone, hinge, yaw: Math.atan2(dirU[0], -dirU[2]) - PI / 2, w: o.w - 0.04, h: v1 - 0.03, open: 0, c: m4.tp(ext.m, [(u0 + u1) / 2, 1, -t / 2]), out: m4.tp(ext.m, [(u0 + u1) / 2, -0.3, 1.6]), ins: m4.tp(ext.m, [(u0 + u1) / 2, 0, -t - 1.0]), baseM: m4.mul(m4.create(), ext.m, m4.translate(m4.create(), u0 + 0.02, 0, -t / 2)) };
-        if (!o.def.noLeaf) World.doors.push(dd); doorList.push(dd);
+        inner(); if (spec.floor === 'stone') ins.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ins.mat(MAT.PLANKS, COL.woodDark);
+        ins.quad([u0, 0.02, -t], [u0, 0.02, 0], [u1, 0.02, 0], [u1, 0.02, -t]);
+        // a door leaf on each side (one in the village, one in the cell); the doorway itself is closed to walkers, the leaf is a portal (56_cells.js)
+        const leaf = (m, side) => { const hinge = m4.tp(m.m, [u0 + 0.02, 0, -t / 2]), dirU = m4.td(m.m, [1, 0, 0]); return { site: side === 'in' ? isite : site, zone: side === 'in' ? zone : cell ? 0 : zone, side, cell: cell ? cell.id : null, hinge, yaw: Math.atan2(dirU[0], -dirU[2]) - PI / 2, w: o.w - 0.04, h: v1 - 0.03, open: 0, c: m4.tp(m.m, [(u0 + u1) / 2, 1, -t / 2]), out: m4.tp(m.m, [(u0 + u1) / 2, -0.3, 1.6]), ins: m4.tp(m.m, [(u0 + u1) / 2, 0, -t - 1.0]), sill: m4.tp(m.m, [(u0 + u1) / 2, 0, -t / 2]), baseM: m4.mul(m4.create(), m.m, m4.translate(m4.create(), u0 + 0.02, 0, -t / 2)) }; };
+        const dd = leaf(ins, 'in'), dx = cell ? leaf(ext, 'out') : null;
+        if (!o.def.noLeaf) { World.doors.push(dd); if (dx) World.doors.push(dx); } doorList.push(dd); if (dx) { dx.pair = dd; dd.pair = dx; xdoorList.push(dx); }
+        if (cell) { addBoxCollider(ext, u0, -t, u1, 0, 0, H + 3); addBoxCollider(ins, u0, -t, u1, 0, 0, H + 3); }
         if (o.def.lamp !== false) at(ext, u1 + 0.55, v1 + 0.25, 0.02, 0, () => { ext.mat(MAT.METAL, COL.black); ext.beam([0, 0.1, 0], [0, 0.1, 0.36], 0.03, 0.03); at(ext, 0, 0.1, 0.34, 0, () => Props.lantern(ext, { zone: 0 })); });
       } else {
         const z = -t * 0.45, uc = (u0 + u1) / 2;
@@ -3339,7 +3637,7 @@ function buildHouse(site, spec) {
         }
         glow.mat(MAT.PLAIN, o.def.glass || [1.0, 0.66, 0.30]); glow.m3 = 34;
         glow.quad([u0, v1, z - 0.04], [u0, v0, z - 0.04], [u1, v0, z - 0.04], [u1, v1, z - 0.04], 0, 0, (u1 - u0) / 0.9, (v1 - v0) / 0.9);
-        addLight(m4.tp(ext.m, [uc, (v0 + v1) / 2 + 0.1, -t - 0.7]), 5.6, [1.5, 1.42, 1.28], zone, 'daylight');
+        addLight(m4.tp(ins.m, [uc, (v0 + v1) / 2 + 0.1, -t - 0.7]), 5.6, [1.5, 1.42, 1.28], zone, 'daylight');
       }
     }
     // timber frame on the outside face
@@ -3360,18 +3658,18 @@ function buildHouse(site, spec) {
       if (a2.length && !ops.some(o => o.u0 < a2[0])) ext.beam([0.17, stoneH + 0.14, 0.018], [a2[0] - 0.08, mid, 0.018], 0.035, 0.12);
       if (a2.length && !ops.some(o => o.u1 > a2[a2.length - 1])) ext.beam([L - 0.17, stoneH + 0.14, 0.018], [a2[a2.length - 1] + 0.08, mid, 0.018], 0.035, 0.12);
       // interior posts
-      inner(); ext.mat(MAT.TIMBER, timberC);
-      for (const p of all) { if (p < t + 0.1 || p > L - t - 0.1 || ops.some(o => p > o.u0 - 0.05 && p < o.u1 + 0.05)) continue; ext.box(p - 0.07, 0, -t - 0.04, p + 0.07, Hin, -t, 32); }
+      inner(); ins.mat(MAT.TIMBER, timberC);
+      for (const p of all) { if (p < t + 0.1 || p > L - t - 0.1 || ops.some(o => p > o.u0 - 0.05 && p < o.u1 + 0.05)) continue; ins.box(p - 0.07, 0, -t - 0.04, p + 0.07, Hin, -t, 32); }
     }
     // collision: solid spans (windows block, doors don't)
-    { let a = 0; const cuts = ops.filter(o => o.door); for (const o of cuts) { if (o.u0 - a > 0.02) addBoxCollider(ext, a, -t, o.u0, 0, 0, H + 3); a = o.u1; } if (L - a > 0.02) addBoxCollider(ext, a, -t, L, 0, 0, H + 3); }
-    for (const m of [ext, int, glow]) m.pop();
+    { let a = 0; const cuts = ops.filter(o => o.door); for (const o of cuts) { if (o.u0 - a > 0.02) { addBoxCollider(ext, a, -t, o.u0, 0, 0, H + 3); if (cell) addBoxCollider(ins, a, -t, o.u0, 0, 0, H + 3); } a = o.u1; } if (L - a > 0.02) { addBoxCollider(ext, a, -t, L, 0, 0, H + 3); if (cell) addBoxCollider(ins, a, -t, L, 0, 0, H + 3); } }
+    for (const m of faces) m.pop();
   }
   // ── floor, plinth ──
-  inner(); if (spec.floor === 'stone') ext.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ext.mat(MAT.PLANKS, COL.woodDark);
-  ext.quad([-w / 2 + t, 0.02, -hd + t], [-w / 2 + t, 0.02, hd - t], [w / 2 - t, 0.02, hd - t], [w / 2 - t, 0.02, -hd + t], 0, 0, (w - 2 * t) / ext.tile, (d - 2 * t) / ext.tile);
+  inner(); if (spec.floor === 'stone') ins.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ins.mat(MAT.PLANKS, COL.woodDark);
+  ins.quad([-w / 2 + t, 0.02, -hd + t], [-w / 2 + t, 0.02, hd - t], [w / 2 - t, 0.02, hd - t], [w / 2 - t, 0.02, -hd + t], 0, 0, (w - 2 * t) / ins.tile, (d - 2 * t) / ins.tile);
   outer(); ext.mat(MAT.STONE, [0.92, 0.92, 0.92]); ext.grad = [1, 0.6]; ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4); ext.grad = null;
-  addFloor(ext, -w / 2, -hd, w / 2, hd, 0.02);
+  addFloor(ins, -w / 2, -hd, w / 2, hd, 0.02);
   // ── roof ──
   const thatch = (spec.roof || 'thatch') === 'thatch', rt = thatch ? 0.30 : 0.10, ov = spec.overhang || 0.55, og = 0.4, X = w / 2 + og;
   const eY = H - ov * tanP, sl = (hd + ov) / Math.cos(P), rc = spec.roofCol || (thatch ? [1, 1, 1] : [0.9, 0.85, 0.8]), rl = thatch ? MAT.THATCH : MAT.SHINGLE;
@@ -3393,15 +3691,15 @@ function buildHouse(site, spec) {
   // undersides: eaves + gable overhangs outside, the rest inside
   ext.mat(MAT.PLANKS, COL.woodDark); ext.ao = 0.5;
   for (const s of [-1, 1]) {
-    const q = (x0, x1, z0, z1) => { const a = [x0, roofY(z0), s * z0], b = [x0, roofY(z1), s * z1], c = [x1, roofY(z1), s * z1], e = [x1, roofY(z0), s * z0]; if (s < 0) ext.quad(a, b, c, e); else ext.quad(e, c, b, a); };
+    const q = (x0, x1, z0, z1, M) => { M = M || ext; const a = [x0, roofY(z0), s * z0], b = [x0, roofY(z1), s * z1], c = [x1, roofY(z1), s * z1], e = [x1, roofY(z0), s * z0]; if (s < 0) M.quad(a, b, c, e); else M.quad(e, c, b, a); };
     outer(); ext.ao = 0.5; q(-X, X, hd - t, hd + ov); q(-X, -w / 2 + t, 0, hd - t); q(w / 2 - t, X, 0, hd - t);
-    if (!spec.ceiling) { inner(); ext.ao = INT_AO * 0.9; q(-w / 2 + t, w / 2 - t, 0, hd - t); }
+    if (!spec.ceiling) { inner(); ins.mat(MAT.PLANKS, COL.woodDark); ins.ao = INT_AO * 0.9; q(-w / 2 + t, w / 2 - t, 0, hd - t, ins); }
   }
   // ── interior roof timbers ──
   int.mat(MAT.TIMBER, timberC);
   if (spec.ceiling) {
-    inner(); ext.mat(MAT.PLANKS, COL.wood); ext.ao = INT_AO * 0.85;
-    ext.quad([-w / 2 + t, H, hd - t], [-w / 2 + t, H, -hd + t], [w / 2 - t, H, -hd + t], [w / 2 - t, H, hd - t]);
+    inner(); ins.mat(MAT.PLANKS, COL.wood); ins.ao = INT_AO * 0.85;
+    ins.quad([-w / 2 + t, H, hd - t], [-w / 2 + t, H, -hd + t], [w / 2 - t, H, -hd + t], [w / 2 - t, H, hd - t]);
     for (let x = -w / 2 + t + 0.6; x < w / 2 - t; x += 1.2) int.box(x - 0.07, H - 0.16, -hd + t, x + 0.07, H, hd - t, 8);
   } else {
     const nb = Math.max(1, Math.round((w - 2 * t) / 2.5)), xs = []; for (let i = 1; i <= nb; i++) xs.push(-w / 2 + t + (w - 2 * t) * i / (nb + 1));
@@ -3413,11 +3711,12 @@ function buildHouse(site, spec) {
     int.box(-w / 2 + t, ridgeY - 0.24, -0.07, w / 2 - t, ridgeY - 0.1, 0.07);
     for (const s of [-1, 1]) { const z = s * (hd - t) * 0.5; int.box(-w / 2 + t, roofY(z) - 0.2, z - 0.06, w / 2 - t, roofY(z) - 0.08, z + 0.06); }
   }
-  ext.ao = 1; ext.m1 = 0;
+  ext.ao = 1; ext.m1 = 0; ins.ao = 1; ins.m1 = 0;
+  // ctx.site / ctx.ext / ctx.Ms are the INTERIOR frame (what the furnishing code builds in); ctx.xsite / xext / Mx are the shell on the village site
   const ctx = {
-    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList, kit, Ms, openings, tanP, zoneInfo: zinfo,
+    site: isite, xsite: site, cell, zone, w, d, H, t, hd, ext: ins, xext: ext, int, glow, R, floorY, xFloorY, ridgeY, roofY, spec, doors: doorList, xdoors: xdoorList, kit, Ms, Mx, openings, tanP, zoneInfo: zinfo,
     world: (x, y, z) => m4.tp(Ms, [x, y, z]),
-    spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: site.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
+    spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: isite.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
     // hearth against a wall. frame: origin on the inner wall face, +x into the room. (x, z) = house-local position, rot = RY angle
     fireplace(x, z, rot, opt) {
       opt = opt || {}; const wid = opt.w || 1.9, dep = 0.8, m = int; ctx.hearth = { x, z, rot, wid, dep }; World.zones[zone - 1].hearth = [x, z, wid];
@@ -3440,26 +3739,40 @@ function buildHouse(site, spec) {
       addBoxCollider(m, 0, -wid / 2 - 0.1, dep + 0.25, wid / 2 + 0.1, 0, 2);
       // chimney stack above the roof
       const sp = wp(m, dep * 0.5 - 0.02, 0, 0); m.pop();
-      const l = worldToSite(site, sp[0], sp[2]);
+      const l = worldToSite(isite, sp[0], sp[2]);
       if (kit) { kitChimney(ctx, l[0], l[1]); ctx.fire = fp; return; }
       outer(); ext.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
       const y0 = roofY(l[1]) - 0.5, y1 = Math.max(ridgeY + 0.9, roofY(l[1]) + 1.5);
       ext.cbox(l[0], y0, l[1], 0.85, y1 - y0, 0.85, 4); ext.cbox(l[0], y1, l[1], 1.02, 0.14, 1.02);
       ext.mat(MAT.PLAIN, [0.05, 0.05, 0.05]); ext.cbox(l[0], y1 + 0.14, l[1], 0.5, 0.01, 0.5, 4);
-      World.emitters.push({ type: 'smoke', p: m4.tp(Ms, [l[0], y1 + 0.2, l[1]]), zone: 0 });
+      World.emitters.push({ type: 'smoke', p: m4.tp(Mx, [l[0], y1 + 0.2, l[1]]), zone: 0 });
       ctx.fire = fp;
     },
     solid(x0, z0, x1, z1, h) { addBoxCollider(int, x0, z0, x1, z1, 0, h || 1); },
     interact(x, y, z, o) { const it = Object.assign({ p: m4.tp(Ms, [x, y, z]), r: 2.0, zone }, o); World.interact.push(it); return it; },
   };
+  const planned = !!(kit && cell && typeof planWanted === 'function' && planWanted(site, spec));
+  ctx.planned = planned;
   if (kit) kitShell(ctx);
-  if (kit && typeof UPPER !== 'undefined' && UPPER[site.id] && !(TEST && TEST.noUpper)) UPPER[site.id](ctx);       // stairs and upper floor first, so the ground-floor furniture goes round them
-  if (spec.interior) spec.interior(ctx);
-  if (kit) kitDress(ctx);
-  if (kit && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
+  if (planned) {          // the interior is a plan (72d_plan.js): drop the shell-shaped room the generator made and build the plan on the same door instead
+    for (const mm of [ins, int]) { mm.nv = 0; mm.ni = 0; mm.min = [1e9, 1e9, 1e9]; mm.max = [-1e9, -1e9, -1e9]; }
+    const cellSide = x => x > CELL.x0 - 100;
+    for (let i = World.colliders.length - 1; i >= col0; i--) if (cellSide(World.colliders[i].x)) World.colliders.splice(i, 1);
+    for (let i = World.floors.length - 1; i >= fl0; i--) if (cellSide(World.floors[i].x)) World.floors.splice(i, 1);
+    for (let i = World.lights.length - 1; i >= lt0; i--) if (cellSide(World.lights[i].p[0])) World.lights.splice(i, 1);
+    planBuild(ctx);
+  } else if (kit && typeof UPPER !== 'undefined' && UPPER[site.id] && !(TEST && TEST.noUpper)) UPPER[site.id](ctx);       // stairs and upper floor first, so the ground-floor furniture goes round them
+  if (!planned && spec.interior) spec.interior(ctx);
+  if (kit && !planned) kitDress(ctx);
+  if (kit && !planned && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
   int.grad = null;
-  World.houses[site.id] = { site, zone, ctx, floorY, door: doorList[0] };
-  return { ext, int, glow, ctx };
+  if (cell) {
+    int.append(ins);          // the interior's wall faces, floor and ceiling travel with the rest of the cell's generated meshes
+    cell.floorY = floorY; cell.zone = zone; cell.door = doorList[0]; cell.xdoor = xdoorList[0]; cell.w = w; cell.d = d; cell.ctx = ctx;
+    if (cell.door && cell.xdoor) Cells.portals(cell, site);
+  }
+  World.houses[site.id] = { site, isite, zone, ctx, floorY, xFloorY, door: doorList[0], xdoor: xdoorList[0], cell, plan: ctx.plan || null };
+  return { ext, int, glow, ctx, cell };
 }
 
 
@@ -3521,18 +3834,31 @@ const KH = (() => {
 })();
 
 let kitFB = null;
-function kitShell(c) {
-  const { site, spec, w, d, H, t, hd, ext, glow, zone, Ms, openings, tanP } = c, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
+// With cells the shell is laid twice: pass 'ext' on the village site (outside faces, a closed door, glowing windows, no interior) and pass 'int' in the cell's own
+// frame (the room's side of the same walls, floor, roof lining). Without cells one pass, 'both', lays it all on the site as it always was.
+function kitShell(c) { if (!c.cell) return kitShellPass(c, 'both'); kitShellPass(c, 'ext'); if (!c.planned) kitShellPass(c, 'int'); }
+function kitShellPass(c, pass) {
+  const { spec, w, d, H, t, hd, glow, zone, openings, tanP } = c, site = c.xsite, X = pass !== 'int', I = pass !== 'ext', ext = pass === 'int' ? c.ext : c.xext, Ms = pass === 'int' ? c.Ms : c.Mx, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
-  ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
-  const b = site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.floorY + H + (st.up ? 3 : 0) }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
+  if (X) { for (const m of [c.xext, c.ext, glow]) { m.nv = 0; m.ni = 0; m.min = [1e9, 1e9, 1e9]; m.max = [-1e9, -1e9, -1e9]; } }
+  const b = X ? (site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.xFloorY + H + (st.up ? 3 : 0) })) : kitIntBatch(zone);
+  if (X) World.kitExt[site.id] = { batch: b, site, Ms: c.Mx, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
-  const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: st.up ? zone : 0, inSkyVis: st.up ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
+  const cellExt = pass === 'ext';          // in a cell the village shell knows nothing of the room: its inside faces are plain dark
+  const OUT = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : st.up ? zone : 0, inSkyVis: st.up && !cellExt ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
+  const IN = { zone, skyVis: INT_AO, inZone: zone, inSkyVis: INT_AO };
   const frames = {}, wbs = {};
   for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); frames[wn] = new THREE.Matrix4().makeBasis(KH.V(W.u), KH.V([0, 1, 0]), KH.V(W.n)).setPosition(s0[0], s0[1], s0[2]).premultiply(MS); wbs[wn] = m4.basis(m4.create(), W.u, [0, 1, 0], W.n, s0); }
-  const add = (F, name, x, y, z, s, o, ry) => { o = o || OUT; if (st.timber && typeof infTimber === 'function') name = infTimber(name); if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] }); b.add(name, KH.xf(F, x, y, z, s, ry), o); };
+  const add = (F, name, x, y, z, s, o, ry) => {
+    o = o || OUT;
+    if (pass === 'int') { if (o === EXT) { if (!/^DoorFrame|^Door_1/.test(name)) return; o = IN; } else o = o.tint ? Object.assign({}, IN, { tint: o.tint }) : IN; }
+    else if (cellExt && o.inZone !== undefined && o !== OUT && o !== UP) o = Object.assign({}, o, { inZone: 0, inSkyVis: 0.12 });
+    if (st.timber && typeof infTimber === 'function') name = infTimber(name);
+    if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] });
+    b.add(name, KH.xf(F, x, y, z, s, ry), o);
+  };
   const Ytop = H + (st.up ? 3 : 0);
-  Object.assign(c, { kb: b, kMS: MS, kYtop: Ytop, kFrames: frames, kR: R });
+  if (X) Object.assign(c, { kb: b, kMX: MS, kFrames: frames }); if (I) c.kMS = MS; c.kYtop = Ytop; c.kR = c.kR || R;
   const G = stone ? 'Wall_UnevenBrick' : 'Wall_Plaster';
   const filler = (F, a, e, y, ys, isStone, endL, endR, o) => {
     const g = e - a; if (g < 0.05) return;
@@ -3553,7 +3879,7 @@ function kitShell(c) {
   };
   c.kDoorLamps = [];
   const infW = site.infill && typeof infKitWalls === 'function' && INFS.mats;
-  if (infW) infKitWalls(c, b, MS, frames, zone, sy, R);
+  if (infW) infKitWalls(c, b, MS, frames, zone, sy, R, pass);
   for (const wn of ['front', 'back', 'left', 'right']) {
     if (infW) continue;
     const F = frames[wn], L = WALLS[wn].len(w, d);
@@ -3568,12 +3894,12 @@ function kitShell(c) {
       filler(F, cur, s.c - sx, 0, sy, stone, cur === 0, false);
       if (o.door) {
         add(F, G + '_Door_Flat', s.c, 0, 0, S); add(F, st.arch ? 'DoorFrame_Round_Brick' : 'DoorFrame_Flat_WoodDark', s.c, 0, 0, st.arch ? [S[0], S[1] * 0.93, 1.1] : S, EXT);
-        if (o.def.kLamp) { const side = s.c + sx + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F, wn, u: s.c + side * (sx + 0.42), v: 1.5 * sy }); }
+        if (X && o.def.kLamp) { const side = s.c + sx + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F, wn, u: s.c + side * (sx + 0.42), v: 1.5 * sy }); }
       } else {
         const k = WIN[o.def.kwin] || WIN.wide;
         add(F, G + k[0], s.c, 0, 0, S); add(F, o.def.glass && Kit.pieces[k[1] + '_Stained'] ? k[1] + '_Stained' : k[1], s.c, 0, 0, S, o.def.glass ? Object.assign({}, OUT, { tint: o.def.glass }) : undefined);
         if (o.def.shutters !== false && sx > 0.9 && s.c - 1.3 > 0 && s.c + 1.3 < L) add(F, k[2], s.c, 0, 0, S, EXT);
-        if (!o.def.glass && !st.arch && sx > 0.9 && (wn === 'front' || R() < 0.3) && R() < 0.7) { const fb = (kitFB = kitFB || [0, 1, 2].map(i => genFlowerBox(1.25, rng(70 + i)))); c.kb.add(R.pick(fb), KH.xf(F, s.c, 0.9 * sy, 0.27, 1, 0), EXT); }
+        if (X && !o.def.glass && !st.arch && sx > 0.9 && (wn === 'front' || R() < 0.3) && R() < 0.7) { const fb = (kitFB = kitFB || [0, 1, 2].map(i => genFlowerBox(1.25, rng(70 + i)))); c.kb.add(R.pick(fb), KH.xf(F, s.c, 0.9 * sy, 0.27, 1, 0), EXT); }
       }
       cur = s.c + sx;
     }
@@ -3581,7 +3907,7 @@ function kitShell(c) {
     add(F, 'Corner_Exterior_Wood', 0, 0, 0, [1.25, sy, 1.25], EXT);
     // ── upper storey: timber and plaster, windows on alternate panels, a balcony over the door on some ──
     if (st.up) {
-      const n = Math.max(1, Math.round(L / 2)), m = L / n, sx = m / 2, S = [sx, 1, 1], mid = n >> 1;
+      const n = Math.max(1, Math.round(L / 2)), m = L / n, sx = m / 2, S = [sx, 1, 1], mid = n >> 1, RU = rng(site.x * 91 + site.z * 7 + wn.charCodeAt(0) * 13);       // its own sequence: the inside copy of the wall must pick the same windows
       for (let k = 0; k < n; k++) {
         const uc = (k + 0.5) * m;
         if (st.balcony === wn && n >= 3 && k === mid) {
@@ -3592,7 +3918,7 @@ function kitShell(c) {
         } else if (n > 1 && k === 0) add(F, 'Wall_Plaster_Straight_L', uc, H, 0, S, UP);
         else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, 0, S, UP);
         else if (n <= 3 || (k + (wn === 'front' || wn === 'back' ? 0 : 1)) % 2 === 1) {
-          const r = R();
+          const r = RU();
           if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); }
           else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
           else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, 0, S, UP); add(F, kitOpen('Window_Thin_Round1'), uc, H, 0, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
@@ -3603,36 +3929,36 @@ function kitShell(c) {
     // ── gable ends carry the timber triangle of the roof ──
     if ((wn === 'left' || wn === 'right') && !(st.shingle && typeof infRoofGen === 'function')) { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; const gw = spec.gableWin && spec.gableWin[wn] && Kit.pieces['Roof_Front_Brick' + span + '_Open'];
       add(F, 'Roof_Front_Brick' + span + (gw ? '_Open' : ''), L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO });
-      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT)); }
+      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT), pass, ext); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.45, inZone: st.up ? 0 : zone, inSky: st.up ? 0.2 : INT_AO, tint: st.timber ? [1, 1, 1] : [1, 1, 1] });
+  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: [1, 1, 1] }); }
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
     let name = 'Roof_RoundTiles_' + span + 'x' + len; const ridge = Kit.info(name).max[1]; if (st.shingle && typeof infR === 'function') name = infR(name);
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
-    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), { zone: 0, skyVis: 1, inZone: zone, inSkyVis: 0.2 });
+    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), pass === 'int' ? { zone, skyVis: INT_AO, inZone: zone, inSkyVis: 0.2 } : { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : 0.2 });
   }
-  // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance) ──
-  {
+  // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance; in a cell they are the cell's) ──
+  if (I) {
     const nx = Math.max(1, Math.round(w / 2)), nz = Math.max(1, Math.round(d / 2)), sx = (w - 0.3) / (2 * nx), sz = (d - 0.3) / (2 * nz), tile = spec.floor === 'stone' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';
     for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) b.add(tile, KH.xf(MS, (i - (nx - 1) / 2) * 2 * sx, 0.012, (j - (nz - 1) / 2) * 2 * sz, [sx, 1, sz]), { zone, skyVis: INT_AO, cast: false });
   }
   // ── generated parts that still make sense: stone plinth down to the ground, door steps, ceiling or roof lining ──
   const inner = () => { ext.m1 = zone; ext.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
-  outer(); ext.mat(MAT.STONE, [0.92, 0.92, 0.92]); ext.grad = [1, 0.6]; ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4); ext.grad = null;
-  for (const wn in WALLS) for (const o of openings[wn]) if (o.door) {
+  if (X) outer(), ext.mat(MAT.STONE, [0.92, 0.92, 0.92]), ext.grad = [1, 0.6], ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4), ext.grad = null;
+  if (X) for (const wn in WALLS) for (const o of openings[wn]) if (o.door) {
     ext.push(); m4.mul(ext.m, ext.m, wbs[wn]); ext.dirty = true;
     outer(); ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(o.u0 - 0.35, -0.5, 0, o.u1 + 0.35, -0.02, 0.5); ext.box(o.u0 - 0.2, -0.5, 0.5, o.u1 + 0.2, -0.17, 0.95);
     ext.pop();
   }
   const e = 0.16;          // the kit walls are thinner than the generated ones: reach to their inner face
   if (st.up) c.needUpper = true;           // a second storey: its floor, with the stairwell, is built by the building (upperFloor in 71b_storeys.js)
-  if (spec.ceiling && !st.up) {
+  if (I && spec.ceiling && !st.up) {
     inner(); ext.mat(MAT.PLANKS, COL.wood); ext.ao = INT_AO * 0.85;
     ext.quad([-w / 2 + e, H, hd - e], [-w / 2 + e, H, -hd + e], [w / 2 - e, H, -hd + e], [w / 2 - e, H, hd - e]);
-  } else if (!st.up) {
+  } else if (I && !st.up) {
     const roofY = c.roofY;
     ext.mat(MAT.PLANKS, COL.woodDark);
     for (const s of [-1, 1]) {
@@ -3645,9 +3971,9 @@ function kitShell(c) {
       ext.pop();
     }
   }
-  c.kCol0 = World.colliders.length;
+  if (I) c.kCol0 = World.colliders.length;
   // lanterns by the doors
-  for (const l of c.kDoorLamps) {
+  if (X) for (const l of c.kDoorLamps) {
     if (site.infill && typeof INFS !== 'undefined' && INFS.mats) {          // a small generated bracket lantern instead of the 2800-triangle kit lantern
       const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), q = KH.xf(l.F, l.u, 2.15, 0.1, 1, 0), p0 = new THREE.Vector3(0, -0.1, 0.42).applyMatrix4(q), p = [p0.x, p0.y, p0.z];
       b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
@@ -3660,10 +3986,9 @@ function kitShell(c) {
 }
 // a kit chimney above a hearth at house-local (lx, lz), rising clear of the ridge
 function kitChimney(c, lx, lz) {
-  lz = Math.max(-c.hd * 0.3, Math.min(c.hd * 0.3, lz));          // keep it near the ridge: out on the slope its stretched base hangs below the eave
-  const ridge = c.kYtop + c.hd * c.tanP, base = c.kYtop + (c.hd - Math.abs(lz)) * c.tanP - 1.0, hgt = Math.max(3.18, ridge + 1.1 - base);
-  c.kb.add('Prop_Chimney', KH.xf(c.kMS, lx, base, lz, [1.1, hgt / 3.18, 1.1]), { zone: 0, skyVis: 1 });
-  World.emitters.push({ type: 'smoke', p: m4.tp(c.Ms, [lx, base + hgt + 0.2, lz]), zone: 0 });
+  lx = clamp(lx, -c.w / 2 + 0.6, c.w / 2 - 0.6); lz = clamp(lz, -c.hd * 0.3, c.hd * 0.3);          // inside the footprint, near the ridge
+  const top = infChimney(c.kb, c.kMX, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0, lift: 0.14 });
+  World.emitters.push({ type: 'smoke', p: m4.tp(c.Mx, [lx, top + 0.2, lz]), zone: 0 });
 }
 
 // ── furnishing: Props.* calls land here while kits are loaded and are answered with kit pieces at the same spot ──
@@ -3672,7 +3997,7 @@ const KITP = { rnd: rng(4242), lc: {} };
 const kitLightOk = (zone, cap) => { const n = KITP.lc[zone] = (KITP.lc[zone] || 0) + 1; return n <= cap; };
 function kitIntBatch(zone) {
   let k = World.kitInt[zone];
-  if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
+  if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null, cell: zi ? zi.cell : null }; }
   return k.batch;
 }
 // ── scanned stand-ins ──
@@ -4017,14 +4342,16 @@ function kitAttach() {
     const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.frustumCulled = false; mesh.matrixAutoUpdate = false; mesh.renderOrder = -5; mesh.name = 'kit-shadow-proxy'; SC.scene.add(mesh);
   }
   try { const sb = kitScatter(); if (sb) addG(sb.build(), { scatter: true }); } catch (e) { console.warn('scan scatter skipped: ' + (e && e.message || e)); }
-  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) { const g = k.batch.build(); furnBlobs(+z, g); addG(g, { site: k.site, interior: true }); } }
-  for (const z in World.kitFine) { const k = World.kitFine[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true, fine: true }); }
+  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) { const g = k.batch.build(); furnBlobs(+z, g); addG(g, { site: k.site, interior: true, cell: k.cell }); } }
+  for (const z in World.kitFine) { const k = World.kitFine[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true, fine: true, cell: k.cell }); }
   if (World.kitYard && World.kitYard.count) { const g = World.kitYard.build(); g.traverse(o => { if (o.isMesh) o.layers.set(1); }); addG(g, { yard: true }); }
   const inner = sceneUpdate;
   sceneUpdate = function (camPos, q) {
     inner(camPos, q);
     // furniture only shows through an open door or a window, so it is drawn for the nearest buildings alone
+    const cur = World.cell;
     for (const k of World.kitGroups) {
+      if (cur || k.cell) { k.g.visible = !!cur && k.cell === cur.id && !(k.fine && q.name === 'Low'); continue; }        // in a cell: that cell's groups only; outside: no cell's
       if (k.interior && k.site) k.g.visible = interiorShown(k.site, camPos) && !(k.fine && q.name === 'Low');
       else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
       else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
@@ -4032,7 +4359,7 @@ function kitAttach() {
       else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? 9 : q.yardRange * 1.6 + 8) && (!k.dress || q.scatter); }
       else k.g.visible = true;
     }
-    if (Kit.update) Kit.update(camPos);
+    if (Kit.update && !cur) Kit.update(camPos);
   };
 }
 
@@ -4329,8 +4656,9 @@ UPPER.mill = c => {
 
 // ── gable windows: the plaster of a gable end with holes cut in it, and the kit's open window frames in the holes ──
 // wb: the wall's basis (house-local), L: its length, Ytop: where the gable starts, wins: [{ u: position along the wall, sill: height above the gable's foot, s: scale of the kit window }]
-function gableFill(c, wb, L, Ytop, wins, placeWin) {
-  const ext = c.ext, { zone, tanP, hd } = c, T = 0.25, inset = 0.3, apex = Ytop + hd * tanP - 0.5, col = c.spec.plaster || [1, 0.96, 0.88];
+function gableFill(c, wb, L, Ytop, wins, placeWin, pass, ext) {
+  ext = ext || c.ext; pass = pass || 'both';
+  const { zone, tanP, hd } = c, T = 0.25, inset = 0.3, apex = Ytop + hd * tanP - 0.5, col = c.spec.plaster || [1, 0.96, 0.88];
   const P = (u, v, n) => m4.tp(wb, [u, v, n]);
   const hw = 0.6, holes = wins.map(w => (w = Object.assign({ u: L / 2 }, w), { u0: w.u - hw * w.s, u1: w.u + hw * w.s, v0: Ytop + w.sill, v1: Ytop + w.sill + 1.55 * w.s, w })).sort((a, b) => a.u0 - b.u0);
   const left = v => inset + (v - Ytop) / tanP, right = v => L - inset - (v - Ytop) / tanP;       // the fill stops inside the rafters
@@ -4346,13 +4674,13 @@ function gableFill(c, wb, L, Ytop, wins, placeWin) {
       for (const [a0, a1, b0, b1] of segs) { if (b0 - a0 < 0.02 && b1 - a1 < 0.02) continue; if (vb >= apex - 0.001 && Math.abs(b1 - a1) < 0.05) continue; q([a0, va], [b0, va], [b1, vb], [a1, vb]); }
     }
   };
-  ext.m1 = 0; ext.ao = 1; ext.mat(MAT.PLASTER, col); face(0, false);
-  ext.m1 = zone; ext.ao = INT_AO; ext.mat(MAT.PLASTER, [col[0] * 0.97, col[1] * 0.95, col[2] * 0.9]); face(-T, true);
+  if (pass !== 'int') { ext.m1 = 0; ext.ao = 1; ext.mat(MAT.PLASTER, col); face(0, false); }
+  if (pass !== 'ext') { ext.m1 = zone; ext.ao = INT_AO; ext.mat(MAT.PLASTER, [col[0] * 0.97, col[1] * 0.95, col[2] * 0.9]); face(-T, true); }
   // reveals round each hole, then the frame
   for (const h of holes) {
-    ext.m1 = 0; ext.ao = 0.8; ext.mat(MAT.TIMBER, c.spec.timber || COL.timber);
+    if (pass !== 'int') { ext.m1 = 0; ext.ao = 0.8; ext.mat(MAT.TIMBER, c.spec.timber || COL.timber);
     const a = [h.u0, h.v0], b = [h.u1, h.v0], e = [h.u1, h.v1], d = [h.u0, h.v1];
-    for (const [p0, p1] of [[a, b], [b, e], [e, d], [d, a]]) ext.quad(P(p0[0], p0[1], 0), P(p1[0], p1[1], 0), P(p1[0], p1[1], -T), P(p0[0], p0[1], -T), 0, 0, 1, 1);
+    for (const [p0, p1] of [[a, b], [b, e], [e, d], [d, a]]) ext.quad(P(p0[0], p0[1], 0), P(p1[0], p1[1], 0), P(p1[0], p1[1], -T), P(p0[0], p0[1], -T), 0, 0, 1, 1); }
     ext.ao = 1; ext.m1 = 0; placeWin(kitOpen('Window_Wide_Flat1'), (h.u0 + h.u1) / 2, h.v0 - 0.95 * h.w.s, h.w.s);
   }
   ext.m1 = 0; ext.ao = 1;
@@ -4729,7 +5057,7 @@ const FURN = { blobs: {} };
 // the fine group of a room: small objects, drawn on medium and high only (see kitAttach)
 World.kitFine = {};
 function furnFineBatch(zone) {
-  let k = World.kitFine[zone]; if (!k) { const zi = World.zones[zone - 1]; k = World.kitFine[zone] = { batch: Kit.batch({ name: 'kitfine-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
+  let k = World.kitFine[zone]; if (!k) { const zi = World.zones[zone - 1]; k = World.kitFine[zone] = { batch: Kit.batch({ name: 'kitfine-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null, cell: zi ? zi.cell : null }; }
   return k.batch;
 }
 function furnBlob(zone, P) {
@@ -5048,6 +5376,8 @@ function furnishHouse(c) {
 // ---- 72c_infill.js ----
 // ───────────────────────── the enterable infill houses: generic cottage interiors, each furnished a little differently ─────────────────────────
 // Sites are chosen in 55b_infill.js (INF.enterIds); the shell is kit-built (71_kithouse.js, shared 'infill' batch, plank walls and shingle roof).
+// every roof of the town is the generated shingle roof (one texel density, one overhang, one ridge cap): the three buildings that still used the stretched kit roof tiles join it
+for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].shingle = true;
 (function infillSpecs() {
   const VARIANTS = [
     { opt: { blanket: [0.45, 0.3, 0.2], shelfItems: ['jug', 'bowl', 'pot', 'bowl', 'cheese', 'jug'], rug: [0.45, 0.3, 0.2], tableItems: ['bowl', 'loaf', 'mug', 'cheese'], seats: 'stools' }, up: 0, ground: 'plaster' },
@@ -5071,6 +5401,768 @@ function furnishHouse(c) {
 })();
 
 
+// ---- 72d_plan.js ----
+// ───────────────────────── plans: interiors laid out like an architect, then dressed like a set decorator ─────────────────────────
+// A cell's interior is a PLAN, not a hollowed-out shell. Per level (cellar -1, ground 0, upper 1) there are rooms (rectangles on a 0.5 m grid, canonical frame:
+// the entrance on the -z side), doorways between them, stairs between levels and windows on the walls that are outside walls in the plan. From that the
+// walls (kit panels, 0.4 m thick, centred on the room edges), floors, ceilings, stairwell openings, colliders and the navigation graph follow. Furniture is placed
+// by rules (footprints, wall bands, clear zones) and recorded; planValidate() checks the records (no overlaps, nothing in doors or on stairs, nothing floating,
+// every room reachable). The canonical frame is turned and moved onto the cell's door by one matrix (T), so a door on any side works.
+// Lengths are metres. Wall sides: 'n' = the z0 edge, 's' = z1, 'w' = x0, 'e' = x1 (room-relative: the wall a room has at that side).
+const PLAN_ON = !(TEST && TEST.plans === 0);
+const PW = { T: 0.4, IN: 0.2, SLAB: 0.25, DOOR: 1.1 };
+const rectOf = (cx, cz, w, d) => ({ x0: cx - w / 2, z0: cz - d / 2, x1: cx + w / 2, z1: cz + d / 2 });
+const rOv = (a, b, g) => { g = g || 0; return a.x0 < b.x1 - g && a.x1 > b.x0 + g && a.z0 < b.z1 - g && a.z1 > b.z0 + g; };
+const rIn = (r, o) => r.x0 >= o.x0 - 1e-6 && r.x1 <= o.x1 + 1e-6 && r.z0 >= o.z0 - 1e-6 && r.z1 <= o.z1 + 1e-6;
+const rGrow = (r, g) => ({ x0: r.x0 - g, z0: r.z0 - g, x1: r.x1 + g, z1: r.z1 + g });
+const SIDES = { n: { ax: 'x', dz: -1 }, s: { ax: 'x', dz: 1 }, w: { ax: 'z', dx: -1 }, e: { ax: 'z', dx: 1 } };
+const OPP = { n: 's', s: 'n', w: 'e', e: 'w' };
+// rotation (about y, as in at()) that puts an item's back (local -z when back = -1, +z when back = +1) against the wall on this side of its room
+const rotBack = (side, back) => ({ n: 0, s: PI, w: PI / 2, e: -PI / 2 }[side] + (back > 0 ? PI : 0));
+
+function planNew(c, T) {
+  const P = { c, zone: c.zone, R: c.R, T, id: c.site.id, lv: {}, rooms: {}, doors: [], stairs: [], walls: [], windows: [], items: [], wallItems: [], clear: [], holes: [], spots: {}, lights: 0, err: [], lightIn: {}, lights0: World.lights.length };
+  P.MS = new THREE.Matrix4().fromArray(T);
+  P.w2 = (x, y, z) => m4.tp(T, [x, y, z]);                      // canonical -> world
+  P.yaw = c.planYaw || 0;                                     // canonical yaw -> world yaw: add this
+  P.occ = (k, r, kind, id, extra) => pOcc(P, k, r, kind, id, extra);
+  return P;
+}
+// a level: k (-1, 0, 1), y = floor height above the entrance floor, H = clear height to the ceiling slab
+function pLevel(P, k, y, H, o) { P.lv[k] = Object.assign({ k, y, H, rooms: [], items: [] }, o || {}); return P.lv[k]; }
+function pRoom(P, k, id, kind, x0, z0, x1, z1, o) {
+  const r = Object.assign({ id, kind, k, x0, z0, x1, z1, floor: 'wood', win: true, doors: [] }, o || {}), L = P.lv[k];
+  if ([x0, z0, x1, z1].some(v => Math.abs(v * 2 - Math.round(v * 2)) > 1e-6)) P.err.push('room ' + id + ' off the 0.5 m grid');
+  r.in = { x0: x0 + PW.IN, z0: z0 + PW.IN, x1: x1 - PW.IN, z1: z1 - PW.IN };
+  L.rooms.push(r); P.rooms[id] = r; return r;
+}
+// a doorway on the wall between rooms a and b (b = null: outside) at the point (x, z) on their shared edge; w = clear width
+function pDoor(P, a, b, x, z, o) { const d = Object.assign({ a, b, x, z, w: PW.DOOR, k: P.rooms[a].k, frame: true }, o || {}); P.doors.push(d); return d; }
+
+// ── layout: walls from room edges, windows, clear zones, stairwell holes ──
+function pLayout(P) {
+  for (const k in P.lv) {
+    const L = P.lv[k], lines = {};
+    const unit = (ax, c, i) => { const key = ax + c, a = lines[key] || (lines[key] = { ax, c, u: new Map() }); let u = a.u.get(i); if (!u) a.u.set(i, u = {}); return u; };
+    for (const r of L.rooms) {
+      for (let i = r.z0 * 2; i < r.z1 * 2; i++) { unit('z', r.x0, i).plus = r; unit('z', r.x1, i).minus = r; }       // walls running along z at x = x0 / x1
+      for (let i = r.x0 * 2; i < r.x1 * 2; i++) { unit('x', r.z0, i).plus = r; unit('x', r.z1, i).minus = r; }       // walls running along x at z = z0 / z1
+    }
+    for (const key in lines) {
+      const ln = lines[key], idx = [...ln.u.keys()].sort((a, b) => a - b); let cur = null;
+      const prio = r => r.kind === 'hall' || r.kind === 'common' || r.kind === 'nave' || r.kind === 'shop' || r.kind === 'corridor' ? 0 : 1;
+      for (const i of idx) {
+        const u = ln.u.get(i), ext = !(u.plus && u.minus), ns = ext ? (u.plus ? -1 : 1) : (prio(u.minus) <= prio(u.plus) ? -1 : 1);       // n points to the empty side (outside) / the lesser room
+        if (cur && cur.b === i / 2 && cur.ext === ext && cur.ns === ns && cur.cellar === (L.k < 0)) { cur.b = (i + 1) / 2; if (u.plus) cur.rooms.add(u.plus.id); if (u.minus) cur.rooms.add(u.minus.id); continue; }
+        cur = { k: L.k, ax: ln.ax, c: ln.c, a: i / 2, b: (i + 1) / 2, ext, ns, cellar: L.k < 0, rooms: new Set([u.plus && u.plus.id, u.minus && u.minus.id].filter(Boolean)), open: [] };
+        P.walls.push(cur);
+      }
+    }
+  }
+  // doorways -> openings on the wall that carries them
+  for (const d of P.doors) {
+    const wl = P.walls.find(w => w.k === d.k && (w.ax === 'x' ? Math.abs(w.c - d.z) < 0.01 && d.x > w.a - 1e-6 && d.x < w.b + 1e-6 : Math.abs(w.c - d.x) < 0.01 && d.z > w.a - 1e-6 && d.z < w.b + 1e-6) && (d.b === null ? w.ext : (w.rooms.has(d.a) && w.rooms.has(d.b))));
+    if (!wl) { P.err.push('door ' + d.a + '/' + d.b + ' at ' + d.x + ',' + d.z + ' is on no wall'); continue; }
+    d.wall = wl; d.pos = wl.ax === 'x' ? d.x : d.z; wl.open.push({ type: 'door', pos: d.pos, hw: d.w / 2, d });
+    d.side = wl.ax === 'x' ? 'x' : 'z';
+    for (const id of [d.a, d.b]) if (id) P.rooms[id].doors.push(d);
+  }
+  // windows on outside walls (levels at or above the ground; the cellar gets high slits only)
+  const WIN = ['Wide_Flat', 'Thin_Round', 'Wide_Round'];
+  for (const wl of P.walls) {
+    if (!wl.ext || wl.k < 0) continue;
+    for (const rid of wl.rooms) {
+      const room = P.rooms[rid]; if (!room || room.win === false) continue;
+      const lo = Math.max(wl.a, wl.ax === 'x' ? room.x0 : room.z0), hi = Math.min(wl.b, wl.ax === 'x' ? room.x1 : room.z1), L = hi - lo;
+      if (L < 2.8) continue;
+      const n = Math.max(1, Math.floor(L / 3.0)), pitch = L / n;
+      for (let i = 0; i < n; i++) {
+        const p = Math.round((lo + pitch * (i + 0.5)) * 2) / 2;
+        if (wl.open.some(o => Math.abs(o.pos - p) < o.hw + 1.45) || p - 0.8 < lo + 0.3 || p + 0.8 > hi - 0.3) continue;
+        const kind = WIN[Math.abs(Math.round(wl.c * 3 + p * 7)) % 3], o = { type: 'win', pos: p, hw: 0.8, kind };
+        wl.open.push(o); P.windows.push({ wall: wl, pos: p, kind, k: wl.k, room });
+      }
+    }
+  }
+  // the stairs: holes in the level above and clear zones at both ends
+  for (const s of P.stairs) pStairGeom(P, s);
+  // the way people need: clear zones round every doorway (both sides) and between the doors of a room
+  for (const d of P.doors) {
+    const wl = d.wall; if (!wl) continue;
+    const z = wl.ax === 'x' ? { x0: d.x - 0.75, x1: d.x + 0.75, z0: d.z - 0.95, z1: d.z + 0.95 } : { x0: d.x - 0.95, x1: d.x + 0.95, z0: d.z - 0.75, z1: d.z + 0.75 };
+    P.clear.push(Object.assign(z, { k: d.k, kind: 'door', ref: d }));
+  }
+  for (const id in P.rooms) {
+    const r = P.rooms[id], cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2, pts = r.doors.filter(d => d.wall).map(d => d.wall.ax === 'x' ? [d.x, d.z + (cz > d.z ? 1 : -1) * Math.min(1.9, Math.abs(cz - d.z))] : [d.x + (cx > d.x ? 1 : -1) * Math.min(1.9, Math.abs(cx - d.x)), d.z]);
+    for (const s of P.stairs) { if (s.k0 === r.k && rOv(s.low, rGrow(r, 0.1))) { const q = s.lowPt.slice(); q.stair = 1; pts.push(q); } if (s.k1 === r.k && rOv(s.high, rGrow(r, 0.1))) { const q = s.highPt.slice(); q.stair = 1; pts.push(q); } }
+    r.pts = pts;
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const a = pts[i], b = pts[j]; if (a.stair && b.stair) continue; const x0 = Math.min(a[0], b[0]) - 0.45, x1 = Math.max(a[0], b[0]) + 0.45, z0 = Math.min(a[1], b[1]) - 0.45, z1 = Math.max(a[1], b[1]) + 0.45;
+      // an L or diagonal path: the bend is at whichever end lies nearer the middle of the room
+      const dx = Math.abs(a[0] - b[0]), dz = Math.abs(a[1] - b[1]);
+      if (dx < 0.01 || dz < 0.01) P.clear.push({ x0, x1, z0, z1, k: r.k, kind: 'path', room: r });
+      else {
+        const zc = Math.abs(a[1] - cz) < Math.abs(b[1] - cz) ? a[1] : b[1], q = (x0_, x1_, z0_, z1_) => P.clear.push({ x0: x0_, x1: x1_, z0: z0_, z1: z1_, k: r.k, kind: 'path', room: r });
+        q(Math.min(a[0], b[0]) - 0.45, Math.max(a[0], b[0]) + 0.45, zc - 0.45, zc + 0.45); q(a[0] - 0.45, a[0] + 0.45, Math.min(a[1], zc) - 0.45, Math.max(a[1], zc) + 0.45); q(b[0] - 0.45, b[0] + 0.45, Math.min(b[1], zc) - 0.45, Math.max(b[1], zc) + 0.45);
+      }
+    }
+  }
+}
+
+// ── stairs ──
+// s: { id, k0, k1, axis: 'x'|'z', dir: +1|-1, x, z (centre of the low end), width, name }: climbs from level k0 to k1 along the axis in the given direction
+function pStair(P, s) {
+  const a = P.lv[s.k0], b = P.lv[s.k1]; s.rise = b.y - a.y; s.width = s.width || 1.0; s.n = Math.ceil(s.rise / 0.19); s.tread = s.tread || 0.27; s.run = s.n * s.tread;
+  P.stairs.push(s); return s;
+}
+function pStairGeom(P, s) {
+  const hw = s.width / 2 + 0.05, ax = s.axis, d = s.dir, p0 = ax === 'x' ? s.x : s.z, p1 = p0 + d * s.run, lat = ax === 'x' ? s.z : s.x;
+  const rect = (a, b, la, lb) => ax === 'x' ? { x0: Math.min(a, b), x1: Math.max(a, b), z0: la, z1: lb } : { x0: la, x1: lb, z0: Math.min(a, b), z1: Math.max(a, b) };
+  s.p0 = p0; s.p1 = p1; s.lat = lat; s.hw = hw;
+  s.low = rect(p0, p1, lat - hw, lat + hw); s.high = s.low;
+  s.hole = rect(p0 - d * 0.8, p1, lat - hw - 0.1, lat + hw + 0.1);        // the opening in the slab of the level above: the whole run
+  s.lowPt = ax === 'x' ? [p0 - d * 0.7, lat] : [lat, p0 - d * 0.7];       // where one stands to start up
+  s.highPt = ax === 'x' ? [p1 + d * 0.8, lat] : [lat, p1 + d * 0.8];      // where one stands when arrived
+  P.holes.push({ k: s.k1, r: s.hole, stair: s });
+  P.clear.push(Object.assign(rect(p0 - d * 1.3, p0, lat - hw - 0.1, lat + hw + 0.1), { k: s.k0, kind: 'stair' }), Object.assign(rect(p1, p1 + d * 1.3, lat - hw - 0.1, lat + hw + 0.1), { k: s.k1, kind: 'stair' }));
+  P.occ(s.k0, rect(p0, p1, lat - hw - 0.08, lat + hw + 0.08), 'stair', s.id);            // the steps and stringers on the lower level
+  P.occ(s.k1, s.hole, 'hole', s.id);            // and the opening above them
+}
+
+// ── occupancy and placement ──
+const P_SOLID = { floor: 1, stair: 1, hole: 1, hearth: 1, post: 1 };
+function pOcc(P, k, r, kind, id, extra) { const it = Object.assign({ k, x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1, kind, id }, extra || {}); P.items.push(it); return it; }
+// can a rectangle (with a height) stand here? inside the room, off every other solid thing, out of the clear zones (door approaches, paths, stair ends) and, when tall, out of the way of windows
+function pFit(P, room, r, o) {
+  o = o || {}; const k = room.k, h = o.h || 0.5;
+  if (!rIn(r, room.in)) return false;
+  for (const it of P.items) if (it.k === k && P_SOLID[it.kind] && rOv(r, it, 0.015)) return false;
+  if (!o.noClear) for (const z of P.clear) if (z.k === k && rOv(r, z, 0.01) && !(o.allow && o.allow.includes(z.kind))) return false;
+  if (h > 0.85 && !o.lowOk) for (const w of P.windows) if (w.k === k && w.room === room) { const z = pWinZone(w); if (rOv(r, z, 0.01)) return false; }
+  return true;
+}
+// the floor in front of a window that tall furniture must leave free
+function pWinZone(w) {
+  const wl = w.wall, ns = wl.ns, depth = 0.55, hw = 0.95;
+  return wl.ax === 'x' ? { x0: w.pos - hw, x1: w.pos + hw, z0: ns < 0 ? wl.c - 0.2 : wl.c - 0.2 - depth, z1: ns < 0 ? wl.c + 0.2 + depth : wl.c + 0.2 } : { x0: ns < 0 ? wl.c - 0.2 : wl.c - 0.2 - depth, x1: ns < 0 ? wl.c + 0.2 + depth : wl.c + 0.2, z0: w.pos - hw, z1: w.pos + hw };
+}
+// the footprint of a w x d item (w along x, d along z before turning) turned by rot (a multiple of PI/2)
+function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2))) & 1; return q ? rectOf(cx, cz, d, w) : rectOf(cx, cz, w, d); }
+// put an item: it is drawn with draw(m) at (cx, cz) turned by rot, on the level's floor (or at y = lift above it), and recorded. Returns the record or null when it does not fit.
+function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
+  o = o || {}; const r = pFoot(cx, cz, w, d, rot);
+  if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
+  const L = P.lv[room.k], m = P.c.int; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m));
+  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), top: o.surface ? h : 0, back: o.back });
+  if (o.flat) it.kind = 'rug'; return it;
+}
+// along a wall of the room, w wide (along the wall) and d deep; o.at: 'start' | 'end' | 'mid' | a coordinate along the wall to be near. Tries every 0.25 m.
+function pWallSlot(P, room, side, w, d, o) {
+  o = o || {}; const a = room.in, hor = side === 'n' || side === 's', lo = (hor ? a.x0 : a.z0) + w / 2, hi = (hor ? a.x1 : a.z1) - w / 2, pts = [];
+  for (let t = lo; t <= hi + 1e-6; t += 0.25) pts.push(t);
+  const want = o.at === 'end' ? hi : o.at === 'mid' || o.at === undefined ? (lo + hi) / 2 : o.at === 'start' ? lo : o.at;
+  pts.sort((p, q) => Math.abs(p - want) - Math.abs(q - want));
+  for (const t of pts) {
+    const cz = side === 'n' ? a.z0 + d / 2 : side === 's' ? a.z1 - d / 2 : t, cx = side === 'w' ? a.x0 + d / 2 : side === 'e' ? a.x1 - d / 2 : t;
+    const px = hor ? t : cx, pz = hor ? cz : t, r = hor ? rectOf(px, pz, w, d) : rectOf(px, pz, d, w);
+    if (pFit(P, room, r, o)) return { cx: px, cz: pz, rect: r };
+  }
+  return null;
+}
+// an item with its back to a wall (back = -1: its local -z is the back, as a bed's head; +1: its +z, as a shelf's)
+function pAgainst(P, room, side, name, w, d, h, back, draw, o) {
+  o = Object.assign({ h }, o || {}); const s = pWallSlot(P, room, side, w, d, o); if (!s) return null;
+  return pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side }));
+}
+// anywhere free in the room: tries the centre, then rings round it (o.near = [x, z] to start from), o.step 0.25
+function pFree(P, room, name, w, d, h, rot, draw, o) {
+  o = o || {}; const a = room.in, c0 = o.near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = [];
+  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3; z += 0.25) pts.push([x, z]);
+  pts.sort((p, q) => Math.hypot(p[0] - c0[0], p[1] - c0[1]) - Math.hypot(q[0] - c0[0], q[1] - c0[1]));
+  for (const p of pts) { const it = pPut(P, room, name, p[0], p[1], rot, w, d, h, draw, o); if (it) return it; }
+  return null;
+}
+// something hung on a wall: a band [y0, y1] and a span along the wall, kept off windows, doorways and other hung things, and clear of tall furniture against that wall
+function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
+  o = o || {}; const a = room.in, L = P.lv[room.k], hor = side === 'n' || side === 's';
+  const wl = P.walls.find(q => q.k === room.k && (hor ? q.ax === 'x' : q.ax === 'z') && Math.abs(q.c - (side === 'n' ? room.z0 : side === 's' ? room.z1 : side === 'w' ? room.x0 : room.x1)) < 0.01 && u > q.a && u < q.b);
+  if (!wl) return null;
+  const rec = { k: room.k, wall: wl, u0: u - w / 2, u1: u + w / 2, y0, y1, id: name, room: room.id, side };
+  if (rec.u0 < (hor ? a.x0 : a.z0) - 1e-6 || rec.u1 > (hor ? a.x1 : a.z1) + 1e-6) return null;
+  for (const op of wl.open) { const hw = op.type === 'door' ? op.hw + 0.1 : 0.9; if (rec.u0 < op.pos + hw && rec.u1 > op.pos - hw && (op.type === 'door' || (y1 > 0.85 && y0 < 2.4))) return null; }
+  for (const q of P.wallItems) if (q.k === rec.k && q.wall === wl && q.side === side && rec.u0 < q.u1 + 0.05 && rec.u1 > q.u0 - 0.05 && rec.y0 < q.y1 + 0.05 && rec.y1 > q.y0 - 0.05) return null;
+  for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
+  const m = P.c.int, p = hor ? [u, side === 'n' ? a.z0 : a.z1] : [side === 'w' ? a.x0 : a.x1, u];
+  const rot = rotBack(side, +1);
+  at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0));
+  P.wallItems.push(rec); return rec;
+}
+const pCentre = r => [(r.in.x0 + r.in.x1) / 2, (r.in.z0 + r.in.z1) / 2];
+const pRoomAt = (P, k, x, z) => { for (const id in P.rooms) { const r = P.rooms[id]; if (r.k === k && x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) return r; } return null; };
+
+// ── registration of the things the village looks for: spots, interact points, lights ──
+function pSpot(P, name, x, z, yaw, o) {
+  o = o || {}; const k = o.k === undefined ? 0 : o.k, L = P.lv[k], y = (o.y === undefined ? 0.02 : o.y) + L.y;
+  const p = P.w2(x, y, z); World.spots[P.id + '.' + name] = Object.assign({ p, yaw: yaw + P.yaw, zone: P.zone, site: P.id, k, room: (pRoomAt(P, k, x, z) || {}).id }, o.extra || {});
+  P.spots[name] = { x, z, k, yaw, p };
+}
+function pInteract(P, x, y, z, o, k) { const L = P.lv[k || 0]; const it = Object.assign({ p: P.w2(x, y + L.y, z), r: 2.0, zone: P.zone }, o); World.interact.push(it); return it; }
+function pLight(P, x, y, z, r, col, kind, k) { const L = P.lv[k || 0], rm = pRoomAt(P, k || 0, x, z); if (rm) P.lightIn[rm.id] = 1; P.lights++; return addLight(P.w2(x, y + L.y, z), r, col, P.zone, kind); }
+
+// ── geometry: floors, ceilings, walls (kit panels), stairs ──
+function rSub(r, h) {         // r minus the rectangle h: up to four rectangles
+  if (!rOv(r, h)) return [r];
+  const out = [], ix0 = Math.max(r.x0, h.x0), ix1 = Math.min(r.x1, h.x1);
+  if (h.z0 > r.z0) out.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: h.z0 }); if (h.z1 < r.z1) out.push({ x0: r.x0, x1: r.x1, z0: h.z1, z1: r.z1 });
+  if (h.x0 > r.x0) out.push({ x0: r.x0, x1: h.x0, z0: Math.max(r.z0, h.z0), z1: Math.min(r.z1, h.z1) }); if (h.x1 < r.x1) out.push({ x0: h.x1, x1: r.x1, z0: Math.max(r.z0, h.z0), z1: Math.min(r.z1, h.z1) });
+  return out.filter(q => q.x1 - q.x0 > 0.01 && q.z1 - q.z0 > 0.01);
+}
+const rSubAll = (r, holes) => holes.reduce((acc, h) => acc.flatMap(q => rSub(q, h)), [r]);
+function pBuild(P) {
+  const c = P.c, m = c.int, B = kitIntBatch(P.zone), zone = P.zone, MS = P.MS, IN = { zone, skyVis: INT_AO, inZone: zone, inSkyVis: INT_AO }, FL = { zone, skyVis: INT_AO, cast: false };
+  m.m1 = zone; m.ao = INT_AO;
+  for (const k in P.lv) {
+    const L = P.lv[k], holes = P.holes.filter(h => h.k === L.k).map(h => h.r), above = P.holes.filter(h => h.k === L.k + 1).map(h => h.r);
+    for (const r of L.rooms) {
+      const tile = r.floor === 'stone' ? 'Floor_UnevenBrick' : r.floor === 'cobble' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';
+      for (const q of rSubAll({ x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1 }, holes)) {
+        const nx = Math.max(1, Math.round((q.x1 - q.x0) / 2)), nz = Math.max(1, Math.round((q.z1 - q.z0) / 2)), sx = (q.x1 - q.x0) / (2 * nx), sz = (q.z1 - q.z0) / (2 * nz);
+        for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) B.add(tile, KH.xf(MS, q.x0 + (i + 0.5) * 2 * sx, L.y + 0.012, q.z0 + (j + 0.5) * 2 * sz, [sx, 1, sz]), FL);
+        addFloor(m, q.x0, q.z0, q.x1, q.z1, L.y + 0.02);
+      }
+      // ceiling slab underside + beams (not over a stairwell)
+      const yc = L.y + L.H; m.m1 = zone; m.ao = INT_AO * 0.9; m.mat(r.floor === 'stone' ? MAT.STONE : MAT.PLANKS, r.floor === 'stone' ? [0.8, 0.78, 0.74] : COL.woodDark);
+      for (const q of rSubAll({ x0: r.x0 + PW.IN, z0: r.z0 + PW.IN, x1: r.x1 - PW.IN, z1: r.z1 - PW.IN }, above)) m.quad([q.x0, yc, q.z1], [q.x0, yc, q.z0], [q.x1, yc, q.z0], [q.x1, yc, q.z1], 0, 0, (q.x1 - q.x0) / m.tile, (q.z1 - q.z0) / m.tile);
+      m.mat(MAT.TIMBER, COL.timberDark); const wide = (r.x1 - r.x0) >= (r.z1 - r.z0), span = wide ? r.z1 - r.z0 : r.x1 - r.x0, len = wide ? r.x1 - r.x0 : r.z1 - r.z0, nb = Math.max(1, Math.round(len / 1.7));
+      if (L.H > 2.2) for (let i = 0; i < nb; i++) {
+        const t = (wide ? r.x0 : r.z0) + len * (i + 0.5) / nb, bq = wide ? { x0: t - 0.08, x1: t + 0.08, z0: r.z0 + 0.2, z1: r.z1 - 0.2 } : { x0: r.x0 + 0.2, x1: r.x1 - 0.2, z0: t - 0.08, z1: t + 0.08 };
+        if (above.some(h => rOv(bq, h))) continue; m.box(bq.x0, yc - 0.2, bq.z0, bq.x1, yc, bq.z1, 8);
+      }
+    }
+  }
+  for (const wl of P.walls) pWallEmit(P, wl, B, IN);
+  for (const s of P.stairs) pStairEmit(P, s);
+}
+function pWallEmit(P, wl, B, IN) {
+  const L = P.lv[wl.k], H = L.H, sy = H / 3.12, ns = wl.ns, hor = wl.ax === 'x', m = P.c.int;
+  const stone = wl.cellar || P.rooms[[...wl.rooms][0]].floor === 'stone' || P.rooms[[...wl.rooms][0]].walls === 'stone', G = stone ? 'Wall_UnevenBrick' : 'Wall_Plaster';
+  const fwd = hor ? (ns > 0) : (ns < 0);                       // does u run along +axis?
+  const a = wl.a - PW.IN, b = wl.b + PW.IN, len = b - a, sOf = p => fwd ? p - a : b - p;
+  const origin = fwd ? a : b, perp = wl.c + 0.11 * ns, O = hor ? [origin, perp] : [perp, origin];
+  const nv = hor ? [0, 0, ns] : [ns, 0, 0];          // outward normal; u = up x n = (nz, 0, -nx)
+  const F = new THREE.Matrix4().makeBasis(KH.V([nv[2], 0, -nv[0]]), KH.V([0, 1, 0]), KH.V(nv)).setPosition(O[0], L.y, O[1]).premultiply(P.MS);
+  const add = (name, uc, s, o) => B.add(name, KH.xf(F, uc, 0, 0, s), o || IN);
+  const spans = wl.open.map(o => ({ o, s: sOf(o.pos), w: o.type === 'door' ? (o.d.w >= 1.2 ? 2.0 * o.d.w / PW.DOOR : 2.0) : 2.0 })).sort((p, q) => p.s - q.s);
+  let cur = 0;
+  const fill = (e) => {
+    const g = e - cur; if (g < 0.05) { cur = Math.max(cur, e); return; }
+    const n = Math.max(1, Math.round(g / 2)), mm = g / n;
+    for (let i = 0; i < n; i++) { const sx = mm / 2, nm = stone ? 'Wall_UnevenBrick_Straight' : sx < 0.6 ? 'Wall_Plaster_Straight_Base' : (i % 2 ? 'Wall_Plaster_Straight_Base' : 'Wall_Plaster_Straight'); add(nm, cur + (i + 0.5) * mm, [sx, sy, 1]); }
+    cur = e;
+  };
+  for (const sp of spans) {
+    const s0 = sp.s - sp.w / 2, s1 = sp.s + sp.w / 2;
+    if (s0 < -0.02 || s1 > len + 0.02) P.err.push('opening at ' + sp.o.pos + ' on wall ' + wl.ax + wl.c + ' sticks out of its wall');
+    fill(Math.max(cur, s0));
+    const S = [sp.w / 2, sy, 1];
+    if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); }
+    else {
+      const tbl = { Wide_Flat: ['_Window_Wide_Flat', 'Window_Wide_Flat1'], Thin_Round: ['_Window_Thin_Round', 'Window_Thin_Round1'], Wide_Round: ['_Window_Wide_Round', 'Window_Wide_Round1'] }[sp.o.kind] || ['_Window_Wide_Flat', 'Window_Wide_Flat1'];
+      add(G + tbl[0], sp.s, S); add(tbl[1], sp.s, S);
+      // the light the window lets in, a little inside it
+      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, [1.5, 1.42, 1.28], 'daylight', wl.k);
+    }
+    cur = Math.max(cur, s1);
+  }
+  fill(len);
+  // collision: the wall is solid except in doorways (a window is wall); the street door is closed (the portal is the way)
+  const cuts = wl.open.filter(o => o.type === 'door' && o.d.b !== null).map(o => [o.pos - o.hw, o.pos + o.hw]).sort((p, q) => p[0] - q[0]);
+  let at0 = a; const y0 = L.y, y1 = L.y + H + 0.1;
+  for (const [c0, c1] of cuts.concat([[b, b]])) { if (c0 - at0 > 0.02) { if (hor) addBoxCollider(m, at0, wl.c - 0.2, c0, wl.c + 0.2, y0, y1); else addBoxCollider(m, wl.c - 0.2, at0, wl.c + 0.2, c0, y0, y1); } at0 = c1; }
+}
+function pStairEmit(P, s) {
+  const m = P.c.int, a = P.lv[s.k0], b = P.lv[s.k1], ax = s.axis, d = s.dir, hw = s.width / 2, r = s.rise / s.n, y0 = a.y + 0.02;
+  const R4 = (p0, p1, l0, l1) => ax === 'x' ? [Math.min(p0, p1), Math.min(l0, l1), Math.max(p0, p1), Math.max(l0, l1)] : [Math.min(l0, l1), Math.min(p0, p1), Math.max(l0, l1), Math.max(p0, p1)];
+  m.m1 = P.zone; m.ao = INT_AO;
+  for (let i = 0; i < s.n; i++) {
+    const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, s.lat - hw, s.lat + hw), top = y0 + (i + 1) * r - 0.02;
+    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0], top - 0.05, q[1], q[2], top, q[3], 4 | (ax === 'x' ? (d > 0 ? 0 : 0) : 0));
+  }
+  // side boards and a handrail up the open side
+  m.mat(MAT.TIMBER, COL.timberDark);
+  for (const sg of [-1, 1]) {
+    const l = s.lat + sg * (hw + 0.035), top = b.y + 0.02;
+    for (let i = 0; i < s.n; i += 1) { const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, l - 0.03, l + 0.03); m.box(q[0], y0, q[1], q[2], y0 + (i + 1) * r + 0.05, q[3], 4); }
+    // handrail: a sloping beam on posts
+    const pa = ax === 'x' ? [s.p0, 0.95 + y0 + 0.4 * r, l] : [l, 0.95 + y0 + 0.4 * r, s.p0], pb = ax === 'x' ? [s.p1, 0.95 + top - 0.4 * r, l] : [l, 0.95 + top - 0.4 * r, s.p1];
+    m.beam(pa, pb, 0.05, 0.06);
+    for (let i = 0; i <= s.n; i += 3) { const t = Math.min(i, s.n) / s.n, p = s.p0 + d * s.run * t, y = lerp(y0, top, t) + 0.1, q = ax === 'x' ? [p, l] : [l, p]; m.box(q[0] - 0.03, y, q[1] - 0.03, q[0] + 0.03, y + 0.95 + 0.4 * r * (1 - 2 * t) + 0.02, q[1] + 0.03); }
+  }
+  // the walkable ramp and the sides that keep a player on it (and out from under it)
+  const lo = ax === 'x' ? [Math.min(s.p0, s.p1), s.lat - hw - 0.05, Math.max(s.p0, s.p1), s.lat + hw + 0.05] : [s.lat - hw - 0.05, Math.min(s.p0, s.p1), s.lat + hw + 0.05, Math.max(s.p0, s.p1)];
+  const yA = a.y + 0.02 + 0.5 * r, yB = b.y + 0.02 - 0.5 * r, lowFirst = d > 0;
+  addFloor(m, lo[0], lo[1], lo[2], lo[3], lowFirst ? yA : yB, lowFirst ? yB : yA, ax);
+  for (const sg of [-1, 1]) { const l = s.lat + sg * (hw + 0.09), q = R4(s.p0, s.p1, l - 0.06, l + 0.06); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, b.y + 1.1); }
+  { const q = R4(s.p0 - d * 0.0, s.p0 - d * 0.08, s.lat - hw - 0.15, s.lat + hw + 0.15); addBoxCollider(m, q[0], q[1], q[2], q[3], b.y + 0.5, b.y + 1.1); }       // the open end of the stairwell on the upper floor, where a person would walk in
+  { const q = R4(s.p1 - d * 0.02, s.p1 + d * 0.06, s.lat - hw, s.lat + hw); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, b.y - 0.6); }          // the solid end of the steps: no walking in under the landing
+  // the stairs are a navigation link
+  pSpot(P, s.name + '0', s.lowPt[0], s.lowPt[1], 0, { k: s.k0 }); pSpot(P, s.name + '1', s.highPt[0], s.highPt[1], 0, { k: s.k1 });
+  World.stairs.push({ id: P.id + '.' + s.name, site: P.id, bottom: P.id + '.' + s.name + '0', top: P.id + '.' + s.name + '1', via: [], width: s.width, slope: s.rise / s.run, plan: true, k0: s.k0, k1: s.k1 });
+}
+
+// ── navigation: room hubs, doorways, stairs ──
+// Called from navBuild (77_npc.js) for every planned house. Walls are never crossed: spots join their room's hub, hubs join through doorways, levels through stairs.
+function planNav(P, add, link, doorNode) {
+  const hub = {}, N = Nav.nodes, L0 = P.lv[0];
+  for (const id in P.rooms) { const r = P.rooms[id], p = pCentre(r), L = P.lv[r.k]; hub[id] = add(...P.w2(p[0], L.y + 0.02, p[1])); }
+  for (const d of P.doors) {
+    const L = P.lv[d.k], k = add(...P.w2(d.x, L.y + 0.02, d.z));
+    if (d.b === null) { const dn = doorNode[P.id]; if (dn) { link(dn.i, k); link(k, hub[d.a]); } }
+    else { link(hub[d.a], k); link(k, hub[d.b]); }
+  }
+  const stairSpot = new Set(); for (const s of P.stairs) { stairSpot.add(s.name + '0'); stairSpot.add(s.name + '1'); }
+  for (const name in P.spots) { if (stairSpot.has(name)) continue; const sp = P.spots[name], k = Nav.spot[P.id + '.' + name]; if (k === undefined) continue; const r = pRoomAt(P, sp.k, sp.x, sp.z); if (r) link(k, hub[r.id]); }
+  for (const s of P.stairs) {
+    const a = Nav.spot[P.id + '.' + s.name + '0'], b = Nav.spot[P.id + '.' + s.name + '1']; if (a === undefined || b === undefined) continue;
+    const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]);
+    link(a, b); if (ra) link(a, hub[ra.id]); if (rb) link(b, hub[rb.id]);
+  }
+  P.hub = hub;
+}
+
+// ── validation of a built plan: returns the list of violations (empty = a sound interior) ──
+function planValidate(P) {
+  const out = P.err.map(e => 'plan: ' + e), flat = it => it.kind === 'rug';
+  const items = P.items.filter(i => P_SOLID[i.kind] && !flat(i));
+  for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) { const a = items[i], b = items[j]; if (a.k === b.k && rOv(a, b, 0.02) && !(a.kind === 'stair' && b.kind === 'hole') && !(a.kind === 'hole' && b.kind === 'stair')) out.push('overlap ' + a.id + ' x ' + b.id + ' (level ' + a.k + ')'); }
+  for (const a of items) {
+    if (a.kind === 'floor') {
+      const room = P.rooms[a.room]; if (!room || !rIn(a, room.in)) out.push(a.id + ' is not inside its room');
+      for (const z of P.clear) if (z.k === a.k && rOv(a, z, 0.02)) out.push(a.id + ' stands in a ' + z.kind + ' clearance');
+      if ((a.h || 0) > 0.85) for (const w of P.windows) if (w.k === a.k && w.room === room && rOv(a, pWinZone(w), 0.02)) out.push(a.id + ' stands in front of a window');
+      for (const h of P.holes) if (h.k === a.k && rOv(a, h.r, 0.01)) out.push(a.id + ' stands in a stairwell');
+      if (Math.abs((a.y0 || 0) - (P.lv[a.k].y + (a.lift || 0))) > 0.001) out.push(a.id + ' is not on the floor');
+    }
+  }
+  for (let i = 0; i < P.wallItems.length; i++) {
+    const a = P.wallItems[i], wl = a.wall;
+    for (const op of wl.open) { const hw = op.type === 'door' ? op.hw : 0.8; if (a.u0 < op.pos + hw && a.u1 > op.pos - hw && (op.type === 'door' || (a.y1 > 0.85 && a.y0 < 2.4))) out.push(a.id + ' hangs over a ' + op.type); }
+    for (let j = i + 1; j < P.wallItems.length; j++) { const b = P.wallItems[j]; if (b.wall === wl && b.side === a.side && a.u0 < b.u1 && a.u1 > b.u0 && a.y0 < b.y1 && a.y1 > b.y0) out.push(a.id + ' overlaps ' + b.id + ' on a wall'); }
+  }
+  for (const s of P.stairs) {
+    const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]);
+    if (!ra) out.push('stair ' + s.name + ' starts outside every room'); if (!rb) out.push('stair ' + s.name + ' arrives outside every room');
+    if (ra && !rIn(rectOf(s.lowPt[0], s.lowPt[1], 0.6, 0.6), ra.in)) out.push('stair ' + s.name + ' starts against a wall');
+    if (rb && !rIn(rectOf(s.highPt[0], s.highPt[1], 0.6, 0.6), rb.in)) out.push('stair ' + s.name + ' arrives against a wall');
+    for (const it of P.items) if (it.kind === 'floor' && it.k === s.k1 && rOv(it, rectOf(s.highPt[0], s.highPt[1], 0.8, 0.8))) out.push(it.id + ' blocks the top of ' + s.name);
+    if (s.low && s.hole && (s.k1 - s.k0) !== 1) out.push('stair ' + s.name + ' skips a level');
+  }
+  // every room reachable from the street door: doorways and stairs as edges
+  const seen = new Set(), todo = [];
+  for (const d of P.doors) if (d.b === null) { seen.add(d.a); todo.push(d.a); }
+  while (todo.length) {
+    const id = todo.pop();
+    for (const d of P.rooms[id].doors) { const o = d.a === id ? d.b : d.a; if (o && !seen.has(o)) { seen.add(o); todo.push(o); } }
+    for (const s of P.stairs) { const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]); if (ra && rb) { if (ra.id === id && !seen.has(rb.id)) { seen.add(rb.id); todo.push(rb.id); } if (rb.id === id && !seen.has(ra.id)) { seen.add(ra.id); todo.push(ra.id); } } }
+  }
+  for (const id in P.rooms) if (!seen.has(id)) out.push('room ' + id + ' cannot be reached from the street door');
+  for (const id in P.rooms) { const r = P.rooms[id]; if (r.kind === 'closet' || r.kind === 'corridor') continue; if (!r.doors.length && !P.stairs.length) out.push('room ' + id + ' has no door'); }
+  for (const id in P.rooms) { const r = P.rooms[id]; if (r.k === 0 && r.kind === 'corridor' && Math.min(r.x1 - r.x0, r.z1 - r.z0) < 1.5) out.push('corridor ' + id + ' is narrower than 1.1 m clear'); }
+  // lit: every room has a window, a hearth, a candle or a lamp
+  for (const id in P.rooms) { const r = P.rooms[id]; if (!P.lightIn || !P.lightIn[id]) out.push('room ' + id + ' has no visible light source'); }
+  return out;
+}
+
+
+// ---- 72e_plans.js ----
+// ───────────────────────── the rooms' recipes, the generic house plan and the designed plans ─────────────────────────
+// planBuild(c) is called from buildHouse for a cell: it lays out the plan, dresses it, builds it and registers everything the village looks for.
+const PLANS = {};          // site id -> (P, c, info) => void : a designed plan (otherwise planHouse's generic one)
+const LOOT = { inn: [['gold', 6], ['apple', 1]], store: [['gold', 8]], draper: [['gold', 5]] };
+const READS = {
+  'inn.note': { title: 'A note on the table', text: 'Traveller — the bed by the window is yours for as long as you stay. Breakfast when the cock crows, ale when the sun sets. — G.' },
+  'elder.book': { title: 'Rowan’s chronicle', text: 'Year of the long frost. The beacon on the crag has stood dark since my grandfather’s day, yet the valley endures. We kept the Dawn bell ringing through every winter but this one.' },
+  'draper.ledger': { title: 'The draper’s ledger', text: 'Blue wool, six ells, for the miller’s coat. Red linen for the chapel banners, paid in apples. A bolt of green for Lark, who has promised a song instead of coin.' },
+  'chapel.book': { title: 'Book of the Dawn', text: 'When the night is longest, ring the bell and light the fire, that those lost upon the fells may find their way home.' },
+};
+const OUTDOOR_SPOT = /^(garden|yard|field2?|porch|door|stall\d?|front|bard)$/;      // spots a schedule names that are outside the building (the village code makes them)
+// the indoor spot names the villagers' schedules want in this building
+function planNeeds(id) {
+  const want = new Set();
+  for (const d of NPC_DEFS) for (const r of d.sched) for (const sp of [].concat(r[1])) if (typeof sp === 'string' && sp.startsWith(id + '.')) { const n = sp.slice(id.length + 1); if (!OUTDOOR_SPOT.test(n) || id === 'inn' && n === 'bard') want.add(n); }
+  return want;
+}
+const dRot = (rot, a) => a + rot;
+
+// ── drawn things ──
+const pdTable = (len, wid, items, n, c) => m => { Props.table(m, len, wid); if (items) Props.clutter(m, c.R, -len / 2 + 0.25, len / 2 - 0.25, 0.76, 0, items, n || 3, c); };
+const pdChest = m => Props.chest(m), pdChair = m => Props.chair(m), pdStool = m => Props.stool(m), pdBench = len => m => Props.bench(m, len);
+const pdBed = (w, blanket, fur) => m => Props.bed(m, w, blanket, fur);
+const pdShelf = (len, h, lv, fill) => m => Props.shelf(m, len, h, lv, 0.32, fill);
+const pdBarrel = (r, h) => m => Props.barrel(m, r, h), pdCrate = s => m => Props.crate(m, s), pdSack = (s, col) => m => Props.sack(m, s, col);
+const pdRug = (w, l, col) => m => Props.rug(m, w, l, col);
+const stockFill = (c, kinds) => (i, y) => Props.clutter(P_M(c), c.R, -0.65, 0.65, y, 0, kinds, 4, c);
+const P_M = c => c.int;
+
+// a hearth with its back to a wall of the room: breast to the ceiling, fire, light; the stack goes up through the levels above (pier) and down (a cellar pier)
+function pHearth(P, room, side, wid, o) {
+  o = o || {}; const L = P.lv[room.k], H = L.H, dep = 0.8, m = P.c.int, hor = side === 'n' || side === 's';
+  const s = pWallSlot(P, room, side, wid + 0.3, dep + 0.1, Object.assign({ lowOk: false, at: o.at, noClear: false }, o)); if (!s) return null;
+  const rot = { w: 0, e: PI, n: -PI / 2, s: PI / 2 }[side], px = hor ? s.cx : (side === 'w' ? room.in.x0 : room.in.x1), pz = hor ? (side === 'n' ? room.in.z0 : room.in.z1) : s.cz;
+  m.m1 = P.zone; m.ao = INT_AO;
+  at(m, px, L.y + 0.02, pz, rot, () => {
+    m.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
+    m.box(0, 0, -wid / 2, dep, 1.15, -wid / 2 + 0.38); m.box(0, 0, wid / 2 - 0.38, dep, 1.15, wid / 2); m.box(0, 1.15, -wid / 2, dep, H - 0.02, wid / 2);
+    m.box(0, 0, -wid / 2 + 0.38, 0.14, 1.15, wid / 2 - 0.38, 1 | 4 | 8); m.box(0, 0, -wid / 2 - 0.15, dep + 0.35, 0.07, wid / 2 + 0.15, 4);
+    m.mat(MAT.TIMBER, COL.woodDark); m.box(0, 1.5, -wid / 2 - 0.1, dep + 0.12, 1.6, wid / 2 + 0.1);          // the mantel beam
+    m.mat(MAT.PLAIN, [0.07, 0.06, 0.06]); m.quad([0.145, 1.15, wid / 2 - 0.38], [0.145, 0.07, wid / 2 - 0.38], [0.145, 0.07, -wid / 2 + 0.38], [0.145, 1.15, -wid / 2 + 0.38]);
+    at(m, dep * 0.55, 0.07, 0, PI / 2, () => Props.logs(m, 3, 0.55, 0.06));
+    emit(m, 1.3, () => { m.mat(MAT.PLAIN, [1, 0.35, 0.08]); m.box(dep * 0.25, 0.07, -0.28, dep * 0.85, 0.10, 0.28, 4); });
+    if (o.cauldron) { at(m, dep * 0.55, 0.42, 0, 0, () => Props.cauldron(m, 0.2)); m.mat(MAT.METAL, COL.black); m.box(dep * 0.55 - 0.01, 0.7, -0.01, dep * 0.55 + 0.01, 1.15, 0.01); }
+    World.emitters.push({ type: 'fire', p: wp(m, dep * 0.55, 0.2, 0), size: o.size || 0.5, zone: P.zone });
+    addLight(wp(m, dep + 0.7, 0.85, 0), o.r || 9.5, o.c || [3.4, 1.75, 0.62], P.zone, 'fire');
+    addBoxCollider(m, 0, -wid / 2 - 0.1, dep + 0.25, wid / 2 + 0.1, 0, 2);
+  });
+  if (o.deco !== false) {          // mantel objects, antlers over the breast, a rug and firewood by the fire
+    at(m, px, L.y + 0.02, pz, rot, () => {
+      if (typeof kitLit === 'function' && Kit.pieces.CandleStick_Triple) for (const sg of [-1, 1]) kitLit(m, 'CandleStick_Triple', 0.42, 1.6 - 0.02, sg * (wid / 2 - 0.32), 0.8, sg, { cap: 0, kind: 'candle', flame: 'candle' });
+      if (Kit.pieces.Vase_4) kp(m, 'Vase_4', 0.42, 1.6, 0, 0.8, 0.4);
+      if (Kit.pieces.Mug) kp(m, 'Mug', 0.3, 1.6, 0.3, 0.9, 1);
+      if (H > 2.9) at(m, 0.68, Math.min(H - 0.55, 2.85) - 0.02, 0, PI / 2, () => antlers(m));
+      at(m, dep + 0.8, 0, 0, 0, () => Props.rug(m, 1.2, wid + 0.6, o.rug || [0.5, 0.32, 0.2]));
+      at(m, 0.4, 0, wid / 2 + 0.55, 0, () => Props.woodpile(m, 4, 4, 0.5));
+    });
+  }
+  const fp = s.rect;
+  P.occ(room.k, fp, 'hearth', P.id + '.hearth', { h: H, back: side, room: room.id, wid });
+  P.clear.push(Object.assign(side === 'n' ? { x0: fp.x0, x1: fp.x1, z0: fp.z1, z1: fp.z1 + 1.0 } : side === 's' ? { x0: fp.x0, x1: fp.x1, z0: fp.z0 - 1.0, z1: fp.z0 } : side === 'w' ? { x0: fp.x1, x1: fp.x1 + 1.0, z0: fp.z0, z1: fp.z1 } : { x0: fp.x0 - 1.0, x1: fp.x0, z0: fp.z0, z1: fp.z1 }, { k: room.k, kind: 'hearth' }));
+  P.lightIn[room.id] = 1; P.hearths = (P.hearths || []).concat([{ k: room.k, x: px, z: pz, side, wid, rect: fp }]);
+  return { px, pz, side, fp, wid, front: hor ? [px, pz + (side === 'n' ? 1 : -1) * (dep + 0.6)] : [px + (side === 'w' ? 1 : -1) * (dep + 0.6), pz] };
+}
+// the same stack on another level: a stone pier from floor to ceiling over (or under) the hearth
+function pPier(P, k, hearth) {
+  const L = P.lv[k]; if (!L) return; const h = hearth, fp = h.fp, m = P.c.int, room = pRoomAt(P, k, (fp.x0 + fp.x1) / 2, (fp.z0 + fp.z1) / 2); if (!room) return;
+  m.m1 = P.zone; m.ao = INT_AO; m.mat(MAT.STONE, [0.9, 0.88, 0.85], 0.8); at(m, 0, L.y + 0.02, 0, 0, () => { m.box(fp.x0 + 0.1, 0, fp.z0 + 0.1, fp.x1 - 0.1, L.H - 0.02, fp.z1 - 0.1); addBoxCollider(m, fp.x0 + 0.1, fp.z0 + 0.1, fp.x1 - 0.1, fp.z1 - 0.1, 0, L.H); });
+  pOcc(P, k, fp, 'hearth', P.id + '.stack' + k, { h: L.H, back: h.side, room: room.id });
+}
+// a wall candle bracket by a door or over a bed; lit like any candle
+function pSconce(P, room, side, u, y) {
+  const rec = pHang(P, room, side, u, 0.3, y || 1.55, (y || 1.55) + 0.3, (m, hh) => { m.mat(MAT.METAL, COL.black); m.box(-0.04, 0, 0.0, 0.04, 0.03, 0.2); m.box(-0.012, -0.12, 0.0, 0.012, 0.03, 0.02); at(m, 0, 0.03, 0.17, 0, () => Props.candle(m, P.c, true)); }, P.id + '.sconce', {}); if (rec) P.lightIn[room.id] = 1; return rec;
+}
+// a lantern hung from the ceiling beam
+function pLamp(P, room, x, z) {
+  const L = P.lv[room.k], m = P.c.int; if (!pFit(P, room, rectOf(x, z, 0.4, 0.4), { h: 0.1, lowOk: true, noClear: true, lift: 0 })) { }
+  at(m, x, L.y + L.H - 0.1, z, 0, () => { m.mat(MAT.METAL, COL.black); m.box(-0.01, 0, -0.01, 0.01, 0.2, 0.01); at(m, 0, -0.02, 0, 0, () => Props.lantern(m, P.c)); });
+  P.lightIn[room.id] = 1; P.lamps = (P.lamps || 0) + 1;
+}
+// a seat at a table: spot + a visible seat. kinds: 'stool', 'chair', 'bench' handled by the caller; this registers the sitting spot only
+const pSit = (P, name, x, z, yaw, k) => pSpot(P, name, x, z, yaw, { k, y: 0.02, extra: { sit: 0.46 } });
+const pBedSpot = (P, name, x, z, rot, k) => pSpot(P, name, x, z, -rot, { k, y: 0.58, extra: { lie: true } });
+
+// a torch on a wall (cellars, crypts, dungeons): iron bracket, a flame and a flickering light
+function pTorch(P, room, side, u, y, r) {
+  const rec = pHang(P, room, side, u, 0.3, y || 1.7, (y || 1.7) + 0.5, (m, hh) => {
+    m.mat(MAT.METAL, COL.black); m.box(-0.03, 0, 0.0, 0.03, 0.04, 0.22); m.box(-0.02, -0.02, 0.18, 0.02, 0.32, 0.22);
+    m.mat(MAT.TIMBER, COL.woodDark); m.cyl(0, 0.0, 0.26, 0.04, 0.05, 0.4, 6, 2);
+    emit(m, 1.4, () => { m.mat(MAT.PLAIN, [1, 0.45, 0.1]); m.cyl(0, 0.4, 0.26, 0.05, 0.015, 0.2, 6, 2); });
+    World.emitters.push({ type: 'fire', p: wp(m, 0, 0.52, 0.26), size: 0.28, zone: P.zone });
+    addLight(wp(m, 0, 0.55, 0.42), r || 7, [3.0, 1.55, 0.55], P.zone, 'fire');
+  }, P.id + '.torch', {}); if (rec) P.lightIn[room.id] = 1; return rec;
+}
+// the walls of a room as sides, longest first
+const pSidesLong = room => (room.x1 - room.x0 >= room.z1 - room.z0 ? ['n', 's', 'w', 'e'] : ['w', 'e', 'n', 's']);
+const R0 = (a, b) => a;
+
+// candidate centres in a room, nearest to a point first
+function pCands(room, near, step) {
+  const a = room.in, c0 = near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = []; step = step || 0.25;
+  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3 + 1e-6; x += step) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3 + 1e-6; z += step) pts.push([x, z]);
+  return pts.sort((p, q) => Math.hypot(p[0] - c0[0], p[1] - c0[1]) - Math.hypot(q[0] - c0[0], q[1] - c0[1]));
+}
+// a dining table with a bench on each long side: returns { x, z, seats: [[x, z, yaw]] } or null
+function pDining(P, room, len, wid, opt) {
+  opt = opt || {}; const c = P.c, items = opt.items || ['mug', 'plate', 'bowl', 'candle', 'loaf'], pts = pCands(room, opt.near);
+  for (const rot of opt.rots || [0, PI / 2]) {
+    const tw = rot ? wid : len, td = rot ? len : wid;
+    for (const p of pts) {
+      const [tx, tz] = p, tr = rectOf(tx, tz, tw, td);
+      if (!pFit(P, room, tr, { h: 0.78 })) continue;
+      const bs = [-1, 1].map(sg => rot ? [tx + sg * (wid / 2 + 0.34), tz] : [tx, tz + sg * (wid / 2 + 0.34)]);
+      const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.34, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.34));
+      if (!brs.every(r => pFit(P, room, r, { h: 0.46 })) || (opt.sideRoom && !brs.every(r => true))) continue;
+      const t = pPut(P, room, P.id + '.' + (opt.id || 'table'), tx, tz, 0, tw, td, 0.78, m => { m.push(); if (rot) m.RY(rot); pdTable(len, wid, items, opt.n || 3, c)(m); m.pop(); }, { surface: true });
+      if (!t) continue;
+      const seats = [];
+      bs.forEach((b, i) => { const sg = i ? 1 : -1; pPut(P, room, P.id + '.' + (opt.id || 'table') + 'bench' + i, b[0], b[1], rot ? PI / 2 : 0, len * 0.9, 0.34, 0.46, pdBench(len * 0.9), {}); for (const q of [-0.5, 0.5]) seats.push([rot ? b[0] : tx + q * len * 0.5, rot ? tz + q * len * 0.5 : b[1], rot ? (sg < 0 ? PI / 2 : -PI / 2) : (sg < 0 ? PI : 0)]); });
+      return { x: tx, z: tz, rot, seats, t };
+    }
+  }
+  return null;
+}
+
+// ───────── dressing by room kind ─────────
+// every dresser fills one room: a focal point first (hearth, bed, bar, counter ...), then what belongs with it, then the wall things; clutter thins away from the focus
+function dressHall(P, room, o) {
+  o = o || {}; const c = P.c, R = P.R, k = room.k;
+  const side = o.hearth || 's', hh = o.hh !== undefined ? o.hh : pHearth(P, room, side, o.hw || 1.7, { cauldron: true, at: o.hearthAt });
+  P.hall = { room, hh };
+  const near = hh ? hh.front.slice() : pCentre(room); near[0] += o.dx || 0; near[1] += o.dz === undefined ? (side === 's' ? -1.8 : 0) : o.dz;
+  const dn = pDining(P, room, o.len || 2.0, 0.9, { near, items: o.items, n: 4 });
+  if (dn) {
+    dn.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], k));
+    pPut(P, room, P.id + '.rug', dn.x, dn.z, 0, dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, 0.02, pdRug(dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, o.rug || COL.red), { flat: true, noClear: true });
+    pLamp(P, room, dn.x, dn.z);
+  }
+  if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k });
+  // storage and a shelf with its wares along the walls that are free
+  for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.shelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, o.shelfItems || ['pot', 'jug', 'bowl', 'cheese', 'bottle'])), { at: o.shelfAt })) break;
+  for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.cupboard', 0.9, 0.5, 0.75, +1, pdChest, { lowOk: true })) break;
+  const e = P.doors.find(d => d.b === null && d.a === room.id);
+  if (e) { const side2 = e.wall.ax === 'x' ? (e.wall.c <= room.z0 + 0.01 ? 'n' : 's') : (e.wall.c <= room.x0 + 0.01 ? 'w' : 'e'); pSconce(P, room, side2, e.wall.ax === 'x' ? e.x + 1.3 : e.z + 1.3) || pSconce(P, room, side2, e.wall.ax === 'x' ? e.x - 1.3 : e.z - 1.3); }
+  for (const sd of ['w', 'e', 'n', 's']) if (pBarrelCorner(P, room, sd)) break;
+}
+function pBarrelCorner(P, room, sd) { return pAgainst(P, room, sd, P.id + '.barrel', 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: 'end' }); }
+function dressBedroom(P, room, o) {
+  o = o || {}; const k = room.k, R = P.R, beds = o.beds || ['bed'], col = o.blanket || R.pick([COL.red, COL.blue, COL.green, [0.5, 0.42, 0.3], COL.purple]);
+  let placed = 0;
+  for (const nm of beds) {
+    let it = null;
+    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { const s = pWallSlot(P, room, sd, 1.1, 2.1, { h: 0.95, at: o.bedAt }); if (!s) continue; it = pPut(P, room, P.id + '.' + nm, s.cx, s.cz, rotBack(sd, -1), 1.1, 2.1, 0.95, pdBed(1.0, col, !!o.fur), { back: sd }); if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
+    if (!it && nm === 'bed') P.err.push('no room for ' + nm + ' in ' + room.id);
+  }
+  // a chest at the foot of the first bed (or against any free wall)
+  let ch = null;
+  if (P.firstBed && P.firstBed.room === room) { const b = P.firstBed, foot = { e: [b.cx - 1.4, b.cz], w: [b.cx + 1.4, b.cz], n: [b.cx, b.cz + 1.5], s: [b.cx, b.cz - 1.5] }[b.sd]; const rot = { e: PI / 2, w: -PI / 2, n: 0, s: PI }[b.sd]; ch = pPut(P, room, P.id + '.' + (o.chestId || 'chest'), foot[0], foot[1], rot, 0.85, 0.5, 0.58, pdChest, { lowOk: true }); }
+  if (!ch) for (const sd of pSidesLong(room)) if ((ch = pAgainst(P, room, sd, P.id + '.' + (o.chestId || 'chest'), 0.85, 0.5, 0.58, +1, pdChest, { lowOk: true }))) break;
+  if (ch && o.chest !== false) pInteract(P, ch.cx, 0.5, ch.cz, { kind: 'chest', id: P.id + '.' + (o.chestId || 'chest'), loot: o.loot || LOOT[P.id] || [['gold', 4 + R.i(0, 6)]], r: 1.8 }, k);
+  for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.wardrobe', 1.2, 0.5, 1.8, +1, pdShelf(1.2, 1.8, 2, null), { })) break;
+  if (P.firstBed && P.firstBed.room === room) { const b = P.firstBed; pSconce(P, room, b.sd, (b.sd === 'e' || b.sd === 'w') ? b.cz + 1.4 : b.cx + 1.4, 1.5) || pSconce(P, room, b.sd, (b.sd === 'e' || b.sd === 'w') ? b.cz - 1.4 : b.cx - 1.4, 1.5); }
+  if (o.table) { const bb = P.firstBed && P.firstBed.room === room ? P.firstBed : null; pFree(P, room, P.id + '.' + room.id + 'table', 0.8, 0.5, 0.75, 0, pdTable(0.8, 0.5, ['candle', 'mug', 'book'], 2, P.c), { near: bb ? [bb.cx, bb.cz] : pCentre(room), surface: true }); }
+  pLamp(P, room, ...pCentre(room));
+}
+function dressStore(P, room, o) {
+  o = o || {}; const R = P.R;
+  let n = 0; for (const sd of pSidesLong(room)) { if (pAgainst(P, room, sd, P.id + '.shelf' + n, 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, o.items || ['pot', 'jug', 'bowl', 'bottle', 'cheese'])), { at: n ? 'end' : 'start' })) n++; if (n >= 2) break; }
+  for (let i = 0; i < 3; i++) for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.barrel' + i, 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: i ? 'end' : 'start' })) break;
+  for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.crate' + i, 0.6, 0.6, 0.6, R() * 0.4, pdCrate(0.6), { near: [room.in.x1 - 1, room.in.z1 - 1] });
+  for (let i = 0; i < 2; i++) pFree(P, room, P.id + '.sack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x0 + 1, room.in.z1 - 1], noClear: false });
+  pLamp(P, room, ...pCentre(room));
+}
+function dressKitchen(P, room, o) {
+  o = o || {}; const c = P.c, R = P.R;
+  const hh = o.hh !== undefined ? o.hh : o.hearth ? pHearth(P, room, o.hearth, 1.5, { cauldron: true, size: 0.4 }) : null;
+  const w = pFree(P, room, P.id + '.worktable', 1.6, 0.8, 0.9, 0, pdTable(1.6, 0.8, ['bowl', 'loaf', 'jug', 'plate', 'cheese'], 4, c), { near: pCentre(room), surface: true });
+  if (w) pSpot(P, 'work', w.cx, w.cz + 0.7, PI, { k: room.k });
+  for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.shelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, ['pot', 'bowl', 'jug', 'cheese', 'loaf'])), {})) break;
+  for (let i = 0; i < 2; i++) for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.barrel' + i, 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: i ? 'end' : 'start' })) break;
+  pLamp(P, room, ...pCentre(room));
+}
+function dressCellar(P, room, o) {
+  o = o || {}; const R = P.R; let n = 0;
+  if (o.rows) { for (const sd of ['w', 'e']) { const lo = room.in.z0 + 1.2; for (let i = 0; i < o.barrels; i++) pAgainst(P, room, sd, P.id + '.cask' + n++, 0.9, 0.9, 1.0, 0, m => Props.keg(m, 0.36, 0.9), { at: lo + i * 1.05 }); } }
+  else for (const sd of pSidesLong(room)) for (let i = 0; i < (o.barrels || 2); i++) if (pAgainst(P, room, sd, P.id + '.cbarrel' + n++, 0.9, 0.9, 1.0, 0, m => Props.keg(m, 0.33, 0.9), { at: i ? 'end' : 'start' })) { }
+  for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.cshelf', 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, ['jug', 'bottle', 'pot', 'bowl'])), { at: 'mid' })) break;
+  for (let i = 0; i < (o.crates === undefined ? 3 : o.crates); i++) pFree(P, room, P.id + '.ccrate' + i, 0.6, 0.6, 0.6, R() * 0.5, pdCrate(0.6), { near: [room.in.x0 + 1, room.in.z1 - 1] });
+  for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.csack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x1 - 1, room.in.z0 + 1] });
+  let t = 0; for (const sd of ['n', 's', 'w', 'e']) { const s = (room.x1 - room.x0 > 3 ? 0.25 : 0.5); if (pTorch(P, room, sd, (sd === 'n' || sd === 's' ? (room.in.x0 + room.in.x1) / 2 : (room.in.z0 + room.in.z1) / 2) + (t++ % 2 ? 1.2 : -1.2), 1.7, 6.5)) break; }
+  if (!P.lightIn[room.id]) pTorch(P, room, 'n', (room.in.x0 + room.in.x1) / 2, 1.7, 6.5) || pTorch(P, room, 's', (room.in.x0 + room.in.x1) / 2, 1.7, 6.5);
+}
+function dressLanding(P, room) { pLamp(P, room, ...pCentre(room)); for (const sd of ['n', 's', 'w', 'e']) if (pSconce(P, room, sd, sd === 'n' || sd === 's' ? (room.in.x0 + room.in.x1) / 2 : (room.in.z0 + room.in.z1) / 2)) break; }
+
+// ───────── the generic house ─────────
+// Canonical frame: the street door in the middle of the z = 0 wall, the house going away in +z. 0.4 m walls on a 0.5 m grid.
+//   ground: a hall (hearth on its back wall, stair down to the cellar along the west wall, stair up along the east wall) with a store (west) and a bedroom (east) behind it
+//   up:     a loft over the east half (the stairwell, a bed) and two chambers over the west half, round the chimney stack
+//   below:  a cellar under the hall and a second vault under the store, joined by a door; the stair arrives in the hall
+// kit pieces on the walls and floor, placed by the plan's rules. KIT_ITEM: [w, d, tall, scale, lit]; KIT_WALL: [w, pivot height, stand-off, scale]
+function pKitFloor(P, room, side, name, o) {
+  const it = KIT_ITEM[name]; if (!it || !Kit.pieces[name]) return null;
+  const sc = it[3], w = it[0] * sc, d = it[1] * sc, h = it[2] ? 2.0 : 0.8;
+  const draw = it[4] ? m => kitLit(m, name, 0, 0, 0, sc, 0, { r: 6.5, c: [2.3, 1.4, 0.6], kind: 'candle' }) : m => kp(m, name, 0, 0, 0, sc, 0);
+  const r = pAgainst(P, room, side, P.id + '.' + name + (o && o.n || ''), w, d, h, -1, draw, Object.assign({ lowOk: !it[2] }, o || {}));
+  if (r && it[4]) P.lightIn[room.id] = 1; return r;
+}
+function pKitWall(P, room, side, u, name, o) {
+  const it = KIT_WALL[name]; if (!it || !Kit.pieces[name]) return null;
+  const y = Math.min(it[1], P.lv[room.k].H - 0.3), ban = name.startsWith('Banner'), lit = name === 'Torch_Metal';
+  const rec = pHang(P, room, side, u, it[0], ban ? Math.max(1.0, y - 1.6) : y - 0.45, y + 0.35, m => {
+    if (lit) kitLit(m, name, 0, 0, -it[2], 1, PI, { r: 6.2, c: [2.5, 1.45, 0.55], kind: 'fire', flame: 'torch', size: 0.14 }); else kp(m, name, 0, 0, -it[2], it[3] || 1, PI);
+  }, P.id + '.' + name, Object.assign({ pivot: y }, o || {}));
+  if (rec && lit) P.lightIn[room.id] = 1; return rec;
+}
+function pArt(P, room, side, u, kind) {
+  const R = P.R, nm = kitGen(kind, R), rack = kind === 'rack';
+  return pHang(P, room, side, u, rack ? 1.0 : 0.8, rack ? 1.85 : 1.45, rack ? 2.25 : 2.1, m => kp(m, nm, 0, 0, -0.03, 1, PI), P.id + '.' + kind, { pivot: rack ? 2.05 : 1.6 });
+}
+// decorate the free stretches of the walls of a room: banners, shields, torches, paintings, racks. u positions are tried along each side.
+function pWalls(P, room, list, o) {
+  o = o || {}; const a = room.in, R = P.R; let q = 0;
+  for (const sd of pSidesLong(room)) {
+    const hor = sd === 'n' || sd === 's', lo = hor ? a.x0 : a.z0, hi = hor ? a.x1 : a.z1;
+    for (let u = lo + 0.9 + R() * 0.5; u < hi - 0.7 && q < list.length; u += 0.5) {
+      const nm = list[q], ok = nm === 'paint' || nm === 'rack' ? pArt(P, room, sd, u, nm) : pKitWall(P, room, sd, u, nm);
+      if (ok) { q++; u += (KIT_WALL[nm] ? KIT_WALL[nm][0] : 0.8) + 0.9 + R() * 0.8; }
+    }
+  }
+  return q;
+}
+const stepTo = (v, a, b) => clamp(Math.round(v), a, b);
+const H_GROUND = 2.7, H_UP = 2.4, H_CELLAR = 3.0;
+function planHouse(P, c, info) {
+  info = info || {};
+  const st = c.spec.kitStyle || {}, up = info.up !== undefined ? info.up : !!st.up, need = P.need;
+  const W = info.W || stepTo(c.w * 1.35, 8, 11), D = info.D || stepTo(c.d * 1.6, 10, 12), Dh = info.Dh || 7, H0 = info.H0 || H_GROUND, x0 = -W / 2, x1 = W / 2;
+  P.dims = { W, D, Dh };
+  pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H0); if (up) pLevel(P, 1, H0 + PW.SLAB, H_UP);
+  const hall = pRoom(P, 0, 'hall', info.inn ? 'common' : 'hall', x0, 0, x1, Dh), store = pRoom(P, 0, 'store', info.inn ? 'kitchen' : 'store', x0, Dh, 0, D), bed0 = pRoom(P, 0, 'bedroom', info.inn ? 'keeper' : 'bedroom', 0, Dh, x1, D);
+  pDoor(P, 'hall', null, 0, 0);
+  pDoor(P, 'hall', 'store', x0 / 2, Dh); pDoor(P, 'hall', 'bedroom', x1 / 2, Dh);
+  // cellar: under the hall (the stair arrives here) and under the store
+  const cel = pRoom(P, -1, 'cellar', 'cellar', x0, 0, x1, Dh, { floor: 'stone', win: false }), vault = pRoom(P, -1, 'vault', 'cellar', x0, Dh, 0, D, { floor: 'stone', win: false });
+  pDoor(P, 'cellar', 'vault', x0 / 2, Dh);
+  // the stairs: cellar -> hall along the west wall (toward +z), hall -> loft along the east wall (toward +z)
+  const tr = 0.22;
+  const fl = !!info.flank;
+  pStair(P, fl ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: x0 + 0.95, z: 1.3, width: 1.0, tread: tr });
+  if (up) {
+    pStair(P, fl ? { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: -1, x: -1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: x1 - 0.95, z: 1.3, width: 1.0, tread: tr });
+    if (fl) { pRoom(P, 1, 'loft', 'gallery', x0, 0, 0, D); pRoom(P, 1, 'chamber1', 'bedroom', 0, 0, x1, Dh); pRoom(P, 1, 'chamber2', 'bedroom', 0, Dh, x1, D); pDoor(P, 'loft', 'chamber1', 0, 3.5); pDoor(P, 'loft', 'chamber2', 0, Dh + 1.5); }
+    else { pRoom(P, 1, 'loft', 'bedroom', 0, 0, x1, D); pRoom(P, 1, 'chamber1', 'bedroom', x0, 0, 0, Dh); pRoom(P, 1, 'chamber2', 'bedroom', x0, Dh, 0, D); pDoor(P, 'loft', 'chamber1', 0, 2.5); pDoor(P, 'loft', 'chamber2', 0, Dh + 1.5); }
+  }
+  pLayout(P);
+  // ground floor
+  const hall0 = hall, hh = pHearth(P, hall, 's', info.inn ? 2.4 : 1.7, { cauldron: true, at: 0 });
+  P.hall = { room: hall, hh };
+  if (need.has('counter')) {
+    const t = pFree(P, hall, P.id + '.counter', 2.0, 0.7, 1.0, 0, m => { Props.table(m, 2.0, 0.7); Props.clutter(m, c.R, -0.8, 0.8, 0.76, 0, ['jug', 'bowl', 'cheese', 'loaf'], 3, c); }, { near: [x0 / 2 + 0.2, 2.2], surface: true });
+    if (t) pSpot(P, 'counter', t.cx, t.cz + 0.75, PI, { k: 0 });
+  }
+  if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
+  let kh = null;
+  if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id] });
+  dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
+  if (up) {
+    if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
+    else { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false }); dressBedroom(P, P.rooms.chamber2, { beds: [], chest: false }); dressBedroom(P, P.rooms.loft, { beds: ['bed3'], chestId: 'chest3', chest: false }); }
+  }
+  if (!hh) P.err.push('no hearth fits in the hall');
+  for (const id of ['cellar', 'vault']) if (!P.lightIn[id]) pTorch(P, P.rooms[id], 'n', (P.rooms[id].in.x0 + P.rooms[id].in.x1) / 2 + 0.5, 1.7, 6.5) || pTorch(P, P.rooms[id], 's', (P.rooms[id].in.x0 + P.rooms[id].in.x1) / 2 + 0.5, 1.7, 6.5);
+}
+
+// Until every building has a designed plan, only those listed here use the plan engine in the published game: the generic plan gives every house the same hall
+// (a shop without its counter, a smithy without its forge). ?plans=all or --opt plans=all builds every house from a plan (work in progress).
+const PLAN_SHIP = {};          // none yet: the inn and chapel plans lose quest interacts (bell, inn.bed); add ids here when their plans pass test/quest.js
+const PLAN_ALL = (TEST && TEST.plans === 'all') || (typeof location !== 'undefined' && /[?&]plans=all\b/.test(location.search));
+function planWanted(site, spec) { return PLAN_ON && !(TEST && TEST.plans === 0) && !!site && (!TEST || TEST.cells !== 0) && (PLAN_ALL || !!PLAN_SHIP[site.id]); }
+
+function planBuild(c) {
+  const dd = c.doors[0], site = c.site, m = c.int;
+  const inw = [dd.ins[0] - dd.sill[0], 0, dd.ins[2] - dd.sill[2]], il = Math.hypot(inw[0], inw[2]) || 1; inw[0] /= il; inw[2] /= il;
+  const T = m4.create(); m4.basis(T, [inw[2], 0, -inw[0]], [0, 1, 0], inw, [dd.sill[0], dd.sill[1], dd.sill[2]]);
+  m.m = T.slice(); m.dirty = true;
+  const P = planNew(c, T); P.yaw = Math.atan2(-inw[0], inw[2]); P.need = planNeeds(P.id); P.R = c.R; c.plan = P;
+  const info = PLANS_INFO[P.id] || {};
+  (PLANS[P.id] || planHouse)(P, c, info);
+  pBuild(P);
+  // the zone: round the whole plan, so room AO, sound and light find it
+  const W = P.dims ? P.dims.W : 9, D = P.dims ? P.dims.D : 10, zi = c.zoneInfo, ctr = P.w2(0, 0, D / 2);
+  zi.site = Object.assign({}, c.site, { x: ctr[0], z: ctr[2], yaw: P.yaw }); zi.hw = W / 2; zi.hd = D / 2; zi.y0 = dd.sill[1] - 3.6; zi.y1 = dd.sill[1] + 7; zi.slope = 0; zi.H = H_GROUND;
+  if (P.hearths && P.hearths[0]) { const h = P.hearths[0], hp = P.w2(h.x, 0, h.z); zi.hearth = [hp[0], hp[2], h.wid]; }
+  // every spot a schedule wants: when the plan has no such place, the nearest thing it has
+  const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
+  for (const n of P.need) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });
+  c.planDone = P; return P;
+}
+const PLANS_INFO = { inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true } };
+// the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
+function dressInn(P, c, room, hh) {
+  const R = P.R, a = room.in; P.hall = { room, hh };
+  const bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, 4.8, PI / 2, 3.8, 0.7, 1.05, m => { Props.table(m, 3.8, 0.7, 1.05); Props.clutter(m, R, -1.7, 1.7, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
+  if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); P.bar = bar;
+    pHang(P, room, 'e', bar.cz, 3.0, 1.45, 2.7, (m) => Props.shelf(m, 3.0, 1.2, 3, 0.3, (i, y) => Props.clutter(m, R, -1.3, 1.3, y, 0, ['bottle', 'bottle', 'mug', 'jug', 'bottle'], 6, c)), P.id + '.backshelf', {});
+    for (let i = 0; i < 3; i++) pAgainst(P, room, 'e', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, m => Props.keg(m, 0.33, 0.9), { at: bar.cz - 1.4 + i * 1.4 });
+    pLamp(P, room, bar.cx + 0.2, bar.cz); }
+  let n = 0;
+  for (const nr of [[-4.2, 5.0], [-0.5, 5.6], [-4.4, 2.8]]) {
+    const dn = pDining(P, room, 2.4, 0.9, { near: nr, id: 'table' + n, n: 4, items: ['mug', 'plate', 'bowl', 'candle', 'loaf', 'mug'] });
+    if (dn) { for (const s of dn.seats) pSit(P, 's' + (++n), s[0], s[1], s[2], 0); pLamp(P, room, dn.x, dn.z); n = Math.max(n, 0); }
+  }
+  if (hh) {
+    pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
+    const st = pPut(P, room, P.id + '.firestool', hh.front[0] + 1.6, hh.front[1] - 0.2, 0, 0.4, 0.4, 0.46, pdStool, {});
+    if (st) pSit(P, 'fire2', st.cx, st.cz, Math.atan2(hh.px - st.cx, -(hh.pz - st.cz)), 0);
+    pSpot(P, 'bard', hh.front[0] - 1.7, hh.front[1] - 0.3, Math.atan2(hh.px - hh.front[0] + 1.7, -(hh.pz - hh.front[1])), { k: 0 });
+  }
+  const e = P.doors.find(d => d.b === null);
+  if (e) pPut(P, room, P.id + '.mat', e.x, 2.7, 0, 2.6, 1.6, 0.02, pdRug(2.6, 1.6, [0.35, 0.34, 0.22]), { flat: true, noClear: true });
+  for (const nm of ['Cabinet', 'Barrel_Holder']) for (const sd of ['w', 's', 'n']) if (pKitFloor(P, room, sd, nm, { at: nm === 'Cabinet' ? 'end' : 'start' })) break;
+  pKitFloor(P, room, 'w', 'CandleStick_Stand', { n: 'a', at: 'mid' }); pKitFloor(P, room, 's', 'CandleStick_Stand', { n: 'b', at: 'start' });
+  pWalls(P, room, ['Torch_Metal', 'Banner_1_Cloth', 'Shield_Wooden', 'Banner_1_Cloth', 'Torch_Metal', 'paint', 'Shield_Wooden', 'rack', 'paint', 'Torch_Metal', 'paint']);
+  pLamp(P, room, -4.0, 3.6); pLamp(P, room, 0.0, 4.4); pLamp(P, room, -4.2, 6.8);
+  if (e) { pSconce(P, room, 'n', e.x + 1.8); pSconce(P, room, 'n', e.x - 1.8); }
+}
+
+
+// ---- 72f_underworld.js ----
+// ───────────────────────── the chapel and what lies under it; later: the tunnel and the dungeon ─────────────────────────
+// pGate: a locked iron-bound door in a doorway of a plan. A leaf in World.doors that opens by itself once the key has turned (S.opened[id]), a collider while shut and an interact point.
+function pGate(P, d, id, key, label) {
+  const L = P.lv[d.k], m = P.c.int, vert = d.wall.ax === 'z';          // vert: the wall runs along z (x = const)
+  const hw = d.w / 2 - 0.02, hinge = vert ? [d.x, L.y, d.z - hw] : [d.x - hw, L.y, d.z];
+  const ux = vert ? [0, 0, 1] : [1, 0, 0], uz = vert ? [-1, 0, 0] : [0, 0, -1].map(v => -v);
+  const C = m4.create(); m4.basis(C, ux, [0, 1, 0], uz, hinge); const base = m4.mul(m4.create(), P.T, C);
+  const cw = P.w2(d.x, L.y + 1, d.z), hp = P.w2(hinge[0], hinge[1], hinge[2]);
+  const leaf = { site: P.c.site, zone: P.zone, side: 'in', cell: P.c.cell.id, hinge: hp, yaw: 0, w: d.w - 0.04, h: 2.2, open: 0, c: cw, out: cw, ins: cw, sill: cw, baseM: base, gate: id, internal: true };
+  World.doors.push(leaf);
+  const q = vert ? [d.x - 0.12, d.z - d.w / 2, d.x + 0.12, d.z + d.w / 2] : [d.x - d.w / 2, d.z - 0.12, d.x + d.w / 2, d.z + 0.12];
+  let col = null; if (!S || !S.opened || !S.opened[id]) { addBoxCollider(m, q[0], q[1], q[2], q[3], L.y, L.y + 2.4); col = World.colliders[World.colliders.length - 1]; }
+  const it = pInteract(P, d.x, 1.1, d.z, { kind: 'gate', id, key, label, r: 2.3, col }, d.k); return it;
+}
+// the sarcophagus: a stone chest with a lid slightly askew
+const pdTomb = (len) => m => { m.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); m.box(-len / 2, 0, -0.42, len / 2, 0.5, 0.42); m.box(-len / 2 - 0.05, 0.5, -0.47, len / 2 + 0.05, 0.66, 0.47); m.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.8); m.box(-len / 2 + 0.2, 0.66, -0.12, len / 2 - 0.2, 0.74, 0.12); };
+const pdAltar = m => { m.mat(MAT.STONE, [0.85, 0.83, 0.79], 0.8); m.box(-1.1, 0, -0.45, 1.1, 0.95, 0.45); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.95, 0.95, -0.4, 0.95, 0.97, 0.4); for (const sx of [-0.7, 0.7]) at(m, sx, 0.97, 0, 0, () => Props.candle(m, null, true)); };
+
+PLANS.chapel = (P, c, info) => {
+  const R = P.R, need = P.need;
+  P.dims = { W: 14, D: 12 };
+  pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H_GROUND + 0.6);
+  // nave (west, long) and the sacristy (east, with the stair to the crypt)
+  pRoom(P, 0, 'nave', 'nave', -5, 0, 5, 12); pRoom(P, 0, 'sacristy', 'sacristy', 5, 0, 9, 7);
+  pDoor(P, 'nave', null, 0, 0); pDoor(P, 'nave', 'sacristy', 5, 3.5);
+  // crypt: the stair arrives in the east vault; a gate leads west under the nave; a second gate-less arch to the ossuary
+  pRoom(P, -1, 'vault', 'cellar', 5, 0, 9, 7, { floor: 'stone', win: false }); pRoom(P, -1, 'crypt', 'cellar', -5, 0, 5, 12, { floor: 'stone', win: false });
+  pDoor(P, 'vault', 'crypt', 5, 3.5, { gate: true });
+  pStair(P, { id: 'stCrypt', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: 8.05, z: 1.3, width: 1.0, tread: 0.22 });
+  pLayout(P);
+  const nave = P.rooms.nave, sac = P.rooms.sacristy, vault = P.rooms.vault, crypt = P.rooms.crypt;
+  // nave: the altar against the far wall, pews facing it, candles
+  const al = pAgainst(P, nave, 's', P.id + '.altar', 2.2, 0.9, 1.0, +1, pdAltar, {});
+  if (al) { pSpot(P, 'altar', al.cx, al.cz - 1.1, 0, { k: 0 }); P.lightIn.nave = 1; }
+  let row = 0; for (const z of [4.0, 5.6, 7.2]) for (const x of [-2.6, 2.6]) { pPut(P, nave, P.id + '.pew' + row++, x, z, 0, 3.4, 0.45, 0.9, pdBench(3.4), {}); }
+  pSpot(P, 'nave', 0, 3.0, PI, { k: 0 });
+  for (const sx of [-1, 1]) pAgainst(P, nave, sx < 0 ? 'w' : 'e', P.id + '.shelfn' + sx, 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, null), { at: 9 });
+  const bk = pFree(P, nave, P.id + '.lectern', 0.5, 0.5, 1.1, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.2, 0, -0.2, 0.2, 1.0, 0.2); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.28, 1.0, -0.22, 0.28, 1.05, 0.22); }, { near: [-3.2, 10.4] });
+  if (bk) pInteract(P, bk.cx, 1.1, bk.cz, Object.assign({ kind: 'read', id: 'chapel.book', r: 1.7 }, READS['chapel.book']), 0);
+  pLamp(P, nave, 0, 3.0); pLamp(P, nave, 0, 8.0);
+  const e = P.doors.find(d => d.b === null); if (e) { pSconce(P, nave, 'n', e.x + 1.4); pSconce(P, nave, 'n', e.x - 1.4); }
+  // sacristy: a vestment chest with the crypt key, a table, shelves
+  const ch = pAgainst(P, sac, 's', P.id + '.sacristy', 0.85, 0.5, 0.6, +1, pdChest, { lowOk: true, at: 'start' }) || pAgainst(P, sac, 'n', P.id + '.sacristy', 0.85, 0.5, 0.6, +1, pdChest, { lowOk: true, at: 'start' });
+  if (ch) pInteract(P, ch.cx, 0.5, ch.cz, { kind: 'chest', id: 'chapel.sacristy', loot: [['cryptkey', 1], ['gold', 3]], r: 1.8 }, 0);
+  pFree(P, sac, P.id + '.sactable', 1.4, 0.7, 0.8, 0, pdTable(1.4, 0.7, ['candle', 'book', 'mug'], 3, c), { near: [6.5, 5.4], surface: true });
+  pAgainst(P, sac, 'n', P.id + '.sacshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, ['book', 'candle', 'jug'])), {}) || pAgainst(P, sac, 'w', P.id + '.sacshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, null), {});
+  pLamp(P, sac, 7, 3.2);
+  // the crypt: the vault is a landing, behind the gate the tombs
+  pTorch(P, vault, 'n', 7.5, 1.7, 6.5) || pTorch(P, vault, 's', 7.5, 1.7, 6.5);
+  pFree(P, vault, P.id + '.vbarrel', 0.9, 0.9, 0.9, 0, m => Props.barrel(m, 0.33, 0.9), { near: [5.7, 5.5] });
+  let tn = 0; for (const z of [2.5, 5.0, 7.5, 10.0]) for (const x of [-3.2, 3.2]) { if (pPut(P, crypt, P.id + '.tomb' + tn++, x, z, PI / 2, 2.2, 0.95, 0.75, pdTomb(2.2), {})) { } }
+  const rel = pAgainst(P, crypt, 'w', P.id + '.relic', 0.85, 0.5, 0.6, +1, pdChest, { lowOk: true, at: 6 });
+  if (rel) pInteract(P, rel.cx, 0.5, rel.cz, { kind: 'chest', id: 'chapel.relic', loot: [['gold', 40], ['potion', 2]], r: 1.8 }, -1);
+  for (const [sd, u] of [['n', -2], ['n', 2], ['s', -2], ['s', 2], ['w', 3], ['w', 9], ['e', 3], ['e', 9]]) pTorch(P, crypt, sd, u, 1.7, 6.0);
+  const g = P.doors.find(d => d.gate); if (g) P.gate = pGate(P, g, 'chapel.gate', 'cryptkey', 'Iron gate');
+  pPier; // no hearth in a chapel
+};
+
+
 // ---- 73_village.js ----
 // ───────────────────────── the village: houses, square, bridge, ruin, fences, dock ─────────────────────────
 const headingTo = (x, z, tx, tz) => Math.atan2(tx - x, -(tz - z));
@@ -5089,7 +6181,7 @@ function buildVillage() {
     const spec = HOUSES[site.id]; if (!spec) continue;
     const h = buildHouse(site, spec);
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
-    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true, cell: h.cell ? h.cell.id : null }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
   }
@@ -5311,7 +6403,7 @@ function buildVillage() {
   leaf.mat(MAT.METAL, COL.black); for (const y of [0.18, 0.82]) { leaf.box(0, y - 0.03, -0.04, 0.82, y + 0.03, -0.03, 32); leaf.box(0, y - 0.03, 0.03, 0.82, y + 0.03, 0.04, 16); }
   leaf.box(0.86, 0.48, -0.07, 0.9, 0.54, 0.07);
   const leafItem = skin.add(leaf);
-  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: 0, kind: 'door' }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;
@@ -5464,8 +6556,10 @@ function GP() {
     let n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]; const l = Math.hypot(n[0], n[1], n[2]) || 1; n = n.map(v => v / l);
     const emit = (vs, uvs, nn) => { const b0 = p.pos.length / 3; vs.forEach((v, i) => { p.pos.push(v[0], v[1], v[2]); p.nrm.push(nn[0], nn[1], nn[2]); p.uv.push(uvs[i][0], uvs[i][1]); p.col.push(col[0], col[1], col[2]); }); p.idx.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3); };
     const uvs = [[u[0], u[1]], [u[2], u[1]], [u[2], u[3]], [u[0], u[3]]];
+    // both may be an outward direction: one face only, wound to face that way (kit materials draw both sides themselves; two coincident faces fight for depth and one side goes dark)
+    if (Array.isArray(both)) { if (n[0] * both[0] + n[1] * both[1] + n[2] * both[2] < 0) emit([d, c, b, a], [uvs[3], uvs[2], uvs[1], uvs[0]], [-n[0], -n[1], -n[2]]); else emit([a, b, c, d], uvs, n); return; }
     emit([a, b, c, d], uvs, n);
-    if (both) emit([d, c, b, a], [uvs[3], uvs[2], uvs[1], uvs[0]], [-n[0], -n[1], -n[2]]);
+    // both === true used to add a second, reversed face; every kit material draws both sides itself, so the pair was coincident (z-fighting) and doubled the triangles: one face now
   };
   const tri = (mat, a, b, c, col, uv, both) => quad(mat, a, b, c, c, col, uv, both);
   const box = (mat, x0, y0, z0, x1, y1, z1, col, uv) => {
@@ -5622,17 +6716,11 @@ function buildAlley() {
     // ── roof: one scheme for the whole terrace: ridge parallel to the street (eaves to the street), each roof exactly as long as its own shop,
     //    no side overhang, so neighbours meet at party walls. The jetty of the upper storeys sits under the front eave. ──
     const Ytop = fl * H, hd = d / 2, rise = hd * tanP, zc = -0.5;
-    let span = d <= 5 ? 4 : 6, lens = span === 4 ? [4, 6, 8] : [4, 6, 8, 10, 12, 14], len = lens.reduce((b2, l) => Math.abs(l - w) < Math.abs(b2 - w) ? l : b2, lens[0]), rn = 'Roof_RoundTiles_' + span + 'x' + len; const rn0 = rn; if (a.shingle && typeof infR === 'function') rn = infR(rn); const ri = Kit.info(rn), ridge = ri.max[1], gr = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1];
-    const RF = new THREE.Matrix4().makeBasis(V([0, 0, -1]), V(up), V([1, 0, 0])).setPosition(0, Ytop, zc).premultiply(MS);
-    B.add(rn, KH.xf(RF, 0, 0, 0, [d / span, rise / ridge, (w + 0.14) / ri.size[2]]), { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
-    const Fg = frames(fl - 1);
-    for (const [wn, east] of [['left', false], ['right', true]]) {          // timber gable closes the roof over an exposed end wall
-      const sEast = site.yaw === PI ? wn === 'left' : wn === 'right', nb = neighbourFloors(a, sEast); if (nb >= fl) continue;
-      addP(MS, 'Roof_Front_Brick' + span, Fg[wn], WALLS[wn].len(w, d) / 2, H, 0, [d / span, rise / gr, 1], 0, { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.2 });
-    }
+    // the generated shingle roof (73d_infill.js: slab thickness, soffits, ridge cap, one outward face per surface), the same on every house of the town
+    infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc, ov: 0.5, nl: neighbourFloors(a, site.yaw === PI) > 0, nr: neighbourFloors(a, site.yaw !== PI) > 0, tint: [0.97, 0.97, 0.97] });
     if (a.kind === 'books' || a.kind === 'grocer') {          // a chimney standing on the ridge
-      const cx = (a.kind === 'books' ? -1 : 1) * w * 0.25, cb = Ytop + rise - 2.1; B.add('Prop_Chimney', KH.xf(MS, cx, cb, zc, [0.9, 3.0 / 3.18, 0.9]), OUT);
-      World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, cb + 3.2, zc).applyMatrix4(MS).toArray(), zone: 0 });
+      const cx = (a.kind === 'books' ? -1 : 1) * w * 0.25, ct = infChimney(B, MS, { x: cx, z: zc, top: Ytop, tanP, hs: hd, ridgeX: true, zc });
+      World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, ct + 0.2, zc).applyMatrix4(MS).toArray(), zone: 0 });
     }
     // ── dressing on the front ──
     const Ff = F0.front, Fu = frames(1).front, nF = Math.round(w / 2);
@@ -6355,10 +7443,11 @@ function splat2Dress(blob, A, B) {
 // in the same way as the market alley (2 m wall panels scaled to the wall, kit window and door modules, jettied upper storeys, kit roof turned to a ridge
 // that suits the street). All of it goes into ONE batch (one draw per material) which is hidden when the camera is far away or indoors and does not
 // cast into the sun-shadow maps: one prism stand-in per house does that.
+const ROOFS = [];       // every generated roof (for test/town.js: slope sample points against the neighbours' volumes)
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
 const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof';
 function infBatch() {
-  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 4096, off: 2048 }), add = b.add; b.add = (n, x, o) => add(n, x, Object.assign({ cast: false }, o || {})); }       // nothing in the batch casts: one mesh per material, not two
+  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 24, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 24 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
   return INFS.batch;
 }
 
@@ -6436,34 +7525,70 @@ function infWalls(B, MS, o) {
     }
     // corner posts
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.box(W_, sx * w / 2 - 0.09 - (sx > 0 ? 0.0 : 0.0), yb, sz * d / 2 - off - 0.09, sx * w / 2 + 0.09, yt, sz * d / 2 - off + 0.09, DK);
-    B.add(g.make('gen_walls_' + (_gn++)), MS, o.optsOf ? o.optsOf(k) : { zone: 0, skyVis: 1, cast: false });
+    { const nm = g.make('gen_walls_' + (_gn++)), gf = GP();           // the far copy: four plain wall faces
+      for (const wn of ['front', 'back', 'left', 'right']) {
+        if ((wn === 'left' || wn === 'right') && k < ((o.skip && o.skip[wn]) || 0)) continue;
+        const W = WALLS[wn], L = W.len(w, d), s0 = W.start(w, d), Q = (u, y) => [s0[0] + W.u[0] * u, y, s0[2] + W.u[2] * u - off];
+        gf.quad(mat, Q(0, yb), Q(L, yb), Q(L, yt), Q(0, yt), col, [0, 0, L / ts, (yt - yb) / ts], W.n);
+      }
+      const fn = gf.make('gen_wallsF_' + (_gn++)); Kit.far[nm] = Kit.pieces[fn].prims; delete Kit.pieces[fn];
+      B.add(nm, MS, o.optsOf ? o.optsOf(k) : { zone: 0, skyVis: 1, cast: false }); }
   }
 }
-// A generated shingle roof: two planes (double-sided), deep eaves, fascia and ridge boards, barge boards and plank gables, about 100 triangles
-// (the kit's round-tile roofs cost 2500-4700). o: w d (footprint), top (wall top y), tanP, ridgeX (ridge along the width), zc (roof centre offset along z), ov (eaves), gov (overhang at an exposed gable),
-// gl / gr: gable at the two ends of the ridge (false: party wall), tint, moss (0..1 darker patches in the vertex colour)
+// A generated shingle roof, one outward face per surface (every kit material draws both sides itself: two faces on one plane fight for depth).
+// Two pieces: the slopes and plank gables (they take the room's zone on their underside), and the slab's thickness at the eaves and rakes, the soffits under the overhang and the ridge cap
+// (outdoors on every face). o: w d (footprint), top (wall top y), tanP, ridgeX (ridge along the width), zc (roof centre offset along z), ov (eaves), gov (rake overhang at an exposed gable),
+// nl / nr: a neighbour stands against that gable end (rake overhang 4 cm, so the roof never reaches into the next house), tint, thick (slab thickness)
 function infRoofGen(B, MS, o) {
-  const g = GP(), w = o.w, d = o.d, tanP = o.tanP, ridgeX = o.ridgeX !== false, len = ridgeX ? w : d, span = ridgeX ? d : w, ov = o.ov === undefined ? 0.5 : o.ov, gov = o.gov === undefined ? 0.2 : o.gov, zc = o.zc || 0, top = o.top;
-  const hs = span / 2, yR = top + hs * tanP, yE = top - ov * tanP, a0 = -len / 2 - (o.gl === false ? 0.04 : gov), a1 = len / 2 + (o.gr === false ? 0.04 : gov), ve = hs + ov;
+  const g = GP(), g2 = GP(), gf = GP(), w = o.w, d = o.d, tanP = o.tanP, ridgeX = o.ridgeX !== false, len = ridgeX ? w : d, span = ridgeX ? d : w, ov = o.ov === undefined ? 0.5 : o.ov, zc = o.zc || 0, top = o.top, T = o.thick || 0.1;
+  const lift = o.lift || 0, gov = o.gov === undefined ? 0.2 : o.gov, hs = span / 2, yR = top + lift + hs * tanP, yE = top + lift - ov * tanP, a0 = -len / 2 - (o.nl ? 0.04 : gov), a1 = len / 2 + (o.nr ? 0.04 : gov), ve = hs + ov;
   const P = (u, v, y) => ridgeX ? [u, y, zc + v] : [v, y, zc + u];
-  const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE);
-  const plane = (v0, y0, v1, y1) => {
-    const A = P(a0, v0, y0), Bp = P(a1, v0, y0), C = P(a1, v1, y1), D = P(a0, v1, y1);
-    const uv = [0, 0, (a1 - a0) / 1.25, slopeLen / 1.25];
-    g.quad(INF_S, A, Bp, C, D, col, uv, true);
+  const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE), dark = col.map(v => v * 0.7), wood = [0.24, 0.2, 0.17];
+  const OUTV = (u, v, y) => ridgeX ? [u, y, v] : [v, y, u];            // a direction in the roof's own frame -> the house frame
+  const planes = G => {
+    for (const s of [-1, 1]) {
+      const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE), C = P(a1, 0, yR), D = P(a0, 0, yR), up = [0, 1, 0];
+      G.quad(INF_S, A, Bp, C, D, col, [0, 0, (a1 - a0) / 1.25, slopeLen / 1.25], up);
+    }
+    for (const [u, sg] of [[-len / 2, -1], [len / 2, 1]]) {
+      const A = P(u, -hs, top), Bp = P(u, hs, top), C = P(u, 0, yR - T * 0.5);
+      G.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], OUTV(sg, 0, 0));
+    }
   };
-  plane(-ve, yE, 0, yR); plane(ve, yE, 0, yR);
-  const wood = [0.2, 0.17, 0.15];
-  // fascia boards along both eaves, ridge cap, barge boards up the rakes
-  for (const s of [-1, 1]) { const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE); g.beam(W_, [A[0], A[1] - 0.04, A[2]], [Bp[0], Bp[1] - 0.04, Bp[2]], 0.09, wood); }
-  { const A = P(a0, 0, yR + 0.04), Bp = P(a1, 0, yR + 0.04); g.beam(W_, A, Bp, 0.14, [0.24, 0.2, 0.17]); }
-  for (const [u, on] of [[a0, o.gl !== false], [a1, o.gr !== false]]) if (on) for (const s of [-1, 1]) { const A = P(u, s * ve, yE), Bp = P(u, 0, yR + 0.02); g.beam(W_, A, Bp, 0.08, wood); }
-  // plank gables on the wall plane, closing the roof over an exposed end wall
-  for (const [u, on, sg] of [[-len / 2, o.gl !== false, -1], [len / 2, o.gr !== false, 1]]) if (on) {
-    const A = P(u, -hs, top), Bp = P(u, hs, top), C = P(u, 0, yR);
-    g.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], true);
+  planes(g); planes(gf);
+  // thickness: the shingle edge at each eave and rake, a soffit under the overhang, a ridge cap
+  for (const s of [-1, 1]) {
+    { const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE), A2 = P(a0, s * ve, yE - T), B2 = P(a1, s * ve, yE - T); g2.quad(INF_S, A, Bp, B2, A2, dark, [0, 0, (a1 - a0) / 1.25, 0.1], OUTV(0, s, -0.4)); }
+    for (const [u, sg, nb] of [[a0, -1, o.nl], [a1, 1, o.nr]]) {
+      const A = P(u, 0, yR), Bp = P(u, s * ve, yE), B2 = P(u, s * ve, yE - T), A2 = P(u, 0, yR - T);
+      g2.quad(INF_S, A, Bp, B2, A2, dark, [0, 0, slopeLen / 1.25, 0.1], OUTV(sg, 0, 0));
+    }
+    // soffit under the eave: from the wall line out to the tip
+    { const A = P(a0, s * hs, top + lift - T), Bp = P(a1, s * hs, top + lift - T), C = P(a1, s * ve, yE - T), D = P(a0, s * ve, yE - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
+    // soffit under the rake overhang
+    for (const [u, un, ex] of [[-len / 2, a0, !o.nl], [len / 2, a1, !o.nr]]) if (ex) { const A = P(u, 0, yR - T), Bp = P(un, 0, yR - T), C = P(un, s * ve, yE - T), D = P(u, s * hs, top + lift - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
   }
-  B.add(g.make('gen_roof_' + (_gn++)), MS, { zone: 0, skyVis: 1, cast: false, inZone: o.inZone || 0, inSkyVis: o.inSky === undefined ? 0.2 : o.inSky });
+  { const A = P(a0, 0, yR + 0.05), Bp = P(a1, 0, yR + 0.05); g2.beam(W_, A, Bp, 0.13, [0.26, 0.22, 0.19]); }
+  ROOFS.push({ M: Array.from(MS.elements || MS), w, d, top, tanP, ridgeX, zc, ov, lift, T, a0, a1, hs, ve, yR, yE });
+  const name = g.make('gen_roof_' + (_gn++)), name2 = g2.make('gen_roofe_' + (_gn++)), fn = gf.make('gen_roofF_' + (_gn++));
+  Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn]; Kit.far[name2] = [];
+  B.add(name, MS, { zone: 0, skyVis: 1, cast: false, inZone: o.inZone || 0, inSkyVis: o.inSky === undefined ? 0.2 : o.inSky });
+  B.add(name2, MS, { zone: 0, skyVis: 1, cast: false });
+}
+// a chimney stack that rises out of the roof: it starts below the slope (so no gap shows from any side), a lead flashing collar sits on the slope and a capped flue ends it.
+// o: x z (house frame), top, tanP, hs (half span), ridgeX, zc. Returns the height of the flue.
+function infChimney(B, MS, o) {
+  const g = GP(), gf = GP(), ridgeX = o.ridgeX !== false, v = ridgeX ? o.z - (o.zc || 0) : o.x, yS = o.top + (o.lift || 0) + (o.hs - Math.abs(v)) * o.tanP, yR = o.top + (o.lift || 0) + o.hs * o.tanP, yT = Math.max(yR + 0.95, yS + 1.5), sw = o.size || 0.46;
+  const st = [0.5, 0.47, 0.43], lead = [0.3, 0.3, 0.32], cap = [0.4, 0.38, 0.35], x = o.x, z = o.z, y0 = yS - 0.35 - sw * o.tanP * 1.1;
+  const uvS = [0, 0, 0.5, 1.2];
+  const stack = G => { G.box(INF_B, x - sw, y0, z - sw, x + sw, yT, z + sw, st, uvS); };
+  stack(g); stack(gf);
+  g.box(INF_B, x - sw - 0.1, yS - 0.03 - sw * o.tanP, z - sw - 0.1, x + sw + 0.1, yS + 0.1 + sw * o.tanP, z + sw + 0.1, lead, [0, 0, 0.3, 0.3]);      // flashing collar
+  g.box(INF_B, x - sw - 0.08, yT, z - sw - 0.08, x + sw + 0.08, yT + 0.1, z + sw + 0.08, cap, [0, 0, 0.3, 0.3]);
+  g.quad(W_, [x - sw * 0.55, yT + 0.101, z + sw * 0.55], [x + sw * 0.55, yT + 0.101, z + sw * 0.55], [x + sw * 0.55, yT + 0.101, z - sw * 0.55], [x - sw * 0.55, yT + 0.101, z - sw * 0.55], [0.03, 0.03, 0.03], GPU.wood, [0, 1, 0]);
+  const name = g.make('gen_chim_' + (_gn++)), fn = gf.make('gen_chimF_' + (_gn++)); Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn];
+  B.add(name, MS, { zone: 0, skyVis: 1, cast: false });
+  return yT + 0.1;
 }
 const hypot2 = Math.hypot;
 
@@ -6529,12 +7654,11 @@ function infShell(B, h, lo) {
   }
   // ── roof: generated shingles; ridge parallel to the street (eaves to the street) or gable to the street ──
   const Ytop = fl * H, rx = !gableFront, zc = -sh, rise = (rx ? d : w) / 2 * tanP;
-  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: 0.5, gl: rx ? nbW < fl : true, gr: rx ? nbE < fl : true, tint: [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
+  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: 0.5, nl: rx && nbW > 0, nr: rx && nbE > 0, tint: [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
   if (!lo) {
-    if (h.chimney) {          // a chimney standing on the ridge
-      const cx = rx ? (h.chimney > 0 ? 1 : -1) * w * 0.28 : 0, cz = rx ? zc : d * 0.2 * (h.chimney > 0 ? 1 : -1), cb = Ytop + rise - 2.1;
-      B.add('Prop_Chimney', KH.xf(MS, cx, cb, cz, [0.9, 3.0 / 3.18, 0.9], 0), OUT);
-      if (INFS.nChim++ % 3 === 0) World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, cb + 3.2, cz).applyMatrix4(MS).toArray(), zone: 0 });
+    if (h.chimney) {          // a chimney that rises through the roof (stack, flashing, cap)
+      const cx = rx ? (h.chimney > 0 ? 1 : -1) * w * 0.28 : 0, cz = rx ? zc : d * 0.2 * (h.chimney > 0 ? 1 : -1) + zc * 0, top = infChimney(B, MS, { x: cx, z: cz, top: Ytop, tanP, hs: (rx ? d : w) / 2, ridgeX: rx, zc: rx ? zc : 0 });
+      if (INFS.nChim++ % 3 === 0) World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, top + 0.2, cz).applyMatrix4(MS).toArray(), zone: 0 });
     }
     // front: flower boxes under upper windows, a lantern by the door, a sheltering gallery with an outside stair on some
     const Ff = F0.front, nF = Math.max(1, Math.round(w / 2)), mF = w / nF;
@@ -6602,7 +7726,7 @@ function infillAttach() {
 }
 
 // the walls of an enterable infill house (called from kitShell): the plan comes from the building's own openings, the upper storey is laid out like a shell's
-function infKitWalls(c, b, MS, frames, zone, sy, R) {
+function infKitWalls(c, b, MS, frames, zone, sy, R, pass) {      // pass: 'ext' / 'int' in a cell (the village shell / the room), else both in one
   const { site, spec, w, d, H, openings } = c, st = spec.kitStyle, fl = st.up ? 2 : 1, plan = [];
   plan[0] = { front: [], back: [], left: [], right: [] };
   for (const wn of ['front', 'back', 'left', 'right']) {
@@ -6611,12 +7735,12 @@ function infKitWalls(c, b, MS, frames, zone, sy, R) {
       const cu = (o.u0 + o.u1) / 2, hw = o.door ? Math.min(0.55 * Math.max(1, o.def.ksx || 1), cu, L - cu) : Math.min(0.55, cu, L - cu);
       if (hw < 0.3) continue;
       plan[0][wn].push({ u0: cu - hw, u1: cu + hw, v0: o.door ? 0 : (o.def.sill || 0.95), v1: o.door ? (o.def.h || 2.12) : (o.def.sill || 0.95) + (o.def.h || 1.55), door: !!o.door, shutter: !o.door && hw > 0.5 && R() < 0.35 });
-      if (o.door && o.def.kLamp) { const side = cu + hw + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F: frames[wn], wn, u: cu + side * (hw + 0.42), v: 1.5 * sy }); }
+      if (o.door && o.def.kLamp && pass !== 'int') { const side = cu + hw + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F: frames[wn], wn, u: cu + side * (hw + 0.42), v: 1.5 * sy }); }
     }
   }
   if (fl > 1) { plan[1] = { front: [], back: [], left: [], right: [] }; const nF = Math.max(2, Math.round(w / 2)), mF = w / nF; for (let i = 0; i < nF; i++) { const cu = (i + 0.5) * mF; if (i % 2 === 0) plan[1].front.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1, shutter: R() < 0.4 }); if (i % 2 === 1) plan[1].back.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1 }); } plan[1].left.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); plan[1].right.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); }
   const tn = 0.85 + R() * 0.25;
-  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: [tn, tn * 0.98, tn * 0.95], jetty: false, R, plan, skip: {}, optsOf: k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 } });
+  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: [tn, tn * 0.98, tn * 0.95], jetty: false, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
 }
 
 
@@ -6831,9 +7955,10 @@ function buildVegetation() {
     if (River.dist(x, z, 7 + pad) < 6.5 + pad) return true;
     if (hyp(x - LAKE.x, z - LAKE.z) < lakeR(x, z) + 2 + pad) return true;
     if (hyp((x - SQUARE.x) / (SQUARE.rx + 2), (z - SQUARE.z) / (SQUARE.rz + 2)) < 1) return true;
+    if (typeof wildsBlocked === 'function' && wildsBlocked(x, z, pad)) return true;
     return false;
   };
-  const gy = (x, z) => (Math.abs(x) < 143 && Math.abs(z) < 143) ? Terrain.y(x, z) : terrainH(x, z);
+  const gy = (x, z) => Terrain.y(x, z);
   const addTree = (kind, x, z, scale) => {
     const y = gy(x, z);
     inst[kind].push([x, y - 0.05, z, scale, R() * TAU, R(), R(), 0]);
@@ -6851,16 +7976,17 @@ function buildVegetation() {
     if (r < 56 || r > ext) continue;
     let dens = (0.10 + 0.62 * smooth(62, 135, r)) * smooth(-0.35, 0.15, fbm(x / 70 + 5, z / 70, 3, 23) + 0.25 * smooth(100, 180, r));
     const farm = smooth(60, 110, x) * smooth(60, -10, Math.abs(z)); dens *= 1 - 0.85 * farm;
+    if (typeof wildsDens === 'function') dens *= wildsDens(x, z);
     if (R() > dens) continue;
-    if (r < 160 && blocked(x, z, 1.5)) continue;
+    if (r < 200 && blocked(x, z, 1.5)) continue;
     const y = gy(x, z); if (y > 205 || y < LAKE.y + 0.3) continue;
     const e = 2.5, sl = Math.max(Math.abs(gy(x + e, z) - y), Math.abs(gy(x, z + e) - y)) / e; if (sl > 0.85) continue;
     const birchP = r < 150 ? 0.34 : 0.07;
     if (R() < birchP) addTree('birch', x, z, 0.8 + R() * 0.45); else addTree('pine', x, z, (0.75 + R() * 0.7) * (y > 150 ? 0.75 : 1));
   }
   // bushes and boulders
-  for (let i = 0; i < 520; i++) {
-    const a = R() * TAU, r = 26 + Math.pow(R(), 0.7) * 125, x = Math.cos(a) * r, z = Math.sin(a) * r;
+  for (let i = 0; i < 700; i++) {
+    const a = R() * TAU, r = 26 + Math.pow(R(), 0.7) * 160, x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (blocked(x, z, 0.3)) continue;
     inst.bush.push([x, Terrain.y(x, z) - 0.05, z, 0.5 + R() * 0.65, R() * TAU, R(), R(), 0]);
   }
@@ -6869,7 +7995,7 @@ function buildVegetation() {
   const addRock = (x, z, s) => { const y = gy(x, z); inst.rock.push([x, y - 0.22 * s, z, s, R() * TAU, R(), R(), 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
   for (let i = 0; i < 420; i++) {
     const a = R() * TAU, r = 30 + R() * 210, x = Math.cos(a) * r, z = Math.sin(a) * r;
-    if (r < 160 && blocked(x, z, 1.0)) continue;
+    if (r < 200 && blocked(x, z, 1.0)) continue;
     addRock(x, z, 0.25 + Math.pow(R(), 2.2) * 2.0);
   }
   for (let s = 20; s < River.len - 30; s += 4.5) { const p = River.point(s); if (hyp(p[0], p[1]) > 200) continue; for (const side of [-1, 1]) { if (R() < 0.6) continue; const o = 4.6 + R() * 2.2, x = p[0] - p[3] * o * side, z = p[1] + p[2] * o * side; if (Math.abs(x - BRIDGE.x) < 10 && Math.abs(z - BRIDGE.z) < 5) continue; if (SITES.some(st => { const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 2.5 && Math.abs(l[1]) < st.d / 2 + 2.5; })) continue; addRock(x, z, 0.3 + R() * 0.8); } }
@@ -6899,6 +8025,7 @@ function buildVegetation() {
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;
+  World.treePos = { pine: inst.pine, birch: inst.birch, oak: inst.oak };      // [ui] read by the map (86_map.js)
 }
 
 
@@ -6915,7 +8042,10 @@ function fxUpdate(dt, time, env, cam) {
   const d = R.partData, max = R.partMax; let n = 0;
   const put = (x, y, z, size, r, g, b, a, rot, kind, aspect, seed) => { if (n >= max) return; const o = n++ * 12; d[o] = x; d[o + 1] = y; d[o + 2] = z; d[o + 3] = size; d[o + 4] = r; d[o + 5] = g; d[o + 6] = b; d[o + 7] = a; d[o + 8] = rot; d[o + 9] = kind; d[o + 10] = aspect; d[o + 11] = seed; };
   const lit = env.windowGlow, wx = env.windDir[0] * env.windStrength, wz = env.windDir[1] * env.windStrength;
+  const here = World.cell ? World.cell.id : null;
   for (const e of World.emitters) {
+    if (e.cell === undefined) { const zi = e.zone ? World.zones[e.zone - 1] : null; e.cell = zi && zi.cell || null; }
+    if (e.cell !== here) continue;          // in a cell only its own flames burn; outdoors none of them do
     const dx = e.p[0] - cam[0], dy = e.p[1] - cam[1], dz = e.p[2] - cam[2], dist = hyp(dx, dy, dz);
     if (e.type === 'fire' || e.type === 'bonfire') {
       if (e.type === 'bonfire' && !World.bonfire) continue;
@@ -6926,7 +8056,7 @@ function fxUpdate(dt, time, env, cam) {
       if (dist < 45) { e.t += dt; const rate = e.type === 'bonfire' ? 0.035 : 0.16; while (e.t > rate) { e.t -= rate; if (FX.embers.length < 150) FX.embers.push({ p: [e.p[0] + (Math.random() - 0.5) * s * 0.6, e.p[1] + s * 0.4, e.p[2] + (Math.random() - 0.5) * s * 0.6], v: [(Math.random() - 0.5) * 0.5, 0.9 + Math.random() * 1.4 * (s > 1 ? 2 : 1), (Math.random() - 0.5) * 0.5], life: 0, max: 0.7 + Math.random() * 1.1 * (s > 1 ? 2 : 1), ph: Math.random() * 9 }); } }
     } else if (e.type === 'smoke') {
       if (dist > 150) continue;
-      e.t += dt; while (e.t > 0.42) { e.t -= 0.42; if (FX.smoke.length < 230) FX.smoke.push({ p: [e.p[0], e.p[1], e.p[2]], life: 0, max: 5.5 + Math.random() * 2, seed: Math.random(), rot: Math.random() * 6 }); }
+      e.t += dt; while (e.t > 0.6) { e.t -= 0.6; if (FX.smoke.length < 230) FX.smoke.push({ p: [e.p[0], e.p[1], e.p[2]], life: 0, max: 5.5 + Math.random() * 2, seed: Math.random(), rot: Math.random() * 6 }); }
     } else if (e.type === 'candle') {
       if ((lit < 0.05 && !e.always) || dist > 40) continue;
       const k = e.always ? 1 : lit;
@@ -6944,10 +8074,11 @@ function fxUpdate(dt, time, env, cam) {
     }
   }
   // chimney smoke drifts with the wind and thins out
+  if (World.cell) FX.smoke.length = 0;
   for (let i = FX.smoke.length - 1; i >= 0; i--) {
     const s = FX.smoke[i]; s.life += dt; if (s.life > s.max) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
     const k = s.life / s.max; s.p[0] += (wx * 0.9 * k + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) * dt; s.p[2] += (wz * 0.9 * k) * dt;
-    put(s.p[0], s.p[1], s.p[2], 0.35 + k * 2.3, 0.62, 0.60, 0.58, Math.min(k * 6, 1) * (1 - k) * 0.5, s.rot + s.life * 0.2, 1, 1, s.seed);
+    put(s.p[0], s.p[1], s.p[2], 0.14 + k * 0.95, 0.30, 0.30, 0.31, Math.min(k * 5, 1) * Math.pow(1 - k, 1.3) * 0.42, s.rot + s.life * 0.2, 1, 1.5 + k, s.seed);       // thin grey wisps that fade out (they were large opaque white blobs from above)
   }
   for (let i = FX.embers.length - 1; i >= 0; i--) {
     const s = FX.embers[i]; s.life += dt; if (s.life > s.max) { FX.embers[i] = FX.embers[FX.embers.length - 1]; FX.embers.pop(); continue; }
@@ -7227,7 +8358,7 @@ const NPC_DEFS = [
     sched: [[7.5, 'stall0', 'idle'], [18, 'barn.work', 'work'], [19.5, 'inn.stand1', 'idle'], [22, 'farm.bed2', 'lie']] },
 ];
 const NPCS = [], NPC = {};
-const Nav = { nodes: [], adj: [], spot: {} };
+const Nav = { nodes: [], adj: [], spot: {}, portal: {} };        // portal[a] = b: stepping from node a to b crosses a door between two spaces (an instant move)
 function navBuild() {
   const N = Nav.nodes, A = Nav.adj;
   const add = (x, y, z) => { N.push([x, y, z]); A.push([]); return N.length - 1; };
@@ -7247,16 +8378,23 @@ function navBuild() {
   const doorNode = {};
   for (const id in World.houses) {
     const h = World.houses[id], d = h.door; if (!d) continue;
-    const o = add(d.out[0], World.groundAt(d.out[0], d.out[2], d.out[1] + 1), d.out[2]), i = add(d.ins[0], h.floorY + 0.02, d.ins[2]);
-    link(o, i); link(o, nearest(d.out[0], d.out[2], outside, 40)); doorNode[id] = { o, i }; outside.push(o);
+    const x = h.xdoor || d, o = add(x.out[0], World.groundAt(x.out[0], x.out[2], x.out[1] + 1), x.out[2]), i = add(d.ins[0], h.floorY + 0.02, d.ins[2]);
+    if (h.cell) {         // the door is a portal: outside node o -> threshold ot (village) ~ threshold it (cell) -> inside node i
+      const ot = add(x.c[0], World.groundAt(x.c[0], x.c[2], x.c[1] + 1), x.c[2]), it = add(d.c[0], h.floorY + 0.02, d.c[2]);
+      link(o, ot); link(it, i); A[ot].push([it, 1.2]); A[it].push([ot, 1.2]); Nav.portal[ot] = it; Nav.portal[it] = ot; doorNode[id] = { o, i, ot, it };
+    } else { link(o, i); doorNode[id] = { o, i }; }
+    link(o, nearest(x.out[0], x.out[2], outside, 40)); outside.push(o);
   }
   for (const name in World.spots) {
     const s = World.spots[name], k = add(s.p[0], s.p[1], s.p[2]); Nav.spot[name] = k;
+    if (s.zone && s.site && World.houses[s.site] && World.houses[s.site].plan) continue;         // planned interiors join their rooms (planNav)
     if (s.zone && s.site && doorNode[s.site]) link(k, doorNode[s.site].i); else link(k, nearest(s.p[0], s.p[2], outside, 60));
   }
+  for (const id in World.houses) { const h = World.houses[id]; if (h.plan) planNav(h.plan, add, link, doorNode); }
   // upper floors are reached by their stairs only: bottom -> top -> (round the stairwell) -> the rooms above; nothing upstairs links straight to the door
   const unlink = k => { A[k].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k) a.splice(i, 1); };
   for (const st of World.stairs) {
+    if (st.plan) continue;
     const nb = Nav.spot[st.bottom], nt = Nav.spot[st.top]; if (nb === undefined || nt === undefined) continue;
     const chain = [nb, nt].concat(st.via.map(n => Nav.spot[n]).filter(k => k !== undefined)), fy = World.houses[st.site].floorY;
     for (const k of chain.slice(1)) unlink(k);
@@ -7320,6 +8458,7 @@ function npcArrive(n, spotName, anim) {
   n.anim = sp.lie ? 'lie' : sp.sit ? 'sit' : (anim === 'sit' || anim === 'lie') ? 'idle' : anim;
 }
 function npcUpdate(dt, playerPos) {
+  const pc = Cells.spaceOf(playerPos);
   for (const n of NPCS) {
     n.t += dt;
     const dPlayer = hyp(n.pos[0] - playerPos[0], n.pos[2] - playerPos[2]);
@@ -7343,7 +8482,7 @@ function npcUpdate(dt, playerPos) {
         const run = n.def.run, sp = (run ? 2.7 : 1.35) * (0.9 + n.scale * 0.1), N2 = Nav.nodes[n.path[n.pi]];
         const dx = N2[0] - n.pos[0], dz = N2[2] - n.pos[2], d = hyp(dx, dz);
         const blocked = dPlayer < 0.75 && (playerPos[0] - n.pos[0]) * dx + (playerPos[2] - n.pos[2]) * dz > 0;
-        if (d < 0.18) { n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
+        if (d < 0.18) { const k = n.path[n.pi], k2 = n.path[n.pi + 1]; if (k2 !== undefined && Nav.portal[k] === k2) { n.pos = Nav.nodes[k2].slice(); n.pi++; n.portalT = 0.4; } n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
         else if (!blocked) {
           const st = Math.min(d, sp * dt); n.pos[0] += dx / d * st; n.pos[2] += dz / d * st;
           const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 0.6); n.pos[1] += clamp(gy - n.pos[1], -3 * dt, 3 * dt); if (Math.abs(gy - n.pos[1]) > 1.2) n.pos[1] = gy;
@@ -7352,6 +8491,9 @@ function npcUpdate(dt, playerPos) {
         } else n.anim = 'idle';
       }
     }
+    // not in the player's space (another cell, or the village while the player is in one): position only, no pose, no drawing
+    if (pc !== Cells.spaceOf(n.pos)) { n.obj.visible = false; if (n.ch && !n.hid) { n.hid = true; n.ch.pivot.visible = false; } continue; }
+    n.hid = false;
     // head follows the player when close
     let lx = 0, ly = 0;
     if (dPlayer < 5.5 && n.anim !== 'lie' && n.anim !== 'hammer' && n.anim !== 'work') { const a = angDiff(Math.atan2(playerPos[0] - n.pos[0], -(playerPos[2] - n.pos[2])), n.yaw); if (Math.abs(a) < 1.9) { lx = clamp(-a, -1.1, 1.1); ly = clamp((n.pos[1] + 1.6 * n.scale - playerPos[1] - 1.6) * 0.25, -0.3, 0.3); } }
@@ -7478,6 +8620,23 @@ function ambUpdate(dt, playerPos) {
 }
 
 
+// ---- 77c_patrons.js ----
+// ───────────────────────── regulars of the Honeyed Hart: evening guests who fill the common room (inn.s6..s12) ─────────────────────────
+// By day they idle in the square or at a porch; from the evening bell they are at their table; they sleep in the infill cottages.
+(function () {
+  const L = [
+    ['pat1', 'Wat Cooper', 'tan', 'brown', [0.45, 0.36, 0.26], 'inn.s6', 'in.02.bed', 'square.bench'],
+    ['pat2', 'Edda Fenn', 'rosy', 'auburn', [0.5, 0.3, 0.3], 'inn.s7', 'in.04.bed', 'square.bench2'],
+    ['pat3', 'Hob the Carter', 'brown', 'black', [0.34, 0.4, 0.3], 'inn.s8', 'in.07.bed', 'square.well'],
+    ['pat4', 'Sorrel Vane', 'fair', 'blond', [0.42, 0.32, 0.5], 'inn.s9', 'in.13.bed', 'elder.porch'],
+    ['pat5', 'Piers Lowe', 'tan', 'grey', [0.4, 0.38, 0.34], 'inn.s10', 'in.21.bed', 'square.bench'],
+    ['pat6', 'Nell Marsh', 'rosy', 'brown', [0.3, 0.42, 0.46], 'inn.s11', 'in.23.bed', 'square.bench2'],
+    ['pat7', 'Jory Thatcher', 'brown', 'brown', [0.5, 0.42, 0.22], 'inn.s12', 'in.02.bed', 'square.well'],
+  ];
+  for (const [id, name, skin, hair, top, seat, bed, day] of L) NPC_DEFS.push({ id, name, skin, hair, top, legs: [0.3, 0.26, 0.22], dress: skin === 'rosy', sched: [[7.5, day, 'idle'], [18.5, seat, 'sit'], [23.5, bed, 'lie']] });
+})();
+
+
 // ---- 78_player.js ----
 // ───────────────────────── collision, walkable surfaces, the player, input ─────────────────────────
 const Col = { grid: new Map(), cell: 4, dyn: [] };
@@ -7530,7 +8689,7 @@ function floorHeight(f, x, z) {
 }
 // highest walkable surface at (x,z) that is not above maxY (terrain is always a candidate)
 World.groundAt = (x, z, maxY) => {
-  let best = Terrain.y(x, z);
+  let best = (CELLS_ON && Cells.inRegion(x)) ? -1e9 : Terrain.y(x, z);          // cells have no terrain: below them is nothing (the rescue in playerUpdate)
   for (const f of World.floors) { const y = floorHeight(f, x, z); if (y !== null && y <= maxY && y > best) best = y; }
   return best;
 };
@@ -7584,7 +8743,7 @@ function playerUpdate(dt) {
     colResolve(np, P.r, P.pos[1], P.pos[1] + 1.75);
     // stay inside the valley and out of deep water
     const rr = hyp(np[0], np[2]);
-    if (rr > WORLD_RADIUS) { np[0] *= WORLD_RADIUS / rr; np[2] *= WORLD_RADIUS / rr; if (P.warned <= 0) { P.warned = 8; if (typeof toast === 'function') toast('The wilds beyond Brackenfell are no place to wander alone.'); } }
+    if (rr > WORLD_RADIUS && !(CELLS_ON && Cells.inRegion(np[0]))) { np[0] *= WORLD_RADIUS / rr; np[2] *= WORLD_RADIUS / rr; if (P.warned <= 0) { P.warned = 8; if (typeof toast === 'function') toast('The wilds beyond Brackenfell are no place to wander alone.'); } }
     const w2 = World.waterAt(np[0], np[2]);
     if (w2 > -900 && w2 - World.groundAt(np[0], np[2], P.pos[1] + 0.6) > 1.12 && w2 - P.pos[1] > 0.9) { np[0] = P.pos[0]; np[2] = P.pos[2]; P.vel[0] *= 0.3; P.vel[2] *= 0.3; }
     P.pos[0] = np[0]; P.pos[2] = np[2];
@@ -7616,7 +8775,8 @@ function playerUpdate(dt) {
   P.dip += (0 - P.dip) * Math.min(1, dt * 9);
   // zone, surface
   const zone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
-  World.camZone = zone; World.indoor += ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
+  if (CELLS_ON) { Cells.sync(P.pos); if (P.pos[1] < CELL.y - 30 && Cells.cur) Cells.rescue(); }
+  World.camZone = zone; World.indoor = World.cell ? 1 : World.indoor + ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
   P.surface = zone ? (World.zones[zone - 1].site.id === 'chapel' ? 'stone' : 'wood') : P.inWater ? 'water' : (P.pos[1] > Terrain.y(P.pos[0], P.pos[2]) + 0.12 ? 'wood' : Terrain.splat(P.pos[0], P.pos[2], 1) > 0.4 ? 'stone' : Terrain.splat(P.pos[0], P.pos[2], 0) > 0.4 ? 'dirt' : 'grass');
   // head bob + footsteps
   const moving = P.speed > 0.4 && P.onGround; P.bobAmt += ((moving ? 1 : 0) - P.bobAmt) * Math.min(1, dt * 8);
@@ -7653,10 +8813,686 @@ function inputInit(canvas, layer) {
 }
 
 
+// ---- 79_wilds.js ----
+// ───────────────────────── the wilds: twelve places outside the village ─────────────────────────
+// Layout and terrain are in 55c_wilds.js. Here every place is built twice over: generated meshes (the village's own materials, one mesh per place in a pack of
+// its own, hidden beyond 125 m by the scene's maxDist rule and never in the shadow maps) at boot, and kit pieces (scanned rocks and stumps, flowers, boats, the
+// hamlet's houses) in batches made once the kit is ready (wildsAttach), hidden as a whole beyond 125 m. Pickups are skinned objects like the frostcaps; readable
+// things, doors and boxes are World.interact entries whose behaviour is in 81_wilds_story.js.
+const WB = { kit: {}, built: false, attached: false, groups: [], picks: [], tris: 0, water: [], bridges: [], fall: null, byId: {} };
+const wy = (x, z) => Terrain.y(x, z);
+const wcol = (x, z, r, h, y0) => { const y = wy(x, z); World.colliders.push({ x, z, r, y0: (y0 === undefined ? y : y0) - 0.6, y1: y + (h || 1.6) }); };
+// put something on the ground at an offset (lx, lz) from the place's centre, turned `rot` (a heading: 0 faces north, PI/2 east)
+function wPut(m, p, lx, lz, rot, fn, dy) {
+  const q = siteToWorld(p, lx, lz), y = wy(q[0], q[1]);
+  m.push().T(q[0], y + (dy || 0), q[1]).RY(-(p.yaw + (rot || 0))); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
+  fn(m, q[0], y, q[1]); m.pop(); return [q[0], y, q[1]];
+}
+// kit pieces to be placed when the kit is ready: name (or a function returning one), world x z, { s, ry, dy, tint, col: collider radius, h }
+function wKit(p, name, lx, lz, o) {
+  o = o || {}; const q = siteToWorld(p, lx, lz), y = wy(q[0], q[1]);
+  (WB.kit[p.id] = WB.kit[p.id] || []).push({ name, x: q[0], y: y + (o.dy || 0), z: q[1], s: o.s === undefined ? 1 : o.s, ry: o.ry === undefined ? 0 : o.ry, rx: o.rx || 0, rz: o.rz || 0, tint: o.tint, inst: !!o.inst, maxDist: o.maxDist, wind: o.wind });
+  if (o.col) World.colliders.push({ x: q[0], z: q[1], r: o.col, y0: y - 0.6, y1: y + (o.h || 1.4) });
+  return [q[0], y, q[1]];
+}
+const wRead = (id, title, text, p, r) => World.interact.push({ p, r: r || 2.4, zone: 0, kind: 'read', id, title, text });
+// a log lying along local x, resting on the ground: radius r, length len
+function wLog(m, len, r, col) {
+  m.mat(MAT.BARK, col || [1, 1, 1], 0.5); m.push().T(0, r, 0).RZ(PI / 2).T(0, -len / 2, 0); m.cyl(0, 0, 0, r, r * 0.94, len, 8, 0);
+  m.mat(MAT.PLAIN, [0.62, 0.5, 0.34]); m.disc(0, len, 0, r * 0.94, 8, 1); m.disc(0, 0, 0, r, 8, -1); m.pop();
+}
+// a stack of logs: cols x rows, ends toward +-x, with a stake at each end
+function wLogStack(m, cols, rows, len, r, tint) {
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols - (j % 2); i++) { m.push().T(0, j * r * 1.75, (i - (cols - 1 - (j % 2)) / 2) * r * 2.04); wLog(m, len * (0.95 + ((i * 7 + j * 3) % 5) * 0.025), r, tint); m.pop(); }
+  m.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.cbox(sx * (len / 2 + 0.12), -0.1, sz * (cols * r * 1.02 + 0.05), 0.1, rows * r * 1.75 + r + 0.2, 0.1, 4);
+  addBoxCollider(m, -len / 2, -cols * r * 1.05, len / 2, cols * r * 1.05, 0, rows * r * 1.8 + r);
+}
+// a tapered standing stone, `h` tall; w wide; leaning `lean` radians
+function wStone(m, w, h, lean, tint) {
+  m.push().RZ(lean || 0).S(1, 1, 0.62); m.mat(MAT.ROCK, tint || [0.92, 0.92, 0.9], 0.55);
+  m.lathe([[w * 0.55, -0.7], [w * 0.5, h * 0.35], [w * 0.42, h * 0.75], [w * 0.26, h * 0.97], [0.05, h * 1.04]], 6, 0); m.pop();
+}
+// timber post-and-rail fence along a polyline of world points; opens a gap of `gap` metres at the arclengths in o.gaps. Posts every 2.2 m, two rails.
+function wFence(m, pts, o) {
+  o = o || {}; const hgt = o.h || 1.0; let acc = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1], L = hyp(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 2.2));
+    for (let k = 0; k < n; k++) {
+      const x0 = lerp(a[0], b[0], k / n), z0 = lerp(a[1], b[1], k / n), x1 = lerp(a[0], b[0], (k + 1) / n), z1 = lerp(a[1], b[1], (k + 1) / n), y0 = wy(x0, z0), y1 = wy(x1, z1), mid = acc + (k + 0.5) * L / n;
+      if (o.gaps && o.gaps.some(g => Math.abs(mid - g) < 1.4)) continue;
+      m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.TIMBER, o.col || COL.timber);
+      m.push().T(x0, y0, z0); m.cbox(0, -0.35, 0, 0.1, hgt + 0.35, 0.1, 4); m.pop();
+      if (i === pts.length - 2 && k === n - 1) { m.push().T(x1, y1, z1); m.cbox(0, -0.35, 0, 0.1, hgt + 0.35, 0.1, 4); m.pop(); }
+      for (const hh of o.rails || [0.42, 0.84]) m.beam([x0, y0 + hh * hgt, z0], [x1, y1 + hh * hgt, z1], 0.045, 0.1);
+      if (o.col2 !== false) { m.push().T((x0 + x1) / 2, Math.min(y0, y1), (z0 + z1) / 2).RY(-Math.atan2(z1 - z0, x1 - x0)); const l = hyp(x1 - x0, z1 - z0) / 2; addBoxCollider(m, -l, -0.07, l, 0.07, -0.2, 1.1); m.pop(); }
+    }
+    acc += L;
+  }
+}
+// a dry-stone wall: low, grey, mossy
+function wWall(m, pts, o) {
+  o = o || {}; const hgt = o.h || 0.8;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1], L = hyp(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 1.6));
+    for (let k = 0; k < n; k++) {
+      const x0 = lerp(a[0], b[0], k / n), z0 = lerp(a[1], b[1], k / n), x1 = lerp(a[0], b[0], (k + 1) / n), z1 = lerp(a[1], b[1], (k + 1) / n), y0 = wy(x0, z0), y1 = wy(x1, z1), mid = (i * 100 + k) * 1.0;
+      if (o.gaps && o.gaps.some(g => hyp((x0 + x1) / 2 - g[0], (z0 + z1) / 2 - g[1]) < 1.3)) continue;
+      m.m1 = 0; m.ao = 1; m.grad = null; m.push().T((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2).RY(-Math.atan2(z1 - z0, x1 - x0)); const l = hyp(x1 - x0, z1 - z0) / 2 + 0.04, hh = hgt * (0.85 + 0.3 * ((mid * 7.3) % 1));
+      m.mat(MAT.STONE, [0.9, 0.9, 0.88], 0.8); m.box(-l, -0.5, -0.22, l, hh, 0.22, 4); m.mat(MAT.MOSS, [0.8, 0.85, 0.75], 0.8); m.box(-l * 0.9, hh, -0.2, l * 0.9, hh + 0.06, 0.2);
+      addBoxCollider(m, -l, -0.23, l, 0.23, -0.5, hh + 0.1); m.pop();
+    }
+  }
+}
+// a hut: walls of a given material, a gable roof along x, an open door in the -z wall (or none), returns nothing; w x d footprint centred on the origin
+function wHut(m, w, d, o) {
+  o = o || {}; const hh = o.h || 2.3, rise = o.rise || 1.2, wall = o.wall || MAT.PLANKS, wc = o.wc || COL.woodDark, dw = o.door === undefined ? 0.5 : o.door;
+  m.mat(MAT.STONE, [0.85, 0.85, 0.82], 0.8); m.box(-w / 2 - 0.05, -0.4, -d / 2 - 0.05, w / 2 + 0.05, 0.35, d / 2 + 0.05, 8);
+  m.mat(wall, wc, 0.9);
+  m.box(-w / 2, 0.35, d / 2 - 0.12, w / 2, hh, d / 2, 0); m.box(-w / 2, 0.35, -d / 2, -w / 2 + 0.12, hh, d / 2); m.box(w / 2 - 0.12, 0.35, -d / 2, w / 2, hh, d / 2);
+  if (dw > 0) { m.box(-w / 2, 0.35, -d / 2, -dw, hh, -d / 2 + 0.12); m.box(dw, 0.35, -d / 2, w / 2, hh, -d / 2 + 0.12); m.box(-dw, 2.0, -d / 2, dw, hh, -d / 2 + 0.12); }
+  else m.box(-w / 2, 0.35, -d / 2, w / 2, hh, -d / 2 + 0.12);
+  m.mat(MAT.PLANKS, [0.5, 0.42, 0.34]); m.box(-w / 2 + 0.12, 0.3, -d / 2 + 0.12, w / 2 - 0.12, 0.36, d / 2 - 0.12);
+  const yR = hh + rise, ov = 0.5, zf = -d / 2 - ov, zb = d / 2 + ov;
+  m.mat(o.roof || MAT.THATCH, o.rc || [0.85, 0.78, 0.6], 0.9);
+  m.quad2([-w / 2 - 0.3, yR, 0], [-w / 2 - 0.3, hh - 0.2, zf], [w / 2 + 0.3, hh - 0.2, zf], [w / 2 + 0.3, yR, 0]); m.quad2([w / 2 + 0.3, yR, 0], [w / 2 + 0.3, hh - 0.2, zb], [-w / 2 - 0.3, hh - 0.2, zb], [-w / 2 - 0.3, yR, 0]);
+  m.mat(wall, wc, 0.9); m.poly([[-w / 2, hh, -d / 2 + 0.1], [w / 2, hh, -d / 2 + 0.1], [0, yR - 0.05, -d / 2 + 0.1]].reverse()); m.poly([[-w / 2, hh, d / 2 - 0.1], [w / 2, hh, d / 2 - 0.1], [0, yR - 0.05, d / 2 - 0.1]]);
+  m.mat(MAT.TIMBER, COL.timberDark); m.beam([-w / 2 - 0.3, yR + 0.02, 0], [w / 2 + 0.3, yR + 0.02, 0], 0.12, 0.12);
+  addBoxCollider(m, -w / 2, -d / 2, w / 2, d / 2, 0, hh + 0.4);
+  if (dw > 0) m.mat(MAT.PLAIN, [0.05, 0.04, 0.035]), m.box(-dw + 0.05, 0.3, -d / 2 + 0.1, dw - 0.05, 2.0, -d / 2 + 0.14);
+}
+// a cairn of stacked stones, h about 0.9 m
+function wCairn(m, R, n) { m.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.5); let y = 0, r = 0.34; for (let i = 0; i < (n || 4); i++) { m.ball(R.s() * 0.04, y + r * 0.45, R.s() * 0.04, r, r * 0.55, r * 0.9, 7, 4); y += r * 0.72; r *= 0.76; } }
+// a plank bridge between two world points, y from the ground at each end (or deckY(p)), rails on both sides, registered as a floor and a pair of rail colliders
+function wBridge(m, a, b, o) {
+  o = o || {}; const w = o.w || 1.5, L = hyp(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[1] - a[1], b[0] - a[0]), ya = o.ya === undefined ? wy(a[0], a[1]) + 0.12 : o.ya, yb = o.yb === undefined ? wy(b[0], b[1]) + 0.12 : o.yb, mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+  m.m1 = 0; m.ao = 1; m.grad = null; m.wind = 0; m.push().T(mx, 0, mz).RY(-ang);
+  m.mat(MAT.PLANKS, o.col || [0.62, 0.56, 0.5], 0.55); m.beam([-L / 2, ya - 0.08, 0], [L / 2, yb - 0.08, 0], w, 0.16);
+  addFloor(m, -L / 2, -w / 2, L / 2, w / 2, ya, yb, 'x');
+  m.mat(MAT.TIMBER, COL.timberDark);
+  for (const s of [-1, 1]) {
+    m.beam([-L / 2, ya + 0.5, s * (w / 2 - 0.05)], [L / 2, yb + 0.5, s * (w / 2 - 0.05)], 0.05, 0.1); m.beam([-L / 2, ya + 0.95, s * (w / 2 - 0.05)], [L / 2, yb + 0.95, s * (w / 2 - 0.05)], 0.06, 0.1);
+    const nP = Math.max(2, Math.round(L / 2) + 1); for (let i = 0; i < nP; i++) { const t = i / (nP - 1), x = lerp(-L / 2, L / 2, t), y = lerp(ya, yb, t); m.cbox(x, y - 0.3, s * (w / 2 - 0.05), 0.11, 1.28, 0.11, 4); }
+    addBoxCollider(m, -L / 2, s * (w / 2 - 0.05) - 0.07, L / 2, s * (w / 2 - 0.05) + 0.07, Math.min(ya, yb) - 0.05, Math.max(ya, yb) + 1.15);
+  }
+  m.pop(); return { L, ang };
+}
+// a tiny pickup mesh (one per kind): fn draws it around the origin on the ground
+function wPickMesh(fn) { const m = new Mesh(256); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); return World.skinPack.add(m); }
+const PICKMESH = {
+  tuft(m, c1, c2, n) { m.mat(MAT.PLAIN, c1); m.tube([[0, 0, 0], [0.02, 0.13, 0.01], [0, 0.24, 0]], 0.012, 5); for (let i = 0; i < (n || 5); i++) { const a = i * TAU / (n || 5); m.quad2([Math.cos(a) * 0.17, 0.07, Math.sin(a) * 0.17], [Math.cos(a + 0.5) * 0.05, 0.02, Math.sin(a + 0.5) * 0.05], [0, 0.03, 0], [Math.cos(a - 0.5) * 0.05, 0.02, Math.sin(a - 0.5) * 0.05]); } m.mat(MAT.PLAIN, c2); m.ball(0, 0.27, 0, 0.055, 0.05, 0.055, 7, 4); for (let i = 0; i < 3; i++) { const a = i * 2.1; m.ball(Math.cos(a) * 0.09, 0.22 + i * 0.01, Math.sin(a) * 0.09, 0.035, 0.03, 0.035, 6, 4); } },
+  mushrooms(m) { for (const [x, z, s] of [[0, 0, 1], [0.12, 0.07, 0.7], [-0.1, 0.09, 0.8]]) { m.mat(MAT.PLAIN, [0.84, 0.78, 0.6]); m.cyl(x, 0, z, 0.025 * s, 0.032 * s, 0.09 * s, 6, 0); m.mat(MAT.PLAIN, [0.9, 0.62, 0.18]); m.ball(x, 0.1 * s, z, 0.07 * s, 0.035 * s, 0.07 * s, 8, 4); } },
+  honey(m) { m.mat(MAT.PLANKS, COL.wood, 0.4); m.box(-0.15, 0, -0.11, 0.15, 0.04, 0.11); m.mat(MAT.PLAIN, [0.78, 0.52, 0.12]); m.box(-0.11, 0.04, -0.08, 0.11, 0.1, 0.08); m.mat(MAT.PLAIN, [0.9, 0.7, 0.3]); m.box(-0.1, 0.1, -0.07, 0.1, 0.105, 0.07); },
+  axe(m) { m.push().RZ(PI / 2 - 0.2).RY(0.5); m.mat(MAT.TIMBER, COL.wood); m.box(-0.02, 0, -0.02, 0.02, 0.62, 0.02); m.mat(MAT.METAL, [0.55, 0.55, 0.58]); m.box(-0.015, 0.5, -0.02, 0.015, 0.62, 0.1); m.box(-0.012, 0.5, -0.05, 0.012, 0.6, 0.02); m.pop(); },
+  sword(m) { m.push().RZ(PI / 2 - 0.1).RY(0.7); m.mat(MAT.METAL, [0.5, 0.36, 0.28]); m.box(-0.022, 0.16, -0.005, 0.022, 0.9, 0.005); m.poly([[-0.022, 0.9, 0], [0.022, 0.9, 0], [0, 0.98, 0]]); m.poly([[0.022, 0.9, 0], [-0.022, 0.9, 0], [0, 0.98, 0]]); m.box(-0.09, 0.14, -0.012, 0.09, 0.165, 0.012); m.mat(MAT.PLAIN, COL.leather); m.box(-0.014, 0, -0.014, 0.014, 0.14, 0.014); m.pop(); },
+  coins(m) { m.mat(MAT.METAL, [0.78, 0.6, 0.2]); for (let i = 0; i < 9; i++) { const a = i * 2.3; m.cyl(Math.cos(a) * 0.1 * (i % 3) * 0.6, 0.012 * (i % 4), Math.sin(a) * 0.1 * (i % 3) * 0.6, 0.032, 0.032, 0.008, 8, 3); } },
+  key(m) { m.mat(MAT.METAL, [0.2, 0.17, 0.15]); m.push().RX(-PI / 2).T(0, 0, 0.012); m.box(-0.012, 0, -0.012, 0.012, 0.2, 0.012); m.cyl(0, 0.2, 0, 0.05, 0.05, 0.02, 8, 3); m.box(-0.012, 0, -0.012, 0.05, 0.03, 0.012); m.box(-0.012, 0.05, -0.012, 0.04, 0.075, 0.012); m.pop(); },
+  fish(m) { m.mat(MAT.PLAIN, [0.5, 0.36, 0.2]); for (const [x, z, a] of [[0, 0, 0], [0.04, 0.12, 0.2]]) { m.push().T(x, 0.03, z).RY(a); m.ball(0, 0, 0, 0.045, 0.035, 0.17, 7, 4); m.poly([[0, 0, 0.16], [0.05, 0.01, 0.26], [-0.05, 0.01, 0.26]]); m.pop(); } },
+  cap(m) { m.mat(MAT.CLOTH, [0.34, 0.27, 0.2], 0.4); m.ball(0, 0.05, 0, 0.12, 0.07, 0.12, 9, 4); m.mat(MAT.CLOTH, [0.28, 0.22, 0.17], 0.4); m.cyl(0, 0, 0, 0.125, 0.125, 0.025, 9, 3); },
+  apple(m) { m.mat(MAT.PLAIN, [0.5, 0.18, 0.1]); for (const [x, z] of [[0, 0], [0.1, 0.05], [-0.06, 0.1]]) m.ball(x, 0.04, z, 0.045, 0.04, 0.045, 7, 4); },
+  bundle(m) { m.mat(MAT.CLOTH, [0.4, 0.36, 0.28], 0.4); m.ball(0, 0.1, 0, 0.14, 0.1, 0.12, 8, 5); m.mat(MAT.PLAIN, COL.leather); m.cyl(0, 0.0, 0, 0.145, 0.145, 0.02, 8, 3); },
+};
+// pickups: id, world position, label, item id, which mesh, glow colour (blue like the frostcaps) or none
+function wPick(id, p3, label, item, mesh, glow) {
+  const key = typeof mesh === 'string' ? mesh : mesh.k; WB.pm = WB.pm || {}; const mi = WB.pm[key] || (WB.pm[key] = wPickMesh(typeof mesh === 'string' ? PICKMESH[mesh] : mesh.f));
+  const obj = addSkinned(mi, { c: p3, r: 0.6, zone: 0, kind: 'pickup' }); R.boneData.set(m4.translate(m4.create(), p3[0], p3[1], p3[2]), obj.slot * 256);
+  const it = { kind: 'pickup', id, item, p: [p3[0], p3[1] + 0.2, p3[2]], r: 1.9, zone: 0, obj, label, wild: true }; World.interact.push(it); World.pickups.push(it);
+  if (glow) { it.em = { type: 'herb', p: p3, zone: 0 }; World.emitters.push(it.em); }
+  WB.picks.push(it); return it;
+}
+const wGround = (p, lx, lz) => { const q = siteToWorld(p, lx, lz); return [q[0], wy(q[0], q[1]), q[1]]; };
+
+// ── Highfold's two enterable houses go through the village's own path (HOUSES -> buildHouse -> a cell reached by its door); the other two stay shells ──
+if (typeof HOUSES !== 'undefined' && typeof KIT_STYLE !== 'undefined' && WILDS.on) {
+  HOUSES['high.a'] = {
+    H: 2.4, walls: 'timber', roof: 'thatch', plaster: [1, 0.93, 0.84], shutter: [0.32, 0.44, 0.34],
+    doors: [{ wall: 'front', pos: 0.9 }], windows: [{ wall: 'front', pos: -1.6 }, { wall: 'back', pos: -1.2 }, { wall: 'right', pos: -0.8 }],
+    interior(c) { cottageInterior(c, { blanket: COL.green, tableItems: ['mug', 'plate', 'candle', 'loaf'], loot: [['gold', 9]] }); }
+  };
+  HOUSES['high.c'] = {
+    H: 2.4, walls: 'timber', roof: 'thatch', plaster: [0.96, 0.92, 0.82], shutter: [0.5, 0.36, 0.3],
+    doors: [{ wall: 'front', pos: -0.9 }], windows: [{ wall: 'front', pos: 1.5 }, { wall: 'back', pos: 1.2 }],
+    interior(c) { cottageInterior(c, { blanket: COL.purple, fur: true, tableItems: ['bowl', 'bottle', 'candle', 'pot'], loot: [['gold', 6], ['apple', 2]] }); }
+  };
+  KIT_STYLE['high.a'] = { timber: true, shingle: true, ground: 'plaster', vines: 2 }; KIT_STYLE['high.c'] = { timber: true, shingle: true, ground: 'plaster', vines: 1 };
+  for (const id of ['high.a', 'high.c']) { const st = SITE[id], h = WILDS.houses.find(k => k.id === id); if (st) { st.floors = 1; st.w = h.w = id === 'high.a' ? 6.4 : 6.0; st.d = h.d = id === 'high.a' ? 5.2 : 5.0; h.floors = 1; h.cell = true; } }
+}
+// ───────────────────────── the builders: one per place ─────────────────────────
+const WBUILD = {};
+WBUILD.shrine = (p, m, R) => {
+  // a small stone shrine under a shingled gable, offerings in the niche, a candle that never quite goes out; a milestone and a leaning signpost at the fork
+  wPut(m, p, 0, -5.2, PI, mm => {
+    mm.mat(MAT.STONE, [0.86, 0.86, 0.82], 0.8); mm.box(-0.95, -0.4, -0.7, 0.95, 0.3, 0.7); mm.box(-0.7, 0.3, -0.5, 0.7, 1.55, 0.5);
+    mm.mat(MAT.PLAIN, [0.06, 0.05, 0.045]); mm.box(-0.34, 0.62, -0.52, 0.34, 1.32, -0.45);
+    mm.mat(MAT.STONE, [0.7, 0.7, 0.66], 0.8); mm.box(-0.42, 0.6, -0.56, 0.42, 0.66, -0.4); mm.box(-0.42, 1.3, -0.56, 0.42, 1.36, -0.4);
+    mm.mat(MAT.SHINGLE, [0.6, 0.56, 0.5], 0.7); mm.quad2([0, 2.15, 0], [-0.95, 1.5, -0.72], [0.95, 1.5, -0.72], [0, 2.15, 0]); mm.quad2([-0.95, 1.5, 0.72], [-0.02, 2.15, 0.02], [0.02, 2.15, 0.02], [0.95, 1.5, 0.72]);
+    mm.quad2([-1.0, 1.5, -0.75], [-1.0, 1.5, 0.75], [0, 2.18, 0.75], [0, 2.18, -0.75]); mm.quad2([1.0, 1.5, 0.75], [1.0, 1.5, -0.75], [0, 2.18, -0.75], [0, 2.18, 0.75]);
+    mm.mat(MAT.STONE, [0.8, 0.8, 0.77], 0.8); mm.box(-0.05, 2.1, -0.05, 0.05, 2.5, 0.05); mm.box(-0.2, 2.3, -0.05, 0.2, 2.38, 0.05);
+    mm.mat(MAT.PLAIN, [0.8, 0.74, 0.55]); mm.cyl(-0.18, 0.66, -0.47, 0.035, 0.03, 0.16, 6, 2); mm.mat(MAT.PLAIN, [0.5, 0.24, 0.2]); mm.cyl(0.14, 0.66, -0.47, 0.05, 0.04, 0.05, 7, 3); mm.mat(MAT.PLAIN, [0.55, 0.62, 0.3]); mm.ball(0.02, 0.7, -0.47, 0.06, 0.04, 0.05, 6, 4);
+    addBoxCollider(mm, -0.95, -0.7, 0.95, 0.7, 0, 2.0);
+  });
+  { const c = wGround(p, 0, -5.9); World.emitters.push({ type: 'candle', p: [c[0] - 0.18, c[1] + 0.85, c[2] + 0.0], zone: 0, always: true, seed: 0.41 }); }
+  // two flat stones before it to kneel on, a bundle of rags on a dead branch
+  for (const [x, z, r] of [[-0.5, -3.9, 0.3], [0.55, -3.7, -0.2]]) wPut(m, p, x, z, r, mm => { mm.mat(MAT.STONE, [0.8, 0.8, 0.77], 0.8); mm.cbox(0, 0, 0, 0.7, 0.1, 0.5, 4); });
+  wPut(m, p, -4.2, -3.2, 0, mm => { mm.mat(MAT.BARK, [0.5, 0.45, 0.4], 0.6); mm.tube([[0, -0.2, 0], [0.04, 1.4, 0.02], [0.0, 2.4, -0.04]], [0.07, 0.05, 0.02], 6);
+    mm.beam([0.02, 1.7, 0], [0.9, 2.3, 0.2], 0.04, 0.04); mm.beam([0.02, 1.2, 0], [-0.8, 1.9, -0.1], 0.04, 0.04); mm.mat(MAT.CLOTH, [0.55, 0.2, 0.16], 0.5); for (const [x, y, c] of [[0.6, 2.2, 0], [0.3, 2.0, 1], [-0.5, 1.75, 2], [-0.7, 1.9, 0]]) { mm.quad2([x, y, 0.02], [x - 0.03, y - 0.34, 0.02], [x + 0.06, y - 0.36, 0.04], [x + 0.08, y, 0.02]); }
+    addCircleCollider(mm, 0, 0, 0.14, 0, 2); });
+  // milestone and signpost at the foot of the lumber path
+  wPut(m, p, 4.6, 2.9, 0.5, mm => { mm.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.5); mm.box(-0.22, -0.2, -0.12, 0.22, 0.85, 0.12); mm.push().T(0, 0.85, 0).RX(PI / 2).T(0, -0.12, 0); mm.cyl(0, 0, 0, 0.22, 0.22, 0.24, 8, 3); mm.pop(); mm.mat(MAT.PLAIN, [0.1, 0.1, 0.1]); mm.box(-0.12, 0.45, 0.118, 0.12, 0.6, 0.125); addBoxCollider(mm, -0.25, -0.15, 0.25, 0.15, 0, 1.2); });
+  const sp = wPut(m, p, -3.4, 2.8, 0.25, mm => { Props.signPost(mm, 3); addCircleCollider(mm, 0, 0, 0.14, 0, 2.5); });
+  wRead('sign.shrine', 'A weathered sign', 'Boards nailed one above another, the paint long gone and the letters cut deep:\n\nBRACKENFELL: east, along the road.\nTHE HUNTER’S BLIND, the old mill road and the south shore: ask the road.\nTHE LUMBER CAMP: up the track to the north. Mind the sleds.\nTOLL FORD and the passes beyond: west.\n\nBeneath, in a different hand and fresher: “Do not go in. — C.”', [sp[0], sp[1] + 1.6, sp[2]]);
+  for (const [x, z] of [[-2.2, -7.4], [3.2, -6.8], [5.4, -4.2]]) wPut(m, p, x, z, R() * 6, mm => { wCairn(mm, R, 3); });
+};
+
+WBUILD.lumber = (p, m, R) => {
+  // a clearing in the pines: log stacks, a saw pit, a lean-to, a cart, a fire, stumps all round
+  wPut(m, p, -6.5, -4.5, 0.15, mm => wLogStack(mm, 5, 4, 3.2, 0.2));
+  wPut(m, p, -6.8, -1.2, -0.1, mm => wLogStack(mm, 4, 3, 3.0, 0.19, [0.9, 0.85, 0.8]));
+  wPut(m, p, -1.5, -8.2, 1.57, mm => wLogStack(mm, 5, 3, 3.4, 0.2));
+  // saw pit: two trestles bearing a trunk, a dark trench below, a long saw
+  wPut(m, p, 4.0, 3.2, 0.35, mm => {
+    mm.mat(MAT.PLAIN, [0.09, 0.075, 0.06]); mm.box(-2.0, 0.015, -0.55, 2.0, 0.02, 0.55);
+    mm.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1.4, 1.4]) { mm.beam([sx - 0.35, 0, -0.5], [sx, 1.0, 0], 0.14, 0.14); mm.beam([sx + 0.35, 0, -0.5], [sx, 1.0, 0], 0.14, 0.14); mm.beam([sx - 0.35, 0, 0.5], [sx, 1.0, 0], 0.14, 0.14); mm.beam([sx + 0.35, 0, 0.5], [sx, 1.0, 0], 0.14, 0.14); }
+    mm.push().T(0, 1.15, 0); wLog(mm, 4.6, 0.26); mm.pop();
+    mm.mat(MAT.METAL, [0.55, 0.55, 0.58]); mm.box(-0.6, 1.25, 0.26, 0.6, 1.62, 0.275); mm.mat(MAT.TIMBER, COL.wood); mm.box(-0.6, 1.62, 0.22, 0.6, 1.66, 0.3);
+    addBoxCollider(mm, -2.1, -0.4, 2.1, 0.4, 0, 1.5);
+  });
+  // the cart with a load of planks
+  wPut(m, p, -9.6, 5.8, 1.2, mm => { Props.cart(mm, false); mm.mat(MAT.PLANKS, [0.9, 0.85, 0.78], 0.6); for (let i = 0; i < 4; i++) mm.box(-0.62, 1.08 + i * 0.07, -1.05 + (i % 2) * 0.1, 0.62, 1.15 + i * 0.07, 1.0 - (i % 2) * 0.1); });
+  // the lean-to: three walls of split boards, a pitched roof, a bunk, the chopping block with the axe
+  wPut(m, p, 8.6, -4.8, -PI / 2, mm => {
+    mm.mat(MAT.PLANKS, COL.woodDark, 0.9); mm.box(-1.8, 0, 1.2, 1.8, 2.2, 1.3); mm.box(-1.85, 0, -1.2, -1.75, 1.85, 1.3); mm.box(1.75, 0, -1.2, 1.85, 1.85, 1.3);
+    mm.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1.8, 1.8]) mm.cbox(sx, -0.3, -1.25, 0.14, 2.6, 0.14, 4); mm.cbox(-1.8, -0.3, 1.25, 0.14, 2.7, 0.14, 4); mm.cbox(1.8, -0.3, 1.25, 0.14, 2.7, 0.14, 4);
+    mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.8); mm.quad2([-2.1, 2.3, 1.45], [-2.1, 1.75, -1.55], [2.1, 1.75, -1.55], [2.1, 2.3, 1.45]);
+    mm.mat(MAT.CLOTH, COL.fur, 0.6); mm.box(-1.2, 0.3, 0.2, 0.2, 0.42, 1.15); mm.mat(MAT.CLOTH, COL.wool, 0.6); mm.box(-1.15, 0.42, 0.7, -0.35, 0.52, 1.1);
+    mm.mat(MAT.TIMBER, COL.timber); mm.box(-1.25, 0, 0.15, -1.15, 0.3, 0.25); mm.box(0.15, 0, 0.15, 0.25, 0.3, 0.25); mm.box(-1.25, 0, 1.05, -1.15, 0.3, 1.15); mm.box(0.15, 0, 1.05, 0.25, 0.3, 1.15);
+    Props.barrel(mm);
+    addBoxCollider(mm, -1.9, -1.3, 1.9, 1.35, 0, 2.2);
+  });
+  wPut(m, p, 5.4, -1.4, 0, mm => { mm.mat(MAT.BARK, [0.95, 0.9, 0.85], 0.6); mm.cyl(0, 0, 0, 0.36, 0.38, 0.58, 10, 0); mm.mat(MAT.PLAIN, [0.7, 0.55, 0.36]); mm.disc(0, 0.58, 0, 0.36, 10, 1); addCircleCollider(mm, 0, 0, 0.4, 0, 0.6); });
+  // the fire: a ring of stones, a tripod, a pot
+  const fp = wPut(m, p, -2.4, 4.2, 0, mm => {
+    mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; mm.ball(Math.cos(a) * 0.62, 0.07, Math.sin(a) * 0.62, 0.15, 0.11, 0.13, 6, 4); }
+    mm.mat(MAT.BARK, [0.3, 0.26, 0.24], 0.5); for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.3; mm.beam([Math.cos(a) * 0.38, 0.02, Math.sin(a) * 0.38], [Math.cos(a + 2.4) * 0.06, 0.3, Math.sin(a + 2.4) * 0.06], 0.08, 0.08); }
+    mm.mat(MAT.TIMBER, COL.timberDark); for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; mm.beam([Math.cos(a) * 0.9, 0, Math.sin(a) * 0.9], [0, 1.55, 0], 0.07, 0.07); }
+    mm.mat(MAT.METAL, COL.black); mm.beam([0, 1.5, 0], [0, 0.95, 0], 0.025, 0.025); Props.cauldron(mm, 0.26); mm.pop(); mm.push().T(0, 0.7, 0); Props.cauldron(mm, 0.26);
+    addCircleCollider(mm, 0, 0, 0.7, 0, 0.5);
+  });
+  World.emitters.push({ type: 'fire', p: [fp[0], fp[1] + 0.2, fp[2]], size: 0.55, zone: 0, seed: 0.23, t: 0 }); addLight([fp[0], fp[1] + 1.0, fp[2]], 12, [3.4, 1.7, 0.6], 0, 'fire'); World.emitters.push({ type: 'smoke', p: [fp[0], fp[1] + 1.3, fp[2]], zone: 0, seed: 0.5, t: 0 });
+  // sitting logs and a few split billets
+  for (const [x, z, r] of [[-2.4, 6.6, 0.1], [-4.7, 4.4, 1.5], [-0.3, 3.8, -1.2]]) wPut(m, p, x, z, r, mm => wLog(mm, 1.5, 0.19));
+  for (let i = 0; i < 14; i++) { const a = R() * TAU, r = 3 + R() * 8; wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, R() * 6, mm => { mm.mat(MAT.PLAIN, [0.72, 0.56, 0.36]); mm.cbox(0, 0, 0, 0.12 + R() * 0.1, 0.1, 0.07, 4); }); }
+  // a felled pine lying across the clearing's edge, branches lopped
+  wPut(m, p, 13.0, -9.0, 0.5, mm => { mm.push().T(0, 0.4, 0); wLog(mm, 8, 0.38); mm.pop(); mm.mat(MAT.BARK, [0.9, 0.85, 0.8], 0.5); for (let i = 0; i < 4; i++) mm.beam([-3 + i * 1.7, 0.7, 0], [-3 + i * 1.7 + 0.3, 1.1, (i % 2 ? 0.5 : -0.5)], 0.06, 0.06); addBoxCollider(mm, -4, -0.4, 4, 0.4, 0, 0.9); });
+  // stumps: scanned, all round the clearing
+  for (let i = 0; i < 16; i++) { const a = R() * TAU, r = 9 + R() * 8; wKit(p, i % 2 ? 'tree_stump_01' : 'tree_stump_02', Math.cos(a) * r, Math.sin(a) * r, { s: 0.7 + R() * 0.6, ry: R() * TAU, col: 0.5, h: 0.5, dy: -0.04 }); }
+  wKit(p, 'dead_tree_trunk', 11, 2, { s: 1.2, ry: 0.4, dy: -0.02 }); wKit(p, 'dead_tree_trunk', -10, -9, { s: 1.0, ry: 2.2 });
+  for (let i = 0; i < 7; i++) { const a = R() * TAU, r = 5 + R() * 9; wKit(p, 'dry_branches_medium_01_a', Math.cos(a) * r, Math.sin(a) * r, { s: 1 + R() * 0.5, ry: R() * TAU }); }
+  const cb = wGround(p, 5.4, -1.4); wPick('wc.axe', [cb[0] + 0.05, cb[1] + 0.6, cb[2]], 'Take the axe', 'woodaxe', 'axe');
+  p.npc = { stand: [wGround(p, 3.6, -1.6)], yaw: -2.0 };
+};
+
+WBUILD.blind = (p, m, R) => {
+  // the hunter's blind: a thatched screen of poles and brush with a slit to watch through; a deer stand on stilts with a ramp up to it; a salt lick in the meadow
+  wPut(m, p, 0, 0, PI, mm => {
+    mm.mat(MAT.TIMBER, COL.timberDark); for (const x of [-1.5, -0.5, 0.5, 1.5]) mm.cbox(x, -0.3, 0.0, 0.1, 2.2, 0.1, 4); for (const x of [-1.5, 1.5]) mm.cbox(x, -0.3, 1.2, 0.1, 1.9, 0.1, 4);
+    mm.mat(MAT.THATCH, [0.7, 0.62, 0.45], 0.7); mm.box(-1.6, 0.1, -0.05, 1.6, 1.2, 0.07); mm.box(-1.6, 1.5, -0.05, 1.6, 2.0, 0.07); mm.box(-1.6, 1.2, -0.05, -0.2, 1.5, 0.07); mm.box(0.2, 1.2, -0.05, 1.6, 1.5, 0.07);
+    mm.box(-1.6, 0.1, 1.15, -1.5, 1.7, 1.25); mm.box(1.5, 0.1, 1.15, 1.6, 1.7, 1.25);
+    mm.mat(MAT.THATCH, [0.62, 0.55, 0.38], 0.8); mm.quad2([-1.8, 2.15, -0.3], [-1.8, 1.85, 1.5], [1.8, 1.85, 1.5], [1.8, 2.15, -0.3]);
+    mm.mat(MAT.PLANKS, COL.wood); mm.box(-1.0, 0.0, 0.5, 0.9, 0.4, 0.9);
+    addBoxCollider(mm, -1.7, -0.2, 1.7, 0.3, 0, 2.0); addBoxCollider(mm, -1.7, 0.2, -1.4, 1.3, 0, 1.8); addBoxCollider(mm, 1.4, 0.2, 1.7, 1.3, 0, 1.8);
+  });
+  wPut(m, p, 9.0, -6.5, 0, mm => {
+    const Hh = 3.1;
+    mm.mat(MAT.TIMBER, COL.timberDark); for (const [x, z] of [[-0.85, -0.85], [0.85, -0.85], [-0.85, 0.85], [0.85, 0.85]]) mm.beam([x * 1.25, -0.3, z * 1.25], [x * 0.9, Hh + 0.2, z * 0.9], 0.15, 0.15);
+    mm.mat(MAT.PLANKS, COL.wood, 0.7); mm.box(-1.05, Hh - 0.12, -1.05, 1.05, Hh, 1.05);
+    for (const [x0, z0, x1, z1] of [[-1.05, -1.05, 1.05, -0.97], [-1.05, 0.97, 1.05, 1.05], [-1.05, -1.05, -0.97, 1.05]]) { mm.mat(MAT.PLANKS, COL.woodDark, 0.7); mm.box(x0, Hh, z0, x1, Hh + 0.9, z1); }
+    mm.mat(MAT.TIMBER, COL.timberDark); mm.box(0.97, Hh + 0.85, -1.05, 1.05, Hh + 0.95, -0.2);
+    mm.mat(MAT.SHINGLE, [0.55, 0.5, 0.44], 0.8); mm.quad2([-1.2, Hh + 1.75, -1.0], [-1.2, Hh + 1.4, 1.2], [1.2, Hh + 1.4, 1.2], [1.2, Hh + 1.75, -1.0]);
+    mm.mat(MAT.TIMBER, COL.timberDark); for (const [x, z] of [[-1.0, -0.95], [1.0, -0.95], [-1.0, 0.95], [1.0, 0.95]]) mm.cbox(x, Hh, z, 0.07, 1.6, 0.07, 4);
+    // the ramp on the east side: 6.4 m long, to the platform
+    mm.mat(MAT.PLANKS, COL.wood, 0.5); mm.beam([1.05, Hh - 0.06, 0], [7.4, 0.12, 0], 1.1, 0.12);
+    mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) { mm.beam([1.05, Hh + 0.9, s * 0.52], [7.4, 1.0, s * 0.52], 0.05, 0.08); for (const t of [0.2, 0.6, 1.0]) mm.cbox(lerp(1.05, 7.4, t), lerp(Hh, 0.1, t) - 0.1, s * 0.52, 0.08, 1.0, 0.08, 4); }
+    addFloor(mm, -1.0, -1.0, 1.0, 1.0, Hh); addFloor(mm, 1.0, -0.55, 7.4, 0.55, Hh, 0.12, 'x');
+    for (const [x0, z0, x1, z1] of [[-1.05, -1.05, 1.05, -0.97], [-1.05, 0.97, 1.05, 1.05], [-1.05, -1.05, -0.97, 1.05]]) addBoxCollider(mm, x0, z0, x1, z1, Hh, Hh + 1.0);
+    for (const [x, z] of [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]]) addCircleCollider(mm, x * 1.1, z * 1.1, 0.2, 0, 1.4);
+  });
+  wPut(m, p, -7, -12, 0.4, mm => { mm.mat(MAT.ROCK, [0.95, 0.95, 0.92], 0.5); mm.ball(0, 0.15, 0, 0.55, 0.28, 0.4, 8, 4); mm.mat(MAT.PLAIN, [0.88, 0.85, 0.78]); mm.ball(0, 0.36, 0, 0.3, 0.05, 0.22, 7, 3); addCircleCollider(mm, 0, 0, 0.5, 0, 0.5); });
+  // a cold fire ring and a skinning rack
+  wPut(m, p, -4.5, 3.5, 0, mm => { mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; mm.ball(Math.cos(a) * 0.5, 0.06, Math.sin(a) * 0.5, 0.13, 0.1, 0.12, 6, 4); } mm.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); mm.disc(0, 0.03, 0, 0.42, 9, 1); });
+  wPut(m, p, 3.2, 4.8, 0.5, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.beam([s * 0.9, 0, -0.3], [s * 0.7, 1.7, 0], 0.07, 0.07), mm.beam([s * 0.9, 0, 0.3], [s * 0.7, 1.7, 0], 0.07, 0.07); mm.beam([-0.75, 1.65, 0], [0.75, 1.65, 0], 0.06, 0.06); mm.mat(MAT.CLOTH, COL.fur, 0.6); mm.quad2([-0.5, 1.62, 0], [-0.55, 0.75, 0.02], [-0.1, 0.7, 0.02], [-0.1, 1.62, 0]); mm.quad2([0.1, 1.62, 0], [0.05, 0.8, 0.02], [0.55, 0.78, 0.02], [0.5, 1.62, 0]); addBoxCollider(mm, -0.9, -0.3, 0.9, 0.3, 0, 1.7); });
+  for (const [x, z, r] of [[2, 6.5, 0], [-2.4, 7.6, 1.4], [6, 8.5, 2.2], [-6.5, 8.0, 0.6]]) wKit(p, 'Mushroom_Common', x, z, { s: 1.4 + R() * 0.8, ry: R() * 6 });
+  for (let i = 0; i < 18; i++) { const a = R() * TAU, r = 4 + R() * 12; wKit(p, 'Fern_1', Math.cos(a) * r, Math.sin(a) * r, { s: 0.9 + R() * 0.7, ry: R() * TAU, inst: true, maxDist: 70 }); }
+  for (const [x, z] of [[1.6, 7.0], [-3, 9.2]]) { const c = wGround(p, x, z); wPick('bl.m' + (x > 0 ? 1 : 2), c, 'Pick chanterelles', 'chanterelle', 'mushrooms'); }
+};
+
+WBUILD.burnt = (p, m, R) => {
+  // the shell of a cottage: charred sill beams, jagged stubs of wall, a standing chimney, fallen rafters, drifts of ash and rubble
+  const CH = [0.34, 0.31, 0.29], CH2 = [0.44, 0.39, 0.34];
+  wPut(m, p, 0, 0, 0.3, mm => {
+    const w = 6.0, d = 4.6;
+    mm.mat(MAT.STONE, [0.62, 0.6, 0.57], 0.8); mm.box(-w / 2 - 0.1, -0.5, -d / 2 - 0.1, w / 2 + 0.1, 0.18, d / 2 + 0.1, 8);
+    mm.mat(MAT.TIMBER, CH); const jag = (x0, z0, x1, z1, n, hmax) => { for (let i = 0; i < n; i++) { const t0 = i / n, t1 = (i + 1) / n, hh = 0.35 + hmax * (0.35 + 0.65 * ((i * 53 + 17) % 7) / 7); mm.box(lerp(x0, x1, t0) - 0.01, 0.18, lerp(z0, z1, t0) - 0.01, lerp(x0, x1, t1) + 0.01, hh, lerp(z0, z1, t1) + 0.01 + 0.1, 0); } };
+    mm.mat(MAT.PLANKS, CH, 0.8); jag(-w / 2, d / 2 - 0.12, w / 2, d / 2 - 0.12, 8, 1.4); jag(-w / 2, -d / 2, -w / 2, d / 2, 6, 1.1);
+    mm.mat(MAT.PLANKS, CH2, 0.8); mm.box(-w / 2, 0.18, -d / 2, -1.2, 0.9, -d / 2 + 0.12); mm.box(1.4, 0.18, -d / 2, w / 2, 1.5, -d / 2 + 0.12);
+    mm.mat(MAT.TIMBER, CH); for (const [x, z, hh] of [[-w / 2, -d / 2, 2.5], [-w / 2, d / 2, 2.0], [w / 2, -d / 2, 1.2], [w / 2, d / 2, 2.8]]) mm.cbox(x, 0.1, z, 0.2, hh, 0.2, 4);
+    mm.box(-1.3, 0.18, -d / 2 - 0.04, -1.1, 2.3, -d / 2 + 0.2); mm.box(0.9, 0.18, -d / 2 - 0.04, 1.1, 2.1, -d / 2 + 0.2); mm.beam([-1.3, 2.28, -d / 2 + 0.05], [1.1, 2.12, -d / 2 + 0.05], 0.2, 0.18);
+    // the chimney: a tapering stack of stone with a hearth
+    mm.mat(MAT.STONE, [0.5, 0.48, 0.46], 0.7); mm.box(w / 2 - 0.9, 0.18, d / 2 - 1.1, w / 2 + 0.3, 3.2, d / 2 + 0.3, 0); mm.box(w / 2 - 0.7, 3.2, d / 2 - 0.9, w / 2 + 0.1, 4.2, d / 2 + 0.1, 0);
+    mm.mat(MAT.PLAIN, [0.03, 0.025, 0.02]); mm.box(w / 2 - 0.72, 0.2, d / 2 - 1.12, w / 2 - 0.1, 1.1, d / 2 - 1.04);
+    // fallen rafters, the ridge beam on its side
+    mm.mat(MAT.TIMBER, CH2); for (const [x0, z0, y0, x1, z1, y1] of [[-2.8, -1.6, 0.2, -0.4, 0.4, 1.4], [-1.0, -1.7, 0.25, 1.6, 0.6, 1.2], [2.2, -1.9, 0.2, 0.2, 1.4, 1.0], [-2.9, 1.2, 0.2, 0.3, 1.9, 0.9], [-1.8, -0.3, 0.2, 2.6, -0.1, 0.3]]) mm.beam([x0, y0, z0], [x1, y1, z1], 0.13, 0.17);
+    // ash and rubble
+    mm.mat(MAT.PLAIN, [0.12, 0.11, 0.1]); for (let i = 0; i < 9; i++) mm.ball((R() - 0.5) * 4.6, 0.12, (R() - 0.5) * 3.2, 0.4 + R() * 0.7, 0.12, 0.35 + R() * 0.5, 7, 3);
+    mm.mat(MAT.STONE, [0.5, 0.48, 0.45], 0.6); for (let i = 0; i < 7; i++) mm.ball((R() - 0.5) * 5.2, 0.15, (R() - 0.5) * 4, 0.16 + R() * 0.12, 0.11, 0.14 + R() * 0.1, 6, 3);
+    addBoxCollider(mm, -w / 2, d / 2 - 0.2, w / 2, d / 2 + 0.05, 0, 1.4); addBoxCollider(mm, -w / 2 - 0.1, -d / 2, -w / 2 + 0.15, d / 2, 0, 1.1); addBoxCollider(mm, w / 2 - 0.9, d / 2 - 1.1, w / 2 + 0.3, d / 2 + 0.3, 0, 3.4);
+    for (const [x, z] of [[-w / 2, -d / 2], [-w / 2, d / 2], [w / 2, -d / 2], [w / 2, d / 2]]) addCircleCollider(mm, x, z, 0.2, 0, 2);
+  });
+  // a charred barrel and crate by the back wall, a blackened wagon wheel
+  wPut(m, p, 3.6, 3.6, 0, mm => { mm.mat(MAT.BARK, [0.2, 0.17, 0.15], 0.6); mm.cyl(0, 0, 0, 0.32, 0.34, 0.86, 10, 2); mm.mat(MAT.METAL, [0.12, 0.1, 0.09]); for (const y of [0.15, 0.7]) mm.lathe([[0.345, y], [0.345, y + 0.04]], 10, 0); addCircleCollider(mm, 0, 0, 0.35, 0, 0.9); });
+  wPut(m, p, -3.4, 3.2, 0.9, mm => { mm.push().RX(0.0); mm.mat(MAT.TIMBER, [0.18, 0.15, 0.13]); mm.push().RX(-PI / 2).T(0, -0.02, 0.0); mm.lathe([[0.55, 0], [0.55, 0.08], [0.46, 0.08], [0.46, 0]], 12, 0); mm.pop(); for (let i = 0; i < 6; i++) { const a = i * PI / 3; mm.beam([0, 0.05, 0], [Math.cos(a) * 0.5, 0.05, Math.sin(a) * 0.5], 0.05, 0.05); } mm.pop(); });
+  // the garden has gone to nettles and a pear tree, black on one side
+  wKit(p, 'weed_plant_02_a', -4.6, -3.8, { s: 3, ry: 0.4 });
+  const hk = wGround(p, 3.5, 1.1); wPick('bn.key', [hk[0], hk[1] + 0.22, hk[2]], 'Search the ashes', 'ashkey', 'key');
+  wRead('note.burnt', 'A scorched board', 'Nailed to the one post still standing, the lettering half burnt away:\n\n“… HERE LIVED ADDA THE RUSHWORKER, whose roof fell in on Candlemas night. If any of hers return, tell them the key she kept for her brother’s strongbox is where she always kept it: in the hearth, under the third stone.”', wGround(p, -2.4, -2.9).map((v, i) => i === 1 ? v + 1.4 : v));
+  World.emitters.push({ type: 'smoke', p: wGround(p, 3.4, 2.7).map((v, i) => i === 1 ? v + 4.3 : v), zone: 0, seed: 0.77, t: 0, thin: true });
+};
+
+WBUILD.mine = (p, m, R) => {
+  // an adit driven into the cliff, timbered, its door boarded shut; ore cart on rails, a lamp post, a notice, spoil heaps
+  const Z = 3.05;       // the portal stands at the cliff's foot (local +z runs into the hill)
+  wPut(m, p, 0, 0, 0, mm => {
+    mm.mat(MAT.PLAIN, [0.02, 0.018, 0.016]); mm.box(-1.15, 0, Z + 0.1, 1.15, 2.4, Z + 1.7);
+    mm.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1.35, 1.35]) { mm.cbox(sx, -0.3, Z, 0.34, 3.0, 0.34, 4); addBoxCollider(mm, sx - 0.2, Z - 0.2, sx + 0.2, Z + 0.2, 0, 3); }
+    mm.box(-1.75, 2.65, Z - 0.18, 1.75, 3.0, Z + 0.2); for (const s of [-1, 1]) mm.beam([s * 1.35, 2.2, Z - 0.18], [s * 0.7, 2.7, Z - 0.18], 0.16, 0.16);
+    mm.mat(MAT.TIMBER, COL.timber); mm.cbox(0, 3.0, Z + 0.35, 3.0, 0.22, 0.3, 4);
+    // boards nailed across the opening, some askew
+    mm.mat(MAT.PLANKS, [0.75, 0.68, 0.6], 0.6); for (let i = 0; i < 6; i++) { const y = 0.3 + i * 0.38, sl = (i % 3 - 1) * 0.05; mm.beam([-1.2, y - sl, Z - 0.2], [1.2, y + sl, Z - 0.2], 0.2, 0.05); }
+    mm.beam([-1.15, 0.35, Z - 0.26], [1.1, 2.4, Z - 0.26], 0.18, 0.04); mm.beam([1.1, 0.4, Z - 0.26], [-1.1, 2.3, Z - 0.26], 0.18, 0.04);
+    mm.mat(MAT.METAL, COL.black); for (const [x, y] of [[-0.9, 0.75], [0.9, 1.1], [0.1, 1.6], [-0.5, 2.0]]) mm.cbox(x, y, Z - 0.3, 0.07, 0.07, 0.03, 4);
+    addBoxCollider(mm, -1.4, Z - 0.3, 1.4, Z - 0.1, 0, 2.8);
+    // rails running out, a cart half loaded with stone, sleepers
+    mm.mat(MAT.TIMBER, COL.timberDark); for (let z = Z - 0.2; z > -8; z -= 0.8) mm.box(-0.7, 0, z - 0.06, 0.7, 0.06, z + 0.06);
+    mm.mat(MAT.METAL, [0.34, 0.28, 0.24]); for (const sx of [-0.45, 0.45]) mm.box(sx - 0.03, 0.06, -8, sx + 0.03, 0.1, Z - 0.2);
+    mm.push().T(0, 0.12, -3.6).RY(0.04); mm.mat(MAT.PLANKS, [0.55, 0.43, 0.32], 0.6); mm.box(-0.55, 0.28, -0.8, 0.55, 0.34, 0.8); for (const sx of [-1, 1]) mm.box(sx * 0.55 - 0.03, 0.3, -0.8, sx * 0.55 + 0.03, 0.95, 0.8); for (const sz of [-1, 1]) mm.box(-0.55, 0.3, sz * 0.8 - 0.03, 0.55, 0.9, sz * 0.8 + 0.03);
+    mm.mat(MAT.METAL, [0.3, 0.27, 0.25]); for (const sx of [-0.5, 0.5]) for (const sz of [-0.5, 0.5]) { mm.push().T(sx, 0.2, sz).RZ(PI / 2); mm.cyl(0, -0.03, 0, 0.18, 0.18, 0.06, 10, 3); mm.pop(); }
+    mm.mat(MAT.ROCK, [0.75, 0.74, 0.72], 0.5); for (let i = 0; i < 8; i++) mm.ball((R() - 0.5) * 0.7, 0.9 + R() * 0.12, (R() - 0.5) * 1.2, 0.2 + R() * 0.12, 0.15, 0.2, 6, 3);
+    addBoxCollider(mm, -0.6, -0.85, 0.6, 0.85, 0, 1.0); mm.pop();
+    // spoil: a fan of broken rock running out of the mouth
+    mm.mat(MAT.ROCK, [0.8, 0.79, 0.77], 0.5); for (let i = 0; i < 26; i++) { const a = -PI / 2 + (R() - 0.5) * 2.0, r = 3 + R() * 7; mm.ball(Math.cos(a) * r * 0.6 - 3.5 * (R() < 0.5 ? 1 : -1) * R(), 0.1, -Math.abs(Math.sin(a)) * r + 1.5, 0.28 + R() * 0.55, 0.16 + R() * 0.2, 0.28 + R() * 0.5, 6, 4); }
+  });
+  // lamp post by the door, an old pickaxe against the wall of rock, a warning board on two posts
+  wPut(m, p, 2.7, 1.5, PI, mm => { mm.mat(MAT.TIMBER, COL.timberDark); mm.cbox(0, -0.3, 0, 0.12, 2.7, 0.12, 4); mm.beam([0, 2.3, 0], [0, 2.3, -0.7], 0.07, 0.07); mm.push().T(0, 2.05, -0.65); Props.lantern(mm, { zone: 0 }); mm.pop(); addCircleCollider(mm, 0, 0, 0.14, 0, 2.5); });
+  const sg = wPut(m, p, -3.6, -1.6, 0.3, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.cbox(s * 0.75, -0.3, 0, 0.1, 2.0, 0.1, 4); mm.mat(MAT.PLANKS, [0.7, 0.62, 0.5], 0.6); mm.box(-0.8, 1.0, -0.04, 0.8, 1.75, 0.04); mm.mat(MAT.PLAIN, [0.2, 0.08, 0.06]); mm.box(-0.5, 1.5, -0.05, 0.5, 1.58, -0.04); mm.box(-0.45, 1.25, -0.05, 0.4, 1.31, -0.04); mm.box(-0.5, 1.1, -0.05, 0.1, 1.15, -0.04); addBoxCollider(mm, -0.85, -0.1, 0.85, 0.1, 0, 1.9); });
+  wRead('note.mine', 'A warning board', 'KEEP OUT. The lower gallery flooded and the roof is working.\nBy order of the Warden of Brackenfell, in the year of the second frost.\n\nBelow, scratched with a nail:\n“Corwin went in after the silver. I told him. — your brother Hob.”', [sg[0], sg[1] + 1.4, sg[2]]);
+  wKit(p, 'picke_dirty_01', 2.9, 0.4, { s: 1.0, rz: 0.22, ry: 1.0, dy: 0.0 });
+  const door = wGround(p, 0, 1.4); World.interact.push({ p: [door[0], door[1] + 1.2, door[2]], r: 3.0, zone: 0, kind: 'door', id: 'mine.door', name: 'the old mine door', shut: true, msg: 'Barred from the far side. Iron and oak: you will not shift it.' });
+  const cp = wGround(p, -1.9, 0.1); wPick('mine.cap', [cp[0], cp[1] + 0.02, cp[2]], 'Take the cap', 'corwincap', 'cap');
+  wPlaceBoulders(p, m, R, 16, 5, 11);
+};
+// loose boulders scattered round a place (scanned rocks, with colliders on the big ones)
+function wPlaceBoulders(p, m, R, n, r0, r1, big) {
+  const names = ['rock_moss_set_02_g', 'rock_moss_set_02_c', 'rock_moss_set_02_a', 'rock_moss_set_01_e'];
+  for (let i = 0; i < n; i++) { const a = R() * TAU, r = r0 + R() * (r1 - r0), s = 0.5 + R() * 1.1; wKit(p, R.pick(names), Math.cos(a) * r, Math.sin(a) * r, { s, ry: R() * TAU, dy: -0.12 * s, col: s > 0.85 ? 0.7 * s : 0, h: 0.9 }); }
+}
+
+WBUILD.hermit = (p, m, R) => {
+  // a turf-and-stone hut by the pool: a gable of thatch, a smoking chimney, a bench, a bed of herbs, a drying rack, firewood and a strongbox
+  const hut = wPut(m, p, 7.2, 3.0, 0.5, mm => {
+    wHut(mm, 4.4, 3.6, { h: 2.2, rise: 1.15, wall: MAT.STONE, wc: [0.78, 0.76, 0.72], roof: MAT.THATCH, rc: [0.9, 0.85, 0.7], door: 0.5 });
+    mm.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.7); mm.box(1.4, 0.3, 1.3, 2.2, 3.4, 2.0); mm.box(1.5, 3.4, 1.4, 2.1, 3.8, 1.9);
+    mm.mat(MAT.PLANKS, COL.wood, 0.5); mm.box(-1.9, 0.3, -2.05, -0.8, 1.45, -1.97); mm.mat(MAT.PLAIN, [0.05, 0.04, 0.03]); mm.box(-1.7, 0.7, -2.0, -1.0, 1.3, -1.96);
+  });
+  World.emitters.push({ type: 'smoke', p: [hut[0] + Math.cos(0.5) * 1.8 - Math.sin(0.5) * 1.65, hut[1] + 4.1, hut[2] + Math.sin(0.5) * 1.8 + Math.cos(0.5) * 1.65], zone: 0, seed: 0.13, t: 0 });
+  wPut(m, p, 3.2, 5.7, 0.2, mm => { mm.mat(MAT.PLANKS, COL.wood, 0.5); mm.box(-0.8, 0.38, -0.18, 0.8, 0.45, 0.18); for (const s of [-1, 1]) mm.box(s * 0.65 - 0.05, 0, -0.15, s * 0.65 + 0.05, 0.38, 0.15); addBoxCollider(mm, -0.85, -0.2, 0.85, 0.2, 0, 0.5); });
+  // a drying rack and the herb bed
+  wPut(m, p, 9.6, 8.0, 0, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.cbox(s * 1.1, -0.3, 0, 0.08, 2.0, 0.08, 4); mm.beam([-1.15, 1.7, 0], [1.15, 1.7, 0], 0.05, 0.05); mm.mat(MAT.PLAIN, [0.42, 0.4, 0.22]); for (let i = 0; i < 7; i++) { const x = -0.95 + i * 0.32; mm.cyl(x, 1.05, 0, 0.025, 0.07, 0.65, 5, 0); } addBoxCollider(mm, -1.2, -0.1, 1.2, 0.1, 0, 1.8); });
+  wPut(m, p, 4.4, 9.0, 0.1, mm => { mm.mat(MAT.SOIL, [0.8, 0.78, 0.75], 0.8); mm.box(-1.4, 0, -0.5, 1.4, 0.16, 0.5); mm.mat(MAT.TIMBER, COL.timber); mm.box(-1.45, 0, -0.55, 1.45, 0.2, -0.5); mm.box(-1.45, 0, 0.5, 1.45, 0.2, 0.55); for (let i = 0; i < 12; i++) { mm.mat(MAT.PLAIN, i % 3 ? [0.28, 0.42, 0.2] : [0.7, 0.62, 0.8]); mm.ball(-1.2 + i * 0.22, 0.28, ((i * 5) % 3 - 1) * 0.22, 0.1, 0.13, 0.1, 5, 3); } addBoxCollider(mm, -1.45, -0.55, 1.45, 0.55, 0, 0.3); });
+  wPut(m, p, 12.2, 2.5, 1.1, mm => wLogStack(mm, 4, 3, 1.4, 0.13));
+  wPut(m, p, 5.2, 0.4, 0, mm => { mm.mat(MAT.BARK, [0.95, 0.9, 0.85], 0.6); mm.cyl(0, 0, 0, 0.3, 0.32, 0.5, 9, 0); mm.mat(MAT.PLAIN, [0.7, 0.55, 0.36]); mm.disc(0, 0.5, 0, 0.3, 9, 1); mm.mat(MAT.PLAIN, [0.5, 0.18, 0.12]); mm.cyl(0.02, 0.5, 0.02, 0.07, 0.06, 0.12, 8, 2); addCircleCollider(mm, 0, 0, 0.34, 0, 0.5); });
+  // the strongbox, at the back of the hut's yard; it wants a key
+  const bp = wPut(m, p, 10.4, -0.2, -0.5, mm => { mm.mat(MAT.PLANKS, [0.45, 0.34, 0.24], 0.5); mm.box(-0.42, 0, -0.26, 0.42, 0.4, 0.26); mm.mat(MAT.TIMBER, [0.3, 0.23, 0.17]); mm.box(-0.44, 0.4, -0.28, 0.44, 0.5, 0.28); mm.mat(MAT.METAL, [0.2, 0.19, 0.18]); for (const x of [-0.28, 0.28]) mm.box(x - 0.025, 0, -0.275, x + 0.025, 0.5, 0.275); mm.box(-0.05, 0.28, -0.29, 0.05, 0.4, -0.26); addBoxCollider(mm, -0.45, -0.3, 0.45, 0.3, 0, 0.5); });
+  World.interact.push({ p: [bp[0], bp[1] + 0.5, bp[2]], r: 2.0, zone: 0, kind: 'wbox', id: 'hermit.box', need: 'ashkey', loot: [['gold', 55], ['potion', 1], ['leather', 1]], label: 'Strongbox' });
+  const np = wGround(p, 5.4, 4.6); wRead('note.hermit', 'A note on the door', 'Pinned to the doorpost with a thorn, in a careful, spidery hand:\n\n“Gone to gather bogbean at the pool, back by dusk. If you are the one who is owed the silver: it is not in the mine. It never was. Corwin knew, and that is why he went down. Leave the kettle where it is. — E.”', [np[0], np[1] + 1.4, np[2]]);
+  const bg = wGround(p, -6.8, 3.4); wPick('hm.bog', [bg[0], bg[1] + 0.0, bg[2]], 'Pick bogbean', 'bogbean', { k: 'bogbean', f: mm => PICKMESH.tuft(mm, [0.3, 0.46, 0.28], [0.95, 0.95, 0.98], 5) }, true);
+  for (let i = 0; i < 6; i++) { const a = 2.6 + i * 0.62 + R() * 0.3, r = 5.6 + R() * 0.8, c = wGround(p, -10 + Math.cos(a) * r, -4.5 + Math.sin(a) * r); wKit(p, 'rock_moss_set_02_g', c[0] - p.x, c[2] - p.z, { s: 0.5 + R() * 0.8, ry: R() * 6, dy: -0.08 }); }
+  for (let i = 0; i < 9; i++) { const a = R() * TAU, r = 5.2 + R() * 2.4; wKit(p, 'Fern_1', -10 + Math.cos(a) * r, -4.5 + Math.sin(a) * r, { s: 1.2 + R() * 0.9, ry: R() * TAU, inst: true, maxDist: 80 }); }
+  // the fall's rock: scanned boulders along the lip and down both sides of the face, dark and half buried, ferns on the ledges
+  { const c = WILDS.cliffs.find(k => k.id === 'fall'), L = (lx, lz) => [c.x + lx - p.x, c.z + c.dz * lz - p.z], rn = ['rock_moss_set_02_g', 'rock_moss_set_02_c', 'rock_moss_set_02_a', 'rock_moss_set_01_e', 'Rock_Medium_1', 'Rock_Medium_2'];
+    for (let i = 0; i < 26; i++) { const side = i % 2 ? 1 : -1, lz = c.at + 0.5 + R() * (c.ramp + 1.5), lx = side * (1.5 + R() * 3.2 + (lz > c.at + c.ramp - 1 ? 0 : 0.8)), q = L(lx, lz), sc = 0.7 + R() * 1.3; wKit(p, R.pick(rn), q[0], q[1], { s: sc, ry: R() * TAU, dy: -0.18 * sc, tint: [0.62, 0.64, 0.66] }); }
+    for (let i = 0; i < 6; i++) { const q = L((i - 2.5) * 0.55, c.at + c.ramp - 0.2 + R() * 0.5); wKit(p, R.pick(rn), q[0], q[1], { s: 0.55 + R() * 0.4, ry: R() * TAU, dy: -0.12, tint: [0.55, 0.58, 0.6] }); }           // the lip
+    for (let i = 0; i < 4; i++) { const a = -0.4 + i * 0.9, q = [20 + Math.cos(a + PI) * 4.9 - p.x, -172.5 + Math.sin(a + PI) * 4.9 - p.z]; wKit(p, R.pick(rn), q[0], q[1], { s: 0.5 + R() * 0.5, ry: R() * TAU, dy: -0.15 }); }
+    for (let i = 0; i < 34; i++) { const q = L(R.s() * 9, c.at - 2 + R() * (c.ramp + 7)); wKit(p, 'Fern_1', q[0], q[1], { s: 1.0 + R() * 1.0, ry: R() * TAU, inst: true, maxDist: 70 }); }
+    for (let i = 0; i < 22; i++) { const q = L(R.s() * 10, c.at + 2 + R() * (c.ramp + 6)); wKit(p, 'Grass_Wispy_Tall', q[0], q[1], { s: 1.0 + R() * 0.8, ry: R() * TAU, inst: true, maxDist: 60 }); } }
+  p.npc = null;
+};
+
+WBUILD.stones = (p, m, R) => {
+  // a ring of nine standing stones and two fallen ones on a bare hilltop, an altar slab with a carving, a cairn, and a hawthorn bent by the wind
+  const N = 9, rr = 6.0;
+  for (let i = 0; i < N; i++) { const a = i / N * TAU + 0.2, h = 2.9 + 1.7 * ((i * 37 + 11) % 10) / 10; wPut(m, p, Math.cos(a) * rr, Math.sin(a) * rr, a, mm => { wStone(mm, 0.95 + 0.25 * ((i * 13) % 5) / 5, h, (R() - 0.5) * 0.12); addCircleCollider(mm, 0, 0, 0.55, 0, 3); }); }
+  for (const [a, r] of [[0.5 + PI, rr + 0.6], [2.5, rr + 0.2]]) wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, a + 1.2, mm => { mm.push().T(0, 0.45, 0).RZ(PI / 2).T(0, -1.3, 0); mm.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.55); mm.lathe([[0.5, 0], [0.45, 1.4], [0.3, 2.6], [0.05, 2.8]], 6, 0); mm.pop(); addBoxCollider(mm, -1.4, -0.5, 1.4, 0.5, 0, 0.9); });
+  const alt = wPut(m, p, 0, 0, 0.2, mm => {
+    mm.mat(MAT.ROCK, [0.85, 0.85, 0.82], 0.6); mm.box(-0.9, 0, -0.45, -0.55, 0.55, 0.45); mm.box(0.55, 0, -0.45, 0.9, 0.55, 0.45); mm.box(-1.25, 0.55, -0.7, 1.25, 0.82, 0.7);
+    mm.mat(MAT.PLAIN, [0.1, 0.1, 0.09]); for (let i = 0; i < 5; i++) { const x = -0.9 + i * 0.45; mm.box(x, 0.822, -0.5, x + 0.05, 0.828, 0.5); } mm.box(-1.0, 0.822, 0.0, 1.0, 0.828, 0.05); mm.cyl(0, 0.822, 0, 0.3, 0.3, 0.006, 12, 2);
+    addBoxCollider(mm, -1.3, -0.75, 1.3, 0.75, 0, 0.85);
+  });
+  wRead('stone.carved', 'The carved stone', 'A knot of lines, worn nearly smooth, runs round the altar slab: the same shape nine times, once for each stone. At its centre someone has cut a small ring, and beneath it, newer letters:\n\n“THE VALLEY IS OLDER THAN ITS NAMES.”\n\nYou lay a hand on the slab. It is cold, and it is the only cold thing on the hill.', [alt[0], alt[1] + 0.9, alt[2]], 3.2);
+  wPut(m, p, 10.5, 6.5, 0.6, mm => wCairn(mm, R, 6));
+  const sc = wGround(p, -3.2, 3.6); wPick('st.crop', [sc[0], sc[1], sc[2]], 'Pick stonecrop', 'stonecrop', { k: 'stonecrop', f: mm => PICKMESH.tuft(mm, [0.38, 0.5, 0.34], [0.92, 0.84, 0.3], 6) }, true);
+  wKit(p, 'TwistedTree_3', -9.5, -8.5, { s: 0.55, ry: 1.0, col: 0.35, h: 3 });
+  wPlaceBoulders(p, m, R, 8, 9, 15);
+};
+
+WBUILD.battle = (p, m, R) => {
+  // a field where the line broke: spears and stakes leaning where they fell, broken shields, bones, a wrecked wagon, a tattered standard, three barrows
+  for (let i = 0; i < 30; i++) {
+    const a = R() * TAU, r = 3 + Math.sqrt(R()) * 16, lean = 0.12 + R() * 0.45, dir = R() * TAU;
+    wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, 0, mm => {
+      mm.push().RY(dir).RZ(lean); mm.mat(MAT.TIMBER, [0.32, 0.26, 0.2]); mm.cbox(0, -0.4, 0, 0.045, 1.9 + R() * 0.7, 0.045, 4);
+      if (i % 3) { mm.mat(MAT.METAL, [0.46, 0.32, 0.24]); const y = 1.5 + R() * 0.4; mm.poly([[0, y + 0.45, 0.012], [-0.05, y, 0.012], [0.05, y, 0.012]]); mm.poly([[0.05, y, -0.012], [-0.05, y, -0.012], [0, y + 0.45, -0.012]]); } mm.pop();
+    });
+  }
+  for (let i = 0; i < 16; i++) { const a = R() * TAU, r = 3 + Math.sqrt(R()) * 17; wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, R() * TAU, mm => { mm.push().RX(R.s() * 0.25).RZ(R.s() * 0.2); mm.mat(MAT.PLANKS, [0.55, 0.4, 0.3], 0.5); mm.cyl(0, 0.03, 0, 0.33, 0.33, 0.04, 10, 3); mm.mat(MAT.METAL, [0.38, 0.3, 0.26]); mm.ball(0, 0.07, 0, 0.07, 0.04, 0.07, 6, 3); if (i % 2) { mm.mat(MAT.PLAIN, [0.5, 0.15, 0.12]); mm.box(-0.3, 0.07, -0.03, 0.3, 0.075, 0.03); } mm.pop(); }); }
+  for (let i = 0; i < 6; i++) { const a = R() * TAU, r = 3 + R() * 14; wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, R() * TAU, mm => { mm.mat(MAT.PLAIN, [0.78, 0.74, 0.62]); mm.ball(0, 0.08, 0, 0.1, 0.09, 0.11, 7, 4); mm.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); mm.ball(-0.035, 0.1, -0.08, 0.025, 0.03, 0.01, 4, 3); mm.ball(0.035, 0.1, -0.08, 0.025, 0.03, 0.01, 4, 3); mm.mat(MAT.PLAIN, [0.76, 0.72, 0.6]); for (let k = 0; k < 5; k++) { mm.push().T((k - 2) * 0.12, 0.02, 0.3 + (k % 2) * 0.1).RZ(PI / 2 + R.s() * 0.4).RY(R() * 3); mm.cyl(0, -0.2, 0, 0.018, 0.022, 0.4, 5, 0); mm.pop(); } }); }
+  wPut(m, p, -6, 5, 0.9, mm => { mm.push().RZ(0.28).T(0, 0.0, 0); Props.cart(mm, false); mm.pop(); });
+  wPut(m, p, 7, -4, 0, mm => { mm.mat(MAT.TIMBER, [0.28, 0.23, 0.18]); mm.push().RZ(0.1); mm.cbox(0, -0.4, 0, 0.1, 4.4, 0.1, 4); mm.mat(MAT.CLOTH, [0.34, 0.12, 0.1], 0.6); mm.quad2([0.04, 4.1, 0], [0.04, 3.2, 0.02], [1.2, 3.35, 0.15], [1.35, 4.0, 0.05]); mm.quad2([0.04, 3.3, 0.02], [0.2, 2.5, 0.03], [0.9, 2.7, 0.12], [1.1, 3.35, 0.1]); mm.pop(); addCircleCollider(mm, 0, 0, 0.14, 0, 3); });
+  wRead('note.battle', 'A rotted standard', 'The cloth is too far gone to say whose it was. Pinned beneath the staff with a nail, a strip of leather, scratched with a point:\n\nHERE THE GREYSPINE LEVY STOOD, AND HERE THEY STAYED.\nThe valley folk bury what they find. They never find all of it.', wGround(p, 7, -4).map((v, i) => i === 1 ? v + 1.3 : v), 3.0);
+  const sw = wGround(p, 1.0, -9.5); wPick('bf.sword', [sw[0], sw[1] + 0.05, sw[2]], 'Take the old sword', 'oldsword', 'sword');
+  const cn = wGround(p, -7.4, 6.2); wPick('bf.coins', [cn[0], cn[1] + 0.02, cn[2]], 'Take the coins', 'oldcoins', 'coins');
+  for (let i = 0; i < 6; i++) { const a = R() * TAU, r = 6 + R() * 14; wKit(p, 'weed_plant_02_a', Math.cos(a) * r, Math.sin(a) * r, { s: 2 + R() * 1.5, ry: R() * 6, inst: true, maxDist: 60 }); }
+};
+
+WBUILD.bee = (p, m, R) => {
+  // skeps on benches inside a ring of low wattle fence, wooden hives on legs, a lean-to for the smoker and the barrels
+  const ring = []; for (let i = 0; i <= 28; i++) { const a = i / 28 * (TAU - 0.5) + PI + 0.55 - 0.01 * 0, r = 7.4; ring.push([p.x + Math.cos(a) * r, p.z + Math.sin(a) * r]); }
+  wFence(m, ring, { h: 0.9, col: [0.62, 0.55, 0.44], rails: [0.4, 0.72] });
+  for (const [x, z, rot] of [[-2.6, -2.2, 0], [0.4, -3.2, 0.2], [3.0, -2.0, -0.2]]) wPut(m, p, x, z, rot, mm => {
+    mm.mat(MAT.PLANKS, COL.wood, 0.5); mm.box(-1.0, 0.5, -0.3, 1.0, 0.56, 0.3); for (const s of [-1, 1]) mm.box(s * 0.9 - 0.05, 0, -0.25, s * 0.9 + 0.05, 0.5, 0.25);
+    mm.mat(MAT.THATCH, [0.95, 0.85, 0.55], 0.6); for (let i = 0; i < 3; i++) { const x = -0.65 + i * 0.65; mm.lathe([[0.27, 0.56], [0.3, 0.7], [0.22, 0.9], [0.1, 1.02], [0.005, 1.06]], 9, 0); mm.push().T(x, 0, 0); mm.pop(); }
+    addBoxCollider(mm, -1.05, -0.32, 1.05, 0.32, 0, 1.0);
+  });
+  // (the three skeps above are drawn at the bench centre; repeat per bench position with offsets)
+  for (const [x, z, rot] of [[-2.6, -2.2, 0], [0.4, -3.2, 0.2], [3.0, -2.0, -0.2]]) for (const dx of [-0.65, 0, 0.65]) wPut(m, p, x, z, rot, mm => { mm.mat(MAT.THATCH, [0.95, 0.85, 0.55], 0.6); mm.push().T(dx, 0, 0); mm.lathe([[0.27, 0.56], [0.3, 0.7], [0.22, 0.92], [0.1, 1.04], [0.005, 1.08]], 9, 0); mm.mat(MAT.PLAIN, [0.1, 0.07, 0.04]); mm.ball(0, 0.62, -0.28, 0.05, 0.04, 0.02, 5, 3); mm.pop(); });
+  for (const [x, z, rot] of [[-4.6, 1.2, 0.4], [4.8, 1.4, -0.5]]) wPut(m, p, x, z, rot, mm => { mm.mat(MAT.PLANKS, [0.88, 0.84, 0.76], 0.5); for (const s of [-1, 1]) for (const t of [-1, 1]) mm.cbox(s * 0.28, 0, t * 0.28, 0.06, 0.55, 0.06, 4); mm.box(-0.36, 0.55, -0.36, 0.36, 1.15, 0.36); mm.mat(MAT.SHINGLE, [0.6, 0.55, 0.5], 0.5); mm.quad2([-0.45, 1.15, -0.45], [-0.45, 1.15, 0.45], [0, 1.4, 0.45], [0, 1.4, -0.45]); mm.quad2([0.45, 1.15, 0.45], [0.45, 1.15, -0.45], [0, 1.4, -0.45], [0, 1.4, 0.45]); mm.mat(MAT.PLAIN, [0.1, 0.08, 0.05]); mm.box(-0.1, 0.62, -0.37, 0.1, 0.7, -0.36); addBoxCollider(mm, -0.4, -0.4, 0.4, 0.4, 0, 1.3); });
+  wPut(m, p, 0.6, 4.6, PI, mm => { wHut(mm, 3.0, 2.2, { h: 2.1, rise: 0.8, wall: MAT.PLANKS, wc: COL.woodDark, roof: MAT.THATCH, door: 0.55 }); mm.push().T(1.9, 0, -0.6); Props.barrel(mm); mm.pop(); });
+  wPut(m, p, -2.2, 3.6, 0, mm => { Props.barrel(mm, 0.28, 0.7); });
+  const hb = wGround(p, 0.6, -2.0); wPick('bee.honey', [hb[0], hb[1] + 0.58, hb[2]], 'Take the honeycomb', 'honeycomb', 'honey');
+  const sw = wGround(p, -5.4, 5.6); wPick('bee.sunwort', [sw[0], sw[1], sw[2]], 'Pick sunwort', 'sunwort', { k: 'sunwort', f: mm => PICKMESH.tuft(mm, [0.34, 0.5, 0.26], [0.98, 0.84, 0.2], 6) }, true);
+  for (let i = 0; i < 70; i++) { const a = R() * TAU, r = 1.5 + Math.sqrt(R()) * 12; wKit(p, R.pick(['Flower_3_Group', 'Flower_4_Group', 'Flower_3_Single', 'Flower_4_Single', 'Clover_1']), Math.cos(a) * r, Math.sin(a) * r, { s: 1.0 + R() * 0.8, ry: R() * TAU, inst: true, maxDist: 55 }); }
+};
+
+WBUILD.fishing = (p, m, R) => {
+  // beached clinker boats, a drying rack hung with nets, a smoking rack over a small fire, a low shelter, barrels and baskets, a jetty into the lake
+  wKit(p, () => dBoat(rng(5)), -3.5, -3.0, { s: 1.5, ry: 0.35, col: 0.9, h: 0.5 }); wKit(p, () => dBoat(rng(5)), 2.2, -5.4, { s: 1.35, ry: -0.2, rz: 0.05, col: 0.85, h: 0.5 });
+  wKit(p, () => dNet(rng(5)), 5.2, 0.8, { s: 1.5, ry: 0.4, col: 0.4, h: 1.6 }); wKit(p, () => dNet(rng(5)), 7.4, -0.6, { s: 1.5, ry: -0.2, col: 0.4, h: 1.6 });
+  wPut(m, p, 3.6, 4.0, 0.3, mm => { wHut(mm, 3.4, 2.6, { h: 1.9, rise: 0.8, wall: MAT.PLANKS, wc: [0.66, 0.6, 0.52], roof: MAT.THATCH, door: 0.6 }); });
+  const fp = wPut(m, p, -2.2, 4.2, 0, mm => {
+    mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; mm.ball(Math.cos(a) * 0.5, 0.06, Math.sin(a) * 0.5, 0.13, 0.1, 0.12, 6, 4); }
+    mm.mat(MAT.BARK, [0.3, 0.26, 0.24], 0.5); for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.3; mm.beam([Math.cos(a) * 0.3, 0.02, Math.sin(a) * 0.3], [Math.cos(a + 2.4) * 0.05, 0.25, Math.sin(a + 2.4) * 0.05], 0.07, 0.07); }
+    mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) { mm.beam([s * 0.9, 0, -0.5], [s * 0.85, 1.3, -0.45], 0.07, 0.07); mm.beam([s * 0.9, 0, 0.5], [s * 0.85, 1.3, 0.45], 0.07, 0.07); } mm.beam([-0.9, 1.3, 0], [0.9, 1.3, 0], 0.05, 0.05);
+    mm.mat(MAT.PLAIN, [0.55, 0.38, 0.2]); for (let i = 0; i < 5; i++) { const x = -0.65 + i * 0.32; mm.push().T(x, 1.28, 0); mm.ball(0, -0.3, 0, 0.045, 0.3, 0.025, 6, 4); mm.pop(); }
+    addCircleCollider(mm, 0, 0, 0.8, 0, 1.3);
+  });
+  World.emitters.push({ type: 'fire', p: [fp[0], fp[1] + 0.15, fp[2]], size: 0.4, zone: 0, seed: 0.88, t: 0 }); World.emitters.push({ type: 'smoke', p: [fp[0], fp[1] + 1.2, fp[2]], zone: 0, seed: 0.31, t: 0 });
+  for (const [x, z, r] of [[6.4, 3.4, 0], [7.0, 4.2, 0.6]]) wPut(m, p, x, z, r, mm => { Props.barrel(mm); });
+  wPut(m, p, 6.3, 5.3, 0, mm => { Props.crate(mm, 0.6); });
+  // the jetty: five metres of planking and two mooring posts, toward the lake's middle
+  const dir = [LAKE.x - p.x, LAKE.z - p.z], dl = hyp(dir[0], dir[1]), ux = dir[0] / dl, uz = dir[1] / dl; let s0 = 0;
+  for (let s = 0; s < 60; s += 0.25) { if (wy(p.x + ux * s, p.z + uz * s) < LAKE.y + 0.35) { s0 = s; break; } }
+  if (s0 > 0) {
+    const a = [p.x + ux * (s0 - 2.8), p.z + uz * (s0 - 2.8)], b = [p.x + ux * (s0 + 5.2), p.z + uz * (s0 + 5.2)];
+    bwWalk(() => m, [a, b], { w: 1.3, rails: [0, 0], seg: 2.0, deckY: q => Math.max(LAKE.y + 0.5, wy(q[0], q[1]) + 0.25), railSide: () => false });
+    m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1, 1]) m.cbox(b[0] + Math.cos(Math.atan2(uz, ux) + PI / 2) * sx * 0.78, LAKE.y - 1.2, b[1] + Math.sin(Math.atan2(uz, ux) + PI / 2) * sx * 0.78, 0.2, 2.2, 0.2, 4);
+    p.jetty = { end: [b[0] - ux * 0.6, LAKE.y + 0.5, b[1] - uz * 0.6], dir: Math.atan2(ux, -uz) };
+  }
+  const fh = wGround(p, 6.7, 3.8); wPick('fs.fish', [fh[0], fh[1] + 0.9, fh[2]], 'Take the smoked fish', 'smokedfish', 'fish');
+  for (let i = 0; i < 5; i++) { const a = R() * TAU, r = 2.5 + R() * 9; wKit(p, 'wooden_bucket_02', Math.cos(a) * r * 0.6 + 4, Math.sin(a) * r * 0.6 - 1, { s: 1.2, ry: R() * 6 }); if (i > 1) break; }
+};
+
+WBUILD.toll = (p, m, R) => {
+  // the road crosses a brook by a ford; beside it a plank footbridge, stepping stones, and a guard post with a toll bar (kept raised); a brazier, a notice, a strongbox of tolls
+  wPut(m, p, 7.2, -4.4, -PI / 2, mm => {
+    wHut(mm, 3.8, 3.0, { h: 2.3, rise: 1.0, wall: MAT.STONE, wc: [0.8, 0.78, 0.74], roof: MAT.SHINGLE, rc: [1.1, 1.05, 1.0], door: 0.5 });
+    mm.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.7); mm.box(-1.0, 0.3, 1.2, -0.2, 3.3, 1.9); mm.mat(MAT.PLAIN, [0.07, 0.06, 0.05]); mm.box(0.9, 0.9, -1.55, 1.5, 1.6, -1.5);
+  });
+  // the toll bar: a post each side of the road, the pole propped upright against the north post so that the road stays open
+  for (const [x, z] of [[-3.4, -4.8], [3.2, 4.8]]) { const q = wGround(p, x, z); m.push().T(q[0], q[1], q[2]); m.m1 = 0; m.ao = 1; m.mat(MAT.TIMBER, COL.timberDark); m.cbox(0, -0.3, 0, 0.22, 1.9, 0.22, 4); addCircleCollider(m, 0, 0, 0.22, 0, 1.6); m.pop(); }
+  wPut(m, p, -3.4, -4.8, 0, mm => { mm.mat(MAT.PLANKS, [0.85, 0.78, 0.68], 0.5); mm.beam([0.1, 0.9, 0.0], [0.65, 4.0, 0.1], 0.12, 0.12); mm.mat(MAT.PLAIN, [0.8, 0.78, 0.74]); for (const y of [1.8, 2.7]) mm.beam([0.28 + (y - 0.9) * 0.17, y, 0.0], [0.38 + (y - 0.9) * 0.17, y + 0.5, 0.0], 0.14, 0.14); });
+  const nb = wPut(m, p, -5.8, -3.6, 0.4, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.cbox(s * 0.8, -0.3, 0, 0.1, 2.2, 0.1, 4); mm.mat(MAT.PLANKS, COL.wood); mm.box(-0.8, 0.95, -0.03, 0.8, 1.95, 0.03); mm.mat(MAT.PLAIN, COL.parchment); mm.box(-0.5, 1.4, -0.04, 0.2, 1.8, -0.03); mm.box(0.3, 1.25, -0.04, 0.65, 1.7, -0.03); addBoxCollider(mm, -0.85, -0.08, 0.85, 0.08, 0, 2.0); });
+  wRead('board.toll', 'Notice of tolls', 'BY THE WARDEN’S LEAVE, at the Ford of the Greyspine Road:\n\nA walker: nothing.\nA cart, laden: two pennies.\nA flock, by the score: one lamb.\nOutlaws and those who aid them: the rope.\n\nThe guard is away at the wedding at Highfold. Leave the bar as you find it, and do not trouble the box.', [nb[0], nb[1] + 1.4, nb[2]]);
+  const br = wPut(m, p, 1.6, 3.2, 0, mm => { mm.mat(MAT.METAL, COL.black); mm.cyl(0, 0.5, 0, 0.3, 0.38, 0.16, 8, 1); mm.mat(MAT.TIMBER, COL.timberDark); for (let i = 0; i < 3; i++) { const a = i * TAU / 3; mm.beam([Math.cos(a) * 0.4, 0, Math.sin(a) * 0.4], [Math.cos(a) * 0.2, 0.55, Math.sin(a) * 0.2], 0.05, 0.05); } mm.mat(MAT.PLAIN, [0.1, 0.07, 0.05]); mm.disc(0, 0.64, 0, 0.28, 8, 1); addCircleCollider(mm, 0, 0, 0.4, 0, 0.9); });
+  World.emitters.push({ type: 'torch', p: [br[0], br[1] + 0.85, br[2]], size: 0.28, zone: 0, seed: 0.62 }); addLight([br[0], br[1] + 1.2, br[2]], 10, [3.0, 1.5, 0.5], 0, 'fire');
+  // the footbridge across the brook, north of the ford, and stepping stones south of it
+  { const bx = WILDS.brook.pts, c = (WILDS.brookLine || (WILDS.brookLine = new Poly(catmull(WILDS.brook.pts, 2)))); c.dist(-159.5, -6, 20); const q = c.point(c.at), nx = -q[3], nz = q[2];
+    const a = [q[0] - nx * 4.6, q[1] - nz * 4.6], b = [q[0] + nx * 4.6, q[1] + nz * 4.6], top = Math.max(wy(a[0], a[1]), wy(b[0], b[1])) + 0.15;
+    wBridge(m, a, b, { w: 1.4, ya: top, yb: top }); WB.bridge = { a, b }; }
+  for (let i = 0; i < 6; i++) { const q = WILDS.brookLine.point(WILDS.brookLine.len * 0.62), z = q[1] - 2 + i * 0.9 * 0, x = q[0] - 2.3 + i * 0.92 + (i % 2) * 0.1, zz = q[1] + (i % 2 ? 0.22 : -0.22); const y = wBrookSurface(x, zz) + 0.1;
+    m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.ROCK, [0.85, 0.85, 0.82], 0.5); m.push().T(x, 0, zz); m.cyl(0, y - 0.5, 0, 0.38, 0.34, 0.5, 8, 2); addFloor(m, -0.36, -0.36, 0.36, 0.36, y); m.pop(); }
+  const tb = wGround(p, 9.0, -1.4); World.interact.push({ p: [tb[0], tb[1] + 0.45, tb[2]], r: 2.0, zone: 0, kind: 'chest', id: 'toll.box', loot: [['gold', 14]] });
+  wPut(m, p, 9.0, -1.4, PI / 2, mm => { Props.chest(mm); });
+};
+// the brook's surface at a point (or the ground when there is none)
+function wBrookSurface(x, z) { for (const k of WILDS.brooks) { const b = k.line; if (!b || x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue; b.dist(x, z, 6); if (b.at >= 0) return wildsBrookY(b.at, k); } return wy(x, z); }
+
+// ───────────────────────── Highfold: the hamlet's yard dressing (the houses are kit shells, in wildsAttach) ─────────────────────────
+WBUILD.hamlet = (p, m, R) => {
+  // dry-stone walls round the green, haystacks, a cart, a well, a woodpile at each door, an orchard of birches
+  wWall(m, [[96, 94], [108, 92], [112, 88]], { h: 0.85 }); wWall(m, [[112, 108], [121, 104]], { h: 0.8, gaps: [[116, 106]] });
+  for (const [x, z, r] of [[133, 118, 1.3], [137, 120, 1.1]]) wPut(m, p, x - p.x, z - p.z, 0, mm => Props.haystack(mm, r));
+  wPut(m, p, -5.6, 10.2, 1.0, mm => { Props.cart(mm, true); });
+  wPut(m, p, 1.4, 1.5, 0, mm => { // a well with a pitched roof
+    mm.mat(MAT.STONE, [0.85, 0.85, 0.8], 0.7); mm.lathe([[0.95, -0.3], [0.95, 0.85], [0.82, 0.92], [0.6, 0.92], [0.6, -0.3]], 12, 0);
+    mm.mat(MAT.PLAIN, [0.04, 0.07, 0.08]); mm.disc(0, 0.2, 0, 0.6, 10, 1); mm.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) mm.cbox(s * 0.85, 0.8, 0, 0.12, 1.3, 0.12, 4); mm.beam([-0.9, 2.05, 0], [0.9, 2.05, 0], 0.11, 0.11);
+    mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.6); mm.quad2([-1.1, 2.3, 0], [-1.1, 1.95, -0.8], [1.1, 1.95, -0.8], [1.1, 2.3, 0]); mm.quad2([1.1, 2.3, 0], [1.1, 1.95, 0.8], [-1.1, 1.95, 0.8], [-1.1, 2.3, 0]); addCircleCollider(mm, 0, 0, 1.0, 0, 1.2);
+  });
+  for (const h of WILDS.houses) { const q = siteToWorld(h, h.w / 2 + 0.9, -h.d / 2 + 1.2); m.push().T(q[0], wy(q[0], q[1]), q[1]).RY(-h.yaw); m.m1 = 0; m.ao = 1; m.grad = null; Props.woodpile(m, 3, 3, 1.1); m.pop(); }
+  for (const [id, msg] of [['high.b', 'Bolted. Nobody is home: they are all at the wedding.'], ['high.barn', 'The barn door is chained. Sheep bleat behind it.']]) { const h = SITE[id]; if (!h) continue; const q = siteToWorld(h, h.doorPos === undefined ? 0 : h.doorPos, -h.d / 2 - 0.9); World.interact.push({ p: [q[0], wy(q[0], q[1]) + 1.2, q[1]], r: 2.2, zone: 0, kind: 'door', id: id + '.door', shut: true, msg }); }
+  // the apple pickups hang under the orchard birches
+  for (const [x, z] of [[129, 123], [125, 126]]) { const c = [x, wy(x, z), z]; wPick("hf.apple" + (x > 127 ? 2 : 1), c, 'Gather apples', 'apple', 'apple'); }
+};
+
+
+// ───────────────────────── wayfinding: signposts where a path leaves the road, cairns along it, milestones, the footbridge over the Stonewater ─────────────────────────
+const WSIGN = {
+  lumber: ['Lumber camp, north-west', 'Back to the Shrine of the Turn'], burnt: ['The burnt cottage', 'Lumber camp'], mine: ['The old mine: barred', 'Burnt cottage'],
+  tower: ['The Old Watchtower, east', 'Mine road, west'], hermit: ['Hermit’s Fall, north-east', 'Watchtower path'], bridge: ['Footbridge over the Stonewater', 'Hermit’s Fall'],
+  stones: ['The Standing Stones, on the hill', 'Footbridge'], battle: ['Greyspine Field: graves, take care', 'The road home'], hamlet: ['Highfold, up the hill', 'Brackenfell'],
+  fishing: ['The south shore and the boats', 'Highfold'], lakeside: ['Lake path', 'Fishing hamlet'], bee: ['Bee meadow, the skeps', 'Watch Road'], blind: ['Hunter’s blind', 'Brackenfell']
+};
+WBUILD.__net = (p, mk, R) => {
+  for (const id of WILDS.paths) {
+    const rd = Roads.find(r => r.id === 'p.' + id); if (!rd) continue; const L = rd.line, lab = WSIGN[id] || [id, ''];
+    const q0 = L.point(1.2), nx = -q0[3], nz = q0[2], sx = q0[0] + nx * 1.7, sz = q0[1] + nz * 1.7;
+    if (!['lakeside'].includes(id)) {
+      const y = wy(sx, sz), m = mk(sx, sz); m.push().T(sx, y, sz).RY(R() * 0.6 - 0.3); m.m1 = 0; m.ao = 1; m.grad = null; Props.signPost(m, 2); addCircleCollider(m, 0, 0, 0.14, 0, 2.5); m.pop();
+      wRead('sign.' + id, 'Signpost', lab.filter(Boolean).join('\n'), [sx, y + 1.7, sz], 2.6);
+    }
+    for (let d = 28 + R() * 14; d < L.len - 10; d += 38 + R() * 14) { const q = L.point(d), o = (R() < 0.5 ? 1 : -1) * (1.5 + R() * 0.8), x = q[0] - q[3] * o, z = q[1] + q[2] * o, m = mk(x, z); m.push().T(x, wy(x, z), z); m.m1 = 0; m.ao = 1; m.grad = null; wCairn(m, R, 3 + (R() * 3 | 0)); m.pop(); }
+  }
+  // milestones along the main roads out of the square
+  for (const [x, z, a] of [[-92, 1.2, 0], [-148, 3.6, 0], [96, -4, PI]]) { const y = wy(x, z), m = mk(x, z); m.push().T(x, y, z).RY(a); m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.5); m.box(-0.22, -0.2, -0.12, 0.22, 0.85, 0.12); m.cyl(0, 0.85, 0, 0.22, 0.2, 0.0, 8, 0); m.mat(MAT.PLAIN, [0.1, 0.1, 0.1]); m.box(-0.12, 0.45, 0.118, 0.12, 0.6, 0.125); addBoxCollider(m, -0.25, -0.15, 0.25, 0.15, 0, 1.2); m.pop(); }
+  // footbridge over the river where the Hermit's path crosses it
+  { const r0 = River.dist(47, -150, 20), at = River.at, q = River.point(at), nx = -q[3], nz = q[2], hs = 6.4;
+    const a = [q[0] - nx * hs, q[1] - nz * hs], b = [q[0] + nx * hs, q[1] + nz * hs]; const ya = wy(a[0], a[1]) + 0.12, yb = wy(b[0], b[1]) + 0.12, mid = Math.max(ya, yb) + 0.1;
+    wBridge(mk(q[0], q[1]), a, b, { w: 1.6, ya: Math.max(ya, yb), yb: Math.max(ya, yb) }); WB.river = { a, b, y: Math.max(ya, yb) }; }
+};
+
+// ───────────────────────── build ─────────────────────────
+function buildWilds() {
+  if (!WILDS.on || WB.built || (TEST && TEST.wb === 0)) return; WB.built = true;
+  const pack = new MeshPack(); pack.shadow = false;
+  for (const p of WILDS.places) {
+    const fn = WBUILD[p.id]; if (!fn) continue;
+    const m = new Mesh(4096); m.seed = (p.x * 7 + p.z * 13) | 0; const R = rng((p.x * 131 + p.z * 17) | 0);
+    try { fn(p, m, R); } catch (e) { console.warn('wilds ' + p.id + ': ' + (e && e.stack || e)); }
+    if (m.ni) { pack.add(m, { kind: 'opaque', maxDist: 125, noShadow: true }); WB.tris += m.ni / 3; }
+    World.places.push({ id: 'wild.' + p.id, name: p.name, x: p.x, z: p.z, r: p.disc });
+  }
+  { const cells = new Map(), mk = (x, z) => { const k = Math.floor(x / 60) * 1000 + Math.floor(z / 60); let m = cells.get(k); if (!m) cells.set(k, m = new Mesh(2048)); return m; };
+    try { WBUILD.__net({ x: 0, z: 0, yaw: 0 }, mk, rng(4242)); } catch (e) { console.warn('wilds net: ' + (e && e.stack || e)); }
+    for (const m of cells.values()) if (m.ni) { pack.add(m, { kind: 'opaque', maxDist: 110, noShadow: true }); WB.tris += m.ni / 3; } }
+  // water: the pool under the fall, the brook at the toll ford, the fall itself
+  const wp2 = new MeshPack(); wp2.shadow = false;
+  const wm = new Mesh(4096); wm.mat(MAT.PLAIN, [1, 1, 1]);
+  const patch = (cx, cz, hx, hz, cs, yAt, flow) => { const nx = Math.ceil(2 * hx / cs), nz = Math.ceil(2 * hz / cs), ids = new Map(); const v = (i, j) => { const k = j * 4096 + i; let q = ids.get(k); if (q !== undefined) return q; const x = cx - hx + i * cs, z = cz - hz + j * cs, y = yAt(x, z); wm.ao = sat((y - Terrain.y(x, z)) / 0.9); q = wm.vert(x, y, z, 0, 1, 0, flow[0], flow[1]); ids.set(k, q); return q; };
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const x = cx - hx + i * cs, z = cz - hz + j * cs; if (Math.min(wy(x, z), wy(x + cs, z), wy(x, z + cs), wy(x + cs, z + cs)) > yAt(x, z) + 0.05) continue; const a = v(i, j), b = v(i, j + 1), c = v(i + 1, j + 1), d = v(i + 1, j); wm.tri(a, b, c); wm.tri(a, c, d); } };
+  if (WILDS.pool) { const q = WILDS.pool, yw = wildsBase('pool', q.x, q.z) - 0.35; q.y = yw; patch(q.x, q.z, q.r + 5, q.r + 5, 1.0, () => yw, [0.2, 0.1]); }
+  for (const k of WILDS.brooks) { const b = k.line || (k.line = new Poly(catmull(k.pts, 2))); for (let s = 0; s < b.len; s += 6) { const q = b.point(s); patch(q[0], q[1], 5.5, 5.5, 1.0, (x, z) => wBrookSurface(x, z), [-q[3] * 0.6, q[2] * 0.6]); } }
+  WB.waterTris = 0;
+  if (wm.ni) { wp2.add(wm, { kind: 'water', noShadow: true, maxDist: 130 }); WB.waterTris += wm.ni / 3; }
+  // the fall: a ribbon hugging the face of the cliff from the lip to the pool
+  const fm = new Mesh(512); fm.mat(MAT.PLAIN, [1, 1, 1]);
+  { const c = WILDS.cliffs.find(k => k.id === 'fall'), pts = []; const ux = c.dx, uz = c.dz, sx = -uz, sz = ux;
+    for (let k = 0; k <= 12; k++) { const lz = c.at + 0.2 + c.ramp * 1.15 * k / 12, x = c.x + ux * lz, z = c.z + uz * lz; pts.push([x, z, wy(x, z)]); }
+    const lipY = pts[pts.length - 1][2]; WB.fall = { x: c.x + ux * (c.at + 1.5), z: c.z + uz * (c.at + 1.5), top: lipY, bottom: wildsBase('pool', 0, 0), ux, uz, pts };
+    const hw = 0.9; let prev = null;
+    for (let k = 0; k < pts.length; k++) { const q = pts[k], off = 0.22, x = q[0] - ux * 0.0 - ux * 0, y = q[2] + off * (1 - k / pts.length * 0.5); const l = fm.vert(q[0] - sx * hw, y, q[1] - sz * hw, -ux, 0.4, -uz, 0, k * 0.3, 0), r = fm.vert(q[0] + sx * hw, y, q[1] + sz * hw, -ux, 0.4, -uz, 0, k * 0.3, 0); fm.ao = 0.85; if (prev) { fm.tri(prev[0], prev[1], r); fm.tri(prev[0], r, l); } prev = [l, r]; }
+  }
+  // (the fall itself is drawn by particles, 79b_life.js: a solid sheet read as a white board)
+  pack.upload('wilds'); World.packs.push(pack);
+  wp2.upload('wilds-water'); World.packs.push(wp2);
+  const wrap = World.waterAt; World.waterAt = (x, z) => {
+    if (WILDS.pool && Math.abs(x - WILDS.pool.x) < 12 && Math.abs(z - WILDS.pool.z) < 12 && hyp(x - WILDS.pool.x, z - WILDS.pool.z) < WILDS.pool.r + 3 && Terrain.y(x, z) < WILDS.pool.y) return WILDS.pool.y;
+    for (const k of WILDS.brooks) { if (x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue; const b = k.line, d = b.dist(x, z, 5); if (d < 5) { const y = wildsBrookY(b.at, k); if (Terrain.y(x, z) < y) return y; } }
+    return wrap(x, z);
+  };
+  if (typeof wildsLifeBuild === 'function') wildsLifeBuild();
+}
+
+// the kit half: batches made when the kit and the quality tier are known (and again if the tier changes). Each place is hidden beyond 125 m.
+function wildsKitBuild() {
+  const q = R.q; if (!q || !kitReady()) return;
+  for (const k of WB.groups) { SC.scene.remove(k.g); k.g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  WB.groups = []; WB.builtFor = R.qName; const low = !q.scatter, I = new THREE.Matrix4();
+  for (const p of WILDS.places) {
+    const list = WB.kit[p.id], houses = p.id === 'hamlet' ? WILDS.houses : null; if (!list && !houses) continue;
+    const B = Kit.batch({ name: 'wild-' + p.id, cell: 4096, off: 2048, far: !!houses }), add = B.add; B.add = (n, x, o) => add(n, x, Object.assign({ cast: false }, o || {}));
+    const insts = {};
+    for (const k of list || []) {
+      const name = typeof k.name === 'function' ? k.name() : k.name; if (!Kit.pieces[name]) continue;
+      if (low && (k.inst || /Flower|Clover|Fern|weed|Mushroom|branches/.test(name))) continue;
+      const M = Kit.matrix({ p: [k.x, k.y, k.z], r: [k.rx, k.ry, k.rz], s: k.s });
+      if (k.inst) { const key = name + '|' + (k.maxDist || 0); (insts[key] = insts[key] || { name, maxDist: k.maxDist, mats: [] }).mats.push(M); } else B.add(name, M, k.tint ? { tint: k.tint } : undefined);
+    }
+    for (const it of Object.values(insts)) B.addInstanced(it.name, it.mats, { cell: 64, maxDist: it.maxDist || 70, cast: false });
+    if (houses) for (const h of houses) { if (h.cell && Cells.by[h.id]) continue; try { if (h.barn) wBarn(B, h, low); else infShell(B, h, low); } catch (e) { console.warn('hamlet house ' + h.id + ': ' + (e && e.stack || e)); } }
+    if (!B.count && !Object.keys(insts).length) continue;
+    const g = B.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); SC.scene.add(g);
+    let t = 0; g.traverse(o => { if (o.isMesh) t += o.geometry.index.count / 3 * (o.isInstancedMesh ? o.count : 1); });
+    WB.groups.push({ g, p, tris: t });
+  }
+}
+function wBarn(B, h, lo) { infShell(B, Object.assign({}, h, { floors: 1, jetty: false, chimney: 0, stairs: 0, boxes: false }), lo); }
+function wildsAttach() {
+  if (!WILDS.on || WB.attached || !SC.scene || !kitReady()) return; WB.attached = true;
+  wildsKitBuild();
+  const inner = sceneUpdate;
+  sceneUpdate = function (camPos, q) {
+    inner(camPos, q);
+    if (WB.builtFor !== R.qName) wildsKitBuild();
+    for (const k of WB.groups) k.g.visible = !World.deepIn && hyp(camPos[0] - k.p.x, camPos[2] - k.p.z) < 125 + k.p.r;
+  };
+}
+
+// ───────────────────────── splat painting (called from buildSplat / buildSplat2 in 60_terrain.js) ─────────────────────────
+function wildsSplat(A, B, T) {
+  if (!WILDS.on) return; const { ell, stroke, red } = T;
+  for (const c of WILDS.cliffs) { const x = c.x + c.dx * (c.at - 2), z = c.z + c.dz * (c.at - 2); ell(B, x, z, 8, 8, a => red(a * 0.55)); }       // bare rock and scree under the cliffs
+  ell(B, WILDS.P.burnt.x, WILDS.P.burnt.z, 4.2, 3.4, a => red(a * 0.8));                                                                 // ash
+  const st = WILDS.P.stones; ell(B, st.x, st.z, 9, 9, a => red(a * 0.55));                                                  // the hilltop is thin soil
+  ell(B, WILDS.P.mine.x, WILDS.P.mine.z, 5, 5, a => red(a * 0.6));
+  const lc = WILDS.P.lumber; ell(B, lc.x, lc.z, 7, 6, a => red(a * 0.3));
+}
+function wildsSplat2(blob, line, A, B) {
+  if (!WILDS.on) return;
+  if (WILDS.pool) { const q = WILDS.pool; for (const [r, a] of [[q.r + 4, 0.35], [q.r + 2.4, 0.5], [q.r + 1, 0.7]]) blob(A, 1, q.x, q.z, r, a, 0.5); }
+  for (const k of WILDS.brooks) line(A, 1, k.line.p, 7, 0.55);
+  if (WB.fall) for (const q of WB.fall.pts) blob(A, 1, q[0], q[1], 2.6, 0.85, 0.3);              // the wet dark rock behind the fall
+  for (const id of ['lumber', 'fishing', 'bee', 'battle', 'hermit']) { const p = WILDS.P[id]; if (p) blob(B, 2, p.x, p.z, p.r * 0.7, 0.4, 0.3); }
+}
+
+
+// ---- 79b_life.js ----
+// ───────────────────────── life in the wilds: six people at their work, and things moving in the air ─────────────────────────
+// The folk stand where they work (no walking, so no nav cost), are not drawn beyond 50 m, do not exist on the low tier and say one line when you come near.
+// Wildlife and weather are particles put through the air system's `put` (75b_air.js): raptors, crows, ducks, fish rings, butterflies, moths, fireflies, mist, leaves.
+const WF = { list: [], ready: false, acc: 0 };
+const WF_DEFS = [
+  { id: 'bram', place: 'lumber', at: [4.4, -3.4], yaw: 0.6, anim: 'work', name: 'a woodcutter', say: ['Mind the sleds, they run on their own.', 'Axe is on the block if you need one. Bring it back.'] },
+  { id: 'ivo', place: 'blind', at: [2.6, 2.6], yaw: 2.6, anim: 'idle', name: 'a hunter', say: ['Quiet. The does come at dusk.', 'You walk like a bell. Stand still a while.'] },
+  { id: 'hilda', place: 'bee', at: [1.4, 0.2], yaw: 0.3, anim: 'idle', name: 'a beekeeper', say: ['Slow hands, and they will not mind you.', 'The sunwort is for Maren, I expect. Take it.'] },
+  { id: 'finn', place: 'fishing', at: [-1.2, 3.6], yaw: 2.9, anim: 'fish', name: 'a fisherman', say: ['Nothing biting. There never is when someone watches.', 'The smoked trout is fair pay for a hand with the nets.'] },
+  { id: 'rowan', place: 'hermit', at: [4.2, 7.2], yaw: -0.8, anim: 'idle', name: 'the hermit', say: ['I am not hiding. The valley is simply loud.', 'Take the bogbean if you must. It grows back.'] },
+  { id: 'osric', place: 'hamlet', at: [-3.2, 2.4], yaw: 1.2, anim: 'idle', name: 'a shepherd', say: ['Highfold has four doors and one opinion.', 'The wedding is on. Everyone is at the Reeve’s.'] },
+];
+function wildsLifeBuild() {
+  if (!G.chars || !Chars.ready || (TEST && TEST.amb === 0) || (R.q && R.qName === 'low')) return;
+  for (const def of WF_DEFS) {
+    const p = WILDS.P[def.place]; if (!p) continue; let ch = null;
+    try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('wild folk ' + def.id + ': ' + (e && e.message || e)); continue; }
+    const q = siteToWorld(p, def.at[0], def.at[1]); let pos = [q[0], World.groundY(q[0], q[1]), q[1]];
+    if (def.place === 'fishing' && p.jetty) pos = [p.jetty.end[0], p.jetty.end[1], p.jetty.end[2]];
+    Chars.update(ch, { pos, yaw: def.yaw, anim: 'idle', scale: 1, zone: 0, light: 1, visible: false, cast: false, look: [0, 0], speed: 0 }, 0);
+    WF.list.push({ def, ch, pos, yaw: def.yaw, look: [0, 0], t: Math.random() * 9, greet: -99, n: 0, shown: true });
+  }
+  WF.ready = WF.list.length > 0;
+}
+function wfUpdate(dt, pp) {
+  if (!WF.ready) return; const hr = Env.hour, day = hr > 7.5 && hr < 18.5 && !World.indoor, lowTier = !(R.q && R.q.scatter);
+  for (const a of WF.list) {
+    const d = hyp(a.pos[0] - pp[0], a.pos[2] - pp[2]), on = day && !lowTier && d < 50;
+    if (!on) { if (a.shown) { a.shown = false; Chars.update(a.ch, { pos: a.pos, yaw: a.yaw, anim: 'idle', scale: 1, zone: 0, light: 1, visible: false, cast: false, look: a.look, speed: 0 }, 0); } continue; }
+    a.shown = true; a.t += dt;
+    let lx = 0; if (d < 5) { const q = angDiff(Math.atan2(pp[0] - a.pos[0], -(pp[2] - a.pos[2])), a.yaw); if (Math.abs(q) < 1.9) lx = clamp(-q, -1, 1); }
+    a.look[0] += (lx - a.look[0]) * Math.min(1, dt * 5);
+    if (d < 2.6 && a.t - a.greet > 60 && !UI.talk && typeof toast === 'function') { a.greet = a.t; toast(a.def.name.charAt(0).toUpperCase() + a.def.name.slice(1) + ': “' + a.def.say[a.n++ % a.def.say.length] + '”'); }
+    Chars.update(a.ch, { pos: a.pos, yaw: a.yaw, anim: a.def.anim, scale: 1, zone: 0, light: 1, visible: true, cast: d < R.q.villagerCast, look: a.look, talking: false, speed: 0 }, dt);
+  }
+}
+if (typeof ambUpdate === 'function') { const _au = ambUpdate; ambUpdate = function (dt, pp) { _au(dt, pp); wfUpdate(dt, pp); }; }
+
+// ── in the air ──
+const _air = typeof airUpdate === 'function' ? airUpdate : null;
+if (_air) airUpdate = function (put, dt, time, env, cam) {
+  _air(put, dt, time, env, cam);
+  if (!WILDS.on || World.indoor || (TEST && TEST.air === 0)) return;
+  const day = env.day, night = env.night, hr = Env.hour, low = !(R.q && R.q.scatter), near = (p, r) => hyp(p.x - cam[0], p.z - cam[2]) < r;
+  const P = WILDS.P, wx = env.windDir[0] * env.windStrength, wz = env.windDir[1] * env.windStrength;
+  // raptors turning over the stones and the battlefield, crows at the field, ducks and fish rings on the lake, a heron-ish dark bird at the pool
+  if (day > 0.2 && !low) {
+    for (const [id, n, h, rad, sp] of [['stones', 2, 38, 16, 0.12], ['battle', 1, 30, 20, 0.1]]) { const p = P[id]; if (!p || !near(p, 140)) continue; for (let i = 0; i < n; i++) { const a = time * sp + i * 3.1, fl = Math.sin(time * 1.3 + i * 2) * 0.25; put(p.x + Math.cos(a) * rad, h + Math.sin(time * 0.2 + i) * 3, p.z + Math.sin(a) * rad, 0.7, 0.1, 0.09, 0.08, 0.85 * Math.min(1, day * 2), Math.atan2(-Math.sin(a), Math.cos(a)) + 1.57, 1, 3.4 + fl, i + 7); } }
+    const b = P.battle; if (b && near(b, 70)) for (let i = 0; i < 6; i++) { const k = time * 0.5 + i * 1.9, hop = Math.max(0, Math.sin(k * 3)) * 0.08; put(b.x - 3 + Math.cos(i * 2.1) * 9, Terrain.y(b.x - 3 + Math.cos(i * 2.1) * 9, b.z + Math.sin(i * 2.1) * 9) + 0.14 + hop, b.z + Math.sin(i * 2.1) * 9, 0.17, 0.03, 0.03, 0.035, 0.9, 0, 1, 1.5, i); }
+    const f = P.fishing; if (f && near(f, 90)) { for (let i = 0; i < 3; i++) { const a = time * 0.03 + i * 2.2, x = LAKE.x + Math.cos(a + 1) * 20 + i * 3, z = LAKE.z - 18 + Math.sin(a * 2 + i) * 6; put(x, LAKE.y + 0.12, z, 0.34, 0.14, 0.12, 0.1, 0.9, 0.5, 1, 3.0, i + 2); put(x + 0.4, LAKE.y + 0.1, z + 0.1, 0.18, 0.1, 0.09, 0.08, 0.9, 0.2, 1, 1.8, i + 5); }
+      for (let i = 0; i < 3; i++) { const ph = (time * 0.35 + i * 0.37 + (f.x * 0.01)) % 1, x = f.x + (i - 1) * 3 + Math.sin(i * 4 + 1) * 5, z = f.z - 16 - i * 4; put(x, LAKE.y + 0.04, z, 0.2 + ph * 1.1, 0.7, 0.75, 0.78, 0.5 * (1 - ph), 0, 1, 1.0, i + 11); } }
+  }
+  // butterflies over the bee meadow and the hamlet's green by day, moths and fireflies at dusk by the pool, the hermit's hut, the meadow and the stones
+  if (!low) {
+    if (day > 0.4) for (const id of ['bee', 'hamlet']) { const p = P[id]; if (!p || !near(p, 60)) continue; for (let i = 0; i < 7; i++) { const a = time * (0.25 + i * 0.03) + i * 1.7, x = p.x + Math.cos(a) * (3 + i * 0.9) + Math.sin(time * 1.7 + i) * 0.6, z = p.z + Math.sin(a * 1.2) * (3 + i * 0.8), y = Terrain.y(x, z) + 1.0 + Math.sin(time * 2.1 + i * 3) * 0.4, fl = Math.sin(time * 14 + i * 5); put(x, y, z, 0.11, i % 2 ? 0.95 : 0.9, i % 2 ? 0.8 : 0.55, i % 2 ? 0.2 : 0.2, 0.9, time + i, 1, 1.0 + fl * 0.5, i); } }
+    const dusk = sat((hr - 17.6) / 1.2) * (hr < 21.5 ? 1 : 0) + night * 0.8;
+    if (dusk > 0.05) for (const id of ['hermit', 'bee', 'stones', 'burnt']) { const p = P[id]; if (!p || !near(p, 45)) continue; for (let i = 0; i < 9; i++) { const a = time * 0.2 + i * 2.4, x = p.x + Math.cos(a * 0.8 + i) * (4 + i), z = p.z + Math.sin(a * 0.9 + i * 2) * (4 + i * 0.8), y = Terrain.y(x, z) + 0.9 + Math.sin(time * 0.9 + i * 4) * 0.7, tw = 0.4 + 0.6 * Math.max(0, Math.sin(time * 1.1 + i * 7)); put(x, y, z, 0.05, 0.75, 0.95, 0.4, dusk * tw * 0.9, 0, 3, 1, i + 20); } }
+  }
+  // the fall: translucent white-blue streaks sliding down the face (thin, tall, fast), foam at the lip, spray and a standing cloud at its foot
+  if (WB.fall && WILDS.pool && near(WB.fall, 90)) { const f = WB.fall, q = WILDS.pool, n = low ? 6 : 16, H = f.top - q.y;
+    for (let i = 0; i < n; i++) { const k = (time * (0.6 + (i % 4) * 0.08) + i * 0.37) % 1, y = f.top - 0.25 - k * (H - 0.2), x = f.x + Math.sin(i * 12.9) * 0.55, z = f.z - 0.55 - k * 0.55 * 0; put(x, y, z, 0.2 + 0.05 * (i % 3), 0.82, 0.88, 0.94, 0.24 * (1 - k * 0.5), 0, 1, 4.5, i + 80); }
+    for (let i = 0; i < (low ? 2 : 4); i++) put(f.x + Math.sin(i * 5.3) * 0.6, f.top + 0.1, f.z + 0.3, 0.5, 0.9, 0.93, 0.96, 0.3, i, 1, 1.0, i + 85);
+    for (let i = 0; i < (low ? 3 : 8); i++) { const k = (time * 0.4 + i * 0.19) % 1; put(f.x + Math.sin(i * 3.7) * 1.5, q.y + 0.3 + k * 1.6, f.z - 3.4 + Math.cos(i * 2.9) * 1.2, 1.0 + k * 1.8, 0.88, 0.92, 0.96, 0.2 * (1 - k), i, 1, 1.0, i + 90); } }
+  // mist lying on the pool, the brook and the lake shore at dawn and dusk; leaves blown through the lumber camp and the hermit's glade
+  const mistK = Math.max(sat(1 - Math.abs(hr - 6.2) / 2.2), sat(1 - Math.abs(hr - 19.2) / 1.8)) * 0.7 + (env.fog ? 0 : 0);
+  if (mistK > 0.05 && !low) {
+    const q = WILDS.pool; if (q && near(q, 70)) for (let i = 0; i < 10; i++) { const a = i * 0.63 + time * 0.03, r = q.r * (0.3 + 0.9 * ((i * 37) % 10) / 10), x = q.x + Math.cos(a) * r, z = q.z + Math.sin(a) * r; put(x + Math.sin(time * 0.1 + i) * 0.8, q.y + 0.5 + (i % 3) * 0.25, z, 3.2, 0.78, 0.8, 0.82, mistK * 0.13, i, 1, 1.0, i + 30); }
+    if (WILDS.brookLine && near({ x: -160, z: 0 }, 70)) for (let i = 0; i < 8; i++) { const s = (i + 0.5) / 8 * WILDS.brookLine.len, p = WILDS.brookLine.point(s); put(p[0] + Math.sin(time * 0.1 + i) * 1.0, wildsBrookY(s) + 0.45, p[1], 2.6, 0.78, 0.8, 0.82, mistK * 0.1, i * 2, 1, 1.0, i + 50); }
+    for (let i = 0; i < 6; i++) { const a = i * 1.1 + 0.4, x = LAKE.x + Math.cos(a) * (LAKE.r - 3 + (i % 2) * 6), z = LAKE.z + Math.sin(a) * (LAKE.r - 3 + (i % 2) * 6); if (hyp(x - cam[0], z - cam[2]) < 80) put(x, LAKE.y + 0.5, z, 5, 0.78, 0.8, 0.82, mistK * 0.08, i, 1, 1.0, i + 60); }
+  }
+  for (const [id, n] of [['lumber', 6], ['hermit', 5]]) { const p = P[id]; if (!p || !near(p, 40) || low) continue; for (let i = 0; i < n; i++) { const k = (time * 0.12 + i / n) % 1, x = p.x - 8 + k * 16 + Math.sin(time * 1.3 + i * 3) * 1.2, z = p.z + Math.sin(i * 2.7) * 7 + Math.cos(time * 0.9 + i) * 0.9, y = Terrain.y(x, z) + 0.4 + Math.abs(Math.sin(time * 2 + i * 5)) * 0.9 + (1 - k) * 0.5; put(x + wx * 0.1, y, z + wz * 0.1, 0.09, i % 2 ? 0.55 : 0.62, i % 2 ? 0.4 : 0.32, 0.12, 0.8, time * 2 + i, 1, 1.0 + Math.sin(time * 5 + i) * 0.4, i + 70); } }
+};
+
+
 // ---- 80_game.js ----
 // ───────────────────────── story: state, quests, dialogue, things you can do ─────────────────────────
 const S = { gold: 6, items: {}, q: {}, flags: {}, opened: {}, picked: {} };
 const ITEMS = {
+  cryptkey: ['Iron crypt key', 'Cold and heavy, with a cross cut in the bow. It hung in the sacristy for a generation.'],
+  rusty: ['Rusted cellar key', 'Left behind by someone in a hurry. It fits the heavy door under the tower.'],
   malt: ['Sack of malt', 'Osric’s malted barley, bound for the Honeyed Hart.'],
   hammer: ['Cross-peen hammer', 'Brandt’s favourite. The handle is worn smooth.'],
   frostcap: ['Frostcap', 'A pale blue flower that glows faintly at dusk.'],
@@ -7689,9 +9525,10 @@ const QUESTS = {
   fire: { name: 'The Harvest Fire', stages: ['Speak with Elder Rowan', 'Light the fire pit in the square'] },
   camp: { name: 'Smoke in the Pines', stages: ['Drive the outlaws from their camp in the pines, north-west of the gate', 'Tell Elder Rowan the camp is empty'] },
   tools: { name: 'Tongs and Temper', stages: ['Find Garrick One-Ear, camped west of the watchtower path', 'Bring Brandt his tools'] },
+  crypt: { name: 'The Sexton’s Key', stages: ['Find the crypt key in the chapel sacristy', 'Unlock the gate in the crypt under the chapel', 'Open the reliquary behind the gate'] },
   bounty: { name: 'Bounty: Outlaws', stages: ['Put down five outlaws', 'Collect the bounty from Warden Hale'] },
 };
-const QORDER = ['welcome', 'ale', 'hammer', 'herbs', 'bell', 'fire', 'camp', 'tools', 'bounty'];
+const QORDER = ['welcome', 'ale', 'hammer', 'herbs', 'bell', 'fire', 'camp', 'tools', 'crypt', 'bounty'];
 const BOUNTY_N = 5;
 const qAt = id => { const q = S.q[id]; return !q ? -1 : q.done ? 99 : q.stage; };
 const has = (id, n) => (S.items[id] || 0) >= (n || 1);
@@ -7709,6 +9546,7 @@ function questTarget(id) {
   if (id === 'ale') return st === 0 ? npc('osric') : npc('greta');
   if (id === 'hammer') return st === 0 ? npc('tobin') : st === 1 ? [SITE.tower.x, 0, SITE.tower.z] : npc('brandt');
   if (id === 'herbs') { if (st === 1) return npc('maren'); let best = null, bd = 1e9; for (const p of World.pickups) { if (p.item !== 'frostcap' || p.gone) continue; const d = hyp(p.p[0] - Player.pos[0], p.p[2] - Player.pos[2]); if (d < bd) { bd = d; best = p.p; } } return best; }
+  if (id === 'crypt') { const h = World.houses.chapel; return h ? [h.site.x, 0, h.site.z] : null; }
   if (id === 'bell') return st === 0 ? npc('marta') : st === 1 ? npc('aldous') : World.bell.p;
   if (id === 'fire') return st === 0 ? npc('rowan') : [World.bonfirePos[0], 0, World.bonfirePos[1]];
   const camp = cid => { const c = Foes.camps.find(k => k.id === cid); return [c.x, 0, c.z]; };
@@ -7827,10 +9665,12 @@ function onCampCleared(id) {
 // ── interactions ──
 function interactLabel(it) {
   if (it.npc) { const w = it.npc.name.split(' '); return 'Talk to ' + (['Old', 'Brother', 'Elder', 'Warden', 'Guardsman'].includes(w[0]) ? w[1] : w[0]); }
+  if (it.kind === 'portal') return Cells.busy ? null : it.label;
   if (it.kind === 'chest') return S.opened[it.id] ? null : 'Open chest';
   if (it.kind === 'loot') return 'Search ' + it.name;
   if (it.kind === 'pickup') return it.gone ? null : it.label;
   if (it.kind === 'read') return 'Read';
+  if (it.kind === 'gate') return S.opened[it.id] ? null : has(it.key) ? 'Unlock the gate' : 'Iron gate';
   if (it.kind === 'bed') return 'Sleep';
   if (it.kind === 'bell') return qAt('bell') >= 2 ? 'Ring the bell' : null;
   if (it.kind === 'shopitem') return 'Hemp rope';
@@ -7839,10 +9679,15 @@ function interactLabel(it) {
 }
 function interactUse(it) {
   if (it.npc) { if (it.npc.anim === 'lie') return toast(it.npc.name + ' is fast asleep.'); return startTalk(it.npc); }
+  if (it.kind === 'portal') return Cells.use(it);
   if (it.kind === 'chest') {
     S.opened[it.id] = 1; Audio2.chest();
     const got = []; for (const [id, n] of it.loot || []) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
     toast('Found: ' + got.join(', ')); uiPurse(); save();
+    if (it.id === 'chapel.sacristy' && qAt('crypt') < 0) { qStart('crypt', 0); qStage('crypt', 1); } else if (it.id === 'chapel.relic') qDone('crypt');
+  } else if (it.kind === 'gate') {
+    if (!has(it.key)) toast('The gate is locked. A heavy iron lock, old and cared for.');
+    else { S.opened[it.id] = 1; Audio2.chest(); toast('The lock turns with a groan.'); const i = World.colliders.indexOf(it.col); if (i >= 0) World.colliders.splice(i, 1); if (it.mesh) it.mesh.gone = true; if (it.hide) it.hide(); if (it.id === 'chapel.gate') qStage('crypt', 2); save(); }
   } else if (it.kind === 'loot') {
     const got = []; Audio2.pickup();
     for (const [id, n] of it.loot) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
@@ -7885,7 +9730,7 @@ function festivalSpots() {
 function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
 function loadSave() { try { const j = JSON.parse(localStorage.getItem('brackenfell.v1') || 'null'); return j && j.S ? j : null; } catch (e) { return null; } }
 function applySave(j) {
-  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; }
+  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; const m = Cells.migrate(j.pos, j.yaw || 0); if (m) { Player.pos = m.pos; Player.yaw = m.yaw; } }
   for (const p of World.pickups) if (S.picked[p.id]) { p.gone = true; p.obj.visible = false; if (p.em) p.em.gone = true; }
   if (S.flags.fire) World.bonfire = true;
   if (S.rpg && S.rpg.v !== 2) S.rpg = null;
@@ -7894,56 +9739,170 @@ function applySave(j) {
 function clearSave() { try { localStorage.removeItem('brackenfell.v1'); } catch (e) { } }
 
 
+// ---- 81_wilds_story.js ----
+// ───────────────────────── the wilds, as story: items, two small quests, the barred mine door and the strongbox ─────────────────────────
+// Loaded after 80_game.js, whose S / ITEMS / QUESTS / TALK it extends. Old saves load unchanged: every new thing is keyed by its own id.
+Object.assign(ITEMS, {
+  woodaxe: ['Woodcutter’s axe', 'Left on a block at the lumber camp. Heavy in the head, and it bites.', { slot: 'weapon', dmg: 13, speed: 0.85, reach: -0.15, blade: [0.42, 0.9, 0.05], value: 14 }],
+  oldsword: ['Rusted levy sword', 'Pitted, but straight. It has been in the ground a long time.', { slot: 'weapon', dmg: 11, blade: [0.62, 0.55], value: 6 }],
+  oldcoins: ['Old coins', 'Worn thin, an unfamiliar king. The smith will weigh them.', { value: 18 }],
+  chanterelle: ['Chanterelles', 'Apricot-gold and smelling of fruit. Good fried in butter.', { heal: 10, value: 2 }],
+  honeycomb: ['Honeycomb', 'Dripping and warm from the skep.', { heal: 22, sta: 40, value: 3 }],
+  smokedfish: ['Smoked trout', 'Dark and salty; it keeps for a month.', { heal: 20, value: 2 }],
+  ashkey: ['Small iron key', 'Black with soot. It was under the third hearthstone.'],
+  corwincap: ['Corwin’s cap', 'Wool, patched twice, with a miner’s candle-stub in the band.'],
+  bogbean: ['Bogbean', 'A bitter white-flowered herb from the hermit’s pool.'],
+  sunwort: ['Sunwort', 'Yellow heads that follow the day. Maren swears by it.'],
+  stonecrop: ['Stonecrop', 'A fleshy little plant from the hilltop stones.'],
+});
+QUESTS.tea = { name: 'Maren’s Three-Herb Tea', stages: ['Gather bogbean (the pool in the north), sunwort (the bee meadow) and stonecrop (the standing stones)', 'Bring the herbs to Maren'] };
+QUESTS.brother = { name: 'What Became of Corwin', stages: ['Find what happened to Corwin: the old mine lies in the south-west cliffs', 'Bring Corwin’s cap to Elder Rowan'] };
+QORDER.push('tea', 'brother');
+const TEA = ['bogbean', 'sunwort', 'stonecrop'];
+const wildPick = id => World.pickups.find(p => p.item === id && !p.gone);
+const _qt = questTarget;
+questTarget = function (id) {
+  const st = qAt(id);
+  if (id === 'tea') { if (st === 1) return NPC.maren && NPC.maren.pos; let best = null, bd = 1e9; for (const t of TEA) { if (has(t)) continue; const p = wildPick(t); if (!p) continue; const d = hyp(p.p[0] - Player.pos[0], p.p[2] - Player.pos[2]); if (d < bd) { bd = d; best = p.p; } } return best; }
+  if (id === 'brother') { if (st === 1) return NPC.rowan && NPC.rowan.pos; const m = WILDS.P.mine; return m ? [m.x, 0, m.z] : null; }
+  return _qt(id);
+};
+const _il = interactLabel, _iu = interactUse;
+interactLabel = function (it) {
+  if (it.kind === 'door' && it.shut) return 'Try the door';
+  if (it.kind === 'wbox') return S.opened[it.id] ? null : has(it.need) ? 'Unlock the strongbox' : 'Strongbox (locked)';
+  return _il(it);
+};
+interactUse = function (it) {
+  if (it.kind === 'door' && it.shut) { Audio2.chest && Audio2.chest(); return toast(it.msg); }
+  if (it.kind === 'wbox') {
+    if (S.opened[it.id]) return;
+    if (!has(it.need)) return toast('Locked. The keyhole is small and clean; someone oils it.');
+    give(it.need, -1); toast('The key turns.'); return _iu(Object.assign({}, it, { kind: 'chest' }));
+  }
+  _iu(it);
+  if (it.kind === 'pickup' && it.wild) {
+    if (it.item === 'corwincap' && qAt('brother') === 0) qStage('brother', 1);
+    if (qAt('tea') === 0 && TEA.every(t => has(t))) qStage('tea', 1);
+  }
+  if (it.kind === 'read' && it.id === 'note.mine' && qAt('brother') < 0) toast('Corwin. Elder Rowan may know the name.');
+};
+const _maren = TALK.maren;
+TALK.maren = function () {
+  if (qAt('herbs') === 99 && qAt('tea') < 0) return node('Since you are the sort who walks: I have a tea I used to make from three herbs and my knees now refuse. Bogbean from the hermit’s pool, sunwort from the bee meadow, stonecrop from the old stones on the eastern hill. It is the only thing that lets Edda’s widow sleep.', [['I’ll fetch them.', () => { qStart('tea'); if (TEA.every(t => has(t))) qStage('tea', 1); return null; }, 1], bye]);
+  if (qAt('tea') >= 0 && qAt('tea') !== 99 && TEA.every(t => has(t))) return node('All three. And the stonecrop still wet. Sit, sit. I will brew it now, and you shall have the first cup.', [['Thank you, Maren.', () => { for (const t of TEA) give(t, -1); give('potion'); gold(40); qDone('tea'); return null; }, 1]]);
+  if (qAt('tea') === 0) return node('Bogbean ' + (has('bogbean') ? 'in hand' : 'still wanting') + ', sunwort ' + (has('sunwort') ? 'in hand' : 'still wanting') + ', stonecrop ' + (has('stonecrop') ? 'in hand' : 'still wanting') + '. Take your time. The herbs are not going anywhere.');
+  return _maren();
+};
+const _rowan = TALK.rowan;
+TALK.rowan = function () {
+  if (qAt('brother') !== 99 && has('corwincap')) return node('Where did you… that is Corwin’s cap. Hob’s brother went down the old mine after silver, a good while back. So. It is the end of a long hope. Thank you for bringing it home rather than leaving it to the damp.', [['I am sorry, Elder.', () => { give('corwincap', -1); gold(60); if (qAt('brother') < 0) qStart('brother', 1); qDone('brother'); return null; }, 1]]);
+  const n = _rowan();
+  if (qAt('brother') < 0 && qAt('welcome') >= 0 && n && n.o) n.o.unshift(['Do you know of a man called Corwin?', () => node('Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.', [['I’ll look into it.', () => { qStart('brother'); return null; }, 1], bye]), 1]);
+  return n;
+};
+
+
 // ---- 85_ui.js ----
-// ───────────────────────── HUD, dialogue, journal ─────────────────────────
+// ───────────────────────── HUD, dialogue, journal, pause, settings ─────────────────────────
+// The interface is parchment and ink and keeps out of the way: bars and quest text rest when nothing changes and return on change; the one thing
+// on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
+// Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const UI = { talk: null, menu: false, reader: false, prompt: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '' };
-function toast(html) { const d = document.createElement('div'); d.innerHTML = html; $('toasts').appendChild(d); setTimeout(() => d.remove(), 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
-function banner(small, big) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.classList.add('on'); clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
-function fadeDo(fn) { const f = $('fade'); f.classList.add('on'); Player.locked = true; setTimeout(() => { fn(); setTimeout(() => { f.classList.remove('on'); Player.locked = uiBusy(); }, 350); }, 950); }
-const uiBusy = () => !!(UI.talk || UI.menu || UI.reader);
-function uiPurse() { $('purse').textContent = S.gold + ' gold'; }
+const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
+function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
+function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
+function fadeDo(fn) { const f = $('fade'); f.classList.add('on'); Player.locked = true; setTimeout(() => { fn(); setTimeout(() => { f.classList.remove('on'); Player.locked = uiBusy(); if (typeof Feel !== 'undefined') Feel.settle(); }, 350); }, 950); }
+const uiBusy = () => !!(UI.talk || UI.menu || UI.reader || UI.paused);
+function uiPurse() { $('purse').textContent = S.gold + ' gold'; if (S.gold !== UI.lastGold) { if (UI.lastGold >= 0) UI.hudT = Math.max(UI.hudT, 6); UI.lastGold = S.gold; } }
+function questLine(id) { let st = QUESTS[id].stages[S.q[id].stage]; if (id === 'herbs' && S.q[id].stage === 0) st += ' (' + Math.min(frostN(), 5) + ' of 5)'; return st; }
 function uiObjective() {
   let h = ''; const act = QORDER.filter(id => S.q[id] && !S.q[id].done).sort((a, b) => S.q[b].t - S.q[a].t).slice(0, 3);
-  for (const id of act) { let st = QUESTS[id].stages[S.q[id].stage]; if (id === 'herbs' && S.q[id].stage === 0) st += ' (' + Math.min(frostN(), 5) + ' of 5)'; h += '<div><b>' + QUESTS[id].name + '</b>' + st + '</div>'; }
-  if (h !== UI.lastObj) { $('objective').innerHTML = h; UI.lastObj = h; }
+  for (const id of act) h += '<div><b>' + QUESTS[id].name + '</b>' + questLine(id) + '</div>';
+  if (h !== UI.lastObj) { $('objective').innerHTML = h; if (UI.lastObj !== '' || h) UI.hudT = Math.max(UI.hudT, 9); UI.lastObj = h; }
 }
 function releaseLook() { if (document.pointerLockElement) document.exitPointerLock(); Input.joy = null; Input.joyT = null; Input.look = null; $('stick').style.display = 'none'; }
-// ── dialogue ──
+const UI_VERBS = [[/^Talk to /, 'Talk'], [/^Open /, 'Open'], [/^Search /, 'Search'], [/^Take /, 'Take'], [/^Pick /, 'Take'], [/^Read/, 'Read'], [/^Sleep/, 'Sleep'], [/^Ring /, 'Ring'], [/^Light /, 'Light'], [/^Enter ?/, 'Enter'], [/^Leave ?/, 'Leave'], [/^Climb ?/, 'Climb'], [/^Use /, 'Use']];
+function promptParts(label) { for (const [re, v] of UI_VERBS) if (re.test(label)) return [v, label.replace(re, '').replace(/^(the|a|an|to) /i, '')]; return ['Examine', label]; }
+// ── dialogue: the camera has framed the speaker (87_feel.js); the HUD steps aside ──
 function startTalk(npc) {
   UI.talk = npc; npc.talking = true; Player.locked = true; releaseLook();
   npc.yawBefore = npc.yaw; if (npc.anim !== 'sit' && npc.anim !== 'lie') npc.yaw = headingTo(npc.pos[0], npc.pos[2], Player.pos[0], Player.pos[2]);
-  $('dname').textContent = npc.name; $('dialog').hidden = false; $('act').hidden = true;
-  showNode((TALK[npc.id] || (() => node('...')))()); Audio2.ui();
+  $('dname').textContent = npc.name; $('dialog').hidden = false; $('act').hidden = true; UI.prompt = null; document.body.classList.add('talking');
+  if (typeof Feel !== 'undefined') Feel.talk(npc);
+  showNode((TALK[npc.id] || (() => node('...')))()); Audio2.ui(); if (typeof Feel !== 'undefined') Feel.did('talk');
 }
 function showNode(n) {
   if (!n) return endTalk();
   $('dtext').textContent = n.t; const box = $('dopts'); box.textContent = '';
-  n.o.forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = o[0]; if (o[2]) b.className = 'quest'; b.onclick = () => { Audio2.ui(); showNode(o[1] ? o[1]() : null); }; box.appendChild(b); if (i === 0 && !Input.touch) setTimeout(() => b.focus(), 30); });
+  n.o.forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = (Input.touch ? '' : (i + 1) + '.  ') + o[0]; if (o[2]) b.className = 'quest'; b.onclick = () => { Audio2.ui(); showNode(o[1] ? o[1]() : null); }; box.appendChild(b); if (i === 0 && !Input.touch) setTimeout(() => b.focus(), 30); });
+  $('dialog').scrollTop = 0;
 }
-function endTalk() { const n = UI.talk; if (n) { n.talking = false; if (n.path) n.yaw = n.yawBefore; } UI.talk = null; $('dialog').hidden = true; Player.locked = uiBusy(); uiObjective(); }
-function openReader(title, text) { UI.reader = true; Player.locked = true; releaseLook(); $('rtitle').textContent = title; $('rtext').textContent = text; $('reader').hidden = false; Audio2.page(); }
+function endTalk() { const n = UI.talk; if (n) { n.talking = false; if (n.path) n.yaw = n.yawBefore; } UI.talk = null; $('dialog').hidden = true; document.body.classList.remove('talking'); Player.locked = uiBusy(); if (typeof Feel !== 'undefined') Feel.talkEnd(); uiObjective(); UI.hudT = 8; }
+function openReader(title, text) { UI.reader = true; Player.locked = true; releaseLook(); $('rtitle').textContent = title; $('rtext').textContent = text; $('reader').hidden = false; Audio2.page(); if (typeof Feel !== 'undefined') Feel.did('use'); }
 function closeReader() { UI.reader = false; $('reader').hidden = true; Player.locked = uiBusy(); }
-// ── journal / pack / settings ──
-function openMenu(tab) {
-  UI.menu = true; Player.locked = true; releaseLook(); $('menu').hidden = false; showTab(tab || 'journal'); Audio2.page();
-  let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
+// ── journal: quests, map, pack, settings ──
+function renderJournal() {
+  const act = [], done = []; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; (q.done ? done : act).push(id); }
+  act.sort((a, b) => S.q[b].t - S.q[a].t);
+  const card = id => { const q = S.q[id], Q = QUESTS[id]; let h = '<div class="qc' + (q.done ? ' done' : '') + '"><span class="tag">' + (q.done ? 'Done' : 'Active') + '</span><h3>' + Q.name + '</h3>';
+    if (!q.done) { h += '<ul>'; Q.stages.forEach((s, i) => { if (i > q.stage) return; h += '<li' + (i < q.stage ? ' class="ok"' : '') + '>' + (i === q.stage ? questLine(id) : s) + '</li>'; }); h += '</ul>'; }
+    return h + '</div>'; };
+  let h = '';
+  if (act.length) h += '<h4>Active</h4><div class="qlog">' + act.map(card).join('') + '</div>';
+  if (done.length) h += '<h4>Completed</h4><div class="qlog">' + done.map(card).join('') + '</div>';
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
-  Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 17 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
-function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
-function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
-function saveSettings() { try { localStorage.setItem('brackenfell.set', JSON.stringify({ q: game.qualitySetting, sens: Input.sens, vol: Audio2.vol, music: Audio2.musicVol, inv: Input.invertY, fps: game.showFps, flow: Env.dayLength })); } catch (e) { } }
-function loadSettings() { try { const j = JSON.parse(localStorage.getItem('brackenfell.set') || 'null'); if (!j) return; if (j.q) game.qualitySetting = j.q; Input.sens = j.sens || 1; Audio2.vol = j.vol === undefined ? 0.8 : j.vol; Audio2.musicVol = j.music === undefined ? 0.6 : j.music; Input.invertY = !!j.inv; game.showFps = !!j.fps; if (j.flow !== undefined) Env.dayLength = j.flow; } catch (e) { } }
+function openMenu(tab, fromPause) {
+  if (UI.menu) return showTab(tab || 'journal');
+  UI.menu = true; UI.fromPause = !!fromPause; Player.locked = true; releaseLook(); $('menu').hidden = false; $('pause').hidden = true; showTab(tab || 'journal'); Audio2.page();
+  renderJournal(); Inv.render(); $('setTime').value = Env.hour; UI.diag(); if (UI.updateReady) $('updBtn').hidden = false;
+  if (typeof Feel !== 'undefined') Feel.did('journal');
+}
+UI.diag = () => {
+  const inf = G.gpuName || '';
+  $('diag').textContent = 'Build ' + (typeof Load !== 'undefined' ? Load.M.v : '17') + ' · ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' · old villagers') + ' · textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' · ' + G.w + ' × ' + G.h + ' at ' + Math.round(R.scale * 100) + '% · detail ' + game.tier + (Perf.T > 20 ? ' · browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (UI.offline ? ' · ' + UI.offline : '') + (G.errors.length ? ' · ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+};
+function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } if (t === 'map' && typeof GameMap !== 'undefined') GameMap.show(); }
+function closeMenu() { UI.menu = false; $('menu').hidden = true; saveSettings(); if (UI.paused) { $('pause').hidden = false; return; } Player.locked = uiBusy(); UI.hudT = 6; }
+// ── settings: one JSON blob; every key is optional so older blobs load ──
+function saveSettings() { try { localStorage.setItem('brackenfell.set', JSON.stringify({ q: game.qualitySetting, sens: Input.sens, vol: Audio2.vol, music: Audio2.musicVol, inv: Input.invertY, fps: game.showFps, flow: Env.dayLength, lefty: UI.pref.lefty, btn: UI.pref.btn, ts: UI.pref.ts, hc: UI.pref.hc, reduce: UI.pref.reduce, hold: UI.pref.hold, x: UI.extra })); } catch (e) { } }
+UI.pref = { lefty: false, btn: 1, ts: 1, hc: false, reduce: false, hold: false };
+function applyPrefs() {
+  const p = UI.pref, b = document.body, r = document.documentElement.style;
+  b.classList.toggle('lefty', !!p.lefty); b.classList.toggle('hc', !!p.hc); b.classList.toggle('reduce', !!p.reduce);
+  r.setProperty('--ts', String(p.ts)); r.setProperty('--bs', String(p.btn));
+  Input.lefty = !!p.lefty; Input.holdUse = !!p.hold; if (typeof Feel !== 'undefined') Feel.reduce = !!p.reduce;
+}
+function loadSettings() {
+  UI.pref.reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  try {
+    const j = JSON.parse(localStorage.getItem('brackenfell.set') || 'null'); if (!j) return applyPrefs();
+    if (j.q) game.qualitySetting = j.q; Input.sens = j.sens || 1; Audio2.vol = j.vol === undefined ? 0.8 : j.vol; Audio2.musicVol = j.music === undefined ? 0.6 : j.music; Input.invertY = !!j.inv; game.showFps = !!j.fps; if (j.flow !== undefined) Env.dayLength = j.flow;
+    for (const k of ['lefty', 'btn', 'ts', 'hc', 'reduce', 'hold']) if (j[k] !== undefined) UI.pref[k] = j[k];
+    if (j.x && typeof j.x === 'object') UI.extra = j.x;
+  } catch (e) { }
+  applyPrefs();
+}
 function uiInit() {
-  const tr = $('ctrack');
+  Mark.init(); const tr = $('ctrack');
   for (const [l, a, minor] of [['N', 0], ['NE', 45, 1], ['E', 90], ['SE', 135, 1], ['S', 180], ['SW', 225, 1], ['W', 270], ['NW', 315, 1]]) { const s = document.createElement('span'); s.textContent = l; if (minor) s.className = 'minor'; tr.appendChild(s); UI.compass.push({ el: s, a: a * PI / 180 }); }
   UI.marks = []; for (let i = 0; i < 4; i++) { const m = document.createElement('span'); m.className = 'mark'; const d = document.createElement('span'); d.className = 'dist'; tr.appendChild(m); tr.appendChild(d); UI.marks.push({ el: m, d }); }
-  $('act').addEventListener('click', e => { e.preventDefault(); if (UI.prompt && !Player.locked) interactUse(UI.prompt); });
+  UI.pmarks = []; for (let i = 0; i < 6; i++) { const m = document.createElement('span'); m.className = 'pl'; const n = document.createElement('span'); n.className = 'pln'; tr.appendChild(m); tr.appendChild(n); UI.pmarks.push({ el: m, n }); }
+  // the use button: instant on touch (pointerdown), optionally held for half a second
+  const act = $('act'); let hold = null;
+  const fire = () => { if (UI.prompt && !Player.locked) { const it = UI.prompt; if (typeof Feel !== 'undefined') Feel.did('use'); interactUse(it); } };
+  const stop = () => { if (hold) { clearTimeout(hold.t); hold = null; } act.classList.remove('on'); const h = $('actHold'); h.style.transition = 'none'; h.style.transform = 'scaleX(0)'; };
+  act.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Input.touch = e.pointerType !== 'mouse' || Input.touch; act.classList.add('on');
+    if (Input.holdUse) { const h = $('actHold'); h.style.transition = 'transform 0.45s linear'; h.style.transform = 'scaleX(1)'; hold = { t: setTimeout(() => { hold = null; stop(); fire(); }, 450) }; } else { fire(); } });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) act.addEventListener(ev, stop);
+  act.addEventListener('click', e => e.preventDefault()); act.addEventListener('contextmenu', e => e.preventDefault());
   $('menuBtn').addEventListener('click', () => openMenu()); $('mclose').addEventListener('click', closeMenu); $('rclose').addEventListener('click', closeReader);
   for (const b of $('tabs').querySelectorAll('[data-tab]')) b.addEventListener('click', () => showTab(b.dataset.tab));
+  for (const b of $('setTabs').querySelectorAll('[data-set]')) b.addEventListener('click', () => { for (const x of $('setTabs').children) x.classList.toggle('on', x === b); for (const p of document.querySelectorAll('#tab-settings .sp')) p.hidden = p.id !== 'set-' + b.dataset.set; });
+  const P = UI.pref, sv = () => saveSettings();
   $('setQuality').value = game.qualitySetting; $('setSens').value = Input.sens; $('setVol').value = Audio2.vol; $('setMusic').value = Audio2.musicVol; $('setInvert').checked = Input.invertY; $('setFps').checked = game.showFps; $('setFlow').value = String(Env.dayLength);
+  $('setLefty').checked = P.lefty; $('setBtn').value = P.btn; $('setText').value = String(P.ts); $('setContrast').checked = P.hc; $('setMotion').checked = P.reduce; $('setHold').checked = P.hold;
   $('setQuality').addEventListener('change', e => { game.qualitySetting = e.target.value; game.applyQuality(); });
   $('setGfx').value = G.backend === 'WebGPU' ? 'webgpu' : 'webgl'; $('setGfx').addEventListener('change', e => { saveSettings(); try { if (game.playing) save(); } catch (er) { } gfxPrefer(e.target.value); });
   $('setSens').addEventListener('input', e => { Input.sens = +e.target.value; });
@@ -7954,40 +9913,104 @@ function uiInit() {
   $('setFlow').addEventListener('change', e => { Env.dayLength = +e.target.value; });
   $('setInvert').addEventListener('change', e => { Input.invertY = e.target.checked; });
   $('setFps').addEventListener('change', e => { game.showFps = e.target.checked; $('fps').hidden = !game.showFps; });
-  $('resetBtn').addEventListener('click', () => { clearSave(); location.reload(); });
+  $('setLefty').addEventListener('change', e => { P.lefty = e.target.checked; applyPrefs(); sv(); });
+  $('setBtn').addEventListener('input', e => { P.btn = +e.target.value; applyPrefs(); });
+  $('setText').addEventListener('change', e => { P.ts = +e.target.value; applyPrefs(); sv(); });
+  $('setContrast').addEventListener('change', e => { P.hc = e.target.checked; applyPrefs(); sv(); });
+  $('setMotion').addEventListener('change', e => { P.reduce = e.target.checked; applyPrefs(); sv(); });
+  $('setHold').addEventListener('change', e => { P.hold = e.target.checked; applyPrefs(); sv(); });
+  $('resetBtn').addEventListener('click', () => { clearSave(); try { localStorage.removeItem('brackenfell.hints'); } catch (e) { } location.reload(); });
+  for (const id of ['updBtn', 'updBtn2']) $(id).addEventListener('click', () => { try { if (game.playing) save(); } catch (e) { } saveSettings(); Load.applyUpdate(); });
+  $('pResume').addEventListener('click', () => UI.resume()); $('pJournal').addEventListener('click', () => openMenu('journal', true)); $('pSettings').addEventListener('click', () => openMenu('settings', true));
   $('fps').hidden = !game.showFps;
+  $('kbNote').hidden = coarse(); $('setBtn').closest('.row').hidden = !coarse(); $('setHold').closest('.row').hidden = false;
+  if (typeof GameMap !== 'undefined') GameMap.init();
 }
+// a newer build has been downloaded and is waiting: say so on the title screen, in Settings and once in play
+UI.updateAvailable = () => {
+  UI.updateReady = true; $('updateNote').hidden = false; $('updBtn').hidden = false;
+  if (game.playing) toast('A newer build of Brackenfell is ready.', ['Reload', () => { try { save(); } catch (e) { } saveSettings(); Load.applyUpdate(); }]);
+};
+UI.storageNote = () => { if (typeof Load !== 'undefined' && Load.cached) UI.offline = 'works offline (' + (Load.cacheBytes / 1048576).toFixed(0) + ' MB kept on this device)'; };
+// the "place discovered" banner and its mark on the map and compass. Others may call UI.discover('Some Name') when the player first reaches somewhere.
+UI.disc = () => S.disc || (S.disc = {});
+UI.discover = (name, id) => {
+  const pl = id ? World.places.find(p => p.id === id) : World.places.find(p => p.name === name), key = pl ? pl.id : name, d = UI.disc();
+  if (d[key]) return false; d[key] = 1; UI.hudT = Math.max(UI.hudT, 7);
+  banner('Discovered', name || (pl && pl.name), 'disc'); if (typeof Audio2.discover === 'function') Audio2.discover(); else Audio2.ui();
+  try { save(); } catch (e) { } return true;
+};
 function onKey(e) {
   if (!game.playing) return;
   const c = e.code;
+  if (UI.paused && !UI.menu) { if (c === 'Escape' || c === 'Enter' || c === 'Space') UI.resume(); return; }
   if (UI.talk) { if (c === 'Escape') endTalk(); const n = +e.key; if (n >= 1 && n <= 9) { const b = $('dopts').children[n - 1]; if (b) b.click(); } return; }
   if (UI.reader) { if (c === 'Escape' || c === 'KeyE' || c === 'Enter') closeReader(); return; }
-  if (UI.menu) { if (c === 'Escape' || c === 'Tab' || c === 'KeyJ') closeMenu(); return; }
-  if (c === 'KeyE' || c === 'KeyF' || c === 'Enter') { if (UI.prompt) interactUse(UI.prompt); }
-  else if (c === 'Tab' || c === 'KeyJ') openMenu('journal'); else if (c === 'KeyI') openMenu('pack');
+  if (UI.menu) { if (c === 'Escape' || c === 'Tab' || c === 'KeyJ' || (c === 'KeyM' && !$('tab-map').hidden)) closeMenu(); else if (c === 'KeyM') showTab('map'); return; }
+  if (c === 'KeyE' || c === 'KeyF' || c === 'Enter') { if (UI.prompt) { if (typeof Feel !== 'undefined') Feel.did('use'); interactUse(UI.prompt); } }
+  else if (c === 'Tab' || c === 'KeyJ') openMenu('journal'); else if (c === 'KeyI') openMenu('pack'); else if (c === 'KeyM') openMenu('map');
+  else if (c === 'Escape') UI.pause('esc');
 }
-function onPointerUnlock() { if (game.playing && !uiBusy() && !Input.touch && !TEST) openMenu('settings'); }
-// per-frame HUD: prompt, compass, clock, place names
+// Esc while the pointer is captured releases it (the page never sees the key): that is the pause
+function onPointerUnlock() { if (game.playing && !uiBusy() && !Input.touch && !TEST) UI.pause('esc'); }
+// ── pause: Esc, a hidden tab, a locked phone, a portrait phone. Saves first, freezes the world (frame() draws but does not step), mutes the audio ──
+UI.pause = why => {
+  if (!game.playing || UI.paused) return;
+  UI.paused = true; UI.pauseWhy = why; try { save(); } catch (e) { } saveSettings(); releaseLook(); Player.locked = true;
+  if (Audio2.ctx && Audio2.ctx.state === 'running') Audio2.ctx.suspend();
+  $('pauseNote').textContent = why === 'hidden' ? 'Your progress is saved while you are away.' : why === 'turn' ? 'Turn your phone sideways to carry on.' : 'Your progress is saved.';
+  if (!UI.menu) $('pause').hidden = false;
+};
+UI.resume = () => {
+  if (!UI.paused) return; UI.paused = false; $('pause').hidden = true; if (UI.menu) { closeMenu(); }
+  Player.locked = uiBusy(); if (Audio2.ctx && game.playing) Audio2.ctx.resume(); lastT = performance.now();
+  if (!Input.touch && !coarse() && !TEST && !UI.talk) { try { const p = G.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
+};
+UI.lifecycle = () => {
+  document.addEventListener('visibilitychange', () => { lastT = performance.now(); if (document.hidden) { if (!TEST) UI.pause('hidden'); else if (Audio2.ctx) Audio2.ctx.suspend(); } else if (Audio2.ctx && game.playing && !UI.paused) Audio2.ctx.resume(); });
+  addEventListener('pagehide', () => { try { if (game.playing) { save(); saveSettings(); } } catch (e) { } });
+  const mq = window.matchMedia ? matchMedia('(orientation: portrait) and (pointer: coarse) and (max-width: 760px)') : null;
+  const turn = () => { UI.portrait = !!(mq && mq.matches); if (UI.portrait) { if (game.playing && !UI.paused) { UI.pause('turn'); UI.turnPaused = true; } } else if (UI.turnPaused) { UI.turnPaused = false; if (UI.paused && UI.pauseWhy === 'turn') UI.resume(); } };
+  if (mq) { (mq.addEventListener ? mq.addEventListener('change', turn) : mq.addListener(turn)); turn(); }
+};
+// ── per-frame HUD: what can be used, compass, clock, places, quiet fades ──
 function uiFrame(dt) {
   const P = Player;
-  // nearest thing to use, in front of the player
-  let best = null, bs = -1e9; const fx = Math.sin(P.yaw) * Math.cos(P.pitch), fy = Math.sin(P.pitch), fz = -Math.cos(P.yaw) * Math.cos(P.pitch), ex = P.pos[0], ey = P.pos[1] + P.eye, ez = P.pos[2];
+  let best = null, bs = -1e9, bp = null; const fx = Math.sin(P.yaw) * Math.cos(P.pitch), fy = Math.sin(P.pitch), fz = -Math.cos(P.yaw) * Math.cos(P.pitch), ex = P.pos[0], ey = P.pos[1] + P.eye, ez = P.pos[2];
   if (!P.locked) {
-    const test = (it, p, r) => { const dx = p[0] - ex, dy = p[1] - ey, dz = p[2] - ez, d = hyp(dx, dy, dz); if (d > r) return; const dot = (dx * fx + dy * fy + dz * fz) / (d || 1); if (dot < 0.35 && d > 0.9) return; const sc = dot * 2 - d * 0.35; if (sc > bs && interactLabel(it)) { bs = sc; best = it; } };
+    const test = (it, p, r) => { const dx = p[0] - ex, dy = p[1] - ey, dz = p[2] - ez, d = hyp(dx, dy, dz); if (d > r) return; const dot = (dx * fx + dy * fy + dz * fz) / (d || 1); if (dot < 0.35 && d > 0.9) return; const sc = dot * 2 - d * 0.35; if (sc > bs && interactLabel(it)) { bs = sc; best = it; bp = p; } };
     for (const it of World.interact) { if (it.zone !== undefined && it.zone !== World.camZone && it.zone !== 0 && World.camZone !== 0) continue; test(it, it.p, it.r || 2); }
     for (const n of NPCS) { if (!n.io) n.io = { npc: n }; if (hyp(n.pos[0] - ex, n.pos[2] - ez) < 3.2) test(n.io, [n.pos[0], n.pos[1] + (n.anim === 'lie' ? 0.3 : n.anim === 'sit' ? 1.0 : 1.35 * n.scale), n.pos[2]], 2.9); }
   }
-  if (best !== UI.prompt) { UI.prompt = best; const a = $('act'); a.hidden = !best; if (best) { $('actLabel').textContent = interactLabel(best); $('actKey').textContent = Input.touch ? '•' : 'E'; } }
-  // compass
+  const lab = best ? interactLabel(best) : null;
+  if (best !== UI.prompt || (best && lab !== UI.promptLab)) {
+    UI.prompt = best; UI.promptLab = lab; const a = $('act'); a.hidden = !best;
+    if (best) { const [v, rest] = promptParts(lab); $('actVerb').textContent = v; $('actLabel').textContent = rest; $('actKey').textContent = 'E'; }
+  }
+  UI.promptPos = bp;
+  // compass: the cardinal points, a gold diamond for each active quest, a small mark and name for places you have found
   if (Math.abs(P.yaw - UI.lastYaw) > 0.002 || (R.frame & 15) === 0) {
-    UI.lastYaw = P.yaw; const W = $('compass').clientWidth || 300, span = 1.9;
+    UI.lastYaw = P.yaw; const span = 1.9;
     for (const c of UI.compass) { const d = angDiff(c.a, P.yaw); c.el.style.display = Math.abs(d) < span / 2 ? '' : 'none'; c.el.style.left = (50 + d / span * 100) + '%'; }
     let k = 0;
-    for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
+    for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = CELLS_ON ? Cells.mapTarget(questTarget(id)) : questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
     for (; k < UI.marks.length; k++) { UI.marks[k].el.style.display = 'none'; UI.marks[k].d.style.display = 'none'; }
+    // discovered places in view (nearest first); the nearest few get a name
+    let j = 0; const dsc = UI.disc();
+    if (S.disc) { const seenIn = []; for (const pl of World.places) { if (!dsc[pl.id] || pl.id.startsWith('camp.') && false) continue; const d = angDiff(headingTo(ex, ez, pl.x, pl.z), P.yaw), dist = hyp(pl.x - ex, pl.z - ez); if (Math.abs(d) < span * 0.5 && dist > 6) seenIn.push([dist, d, pl]); }
+      seenIn.sort((a, b) => a[0] - b[0]); for (const [dist, d, pl] of seenIn) { if (j >= UI.pmarks.length) break; const m = UI.pmarks[j++], l = (50 + d / span * 100) + '%'; m.el.style.display = ''; m.el.style.left = l; m.n.style.display = j <= 2 ? '' : 'none'; m.n.style.left = l; m.n.textContent = pl.name.replace(/^(The|Brackenfell) /, ''); } }
+    for (; j < UI.pmarks.length; j++) { UI.pmarks[j].el.style.display = 'none'; UI.pmarks[j].n.style.display = 'none'; }
   }
-  if ((R.frame & 31) === 0) { const h = Math.floor(Env.hour), m = Math.floor((Env.hour - h) * 60 / 10) * 10; const part = Env.hour < 5 ? 'Night' : Env.hour < 8 ? 'Dawn' : Env.hour < 12 ? 'Morning' : Env.hour < 17 ? 'Afternoon' : Env.hour < 20.5 ? 'Dusk' : 'Night'; $('clock').textContent = part + ' · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); uiObjective();
-    for (const pl of World.places) { if (UI.seen[pl.id] || hyp(pl.x - ex, pl.z - ez) > pl.r) continue; UI.seen[pl.id] = 1; if (game.clock > 4) banner('Discovered', pl.name); break; } }
+  if ((R.frame & 31) === 0) {
+    const h = Math.floor(Env.hour), m = Math.floor((Env.hour - h) * 60 / 10) * 10; const part = Env.hour < 5 ? 'Night' : Env.hour < 8 ? 'Dawn' : Env.hour < 12 ? 'Morning' : Env.hour < 17 ? 'Afternoon' : Env.hour < 20.5 ? 'Dusk' : 'Night';
+    $('clock').textContent = part + ' · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); if (part !== UI.lastPart) { if (UI.lastPart) UI.hudT = Math.max(UI.hudT, 5); UI.lastPart = part; } uiObjective();
+    for (const pl of World.places) { if (UI.disc()[pl.id] || hyp(pl.x - ex, pl.z - ez) > pl.r) continue; if (game.clock > 3) { UI.discover(pl.name, pl.id); break; } else UI.disc()[pl.id] = 1; }
+  }
+  // quiet HUD: the quest text, clock and purse rest a few seconds after the last change
+  UI.hudT -= dt; const q = UI.hudT <= 0 && !uiBusy(); if (q !== UI.quiet) { UI.quiet = q; $('hud').classList.toggle('quiet', q); }
+  // "click to look" for a mouse that has not captured the pointer
+  const cue = !Input.touch && !Input.plock && !UI.talk && !uiBusy() && !coarse() && !TEST; if (cue !== UI.cue) { UI.cue = cue; $('lookcue').hidden = !cue; }
+  if (typeof Feel !== 'undefined') Feel.hintFrame(dt);
 }
 
 
@@ -8025,98 +10048,1101 @@ const PerfHud = (() => {
 })();
 
 
-// ---- 88_audio.js ----
-// ───────────────────────── sound: everything is synthesised with Web Audio ─────────────────────────
-const Audio2 = {
-  ctx: null, vol: 0.8, musicVol: 0.6, luteRequest: 0, t: { bird: 2, cricket: 0, crackle: 0, pad: 1, lute: 0, owl: 20 }, luteStep: 0, chord: 0, hammerK: 0, lastHour: -1,
-  start() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
-    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-    try {
-      const c = this.ctx = new AC(), o = this;
-      o.master = c.createGain(); o.master.gain.value = 0;
-      const comp = c.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 5; o.master.connect(comp); comp.connect(c.destination);
-      o.sfx = c.createGain(); o.sfx.connect(o.master); o.music = c.createGain(); o.music.connect(o.master);
-      // shared noise + a synthetic hall for the bell and the music
-      const nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1; o.noise = nb;
-      const ir = c.createBuffer(2, c.sampleRate * 2.6, c.sampleRate); for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); }
-      o.rev = c.createConvolver(); o.rev.buffer = ir; const rg = c.createGain(); rg.gain.value = 0.55; o.rev.connect(rg); rg.connect(o.master);
-      // continuous beds: wind, water, fire, crickets
-      const bed = (type, f, q) => { const s = c.createBufferSource(); s.buffer = nb; s.loop = true; s.playbackRate.value = 0.8 + Math.random() * 0.4; const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = c.createGain(); g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(o.sfx); s.start(); return { g, fl }; };
-      o.wind = bed('bandpass', 420, 0.5); o.water = bed('bandpass', 1100, 0.7); o.fire = bed('lowpass', 420, 0.6);
-      const cr = c.createOscillator(); cr.frequency.value = 4300; const cg = c.createGain(); cg.gain.value = 0; const lfo = c.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 31; const lg = c.createGain(); lg.gain.value = 0; lfo.connect(lg); lg.connect(cg.gain); cr.connect(cg); cg.connect(o.sfx); cr.start(); lfo.start(); o.crick = lg;
-    } catch (e) { this.ctx = null; }
-  },
-  // enveloped oscillator
-  tone(f, dur, vol, type, dest, f2, delay, attack) {
-    const c = this.ctx; if (!c) return; const t = c.currentTime + (delay || 0), o = c.createOscillator(), g = c.createGain();
-    o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(vol, 0.0002), t + (attack || 0.006)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(dest || this.sfx); o.start(t); o.stop(t + dur + 0.05);
-  },
-  burst(dur, vol, type, f, q, dest, delay, f2) {
-    const c = this.ctx; if (!c) return; const t = c.currentTime + (delay || 0), s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
-    s.buffer = this.noise; fl.type = type; fl.frequency.setValueAtTime(f, t); if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur); fl.Q.value = q || 0.7;
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    s.connect(fl); fl.connect(g); g.connect(dest || this.sfx); s.start(t, Math.random() * 1.5, dur + 0.05);
-  },
-  pluck(f, vol, delay, long) { const d = long || 0.9; this.tone(f, d, vol, 'triangle', this.lutebus, null, delay, 0.004); this.tone(f * 2.003, d * 0.5, vol * 0.35, 'sine', this.lutebus, null, delay, 0.003); this.tone(f * 3.01, d * 0.22, vol * 0.18, 'sine', this.lutebus, null, delay, 0.002); },
-  step(surface, run) {
-    if (!this.ctx) return; const v = run ? 0.16 : 0.10, j = 0.85 + Math.random() * 0.3;
-    if (surface === 'wood') { this.burst(0.09, v * 1.3, 'lowpass', 420 * j, 1.2); this.burst(0.03, v * 0.5, 'bandpass', 1900 * j, 2); }
-    else if (surface === 'stone') { this.burst(0.05, v * 0.9, 'bandpass', 2300 * j, 1.5); this.burst(0.08, v * 0.7, 'lowpass', 500, 1); }
-    else if (surface === 'water') { this.burst(0.22, v * 1.2, 'bandpass', 1400 * j, 0.8, null, 0, 600); }
-    else if (surface === 'dirt') { this.burst(0.07, v, 'lowpass', 1300 * j, 0.8); }
-    else { this.burst(0.11, v * 0.9, 'bandpass', 3200 * j, 0.6); this.burst(0.06, v * 0.6, 'lowpass', 600, 0.8); }
-  },
-  thud() { this.burst(0.18, 0.3, 'lowpass', 260, 1); },
-  ui() { this.tone(880, 0.06, 0.04, 'triangle'); },
-  page() { this.burst(0.16, 0.06, 'highpass', 2500, 0.5); },
-  coin() { this.tone(2400, 0.12, 0.05, 'sine'); this.tone(3200, 0.2, 0.04, 'sine', null, null, 0.05); },
-  pickup() { this.tone(520, 0.12, 0.07, 'triangle', null, 780); this.tone(1040, 0.18, 0.04, 'sine', null, null, 0.07); },
-  chest() { this.burst(0.25, 0.1, 'bandpass', 500, 2, null, 0, 900); this.tone(140, 0.3, 0.08, 'sawtooth', null, 190); },
-  drink() { for (let i = 0; i < 3; i++) this.tone(300 + i * 60, 0.09, 0.05, 'sine', null, 200, i * 0.16); },
-  door(vol) { if (!this.ctx) return; this.tone(95, 0.42, 0.045 * vol, 'sawtooth', null, 150); this.burst(0.3, 0.02 * vol, 'bandpass', 700, 4, null, 0, 1200); },
-  cluck(vol) { this.tone(700, 0.07, 0.06 * vol, 'square', null, 420); this.tone(760, 0.09, 0.05 * vol, 'square', null, 400, 0.12); },
-  clang(vol) { if (!this.ctx) return; for (const [f, d] of [[1870, 0.35], [2790, 0.28], [4150, 0.2], [5630, 0.12]]) this.tone(f * (0.99 + Math.random() * 0.02), d, 0.05 * vol, 'sine'); this.burst(0.03, 0.12 * vol, 'highpass', 3000, 0.5); },
-  quest(k) { const n = k === 0 ? [293.7, 440, 587.3] : k === 1 ? [440, 587.3] : [293.7, 370, 440, 587.3, 740]; n.forEach((f, i) => { this.tone(f, 1.6, 0.07, 'triangle', this.rev, null, i * 0.13, 0.01); this.tone(f, 0.5, 0.05, 'sine', null, null, i * 0.13); }); },
-  bell(vol) { if (!this.ctx) return; const f0 = 196; for (const [m, d, a] of [[0.5, 7, 0.25], [1, 6, 0.5], [1.19, 4.5, 0.3], [1.5, 3.8, 0.25], [2, 3.2, 0.3], [2.51, 2.4, 0.16], [3.01, 1.8, 0.12], [4.1, 1.2, 0.08]]) { this.tone(f0 * m, d, 0.16 * a * vol, 'sine', this.rev, null, 0, 0.004); this.tone(f0 * m, d * 0.7, 0.10 * a * vol, 'sine', null, null, 0, 0.004); } this.burst(0.05, 0.1 * vol, 'bandpass', 2600, 1); },
-  // called every frame with the listener's surroundings
-  update(dt, st) {
-    const c = this.ctx; if (!c || c.state !== 'running') return; const o = this, now = c.currentTime, T = o.t;
-    o.master.gain.setTargetAtTime(st.playing ? o.vol : o.vol * 0.5, now, 0.3);
-    const out = 1 - st.indoor;
-    o.wind.g.gain.setTargetAtTime((0.035 + 0.05 * st.wind + st.height * 0.05) * (0.25 + 0.75 * out), now, 0.6); o.wind.fl.frequency.setTargetAtTime(300 + 300 * st.wind - 120 * st.indoor, now, 0.8);
-    o.water.g.gain.setTargetAtTime(0.15 * st.water * (0.3 + 0.7 * out), now, 0.4);
-    o.fire.g.gain.setTargetAtTime(0.16 * st.fire, now, 0.3);
-    o.crick.gain.setTargetAtTime(0.012 * st.night * out, now, 1);
-    T.crackle -= dt; if (st.fire > 0.05 && T.crackle <= 0) { T.crackle = 0.04 + Math.random() * 0.35; o.burst(0.02 + Math.random() * 0.04, 0.12 * st.fire * Math.random(), 'highpass', 1500 + Math.random() * 3000, 0.7); }
-    T.bird -= dt; if (T.bird <= 0) { T.bird = 1.5 + Math.random() * 6; if (st.day > 0.4 && out > 0.3) { const f = 2400 + Math.random() * 2600, n = 2 + Math.floor(Math.random() * 5), v = 0.022 * out * (0.4 + Math.random() * 0.6); for (let i = 0; i < n; i++) o.tone(f * (1 + (Math.random() - 0.5) * 0.25), 0.07 + Math.random() * 0.07, v, 'sine', null, f * (0.8 + Math.random() * 0.5), i * (0.09 + Math.random() * 0.05)); } }
-    T.owl -= dt; if (T.owl <= 0) { T.owl = 18 + Math.random() * 30; if (st.night > 0.7 && out > 0.5) { o.tone(410, 0.5, 0.03, 'sine', o.rev, 380, 0, 0.08); o.tone(360, 0.8, 0.035, 'sine', o.rev, 330, 0.7, 0.1); } }
-    // the smith's hammer, the bell on the hour
-    if (st.hammer >= 0) { const k = (st.hammer * 0.9) % 1; if (o.hammerK < 0.66 && k >= 0.66 && st.hammerDist < 60) o.clang(clamp(1.3 - st.hammerDist / 45, 0.05, 1) * (st.indoor ? 0.4 : 1)); o.hammerK = k; }
-    const hr = Math.floor(st.hour); if (hr !== o.lastHour) { if (o.lastHour >= 0 && st.bellOn && (hr === 6 || hr === 12 || hr === 18)) o.bell(clamp(1.1 - st.bellDist / 160, 0.15, 0.8)); o.lastHour = hr; }
-    // music: a soft drone of slow chords outdoors, and Lark's lute wherever Lark is
-    if (!o.lutebus) { o.lutebus = c.createGain(); o.lutelp = c.createBiquadFilter(); o.lutelp.type = 'lowpass'; o.lutebus.connect(o.lutelp); o.lutelp.connect(o.music); const s = c.createGain(); s.gain.value = 0.5; o.lutelp.connect(s); s.connect(o.rev); o.padbus = c.createGain(); o.padbus.connect(o.rev); const pd = c.createGain(); pd.gain.value = 0.35; o.padbus.connect(pd); pd.connect(o.music); }
-    o.music.gain.setTargetAtTime(o.musicVol, now, 0.3);
-    o.luteRequest = Math.max(0, o.luteRequest - dt);
-    const playing = st.lute || o.luteRequest > 0, lv = playing ? clamp(1.25 - st.luteDist / 26, 0, 1) * (st.luteWall ? 0.45 : 1) : 0;
-    o.lutebus.gain.setTargetAtTime(lv * 0.9, now, 0.4); o.lutelp.frequency.setTargetAtTime(st.luteWall ? 900 : 5200, now, 0.4);
-    T.lute -= dt;
-    if (playing && lv > 0.02 && T.lute <= 0) {
-      const scale = [146.83, 164.81, 174.61, 196, 220, 246.94, 261.63, 293.66, 329.63, 349.23, 392, 440], mel = [7, 9, 10, 9, 7, 6, 4, 6, 7, 11, 10, 9, 7, 6, 7, -1, 4, 6, 7, 6, 4, 3, 2, 3, 4, 7, 6, 4, 3, 2, 0, -1], bass = [0, 0, 3, 3, 4, 4, 0, 0];
-      const i = o.luteStep++ % mel.length, beat = 0.27; T.lute = beat;
-      if (mel[i] >= 0) o.pluck(scale[mel[i]], 0.10, 0.02 + Math.random() * 0.012, 1.1);
-      if (i % 4 === 0) o.pluck(scale[bass[(i / 4) % 8]] / 2, 0.11, 0.02, 1.6); else if (i % 4 === 2) o.pluck(scale[bass[Math.floor(i / 4) % 8] + 4] / 2, 0.05, 0.02, 0.9);
-    }
-    T.pad -= dt;
-    if (T.pad <= 0) {
-      T.pad = 9 + Math.random() * 5; const chords = [[146.83, 220, 349.23], [130.81, 196, 329.63], [116.54, 174.61, 293.66], [174.61, 261.63, 349.23], [146.83, 220, 293.66], [110, 164.81, 261.63]], ch = chords[o.chord++ % chords.length];
-      const v = 0.05 * out * (playing && lv > 0.2 ? 0 : 1) * (st.playing ? 1 : 1.4) * (0.6 + 0.4 * st.night);
-      if (v > 0.004) ch.forEach((f, k) => { for (const det of [0.997, 1.003]) { const os = c.createOscillator(), g = c.createGain(); os.type = k === 0 ? 'triangle' : 'sine'; os.frequency.value = f * det * (st.night > 0.5 && k === 2 ? 2 : 1); g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(v / (k + 1.2), now + 4.5); g.gain.linearRampToValueAtTime(0.0001, now + 13); os.connect(g); g.connect(o.padbus); os.start(now); os.stop(now + 13.2); } });
-    }
-  },
+// ---- 87_feel.js ----
+// ───────────────────────── game feel: the camera, the first two minutes, hints, and the ink marks drawn over the view ─────────────────────────
+// Feel.post(dt) runs once a tick right after playerUpdate and owns the final camera pose while the player is in the world:
+//   head bob matched to stride length and speed (and a little to the surface), a lateral sway, a landing dip, roll when strafing, a wider
+//   field of view when sprinting, breathing when still, and a smooth settle after a fade. All of it is off under Settings > Reduce motion.
+// During dialogue the camera eases to frame the speaker in the upper part of the view (the words sit below).
+const Feel = {
+  reduce: false, t: 0, roll: 0, fov: 0, dipK: 0, lastDip: 0, settleT: 0, bobS: 0, base: 0.92, talkNpc: null, talkT: 0,
+  intro: null, hints: null, tipT: 0, tipKey: '', moved: 0, turned: 0, last: null, greeted: false, usedSeen: 0, playT: 0,
 };
+const FEEL_SURF = { wood: 1.12, stone: 1.18, dirt: 0.92, grass: 0.82, water: 0.55 };
+Feel.post = function (dt) {
+  const P = Player, cam = R.cam; Feel.t += dt;
+  if (!Feel.base0) Feel.base0 = Feel.base = cam.fovMin;
+  const rm = Feel.reduce, base = Feel.base0;
+  // landing: the dip playerUpdate computed also nudges the view down and back, once
+  if (P.dip > Feel.lastDip + 0.02 && !rm) Feel.dipK = Math.min(0.045, P.dip * 0.28);
+  Feel.lastDip = P.dip; Feel.dipK += (0 - Feel.dipK) * Math.min(1, dt * 7);
+  const sp = P.speed, run = sp > 4;
+  // roll into a sideways step, FOV out with a sprint; both ease, neither snaps
+  const rx = Math.cos(P.yaw), rz = Math.sin(P.yaw), side = P.vel[0] * rx + P.vel[2] * rz;
+  const rollT = rm || !P.onGround || Player.locked ? 0 : -clamp(side / 5.4, -1, 1) * 0.024;
+  Feel.roll += (rollT - Feel.roll) * Math.min(1, dt * 6);
+  let fovT = base + (!rm && run && P.onGround && !Player.locked ? 0.075 : 0) - (Feel.talkNpc && !rm ? 0.07 : 0);
+  if (Feel.settleT > 0) { Feel.settleT = Math.max(0, Feel.settleT - dt); fovT += 0.06 * smooth(0, 1, Feel.settleT / 1.1); }
+  Feel.fov += (fovT - Feel.fov) * Math.min(1, dt * (Feel.settleT > 0 ? 2.2 : 4.5)); if (!Feel.fov) Feel.fov = fovT;
+  cam.fovMin = Feel.fov;
+  // bob: amplitude grows with speed, the phase is the stride (P.step already advances with distance), the surface changes its bite
+  const amp = rm ? 0 : (0.012 + 0.02 * sat((sp - 1.6) / 3.8)) * (FEEL_SURF[P.surface] || 1) * P.bobAmt;
+  const ph = P.step * TAU, bob = Math.sin(ph) * amp, lat = Math.sin(ph * 0.5) * amp * 0.42;
+  const still = rm ? 0 : sat(1 - P.bobAmt * 1.4), br = Math.sin(Feel.t * 1.15) * 0.0032 * still, brp = Math.sin(Feel.t * 0.8 + 1.3) * 0.0011 * still;
+  let y = P.camY + P.eye - (rm ? 0 : P.dip) + bob + br; if (rm) y = P.camY + P.eye;
+  cam.pos[0] = P.pos[0] + rx * lat; cam.pos[1] = y; cam.pos[2] = P.pos[2] + rz * lat;
+  cam.yaw = P.yaw + (rm ? 0 : Math.cos(P.step * PI) * 0.0022 * P.bobAmt + brp);
+  cam.pitch = P.pitch - Feel.dipK + (rm ? 0 : br * 0.5 + (Feel.settleT > 0 ? -0.035 * smooth(0, 1, Feel.settleT / 1.1) : 0));
+  cam.roll = Feel.roll + (rm ? 0 : lat * 0.05);
+  // dialogue framing and the held opening shot move the player's own view (so it stays where it settles)
+  if (Feel.talkNpc) {
+    const n = Feel.talkNpc, e = [P.pos[0], P.camY + P.eye, P.pos[2]], hy = n.pos[1] + (n.anim === 'lie' ? 0.5 : n.anim === 'sit' ? 1.22 : 1.56 * (n.scale || 1)), d = hyp(n.pos[0] - e[0], n.pos[2] - e[2]) || 1;
+    const yawT = headingTo(e[0], e[2], n.pos[0], n.pos[2]) + 0.06, pitT = Math.atan2(hy - e[1], d) - 0.16 * 0.85, k = Math.min(1, dt * (rm ? 30 : 3.2));
+    P.yaw += angDiff(yawT, P.yaw) * k; P.pitch += (pitT - P.pitch) * k;
+  }
+  Feel.introFrame(dt);
+};
+Feel.talk = npc => { Feel.talkNpc = npc; };
+Feel.talkEnd = () => { Feel.talkNpc = null; Feel.settleT = Math.max(Feel.settleT, 0.01); };
+Feel.settle = () => { if (!Feel.reduce) Feel.settleT = 1.1; };
+
+// ── the opening: a new game starts on the road above the town at dawn, a held shot of the valley with the title, then control ──
+Feel.START = { x: -132, z: -7, yaw: 90, pitch: 3 };
+Feel.begin = () => {
+  const s = Feel.START, P = Player; Env.hour = 6.1; npcSnapAll();
+  P.pos = [s.x, World.groundAt(s.x, s.z, 1e9), s.z]; P.vel = [0, 0, 0]; P.yaw = s.yaw * PI / 180; P.pitch = s.pitch * PI / 180; P.camY = P.pos[1];
+  Feel.intro = { t: 0, len: Feel.reduce ? 3.2 : 6.2, y0: P.pitch }; Player.locked = true; document.body.classList.add('cine'); $('hud').style.opacity = '0';
+  setTimeout(() => { if (Feel.intro) banner('The Greyspine Valley', 'Brackenfell'); }, 700);
+};
+Feel.introFrame = dt => {
+  const I = Feel.intro; if (!I) return; const P = Player;
+  I.t += dt; const k = I.t / I.len;
+  if (!Feel.reduce) { const dir = [Math.sin(P.yaw), -Math.cos(P.yaw)]; P.pos[0] += dir[0] * 0.38 * dt; P.pos[2] += dir[1] * 0.38 * dt; P.pitch = I.y0 - 0.03 * smooth(0, 1, k); }
+  if (k > 0.8) $('hud').style.opacity = String(Math.min(1, (k - 0.8) / 0.2));
+  if (I.t >= I.len) { Feel.intro = null; document.body.classList.remove('cine'); $('hud').style.opacity = ''; Player.locked = uiBusy(); Feel.playT = 0; if (qAt('welcome') < 0) qStart('welcome'); Feel.tip('goal'); }
+};
+
+// ── hints: a few notes, each shown only until the player has done the thing ──
+const FEEL_HINTS = {
+  goal: () => 'Warden Hale waits at the gate, up the road. <b>Follow the gold mark on the compass.</b>',
+  move: () => Input.touch || coarse() ? 'Touch and drag on the <b>left</b> to walk. Push the stick all the way over to run.' : '<b>W A S D</b> to walk, <b>Shift</b> to run.',
+  look: () => Input.touch || coarse() ? 'Drag on the <b>right</b> to look around.' : 'Move the <b>mouse</b> to look around. <b>Esc</b> pauses.',
+  use: () => UI.prompt ? (Input.touch || coarse() ? 'Tap <b>' + $('actVerb').textContent + '</b> to ' + $('actVerb').textContent.toLowerCase() + ' it.' : 'Press <b>E</b> to ' + $('actVerb').textContent.toLowerCase() + '.') : '',
+  journal: () => Input.touch || coarse() ? 'Tap the <b>menu</b> button for your journal, pack and map.' : 'Press <b>Tab</b> for your journal, <b>M</b> for the map.',
+};
+Feel.load = () => { try { Feel.hints = JSON.parse(localStorage.getItem('brackenfell.hints') || 'null'); } catch (e) { } if (!Feel.hints) Feel.hints = {}; };
+Feel.did = k => { if (!Feel.hints) Feel.load(); if (Feel.hints[k]) return; Feel.hints[k] = 1; try { localStorage.setItem('brackenfell.hints', JSON.stringify(Feel.hints)); } catch (e) { } if (Feel.tipKey === k || (k === 'move' && Feel.tipKey === 'goal')) Feel.tipHide(); };
+Feel.tip = key => {
+  if (!Feel.hints) Feel.load(); if (Feel.hints[key] && key !== 'goal') return; const t = FEEL_HINTS[key](); if (!t) return;
+  const el = $('tip'); el.innerHTML = t; el.classList.remove('out'); el.hidden = false; Feel.tipKey = key; Feel.tipT = key === 'use' ? 4.5 : 9;
+};
+Feel.tipHide = () => { const el = $('tip'); el.classList.add('out'); Feel.tipKey = ''; setTimeout(() => { if (!Feel.tipKey) el.hidden = true; }, 650); };
+Feel.hintFrame = dt => {
+  if (!Feel.hints) Feel.load(); const P = Player, H = Feel.hints;
+  if (Feel.intro) return;
+  if (!Feel.last) Feel.last = [P.pos[0], P.pos[2], P.yaw];
+  const mv = hyp(P.pos[0] - Feel.last[0], P.pos[2] - Feel.last[1]); if (mv < 3) Feel.moved += mv; Feel.turned += Math.abs(angDiff(P.yaw, Feel.last[2])); Feel.last = [P.pos[0], P.pos[2], P.yaw];
+  if (!P.locked) Feel.playT += dt;
+  if (Feel.moved > 5) Feel.did('move'); if (Feel.turned > 1.4 && Feel.moved > 0.5) Feel.did('look');
+  if (uiBusy()) { if (Feel.tipKey) Feel.tipHide(); return; }
+  if (Feel.tipKey) { Feel.tipT -= dt; if (Feel.tipT <= 0) { const was = Feel.tipKey; Feel.tipHide(); Feel.shownAt = Feel.t; } return; }
+  if (Feel.t - (Feel.shownAt || 0) < 3.2) return;
+  // in order: walk, look, use what you are facing, open the journal. Each is offered at most a few times.
+  const tryTip = k => { if (H[k]) return false; Feel.counts = Feel.counts || {}; if ((Feel.counts[k] = (Feel.counts[k] || 0)) >= 3) return false; Feel.counts[k]++; Feel.tip(k); return true; };
+  if (!H.move) { if (Feel.playT > 1.2 && Feel.playT < 40 && tryTip('move')) return; }
+  else if (!H.look) { if (tryTip('look')) return; }
+  else if (!H.use && UI.prompt) { if (tryTip('use')) return; }
+  else if (!H.journal && H.use && Feel.playT > 60 && S.q.welcome) { if (tryTip('journal')) return; }
+  // a greeting when the warden first sees you
+  if (!Feel.greeted && NPC.hale && qAt('welcome') === 0 && hyp(NPC.hale.pos[0] - P.pos[0], NPC.hale.pos[2] - P.pos[2]) < 8) { Feel.greeted = true; toast('<b>Warden Hale</b> “Hold there, traveller.”'); }
+};
+
+// ── ink marks drawn over the view on one 2D canvas (no extra 3D pass, so it costs the same on Low): the thing you are looking at, where doors lead,
+// a faint glint on things worth taking, and the quest giver when he is in sight ──
+const Mark = { cv: null, ctx: null, w: 0, h: 0, dpr: 1, drawn: false, v: null, glint: [], tmp: [0, 0, 0] };
+Mark.init = () => { Mark.cv = $('ovl'); Mark.ctx = Mark.cv.getContext('2d'); Mark.v = new THREE.Vector3(); Mark.size(); addEventListener('resize', Mark.size); };
+Mark.size = () => { const d = Math.min(window.devicePixelRatio || 1, 2); Mark.dpr = d; Mark.w = innerWidth; Mark.h = innerHeight; Mark.cv.width = Math.round(Mark.w * d); Mark.cv.height = Math.round(Mark.h * d); };
+// world point -> screen pixels, or null when behind the camera / far off to the side
+Mark.at = (x, y, z) => { const v = Mark.v.set(x, y, z).project(R.camera); if (v.z > 1 || v.z < -1 || Math.abs(v.x) > 1.15 || Math.abs(v.y) > 1.15) return null; return [(v.x * 0.5 + 0.5) * Mark.w, (-v.y * 0.5 + 0.5) * Mark.h]; };
+Mark.diamond = (c, x, y, s, fill, ink, a) => { c.globalAlpha = a; c.beginPath(); c.moveTo(x, y - s); c.lineTo(x + s * 0.72, y); c.lineTo(x, y + s); c.lineTo(x - s * 0.72, y); c.closePath(); c.fillStyle = fill; c.fill(); c.lineWidth = 1.6; c.strokeStyle = ink; c.stroke(); };
+Mark.star = (c, x, y, r, a) => { c.globalAlpha = a; c.beginPath(); c.moveTo(x, y - r); c.quadraticCurveTo(x, y, x + r * 0.7, y); c.quadraticCurveTo(x, y, x, y + r); c.quadraticCurveTo(x, y, x - r * 0.7, y); c.quadraticCurveTo(x, y, x, y - r); c.fillStyle = '#fff3cf'; c.fill(); };
+Mark.tag = (c, x, y, text, gold) => {
+  c.font = '500 ' + Math.round(13 * (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ts')) || 1)) + 'px "IM Fell English SC", Georgia, serif'; const w = c.measureText(text).width + 18, h = 22;
+  c.globalAlpha = 0.9; c.fillStyle = gold ? 'rgba(216,181,99,0.94)' : 'rgba(228,214,179,0.92)'; c.strokeStyle = 'rgba(42,32,22,0.8)'; c.lineWidth = 1; c.beginPath(); if (c.roundRect) c.roundRect(x - w / 2, y - h / 2, w, h, 3); else c.rect(x - w / 2, y - h / 2, w, h); c.fill(); c.stroke();
+  c.fillStyle = '#2a2016'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, x, y + 1);
+};
+Mark.draw = () => {
+  const c = Mark.ctx; if (!c) return;
+  const playing = game.playing && !uiBusy() && !Feel.intro && !Feel.talkNpc;
+  if (!playing) { if (Mark.drawn) { c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, Mark.cv.width, Mark.cv.height); Mark.drawn = false; } return; }
+  c.setTransform(Mark.dpr, 0, 0, Mark.dpr, 0, 0); c.clearRect(0, 0, Mark.w, Mark.h); Mark.drawn = false;
+  const P = Player, t = performance.now() / 1000, rm = Feel.reduce, e = [P.pos[0], P.pos[1] + P.eye, P.pos[2]], fx = Math.sin(P.yaw) * Math.cos(P.pitch), fz = -Math.cos(P.yaw) * Math.cos(P.pitch), fy = Math.sin(P.pitch);
+  const front = (x, y, z) => ((x - e[0]) * fx + (y - e[1]) * fy + (z - e[2]) * fz) / (hyp(x - e[0], y - e[1], z - e[2]) || 1);
+  // 1. the thing you can use: a small ink diamond above it, breathing
+  if (UI.prompt && UI.promptPos) {
+    const p = UI.promptPos, s = Mark.at(p[0], p[1] + 0.32, p[2]);
+    if (s) { const k = rm ? 0 : Math.sin(t * 3.2); c.globalAlpha = 0.28 + 0.1 * k; c.beginPath(); c.arc(s[0], s[1], 13 + 2.5 * k, 0, TAU); c.fillStyle = '#f6e7b4'; c.fill(); Mark.diamond(c, s[0], s[1], 6.5, '#ebe0c6', '#14110d', 0.95); Mark.drawn = true; }
+  }
+  // 2. doors: where this one leads (outside only, the nearest two, in front of you, not the one you are about to use)
+  if (!World.camZone && !World.cell && !(UI.prompt && UI.prompt.kind === 'portal')) {
+    let n = 0; const cand = [];
+    for (const d of World.doors) { if (!d.site || d.site.facade || d.site.alleyRow && !d.site.name) continue; const dx = d.c[0] - e[0], dz = d.c[2] - e[2], dist = hyp(dx, dz); if (dist > 10 || dist < 1.2) continue; if (front(d.c[0], d.c[1], d.c[2]) < 0.55) continue; cand.push([dist, d]); }
+    cand.sort((a, b) => a[0] - b[0]);
+    for (const [dist, d] of cand) { if (n >= 2) break; const s = Mark.at(d.c[0], d.c[1] + 1.35, d.c[2]); if (!s) continue; n++; c.globalAlpha = 1; Mark.tag(c, s[0], s[1], d.site.name, false); c.globalAlpha = 1; Mark.drawn = true; }
+  }
+  // 3. a faint glint on what can be taken
+  const list = UI.glintList || (UI.glintList = []), now = performance.now();
+  if (now - (Mark.gt || 0) > 400) { Mark.gt = now; list.length = 0; for (const it of World.interact) { if (it.gone || (it.kind !== 'pickup' && it.kind !== 'chest' && it.kind !== 'loot') || (it.kind === 'chest' && S.opened[it.id])) continue; if (it.zone !== undefined && it.zone !== World.camZone && it.zone !== 0) continue; if (hyp(it.p[0] - e[0], it.p[2] - e[2]) < 15) list.push(it); } if (list.length > 8) { list.sort((a, b) => hyp(a.p[0] - e[0], a.p[2] - e[2]) - hyp(b.p[0] - e[0], b.p[2] - e[2])); list.length = 8; } }
+  for (let i = 0; i < list.length; i++) {
+    const it = list[i]; if (it.gone || it === UI.prompt) continue; const s = Mark.at(it.p[0], it.p[1] + 0.12, it.p[2]); if (!s) continue; const dist = hyp(it.p[0] - e[0], it.p[2] - e[2]);
+    const tw = rm ? 0.5 : 0.5 + 0.5 * Math.sin(t * 2.1 + i * 1.9), a = (0.18 + 0.5 * tw) * (1 - smooth(8, 15, dist)); if (a < 0.04) continue;
+    Mark.star(c, s[0], s[1], (5 + 4 * tw) * (1 - 0.4 * smooth(2, 12, dist)), a); Mark.drawn = true;
+  }
+  // 4. the person the first quest points at, while he is in sight
+  const gt = (S.q.welcome && !S.q.welcome.done && S.q.welcome.stage === 0 && NPC.hale) ? NPC.hale : null;
+  if (gt) { const dist = hyp(gt.pos[0] - e[0], gt.pos[2] - e[2]); if (dist > 4.5 && dist < 70 && front(gt.pos[0], gt.pos[1] + 1.8, gt.pos[2]) > 0.6) { const s = Mark.at(gt.pos[0], gt.pos[1] + 2.15, gt.pos[2]); if (s) { const b = rm ? 0 : Math.sin(t * 2.4) * 2; Mark.diamond(c, s[0], s[1] + b, 6, '#d8b563', '#14110d', 0.95); c.globalAlpha = 1; Mark.tag(c, s[0], s[1] - 22 + b, 'Warden Hale', true); Mark.drawn = true; } } }
+  c.globalAlpha = 1;
+};
+
+
+// ---- 87b_input.js ----
+// ───────────────────────── controls: keyboard and mouse, and a touch layer tuned for thumbs ─────────────────────────
+// Replaces inputInit of 78_player.js (which stays as the plain reference); 99_main.js calls inputInit2. Same Input fields, so playerUpdate is unchanged.
+//   Touch:  a floating stick appears where the thumb lands on the move half of the screen (the left half, the right half when left-handed);
+//           the other half looks. A radial dead zone, rescaled so full push is still 1 (full push runs). Look has a mild acceleration curve.
+//           Each finger is tracked by id and cleaned up on cancel, blur and "all fingers up", so the look finger is never lost to a stray event
+//           and a lost "up" never leaves the stick stuck.
+//   Mouse:  click the view to capture the pointer; Esc releases it, which pauses (onPointerUnlock in 85_ui.js).
+Object.assign(Input, { lefty: false, holdUse: false, accel: 0.55, dead: 0.14, stickR: 54, moveId: null, lookId: null });
+const lookGain = (dx, dy, dt) => { const v = Math.hypot(dx, dy) / Math.max(4, dt); return 1 + Input.accel * smooth(0.3, 2.4, v); };      // v: pixels per millisecond
+function inputInit2(canvas, layer) {
+  const I = Input, stick = $('stick'), knob = $('knob');
+  const busy = () => !game.playing || Player.locked;
+  addEventListener('keydown', e => {
+    if (e.repeat) { if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault(); return; }
+    I.keys[e.code] = true; if (typeof onKey === 'function') onKey(e);
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
+  });
+  addEventListener('keyup', e => { I.keys[e.code] = false; });
+  const dropAll = () => { I.keys = {}; endStick(); endLook(); I.drag = null; };
+  addEventListener('blur', dropAll); addEventListener('pagehide', dropAll);
+  document.addEventListener('pointerlockchange', () => { I.plock = document.pointerLockElement === canvas; if (!I.plock && typeof onPointerUnlock === 'function') onPointerUnlock(); });
+  addEventListener('mousemove', e => { if (I.plock && !Player.locked) { I.lookX += e.movementX * 0.0022 * I.sens; I.lookY += e.movementY * 0.0022 * I.sens; } });
+  const moveSide = x => I.lefty ? x >= innerWidth * 0.5 : x < innerWidth * 0.5;
+  function endStick() { if (I.joyT) { I.joyT = null; } I.joy = null; stick.style.display = 'none'; }
+  function endLook() { I.look = null; }
+  const down = e => {
+    if (e.pointerType === 'mouse') {
+      if (e.button !== 0 && e.button !== undefined) return;
+      if (!I.plock && game.playing && !Player.locked) { I.drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; if (canvas.requestPointerLock) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (err) { } } }
+      return;
+    }
+    I.touch = true; e.preventDefault();
+    if (busy()) return;
+    if (moveSide(e.clientX) && !I.joyT) {
+      const r = 58, x = clamp(e.clientX, r, innerWidth - r), y = clamp(e.clientY, r, innerHeight - r);
+      I.joyT = { id: e.pointerId, x, y }; I.joy = { x: 0, y: 0 }; stick.style.display = 'block'; stick.style.left = x + 'px'; stick.style.top = y + 'px'; knob.style.transform = 'translate(-50%,-50%)';
+    } else if (!I.look) I.look = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp };
+  };
+  const move = e => {
+    if (I.joyT && e.pointerId === I.joyT.id) {
+      const R0 = I.stickR; let dx = (e.clientX - I.joyT.x) / R0, dy = (e.clientY - I.joyT.y) / R0; const l = Math.hypot(dx, dy);
+      let m = Math.min(1, l); if (l > 1) { dx /= l; dy /= l; }
+      m = m < I.dead ? 0 : (m - I.dead) / (1 - I.dead);                                        // dead zone, then back up to 1 at full push
+      const k = l > 1e-6 ? m / Math.min(1, l) : 0; I.joy = { x: dx * k, y: dy * k };
+      knob.style.transform = `translate(calc(-50% + ${dx * R0}px), calc(-50% + ${dy * R0}px))`;
+      knob.style.background = m > 0.93 ? 'rgba(216,181,99,0.6)' : '';
+    } else if (I.look && e.pointerId === I.look.id) {
+      const dx = e.clientX - I.look.x, dy = e.clientY - I.look.y, g = lookGain(dx, dy, e.timeStamp - I.look.t) * 0.0052 * I.sens;
+      I.lookX += dx * g; I.lookY += dy * g; I.look.x = e.clientX; I.look.y = e.clientY; I.look.t = e.timeStamp;
+    } else if (I.drag && e.pointerId === I.drag.id && !I.plock) {
+      I.lookX += (e.clientX - I.drag.x) * 0.004 * I.sens; I.lookY += (e.clientY - I.drag.y) * 0.004 * I.sens; I.drag.x = e.clientX; I.drag.y = e.clientY;
+    }
+  };
+  const up = e => {
+    if (I.joyT && e.pointerId === I.joyT.id) endStick();
+    if (I.look && e.pointerId === I.look.id) endLook();
+    if (I.drag && e.pointerId === I.drag.id) I.drag = null;
+  };
+  layer.addEventListener('pointerdown', down); addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  layer.addEventListener('contextmenu', e => e.preventDefault());
+  // every finger gone: nothing can still be held (covers an "up" the browser never delivered)
+  const lifted = e => { if (!e.touches || e.touches.length === 0) { endStick(); endLook(); } };
+  addEventListener('touchend', lifted, { passive: true }); addEventListener('touchcancel', lifted, { passive: true });
+  // no page scroll or pinch zoom behind the game; the journal, dialogue and settings keep their own scrolling
+  const scrolls = t => t && t.closest && t.closest('.tab, #dialog, #reader .sheet, #pause, select, input[type=range]');
+  document.addEventListener('touchmove', e => { if (!scrolls(e.target)) e.preventDefault(); }, { passive: false });
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault());
+  document.addEventListener('selectstart', e => { if (!(e.target && e.target.closest && e.target.closest('input, select, textarea'))) e.preventDefault(); });
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('dragstart', e => e.preventDefault());
+  addEventListener('wheel', e => { if (!scrolls(e.target) && !(e.target && e.target.closest && e.target.closest('#mapWrap'))) e.preventDefault(); }, { passive: false });
+}
+
+
+// ---- 88_audio.js ----
+// ───────────────────────── Snd: the sound engine ─────────────────────────
+// 88_audio.js   engine: context, master chain (soft limiter), buses, reverb spaces, listener, positional routing, voices, iOS handling,
+//               Settings block, and the Audio2 shim the rest of the game still calls.
+// 88b_sfx.js    synthesised one-shots (footsteps, doors, combat, UI, bells, birds ...): Snd.lib[name] = { bus, prio, gap, fn }.
+// 88c_beds.js   ambience beds, positional loops (river, lake, fire, mill, forge, crowd) and scheduled nature sounds.
+// 88c_world.js  reads the game (player, zones, ENV, NPCs, foes) once per frame and drives footsteps, doors, bell, forge, combat.
+// 88c_music.js  procedural adaptive music and the lute tune.
+// Everything is built on any BaseAudioContext, so test/audio.mjs renders it offline. Nothing here allocates per frame, and every
+// call is safe when there is no audio device (the context stays null or suspended and update() returns at once).
+const Snd = {
+  ctx: null, disabled: false, T: 0, frame: 0, err: 0, errMsg: '', pausedMul: 1, ups: [], lib: {}, bus: {}, rin: {}, rret: {}, sp: { open: 1, room: 0, hall: 0, cave: 0 }, spT: { open: 1, room: 0, hall: 0, cave: 0 },
+  set: { master: 0.8, amb: 0.85, world: 0.85, foot: 0.85, ui: 0.85, music: 0.6, musicOn: true },
+  // base trims per bus (dB-ish scaling chosen so that ambience beds sit near -27 dB RMS, footsteps and interactions peak near -12 dB)
+  trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 2.5 },
+  rvSend: { amb: 0.1, world: 0.55, foot: 0.7, ui: 0.25, music: 0.4 },
+  L: { x: 0, y: 0, z: 0, yaw: 0, fx: 0, fz: -1, rx: 1, rz: 0 },
+  G: { x: 0, y: 0, z: 0, zone: 0, zid: '', indoor: 0, space: 'open', hour: 12, night: 0, day: 1, wind: 0.8, rain: 0, forest: 0, playing: false, menu: false, talk: false, dead: false, speed: 0, ground: true, outd: 1, nearTown: 0 },
+  dbg: {}, trims: {}, vEnd: new Float64Array(64), vPrio: new Uint8Array(64), vN: 0, last: {}, _s: { g: 0, lp: 16000, pan: 0, d: 0 },
+
+  // ── persistence of the volume block (master and music are shared with the older Sound / Music sliders through Audio2) ──
+  load() { try { const j = JSON.parse(localStorage.getItem('brackenfell.snd') || 'null'); if (j) for (const k in this.set) if (j[k] !== undefined && typeof j[k] === typeof this.set[k]) this.set[k] = j[k]; } catch (e) { } },
+  save() { try { localStorage.setItem('brackenfell.snd', JSON.stringify(this.set)); } catch (e) { } },
+
+  // ── context ──
+  start() {
+    if (this.ctx) { this.resume(); return; }
+    if (this.disabled) return;
+    const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext); if (!AC) { this.disabled = true; return; }
+    try {
+      const c = new AC({ latencyHint: 'interactive' }); this.build(c); this.ctx = c; this.running = c.state === 'running';
+      c.onstatechange = () => { this.running = c.state === 'running'; };
+      // iOS only starts a context from inside a gesture: play one silent sample now, and resume on every later gesture if it is suspended or interrupted
+      const b = c.createBuffer(1, 1, c.sampleRate), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0);
+      this.resume();
+    } catch (e) { this.ctx = null; this.disabled = true; this.errMsg = String(e); }
+  },
+  resume() { const c = this.ctx; if (!c || this.hidden) return; if (c.state !== 'running') { try { const p = c.resume(); if (p && p.catch) p.catch(() => { }); } catch (e) { } } },
+  hush() { const c = this.ctx; if (c && c.state === 'running') { try { const p = c.suspend(); if (p && p.catch) p.catch(() => { }); } catch (e) { } } },
+
+  // ── graph ──
+  build(c, o) {
+    const S = this; S.ctx = S.ctx || null; S.c = c; S.sr = c.sampleRate; o = o || {};
+    S.master = c.createGain(); S.master.gain.value = 0;
+    S.shelf = c.createBiquadFilter(); S.shelf.type = 'highshelf'; S.shelf.frequency.value = 7000; S.shelf.gain.value = -2.5;           // phone speakers are bright: take the edge off
+    S.comp = c.createDynamicsCompressor(); S.comp.threshold.value = -4; S.comp.knee.value = 3; S.comp.ratio.value = 16;      // a limiter, not a leveller: the browsers add make-up gain to compressors, so keep it near +2 dB S.comp.attack.value = 0.004; S.comp.release.value = 0.14;
+    S.clip = c.createWaveShaper();            // the last word: a soft ceiling at 0.89 (-1 dBFS), linear below 0.6, so nothing can leave the chain above -1 dB
+    const n = 2048, cv = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1, a = Math.abs(x); cv[i] = (a < 0.6 ? a : 0.6 + 0.29 * Math.tanh((a - 0.6) / 0.29)) * Math.sign(x); } S.clip.curve = cv;
+    S.pre = c.createGain(); S.pre.connect(S.master); S.master.connect(S.shelf); S.shelf.connect(S.comp); S.comp.connect(S.clip); S.clip.connect(c.destination);
+    // noise stock: white, pink (Kellet), brown. Every bed and burst plays slices of these.
+    S.nz = {}; for (const k of ['white', 'pink', 'brown']) S.nz[k] = S.mkNoise(k, 4);
+    // slow random control signal in [-1, 1], features about 1 s long at rate 1 (play faster for quicker flutter): modulates levels and filters
+    { const n = 60 * 8000, b = c.createBuffer(1, n, 8000), d = b.getChannelData(0), pts = new Float32Array(62); let s = 4242; for (let i = 0; i < 62; i++) { s = (s * 1664525 + 1013904223) >>> 0; pts[i] = (s / 4294967296) * 2 - 1; } pts[60] = pts[0];
+      for (let i = 0; i < n; i++) { const x = i / 8000, k = Math.floor(x), f = x - k, u = f * f * (3 - 2 * f); d[i] = pts[k] + (pts[k + 1] - pts[k]) * u; } d[n - 1] = d[0]; S.slow = b; }
+    // reverb spaces: a small room, a hall (inn, chapel), a stone cellar; open air is a faint filtered slap
+    S.rv = {};
+    for (const [k, dur, dec, bright, pre, er] of [['room', 0.5, 5.5, 0.55, 0.004, 1], ['hall', 2.3, 3.4, 0.5, 0.018, 0.6], ['cave', 3.6, 2.6, 0.32, 0.03, 0.3]]) {
+      const cv2 = c.createConvolver(); cv2.buffer = S.mkIR(dur, dec, bright, pre, er); const rg = c.createGain(); rg.gain.value = 0; cv2.connect(rg); rg.connect(S.pre); S.rin[k] = cv2; S.rret[k] = rg;
+    }
+    { const d = c.createDelay(0.5), fb = c.createGain(), lp = c.createBiquadFilter(), rg = c.createGain(); d.delayTime.value = 0.13; fb.gain.value = 0.22; lp.type = 'lowpass'; lp.frequency.value = 2200; rg.gain.value = 0;
+      const inn = c.createGain(); inn.connect(d); d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(rg); rg.connect(S.pre); S.rin.open = inn; S.rret.open = rg; }
+    S.rvList = ['open', 'room', 'hall', 'cave'];
+    for (const k of ['amb', 'world', 'foot', 'ui', 'music']) {
+      const g = c.createGain(); g.gain.value = S.set[k] * S.trim[k]; g.connect(S.pre);
+      const b = S.bus[k] = { g, in: g, snd: {} };
+      for (const s of S.rvList) { const sg = c.createGain(); sg.gain.value = 0; g.connect(sg); sg.connect(S.rin[s]); b.snd[s] = sg; }
+    }
+    S.out = S.bus.world.in;
+    S.master.gain.value = o.instant ? S.set.master : 0;
+    S.spT.open = 1; S.sp.open = 1; S.applySends(true);
+    S.buf = S.buf || {};
+    S.vN = 0; S.vEnd.fill(0);
+    for (const fn of S.inits || []) fn(S, c);
+    return S;
+  },
+  mkNoise(kind, secs) {
+    const c = this.c, n = Math.floor(c.sampleRate * secs), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+    let a0 = 0, a1 = 0, a2 = 0, a3 = 0, a4 = 0, a5 = 0, a6 = 0, br = 0, s = 12345;
+    for (let i = 0; i < n; i++) {
+      s = (s * 1664525 + 1013904223) >>> 0; const w = (s / 4294967296) * 2 - 1;
+      if (kind === 'white') d[i] = w;
+      else if (kind === 'pink') { a0 = 0.99886 * a0 + w * 0.0555179; a1 = 0.99332 * a1 + w * 0.0750759; a2 = 0.969 * a2 + w * 0.153852; a3 = 0.8665 * a3 + w * 0.3104856; a4 = 0.55 * a4 + w * 0.5329522; a5 = -0.7616 * a5 - w * 0.016898; d[i] = (a0 + a1 + a2 + a3 + a4 + a5 + a6 + w * 0.5362) * 0.11; a6 = w * 0.115926; }
+      else { br = (br + 0.02 * w) / 1.02; d[i] = br * 3.5; }
+    }
+    // make it loop seamlessly: crossfade the last 2000 samples into the first
+    const x = Math.min(2000, n >> 2); for (let i = 0; i < x; i++) { const k = i / x; d[i] = d[i] * k + d[n - x + i] * (1 - k); }
+    return b;
+  },
+  mkIR(dur, decay, bright, pre, er) {
+    const c = this.c, sr = c.sampleRate, n = Math.floor(sr * dur), b = c.createBuffer(2, n, sr);
+    let s = 987654321 + Math.floor(dur * 1000);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = b.getChannelData(ch); let lp = 0; const p0 = Math.floor(pre * sr);
+      for (let i = p0; i < n; i++) {
+        s = (s * 1664525 + 1013904223) >>> 0; const w = (s / 4294967296) * 2 - 1, t = (i - p0) / (n - p0);
+        const k = bright * Math.pow(1 - t, 1.6) + 0.05; lp += (w - lp) * Math.min(1, k * 0.9 + 0.03);       // the tail gets darker as it dies
+        d[i] = lp * Math.exp(-decay * 2.3 * t) * (1 - Math.exp(-(i - p0) / (sr * 0.004)));
+      }
+      // sparse early reflections
+      for (let e = 0; e < 7; e++) { s = (s * 1664525 + 1013904223) >>> 0; const at = p0 + Math.floor((0.004 + (s / 4294967296) * 0.05 * (dur > 1 ? 1.6 : 1)) * sr); if (at < n) d[at] += (ch ? -1 : 1) * er * (0.35 - e * 0.03); }
+    }
+    return b;
+  },
+
+  // ── reverb space and bus levels ──
+  applySends(now) {
+    const S = this, t = S.now(), tc = now ? 0.001 : 0.25;
+    for (const k of S.rvList) {
+      const w = S.sp[k], ret = k === 'open' ? 0.22 : k === 'room' ? 0.9 : k === 'hall' ? 1.0 : 1.0;
+      S.rret[k].gain.setTargetAtTime(ret, t, 0.05);
+      for (const bn of ['amb', 'world', 'foot', 'ui', 'music']) {
+        const b = S.bus[bn]; let lv = S.rvSend[bn] * w;
+        if (bn === 'music') lv = S.rvSend.music * (k === 'open' ? 0 : 0.6 * w) + (k === 'hall' ? 0.45 * (1 - 0.5 * w) : 0);        // the music always has a little hall around it
+        else if (k === 'open') lv *= bn === 'amb' || bn === 'ui' ? 0 : 0.5;
+        b.snd[k].gain.setTargetAtTime(lv, t, tc);
+      }
+    }
+  },
+  busLevels() {
+    const S = this, t = S.now(), u = S.set, m = S.G.talk ? 0.38 : 1;
+    S.master.gain.setTargetAtTime(u.master * S.pausedMul * S.fadeIn, t, 0.15);
+    const dk = 1 - 0.45 * (S.duck || 0);      // speech ducks the ambience and the world
+    S.bus.amb.g.gain.setTargetAtTime(u.amb * S.trim.amb * dk, t, 0.3);
+    S.bus.world.g.gain.setTargetAtTime(u.world * S.trim.world * dk, t, 0.3);
+    S.bus.foot.g.gain.setTargetAtTime(u.foot * S.trim.foot, t, 0.3);
+    S.bus.ui.g.gain.setTargetAtTime(u.ui * S.trim.ui, t, 0.3);
+    S.dbg.music = (u.musicOn ? u.music : 0) * S.trim.music * m * (1 - 0.6 * (S.duck || 0)); S.bus.music.g.gain.setTargetAtTime(S.dbg.music, t, S.G.talk ? 0.35 : 1.2);        // ducks under dialogue
+  },
+
+  // ── voices: a hard limit on one-shots, with room kept for important ones ──
+  voice(prio, dur) {
+    const S = this, now = S.now(); let n = 0, free = -1;
+    for (let i = 0; i < 64; i++) { if (S.vEnd[i] > now) n++; else if (free < 0) free = i; }
+    S.vN = n; const lim = prio >= 2 ? 40 : prio === 1 ? 30 : 22;
+    if (n >= lim || free < 0) return false;
+    S.vEnd[free] = now + dur; S.vPrio[free] = prio; S.vN = n + 1; return true;
+  },
+
+  // ── positional audibility: distance roll-off, air absorption, and a muffled wall when the source is in another zone ──
+  spat(x, y, z, zone, ref, maxD, out) {
+    const S = this, L = S.L, G = S.G, dx = x - L.x, dy = y - L.y, dz = z - L.z, d = Math.sqrt(dx * dx + dy * dy + dz * dz), o = out || S._s;
+    o.d = d; if (d > maxD) { o.g = 0; return false; }
+    let g = ref / Math.max(d, ref); const f = d / maxD; g *= 1 - f * f * f;
+    let lp = 16000 / (1 + d / 18); if (lp < 1400) lp = 1400;
+    if (zone !== G.zone) { g *= G.zone && zone ? 0.1 : 0.2; lp = Math.min(lp, G.zone && zone ? 450 : 700); }       // through a wall (or two)
+    const dl = d > 0.01 ? 1 / d : 0, hx = dx * dl, hz = dz * dl;
+    o.pan = d < 1.2 ? 0 : Math.max(-0.95, Math.min(0.95, (hx * L.rx + hz * L.rz) * 0.9));
+    const back = hx * L.fx + hz * L.fz; if (back < 0) lp *= 0.75 + 0.25 * (1 + back);                                  // head shadow behind you
+    o.g = g; o.lp = lp; return g > 0.004;
+  },
+  // a disposable chain for one voice: returns the node to connect the sound to, or null when it could not be heard
+  route(bus, x, y, z, zone, ref, maxD, v) {
+    const S = this, c = S.c, o = S._s; if (!S.spat(x, y, z, zone, ref || 2.5, maxD || 90, o)) return null;
+    const g = c.createGain(), lp = c.createBiquadFilter(), p = c.createStereoPanner ? c.createStereoPanner() : null;
+    g.gain.value = o.g * (v === undefined ? 1 : v); lp.type = 'lowpass'; lp.frequency.value = o.lp; lp.Q.value = 0.5; g.connect(lp);
+    if (p) { p.pan.value = o.pan; lp.connect(p); p.connect(S.bus[bus].in); } else lp.connect(S.bus[bus].in);
+    return g;
+  },
+  zoneOf(x, y, z) { return typeof World !== 'undefined' && World.zoneAt ? World.zoneAt(x, y + 1, z) : 0; },
+
+  // ── playing a library sound. pos = [x,y,z] or null for a sound at the listener. Returns true if it started. ──
+  play(name, pos, v, p) {
+    const S = this, c = S.c, e = S.lib[name]; if (!c || !e || S.off) return false;
+    const now = S.now();
+    if (e.gap && !(p && p.free)) { const l = S.last[name]; if (l !== undefined && now - l < e.gap) return false; S.last[name] = now; }
+    if (!S.voice(e.prio || 1, e.dur || 1)) return false;
+    let out = S.bus[e.bus || 'world'].in;
+    if (pos) { out = S.route(e.bus || 'world', pos[0], pos[1], pos[2], p && p.zone !== undefined ? p.zone : S.zoneOf(pos[0], pos[1], pos[2]), e.ref, e.max, 1); if (!out) return false; }
+    e.fn(S, c, out, now + (p && p.delay || 0.004), (v === undefined ? 1 : v) * (S.trims[name] || 1), p || null);
+    return true;
+  },
+  event(name, pos, v, p) { return this.play(name, pos || null, v, p); },
+
+  // ── helpers the library uses ──
+  // a started slice of the stock noise, stopped by the caller
+  src(kind, t, dur, rate) { const s = this.c.createBufferSource(), b = this.nz[kind || 'white']; s.buffer = b; if (rate) s.playbackRate.value = rate; s.start(t, Math.random() * (b.duration - dur - 0.1), dur + 0.05); return s; },
+  // enveloped filtered noise: o = { d, a, f, f2, q, type, v, kind, hp, rate }
+  nb(out, t, o) {
+    const c = this.c, d = o.d || 0.1, a = o.a || 0.003, s = this.src(o.kind, t, d + a, o.rate), fl = c.createBiquadFilter(), g = c.createGain();
+    fl.type = o.type || 'bandpass'; fl.frequency.setValueAtTime(o.f || 1000, t); if (o.f2) fl.frequency.exponentialRampToValueAtTime(o.f2, t + d); fl.Q.value = o.q || 0.8;
+    const v = Math.max(1e-4, o.v === undefined ? 0.5 : o.v); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+    s.connect(fl); let last = fl; if (o.hp) { const h = c.createBiquadFilter(); h.type = 'highpass'; h.frequency.value = o.hp; fl.connect(h); last = h; }
+    last.connect(g); g.connect(out); return g;
+  },
+  // enveloped oscillator: o = { f, f2, d, a, v, type, det, vib, vibf }
+  tn(out, t, o) {
+    const c = this.c, d = o.d || 0.2, a = o.a || 0.005, os = c.createOscillator(), g = c.createGain(); os.type = o.type || 'sine';
+    os.frequency.setValueAtTime(o.f, t); if (o.f2) os.frequency.exponentialRampToValueAtTime(o.f2, t + (o.fd || d)); if (o.det) os.detune.value = o.det;
+    if (o.vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = o.vibf || 5.5; lg.gain.value = o.vib; l.connect(lg); lg.connect(os.frequency); l.start(t); l.stop(t + a + d + 0.05); }
+    const v = Math.max(1e-4, o.v === undefined ? 0.2 : o.v); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+    os.connect(g); g.connect(out); os.start(t); os.stop(t + a + d + 0.05); return g;
+  },
+  // modal resonators: a struck object is a handful of decaying sines. parts: [[ratio, amp, decaySeconds], ...]
+  modal(out, t, f0, parts, v, o) {
+    const c = this.c, sum = c.createGain(); sum.gain.value = v; sum.connect(out); o = o || {};
+    for (let i = 0; i < parts.length; i++) { const p = parts[i], f = f0 * p[0] * (1 + (o.jit || 0) * (Math.random() - 0.5)); if (f > 18000) continue; this.tn(sum, t, { f, d: p[2], a: o.a || 0.0015, v: p[1] }); }
+    return sum;
+  },
+  // Karplus-Strong string, rendered once into a buffer and cached by pitch (lute, harp, plucked voices)
+  ks(f, dur, bright) {
+    const S = this, key = Math.round(f * 4) + ':' + dur + ':' + bright; S.buf.ks = S.buf.ks || {}; if (S.buf.ks[key]) return S.buf.ks[key];
+    const sr = S.sr, n = Math.floor(sr * dur), N = Math.max(2, Math.round(sr / f)), b = S.c.createBuffer(1, n, sr), d = b.getChannelData(0), ring = new Float32Array(N);
+    let s = Math.floor(f * 977) + 1; for (let i = 0; i < N; i++) { s = (s * 1664525 + 1013904223) >>> 0; ring[i] = ((s / 4294967296) * 2 - 1) * (0.3 + 0.7 * bright); }
+    let lp = 0; for (let i = 1; i < N; i++) { lp += (ring[i] - lp) * (0.35 + 0.6 * bright); ring[i] = lp; }
+    const damp = 0.996 - (1 - bright) * 0.004; let idx = 0;
+    for (let i = 0; i < n; i++) { const j = (idx + 1) % N, v = (ring[idx] + ring[j]) * 0.5 * damp; d[i] = ring[idx]; ring[idx] = v; idx = j; }
+    for (let i = 0; i < 64; i++) d[n - 1 - i] *= i / 64; S.buf.ks[key] = b; return b;
+  },
+  pluck(out, t, f, v, o) { const c = this.c, s = c.createBufferSource(), g = c.createGain(); o = o || {}; s.buffer = this.ks(f, o.dur || 1.6, o.bright === undefined ? 0.6 : o.bright); g.gain.value = v; s.connect(g); g.connect(out); s.start(t); return g; },
+  now() { return this.fakeNow !== undefined ? this.fakeNow : this.c.currentTime; },
+  rnd(a, b) { return a + Math.random() * (b - a); },
+  pick(a) { return a[Math.floor(Math.random() * a.length)]; },
+};
+Snd.inits = [];
+Snd.load();
+
+// the main per-frame call. Never throws, never allocates; after repeated failures it switches itself off and the game goes on silently.
+Snd.update = function (dt) {
+  const S = this, c = S.ctx; if (!c || S.off) return;
+  if (c.state !== 'running') { S.running = false; return; }
+  S.running = true; S.step(dt);
+};
+Snd.step = function (dt) {
+  const S = this;
+  try {
+    dt = Math.min(dt, 0.1); S.T += dt; S.frame++; S.dt = dt;
+    if (S.fadeIn === undefined) S.fadeIn = 0; S.fadeIn = Math.min(1, S.fadeIn + dt / 1.5);
+    if (S.gather) S.gather(dt);
+    const G = S.G; S.pausedMul += ((!G.playing ? 0.55 : G.menu ? 0.6 : G.dead ? 0.5 : 1) - S.pausedMul) * Math.min(1, dt * 3);
+    // reverb space: crossfade towards the one the listener is in
+    const tgt = S.spT; tgt.open = G.space === 'open' ? 1 : 0; tgt.room = G.space === 'room' ? 1 : 0; tgt.hall = G.space === 'hall' ? 1 : 0; tgt.cave = G.space === 'cave' ? 1 : 0;
+    const k = Math.min(1, dt / 0.7); for (const n of S.rvList) S.sp[n] += (tgt[n] - S.sp[n]) * k;
+    if ((S.frame & 3) === 0) { S.applySends(false); S.busLevels(); }
+    for (let i = 0; i < S.ups.length; i++) S.ups[i](S, dt, G);
+  } catch (e) { S.err++; if (S.err === 1) { S.errMsg = String(e && e.stack || e); if (typeof console !== 'undefined') console.warn('[Snd]', S.errMsg); } if (S.err > 30) S.off = true; }
+};
+
+// ── iOS and friends: unlock on the first touch, resume after the phone was locked, a call, or the tab was hidden ──
+if (typeof document !== 'undefined') {
+  const wake = () => { if (typeof game !== 'undefined' && !game.ready && !Snd.ctx) return; Snd.start(); };
+  for (const ev of ['touchstart', 'touchend', 'pointerup', 'mousedown', 'keydown']) document.addEventListener(ev, wake, { capture: true, passive: true });
+  const hide = () => { Snd.hidden = true; Snd.hush(); };
+  const show = () => { Snd.hidden = false; Snd.resume(); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) hide(); else show(); });
+  addEventListener('pagehide', hide); addEventListener('pageshow', show); addEventListener('blur', () => { if (document.hidden) hide(); });
+}
+
+// ── Settings: a small additive block under the existing Sound and Music sliders (built here so no other file needs to know) ──
+Snd.settingsUI = function () {
+  if (this.uiDone || typeof document === 'undefined') return; const m = document.getElementById('setMusic'); if (!m || !m.parentNode) return; this.uiDone = true;
+  const anchor = m.parentNode, S = this; let after = anchor;
+  const row = (label, id, key) => { const l = document.createElement('label'); l.className = 'row'; l.htmlFor = id; const s = document.createElement('span'); s.textContent = label; const i = document.createElement('input'); i.type = 'range'; i.min = 0; i.max = 1; i.step = 0.05; i.id = id; i.value = S.set[key]; i.addEventListener('input', e => { S.set[key] = +e.target.value; S.save(); if (S.ctx) S.busLevels(); }); l.appendChild(s); l.appendChild(i); after.after(l); after = l; };
+  row('Ambience', 'setAmb', 'amb'); row('World effects', 'setWorld', 'world'); row('Footsteps', 'setFoot', 'foot'); row('Voices and interface', 'setUi', 'ui');
+  const l = document.createElement('label'); l.className = 'row check'; l.htmlFor = 'setMusicOn'; const s = document.createElement('span'); s.textContent = 'Music on'; const i = document.createElement('input'); i.type = 'checkbox'; i.id = 'setMusicOn'; i.checked = S.set.musicOn;
+  i.addEventListener('change', e => { S.set.musicOn = e.target.checked; S.save(); if (S.ctx) S.busLevels(); }); l.appendChild(s); l.appendChild(i); after.after(l);
+  const l2 = document.createElement('label'); l2.className = 'row check'; l2.htmlFor = 'setVoices'; const s2 = document.createElement('span'); s2.textContent = 'Spoken voices'; const i2 = document.createElement('input'); i2.type = 'checkbox'; i2.id = 'setVoices'; i2.checked = S.set.voices; i2.addEventListener('change', e => { S.set.voices = e.target.checked; S.save(); if (!S.set.voices && S.vox) S.vox.stop(); }); l2.appendChild(s2); l2.appendChild(i2); l.after(l2);
+  const l3 = document.createElement('label'); l3.className = 'row'; l3.htmlFor = 'setVoiceVol'; const s3 = document.createElement('span'); s3.textContent = 'Voice volume'; const i3 = document.createElement('input'); i3.type = 'range'; i3.min = 0; i3.max = 1; i3.step = 0.05; i3.id = 'setVoiceVol'; i3.value = S.set.voiceVol; i3.addEventListener('input', e => { S.set.voiceVol = +e.target.value; S.save(); }); l3.appendChild(s3); l3.appendChild(i3); l2.after(l3);
+  const l4 = document.createElement('label'); l4.className = 'row check'; l4.htmlFor = 'setSubs'; const s4 = document.createElement('span'); s4.textContent = 'Subtitles while voiced'; const i4 = document.createElement('input'); i4.type = 'checkbox'; i4.id = 'setSubs'; i4.checked = S.set.subs; i4.addEventListener('change', e => { S.set.subs = e.target.checked; S.save(); document.body.classList.toggle('nosubs', !S.set.subs); }); l4.appendChild(s4); l4.appendChild(i4); l3.after(l4);
+  // the two older sliders write Audio2.vol / Audio2.musicVol: keep them in step with this block
+};
+Snd.ups.push(S => { if (!S.uiDone && (S.frame & 31) === 1) S.settingsUI(); });
+
+// ── Audio2: the old name, kept so the rest of the game keeps working; every method now plays a library sound ──
+const Audio2 = {
+  luteRequest: 0,
+  get ctx() { return Snd.ctx; },
+  get vol() { return Snd.set.master; }, set vol(v) { Snd.set.master = v; Snd.save(); },
+  get musicVol() { return Snd.set.music; }, set musicVol(v) { Snd.set.music = v; Snd.save(); },
+  start() { Snd.start(); }, update(dt) { Snd.update(dt); },
+  // positionless events from older call sites (a position is added where the caller knows one)
+  ui() { Snd.event('ui.click'); }, page() { Snd.event('ui.page'); }, coin() { Snd.event('pickup.coin'); }, pickup(m) { Snd.event('pickup.' + (m || Snd.lastMat || 'generic')); },
+  chest() { Snd.event('chest.open'); }, drink() { Snd.event('drink'); }, eat() { Snd.event('eat'); },
+  door(vol) { },                                    // doors are heard from their own animation (88c_world.js)
+  cluck(vol) { Snd.event('cluck', null, vol); }, clang(vol) { Snd.event('anvil', null, vol); },
+  quest(k) { Snd.event(k === 0 ? 'q.begin' : k === 1 ? 'q.update' : 'q.done'); },
+  bell(vol) { Snd.event('bell.ring', null, vol); },
+  swing(heavy) { Snd.event(heavy ? 'swing.heavy' : 'swing.light'); }, hitFlesh(heavy) { Snd.event(heavy ? 'hit.flesh.heavy' : 'hit.flesh'); },
+  clash(vol) { Snd.event(vol > 0.9 ? 'hit.metal' : 'hit.shield', null, 1); }, hurt() { Snd.event('hurt'); },
+  hop() { Snd.event('jump'); }, shout(deep) { Snd.event(deep ? 'foe.shout.deep' : 'foe.shout'); }, fall() { Snd.event('player.death'); },
+  thud() { Snd.event('land', null, 1, { v: typeof Player !== 'undefined' ? -Player.vel[1] : 7 }); },
+  step() { },                                       // footsteps are timed from the player's stride in 88c_world.js
+};
+
+
+// ---- 88b_sfx.js ----
+// ───────────────────────── Snd.lib: synthesised one-shots ─────────────────────────
+// Each entry: { bus, prio, dur, gap, ref, max, fn(S, c, out, t, v, p) }. v is a volume multiplier, p optional parameters. Recipes are filtered noise,
+// modal resonators (struck wood, metal, glass are a few decaying sines), formant-filtered saws for voices and short Karplus-Strong plucks.
+// Peak levels were set from the offline measurements in test/audio.mjs (footsteps and interactions near -12 dB after the master chain).
+(() => {
+  const L = Snd.lib, def = (name, bus, prio, dur, fn, x) => { L[name] = Object.assign({ bus, prio, dur, fn }, x); }, R = (a, b) => a + Math.random() * (b - a), J = (x, k) => x * (1 + (Math.random() - 0.5) * 2 * (k || 0.12));
+  // formant voice: a saw through parallel bandpass filters, with a little breath
+  Snd.voc = function (out, t, o) {
+    const c = this.c, d = o.d || 0.25, a = o.a || 0.02, os = c.createOscillator(), g = c.createGain(), sum = c.createGain(); os.type = 'sawtooth';
+    os.frequency.setValueAtTime(o.f0, t); os.frequency.linearRampToValueAtTime(o.f1 || o.f0, t + d);
+    if (o.vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = o.vibf || 5.5; lg.gain.value = o.vib; l.connect(lg); lg.connect(os.frequency); l.start(t); l.stop(t + d + a + 0.1); }
+    const v = Math.max(1e-4, o.v || 0.2); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.setTargetAtTime(0, t + a + d * 0.55, d * 0.22);
+    os.connect(g); for (const f of o.form || [[700, 5, 1], [1200, 6, 0.6], [2600, 8, 0.3]]) { const b = c.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f[0] * (o.fs || 1); b.Q.value = f[1]; const fg = c.createGain(); fg.gain.value = f[2]; g.connect(b); b.connect(fg); fg.connect(sum); }
+    sum.gain.value = 1; sum.connect(out); os.start(t); os.stop(t + a + d * 2.2 + 0.1);
+    if (o.breath) this.nb(out, t, { d: d * 0.9, a, f: 2400, q: 0.5, v: v * o.breath });
+  };
+  // hinge and floorboard creak: stick-slip friction, a saw with a wandering pitch through a sweeping resonance
+  Snd.creakSnd = function (out, t, o) {
+    const c = this.c, d = o.d || 0.5, os = c.createOscillator(), bp = c.createBiquadFilter(), g = c.createGain(), lf = c.createOscillator(), lg = c.createGain(), tr = c.createGain();
+    os.type = 'sawtooth'; const f = o.f || 110; os.frequency.setValueAtTime(f * 0.8, t); os.frequency.linearRampToValueAtTime(f * R(1.0, 1.35), t + d * 0.5); os.frequency.linearRampToValueAtTime(f * R(0.9, 1.2), t + d);
+    bp.type = 'bandpass'; bp.Q.value = 7; bp.frequency.setValueAtTime(o.fb || 600, t); bp.frequency.linearRampToValueAtTime((o.fb || 600) * R(1.3, 1.9), t + d);
+    lf.frequency.value = R(26, 52); lg.gain.value = 0.5; tr.gain.value = 0.5; lf.connect(lg); lg.connect(tr.gain);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(o.v || 0.1, t + d * 0.15); g.gain.linearRampToValueAtTime(0, t + d);
+    os.connect(bp); bp.connect(tr); tr.connect(g); g.connect(out); os.start(t); lf.start(t); os.stop(t + d + 0.05); lf.stop(t + d + 0.05);
+  };
+  // a wet send for stingers and bells that should bloom in the hall whatever room the player stands in
+  Snd.wet = function (out, k, lvl) { const g = this.c.createGain(); g.gain.value = lvl; out.connect(g); g.connect(this.rin[k || 'hall']); };
+
+  // ───────── footsteps ─────────
+  // p.w is stride weight (0.7 creeping .. 1.4 sprint); all are two-part: heel, then toe/sole a few hundredths later
+  const fs = (name, fn, x) => def(name, 'foot', 1, 0.5, (S, c, out, t, v, p) => { const w = (p && p.w) || 1; fn(S, c, out, t, v * (0.6 + 0.45 * w), w); S.nb(out, t, { f: 2800, q: 0.4, a: 0.02, d: 0.13, v: 0.05 * v * w }); }, Object.assign({ gap: 0.12 }, x));
+  fs('fs.cobble', (S, c, o, t, v, w) => { const j = R(0.88, 1.12);
+    S.nb(o, t, { f: 2300 * j, q: 1.6, d: 0.035, v: 0.5 * v }); S.modal(o, t, 1050 * j, [[1, 0.3, 0.05], [1.9, 0.2, 0.035], [3.1, 0.1, 0.025]], 0.55 * v); S.nb(o, t, { type: 'lowpass', f: 170, d: 0.09, v: 0.7 * v });
+    S.nb(o, t + 0.06, { f: 1900 * j, q: 1.2, d: 0.025, v: 0.25 * v }); });
+  fs('fs.dirt', (S, c, o, t, v, w) => { const j = R(0.85, 1.15);
+    S.nb(o, t, { type: 'lowpass', f: 1100 * j, q: 0.7, d: 0.085, v: 0.65 * v }); S.nb(o, t, { type: 'highpass', f: 3500, d: 0.03, v: 0.2 * v }); S.nb(o, t, { type: 'lowpass', f: 200, d: 0.07, v: 0.6 * v }); S.nb(o, t + 0.05, { type: 'lowpass', f: 1500 * j, d: 0.05, v: 0.25 * v }); });
+  fs('fs.grass', (S, c, o, t, v, w) => { const j = R(0.85, 1.15);
+    S.nb(o, t, { f: 3200 * j, q: 0.5, a: 0.012, d: 0.12, v: 0.32 * v }); S.nb(o, t, { type: 'lowpass', f: 420, d: 0.07, v: 0.6 * v }); if (Math.random() < 0.5) S.nb(o, t + 0.03, { type: 'highpass', f: 6000, d: 0.02, v: 0.1 * v }); });
+  fs('fs.mud', (S, c, o, t, v, w) => { const j = R(0.85, 1.15);
+    S.nb(o, t, { type: 'lowpass', f: 380 * j, d: 0.13, v: 0.9 * v }); S.nb(o, t, { f: 260, f2: 800, q: 3, a: 0.01, d: 0.08, v: 0.3 * v }); S.nb(o, t + 0.13, { f: 900, f2: 300, q: 2.5, a: 0.01, d: 0.1, v: 0.2 * v }); });
+  fs('fs.water', (S, c, o, t, v, w) => { const j = R(0.85, 1.15), deep = 0;
+    S.nb(o, t, { f: 1600 * j, f2: 700, q: 0.7, a: 0.01, d: 0.24, v: 0.5 * v }); S.nb(o, t, { type: 'lowpass', f: 260, d: 0.12, v: 0.6 * v });
+    for (let i = 0; i < 2; i++) S.tn(o, t + 0.03 + i * R(0.03, 0.07), { f: R(600, 1000), f2: R(1500, 2200), d: 0.035, a: 0.004, v: 0.07 * v }); });
+  fs('fs.wood', (S, c, o, t, v, w) => { const j = R(0.9, 1.1);
+    S.modal(o, t, 140 * j, [[1, 0.5, 0.13], [1.9, 0.3, 0.08], [3.2, 0.16, 0.05]], 0.9 * v); S.nb(o, t, { f: 900, q: 1, d: 0.03, v: 0.35 * v }); S.nb(o, t, { type: 'lowpass', f: 320, d: 0.07, v: 0.4 * v }); });
+  fs('fs.plank', (S, c, o, t, v, w) => { const j = R(0.9, 1.1);
+    S.modal(o, t, 190 * j, [[1, 0.4, 0.07], [2.3, 0.2, 0.04], [3.7, 0.1, 0.03]], 0.7 * v); S.nb(o, t, { f: 1200, q: 1, d: 0.025, v: 0.3 * v }); S.nb(o, t, { type: 'lowpass', f: 260, d: 0.06, v: 0.4 * v });
+    if (Math.random() < 0.09) S.creakSnd(o, t + 0.02, { d: R(0.2, 0.4), f: 140, fb: 500, v: 0.05 * v }); });
+  fs('fs.stone', (S, c, o, t, v, w) => { const j = R(0.9, 1.1);
+    S.nb(o, t, { f: 2600 * j, q: 2, d: 0.03, v: 0.5 * v }); S.modal(o, t, 1300 * j, [[1, 0.25, 0.08], [2.2, 0.15, 0.05]], 0.5 * v); S.nb(o, t, { type: 'lowpass', f: 200, d: 0.1, v: 0.6 * v }); S.nb(o, t + 0.055, { f: 2000, q: 1.5, d: 0.025, v: 0.2 * v }); });
+  fs('fs.stairs', (S, c, o, t, v, w) => { const j = R(0.9, 1.1);
+    S.modal(o, t, 150 * j, [[1, 0.55, 0.11], [2.1, 0.3, 0.07], [3.5, 0.15, 0.04]], 1.0 * v); S.nb(o, t, { f: 800, q: 1, d: 0.03, v: 0.3 * v }); S.nb(o, t, { type: 'lowpass', f: 240, d: 0.07, v: 0.5 * v }); });
+  // villagers use the same recipes quieter, through the world bus and a spatial route (see 88c_world.js)
+  def('rustle', 'foot', 0, 0.3, (S, c, o, t, v) => { S.nb(o, t, { f: 2800, q: 0.4, a: 0.03, d: 0.16, v: 0.12 * v, hp: 1200 }); }, { gap: 0.25 });
+
+  // ───────── body ─────────
+  def('land', 'foot', 2, 0.5, (S, c, o, t, v, p) => { const h = Math.min(1, ((p && p.v) || 6) / 12);
+    S.nb(o, t, { type: 'lowpass', f: 130, q: 0.7, d: 0.16 + 0.1 * h, v: (0.35 + 0.7 * h) * v }); S.nb(o, t, { type: 'lowpass', f: 700, d: 0.1, v: 0.35 * v * (0.4 + h) }); S.nb(o, t, { f: 3000, q: 0.5, a: 0.02, d: 0.12, v: 0.15 * v * (0.4 + h) });
+    if (h > 0.55) S.voc(o, t + 0.01, { f0: 150, f1: 95, d: 0.18, v: 0.3 * v * h, form: [[500, 5, 1], [900, 6, 0.5], [2400, 8, 0.2]], breath: 0.3 }); });
+  def('jump', 'foot', 1, 0.3, (S, c, o, t, v) => { S.voc(o, t, { f0: 150, f1: 185, d: 0.12, a: 0.015, v: 0.14 * v, form: [[600, 5, 1], [1000, 6, 0.5], [2500, 8, 0.2]], breath: 0.4 }); S.nb(o, t, { f: 2800, q: 0.4, a: 0.03, d: 0.14, v: 0.1 * v, hp: 1200 }); }, { gap: 0.2 });
+  def('breath', 'ui', 0, 1.2, (S, c, o, t, v, p) => { const lo = (p && p.lo) || 0.5;       // a gasp in, a push out; louder the more tired
+    S.nb(o, t, { f: 1100, f2: 1700, q: 0.7, a: 0.16, d: 0.3, v: (0.12 + 0.2 * lo) * v }); S.nb(o, t + 0.45, { f: 1500, f2: 800, q: 0.8, a: 0.05, d: 0.5, v: (0.1 + 0.16 * lo) * v }); }, { gap: 0.9 });
+  def('hurt', 'ui', 2, 0.6, (S, c, o, t, v) => { S.voc(o, t, { f0: 200, f1: 118, d: 0.28, a: 0.01, v: 0.3 * v, form: [[800, 5, 1], [1150, 6, 0.6], [2900, 8, 0.25]], breath: 0.3 }); S.nb(o, t, { type: 'lowpass', f: 330, d: 0.2, v: 0.55 * v }); S.nb(o, t, { f: 2500, q: 0.5, a: 0.02, d: 0.1, v: 0.1 * v }); }, { gap: 0.15 });
+  def('player.death', 'ui', 2, 2.2, (S, c, o, t, v) => { S.voc(o, t, { f0: 190, f1: 70, d: 0.9, a: 0.02, v: 0.3 * v, form: [[700, 5, 1], [1100, 6, 0.5], [2700, 8, 0.2]], breath: 0.4 }); S.nb(o, t + 0.5, { type: 'lowpass', f: 120, d: 0.5, v: 0.9 * v }); S.nb(o, t + 0.5, { type: 'lowpass', f: 600, d: 0.4, v: 0.4 * v }); S.nb(o, t + 0.55, { f: 3000, q: 0.5, d: 0.3, v: 0.12 * v }); });
+  def('heart', 'ui', 1, 0.7, (S, c, o, t, v) => { S.tn(o, t, { f: 62, f2: 42, d: 0.14, a: 0.008, v: 0.65 * v }); S.tn(o, t + 0.21, { f: 52, f2: 38, d: 0.13, a: 0.008, v: 0.45 * v }); }, { gap: 0.4 });
+
+  // ───────── doors, chests, things picked up ─────────
+  const latch = (S, o, t, v) => { S.nb(o, t, { f: 2400, q: 3, d: 0.012, v: 0.3 * v }); S.modal(o, t, 950, [[1, 0.2, 0.05], [2.6, 0.12, 0.03]], 0.3 * v); };
+  def('door.open', 'world', 1, 1.2, (S, c, o, t, v) => { latch(S, o, t, v); S.creakSnd(o, t + 0.04, { d: R(0.45, 0.7), f: R(95, 125), fb: R(500, 700), v: 0.28 * v }); S.nb(o, t + 0.1, { f: 300, q: 0.5, a: 0.2, d: 0.4, v: 0.05 * v }); S.nb(o, t + 0.55, { type: 'lowpass', f: 150, d: 0.12, v: 0.25 * v }); }, { ref: 3, max: 45, gap: 0.2 });
+  def('door.close', 'world', 1, 1.0, (S, c, o, t, v) => { S.nb(o, t, { f: 400, f2: 200, q: 0.5, a: 0.12, d: 0.3, v: 0.08 * v }); S.modal(o, t + 0.32, 110, [[1, 0.8, 0.16], [2.1, 0.35, 0.08], [3.4, 0.15, 0.05]], 0.9 * v); S.nb(o, t + 0.32, { type: 'lowpass', f: 420, d: 0.1, v: 0.6 * v }); latch(S, o, t + 0.36, v * 0.8); }, { ref: 3, max: 45, gap: 0.2 });
+  def('door.locked', 'world', 1, 0.8, (S, c, o, t, v) => { for (let i = 0; i < 3; i++) { S.nb(o, t + i * 0.075, { f: 1800, q: 4, d: 0.02, v: 0.35 * v }); S.modal(o, t + i * 0.075, 800 + i * 90, [[1, 0.25, 0.06], [2.7, 0.15, 0.04]], 0.35 * v); } S.modal(o, t, 130, [[1, 0.5, 0.09]], 0.4 * v); S.creakSnd(o, t + 0.2, { d: 0.18, f: 150, fb: 800, v: 0.07 * v }); }, { ref: 3, max: 30 });
+  def('chest.open', 'world', 1, 1.4, (S, c, o, t, v) => { latch(S, o, t, v); S.creakSnd(o, t + 0.05, { d: 0.6, f: 100, fb: 450, v: 0.28 * v }); S.modal(o, t + 0.62, 160, [[1, 0.5, 0.14], [2.3, 0.3, 0.07]], 0.6 * v); S.nb(o, t + 0.64, { f: 1500, q: 1, d: 0.05, v: 0.18 * v });
+    for (let i = 0; i < 3; i++) S.modal(o, t + 0.7 + i * 0.07, R(2300, 3000), [[1, 0.2, 0.15], [2.4, 0.12, 0.08]], 0.18 * v); }, { ref: 3, max: 30 });
+  def('pickup.coin', 'ui', 1, 0.7, (S, c, o, t, v) => { for (let i = 0; i < 2; i++) S.modal(o, t + i * 0.055, R(2400, 3000), [[1, 0.4, 0.22], [2.4, 0.22, 0.12], [4.1, 0.1, 0.07]], 0.5 * v); S.nb(o, t, { f: 5000, q: 1, d: 0.02, v: 0.1 * v }); });
+  def('coins', 'ui', 1, 1.0, (S, c, o, t, v) => { for (let i = 0; i < 5; i++) S.modal(o, t + i * R(0.04, 0.08), R(2200, 3200), [[1, 0.3, 0.2], [2.4, 0.18, 0.1]], 0.4 * v); });
+  def('pickup.cloth', 'ui', 1, 0.4, (S, c, o, t, v) => { S.nb(o, t, { f: 2200, q: 0.3, a: 0.035, d: 0.2, v: 0.3 * v, hp: 900 }); S.nb(o, t, { type: 'lowpass', f: 300, d: 0.08, v: 0.2 * v }); });
+  def('pickup.metal', 'ui', 1, 0.6, (S, c, o, t, v) => { S.modal(o, t, R(1700, 2300), [[1, 0.3, 0.3], [2.76, 0.2, 0.18], [5.4, 0.1, 0.08]], 0.5 * v); S.nb(o, t, { f: 4500, q: 1, d: 0.03, v: 0.15 * v }); S.nb(o, t + 0.05, { f: 2500, q: 1, a: 0.02, d: 0.1, v: 0.1 * v }); });
+  def('pickup.herb', 'ui', 1, 0.5, (S, c, o, t, v) => { S.nb(o, t, { type: 'highpass', f: 3000, a: 0.02, d: 0.1, v: 0.16 * v }); S.nb(o, t + 0.09, { f: 2600, q: 0.5, a: 0.02, d: 0.12, v: 0.18 * v }); S.nb(o, t, { type: 'lowpass', f: 400, d: 0.06, v: 0.2 * v }); });
+  def('pickup.wood', 'ui', 1, 0.4, (S, c, o, t, v) => { S.modal(o, t, R(380, 460), [[1, 0.6, 0.08], [2.4, 0.3, 0.05], [4.1, 0.1, 0.03]], 0.7 * v); S.nb(o, t, { f: 1500, q: 1, d: 0.025, v: 0.2 * v }); });
+  def('pickup.food', 'ui', 1, 0.4, (S, c, o, t, v) => { S.nb(o, t, { type: 'lowpass', f: 300, d: 0.09, v: 0.45 * v }); S.nb(o, t + 0.02, { f: 2000, q: 0.4, a: 0.03, d: 0.14, v: 0.15 * v, hp: 1000 }); });
+  def('pickup.paper', 'ui', 1, 0.5, (S, c, o, t, v) => { S.nb(o, t, { f: 2500, q: 0.5, a: 0.03, d: 0.22, v: 0.3 * v }); S.nb(o, t + 0.1, { type: 'highpass', f: 4500, d: 0.06, v: 0.1 * v }); });
+  def('pickup.generic', 'ui', 1, 0.5, (S, c, o, t, v) => { S.nb(o, t, { f: 2400, q: 0.4, a: 0.025, d: 0.15, v: 0.25 * v, hp: 1000 }); S.modal(o, t + 0.02, 600, [[1, 0.4, 0.07], [2.3, 0.2, 0.04]], 0.4 * v); });
+  def('ui.click', 'ui', 1, 0.2, (S, c, o, t, v) => { S.modal(o, t, 760, [[1, 0.4, 0.05], [2.8, 0.2, 0.03]], 0.5 * v); S.nb(o, t, { f: 3200, q: 1, d: 0.012, v: 0.18 * v }); }, { gap: 0.04 });
+  def('ui.page', 'ui', 1, 0.5, (S, c, o, t, v) => { S.nb(o, t, { f: 2500, q: 0.5, a: 0.035, d: 0.24, v: 0.32 * v }); S.nb(o, t + 0.12, { type: 'highpass', f: 4000, d: 0.07, v: 0.1 * v }); S.nb(o, t, { type: 'lowpass', f: 400, a: 0.05, d: 0.1, v: 0.1 * v }); }, { gap: 0.1 });
+  def('eat', 'ui', 1, 0.8, (S, c, o, t, v) => { for (let i = 0; i < 3; i++) { S.nb(o, t + i * 0.17, { f: R(1500, 2400), q: 2, d: 0.045, v: 0.4 * v }); S.nb(o, t + i * 0.17, { type: 'lowpass', f: 400, d: 0.05, v: 0.3 * v }); } });
+  def('drink', 'ui', 1, 1.2, (S, c, o, t, v) => { for (let i = 0; i < 3; i++) { S.tn(o, t + i * 0.2, { f: 260, f2: 150, d: 0.13, a: 0.02, v: 0.25 * v }); S.nb(o, t + i * 0.2, { f: 700, f2: 400, q: 1.5, a: 0.02, d: 0.12, v: 0.2 * v }); }
+    S.modal(o, t + 0.8, 520, [[1, 0.5, 0.1], [2.3, 0.3, 0.06]], 0.45 * v); S.nb(o, t + 0.82, { f: 1400, q: 1, d: 0.03, v: 0.15 * v }); });
+  def('mug', 'world', 0, 0.6, (S, c, o, t, v) => { S.modal(o, t, R(1300, 1700), [[1, 0.35, 0.2], [2.3, 0.25, 0.1], [4.4, 0.1, 0.05]], 0.5 * v); S.nb(o, t, { f: 3500, q: 1, d: 0.02, v: 0.15 * v }); }, { ref: 3, max: 25, gap: 0.5 });
+  def('cloth.flap', 'world', 0, 0.5, (S, c, o, t, v) => { let tt = t; for (let i = 0; i < 4; i++) { S.nb(o, tt, { f: R(1400, 2200), q: 1, d: 0.05, v: 0.3 * v }); tt += R(0.05, 0.11); } }, { ref: 3, max: 40, gap: 0.3 });
+
+  // ───────── stingers ─────────
+  const bell = (S, o, t, f, v, dec) => S.tn(o, t, { f, d: dec || 1.6, a: 0.006, v: 0.2 * v }) && S.tn(o, t, { f: f * 2.76, d: (dec || 1.6) * 0.3, a: 0.003, v: 0.05 * v });
+  def('q.begin', 'ui', 2, 3.5, (S, c, o, t, v) => { for (const [f, d] of [[293.7, 0], [440, 0.14], [587.3, 0.28]]) { S.pluck(o, t + d, f, 0.4 * v, { dur: 2, bright: 0.7 }); bell(S, o, t + d, f * 2, v * 0.8, 1.4); } S.wet(o, 'hall', 0.5); });
+  def('q.update', 'ui', 2, 2.5, (S, c, o, t, v) => { for (const [f, d] of [[440, 0], [587.3, 0.13]]) { S.pluck(o, t + d, f, 0.35 * v, { dur: 1.6, bright: 0.65 }); bell(S, o, t + d, f * 2, v * 0.6, 1.1); } S.wet(o, 'hall', 0.45); });
+  def('q.done', 'ui', 2, 4.5, (S, c, o, t, v) => { [293.7, 370, 440, 587.3, 740].forEach((f, i) => { S.pluck(o, t + i * 0.13, f, 0.35 * v, { dur: 2.4, bright: 0.7 }); bell(S, o, t + i * 0.13, f * 2, v * 0.7, 1.8); }); S.tn(o, t + 0.5, { f: 146.8, d: 3, a: 0.4, v: 0.14 * v, type: 'triangle' }); S.wet(o, 'hall', 0.6); });
+  def('discover', 'ui', 2, 5, (S, c, o, t, v) => { S.tn(o, t, { f: 110, d: 3.8, a: 1.0, v: 0.13 * v, type: 'triangle' }); S.tn(o, t, { f: 165, d: 3.6, a: 1.1, v: 0.08 * v }); [[587.3, 0.3], [740, 0.75], [880, 1.2]].forEach(([f, d]) => { S.pluck(o, t + d, f, 0.28 * v, { dur: 2.6, bright: 0.5 }); bell(S, o, t + d, f * 2, v * 0.5, 2); }); S.wet(o, 'hall', 0.7); });
+  // a church bell stroke: a low hum, the strike tone, and the inharmonic partials a cast bell really has
+  def('bell.stroke', 'world', 2, 9, (S, c, o, t, v, p) => { const f0 = 196; for (const [m, d, a] of [[0.5, 7, 0.25], [1, 6, 0.5], [1.19, 4.5, 0.3], [1.5, 3.8, 0.25], [2, 3.2, 0.3], [2.51, 2.4, 0.16], [3.01, 1.8, 0.12], [4.1, 1.2, 0.08]]) S.tn(o, t, { f: f0 * m * (1 + R(-0.002, 0.002)), d, a: 0.004, v: 0.17 * a * v });
+    S.nb(o, t, { f: 2600, q: 1, d: 0.05, v: 0.12 * v }); S.wet(o, 'hall', 0.35); }, { ref: 18, max: 420 });
+  L['bell.ring'] = Object.assign({}, L['bell.stroke'], { bus: 'ui' });
+
+  // ───────── combat ─────────
+  def('swing.light', 'ui', 1, 0.4, (S, c, o, t, v) => { S.nb(o, t, { f: 700, f2: 2100, q: 1.2, a: 0.06, d: 0.17, v: 0.3 * v }); }, { gap: 0.08 });
+  def('swing.heavy', 'ui', 1, 0.5, (S, c, o, t, v) => { S.nb(o, t, { f: 450, f2: 1500, q: 1.1, a: 0.1, d: 0.26, v: 0.4 * v }); S.nb(o, t, { type: 'lowpass', f: 320, a: 0.1, d: 0.25, v: 0.18 * v }); }, { gap: 0.08 });
+  const flesh = (S, o, t, v, h) => { S.tn(o, t, { f: h ? 70 : 95, f2: 45, d: 0.16, a: 0.004, v: (h ? 0.6 : 0.45) * v }); S.nb(o, t, { type: 'lowpass', f: 520, d: 0.11, v: (h ? 0.6 : 0.45) * v }); S.nb(o, t, { f: 1200, q: 1, d: 0.04, v: 0.28 * v }); if (h) S.nb(o, t + 0.02, { f: 2200, q: 2, d: 0.03, v: 0.2 * v }); };
+  def('hit.flesh', 'world', 2, 0.5, (S, c, o, t, v) => flesh(S, o, t, v, false), { ref: 4, max: 50, gap: 0.05 });
+  def('hit.flesh.heavy', 'world', 2, 0.5, (S, c, o, t, v) => flesh(S, o, t, v, true), { ref: 4, max: 50, gap: 0.05 });
+  def('hit.wood', 'world', 2, 0.5, (S, c, o, t, v) => { S.modal(o, t, R(280, 340), [[1, 0.5, 0.1], [2.3, 0.3, 0.06], [3.9, 0.2, 0.035]], 0.8 * v); S.nb(o, t, { f: 1500, q: 1, d: 0.03, v: 0.3 * v }); }, { ref: 4, max: 50, gap: 0.05 });
+  def('hit.metal', 'world', 2, 1.4, (S, c, o, t, v) => { const j = R(0.97, 1.03); S.modal(o, t, 1870 * j, [[1, 0.3, 0.55], [1.49, 0.22, 0.4], [2.22, 0.2, 0.3], [3.0, 0.12, 0.2], [4.1, 0.07, 0.12]], 0.7 * v); S.nb(o, t, { type: 'highpass', f: 3000, d: 0.04, v: 0.35 * v }); S.nb(o, t, { f: 900, q: 1, d: 0.03, v: 0.2 * v }); }, { ref: 4, max: 60, gap: 0.05 });
+  def('hit.shield', 'world', 2, 1.0, (S, c, o, t, v) => { S.modal(o, t, 520, [[1, 0.5, 0.14], [2.1, 0.3, 0.08], [3.2, 0.15, 0.05]], 0.75 * v); S.modal(o, t, 2200 * R(0.97, 1.03), [[1, 0.2, 0.3], [2.4, 0.1, 0.15]], 0.5 * v); S.nb(o, t, { f: 2500, q: 1, d: 0.03, v: 0.3 * v }); S.nb(o, t, { type: 'lowpass', f: 200, d: 0.08, v: 0.4 * v }); }, { ref: 4, max: 60, gap: 0.05 });
+  def('foe.effort', 'world', 1, 0.4, (S, c, o, t, v) => { S.voc(o, t, { f0: R(100, 115), f1: 80, d: 0.17, a: 0.015, v: 0.32 * v, form: [[570, 5, 1], [840, 6, 0.6], [2410, 8, 0.2]], breath: 0.35 }); }, { ref: 4, max: 45, gap: 0.3 });
+  def('foe.hurt', 'world', 1, 0.5, (S, c, o, t, v) => { S.voc(o, t, { f0: R(150, 175), f1: 100, d: 0.24, a: 0.01, v: 0.36 * v, form: [[640, 5, 1], [1000, 6, 0.6], [2500, 8, 0.2]], breath: 0.3 }); }, { ref: 4, max: 45, gap: 0.2 });
+  def('foe.shout', 'world', 2, 0.8, (S, c, o, t, v) => { S.voc(o, t, { f0: 165, f1: 128, d: 0.34, a: 0.03, v: 0.3 * v, vib: 6, form: [[700, 5, 1], [1100, 6, 0.6], [2600, 8, 0.25]], breath: 0.4 }); }, { ref: 6, max: 80, gap: 0.5 });
+  def('foe.shout.deep', 'world', 2, 0.8, (S, c, o, t, v) => { S.voc(o, t, { f0: 120, f1: 92, d: 0.4, a: 0.03, v: 0.34 * v, vib: 5, form: [[600, 5, 1], [900, 6, 0.6], [2400, 8, 0.25]], breath: 0.4 }); }, { ref: 6, max: 80, gap: 0.5 });
+  def('foe.death', 'world', 2, 1.8, (S, c, o, t, v) => { S.voc(o, t, { f0: 150, f1: 60, d: 0.7, a: 0.02, v: 0.34 * v, form: [[640, 5, 1], [1000, 6, 0.6], [2500, 8, 0.2]], breath: 0.4 }); S.nb(o, t + 0.55, { type: 'lowpass', f: 140, d: 0.4, v: 0.7 * v }); S.nb(o, t + 0.55, { type: 'lowpass', f: 700, d: 0.3, v: 0.3 * v }); }, { ref: 5, max: 70 });
+
+  // ───────── places ─────────
+  def('anvil', 'world', 1, 2.0, (S, c, o, t, v) => { const j = R(0.985, 1.015); S.modal(o, t, 1870 * j, [[1, 0.3, 0.9], [1.49, 0.2, 0.6], [2.22, 0.22, 0.45], [3.0, 0.12, 0.3], [4.16, 0.08, 0.2]], 0.55 * v); S.nb(o, t, { type: 'highpass', f: 3000, d: 0.025, v: 0.32 * v }); S.nb(o, t, { f: 700, q: 1, d: 0.03, v: 0.25 * v }); S.tn(o, t, { f: 120, f2: 80, d: 0.08, v: 0.3 * v }); }, { ref: 8, max: 120, gap: 0.2 });
+  def('bellows', 'world', 0, 2.0, (S, c, o, t, v) => { S.nb(o, t, { f: 500, f2: 1100, q: 0.5, a: 0.3, d: 0.35, v: 0.2 * v }); S.nb(o, t + 0.65, { f: 900, f2: 350, q: 0.6, a: 0.08, d: 0.7, v: 0.3 * v }); S.nb(o, t + 0.65, { type: 'lowpass', f: 250, a: 0.1, d: 0.7, v: 0.3 * v }); }, { ref: 5, max: 60, gap: 1.2 });
+  def('quench', 'world', 0, 2.0, (S, c, o, t, v) => { S.nb(o, t, { type: 'highpass', f: 3500, a: 0.04, d: 1.3, v: 0.2 * v }); S.nb(o, t, { f: 1500, q: 0.5, a: 0.05, d: 0.9, v: 0.1 * v }); }, { ref: 5, max: 60, gap: 5 });
+  def('paddle', 'world', 0, 1.0, (S, c, o, t, v) => { S.nb(o, t, { f: 800, f2: 300, q: 0.6, a: 0.03, d: 0.5, v: 0.3 * v }); S.tn(o, t, { f: 90, f2: 60, d: 0.25, a: 0.02, v: 0.25 * v, type: 'triangle' }); for (let i = 0; i < 3; i++) S.tn(o, t + R(0.1, 0.5), { f: R(900, 1500), f2: R(1800, 2600), d: 0.03, v: 0.05 * v }); }, { ref: 8, max: 60, gap: 0.3 });
+  def('drip', 'world', 0, 0.5, (S, c, o, t, v) => { S.tn(o, t, { f: R(900, 1500), f2: R(2200, 3200), d: 0.05, fd: 0.03, a: 0.002, v: 0.25 * v }); S.nb(o, t, { f: 3000, q: 1.5, d: 0.012, v: 0.06 * v }); }, { ref: 3, max: 35, gap: 0.8 });
+  def('creak', 'world', 0, 1.0, (S, c, o, t, v) => { S.creakSnd(o, t, { d: R(0.35, 0.8), f: R(80, 130), fb: R(500, 900), v: 0.16 * v }); }, { ref: 3, max: 30, gap: 1.2 });
+  def('cluck', 'world', 0, 0.5, (S, c, o, t, v) => { S.voc(o, t, { f0: 720, f1: 430, d: 0.07, a: 0.008, v: 0.2 * v, form: [[1000, 6, 1], [2200, 8, 0.4]] }); S.voc(o, t + 0.12, { f0: 770, f1: 420, d: 0.09, a: 0.008, v: 0.17 * v, form: [[1000, 6, 1], [2200, 8, 0.4]] }); }, { ref: 3, max: 25, gap: 0.3 });
+  def('dog', 'world', 0, 2.5, (S, c, o, t, v) => { const n = 2 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) { const tt = t + i * R(0.22, 0.3); S.voc(o, tt, { f0: R(480, 560), f1: 300, d: 0.13, a: 0.008, v: 0.45 * v, form: [[650, 6, 1], [1500, 7, 0.7], [2800, 8, 0.2]], breath: 0.5 }); } }, { ref: 10, max: 180, gap: 20 });
+  def('cow', 'world', 0, 3, (S, c, o, t, v) => { S.voc(o, t, { f0: 98, f1: 92, d: 1.3, a: 0.25, v: 0.5 * v, vib: 2.5, vibf: 6, form: [[450, 5, 1], [900, 6, 0.8], [1800, 8, 0.2]], breath: 0.1 }); }, { ref: 12, max: 200, gap: 30 });
+  def('rooster', 'world', 0, 3, (S, c, o, t, v) => { const form = [[900, 7, 1], [2100, 8, 0.7], [3200, 8, 0.3]]; [[0, 650, 820, 0.14], [0.2, 800, 980, 0.12], [0.36, 740, 1100, 0.14], [0.55, 980, 820, 0.9]].forEach(([d, a, b, du]) => S.voc(o, t + d, { f0: a, f1: b, d: du, a: 0.012, v: 0.4 * v, vib: du > 0.5 ? 25 : 0, vibf: 9, form, breath: 0.3 })); }, { ref: 12, max: 200, gap: 40 });
+  def('owl', 'world', 0, 3, (S, c, o, t, v) => { S.tn(o, t, { f: 410, f2: 385, d: 0.5, a: 0.07, v: 0.4 * v, vib: 6, vibf: 4 }); S.tn(o, t + 0.8, { f: 370, f2: 330, d: 0.25, a: 0.05, v: 0.35 * v }); S.tn(o, t + 1.15, { f: 370, f2: 310, d: 0.9, a: 0.08, v: 0.4 * v, vib: 6, vibf: 4 }); S.nb(o, t, { f: 600, q: 1, a: 0.1, d: 1.9, v: 0.02 * v }); }, { ref: 15, max: 220, gap: 20 });
+
+  // ───────── birdsong: one oscillator and one gain per call, each note a pitch glide and an amplitude puff ─────────
+  const song = (S, o, t, notes, v, wob) => {
+    const c = S.c, os = c.createOscillator(), g = c.createGain(); os.type = 'sine'; let end = t;
+    if (wob) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = wob[0]; lg.gain.value = wob[1]; l.connect(lg); lg.connect(os.frequency); l.start(t); l.stop(t + 4); }
+    g.gain.setValueAtTime(0, t); os.frequency.setValueAtTime(notes[0][1], t);
+    for (const n of notes) { const t0 = t + n[0], d = n[3]; os.frequency.setValueAtTime(n[1], t0); os.frequency.linearRampToValueAtTime(n[2], t0 + d); g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime((n[4] || 1) * v, t0 + d * 0.25); g.gain.linearRampToValueAtTime(0.0001, t0 + d); if (t0 + d > end) end = t0 + d; }
+    os.connect(g); g.connect(S._birdOut); os.start(t); os.stop(end + 0.05); return end - t;
+  };
+  const bird = (name, dur, mk, x) => def(name, 'amb', 1, dur, (S, c, o, t, v) => { S._birdOut = o; const n = mk(); song(S, o, t, n.notes, 0.22 * v, n.wob); }, Object.assign({ ref: 6, max: 140 }, x));
+  bird('bird.chaffinch', 2.2, () => { const n = [], f = R(3600, 4600); let t = 0; for (let i = 0; i < 9; i++) { n.push([t, f * (1 - i * 0.03), f * (0.86 - i * 0.03), 0.055, 1 - i * 0.04]); t += 0.085; } n.push([t + 0.05, f * 0.7, f * 1.05, 0.09, 1], [t + 0.17, f * 1.0, f * 0.8, 0.1, 0.8]); return { notes: n }; });
+  bird('bird.robin', 3.0, () => { const n = []; let t = 0; for (let i = 0; i < 7 + Math.floor(Math.random() * 4); i++) { const f = R(2800, 5600), d = R(0.05, 0.13); n.push([t, f, f * R(0.7, 1.35), d, R(0.5, 1)]); t += d + R(0.02, 0.12); } return { notes: n, wob: [38, 160] }; });
+  bird('bird.wren', 1.6, () => { const n = []; let t = 0, f = R(4300, 5400); for (let i = 0; i < 22; i++) { n.push([t, f, f * R(0.9, 1.1), 0.028, 1 - i * 0.012]); t += 0.04; if (i === 14) f *= 0.82; } return { notes: n }; });
+  bird('bird.thrush', 4.0, () => { const n = []; let t = 0; for (let k = 0; k < 3 + Math.floor(Math.random() * 3); k++) { const f = R(1700, 2700), d = R(0.12, 0.22); n.push([t, f, f * R(0.8, 1.25), d, 1], [t + d + 0.02, f * 1.1, f * 0.9, d * 0.6, 0.7]); t += d * 1.8 + R(0.15, 0.45); } return { notes: n, wob: [6, 20] }; });
+  bird('bird.pigeon', 3.0, () => { const f = R(430, 520), n = [], d = [0, 0.38, 0.9, 1.5, 1.85]; d.forEach((t, i) => n.push([t, f, f * 0.93, i === 1 || i === 3 ? 0.4 : 0.22, 1])); return { notes: n, wob: [3, 12] }; }, { max: 220 });
+  def('bird.crow', 'amb', 1, 2, (S, c, o, t, v) => { const n = 2 + Math.floor(Math.random() * 2); for (let i = 0; i < n; i++) S.voc(o, t + i * 0.4, { f0: R(380, 450), f1: 300, d: 0.22, a: 0.015, v: 0.34 * v, form: [[800, 4, 1], [1500, 5, 0.6], [2400, 6, 0.3]], breath: 0.9 }); }, { ref: 8, max: 220, gap: 8 });
+})();
+
+Snd.trims = {};
+
+// ── per-sound trims, generated from the median of three offline renders in test/audio.mjs (target peaks: footsteps and interactions -12 dB, combat -11, stingers -13, nature one-shots -22 at the listener) ──
+Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.grass": 1.259, "fs.mud": 1.274, "fs.water": 1.084, "fs.wood": 0.367, "fs.plank": 0.692, "fs.stone": 1.012, "fs.stairs": 0.331, "rustle": 0.61, "land": 1.995, "jump": 1.38, "breath": 0.923, "hurt": 1.622, "player.death": 1.928, "heart": 0.479, "door.open": 2.692, "door.close": 0.327, "door.locked": 0.75, "chest.open": 0.813, "pickup.coin": 0.933, "coins": 1.622, "pickup.cloth": 0.861, "pickup.metal": 0.861, "pickup.herb": 1.274, "pickup.wood": 0.403, "pickup.food": 2.138, "pickup.paper": 1.175, "pickup.generic": 0.804, "ui.click": 0.575, "ui.page": 0.891, "eat": 1.274, "drink": 0.733, "mug": 0.335, "cloth.flap": 0.495, "q.begin": 0.638, "q.update": 0.724, "q.done": 0.543, "discover": 0.684, "bell.stroke": 1.38, "bell.ring": 1.396, "swing.light": 2.089, "swing.heavy": 1.95, "hit.flesh": 0.7, "hit.flesh.heavy": 0.569, "hit.wood": 0.468, "hit.metal": 0.484, "hit.shield": 0.507, "foe.effort": 2.317, "foe.hurt": 1.95, "foe.shout": 2.018, "foe.shout.deep": 1.862, "foe.death": 1.841, "anvil": 0.473, "bellows": 2.57, "quench": 0.653, "paddle": 0.589, "drip": 0.403, "creak": 1.778, "cluck": 1.549, "dog": 0.484, "cow": 0.569, "rooster": 0.473, "owl": 0.302, "bird.chaffinch": 0.219, "bird.robin": 0.229, "bird.wren": 0.232, "bird.thrush": 0.219, "bird.pigeon": 0.219, "bird.crow": 0.143});
+
+
+// ---- 88c_beds.js ----
+// ───────────────────────── ambience: beds, positional loops, scheduled nature ─────────────────────────
+// Beds are looped noise through filters whose levels follow the world (see 88c_world.js for what is read). A bed whose level is ~0 is disconnected
+// from the graph, so a silent bed costs nothing. Positional loops (river, lake, fire, crowd, mill) run through distance, air absorption, zone
+// occlusion and a stereo pan. Birds, owls, drips and the rest are one-shots scheduled from update with random gaps, never on a fixed grid.
+(() => {
+  const S = Snd, sat = x => x < 0 ? 0 : x > 1 ? 1 : x, R = (a, b) => a + Math.random() * (b - a);
+  S.beds = {}; S.sch = { bird: 3, owl: 30, dog: 60, cow: 80, rooster: 30, drip: 2, lap: 1, mug: 4, creak: 5, flap: 3, cricket: 0 };
+
+  // a bed: sources connect to .in; .g is the level; .lp muffles it; .pan places it; connected to its bus only while audible
+  const mkLoop = (c, dest) => { const inn = c.createGain(), lp = c.createBiquadFilter(), pan = c.createStereoPanner ? c.createStereoPanner() : null, g = c.createGain(); lp.type = 'lowpass'; lp.frequency.value = 16000; lp.Q.value = 0.5; g.gain.value = 0; inn.connect(lp); let last = lp; if (pan) { lp.connect(pan); last = pan; } last.connect(g); return { in: inn, lp, pan, g, dest, conn: false, off: 0, lvl: 0 }; };
+  const loopSrc = (kind, rate) => { const s = S.c.createBufferSource(), b = S.nz[kind]; s.buffer = b; s.loop = true; s.playbackRate.value = rate || 1; s.start(0, Math.random() * b.duration); return s; };
+  const filt = (type, f, q) => { const b = S.c.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q || 0.7; return b; };
+  const gain = v => { const g = S.c.createGain(); g.gain.value = v; return g; };
+  // random modulation of a parameter: noise -> lowpass -> depth -> param
+  const modulate = (param, kind, hz, depth) => { const s = S.c.createBufferSource(); s.buffer = S.slow; s.loop = true; s.playbackRate.value = hz * R(0.8, 1.2); s.start(0, Math.random() * 40); const d = gain(depth); s.connect(d); d.connect(param); };
+  // one strand of a texture: a noise source, a band, optional random amplitude modulation, into the loop
+  const strand = (lp, kind, type, f, q, level, modHz, modDepth, f2, q2) => { const s = loopSrc(kind, R(0.85, 1.15)), b = filt(type, f, q); s.connect(b); let end = b; if (f2) { const b2 = filt(type === 'lowpass' ? 'highpass' : 'lowpass', f2, q2 || 0.7); b.connect(b2); end = b2; } const g = gain(level); end.connect(g); if (modHz) modulate(g.gain, 'pink', modHz, modDepth); g.connect(lp.in); return g; };
+  const bedSet = (b, v, tc) => {
+    const t = S.now(); v *= 1.5; b.lvl = v;   // 1.5: bed calibration (test/audio.mjs)
+    if (v > 0.0015) { if (!b.conn) { b.g.connect(b.dest); b.conn = true; } b.off = 0; b.g.gain.setTargetAtTime(v, t, tc || 0.35); }
+    else if (b.conn) { b.g.gain.setTargetAtTime(0, t, tc || 0.35); if (!b.off) b.off = t; else if (t - b.off > (tc || 0.35) * 7) { b.g.disconnect(); b.conn = false; b.off = 0; } }
+  };
+  S.bedSet = bedSet;
+  const place = (b, sp, extra) => { const t = S.now(); b.lp.frequency.setTargetAtTime(sp.lp, t, 0.25); if (b.pan) b.pan.pan.setTargetAtTime(sp.pan, t, 0.2); };
+
+  S.inits.push((S, c) => {
+    // the outdoor sub-bus: wind and weather lose their top end and most of their level when you step inside
+    const ob = S.outBus = { g: gain(1), lp: filt('lowpass', 16000, 0.5) }; ob.g.connect(ob.lp); ob.lp.connect(S.bus.amb.in);
+    const B = S.beds, amb = S.bus.amb.in, wor = S.bus.world.in;
+    // wind: broad body, a pitched howl and the sound of the gusts themselves
+    B.wind = mkLoop(c, ob.g); strand(B.wind, 'pink', 'bandpass', 480, 0.5, 0.9, 0.22, 0.45); strand(B.wind, 'pink', 'bandpass', 210, 4, 0.5, 0.13, 0.3); strand(B.wind, 'white', 'bandpass', 1400, 0.6, 0.08, 0.35, 0.06);
+    B.leaves = mkLoop(c, ob.g); strand(B.leaves, 'white', 'bandpass', 3600, 0.5, 0.5, 0.5, 0.35, 9000); strand(B.leaves, 'pink', 'bandpass', 650, 1.1, 0.7, 0.18, 0.4);
+    B.rain = mkLoop(c, ob.g); strand(B.rain, 'white', 'highpass', 1100, 0.5, 0.5, 0, 0, 9500); strand(B.rain, 'pink', 'lowpass', 420, 0.5, 0.45, 0.4, 0.15);
+    B.roof = mkLoop(c, amb); strand(B.roof, 'pink', 'bandpass', 900, 0.7, 0.6, 0.5, 0.25); strand(B.roof, 'brown', 'lowpass', 160, 0.5, 0.35);
+    B.room = mkLoop(c, amb); strand(B.room, 'brown', 'lowpass', 170, 0.5, 0.8); strand(B.room, 'pink', 'bandpass', 700, 0.5, 0.1, 0.1, 0.04);
+    B.cave = mkLoop(c, amb); strand(B.cave, 'brown', 'lowpass', 100, 0.5, 1.0, 0.07, 0.3); strand(B.cave, 'pink', 'bandpass', 320, 2.5, 0.12, 0.12, 0.08);
+    B.night = mkLoop(c, ob.g); strand(B.night, 'white', 'bandpass', 5800, 6, 0.05, 0.2, 0.025);        // the shimmer under the crickets
+    // water, crowds and the mill: positional (set each frame from the nearest point of the source)
+    B.river = mkLoop(c, amb); strand(B.river, 'pink', 'bandpass', 620, 0.5, 1.0, 0.35, 0.25); strand(B.river, 'white', 'highpass', 1700, 0.5, 0.2, 5, 0.18, 6500); strand(B.river, 'brown', 'lowpass', 150, 0.5, 0.5, 0.2, 0.2);
+    B.lake = mkLoop(c, amb); strand(B.lake, 'pink', 'lowpass', 520, 0.5, 0.8, 0.25, 0.5); strand(B.lake, 'white', 'bandpass', 2200, 0.5, 0.05, 0.3, 0.03);
+    B.mill = mkLoop(c, wor); strand(B.mill, 'pink', 'bandpass', 480, 0.5, 0.9, 0.5, 0.2); strand(B.mill, 'white', 'highpass', 1800, 0.5, 0.15, 4, 0.1, 6000); strand(B.mill, 'brown', 'lowpass', 120, 0.5, 0.5);
+    B.grind = mkLoop(c, wor); strand(B.grind, 'brown', 'lowpass', 240, 0.8, 0.9, 2.2, 0.5); strand(B.grind, 'pink', 'bandpass', 900, 1.2, 0.25, 3.8, 0.2);
+    const crowd = k => { const b = mkLoop(c, wor); strand(b, 'pink', 'bandpass', 420, 1.0, 0.7, 5, 0.45); strand(b, 'pink', 'bandpass', 1300, 1.2, 0.4, 7, 0.3); strand(b, 'pink', 'bandpass', 2500, 1.0, 0.12, 9, 0.08); return b; };
+    B.crowd = crowd(); B.market = crowd(); B.inn = crowd();
+    // fire: three loops that follow the nearest hearths. crackle is a looped buffer of random pops, rumble and flutter are noise
+    const cb = S.crack = c.createBuffer(1, Math.floor(c.sampleRate * 3), c.sampleRate), cd = cb.getChannelData(0);
+    for (let k = 0; k < 90; k++) { const at = Math.floor(Math.random() * (cb.length - 4000)), amp = Math.pow(Math.random(), 2.5) * 0.9 + 0.05, len = Math.floor(R(0.002, 0.02) * c.sampleRate), hi = Math.random(); let lp = 0; for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; lp += (w - lp) * (0.3 + 0.7 * hi); cd[at + i] += (w - lp * 0.5) * amp * Math.exp(-i / (len * 0.3)); } }
+    for (let i = 0; i < cd.length; i++) cd[i] = Math.max(-1, Math.min(1, cd[i]));
+    B.fire = []; for (let i = 0; i < 3; i++) { const b = mkLoop(c, wor), s = c.createBufferSource(); s.buffer = cb; s.loop = true; s.playbackRate.value = R(0.9, 1.1); s.start(0, Math.random() * 2.5); const h = filt('highpass', 800, 0.6), g = gain(0.7); s.connect(h); h.connect(g); g.connect(b.in);
+      strand(b, 'brown', 'lowpass', 520, 0.6, 0.9, 0.9, 0.5); strand(b, 'pink', 'bandpass', 1800, 0.7, 0.18, 8, 0.12); b.fire = null; B.fire.push(b); }
+    // crickets: three fixed pitches, each switched in short pulse groups from update
+    S.crick = []; for (let i = 0; i < 3; i++) { const o = c.createOscillator(), g = gain(0); o.frequency.value = 4100 + i * 330 + R(0, 120); o.connect(g); g.connect(ob.g); o.start(); S.crick.push({ o, g, lvl: 0, next: 0, f: 3.2 + i * 0.7, conn: true }); }
+  });
+
+  // ── per-frame update of everything above ──
+  const tmp = { g: 0, lp: 16000, pan: 0, d: 0 };
+  S.ups.push(function (S, dt, G) {
+    const c = S.c, t = S.now(), B = S.beds, f3 = (S.frame % 3) === 0; if (!B.wind) return;
+    // outdoor sub-bus follows how far inside the listener is
+    if (f3) {
+      S.outBus.g.gain.setTargetAtTime(1 - 0.86 * G.indoor, t, 0.3); S.outBus.lp.frequency.setTargetAtTime(16000 - 15300 * G.indoor, t, 0.3);
+      const out = 1 - G.indoor, ws = G.wind, rain = G.rain;
+      // wind follows ENV.windStrength (0.15 .. 1.35); trees add leaf hiss and low soughing
+      bedSet(B.wind, ((0.035 + 0.055 * ws * ws) * (0.5 + 0.5 * sat(ws)) * 0.95 + 0.012) * 2.5, 0.8);
+      bedSet(B.leaves, (0.045 * G.forest * (0.15 + 0.85 * sat(ws * 0.9)) + 0.008 * G.forest) * 2, 0.8);
+      bedSet(B.rain, rain * 0.12, 0.8); bedSet(B.roof, rain * 0.08 * G.indoor, 0.8);
+      bedSet(B.night, 1.0 * G.night * out * (1 - rain) * (0.4 + 0.6 * G.meadow), 2);
+      // indoors
+      const rm = G.indoor * (G.space === 'cave' ? 0 : 1), cv = G.indoor * (G.space === 'cave' ? 1 : 0);
+      bedSet(B.room, 0.12 * rm, 0.5); bedSet(B.cave, 0.13 * cv, 0.8);
+      // river: a line, so use the nearest point; muffled and quieter through walls (spat does that via zone)
+      if (G.riverD < 60) { if (S.spat(G.riverX, G.riverY, G.riverZ, 0, 9, 75, tmp)) { place(B.river, tmp); bedSet(B.river, 0.2 * tmp.g * (1 + 0.8 * sat(1 - G.riverD / 5)), 0.35); } else bedSet(B.river, 0, 0.5); } else bedSet(B.river, 0, 0.5);
+      if (G.lakeD < 70) { if (S.spat(G.lakeX, G.lakeY, G.lakeZ, 0, 7, 80, tmp)) { place(B.lake, tmp); bedSet(B.lake, 0.18 * tmp.g, 0.5); } else bedSet(B.lake, 0, 0.5); } else bedSet(B.lake, 0, 0.5);
+      // the town's murmur: by who is actually standing about
+      const day = G.day, sqL = 0.1 + 0.9 * sat(G.nSquare / 4);
+      const cd = G.nearSquare; if (cd < 95 && S.spat(G.sqX, G.sqY, G.sqZ, 0, 13, 95, tmp)) { place(B.crowd, tmp); bedSet(B.crowd, 0.34 * tmp.g * (0.3 + 0.7 * sqL) * (0.35 + 0.65 * day) * (1 - 0.7 * rain), 0.8); } else bedSet(B.crowd, 0, 0.8);
+      if (G.nearMarket < 60 && S.spat(G.mkX, G.mkY, G.mkZ, 0, 9, 60, tmp)) { place(B.market, tmp); bedSet(B.market, 0.22 * tmp.g * day * (1 - 0.5 * rain) * (0.4 + 0.6 * sat(G.nMarket / 2)), 0.8); } else bedSet(B.market, 0, 0.8);
+      if (G.innZone && G.nearInn < 60 && S.spat(G.innX, G.innY, G.innZ, G.innZone, 6, 60, tmp)) { place(B.inn, tmp); bedSet(B.inn, 0.24 * tmp.g * sat(G.nInn / 5), 0.8); } else bedSet(B.inn, 0, 0.8);
+      // the mill: wheel and race while the wheel is turning, the stone while the miller works
+      if (G.millOn && S.spat(G.millX, G.millY, G.millZ, 0, 8, 70, tmp)) { place(B.mill, tmp); bedSet(B.mill, 0.24 * tmp.g, 0.6); } else bedSet(B.mill, 0, 0.6);
+      if (G.grindOn && S.spat(G.millX, G.millY + 1, G.millZ, G.millZone, 4, 40, tmp)) { place(B.grind, tmp); bedSet(B.grind, 0.2 * tmp.g, 0.6); } else bedSet(B.grind, 0, 0.6);
+      // fires: the nearest three, each at its own place
+      for (let i = 0; i < 3; i++) { const b = B.fire[i], f = G.fires[i];
+        if (f.on && S.spat(f.x, f.y, f.z, f.zone, f.ref, f.max, tmp)) { place(b, tmp); bedSet(b, 0.3 * f.lvl * tmp.g, 0.2); } else bedSet(b, 0, 0.3); }
+      // crickets: night, outdoors, mostly away from the square
+      const cv2 = G.night * out * (1 - rain) * (0.35 + 0.65 * G.meadow); for (let i = 0; i < 3; i++) S.crick[i].lvl = cv2 * (i === 0 ? 1 : 0.7);
+    }
+    // cricket pulses: groups of three or four chirps of about 12 ms, a group every 0.3 .. 0.5 s, scheduled 0.3 s ahead
+    for (let i = 0; i < 3; i++) { const k = S.crick[i]; if (k.lvl < 0.01) { if (k.conn && k.next === 0) { } continue; }
+      while (k.next < t + 0.3) { if (k.next < t) k.next = t; const n = 3 + (Math.random() * 2 | 0); for (let j = 0; j < n; j++) { const a = k.next + j * 0.03; k.g.gain.setValueAtTime(0.022 * k.lvl, a); k.g.gain.setValueAtTime(0, a + 0.012); } k.next += 1 / k.f * R(0.85, 1.2); } }
+    // lake lapping, and scheduled one-shots
+    const T = S.sch; if (!G.playing) return;
+    if (B.lake.lvl > 0.004) { T.lap -= dt; if (T.lap <= 0) { T.lap = R(1.4, 3.6); S.nb(B.lake.in, t + 0.02, { f: R(500, 800), f2: R(180, 300), q: 0.8, a: R(0.08, 0.2), d: R(0.4, 0.9), v: 0.5, kind: 'pink' }); S.nb(B.lake.in, t + 0.1, { type: 'highpass', f: 3500, a: 0.1, d: 0.3, v: 0.05 }); } }
+    // birds: the dawn chorus, a quiet noon, a thrush at evening. One call at a random bearing, 8 .. 70 m off, up in the trees.
+    const h = G.hour, dawn = Math.exp(-Math.pow((h - 6.1) / 1.25, 2)), eve = Math.exp(-Math.pow((h - 18.1) / 1.4, 2)) * 0.55, mid = h > 7.8 && h < 17 ? 0.2 : 0, br = (dawn + eve + mid) * (1 - G.night) * (1 - G.rain * 0.9) * (0.35 + 0.65 * G.forest + 0.2 * G.meadow);
+    T.bird -= dt;
+    if (T.bird <= 0 && br > 0.02) {
+      T.bird = R(1.2, 3.2) / br; const a = Math.random() * 6.283, d = R(9, 70), x = G.x + Math.cos(a) * d, z = G.z + Math.sin(a) * d, y = G.y + R(3, 12), r = Math.random();
+      const nm = dawn > 0.35 ? (r < 0.26 ? 'robin' : r < 0.5 ? 'chaffinch' : r < 0.7 ? 'wren' : r < 0.9 ? 'thrush' : 'crow') : eve > 0.15 ? (r < 0.5 ? 'thrush' : r < 0.75 ? 'robin' : r < 0.9 ? 'chaffinch' : 'crow') : (r < 0.3 ? 'pigeon' : r < 0.55 ? 'chaffinch' : r < 0.75 ? 'wren' : r < 0.95 ? 'robin' : 'crow');
+      S.play('bird.' + nm, [x, y, z], R(0.7, 1.1));
+    }
+    T.owl -= dt; if (T.owl <= 0) { T.owl = R(22, 55); if (G.night > 0.7 && G.indoor < 0.5) { const a = Math.random() * 6.283, d = R(40, 120); S.play('owl', [G.x + Math.cos(a) * d, G.y + 8, G.z + Math.sin(a) * d], 1); } }
+    // livestock and dogs: far off, at the farm, the barn and the hunter's cabin; the route drops them if they cannot be heard from here
+    T.dog -= dt; if (T.dog <= 0) { T.dog = R(50, 140); const p = G.pHunter; if (p && G.night < 0.9) S.play('dog', p, 1); }
+    T.cow -= dt; if (T.cow <= 0) { T.cow = R(60, 150); const p = G.pBarn; if (p && G.day > 0.3) S.play('cow', p, 1); }
+    T.rooster -= dt; if (T.rooster <= 0) { T.rooster = R(35, 90); const p = G.pFarm; if (p && h > 4.6 && h < 8.5) S.play('rooster', p, 1); }
+    // cellar drip: a random drop somewhere in the room
+    T.drip -= dt; if (T.drip <= 0) { T.drip = R(1.2, 4.5); if (G.space === 'cave' && G.indoor > 0.5) S.play('drip', [G.x + R(-4, 4), G.y + 0.1, G.z + R(-4, 4)], R(0.6, 1)); }
+    // the inn: mugs and a clink of cutlery while it is full
+    T.mug -= dt; if (T.mug <= 0) { T.mug = R(2.5, 8); if (G.nInn >= 3 && G.nearInn < 40) S.play('mug', [G.innX + R(-4, 4), G.innY + 1, G.innZ + R(-3, 3)], R(0.5, 1)); }
+    // hanging signs and lanterns creak, bunting flaps, when the wind is up
+    T.creak -= dt; if (T.creak <= 0) { T.creak = R(2.5, 8) / Math.max(0.2, G.wind * G.wind); const p = G.lanternNear; if (G.wind > 0.85 && p) S.play('creak', p, 1); }
+    T.flap -= dt; if (T.flap <= 0) { T.flap = R(1.4, 4) / Math.max(0.2, G.wind); if (G.wind > 0.7 && G.nearMarket < 40) S.play('cloth.flap', [G.mkX + R(-6, 6), G.y + 3, G.mkZ + R(-2, 2)], 0.5 + 0.5 * sat(G.wind - 0.5)); }
+  });
+})();
+
+
+// ---- 88c_music.js ----
+// ───────────────────────── music: sparse, modal, procedural, with long silences ─────────────────────────
+// Voices: drone (detuned saws and a fifth), plucked string (Karplus-Strong), bowed string (saws, vibrato, slow attack), frame drum, small bells.
+// Cues (dawn, day, dusk, night, tavern, tension, combat, discovery) schedule one bar at a time from update, each bar made fresh from a random walk over
+// the mode, so nothing repeats. After an ambient cue comes a silence of one to three minutes. Dialogue ducks the music bus (88_audio.js, busLevels).
+// The lute that Lark plays is diegetic: a tune composed here, played from Lark's position through the world bus.
+(() => {
+  const K = Snd, R = (a, b) => a + Math.random() * (b - a), P = a => a[Math.floor(Math.random() * a.length)], sat = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const MODES = { dorian: [0, 2, 3, 5, 7, 9, 10], aeolian: [0, 2, 3, 5, 7, 8, 10], mixo: [0, 2, 4, 5, 7, 9, 10], lydian: [0, 2, 4, 6, 7, 9, 11], phryg: [0, 1, 3, 5, 7, 8, 10] };
+  const ROOTS = { d: 146.83, a: 110, g: 98, f: 87.31, e: 82.41 };
+  const fq = (root, mode, deg) => { const m = MODES[mode], o = Math.floor(deg / 7), i = ((deg % 7) + 7) % 7; return root * Math.pow(2, (m[i] + 12 * o) / 12); };
+  const M = K.music = { cue: null, cg: null, nextBar: 0, bar: 0, bars: 0, silentUntil: 0, t0: 0, want: null, wantT: 0, calmT: 0, mode: 'dorian', root: 146.83, walk: 3, lastCue: '', cues: {}, disc: 0, startT: 0 };
+  K.inits.push((K, c) => { M.cue = null; M.cg = null; M.silentUntil = 25 + R(0, 20); M.nextBar = 0; M.lute = { g: c.createGain(), lp: c.createBiquadFilter(), pan: c.createStereoPanner ? c.createStereoPanner() : null, ev: null, idx: 0, base: 0, end: 0, phrase: 0, gapUntil: 0, audible: false, dest: K.bus.world.in };
+    const l = M.lute; l.g.gain.value = 0; l.lp.type = 'lowpass'; l.lp.frequency.value = 6000; l.g.connect(l.lp); if (l.pan) { l.lp.connect(l.pan); l.pan.connect(l.dest); } else l.lp.connect(l.dest); });
+
+  // ── voices (all take an output node, a start time, a frequency) ──
+  const drone = (o, t, dur, f, v, fifth) => { const c = K.c, g = c.createGain(), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(220, t); lp.frequency.linearRampToValueAtTime(520, t + dur * 0.5); lp.frequency.linearRampToValueAtTime(240, t + dur); lp.Q.value = 0.7;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + Math.min(4, dur * 0.35)); g.gain.setValueAtTime(v, t + dur - Math.min(5, dur * 0.4)); g.gain.linearRampToValueAtTime(0, t + dur); lp.connect(g); g.connect(o);
+    for (const [m, det, ty, a] of [[1, -5, 'sawtooth', 0.5], [1, 6, 'sawtooth', 0.5], [0.5, 0, 'sine', 0.8], [fifth ? 1.5 : 2, 3, 'triangle', 0.35]]) { const os = c.createOscillator(), og = c.createGain(); os.type = ty; os.frequency.value = f * m; os.detune.value = det; og.gain.value = a; os.connect(og); og.connect(lp); os.start(t); os.stop(t + dur + 0.1); } };
+  const pluckV = (o, t, f, v, br) => K.pluck(o, t, f, v, { dur: 2.2, bright: br === undefined ? 0.55 : br });
+  const bowed = (o, t, f, dur, v) => { const c = K.c, g = c.createGain(), lp = c.createBiquadFilter(), vb = c.createOscillator(), vg = c.createGain(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(500, t); lp.frequency.linearRampToValueAtTime(1500, t + dur * 0.4); lp.frequency.linearRampToValueAtTime(600, t + dur); lp.Q.value = 1.2;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + Math.min(0.7, dur * 0.3)); g.gain.setValueAtTime(v, t + dur * 0.7); g.gain.linearRampToValueAtTime(0, t + dur); vb.frequency.value = R(4.8, 5.6); vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * 0.006, t + dur * 0.6); vb.connect(vg); lp.connect(g); g.connect(o);
+    for (const det of [-6, 5]) { const os = c.createOscillator(); os.type = 'sawtooth'; os.frequency.value = f; os.detune.value = det; vg.connect(os.frequency); os.connect(lp); os.start(t); os.stop(t + dur + 0.1); } vb.start(t); vb.stop(t + dur + 0.1); };
+  const frame = (o, t, v, low) => { K.tn(o, t, { f: low ? 62 : 95, f2: low ? 42 : 58, d: 0.28, a: 0.004, v: v }); K.nb(o, t, { type: 'lowpass', f: low ? 300 : 500, d: 0.12, v: v * 0.6 }); K.nb(o, t, { f: 1800, q: 1, d: 0.03, v: v * 0.14 }); };
+  const shaker = (o, t, v) => K.nb(o, t, { type: 'highpass', f: 5000, a: 0.012, d: 0.07, v });
+  const bellV = (o, t, f, v) => { K.tn(o, t, { f, d: 2.2, a: 0.004, v }); K.tn(o, t, { f: f * 2.76, d: 0.7, a: 0.002, v: v * 0.3 }); K.tn(o, t, { f: f * 5.4, d: 0.3, a: 0.002, v: v * 0.1 }); };
+
+  // ── a melody over a mode: a random walk with an arch, rests, and a landing on the tonic or the fifth ──
+  const walkMelody = (n, start, rest, spread) => { const out = []; let d = start; for (let i = 0; i < n; i++) { if (Math.random() < rest) { out.push(null); continue; } const s = P([-2, -1, -1, 0, 1, 1, 2, spread > 1 ? 3 : 1, spread > 1 ? -3 : -1]); d = Math.max(0, Math.min(11, d + s)); if (i === n - 1) d = P([0, 4, 7]); out.push(d); } return out; };
+
+  // ── cues: bar(t, i) schedules bar i starting at t (all into M.cg), len = bar length in seconds ──
+  const C = M.cues;
+  C.dawn = { dur: 78, len: () => 6, vol: 0.55, setup() { M.root = ROOTS.f * 2; M.mode = 'lydian'; M.walk = 7; },
+    bar(t, i, o) { if (i === 0) { drone(o, t, 70, M.root / 2, 0.06, true); } const n = P([2, 3, 3, 4]); for (let k = 0; k < n; k++) if (Math.random() < 0.75) { const d = M.walk = Math.max(2, Math.min(13, M.walk + P([-2, -1, 1, 2, 3, -3]))); pluckV(o, t + k * R(0.9, 1.6) + R(0, 0.4), fq(M.root, M.mode, d), 0.13, 0.5); }
+      if (i % 3 === 1) bellV(o, t + R(1, 4), fq(M.root, M.mode, P([7, 9, 11])) * 2, 0.025); } };
+  C.day = { dur: 96, len: () => 4, vol: 0.5, setup() { M.root = P([ROOTS.d, ROOTS.g]) * 2; M.mode = M.root > 250 ? 'dorian' : 'mixo'; M.walk = 6; },
+    bar(t, i, o) { if (i === 0) drone(o, t, 80, M.root / 2, 0.045, true); const m = walkMelody(4, M.walk, 0.5, 1); m.forEach((d, k) => { if (d === null) return; M.walk = d; pluckV(o, t + k * 0.95 + R(0, 0.08), fq(M.root, M.mode, d + 2), 0.14, 0.55); });
+      if (i % 6 === 3) bowed(o, t + 0.5, fq(M.root, M.mode, P([0, 4, 2])), R(3, 4.5), 0.05); } };
+  C.dusk = { dur: 84, len: () => 6, vol: 0.5, setup() { M.root = ROOTS.a * 2; M.mode = 'aeolian'; M.walk = 4; },
+    bar(t, i, o) { if (i === 0) drone(o, t, 76, M.root / 2, 0.06, true); if (i % 2 === 0) bowed(o, t, fq(M.root, M.mode, P([0, 2, 4, 5])), R(4, 5.5), 0.06); const n = P([1, 2]); for (let k = 0; k < n; k++) { M.walk = Math.max(0, Math.min(11, M.walk + P([-2, -1, 1, 2]))); pluckV(o, t + R(1.5, 5), fq(M.root, M.mode, M.walk + 3), 0.12, 0.45); } } };
+  C.night = { dur: 90, len: () => 8, vol: 0.4, setup() { M.root = ROOTS.e * 2; M.mode = 'phryg'; M.walk = 2; },
+    bar(t, i, o) { if (i === 0) drone(o, t, 82, M.root / 2, 0.05, false); if (Math.random() < 0.7) bellV(o, t + R(0.5, 6), fq(M.root, M.mode, P([4, 7, 9, 11])) * 2, 0.03); if (i % 3 === 1) bowed(o, t + R(0, 3), fq(M.root, M.mode, P([0, 1, 4])) * 2, R(5, 7), 0.035); } };
+  C.tavern = { dur: 46, len: () => 2.4, vol: 0.5, setup() { M.root = ROOTS.g * 2; M.mode = 'mixo'; M.walk = 6; },
+    bar(t, i, o) { const q = 0.3; const m = walkMelody(8, M.walk, 0.18, 1); m.forEach((d, k) => { if (d === null) return; M.walk = d; pluckV(o, t + k * q, fq(M.root, M.mode, d + 2), 0.08, 0.6); }); pluckV(o, t, fq(M.root, M.mode, 0) / 2, 0.1, 0.4); pluckV(o, t + q * 4, fq(M.root, M.mode, 4) / 2, 0.08, 0.4); frame(o, t, 0.1); frame(o, t + q * 4, 0.08); shaker(o, t + q * 2, 0.012); shaker(o, t + q * 6, 0.012); } };
+  C.tension = { dur: 1e9, len: () => 3, vol: 0.55, setup() { M.root = ROOTS.e; M.mode = 'phryg'; M.walk = 0; },
+    bar(t, i, o) { if (i === 0) { drone(o, t, 40, M.root, 0.08, false); drone(o, t, 40, M.root * 1.0595, 0.04, false); } if (i > 0 && i % 12 === 0) { drone(o, t, 40, M.root, 0.08, false); drone(o, t, 40, M.root * 1.0595, 0.04, false); } frame(o, t, 0.18, true); frame(o, t + 0.9, 0.1, true); if (Math.random() < 0.3) bowed(o, t + R(0, 2), fq(M.root, M.mode, P([1, 3, 6])) * 2, R(2.5, 3.5), 0.03); } };
+  C.combat = { dur: 1e9, len: () => 2.4, vol: 0.6, setup() { M.root = ROOTS.a; M.mode = 'aeolian'; M.walk = 0; },
+    bar(t, i, o) { const q = 0.3; if (i % 16 === 0) drone(o, t, 40, M.root, 0.07, true); for (let k = 0; k < 8; k++) { if (k % 4 === 0) frame(o, t + k * q, 0.32, true); else if (k === 6 || (k === 3 && Math.random() < 0.4)) frame(o, t + k * q, 0.2); else if (Math.random() < 0.3) frame(o, t + k * q, 0.08); }
+      const pat = i % 4 === 3 ? [0, 0, 1, 0, 4, 3, 1, 0] : [0, 0, 0, 2, 0, 0, 4, 3]; pat.forEach((d, k) => { const f = fq(M.root, M.mode, d) * 2; K.tn(o, t + k * q, { f, d: 0.25, a: 0.015, v: 0.05, type: 'sawtooth' }); }); if (i % 2 === 0) bowed(o, t, fq(M.root, M.mode, P([0, 4, 5])) * 2, 2.2, 0.04); } };
+  C.discovery = { dur: 9, len: () => 3, vol: 0.5, setup() { M.root = ROOTS.d * 2; M.mode = 'lydian'; M.walk = 2; },
+    bar(t, i, o) { if (i === 0) { drone(o, t, 9, M.root / 2, 0.06, true); [0, 2, 4, 6, 9].forEach((d, k) => { pluckV(o, t + 0.2 + k * 0.38, fq(M.root, M.mode, d + 2), 0.16, 0.5); bellV(o, t + 0.2 + k * 0.38, fq(M.root, M.mode, d + 2) * 2, 0.02); }); } } };
+
+  // ── the state machine ──
+  const startCue = (name, now) => { const c = K.c, cu = C[name]; if (M.cg) fadeOut(M.cg, 1.4, now); const g = c.createGain(); g.gain.value = 0; g.gain.setTargetAtTime(cu.vol, now, 0.6); g.connect(K.bus.music.in); M.cg = g; M.cue = cu; M.cueName = name; cu.setup(); M.bar = 0; M.nextBar = now + 0.3; M.t0 = now; };
+  const fadeOut = (g, s, now) => { g.gain.cancelScheduledValues(now); g.gain.setTargetAtTime(0, now, s / 4); setTimeout(() => { try { g.disconnect(); } catch (e) { } }, s * 1000 + 500); };
+  const stopCue = (now, fade) => { if (M.cg) fadeOut(M.cg, fade || 3, now); M.cg = null; M.cue = null; M.cueName = ''; };
+  M.threat = { tension: false, combat: false, d: 99 };
+  const sense = () => { let ten = false, com = false, dmin = 99; if (typeof Foes !== 'undefined' && Foes.list && typeof Player !== 'undefined') for (const f of Foes.list) { if (!f.alive) continue; const d = Math.hypot(f.pos[0] - Player.pos[0], f.pos[2] - Player.pos[2]); if (d > 55) continue; const s = f.state; if (s === 'idle' || s === 'return' || s === 'gone') continue; if (d < dmin) dmin = d; if (d < 16 && (s === 'circle' || s === 'attack' || s === 'guard' || s === 'stagger' || s === 'chase')) com = true; ten = true; }
+    if (typeof RPG !== 'undefined' && RPG.combatT < 4 && dmin < 30) com = true; M.threat.tension = ten; M.threat.combat = com; M.threat.d = dmin; };
+  const pickAmbient = G => { const h = G.hour, inn = G.zid === 'inn' && h >= 17 && !G.lark.on;
+    if (inn && Math.random() < 0.8) return 'tavern'; if (G.indoor > 0.5) return null;
+    if (h >= 5 && h < 8.6) return 'dawn'; if (h >= 8.6 && h < 17) return 'day'; if (h >= 17 && h < 20.5) return 'dusk'; return 'night'; };
+
+  K.ups.push(function (K, dt, G) {
+    if (!M.lute) return; const c = K.c, now = K.now();
+    luteUpdate(K, dt, G, now);
+    if (!G.playing) { if (M.cue) stopCue(now, 2); return; }
+    if ((K.frame & 7) === 0) sense();
+    const th = M.threat;
+    // priority: combat > tension > ambient; discovery is a short flourish that never interrupts a fight
+    if (th.combat) { M.calmT = 0; if (M.cueName !== 'combat') startCue('combat', now); }
+    else if (th.tension) { M.calmT = 0; if (M.cueName !== 'tension' && M.cueName !== 'combat') startCue('tension', now); else if (M.cueName === 'combat' && M.calmT === 0) { M.calmT = 0; } }
+    else if (M.cueName === 'combat' || M.cueName === 'tension') { M.calmT += dt; if (M.calmT > 7) { stopCue(now, 4); M.silentUntil = now + R(25, 50); M.calmT = 0; } }
+    if (M.disc && !th.tension && M.cueName !== 'discovery') { M.disc = 0; startCue('discovery', now); }
+    else if (M.cueName === 'combat' && !th.combat && th.tension) startCue('tension', now);
+    // ambient cues: only after a silence, and only when the place suits music
+    if (!M.cue && now >= M.silentUntil && !th.tension && !G.talk && !G.menu) { const nm = pickAmbient(G); if (nm) startCue(nm, now); else M.silentUntil = now + 20; }
+    else if (M.cue && M.cueName !== 'combat' && M.cueName !== 'tension' && (now - M.t0 > M.cue.dur || (G.indoor > 0.7 && M.cueName !== 'tavern') )) { stopCue(now, 5); M.silentUntil = now + R(70, 180); }
+    if (M.cue) while (M.nextBar < now + 1.5) { M.cue.bar(M.nextBar, M.bar++, M.cg); M.nextBar += M.cue.len(M.bar); }
+  });
+  K.discover = () => { M.disc = 1; };
+
+  // ── Lark's lute: a tune made up as it goes, in D dorian, played from where Lark stands. Events are [eighths, Hz, velocity] ──
+  const lutePhrase = l => { const root = ROOTS.d * 2, mode = 'dorian', out = [], rh = [[1, 1, 1, 1, 1, 1, 1, 1], [2, 1, 1, 2, 1, 1], [1, 1, 2, 1, 1, 2], [3, 1, 2, 2], [2, 2, 1, 1, 2], [1, 2, 1, 2, 2]], k = l.phrase % 4; let d = k === 2 ? 7 : 4;
+    for (let bar = 0; bar < 2; bar++) { const pat = P(rh); let tt = bar * 8; for (let i = 0; i < pat.length; i++) { d = Math.max(0, Math.min(11, d + P([-2, -1, -1, 0, 1, 1, 2]) + (k === 2 && Math.random() < 0.3 ? 1 : 0))); if (bar === 1 && i === pat.length - 1) d = P(k === 3 ? [0] : [0, 4, 4]); out.push([tt, fq(root, mode, d), 0.28 * R(0.8, 1)]); tt += pat[i]; } }
+    out.push([0, fq(root, mode, 0) / 2, 0.22], [4, fq(root, mode, 4) / 2, 0.16], [8, fq(root, mode, 0) / 2, 0.2], [12, fq(root, mode, k === 3 ? 0 : 3) / 2, 0.16]); out.sort((a, b) => a[0] - b[0]); return out; };
+  function luteUpdate(K, dt, G, now) {
+    const l = M.lute, Lk = G.lark, on = Lk.on && K.set.world > 0.01 && Lk.d < 45; Audio2.luteRequest = Math.max(0, Audio2.luteRequest - dt);
+    if ((K.frame & 3) === 0) { if (on && K.spat(Lk.x, Lk.y, Lk.z, Lk.zone, 3, 45, K._s)) { l.g.gain.setTargetAtTime(0.9 * K._s.g, now, 0.2); l.lp.frequency.setTargetAtTime(K._s.lp, now, 0.2); if (l.pan) l.pan.pan.setTargetAtTime(K._s.pan, now, 0.2); l.audible = true; } else { l.g.gain.setTargetAtTime(0, now, 0.25); l.audible = false; } }
+    if (!on || !l.audible) { l.ev = null; return; }        // nobody hears it, so it is not rendered; a fresh phrase begins when you come within earshot
+    const half = 0.17;
+    if (!l.ev) { if (now < l.gapUntil) return; l.ev = lutePhrase(l); l.idx = 0; l.base = now + 0.15; l.end = l.base + 16 * half; l.phrase++; }
+    while (l.idx < l.ev.length && l.base + l.ev[l.idx][0] * half < now + 0.5) { const e = l.ev[l.idx++]; K.pluck(l.g, Math.max(l.base + e[0] * half + R(0, 0.012), now), e[1], e[2], { dur: e[1] < 140 ? 2.2 : 1.5, bright: e[1] < 140 ? 0.35 : 0.55 }); }
+    if (l.idx >= l.ev.length && now >= l.end - 0.05) { l.ev = null; if (l.phrase % 4 === 0) l.gapUntil = now + R(3, 8); }
+  }
+  // test hooks
+  K.renderCue = (name, secs) => { const c = K.c, cu = C[name]; const g = c.createGain(); g.gain.value = cu.vol; g.connect(K.bus.music.in); cu.setup(); let t = 0.1, i = 0; while (t < secs) { cu.bar(t, i++, g); t += cu.len(i); } };
+})();
+
+
+// ---- 88c_world.js ----
+// ───────────────────────── Snd reads the game: state for the beds, and the sounds that follow gameplay ─────────────────────────
+// Everything here is read-only against the game (player, camera, World, ENV, NPCs, foes, doors); nothing is hooked except a few Audio2 shim calls.
+// Footsteps are timed from Player.step, doors from World.doors[].open, the smith's hammer from NPC.brandt.t, the bell from Env.hour, the lute from NPC.lark.
+(() => {
+  const K = Snd, G = K.G, sat = x => x < 0 ? 0 : x > 1 ? 1 : x, hyp2 = (a, b) => Math.sqrt(a * a + b * b), RN = (a, b) => a + Math.random() * (b - a);
+  const tick = (id, n) => K.frame % n === (id % n);
+  G.fires = [{ on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }, { on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }, { on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }];
+  G.lanternNear = null; G.nLan = 0; G.innZone = 0; G.millZone = 0; G.lark = { on: false, x: 0, y: 0, z: 0, zone: 0, d: 99 };
+  G.sqX = 0; G.sqY = 0; G.sqZ = -2; G.mkX = 34.5; G.mkY = 0; G.mkZ = 0.7; G.innX = 0; G.innY = 0; G.innZ = -22; G.millX = 0; G.millY = 0; G.millZ = 0;
+  G.riverD = 99; G.riverX = 0; G.riverY = 0; G.riverZ = 0; G.lakeD = 99; G.lakeX = 0; G.lakeY = 0; G.lakeZ = 0; G.meadow = 0.5; G.forest = 0;
+  G.nSquare = 0; G.nMarket = 0; G.nInn = 0; G.nearSquare = 99; G.nearMarket = 99; G.nearInn = 99; G.millOn = false; G.grindOn = false; G.pHunter = null; G.pBarn = null; G.pFarm = null;
+  let forestGrid = null, fireList = [], fireN = -1, lanList = [], lanN = -1, ready = false;
+  const CELL = 10, HALF = 180, NG = HALF * 2 / CELL;
+  const SPACE = id => /cellar|crypt|dungeon|cave|undercroft|tomb|mine|tower|vault/.test(id) ? 'cave' : /chapel|inn|hall|barn|temple|church/.test(id) ? 'hall' : 'room';
+  const STONE = /chapel|cellar|crypt|dungeon|cave|undercroft|tomb|tower|vault/;
+  const nearestRiver = (x, z, max) => {            // River.dist, but it also keeps the nearest point (no allocation)
+    const p = River.p; let best = max * max, bx = 0, bz = 0, at = -1;
+    for (const b of River.boxes) { if (x < b[0] - max || x > b[2] + max || z < b[1] - max || z > b[3] + max) continue;
+      for (let i = b[4]; i < b[5]; i++) { const ax = p[i][0], az = p[i][1], ex = p[i + 1][0] - ax, ez = p[i + 1][1] - az, l2 = ex * ex + ez * ez, t = l2 ? sat(((x - ax) * ex + (z - az) * ez) / l2) : 0, dx = x - ax - ex * t, dz = z - az - ez * t, dd = dx * dx + dz * dz; if (dd < best) { best = dd; bx = ax + ex * t; bz = az + ez * t; at = River.cum[i] + t * Math.sqrt(l2); } } }
+    G.riverX = bx; G.riverZ = bz; G.riverAt = at; return at < 0 ? max : Math.sqrt(best);
+  };
+  function setup() {
+    ready = true; const gy = (x, z) => World.groundY ? World.groundY(x, z) : 0;
+    forestGrid = new Uint8Array(NG * NG); const V = World.vegInst || {};
+    for (const [k, w] of [['pine', 1], ['birch', 1], ['oak', 3]]) for (const t of V[k] || []) { const i = Math.floor((t[0] + HALF) / CELL), j = Math.floor((t[2] + HALF) / CELL); if (i >= 0 && j >= 0 && i < NG && j < NG) forestGrid[j * NG + i] = Math.min(255, forestGrid[j * NG + i] + w); }
+    const inn = typeof SITE !== 'undefined' && SITE.inn; if (inn) { G.innX = inn.x; G.innZ = inn.z; G.innY = gy(inn.x, inn.z) + 1.2; }
+    G.sqX = SQUARE.x; G.sqZ = SQUARE.z; G.sqY = gy(SQUARE.x, SQUARE.z) + 1.5; G.mkY = gy(G.mkX, G.mkZ) + 1.5;
+    for (const z of World.zones) { if (z.site.id === 'inn') G.innZone = z.id; if (z.site.id === 'mill') G.millZone = z.id; }
+    const P = id => { const s = SITE[id]; return s ? [s.x, gy(s.x, s.z) + 1, s.z] : null; }; G.pHunter = P('hunter'); G.pBarn = P('barn'); G.pFarm = P('farm');
+    G.lakeY = LAKE.y;
+  }
+  const forestAt = (x, z) => { const i = Math.floor((x + HALF) / CELL), j = Math.floor((z + HALF) / CELL); if (i < 1 || j < 1 || i >= NG - 1 || j >= NG - 1) return 0.5; let n = 0; for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) n += forestGrid[(j + b) * NG + i + a]; return sat(n / 14); };
+
+  // ── the surface under a foot, at any place ──
+  K.surfaceAt = function (x, y, z, zone, inWater) {
+    if (zone) { const id = World.zones[zone - 1].site.id; return STONE.test(id) ? 'stone' : 'plank'; }
+    if (inWater) return 'water';
+    const ty = Terrain.y(x, z); if (y > ty + 0.12) return 'wood';
+    if (Terrain.splat(x, z, 1) > 0.4) return 'cobble'; if (Terrain.splat(x, z, 0) > 0.4 || Terrain.splat(x, z, 3) > 0.5) return 'dirt';
+    if (World.waterAt(x, z) > -900) return 'water';
+    if (nearestRiver(x, z, 9) < 7 || (hyp2(x - LAKE.x, z - LAKE.z) - LAKE.r) < 4) return 'mud';
+    return 'grass';
+  };
+
+  K.gather = function (dt) {
+    if (!ready) { if (typeof World === 'undefined' || !World.zones || !World.vegInst || typeof Player === 'undefined') return; setup(); }
+    const cam = R.cam, p = cam.pos, P = Player, f = K.frame;
+    G.x = p[0]; G.y = p[1]; G.z = p[2]; G.zone = World.camZone | 0; G.indoor = World.indoor;
+    const L = K.L; L.x = p[0]; L.y = p[1]; L.z = p[2]; L.yaw = cam.yaw; L.fx = Math.sin(cam.yaw); L.fz = -Math.cos(cam.yaw); L.rx = Math.cos(cam.yaw); L.rz = Math.sin(cam.yaw);
+    G.zid = G.zone ? World.zones[G.zone - 1].site.id : ''; G.space = G.zone ? SPACE(G.zid) : 'open';
+    G.hour = Env.hour; G.night = ENV.night; G.day = ENV.day; G.wind = Math.max(0.1, Math.min(1.4, ENV.windStrength));
+    G.rain = Math.max(Env.rain || 0, (typeof Sky !== 'undefined' && Sky.weather && Sky.weather.rain) || 0);
+    G.playing = !!game.playing; G.menu = !!(typeof UI !== 'undefined' && UI.menu); G.talk = !!(typeof UI !== 'undefined' && (UI.talk || UI.reader)); G.dead = !!(typeof RPG !== 'undefined' && RPG.dead);
+    if (K.testHold) return;
+    // places that move slowly: re-evaluated a few times a second
+    if (tick(1, 4)) {
+      G.forest = forestAt(G.x, G.z); G.meadow = sat((hyp2(G.x - SQUARE.x, G.z - SQUARE.z) - 22) / 45) * (1 - 0.6 * G.forest);
+      G.riverD = nearestRiver(G.x, G.z, 60); G.riverY = riverY(G.riverAt) + 0.3;
+      const dl = hyp2(G.x - LAKE.x, G.z - LAKE.z), lx = dl > 1 ? (G.x - LAKE.x) / dl : 1, lz = dl > 1 ? (G.z - LAKE.z) / dl : 0;
+      if (dl > LAKE.r) { G.lakeX = LAKE.x + lx * LAKE.r; G.lakeZ = LAKE.z + lz * LAKE.r; G.lakeD = dl - LAKE.r; } else { G.lakeX = G.x; G.lakeZ = G.z; G.lakeD = 0; } G.lakeY = LAKE.y + 0.2;
+      G.nearSquare = hyp2(G.x - G.sqX, G.z - G.sqZ); G.nearMarket = hyp2(G.x - G.mkX, G.z - G.mkZ); G.nearInn = hyp2(G.x - G.innX, G.z - G.innZ);
+      if (World.millPos) { G.millOn = true; G.millX = World.millPos[0]; G.millY = World.millPos[1]; G.millZ = World.millPos[2]; }
+    }
+    if (tick(2, 15) && typeof NPCS !== 'undefined') {
+      let a = 0, b = 0, c = 0; for (const n of NPCS) { const q = n.pos; if (hyp2(q[0] - SQUARE.x, q[2] - SQUARE.z) < 17) a++; if (hyp2(q[0] - G.mkX, q[2] - G.mkZ) < 10) b++; if (G.innZone && Math.abs(q[0] - G.innX) < 9 && Math.abs(q[2] - G.innZ) < 7 && World.zoneAt(q[0], q[1] + 1, q[2]) === G.innZone) c++; }
+      G.nSquare = a; G.nMarket = b; G.nInn = c;
+      const o = NPC.osric; G.grindOn = !!(o && o.anim === 'work' && !o.talking && G.millOn && hyp2(o.pos[0] - G.millX, o.pos[2] - G.millZ) < 9); if (G.millZone) G.grindOn = G.grindOn;
+    }
+    // fires: the nearest three emitters that burn
+    if (World.emitters.length !== fireN) { fireN = World.emitters.length; fireList.length = 0; lanList.length = 0; for (const e of World.emitters) { if (e.type === 'fire' || e.type === 'bonfire' || e.type === 'torch') fireList.push(e); else if (e.type === 'lantern' && !e.zone) lanList.push(e); } }
+    if (tick(3, 6)) {
+      for (const F of G.fires) F.on = false;
+      for (const e of fireList) {
+        if (e.type === 'bonfire' && !World.bonfire) continue; const d = Math.sqrt((e.p[0] - G.x) ** 2 + (e.p[1] - G.y) ** 2 + (e.p[2] - G.z) ** 2), big = e.type === 'bonfire', ref = big ? 4 : e.type === 'torch' ? 1.2 : 1.8, max = big ? 70 : 32;
+        if (d > max) continue; const lvl = big ? 1.5 : e.type === 'torch' ? 0.3 : Math.min(1.3, 0.5 + (e.size || 0.4)), sc = lvl * ref / Math.max(d, ref) * (e.zone === G.zone ? 1 : 0.3);
+        // insert into the three slots by score
+        let w = -1, low = sc; for (let i = 0; i < 3; i++) { const F = G.fires[i]; if (!F.on) { w = i; break; } if (F.sc < low) { low = F.sc; w = i; } }
+        if (w >= 0) { const F = G.fires[w]; F.on = true; F.sc = sc; F.x = e.p[0]; F.y = e.p[1]; F.z = e.p[2]; F.zone = e.zone | 0; F.ref = ref; F.max = max; F.lvl = lvl; }
+      }
+      // creak targets: lanterns within 18 m
+      G.nLan = 0; G.lanternNear = null; let bd = 18; for (const e of lanList) { const d = hyp2(e.p[0] - G.x, e.p[2] - G.z); if (d < bd) { bd = d; if (!G.lanternNear || Math.random() < 0.5) G.lanternNear = e.p; } }
+    }
+    const l = typeof NPC !== 'undefined' && NPC.lark, Lk = G.lark; if (l) { Lk.on = !!(l.anim === 'lute' && !l.talking) || Audio2.luteRequest > 0; Lk.x = l.pos[0]; Lk.y = l.pos[1] + 1.2; Lk.z = l.pos[2]; Lk.d = hyp2(l.pos[0] - G.x, l.pos[2] - G.z); if (tick(5, 10)) Lk.zone = World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]); }
+  };
+
+  // ── gameplay-driven sound ──
+  const q = { step: 0, vy: 0, prevY: 0, prevGround: true, sNext: 0, breathT: 0, heartT: 0, hour: -1, bellN: 0, bellT: 0, k: 0, bellowT: 0, foes: new Map(), placeSeen: 0, steps: 0, npcAcc: new Map() };
+  K.q = q; K.lastMat = null;
+  K.ups.push(function (K, dt, G) {
+    if (!ready || K.testHold) return; const c = K.c, now = K.now(), P = Player;
+    const playing = G.playing;
+    // ─ the player's feet ─
+    if (playing && !P.locked) {
+      const fl = Math.floor(P.step);
+      if (fl !== q.step) { q.step = fl;
+        if (P.speed > 0.4 && P.onGround) {
+          let sf = K.surfaceAt(P.pos[0], P.pos[1], P.pos[2], G.zone, P.inWater > 0.15);
+          const vy = Math.abs(q.vy); if (P.onGround && vy > 0.45 * P.speed && vy > 0.5) sf = 'stairs';
+          K.play('fs.' + sf, null, 1, { w: Math.max(0.55, Math.min(1.5, P.speed / 2.9)) }); K.lastSurface = sf; }
+      }
+      if (Math.abs(P.pos[1] - q.prevY) > 0.8) q.vy = 0; else q.vy += ((P.pos[1] - q.prevY) / Math.max(dt, 0.001) - q.vy) * Math.min(1, dt * 6); q.prevY = P.pos[1];
+      // breath: when stamina is nearly gone, and for a while after
+      if (typeof RPG !== 'undefined') { const r = RPG.st(), sta = r.sta / RPG.MAXST, hp = r.hp / RPG.MAXHP;
+        q.breathT -= dt; if (q.breathT <= 0 && (sta < 0.34 || RPG.exhausted) && !RPG.dead) { q.breathT = RN(1.2, 1.6); K.play('breath', null, 1, { lo: 1 - sta / 0.34 }); }
+        q.heartT -= dt; if (q.heartT <= 0 && hp < 0.3 && hp > 0 && !RPG.dead) { q.heartT = 0.55 + hp * 1.6; K.play('heart', null, 0.5 + (0.3 - hp) * 2.5); } }
+    } else q.prevY = P.pos[1];
+    // ─ villagers' feet: every stride's worth of distance, quieter, through the spatial route ─
+    if (typeof NPCS !== 'undefined' && playing) { let n = 0;
+      for (const v of NPCS) { const dx = v.pos[0] - G.x, dz = v.pos[2] - G.z; if (Math.abs(dx) > 16 || Math.abs(dz) > 16) { q.npcAcc.set(v, 0); continue; }
+        if (v.anim !== 'walk' && v.anim !== 'run') { q.npcAcc.set(v, 0); continue; }
+        let a = (q.npcAcc.get(v) || 0) + (v.anim === 'run' ? 2.7 : 1.35) * dt * 1; const stride = v.anim === 'run' ? 1.25 : 0.8 * v.scale;
+        if (a >= stride && n < 4) { a = 0; n++; const zn = K.zoneOf(v.pos[0], v.pos[1], v.pos[2]), sf = K.surfaceAt(v.pos[0], v.pos[1], v.pos[2], zn, false); K.play('fs.' + sf, v.pos, 0.55 * (0.6 + 0.4 * v.scale), { w: 0.9, free: true, zone: zn }); }
+        q.npcAcc.set(v, a); } }
+    // ─ doors: opening starts the creak, arriving closed is the thunk ─
+    if (World.doors && playing) for (const d of World.doors) {
+      const o = d.open; if (d._so === undefined) { d._so = o; continue; }
+      if (o !== d._so) { const dir = o > d._so ? 1 : -1;
+        if (dir === 1 && d._sd !== 1 && d._so < 0.02) { const dd = hyp2(d.c[0] - G.x, d.c[2] - G.z); if (dd < 40) K.play('door.open', d.c, 1, { zone: dd < 7 ? G.zone : 0, free: true }); }
+        if (dir === -1 && o < 0.02) { const dd = hyp2(d.c[0] - G.x, d.c[2] - G.z); if (dd < 40) K.play('door.close', d.c, 1, { zone: dd < 7 ? G.zone : 0, free: true }); }
+        d._sd = dir; d._so = o; } else if (d._sd) d._sd = 0;
+    }
+    // ─ the smith: hammer strike in step with his animation, bellows at the forge ─
+    const b = typeof NPC !== 'undefined' && NPC.brandt;
+    if (b && playing) {
+      if (b.anim === 'hammer' && !b.talking) { const k = (b.t * 0.9) % 1; if (q.k < 0.66 && k >= 0.66) { const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('anvil', [b.pos[0], b.pos[1] + 0.9, b.pos[2]], RN(0.85, 1.1), { zone: zn, free: true }); } q.k = k; }
+      else { q.k = 0; if (b.anim === 'work' && !b.talking) { q.bellowT -= dt; if (q.bellowT <= 0) { q.bellowT = RN(3.5, 6); const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('bellows', [b.pos[0] + 1, b.pos[1] + 0.9, b.pos[2]], 1, { zone: zn, free: true }); } } }
+    }
+    // ─ the mill wheel: a paddle splash twelve times a turn, in step with the visible wheel ─
+    const w = World.millWheel; if (w && playing) { const k = Math.floor(w.angle / (Math.PI * 2 / 12)); if (q.wk === undefined) q.wk = k; if (k !== q.wk) { q.wk = k; if (G.millOn) K.play('paddle', [G.millX, G.millY - 1.2, G.millZ], RN(0.7, 1), { zone: 0, free: true }); } }
+    // ─ the chapel bell: strokes spaced about three seconds apart; 6 and 12 o'clock count the hour, others strike once ─
+    const hr = Math.floor(Env.hour), flags = typeof S !== 'undefined' && S.flags;
+    if (hr !== q.hour) { if (q.hour >= 0 && hr === (q.hour + 1) % 24 && flags && flags.bell && playing) { q.bellN = hr === 12 ? 12 : (hr === 6 || hr === 18) ? 6 : 1; q.bellT = now + 0.6; } q.hour = hr; }
+    if (q.bellN > 0 && now >= q.bellT && World.bell) { q.bellN--; q.bellT = now + RN(3.1, 3.5); K.play('bell.stroke', World.bell.p, 1, { zone: 0, free: true }); }
+    // ─ foes: efforts when a swing starts, grunts when they stagger ─
+    if (typeof Foes !== 'undefined' && Foes.list && playing) for (const f of Foes.list) {
+      const st = f.alive ? f.state : 'gone', ps = q.foes.get(f); if (ps === undefined) { q.foes.set(f, st); continue; }
+      if (st !== ps) { q.foes.set(f, st); const pos = [f.pos[0], f.pos[1] + 1.2, f.pos[2]];
+        if (st === 'attack') K.play('foe.effort', pos, 1, { free: true }); else if (st === 'stagger') K.play('foe.hurt', pos, 1, { free: true }); }
+    }
+    // ─ a place discovered ─
+    if (typeof UI !== 'undefined' && UI.placeT !== q.placeSeen) { q.placeSeen = UI.placeT; const pl = document.getElementById('place'); if (pl && pl.firstChild && /Discovered/.test(pl.firstChild.textContent || '')) K.play('discover'); }
+  });
+  // the lute and the music are in 88c_music.js
+  // remember what was last picked up, so the older pickup() call can choose a material
+  const MAT = { gold: 'coin', apple: 'food', bread: 'food', ale: 'wood', rope: 'cloth', hammer: 'metal', knife: 'metal', tools: 'metal', frostcap: 'herb', malt: 'cloth', potion: 'generic', tonic: 'generic' };
+  K.ups.push(function (K) { if (!K.givePatched && typeof give === 'function') { K.givePatched = true; try { const g0 = give; give = function (id, n) { K.lastMat = MAT[id] || (typeof ITEMS !== 'undefined' && ITEMS[id] && ITEMS[id][2] && ITEMS[id][2].slot ? 'metal' : 'generic'); return g0.apply(this, arguments); }; } catch (e) { } } });
+})();
+
+
+// ---- 88d_voice.js ----
+// ───────────────────────── spoken dialogue and barks ─────────────────────────
+// Lines are generated at build time (tools/voice, Kokoro-82M) into audio/voice/*.m4a with a manifest keyed by a hash of speaker + on-screen text.
+// When a dialogue node is shown the line is fetched (the speaker's other lines are prefetched), decoded and played from the speaker's position on the
+// voice bus, ducking ambience and music. Subtitles stay, as a slim strip (body.voiced). Choices wait for the line to end or a tap, which skips it.
+// If the manifest, the file or the audio context is missing, nothing changes: the text box behaves exactly as before.
+// showNode / endTalk (85_ui.js) are wrapped here rather than edited; barks read NPC positions and Combat.swingN.
+(() => {
+  const K = Snd, V = K.vox = { man: null, loading: false, failed: false, buf: new Map(), pend: new Map(), cur: null, wait: false, lastBark: -99, perNpc: new Map(), swing: 0, key: null, wrapped: false, req: [], waitT: 0 };
+  const cyrb53 = (str, seed = 0) => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (let i = 0; i < str.length; i++) { const ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); };
+  V.keyOf = (speaker, text) => cyrb53(speaker + '\n' + text);
+  const BASE = 'audio/voice/';
+  K.set.voices = true; K.set.voiceVol = 0.9; K.set.subs = true; K.load();
+  // the slim subtitle strip and the waiting state (styles are injected here so the interface files stay untouched)
+  if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = '/* [voice] subtitle strip while a line is spoken */\nbody.voiced #dialog { padding: 8px 14px 10px; }\nbody.voiced #dname { font-size: 14px; }\nbody.voiced #dtext { font-size: 15px; line-height: 1.32; margin: 2px 0 8px; min-height: 0; max-height: 2.7em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\nbody.voiced.nosubs #dtext { visibility: hidden; }\n#dopts.vwait { visibility: hidden; }\nbody.voiced #dopts button { min-height: 40px; padding: 6px 12px; font-size: 15px; }'; document.head.appendChild(st); }
+
+  V.init = function () { if (V.loading || V.man || V.failed) return; V.loading = true;
+    fetch(BASE + 'manifest.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { V.man = j; V.loading = false; }).catch(() => { V.failed = true; V.loading = false; }); };
+  const decode = (c, ab) => new Promise((res, rej) => { try { const p = c.decodeAudioData(ab, res, rej); if (p && p.catch) p.catch(rej); } catch (e) { rej(e); } });
+  // fetch and decode one file once; resolves to an AudioBuffer or null
+  V.load = function (file) { if (V.buf.has(file)) return Promise.resolve(V.buf.get(file)); if (V.pend.has(file)) return V.pend.get(file); const c = K.ctx; if (!c) return Promise.resolve(null);
+    const p = fetch(BASE + file).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status)).then(ab => decode(c, ab)).then(b => { V.buf.set(file, b); V.pend.delete(file); return b; }).catch(() => { V.pend.delete(file); return null; }); V.pend.set(file, p); return p; };
+  V.prefetch = function (speaker) { if (!V.man) return; const m = V.man.lines; let n = 0; for (const k in m) if (m[k].s === speaker && !V.buf.has(m[k].f) && !V.pend.has(m[k].f) && n++ < 16) setTimeout(() => V.load(m[k].f), 80 * n); };
+  V.stop = function (quiet) { const cu = V.cur; V.cur = null; if (cu) { try { cu.g.gain.setTargetAtTime(0, K.now(), 0.03); cu.src.stop(K.now() + 0.15); } catch (e) { } } V.reveal(); V.key = null; };
+  V.reveal = function () { V.wait = false; if (typeof document === 'undefined') return; const b = document.getElementById('dopts'); if (b) b.classList.remove('vwait'); };
+  // play a decoded buffer from a position (or at the listener) on the voice bus; returns the handle
+  V.play = function (buf, speaker, pos, vol, o) {
+    const c = K.ctx; if (!c || K.off) return null; const G = K.G; let dest = K.bus.ui.in, g = c.createGain(), src = c.createBufferSource(); src.buffer = buf; g.gain.value = vol * K.set.voiceVol * (o && o.trim || 1);
+    if (pos) { const node = K.route(o && o.bus || 'ui', pos[0], pos[1], pos[2], o && o.zone !== undefined ? o.zone : G.zone, o && o.ref || 3, o && o.max || 40, 1); if (!node) return null; g.connect(node); } else g.connect(dest);
+    src.connect(g); src.start(K.now() + 0.02); const h = { src, g, t0: K.now(), dur: buf.duration, speaker }; src.onended = () => { if (V.cur === h) { V.cur = null; V.reveal(); } }; return h; };
+  // a dialogue node was shown: returns true if the line is voiced. The speaker is an NPC object or id.
+  K.say = function (npc, text) {
+    V.stop(); if (!K.set.voices || !K.ctx || K.off || !npc || !V.man) return false; const id = npc.id || npc, e = V.man.lines[V.keyOf(id, text)]; if (!e) { document.body.classList.remove('voiced'); return false; }
+    const key = V.key = V.keyOf(id, text); V.wait = true; const box = document.getElementById('dopts'); if (box) box.classList.add('vwait'); document.body.classList.add('voiced'); document.body.classList.toggle('nosubs', !K.set.subs); V.waitT = K.now();
+    const pos = npc.pos ? [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]] : null;
+    V.load(e.f).then(buf => { if (V.key !== key) return; if (!buf) { V.reveal(); document.body.classList.remove('voiced'); return; }
+      if (K.ctx.state !== 'running') { V.reveal(); return; }
+      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40 }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; V.lastPlayed = { speaker: id, file: e.f, text }; });
+    // do not hold the choices hostage to a slow download
+    setTimeout(() => { if (V.key === key && !V.cur) { V.reveal(); } }, 2500);
+    return true; };
+  K.voiceBusy = () => !!V.cur || V.wait;
+  // the interface: tapping the dialogue skips the line (and does not pick an option); wrapped here so 85_ui.js stays untouched
+  function wrap() {
+    if (V.wrapped || typeof showNode !== 'function' || typeof endTalk !== 'function') return; V.wrapped = true;
+    const sn = showNode, et = endTalk;
+    showNode = function (n) { sn(n); try { if (n && UI.talk) { K.say(UI.talk, n.t); V.prefetch(UI.talk.id); } } catch (e) { } };
+    endTalk = function () { try { V.stop(); document.body.classList.remove('voiced'); } catch (e) { } return et.apply(this, arguments); };
+    const d = document.getElementById('dialog'); if (d) d.addEventListener('click', e => { if (V.wait || V.cur) { V.stop(); e.stopPropagation(); e.preventDefault(); } }, true);
+    addEventListener('keydown', e => { if ((V.wait || V.cur) && typeof UI !== 'undefined' && UI.talk && (e.code === 'Space' || e.code === 'Enter' || /^Digit\d$/.test(e.code))) { V.stop(); e.stopPropagation(); e.preventDefault(); } }, true);
+  }
+  // ── barks: a greeting by time of day for an idle villager close by, a protest when a sword is swung near them ──
+  const cat = h => h >= 5 && h < 11 ? 'morning' : h >= 11 && h < 17 ? 'day' : h >= 17 && h < 21 ? 'evening' : 'night';
+  V.bark = function (npc, c) { if (!V.man || !K.set.voices || !K.ctx) return false; const arr = V.man.barks && V.man.barks[npc.id] && V.man.barks[npc.id][c]; if (!arr || !arr.length) return false; const key = arr[Math.floor(Math.random() * arr.length)], e = V.man.lines[key]; if (!e) return false;
+    V.lastBark = K.T; V.perNpc.set(npc, K.T);
+    V.load(e.f).then(buf => { if (!buf || V.cur || K.ctx.state !== 'running') return; const h = V.play(buf, npc.id, [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]], 0.55, { ref: 2, max: 14, bus: 'world', zone: K.zoneOf(npc.pos[0], npc.pos[1], npc.pos[2]) }); if (h) { V.barkH = h; V.lastPlayed = { speaker: npc.id, file: e.f, bark: c }; } }); return true; };
+  K.ups.push(function (K, dt, G) {
+    if (!G.playing && !K.ctx) return; if (!V.man && !V.failed && !V.loading && K.T > 1) V.init(); if (!V.wrapped && typeof game !== 'undefined' && game.ready) wrap();
+    // ducking: ambience and music dip while anyone is speaking
+    const tgt = V.cur ? (V.cur.speaker && V.barkH === V.cur ? 0.25 : 1) : 0; K.duck = (K.duck || 0) + (tgt - (K.duck || 0)) * Math.min(1, dt * (tgt > (K.duck || 0) ? 6 : 1.5));
+    if (V.barkH && V.barkH.src && K.now() > V.barkH.t0 + V.barkH.dur + 0.2) V.barkH = null;
+    if (!G.playing || G.talk || G.menu || !K.set.voices || typeof NPCS === 'undefined' || (K.frame & 15) !== 0) return;
+    // a swung sword near a villager
+    if (typeof Combat !== 'undefined' && Combat.swingN !== V.swing) { V.swing = Combat.swingN; for (const n of NPCS) { if (n.anim === 'lie' || n.talking || Math.hypot(n.pos[0] - G.x, n.pos[2] - G.z) > 9) continue; if (K.T - (V.perNpc.get(n) || -99) < 25) continue; V.bark(n, 'weapon'); break; } return; }
+    if (K.T - V.lastBark < 22 || V.cur) return;
+    for (const n of NPCS) { const d = Math.hypot(n.pos[0] - G.x, n.pos[2] - G.z); if (d > 4.5 || d < 0.8 || n.anim === 'lie' || n.anim === 'sit' && G.night > 0.5 || n.talking) continue; if (K.T - (V.perNpc.get(n) || -99) < 150) continue; if (Math.random() < 0.5) { V.perNpc.set(n, K.T - 100); continue; } V.bark(n, cat(G.hour)); break; }
+  });
+})();
 
 
 // ---- 90_rpg.js ----
@@ -8132,17 +11158,7 @@ const RPG = {
   stDelay: 0, hurtT: 99, combatT: 99, flash: 0, shake: 0, kick: [0, 0], hitStop: 0, exhausted: false,
   dead: false, deadT: 0, inited: false, out: { run: false, speed: 1, jump: false, ov: null }, ov: [0, 0], fx: [], hud: {}, wasPlaying: false,
 };
-// sounds, built from the synth's two primitives
-Object.assign(Audio2, {
-  swing(heavy) { if (!this.ctx) return; this.burst(heavy ? 0.26 : 0.17, heavy ? 0.11 : 0.075, 'bandpass', heavy ? 480 : 700, 1.2, null, 0, heavy ? 1500 : 2100); },
-  hitFlesh(heavy) { if (!this.ctx) return; this.burst(0.11, heavy ? 0.3 : 0.2, 'lowpass', 520, 1); this.tone(heavy ? 70 : 95, 0.16, heavy ? 0.22 : 0.14, 'sine', null, 45); },
-  clash(vol) { if (!this.ctx) return; this.clang(vol === undefined ? 0.9 : vol); this.burst(0.07, 0.16, 'highpass', 3000, 0.7); },
-  hurt() { if (!this.ctx) return; this.burst(0.2, 0.3, 'lowpass', 330, 1); this.tone(150, 0.22, 0.12, 'sawtooth', null, 80); },
-  hop() { if (!this.ctx) return; this.burst(0.08, 0.05, 'bandpass', 420, 1.5); },
-  eat() { if (!this.ctx) return; for (let i = 0; i < 3; i++) this.burst(0.07, 0.07, 'bandpass', 900 + i * 150, 2, null, i * 0.17); },
-  shout(deep) { if (!this.ctx) return; this.tone(deep ? 120 : 165, 0.34, 0.09, 'sawtooth', null, deep ? 92 : 128); this.burst(0.3, 0.05, 'bandpass', 900, 2); },
-  fall() { if (!this.ctx) return; this.tone(110, 1.1, 0.14, 'sine', null, 48); this.burst(0.5, 0.2, 'lowpass', 240, 1, null, 0.25); },
-});
+// sounds: Audio2.swing / hitFlesh / clash / hurt / hop / eat / shout / fall are in the sound engine now (88_audio.js, 88b_sfx.js)
 
 // saved state, with defaults filled in for a new game or an older save
 RPG.st = function () {
@@ -8338,7 +11354,8 @@ RPG.tick = function (dt) {
   if (playing) {
     K[0] += (0 - K[0]) * Math.min(1, dt * 11); K[1] += (0 - K[1]) * Math.min(1, dt * 11); RPG.shake = Math.max(0, RPG.shake - dt * 2.6);
     const sh = RPG.shake * RPG.shake * 0.05, t = game.time * 47;
-    cam.yaw += K[0] + Math.sin(t) * sh; cam.pitch += K[1] + Math.cos(t * 1.31) * sh;
+    const rm = typeof Feel !== 'undefined' && Feel.reduce ? 0 : 1;      // [ui] Settings > Reduce motion silences camera kick
+    cam.yaw += (K[0] + Math.sin(t) * sh) * rm; cam.pitch += (K[1] + Math.cos(t * 1.31) * sh) * rm;
     if (RPG.dead) { RPG.deadT += dt; const d = smooth(0, 1.1, RPG.deadT); RPG.hud.deadMsg.style.opacity = smooth(0.5, 1.6, RPG.deadT).toFixed(2); cam.pos[1] -= d * 1.25; cam.pitch += d * 0.5; cam.yaw += d * 0.35; }
     RPG.hudFrame(dt);
   }
@@ -8625,6 +11642,8 @@ const Foes = (() => {
   };
   // everyone goes home and forgets (after the player dies, or sleeps)
   F.calm = function (heal) { for (const f of F.list) { if (!f.alive) continue; release(f); f.state = 'idle'; f.t = 0; f.pos = f.spot.p.slice(); f.yaw = f.spot.yaw; f.alert = 0; if (heal) f.hp = f.maxHp; } };
+  // a fight does not follow through a door: everyone goes home, calm, and the fight timer clears
+  F.breakOff = function () { F.calm(false); F.target = null; F.attackers = 0; if (typeof RPG !== 'undefined') RPG.combatT = 99; for (const f of F.list) if (f.h && f.h.pivot.visible && f.alive) f.h.pivot.visible = false; };
   function campState() {
     const r = RPG.st(); r.cleared = r.cleared || {};
     for (const c of CAMPS) { const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
@@ -8639,7 +11658,7 @@ const Foes = (() => {
   function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < 34) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
   function die(f) {
     const r = RPG.st(); release(f); f.alive = false; f.hp = 0; f.state = 'dead'; f.t = 0; f.anim = Math.random() < 0.5 ? 'c-die' : 'c-die2'; f.h.curName = '';
-    r.kills++; r.dead[f.id] = r.day; Audio2.shout(f.leader);
+    r.kills++; r.dead[f.id] = r.day; Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
     const loot = [['gold', Math.round(f.leader ? rnd(22, 34) : rnd(4, 12))]];
     if (Math.random() < 0.45) loot.push([Math.random() < 0.5 ? 'bread' : 'apple', 1]); if (Math.random() < (f.leader ? 1 : 0.18)) loot.push(['potion', 1]);
     if (f.chief) { loot.push(['steelsword', 1]); if (!has('tools') && qAt('tools') !== 99) loot.push(['tools', 1]); } else if (f.leader) loot.push(['ironsword', 1]); else if (Math.random() < 0.1) loot.push(['buckler', 1]);
@@ -8691,7 +11710,7 @@ const Foes = (() => {
       case 'idle': {
         f.anim = f.spot.kind === 'sit' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
         const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
-        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); Audio2.shout(f.leader); if (!F.warned) { F.warned = true; toast('Outlaws! They have seen you.'); } }
+        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned) { F.warned = true; toast('Outlaws! They have seen you.'); } }
         break; }
       case 'notice': f.anim = 'c-idle'; if (f.t > 0) turn(f, toP, 6, dt); if (f.t > 0.45) { f.state = 'chase'; f.t = 0; } break;
       case 'chase': {
@@ -8735,6 +11754,7 @@ const Foes = (() => {
   }
   F.update = function (dt, rdt) {
     if (!F.ready) return;
+    if (World.cell) { F.target = null; return; }          // outlaws live outdoors: in a cell none is drawn, thought about or posed
     const P = game.playing ? Player.pos : R.cam.pos, live = game.playing && !RPG.dead, st = F.st, r = RPG.st();
     let target = null, tb = 0.55, fight = null;
     for (const f of F.list) {
@@ -8906,8 +11926,9 @@ function updateDynamics(dt, chars) {
   const bd = R.boneData, tmp = POSE.S, pp = Player.pos;
   for (const d of World.doors) {
     let near = false;
-    for (const c of chars) if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
+    for (const c of chars) if (CELLS_ON && c === chars[0]) continue; else if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
     if (near && d.open === 0 && game.playing) { const dd = hyp(pp[0] - d.c[0], pp[2] - d.c[2]); if (dd < 14) Audio2.door(clamp(1.2 - dd / 12, 0.1, 1)); }
+    if (d.gate && !S.opened[d.gate]) near = false;          // a locked gate stays shut until the key has turned
     d.open = clamp(d.open + (near ? dt : -dt) * 2.4, 0, 1);
     if (d.open === d.last) continue; d.last = d.open;
     m4.copy(tmp, d.baseM); m4.rotY(tmp, smooth(0, 1, d.open) * 1.85); m4.mul(tmp, tmp, d.S); bd.set(tmp, d.obj.slot * 256);
@@ -8927,8 +11948,8 @@ function audioState() {
     const wd = River.dist(p[0], p[2], 30), ld = hyp(p[0] - LAKE.x, p[2] - LAKE.z) - LAKE.r, md = World.millPos ? hyp(p[0] - World.millPos[0], p[2] - World.millPos[2]) : 99;
     st.water = Math.max(sat(1 - wd / 26) * 0.8, sat(1 - ld / 20) * 0.35, sat(1 - md / 18));
   }
-  const b = NPC.brandt; st.hammer = b && b.anim === 'hammer' && !b.talking ? b.t : -1; st.hammerDist = b ? hyp(b.pos[0] - p[0], b.pos[2] - p[2]) : 999;
-  const l = NPC.lark; st.lute = !!(l && l.anim === 'lute' && !l.talking); st.luteDist = l ? hyp(l.pos[0] - p[0], l.pos[2] - p[2]) : 999; st.luteWall = !!l && World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]) !== World.camZone;
+  st.cell = !!World.cell; const b = NPC.brandt; st.hammer = b && b.anim === 'hammer' && !b.talking ? b.t : -1; const hb = b ? Cells.hear(b.pos, p) : null; st.hammerDist = b ? (CELLS_ON ? hb.d : hyp(b.pos[0] - p[0], b.pos[2] - p[2])) : 999; st.hammerWall = !!hb && hb.wall;
+  const l = NPC.lark; st.lute = !!(l && l.anim === 'lute' && !l.talking); const hl = l ? Cells.hear(l.pos, p) : null; st.luteDist = l ? (CELLS_ON ? hl.d : hyp(l.pos[0] - p[0], l.pos[2] - p[2])) : 999; st.luteWall = !!l && (CELLS_ON ? hl.wall : World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]) !== World.camZone);
   st.bellOn = !!S.flags.bell; st.bellDist = World.bell ? hyp(World.bell.p[0] - p[0], World.bell.p[2] - p[2]) : 999;
   for (const c of World.chickens) if (c.cluck) { c.cluck = false; Audio2.cluck(clamp(1.2 - hyp(c.pos[0] - p[0], c.pos[2] - p[2]) / 8, 0, 1)); }
   return st;
@@ -8940,7 +11961,7 @@ function tick(dt) {
   // villagers are obstacles too
   Col.dyn.length = 0; const pp = Player.pos, chars = [pp];
   for (const n of NPCS) { chars.push(n.pos); if (n.anim !== 'lie' && Math.abs(n.pos[0] - pp[0]) < 4 && Math.abs(n.pos[2] - pp[2]) < 4) Col.dyn.push({ x: n.pos[0], z: n.pos[2], r: 0.27 * n.scale, y0: n.pos[1] - 0.3, y1: n.pos[1] + 1.7 }); }
-  if (game.playing) playerUpdate(dt); else attractCamera(game.time);
+  if (game.playing) { playerUpdate(dt); Feel.post(dt); } else attractCamera(game.time);
   npcUpdate(dt, game.playing ? pp : R.cam.pos);
   updateDynamics(dt, chars);
   World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
@@ -8961,9 +11982,9 @@ function frame(tms) {
   PerfHud.frame(rawMs);
   if (Perf.probeN > 0) { Perf.probeBuf.push(dtMs); if (--Perf.probeN === 0) cadenceDone(); return; }
   try {
-    const env = tick(dtMs / 1000);
+    const env = UI.paused && game.env ? game.env : tick(dtMs / 1000); game.env = env;      // paused: the world is drawn but not stepped
     perfUpdate(dtMs, dtMs / 1000);
-    if (!R.busy) renderFrame(game.time, env);
+    if (!R.busy) { renderFrame(game.time, env); Mark.draw(); }
   } catch (e) { if (!game.crashed) { game.crashed = true; console.error(e); G.errors.push(String(e && e.stack || e)); } }
   // WebGPU that reports errors (or throws) in its first seconds of drawing will not get better: switch this device to WebGL 2
   if (!G.gfxChecked) { if (!G.tDraw) G.tDraw = tms; if (G.errors.length) { G.gfxChecked = true; gfxFallback(G.errors[0]); } else if (tms - G.tDraw > 12000) G.gfxChecked = true; }
@@ -8983,69 +12004,107 @@ function startGame(cont) {
   Audio2.start();
   const sv = cont && loadSave(); if (sv) applySave(sv); else { clearSave(); }
   npcSnapAll(); uiPurse(); uiObjective();
-  game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + 50);
+  game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + (Cells.inRegion(Player.pos[0]) ? 0.8 : 50)); if (CELLS_ON) { Cells.sync(Player.pos); World.camZone = World.zoneAt(Player.pos[0], Player.pos[1] + 1, Player.pos[2]); }
   if (!Input.touch && !coarse() && !TEST) { try { const p = G.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
-  setTimeout(() => { banner('The Greyspine Valley', 'Brackenfell'); }, 900);
-  if (!sv) setTimeout(() => { if (qAt('welcome') < 0) qStart('welcome'); }, 5200);
+  if (!sv) { if (!TEST || TEST.intro) Feel.begin(); else setTimeout(() => { if (qAt('welcome') < 0) qStart('welcome'); }, 5200); }
+  else { setTimeout(() => { banner('The Greyspine Valley', 'Brackenfell'); }, 900); if (S.q.welcome) Feel.did('move'), Feel.did('look'), Feel.did('use'); }
+}
+// every label the loading screen shows while the valley is made; Load (index.html's inline script) draws the bar and the byte counts
+const bootSay = t => { if (typeof Load !== 'undefined') Load.say(t); else $('loadText').textContent = t; };
+const bootStage = f => { if (typeof Load !== 'undefined') Load.stage(f); };
+const gfxSync = async () => { try { const b = G.renderer && G.renderer.backend; if (b && b.device && b.device.queue && b.device.queue.onSubmittedWorkDone) await b.device.queue.onSubmittedWorkDone(); else if (b && b.gl && b.gl.finish) b.gl.finish(); } catch (e) { } };
+// Draw a few frames from places that between them put every kind of surface on screen (roads, houses, people, grass, water, a lit room), so the
+// shader and pipeline compiles happen behind the loading screen instead of as a hitch in the first seconds of play. Safe on both backends: these are
+// ordinary frames of the same pipeline; nothing here is compiled separately. A failed frame is only a skipped warm-up.
+async function warmShaders() {
+  const here = [R.cam.pos.slice(), R.cam.yaw, R.cam.pitch], zone0 = World.camZone, ind0 = World.indoor;
+
+  const views = [[-84, null, -6.5, 90, 2], [0, null, 8, 0, 4], [10, null, 84, 0, 2], [-40, null, -2, 270, 8]];
+  let i = 0;
+  for (const v of views) {
+    bootSay('Warming the lanterns'); bootStage(0.84 + 0.14 * (i++ / views.length));
+    try {
+      R.cam.pos = [v[0], v[1] === null ? Terrain.y(v[0], v[2]) + 1.7 : v[1], v[2]]; R.cam.yaw = v[3] * PI / 180; R.cam.pitch = v[4] * PI / 180;
+      World.camZone = World.zoneAt(v[0], R.cam.pos[1], v[2]); World.indoor = World.camZone ? 1 : 0;
+      npcUpdate(0.05, R.cam.pos); fxUpdate(0.05, game.time, updateEnv(game.time, World.indoor), R.cam.pos);
+      const env = updateEnv(game.time, World.indoor); env.time = game.time;
+      renderFrame(game.time, env); renderFrame(game.time + 0.03, env);
+      await gfxSync();
+    } catch (e) { console.warn('warm-up frame skipped', e && e.message); }
+    await new Promise(r => setTimeout(r, 16));
+  }
+  R.cam.pos = here[0]; R.cam.yaw = here[1]; R.cam.pitch = here[2]; World.camZone = zone0; World.indoor = ind0;
 }
 (async function boot() {
-  const load = (t, f) => { $('loadText').textContent = t; $('barFill').style.width = Math.round(f * 100) + '%'; return new Promise(r => setTimeout(r, TEST ? 0 : 30)); };
+  const load = (t, f) => { bootSay(t); bootStage(f); return new Promise(r => setTimeout(r, TEST ? 0 : 30)); };
   let t0 = performance.now(); const laps = game.laps = {}, lap = n => { const t = performance.now(); laps[n] = Math.round(t - t0); t0 = t; };
   try {
     loadSettings(); if (PerfHud.url >= 0) { game.showFps = !!PerfHud.url; saveSettings(); } gfxTexInit(game.qualitySetting === 'auto' ? (TEST && TEST.quality) : game.qualitySetting);
     const canvas = $('view');
+    bootSay('Waking the valley');
     try { await gfxInit(canvas); }
-    catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'; console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
+    catch (e) { $('bar').hidden = true; $('loadNums').hidden = true; bootSay('Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'); console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
+    if (typeof Load !== 'undefined' && !G.astc) Load.use(['app', 'imgs', 'kits', 'chars']);        // no ASTC on this GPU: the WebP and JPEG texture files are fetched instead
     gfxResize(G.canvas.clientWidth, G.canvas.clientHeight);
-    await load('Mixing lime, straw and river stone', 0.06);
+    await load('Mixing lime, straw and river stone', 0.02);
     const lowMem = (navigator.deviceMemory || 8) <= 3;
-    $('loadText').textContent = 'Unpacking stone, timber and thatch (about 35 MB the first time)';
+    bootSay(Load.first ? 'Unpacking stone, timber and thatch (first visit: kept on this device for next time)' : 'Unpacking stone, timber and thatch');
     await loadNoise();
-    await loadPack(lowMem, f => { $('barFill').style.width = Math.round(6 + f * 32) + '%'; }); lap('pack');
+    await loadPack(lowMem, f => { }); lap('pack');
     SH.init();
     // animated villagers; if their files cannot be loaded the old hand-built bodies stand in
-    $('loadText').textContent = 'Dressing the villagers';
+    bootSay('Dressing the villagers');
     // the realistic set first, the stylized one if its files cannot be loaded; ?chars=quaternius (or TEST.chars) picks one set and no fallback
     if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) {
       const want = (TEST && TEST.chars) || (/[?&]chars=(\w+)/.exec(location.search) || [])[1], order = want ? [want] : ['real', 'quaternius'];
       for (const name of order) {
-        try { await Chars.load(name, f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; G.charSet = name; break; }
+        try { if (name === 'quaternius' && typeof Load !== 'undefined') Load.use(Load.groups.concat('charsq')); await Chars.load(name, f => { }); G.chars = true; G.charSet = name; break; }
         catch (e) { console.warn('character set ' + name + ' unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); Chars.ready = false; Chars.set = null; }
       }
     }
     lap('chars');
-    if (typeof kitBoot === 'function') await kitBoot(f => { $('loadText').textContent = 'Carting in beams, barrels and roof tiles'; $('barFill').style.width = Math.round(38 + f * 2) + '%'; });
+    if (typeof kitBoot === 'function') await kitBoot(f => { bootSay('Carting in beams, barrels and roof tiles'); });
     renderInit();
-    await load('Raising the Greyspine', 0.4); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
-    await load('Framing timber, laying thatch', 0.55); buildVillage(); lap('village');
-    await load('Waking the villagers', 0.68); buildNPCs(); festivalSpots(); lap('npcs');
-    await load('Planting pine and birch', 0.76); buildVegetation(); lap('veg');
+    await load('Raising the Greyspine', 0.1); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
+    await load('Framing timber, laying thatch', 0.25); buildVillage(); lap('village');
+    await load('Waking the villagers', 0.5); buildNPCs(); festivalSpots(); lap('npcs');
+    await load('Planting pine and birch', 0.62); buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
     World.villagePack.upload('village'); World.skinPack.upload('skin');
     buildSplat2(); colBuild(); navBuild(); fxInit(); lap('nav');
-    await load('Lighting the lanterns', 0.88);
+    await load('Lighting the lanterns', 0.74);
     if (TEST && TEST.quality) game.qualitySetting = TEST.quality;
     await game.applyQuality(); lap('pipelines');
     if (typeof kitAttach === 'function') kitAttach();
     if (typeof infillAttach === 'function') infillAttach();
   if (typeof dressAttach === 'function') dressAttach();
+    if (typeof wildsAttach === 'function') wildsAttach();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
-    npcSnapAll(); uiInit(); inputInit(G.canvas, $('touch'));
+    npcSnapAll(); uiInit(); inputInit2(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));
-    document.addEventListener('visibilitychange', () => { if (Audio2.ctx) { if (document.hidden) Audio2.ctx.suspend(); else if (game.playing) Audio2.ctx.resume(); } lastT = performance.now(); });
-    $('barFill').style.width = '100%'; $('loadText').textContent = ''; $('bar').hidden = true; $('startRow').hidden = false;
-    $('hint').textContent = coarse() ? 'Drag on the left to walk, on the right to look. Push the stick all the way to run. Doors open as you walk up to them. Turn your phone sideways for a wider view.' : 'W A S D to walk, mouse to look, Shift to run, E to interact, Tab for your journal. Doors open as you walk up to them.';
+    UI.lifecycle();
+    if (!TEST || TEST.warm) await warmShaders();
+    bootStage(1); if (typeof Load !== 'undefined') Load.complete(); else $('barFill').style.transform = 'scaleX(1)';
+    $('loadBox').hidden = true; $('startRow').hidden = false; $('title').classList.remove('loading'); $('title').classList.add('ready');
+    $('hint').textContent = coarse() ? 'Drag on the left to walk, on the right to look. Push the stick all the way to run. Doors open as you walk up to them.' : 'W A S D to walk, mouse to look, Shift to run, E to use, Tab for your journal and map, Esc to pause.';
     if (loadSave()) $('contBtn').hidden = false;
     $('startBtn').addEventListener('click', () => startGame(false)); $('contBtn').addEventListener('click', () => startGame(true));
+    if (typeof Load !== 'undefined') { Load.update = () => UI.updateAvailable(); if (Load.updateReady) UI.updateAvailable(); setTimeout(() => { Load.register(); setTimeout(() => Load.warm().then(() => UI.storageNote()), 4000); }, 1500); }
     game.ready = true;
     // ── test hooks ──
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
         game.step = (n, dt) => { let env; for (let i = 0; i < (n || 1); i++) env = tick(dt || 1 / 30); return env; };
-    game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); return R.stats; };
-    game.tp = (x, z, yawDeg, pitchDeg, y) => { Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180; World.indoor = World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; };
+    game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); Mark.draw(); return R.stats; };
+    game.tp = (x, z, yawDeg, pitchDeg, y) => {       // tp(spotName, yawDeg?) goes to a named spot (inside a cell too); tp(x, z, ...) to coordinates, y optional
+      if (typeof x === 'string') { const sp = World.spots[x]; if (!sp) throw new Error('no spot ' + x); yawDeg = z === undefined ? sp.yaw * 180 / PI : z; pitchDeg = 0; y = sp.p[1]; z = sp.p[2]; x = sp.p[0]; }
+      Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180;
+      if (CELLS_ON) Cells.sync(Player.pos); World.indoor = World.cell || World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; World.camZone = World.zoneAt(x, Player.pos[1] + 1, z); R.cam.pos[0] = x; R.cam.pos[1] = Player.pos[1] + Player.eye; R.cam.pos[2] = z; Player.camY = Player.pos[1];
+    };
+    game.enter = id => { const c = Cells.by[id]; if (!c) throw new Error('no cell ' + id); Cells.teleport(c.enter); return c.id; };         // instant, no fade (tests); the door interaction is Cells.use
+    game.leave = () => { const c = Cells.cur; if (!c) return false; Cells.teleport(c.leave); return true; };
     game.shot = async (x, y, z, yaw, pitch, hour) => {
       if (hour !== undefined) { Env.hour = hour; npcSnapAll(); }
       game.playing = false; const save = attractCamera; R.cam.pos = [x, y === null ? Terrain.y(x, z) + 1.65 : y, z]; R.cam.yaw = yaw * PI / 180; R.cam.pitch = (pitch || 0) * PI / 180;
-      World.camZone = World.zoneAt(x, R.cam.pos[1], z); World.indoor = World.camZone ? 1 : 0;
+      if (CELLS_ON) Cells.sync(R.cam.pos); World.camZone = World.zoneAt(x, R.cam.pos[1], z); World.indoor = World.cell || World.camZone ? 1 : 0;
       game.time += 0.4; npcUpdate(0.4, R.cam.pos); updateDynamics(0.4, [R.cam.pos].concat(NPCS.map(n => n.pos)));
       const env = updateEnv(game.time, World.indoor); env.time = game.time; World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
       fxUpdate(0.4, game.time, env, R.cam.pos); fxUpdate(0.4, game.time, env, R.cam.pos);

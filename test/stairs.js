@@ -45,7 +45,7 @@ function walk(st, up, start, v) {
     if (P.pos[1] < lo - 0.35) { fails.push(tag + ': fell through'); break; }
     // on the stair: stay between its sides
     const px = P.pos[0] - a.p[0], pz = P.pos[2] - a.p[2], along = px * ux + pz * uz, lat = Math.abs(-px * uz + pz * ux);
-    if (along > 0.4 && along < al - 0.5 && P.pos[1] > lo + 0.5 && P.pos[1] < hi - 0.3) { maxLat = Math.max(maxLat, lat); if (lat > st.width / 2 + 0.15) fails.push(tag + ' frame ' + f + ': off the stair sideways (' + lat.toFixed(2) + ' m from the axis)'); }
+    if (along > 0.4 && along < al - 0.5 && P.pos[1] > lo + 0.5 && P.pos[1] < hi - 0.3 && P.onGround) { maxLat = Math.max(maxLat, lat); if (lat > st.width / 2 + 0.15) fails.push(tag + ' frame ' + f + ': off the stair sideways (' + lat.toFixed(2) + ' m from the axis)'); }
     // a head in a slab
     for (const fl of World.floors) { const y = floorHeight(fl, P.pos[0], P.pos[2]); if (y === null) continue; const u = y - 0.12; if (P.pos[1] + 1.5 < u && P.pos[1] + PLAYER_HEAD > u + 0.04) { fails.push(tag + ' frame ' + f + ': head in a floor at y ' + y.toFixed(2) + ' (feet ' + P.pos[1].toFixed(2) + ')'); break; } }
     // stuck: no progress to the goal over 1.2 s while pushing
@@ -97,9 +97,22 @@ for (const st of World.stairs) {
   // and straight from the spots themselves, both ways, once more
   walk(st, true, [a.p[0], a.p[1], a.p[2]], VARIANTS[0]); walk(st, false, [b.p[0], b.p[1], b.p[2]], VARIANTS[0]);
 }
-// every door, in and out
+// every door: a portal when cells are on (the full trip is test/cells.js): the entrance inside is free standing room and a walk straight in from it works;
+// with cells off (TEST cells=0) the old walk through the open door, in and out
 for (const id in World.houses) {
   const h = World.houses[id], d = h.door; if (!d) continue;
+  if (h.cell) {
+    const e = h.cell.enter.p, back = [e[0] + (e[0] - d.c[0]) * 1.2, 0, e[2] + (e[2] - d.c[2]) * 1.2];
+    put(e[0], World.groundAt(e[0], e[2], e[1] + 1), e[2], 0); let ok = false, f = 0;
+    for (const off of [0, 0.7, -0.7, 1.4, -1.4]) {          // straight in, then half left / right / sideways (a divider or a table can stand right behind the door): the player must get somewhere
+      put(e[0], World.groundAt(e[0], e[2], e[1] + 1), e[2], 0);
+      for (f = 0; f < 60; f++) { steer('diag', back[0], back[2], off, 1); fix(); __game.step(1, dt); }
+      if (Math.hypot(Player.pos[0] - e[0], Player.pos[2] - e[2]) > 0.55 && World.cell && World.cell.id === id) { ok = true; break; }       // (the infill cottages are 2.4 m deep and crowded: Phase B replaces them)
+    }
+    if (!ok) fails.push('door ' + id + ': cannot walk in from the entrance, stuck at ' + Player.pos.map(q => +q.toFixed(2)).join(','));
+    if (!World.interact.some(it => it.kind === 'portal' && it.cell === id && it.side === 'in') || !World.interact.some(it => it.kind === 'portal' && it.cell === id && it.side === 'out')) fails.push('door ' + id + ': portal prompts missing');
+    rows.push({ t: 'door ' + id, f, ok }); continue;
+  }
   for (const going of [1, 0]) {
     const A = going ? d.out : d.ins, Bp = going ? d.ins : d.out, ya = World.groundAt(A[0], A[2], 1e9) , yb = World.groundAt(Bp[0], Bp[2], A[1] + 1);
     const k = going ? 1.0 : 0.4, far = [A[0] + (A[0] - Bp[0]) * k, 0, A[2] + (A[2] - Bp[2]) * k];

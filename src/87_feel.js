@@ -123,7 +123,7 @@ Mark.draw = () => {
     if (s) { const k = rm ? 0 : Math.sin(t * 3.2); c.globalAlpha = 0.28 + 0.1 * k; c.beginPath(); c.arc(s[0], s[1], 13 + 2.5 * k, 0, TAU); c.fillStyle = '#f6e7b4'; c.fill(); Mark.diamond(c, s[0], s[1], 6.5, '#ebe0c6', '#14110d', 0.95); Mark.drawn = true; }
   }
   // 2. doors: where this one leads (outside only, the nearest two, in front of you, not the one you are about to use)
-  if (!World.camZone) {
+  if (!World.camZone && !World.cell && !(UI.prompt && UI.prompt.kind === 'portal')) {
     let n = 0; const cand = [];
     for (const d of World.doors) { if (!d.site || d.site.facade || d.site.alleyRow && !d.site.name) continue; const dx = d.c[0] - e[0], dz = d.c[2] - e[2], dist = hyp(dx, dz); if (dist > 10 || dist < 1.2) continue; if (front(d.c[0], d.c[1], d.c[2]) < 0.55) continue; cand.push([dist, d]); }
     cand.sort((a, b) => a[0] - b[0]);

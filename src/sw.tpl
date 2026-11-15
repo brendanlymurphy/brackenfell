@@ -52,6 +52,13 @@ async function asset(req, path) {
   if (r.ok && r.status === 200) { try { await c.put(key, r.clone()); } catch (err) { } }
   return r;
 }
+// spoken lines: fetched when first needed, kept for good (172 files, 3.3 MB); the manifest tries the network first so a new script is noticed
+async function voice(req, path) {
+  const c = await caches.open('bf-voice'), hit = await c.match(req.url);
+  if (path.endsWith('manifest.json')) { try { const r = await fetch(req); if (r.ok) { await c.put(req.url, r.clone()); return r; } } catch (err) { } return hit || fetch(req); }
+  if (hit) return hit;
+  const r = await fetch(req); if (r.ok && r.status === 200) { try { await c.put(req.url, r.clone()); } catch (err) { } } return r;
+}
 self.addEventListener('fetch', e => {
   const req = e.request; if (req.method !== 'GET') return;
   const u = new URL(req.url); if (u.origin !== ORIGIN || !u.pathname.startsWith(BASE)) return;
@@ -59,6 +66,7 @@ self.addEventListener('fetch', e => {
   try {
     if (req.mode === 'navigate' && (path === '' || path === 'index.html')) { e.respondWith(shell(e).catch(() => fetch(req))); return; }
     if (APPSET.has(path + u.search) || APPSET.has(path)) { e.respondWith(fromApp(req, APPSET.has(path + u.search) ? path + u.search : path).catch(() => fetch(req))); return; }
+    if (path.startsWith('audio/voice/') && !req.headers.has('range')) { e.respondWith(voice(req, path).catch(() => fetch(req))); return; }
     if (ASSETS[path] && !req.headers.has('range')) e.respondWith(asset(req, path).catch(() => fetch(req)));
   } catch (err) { }
 });

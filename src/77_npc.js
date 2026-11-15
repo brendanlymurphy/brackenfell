@@ -37,7 +37,7 @@ const NPC_DEFS = [
     sched: [[7.5, 'stall0', 'idle'], [18, 'barn.work', 'work'], [19.5, 'inn.stand1', 'idle'], [22, 'farm.bed2', 'lie']] },
 ];
 const NPCS = [], NPC = {};
-const Nav = { nodes: [], adj: [], spot: {} };
+const Nav = { nodes: [], adj: [], spot: {}, portal: {} };        // portal[a] = b: stepping from node a to b crosses a door between two spaces (an instant move)
 function navBuild() {
   const N = Nav.nodes, A = Nav.adj;
   const add = (x, y, z) => { N.push([x, y, z]); A.push([]); return N.length - 1; };
@@ -57,16 +57,23 @@ function navBuild() {
   const doorNode = {};
   for (const id in World.houses) {
     const h = World.houses[id], d = h.door; if (!d) continue;
-    const o = add(d.out[0], World.groundAt(d.out[0], d.out[2], d.out[1] + 1), d.out[2]), i = add(d.ins[0], h.floorY + 0.02, d.ins[2]);
-    link(o, i); link(o, nearest(d.out[0], d.out[2], outside, 40)); doorNode[id] = { o, i }; outside.push(o);
+    const x = h.xdoor || d, o = add(x.out[0], World.groundAt(x.out[0], x.out[2], x.out[1] + 1), x.out[2]), i = add(d.ins[0], h.floorY + 0.02, d.ins[2]);
+    if (h.cell) {         // the door is a portal: outside node o -> threshold ot (village) ~ threshold it (cell) -> inside node i
+      const ot = add(x.c[0], World.groundAt(x.c[0], x.c[2], x.c[1] + 1), x.c[2]), it = add(d.c[0], h.floorY + 0.02, d.c[2]);
+      link(o, ot); link(it, i); A[ot].push([it, 1.2]); A[it].push([ot, 1.2]); Nav.portal[ot] = it; Nav.portal[it] = ot; doorNode[id] = { o, i, ot, it };
+    } else { link(o, i); doorNode[id] = { o, i }; }
+    link(o, nearest(x.out[0], x.out[2], outside, 40)); outside.push(o);
   }
   for (const name in World.spots) {
     const s = World.spots[name], k = add(s.p[0], s.p[1], s.p[2]); Nav.spot[name] = k;
+    if (s.zone && s.site && World.houses[s.site] && World.houses[s.site].plan) continue;         // planned interiors join their rooms (planNav)
     if (s.zone && s.site && doorNode[s.site]) link(k, doorNode[s.site].i); else link(k, nearest(s.p[0], s.p[2], outside, 60));
   }
+  for (const id in World.houses) { const h = World.houses[id]; if (h.plan) planNav(h.plan, add, link, doorNode); }
   // upper floors are reached by their stairs only: bottom -> top -> (round the stairwell) -> the rooms above; nothing upstairs links straight to the door
   const unlink = k => { A[k].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k) a.splice(i, 1); };
   for (const st of World.stairs) {
+    if (st.plan) continue;
     const nb = Nav.spot[st.bottom], nt = Nav.spot[st.top]; if (nb === undefined || nt === undefined) continue;
     const chain = [nb, nt].concat(st.via.map(n => Nav.spot[n]).filter(k => k !== undefined)), fy = World.houses[st.site].floorY;
     for (const k of chain.slice(1)) unlink(k);
@@ -130,6 +137,7 @@ function npcArrive(n, spotName, anim) {
   n.anim = sp.lie ? 'lie' : sp.sit ? 'sit' : (anim === 'sit' || anim === 'lie') ? 'idle' : anim;
 }
 function npcUpdate(dt, playerPos) {
+  const pc = Cells.spaceOf(playerPos);
   for (const n of NPCS) {
     n.t += dt;
     const dPlayer = hyp(n.pos[0] - playerPos[0], n.pos[2] - playerPos[2]);
@@ -153,7 +161,7 @@ function npcUpdate(dt, playerPos) {
         const run = n.def.run, sp = (run ? 2.7 : 1.35) * (0.9 + n.scale * 0.1), N2 = Nav.nodes[n.path[n.pi]];
         const dx = N2[0] - n.pos[0], dz = N2[2] - n.pos[2], d = hyp(dx, dz);
         const blocked = dPlayer < 0.75 && (playerPos[0] - n.pos[0]) * dx + (playerPos[2] - n.pos[2]) * dz > 0;
-        if (d < 0.18) { n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
+        if (d < 0.18) { const k = n.path[n.pi], k2 = n.path[n.pi + 1]; if (k2 !== undefined && Nav.portal[k] === k2) { n.pos = Nav.nodes[k2].slice(); n.pi++; n.portalT = 0.4; } n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
         else if (!blocked) {
           const st = Math.min(d, sp * dt); n.pos[0] += dx / d * st; n.pos[2] += dz / d * st;
           const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 0.6); n.pos[1] += clamp(gy - n.pos[1], -3 * dt, 3 * dt); if (Math.abs(gy - n.pos[1]) > 1.2) n.pos[1] = gy;
@@ -162,6 +170,9 @@ function npcUpdate(dt, playerPos) {
         } else n.anim = 'idle';
       }
     }
+    // not in the player's space (another cell, or the village while the player is in one): position only, no pose, no drawing
+    if (pc !== Cells.spaceOf(n.pos)) { n.obj.visible = false; if (n.ch && !n.hid) { n.hid = true; n.ch.pivot.visible = false; } continue; }
+    n.hid = false;
     // head follows the player when close
     let lx = 0, ly = 0;
     if (dPlayer < 5.5 && n.anim !== 'lie' && n.anim !== 'hammer' && n.anim !== 'work') { const a = angDiff(Math.atan2(playerPos[0] - n.pos[0], -(playerPos[2] - n.pos[2])), n.yaw); if (Math.abs(a) < 1.9) { lx = clamp(-a, -1.1, 1.1); ly = clamp((n.pos[1] + 1.6 * n.scale - playerPos[1] - 1.6) * 0.25, -0.3, 0.3); } }

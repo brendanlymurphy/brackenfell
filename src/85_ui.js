@@ -17,7 +17,7 @@ function uiObjective() {
 }
 function releaseLook() { if (document.pointerLockElement) document.exitPointerLock(); Input.joy = null; Input.joyT = null; Input.look = null; $('stick').style.display = 'none'; }
 const UI_VERBS = [[/^Talk to /, 'Talk'], [/^Open /, 'Open'], [/^Search /, 'Search'], [/^Take /, 'Take'], [/^Pick /, 'Take'], [/^Read/, 'Read'], [/^Sleep/, 'Sleep'], [/^Ring /, 'Ring'], [/^Light /, 'Light'], [/^Enter ?/, 'Enter'], [/^Leave ?/, 'Leave'], [/^Climb ?/, 'Climb'], [/^Use /, 'Use']];
-function promptParts(label) { for (const [re, v] of UI_VERBS) if (re.test(label)) return [v, label.replace(re, '').replace(/^(the|a|an) /i, '')]; return ['Examine', label]; }
+function promptParts(label) { for (const [re, v] of UI_VERBS) if (re.test(label)) return [v, label.replace(re, '').replace(/^(the|a|an|to) /i, '')]; return ['Examine', label]; }
 // ── dialogue: the camera has framed the speaker (87_feel.js); the HUD steps aside ──
 function startTalk(npc) {
   UI.talk = npc; npc.talking = true; Player.locked = true; releaseLook();
@@ -79,7 +79,7 @@ function loadSettings() {
   applyPrefs();
 }
 function uiInit() {
-  const tr = $('ctrack');
+  Mark.init(); const tr = $('ctrack');
   for (const [l, a, minor] of [['N', 0], ['NE', 45, 1], ['E', 90], ['SE', 135, 1], ['S', 180], ['SW', 225, 1], ['W', 270], ['NW', 315, 1]]) { const s = document.createElement('span'); s.textContent = l; if (minor) s.className = 'minor'; tr.appendChild(s); UI.compass.push({ el: s, a: a * PI / 180 }); }
   UI.marks = []; for (let i = 0; i < 4; i++) { const m = document.createElement('span'); m.className = 'mark'; const d = document.createElement('span'); d.className = 'dist'; tr.appendChild(m); tr.appendChild(d); UI.marks.push({ el: m, d }); }
   UI.pmarks = []; for (let i = 0; i < 6; i++) { const m = document.createElement('span'); m.className = 'pl'; const n = document.createElement('span'); n.className = 'pln'; tr.appendChild(m); tr.appendChild(n); UI.pmarks.push({ el: m, n }); }
@@ -131,7 +131,7 @@ UI.disc = () => S.disc || (S.disc = {});
 UI.discover = (name, id) => {
   const pl = id ? World.places.find(p => p.id === id) : World.places.find(p => p.name === name), key = pl ? pl.id : name, d = UI.disc();
   if (d[key]) return false; d[key] = 1; UI.hudT = Math.max(UI.hudT, 7);
-  banner('Place discovered', name || (pl && pl.name), 'disc'); if (typeof Audio2.discover === 'function') Audio2.discover(); else Audio2.ui();
+  banner('Discovered', name || (pl && pl.name), 'disc'); if (typeof Audio2.discover === 'function') Audio2.discover(); else Audio2.ui();
   try { save(); } catch (e) { } return true;
 };
 function onKey(e) {
@@ -187,7 +187,7 @@ function uiFrame(dt) {
     UI.lastYaw = P.yaw; const span = 1.9;
     for (const c of UI.compass) { const d = angDiff(c.a, P.yaw); c.el.style.display = Math.abs(d) < span / 2 ? '' : 'none'; c.el.style.left = (50 + d / span * 100) + '%'; }
     let k = 0;
-    for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
+    for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = CELLS_ON ? Cells.mapTarget(questTarget(id)) : questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
     for (; k < UI.marks.length; k++) { UI.marks[k].el.style.display = 'none'; UI.marks[k].d.style.display = 'none'; }
     // discovered places in view (nearest first); the nearest few get a name
     let j = 0; const dsc = UI.disc();

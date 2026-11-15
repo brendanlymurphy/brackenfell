@@ -10,7 +10,10 @@ function fxUpdate(dt, time, env, cam) {
   const d = R.partData, max = R.partMax; let n = 0;
   const put = (x, y, z, size, r, g, b, a, rot, kind, aspect, seed) => { if (n >= max) return; const o = n++ * 12; d[o] = x; d[o + 1] = y; d[o + 2] = z; d[o + 3] = size; d[o + 4] = r; d[o + 5] = g; d[o + 6] = b; d[o + 7] = a; d[o + 8] = rot; d[o + 9] = kind; d[o + 10] = aspect; d[o + 11] = seed; };
   const lit = env.windowGlow, wx = env.windDir[0] * env.windStrength, wz = env.windDir[1] * env.windStrength;
+  const here = World.cell ? World.cell.id : null;
   for (const e of World.emitters) {
+    if (e.cell === undefined) { const zi = e.zone ? World.zones[e.zone - 1] : null; e.cell = zi && zi.cell || null; }
+    if (e.cell !== here) continue;          // in a cell only its own flames burn; outdoors none of them do
     const dx = e.p[0] - cam[0], dy = e.p[1] - cam[1], dz = e.p[2] - cam[2], dist = hyp(dx, dy, dz);
     if (e.type === 'fire' || e.type === 'bonfire') {
       if (e.type === 'bonfire' && !World.bonfire) continue;
@@ -21,7 +24,7 @@ function fxUpdate(dt, time, env, cam) {
       if (dist < 45) { e.t += dt; const rate = e.type === 'bonfire' ? 0.035 : 0.16; while (e.t > rate) { e.t -= rate; if (FX.embers.length < 150) FX.embers.push({ p: [e.p[0] + (Math.random() - 0.5) * s * 0.6, e.p[1] + s * 0.4, e.p[2] + (Math.random() - 0.5) * s * 0.6], v: [(Math.random() - 0.5) * 0.5, 0.9 + Math.random() * 1.4 * (s > 1 ? 2 : 1), (Math.random() - 0.5) * 0.5], life: 0, max: 0.7 + Math.random() * 1.1 * (s > 1 ? 2 : 1), ph: Math.random() * 9 }); } }
     } else if (e.type === 'smoke') {
       if (dist > 150) continue;
-      e.t += dt; while (e.t > 0.42) { e.t -= 0.42; if (FX.smoke.length < 230) FX.smoke.push({ p: [e.p[0], e.p[1], e.p[2]], life: 0, max: 5.5 + Math.random() * 2, seed: Math.random(), rot: Math.random() * 6 }); }
+      e.t += dt; while (e.t > 0.6) { e.t -= 0.6; if (FX.smoke.length < 230) FX.smoke.push({ p: [e.p[0], e.p[1], e.p[2]], life: 0, max: 5.5 + Math.random() * 2, seed: Math.random(), rot: Math.random() * 6 }); }
     } else if (e.type === 'candle') {
       if ((lit < 0.05 && !e.always) || dist > 40) continue;
       const k = e.always ? 1 : lit;
@@ -39,10 +42,11 @@ function fxUpdate(dt, time, env, cam) {
     }
   }
   // chimney smoke drifts with the wind and thins out
+  if (World.cell) FX.smoke.length = 0;
   for (let i = FX.smoke.length - 1; i >= 0; i--) {
     const s = FX.smoke[i]; s.life += dt; if (s.life > s.max) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
     const k = s.life / s.max; s.p[0] += (wx * 0.9 * k + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) * dt; s.p[2] += (wz * 0.9 * k) * dt;
-    put(s.p[0], s.p[1], s.p[2], 0.35 + k * 2.3, 0.62, 0.60, 0.58, Math.min(k * 6, 1) * (1 - k) * 0.5, s.rot + s.life * 0.2, 1, 1, s.seed);
+    put(s.p[0], s.p[1], s.p[2], 0.14 + k * 0.95, 0.30, 0.30, 0.31, Math.min(k * 5, 1) * Math.pow(1 - k, 1.3) * 0.42, s.rot + s.life * 0.2, 1, 1.5 + k, s.seed);       // thin grey wisps that fade out (they were large opaque white blobs from above)
   }
   for (let i = FX.embers.length - 1; i >= 0; i--) {
     const s = FX.embers[i]; s.life += dt; if (s.life > s.max) { FX.embers[i] = FX.embers[FX.embers.length - 1]; FX.embers.pop(); continue; }

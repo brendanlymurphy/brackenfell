@@ -60,7 +60,7 @@ function terrainBase(x, z) {
 }
 function terrainH(x, z) {
   let h = terrainBase(x, z);
-  if (Math.abs(x) < 160 && Math.abs(z) < 170) {
+  if (Math.abs(x) < 210 && Math.abs(z) < 210) {
     // village square
     const sq = hyp((x - SQUARE.x) / (SQUARE.rx + 3), (z - SQUARE.z) / (SQUARE.rz + 3));
     if (sq < 2) h = lerp(h, 0, 1 - smooth(1, 1.9, sq));
@@ -72,6 +72,7 @@ function terrainH(x, z) {
       if (dd < 6) h = lerp(h, s.y, 1 - smooth(0, 6, dd));
     }
   }
+  if (typeof wildsH === 'function') h = wildsH(x, z, h);        // hills, cliffs, yards and the toll-ford brook (55c_wilds.js)
   // river: level banks, then a channel
   const ext = 8 * smooth(125, 230, hyp(x, z));            // far from the village the channel widens so coarse terrain still shows it
   const d = River.dist(x, z, 14 + ext);
@@ -153,7 +154,7 @@ function buildTerrain() {
   // TERRAIN_FINE: the ground is drawn with 1.5 m cells out to this distance from the centre and with 3 m cells (a quarter of the triangles) from there to the
   // edge of the height grid. Terrain.y still reads the 1.5 m grid. 144 puts the whole grid back on 1.5 m cells.
   const FINE = TERRAIN_FINE, ring = FINE < K.terrainHalf;
-  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: 144, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: 144, tile: TERRAIN_TILE[0] }, { cell: 24, half: 1440, hole: 432, tile: TERRAIN_TILE[1] }, { cell: 96, half: 4800, hole: 1440, tile: TERRAIN_TILE[2] }]);
+  const TH = K.terrainHalf, levels = [{ cell: 1.5, half: TH, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: TH, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: TH, tile: TERRAIN_TILE[0] }, { cell: 24, half: 1440, hole: 432, tile: TERRAIN_TILE[1] }, { cell: 96, half: 4800, hole: 1440, tile: TERRAIN_TILE[2] }]);
   const pack = new MeshPack(); pack.shadow = true;
   let prev = null;
   for (let li = levels.length - 1; li >= 0; li--) {            // coarse first so fine borders can be stitched to them
@@ -253,6 +254,7 @@ function buildSplat() {
   ell(B, SITE.tower.x, SITE.tower.z, 4.6, 4.6, red);
   stroke(B, River.p, 9.4, red, 1.2);
   ell(B, LAKE.x, LAKE.z, LAKE.r + 4, LAKE.r + 4, red);
+  if (typeof wildsSplat === 'function') wildsSplat(A, B, { P, stroke, ell, red, grn, blu });       // (79_wilds.js: footpath cobbles, scree, ash)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = da[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
   Terrain.splatData = out;
@@ -304,6 +306,7 @@ function buildSplat2() {
   blob(B, 0, SQUARE.x, SQUARE.z, Math.max(SQUARE.rx, SQUARE.rz) + 6, 0.5, 0.75);
   // ── outdoor dressing: damp patches on the cobbles, mud and worn turf around troughs, hay, carts, benches (73c_dress.js; this block is separate from the LOD work) ──
   if (typeof splat2Dress === 'function') splat2Dress(blob, A, B);
+  if (typeof wildsSplat2 === 'function') wildsSplat2(blob, line, A, B);       // (79_wilds.js: mud at the pool and brook, trodden ground at the camps)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = db[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
   G.splat2Tex = gfxDataTex(out, Rz, Rz, THREE.RGBAFormat, THREE.UnsignedByteType);
