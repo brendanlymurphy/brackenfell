@@ -6660,6 +6660,8 @@ function splat2Dress(blob, A, B) {
 
 
 // ---- 73d_infill.js ----
+// Budget: yard props, dressing and the alley are culled nearer on Medium (the town is dense; beyond ~42 m they are small and cost a draw call each)
+QUALITY.medium.yardRange = 30; QUALITY.medium.houseFar = 42; QUALITY.medium.yardCast = false;
 // ───────────────────────── infill houses: dark timber walls, grey shingle roofs, built from the village kit ─────────────────────────
 // Sites come from 55b_infill.js. Six of them are enterable (HOUSES specs in 72c_infill.js, shell by kitShell); the rest are shells only, assembled here
 // in the same way as the market alley (2 m wall panels scaled to the wall, kit window and door modules, jettied upper storeys, kit roof turned to a ridge
