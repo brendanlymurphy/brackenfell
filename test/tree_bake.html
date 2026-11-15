@@ -1,0 +1,49 @@
+<!doctype html><html><body style="margin:0;background:#222"><canvas id="out"></canvas>
+<script>
+// Step 2 of the tree builder: draws the scan's real foliage into the card atlas prepared by tools/scan/tree_prep.py.
+// Every foliage vertex already carries its atlas position; this page only rasterises (4x MSAA, alpha to coverage) and halves the result.
+(async () => {
+  const name = new URLSearchParams(location.search).get('name'), base = '/tools/scan/_bake/' + name + '/';
+  const meta = await (await fetch(base + 'meta.json')).json(), S = meta.atlas;
+  const bin = async (f, T) => new T(await (await fetch(base + f)).arrayBuffer());
+  const img = async f => { const b = await (await fetch(base + f)).blob(); return createImageBitmap(b, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }); };
+  const cv = document.createElement('canvas'), gl = cv.getContext('webgl2', { antialias: false, premultipliedAlpha: false });
+  const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+  const pr = gl.createProgram();
+  gl.attachShader(pr, sh(gl.VERTEX_SHADER, `#version 300 es
+    layout(location=0) in vec3 aPos; layout(location=1) in vec2 aUV; layout(location=2) in float aShade; out vec2 vUV; out float vS;
+    void main() { vUV = aUV; vS = aShade; gl_Position = vec4(aPos, 1.0); }`));
+  gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, `#version 300 es
+    precision highp float; in vec2 vUV; in float vS; uniform sampler2D uD, uA; out vec4 o;
+    void main() { float a = texture(uA, vUV).r; if (a < 0.08) discard; o = vec4(texture(uD, vUV).rgb * vS, a); }`));
+  gl.linkProgram(pr); if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr)); gl.useProgram(pr);
+  const tex = (unit, im) => { const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im); gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); };
+  tex(0, await img('diff.jpg')); tex(1, await img(meta.alpha)); gl.uniform1i(gl.getUniformLocation(pr, 'uD'), 0); gl.uniform1i(gl.getUniformLocation(pr, 'uA'), 1);
+  const vb = (loc, data, n) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, n, gl.FLOAT, false, 0, 0); return b; };
+  vb(1, await bin('uv.bin', Float32Array), 2); vb(2, await bin('shade.bin', Float32Array), 1);
+  const idx = await bin('idx.bin', Uint32Array), ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+  // multisampled target, resolved into a texture
+  const samples = Math.min(4, gl.getParameter(gl.MAX_SAMPLES));
+  const fbM = gl.createFramebuffer(), rbC = gl.createRenderbuffer(), rbD = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, rbC); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.RGBA8, S, S);
+  gl.bindRenderbuffer(gl.RENDERBUFFER, rbD); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.DEPTH_COMPONENT24, S, S);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbM); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, rbC); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rbD);
+  gl.viewport(0, 0, S, S); gl.clearColor(0, 0, 0, 0); gl.clearDepth(1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.CULL_FACE); gl.disable(gl.BLEND); gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+  for (const f of meta.passes) { const b = vb(0, await bin(f, Float32Array), 3); gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_INT, 0); gl.deleteBuffer(b); }
+  const fbR = gl.createFramebuffer(), tr = gl.createTexture(); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, tr); gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, S, S);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbR); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tr, 0);
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER, fbM); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, fbR); gl.blitFramebuffer(0, 0, S, S, 0, 0, S, S, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbR); const px = new Uint8Array(S * S * 4); gl.readPixels(0, 0, S, S, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  // halve: colours are averaged weighted by coverage; rows flipped so the image's top row is the atlas's top
+  const H = S / 2, o = new Uint8ClampedArray(H * H * 4);
+  for (let y = 0; y < H; y++) for (let x = 0; x < H; x++) {
+    let r = 0, g = 0, b = 0, a = 0;
+    for (let k = 0; k < 4; k++) { const i = (((S - 1 - (y * 2 + (k >> 1))) * S) + x * 2 + (k & 1)) * 4, w = px[i + 3]; r += px[i] * w; g += px[i + 1] * w; b += px[i + 2] * w; a += w; }
+    const j = (y * H + x) * 4; if (a > 0) { o[j] = r / a; o[j + 1] = g / a; o[j + 2] = b / a; } o[j + 3] = a / 4;
+  }
+  const out = document.getElementById('out'); out.width = out.height = H; out.style.width = '512px';
+  out.getContext('2d').putImageData(new ImageData(o, H, H), 0, 0);
+  window.__bake = out.toDataURL('image/png'); window.__ready = true;
+})().catch(e => { console.error('BAKE FAIL', e.stack || e); window.__error = String(e); window.__ready = true; });
+</script></body></html>

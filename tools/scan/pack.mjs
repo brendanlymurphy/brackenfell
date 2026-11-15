@@ -7,13 +7,15 @@ import * as F from '@gltf-transform/functions';
 const [listFile, CACHE, KITS] = process.argv.slice(2);
 const list = fs.readFileSync(listFile, 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')).map(l => l.split(/\s+/));
 const EXCLUDE = new Set(fs.readFileSync(new URL('./exclude.txt', import.meta.url), 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')));
+const treeFile = new URL('./trees.txt', import.meta.url);
+const trees = fs.existsSync(treeFile) ? fs.readFileSync(treeFile, 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')).map(l => [l.split(/\s+/)[0], 'tree']) : [];
 const NATURE = new Set(['rock', 'ground-cover', 'plant', 'tree']);
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 const packs = { 'scan_props.glb': new Document(), 'scan_nature.glb': new Document() }, catalog = {};
 for (const d of Object.values(packs)) { d.createBuffer(); d.getRoot().setDefaultScene(d.createScene('scan')); }
 const tris = p => (p.getIndices() ? p.getIndices().getCount() : p.getAttribute('POSITION').getCount()) / 3;
 const r3 = a => a.map(v => +v.toFixed(3));
-for (const [id, cat] of list) {
+for (const [id, cat] of list.concat(trees)) {
   const f = `${CACHE}/${id}.glb`; if (!fs.existsSync(f)) { console.log('missing', id); continue; }
   const file = NATURE.has(cat) ? 'scan_nature.glb' : 'scan_props.glb', target = packs[file];
   const src = await io.read(f);
@@ -35,6 +37,7 @@ for (const [file, doc] of Object.entries(packs)) {
     if (ex.metal > 0.3) e.metal = ex.metal;
     if (ex.far) e.far = ex.far;
     if (ex.lodOf) e.lodOf = ex.lodOf;
+    if (ex.height) { e.height = ex.height; e.crownRadius = ex.crownRadius; }
     catalog[n.getName()] = e;
   }
   await io.write(`${KITS}/${file}`, doc);

@@ -10,3 +10,4 @@ shots/
 # local link to the conversion tool dependencies (kept outside the repo)
 tools/scan/node_modules
 /node_modules
+tools/scan/_bake/

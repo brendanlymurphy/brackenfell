@@ -123,9 +123,6 @@ root_cluster_01 ground-cover
 single_root ground-cover
 dry_branches_medium_01 ground-cover
 bark_debris_01 ground-cover
-fir_sapling tree
-pine_sapling_small tree
-tree_small_02 tree
 fern_02 plant
 nettle_plant plant
 shrub_02 plant

@@ -1,0 +1,9 @@
+# name  poly-haven-id  node-name-contains  near-clusters  far-clusters  [alpha gain]  [atlas size]
+fir_c fir_tree_01 fir_tree_01_c 150 14
+fir_b fir_tree_01 fir_tree_01_b 170 14
+fir_a fir_tree_01 fir_tree_01_a 200 16
+pine_b pine_tree_01 pine_tree_01_b 170 14
+pine_c pine_tree_01 pine_tree_01_c 190 16
+broadleaf_small tree_small_02 tree_small_02 140 12
+fir_sapling fir_sapling fir_sapling_a 40 6 3.2 1024
+pine_sapling pine_sapling_small pine_sapling_small_a 40 6 3.2 1024
