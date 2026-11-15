@@ -1065,6 +1065,288 @@ function renderFrame(time, env) {
 }
 
 
+// ---- 44_kit.js ----
+// ───────────────────────── asset kits: modular buildings, props, nature (glTF packs under kits/) ─────────────────────────
+// A pack is one GLB whose top-level nodes are the pieces, plus a catalogue (bbox, category, notes). Pieces from every pack share one
+// namespace. Level code places pieces through a batch, which merges them into a few meshes per material and 24 m cell, or as
+// instanced meshes for things repeated hundreds of times. Every kit material is lit like the rest of the world: Three's sun light
+// and shadow, plus ambient and the zone-aware point lights in the emissive term (see 40_shade.js).
+const Kit = (() => {
+  const { Fn, float, vec2, vec3, vec4, uniform, attribute, texture, uv, positionWorld, positionLocal, positionGeometry, normalWorld, normalMap,
+    mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs } = TSL;
+  const K_ = {
+    PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
+    pieces: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [],
+    grade: null,
+  };
+  const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
+
+  // ── loading ──
+  async function fetchJson(url, optional) { const r = await fetch(url); if (!r.ok) { if (optional) return null; throw new Error(url + ' ' + r.status); } return r.json(); }
+  function extract(mesh) {       // one primitive -> plain arrays in piece space
+    const g = mesh.geometry, P = g.attributes.position, N = g.attributes.normal, T = g.attributes.uv, C = g.attributes.color, n = P.count;
+    const pos = new Float32Array(n * 3), nrm = new Float32Array(n * 3), uvs = new Float32Array(n * 2), col = C ? new Float32Array(n * 3) : null;
+    mesh.updateWorldMatrix(true, false); _n3.getNormalMatrix(mesh.matrixWorld);
+    for (let i = 0; i < n; i++) {
+      _v.fromBufferAttribute(P, i).applyMatrix4(mesh.matrixWorld); pos[i * 3] = _v.x; pos[i * 3 + 1] = _v.y; pos[i * 3 + 2] = _v.z;
+      if (N) { _v.fromBufferAttribute(N, i).applyMatrix3(_n3).normalize(); nrm[i * 3] = _v.x; nrm[i * 3 + 1] = _v.y; nrm[i * 3 + 2] = _v.z; } else nrm[i * 3 + 1] = 1;
+      if (T) { uvs[i * 2] = T.getX(i); uvs[i * 2 + 1] = T.getY(i); }
+      if (col) { col[i * 3] = C.getX(i); col[i * 3 + 1] = C.getY(i); col[i * 3 + 2] = C.getZ(i); }
+    }
+    let idx; if (g.index) idx = Uint32Array.from(g.index.array); else { idx = new Uint32Array(n); for (let i = 0; i < n; i++) idx[i] = i; }
+    return { mat: mesh.material.name || 'unnamed', pos, nrm, uv: uvs, col, idx, n };
+  }
+  function registerMaterial(m) {       // remember the glTF material's maps once per name
+    const name = m.name || 'unnamed'; if (K_.defs[name]) return;
+    const orm = m.roughnessMap || m.metalnessMap || null;
+    K_.defs[name] = {
+      name, map: m.map || null, normalMap: m.normalMap || null, orm, aoInOrm: !!m.aoMap || (!!orm && /ORM|_arm|_orm/i.test(orm.name || '')),
+      color: m.color ? [m.color.r, m.color.g, m.color.b] : [1, 1, 1], rough: m.roughness === undefined ? 1 : m.roughness, metal: m.metalness || 0,
+      alphaTest: m.alphaTest || 0, blend: !!m.transparent, doubleSided: m.side === THREE.DoubleSide,
+      emissive: m.emissive ? [m.emissive.r * (m.emissiveIntensity || 1), m.emissive.g * (m.emissiveIntensity || 1), m.emissive.b * (m.emissiveIntensity || 1)] : [0, 0, 0], emissiveMap: m.emissiveMap || null,
+      uvScale: [1, 1], gain: 1, nScale: 1,
+    };
+    for (const t of [m.map, m.normalMap, orm, m.emissiveMap]) if (t) { t.anisotropy = 4; }
+  }
+  async function loadPack(pack, progress) {
+    const loader = new T3X.GLTFLoader();
+    let gltf;
+    try { gltf = await loader.loadAsync(pack.glb, e => { if (progress && e.total) progress(e.loaded / e.total); }); }
+    catch (e) { if (pack.optional) return false; throw new Error('kit ' + pack.glb + ': ' + (e && e.message || e)); }
+    if (pack.catalog) { const c = await fetchJson(pack.catalog, pack.optional); if (c) Object.assign(K_.cat, c.pieces || c); }
+    gltf.scene.updateMatrixWorld(true);
+    for (const node of gltf.scene.children) {
+      const prims = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); prims.push(extract(o)); } });
+      if (!prims.length) continue;
+      const min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9];
+      for (const p of prims) for (let i = 0; i < p.pos.length; i++) { const k = i % 3, v = p.pos[i]; if (v < min[k]) min[k] = v; if (v > max[k]) max[k] = v; }
+      K_.pieces[node.name] = { name: node.name, prims, min, max, pack: pack.glb };
+    }
+    return true;
+  }
+  const texLoad = url => new Promise((res, rej) => new THREE.TextureLoader().load(url, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = 4; res(t); }, undefined, () => rej(new Error('texture ' + url))));
+  // the realistic skin: scanned or re-worked texture sets that replace the kit's painted ones, material by material (kits/skin/SKIN.json)
+  async function loadSkin() {
+    const S = await fetchJson('kits/skin/SKIN.json', true); if (!S) { K_.skin = 'painted'; return; }
+    K_.skinDef = S;
+    if (S.grade) Object.assign(K_.gradeInit, S.grade);
+    const jobs = [];
+    for (const name of Object.keys(S.materials || {})) {
+      const s = S.materials[name], d = K_.defs[name]; if (!d) continue;
+      if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
+      if (s.a) jobs.push(texLoad('kits/skin/' + s.a).then(t => { t.colorSpace = THREE.SRGBColorSpace; d.map = t; }));
+      if (s.n) jobs.push(texLoad('kits/skin/' + s.n).then(t => { t.colorSpace = THREE.NoColorSpace; d.normalMap = t; }));
+      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm).then(t => { t.colorSpace = THREE.NoColorSpace; d.orm = t; d.aoInOrm = s.ao !== false; }));
+    }
+    await Promise.all(jobs);
+  }
+  K_.gradeInit = { sat: 1, gain: 1, tint: [1, 1, 1], weather: 0 };
+  // opts: { packs: [{ glb, catalog, optional }], skin: 'realistic' | 'painted' }
+  K_.load = async function (progress, opts) {
+    opts = opts || {};
+    const packs = opts.packs || K_.PACKS; K_.skin = opts.skin || (TEST && TEST.skin) || 'realistic';
+    for (let i = 0; i < packs.length; i++) await loadPack(packs[i], f => progress && progress((i + f) / (packs.length + 1)));
+    if (K_.skin === 'realistic') await loadSkin();
+    const g = K_.gradeInit;
+    K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };
+    if (K_.skin !== 'realistic') { K_.grade.sat.value = 1; K_.grade.gain.value = 1; K_.grade.tint.value.set(1, 1, 1); K_.grade.weather.value = 0; }
+    K_.ready = true; if (progress) progress(1);
+  };
+  // one knob set for the whole kit look: saturation, brightness, a colour cast, and weathering (large soft stains so no two walls match)
+  K_.setGrade = function (o) { const G_ = K_.grade; if (o.weather !== undefined) G_.weather.value = o.weather; if (o.sat !== undefined) G_.sat.value = o.sat; if (o.gain !== undefined) G_.gain.value = o.gain; if (o.tint) G_.tint.value.set(o.tint[0], o.tint[1], o.tint[2]); };
+
+  K_.info = name => { const p = K_.pieces[name]; if (!p) return null; return Object.assign({ name, min: p.min, max: p.max, size: [p.max[0] - p.min[0], p.max[1] - p.min[1], p.max[2] - p.min[2]] }, K_.cat[name] || {}); };
+  K_.names = filter => Object.keys(K_.pieces).filter(n => !filter || filter(K_.info(n))).sort();
+  // local positions of the light sources on a piece (candle tips, lantern, torch head), from the catalogue
+  K_.lights = name => ((K_.cat[name] || {}).lights || []).map(p => p.slice());
+
+  // position / rotation / scale shorthand -> Matrix4. Accepts a Matrix4, a column-major array of 16, or { p:[x,y,z], ry, r:[rx,ry,rz], s }
+  function toMatrix(x, out) {
+    out = out || new THREE.Matrix4();
+    if (!x) return out.identity();
+    if (x.isMatrix4) return out.copy(x);
+    if (x.length === 16) return out.fromArray(x);
+    const p = x.p || x.pos || [0, 0, 0], s = x.s === undefined ? 1 : x.s, sv = typeof s === 'number' ? [s, s, s] : s;
+    const e = new THREE.Euler(x.r ? x.r[0] : 0, x.r ? x.r[1] : (x.ry || 0), x.r ? x.r[2] : 0, 'YXZ');
+    return out.compose(new THREE.Vector3(p[0], p[1], p[2]), new THREE.Quaternion().setFromEuler(e), new THREE.Vector3(sv[0], sv[1], sv[2]));
+  }
+  K_.matrix = toMatrix;
+  // world-space box of a placed piece: { min:[x,y,z], max:[x,y,z] }
+  K_.box = function (name, xf) {
+    const p = K_.pieces[name]; if (!p) return null;
+    const M = toMatrix(xf, _m), min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9];
+    for (let i = 0; i < 8; i++) { _v.set(i & 1 ? p.max[0] : p.min[0], i & 2 ? p.max[1] : p.min[1], i & 4 ? p.max[2] : p.min[2]).applyMatrix4(M); min[0] = Math.min(min[0], _v.x); min[1] = Math.min(min[1], _v.y); min[2] = Math.min(min[2], _v.z); max[0] = Math.max(max[0], _v.x); max[1] = Math.max(max[1], _v.y); max[2] = Math.max(max[2], _v.z); }
+    return { min, max };
+  };
+
+  // ── materials ──
+  const isFoliage = d => d.alphaTest > 0 || /leaf|leaves|grass|flower|vine|fern|plant|clover/i.test(d.name);
+  const isGlass = d => /glass/i.test(d.name);
+  const gradeFn = c => {
+    const G_ = K_.grade, l = dot(c, vec3(0.2126, 0.7152, 0.0722)), wp = positionWorld;
+    const st = texture(G.noiseTex, vec2(wp.x.add(wp.z.mul(0.7)).mul(0.11), wp.y.mul(0.16).add(wp.z.mul(0.05)))), stain = st.r.mul(0.65).add(st.g.mul(0.35)).sub(0.5).mul(1.5);
+    return mix(vec3(l), c, G_.sat).mul(G_.tint).mul(G_.gain).mul(stain.mul(G_.weather).add(1).clamp(0.55, 1.25));
+  };
+  // mode 'batch': per-vertex kc (rgb tint, a sky visibility) and kz (x zone / 255, y emissive strength / 16 * 255 ...). mode 'inst': InstancedMesh, outdoors.
+  function material(name, mode, o) {
+    o = o || {};
+    const key = name + '|' + mode + '|' + (o.wind ? 'w' : '') + (o.zone || 0) + (o.skyVis === undefined ? '' : o.skyVis);
+    let m = K_.mats.get(key); if (m) return m;
+    const d = K_.defs[name] || { name, color: [1, 1, 1], uvScale: [1, 1], gain: 1, rough: 1, metal: 0, alphaTest: 0, emissive: [0, 0, 0], nScale: 1 }, U = SH.U;
+    m = new THREE.MeshStandardNodeMaterial(); m.name = key;
+    const uvn = (d.uvScale[0] !== 1 || d.uvScale[1] !== 1) ? uv().mul(vec2(d.uvScale[0], d.uvScale[1])) : uv();
+    const batch = mode === 'batch';
+    const kc = batch ? attribute('kc', 'vec4') : null, kz = batch ? attribute('kz', 'vec4') : null;
+    const tint = batch ? kc.rgb : (o.hasColor ? attribute('color', 'vec3') : vec3(1)).mul(o.hasTint ? attribute('itint', 'vec3') : vec3(1));
+    // wall modules are often a single sheet seen from both sides: its back face is the room side. Such pieces carry a second zone and
+    // sky visibility (kz.z, kz.w) that the back face uses; pieces without that have both pairs equal.
+    const inside = batch ? frontFacing.not().and(abs(kz.z.sub(kz.x)).greaterThan(0.002)) : null;
+    const skyVis = batch ? select(inside, kz.w, kc.a) : float(o.skyVis === undefined ? 1 : o.skyVis), zone = batch ? select(inside, kz.z, kz.x).mul(255).round() : float(o.zone || 0);
+    const glow = batch ? kz.y.mul(255 / 16) : float(0);          // extra self-illumination in HDR units (candle wax near the flame, embers)
+    const N = normalWorld, wp = positionWorld;
+    if (isGlass(d)) {         // window panes: dark by day with a little sky in them, lit from inside after dusk (each pane a slightly different warmth)
+      const cell = floor(wp.mul(0.9)), h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))).mul(43758.5453));
+      const V = normalize(wp.sub(U.camPos)), R = reflect(V, N);
+      const sky = SH.skyBase(vec3(R.x, max(R.y, 0.02), R.z)).mul(0.22);
+      const lit = vec3(1.0, 0.60, 0.24).mul(h.mul(0.9).add(0.35)).mul(U.windowGlow).mul(2.4).mul(smoothstep(0.12, 0.3, h));
+      m.colorNode = vec3(0.012, 0.016, 0.02); m.roughnessNode = float(0.15); m.metalnessNode = float(0);
+      // from the room side a pane just shows the dim sky outside
+      const outsideView = batch ? frontFacing : frontFacing;
+      m.emissiveNode = select(outsideView, sky.add(lit), SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55)).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
+      m.side = THREE.DoubleSide;
+      K_.mats.set(key, m); return m;
+    }
+    const base = d.map ? texture(d.map, uvn) : vec4(1);
+    const orm = d.orm ? texture(d.orm, uvn) : null;
+    const metal = orm ? orm.b : float(d.metal || 0);
+    // no reflection probes here, so metal keeps a darkened diffuse instead of going black, and gets its shine from a lower roughness
+    const raw = base.rgb.mul(vec3(d.color[0] * d.gain, d.color[1] * d.gain, d.color[2] * d.gain)).mul(tint);
+    const alb = gradeFn(d.sat === undefined ? raw : mix(vec3(dot(raw, vec3(0.2126, 0.7152, 0.0722))), raw, d.sat)).mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
+    const ao = (orm && d.aoInOrm) ? orm.r : float(1);
+    m.colorNode = vec4(alb, base.a);
+    if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
+    m.roughnessNode = orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough);
+    m.metalnessNode = float(0);
+    let em = alb.mul(SH.hemi(N, skyVis.mul(ao), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6))));
+    em = em.add(alb.mul(glow));
+    if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
+    else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));
+    m.emissiveNode = em;
+    if (batch) m.receivedShadowNode = Fn(([shadow]) => shadow.mul(select(inside, float(0), float(1))));      // the sheet would not shadow its own back face
+    if (d.alphaTest > 0) { m.alphaTest = Math.max(d.alphaTest, 0.35); m.side = THREE.DoubleSide; }
+    else m.side = d.doubleSided && !o.frontOnly ? THREE.DoubleSide : THREE.FrontSide;
+    if (d.blend && !(d.alphaTest > 0)) { m.transparent = true; m.depthWrite = false; }
+    if (o.wind) {             // trees lean with the gusts, leaves and grass flutter on top; the root stays planted
+      m.positionNode = Fn(() => {
+        const p = positionLocal, h = max(positionGeometry.y, 0), t = U.wind.w, ph = p.x.mul(0.31).add(p.z.mul(0.27));
+        const lean = h.mul(h).mul(0.0016).mul(sin(t.mul(0.9).add(ph.mul(0.35))).mul(0.6).add(0.55));
+        const flut = sin(t.mul(3.1).add(ph.mul(4.0)).add(h.mul(1.7))).mul(isFoliage(d) ? 0.035 : 0).mul(smoothstep(0.0, 1.2, h));
+        const k = lean.add(flut).mul(U.wind.z);
+        return vec3(p.x.add(U.wind.x.mul(k)), p.y, p.z.add(U.wind.y.mul(k)));
+      })();
+    }
+    K_.mats.set(key, m); return m;
+  }
+  K_.material = material;
+
+  // ── batches ──
+  K_.batch = function (opts) {
+    opts = opts || {};
+    const cell = opts.cell || 24, buckets = new Map(), inst = [], B = { count: 0 };
+    // o: { zone: 0 outdoors | n the interior of building n, skyVis: 1 outdoors .. ~0.3 indoors, tint: [r,g,b] linear, cast: true, glow: HDR self-illumination,
+    //      lit: 0..1 for light-source pieces: the wax around each flame position glows (the flame itself is a particle the game adds),
+    //      inZone, inSkyVis: for wall, gable and roof pieces (outside face = local +z or up): the room side gets this zone / sky visibility instead }
+    B.add = function (name, xf, o) {
+      const p = K_.pieces[name]; if (!p) { console.warn('Kit: unknown piece ' + name); return B; }
+      o = o || {};
+      const M = toMatrix(xf);
+      _v.set((p.min[0] + p.max[0]) / 2, (p.min[1] + p.max[1]) / 2, (p.min[2] + p.max[2]) / 2).applyMatrix4(M);
+      const ck = Math.floor(_v.x / cell) + ',' + Math.floor(_v.z / cell), cast = o.cast === false ? 0 : 1;
+      for (const prim of p.prims) {
+        const key = prim.mat + '|' + ck + '|' + cast; let b = buckets.get(key);
+        if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
+        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis }); b.nv += prim.n; b.ni += prim.idx.length;
+      }
+      B.count++; return B;
+    };
+    // many copies of one piece (trees, rocks, tufts). matrices: array of Matrix4 / shorthand. o: { tints: [[r,g,b]...], wind, cast, cell, maxDist, zone, skyVis }
+    B.addInstanced = function (name, matrices, o) {
+      const p = K_.pieces[name]; if (!p) { console.warn('Kit: unknown piece ' + name); return B; }
+      inst.push({ p, matrices: matrices.map(x => toMatrix(x)), o: o || {} }); return B;
+    };
+    B.build = function () {
+      const group = new THREE.Group(); group.name = opts.name || 'kit-batch'; group.matrixAutoUpdate = false;
+      const nm = new THREE.Matrix3(), v = new THREE.Vector3();
+      for (const b of buckets.values()) {
+        const pos = new Float32Array(b.nv * 3), nrm = new Int8Array(b.nv * 4), uvs = new Float32Array(b.nv * 2), kc = new Uint8Array(b.nv * 4), kz = new Uint8Array(b.nv * 4);
+        const idx = b.nv > 65535 ? new Uint32Array(b.ni) : new Uint16Array(b.ni); let vo = 0, io = 0;
+        for (const it of b.items) {
+          const pr = it.prim, M = it.M, flip = M.determinant() < 0; nm.getNormalMatrix(M);
+          const sky = Math.round(Math.min(Math.max(it.skyVis, 0), 1) * 255), skyIn = Math.round(Math.min(Math.max(it.inSky, 0), 1) * 255), split = it.inZone !== undefined, tr = it.tint ? it.tint[0] : 1, tg = it.tint ? it.tint[1] : 1, tb = it.tint ? it.tint[2] : 1, gl = Math.min(255, Math.round(it.glow * 16));
+          for (let i = 0; i < pr.n; i++) {
+            const o = vo + i;
+            v.set(pr.pos[i * 3], pr.pos[i * 3 + 1], pr.pos[i * 3 + 2]).applyMatrix4(M); pos[o * 3] = v.x; pos[o * 3 + 1] = v.y; pos[o * 3 + 2] = v.z;
+            v.set(pr.nrm[i * 3], pr.nrm[i * 3 + 1], pr.nrm[i * 3 + 2]).applyMatrix3(nm).normalize(); nrm[o * 4] = Math.round(v.x * 127); nrm[o * 4 + 1] = Math.round(v.y * 127); nrm[o * 4 + 2] = Math.round(v.z * 127);
+            uvs[o * 2] = pr.uv[i * 2]; uvs[o * 2 + 1] = pr.uv[i * 2 + 1];
+            const c = pr.col;
+            kc[o * 4] = Math.min(255, Math.round((c ? c[i * 3] : 1) * tr * 255)); kc[o * 4 + 1] = Math.min(255, Math.round((c ? c[i * 3 + 1] : 1) * tg * 255)); kc[o * 4 + 2] = Math.min(255, Math.round((c ? c[i * 3 + 2] : 1) * tb * 255));
+            // faces modelled toward the room (inner plaster, the ceiling beam, reveals) are indoors outright; single sheets switch by facing in the shader
+            const inside = split && (pr.nrm[i * 3 + 2] < -0.5 || (pr.nrm[i * 3 + 2] < 0.5 && pr.pos[i * 3 + 2] < -0.12));
+            kc[o * 4 + 3] = inside ? skyIn : sky; kz[o * 4] = inside ? it.inZone : it.zone;
+            let g1 = gl;
+            if (it.lights) { let best = 9; for (const L of it.lights) { const dx = pr.pos[i * 3] - L[0], dy = pr.pos[i * 3 + 1] - L[1], dz = pr.pos[i * 3 + 2] - L[2]; best = Math.min(best, Math.sqrt(dx * dx + dy * dy * 0.5 + dz * dz)); } g1 = Math.min(255, gl + Math.round(Math.max(0, 1 - best / 0.11) * it.lit * 40)); }
+            kz[o * 4 + 1] = g1;
+            kz[o * 4 + 2] = split ? it.inZone : it.zone; kz[o * 4 + 3] = split ? skyIn : sky;
+          }
+          const src = pr.idx;
+          if (flip) for (let i = 0; i < src.length; i += 3) { idx[io + i] = src[i] + vo; idx[io + i + 1] = src[i + 2] + vo; idx[io + i + 2] = src[i + 1] + vo; }
+          else for (let i = 0; i < src.length; i++) idx[io + i] = src[i] + vo;
+          vo += pr.n; io += src.length;
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nrm, 4, true)); g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+        g.setAttribute('kc', new THREE.BufferAttribute(kc, 4, true)); g.setAttribute('kz', new THREE.BufferAttribute(kz, 4, true)); g.setIndex(new THREE.BufferAttribute(idx, 1));
+        g.computeBoundingBox(); g.computeBoundingSphere();
+        const mesh = new THREE.Mesh(g, material(b.mat, 'batch'));
+        mesh.castShadow = !!b.cast && !isGlass(K_.defs[b.mat] || { name: b.mat }); mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = b.mat;
+        group.add(mesh);
+      }
+      for (const it of inst) {
+        const o = it.o, cs = o.cell || 48, cells = new Map();
+        it.matrices.forEach((M, i) => { const k = Math.floor(M.elements[12] / cs) + ',' + Math.floor(M.elements[14] / cs); let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(i); });
+        for (const prim of it.p.prims) {
+          const d = K_.defs[prim.mat] || { name: prim.mat, alphaTest: 0 };
+          const g = new THREE.BufferGeometry();
+          g.setAttribute('position', new THREE.BufferAttribute(prim.pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(prim.nrm, 3)); g.setAttribute('uv', new THREE.BufferAttribute(prim.uv, 2));
+          if (prim.col) g.setAttribute('color', new THREE.BufferAttribute(prim.col, 3));
+          g.setIndex(new THREE.BufferAttribute(prim.idx, 1)); g.computeBoundingBox(); g.computeBoundingSphere();
+          const wind = o.wind === undefined ? /tree|pine|bush|grass|flower|plant|fern|clover/i.test(it.p.name) : o.wind;
+          const mat = material(prim.mat, 'inst', { wind, hasColor: !!prim.col, hasTint: !!o.tints, zone: o.zone, skyVis: o.skyVis });
+          for (const list of cells.values()) {
+            const gi = new THREE.BufferGeometry();          // shares the vertex buffers; each cell only adds its own instanced attributes
+            for (const k of Object.keys(g.attributes)) gi.setAttribute(k, g.attributes[k]); gi.setIndex(g.index); gi.boundingBox = g.boundingBox; gi.boundingSphere = g.boundingSphere;
+            const im = new THREE.InstancedMesh(gi, mat, list.length);
+            list.forEach((src, j) => im.setMatrixAt(j, it.matrices[src]));
+            if (o.tints) { const a = new Float32Array(list.length * 3); list.forEach((src, j) => { const t = o.tints[src] || [1, 1, 1]; a[j * 3] = t[0]; a[j * 3 + 1] = t[1]; a[j * 3 + 2] = t[2]; }); gi.setAttribute('itint', new THREE.InstancedBufferAttribute(a, 3)); }
+            im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); im.computeBoundingBox();
+            im.castShadow = o.cast !== false; im.receiveShadow = true; im.matrixAutoUpdate = false; im.name = it.p.name + ':' + prim.mat;
+            if (o.maxDist) { im.userData.maxDist = o.maxDist; K_.instanced.push(im); }
+            group.add(im);
+          }
+        }
+      }
+      return group;
+    };
+    return B;
+  };
+  // hides instanced cells that asked for a draw distance (o.maxDist) once the camera is farther than that
+  K_.update = function (camPos) {
+    for (const im of K_.instanced) { const s = im.boundingSphere, dx = s.center.x - camPos[0], dz = s.center.z - camPos[2]; im.visible = Math.sqrt(dx * dx + dz * dz) - s.radius < im.userData.maxDist; }
+  };
+  return K_;
+})();
+
+
 // ---- 45_sky.js ----
 // ───────────────────────── sky dome: gradient, stars, sun and moon, aurora, clouds ─────────────────────────
 // A sphere that follows the camera. It is drawn after the opaque world with the depth test on, so only uncovered pixels pay for it.
@@ -2148,7 +2430,7 @@ const COL = {
   iron: [0.72, 0.72, 0.76], steel: [1, 1, 1.02], bronze: [1.0, 0.80, 0.45], black: [0.22, 0.21, 0.2],
   linen: [0.92, 0.89, 0.80], wool: [0.78, 0.72, 0.62], red: [0.70, 0.17, 0.13], blue: [0.20, 0.32, 0.60], green: [0.24, 0.46, 0.22], gold: [0.92, 0.72, 0.22],
   purple: [0.42, 0.22, 0.50], clay: [0.74, 0.40, 0.26], wax: [0.95, 0.90, 0.75], hay: [1, 0.95, 0.8], leather: [0.45, 0.28, 0.16], fur: [0.42, 0.32, 0.24],
-  bread: [0.80, 0.56, 0.28], cheese: [0.93, 0.76, 0.28], apple: [0.75, 0.14, 0.10], cabbage: [0.42, 0.62, 0.28], glass: [0.35, 0.55, 0.40], parchment: [0.90, 0.82, 0.62],
+  bread: [0.62, 0.44, 0.24], cheese: [0.74, 0.62, 0.30], apple: [0.52, 0.13, 0.10], cabbage: [0.34, 0.46, 0.25], glass: [0.35, 0.55, 0.40], parchment: [0.90, 0.82, 0.62],
 };
 // colliders / lights / emitters are registered in world space using the mesh's current matrix
 function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
@@ -2372,6 +2654,8 @@ function addFloor(m, x0, z0, x1, z1, y, y2, axis) {
 function siteMatrix(site, y) { const M = m4.create(); m4.translate(M, site.x, y, site.z); m4.rotY(M, -site.yaw); return M; }
 
 function buildHouse(site, spec) {
+  const kit = typeof kitWanted === 'function' && kitWanted(site, spec);      // kit-built shell (71_kithouse.js) or the procedural one below
+  if (kit) spec = kitSpec(site, spec);
   const w = site.w, d = site.d, H = spec.H || 2.6, t = 0.3, P = (spec.pitch || 48) * PI / 180, tanP = Math.tan(P), hd = d / 2;
   const floorY = site.y + 0.32, zone = World.zones.length + 1, R = rng(site.x * 131 + site.z * 17 + 5);
   const Ms = siteMatrix(site, floorY);
@@ -2533,7 +2817,7 @@ function buildHouse(site, spec) {
   }
   ext.ao = 1; ext.m1 = 0;
   const ctx = {
-    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList,
+    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList, kit, Ms, openings, tanP,
     world: (x, y, z) => m4.tp(Ms, [x, y, z]),
     spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: site.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
     // hearth against a wall. frame: origin on the inner wall face, +x into the room. (x, z) = house-local position, rot = RY angle
@@ -2559,6 +2843,7 @@ function buildHouse(site, spec) {
       // chimney stack above the roof
       const sp = wp(m, dep * 0.5 - 0.02, 0, 0); m.pop();
       const l = worldToSite(site, sp[0], sp[2]);
+      if (kit) { kitChimney(ctx, l[0], l[1]); ctx.fire = fp; return; }
       outer(); ext.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
       const y0 = roofY(l[1]) - 0.5, y1 = Math.max(ridgeY + 0.9, roofY(l[1]) + 1.5);
       ext.cbox(l[0], y0, l[1], 0.85, y1 - y0, 0.85, 4); ext.cbox(l[0], y1, l[1], 1.02, 0.14, 1.02);
@@ -2569,10 +2854,380 @@ function buildHouse(site, spec) {
     solid(x0, z0, x1, z1, h) { addBoxCollider(int, x0, z0, x1, z1, 0, h || 1); },
     interact(x, y, z, o) { const it = Object.assign({ p: m4.tp(Ms, [x, y, z]), r: 2.0, zone }, o); World.interact.push(it); return it; },
   };
+  if (kit) kitShell(ctx);
   if (spec.interior) spec.interior(ctx);
+  if (kit) kitDress(ctx);
   int.grad = null;
   World.houses[site.id] = { site, zone, ctx, floorY, door: doorList[0] };
   return { ext, int, glow, ctx };
+}
+
+
+// ---- 71_kithouse.js ----
+// ───────────────────────── houses assembled from the village kit, furnished from the props kit ─────────────────────────
+// buildHouse() still lays out every building (zones, colliders, floors, doors, window light, seats, hearths); in kit style its
+// generated shell is thrown away here and replaced by kit modules: 2 m wall panels scaled to the wall runs, with door and window
+// panels exactly where the building's openings are, corner posts, a tiled roof that fits, timber gables, chimneys, and on some
+// buildings a second storey with a balcony. Props.* calls made while furnishing are swapped for kit props at the same place.
+const HOUSE_STYLE = (TEST && TEST.house) || 'kit';        // 'kit' | 'legacy' (the generated houses)
+const KIT_STYLE = {
+  inn: { ground: 'stone', pitch: 50, vines: 4, banner: true, round: true, dormers: [-4.2, 4.2] },
+  smithy: { ground: 'stone', vines: 1 },
+  store: { ground: 'plaster', up: 1, balcony: 'front', vines: 2 },
+  elder: { ground: 'stone', up: 1, vines: 3 },
+  herbalist: { ground: 'plaster', vines: 4, round: true },
+  guardhouse: { ground: 'stone', up: 1, balcony: 'front' },
+  weaver: { ground: 'plaster', up: 1, vines: 2 },
+  chapel: { ground: 'stone', pitch: 56, thin: true, banner: true },
+  mill: { ground: 'stone', up: 1, vines: 2 },
+  farm: { ground: 'plaster', vines: 2 },
+  hunter: { ground: 'stone', vines: 1 },
+  fisher: { ground: 'plaster' },
+};
+World.kitExt = {}; World.kitInt = {}; World.kitYard = null; World.kitGroups = [];
+const kitReady = () => HOUSE_STYLE === 'kit' && typeof Kit !== 'undefined' && !!Kit.ready;
+function kitWanted(site, spec) { return kitReady() && !!KIT_STYLE[site.id]; }
+async function kitBoot(progress) {
+  if (HOUSE_STYLE !== 'kit' || typeof Kit === 'undefined') return;
+  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props/.test(p.glb)) }); }
+  catch (e) { console.warn('kits unavailable, building the generated houses instead: ' + (e && e.message || e)); G.kitNote = String(e && e.message || e); }
+}
+// the building's spec adjusted to what the kit panels can do: 3 m storeys, kit door and window sizes, no slit windows
+function kitSpec(site, spec) {
+  const st = KIT_STYLE[site.id], s = Object.assign({}, spec, { kitStyle: st });
+  s.H = Math.max(spec.H || 2.6, 3.0); s.pitch = st.pitch || 52;
+  const sy = s.H / 3;
+  s.doors = (spec.doors || []).map(o => { const sx = clamp((o.w || 1.05) / 1.08, 1.0, 1.4); return Object.assign({}, o, { w: 1.1 * sx, h: 2.12 * sy, ksx: sx, lamp: false, kLamp: o.lamp !== false }); });
+  s.windows = (spec.windows || []).filter(o => (o.sill === undefined ? 1 : o.sill) < 2.0).map(o => Object.assign({}, o, { w: 1.2, sill: 0.95 * sy, h: 1.55 * sy, kwin: st.thin || (o.w || 0.9) < 0.85 ? 'thin' : st.round ? 'round' : 'wide' }));
+  if (st.up) s.ceiling = true;
+  return s;
+}
+const KH = (() => {
+  const _p = new THREE.Vector3(), _s = new THREE.Vector3(), _q = new THREE.Quaternion(), _l = new THREE.Matrix4(), Y = new THREE.Vector3(0, 1, 0);
+  const V = a => new THREE.Vector3(a[0], a[1], a[2]);
+  // base * translate * rotateY * scale
+  const xf = (base, x, y, z, s, ry) => { const sv = s === undefined ? [1, 1, 1] : typeof s === 'number' ? [s, s, s] : s; _l.compose(_p.set(x, y, z), _q.setFromAxisAngle(Y, ry || 0), _s.set(sv[0], sv[1], sv[2])); return new THREE.Matrix4().multiplyMatrices(base, _l); };
+  return { V, xf };
+})();
+
+function kitShell(c) {
+  const { site, spec, w, d, H, t, hd, ext, glow, zone, Ms, openings, tanP } = c, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
+  // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
+  ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
+  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096 }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
+  const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
+  const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: 0, inSkyVis: 0.12 };
+  const frames = {}, wbs = {};
+  for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); frames[wn] = new THREE.Matrix4().makeBasis(KH.V(W.u), KH.V([0, 1, 0]), KH.V(W.n)).setPosition(s0[0], s0[1], s0[2]).premultiply(MS); wbs[wn] = m4.basis(m4.create(), W.u, [0, 1, 0], W.n, s0); }
+  const add = (F, name, x, y, z, s, o, ry) => b.add(name, KH.xf(F, x, y, z, s, ry), o || OUT);
+  const Ytop = H + (st.up ? 3 : 0);
+  Object.assign(c, { kb: b, kMS: MS, kYtop: Ytop, kFrames: frames, kR: R });
+  const G = stone ? 'Wall_UnevenBrick' : 'Wall_Plaster';
+  const filler = (F, a, e, y, ys, isStone, endL, endR, o) => {
+    const g = e - a; if (g < 0.05) return;
+    const n = Math.max(1, Math.round(g / 2)), m = g / n;
+    for (let k = 0; k < n; k++) {
+      const sx = m / 2; let name;
+      if (isStone) name = 'Wall_UnevenBrick_Straight';
+      else if (sx < 0.6) name = 'Wall_Plaster_Straight_Base';
+      else if (k === 0 && endL) name = 'Wall_Plaster_Straight_L'; else if (k === n - 1 && endR) name = 'Wall_Plaster_Straight_R';
+      else name = (k % 2) ? 'Wall_Plaster_Straight_Base' : 'Wall_Plaster_Straight';
+      add(F, name, a + (k + 0.5) * m, y, 0, [sx, ys, 1], o);
+    }
+  };
+  const WIN = {
+    thin: ['_Window_Thin_Round', 'Window_Thin_Round1', 'WindowShutters_Thin_Round_Open'],
+    round: ['_Window_Wide_Round', 'Window_Wide_Round1', 'WindowShutters_Wide_Round_Open'],
+    wide: ['_Window_Wide_Flat', 'Window_Wide_Flat1', 'WindowShutters_Wide_Flat_Open'],
+  };
+  c.kDoorLamps = [];
+  for (const wn of ['front', 'back', 'left', 'right']) {
+    const F = frames[wn], L = WALLS[wn].len(w, d);
+    // ── ground storey: door and window panels where the openings are, plain panels scaled to fill between them ──
+    const slots = openings[wn].map(o => ({ o, c: (o.u0 + o.u1) / 2, hw: o.door ? (o.def.ksx || 1) : 1 })).sort((a, e) => a.c - e.c);
+    for (const s of slots) s.hw = Math.min(s.hw, s.c, L - s.c);
+    for (let i = 0; i < slots.length - 1; i++) { const a = slots[i], n = slots[i + 1], gap = n.c - a.c, sum = a.hw + n.hw; if (sum > gap) { a.hw *= gap / sum; n.hw *= gap / sum; } }
+    let cur = 0;
+    for (const s of slots) {
+      const o = s.o, sx = s.hw, S = [sx, sy, 1];
+      if (!o.door && sx < 0.5) continue;                      // no room for a window panel: the wall stays solid there
+      filler(F, cur, s.c - sx, 0, sy, stone, cur === 0, false);
+      if (o.door) {
+        add(F, G + '_Door_Flat', s.c, 0, 0, S); add(F, 'DoorFrame_Flat_WoodDark', s.c, 0, 0, S, EXT);
+        if (o.def.kLamp) { const side = s.c + sx + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F, wn, u: s.c + side * (sx + 0.42), v: 1.5 * sy }); }
+      } else {
+        const k = WIN[o.def.kwin] || WIN.wide;
+        add(F, G + k[0], s.c, 0, 0, S); add(F, k[1], s.c, 0, 0, S);
+        if (o.def.shutters !== false && sx > 0.9 && s.c - 1.3 > 0 && s.c + 1.3 < L) add(F, k[2], s.c, 0, 0, S, EXT);
+      }
+      cur = s.c + sx;
+    }
+    filler(F, cur, L, 0, sy, stone, cur === 0, true);
+    add(F, 'Corner_Exterior_Wood', 0, 0, 0, [1.25, sy, 1.25], EXT);
+    // ── upper storey: timber and plaster, windows on alternate panels, a balcony over the door on some ──
+    if (st.up) {
+      const n = Math.max(1, Math.round(L / 2)), m = L / n, sx = m / 2, S = [sx, 1, 1], mid = n >> 1;
+      for (let k = 0; k < n; k++) {
+        const uc = (k + 0.5) * m;
+        if (st.balcony === wn && n >= 3 && k === mid) {
+          add(F, 'Wall_Plaster_Door_Flat', uc, H, 0, S, UP); add(F, 'DoorFrame_Flat_WoodDark', uc, H, 0, S, EXT); add(F, 'Door_1_Flat', uc - 0.54 * sx, H, -0.05, S, EXT);
+          add(F, 'Balcony_Simple_Corner', uc + sx, H, 0, S, EXT); add(F, 'Balcony_Simple_Corner', uc - sx, H, 0, [-sx, 1, 1], EXT);
+          add(F, 'Floor_WoodDark_Half3', uc - sx, H, 1, S, EXT); add(F, 'Floor_WoodDark_Half3', uc + sx, H, 1, S, EXT);
+          for (const sg of [-1, 1]) add(F, 'Roof_Support2', uc + sg * 1.7 * sx, H - 0.74, 0.02, 1, EXT);
+        } else if (n > 1 && k === 0) add(F, 'Wall_Plaster_Straight_L', uc, H, 0, S, UP);
+        else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, 0, S, UP);
+        else if (n <= 3 || (k + (wn === 'front' || wn === 'back' ? 0 : 1)) % 2 === 1) {
+          const r = R();
+          if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, 0, S, UP); add(F, 'Window_Wide_Flat1', uc, H, 0, S, UP); }
+          else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, 0, S, UP); add(F, 'Window_Wide_Flat1', uc, H, 0, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
+          else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, 0, S, UP); add(F, 'Window_Thin_Round1', uc, H, 0, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
+        } else add(F, 'Wall_Plaster_Straight', uc, H, 0, S, UP);
+      }
+      add(F, 'Corner_Exterior_Wood', 0, H, 0, [1.25, 1, 1.25], EXT);
+    }
+    // ── gable ends carry the timber triangle of the roof ──
+    if (wn === 'left' || wn === 'right') { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; add(F, 'Roof_Front_Brick' + span, L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: st.up ? 0 : zone, inSkyVis: INT_AO }); }
+  }
+  // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
+  {
+    const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
+    let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
+    const name = 'Roof_RoundTiles_' + span + 'x' + len, ridge = Kit.info(name).max[1];
+    const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
+    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, w / len]), { zone: 0, skyVis: 1, inZone: st.up ? 0 : zone, inSkyVis: 0.2 });
+  }
+  // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance) ──
+  {
+    const nx = Math.max(1, Math.round(w / 2)), nz = Math.max(1, Math.round(d / 2)), sx = (w - 0.3) / (2 * nx), sz = (d - 0.3) / (2 * nz), tile = spec.floor === 'stone' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';
+    for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) b.add(tile, KH.xf(MS, (i - (nx - 1) / 2) * 2 * sx, 0.012, (j - (nz - 1) / 2) * 2 * sz, [sx, 1, sz]), { zone, skyVis: INT_AO, cast: false });
+  }
+  // ── generated parts that still make sense: stone plinth down to the ground, door steps, ceiling or roof lining ──
+  const inner = () => { ext.m1 = zone; ext.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
+  outer(); ext.mat(MAT.STONE, [0.92, 0.92, 0.92]); ext.grad = [1, 0.6]; ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4); ext.grad = null;
+  for (const wn in WALLS) for (const o of openings[wn]) if (o.door) {
+    ext.push(); m4.mul(ext.m, ext.m, wbs[wn]); ext.dirty = true;
+    outer(); ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(o.u0 - 0.35, -0.5, 0, o.u1 + 0.35, -0.02, 0.5); ext.box(o.u0 - 0.2, -0.5, 0.5, o.u1 + 0.2, -0.17, 0.95);
+    ext.pop();
+  }
+  const e = 0.16;          // the kit walls are thinner than the generated ones: reach to their inner face
+  if (spec.ceiling) {
+    inner(); ext.mat(MAT.PLANKS, COL.wood); ext.ao = INT_AO * 0.85;
+    ext.quad([-w / 2 + e, H, hd - e], [-w / 2 + e, H, -hd + e], [w / 2 - e, H, -hd + e], [w / 2 - e, H, hd - e]);
+    if (st.up) { outer(); ext.ao = 0.15; ext.mat(MAT.PLANKS, COL.woodDark); ext.quad([-w / 2 + e, H + 0.05, -hd + e], [-w / 2 + e, H + 0.05, hd - e], [w / 2 - e, H + 0.05, hd - e], [w / 2 - e, H + 0.05, -hd + e]); }
+  } else {
+    const roofY = c.roofY;
+    ext.mat(MAT.PLANKS, COL.woodDark);
+    for (const s of [-1, 1]) {
+      const q = (x0, x1, z0, z1) => { const a = [x0, roofY(z0) - 0.04, s * z0], p = [x0, roofY(z1) - 0.04, s * z1], r = [x1, roofY(z1) - 0.04, s * z1], f = [x1, roofY(z0) - 0.04, s * z0]; if (s < 0) ext.quad(a, p, r, f); else ext.quad(f, r, p, a); };
+      inner(); ext.ao = INT_AO * 0.9; q(-w / 2 + e, w / 2 - e, 0, hd - e);
+    }
+    for (const wn of ['left', 'right']) {
+      ext.push(); m4.mul(ext.m, ext.m, wbs[wn]); ext.dirty = true;
+      inner(); ext.mat(MAT.PLASTER, [0.97, 0.93, 0.86]); ext.poly([[d - 0.05, H, -e - 0.02], [0.05, H, -e - 0.02], [d / 2, H + d / 2 * tanP, -e - 0.02]]);
+      ext.pop();
+    }
+  }
+  c.kCol0 = World.colliders.length;
+  // lanterns by the doors
+  for (const l of c.kDoorLamps) {
+    add(l.F, 'Lantern_Wall', l.u, l.v, 0.03, 0.8, { zone: 0, skyVis: 1, lit: 1 });
+    const lp = Kit.lights('Lantern_Wall')[0] || [0, 0.53, 0.76], v = new THREE.Vector3(lp[0] * 0.8, lp[1] * 0.8, lp[2] * 0.8).applyMatrix4(KH.xf(l.F, l.u, l.v, 0.03)), p = [v.x, v.y, v.z];
+    World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern');
+  }
+  outer(); ext.grad = null;
+}
+// a kit chimney above a hearth at house-local (lx, lz), rising clear of the ridge
+function kitChimney(c, lx, lz) {
+  const ridge = c.kYtop + c.hd * c.tanP, base = c.kYtop + (c.hd - Math.abs(lz)) * c.tanP - 1.0, hgt = Math.max(3.18, ridge + 1.1 - base);
+  c.kb.add('Prop_Chimney', KH.xf(c.kMS, lx, base, lz, [1.1, hgt / 3.18, 1.1]), { zone: 0, skyVis: 1 });
+  World.emitters.push({ type: 'smoke', p: m4.tp(c.Ms, [lx, base + hgt + 0.2, lz]), zone: 0 });
+}
+
+// ── furnishing: Props.* calls land here while kits are loaded and are answered with kit pieces at the same spot ──
+const KITP = { rnd: rng(4242), lc: {} };
+// only the first few small flames in a room cast light: the renderer lights a view with its eight strongest lights, and hearths must stay among them
+const kitLightOk = (zone, cap) => { const n = KITP.lc[zone] = (KITP.lc[zone] || 0) + 1; return n <= cap; };
+function kitIntBatch(zone) {
+  let k = World.kitInt[zone];
+  if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
+  return k.batch;
+}
+// place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
+function kp(m, name, x, y, z, s, ry, extra) {
+  const zone = m.m1 | 0;
+  let B; if (zone) B = kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: 40 }); B = World.kitYard; }
+  B.add(name, KH.xf(new THREE.Matrix4().fromArray(m.m), x, y, z, s, ry), Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone }, extra || {}));
+}
+// a light-source piece: the piece itself with glowing wax, one flame per candle tip, one point light for the whole piece
+function kitLit(m, name, x, y, z, s, ry, o) {
+  const zone = m.m1 | 0, M = KH.xf(new THREE.Matrix4().fromArray(m.m), x, y, z, s, ry), pts = Kit.lights(name), v = new THREE.Vector3(), c = [0, 0, 0];
+  kp(m, name, x, y, z, s, ry, { lit: 1 });
+  for (const p of pts) { v.set(p[0], p[1], p[2]).applyMatrix4(M); c[0] += v.x / pts.length; c[1] += v.y / pts.length; c[2] += v.z / pts.length; World.emitters.push(o.flame === 'torch' ? { type: 'torch', p: [v.x, v.y, v.z], zone, size: o.size } : { type: 'candle', p: [v.x, v.y + 0.02, v.z], zone, always: !!o.always }); }
+  if (!pts.length) { v.set(0, 0.2, 0).applyMatrix4(M); c[0] = v.x; c[1] = v.y; c[2] = v.z; }
+  if (o.cap === undefined || kitLightOk(zone, o.cap)) addLight([c[0], c[1] + 0.1, c[2]], o.r || 5, o.c || [1.9, 1.15, 0.5], zone, o.kind || 'candle');
+}
+(function kitPropsInstall() {
+  const wrap = (name, fn) => { const orig = Props[name]; Props[name] = function () { return kitReady() ? fn.apply(Props, arguments) : orig.apply(Props, arguments); }; };
+  wrap('table', (m, len, wid, h) => {
+    h = h || 0.76; kp(m, 'Table_Large', 0, 0, 0, [len / 2.85, h / 0.81, wid / 1.1]); addBoxCollider(m, -len / 2, -wid / 2, len / 2, wid / 2, 0, h);
+    if ((m.m1 | 0) && len >= 1.4 && KITP.rnd() < 0.65) kitLit(m, 'CandleStick_Triple', len * 0.18, h, 0.03, 1, KITP.rnd() * 3, { r: 5.0, c: [1.9, 1.15, 0.5], kind: 'candle', flame: 'candle', cap: 3 });
+  });
+  wrap('bench', (m, len, noCol) => { kp(m, 'Bench', 0, 0, 0, [len / 2.78, 0.46 / 0.52, 0.66]); if (!noCol) addBoxCollider(m, -len / 2, -0.16, len / 2, 0.16, 0, 0.46); });
+  wrap('stool', m => kp(m, 'Stool', 0, 0, 0, [0.8, 0.45 / 0.58, 0.8]));
+  wrap('chair', m => kp(m, 'Chair_1', 0, 0, 0, [0.85, 0.9, 0.85], KITP.chairRy));
+  wrap('bed', (m, w) => { w = w || 1.0; kp(m, KITP.rnd() < 0.5 ? 'Bed_Twin1' : 'Bed_Twin2', 0, 0, 0, [(w + 0.14) / 1.88, 0.74, 2.08 / 2.41], KITP.bedRy); addBoxCollider(m, -w / 2, -1, w / 2, 1, 0, 0.6); });
+  wrap('chest', (m, w) => { w = w || 0.85; const s = w / 1.2; kp(m, 'Chest_Wood__Base', 0, 0.01, 0, s, KITP.chestRy); kp(m, 'Chest_Wood__Lid', 0, 0.01, 0, s, KITP.chestRy); addBoxCollider(m, -w / 2, -0.25, w / 2, 0.25, 0, 0.6); });
+  wrap('barrel', (m, r, h, noCol) => { r = r || 0.33; h = h || 0.9; kp(m, 'Barrel', 0, 0, 0, [r / 0.35, h / 0.9, r / 0.35], KITP.rnd() * 6); if (!noCol) addCircleCollider(m, 0, 0, r, 0, h); });
+  wrap('keg', (m, r, len) => { const s = (2 * r + 0.3) / 1.25; kp(m, 'Barrel_Holder', 0, 0, 0, [len / 1.15, s, s]); });
+  wrap('crate', (m, s, noCol) => { s = s || 0.6; const k = s / 0.88; if (m.m1 | 0) kp(m, 'Crate_Wooden', 0, 0.05 * k, 0, k); else kp(m, 'Prop_Crate', 0, 0, 0, s / 1.07); if (!noCol) addBoxCollider(m, -s / 2, -s / 2, s / 2, s / 2, 0, s); });
+  wrap('sack', (m, s) => { s = s || 0.3; kp(m, 'Bag', 0, 0, 0, 1.9 * s / 0.8, KITP.rnd() * 6); });
+  wrap('pot', (m, s) => { s = s || 0.14; kp(m, KITP.rnd() < 0.5 ? 'Vase_4' : 'Vase_2', 0, 0, 0, 2.1 * s / 0.5); });
+  wrap('jug', m => kp(m, 'Vase_4', 0, 0, 0, 0.56));
+  wrap('bottle', m => { const r = KITP.rnd(); kp(m, r < 0.6 ? 'Bottle_1' : r < 0.8 ? 'Potion_2' : 'Potion_4', 0, 0, 0, r < 0.6 ? 0.75 : 0.9); });
+  wrap('mug', m => kp(m, 'Mug', 0, 0.006, 0, 0.7, KITP.rnd() * 6));
+  wrap('plate', m => kp(m, 'Table_Plate', 0, 0.003, 0, 0.75));
+  wrap('book', (m, col, w) => kp(m, 'Book_5', 0, 0.026, 0, [0.85, (w || 0.04) / 0.06, 0.85], 0, col ? { tint: [0.55 + col[0] * 0.6, 0.55 + col[1] * 0.6, 0.55 + col[2] * 0.6] } : null));
+  wrap('candle', (m, ctx, tall) => {
+    const name = tall ? 'Candle_2' : 'Candle_1', lp = Kit.lights(name)[0] || [0, tall ? 0.27 : 0.15, 0];
+    kp(m, name, 0, 0, 0, 1, 0, { lit: 1 });
+    World.emitters.push({ type: 'candle', p: wp(m, lp[0], lp[1] + 0.02, lp[2]), zone: ctx.zone, always: !!ctx.always });
+    if (ctx.candleLight !== false && kitLightOk(ctx.zone | 0, 2)) addLight(wp(m, lp[0], lp[1] + 0.1, lp[2]), 4.6, [1.6, 1.0, 0.44], ctx.zone, 'candle');
+  });
+  wrap('cauldron', (m, r) => { r = r || 0.24; kp(m, 'Cauldron', 0, 0, 0, 2.1 * r / 0.99); });
+  wrap('anvil', m => { kp(m, 'Anvil_Log', 0, 0, 0, 0.78); addCircleCollider(m, 0, 0, 0.32, 0, 0.8); });
+  wrap('sword', m => kp(m, 'Sword_Bronze', 0, 0.2, 0, 0.9));
+  wrap('shield', m => kp(m, 'Shield_Wooden', 0, 0, 0, 1.08));
+})();
+KITP.chairRy = PI; KITP.bedRy = 0; KITP.chestRy = PI;       // which way each kit piece faces relative to the generated prop it stands in for
+
+// extra dressing per building, once its own interior has been laid out
+// Floor pieces go against free wall, wall pieces hang where no window or tall furniture is in the way.
+// footprint along the wall, depth, tall, scale, [light]
+const KIT_ITEM = {
+  Bookcase_2: [1.46, 0.43, 1, 0.9], Cabinet: [1.36, 0.38, 0, 1], Nightstand_Shelf: [0.7, 0.4, 0, 0.9], Workbench: [2.02, 1.02, 0, 0.95], WeaponStand: [1.39, 0.98, 0, 0.85],
+  Dummy: [0.8, 0.6, 0, 0.95], Barrel: [0.7, 0.7, 0, 1], Barrel_Apples: [0.7, 0.7, 0, 1], Crate_Wooden: [0.86, 0.9, 0, 0.8], Bag: [0.66, 0.54, 0, 0.9], Bucket_Wooden_1: [0.43, 0.4, 0, 1],
+  Vase_2: [0.69, 0.69, 0, 0.8], FarmCrate_Apple: [0.71, 0.45, 0, 1], FarmCrate_Carrot: [0.71, 0.57, 0, 1], CandleStick_Stand: [0.6, 0.6, 0, 0.95, 1], BookStand: [0.51, 0.51, 0, 1],
+  Whetstone: [1.14, 0.9, 0, 0.8], Barrel_Holder: [1.36, 0.74, 0, 0.9],
+};
+const KIT_WALL = {            // width, height of the pivot above the floor, stand-off from the wall
+  Torch_Metal: [0.5, 1.85, 0.01], Shelf_Simple: [1.2, 1.55, 0.01], Shelf_Arch: [1.25, 1.8, 0.01], Shelf_Small_Bottles: [1.15, 1.5, 0.01], Peg_Rack: [1.2, 1.75, 0.01],
+  Shield_Wooden: [0.7, 1.9, 0.01], Banner_1_Cloth: [0.85, 2.7, 0.05], Banner_2_Cloth: [0.85, 2.6, 0.05], Axe_Bronze: [0.4, 1.75, 0.04], Pickaxe_Bronze: [0.85, 1.8, 0.08], Sword_Bronze: [0.35, 1.5, 0.04],
+};
+const KIT_DRESS = {
+  inn: { floor: ['CandleStick_Stand', 'Barrel_Holder', 'Cabinet', 'Barrel', 'Crate_Wooden', 'Bag', 'Barrel'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Shield_Wooden', 'Torch_Metal', 'Banner_1_Cloth', 'Peg_Rack', 'Shelf_Simple', 'Torch_Metal'] },
+  smithy: { floor: ['Workbench', 'WeaponStand', 'Barrel', 'Whetstone', 'Crate_Wooden', 'Bucket_Wooden_1'], wall: ['Torch_Metal', 'Peg_Rack', 'Pickaxe_Bronze', 'Axe_Bronze', 'Shield_Wooden', 'Torch_Metal'] },
+  store: { floor: ['Cabinet', 'Bookcase_2', 'Crate_Wooden', 'FarmCrate_Apple', 'Barrel', 'FarmCrate_Carrot', 'Bag', 'Vase_2', 'Nightstand_Shelf', 'Barrel_Apples'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch', 'Torch_Metal', 'Peg_Rack'] },
+  elder: { floor: ['Bookcase_2', 'BookStand', 'Bookcase_2', 'CandleStick_Stand', 'Cabinet', 'Nightstand_Shelf'], wall: ['Shelf_Arch', 'Torch_Metal', 'Banner_1_Cloth', 'Shelf_Simple'] },
+  herbalist: { floor: ['Cabinet', 'Nightstand_Shelf', 'Vase_2', 'Bucket_Wooden_1', 'Bag', 'Crate_Wooden'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch'] },
+  guardhouse: { floor: ['WeaponStand', 'Dummy', 'Barrel', 'Crate_Wooden', 'Nightstand_Shelf'], wall: ['Shield_Wooden', 'Torch_Metal', 'Peg_Rack', 'Banner_1_Cloth', 'Sword_Bronze', 'Torch_Metal'] },
+  weaver: { floor: ['Cabinet', 'Nightstand_Shelf', 'Bag', 'Crate_Wooden', 'Vase_2'], wall: ['Shelf_Simple', 'Torch_Metal', 'Banner_1_Cloth', 'Peg_Rack'] },
+  mill: { floor: ['Bag', 'Barrel', 'Bag', 'Crate_Wooden', 'Bag', 'Bucket_Wooden_1', 'Nightstand_Shelf'], wall: ['Torch_Metal', 'Peg_Rack', 'Shelf_Simple'] },
+  farm: { floor: ['FarmCrate_Apple', 'Barrel_Apples', 'FarmCrate_Carrot', 'Bag', 'Cabinet', 'Bucket_Wooden_1'], wall: ['Shelf_Simple', 'Torch_Metal', 'Peg_Rack'] },
+  hunter: { floor: ['Crate_Wooden', 'Barrel', 'Bag', 'WeaponStand'], wall: ['Torch_Metal', 'Peg_Rack', 'Axe_Bronze', 'Shield_Wooden'] },
+  fisher: { floor: ['Barrel', 'Bucket_Wooden_1', 'Crate_Wooden'], wall: ['Torch_Metal', 'Peg_Rack'] },
+  chapel: { floor: ['CandleStick_Stand', 'CandleStick_Stand', 'BookStand', 'CandleStick_Stand', 'CandleStick_Stand'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal'] },
+};
+// extra dressing per building, once its own interior has been laid out
+function kitDress(c) {
+  const { site, w, d, H, hd, zone, spec } = c, id = site.id, st = spec.kitStyle, R = c.kR, dress = KIT_DRESS[id] || {}, e = 0.21, sy = H / 3;
+  const X0 = -w / 2 + e, X1 = w / 2 - e, Z0 = -hd + e, Z1 = hd - e, m = { m: c.Ms, m1: zone, ao: INT_AO }, EXT = { zone: 0, skyVis: 1 };
+  // is this patch of floor (house-local) taken by something the house has already registered?
+  const blocked = (x, z, r) => {
+    const p = m4.tp(c.Ms, [x, 0, z]);
+    for (let i = c.kCol0; i < World.colliders.length; i++) {
+      const k = World.colliders[i]; if (k.y0 > p[1] + 2.2) continue;
+      if (k.r !== undefined) { if (hyp(k.x - p[0], k.z - p[2]) < k.r + r) return true; continue; }
+      const dx = p[0] - k.x, dz = p[2] - k.z; if (Math.abs(dx * k.ax + dz * k.az) < k.hx + r && Math.abs(dx * k.bx + dz * k.bz) < k.hz + r) return true;
+    }
+    for (const dd of c.doors) if (hyp(dd.ins[0] - p[0], dd.ins[2] - p[2]) < 1.25 + r) return true;
+    for (const k in World.spots) { const s = World.spots[k]; if (s.site === id && Math.abs(s.p[1] - p[1]) < 1.5 && hyp(s.p[0] - p[0], s.p[2] - p[2]) < 0.6 + r) return true; }
+    return false;
+  };
+  const sides = [
+    { wn: 'back', len: X1 - X0, at: (u, o) => [X0 + u, Z1 - o], ry: PI, lo: X0 }, { wn: 'left', len: Z1 - Z0, at: (u, o) => [X0 + o, Z0 + u], ry: PI / 2, lo: Z0 },
+    { wn: 'right', len: Z1 - Z0, at: (u, o) => [X1 - o, Z0 + u], ry: -PI / 2, lo: Z0 }, { wn: 'front', len: X1 - X0, at: (u, o) => [X0 + u, Z0 + o], ry: 0, lo: X0 }];
+  const nearOpening = (sd, u, half, doorsOnly) => c.openings[sd.wn].some(o => (!doorsOnly || o.door) && Math.abs((o.def.pos || 0) - sd.lo - u) < half + (o.door ? 1.0 : 0.75));
+  const tall = [];           // [side, u, half] of tall furniture, so nothing is hung behind it
+  // ── floor pieces along the walls ──
+  const queue = (dress.floor || []).slice(); let guard = 0;
+  for (let si = 0; si < 8 && queue.length; si++) {
+    const sd = sides[(si + (R() * 4 | 0)) % 4];
+    for (let u = 0.5; u < sd.len - 0.5 && queue.length && guard++ < 400; u += 0.3) {
+      const name = queue[0], it = KIT_ITEM[name]; if (!it) { queue.shift(); continue; }
+      const sc = it[3], wid = it[0] * sc, dep = it[1] * sc, half = wid / 2;
+      if (u - half < 0.12 || u + half > sd.len - 0.12 || nearOpening(sd, u, half, !it[2])) continue;
+      const p = sd.at(u, dep / 2 + 0.03), pa = sd.at(u - half * 0.7, dep / 2 + 0.03), pb = sd.at(u + half * 0.7, dep / 2 + 0.03), r = Math.min(dep, wid) * 0.5;
+      if (blocked(p[0], p[1], r) || blocked(pa[0], pa[1], r) || blocked(pb[0], pb[1], r)) continue;
+      const ry = sd.ry + (it[2] || wid > 1 ? 0 : R.s() * 0.5), y = 0.02 + (name === 'Crate_Wooden' ? 0.05 * sc : 0);
+      if (it[4]) kitLit(m, name, p[0], y, p[1], sc, ry, { r: 6.5, c: [2.3, 1.4, 0.6], kind: 'candle' }); else kp(m, name, p[0], y, p[1], sc, ry);
+      const fm = { m: m4.mul(m4.create(), c.Ms, m4.rotY(m4.translate(m4.create(), p[0], 0, p[1]), -sd.ry)) };
+      if (wid > 0.55) addBoxCollider(fm, -half, -dep / 2, half, dep / 2, 0, it[2] ? 2.2 : 0.9);
+      if (it[2]) tall.push([sd, u, half]);
+      queue.shift(); u += wid + 0.1 + R() * 0.5;
+    }
+  }
+  // ── things on the walls ──
+  const hung = []; let torches = 0;
+  const wq = (dress.wall || []).slice();
+  for (let si = 0; si < 8 && wq.length; si++) {
+    const sd = sides[(si + 1 + (R() * 4 | 0)) % 4];
+    for (let u = 0.8 + R() * 0.6; u < sd.len - 0.7 && wq.length; u += 0.45) {
+      const name = wq[0], it = KIT_WALL[name]; if (!it) { wq.shift(); continue; }
+      const half = it[0] / 2, y = Math.min(it[1] * (name.startsWith('Banner') ? sy : 1), H - 0.3);
+      if (nearOpening(sd, u, half, false) || tall.some(t => t[0] === sd && Math.abs(t[1] - u) < t[2] + half + 0.1) || hung.some(t => t[0] === sd && Math.abs(t[1] - u) < t[2] + half + 0.5)) continue;
+      const p = sd.at(u, it[2]);
+      if (blocked(sd.at(u, 0.3)[0], sd.at(u, 0.3)[1], 0.12) && y < 2.4) continue;           // a hearth or stair is in front of this stretch of wall
+      if (name === 'Torch_Metal') { kitLit(m, name, p[0], y, p[1], 1, sd.ry, { r: 6.2, c: [2.5, 1.45, 0.55], kind: 'fire', flame: 'torch', size: 0.14 }); torches++; }
+      else kp(m, name, p[0], y, p[1], 1, sd.ry);
+      if (name === 'Shelf_Simple') { const q = sd.at(u - 0.28, 0.19), q2 = sd.at(u + 0.26, 0.19); kp(m, R.pick(['SmallBottles_1', 'Book_Stack_1', 'Potion_2']), q[0], y + 0.11, q[1], 1, sd.ry); kp(m, R.pick(['Book_Stack_2', 'Bottle_1', 'Vase_4']), q2[0], y + 0.11, q2[1], 0.7, sd.ry + 0.4); }
+      hung.push([sd, u, half]); wq.shift(); u += it[0] + 1.2 + R() * 1.2;
+    }
+  }
+  if (id === 'chapel') for (const x of [-w * 0.2, w * 0.2]) kitLit(m, 'Chandelier', x, H + 0.9, 0, 1.1, 0, { r: 10, c: [3.0, 1.9, 0.85], kind: 'candle', always: true });
+  // ── outside: vines up the walls, a banner by the door ──
+  for (let i = 0; i < (st.vines || 0); i++) {
+    const wn = R.pick(['back', 'left', 'right', 'front', 'back']), L = WALLS[wn].len(w, d), u = 0.9 + R() * (L - 1.8), up = !!st.up && R() < 0.6;
+    if (!up && c.openings[wn].some(o => Math.abs((o.u0 + o.u1) / 2 - u) < 1.5)) continue;
+    if (up && st.balcony === wn && Math.abs(u - L / 2) < 2.6) continue;
+    c.kb.add(R.pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine1', 'Prop_Vine4']), KH.xf(c.kFrames[wn], u, up ? H + 2.45 : H * 0.84, 0.1, [1.2, up ? 1.2 : Math.min(1.2, H * 0.84 / 2.2), 1]), EXT);
+  }
+  if (st.dormers) for (const x of st.dormers) { const z = -hd * 0.5, y = c.kYtop + hd * 0.5 * c.tanP - 0.35; c.kb.add('Roof_Dormer_RoundTile', KH.xf(c.kMS, x, y, z, 1.25, PI), { zone: 0, skyVis: 1 }); }
+  if (st.banner) { const dw = spec.doors[0].wall, o = c.openings[dw].find(q => q.door), L = WALLS[dw].len(w, d); if (o) for (const sg of [-1, 1]) { const u = (o.u0 + o.u1) / 2 + sg * 2.3; if (u > 0.6 && u < L - 0.6) c.kb.add(sg < 0 ? 'Banner_1' : 'Banner_2', KH.xf(c.kFrames[dw], u, Math.min(3.1 * sy, H + 0.5), 0.12, 1, -PI / 2), EXT); } }
+}
+
+// ── scene: build the batches once the scene exists, hide interiors that are far away ──
+function kitAttach() {
+  if (!kitReady() || !SC.scene) return;
+  const addG = (g, info) => { g.traverse(o => { if (o.isMesh && info.interior) { o.layers.set(1); o.castShadow = false; } }); SC.scene.add(g); World.kitGroups.push(Object.assign({ g }, info)); };
+  // The modelled houses do not draw into the sun-shadow maps: tiled roofs and window frames would triple their cost. One plain
+  // box-and-prism stand-in per house casts the shadow instead, all in a single mesh the camera does not see (it writes nothing).
+  const tri = [], V = (M, x, y, z) => { const p = m4.tp(M, [x, y, z]); tri.push(p[0], p[1], p[2]); }, Q = (M, a, b2, c2, d2) => { for (const q of [a, b2, c2, a, c2, d2]) V(M, q[0], q[1], q[2]); };
+  for (const id in World.kitExt) {
+    let k = World.kitExt[id]; if (!k.batch.count) continue;
+    const g = k.batch.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g, { site: k.site });
+    const M = k.Ms, x = k.w / 2 + 0.3, xw = k.w / 2 - 0.12, z = k.hd + 0.4, y = k.top, r = y + k.rise + 0.4 * k.rise / k.hd - 0.25; k = Object.assign({}, k, { hd: k.hd - 0.12 });
+    Q(M, [-xw, -1, -k.hd], [xw, -1, -k.hd], [xw, y, -k.hd], [-xw, y, -k.hd]); Q(M, [-xw, -1, k.hd], [xw, -1, k.hd], [xw, y, k.hd], [-xw, y, k.hd]);
+    Q(M, [-xw, -1, -k.hd], [-xw, -1, k.hd], [-xw, y, k.hd], [-xw, y, -k.hd]); Q(M, [xw, -1, -k.hd], [xw, -1, k.hd], [xw, y, k.hd], [xw, y, -k.hd]);
+    Q(M, [-x, y - 0.55, -z], [x, y - 0.55, -z], [x, r, 0], [-x, r, 0]); Q(M, [-x, y - 0.55, z], [x, y - 0.55, z], [x, r, 0], [-x, r, 0]);
+    for (const sx of [-xw, xw]) { V(M, sx, y - 0.2, -k.hd); V(M, sx, y - 0.2, k.hd); V(M, sx, r - 0.2, 0); }
+  }
+  if (tri.length) {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(tri), 3));
+    const mat = new THREE.MeshBasicNodeMaterial(); mat.side = THREE.DoubleSide; mat.colorWrite = false; mat.depthWrite = false; mat.depthTest = false; mat.fog = false;
+    const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.frustumCulled = false; mesh.matrixAutoUpdate = false; mesh.renderOrder = -5; mesh.name = 'kit-shadow-proxy'; SC.scene.add(mesh);
+  }
+  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true }); }
+  if (World.kitYard && World.kitYard.count) { const g = World.kitYard.build(); g.traverse(o => { if (o.isMesh) o.layers.set(1); }); addG(g, { yard: true }); }
+  const inner = sceneUpdate;
+  sceneUpdate = function (camPos, q) {
+    inner(camPos, q);
+    // furniture only shows through an open door or a window, so it is drawn for the nearest buildings alone
+    for (const k of World.kitGroups) {
+      if (k.interior && k.site) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < 9 + Math.max(k.site.w, k.site.d) * 0.5;
+      else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) o.visible = hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < 58 + bs.radius; }
+    }
+    if (Kit.update) Kit.update(camPos);
+  };
 }
 
 
@@ -2940,7 +3595,7 @@ function buildVillage() {
   for (const site of SITES) {
     const spec = HOUSES[site.id]; if (!spec) continue;
     const h = buildHouse(site, spec);
-    pack.add(h.ext, { kind: 'opaque' }); if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.ext.ni) pack.add(h.ext, { kind: 'opaque' }); if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
   }
@@ -3214,6 +3869,14 @@ function buildVillage() {
     }
   }
 
+  // a wagon or two parked beside the busier houses (kit style only)
+  if (typeof kitReady === 'function' && kitReady()) for (const [id, lx, lz, yaw] of [['inn', -11.8, 1.5, 0.25], ['store', 0.5, 6.4, 1.45], ['smithy', 1.5, 7.2, 1.7], ['elder', 0, 6.0, 1.5]]) {
+    const s = SITE[id], p = siteToWorld(s, lx, lz); let ok = Math.abs(Terrain.y(p[0], p[1]) - s.y) < 0.6;
+    for (const rd of Roads) if (rd.line.dist(p[0], p[1], 5) < rd.w / 2 + 2.2) ok = false;
+    for (const c of World.colliders) if (hyp(p[0] - c.x, p[1] - c.z) < (c.r !== undefined ? c.r : Math.max(c.hx, c.hz)) + 2.3) ok = false;
+    if (ok) put(p[0], p[1], s.yaw + yaw, m => { kp(m, 'Prop_Wagon', 0, 0, 1.14, 1); addBoxCollider(m, -1.0, -2.0, 1.0, 2.0, 0, 1.3); });
+  }
+
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {
     for (let i = 0; i < m.nv; i++) { if (m.u8[i * 32 + 29] !== 0 || m.u8[i * 32 + 27] < 250) continue; const y = m.f[i * 8 + 1] - Terrain.y(m.f[i * 8], m.f[i * 8 + 2]); if (y < 0.45) m.u8[i * 32 + 27] = Math.round(255 * lerp(0.62, 1, sat(y / 0.45))); }
@@ -3428,6 +4091,10 @@ function fxUpdate(dt, time, env, cam) {
       if ((lit < 0.05 && !e.always) || dist > 40) continue;
       const k = e.always ? 1 : lit;
       put(e.p[0], e.p[1], e.p[2], 0.05, 1, 1, 1, 0.9 * k, 0, 2, 1.7, e.seed); put(e.p[0], e.p[1] + 0.01, e.p[2], 0.2, 1.0, 0.6, 0.22, 0.5 * k, 0, 0, 1, e.seed);
+    } else if (e.type === 'torch') {             // wall torches and standing candelabra: always burning
+      if (dist > 55) continue;
+      const fl = flick(time, e.seed * 9), sz = e.size || 0.16;
+      put(e.p[0], e.p[1] + sz * 0.45, e.p[2], sz, 1, 1, 1, 0.9 * fl, 0, 2, 1.5, e.seed); put(e.p[0], e.p[1] + sz * 0.4, e.p[2], sz * 4.2, 1.0, 0.5, 0.16, 0.2 * fl, 0, 0, 1, e.seed);
     } else if (e.type === 'lantern') {
       if (lit < 0.05 || dist > 170) continue;
       put(e.p[0], e.p[1], e.p[2], 0.11, 1.0, 0.75, 0.35, 3.0 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.75 + dist * 0.012, 1.0, 0.55, 0.2, 0.26 * lit, 0, 0, 1, e.seed);
@@ -4165,7 +4832,7 @@ function openMenu(tab) {
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   let p = '<div class="items"><div><b>' + S.gold + ' gold</b><span>Coin of the valley.</span></div>'; for (const id in S.items) p += '<div><b>' + ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + '</b><span>' + ITEMS[id][1] + '</span></div>';
   $('tab-pack').innerHTML = p + '</div>'; $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 5 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 6 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
@@ -4490,6 +5157,7 @@ function startGame(cont) {
     $('loadText').textContent = 'Dressing the villagers';
     if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) { try { await Chars.load('quaternius', f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; } catch (e) { console.warn('villager models unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); } }
     lap('chars');
+    if (typeof kitBoot === 'function') await kitBoot(f => { $('loadText').textContent = 'Carting in beams, barrels and roof tiles'; $('barFill').style.width = Math.round(38 + f * 2) + '%'; });
     renderInit();
     await load('Raising the Greyspine', 0.4); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
     await load('Framing timber, laying thatch', 0.55); buildVillage(); lap('village');
@@ -4500,6 +5168,7 @@ function startGame(cont) {
     await load('Lighting the lanterns', 0.88);
     if (TEST && TEST.quality) game.qualitySetting = TEST.quality;
     await game.applyQuality(); lap('pipelines');
+    if (typeof kitAttach === 'function') kitAttach();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
     npcSnapAll(); uiInit(); inputInit(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));
