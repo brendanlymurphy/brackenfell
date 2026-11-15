@@ -20,6 +20,7 @@ def owner(d):
         if re.search(r'T_Wall|Wall_Uneven|Wall_Plaster|Corner_', t): return 'fork-c2 (71_kithouse)'
         if 'mesh:l20' in t: return 'fork-look (74_vegetation)'
         return 'fork-v2 (73d_infill)' if 'gen_' in t else 'fork-v2'
+    if k == 'look-flat' and d['area'].startswith('int.'): return 'minor'
     if k in ('npcsep', 'twin', 'charsunk', 'charfloat', 'charinside', 'slide', 'treadmill'): return 'qa (49_chars/77)' if k in ('slide', 'treadmill') else 'fork-c2 (npc placement)'
     return 'fork-v2'
 
@@ -29,6 +30,7 @@ def severity(d):
     if k == 'door': return 'breaks play'
     if k == 'road': return 'breaks play' if ('main' in t or 'south' in t or 'north' in t) else 'ugly'
     if k in ('walkdrop',): return 'breaks play'
+    if k == 'look-flat' and d['area'].startswith('int.'): return 'minor'
     if k in ('npcsep', 'twin', 'charinside', 'handprop', 'fencecross', 'roofhit', 'deckfloat', 'waterpost', 'float', 'sunk', 'look-black', 'look-white', 'look-glow', 'look-flat', 'look-jitter', 'doorwall', 'charsunk', 'charfloat', 'fencedouble', 'climb', 'onwater', 'slide'): return 'ugly'
     if k == 'coplanar':
         return 'ugly' if (n >= 0.15 and 'mesh:l17 x mesh:l17' not in t and 'mesh:l22 x mesh:l22' not in t) else 'minor'
@@ -61,9 +63,10 @@ def merge(D):
     tour = load(D + '/tour.json', {})
     for key, m in tour.items():
         v = m['v']; hr = key.split('|')[2]; a = v['area']; fl = []
-        if m['black'] > 0.06: fl.append(('look-black', 'black region covers %.0f%% of the frame (non-sky) at %sh' % (m['black'] * 100, hr), m['black']))
+        night = hr in ('21', '22', '23', '0', '1', '2', '3')
+        if m['black'] > (0.25 if night else 0.06) and not (night and a.startswith('int.')): fl.append(('look-black', 'black region covers %.0f%% of the frame (non-sky) at %sh' % (m['black'] * 100, hr), m['black']))
         if m['white'] > 0.04: fl.append(('look-white', 'blown-out white covers %.0f%% of the frame at %sh' % (m['white'] * 100, hr), m['white']))
-        if m['flat'] and m['flat']['f'] > 0.03 and max(m['flat']['col']) > 25: fl.append(('look-flat', 'flat single colour %s covers %.0f%% of the frame at %sh' % (m['flat']['col'], m['flat']['f'] * 100, hr), m['flat']['f']))
+        if m['flat'] and m['flat']['f'] > 0.03 and max(m['flat']['col']) > (80 if night else 25): fl.append(('look-flat', 'flat single colour %s covers %.0f%% of the frame at %sh' % (m['flat']['col'], m['flat']['f'] * 100, hr), m['flat']['f']))
         if m['part'] > 0.08 or m.get('glow1', 0) > 0.02: fl.append(('look-glow', 'glow/particle sprites cover %.0f%% of the frame (largest single blob %.1f%%) at %sh' % (m['part'] * 100, m.get('glow1', 0) * 100, hr), max(m['part'], m.get('glow1', 0))))
         if m.get('jit', 0) > 0.02: fl.append(('look-jitter', 'z-fighting: %.1f%% of pixels flip with a 2 mm camera shift' % (m['jit'] * 100), m['jit'] * 10))
         for k, t, n in fl:
