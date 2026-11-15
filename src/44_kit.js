@@ -164,7 +164,7 @@ const Kit = (() => {
       m.colorNode = vec3(0.012, 0.016, 0.02); m.roughnessNode = float(0.15); m.metalnessNode = float(0);
       // from the room side a pane just shows the dim sky outside
       const outsideView = batch ? frontFacing : frontFacing;
-      m.emissiveNode = select(outsideView, sky.add(lit), SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55)).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
+      m.emissiveNode = select(outsideView, sky.add(lit), (SH.paneOut ? SH.paneOut(wp, N, V) : SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55))).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
       m.side = THREE.DoubleSide;
       K_.mats.set(key, m); return m;
     }

@@ -674,6 +674,24 @@ SH.init = function () {
     const warm = mix(vec3(1.0, 0.50, 0.16), vec3(1.0, 0.66, 0.30), hv);
     return warm.mul(lead.mul(0.92).add(0.08)).mul(hv.mul(0.35).add(0.65)).mul(smoothstep(0.15, 0.75, room).mul(0.75).add(0.35)).mul(h.mul(0.5).add(0.55)).mul(flick).mul(on).mul(U.windowGlow).mul(0.52);
   });
+  // [c3] what a window shows from inside: a sky with soft cloud, a skyline of roofs and gables, dark street below; at night deep blue with a few warm windows. The sky colour itself
+  // is the engine's (SH.skyBase), so the hour of day stays right; the lattice adds leading and mullions. wp world position, N the pane normal, V the view direction.
+  SH.paneOut = Fn(([wp, N, V]) => {
+    const at2 = TSL.atan2 || TSL.atan, az = at2(V.x, V.z), el = V.y, nz = (u, v) => texture(G.noiseTex, vec2(u, v)).r;
+    const sky = SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55);
+    const cloud = nz(az.mul(0.8), el.mul(1.6).add(0.2)).mul(0.22).add(0.89);
+    const roof = nz(az.mul(1.1), 0.31).mul(0.2).add(nz(az.mul(3.7), 0.7).mul(0.07)).sub(0.06);
+    const mask = smoothstep(roof.add(0.012), roof.sub(0.012), el);
+    const cell = vec2(TSL.floor(az.mul(150)), TSL.floor(el.mul(150))), hv = TSL.fract(TSL.sin(dot(cell, vec2(127.1, 311.7))).mul(43758.5453));
+    const spec = step(0.965, hv).mul(mask).mul(step(-0.12, el));
+    const wall = mix(vec3(0.34, 0.30, 0.26), vec3(0.22, 0.20, 0.19), nz(az.mul(7), el.mul(9))).mul(sky.r.add(sky.g).add(sky.b).mul(0.45).add(0.04));
+    const street = wall.mul(smoothstep(0.02, -0.25, el).mul(0.6).oneMinus());
+    let col = mix(sky.mul(cloud), street, mask);
+    col = col.mul(float(1).sub(spec.mul(float(1).sub(U.windowGlow)).mul(0.4))).add(vec3(1.0, 0.55, 0.2).mul(spec).mul(U.windowGlow).mul(0.5));
+    const hc = wp.x.mul(abs(N.z)).add(wp.z.mul(abs(N.x))), q = vec2(hc, wp.y).mul(4.2), a = q.x.add(q.y), b = q.x.sub(q.y);
+    const lat = TSL.min(abs(TSL.fract(a).sub(0.5)), abs(TSL.fract(b).sub(0.5))), lead = smoothstep(0.03, 0.075, lat);
+    return col.mul(lead.mul(0.88).add(0.12));
+  });
   // tangent frame from screen derivatives, then a tangent-space normal (xy in 0..1) applied to the world normal N
   SH.perturb = Fn(([N, wp, uvn, nxy, strength]) => {
     const dp1 = dFdx(wp), dp2 = dFdy(wp), du1 = dFdx(uvn), du2 = dFdy(uvn);
@@ -1537,7 +1555,7 @@ const Kit = (() => {
       m.colorNode = vec3(0.012, 0.016, 0.02); m.roughnessNode = float(0.15); m.metalnessNode = float(0);
       // from the room side a pane just shows the dim sky outside
       const outsideView = batch ? frontFacing : frontFacing;
-      m.emissiveNode = select(outsideView, sky.add(lit), SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55)).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
+      m.emissiveNode = select(outsideView, sky.add(lit), (SH.paneOut ? SH.paneOut(wp, N, V) : SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55))).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
       m.side = THREE.DoubleSide;
       K_.mats.set(key, m); return m;
     }
