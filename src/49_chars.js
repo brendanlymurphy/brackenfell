@@ -97,7 +97,8 @@ const Chars = (() => {
     const NAT = { m_boy: 1.293, f_child: 1.213 };      // height of the children as built; a child is stood up to 1.72 m so the villager's own scale (0.74, 0.66) brings it to the height the village expects
     const FIT = { m_boy: 1.72 / NAT.m_boy, f_child: 1.72 / NAT.f_child, f_elder: 1 / 0.93, m_elder: 1 / 0.97 };
     const TINT = {      // light touches on top of the colours baked into each body, to keep neighbours apart
-      hale: { tunic: [0.92, 0.92, 0.98] }, ivo: { tunic: [0.8, 0.88, 1.1], pants: [0.8, 0.8, 0.85] }, bram: { tunic: [1.05, 1.0, 0.9] }, hilda: { robe: [0.95, 0.95, 1.1] },
+      hale: { tunic: [0.92, 0.92, 0.98] }, brandt: { boots: [0.34, 0.32, 0.3] }, marta: { boots: [0.34, 0.32, 0.3] },      // these two came with very pale boots
+       ivo: { tunic: [0.8, 0.88, 1.1], pants: [0.8, 0.8, 0.85] }, bram: { tunic: [1.05, 1.0, 0.9] }, hilda: { robe: [0.95, 0.95, 1.1] },
     };
     const FOES = [{ body: 'o_hood_m' }, { body: 'o_brute' }, { body: 'o_hood_f' }, { body: 'o_rogue' }], FOE_LEADER = { body: 'o_brute', tint: { tunic: [1.35, 0.7, 0.6], pants: [0.9, 0.8, 0.8] } };
     const SKIN_T = { light: [0.88, 0.82, 0.78], m_hunter: [1, 1, 1], f_herbalist: [1, 1, 1], o_rogue: [1, 1, 1] };      // the stock light skins are very bright under a sun-lit sky
@@ -266,7 +267,7 @@ const Chars = (() => {
     const { attribute, abs, Discard, If, frontFacing, normalView, clamp } = TSL;
     const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
     const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
-    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false;
+    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false;
     names.forEach((mn, i) => {
       const src = srcOf && srcOf[mn], md = S.cfg.materials[mn] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
       let key = (look.maps && look.maps[mn]) || md.map; if (key && typeof key === 'object') key = key[H.body];
@@ -275,6 +276,7 @@ const Chars = (() => {
       albedo = albedo.add((tx ? tx.rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
       rough = rough.add(w.mul(md.rough === undefined ? 0.85 : md.rough));
       if (md.oneSided) one = one.add(w);
+      if (md.kind === 'eye') { eyeW = eyeW.add(w); anyEye = true; }
       if (md.alpha && tx) { anyAlpha = true; alpha = alpha.add(w.mul(tx.a.sub(1))); cut = cut.add(w.mul(md.alpha)); }      // cut-out hair and brows: this fragment's alpha and threshold
       const wm = md.warm || [1, 1, 1]; if (md.warm) anyWarm = true; warm = warm.add(vec3(wm[0], wm[1], wm[2]).mul(w));
       if (C.normalMaps && md.normal && S.tex[md.normal]) { const nm = normalMap(texture(S.tex[md.normal], U)); nrm = nrm ? nrm.add(nm.mul(w)) : nm.mul(w); nw = nw.add(w); }
@@ -284,7 +286,13 @@ const Chars = (() => {
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
     let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
     if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
-    m.emissiveNode = albedo.mul(lit);
+    let emis = albedo.mul(lit);
+    if (anyEye) {      // a catch-light: the key light's glint on the wet eye (no specular on the stock eye texture), off indoors where the hemisphere is a lamp-lit room
+      const V = SH.U.camPos.sub(positionWorld).normalize(), Hs = SH.U.sunDir.add(V).normalize(), Hs2 = V.add(V.add(vec3(0, 0.8, 0)).normalize()).normalize();      // the key light, and a soft light from above the viewer so a face looking at you always has one
+      const day = float(1).sub(H.uZone).mul(H.uLight), glint = TSL.pow(TSL.max(N.dot(Hs), 0), float(130)).mul(0.6).mul(TSL.min(SH.U.sunCol.x.mul(1.4), 1)).add(TSL.pow(TSL.max(N.dot(Hs2), 0), float(24)).mul(0.8)).mul(day).mul(eyeW);
+      emis = emis.add(vec3(1, 0.97, 0.9).mul(glint));
+    }
+    m.emissiveNode = emis;
     return m;
   }
 
