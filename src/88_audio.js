@@ -11,8 +11,8 @@ const Snd = {
   ctx: null, disabled: false, T: 0, frame: 0, err: 0, errMsg: '', pausedMul: 1, ups: [], lib: {}, bus: {}, rin: {}, rret: {}, sp: { open: 1, room: 0, hall: 0, cave: 0 }, spT: { open: 1, room: 0, hall: 0, cave: 0 },
   set: { master: 0.8, amb: 0.85, world: 0.85, foot: 0.85, ui: 0.85, music: 0.6, musicOn: true },
   // base trims per bus (dB-ish scaling chosen so that ambience beds sit near -27 dB RMS, footsteps and interactions peak near -12 dB)
-  trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 0.8 },
-  rvSend: { amb: 0.1, world: 0.55, foot: 0.7, ui: 0.25, music: 0.4 },
+  trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 2.5 },
+  rvSend: { amb: 0.08, world: 0.3, foot: 0.35, ui: 0, music: 0.4 },      // modest: rooms colour the world a little; interface sounds and speech are never reverberated
   L: { x: 0, y: 0, z: 0, yaw: 0, fx: 0, fz: -1, rx: 1, rz: 0 },
   G: { x: 0, y: 0, z: 0, zone: 0, zid: '', indoor: 0, space: 'open', hour: 12, night: 0, day: 1, wind: 0.8, rain: 0, forest: 0, playing: false, menu: false, talk: false, dead: false, speed: 0, ground: true, outd: 1, nearTown: 0 },
   dbg: {}, trims: {}, vEnd: new Float64Array(64), vPrio: new Uint8Array(64), vN: 0, last: {}, _s: { g: 0, lp: 16000, pan: 0, d: 0 },
@@ -105,7 +105,7 @@ const Snd = {
   applySends(now) {
     const S = this, t = S.now(), tc = now ? 0.001 : 0.25;
     for (const k of S.rvList) {
-      const w = S.sp[k], ret = k === 'open' ? 0.22 : k === 'room' ? 0.9 : k === 'hall' ? 1.0 : 1.0;
+      const w = S.sp[k], ret = k === 'open' ? 0 : k === 'room' ? 0.7 : k === 'hall' ? 0.8 : 1.0;      // open air is dry (the old 130 ms slap-back read as an echo on everything)
       S.rret[k].gain.setTargetAtTime(ret, t, 0.05);
       for (const bn of ['amb', 'world', 'foot', 'ui', 'music']) {
         const b = S.bus[bn]; let lv = S.rvSend[bn] * w;

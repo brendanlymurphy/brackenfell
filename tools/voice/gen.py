@@ -26,8 +26,13 @@ def process(wav, sr, pitch, dst):
         act = x[np.abs(x) > 0.01]; rms = np.sqrt(np.mean(act ** 2)) if len(act) else 1e-4
         g = (10 ** (-18 / 20)) / max(rms, 1e-5); pk = np.max(np.abs(x)) * g
         if pk > 10 ** (-2.5 / 20): g *= (10 ** (-2.5 / 20)) / pk                      # dialogue about -18 dB RMS, peaks under -2.5 dB
-        x = np.concatenate([np.zeros(int(sr2 * 0.03)), x * g, np.zeros(int(sr2 * 0.08))]); c = os.path.join(td, 'c.wav'); sf.write(c, x, sr2)
-        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', c, '-ac', '1', '-c:a', 'aac', '-b:a', '32k', '-movflags', '+faststart', dst], check=True)
+        for attempt in range(4):                           # AAC can overshoot by a couple of dB: re-encode quieter until the decoded peak is under -1.5 dB
+            y = np.concatenate([np.zeros(int(sr2 * 0.03)), x * g, np.zeros(int(sr2 * 0.08))]); c = os.path.join(td, 'c.wav'); sf.write(c, y, sr2)
+            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', c, '-ac', '1', '-c:a', 'aac', '-b:a', '32k', '-movflags', '+faststart', dst], check=True)
+            raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', dst, '-f', 'f32le', '-ac', '1', '-ar', '24000', '-'], capture_output=True).stdout
+            pk = float(np.max(np.abs(np.frombuffer(raw, dtype=np.float32)))) if raw else 1.0
+            if pk < 10 ** (-1.5 / 20): break
+            g *= (10 ** (-2.0 / 20)) / pk
 todo = [p for p in plan['plan'] if (not only or p['speaker'] == only)]
 k = None; done = 0; t0 = time.time()
 for p in todo:

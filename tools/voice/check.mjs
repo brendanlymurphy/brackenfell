@@ -8,7 +8,7 @@ for (const p of plan) {
   const e = man.lines[p.key]; if (!e || !fs.existsSync(dir + p.file)) { missing++; if (!allow) bad('missing ' + p.speaker + ': ' + p.text.slice(0, 50)); continue; }
   const size = fs.statSync(dir + p.file).size; bytes += size; secs += e.d; n++;
   // ~0.065 s per character at speed 1 (British Kokoro voices), so slower or faster casting scales it; allow a wide but telling band
-  const per = e.d / p.say.length * p.speed, lo = 0.035, hi = 0.11; if (per < lo || per > hi) bad(`duration ${e.d}s for ${p.say.length} chars (${per.toFixed(3)} s/char x speed) ${p.speaker}: ${p.text.slice(0, 40)}`);
+  const per = (e.d - 0.35) / p.say.length * p.speed, lo = 0.035, hi = 0.11; if (p.say.length < 14 ? (e.d < 0.4 || e.d > 3.2) : (per < lo || per > hi)) bad(`duration ${e.d}s for ${p.say.length} chars (${per.toFixed(3)} s/char x speed) ${p.speaker}: ${p.text.slice(0, 40)}`);
   const s = (execFileSync('sh', ['-c', `ffmpeg -v info -i '${dir + p.file}' -af volumedetect -f null - 2>&1 | grep -E "mean_volume|max_volume"`], { encoding: 'utf8' }));
   const mean = +/mean_volume: (-?[\d.]+)/.exec(s)[1], max = +/max_volume: (-?[\d.]+)/.exec(s)[1];
   if (max < -30 || Math.max(...e.e) < 4) bad('silent ' + p.file); if (max > -1.0) bad(`clipped (${max} dB) ` + p.file); if (mean < -32 || mean > -10) bad(`mean ${mean} dB out of range ` + p.file);

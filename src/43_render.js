@@ -7,7 +7,7 @@ const QUALITY = {
 const R = {
   q: QUALITY.high, qName: 'high', scale: 1, frame: 0, P: null, busy: false,
   cam: { pos: [0, 2, 0], yaw: 0, pitch: 0, fovMin: 0.92 },
-  maxSkin: 96, boneData: new Float32Array(96 * 256),
+  maxSkin: 256, boneData: new Float32Array(256 * 256),
   partMax: 1536, partData: new Float32Array(1536 * 12), partCount: 0,
   stats: { draws: 0, tris: 0 },
 };

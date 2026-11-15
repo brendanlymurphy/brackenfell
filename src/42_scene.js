@@ -17,7 +17,7 @@ function deepIndoors(e) {
   if (!World.camZone) return false;
   const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw);
   for (const d of World.doors) {         // an open door that is behind the camera shows nothing of the outdoors
-    if (!(d.open > 0.02)) continue;
+    if (!(d.open > 0.02) || d.internal) continue;
     const dx = d.c[0] - e[0], dz = d.c[2] - e[2], l = hyp(dx, dz);
     if (l < DRAW.doorSee && (l < 2.5 || (dx * fx + dz * fz) / l > 0.3)) return false;
   }

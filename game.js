@@ -863,8 +863,8 @@ function terrainMaterial() {
     const dn = texture(G.noiseTex, wp.xz.mul(0.0013)).zw.sub(0.5);
     const Nv = normalize(vN.add(vec3(dn.x, 0, dn.y).mul(smoothstep(260, 700, r).mul(1.1)))).toVar();
     const slope = Nv.y.oneMinus();
-    const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(2.5).toVar(), uvR = vec2(wp.x.add(wp.z), wp.y.mul(1.3)).mul(0.16).toVar();
-    const dGx = dFdx(uvG).toVar(), dGy = dFdy(uvG).toVar(), dFx = dFdx(uvF).toVar(), dFy = dFdy(uvF).toVar(), dCx = dFdx(uvC).toVar(), dCy = dFdy(uvC).toVar(), dRx = dFdx(uvR).toVar(), dRy = dFdy(uvR).toVar();
+    const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(2.5).toVar(), uvR = vec2(wp.x, wp.y.mul(1.3)).mul(0.16).toVar(), uvR2 = vec2(wp.z.add(7.3), wp.y.mul(1.3)).mul(0.16).toVar();       // rock is mapped on two vertical planes (x-y and z-y) and blended by the facing, so no cliff smears
+    const dGx = dFdx(uvG).toVar(), dGy = dFdy(uvG).toVar(), dFx = dFdx(uvF).toVar(), dFy = dFdy(uvF).toVar(), dCx = dFdx(uvC).toVar(), dCy = dFdy(uvC).toVar(), dRx = dFdx(uvR).toVar(), dRy = dFdy(uvR).toVar(), dR2x = dFdx(uvR2).toVar(), dR2y = dFdy(uvR2).toVar();
     const det = dist.lessThan(56);                              // normal maps only matter near the camera (one sample less per layer beyond that)
     const farK = smoothstep(16, 55, dist).toVar();
     const wRock = sat(slope.sub(0.24).add(mn2.r.sub(0.5).mul(0.22)).sub(smoothstep(120, 300, wp.y).mul(0.12)).mul(7)).toVar();
@@ -910,7 +910,8 @@ function terrainMaterial() {
     const damp = sat(s2.g.mul(0.7).add(pud)).toVar();
     G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, 0.45, damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
     If(wRock.greaterThan(0.004), () => {
-      const q = samp(MAT.ROCK, uvR, dRx, dRy); q.c.mulAssign(vec3(0.97, 0.98, 1.04).mul(mn.g.mul(0.45).add(0.80)));
+      const q = samp(MAT.ROCK, uvR, dRx, dRy), q2 = samp(MAT.ROCK, uvR2, dR2x, dR2y), kx = Nv.z.mul(Nv.z).div(Nv.x.mul(Nv.x).add(Nv.z.mul(Nv.z)).add(0.0001)).toVar();       // kx: weight of the x-y plane (faces looking along z)
+      q.c.assign(mix(q2.c, q.c, kx)); q.ao.assign(mix(q2.ao, q.ao, kx)); q.r.assign(mix(q2.r, q.r, kx)); q.c.mulAssign(vec3(0.97, 0.98, 1.04).mul(mn.g.mul(0.45).add(0.80)));
       G0.c.assign(mix(G0.c, q.c, wRock)); G0.ao.assign(mix(G0.ao, q.ao, wRock)); G0.r.assign(mix(G0.r, q.r, wRock)); G0.n.assign(mix(G0.n, vec2(0.5), wRock));
     });
     G0.c.assign(mix(G0.c, vec3(0.80, 0.84, 0.90), wSnow));
@@ -950,7 +951,7 @@ function deepIndoors(e) {
   if (!World.camZone) return false;
   const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw);
   for (const d of World.doors) {         // an open door that is behind the camera shows nothing of the outdoors
-    if (!(d.open > 0.02)) continue;
+    if (!(d.open > 0.02) || d.internal) continue;
     const dx = d.c[0] - e[0], dz = d.c[2] - e[2], l = hyp(dx, dz);
     if (l < DRAW.doorSee && (l < 2.5 || (dx * fx + dz * fz) / l > 0.3)) return false;
   }
@@ -1080,7 +1081,7 @@ const QUALITY = {
 const R = {
   q: QUALITY.high, qName: 'high', scale: 1, frame: 0, P: null, busy: false,
   cam: { pos: [0, 2, 0], yaw: 0, pitch: 0, fovMin: 0.92 },
-  maxSkin: 96, boneData: new Float32Array(96 * 256),
+  maxSkin: 256, boneData: new Float32Array(256 * 256),
   partMax: 1536, partData: new Float32Array(1536 * 12), partCount: 0,
   stats: { draws: 0, tris: 0 },
 };
@@ -1453,7 +1454,8 @@ const Kit = (() => {
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
       const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
       em = em.add(alb.mul(U.sunCol.mul(F.x.add(F2.x.mul(wallK))).add(U.ambSky.mul(F.y.add(F2.y.mul(wallK))))).mul(skyVis).mul(outM));
-      const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM);
+      const dayK = smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(0.97).add(0.03);       // the floor follows the daylight: constant, it left roofs and walls glowing pale at night while the ground went dark
+      const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
     }
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
@@ -2691,18 +2693,18 @@ const WILDS = { places: [], P: {}, pads: [], bumps: [], cliffs: [], groves: [], 
 (function wildsLayout() {
   const place = (id, name, x, z, yaw, r, o) => { const p = Object.assign({ id, name, x, z, yaw, r, disc: r + 4 }, o || {}); WILDS.places.push(p); WILDS.P[id] = p; return p; };
   // ── the places (x east, z south; yaw: heading of the place's front, 0 = north, clockwise) ──
-  place('shrine', 'Wayside Shrine', -112, -7, 0, 9, { disc: 12 });
-  place('lumber', 'Hob’s Lumber Camp', -140, -60, 0, 15);
-  place('blind', 'The Hunter’s Blind', -120, 62, 0, 9, { disc: 14 });
-  place('burnt', 'The Burnt Cottage', -108, -108, 0, 10);
-  place('mine', 'The Old Mine', -70, -150, 2.47, 12, { disc: 16 });          // yaw: the portal looks south-east (local +z runs into the hill)
-  place('hermit', 'The Hermit’s Pool', 30, -168, 0, 14, { disc: 18 });
-  place('stones', 'The Standing Stones', 112, -118, 0, 14, { disc: 20 });
+  place('shrine', 'Wayside Shrine', -112, -7, 0, 12, { disc: 12 });
+  place('lumber', 'Hob’s Lumber Camp', -140, -60, 0, 22);
+  place('blind', 'The Hunter’s Blind', -120, 62, 0, 14, { disc: 14 });
+  place('burnt', 'The Burnt Cottage', -108, -108, 0, 14);
+  place('mine', 'The Old Mine', -70, -150, 2.47, 16, { disc: 16 });          // yaw: the portal looks south-east (local +z runs into the hill)
+  place('hermit', 'The Hermit’s Pool', 30, -168, 0, 20, { disc: 18 });
+  place('stones', 'The Standing Stones', 112, -118, 0, 24, { disc: 20 });
   place('battle', 'The Old Battlefield', 150, -52, 0, 20, { disc: 24 });
-  place('bee', 'The Bee Meadow', 34, -70, 0, 12, { disc: 16 });
+  place('bee', 'The Bee Meadow', 34, -70, 0, 15, { disc: 16 });
   place('hamlet', 'Highfold', 116, 104, 0, 26, { disc: 32 });
-  place('fishing', 'The Far Shore', 30, 160, 0, 12, { disc: 16 });
-  place('toll', 'The Toll Ford', -160, 1, 0, 10, { disc: 14 });
+  place('fishing', 'The Far Shore', 30, 160, 0, 15, { disc: 16 });
+  place('toll', 'The Toll Ford', -160, 1, 0, 14, { disc: 14 });
 
   // ── paths (id, width, points). Each begins on an existing road or at the end of another path. ──
   const path = (id, w, pts) => { ROADS.push({ id: 'p.' + id, w, pts, path: true }); WILDS.paths.push(id); };
@@ -2751,11 +2753,14 @@ const WILDS = { places: [], P: {}, pads: [], bumps: [], cliffs: [], groves: [], 
   WILDS.pads.push([-140, -60, 8, 7], [-108, -108, 9, 6], [-120, 62, 5, 5], [34, -70, 6, 6], [30, 160, 6, 6], [38, -166, 5, 5], [-160, -3, 6, 6], [-112, -7, 4, 4]);
   // the pool under the fall, and the toll-ford brook (water bodies; the meshes are built in 79_wilds.js)
   WILDS.pool = { x: 20, z: -172.5, r: 4.6, dig: 1.35 };
-  WILDS.brook = { pts: [[-171, -60], [-164, -32], [-160, -8], [-159.4, 1.6], [-161, 14], [-166, 38], [-175, 66]], w: 1.9, bank: 3.6 };
+  WILDS.brooks = [];
+  Object.defineProperty(WILDS, 'brookLine', { get() { const k = WILDS.brook; return k.line || (k.line = new Poly(catmull(k.pts, 2))); } });
+  WILDS.brook = { pts: [[-171, -60], [-164, -32], [-160, -8], [-159.4, 1.6], [-161, 14], [-166, 38], [-175, 66]], w: 1.9, bank: 3.6, x0: -195, x1: -140, z0: -100, z1: 100, ford: true }; WILDS.brooks.push(WILDS.brook);
+  WILDS.creek = { pts: [[24.5, -171.5], [33, -170.5], [43, -173], [52.5, -177]], w: 1.5, bank: 3.2, x0: 10, x1: 70, z0: -200, z1: -150, ford: false }; WILDS.brooks.push(WILDS.creek);
 
   // ── forest: clearings round each place, denser stands, birch groves ──
   WILDS.groves.push({ x: -150, z: 98, r: 10, n: 18 }, { x: 52, z: -88, r: 10, n: 16 }, { x: 70, z: 128, r: 10, n: 14 }, { x: 126, z: 128, r: 9, n: 14 }, { x: 160, z: -86, r: 10, n: 16 });
-  WILDS.dense.push({ x: -118, z: 60, r: 42, k: 1.9 }, { x: -50, z: 120, r: 30, k: 1.5 });
+  WILDS.dense.push({ x: -118, z: 60, r: 42, k: 1.25 }, { x: -50, z: 120, r: 30, k: 1.0 });
   // (flower meadow, orchard rows and fields are drawn by 79_wilds.js)
 })();
 
@@ -2796,12 +2801,13 @@ function wildsH(x, z, h) {
     const q = WILDS.pool, d = hyp(x - q.x, z - q.z);
     if (d < q.r + 5) h = Math.min(h, lerp(wildsBase('pool', q.x, q.z) - q.dig - 0.5 * (1 - (d / q.r) * (d / q.r)), h, smooth(q.r - 0.5, q.r + 4.5, d)));
   }
-  if (WILDS.brook && x < -140 && x > -195) {
-    const b = WILDS.brookLine || (WILDS.brookLine = new Poly(catmull(WILDS.brook.pts, 2))), d = b.dist(x, z, WILDS.brook.bank + 6);
-    if (d < WILDS.brook.bank + 6) {
-      const at = b.at, yw = wildsBrookY(at), cr = ford(x, z), bed = yw - 0.45 + (cr ? 0.25 * cr : 0);
-      h = lerp(h, Math.min(h, yw + 0.5), smooth(WILDS.brook.bank + 6, WILDS.brook.bank, d));
-      h = Math.min(h, lerp(bed, h, smooth(WILDS.brook.w * 0.7, WILDS.brook.bank, d)));
+  for (const k of WILDS.brooks) {
+    if (x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue;
+    const b = k.line || (k.line = new Poly(catmull(k.pts, 2))), d = b.dist(x, z, k.bank + 6);
+    if (d < k.bank + 6) {
+      const at = b.at, yw = wildsBrookY(at, k), cr = k.ford ? ford(x, z) : 0, bed = yw - 0.45 + (cr ? 0.25 * cr : 0);
+      h = lerp(h, Math.min(h, yw + 0.5), smooth(k.bank + 6, k.bank, d));
+      h = Math.min(h, lerp(bed, h, smooth(k.w * 0.7, k.bank, d)));
     }
   }
   return h;
@@ -2809,13 +2815,14 @@ function wildsH(x, z, h) {
 // the toll ford: the road bed lifts to a gravel bar where the main road crosses the brook (1 on the bar, 0 away from it)
 function ford(x, z) { return 1 - smooth(1.5, 5.5, hyp(x - (-159.5), z - 1.4)); }
 // brook surface height along its length: the ground beside it, never rising downstream
-function wildsBrookY(at) {
-  if (!WILDS._by) {
-    const b = WILDS.brookLine, n = Math.ceil(b.len / 3) + 1, ys = [];
-    let y = 1e9; for (let i = 0; i < n; i++) { const p = b.point(i * 3); y = Math.min(y, terrainBase(p[0], p[1]) - 0.5); ys.push(y); }
-    WILDS._by = ys;
+function wildsBrookY(at, k) {
+  k = k || WILDS.brooks[0];
+  if (!k._by) {
+    const b = k.line || (k.line = new Poly(catmull(k.pts, 2))), n = Math.ceil(b.len / 3) + 1, ys = [];
+    let y = k.top === undefined ? 1e9 : k.top; for (let i = 0; i < n; i++) { const p = b.point(i * 3); y = Math.min(y, terrainBase(p[0], p[1]) - 0.5); ys.push(y); }
+    k._by = ys;
   }
-  const f = Math.min(Math.max(at, 0) / 3, WILDS._by.length - 1.001), i = f | 0; return WILDS._by[i] + (WILDS._by[i + 1] - WILDS._by[i]) * (f - i);
+  const f = Math.min(Math.max(at, 0) / 3, k._by.length - 1.001), i = f | 0; return k._by[i] + (k._by[i + 1] - k._by[i]) * (f - i);
 }
 
 
@@ -2929,7 +2936,7 @@ Cells.env = function (e) {
   const c = Cells.cur; if (!c) return e;
   e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
   // daylight: with the sun off, rooms lost the light that used to come in by day (midday was darker than night). Windows let the sky in: lift the day's ambient. c.daylight: 0 for a cellar or crypt, default for a room with windows.
-  { const k = c.daylight === undefined ? CELL_DAYLIGHT : c.daylight; if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); } else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
+  { const dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); } else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
   e.fogCol = c.fog || [0.030, 0.025, 0.020]; e.fogDensity = c.fogDensity || 0.022; e.cloud = 0; e.stars = 0; e.aurora = 0; e.sunDisc = 0; e.moonBright = 0;
   return e;
 };
@@ -3540,6 +3547,7 @@ function siteMatrix(site, y) { const M = m4.create(); m4.translate(M, site.x, y,
 function buildHouse(site, spec) {
   const kit = typeof kitWanted === 'function' && kitWanted(site, spec);      // kit-built shell (71_kithouse.js) or the procedural one below
   if (kit) spec = kitSpec(site, spec);
+  const col0 = World.colliders.length, fl0 = World.floors.length, lt0 = World.lights.length;
   // Cells (56_cells.js): the interior is built in its own frame far from the village (isite, Ms) and only the shell stays on the site (site, Mx). Without cells both are the same.
   const cell = kit && CELLS_ON ? Cells.make(site.id, site.name, { site }) : null, isite = cell ? cell.cs : site;
   const w = site.w, d = site.d, H = spec.H || 2.6, t = 0.3, P = (spec.pitch || 48) * PI / 180, tanP = Math.tan(P), hd = d / 2;
@@ -3744,18 +3752,27 @@ function buildHouse(site, spec) {
     solid(x0, z0, x1, z1, h) { addBoxCollider(int, x0, z0, x1, z1, 0, h || 1); },
     interact(x, y, z, o) { const it = Object.assign({ p: m4.tp(Ms, [x, y, z]), r: 2.0, zone }, o); World.interact.push(it); return it; },
   };
+  const planned = !!(kit && cell && typeof planWanted === 'function' && planWanted(site, spec));
+  ctx.planned = planned;
   if (kit) kitShell(ctx);
-  if (kit && typeof UPPER !== 'undefined' && UPPER[site.id] && !(TEST && TEST.noUpper)) UPPER[site.id](ctx);       // stairs and upper floor first, so the ground-floor furniture goes round them
-  if (spec.interior) spec.interior(ctx);
-  if (kit) kitDress(ctx);
-  if (kit && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
+  if (planned) {          // the interior is a plan (72d_plan.js): drop the shell-shaped room the generator made and build the plan on the same door instead
+    for (const mm of [ins, int]) { mm.nv = 0; mm.ni = 0; mm.min = [1e9, 1e9, 1e9]; mm.max = [-1e9, -1e9, -1e9]; }
+    const cellSide = x => x > CELL.x0 - 100;
+    for (let i = World.colliders.length - 1; i >= col0; i--) if (cellSide(World.colliders[i].x)) World.colliders.splice(i, 1);
+    for (let i = World.floors.length - 1; i >= fl0; i--) if (cellSide(World.floors[i].x)) World.floors.splice(i, 1);
+    for (let i = World.lights.length - 1; i >= lt0; i--) if (cellSide(World.lights[i].p[0])) World.lights.splice(i, 1);
+    planBuild(ctx);
+  } else if (kit && typeof UPPER !== 'undefined' && UPPER[site.id] && !(TEST && TEST.noUpper)) UPPER[site.id](ctx);       // stairs and upper floor first, so the ground-floor furniture goes round them
+  if (!planned && spec.interior) spec.interior(ctx);
+  if (kit && !planned) kitDress(ctx);
+  if (kit && !planned && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
   int.grad = null;
   if (cell) {
     int.append(ins);          // the interior's wall faces, floor and ceiling travel with the rest of the cell's generated meshes
     cell.floorY = floorY; cell.zone = zone; cell.door = doorList[0]; cell.xdoor = xdoorList[0]; cell.w = w; cell.d = d; cell.ctx = ctx;
     if (cell.door && cell.xdoor) Cells.portals(cell, site);
   }
-  World.houses[site.id] = { site, isite, zone, ctx, floorY, xFloorY, door: doorList[0], xdoor: xdoorList[0], cell };
+  World.houses[site.id] = { site, isite, zone, ctx, floorY, xFloorY, door: doorList[0], xdoor: xdoorList[0], cell, plan: ctx.plan || null };
   return { ext, int, glow, ctx, cell };
 }
 
@@ -3820,7 +3837,7 @@ const KH = (() => {
 let kitFB = null;
 // With cells the shell is laid twice: pass 'ext' on the village site (outside faces, a closed door, glowing windows, no interior) and pass 'int' in the cell's own
 // frame (the room's side of the same walls, floor, roof lining). Without cells one pass, 'both', lays it all on the site as it always was.
-function kitShell(c) { if (!c.cell) return kitShellPass(c, 'both'); kitShellPass(c, 'ext'); kitShellPass(c, 'int'); }
+function kitShell(c) { if (!c.cell) return kitShellPass(c, 'both'); kitShellPass(c, 'ext'); if (!c.planned) kitShellPass(c, 'int'); }
 function kitShellPass(c, pass) {
   const { spec, w, d, H, t, hd, glow, zone, openings, tanP } = c, site = c.xsite, X = pass !== 'int', I = pass !== 'ext', ext = pass === 'int' ? c.ext : c.xext, Ms = pass === 'int' ? c.Ms : c.Mx, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
@@ -5385,6 +5402,836 @@ for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].s
 })();
 
 
+// ---- 72d_plan.js ----
+// ───────────────────────── plans: interiors laid out like an architect, then dressed like a set decorator ─────────────────────────
+// A cell's interior is a PLAN, not a hollowed-out shell. Per level (cellar -1, ground 0, upper 1) there are rooms (rectangles on a 0.5 m grid, canonical frame:
+// the entrance on the -z side), doorways between them, stairs between levels and windows on the walls that are outside walls in the plan. From that the
+// walls (kit panels, 0.4 m thick, centred on the room edges), floors, ceilings, stairwell openings, colliders and the navigation graph follow. Furniture is placed
+// by rules (footprints, wall bands, clear zones) and recorded; planValidate() checks the records (no overlaps, nothing in doors or on stairs, nothing floating,
+// every room reachable). The canonical frame is turned and moved onto the cell's door by one matrix (T), so a door on any side works.
+// Lengths are metres. Wall sides: 'n' = the z0 edge, 's' = z1, 'w' = x0, 'e' = x1 (room-relative: the wall a room has at that side).
+const PLAN_ON = !(TEST && TEST.plans === 0);
+const PW = { T: 0.4, IN: 0.2, SLAB: 0.25, DOOR: 1.1 };
+const rectOf = (cx, cz, w, d) => ({ x0: cx - w / 2, z0: cz - d / 2, x1: cx + w / 2, z1: cz + d / 2 });
+const rOv = (a, b, g) => { g = g || 0; return a.x0 < b.x1 - g && a.x1 > b.x0 + g && a.z0 < b.z1 - g && a.z1 > b.z0 + g; };
+const rIn = (r, o) => r.x0 >= o.x0 - 1e-6 && r.x1 <= o.x1 + 1e-6 && r.z0 >= o.z0 - 1e-6 && r.z1 <= o.z1 + 1e-6;
+const rGrow = (r, g) => ({ x0: r.x0 - g, z0: r.z0 - g, x1: r.x1 + g, z1: r.z1 + g });
+const SIDES = { n: { ax: 'x', dz: -1 }, s: { ax: 'x', dz: 1 }, w: { ax: 'z', dx: -1 }, e: { ax: 'z', dx: 1 } };
+const OPP = { n: 's', s: 'n', w: 'e', e: 'w' };
+// rotation (about y, as in at()) that puts an item's back (local -z when back = -1, +z when back = +1) against the wall on this side of its room
+const rotBack = (side, back) => ({ n: 0, s: PI, w: PI / 2, e: -PI / 2 }[side] + (back > 0 ? PI : 0));
+
+function planNew(c, T) {
+  const P = { c, zone: c.zone, R: c.R, T, id: c.site.id, lv: {}, rooms: {}, doors: [], stairs: [], walls: [], windows: [], items: [], wallItems: [], clear: [], holes: [], spots: {}, lights: 0, err: [], lightIn: {}, lights0: World.lights.length };
+  P.MS = new THREE.Matrix4().fromArray(T);
+  P.w2 = (x, y, z) => m4.tp(T, [x, y, z]);                      // canonical -> world
+  P.yaw = c.planYaw || 0;                                     // canonical yaw -> world yaw: add this
+  P.occ = (k, r, kind, id, extra) => pOcc(P, k, r, kind, id, extra);
+  return P;
+}
+// a level: k (-1, 0, 1), y = floor height above the entrance floor, H = clear height to the ceiling slab
+function pLevel(P, k, y, H, o) { P.lv[k] = Object.assign({ k, y, H, rooms: [], items: [] }, o || {}); return P.lv[k]; }
+function pRoom(P, k, id, kind, x0, z0, x1, z1, o) {
+  const r = Object.assign({ id, kind, k, x0, z0, x1, z1, floor: 'wood', win: true, doors: [] }, o || {}), L = P.lv[k];
+  if ([x0, z0, x1, z1].some(v => Math.abs(v * 2 - Math.round(v * 2)) > 1e-6)) P.err.push('room ' + id + ' off the 0.5 m grid');
+  r.in = { x0: x0 + PW.IN, z0: z0 + PW.IN, x1: x1 - PW.IN, z1: z1 - PW.IN };
+  L.rooms.push(r); P.rooms[id] = r; return r;
+}
+// a doorway on the wall between rooms a and b (b = null: outside) at the point (x, z) on their shared edge; w = clear width
+function pDoor(P, a, b, x, z, o) { const d = Object.assign({ a, b, x, z, w: PW.DOOR, k: P.rooms[a].k, frame: true }, o || {}); P.doors.push(d); return d; }
+
+// ── layout: walls from room edges, windows, clear zones, stairwell holes ──
+function pLayout(P) {
+  for (const k in P.lv) {
+    const L = P.lv[k], lines = {};
+    const unit = (ax, c, i) => { const key = ax + c, a = lines[key] || (lines[key] = { ax, c, u: new Map() }); let u = a.u.get(i); if (!u) a.u.set(i, u = {}); return u; };
+    for (const r of L.rooms) {
+      for (let i = r.z0 * 2; i < r.z1 * 2; i++) { unit('z', r.x0, i).plus = r; unit('z', r.x1, i).minus = r; }       // walls running along z at x = x0 / x1
+      for (let i = r.x0 * 2; i < r.x1 * 2; i++) { unit('x', r.z0, i).plus = r; unit('x', r.z1, i).minus = r; }       // walls running along x at z = z0 / z1
+    }
+    for (const key in lines) {
+      const ln = lines[key], idx = [...ln.u.keys()].sort((a, b) => a - b); let cur = null;
+      const prio = r => r.kind === 'hall' || r.kind === 'common' || r.kind === 'nave' || r.kind === 'shop' || r.kind === 'corridor' ? 0 : 1;
+      for (const i of idx) {
+        const u = ln.u.get(i), ext = !(u.plus && u.minus), ns = ext ? (u.plus ? -1 : 1) : (prio(u.minus) <= prio(u.plus) ? -1 : 1);       // n points to the empty side (outside) / the lesser room
+        if (cur && cur.b === i / 2 && cur.ext === ext && cur.ns === ns && cur.cellar === (L.k < 0)) { cur.b = (i + 1) / 2; if (u.plus) cur.rooms.add(u.plus.id); if (u.minus) cur.rooms.add(u.minus.id); continue; }
+        cur = { k: L.k, ax: ln.ax, c: ln.c, a: i / 2, b: (i + 1) / 2, ext, ns, cellar: L.k < 0, rooms: new Set([u.plus && u.plus.id, u.minus && u.minus.id].filter(Boolean)), open: [] };
+        P.walls.push(cur);
+      }
+    }
+  }
+  // doorways -> openings on the wall that carries them
+  for (const d of P.doors) {
+    const wl = P.walls.find(w => w.k === d.k && (w.ax === 'x' ? Math.abs(w.c - d.z) < 0.01 && d.x > w.a - 1e-6 && d.x < w.b + 1e-6 : Math.abs(w.c - d.x) < 0.01 && d.z > w.a - 1e-6 && d.z < w.b + 1e-6) && (d.b === null ? w.ext : (w.rooms.has(d.a) && w.rooms.has(d.b))));
+    if (!wl) { P.err.push('door ' + d.a + '/' + d.b + ' at ' + d.x + ',' + d.z + ' is on no wall'); continue; }
+    d.wall = wl; d.pos = wl.ax === 'x' ? d.x : d.z; wl.open.push({ type: 'door', pos: d.pos, hw: d.w / 2, d });
+    d.side = wl.ax === 'x' ? 'x' : 'z';
+    for (const id of [d.a, d.b]) if (id) P.rooms[id].doors.push(d);
+  }
+  // windows on outside walls (levels at or above the ground; the cellar gets high slits only)
+  const WIN0 = ['Wide_Flat', 'Thin_Round', 'Wide_Round'];
+  for (const wl of P.walls) {
+    if (!wl.ext || wl.k < 0) continue;
+    for (const rid of wl.rooms) {
+      const room = P.rooms[rid]; if (!room || room.win === false) continue;
+      const lo = Math.max(wl.a, wl.ax === 'x' ? room.x0 : room.z0), hi = Math.min(wl.b, wl.ax === 'x' ? room.x1 : room.z1), L = hi - lo;
+      if (L < 2.8) continue;
+      const n = Math.max(1, Math.floor(L / 3.0)), pitch = L / n;
+      for (let i = 0; i < n; i++) {
+        const p = Math.round((lo + pitch * (i + 0.5)) * 2) / 2;
+        if (wl.open.some(o => Math.abs(o.pos - p) < o.hw + 1.45) || p - 0.8 < lo + 0.3 || p + 0.8 > hi - 0.3) continue;
+        const WIN = room.winKinds || WIN0, kind = WIN[Math.abs(Math.round(wl.c * 3 + p * 7)) % WIN.length], o = { type: 'win', pos: p, hw: 0.8, kind, glass: room.glass ? room.glass[P.windows.length % room.glass.length] : null };
+        wl.open.push(o); P.windows.push({ wall: wl, pos: p, kind, k: wl.k, room });
+      }
+    }
+  }
+  // the stairs: holes in the level above and clear zones at both ends
+  for (const s of P.stairs) pStairGeom(P, s);
+  // the way people need: clear zones round every doorway (both sides) and between the doors of a room
+  for (const d of P.doors) {
+    const wl = d.wall; if (!wl) continue;
+    const z = wl.ax === 'x' ? { x0: d.x - 0.75, x1: d.x + 0.75, z0: d.z - 0.95, z1: d.z + 0.95 } : { x0: d.x - 0.95, x1: d.x + 0.95, z0: d.z - 0.75, z1: d.z + 0.75 };
+    P.clear.push(Object.assign(z, { k: d.k, kind: 'door', ref: d }));
+  }
+  for (const id in P.rooms) {
+    const r = P.rooms[id], cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2, pts = r.doors.filter(d => d.wall).map(d => d.wall.ax === 'x' ? [d.x, d.z + (cz > d.z ? 1 : -1) * Math.min(1.9, Math.abs(cz - d.z))] : [d.x + (cx > d.x ? 1 : -1) * Math.min(1.9, Math.abs(cx - d.x)), d.z]);
+    for (const s of P.stairs) { if (s.k0 === r.k && rOv(s.low, rGrow(r, 0.1))) { const q = s.lowPt.slice(); q.stair = 1; pts.push(q); } if (s.k1 === r.k && rOv(s.high, rGrow(r, 0.1))) { const q = s.highPt.slice(); q.stair = 1; pts.push(q); } }
+    r.pts = pts;
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const a = pts[i], b = pts[j]; if (a.stair && b.stair) continue; const x0 = Math.min(a[0], b[0]) - 0.45, x1 = Math.max(a[0], b[0]) + 0.45, z0 = Math.min(a[1], b[1]) - 0.45, z1 = Math.max(a[1], b[1]) + 0.45;
+      // an L or diagonal path: the bend is at whichever end lies nearer the middle of the room
+      const dx = Math.abs(a[0] - b[0]), dz = Math.abs(a[1] - b[1]);
+      if (dx < 0.01 || dz < 0.01) P.clear.push({ x0, x1, z0, z1, k: r.k, kind: 'path', room: r });
+      else {
+        const zc = Math.abs(a[1] - cz) < Math.abs(b[1] - cz) ? a[1] : b[1], q = (x0_, x1_, z0_, z1_) => P.clear.push({ x0: x0_, x1: x1_, z0: z0_, z1: z1_, k: r.k, kind: 'path', room: r });
+        q(Math.min(a[0], b[0]) - 0.45, Math.max(a[0], b[0]) + 0.45, zc - 0.45, zc + 0.45); q(a[0] - 0.45, a[0] + 0.45, Math.min(a[1], zc) - 0.45, Math.max(a[1], zc) + 0.45); q(b[0] - 0.45, b[0] + 0.45, Math.min(b[1], zc) - 0.45, Math.max(b[1], zc) + 0.45);
+      }
+    }
+  }
+}
+
+// ── stairs ──
+// s: { id, k0, k1, axis: 'x'|'z', dir: +1|-1, x, z (centre of the low end), width, name }: climbs from level k0 to k1 along the axis in the given direction
+function pStair(P, s) {
+  const a = P.lv[s.k0], b = P.lv[s.k1]; s.rise = b.y - a.y; s.width = s.width || 1.0; s.n = Math.ceil(s.rise / 0.19); s.tread = s.tread || 0.27; s.run = s.n * s.tread;
+  P.stairs.push(s); return s;
+}
+function pStairGeom(P, s) {
+  const hw = s.width / 2 + 0.05, ax = s.axis, d = s.dir, p0 = ax === 'x' ? s.x : s.z, p1 = p0 + d * s.run, lat = ax === 'x' ? s.z : s.x;
+  const rect = (a, b, la, lb) => ax === 'x' ? { x0: Math.min(a, b), x1: Math.max(a, b), z0: la, z1: lb } : { x0: la, x1: lb, z0: Math.min(a, b), z1: Math.max(a, b) };
+  s.p0 = p0; s.p1 = p1; s.lat = lat; s.hw = hw;
+  s.low = rect(p0, p1, lat - hw, lat + hw); s.high = s.low;
+  s.hole = rect(p0 - d * 0.8, p1, lat - hw - 0.1, lat + hw + 0.1);        // the opening in the slab of the level above: the whole run
+  s.lowPt = ax === 'x' ? [p0 - d * 0.7, lat] : [lat, p0 - d * 0.7];       // where one stands to start up
+  s.highPt = ax === 'x' ? [p1 + d * 0.8, lat] : [lat, p1 + d * 0.8];      // where one stands when arrived
+  P.holes.push({ k: s.k1, r: s.hole, stair: s });
+  P.clear.push(Object.assign(rect(p0 - d * 1.3, p0, lat - hw - 0.1, lat + hw + 0.1), { k: s.k0, kind: 'stair' }), Object.assign(rect(p1, p1 + d * 1.3, lat - hw - 0.1, lat + hw + 0.1), { k: s.k1, kind: 'stair' }));
+  P.occ(s.k0, rect(p0, p1, lat - hw - 0.08, lat + hw + 0.08), 'stair', s.id);            // the steps and stringers on the lower level
+  P.occ(s.k1, s.hole, 'hole', s.id);            // and the opening above them
+}
+
+// ── occupancy and placement ──
+const P_SOLID = { floor: 1, stair: 1, hole: 1, hearth: 1, post: 1 };
+function pOcc(P, k, r, kind, id, extra) { const it = Object.assign({ k, x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1, kind, id }, extra || {}); P.items.push(it); return it; }
+// can a rectangle (with a height) stand here? inside the room, off every other solid thing, out of the clear zones (door approaches, paths, stair ends) and, when tall, out of the way of windows
+function pFit(P, room, r, o) {
+  o = o || {}; const k = room.k, h = o.h || 0.5;
+  if (!rIn(r, room.in)) return false;
+  for (const it of P.items) if (it.k === k && P_SOLID[it.kind] && rOv(r, it, 0.015)) return false;
+  if (!o.noClear) for (const z of P.clear) if (z.k === k && rOv(r, z, 0.01) && !(o.allow && o.allow.includes(z.kind))) return false;
+  if (h > 0.85 && !o.lowOk) for (const w of P.windows) if (w.k === k && w.room === room) { const z = pWinZone(w); if (rOv(r, z, 0.01)) return false; }
+  return true;
+}
+// the floor in front of a window that tall furniture must leave free
+function pWinZone(w) {
+  const wl = w.wall, ns = wl.ns, depth = 0.55, hw = 0.95;
+  return wl.ax === 'x' ? { x0: w.pos - hw, x1: w.pos + hw, z0: ns < 0 ? wl.c - 0.2 : wl.c - 0.2 - depth, z1: ns < 0 ? wl.c + 0.2 + depth : wl.c + 0.2 } : { x0: ns < 0 ? wl.c - 0.2 : wl.c - 0.2 - depth, x1: ns < 0 ? wl.c + 0.2 + depth : wl.c + 0.2, z0: w.pos - hw, z1: w.pos + hw };
+}
+// the footprint of a w x d item (w along x, d along z before turning) turned by rot (a multiple of PI/2)
+function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2))) & 1; return q ? rectOf(cx, cz, d, w) : rectOf(cx, cz, w, d); }
+// put an item: it is drawn with draw(m) at (cx, cz) turned by rot, on the level's floor (or at y = lift above it), and recorded. Returns the record or null when it does not fit.
+function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
+  o = o || {}; const r = pFoot(cx, cz, w, d, rot);
+  if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
+  const L = P.lv[room.k], m = P.c.int; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m));
+  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
+  if (o.flat) it.kind = 'rug'; return it;
+}
+// along a wall of the room, w wide (along the wall) and d deep; o.at: 'start' | 'end' | 'mid' | a coordinate along the wall to be near. Tries every 0.25 m.
+function pWallSlot(P, room, side, w, d, o) {
+  o = o || {}; const a = room.in, hor = side === 'n' || side === 's', lo = (hor ? a.x0 : a.z0) + w / 2, hi = (hor ? a.x1 : a.z1) - w / 2, pts = [];
+  for (let t = lo; t <= hi + 1e-6; t += 0.25) pts.push(t);
+  const want = o.at === 'end' ? hi : o.at === 'mid' || o.at === undefined ? (lo + hi) / 2 : o.at === 'start' ? lo : o.at;
+  pts.sort((p, q) => Math.abs(p - want) - Math.abs(q - want));
+  for (const t of pts) {
+    const cz = side === 'n' ? a.z0 + d / 2 : side === 's' ? a.z1 - d / 2 : t, cx = side === 'w' ? a.x0 + d / 2 : side === 'e' ? a.x1 - d / 2 : t;
+    const px = hor ? t : cx, pz = hor ? cz : t, r = hor ? rectOf(px, pz, w, d) : rectOf(px, pz, d, w);
+    if (pFit(P, room, r, o)) return { cx: px, cz: pz, rect: r };
+  }
+  return null;
+}
+// an item with its back to a wall (back = -1: its local -z is the back, as a bed's head; +1: its +z, as a shelf's)
+function pAgainst(P, room, side, name, w, d, h, back, draw, o) {
+  o = Object.assign({ h }, o || {}); const s = pWallSlot(P, room, side, w, d, o); if (!s) return null;
+  return pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side }));
+}
+// anywhere free in the room: tries the centre, then rings round it (o.near = [x, z] to start from), o.step 0.25
+function pFree(P, room, name, w, d, h, rot, draw, o) {
+  o = o || {}; const a = room.in, c0 = o.near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = [];
+  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3; z += 0.25) pts.push([x, z]);
+  pts.sort((p, q) => Math.hypot(p[0] - c0[0], p[1] - c0[1]) - Math.hypot(q[0] - c0[0], q[1] - c0[1]));
+  for (const p of pts) { const it = pPut(P, room, name, p[0], p[1], rot, w, d, h, draw, o); if (it) return it; }
+  return null;
+}
+// something hung on a wall: a band [y0, y1] and a span along the wall, kept off windows, doorways and other hung things, and clear of tall furniture against that wall
+function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
+  o = o || {}; const a = room.in, L = P.lv[room.k], hor = side === 'n' || side === 's';
+  const wl = P.walls.find(q => q.k === room.k && (hor ? q.ax === 'x' : q.ax === 'z') && Math.abs(q.c - (side === 'n' ? room.z0 : side === 's' ? room.z1 : side === 'w' ? room.x0 : room.x1)) < 0.01 && u > q.a && u < q.b);
+  if (!wl) return null;
+  const rec = { k: room.k, wall: wl, u0: u - w / 2, u1: u + w / 2, y0, y1, id: name, room: room.id, side };
+  if (rec.u0 < (hor ? a.x0 : a.z0) - 1e-6 || rec.u1 > (hor ? a.x1 : a.z1) + 1e-6) return null;
+  for (const op of wl.open) { const hw = op.type === 'door' ? op.hw + 0.1 : 0.9; if (rec.u0 < op.pos + hw && rec.u1 > op.pos - hw && (op.type === 'door' || (y1 > 0.85 && y0 < 2.4))) return null; }
+  for (const q of P.wallItems) if (q.k === rec.k && q.wall === wl && q.side === side && rec.u0 < q.u1 + 0.05 && rec.u1 > q.u0 - 0.05 && rec.y0 < q.y1 + 0.05 && rec.y1 > q.y0 - 0.05) return null;
+  for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
+  const m = P.c.int, p = hor ? [u, side === 'n' ? a.z0 : a.z1] : [side === 'w' ? a.x0 : a.x1, u];
+  const rot = rotBack(side, +1);
+  at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0));
+  P.wallItems.push(rec); return rec;
+}
+const pCentre = r => [(r.in.x0 + r.in.x1) / 2, (r.in.z0 + r.in.z1) / 2];
+const pRoomAt = (P, k, x, z) => { for (const id in P.rooms) { const r = P.rooms[id]; if (r.k === k && x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) return r; } return null; };
+
+// ── registration of the things the village looks for: spots, interact points, lights ──
+function pSpot(P, name, x, z, yaw, o) {
+  o = o || {}; const k = o.k === undefined ? 0 : o.k, L = P.lv[k], y = (o.y === undefined ? 0.02 : o.y) + L.y;
+  const p = P.w2(x, y, z); World.spots[P.id + '.' + name] = Object.assign({ p, yaw: yaw + P.yaw, zone: P.zone, site: P.id, k, room: (pRoomAt(P, k, x, z) || {}).id }, o.extra || {});
+  P.spots[name] = { x, z, k, yaw, p };
+}
+function pInteract(P, x, y, z, o, k) { const L = P.lv[k || 0]; const it = Object.assign({ p: P.w2(x, y + L.y, z), r: 2.0, zone: P.zone }, o); World.interact.push(it); return it; }
+function pLight(P, x, y, z, r, col, kind, k) { const L = P.lv[k || 0], rm = pRoomAt(P, k || 0, x, z); if (rm) P.lightIn[rm.id] = 1; P.lights++; return addLight(P.w2(x, y + L.y, z), r, col, P.zone, kind); }
+
+// ── geometry: floors, ceilings, walls (kit panels), stairs ──
+function rSub(r, h) {         // r minus the rectangle h: up to four rectangles
+  if (!rOv(r, h)) return [r];
+  const out = [], ix0 = Math.max(r.x0, h.x0), ix1 = Math.min(r.x1, h.x1);
+  if (h.z0 > r.z0) out.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: h.z0 }); if (h.z1 < r.z1) out.push({ x0: r.x0, x1: r.x1, z0: h.z1, z1: r.z1 });
+  if (h.x0 > r.x0) out.push({ x0: r.x0, x1: h.x0, z0: Math.max(r.z0, h.z0), z1: Math.min(r.z1, h.z1) }); if (h.x1 < r.x1) out.push({ x0: h.x1, x1: r.x1, z0: Math.max(r.z0, h.z0), z1: Math.min(r.z1, h.z1) });
+  return out.filter(q => q.x1 - q.x0 > 0.01 && q.z1 - q.z0 > 0.01);
+}
+const rSubAll = (r, holes) => holes.reduce((acc, h) => acc.flatMap(q => rSub(q, h)), [r]);
+function pBuild(P) {
+  const c = P.c, m = c.int, B = kitIntBatch(P.zone), zone = P.zone, MS = P.MS, IN = { zone, skyVis: INT_AO, inZone: zone, inSkyVis: INT_AO }, FL = { zone, skyVis: INT_AO, cast: false };
+  m.m1 = zone; m.ao = INT_AO;
+  for (const k in P.lv) {
+    const L = P.lv[k], holes = P.holes.filter(h => h.k === L.k).map(h => h.r), above = P.holes.filter(h => h.k === L.k + 1).map(h => h.r);
+    for (const r of L.rooms) {
+      const tile = r.floor === 'stone' ? 'Floor_UnevenBrick' : r.floor === 'cobble' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';
+      for (const q of rSubAll({ x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1 }, holes)) {
+        const nx = Math.max(1, Math.round((q.x1 - q.x0) / 2)), nz = Math.max(1, Math.round((q.z1 - q.z0) / 2)), sx = (q.x1 - q.x0) / (2 * nx), sz = (q.z1 - q.z0) / (2 * nz);
+        for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) B.add(tile, KH.xf(MS, q.x0 + (i + 0.5) * 2 * sx, L.y + 0.012, q.z0 + (j + 0.5) * 2 * sz, [sx, 1, sz]), FL);
+        addFloor(m, q.x0, q.z0, q.x1, q.z1, L.y + 0.02);
+      }
+      // ceiling slab underside + beams (not over a stairwell)
+      const yc = L.y + L.H; m.m1 = zone; m.ao = INT_AO * 0.9; m.mat(r.floor === 'stone' ? MAT.STONE : MAT.PLANKS, r.floor === 'stone' ? [0.8, 0.78, 0.74] : COL.woodDark);
+      for (const q of rSubAll({ x0: r.x0 + PW.IN, z0: r.z0 + PW.IN, x1: r.x1 - PW.IN, z1: r.z1 - PW.IN }, above)) m.quad([q.x0, yc, q.z1], [q.x0, yc, q.z0], [q.x1, yc, q.z0], [q.x1, yc, q.z1], 0, 0, (q.x1 - q.x0) / m.tile, (q.z1 - q.z0) / m.tile);
+      m.mat(MAT.TIMBER, COL.timberDark); const wide = (r.x1 - r.x0) >= (r.z1 - r.z0), span = wide ? r.z1 - r.z0 : r.x1 - r.x0, len = wide ? r.x1 - r.x0 : r.z1 - r.z0, nb = Math.max(1, Math.round(len / 1.7));
+      if (L.H > 2.2) for (let i = 0; i < nb; i++) {
+        const t = (wide ? r.x0 : r.z0) + len * (i + 0.5) / nb, bq = wide ? { x0: t - 0.08, x1: t + 0.08, z0: r.z0 + 0.2, z1: r.z1 - 0.2 } : { x0: r.x0 + 0.2, x1: r.x1 - 0.2, z0: t - 0.08, z1: t + 0.08 };
+        if (above.some(h => rOv(bq, h))) continue; m.box(bq.x0, yc - 0.2, bq.z0, bq.x1, yc, bq.z1, 8);
+      }
+    }
+  }
+  for (const wl of P.walls) pWallEmit(P, wl, B, IN);
+  for (const s of P.stairs) pStairEmit(P, s);
+}
+function pWallEmit(P, wl, B, IN) {
+  const L = P.lv[wl.k], H = L.H, sy = H / 3.12, ns = wl.ns, hor = wl.ax === 'x', m = P.c.int;
+  const stone = wl.cellar || P.rooms[[...wl.rooms][0]].floor === 'stone' || P.rooms[[...wl.rooms][0]].walls === 'stone', G = stone ? 'Wall_UnevenBrick' : 'Wall_Plaster';
+  const fwd = hor ? (ns > 0) : (ns < 0);                       // does u run along +axis?
+  const a = wl.a - PW.IN, b = wl.b + PW.IN, len = b - a, sOf = p => fwd ? p - a : b - p;
+  const origin = fwd ? a : b, perp = wl.c + 0.11 * ns, O = hor ? [origin, perp] : [perp, origin];
+  const nv = hor ? [0, 0, ns] : [ns, 0, 0];          // outward normal; u = up x n = (nz, 0, -nx)
+  const F = new THREE.Matrix4().makeBasis(KH.V([nv[2], 0, -nv[0]]), KH.V([0, 1, 0]), KH.V(nv)).setPosition(O[0], L.y, O[1]).premultiply(P.MS);
+  const add = (name, uc, s, o) => B.add(name, KH.xf(F, uc, 0, 0, s), o || IN);
+  const spans = wl.open.map(o => ({ o, s: sOf(o.pos), w: o.type === 'door' ? (o.d.w >= 1.2 ? 2.0 * o.d.w / PW.DOOR : 2.0) : 2.0 })).sort((p, q) => p.s - q.s);
+  let cur = 0;
+  const fill = (e) => {
+    const g = e - cur; if (g < 0.05) { cur = Math.max(cur, e); return; }
+    const n = Math.max(1, Math.round(g / 2)), mm = g / n;
+    for (let i = 0; i < n; i++) { const sx = mm / 2, nm = stone ? 'Wall_UnevenBrick_Straight' : sx < 0.6 ? 'Wall_Plaster_Straight_Base' : (i % 2 ? 'Wall_Plaster_Straight_Base' : 'Wall_Plaster_Straight'); add(nm, cur + (i + 0.5) * mm, [sx, sy, 1]); }
+    cur = e;
+  };
+  for (const sp of spans) {
+    const s0 = sp.s - sp.w / 2, s1 = sp.s + sp.w / 2;
+    if (s0 < -0.02 || s1 > len + 0.02) P.err.push('opening at ' + sp.o.pos + ' on wall ' + wl.ax + wl.c + ' sticks out of its wall');
+    fill(Math.max(cur, s0));
+    const S = [sp.w / 2, sy, 1];
+    if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); }
+    else {
+      const tbl = { Wide_Flat: ['_Window_Wide_Flat', 'Window_Wide_Flat1'], Thin_Round: ['_Window_Thin_Round', 'Window_Thin_Round1'], Wide_Round: ['_Window_Wide_Round', 'Window_Wide_Round1'] }[sp.o.kind] || ['_Window_Wide_Flat', 'Window_Wide_Flat1'];
+      const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];
+      add(G + tbl[0], sp.s, S); add(st ? tbl[1] + '_Stained' : tbl[1], sp.s, S, st ? Object.assign({}, IN, { tint: sp.o.glass }) : undefined);
+      // the light the window lets in, a little inside it
+      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, sp.o.glass ? sp.o.glass.map(v => 0.5 + v * 1.4) : [1.5, 1.42, 1.28], 'daylight', wl.k);
+    }
+    cur = Math.max(cur, s1);
+  }
+  fill(len);
+  // collision: the wall is solid except in doorways (a window is wall); the street door is closed (the portal is the way)
+  const cuts = wl.open.filter(o => o.type === 'door' && o.d.b !== null).map(o => [o.pos - o.hw, o.pos + o.hw]).sort((p, q) => p[0] - q[0]);
+  let at0 = a; const y0 = L.y, y1 = L.y + H + 0.1;
+  for (const [c0, c1] of cuts.concat([[b, b]])) { if (c0 - at0 > 0.02) { if (hor) addBoxCollider(m, at0, wl.c - 0.2, c0, wl.c + 0.2, y0, y1); else addBoxCollider(m, wl.c - 0.2, at0, wl.c + 0.2, c0, y0, y1); } at0 = c1; }
+}
+function pStairEmit(P, s) {
+  const m = P.c.int, a = P.lv[s.k0], b = P.lv[s.k1], ax = s.axis, d = s.dir, hw = s.width / 2, r = s.rise / s.n, y0 = a.y + 0.02;
+  const R4 = (p0, p1, l0, l1) => ax === 'x' ? [Math.min(p0, p1), Math.min(l0, l1), Math.max(p0, p1), Math.max(l0, l1)] : [Math.min(l0, l1), Math.min(p0, p1), Math.max(l0, l1), Math.max(p0, p1)];
+  m.m1 = P.zone; m.ao = INT_AO;
+  for (let i = 0; i < s.n; i++) {
+    const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, s.lat - hw, s.lat + hw), top = y0 + (i + 1) * r - 0.02;
+    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0], top - 0.05, q[1], q[2], top, q[3], 4 | (ax === 'x' ? (d > 0 ? 0 : 0) : 0));
+  }
+  // side boards and a handrail up the open side
+  m.mat(MAT.TIMBER, COL.timberDark);
+  for (const sg of [-1, 1]) {
+    const l = s.lat + sg * (hw + 0.035), top = b.y + 0.02;
+    for (let i = 0; i < s.n; i += 1) { const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, l - 0.03, l + 0.03); m.box(q[0], y0, q[1], q[2], y0 + (i + 1) * r + 0.05, q[3], 4); }
+    // handrail: a sloping beam on posts
+    const pa = ax === 'x' ? [s.p0, 0.95 + y0 + 0.4 * r, l] : [l, 0.95 + y0 + 0.4 * r, s.p0], pb = ax === 'x' ? [s.p1, 0.95 + top - 0.4 * r, l] : [l, 0.95 + top - 0.4 * r, s.p1];
+    m.beam(pa, pb, 0.05, 0.06);
+    for (let i = 0; i <= s.n; i += 3) { const t = Math.min(i, s.n) / s.n, p = s.p0 + d * s.run * t, y = lerp(y0, top, t) + 0.1, q = ax === 'x' ? [p, l] : [l, p]; m.box(q[0] - 0.03, y, q[1] - 0.03, q[0] + 0.03, y + 0.95 + 0.4 * r * (1 - 2 * t) + 0.02, q[1] + 0.03); }
+  }
+  // the walkable ramp and the sides that keep a player on it (and out from under it)
+  const lo = ax === 'x' ? [Math.min(s.p0, s.p1), s.lat - hw - 0.05, Math.max(s.p0, s.p1), s.lat + hw + 0.05] : [s.lat - hw - 0.05, Math.min(s.p0, s.p1), s.lat + hw + 0.05, Math.max(s.p0, s.p1)];
+  const yA = a.y + 0.02 + 0.5 * r, yB = b.y + 0.02 - 0.5 * r, lowFirst = d > 0;
+  addFloor(m, lo[0], lo[1], lo[2], lo[3], lowFirst ? yA : yB, lowFirst ? yB : yA, ax);
+  for (const sg of [-1, 1]) { const l = s.lat + sg * (hw + 0.09), q = R4(s.p0, s.p1, l - 0.06, l + 0.06); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, b.y + 1.1); }
+  { const q = R4(s.p0 - d * 0.0, s.p0 - d * 0.08, s.lat - hw - 0.15, s.lat + hw + 0.15); addBoxCollider(m, q[0], q[1], q[2], q[3], b.y + 0.5, b.y + 1.1); }       // the open end of the stairwell on the upper floor, where a person would walk in
+  { const q = R4(s.p1 - d * 0.02, s.p1 + d * 0.06, s.lat - hw, s.lat + hw); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, b.y - 0.6); }          // the solid end of the steps: no walking in under the landing
+  // the stairs are a navigation link
+  pSpot(P, s.name + '0', s.lowPt[0], s.lowPt[1], 0, { k: s.k0 }); pSpot(P, s.name + '1', s.highPt[0], s.highPt[1], 0, { k: s.k1 });
+  World.stairs.push({ id: P.id + '.' + s.name, site: P.id, bottom: P.id + '.' + s.name + '0', top: P.id + '.' + s.name + '1', via: [], width: s.width, slope: s.rise / s.run, plan: true, k0: s.k0, k1: s.k1 });
+}
+
+// ── navigation: room hubs, doorways, stairs ──
+// Called from navBuild (77_npc.js) for every planned house. Walls are never crossed: spots join their room's hub, hubs join through doorways, levels through stairs.
+function planNav(P, add, link, doorNode) {
+  const hub = {}, N = Nav.nodes, L0 = P.lv[0];
+  for (const id in P.rooms) { const r = P.rooms[id], p = pCentre(r), L = P.lv[r.k]; hub[id] = add(...P.w2(p[0], L.y + 0.02, p[1])); }
+  for (const d of P.doors) {
+    const L = P.lv[d.k], k = add(...P.w2(d.x, L.y + 0.02, d.z));
+    if (d.b === null) { const dn = doorNode[P.id]; if (dn) { link(dn.i, k); link(k, hub[d.a]); } }
+    else { link(hub[d.a], k); link(k, hub[d.b]); }
+  }
+  const stairSpot = new Set(); for (const s of P.stairs) { stairSpot.add(s.name + '0'); stairSpot.add(s.name + '1'); }
+  for (const name in P.spots) { if (stairSpot.has(name)) continue; const sp = P.spots[name], k = Nav.spot[P.id + '.' + name]; if (k === undefined) continue; const r = pRoomAt(P, sp.k, sp.x, sp.z); if (r) link(k, hub[r.id]); }
+  for (const s of P.stairs) {
+    const a = Nav.spot[P.id + '.' + s.name + '0'], b = Nav.spot[P.id + '.' + s.name + '1']; if (a === undefined || b === undefined) continue;
+    const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]);
+    link(a, b);
+    // a walker leaves a stair by stepping aside first (never straight across the stairwell)
+    const side = (pt, r, k) => { if (!r) return null; const c = pCentre(r), sg = s.axis === 'x' ? (c[1] > s.lat ? 1 : -1) : (c[0] > s.lat ? 1 : -1), off = s.hw + 0.95, L = P.lv[k]; return add(...P.w2(s.axis === 'x' ? pt[0] : pt[0] + sg * off, L.y + 0.02, s.axis === 'x' ? pt[1] + sg * off : pt[1])); };
+    const wa = side(s.lowPt, ra, s.k0), wb = side(s.highPt, rb, s.k1);
+    if (wa) { link(a, wa); link(wa, hub[ra.id]); } if (wb) { link(b, wb); link(wb, hub[rb.id]); }
+  }
+  P.hub = hub;
+}
+
+// ── validation of a built plan: returns the list of violations (empty = a sound interior) ──
+function planValidate(P) {
+  const out = P.err.map(e => 'plan: ' + e), flat = it => it.kind === 'rug';
+  const items = P.items.filter(i => P_SOLID[i.kind] && !flat(i));
+  for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) { const a = items[i], b = items[j]; if (a.k === b.k && rOv(a, b, 0.02) && !(a.kind === 'stair' && b.kind === 'hole') && !(a.kind === 'hole' && b.kind === 'stair')) out.push('overlap ' + a.id + ' x ' + b.id + ' (level ' + a.k + ')'); }
+  for (const a of items) {
+    if (a.kind === 'floor') {
+      const room = P.rooms[a.room]; if (!room || !rIn(a, room.in)) out.push(a.id + ' is not inside its room');
+      for (const z of P.clear) if (z.k === a.k && rOv(a, z, 0.02)) out.push(a.id + ' stands in a ' + z.kind + ' clearance');
+      if ((a.h || 0) > 0.85) for (const w of P.windows) if (w.k === a.k && w.room === room && rOv(a, pWinZone(w), 0.02)) out.push(a.id + ' stands in front of a window');
+      for (const h of P.holes) if (h.k === a.k && rOv(a, h.r, 0.01)) out.push(a.id + ' stands in a stairwell');
+      if (Math.abs((a.y0 || 0) - (P.lv[a.k].y + (a.lift || 0))) > 0.001) out.push(a.id + ' is not on the floor');
+    }
+  }
+  for (let i = 0; i < P.wallItems.length; i++) {
+    const a = P.wallItems[i], wl = a.wall;
+    for (const op of wl.open) { const hw = op.type === 'door' ? op.hw : 0.8; if (a.u0 < op.pos + hw && a.u1 > op.pos - hw && (op.type === 'door' || (a.y1 > 0.85 && a.y0 < 2.4))) out.push(a.id + ' hangs over a ' + op.type); }
+    for (let j = i + 1; j < P.wallItems.length; j++) { const b = P.wallItems[j]; if (b.wall === wl && b.side === a.side && a.u0 < b.u1 && a.u1 > b.u0 && a.y0 < b.y1 && a.y1 > b.y0) out.push(a.id + ' overlaps ' + b.id + ' on a wall'); }
+  }
+  for (const s of P.stairs) {
+    const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]);
+    if (!ra) out.push('stair ' + s.name + ' starts outside every room'); if (!rb) out.push('stair ' + s.name + ' arrives outside every room');
+    if (ra && !rIn(rectOf(s.lowPt[0], s.lowPt[1], 0.6, 0.6), ra.in)) out.push('stair ' + s.name + ' starts against a wall');
+    if (rb && !rIn(rectOf(s.highPt[0], s.highPt[1], 0.6, 0.6), rb.in)) out.push('stair ' + s.name + ' arrives against a wall');
+    for (const it of P.items) if (it.kind === 'floor' && it.k === s.k1 && rOv(it, rectOf(s.highPt[0], s.highPt[1], 0.8, 0.8))) out.push(it.id + ' blocks the top of ' + s.name);
+    if (s.low && s.hole && (s.k1 - s.k0) !== 1) out.push('stair ' + s.name + ' skips a level');
+  }
+  // every room reachable from the street door: doorways and stairs as edges
+  const seen = new Set(), todo = [];
+  for (const d of P.doors) if (d.b === null) { seen.add(d.a); todo.push(d.a); }
+  while (todo.length) {
+    const id = todo.pop();
+    for (const d of P.rooms[id].doors) { const o = d.a === id ? d.b : d.a; if (o && !seen.has(o)) { seen.add(o); todo.push(o); } }
+    for (const s of P.stairs) { const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]); if (ra && rb) { if (ra.id === id && !seen.has(rb.id)) { seen.add(rb.id); todo.push(rb.id); } if (rb.id === id && !seen.has(ra.id)) { seen.add(ra.id); todo.push(ra.id); } } }
+  }
+  for (const id in P.rooms) if (!seen.has(id)) out.push('room ' + id + ' cannot be reached from the street door');
+  for (const id in P.rooms) { const r = P.rooms[id]; if (r.kind === 'closet' || r.kind === 'corridor') continue; if (!r.doors.length && !P.stairs.length) out.push('room ' + id + ' has no door'); }
+  for (const id in P.rooms) { const r = P.rooms[id]; if (r.k === 0 && r.kind === 'corridor' && Math.min(r.x1 - r.x0, r.z1 - r.z0) < 1.5) out.push('corridor ' + id + ' is narrower than 1.1 m clear'); }
+  // lit: every room has a window, a hearth, a candle or a lamp
+  for (const id in P.rooms) { const r = P.rooms[id]; if (!P.lightIn || !P.lightIn[id]) out.push('room ' + id + ' has no visible light source'); }
+  return out;
+}
+
+
+// ---- 72e_plans.js ----
+// ───────────────────────── the rooms' recipes, the generic house plan and the designed plans ─────────────────────────
+// planBuild(c) is called from buildHouse for a cell: it lays out the plan, dresses it, builds it and registers everything the village looks for.
+const PLANS = {};          // site id -> (P, c, info) => void : a designed plan (otherwise planHouse's generic one)
+const LOOT = { inn: [['gold', 6], ['apple', 1]], store: [['gold', 8]], draper: [['gold', 5]] };
+const READS = {
+  'inn.note': { title: 'A note on the table', text: 'Traveller — the bed by the window is yours for as long as you stay. Breakfast when the cock crows, ale when the sun sets. — G.' },
+  'elder.book': { title: 'Rowan’s chronicle', text: 'Year of the long frost. The beacon on the crag has stood dark since my grandfather’s day, yet the valley endures. We kept the Dawn bell ringing through every winter but this one.' },
+  'draper.ledger': { title: 'The draper’s ledger', text: 'Blue wool, six ells, for the miller’s coat. Red linen for the chapel banners, paid in apples. A bolt of green for Lark, who has promised a song instead of coin.' },
+  'chapel.book': { title: 'Book of the Dawn', text: 'When the night is longest, ring the bell and light the fire, that those lost upon the fells may find their way home.' },
+};
+const OUTDOOR_SPOT = /^(garden|yard|field2?|porch|door|stall\d?|front|bard)$/;      // spots a schedule names that are outside the building (the village code makes them)
+// the indoor spot names the villagers' schedules want in this building
+function planNeeds(id) {
+  const want = new Set();
+  for (const d of NPC_DEFS) for (const r of d.sched) for (const sp of [].concat(r[1])) if (typeof sp === 'string' && sp.startsWith(id + '.')) { const n = sp.slice(id.length + 1); if (!OUTDOOR_SPOT.test(n) || id === 'inn' && n === 'bard') want.add(n); }
+  return want;
+}
+const dRot = (rot, a) => a + rot;
+
+// ── drawn things ──
+const pdTable = (len, wid, items, n, c) => m => { Props.table(m, len, wid); if (items) Props.clutter(m, c.R, -len / 2 + 0.25, len / 2 - 0.25, 0.76, 0, items, n || 3, c); };
+const pdChest = m => Props.chest(m), pdChair = m => Props.chair(m), pdStool = m => Props.stool(m), pdBench = len => m => Props.bench(m, len);
+const pdBed = (w, blanket, fur) => m => Props.bed(m, w, blanket, fur);
+const pdShelf = (len, h, lv, fill) => m => Props.shelf(m, len, h, lv, 0.32, fill);
+const pdBarrel = (r, h) => m => Props.barrel(m, r, h), pdCrate = s => m => Props.crate(m, s), pdSack = (s, col) => m => Props.sack(m, s, col);
+const pdRug = (w, l, col) => m => Props.rug(m, w, l, col);
+const stockFill = (c, kinds) => (i, y) => Props.clutter(P_M(c), c.R, -0.65, 0.65, y, 0, kinds, 4, c);
+const P_M = c => c.int;
+
+// a hearth with its back to a wall of the room: breast to the ceiling, fire, light; the stack goes up through the levels above (pier) and down (a cellar pier)
+function pHearth(P, room, side, wid, o) {
+  o = o || {}; const L = P.lv[room.k], H = L.H, dep = 0.8, m = P.c.int, hor = side === 'n' || side === 's';
+  const s = pWallSlot(P, room, side, wid + 0.3, dep + 0.1, Object.assign({ lowOk: false, at: o.at, noClear: false }, o)); if (!s) return null;
+  const rot = { w: 0, e: PI, n: -PI / 2, s: PI / 2 }[side], px = hor ? s.cx : (side === 'w' ? room.in.x0 : room.in.x1), pz = hor ? (side === 'n' ? room.in.z0 : room.in.z1) : s.cz;
+  m.m1 = P.zone; m.ao = INT_AO;
+  at(m, px, L.y + 0.02, pz, rot, () => {
+    m.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
+    m.box(0, 0, -wid / 2, dep, 1.15, -wid / 2 + 0.38); m.box(0, 0, wid / 2 - 0.38, dep, 1.15, wid / 2); m.box(0, 1.15, -wid / 2, dep, H - 0.02, wid / 2);
+    m.box(0, 0, -wid / 2 + 0.38, 0.14, 1.15, wid / 2 - 0.38, 1 | 4 | 8); m.box(0, 0, -wid / 2 - 0.15, dep + 0.35, 0.07, wid / 2 + 0.15, 4);
+    m.mat(MAT.TIMBER, COL.woodDark); m.box(0, 1.5, -wid / 2 - 0.1, dep + 0.12, 1.6, wid / 2 + 0.1);          // the mantel beam
+    m.mat(MAT.PLAIN, [0.07, 0.06, 0.06]); m.quad([0.145, 1.15, wid / 2 - 0.38], [0.145, 0.07, wid / 2 - 0.38], [0.145, 0.07, -wid / 2 + 0.38], [0.145, 1.15, -wid / 2 + 0.38]);
+    at(m, dep * 0.55, 0.07, 0, PI / 2, () => Props.logs(m, 3, 0.55, 0.06));
+    emit(m, 1.3, () => { m.mat(MAT.PLAIN, [1, 0.35, 0.08]); m.box(dep * 0.25, 0.07, -0.28, dep * 0.85, 0.10, 0.28, 4); });
+    if (o.cauldron) { at(m, dep * 0.55, 0.42, 0, 0, () => Props.cauldron(m, 0.2)); m.mat(MAT.METAL, COL.black); m.box(dep * 0.55 - 0.01, 0.7, -0.01, dep * 0.55 + 0.01, 1.15, 0.01); }
+    World.emitters.push({ type: 'fire', p: wp(m, dep * 0.55, 0.2, 0), size: o.size || 0.5, zone: P.zone });
+    addLight(wp(m, dep + 0.7, 0.85, 0), o.r || 9.5, o.c || [3.4, 1.75, 0.62], P.zone, 'fire');
+    addBoxCollider(m, 0, -wid / 2 - 0.1, dep + 0.25, wid / 2 + 0.1, 0, 2);
+  });
+  if (o.deco !== false) {          // mantel objects, antlers over the breast, a rug and firewood by the fire
+    at(m, px, L.y + 0.02, pz, rot, () => {
+      if (typeof kitLit === 'function' && Kit.pieces.CandleStick_Triple) for (const sg of [-1, 1]) kitLit(m, 'CandleStick_Triple', 0.42, 1.6 - 0.02, sg * (wid / 2 - 0.32), 0.8, sg, { cap: 0, kind: 'candle', flame: 'candle' });
+      if (Kit.pieces.Vase_4) kp(m, 'Vase_4', 0.42, 1.6, 0, 0.8, 0.4);
+      if (Kit.pieces.Mug) kp(m, 'Mug', 0.3, 1.6, 0.3, 0.9, 1);
+      if (H > 2.9) at(m, 0.68, Math.min(H - 0.55, 2.85) - 0.02, 0, PI / 2, () => antlers(m));
+      at(m, dep + 0.8, 0, 0, 0, () => Props.rug(m, 1.2, wid + 0.6, o.rug || [0.5, 0.32, 0.2]));
+      at(m, 0.4, 0, wid / 2 + 0.55, 0, () => Props.woodpile(m, 4, 4, 0.5));
+    });
+  }
+  const fp = s.rect;
+  P.occ(room.k, fp, 'hearth', P.id + '.hearth', { h: H, back: side, room: room.id, wid });
+  P.clear.push(Object.assign(side === 'n' ? { x0: fp.x0, x1: fp.x1, z0: fp.z1, z1: fp.z1 + 1.0 } : side === 's' ? { x0: fp.x0, x1: fp.x1, z0: fp.z0 - 1.0, z1: fp.z0 } : side === 'w' ? { x0: fp.x1, x1: fp.x1 + 1.0, z0: fp.z0, z1: fp.z1 } : { x0: fp.x0 - 1.0, x1: fp.x0, z0: fp.z0, z1: fp.z1 }, { k: room.k, kind: 'hearth' }));
+  P.lightIn[room.id] = 1; P.hearths = (P.hearths || []).concat([{ k: room.k, x: px, z: pz, side, wid, rect: fp }]);
+  return { px, pz, side, fp, wid, front: hor ? [px, pz + (side === 'n' ? 1 : -1) * (dep + 0.6)] : [px + (side === 'w' ? 1 : -1) * (dep + 0.6), pz] };
+}
+// the same stack on another level: a stone pier from floor to ceiling over (or under) the hearth
+function pPier(P, k, hearth) {
+  const L = P.lv[k]; if (!L) return; const h = hearth, fp = h.fp, m = P.c.int, room = pRoomAt(P, k, (fp.x0 + fp.x1) / 2, (fp.z0 + fp.z1) / 2); if (!room) return;
+  m.m1 = P.zone; m.ao = INT_AO; m.mat(MAT.STONE, [0.9, 0.88, 0.85], 0.8); at(m, 0, L.y + 0.02, 0, 0, () => { m.box(fp.x0 + 0.1, 0, fp.z0 + 0.1, fp.x1 - 0.1, L.H - 0.02, fp.z1 - 0.1); addBoxCollider(m, fp.x0 + 0.1, fp.z0 + 0.1, fp.x1 - 0.1, fp.z1 - 0.1, 0, L.H); });
+  pOcc(P, k, fp, 'hearth', P.id + '.stack' + k, { h: L.H, back: h.side, room: room.id });
+}
+// a wall candle bracket by a door or over a bed; lit like any candle
+function pSconce(P, room, side, u, y) {
+  const rec = pHang(P, room, side, u, 0.3, y || 1.55, (y || 1.55) + 0.3, (m, hh) => { m.mat(MAT.METAL, COL.black); m.box(-0.04, 0, 0.0, 0.04, 0.03, 0.2); m.box(-0.012, -0.12, 0.0, 0.012, 0.03, 0.02); at(m, 0, 0.03, 0.17, 0, () => Props.candle(m, P.c, true)); }, P.id + '.sconce', {}); if (rec) P.lightIn[room.id] = 1; return rec;
+}
+// a lantern hung from the ceiling beam
+function pLamp(P, room, x, z) {
+  const L = P.lv[room.k], m = P.c.int; if (!pFit(P, room, rectOf(x, z, 0.4, 0.4), { h: 0.1, lowOk: true, noClear: true, lift: 0 })) { }
+  at(m, x, L.y + L.H - 0.1, z, 0, () => { m.mat(MAT.METAL, COL.black); m.box(-0.01, 0, -0.01, 0.01, 0.2, 0.01); at(m, 0, -0.02, 0, 0, () => Props.lantern(m, P.c)); });
+  P.lightIn[room.id] = 1; P.lamps = (P.lamps || 0) + 1;
+}
+// a seat at a table: spot + a visible seat. kinds: 'stool', 'chair', 'bench' handled by the caller; this registers the sitting spot only
+const pSit = (P, name, x, z, yaw, k) => pSpot(P, name, x, z, yaw, { k, y: 0.02, extra: { sit: 0.46 } });
+const pBedSpot = (P, name, x, z, rot, k) => pSpot(P, name, x, z, -rot, { k, y: 0.58, extra: { lie: true } });
+
+// a torch on a wall (cellars, crypts, dungeons): iron bracket, a flame and a flickering light
+function pTorch(P, room, side, u, y, r) {
+  const rec = pHang(P, room, side, u, 0.3, y || 1.7, (y || 1.7) + 0.5, (m, hh) => {
+    m.mat(MAT.METAL, COL.black); m.box(-0.03, 0, 0.0, 0.03, 0.04, 0.22); m.box(-0.02, -0.02, 0.18, 0.02, 0.32, 0.22);
+    m.mat(MAT.TIMBER, COL.woodDark); m.cyl(0, 0.0, 0.26, 0.04, 0.05, 0.4, 6, 2);
+    emit(m, 1.4, () => { m.mat(MAT.PLAIN, [1, 0.45, 0.1]); m.cyl(0, 0.4, 0.26, 0.05, 0.015, 0.2, 6, 2); });
+    World.emitters.push({ type: 'fire', p: wp(m, 0, 0.52, 0.26), size: 0.28, zone: P.zone });
+    addLight(wp(m, 0, 0.55, 0.42), r || 7, [3.0, 1.55, 0.55], P.zone, 'fire');
+  }, P.id + '.torch', {}); if (rec) P.lightIn[room.id] = 1; return rec;
+}
+// the walls of a room as sides, longest first
+const pSidesLong = room => (room.x1 - room.x0 >= room.z1 - room.z0 ? ['n', 's', 'w', 'e'] : ['w', 'e', 'n', 's']);
+const R0 = (a, b) => a;
+
+// candidate centres in a room, nearest to a point first
+function pCands(room, near, step) {
+  const a = room.in, c0 = near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = []; step = step || 0.25;
+  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3 + 1e-6; x += step) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3 + 1e-6; z += step) pts.push([x, z]);
+  return pts.sort((p, q) => Math.hypot(p[0] - c0[0], p[1] - c0[1]) - Math.hypot(q[0] - c0[0], q[1] - c0[1]));
+}
+// a dining table with a bench on each long side: returns { x, z, seats: [[x, z, yaw]] } or null
+function pDining(P, room, len, wid, opt) {
+  opt = opt || {}; const c = P.c, items = opt.items || ['mug', 'plate', 'bowl', 'candle', 'loaf'], pts = pCands(room, opt.near);
+  for (const rot of opt.rots || [0, PI / 2]) {
+    const tw = rot ? wid : len, td = rot ? len : wid;
+    for (const p of pts) {
+      const [tx, tz] = p, tr = rectOf(tx, tz, tw, td);
+      if (!pFit(P, room, tr, { h: 0.78 })) continue;
+      const bs = [-1, 1].map(sg => rot ? [tx + sg * (wid / 2 + 0.34), tz] : [tx, tz + sg * (wid / 2 + 0.34)]);
+      const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.34, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.34));
+      if (!brs.every(r => pFit(P, room, r, { h: 0.46 })) || (opt.sideRoom && !brs.every(r => true))) continue;
+      const t = pPut(P, room, P.id + '.' + (opt.id || 'table'), tx, tz, 0, tw, td, 0.78, m => { m.push(); if (rot) m.RY(rot); pdTable(len, wid, items, opt.n || 3, c)(m); m.pop(); }, { surface: true });
+      if (!t) continue;
+      const seats = [];
+      bs.forEach((b, i) => { const sg = i ? 1 : -1; pPut(P, room, P.id + '.' + (opt.id || 'table') + 'bench' + i, b[0], b[1], rot ? PI / 2 : 0, len * 0.9, 0.34, 0.46, pdBench(len * 0.9), {}); for (const q of [-0.5, 0.5]) seats.push([rot ? b[0] : tx + q * len * 0.5, rot ? tz + q * len * 0.5 : b[1], rot ? (sg < 0 ? PI / 2 : -PI / 2) : (sg < 0 ? PI : 0)]); });
+      return { x: tx, z: tz, rot, seats, t };
+    }
+  }
+  return null;
+}
+
+// ───────── dressing by room kind ─────────
+// every dresser fills one room: a focal point first (hearth, bed, bar, counter ...), then what belongs with it, then the wall things; clutter thins away from the focus
+function dressHall(P, room, o) {
+  o = o || {}; const c = P.c, R = P.R, k = room.k;
+  const side = o.hearth || 's', hh = o.hh !== undefined ? o.hh : pHearth(P, room, side, o.hw || 1.7, { cauldron: true, at: o.hearthAt });
+  P.hall = { room, hh };
+  const near = hh ? hh.front.slice() : pCentre(room); near[0] += o.dx || 0; near[1] += o.dz === undefined ? (side === 's' ? -1.8 : 0) : o.dz;
+  const dn = pDining(P, room, o.len || 2.0, 0.9, { near, items: o.items, n: 4 });
+  if (dn) {
+    dn.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], k));
+    pPut(P, room, P.id + '.rug', dn.x, dn.z, 0, dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, 0.02, pdRug(dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, o.rug || COL.red), { flat: true, noClear: true });
+    pLamp(P, room, dn.x, dn.z);
+  }
+  if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k });
+  // storage and a shelf with its wares along the walls that are free
+  for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.shelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, o.shelfItems || ['pot', 'jug', 'bowl', 'cheese', 'bottle'])), { at: o.shelfAt })) break;
+  for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.cupboard', 0.9, 0.5, 0.75, +1, pdChest, { lowOk: true })) break;
+  const e = P.doors.find(d => d.b === null && d.a === room.id);
+  if (e) { const side2 = e.wall.ax === 'x' ? (e.wall.c <= room.z0 + 0.01 ? 'n' : 's') : (e.wall.c <= room.x0 + 0.01 ? 'w' : 'e'); pSconce(P, room, side2, e.wall.ax === 'x' ? e.x + 1.3 : e.z + 1.3) || pSconce(P, room, side2, e.wall.ax === 'x' ? e.x - 1.3 : e.z - 1.3); }
+  for (const sd of ['w', 'e', 'n', 's']) if (pBarrelCorner(P, room, sd)) break;
+  pKitFloor(P, room, 'w', 'Cabinet', { at: 'end' }) || pKitFloor(P, room, 'n', 'Cabinet', { at: 'end' });
+  pWalls(P, room, o.walls || ['Torch_Metal', 'paint', 'Banner_1_Cloth', 'rack', 'paint', 'Peg_Rack']);
+}
+function pBarrelCorner(P, room, sd) { return pAgainst(P, room, sd, P.id + '.barrel', 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: 'end' }); }
+function dressBedroom(P, room, o) {
+  o = o || {}; const k = room.k, R = P.R, beds = o.beds || ['bed'], col = o.blanket || R.pick([COL.red, COL.blue, COL.green, [0.5, 0.42, 0.3], COL.purple]);
+  let placed = 0;
+  for (const nm of beds) {
+    let it = null;
+    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { const s = pWallSlot(P, room, sd, 1.1, 2.1, { h: 0.95, at: o.bedAt }); if (!s) continue; it = pPut(P, room, P.id + '.' + nm, s.cx, s.cz, rotBack(sd, -1), 1.1, 2.1, 0.95, pdBed(1.0, col, !!o.fur), { back: sd }); if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
+    if (!it && nm === 'bed') P.err.push('no room for ' + nm + ' in ' + room.id);
+  }
+  // a chest at the foot of the first bed (or against any free wall)
+  let ch = null;
+  if (P.firstBed && P.firstBed.room === room) { const b = P.firstBed, foot = { e: [b.cx - 1.4, b.cz], w: [b.cx + 1.4, b.cz], n: [b.cx, b.cz + 1.5], s: [b.cx, b.cz - 1.5] }[b.sd]; const rot = { e: PI / 2, w: -PI / 2, n: 0, s: PI }[b.sd]; ch = pPut(P, room, P.id + '.' + (o.chestId || 'chest'), foot[0], foot[1], rot, 0.85, 0.5, 0.58, pdChest, { lowOk: true }); }
+  if (!ch) for (const sd of pSidesLong(room)) if ((ch = pAgainst(P, room, sd, P.id + '.' + (o.chestId || 'chest'), 0.85, 0.5, 0.58, +1, pdChest, { lowOk: true }))) break;
+  if (ch && o.chest !== false) pInteract(P, ch.cx, 0.5, ch.cz, { kind: 'chest', id: P.id + '.' + (o.chestId || 'chest'), loot: o.loot || LOOT[P.id] || [['gold', 4 + R.i(0, 6)]], r: 1.8 }, k);
+  for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.wardrobe', 1.2, 0.5, 1.8, +1, pdShelf(1.2, 1.8, 2, null), { })) break;
+  if (P.firstBed && P.firstBed.room === room) { const b = P.firstBed; pSconce(P, room, b.sd, (b.sd === 'e' || b.sd === 'w') ? b.cz + 1.4 : b.cx + 1.4, 1.5) || pSconce(P, room, b.sd, (b.sd === 'e' || b.sd === 'w') ? b.cz - 1.4 : b.cx - 1.4, 1.5); }
+  { const bb = P.firstBed && P.firstBed.room === room ? P.firstBed : null; if (bb) { const rc = { e: [bb.cx - 1.5, bb.cz], w: [bb.cx + 1.5, bb.cz], n: [bb.cx, bb.cz + 1.6], s: [bb.cx, bb.cz - 1.6] }[bb.sd]; pPut(P, room, P.id + '.' + room.id + 'rug', rc[0], rc[1], 0, 1.8, 1.2, 0.02, pdRug(1.8, 1.2, [0.42, 0.26, 0.2]), { flat: true, noClear: true }); } pWalls(P, room, ['paint', 'Banner_1_Cloth', 'rack']); }
+  if (o.table) { const bb = P.firstBed && P.firstBed.room === room ? P.firstBed : null; pFree(P, room, P.id + '.' + room.id + 'table', 0.8, 0.5, 0.75, 0, pdTable(0.8, 0.5, ['candle', 'mug', 'book'], 2, P.c), { near: bb ? [bb.cx, bb.cz] : pCentre(room), surface: true }); }
+  pLamp(P, room, ...pCentre(room));
+}
+function dressStore(P, room, o) {
+  o = o || {}; const R = P.R;
+  let n = 0; for (const sd of pSidesLong(room)) { if (pAgainst(P, room, sd, P.id + '.shelf' + n, 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, o.items || ['pot', 'jug', 'bowl', 'bottle', 'cheese'])), { at: n ? 'end' : 'start' })) n++; if (n >= 2) break; }
+  for (let i = 0; i < 3; i++) for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.barrel' + i, 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: i ? 'end' : 'start' })) break;
+  for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.crate' + i, 0.6, 0.6, 0.6, R() * 0.4, pdCrate(0.6), { near: [room.in.x1 - 1, room.in.z1 - 1] });
+  for (let i = 0; i < 2; i++) pFree(P, room, P.id + '.sack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x0 + 1, room.in.z1 - 1], noClear: false });
+  pWalls(P, room, ['Shelf_Small_Bottles', 'Peg_Rack', 'Torch_Metal', 'Shelf_Simple']);
+  pLamp(P, room, ...pCentre(room));
+}
+function dressKitchen(P, room, o) {
+  o = o || {}; const c = P.c, R = P.R;
+  const hh = o.hh !== undefined ? o.hh : o.hearth ? pHearth(P, room, o.hearth, 1.5, { cauldron: true, size: 0.4 }) : null;
+  const w = pFree(P, room, P.id + '.worktable', 1.6, 0.8, 0.9, 0, pdTable(1.6, 0.8, ['bowl', 'loaf', 'jug', 'plate', 'cheese'], 4, c), { near: pCentre(room), surface: true });
+  if (w) pSpot(P, 'work', w.cx, w.cz + 0.7, PI, { k: room.k });
+  for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.shelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, ['pot', 'bowl', 'jug', 'cheese', 'loaf'])), {})) break;
+  for (let i = 0; i < 2; i++) for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.barrel' + i, 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: i ? 'end' : 'start' })) break;
+  pKitFloor(P, room, 's', 'Cabinet', { at: 'start' }) || pKitFloor(P, room, 'n', 'Cabinet', { at: 'start' });
+  pWalls(P, room, ['Peg_Rack', 'Shelf_Simple', 'Torch_Metal', 'rack', 'Shelf_Small_Bottles', 'Peg_Rack']);
+  pLamp(P, room, ...pCentre(room));
+}
+function dressCellar(P, room, o) {
+  o = o || {}; const R = P.R; let n = 0;
+  if (o.rows) { for (const sd of ['w', 'e']) { const lo = room.in.z0 + 1.2; for (let i = 0; i < o.barrels; i++) pAgainst(P, room, sd, P.id + '.cask' + n++, 0.9, 0.9, 1.0, 0, m => Props.keg(m, 0.36, 0.9), { at: lo + i * 1.05 }); } }
+  else for (const sd of pSidesLong(room)) for (let i = 0; i < (o.barrels || 2); i++) if (pAgainst(P, room, sd, P.id + '.cbarrel' + n++, 0.9, 0.9, 1.0, 0, m => Props.keg(m, 0.33, 0.9), { at: i ? 'end' : 'start' })) { }
+  for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.cshelf', 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, ['jug', 'bottle', 'pot', 'bowl'])), { at: 'mid' })) break;
+  for (let i = 0; i < (o.crates === undefined ? 3 : o.crates); i++) pFree(P, room, P.id + '.ccrate' + i, 0.6, 0.6, 0.6, R() * 0.5, pdCrate(0.6), { near: [room.in.x0 + 1, room.in.z1 - 1] });
+  for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.csack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x1 - 1, room.in.z0 + 1] });
+  let t = 0; for (const sd of ['n', 's', 'w', 'e']) { const s = (room.x1 - room.x0 > 3 ? 0.25 : 0.5); if (pTorch(P, room, sd, (sd === 'n' || sd === 's' ? (room.in.x0 + room.in.x1) / 2 : (room.in.z0 + room.in.z1) / 2) + (t++ % 2 ? 1.2 : -1.2), 1.7, 6.5)) break; }
+  if (!P.lightIn[room.id]) pTorch(P, room, 'n', (room.in.x0 + room.in.x1) / 2, 1.7, 6.5) || pTorch(P, room, 's', (room.in.x0 + room.in.x1) / 2, 1.7, 6.5);
+}
+function dressLanding(P, room) { pLamp(P, room, ...pCentre(room)); for (const sd of ['n', 's', 'w', 'e']) if (pSconce(P, room, sd, sd === 'n' || sd === 's' ? (room.in.x0 + room.in.x1) / 2 : (room.in.z0 + room.in.z1) / 2)) break; }
+
+// ───────── the generic house ─────────
+// Canonical frame: the street door in the middle of the z = 0 wall, the house going away in +z. 0.4 m walls on a 0.5 m grid.
+//   ground: a hall (hearth on its back wall, stair down to the cellar along the west wall, stair up along the east wall) with a store (west) and a bedroom (east) behind it
+//   up:     a loft over the east half (the stairwell, a bed) and two chambers over the west half, round the chimney stack
+//   below:  a cellar under the hall and a second vault under the store, joined by a door; the stair arrives in the hall
+// kit pieces on the walls and floor, placed by the plan's rules. KIT_ITEM: [w, d, tall, scale, lit]; KIT_WALL: [w, pivot height, stand-off, scale]
+function pKitFloor(P, room, side, name, o) {
+  const it = KIT_ITEM[name]; if (!it || !Kit.pieces[name]) return null;
+  const sc = it[3], w = it[0] * sc, d = it[1] * sc, h = it[2] ? 2.0 : 0.8;
+  const draw = it[4] ? m => kitLit(m, name, 0, 0, 0, sc, 0, { r: 6.5, c: [2.3, 1.4, 0.6], kind: 'candle' }) : m => kp(m, name, 0, 0, 0, sc, 0);
+  const r = pAgainst(P, room, side, P.id + '.' + name + (o && o.n || ''), w, d, h, -1, draw, Object.assign({ lowOk: !it[2] }, o || {}));
+  if (r && it[4]) P.lightIn[room.id] = 1; return r;
+}
+function pKitWall(P, room, side, u, name, o) {
+  const it = KIT_WALL[name]; if (!it || !Kit.pieces[name]) return null;
+  const y = Math.min(it[1], P.lv[room.k].H - 0.3), ban = name.startsWith('Banner'), lit = name === 'Torch_Metal';
+  const rec = pHang(P, room, side, u, it[0], ban ? Math.max(1.0, y - 1.6) : y - 0.45, y + 0.35, m => {
+    if (lit) kitLit(m, name, 0, 0, -it[2], 1, PI, { r: 6.2, c: [2.5, 1.45, 0.55], kind: 'fire', flame: 'torch', size: 0.14 }); else kp(m, name, 0, 0, -it[2], it[3] || 1, PI);
+  }, P.id + '.' + name, Object.assign({ pivot: y }, o || {}));
+  if (rec && lit) P.lightIn[room.id] = 1; return rec;
+}
+function pArt(P, room, side, u, kind) {
+  const R = P.R, nm = kitGen(kind, R), rack = kind === 'rack';
+  return pHang(P, room, side, u, rack ? 1.0 : 0.8, rack ? 1.85 : 1.45, rack ? 2.25 : 2.1, m => kp(m, nm, 0, 0, -0.03, 1, PI), P.id + '.' + kind, { pivot: rack ? 2.05 : 1.6 });
+}
+// decorate the free stretches of the walls of a room: banners, shields, torches, paintings, racks. u positions are tried along each side.
+function pWalls(P, room, list, o) {
+  o = o || {}; const a = room.in, R = P.R; let q = 0;
+  for (const sd of pSidesLong(room)) {
+    const hor = sd === 'n' || sd === 's', lo = hor ? a.x0 : a.z0, hi = hor ? a.x1 : a.z1;
+    for (let u = lo + 0.9 + R() * 0.5; u < hi - 0.7 && q < list.length; u += 0.5) {
+      const nm = list[q], ok = nm === 'paint' || nm === 'rack' ? pArt(P, room, sd, u, nm) : pKitWall(P, room, sd, u, nm);
+      if (ok) { q++; u += (KIT_WALL[nm] ? KIT_WALL[nm][0] : 0.8) + 0.9 + R() * 0.8; }
+    }
+  }
+  return q;
+}
+const stepTo = (v, a, b) => clamp(Math.round(v), a, b);
+const H_GROUND = 2.7, H_UP = 2.4, H_CELLAR = 3.0;
+function planHouse(P, c, info) {
+  info = info || {};
+  const st = c.spec.kitStyle || {}, up = info.up !== undefined ? info.up : !!st.up, need = P.need;
+  const W = info.W || stepTo(c.w * 1.35, 8, 11), D = info.D || stepTo(c.d * 1.6, 10, 12), Dh = info.Dh || 7, H0 = info.H0 || H_GROUND, x0 = -W / 2, x1 = W / 2;
+  P.dims = { W, D, Dh };
+  pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H0); if (up) pLevel(P, 1, H0 + PW.SLAB, H_UP);
+  const hall = pRoom(P, 0, 'hall', info.inn ? 'common' : 'hall', x0, 0, x1, Dh), store = pRoom(P, 0, 'store', info.inn ? 'kitchen' : 'store', x0, Dh, 0, D), bed0 = pRoom(P, 0, 'bedroom', info.inn ? 'keeper' : 'bedroom', 0, Dh, x1, D);
+  pDoor(P, 'hall', null, 0, 0);
+  pDoor(P, 'hall', 'store', x0 / 2, Dh); pDoor(P, 'hall', 'bedroom', x1 / 2, Dh);
+  // cellar: under the hall (the stair arrives here) and under the store
+  const cel = pRoom(P, -1, 'cellar', 'cellar', x0, 0, x1, Dh, { floor: 'stone', win: false }), vault = pRoom(P, -1, 'vault', 'cellar', x0, Dh, 0, D, { floor: 'stone', win: false });
+  pDoor(P, 'cellar', 'vault', x0 / 2, Dh);
+  // the stairs: cellar -> hall along the west wall (toward +z), hall -> loft along the east wall (toward +z)
+  const tr = 0.22;
+  const fl = !!info.flank;
+  pStair(P, fl ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: x0 + 0.95, z: 1.3, width: 1.0, tread: tr });
+  if (up) {
+    pStair(P, fl ? { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: -1, x: -1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: x1 - 0.95, z: 1.3, width: 1.0, tread: tr });
+    if (fl) { pRoom(P, 1, 'loft', 'gallery', x0, 0, 0, D); pRoom(P, 1, 'chamber1', 'bedroom', 0, 0, x1, Dh); pRoom(P, 1, 'chamber2', 'bedroom', 0, Dh, x1, D); pDoor(P, 'loft', 'chamber1', 0, 3.5); pDoor(P, 'loft', 'chamber2', 0, Dh + 1.5); }
+    else { pRoom(P, 1, 'loft', 'bedroom', 0, 0, x1, D); pRoom(P, 1, 'chamber1', 'bedroom', x0, 0, 0, Dh); pRoom(P, 1, 'chamber2', 'bedroom', x0, Dh, 0, D); pDoor(P, 'loft', 'chamber1', 0, 2.5); pDoor(P, 'loft', 'chamber2', 0, Dh + 1.5); }
+  }
+  pLayout(P);
+  // ground floor
+  const hall0 = hall, hh = pHearth(P, hall, 's', info.inn ? 2.4 : 1.7, { cauldron: true, at: 0 });
+  P.hall = { room: hall, hh };
+  if (need.has('counter')) {
+    const t = pFree(P, hall, P.id + '.counter', 2.0, 0.7, 1.0, 0, m => { Props.table(m, 2.0, 0.7); Props.clutter(m, c.R, -0.8, 0.8, 0.76, 0, ['jug', 'bowl', 'cheese', 'loaf'], 3, c); }, { near: [x0 / 2 + 0.2, 2.2], surface: true });
+    if (t) pSpot(P, 'counter', t.cx, t.cz + 0.75, PI, { k: 0 });
+  }
+  if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
+  let kh = null;
+  if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); } else if (KIT_DRESS[P.id] && info.kind) { dressKind(P, c, hall, hh, info); dressStore(P, store); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id] });
+  dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
+  if (up) {
+    if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
+    else { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false }); dressBedroom(P, P.rooms.chamber2, { beds: [], chest: false }); dressBedroom(P, P.rooms.loft, { beds: ['bed3'], chestId: 'chest3', chest: false }); }
+  }
+  if (!hh) P.err.push('no hearth fits in the hall');
+  for (const id of ['cellar', 'vault']) if (!P.lightIn[id]) pTorch(P, P.rooms[id], 'n', (P.rooms[id].in.x0 + P.rooms[id].in.x1) / 2 + 0.5, 1.7, 6.5) || pTorch(P, P.rooms[id], 's', (P.rooms[id].in.x0 + P.rooms[id].in.x1) / 2 + 0.5, 1.7, 6.5);
+}
+
+// Until every building has a designed plan, only those listed here use the plan engine in the published game: the generic plan gives every house the same hall
+// (a shop without its counter, a smithy without its forge). ?plans=all or --opt plans=all builds every house from a plan (work in progress).
+const PLAN_SHIP = { inn: 1, chapel: 1 };          // designed and dressed plans only (test/parity.mjs checks nothing the old interior offered is lost)
+const PLAN_ALL = (TEST && TEST.plans === 'all') || (typeof location !== 'undefined' && /[?&]plans=all\b/.test(location.search));
+function planWanted(site, spec) { return PLAN_ON && !(TEST && TEST.plans === 0) && !!site && (!TEST || TEST.cells !== 0) && (PLAN_ALL || !!PLAN_SHIP[site.id]); }
+
+function planBuild(c) {
+  const dd = c.doors[0], site = c.site, m = c.int;
+  const inw = [dd.ins[0] - dd.sill[0], 0, dd.ins[2] - dd.sill[2]], il = Math.hypot(inw[0], inw[2]) || 1; inw[0] /= il; inw[2] /= il;
+  const T = m4.create(); m4.basis(T, [inw[2], 0, -inw[0]], [0, 1, 0], inw, [dd.sill[0], dd.sill[1], dd.sill[2]]);
+  m.m = T.slice(); m.dirty = true;
+  const P = planNew(c, T); P.yaw = Math.atan2(-inw[0], inw[2]); P.need = planNeeds(P.id); P.R = c.R; c.plan = P;
+  const info = PLANS_INFO[P.id] || {};
+  (PLANS[P.id] || planHouse)(P, c, info);
+  pBuild(P);
+  // the zone: round the whole plan, so room AO, sound and light find it
+  const W = P.dims ? P.dims.W : 9, D = P.dims ? P.dims.D : 10, zi = c.zoneInfo, ctr = P.w2(0, 0, D / 2);
+  zi.site = Object.assign({}, c.site, { x: ctr[0], z: ctr[2], yaw: P.yaw }); zi.hw = W / 2; zi.hd = D / 2; zi.y0 = dd.sill[1] - 3.6; zi.y1 = dd.sill[1] + 7; zi.slope = 0; zi.H = H_GROUND;
+  if (P.hearths && P.hearths[0]) { const h = P.hearths[0], hp = P.w2(h.x, 0, h.z); zi.hearth = [hp[0], hp[2], h.wid]; }
+  // every spot a schedule wants: when the plan has no such place, the nearest thing it has
+  const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
+  for (const n of new Set([...P.need, 'fire1', 'stand2', 'guestbed', 'barfront', 'front', 'pew1', 'pew2', 'sit', 'bed2', 'home'])) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });
+  // what the old interior offered to read or buy: a book or note on the nearest table, the rope on the counter
+  { const tab = P.items.find(i => i.k === 0 && i.kind === 'floor' && i.top > 0 && /table|counter|bar$|lectern/i.test(i.id)) || P.items.find(i => i.k === 0 && i.kind === 'floor' && i.top > 0), pos = tab ? [tab.cx, tab.top + 0.05, tab.cz] : [home ? home.x : 0, 1.0, home ? home.z : 1];
+    for (const id in READS) if (id.startsWith(P.id + '.') && !World.interact.some(i => i.id === id)) pInteract(P, pos[0], pos[1] + 0.2, pos[2], Object.assign({ kind: 'read', id, r: 1.8 }, READS[id]), 0);
+    if (P.id === 'store' && !World.interact.some(i => i.id === 'rope')) pInteract(P, pos[0], pos[1] + 0.2, pos[2], { kind: 'shopitem', id: 'rope', r: 1.6 }, 0); }
+  { const fy = dd.sill[1]; c.cell.daylightFn = () => Player.pos[1] < fy - 1.0 ? 0 : undefined; }          // below the ground floor no daylight comes in
+  c.planDone = P; return P;
+}
+const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: { kind: 'study' }, guardhouse: { kind: 'guard' },  inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true } };
+// the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
+function dressInn(P, c, room, hh) {
+  const R = P.R, a = room.in; P.hall = { room, hh };
+  const bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, 4.8, PI / 2, 3.8, 0.7, 1.05, m => { Props.table(m, 3.8, 0.7, 1.05); Props.clutter(m, R, -1.7, 1.7, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
+  if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); P.bar = bar;
+    pHang(P, room, 'e', bar.cz, 3.0, 1.45, 2.7, (m) => Props.shelf(m, 3.0, 1.2, 3, 0.3, (i, y) => Props.clutter(m, R, -1.3, 1.3, y, 0, ['bottle', 'bottle', 'mug', 'jug', 'bottle'], 6, c)), P.id + '.backshelf', {});
+    for (let i = 0; i < 3; i++) pAgainst(P, room, 'e', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, m => Props.keg(m, 0.33, 0.9), { at: bar.cz - 1.4 + i * 1.4 });
+    pLamp(P, room, bar.cx + 0.2, bar.cz); }
+  let n = 0;
+  for (const nr of [[-4.2, 5.0], [-0.5, 5.6], [-4.4, 2.8]]) {
+    const dn = pDining(P, room, 2.4, 0.9, { near: nr, id: 'table' + n, n: 4, items: ['mug', 'plate', 'bowl', 'candle', 'loaf', 'mug'] });
+    if (dn) { for (const s of dn.seats) pSit(P, 's' + (++n), s[0], s[1], s[2], 0); pLamp(P, room, dn.x, dn.z); n = Math.max(n, 0); }
+  }
+  if (hh) {
+    pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
+    const st = pPut(P, room, P.id + '.firestool', hh.front[0] + 1.6, hh.front[1] - 0.2, 0, 0.4, 0.4, 0.46, pdStool, {});
+    if (st) pSit(P, 'fire2', st.cx, st.cz, Math.atan2(hh.px - st.cx, -(hh.pz - st.cz)), 0);
+    pSpot(P, 'bard', hh.front[0] - 1.7, hh.front[1] - 0.3, Math.atan2(hh.px - hh.front[0] + 1.7, -(hh.pz - hh.front[1])), { k: 0 });
+  }
+  const e = P.doors.find(d => d.b === null);
+  if (e) pPut(P, room, P.id + '.mat', e.x, 2.7, 0, 2.6, 1.6, 0.02, pdRug(2.6, 1.6, [0.35, 0.34, 0.22]), { flat: true, noClear: true });
+  for (const nm of ['Cabinet', 'Barrel_Holder']) for (const sd of ['w', 's', 'n']) if (pKitFloor(P, room, sd, nm, { at: nm === 'Cabinet' ? 'end' : 'start' })) break;
+  pKitFloor(P, room, 'w', 'CandleStick_Stand', { n: 'a', at: 'mid' }); pKitFloor(P, room, 's', 'CandleStick_Stand', { n: 'b', at: 'start' });
+  pWalls(P, room, ['Torch_Metal', 'Banner_1_Cloth', 'Shield_Wooden', 'Banner_1_Cloth', 'Torch_Metal', 'paint', 'Shield_Wooden', 'rack', 'paint', 'Torch_Metal', 'paint']);
+  pLamp(P, room, -4.0, 3.6); pLamp(P, room, 0.0, 4.4); pLamp(P, room, -4.2, 6.8);
+  if (e) { pSconce(P, room, 'n', e.x + 1.8); pSconce(P, room, 'n', e.x - 1.8); }
+}
+
+// a main room designed for its trade: the focal piece first (counter, forge, desk, weapon wall), then the kit pieces its trade owns along the free walls, then the wall things
+function dressKind(P, c, room, hh, info) {
+  const id = P.id, D = KIT_DRESS[id] || {}, R = P.R, a = room.in, kind = info.kind; P.hall = { room, hh };
+  if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
+  if (kind === 'shop') {          // a counter across the room with the keeper behind it, wares on every wall
+    const t = pFree(P, room, id + '.counter', 2.6, 0.8, 1.0, 0, m => { Props.table(m, 2.6, 0.8, 1.0); Props.clutter(m, R, -1.1, 1.1, 1.0, 0, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple'], 5, c); }, { near: [-1.6, 2.4], surface: true });
+    if (t) { pSpot(P, 'counter', t.cx, t.cz + 0.8, PI, { k: 0 }); pSpot(P, 'front', t.cx, t.cz - 0.8, 0, { k: 0 }); }
+    for (const sd of ['w', 'e']) for (let i = 0; i < 2; i++) pAgainst(P, room, sd, id + '.ware' + sd + i, 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(c, ['pot', 'jug', 'bowl', 'cheese', 'bottle', 'loaf'])), { at: 'mid' === 0 ? 0 : 2.0 + i * 2.2 });
+  } else if (kind === 'smith') {          // the forge is the hearth; the anvil in front of it, a quench trough, a bench and weapons
+    const an = hh ? pPut(P, room, id + '.anvil', hh.front[0] + 0.9, hh.front[1] - 0.4, 0, 0.7, 0.45, 0.9, m => Props.anvil(m), {}) : null;
+    if (an) pSpot(P, 'anvil', an.cx, an.cz - 0.55, 0, { k: 0 }); if (hh) pSpot(P, 'forge', hh.front[0] - 0.9, hh.front[1] - 0.2, Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
+    pFree(P, room, id + '.trough', 1.2, 0.5, 0.6, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.6, 0, -0.25, 0.6, 0.55, 0.25); m.mat(MAT.PLAIN, [0.12, 0.2, 0.3]); m.quad([-0.55, 0.5, -0.2], [-0.55, 0.5, 0.2], [0.55, 0.5, 0.2], [0.55, 0.5, -0.2]); }, { near: [a.x0 + 1.2, 2.5], lowOk: true });
+    pFree(P, room, id + '.coal', 0.6, 0.6, 0.5, 0, m => Props.crate(m, 0.6), { near: [a.x1 - 1, 2] });
+  } else if (kind === 'study') {          // a desk with the chronicle, bookcases, a long table
+    const dk = pFree(P, room, id + '.desk', 1.6, 0.8, 0.8, 0, pdTable(1.6, 0.8, ['book', 'candle', 'book', 'mug'], 4, c), { near: [a.x0 + 2.0, 3.2], surface: true });
+    if (dk) { pSpot(P, 'sit', dk.cx, dk.cz + 0.8, PI, { k: 0 }); pSit(P, 'sit', dk.cx, dk.cz + 0.8, PI, 0); P.deskAt = dk; }
+    pDining(P, room, 2.0, 0.9, { near: [a.x1 - 2.5, 3.8], id: 'table', n: 3 });
+    for (const sd of ['w', 'e']) pKitFloor(P, room, sd, 'Bookcase_2', { n: sd, at: 'start' });
+  } else if (kind === 'guard') {          // weapon stands and a dummy, a table with the watch roster
+    pDining(P, room, 2.0, 0.9, { near: [0, 3.6], id: 'table', n: 3 });
+    for (const sd of ['w', 'e']) { pKitFloor(P, room, sd, 'WeaponStand', { n: sd, at: 'start' }); pKitFloor(P, room, sd, 'Dummy', { n: sd + 'd', at: 'end' }); }
+  }
+  for (const nm of D.floor || []) for (const sd of pSidesLong(room)) { if (pKitFloor(P, room, sd, nm, { n: sd + (R() * 99 | 0) })) break; }
+  pWalls(P, room, (D.wall || []).concat(['paint', 'Torch_Metal']));
+  const e = P.doors.find(d => d.b === null); if (e) pSconce(P, room, 'n', e.x + 1.5) || pSconce(P, room, 'n', e.x - 1.5);
+  if (hh) pLamp(P, room, 0, 3.2); else pLamp(P, room, 0, 3.0);
+  pFree(P, room, id + '.rug', 2.2, 1.5, 0.02, 0.1, pdRug(2.2, 1.5, [0.4, 0.26, 0.2]), { flat: true, noClear: true, near: [0, 4.2] });
+}
+
+
+// ---- 72f_underworld.js ----
+// ───────────────────────── the chapel and what lies under it; later: the tunnel and the dungeon ─────────────────────────
+// pGate: a locked iron-bound door in a doorway of a plan. A leaf in World.doors that opens by itself once the key has turned (S.opened[id]), a collider while shut and an interact point.
+function pGate(P, d, id, key, label) {
+  const L = P.lv[d.k], m = P.c.int, vert = d.wall.ax === 'z';          // vert: the wall runs along z (x = const)
+  const hw = d.w / 2 - 0.02, hinge = vert ? [d.x, L.y, d.z - hw] : [d.x - hw, L.y, d.z];
+  const ux = vert ? [0, 0, 1] : [1, 0, 0], uz = vert ? [-1, 0, 0] : [0, 0, -1].map(v => -v);
+  const C = m4.create(); m4.basis(C, ux, [0, 1, 0], uz, hinge); const base = m4.mul(m4.create(), P.T, C);
+  const cw = P.w2(d.x, L.y + 1, d.z), hp = P.w2(hinge[0], hinge[1], hinge[2]);
+  const leaf = { site: P.c.site, zone: P.zone, side: 'in', cell: P.c.cell.id, hinge: hp, yaw: 0, w: d.w - 0.04, h: 2.2, open: 0, c: cw, out: cw, ins: cw, sill: cw, baseM: base, gate: id, internal: true };
+  World.doors.push(leaf);
+  const q = vert ? [d.x - 0.12, d.z - d.w / 2, d.x + 0.12, d.z + d.w / 2] : [d.x - d.w / 2, d.z - 0.12, d.x + d.w / 2, d.z + 0.12];
+  let col = null; if (!S || !S.opened || !S.opened[id]) { addBoxCollider(m, q[0], q[1], q[2], q[3], L.y, L.y + 2.4); col = World.colliders[World.colliders.length - 1]; }
+  const it = pInteract(P, d.x, 1.1, d.z, { kind: 'gate', id, key, label, r: 2.3, col }, d.k); return it;
+}
+// the sarcophagus: a stone chest with a lid slightly askew
+const pdTomb = (len) => m => { m.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); m.box(-len / 2, 0, -0.42, len / 2, 0.5, 0.42); m.box(-len / 2 - 0.05, 0.5, -0.47, len / 2 + 0.05, 0.66, 0.47); m.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.8); m.box(-len / 2 + 0.2, 0.66, -0.12, len / 2 - 0.2, 0.74, 0.12); };
+const pdAltar = m => { m.mat(MAT.STONE, [0.85, 0.83, 0.79], 0.8); m.box(-1.1, 0, -0.45, 1.1, 0.95, 0.45); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.95, 0.95, -0.4, 0.95, 0.97, 0.4); for (const sx of [-0.7, 0.7]) at(m, sx, 0.97, 0, 0, () => Props.candle(m, null, true)); };
+
+PLANS.chapel = (P, c, info) => {
+  const R = P.R, need = P.need;
+  P.dims = { W: 14, D: 12 };
+  pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H_GROUND + 0.6);
+  // nave (west, long) and the sacristy (east, with the stair to the crypt)
+  const GL = [[0.35, 0.55, 1.0], [1.0, 0.42, 0.3], [0.95, 0.8, 0.3], [0.4, 0.85, 0.5]], WK = ['Thin_Round', 'Wide_Round'];
+  pRoom(P, 0, 'nave', 'nave', -5, 0, 5, 12, { floor: 'stone', winKinds: WK, glass: GL }); pRoom(P, 0, 'sacristy', 'sacristy', 5, 0, 9, 7, { floor: 'stone' }); pRoom(P, 0, 'tower', 'tower', -9, 0, -5, 5, { win: false, floor: 'stone' });
+  pDoor(P, 'nave', null, 0, 0); pDoor(P, 'nave', 'sacristy', 5, 3.5); pDoor(P, 'nave', 'tower', -5, 2.5);
+  // crypt: the stair arrives in the east vault; a gate leads west under the nave; a second gate-less arch to the ossuary
+  pRoom(P, -1, 'vault', 'cellar', 5, 0, 9, 7, { floor: 'stone', win: false }); pRoom(P, -1, 'crypt', 'cellar', -5, 0, 5, 12, { floor: 'stone', win: false });
+  pDoor(P, 'vault', 'crypt', 5, 3.5, { gate: true });
+  pStair(P, { id: 'stCrypt', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: 8.05, z: 1.3, width: 1.0, tread: 0.22 });
+  pLayout(P);
+  const nave = P.rooms.nave, sac = P.rooms.sacristy, vault = P.rooms.vault, crypt = P.rooms.crypt;
+  // nave: the altar on a step against the far wall, a cross and candles, rows of pews with a central aisle, the font by the door
+  { const m = P.c.int, L0 = P.lv[0]; m.m1 = P.zone; m.ao = INT_AO;
+    pPut(P, nave, P.id + '.step', 0, 11.0, 0, 6.0, 1.7, 0.14, mm => { mm.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); mm.box(-3, 0, -0.85, 3, 0.14, 0.85); }, { flat: true, noClear: true });
+    addFloor(m, -3, 10.15, 3, 11.85, L0.y + 0.16);
+    const al = pPut(P, nave, P.id + '.altar', 0, 11.3, 0, 2.2, 0.9, 1.0, pdAltar, { lift: 0.14, back: 's' });
+    if (al) { pSpot(P, 'altar', 0, 9.3, 0, { k: 0 }); P.lightIn.nave = 1;
+      at(m, 0, L0.y + 1.16, 11.55, 0, () => { m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.04, 0, -0.04, 0.04, 0.9, 0.04); m.box(-0.22, 0.55, -0.04, 0.22, 0.63, 0.04); }); } }
+  let row = 0; for (const z of [2.8, 4.2, 5.6, 7.0, 8.4]) for (const x of [-2.5, 2.5]) { const pw = pPut(P, nave, P.id + '.pew' + row++, x, z, 0, 3.0, 0.5, 0.95, pdBench(3.0), {}); if (pw && row <= 2) pSit(P, 'pew' + row, x, z + 0.3, PI, 0); }
+  { const f = pAgainst(P, nave, 'n', P.id + '.font', 0.7, 0.7, 0.95, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.cyl(0, 0, 0, 0.16, 0.14, 0.8, 10, 3); m.cyl(0, 0.8, 0, 0.36, 0.2, 0.18, 12, 3); m.mat(MAT.PLAIN, [0.15, 0.25, 0.4]); m.disc(0, 0.95, 0, 0.3, 12, 1); }, { at: nave.in.x1 - 1.0 }); }
+  pAgainst(P, nave, 'w', P.id + '.statuebase', 0.8, 0.8, 1.2, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.box(-0.4, 0, -0.4, 0.4, 0.5, 0.4); m.mat(MAT.STONE, [0.72, 0.7, 0.66], 0.8); m.box(-0.14, 0.5, -0.1, 0.14, 1.5, 0.1); m.ball(0, 1.62, 0, 0.14); }, { at: 9.5, noClear: false });
+  pSpot(P, 'nave', 0, 3.4, PI, { k: 0 });
+  for (const sx of [-1, 1]) pAgainst(P, nave, sx < 0 ? 'w' : 'e', P.id + '.shelfn' + sx, 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, null), { at: 9 });
+  const bk = pFree(P, nave, P.id + '.lectern', 0.5, 0.5, 1.1, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.2, 0, -0.2, 0.2, 1.0, 0.2); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.28, 1.0, -0.22, 0.28, 1.05, 0.22); }, { near: [-3.2, 10.4] });
+  if (bk) pInteract(P, bk.cx, 1.1, bk.cz, Object.assign({ kind: 'read', id: 'chapel.book', r: 1.7 }, READS['chapel.book']), 0);
+  pLamp(P, nave, 0, 3.0); pLamp(P, nave, 0, 8.0);
+  if (Kit.pieces.Chandelier) for (const z of [3.0, 8.0]) { const L0 = P.lv[0]; at(P.c.int, 0, 0, z, 0, () => kitLit(P.c.int, 'Chandelier', 0, L0.H - 0.1, 0, 0.55, 0, { r: 10, c: [3.0, 1.9, 0.85], kind: 'candle', always: true })); }
+  pWalls(P, nave, ['Banner_1_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'paint', 'Banner_1_Cloth']);
+  pKitFloor(P, nave, 'w', 'CandleStick_Stand', { n: 'a', at: 10 }); pKitFloor(P, nave, 'e', 'CandleStick_Stand', { n: 'b', at: 10 });
+  const e = P.doors.find(d => d.b === null); if (e) { pSconce(P, nave, 'n', e.x + 1.4); pSconce(P, nave, 'n', e.x - 1.4); }
+  // sacristy: a vestment chest with the crypt key, a table, shelves
+  const ch = pAgainst(P, sac, 's', P.id + '.sacristy', 0.85, 0.5, 0.6, +1, pdChest, { lowOk: true, at: 'start' }) || pAgainst(P, sac, 'n', P.id + '.sacristy', 0.85, 0.5, 0.6, +1, pdChest, { lowOk: true, at: 'start' });
+  if (ch) pInteract(P, ch.cx, 0.5, ch.cz, { kind: 'chest', id: 'chapel.sacristy', loot: [['cryptkey', 1], ['gold', 3]], r: 1.8 }, 0);
+  pFree(P, sac, P.id + '.sactable', 1.4, 0.7, 0.8, 0, pdTable(1.4, 0.7, ['candle', 'book', 'mug'], 3, c), { near: [6.5, 5.4], surface: true });
+  pAgainst(P, sac, 'n', P.id + '.sacshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, ['book', 'candle', 'jug'])), {}) || pAgainst(P, sac, 'w', P.id + '.sacshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, null), {});
+  pLamp(P, sac, 7, 3.2);
+  // the bell tower: a stone chamber west of the nave with the bell high above and the rope hanging down its middle
+  { const tw = P.rooms.tower, m = P.c.int, L0 = P.lv[0], cx = -7, cz = 2.5;
+    m.m1 = P.zone; m.ao = INT_AO;
+    at(m, cx, L0.y + 0.02, cz, 0, () => {
+      m.mat(MAT.TIMBER, COL.timberDark); m.box(-1.5, 2.55, -0.09, 1.5, 2.73, 0.09);
+      m.mat(MAT.METAL, COL.bronze); m.push().T(0, 2.0, 0); m.lathe([[0.48, 0], [0.42, 0.06], [0.33, 0.3], [0.27, 0.62], [0.17, 0.85], [0.03, 0.93]], 12, 0); m.mat(MAT.METAL, COL.black); m.box(-0.02, -0.12, -0.02, 0.02, 0.6, 0.02); m.ball(0, -0.12, 0, 0.07); m.pop();
+      m.mat(MAT.CLOTH, [0.75, 0.62, 0.4], 0.3); m.box(0.7 - 0.012, 0.9, -0.012, 0.7 + 0.012, 2.0, 0.012);
+    });
+    World.bell = { p: P.w2(cx, L0.y + 2.4, cz) };
+    pInteract(P, cx + 0.7, 1.4, cz, { kind: 'bell', id: 'bell', r: 1.9 }, 0);
+    pLamp(P, tw, -7, 3.5); pTorch(P, tw, 'w', 2.5, 1.7, 6.5);
+    P.occ(0, { x0: cx + 0.55, x1: cx + 0.85, z0: cz - 0.15, z1: cz + 0.15 }, 'floor', P.id + '.rope', { h: 1.0, room: 'tower', y0: L0.y });
+  }
+  // the crypt: the vault is a landing, behind the gate the tombs
+  pTorch(P, vault, 'n', 7.5, 1.7, 6.5) || pTorch(P, vault, 's', 7.5, 1.7, 6.5);
+  pFree(P, vault, P.id + '.vbarrel', 0.9, 0.9, 0.9, 0, m => Props.barrel(m, 0.33, 0.9), { near: [5.7, 5.5] });
+  let tn = 0; for (const z of [2.5, 5.0, 7.5, 10.0]) for (const x of [-3.2, 3.2]) { if (pPut(P, crypt, P.id + '.tomb' + tn++, x, z, PI / 2, 2.2, 0.95, 0.75, pdTomb(2.2), {})) { } }
+  const rel = pAgainst(P, crypt, 'w', P.id + '.relic', 0.85, 0.5, 0.6, +1, pdChest, { lowOk: true, at: 6 });
+  if (rel) pInteract(P, rel.cx, 0.5, rel.cz, { kind: 'chest', id: 'chapel.relic', loot: [['gold', 40], ['potion', 2]], r: 1.8 }, -1);
+  for (const [sd, u] of [['n', -2], ['n', 2], ['s', -2], ['s', 2], ['w', 3], ['w', 9], ['e', 3], ['e', 9]]) pTorch(P, crypt, sd, u, 1.7, 8.5);
+  const g = P.doors.find(d => d.gate); if (g) P.gate = pGate(P, g, 'chapel.gate', 'cryptkey', 'Iron gate');
+  pPier; // no hearth in a chapel
+};
+
+
 // ---- 73_village.js ----
 // ───────────────────────── the village: houses, square, bridge, ruin, fences, dock ─────────────────────────
 const headingTo = (x, z, tx, tz) => Math.atan2(tx - x, -(tz - z));
@@ -5405,7 +6252,7 @@ function buildVillage() {
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
     if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true, cell: h.cell ? h.cell.id : null }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
-    World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
+    World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5, minor: true });      // minor: on the map, but no banner when you walk past a house
   }
 
   // ── fences and low walls ──
@@ -5492,8 +6339,8 @@ function buildVillage() {
     if (i % 4 === 0) { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z), z); addBoxCollider(m, -0.2, -0.2, 0.2, 1.3, 0, 2.5); m.pop(); }
   }
   spot('gate.post', -60.4, -7.6, -PI / 2 + 0.3); spot('gate.post2', -60.2, -2.9, -PI / 2 - 0.2);
-  World.places.push({ id: 'gate', name: 'Brackenfell Gate', x: -62, z: -5.2, r: 7 });
-  World.places.push({ id: 'square', name: 'Market Square', x: 0, z: -2, r: 9 });
+  World.places.push({ id: 'gate', name: 'Brackenfell Gate', x: -62, z: -5.2, r: 7, minor: true });
+  World.places.push({ id: 'square', name: 'Market Square', x: 0, z: -2, r: 9, minor: true });
 
   // ── stone bridge ──
   {
@@ -5520,7 +6367,7 @@ function buildVillage() {
       if (archY(xa) > -8 || archY(xb) > -8) { m.mat(MAT.STONE, [0.8, 0.8, 0.8]); m.ao = 0.5; m.quad([xa, aa, bz + hw + 0.4], [xa, aa, bz - hw - 0.4], [xb, ab, bz - hw - 0.4], [xb, ab, bz + hw + 0.4]); m.ao = 1; }
     }
     for (const s of [-1, 1]) { m.push().T(bx, 0, bz + s * (hw + 0.2)); addBoxCollider(m, -hl - 0.4, -0.22, hl + 0.4, 0.22, Math.min(y0, y1) - 1, Math.max(y0, y1) + 2.6); m.pop(); for (const e of [-1, 1]) { const x = bx + e * (hl + 0.25), y = e < 0 ? y0 : y1; m.mat(MAT.STONE, [0.95, 0.95, 0.95]); m.box(x - 0.36, y - 1.2, bz + s * (hw + 0.2) - 0.36, x + 0.36, y + 1.25, bz + s * (hw + 0.2) + 0.36); m.mat(MAT.STONE, [0.8, 0.8, 0.8], 0.6); m.box(x - 0.43, y + 1.25, bz + s * (hw + 0.2) - 0.43, x + 0.43, y + 1.38, bz + s * (hw + 0.2) + 0.43); } }
-    World.places.push({ id: 'bridge', name: 'Stonewater Bridge', x: bx, z: bz, r: 8 });
+    World.places.push({ id: 'bridge', name: 'Stonewater Bridge', x: bx, z: bz, r: 8, minor: true });
   }
 
   // ── old watchtower on the crag ──
@@ -5592,7 +6439,7 @@ function buildVillage() {
   fence(rect(101.5, -21, 108.5, -13.5).slice(0, 4)); put(102.6, -9.6, 0.2, m => Props.cart(m, false));
   put(95.2, -17, 1.2, m => Props.woodpile(m, 5, 4, 0.7)); put(93.6, -19.8, 0, m => Props.barrel(m));
   spot('farm.field', 93, 16, 2.4); spot('farm.field2', 112, 20, -1.0); spot('farm.yard', 101, -15.5, 1.0); spot('barn.front', 108.2, -3, PI / 2);
-  World.places.push({ id: 'fields', name: 'Fairweather Fields', x: 96, z: 22, r: 16 });
+  World.places.push({ id: 'fields', name: 'Fairweather Fields', x: 96, z: 22, r: 16, minor: true });
 
   // ── cottage yards ──
   const H = SITE.herbalist, hg = [[2.2, 3.4], [7.2, 3.4], [7.2, -2.4], [3.6, -2.4]].map(p => siteToWorld(H, p[0] + H.w / 2 - 2.6, p[1]));
@@ -5751,6 +6598,7 @@ function buildVillage() {
 function addSkinned(item, o) {
   const obj = Object.assign({ first: item.first, count: item.count, base: item.base, slot: World.skinned.length, visible: true, c: [0, 0, 0], r: 2, zone: 0, light: 1 }, o);
   World.skinned.push(obj); World.skinCount = World.skinned.length;
+  if ((obj.slot + 1) * 256 > R.boneData.length) { const nb = new Float32Array(R.boneData.length * 2); nb.set(R.boneData); R.boneData = nb; R.maxSkin *= 2; }      // grow instead of overflowing (96 slots ran out once the wilds and the inn's regulars arrived: two places stopped building)
   const bd = R.boneData, k = obj.slot * 256; for (let b = 0; b < 16; b++) { bd.fill(0, k + b * 16, k + b * 16 + 16); bd[k + b * 16] = bd[k + b * 16 + 5] = bd[k + b * 16 + 10] = bd[k + b * 16 + 15] = 1; }
   bd[k + 240] = obj.zone; bd[k + 241] = obj.light;
   return obj;
@@ -6686,7 +7534,7 @@ async function infillMaterials() {
     return true;
   };
   const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0 });
-  const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 1.9, nScale: 1.0, moss: 0.6 });
+  const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 1.2, nScale: 1.0, moss: 0.6 });
   if (Kit.defs.MI_UnevenBrick) Kit.defs[INF_B] = Object.assign({}, Kit.defs.MI_UnevenBrick, { name: INF_B, doubleSided: true });
   if (Kit.defs[INF_T]) Kit.defs[INF_T].doubleSided = true;
   INFS.mats = ok1 && ok2 && !!Kit.defs[INF_B];
@@ -7301,7 +8149,7 @@ function fxUpdate(dt, time, env, cam) {
   for (let i = FX.smoke.length - 1; i >= 0; i--) {
     const s = FX.smoke[i]; s.life += dt; if (s.life > s.max) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
     const k = s.life / s.max; s.p[0] += (wx * 0.9 * k + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) * dt; s.p[2] += (wz * 0.9 * k) * dt;
-    put(s.p[0], s.p[1], s.p[2], 0.14 + k * 0.95, 0.30, 0.30, 0.31, Math.min(k * 5, 1) * Math.pow(1 - k, 1.5) * 0.2, s.rot + s.life * 0.2, 1, 1.5 + k, s.seed);       // thin grey wisps that fade out (they were large opaque white blobs from above)
+    put(s.p[0], s.p[1], s.p[2], 0.14 + k * 0.95, 0.30, 0.30, 0.31, Math.min(k * 5, 1) * Math.pow(1 - k, 1.3) * 0.42, s.rot + s.life * 0.2, 1, 1.5 + k, s.seed);       // thin grey wisps that fade out (they were large opaque white blobs from above)
   }
   for (let i = FX.embers.length - 1; i >= 0; i--) {
     const s = FX.embers[i]; s.life += dt; if (s.life > s.max) { FX.embers[i] = FX.embers[FX.embers.length - 1]; FX.embers.pop(); continue; }
@@ -7610,11 +8458,14 @@ function navBuild() {
   }
   for (const name in World.spots) {
     const s = World.spots[name], k = add(s.p[0], s.p[1], s.p[2]); Nav.spot[name] = k;
+    if (s.zone && s.site && World.houses[s.site] && World.houses[s.site].plan) continue;         // planned interiors join their rooms (planNav)
     if (s.zone && s.site && doorNode[s.site]) link(k, doorNode[s.site].i); else link(k, nearest(s.p[0], s.p[2], outside, 60));
   }
+  for (const id in World.houses) { const h = World.houses[id]; if (h.plan) planNav(h.plan, add, link, doorNode); }
   // upper floors are reached by their stairs only: bottom -> top -> (round the stairwell) -> the rooms above; nothing upstairs links straight to the door
   const unlink = k => { A[k].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k) a.splice(i, 1); };
   for (const st of World.stairs) {
+    if (st.plan) continue;
     const nb = Nav.spot[st.bottom], nt = Nav.spot[st.top]; if (nb === undefined || nt === undefined) continue;
     const chain = [nb, nt].concat(st.via.map(n => Nav.spot[n]).filter(k => k !== undefined)), fy = World.houses[st.site].floorY;
     for (const k of chain.slice(1)) unlink(k);
@@ -7838,6 +8689,23 @@ function ambUpdate(dt, playerPos) {
   }
   if (AMB.acc >= 0.5) AMB.acc = 0;
 }
+
+
+// ---- 77c_patrons.js ----
+// ───────────────────────── regulars of the Honeyed Hart: evening guests who fill the common room (inn.s6..s12) ─────────────────────────
+// By day they idle in the square or at a porch; from the evening bell they are at their table; they sleep in the infill cottages.
+(function () {
+  const L = [
+    ['pat1', 'Wat Cooper', 'tan', 'brown', [0.45, 0.36, 0.26], 'inn.s6', 'in.02.bed', 'square.bench'],
+    ['pat2', 'Edda Fenn', 'rosy', 'auburn', [0.5, 0.3, 0.3], 'inn.s7', 'in.04.bed', 'square.bench2'],
+    ['pat3', 'Hob the Carter', 'brown', 'black', [0.34, 0.4, 0.3], 'inn.s8', 'in.07.bed', 'square.well'],
+    ['pat4', 'Sorrel Vane', 'fair', 'blond', [0.42, 0.32, 0.5], 'inn.s9', 'in.13.bed', 'elder.porch'],
+    ['pat5', 'Piers Lowe', 'tan', 'grey', [0.4, 0.38, 0.34], 'inn.s10', 'in.21.bed', 'square.bench'],
+    ['pat6', 'Nell Marsh', 'rosy', 'brown', [0.3, 0.42, 0.46], 'inn.s11', 'in.23.bed', 'square.bench2'],
+    ['pat7', 'Jory Thatcher', 'brown', 'brown', [0.5, 0.42, 0.22], 'inn.s12', 'in.02.bed', 'square.well'],
+  ];
+  for (const [id, name, skin, hair, top, seat, bed, day] of L) NPC_DEFS.push({ id, name, skin, hair, top, legs: [0.3, 0.26, 0.22], dress: skin === 'rosy', sched: [[7.5, day, 'idle'], [18.5, seat, 'sit'], [23.5, bed, 'lie']] });
+})();
 
 
 // ---- 78_player.js ----
@@ -8144,6 +9012,21 @@ function wPick(id, p3, label, item, mesh, glow) {
 }
 const wGround = (p, lx, lz) => { const q = siteToWorld(p, lx, lz); return [q[0], wy(q[0], q[1]), q[1]]; };
 
+// ── Highfold's two enterable houses go through the village's own path (HOUSES -> buildHouse -> a cell reached by its door); the other two stay shells ──
+if (typeof HOUSES !== 'undefined' && typeof KIT_STYLE !== 'undefined' && WILDS.on) {
+  HOUSES['high.a'] = {
+    H: 2.4, walls: 'timber', roof: 'thatch', plaster: [1, 0.93, 0.84], shutter: [0.32, 0.44, 0.34],
+    doors: [{ wall: 'front', pos: 0.9 }], windows: [{ wall: 'front', pos: -1.6 }, { wall: 'back', pos: -1.2 }, { wall: 'right', pos: -0.8 }],
+    interior(c) { cottageInterior(c, { blanket: COL.green, tableItems: ['mug', 'plate', 'candle', 'loaf'], loot: [['gold', 9]] }); }
+  };
+  HOUSES['high.c'] = {
+    H: 2.4, walls: 'timber', roof: 'thatch', plaster: [0.96, 0.92, 0.82], shutter: [0.5, 0.36, 0.3],
+    doors: [{ wall: 'front', pos: -0.9 }], windows: [{ wall: 'front', pos: 1.5 }, { wall: 'back', pos: 1.2 }],
+    interior(c) { cottageInterior(c, { blanket: COL.purple, fur: true, tableItems: ['bowl', 'bottle', 'candle', 'pot'], loot: [['gold', 6], ['apple', 2]] }); }
+  };
+  KIT_STYLE['high.a'] = { timber: true, shingle: true, ground: 'plaster', vines: 2 }; KIT_STYLE['high.c'] = { timber: true, shingle: true, ground: 'plaster', vines: 1 };
+  for (const id of ['high.a', 'high.c']) { const st = SITE[id], h = WILDS.houses.find(k => k.id === id); if (st) { st.floors = 1; st.w = h.w = id === 'high.a' ? 6.4 : 6.0; st.d = h.d = id === 'high.a' ? 5.2 : 5.0; h.floors = 1; h.cell = true; } }
+}
 // ───────────────────────── the builders: one per place ─────────────────────────
 const WBUILD = {};
 WBUILD.shrine = (p, m, R) => {
@@ -8255,7 +9138,7 @@ WBUILD.blind = (p, m, R) => {
 
 WBUILD.burnt = (p, m, R) => {
   // the shell of a cottage: charred sill beams, jagged stubs of wall, a standing chimney, fallen rafters, drifts of ash and rubble
-  const CH = [0.16, 0.14, 0.13], CH2 = [0.24, 0.2, 0.17];
+  const CH = [0.34, 0.31, 0.29], CH2 = [0.44, 0.39, 0.34];
   wPut(m, p, 0, 0, 0.3, mm => {
     const w = 6.0, d = 4.6;
     mm.mat(MAT.STONE, [0.62, 0.6, 0.57], 0.8); mm.box(-w / 2 - 0.1, -0.5, -d / 2 - 0.1, w / 2 + 0.1, 0.18, d / 2 + 0.1, 8);
@@ -8313,7 +9196,7 @@ WBUILD.mine = (p, m, R) => {
   const sg = wPut(m, p, -3.6, -1.6, 0.3, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.cbox(s * 0.75, -0.3, 0, 0.1, 2.0, 0.1, 4); mm.mat(MAT.PLANKS, [0.7, 0.62, 0.5], 0.6); mm.box(-0.8, 1.0, -0.04, 0.8, 1.75, 0.04); mm.mat(MAT.PLAIN, [0.2, 0.08, 0.06]); mm.box(-0.5, 1.5, -0.05, 0.5, 1.58, -0.04); mm.box(-0.45, 1.25, -0.05, 0.4, 1.31, -0.04); mm.box(-0.5, 1.1, -0.05, 0.1, 1.15, -0.04); addBoxCollider(mm, -0.85, -0.1, 0.85, 0.1, 0, 1.9); });
   wRead('note.mine', 'A warning board', 'KEEP OUT. The lower gallery flooded and the roof is working.\nBy order of the Warden of Brackenfell, in the year of the second frost.\n\nBelow, scratched with a nail:\n“Corwin went in after the silver. I told him. — your brother Hob.”', [sg[0], sg[1] + 1.4, sg[2]]);
   wKit(p, 'picke_dirty_01', 2.9, 0.4, { s: 1.0, rz: 0.22, ry: 1.0, dy: 0.0 });
-  const door = wGround(p, 0, 1.4); World.interact.push({ p: [door[0], door[1] + 1.2, door[2]], r: 3.0, zone: 0, kind: 'door', id: 'mine.door', name: 'the old mine door' });
+  const door = wGround(p, 0, 1.4); World.interact.push({ p: [door[0], door[1] + 1.2, door[2]], r: 3.0, zone: 0, kind: 'door', id: 'mine.door', name: 'the old mine door', shut: true, msg: 'Barred from the far side. Iron and oak: you will not shift it.' });
   const cp = wGround(p, -1.9, 0.1); wPick('mine.cap', [cp[0], cp[1] + 0.02, cp[2]], 'Take the cap', 'corwincap', 'cap');
   wPlaceBoulders(p, m, R, 16, 5, 11);
 };
@@ -8344,13 +9227,20 @@ WBUILD.hermit = (p, m, R) => {
   const bg = wGround(p, -6.8, 3.4); wPick('hm.bog', [bg[0], bg[1] + 0.0, bg[2]], 'Pick bogbean', 'bogbean', { k: 'bogbean', f: mm => PICKMESH.tuft(mm, [0.3, 0.46, 0.28], [0.95, 0.95, 0.98], 5) }, true);
   for (let i = 0; i < 6; i++) { const a = 2.6 + i * 0.62 + R() * 0.3, r = 5.6 + R() * 0.8, c = wGround(p, -10 + Math.cos(a) * r, -4.5 + Math.sin(a) * r); wKit(p, 'rock_moss_set_02_g', c[0] - p.x, c[2] - p.z, { s: 0.5 + R() * 0.8, ry: R() * 6, dy: -0.08 }); }
   for (let i = 0; i < 9; i++) { const a = R() * TAU, r = 5.2 + R() * 2.4; wKit(p, 'Fern_1', -10 + Math.cos(a) * r, -4.5 + Math.sin(a) * r, { s: 1.2 + R() * 0.9, ry: R() * TAU, inst: true, maxDist: 80 }); }
+  // the fall's rock: scanned boulders along the lip and down both sides of the face, dark and half buried, ferns on the ledges
+  { const c = WILDS.cliffs.find(k => k.id === 'fall'), L = (lx, lz) => [c.x + lx - p.x, c.z + c.dz * lz - p.z], rn = ['rock_moss_set_02_g', 'rock_moss_set_02_c', 'rock_moss_set_02_a', 'rock_moss_set_01_e', 'Rock_Medium_1', 'Rock_Medium_2'];
+    for (let i = 0; i < 26; i++) { const side = i % 2 ? 1 : -1, lz = c.at + 0.5 + R() * (c.ramp + 1.5), lx = side * (1.5 + R() * 3.2 + (lz > c.at + c.ramp - 1 ? 0 : 0.8)), q = L(lx, lz), sc = 0.7 + R() * 1.3; wKit(p, R.pick(rn), q[0], q[1], { s: sc, ry: R() * TAU, dy: -0.18 * sc, tint: [0.62, 0.64, 0.66] }); }
+    for (let i = 0; i < 6; i++) { const q = L((i - 2.5) * 0.55, c.at + c.ramp - 0.2 + R() * 0.5); wKit(p, R.pick(rn), q[0], q[1], { s: 0.55 + R() * 0.4, ry: R() * TAU, dy: -0.12, tint: [0.55, 0.58, 0.6] }); }           // the lip
+    for (let i = 0; i < 4; i++) { const a = -0.4 + i * 0.9, q = [20 + Math.cos(a + PI) * 4.9 - p.x, -172.5 + Math.sin(a + PI) * 4.9 - p.z]; wKit(p, R.pick(rn), q[0], q[1], { s: 0.5 + R() * 0.5, ry: R() * TAU, dy: -0.15 }); }
+    for (let i = 0; i < 34; i++) { const q = L(R.s() * 9, c.at - 2 + R() * (c.ramp + 7)); wKit(p, 'Fern_1', q[0], q[1], { s: 1.0 + R() * 1.0, ry: R() * TAU, inst: true, maxDist: 70 }); }
+    for (let i = 0; i < 22; i++) { const q = L(R.s() * 10, c.at + 2 + R() * (c.ramp + 6)); wKit(p, 'Grass_Wispy_Tall', q[0], q[1], { s: 1.0 + R() * 0.8, ry: R() * TAU, inst: true, maxDist: 60 }); } }
   p.npc = null;
 };
 
 WBUILD.stones = (p, m, R) => {
   // a ring of nine standing stones and two fallen ones on a bare hilltop, an altar slab with a carving, a cairn, and a hawthorn bent by the wind
   const N = 9, rr = 6.0;
-  for (let i = 0; i < N; i++) { const a = i / N * TAU + 0.2, h = 2.1 + 1.3 * ((i * 37 + 11) % 10) / 10; wPut(m, p, Math.cos(a) * rr, Math.sin(a) * rr, a, mm => { wStone(mm, 0.95 + 0.25 * ((i * 13) % 5) / 5, h, (R() - 0.5) * 0.12); addCircleCollider(mm, 0, 0, 0.55, 0, 3); }); }
+  for (let i = 0; i < N; i++) { const a = i / N * TAU + 0.2, h = 2.9 + 1.7 * ((i * 37 + 11) % 10) / 10; wPut(m, p, Math.cos(a) * rr, Math.sin(a) * rr, a, mm => { wStone(mm, 0.95 + 0.25 * ((i * 13) % 5) / 5, h, (R() - 0.5) * 0.12); addCircleCollider(mm, 0, 0, 0.55, 0, 3); }); }
   for (const [a, r] of [[0.5 + PI, rr + 0.6], [2.5, rr + 0.2]]) wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, a + 1.2, mm => { mm.push().T(0, 0.45, 0).RZ(PI / 2).T(0, -1.3, 0); mm.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.55); mm.lathe([[0.5, 0], [0.45, 1.4], [0.3, 2.6], [0.05, 2.8]], 6, 0); mm.pop(); addBoxCollider(mm, -1.4, -0.5, 1.4, 0.5, 0, 0.9); });
   const alt = wPut(m, p, 0, 0, 0.2, mm => {
     mm.mat(MAT.ROCK, [0.85, 0.85, 0.82], 0.6); mm.box(-0.9, 0, -0.45, -0.55, 0.55, 0.45); mm.box(0.55, 0, -0.45, 0.9, 0.55, 0.45); mm.box(-1.25, 0.55, -0.7, 1.25, 0.82, 0.7);
@@ -8433,7 +9323,7 @@ WBUILD.fishing = (p, m, R) => {
 WBUILD.toll = (p, m, R) => {
   // the road crosses a brook by a ford; beside it a plank footbridge, stepping stones, and a guard post with a toll bar (kept raised); a brazier, a notice, a strongbox of tolls
   wPut(m, p, 7.2, -4.4, -PI / 2, mm => {
-    wHut(mm, 3.8, 3.0, { h: 2.3, rise: 1.0, wall: MAT.STONE, wc: [0.8, 0.78, 0.74], roof: MAT.SHINGLE, rc: [0.62, 0.56, 0.5], door: 0.5 });
+    wHut(mm, 3.8, 3.0, { h: 2.3, rise: 1.0, wall: MAT.STONE, wc: [0.8, 0.78, 0.74], roof: MAT.SHINGLE, rc: [1.1, 1.05, 1.0], door: 0.5 });
     mm.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.7); mm.box(-1.0, 0.3, 1.2, -0.2, 3.3, 1.9); mm.mat(MAT.PLAIN, [0.07, 0.06, 0.05]); mm.box(0.9, 0.9, -1.55, 1.5, 1.6, -1.5);
   });
   // the toll bar: a post each side of the road, the pole propped upright against the north post so that the road stays open
@@ -8453,7 +9343,7 @@ WBUILD.toll = (p, m, R) => {
   wPut(m, p, 9.0, -1.4, PI / 2, mm => { Props.chest(mm); });
 };
 // the brook's surface at a point (or the ground when there is none)
-function wBrookSurface(x, z) { const b = WILDS.brookLine; if (!b) return wy(x, z); b.dist(x, z, 6); return b.at < 0 ? wy(x, z) : wildsBrookY(b.at); }
+function wBrookSurface(x, z) { for (const k of WILDS.brooks) { const b = k.line; if (!b || x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue; b.dist(x, z, 6); if (b.at >= 0) return wildsBrookY(b.at, k); } return wy(x, z); }
 
 // ───────────────────────── Highfold: the hamlet's yard dressing (the houses are kit shells, in wildsAttach) ─────────────────────────
 WBUILD.hamlet = (p, m, R) => {
@@ -8467,6 +9357,7 @@ WBUILD.hamlet = (p, m, R) => {
     mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.6); mm.quad2([-1.1, 2.3, 0], [-1.1, 1.95, -0.8], [1.1, 1.95, -0.8], [1.1, 2.3, 0]); mm.quad2([1.1, 2.3, 0], [1.1, 1.95, 0.8], [-1.1, 1.95, 0.8], [-1.1, 2.3, 0]); addCircleCollider(mm, 0, 0, 1.0, 0, 1.2);
   });
   for (const h of WILDS.houses) { const q = siteToWorld(h, h.w / 2 + 0.9, -h.d / 2 + 1.2); m.push().T(q[0], wy(q[0], q[1]), q[1]).RY(-h.yaw); m.m1 = 0; m.ao = 1; m.grad = null; Props.woodpile(m, 3, 3, 1.1); m.pop(); }
+  for (const [id, msg] of [['high.b', 'Bolted. Nobody is home: they are all at the wedding.'], ['high.barn', 'The barn door is chained. Sheep bleat behind it.']]) { const h = SITE[id]; if (!h) continue; const q = siteToWorld(h, h.doorPos === undefined ? 0 : h.doorPos, -h.d / 2 - 0.9); World.interact.push({ p: [q[0], wy(q[0], q[1]) + 1.2, q[1]], r: 2.2, zone: 0, kind: 'door', id: id + '.door', shut: true, msg }); }
   // the apple pickups hang under the orchard birches
   for (const [x, z] of [[129, 123], [125, 126]]) { const c = [x, wy(x, z), z]; wPick("hf.apple" + (x > 127 ? 2 : 1), c, 'Gather apples', 'apple', 'apple'); }
 };
@@ -8499,7 +9390,7 @@ WBUILD.__net = (p, mk, R) => {
 
 // ───────────────────────── build ─────────────────────────
 function buildWilds() {
-  if (!WILDS.on || WB.built) return; WB.built = true;
+  if (!WILDS.on || WB.built || (TEST && TEST.wb === 0)) return; WB.built = true;
   const pack = new MeshPack(); pack.shadow = false;
   for (const p of WILDS.places) {
     const fn = WBUILD[p.id]; if (!fn) continue;
@@ -8517,7 +9408,7 @@ function buildWilds() {
   const patch = (cx, cz, hx, hz, cs, yAt, flow) => { const nx = Math.ceil(2 * hx / cs), nz = Math.ceil(2 * hz / cs), ids = new Map(); const v = (i, j) => { const k = j * 4096 + i; let q = ids.get(k); if (q !== undefined) return q; const x = cx - hx + i * cs, z = cz - hz + j * cs, y = yAt(x, z); wm.ao = sat((y - Terrain.y(x, z)) / 0.9); q = wm.vert(x, y, z, 0, 1, 0, flow[0], flow[1]); ids.set(k, q); return q; };
     for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const x = cx - hx + i * cs, z = cz - hz + j * cs; if (Math.min(wy(x, z), wy(x + cs, z), wy(x, z + cs), wy(x + cs, z + cs)) > yAt(x, z) + 0.05) continue; const a = v(i, j), b = v(i, j + 1), c = v(i + 1, j + 1), d = v(i + 1, j); wm.tri(a, b, c); wm.tri(a, c, d); } };
   if (WILDS.pool) { const q = WILDS.pool, yw = wildsBase('pool', q.x, q.z) - 0.35; q.y = yw; patch(q.x, q.z, q.r + 5, q.r + 5, 1.0, () => yw, [0.2, 0.1]); }
-  if (WILDS.brook) { wBrookSurface(-160, 0); const b = WILDS.brookLine; for (let s = 0; s < b.len; s += 6) { const q = b.point(s); patch(q[0], q[1], 5.5, 5.5, 1.0, (x, z) => wBrookSurface(x, z), [-q[3] * 0.6, q[2] * 0.6]); } }
+  for (const k of WILDS.brooks) { const b = k.line || (k.line = new Poly(catmull(k.pts, 2))); for (let s = 0; s < b.len; s += 6) { const q = b.point(s); patch(q[0], q[1], 5.5, 5.5, 1.0, (x, z) => wBrookSurface(x, z), [-q[3] * 0.6, q[2] * 0.6]); } }
   WB.waterTris = 0;
   if (wm.ni) { wp2.add(wm, { kind: 'water', noShadow: true, maxDist: 130 }); WB.waterTris += wm.ni / 3; }
   // the fall: a ribbon hugging the face of the cliff from the lip to the pool
@@ -8528,12 +9419,12 @@ function buildWilds() {
     const hw = 0.9; let prev = null;
     for (let k = 0; k < pts.length; k++) { const q = pts[k], off = 0.22, x = q[0] - ux * 0.0 - ux * 0, y = q[2] + off * (1 - k / pts.length * 0.5); const l = fm.vert(q[0] - sx * hw, y, q[1] - sz * hw, -ux, 0.4, -uz, 0, k * 0.3, 0), r = fm.vert(q[0] + sx * hw, y, q[1] + sz * hw, -ux, 0.4, -uz, 0, k * 0.3, 0); fm.ao = 0.85; if (prev) { fm.tri(prev[0], prev[1], r); fm.tri(prev[0], r, l); } prev = [l, r]; }
   }
-  if (fm.ni) { wp2.add(fm, { kind: 'water', noShadow: true, maxDist: 130 }); }
+  // (the fall itself is drawn by particles, 79b_life.js: a solid sheet read as a white board)
   pack.upload('wilds'); World.packs.push(pack);
   wp2.upload('wilds-water'); World.packs.push(wp2);
   const wrap = World.waterAt; World.waterAt = (x, z) => {
     if (WILDS.pool && Math.abs(x - WILDS.pool.x) < 12 && Math.abs(z - WILDS.pool.z) < 12 && hyp(x - WILDS.pool.x, z - WILDS.pool.z) < WILDS.pool.r + 3 && Terrain.y(x, z) < WILDS.pool.y) return WILDS.pool.y;
-    if (WILDS.brookLine && x < -150 && x > -185) { const b = WILDS.brookLine, d = b.dist(x, z, 5); if (d < 5) { const y = wildsBrookY(b.at); if (Terrain.y(x, z) < y) return y; } }
+    for (const k of WILDS.brooks) { if (x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue; const b = k.line, d = b.dist(x, z, 5); if (d < 5) { const y = wildsBrookY(b.at, k); if (Terrain.y(x, z) < y) return y; } }
     return wrap(x, z);
   };
   if (typeof wildsLifeBuild === 'function') wildsLifeBuild();
@@ -8555,7 +9446,7 @@ function wildsKitBuild() {
       if (k.inst) { const key = name + '|' + (k.maxDist || 0); (insts[key] = insts[key] || { name, maxDist: k.maxDist, mats: [] }).mats.push(M); } else B.add(name, M, k.tint ? { tint: k.tint } : undefined);
     }
     for (const it of Object.values(insts)) B.addInstanced(it.name, it.mats, { cell: 64, maxDist: it.maxDist || 70, cast: false });
-    if (houses) for (const h of houses) { try { if (h.barn) wBarn(B, h, low); else infShell(B, h, low); } catch (e) { console.warn('hamlet house ' + h.id + ': ' + (e && e.stack || e)); } }
+    if (houses) for (const h of houses) { if (h.cell && Cells.by[h.id]) continue; try { if (h.barn) wBarn(B, h, low); else infShell(B, h, low); } catch (e) { console.warn('hamlet house ' + h.id + ': ' + (e && e.stack || e)); } }
     if (!B.count && !Object.keys(insts).length) continue;
     const g = B.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); SC.scene.add(g);
     let t = 0; g.traverse(o => { if (o.isMesh) t += o.geometry.index.count / 3 * (o.isInstancedMesh ? o.count : 1); });
@@ -8577,24 +9468,102 @@ function wildsAttach() {
 // ───────────────────────── splat painting (called from buildSplat / buildSplat2 in 60_terrain.js) ─────────────────────────
 function wildsSplat(A, B, T) {
   if (!WILDS.on) return; const { ell, stroke, red } = T;
-  for (const c of WILDS.cliffs) { const x = c.x + c.dx * (c.at - 2), z = c.z + c.dz * (c.at - 2); ell(B, x, z, 9, 9, red); }       // bare rock and scree under the cliffs
-  ell(B, WILDS.P.burnt.x, WILDS.P.burnt.z, 4.2, 3.4, red);                                                                 // ash
+  for (const c of WILDS.cliffs) { const x = c.x + c.dx * (c.at - 2), z = c.z + c.dz * (c.at - 2); ell(B, x, z, 8, 8, a => red(a * 0.55)); }       // bare rock and scree under the cliffs
+  ell(B, WILDS.P.burnt.x, WILDS.P.burnt.z, 4.2, 3.4, a => red(a * 0.8));                                                                 // ash
   const st = WILDS.P.stones; ell(B, st.x, st.z, 9, 9, a => red(a * 0.55));                                                  // the hilltop is thin soil
-  ell(B, WILDS.P.mine.x, WILDS.P.mine.z, 6, 6, red);
-  const lc = WILDS.P.lumber; ell(B, lc.x, lc.z, 8, 7, a => red(a * 0.5));
+  ell(B, WILDS.P.mine.x, WILDS.P.mine.z, 5, 5, a => red(a * 0.6));
+  const lc = WILDS.P.lumber; ell(B, lc.x, lc.z, 7, 6, a => red(a * 0.3));
 }
 function wildsSplat2(blob, line, A, B) {
   if (!WILDS.on) return;
   if (WILDS.pool) { const q = WILDS.pool; for (const [r, a] of [[q.r + 4, 0.35], [q.r + 2.4, 0.5], [q.r + 1, 0.7]]) blob(A, 1, q.x, q.z, r, a, 0.5); }
-  if (WILDS.brookLine) line(A, 1, WILDS.brookLine.p, 7, 0.55);
+  for (const k of WILDS.brooks) line(A, 1, k.line.p, 7, 0.55);
+  if (WB.fall) for (const q of WB.fall.pts) blob(A, 1, q[0], q[1], 2.6, 0.85, 0.3);              // the wet dark rock behind the fall
   for (const id of ['lumber', 'fishing', 'bee', 'battle', 'hermit']) { const p = WILDS.P[id]; if (p) blob(B, 2, p.x, p.z, p.r * 0.7, 0.4, 0.3); }
 }
+
+
+// ---- 79b_life.js ----
+// ───────────────────────── life in the wilds: six people at their work, and things moving in the air ─────────────────────────
+// The folk stand where they work (no walking, so no nav cost), are not drawn beyond 50 m, do not exist on the low tier and say one line when you come near.
+// Wildlife and weather are particles put through the air system's `put` (75b_air.js): raptors, crows, ducks, fish rings, butterflies, moths, fireflies, mist, leaves.
+const WF = { list: [], ready: false, acc: 0 };
+const WF_DEFS = [
+  { id: 'bram', place: 'lumber', at: [4.4, -3.4], yaw: 0.6, anim: 'work', name: 'a woodcutter', say: ['Mind the sleds, they run on their own.', 'Axe is on the block if you need one. Bring it back.'] },
+  { id: 'ivo', place: 'blind', at: [2.6, 2.6], yaw: 2.6, anim: 'idle', name: 'a hunter', say: ['Quiet. The does come at dusk.', 'You walk like a bell. Stand still a while.'] },
+  { id: 'hilda', place: 'bee', at: [1.4, 0.2], yaw: 0.3, anim: 'idle', name: 'a beekeeper', say: ['Slow hands, and they will not mind you.', 'The sunwort is for Maren, I expect. Take it.'] },
+  { id: 'finn', place: 'fishing', at: [-1.2, 3.6], yaw: 2.9, anim: 'fish', name: 'a fisherman', say: ['Nothing biting. There never is when someone watches.', 'The smoked trout is fair pay for a hand with the nets.'] },
+  { id: 'rowan', place: 'hermit', at: [4.2, 7.2], yaw: -0.8, anim: 'idle', name: 'the hermit', say: ['I am not hiding. The valley is simply loud.', 'Take the bogbean if you must. It grows back.'] },
+  { id: 'osric', place: 'hamlet', at: [-3.2, 2.4], yaw: 1.2, anim: 'idle', name: 'a shepherd', say: ['Highfold has four doors and one opinion.', 'The wedding is on. Everyone is at the Reeve’s.'] },
+];
+function wildsLifeBuild() {
+  if (!G.chars || !Chars.ready || (TEST && TEST.amb === 0) || (R.q && R.qName === 'low')) return;
+  for (const def of WF_DEFS) {
+    const p = WILDS.P[def.place]; if (!p) continue; let ch = null;
+    try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('wild folk ' + def.id + ': ' + (e && e.message || e)); continue; }
+    const q = siteToWorld(p, def.at[0], def.at[1]); let pos = [q[0], World.groundY(q[0], q[1]), q[1]];
+    if (def.place === 'fishing' && p.jetty) pos = [p.jetty.end[0], p.jetty.end[1], p.jetty.end[2]];
+    Chars.update(ch, { pos, yaw: def.yaw, anim: 'idle', scale: 1, zone: 0, light: 1, visible: false, cast: false, look: [0, 0], speed: 0 }, 0);
+    WF.list.push({ def, ch, pos, yaw: def.yaw, look: [0, 0], t: Math.random() * 9, greet: -99, n: 0, shown: true });
+  }
+  WF.ready = WF.list.length > 0;
+}
+function wfUpdate(dt, pp) {
+  if (!WF.ready) return; const hr = Env.hour, day = hr > 7.5 && hr < 18.5 && !World.indoor, lowTier = !(R.q && R.q.scatter);
+  for (const a of WF.list) {
+    const d = hyp(a.pos[0] - pp[0], a.pos[2] - pp[2]), on = day && !lowTier && d < 50;
+    if (!on) { if (a.shown) { a.shown = false; Chars.update(a.ch, { pos: a.pos, yaw: a.yaw, anim: 'idle', scale: 1, zone: 0, light: 1, visible: false, cast: false, look: a.look, speed: 0 }, 0); } continue; }
+    a.shown = true; a.t += dt;
+    let lx = 0; if (d < 5) { const q = angDiff(Math.atan2(pp[0] - a.pos[0], -(pp[2] - a.pos[2])), a.yaw); if (Math.abs(q) < 1.9) lx = clamp(-q, -1, 1); }
+    a.look[0] += (lx - a.look[0]) * Math.min(1, dt * 5);
+    if (d < 2.6 && a.t - a.greet > 60 && !UI.talk && typeof toast === 'function') { a.greet = a.t; toast(a.def.name.charAt(0).toUpperCase() + a.def.name.slice(1) + ': “' + a.def.say[a.n++ % a.def.say.length] + '”'); }
+    Chars.update(a.ch, { pos: a.pos, yaw: a.yaw, anim: a.def.anim, scale: 1, zone: 0, light: 1, visible: true, cast: d < R.q.villagerCast, look: a.look, talking: false, speed: 0 }, dt);
+  }
+}
+if (typeof ambUpdate === 'function') { const _au = ambUpdate; ambUpdate = function (dt, pp) { _au(dt, pp); wfUpdate(dt, pp); }; }
+
+// ── in the air ──
+const _air = typeof airUpdate === 'function' ? airUpdate : null;
+if (_air) airUpdate = function (put, dt, time, env, cam) {
+  _air(put, dt, time, env, cam);
+  if (!WILDS.on || World.indoor || (TEST && TEST.air === 0)) return;
+  const day = env.day, night = env.night, hr = Env.hour, low = !(R.q && R.q.scatter), near = (p, r) => hyp(p.x - cam[0], p.z - cam[2]) < r;
+  const P = WILDS.P, wx = env.windDir[0] * env.windStrength, wz = env.windDir[1] * env.windStrength;
+  // raptors turning over the stones and the battlefield, crows at the field, ducks and fish rings on the lake, a heron-ish dark bird at the pool
+  if (day > 0.2 && !low) {
+    for (const [id, n, h, rad, sp] of [['stones', 2, 38, 16, 0.12], ['battle', 1, 30, 20, 0.1]]) { const p = P[id]; if (!p || !near(p, 140)) continue; for (let i = 0; i < n; i++) { const a = time * sp + i * 3.1, fl = Math.sin(time * 1.3 + i * 2) * 0.25; put(p.x + Math.cos(a) * rad, h + Math.sin(time * 0.2 + i) * 3, p.z + Math.sin(a) * rad, 0.7, 0.1, 0.09, 0.08, 0.85 * Math.min(1, day * 2), Math.atan2(-Math.sin(a), Math.cos(a)) + 1.57, 1, 3.4 + fl, i + 7); } }
+    const b = P.battle; if (b && near(b, 70)) for (let i = 0; i < 6; i++) { const k = time * 0.5 + i * 1.9, hop = Math.max(0, Math.sin(k * 3)) * 0.08; put(b.x - 3 + Math.cos(i * 2.1) * 9, Terrain.y(b.x - 3 + Math.cos(i * 2.1) * 9, b.z + Math.sin(i * 2.1) * 9) + 0.14 + hop, b.z + Math.sin(i * 2.1) * 9, 0.17, 0.03, 0.03, 0.035, 0.9, 0, 1, 1.5, i); }
+    const f = P.fishing; if (f && near(f, 90)) { for (let i = 0; i < 3; i++) { const a = time * 0.03 + i * 2.2, x = LAKE.x + Math.cos(a + 1) * 20 + i * 3, z = LAKE.z - 18 + Math.sin(a * 2 + i) * 6; put(x, LAKE.y + 0.12, z, 0.34, 0.14, 0.12, 0.1, 0.9, 0.5, 1, 3.0, i + 2); put(x + 0.4, LAKE.y + 0.1, z + 0.1, 0.18, 0.1, 0.09, 0.08, 0.9, 0.2, 1, 1.8, i + 5); }
+      for (let i = 0; i < 3; i++) { const ph = (time * 0.35 + i * 0.37 + (f.x * 0.01)) % 1, x = f.x + (i - 1) * 3 + Math.sin(i * 4 + 1) * 5, z = f.z - 16 - i * 4; put(x, LAKE.y + 0.04, z, 0.2 + ph * 1.1, 0.7, 0.75, 0.78, 0.5 * (1 - ph), 0, 1, 1.0, i + 11); } }
+  }
+  // butterflies over the bee meadow and the hamlet's green by day, moths and fireflies at dusk by the pool, the hermit's hut, the meadow and the stones
+  if (!low) {
+    if (day > 0.4) for (const id of ['bee', 'hamlet']) { const p = P[id]; if (!p || !near(p, 60)) continue; for (let i = 0; i < 7; i++) { const a = time * (0.25 + i * 0.03) + i * 1.7, x = p.x + Math.cos(a) * (3 + i * 0.9) + Math.sin(time * 1.7 + i) * 0.6, z = p.z + Math.sin(a * 1.2) * (3 + i * 0.8), y = Terrain.y(x, z) + 1.0 + Math.sin(time * 2.1 + i * 3) * 0.4, fl = Math.sin(time * 14 + i * 5); put(x, y, z, 0.11, i % 2 ? 0.95 : 0.9, i % 2 ? 0.8 : 0.55, i % 2 ? 0.2 : 0.2, 0.9, time + i, 1, 1.0 + fl * 0.5, i); } }
+    const dusk = sat((hr - 17.6) / 1.2) * (hr < 21.5 ? 1 : 0) + night * 0.8;
+    if (dusk > 0.05) for (const id of ['hermit', 'bee', 'stones', 'burnt']) { const p = P[id]; if (!p || !near(p, 45)) continue; for (let i = 0; i < 9; i++) { const a = time * 0.2 + i * 2.4, x = p.x + Math.cos(a * 0.8 + i) * (4 + i), z = p.z + Math.sin(a * 0.9 + i * 2) * (4 + i * 0.8), y = Terrain.y(x, z) + 0.9 + Math.sin(time * 0.9 + i * 4) * 0.7, tw = 0.4 + 0.6 * Math.max(0, Math.sin(time * 1.1 + i * 7)); put(x, y, z, 0.05, 0.75, 0.95, 0.4, dusk * tw * 0.9, 0, 3, 1, i + 20); } }
+  }
+  // the fall: translucent white-blue streaks sliding down the face (thin, tall, fast), foam at the lip, spray and a standing cloud at its foot
+  if (WB.fall && WILDS.pool && near(WB.fall, 90)) { const f = WB.fall, q = WILDS.pool, n = low ? 6 : 16, H = f.top - q.y;
+    for (let i = 0; i < n; i++) { const k = (time * (0.6 + (i % 4) * 0.08) + i * 0.37) % 1, y = f.top - 0.25 - k * (H - 0.2), x = f.x + Math.sin(i * 12.9) * 0.55, z = f.z - 0.55 - k * 0.55 * 0; put(x, y, z, 0.2 + 0.05 * (i % 3), 0.82, 0.88, 0.94, 0.24 * (1 - k * 0.5), 0, 1, 4.5, i + 80); }
+    for (let i = 0; i < (low ? 2 : 4); i++) put(f.x + Math.sin(i * 5.3) * 0.6, f.top + 0.1, f.z + 0.3, 0.5, 0.9, 0.93, 0.96, 0.3, i, 1, 1.0, i + 85);
+    for (let i = 0; i < (low ? 3 : 8); i++) { const k = (time * 0.4 + i * 0.19) % 1; put(f.x + Math.sin(i * 3.7) * 1.5, q.y + 0.3 + k * 1.6, f.z - 3.4 + Math.cos(i * 2.9) * 1.2, 1.0 + k * 1.8, 0.88, 0.92, 0.96, 0.2 * (1 - k), i, 1, 1.0, i + 90); } }
+  // mist lying on the pool, the brook and the lake shore at dawn and dusk; leaves blown through the lumber camp and the hermit's glade
+  const mistK = Math.max(sat(1 - Math.abs(hr - 6.2) / 2.2), sat(1 - Math.abs(hr - 19.2) / 1.8)) * 0.7 + (env.fog ? 0 : 0);
+  if (mistK > 0.05 && !low) {
+    const q = WILDS.pool; if (q && near(q, 70)) for (let i = 0; i < 10; i++) { const a = i * 0.63 + time * 0.03, r = q.r * (0.3 + 0.9 * ((i * 37) % 10) / 10), x = q.x + Math.cos(a) * r, z = q.z + Math.sin(a) * r; put(x + Math.sin(time * 0.1 + i) * 0.8, q.y + 0.5 + (i % 3) * 0.25, z, 3.2, 0.78, 0.8, 0.82, mistK * 0.13, i, 1, 1.0, i + 30); }
+    if (WILDS.brookLine && near({ x: -160, z: 0 }, 70)) for (let i = 0; i < 8; i++) { const s = (i + 0.5) / 8 * WILDS.brookLine.len, p = WILDS.brookLine.point(s); put(p[0] + Math.sin(time * 0.1 + i) * 1.0, wildsBrookY(s) + 0.45, p[1], 2.6, 0.78, 0.8, 0.82, mistK * 0.1, i * 2, 1, 1.0, i + 50); }
+    for (let i = 0; i < 6; i++) { const a = i * 1.1 + 0.4, x = LAKE.x + Math.cos(a) * (LAKE.r - 3 + (i % 2) * 6), z = LAKE.z + Math.sin(a) * (LAKE.r - 3 + (i % 2) * 6); if (hyp(x - cam[0], z - cam[2]) < 80) put(x, LAKE.y + 0.5, z, 5, 0.78, 0.8, 0.82, mistK * 0.08, i, 1, 1.0, i + 60); }
+  }
+  for (const [id, n] of [['lumber', 6], ['hermit', 5]]) { const p = P[id]; if (!p || !near(p, 40) || low) continue; for (let i = 0; i < n; i++) { const k = (time * 0.12 + i / n) % 1, x = p.x - 8 + k * 16 + Math.sin(time * 1.3 + i * 3) * 1.2, z = p.z + Math.sin(i * 2.7) * 7 + Math.cos(time * 0.9 + i) * 0.9, y = Terrain.y(x, z) + 0.4 + Math.abs(Math.sin(time * 2 + i * 5)) * 0.9 + (1 - k) * 0.5; put(x + wx * 0.1, y, z + wz * 0.1, 0.09, i % 2 ? 0.55 : 0.62, i % 2 ? 0.4 : 0.32, 0.12, 0.8, time * 2 + i, 1, 1.0 + Math.sin(time * 5 + i) * 0.4, i + 70); } }
+};
 
 
 // ---- 80_game.js ----
 // ───────────────────────── story: state, quests, dialogue, things you can do ─────────────────────────
 const S = { gold: 6, items: {}, q: {}, flags: {}, opened: {}, picked: {} };
 const ITEMS = {
+  cryptkey: ['Iron crypt key', 'Cold and heavy, with a cross cut in the bow. It hung in the sacristy for a generation.'],
+  rusty: ['Rusted cellar key', 'Left behind by someone in a hurry. It fits the heavy door under the tower.'],
   malt: ['Sack of malt', 'Osric’s malted barley, bound for the Honeyed Hart.'],
   hammer: ['Cross-peen hammer', 'Brandt’s favourite. The handle is worn smooth.'],
   frostcap: ['Frostcap', 'A pale blue flower that glows faintly at dusk.'],
@@ -8627,9 +9596,10 @@ const QUESTS = {
   fire: { name: 'The Harvest Fire', stages: ['Speak with Elder Rowan', 'Light the fire pit in the square'] },
   camp: { name: 'Smoke in the Pines', stages: ['Drive the outlaws from their camp in the pines, north-west of the gate', 'Tell Elder Rowan the camp is empty'] },
   tools: { name: 'Tongs and Temper', stages: ['Find Garrick One-Ear, camped west of the watchtower path', 'Bring Brandt his tools'] },
+  crypt: { name: 'The Sexton’s Key', stages: ['Find the crypt key in the chapel sacristy', 'Unlock the gate in the crypt under the chapel', 'Open the reliquary behind the gate'] },
   bounty: { name: 'Bounty: Outlaws', stages: ['Put down five outlaws', 'Collect the bounty from Warden Hale'] },
 };
-const QORDER = ['welcome', 'ale', 'hammer', 'herbs', 'bell', 'fire', 'camp', 'tools', 'bounty'];
+const QORDER = ['welcome', 'ale', 'hammer', 'herbs', 'bell', 'fire', 'camp', 'tools', 'crypt', 'bounty'];
 const BOUNTY_N = 5;
 const qAt = id => { const q = S.q[id]; return !q ? -1 : q.done ? 99 : q.stage; };
 const has = (id, n) => (S.items[id] || 0) >= (n || 1);
@@ -8647,6 +9617,7 @@ function questTarget(id) {
   if (id === 'ale') return st === 0 ? npc('osric') : npc('greta');
   if (id === 'hammer') return st === 0 ? npc('tobin') : st === 1 ? [SITE.tower.x, 0, SITE.tower.z] : npc('brandt');
   if (id === 'herbs') { if (st === 1) return npc('maren'); let best = null, bd = 1e9; for (const p of World.pickups) { if (p.item !== 'frostcap' || p.gone) continue; const d = hyp(p.p[0] - Player.pos[0], p.p[2] - Player.pos[2]); if (d < bd) { bd = d; best = p.p; } } return best; }
+  if (id === 'crypt') { const h = World.houses.chapel; return h ? [h.site.x, 0, h.site.z] : null; }
   if (id === 'bell') return st === 0 ? npc('marta') : st === 1 ? npc('aldous') : World.bell.p;
   if (id === 'fire') return st === 0 ? npc('rowan') : [World.bonfirePos[0], 0, World.bonfirePos[1]];
   const camp = cid => { const c = Foes.camps.find(k => k.id === cid); return [c.x, 0, c.z]; };
@@ -8770,6 +9741,7 @@ function interactLabel(it) {
   if (it.kind === 'loot') return 'Search ' + it.name;
   if (it.kind === 'pickup') return it.gone ? null : it.label;
   if (it.kind === 'read') return 'Read';
+  if (it.kind === 'gate') return S.opened[it.id] ? null : has(it.key) ? 'Unlock the gate' : 'Iron gate';
   if (it.kind === 'bed') return 'Sleep';
   if (it.kind === 'bell') return qAt('bell') >= 2 ? 'Ring the bell' : null;
   if (it.kind === 'shopitem') return 'Hemp rope';
@@ -8783,6 +9755,10 @@ function interactUse(it) {
     S.opened[it.id] = 1; Audio2.chest();
     const got = []; for (const [id, n] of it.loot || []) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
     toast('Found: ' + got.join(', ')); uiPurse(); save();
+    if (it.id === 'chapel.sacristy' && qAt('crypt') < 0) { qStart('crypt', 0); qStage('crypt', 1); } else if (it.id === 'chapel.relic') qDone('crypt');
+  } else if (it.kind === 'gate') {
+    if (!has(it.key)) toast('The gate is locked. A heavy iron lock, old and cared for.');
+    else { S.opened[it.id] = 1; Audio2.chest(); toast('The lock turns with a groan.'); const i = World.colliders.indexOf(it.col); if (i >= 0) World.colliders.splice(i, 1); if (it.mesh) it.mesh.gone = true; if (it.hide) it.hide(); if (it.id === 'chapel.gate') qStage('crypt', 2); save(); }
   } else if (it.kind === 'loot') {
     const got = []; Audio2.pickup();
     for (const [id, n] of it.loot) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
@@ -8864,12 +9840,12 @@ questTarget = function (id) {
 };
 const _il = interactLabel, _iu = interactUse;
 interactLabel = function (it) {
-  if (it.kind === 'door' && it.id === 'mine.door') return 'Try the mine door';
+  if (it.kind === 'door' && it.shut) return 'Try the door';
   if (it.kind === 'wbox') return S.opened[it.id] ? null : has(it.need) ? 'Unlock the strongbox' : 'Strongbox (locked)';
   return _il(it);
 };
 interactUse = function (it) {
-  if (it.kind === 'door' && it.id === 'mine.door') { Audio2.chest && Audio2.chest(); return toast('Barred from the far side. Iron and oak: you will not shift it.'); }
+  if (it.kind === 'door' && it.shut) { Audio2.chest && Audio2.chest(); return toast(it.msg); }
   if (it.kind === 'wbox') {
     if (S.opened[it.id]) return;
     if (!has(it.need)) return toast('Locked. The keyhole is small and clean; someone oils it.');
@@ -8934,7 +9910,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 22 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 26 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
@@ -8991,7 +9967,7 @@ function uiFrame(dt) {
     for (; k < UI.marks.length; k++) { UI.marks[k].el.style.display = 'none'; UI.marks[k].d.style.display = 'none'; }
   }
   if ((R.frame & 31) === 0) { const h = Math.floor(Env.hour), m = Math.floor((Env.hour - h) * 60 / 10) * 10; const part = Env.hour < 5 ? 'Night' : Env.hour < 8 ? 'Dawn' : Env.hour < 12 ? 'Morning' : Env.hour < 17 ? 'Afternoon' : Env.hour < 20.5 ? 'Dusk' : 'Night'; $('clock').textContent = part + ' · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); uiObjective();
-    for (const pl of World.places) { if (UI.seen[pl.id] || hyp(pl.x - ex, pl.z - ez) > pl.r) continue; UI.seen[pl.id] = 1; if (game.clock > 4) banner('Discovered', pl.name); break; } }
+    for (const pl of World.places) { if (UI.seen[pl.id] || hyp(pl.x - ex, pl.z - ez) > pl.r) continue; UI.seen[pl.id] = 1; if (game.clock > 4 && !pl.minor) banner('Discovered', pl.name); break; } }
 }
 
 
@@ -9043,8 +10019,8 @@ const Snd = {
   ctx: null, disabled: false, T: 0, frame: 0, err: 0, errMsg: '', pausedMul: 1, ups: [], lib: {}, bus: {}, rin: {}, rret: {}, sp: { open: 1, room: 0, hall: 0, cave: 0 }, spT: { open: 1, room: 0, hall: 0, cave: 0 },
   set: { master: 0.8, amb: 0.85, world: 0.85, foot: 0.85, ui: 0.85, music: 0.6, musicOn: true },
   // base trims per bus (dB-ish scaling chosen so that ambience beds sit near -27 dB RMS, footsteps and interactions peak near -12 dB)
-  trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 0.8 },
-  rvSend: { amb: 0.1, world: 0.55, foot: 0.7, ui: 0.25, music: 0.4 },
+  trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 2.5 },
+  rvSend: { amb: 0.08, world: 0.3, foot: 0.35, ui: 0, music: 0.4 },      // modest: rooms colour the world a little; interface sounds and speech are never reverberated
   L: { x: 0, y: 0, z: 0, yaw: 0, fx: 0, fz: -1, rx: 1, rz: 0 },
   G: { x: 0, y: 0, z: 0, zone: 0, zid: '', indoor: 0, space: 'open', hour: 12, night: 0, day: 1, wind: 0.8, rain: 0, forest: 0, playing: false, menu: false, talk: false, dead: false, speed: 0, ground: true, outd: 1, nearTown: 0 },
   dbg: {}, trims: {}, vEnd: new Float64Array(64), vPrio: new Uint8Array(64), vN: 0, last: {}, _s: { g: 0, lp: 16000, pan: 0, d: 0 },
@@ -9137,7 +10113,7 @@ const Snd = {
   applySends(now) {
     const S = this, t = S.now(), tc = now ? 0.001 : 0.25;
     for (const k of S.rvList) {
-      const w = S.sp[k], ret = k === 'open' ? 0.22 : k === 'room' ? 0.9 : k === 'hall' ? 1.0 : 1.0;
+      const w = S.sp[k], ret = k === 'open' ? 0 : k === 'room' ? 0.7 : k === 'hall' ? 0.8 : 1.0;      // open air is dry (the old 130 ms slap-back read as an echo on everything)
       S.rret[k].gain.setTargetAtTime(ret, t, 0.05);
       for (const bn of ['amb', 'world', 'foot', 'ui', 'music']) {
         const b = S.bus[bn]; let lv = S.rvSend[bn] * w;
@@ -9627,7 +10603,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
   C.night = { dur: 90, len: () => 8, vol: 0.4, setup() { M.root = ROOTS.e * 2; M.mode = 'phryg'; M.walk = 2; },
     bar(t, i, o) { if (i === 0) drone(o, t, 82, M.root / 2, 0.05, false); if (Math.random() < 0.7) bellV(o, t + R(0.5, 6), fq(M.root, M.mode, P([4, 7, 9, 11])) * 2, 0.03); if (i % 3 === 1) bowed(o, t + R(0, 3), fq(M.root, M.mode, P([0, 1, 4])) * 2, R(5, 7), 0.035); } };
   C.tavern = { dur: 46, len: () => 2.4, vol: 0.5, setup() { M.root = ROOTS.g * 2; M.mode = 'mixo'; M.walk = 6; },
-    bar(t, i, o) { const q = 0.3; const m = walkMelody(8, M.walk, 0.18, 1); m.forEach((d, k) => { if (d === null) return; M.walk = d; pluckV(o, t + k * q, fq(M.root, M.mode, d + 2), 0.17, 0.6); }); pluckV(o, t, fq(M.root, M.mode, 0) / 2, 0.2, 0.4); pluckV(o, t + q * 4, fq(M.root, M.mode, 4) / 2, 0.15, 0.4); frame(o, t, 0.2); frame(o, t + q * 4, 0.16); shaker(o, t + q * 2, 0.04); shaker(o, t + q * 6, 0.04); } };
+    bar(t, i, o) { const q = 0.3; const m = walkMelody(8, M.walk, 0.18, 1); m.forEach((d, k) => { if (d === null) return; M.walk = d; pluckV(o, t + k * q, fq(M.root, M.mode, d + 2), 0.08, 0.6); }); pluckV(o, t, fq(M.root, M.mode, 0) / 2, 0.1, 0.4); pluckV(o, t + q * 4, fq(M.root, M.mode, 4) / 2, 0.08, 0.4); frame(o, t, 0.1); frame(o, t + q * 4, 0.08); shaker(o, t + q * 2, 0.012); shaker(o, t + q * 6, 0.012); } };
   C.tension = { dur: 1e9, len: () => 3, vol: 0.55, setup() { M.root = ROOTS.e; M.mode = 'phryg'; M.walk = 0; },
     bar(t, i, o) { if (i === 0) { drone(o, t, 40, M.root, 0.08, false); drone(o, t, 40, M.root * 1.0595, 0.04, false); } if (i > 0 && i % 12 === 0) { drone(o, t, 40, M.root, 0.08, false); drone(o, t, 40, M.root * 1.0595, 0.04, false); } frame(o, t, 0.18, true); frame(o, t + 0.9, 0.1, true); if (Math.random() < 0.3) bowed(o, t + R(0, 2), fq(M.root, M.mode, P([1, 3, 6])) * 2, R(2.5, 3.5), 0.03); } };
   C.combat = { dur: 1e9, len: () => 2.4, vol: 0.6, setup() { M.root = ROOTS.a; M.mode = 'aeolian'; M.walk = 0; },
@@ -9664,7 +10640,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
     else if (M.cue && M.cueName !== 'combat' && M.cueName !== 'tension' && (now - M.t0 > M.cue.dur || (G.indoor > 0.7 && M.cueName !== 'tavern') )) { stopCue(now, 5); M.silentUntil = now + R(70, 180); }
     if (M.cue) while (M.nextBar < now + 1.5) { M.cue.bar(M.nextBar, M.bar++, M.cg); M.nextBar += M.cue.len(M.bar); }
   });
-  K.discover = () => { M.disc = 1; };
+  K.discover = () => { };      // the discovery flourish is off (see 88c_world.js)
 
   // ── Lark's lute: a tune made up as it goes, in D dorian, played from where Lark stands. Events are [eighths, Hz, velocity] ──
   const lutePhrase = l => { const root = ROOTS.d * 2, mode = 'dorian', out = [], rh = [[1, 1, 1, 1, 1, 1, 1, 1], [2, 1, 1, 2, 1, 1], [1, 1, 2, 1, 1, 2], [3, 1, 2, 2], [2, 2, 1, 1, 2], [1, 2, 1, 2, 2]], k = l.phrase % 4; let d = k === 2 ? 7 : 4;
@@ -9825,7 +10801,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
         if (st === 'attack') K.play('foe.effort', pos, 1, { free: true }); else if (st === 'stagger') K.play('foe.hurt', pos, 1, { free: true }); }
     }
     // ─ a place discovered ─
-    if (typeof UI !== 'undefined' && UI.placeT !== q.placeSeen) { q.placeSeen = UI.placeT; const pl = document.getElementById('place'); if (pl && pl.firstChild && /Discovered/.test(pl.firstChild.textContent || '')) K.play('discover'); }
+    if (typeof UI !== 'undefined' && UI.placeT !== q.placeSeen) { q.placeSeen = UI.placeT; const pl = document.getElementById('place'); }      // no sound: a jingle at every named place wore thin at once (the banner alone marks a discovery)
   });
   // the lute and the music are in 88c_music.js
   // remember what was last picked up, so the older pickup() call can choose a material
@@ -9848,7 +10824,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
   const BASE = 'audio/voice/';
   K.set.voices = true; K.set.voiceVol = 0.9; K.set.subs = true; K.load();
   // the slim subtitle strip and the waiting state (styles are injected here so the interface files stay untouched)
-  if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = '/* [voice] subtitle strip while a line is spoken */\nbody.voiced #dialog { padding: 8px 14px 10px; }\nbody.voiced #dname { font-size: 14px; }\nbody.voiced #dtext { font-size: 15px; line-height: 1.32; margin: 2px 0 8px; min-height: 0; max-height: 2.7em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\nbody.voiced.nosubs #dtext { visibility: hidden; }\n#dopts.vwait { visibility: hidden; }\nbody.voiced #dopts button { min-height: 40px; padding: 6px 12px; font-size: 15px; }'; document.head.appendChild(st); }
+  if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = '/* [voice] */\nbody.voiced.nosubs #dtext { visibility: hidden; }\n#dopts.vwait { visibility: hidden; }'; document.head.appendChild(st); }
 
   V.init = function () { if (V.loading || V.man || V.failed) return; V.loading = true;
     fetch(BASE + 'manifest.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { V.man = j; V.loading = false; }).catch(() => { V.failed = true; V.loading = false; }); };
@@ -9862,7 +10838,14 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
   // play a decoded buffer from a position (or at the listener) on the voice bus; returns the handle
   V.play = function (buf, speaker, pos, vol, o) {
     const c = K.ctx; if (!c || K.off) return null; const G = K.G; let dest = K.bus.ui.in, g = c.createGain(), src = c.createBufferSource(); src.buffer = buf; g.gain.value = vol * K.set.voiceVol * (o && o.trim || 1);
-    if (pos) { const node = K.route(o && o.bus || 'ui', pos[0], pos[1], pos[2], o && o.zone !== undefined ? o.zone : G.zone, o && o.ref || 3, o && o.max || 40, 1); if (!node) return null; g.connect(node); } else g.connect(dest);
+    // Speech is DRY: straight to the master chain, never through a bus (the buses feed the room reverbs and the outdoor echo, which made every
+    // line sound shouted across a hall). Conversation (o.dry, or no position) is centred at full level, like any game's dialogue. A passing bark
+    // keeps distance fall-off, a little pan and the wall muffle, but still no reverb.
+    dest = K.pre || K.bus.ui.in;
+    if (pos && !(o && o.dry)) { const sp = K._s; if (!K.spat(pos[0], pos[1], pos[2], o && o.zone !== undefined ? o.zone : G.zone, o && o.ref || 3, o && o.max || 40, sp)) return null;
+      g.gain.value *= sp.g; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.max(sp.lp, 2600); lp.Q.value = 0.5; g.connect(lp);
+      if (c.createStereoPanner) { const pn = c.createStereoPanner(); pn.pan.value = sp.pan * 0.45; lp.connect(pn); pn.connect(dest); } else lp.connect(dest);
+    } else g.connect(dest);
     src.connect(g); src.start(K.now() + 0.02); const h = { src, g, t0: K.now(), dur: buf.duration, speaker }; src.onended = () => { if (V.cur === h) { V.cur = null; V.reveal(); } }; return h; };
   // a dialogue node was shown: returns true if the line is voiced. The speaker is an NPC object or id.
   K.say = function (npc, text) {
@@ -9871,7 +10854,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
     const pos = npc.pos ? [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]] : null;
     V.load(e.f).then(buf => { if (V.key !== key) return; if (!buf) { V.reveal(); document.body.classList.remove('voiced'); return; }
       if (K.ctx.state !== 'running') { V.reveal(); return; }
-      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40 }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; V.lastPlayed = { speaker: id, file: e.f, text }; });
+      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40, dry: true }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; V.lastPlayed = { speaker: id, file: e.f, text }; });
     // do not hold the choices hostage to a slow download
     setTimeout(() => { if (V.key === key && !V.cur) { V.reveal(); } }, 2500);
     return true; };
@@ -10686,6 +11669,7 @@ function updateDynamics(dt, chars) {
     let near = false;
     for (const c of chars) if (CELLS_ON && c === chars[0]) continue; else if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
     if (near && d.open === 0 && game.playing) { const dd = hyp(pp[0] - d.c[0], pp[2] - d.c[2]); if (dd < 14) Audio2.door(clamp(1.2 - dd / 12, 0.1, 1)); }
+    if (d.gate && !S.opened[d.gate]) near = false;          // a locked gate stays shut until the key has turned
     d.open = clamp(d.open + (near ? dt : -dt) * 2.4, 0, 1);
     if (d.open === d.last) continue; d.last = d.open;
     m4.copy(tmp, d.baseM); m4.rotY(tmp, smooth(0, 1, d.open) * 1.85); m4.mul(tmp, tmp, d.S); bd.set(tmp, d.obj.slot * 256);
