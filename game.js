@@ -8259,7 +8259,7 @@ WBUILD.blind = (p, m, R) => {
 
 WBUILD.burnt = (p, m, R) => {
   // the shell of a cottage: charred sill beams, jagged stubs of wall, a standing chimney, fallen rafters, drifts of ash and rubble
-  const CH = [0.16, 0.14, 0.13], CH2 = [0.24, 0.2, 0.17];
+  const CH = [0.34, 0.31, 0.29], CH2 = [0.44, 0.39, 0.34];
   wPut(m, p, 0, 0, 0.3, mm => {
     const w = 6.0, d = 4.6;
     mm.mat(MAT.STONE, [0.62, 0.6, 0.57], 0.8); mm.box(-w / 2 - 0.1, -0.5, -d / 2 - 0.1, w / 2 + 0.1, 0.18, d / 2 + 0.1, 8);
@@ -8444,7 +8444,7 @@ WBUILD.fishing = (p, m, R) => {
 WBUILD.toll = (p, m, R) => {
   // the road crosses a brook by a ford; beside it a plank footbridge, stepping stones, and a guard post with a toll bar (kept raised); a brazier, a notice, a strongbox of tolls
   wPut(m, p, 7.2, -4.4, -PI / 2, mm => {
-    wHut(mm, 3.8, 3.0, { h: 2.3, rise: 1.0, wall: MAT.STONE, wc: [0.8, 0.78, 0.74], roof: MAT.SHINGLE, rc: [0.62, 0.56, 0.5], door: 0.5 });
+    wHut(mm, 3.8, 3.0, { h: 2.3, rise: 1.0, wall: MAT.STONE, wc: [0.8, 0.78, 0.74], roof: MAT.SHINGLE, rc: [1.1, 1.05, 1.0], door: 0.5 });
     mm.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.7); mm.box(-1.0, 0.3, 1.2, -0.2, 3.3, 1.9); mm.mat(MAT.PLAIN, [0.07, 0.06, 0.05]); mm.box(0.9, 0.9, -1.55, 1.5, 1.6, -1.5);
   });
   // the toll bar: a post each side of the road, the pole propped upright against the north post so that the road stays open
