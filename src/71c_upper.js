@@ -82,8 +82,9 @@ UPPER.mill = c => {
 
 // ── gable windows: the plaster of a gable end with holes cut in it, and the kit's open window frames in the holes ──
 // wb: the wall's basis (house-local), L: its length, Ytop: where the gable starts, wins: [{ u: position along the wall, sill: height above the gable's foot, s: scale of the kit window }]
-function gableFill(c, wb, L, Ytop, wins, placeWin) {
-  const ext = c.ext, { zone, tanP, hd } = c, T = 0.25, inset = 0.3, apex = Ytop + hd * tanP - 0.5, col = c.spec.plaster || [1, 0.96, 0.88];
+function gableFill(c, wb, L, Ytop, wins, placeWin, pass, ext) {
+  ext = ext || c.ext; pass = pass || 'both';
+  const { zone, tanP, hd } = c, T = 0.25, inset = 0.3, apex = Ytop + hd * tanP - 0.5, col = c.spec.plaster || [1, 0.96, 0.88];
   const P = (u, v, n) => m4.tp(wb, [u, v, n]);
   const hw = 0.6, holes = wins.map(w => (w = Object.assign({ u: L / 2 }, w), { u0: w.u - hw * w.s, u1: w.u + hw * w.s, v0: Ytop + w.sill, v1: Ytop + w.sill + 1.55 * w.s, w })).sort((a, b) => a.u0 - b.u0);
   const left = v => inset + (v - Ytop) / tanP, right = v => L - inset - (v - Ytop) / tanP;       // the fill stops inside the rafters
@@ -99,13 +100,13 @@ function gableFill(c, wb, L, Ytop, wins, placeWin) {
       for (const [a0, a1, b0, b1] of segs) { if (b0 - a0 < 0.02 && b1 - a1 < 0.02) continue; if (vb >= apex - 0.001 && Math.abs(b1 - a1) < 0.05) continue; q([a0, va], [b0, va], [b1, vb], [a1, vb]); }
     }
   };
-  ext.m1 = 0; ext.ao = 1; ext.mat(MAT.PLASTER, col); face(0, false);
-  ext.m1 = zone; ext.ao = INT_AO; ext.mat(MAT.PLASTER, [col[0] * 0.97, col[1] * 0.95, col[2] * 0.9]); face(-T, true);
+  if (pass !== 'int') { ext.m1 = 0; ext.ao = 1; ext.mat(MAT.PLASTER, col); face(0, false); }
+  if (pass !== 'ext') { ext.m1 = zone; ext.ao = INT_AO; ext.mat(MAT.PLASTER, [col[0] * 0.97, col[1] * 0.95, col[2] * 0.9]); face(-T, true); }
   // reveals round each hole, then the frame
   for (const h of holes) {
-    ext.m1 = 0; ext.ao = 0.8; ext.mat(MAT.TIMBER, c.spec.timber || COL.timber);
+    if (pass !== 'int') { ext.m1 = 0; ext.ao = 0.8; ext.mat(MAT.TIMBER, c.spec.timber || COL.timber);
     const a = [h.u0, h.v0], b = [h.u1, h.v0], e = [h.u1, h.v1], d = [h.u0, h.v1];
-    for (const [p0, p1] of [[a, b], [b, e], [e, d], [d, a]]) ext.quad(P(p0[0], p0[1], 0), P(p1[0], p1[1], 0), P(p1[0], p1[1], -T), P(p0[0], p0[1], -T), 0, 0, 1, 1);
+    for (const [p0, p1] of [[a, b], [b, e], [e, d], [d, a]]) ext.quad(P(p0[0], p0[1], 0), P(p1[0], p1[1], 0), P(p1[0], p1[1], -T), P(p0[0], p0[1], -T), 0, 0, 1, 1); }
     ext.ao = 1; ext.m1 = 0; placeWin(kitOpen('Window_Wide_Flat1'), (h.u0 + h.u1) / 2, h.v0 - 0.95 * h.w.s, h.w.s);
   }
   ext.m1 = 0; ext.ao = 1;

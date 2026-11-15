@@ -10,17 +10,7 @@ const RPG = {
   stDelay: 0, hurtT: 99, combatT: 99, flash: 0, shake: 0, kick: [0, 0], hitStop: 0, exhausted: false,
   dead: false, deadT: 0, inited: false, out: { run: false, speed: 1, jump: false, ov: null }, ov: [0, 0], fx: [], hud: {}, wasPlaying: false,
 };
-// sounds, built from the synth's two primitives
-Object.assign(Audio2, {
-  swing(heavy) { if (!this.ctx) return; this.burst(heavy ? 0.26 : 0.17, heavy ? 0.11 : 0.075, 'bandpass', heavy ? 480 : 700, 1.2, null, 0, heavy ? 1500 : 2100); },
-  hitFlesh(heavy) { if (!this.ctx) return; this.burst(0.11, heavy ? 0.3 : 0.2, 'lowpass', 520, 1); this.tone(heavy ? 70 : 95, 0.16, heavy ? 0.22 : 0.14, 'sine', null, 45); },
-  clash(vol) { if (!this.ctx) return; this.clang(vol === undefined ? 0.9 : vol); this.burst(0.07, 0.16, 'highpass', 3000, 0.7); },
-  hurt() { if (!this.ctx) return; this.burst(0.2, 0.3, 'lowpass', 330, 1); this.tone(150, 0.22, 0.12, 'sawtooth', null, 80); },
-  hop() { if (!this.ctx) return; this.burst(0.08, 0.05, 'bandpass', 420, 1.5); },
-  eat() { if (!this.ctx) return; for (let i = 0; i < 3; i++) this.burst(0.07, 0.07, 'bandpass', 900 + i * 150, 2, null, i * 0.17); },
-  shout(deep) { if (!this.ctx) return; this.tone(deep ? 120 : 165, 0.34, 0.09, 'sawtooth', null, deep ? 92 : 128); this.burst(0.3, 0.05, 'bandpass', 900, 2); },
-  fall() { if (!this.ctx) return; this.tone(110, 1.1, 0.14, 'sine', null, 48); this.burst(0.5, 0.2, 'lowpass', 240, 1, null, 0.25); },
-});
+// sounds: Audio2.swing / hitFlesh / clash / hurt / hop / eat / shout / fall are in the sound engine now (88_audio.js, 88b_sfx.js)
 
 // saved state, with defaults filled in for a new game or an older save
 RPG.st = function () {
