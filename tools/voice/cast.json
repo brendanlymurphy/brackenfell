@@ -1,0 +1,21 @@
+{
+  "_note": "voice = Kokoro voice id; speed 1.0 = normal; pitch = semitones (ffmpeg rubberband, formants preserved); lang en-gb. Edit and regenerate: files are named by a hash of these settings, so only changed characters are re-voiced.",
+  "hale":   { "voice": "bm_george",   "speed": 0.92, "pitch": -0.5, "note": "Warden, fifties, weary authority" },
+  "ivo":    { "voice": "bm_daniel",   "speed": 1.0,  "pitch": 0.5,  "note": "young guardsman" },
+  "greta":  { "voice": "bf_emma",     "speed": 1.0,  "pitch": 0,    "note": "innkeeper, warm, forties" },
+  "brandt": { "voice": "bm_lewis",    "speed": 0.94, "pitch": -2,   "note": "smith, gruff and slow" },
+  "tobin":  { "voice": "bm_daniel",   "speed": 1.1,  "pitch": 5,    "note": "boy" },
+  "marta":  { "voice": "bf_alice",    "speed": 1.0,  "pitch": 0,    "note": "storekeeper, brisk" },
+  "aldous": { "voice": "bm_fable",    "speed": 0.88, "pitch": -0.5, "note": "chapel brother, gentle, old" },
+  "maren":  { "voice": "bf_isabella", "speed": 0.87, "pitch": -1.5, "note": "herbalist, very old woman" },
+  "osric":  { "voice": "bm_fable",    "speed": 1.0,  "pitch": 1.5,  "note": "miller, hearty" },
+  "edda":   { "voice": "bf_emma",     "speed": 0.95, "pitch": -1.5, "note": "farmer, plain-spoken, older" },
+  "finn":   { "voice": "bm_lewis",    "speed": 0.86, "pitch": -3.5, "note": "old fisherman, murmuring" },
+  "lark":   { "voice": "bf_isabella", "speed": 1.05, "pitch": 1,    "note": "bard, young and wry" },
+  "wren":   { "voice": "bf_alice",    "speed": 0.95, "pitch": -2,   "note": "hunter, laconic" },
+  "rowan":  { "voice": "bm_george",   "speed": 0.82, "pitch": -2,   "note": "village elder, very old" },
+  "pip":    { "voice": "bf_lily",     "speed": 1.1,  "pitch": 4,    "note": "small girl" },
+  "hilda":  { "voice": "bf_lily",     "speed": 1.0,  "pitch": -1,   "note": "weaver, mother of Pip" },
+  "bram":   { "voice": "bm_lewis",    "speed": 1.08, "pitch": 1.5,  "note": "farmhand, cheerful" },
+  "narrator": { "voice": "bm_fable",  "speed": 0.92, "pitch": 0,    "note": "notes and signs; off by default (nothing is generated unless lines name this speaker)" }
+}

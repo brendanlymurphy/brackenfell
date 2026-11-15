@@ -1,0 +1,472 @@
+{
+ "lines": [
+  {
+   "speaker": "hale",
+   "text": "Hold there, traveller. Brackenfell is a quiet place and I mean to keep it so. But you have the look of the road on you: tired, and honest enough. Greta at the Honeyed Hart keeps a bed for folk like you. Straight down this road to the square. It’s the tall house with the lantern.",
+   "where": "80_game.js:70"
+  },
+  {
+   "speaker": "hale",
+   "text": "You lit the harvest fire. I never thought to see it burn again. You’re one of us now, whether you like it or not.",
+   "where": "80_game.js:71"
+  },
+  {
+   "speaker": "hale",
+   "text": "Road’s quiet. Just how I like it.",
+   "where": "80_game.js:72"
+  },
+  {
+   "speaker": "hale",
+   "text": "The old watchtower, up the crag to the north-east. It held a beacon once. Burned out before my grandfather’s day. Children dare each other up there, though they swear to me they don’t.",
+   "where": "80_game.js:72"
+  },
+  {
+   "speaker": "hale",
+   "text": "Last village before the Greyspine passes. Sixty souls, one inn, one forge, and a chapel bell that no longer rings. Mind the river. The Stonewater is colder than she looks, and she doesn’t give back what she takes.",
+   "where": "80_game.js:74"
+  },
+  {
+   "speaker": "greta",
+   "text": "Well now, a new face! Hale sent you? Then you’re welcome under this roof. There’s a bed up the stairs, by the window. It’s yours while you stay. But I’ll ask a kindness in return. Osric at the mill owes me a sack of malt, and I can’t brew on promises. Fetch it for me?",
+   "where": "80_game.js:78"
+  },
+  {
+   "speaker": "greta",
+   "text": "You’re a treasure. Over the bridge east of the square, then follow the river downstream. You’ll hear the wheel before you see it.",
+   "where": "80_game.js:78"
+  },
+  {
+   "speaker": "greta",
+   "text": "The mill is over the bridge east of the square, then down the river. Osric will know what I’m owed.",
+   "where": "80_game.js:80"
+  },
+  {
+   "speaker": "greta",
+   "text": "That’s the malt! Oh, bless you. There’ll be ale by week’s end. Here, for your trouble, and a bottle of the last batch.",
+   "where": "80_game.js:81"
+  },
+  {
+   "speaker": "greta",
+   "text": "If you’ve a mind to stay useful: Brandt has been storming about since his hammer went missing, old Maren is short of frostcaps, and Brother Aldous frets over that silent bell of his. And the Elder likes company, out under the oak.",
+   "where": "80_game.js:81"
+  },
+  {
+   "speaker": "greta",
+   "text": "The whole village in my hall, and the fire lit in the square. I could weep. Sit, drink!",
+   "where": "80_game.js:82"
+  },
+  {
+   "speaker": "greta",
+   "text": "What can I get you, love?",
+   "where": "80_game.js:82"
+  },
+  {
+   "speaker": "greta",
+   "text": "It’s two gold, love, and your purse is light. Help a few folk around the village and come back.",
+   "where": "80_game.js:84"
+  },
+  {
+   "speaker": "greta",
+   "text": "Warm, and sweet with heather honey. The room feels friendlier already.",
+   "where": "80_game.js:84"
+  },
+  {
+   "speaker": "greta",
+   "text": "Three generations of Barleybrooks have kept this hearth. The beams came down from the beacon forest, and the recipe for the ale came from my gran, who took it from a traveller in trade for a night’s lodging. So you see, I’ve a soft spot for strangers.",
+   "where": "80_game.js:84"
+  },
+  {
+   "speaker": "greta",
+   "text": "Up the stairs at the back, the bed by the window. Sleep as late as you like.",
+   "where": "80_game.js:84"
+  },
+  {
+   "speaker": "greta",
+   "text": "Do me one small favour first and there’s a bed in it for you.",
+   "where": "80_game.js:84"
+  },
+  {
+   "speaker": "osric",
+   "text": "Greta’s malt! I’d clean forgot, what with the wheel groaning all week. Here, take it, and tell her the next sack is on me. I’d carry it myself, but the stones won’t dress themselves.",
+   "where": "80_game.js:86"
+  },
+  {
+   "speaker": "osric",
+   "text": "Mind the dust. A mill is no place for a naked flame, or a fool.",
+   "where": "80_game.js:87"
+  },
+  {
+   "speaker": "osric",
+   "text": "The Stonewater turns my wheel, the wheel turns the stones, and the stones feed the valley. Simple as bread. Listen: you can hear her running true.",
+   "where": "80_game.js:87"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Unless you’ve come to tell me where my hammer is, I’ve work to do. My best cross-peen, gone from the bench three days back. And that boy Tobin can’t look me in the eye.",
+   "where": "80_game.js:91"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Hm. Start with the boy. He’s always underfoot in the square, when he should be at the bellows.",
+   "where": "80_game.js:91"
+  },
+  {
+   "speaker": "brandt",
+   "text": "That’s her! Where was she? The watchtower? I’ll tan his... no. No, I was a boy once, and that tower was a castle then too. Take this. I made it for no one in particular, and it seems that was you.",
+   "where": "80_game.js:92"
+  },
+  {
+   "speaker": "brandt",
+   "text": "She rings true again. Hear that? That’s the sound of a village with a working forge.",
+   "where": "80_game.js:93"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Find the boy. Tobin. Fair hair, guilty face.",
+   "where": "80_game.js:94"
+  },
+  {
+   "speaker": "brandt",
+   "text": "The watchtower, he said? Up the crag past the chapel. Mind your footing.",
+   "where": "80_game.js:94"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Iron from the Greyspine, charcoal from the pine, water from the Stonewater. Everything in this valley was made within sight of it. That’s rarer than you’d think.",
+   "where": "80_game.js:96"
+  },
+  {
+   "speaker": "tobin",
+   "text": "The hammer? I, um. I only borrowed it! I was playing knights up at the old watchtower, and then it got dark, and I ran, and... I left it by the fire ring. Please don’t tell him it was me.",
+   "where": "80_game.js:98"
+  },
+  {
+   "speaker": "tobin",
+   "text": "He wasn’t even cross! Well. He was a bit cross.",
+   "where": "80_game.js:99"
+  },
+  {
+   "speaker": "tobin",
+   "text": "Bet you can’t beat me to the well!",
+   "where": "80_game.js:99"
+  },
+  {
+   "speaker": "tobin",
+   "text": "A smith, like Brandt. I’m going to forge a sword as tall as Warden Hale. Taller!",
+   "where": "80_game.js:99"
+  },
+  {
+   "speaker": "maren",
+   "text": "Hm. Young eyes. Good. The frost came early and my stores are thin. I need frostcaps: pale blue, and they glow a little at dusk. They grow where it is cold and quiet. By the lake, at the forest’s edge, near old stones. Bring me five.",
+   "where": "80_game.js:103"
+  },
+  {
+   "speaker": "maren",
+   "text": "Five, and not one bruised! You have gentle hands. Take this tonic. It will keep the mountain chill from your bones.",
+   "where": "80_game.js:104"
+  },
+  {
+   "speaker": "maren",
+   "text": "Sixty winters in this valley. I have buried more secrets in that garden than turnips.",
+   "where": "80_game.js:106"
+  },
+  {
+   "speaker": "maren",
+   "text": "Fevers, mostly. And grief, a little, though I don’t tell them that’s what’s in the tea.",
+   "where": "80_game.js:106"
+  },
+  {
+   "speaker": "aldous",
+   "text": "The peace of the Dawn upon you. Forgive the quiet. Our bell rope rotted through at midsummer, and I have neither the coin nor the knees to replace it. A village without its bell is a body without a voice.",
+   "where": "80_game.js:110"
+  },
+  {
+   "speaker": "aldous",
+   "text": "Would you? Marta keeps good hemp at her shop on the square. The Dawn remembers a kindness.",
+   "where": "80_game.js:110"
+  },
+  {
+   "speaker": "aldous",
+   "text": "Hemp, and well laid! Give me one moment in the tower... there. It is done. Would you ring it? It ought to be a friend who rings it first.",
+   "where": "80_game.js:111"
+  },
+  {
+   "speaker": "aldous",
+   "text": "Marta keeps good hemp rope at her shop on the square, east side.",
+   "where": "80_game.js:112"
+  },
+  {
+   "speaker": "aldous",
+   "text": "The rope hangs under the tower, by the door. Pull, and let the valley hear.",
+   "where": "80_game.js:113"
+  },
+  {
+   "speaker": "aldous",
+   "text": "Listen. The valley has its voice again.",
+   "where": "80_game.js:114"
+  },
+  {
+   "speaker": "aldous",
+   "text": "Only that the night ends. Every night, without fail. We find that worth a small stone house and a bell.",
+   "where": "80_game.js:114"
+  },
+  {
+   "speaker": "marta",
+   "text": "Quill’s Sundries. If I don’t have it, you don’t need it.",
+   "where": "80_game.js:117"
+  },
+  {
+   "speaker": "marta",
+   "text": "Thirty feet of the best. Don’t hang anything you can’t lift.",
+   "where": "80_game.js:117"
+  },
+  {
+   "speaker": "marta",
+   "text": "Baked this morning. Mostly.",
+   "where": "80_game.js:117"
+  },
+  {
+   "speaker": "marta",
+   "text": "From Edda’s trees. Sweetest in the valley.",
+   "where": "80_game.js:117"
+  },
+  {
+   "speaker": "marta",
+   "text": "I trade with the lowland caravans twice a year. The rest of the time I trade in gossip, and the price is always fair.",
+   "where": "80_game.js:117"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Brackenfell remembers its friends. Stay as long as you like. Stay for good, if the road will let you.",
+   "where": "80_game.js:121"
+  },
+  {
+   "speaker": "rowan",
+   "text": "The inn has its ale, the forge its hammer, Maren her remedies, and the bell its voice. Do you know how long it has been since Brackenfell was whole? We used to light a fire in the square at harvest’s end, and the whole valley would come. Light it tonight. You have earned the tinder.",
+   "where": "80_game.js:124"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Sit a while. An old man’s stories are all the entertainment this square can afford.",
+   "where": "80_game.js:127"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Before the bell there was the beacon on the crag, and before the beacon, only the stars. We have always found some way to say: here we are. Come and find us.",
+   "where": "80_game.js:127"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Begin with Greta at the inn. Everything in Brackenfell begins there.",
+   "where": "80_game.js:127"
+  },
+  {
+   "speaker": "edda",
+   "text": "Wheat’s in, mostly. Chickens are out, always.",
+   "where": "80_game.js:129"
+  },
+  {
+   "speaker": "edda",
+   "text": "Fairweather land, five generations. The soil is thin and the summers short, but the bread tastes of it. If you see Bram dawdling at the market, tell him the barn won’t sweep itself.",
+   "where": "80_game.js:129"
+  },
+  {
+   "speaker": "finn",
+   "text": "Shh. You’ll scare the char.",
+   "where": "80_game.js:130"
+  },
+  {
+   "speaker": "finn",
+   "text": "Mirrormere gives what she gives. She’s deep in the middle, mind. Deeper than the watchtower is tall, they say. Oh, and there’s one of Maren’s blue flowers on the shore yonder, if you’re collecting.",
+   "where": "80_game.js:130"
+  },
+  {
+   "speaker": "lark",
+   "text": "A song for the traveller? I know nine. Seven of them are sad.",
+   "where": "80_game.js:131"
+  },
+  {
+   "speaker": "lark",
+   "text": "This one’s called “The Road Goes Ever Up.” It isn’t about anything. The good ones never are.",
+   "where": "80_game.js:131"
+  },
+  {
+   "speaker": "lark",
+   "text": "I came for one night, two winters ago. Greta’s ale is a kind of gravity.",
+   "where": "80_game.js:131"
+  },
+  {
+   "speaker": "wren",
+   "text": "You walk loud.",
+   "where": "80_game.js:132"
+  },
+  {
+   "speaker": "wren",
+   "text": "Forest edge, north-west of the gate. Another on the rocks above the river, north of the bridge. And one past my cabin, where the ground stays cold. Don’t trample them.",
+   "where": "80_game.js:132"
+  },
+  {
+   "speaker": "wren",
+   "text": "Hare. Grouse. Silence, mostly.",
+   "where": "80_game.js:132"
+  },
+  {
+   "speaker": "pip",
+   "text": "Have you seen a chicken? Not for any reason.",
+   "where": "80_game.js:133"
+  },
+  {
+   "speaker": "pip",
+   "text": "My mum sells cloth and says I have to stay where she can see me. So I’m going to be a knight. Or a chicken farmer. I haven’t decided.",
+   "where": "80_game.js:133"
+  },
+  {
+   "speaker": "ivo",
+   "text": "Patrol’s quiet. Keep to the roads after dark, friend.",
+   "where": "80_game.js:134"
+  },
+  {
+   "speaker": "ivo",
+   "text": "Stonewater Bridge? Older than the village. Older than the chapel. Whoever built it meant for something to be on the other side.",
+   "where": "80_game.js:134"
+  },
+  {
+   "speaker": "hilda",
+   "text": "Wool from the high pastures, dyed with Maren’s roots. Feel that. Go on.",
+   "where": "80_game.js:135"
+  },
+  {
+   "speaker": "hilda",
+   "text": "It keeps us fed. And if my Pip offers to sell you a chicken, it isn’t hers.",
+   "where": "80_game.js:135"
+  },
+  {
+   "speaker": "bram",
+   "text": "Apples! Cabbages! Oh. Sorry. Habit.",
+   "where": "80_game.js:136"
+  },
+  {
+   "speaker": "bram",
+   "text": "Not a coin? Go on, then. Don’t tell Edda.",
+   "where": "80_game.js:136"
+  },
+  {
+   "speaker": "bram",
+   "text": "Best in the valley. Only in the valley, mind, but still.",
+   "where": "80_game.js:136"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Safer than most. But there has been smoke in the pines north-west of the gate these three nights, and it is not Wren’s. Outlaws, come down off the passes before the snow. Hale cannot leave the gate, and I am too old to do more than worry. If you carry a blade and know its use, drive them off. Mind the big one.",
+   "where": "80_game.js:144"
+  },
+  {
+   "speaker": "rowan",
+   "text": "North-west of the gate, among the pines. You will see their rag on a pole before they see you, if you are careful. Eat before you go, and do not be too proud to run.",
+   "where": "80_game.js:145"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Then the children can pick berries at the wood’s edge again. This was my father’s, and it has hung on the wall long enough. Take it, with the village’s thanks.",
+   "where": "80_game.js:146"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Troubled me? They had my second-best tongs and a roll of files off the cart at the ford, a week gone. Their chief wears them on his belt like trophies. One ear, red beard. They camp west of the path up to the old watchtower. Bring my tools back and I’ll put a proper sword in your hand, not that kitchen iron.",
+   "where": "80_game.js:149"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Hah! Not a scratch on them. As promised: an arming sword, drawn out this spring and waiting for a hand. Keep the point low and your feet moving.",
+   "where": "80_game.js:150"
+  },
+  {
+   "speaker": "hale",
+   "text": "There’s coin on the board for outlaws, and I’ll pay it myself. Five of them put down and the road is a road again. Two camps: one in the pines north-west of here, one under the old watchtower. Don’t take on more than you can see.",
+   "where": "80_game.js:155"
+  },
+  {
+   "speaker": "hale",
+   "text": "Five, by my count and yours. Paid in full. You’ve done the valley a turn, and I’ll not forget it.",
+   "where": "80_game.js:156"
+  },
+  {
+   "speaker": "maren",
+   "text": "Twenty-four, child. Frostcaps do not pick themselves.",
+   "where": "80_game.js:158"
+  },
+  {
+   "speaker": "maren",
+   "text": "Drink it when you bleed, not before. It is no use against foolishness.",
+   "where": "80_game.js:158"
+  },
+  {
+   "speaker": "maren",
+   "text": "Since you are the sort who walks: I have a tea I used to make from three herbs and my knees now refuse. Bogbean from the hermit’s pool, sunwort from the bee meadow, stonecrop from the old stones on the eastern hill. It is the only thing that lets Edda’s widow sleep.",
+   "where": "81_wilds_story.js:50"
+  },
+  {
+   "speaker": "maren",
+   "text": "All three. And the stonecrop still wet. Sit, sit. I will brew it now, and you shall have the first cup.",
+   "where": "81_wilds_story.js:51"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Where did you… that is Corwin’s cap. Hob’s brother went down the old mine after silver, a good while back. So. It is the end of a long hope. Thank you for bringing it home rather than leaving it to the damp.",
+   "where": "81_wilds_story.js:57"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
+   "where": "81_wilds_story.js:59"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Sound work, that. Look after it and it will look after you.",
+   "where": "93_inventory.js:51"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Iron from the Greyspine, every piece. I don’t haggle.",
+   "where": "93_inventory.js:52"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Let’s see it, then.",
+   "where": "93_inventory.js:57"
+  },
+  {
+   "speaker": "brandt",
+   "text": "You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.",
+   "where": "93_inventory.js:57"
+  }
+ ],
+ "dynamic": [
+  {
+   "speaker": "maren",
+   "where": "80_game.js:105",
+   "raw": "'You have ' + frostN() + ' of five. Keep looking where it is cold and quiet.'"
+  },
+  {
+   "speaker": "",
+   "where": "80_game.js:119",
+   "raw": "'That’s ' + cost + ' gold, dear, and you have ' + S.gold + '. Greta or Brandt might have paying work.'"
+  },
+  {
+   "speaker": "rowan",
+   "where": "80_game.js:127",
+   "raw": "'There are troubles enough: ' + left.join(', ') + '. Mend those, and come back to me.'"
+  },
+  {
+   "speaker": "maren",
+   "where": "81_wilds_story.js:52",
+   "raw": "'Bogbean ' + (has('bogbean') ? 'in hand' : 'still wanting') + ', sunwort ' + (has('sunwort') ? 'in hand' : 'still wanting') + ', stonecrop ' + (has('stonecrop')"
+  },
+  {
+   "speaker": "brandt",
+   "where": "93_inventory.js:49",
+   "raw": "'That’s ' + m.cost + ' gold, and you’ve ' + S.gold + '. Hale pays a bounty on outlaws, if you’ve the stomach for it.'"
+  }
+ ],
+ "unresolved": []
+}
