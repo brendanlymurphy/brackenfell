@@ -1,9 +1,13 @@
 // ───────────────────────── sky dome: gradient, stars, sun and moon, aurora, clouds ─────────────────────────
 // A sphere that follows the camera. It is drawn after the opaque world with the depth test on, so only uncovered pixels pay for it.
-const Sky = { mesh: null, radius: 10000 };
+// Weather: Sky.setWeather(cover, mist), both 0..1. cover thickens the cloud layer up to a full overcast; mist fills the valley with fog.
+// The render loop must call Sky.applyWeather(env) right after updateEnv() and before SH.update(), so that the sun, ambient light,
+// fog and cloud cover every material sees agree with the sky. With both at 0 nothing changes.
+const Sky = { mesh: null, radius: 10000, weather: { cover: 0, mist: 0 } };
 (() => {
   Sky.build = function (scene) {
-    const { Fn, If, float, vec2, vec3, positionLocal, mix, smoothstep, max, pow, sin, dot, normalize, length, floor, fract, abs } = TSL;
+    const { Fn, If, float, vec2, vec3, uniform, positionLocal, mix, smoothstep, max, pow, sin, dot, normalize, length, floor, fract, abs } = TSL;
+    const uCover = Sky.uCover = uniform(0), uMist = Sky.uMist = uniform(0);
     const U = SH.U, sat = SH.sat, noiseL = SH.noiseL;
     const h31 = (p, k) => fract(sin(dot(p, k)).mul(43758.5453));
     const m = new THREE.MeshBasicNodeMaterial({ side: THREE.BackSide, depthWrite: false });
@@ -55,11 +59,16 @@ const Sky = { mesh: null, radius: 10000 };
           const lit = sat(float(1.15).sub(toward.mul(1.1)));
           const sunlit = U.sunCol.mul(0.5).add(U.ambSky).add(U.fogSun.mul(pow(max(sd, 0), 4).mul(0.5)));
           const dark = U.ambSky.mul(0.55).add(U.horizon.mul(0.25));
-          const cc = mix(dark, sunlit, lit.mul(dens.oneMinus().mul(0.45).add(0.55)));
+          const cc = mix(dark, sunlit, lit.mul(dens.oneMinus().mul(0.45).add(0.55))).toVar();
+          // overcast: no sunlit tops, just a mottled grey ceiling that is a little brighter where it is thin
+          const lid = U.ambSky.mul(0.80).add(U.horizon.mul(0.42)).mul(noiseL(pc.mul(0.00035)).g.mul(0.75).add(noiseL(pc.mul(0.0011).add(vec2(t.mul(0.002), 0.3))).b.mul(0.35)).add(0.47));
+          cc.assign(mix(cc, lid, uCover.mul(0.9)));
           const fade = smoothstep(0.012, 0.20, dir.y);
           c.assign(mix(c, mix(U.horizon, cc, fade), dens.mul(fade).mul(0.94)));
         });
       });
+      // mist: the horizon dissolves into the fog colour, and a little of it veils the whole sky
+      c.assign(mix(c, U.fogCol, uMist.mul(smoothstep(0.02, 0.42, dir.y).oneMinus().mul(0.8).add(0.2))));
       return c;
     })();
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), m);
@@ -70,6 +79,31 @@ const Sky = { mesh: null, radius: 10000 };
     return mesh;
   };
   Sky.update = function (camPos) {
-    if (Sky.mesh) { Sky.mesh.position.set(camPos[0], camPos[1], camPos[2]); Sky.mesh.updateMatrixWorld(); }
+    if (!Sky.mesh) return;
+    Sky.mesh.position.set(camPos[0], camPos[1], camPos[2]); Sky.mesh.updateMatrixWorld();
+    const w = Sky.weather; Sky.uCover.value = w.cover; Sky.uMist.value = w.mist;
+    SH.U.fogFall.value = 0.011 + 0.014 * w.mist;          // mist hugs the valley floor
+  };
+  Sky.setWeather = function (cover, mist) { Sky.weather.cover = sat(cover || 0); Sky.weather.mist = sat(mist || 0); };
+  // Adjusts a freshly computed ENV (50_env.js) in place for the current weather.
+  Sky.applyWeather = function (env) {
+    const c = Sky.weather.cover, m = Sky.weather.mist;
+    if (c <= 0 && m <= 0) return env;
+    const lum = a => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2], grey = (g, t) => [g * (1 - 0.04 * t), g, g * (1 + 0.07 * t)];
+    const sunL = lum(env.keyCol);
+    // thick cloud takes most of the direct light and nearly all of the shadow contrast, and hands part of it back as flat sky light
+    env.keyCol = v3.scale(env.keyCol, 1 - 0.90 * c); env.shadowStrength *= 1 - 0.85 * c;
+    env.ambSky = mix3(env.ambSky, grey(lum(env.ambSky) * 1.05 + sunL * 0.085, 1), c);
+    env.ambGnd = mix3(env.ambGnd, grey(lum(env.ambGnd) * 0.9 + sunL * 0.02, -1), c * 0.7);
+    const sk = lum(mix3(env.zenith, env.horizon, 0.55));
+    env.zenith = mix3(env.zenith, grey(sk * 0.62, 1), c); env.horizon = mix3(env.horizon, grey(sk * 0.95, 0.6), c);
+    env.fogSun = v3.scale(env.fogSun, (1 - 0.92 * c) * (1 - 0.5 * m)); env.sunDisc *= (1 - c) * (1 - c) * (1 - 0.7 * m);
+    env.stars *= (1 - c) * (1 - 0.6 * m); env.aurora *= (1 - c) * (1 - 0.5 * m); env.moonBright *= (1 - 0.9 * c) * (1 - 0.5 * m);
+    env.cloud = lerp(env.cloud, 1.25, c);
+    // mist: much denser air, its colour a pale grey lit by whatever light is left
+    const k = Math.max(c * 0.6, m);
+    env.fogCol = mix3(env.fogCol, grey(lum(env.fogCol) * (1 + 0.15 * m), 0.7), k * 0.8);
+    env.fogDensity = env.fogDensity * (1 + 0.8 * c + 5 * m) + 0.0055 * m * m;
+    return env;
   };
 })();

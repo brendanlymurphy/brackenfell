@@ -129,13 +129,14 @@ const R = { partMax: 1536, partData: new Float32Array(1536 * 12), partCount: 0, 
     }
     R.partCount = n;
   };
-  // o: { hour, x, y, z, yaw, pitch (degrees), parts, light:[x,y,z,r, r,g,b], indoor, style, time }
+  // o: { hour, x, y, z, yaw, pitch (degrees), parts, light:[x,y,z,r, r,g,b], indoor, time, weather:[cover, mist] }
   window.__shot = async (o) => {
     o = o || {};
     if (o.hour !== undefined) Env.hour = o.hour;
     if (o.time !== undefined) time = o.time;
     const x = o.x || 0, z = o.z || 0, y = o.y === undefined ? hfn(x, z) + 1.65 : o.y, yaw = (o.yaw || 0) * Math.PI / 180, pitch = (o.pitch || 0) * Math.PI / 180;
     const env = updateEnv(time, o.indoor || 0);
+    if (typeof Sky !== 'undefined' && Sky.setWeather) { const w = o.weather || [0, 0]; Sky.setWeather(w[0], w[1]); Sky.applyWeather(env); }
     SH.update(env, [x, y, z], time);
     if (o.grassRange) U.grassRange.value = o.grassRange; else U.grassRange.value = quality.grassRange;
     for (let i = 0; i < 8; i++) { U.lightPos.array[i].set(0, 0, 0, 0); U.lightCol.array[i].set(0, 0, 0, 0); }
@@ -147,12 +148,12 @@ const R = { partMax: 1536, partData: new Float32Array(1536 * 12), partCount: 0, 
     sun.target.position.set(x + sy * 14, y - 1.6, z - cy * 14); sun.position.copy(sun.target.position).addScaledVector(new THREE.Vector3(...env.keyDir), 150); sun.target.updateMatrixWorld(); sun.updateMatrixWorld();
     expo.value = env.exposure;
     if (typeof Sky !== 'undefined' && Sky.update) Sky.update([x, y, z]);
-    if (typeof Grass !== 'undefined' && Grass.update) { if (o.style !== undefined) Grass.style = o.style; Grass.update([x, y, z], [sy, -cy]); }
+    if (typeof Grass !== 'undefined' && Grass.update) Grass.update([x, y, z], [sy, -cy]);
     putParticles(o.parts);
     if (typeof Particles !== 'undefined' && Particles.update) Particles.update();
     await gfxCapture(() => pipeline.render());
     await gfxCapture(() => pipeline.render());
-    const inf = r.info.render; return { backend: G.backend, pack: G.pack, calls: inf.drawCalls, tris: inf.triangles, errors: G.errors.length };
+    const inf = r.info.render; return { backend: G.backend, pack: G.pack, calls: inf.drawCalls, tris: inf.triangles, errors: G.errors.length, grassVerts: (typeof Grass !== 'undefined' && Grass.verts) || 0 };
   };
   window.__gpuErrors = () => G.errors;
   window.__ready = true;
