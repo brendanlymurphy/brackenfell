@@ -1,0 +1,11 @@
+{
+ "t_smith": { "macro": {"gender": 1.0, "age": 0.62, "muscle": 0.78, "weight": 0.6, "height": 0.55, "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}},
+   "skin": "middleage_caucasian_male", "eyes": "brown", "brows": "eyebrow006", "hair": ["short02", [0.75, 0.7, 0.65], 0.8],
+   "clothes": [["rehmanpolanski_viking_tunic", null, 0.9], ["rehmanpolanski_viking_pants", null, 0.9], ["rehmanpolanski_viking_boots", null, 0.9]] },
+ "t_elder": { "macro": {"gender": 1.0, "age": 0.95, "muscle": 0.35, "weight": 0.45, "height": 0.45, "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}},
+   "skin": "old_caucasian_male", "eyes": "grey", "brows": "eyebrow010", "hair": ["short04", [1.9, 1.9, 1.9], 0.05],
+   "clothes": [["donitz_monk_robe", [0.8, 0.75, 0.7], 0.8], ["donitz_monk_robe_hood_down", [0.8, 0.75, 0.7], 0.8], ["rehmanpolanski_viking_boots", [0.6, 0.55, 0.5], 0.7]] },
+ "t_woman": { "macro": {"gender": 0.0, "age": 0.5, "muscle": 0.45, "weight": 0.5, "height": 0.45, "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}},
+   "skin": "young_caucasian_female", "eyes": "green", "brows": "eyebrow001", "hair": ["braid01", [0.9, 0.6, 0.4], 1.0],
+   "clothes": [["wdg_mycenaean_tunic", [0.55, 0.5, 0.38], 0.7], ["rehmanpolanski_viking_boots", null, 0.9]] }
+}
