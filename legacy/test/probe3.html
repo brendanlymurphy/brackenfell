@@ -1,0 +1,24 @@
+<!DOCTYPE html><html><body><canvas id="c" width="256" height="256"></canvas><script>
+(async()=>{
+  const out={tries:[]};
+  for(let i=0;i<4;i++){
+    try{
+      const ad=await navigator.gpu.requestAdapter(i%2?{forceFallbackAdapter:true}:undefined);
+      if(!ad){out.tries.push('noadapter');continue;}
+      const dev=await ad.requestDevice();
+      out.tries.push('ok');
+      const ctx=document.getElementById('c').getContext('webgpu');
+      const fmt=navigator.gpu.getPreferredCanvasFormat();
+      ctx.configure({device:dev,format:fmt,alphaMode:'opaque'});
+      const mod=dev.createShaderModule({code:`@vertex fn vs(@builtin(vertex_index) i:u32)->@builtin(position) vec4f{var p=array<vec2f,3>(vec2f(-1,-1),vec2f(3,-1),vec2f(-1,3));return vec4f(p[i],0,1);} @fragment fn fs(@builtin(position) p:vec4f)->@location(0) vec4f{return vec4f(p.x/256.0,p.y/256.0,0.3,1);}`});
+      const pipe=dev.createRenderPipeline({layout:'auto',vertex:{module:mod,entryPoint:'vs'},fragment:{module:mod,entryPoint:'fs',targets:[{format:fmt}]}});
+      const enc=dev.createCommandEncoder();
+      const pass=enc.beginRenderPass({colorAttachments:[{view:ctx.getCurrentTexture().createView(),loadOp:'clear',storeOp:'store',clearValue:{r:0,g:0,b:0,a:1}}]});
+      pass.setPipeline(pipe);pass.draw(3);pass.end();dev.queue.submit([enc.finish()]);
+      await dev.queue.onSubmittedWorkDone();
+      out.rendered=true;break;
+    }catch(e){out.tries.push(String(e).slice(0,120));await new Promise(r=>setTimeout(r,500));}
+  }
+  window.__out=out;document.title='done';
+})();
+</script></body></html>

@@ -1,0 +1,15 @@
+import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+import http from 'node:http'; import fs from 'node:fs';
+const root = new URL('../dist/', import.meta.url).pathname;
+const srv = http.createServer((q, s) => { try { const u = q.url.split('?')[0]; const b = fs.readFileSync(root + (u === '/' ? 'index.html' : u.slice(1))); const ext = u.split('.').pop(); s.writeHead(200, { 'content-type': ({ webp: 'image/webp', jpg: 'image/jpeg', png: 'image/png' })[ext] || 'text/html' }); s.end(b); } catch (e) { s.writeHead(404); s.end(); } }).listen(8377);
+const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--use-webgpu-adapter=swiftshader'] });
+const page = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+const logs = [];
+page.on('console', m => { const t = m.text(); if (!t.includes('Failed to load resource')) logs.push('[' + m.type() + '] ' + t.slice(0, 300)); });
+page.on('pageerror', e => logs.push('[pageerror] ' + (e.stack || e.message).slice(0, 400)));
+await page.goto('http://localhost:8377/');
+await page.waitForFunction(() => window.__ready === true, null, { timeout: 120000 });
+const st = await page.evaluate(() => ({ pack: G.pack, packError: G.packError || null, ready: __game.ready, tier: __game.tier, canvas: [G.w, G.h], fmt: G.fmt, startVisible: !document.getElementById('startRow').hidden, load: document.getElementById('loadText').textContent, hint: document.getElementById('hint').textContent.slice(0, 40), lost: G.lost, errs: G.errors.slice(0, 5) }));
+console.log(JSON.stringify(st, null, 1));
+console.log(logs.slice(0, 12).join('\n'));
+await browser.close(); srv.close();

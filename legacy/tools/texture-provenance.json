@@ -1,0 +1,1381 @@
+[
+ {
+  "file": "sr3/grass_green_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_green_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 988323
+ },
+ {
+  "file": "sr3/grass_green_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_green_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 798490
+ },
+ {
+  "file": "sr3/grass_green2y_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_green2y_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 3616040
+ },
+ {
+  "file": "sr3/grass_green2y_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_green2y_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 2117500
+ },
+ {
+  "file": "sr3/grass_ground_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_ground_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1064143
+ },
+ {
+  "file": "sr3/grass_ground_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_ground_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 771064
+ },
+ {
+  "file": "sr3/grass_ground_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_ground_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 649959
+ },
+ {
+  "file": "sr3/grass_ground_h.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_ground_h.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 702398
+ },
+ {
+  "file": "sr3/grass_mix_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_mix_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 966564
+ },
+ {
+  "file": "sr3/grass_mix_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_mix_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 430417
+ },
+ {
+  "file": "sr3/grass_mix_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_mix_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 426558
+ },
+ {
+  "file": "sr3/grass_rocky_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_rocky_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 963274
+ },
+ {
+  "file": "sr3/grass_rocky_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_rocky_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 930184
+ },
+ {
+  "file": "sr3/grass_rocky_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_rocky_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 408017
+ },
+ {
+  "file": "sr3/grass_autumn_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_autumn_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 549749
+ },
+ {
+  "file": "sr3/grass_autumn_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_autumn_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 465502
+ },
+ {
+  "file": "sr3/grass_autumn_orn_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/grass_autumn_orn_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1103651
+ },
+ {
+  "file": "sr3/moss_plants_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/moss_plants_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 899201
+ },
+ {
+  "file": "sr3/moss_plants_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/moss_plants_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 703577
+ },
+ {
+  "file": "sr3/moss_plants_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/moss_plants_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1044779
+ },
+ {
+  "file": "sr3/moss_ground_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/moss_ground_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1030194
+ },
+ {
+  "file": "sr3/ground_leaves_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_leaves_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 929120
+ },
+ {
+  "file": "sr3/ground_leaves_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_leaves_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 666901
+ },
+ {
+  "file": "sr3/ground_leaves_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_leaves_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 736151
+ },
+ {
+  "file": "sr3/ground_ferns_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_ferns_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 942590
+ },
+ {
+  "file": "sr3/ground_ferns_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_ferns_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 642943
+ },
+ {
+  "file": "sr3/ground_ferns_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_ferns_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 644904
+ },
+ {
+  "file": "sr3/ground_mud_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_mud_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 895485
+ },
+ {
+  "file": "sr3/ground_mud_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_mud_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 976983
+ },
+ {
+  "file": "sr3/ground_mud_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_mud_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 497013
+ },
+ {
+  "file": "sr3/ground_mud2_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_mud2_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 838070
+ },
+ {
+  "file": "sr3/ground_mud2_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_mud2_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 790874
+ },
+ {
+  "file": "sr3/ground_mud2_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_mud2_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 214391
+ },
+ {
+  "file": "sr3/ground_mud3_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_mud3_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 967712
+ },
+ {
+  "file": "sr3/ground_mud3_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_mud3_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1992818
+ },
+ {
+  "file": "sr3/ground_mud3_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_mud3_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 465203
+ },
+ {
+  "file": "sr3/ground_dirty_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_dirty_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1561641
+ },
+ {
+  "file": "sr3/ground_dirty_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_dirty_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 2341080
+ },
+ {
+  "file": "sr3/ground_dirty_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_dirty_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 685100
+ },
+ {
+  "file": "sr3/ground_dry_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_dry_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 739488
+ },
+ {
+  "file": "sr3/ground_dry_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_dry_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 845905
+ },
+ {
+  "file": "sr3/ground_dry_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_dry_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 519732
+ },
+ {
+  "file": "sr3/ground_dry2_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_dry2_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 639090
+ },
+ {
+  "file": "sr3/ground_dry2_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_dry2_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 554195
+ },
+ {
+  "file": "sr3/ground_dry2_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_dry2_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 678216
+ },
+ {
+  "file": "sr3/ground_white_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_white_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1282069
+ },
+ {
+  "file": "sr3/ground_white_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_white_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 954599
+ },
+ {
+  "file": "sr3/ground_white_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_white_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 596867
+ },
+ {
+  "file": "sr3/stones_gray_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/stones_gray_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 733710
+ },
+ {
+  "file": "sr3/stones_gray_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/stones_gray_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1057491
+ },
+ {
+  "file": "sr3/stones_gray_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/stones_gray_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 594090
+ },
+ {
+  "file": "sr3/stones_brown_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/stones_brown_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 741652
+ },
+ {
+  "file": "sr3/stones_brown_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/stones_brown_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1151318
+ },
+ {
+  "file": "sr3/stones_brown_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/stones_brown_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 493400
+ },
+ {
+  "file": "sr3/stones_color_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/stones_color_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 919537
+ },
+ {
+  "file": "sr3/stones_color_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/stones_color_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1316439
+ },
+ {
+  "file": "sr3/stones_color_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/stones_color_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 522463
+ },
+ {
+  "file": "sr3/mntn_dark_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_dark_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1151653
+ },
+ {
+  "file": "sr3/mntn_dark_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_dark_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1043497
+ },
+ {
+  "file": "sr3/mntn_dark_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_dark_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 768015
+ },
+ {
+  "file": "sr3/mntn_dark2_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_dark2_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1461563
+ },
+ {
+  "file": "sr3/mntn_dark2_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_dark2_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 2513861
+ },
+ {
+  "file": "sr3/mntn_dark2_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_dark2_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 730137
+ },
+ {
+  "file": "sr3/mntn_gray_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_gray_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 985338
+ },
+ {
+  "file": "sr3/mntn_brown_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_brown_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 822526
+ },
+ {
+  "file": "sr3/mntn_brown_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_brown_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 605381
+ },
+ {
+  "file": "sr3/mntn_brown_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_brown_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 373517
+ },
+ {
+  "file": "sr3/mntn_brown_h.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_brown_h.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 726498
+ },
+ {
+  "file": "sr3/mntn_black_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_black_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 616955
+ },
+ {
+  "file": "sr3/mntn_black_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_black_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 742367
+ },
+ {
+  "file": "sr3/mntn_black_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_black_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 446694
+ },
+ {
+  "file": "sr3/mntn_green_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_green_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 681311
+ },
+ {
+  "file": "sr3/mntn_green_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_green_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 498996
+ },
+ {
+  "file": "sr3/mntn_green_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_green_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 385827
+ },
+ {
+  "file": "sr3/mntn_forest_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_forest_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 743891
+ },
+ {
+  "file": "sr3/mntn_canyon_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_canyon_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 925972
+ },
+ {
+  "file": "sr3/mntn_canyon_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_canyon_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 846448
+ },
+ {
+  "file": "sr3/mntn_canyon_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_canyon_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 736559
+ },
+ {
+  "file": "sr3/mntn_x1_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_x1_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 790292
+ },
+ {
+  "file": "sr3/mntn_x1_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_x1_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 573487
+ },
+ {
+  "file": "sr3/mntn_x1_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_x1_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 745069
+ },
+ {
+  "file": "sr3/mntn_x2_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_x2_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 911079
+ },
+ {
+  "file": "sr3/mntn_x2_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_x2_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 631444
+ },
+ {
+  "file": "sr3/mntn_x2_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/mntn_x2_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 618974
+ },
+ {
+  "file": "sr3/jungle_stone_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/jungle_stone_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 848472
+ },
+ {
+  "file": "sr3/jungle_stone_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/jungle_stone_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 728145
+ },
+ {
+  "file": "sr3/jungle_stone_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/jungle_stone_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 554267
+ },
+ {
+  "file": "sr3/jungle_stone_h.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/jungle_stone_h.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 711848
+ },
+ {
+  "file": "sr3/jungle_mntn_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/jungle_mntn_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 737987
+ },
+ {
+  "file": "sr3/jungle_mntn_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/jungle_mntn_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 956815
+ },
+ {
+  "file": "sr3/jungle_mntn_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/jungle_mntn_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 527090
+ },
+ {
+  "file": "sr3/savanna_dry_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/savanna_dry_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1234385
+ },
+ {
+  "file": "sr3/savanna_dry_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/savanna_dry_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1055779
+ },
+ {
+  "file": "sr3/savanna_dry_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/savanna_dry_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 545089
+ },
+ {
+  "file": "sr3/savanna_green_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/savanna_green_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 1091572
+ },
+ {
+  "file": "sr3/savanna_green_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/savanna_green_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 882864
+ },
+ {
+  "file": "sr3/savanna_green_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/savanna_green_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 555661
+ },
+ {
+  "file": "sr3/snow1_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow1_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 377938
+ },
+ {
+  "file": "sr3/snow1_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow1_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 145039
+ },
+ {
+  "file": "sr3/snow1_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow1_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 491356
+ },
+ {
+  "file": "sr3/snow2_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow2_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 465239
+ },
+ {
+  "file": "sr3/snow2_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow2_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 554425
+ },
+ {
+  "file": "sr3/snow2_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow2_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 540314
+ },
+ {
+  "file": "sr3/snow_rough_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow_rough_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 377089
+ },
+ {
+  "file": "sr3/snow_rough_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow_rough_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 499508
+ },
+ {
+  "file": "sr3/snow_rough_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow_rough_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 377089
+ },
+ {
+  "file": "sr3/snow_bumpy_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow_bumpy_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 307133
+ },
+ {
+  "file": "sr3/snow_bumpy_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow_bumpy_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 716625
+ },
+ {
+  "file": "sr3/snow_bumpy_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/snow_bumpy_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 225939
+ },
+ {
+  "file": "sr3/ground_cracked_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_cracked_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 896016
+ },
+ {
+  "file": "sr3/ground_cracked_s.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_cracked_s.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 375550
+ },
+ {
+  "file": "sr3/ground_crackedo_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_crackedo_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 703909
+ },
+ {
+  "file": "sr3/ground_cracks2_n.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_cracks2_n.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 920277
+ },
+ {
+  "file": "sr3/ground_cracks2v_d.jpg",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/terrain/ground_cracks2v_d.jpg",
+  "provenance": "Stunt Rally 3 terrain set: Nobiax/yughues \"Free tiling textures pack\" (CC0), edited by CryHam (CC0); mntn_dark2/ground_mud3/ground_dirty from ambientCG (CC0); snow1/snow2/snow_rough/snow_bumpy/ground_cracks from rubberduck \"50 free textures\" (CC0). See data/textures/terrain/_terrain.txt",
+  "bytes": 647960
+ },
+ {
+  "file": "sr3grass/grass2.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/grass2.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 545266
+ },
+ {
+  "file": "sr3grass/grass3.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/grass3.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 584531
+ },
+ {
+  "file": "sr3grass/grass5.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/grass5.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 377467
+ },
+ {
+  "file": "sr3grass/grass10.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/grass10.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 291096
+ },
+ {
+  "file": "sr3grass/grass15.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/grass15.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 440137
+ },
+ {
+  "file": "sr3grass/grass17.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/grass17.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 327347
+ },
+ {
+  "file": "sr3grass/grass19.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/grass19.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 383433
+ },
+ {
+  "file": "sr3grass/grass20.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/grass20.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 298504
+ },
+ {
+  "file": "sr3grass/grassForest.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/grassForest.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 74539
+ },
+ {
+  "file": "sr3grass/flower01.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/flower01.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 152215
+ },
+ {
+  "file": "sr3grass/flower01b.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/flower01b.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 152436
+ },
+ {
+  "file": "sr3grass/flower02.png",
+  "repo": "stuntrally/stuntrally3",
+  "path": "data/textures/grass/flower02.png",
+  "provenance": "Stunt Rally 3 grass sprites: yughues \"Plants textures Pack 01-04\" (CC0), coloured by CryHam; flower01 = Poly Haven shrub_sorrel_01 (CC0), flower02 = Poly Haven dandelion_01 (CC0). See data/textures/grass/_grass.txt",
+  "bytes": 80980
+ },
+ {
+  "file": "polyhaven/sparse_grass_diff_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/terrain/sparse_grass_diff_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 201707
+ },
+ {
+  "file": "polyhaven/sparse_grass_nor_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/terrain/sparse_grass_nor_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 505901
+ },
+ {
+  "file": "polyhaven/aerial_grass_rock_diff_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/terrain/aerial_grass_rock_diff_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 210946
+ },
+ {
+  "file": "polyhaven/aerial_grass_rock_nor_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/terrain/aerial_grass_rock_nor_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 316388
+ },
+ {
+  "file": "polyhaven/dirt_aerial_02_diff_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/terrain/dirt_aerial_02_diff_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 147981
+ },
+ {
+  "file": "polyhaven/dirt_aerial_02_nor_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/terrain/dirt_aerial_02_nor_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 221059
+ },
+ {
+  "file": "polyhaven/rock_face_03_diff_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/terrain/rock_face_03_diff_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 927082
+ },
+ {
+  "file": "polyhaven/rock_face_03_nor_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/terrain/rock_face_03_nor_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 1146788
+ },
+ {
+  "file": "polyhaven/aerial_rocks_02_diff_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/terrain/aerial_rocks_02_diff_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 270756
+ },
+ {
+  "file": "polyhaven/aerial_rocks_02_nor_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/terrain/aerial_rocks_02_nor_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 412136
+ },
+ {
+  "file": "polyhaven/rocky_trail_diff_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/rocky_trail_diff_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 272460
+ },
+ {
+  "file": "polyhaven/coast_sand_rocks_02_diff_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/coast_sand_rocks_02_diff_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 189712
+ },
+ {
+  "file": "polyhaven/rock_boulder_cracked_diff_1k.jpg",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/rock_boulder_cracked_diff_1k.jpg",
+  "provenance": "Poly Haven texture (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 226283
+ },
+ {
+  "file": "ambientcg_pc/bricks076a__color.webp",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/bricks076a/color.webp",
+  "provenance": "ambientCG material (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 389038
+ },
+ {
+  "file": "ambientcg_pc/bricks076a__normal.webp",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/bricks076a/normal.webp",
+  "provenance": "ambientCG material (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 561584
+ },
+ {
+  "file": "ambientcg_pc/bricks076a__roughness.webp",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/bricks076a/roughness.webp",
+  "provenance": "ambientCG material (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 163364
+ },
+ {
+  "file": "ambientcg_pc/bricks076a__ao.webp",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/bricks076a/ao.webp",
+  "provenance": "ambientCG material (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 284934
+ },
+ {
+  "file": "ambientcg_pc/bricks076a__height.webp",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/bricks076a/height.webp",
+  "provenance": "ambientCG material (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 126314
+ },
+ {
+  "file": "ambientcg_pc/ground092c__color.webp",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/ground092c/color.webp",
+  "provenance": "ambientCG material (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 115118
+ },
+ {
+  "file": "ambientcg_pc/ground092c__normal.webp",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/ground092c/normal.webp",
+  "provenance": "ambientCG material (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 265132
+ },
+ {
+  "file": "ambientcg_pc/ground092c__roughness.webp",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/ground092c/roughness.webp",
+  "provenance": "ambientCG material (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 284968
+ },
+ {
+  "file": "ambientcg_pc/ground092c__ao.webp",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/ground092c/ao.webp",
+  "provenance": "ambientCG material (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 25600
+ },
+ {
+  "file": "ambientcg_pc/ground092c__height.webp",
+  "repo": "playcanvas/engine",
+  "path": "examples/assets/textures/ground092c/height.webp",
+  "provenance": "ambientCG material (CC0), as shipped in the PlayCanvas engine examples",
+  "bytes": 84702
+ },
+ {
+  "file": "cgbookcase/Moss_01_Color.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Moss_01/Moss_01_Color.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 5837901
+ },
+ {
+  "file": "cgbookcase/Moss_01_Normal.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Moss_01/Moss_01_Normal.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 6625866
+ },
+ {
+  "file": "cgbookcase/Moss_01_Roughness.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Moss_01/Moss_01_Roughness.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 2501382
+ },
+ {
+  "file": "cgbookcase/Moss_01_AO.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Moss_01/Moss_01_AO.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 1380028
+ },
+ {
+  "file": "cgbookcase/Sandy_gravel_01_Color.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Sandy_gravel_01/Sandy_gravel_01_Color.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 8588583
+ },
+ {
+  "file": "cgbookcase/Sandy_gravel_01_Normal.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Sandy_gravel_01/Sandy_gravel_01_Normal.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 10322105
+ },
+ {
+  "file": "cgbookcase/Sandy_gravel_01_Roughness.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Sandy_gravel_01/Sandy_gravel_01_Roughness.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 3884036
+ },
+ {
+  "file": "cgbookcase/Sandy_gravel_01_AO.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Sandy_gravel_01/Sandy_gravel_01_AO.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 1883678
+ },
+ {
+  "file": "cgbookcase/Parquet_flooring_05_Color.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Parquet_flooring_05/Parquet_flooring_05_Color.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 5475887
+ },
+ {
+  "file": "cgbookcase/Parquet_flooring_05_Normal.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Parquet_flooring_05/Parquet_flooring_05_Normal.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 5307337
+ },
+ {
+  "file": "cgbookcase/Parquet_flooring_05_Roughness.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Parquet_flooring_05/Parquet_flooring_05_Roughness.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 1048737
+ },
+ {
+  "file": "cgbookcase/Parquet_flooring_05_AO.png",
+  "repo": "google/filament",
+  "path": "third_party/textures/Parquet_flooring_05/Parquet_flooring_05_AO.png",
+  "provenance": "cgbookcase texture (CC0), as shipped in google/filament third_party/textures",
+  "bytes": 1049341
+ },
+ {
+  "file": "cgbookcase/CC0.html",
+  "repo": "google/filament",
+  "path": "third_party/textures/CC0.html",
+  "provenance": "licence note",
+  "bytes": 9869
+ },
+ {
+  "file": "cgbookcase/URL.txt",
+  "repo": "google/filament",
+  "path": "third_party/textures/URL.txt",
+  "provenance": "licence note",
+  "bytes": 37
+ },
+ {
+  "file": "ambientcg_tls/wall_plaster_dirty_Color.png",
+  "repo": "itz019/tls-textures",
+  "path": "wall_plaster_dirty_Color.png",
+  "provenance": "ambientCG material (CC0), from itz019/tls-textures",
+  "bytes": 1771858
+ },
+ {
+  "file": "ambientcg_tls/wall_plaster_dirty_NormalGL.jpg",
+  "repo": "itz019/tls-textures",
+  "path": "wall_plaster_dirty_NormalGL.jpg",
+  "provenance": "ambientCG material (CC0), from itz019/tls-textures",
+  "bytes": 1816404
+ },
+ {
+  "file": "ambientcg_tls/wall_plaster_dirty_Roughness.jpg",
+  "repo": "itz019/tls-textures",
+  "path": "wall_plaster_dirty_Roughness.jpg",
+  "provenance": "ambientCG material (CC0), from itz019/tls-textures",
+  "bytes": 744347
+ },
+ {
+  "file": "ambientcg_tls/wall_brick_Color.png",
+  "repo": "itz019/tls-textures",
+  "path": "wall_brick_Color.png",
+  "provenance": "ambientCG material (CC0), from itz019/tls-textures",
+  "bytes": 1778419
+ },
+ {
+  "file": "ambientcg_tls/wall_brick_NormalGL.png",
+  "repo": "itz019/tls-textures",
+  "path": "wall_brick_NormalGL.png",
+  "provenance": "ambientCG material (CC0), from itz019/tls-textures",
+  "bytes": 1616479
+ },
+ {
+  "file": "ambientcg_tls/wall_brick_Roughness.png",
+  "repo": "itz019/tls-textures",
+  "path": "wall_brick_Roughness.png",
+  "provenance": "ambientCG material (CC0), from itz019/tls-textures",
+  "bytes": 666908
+ },
+ {
+  "file": "ambientcg_tls/README.md",
+  "repo": "itz019/tls-textures",
+  "path": "README.md",
+  "provenance": "licence note",
+  "bytes": 168
+ },
+ {
+  "file": "ambientcg_mk/grass__Grass001_1K_Color.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/grass/Grass001_1K_Color.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 217035
+ },
+ {
+  "file": "ambientcg_mk/grass__Grass001_1K_Normal.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/grass/Grass001_1K_Normal.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 323302
+ },
+ {
+  "file": "ambientcg_mk/grass__Grass001_1K_Roughness.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/grass/Grass001_1K_Roughness.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 290290
+ },
+ {
+  "file": "ambientcg_mk/grass__Grass001_1K_AmbientOcclusion.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/grass/Grass001_1K_AmbientOcclusion.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 366807
+ },
+ {
+  "file": "ambientcg_mk/grass__Grass001_1K_Displacement.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/grass/Grass001_1K_Displacement.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 361438
+ },
+ {
+  "file": "ambientcg_mk/grass__info.json",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/grass/info.json",
+  "provenance": "licence note",
+  "bytes": 333
+ },
+ {
+  "file": "ambientcg_mk/rock__Rock020_1K_Color.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/rock/Rock020_1K_Color.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 1330247
+ },
+ {
+  "file": "ambientcg_mk/rock__Rock020_1K_Normal.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/rock/Rock020_1K_Normal.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 1934473
+ },
+ {
+  "file": "ambientcg_mk/rock__Rock020_1K_Roughness.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/rock/Rock020_1K_Roughness.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 585699
+ },
+ {
+  "file": "ambientcg_mk/rock__Rock020_1K_AmbientOcclusion.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/rock/Rock020_1K_AmbientOcclusion.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 447427
+ },
+ {
+  "file": "ambientcg_mk/rock__Rock020_1K_Displacement.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/rock/Rock020_1K_Displacement.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 262998
+ },
+ {
+  "file": "ambientcg_mk/rock__info.json",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/rock/info.json",
+  "provenance": "licence note",
+  "bytes": 327
+ },
+ {
+  "file": "ambientcg_mk/tiles__Tiles036_1K_Color.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/tiles/Tiles036_1K_Color.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 332259
+ },
+ {
+  "file": "ambientcg_mk/tiles__Tiles036_1K_Normal.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/tiles/Tiles036_1K_Normal.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 848168
+ },
+ {
+  "file": "ambientcg_mk/tiles__Tiles036_1K_Roughness.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/tiles/Tiles036_1K_Roughness.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 357047
+ },
+ {
+  "file": "ambientcg_mk/tiles__Tiles036_1K_Displacement.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/tiles/Tiles036_1K_Displacement.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 314464
+ },
+ {
+  "file": "ambientcg_mk/tiles__info.json",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/tiles/info.json",
+  "provenance": "licence note",
+  "bytes": 284
+ },
+ {
+  "file": "ambientcg_mk/wood-floor-43__WoodFloor043_1K_Color.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/wood-floor-43/WoodFloor043_1K_Color.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 76694
+ },
+ {
+  "file": "ambientcg_mk/wood-floor-43__WoodFloor043_1K_Normal.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/wood-floor-43/WoodFloor043_1K_Normal.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 21689
+ },
+ {
+  "file": "ambientcg_mk/wood-floor-43__WoodFloor043_1K_Roughness.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/wood-floor-43/WoodFloor043_1K_Roughness.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 49320
+ },
+ {
+  "file": "ambientcg_mk/wood-floor-43__WoodFloor043_1K_AmbientOcclusion.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/wood-floor-43/WoodFloor043_1K_AmbientOcclusion.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 17623
+ },
+ {
+  "file": "ambientcg_mk/wood-floor-43__WoodFloor043_1K_Displacement.jpg",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/wood-floor-43/WoodFloor043_1K_Displacement.jpg",
+  "provenance": "ambientCG material (CC0), from pmndrs/market-assets",
+  "bytes": 33476
+ },
+ {
+  "file": "ambientcg_mk/wood-floor-43__info.json",
+  "repo": "pmndrs/market-assets",
+  "path": "files/materials/wood-floor-43/info.json",
+  "provenance": "licence note",
+  "bytes": 411
+ },
+ {
+  "file": "ambientcg_t3d/ground037_alb_ht.png",
+  "repo": "TokisanGames/Terrain3D",
+  "path": "project/demo/assets/textures/ground037_alb_ht.png",
+  "provenance": "ambientCG material (CC0), packed, from TokisanGames/Terrain3D demo",
+  "bytes": 3339714
+ },
+ {
+  "file": "ambientcg_t3d/ground037_nrm_rgh.png",
+  "repo": "TokisanGames/Terrain3D",
+  "path": "project/demo/assets/textures/ground037_nrm_rgh.png",
+  "provenance": "ambientCG material (CC0), packed, from TokisanGames/Terrain3D demo",
+  "bytes": 3425588
+ },
+ {
+  "file": "ambientcg_t3d/rock023_alb_ht.png",
+  "repo": "TokisanGames/Terrain3D",
+  "path": "project/demo/assets/textures/rock023_alb_ht.png",
+  "provenance": "ambientCG material (CC0), packed, from TokisanGames/Terrain3D demo",
+  "bytes": 2691666
+ },
+ {
+  "file": "ambientcg_t3d/rock023_nrm_rgh.png",
+  "repo": "TokisanGames/Terrain3D",
+  "path": "project/demo/assets/textures/rock023_nrm_rgh.png",
+  "provenance": "ambientCG material (CC0), packed, from TokisanGames/Terrain3D demo",
+  "bytes": 2575727
+ }
+]

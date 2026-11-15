@@ -1,0 +1,41 @@
+<!DOCTYPE html><html><body><canvas id="c" width="256" height="256"></canvas><script>
+(async()=>{
+  const out={steps:[]};
+  const S=s=>out.steps.push(s);
+  try{
+      const ad=await navigator.gpu.requestAdapter();
+      const dev=await ad.requestDevice();
+      S('device');
+      dev.lost.then(i=>{out.lost=i.reason+': '+i.message;});
+      dev.addEventListener('uncapturederror',e=>{out.uncaptured=(out.uncaptured||'')+e.error.message.slice(0,200)+' | ';});
+      const ctx=document.getElementById('c').getContext('webgpu');
+      const fmt=navigator.gpu.getPreferredCanvasFormat();
+      ctx.configure({device:dev,format:fmt,alphaMode:'opaque'});
+      S('configure');
+      const mod=dev.createShaderModule({code:`@vertex fn vs(@builtin(vertex_index) i:u32)->@builtin(position) vec4f{var p=array<vec2f,3>(vec2f(-1,-1),vec2f(3,-1),vec2f(-1,3));return vec4f(p[i],0,1);} @fragment fn fs(@builtin(position) p:vec4f)->@location(0) vec4f{return vec4f(p.x/256.0,p.y/256.0,0.3,1);}`});
+      S('module');
+      const pipe=dev.createRenderPipeline({layout:'auto',vertex:{module:mod,entryPoint:'vs'},fragment:{module:mod,entryPoint:'fs',targets:[{format:fmt}]}});
+      S('pipeline');
+      const tex=ctx.getCurrentTexture(); S('curtex');
+      const enc=dev.createCommandEncoder();
+      const pass=enc.beginRenderPass({colorAttachments:[{view:tex.createView(),loadOp:'clear',storeOp:'store',clearValue:{r:0,g:0,b:0,a:1}}]});
+      pass.setPipeline(pipe);pass.draw(3);pass.end();dev.queue.submit([enc.finish()]);
+      S('submit');
+      try{ await dev.queue.onSubmittedWorkDone(); S('workdone'); }catch(e){ S('workdone-fail:'+String(e).slice(0,80)); }
+      // offscreen readback
+      const t2=dev.createTexture({size:[64,64],format:'rgba8unorm',usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.COPY_SRC});
+      const pipe2=dev.createRenderPipeline({layout:'auto',vertex:{module:mod,entryPoint:'vs'},fragment:{module:mod,entryPoint:'fs',targets:[{format:'rgba8unorm'}]}});
+      const enc2=dev.createCommandEncoder();
+      const p2=enc2.beginRenderPass({colorAttachments:[{view:t2.createView(),loadOp:'clear',storeOp:'store',clearValue:{r:0,g:0,b:0,a:1}}]});
+      p2.setPipeline(pipe2);p2.draw(3);p2.end();
+      const buf=dev.createBuffer({size:64*64*4,usage:GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ});
+      enc2.copyTextureToBuffer({texture:t2},{buffer:buf,bytesPerRow:256},[64,64]);
+      dev.queue.submit([enc2.finish()]);
+      await buf.mapAsync(GPUMapMode.READ); S('mapped');
+      const a=new Uint8Array(buf.getMappedRange()); out.px=[a[0],a[1],a[2],a[3], a[4*(64*32+32)],a[4*(64*32+32)+1]];
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      S('raf');
+  }catch(e){out.err=String(e);}
+  window.__out=out;document.title='done';
+})();
+</script></body></html>
