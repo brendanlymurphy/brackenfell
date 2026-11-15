@@ -1,0 +1,57 @@
+# phone-sized scan pack: name  source-id  tris  base  normal  orm   (nodes keep their name; sizes are texture edge in px)
+# containers
+wine_barrel_01 wine_barrel_01 1100 512 512 256
+wooden_barrels_01_a wooden_barrels_01 1000 512 512 256
+wooden_crate_01 wooden_crate_01 700 512 512 256
+treasure_chest treasure_chest 1300 512 512 256
+wicker_basket_02 wicker_basket_02 800 512 512 256
+wooden_bucket_01 wooden_bucket_01 800 512 512 256
+wooden_bucket_02 wooden_bucket_02 700 512 512 256
+# pots, jugs, tableware, food
+ceramic_pot ceramic_pot 900 512 512 256
+ceramic_vase_04 ceramic_vase_04 600 512 512 256
+ceramic_vase_02 ceramic_vase_02 600 512 512 256
+carved_wooden_plate carved_wooden_plate 450 512 512 256
+wooden_bowl_01 wooden_bowl_01 600 512 512 256
+brass_goblets brass_goblets 700 512 512 256
+food_apple_01 food_apple_01 400 512 512 256
+food_pears_asian_01 food_pears_asian_01 500 512 512 256
+yellow_onion yellow_onion 400 512 512 256
+hamburger_buns_a hamburger_buns 400 512 512 256
+# light sources
+brass_candleholders_c brass_candleholders 600 512 512 256
+wooden_candlestick wooden_candlestick 600 512 512 256
+wooden_lantern_01 wooden_lantern_01 900 512 512 256
+lantern_01 Lantern_01 900 512 512 256
+# furniture
+painted_wooden_table painted_wooden_table 600 1024 512 512
+wooden_table_02 wooden_table_02 196 512 512 256
+woodentable_01 WoodenTable_01 800 512 512 256
+painted_wooden_bench painted_wooden_bench 630 512 512 256
+painted_wooden_stool painted_wooden_stool 676 512 512 256
+painted_wooden_chair_01 painted_wooden_chair_01 724 512 512 256
+wooden_bookshelf_worn wooden_bookshelf_worn 1500 1024 512 512
+painted_wooden_shelves painted_wooden_shelves 524 512 512 256
+gothicbed_01 GothicBed_01 2200 1024 512 512
+painted_wooden_cabinet painted_wooden_cabinet 1200 512 512 256
+# tools and weapons
+wooden_axe_03 wooden_axe_03 600 512 512 256
+rusted_spade_01 rusted_spade_01 600 512 512 256
+picke_dirty_01 picke_dirty_01 700 512 512 256
+cross_pein_hammer cross_pein_hammer 400 512 512 256
+wooden_ladder wooden_ladder 900 512 512 256
+spinning_wheel_01 spinning_wheel_01 1200 512 512 256
+kite_shield kite_shield 800 512 512 256
+ornate_medieval_mace ornate_medieval_mace 700 512 512 256
+# rocks, stumps, roots, ground plants
+rock_moss_set_02_a rock_moss_set_02 1400 512 512 256
+rock_moss_set_02_c rock_moss_set_02 1400 512 512 256
+rock_moss_set_02_g rock_moss_set_02 1000 512 512 256
+rock_moss_set_01_e rock_moss_set_01 1500 512 512 256
+tree_stump_01 tree_stump_01 1200 512 512 256
+tree_stump_02 tree_stump_02 1200 512 512 256
+pine_roots_a pine_roots 800 512 512 256
+dry_branches_medium_01_a dry_branches_medium_01 700 512 512 256
+dead_tree_trunk dead_tree_trunk 1000 512 512 256
+fern_02_a fern_02 1000 512 512 256
+weed_plant_02_a weed_plant_02 600 512 512 256

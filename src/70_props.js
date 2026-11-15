@@ -136,7 +136,7 @@ const Props = {
       });
     }
   },
-  rug(m, w, l, col) { m.mat(MAT.STRIPES, col || COL.red, 0.6); m.quad([-w / 2, 0.015, -l / 2], [-w / 2, 0.015, l / 2], [w / 2, 0.015, l / 2], [w / 2, 0.015, -l / 2], 0, 0, w / 0.6, l / 0.6); },
+  rug(m, w, l, col) { const c = col || COL.red; m.mat(MAT.CLOTH, [c[0] * 0.5, c[1] * 0.42, c[2] * 0.4], 0.6); m.quad([-w / 2, 0.015, -l / 2], [-w / 2, 0.015, l / 2], [w / 2, 0.015, l / 2], [w / 2, 0.015, -l / 2], 0, 0, w / 0.6, l / 0.6); },
   cauldron(m, r) { r = r || 0.24; m.mat(MAT.METAL, COL.black); m.lathe([[r * 0.5, 0], [r * 0.95, r * 0.4], [r, r * 0.9], [r * 0.86, r * 1.25], [r * 0.92, r * 1.32]], 10, 1); m.mat(MAT.PLAIN, [0.35, 0.3, 0.18]); m.disc(0, r * 1.1, 0, r * 0.88, 10, 1); },
   logs(m, n, len, r) { m.mat(MAT.BARK, [1, 1, 1], 0.5); for (let i = 0; i < n; i++) { m.push().T(0, r + 0.01, (i - (n - 1) / 2) * r * 2.05).RZ(PI / 2).T(0, -len / 2, 0); m.cyl(0, 0, 0, r, r * 0.95, len, 7, 0); m.mat(MAT.PLAIN, [0.78, 0.62, 0.42]); m.disc(0, len, 0, r * 0.95, 7, 1); m.disc(0, 0, 0, r, 7, -1); m.mat(MAT.BARK, [1, 1, 1], 0.5); m.pop(); } },
   woodpile(m, cols, rows, len) { const r = 0.09; for (let j = 0; j < rows; j++) { m.push().T(0, j * r * 1.85, (j % 2) * r * 0.5); Props.logs(m, cols - (j % 2), len, r); m.pop(); } addBoxCollider(m, -len / 2, -cols * r, len / 2, cols * r, 0, rows * r * 1.9); },

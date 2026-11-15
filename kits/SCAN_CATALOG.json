@@ -1,0 +1,1342 @@
+{
+ "treasure_chest": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "treasure_chest",
+  "category": "container",
+  "min": [
+   -0.474,
+   0,
+   -0.261
+  ],
+  "max": [
+   0.474,
+   0.616,
+   0.261
+  ],
+  "size": [
+   0.947,
+   0.616,
+   0.522
+  ],
+  "tris": 1300,
+  "materials": [
+   "treasure_chest"
+  ],
+  "alpha": false,
+  "metal": 0.36
+ },
+ "wicker_basket_02": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wicker_basket_02",
+  "category": "container",
+  "min": [
+   -0.172,
+   0,
+   -0.127
+  ],
+  "max": [
+   0.172,
+   0.2,
+   0.127
+  ],
+  "size": [
+   0.344,
+   0.2,
+   0.254
+  ],
+  "tris": 800,
+  "materials": [
+   "wicker_basket_02"
+  ],
+  "alpha": false
+ },
+ "wine_barrel_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wine_barrel_01",
+  "category": "container",
+  "min": [
+   -0.371,
+   0,
+   -0.371
+  ],
+  "max": [
+   0.371,
+   0.87,
+   0.371
+  ],
+  "size": [
+   0.742,
+   0.87,
+   0.742
+  ],
+  "tris": 1957,
+  "materials": [
+   "wine_barrel_01"
+  ],
+  "alpha": false
+ },
+ "wooden_barrels_01_a": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_barrels_01",
+  "category": "container",
+  "min": [
+   -0.367,
+   0,
+   -0.369
+  ],
+  "max": [
+   0.367,
+   0.891,
+   0.369
+  ],
+  "size": [
+   0.734,
+   0.891,
+   0.738
+  ],
+  "tris": 1566,
+  "materials": [
+   "wooden_barrels_01_barrel02"
+  ],
+  "alpha": false
+ },
+ "wooden_bucket_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_bucket_01",
+  "category": "container",
+  "min": [
+   -0.18,
+   0,
+   -0.169
+  ],
+  "max": [
+   0.18,
+   0.548,
+   0.169
+  ],
+  "size": [
+   0.36,
+   0.548,
+   0.338
+  ],
+  "tris": 799,
+  "materials": [
+   "wooden_bucket_01"
+  ],
+  "alpha": false
+ },
+ "wooden_bucket_02": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_bucket_02",
+  "category": "container",
+  "min": [
+   -0.306,
+   0,
+   -0.306
+  ],
+  "max": [
+   0.306,
+   0.35,
+   0.306
+  ],
+  "size": [
+   0.611,
+   0.35,
+   0.612
+  ],
+  "tris": 699,
+  "materials": [
+   "wooden_bucket_02"
+  ],
+  "alpha": false
+ },
+ "wooden_crate_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_crate_01",
+  "category": "container",
+  "min": [
+   -0.41,
+   0,
+   -0.202
+  ],
+  "max": [
+   0.41,
+   0.347,
+   0.202
+  ],
+  "size": [
+   0.82,
+   0.347,
+   0.404
+  ],
+  "tris": 700,
+  "materials": [
+   "wooden_crate_01"
+  ],
+  "alpha": false
+ },
+ "food_apple_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "food_apple_01",
+  "category": "food",
+  "min": [
+   -0.048,
+   0,
+   -0.048
+  ],
+  "max": [
+   0.048,
+   0.083,
+   0.048
+  ],
+  "size": [
+   0.097,
+   0.083,
+   0.096
+  ],
+  "tris": 398,
+  "materials": [
+   "food_apple_01"
+  ],
+  "alpha": false
+ },
+ "food_pears_asian_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "food_pears_asian_01",
+  "category": "food",
+  "min": [
+   -0.055,
+   0,
+   -0.078
+  ],
+  "max": [
+   0.055,
+   0.055,
+   0.078
+  ],
+  "size": [
+   0.109,
+   0.055,
+   0.156
+  ],
+  "tris": 500,
+  "materials": [
+   "food_pears_asian_01"
+  ],
+  "alpha": false
+ },
+ "hamburger_buns_a": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "hamburger_buns",
+  "category": "food",
+  "min": [
+   -0.052,
+   0,
+   -0.057
+  ],
+  "max": [
+   0.052,
+   0.063,
+   0.057
+  ],
+  "size": [
+   0.104,
+   0.063,
+   0.114
+  ],
+  "tris": 400,
+  "materials": [
+   "hamburger_buns"
+  ],
+  "alpha": false
+ },
+ "yellow_onion": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "yellow_onion",
+  "category": "food",
+  "min": [
+   -0.036,
+   0,
+   -0.034
+  ],
+  "max": [
+   0.036,
+   0.085,
+   0.034
+  ],
+  "size": [
+   0.072,
+   0.085,
+   0.069
+  ],
+  "tris": 400,
+  "materials": [
+   "yellow_onion"
+  ],
+  "alpha": false
+ },
+ "dead_tree_trunk": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "dead_tree_trunk",
+  "category": "ground-cover",
+  "min": [
+   -1.522,
+   0,
+   -0.137
+  ],
+  "max": [
+   1.522,
+   0.287,
+   0.137
+  ],
+  "size": [
+   3.044,
+   0.287,
+   0.274
+  ],
+  "tris": 998,
+  "materials": [
+   "dead_tree_trunk"
+  ],
+  "alpha": false
+ },
+ "dry_branches_medium_01_a": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "dry_branches_medium_01",
+  "category": "ground-cover",
+  "min": [
+   -0.159,
+   0,
+   -0.648
+  ],
+  "max": [
+   0.159,
+   0.34,
+   0.648
+  ],
+  "size": [
+   0.318,
+   0.34,
+   1.296
+  ],
+  "tris": 700,
+  "materials": [
+   "dry_branches_medium_01"
+  ],
+  "alpha": false
+ },
+ "pine_roots_a": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "pine_roots",
+  "category": "ground-cover",
+  "min": [
+   -0.867,
+   0,
+   -0.411
+  ],
+  "max": [
+   0.867,
+   0.142,
+   0.411
+  ],
+  "size": [
+   1.733,
+   0.142,
+   0.823
+  ],
+  "tris": 799,
+  "materials": [
+   "pine_roots_a"
+  ],
+  "alpha": false
+ },
+ "tree_stump_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "tree_stump_01",
+  "category": "ground-cover",
+  "min": [
+   -0.713,
+   0,
+   -0.794
+  ],
+  "max": [
+   0.713,
+   0.571,
+   0.794
+  ],
+  "size": [
+   1.425,
+   0.571,
+   1.587
+  ],
+  "tris": 1199,
+  "materials": [
+   "tree_stump_01"
+  ],
+  "alpha": false
+ },
+ "tree_stump_02": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "tree_stump_02",
+  "category": "ground-cover",
+  "min": [
+   -0.758,
+   0,
+   -0.695
+  ],
+  "max": [
+   0.758,
+   0.518,
+   0.695
+  ],
+  "size": [
+   1.517,
+   0.518,
+   1.391
+  ],
+  "tris": 1200,
+  "materials": [
+   "tree_stump_02"
+  ],
+  "alpha": false
+ },
+ "brass_candleholders_c": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "brass_candleholders",
+  "category": "light-source",
+  "min": [
+   -0.049,
+   0,
+   -0.049
+  ],
+  "max": [
+   0.049,
+   0.348,
+   0.049
+  ],
+  "size": [
+   0.097,
+   0.348,
+   0.097
+  ],
+  "tris": 598,
+  "materials": [
+   "brass_candleholders_01"
+  ],
+  "alpha": false,
+  "lights": [
+   [
+    0,
+    0.354,
+    0
+   ]
+  ],
+  "metal": 0.99
+ },
+ "lantern_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "Lantern_01",
+  "category": "light-source",
+  "min": [
+   -0.061,
+   0,
+   -0.048
+  ],
+  "max": [
+   0.061,
+   0.205,
+   0.048
+  ],
+  "size": [
+   0.121,
+   0.205,
+   0.095
+  ],
+  "tris": 903,
+  "materials": [
+   "Lantern_01_brass",
+   "Lantern_01_pane"
+  ],
+  "alpha": true,
+  "lights": [
+   [
+    0,
+    0.136,
+    0
+   ]
+  ],
+  "metal": 0.63
+ },
+ "wooden_candlestick": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_candlestick",
+  "category": "light-source",
+  "min": [
+   -0.048,
+   0,
+   -0.049
+  ],
+  "max": [
+   0.048,
+   0.219,
+   0.049
+  ],
+  "size": [
+   0.097,
+   0.219,
+   0.098
+  ],
+  "tris": 599,
+  "materials": [
+   "wooden_candlestick"
+  ],
+  "alpha": false,
+  "lights": [
+   [
+    0,
+    0.228,
+    0
+   ]
+  ]
+ },
+ "wooden_lantern_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_lantern_01",
+  "category": "light-source",
+  "min": [
+   -0.11,
+   0,
+   -0.114
+  ],
+  "max": [
+   0.11,
+   0.48,
+   0.114
+  ],
+  "size": [
+   0.22,
+   0.48,
+   0.228
+  ],
+  "tris": 899,
+  "materials": [
+   "wooden_lantern_01",
+   "wooden_lantern_01_pane"
+  ],
+  "alpha": true,
+  "lights": [
+   [
+    0,
+    0.173,
+    0.003
+   ]
+  ]
+ },
+ "fern_02_a": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "fern_02",
+  "category": "plant",
+  "min": [
+   -0.495,
+   0,
+   -0.447
+  ],
+  "max": [
+   0.495,
+   0.428,
+   0.447
+  ],
+  "size": [
+   0.989,
+   0.428,
+   0.894
+  ],
+  "tris": 999,
+  "materials": [
+   "fern_02"
+  ],
+  "alpha": true
+ },
+ "weed_plant_02_a": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "weed_plant_02",
+  "category": "plant",
+  "min": [
+   -0.11,
+   0,
+   -0.145
+  ],
+  "max": [
+   0.11,
+   0.072,
+   0.145
+  ],
+  "size": [
+   0.219,
+   0.072,
+   0.291
+  ],
+  "tris": 599,
+  "materials": [
+   "weed_plant_02"
+  ],
+  "alpha": true
+ },
+ "gothicbed_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "GothicBed_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.744,
+   0,
+   -1.016
+  ],
+  "max": [
+   0.744,
+   1.534,
+   1.016
+  ],
+  "size": [
+   1.487,
+   1.534,
+   2.031
+  ],
+  "tris": 2198,
+  "materials": [
+   "GothicBed_01"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_bench": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "painted_wooden_bench",
+  "category": "prop-furniture",
+  "min": [
+   -0.582,
+   0,
+   -0.248
+  ],
+  "max": [
+   0.582,
+   0.889,
+   0.248
+  ],
+  "size": [
+   1.165,
+   0.889,
+   0.496
+  ],
+  "tris": 630,
+  "materials": [
+   "painted_wooden_bench"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_cabinet": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "painted_wooden_cabinet",
+  "category": "prop-furniture",
+  "min": [
+   -0.597,
+   0,
+   -0.308
+  ],
+  "max": [
+   0.597,
+   1.182,
+   0.308
+  ],
+  "size": [
+   1.194,
+   1.182,
+   0.616
+  ],
+  "tris": 1199,
+  "materials": [
+   "painted_wooden_cabinet"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_chair_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "painted_wooden_chair_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.216,
+   0,
+   -0.27
+  ],
+  "max": [
+   0.216,
+   0.956,
+   0.27
+  ],
+  "size": [
+   0.432,
+   0.956,
+   0.54
+  ],
+  "tris": 724,
+  "materials": [
+   "painted_wooden_chair_01"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_shelves": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "painted_wooden_shelves",
+  "category": "prop-furniture",
+  "min": [
+   -0.256,
+   0,
+   -0.184
+  ],
+  "max": [
+   0.256,
+   1.125,
+   0.184
+  ],
+  "size": [
+   0.511,
+   1.125,
+   0.367
+  ],
+  "tris": 524,
+  "materials": [
+   "painted_wooden_shelves"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_stool": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "painted_wooden_stool",
+  "category": "prop-furniture",
+  "min": [
+   -0.192,
+   0,
+   -0.203
+  ],
+  "max": [
+   0.192,
+   0.579,
+   0.203
+  ],
+  "size": [
+   0.385,
+   0.579,
+   0.406
+  ],
+  "tris": 676,
+  "materials": [
+   "painted_wooden_stool"
+  ],
+  "alpha": false
+ },
+ "painted_wooden_table": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "painted_wooden_table",
+  "category": "prop-furniture",
+  "min": [
+   -1.203,
+   0,
+   -0.568
+  ],
+  "max": [
+   1.203,
+   0.959,
+   0.568
+  ],
+  "size": [
+   2.406,
+   0.959,
+   1.137
+  ],
+  "tris": 600,
+  "materials": [
+   "painted_wooden_table"
+  ],
+  "alpha": false
+ },
+ "wooden_bookshelf_worn": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_bookshelf_worn",
+  "category": "prop-furniture",
+  "min": [
+   -0.687,
+   0,
+   -0.291
+  ],
+  "max": [
+   0.687,
+   2.063,
+   0.291
+  ],
+  "size": [
+   1.374,
+   2.063,
+   0.581
+  ],
+  "tris": 1500,
+  "materials": [
+   "wooden_bookshelf_worn"
+  ],
+  "alpha": false
+ },
+ "wooden_table_02": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_table_02",
+  "category": "prop-furniture",
+  "min": [
+   -0.567,
+   0,
+   -0.353
+  ],
+  "max": [
+   0.567,
+   0.8,
+   0.353
+  ],
+  "size": [
+   1.134,
+   0.8,
+   0.706
+  ],
+  "tris": 196,
+  "materials": [
+   "wooden_table_02"
+  ],
+  "alpha": false
+ },
+ "woodentable_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "WoodenTable_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.9,
+   0,
+   -0.329
+  ],
+  "max": [
+   0.9,
+   0.549,
+   0.329
+  ],
+  "size": [
+   1.8,
+   0.549,
+   0.657
+  ],
+  "tris": 800,
+  "materials": [
+   "WoodenTable_01"
+  ],
+  "alpha": false
+ },
+ "brass_goblets": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "brass_goblets",
+  "category": "prop-small",
+  "min": [
+   -0.225,
+   0,
+   -0.148
+  ],
+  "max": [
+   0.225,
+   0.273,
+   0.148
+  ],
+  "size": [
+   0.45,
+   0.273,
+   0.296
+  ],
+  "tris": 700,
+  "materials": [
+   "brass_goblets_01",
+   "brass_goblets_02",
+   "brass_goblets_03"
+  ],
+  "alpha": false,
+  "metal": 1
+ },
+ "carved_wooden_plate": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "carved_wooden_plate",
+  "category": "prop-small",
+  "min": [
+   -0.136,
+   0,
+   -0.134
+  ],
+  "max": [
+   0.136,
+   0.038,
+   0.134
+  ],
+  "size": [
+   0.272,
+   0.038,
+   0.269
+  ],
+  "tris": 450,
+  "materials": [
+   "carved_wooden_plate"
+  ],
+  "alpha": false
+ },
+ "ceramic_pot": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "ceramic_pot",
+  "category": "prop-small",
+  "min": [
+   -0.328,
+   0,
+   -0.249
+  ],
+  "max": [
+   0.328,
+   0.372,
+   0.249
+  ],
+  "size": [
+   0.656,
+   0.372,
+   0.499
+  ],
+  "tris": 900,
+  "materials": [
+   "ceramic_pot"
+  ],
+  "alpha": false
+ },
+ "ceramic_vase_02": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "ceramic_vase_02",
+  "category": "prop-small",
+  "min": [
+   -0.108,
+   0,
+   -0.109
+  ],
+  "max": [
+   0.108,
+   0.308,
+   0.109
+  ],
+  "size": [
+   0.216,
+   0.308,
+   0.218
+  ],
+  "tris": 600,
+  "materials": [
+   "ceramic_vase_02"
+  ],
+  "alpha": false
+ },
+ "ceramic_vase_04": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "ceramic_vase_04",
+  "category": "prop-small",
+  "min": [
+   -0.09,
+   0,
+   -0.089
+  ],
+  "max": [
+   0.09,
+   0.341,
+   0.089
+  ],
+  "size": [
+   0.179,
+   0.341,
+   0.178
+  ],
+  "tris": 600,
+  "materials": [
+   "ceramic_vase_04"
+  ],
+  "alpha": false
+ },
+ "wooden_bowl_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_bowl_01",
+  "category": "prop-small",
+  "min": [
+   -0.156,
+   0,
+   -0.154
+  ],
+  "max": [
+   0.156,
+   0.093,
+   0.154
+  ],
+  "size": [
+   0.311,
+   0.093,
+   0.308
+  ],
+  "tris": 600,
+  "materials": [
+   "wooden_bowl_01"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_01_e": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "rock_moss_set_01",
+  "category": "rock",
+  "min": [
+   -1.064,
+   0,
+   -0.981
+  ],
+  "max": [
+   1.064,
+   1.763,
+   0.981
+  ],
+  "size": [
+   2.128,
+   1.763,
+   1.962
+  ],
+  "tris": 1500,
+  "materials": [
+   "rock_moss_set_01"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_02_a": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "rock_moss_set_02",
+  "category": "rock",
+  "min": [
+   -0.977,
+   0,
+   -0.763
+  ],
+  "max": [
+   0.977,
+   1.308,
+   0.763
+  ],
+  "size": [
+   1.954,
+   1.308,
+   1.527
+  ],
+  "tris": 1400,
+  "materials": [
+   "rock_moss_set_02"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_02_c": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "rock_moss_set_02",
+  "category": "rock",
+  "min": [
+   -1.046,
+   0,
+   -0.569
+  ],
+  "max": [
+   1.046,
+   1.256,
+   0.569
+  ],
+  "size": [
+   2.091,
+   1.257,
+   1.138
+  ],
+  "tris": 1400,
+  "materials": [
+   "rock_moss_set_02"
+  ],
+  "alpha": false
+ },
+ "rock_moss_set_02_g": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "rock_moss_set_02",
+  "category": "rock",
+  "min": [
+   -0.603,
+   0,
+   -0.491
+  ],
+  "max": [
+   0.603,
+   0.525,
+   0.491
+  ],
+  "size": [
+   1.205,
+   0.525,
+   0.983
+  ],
+  "tris": 1000,
+  "materials": [
+   "rock_moss_set_02"
+  ],
+  "alpha": false
+ },
+ "cross_pein_hammer": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "cross_pein_hammer",
+  "category": "tool",
+  "min": [
+   -0.049,
+   0,
+   -0.012
+  ],
+  "max": [
+   0.049,
+   0.3,
+   0.012
+  ],
+  "size": [
+   0.099,
+   0.3,
+   0.024
+  ],
+  "tris": 400,
+  "materials": [
+   "cross_pein_hammer"
+  ],
+  "alpha": false,
+  "metal": 0.31
+ },
+ "picke_dirty_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "picke_dirty_01",
+  "category": "tool",
+  "min": [
+   -0.275,
+   0,
+   -0.034
+  ],
+  "max": [
+   0.275,
+   1.115,
+   0.034
+  ],
+  "size": [
+   0.55,
+   1.115,
+   0.069
+  ],
+  "tris": 700,
+  "materials": [
+   "picke_dirty_01"
+  ],
+  "alpha": false
+ },
+ "rusted_spade_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "rusted_spade_01",
+  "category": "tool",
+  "min": [
+   -0.084,
+   0,
+   -0.023
+  ],
+  "max": [
+   0.084,
+   1.101,
+   0.023
+  ],
+  "size": [
+   0.168,
+   1.101,
+   0.045
+  ],
+  "tris": 600,
+  "materials": [
+   "rusted_spade_01"
+  ],
+  "alpha": false,
+  "metal": 0.36
+ },
+ "spinning_wheel_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "spinning_wheel_01",
+  "category": "tool",
+  "min": [
+   -0.243,
+   0,
+   -0.5
+  ],
+  "max": [
+   0.243,
+   0.965,
+   0.5
+  ],
+  "size": [
+   0.487,
+   0.966,
+   1
+  ],
+  "tris": 1200,
+  "materials": [
+   "spinning_wheel_01"
+  ],
+  "alpha": false
+ },
+ "wooden_axe_03": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_axe_03",
+  "category": "tool",
+  "min": [
+   -0.025,
+   0,
+   -0.079
+  ],
+  "max": [
+   0.025,
+   0.631,
+   0.079
+  ],
+  "size": [
+   0.05,
+   0.631,
+   0.158
+  ],
+  "tris": 600,
+  "materials": [
+   "axe_03"
+  ],
+  "alpha": false
+ },
+ "wooden_ladder": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "wooden_ladder",
+  "category": "tool",
+  "min": [
+   -0.48,
+   0,
+   -0.249
+  ],
+  "max": [
+   0.48,
+   1.335,
+   0.249
+  ],
+  "size": [
+   0.959,
+   1.335,
+   0.499
+  ],
+  "tris": 899,
+  "materials": [
+   "wooden_ladder"
+  ],
+  "alpha": false
+ },
+ "kite_shield": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "kite_shield",
+  "category": "weapon",
+  "min": [
+   -0.272,
+   0,
+   -0.067
+  ],
+  "max": [
+   0.272,
+   1.394,
+   0.067
+  ],
+  "size": [
+   0.543,
+   1.394,
+   0.135
+  ],
+  "tris": 799,
+  "materials": [
+   "kite_shield_body",
+   "kite_shield_clamps_and_trim"
+  ],
+  "alpha": false
+ },
+ "ornate_medieval_mace": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "ornate_medieval_mace",
+  "category": "weapon",
+  "min": [
+   -0.047,
+   0,
+   -0.051
+  ],
+  "max": [
+   0.047,
+   0.598,
+   0.051
+  ],
+  "size": [
+   0.095,
+   0.598,
+   0.102
+  ],
+  "tris": 726,
+  "materials": [
+   "ornate_medieval_mace"
+  ],
+  "alpha": false,
+  "metal": 0.79
+ }
+}

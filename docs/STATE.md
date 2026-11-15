@@ -23,7 +23,7 @@ Read this before touching anything. It replaces having the whole conversation in
 |---|---|---|
 | `/home/claude/wt/e` | `fork-e` | Village rebuild from the Quaternius kit (`71_kithouse.js`). Just started; uncommitted files. Brief: every building from kit pieces on a 2 m grid, furnished candle-lit interiors, game logic unchanged. |
 | `/home/claude/wt/g` | `fork-g` | Gameplay (sprint, jump, stamina, sword, bandit camps, loot, inventory, quests, dungeon). Just started; uncommitted files. |
-| `/home/claude/wt/f` | `fork-f` | Poly Haven scanned props, rocks, plants and building textures. One commit (`8edc5bb`), more uncommitted. Contact sheets in `/home/claude/shots/F/`. |
+| `/home/claude/wt/f` | `fork-f` | Poly Haven scanned props. `kits/scan.glb` (50 CC0 models, 5 MB, built by `tools/scan/slim.mjs` from `tools/scan/slim.txt`) is loaded by `kitBoot`; `kp()` in `71_kithouse.js` answers painted pieces with scans (`SCANR` table), houses, yards and the lake shore get scanned clutter and ground cover. Without the pack the painted props stay (`--opt scan=0` simulates that, `--opt scatter=0` drops the ground cover). Screenshots in `/home/claude/shots/F2/`. |
 | `/home/claude/wt/h` | `fork-h` | Realistic humans with Blender + MakeHuman. Test renders in `/home/claude/shots/H/`; no verdict yet. |
 | `/home/claude/wt/d` | `fork-d` | Done: kits packed in `kits/`, `Kit` loader, realistic skin. Merged into `fork-e`, not into `threejs`. |
 

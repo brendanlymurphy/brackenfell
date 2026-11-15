@@ -23,7 +23,7 @@ const kitReady = () => HOUSE_STYLE === 'kit' && typeof Kit !== 'undefined' && !!
 function kitWanted(site, spec) { return kitReady() && !!KIT_STYLE[site.id]; }
 async function kitBoot(progress) {
   if (HOUSE_STYLE !== 'kit' || typeof Kit === 'undefined') return;
-  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props/.test(p.glb)) }); }
+  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan/.test(p.glb)) }); for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) Kit.defs[n].gain = 1.3; }       // scanned rocks photograph dark; lift them a little
   catch (e) { console.warn('kits unavailable, building the generated houses instead: ' + (e && e.message || e)); G.kitNote = String(e && e.message || e); }
 }
 // the building's spec adjusted to what the kit panels can do: 3 m storeys, kit door and window sizes, no slit windows
@@ -186,16 +186,68 @@ function kitIntBatch(zone) {
   if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
   return k.batch;
 }
-// place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
-function kp(m, name, x, y, z, s, ry, extra) {
+// ── scanned stand-ins ──
+// A painted kit piece is answered with a photo-scanned model of the same kind when the scan pack is loaded. The scan is fitted to the box the painted
+// piece would have filled (so colliders, seats and wall spacing still hold) and stands on the same floor line. Per entry: n = scanned model(s),
+// fit = 'box' (stretch to the box, within lo..hi), 'contain' (uniform, as big as fits), 'xz' (uniform on the footprint, height within 25%),
+// one = outdoors only the first model is used (fewer materials, fewer draw calls), k = extra per-axis factor, mul = extra scale, y = lift in metres, ry = turn in radians (a quarter turn swaps the footprint), tint = colour factor, skip = draw nothing.
+const SCANR = {
+  Table_Large: { n: ['woodentable_01'], fit: 'box', tint: [0.85, 0.72, 0.6] },
+  Bench: { n: ['woodentable_01'], fit: 'box', tint: [0.9, 0.8, 0.7] },
+  Stool: { n: ['painted_wooden_stool'], fit: 'contain', tint: [0.5, 0.4, 0.31] },
+  Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.36, 0.29, 0.22] },
+  Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
+  Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
+  Barrel: { n: ['wine_barrel_01', 'wooden_barrels_01_a'], fit: 'xz', one: 1 },
+  Crate_Wooden: { n: ['wooden_crate_01'], fit: 'contain', k: [1, 1.75, 1.45] }, Prop_Crate: { n: ['wooden_crate_01'], fit: 'contain', k: [1, 1.75, 1.45] },
+  Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' }, Bottle_1: { n: ['ceramic_vase_04'], fit: 'contain' },
+  Table_Plate: { n: ['carved_wooden_plate'], fit: 'contain' },
+  Candle_1: { n: ['wooden_candlestick'], fit: 'contain', mul: 1.25 }, Candle_2: { n: ['wooden_candlestick'], fit: 'contain' },
+  CandleStick_Triple: { n: ['brass_candleholders_c'], fit: 'contain', mul: 0.75 },
+  Bucket_Wooden_1: { n: ['wooden_bucket_01', 'wooden_bucket_02'], fit: 'contain', mul: 1.1, one: 1 },
+  Bookcase_2: { n: ['wooden_bookshelf_worn'], fit: 'box', lo: 0.7, hi: 1.3 }, Cabinet: { n: ['painted_wooden_cabinet'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.7, 0.6, 0.5] },
+  Nightstand_Shelf: { n: ['painted_wooden_shelves'], fit: 'box', lo: 0.7, hi: 1.4, tint: [0.8, 0.75, 0.7] },
+  Workbench: { n: ['painted_wooden_table'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.6, 0.5, 0.42] },
+  Pickaxe_Bronze: { n: ['picke_dirty_01'], fit: 'contain' }, Axe_Bronze: { n: ['wooden_axe_03'], fit: 'contain', ry: PI / 2 },
+};
+const SCAN_FLAT = { wooden_axe_03: 1, rusted_spade_01: 1, kite_shield: 1, cross_pein_hammer: 1, picke_dirty_01: 1 };
+// top of a crate of nominal size s (things stacked on crates are placed with this)
+const crateTop = s => (scanOn() ? 0.71 : 1) * s;
+const scanOn = () => kitReady() && !!Kit.pieces.wine_barrel_01 && !(TEST && TEST.scan === 0);
+const _sm = new THREE.Matrix4(), _sv = new THREE.Vector3(), _sq = new THREE.Quaternion(), _su = new THREE.Vector3(0, 1, 0);
+// where a painted piece placed at (x, y, z) with scale s and turn ry ends up: { name, M, tint }, the scan stand-in if there is one
+function kplace(m, name, x, y, z, s, ry) {
+  const base = new THREE.Matrix4().fromArray(m.m), E = scanOn() ? SCANR[name] : null, P = Kit.pieces[name];
+  if (!E || !P) { if (scanOn() && SCAN_FLAT[name]) { const q = Kit.pieces[name]; if (q) return { name, M: KH.xf(base, x, y + (q.max[1] - q.min[1]) * 0.5 * (typeof s === 'number' ? s : s[1]), z, s, ry) }; } return { name, M: KH.xf(base, x, y, z, s, ry) }; }
+  if (E.skip) return null;
+  const sv = s === undefined ? [1, 1, 1] : typeof s === 'number' ? [s, s, s] : s, W = [P.max[0] - P.min[0], P.max[1] - P.min[1], P.max[2] - P.min[2]];
+  const tw = Math.abs(W[0] * sv[0]) * (E.box ? E.box[0] : 1), th = Math.abs(W[1] * sv[1]) * (E.box ? E.box[1] : 1), td = Math.abs(W[2] * sv[2]) * (E.box ? E.box[2] : 1);
+  const tcx = (P.min[0] + P.max[0]) / 2 * sv[0], tcz = (P.min[2] + P.max[2]) / 2 * sv[2], tby = P.min[1] * sv[1];
+  const sn = E.n[E.n.length > 1 && !(E.one && !(m.m1 | 0)) ? Math.floor(KITP.rnd() * E.n.length) : 0], Q = Kit.pieces[sn]; if (!Q) return { name, M: KH.xf(base, x, y, z, s, ry) };
+  const quarter = Math.abs(Math.sin(E.ry || 0)) > 0.9, sw = quarter ? Q.max[2] - Q.min[2] : Q.max[0] - Q.min[0], sh = Q.max[1] - Q.min[1], sd = quarter ? Q.max[0] - Q.min[0] : Q.max[2] - Q.min[2];
+  const mul = E.mul || 1, k = E.k || [1, 1, 1]; let f;
+  if (E.fit === 'box') { const lo = E.lo || 0.5, hi = E.hi || 2.2, c = v => Math.min(hi, Math.max(lo, v)); f = [c(tw / sw), c(th / sh), c(td / sd)]; }
+  else if (E.fit === 'xz') { const u = Math.min(tw / sw, td / sd); f = [u, Math.min(u * 1.25, Math.max(u * 0.8, th / sh)), u]; }
+  else { const u = Math.min(tw / sw, th / sh, td / sd); f = [u, u, u]; }
+  f = [f[0] * mul * k[0], f[1] * mul * k[1], f[2] * mul * k[2]];
+  const L = KH.xf(base, x, y, z, 1, ry);
+  const cx = (Q.min[0] + Q.max[0]) / 2, cz = (Q.min[2] + Q.max[2]) / 2;
+  _sm.compose(_sv.set(tcx, tby + (E.y || 0), tcz), _sq.setFromAxisAngle(_su, E.ry || 0), new THREE.Vector3(f[0], f[1], f[2]));
+  const loc = new THREE.Matrix4().makeTranslation(-cx, -Q.min[1], -cz);
+  return { name: sn, M: new THREE.Matrix4().multiplyMatrices(L, _sm).multiply(loc), tint: E.tint };
+}
+function kadd(m, P, extra) {
   const zone = m.m1 | 0;
   let B; if (zone) B = kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: 40 }); B = World.kitYard; }
-  B.add(name, KH.xf(new THREE.Matrix4().fromArray(m.m), x, y, z, s, ry), Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone }, extra || {}));
+  const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
+  B.add(P.name, P.M, o);
 }
+// place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
+function kp(m, name, x, y, z, s, ry, extra) { const P = kplace(m, name, x, y, z, s, ry); if (P) kadd(m, P, extra); }
 // a light-source piece: the piece itself with glowing wax, one flame per candle tip, one point light for the whole piece
 function kitLit(m, name, x, y, z, s, ry, o) {
-  const zone = m.m1 | 0, M = KH.xf(new THREE.Matrix4().fromArray(m.m), x, y, z, s, ry), pts = Kit.lights(name), v = new THREE.Vector3(), c = [0, 0, 0];
-  kp(m, name, x, y, z, s, ry, { lit: 1 });
+  const zone = m.m1 | 0, P = kplace(m, name, x, y, z, s, ry), M = P.M, pts = Kit.lights(P.name), v = new THREE.Vector3(), c = [0, 0, 0];
+  kadd(m, P, { lit: 1 });
   for (const p of pts) { v.set(p[0], p[1], p[2]).applyMatrix4(M); c[0] += v.x / pts.length; c[1] += v.y / pts.length; c[2] += v.z / pts.length; World.emitters.push(o.flame === 'torch' ? { type: 'torch', p: [v.x, v.y, v.z], zone, size: o.size } : { type: 'candle', p: [v.x, v.y + 0.02, v.z], zone, always: !!o.always }); }
   if (!pts.length) { v.set(0, 0.2, 0).applyMatrix4(M); c[0] = v.x; c[1] = v.y; c[2] = v.z; }
   if (o.cap === undefined || kitLightOk(zone, o.cap)) addLight([c[0], c[1] + 0.1, c[2]], o.r || 5, o.c || [1.9, 1.15, 0.5], zone, o.kind || 'candle');
@@ -222,15 +274,30 @@ function kitLit(m, name, x, y, z, s, ry, o) {
   wrap('plate', m => kp(m, 'Table_Plate', 0, 0.003, 0, 0.75));
   wrap('book', (m, col, w) => kp(m, 'Book_5', 0, 0.026, 0, [0.85, (w || 0.04) / 0.06, 0.85], 0, col ? { tint: [0.55 + col[0] * 0.6, 0.55 + col[1] * 0.6, 0.55 + col[2] * 0.6] } : null));
   wrap('candle', (m, ctx, tall) => {
-    const name = tall ? 'Candle_2' : 'Candle_1', lp = Kit.lights(name)[0] || [0, tall ? 0.27 : 0.15, 0];
-    kp(m, name, 0, 0, 0, 1, 0, { lit: 1 });
-    World.emitters.push({ type: 'candle', p: wp(m, lp[0], lp[1] + 0.02, lp[2]), zone: ctx.zone, always: !!ctx.always });
-    if (ctx.candleLight !== false && kitLightOk(ctx.zone | 0, 2)) addLight(wp(m, lp[0], lp[1] + 0.1, lp[2]), 4.6, [1.6, 1.0, 0.44], ctx.zone, 'candle');
+    const P = kplace(m, tall ? 'Candle_2' : 'Candle_1', 0, 0, 0, 1, 0), lp = Kit.lights(P.name)[0] || [0, tall ? 0.27 : 0.15, 0], v = new THREE.Vector3(lp[0], lp[1], lp[2]).applyMatrix4(P.M);
+    kadd(m, P, { lit: 1 });
+    World.emitters.push({ type: 'candle', p: [v.x, v.y + 0.02, v.z], zone: ctx.zone, always: !!ctx.always });
+    if (ctx.candleLight !== false && kitLightOk(ctx.zone | 0, 2)) addLight([v.x, v.y + 0.1, v.z], 4.6, [1.6, 1.0, 0.44], ctx.zone, 'candle');
   });
   wrap('cauldron', (m, r) => { r = r || 0.24; kp(m, 'Cauldron', 0, 0, 0, 2.1 * r / 0.99); });
   wrap('anvil', m => { kp(m, 'Anvil_Log', 0, 0, 0, 0.78); addCircleCollider(m, 0, 0, 0.32, 0, 0.8); });
   wrap('sword', m => kp(m, 'Sword_Bronze', 0, 0.2, 0, 0.9));
   wrap('shield', m => kp(m, 'Shield_Wooden', 0, 0, 0, 1.08));
+  // food, tableware and lamps that exist only as scans: the generated prop stays when the scan pack is not loaded
+  const swrap = (name, fn) => { const prev = Props[name]; Props[name] = function () { return scanOn() ? fn.apply(Props, arguments) : prev.apply(Props, arguments); }; };
+  let nApple = 0; const apple0 = Props.apple;
+  swrap('apple', (m, col) => { if (++nApple % 3) return apple0.call(Props, m, col); kp(m, 'food_apple_01', 0, 0, 0, 0.8, KITP.rnd() * 6); });
+  swrap('loaf', m => kp(m, 'hamburger_buns_a', 0, 0, 0, 1.7, KITP.rnd() * 6));
+  swrap('bowl', m => kp(m, 'wooden_bowl_01', 0, 0, 0, 0.7, KITP.rnd() * 6));
+  const lantern0 = Props.lantern;
+  Props.lantern = function (m, ctx, kind) {      // hanging lamp, origin at the hook: scanned indoors only (every outdoor lamp would add two draw calls)
+    if (!scanOn() || !ctx.zone) return lantern0.call(Props, m, ctx, kind);
+    const name = 'wooden_lantern_01', P = kplace(m, name, 0, 0, 0, 0.8, 0); P.M.multiply(new THREE.Matrix4().makeTranslation(0, -Kit.info(name).size[1], 0));
+    kadd(m, P, { lit: 1 });
+    const lp = Kit.lights(name)[0] || [0, 0.17, 0], v = new THREE.Vector3(lp[0], lp[1] - Kit.info(name).size[1], lp[2]).applyMatrix4(new THREE.Matrix4().fromArray(m.m).multiply(KH.xf(new THREE.Matrix4(), 0, 0, 0, 0.8, 0))), p = [v.x, v.y, v.z];
+    World.emitters.push({ type: 'lantern', p, zone: ctx.zone });
+    addLight(p, ctx.zone ? 6.5 : 9, ctx.zone ? [2.3, 1.35, 0.55] : [3.4, 1.9, 0.75], ctx.zone, kind || 'lantern');
+  };
 })();
 KITP.chairRy = PI; KITP.bedRy = 0; KITP.chestRy = PI;       // which way each kit piece faces relative to the generated prop it stands in for
 
@@ -242,23 +309,25 @@ const KIT_ITEM = {
   Dummy: [0.8, 0.6, 0, 0.95], Barrel: [0.7, 0.7, 0, 1], Barrel_Apples: [0.7, 0.7, 0, 1], Crate_Wooden: [0.86, 0.9, 0, 0.8], Bag: [0.66, 0.54, 0, 0.9], Bucket_Wooden_1: [0.43, 0.4, 0, 1],
   Vase_2: [0.69, 0.69, 0, 0.8], FarmCrate_Apple: [0.71, 0.45, 0, 1], FarmCrate_Carrot: [0.71, 0.57, 0, 1], CandleStick_Stand: [0.6, 0.6, 0, 0.95, 1], BookStand: [0.51, 0.51, 0, 1],
   Whetstone: [1.14, 0.9, 0, 0.8], Barrel_Holder: [1.36, 0.74, 0, 0.9],
+  // scan-only floor pieces (footprint is the model's own)
+  spinning_wheel_01: [0.55, 1.05, 0, 1], wooden_ladder: [0.98, 0.52, 0, 1], treasure_chest: [0.97, 0.54, 0, 1], wicker_basket_02: [0.4, 0.3, 0, 1.2], rock_moss_set_02_g: [0.9, 0.7, 0, 0.7],
 };
 const KIT_WALL = {            // width, height of the pivot above the floor, stand-off from the wall
   Torch_Metal: [0.5, 1.85, 0.01], Shelf_Simple: [1.2, 1.55, 0.01], Shelf_Arch: [1.25, 1.8, 0.01], Shelf_Small_Bottles: [1.15, 1.5, 0.01], Peg_Rack: [1.2, 1.75, 0.01],
-  Shield_Wooden: [0.7, 1.9, 0.01], Banner_1_Cloth: [0.85, 2.7, 0.05], Banner_2_Cloth: [0.85, 2.6, 0.05], Axe_Bronze: [0.4, 1.75, 0.04], Pickaxe_Bronze: [0.85, 1.8, 0.08], Sword_Bronze: [0.35, 1.5, 0.04],
+  Shield_Wooden: [0.7, 1.9, 0.01], kite_shield: [0.6, 1.75, 0.04, 0.7], rusted_spade_01: [0.3, 1.6, 0.03, 1], cross_pein_hammer: [0.3, 1.6, 0.03, 1.2], Banner_1_Cloth: [0.85, 2.7, 0.05], Banner_2_Cloth: [0.85, 2.6, 0.05], Axe_Bronze: [0.4, 1.75, 0.04], Pickaxe_Bronze: [0.85, 1.8, 0.08], Sword_Bronze: [0.35, 1.5, 0.04],
 };
 const KIT_DRESS = {
   inn: { floor: ['CandleStick_Stand', 'Barrel_Holder', 'Cabinet', 'Barrel', 'Crate_Wooden', 'Bag', 'Barrel'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Shield_Wooden', 'Torch_Metal', 'Banner_1_Cloth', 'Peg_Rack', 'Shelf_Simple', 'Torch_Metal'] },
-  smithy: { floor: ['Workbench', 'WeaponStand', 'Barrel', 'Whetstone', 'Crate_Wooden', 'Bucket_Wooden_1'], wall: ['Torch_Metal', 'Peg_Rack', 'Pickaxe_Bronze', 'Axe_Bronze', 'Shield_Wooden', 'Torch_Metal'] },
+  smithy: { floor: ['Workbench', 'WeaponStand', 'Barrel', 'Whetstone', 'Crate_Wooden', 'Bucket_Wooden_1'], wall: ['Torch_Metal', 'Peg_Rack', 'Pickaxe_Bronze', 'Axe_Bronze', 'cross_pein_hammer', 'kite_shield', 'Torch_Metal'] },
   store: { floor: ['Cabinet', 'Bookcase_2', 'Crate_Wooden', 'FarmCrate_Apple', 'Barrel', 'FarmCrate_Carrot', 'Bag', 'Vase_2', 'Nightstand_Shelf', 'Barrel_Apples'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch', 'Torch_Metal', 'Peg_Rack'] },
-  elder: { floor: ['Bookcase_2', 'BookStand', 'Bookcase_2', 'CandleStick_Stand', 'Cabinet', 'Nightstand_Shelf'], wall: ['Shelf_Arch', 'Torch_Metal', 'Banner_1_Cloth', 'Shelf_Simple'] },
+  elder: { floor: ['Bookcase_2', 'BookStand', 'Bookcase_2', 'CandleStick_Stand', 'treasure_chest', 'Cabinet', 'Nightstand_Shelf'], wall: ['Shelf_Arch', 'Torch_Metal', 'Banner_1_Cloth', 'Shelf_Simple'] },
   herbalist: { floor: ['Cabinet', 'Nightstand_Shelf', 'Vase_2', 'Bucket_Wooden_1', 'Bag', 'Crate_Wooden'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch'] },
-  guardhouse: { floor: ['WeaponStand', 'Dummy', 'Barrel', 'Crate_Wooden', 'Nightstand_Shelf'], wall: ['Shield_Wooden', 'Torch_Metal', 'Peg_Rack', 'Banner_1_Cloth', 'Sword_Bronze', 'Torch_Metal'] },
-  weaver: { floor: ['Cabinet', 'Nightstand_Shelf', 'Bag', 'Crate_Wooden', 'Vase_2'], wall: ['Shelf_Simple', 'Torch_Metal', 'Banner_1_Cloth', 'Peg_Rack'] },
-  mill: { floor: ['Bag', 'Barrel', 'Bag', 'Crate_Wooden', 'Bag', 'Bucket_Wooden_1', 'Nightstand_Shelf'], wall: ['Torch_Metal', 'Peg_Rack', 'Shelf_Simple'] },
-  farm: { floor: ['FarmCrate_Apple', 'Barrel_Apples', 'FarmCrate_Carrot', 'Bag', 'Cabinet', 'Bucket_Wooden_1'], wall: ['Shelf_Simple', 'Torch_Metal', 'Peg_Rack'] },
-  hunter: { floor: ['Crate_Wooden', 'Barrel', 'Bag', 'WeaponStand'], wall: ['Torch_Metal', 'Peg_Rack', 'Axe_Bronze', 'Shield_Wooden'] },
-  fisher: { floor: ['Barrel', 'Bucket_Wooden_1', 'Crate_Wooden'], wall: ['Torch_Metal', 'Peg_Rack'] },
+  guardhouse: { floor: ['WeaponStand', 'Dummy', 'Barrel', 'Crate_Wooden', 'Nightstand_Shelf', 'treasure_chest'], wall: ['kite_shield', 'Torch_Metal', 'Peg_Rack', 'Banner_1_Cloth', 'Sword_Bronze', 'Torch_Metal', 'kite_shield'] },
+  weaver: { floor: ['spinning_wheel_01', 'Cabinet', 'wicker_basket_02', 'Nightstand_Shelf', 'Bag', 'Crate_Wooden', 'Vase_2'], wall: ['Shelf_Simple', 'Torch_Metal', 'Banner_1_Cloth', 'Peg_Rack'] },
+  mill: { floor: ['Bag', 'Barrel', 'Bag', 'wooden_ladder', 'Crate_Wooden', 'Bag', 'Bucket_Wooden_1', 'Nightstand_Shelf'], wall: ['Torch_Metal', 'Peg_Rack', 'Shelf_Simple'] },
+  farm: { floor: ['FarmCrate_Apple', 'Barrel_Apples', 'wooden_ladder', 'FarmCrate_Carrot', 'Bag', 'Cabinet', 'Bucket_Wooden_1', 'wicker_basket_02'], wall: ['Shelf_Simple', 'Torch_Metal', 'rusted_spade_01', 'Peg_Rack'] },
+  hunter: { floor: ['Crate_Wooden', 'Barrel', 'Bag', 'WeaponStand', 'treasure_chest'], wall: ['Torch_Metal', 'Peg_Rack', 'Axe_Bronze', 'kite_shield', 'rusted_spade_01'] },
+  fisher: { floor: ['Barrel', 'Bucket_Wooden_1', 'wicker_basket_02', 'Crate_Wooden'], wall: ['Torch_Metal', 'Peg_Rack'] },
   chapel: { floor: ['CandleStick_Stand', 'CandleStick_Stand', 'BookStand', 'CandleStick_Stand', 'CandleStick_Stand'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal'] },
 };
 // extra dressing per building, once its own interior has been laid out
@@ -283,7 +352,7 @@ function kitDress(c) {
   const nearOpening = (sd, u, half, doorsOnly) => c.openings[sd.wn].some(o => (!doorsOnly || o.door) && Math.abs((o.def.pos || 0) - sd.lo - u) < half + (o.door ? 1.0 : 0.75));
   const tall = [];           // [side, u, half] of tall furniture, so nothing is hung behind it
   // ── floor pieces along the walls ──
-  const queue = (dress.floor || []).slice(); let guard = 0;
+  const queue = (dress.floor || []).filter(n => Kit.pieces[n]); let guard = 0;
   for (let si = 0; si < 8 && queue.length; si++) {
     const sd = sides[(si + (R() * 4 | 0)) % 4];
     for (let u = 0.5; u < sd.len - 0.5 && queue.length && guard++ < 400; u += 0.3) {
@@ -302,7 +371,7 @@ function kitDress(c) {
   }
   // ── things on the walls ──
   const hung = []; let torches = 0;
-  const wq = (dress.wall || []).slice();
+  const wq = (dress.wall || []).filter(n => Kit.pieces[n]);
   for (let si = 0; si < 8 && wq.length; si++) {
     const sd = sides[(si + 1 + (R() * 4 | 0)) % 4];
     for (let u = 0.8 + R() * 0.6; u < sd.len - 0.7 && wq.length; u += 0.45) {
@@ -312,8 +381,13 @@ function kitDress(c) {
       const p = sd.at(u, it[2]);
       if (blocked(sd.at(u, 0.3)[0], sd.at(u, 0.3)[1], 0.12) && y < 2.4) continue;           // a hearth or stair is in front of this stretch of wall
       if (name === 'Torch_Metal') { kitLit(m, name, p[0], y, p[1], 1, sd.ry, { r: 6.2, c: [2.5, 1.45, 0.55], kind: 'fire', flame: 'torch', size: 0.14 }); torches++; }
-      else kp(m, name, p[0], y, p[1], 1, sd.ry);
-      if (name === 'Shelf_Simple') { const q = sd.at(u - 0.28, 0.19), q2 = sd.at(u + 0.26, 0.19); kp(m, R.pick(['SmallBottles_1', 'Book_Stack_1', 'Potion_2']), q[0], y + 0.11, q[1], 1, sd.ry); kp(m, R.pick(['Book_Stack_2', 'Bottle_1', 'Vase_4']), q2[0], y + 0.11, q2[1], 0.7, sd.ry + 0.4); }
+      else kp(m, name, p[0], y, p[1], it[3] || 1, sd.ry);
+      if (name === 'Shelf_Simple') {
+        const q = sd.at(u - 0.28, 0.19), q2 = sd.at(u + 0.26, 0.19), pickOn = list => { const l = list.filter(e => Kit.pieces[e[0]]); return l.length ? R.pick(l) : null; };
+        const a = pickOn([['SmallBottles_1', 1], ['Book_Stack_1', 1], ['Potion_2', 1], ['ceramic_vase_04', 0.6], ['wooden_bowl_01', 0.8], ['food_pears_asian_01', 1], ['ceramic_pot', 0.5]]);
+        const b2 = pickOn([['Book_Stack_2', 0.7], ['Bottle_1', 0.7], ['Vase_4', 0.7], ['brass_goblets', 0.7], ['wooden_candlestick', 0.8], ['carved_wooden_plate', 0.9], ['yellow_onion', 1]]);
+        if (a) kp(m, a[0], q[0], y + 0.11, q[1], a[1], sd.ry); if (b2) kp(m, b2[0], q2[0], y + 0.11, q2[1], b2[1], sd.ry + 0.4);
+      }
       hung.push([sd, u, half]); wq.shift(); u += it[0] + 1.2 + R() * 1.2;
     }
   }
@@ -327,6 +401,57 @@ function kitDress(c) {
   }
   if (st.dormers) for (const x of st.dormers) { const z = -hd * 0.5, y = c.kYtop + hd * 0.5 * c.tanP - 0.35; c.kb.add('Roof_Dormer_RoundTile', KH.xf(c.kMS, x, y, z, 1.25, PI), { zone: 0, skyVis: 1 }); }
   if (st.banner) { const dw = spec.doors[0].wall, o = c.openings[dw].find(q => q.door), L = WALLS[dw].len(w, d); if (o) for (const sg of [-1, 1]) { const u = (o.u0 + o.u1) / 2 + sg * 2.3; if (u > 0.6 && u < L - 0.6) c.kb.add(sg < 0 ? 'Banner_1' : 'Banner_2', KH.xf(c.kFrames[dw], u, Math.min(3.1 * sy, H + 0.5), 0.12, 1, -PI / 2), EXT); } }
+}
+
+// ── scanned ground dressing: rocks, stumps, a trunk, ferns and weeds beside the houses and around the lake shore (instanced, a few hundred in all) ──
+function kitScatter() {
+  if (!scanOn() || (TEST && TEST.scatter === 0)) return null;
+  const R = rng(9091), gy = (x, z) => (Math.abs(x) < 143 && Math.abs(z) < 143) ? Terrain.y(x, z) : terrainH(x, z), B = Kit.batch({ name: 'scan-scatter' });
+  const lists = {}, add = (key, name, x, z, s, sink, ry) => { const y = gy(x, z); (lists[key] = lists[key] || {})[name] = lists[key][name] || []; lists[key][name].push(Kit.matrix({ p: [x, y - sink * s, z], ry: ry === undefined ? R() * TAU : ry, s })); return y; };
+  const clear = (x, z, pad) => {
+    for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + pad + (s.porch || 0) + 0.5 && Math.abs(l[1]) < s.d / 2 + pad + 0.5) return false; }
+    for (const r of Roads) if (r.line.dist(x, z, r.w / 2 + pad) < r.w / 2 + pad) return false;
+    for (const f of FIELDS) if (x > f.x0 - pad && x < f.x1 + pad && z > f.z0 - pad && z < f.z1 + pad) return false;
+    if (River.dist(x, z, 7 + pad) < 6.5 + pad) return false;
+    if (hyp((x - SQUARE.x) / (SQUARE.rx + 1), (z - SQUARE.z) / (SQUARE.rz + 1)) < 1) return false;
+    const dk = World.spots['dock.end']; if (dk && hyp(x - dk.p[0], z - dk.p[2]) < 7) return false;
+    for (const c of World.colliders) { if (c.r !== undefined ? hyp(x - c.x, z - c.z) < c.r + pad : (Math.abs(x - c.x) < c.hx + pad + 0.3 && Math.abs(z - c.z) < c.hz + pad + 0.3)) return false; }
+    return true;
+  };
+  const rocks = ['rock_moss_set_02_g', 'rock_moss_set_02_c', 'rock_moss_set_02_a', 'rock_moss_set_01_e'], rockSize = n => Math.max(...Kit.info(n).size);
+  const rock = (key, x, z, k) => {       // k: 0 pebble .. 1 boulder
+    const n = R.pick(key === 'h' ? rocks.slice(0, 2) : rocks), s = (0.12 + 0.5 * k * k) * (1 + R() * 0.5) / Math.max(0.5, rockSize(n)) * 2.2;
+    add(key, n, x, z, s, 0.08 * Kit.info(n).size[1], undefined);
+    if (rockSize(n) * s > 0.9 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: rockSize(n) * s * 0.36, y0: gy(x, z) - 1, y1: gy(x, z) + 0.8 });
+  };
+  // beside the houses: a few at the foot of the walls, away from the doors
+  for (const s of SITES) {
+    if (!HOUSES[s.id] || s.id === 'barn') continue;
+    const dl = siteDoorLocal(s, 0); let n = 0;
+    for (let t = 0; t < 40 && n < 7; t++) {
+      const side = R.i(0, 3), u = R.s() * 0.5, off = 0.9 + R() * 1.6;
+      const [lx, lz] = side === 0 ? [u * s.w, -s.d / 2 - off] : side === 1 ? [u * s.w, s.d / 2 + off] : side === 2 ? [-s.w / 2 - off, u * s.d] : [s.w / 2 + off, u * s.d];
+      if (hyp(lx - dl[0], lz - dl[1]) < 3.2) continue;
+      const p = siteToWorld(s, lx, lz); if (!clear(p[0], p[1], 0.5) || Math.abs(gy(p[0], p[1]) - s.y) > 0.5) continue;
+      const r = R();
+      if (r < 0.34) add('h', 'fern_02_a', p[0], p[1], 0.5 + R() * 0.4, 0.04); else if (r < 0.58) add('h', 'weed_plant_02_a', p[0], p[1], 1.2 + R() * 0.8, 0.02);
+      else rock('h', p[0], p[1], R() * 0.6);
+      n++;
+    }
+  }
+  // the lake shore: reeds of weeds and fern at the water's edge, rocks half in the shallows, a fallen trunk or two, stumps
+  const LK = 'l';
+  for (let i = 0, n = 0; i < 400 && n < 78; i++) {
+    const a = R() * TAU, r0 = lakeR(LAKE.x + Math.cos(a) * LAKE.r, LAKE.z + Math.sin(a) * LAKE.r), off = -0.8 + Math.pow(R(), 1.3) * 7;
+    const x = LAKE.x + Math.cos(a) * (r0 + off), z = LAKE.z + Math.sin(a) * (r0 + off), y = gy(x, z);
+    if (y < LAKE.y - 0.35 || y > LAKE.y + 3 || !clear(x, z, 0.4)) continue;
+    const q = R();
+    if (off < 1.5 && q < 0.5) rock(LK, x, z, 0.2 + R() * 0.8); else if (q < 0.55) add(LK, 'fern_02_a', x, z, 0.55 + R() * 0.5, 0.04); else if (q < 0.8) add(LK, 'weed_plant_02_a', x, z, 1.3 + R() * 0.9, 0.02);
+    else if (q < 0.9) rock(LK, x, z, R() * 0.5); else if (q < 0.95) add(LK, 'dead_tree_trunk', x, z, 0.8 + R() * 0.4, 0.05, a + PI / 2 + R.s() * 0.6); else add(LK, 'tree_stump_01', x, z, 0.4 + R() * 0.25, 0.06);
+    n++;
+  }
+  for (const key in lists) for (const name in lists[key]) B.addInstanced(name, lists[key][name], { cell: key === 'h' ? 80 : 60, maxDist: key === 'h' ? 70 : 80, cast: false });
+  return B;
 }
 
 // ── scene: build the batches once the scene exists, hide interiors that are far away ──
@@ -350,6 +475,7 @@ function kitAttach() {
     const mat = new THREE.MeshBasicNodeMaterial(); mat.side = THREE.DoubleSide; mat.colorWrite = false; mat.depthWrite = false; mat.depthTest = false; mat.fog = false;
     const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.frustumCulled = false; mesh.matrixAutoUpdate = false; mesh.renderOrder = -5; mesh.name = 'kit-shadow-proxy'; SC.scene.add(mesh);
   }
+  try { const sb = kitScatter(); if (sb) addG(sb.build(), { scatter: true }); } catch (e) { console.warn('scan scatter skipped: ' + (e && e.message || e)); }
   for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true }); }
   if (World.kitYard && World.kitYard.count) { const g = World.kitYard.build(); g.traverse(o => { if (o.isMesh) o.layers.set(1); }); addG(g, { yard: true }); }
   const inner = sceneUpdate;

@@ -1,0 +1,9 @@
+# objects dropped after looking at the contact sheets (name as it would appear in the catalogue)
+# stems vanish when simplified, leaving floating leaves
+periwinkle_plant_a
+periwinkle_plant_b
+periwinkle_plant_c
+periwinkle_plant_d
+# single loose leaf / flower, too small to be useful
+shrub_sorrel_01_f
+shrub_sorrel_01_h
