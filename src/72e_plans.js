@@ -143,6 +143,8 @@ function dressHall(P, room, o) {
   const e = P.doors.find(d => d.b === null && d.a === room.id);
   if (e) { const side2 = e.wall.ax === 'x' ? (e.wall.c <= room.z0 + 0.01 ? 'n' : 's') : (e.wall.c <= room.x0 + 0.01 ? 'w' : 'e'); pSconce(P, room, side2, e.wall.ax === 'x' ? e.x + 1.3 : e.z + 1.3) || pSconce(P, room, side2, e.wall.ax === 'x' ? e.x - 1.3 : e.z - 1.3); }
   for (const sd of ['w', 'e', 'n', 's']) if (pBarrelCorner(P, room, sd)) break;
+  pKitFloor(P, room, 'w', 'Cabinet', { at: 'end' }) || pKitFloor(P, room, 'n', 'Cabinet', { at: 'end' });
+  pWalls(P, room, o.walls || ['Torch_Metal', 'paint', 'Banner_1_Cloth', 'rack', 'paint', 'Peg_Rack']);
 }
 function pBarrelCorner(P, room, sd) { return pAgainst(P, room, sd, P.id + '.barrel', 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: 'end' }); }
 function dressBedroom(P, room, o) {
@@ -160,6 +162,7 @@ function dressBedroom(P, room, o) {
   if (ch && o.chest !== false) pInteract(P, ch.cx, 0.5, ch.cz, { kind: 'chest', id: P.id + '.' + (o.chestId || 'chest'), loot: o.loot || LOOT[P.id] || [['gold', 4 + R.i(0, 6)]], r: 1.8 }, k);
   for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.wardrobe', 1.2, 0.5, 1.8, +1, pdShelf(1.2, 1.8, 2, null), { })) break;
   if (P.firstBed && P.firstBed.room === room) { const b = P.firstBed; pSconce(P, room, b.sd, (b.sd === 'e' || b.sd === 'w') ? b.cz + 1.4 : b.cx + 1.4, 1.5) || pSconce(P, room, b.sd, (b.sd === 'e' || b.sd === 'w') ? b.cz - 1.4 : b.cx - 1.4, 1.5); }
+  { const bb = P.firstBed && P.firstBed.room === room ? P.firstBed : null; if (bb) { const rc = { e: [bb.cx - 1.5, bb.cz], w: [bb.cx + 1.5, bb.cz], n: [bb.cx, bb.cz + 1.6], s: [bb.cx, bb.cz - 1.6] }[bb.sd]; pPut(P, room, P.id + '.' + room.id + 'rug', rc[0], rc[1], 0, 1.8, 1.2, 0.02, pdRug(1.8, 1.2, [0.42, 0.26, 0.2]), { flat: true, noClear: true }); } pWalls(P, room, ['paint', 'Banner_1_Cloth', 'rack']); }
   if (o.table) { const bb = P.firstBed && P.firstBed.room === room ? P.firstBed : null; pFree(P, room, P.id + '.' + room.id + 'table', 0.8, 0.5, 0.75, 0, pdTable(0.8, 0.5, ['candle', 'mug', 'book'], 2, P.c), { near: bb ? [bb.cx, bb.cz] : pCentre(room), surface: true }); }
   pLamp(P, room, ...pCentre(room));
 }
@@ -169,6 +172,7 @@ function dressStore(P, room, o) {
   for (let i = 0; i < 3; i++) for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.barrel' + i, 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: i ? 'end' : 'start' })) break;
   for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.crate' + i, 0.6, 0.6, 0.6, R() * 0.4, pdCrate(0.6), { near: [room.in.x1 - 1, room.in.z1 - 1] });
   for (let i = 0; i < 2; i++) pFree(P, room, P.id + '.sack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x0 + 1, room.in.z1 - 1], noClear: false });
+  pWalls(P, room, ['Shelf_Small_Bottles', 'Peg_Rack', 'Torch_Metal', 'Shelf_Simple']);
   pLamp(P, room, ...pCentre(room));
 }
 function dressKitchen(P, room, o) {
@@ -178,6 +182,8 @@ function dressKitchen(P, room, o) {
   if (w) pSpot(P, 'work', w.cx, w.cz + 0.7, PI, { k: room.k });
   for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.shelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, ['pot', 'bowl', 'jug', 'cheese', 'loaf'])), {})) break;
   for (let i = 0; i < 2; i++) for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.barrel' + i, 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: i ? 'end' : 'start' })) break;
+  pKitFloor(P, room, 's', 'Cabinet', { at: 'start' }) || pKitFloor(P, room, 'n', 'Cabinet', { at: 'start' });
+  pWalls(P, room, ['Peg_Rack', 'Shelf_Simple', 'Torch_Metal', 'rack', 'Shelf_Small_Bottles', 'Peg_Rack']);
   pLamp(P, room, ...pCentre(room));
 }
 function dressCellar(P, room, o) {
@@ -290,6 +296,7 @@ function planBuild(c) {
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
   const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
   for (const n of P.need) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });
+  { const fy = dd.sill[1]; c.cell.daylightFn = () => Player.pos[1] < fy - 1.0 ? 0 : undefined; }          // below the ground floor no daylight comes in
   c.planDone = P; return P;
 }
 const PLANS_INFO = { inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true } };

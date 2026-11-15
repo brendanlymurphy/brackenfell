@@ -38,6 +38,9 @@ PLANS.chapel = (P, c, info) => {
   const bk = pFree(P, nave, P.id + '.lectern', 0.5, 0.5, 1.1, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.2, 0, -0.2, 0.2, 1.0, 0.2); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.28, 1.0, -0.22, 0.28, 1.05, 0.22); }, { near: [-3.2, 10.4] });
   if (bk) pInteract(P, bk.cx, 1.1, bk.cz, Object.assign({ kind: 'read', id: 'chapel.book', r: 1.7 }, READS['chapel.book']), 0);
   pLamp(P, nave, 0, 3.0); pLamp(P, nave, 0, 8.0);
+  if (Kit.pieces.Chandelier) for (const z of [3.0, 8.0]) { const L0 = P.lv[0]; at(P.c.int, 0, 0, z, 0, () => kitLit(P.c.int, 'Chandelier', 0, L0.H - 0.1, 0, 0.55, 0, { r: 10, c: [3.0, 1.9, 0.85], kind: 'candle', always: true })); }
+  pWalls(P, nave, ['Banner_1_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'paint', 'Banner_1_Cloth']);
+  pKitFloor(P, nave, 'w', 'CandleStick_Stand', { n: 'a', at: 10 }); pKitFloor(P, nave, 'e', 'CandleStick_Stand', { n: 'b', at: 10 });
   const e = P.doors.find(d => d.b === null); if (e) { pSconce(P, nave, 'n', e.x + 1.4); pSconce(P, nave, 'n', e.x - 1.4); }
   // sacristy: a vestment chest with the crypt key, a table, shelves
   const ch = pAgainst(P, sac, 's', P.id + '.sacristy', 0.85, 0.5, 0.6, +1, pdChest, { lowOk: true, at: 'start' }) || pAgainst(P, sac, 'n', P.id + '.sacristy', 0.85, 0.5, 0.6, +1, pdChest, { lowOk: true, at: 'start' });
@@ -51,7 +54,7 @@ PLANS.chapel = (P, c, info) => {
   let tn = 0; for (const z of [2.5, 5.0, 7.5, 10.0]) for (const x of [-3.2, 3.2]) { if (pPut(P, crypt, P.id + '.tomb' + tn++, x, z, PI / 2, 2.2, 0.95, 0.75, pdTomb(2.2), {})) { } }
   const rel = pAgainst(P, crypt, 'w', P.id + '.relic', 0.85, 0.5, 0.6, +1, pdChest, { lowOk: true, at: 6 });
   if (rel) pInteract(P, rel.cx, 0.5, rel.cz, { kind: 'chest', id: 'chapel.relic', loot: [['gold', 40], ['potion', 2]], r: 1.8 }, -1);
-  for (const [sd, u] of [['n', -2], ['n', 2], ['s', -2], ['s', 2], ['w', 3], ['w', 9], ['e', 3], ['e', 9]]) pTorch(P, crypt, sd, u, 1.7, 6.0);
+  for (const [sd, u] of [['n', -2], ['n', 2], ['s', -2], ['s', 2], ['w', 3], ['w', 9], ['e', 3], ['e', 9]]) pTorch(P, crypt, sd, u, 1.7, 8.5);
   const g = P.doors.find(d => d.gate); if (g) P.gate = pGate(P, g, 'chapel.gate', 'cryptkey', 'Iron gate');
   pPier; // no hearth in a chapel
 };
