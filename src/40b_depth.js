@@ -47,11 +47,11 @@ SH.ROOMS = 64;
       const out = vec4(1, 1, 1, 0).toVar();
       If(hgt.lessThan(7.9).or(eave.lessThan(7.9)).or(rdirt.greaterThan(0.01)).or(rsoot.greaterThan(0.01)), () => {
         const nn = nz1(vec2(wp.x.add(wp.z).mul(0.5), wp.y.mul(0.7).add(wp.x.sub(wp.z).mul(0.09)))).toVar(), wallness = float(1).sub(abs(N.y));
-        const dirtE = sat(hgt.div(nn.r.mul(0.8).add(0.25))).oneMinus().mul(wallness);
+        const dirtE = TSL.sqrt(sat(hgt.div(nn.r.mul(0.9).add(1.0))).oneMinus()).mul(wallness).mul(0.8);
         const dirt = max(dirtE, rdirt);
         const streak = sat(eave.div(nn.g.mul(0.5).add(0.3))).oneMinus().mul(wallness).mul(smoothstep(0.3, 0.6, nn.b));
-        const rgb = (mix(vec3(1), vec3(0.36, 0.30, 0.22), dirt.mul(0.95)).mul(mix(vec3(1), vec3(0.56, 0.53, 0.5), streak.mul(0.8))).mul(mix(vec3(1), vec3(0.12, 0.11, 0.10), rsoot)));
-        const mo = (sat(hgt.div(nn.a.mul(0.5).add(0.3))).oneMinus().mul(smoothstep(0.42, 0.62, nn.r.mul(0.5).add(nn.b.mul(0.5)))).mul(wallness).mul(stone));
+        const rgb = (mix(vec3(1), vec3(0.36, 0.30, 0.22), dirt).mul(mix(vec3(1), vec3(0.56, 0.53, 0.5), streak.mul(0.8))).mul(mix(vec3(1), vec3(0.12, 0.11, 0.10), rsoot)));
+        const mo = (sat(hgt.div(nn.a.mul(0.6).add(0.4))).oneMinus().mul(smoothstep(0.38, 0.58, nn.r.mul(0.5).add(nn.b.mul(0.5)))).mul(wallness).mul(stone));
         out.assign(vec4(rgb, mo));
       });
       return out;
