@@ -206,7 +206,8 @@ RPG.tick = function (dt) {
   if (playing) {
     K[0] += (0 - K[0]) * Math.min(1, dt * 11); K[1] += (0 - K[1]) * Math.min(1, dt * 11); RPG.shake = Math.max(0, RPG.shake - dt * 2.6);
     const sh = RPG.shake * RPG.shake * 0.05, t = game.time * 47;
-    cam.yaw += K[0] + Math.sin(t) * sh; cam.pitch += K[1] + Math.cos(t * 1.31) * sh;
+    const rm = typeof Feel !== 'undefined' && Feel.reduce ? 0 : 1;      // [ui] Settings > Reduce motion silences camera kick
+    cam.yaw += (K[0] + Math.sin(t) * sh) * rm; cam.pitch += (K[1] + Math.cos(t * 1.31) * sh) * rm;
     if (RPG.dead) { RPG.deadT += dt; const d = smooth(0, 1.1, RPG.deadT); RPG.hud.deadMsg.style.opacity = smooth(0.5, 1.6, RPG.deadT).toFixed(2); cam.pos[1] -= d * 1.25; cam.pitch += d * 0.5; cam.yaw += d * 0.35; }
     RPG.hudFrame(dt);
   }

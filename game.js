@@ -1220,7 +1220,7 @@ function renderFrame(time, env) {
   fovy = Math.min(fovy, 1.75); if (aspect > 1) { const hf = 2 * Math.atan(Math.tan(fovy / 2) * aspect); if (hf > 1.62) fovy = 2 * Math.atan(Math.tan(1.62 / 2) / aspect); }
   const key = aspect.toFixed(4) + ':' + fovy.toFixed(4);
   if (key !== R.camKey) { R.camKey = key; c3.aspect = aspect; c3.fov = fovy * 180 / Math.PI; c3.updateProjectionMatrix(); }
-  c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, 0); c3.updateMatrixWorld();
+  c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, cam.roll || 0);   /* [ui] roll from 87_feel.js */ c3.updateMatrixWorld();
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
   SH.update(env, e, time);
@@ -8095,6 +8095,7 @@ function buildVegetation() {
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;
+  World.treePos = { pine: inst.pine, birch: inst.birch, oak: inst.oak };      // [ui] read by the map (86_map.js)
 }
 
 
@@ -9873,55 +9874,106 @@ TALK.rowan = function () {
 
 
 // ---- 85_ui.js ----
-// ───────────────────────── HUD, dialogue, journal ─────────────────────────
+// ───────────────────────── HUD, dialogue, journal, pause, settings ─────────────────────────
+// The interface is parchment and ink and keeps out of the way: bars and quest text rest when nothing changes and return on change; the one thing
+// on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
+// Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const UI = { talk: null, menu: false, reader: false, prompt: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '' };
-function toast(html) { const d = document.createElement('div'); d.innerHTML = html; $('toasts').appendChild(d); setTimeout(() => d.remove(), 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
-function banner(small, big) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.classList.add('on'); clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
-function fadeDo(fn) { const f = $('fade'); f.classList.add('on'); Player.locked = true; setTimeout(() => { fn(); setTimeout(() => { f.classList.remove('on'); Player.locked = uiBusy(); }, 350); }, 950); }
-const uiBusy = () => !!(UI.talk || UI.menu || UI.reader);
-function uiPurse() { $('purse').textContent = S.gold + ' gold'; }
+const BUILD_NAME = 'Build 28';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
+function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
+function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
+function fadeDo(fn) { const f = $('fade'); f.classList.add('on'); Player.locked = true; setTimeout(() => { fn(); setTimeout(() => { f.classList.remove('on'); Player.locked = uiBusy(); if (typeof Feel !== 'undefined') Feel.settle(); }, 350); }, 950); }
+const uiBusy = () => !!(UI.talk || UI.menu || UI.reader || UI.paused);
+function uiPurse() { $('purse').textContent = S.gold + ' gold'; if (S.gold !== UI.lastGold) { if (UI.lastGold >= 0) UI.hudT = Math.max(UI.hudT, 6); UI.lastGold = S.gold; } }
+function questLine(id) { let st = QUESTS[id].stages[S.q[id].stage]; if (id === 'herbs' && S.q[id].stage === 0) st += ' (' + Math.min(frostN(), 5) + ' of 5)'; return st; }
 function uiObjective() {
   let h = ''; const act = QORDER.filter(id => S.q[id] && !S.q[id].done).sort((a, b) => S.q[b].t - S.q[a].t).slice(0, 3);
-  for (const id of act) { let st = QUESTS[id].stages[S.q[id].stage]; if (id === 'herbs' && S.q[id].stage === 0) st += ' (' + Math.min(frostN(), 5) + ' of 5)'; h += '<div><b>' + QUESTS[id].name + '</b>' + st + '</div>'; }
-  if (h !== UI.lastObj) { $('objective').innerHTML = h; UI.lastObj = h; }
+  for (const id of act) h += '<div><b>' + QUESTS[id].name + '</b>' + questLine(id) + '</div>';
+  if (h !== UI.lastObj) { $('objective').innerHTML = h; if (UI.lastObj !== '' || h) UI.hudT = Math.max(UI.hudT, 9); UI.lastObj = h; }
 }
 function releaseLook() { if (document.pointerLockElement) document.exitPointerLock(); Input.joy = null; Input.joyT = null; Input.look = null; $('stick').style.display = 'none'; }
-// ── dialogue ──
+const UI_VERBS = [[/^Talk to /, 'Talk'], [/^Open /, 'Open'], [/^Search /, 'Search'], [/^Take /, 'Take'], [/^Pick /, 'Take'], [/^Read/, 'Read'], [/^Sleep/, 'Sleep'], [/^Ring /, 'Ring'], [/^Light /, 'Light'], [/^Enter ?/, 'Enter'], [/^Leave ?/, 'Leave'], [/^Climb ?/, 'Climb'], [/^Use /, 'Use']];
+function promptParts(label) { for (const [re, v] of UI_VERBS) if (re.test(label)) return [v, label.replace(re, '').replace(/^(the|a|an|to) /i, '')]; return ['Examine', label]; }
+// ── dialogue: the camera has framed the speaker (87_feel.js); the HUD steps aside ──
 function startTalk(npc) {
   UI.talk = npc; npc.talking = true; Player.locked = true; releaseLook();
   npc.yawBefore = npc.yaw; if (npc.anim !== 'sit' && npc.anim !== 'lie') npc.yaw = headingTo(npc.pos[0], npc.pos[2], Player.pos[0], Player.pos[2]);
-  $('dname').textContent = npc.name; $('dialog').hidden = false; $('act').hidden = true;
-  showNode((TALK[npc.id] || (() => node('...')))()); Audio2.ui();
+  $('dname').textContent = npc.name; $('dialog').hidden = false; $('act').hidden = true; UI.prompt = null; document.body.classList.add('talking');
+  if (typeof Feel !== 'undefined') Feel.talk(npc);
+  showNode((TALK[npc.id] || (() => node('...')))()); Audio2.ui(); if (typeof Feel !== 'undefined') Feel.did('talk');
 }
 function showNode(n) {
   if (!n) return endTalk();
   $('dtext').textContent = n.t; const box = $('dopts'); box.textContent = '';
-  n.o.forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = o[0]; if (o[2]) b.className = 'quest'; b.onclick = () => { Audio2.ui(); showNode(o[1] ? o[1]() : null); }; box.appendChild(b); if (i === 0 && !Input.touch) setTimeout(() => b.focus(), 30); });
+  n.o.forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = (Input.touch ? '' : (i + 1) + '.  ') + o[0]; if (o[2]) b.className = 'quest'; b.onclick = () => { Audio2.ui(); showNode(o[1] ? o[1]() : null); }; box.appendChild(b); if (i === 0 && !Input.touch) setTimeout(() => b.focus(), 30); });
+  $('dialog').scrollTop = 0;
 }
-function endTalk() { const n = UI.talk; if (n) { n.talking = false; if (n.path) n.yaw = n.yawBefore; } UI.talk = null; $('dialog').hidden = true; Player.locked = uiBusy(); uiObjective(); }
-function openReader(title, text) { UI.reader = true; Player.locked = true; releaseLook(); $('rtitle').textContent = title; $('rtext').textContent = text; $('reader').hidden = false; Audio2.page(); }
+function endTalk() { const n = UI.talk; if (n) { n.talking = false; if (n.path) n.yaw = n.yawBefore; } UI.talk = null; $('dialog').hidden = true; document.body.classList.remove('talking'); Player.locked = uiBusy(); if (typeof Feel !== 'undefined') Feel.talkEnd(); uiObjective(); UI.hudT = 8; }
+function openReader(title, text) { UI.reader = true; Player.locked = true; releaseLook(); $('rtitle').textContent = title; $('rtext').textContent = text; $('reader').hidden = false; Audio2.page(); if (typeof Feel !== 'undefined') Feel.did('use'); }
 function closeReader() { UI.reader = false; $('reader').hidden = true; Player.locked = uiBusy(); }
-// ── journal / pack / settings ──
-function openMenu(tab) {
-  UI.menu = true; Player.locked = true; releaseLook(); $('menu').hidden = false; showTab(tab || 'journal'); Audio2.page();
-  let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
+// ── journal: quests, map, pack, settings ──
+function renderJournal() {
+  const act = [], done = []; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; (q.done ? done : act).push(id); }
+  act.sort((a, b) => S.q[b].t - S.q[a].t);
+  const card = id => { const q = S.q[id], Q = QUESTS[id]; let h = '<div class="qc' + (q.done ? ' done' : '') + '"><span class="tag">' + (q.done ? 'Done' : 'Active') + '</span><h3>' + Q.name + '</h3>';
+    if (!q.done) { h += '<ul>'; Q.stages.forEach((s, i) => { if (i > q.stage) return; h += '<li' + (i < q.stage ? ' class="ok"' : '') + '>' + (i === q.stage ? questLine(id) : s) + '</li>'; }); h += '</ul>'; }
+    return h + '</div>'; };
+  let h = '';
+  if (act.length) h += '<h4>Active</h4><div class="qlog">' + act.map(card).join('') + '</div>';
+  if (done.length) h += '<h4>Completed</h4><div class="qlog">' + done.map(card).join('') + '</div>';
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
-  Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 27 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
-function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
-function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
-function saveSettings() { try { localStorage.setItem('brackenfell.set', JSON.stringify({ q: game.qualitySetting, sens: Input.sens, vol: Audio2.vol, music: Audio2.musicVol, inv: Input.invertY, fps: game.showFps, flow: Env.dayLength })); } catch (e) { } }
-function loadSettings() { try { const j = JSON.parse(localStorage.getItem('brackenfell.set') || 'null'); if (!j) return; if (j.q) game.qualitySetting = j.q; Input.sens = j.sens || 1; Audio2.vol = j.vol === undefined ? 0.8 : j.vol; Audio2.musicVol = j.music === undefined ? 0.6 : j.music; Input.invertY = !!j.inv; game.showFps = !!j.fps; if (j.flow !== undefined) Env.dayLength = j.flow; } catch (e) { } }
+function openMenu(tab, fromPause) {
+  if (UI.menu) return showTab(tab || 'journal');
+  UI.menu = true; UI.fromPause = !!fromPause; Player.locked = true; releaseLook(); $('menu').hidden = false; $('pause').hidden = true; showTab(tab || 'journal'); Audio2.page();
+  renderJournal(); Inv.render(); $('setTime').value = Env.hour; UI.diag(); if (UI.updateReady) $('updBtn').hidden = false;
+  if (typeof Feel !== 'undefined') Feel.did('journal');
+}
+UI.diag = () => {
+  const inf = G.gpuName || '';
+  $('diag').textContent = BUILD_NAME + ' (' + (typeof Load !== 'undefined' ? Load.M.v : 'dev') + ')' + ' · ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' · old villagers') + ' · textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' · ' + G.w + ' × ' + G.h + ' at ' + Math.round(R.scale * 100) + '% · detail ' + game.tier + (Perf.T > 20 ? ' · browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (UI.offline ? ' · ' + UI.offline : '') + (G.errors.length ? ' · ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+};
+function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } if (t === 'map' && typeof GameMap !== 'undefined') GameMap.show(); }
+function closeMenu() { UI.menu = false; $('menu').hidden = true; saveSettings(); if (UI.paused) { $('pause').hidden = false; return; } Player.locked = uiBusy(); UI.hudT = 6; }
+// ── settings: one JSON blob; every key is optional so older blobs load ──
+function saveSettings() { try { localStorage.setItem('brackenfell.set', JSON.stringify({ q: game.qualitySetting, sens: Input.sens, vol: Audio2.vol, music: Audio2.musicVol, inv: Input.invertY, fps: game.showFps, flow: Env.dayLength, lefty: UI.pref.lefty, btn: UI.pref.btn, ts: UI.pref.ts, hc: UI.pref.hc, reduce: UI.pref.reduce, hold: UI.pref.hold, x: UI.extra })); } catch (e) { } }
+UI.pref = { lefty: false, btn: 1, ts: 1, hc: false, reduce: false, hold: false };
+function applyPrefs() {
+  const p = UI.pref, b = document.body, r = document.documentElement.style;
+  b.classList.toggle('lefty', !!p.lefty); b.classList.toggle('hc', !!p.hc); b.classList.toggle('reduce', !!p.reduce);
+  r.setProperty('--ts', String(p.ts)); r.setProperty('--bs', String(p.btn));
+  Input.lefty = !!p.lefty; Input.holdUse = !!p.hold; if (typeof Feel !== 'undefined') Feel.reduce = !!p.reduce;
+}
+function loadSettings() {
+  UI.pref.reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  try {
+    const j = JSON.parse(localStorage.getItem('brackenfell.set') || 'null'); if (!j) return applyPrefs();
+    if (j.q) game.qualitySetting = j.q; Input.sens = j.sens || 1; Audio2.vol = j.vol === undefined ? 0.8 : j.vol; Audio2.musicVol = j.music === undefined ? 0.6 : j.music; Input.invertY = !!j.inv; game.showFps = !!j.fps; if (j.flow !== undefined) Env.dayLength = j.flow;
+    for (const k of ['lefty', 'btn', 'ts', 'hc', 'reduce', 'hold']) if (j[k] !== undefined) UI.pref[k] = j[k];
+    if (j.x && typeof j.x === 'object') UI.extra = j.x;
+  } catch (e) { }
+  applyPrefs();
+}
 function uiInit() {
-  const tr = $('ctrack');
+  Mark.init(); const tr = $('ctrack');
   for (const [l, a, minor] of [['N', 0], ['NE', 45, 1], ['E', 90], ['SE', 135, 1], ['S', 180], ['SW', 225, 1], ['W', 270], ['NW', 315, 1]]) { const s = document.createElement('span'); s.textContent = l; if (minor) s.className = 'minor'; tr.appendChild(s); UI.compass.push({ el: s, a: a * PI / 180 }); }
   UI.marks = []; for (let i = 0; i < 4; i++) { const m = document.createElement('span'); m.className = 'mark'; const d = document.createElement('span'); d.className = 'dist'; tr.appendChild(m); tr.appendChild(d); UI.marks.push({ el: m, d }); }
-  $('act').addEventListener('click', e => { e.preventDefault(); if (UI.prompt && !Player.locked) interactUse(UI.prompt); });
+  UI.pmarks = []; for (let i = 0; i < 6; i++) { const m = document.createElement('span'); m.className = 'pl'; const n = document.createElement('span'); n.className = 'pln'; tr.appendChild(m); tr.appendChild(n); UI.pmarks.push({ el: m, n }); }
+  // the use button: instant on touch (pointerdown), optionally held for half a second
+  const act = $('act'); let hold = null;
+  const fire = () => { if (UI.prompt && !Player.locked) { const it = UI.prompt; if (typeof Feel !== 'undefined') Feel.did('use'); interactUse(it); } };
+  const stop = () => { if (hold) { clearTimeout(hold.t); hold = null; } act.classList.remove('on'); const h = $('actHold'); h.style.transition = 'none'; h.style.transform = 'scaleX(0)'; };
+  act.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Input.touch = e.pointerType !== 'mouse' || Input.touch; act.classList.add('on');
+    if (Input.holdUse) { const h = $('actHold'); h.style.transition = 'transform 0.45s linear'; h.style.transform = 'scaleX(1)'; hold = { t: setTimeout(() => { hold = null; stop(); fire(); }, 450) }; } else { fire(); } });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) act.addEventListener(ev, stop);
+  act.addEventListener('click', e => e.preventDefault()); act.addEventListener('contextmenu', e => e.preventDefault());
   $('menuBtn').addEventListener('click', () => openMenu()); $('mclose').addEventListener('click', closeMenu); $('rclose').addEventListener('click', closeReader);
   for (const b of $('tabs').querySelectorAll('[data-tab]')) b.addEventListener('click', () => showTab(b.dataset.tab));
+  for (const b of $('setTabs').querySelectorAll('[data-set]')) b.addEventListener('click', () => { for (const x of $('setTabs').children) x.classList.toggle('on', x === b); for (const p of document.querySelectorAll('#tab-settings .sp')) p.hidden = p.id !== 'set-' + b.dataset.set; });
+  const P = UI.pref, sv = () => saveSettings();
   $('setQuality').value = game.qualitySetting; $('setSens').value = Input.sens; $('setVol').value = Audio2.vol; $('setMusic').value = Audio2.musicVol; $('setInvert').checked = Input.invertY; $('setFps').checked = game.showFps; $('setFlow').value = String(Env.dayLength);
+  $('setLefty').checked = P.lefty; $('setBtn').value = P.btn; $('setText').value = String(P.ts); $('setContrast').checked = P.hc; $('setMotion').checked = P.reduce; $('setHold').checked = P.hold;
   $('setQuality').addEventListener('change', e => { game.qualitySetting = e.target.value; game.applyQuality(); });
   $('setGfx').value = G.backend === 'WebGPU' ? 'webgpu' : 'webgl'; $('setGfx').addEventListener('change', e => { saveSettings(); try { if (game.playing) save(); } catch (er) { } gfxPrefer(e.target.value); });
   $('setSens').addEventListener('input', e => { Input.sens = +e.target.value; });
@@ -9932,40 +9984,104 @@ function uiInit() {
   $('setFlow').addEventListener('change', e => { Env.dayLength = +e.target.value; });
   $('setInvert').addEventListener('change', e => { Input.invertY = e.target.checked; });
   $('setFps').addEventListener('change', e => { game.showFps = e.target.checked; $('fps').hidden = !game.showFps; });
-  $('resetBtn').addEventListener('click', () => { clearSave(); location.reload(); });
+  $('setLefty').addEventListener('change', e => { P.lefty = e.target.checked; applyPrefs(); sv(); });
+  $('setBtn').addEventListener('input', e => { P.btn = +e.target.value; applyPrefs(); });
+  $('setText').addEventListener('change', e => { P.ts = +e.target.value; applyPrefs(); sv(); });
+  $('setContrast').addEventListener('change', e => { P.hc = e.target.checked; applyPrefs(); sv(); });
+  $('setMotion').addEventListener('change', e => { P.reduce = e.target.checked; applyPrefs(); sv(); });
+  $('setHold').addEventListener('change', e => { P.hold = e.target.checked; applyPrefs(); sv(); });
+  $('resetBtn').addEventListener('click', () => { clearSave(); try { localStorage.removeItem('brackenfell.hints'); } catch (e) { } location.reload(); });
+  for (const id of ['updBtn', 'updBtn2']) $(id).addEventListener('click', () => { try { if (game.playing) save(); } catch (e) { } saveSettings(); Load.applyUpdate(); });
+  $('pResume').addEventListener('click', () => UI.resume()); $('pJournal').addEventListener('click', () => openMenu('journal', true)); $('pSettings').addEventListener('click', () => openMenu('settings', true));
   $('fps').hidden = !game.showFps;
+  $('kbNote').hidden = coarse(); $('setBtn').closest('.row').hidden = !coarse(); $('setHold').closest('.row').hidden = false;
+  if (typeof GameMap !== 'undefined') GameMap.init();
 }
+// a newer build has been downloaded and is waiting: say so on the title screen, in Settings and once in play
+UI.updateAvailable = () => {
+  UI.updateReady = true; $('updateNote').hidden = false; $('updBtn').hidden = false;
+  if (game.playing) toast('A newer build of Brackenfell is ready.', ['Reload', () => { try { save(); } catch (e) { } saveSettings(); Load.applyUpdate(); }]);
+};
+UI.storageNote = () => { if (typeof Load !== 'undefined' && Load.cached) UI.offline = 'works offline (' + (Load.cacheBytes / 1048576).toFixed(0) + ' MB kept on this device)'; };
+// the "place discovered" banner and its mark on the map and compass. Others may call UI.discover('Some Name') when the player first reaches somewhere.
+UI.disc = () => S.disc || (S.disc = {});
+UI.discover = (name, id) => {
+  const pl = id ? World.places.find(p => p.id === id) : World.places.find(p => p.name === name), key = pl ? pl.id : name, d = UI.disc();
+  if (d[key]) return false; d[key] = 1; UI.hudT = Math.max(UI.hudT, 7);
+  banner('Discovered', name || (pl && pl.name), 'disc');      // silent: the owner asked for no jingle on discovery
+  try { save(); } catch (e) { } return true;
+};
 function onKey(e) {
   if (!game.playing) return;
   const c = e.code;
+  if (UI.paused && !UI.menu) { if (c === 'Escape' || c === 'Enter' || c === 'Space') UI.resume(); return; }
   if (UI.talk) { if (c === 'Escape') endTalk(); const n = +e.key; if (n >= 1 && n <= 9) { const b = $('dopts').children[n - 1]; if (b) b.click(); } return; }
   if (UI.reader) { if (c === 'Escape' || c === 'KeyE' || c === 'Enter') closeReader(); return; }
-  if (UI.menu) { if (c === 'Escape' || c === 'Tab' || c === 'KeyJ') closeMenu(); return; }
-  if (c === 'KeyE' || c === 'KeyF' || c === 'Enter') { if (UI.prompt) interactUse(UI.prompt); }
-  else if (c === 'Tab' || c === 'KeyJ') openMenu('journal'); else if (c === 'KeyI') openMenu('pack');
+  if (UI.menu) { if (c === 'Escape' || c === 'Tab' || c === 'KeyJ' || (c === 'KeyM' && !$('tab-map').hidden)) closeMenu(); else if (c === 'KeyM') showTab('map'); return; }
+  if (c === 'KeyE' || c === 'KeyF' || c === 'Enter') { if (UI.prompt) { if (typeof Feel !== 'undefined') Feel.did('use'); interactUse(UI.prompt); } }
+  else if (c === 'Tab' || c === 'KeyJ') openMenu('journal'); else if (c === 'KeyI') openMenu('pack'); else if (c === 'KeyM') openMenu('map');
+  else if (c === 'Escape') UI.pause('esc');
 }
-function onPointerUnlock() { if (game.playing && !uiBusy() && !Input.touch && !TEST) openMenu('settings'); }
-// per-frame HUD: prompt, compass, clock, place names
+// Esc while the pointer is captured releases it (the page never sees the key): that is the pause
+function onPointerUnlock() { if (game.playing && !uiBusy() && !Input.touch && !TEST) UI.pause('esc'); }
+// ── pause: Esc, a hidden tab, a locked phone, a portrait phone. Saves first, freezes the world (frame() draws but does not step), mutes the audio ──
+UI.pause = why => {
+  if (!game.playing || UI.paused) return;
+  UI.paused = true; UI.pauseWhy = why; try { save(); } catch (e) { } saveSettings(); releaseLook(); Player.locked = true;
+  if (Audio2.ctx && Audio2.ctx.state === 'running') Audio2.ctx.suspend();
+  $('pauseNote').textContent = why === 'hidden' ? 'Your progress is saved while you are away.' : why === 'turn' ? 'Turn your phone sideways to carry on.' : 'Your progress is saved.';
+  if (!UI.menu) $('pause').hidden = false;
+};
+UI.resume = () => {
+  if (!UI.paused) return; UI.paused = false; $('pause').hidden = true; if (UI.menu) { closeMenu(); }
+  Player.locked = uiBusy(); if (Audio2.ctx && game.playing) Audio2.ctx.resume(); lastT = performance.now();
+  if (!Input.touch && !coarse() && !TEST && !UI.talk) { try { const p = G.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
+};
+UI.lifecycle = () => {
+  document.addEventListener('visibilitychange', () => { lastT = performance.now(); if (document.hidden) { if (!TEST) UI.pause('hidden'); else if (Audio2.ctx) Audio2.ctx.suspend(); } else if (Audio2.ctx && game.playing && !UI.paused) Audio2.ctx.resume(); });
+  addEventListener('pagehide', () => { try { if (game.playing) { save(); saveSettings(); } } catch (e) { } });
+  const mq = window.matchMedia ? matchMedia('(orientation: portrait) and (pointer: coarse) and (max-width: 760px)') : null;
+  const turn = () => { UI.portrait = !!(mq && mq.matches); if (UI.portrait) { if (game.playing && !UI.paused) { UI.pause('turn'); UI.turnPaused = true; } } else if (UI.turnPaused) { UI.turnPaused = false; if (UI.paused && UI.pauseWhy === 'turn') UI.resume(); } };
+  if (mq) { (mq.addEventListener ? mq.addEventListener('change', turn) : mq.addListener(turn)); turn(); }
+};
+// ── per-frame HUD: what can be used, compass, clock, places, quiet fades ──
 function uiFrame(dt) {
   const P = Player;
-  // nearest thing to use, in front of the player
-  let best = null, bs = -1e9; const fx = Math.sin(P.yaw) * Math.cos(P.pitch), fy = Math.sin(P.pitch), fz = -Math.cos(P.yaw) * Math.cos(P.pitch), ex = P.pos[0], ey = P.pos[1] + P.eye, ez = P.pos[2];
+  let best = null, bs = -1e9, bp = null; const fx = Math.sin(P.yaw) * Math.cos(P.pitch), fy = Math.sin(P.pitch), fz = -Math.cos(P.yaw) * Math.cos(P.pitch), ex = P.pos[0], ey = P.pos[1] + P.eye, ez = P.pos[2];
   if (!P.locked) {
-    const test = (it, p, r) => { const dx = p[0] - ex, dy = p[1] - ey, dz = p[2] - ez, d = hyp(dx, dy, dz); if (d > r) return; const dot = (dx * fx + dy * fy + dz * fz) / (d || 1); if (dot < 0.35 && d > 0.9) return; const sc = dot * 2 - d * 0.35; if (sc > bs && interactLabel(it)) { bs = sc; best = it; } };
+    const test = (it, p, r) => { const dx = p[0] - ex, dy = p[1] - ey, dz = p[2] - ez, d = hyp(dx, dy, dz); if (d > r) return; const dot = (dx * fx + dy * fy + dz * fz) / (d || 1); if (dot < 0.35 && d > 0.9) return; const sc = dot * 2 - d * 0.35; if (sc > bs && interactLabel(it)) { bs = sc; best = it; bp = p; } };
     for (const it of World.interact) { if (it.zone !== undefined && it.zone !== World.camZone && it.zone !== 0 && World.camZone !== 0) continue; test(it, it.p, it.r || 2); }
     for (const n of NPCS) { if (!n.io) n.io = { npc: n }; if (hyp(n.pos[0] - ex, n.pos[2] - ez) < 3.2) test(n.io, [n.pos[0], n.pos[1] + (n.anim === 'lie' ? 0.3 : n.anim === 'sit' ? 1.0 : 1.35 * n.scale), n.pos[2]], 2.9); }
   }
-  if (best !== UI.prompt) { UI.prompt = best; const a = $('act'); a.hidden = !best; if (best) { $('actLabel').textContent = interactLabel(best); $('actKey').textContent = Input.touch ? '•' : 'E'; } }
-  // compass
+  const lab = best ? interactLabel(best) : null;
+  if (best !== UI.prompt || (best && lab !== UI.promptLab)) {
+    UI.prompt = best; UI.promptLab = lab; const a = $('act'); a.hidden = !best;
+    if (best) { const [v, rest] = promptParts(lab); $('actVerb').textContent = v; $('actName').textContent = rest; $('actLabel').textContent = lab; $('actKey').textContent = 'E'; }
+  }
+  UI.promptPos = bp;
+  // compass: the cardinal points, a gold diamond for each active quest, a small mark and name for places you have found
   if (Math.abs(P.yaw - UI.lastYaw) > 0.002 || (R.frame & 15) === 0) {
-    UI.lastYaw = P.yaw; const W = $('compass').clientWidth || 300, span = 1.9;
+    UI.lastYaw = P.yaw; const span = 1.9;
     for (const c of UI.compass) { const d = angDiff(c.a, P.yaw); c.el.style.display = Math.abs(d) < span / 2 ? '' : 'none'; c.el.style.left = (50 + d / span * 100) + '%'; }
     let k = 0;
     for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = CELLS_ON ? Cells.mapTarget(questTarget(id)) : questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
     for (; k < UI.marks.length; k++) { UI.marks[k].el.style.display = 'none'; UI.marks[k].d.style.display = 'none'; }
+    // discovered places in view (nearest first); the nearest few get a name
+    let j = 0; const dsc = UI.disc();
+    if (S.disc) { const seenIn = []; for (const pl of World.places) { if (!dsc[pl.id] || pl.id.startsWith('camp.') && false) continue; const d = angDiff(headingTo(ex, ez, pl.x, pl.z), P.yaw), dist = hyp(pl.x - ex, pl.z - ez); if (Math.abs(d) < span * 0.5 && dist > 6) seenIn.push([dist, d, pl]); }
+      seenIn.sort((a, b) => a[0] - b[0]); for (const [dist, d, pl] of seenIn) { if (j >= UI.pmarks.length) break; const m = UI.pmarks[j++], l = (50 + d / span * 100) + '%'; m.el.style.display = ''; m.el.style.left = l; m.n.style.display = j <= 2 ? '' : 'none'; m.n.style.left = l; m.n.textContent = pl.name.replace(/^(The|Brackenfell) /, ''); } }
+    for (; j < UI.pmarks.length; j++) { UI.pmarks[j].el.style.display = 'none'; UI.pmarks[j].n.style.display = 'none'; }
   }
-  if ((R.frame & 31) === 0) { const h = Math.floor(Env.hour), m = Math.floor((Env.hour - h) * 60 / 10) * 10; const part = Env.hour < 5 ? 'Night' : Env.hour < 8 ? 'Dawn' : Env.hour < 12 ? 'Morning' : Env.hour < 17 ? 'Afternoon' : Env.hour < 20.5 ? 'Dusk' : 'Night'; $('clock').textContent = part + ' · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); uiObjective();
-    for (const pl of World.places) { if (UI.seen[pl.id] || hyp(pl.x - ex, pl.z - ez) > pl.r) continue; UI.seen[pl.id] = 1; if (game.clock > 4 && !pl.minor) banner('Discovered', pl.name); break; } }
+  if ((R.frame & 31) === 0) {
+    const h = Math.floor(Env.hour), m = Math.floor((Env.hour - h) * 60 / 10) * 10; const part = Env.hour < 5 ? 'Night' : Env.hour < 8 ? 'Dawn' : Env.hour < 12 ? 'Morning' : Env.hour < 17 ? 'Afternoon' : Env.hour < 20.5 ? 'Dusk' : 'Night';
+    $('clock').textContent = part + ' · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); if (part !== UI.lastPart) { if (UI.lastPart) UI.hudT = Math.max(UI.hudT, 5); UI.lastPart = part; } uiObjective();
+    for (const pl of World.places) { if (UI.disc()[pl.id] || hyp(pl.x - ex, pl.z - ez) > pl.r) continue; if (game.clock > 3 && !pl.minor) { UI.discover(pl.name, pl.id); break; } else UI.disc()[pl.id] = 1; }      // minor places (ordinary buildings) are marked seen without a banner
+  }
+  // quiet HUD: the quest text, clock and purse rest a few seconds after the last change
+  UI.hudT -= dt; const q = UI.hudT <= 0 && !uiBusy(); if (q !== UI.quiet) { UI.quiet = q; $('hud').classList.toggle('quiet', q); }
+  // "click to look" for a mouse that has not captured the pointer
+  const cue = !Input.touch && !Input.plock && !UI.talk && !uiBusy() && !coarse() && !TEST; if (cue !== UI.cue) { UI.cue = cue; $('lookcue').hidden = !cue; }
+  if (typeof Feel !== 'undefined') Feel.hintFrame(dt);
 }
 
 
@@ -10001,6 +10117,228 @@ const PerfHud = (() => {
   H.url = m ? (m[1] === '0' || m[1] === 'off' ? 0 : 1) : -1;
   return H;
 })();
+
+
+// ---- 87_feel.js ----
+// ───────────────────────── game feel: the camera, the first two minutes, hints, and the ink marks drawn over the view ─────────────────────────
+// Feel.post(dt) runs once a tick right after playerUpdate and owns the final camera pose while the player is in the world:
+//   head bob matched to stride length and speed (and a little to the surface), a lateral sway, a landing dip, roll when strafing, a wider
+//   field of view when sprinting, breathing when still, and a smooth settle after a fade. All of it is off under Settings > Reduce motion.
+// During dialogue the camera eases to frame the speaker in the upper part of the view (the words sit below).
+const Feel = {
+  reduce: false, t: 0, roll: 0, fov: 0, dipK: 0, lastDip: 0, settleT: 0, bobS: 0, base: 0.92, talkNpc: null, talkT: 0,
+  intro: null, hints: null, tipT: 0, tipKey: '', moved: 0, turned: 0, last: null, greeted: false, usedSeen: 0, playT: 0,
+};
+const FEEL_SURF = { wood: 1.12, stone: 1.18, dirt: 0.92, grass: 0.82, water: 0.55 };
+Feel.post = function (dt) {
+  const P = Player, cam = R.cam; Feel.t += dt;
+  if (!Feel.base0) Feel.base0 = Feel.base = cam.fovMin;
+  const rm = Feel.reduce, base = Feel.base0;
+  // landing: the dip playerUpdate computed also nudges the view down and back, once
+  if (P.dip > Feel.lastDip + 0.02 && !rm) Feel.dipK = Math.min(0.045, P.dip * 0.28);
+  Feel.lastDip = P.dip; Feel.dipK += (0 - Feel.dipK) * Math.min(1, dt * 7);
+  const sp = P.speed, run = sp > 4;
+  // roll into a sideways step, FOV out with a sprint; both ease, neither snaps
+  const rx = Math.cos(P.yaw), rz = Math.sin(P.yaw), side = P.vel[0] * rx + P.vel[2] * rz;
+  const rollT = rm || !P.onGround || Player.locked ? 0 : -clamp(side / 5.4, -1, 1) * 0.024;
+  Feel.roll += (rollT - Feel.roll) * Math.min(1, dt * 6);
+  let fovT = base + (!rm && run && P.onGround && !Player.locked ? 0.075 : 0) - (Feel.talkNpc && !rm ? 0.07 : 0);
+  if (Feel.settleT > 0) { Feel.settleT = Math.max(0, Feel.settleT - dt); fovT += 0.06 * smooth(0, 1, Feel.settleT / 1.1); }
+  Feel.fov += (fovT - Feel.fov) * Math.min(1, dt * (Feel.settleT > 0 ? 2.2 : 4.5)); if (!Feel.fov) Feel.fov = fovT;
+  cam.fovMin = Feel.fov;
+  // bob: amplitude grows with speed, the phase is the stride (P.step already advances with distance), the surface changes its bite
+  const amp = rm ? 0 : (0.012 + 0.02 * sat((sp - 1.6) / 3.8)) * (FEEL_SURF[P.surface] || 1) * P.bobAmt;
+  const ph = P.step * TAU, bob = Math.sin(ph) * amp, lat = Math.sin(ph * 0.5) * amp * 0.42;
+  const still = rm ? 0 : sat(1 - P.bobAmt * 1.4), br = Math.sin(Feel.t * 1.15) * 0.0032 * still, brp = Math.sin(Feel.t * 0.8 + 1.3) * 0.0011 * still;
+  let y = P.camY + P.eye - (rm ? 0 : P.dip) + bob + br; if (rm) y = P.camY + P.eye;
+  cam.pos[0] = P.pos[0] + rx * lat; cam.pos[1] = y; cam.pos[2] = P.pos[2] + rz * lat;
+  cam.yaw = P.yaw + (rm ? 0 : Math.cos(P.step * PI) * 0.0022 * P.bobAmt + brp);
+  cam.pitch = P.pitch - Feel.dipK + (rm ? 0 : br * 0.5 + (Feel.settleT > 0 ? -0.035 * smooth(0, 1, Feel.settleT / 1.1) : 0));
+  cam.roll = Feel.roll + (rm ? 0 : lat * 0.05);
+  // dialogue framing and the held opening shot move the player's own view (so it stays where it settles)
+  if (Feel.talkNpc) {
+    const n = Feel.talkNpc, e = [P.pos[0], P.camY + P.eye, P.pos[2]], hy = n.pos[1] + (n.anim === 'lie' ? 0.5 : n.anim === 'sit' ? 1.22 : 1.56 * (n.scale || 1)), d = hyp(n.pos[0] - e[0], n.pos[2] - e[2]) || 1;
+    const yawT = headingTo(e[0], e[2], n.pos[0], n.pos[2]) + 0.06, pitT = Math.atan2(hy - e[1], d) - 0.16 * 0.85, k = Math.min(1, dt * (rm ? 30 : 3.2));
+    P.yaw += angDiff(yawT, P.yaw) * k; P.pitch += (pitT - P.pitch) * k;
+  }
+  Feel.introFrame(dt);
+};
+Feel.talk = npc => { Feel.talkNpc = npc; };
+Feel.talkEnd = () => { Feel.talkNpc = null; Feel.settleT = Math.max(Feel.settleT, 0.01); };
+Feel.settle = () => { if (!Feel.reduce) Feel.settleT = 1.1; };
+
+// ── the opening: a new game starts on the road above the town at dawn, a held shot of the valley with the title, then control ──
+Feel.START = { x: -132, z: -7, yaw: 90, pitch: 3 };
+Feel.begin = () => {
+  const s = Feel.START, P = Player; Env.hour = 6.1; npcSnapAll();
+  P.pos = [s.x, World.groundAt(s.x, s.z, 1e9), s.z]; P.vel = [0, 0, 0]; P.yaw = s.yaw * PI / 180; P.pitch = s.pitch * PI / 180; P.camY = P.pos[1];
+  Feel.intro = { t: 0, len: Feel.reduce ? 3.2 : 6.2, y0: P.pitch }; Player.locked = true; document.body.classList.add('cine'); $('hud').style.opacity = '0';
+  setTimeout(() => { if (Feel.intro) banner('The Greyspine Valley', 'Brackenfell'); }, 700);
+};
+Feel.introFrame = dt => {
+  const I = Feel.intro; if (!I) return; const P = Player;
+  I.t += dt; const k = I.t / I.len;
+  if (!Feel.reduce) { const dir = [Math.sin(P.yaw), -Math.cos(P.yaw)]; P.pos[0] += dir[0] * 0.38 * dt; P.pos[2] += dir[1] * 0.38 * dt; P.pitch = I.y0 - 0.03 * smooth(0, 1, k); }
+  if (k > 0.8) $('hud').style.opacity = String(Math.min(1, (k - 0.8) / 0.2));
+  if (I.t >= I.len) { Feel.intro = null; document.body.classList.remove('cine'); $('hud').style.opacity = ''; Player.locked = uiBusy(); Feel.playT = 0; if (qAt('welcome') < 0) qStart('welcome'); Feel.tip('goal'); }
+};
+
+// ── hints: a few notes, each shown only until the player has done the thing ──
+const FEEL_HINTS = {
+  goal: () => 'Warden Hale waits at the gate, up the road. <b>Follow the gold mark on the compass.</b>',
+  move: () => Input.touch || coarse() ? 'Touch and drag on the <b>left</b> to walk. Push the stick all the way over to run.' : '<b>W A S D</b> to walk, <b>Shift</b> to run.',
+  look: () => Input.touch || coarse() ? 'Drag on the <b>right</b> to look around.' : 'Move the <b>mouse</b> to look around. <b>Esc</b> pauses.',
+  use: () => UI.prompt ? (Input.touch || coarse() ? 'Tap <b>' + $('actVerb').textContent + '</b> to ' + $('actVerb').textContent.toLowerCase() + ' it.' : 'Press <b>E</b> to ' + $('actVerb').textContent.toLowerCase() + '.') : '',
+  journal: () => Input.touch || coarse() ? 'Tap the <b>menu</b> button for your journal, pack and map.' : 'Press <b>Tab</b> for your journal, <b>M</b> for the map.',
+};
+Feel.load = () => { try { Feel.hints = JSON.parse(localStorage.getItem('brackenfell.hints') || 'null'); } catch (e) { } if (!Feel.hints) Feel.hints = {}; };
+Feel.did = k => { if (!Feel.hints) Feel.load(); if (Feel.hints[k]) return; Feel.hints[k] = 1; try { localStorage.setItem('brackenfell.hints', JSON.stringify(Feel.hints)); } catch (e) { } if (Feel.tipKey === k || (k === 'move' && Feel.tipKey === 'goal')) Feel.tipHide(); };
+Feel.tip = key => {
+  if (!Feel.hints) Feel.load(); if (Feel.hints[key] && key !== 'goal') return; const t = FEEL_HINTS[key](); if (!t) return;
+  const el = $('tip'); el.innerHTML = t; el.classList.remove('out'); el.hidden = false; Feel.tipKey = key; Feel.tipT = key === 'use' ? 4.5 : 9;
+};
+Feel.tipHide = () => { const el = $('tip'); el.classList.add('out'); Feel.tipKey = ''; setTimeout(() => { if (!Feel.tipKey) el.hidden = true; }, 650); };
+Feel.hintFrame = dt => {
+  if (!Feel.hints) Feel.load(); const P = Player, H = Feel.hints;
+  if (Feel.intro) return;
+  if (!Feel.last) Feel.last = [P.pos[0], P.pos[2], P.yaw];
+  const mv = hyp(P.pos[0] - Feel.last[0], P.pos[2] - Feel.last[1]); if (mv < 3) Feel.moved += mv; Feel.turned += Math.abs(angDiff(P.yaw, Feel.last[2])); Feel.last = [P.pos[0], P.pos[2], P.yaw];
+  if (!P.locked) Feel.playT += dt;
+  if (Feel.moved > 5) Feel.did('move'); if (Feel.turned > 1.4 && Feel.moved > 0.5) Feel.did('look');
+  if (uiBusy()) { if (Feel.tipKey) Feel.tipHide(); return; }
+  if (Feel.tipKey) { Feel.tipT -= dt; if (Feel.tipT <= 0) { const was = Feel.tipKey; Feel.tipHide(); Feel.shownAt = Feel.t; } return; }
+  if (Feel.t - (Feel.shownAt || 0) < 3.2) return;
+  // in order: walk, look, use what you are facing, open the journal. Each is offered at most a few times.
+  const tryTip = k => { if (H[k]) return false; Feel.counts = Feel.counts || {}; if ((Feel.counts[k] = (Feel.counts[k] || 0)) >= 3) return false; Feel.counts[k]++; Feel.tip(k); return true; };
+  if (!H.move) { if (Feel.playT > 1.2 && Feel.playT < 40 && tryTip('move')) return; }
+  else if (!H.look) { if (tryTip('look')) return; }
+  else if (!H.use && UI.prompt) { if (tryTip('use')) return; }
+  else if (!H.journal && H.use && Feel.playT > 60 && S.q.welcome) { if (tryTip('journal')) return; }
+  // a greeting when the warden first sees you
+  if (!Feel.greeted && NPC.hale && qAt('welcome') === 0 && hyp(NPC.hale.pos[0] - P.pos[0], NPC.hale.pos[2] - P.pos[2]) < 8) { Feel.greeted = true; toast('<b>Warden Hale</b> “Hold there, traveller.”'); }
+};
+
+// ── ink marks drawn over the view on one 2D canvas (no extra 3D pass, so it costs the same on Low): the thing you are looking at, where doors lead,
+// a faint glint on things worth taking, and the quest giver when he is in sight ──
+const Mark = { cv: null, ctx: null, w: 0, h: 0, dpr: 1, drawn: false, v: null, glint: [], tmp: [0, 0, 0] };
+Mark.init = () => { Mark.cv = $('ovl'); Mark.ctx = Mark.cv.getContext('2d'); Mark.v = new THREE.Vector3(); Mark.size(); addEventListener('resize', Mark.size); };
+Mark.size = () => { const d = Math.min(window.devicePixelRatio || 1, 2); Mark.dpr = d; Mark.w = innerWidth; Mark.h = innerHeight; Mark.cv.width = Math.round(Mark.w * d); Mark.cv.height = Math.round(Mark.h * d); };
+// world point -> screen pixels, or null when behind the camera / far off to the side
+Mark.at = (x, y, z) => { const v = Mark.v.set(x, y, z).project(R.camera); if (v.z > 1 || v.z < -1 || Math.abs(v.x) > 1.15 || Math.abs(v.y) > 1.15) return null; return [(v.x * 0.5 + 0.5) * Mark.w, (-v.y * 0.5 + 0.5) * Mark.h]; };
+Mark.diamond = (c, x, y, s, fill, ink, a) => { c.globalAlpha = a; c.beginPath(); c.moveTo(x, y - s); c.lineTo(x + s * 0.72, y); c.lineTo(x, y + s); c.lineTo(x - s * 0.72, y); c.closePath(); c.fillStyle = fill; c.fill(); c.lineWidth = 1.6; c.strokeStyle = ink; c.stroke(); };
+Mark.star = (c, x, y, r, a) => { c.globalAlpha = a; c.beginPath(); c.moveTo(x, y - r); c.quadraticCurveTo(x, y, x + r * 0.7, y); c.quadraticCurveTo(x, y, x, y + r); c.quadraticCurveTo(x, y, x - r * 0.7, y); c.quadraticCurveTo(x, y, x, y - r); c.fillStyle = '#fff3cf'; c.fill(); };
+Mark.tag = (c, x, y, text, gold) => {
+  c.font = '500 ' + Math.round(13 * (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ts')) || 1)) + 'px "IM Fell English SC", Georgia, serif'; const w = c.measureText(text).width + 18, h = 22;
+  c.globalAlpha = 0.9; c.fillStyle = gold ? 'rgba(216,181,99,0.94)' : 'rgba(228,214,179,0.92)'; c.strokeStyle = 'rgba(42,32,22,0.8)'; c.lineWidth = 1; c.beginPath(); if (c.roundRect) c.roundRect(x - w / 2, y - h / 2, w, h, 3); else c.rect(x - w / 2, y - h / 2, w, h); c.fill(); c.stroke();
+  c.fillStyle = '#2a2016'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, x, y + 1);
+};
+Mark.draw = () => {
+  const c = Mark.ctx; if (!c) return;
+  const playing = game.playing && !uiBusy() && !Feel.intro && !Feel.talkNpc;
+  if (!playing) { if (Mark.drawn) { c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, Mark.cv.width, Mark.cv.height); Mark.drawn = false; } return; }
+  c.setTransform(Mark.dpr, 0, 0, Mark.dpr, 0, 0); c.clearRect(0, 0, Mark.w, Mark.h); Mark.drawn = false;
+  const P = Player, t = performance.now() / 1000, rm = Feel.reduce, e = [P.pos[0], P.pos[1] + P.eye, P.pos[2]], fx = Math.sin(P.yaw) * Math.cos(P.pitch), fz = -Math.cos(P.yaw) * Math.cos(P.pitch), fy = Math.sin(P.pitch);
+  const front = (x, y, z) => ((x - e[0]) * fx + (y - e[1]) * fy + (z - e[2]) * fz) / (hyp(x - e[0], y - e[1], z - e[2]) || 1);
+  // 1. the thing you can use: a small ink diamond above it, breathing
+  if (UI.prompt && UI.promptPos) {
+    const p = UI.promptPos, s = Mark.at(p[0], p[1] + 0.32, p[2]);
+    if (s) { const k = rm ? 0 : Math.sin(t * 3.2); c.globalAlpha = 0.28 + 0.1 * k; c.beginPath(); c.arc(s[0], s[1], 13 + 2.5 * k, 0, TAU); c.fillStyle = '#f6e7b4'; c.fill(); Mark.diamond(c, s[0], s[1], 6.5, '#ebe0c6', '#14110d', 0.95); Mark.drawn = true; }
+  }
+  // 2. doors: where this one leads (outside only, the nearest two, in front of you, not the one you are about to use)
+  if (!World.camZone && !World.cell && !(UI.prompt && UI.prompt.kind === 'portal')) {
+    let n = 0; const cand = [];
+    for (const d of World.doors) { if (!d.site || d.site.facade || d.site.alleyRow && !d.site.name) continue; const dx = d.c[0] - e[0], dz = d.c[2] - e[2], dist = hyp(dx, dz); if (dist > 10 || dist < 1.2) continue; if (front(d.c[0], d.c[1], d.c[2]) < 0.55) continue; cand.push([dist, d]); }
+    cand.sort((a, b) => a[0] - b[0]);
+    for (const [dist, d] of cand) { if (n >= 2) break; const s = Mark.at(d.c[0], d.c[1] + 1.35, d.c[2]); if (!s) continue; n++; c.globalAlpha = 1; Mark.tag(c, s[0], s[1], d.site.name, false); c.globalAlpha = 1; Mark.drawn = true; }
+  }
+  // 3. a faint glint on what can be taken
+  const list = UI.glintList || (UI.glintList = []), now = performance.now();
+  if (now - (Mark.gt || 0) > 400) { Mark.gt = now; list.length = 0; for (const it of World.interact) { if (it.gone || (it.kind !== 'pickup' && it.kind !== 'chest' && it.kind !== 'loot') || (it.kind === 'chest' && S.opened[it.id])) continue; if (it.zone !== undefined && it.zone !== World.camZone && it.zone !== 0) continue; if (hyp(it.p[0] - e[0], it.p[2] - e[2]) < 15) list.push(it); } if (list.length > 8) { list.sort((a, b) => hyp(a.p[0] - e[0], a.p[2] - e[2]) - hyp(b.p[0] - e[0], b.p[2] - e[2])); list.length = 8; } }
+  for (let i = 0; i < list.length; i++) {
+    const it = list[i]; if (it.gone || it === UI.prompt) continue; const s = Mark.at(it.p[0], it.p[1] + 0.12, it.p[2]); if (!s) continue; const dist = hyp(it.p[0] - e[0], it.p[2] - e[2]);
+    const tw = rm ? 0.5 : 0.5 + 0.5 * Math.sin(t * 2.1 + i * 1.9), a = (0.18 + 0.5 * tw) * (1 - smooth(8, 15, dist)); if (a < 0.04) continue;
+    Mark.star(c, s[0], s[1], (5 + 4 * tw) * (1 - 0.4 * smooth(2, 12, dist)), a); Mark.drawn = true;
+  }
+  // 4. the person the first quest points at, while he is in sight
+  const gt = (S.q.welcome && !S.q.welcome.done && S.q.welcome.stage === 0 && NPC.hale) ? NPC.hale : null;
+  if (gt) { const dist = hyp(gt.pos[0] - e[0], gt.pos[2] - e[2]); if (dist > 4.5 && dist < 70 && front(gt.pos[0], gt.pos[1] + 1.8, gt.pos[2]) > 0.6) { const s = Mark.at(gt.pos[0], gt.pos[1] + 2.15, gt.pos[2]); if (s) { const b = rm ? 0 : Math.sin(t * 2.4) * 2; Mark.diamond(c, s[0], s[1] + b, 6, '#d8b563', '#14110d', 0.95); c.globalAlpha = 1; Mark.tag(c, s[0], s[1] - 22 + b, 'Warden Hale', true); Mark.drawn = true; } } }
+  c.globalAlpha = 1;
+};
+
+
+// ---- 87b_input.js ----
+// ───────────────────────── controls: keyboard and mouse, and a touch layer tuned for thumbs ─────────────────────────
+// Replaces inputInit of 78_player.js (which stays as the plain reference); 99_main.js calls inputInit2. Same Input fields, so playerUpdate is unchanged.
+//   Touch:  a floating stick appears where the thumb lands on the move half of the screen (the left half, the right half when left-handed);
+//           the other half looks. A radial dead zone, rescaled so full push is still 1 (full push runs). Look has a mild acceleration curve.
+//           Each finger is tracked by id and cleaned up on cancel, blur and "all fingers up", so the look finger is never lost to a stray event
+//           and a lost "up" never leaves the stick stuck.
+//   Mouse:  click the view to capture the pointer; Esc releases it, which pauses (onPointerUnlock in 85_ui.js).
+Object.assign(Input, { lefty: false, holdUse: false, accel: 0.55, dead: 0.14, stickR: 54, moveId: null, lookId: null });
+const lookGain = (dx, dy, dt) => { const v = Math.hypot(dx, dy) / Math.max(4, dt); return 1 + Input.accel * smooth(0.3, 2.4, v); };      // v: pixels per millisecond
+function inputInit2(canvas, layer) {
+  const I = Input, stick = $('stick'), knob = $('knob');
+  const busy = () => !game.playing || Player.locked;
+  addEventListener('keydown', e => {
+    if (e.repeat) { if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault(); return; }
+    I.keys[e.code] = true; if (typeof onKey === 'function') onKey(e);
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
+  });
+  addEventListener('keyup', e => { I.keys[e.code] = false; });
+  const dropAll = () => { I.keys = {}; endStick(); endLook(); I.drag = null; };
+  addEventListener('blur', dropAll); addEventListener('pagehide', dropAll);
+  document.addEventListener('pointerlockchange', () => { I.plock = document.pointerLockElement === canvas; if (!I.plock && typeof onPointerUnlock === 'function') onPointerUnlock(); });
+  addEventListener('mousemove', e => { if (I.plock && !Player.locked) { I.lookX += e.movementX * 0.0022 * I.sens; I.lookY += e.movementY * 0.0022 * I.sens; } });
+  const moveSide = x => I.lefty ? x >= innerWidth * 0.5 : x < innerWidth * 0.5;
+  function endStick() { if (I.joyT) { I.joyT = null; } I.joy = null; stick.style.display = 'none'; }
+  function endLook() { I.look = null; }
+  const down = e => {
+    if (e.pointerType === 'mouse') {
+      if (e.button !== 0 && e.button !== undefined) return;
+      if (!I.plock && game.playing && !Player.locked) { I.drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; if (canvas.requestPointerLock) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (err) { } } }
+      return;
+    }
+    I.touch = true; e.preventDefault();
+    if (busy()) return;
+    if (moveSide(e.clientX) && !I.joyT) {
+      const r = 58, x = clamp(e.clientX, r, innerWidth - r), y = clamp(e.clientY, r, innerHeight - r);
+      I.joyT = { id: e.pointerId, x, y }; I.joy = { x: 0, y: 0 }; stick.style.display = 'block'; stick.style.left = x + 'px'; stick.style.top = y + 'px'; knob.style.transform = 'translate(-50%,-50%)';
+    } else if (!I.look) I.look = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp };
+  };
+  const move = e => {
+    if (I.joyT && e.pointerId === I.joyT.id) {
+      const R0 = I.stickR; let dx = (e.clientX - I.joyT.x) / R0, dy = (e.clientY - I.joyT.y) / R0; const l = Math.hypot(dx, dy);
+      let m = Math.min(1, l); if (l > 1) { dx /= l; dy /= l; }
+      m = m < I.dead ? 0 : (m - I.dead) / (1 - I.dead);                                        // dead zone, then back up to 1 at full push
+      const k = l > 1e-6 ? m / Math.min(1, l) : 0; I.joy = { x: dx * k, y: dy * k };
+      knob.style.transform = `translate(calc(-50% + ${dx * R0}px), calc(-50% + ${dy * R0}px))`;
+      knob.style.background = m > 0.93 ? 'rgba(216,181,99,0.6)' : '';
+    } else if (I.look && e.pointerId === I.look.id) {
+      const dx = e.clientX - I.look.x, dy = e.clientY - I.look.y, g = lookGain(dx, dy, e.timeStamp - I.look.t) * 0.0052 * I.sens;
+      I.lookX += dx * g; I.lookY += dy * g; I.look.x = e.clientX; I.look.y = e.clientY; I.look.t = e.timeStamp;
+    } else if (I.drag && e.pointerId === I.drag.id && !I.plock) {
+      I.lookX += (e.clientX - I.drag.x) * 0.004 * I.sens; I.lookY += (e.clientY - I.drag.y) * 0.004 * I.sens; I.drag.x = e.clientX; I.drag.y = e.clientY;
+    }
+  };
+  const up = e => {
+    if (I.joyT && e.pointerId === I.joyT.id) endStick();
+    if (I.look && e.pointerId === I.look.id) endLook();
+    if (I.drag && e.pointerId === I.drag.id) I.drag = null;
+  };
+  layer.addEventListener('pointerdown', down); addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  layer.addEventListener('contextmenu', e => e.preventDefault());
+  // every finger gone: nothing can still be held (covers an "up" the browser never delivered)
+  const lifted = e => { if (!e.touches || e.touches.length === 0) { endStick(); endLook(); } };
+  addEventListener('touchend', lifted, { passive: true }); addEventListener('touchcancel', lifted, { passive: true });
+  // no page scroll or pinch zoom behind the game; the journal, dialogue and settings keep their own scrolling
+  const scrolls = t => t && t.closest && t.closest('.tab, #dialog, #reader .sheet, #pause, select, input[type=range]');
+  document.addEventListener('touchmove', e => { if (!scrolls(e.target)) e.preventDefault(); }, { passive: false });
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault());
+  document.addEventListener('selectstart', e => { if (!(e.target && e.target.closest && e.target.closest('input, select, textarea'))) e.preventDefault(); });
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('dragstart', e => e.preventDefault());
+  addEventListener('wheel', e => { if (!scrolls(e.target) && !(e.target && e.target.closest && e.target.closest('#mapWrap'))) e.preventDefault(); }, { passive: false });
+}
 
 
 // ---- 88_audio.js ----
@@ -11094,7 +11432,8 @@ RPG.tick = function (dt) {
   if (playing) {
     K[0] += (0 - K[0]) * Math.min(1, dt * 11); K[1] += (0 - K[1]) * Math.min(1, dt * 11); RPG.shake = Math.max(0, RPG.shake - dt * 2.6);
     const sh = RPG.shake * RPG.shake * 0.05, t = game.time * 47;
-    cam.yaw += K[0] + Math.sin(t) * sh; cam.pitch += K[1] + Math.cos(t * 1.31) * sh;
+    const rm = typeof Feel !== 'undefined' && Feel.reduce ? 0 : 1;      // [ui] Settings > Reduce motion silences camera kick
+    cam.yaw += (K[0] + Math.sin(t) * sh) * rm; cam.pitch += (K[1] + Math.cos(t * 1.31) * sh) * rm;
     if (RPG.dead) { RPG.deadT += dt; const d = smooth(0, 1.1, RPG.deadT); RPG.hud.deadMsg.style.opacity = smooth(0.5, 1.6, RPG.deadT).toFixed(2); cam.pos[1] -= d * 1.25; cam.pitch += d * 0.5; cam.yaw += d * 0.35; }
     RPG.hudFrame(dt);
   }
@@ -11700,7 +12039,7 @@ function tick(dt) {
   // villagers are obstacles too
   Col.dyn.length = 0; const pp = Player.pos, chars = [pp];
   for (const n of NPCS) { chars.push(n.pos); if (n.anim !== 'lie' && Math.abs(n.pos[0] - pp[0]) < 4 && Math.abs(n.pos[2] - pp[2]) < 4) Col.dyn.push({ x: n.pos[0], z: n.pos[2], r: 0.27 * n.scale, y0: n.pos[1] - 0.3, y1: n.pos[1] + 1.7 }); }
-  if (game.playing) playerUpdate(dt); else attractCamera(game.time);
+  if (game.playing) { playerUpdate(dt); Feel.post(dt); } else attractCamera(game.time);
   npcUpdate(dt, game.playing ? pp : R.cam.pos);
   updateDynamics(dt, chars);
   World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
@@ -11721,9 +12060,9 @@ function frame(tms) {
   PerfHud.frame(rawMs);
   if (Perf.probeN > 0) { Perf.probeBuf.push(dtMs); if (--Perf.probeN === 0) cadenceDone(); return; }
   try {
-    const env = tick(dtMs / 1000);
+    const env = UI.paused && game.env ? game.env : tick(dtMs / 1000); game.env = env;      // paused: the world is drawn but not stepped
     perfUpdate(dtMs, dtMs / 1000);
-    if (!R.busy) renderFrame(game.time, env);
+    if (!R.busy) { renderFrame(game.time, env); Mark.draw(); }
   } catch (e) { if (!game.crashed) { game.crashed = true; console.error(e); G.errors.push(String(e && e.stack || e)); } }
   // WebGPU that reports errors (or throws) in its first seconds of drawing will not get better: switch this device to WebGL 2
   if (!G.gfxChecked) { if (!G.tDraw) G.tDraw = tms; if (G.errors.length) { G.gfxChecked = true; gfxFallback(G.errors[0]); } else if (tms - G.tDraw > 12000) G.gfxChecked = true; }
@@ -11745,44 +12084,72 @@ function startGame(cont) {
   npcSnapAll(); uiPurse(); uiObjective();
   game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + (Cells.inRegion(Player.pos[0]) ? 0.8 : 50)); if (CELLS_ON) { Cells.sync(Player.pos); World.camZone = World.zoneAt(Player.pos[0], Player.pos[1] + 1, Player.pos[2]); }
   if (!Input.touch && !coarse() && !TEST) { try { const p = G.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
-  setTimeout(() => { banner('The Greyspine Valley', 'Brackenfell'); }, 900);
-  if (!sv) setTimeout(() => { if (qAt('welcome') < 0) qStart('welcome'); }, 5200);
+  if (!sv) { if (!TEST || TEST.intro) Feel.begin(); else setTimeout(() => { if (qAt('welcome') < 0) qStart('welcome'); }, 5200); }
+  else { setTimeout(() => { banner('The Greyspine Valley', 'Brackenfell'); }, 900); if (S.q.welcome) Feel.did('move'), Feel.did('look'), Feel.did('use'); }
+}
+// every label the loading screen shows while the valley is made; Load (index.html's inline script) draws the bar and the byte counts
+const bootSay = t => { if (typeof Load !== 'undefined') Load.say(t); else $('loadText').textContent = t; };
+const bootStage = f => { if (typeof Load !== 'undefined') Load.stage(f); };
+const gfxSync = async () => { try { const b = G.renderer && G.renderer.backend; if (b && b.device && b.device.queue && b.device.queue.onSubmittedWorkDone) await b.device.queue.onSubmittedWorkDone(); else if (b && b.gl && b.gl.finish) b.gl.finish(); } catch (e) { } };
+// Draw a few frames from places that between them put every kind of surface on screen (roads, houses, people, grass, water, a lit room), so the
+// shader and pipeline compiles happen behind the loading screen instead of as a hitch in the first seconds of play. Safe on both backends: these are
+// ordinary frames of the same pipeline; nothing here is compiled separately. A failed frame is only a skipped warm-up.
+async function warmShaders() {
+  const here = [R.cam.pos.slice(), R.cam.yaw, R.cam.pitch], zone0 = World.camZone, ind0 = World.indoor;
+
+  const views = [[-84, null, -6.5, 90, 2], [0, null, 8, 0, 4], [10, null, 84, 0, 2], [-40, null, -2, 270, 8]];
+  let i = 0;
+  for (const v of views) {
+    bootSay('Warming the lanterns'); bootStage(0.84 + 0.14 * (i++ / views.length));
+    try {
+      R.cam.pos = [v[0], v[1] === null ? Terrain.y(v[0], v[2]) + 1.7 : v[1], v[2]]; R.cam.yaw = v[3] * PI / 180; R.cam.pitch = v[4] * PI / 180;
+      World.camZone = World.zoneAt(v[0], R.cam.pos[1], v[2]); World.indoor = World.camZone ? 1 : 0;
+      npcUpdate(0.05, R.cam.pos); fxUpdate(0.05, game.time, updateEnv(game.time, World.indoor), R.cam.pos);
+      const env = updateEnv(game.time, World.indoor); env.time = game.time;
+      renderFrame(game.time, env); renderFrame(game.time + 0.03, env);
+      await gfxSync();
+    } catch (e) { console.warn('warm-up frame skipped', e && e.message); }
+    await new Promise(r => setTimeout(r, 16));
+  }
+  R.cam.pos = here[0]; R.cam.yaw = here[1]; R.cam.pitch = here[2]; World.camZone = zone0; World.indoor = ind0;
 }
 (async function boot() {
-  const load = (t, f) => { $('loadText').textContent = t; $('barFill').style.width = Math.round(f * 100) + '%'; return new Promise(r => setTimeout(r, TEST ? 0 : 30)); };
+  const load = (t, f) => { bootSay(t); bootStage(f); return new Promise(r => setTimeout(r, TEST ? 0 : 30)); };
   let t0 = performance.now(); const laps = game.laps = {}, lap = n => { const t = performance.now(); laps[n] = Math.round(t - t0); t0 = t; };
   try {
     loadSettings(); if (PerfHud.url >= 0) { game.showFps = !!PerfHud.url; saveSettings(); } gfxTexInit(game.qualitySetting === 'auto' ? (TEST && TEST.quality) : game.qualitySetting);
     const canvas = $('view');
+    bootSay('Waking the valley');
     try { await gfxInit(canvas); }
-    catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'; console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
+    catch (e) { $('bar').hidden = true; $('loadNums').hidden = true; bootSay('Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'); console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
+    if (typeof Load !== 'undefined' && !G.astc) Load.use(['app', 'imgs', 'kits', 'chars']);        // no ASTC on this GPU: the WebP and JPEG texture files are fetched instead
     gfxResize(G.canvas.clientWidth, G.canvas.clientHeight);
-    await load('Mixing lime, straw and river stone', 0.06);
+    await load('Mixing lime, straw and river stone', 0.02);
     const lowMem = (navigator.deviceMemory || 8) <= 3;
-    $('loadText').textContent = 'Unpacking stone, timber and thatch (about 35 MB the first time)';
+    bootSay(Load.first ? 'Unpacking stone, timber and thatch (first visit: kept on this device for next time)' : 'Unpacking stone, timber and thatch');
     await loadNoise();
-    await loadPack(lowMem, f => { $('barFill').style.width = Math.round(6 + f * 32) + '%'; }); lap('pack');
+    await loadPack(lowMem, f => { }); lap('pack');
     SH.init();
     // animated villagers; if their files cannot be loaded the old hand-built bodies stand in
-    $('loadText').textContent = 'Dressing the villagers';
+    bootSay('Dressing the villagers');
     // the realistic set first, the stylized one if its files cannot be loaded; ?chars=quaternius (or TEST.chars) picks one set and no fallback
     if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) {
       const want = (TEST && TEST.chars) || (/[?&]chars=(\w+)/.exec(location.search) || [])[1], order = want ? [want] : ['real', 'quaternius'];
       for (const name of order) {
-        try { await Chars.load(name, f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; G.charSet = name; break; }
+        try { if (name === 'quaternius' && typeof Load !== 'undefined') Load.use(Load.groups.concat('charsq')); await Chars.load(name, f => { }); G.chars = true; G.charSet = name; break; }
         catch (e) { console.warn('character set ' + name + ' unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); Chars.ready = false; Chars.set = null; }
       }
     }
     lap('chars');
-    if (typeof kitBoot === 'function') await kitBoot(f => { $('loadText').textContent = 'Carting in beams, barrels and roof tiles'; $('barFill').style.width = Math.round(38 + f * 2) + '%'; });
+    if (typeof kitBoot === 'function') await kitBoot(f => { bootSay('Carting in beams, barrels and roof tiles'); });
     renderInit();
-    await load('Raising the Greyspine', 0.4); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
-    await load('Framing timber, laying thatch', 0.55); buildVillage(); lap('village');
-    await load('Waking the villagers', 0.68); buildNPCs(); festivalSpots(); lap('npcs');
-    await load('Planting pine and birch', 0.76); buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
+    await load('Raising the Greyspine', 0.1); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
+    await load('Framing timber, laying thatch', 0.25); buildVillage(); lap('village');
+    await load('Waking the villagers', 0.5); buildNPCs(); festivalSpots(); lap('npcs');
+    await load('Planting pine and birch', 0.62); buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
     World.villagePack.upload('village'); World.skinPack.upload('skin');
     buildSplat2(); colBuild(); navBuild(); fxInit(); lap('nav');
-    await load('Lighting the lanterns', 0.88);
+    await load('Lighting the lanterns', 0.74);
     if (TEST && TEST.quality) game.qualitySetting = TEST.quality;
     await game.applyQuality(); lap('pipelines');
     if (typeof kitAttach === 'function') kitAttach();
@@ -11790,18 +12157,21 @@ function startGame(cont) {
   if (typeof dressAttach === 'function') dressAttach();
     if (typeof wildsAttach === 'function') wildsAttach();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
-    npcSnapAll(); uiInit(); inputInit(G.canvas, $('touch'));
+    npcSnapAll(); uiInit(); inputInit2(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));
-    document.addEventListener('visibilitychange', () => { if (Audio2.ctx) { if (document.hidden) Audio2.ctx.suspend(); else if (game.playing) Audio2.ctx.resume(); } lastT = performance.now(); });
-    $('barFill').style.width = '100%'; $('loadText').textContent = ''; $('bar').hidden = true; $('startRow').hidden = false;
-    $('hint').textContent = coarse() ? 'Drag on the left to walk, on the right to look. Push the stick all the way to run. Doors open as you walk up to them. Turn your phone sideways for a wider view.' : 'W A S D to walk, mouse to look, Shift to run, E to interact, Tab for your journal. Doors open as you walk up to them.';
+    UI.lifecycle();
+    if (!TEST || TEST.warm) await warmShaders();
+    bootStage(1); if (typeof Load !== 'undefined') Load.complete(); else $('barFill').style.transform = 'scaleX(1)';
+    $('loadBox').hidden = true; $('startRow').hidden = false; $('title').classList.remove('loading'); $('title').classList.add('ready');
+    $('hint').textContent = coarse() ? 'Drag on the left to walk, on the right to look. Push the stick all the way to run. Doors open as you walk up to them.' : 'W A S D to walk, mouse to look, Shift to run, E to use, Tab for your journal and map, Esc to pause.';
     if (loadSave()) $('contBtn').hidden = false;
     $('startBtn').addEventListener('click', () => startGame(false)); $('contBtn').addEventListener('click', () => startGame(true));
+    if (typeof Load !== 'undefined') { Load.update = () => UI.updateAvailable(); if (Load.updateReady) UI.updateAvailable(); setTimeout(() => { Load.register(); setTimeout(() => Load.warm().then(() => UI.storageNote()), 4000); }, 1500); }
     game.ready = true;
     // ── test hooks ──
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
         game.step = (n, dt) => { let env; for (let i = 0; i < (n || 1); i++) env = tick(dt || 1 / 30); return env; };
-    game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); return R.stats; };
+    game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); Mark.draw(); return R.stats; };
     game.tp = (x, z, yawDeg, pitchDeg, y) => {       // tp(spotName, yawDeg?) goes to a named spot (inside a cell too); tp(x, z, ...) to coordinates, y optional
       if (typeof x === 'string') { const sp = World.spots[x]; if (!sp) throw new Error('no spot ' + x); yawDeg = z === undefined ? sp.yaw * 180 / PI : z; pitchDeg = 0; y = sp.p[1]; z = sp.p[2]; x = sp.p[0]; }
       Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180;

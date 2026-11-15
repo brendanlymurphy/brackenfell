@@ -171,4 +171,5 @@ function buildVegetation() {
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;
+  World.treePos = { pine: inst.pine, birch: inst.birch, oak: inst.oak };      // [ui] read by the map (86_map.js)
 }
