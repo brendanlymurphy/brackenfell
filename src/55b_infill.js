@@ -79,7 +79,7 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
     if (free(x, z, y2, w, d, o)) return add(x, z, y2, w, d, Object.assign({ floors: R.pick([2, 2, 3]), pitch: 40 + (R() * 12 | 0), ring: true }, o || {}));
     return null;
   };
-  INF.frontage = frontage; INF.ringPlace = ringPlace;
+  INF.frontage = frontage; INF.ringPlace = ringPlace; INF.add = add; INF.R = R;
   // ── 1. the square: houses standing round it, first row (these are the ones the player sees first) ──
   const ringOrder = [];
   for (let k = 0; k < 28; k++) ringOrder.push(k / 28 * TAU);
@@ -113,6 +113,43 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
       chosen.push(best);
     }
     chosen.forEach((h, i) => { h.enter = true; h.name = ['Cooper’s House', 'Tanner’s House', 'Potter’s House', 'Widow Hale’s House', 'Fletcher’s House', 'Dyer’s House'][i]; INF.enterIds.push(h.id); SITES.find(q => q.id === h.id).name = h.name; }); }
+  // ── 5. the dense town: after the first 25 (and the six enterable ones) are fixed, so their ids stay, fill the blocks: the outer streets, then second and third rows on lanes 2.2 to 2.7 m wide ──
+  if (!(TEST && TEST.dense === 0)) {
+    const base = INF.houses.length;
+    frontage('north', 1, [-9, -42], [-6.5, -60], { tier: 0 }); frontage('north', -1, [-9, -42], [-6.5, -60], { tier: 0 });
+    frontage('south', 1, [3, 47], [5, 80], { tier: 0 }); frontage('south', -1, [3, 47], [5, 80], { tier: 0 });
+    frontage('main', -1, [-62, -5], [-50, -5], { tier: 0 }); frontage('main', 1, [-62, -5], [-50, -5], { tier: 0 });
+    for (const h of INF.houses.slice()) {
+      if (h.second || R() < 0.15) continue;
+      const c = Math.cos(h.yaw), sn = Math.sin(h.yaw), back = 2.2 + R() * 0.5;
+      const w = R.pick([4.4, 5, 5.6, 6.4]), d = R.pick([4.6, 5.2, 5.8]), lz = h.d / 2 + back + d / 2, x = h.x + R.s() * 0.8 * c - lz * sn, z = h.z + R.s() * 0.8 * sn + lz * c;
+      if (!free(x, z, h.yaw, w, d, { sq: 3 })) continue;
+      const h2 = add(x, z, h.yaw, w, d, { floors: R.pick([1, 2, 2, 3]), pitch: 40 + (R() * 12 | 0), tier: 1, second: true });
+      if (R() < 0.4) { const w3 = R.pick([4.4, 5, 5.6]), d3 = R.pick([4.4, 5.2]), lz3 = h2.d / 2 + 2.0 + d3 / 2, x3 = h2.x + R.s() * 0.6 * c - lz3 * sn, z3 = h2.z + R.s() * 0.6 * sn + lz3 * c; if (free(x3, z3, h.yaw + PI, w3, d3, { sq: 4 })) add(x3, z3, h.yaw + PI, w3, d3, { floors: R.pick([1, 2]), pitch: 40 + (R() * 12 | 0), tier: 1, second: true }); }
+    }
+    // blocks: districts filled with rows that face each other across 2.3 m lanes (front rows: yaw 0 looks north, yaw PI looks south), a cross-lane now and then, back-to-back pairs 1.8 m apart (the eaves overhang 0.5 m each).
+    // A district is a rectangle [x0, z0, x1, z1] with a cap; free() leaves the roads, the square, the existing houses and the door paths alone, so cross streets appear where roads run.
+    const RB = rng(9091);
+    const districts = INF.districts = [
+      { id: 'north-west', r: [-46, -66, -17, -12], cap: 16 }, { id: 'north-east', r: [-11, -62, 32, -31], cap: 14 }, { id: 'west', r: [-62, -12, -27, 34], cap: 16 },
+      { id: 'south-west', r: [-33, 14, -4, 72], cap: 14 }, { id: 'south-east', r: [6, 14, 34, 72], cap: 14 }, { id: 'east-bank', r: [31, 7, 46, 40], cap: 6 },
+    ];
+    for (const D of districts) {
+      let placed = 0; const [x0, z0, x1, z1] = D.r; D.n = 0;
+      for (let row = 0, z = z0 + 3; z < z1 && placed < D.cap; row++) {
+        const pair = row % 2, d = RB.pick([4.6, 5.0, 5.4]), yaw = pair ? PI : 0;
+        let x = x0 + RB() * 3, k = 0;
+        while (x < x1 && placed < D.cap) {
+          const w = RB.pick([4.4, 5, 5.6, 6.2, 7]);
+          if (RB() < 0.1) { x += 2.6; continue; }                                  // a gap: a yard or a cross-lane
+          if (free(x + w / 2, z + d / 2, yaw, w, d, { sq: 2.5, road: 1.0 })) { add(x + w / 2, z + d / 2, yaw, w, d, { floors: RB.pick([1, 2, 2, 3]), pitch: 38 + (RB() * 14 | 0), tier: 1, second: true, block: D.id }); placed++; D.n++; x += w + (k++ % 3 === 2 ? 2.3 : 0.1); }
+          else x += 1.0;
+        }
+        z += d + (pair ? 1.8 : 2.3);                                               // the lane after a front pair's first row, a narrow back yard after its second
+      }
+    }
+    INF.dense = INF.houses.length - base;
+  }
   // per-house features (so the painted door paths know where each door is)
   const nbAt = (h, east) => { const c = Math.cos(h.yaw), sn = Math.sin(h.yaw), lx = (east ? 1 : -1) * (h.w / 2 + 0.3); const x = h.x + lx * c, z = h.z + lx * sn; for (const o of SITES) { if (o === h || !o.w) continue; if (inRect(o, x, z, 0.12)) return 1; } return 0; };
   for (const h of INF.houses) {

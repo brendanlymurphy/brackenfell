@@ -85,20 +85,21 @@ function buildBoards(bucket, fence, R) {
   }
   // dry-stone walls: the back-yard wall behind the promenade (with a gap for the lane), and wing walls at the footbridge's west end
   { const w1 = alongBank(-27, -12, 9.6); fence(w1, { stone: true }); }
-  // ── the lake: a shore walk from the drying rack to the dock, a jetty with mooring posts, steps down to the water ──
+  // ── the fisher's pier: a short pier on piles straight out from the cabin's door side into the water. Planks only where there is water or mud under them; rails only on the water side. ──
   {
-    const shore = []; for (let x = -7.5; x <= 5.4; x += 2.1) { let zs = null; for (let z = 78; z < 100; z += 0.2) if (Terrain.y(x, z) < LAKE.y + 0.45) { zs = z; break; } if (zs !== null) shore.push([x, zs - 2.0]); }
-    BW.shore = shore;
-    if (shore.length > 3) {
-      bwWalk(bucket, shore, { w: 1.5, lift: 0.3, rails: [0, 1], ramp: 1.2 });
-      // a jetty out from the middle of the walk
-      const k = shore[Math.floor(shore.length * 0.4)], zw = k[1] + 2.0;
-      const jet = [[k[0], k[1]], [k[0] + 0.2, zw + 7.5]];
-      bwWalk(bucket, jet, { w: 1.3, rails: [0, 0], seg: 2.0, deckY: p => Math.max(LAKE.y + 0.52, Terrain.y(p[0], p[1]) + 0.3), railSide: (i, s, P) => hyp(P[i][0] - k[0], P[i][1] - k[1]) > 2.6 });
-      // mooring posts and a lantern post at the end
-      const m = bucket(jet[1][0], jet[1][1]); m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.TIMBER, COL.timberDark);
-      for (const sx of [-1, 1]) m.cbox(jet[1][0] + sx * 0.78, LAKE.y - 1.2, jet[1][1] + 0.6, 0.2, 2.3, 0.2, 4);
-      m.cbox(jet[1][0] + 0.0, LAKE.y - 0.3, jet[1][1] + 0.9, 0.12, 2.4, 0.12, 4); m.mat(MAT.METAL, COL.black); m.box(jet[1][0] - 0.1, LAKE.y + 2.0, jet[1][1] + 0.84, jet[1][0] + 0.1, LAKE.y + 2.3, jet[1][1] + 0.96);
+    const fs = SITES.find(q => q.id === 'fisher');
+    if (fs) {
+      const fx = Math.sin(fs.yaw), fz = -Math.cos(fs.yaw), p0 = [fs.x + fx * (fs.d / 2 + 1.8), fs.z + fz * (fs.d / 2 + 1.8)];
+      let ux = LAKE.x - p0[0], uz = LAKE.z - p0[1]; const ul = hyp(ux, uz); ux /= ul; uz /= ul;
+      // the shore: first point from the door heading for the lake that is under the wet line
+      let t = 0; while (t < 40 && hyp(p0[0] + ux * t - LAKE.x, p0[1] + uz * t - LAKE.z) > LAKE.r - 0.3) t += 0.25;
+      const q = [p0[0] + ux * t, p0[1] + uz * t], A = [p0[0], p0[1]], B = [q[0] + ux * 6.5, q[1] + uz * 6.5];
+      const wet = P => hyp(P[0] - LAKE.x, P[1] - LAKE.z) < LAKE.r + 0.2;
+      const r = bwWalk(bucket, [A, B], { w: 1.3, rails: [0, 0], seg: 1.8, ramp: 0.0, piles: true, deckY: p => Math.max(LAKE.y + 0.55, Terrain.y(p[0], p[1]) + 0.4), railSide: (i, s2, P) => wet(P[i]) && wet(P[Math.min(P.length - 1, i + 1)]) && hyp(P[i][0] - q[0], P[i][1] - q[1]) > 0.3, railOff: () => false });
+      BW.fisher = { p0, q, A, B, u: [ux, uz] };
+      // two mooring posts at the head and a lantern post on the landward side of the head (on the deck's edge, not in open water)
+      const m = bucket(B[0], B[1]); m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.TIMBER, COL.timberDark);
+      for (const sx of [-1, 1]) m.cbox(B[0] - uz * sx * 0.85, LAKE.y - 1.0, B[1] + ux * sx * 0.85, 0.16, 2.0, 0.16, 4);
     }
   }
 }

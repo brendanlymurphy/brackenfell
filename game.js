@@ -2637,7 +2637,7 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
     if (free(x, z, y2, w, d, o)) return add(x, z, y2, w, d, Object.assign({ floors: R.pick([2, 2, 3]), pitch: 40 + (R() * 12 | 0), ring: true }, o || {}));
     return null;
   };
-  INF.frontage = frontage; INF.ringPlace = ringPlace;
+  INF.frontage = frontage; INF.ringPlace = ringPlace; INF.add = add; INF.R = R;
   // ── 1. the square: houses standing round it, first row (these are the ones the player sees first) ──
   const ringOrder = [];
   for (let k = 0; k < 28; k++) ringOrder.push(k / 28 * TAU);
@@ -2671,6 +2671,43 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
       chosen.push(best);
     }
     chosen.forEach((h, i) => { h.enter = true; h.name = ['Cooper’s House', 'Tanner’s House', 'Potter’s House', 'Widow Hale’s House', 'Fletcher’s House', 'Dyer’s House'][i]; INF.enterIds.push(h.id); SITES.find(q => q.id === h.id).name = h.name; }); }
+  // ── 5. the dense town: after the first 25 (and the six enterable ones) are fixed, so their ids stay, fill the blocks: the outer streets, then second and third rows on lanes 2.2 to 2.7 m wide ──
+  if (!(TEST && TEST.dense === 0)) {
+    const base = INF.houses.length;
+    frontage('north', 1, [-9, -42], [-6.5, -60], { tier: 0 }); frontage('north', -1, [-9, -42], [-6.5, -60], { tier: 0 });
+    frontage('south', 1, [3, 47], [5, 80], { tier: 0 }); frontage('south', -1, [3, 47], [5, 80], { tier: 0 });
+    frontage('main', -1, [-62, -5], [-50, -5], { tier: 0 }); frontage('main', 1, [-62, -5], [-50, -5], { tier: 0 });
+    for (const h of INF.houses.slice()) {
+      if (h.second || R() < 0.15) continue;
+      const c = Math.cos(h.yaw), sn = Math.sin(h.yaw), back = 2.2 + R() * 0.5;
+      const w = R.pick([4.4, 5, 5.6, 6.4]), d = R.pick([4.6, 5.2, 5.8]), lz = h.d / 2 + back + d / 2, x = h.x + R.s() * 0.8 * c - lz * sn, z = h.z + R.s() * 0.8 * sn + lz * c;
+      if (!free(x, z, h.yaw, w, d, { sq: 3 })) continue;
+      const h2 = add(x, z, h.yaw, w, d, { floors: R.pick([1, 2, 2, 3]), pitch: 40 + (R() * 12 | 0), tier: 1, second: true });
+      if (R() < 0.4) { const w3 = R.pick([4.4, 5, 5.6]), d3 = R.pick([4.4, 5.2]), lz3 = h2.d / 2 + 2.0 + d3 / 2, x3 = h2.x + R.s() * 0.6 * c - lz3 * sn, z3 = h2.z + R.s() * 0.6 * sn + lz3 * c; if (free(x3, z3, h.yaw + PI, w3, d3, { sq: 4 })) add(x3, z3, h.yaw + PI, w3, d3, { floors: R.pick([1, 2]), pitch: 40 + (R() * 12 | 0), tier: 1, second: true }); }
+    }
+    // blocks: districts filled with rows that face each other across 2.3 m lanes (front rows: yaw 0 looks north, yaw PI looks south), a cross-lane now and then, back-to-back pairs 1.8 m apart (the eaves overhang 0.5 m each).
+    // A district is a rectangle [x0, z0, x1, z1] with a cap; free() leaves the roads, the square, the existing houses and the door paths alone, so cross streets appear where roads run.
+    const RB = rng(9091);
+    const districts = INF.districts = [
+      { id: 'north-west', r: [-46, -66, -17, -12], cap: 16 }, { id: 'north-east', r: [-11, -62, 32, -31], cap: 14 }, { id: 'west', r: [-62, -12, -27, 34], cap: 16 },
+      { id: 'south-west', r: [-33, 14, -4, 72], cap: 14 }, { id: 'south-east', r: [6, 14, 34, 72], cap: 14 }, { id: 'east-bank', r: [31, 7, 46, 40], cap: 6 },
+    ];
+    for (const D of districts) {
+      let placed = 0; const [x0, z0, x1, z1] = D.r; D.n = 0;
+      for (let row = 0, z = z0 + 3; z < z1 && placed < D.cap; row++) {
+        const pair = row % 2, d = RB.pick([4.6, 5.0, 5.4]), yaw = pair ? PI : 0;
+        let x = x0 + RB() * 3, k = 0;
+        while (x < x1 && placed < D.cap) {
+          const w = RB.pick([4.4, 5, 5.6, 6.2, 7]);
+          if (RB() < 0.1) { x += 2.6; continue; }                                  // a gap: a yard or a cross-lane
+          if (free(x + w / 2, z + d / 2, yaw, w, d, { sq: 2.5, road: 1.0 })) { add(x + w / 2, z + d / 2, yaw, w, d, { floors: RB.pick([1, 2, 2, 3]), pitch: 38 + (RB() * 14 | 0), tier: 1, second: true, block: D.id }); placed++; D.n++; x += w + (k++ % 3 === 2 ? 2.3 : 0.1); }
+          else x += 1.0;
+        }
+        z += d + (pair ? 1.8 : 2.3);                                               // the lane after a front pair's first row, a narrow back yard after its second
+      }
+    }
+    INF.dense = INF.houses.length - base;
+  }
   // per-house features (so the painted door paths know where each door is)
   const nbAt = (h, east) => { const c = Math.cos(h.yaw), sn = Math.sin(h.yaw), lx = (east ? 1 : -1) * (h.w / 2 + 0.3); const x = h.x + lx * c, z = h.z + lx * sn; for (const o of SITES) { if (o === h || !o.w) continue; if (inRect(o, x, z, 0.12)) return 1; } return 0; };
   for (const h of INF.houses) {
@@ -7661,7 +7698,7 @@ function buildDress() {
   { const x = ALLEY.x0 - 1.5, z = roadZ(x) - 2.4; if (ok(x, z, 0.6)) { add(dNoticePost(R), x, gy(x, z), z, 1.1, 0.2, false, { es: true }); solid(x, z, 0.25, 2); claim(x, z, 0.6); } }
 
   // ── yards and the village edge: split-rail fences at the sides of cottages, a roadside shrine, milestones, fish racks and a boat by the fisher ──
-  for (const id of ['elder', 'guardhouse', 'weaver', 'hunter', 'fisher', 'farm', 'mill', 'herbalist']) {
+  for (const id of ['elder', 'guardhouse', 'weaver', 'hunter', 'farm', 'mill', 'herbalist']) {
     const s = SITE[id]; if (!s) continue;
     const face = R() < 0.5 ? 'left' : 'right', len = wallLen(s, face);
     for (let u = -len / 2 + 0.6, k = 0; u < len / 2 + 2.2; u += 2.0, k++) {
@@ -7676,7 +7713,15 @@ function buildDress() {
   { const s = SITE.fisher;
     if (s) { const a = wallAt(s, 'back', 0.6, 2.4), b = wallAt(s, 'back', -1.4, 2.0); if (ok(a.x, a.z, 0.9, { flat: s.y })) { add(dNet(R), a.x, gy(a.x, a.z), a.z, 1, a.ry + PI / 2 * 0); claim(a.x, a.z, 1.0); }
       if (ok(b.x, b.z, 0.9, { flat: s.y })) { add(dHangFish(R, 2), b.x, gy(b.x, b.z) + 1.4, b.z, 1, b.ry); } }
-    for (let t = 0; t < 40; t++) { const ang = 4.2 + R() * 0.7, d = LAKE.r + 0.2 + R() * 2.5, x = LAKE.x + Math.cos(ang) * d, z = LAKE.z + Math.sin(ang) * d, y = gy(x, z); if (y > LAKE.y + 0.15 && y < LAKE.y + 1.2 && hyp(x - 6.8, z - 88.2) > 5) { add(dBoat(R), x, y - 0.05, z, 1.2, ang + PI / 2 + R.s() * 0.3); solid(x, z, 1.0, 0.5); break; } } }
+    // the fisher's corner: a boat pulled up on the bank beside the pier, nets on racks, barrels and crates by the cabin's door side
+    { const F = BW.fisher;
+      if (F && s) { const [ux, uz] = F.u, px = -uz, pz = ux, yawU = Math.atan2(ux, -uz);
+        const at = (a, b, f) => [F.q[0] + ux * a + px * b, F.q[1] + uz * a + pz * b];
+        const bp = at(-1.2, 3.6); if (ok(bp[0], bp[1], 1.3)) { add(dBoat(R), bp[0], gy(bp[0], bp[1]) - 0.05, bp[1], 1.25, yawU + PI / 2 + 0.15); solid(bp[0], bp[1], 1.0, 0.5); claim(bp[0], bp[1], 1.4); }
+        const np = at(-2.6, -2.6); if (ok(np[0], np[1], 0.9)) { add(dNet(R), np[0], gy(np[0], np[1]), np[1], 1, yawU); claim(np[0], np[1], 1.0); }
+        const np2 = at(-3.6, 1.8); if (ok(np2[0], np2[1], 0.9)) { add(dNet(R), np2[0], gy(np2[0], np2[1]), np2[1], 1, yawU + 0.4); claim(np2[0], np2[1], 1.0); }
+        for (const [a, b] of [[-2.2, -1.3], [-2.0, -0.8], [-3.0, -1.6]]) { const bb = at(a, b); if (ok(bb[0], bb[1], 0.5)) { add(dBarrel(R), bb[0], gy(bb[0], bb[1]), bb[1], 1, R() * TAU); solid(bb[0], bb[1], 0.4, 0.9); claim(bb[0], bb[1], 0.5); } } } }
+    for (let t = 0; t < (BW.fisher ? 0 : 40); t++) { const ang = 4.2 + R() * 0.7, d = LAKE.r + 0.2 + R() * 2.5, x = LAKE.x + Math.cos(ang) * d, z = LAKE.z + Math.sin(ang) * d, y = gy(x, z); if (y > LAKE.y + 0.15 && y < LAKE.y + 1.2 && hyp(x - 6.8, z - 88.2) > 5) { add(dBoat(R), x, y - 0.05, z, 1.2, ang + PI / 2 + R.s() * 0.3); solid(x, z, 1.0, 0.5); break; } } }
   // ── wall furniture: hanging signs, bracket lanterns, vines, laundry lines ──
   const MSof = s => new THREE.Matrix4().fromArray(siteMatrix(s, s.y));
   const glyphs = { inn: 'mugs', smithy: 'anvil', store: 'crest', herbalist: 'herbs', weaver: 'crest', elder: 'crest' };
@@ -7715,7 +7760,7 @@ function dressBuild() {
   const q = R.q; if (!q || !DRS.items) return;
   for (const k of DRS.groups) { SC.scene.remove(k.g); k.g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
   DRS.groups = []; DRS.builtFor = R.qName;
-  const low = !q.scatter, town = Kit.batch({ name: 'dress-town', cell: 4096, off: 2048 }), out = Kit.batch({ name: 'dress-out', cell: 64, off: 20 });
+  const low = !q.scatter, town = Kit.batch({ name: 'dress-town', cell: 40, off: 2048 }), out = Kit.batch({ name: 'dress-out', cell: 64, off: 20 });
   const inTown = (x, z) => x > -22 && x < 58 && z > -30 && z < 30;
   for (const it of DRS.items) { if (low && it.tier > 0) continue; (inTown(it.x, it.z) ? town : out).add(it.name, it.M, it.o); }
   const mk = (B, isTown) => { if (!B.count) return; const g = B.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); SC.scene.add(g); let t = 0; g.traverse(o => { if (o.isMesh) t += o.geometry.index.count / 3; }); DRS.groups.push({ g, town: isTown, tris: t, meshes: g.children.length }); };
@@ -7731,7 +7776,6 @@ function dressAttach() {
     const range = q.yardRange * 1.1 + 4, hide = World.deepIn;
     for (const k of DRS.groups) {
       if (hide) { k.g.visible = false; continue; }
-      if (k.town) { k.g.visible = hyp(camPos[0] - 18, camPos[2] - 0) < range + 48; continue; }
       k.g.visible = true; for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) o.visible = hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < range + bs.radius; }
     }
   };
@@ -7749,6 +7793,8 @@ function splat2Dress(blob, A, B) {
 
 
 // ---- 73d_infill.js ----
+// Budget: yard props, dressing and the alley are culled nearer on Medium (the town is dense; beyond ~24 m they are small and cost a draw call each)
+QUALITY.medium.yardRange = 24; QUALITY.medium.houseFar = 34; QUALITY.medium.yardCast = false;
 // ───────────────────────── infill houses: dark timber walls, grey shingle roofs, built from the village kit ─────────────────────────
 // Sites come from 55b_infill.js. Six of them are enterable (HOUSES specs in 72c_infill.js, shell by kitShell); the rest are shells only, assembled here
 // in the same way as the market alley (2 m wall panels scaled to the wall, kit window and door modules, jettied upper storeys, kit roof turned to a ridge
@@ -7758,7 +7804,7 @@ const ROOFS = [];       // every generated roof (for test/town.js: slope sample 
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
 const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof';
 function infBatch() {
-  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 24, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 24 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
+  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 48, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 48 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
   return INFS.batch;
 }
 
@@ -8143,20 +8189,21 @@ function buildBoards(bucket, fence, R) {
   }
   // dry-stone walls: the back-yard wall behind the promenade (with a gap for the lane), and wing walls at the footbridge's west end
   { const w1 = alongBank(-27, -12, 9.6); fence(w1, { stone: true }); }
-  // ── the lake: a shore walk from the drying rack to the dock, a jetty with mooring posts, steps down to the water ──
+  // ── the fisher's pier: a short pier on piles straight out from the cabin's door side into the water. Planks only where there is water or mud under them; rails only on the water side. ──
   {
-    const shore = []; for (let x = -7.5; x <= 5.4; x += 2.1) { let zs = null; for (let z = 78; z < 100; z += 0.2) if (Terrain.y(x, z) < LAKE.y + 0.45) { zs = z; break; } if (zs !== null) shore.push([x, zs - 2.0]); }
-    BW.shore = shore;
-    if (shore.length > 3) {
-      bwWalk(bucket, shore, { w: 1.5, lift: 0.3, rails: [0, 1], ramp: 1.2 });
-      // a jetty out from the middle of the walk
-      const k = shore[Math.floor(shore.length * 0.4)], zw = k[1] + 2.0;
-      const jet = [[k[0], k[1]], [k[0] + 0.2, zw + 7.5]];
-      bwWalk(bucket, jet, { w: 1.3, rails: [0, 0], seg: 2.0, deckY: p => Math.max(LAKE.y + 0.52, Terrain.y(p[0], p[1]) + 0.3), railSide: (i, s, P) => hyp(P[i][0] - k[0], P[i][1] - k[1]) > 2.6 });
-      // mooring posts and a lantern post at the end
-      const m = bucket(jet[1][0], jet[1][1]); m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.TIMBER, COL.timberDark);
-      for (const sx of [-1, 1]) m.cbox(jet[1][0] + sx * 0.78, LAKE.y - 1.2, jet[1][1] + 0.6, 0.2, 2.3, 0.2, 4);
-      m.cbox(jet[1][0] + 0.0, LAKE.y - 0.3, jet[1][1] + 0.9, 0.12, 2.4, 0.12, 4); m.mat(MAT.METAL, COL.black); m.box(jet[1][0] - 0.1, LAKE.y + 2.0, jet[1][1] + 0.84, jet[1][0] + 0.1, LAKE.y + 2.3, jet[1][1] + 0.96);
+    const fs = SITES.find(q => q.id === 'fisher');
+    if (fs) {
+      const fx = Math.sin(fs.yaw), fz = -Math.cos(fs.yaw), p0 = [fs.x + fx * (fs.d / 2 + 1.8), fs.z + fz * (fs.d / 2 + 1.8)];
+      let ux = LAKE.x - p0[0], uz = LAKE.z - p0[1]; const ul = hyp(ux, uz); ux /= ul; uz /= ul;
+      // the shore: first point from the door heading for the lake that is under the wet line
+      let t = 0; while (t < 40 && hyp(p0[0] + ux * t - LAKE.x, p0[1] + uz * t - LAKE.z) > LAKE.r - 0.3) t += 0.25;
+      const q = [p0[0] + ux * t, p0[1] + uz * t], A = [p0[0], p0[1]], B = [q[0] + ux * 6.5, q[1] + uz * 6.5];
+      const wet = P => hyp(P[0] - LAKE.x, P[1] - LAKE.z) < LAKE.r + 0.2;
+      const r = bwWalk(bucket, [A, B], { w: 1.3, rails: [0, 0], seg: 1.8, ramp: 0.0, piles: true, deckY: p => Math.max(LAKE.y + 0.55, Terrain.y(p[0], p[1]) + 0.4), railSide: (i, s2, P) => wet(P[i]) && wet(P[Math.min(P.length - 1, i + 1)]) && hyp(P[i][0] - q[0], P[i][1] - q[1]) > 0.3, railOff: () => false });
+      BW.fisher = { p0, q, A, B, u: [ux, uz] };
+      // two mooring posts at the head and a lantern post on the landward side of the head (on the deck's edge, not in open water)
+      const m = bucket(B[0], B[1]); m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.TIMBER, COL.timberDark);
+      for (const sx of [-1, 1]) m.cbox(B[0] - uz * sx * 0.85, LAKE.y - 1.0, B[1] + ux * sx * 0.85, 0.16, 2.0, 0.16, 4);
     }
   }
 }
@@ -10202,7 +10249,7 @@ TALK.rowan = function () {
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 29';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 30';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }

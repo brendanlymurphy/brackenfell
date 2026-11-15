@@ -501,7 +501,7 @@ function buildDress() {
   { const x = ALLEY.x0 - 1.5, z = roadZ(x) - 2.4; if (ok(x, z, 0.6)) { add(dNoticePost(R), x, gy(x, z), z, 1.1, 0.2, false, { es: true }); solid(x, z, 0.25, 2); claim(x, z, 0.6); } }
 
   // ── yards and the village edge: split-rail fences at the sides of cottages, a roadside shrine, milestones, fish racks and a boat by the fisher ──
-  for (const id of ['elder', 'guardhouse', 'weaver', 'hunter', 'fisher', 'farm', 'mill', 'herbalist']) {
+  for (const id of ['elder', 'guardhouse', 'weaver', 'hunter', 'farm', 'mill', 'herbalist']) {
     const s = SITE[id]; if (!s) continue;
     const face = R() < 0.5 ? 'left' : 'right', len = wallLen(s, face);
     for (let u = -len / 2 + 0.6, k = 0; u < len / 2 + 2.2; u += 2.0, k++) {
@@ -516,7 +516,15 @@ function buildDress() {
   { const s = SITE.fisher;
     if (s) { const a = wallAt(s, 'back', 0.6, 2.4), b = wallAt(s, 'back', -1.4, 2.0); if (ok(a.x, a.z, 0.9, { flat: s.y })) { add(dNet(R), a.x, gy(a.x, a.z), a.z, 1, a.ry + PI / 2 * 0); claim(a.x, a.z, 1.0); }
       if (ok(b.x, b.z, 0.9, { flat: s.y })) { add(dHangFish(R, 2), b.x, gy(b.x, b.z) + 1.4, b.z, 1, b.ry); } }
-    for (let t = 0; t < 40; t++) { const ang = 4.2 + R() * 0.7, d = LAKE.r + 0.2 + R() * 2.5, x = LAKE.x + Math.cos(ang) * d, z = LAKE.z + Math.sin(ang) * d, y = gy(x, z); if (y > LAKE.y + 0.15 && y < LAKE.y + 1.2 && hyp(x - 6.8, z - 88.2) > 5) { add(dBoat(R), x, y - 0.05, z, 1.2, ang + PI / 2 + R.s() * 0.3); solid(x, z, 1.0, 0.5); break; } } }
+    // the fisher's corner: a boat pulled up on the bank beside the pier, nets on racks, barrels and crates by the cabin's door side
+    { const F = BW.fisher;
+      if (F && s) { const [ux, uz] = F.u, px = -uz, pz = ux, yawU = Math.atan2(ux, -uz);
+        const at = (a, b, f) => [F.q[0] + ux * a + px * b, F.q[1] + uz * a + pz * b];
+        const bp = at(-1.2, 3.6); if (ok(bp[0], bp[1], 1.3)) { add(dBoat(R), bp[0], gy(bp[0], bp[1]) - 0.05, bp[1], 1.25, yawU + PI / 2 + 0.15); solid(bp[0], bp[1], 1.0, 0.5); claim(bp[0], bp[1], 1.4); }
+        const np = at(-2.6, -2.6); if (ok(np[0], np[1], 0.9)) { add(dNet(R), np[0], gy(np[0], np[1]), np[1], 1, yawU); claim(np[0], np[1], 1.0); }
+        const np2 = at(-3.6, 1.8); if (ok(np2[0], np2[1], 0.9)) { add(dNet(R), np2[0], gy(np2[0], np2[1]), np2[1], 1, yawU + 0.4); claim(np2[0], np2[1], 1.0); }
+        for (const [a, b] of [[-2.2, -1.3], [-2.0, -0.8], [-3.0, -1.6]]) { const bb = at(a, b); if (ok(bb[0], bb[1], 0.5)) { add(dBarrel(R), bb[0], gy(bb[0], bb[1]), bb[1], 1, R() * TAU); solid(bb[0], bb[1], 0.4, 0.9); claim(bb[0], bb[1], 0.5); } } } }
+    for (let t = 0; t < (BW.fisher ? 0 : 40); t++) { const ang = 4.2 + R() * 0.7, d = LAKE.r + 0.2 + R() * 2.5, x = LAKE.x + Math.cos(ang) * d, z = LAKE.z + Math.sin(ang) * d, y = gy(x, z); if (y > LAKE.y + 0.15 && y < LAKE.y + 1.2 && hyp(x - 6.8, z - 88.2) > 5) { add(dBoat(R), x, y - 0.05, z, 1.2, ang + PI / 2 + R.s() * 0.3); solid(x, z, 1.0, 0.5); break; } } }
   // ── wall furniture: hanging signs, bracket lanterns, vines, laundry lines ──
   const MSof = s => new THREE.Matrix4().fromArray(siteMatrix(s, s.y));
   const glyphs = { inn: 'mugs', smithy: 'anvil', store: 'crest', herbalist: 'herbs', weaver: 'crest', elder: 'crest' };
@@ -555,7 +563,7 @@ function dressBuild() {
   const q = R.q; if (!q || !DRS.items) return;
   for (const k of DRS.groups) { SC.scene.remove(k.g); k.g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
   DRS.groups = []; DRS.builtFor = R.qName;
-  const low = !q.scatter, town = Kit.batch({ name: 'dress-town', cell: 4096, off: 2048 }), out = Kit.batch({ name: 'dress-out', cell: 64, off: 20 });
+  const low = !q.scatter, town = Kit.batch({ name: 'dress-town', cell: 40, off: 2048 }), out = Kit.batch({ name: 'dress-out', cell: 64, off: 20 });
   const inTown = (x, z) => x > -22 && x < 58 && z > -30 && z < 30;
   for (const it of DRS.items) { if (low && it.tier > 0) continue; (inTown(it.x, it.z) ? town : out).add(it.name, it.M, it.o); }
   const mk = (B, isTown) => { if (!B.count) return; const g = B.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); SC.scene.add(g); let t = 0; g.traverse(o => { if (o.isMesh) t += o.geometry.index.count / 3; }); DRS.groups.push({ g, town: isTown, tris: t, meshes: g.children.length }); };
@@ -571,7 +579,6 @@ function dressAttach() {
     const range = q.yardRange * 1.1 + 4, hide = World.deepIn;
     for (const k of DRS.groups) {
       if (hide) { k.g.visible = false; continue; }
-      if (k.town) { k.g.visible = hyp(camPos[0] - 18, camPos[2] - 0) < range + 48; continue; }
       k.g.visible = true; for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) o.visible = hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < range + bs.radius; }
     }
   };
