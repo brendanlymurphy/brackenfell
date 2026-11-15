@@ -14,16 +14,16 @@ function pGate(P, d, id, key, label) {
 }
 // the sarcophagus: a stone chest with a lid slightly askew
 const pdTomb = (len) => m => { m.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); m.box(-len / 2, 0, -0.42, len / 2, 0.5, 0.42); m.box(-len / 2 - 0.05, 0.5, -0.47, len / 2 + 0.05, 0.66, 0.47); m.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.8); m.box(-len / 2 + 0.2, 0.66, -0.12, len / 2 - 0.2, 0.74, 0.12); };
-const pdAltar = m => {
+const pdAltar = c => m => {
   m.mat(MAT.STONE, [0.82, 0.8, 0.76], 0.8); m.box(-1.45, 0, -0.5, 1.45, 0.95, 0.5); m.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.8); m.box(-1.6, 0.95, -0.56, 1.6, 1.07, 0.56);
   m.mat(MAT.CLOTH, [0.42, 0.07, 0.08], 0.5); m.box(-1.25, 0.28, -0.585, 1.25, 1.065, -0.55); m.box(-1.2, 1.07, -0.4, 1.2, 1.085, 0.4);          // the frontal hanging from the slab, a runner on top
   m.mat(MAT.METAL, COL.bronze); m.box(-1.25, 0.28, -0.59, 1.25, 0.31, -0.55); m.box(-1.25, 0.92, -0.59, 1.25, 0.95, -0.55);
-  for (const sx of [-1.25, 1.25]) at(m, sx, 1.085, 0, 0, () => { m.mat(MAT.METAL, COL.bronze); m.cyl(0, 0, 0, 0.09, 0.05, 0.05, 8, 2); m.cyl(0, 0.05, 0, 0.03, 0.03, 0.45, 6, 2); Props.candle(m, null, true); });
-  for (const sx of [-0.55, 0.55]) at(m, sx, 1.085, 0.05, 0, () => Props.candle(m, null, false));
+  for (const sx of [-1.25, 1.25]) at(m, sx, 1.085, 0, 0, () => { m.mat(MAT.METAL, COL.bronze); m.cyl(0, 0, 0, 0.09, 0.05, 0.05, 8, 2); m.cyl(0, 0.05, 0, 0.03, 0.03, 0.45, 6, 2); Props.candle(m, c, true); });
+  for (const sx of [-0.55, 0.55]) at(m, sx, 1.085, 0.05, 0, () => Props.candle(m, { zone: c.zone, candleLight: false }, false));
   addBoxCollider(m, -1.6, -0.56, 1.6, 0.56, 0, 1.1);
 };
 const pdPew = len => m => {            // backs to the door (local -z), a kneeler at the foot of the back for the row behind, panelled ends
-  m.mat(MAT.PLANKS, COL.woodDark); m.box(-len / 2, 0.44, -0.12, len / 2, 0.49, 0.4); m.box(-len / 2, 0.2, -0.22, len / 2, 1.0, -0.15); m.box(-len / 2, 0.88, -0.25, len / 2, 0.95, -0.12);
+  m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2, 0.44, -0.12, len / 2, 0.49, 0.4); m.box(-len / 2, 0.5, -0.22, len / 2, 0.98, -0.16); m.mat(MAT.PLANKS, COL.woodDark); m.box(-len / 2, 0.92, -0.25, len / 2, 1.0, -0.13); m.box(-len / 2, 0.2, -0.22, len / 2, 0.44, -0.16);
   m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2, 0, -0.45, len / 2, 0.1, -0.2); m.box(-len / 2, 0.1, -0.44, len / 2, 0.14, -0.2);
   m.mat(MAT.TIMBER, COL.woodDark); for (const sx of [-1, 1]) { m.box(sx * len / 2 - 0.04, 0, -0.26, sx * len / 2 + 0.04, 1.05, 0.42); m.box(sx * len / 2 - 0.04, 0, -0.5, sx * len / 2 + 0.04, 0.18, -0.26); }
   addBoxCollider(m, -len / 2, -0.5, len / 2, 0.42, 0, 0.5);
@@ -37,7 +37,7 @@ PLANS.chapel = (P, c, info) => {
   P.dims = { W: 14, D: 12 };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H_GROUND + 0.6);
   // nave (west, long) and the sacristy (east, with the stair to the crypt)
-  const GL = [[0.14, 0.2, 0.46], [0.46, 0.1, 0.1], [0.46, 0.3, 0.08], [0.1, 0.3, 0.17]]       /* deep jewel colours: sapphire, ruby, amber, emerald */, WK = ['Thin_Round', 'Wide_Round'];
+  const GL = [[0.09, 0.14, 0.34], [0.34, 0.07, 0.08], [0.36, 0.22, 0.06], [0.07, 0.22, 0.12]]       /* deep jewel colours: sapphire, ruby, amber, emerald */, WK = ['Thin_Round', 'Wide_Round'];
   pRoom(P, 0, 'nave', 'nave', -5, 0, 5, 12, { floor: 'stone', winKinds: WK, glass: GL }); pRoom(P, 0, 'sacristy', 'sacristy', 5, 0, 9, 7, { floor: 'stone' }); pRoom(P, 0, 'tower', 'tower', -9, 0, -5, 5, { win: false, floor: 'stone' });
   pDoor(P, 'nave', null, 0, 0); pDoor(P, 'nave', 'sacristy', 5, 3.5); pDoor(P, 'nave', 'tower', -5, 2.5);
   // crypt: the stair arrives in the east vault; a gate leads west under the nave; a second gate-less arch to the ossuary
@@ -50,7 +50,7 @@ PLANS.chapel = (P, c, info) => {
   { const m = P.c.int, L0 = P.lv[0]; m.m1 = P.zone; m.ao = INT_AO;
     pPut(P, nave, P.id + '.step', 0, 11.0, 0, 6.0, 1.7, 0.14, mm => { mm.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); mm.box(-3, 0, -0.85, 3, 0.14, 0.85); }, { flat: true, noClear: true });
     addFloor(m, -3, 10.15, 3, 11.85, L0.y + 0.16);
-    const al = pPut(P, nave, P.id + '.altar', 0, 11.2, 0, 3.2, 1.12, 1.1, pdAltar, { lift: 0.14, back: 's' });
+    const al = pPut(P, nave, P.id + '.altar', 0, 11.2, 0, 3.2, 1.12, 1.1, pdAltar(c), { lift: 0.14, back: 's', lowOk: true });
     if (al) { pSpot(P, 'altar', 0, 9.3, 0, { k: 0 }); P.lightIn.nave = 1;
       at(m, 0, L0.y + 1.3, 11.62, 0, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.05, 0, -0.04, 0.05, 1.5, 0.04); m.box(-0.32, 0.95, -0.04, 0.32, 1.05, 0.04); m.mat(MAT.STONE, [0.6, 0.58, 0.54], 0.8); m.box(-0.14, -0.06, -0.12, 0.14, 0.0, 0.12); }); } }
   let row = 0; for (const z of [2.9, 4.15, 5.4, 6.65, 7.9, 9.15]) for (const x of [-2.5, 2.5]) { const pw = pPut(P, nave, P.id + '.pew' + row++, x, z, 0, 3.0, 1.0, 1.05, pdPew(3.0), {}); if (pw && row <= 2) pSit(P, 'pew' + row, x, z + 0.15, PI, 0); }
