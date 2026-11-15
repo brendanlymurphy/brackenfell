@@ -46,3 +46,8 @@ The user wants it as realistic as possible, like Skyrim: simple shapes, photogra
 - Never push to `main` anything that has not booted on both backends and passed `test/quest.js`.
 - The user's phone (iPhone, Safari) cannot be tested here. Keep the WebGL 2 fallback and the classic link working.
 - See `ROADMAP.md` for what comes next.
+
+## Publishing checklist (learned the hard way)
+
+- No symlinks may be tracked: the GitHub Pages deployment fails on them (`git ls-tree -r main | grep ^120000` must print nothing).
+- After pushing `main`, confirm the deployment: `gh run list -R brendanlymurphy/brackenfell -L 1` shows success, and the live page's `game.js?v=` hash matches the local `index.html`. Builds 10 and 11 were announced as live while their deployments had failed.
