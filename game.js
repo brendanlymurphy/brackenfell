@@ -6069,10 +6069,10 @@ function planHouse(P, c, info) {
     const rm = P.rooms, dn = (id, o) => rm[id] && PD.dense(P, rm[id], o);
     dn('hall', { pool: ['tapestry', 'hooks', 'cabinet', 'paint', 'shelf', 'cask', 'paint', 'sconce'], corner: ['broom', 'cask', 'stack', 'sacks'], mid: { kinds: ['rug', 'casks'], max: 2 }, racks: 2, rackKinds: ['mug', 'herb', 'pot', 'herb'] });
     dn('store', { pool: ['shelf', 'cupboard', 'hooks', 'cask', 'sacks', 'stack', 'cabinet'], corner: ['broom', 'sacks', 'stack'], mid: { kinds: ['table', 'sacks'], max: 1 }, racks: 1 });
-    dn('bed0', { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-    for (const id of ['chamber1', 'chamber2']) dn(id, { pool: ['cupboard', 'hooks', 'paint', 'tapestry', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-    dn('loft', { pool: ['tapestry', 'hooks', 'cabinet', 'paint', 'shelf', 'cupboard'], corner: ['broom', 'cask', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-    for (const id of ['cellar', 'vault']) dn(id, { pool: ['cask', 'shelf', 'sacks', 'stack', 'cask', 'cabinet', 'torch'], corner: ['cask', 'sacks', 'stack', 'broom'], mid: { kinds: ['casks', 'sacks'], max: 2 }, racks: 1, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
+    dn(bed0.id, { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
+    for (const id of ['chamber1', 'chamber2']) dn(id, { pool: ['cupboard', 'hooks', 'paint', 'tapestry', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug', 'sacks'], max: 2 } });
+    dn('loft', { pool: ['tapestry', 'hooks', 'cabinet', 'paint', 'shelf', 'cupboard'], corner: ['broom', 'cask', 'sacks'], mid: { kinds: ['rug', 'casks', 'sacks'], max: 3, min: 0.9 } });
+    for (const id of ['cellar', 'vault']) dn(id, { pool: ['cask', 'shelf', 'sacks', 'stack', 'cask', 'cabinet', 'torch'], corner: ['cask', 'sacks', 'stack', 'broom'], mid: { kinds: ['casks', 'sacks', 'casks'], max: 4, min: 0.8 }, racks: 1, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
   }
   if (!hh) P.err.push('no hearth fits in the hall');
   for (const id of ['cellar', 'vault']) if (!P.lightIn[id]) pTorch(P, P.rooms[id], 'n', (P.rooms[id].in.x0 + P.rooms[id].in.x1) / 2 + 0.5, 1.7, 6.5) || pTorch(P, P.rooms[id], 's', (P.rooms[id].in.x0 + P.rooms[id].in.x1) / 2 + 0.5, 1.7, 6.5);
