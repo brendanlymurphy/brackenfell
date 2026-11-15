@@ -53,6 +53,7 @@ function sceneBuild() {
     pieces.set(obj.first, p); return p;
   };
   for (const obj of World.skinned) {
+    if (obj.npc && obj.hasChar) continue;      // an animated glTF villager stands in for this old body (49_chars.js)
     if (obj.npc) {
       const mat = surfaceMaterial('skin'), g = geo(pk, obj.first, obj.count), mesh = new THREE.Mesh(g, mat);
       mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.castShadow = mesh.receiveShadow = true; mesh.layers.set(1);

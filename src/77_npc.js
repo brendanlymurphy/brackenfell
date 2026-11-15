@@ -89,6 +89,7 @@ function buildNPCs() {
     const mesh = buildCharacter(def), item = World.skinPack.add(mesh);
     const npc = { def, id: def.id, name: def.name, scale: def.scale || 1, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, wander: 0, dwell: 0, talking: false, look: [0, 0], ang: new Float32Array(33) };
     npc.obj = addSkinned(item, { r: 1.4, zone: 0, npc: true });
+    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; } }
     NPCS.push(npc); NPC[def.id] = npc;
   }
   // chickens
@@ -165,8 +166,9 @@ function npcUpdate(dt, playerPos) {
     else { m4.rotY(root, -n.yaw); m4.translate(root, 0, dy * s + (anim === 'sit' ? ((n.spot && n.spot.sit) || 0.46) + 0.09 - 0.96 * s : 0), 0); }
     m4.scale(root, s, s, s);
     poseWrite(n.obj.slot, root, n.ang);
-    const o = n.obj; o.c = [n.pos[0], n.pos[1] + 0.9, n.pos[2]]; o.visible = dPlayer < 170;
+    const o = n.obj; o.c = [n.pos[0], n.pos[1] + 0.9, n.pos[2]]; o.visible = dPlayer < 170 && !n.ch;
     const zn = World.zoneAt(n.pos[0], n.pos[1] + 0.5, n.pos[2]); R.boneData[o.slot * 256 + 240] = zn; R.boneData[o.slot * 256 + 241] = zn ? 0.34 : 1;
+    if (n.ch) Chars.update(n.ch, { pos: n.pos, yaw: n.yaw, anim: n.anim, scale: s, zone: zn, light: zn ? 0.34 : 1, visible: dPlayer < 95, cast: dPlayer < 32, look: n.look, talking: n.talking, seatHeight: n.spot && n.spot.sit, speed: n.anim === 'run' ? 2.7 * (0.9 + s * 0.1) : n.anim === 'walk' ? 1.35 * (0.9 + s * 0.1) : 0 }, dt);
   }
   // chickens potter about and scatter when approached
   for (const c of World.chickens) {

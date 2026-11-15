@@ -36,6 +36,7 @@ async function setQuality(name) {
     scene.fogNode = TSL.fog(SH.fogColor(), SH.fogAmount());
     if (typeof Sky !== 'undefined') Sky.build(scene); else scene.backgroundNode = U.horizon;
     if (typeof Particles !== 'undefined') Particles.build(scene);
+    if (G.chars) scene.add(Chars.group);
   }
   // sun shadows: a tight map around the player and a wide one beyond it
   if (!R.shadows) { R.shadows = makeSunShadows(R.sun); for (const l of R.shadows.lights) { SC.scene.add(l); SC.scene.add(l.target); } R.sun.shadow.shadowNode = R.shadows; }
@@ -55,7 +56,7 @@ function buildPipeline() {
   let hdr = col.rgb;
   R.bloomNode = null;
   if (q.bloom) { R.bloomNode = T3X.bloom(col, 0.22, 0.55, 1.6); hdr = hdr.add(R.bloomNode.rgb); }
-  const P = R.pu = { exposure: uniform(0.6), vignette: uniform(0.55), sat: uniform(1.14), frame: uniform(0) };
+  const P = R.pu = { exposure: uniform(0.6), vignette: uniform(0.55), sat: uniform(1.0), frame: uniform(0) };
   const lum = vec3(0.2126, 0.7152, 0.0722);
   const fin = Fn(() => {
     const qv = screenUV.sub(0.5);

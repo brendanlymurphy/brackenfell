@@ -151,6 +151,10 @@ function startGame(cont) {
     await loadNoise();
     await loadPack(lowMem, f => { $('barFill').style.width = Math.round(6 + f * 32) + '%'; }); lap('pack');
     SH.init();
+    // animated villagers; if their files cannot be loaded the old hand-built bodies stand in
+    $('loadText').textContent = 'Dressing the villagers';
+    if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) { try { await Chars.load('quaternius', f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; } catch (e) { console.warn('villager models unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); } }
+    lap('chars');
     renderInit();
     await load('Raising the Greyspine', 0.4); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
     await load('Framing timber, laying thatch', 0.55); buildVillage(); lap('village');
