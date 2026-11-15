@@ -61,11 +61,13 @@
       <label class="row" for="setTime"><span>Time of day</span><input id="setTime" type="range" min="0" max="24" step="0.25" value="9.5"></label>
       <label class="row" for="setFlow"><span>Day length</span>
         <select id="setFlow"><option value="720">12 minutes</option><option value="1440">24 minutes</option><option value="360">6 minutes</option><option value="0">Stop the clock</option></select></label>
+      <label class="row" for="setGfx"><span>Graphics engine</span>
+        <select id="setGfx"><option value="webgpu">WebGPU (default)</option><option value="webgl">WebGL 2 (if things look wrong)</option></select></label>
       <label class="row check" for="setInvert"><span>Invert look up and down</span><input id="setInvert" type="checkbox"></label>
       <label class="row check" for="setFps"><span>Show frame rate</span><input id="setFps" type="checkbox"></label>
       <button id="resetBtn" type="button" class="btn ghost">Start the story over</button>
       <p id="diag"></p>
-        <p id="credits">Surface scans are public-domain (CC0) textures from ambientCG, cgbookcase and Nobiax.</p>
+        <p id="credits">Built on Three.js. Surface scans from ambientCG, cgbookcase and Nobiax; villagers from Quaternius; their animations from Mesh2Motion. All public domain (CC0).</p>
     </div>
   </div>
 </section>
@@ -82,6 +84,7 @@
     </div>
     <p id="hint"></p>
     <p id="gpuNote" hidden></p>
+    <p id="classic"><a href="classic/">Classic version</a> (the build before this one)</p>
   </div>
 </section>
 <div id="fade"></div>

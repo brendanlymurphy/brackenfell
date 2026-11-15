@@ -125,8 +125,20 @@ function frame(tms) {
     perfUpdate(dtMs, dtMs / 1000);
     if (!R.busy) renderFrame(game.time, env);
   } catch (e) { if (!game.crashed) { game.crashed = true; console.error(e); G.errors.push(String(e && e.stack || e)); } }
+  // WebGPU that reports errors (or throws) in its first seconds of drawing will not get better: switch this device to WebGL 2
+  if (!G.gfxChecked) { if (!G.tDraw) G.tDraw = tms; if (G.errors.length) { G.gfxChecked = true; gfxFallback(G.errors[0]); } else if (tms - G.tDraw > 12000) G.gfxChecked = true; }
 }
-function onDeviceLost() { $('title').classList.remove('gone'); $('startRow').hidden = true; $('bar').hidden = true; $('loadText').textContent = 'The graphics device was lost. Reload the page to return to Brackenfell.'; }
+function onDeviceLost() {
+  $('title').classList.remove('gone'); $('startRow').hidden = true; $('bar').hidden = true; $('loadText').textContent = 'The graphics device was lost. Reloading to return to Brackenfell.';
+  if (TEST) return;
+  try { if (game.playing && typeof save === 'function') save(); } catch (e) { }
+  let n = 1; try { n = (+sessionStorage.getItem('brackenfell.lost') || 0) + 1; sessionStorage.setItem('brackenfell.lost', String(n)); } catch (e) { }
+  // lost while starting up, or for the second time: this device and WebGPU do not get along, so come back on WebGL 2
+  if ((performance.now() - (G.t0 || 0) < 30000 || n >= 2) && gfxFallback('graphics device lost')) return;
+  if (n > 3) { $('loadText').textContent = 'The graphics device keeps being lost. Reload the page to try again.'; return; }
+  const again = () => { if (!document.hidden) location.reload(); };
+  if (document.hidden) document.addEventListener('visibilitychange', again); else setTimeout(again, 1200);
+}
 function startGame(cont) {
   Audio2.start();
   const sv = cont && loadSave(); if (sv) applySave(sv); else { clearSave(); }
@@ -144,7 +156,7 @@ function startGame(cont) {
     const canvas = $('view');
     try { await gfxInit(canvas); }
     catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'; console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
-    gfxResize(canvas.clientWidth, canvas.clientHeight);
+    gfxResize(G.canvas.clientWidth, G.canvas.clientHeight);
     await load('Mixing lime, straw and river stone', 0.06);
     const lowMem = (navigator.deviceMemory || 8) <= 3;
     $('loadText').textContent = 'Unpacking stone, timber and thatch (about 35 MB the first time)';
@@ -166,7 +178,7 @@ function startGame(cont) {
     if (TEST && TEST.quality) game.qualitySetting = TEST.quality;
     await game.applyQuality(); lap('pipelines');
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
-    npcSnapAll(); uiInit(); inputInit(canvas, $('touch'));
+    npcSnapAll(); uiInit(); inputInit(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));
     document.addEventListener('visibilitychange', () => { if (Audio2.ctx) { if (document.hidden) Audio2.ctx.suspend(); else if (game.playing) Audio2.ctx.resume(); } lastT = performance.now(); });
     $('barFill').style.width = '100%'; $('loadText').textContent = ''; $('bar').hidden = true; $('startRow').hidden = false;
@@ -196,6 +208,7 @@ function startGame(cont) {
   } catch (e) {
     console.error(e && e.stack || e);
     // shader and pipeline messages arrive a moment later; show them too so a screenshot of this screen says what failed
+    if (gfxFallback('start-up failed: ' + (e && e.message || e))) return;
     const show = () => { $('bar').hidden = true; $('loadText').textContent = 'Something went wrong while building the village: ' + (e && e.message || e) + (G.errors.length ? ' [' + G.errors.slice(0, 2).join(' | ').slice(0, 420) + ']' : ''); };
     show(); setTimeout(show, 900); setTimeout(() => { G.errors.push(String(e && e.stack || e)); }, 1000); window.__ready = true;
   }

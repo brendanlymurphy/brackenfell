@@ -15,21 +15,52 @@ const K = {
   grassCell: 0.30,
 };
 
+// Which graphics backend to start: WebGPU unless this device has already shown it cannot run it (remembered in localStorage),
+// or the address says otherwise (?webgl or ?webgpu).
+const GFX_KEY = 'brackenfell.gfx';
+function gfxChoice() {
+  const q = location.search;
+  if (/[?&]webgl\b/.test(q)) return 'webgl';
+  if (/[?&]webgpu\b/.test(q)) return 'webgpu';
+  if (TEST) return TEST.webgl ? 'webgl' : 'webgpu';
+  try { if (localStorage.getItem(GFX_KEY) === 'webgl') { G.gfxWhy = localStorage.getItem(GFX_KEY + '.why') || 'chosen earlier'; return 'webgl'; } } catch (e) { }
+  return 'webgpu';
+}
 async function gfxInit(canvas) {
-  const forceWebGL = !!(TEST && TEST.webgl) || /[?&]webgl\b/.test(location.search);
-  const r = new THREE.WebGPURenderer({ canvas, antialias: false, forceWebGL, powerPreference: 'high-performance', reversedDepthBuffer: true });
-  await r.init();
-  G.renderer = r; G.canvas = canvas;
+  const want = gfxChoice();
+  const make = async (cv, forceWebGL) => { const r = new THREE.WebGPURenderer({ canvas: cv, antialias: false, forceWebGL, powerPreference: 'high-performance', reversedDepthBuffer: true }); await r.init(); return r; };
+  let r;
+  try { r = await make(canvas, want === 'webgl'); }
+  catch (e) {
+    if (want === 'webgl') throw e;
+    // WebGPU would not start. A canvas that was asked for one kind of context cannot give another, so continue on a fresh one.
+    G.gfxWhy = 'WebGPU did not start: ' + String(e && e.message || e).slice(0, 160); console.warn(G.gfxWhy);
+    const c2 = canvas.cloneNode(false); canvas.parentNode.replaceChild(c2, canvas); canvas = c2;
+    r = await make(canvas, true);
+  }
+  G.renderer = r; G.canvas = canvas; G.t0 = performance.now();
   G.backend = r.backend.isWebGPUBackend ? 'WebGPU' : 'WebGL 2';
+  if (G.backend === 'WebGL 2' && want === 'webgpu' && !G.gfxWhy) G.gfxWhy = 'WebGPU is not available here';
   G.astc = !!r.hasFeature('texture-compression-astc') && !(TEST && TEST.noAstc);
   r.toneMapping = THREE.NoToneMapping;
   r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFShadowMap;
   r.setPixelRatio(1);
   r.onDeviceLost = info => { G.lost = true; if (typeof onDeviceLost === 'function') onDeviceLost(info); };
   const dev = r.backend.device;
-  if (dev && dev.addEventListener) dev.addEventListener('uncapturederror', e => { const msg = (e.error && e.error.message) || String(e.error); if (G.errors.length < 40) G.errors.push(msg); console.error('[gpu]', msg); });
+  if (dev && dev.addEventListener) dev.addEventListener('uncapturederror', e => { const msg = (e.error && e.error.message) || String(e.error); if (G.errors.length < 40) G.errors.push(msg); G.gpuErrors = (G.gpuErrors || 0) + 1; console.error('[gpu]', msg); });
   if (dev && dev.adapterInfo) G.gpuName = [dev.adapterInfo.vendor, dev.adapterInfo.architecture].filter(Boolean).join(' ');
 }
+// WebGPU went wrong on this device (errors while drawing, or the device was lost): remember that and start again on WebGL 2.
+// Returns false when there is nothing to fall back to.
+function gfxFallback(why) {
+  if (TEST || G.backend !== 'WebGPU' || /[?&]webgpu\b/.test(location.search) || G.fellBack) return false;
+  G.fellBack = true;
+  let stored = false;
+  try { localStorage.setItem(GFX_KEY, 'webgl'); localStorage.setItem(GFX_KEY + '.why', String(why).slice(0, 200)); stored = localStorage.getItem(GFX_KEY) === 'webgl'; } catch (e) { }
+  if (stored) location.reload(); else location.replace(location.pathname + '?webgl');
+  return true;
+}
+function gfxPrefer(kind) { try { if (kind === 'webgl') { localStorage.setItem(GFX_KEY, 'webgl'); localStorage.setItem(GFX_KEY + '.why', 'chosen in Settings'); } else { localStorage.removeItem(GFX_KEY); localStorage.removeItem(GFX_KEY + '.why'); } } catch (e) { } location.replace(location.pathname); }
 function gfxResize(w, h) {
   w = Math.max(16, w | 0); h = Math.max(16, h | 0);
   if (G.w === w && G.h === h) return;
