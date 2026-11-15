@@ -8112,7 +8112,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 19 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 20 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
@@ -8328,11 +8328,12 @@ const Snd = {
   busLevels() {
     const S = this, t = S.now(), u = S.set, m = S.G.talk ? 0.38 : 1;
     S.master.gain.setTargetAtTime(u.master * S.pausedMul * S.fadeIn, t, 0.15);
-    S.bus.amb.g.gain.setTargetAtTime(u.amb * S.trim.amb, t, 0.3);
-    S.bus.world.g.gain.setTargetAtTime(u.world * S.trim.world, t, 0.3);
+    const dk = 1 - 0.45 * (S.duck || 0);      // speech ducks the ambience and the world
+    S.bus.amb.g.gain.setTargetAtTime(u.amb * S.trim.amb * dk, t, 0.3);
+    S.bus.world.g.gain.setTargetAtTime(u.world * S.trim.world * dk, t, 0.3);
     S.bus.foot.g.gain.setTargetAtTime(u.foot * S.trim.foot, t, 0.3);
     S.bus.ui.g.gain.setTargetAtTime(u.ui * S.trim.ui, t, 0.3);
-    S.dbg.music = (u.musicOn ? u.music : 0) * S.trim.music * m; S.bus.music.g.gain.setTargetAtTime(S.dbg.music, t, S.G.talk ? 0.35 : 1.2);        // ducks under dialogue
+    S.dbg.music = (u.musicOn ? u.music : 0) * S.trim.music * m * (1 - 0.6 * (S.duck || 0)); S.bus.music.g.gain.setTargetAtTime(S.dbg.music, t, S.G.talk ? 0.35 : 1.2);        // ducks under dialogue
   },
 
   // ── voices: a hard limit on one-shots, with room kept for important ones ──
@@ -8461,6 +8462,9 @@ Snd.settingsUI = function () {
   row('Ambience', 'setAmb', 'amb'); row('World effects', 'setWorld', 'world'); row('Footsteps', 'setFoot', 'foot'); row('Voices and interface', 'setUi', 'ui');
   const l = document.createElement('label'); l.className = 'row check'; l.htmlFor = 'setMusicOn'; const s = document.createElement('span'); s.textContent = 'Music on'; const i = document.createElement('input'); i.type = 'checkbox'; i.id = 'setMusicOn'; i.checked = S.set.musicOn;
   i.addEventListener('change', e => { S.set.musicOn = e.target.checked; S.save(); if (S.ctx) S.busLevels(); }); l.appendChild(s); l.appendChild(i); after.after(l);
+  const l2 = document.createElement('label'); l2.className = 'row check'; l2.htmlFor = 'setVoices'; const s2 = document.createElement('span'); s2.textContent = 'Spoken voices'; const i2 = document.createElement('input'); i2.type = 'checkbox'; i2.id = 'setVoices'; i2.checked = S.set.voices; i2.addEventListener('change', e => { S.set.voices = e.target.checked; S.save(); if (!S.set.voices && S.vox) S.vox.stop(); }); l2.appendChild(s2); l2.appendChild(i2); l.after(l2);
+  const l3 = document.createElement('label'); l3.className = 'row'; l3.htmlFor = 'setVoiceVol'; const s3 = document.createElement('span'); s3.textContent = 'Voice volume'; const i3 = document.createElement('input'); i3.type = 'range'; i3.min = 0; i3.max = 1; i3.step = 0.05; i3.id = 'setVoiceVol'; i3.value = S.set.voiceVol; i3.addEventListener('input', e => { S.set.voiceVol = +e.target.value; S.save(); }); l3.appendChild(s3); l3.appendChild(i3); l2.after(l3);
+  const l4 = document.createElement('label'); l4.className = 'row check'; l4.htmlFor = 'setSubs'; const s4 = document.createElement('span'); s4.textContent = 'Subtitles while voiced'; const i4 = document.createElement('input'); i4.type = 'checkbox'; i4.id = 'setSubs'; i4.checked = S.set.subs; i4.addEventListener('change', e => { S.set.subs = e.target.checked; S.save(); document.body.classList.toggle('nosubs', !S.set.subs); }); l4.appendChild(s4); l4.appendChild(i4); l3.after(l4);
   // the two older sliders write Audio2.vol / Audio2.musicVol: keep them in step with this block
 };
 Snd.ups.push(S => { if (!S.uiDone && (S.frame & 31) === 1) S.settingsUI(); });
@@ -9005,6 +9009,76 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
   // remember what was last picked up, so the older pickup() call can choose a material
   const MAT = { gold: 'coin', apple: 'food', bread: 'food', ale: 'wood', rope: 'cloth', hammer: 'metal', knife: 'metal', tools: 'metal', frostcap: 'herb', malt: 'cloth', potion: 'generic', tonic: 'generic' };
   K.ups.push(function (K) { if (!K.givePatched && typeof give === 'function') { K.givePatched = true; try { const g0 = give; give = function (id, n) { K.lastMat = MAT[id] || (typeof ITEMS !== 'undefined' && ITEMS[id] && ITEMS[id][2] && ITEMS[id][2].slot ? 'metal' : 'generic'); return g0.apply(this, arguments); }; } catch (e) { } } });
+})();
+
+
+// ---- 88d_voice.js ----
+// ───────────────────────── spoken dialogue and barks ─────────────────────────
+// Lines are generated at build time (tools/voice, Kokoro-82M) into audio/voice/*.m4a with a manifest keyed by a hash of speaker + on-screen text.
+// When a dialogue node is shown the line is fetched (the speaker's other lines are prefetched), decoded and played from the speaker's position on the
+// voice bus, ducking ambience and music. Subtitles stay, as a slim strip (body.voiced). Choices wait for the line to end or a tap, which skips it.
+// If the manifest, the file or the audio context is missing, nothing changes: the text box behaves exactly as before.
+// showNode / endTalk (85_ui.js) are wrapped here rather than edited; barks read NPC positions and Combat.swingN.
+(() => {
+  const K = Snd, V = K.vox = { man: null, loading: false, failed: false, buf: new Map(), pend: new Map(), cur: null, wait: false, lastBark: -99, perNpc: new Map(), swing: 0, key: null, wrapped: false, req: [], waitT: 0 };
+  const cyrb53 = (str, seed = 0) => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (let i = 0; i < str.length; i++) { const ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); };
+  V.keyOf = (speaker, text) => cyrb53(speaker + '\n' + text);
+  const BASE = 'audio/voice/';
+  K.set.voices = true; K.set.voiceVol = 0.9; K.set.subs = true; K.load();
+  // the slim subtitle strip and the waiting state (styles are injected here so the interface files stay untouched)
+  if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = '/* [voice] subtitle strip while a line is spoken */\nbody.voiced #dialog { padding: 8px 14px 10px; }\nbody.voiced #dname { font-size: 14px; }\nbody.voiced #dtext { font-size: 15px; line-height: 1.32; margin: 2px 0 8px; min-height: 0; max-height: 2.7em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\nbody.voiced.nosubs #dtext { visibility: hidden; }\n#dopts.vwait { visibility: hidden; }\nbody.voiced #dopts button { min-height: 40px; padding: 6px 12px; font-size: 15px; }'; document.head.appendChild(st); }
+
+  V.init = function () { if (V.loading || V.man || V.failed) return; V.loading = true;
+    fetch(BASE + 'manifest.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { V.man = j; V.loading = false; }).catch(() => { V.failed = true; V.loading = false; }); };
+  const decode = (c, ab) => new Promise((res, rej) => { try { const p = c.decodeAudioData(ab, res, rej); if (p && p.catch) p.catch(rej); } catch (e) { rej(e); } });
+  // fetch and decode one file once; resolves to an AudioBuffer or null
+  V.load = function (file) { if (V.buf.has(file)) return Promise.resolve(V.buf.get(file)); if (V.pend.has(file)) return V.pend.get(file); const c = K.ctx; if (!c) return Promise.resolve(null);
+    const p = fetch(BASE + file).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status)).then(ab => decode(c, ab)).then(b => { V.buf.set(file, b); V.pend.delete(file); return b; }).catch(() => { V.pend.delete(file); return null; }); V.pend.set(file, p); return p; };
+  V.prefetch = function (speaker) { if (!V.man) return; const m = V.man.lines; let n = 0; for (const k in m) if (m[k].s === speaker && !V.buf.has(m[k].f) && !V.pend.has(m[k].f) && n++ < 16) setTimeout(() => V.load(m[k].f), 80 * n); };
+  V.stop = function (quiet) { const cu = V.cur; V.cur = null; if (cu) { try { cu.g.gain.setTargetAtTime(0, K.now(), 0.03); cu.src.stop(K.now() + 0.15); } catch (e) { } } V.reveal(); V.key = null; };
+  V.reveal = function () { V.wait = false; if (typeof document === 'undefined') return; const b = document.getElementById('dopts'); if (b) b.classList.remove('vwait'); };
+  // play a decoded buffer from a position (or at the listener) on the voice bus; returns the handle
+  V.play = function (buf, speaker, pos, vol, o) {
+    const c = K.ctx; if (!c || K.off) return null; const G = K.G; let dest = K.bus.ui.in, g = c.createGain(), src = c.createBufferSource(); src.buffer = buf; g.gain.value = vol * K.set.voiceVol * (o && o.trim || 1);
+    if (pos) { const node = K.route(o && o.bus || 'ui', pos[0], pos[1], pos[2], o && o.zone !== undefined ? o.zone : G.zone, o && o.ref || 3, o && o.max || 40, 1); if (!node) return null; g.connect(node); } else g.connect(dest);
+    src.connect(g); src.start(K.now() + 0.02); const h = { src, g, t0: K.now(), dur: buf.duration, speaker }; src.onended = () => { if (V.cur === h) { V.cur = null; V.reveal(); } }; return h; };
+  // a dialogue node was shown: returns true if the line is voiced. The speaker is an NPC object or id.
+  K.say = function (npc, text) {
+    V.stop(); if (!K.set.voices || !K.ctx || K.off || !npc || !V.man) return false; const id = npc.id || npc, e = V.man.lines[V.keyOf(id, text)]; if (!e) { document.body.classList.remove('voiced'); return false; }
+    const key = V.key = V.keyOf(id, text); V.wait = true; const box = document.getElementById('dopts'); if (box) box.classList.add('vwait'); document.body.classList.add('voiced'); document.body.classList.toggle('nosubs', !K.set.subs); V.waitT = K.now();
+    const pos = npc.pos ? [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]] : null;
+    V.load(e.f).then(buf => { if (V.key !== key) return; if (!buf) { V.reveal(); document.body.classList.remove('voiced'); return; }
+      if (K.ctx.state !== 'running') { V.reveal(); return; }
+      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40 }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; V.lastPlayed = { speaker: id, file: e.f, text }; });
+    // do not hold the choices hostage to a slow download
+    setTimeout(() => { if (V.key === key && !V.cur) { V.reveal(); } }, 2500);
+    return true; };
+  K.voiceBusy = () => !!V.cur || V.wait;
+  // the interface: tapping the dialogue skips the line (and does not pick an option); wrapped here so 85_ui.js stays untouched
+  function wrap() {
+    if (V.wrapped || typeof showNode !== 'function' || typeof endTalk !== 'function') return; V.wrapped = true;
+    const sn = showNode, et = endTalk;
+    showNode = function (n) { sn(n); try { if (n && UI.talk) { K.say(UI.talk, n.t); V.prefetch(UI.talk.id); } } catch (e) { } };
+    endTalk = function () { try { V.stop(); document.body.classList.remove('voiced'); } catch (e) { } return et.apply(this, arguments); };
+    const d = document.getElementById('dialog'); if (d) d.addEventListener('click', e => { if (V.wait || V.cur) { V.stop(); e.stopPropagation(); e.preventDefault(); } }, true);
+    addEventListener('keydown', e => { if ((V.wait || V.cur) && typeof UI !== 'undefined' && UI.talk && (e.code === 'Space' || e.code === 'Enter' || /^Digit\d$/.test(e.code))) { V.stop(); e.stopPropagation(); e.preventDefault(); } }, true);
+  }
+  // ── barks: a greeting by time of day for an idle villager close by, a protest when a sword is swung near them ──
+  const cat = h => h >= 5 && h < 11 ? 'morning' : h >= 11 && h < 17 ? 'day' : h >= 17 && h < 21 ? 'evening' : 'night';
+  V.bark = function (npc, c) { if (!V.man || !K.set.voices || !K.ctx) return false; const arr = V.man.barks && V.man.barks[npc.id] && V.man.barks[npc.id][c]; if (!arr || !arr.length) return false; const key = arr[Math.floor(Math.random() * arr.length)], e = V.man.lines[key]; if (!e) return false;
+    V.lastBark = K.T; V.perNpc.set(npc, K.T);
+    V.load(e.f).then(buf => { if (!buf || V.cur || K.ctx.state !== 'running') return; const h = V.play(buf, npc.id, [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]], 0.55, { ref: 2, max: 14, bus: 'world', zone: K.zoneOf(npc.pos[0], npc.pos[1], npc.pos[2]) }); if (h) { V.barkH = h; V.lastPlayed = { speaker: npc.id, file: e.f, bark: c }; } }); return true; };
+  K.ups.push(function (K, dt, G) {
+    if (!G.playing && !K.ctx) return; if (!V.man && !V.failed && !V.loading && K.T > 1) V.init(); if (!V.wrapped && typeof game !== 'undefined' && game.ready) wrap();
+    // ducking: ambience and music dip while anyone is speaking
+    const tgt = V.cur ? (V.cur.speaker && V.barkH === V.cur ? 0.25 : 1) : 0; K.duck = (K.duck || 0) + (tgt - (K.duck || 0)) * Math.min(1, dt * (tgt > (K.duck || 0) ? 6 : 1.5));
+    if (V.barkH && V.barkH.src && K.now() > V.barkH.t0 + V.barkH.dur + 0.2) V.barkH = null;
+    if (!G.playing || G.talk || G.menu || !K.set.voices || typeof NPCS === 'undefined' || (K.frame & 15) !== 0) return;
+    // a swung sword near a villager
+    if (typeof Combat !== 'undefined' && Combat.swingN !== V.swing) { V.swing = Combat.swingN; for (const n of NPCS) { if (n.anim === 'lie' || n.talking || Math.hypot(n.pos[0] - G.x, n.pos[2] - G.z) > 9) continue; if (K.T - (V.perNpc.get(n) || -99) < 25) continue; V.bark(n, 'weapon'); break; } return; }
+    if (K.T - V.lastBark < 22 || V.cur) return;
+    for (const n of NPCS) { const d = Math.hypot(n.pos[0] - G.x, n.pos[2] - G.z); if (d > 4.5 || d < 0.8 || n.anim === 'lie' || n.anim === 'sit' && G.night > 0.5 || n.talking) continue; if (K.T - (V.perNpc.get(n) || -99) < 150) continue; if (Math.random() < 0.5) { V.perNpc.set(n, K.T - 100); continue; } V.bark(n, cat(G.hour)); break; }
+  });
 })();
 
 
