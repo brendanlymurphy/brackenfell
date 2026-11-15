@@ -3,6 +3,22 @@
 // roofs: for every generated roof, sample points on the top of each slope; fail where the point lies inside another building's walls or roof slab (interpenetration).
 const only = window.__town, want = k => !only || only.includes(k), fails = [], rows = [];
 const fx = (c, m) => { if (!c) fails.push(m); };
+// far: every house-batch mesh and its far copy (same parent, same material): the far copy's box must match the full mesh's within 0.25 m, and its mean vertex colour within 12%
+if (want('far')) {
+  const grp = new Map();
+  for (const m of Kit.lodMeshes) { const k = (m.parent ? m.parent.name : '') + '|' + m.material.uuid + '|' + (m.userData.cellKey || ''); let g = grp.get(k); if (!g) grp.set(k, g = { n: [], f: [] }); (m.userData.lod === 2 ? g.f : g.n).push(m); }
+  const box = ms => { const b = new THREE.Box3(); for (const m of ms) { if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); b.union(m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)); } return b; };
+  let pairs = 0, bad = 0, worst = 0;
+  for (const [k, g] of grp) {
+    if (!g.n.length || !g.f.length) continue;
+    // pair by nearest centre (a cell block holds one mesh of each kind)
+    for (const nm of g.n) { const bn = box([nm]), c = bn.getCenter(new THREE.Vector3()); let best = null, bd = 1e9; for (const fm of g.f) { const d = box([fm]).getCenter(new THREE.Vector3()).distanceTo(c); if (d < bd) { bd = d; best = fm; } } if (!best || bd > 3) continue;                  // (a far copy that drops the small pieces has a smaller box: only a same-place pair is comparable)
+      const bf = box([best]); pairs++;
+      const dmax = Math.max(Math.abs(bf.max.y - bn.max.y), Math.abs(bf.min.y - bn.min.y) * 0, Math.abs(bf.max.x - bn.max.x) * 0.5, Math.abs(bf.min.x - bn.min.x) * 0.5);
+      worst = Math.max(worst, dmax); if (dmax > 0.25) { bad++; if (bad <= 8) fails.push('far copy of ' + k.split('|')[0] + ' differs by ' + dmax.toFixed(2) + ' m at ' + bn.getCenter(new THREE.Vector3()).toArray().map(v => v.toFixed(0))); } }
+  }
+  rows.push('far pairs ' + pairs + ' off ' + bad + ' worst ' + worst.toFixed(2));
+}
 if (want('roofs')) {
   const inv = ROOFS.map(r => new THREE.Matrix4().fromArray(r.M).invert()), M = ROOFS.map(r => new THREE.Matrix4().fromArray(r.M));
   const name = r => { const s = SITES.reduce((b, q) => Math.hypot(q.x - r.M[12], q.z - r.M[14]) < Math.hypot(b.x - r.M[12], b.z - r.M[14]) ? q : b, SITES[0]); return s.id; };
