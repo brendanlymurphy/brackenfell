@@ -12,3 +12,5 @@ grep -v '^#' tools/scan/trees.txt | while read name pid sel kn kf gain size; do
   node tools/scan/trees.mjs $B "$CACHE" "$name" 2>&1 | grep -v '^prune\|^dedup'
   rm -f $B/"$name"/pos_*.bin $B/"$name"/uv.bin $B/"$name"/idx.bin $B/"$name"/shade.bin
 done
+# then pack what the game loads (kits/trees.glb, trees_far.webp, TREES.json): see kits/TREES_PROVENANCE.md
+# TREE_ATLAS=2048 node tools/scan/tree_pack.mjs "$CACHE" kits fir_b fir_c pine_c broadleaf_small

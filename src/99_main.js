@@ -212,7 +212,7 @@ async function warmShaders() {
     await load('Raising the Greyspine', 0.1); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
     await load('Framing timber, laying thatch', 0.25); buildVillage(); lap('village');
     await load('Waking the villagers', 0.5); buildNPCs(); festivalSpots(); lap('npcs');
-    await load('Planting pine and birch', 0.62); buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
+    await load('Planting pine and birch', 0.62); if (typeof Trees !== 'undefined') await Trees.load(); /* fork-look: scanned trees (74b_trees.js) */ buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
     World.villagePack.upload('village'); World.skinPack.upload('skin');
     buildSplat2(); colBuild(); navBuild(); fxInit(); lap('nav');
     await load('Lighting the lanterns', 0.74);

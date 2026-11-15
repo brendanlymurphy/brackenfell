@@ -600,7 +600,7 @@ class MeshPack {
 // ───────────────────────── shared shading: frame uniforms and TSL helpers every material uses ─────────────────────────
 // SH.init() must run after the textures in G exist. Other files take what they need from SH and from TSL inside their own closure,
 // because TSL names such as clamp, mix or length would collide with the game's own maths helpers at the top level.
-const SH = { U: null };
+const SH = { U: null, LAMP_PEAK: 1.6 };
 SH.init = function () {
   const { Fn, If, Loop, float, int, vec2, vec3, step, uniform, uniformArray, texture, positionWorld, mix, smoothstep, clamp, max, pow, exp, abs, dot, normalize, length, sqrt, select, dFdx, dFdy } = TSL;
   const V3 = () => new THREE.Vector3(), V4 = () => new THREE.Vector4();
@@ -612,7 +612,7 @@ SH.init = function () {
     fogCol: uniform(V3()), fogDens: uniform(0.001), fogSun: uniform(V3()), fogFall: uniform(0.011),
     zenith: uniform(V3()), horizon: uniform(V3()), stars: uniform(0), aurora: uniform(0),
     moonDir: uniform(new THREE.Vector3(0, 1, 0)), moonBright: uniform(0), sunDisc: uniform(new THREE.Vector3(0, 1, 0)), sunDiscI: uniform(0),
-    wind: uniform(V4()),                                      // dir.x, dir.z, strength, time
+    wind: uniform(V4()), windOff: uniform(new THREE.Vector2()),     // wind: dir.x, dir.z, strength, time. windOff: how far (m) the air has travelled, which carries the gust pattern
     cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0),
     lightPos: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // xyz, radius
     lightCol: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // rgb, zone (255 = everywhere)
@@ -629,7 +629,7 @@ SH.init = function () {
     return mix(c, U.fogCol, smoothstep(-0.10, 0.03, dir.y).oneMinus());
   });
   SH.cloudDensity = Fn(([p]) => {
-    const t = U.time, uvc = p.mul(0.00022).add(vec2(t.mul(0.0030), t.mul(0.0011)));
+    const t = U.time, uvc = p.mul(0.00022).sub(vec2(t.mul(0.0026), t.mul(0.0019)));      // clouds travel the way the wind blows (they used to drift against it)
     const d = noiseL(uvc).r.mul(0.64).add(noiseL(uvc.mul(3.1).add(vec2(t.mul(0.002), 0))).g.mul(0.36));
     return smoothstep(float(0.86).sub(U.cloud.mul(0.62)), float(1.10).sub(U.cloud.mul(0.62)), d);
   });
@@ -640,19 +640,38 @@ SH.init = function () {
     return mix(h, room, step(0.5, zone));      // arithmetic, not select(): select() with these branches makes Three r187 emit a redeclared variable
   });
   // the eight nearest point lights (hearths, lanterns). A light only reaches surfaces of its own zone, so it cannot leak through walls.
-  SH.pointLights = Fn(([wp, N, zone, wrap]) => {
+  // A light stored with a negative radius is a street lantern whose pool on the ground is already in the lamp map (43b_lamps.js):
+  // the terrain skips those (SH.pointLightsGround), everything else lights from them as usual.
+  const pointFn = ground => Fn(([wp, N, zone, wrap]) => {
     const acc = vec3(0).toVar();
     const nEnd = select(zone.lessThan(0.5), U.lightNOut, U.lightN);      // an outdoor surface only loops over the outdoor lights; none near: no iterations
     Loop({ start: int(0), end: nEnd, type: 'int', condition: '<' }, ({ i }) => {
       const lc = U.lightCol.element(i), lp = U.lightPos.element(i);
       const d = lp.xyz.sub(wp), d2 = dot(d, d), r2 = lp.w.mul(lp.w);
-      If(abs(lc.w.sub(zone)).lessThan(0.5).or(lc.w.greaterThan(254.5)).and(d2.lessThan(r2)), () => {
+      let ok = abs(lc.w.sub(zone)).lessThan(0.5).or(lc.w.greaterThan(254.5)).and(d2.lessThan(r2)); if (ground) ok = ok.and(lp.w.greaterThan(0));
+      If(ok, () => {
         const f = float(1).sub(d2.div(r2)), att = f.mul(f).div(d2.mul(0.55).add(1));
         const ndl = dot(N, d).mul(max(d2, 1e-4).inverseSqrt()).add(wrap).div(float(1).add(wrap));
         acc.addAssign(lc.rgb.mul(att.mul(max(ndl, 0))));
       });
     });
     return acc;
+  });
+  SH.pointLights = pointFn(false); SH.pointLightsGround = pointFn(true);
+  // warm light lying on the ground under every street lantern, from the baked lamp map (one sample; lit with the windows at dusk)
+  SH.lampPool = Fn(([wp]) => { if (!G.lampTex) Lamps.init(); const t = texture(G.lampTex, wp.xz.div(2 * K.terrainHalf).add(0.5)).r; return vec3(1.0, 0.56, 0.22).mul(t.mul(t).mul(SH.LAMP_PEAK).mul(U.windowGlow)); });
+  // A window pane lit from inside, as seen from the street: small leaded diamonds, each a little different, the room behind unevenly
+  // bright. Values are chosen for the night exposure so the glass stays amber instead of clipping to white. h: a random number per window.
+  SH.paneLit = Fn(([wp, N, h]) => {
+    const hc = wp.x.mul(abs(N.z)).add(wp.z.mul(abs(N.x))), q = vec2(hc, wp.y).mul(5.2);
+    const a = q.x.add(q.y), b = q.x.sub(q.y), lat = TSL.min(abs(TSL.fract(a).sub(0.5)), abs(TSL.fract(b).sub(0.5)));
+    const lead = smoothstep(0.035, 0.10, lat);
+    const id = TSL.floor(vec2(a.add(0.5), b.add(0.5))), hv = TSL.fract(TSL.sin(dot(id, vec2(127.1, 311.7))).mul(43758.5453));
+    const room = texture(G.noiseTex, vec2(hc.mul(0.11), wp.y.mul(0.13))).r;                     // furniture, curtains and people between the fire and the glass
+    const flick = TSL.sin(U.time.mul(6.0).add(h.mul(40))).mul(0.04).add(0.96);
+    const on = smoothstep(0.26, 0.34, h);                                                       // a quarter of the windows are dark
+    const warm = mix(vec3(1.0, 0.50, 0.16), vec3(1.0, 0.66, 0.30), hv);
+    return warm.mul(lead.mul(0.92).add(0.08)).mul(hv.mul(0.35).add(0.65)).mul(smoothstep(0.15, 0.75, room).mul(0.75).add(0.35)).mul(h.mul(0.5).add(0.55)).mul(flick).mul(on).mul(U.windowGlow).mul(0.52);
   });
   // tangent frame from screen derivatives, then a tangent-space normal (xy in 0..1) applied to the world normal N
   SH.perturb = Fn(([N, wp, uvn, nxy, strength]) => {
@@ -675,6 +694,35 @@ SH.init = function () {
     const s = pow(max(dot(normalize(positionWorld.sub(U.camPos)), U.sunDisc), 0), 6);
     return mix(U.fogCol, U.fogCol.add(U.fogSun.mul(0.6)), s);
   });
+  // ── one wind ──
+  // U.wind = direction x, direction z, strength, time. Gusts are a slow noise pattern that travels downwind across the valley; everything
+  // that moves reads the gust at its own place, so a gust is seen to arrive: first the far trees, then the grass, then the washing.
+  // (On the CPU the same field is Wind.gust(x, z), see 50_env.js.)
+  SH.gust = Fn(([xz]) => noiseL(xz.sub(U.windOff).mul(0.013)).r.sub(0.42));          // about -0.4 (lull) .. 0.6 (gust)
+  SH.gustK = Fn(([xz]) => U.wind.z.mul(max(SH.gust(xz).mul(1.7).add(0.7), 0.12)));      // wind speed felt at a place (Wind.feel on the CPU)
+  // Things that hang (kit batches, see SH.hangOf in 50_env.js): kg.z = 1 - how freely the vertex moves, kg.w = 1 for cloth, else the
+  // compass direction a board on chains can swing in. Cloth billows downwind and flutters; a sign swings across its own face.
+  SH.hangSway = () => Fn(() => {
+    const kg = TSL.attribute('kg', 'vec4'), w = kg.z.oneMinus(), p = TSL.positionLocal.toVar();
+    If(w.greaterThan(0.012), () => {
+      const k = SH.gustK(p.xz), t = U.wind.w, free = step(0.995, kg.w), ang = kg.w.mul(255 / 254 * 6.2831853), axis = vec2(TSL.cos(ang), TSL.sin(ang));
+      const swing = dot(U.wind.xy, axis).mul(k).mul(0.085).add(TSL.sin(t.mul(2.7).add(p.x.mul(0.11)).add(p.z.mul(0.09))).mul(k).mul(0.05));
+      const fl = TSL.sin(t.mul(5.3).add(p.x.mul(3.1)).add(p.z.mul(2.7)).add(p.y.mul(4.0))).mul(0.6).add(TSL.sin(t.mul(8.1).add(p.x.mul(5.3)).sub(p.y.mul(6.0))).mul(0.4));
+      const cloth = U.wind.xy.mul(k.mul(0.15).add(fl.mul(k).mul(0.055)).mul(w.mul(w.mul(0.5).add(0.5))));
+      const off = mix(axis.mul(swing.mul(w)), cloth, free);
+      p.addAssign(vec3(off.x, mix(swing.mul(swing).mul(w).mul(0.5), k.mul(0.045).mul(w), free), off.y));
+    });
+    return p;
+  })();
+  // how far a point on a tree is pushed: root = the foot of the tree (world), p = the point relative to the foot, ww = how freely it moves, ph = the tree's own phase
+  SH.sway = Fn(([root, p, ww, ph]) => {
+    const g = SH.gust(root.xz), wt = U.wind.w, k = U.wind.z.mul(max(g.mul(1.7).add(0.7), 0.12)), y2 = p.y.mul(p.y);
+    const lean = y2.mul(0.0008).mul(k).add(TSL.sin(wt.mul(0.9).add(ph)).mul(y2).mul(0.00032).mul(k));                       // the whole stem bends downwind and rocks slowly
+    const flut = TSL.sin(wt.mul(2.3).add(ph.mul(1.7)).add(p.x.mul(1.3)).add(p.y.mul(0.9))).mul(0.6).add(TSL.sin(wt.mul(3.7).add(ph).add(p.z.mul(1.9))).mul(0.4)).mul(ww).mul(0.055).mul(k);
+    const along = lean.add(flut);
+    return vec3(U.wind.x.mul(along), flut.mul(0.45), U.wind.y.mul(along));
+  });
+  if (typeof Lamps !== 'undefined' && !G.lampTex) Lamps.init();
   SH.groundTint = (mn, mn2) => mix(vec3(0.80, 0.90, 0.70), vec3(1.16, 1.06, 0.80), mn.r).mul(mn2.a.mul(0.28).add(0.86));
 };
 // copies ENV (see 50_env.js) and the camera into the frame uniforms
@@ -685,7 +733,7 @@ SH.update = function (env, camPos, time) {
   s3(U.fogCol, env.fogCol); U.fogDens.value = env.fogDensity; s3(U.fogSun, env.fogSun);
   s3(U.zenith, env.zenith); s3(U.horizon, env.horizon); U.stars.value = env.stars; U.aurora.value = env.aurora;
   s3(U.moonDir, env.moonDir); U.moonBright.value = env.moonBright; s3(U.sunDisc, env.sunDir); U.sunDiscI.value = env.sunDisc;
-  U.wind.value.set(env.windDir[0], env.windDir[1], env.windStrength, time);
+  U.wind.value.set(env.windDir[0], env.windDir[1], env.windStrength, time); U.windOff.value.set(Wind.off[0], Wind.off[1]);
   U.cloud.value = env.cloud; U.windowGlow.value = env.windowGlow; U.lakeY.value = World.lakeY || 0; U.indoor.value = World.indoor || 0;
 };
 
@@ -785,11 +833,8 @@ function instNodes(noLod) {
     // vertex lod 3 marks the one boulder shape: every instance squashes it by its own random amounts (iprm.y, iprm.z), so one mesh gives many shapes
     const sq = TSL.mix(vec3(1, 1, 1), vec3(iprm.y.mul(0.55).add(0.8), iprm.z.mul(0.4).add(0.8), float(1.3).sub(iprm.y.mul(0.55))), TSL.step(2.5, lod)), lp = positionLocal.mul(ipos.w).mul(sq);
     const p = vec3(lp.x.mul(c).add(lp.z.mul(s)), lp.y, lp.x.negate().mul(s).add(lp.z.mul(c)));
-    const wt = U.wind.w, ph = iprm.z.mul(40);
-    const sway = sin(wt.mul(1.1).add(ph).add(p.y.mul(0.2))).mul(0.6).add(sin(wt.mul(2.3).add(ph.mul(1.7)).add(lp.x.mul(1.3))).mul(0.4));
-    const lean = p.y.mul(p.y).mul(0.0004).mul(sin(wt.mul(0.7).add(ph)).add(0.5));
-    const off = sway.mul(ww).mul(0.10).add(lean).mul(U.wind.z);
-    const w = vec3(p.x.add(U.wind.x.mul(off)), p.y.add(sin(wt.mul(2.9).add(ph).add(lp.x.mul(2.1)).add(lp.z.mul(1.7))).mul(ww).mul(0.03).mul(U.wind.z)), p.z.add(U.wind.y.mul(off))).add(ipos.xyz);
+    // the same sway as the scanned trees (SH.sway): the stem leans with the gust passing over it, leaves flutter on top
+    const w = p.add(SH.sway(ipos.xyz, p, ww, iprm.z.mul(40))).add(ipos.xyz);
     // full trees near the player, flat stand-ins beyond; measured from the player even while a shadow map is drawn
     const d = distance(ipos.xyz, U.camPos);
     const far = TSL.step(U.treeLod, d), is1 = TSL.step(TSL.abs(lod.sub(1)), 0.5), is2 = TSL.step(TSL.abs(lod.sub(2)), 0.5);
@@ -924,7 +969,7 @@ function terrainMaterial() {
     const sky = SH.skyBase(vec3(Rf.x, abs(Rf.y).add(0.02), Rf.z));
     const albedo = G0.c.mul(contact).mul(k.oneMinus()).toVar();
     pN.assign(N); pRough.assign(mix(G0.r, 0.6, wSnow));
-    pEmis.assign(albedo.mul(SH.hemi(N, ao, float(0)).add(SH.pointLights(wp, N, float(0), float(0.25)).mul(mix(float(0.6), 1.0, ao)))).add(sky.mul(k).mul(contact)));
+    pEmis.assign(albedo.mul(SH.hemi(N, ao, float(0)).add(SH.pointLightsGround(wp, N, float(0), float(0.25)).add(SH.lampPool(wp).mul(inside)).mul(mix(float(0.6), 1.0, ao)))).add(sky.mul(k).mul(contact)));
     return vec4(albedo, 1);
   })();
   m.normalNode = transformNormalToView(pN); m.roughnessNode = pRough; m.metalnessNode = float(0); m.emissiveNode = pEmis;
@@ -1027,6 +1072,7 @@ function sceneBuild() {
       scene.add(mesh); SC.rigid.push({ mesh, obj, o: obj.slot * 256 + p.bone * 16 });
     }
   }
+  if (typeof Trees !== 'undefined') Trees.build(scene);       // scanned trees (74b_trees.js)
   return scene;
 }
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
@@ -1053,6 +1099,7 @@ function sceneUpdate(camPos, q) {
     s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }
   if (Grass.mesh) Grass.mesh.visible = !inside && !cur;
+  if (typeof Trees !== 'undefined') Trees.update(e, q, !!cur);
   for (const r of SC.rigid) {
     const o = r.obj;
     if (cur ? o.cell !== cur.id : o.cell) { r.mesh.visible = false; continue; }
@@ -1117,6 +1164,7 @@ async function setQuality(name) {
   if (!prev || prev.shadowRes !== q.shadowRes) for (const l of R.shadows.lights) { l.shadow.mapSize.set(q.shadowRes, q.shadowRes); if (l.shadow.map) { l.shadow.map.dispose(); l.shadow.map = null; } }
   U.terrLayers.value = q.terrLayers === false ? 0 : 1; U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
   { const lf = SC.mats.leaf, a2c = q.msaa > 1; if (lf.alphaToCoverage !== a2c) { lf.alphaToCoverage = a2c; lf.alphaTest = a2c ? 0.06 : 0.5; lf.needsUpdate = true; } }
+  if (typeof Trees !== 'undefined') Trees.quality(q);
   if (!prev || prev.grassRange !== q.grassRange || prev.grassThin !== q.grassThin) { if (prev) Grass.dispose(); Grass.build(SC.scene, q); }
   if (!prev || prev.msaa !== q.msaa || prev.bloom !== q.bloom || prev.bloomScale !== q.bloomScale || prev.bloomMips !== q.bloomMips) buildPipeline();
   R.P = true; R.camKey = '';
@@ -1198,7 +1246,7 @@ function pickLights(camPos, camZone, env) {
     const reach = l.r + 34; if (d2 > reach * reach) continue;
     let score = inten * l.r / (d2 + 4);
     if (l.zone !== 0 && (dy > 2.4 || dy < -1.9)) score *= 0.02;      // a light on another storey (a cellar torch under the floor, a loft candle) lights nothing the camera sees: it must not take one of the few slots
-    if (l.zone === camZone) score *= 6; else if (l.zone !== 0 && camZone === 0) score *= 0.5; else if (l.zone !== 0) score *= 0.05;
+    if (l.zone === camZone) score *= 6; else if (l.zone !== 0 && camZone === 0) score *= 0.04; else if (l.zone !== 0) score *= 0.05;      // out in the street the lamps come first: a hearth behind a wall lights nothing out here but used to take a slot
     cand.push([score, l, inten * (1 - smooth(l.r + 20, l.r + 34, Math.sqrt(d2)))]);
   }
   cand.sort((a, b) => b[0] - a[0]);
@@ -1208,7 +1256,7 @@ function pickLights(camPos, camZone, env) {
   for (let i = 0; i < 8; i++) {
     if (i >= n) { P[i].set(0, -9999, 0, 0); C[i].set(0, 0, 0, 0); continue; }
     const l = sorted[i][0], k = sorted[i][1];
-    P[i].set(l.p[0], l.p[1], l.p[2], l.r); C[i].set(l.c[0] * k, l.c[1] * k, l.c[2] * k, l.zone);
+    P[i].set(l.p[0], l.p[1], l.p[2], l.baked ? -l.r : l.r); C[i].set(l.c[0] * k, l.c[1] * k, l.c[2] * k, l.zone);
   }
   U.lightN.value = n; U.lightNOut.value = outdoor.length;
   return n;
@@ -1225,7 +1273,7 @@ function renderFrame(time, env) {
   c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, cam.roll || 0);   /* [ui] roll from 87_feel.js */ c3.updateMatrixWorld();
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
-  SH.update(env, e, time);
+  SH.update(env, e, time); Lamps.sync();
   pickLights(e, World.camZone | 0, env);
   const L = env.keyDir, sun = R.sun;
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
@@ -1254,6 +1302,55 @@ function renderFrame(time, env) {
   if (off) r.setRenderTarget(null);
   R.stats.draws = R.stats.n; R.stats.tris = Math.round(R.stats.t);
 }
+
+
+// ---- 43b_lamps.js ----
+// ───────────────────────── lamp map: the pool of light each street lantern throws on the ground ─────────────────────────
+// Only the few nearest lights are real point lights (R.q.lights). Every lantern still needs its pool, near or far, so the ground
+// term of all outdoor lanterns is baked once into one small texture over the terrain square (the same mapping as the splat maps) and
+// the terrain reads it with a single sample. Houses block it: a lantern does not light the lane behind its own building.
+// Lights baked here are flagged (l.baked) so the terrain does not also add them as real lights.
+const Lamps = { N: 640, count: -1, tex: null };
+Lamps.init = function () {
+  const N = Lamps.N, d = Lamps.data = new Uint8Array(N * N);
+  const t = Lamps.tex = new THREE.DataTexture(d, N, N, THREE.RedFormat, THREE.UnsignedByteType);
+  t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true;
+  G.lampTex = t;
+};
+// called every frame; rebakes only when lanterns were added (places outside the village attach theirs after the first build)
+Lamps.sync = function () {
+  if (!Lamps.tex || World.emitters.length === Lamps.count) return;
+  Lamps.count = World.emitters.length;
+  const N = Lamps.N, TH = K.terrainHalf, cell = 2 * TH / N, acc = new Float32Array(N * N), R_ = 9, H = 2.2;
+  const lamps = World.emitters.filter(e => e.type === 'lantern' && !e.zone && Math.abs(e.p[0]) < TH - R_ && Math.abs(e.p[2]) < TH - R_);
+  const houses = SITES.concat(typeof INF !== 'undefined' ? INF.houses : []).filter(s => s && s.w && s.d);
+  for (const l of World.lights) if (l.kind === 'lantern' && !l.zone && lamps.some(e => hyp(e.p[0] - l.p[0], e.p[2] - l.p[2]) < 0.6)) l.baked = true;
+  // does the straight line from the lamp to a point on the ground pass through a house? (2D, footprints drawn in a little so a lamp on a wall is outside its own)
+  const blockers = (x, z) => houses.filter(s => hyp(s.x - x, s.z - z) < R_ + 0.75 * Math.max(s.w, s.d)).map(s => ({ s, a: worldToSite(s, x, z), hw: s.w / 2 - 0.45, hd: s.d / 2 - 0.45 }));
+  const cut = (b, x, z) => {
+    const q = worldToSite(b.s, x, z), ax = b.a[0], az = b.a[1], dx = q[0] - ax, dz = q[1] - az; let t0 = 0, t1 = 1;
+    for (const [o, d, h] of [[ax, dx, b.hw], [az, dz, b.hd]]) {
+      if (Math.abs(d) < 1e-9) { if (Math.abs(o) > h) return false; continue; }
+      let u0 = (-h - o) / d, u1 = (h - o) / d; if (u0 > u1) { const t = u0; u0 = u1; u1 = t; }
+      t0 = Math.max(t0, u0); t1 = Math.min(t1, u1); if (t0 > t1) return false;
+    }
+    return true;
+  };
+  for (const e of lamps) {
+    const lx = e.p[0], lz = e.p[2], gy = World.groundY ? World.groundY(lx, lz) : Terrain.y(lx, lz), h = clamp(e.p[1] - gy, 1.2, 4), B = blockers(lx, lz);
+    const i0 = Math.floor((lx - R_ + TH) / cell), i1 = Math.ceil((lx + R_ + TH) / cell), j0 = Math.floor((lz - R_ + TH) / cell), j1 = Math.ceil((lz + R_ + TH) / cell);
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const x = (i + 0.5) * cell - TH, z = (j + 0.5) * cell - TH, d2 = (x - lx) * (x - lx) + (z - lz) * (z - lz) + h * h; if (d2 >= R_ * R_) continue;
+      let hit = false; for (const b of B) if (cut(b, x, z)) { hit = true; break; } if (hit) continue;
+      const f = 1 - d2 / (R_ * R_), ndl = (h / Math.sqrt(d2) + 0.25) / 1.25;        // the same falloff as SH.pointLights, for ground facing up
+      acc[j * N + i] += 3.4 * f * f / (d2 * 0.55 + 1) * ndl;
+    }
+  }
+  // soften the hard edge the footprint test leaves, then store the square root (the shader squares it) so dim edges keep their steps
+  const d = Lamps.data, pk = SH.LAMP_PEAK;
+  for (let j = 1; j < N - 1; j++) for (let i = 1; i < N - 1; i++) { const o = j * N + i, v = (acc[o] * 4 + acc[o - 1] + acc[o + 1] + acc[o - N] + acc[o + N]) / 8; d[o] = Math.min(255, Math.round(Math.sqrt(Math.min(v / pk, 1)) * 255)); }
+  Lamps.tex.needsUpdate = true; Lamps.lamps = lamps.length;
+};
 
 
 // ---- 44_kit.js ----
@@ -1419,7 +1516,7 @@ const Kit = (() => {
       const cell = floor(wp.mul(0.9)), h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))).mul(43758.5453));
       const V = normalize(wp.sub(U.camPos)), R = reflect(V, N);
       const sky = SH.skyBase(vec3(R.x, max(R.y, 0.02), R.z)).mul(0.22);
-      const lit = vec3(1.0, 0.60, 0.24).mul(h.mul(0.9).add(0.35)).mul(U.windowGlow).mul(2.4).mul(smoothstep(0.12, 0.3, h));
+      const lit = SH.paneLit ? SH.paneLit(wp, N, h) : vec3(1.0, 0.60, 0.24).mul(h.mul(0.9).add(0.35)).mul(U.windowGlow).mul(2.4).mul(smoothstep(0.12, 0.3, h));      // fork-look: leaded amber panes that do not clip (40_shade.js)
       m.colorNode = vec3(0.012, 0.016, 0.02); m.roughnessNode = float(0.15); m.metalnessNode = float(0);
       // from the room side a pane just shows the dim sky outside
       const outsideView = batch ? frontFacing : frontFacing;
@@ -1467,6 +1564,7 @@ const Kit = (() => {
     if (d.alphaTest > 0) { m.alphaTest = Math.max(d.alphaTest, 0.35); m.side = THREE.DoubleSide; }
     else m.side = d.doubleSided && !o.frontOnly ? THREE.DoubleSide : THREE.FrontSide;
     if (d.blend && !(d.alphaTest > 0)) { m.transparent = true; m.depthWrite = false; }
+    if (batch && SH.hangSway) m.positionNode = SH.hangSway();      // fork-look: vertices marked as hanging (kg.z) sway; all others are untouched
     if (o.wind) {             // trees lean with the gusts, leaves and grass flutter on top; the root stays planted
       m.positionNode = Fn(() => {
         const p = positionLocal, h = max(positionGeometry.y, 0), t = U.wind.w, ph = p.x.mul(0.31).add(p.z.mul(0.27));
@@ -1525,6 +1623,7 @@ const Kit = (() => {
         const idx = b.nv > 65535 ? new Uint32Array(b.ni) : new Uint16Array(b.ni); let vo = 0, io = 0;
         for (const it of b.items) {
           const pr = it.prim, M = it.M, flip = M.determinant() < 0; nm.getNormalMatrix(M);
+          const hang = SH.hangOf && !it.zone ? SH.hangOf(pr, M) : null;      // fork-look: pennants, washing and hung signs move with the wind (50_env.js)
           const sky = Math.round(Math.min(Math.max(it.skyVis, 0), 1) * 255), skyIn = Math.round(Math.min(Math.max(it.inSky, 0), 1) * 255), split = it.inZone !== undefined, tr = it.tint ? it.tint[0] : 1, tg = it.tint ? it.tint[1] : 1, tb = it.tint ? it.tint[2] : 1, gl = Math.min(255, Math.round(it.glow * 16));
           for (let i = 0; i < pr.n; i++) {
             const o = vo + i;
@@ -1541,6 +1640,7 @@ const Kit = (() => {
             if (it.lights) { let best = 9; for (const L of it.lights) { const dx = pr.pos[i * 3] - L[0], dy = pr.pos[i * 3 + 1] - L[1], dz = pr.pos[i * 3 + 2] - L[2]; best = Math.min(best, Math.sqrt(dx * dx + dy * dy * 0.5 + dz * dz)); } g1 = Math.min(255, gl + Math.round(Math.max(0, 1 - best / 0.11) * it.lit * 40)); }
             kz[o * 4 + 1] = g1;
             kz[o * 4 + 2] = split ? it.inZone : it.zone; kz[o * 4 + 3] = split ? skyIn : sky;
+            if (hang) { kg[o * 4 + 2] = hang.w(i); kg[o * 4 + 3] = hang.dir; }      // fork-look
           }
           const src = pr.idx;
           if (flip) for (let i = 0; i < src.length; i += 3) { idx[io + i] = src[i] + vo; idx[io + i + 1] = src[i + 2] + vo; idx[io + i + 2] = src[i + 1] + vo; }
@@ -1776,7 +1876,7 @@ const Grass = { mesh: null, N: 0, range: 0 };
           const t = b.y, ang = b.z.add(r1.y.mul(6.2831853)), dirv = vec2(cos(ang), sin(ang));
           const p0 = vec3(root.x.add(dirv.x.mul(b.w).mul(0.08)), root.y, root.z.add(dirv.y.mul(b.w).mul(0.08)));
           // wind: slow gusts drifting across the meadow plus a quick shiver; `wave` is kept for the colour
-          const wv = noiseL(root2.mul(0.013).sub(U.wind.xy.mul(U.time.mul(0.035)))).r.sub(0.42);
+          const wv = SH.gust(root2);                                                                              // the valley's one gust field (40_shade.js)
           const gust = wv.mul(2.2).add(sin(U.time.mul(2.6).add(root2.x.mul(0.9)).add(root2.y.mul(1.3))).mul(0.18));
           const toP = root2.sub(U.camPos.xz), dP = length(toP);
           const pushAmt = smoothstep(0.25, 1.0, dP).oneMinus().mul(step(abs(U.camPos.y.sub(1.6).sub(hy)), 1.2));      // blades part around the player
@@ -1851,7 +1951,7 @@ let WaterMat, GlowMat;
       const t = U.time, wp = positionWorld, p = wp.xz, fd = uv(), depth = attribute('tint', 'vec4').a;
       const n1 = noise(p.mul(0.09).sub(fd.mul(t.mul(0.05)))).rg;
       const n2 = noise(p.mul(0.23).sub(fd.mul(t.mul(0.09))).add(vec2(0.37, 0.11))).ga;
-      const n3 = noise(p.mul(0.71).add(vec2(t.mul(0.02), t.mul(-0.017)))).rb;
+      const n3 = noise(p.sub(U.windOff.mul(0.05)).mul(0.71)).rb;                 // the fine ripples run before the wind
       const nn = n1.add(n2.mul(0.7)).add(n3.mul(0.35)).sub(1.025);
       const N = normalize(vec3(nn.x.mul(0.55), 1.0, nn.y.mul(0.55)));
       const V = normalize(U.camPos.sub(wp));
@@ -1917,14 +2017,19 @@ const Particles = { mesh: null };
     m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; m.fog = false; m.lights = false; m.toneMapped = false;
     m.blending = THREE.CustomBlending; m.blendEquation = THREE.AddEquation; m.blendSrc = THREE.OneFactor; m.blendDst = THREE.OneMinusSrcAlphaFactor; m.blendSrcAlpha = THREE.OneFactor; m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
     const ps = attribute('ps', 'vec4'), pcol = attribute('pcol', 'vec4'), prm = attribute('prm', 'vec4'), corner = attribute('position', 'vec3').xy;
+    const vNear = TSL.varyingProperty('float', 'vPartNear');       // fades a glow or spark out as it passes through the eye
     m.positionNode = Fn(() => {
       const camR = normalize(cameraWorldMatrix.mul(vec4(1, 0, 0, 0)).xyz), camU = normalize(cameraWorldMatrix.mul(vec4(0, 1, 0, 0)).xyz);
       const upright = prm.y.greaterThan(1.5).and(prm.y.lessThan(2.5));          // flames stand up instead of tilting with the view
       const right = select(upright, normalize(vec3(camR.x, 0, camR.z)), camR), up = select(upright, vec3(0, 1, 0), camU);
       const cr = cos(prm.x), sr = sin(prm.x);
       const cc = vec2(corner.x.mul(cr).sub(corner.y.mul(sr)), corner.x.mul(sr).add(corner.y.mul(cr)));
-      const wp = ps.xyz.add(right.mul(cc.x).add(up.mul(cc.y.mul(prm.z))).mul(ps.w));
-      return wp.add(normalize(U.camPos.sub(ps.xyz)).mul(min(ps.w.mul(0.35), 0.3)));      // pull toward the eye so sprites don't slice into walls (capped: a big glow must not float in front of its fire)
+      // glows and sparks are never drawn larger than a set angle: a firefly at arm's length stays a speck and a lamp's halo near the eye stays a halo
+      const dEye = distance(ps.xyz, U.camPos), lim = select(prm.y.lessThan(0.5), float(0.11), select(prm.y.greaterThan(2.5), float(0.02), float(1e6)));
+      const size = min(ps.w, dEye.mul(lim));
+      vNear.assign(select(prm.y.greaterThan(2.5), smoothstep(0.2, 0.9, dEye), select(prm.y.lessThan(0.5), smoothstep(0.1, 0.6, dEye), float(1))));
+      const wp = ps.xyz.add(right.mul(cc.x).add(up.mul(cc.y.mul(prm.z))).mul(size));
+      return wp.add(normalize(U.camPos.sub(ps.xyz)).mul(min(size.mul(0.35), 0.3)));      // pull toward the eye so sprites don't slice into walls (capped: a big glow must not float in front of its fire)
     })();
     m.fragmentNode = Fn(() => {
       const q = corner, wp = positionWorld, r2 = dot(q, q), kind = prm.y, seed = prm.w;
@@ -1933,7 +2038,7 @@ const Particles = { mesh: null };
       const out = vec4(0).toVar();
       If(kind.lessThan(0.5), () => {                       // soft additive glow
         const a = exp(r2.mul(-4.5)).mul(smoothstep(0.7, 1.0, r2).oneMinus());
-        out.assign(vec4(pcol.rgb.mul(a.mul(pcol.a).mul(fogf)), 0));
+        out.assign(vec4(pcol.rgb.mul(a.mul(pcol.a).mul(fogf).mul(vNear)), 0));
       }).ElseIf(kind.lessThan(1.5), () => {                // smoke puff, lit by the sky
         const a = sat(r2.oneMinus().mul(n.r.mul(1.3).add(0.35)).sub(0.25)).mul(pcol.a);
         const lit = U.ambSky.mul(1.3).add(U.sunCol.mul(0.35)).mul(pcol.rgb);
@@ -1955,7 +2060,7 @@ const Particles = { mesh: null };
         fc.addAssign(vec3(0.10, 0.22, 0.75).mul(smoothstep(0.30, 0.02, y).mul(sat(d.oneMinus())).mul(turb.oneMinus()).mul(0.7)));   // the blue foot of a candle flame
         out.assign(vec4(fc.mul(a.mul(core.mul(0.8).add(0.36))).mul(pcol.a.mul(mix(1.9, 1.0, turb))).mul(pcol.rgb), 0));
       }).Else(() => {                                      // firefly / ember
-        out.assign(vec4(pcol.rgb.mul(exp(r2.mul(-7.0)).mul(pcol.a).mul(fogf)), 0));
+        out.assign(vec4(pcol.rgb.mul(exp(r2.mul(-7.0)).mul(pcol.a).mul(fogf).mul(vNear)), 0));
       });
       return out;
     })();
@@ -2450,6 +2555,38 @@ const ENV = {
   fogCol: [0, 0, 0], fogSun: [0, 0, 0], zenith: [0, 0, 0], horizon: [0, 0, 0], windDir: [0.8, 0.6], windStrength: 1,
   exposure: 0.6, shadowStrength: 1, night: 0, day: 1, cloud: 0.45, fogDensity: 0.001, stars: 0, aurora: 0, moonBright: 0, sunDisc: 0, windowGlow: 0,
 };
+// ── one wind ──
+// The whole valley shares one moving air: a direction that veers slowly, a strength, and gusts: a noise pattern carried downwind
+// (Wind.off is how far the air has travelled). The shaders read the same pattern (SH.gust in 40_shade.js), so smoke, falling leaves and
+// the sound of the wind (CPU) agree with grass, trees, washing and signs (GPU).
+const Wind = { off: [0, 0], time: -1, SPEED: 2.7 };
+Wind.step = function (time, env) {
+  const dt = Wind.time < 0 ? 0 : clamp(time - Wind.time, 0, 0.5); Wind.time = time;
+  const a = 0.6435 + 0.30 * Math.sin(time * 0.011) + 0.12 * Math.sin(time * 0.037);       // about the old fixed heading (0.8, 0.6), swinging some 20 degrees either way
+  env.windDir = [Math.cos(a), Math.sin(a)];
+  Wind.off[0] += env.windDir[0] * Wind.SPEED * dt; Wind.off[1] += env.windDir[1] * Wind.SPEED * dt;
+};
+Wind.gust = function (x, z) {        // the same value as SH.gust: about -0.4 in a lull .. 0.6 in a gust
+  const t = G.noiseTex, d = t && t.image && t.image.data; if (!d) return 0;
+  const u = (x - Wind.off[0]) * 0.013 * 256 - 0.5, v = (z - Wind.off[1]) * 0.013 * 256 - 0.5, i = Math.floor(u), j = Math.floor(v), fu = u - i, fv = v - j;
+  const at = (a, b) => d[(((b % 256) + 256) % 256 * 256 + ((a % 256) + 256) % 256) * 4];
+  return (lerp(lerp(at(i, j), at(i + 1, j), fu), lerp(at(i, j + 1), at(i + 1, j + 1), fu), fv)) / 255 - 0.42;
+};
+Wind.feel = (x, z) => ENV.windStrength * Math.max(0.12, 0.7 + 1.7 * Wind.gust(x, z));         // wind speed felt at a place, 1 = a steady breeze
+Wind.at = (x, z) => { const k = Wind.feel(x, z); return [ENV.windDir[0] * k, ENV.windDir[1] * k]; };
+// Which vertices of a kit piece hang free, for the kit batcher (it calls this per primitive; two marked lines in 44_kit.js).
+// Returns null, or { w(i): byte 255 = fixed .. 0 = free, dir: byte 255 = cloth, else the compass direction a hung board swings in }.
+SH.hangOf = function (prim, M) {
+  let name = SH.hangNames.get(prim);
+  if (name === undefined) { for (const n in Kit.pieces) for (const q of Kit.pieces[n].prims) SH.hangNames.set(q, n); name = SH.hangNames.get(prim) || ''; SH.hangNames.set(prim, name); }
+  if (/^gen_sign_/.test(name)) {          // the board and its chains, below the arm (73b_alley.js genSign): hung at y = -0.04, the board ends at -0.82
+    const e = M.elements, ang = Math.atan2(e[2], e[0]);
+    return { w: i => prim.pos[i * 3 + 2] > 0.4 ? 255 - Math.round(255 * sat((-0.04 - prim.pos[i * 3 + 1]) / 0.78)) : 255, dir: Math.round((((ang % TAU) + TAU) % TAU) / TAU * 254) };
+  }
+  if (/^gen_bunt_|^dr_laundry/.test(name) && /Cloth/.test(prim.mat)) return { w: i => 255 - Math.round(255 * sat((prim.uv[i * 2 + 1] - 0.27) / 0.18)), dir: 255 };      // pennants and washing: the cloth quads run from the line (v 0.27) to the free edge (v 0.45)
+  return null;
+};
+SH.hangNames = new Map();
 const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 function updateEnv(time, indoor) {
   const e = ENV, th = (Env.hour - 6) / 12 * PI, maxEl = 0.62;      // a northern autumn sun: it never climbs high, so shadows stay long
@@ -2463,7 +2600,7 @@ function updateEnv(time, indoor) {
   const sunI = smooth(-0.015, 0.11, sy), moonI = smooth(0.02, 0.2, moon[1]) * smooth(-0.04, -0.12, sy);
   const sunCol = mix3([1.0, 0.42, 0.14], [1.0, 0.925, 0.79], smooth(0.0, 0.42, sy));
   if (sunI > 0.001 || moonI <= 0) { e.keyDir = sun[1] > 0.02 ? sun : v3.norm([sun[0], 0.02, sun[2]]); e.keyCol = v3.scale(sunCol, 3.7 * sunI); }
-  else { e.keyDir = moon; e.keyCol = v3.scale([0.50, 0.64, 1.0], 0.20 * moonI); }
+  else { e.keyDir = moon; e.keyCol = v3.scale([0.36, 0.54, 1.0], 0.17 * moonI); }
   e.shadowStrength = sunI > 0.001 ? smooth(0.0, 0.25, sunI) : smooth(0.0, 0.3, moonI) * 0.9;
   // sky
   const zDay = [0.115, 0.28, 0.72], hDay = [0.52, 0.68, 0.90], zSet = [0.10, 0.15, 0.36], hSet = [0.95, 0.50, 0.24], zNight = [0.0035, 0.007, 0.020], hNight = [0.010, 0.019, 0.040];
@@ -2474,13 +2611,15 @@ function updateEnv(time, indoor) {
   e.sunDisc = 26 * smooth(-0.03, 0.05, sy);
   e.ambSky = v3.add(v3.add(v3.scale(mix3(z, h, 0.45), 1.0), v3.scale(sunCol, 0.07 * sunI)), [0.004, 0.006, 0.012]);
   e.ambGnd = v3.add(v3.scale(mix3([0.20, 0.17, 0.12], [0.30, 0.20, 0.14], golden), (0.10 + 0.55 * day)), [0.002, 0.003, 0.006]);
+  // night: what little bounces up from the ground is moonlit blue, not the warm earth of the day, so unlit streets read as dark blue
+  e.ambGnd = mix3(e.ambGnd, [0.0045, 0.0075, 0.017], night); e.ambSky = mix3(e.ambSky, [0.008, 0.016, 0.040], night * 0.6);
   const mist = Math.exp(-Math.pow((Env.hour - 6.3) / 1.3, 2)) * 0.9 + Math.exp(-Math.pow((Env.hour - 19.6) / 1.5, 2)) * 0.2;
   e.fogCol = mix3(mix3(h, z, 0.42), [0.5 * (h[0] + h[1]), 0.5 * (h[0] + h[1]), 0.5 * (h[1] + h[2])], 0.25);
   e.fogDensity = 0.00115 * (1 + mist * 1.3 + golden * 0.5) + 0.0005 * night;
   e.stars = night; e.aurora = night * (0.55 + 0.45 * Math.sin(time * 0.05));
   e.moonBright = smooth(-0.02, -0.14, sy) * 1.4;
   e.cloud = 0.44 + 0.16 * Math.sin(time * 0.011 + 1.3);
-  e.windStrength = 0.75 + 0.4 * Math.sin(time * 0.07) + 0.2 * Math.sin(time * 0.23);
+  e.windStrength = 0.75 + 0.4 * Math.sin(time * 0.07) + 0.2 * Math.sin(time * 0.23); Wind.step(time, e);
   e.windowGlow = smooth(0.62, 0.22, day);
   const outExp = lerp(lerp(0.56, 0.84, golden), 3.0, night);
   e.exposure = lerp(outExp, lerp(1.05, 1.25, night), indoor || 0);
@@ -8375,16 +8514,231 @@ function buildVegetation() {
     const ibuf = data;
     for (const g of defs) World.instGroups.push(Object.assign({ ibuf, cells: list, first: g.item.first, count: g.item.count, base: g.item.base, shadow: true }, g));
   };
-  mkGroups(inst.pine, [{ item: I.pineT, kind: 'opaque', lod: 1 }, { item: I.pineL, kind: 'leaf', lod: 1 }], 48);
-  mkGroups(inst.pine, [{ item: I.pineF, kind: 'leaf', lod: 2, nearOnly: false }], FAR_TREE_CELL);
-  mkGroups(inst.birch, [{ item: I.birchT, kind: 'opaque', lod: 1 }, { item: I.birchL, kind: 'leaf', lod: 1 }], 48);
-  mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
+  // conifers and birches: the scanned trees (74b_trees.js) take the planted positions; the generated ones only stand in if those files failed to load
+  if (typeof Trees !== 'undefined' && Trees.ready) Trees.plant(inst);
+  else {
+    mkGroups(inst.pine, [{ item: I.pineT, kind: 'opaque', lod: 1 }, { item: I.pineL, kind: 'leaf', lod: 1 }], 48);
+    mkGroups(inst.pine, [{ item: I.pineF, kind: 'leaf', lod: 2, nearOnly: false }], FAR_TREE_CELL);
+    mkGroups(inst.birch, [{ item: I.birchT, kind: 'opaque', lod: 1 }, { item: I.birchL, kind: 'leaf', lod: 1 }], 48);
+    mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
+  }
   mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;
   World.treePos = { pine: inst.pine, birch: inst.birch, oak: inst.oak };      // [ui] read by the map (86_map.js)
 }
+
+
+// ---- 74b_trees.js ----
+// ───────────────────────── scanned trees: firs, pines and a small broadleaf from Poly Haven scans ─────────────────────────
+// kits/trees.glb holds, per species, a near model (simplified trunk and boughs, about 200 foliage cards cut from the scan and baked
+// into an atlas) and a far model (a stub of trunk and a quarter of the cards, enlarged). kits/trees_far.webp holds each species drawn flat from two
+// sides. Built by tools/scan/trees.sh and tools/scan/tree_pack.mjs; sources in kits/TREES_PROVENANCE.md.
+// Three rings round the player, so the cost follows what is near and not how many trees the valley holds:
+//   inside NEAR[tier] m   near model (camera only)                               one draw each for wood and cards per species
+//   out to q.treeLod      far model; the same model casts the near sun shadow    one draw per species (wood and cards in one)
+//   beyond                two crossed flat pictures, in 400 m cells, which also cast into the wide shadow map
+// The first two rings are instance lists refilled when the player has moved a little; nothing is switched in the shader there.
+// If the files cannot be loaded, Trees.ready stays false and 74_vegetation.js plants the old generated trees instead.
+const Trees = { ready: false, sp: {}, items: [], NEAR: { low: 13, medium: 20, high: 30 }, lastPos: [1e9, 0, 1e9], lastLod: -1 };
+// which scan stands in for which planted tree, how tall it grows (m, at planting scale 1) and how its baked colours are corrected
+Trees.SPEC = {
+  fir_b: { tall: 13.5, gain: [1.1, 1.28, 1.15] }, fir_c: { tall: 14.5, gain: [1.15, 1.3, 1.15] }, pine_c: { tall: 16, gain: [2.0, 2.25, 1.95] },
+  broadleaf_small: { tall: 6.2, gain: [1.0, 1.0, 1.0], autumn: 1 },
+};
+Trees.load = async function () {
+  if (TEST && TEST.trees === 0) return;
+  try {
+    const meta = await (await fetch('kits/TREES.json')).json();
+    const [gltf, farTex] = await Promise.all([new T3X.GLTFLoader().loadAsync('kits/trees.glb'), new THREE.TextureLoader().loadAsync('kits/trees_far.webp')]);
+    farTex.colorSpace = THREE.SRGBColorSpace; farTex.wrapS = farTex.wrapT = THREE.ClampToEdgeWrapping; farTex.anisotropy = 2; farTex.premultiplyAlpha = false;
+    Trees.farTex = farTex; Trees.meta = meta;
+    const BA = THREE.BufferAttribute;
+    // geometry as plain attributes: position, normal, uv, wind (how freely this vertex moves), tk (1 on wood, 0 on foliage)
+    const plain = (mesh, H, rad, wood) => {
+      const g = mesh.geometry, P = g.attributes.position, N = g.attributes.normal, U_ = g.attributes.uv, n = P.count, v = new THREE.Vector3();
+      mesh.updateWorldMatrix(true, false); const MW = mesh.matrixWorld, NM = new THREE.Matrix3().getNormalMatrix(MW);       // the pack stores quantized positions: the node's matrix restores metres
+      const pos = new Float32Array(n * 3), nrm = new Float32Array(n * 3), uv = new Float32Array(n * 2), wind = new Float32Array(n), tk = new Float32Array(n).fill(wood ? 1 : 0);
+      for (let i = 0; i < n; i++) {
+        v.fromBufferAttribute(P, i).applyMatrix4(MW); pos[i * 3] = v.x; pos[i * 3 + 1] = v.y; pos[i * 3 + 2] = v.z;
+        const out = Math.min(1, Math.hypot(v.x, v.z) / Math.max(rad, 0.1)), up = Math.min(1, v.y / H);
+        wind[i] = wood ? out * 0.5 : 0.3 + out * 0.7 + up * 0.2;       // twigs and outer foliage shiver, the trunk only leans
+        v.fromBufferAttribute(N, i).applyMatrix3(NM).normalize(); nrm[i * 3] = v.x; nrm[i * 3 + 1] = v.y; nrm[i * 3 + 2] = v.z;
+        uv[i * 2] = U_.getX(i); uv[i * 2 + 1] = U_.getY(i);
+      }
+      return { pos, nrm, uv, wind, tk, idx: Uint32Array.from(g.index.array), n };
+    };
+    const join = (a, b) => {
+      const o = { n: a.n + b.n, idx: new Uint32Array(a.idx.length + b.idx.length) };
+      for (const [k, w] of [['pos', 3], ['nrm', 3], ['uv', 2], ['wind', 1], ['tk', 1]]) { o[k] = new Float32Array(o.n * w); o[k].set(a[k]); o[k].set(b[k], a.n * w); }
+      o.idx.set(a.idx); for (let i = 0; i < b.idx.length; i++) o.idx[a.idx.length + i] = b.idx[i] + a.n;
+      return o;
+    };
+    const geo = a => { const g = new THREE.InstancedBufferGeometry(); g.setAttribute('position', new BA(a.pos, 3)); g.setAttribute('normal', new BA(a.nrm, 3)); g.setAttribute('uv', new BA(a.uv, 2)); g.setAttribute('wind', new BA(a.wind, 1)); g.setAttribute('tk', new BA(a.tk, 1)); g.setIndex(new BA(a.idx, 1)); g.instanceCount = 0; g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6); return g; };
+    let k = 0;
+    for (const name in Trees.SPEC) {
+      const m = meta.species[name], near = gltf.scene.getObjectByName(name), far = gltf.scene.getObjectByName(name + '_far'); if (!m || !near || !far) throw new Error('trees.glb has no ' + name);
+      const parts = o => { const l = []; o.traverse(c => { if (c.isMesh) l.push(c); }); return { wood: l.find(c => /_wood$/.test(c.material.name)), leaf: l.find(c => /_foliage$/.test(c.material.name)) }; };
+      const pn = parts(near), pf = parts(far), atlas = pn.leaf.material.map, bark = pn.wood.material.map;
+      atlas.anisotropy = 4; bark.anisotropy = 2; bark.wrapS = bark.wrapT = THREE.RepeatWrapping;
+      // the atlas ships at 2048; phones and the lighter tiers keep 1024 (a quarter of the memory: 5.6 MB instead of 22 MB per species)
+      { const cap = (TEST && TEST.treeAtlas) || Math.min(2048, GFX_TEX.color * 2), im = atlas.image; if (im && im.width > cap) { try { const bmp = await createImageBitmap(im, { resizeWidth: cap, resizeHeight: cap, resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' }); if (im.close) im.close(); atlas.image = bmp; atlas.needsUpdate = true; } catch (e) { } } }
+      const wN = plain(pn.wood, m.height, m.crownRadius, true), lN = plain(pn.leaf, m.height, m.crownRadius, false), mid = join(plain(pf.wood, m.height, m.crownRadius, true), plain(pf.leaf, m.height, m.crownRadius, false));
+      Trees.sp[name] = Object.assign({ name, k: k++, m, atlas, bark, wood: wN, leaf: lN, mid, items: [], trisNear: (wN.idx.length + lN.idx.length) / 3, trisMid: mid.idx.length / 3, geo }, Trees.SPEC[name]);
+    }
+    Trees.ready = true;
+  } catch (e) { console.warn('scanned trees unavailable, planting the generated ones:', e && e.message || e); Trees.ready = false; }
+};
+// Called by buildVegetation with the planted trees (the same lists the generated trees used: x, y, z, scale, yaw, tint, phase).
+Trees.plant = function (inst) {
+  const S = Trees.sp, items = Trees.items = [], rnd = rng(4242);
+  const houses = SITES.concat(typeof INF !== 'undefined' ? INF.houses : []).filter(s => s && s.w && s.d);
+  for (const t of inst.pine) {
+    const r = rnd(), sp = r < 0.42 ? S.fir_b : r < 0.76 ? S.fir_c : S.pine_c;
+    items.push({ sp, x: t[0], y: t[1] - 0.12, z: t[2], s: sp.tall * t[3] / sp.m.height, yaw: t[4], tint: t[5], ph: t[6] });
+  }
+  for (const t of inst.birch) {
+    const sp = S.broadleaf_small; let s = sp.tall * t[3] / sp.m.height, yaw = t[4];
+    // in the yards: no wider than the gap to the nearest wall, and turned so its leaning crown hangs away from that wall
+    let best = 1e9, bx = 0, bz = 0;
+    for (const h of houses) { const dc = hyp(h.x - t[0], h.z - t[2]); if (dc > 16) continue; const l = worldToSite(h, t[0], t[2]), d = Math.max(Math.abs(l[0]) - h.w / 2, Math.abs(l[1]) - h.d / 2); if (d < best) { best = d; bx = h.x; bz = h.z; } }
+    if (best < 6) { s = Math.min(s, Math.max(0.75, (best - 0.2) / 1.5)); yaw = Math.atan2(t[0] - bx, t[2] - bz) + rnd.s() * 0.5; }
+    items.push({ sp, x: t[0], y: t[1] - 0.05, z: t[2], s, yaw, tint: t[5], ph: t[6] });
+  }
+  // a coarse grid to find the trees near the player
+  const G_ = Trees.grid = new Map(), C = Trees.CELL = 32;
+  for (const it of items) { const key = Math.floor(it.x / C) + ',' + Math.floor(it.z / C); let l = G_.get(key); if (!l) G_.set(key, l = []); l.push(it); }
+  World.treeCount = items.length;
+};
+Trees.materials = function (sp) {
+  const { Fn, float, vec2, vec3, vec4, attribute, texture, uv, varying, positionLocal, normalLocal, positionWorld, cos, sin, mix, step, smoothstep, dot, normalize, max, pow, distance, transformNormalToView, uniform } = TSL, U = SH.U;
+  const ipos = attribute('ipos', 'vec4'), iprm = attribute('iprm', 'vec4');
+  const gain = vec3(sp.gain[0], sp.gain[1], sp.gain[2]);
+  // instance transform and wind. flat: the stand-in quads (unit quad scaled by idim); hideNear / hideFar: collapse by distance from the player
+  const place = o => Fn(() => {
+    const c = cos(iprm.x), s = sin(iprm.x), ww = o.flat ? positionLocal.y.mul(positionLocal.y) : attribute('wind', 'float');
+    const lp0 = o.flat ? positionLocal.mul(vec3(attribute('idim', 'vec4').x, attribute('idim', 'vec4').y, attribute('idim', 'vec4').x)) : positionLocal.mul(ipos.w);
+    const p = vec3(lp0.x.mul(c).add(lp0.z.mul(s)), lp0.y, lp0.x.negate().mul(s).add(lp0.z.mul(c)));
+    const off = SH.sway(ipos.xyz, p, ww, iprm.z.mul(40));
+    const w = p.add(off).add(ipos.xyz), d = distance(ipos.xyz, U.camPos);
+    if (o.hideNear) return mix(w, vec3(0, -20000, 0), step(d, U.treeLod));
+    if (o.hideFar) return mix(w, vec3(0, -20000, 0), step(U.treeLod, d));
+    return w;
+  })();
+  const rotN = () => { const c = cos(iprm.x), s = sin(iprm.x), n = normalLocal; return vec3(n.x.mul(c).add(n.z.mul(s)), n.y, n.x.negate().mul(s).add(n.z.mul(c))); };
+  // autumn: each broadleaf turns by its own amount, from tired green to ochre and rust
+  const tintOf = () => sp.autumn ? mix(vec3(1.05, 1.0, 0.8), mix(vec3(2.3, 1.45, 0.42), vec3(2.2, 0.95, 0.30), smoothstep(0.7, 1.0, iprm.y)), smoothstep(0.15, 0.6, iprm.y)) : mix(vec3(0.86, 0.92, 0.9), vec3(1.12, 1.06, 0.9), iprm.y);
+  const cut = a => SH.sat(a.sub((TEST && TEST.treeCut) || 0.34).div(max(TSL.fwidth(a), 0.001)).add(0.5));
+  const leafLight = (albedo, N, sky) => { const V = normalize(U.camPos.sub(positionWorld)), back = pow(SH.sat(dot(V, U.sunDir.negate())), 3).mul(0.55);
+    return albedo.mul(SH.hemi(N, sky, float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.6))).add(vec3(1.3, 1.25, 0.6).mul(U.sunCol).mul(back.mul(sky).mul(0.3)))); };
+  const lambert = (o, colour, alpha, sky) => {
+    const m = new THREE.MeshLambertNodeMaterial(); m.positionNode = place(o);
+    const N = normalize(varying(o.flat ? vec3(0, 1, 0) : rotN()));
+    m.colorNode = colour; if (alpha) { m.opacityNode = alpha; m.alphaTest = 0.5; m.side = THREE.DoubleSide; }
+    m.normalNode = transformNormalToView(normalize(N.add(U.sunDir.mul(0.6)))); m.emissiveNode = leafLight(colour, N, sky);
+    return m;
+  };
+  const vTint = varying(tintOf()), height = positionLocal.y.div(sp.m.height);
+  // near: cards from the atlas; crowns are darker inside and low down
+  const a = texture(sp.atlas, uv()), leafCol = a.rgb.mul(gain).mul(vTint), skyL = varying(smoothstep(0.1, 0.9, height).mul(0.35).add(0.65));
+  const leaf = lambert({}, leafCol, cut(a.a), skyL);
+  const wood = new THREE.MeshStandardNodeMaterial(); wood.positionNode = place({});
+  { const N = normalize(varying(rotN())), alb = texture(sp.bark, uv()).rgb.mul(0.8); wood.colorNode = alb; wood.normalNode = transformNormalToView(N); wood.roughnessNode = float(0.95); wood.metalnessNode = float(0);
+    wood.emissiveNode = alb.mul(SH.hemi(N, float(0.75), float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.25)))); }
+  // middle ring: wood and cards in one draw; wood takes the bark's average colour
+  const tk = varying(attribute('tk', 'float')), barkC = vec3(sp.m.bark[0], sp.m.bark[1], sp.m.bark[2]).mul(vec3(sp.m.bark[0], sp.m.bark[1], sp.m.bark[2])).mul(0.8);
+  const midCol = mix(leafCol, barkC, tk), midA = max(cut(a.a), tk);
+  const mid = lambert({ hideFar: true }, midCol, midA, skyL), midCast = lambert({}, midCol, midA, skyL);
+  return { leaf, wood, mid, midCast };
+};
+// the flat stand-ins share one material (and one for the copy that only the wide shadow map draws, which never hides)
+Trees.farMaterial = function (noLod) {
+  const { Fn, float, vec2, vec3, attribute, texture, varying, positionLocal, positionWorld, cos, sin, mix, step, smoothstep, dot, normalize, max, pow, distance, transformNormalToView } = TSL, U = SH.U;
+  const ipos = attribute('ipos', 'vec4'), iprm = attribute('iprm', 'vec4'), idim = attribute('idim', 'vec4'), q = attribute('q', 'vec3');       // q: u (0..1), v (0..1), which of the two pictures
+  const m = new THREE.MeshLambertNodeMaterial();
+  m.positionNode = Fn(() => {
+    const c = cos(iprm.x), s = sin(iprm.x), lp = positionLocal.mul(vec3(idim.x, idim.y, idim.x));
+    const p = vec3(lp.x.mul(c).add(lp.z.mul(s)), lp.y, lp.x.negate().mul(s).add(lp.z.mul(c)));
+    const w = p.add(SH.sway(ipos.xyz, p, positionLocal.y.mul(0.6), iprm.z.mul(40))).add(ipos.xyz);
+    return noLod ? w : mix(w, vec3(0, -20000, 0), step(distance(ipos.xyz, U.camPos), U.treeLod));
+  })();
+  const n = Trees.meta.count, tuv = vec2(idim.z.add(q.z).add(q.x.mul(0.96).add(0.02)).div(n), q.y), a = texture(Trees.farTex, tuv);
+  const autumn = step(0.5, idim.w), tint = varying(mix(mix(vec3(0.86, 0.92, 0.9), vec3(1.12, 1.06, 0.9), iprm.y), mix(vec3(1.05, 1.0, 0.8), mix(vec3(2.3, 1.45, 0.42), vec3(2.2, 0.95, 0.30), smoothstep(0.7, 1.0, iprm.y)), smoothstep(0.15, 0.6, iprm.y)), autumn).mul(attribute('igain', 'vec3')));
+  const col = a.rgb.mul(tint), N = normalize(varying(vec3(positionLocal.x.mul(cos(iprm.x)).mul(0.6), 0.6, positionLocal.x.mul(sin(iprm.x)).mul(-0.6))));
+  m.colorNode = col; m.opacityNode = SH.sat(a.a.sub(0.36).div(max(TSL.fwidth(a.a), 0.001)).add(0.5)); m.alphaTest = 0.5; m.side = THREE.DoubleSide;
+  m.normalNode = transformNormalToView(normalize(N.add(U.sunDir.mul(0.6))));
+  const V = normalize(U.camPos.sub(positionWorld)), back = pow(SH.sat(dot(V, U.sunDir.negate())), 3).mul(0.55), sky = varying(smoothstep(0.1, 0.9, q.y).mul(0.35).add(0.65));
+  m.emissiveNode = col.mul(SH.hemi(N, sky, float(0)).add(vec3(1.3, 1.25, 0.6).mul(U.sunCol).mul(back.mul(sky).mul(0.3))));
+  return m;
+};
+Trees.build = function (scene) {
+  if (!Trees.ready || !Trees.items.length) return;
+  const T = THREE, IBA = T.InstancedBufferAttribute, mk = (g, mat, layer, cast) => { const o = new T.Mesh(g, mat); o.matrixAutoUpdate = false; o.frustumCulled = false; o.castShadow = !!cast; o.receiveShadow = !cast; if (layer !== undefined) o.layers.set(layer); o.visible = false; scene.add(o); return o; };
+  Trees.sets = [];
+  const ring = (g, cap) => { const a = new Float32Array(cap * 4), b = new Float32Array(cap * 4), ia = new IBA(a, 4), ib = new IBA(b, 4); ia.setUsage(T.DynamicDrawUsage); ib.setUsage(T.DynamicDrawUsage); g.setAttribute('ipos', ia); g.setAttribute('iprm', ib); return { g, a, b, ia, ib, cap, n: 0 }; };
+  for (const name in Trees.sp) {
+    const sp = Trees.sp[name], M = Trees.materials(sp), set = { sp, meshes: [] };
+    const gW = sp.geo(sp.wood), gL = sp.geo(sp.leaf), near = ring(gW, 48); gL.setAttribute('ipos', near.ia); gL.setAttribute('iprm', near.ib);
+    set.near = near; set.nearMeshes = [mk(gW, M.wood, 1), mk(gL, M.leaf, 1)]; set.nearGeos = [gW, gL];
+    set.mid = ring(sp.geo(sp.mid), 320); set.midMesh = mk(set.mid.g, M.mid, 1);
+    set.cast = ring(sp.geo(sp.mid), 96); set.castMesh = mk(set.cast.g, M.midCast, SHADOW_ONLY_LAYER, true);
+    set.leafMats = [M.leaf, M.mid, M.midCast];
+    Trees.sets.push(set);
+  }
+  // stand-ins: two crossed quads per tree, bucketed into big cells
+  const CS = typeof FAR_TREE_CELL !== 'undefined' ? FAR_TREE_CELL : 400, cells = new Map();
+  for (const it of Trees.items) { const key = Math.floor(it.x / CS) + ',' + Math.floor(it.z / CS); let l = cells.get(key); if (!l) cells.set(key, l = []); l.push(it); }
+  const pos = [], q = [], idx = [];
+  for (let j = 0; j < 2; j++) { const ax = j ? [0, 0, 1] : [1, 0, 0], o = j * 4; for (const [s, v] of [[-1, 0], [1, 0], [1, 1], [-1, 1]]) { pos.push(ax[0] * s, v, ax[2] * s); q.push(s * 0.5 + 0.5, v, j); } idx.push(o, o + 1, o + 2, o, o + 2, o + 3); }
+  const farMat = Trees.farMat = Trees.farMaterial(false), farCast = Trees.farMaterial(true); Trees.farMeshes = [];
+  for (const list of cells.values()) {
+    const n = list.length, a = new Float32Array(n * 4), b = new Float32Array(n * 4), d = new Float32Array(n * 4), gn = new Float32Array(n * 3); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, z0 = 1e9, z1 = -1e9;
+    list.forEach((it, i) => { const m = it.sp.m; a.set([it.x, it.y, it.z, it.s], i * 4); b.set([it.yaw, it.tint, it.ph, 0], i * 4); d.set([m.halfWidth * it.s, m.height * it.s, m.tiles[0], it.sp.autumn ? 1 : 0], i * 4); gn.set(it.sp.gain, i * 3);
+      x0 = Math.min(x0, it.x); x1 = Math.max(x1, it.x); y0 = Math.min(y0, it.y); y1 = Math.max(y1, it.y + m.height * it.s); z0 = Math.min(z0, it.z); z1 = Math.max(z1, it.z); });
+    const g = new T.InstancedBufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('q', new T.Float32BufferAttribute(q, 3)); g.setIndex(idx);
+    g.setAttribute('ipos', new IBA(a, 4)); g.setAttribute('iprm', new IBA(b, 4)); g.setAttribute('idim', new IBA(d, 4)); g.setAttribute('igain', new IBA(gn, 3)); g.instanceCount = n;
+    g.boundingSphere = new T.Sphere(new T.Vector3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), 0.5 * hyp(x1 - x0, y1 - y0, z1 - z0) + 8);
+    const m1 = new T.Mesh(g, farMat); m1.matrixAutoUpdate = false; m1.receiveShadow = true; scene.add(m1); Trees.farMeshes.push(m1);
+    const m2 = new T.Mesh(g, farCast); m2.matrixAutoUpdate = false; m2.castShadow = true; m2.layers.set(2); scene.add(m2); Trees.farMeshes.push(m2);
+  }
+  Trees.lastPos = [1e9, 0, 1e9];
+};
+// multisampled tiers smooth the cut-out edges with alpha to coverage (as the old leaf material did)
+Trees.quality = function (q) {
+  if (!Trees.sets) return; const a2c = q.msaa > 1;
+  for (const m of Trees.sets.flatMap(s => s.leafMats).concat([Trees.farMat])) if (m.alphaToCoverage !== a2c) { m.alphaToCoverage = a2c; m.alphaTest = a2c ? 0.06 : 0.5; m.needsUpdate = true; }
+  Trees.lastPos = [1e9, 0, 1e9];
+};
+// per frame: refill the two inner rings when the player has moved
+Trees.update = function (e, q, hidden) {
+  if (!Trees.sets) return;
+  for (const s of Trees.sets) { s.nearMeshes[0].visible = s.nearMeshes[1].visible = !hidden && s.near.n > 0; s.midMesh.visible = !hidden && s.mid.n > 0; s.castMesh.visible = !hidden && s.cast.n > 0; }
+  for (const m of Trees.farMeshes) m.visible = !hidden;
+  if (hidden) return;
+  const R1 = q.treeLod + 2.5, R0 = Trees.NEAR[R.qName] || 20, RS = Math.min(R1, q.shadowNear * 1.72 + 9);
+  if (hyp(e[0] - Trees.lastPos[0], e[2] - Trees.lastPos[2]) < 1.2 && Trees.lastLod === R1 + R0) return;
+  Trees.lastPos = [e[0], e[1], e[2]]; Trees.lastLod = R1 + R0;
+  const C = Trees.CELL, G_ = Trees.grid, found = [];
+  for (let gz = Math.floor((e[2] - R1) / C); gz <= Math.floor((e[2] + R1) / C); gz++) for (let gx = Math.floor((e[0] - R1) / C); gx <= Math.floor((e[0] + R1) / C); gx++) {
+    const l = G_.get(gx + ',' + gz); if (!l) continue;
+    for (const it of l) { const d = hyp(it.x - e[0], it.z - e[2]); if (d < R1) { it.d = d; found.push(it); } }
+  }
+  found.sort((a, b) => a.d - b.d);
+  for (const s of Trees.sets) s.near.n = s.mid.n = s.cast.n = 0;
+  const put = (r, it) => { if (r.n >= r.cap) return; const o = r.n++ * 4; r.a[o] = it.x; r.a[o + 1] = it.y; r.a[o + 2] = it.z; r.a[o + 3] = it.s; r.b[o] = it.yaw; r.b[o + 1] = it.tint; r.b[o + 2] = it.ph; r.b[o + 3] = 0; };
+  let nNear = 0; const maxNear = R.qName === 'low' ? 10 : R.qName === 'medium' ? 18 : 40; Trees.stat = { near: 0, mid: 0, cast: 0 };
+  for (const it of found) {
+    const s = Trees.sets[it.sp.k];
+    if (it.d < R0 && nNear < maxNear) { put(s.near, it); nNear++; Trees.stat.near++; } else { put(s.mid, it); Trees.stat.mid++; }
+    if (it.d < RS) { put(s.cast, it); Trees.stat.cast++; }
+  }
+  for (const s of Trees.sets) {
+    for (const r of [s.near, s.mid, s.cast]) { r.ia.clearUpdateRanges(); r.ib.clearUpdateRanges(); if (r.n) { r.ia.addUpdateRange(0, r.n * 4); r.ib.addUpdateRange(0, r.n * 4); r.ia.needsUpdate = r.ib.needsUpdate = true; } }
+    s.nearGeos[0].instanceCount = s.nearGeos[1].instanceCount = s.near.n; s.mid.g.instanceCount = s.mid.n; s.cast.g.instanceCount = s.cast.n;
+    s.nearMeshes[0].visible = s.nearMeshes[1].visible = s.near.n > 0; s.midMesh.visible = s.mid.n > 0; s.castMesh.visible = s.cast.n > 0;
+  }
+};
 
 
 // ---- 75_particles.js ----
@@ -8425,7 +8779,7 @@ function fxUpdate(dt, time, env, cam) {
       put(e.p[0], e.p[1] + sz * 0.45, e.p[2], sz, 1, 1, 1, 0.9 * fl, 0, 2, 1.5, e.seed); put(e.p[0], e.p[1] + sz * 0.4, e.p[2], sz * 4.2, 1.0, 0.5, 0.16, 0.2 * fl, 0, 0, 1, e.seed);
     } else if (e.type === 'lantern') {
       if (lit < 0.05 || dist > 170) continue;
-      put(e.p[0], e.p[1], e.p[2], 0.11, 1.0, 0.75, 0.35, 3.0 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.75 + dist * 0.012, 1.0, 0.55, 0.2, 0.26 * lit, 0, 0, 1, e.seed);
+      put(e.p[0], e.p[1], e.p[2], 0.055 + dist * 0.0016, 1.0, 0.66, 0.26, 1.5 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.42 + dist * 0.006, 1.0, 0.50, 0.17, 0.11 * lit, 0, 0, 1, e.seed);      // a small bright flame and a faint halo (it was a white ball a metre across)
     } else if (e.type === 'herb') {
       if (e.gone || dist > 60) continue;
       put(e.p[0], e.p[1] + 0.12, e.p[2], 0.34, 0.55, 0.85, 1.0, 0.16 + 0.10 * Math.sin(time * 2 + e.seed * 20) + env.night * 0.25, 0, 0, 1, e.seed);
@@ -8435,12 +8789,14 @@ function fxUpdate(dt, time, env, cam) {
   if (World.cell) FX.smoke.length = 0;
   for (let i = FX.smoke.length - 1; i >= 0; i--) {
     const s = FX.smoke[i]; s.life += dt; if (s.life > s.max) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
-    const k = s.life / s.max; s.p[0] += (wx * 0.9 * k + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) * dt; s.p[2] += (wz * 0.9 * k) * dt;
+    const k = s.life / s.max, wv = Wind.at(s.p[0], s.p[2]), wk = 0.25 + 0.95 * k;          // the gust over this chimney, taking hold as the smoke leaves its shelter
+    s.p[0] += (wv[0] * wk + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) / (1 + 0.35 * Math.hypot(wv[0], wv[1])) * dt; s.p[2] += (wv[1] * wk) * dt;
     put(s.p[0], s.p[1], s.p[2], 0.14 + k * 0.95, 0.30, 0.30, 0.31, Math.min(k * 5, 1) * Math.pow(1 - k, 1.3) * 0.42, s.rot + s.life * 0.2, 1, 1.5 + k, s.seed);       // thin grey wisps that fade out (they were large opaque white blobs from above)
   }
   for (let i = FX.embers.length - 1; i >= 0; i--) {
     const s = FX.embers[i]; s.life += dt; if (s.life > s.max) { FX.embers[i] = FX.embers[FX.embers.length - 1]; FX.embers.pop(); continue; }
-    s.p[0] += (s.v[0] + Math.sin(s.ph + s.life * 7) * 0.4) * dt; s.p[1] += s.v[1] * dt; s.p[2] += (s.v[2] + Math.cos(s.ph + s.life * 6) * 0.4) * dt;
+    const ew = World.cell ? [0, 0] : Wind.at(s.p[0], s.p[2]);
+    s.p[0] += (s.v[0] + ew[0] * 0.5 + Math.sin(s.ph + s.life * 7) * 0.4) * dt; s.p[1] += s.v[1] * dt; s.p[2] += (s.v[2] + ew[1] * 0.5 + Math.cos(s.ph + s.life * 6) * 0.4) * dt;
     put(s.p[0], s.p[1], s.p[2], 0.035, 1.0, 0.5, 0.12, 2.6 * (1 - s.life / s.max), 0, 3, 1, 0);
   }
   // fireflies after dusk, drifting specks of dust by day (both wrap around the camera)
@@ -8506,7 +8862,7 @@ function airUpdate(put, dt, time, env, cam) {
   }
   // leaves loosen from the nearest trees by day and spiral down on the wind
   if (day > 0.3 && AIR.near.length) for (let k = 0; k < AIR.near.length; k++) for (let j = 0; j < 4; j++) {
-    const t = AIR.near[k], ph = (time * 0.12 + (k * 4 + j) * 0.21) % 1, h = 9 * t[3] * 0.6 * (1 - ph) + 0.1, a = (k * 4 + j) * 2.1 + time * 0.2;
+    const t = AIR.near[k], ph = (time * 0.12 + (k * 4 + j) * 0.21) % 1, h = 9 * t[3] * 0.6 * (1 - ph) + 0.1, a = (k * 4 + j) * 2.1 + time * 0.2, wv = Wind.at(t[0], t[2]), wx = wv[0], wz = wv[1];      // the gust at this tree
     put(t[0] + Math.cos(a) * 2.4 * t[3] * 0.5 + wx * ph * 5 + Math.sin(time * 1.5 + j) * 0.4, World.groundY(t[0], t[2]) + h, t[2] + Math.sin(a) * 2.4 * t[3] * 0.5 + wz * ph * 5, 0.045, 0.5, 0.36, 0.14, 0.9 * Math.sin(ph * 3.14), time * 2 + j, 1, 1, j);
   }
   // moths around lanterns after dusk
@@ -10249,7 +10605,7 @@ TALK.rowan = function () {
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 30';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 31';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -11514,7 +11870,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
     G.x = p[0]; G.y = p[1]; G.z = p[2]; G.zone = World.camZone | 0; G.indoor = World.indoor;
     const L = K.L; L.x = p[0]; L.y = p[1]; L.z = p[2]; L.yaw = cam.yaw; L.fx = Math.sin(cam.yaw); L.fz = -Math.cos(cam.yaw); L.rx = Math.cos(cam.yaw); L.rz = Math.sin(cam.yaw);
     G.zid = G.zone ? World.zones[G.zone - 1].site.id : ''; G.space = G.zone ? SPACE(G.zid) : 'open';
-    G.hour = Env.hour; G.night = ENV.night; G.day = ENV.day; G.wind = Math.max(0.1, Math.min(1.4, ENV.windStrength));
+    G.hour = Env.hour; G.night = ENV.night; G.day = ENV.day; G.wind = Math.max(0.1, Math.min(1.4, typeof Wind !== 'undefined' ? Wind.feel(Player.pos[0], Player.pos[2]) : ENV.windStrength));      // the gust passing over the player, the same one the grass shows
     G.rain = Math.max(Env.rain || 0, (typeof Sky !== 'undefined' && Sky.weather && Sky.weather.rain) || 0);
     G.playing = !!game.playing; G.menu = !!(typeof UI !== 'undefined' && UI.menu); G.talk = !!(typeof UI !== 'undefined' && (UI.talk || UI.reader)); G.dead = !!(typeof RPG !== 'undefined' && RPG.dead);
     if (K.testHold) return;
@@ -11795,13 +12151,13 @@ RPG.fxWrite = function (dt) {
 };
 
 // ── geometry and material helpers for small hand-built things (weapons, hands) ──
-// parts: [geometry, Matrix4, [r, g, b] linear]; returns one geometry with a 'color' attribute
+// parts: [geometry, Matrix4, [r, g, b] linear, [metal, roughness]?]; returns one geometry with 'color' and 'mr' attributes
 RPG.merge = function (parts) {
-  let n = 0; const gs = parts.map(([g, m, c]) => { const t = g.index ? g.toNonIndexed() : g.clone(); if (m) t.applyMatrix4(m); g.dispose(); n += t.attributes.position.count; return [t, c]; });
-  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3); let o = 0;
-  for (const [t, c] of gs) { const k = t.attributes.position.count; pos.set(t.attributes.position.array, o * 3); nor.set(t.attributes.normal.array, o * 3); for (let i = 0; i < k; i++) col.set(c, (o + i) * 3); o += k; t.dispose(); }
+  let n = 0; const gs = parts.map(([g, m, c, mr]) => { const t = g.index ? g.toNonIndexed() : g.clone(); if (m) t.applyMatrix4(m); g.dispose(); n += t.attributes.position.count; return [t, c, mr || [0, 0.8]]; });
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3), mrA = new Float32Array(n * 2); let o = 0;
+  for (const [t, c, mr] of gs) { const k = t.attributes.position.count; pos.set(t.attributes.position.array, o * 3); nor.set(t.attributes.normal.array, o * 3); for (let i = 0; i < k; i++) { col.set(c, (o + i) * 3); mrA.set(mr, (o + i) * 2); } o += k; t.dispose(); }
   const g = new THREE.BufferGeometry(), BA = THREE.BufferAttribute;
-  g.setAttribute('position', new BA(pos, 3)); g.setAttribute('normal', new BA(nor, 3)); g.setAttribute('color', new BA(col, 3)); g.computeBoundingSphere();
+  g.setAttribute('position', new BA(pos, 3)); g.setAttribute('normal', new BA(nor, 3)); g.setAttribute('color', new BA(col, 3)); g.setAttribute('mr', new BA(mrA, 2)); g.computeBoundingSphere();
   return g;
 };
 // vertex-coloured surface lit like the rest of the world: sun from the scene light, sky and hearths through emissive
@@ -11812,17 +12168,104 @@ RPG.litMat = function (uZone, uLight, rough) {
   m.colorNode = albedo; m.emissiveNode = albedo.mul(SH.hemi(N, uLight, uZone).add(SH.pointLights(positionWorld, N, uZone, float(0.25))));
   return m;
 };
+// Weapons, gloves and sleeves: as litMat, plus per-vertex metal and roughness ('mr'). Steel mirrors the sky above and the ground below
+// (there is no environment map), takes the sun's highlight from the scene light and glints in firelight; leather and cloth get a grain.
+RPG.gearMat = function (uZone, uLight) {
+  const { attribute, float, vec2, vec3, positionWorld, positionLocal, normalWorld, texture, mix, reflect, normalize, dot, pow, max, abs, smoothstep, step } = TSL, U = SH.U;
+  const m = new THREE.MeshStandardNodeMaterial();
+  const col = attribute('color', 'vec3'), mr = attribute('mr', 'vec2'), metal = mr.x, pl = positionLocal;
+  const N = normalWorld.normalize(), V = normalize(U.camPos.sub(positionWorld)), Rf = reflect(V.negate(), N);
+  // grain: long streaks down a blade (the marks of the grindstone), a fine mottle on leather and cloth
+  const g = texture(G.noiseTex, vec2(pl.x.mul(mix(55.0, 130.0, metal)).add(pl.z.mul(41.0)), pl.y.mul(mix(55.0, 2.2, metal)).add(pl.z.mul(23.0)))).r.sub(0.5);
+  const albedo = col.mul(g.mul(mix(0.8, 0.25, metal)).add(1));
+  const rough = SH.sat(mr.y.add(g.mul(0.25)));
+  const sky = SH.skyBase(vec3(Rf.x, abs(Rf.y).mul(0.6).add(0.02), Rf.z)), open = step(uZone, 0.5);
+  // worn steel is a poor mirror: it shows the sky's brightness more than its colour
+  const skyG = mix(vec3(dot(sky, vec3(0.2126, 0.7152, 0.0722))), sky, 0.3).mul(0.8);
+  const outEnv = mix(U.ambGnd.mul(1.5), skyG, smoothstep(-0.25, 0.2, Rf.y));
+  const env = mix(SH.hemi(Rf, uLight, uZone).mul(1.3), outEnv.mul(uLight), open).mul(mix(1.0, 0.55, rough));
+  const glint = SH.pointLights(positionWorld, Rf, uZone, float(0.0)).mul(1.6).add(SH.pointLights(positionWorld, N, uZone, float(0.25)).mul(0.35));
+  const dull = SH.hemi(N, uLight, uZone).add(SH.pointLights(positionWorld, N, uZone, float(0.25)));
+  const fres = pow(SH.sat(float(1).sub(dot(N, V))), 4);
+  m.colorNode = albedo; m.metalnessNode = metal; m.roughnessNode = rough;
+  m.emissiveNode = mix(albedo.mul(dull).add(env.mul(fres.mul(0.05))), albedo.mul(env.add(glint)).mul(fres.mul(0.5).add(0.75)), metal);
+  return m;
+};
 const _M4 = () => new THREE.Matrix4();
 RPG.xf = (x, y, z, rx, ry, rz, sx, sy, sz) => _M4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx || 0, ry || 0, rz || 0)), new THREE.Vector3(sx === undefined ? 1 : sx, sy === undefined ? (sx === undefined ? 1 : sx) : sy, sz === undefined ? (sx === undefined ? 1 : sx) : sz));
-// a one-handed sword: grip at the origin, blade along +y. len = blade length, tone = blade brightness
+// places a shape built along +y so that it runs from a to b (centred between them); sx, sz scale its cross-section
+RPG.aim = (a, b, sx, sz) => { const A = new THREE.Vector3(a[0], a[1], a[2]), B = new THREE.Vector3(b[0], b[1], b[2]), d = B.clone().sub(A).normalize();
+  return _M4().compose(A.add(B).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d), new THREE.Vector3(sx || 1, 1, sz || sx || 1)); };
+// flat-faced skin over a row of closed rings (each a list of [x, y, z], all the same length); the ends are closed with fans
+RPG.loft = function (rings) {
+  const P = [], n = rings[0].length, cen = r => { const c = [0, 0, 0]; for (const p of r) { c[0] += p[0] / n; c[1] += p[1] / n; c[2] += p[2] / n; } return c; };
+  const tri = (a, b, c, inside) => {       // wound so that it faces away from `inside`
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2], nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    if (nx * nx + ny * ny + nz * nz < 1e-18) return;
+    if (nx * (a[0] - inside[0]) + ny * (a[1] - inside[1]) + nz * (a[2] - inside[2]) < 0) P.push(...a, ...c, ...b); else P.push(...a, ...b, ...c);
+  };
+  for (let k = 0; k + 1 < rings.length; k++) { const A = rings[k], B = rings[k + 1], ca = cen(A), cb = cen(B), mid = [(ca[0] + cb[0]) / 2, (ca[1] + cb[1]) / 2, (ca[2] + cb[2]) / 2];
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n; tri(A[i], A[j], B[j], mid); tri(A[i], B[j], B[i], mid); } }
+  for (const [r, o] of [[rings[0], rings[1]], [rings[rings.length - 1], rings[rings.length - 2]]]) { const c = cen(r), inn = cen(o); for (let i = 0; i < n; i++) tri(c, r[i], r[(i + 1) % n], inn); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(P), 3)); g.computeVertexNormals();
+  return g;
+};
+// An arming sword: grip at the origin, blade along +y with its flats facing +z and -z. len = blade length, tone = how bright the steel
+// is (below 0.7 it is pitted and brown), wide = half the blade's width at the guard. The blade is a flattened hexagon with a fuller
+// (the groove down the middle) over the first two thirds, tapering to a point; a straight crossguard, a corded grip, a wheel pommel.
 RPG.swordGeo = function (len, tone, wide) {
-  const T = THREE, st = [0.30 * tone, 0.31 * tone, 0.34 * tone], w = wide || 0.026;
+  const T = THREE, w0 = wide || 0.026, t0 = 0.0036, y0 = 0.094, L = len + 0.09, rust = sat((0.75 - tone) * 3.3);
+  const k = 0.42 + 0.26 * Math.min(tone, 1.3), st = mix3([0.60 * k / 0.68, 0.61 * k / 0.68, 0.64 * k / 0.68], [0.20, 0.13, 0.085], rust), fit = mix3([0.30, 0.29, 0.28], [0.15, 0.11, 0.08], rust);
+  const steel = [1, lerp(0.30, 0.72, rust)], iron = [1, lerp(0.48, 0.75, rust)];
+  const ring = (y, w, t, f) => [[w, y, 0], [w * 0.40, y, t], [w * 0.17, y, t * (1 - f)], [-w * 0.17, y, t * (1 - f)], [-w * 0.40, y, t], [-w, y, 0], [-w * 0.40, y, -t], [-w * 0.17, y, -t * (1 - f)], [w * 0.17, y, -t * (1 - f)], [w * 0.40, y, -t]];
+  const short = len < 0.35, F = short ? 0 : 0.62;        // a knife has no fuller
+  const blade = RPG.loft([ring(y0, w0 * 0.96, t0, F), ring(y0 + L * 0.03, w0, t0, F), ring(y0 + L * 0.58, w0 * 0.80, t0 * 0.84, F), ring(y0 + L * 0.66, w0 * 0.77, t0 * 0.80, 0), ring(y0 + L * 0.88, w0 * 0.60, t0 * 0.62, 0), ring(y0 + L * 0.965, w0 * 0.36, t0 * 0.45, 0), ring(y0 + L, 0.0006, 0.0005, 0)]);
+  const gripPts = []; for (let i = 0; i <= 30; i++) { const u = i / 30; gripPts.push(new T.Vector2(0.0142 + 0.0024 * Math.sin(u * PI) + (i % 2 ? 0.0013 : 0), -0.075 + u * 0.15)); }
+  const gl = 0.2 * (short ? 0.5 : 1) / 2;                 // half the guard's span
   return RPG.merge([
-    [new T.CylinderGeometry(0.016, 0.019, 0.15, 7), RPG.xf(0, 0, 0), [0.07, 0.04, 0.025]],
-    [new T.SphereGeometry(0.025, 8, 6), RPG.xf(0, -0.092, 0), [0.16, 0.13, 0.09]],
-    [new T.BoxGeometry(0.19, 0.022, 0.034), RPG.xf(0, 0.086, 0), [0.16, 0.13, 0.09]],
-    [new T.CylinderGeometry(1, 1, len, 4), RPG.xf(0, 0.097 + len / 2, 0, 0, 0, 0, w, 1, 0.0055), st],
-    [new T.ConeGeometry(1, 0.09, 4), RPG.xf(0, 0.097 + len + 0.045, 0, 0, 0, 0, w, 1, 0.0055), st],
+    [blade, null, st, steel],
+    [new T.LatheGeometry(gripPts, 10), RPG.xf(0, 0, 0, 0, 0, 0, 1, 1, 0.84), [0.050, 0.030, 0.019], [0, 0.7]],
+    [new T.CylinderGeometry(0.0195, 0.0195, 0.006, 10), RPG.xf(0, 0.072, 0, 0, 0, 0, 1, 1, 0.84), fit, iron],
+    [new T.CylinderGeometry(0.0185, 0.0185, 0.006, 10), RPG.xf(0, -0.072, 0, 0, 0, 0, 1, 1, 0.84), fit, iron],
+    // crossguard: a block the blade sits in, and two arms that thin toward flared ends
+    [new T.BoxGeometry(0.036, 0.021, 0.027), RPG.xf(0, 0.0855, 0), fit, iron],
+    [new T.CylinderGeometry(0.0068, 0.0098, gl, 8), RPG.xf(gl / 2 + 0.012, 0.0855, 0, 0, 0, -PI / 2, 1, 1, 1.25), fit, iron],
+    [new T.CylinderGeometry(0.0068, 0.0098, gl, 8), RPG.xf(-gl / 2 - 0.012, 0.0855, 0, 0, 0, PI / 2, 1, 1, 1.25), fit, iron],
+    [new T.SphereGeometry(0.0098, 8, 6), RPG.xf(gl + 0.012, 0.0855, 0, 0, 0, 0, 0.8, 1, 1.2), fit, iron],
+    [new T.SphereGeometry(0.0098, 8, 6), RPG.xf(-gl - 0.012, 0.0855, 0, 0, 0, 0, 0.8, 1, 1.2), fit, iron],
+    // wheel pommel: a disc on edge with a raised boss on each face, and the peened end of the tang
+    [new T.CylinderGeometry(0.0235, 0.0235, 0.014, 14), RPG.xf(0, -0.097, 0, PI / 2, 0, 0), fit, iron],
+    [new T.CylinderGeometry(0.0150, 0.0205, 0.005, 14), RPG.xf(0, -0.097, 0.0095, PI / 2, 0, 0), fit, iron],
+    [new T.CylinderGeometry(0.0205, 0.0150, 0.005, 14), RPG.xf(0, -0.097, -0.0095, PI / 2, 0, 0), fit, iron],
+    [new T.CylinderGeometry(0.005, 0.006, 0.006, 6), RPG.xf(0, -0.123, 0), fit, iron],
+  ]);
+};
+// A gloved right fist closed round a grip that runs along y through the origin: back of the hand on +x, knuckles toward -z, wrist toward +z.
+RPG.WRIST = [0.027, -0.012, 0.060];
+RPG.fistGeo = function () {
+  const T = THREE, lea = [0.052, 0.034, 0.023], dark = [0.036, 0.023, 0.016], soft = [0, 0.78], parts = [];
+  parts.push([new T.SphereGeometry(1, 12, 9), RPG.xf(0.029, -0.002, 0.012, 0, 0.12, 0, 0.0185, 0.045, 0.043), lea, soft]);       // back of the hand
+  const ys = [0.031, 0.0095, -0.012, -0.0325], Rr = [0.0262, 0.0274, 0.0268, 0.0246], tb = [0.0106, 0.0111, 0.0107, 0.0096];
+  for (let i = 0; i < 4; i++) {
+    const R_ = Rr[i], t = tb[i], y = ys[i], a0 = PI * 0.75, a1 = a0 + PI * 1.02;
+    parts.push([new T.TorusGeometry(R_, t, 7, 9, PI * 1.02), RPG.xf(0, y, 0, PI / 2, 0, a0), i % 2 ? dark : lea, soft]);
+    parts.push([new T.SphereGeometry(t * 1.16, 8, 6), RPG.xf(Math.cos(a1) * R_ * 1.04, y, Math.sin(a1) * R_ * 1.04), lea, soft]);      // knuckle
+    parts.push([new T.SphereGeometry(t * 0.98, 8, 6), RPG.xf(Math.cos(a0) * R_, y, Math.sin(a0) * R_), dark, soft]);                  // fingertip
+  }
+  parts.push([new T.CapsuleGeometry(0.0112, 0.034, 4, 8), RPG.aim([0.021, 0.036, 0.031], [-0.019, 0.047, 0.015]), lea, soft]);       // thumb, laid over the forefinger
+  parts.push([new T.SphereGeometry(1, 10, 8), RPG.xf(0.021, 0.010, 0.036, 0, 0, 0, 0.021, 0.027, 0.021), lea, soft]);                 // ball of the thumb
+  parts.push([new T.SphereGeometry(1, 10, 8), RPG.xf(0.012, -0.024, 0.034, 0, 0, 0, 0.022, 0.022, 0.022), dark, soft]);               // heel of the palm
+  const W = RPG.WRIST; parts.push([new T.SphereGeometry(1, 10, 8), RPG.xf(W[0], W[1], W[2], 0, 0, 0, 0.029, 0.026, 0.028), lea, soft]);
+  return RPG.merge(parts);
+};
+// Forearm from the wrist (origin) back along +z: the glove's flared cuff with a stitched rim, then a padded wool sleeve.
+RPG.forearmGeo = function () {
+  const T = THREE, V = (r, y) => new T.Vector2(r, y), up = RPG.xf(0, 0, 0, PI / 2, 0, 0, 1.1, 1, 0.94);
+  const sleeve = [V(0.033, 0.07)]; for (let i = 0; i <= 12; i++) { const u = i / 12; sleeve.push(V(0.037 + 0.016 * u + (i % 3 === 1 ? 0.0028 : 0), 0.09 + u * 0.50)); }
+  return RPG.merge([
+    [new T.LatheGeometry([V(0.026, -0.02), V(0.0295, 0.0), V(0.031, 0.03), V(0.036, 0.065), V(0.0445, 0.105)], 12), up, [0.046, 0.030, 0.021], [0, 0.74]],
+    [new T.TorusGeometry(0.0445, 0.0034, 5, 14), RPG.xf(0, 0, 0.105, 0, 0, 0, 1.1, 0.94, 1), [0.075, 0.052, 0.034], [0, 0.7]],
+    [new T.LatheGeometry(sleeve, 12), up, [0.050, 0.049, 0.044], [0, 0.95]],
   ]);
 };
 RPG.shieldGeo = function () {
@@ -11934,19 +12377,15 @@ const Combat = (() => {
 
   C.init = function () {
     const T = THREE; C.uZone = TSL.uniform(0); C.uLight = TSL.uniform(1);
-    const mat = C.mat = RPG.litMat(C.uZone, C.uLight, 0.42), matSoft = C.matSoft = RPG.litMat(C.uZone, C.uLight, 0.85);
+    const mat = C.mat = RPG.gearMat(C.uZone, C.uLight), matSoft = C.matSoft = mat;
     const vm = C.vm = new T.Group(); vm.matrixAutoUpdate = false; vm.name = 'viewmodel';
     const mk = (g, m) => { const o = new T.Mesh(g, m); o.frustumCulled = false; o.castShadow = false; o.receiveShadow = true; o.layers.set(1); return o; };
     C.hand = new T.Group(); C.blade = mk(RPG.swordGeo(0.64, 1), mat); C.hand.add(C.blade);
-    // a fist around the grip and a forearm running back out of view
-    const arm = d => RPG.merge([
-      [new T.BoxGeometry(0.064, 0.074, 0.078), RPG.xf(0, 0, 0.004), [0.06, 0.04, 0.028]],
-      [new T.CylinderGeometry(0.026, 0.033, 0.2, 8), RPG.xf(0.02 * d, -0.07, 0.12, 1.05, 0, 0), [0.06, 0.055, 0.04]],
-      [new T.CylinderGeometry(0.036, 0.038, 0.07, 8), RPG.xf(0.01 * d, -0.045, 0.07, 1.05, 0, 0), [0.075, 0.048, 0.03]],
-    ]);
-    C.hand.add(mk(arm(1), matSoft)); vm.add(C.hand);
-    C.shieldG = new T.Group(); C.shieldG.add(mk(RPG.shieldGeo(), matSoft));
-    const la = mk(arm(-1), matSoft); la.position.set(0.02, -0.02, 0.07); C.shieldG.add(la); C.shieldG.visible = false; vm.add(C.shieldG);
+    // a gloved fist round the grip; the forearm is its own piece, turned every frame to run from the wrist back to where the elbow would be
+    C.hand.add(mk(RPG.fistGeo(), mat)); vm.add(C.hand);
+    const fg = RPG.forearmGeo(); C.arm = mk(fg, mat); vm.add(C.arm);
+    C.shieldG = new T.Group(); C.shieldG.add(mk(RPG.shieldGeo(), RPG.litMat(C.uZone, C.uLight, 0.85)));
+    C.shieldG.visible = false; vm.add(C.shieldG); C.armL = mk(fg, mat); C.armL.visible = false; vm.add(C.armL);
     SC.scene.add(vm); C.refresh();
   };
   // equipment changed: the blade in view follows the sword you carry
@@ -11957,7 +12396,7 @@ const Combat = (() => {
       C.blade.visible = !!eq.weapon;
       if (b) { C.blade.geometry.dispose(); C.blade.geometry = RPG.swordGeo(b[0], b[1], b[2]); }
     }
-    C.hasShield = !!eq.shield; C.shieldG.visible = C.hasShield;
+    C.hasShield = !!eq.shield; C.shieldG.visible = C.armL.visible = C.hasShield;
   };
   C.busy = () => C.phase === 'wind' || C.phase === 'charge' || C.phase === 'strike' || C.phase === 'block';
   C.blocking = () => C.phase === 'block';
@@ -12046,6 +12485,7 @@ const Combat = (() => {
   };
   // put the view model where the camera is (called after the camera has had its last nudge for the frame)
   const _e = new THREE.Euler(0, 0, 0, 'YXZ'), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
+  const _w = new THREE.Vector3(), _d = new THREE.Vector3(), _z = new THREE.Vector3(0, 0, 1), SH_WRIST = [0.02, -0.03, 0.08];
   const VS = 1.3;       // poses are authored for a narrow view; pushing them out keeps a wide phone screen from being filled by the hand
   C.place = function () {
     if (!C.vm) return;
@@ -12057,6 +12497,9 @@ const Combat = (() => {
     C.hand.position.set((c.p[0] - C.sway) * VS + Math.sin(st) * 0.007 * bob, (c.p[1] - drop) * VS - Math.abs(Math.cos(st)) * 0.011 * bob + Math.sin(game.time * 1.7) * 0.004, c.p[2] * VS);
     C.hand.rotation.set(c.r[0] + C.away * 0.5, c.r[1], c.r[2] - C.sway * 2);
     C.shieldG.position.set((C.sh.p[0] - C.sway) * VS, (C.sh.p[1] - drop * 0.8) * VS - Math.abs(Math.cos(st)) * 0.009 * bob, C.sh.p[2] * VS); C.shieldG.rotation.set(C.sh.r[0], C.sh.r[1], C.sh.r[2]);
+    // forearms: from each wrist toward an elbow that stays low and outside the view, so the arm turns naturally through every swing
+    const aimArm = (arm, from, local, ex) => { _w.set(local[0], local[1], local[2]).applyEuler(from.rotation).add(from.position); arm.position.copy(_w); _d.set(ex, -0.70, -0.40).sub(_w).normalize(); arm.quaternion.setFromUnitVectors(_z, _d); };
+    aimArm(C.arm, C.hand, RPG.WRIST, 0.44); if (C.hasShield) aimArm(C.armL, C.shieldG, SH_WRIST, -0.50);
     C.vm.updateMatrixWorld(true);
     C.uZone.value = World.camZone | 0; C.uLight.value = World.camZone ? 0.34 : 1;
   };
@@ -12170,7 +12613,7 @@ const Foes = (() => {
           spot: sp, pos: sp.p.slice(), yaw: sp.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0 };
         f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
         f.h = Chars.spawn({ id: 'foe.' + id, foe: look });
-        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.layers.set(1);
+        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.gearMat(f.h.uZone, f.h.uLight)); sw.castShadow = true; sw.layers.set(1);
         const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });      // near sun-shadow map only, like the villagers
         if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
         F.list.push(f);
@@ -12624,7 +13067,7 @@ async function warmShaders() {
     await load('Raising the Greyspine', 0.1); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
     await load('Framing timber, laying thatch', 0.25); buildVillage(); lap('village');
     await load('Waking the villagers', 0.5); buildNPCs(); festivalSpots(); lap('npcs');
-    await load('Planting pine and birch', 0.62); buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
+    await load('Planting pine and birch', 0.62); if (typeof Trees !== 'undefined') await Trees.load(); /* fork-look: scanned trees (74b_trees.js) */ buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
     World.villagePack.upload('village'); World.skinPack.upload('skin');
     buildSplat2(); colBuild(); navBuild(); fxInit(); lap('nav');
     await load('Lighting the lanterns', 0.74);

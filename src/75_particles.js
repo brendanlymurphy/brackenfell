@@ -35,7 +35,7 @@ function fxUpdate(dt, time, env, cam) {
       put(e.p[0], e.p[1] + sz * 0.45, e.p[2], sz, 1, 1, 1, 0.9 * fl, 0, 2, 1.5, e.seed); put(e.p[0], e.p[1] + sz * 0.4, e.p[2], sz * 4.2, 1.0, 0.5, 0.16, 0.2 * fl, 0, 0, 1, e.seed);
     } else if (e.type === 'lantern') {
       if (lit < 0.05 || dist > 170) continue;
-      put(e.p[0], e.p[1], e.p[2], 0.11, 1.0, 0.75, 0.35, 3.0 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.75 + dist * 0.012, 1.0, 0.55, 0.2, 0.26 * lit, 0, 0, 1, e.seed);
+      put(e.p[0], e.p[1], e.p[2], 0.055 + dist * 0.0016, 1.0, 0.66, 0.26, 1.5 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.42 + dist * 0.006, 1.0, 0.50, 0.17, 0.11 * lit, 0, 0, 1, e.seed);      // a small bright flame and a faint halo (it was a white ball a metre across)
     } else if (e.type === 'herb') {
       if (e.gone || dist > 60) continue;
       put(e.p[0], e.p[1] + 0.12, e.p[2], 0.34, 0.55, 0.85, 1.0, 0.16 + 0.10 * Math.sin(time * 2 + e.seed * 20) + env.night * 0.25, 0, 0, 1, e.seed);
@@ -45,12 +45,14 @@ function fxUpdate(dt, time, env, cam) {
   if (World.cell) FX.smoke.length = 0;
   for (let i = FX.smoke.length - 1; i >= 0; i--) {
     const s = FX.smoke[i]; s.life += dt; if (s.life > s.max) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
-    const k = s.life / s.max; s.p[0] += (wx * 0.9 * k + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) * dt; s.p[2] += (wz * 0.9 * k) * dt;
+    const k = s.life / s.max, wv = Wind.at(s.p[0], s.p[2]), wk = 0.25 + 0.95 * k;          // the gust over this chimney, taking hold as the smoke leaves its shelter
+    s.p[0] += (wv[0] * wk + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) / (1 + 0.35 * Math.hypot(wv[0], wv[1])) * dt; s.p[2] += (wv[1] * wk) * dt;
     put(s.p[0], s.p[1], s.p[2], 0.14 + k * 0.95, 0.30, 0.30, 0.31, Math.min(k * 5, 1) * Math.pow(1 - k, 1.3) * 0.42, s.rot + s.life * 0.2, 1, 1.5 + k, s.seed);       // thin grey wisps that fade out (they were large opaque white blobs from above)
   }
   for (let i = FX.embers.length - 1; i >= 0; i--) {
     const s = FX.embers[i]; s.life += dt; if (s.life > s.max) { FX.embers[i] = FX.embers[FX.embers.length - 1]; FX.embers.pop(); continue; }
-    s.p[0] += (s.v[0] + Math.sin(s.ph + s.life * 7) * 0.4) * dt; s.p[1] += s.v[1] * dt; s.p[2] += (s.v[2] + Math.cos(s.ph + s.life * 6) * 0.4) * dt;
+    const ew = World.cell ? [0, 0] : Wind.at(s.p[0], s.p[2]);
+    s.p[0] += (s.v[0] + ew[0] * 0.5 + Math.sin(s.ph + s.life * 7) * 0.4) * dt; s.p[1] += s.v[1] * dt; s.p[2] += (s.v[2] + ew[1] * 0.5 + Math.cos(s.ph + s.life * 6) * 0.4) * dt;
     put(s.p[0], s.p[1], s.p[2], 0.035, 1.0, 0.5, 0.12, 2.6 * (1 - s.life / s.max), 0, 3, 1, 0);
   }
   // fireflies after dusk, drifting specks of dust by day (both wrap around the camera)

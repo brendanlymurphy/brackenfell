@@ -163,10 +163,14 @@ function buildVegetation() {
     const ibuf = data;
     for (const g of defs) World.instGroups.push(Object.assign({ ibuf, cells: list, first: g.item.first, count: g.item.count, base: g.item.base, shadow: true }, g));
   };
-  mkGroups(inst.pine, [{ item: I.pineT, kind: 'opaque', lod: 1 }, { item: I.pineL, kind: 'leaf', lod: 1 }], 48);
-  mkGroups(inst.pine, [{ item: I.pineF, kind: 'leaf', lod: 2, nearOnly: false }], FAR_TREE_CELL);
-  mkGroups(inst.birch, [{ item: I.birchT, kind: 'opaque', lod: 1 }, { item: I.birchL, kind: 'leaf', lod: 1 }], 48);
-  mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
+  // conifers and birches: the scanned trees (74b_trees.js) take the planted positions; the generated ones only stand in if those files failed to load
+  if (typeof Trees !== 'undefined' && Trees.ready) Trees.plant(inst);
+  else {
+    mkGroups(inst.pine, [{ item: I.pineT, kind: 'opaque', lod: 1 }, { item: I.pineL, kind: 'leaf', lod: 1 }], 48);
+    mkGroups(inst.pine, [{ item: I.pineF, kind: 'leaf', lod: 2, nearOnly: false }], FAR_TREE_CELL);
+    mkGroups(inst.birch, [{ item: I.birchT, kind: 'opaque', lod: 1 }, { item: I.birchL, kind: 'leaf', lod: 1 }], 48);
+    mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
+  }
   mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);

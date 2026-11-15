@@ -45,7 +45,7 @@ function airUpdate(put, dt, time, env, cam) {
   }
   // leaves loosen from the nearest trees by day and spiral down on the wind
   if (day > 0.3 && AIR.near.length) for (let k = 0; k < AIR.near.length; k++) for (let j = 0; j < 4; j++) {
-    const t = AIR.near[k], ph = (time * 0.12 + (k * 4 + j) * 0.21) % 1, h = 9 * t[3] * 0.6 * (1 - ph) + 0.1, a = (k * 4 + j) * 2.1 + time * 0.2;
+    const t = AIR.near[k], ph = (time * 0.12 + (k * 4 + j) * 0.21) % 1, h = 9 * t[3] * 0.6 * (1 - ph) + 0.1, a = (k * 4 + j) * 2.1 + time * 0.2, wv = Wind.at(t[0], t[2]), wx = wv[0], wz = wv[1];      // the gust at this tree
     put(t[0] + Math.cos(a) * 2.4 * t[3] * 0.5 + wx * ph * 5 + Math.sin(time * 1.5 + j) * 0.4, World.groundY(t[0], t[2]) + h, t[2] + Math.sin(a) * 2.4 * t[3] * 0.5 + wz * ph * 5, 0.045, 0.5, 0.36, 0.14, 0.9 * Math.sin(ph * 3.14), time * 2 + j, 1, 1, j);
   }
   // moths around lanterns after dusk

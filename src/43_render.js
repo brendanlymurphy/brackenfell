@@ -42,6 +42,7 @@ async function setQuality(name) {
   if (!prev || prev.shadowRes !== q.shadowRes) for (const l of R.shadows.lights) { l.shadow.mapSize.set(q.shadowRes, q.shadowRes); if (l.shadow.map) { l.shadow.map.dispose(); l.shadow.map = null; } }
   U.terrLayers.value = q.terrLayers === false ? 0 : 1; U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
   { const lf = SC.mats.leaf, a2c = q.msaa > 1; if (lf.alphaToCoverage !== a2c) { lf.alphaToCoverage = a2c; lf.alphaTest = a2c ? 0.06 : 0.5; lf.needsUpdate = true; } }
+  if (typeof Trees !== 'undefined') Trees.quality(q);
   if (!prev || prev.grassRange !== q.grassRange || prev.grassThin !== q.grassThin) { if (prev) Grass.dispose(); Grass.build(SC.scene, q); }
   if (!prev || prev.msaa !== q.msaa || prev.bloom !== q.bloom || prev.bloomScale !== q.bloomScale || prev.bloomMips !== q.bloomMips) buildPipeline();
   R.P = true; R.camKey = '';
@@ -123,7 +124,7 @@ function pickLights(camPos, camZone, env) {
     const reach = l.r + 34; if (d2 > reach * reach) continue;
     let score = inten * l.r / (d2 + 4);
     if (l.zone !== 0 && (dy > 2.4 || dy < -1.9)) score *= 0.02;      // a light on another storey (a cellar torch under the floor, a loft candle) lights nothing the camera sees: it must not take one of the few slots
-    if (l.zone === camZone) score *= 6; else if (l.zone !== 0 && camZone === 0) score *= 0.5; else if (l.zone !== 0) score *= 0.05;
+    if (l.zone === camZone) score *= 6; else if (l.zone !== 0 && camZone === 0) score *= 0.04; else if (l.zone !== 0) score *= 0.05;      // out in the street the lamps come first: a hearth behind a wall lights nothing out here but used to take a slot
     cand.push([score, l, inten * (1 - smooth(l.r + 20, l.r + 34, Math.sqrt(d2)))]);
   }
   cand.sort((a, b) => b[0] - a[0]);
@@ -133,7 +134,7 @@ function pickLights(camPos, camZone, env) {
   for (let i = 0; i < 8; i++) {
     if (i >= n) { P[i].set(0, -9999, 0, 0); C[i].set(0, 0, 0, 0); continue; }
     const l = sorted[i][0], k = sorted[i][1];
-    P[i].set(l.p[0], l.p[1], l.p[2], l.r); C[i].set(l.c[0] * k, l.c[1] * k, l.c[2] * k, l.zone);
+    P[i].set(l.p[0], l.p[1], l.p[2], l.baked ? -l.r : l.r); C[i].set(l.c[0] * k, l.c[1] * k, l.c[2] * k, l.zone);
   }
   U.lightN.value = n; U.lightNOut.value = outdoor.length;
   return n;
@@ -150,7 +151,7 @@ function renderFrame(time, env) {
   c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, cam.roll || 0);   /* [ui] roll from 87_feel.js */ c3.updateMatrixWorld();
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
-  SH.update(env, e, time);
+  SH.update(env, e, time); Lamps.sync();
   pickLights(e, World.camZone | 0, env);
   const L = env.keyDir, sun = R.sun;
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
