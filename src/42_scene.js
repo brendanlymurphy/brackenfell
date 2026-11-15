@@ -1,9 +1,11 @@
 // ───────────────────────── scene: Three objects built from the generated world ─────────────────────────
+// Layers: 0 = seen by the camera and both sun shadow maps; 1 = camera and the near shadow map only (interiors, full trees,
+// villagers, small props); 2 = the wide shadow map only (flat tree stand-ins that cast for every tree out there).
 const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {} };
 function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
-  M.static = surfaceMaterial('static'); M.inst = surfaceMaterial('inst'); M.rigid = surfaceMaterial('rigid'); M.leaf = foliageMaterial(); M.terrain = terrainMaterial();
+  M.static = surfaceMaterial('static'); M.inst = surfaceMaterial('inst'); M.rigid = surfaceMaterial('rigid'); M.leaf = foliageMaterial(); M.leafFar = foliageMaterial(true); M.terrain = terrainMaterial();
   if (typeof WaterMat !== 'undefined') M.water = WaterMat();
   else { M.water = new THREE.MeshBasicNodeMaterial(); M.water.colorNode = SH.U.horizon.mul(0.35).add(TSL.vec3(0.01, 0.03, 0.03)); M.water.opacityNode = TSL.float(0.82); M.water.transparent = true; M.water.depthWrite = false; }
   M.glow = typeof GlowMat !== 'undefined' ? GlowMat() : null;
@@ -22,6 +24,7 @@ function sceneBuild() {
     const mesh = new THREE.Mesh(g, mat); mesh.matrixAutoUpdate = false;
     mesh.castShadow = !!pk.shadow && !it.noShadow && it.kind === 'opaque'; mesh.receiveShadow = it.kind === 'opaque' || it.kind === 'terrain';
     if (it.kind === 'water') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
+    if (it.nearOnly) mesh.layers.set(1);
     scene.add(mesh); SC.statics.push({ mesh, it });
   }
   // ── instanced trees, bushes and boulders: one mesh per (model, cell) so cells cull and switch level of detail ──
@@ -34,8 +37,10 @@ function sceneBuild() {
     }
     const g = geo(World.instPack, grp.first, grp.count, true); g.setAttribute('ipos', c.ipos); g.setAttribute('iprm', c.iprm); g.instanceCount = c.count; g.boundingSphere = sphere(c.c, c.r);
     const mesh = new THREE.Mesh(g, grp.kind === 'leaf' ? M.leaf : M.inst); mesh.matrixAutoUpdate = false;
-    mesh.castShadow = !!grp.shadow; mesh.receiveShadow = true;
+    mesh.castShadow = !!grp.shadow && grp.lod !== 2; mesh.receiveShadow = true;
+    if (grp.nearOnly || grp.lod === 1) mesh.layers.set(1);
     scene.add(mesh); SC.cells.push({ mesh, grp, c });
+    if (grp.lod === 2 && grp.shadow) { const tw = new THREE.Mesh(g, M.leafFar); tw.matrixAutoUpdate = false; tw.castShadow = true; tw.layers.set(2); scene.add(tw); }
   }
   // ── hinged and carried things (doors, mill wheel, pickups, chickens): rigid pieces, one per bone, moved by R.boneData ──
   const pk = World.skinPack, mmA = pk.attr.mm.array, ixA = pk.index.array, pieces = new Map();
@@ -50,10 +55,10 @@ function sceneBuild() {
   for (const obj of World.skinned) {
     if (obj.npc) {
       const mat = surfaceMaterial('skin'), g = geo(pk, obj.first, obj.count), mesh = new THREE.Mesh(g, mat);
-      mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.castShadow = mesh.receiveShadow = true;
+      mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.castShadow = mesh.receiveShadow = true; mesh.layers.set(1);
       scene.add(mesh); SC.bodies.push({ mesh, obj, mat });
     } else for (const p of split(obj)) {
-      const mesh = new THREE.Mesh(p.g, M.rigid); mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.castShadow = mesh.receiveShadow = true;
+      const mesh = new THREE.Mesh(p.g, M.rigid); mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.castShadow = mesh.receiveShadow = true; mesh.layers.set(1);
       scene.add(mesh); SC.rigid.push({ mesh, obj, o: obj.slot * 256 + p.bone * 16 });
     }
   }

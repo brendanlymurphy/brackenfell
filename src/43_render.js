@@ -13,7 +13,7 @@ const R = {
 };
 function renderInit() {
   const cam = R.camera = new THREE.PerspectiveCamera(60, 1, 0.09, 12000);
-  cam.rotation.order = 'YXZ';
+  cam.rotation.order = 'YXZ'; cam.layers.enable(1);
   const sun = R.sun = new THREE.DirectionalLight(0xffffff, Math.PI);
   sun.castShadow = true; sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.05;
   sun.shadow.camera.near = 1; sun.shadow.camera.far = 700;
@@ -83,7 +83,7 @@ function makeSunShadows(light) {
       for (let i = 0; i < 2; i++) {
         const lw = new THREE.Object3D(); lw.target = new THREE.Object3D(); lw.castShadow = true;
         const sh = lw.shadow = light.shadow.clone(); sh.bias = light.shadow.bias * (i ? 3 : 1); sh.normalBias = light.shadow.normalBias * (i ? 3 : 1);
-        if (i) sh.autoUpdate = false;
+        if (i) { sh.autoUpdate = false; sh.camera.layers.enable(2); } else sh.camera.layers.enable(1);
         this.lights.push(lw); this.nodes.push(TSL.shadow(lw, sh));
       }
     }

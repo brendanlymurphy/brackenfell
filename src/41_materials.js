@@ -7,7 +7,7 @@ function gfxDataTex(data, w, h, format, type) {
   return t;
 }
 // tree / rock instance transform with wind; ipos = xyz scale, iprm = yaw, tint, phase
-function instNodes() {
+function instNodes(noLod) {
   const { Fn, vec3, attribute, positionLocal, normalLocal, cos, sin, distance, select, float } = TSL, U = SH.U;
   const ipos = attribute('ipos', 'vec4'), iprm = attribute('iprm', 'vec4'), lod = attribute('mm', 'vec4').w.mul(255).round();
   const pos = Fn(() => {
@@ -21,7 +21,7 @@ function instNodes() {
     // full trees near the player, flat stand-ins beyond; measured from the player even while a shadow map is drawn
     const d = distance(ipos.xyz, U.camPos);
     const far = TSL.step(U.treeLod, d), is1 = TSL.step(TSL.abs(lod.sub(1)), 0.5), is2 = TSL.step(TSL.abs(lod.sub(2)), 0.5);
-    return TSL.mix(w, vec3(0, -20000, 0), is1.mul(far).add(is2.mul(far.oneMinus())));
+    return noLod ? w : TSL.mix(w, vec3(0, -20000, 0), is1.mul(far).add(is2.mul(far.oneMinus())));
   })();
   const c = cos(iprm.x), s = sin(iprm.x), n = normalLocal;
   const nrm = vec3(n.x.mul(c).add(n.z.mul(s)), n.y, n.x.negate().mul(s).add(n.z.mul(c)));
@@ -57,10 +57,11 @@ function surfaceMaterial(mode) {
   return m;
 }
 // leaf cards: cut-out, lit from both sides, a little sun shining through
-function foliageMaterial() {
+// noLod: the copy that only the wide shadow map draws, where every tree is its flat stand-in whatever the distance
+function foliageMaterial(noLod) {
   const { float, int, vec3, attribute, texture, uv, varying, positionWorld, normalize, transformNormalToView, pow, dot, max } = TSL, U = SH.U;
   const m = new THREE.MeshLambertNodeMaterial();
-  const I = instNodes(), mm = attribute('mm', 'vec4').mul(255).round(), tint = attribute('tint', 'vec4');
+  const I = instNodes(noLod), mm = attribute('mm', 'vec4').mul(255).round(), tint = attribute('tint', 'vec4');
   m.positionNode = I.pos;
   const vN = varying(I.nrm), vTint = varying(tint.rgb.mul(tint.rgb).mul(I.tintK)), sky = varying(tint.a);
   const a = texture(G.albedoArr, uv()).depth(int(mm.x)), albedo = a.rgb.mul(vTint), N = normalize(vN);
