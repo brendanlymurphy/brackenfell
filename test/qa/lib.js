@@ -88,6 +88,7 @@ Q.measure = (A, C, B) => {
     if (!ok[o] || seen[o]) continue; const st = [o]; seen[o] = 1; let n = 0, sx = 0, sy = 0; const c0 = [col[o * 3], col[o * 3 + 1], col[o * 3 + 2]];
     while (st.length) { const q = st.pop(); n++; const qx = q % bw, qy = (q / bw) | 0; sx += qx; sy += qy;
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = qx + dx, y = qy + dy; if (x < 0 || y < 0 || x >= bw || y >= bh) continue; const p = y * bw + x; if (seen[p] || !ok[p]) continue; if (Math.abs(col[p * 3] - c0[0]) + Math.abs(col[p * 3 + 1] - c0[1]) + Math.abs(col[p * 3 + 2] - c0[2]) > 12) continue; seen[p] = 1; st.push(p); } }
+    if (c0[2] > c0[0] + 15 && c0[2] > c0[1] && sy / n * BS < H * 0.5) continue;       // a clear sky the mask missed
     comp.push({ f: n * BS * BS / ns, col: c0.map(v => Math.round(v)), at: [Math.round(sx / n * BS), Math.round(sy / n * BS)] });
   }
   comp.sort((p, q) => q.f - p.f);

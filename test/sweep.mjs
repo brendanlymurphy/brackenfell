@@ -10,7 +10,7 @@ fs.mkdirSync(OUT + '/img', { recursive: true });
 if (mode === 'tour') {
   const hours = arg('hours', '13,21').split(',').map(Number), area = arg('area', ''), budget = +arg('budget', 420) * 1000, t0 = Date.now(), quality = arg('quality', 'medium');
   const dbf = OUT + '/tour.json', db = fs.existsSync(dbf) ? JSON.parse(fs.readFileSync(dbf, 'utf8')) : {};
-  const s = await open({ webgl: 1, quality }, [640, 292]);
+  const sz = arg('size', '480x219').split('x').map(Number), s = await open({ webgl: 1, quality }, sz);
   const views = JSON.parse(await s.run('return JSON.stringify(QA.views())')).filter(v => v.area.startsWith(area));
   fs.writeFileSync(OUT + '/views.json', JSON.stringify(JSON.parse(await s.run('return JSON.stringify(QA.views())')), null, 0));
   let done = 0, left = 0;
@@ -25,6 +25,15 @@ if (mode === 'tour') {
   fs.writeFileSync(dbf, JSON.stringify(db)); if (s.msgs.length) console.log('console:', s.msgs.slice(0, 8).join('\n'));
   console.log(`tour: ${done} rendered, ${left} left, ${Object.keys(db).length} total, ${Math.round((Date.now() - t0) / 1000)} s`);
   await s.close(); process.exit(0);
+}
+if (mode === 'shots') {      // one picture per defect (defects.json from defects.py merge): /home/claude/shots/qa/defects/<id>.jpg, resumable
+  const D = JSON.parse(fs.readFileSync(OUT + '/defects.json', 'utf8')), max = +arg('max', 60), budget = +arg('budget', 420) * 1000, t0 = Date.now(); fs.mkdirSync(OUT + '/defects', { recursive: true });
+  const todo = D.filter(d => !fs.existsSync(OUT + '/defects/' + d.id + '.jpg') && (d.sev !== 'minor' || arg('minor', 0))).slice(0, max); if (!todo.length) { console.log('shots: nothing to do'); process.exit(0); }
+  const s = await open({ webgl: 1, quality: 'medium' }, [640, 292]); let n = 0;
+  for (const d of todo) { if (Date.now() - t0 > budget) break;
+    try { const jpg = await s.run(`const d = ${JSON.stringify({ c: d.shotcall, h: d.cam ? d.cam[5] : 13 })}; Env.dayLength = 0; Env.hour = d.h; await eval(d.c); const A = await QA.draw(); return QA.jpeg(A);`);
+      fs.writeFileSync(OUT + '/defects/' + d.id + '.jpg', Buffer.from(jpg, 'base64')); n++; } catch (e) { console.log('FAIL', d.id, String(e.message).slice(0, 160)); } }
+  console.log('shots:', n, 'of', todo.length); await s.close(); process.exit(0);
 }
 if (mode === 'sheets') { const r = spawnSync('python3', ['-I', root + 'test/qa/sheet.py', OUT], { stdio: 'inherit' }); process.exit(r.status); }
 if (mode === 'geo' || mode === 'chars' || mode === 'player') {
