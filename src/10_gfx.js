@@ -10,8 +10,8 @@ const MAT_NAMES = ['plaster', 'timber', 'planks', 'stone', 'cobble', 'thatch', '
 // world metres covered by one texture repeat
 const MAT_TILE = [2.5, 1.5, 2, 2, 2.5, 2, 2, 3, 3, 4, 1, 3, 3, 3, 3, 2.5, 3, 1, 1, 1, 1, 1, 0.5, 1, 1];
 const K = {
-  terrainHalf: 144, terrainCell: 1.5, heightN: 193,   // level-0 terrain grid (also the grass / splat region)
-  splatRes: 1024, cloudH: 700, fogBase: -2,
+  terrainHalf: 192, terrainCell: 1.5, heightN: 257,   // level-0 terrain grid (also the grass / splat region); was 144 / 193 until the wilds (79_wilds.js) opened the valley out to 184 m
+  splatRes: 1280, cloudH: 700, fogBase: -2,
   grassCell: 0.30,
 };
 

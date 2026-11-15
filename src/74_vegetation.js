@@ -101,9 +101,10 @@ function buildVegetation() {
     if (River.dist(x, z, 7 + pad) < 6.5 + pad) return true;
     if (hyp(x - LAKE.x, z - LAKE.z) < lakeR(x, z) + 2 + pad) return true;
     if (hyp((x - SQUARE.x) / (SQUARE.rx + 2), (z - SQUARE.z) / (SQUARE.rz + 2)) < 1) return true;
+    if (typeof wildsBlocked === 'function' && wildsBlocked(x, z, pad)) return true;
     return false;
   };
-  const gy = (x, z) => (Math.abs(x) < 143 && Math.abs(z) < 143) ? Terrain.y(x, z) : terrainH(x, z);
+  const gy = (x, z) => Terrain.y(x, z);
   const addTree = (kind, x, z, scale) => {
     const y = gy(x, z);
     inst[kind].push([x, y - 0.05, z, scale, R() * TAU, R(), R(), 0]);
@@ -121,16 +122,17 @@ function buildVegetation() {
     if (r < 56 || r > ext) continue;
     let dens = (0.10 + 0.62 * smooth(62, 135, r)) * smooth(-0.35, 0.15, fbm(x / 70 + 5, z / 70, 3, 23) + 0.25 * smooth(100, 180, r));
     const farm = smooth(60, 110, x) * smooth(60, -10, Math.abs(z)); dens *= 1 - 0.85 * farm;
+    if (typeof wildsDens === 'function') dens *= wildsDens(x, z);
     if (R() > dens) continue;
-    if (r < 160 && blocked(x, z, 1.5)) continue;
+    if (r < 200 && blocked(x, z, 1.5)) continue;
     const y = gy(x, z); if (y > 205 || y < LAKE.y + 0.3) continue;
     const e = 2.5, sl = Math.max(Math.abs(gy(x + e, z) - y), Math.abs(gy(x, z + e) - y)) / e; if (sl > 0.85) continue;
     const birchP = r < 150 ? 0.34 : 0.07;
     if (R() < birchP) addTree('birch', x, z, 0.8 + R() * 0.45); else addTree('pine', x, z, (0.75 + R() * 0.7) * (y > 150 ? 0.75 : 1));
   }
   // bushes and boulders
-  for (let i = 0; i < 520; i++) {
-    const a = R() * TAU, r = 26 + Math.pow(R(), 0.7) * 125, x = Math.cos(a) * r, z = Math.sin(a) * r;
+  for (let i = 0; i < 700; i++) {
+    const a = R() * TAU, r = 26 + Math.pow(R(), 0.7) * 160, x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (blocked(x, z, 0.3)) continue;
     inst.bush.push([x, Terrain.y(x, z) - 0.05, z, 0.5 + R() * 0.65, R() * TAU, R(), R(), 0]);
   }
@@ -139,7 +141,7 @@ function buildVegetation() {
   const addRock = (x, z, s) => { const y = gy(x, z); inst.rock.push([x, y - 0.22 * s, z, s, R() * TAU, R(), R(), 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
   for (let i = 0; i < 420; i++) {
     const a = R() * TAU, r = 30 + R() * 210, x = Math.cos(a) * r, z = Math.sin(a) * r;
-    if (r < 160 && blocked(x, z, 1.0)) continue;
+    if (r < 200 && blocked(x, z, 1.0)) continue;
     addRock(x, z, 0.25 + Math.pow(R(), 2.2) * 2.0);
   }
   for (let s = 20; s < River.len - 30; s += 4.5) { const p = River.point(s); if (hyp(p[0], p[1]) > 200) continue; for (const side of [-1, 1]) { if (R() < 0.6) continue; const o = 4.6 + R() * 2.2, x = p[0] - p[3] * o * side, z = p[1] + p[2] * o * side; if (Math.abs(x - BRIDGE.x) < 10 && Math.abs(z - BRIDGE.z) < 5) continue; if (SITES.some(st => { const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 2.5 && Math.abs(l[1]) < st.d / 2 + 2.5; })) continue; addRock(x, z, 0.3 + R() * 0.8); } }
