@@ -199,8 +199,8 @@ function kitIntBatch(zone) {
 // fit = 'box' (stretch to the box, within lo..hi), 'contain' (uniform, as big as fits), 'xz' (uniform on the footprint, height within 25%),
 // one = outdoors only the first model is used (fewer materials, fewer draw calls), k = extra per-axis factor, mul = extra scale, y = lift in metres, ry = turn in radians (a quarter turn swaps the footprint), tint = colour factor, skip = draw nothing.
 const SCANR = {
-  Table_Large: { n: ['wooden_table_02'], fit: 'row', tint: [0.8, 0.66, 0.52] },
-  Bench: { n: ['woodentable_01'], fit: 'row', tint: [0.8, 0.68, 0.55] },
+  Table_Large: { n: ['wooden_table_02'], fit: 'row', tint: [0.5, 0.4, 0.31] },
+  Bench: { n: ['woodentable_01'], fit: 'row', tint: [0.5, 0.41, 0.33] },
   Stool: { n: ['painted_wooden_stool'], fit: 'contain', tint: [0.3, 0.23, 0.17] },
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
@@ -388,7 +388,7 @@ function kitDress(c) {
   }
   // ── things on the walls ──
   const hung = []; let torches = 0;
-  const wq = (dress.wall || []).filter(n => Kit.pieces[n]);
+  const wq = (dress.wall || []).concat(id === 'chapel' || id === 'smithy' ? [] : ['Shelf_Simple', 'Peg_Rack']).filter(n => Kit.pieces[n]);
   for (let si = 0; si < 8 && wq.length; si++) {
     const sd = sides[(si + 1 + (R() * 4 | 0)) % 4];
     for (let u = 0.8 + R() * 0.6; u < sd.len - 0.7 && wq.length; u += 0.45) {
@@ -399,7 +399,7 @@ function kitDress(c) {
       if (blocked(sd.at(u, 0.3)[0], sd.at(u, 0.3)[1], 0.12) && y < 2.4) continue;           // a hearth or stair is in front of this stretch of wall
       if (name === 'Torch_Metal') { kitLit(m, name, p[0], y, p[1], 1, sd.ry, { r: 6.2, c: [2.5, 1.45, 0.55], kind: 'fire', flame: 'torch', size: 0.14 }); torches++; }
       else kp(m, name, p[0], y, p[1], it[3] || 1, sd.ry);
-      if (name === 'Shelf_Simple') {
+      if (name === 'Shelf_Simple' || name === 'Shelf_Arch') {
         const q = sd.at(u - 0.28, 0.19), q2 = sd.at(u + 0.26, 0.19), pickOn = list => { const l = list.filter(e => Kit.pieces[e[0]]); return l.length ? R.pick(l) : null; };
         const a = pickOn([['SmallBottles_1', 1], ['Book_Stack_1', 1], ['Potion_2', 1], ['ceramic_vase_04', 0.6], ['wooden_bowl_01', 0.8], ['food_pears_asian_01', 1], ['ceramic_pot', 0.5]]);
         const b2 = pickOn([['Book_Stack_2', 0.7], ['Bottle_1', 0.7], ['Vase_4', 0.7], ['brass_goblets', 0.7], ['wooden_candlestick', 0.8], ['carved_wooden_plate', 0.9], ['yellow_onion', 1]]);
@@ -409,6 +409,39 @@ function kitDress(c) {
     }
   }
   if (id === 'chapel') for (const x of [-w * 0.2, w * 0.2]) kitLit(m, 'Chandelier', x, H + 0.9, 0, 1.1, 0, { r: 10, c: [3.0, 1.9, 0.85], kind: 'candle', always: true });
+  // ── density: hearth rug, firewood, mantel candles and antlers, paintings and herb racks on the free walls ──
+  if (id !== 'chapel') {
+    const hr = c.hearth, mm = c.int, Z1h = hd - 0.3;
+    if (hr && Math.abs(hr.rot) < 0.01) {
+      at(mm, hr.x, 0.02, hr.z, 0, () => at(mm, hr.dep + 0.8, 0, 0, 0, () => Props.rug(mm, 1.2, hr.wid + 0.6, id === 'smithy' ? [0.3, 0.26, 0.22] : [0.5, 0.32, 0.2])));
+      for (const sg of [1, -1]) { const zz = hr.z + sg * (hr.wid / 2 + 0.55), xx = hr.x + 0.4; if (Math.abs(zz) < Z1h - 0.3 && !blocked(xx, zz, 0.5)) { at(mm, xx, 0.02, zz, 0, () => Props.woodpile(mm, 4, 4, 0.5)); break; } }
+      if (id !== 'smithy') {
+        for (const sg of [-1, 1]) kitLit(m, 'CandleStick_Triple', hr.x + 0.42, 1.6, hr.z + sg * (hr.wid / 2 - 0.32), 0.8, sg, { cap: 0, kind: 'candle', flame: 'candle' });
+        kp(m, 'Vase_4', hr.x + 0.42, 1.6, hr.z, 0.8, 0.4); kp(m, 'Mug', hr.x + 0.3, 1.6, hr.z + 0.3, 0.9, 1);
+        if (id !== 'hunter') at(mm, hr.x + 0.68, id === 'inn' ? 2.85 : 2.1, hr.z, PI / 2, () => antlers(mm));
+      }
+    }
+    // paintings and herb racks where the walls are still bare
+    let want = Math.max(2, Math.round(w * d / 11)), n = 0;
+    for (let si = 0; si < 8 && want > 0; si++) {
+      const sd = sides[(si + 2 + (R() * 4 | 0)) % 4];
+      for (let u = 1.0 + R() * 0.8; u < sd.len - 0.8 && want > 0; u += 0.7) {
+        if (nearOpening(sd, u, 0.5, false) || tall.some(t => t[0] === sd && Math.abs(t[1] - u) < t[2] + 0.6) || hung.some(t => t[0] === sd && Math.abs(t[1] - u) < t[2] + 0.9)) continue;
+        const q = sd.at(u, 0.3); if (blocked(q[0], q[1], 0.12)) continue;
+        const p = sd.at(u, 0.03), rack = id !== 'smithy' && n % 3 === 2;
+        if (id === 'smithy' && n % 2) { n++; continue; }
+        if (rack) kp(m, kitGen('rack', R), p[0], 2.05, p[1], 1, sd.ry); else kp(m, kitGen('paint', R), p[0], 1.6 + R() * 0.3, p[1], 1, sd.ry);
+        hung.push([sd, u, 0.5]); n++; want--; u += 0.6 + R() * 0.8;
+      }
+    }
+    if (id === 'inn') {
+      at(mm, 4.9, 1.6, Z1h - 0.17, 0, () => Props.shelf(mm, 3.0, 1.2, 3, 0.3, (i, y) => Props.clutter(mm, R, -1.3, 1.3, y, 0, ['bottle', 'bottle', 'mug', 'jug', 'bottle'], 6)));
+      at(mm, 4.8, 2.5, 1.2, 0, () => Props.lantern(mm, c));
+      at(mm, 4.4, 0.02, -1.0, 0.1, () => Props.rug(mm, 2.4, 1.6, [0.35, 0.34, 0.22]));
+      at(mm, -1.0, 0.02, 3.3, 0.2, () => Props.rug(mm, 1.3, 0.9, [0.4, 0.22, 0.16]));
+      for (const x of [0.2, 1.5]) kp(m, 'Barrel', x, 0.02, 4.3, 0.9, R() * 6);
+    }
+  }
   // ── outside: vines up the walls, a banner by the door ──
   for (let i = 0; i < (st.vines || 0); i++) {
     const wn = R.pick(['back', 'left', 'right', 'front', 'back']), L = WALLS[wn].len(w, d), u = 0.9 + R() * (L - 1.8), up = !!st.up && R() < 0.6;

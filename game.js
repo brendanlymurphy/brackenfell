@@ -2720,7 +2720,15 @@ const Props = {
       });
     }
   },
-  rug(m, w, l, col) { const c = col || COL.red; m.mat(MAT.CLOTH, [c[0] * 0.5, c[1] * 0.42, c[2] * 0.4], 0.6); m.quad([-w / 2, 0.015, -l / 2], [-w / 2, 0.015, l / 2], [w / 2, 0.015, l / 2], [w / 2, 0.015, -l / 2], 0, 0, w / 0.6, l / 0.6); },
+  // woven rug: a darker border, a field of the main colour, a lighter band down the middle and a fringe at both ends
+  rug(m, w, l, col) {
+    const c = col || COL.red, lay = (i, x0, z0, x1, z1, k, y) => { m.mat(MAT.CLOTH, [c[0] * k[0], c[1] * k[1], c[2] * k[2]], 0.6); m.quad([x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0], 0, 0, (x1 - x0) / 0.6, (z1 - z0) / 0.6); };
+    const b = Math.min(0.12, w * 0.09);
+    lay(0, -w / 2, -l / 2, w / 2, l / 2, [0.3, 0.27, 0.26], 0.012);
+    lay(1, -w / 2 + b, -l / 2 + b, w / 2 - b, l / 2 - b, [0.52, 0.42, 0.38], 0.016);
+    if (w > 0.9 && l > 1.2) { lay(2, -w * 0.12, -l / 2 + b * 2, w * 0.12, l / 2 - b * 2, [0.78, 0.62, 0.45], 0.02); lay(3, -w * 0.05, -l / 2 + b * 3, w * 0.05, l / 2 - b * 3, [0.4, 0.3, 0.26], 0.024); }
+    for (const sz of [-1, 1]) lay(4, -w / 2 + b * 1.4, sz * (l / 2 - b * 1.4) - 0.015, w / 2 - b * 1.4, sz * (l / 2 - b * 1.4) + 0.015, [0.85, 0.72, 0.52], 0.022);
+  },
   cauldron(m, r) { r = r || 0.24; m.mat(MAT.METAL, COL.black); m.lathe([[r * 0.5, 0], [r * 0.95, r * 0.4], [r, r * 0.9], [r * 0.86, r * 1.25], [r * 0.92, r * 1.32]], 10, 1); m.mat(MAT.PLAIN, [0.35, 0.3, 0.18]); m.disc(0, r * 1.1, 0, r * 0.88, 10, 1); },
   logs(m, n, len, r) { m.mat(MAT.BARK, [1, 1, 1], 0.5); for (let i = 0; i < n; i++) { m.push().T(0, r + 0.01, (i - (n - 1) / 2) * r * 2.05).RZ(PI / 2).T(0, -len / 2, 0); m.cyl(0, 0, 0, r, r * 0.95, len, 7, 0); m.mat(MAT.PLAIN, [0.78, 0.62, 0.42]); m.disc(0, len, 0, r * 0.95, 7, 1); m.disc(0, 0, 0, r, 7, -1); m.mat(MAT.BARK, [1, 1, 1], 0.5); m.pop(); } },
   woodpile(m, cols, rows, len) { const r = 0.09; for (let j = 0; j < rows; j++) { m.push().T(0, j * r * 1.85, (j % 2) * r * 0.5); Props.logs(m, cols - (j % 2), len, r); m.pop(); } addBoxCollider(m, -len / 2, -cols * r, len / 2, cols * r, 0, rows * r * 1.9); },
@@ -2980,7 +2988,7 @@ function buildHouse(site, spec) {
     spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: site.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
     // hearth against a wall. frame: origin on the inner wall face, +x into the room. (x, z) = house-local position, rot = RY angle
     fireplace(x, z, rot, opt) {
-      opt = opt || {}; const wid = opt.w || 1.9, dep = 0.8, m = int;
+      opt = opt || {}; const wid = opt.w || 1.9, dep = 0.8, m = int; ctx.hearth = { x, z, rot, wid, dep };
       m.push().T(x, 0, z).RY(rot);
       m.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
       m.box(0, 0, -wid / 2, dep, 1.15, -wid / 2 + 0.38); m.box(0, 0, wid / 2 - 0.38, dep, 1.15, wid / 2);
@@ -3412,7 +3420,7 @@ function kitDress(c) {
   }
   // ── things on the walls ──
   const hung = []; let torches = 0;
-  const wq = (dress.wall || []).filter(n => Kit.pieces[n]);
+  const wq = (dress.wall || []).concat(id === 'chapel' || id === 'smithy' ? [] : ['Shelf_Simple', 'Peg_Rack']).filter(n => Kit.pieces[n]);
   for (let si = 0; si < 8 && wq.length; si++) {
     const sd = sides[(si + 1 + (R() * 4 | 0)) % 4];
     for (let u = 0.8 + R() * 0.6; u < sd.len - 0.7 && wq.length; u += 0.45) {
@@ -3423,7 +3431,7 @@ function kitDress(c) {
       if (blocked(sd.at(u, 0.3)[0], sd.at(u, 0.3)[1], 0.12) && y < 2.4) continue;           // a hearth or stair is in front of this stretch of wall
       if (name === 'Torch_Metal') { kitLit(m, name, p[0], y, p[1], 1, sd.ry, { r: 6.2, c: [2.5, 1.45, 0.55], kind: 'fire', flame: 'torch', size: 0.14 }); torches++; }
       else kp(m, name, p[0], y, p[1], it[3] || 1, sd.ry);
-      if (name === 'Shelf_Simple') {
+      if (name === 'Shelf_Simple' || name === 'Shelf_Arch') {
         const q = sd.at(u - 0.28, 0.19), q2 = sd.at(u + 0.26, 0.19), pickOn = list => { const l = list.filter(e => Kit.pieces[e[0]]); return l.length ? R.pick(l) : null; };
         const a = pickOn([['SmallBottles_1', 1], ['Book_Stack_1', 1], ['Potion_2', 1], ['ceramic_vase_04', 0.6], ['wooden_bowl_01', 0.8], ['food_pears_asian_01', 1], ['ceramic_pot', 0.5]]);
         const b2 = pickOn([['Book_Stack_2', 0.7], ['Bottle_1', 0.7], ['Vase_4', 0.7], ['brass_goblets', 0.7], ['wooden_candlestick', 0.8], ['carved_wooden_plate', 0.9], ['yellow_onion', 1]]);
@@ -3433,6 +3441,39 @@ function kitDress(c) {
     }
   }
   if (id === 'chapel') for (const x of [-w * 0.2, w * 0.2]) kitLit(m, 'Chandelier', x, H + 0.9, 0, 1.1, 0, { r: 10, c: [3.0, 1.9, 0.85], kind: 'candle', always: true });
+  // ── density: hearth rug, firewood, mantel candles and antlers, paintings and herb racks on the free walls ──
+  if (id !== 'chapel') {
+    const hr = c.hearth, mm = c.int, Z1h = hd - 0.3;
+    if (hr && Math.abs(hr.rot) < 0.01) {
+      at(mm, hr.x, 0.02, hr.z, 0, () => at(mm, hr.dep + 0.8, 0, 0, 0, () => Props.rug(mm, 1.2, hr.wid + 0.6, id === 'smithy' ? [0.3, 0.26, 0.22] : [0.5, 0.32, 0.2])));
+      for (const sg of [1, -1]) { const zz = hr.z + sg * (hr.wid / 2 + 0.55), xx = hr.x + 0.4; if (Math.abs(zz) < Z1h - 0.3 && !blocked(xx, zz, 0.5)) { at(mm, xx, 0.02, zz, 0, () => Props.woodpile(mm, 4, 4, 0.5)); break; } }
+      if (id !== 'smithy') {
+        for (const sg of [-1, 1]) kitLit(m, 'CandleStick_Triple', hr.x + 0.42, 1.6, hr.z + sg * (hr.wid / 2 - 0.32), 0.8, sg, { cap: 0, kind: 'candle', flame: 'candle' });
+        kp(m, 'Vase_4', hr.x + 0.42, 1.6, hr.z, 0.8, 0.4); kp(m, 'Mug', hr.x + 0.3, 1.6, hr.z + 0.3, 0.9, 1);
+        if (id !== 'hunter') at(mm, hr.x + 0.68, id === 'inn' ? 2.85 : 2.1, hr.z, PI / 2, () => antlers(mm));
+      }
+    }
+    // paintings and herb racks where the walls are still bare
+    let want = Math.max(2, Math.round(w * d / 11)), n = 0;
+    for (let si = 0; si < 8 && want > 0; si++) {
+      const sd = sides[(si + 2 + (R() * 4 | 0)) % 4];
+      for (let u = 1.0 + R() * 0.8; u < sd.len - 0.8 && want > 0; u += 0.7) {
+        if (nearOpening(sd, u, 0.5, false) || tall.some(t => t[0] === sd && Math.abs(t[1] - u) < t[2] + 0.6) || hung.some(t => t[0] === sd && Math.abs(t[1] - u) < t[2] + 0.9)) continue;
+        const q = sd.at(u, 0.3); if (blocked(q[0], q[1], 0.12)) continue;
+        const p = sd.at(u, 0.03), rack = id !== 'smithy' && n % 3 === 2;
+        if (id === 'smithy' && n % 2) { n++; continue; }
+        if (rack) kp(m, kitGen('rack', R), p[0], 2.05, p[1], 1, sd.ry); else kp(m, kitGen('paint', R), p[0], 1.6 + R() * 0.3, p[1], 1, sd.ry);
+        hung.push([sd, u, 0.5]); n++; want--; u += 0.6 + R() * 0.8;
+      }
+    }
+    if (id === 'inn') {
+      at(mm, 4.9, 1.6, Z1h - 0.17, 0, () => Props.shelf(mm, 3.0, 1.2, 3, 0.3, (i, y) => Props.clutter(mm, R, -1.3, 1.3, y, 0, ['bottle', 'bottle', 'mug', 'jug', 'bottle'], 6)));
+      at(mm, 4.8, 2.5, 1.2, 0, () => Props.lantern(mm, c));
+      at(mm, 4.4, 0.02, -1.0, 0.1, () => Props.rug(mm, 2.4, 1.6, [0.35, 0.34, 0.22]));
+      at(mm, -1.0, 0.02, 3.3, 0.2, () => Props.rug(mm, 1.3, 0.9, [0.4, 0.22, 0.16]));
+      for (const x of [0.2, 1.5]) kp(m, 'Barrel', x, 0.02, 4.3, 0.9, R() * 6);
+    }
+  }
   // ── outside: vines up the walls, a banner by the door ──
   for (let i = 0; i < (st.vines || 0); i++) {
     const wn = R.pick(['back', 'left', 'right', 'front', 'back']), L = WALLS[wn].len(w, d), u = 0.9 + R() * (L - 1.8), up = !!st.up && R() < 0.6;
@@ -4524,6 +4565,27 @@ function alleyDress(B, B2, R) {
   }
   // ── places for villagers to stand ──
   World.spots['alley.n'] = { p: [38.2, Terrain.y(38.2, -2.2), -2.2], yaw: 0, zone: 0 }; World.spots['alley.s'] = { p: [30.8, Terrain.y(30.8, 3.6), 3.6], yaw: PI, zone: 0 };
+}
+
+// ── small generated wall dressing for the interiors (paintings, herb racks): the same kit wood and cloth, so no new textures ──
+const KGEN = {};
+function kitGen(kind, R) {
+  const key = kind + (kind === 'paint' ? R.i(0, 3) : '');
+  if (KGEN[key]) return KGEN[key];
+  const g = GP();
+  if (kind === 'paint') {
+    const t = R.i(0, 3), w = [0.8, 0.55, 0.62, 0.9][t], h = [0.52, 0.72, 0.5, 0.6][t];
+    g.box(W_, -w / 2 - 0.05, -h / 2 - 0.05, 0, w / 2 + 0.05, h / 2 + 0.05, 0.04, [0.5, 0.42, 0.34]);
+    const z = 0.042, Q = (x0, y0, x1, y1, col) => g.quad(C_, [x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z], col, GPU.cloth);
+    if (t === 0 || t === 3) { Q(-w / 2, 0, w / 2, h / 2, [0.45, 0.52, 0.58]); Q(-w / 2, -h / 2, w / 2, 0, [0.3, 0.36, 0.2]); Q(-w / 2, -h / 2, w / 2, -h * 0.15, [0.2, 0.24, 0.14]); g.tri(C_, [-w * 0.4, 0.0, z + 0.001], [w * 0.1, 0.0, z + 0.001], [-w * 0.15, h * 0.28, z + 0.001], [0.3, 0.32, 0.34], GPU.cloth); }
+    else if (t === 1) { Q(-w / 2, -h / 2, w / 2, h / 2, [0.2, 0.15, 0.1]); Q(-w * 0.22, -h * 0.05, w * 0.22, h * 0.32, [0.55, 0.42, 0.33]); Q(-w * 0.4, -h / 2, w * 0.4, -h * 0.1, [0.32, 0.2, 0.16]); }
+    else { for (let i = 0; i < 5; i++) Q(-w / 2 + i * w / 5, -h / 2, -w / 2 + (i + 1) * w / 5, h / 2, [[0.5, 0.2, 0.15], [0.7, 0.55, 0.3], [0.25, 0.3, 0.4], [0.7, 0.55, 0.3], [0.5, 0.2, 0.15]][i]); }
+  } else {       // a bar with bundles of herbs, onions and dried flowers
+    g.box(W_, -0.55, -0.02, 0, 0.55, 0.03, 0.06, DARKW);
+    const cols = [[0.3, 0.45, 0.22], [0.5, 0.38, 0.2], [0.55, 0.3, 0.45], [0.7, 0.62, 0.3], [0.3, 0.42, 0.2], [0.6, 0.45, 0.2]];
+    for (let i = 0; i < 6; i++) { const x = -0.45 + i * 0.18, len = 0.28 + R() * 0.2, c = cols[i]; g.quad(C_, [x - 0.04, -0.02, 0.06], [x + 0.04, -0.02, 0.06], [x + 0.08, -0.02 - len, 0.08], [x - 0.08, -0.02 - len, 0.08], c, GPU.cloth, true); g.quad(C_, [x, -0.02, 0.02], [x, -0.02, 0.1], [x + 0.02, -0.02 - len, 0.14], [x - 0.02, -0.02 - len, 0.02], c.map(v => v * 0.8), GPU.cloth, true); }
+  }
+  return KGEN[key] = g.make('gen_' + key + '_' + (_gn++));
 }
 
 

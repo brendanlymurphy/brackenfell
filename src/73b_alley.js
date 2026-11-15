@@ -279,3 +279,24 @@ function alleyDress(B, B2, R) {
   // ── places for villagers to stand ──
   World.spots['alley.n'] = { p: [38.2, Terrain.y(38.2, -2.2), -2.2], yaw: 0, zone: 0 }; World.spots['alley.s'] = { p: [30.8, Terrain.y(30.8, 3.6), 3.6], yaw: PI, zone: 0 };
 }
+
+// ── small generated wall dressing for the interiors (paintings, herb racks): the same kit wood and cloth, so no new textures ──
+const KGEN = {};
+function kitGen(kind, R) {
+  const key = kind + (kind === 'paint' ? R.i(0, 3) : '');
+  if (KGEN[key]) return KGEN[key];
+  const g = GP();
+  if (kind === 'paint') {
+    const t = R.i(0, 3), w = [0.8, 0.55, 0.62, 0.9][t], h = [0.52, 0.72, 0.5, 0.6][t];
+    g.box(W_, -w / 2 - 0.05, -h / 2 - 0.05, 0, w / 2 + 0.05, h / 2 + 0.05, 0.04, [0.5, 0.42, 0.34]);
+    const z = 0.042, Q = (x0, y0, x1, y1, col) => g.quad(C_, [x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z], col, GPU.cloth);
+    if (t === 0 || t === 3) { Q(-w / 2, 0, w / 2, h / 2, [0.45, 0.52, 0.58]); Q(-w / 2, -h / 2, w / 2, 0, [0.3, 0.36, 0.2]); Q(-w / 2, -h / 2, w / 2, -h * 0.15, [0.2, 0.24, 0.14]); g.tri(C_, [-w * 0.4, 0.0, z + 0.001], [w * 0.1, 0.0, z + 0.001], [-w * 0.15, h * 0.28, z + 0.001], [0.3, 0.32, 0.34], GPU.cloth); }
+    else if (t === 1) { Q(-w / 2, -h / 2, w / 2, h / 2, [0.2, 0.15, 0.1]); Q(-w * 0.22, -h * 0.05, w * 0.22, h * 0.32, [0.55, 0.42, 0.33]); Q(-w * 0.4, -h / 2, w * 0.4, -h * 0.1, [0.32, 0.2, 0.16]); }
+    else { for (let i = 0; i < 5; i++) Q(-w / 2 + i * w / 5, -h / 2, -w / 2 + (i + 1) * w / 5, h / 2, [[0.5, 0.2, 0.15], [0.7, 0.55, 0.3], [0.25, 0.3, 0.4], [0.7, 0.55, 0.3], [0.5, 0.2, 0.15]][i]); }
+  } else {       // a bar with bundles of herbs, onions and dried flowers
+    g.box(W_, -0.55, -0.02, 0, 0.55, 0.03, 0.06, DARKW);
+    const cols = [[0.3, 0.45, 0.22], [0.5, 0.38, 0.2], [0.55, 0.3, 0.45], [0.7, 0.62, 0.3], [0.3, 0.42, 0.2], [0.6, 0.45, 0.2]];
+    for (let i = 0; i < 6; i++) { const x = -0.45 + i * 0.18, len = 0.28 + R() * 0.2, c = cols[i]; g.quad(C_, [x - 0.04, -0.02, 0.06], [x + 0.04, -0.02, 0.06], [x + 0.08, -0.02 - len, 0.08], [x - 0.08, -0.02 - len, 0.08], c, GPU.cloth, true); g.quad(C_, [x, -0.02, 0.02], [x, -0.02, 0.1], [x + 0.02, -0.02 - len, 0.14], [x - 0.02, -0.02 - len, 0.02], c.map(v => v * 0.8), GPU.cloth, true); }
+  }
+  return KGEN[key] = g.make('gen_' + key + '_' + (_gn++));
+}

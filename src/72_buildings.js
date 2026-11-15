@@ -14,7 +14,7 @@ function tableSet(c, x, z, rot, len, wid, items, n, seats) {
     else if (seats === 'chairs') { at(m, -len / 4, 0, -wid / 2 - 0.32, PI, () => Props.chair(m)); at(m, len / 4, 0, wid / 2 + 0.32, 0, () => Props.chair(m)); } });
 }
 const ropeCoil = m => { m.mat(MAT.CLOTH, [0.78, 0.62, 0.38], 0.3); m.lathe([[0.10, 0], [0.16, 0.015], [0.165, 0.07], [0.10, 0.085], [0.10, 0]], 10, 0); };
-const clothBolt = (m, col) => { m.mat(MAT.CLOTH, col, 0.5); m.push().RZ(PI / 2).T(0.07, -0.3, 0); m.cyl(0, 0, 0, 0.07, 0.07, 0.6, 8, 3); m.pop(); };
+const clothBolt = (m, col) => { m.mat(MAT.CLOTH, [0.3 + col[0] * 0.45, 0.28 + col[1] * 0.4, 0.26 + col[2] * 0.38], 0.5); m.push().RZ(PI / 2).T(0.07, -0.3, 0); m.cyl(0, 0, 0, 0.07, 0.07, 0.6, 8, 3); m.pop(); };
 const herbs = (m, R) => { m.mat(MAT.PLAIN, R.pick([[0.35, 0.5, 0.25], [0.55, 0.5, 0.25], [0.5, 0.35, 0.5], [0.4, 0.45, 0.2]])); m.lathe([[0.01, -0.34], [0.07, -0.26], [0.035, -0.06], [0.012, 0]], 6, 0); };
 const pelt = (m, w, h) => { m.mat(MAT.CLOTH, COL.fur, 0.5); m.quad([-w / 2, h, 0], [-w / 2 * 0.8, 0, 0], [w / 2 * 0.8, 0, 0], [w / 2, h, 0]); };
 const antlers = m => { m.mat(MAT.PLAIN, [0.85, 0.78, 0.62]); for (const s of [-1, 1]) { m.tube([[s * 0.03, 0, 0], [s * 0.16, 0.12, 0.05], [s * 0.3, 0.3, 0.06], [s * 0.36, 0.5, 0.02]], [0.022, 0.018, 0.014, 0.006], 5); m.tube([[s * 0.16, 0.12, 0.05], [s * 0.2, 0.26, 0.16]], [0.014, 0.005], 5); m.tube([[s * 0.3, 0.3, 0.06], [s * 0.42, 0.4, 0.14]], [0.012, 0.004], 5); } m.mat(MAT.PLANKS, COL.woodDark, 0.4); m.box(-0.1, -0.1, -0.02, 0.1, 0.08, 0); };
