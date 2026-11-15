@@ -10990,13 +10990,13 @@ RPG.fxWrite = function (dt) {
 };
 
 // ── geometry and material helpers for small hand-built things (weapons, hands) ──
-// parts: [geometry, Matrix4, [r, g, b] linear]; returns one geometry with a 'color' attribute
+// parts: [geometry, Matrix4, [r, g, b] linear, [metal, roughness]?]; returns one geometry with 'color' and 'mr' attributes
 RPG.merge = function (parts) {
-  let n = 0; const gs = parts.map(([g, m, c]) => { const t = g.index ? g.toNonIndexed() : g.clone(); if (m) t.applyMatrix4(m); g.dispose(); n += t.attributes.position.count; return [t, c]; });
-  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3); let o = 0;
-  for (const [t, c] of gs) { const k = t.attributes.position.count; pos.set(t.attributes.position.array, o * 3); nor.set(t.attributes.normal.array, o * 3); for (let i = 0; i < k; i++) col.set(c, (o + i) * 3); o += k; t.dispose(); }
+  let n = 0; const gs = parts.map(([g, m, c, mr]) => { const t = g.index ? g.toNonIndexed() : g.clone(); if (m) t.applyMatrix4(m); g.dispose(); n += t.attributes.position.count; return [t, c, mr || [0, 0.8]]; });
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3), mrA = new Float32Array(n * 2); let o = 0;
+  for (const [t, c, mr] of gs) { const k = t.attributes.position.count; pos.set(t.attributes.position.array, o * 3); nor.set(t.attributes.normal.array, o * 3); for (let i = 0; i < k; i++) { col.set(c, (o + i) * 3); mrA.set(mr, (o + i) * 2); } o += k; t.dispose(); }
   const g = new THREE.BufferGeometry(), BA = THREE.BufferAttribute;
-  g.setAttribute('position', new BA(pos, 3)); g.setAttribute('normal', new BA(nor, 3)); g.setAttribute('color', new BA(col, 3)); g.computeBoundingSphere();
+  g.setAttribute('position', new BA(pos, 3)); g.setAttribute('normal', new BA(nor, 3)); g.setAttribute('color', new BA(col, 3)); g.setAttribute('mr', new BA(mrA, 2)); g.computeBoundingSphere();
   return g;
 };
 // vertex-coloured surface lit like the rest of the world: sun from the scene light, sky and hearths through emissive
@@ -11007,17 +11007,104 @@ RPG.litMat = function (uZone, uLight, rough) {
   m.colorNode = albedo; m.emissiveNode = albedo.mul(SH.hemi(N, uLight, uZone).add(SH.pointLights(positionWorld, N, uZone, float(0.25))));
   return m;
 };
+// Weapons, gloves and sleeves: as litMat, plus per-vertex metal and roughness ('mr'). Steel mirrors the sky above and the ground below
+// (there is no environment map), takes the sun's highlight from the scene light and glints in firelight; leather and cloth get a grain.
+RPG.gearMat = function (uZone, uLight) {
+  const { attribute, float, vec2, vec3, positionWorld, positionLocal, normalWorld, texture, mix, reflect, normalize, dot, pow, max, abs, smoothstep, step } = TSL, U = SH.U;
+  const m = new THREE.MeshStandardNodeMaterial();
+  const col = attribute('color', 'vec3'), mr = attribute('mr', 'vec2'), metal = mr.x, pl = positionLocal;
+  const N = normalWorld.normalize(), V = normalize(U.camPos.sub(positionWorld)), Rf = reflect(V.negate(), N);
+  // grain: long streaks down a blade (the marks of the grindstone), a fine mottle on leather and cloth
+  const g = texture(G.noiseTex, vec2(pl.x.mul(mix(55.0, 130.0, metal)).add(pl.z.mul(41.0)), pl.y.mul(mix(55.0, 2.2, metal)).add(pl.z.mul(23.0)))).r.sub(0.5);
+  const albedo = col.mul(g.mul(mix(0.8, 0.25, metal)).add(1));
+  const rough = SH.sat(mr.y.add(g.mul(0.25)));
+  const sky = SH.skyBase(vec3(Rf.x, abs(Rf.y).mul(0.6).add(0.02), Rf.z)), open = step(uZone, 0.5);
+  // worn steel is a poor mirror: it shows the sky's brightness more than its colour
+  const skyG = mix(vec3(dot(sky, vec3(0.2126, 0.7152, 0.0722))), sky, 0.3).mul(0.8);
+  const outEnv = mix(U.ambGnd.mul(1.5), skyG, smoothstep(-0.25, 0.2, Rf.y));
+  const env = mix(SH.hemi(Rf, uLight, uZone).mul(1.3), outEnv.mul(uLight), open).mul(mix(1.0, 0.55, rough));
+  const glint = SH.pointLights(positionWorld, Rf, uZone, float(0.0)).mul(1.6).add(SH.pointLights(positionWorld, N, uZone, float(0.25)).mul(0.35));
+  const dull = SH.hemi(N, uLight, uZone).add(SH.pointLights(positionWorld, N, uZone, float(0.25)));
+  const fres = pow(SH.sat(float(1).sub(dot(N, V))), 4);
+  m.colorNode = albedo; m.metalnessNode = metal; m.roughnessNode = rough;
+  m.emissiveNode = mix(albedo.mul(dull).add(env.mul(fres.mul(0.05))), albedo.mul(env.add(glint)).mul(fres.mul(0.5).add(0.75)), metal);
+  return m;
+};
 const _M4 = () => new THREE.Matrix4();
 RPG.xf = (x, y, z, rx, ry, rz, sx, sy, sz) => _M4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx || 0, ry || 0, rz || 0)), new THREE.Vector3(sx === undefined ? 1 : sx, sy === undefined ? (sx === undefined ? 1 : sx) : sy, sz === undefined ? (sx === undefined ? 1 : sx) : sz));
-// a one-handed sword: grip at the origin, blade along +y. len = blade length, tone = blade brightness
+// places a shape built along +y so that it runs from a to b (centred between them); sx, sz scale its cross-section
+RPG.aim = (a, b, sx, sz) => { const A = new THREE.Vector3(a[0], a[1], a[2]), B = new THREE.Vector3(b[0], b[1], b[2]), d = B.clone().sub(A).normalize();
+  return _M4().compose(A.add(B).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d), new THREE.Vector3(sx || 1, 1, sz || sx || 1)); };
+// flat-faced skin over a row of closed rings (each a list of [x, y, z], all the same length); the ends are closed with fans
+RPG.loft = function (rings) {
+  const P = [], n = rings[0].length, cen = r => { const c = [0, 0, 0]; for (const p of r) { c[0] += p[0] / n; c[1] += p[1] / n; c[2] += p[2] / n; } return c; };
+  const tri = (a, b, c, inside) => {       // wound so that it faces away from `inside`
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2], nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    if (nx * nx + ny * ny + nz * nz < 1e-18) return;
+    if (nx * (a[0] - inside[0]) + ny * (a[1] - inside[1]) + nz * (a[2] - inside[2]) < 0) P.push(...a, ...c, ...b); else P.push(...a, ...b, ...c);
+  };
+  for (let k = 0; k + 1 < rings.length; k++) { const A = rings[k], B = rings[k + 1], ca = cen(A), cb = cen(B), mid = [(ca[0] + cb[0]) / 2, (ca[1] + cb[1]) / 2, (ca[2] + cb[2]) / 2];
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n; tri(A[i], A[j], B[j], mid); tri(A[i], B[j], B[i], mid); } }
+  for (const [r, o] of [[rings[0], rings[1]], [rings[rings.length - 1], rings[rings.length - 2]]]) { const c = cen(r), inn = cen(o); for (let i = 0; i < n; i++) tri(c, r[i], r[(i + 1) % n], inn); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(P), 3)); g.computeVertexNormals();
+  return g;
+};
+// An arming sword: grip at the origin, blade along +y with its flats facing +z and -z. len = blade length, tone = how bright the steel
+// is (below 0.7 it is pitted and brown), wide = half the blade's width at the guard. The blade is a flattened hexagon with a fuller
+// (the groove down the middle) over the first two thirds, tapering to a point; a straight crossguard, a corded grip, a wheel pommel.
 RPG.swordGeo = function (len, tone, wide) {
-  const T = THREE, st = [0.30 * tone, 0.31 * tone, 0.34 * tone], w = wide || 0.026;
+  const T = THREE, w0 = wide || 0.026, t0 = 0.0036, y0 = 0.094, L = len + 0.09, rust = sat((0.75 - tone) * 3.3);
+  const k = 0.42 + 0.26 * Math.min(tone, 1.3), st = mix3([0.60 * k / 0.68, 0.61 * k / 0.68, 0.64 * k / 0.68], [0.20, 0.13, 0.085], rust), fit = mix3([0.30, 0.29, 0.28], [0.15, 0.11, 0.08], rust);
+  const steel = [1, lerp(0.30, 0.72, rust)], iron = [1, lerp(0.48, 0.75, rust)];
+  const ring = (y, w, t, f) => [[w, y, 0], [w * 0.40, y, t], [w * 0.17, y, t * (1 - f)], [-w * 0.17, y, t * (1 - f)], [-w * 0.40, y, t], [-w, y, 0], [-w * 0.40, y, -t], [-w * 0.17, y, -t * (1 - f)], [w * 0.17, y, -t * (1 - f)], [w * 0.40, y, -t]];
+  const short = len < 0.35, F = short ? 0 : 0.62;        // a knife has no fuller
+  const blade = RPG.loft([ring(y0, w0 * 0.96, t0, F), ring(y0 + L * 0.03, w0, t0, F), ring(y0 + L * 0.58, w0 * 0.80, t0 * 0.84, F), ring(y0 + L * 0.66, w0 * 0.77, t0 * 0.80, 0), ring(y0 + L * 0.88, w0 * 0.60, t0 * 0.62, 0), ring(y0 + L * 0.965, w0 * 0.36, t0 * 0.45, 0), ring(y0 + L, 0.0006, 0.0005, 0)]);
+  const gripPts = []; for (let i = 0; i <= 30; i++) { const u = i / 30; gripPts.push(new T.Vector2(0.0142 + 0.0024 * Math.sin(u * PI) + (i % 2 ? 0.0013 : 0), -0.075 + u * 0.15)); }
+  const gl = 0.2 * (short ? 0.5 : 1) / 2;                 // half the guard's span
   return RPG.merge([
-    [new T.CylinderGeometry(0.016, 0.019, 0.15, 7), RPG.xf(0, 0, 0), [0.07, 0.04, 0.025]],
-    [new T.SphereGeometry(0.025, 8, 6), RPG.xf(0, -0.092, 0), [0.16, 0.13, 0.09]],
-    [new T.BoxGeometry(0.19, 0.022, 0.034), RPG.xf(0, 0.086, 0), [0.16, 0.13, 0.09]],
-    [new T.CylinderGeometry(1, 1, len, 4), RPG.xf(0, 0.097 + len / 2, 0, 0, 0, 0, w, 1, 0.0055), st],
-    [new T.ConeGeometry(1, 0.09, 4), RPG.xf(0, 0.097 + len + 0.045, 0, 0, 0, 0, w, 1, 0.0055), st],
+    [blade, null, st, steel],
+    [new T.LatheGeometry(gripPts, 10), RPG.xf(0, 0, 0, 0, 0, 0, 1, 1, 0.84), [0.050, 0.030, 0.019], [0, 0.7]],
+    [new T.CylinderGeometry(0.0195, 0.0195, 0.006, 10), RPG.xf(0, 0.072, 0, 0, 0, 0, 1, 1, 0.84), fit, iron],
+    [new T.CylinderGeometry(0.0185, 0.0185, 0.006, 10), RPG.xf(0, -0.072, 0, 0, 0, 0, 1, 1, 0.84), fit, iron],
+    // crossguard: a block the blade sits in, and two arms that thin toward flared ends
+    [new T.BoxGeometry(0.036, 0.021, 0.027), RPG.xf(0, 0.0855, 0), fit, iron],
+    [new T.CylinderGeometry(0.0068, 0.0098, gl, 8), RPG.xf(gl / 2 + 0.012, 0.0855, 0, 0, 0, -PI / 2, 1, 1, 1.25), fit, iron],
+    [new T.CylinderGeometry(0.0068, 0.0098, gl, 8), RPG.xf(-gl / 2 - 0.012, 0.0855, 0, 0, 0, PI / 2, 1, 1, 1.25), fit, iron],
+    [new T.SphereGeometry(0.0098, 8, 6), RPG.xf(gl + 0.012, 0.0855, 0, 0, 0, 0, 0.8, 1, 1.2), fit, iron],
+    [new T.SphereGeometry(0.0098, 8, 6), RPG.xf(-gl - 0.012, 0.0855, 0, 0, 0, 0, 0.8, 1, 1.2), fit, iron],
+    // wheel pommel: a disc on edge with a raised boss on each face, and the peened end of the tang
+    [new T.CylinderGeometry(0.0235, 0.0235, 0.014, 14), RPG.xf(0, -0.097, 0, PI / 2, 0, 0), fit, iron],
+    [new T.CylinderGeometry(0.0150, 0.0205, 0.005, 14), RPG.xf(0, -0.097, 0.0095, PI / 2, 0, 0), fit, iron],
+    [new T.CylinderGeometry(0.0205, 0.0150, 0.005, 14), RPG.xf(0, -0.097, -0.0095, PI / 2, 0, 0), fit, iron],
+    [new T.CylinderGeometry(0.005, 0.006, 0.006, 6), RPG.xf(0, -0.123, 0), fit, iron],
+  ]);
+};
+// A gloved right fist closed round a grip that runs along y through the origin: back of the hand on +x, knuckles toward -z, wrist toward +z.
+RPG.WRIST = [0.027, -0.012, 0.060];
+RPG.fistGeo = function () {
+  const T = THREE, lea = [0.052, 0.034, 0.023], dark = [0.036, 0.023, 0.016], soft = [0, 0.78], parts = [];
+  parts.push([new T.SphereGeometry(1, 12, 9), RPG.xf(0.029, -0.002, 0.012, 0, 0.12, 0, 0.0185, 0.045, 0.043), lea, soft]);       // back of the hand
+  const ys = [0.031, 0.0095, -0.012, -0.0325], Rr = [0.0262, 0.0274, 0.0268, 0.0246], tb = [0.0106, 0.0111, 0.0107, 0.0096];
+  for (let i = 0; i < 4; i++) {
+    const R_ = Rr[i], t = tb[i], y = ys[i], a0 = PI * 0.75, a1 = a0 + PI * 1.02;
+    parts.push([new T.TorusGeometry(R_, t, 7, 9, PI * 1.02), RPG.xf(0, y, 0, PI / 2, 0, a0), i % 2 ? dark : lea, soft]);
+    parts.push([new T.SphereGeometry(t * 1.16, 8, 6), RPG.xf(Math.cos(a1) * R_ * 1.04, y, Math.sin(a1) * R_ * 1.04), lea, soft]);      // knuckle
+    parts.push([new T.SphereGeometry(t * 0.98, 8, 6), RPG.xf(Math.cos(a0) * R_, y, Math.sin(a0) * R_), dark, soft]);                  // fingertip
+  }
+  parts.push([new T.CapsuleGeometry(0.0112, 0.034, 4, 8), RPG.aim([0.021, 0.036, 0.031], [-0.019, 0.047, 0.015]), lea, soft]);       // thumb, laid over the forefinger
+  parts.push([new T.SphereGeometry(1, 10, 8), RPG.xf(0.021, 0.010, 0.036, 0, 0, 0, 0.021, 0.027, 0.021), lea, soft]);                 // ball of the thumb
+  parts.push([new T.SphereGeometry(1, 10, 8), RPG.xf(0.012, -0.024, 0.034, 0, 0, 0, 0.022, 0.022, 0.022), dark, soft]);               // heel of the palm
+  const W = RPG.WRIST; parts.push([new T.SphereGeometry(1, 10, 8), RPG.xf(W[0], W[1], W[2], 0, 0, 0, 0.029, 0.026, 0.028), lea, soft]);
+  return RPG.merge(parts);
+};
+// Forearm from the wrist (origin) back along +z: the glove's flared cuff with a stitched rim, then a padded wool sleeve.
+RPG.forearmGeo = function () {
+  const T = THREE, V = (r, y) => new T.Vector2(r, y), up = RPG.xf(0, 0, 0, PI / 2, 0, 0, 1.1, 1, 0.94);
+  const sleeve = [V(0.033, 0.07)]; for (let i = 0; i <= 12; i++) { const u = i / 12; sleeve.push(V(0.037 + 0.016 * u + (i % 3 === 1 ? 0.0028 : 0), 0.09 + u * 0.50)); }
+  return RPG.merge([
+    [new T.LatheGeometry([V(0.026, -0.02), V(0.0295, 0.0), V(0.031, 0.03), V(0.036, 0.065), V(0.0445, 0.105)], 12), up, [0.046, 0.030, 0.021], [0, 0.74]],
+    [new T.TorusGeometry(0.0445, 0.0034, 5, 14), RPG.xf(0, 0, 0.105, 0, 0, 0, 1.1, 0.94, 1), [0.075, 0.052, 0.034], [0, 0.7]],
+    [new T.LatheGeometry(sleeve, 12), up, [0.050, 0.049, 0.044], [0, 0.95]],
   ]);
 };
 RPG.shieldGeo = function () {
@@ -11128,19 +11215,15 @@ const Combat = (() => {
 
   C.init = function () {
     const T = THREE; C.uZone = TSL.uniform(0); C.uLight = TSL.uniform(1);
-    const mat = C.mat = RPG.litMat(C.uZone, C.uLight, 0.42), matSoft = C.matSoft = RPG.litMat(C.uZone, C.uLight, 0.85);
+    const mat = C.mat = RPG.gearMat(C.uZone, C.uLight), matSoft = C.matSoft = mat;
     const vm = C.vm = new T.Group(); vm.matrixAutoUpdate = false; vm.name = 'viewmodel';
     const mk = (g, m) => { const o = new T.Mesh(g, m); o.frustumCulled = false; o.castShadow = false; o.receiveShadow = true; o.layers.set(1); return o; };
     C.hand = new T.Group(); C.blade = mk(RPG.swordGeo(0.64, 1), mat); C.hand.add(C.blade);
-    // a fist around the grip and a forearm running back out of view
-    const arm = d => RPG.merge([
-      [new T.BoxGeometry(0.064, 0.074, 0.078), RPG.xf(0, 0, 0.004), [0.06, 0.04, 0.028]],
-      [new T.CylinderGeometry(0.026, 0.033, 0.2, 8), RPG.xf(0.02 * d, -0.07, 0.12, 1.05, 0, 0), [0.06, 0.055, 0.04]],
-      [new T.CylinderGeometry(0.036, 0.038, 0.07, 8), RPG.xf(0.01 * d, -0.045, 0.07, 1.05, 0, 0), [0.075, 0.048, 0.03]],
-    ]);
-    C.hand.add(mk(arm(1), matSoft)); vm.add(C.hand);
-    C.shieldG = new T.Group(); C.shieldG.add(mk(RPG.shieldGeo(), matSoft));
-    const la = mk(arm(-1), matSoft); la.position.set(0.02, -0.02, 0.07); C.shieldG.add(la); C.shieldG.visible = false; vm.add(C.shieldG);
+    // a gloved fist round the grip; the forearm is its own piece, turned every frame to run from the wrist back to where the elbow would be
+    C.hand.add(mk(RPG.fistGeo(), mat)); vm.add(C.hand);
+    const fg = RPG.forearmGeo(); C.arm = mk(fg, mat); vm.add(C.arm);
+    C.shieldG = new T.Group(); C.shieldG.add(mk(RPG.shieldGeo(), RPG.litMat(C.uZone, C.uLight, 0.85)));
+    C.shieldG.visible = false; vm.add(C.shieldG); C.armL = mk(fg, mat); C.armL.visible = false; vm.add(C.armL);
     SC.scene.add(vm); C.refresh();
   };
   // equipment changed: the blade in view follows the sword you carry
@@ -11151,7 +11234,7 @@ const Combat = (() => {
       C.blade.visible = !!eq.weapon;
       if (b) { C.blade.geometry.dispose(); C.blade.geometry = RPG.swordGeo(b[0], b[1], b[2]); }
     }
-    C.hasShield = !!eq.shield; C.shieldG.visible = C.hasShield;
+    C.hasShield = !!eq.shield; C.shieldG.visible = C.armL.visible = C.hasShield;
   };
   C.busy = () => C.phase === 'wind' || C.phase === 'charge' || C.phase === 'strike' || C.phase === 'block';
   C.blocking = () => C.phase === 'block';
@@ -11240,6 +11323,7 @@ const Combat = (() => {
   };
   // put the view model where the camera is (called after the camera has had its last nudge for the frame)
   const _e = new THREE.Euler(0, 0, 0, 'YXZ'), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
+  const _w = new THREE.Vector3(), _d = new THREE.Vector3(), _z = new THREE.Vector3(0, 0, 1), SH_WRIST = [0.02, -0.03, 0.08];
   const VS = 1.3;       // poses are authored for a narrow view; pushing them out keeps a wide phone screen from being filled by the hand
   C.place = function () {
     if (!C.vm) return;
@@ -11251,6 +11335,9 @@ const Combat = (() => {
     C.hand.position.set((c.p[0] - C.sway) * VS + Math.sin(st) * 0.007 * bob, (c.p[1] - drop) * VS - Math.abs(Math.cos(st)) * 0.011 * bob + Math.sin(game.time * 1.7) * 0.004, c.p[2] * VS);
     C.hand.rotation.set(c.r[0] + C.away * 0.5, c.r[1], c.r[2] - C.sway * 2);
     C.shieldG.position.set((C.sh.p[0] - C.sway) * VS, (C.sh.p[1] - drop * 0.8) * VS - Math.abs(Math.cos(st)) * 0.009 * bob, C.sh.p[2] * VS); C.shieldG.rotation.set(C.sh.r[0], C.sh.r[1], C.sh.r[2]);
+    // forearms: from each wrist toward an elbow that stays low and outside the view, so the arm turns naturally through every swing
+    const aimArm = (arm, from, local, ex) => { _w.set(local[0], local[1], local[2]).applyEuler(from.rotation).add(from.position); arm.position.copy(_w); _d.set(ex, -0.70, -0.40).sub(_w).normalize(); arm.quaternion.setFromUnitVectors(_z, _d); };
+    aimArm(C.arm, C.hand, RPG.WRIST, 0.44); if (C.hasShield) aimArm(C.armL, C.shieldG, SH_WRIST, -0.50);
     C.vm.updateMatrixWorld(true);
     C.uZone.value = World.camZone | 0; C.uLight.value = World.camZone ? 0.34 : 1;
   };
@@ -11364,7 +11451,7 @@ const Foes = (() => {
           spot: sp, pos: sp.p.slice(), yaw: sp.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0 };
         f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
         f.h = Chars.spawn({ id: 'foe.' + id, foe: look });
-        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.layers.set(1);
+        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.gearMat(f.h.uZone, f.h.uLight)); sw.castShadow = true; sw.layers.set(1);
         const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });      // near sun-shadow map only, like the villagers
         if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
         F.list.push(f);

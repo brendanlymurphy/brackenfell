@@ -103,7 +103,7 @@ const Foes = (() => {
           spot: sp, pos: sp.p.slice(), yaw: sp.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0 };
         f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
         f.h = Chars.spawn({ id: 'foe.' + id, foe: look });
-        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.layers.set(1);
+        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.gearMat(f.h.uZone, f.h.uLight)); sw.castShadow = true; sw.layers.set(1);
         const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });      // near sun-shadow map only, like the villagers
         if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
         F.list.push(f);

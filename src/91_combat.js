@@ -20,19 +20,15 @@ const Combat = (() => {
 
   C.init = function () {
     const T = THREE; C.uZone = TSL.uniform(0); C.uLight = TSL.uniform(1);
-    const mat = C.mat = RPG.litMat(C.uZone, C.uLight, 0.42), matSoft = C.matSoft = RPG.litMat(C.uZone, C.uLight, 0.85);
+    const mat = C.mat = RPG.gearMat(C.uZone, C.uLight), matSoft = C.matSoft = mat;
     const vm = C.vm = new T.Group(); vm.matrixAutoUpdate = false; vm.name = 'viewmodel';
     const mk = (g, m) => { const o = new T.Mesh(g, m); o.frustumCulled = false; o.castShadow = false; o.receiveShadow = true; o.layers.set(1); return o; };
     C.hand = new T.Group(); C.blade = mk(RPG.swordGeo(0.64, 1), mat); C.hand.add(C.blade);
-    // a fist around the grip and a forearm running back out of view
-    const arm = d => RPG.merge([
-      [new T.BoxGeometry(0.064, 0.074, 0.078), RPG.xf(0, 0, 0.004), [0.06, 0.04, 0.028]],
-      [new T.CylinderGeometry(0.026, 0.033, 0.2, 8), RPG.xf(0.02 * d, -0.07, 0.12, 1.05, 0, 0), [0.06, 0.055, 0.04]],
-      [new T.CylinderGeometry(0.036, 0.038, 0.07, 8), RPG.xf(0.01 * d, -0.045, 0.07, 1.05, 0, 0), [0.075, 0.048, 0.03]],
-    ]);
-    C.hand.add(mk(arm(1), matSoft)); vm.add(C.hand);
-    C.shieldG = new T.Group(); C.shieldG.add(mk(RPG.shieldGeo(), matSoft));
-    const la = mk(arm(-1), matSoft); la.position.set(0.02, -0.02, 0.07); C.shieldG.add(la); C.shieldG.visible = false; vm.add(C.shieldG);
+    // a gloved fist round the grip; the forearm is its own piece, turned every frame to run from the wrist back to where the elbow would be
+    C.hand.add(mk(RPG.fistGeo(), mat)); vm.add(C.hand);
+    const fg = RPG.forearmGeo(); C.arm = mk(fg, mat); vm.add(C.arm);
+    C.shieldG = new T.Group(); C.shieldG.add(mk(RPG.shieldGeo(), RPG.litMat(C.uZone, C.uLight, 0.85)));
+    C.shieldG.visible = false; vm.add(C.shieldG); C.armL = mk(fg, mat); C.armL.visible = false; vm.add(C.armL);
     SC.scene.add(vm); C.refresh();
   };
   // equipment changed: the blade in view follows the sword you carry
@@ -43,7 +39,7 @@ const Combat = (() => {
       C.blade.visible = !!eq.weapon;
       if (b) { C.blade.geometry.dispose(); C.blade.geometry = RPG.swordGeo(b[0], b[1], b[2]); }
     }
-    C.hasShield = !!eq.shield; C.shieldG.visible = C.hasShield;
+    C.hasShield = !!eq.shield; C.shieldG.visible = C.armL.visible = C.hasShield;
   };
   C.busy = () => C.phase === 'wind' || C.phase === 'charge' || C.phase === 'strike' || C.phase === 'block';
   C.blocking = () => C.phase === 'block';
@@ -132,6 +128,7 @@ const Combat = (() => {
   };
   // put the view model where the camera is (called after the camera has had its last nudge for the frame)
   const _e = new THREE.Euler(0, 0, 0, 'YXZ'), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
+  const _w = new THREE.Vector3(), _d = new THREE.Vector3(), _z = new THREE.Vector3(0, 0, 1), SH_WRIST = [0.02, -0.03, 0.08];
   const VS = 1.3;       // poses are authored for a narrow view; pushing them out keeps a wide phone screen from being filled by the hand
   C.place = function () {
     if (!C.vm) return;
@@ -143,6 +140,9 @@ const Combat = (() => {
     C.hand.position.set((c.p[0] - C.sway) * VS + Math.sin(st) * 0.007 * bob, (c.p[1] - drop) * VS - Math.abs(Math.cos(st)) * 0.011 * bob + Math.sin(game.time * 1.7) * 0.004, c.p[2] * VS);
     C.hand.rotation.set(c.r[0] + C.away * 0.5, c.r[1], c.r[2] - C.sway * 2);
     C.shieldG.position.set((C.sh.p[0] - C.sway) * VS, (C.sh.p[1] - drop * 0.8) * VS - Math.abs(Math.cos(st)) * 0.009 * bob, C.sh.p[2] * VS); C.shieldG.rotation.set(C.sh.r[0], C.sh.r[1], C.sh.r[2]);
+    // forearms: from each wrist toward an elbow that stays low and outside the view, so the arm turns naturally through every swing
+    const aimArm = (arm, from, local, ex) => { _w.set(local[0], local[1], local[2]).applyEuler(from.rotation).add(from.position); arm.position.copy(_w); _d.set(ex, -0.70, -0.40).sub(_w).normalize(); arm.quaternion.setFromUnitVectors(_z, _d); };
+    aimArm(C.arm, C.hand, RPG.WRIST, 0.44); if (C.hasShield) aimArm(C.armL, C.shieldG, SH_WRIST, -0.50);
     C.vm.updateMatrixWorld(true);
     C.uZone.value = World.camZone | 0; C.uLight.value = World.camZone ? 0.34 : 1;
   };
