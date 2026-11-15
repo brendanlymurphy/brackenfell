@@ -5874,10 +5874,10 @@ function pDining(P, room, len, wid, opt) {
       const bs = [-1, 1].map(sg => rot ? [tx + sg * (wid / 2 + 0.34), tz] : [tx, tz + sg * (wid / 2 + 0.34)]);
       const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.34, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.34));
       if (!brs.every(r => pFit(P, room, r, { h: 0.46 })) || (opt.sideRoom && !brs.every(r => true))) continue;
-      const t = pPut(P, room, P.id + '.table', tx, tz, 0, tw, td, 0.78, m => { m.push(); if (rot) m.RY(rot); pdTable(len, wid, items, opt.n || 3, c)(m); m.pop(); }, { surface: true });
+      const t = pPut(P, room, P.id + '.' + (opt.id || 'table'), tx, tz, 0, tw, td, 0.78, m => { m.push(); if (rot) m.RY(rot); pdTable(len, wid, items, opt.n || 3, c)(m); m.pop(); }, { surface: true });
       if (!t) continue;
       const seats = [];
-      bs.forEach((b, i) => { const sg = i ? 1 : -1; pPut(P, room, P.id + '.bench', b[0], b[1], rot ? PI / 2 : 0, len * 0.9, 0.34, 0.46, pdBench(len * 0.9), {}); for (const q of [-0.5, 0.5]) seats.push([rot ? b[0] : tx + q * len * 0.5, rot ? tz + q * len * 0.5 : b[1], rot ? (sg < 0 ? PI / 2 : -PI / 2) : (sg < 0 ? PI : 0)]); });
+      bs.forEach((b, i) => { const sg = i ? 1 : -1; pPut(P, room, P.id + '.' + (opt.id || 'table') + 'bench' + i, b[0], b[1], rot ? PI / 2 : 0, len * 0.9, 0.34, 0.46, pdBench(len * 0.9), {}); for (const q of [-0.5, 0.5]) seats.push([rot ? b[0] : tx + q * len * 0.5, rot ? tz + q * len * 0.5 : b[1], rot ? (sg < 0 ? PI / 2 : -PI / 2) : (sg < 0 ? PI : 0)]); });
       return { x: tx, z: tz, rot, seats, t };
     }
   }
@@ -5964,7 +5964,7 @@ function planHouse(P, c, info) {
   const W = info.W || stepTo(c.w * 1.35, 8, 11), D = info.D || stepTo(c.d * 1.6, 10, 12), Dh = 7, x0 = -W / 2, x1 = W / 2;
   P.dims = { W, D, Dh };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H_GROUND); if (up) pLevel(P, 1, H_GROUND + PW.SLAB, H_UP);
-  const hall = pRoom(P, 0, 'hall', 'hall', x0, 0, x1, Dh), store = pRoom(P, 0, 'store', 'store', x0, Dh, 0, D), bed0 = pRoom(P, 0, 'bedroom', 'bedroom', 0, Dh, x1, D);
+  const hall = pRoom(P, 0, 'hall', info.inn ? 'common' : 'hall', x0, 0, x1, Dh), store = pRoom(P, 0, 'store', info.inn ? 'kitchen' : 'store', x0, Dh, 0, D), bed0 = pRoom(P, 0, 'bedroom', info.inn ? 'keeper' : 'bedroom', 0, Dh, x1, D);
   pDoor(P, 'hall', null, 0, 0);
   pDoor(P, 'hall', 'store', x0 / 2, Dh); pDoor(P, 'hall', 'bedroom', x1 / 2, Dh);
   // cellar: under the hall (the stair arrives here) and under the store
@@ -5980,15 +5980,15 @@ function planHouse(P, c, info) {
   }
   pLayout(P);
   // ground floor
-  const hall0 = hall, hh = pHearth(P, hall, 's', 1.7, { cauldron: true, at: 0 });
+  const hall0 = hall, hh = pHearth(P, hall, 's', info.inn ? 2.4 : 1.7, { cauldron: true, at: 0 });
   P.hall = { room: hall, hh };
   if (need.has('counter')) {
     const t = pFree(P, hall, P.id + '.counter', 2.0, 0.7, 1.0, 0, m => { Props.table(m, 2.0, 0.7); Props.clutter(m, c.R, -0.8, 0.8, 0.76, 0, ['jug', 'bowl', 'cheese', 'loaf'], 3, c); }, { near: [x0 / 2 + 0.2, 2.2], surface: true });
     if (t) pSpot(P, 'counter', t.cx, t.cz + 0.75, PI, { k: 0 });
   }
   if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
-  dressHall(P, hall, { hh });
-  dressStore(P, store); dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id] });
+  if (info.inn) dressInn(P, c, hall, hh); else dressHall(P, hall, { hh });
+  if (info.inn) dressKitchen(P, store); else dressStore(P, store); dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id] });
   dressCellar(P, cel, { barrels: 1, crates: 2 }); dressCellar(P, vault, { barrels: 3 });
   if (up) {
     dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false });
@@ -6019,7 +6019,29 @@ function planBuild(c) {
   for (const n of P.need) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });
   c.planDone = P; return P;
 }
-const PLANS_INFO = {};
+const PLANS_INFO = { inn: { inn: true, W: 14, D: 12, up: true } };
+// the common room: a bar with kegs behind it, two long tables with benches, a stool by the fire, the bard's corner
+function dressInn(P, c, room, hh) {
+  const R = P.R, a = room.in; P.hall = { room, hh };
+  const bar = pPut(P, room, P.id + '.bar', a.x1 - 1.9, 3.2, PI / 2, 3.6, 0.7, 1.05, m => { Props.table(m, 3.6, 0.7, 1.05); Props.clutter(m, R, -1.6, 1.6, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate'], 5, c); }, { surface: true });
+  if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.6, PI / 2, { k: 0 }); P.bar = bar; }
+  for (let i = 0; i < 3; i++) pAgainst(P, room, 'e', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, m => Props.keg(m, 0.33, 0.9), { at: 0.6 + i * 1.2 + 3.2 - 1.2 });
+  let n = 0;
+  const near = [[-3.5, 3.0], [0.5, 3.5], [-4.5, 1.8]];
+  for (let t = 0; t < 3; t++) {
+    const dn = pDining(P, room, 2.2, 0.9, { near: near[t], id: 'table' + t, n: 3 });
+    if (dn) for (const s of dn.seats) { n++; pSit(P, 's' + n, s[0], s[1], s[2], 0); }
+  }
+  if (hh) {
+    pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
+    const st = pPut(P, room, P.id + '.firestool', hh.front[0] + 1.5, hh.front[1] - 0.1, 0, 0.4, 0.4, 0.46, pdStool, {});
+    if (st) pSit(P, 'fire2', st.cx, st.cz, Math.atan2(hh.px - st.cx, -(hh.pz - st.cz)), 0);
+    pSpot(P, 'bard', hh.front[0] - 1.6, hh.front[1] - 0.2, Math.atan2(hh.px - hh.front[0] + 1.6, -(hh.pz - hh.front[1])) , { k: 0 });
+  }
+  for (const sd of ['w', 'n']) if (pAgainst(P, room, sd, P.id + '.shelf', 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(c, ['mug', 'bottle', 'jug', 'bowl'])), {})) break;
+  pLamp(P, room, -3.5, 3.0); pLamp(P, room, 0.5, 3.5); pLamp(P, room, -3.5, 1.2);
+  const e = P.doors.find(d => d.b === null); if (e) { pSconce(P, room, 'n', e.x + 1.4); pSconce(P, room, 'n', e.x - 1.4); }
+}
 
 
 // ---- 73_village.js ----
