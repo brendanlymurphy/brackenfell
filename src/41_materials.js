@@ -133,10 +133,14 @@ function terrainMaterial() {
     If(wGrav.greaterThan(0.004), () => { over(samp(MAT.GRAVEL, uvG.mul(1.4), dGx.mul(1.4), dGy.mul(1.4)), wGrav); });
     If(sp.g.greaterThan(0.004), () => { const c = samp(MAT.COBBLE, uvC, dCx, dCy); c.h.assign(c.h.mul(0.2).add(0.72)); over(c, sat(sp.g.mul(1.15)).toVar()); });
     // puddles collect in the low spots of roads and wet banks
-    const wetGround = max(max(wMud, wPath.mul(0.8)), s2.g.mul(0.9)).mul(sp.g.oneMinus());
-    const pud = smoothstep(0.58, 0.70, mn2.a.mul(0.50).add(mn3.b.mul(0.28)).add(s2.g.mul(0.55))).mul(wetGround).mul(smoothstep(0.02, 0.09, slope).oneMinus()).mul(smoothstep(0.30, 0.55, G0.h).oneMinus()).mul(farK.mul(0.6).oneMinus()).toVar();
-    const damp = sat(s2.g.mul(0.7).add(pud)).toVar();
-    G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, 0.45, damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
+    // rain: water stands on every road, between the cobbles and on bare earth, the ground darkens and takes a sheen
+    const wet = U.wet, hard = max(max(road, sp.g), sp.a);
+    const wetGround = max(max(max(wMud, wPath.mul(0.8)), s2.g.mul(0.9)).mul(sp.g.oneMinus()), wet.mul(hard.mul(0.75).add(0.2)));
+    const pud = smoothstep(float(0.58).sub(wet.mul(0.20)), float(0.70).sub(wet.mul(0.17)), mn2.a.mul(0.50).add(mn3.b.mul(0.28)).add(s2.g.mul(0.55))).mul(wetGround).mul(smoothstep(0.02, 0.09, slope).oneMinus()).mul(smoothstep(0.30, 0.55, G0.h).oneMinus()).mul(farK.mul(0.6).oneMinus()).toVar();
+    // in rain, broad shallow pools also lie over cobbles and packed road whatever the stones' height
+    pud.assign(max(pud, smoothstep(0.50, 0.60, mn2.a.mul(0.55).add(mn3.b.mul(0.15)).add(mn.r.mul(0.30))).mul(wet).mul(hard).mul(smoothstep(0.02, 0.07, slope).oneMinus()).mul(farK.mul(0.5).oneMinus())));
+    const damp = sat(s2.g.mul(0.7).add(pud).add(wet.mul(0.7))).toVar();
+    G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, mix(float(0.45), 0.24, wet), damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
     If(wRock.greaterThan(0.004), () => {
       const q = samp(MAT.ROCK, uvR, dRx, dRy), q2 = samp(MAT.ROCK, uvR2, dR2x, dR2y), kx = Nv.z.mul(Nv.z).div(Nv.x.mul(Nv.x).add(Nv.z.mul(Nv.z)).add(0.0001)).toVar();       // kx: weight of the x-y plane (faces looking along z)
       q.c.assign(mix(q2.c, q.c, kx)); q.ao.assign(mix(q2.ao, q.ao, kx)); q.r.assign(mix(q2.r, q.r, kx)); q.c.mulAssign(vec3(0.97, 0.98, 1.04).mul(mn.g.mul(0.45).add(0.80)));
@@ -144,6 +148,14 @@ function terrainMaterial() {
     });
     G0.c.assign(mix(G0.c, vec3(0.80, 0.84, 0.90), wSnow));
     const N = SH.perturb(Nv, wp, uvG, G0.n, smoothstep(38, 56, dist).oneMinus()).toVar();
+    // raindrops ring the standing water: one expanding ring per half-metre cell, each on its own clock
+    If(U.rain.greaterThan(0.02).and(pud.greaterThan(0.03)).and(dist.lessThan(30)), () => {
+      const g = wp.xz.mul(2.1), cell = TSL.floor(g), h = TSL.fract(sin(vec3(dot(cell, vec2(127.1, 311.7)), dot(cell, vec2(269.5, 183.3)), dot(cell, vec2(419.2, 371.9)))).mul(43758.5453));
+      const ph = TSL.fract(U.time.mul(1.15).add(h.x)), d2 = TSL.fract(g).sub(0.5).sub(h.yz.sub(0.5).mul(0.45)), dl = length(d2), rr = ph.mul(0.42);
+      const ring = sin(dl.sub(rr).mul(46)).mul(smoothstep(0.075, 0.0, abs(dl.sub(rr)))).mul(ph.oneMinus()).mul(smoothstep(0.0, 0.08, ph));
+      const push = d2.div(max(dl, 0.01)).mul(ring.mul(0.42).mul(U.rain).mul(pud));
+      N.assign(normalize(N.add(vec3(push.x, 0, push.y))));
+    });
     const ao = G0.ao.mul(s2.b.mul(0.55).oneMinus()), contact = s2.b.mul(0.32).oneMinus();        // soft contact shade at the foot of walls and trunks
     // standing water mirrors the sky
     const V = normalize(U.camPos.sub(wp)), Rf = reflect(V.negate(), N), F = pow(sat(dot(N, V).oneMinus()), 5).mul(0.97).add(0.03);
@@ -151,7 +163,10 @@ function terrainMaterial() {
     const sky = SH.skyBase(vec3(Rf.x, abs(Rf.y).add(0.02), Rf.z));
     const albedo = G0.c.mul(contact).mul(k.oneMinus()).toVar();
     pN.assign(N); pRough.assign(mix(G0.r, 0.6, wSnow));
-    pEmis.assign(albedo.mul(SH.hemi(N, ao, float(0)).add(SH.pointLightsGround(wp, N, float(0), float(0.25)).add(SH.lampPool(wp).mul(inside)).mul(mix(float(0.6), 1.0, ao)))).add(sky.mul(k).mul(contact)));
+    const lamp = SH.lampPool(wp).mul(inside).toVar();
+    // wet ground throws lamp light back at the eye: puddles and wet cobbles under a lantern shine
+    const shine = lamp.mul(pud.mul(0.55).add(damp.mul(wet).mul(0.12))).mul(F.mul(2.5).add(0.35));
+    pEmis.assign(albedo.mul(SH.hemi(N, ao, float(0)).add(SH.pointLightsGround(wp, N, float(0), float(0.25)).add(lamp).mul(mix(float(0.6), 1.0, ao)))).add(sky.mul(k).mul(contact)).add(shine));
     return vec4(albedo, 1);
   })();
   m.normalNode = transformNormalToView(pN); m.roughnessNode = pRough; m.metalnessNode = float(0); m.emissiveNode = pEmis;

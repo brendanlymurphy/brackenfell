@@ -56,7 +56,7 @@ function fxUpdate(dt, time, env, cam) {
     put(s.p[0], s.p[1], s.p[2], 0.035, 1.0, 0.5, 0.12, 2.6 * (1 - s.life / s.max), 0, 3, 1, 0);
   }
   // fireflies after dusk, drifting specks of dust by day (both wrap around the camera)
-  if (env.night > 0.05 && !World.indoor) for (const f of FX.flies) {
+  if (env.night > 0.05 && !World.indoor && !(env.rain > 0.1)) for (const f of FX.flies) {
     const x = cam[0] + ((f.o[0] - cam[0]) % 44 + 66) % 44 - 22 + Math.sin(time * f.sp + f.ph) * 1.5, z = cam[2] + ((f.o[2] - cam[2]) % 44 + 66) % 44 - 22 + Math.cos(time * f.sp * 0.8 + f.ph) * 1.5;
     const b = Math.max(0, Math.sin(time * 1.3 + f.ph * 3)) * env.night;
     if (b > 0.02) put(x, World.groundY(x, z) + f.o[1] + Math.sin(time * 0.7 + f.ph) * 0.3, z, 0.07, 0.75, 1.0, 0.35, 2.2 * b, 0, 3, 1, 0);
@@ -66,5 +66,6 @@ function fxUpdate(dt, time, env, cam) {
     put(x, y, z, 0.022, 1.0, 0.95, 0.8, 0.5 * env.day * (0.5 + 0.5 * Math.sin(time + f.ph)), 0, 3, 1, 0);
   }
   if (typeof airUpdate === 'function') airUpdate(put, dt, time, env, cam);
+  if (typeof Weather !== 'undefined') Weather.particles(put, dt, time, env, cam);
   R.partCount = n;
 }

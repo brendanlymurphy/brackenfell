@@ -36,6 +36,9 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - **Defect hunt** (`fork-qa`): scripted walk of every place at four hours, coplanar-face audit outdoors, floating and sunk objects,
   character problems; fixes in unowned files, reports for the rest.
 
+- **Outdoor look** (`fork-look`, waiting to be merged): first-person arming sword and gloved hand; night with leaded amber windows, clamped
+  glows and pools of lamp light; scanned trees; one wind for trees, grass, cloth, signs, smoke and sound; rain, wet ground, overcast, lake mist.
+
 ## Next
 
 - Lighting and weather as composition: pools of light at night, shafts through windows, eye adaptation at doors, rain and wet ground.
