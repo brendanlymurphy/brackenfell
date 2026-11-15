@@ -75,6 +75,14 @@ Lines are generated offline with Kokoro-82M (Apache 2.0) and shipped as AAC file
 (`'bm_george:0.5+am_onyx:0.5'`) make distinct voices. Speech is played dry: never route it through reverb. Any new spoken text must go
 in the same tables, then regenerate.
 
+The owner finds Kokoro too artificial (it scores about 1055 in the Artificial Analysis blind-listening arena; hosted leaders score
+about 1200). The replacement path is ready but has not been run: `tools/voice/gen_gemini.py` with `tools/voice/cast_gemini.json`
+(Gemini 3.1 Flash TTS, one prebuilt voice and a one-line acting direction per character). It needs `GEMINI_API_KEY` in the
+environment (never in the repo or the chat) and network access to generativelanguage.googleapis.com. First run
+`python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json /tmp/vsample --sample`, give the owner
+`/tmp/vsample/sample.m4a` to approve by ear, then run it with `audio/voice` as the output folder, run `node tools/voice/check.mjs`
+and `test/voice_game.js`, and push.
+
 ## Working with several agents at once
 
 - One branch and one git worktree per worker (`fork-<name>`); the coordinator merges into `threejs` and publishes.
