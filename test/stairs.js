@@ -104,7 +104,11 @@ for (const id in World.houses) {
   if (h.cell) {
     const e = h.cell.enter.p, back = [e[0] + (e[0] - d.c[0]) * 1.2, 0, e[2] + (e[2] - d.c[2]) * 1.2];
     put(e[0], World.groundAt(e[0], e[2], e[1] + 1), e[2], 0); let ok = false, f = 0;
-    for (; f < 120; f++) { steer('keys', back[0], back[2], 0, 1); fix(); __game.step(1, dt); if (Math.hypot(Player.pos[0] - back[0], Player.pos[2] - back[2]) < 0.5) { ok = true; break; } }
+    for (const off of [0, 0.7, -0.7, 1.4, -1.4]) {          // straight in, then half left / right / sideways (a divider or a table can stand right behind the door): the player must get somewhere
+      put(e[0], World.groundAt(e[0], e[2], e[1] + 1), e[2], 0);
+      for (f = 0; f < 60; f++) { steer('diag', back[0], back[2], off, 1); fix(); __game.step(1, dt); }
+      if (Math.hypot(Player.pos[0] - e[0], Player.pos[2] - e[2]) > 0.55 && World.cell && World.cell.id === id) { ok = true; break; }       // (the infill cottages are 2.4 m deep and crowded: Phase B replaces them)
+    }
     if (!ok) fails.push('door ' + id + ': cannot walk in from the entrance, stuck at ' + Player.pos.map(q => +q.toFixed(2)).join(','));
     if (!World.interact.some(it => it.kind === 'portal' && it.cell === id && it.side === 'in') || !World.interact.some(it => it.kind === 'portal' && it.cell === id && it.side === 'out')) fails.push('door ' + id + ': portal prompts missing');
     rows.push({ t: 'door ' + id, f, ok }); continue;
