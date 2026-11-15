@@ -21,6 +21,15 @@ function deepIndoors(e) {
   }
   return true;
 }
+// Furniture of a building is drawn only when it can be seen: the camera is inside it, or one of its doors is (opening or) open. Window panes are opaque, so
+// nothing inside shows through them. A building whose doors are open archways (no leaf registered) keeps the old rule: near enough. INTERIOR_NEAR: metres from its centre.
+const INTERIOR_NEAR = 9;
+function interiorShown(site, camPos) {
+  if (hyp(site.x - camPos[0], site.z - camPos[2]) >= INTERIOR_NEAR + Math.max(site.w, site.d) * 0.5) return false;
+  const z = World.camZone; if (z && World.zones[z - 1] && World.zones[z - 1].site === site) return true;
+  let any = false; for (const d of World.doors) if (d.site === site) { if (d.open > 0.02) return true; any = true; }
+  return !any;
+}
 function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
