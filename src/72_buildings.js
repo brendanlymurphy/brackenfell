@@ -24,7 +24,8 @@ function cottageInterior(c, o) {
   c.fireplace(B.x0, o.fz || 0, 0, { w: 1.7, cauldron: o.cauldron });
   if (!o.noBed) bedAt(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 1.0, o.blanket, o.fur);
   if (o.bed2 && !o.noBed) bedAt(c, 'bed2', B.x1 - 1.9, B.z1 - 1.08, PI, 1.0, o.blanket2 || COL.blue);
-  chestAt(c, B.x1 - 0.45, B.z1 - 2.5, PI / 2, o.loot || [['gold', 4 + R.i(0, 6)]]);
+  const cp = o.chestRel || [-0.45, -2.5, PI / 2];       // (chestRel: where, relative to the back right corner, when the right wall is taken by a stair)
+  chestAt(c, B.x1 + cp[0], B.z1 + cp[1], cp[2], o.loot || [['gold', 4 + R.i(0, 6)]]);
   tableSet(c, o.tx === undefined ? -0.5 : o.tx, o.tz === undefined ? 0.35 : o.tz, 0, 1.5, 0.8, o.tableItems, 3, o.seats || 'stools');
   at(m, o.tx === undefined ? -0.5 : o.tx, 0.02, o.tz === undefined ? 0.35 : o.tz, 0.2, () => Props.rug(m, 2.2, 1.6, o.rug || COL.red));
   if (!o.noShelf) at(m, o.sx === undefined ? -0.3 : o.sx, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 1.6, 1.8, 3, 0.32, (i, y) => Props.clutter(m, R, -0.65, 0.65, y, 0, o.shelfItems || ['pot', 'jug', 'bowl', 'book', 'bottle', 'cheese'], 4)));
@@ -160,11 +161,11 @@ const HOUSES = {
   },
   herbalist: {
     H: 2.4, walls: 'timber', roof: 'thatch', plaster: [0.98, 0.95, 0.85], shutter: [0.5, 0.36, 0.5], roofCol: [0.95, 0.98, 0.9],
-    doors: [{ wall: 'front', pos: -0.9 }], windows: [{ wall: 'front', pos: 1.5 }, { wall: 'back', pos: 1.2 }, { wall: 'right', pos: 0.6 }],
+    doors: [{ wall: 'front', pos: -0.9 }], windows: [{ wall: 'front', pos: 1.5 }, { wall: 'back', pos: 1.2 }], gableWin: { right: [{ sill: 0.45, s: 0.8 }] },
     interior(c) {
-      cottageInterior(c, { cauldron: true, blanket: COL.purple, shelfItems: ['bottle', 'pot', 'bottle', 'jug', 'bowl', 'bottle'], rug: COL.green, tableItems: ['bowl', 'bottle', 'candle', 'pot'], sx: -0.9 });
+      cottageInterior(c, { noBed: true, chestRel: [-2.7, -0.32, PI], cauldron: true, blanket: COL.purple, shelfItems: ['bottle', 'pot', 'bottle', 'jug', 'bowl', 'bottle'], rug: COL.green, tableItems: ['bowl', 'bottle', 'candle', 'pot'], sx: -0.9 });
       const m = c.int, B = bounds(c);
-      for (let x = B.x0 + 1.2; x < B.x1 - 0.4; x += 0.42) at(m, x, c.H - 0.2, c.R.s() * 0.3 + (Math.round(x * 3) % 2 ? 1.1 : -1.3), 0, () => herbs(m, c.R));
+      for (let x = B.x0 + 1.2; x < B.x1 - 1.6; x += 0.42) at(m, x, (c.ceilY || c.H) - 0.2, c.R.s() * 0.3 + (Math.round(x * 3) % 2 ? 1.1 : -1.3), 0, () => herbs(m, c.R));
       at(m, 1.3, 0.02, B.z0 + 0.4, PI, () => { Props.table(m, 1.4, 0.6, 0.85); Props.clutter(m, c.R, -0.5, 0.5, 0.85, 0, ['bowl', 'bottle', 'pot', 'bottle'], 4); });
     },
   },
@@ -196,19 +197,19 @@ const HOUSES = {
   },
   farm: {
     H: 2.5, walls: 'timber', roof: 'thatch', plaster: [1, 0.96, 0.84], shutter: [0.5, 0.25, 0.2],
-    doors: [{ wall: 'front', pos: 1.0 }], windows: [{ wall: 'front', pos: -1.9 }, { wall: 'back', pos: -1.5 }, { wall: 'back', pos: 1.7 }, { wall: 'right', pos: -1.0 }],
+    doors: [{ wall: 'front', pos: 1.0 }], windows: [{ wall: 'front', pos: -1.9 }, { wall: 'back', pos: -1.5 }, { wall: 'back', pos: 1.7 }], gableWin: { right: [{ sill: 0.45, s: 0.8 }] },
     interior(c) {
-      cottageInterior(c, { cauldron: true, bed2: true, blanket: COL.gold, blanket2: COL.green, tableItems: ['loaf', 'cheese', 'bowl', 'mug', 'apple'], seats: 'bench', tx: -0.9, tz: 0.3 });
+      cottageInterior(c, { noBed: true, chestRel: [-2.7, -0.32, PI], cauldron: true, bed2: true, blanket: COL.gold, blanket2: COL.green, tableItems: ['loaf', 'cheese', 'bowl', 'mug', 'apple'], seats: 'bench', tx: -0.9, tz: 0.3 });
       const m = c.int, B = bounds(c);
-      for (let i = 0; i < 5; i++) at(m, B.x0 + 1.6 + i * 0.5, c.H - 0.2, -1.4, 0, () => herbs(m, c.R));
+      for (let i = 0; i < 5; i++) at(m, B.x0 + 1.6 + i * 0.5, (c.ceilY || c.H) - 0.2, -1.4, 0, () => herbs(m, c.R));
       at(m, B.x0 + 0.5, 0.02, B.z1 - 0.5, 0, () => Props.sack(m, 0.34)); at(m, B.x0 + 1.2, 0.02, B.z1 - 0.45, 0, () => Props.crate(m, 0.55));
     },
   },
   hunter: {
     H: 2.3, walls: 'log', roof: 'thatch', roofCol: [0.85, 0.85, 0.8],
-    doors: [{ wall: 'front', pos: 0.8 }], windows: [{ wall: 'front', pos: -1.4, w: 0.7, h: 0.8 }, { wall: 'back', pos: 0.3, w: 0.7, h: 0.8 }],
+    doors: [{ wall: 'front', pos: 0.8 }], windows: [{ wall: 'front', pos: -1.4, w: 0.7, h: 0.8 }, { wall: 'back', pos: 0.3, w: 0.7, h: 0.8 }], gableWin: { right: [{ sill: 0.45, s: 0.8 }] },
     interior(c) {
-      cottageInterior(c, { fur: true, blanket: [0.4, 0.3, 0.2], noShelf: true, tableItems: ['mug', 'bowl', 'candle'], rug: [0.5, 0.4, 0.3] });
+      cottageInterior(c, { noBed: true, chestRel: [-2.7, -0.32, PI], fur: true, blanket: [0.4, 0.3, 0.2], noShelf: true, tableItems: ['mug', 'bowl', 'candle'], rug: [0.5, 0.4, 0.3] });
       const m = c.int, B = bounds(c);
       at(m, -0.6, 1.3, B.z1 - 0.02, PI, () => pelt(m, 1.1, 0.9)); at(m, 1.0, 1.25, B.z1 - 0.02, PI, () => pelt(m, 0.8, 0.7));
       at(m, B.x0 + 0.68, 1.85, 0, PI / 2, () => antlers(m));
@@ -217,11 +218,10 @@ const HOUSES = {
   },
   fisher: {
     H: 2.2, walls: 'timber', roof: 'thatch', plaster: [0.94, 0.94, 0.9], shutter: [0.3, 0.45, 0.5], roofCol: [0.9, 0.9, 0.85],
-    doors: [{ wall: 'front', pos: 0.6 }], windows: [{ wall: 'front', pos: -1.2, w: 0.7 }, { wall: 'right', pos: 0, w: 0.7 }],
+    doors: [{ wall: 'front', pos: 0.6 }], windows: [{ wall: 'front', pos: -1.2, w: 0.7 }], gableWin: { right: [{ sill: 0.45, s: 0.8 }] },
     interior(c) {
       const m = c.int, B = bounds(c);
       c.fireplace(B.x0, 0, 0, { w: 1.5 });
-      bedAt(c, 'bed', B.x1 - 0.6, B.z1 - 1.05, PI, 0.95, [0.3, 0.42, 0.5]);
       tableSet(c, -0.3, 0.9, 0, 1.0, 0.65, ['bowl', 'mug', 'candle'], 2, 'stools');
       at(m, B.x0 + 0.45, 0.02, B.z0 + 0.45, 0, () => Props.barrel(m)); at(m, 1.2, 0.02, B.z0 + 0.4, 0, () => Props.crate(m, 0.5));
       chestAt(c, 0.6, B.z1 - 0.32, 0, [['gold', 5]]);

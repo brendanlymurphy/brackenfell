@@ -31,6 +31,7 @@ async function kitBoot(progress) {
 function kitFixups() {
   for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) { Kit.defs[n].gain = 2.0; Kit.defs[n].sat = 0.85; }       // scanned rocks photograph dark
   for (const n of ['Window_Wide_Flat1', 'Window_Wide_Round1', 'Window_Thin_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Open'] = Object.assign({}, p, { name: n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_WindowGlass') }); }       // the frame without the pane: upstairs windows you can look out of
+  for (const n of [4, 6, 8]) { const p = Kit.pieces['Roof_Front_Brick' + n]; if (p) Kit.pieces['Roof_Front_Brick' + n + '_Open'] = Object.assign({}, p, { name: 'Roof_Front_Brick' + n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_Plaster') }); }       // gable frames without their plaster, where a window is cut in (gableFill, 71c_upper.js)
   if (Kit.defs.MI_WindowGlass) Kit.defs.MI_StainedGlass = Object.assign({}, Kit.defs.MI_WindowGlass, { name: 'MI_StainedGlass' });
   for (const n of ['Window_Thin_Round1', 'Window_Wide_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Stained'] = Object.assign({}, p, { name: n + '_Stained', prims: p.prims.map(q => q.mat === 'MI_WindowGlass' ? Object.assign({}, q, { mat: 'MI_StainedGlass' }) : q) }); }
 }
@@ -131,7 +132,9 @@ function kitShell(c) {
       add(F, 'Corner_Exterior_Wood', 0, H, 0, [1.25, 1, 1.25], EXT);
     }
     // ── gable ends carry the timber triangle of the roof ──
-    if (wn === 'left' || wn === 'right') { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; add(F, 'Roof_Front_Brick' + span, L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }); }
+    if (wn === 'left' || wn === 'right') { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; const gw = spec.gableWin && spec.gableWin[wn] && Kit.pieces['Roof_Front_Brick' + span + '_Open'];
+      add(F, 'Roof_Front_Brick' + span + (gw ? '_Open' : ''), L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO });
+      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT)); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
   {

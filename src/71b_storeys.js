@@ -44,14 +44,14 @@ function buildStair(c, o) {
     }
     const r = rect(KSTAIR.treads * KSTAIR.runStep * G.sz - 0.1, G.ZE, lane - hw, lane + hw); m.box(r[0], base, r[1], r[2], top, r[3]);
   }
+  const gap = o.exitGap || 0.5;       // how much of the room side, below the top, is left open to step off
   // side colliders in short pieces following the slope: the player can neither fall off nor walk in under it
-  for (let Za = G.Z0; Za < G.ZE - 0.01; Za += 0.45) {
-    const Zb = Math.min(G.ZE, Za + 0.45), yTop = base + Math.min(o.rise, G.Y(Zb)) + 1.5;
-    for (const s of [-1, 1]) {
-      const r = rect(Za, Zb, lane + s * (hw + 0.04) - 0.06, lane + s * (hw + 0.04) + 0.06), open = s === o.exit && Za >= G.Z1 - 0.5;
-      addBoxCollider(m, r[0], r[1], r[2], r[3], base, open ? top - 0.5 : yTop);       // the exit side stays closed to the floor below (the stair is solid there) and open to the one above
-    }
+  for (const s of [-1, 1]) {
+    const cut = s === o.exit ? Math.max(G.Z0, G.Z1 - gap) : G.ZE, l = lane + s * (hw + 0.04);
+    for (let Za = G.Z0; Za < cut - 0.01; Za += 0.45) { const Zb = Math.min(cut, Za + 0.45), r = rect(Za, Zb, l - 0.06, l + 0.06); addBoxCollider(m, r[0], r[1], r[2], r[3], base, base + Math.min(o.rise, G.Y(Zb)) + 1.5); }
+    if (cut < G.ZE - 0.01) { const r = rect(cut, G.ZE, l - 0.06, l + 0.06); addBoxCollider(m, r[0], r[1], r[2], r[3], base, top - 0.5); }       // the exit side stays closed to the floor below (the stair is solid there) and open to the one above
   }
+  { const r = rect(G.ZE - 0.02, G.ZE + 0.04, lane - hw, lane + hw); addBoxCollider(m, r[0], r[1], r[2], r[3], base, top - 0.5); }       // the solid stair's top end: no walking in under the landing from the floor below
   // keep furniture off the approaches (a collider that never stops the player but that kitDress's free-floor test respects)
   for (const [Za, Zb] of [[-1.3, -0.1], [G.ZE, G.ZE + 0.9]]) { const r = rect(Za, Zb, lane - hw, lane + hw); addBoxCollider(m, r[0], r[1], r[2], r[3], -50, -49); }
   // handrails on the open sides, up to where the slab (if any) begins
@@ -64,20 +64,22 @@ function buildStair(c, o) {
     m.beam([a[0], base + G.Y(0) + 0.45, a[1]], [b[0], base + G.Y(zEnd) + 0.45, b[1]], 0.04, 0.04);
   }
   // villagers' and the test's way points: a step before the first tread, a step past the top
-  const heading = ax === 'x' ? (dir > 0 ? PI / 2 : -PI / 2) : (dir > 0 ? PI : 0), B = bounds(c), clampP = p => ax === 'x' ? [clamp(p[0], B.x0 + 0.45, B.x1 - 0.45), p[1]] : [p[0], clamp(p[1], B.z0 + 0.45, B.z1 - 0.45)], pb = clampP(P(-0.7, lane)), pt = clampP(P(G.ZE + 0.75, lane)), n0s = o.spot0 || name + '0', n1s = o.spot1 || name + '1';
+  const heading = ax === 'x' ? (dir > 0 ? PI / 2 : -PI / 2) : (dir > 0 ? PI : 0), B = bounds(c), lim = o.limit || [-1e9, 1e9], clampP = p => ax === 'x' ? [clamp(p[0], Math.max(B.x0 + 0.45, lim[0]), Math.min(B.x1 - 0.45, lim[1])), p[1]] : [p[0], clamp(p[1], Math.max(B.z0 + 0.45, lim[0]), Math.min(B.z1 - 0.45, lim[1]))], pb = clampP(P(-0.7, lane)), pt = clampP(P(G.ZE + 0.75, lane)), n0s = o.spot0 || name + '0', n1s = o.spot1 || name + '1';
   c.spot(n0s, pb[0], pb[1], heading, base);
-  c.spot(n1s, pt[0], pt[1], heading, top + 0.01);
+  const Zt = ((ax === 'x' ? pt[0] : pt[1]) - n0) * dir;       // a top spot pulled back by a low roof stands on the ramp, not above it
+  c.spot(n1s, pt[0], pt[1], heading, Zt >= G.Z1 ? top + 0.01 : base + Math.max(0, G.Y(Zt)) + 0.01);
   // upstairs, the way from the stair's top round the stairwell to the rooms: a step to the side of the top, then past the near end of the well
   const via = [];
   if (o.exit) {
     const lat = lane + o.exit * (hw + 1.0), pu = clampP(P(G.ZE + 0.75, lat)), pv = clampP(P(G.Zh - 0.6, lat));
-    c.spot(name + 'U', pu[0], pu[1], heading, top + 0.01); c.spot(name + 'V', pv[0], pv[1], heading, top + 0.01); via.push(c.site.id + '.' + name + 'U', c.site.id + '.' + name + 'V');
+    c.spot(name + 'U', pu[0], pu[1], heading, top + 0.01); via.push(c.site.id + '.' + name + 'U');
+    if (!o.noV) { c.spot(name + 'V', pv[0], pv[1], heading, top + 0.01); via.push(c.site.id + '.' + name + 'V'); }
   }
   const exitL = o.exit ? P(G.Z1 - 0.2, lane + o.exit * (hw + 0.3)) : null, exitW = exitL ? m4.tp(c.Ms, [exitL[0], top, exitL[1]]) : null;
-  World.stairs.push({ via, exitPt: exitW, id: c.site.id + '.' + name, site: c.site.id, zone: c.zone, bottom: c.site.id + '.' + n0s, top: c.site.id + '.' + n1s, rise: o.rise, width: 2 * hw, upper: o.upper !== false });
+  World.stairs.push({ slope: G.slope, via, exitPt: exitW, id: c.site.id + '.' + name, site: c.site.id, zone: c.zone, bottom: c.site.id + '.' + n0s, top: c.site.id + '.' + n1s, rise: o.rise, width: 2 * hw, upper: o.upper !== false });
   // the stairwell in the slab above and the level rails round it: across the near end, along the sides (the exit side stops short of the top so one can step off)
   const hole = rect(G.Zh, G.ZE, lane - hw, lane + hw), railSegs = [[P(G.Zh, lane - hw - 0.05), P(G.Zh, lane + hw + 0.05)]];
-  for (const s of [-1, 1]) railSegs.push([P(G.Zh, lane + s * (hw + 0.05)), P(s === o.exit ? G.Z1 - 0.5 : G.ZE + 0.06, lane + s * (hw + 0.05))]);
+  for (const s of [-1, 1]) railSegs.push([P(G.Zh, lane + s * (hw + 0.05)), P(s === o.exit ? G.Z1 - gap : G.ZE + 0.06, lane + s * (hw + 0.05))]);
   if (o.H) {        // the slab's edge round the stairwell is solid to a head that has risen into its thickness (a jump on the stair, a jump out of the well)
     const Hs = o.H + FLOOR_T, e = [rect(G.Zh - 0.03, G.Zh + 0.03, lane - hw - 0.09, lane + hw + 0.09), rect(G.Zh, G.ZE, lane - hw - 0.06, lane - hw), rect(G.Zh, G.ZE, lane + hw, lane + hw + 0.06)];
     for (const r of e) addBoxCollider(m, r[0], r[1], r[2], r[3], o.H - 0.02, Hs);
@@ -126,7 +128,7 @@ function upperFloor(c, o) {
     const nb = Math.max(2, Math.round((w - 2 * e) / 2.2)), ridge = Yt + hd * tanP;
     for (let i = 1; i <= nb; i++) {
       const x = X0 + (X1 - X0) * i / (nb + 1);
-      int.box(x - 0.09, Yt - 0.2, Z0, x + 0.09, Yt, Z1);
+      if (o.ties !== false) int.box(x - 0.09, Yt - 0.2, Z0, x + 0.09, Yt, Z1);
       for (const s of [-1, 1]) int.beam([x, roofU(hd - e) - 0.1, s * (hd - e - 0.02)], [x, ridge - 0.14, s * 0.02], 0.1, 0.13);
     }
     int.box(X0, ridge - 0.26, -0.07, X1, ridge - 0.12, 0.07);

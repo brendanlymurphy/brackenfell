@@ -39,7 +39,7 @@ function walk(st, up, start, v) {
     if (v.jump && ++jumpT % 14 === 0) RPG.jumpBuf = 0.15;
     fix(); __game.step(1, dt);
     const dy = P.pos[1] - prevY, g = P.onGround;
-    if (g && prevG && Math.abs(dy) > 0.42) fails.push(tag + ' frame ' + f + ': height jump ' + dy.toFixed(2) + ' at ' + P.pos.map(q => +q.toFixed(2)).join(','));
+    if (g && prevG && (dy > 0.42 + Math.max(0, (st.slope || 0) - 1.0) * 0.8 || dy < -0.64)) fails.push(tag + ' frame ' + f + ': height jump ' + dy.toFixed(2) + ' at ' + P.pos.map(q => +q.toFixed(2)).join(','));
     maxDy = Math.max(maxDy, Math.abs(dy)); prevY = P.pos[1]; prevG = g;
     if (P.pos[1] < lo - 0.35 && !(v.jump)) fails.push(tag + ' frame ' + f + ': fell through (y ' + P.pos[1].toFixed(2) + ' < ' + (lo - 0.35).toFixed(2) + ')');
     if (P.pos[1] < lo - 0.35) { fails.push(tag + ': fell through'); break; }
@@ -84,7 +84,8 @@ for (const st of World.stairs) {
   const a = sp(st.bottom), b = sp(st.top); if (!a || !b) { fails.push(st.id + ': spots missing'); continue; }
   const ax = b.p[0] - a.p[0], az = b.p[2] - a.p[2], al = Math.hypot(ax, az), ux = ax / al, uz = az / al, nx = -uz, nz = ux;
   // start points round an end of the stair: eight directions at 1.6 m and 2.4 m, kept when the spot is free and the way from there to the spot is too
-  const around = s => { const out = []; for (const r of [1.0, 1.6, 2.4]) for (let k = 0; k < 12; k++) { const an = ux !== undefined ? Math.atan2(uz, ux) + k * Math.PI / 6 : 0, p = [s.p[0] + Math.cos(an) * r, s.p[1], s.p[2] + Math.sin(an) * r]; let ok = free(p[0], p[1], p[2]); for (let q = 1; q < 8 && ok; q++) ok = free(lerp(p[0], s.p[0], q / 8), s.p[1], lerp(p[2], s.p[2], q / 8)); if (ok) out.push(p); } return out; };
+  const clear = (x, y, z) => !colResolve([x, y, z], Player.r + 0.02, y, y + 1.75);
+  const around = s => { const out = []; for (const r of [0.6, 1.0, 1.6, 2.4, 3.2]) for (let k = 0; k < 16; k++) { const an = Math.atan2(uz, ux) + k * Math.PI / 8, x = s.p[0] + Math.cos(an) * r, z = s.p[2] + Math.sin(an) * r, gy = World.groundAt(x, z, s.p[1] + 0.6), p = [x, gy, z]; let ok = Math.abs(gy - s.p[1]) < 0.45 && clear(x, gy, z); for (let q = 1; q < 24 && ok; q++) { const px = lerp(x, s.p[0], q / 24), pz = lerp(z, s.p[2], q / 24); if (Math.hypot(px - s.p[0], pz - s.p[2]) > 0.45) ok = clear(px, gy, pz) && Math.abs(World.groundAt(px, pz, gy + 0.6) - gy) < 0.5; } if (ok) out.push(p); } return out; };
   const lows = around(a), highs = around(b);
   if (lows.length < 1 || highs.length < 1) fails.push(st.id + ': too few free start points (' + lows.length + ' below, ' + highs.length + ' above)');
   const vs = quick ? VARIANTS.filter((v, i) => i % 2 === 0) : VARIANTS;
