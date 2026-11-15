@@ -119,6 +119,48 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 #classic { margin: 14px 0 0; font-size: 12px; color: var(--dim); opacity: 0.85; }
 #classic a { color: inherit; text-decoration: underline; }
 
+/* ── gameplay (90_rpg.js): vitals, foe bar, touch buttons, death ── */
+#rpg { position: fixed; inset: 0; pointer-events: none; }
+#vitals { position: absolute; left: 50%; bottom: calc(var(--sab) + 26px); width: min(300px, 46vw); transform: translateX(-50%); display: grid; gap: 4px; transition: opacity 1.2s ease; }
+#vitals.rest { opacity: 0; }
+.vbar { height: 6px; background: rgba(12, 10, 8, 0.62); border: 1px solid rgba(216, 181, 99, 0.28); overflow: hidden; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); }
+.vbar i { display: block; height: 100%; width: 100%; transform-origin: 0 50%; transform: scaleX(1); transition: transform 0.12s linear; }
+.vbar.hp i { background: linear-gradient(#8e2a22, #5e1812); }
+.vbar.st { height: 4px; width: 78%; justify-self: center; }
+.vbar.st i { background: linear-gradient(#a8923f, #7a6a2c); }
+.vbar.st.low i { background: #6b5a2a; }
+.vbar.st.low { border-color: rgba(224, 112, 58, 0.55); }
+#foe { position: absolute; top: calc(var(--sat) + 62px); left: 50%; transform: translateX(-50%); width: min(260px, 42vw); text-align: center; }
+#foeName { display: block; font-family: var(--display); font-size: 14px; letter-spacing: 0.05em; color: var(--parch); text-shadow: 0 1px 3px #000; margin-bottom: 3px; }
+#foe .vbar i { background: linear-gradient(#7d2e26, #4f1a15); transition: transform 0.2s ease-out; }
+#hurt { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, rgba(60, 6, 4, 0) 45%, rgba(70, 8, 6, 0.55) 80%, rgba(40, 3, 2, 0.85) 100%); }
+#rpgTouch button { pointer-events: auto; position: absolute; display: grid; place-items: center; border-radius: 50%; background: rgba(20, 17, 13, 0.55); border: 1px solid var(--line); padding: 0; touch-action: none; }
+#rpgTouch button.on { background: rgba(216, 181, 99, 0.35); border-color: var(--gold); }
+#rpgTouch svg { width: 52%; height: 52%; fill: none; stroke: var(--parch); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
+#tAtk { right: calc(var(--sar) + 20px); bottom: calc(var(--sab) + 18px); width: 76px; height: 76px; }
+#tBlock { right: calc(var(--sar) + 108px); bottom: calc(var(--sab) + 26px); width: 58px; height: 58px; }
+#tJump { right: calc(var(--sar) + 30px); bottom: calc(var(--sab) + 104px); width: 58px; height: 58px; }
+#tDodge { right: calc(var(--sar) + 104px); bottom: calc(var(--sab) + 96px); width: 46px; height: 46px; }
+#tEat { right: calc(var(--sar) + 176px); bottom: calc(var(--sab) + 30px); width: 40px; height: 40px; }
+body.touch #act { bottom: calc(var(--sab) + 176px); right: calc(var(--sar) + 22px); }
+body.touch #vitals { bottom: calc(var(--sab) + 14px); }
+#deadMsg { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; background: radial-gradient(ellipse at center, rgba(16, 4, 3, 0.55), rgba(6, 3, 2, 0.94)); opacity: 0; pointer-events: none; }
+#deadMsg b { font-family: var(--display); font-weight: 400; font-size: clamp(28px, 6vw, 52px); letter-spacing: 0.08em; color: #b9503f; text-shadow: 0 2px 14px #000; }
+#deadMsg small { margin-top: 8px; font-size: 15px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim); }
+/* the pack tab */
+.vit { display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--dim); font-size: 14px; margin-bottom: 10px; }
+.vit b { color: var(--parch); font-weight: 500; }
+.gear { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.gear > div { border: 1px solid var(--line); padding: 8px 10px; background: rgba(235, 224, 198, 0.04); }
+.gear small { display: block; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+.gear b { display: block; font-weight: 500; }
+.gear span { display: block; font-size: 12px; color: var(--dim); line-height: 1.25; }
+.items .worn { border-color: var(--gold); background: rgba(216, 181, 99, 0.08); }
+.items i { display: block; font-style: normal; color: var(--gold); font-size: 12px; margin-top: 2px; }
+.btn.small { min-height: 34px; padding: 4px 14px; font-size: 15px; margin-top: 6px; }
+#tab-pack .items div { display: flex; flex-direction: column; align-items: flex-start; }
+@media (max-height: 430px) { #foe { top: calc(var(--sat) + 56px); } #tAtk { width: 68px; height: 68px; } #tJump { bottom: calc(var(--sab) + 94px); } #tDodge { bottom: calc(var(--sab) + 88px); } body.touch #act { bottom: calc(var(--sab) + 160px); } }
+
 </style>
 </head>
 <body>
@@ -137,6 +179,21 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
   <div id="purse"></div>
   <div id="fps" hidden></div>
 </div>
+
+<!-- gameplay layer (90_rpg.js): health and stamina, the foe in front of you, touch buttons, the death screen -->
+<div id="rpg" hidden>
+  <div id="vitals" class="rest"><div class="vbar hp"><i id="hpFill"></i></div><div class="vbar st"><i id="stFill"></i></div></div>
+  <div id="foe" hidden><span id="foeName"></span><div class="vbar"><i id="foeFill"></i></div></div>
+  <div id="hurt"></div>
+  <div id="rpgTouch" hidden>
+    <button id="tJump" type="button" aria-label="Jump"><svg viewBox="0 0 24 24"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5"/></svg></button>
+    <button id="tDodge" type="button" aria-label="Dodge"><svg viewBox="0 0 24 24"><path d="M5 8h9M5 16h9M16 6l4 6-4 6"/></svg></button>
+    <button id="tBlock" type="button" aria-label="Block"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/></svg></button>
+    <button id="tAtk" type="button" aria-label="Attack"><svg viewBox="0 0 24 24"><path d="M19 4 9 14M7 12l5 5M6 18l-3 3M19 4v5M19 4h-5"/></svg></button>
+    <button id="tEat" type="button" aria-label="Eat or drink"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v4l-4 8a4 4 0 0 0 4 6h4a4 4 0 0 0 4-6l-4-8V3"/></svg></button>
+  </div>
+</div>
+<div id="deadMsg" hidden><b>You were cut down.</b><small>The valley goes quiet.</small></div>
 
 <section id="dialog" hidden aria-live="polite">
   <div id="dname"></div>
@@ -199,6 +256,6 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 </section>
 <div id="fade"></div>
 <script src="three.js?v=e87dfbcc"></script>
-<script src="game.js?v=cf566cc4"></script>
+<script src="game.js?v=35ed8fce"></script>
 </body>
 </html>

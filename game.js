@@ -4539,7 +4539,7 @@ World.groundAt = (x, z, maxY) => {
 World.zoneAt = (x, y, z) => { for (const zn of World.zones) { if (Math.abs(x - zn.site.x) > 12 || Math.abs(z - zn.site.z) > 12) continue; const l = worldToSite(zn.site, x, z); if (Math.abs(l[0]) < zn.hw && Math.abs(l[1]) < zn.hd && y > zn.y0 && y < zn.y1) return zn.id; } return 0; };
 World.waterAt = (x, z) => { if (hyp(x - LAKE.x, z - LAKE.z) < LAKE.r + 8 && Terrain.y(x, z) < LAKE.y) return LAKE.y; const d = River.dist(x, z, 6); if (d < 6) { const wy = riverY(River.at); if (Terrain.y(x, z) < wy) return wy; } return -999; };
 
-const Player = { pos: [-84, 0, -6.5], vel: [0, 0, 0], yaw: 1.45, pitch: 0.02, eye: 1.66, r: 0.32, onGround: true, bob: 0, bobAmt: 0, step: 0, speed: 0, inWater: 0, surface: 'grass', locked: false, warned: 0 };
+const Player = { pos: [-84, 0, -6.5], vel: [0, 0, 0], yaw: 1.45, pitch: 0.02, eye: 1.66, r: 0.32, onGround: true, bob: 0, bobAmt: 0, step: 0, speed: 0, inWater: 0, surface: 'grass', locked: false, warned: 0, coyote: 0, dip: 0 };
 const Input = { keys: {}, mx: 0, mz: 0, run: false, lookX: 0, lookY: 0, joy: null, look: null, sens: 1, invertY: false, interact: false, touch: false };
 
 function playerUpdate(dt) {
@@ -4560,9 +4560,16 @@ function playerUpdate(dt) {
   }
   const feet = P.pos[1], water = World.waterAt(P.pos[0], P.pos[2]), depth = water - feet;
   P.inWater = depth > 0.15 ? depth : 0;
-  const maxSp = (run ? 5.4 : 2.9) * (depth > 0.45 ? 0.55 : 1);
+  // wading slows you, chest-deep water more so, and nobody sprints through it
+  const wade = depth > 0.9 ? 0.42 : depth > 0.45 ? 0.55 : depth > 0.15 ? 0.8 : 1;
+  if (depth > 0.45) run = false;
+  // stamina, jumping, dodging and combat stance live in 90_rpg.js; it answers { run, speed, jump, ov: [vx, vz] | null }
+  const rp = typeof RPG !== 'undefined' && !P.locked ? RPG.move(dt, run, mx, mz, depth) : null;
+  if (rp) run = rp.run;
+  const maxSp = (run ? 5.4 : 2.9) * wade * (rp ? rp.speed : 1);
   const fx = Math.sin(P.yaw), fz = -Math.cos(P.yaw), rx = Math.cos(P.yaw), rz = Math.sin(P.yaw);
-  const tx = (fx * mz + rx * mx) * maxSp, tz = (fz * mz + rz * mx) * maxSp, acc = Math.min(1, dt * (P.onGround ? 11 : 2.5));
+  let tx = (fx * mz + rx * mx) * maxSp, tz = (fz * mz + rz * mx) * maxSp, acc = Math.min(1, dt * (P.onGround ? 11 : 2.5));
+  if (rp && rp.ov) { tx = rp.ov[0]; tz = rp.ov[1]; acc = Math.min(1, dt * 30); }
   P.vel[0] += (tx - P.vel[0]) * acc; P.vel[2] += (tz - P.vel[2]) * acc;
   const sp = hyp(P.vel[0], P.vel[2]); P.speed = sp;
   // integrate in small steps so thin walls can't be tunnelled
@@ -4580,8 +4587,18 @@ function playerUpdate(dt) {
   P.warned -= dt;
   // ground / gravity
   const gy = World.groundAt(P.pos[0], P.pos[2], P.pos[1] + 0.58);
-  if (P.pos[1] > gy + 0.12) { P.vel[1] -= 20 * dt; P.pos[1] += P.vel[1] * dt; P.onGround = false; if (P.pos[1] <= gy) { P.pos[1] = gy; P.onGround = true; if (P.vel[1] < -5 && typeof Audio2 !== 'undefined') Audio2.thud(); P.vel[1] = 0; } }
-  else { P.pos[1] += (gy - P.pos[1]) * Math.min(1, dt * 16); P.vel[1] = 0; P.onGround = true; }
+  // a jump is allowed for a moment after walking off an edge (coyote time)
+  if (rp && rp.jump && (P.onGround || P.coyote > 0) && depth < 0.9) { P.vel[1] = 6.4 * (depth > 0.45 ? 0.7 : 1); P.onGround = false; P.coyote = 0; RPG.jumped(); }
+  if (P.vel[1] > 0 || P.pos[1] > gy + 0.12) {
+    P.vel[1] -= 20 * dt; P.pos[1] += P.vel[1] * dt; P.onGround = false; P.coyote = Math.max(0, P.coyote - dt);
+    if (P.vel[1] <= 0 && P.pos[1] <= gy) {
+      P.pos[1] = gy; P.onGround = true; P.dip = Math.min(0.16, -P.vel[1] * 0.014);
+      if (P.vel[1] < -5 && typeof Audio2 !== 'undefined') Audio2.thud();
+      if (typeof RPG !== 'undefined') RPG.landed(-P.vel[1], depth);
+      P.vel[1] = 0;
+    }
+  } else { P.pos[1] += (gy - P.pos[1]) * Math.min(1, dt * 16); P.vel[1] = 0; P.onGround = true; P.coyote = 0.12; }
+  P.dip += (0 - P.dip) * Math.min(1, dt * 9);
   // zone, surface
   const zone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
   World.camZone = zone; World.indoor += ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
@@ -4590,7 +4607,7 @@ function playerUpdate(dt) {
   const moving = sp > 0.4 && P.onGround; P.bobAmt += ((moving ? 1 : 0) - P.bobAmt) * Math.min(1, dt * 8);
   if (moving) { const prev = P.step; P.step += sp * dt * (sp > 4 ? 0.42 : 0.56); if (Math.floor(prev) !== Math.floor(P.step) && typeof Audio2 !== 'undefined') Audio2.step(P.surface, sp > 4); }
   P.bob = Math.sin(P.step * TAU) * 0.028 * P.bobAmt;
-  const cam = R.cam; cam.pos[0] = P.pos[0]; cam.pos[1] = P.pos[1] + P.eye + P.bob - Math.min(P.inWater, 0) * 0; cam.pos[2] = P.pos[2]; cam.yaw = P.yaw + Math.cos(P.step * PI) * 0.0025 * P.bobAmt; cam.pitch = P.pitch;
+  const cam = R.cam; cam.pos[0] = P.pos[0]; cam.pos[1] = P.pos[1] + P.eye + P.bob - P.dip; cam.pos[2] = P.pos[2]; cam.yaw = P.yaw + Math.cos(P.step * PI) * 0.0025 * P.bobAmt; cam.pitch = P.pitch;
 }
 
 function inputInit(canvas, layer) {
@@ -4635,6 +4652,19 @@ const ITEMS = {
   apple: ['Apple', 'Crisp, from the valley orchards.'],
   bread: ['Rye loaf', 'Still a little warm.'],
 };
+// What things do (93_inventory.js reads the third field): food heals, blades cut, shields and jerkins protect.
+// value = what the smith pays for it, cost = what it sells for, blade = [length, brightness, half-width] of the sword in view.
+Object.assign(ITEMS, {
+  shortsword: ['Worn shortsword', 'Notched, but it holds an edge. It came up the road with you.', { slot: 'weapon', dmg: 10, blade: [0.60, 0.85], value: 8 }],
+  ironsword: ['Iron arming sword', 'Brandt’s plain, honest work.', { slot: 'weapon', dmg: 15, blade: [0.70, 1.0], value: 30, cost: 70 }],
+  steelsword: ['Garrick’s blade', 'Good steel, taken from a man who deserved it less than you.', { slot: 'weapon', dmg: 21, blade: [0.78, 1.25, 0.028], value: 70 }],
+  buckler: ['Oak buckler', 'Small, round, and better than an arm.', { slot: 'shield', value: 14, cost: 38 }],
+  leather: ['Leather jerkin', 'Boiled hide over wool. Turns a glancing blow.', { slot: 'armor', armor: 0.25, value: 22, cost: 55 }],
+  potion: ['Red tonic', 'Maren’s strongest. Knits a wound in a breath.', { heal: 60, value: 9, cost: 24 }],
+  tools: ['Brandt’s tongs and files', 'A smith’s bench tools, rolled in oilcloth.'],
+});
+ITEMS.apple[2] = { heal: 8 }; ITEMS.bread[2] = { heal: 18, value: 1 }; ITEMS.ale[2] = { heal: 10, sta: 60, value: 1 }; ITEMS.tonic[2] = { heal: 45 };
+ITEMS.knife[2] = { slot: 'weapon', dmg: 7, speed: 1.3, reach: -0.45, blade: [0.26, 1.1] };
 const QUESTS = {
   welcome: { name: 'A Stranger at the Gate', stages: ['Speak to the guard at the gate', 'Find Greta at the Honeyed Hart, the inn on the square'] },
   ale: { name: 'Ale for the Hart', stages: ['Fetch the malt from Osric at the mill, east over the bridge', 'Carry the malt back to Greta'] },
@@ -4642,8 +4672,12 @@ const QUESTS = {
   herbs: { name: 'Frostcaps for Maren', stages: ['Gather five frostcaps around the valley', 'Bring the frostcaps to Maren'] },
   bell: { name: 'The Silent Bell', stages: ['Buy a rope from Marta at Quill’s Sundries', 'Take the rope to Brother Aldous at the chapel', 'Ring the bell under the chapel tower'] },
   fire: { name: 'The Harvest Fire', stages: ['Speak with Elder Rowan', 'Light the fire pit in the square'] },
+  camp: { name: 'Smoke in the Pines', stages: ['Drive the outlaws from their camp in the pines, north-west of the gate', 'Tell Elder Rowan the camp is empty'] },
+  tools: { name: 'Tongs and Temper', stages: ['Find Garrick One-Ear, camped west of the watchtower path', 'Bring Brandt his tools'] },
+  bounty: { name: 'Bounty: Outlaws', stages: ['Put down five outlaws', 'Collect the bounty from Warden Hale'] },
 };
-const QORDER = ['welcome', 'ale', 'hammer', 'herbs', 'bell', 'fire'];
+const QORDER = ['welcome', 'ale', 'hammer', 'herbs', 'bell', 'fire', 'camp', 'tools', 'bounty'];
+const BOUNTY_N = 5;
 const qAt = id => { const q = S.q[id]; return !q ? -1 : q.done ? 99 : q.stage; };
 const has = (id, n) => (S.items[id] || 0) >= (n || 1);
 function give(id, n) { S.items[id] = (S.items[id] || 0) + (n || 1); if (S.items[id] <= 0) delete S.items[id]; }
@@ -4662,6 +4696,10 @@ function questTarget(id) {
   if (id === 'herbs') { if (st === 1) return npc('maren'); let best = null, bd = 1e9; for (const p of World.pickups) { if (p.item !== 'frostcap' || p.gone) continue; const d = hyp(p.p[0] - Player.pos[0], p.p[2] - Player.pos[2]); if (d < bd) { bd = d; best = p.p; } } return best; }
   if (id === 'bell') return st === 0 ? npc('marta') : st === 1 ? npc('aldous') : World.bell.p;
   if (id === 'fire') return st === 0 ? npc('rowan') : [World.bonfirePos[0], 0, World.bonfirePos[1]];
+  const camp = cid => { const c = Foes.camps.find(k => k.id === cid); return [c.x, 0, c.z]; };
+  if (id === 'camp') return st === 0 ? camp('pines') : npc('rowan');
+  if (id === 'tools') return st === 0 ? camp('crag') : npc('brandt');
+  if (id === 'bounty') { if (st === 1) return npc('hale'); const f = Foes.nearest(Player.pos); return f ? f.pos : null; }
   return null;
 }
 
@@ -4739,10 +4777,43 @@ const TALK = {
   bram: () => node('Apples! Cabbages! Oh. Sorry. Habit.', [['An apple, please. (1 gold)', () => { if (S.gold < 1) return node('Not a coin? Go on, then. Don’t tell Edda.', [['Thanks, Bram.', () => { give('apple'); toast('Received: Apple'); return null; }]]); gold(-1); give('apple'); toast('Bought: Apple'); return node('Best in the valley. Only in the valley, mind, but still.'); }], bye]),
 };
 
+// ── outlaw trouble (92_foes.js): extra lines for the elder, the smith, the warden and the herbalist, slotted in before their farewell ──
+{
+  const base = { rowan: TALK.rowan, brandt: TALK.brandt, hale: TALK.hale, maren: TALK.maren };
+  const add = (n, opts) => { const i = n && n.o ? n.o.indexOf(bye) : -1; if (i >= 0) n.o.splice(i, 0, ...opts.filter(Boolean)); return n; };
+  TALK.rowan = () => add(base.rowan(), [
+    qAt('camp') < 0 && qAt('welcome') === 99 && ['Is the valley safe?', () => node('Safer than most. But there has been smoke in the pines north-west of the gate these three nights, and it is not Wren’s. Outlaws, come down off the passes before the snow. Hale cannot leave the gate, and I am too old to do more than worry. If you carry a blade and know its use, drive them off. Mind the big one.', [['I’ll see to it.', () => { qStart('camp'); if (RPG.st().cleared && RPG.st().cleared.pines !== undefined) qStage('camp', 1); return null; }, 1], ['Not today.', null]])],
+    qAt('camp') === 0 && ['About the outlaws…', () => node('North-west of the gate, among the pines. You will see their rag on a pole before they see you, if you are careful. Eat before you go, and do not be too proud to run.')],
+    qAt('camp') === 1 && ['The camp in the pines is empty.', () => { gold(60); give('buckler'); toast('Received: ' + ITEMS.buckler[0]); qDone('camp'); return node('Then the children can pick berries at the wood’s edge again. This was my father’s, and it has hung on the wall long enough. Take it, with the village’s thanks.'); }, 1],
+  ]);
+  TALK.brandt = () => add(base.brandt(), [
+    qAt('tools') < 0 && ['Have the outlaws troubled you?', () => node('Troubled me? They had my second-best tongs and a roll of files off the cart at the ford, a week gone. Their chief wears them on his belt like trophies. One ear, red beard. They camp west of the path up to the old watchtower. Bring my tools back and I’ll put a proper sword in your hand, not that kitchen iron.', [['I’ll get them back.', () => { qStart('tools'); if (has('tools')) qStage('tools', 1); return null; }, 1], ['Another time.', null]])],
+    has('tools') && qAt('tools') !== 99 && ['I have your tongs and files.', () => { give('tools', -1); give('ironsword'); toast('Received: ' + ITEMS.ironsword[0]); gold(20); if (qAt('tools') < 0) qStart('tools', 1); qDone('tools'); return node('Hah! Not a scratch on them. As promised: an arming sword, drawn out this spring and waiting for a hand. Keep the point low and your feet moving.'); }, 1],
+    ['Show me what you have for sale.', () => Inv.shop('brandt')],
+    ['I have things to sell.', () => Inv.sell('brandt')],
+  ]);
+  TALK.hale = () => add(base.hale(), [
+    qAt('bounty') < 0 && qAt('welcome') > 0 && ['Any work for a sword?', () => { qStart('bounty'); bountyText(); return node('There’s coin on the board for outlaws, and I’ll pay it myself. Five of them put down and the road is a road again. Two camps: one in the pines north-west of here, one under the old watchtower. Don’t take on more than you can see.'); }, 1],
+    qAt('bounty') === 1 && ['I’ve come for the bounty.', () => { gold(45); qDone('bounty'); return node('Five, by my count and yours. Paid in full. You’ve done the valley a turn, and I’ll not forget it.'); }, 1],
+  ]);
+  TALK.maren = () => add(base.maren(), [['A red tonic. (24 gold)', () => { if (S.gold < 24) return node('Twenty-four, child. Frostcaps do not pick themselves.'); gold(-24); give('potion'); toast('Bought: ' + ITEMS.potion[0]); save(); return node('Drink it when you bleed, not before. It is no use against foolishness.'); }]]);
+}
+const bountyN = () => Math.min(BOUNTY_N, (S.rpg && S.rpg.bounty) || 0);
+function bountyText() { QUESTS.bounty.stages[0] = 'Put down five outlaws (' + bountyN() + ' of ' + BOUNTY_N + ')'; }
+// called by 92_foes.js
+function onFoeKilled(f) {
+  if (qAt('bounty') === 0) { S.rpg.bounty = (S.rpg.bounty || 0) + 1; bountyText(); if (S.rpg.bounty >= BOUNTY_N) qStage('bounty', 1); else toast('<b>Bounty</b> ' + bountyN() + ' of ' + BOUNTY_N + ' outlaws'); uiObjective(); }
+}
+function onCampCleared(id) {
+  toast(id === 'pines' ? 'The camp in the pines is silent.' : 'Garrick’s camp is silent.');
+  if (id === 'pines' && qAt('camp') === 0) qStage('camp', 1);
+}
+
 // ── interactions ──
 function interactLabel(it) {
   if (it.npc) { const w = it.npc.name.split(' '); return 'Talk to ' + (['Old', 'Brother', 'Elder', 'Warden', 'Guardsman'].includes(w[0]) ? w[1] : w[0]); }
   if (it.kind === 'chest') return S.opened[it.id] ? null : 'Open chest';
+  if (it.kind === 'loot') return 'Search ' + it.name;
   if (it.kind === 'pickup') return it.gone ? null : it.label;
   if (it.kind === 'read') return 'Read';
   if (it.kind === 'bed') return 'Sleep';
@@ -4757,15 +4828,25 @@ function interactUse(it) {
     S.opened[it.id] = 1; Audio2.chest();
     const got = []; for (const [id, n] of it.loot || []) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
     toast('Found: ' + got.join(', ')); uiPurse(); save();
+  } else if (it.kind === 'loot') {
+    const got = []; Audio2.pickup();
+    for (const [id, n] of it.loot) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
+    const i = World.interact.indexOf(it); if (i >= 0) World.interact.splice(i, 1); if (it.foe) it.foe.looted = true;
+    toast('Taken: ' + got.join(', ')); uiPurse();
+    if (has('tools') && qAt('tools') !== 99) { if (qAt('tools') < 0) qStart('tools', 1); else qStage('tools', 1); }
+    save();
   } else if (it.kind === 'pickup') {
     it.gone = true; it.obj.visible = false; if (it.em) it.em.gone = true; S.picked[it.id] = 1; give(it.item); Audio2.pickup();
     if (it.item === 'frostcap') { toast('Frostcap gathered (' + Math.min(frostN(), 5) + ' of 5)'); if (qAt('herbs') === 0 && frostN() >= 5) qStage('herbs', 1); }
     else { toast('Taken: ' + ITEMS[it.item][0]); if (it.item === 'hammer') { if (qAt('hammer') < 0) qStart('hammer', 2); else qStage('hammer', 2); } }
     save();
-  } else if (it.kind === 'read') openReader(it.title, it.text);
+  } else if (it.kind === 'read') {
+    openReader(it.title, it.text + (it.id === 'board' ? '\n\nBOUNTY. Outlaws on the passes. Coin paid for five put down. See Warden Hale at the gate.' : ''));
+    if (it.id === 'board' && qAt('bounty') < 0 && qAt('welcome') >= 0) { qStart('bounty'); bountyText(); }
+  }
   else if (it.kind === 'bed') {
     if (!S.flags.bed) return toast('This bed isn’t yours. Greta at the bar lets rooms.');
-    fadeDo(() => { Env.hour = 7; World.festival = false; for (const n of NPCS) n.override = null; npcSnapAll(); toast('You wake rested. A new morning in Brackenfell.'); save(); });
+    fadeDo(() => { Env.hour = 7; World.festival = false; for (const n of NPCS) n.override = null; npcSnapAll(); const r = RPG.st(); r.hp = RPG.MAXHP; r.sta = RPG.MAXST; Foes.calm(true); toast('You wake rested. A new morning in Brackenfell.'); save(); });
   } else if (it.kind === 'bell') { Audio2.bell(1); World.bellSwing = 3; if (qAt('bell') === 2) { qDone('bell'); S.flags.bell = 1; toast('The Dawn bell rings out over the valley.'); } }
   else if (it.kind === 'shopitem') toast('Marta: “Fifteen gold, dear. Ask me at the counter.”');
   else if (it.kind === 'bonfire') lightHarvestFire();
@@ -4785,12 +4866,15 @@ function festivalSpots() {
   World.interact.push({ p: [b[0], World.groundY(b[0], b[1]) + 0.8, b[1]], r: 3.0, zone: 0, kind: 'bonfire', id: 'bonfire' });
 }
 // ── saving (a convenience only: one browser, may be unavailable) ──
-function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
+// v 2 adds S.rpg (health, gear, outlaws). Saves without it still load: RPG.st() fills in what is missing.
+function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
 function loadSave() { try { const j = JSON.parse(localStorage.getItem('brackenfell.v1') || 'null'); return j && j.S ? j : null; } catch (e) { return null; } }
 function applySave(j) {
-  Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; }
+  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; }
   for (const p of World.pickups) if (S.picked[p.id]) { p.gone = true; p.obj.visible = false; if (p.em) p.em.gone = true; }
   if (S.flags.fire) World.bonfire = true;
+  if (S.rpg && S.rpg.v !== 2) S.rpg = null;
+  RPG.st(); bountyText(); if (typeof Combat !== 'undefined') Combat.refresh();
 }
 function clearSave() { try { localStorage.removeItem('brackenfell.v1'); } catch (e) { } }
 
@@ -4830,9 +4914,8 @@ function openMenu(tab) {
   UI.menu = true; Player.locked = true; releaseLook(); $('menu').hidden = false; showTab(tab || 'journal'); Audio2.page();
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
-  let p = '<div class="items"><div><b>' + S.gold + ' gold</b><span>Coin of the valley.</span></div>'; for (const id in S.items) p += '<div><b>' + ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + '</b><span>' + ITEMS[id][1] + '</span></div>';
-  $('tab-pack').innerHTML = p + '</div>'; $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 6 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  Inv.render(); $('setTime').value = Env.hour;
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 7 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
@@ -4987,6 +5070,718 @@ const Audio2 = {
 };
 
 
+// ---- 90_rpg.js ----
+// ───────────────────────── the adventurer: health, stamina, sprint / jump / dodge, HUD, death and respawn ─────────────────────────
+// Everything a small action RPG adds on top of the village walk lives in 90_rpg.js (this file), 91_combat.js (the sword in view),
+// 92_foes.js (outlaws and their camps) and 93_inventory.js (gear, food, the smith's trade). The rest of the game talks to it through
+// RPG.move / RPG.jumped / RPG.landed (from playerUpdate) and RPG.tick (from the main loop, after particles are laid out).
+// State that must survive a save sits in S.rpg, so the existing save system carries it.
+const RPG = {
+  MAXHP: 100, MAXST: 100,
+  in: { atk: false, block: false, jump: false, dodge: false },          // held buttons: mouse, keys, touch buttons or a test script
+  prev: { jump: false, dodge: false }, jumpBuf: 0, dodgeT: 0, dodgeCd: 0, dodgeDir: [0, 0], lastMove: [0, 0], iframes: 0,
+  stDelay: 0, hurtT: 99, combatT: 99, flash: 0, shake: 0, kick: [0, 0], hitStop: 0, exhausted: false,
+  dead: false, deadT: 0, inited: false, out: { run: false, speed: 1, jump: false, ov: null }, ov: [0, 0], fx: [], hud: {}, wasPlaying: false,
+};
+// sounds, built from the synth's two primitives
+Object.assign(Audio2, {
+  swing(heavy) { if (!this.ctx) return; this.burst(heavy ? 0.26 : 0.17, heavy ? 0.11 : 0.075, 'bandpass', heavy ? 480 : 700, 1.2, null, 0, heavy ? 1500 : 2100); },
+  hitFlesh(heavy) { if (!this.ctx) return; this.burst(0.11, heavy ? 0.3 : 0.2, 'lowpass', 520, 1); this.tone(heavy ? 70 : 95, 0.16, heavy ? 0.22 : 0.14, 'sine', null, 45); },
+  clash(vol) { if (!this.ctx) return; this.clang(vol === undefined ? 0.9 : vol); this.burst(0.07, 0.16, 'highpass', 3000, 0.7); },
+  hurt() { if (!this.ctx) return; this.burst(0.2, 0.3, 'lowpass', 330, 1); this.tone(150, 0.22, 0.12, 'sawtooth', null, 80); },
+  hop() { if (!this.ctx) return; this.burst(0.08, 0.05, 'bandpass', 420, 1.5); },
+  eat() { if (!this.ctx) return; for (let i = 0; i < 3; i++) this.burst(0.07, 0.07, 'bandpass', 900 + i * 150, 2, null, i * 0.17); },
+  shout(deep) { if (!this.ctx) return; this.tone(deep ? 120 : 165, 0.34, 0.09, 'sawtooth', null, deep ? 92 : 128); this.burst(0.3, 0.05, 'bandpass', 900, 2); },
+  fall() { if (!this.ctx) return; this.tone(110, 1.1, 0.14, 'sine', null, 48); this.burst(0.5, 0.2, 'lowpass', 240, 1, null, 0.25); },
+});
+
+// saved state, with defaults filled in for a new game or an older save
+RPG.st = function () {
+  let r = S.rpg;
+  if (!r || r.v !== 2) {
+    const fresh = !r;
+    r = S.rpg = Object.assign({ hp: RPG.MAXHP, sta: RPG.MAXST, eq: { weapon: 'shortsword', shield: null, armor: null }, kills: 0, day: 0, dead: {}, hour: Env.hour }, r || {}); r.v = 2;
+    if (fresh && !has('shortsword')) give('shortsword');
+  }
+  return r;
+};
+RPG.meta = id => (ITEMS[id] && ITEMS[id][2]) || {};
+
+// ── called from playerUpdate ──
+RPG.move = function (dt, run, mx, mz, depth) {
+  const r = RPG.st(), o = RPG.out, P = Player, moving = hyp(mx, mz) > 0.2;
+  RPG.lastMove[0] = mx; RPG.lastMove[1] = mz;
+  const sprint = run && moving && !RPG.exhausted && r.sta > 0 && !Combat.busy();
+  if (sprint && P.onGround) { r.sta = Math.max(0, r.sta - 10 * dt); RPG.stDelay = 0.7; if (r.sta <= 0) { RPG.exhausted = true; toast('You are out of breath.'); } }
+  if (RPG.exhausted && r.sta > 30) RPG.exhausted = false;
+  o.run = sprint; o.speed = Combat.speed();
+  o.jump = false;
+  if (RPG.jumpBuf > 0) { RPG.jumpBuf -= dt; if ((P.onGround || P.coyote > 0) && r.sta >= 5) { o.jump = true; RPG.jumpBuf = 0; } }
+  o.ov = null;
+  if (RPG.dodgeT > 0) { RPG.dodgeT -= dt; RPG.ov[0] = RPG.dodgeDir[0] * 8.4; RPG.ov[1] = RPG.dodgeDir[1] * 8.4; o.ov = RPG.ov; }
+  return o;
+};
+RPG.jumped = function () { const r = RPG.st(); r.sta = Math.max(0, r.sta - 5); RPG.stDelay = Math.max(RPG.stDelay, 0.5); Audio2.hop(); };
+RPG.landed = function (v, depth) { if (v > 11.5 && depth < 0.3) RPG.damage((v - 11.5) * 7, null, 'fall'); };
+RPG.tryDodge = function () {
+  const r = RPG.st(), P = Player;
+  if (RPG.dodgeCd > 0 || r.sta < 16 || !P.onGround || P.locked || RPG.dead) return false;
+  let mx = RPG.lastMove[0], mz = RPG.lastMove[1]; if (hyp(mx, mz) < 0.3) { mx = 0; mz = -1; }
+  const l = hyp(mx, mz), fx = Math.sin(P.yaw), fz = -Math.cos(P.yaw), rx = Math.cos(P.yaw), rz = Math.sin(P.yaw);
+  RPG.dodgeDir[0] = (fx * mz + rx * mx) / l; RPG.dodgeDir[1] = (fz * mz + rz * mx) / l;
+  RPG.dodgeT = 0.24; RPG.dodgeCd = 0.7; RPG.iframes = 0.3; r.sta -= 16; RPG.stDelay = 0.9; Audio2.swing(false); Combat.interrupt();
+  return true;
+};
+
+// ── damage, death, healing ──
+RPG.damage = function (n, from, kind) {
+  const r = RPG.st();
+  if (RPG.dead || !game.playing || n <= 0) return 0;
+  if (kind !== 'fall') { if (RPG.iframes > 0) return 0; n = Combat.defend(n, from); if (n <= 0) return 0; n *= 1 - (RPG.meta(r.eq.armor).armor || 0); }
+  r.hp -= n; RPG.hurtT = 0; RPG.combatT = 0; RPG.flash = Math.min(1, 0.4 + n / 35); RPG.shake = Math.min(1, 0.35 + n / 30);
+  Audio2.hurt();
+  if (r.hp <= 0) { r.hp = 0; RPG.die(kind === 'fall' ? 'The fall broke you.' : 'You were cut down.'); }
+  return n;
+};
+RPG.heal = function (n) { const r = RPG.st(); r.hp = Math.min(RPG.MAXHP, r.hp + n); };
+RPG.die = function (why) {
+  if (RPG.dead) return;
+  RPG.dead = true; RPG.deadT = 0; Player.locked = true; Combat.interrupt(); Audio2.fall();
+  if (typeof releaseLook === 'function') releaseLook();
+  const d = $('deadMsg'); d.querySelector('b').textContent = why; d.style.opacity = 0; d.hidden = false;
+  setTimeout(() => fadeDo(RPG.respawn), TEST ? 300 : 2400);
+};
+RPG.respawn = function () {
+  const r = RPG.st(), bed = World.interact.find(i => i.id === 'inn.bed'), P = Player;
+  const lost = Math.min(25, Math.floor(S.gold * 0.2)); S.gold -= lost; uiPurse();
+  if (S.flags.bed && bed) { P.pos = [bed.p[0] + 0.9, bed.p[1] - 0.5, bed.p[2]]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], bed.p[1] + 0.4); }
+  else { P.pos = [-84, 0, -6.5]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], 50); P.yaw = 1.45; }
+  P.vel = [0, 0, 0]; P.pitch = 0; r.hp = RPG.MAXHP; r.sta = RPG.MAXST; RPG.dead = false; RPG.hud.deadMsg.style.opacity = 0; RPG.flash = 0; RPG.shake = 0; RPG.iframes = 2;
+  Env.hour = 7; World.festival = false; for (const n of NPCS) n.override = null; npcSnapAll();
+  if (typeof Foes !== 'undefined') Foes.calm(true);
+  $('deadMsg').hidden = true;
+  toast(S.flags.bed ? 'You wake in your bed at the Honeyed Hart, bruised' + (lost ? ' and ' + lost + ' gold lighter.' : '.') : 'You come to by the road, bruised' + (lost ? ' and ' + lost + ' gold lighter.' : '.'));
+  save();
+};
+
+// ── transient sparks and puffs, appended to the particle buffer each frame ──
+RPG.spark = function (p, n, col, speed, kind, size, life) {
+  for (let i = 0; i < n && RPG.fx.length < 90; i++) {
+    const a = Math.random() * TAU, e = Math.random() * 1.6 - 0.3, s = (speed || 3) * (0.4 + Math.random() * 0.8);
+    RPG.fx.push({ p: [p[0], p[1], p[2]], v: [Math.cos(a) * Math.cos(e) * s, Math.sin(e) * s + 0.6, Math.sin(a) * Math.cos(e) * s], life: 0, max: (life || 0.35) * (0.6 + Math.random() * 0.8), kind: kind === undefined ? 3 : kind, size: size || 0.03, col: col || [1, 0.75, 0.3], seed: Math.random() });
+  }
+};
+RPG.fxWrite = function (dt) {
+  const d = R.partData, max = R.partMax, fx = RPG.fx; let n = R.partCount;
+  for (let i = fx.length - 1; i >= 0; i--) {
+    const s = fx[i]; s.life += dt; if (s.life > s.max) { fx[i] = fx[fx.length - 1]; fx.pop(); continue; }
+    const k = s.life / s.max, smoke = s.kind === 1;
+    s.p[0] += s.v[0] * dt; s.p[1] += s.v[1] * dt; s.p[2] += s.v[2] * dt; s.v[1] -= (smoke ? -0.4 : 9) * dt; if (smoke) { s.v[0] *= 1 - 2 * dt; s.v[2] *= 1 - 2 * dt; }
+    if (n >= max) continue;
+    const o = n++ * 12; d[o] = s.p[0]; d[o + 1] = s.p[1]; d[o + 2] = s.p[2]; d[o + 3] = smoke ? s.size * (1 + k * 2.5) : s.size;
+    d[o + 4] = s.col[0]; d[o + 5] = s.col[1]; d[o + 6] = s.col[2]; d[o + 7] = smoke ? (1 - k) * 0.5 : 3.2 * (1 - k); d[o + 8] = s.seed * 6; d[o + 9] = s.kind; d[o + 10] = 1; d[o + 11] = s.seed;
+  }
+  R.partCount = n;
+};
+
+// ── geometry and material helpers for small hand-built things (weapons, hands) ──
+// parts: [geometry, Matrix4, [r, g, b] linear]; returns one geometry with a 'color' attribute
+RPG.merge = function (parts) {
+  let n = 0; const gs = parts.map(([g, m, c]) => { const t = g.index ? g.toNonIndexed() : g.clone(); if (m) t.applyMatrix4(m); g.dispose(); n += t.attributes.position.count; return [t, c]; });
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3); let o = 0;
+  for (const [t, c] of gs) { const k = t.attributes.position.count; pos.set(t.attributes.position.array, o * 3); nor.set(t.attributes.normal.array, o * 3); for (let i = 0; i < k; i++) col.set(c, (o + i) * 3); o += k; t.dispose(); }
+  const g = new THREE.BufferGeometry(), BA = THREE.BufferAttribute;
+  g.setAttribute('position', new BA(pos, 3)); g.setAttribute('normal', new BA(nor, 3)); g.setAttribute('color', new BA(col, 3)); g.computeBoundingSphere();
+  return g;
+};
+// vertex-coloured surface lit like the rest of the world: sun from the scene light, sky and hearths through emissive
+RPG.litMat = function (uZone, uLight, rough) {
+  const { attribute, float, positionWorld, normalWorld } = TSL;
+  const m = new THREE.MeshStandardNodeMaterial(); m.roughness = rough === undefined ? 0.5 : rough; m.metalness = 0;
+  const albedo = attribute('color', 'vec3'), N = normalWorld.normalize();
+  m.colorNode = albedo; m.emissiveNode = albedo.mul(SH.hemi(N, uLight, uZone).add(SH.pointLights(positionWorld, N, uZone, float(0.25))));
+  return m;
+};
+const _M4 = () => new THREE.Matrix4();
+RPG.xf = (x, y, z, rx, ry, rz, sx, sy, sz) => _M4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx || 0, ry || 0, rz || 0)), new THREE.Vector3(sx === undefined ? 1 : sx, sy === undefined ? (sx === undefined ? 1 : sx) : sy, sz === undefined ? (sx === undefined ? 1 : sx) : sz));
+// a one-handed sword: grip at the origin, blade along +y. len = blade length, tone = blade brightness
+RPG.swordGeo = function (len, tone, wide) {
+  const T = THREE, st = [0.30 * tone, 0.31 * tone, 0.34 * tone], w = wide || 0.026;
+  return RPG.merge([
+    [new T.CylinderGeometry(0.016, 0.019, 0.15, 7), RPG.xf(0, 0, 0), [0.07, 0.04, 0.025]],
+    [new T.SphereGeometry(0.025, 8, 6), RPG.xf(0, -0.092, 0), [0.16, 0.13, 0.09]],
+    [new T.BoxGeometry(0.19, 0.022, 0.034), RPG.xf(0, 0.086, 0), [0.16, 0.13, 0.09]],
+    [new T.CylinderGeometry(1, 1, len, 4), RPG.xf(0, 0.097 + len / 2, 0, 0, 0, 0, w, 1, 0.0055), st],
+    [new T.ConeGeometry(1, 0.09, 4), RPG.xf(0, 0.097 + len + 0.045, 0, 0, 0, 0, w, 1, 0.0055), st],
+  ]);
+};
+RPG.shieldGeo = function () {
+  const T = THREE;
+  return RPG.merge([
+    [new T.CylinderGeometry(0.30, 0.30, 0.03, 16), RPG.xf(0, 0, 0, PI / 2, 0, 0), [0.20, 0.07, 0.045]],
+    [new T.CylinderGeometry(0.315, 0.315, 0.018, 16), RPG.xf(0, 0, 0, PI / 2, 0, 0), [0.14, 0.14, 0.15]],
+    [new T.SphereGeometry(0.075, 10, 6), RPG.xf(0, 0, -0.02, 0, 0, 0, 1, 1, 0.55), [0.2, 0.2, 0.22]],
+  ]);
+};
+
+// ── HUD ──
+RPG.hudInit = function () {
+  const H = RPG.hud; for (const id of ['rpg', 'vitals', 'hpFill', 'stFill', 'foe', 'foeName', 'foeFill', 'hurt', 'rpgTouch', 'deadMsg']) H[id] = $(id);
+  const hold = (id, key) => {
+    const b = $(id); if (!b) return;
+    const down = e => { e.preventDefault(); e.stopPropagation(); Input.touch = true; RPG.in[key] = true; try { b.setPointerCapture(e.pointerId); } catch (err) { } b.classList.add('on'); };
+    const up = e => { RPG.in[key] = false; b.classList.remove('on'); };
+    b.addEventListener('pointerdown', down); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+    b.addEventListener('contextmenu', e => e.preventDefault());
+  };
+  hold('tAtk', 'atk'); hold('tBlock', 'block'); hold('tJump', 'jump'); hold('tDodge', 'dodge');
+  const eat = $('tEat'); if (eat) { eat.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Input.touch = true; if (!Player.locked && !RPG.dead) Inv.quick(); }); eat.addEventListener('contextmenu', e => e.preventDefault()); }
+  addEventListener('keydown', e => { if (e.code === 'KeyH' && !e.repeat && game.playing && !Player.locked && !RPG.dead) Inv.quick(); });
+  // mouse: left attacks, right blocks, while the pointer is captured by the view
+  addEventListener('mousedown', e => { if (!Input.plock || Player.locked) return; if (e.button === 0) RPG.in.atk = true; else if (e.button === 2) RPG.in.block = true; });
+  addEventListener('mouseup', e => { if (e.button === 0) RPG.in.atk = false; else if (e.button === 2) RPG.in.block = false; });
+  addEventListener('contextmenu', e => { if (Input.plock) e.preventDefault(); });
+  addEventListener('blur', () => { RPG.in.atk = RPG.in.block = RPG.in.jump = RPG.in.dodge = false; });
+};
+RPG.hudFrame = function (dt) {
+  const H = RPG.hud, r = RPG.st(), hp = r.hp / RPG.MAXHP, st = r.sta / RPG.MAXST;
+  if (Math.abs(hp - H.hpV) > 0.004 || H.hpV === undefined) { H.hpV = hp; H.hpFill.style.transform = 'scaleX(' + hp.toFixed(3) + ')'; }
+  if (Math.abs(st - H.stV) > 0.004 || H.stV === undefined) { H.stV = st; H.stFill.style.transform = 'scaleX(' + st.toFixed(3) + ')'; H.stFill.parentNode.classList.toggle('low', RPG.exhausted); }
+  // the bars rest when there is nothing to tell
+  const show = hp < 0.995 || st < 0.995 || RPG.combatT < 6; H.showT = show ? 0 : (H.showT || 0) + dt;
+  const vis = H.showT < 2.5; if (vis !== H.vis) { H.vis = vis; H.vitals.classList.toggle('rest', !vis); }
+  RPG.flash = Math.max(0, RPG.flash - dt * 1.6); const low = hp < 0.3 ? (0.3 - hp) * 1.6 * (0.75 + 0.25 * Math.sin(game.time * 5)) : 0, f = Math.max(RPG.flash, low);
+  if (Math.abs(f - (H.flashV || 0)) > 0.01) { H.flashV = f; H.hurt.style.opacity = f.toFixed(2); }
+  const touch = Input.touch || (typeof coarse === 'function' && coarse()); if (touch !== H.touch) { H.touch = touch; H.rpgTouch.hidden = !touch; document.body.classList.toggle('touch', touch); }
+  // the foe you are facing
+  const t = typeof Foes !== 'undefined' ? Foes.target : null;
+  if (t !== H.foeT) { H.foeT = t; H.foe.hidden = !t; if (t) H.foeName.textContent = t.name; }
+  if (t) { const v = Math.max(0, t.hp / t.maxHp); if (v !== H.foeV) { H.foeV = v; H.foeFill.style.transform = 'scaleX(' + v.toFixed(3) + ')'; } }
+};
+
+// ── per frame, from the main loop ──
+RPG.tick = function (dt) {
+  if (!SC.scene) return;
+  if (!RPG.inited) { RPG.inited = true; RPG.hudInit(); Combat.init(); Foes.init(); }
+  const r = RPG.st(), playing = game.playing, I = RPG.in, k = Input.keys;
+  if (playing !== RPG.wasPlaying) { RPG.wasPlaying = playing; RPG.hud.rpg.hidden = !playing; }
+  // days pass (outlaws drift back to an emptied camp after a few)
+  if (Env.hour < r.hour - 12) r.day++; r.hour = Env.hour;
+  const slow = RPG.hitStop > 0 ? 0.06 : 1; RPG.hitStop -= dt;
+  if (playing) {
+    // buttons: edges of held states
+    const jump = !!(k.Space || I.jump), dodge = !!(k.KeyQ || k.ControlLeft || k.AltLeft || I.dodge);
+    if (!Player.locked && !RPG.dead) {
+      if (jump && !RPG.prev.jump) RPG.jumpBuf = 0.14;
+      if (dodge && !RPG.prev.dodge) RPG.tryDodge();
+    }
+    RPG.prev.jump = jump; RPG.prev.dodge = dodge;
+    RPG.dodgeCd -= dt; RPG.iframes -= dt; RPG.hurtT += dt; RPG.combatT += dt;
+    // stamina returns after a breath; health mends slowly once the fight is well behind you
+    RPG.stDelay -= dt;
+    if (RPG.stDelay <= 0 && !RPG.dead) r.sta = Math.min(RPG.MAXST, r.sta + (Combat.blocking() ? 7 : 22) * dt);
+    if (RPG.hurtT > 7 && RPG.combatT > 7 && r.hp > 0 && r.hp < RPG.MAXHP) r.hp = Math.min(RPG.MAXHP, r.hp + 1.4 * dt);
+    Combat.update(dt * slow, dt);
+  }
+  Foes.update(UI.menu || UI.reader ? 0 : dt * slow, dt);        // the journal is a pause: nobody swings while you read it
+  // camera: recoil from blows given and taken, and the slump of a fall
+  const cam = R.cam, K = RPG.kick;
+  if (playing) {
+    K[0] += (0 - K[0]) * Math.min(1, dt * 11); K[1] += (0 - K[1]) * Math.min(1, dt * 11); RPG.shake = Math.max(0, RPG.shake - dt * 2.6);
+    const sh = RPG.shake * RPG.shake * 0.05, t = game.time * 47;
+    cam.yaw += K[0] + Math.sin(t) * sh; cam.pitch += K[1] + Math.cos(t * 1.31) * sh;
+    if (RPG.dead) { RPG.deadT += dt; const d = smooth(0, 1.1, RPG.deadT); RPG.hud.deadMsg.style.opacity = smooth(0.5, 1.6, RPG.deadT).toFixed(2); cam.pos[1] -= d * 1.25; cam.pitch += d * 0.5; cam.yaw += d * 0.35; }
+    RPG.hudFrame(dt);
+  }
+  Combat.place();
+  RPG.fxWrite(dt);
+};
+// test hook: one object with everything a script wants to look at
+RPG.info = function () { const r = RPG.st(); return { hp: +r.hp.toFixed(1), sta: +r.sta.toFixed(1), eq: r.eq, kills: r.kills, gold: S.gold, dead: RPG.dead, foes: typeof Foes !== 'undefined' ? Foes.list.map(f => f.id + ':' + f.state + ':' + Math.round(f.hp)) : [] }; };
+
+
+// ---- 91_combat.js ----
+// ───────────────────────── melee in first person: the sword (and shield) in view, swings, blocking, hits ─────────────────────────
+// Poses are in camera space (x right, y up, -z into the screen): p = hand position, r = Euler XYZ of a blade that points along +y.
+const Combat = (() => {
+  const REST = { p: [0.27, -0.31, -0.58], r: [-1.0, 0.2, 0.25] };
+  const ATK = [
+    { name: 'slash',  W: { p: [0.34, -0.10, -0.50] , r: [0.25, 0.3, -0.75] },  E: { p: [-0.10, -0.38, -0.64], r: [-1.45, 0.0, 1.25] }, wind: 0.11, strike: 0.13, rec: 0.27, hit: 0.45, mul: 1.0,  sta: 8,  arc: 1.05, kick: [-0.035, -0.012] },
+    { name: 'back',   W: { p: [-0.20, -0.20, -0.52], r: [-0.75, -0.4, 1.45] }, E: { p: [0.36, -0.34, -0.60], r: [-1.25, 0.3, -1.25] }, wind: 0.10, strike: 0.13, rec: 0.27, hit: 0.45, mul: 1.0,  sta: 8,  arc: 1.05, kick: [0.035, -0.008] },
+    { name: 'chop',   W: { p: [0.20, 0.08, -0.48], r: [0.85, 0, -0.12] },      E: { p: [0.06, -0.42, -0.66], r: [-1.75, 0, 0.12] },    wind: 0.13, strike: 0.13, rec: 0.34, hit: 0.5,  mul: 1.35, sta: 10, arc: 0.8,  kick: [0, -0.05] },
+  ];
+  const HEAVY = { name: 'heavy', W: { p: [0.28, 0.10, -0.46], r: [1.15, 0.2, -0.45] }, E: { p: [-0.02, -0.46, -0.68], r: [-1.85, 0, 0.5] }, charge: 0.27, strike: 0.15, rec: 0.44, hit: 0.5, mul: 2.2, sta: 26, arc: 1.25, kick: [-0.012, -0.085] };
+  const BLOCK = { p: [0.04, -0.14, -0.50], r: [-0.25, 0, 1.30] }, BLOCK_S = { p: [0.30, -0.36, -0.55], r: [-1.1, 0.25, 0.2] };
+  const SH_REST = { p: [-0.40, -0.52, -0.50], r: [0.3, 0.6, 0.1] }, SH_UP = { p: [-0.10, -0.15, -0.48], r: [0.05, 0.12, 0.04] };
+  const C = {
+    phase: 'idle', k: 0, t: 0, atk: null, heavy: false, from: { p: [0, 0, 0], r: [0, 0, 0] }, cur: { p: REST.p.slice(), r: REST.r.slice() }, sh: { p: SH_REST.p.slice(), r: SH_REST.r.slice() },
+    hitDone: false, queued: false, pressed: false, chainT: 9, blockT: 0, away: 1, idleT: 99, sway: 0, lastYaw: 0, weaponId: '', hasShield: false, swingN: 0,
+  };
+  const ease = x => x * x * (3 - 2 * x), lerpPose = (o, a, b, k) => { for (let i = 0; i < 3; i++) { o.p[i] = a.p[i] + (b.p[i] - a.p[i]) * k; o.r[i] = a.r[i] + (b.r[i] - a.r[i]) * k; } };
+  const grab = () => { for (let i = 0; i < 3; i++) { C.from.p[i] = C.cur.p[i]; C.from.r[i] = C.cur.r[i]; } };
+  const speedOf = () => RPG.meta(RPG.st().eq.weapon).speed || 1;
+
+  C.init = function () {
+    const T = THREE; C.uZone = TSL.uniform(0); C.uLight = TSL.uniform(1);
+    const mat = C.mat = RPG.litMat(C.uZone, C.uLight, 0.42), matSoft = C.matSoft = RPG.litMat(C.uZone, C.uLight, 0.85);
+    const vm = C.vm = new T.Group(); vm.matrixAutoUpdate = false; vm.name = 'viewmodel';
+    const mk = (g, m) => { const o = new T.Mesh(g, m); o.frustumCulled = false; o.castShadow = false; o.receiveShadow = true; o.layers.set(1); return o; };
+    C.hand = new T.Group(); C.blade = mk(RPG.swordGeo(0.64, 1), mat); C.hand.add(C.blade);
+    // a fist around the grip and a forearm running back out of view
+    const arm = d => RPG.merge([
+      [new T.BoxGeometry(0.064, 0.074, 0.078), RPG.xf(0, 0, 0.004), [0.06, 0.04, 0.028]],
+      [new T.CylinderGeometry(0.026, 0.033, 0.2, 8), RPG.xf(0.02 * d, -0.07, 0.12, 1.05, 0, 0), [0.06, 0.055, 0.04]],
+      [new T.CylinderGeometry(0.036, 0.038, 0.07, 8), RPG.xf(0.01 * d, -0.045, 0.07, 1.05, 0, 0), [0.075, 0.048, 0.03]],
+    ]);
+    C.hand.add(mk(arm(1), matSoft)); vm.add(C.hand);
+    C.shieldG = new T.Group(); C.shieldG.add(mk(RPG.shieldGeo(), matSoft));
+    const la = mk(arm(-1), matSoft); la.position.set(0.02, -0.02, 0.07); C.shieldG.add(la); C.shieldG.visible = false; vm.add(C.shieldG);
+    SC.scene.add(vm); C.refresh();
+  };
+  // equipment changed: the blade in view follows the sword you carry
+  C.refresh = function () {
+    const eq = RPG.st().eq; if (!C.vm) return;
+    if (eq.weapon !== C.weaponId) {
+      C.weaponId = eq.weapon; const b = RPG.meta(eq.weapon).blade;
+      C.blade.visible = !!eq.weapon;
+      if (b) { C.blade.geometry.dispose(); C.blade.geometry = RPG.swordGeo(b[0], b[1], b[2]); }
+    }
+    C.hasShield = !!eq.shield; C.shieldG.visible = C.hasShield;
+  };
+  C.busy = () => C.phase === 'wind' || C.phase === 'charge' || C.phase === 'strike' || C.phase === 'block';
+  C.blocking = () => C.phase === 'block';
+  C.speed = () => C.phase === 'block' || C.phase === 'charge' ? 0.5 : C.phase === 'wind' || C.phase === 'strike' ? 0.72 : 1;
+  C.interrupt = function () { if (C.phase !== 'idle') { C.phase = 'idle'; C.t = 0; grab(); } C.queued = false; C.pressed = false; };
+  const begin = k => { C.k = k; C.atk = ATK[k]; C.heavy = false; C.phase = 'wind'; C.t = 0; C.hitDone = false; C.queued = false; C.idleT = 0; grab(); };
+  const strike = heavy => {
+    const r = RPG.st(), a = heavy ? HEAVY : C.atk; C.heavy = heavy; C.atk = a;
+    C.weak = r.sta < a.sta; r.sta = Math.max(0, r.sta - a.sta); RPG.stDelay = Math.max(RPG.stDelay, heavy ? 1.1 : 0.75);
+    C.phase = 'strike'; C.t = 0; C.hitDone = false; grab(); Audio2.swing(heavy); C.swingN++;
+  };
+  // the blow lands: everything in reach and inside the arc takes it once
+  const land = () => {
+    const r = RPG.st(), a = C.atk, m = RPG.meta(r.eq.weapon), P = Player;
+    const dmg = (m.dmg || 3) * a.mul * (C.weak ? 0.6 : 1), reach = 2.15 + (m.reach || 0) + (C.heavy ? 0.25 : 0);
+    const res = Foes.sweep(P.pos, P.yaw, reach, a.arc, dmg, C.heavy);
+    if (res.n) {
+      RPG.hitStop = C.heavy ? 0.11 : 0.07; RPG.kick[0] += a.kick[0]; RPG.kick[1] += a.kick[1]; RPG.shake = Math.max(RPG.shake, C.heavy ? 0.5 : 0.28); RPG.combatT = 0;
+      if (res.blocked) { Audio2.clash(0.8); RPG.spark(res.p, 12, [1, 0.8, 0.4], 3.5, 3, 0.04, 0.3); }
+      else { Audio2.hitFlesh(C.heavy); RPG.spark(res.p, C.heavy ? 4 : 3, [0.10, 0.012, 0.008], 1.2, 1, 0.07, 0.45); RPG.spark(res.p, 5, [1, 0.62, 0.28], 2.5, 3, 0.04, 0.26); }
+    } else { RPG.kick[0] += a.kick[0] * 0.35; RPG.kick[1] += a.kick[1] * 0.35; }
+  };
+  // a blow is coming in: the guard takes what it can. Returns the damage that gets through.
+  C.defend = function (n, from) {
+    if (C.phase !== 'block' || !from) return n;
+    const P = Player, a = Math.abs(angDiff(Math.atan2(from.pos[0] - P.pos[0], -(from.pos[2] - P.pos[2])), P.yaw));
+    if (a > 1.3) return n;
+    const r = RPG.st(), hit = [(P.pos[0] + from.pos[0]) / 2, P.pos[1] + 1.25, (P.pos[2] + from.pos[2]) / 2];
+    if (C.blockT < 0.24) {           // caught it early: turned aside, and the attacker reels
+      Audio2.clash(1.1); RPG.spark(hit, 12, [1, 0.85, 0.45], 4, 3, 0.03, 0.32); RPG.shake = Math.max(RPG.shake, 0.3); if (from.stagger) from.stagger(1.15); return 0;
+    }
+    const cost = C.hasShield ? 8 : 13; RPG.stDelay = Math.max(RPG.stDelay, 0.9);
+    if (r.sta < cost) { r.sta = 0; C.interrupt(); Audio2.clash(0.7); toast('Your guard breaks.'); return n * 0.7; }
+    r.sta -= cost; Audio2.clash(0.7); RPG.spark(hit, 6, [1, 0.8, 0.4], 3, 3, 0.026, 0.25); RPG.shake = Math.max(RPG.shake, 0.4); RPG.kick[1] += 0.02;
+    return n * (C.hasShield ? 0.1 : 0.3);
+  };
+
+  C.update = function (dt) {
+    if (!C.vm) return;
+    const I = RPG.in, r = RPG.st(), P = Player, free = !P.locked && !RPG.dead, sp = speedOf();
+    const atk = free && I.atk, blk = free && I.block && !!r.eq.weapon;
+    const down = atk && !C.pressed, up = !atk && C.pressed; C.pressed = atk;
+    C.t += dt; C.chainT += dt; C.idleT += dt; C.blockT += dt;
+    if (down || blk) C.idleT = 0;
+    let to = REST, k = 1;
+    switch (C.phase) {
+      case 'idle':
+        if (down && r.eq.weapon) begin(C.chainT < 0.7 ? (C.k + 1) % ATK.length : 0);
+        else if (blk) { C.phase = 'block'; C.t = 0; C.blockT = 0; grab(); }
+        else { k = Math.min(1, C.t / 0.22); }
+        break;
+      case 'wind': {
+        const a = C.atk; to = a.W; k = Math.min(1, C.t / (a.wind / sp));
+        if (k >= 1) { if (atk && r.sta >= HEAVY.sta) { C.phase = 'charge'; C.t = 0; grab(); } else strike(false); }
+        break; }
+      case 'charge':
+        to = HEAVY.W; k = Math.min(1, C.t / (HEAVY.charge / sp));
+        if (!atk && k < 1) strike(false); else if (k >= 1) strike(true);
+        break;
+      case 'strike': {
+        const a = C.atk; to = a.E; k = Math.min(1, C.t / (a.strike / sp * (C.weak ? 1.4 : 1)));
+        if (down) C.queued = true;
+        if (!C.hitDone && k >= a.hit) { C.hitDone = true; land(); }
+        if (k >= 1) { C.phase = 'rec'; C.t = 0; grab(); C.chainT = 0; }
+        break; }
+      case 'rec': {
+        const a = C.atk, d = a.rec / sp; k = Math.min(1, C.t / d);
+        if (down) C.queued = true;
+        if (C.queued && !C.heavy && C.t > d * 0.3) { begin((C.k + 1) % ATK.length); to = C.atk.W; k = 0; }
+        else if (blk && C.t > d * 0.45) { C.phase = 'block'; C.t = 0; C.blockT = 0; grab(); to = REST; k = 0; }
+        else if (k >= 1) { C.phase = 'idle'; C.t = 0; grab(); C.chainT = 0; }
+        break; }
+      case 'block':
+        to = C.hasShield ? BLOCK_S : BLOCK; k = Math.min(1, C.t / 0.1);
+        if (!blk) { C.phase = 'idle'; C.t = 0; grab(); to = REST; k = 0; }
+        break;
+    }
+    lerpPose(C.cur, C.from, to, C.phase === 'strike' ? k * k * (3 - 2 * k) * 0.6 + k * 0.4 : ease(k));
+    // the shield comes up with the guard
+    const shT = C.phase === 'block' && C.hasShield ? SH_UP : SH_REST, q = Math.min(1, dt * 16);
+    for (let i = 0; i < 3; i++) { C.sh.p[i] += (shT.p[i] - C.sh.p[i]) * q; C.sh.r[i] += (shT.r[i] - C.sh.r[i]) * q; }
+    // the blade rests out of sight when nothing has happened for a while or the hands are busy talking
+    const wild = hyp(P.pos[0] - SQUARE.x, P.pos[2] - SQUARE.z) > 66;      // out in the wilds the blade stays in hand
+    const away = (C.idleT > 9 && RPG.combatT > 9 && !wild) || P.locked || !r.eq.weapon ? 1 : 0; C.away += (away - C.away) * Math.min(1, dt * (away ? 3.5 : 14));
+    const dy = angDiff(P.yaw, C.lastYaw); C.lastYaw = P.yaw; C.sway += (clamp(dy / Math.max(dt, 0.001) * 0.012, -0.05, 0.05) - C.sway) * Math.min(1, dt * 9);
+  };
+  // put the view model where the camera is (called after the camera has had its last nudge for the frame)
+  const _e = new THREE.Euler(0, 0, 0, 'YXZ'), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
+  const VS = 1.3;       // poses are authored for a narrow view; pushing them out keeps a wide phone screen from being filled by the hand
+  C.place = function () {
+    if (!C.vm) return;
+    const cam = R.cam, P = Player, show = game.playing && !RPG.dead && C.away < 0.985;
+    C.vm.visible = show; if (!show) return;
+    _e.set(cam.pitch, -cam.yaw, 0, 'YXZ'); _q.setFromEuler(_e); _v.set(cam.pos[0], cam.pos[1], cam.pos[2]);
+    C.vm.matrix.compose(_v, _q, _s); C.vm.matrixWorld.copy(C.vm.matrix); C.vm.matrixWorldNeedsUpdate = false;
+    const bob = P.bobAmt, st = P.step * TAU, c = C.cur, drop = C.away * 0.62 + (P.onGround ? 0 : 0.03);
+    C.hand.position.set((c.p[0] - C.sway) * VS + Math.sin(st) * 0.007 * bob, (c.p[1] - drop) * VS - Math.abs(Math.cos(st)) * 0.011 * bob + Math.sin(game.time * 1.7) * 0.004, c.p[2] * VS);
+    C.hand.rotation.set(c.r[0] + C.away * 0.5, c.r[1], c.r[2] - C.sway * 2);
+    C.shieldG.position.set((C.sh.p[0] - C.sway) * VS, (C.sh.p[1] - drop * 0.8) * VS - Math.abs(Math.cos(st)) * 0.009 * bob, C.sh.p[2] * VS); C.shieldG.rotation.set(C.sh.r[0], C.sh.r[1], C.sh.r[2]);
+    C.vm.updateMatrixWorld(true);
+    C.uZone.value = World.camZone | 0; C.uLight.value = World.camZone ? 0.34 : 1;
+  };
+  return C;
+})();
+
+
+// ---- 92_foes.js ----
+// ───────────────────────── outlaws: two camps outside the village, and the people in them ─────────────────────────
+// Bodies and motion come from the villager system (Chars); this file adds a look for outlaws, the fighting clips, the camps
+// themselves (built with the same mesh builder and scanned textures as the village) and a small state machine per outlaw:
+// idle at camp -> notice -> chase -> circle -> attack (with a wind-up you can read) -> stagger / flee / return -> dead.
+const Foes = (() => {
+  const CAMPS = [
+    { id: 'pines', label: 'the camp in the pines', x: -96, z: -44, yaw: 0.6, n: 3, leader: { name: 'Outlaw Brute', hp: 84, dmg: 14, scale: 1.09 } },
+    { id: 'crag', label: 'the camp below the watchtower', x: -6, z: -100, yaw: 2.5, n: 3, leader: { name: 'Garrick One-Ear', hp: 112, dmg: 17, scale: 1.07, chief: true } },
+  ];
+  const R4 = ['Ranger_Body', 'Ranger_Arms', 'Ranger_Legs', 'Ranger_Feet'];
+  const LOOKS = [
+    { body: 'male', parts: [...R4, 'Ranger_Head_Hood'], tint: { MI_Ranger: [0.52, 0.47, 0.42] }, skin: 'tan', hair: 'black' },
+    { body: 'male', parts: [...R4, 'Ranger_Arms_Bracer', 'Ranger_Body_Belt_1', 'Hair_Buzzed', 'Hair_Beard'], maps: { MI_Ranger: 'ranger3' }, tint: { MI_Ranger: [0.5, 0.42, 0.38] }, skin: 'fair', hair: 'brown' },
+    { body: 'female', parts: [...R4, 'Ranger_Head_Hood', 'Ranger_Arms_Bracer'], tint: { MI_Ranger: [0.58, 0.48, 0.46] }, skin: 'rosy', hair: 'auburn' },
+    { body: 'male', parts: ['Peasant_Body', 'Peasant_Arms', 'Ranger_Legs', 'Ranger_Feet', 'Hair_Long', 'Hair_Beard'], maps: { MI_Peasant: 'peasant2' }, tint: { MI_Peasant: [0.5, 0.44, 0.4], MI_Ranger: [0.5, 0.45, 0.4] }, skin: 'brown', hair: 'black' },
+  ];
+  const LEADER = { body: 'male', parts: [...R4, 'Ranger_Arms_Bracer', 'Ranger_Body_Belt_1', 'Ranger_Body_Belt_2', 'Ranger_Pauldrons', 'Hair_Buzzed', 'Hair_Beard'], maps: { MI_Ranger: 'ranger3' }, tint: { MI_Ranger: [0.78, 0.36, 0.3] }, skin: 'tan', hair: 'red' };
+  const ANIMS = { 'c-idle': 'one-hand-weapon-idle', 'c-walk': 'walk', 'c-run': 'jog', 'c-sprint': 'sprint', 'c-left': 'strafe-left', 'c-right': 'strafe-right', 'c-back': 'walk-backwards',
+    'c-atk1': 'sword-regular-a', 'c-atk2': 'sword-regular-b', 'c-atk3': 'sword-attack', 'c-block': 'sword-block', 'c-hit': 'hit-chest', 'c-hit2': 'hit-head', 'c-die': 'death-a', 'c-die2': 'death-b', 'c-sit': 'sit-ground-idle', 'c-stand': 'idle-foldarms' };
+  const F = { list: [], camps: CAMPS, target: null, ready: false, failed: false, attackers: 0, hitFrac: {}, res: { n: 0, blocked: false, p: [0, 0, 0] }, st: { pos: null, yaw: 0, anim: '', scale: 1, zone: 0, light: 1, visible: true, look: [0, 0] } };
+  const VILLAGE_R = 64, LEASH = 44, inVillage = (x, z) => hyp(x - SQUARE.x, z - SQUARE.z) < VILLAGE_R;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+
+  // ── camps ──
+  function buildCamps() {
+    const pack = new MeshPack(); pack.shadow = true;
+    for (const c of CAMPS) {
+      const m = new Mesh(4096), ca = Math.cos(c.yaw), sa = Math.sin(c.yaw);
+      const W = (lx, lz) => { const x = c.x + lx * ca - lz * sa, z = c.z + lx * sa + lz * ca; return [x, Terrain.y(x, z), z]; };
+      const put = (lx, lz, rot, fn) => { const p = W(lx, lz); m.push().T(p[0], p[1], p[2]).RY(-(c.yaw + (rot || 0))); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); return p; };
+      // fire: a ring of stones, charred logs leaning together
+      const fp = put(0, 0, 0, mm => {
+        mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU, r = 0.62 + (i % 3) * 0.04; mm.ball(Math.cos(a) * r, 0.07, Math.sin(a) * r, 0.14 + (i % 2) * 0.04, 0.11, 0.13, 6, 4); }
+        mm.mat(MAT.BARK, [0.35, 0.3, 0.28], 0.5); for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + 0.3; mm.beam([Math.cos(a) * 0.42, 0.02, Math.sin(a) * 0.42], [Math.cos(a + 2.6) * 0.06, 0.52, Math.sin(a + 2.6) * 0.06], 0.09, 0.09); }
+      });
+      World.emitters.push({ type: 'fire', p: [fp[0], fp[1] + 0.2, fp[2]], size: 0.6, zone: 0, seed: (World.emitters.length * 0.618) % 1, t: 0 });
+      addLight([fp[0], fp[1] + 1.0, fp[2]], 12, [3.6, 1.8, 0.62], 0, 'fire');
+      World.emitters.push({ type: 'smoke', p: [fp[0], fp[1] + 1.0, fp[2]], zone: 0, seed: 0.37, t: 0 });
+      // two tents: a ridge pole on crossed sticks, drab cloth to the ground, a bedroll inside
+      const tent = (lx, lz, rot, col) => put(lx, lz, rot, mm => {
+        const L = 1.35, H = 1.45, Wd = 1.15;
+        mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([0, H, -L], [0, H, L], 0.07, 0.07);
+        for (const s of [-1, 1]) for (const e of [-1, 1]) mm.beam([e * Wd * 0.9, -0.1, s * L], [-e * 0.12, H + 0.16, s * L], 0.055, 0.055);
+        mm.mat(MAT.CLOTH, col, 0.5);
+        for (const e of [-1, 1]) mm.quad2([0, H, -L], [e * Wd, 0.02, -L - 0.08], [e * Wd, 0.02, L + 0.08], [0, H, L]);
+        mm.poly([[0, H, L], [-Wd, 0.02, L + 0.08], [Wd, 0.02, L + 0.08]]); mm.poly([[0, H, L], [Wd, 0.02, L + 0.08], [-Wd, 0.02, L + 0.08]]);
+        mm.mat(MAT.CLOTH, COL.fur, 0.6); mm.box(-0.32, 0.02, -0.9, 0.32, 0.1, 0.9); mm.mat(MAT.CLOTH, COL.wool, 0.6); mm.box(-0.3, 0.1, 0.55, 0.3, 0.19, 0.88);
+        addBoxCollider(mm, -Wd * 0.8, -L, Wd * 0.8, L, 0, 1.3);
+      });
+      tent(-4.1, 1.2, PI / 2 + 0.25, [0.42, 0.38, 0.3]); tent(3.6, 2.6, -PI / 2 - 0.4, [0.36, 0.34, 0.3]);
+      // logs to sit on
+      for (const [lx, lz, rot] of [[0, -1.9, 0.1], [-1.9, 0.4, 1.4], [1.7, 0.9, -1.1]]) put(lx, lz, rot, mm => { mm.mat(MAT.BARK, [0.8, 0.75, 0.7], 0.6); mm.push().T(-0.85, 0.2, 0).RZ(-PI / 2); mm.cyl(0, 0, 0, 0.2, 0.19, 1.7, 9, 3); mm.pop(); });
+      // stores: crates, barrels, sacks, and a strongbox
+      put(-1.6, 4.4, 0.3, mm => Props.crate(mm, 0.7)); put(-0.8, 4.7, -0.2, mm => Props.crate(mm, 0.55)); put(-1.5, 4.5, 0.3, mm => { mm.T(0, 0.7, 0); Props.crate(mm, 0.45, true); });
+      put(0.4, 4.6, 0, mm => Props.barrel(mm)); put(1.2, 4.2, 0, mm => Props.barrel(mm)); put(0.9, 5.0, 0.5, mm => Props.sack(mm, 0.32)); put(1.7, 4.9, 1.2, mm => Props.sack(mm, 0.26, [0.6, 0.52, 0.4]));
+      put(-2.4, -3.0, 0.9, mm => Props.woodpile(mm, 4, 3, 0.8));
+      const cp = put(-3.3, 2.7, PI / 2 + 0.25, mm => Props.chest(mm));
+      World.interact.push({ p: [cp[0], cp[1] + 0.5, cp[2]], r: 1.9, zone: 0, kind: 'chest', id: 'camp.' + c.id, loot: c.id === 'pines' ? [['gold', 28], ['potion', 1], ['bread', 2]] : [['gold', 46], ['potion', 2], ['leather', 1]] });
+      // a pole with a rag on it, so the camp can be seen from the road
+      put(5.4, -2.2, 0, mm => { mm.mat(MAT.TIMBER, COL.timberDark); mm.cbox(0, -0.3, 0, 0.09, 4.3, 0.09, 4); mm.mat(MAT.CLOTH, [0.5, 0.12, 0.1], 0.5); mm.quad2([0.05, 3.9, 0], [0.05, 2.9, 0.02], [0.75, 3.0, 0.06], [0.85, 3.8, 0.02]); addCircleCollider(mm, 0, 0, 0.12, 0, 4); });
+      if (c.id === 'crag') put(6.0, 3.6, 2.1, mm => Props.cart(mm, false));
+      pack.add(m, { kind: 'opaque' });
+      World.places.push({ id: 'camp.' + c.id, name: c.id === 'pines' ? 'Outlaw Camp' : 'Garrick’s Camp', x: c.x, z: c.z, r: 13 });
+      // where the outlaws wait
+      c.spots = [[1.6, -1.2, 'sit'], [-1.5, -0.9, 'sit'], [0.9, 2.0, 'sit'], [-0.4, 3.2, 'stand']].map(([lx, lz, kind]) => { const p = W(lx, lz); return { p, kind, yaw: headingTo(p[0], p[2], fp[0], fp[2]) }; });
+      const wv = SQUARE.x - c.x, wz = SQUARE.z - c.z, wl = hyp(wv, wz); c.watch = { p: [c.x + wv / wl * 7.5, 0, c.z + wz / wl * 7.5], kind: 'guard', yaw: Math.atan2(wv, -wz) }; c.watch.p[1] = Terrain.y(c.watch.p[0], c.watch.p[2]);
+    }
+    pack.upload('camps');
+    for (const it of pack.items) {
+      const g = new THREE.BufferGeometry(); for (const k in pack.attr) if (k !== 'wind') g.setAttribute(k, pack.attr[k]);
+      g.setIndex(pack.index); g.setDrawRange(it.first, it.count); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(it.c[0], it.c[1], it.c[2]), it.r);
+      const mesh = new THREE.Mesh(g, SC.mats.static); mesh.matrixAutoUpdate = false; mesh.castShadow = mesh.receiveShadow = true; SC.scene.add(mesh);
+    }
+    colBuild();
+  }
+
+  // ── people ──
+  function prepareChars() {
+    const cfg = Chars.cfg; Object.assign(cfg.anims, ANIMS);
+    for (const n of ['sword-block']) if (cfg.once && cfg.once.includes(n)) cfg.once.splice(cfg.once.indexOf(n), 1);
+    if (!cfg.lookFoe) { const orig = cfg.look; cfg.lookFoe = true; cfg.look = def => { if (!def.foe) return orig(def); const b = orig({ id: '\u0000', skin: def.foe.skin, hair: def.foe.hair }); return { body: def.foe.body, parts: ['HeadSkin', 'Eyes', 'Brows'].concat(def.foe.parts), maps: def.foe.maps || {}, tint: Object.assign({ skin: b.tint.skin, hair: b.tint.hair }, def.foe.tint) }; }; }
+    // when in each attack clip the sword hand is furthest forward: that is the moment the blow lands
+    try {
+      const body = Chars.set.bodies.male, rig = T3X.SkeletonUtils.clone(body.armature), mx = new THREE.AnimationMixer(rig), hand = rig.getObjectByName(cfg.bones.handR), hips = rig.getObjectByName(cfg.bones.hips), a = new THREE.Vector3(), b = new THREE.Vector3();
+      for (const key of ['c-atk1', 'c-atk2', 'c-atk3']) {
+        const clip = Chars.set.clips[ANIMS[key]]; if (!clip || !hand || !hips) continue;
+        const act = mx.clipAction(clip); act.play(); let best = -1e9, bt = 0.45;
+        for (let i = 3; i <= 17; i++) { const t = i / 20; mx.setTime(t * clip.duration); rig.updateMatrixWorld(true); hand.getWorldPosition(a); hips.getWorldPosition(b); const reach = (a.z - b.z) * (cfg.faces === -1 ? -1 : 1) + (a.y - b.y) * 0.15; if (reach > best) { best = reach; bt = t; } }
+        act.stop(); F.hitFrac[key] = { frac: clamp(bt - 0.04, 0.2, 0.75), dur: clip.duration };
+      }
+      mx.stopAllAction(); mx.uncacheRoot(rig);
+    } catch (e) { console.warn('foes: could not time the attack clips', e); }
+  }
+  function spawnAll() {
+    prepareChars();
+    const r = RPG.st();
+    for (const c of CAMPS) {
+      for (let i = 0; i <= c.n; i++) {
+        const lead = i === c.n ? c.leader : null, id = c.id + '.' + i, look = lead ? LEADER : LOOKS[(i + (c.id === 'crag' ? 2 : 0)) % LOOKS.length];
+        const sp = i === 0 ? c.watch : c.spots[(i - 1) % c.spots.length];
+        const f = { id, camp: c, name: lead ? lead.name : 'Outlaw', leader: !!lead, chief: !!(lead && lead.chief), maxHp: lead ? lead.hp : 38, dmg: lead ? lead.dmg : 8, scale: lead ? lead.scale : 0.97 + (i % 3) * 0.03,
+          spot: sp, pos: sp.p.slice(), yaw: sp.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0 };
+        f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
+        f.h = Chars.spawn({ id: 'foe.' + id, foe: look });
+        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.frustumCulled = false; sw.layers.set(1);
+        sw.rotation.set(F.grip[0], F.grip[1], F.grip[2]); sw.position.set(F.grip[3], F.grip[4], F.grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw;
+        if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
+        F.list.push(f);
+      }
+    }
+    if (!Chars.group.parent) SC.scene.add(Chars.group);
+    F.ready = true; campState();
+  }
+  F.grip = [PI / 2, 0, 0, 0, 0.02, 0.03];       // how a sword sits in the rig's right hand: rotation xyz, offset xyz (hand space)
+  F.init = function () {
+    buildCamps();
+    F.loading = (Chars.ready ? Promise.resolve() : Chars.load('quaternius')).then(spawnAll).catch(e => { F.failed = true; console.warn('outlaws could not be loaded: ' + (e && e.message || e)); });
+  };
+  // everyone goes home and forgets (after the player dies, or sleeps)
+  F.calm = function (heal) { for (const f of F.list) { if (!f.alive) continue; release(f); f.state = 'idle'; f.t = 0; f.pos = f.spot.p.slice(); f.yaw = f.spot.yaw; f.alert = 0; if (heal) f.hp = f.maxHp; } };
+  function campState() {
+    const r = RPG.st(); r.cleared = r.cleared || {};
+    for (const c of CAMPS) { const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
+  }
+  F.alive = id => F.list.filter(f => f.alive && (!id || f.camp.id === id));
+  F.nearest = function (pos, id) { let best = null, bd = 1e9; for (const f of F.list) { if (!f.alive || (id && f.camp.id !== id)) continue; const d = hyp(f.pos[0] - pos[0], f.pos[2] - pos[2]); if (d < bd) { bd = d; best = f; } } return best; };
+
+  // ── being hit ──
+  const release = f => { if (f.token) { f.token = false; F.attackers = Math.max(0, F.attackers - 1); } };
+  function stagger(f, dur, hard) { if (!f.alive) return; release(f); f.state = 'stagger'; f.t = 0; f.stagT = dur; f.anim = hard || Math.random() < 0.5 ? 'c-hit2' : 'c-hit'; f.h.curName = ''; }
+  function rouse(f, delay) { if (f.alive && (f.state === 'idle' || f.state === 'return')) { f.state = 'notice'; f.t = -(delay || 0); } f.alert = 12; }
+  function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < 34) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
+  function die(f) {
+    const r = RPG.st(); release(f); f.alive = false; f.hp = 0; f.state = 'dead'; f.t = 0; f.anim = Math.random() < 0.5 ? 'c-die' : 'c-die2'; f.h.curName = '';
+    r.kills++; r.dead[f.id] = r.day; Audio2.shout(f.leader);
+    const loot = [['gold', Math.round(f.leader ? rnd(22, 34) : rnd(4, 12))]];
+    if (Math.random() < 0.45) loot.push([Math.random() < 0.5 ? 'bread' : 'apple', 1]); if (Math.random() < (f.leader ? 1 : 0.18)) loot.push(['potion', 1]);
+    if (f.chief) { loot.push(['steelsword', 1]); if (!has('tools') && qAt('tools') !== 99) loot.push(['tools', 1]); } else if (f.leader) loot.push(['ironsword', 1]); else if (Math.random() < 0.1) loot.push(['buckler', 1]);
+    f.lootIt = { kind: 'loot', id: 'loot.' + f.id, p: [f.pos[0], f.pos[1] + 0.35, f.pos[2]], r: 2.1, zone: 0, name: f.name, loot, foe: f }; World.interact.push(f.lootIt);
+    campState(); if (typeof onFoeKilled === 'function') onFoeKilled(f); save();
+  }
+  function hurt(f, dmg, heavy, from) {
+    const dx = f.pos[0] - from[0], dz = f.pos[2] - from[2], l = hyp(dx, dz) || 1;
+    alarm(f.camp, f.pos); f.alert = 14;
+    // a leader who sees it coming gets steel in the way
+    if (f.leader && !heavy && (f.state === 'circle' || f.state === 'chase') && Math.random() < 0.38) { f.state = 'guard'; f.t = 0; f.anim = 'c-block'; f.hp -= dmg * 0.15; f.kv[0] = dx / l * 1.2; f.kv[1] = dz / l * 1.2; if (f.hp <= 0) die(f); return true; }
+    f.hp -= dmg; f.hits++; f.kv[0] = dx / l * (heavy ? 4.6 : 2.2); f.kv[1] = dz / l * (heavy ? 4.6 : 2.2);
+    if (f.hp <= 0) { die(f); return false; }
+    if (!f.leader || heavy || f.hits % 3 === 0 || f.state !== 'attack') stagger(f, heavy ? 0.8 : 0.42, heavy);
+    if (!f.leader && !f.fleeDone && f.hp < f.maxHp * 0.28 && F.alive(f.camp.id).length > 1) { f.fleeDone = true; f.fleeNext = true; }
+    return false;
+  }
+  // the player's blade sweeps: pos and heading of the swing, reach, half-angle of the arc
+  F.sweep = function (pos, yaw, reach, arc, dmg, heavy) {
+    const res = F.res; res.n = 0; res.blocked = false;
+    for (const f of F.list) {
+      if (!f.alive || !f.vis) continue;
+      const dx = f.pos[0] - pos[0], dz = f.pos[2] - pos[2], d = hyp(dx, dz);
+      if (d > reach + 0.35 || Math.abs(f.pos[1] - pos[1]) > 1.7) continue;
+      if (d > 0.9 && Math.abs(angDiff(Math.atan2(dx, -dz), yaw)) > arc) continue;
+      const k = d > 0.01 ? Math.max(0, d - 0.3) / d : 0;
+      if (!res.n) { res.p[0] = pos[0] + dx * k; res.p[1] = f.pos[1] + 1.15 * f.scale; res.p[2] = pos[2] + dz * k; }
+      if (hurt(f, dmg, heavy, pos)) res.blocked = true;
+      res.n++;
+    }
+    return res;
+  };
+
+  // ── per frame ──
+  const turn = (f, to, rate, dt) => { f.yaw += clamp(angDiff(to, f.yaw), -rate * dt, rate * dt); };
+  function step(f, vx, vz, dt) {
+    const p = f.pos, ox = p[0], oz = p[2];
+    p[0] += (vx + f.kv[0]) * dt; p[2] += (vz + f.kv[1]) * dt; f.kv[0] *= Math.max(0, 1 - dt * 7); f.kv[1] *= Math.max(0, 1 - dt * 7);
+    colResolve(p, 0.3, p[1], p[1] + 1.7);
+    if (World.waterAt(p[0], p[2]) - Terrain.y(p[0], p[2]) > 0.5 || hyp(p[0], p[2]) > WORLD_RADIUS + 6) { p[0] = ox; p[2] = oz; }
+    for (const g of F.list) { if (g === f || !g.alive) continue; const dx = p[0] - g.pos[0], dz = p[2] - g.pos[2], d2 = dx * dx + dz * dz; if (d2 < 0.49 && d2 > 1e-6) { const d = Math.sqrt(d2), k = (0.7 - d) / d * 0.5; p[0] += dx * k; p[2] += dz * k; } }
+    p[1] = Terrain.y(p[0], p[2]);
+  }
+  function think(f, dt, P, d, live) {
+    const toP = Math.atan2(P[0] - f.pos[0], -(P[2] - f.pos[2])), home = f.spot.p, dHome = hyp(f.pos[0] - home[0], f.pos[2] - home[2]), camp = f.camp;
+    const lost = !live || inVillage(P[0], P[2]) || hyp(f.pos[0] - camp.x, f.pos[2] - camp.z) > LEASH;
+    f.t += dt; f.cd -= dt; f.alert -= dt;
+    switch (f.state) {
+      case 'idle': {
+        f.anim = f.spot.kind === 'sit' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
+        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
+        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); Audio2.shout(f.leader); if (!F.warned) { F.warned = true; toast('Outlaws! They have seen you.'); } }
+        break; }
+      case 'notice': f.anim = 'c-idle'; if (f.t > 0) turn(f, toP, 6, dt); if (f.t > 0.45) { f.state = 'chase'; f.t = 0; } break;
+      case 'chase': {
+        if (lost) { f.state = 'return'; f.t = 0; break; }
+        turn(f, toP, 7, dt); const sp = f.leader ? 3.9 : 4.5; f.anim = 'c-run'; step(f, Math.sin(f.yaw) * sp, -Math.cos(f.yaw) * sp, dt);
+        if (d < 3.0) { f.state = 'circle'; f.t = 0; f.strafeT = rnd(0.8, 2); }
+        break; }
+      case 'circle': {
+        if (lost) { release(f); f.state = 'return'; f.t = 0; break; }
+        if (f.fleeNext) { f.fleeNext = false; release(f); f.state = 'flee'; f.t = 0; break; }
+        if (d > 5) { release(f); f.state = 'chase'; f.t = 0; break; }
+        if (!f.token && f.cd <= 0 && F.attackers < 2 && d < 4.2) { f.token = true; F.attackers++; }
+        turn(f, toP, 6, dt); f.strafeT -= dt; if (f.strafeT <= 0) { f.strafe = -f.strafe; f.strafeT = rnd(0.9, 2.4); }
+        const want = f.token ? 1.85 : 3.3, rad = clamp((d - want) * 2.2, -1.5, 2.0), tan = (f.token ? 0.7 : 1.25) * f.strafe;
+        const fx = Math.sin(f.yaw), fz = -Math.cos(f.yaw); step(f, fx * rad - fz * tan, fz * rad + fx * tan, dt);
+        f.anim = Math.abs(rad) > 0.9 ? (rad > 0 ? 'c-walk' : 'c-back') : tan > 0 ? 'c-right' : 'c-left';
+        if (f.token && d < 2.45 && f.cd <= 0) {
+          const key = f.leader && Math.random() < 0.4 ? 'c-atk3' : Math.random() < 0.5 ? 'c-atk1' : 'c-atk2', hf = F.hitFrac[key] || { frac: 0.45, dur: 1.1 };
+          const rate = Math.min(1.15, hf.frac * hf.dur / (f.leader ? 0.56 : 0.46));       // slow the clip if needed so the wind-up can be read
+          f.state = 'attack'; f.t = 0; f.anim = key; f.h.curName = ''; f.atk = { hitT: hf.frac * hf.dur / rate, end: hf.dur * 0.9 / rate, rate, done: false, heavy: key === 'c-atk3' };
+        }
+        break; }
+      case 'attack': {
+        const a = f.atk; if (!a.done) { turn(f, toP, 2.6, dt); if (d > 1.5) step(f, Math.sin(f.yaw) * 1.5, -Math.cos(f.yaw) * 1.5, dt); else step(f, 0, 0, dt); } else step(f, 0, 0, dt);
+        if (!a.done && f.t >= a.hitT) { a.done = true; if (live && d < 2.4 && Math.abs(angDiff(toP, f.yaw)) < 0.95 && Math.abs(P[1] - f.pos[1]) < 1.6) { RPG.damage(f.dmg * (a.heavy ? 1.35 : 1), f); } else Audio2.swing(false); }
+        if (f.t >= a.end) { release(f); f.state = 'circle'; f.t = 0; f.cd = f.leader ? rnd(0.7, 1.5) : rnd(1.4, 2.8); }
+        break; }
+      case 'guard': f.anim = 'c-block'; turn(f, toP, 6, dt); step(f, 0, 0, dt); if (f.t > 0.5) { f.state = 'circle'; f.t = 0; f.cd = Math.min(f.cd, 0.25); } break;
+      case 'stagger': step(f, 0, 0, dt); if (f.t > f.stagT) { f.state = 'circle'; f.t = 0; f.cd = Math.max(f.cd, 0.35); } break;
+      case 'flee': {
+        const away = Math.atan2(f.pos[0] - P[0], -(f.pos[2] - P[2])); turn(f, away, 7, dt); f.anim = 'c-sprint'; step(f, Math.sin(f.yaw) * 4.9, -Math.cos(f.yaw) * 4.9, dt);
+        if (f.t > 3.6 || hyp(f.pos[0] - camp.x, f.pos[2] - camp.z) > LEASH - 4) { f.state = d < 9 && live ? 'chase' : 'return'; f.t = 0; }
+        break; }
+      case 'return': {
+        const th = Math.atan2(home[0] - f.pos[0], -(home[2] - f.pos[2])); turn(f, th, 5, dt); f.anim = 'c-run'; step(f, Math.sin(f.yaw) * 3.4, -Math.cos(f.yaw) * 3.4, dt);
+        f.hp = Math.min(f.maxHp, f.hp + f.maxHp * 0.08 * dt);
+        if (dHome < 0.5) { f.state = 'idle'; f.t = 0; f.fleeDone = false; }
+        else if (live && d < 7 && !inVillage(P[0], P[2]) && hyp(f.pos[0] - camp.x, f.pos[2] - camp.z) < LEASH - 8 && f.t > 1.5) { f.state = 'chase'; f.t = 0; }
+        break; }
+    }
+  }
+  F.update = function (dt, rdt) {
+    if (!F.ready) return;
+    const P = game.playing ? Player.pos : R.cam.pos, live = game.playing && !RPG.dead, st = F.st, r = RPG.st();
+    let target = null, tb = 0.55, fight = null;
+    for (const f of F.list) {
+      if (f.state === 'gone') continue;
+      const d = hyp(f.pos[0] - P[0], f.pos[2] - P[2]);
+      f.vis = d < 135;
+      if (!f.vis) { if (f.h.pivot.visible) f.h.pivot.visible = false; if (f.alive && f.state !== 'idle') { f.acc += dt; if (f.acc > 0.25) { think(f, f.acc, P, d, live); f.acc = 0; } } continue; }
+      // far away, think and pose less often
+      f.acc += dt; const every = d > 90 ? 0.2 : d > 48 ? 0.09 : 0; if (f.acc < every) continue; const fdt = f.acc; f.acc = 0;
+      if (f.alive) {
+        think(f, fdt, P, d, live);
+        if (f.state !== 'idle' && f.state !== 'return') { fight = f; RPG.combatT = Math.min(RPG.combatT, d < 14 ? 0 : 5); }
+        // keep bodies apart
+        if (live && d < 0.72 && d > 0.01 && Math.abs(P[1] - f.pos[1]) < 1.5) { const k = (0.72 - d) / d, dx = f.pos[0] - P[0], dz = f.pos[2] - P[2]; f.pos[0] += dx * k * 0.7; f.pos[2] += dz * k * 0.7; Player.pos[0] -= dx * k * 0.3; Player.pos[2] -= dz * k * 0.3; }
+        if (live && d < 9 && (f.state !== 'idle' || d < 5)) { const a = Math.abs(angDiff(Math.atan2(f.pos[0] - P[0], -(f.pos[2] - P[2])), Player.yaw)); const sc = a + d * 0.03; if (sc < tb) { tb = sc; target = f; } }
+      } else {
+        f.t += fdt;
+        if (f.state === 'dead' && (f.t > (f.looted ? 40 : 300)) && d > 30) { f.state = 'gone'; f.h.pivot.visible = false; if (f.lootIt) { const i = World.interact.indexOf(f.lootIt); if (i >= 0) World.interact.splice(i, 1); } continue; }
+      }
+      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = 1; st.visible = true;
+      st.look[0] = 0; st.look[1] = 0;
+      Chars.update(f.h, st, fdt * (f.state === 'attack' && f.atk ? f.atk.rate : 1));
+    }
+    F.target = target;
+    // villagers nearby stop and stare at a fight
+    if (fight) for (const n of NPCS) { if (n.anim === 'lie' || n.talking) continue; if (hyp(n.pos[0] - fight.pos[0], n.pos[2] - fight.pos[2]) < 26) { n.alarm = 1.2; n.alarmAt = fight.pos; } }
+    for (const n of NPCS) if (n.alarm > 0) { n.alarm -= rdt; if (n.anim === 'walk' || n.anim === 'run') n.anim = 'idle'; if (n.anim === 'idle' || n.anim === 'guard') n.yaw += angDiff(Math.atan2(n.alarmAt[0] - n.pos[0], -(n.alarmAt[2] - n.pos[2])), n.yaw) * Math.min(1, rdt * 5); }
+    // an emptied camp fills again after a few days, while you are far away
+    if ((R.frame & 255) === 0) for (const f of F.list) if (f.state === 'gone' && !f.chief && r.dead[f.id] !== undefined && r.day - r.dead[f.id] >= 3 && hyp(f.camp.x - P[0], f.camp.z - P[2]) > 100) {
+      delete r.dead[f.id]; f.alive = true; f.hp = f.maxHp; f.state = 'idle'; f.t = 0; f.pos = f.spot.p.slice(); f.yaw = f.spot.yaw; f.looted = false; f.fleeDone = false; f.h.curName = ''; campState();
+    }
+  };
+  return F;
+})();
+
+
+// ---- 93_inventory.js ----
+// ───────────────────────── the pack: what you wear and carry, eating, and trading with the smith ─────────────────────────
+// Item facts live in ITEMS (80_game.js): [name, description, { slot, dmg, armor, heal, sta, value, cost, blade }].
+const Inv = {
+  SLOTS: [['weapon', 'Blade'], ['shield', 'Shield'], ['armor', 'Armour']],
+  stock: { brandt: ['ironsword', 'buckler', 'leather'] },
+  // one line saying what a thing is good for
+  facts(id) {
+    const m = RPG.meta(id), f = [];
+    if (m.dmg) f.push(m.dmg + ' damage' + (m.speed > 1 ? ', quick' : ''));
+    if (m.slot === 'shield') f.push('blocks nine parts in ten');
+    if (m.armor) f.push('turns ' + Math.round(m.armor * 100) + '% of a blow');
+    if (m.heal) f.push('restores ' + m.heal + ' health' + (m.sta ? ' and your wind' : ''));
+    return f.join(' · ');
+  },
+  equip(id) {
+    const r = RPG.st(), m = RPG.meta(id); if (!m.slot || !has(id)) return;
+    r.eq[m.slot] = r.eq[m.slot] === id ? (m.slot === 'weapon' ? id : null) : id;
+    Combat.refresh(); Audio2.pickup(); save(); Inv.render();
+  },
+  use(id) {
+    const r = RPG.st(), m = RPG.meta(id); if (!m.heal || !has(id)) return;
+    if (r.hp >= RPG.MAXHP - 0.5 && !(m.sta && r.sta < RPG.MAXST - 1)) { toast('You are not hurt.'); return; }
+    give(id, -1); RPG.heal(m.heal); if (m.sta) r.sta = Math.min(RPG.MAXST, r.sta + m.sta);
+    if (id === 'ale' || id === 'potion' || id === 'tonic') Audio2.drink(); else Audio2.eat();
+    toast(ITEMS[id][0] + ': +' + m.heal + ' health'); save(); Inv.render();
+  },
+  // the best thing to eat right now (quick-use key and the touch button)
+  quick() { const r = RPG.st(); let best = null, bs = 1e9; for (const id in S.items) { const m = RPG.meta(id); if (!m.heal) continue; const waste = Math.abs(RPG.MAXHP - r.hp - m.heal); if (waste < bs) { bs = waste; best = id; } } if (best) Inv.use(best); else toast('Nothing to eat or drink.'); },
+  render() {
+    const box = $('tab-pack'), r = RPG.st(); if (!box) return;
+    let h = '<div class="vit"><span>Health <b>' + Math.round(r.hp) + ' / ' + RPG.MAXHP + '</b></span><span>Stamina <b>' + Math.round(r.sta) + ' / ' + RPG.MAXST + '</b></span><span><b>' + S.gold + '</b> gold</span></div><div class="gear">';
+    for (const [slot, label] of Inv.SLOTS) { const id = r.eq[slot]; h += '<div><small>' + label + '</small><b>' + (id && has(id) ? ITEMS[id][0] : 'None') + '</b><span>' + (id && has(id) ? Inv.facts(id) : slot === 'weapon' ? 'Bare hands will not serve you.' : '') + '</span></div>'; }
+    h += '</div><div class="items">';
+    const ids = Object.keys(S.items).sort((a, b) => (RPG.meta(b).slot ? 1 : 0) - (RPG.meta(a).slot ? 1 : 0) || (RPG.meta(b).heal ? 1 : 0) - (RPG.meta(a).heal ? 1 : 0));
+    for (const id of ids) {
+      const m = RPG.meta(id), on = m.slot && r.eq[m.slot] === id, f = Inv.facts(id);
+      h += '<div' + (on ? ' class="worn"' : '') + '><b>' + ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + '</b><span>' + ITEMS[id][1] + (f ? ' <i>' + f + '</i>' : '') + '</span>';
+      if (m.slot) h += '<button type="button" class="btn small" data-equip="' + id + '">' + (on ? (m.slot === 'weapon' ? 'In hand' : 'Take off') : m.slot === 'weapon' ? 'Wield' : 'Wear') + '</button>';
+      else if (m.heal) h += '<button type="button" class="btn small" data-use="' + id + '">' + (id === 'ale' || id === 'potion' || id === 'tonic' ? 'Drink' : 'Eat') + '</button>';
+      h += '</div>';
+    }
+    if (!ids.length) h += '<p class="empty">Your pack is empty.</p>';
+    box.innerHTML = h + '</div>';
+    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
+  },
+  // ── trade, as dialogue ──
+  shop(who) {
+    const opts = Inv.stock[who].map(id => { const m = RPG.meta(id); return [ITEMS[id][0] + ' (' + m.cost + ' gold): ' + Inv.facts(id), () => {
+      if (S.gold < m.cost) return node('That’s ' + m.cost + ' gold, and you’ve ' + S.gold + '. Hale pays a bounty on outlaws, if you’ve the stomach for it.', [['Something else.', () => Inv.shop(who)], bye]);
+      gold(-m.cost); give(id); toast('Bought: ' + ITEMS[id][0]); const r = RPG.st(); if (m.slot && (m.slot !== 'weapon' || (RPG.meta(r.eq.weapon).dmg || 0) < m.dmg)) { r.eq[m.slot] = id; Combat.refresh(); } save();
+      return node('Sound work, that. Look after it and it will look after you.', [['Something else.', () => Inv.shop(who)], bye]); }]; });
+    return node('Iron from the Greyspine, every piece. I don’t haggle.', opts.concat([bye]));
+  },
+  sell(who) {
+    const r = RPG.st(), opts = [];
+    for (const id in S.items) { const m = RPG.meta(id); if (!m.value || (m.slot && r.eq[m.slot] === id && S.items[id] < 2)) continue; opts.push([ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + ' (' + m.value + ' gold)', () => { give(id, -1); gold(m.value); save(); return Inv.sell(who); }]); }
+    return node(opts.length ? 'Let’s see it, then.' : 'You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.', opts.slice(0, 7).concat([bye]));
+  },
+};
+
+
 // ---- 99_main.js ----
 // ───────────────────────── boot, main loop, adaptive quality ─────────────────────────
 const game = { time: 0, clock: 0, playing: false, qualitySetting: 'auto', showFps: false, tier: 'high', ready: false };
@@ -5099,6 +5894,7 @@ function tick(dt) {
   if (World.festival && Env.hour > 23.4 && Env.hour < 23.9) { World.festival = false; for (const n of NPCS) n.override = null; }
   const env = updateEnv(game.time, World.indoor); env.time = game.time;
   fxUpdate(dt, game.time, env, R.cam.pos);
+  RPG.tick(dt);
   if (game.playing) uiFrame(dt);
   Audio2.update(dt, audioState());
   return env;

@@ -5,7 +5,7 @@ with daily routines, a short chain of errands, day and night, weather.
 
 Play it: https://brendanlymurphy.github.io/brackenfell/
 
-## Build 6 (kit-built houses, scanned-texture skin; Quaternius Medieval Village and Fantasy Props kits, CC0)
+## Build 7 (sprint, jump, sword combat, outlaw camps, loot, inventory, three new quests; on top of Build 6: kit-built houses with scanned-texture skin; Quaternius Medieval Village and Fantasy Props kits, CC0)
 
 - Runs on [Three.js](https://threejs.org) r187: WebGPU where the browser has it, WebGL 2 otherwise. If WebGPU reports errors
   or loses its device while starting, the page remembers that and reloads itself on WebGL 2. Menu → Settings → Graphics engine
