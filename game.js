@@ -566,6 +566,7 @@ class Mesh {
 class MeshPack {
   constructor() { this.items = []; this.nv = 0; this.ni = 0; }
   add(mesh, extra) {
+    if (typeof TEST !== 'undefined' && TEST && TEST.audit) (window.__AUDIT_MESH = window.__AUDIT_MESH || []).push(mesh);          // test/audit.js
     const it = Object.assign({ first: this.ni, count: mesh.ni, base: this.nv, mesh, c: mesh.center(), r: mesh.radius() }, extra || {});
     this.items.push(it); this.nv += mesh.nv; this.ni += mesh.ni; return it;
   }
@@ -1218,8 +1219,8 @@ function renderFrame(time, env) {
   const aspect = G.w / G.h;
   let fovy = aspect > 1 ? cam.fovMin : 2 * Math.atan(Math.tan(cam.fovMin / 2) / aspect);
   fovy = Math.min(fovy, 1.75); if (aspect > 1) { const hf = 2 * Math.atan(Math.tan(fovy / 2) * aspect); if (hf > 1.62) fovy = 2 * Math.atan(Math.tan(1.62 / 2) / aspect); }
-  const key = aspect.toFixed(4) + ':' + fovy.toFixed(4);
-  if (key !== R.camKey) { R.camKey = key; c3.aspect = aspect; c3.fov = fovy * 180 / Math.PI; c3.updateProjectionMatrix(); }
+  const key = aspect.toFixed(4) + ':' + fovy.toFixed(4) + (World.cell ? ':c' : '');          // in a cell: near 0.08, far 90 (a 400 m valley's far plane wastes depth precision indoors)
+  if (key !== R.camKey) { R.camKey = key; c3.aspect = aspect; c3.fov = fovy * 180 / Math.PI; c3.near = World.cell ? 0.08 : 0.09; c3.far = World.cell ? 90 : 12000; c3.updateProjectionMatrix(); }
   c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, cam.roll || 0);   /* [ui] roll from 87_feel.js */ c3.updateMatrixWorld();
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
@@ -1490,6 +1491,7 @@ const Kit = (() => {
       const p = K_.pieces[name]; if (!p) { console.warn('Kit: unknown piece ' + name); return B; }
       o = o || {};
       const M = toMatrix(xf);
+      if (TEST && TEST.audit) (window.__AUDIT_KIT = window.__AUDIT_KIT || []).push({ name, M: M.clone(), zone: o.zone || 0 });          // test/audit.js: every placed piece (coplanar-face audit)
       _v.set((p.min[0] + p.max[0]) / 2, (p.min[1] + p.max[1]) / 2, (p.min[2] + p.max[2]) / 2).applyMatrix4(M);
       const ck = Math.floor((_v.x + (opts.off || 0)) / cell) + ',' + Math.floor((_v.z + (opts.off || 0)) / cell), cast = o.cast === false ? 0 : 1;
       for (const prim of p.prims) {
@@ -2836,7 +2838,9 @@ function wildsBrookY(at, k) {
 // no sky, terrain, grass, trees or outdoor props (see sceneUpdate in 42_scene.js and the cell branches in renderFrame), and the fog is short and dark.
 // Villagers cross doors through portal edges of the nav graph (77_npc.js). CELLS_ON = false (test option cells=0) gives back the old seamless houses.
 const CELLS_ON = !(TEST && TEST.cells === 0);
-const CELL = { x0: 3000, y: -400, step: 150, cols: 8, half: 70 };
+// x0: cells sit just outside the playable valley (WORLD_RADIUS 184) and 400 m under it: float32 vertices, the camera and world-space shader maths keep ~0.03-0.1 mm of precision (at x = 3000 a step was 0.24-0.5 mm and surfaces a few mm apart flickered). Builds up to 25 stored positions at x0 = 3000 (CELL_X0_OLD): Cells.migrate moves those.
+const CELL_X0_OLD = 3000;
+const CELL = { x0: 260, y: -400, step: 150, cols: 8, half: 70 };
 const Cells = { list: [], by: {}, cur: null, busy: false, fadeIn: 0.3, fadeOut: 0.3, hold: 0.42 };
 // allocate the next free cell. cs is a site-like frame (x, z, y, yaw 0) that interior code uses where it used the site's
 Cells.make = function (id, name, extra) {
@@ -2944,6 +2948,7 @@ Cells.env = function (e) {
 Cells.rescue = function () { const c = Cells.cur; if (c && c.enter) Cells.teleport(c.enter); };
 // an old save made inside a building (when interiors stood in the village): the same spot in the same building's cell (cells are built in the building's own frame)
 Cells.migrate = function (pos, yaw) {
+  if (CELLS_ON && pos[0] > CELL_X0_OLD - CELL.half && pos[1] < CELL.y + 100) return { pos: [pos[0] - CELL_X0_OLD + CELL.x0, pos[1], pos[2]], yaw };          // a save made inside a cell of Build 25 or earlier
   if (!CELLS_ON || Cells.inRegion(pos[0])) return false;
   for (const c of Cells.list) {
     const real = c.cs.real, z = World.zones[c.zones[0] - 1]; if (!real || !z) continue;
@@ -3428,8 +3433,8 @@ const Props = {
   shelf(m, len, h, levels, depth, fill) {
     depth = depth || 0.32; m.mat(MAT.PLANKS, COL.wood);
     for (const sx of [-1, 1]) m.box(sx * len / 2 - 0.025, 0, -depth / 2, sx * len / 2 + 0.025, h, depth / 2);
-    for (let i = 0; i <= levels; i++) { const y = 0.08 + (h - 0.12) * i / levels; m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2, y, -depth / 2, len / 2, y + 0.03, depth / 2); if (fill && i < levels) fill(i, y + 0.03); }
-    m.mat(MAT.PLANKS, COL.woodDark); m.box(-len / 2, 0, depth / 2 - 0.02, len / 2, h, depth / 2);
+    for (let i = 0; i <= levels; i++) { const y = 0.08 + (h - 0.12) * i / levels; m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2 + 0.025, y, -depth / 2 + 0.004, len / 2 - 0.025, y + 0.03, depth / 2 - 0.022); if (fill && i < levels) fill(i, y + 0.03); }
+    m.mat(MAT.PLANKS, COL.woodDark); m.box(-len / 2 + 0.025, 0.01, depth / 2 - 0.02, len / 2 - 0.025, h - 0.005, depth / 2);
     addBoxCollider(m, -len / 2, -depth / 2, len / 2, depth / 2, 0, h);
   },
   // random tableware along a strip
@@ -3447,7 +3452,8 @@ const Props = {
   },
   // woven rug: a darker border, a field of the main colour, a lighter band down the middle and a fringe at both ends
   rug(m, w, l, col) {
-    const c = col || COL.red, lay = (i, x0, z0, x1, z1, k, y) => { m.mat(MAT.CLOTH, [c[0] * k[0], c[1] * k[1], c[2] * k[2]], 0.6); m.quad([x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0], 0, 0, (x1 - x0) / 0.6, (z1 - z0) / 0.6); };
+    const c = col || COL.red, RL = ((m.rugN = (m.rugN || 0) + 1) % 5) * 0.011, lay = (i, x0, z0, x1, z1, k, y0) => { const y = y0 + RL;          // each rug in a mesh lies a centimetre above the one before (two coplanar rugs flicker)
+       m.mat(MAT.CLOTH, [c[0] * k[0], c[1] * k[1], c[2] * k[2]], 0.6); m.quad([x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0], 0, 0, (x1 - x0) / 0.6, (z1 - z0) / 0.6); };
     const b = Math.min(0.12, w * 0.09);
     lay(0, -w / 2, -l / 2, w / 2, l / 2, [0.3, 0.27, 0.26], 0.012);
     lay(1, -w / 2 + b, -l / 2 + b, w / 2 - b, l / 2 - b, [0.52, 0.42, 0.38], 0.016);
@@ -3757,7 +3763,7 @@ function buildHouse(site, spec) {
   if (kit) kitShell(ctx);
   if (planned) {          // the interior is a plan (72d_plan.js): drop the shell-shaped room the generator made and build the plan on the same door instead
     for (const mm of [ins, int]) { mm.nv = 0; mm.ni = 0; mm.min = [1e9, 1e9, 1e9]; mm.max = [-1e9, -1e9, -1e9]; }
-    const cellSide = x => x > CELL.x0 - 100;
+    const cellSide = x => x > CELL.x0 - CELL.half;
     for (let i = World.colliders.length - 1; i >= col0; i--) if (cellSide(World.colliders[i].x)) World.colliders.splice(i, 1);
     for (let i = World.floors.length - 1; i >= fl0; i--) if (cellSide(World.floors[i].x)) World.floors.splice(i, 1);
     for (let i = World.lights.length - 1; i >= lt0; i--) if (cellSide(World.lights[i].p[0])) World.lights.splice(i, 1);
@@ -5553,7 +5559,7 @@ function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2)
 function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   o = o || {}; const r = pFoot(cx, cz, w, d, rot);
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
-  const L = P.lv[room.k], m = P.c.int; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m));
+  const L = P.lv[room.k], m = P.c.int, t0 = m.ni; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]);          // owner ranges: test/audit.js names the thing a face belongs to
   const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
   if (o.flat) it.kind = 'rug'; return it;
 }
@@ -5652,7 +5658,8 @@ function pWallEmit(P, wl, B, IN) {
   const origin = fwd ? a : b, perp = wl.c + 0.11 * ns, O = hor ? [origin, perp] : [perp, origin];
   const nv = hor ? [0, 0, ns] : [ns, 0, 0];          // outward normal; u = up x n = (nz, 0, -nx)
   const F = new THREE.Matrix4().makeBasis(KH.V([nv[2], 0, -nv[0]]), KH.V([0, 1, 0]), KH.V(nv)).setPosition(O[0], L.y, O[1]).premultiply(P.MS);
-  const add = (name, uc, s, o) => B.add(name, KH.xf(F, uc, 0, 0, s), o || IN);
+  const INW = wl.cellar ? Object.assign({}, IN, { tint: [0.42, 0.38, 0.35] }) : IN;          // cellar walls: damp, darker stone
+  const add = (name, uc, s, o) => B.add(name, KH.xf(F, uc, 0, 0, s), o || INW);
   const spans = wl.open.map(o => ({ o, s: sOf(o.pos), w: o.type === 'door' ? (o.d.w >= 1.2 ? 2.0 * o.d.w / PW.DOOR : 2.0) : 2.0 })).sort((p, q) => p.s - q.s);
   let cur = 0;
   const fill = (e) => {
@@ -5672,7 +5679,8 @@ function pWallEmit(P, wl, B, IN) {
       const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];
       add(G + tbl[0], sp.s, S); add(st ? tbl[1] + '_Stained' : tbl[1], sp.s, S, st ? Object.assign({}, IN, { tint: sp.o.glass }) : undefined);
       // the light the window lets in, a little inside it
-      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, sp.o.glass ? sp.o.glass.map(v => 0.5 + v * 1.4) : [1.5, 1.42, 1.28], 'daylight', wl.k);
+      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, sp.o.glass ? sp.o.glass.map(v => 0.35 + v * 1.1) : [1.5, 1.42, 1.28], 'daylight', wl.k);
+      if (sp.o.glass) { const fx = hor ? sp.o.pos : wl.c - ns * 2.1, fz = hor ? wl.c - ns * 2.1 : sp.o.pos; pLight(P, fx, 0.5, fz, 3.4, sp.o.glass.map(v => v * 3.2), 'daylight', wl.k); }          // the coloured pool the window throws on the floor by day
     }
     cur = Math.max(cur, s1);
   }
@@ -5688,7 +5696,7 @@ function pStairEmit(P, s) {
   m.m1 = P.zone; m.ao = INT_AO;
   for (let i = 0; i < s.n; i++) {
     const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, s.lat - hw, s.lat + hw), top = y0 + (i + 1) * r - 0.02;
-    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0], top - 0.05, q[1], q[2], top, q[3], 4 | (ax === 'x' ? (d > 0 ? 0 : 0) : 0));
+    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4 | 8); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0] - 0.012, top - 0.05, q[1] - 0.012, q[2] + 0.012, top + 0.008, q[3] + 0.012, 4);          // the tread plate overhangs the block by 1 cm (nothing coplanar)
   }
   // side boards and a handrail up the open side
   m.mat(MAT.TIMBER, COL.timberDark);
@@ -6051,10 +6059,10 @@ function planHouse(P, c, info) {
   }
   if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
   let kh = null;
-  if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); } else if (KIT_DRESS[P.id] && info.kind) { dressKind(P, c, hall, hh, info); dressStore(P, store); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id] });
+  if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); PD.rack(P, store, -3.5, 10.4, 2.4, 0, ['pot', 'herb', 'ham', 'herb', 'garlic']); } else if (KIT_DRESS[P.id] && info.kind) { dressKind(P, c, hall, hh, info); dressStore(P, store); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id], bedSides: info.inn ? ['s', 'e', 'w', 'n'] : undefined, bedAt: info.inn ? 'mid' : undefined });
   dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
   if (up) {
-    if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
+    if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); PD.gallery(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
     else { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false }); dressBedroom(P, P.rooms.chamber2, { beds: [], chest: false }); dressBedroom(P, P.rooms.loft, { beds: ['bed3'], chestId: 'chest3', chest: false }); }
   }
   if (!hh) P.err.push('no hearth fits in the hall');
@@ -6166,14 +6174,28 @@ function pGate(P, d, id, key, label) {
 }
 // the sarcophagus: a stone chest with a lid slightly askew
 const pdTomb = (len) => m => { m.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); m.box(-len / 2, 0, -0.42, len / 2, 0.5, 0.42); m.box(-len / 2 - 0.05, 0.5, -0.47, len / 2 + 0.05, 0.66, 0.47); m.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.8); m.box(-len / 2 + 0.2, 0.66, -0.12, len / 2 - 0.2, 0.74, 0.12); };
-const pdAltar = m => { m.mat(MAT.STONE, [0.85, 0.83, 0.79], 0.8); m.box(-1.1, 0, -0.45, 1.1, 0.95, 0.45); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.95, 0.95, -0.4, 0.95, 0.97, 0.4); for (const sx of [-0.7, 0.7]) at(m, sx, 0.97, 0, 0, () => Props.candle(m, null, true)); };
+const pdAltar = c => m => {
+  m.mat(MAT.STONE, [0.82, 0.8, 0.76], 0.8); m.box(-1.45, 0, -0.5, 1.45, 0.95, 0.5); m.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.8); m.box(-1.6, 0.95, -0.56, 1.6, 1.07, 0.56);
+  m.mat(MAT.CLOTH, [0.42, 0.07, 0.08], 0.5); m.box(-1.25, 0.28, -0.585, 1.25, 1.065, -0.55); m.box(-1.2, 1.07, -0.4, 1.2, 1.085, 0.4);          // the frontal hanging from the slab, a runner on top
+  m.mat(MAT.METAL, COL.bronze); m.box(-1.25, 0.28, -0.59, 1.25, 0.31, -0.55); m.box(-1.25, 0.92, -0.59, 1.25, 0.95, -0.55);
+  for (const sx of [-1.25, 1.25]) at(m, sx, 1.085, 0, 0, () => { m.mat(MAT.METAL, COL.bronze); m.cyl(0, 0, 0, 0.09, 0.05, 0.05, 8, 2); m.cyl(0, 0.05, 0, 0.03, 0.03, 0.45, 6, 2); Props.candle(m, c, true); });
+  for (const sx of [-0.55, 0.55]) at(m, sx, 1.085, 0.05, 0, () => Props.candle(m, { zone: c.zone, candleLight: false }, false));
+  addBoxCollider(m, -1.6, -0.56, 1.6, 0.56, 0, 1.1);
+};
+const pdPew = len => m => {            // backs to the door (local -z), a kneeler at the foot of the back for the row behind, panelled ends
+  m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2, 0.44, -0.12, len / 2, 0.49, 0.4); m.box(-len / 2, 0.5, -0.22, len / 2, 0.98, -0.16); m.mat(MAT.PLANKS, COL.woodDark); m.box(-len / 2, 0.92, -0.25, len / 2, 1.0, -0.13); m.box(-len / 2, 0.2, -0.22, len / 2, 0.44, -0.16);
+  m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2, 0, -0.45, len / 2, 0.1, -0.2); m.box(-len / 2, 0.1, -0.44, len / 2, 0.14, -0.2);
+  m.mat(MAT.TIMBER, COL.woodDark); for (const sx of [-1, 1]) { m.box(sx * len / 2 - 0.04, 0, -0.26, sx * len / 2 + 0.04, 1.05, 0.42); m.box(sx * len / 2 - 0.04, 0, -0.5, sx * len / 2 + 0.04, 0.18, -0.26); }
+  addBoxCollider(m, -len / 2, -0.5, len / 2, 0.42, 0, 0.5);
+};
+
 
 PLANS.chapel = (P, c, info) => {
   const R = P.R, need = P.need;
   P.dims = { W: 14, D: 12 };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H_GROUND + 0.6);
   // nave (west, long) and the sacristy (east, with the stair to the crypt)
-  const GL = [[0.35, 0.55, 1.0], [1.0, 0.42, 0.3], [0.95, 0.8, 0.3], [0.4, 0.85, 0.5]], WK = ['Thin_Round', 'Wide_Round'];
+  const GL = [[0.09, 0.14, 0.34], [0.34, 0.07, 0.08], [0.36, 0.22, 0.06], [0.07, 0.22, 0.12]]       /* deep jewel colours: sapphire, ruby, amber, emerald */, WK = ['Thin_Round', 'Wide_Round'];
   pRoom(P, 0, 'nave', 'nave', -5, 0, 5, 12, { floor: 'stone', winKinds: WK, glass: GL }); pRoom(P, 0, 'sacristy', 'sacristy', 5, 0, 9, 7, { floor: 'stone' }); pRoom(P, 0, 'tower', 'tower', -9, 0, -5, 5, { win: false, floor: 'stone' });
   pDoor(P, 'nave', null, 0, 0); pDoor(P, 'nave', 'sacristy', 5, 3.5); pDoor(P, 'nave', 'tower', -5, 2.5);
   // crypt: the stair arrives in the east vault; a gate leads west under the nave; a second gate-less arch to the ossuary
@@ -6186,14 +6208,14 @@ PLANS.chapel = (P, c, info) => {
   { const m = P.c.int, L0 = P.lv[0]; m.m1 = P.zone; m.ao = INT_AO;
     pPut(P, nave, P.id + '.step', 0, 11.0, 0, 6.0, 1.7, 0.14, mm => { mm.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); mm.box(-3, 0, -0.85, 3, 0.14, 0.85); }, { flat: true, noClear: true });
     addFloor(m, -3, 10.15, 3, 11.85, L0.y + 0.16);
-    const al = pPut(P, nave, P.id + '.altar', 0, 11.3, 0, 2.2, 0.9, 1.0, pdAltar, { lift: 0.14, back: 's' });
+    const al = pPut(P, nave, P.id + '.altar', 0, 11.2, 0, 3.2, 1.12, 0.84, pdAltar(c), { lift: 0.14, back: 's', lowOk: true });
     if (al) { pSpot(P, 'altar', 0, 9.3, 0, { k: 0 }); P.lightIn.nave = 1;
-      at(m, 0, L0.y + 1.16, 11.55, 0, () => { m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.04, 0, -0.04, 0.04, 0.9, 0.04); m.box(-0.22, 0.55, -0.04, 0.22, 0.63, 0.04); }); } }
-  let row = 0; for (const z of [2.8, 4.2, 5.6, 7.0, 8.4]) for (const x of [-2.5, 2.5]) { const pw = pPut(P, nave, P.id + '.pew' + row++, x, z, 0, 3.0, 0.5, 0.95, pdBench(3.0), {}); if (pw && row <= 2) pSit(P, 'pew' + row, x, z + 0.3, PI, 0); }
+      at(m, 0, L0.y + 1.3, 11.62, 0, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.05, 0, -0.04, 0.05, 1.5, 0.04); m.box(-0.32, 0.95, -0.04, 0.32, 1.05, 0.04); m.mat(MAT.STONE, [0.6, 0.58, 0.54], 0.8); m.box(-0.14, -0.06, -0.12, 0.14, 0.0, 0.12); }); } }
+  let row = 0; for (const z of [2.9, 4.15, 5.4, 6.65, 7.9, 9.15]) for (const x of [-2.5, 2.5]) { const pw = pPut(P, nave, P.id + '.pew' + row++, x, z, 0, 3.0, 1.0, 1.05, pdPew(3.0), {}); if (pw && row <= 2) pSit(P, 'pew' + row, x, z + 0.15, PI, 0); }
   { const f = pAgainst(P, nave, 'n', P.id + '.font', 0.7, 0.7, 0.95, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.cyl(0, 0, 0, 0.16, 0.14, 0.8, 10, 3); m.cyl(0, 0.8, 0, 0.36, 0.2, 0.18, 12, 3); m.mat(MAT.PLAIN, [0.15, 0.25, 0.4]); m.disc(0, 0.95, 0, 0.3, 12, 1); }, { at: nave.in.x1 - 1.0 }); }
   pAgainst(P, nave, 'w', P.id + '.statuebase', 0.8, 0.8, 1.2, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.box(-0.4, 0, -0.4, 0.4, 0.5, 0.4); m.mat(MAT.STONE, [0.72, 0.7, 0.66], 0.8); m.box(-0.14, 0.5, -0.1, 0.14, 1.5, 0.1); m.ball(0, 1.62, 0, 0.14); }, { at: 9.5, noClear: false });
   pSpot(P, 'nave', 0, 3.4, PI, { k: 0 });
-  for (const sx of [-1, 1]) pAgainst(P, nave, sx < 0 ? 'w' : 'e', P.id + '.shelfn' + sx, 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, null), { at: 9 });
+  for (const sx of [-1, 1]) pAgainst(P, nave, sx < 0 ? 'w' : 'e', P.id + '.shelfn' + sx, 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, PD.books(c, 1.6)), { at: 9 });
   const bk = pFree(P, nave, P.id + '.lectern', 0.5, 0.5, 1.1, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.2, 0, -0.2, 0.2, 1.0, 0.2); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.28, 1.0, -0.22, 0.28, 1.05, 0.22); }, { near: [-3.2, 10.4] });
   if (bk) pInteract(P, bk.cx, 1.1, bk.cz, Object.assign({ kind: 'read', id: 'chapel.book', r: 1.7 }, READS['chapel.book']), 0);
   pLamp(P, nave, 0, 3.0); pLamp(P, nave, 0, 8.0);
@@ -6229,6 +6251,51 @@ PLANS.chapel = (P, c, info) => {
   for (const [sd, u] of [['n', -2], ['n', 2], ['s', -2], ['s', 2], ['w', 3], ['w', 9], ['e', 3], ['e', 9]]) pTorch(P, crypt, sd, u, 1.7, 8.5);
   const g = P.doors.find(d => d.gate); if (g) P.gate = pGate(P, g, 'chapel.gate', 'cryptkey', 'Iron gate');
   pPier; // no hearth in a chapel
+};
+
+
+// ---- 72g_dress.js ----
+// ───────────────────────── set dressing shared by the designed plans: things that hang, stand and fill ─────────────────────────
+// Everything here draws into the cell's interior mesh (P.c.int) in the plan's canonical frame and records what it occupies through the placement helpers of 72d_plan.js.
+const PD = {};
+// a bookcase's contents: upright spines of varied colour, height and lean, with gaps
+PD.books = (c, len) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.06;
+  while (x < len / 2 - 0.12) { if (R() < 0.12) { x += 0.1 + R() * 0.15; continue; } const w = 0.05 + R() * 0.09, h = 0.18 + R() * 0.1; m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, COL.leather, COL.purple, [0.3, 0.22, 0.14]]), 0.5); m.box(x, y, -0.11, x + w, y + h, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(x + 0.005, y + 0.005, -0.112, x + w - 0.005, y + h - 0.005, -0.1, 0); x += w + 0.004; } };
+// shelves filled with rolled bolts of cloth lying end-on, in a few colours
+PD.bolts = (c, len, cols) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.1; cols = cols || [COL.red, COL.blue, COL.green, COL.purple, [0.7, 0.62, 0.45], [0.55, 0.5, 0.42], [0.25, 0.3, 0.4]];
+  while (x < len / 2 - 0.12) { const r = 0.07 + R() * 0.03; m.mat(MAT.CLOTH, R.pick(cols), 0.5); m.push().T(x + r, y + r, -0.02).RX(PI / 2); m.lathe([[r, -0.14], [r, 0.14]], 7, 2); m.pop(); x += r * 2 + 0.01; } };
+// sacks and jars on a shelf: a plain row of grain bags and pots, for a store
+PD.goods = (c, len) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.1;
+  while (x < len / 2 - 0.15) { const k = R(), w = 0.12 + R() * 0.1; at(m, x + w / 2, y, R.s() * 0.03, R() * 6, () => { if (k < 0.3) Props.sack(m, 0.12 + R() * 0.04, R.pick([[0.7, 0.62, 0.45], [0.6, 0.55, 0.42], [0.5, 0.45, 0.32]])); else if (k < 0.55) Props.jug(m); else if (k < 0.7) Props.cheese(m); else if (k < 0.85) Props.pot(m, 0.1, R.pick([COL.clay, [0.5, 0.42, 0.3], [0.3, 0.3, 0.32]])); else Props.bottle(m); }); x += w + 0.06; } };
+// a rod hung from the ceiling beams on two chains, with hams, herb bundles, pots and onions; its bottom stays above head height
+PD.rack = function (P, room, x, z, len, rot, kinds) {
+  const L = P.lv[room.k], m = P.c.int, R = P.R, H = Math.min(L.H, 3.4); m.m1 = P.zone; m.ao = INT_AO; kinds = kinds || ['herb', 'ham', 'pot', 'herb', 'garlic', 'pot'];
+  at(m, x, L.y + L.H, z, rot, () => {
+    m.mat(MAT.TIMBER, COL.timberDark); m.box(-len / 2, -0.6, -0.035, len / 2, -0.54, 0.035);
+    m.mat(MAT.METAL, COL.black); for (const sx of [-1, 1]) m.box(sx * len * 0.42 - 0.008, -0.6, -0.008, sx * len * 0.42 + 0.008, 0, 0.008);
+    const n = Math.max(3, Math.round(len / 0.38));
+    for (let i = 0; i < n; i++) {
+      const px = -len / 2 + 0.2 + i * (len - 0.4) / (n - 1), k = R.pick(kinds), j = R.s() * 0.03;
+      m.mat(MAT.METAL, COL.black); m.box(px - 0.006, -0.78, -0.006, px + 0.006, -0.6, 0.006);
+      if (k === 'herb') { m.mat(MAT.CLOTH, R.pick([[0.3, 0.4, 0.18], [0.42, 0.4, 0.2], [0.5, 0.38, 0.2]]), 0.5); m.cyl(px + j, -1.12, 0, 0.1, 0.02, 0.34, 6, 1); }
+      else if (k === 'ham') { m.mat(MAT.PLAIN, [0.5, 0.26, 0.2]); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
+      else if (k === 'pot') { m.mat(MAT.METAL, COL.black); m.cyl(px, -1.0, 0, 0.13, 0.16, 0.2, 8, 2); }
+      else { m.mat(MAT.PLAIN, [0.78, 0.7, 0.5]); m.ball(px, -0.95, 0, 0.06, 0.08, 0.06, 5, 3); m.ball(px + 0.02, -1.08, 0, 0.06, 0.08, 0.06, 5, 3); }
+    }
+  });
+  P.lightIn[room.id] = P.lightIn[room.id] || 0;
+};
+// a runner rug along a line (flat, any room): w x len, centred
+PD.rug = (P, room, x, z, w, l, col, rot) => pPut(P, room, P.id + '.rug' + (P.items.length), x, z, rot || 0, w, l, 0.02, pdRug(w, l, col || COL.red), { flat: true, noClear: true });
+// the landing or gallery of a house: a reading table with chairs by a window, a bookcase, a runner rug, banners
+PD.gallery = function (P, room) {
+  const c = P.c, R = P.R, a = room.in;
+  PD.rug(P, room, (a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2 + 1, 2.0, 5.0, [0.32, 0.2, 0.18], 0);
+  for (const sd of ['w', 'n', 's', 'e']) if (pAgainst(P, room, sd, P.id + '.gbooks', 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, PD.books(c, 1.8)), {})) break;
+  const t = pFree(P, room, P.id + '.gtable', 1.3, 0.75, 0.78, 0, pdTable(1.3, 0.75, ['book', 'candle', 'mug'], 3, c), { near: [a.x0 + 1.4, a.z1 - 2.2], surface: true });
+  if (t) { for (const sg of [-1, 1]) { const ch = pPut(P, room, P.id + '.gchair' + sg, t.cx + sg * 0.1, t.cz + sg * 0.8, sg > 0 ? PI : 0, 0.5, 0.5, 0.95, pdChair, { lowOk: true }); } }
+  pFree(P, room, P.id + '.gchest', 0.85, 0.5, 0.58, 0, pdChest, { near: [a.x0 + 0.8, a.z1 - 0.6], lowOk: true });
+  PD.rack(P, room, (a.x0 + a.x1) / 2, a.z0 + 4.2, 1.6, PI / 2, ['herb', 'herb', 'garlic']);
 };
 
 
@@ -7563,7 +7630,7 @@ function infWalls(B, MS, o) {
       if ((wn === 'left' || wn === 'right') && k < ((o.skip && o.skip[wn]) || 0)) continue;
       const P = (u, y, dep) => [s0[0] + W.u[0] * u - W.n[0] * (dep || 0), y, s0[2] + W.u[2] * u - W.n[2] * (dep || 0) - off];       // dep: metres into the wall
       const q = (m2, ua, ub, ya, yb, dep, c2, uv, both) => { if (ub - ua < 0.015 || yb - ya < 0.015) return; g.quad(m2, P(ua, ya, dep), P(ub, ya, dep), P(ub, yb, dep), P(ua, yb, dep), c2, uv || [ua / ts, ya / ts, ub / ts, yb / ts], both); };
-      const bx = (ua, ub, ya, yb, d0, d1, c2) => { const a = P(ua, ya, d0), b = P(ub, yb, d1); g.box(W_, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2]), c2); };
+      const bx = (ua, ub, ya, yb, d0, d1, c2) => { if (d1 >= 0) d1 += 0.012; /* c2: trim boards stand 1.2 cm proud of the wall's back too: their faces were coplanar with the cladding and flickered from inside a cell */ const a = P(ua, ya, d0), b = P(ub, yb, d1); g.box(W_, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2]), c2); };
       const ops = ((o.plan[k] && o.plan[k][wn]) || []).slice().sort((a, b2) => a.u0 - b2.u0), fy = k * H;
       let cur = 0;
       for (const p of ops) { q(mat, cur, p.u0, yb, yt, 0, col); q(mat, p.u0, p.u1, yb, fy + p.v0, 0, col); q(mat, p.u0, p.u1, fy + p.v1, yt, 0, col); cur = p.u1; }

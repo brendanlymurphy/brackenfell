@@ -148,7 +148,7 @@ function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2)
 function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   o = o || {}; const r = pFoot(cx, cz, w, d, rot);
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
-  const L = P.lv[room.k], m = P.c.int; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m));
+  const L = P.lv[room.k], m = P.c.int, t0 = m.ni; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]);          // owner ranges: test/audit.js names the thing a face belongs to
   const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
   if (o.flat) it.kind = 'rug'; return it;
 }
@@ -247,7 +247,8 @@ function pWallEmit(P, wl, B, IN) {
   const origin = fwd ? a : b, perp = wl.c + 0.11 * ns, O = hor ? [origin, perp] : [perp, origin];
   const nv = hor ? [0, 0, ns] : [ns, 0, 0];          // outward normal; u = up x n = (nz, 0, -nx)
   const F = new THREE.Matrix4().makeBasis(KH.V([nv[2], 0, -nv[0]]), KH.V([0, 1, 0]), KH.V(nv)).setPosition(O[0], L.y, O[1]).premultiply(P.MS);
-  const add = (name, uc, s, o) => B.add(name, KH.xf(F, uc, 0, 0, s), o || IN);
+  const INW = wl.cellar ? Object.assign({}, IN, { tint: [0.42, 0.38, 0.35] }) : IN;          // cellar walls: damp, darker stone
+  const add = (name, uc, s, o) => B.add(name, KH.xf(F, uc, 0, 0, s), o || INW);
   const spans = wl.open.map(o => ({ o, s: sOf(o.pos), w: o.type === 'door' ? (o.d.w >= 1.2 ? 2.0 * o.d.w / PW.DOOR : 2.0) : 2.0 })).sort((p, q) => p.s - q.s);
   let cur = 0;
   const fill = (e) => {
@@ -267,7 +268,8 @@ function pWallEmit(P, wl, B, IN) {
       const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];
       add(G + tbl[0], sp.s, S); add(st ? tbl[1] + '_Stained' : tbl[1], sp.s, S, st ? Object.assign({}, IN, { tint: sp.o.glass }) : undefined);
       // the light the window lets in, a little inside it
-      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, sp.o.glass ? sp.o.glass.map(v => 0.5 + v * 1.4) : [1.5, 1.42, 1.28], 'daylight', wl.k);
+      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, sp.o.glass ? sp.o.glass.map(v => 0.35 + v * 1.1) : [1.5, 1.42, 1.28], 'daylight', wl.k);
+      if (sp.o.glass) { const fx = hor ? sp.o.pos : wl.c - ns * 2.1, fz = hor ? wl.c - ns * 2.1 : sp.o.pos; pLight(P, fx, 0.5, fz, 3.4, sp.o.glass.map(v => v * 3.2), 'daylight', wl.k); }          // the coloured pool the window throws on the floor by day
     }
     cur = Math.max(cur, s1);
   }
@@ -283,7 +285,7 @@ function pStairEmit(P, s) {
   m.m1 = P.zone; m.ao = INT_AO;
   for (let i = 0; i < s.n; i++) {
     const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, s.lat - hw, s.lat + hw), top = y0 + (i + 1) * r - 0.02;
-    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0], top - 0.05, q[1], q[2], top, q[3], 4 | (ax === 'x' ? (d > 0 ? 0 : 0) : 0));
+    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4 | 8); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0] - 0.012, top - 0.05, q[1] - 0.012, q[2] + 0.012, top + 0.008, q[3] + 0.012, 4);          // the tread plate overhangs the block by 1 cm (nothing coplanar)
   }
   // side boards and a handrail up the open side
   m.mat(MAT.TIMBER, COL.timberDark);
