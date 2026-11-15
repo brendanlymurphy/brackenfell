@@ -6,18 +6,18 @@ const WILDS = { places: [], P: {}, pads: [], bumps: [], cliffs: [], groves: [], 
 (function wildsLayout() {
   const place = (id, name, x, z, yaw, r, o) => { const p = Object.assign({ id, name, x, z, yaw, r, disc: r + 4 }, o || {}); WILDS.places.push(p); WILDS.P[id] = p; return p; };
   // ── the places (x east, z south; yaw: heading of the place's front, 0 = north, clockwise) ──
-  place('shrine', 'Wayside Shrine', -112, -7, 0, 9, { disc: 12 });
-  place('lumber', 'Hob’s Lumber Camp', -140, -60, 0, 15);
-  place('blind', 'The Hunter’s Blind', -120, 62, 0, 9, { disc: 14 });
-  place('burnt', 'The Burnt Cottage', -108, -108, 0, 10);
-  place('mine', 'The Old Mine', -70, -150, 2.47, 12, { disc: 16 });          // yaw: the portal looks south-east (local +z runs into the hill)
-  place('hermit', 'The Hermit’s Pool', 30, -168, 0, 14, { disc: 18 });
-  place('stones', 'The Standing Stones', 112, -118, 0, 14, { disc: 20 });
+  place('shrine', 'Wayside Shrine', -112, -7, 0, 12, { disc: 12 });
+  place('lumber', 'Hob’s Lumber Camp', -140, -60, 0, 22);
+  place('blind', 'The Hunter’s Blind', -120, 62, 0, 14, { disc: 14 });
+  place('burnt', 'The Burnt Cottage', -108, -108, 0, 14);
+  place('mine', 'The Old Mine', -70, -150, 2.47, 16, { disc: 16 });          // yaw: the portal looks south-east (local +z runs into the hill)
+  place('hermit', 'The Hermit’s Pool', 30, -168, 0, 20, { disc: 18 });
+  place('stones', 'The Standing Stones', 112, -118, 0, 24, { disc: 20 });
   place('battle', 'The Old Battlefield', 150, -52, 0, 20, { disc: 24 });
-  place('bee', 'The Bee Meadow', 34, -70, 0, 12, { disc: 16 });
+  place('bee', 'The Bee Meadow', 34, -70, 0, 15, { disc: 16 });
   place('hamlet', 'Highfold', 116, 104, 0, 26, { disc: 32 });
-  place('fishing', 'The Far Shore', 30, 160, 0, 12, { disc: 16 });
-  place('toll', 'The Toll Ford', -160, 1, 0, 10, { disc: 14 });
+  place('fishing', 'The Far Shore', 30, 160, 0, 15, { disc: 16 });
+  place('toll', 'The Toll Ford', -160, 1, 0, 14, { disc: 14 });
 
   // ── paths (id, width, points). Each begins on an existing road or at the end of another path. ──
   const path = (id, w, pts) => { ROADS.push({ id: 'p.' + id, w, pts, path: true }); WILDS.paths.push(id); };
@@ -66,11 +66,14 @@ const WILDS = { places: [], P: {}, pads: [], bumps: [], cliffs: [], groves: [], 
   WILDS.pads.push([-140, -60, 8, 7], [-108, -108, 9, 6], [-120, 62, 5, 5], [34, -70, 6, 6], [30, 160, 6, 6], [38, -166, 5, 5], [-160, -3, 6, 6], [-112, -7, 4, 4]);
   // the pool under the fall, and the toll-ford brook (water bodies; the meshes are built in 79_wilds.js)
   WILDS.pool = { x: 20, z: -172.5, r: 4.6, dig: 1.35 };
-  WILDS.brook = { pts: [[-171, -60], [-164, -32], [-160, -8], [-159.4, 1.6], [-161, 14], [-166, 38], [-175, 66]], w: 1.9, bank: 3.6 };
+  WILDS.brooks = [];
+  Object.defineProperty(WILDS, 'brookLine', { get() { const k = WILDS.brook; return k.line || (k.line = new Poly(catmull(k.pts, 2))); } });
+  WILDS.brook = { pts: [[-171, -60], [-164, -32], [-160, -8], [-159.4, 1.6], [-161, 14], [-166, 38], [-175, 66]], w: 1.9, bank: 3.6, x0: -195, x1: -140, z0: -100, z1: 100, ford: true }; WILDS.brooks.push(WILDS.brook);
+  WILDS.creek = { pts: [[24.5, -171.5], [33, -170.5], [43, -173], [52.5, -177]], w: 1.5, bank: 3.2, x0: 10, x1: 70, z0: -200, z1: -150, ford: false }; WILDS.brooks.push(WILDS.creek);
 
   // ── forest: clearings round each place, denser stands, birch groves ──
   WILDS.groves.push({ x: -150, z: 98, r: 10, n: 18 }, { x: 52, z: -88, r: 10, n: 16 }, { x: 70, z: 128, r: 10, n: 14 }, { x: 126, z: 128, r: 9, n: 14 }, { x: 160, z: -86, r: 10, n: 16 });
-  WILDS.dense.push({ x: -118, z: 60, r: 42, k: 1.9 }, { x: -50, z: 120, r: 30, k: 1.5 });
+  WILDS.dense.push({ x: -118, z: 60, r: 42, k: 1.25 }, { x: -50, z: 120, r: 30, k: 1.0 });
   // (flower meadow, orchard rows and fields are drawn by 79_wilds.js)
 })();
 
@@ -111,12 +114,13 @@ function wildsH(x, z, h) {
     const q = WILDS.pool, d = hyp(x - q.x, z - q.z);
     if (d < q.r + 5) h = Math.min(h, lerp(wildsBase('pool', q.x, q.z) - q.dig - 0.5 * (1 - (d / q.r) * (d / q.r)), h, smooth(q.r - 0.5, q.r + 4.5, d)));
   }
-  if (WILDS.brook && x < -140 && x > -195) {
-    const b = WILDS.brookLine || (WILDS.brookLine = new Poly(catmull(WILDS.brook.pts, 2))), d = b.dist(x, z, WILDS.brook.bank + 6);
-    if (d < WILDS.brook.bank + 6) {
-      const at = b.at, yw = wildsBrookY(at), cr = ford(x, z), bed = yw - 0.45 + (cr ? 0.25 * cr : 0);
-      h = lerp(h, Math.min(h, yw + 0.5), smooth(WILDS.brook.bank + 6, WILDS.brook.bank, d));
-      h = Math.min(h, lerp(bed, h, smooth(WILDS.brook.w * 0.7, WILDS.brook.bank, d)));
+  for (const k of WILDS.brooks) {
+    if (x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue;
+    const b = k.line || (k.line = new Poly(catmull(k.pts, 2))), d = b.dist(x, z, k.bank + 6);
+    if (d < k.bank + 6) {
+      const at = b.at, yw = wildsBrookY(at, k), cr = k.ford ? ford(x, z) : 0, bed = yw - 0.45 + (cr ? 0.25 * cr : 0);
+      h = lerp(h, Math.min(h, yw + 0.5), smooth(k.bank + 6, k.bank, d));
+      h = Math.min(h, lerp(bed, h, smooth(k.w * 0.7, k.bank, d)));
     }
   }
   return h;
@@ -124,11 +128,12 @@ function wildsH(x, z, h) {
 // the toll ford: the road bed lifts to a gravel bar where the main road crosses the brook (1 on the bar, 0 away from it)
 function ford(x, z) { return 1 - smooth(1.5, 5.5, hyp(x - (-159.5), z - 1.4)); }
 // brook surface height along its length: the ground beside it, never rising downstream
-function wildsBrookY(at) {
-  if (!WILDS._by) {
-    const b = WILDS.brookLine, n = Math.ceil(b.len / 3) + 1, ys = [];
-    let y = 1e9; for (let i = 0; i < n; i++) { const p = b.point(i * 3); y = Math.min(y, terrainBase(p[0], p[1]) - 0.5); ys.push(y); }
-    WILDS._by = ys;
+function wildsBrookY(at, k) {
+  k = k || WILDS.brooks[0];
+  if (!k._by) {
+    const b = k.line || (k.line = new Poly(catmull(k.pts, 2))), n = Math.ceil(b.len / 3) + 1, ys = [];
+    let y = k.top === undefined ? 1e9 : k.top; for (let i = 0; i < n; i++) { const p = b.point(i * 3); y = Math.min(y, terrainBase(p[0], p[1]) - 0.5); ys.push(y); }
+    k._by = ys;
   }
-  const f = Math.min(Math.max(at, 0) / 3, WILDS._by.length - 1.001), i = f | 0; return WILDS._by[i] + (WILDS._by[i + 1] - WILDS._by[i]) * (f - i);
+  const f = Math.min(Math.max(at, 0) / 3, k._by.length - 1.001), i = f | 0; return k._by[i] + (k._by[i + 1] - k._by[i]) * (f - i);
 }
