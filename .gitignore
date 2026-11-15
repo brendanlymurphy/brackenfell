@@ -1,13 +1,5 @@
-node_modules/
+node_modules
 shots/
 *.log
 .DS_Store
-/three.js
-/game.js
-/index.html
-/chars/
-
-# local link to the conversion tool dependencies (kept outside the repo)
-tools/scan/node_modules
-/node_modules
-tools/scan/_bake/
+/cand
