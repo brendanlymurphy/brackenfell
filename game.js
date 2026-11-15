@@ -5604,6 +5604,8 @@ function GP() {
     let n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]; const l = Math.hypot(n[0], n[1], n[2]) || 1; n = n.map(v => v / l);
     const emit = (vs, uvs, nn) => { const b0 = p.pos.length / 3; vs.forEach((v, i) => { p.pos.push(v[0], v[1], v[2]); p.nrm.push(nn[0], nn[1], nn[2]); p.uv.push(uvs[i][0], uvs[i][1]); p.col.push(col[0], col[1], col[2]); }); p.idx.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3); };
     const uvs = [[u[0], u[1]], [u[2], u[1]], [u[2], u[3]], [u[0], u[3]]];
+    // both may be an outward direction: one face only, wound to face that way (kit materials draw both sides themselves; two coincident faces fight for depth and one side goes dark)
+    if (Array.isArray(both)) { if (n[0] * both[0] + n[1] * both[1] + n[2] * both[2] < 0) emit([d, c, b, a], [uvs[3], uvs[2], uvs[1], uvs[0]], [-n[0], -n[1], -n[2]]); else emit([a, b, c, d], uvs, n); return; }
     emit([a, b, c, d], uvs, n);
     if (both) emit([d, c, b, a], [uvs[3], uvs[2], uvs[1], uvs[0]], [-n[0], -n[1], -n[2]]);
   };
@@ -6590,7 +6592,7 @@ function infRoofGen(B, MS, o) {
   const plane = (v0, y0, v1, y1) => {
     const A = P(a0, v0, y0), Bp = P(a1, v0, y0), C = P(a1, v1, y1), D = P(a0, v1, y1);
     const uv = [0, 0, (a1 - a0) / 1.25, slopeLen / 1.25];
-    g.quad(INF_S, A, Bp, C, D, col, uv, true);
+    g.quad(INF_S, A, Bp, C, D, col, uv, [0, 1, 0]);
   };
   plane(-ve, yE, 0, yR); plane(ve, yE, 0, yR);
   const wood = [0.2, 0.17, 0.15];
@@ -6601,7 +6603,7 @@ function infRoofGen(B, MS, o) {
   // plank gables on the wall plane, closing the roof over an exposed end wall
   for (const [u, on, sg] of [[-len / 2, o.gl !== false, -1], [len / 2, o.gr !== false, 1]]) if (on) {
     const A = P(u, -hs, top), Bp = P(u, hs, top), C = P(u, 0, yR);
-    g.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], true);
+    { const O = P(u + sg, 0, top), Z = P(u, 0, top); g.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], [O[0] - Z[0], 0, O[2] - Z[2]]); }
   }
   B.add(g.make('gen_roof_' + (_gn++)), MS, { zone: 0, skyVis: 1, cast: false, inZone: o.inZone || 0, inSkyVis: o.inSky === undefined ? 0.2 : o.inSky });
 }
@@ -8784,7 +8786,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 17 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 18 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
