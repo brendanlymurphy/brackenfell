@@ -6,7 +6,10 @@ function bwDeckY(p, hw, lift) { let g = Terrain.y(p[0], p[1]); for (const [dx, d
 // a walk along a polyline. o: w width, lift above the ground, rails [left, right] (+1: on), deckY(p, i) override, piles: posts down to the ground, ramp: slope the ends down to the ground,
 // railOff(i): true where the fence is left open, col tint
 function bwWalk(bucket, pts, o) {
-  o = o || {}; const hw = (o.w || 1.5) / 2, lift = o.lift === undefined ? 0.3 : o.lift, rails = o.rails || [1, 1], col = o.col || [0.62, 0.56, 0.5], P = [];
+  o = Object.assign({}, o || {});
+  // never fence across the way to a house door: leave the rail open on any stretch close to a building that can be entered
+  { const ro = o.railOff; o.railOff = i => (ro && ro(i)) || (P[i] && SITES.some(st => !st.shell && hyp(st.x - P[i][0], st.z - P[i][1]) < Math.max(st.w, st.d) * 0.5 + 5.5)); }
+  const hw = (o.w || 1.5) / 2, lift = o.lift === undefined ? 0.3 : o.lift, rails = o.rails || [1, 1], col = o.col || [0.62, 0.56, 0.5], P = [];
   for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], n = Math.max(1, Math.ceil(hyp(b[0] - a[0], b[1] - a[1]) / (o.seg || 2.4))); for (let k = 0; k < n; k++) P.push([lerp(a[0], b[0], k / n), lerp(a[1], b[1], k / n)]); }
   P.push(pts[pts.length - 1].slice());
   let Y = P.map((p, i) => o.deckY ? o.deckY(p, i, P) : bwDeckY(p, hw, lift));
