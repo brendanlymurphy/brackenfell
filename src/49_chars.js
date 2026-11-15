@@ -171,11 +171,12 @@ const Chars = (() => {
       }
     }
     for (const c of gltf.animations || []) if (!S.clips[c.name]) S.clips[c.name] = c;       // a body file may bring its own clips
-    const B = { scene, rest: restPose(scene), parts: {}, skel: null, armature: null };
+    const B = { scene, rest: restPose(scene), parts: {}, lodParts: {}, skel: null, armature: null };
     scene.traverse(o => {
       if (!o.isSkinnedMesh) return;
       if (!B.skel) { B.skel = o.skeleton; B.bindMatrix = o.bindMatrix.clone(); }
       const g = o.parent, part = g && g !== scene && !g.isBone && g.children.length && g.children.every(c => c.isSkinnedMesh) ? g.name : o.name;   // a mesh with several materials loads as a group
+      if (/@lod$/.test(part)) { const k = part.slice(0, -4); (B.lodParts[k] = B.lodParts[k] || []).push(o); return; }      // low-detail copies (tools/chars_lod.mjs) are kept apart
       (B.parts[part] = B.parts[part] || []).push(o);
     });
     if (!B.skel) throw new Error(cfg.bodies[n] + ' has no skinned mesh');
@@ -226,9 +227,9 @@ const Chars = (() => {
 
   // ── geometry: the chosen parts of a body, merged per material so a villager costs a handful of draws ──
   const ATTR = [['position', 3], ['normal', 3], ['uv', 2], ['skinIndex', 4], ['skinWeight', 4]];
-  function mergedGeometry(S, body, parts, matName, names) {
-    const key = body + '|' + (matName || '*') + '|' + parts.join(','); let g = S.geo.get(key); if (g !== undefined) return g;
-    const src = [], mids = []; for (const p of parts) for (const m of S.bodies[body].parts[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
+  function mergedGeometry(S, body, parts, matName, names, lod) {
+    const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|lod' : ''); let g = S.geo.get(key); if (g !== undefined) return g;
+    const src = [], mids = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
     if (!src.length) { S.geo.set(key, null); return null; }
     let nv = 0, ni = 0; for (const s of src) { nv += s.attributes.position.count; ni += s.index ? s.index.count : s.attributes.position.count; }
     g = new THREE.BufferGeometry(); const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
@@ -296,6 +297,33 @@ const Chars = (() => {
     return m;
   }
 
+  // ── level of detail ──
+  // A body file may carry a low-detail copy of every mesh (tools/chars_lod.mjs, "<mesh>@lod": about a fifth of the triangles, same skeleton and
+  // material). Beyond LOD.dist[tier] metres the villager is drawn with the copy only. The copy is also what casts the sun shadow, always: close
+  // up it sits on a layer only the near shadow map sees (LOD.shadowLayer), so the full mesh never casts and is never drawn twice.
+  // Far villagers (beyond LOD.slowDist) advance their animation every LOD.slowEvery frames only.
+  const LOD = C.LOD = { dist: { low: 8, medium: 12, high: 20 }, hyst: 1.5, shadowLayer: 3, slowDist: 45, slowEvery: 3, force: TEST && TEST.charlod !== undefined ? TEST.charlod : -1 };    // force: 0 full mesh only, 1 low only, -1 by distance
+  function lodMesh(S, H, root, skeleton, B, body, parts, matName, names, mat) {
+    if (!B.lodParts) return;
+    const g = mergedGeometry(S, body, parts, matName, names, true); if (!g) return;
+    const mesh = new THREE.SkinnedMesh(g, mat); mesh.name = 'villager.lod'; mesh.receiveShadow = true; mesh.castShadow = false; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
+    mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true; mesh.visible = false;
+    (H.lods = H.lods || []).push({ hi: H.meshes[H.meshes.length - 1], lo: mesh });
+  }
+  function lodUpdate(H, d, cast) {
+    if (!H.lods) { for (const m of H.meshes) m.castShadow = cast; return; }
+    const far = LOD.force === 1 ? true : LOD.force === 0 ? false : H.far ? d > (LOD.dist[R.qName] || 13) - LOD.hyst : d > (LOD.dist[R.qName] || 13) + LOD.hyst;
+    if (far !== H.far || H.lodCast !== cast) {
+      H.far = far; H.lodCast = cast;
+      for (const l of H.lods) {
+        if (l.mask === undefined) l.mask = l.hi.layers.mask;           // the layers the game gave this villager
+        l.hi.visible = !far; l.hi.castShadow = false;
+        l.lo.visible = far || cast; l.lo.castShadow = cast; l.lo.layers.mask = far ? l.mask : (1 << LOD.shadowLayer);
+      }
+    }
+    if (!C.shadowLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(LOD.shadowLayer); C.shadowLayerOn = true; }
+  }
+
   // ── spawning ──
   const cloneBones = o => { const c = o.clone(false); for (const ch of o.children) if (ch.isBone) c.add(cloneBones(ch)); return c; };
   C.spawn = function (def) {
@@ -317,6 +345,7 @@ const Chars = (() => {
         mesh.name = 'villager'; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
         mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;
         H.mats.push(mat); H.meshes.push(mesh);
+        lodMesh(S, H, root, skeleton, B, body, parts, null, nameList, mat);
       }
     } else for (const mn of nameList) {
       const g = mergedGeometry(S, body, parts, mn); if (!g) continue;
@@ -324,6 +353,7 @@ const Chars = (() => {
       mesh.name = mn; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
       mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;      // a fixed sphere: each pass (camera, shadow maps) culls villagers itself
       H.mats.push(mat); H.meshes.push(mesh);
+      lodMesh(S, H, root, skeleton, B, body, parts, mn, null, mat);
     }
     for (const k of Object.keys(cfg.bones)) H.bones[k] = byName[cfg.bones[k]] || null;
     H.mixer = new THREE.AnimationMixer(root);
@@ -404,7 +434,9 @@ const Chars = (() => {
     play(H, key);
     const s = st.scale || 1, k = (cfg.scale || 1) * s * H.fit;
     if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1; H.cur.setEffectiveTimeScale(st.speed > 0 && g > 0.2 ? Math.min(Math.max(st.speed / g, 0.6), cfg.maxRate || 1.8) : rate); }
-    H.mixer.update(dt);
+    const dcam = hyp(st.pos[0] - R.cam.pos[0], st.pos[1] - R.cam.pos[1], st.pos[2] - R.cam.pos[2]);
+    if (dcam > LOD.slowDist && H.seed % LOD.slowEvery !== R.frame % LOD.slowEvery) H.slowDt = (H.slowDt || 0) + dt;      // far away: the pose changes on one frame in a few
+    else { H.mixer.update(dt + (H.slowDt || 0)); H.slowDt = 0; }
     const p = st.pos, yaw = st.yaw || 0, face = cfg.faces === -1 ? 0 : Math.PI;
     H.root.scale.setScalar(k);
     if (lying) {
@@ -418,7 +450,7 @@ const Chars = (() => {
       }
       pv.rotation.y = th; pv.position.set(x, y, z);
     }
-    if (st.cast !== undefined && st.cast !== H.cast) { H.cast = st.cast; for (const m of H.meshes) m.castShadow = st.cast; }
+    lodUpdate(H, dcam, st.cast === undefined ? !!H.cast : st.cast); H.cast = st.cast === undefined ? H.cast : st.cast;
     H.uZone.value = st.zone || 0; H.uLight.value = st.light === undefined ? 1 : st.light;
     // Head look. The mixer only rewrites a joint when its animated value changed, so a turn added last frame may still be in the
     // joint: take it out again before adding this frame's.

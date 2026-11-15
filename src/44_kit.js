@@ -205,7 +205,7 @@ const Kit = (() => {
   // ── batches ──
   K_.batch = function (opts) {
     opts = opts || {};
-    const cell = opts.cell || 24, buckets = new Map(), inst = [], B = { count: 0 };
+    const cell = opts.cell || 24, buckets = new Map(), inst = [], B = { count: 0, tally: {} };      // tally: how often each piece was placed (for budgets)
     // o: { zone: 0 outdoors | n the interior of building n, skyVis: 1 outdoors .. ~0.3 indoors, tint: [r,g,b] linear, cast: true, glow: HDR self-illumination,
     //      lit: 0..1 for light-source pieces: the wax around each flame position glows (the flame itself is a particle the game adds),
     //      uvs: [sx, sy] the panel's scale, so plaster and brick keep their texel size instead of stretching
@@ -221,7 +221,7 @@ const Kit = (() => {
         if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
         b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
       }
-      B.count++; return B;
+      B.count++; B.tally[name] = (B.tally[name] || 0) + 1; return B;
     };
     // many copies of one piece (trees, rocks, tufts). matrices: array of Matrix4 / shorthand. o: { tints: [[r,g,b]...], wind, cast, cell, maxDist, zone, skyVis }
     B.addInstanced = function (name, matrices, o) {

@@ -47,7 +47,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 #menuBtn { pointer-events: auto; position: absolute; top: calc(var(--sat) + 8px); right: calc(var(--sar) + 10px); width: 46px; height: 46px; display: grid; place-content: center; gap: 5px; background: var(--panel); border: 1px solid var(--line); border-radius: 50%; }
 #menuBtn span { display: block; width: 18px; height: 2px; background: var(--parch); }
 #purse { position: absolute; top: calc(var(--sat) + 62px); right: calc(var(--sar) + 14px); font-size: 13px; color: var(--gold); text-shadow: 0 1px 3px #000; font-variant-numeric: tabular-nums; }
-#fps { position: absolute; right: calc(var(--sar) + 14px); bottom: calc(var(--sab) + 8px); font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; text-align: right; white-space: pre; text-shadow: 0 1px 2px #000; }
+#fps { position: absolute; left: calc(var(--sal, 0px) + 10px); top: calc(var(--sat) + 120px); font: 10px/1.25 ui-monospace, Menlo, Consolas, monospace; color: #cfe3c0; text-align: left; white-space: pre; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; opacity: 0.85; }
 
 /* ── dialogue ── */
 #dialog { position: fixed; left: 50%; bottom: calc(var(--sab) + 14px); transform: translateX(-50%); width: min(680px, calc(100% - 32px - var(--sal) - var(--sar))); max-height: 78%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--gold); padding: 14px 18px 16px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }

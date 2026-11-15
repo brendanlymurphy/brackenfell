@@ -6,7 +6,8 @@ const Perf = { ft: 16.7, T: 16.7, hold: 3, ceil: 1, ceilT: 0, lowT: 0, acc: 0, n
 const coarse = () => (window.matchMedia && matchMedia('(pointer: coarse)').matches) || Math.min(innerWidth, innerHeight) < 520;
 
 function resize() {
-  const c = G.canvas, pr = Math.min(window.devicePixelRatio || 1, R.q.pr);
+  const c = G.canvas; let pr = Math.min(window.devicePixelRatio || 1, R.q.pr);
+  const long = Math.max(c.clientWidth, c.clientHeight) * pr; if (R.q.maxLong && long > R.q.maxLong) pr *= R.q.maxLong / long;      // cap the long side of the canvas per tier (high-DPI phones and tablets)
   gfxResize(Math.round(c.clientWidth * pr), Math.round(c.clientHeight * pr));
 }
 game.applyQuality = async () => {
@@ -26,10 +27,9 @@ function cadenceDone() {
 }
 // keep the frame rate by trading resolution first, then detail
 function perfUpdate(dtMs, dt) {
-  const P = Perf; P.ft += (dtMs - P.ft) * 0.06; P.acc += dtMs; P.n++;
+  const P = Perf; PerfHud.update(dtMs); P.ft += (dtMs - P.ft) * 0.06; P.acc += dtMs; P.n++;
   if (P.acc > 500) {
     P.fps = Math.round(1000 * P.n / P.acc); P.acc = 0; P.n = 0;
-    if (game.showFps) $('fps').textContent = P.fps + ' fps' + (P.T > 20 ? ' (browser cap)' : '') + '  ' + Math.round(R.scale * 100) + '%  ' + game.tier + '\n' + Math.round(R.stats.tris / 1000) + 'k tris  ' + R.stats.draws + ' draws';
     if (G.errors.length && !game.errSaid) { game.errSaid = true; const m = 'This device reported a graphics error, so the valley may not draw correctly: ' + G.errors[0].slice(0, 260); const n = $('gpuNote'); n.textContent = m; n.hidden = false; if (game.playing) toast(m.slice(0, 190)); }
   }
   if ((TEST && !TEST.loop) || R.busy || document.hidden || !game.playing) return;
@@ -44,7 +44,8 @@ function perfUpdate(dtMs, dt) {
   } else P.capT = 0;
   // a phone that holds full resolution with ease gets one try at the next tier up
   if (game.qualitySetting === 'auto') {
-    if (game.tier === 'medium' && !P.triedHigh) { P.goodT = (R.scale >= 1 && r < 1.04) ? (P.goodT || 0) + dt : 0; if (P.goodT > 9) { P.triedHigh = true; P.probeT = 14; game.autoTier = 'high'; game.applyQuality(); } }
+    if (game.tier === 'medium' && !P.triedHigh && !coarse()) {      // phones and tablets stay on medium: a failed trial of high costs seconds of stutter
+       P.goodT = (R.scale >= 1 && r < 1.04) ? (P.goodT || 0) + dt : 0; if (P.goodT > 9) { P.triedHigh = true; P.probeT = 14; game.autoTier = 'high'; game.applyQuality(); } }
     else if (P.probeT > 0) { P.probeT -= dt; if (R.scale < 0.86) { P.probeT = 0; game.autoTier = 'medium'; R.scale = 1; P.hold = 3; game.applyQuality(); } }
   }
   P.hold -= dt; P.ceilT -= dt;
@@ -61,7 +62,7 @@ function perfUpdate(dtMs, dt) {
   else { P.hold = 0.5; if (r < 1.04) P.raised = false; }
   // out of resolution to give: drop a detail tier (auto only). High detail is not worth keeping below 70% resolution.
   const hi = game.tier === 'high';
-  if (R.scale <= (hi ? 0.7 : 0.55) + 1e-6 && (hi || r > 1.17)) P.lowT += 1; else P.lowT = Math.max(0, P.lowT - 0.5);
+  if (R.scale <= 0.7 + 1e-6 && (hi || r > 1.10)) P.lowT += 1;      // out of resolution to give: below 70% the picture is soft enough that a lighter tier is the better trade else P.lowT = Math.max(0, P.lowT - 0.5);
   if (P.lowT > 5 && game.qualitySetting === 'auto' && game.tier !== 'low') { P.lowT = 0; game.autoTier = hi ? 'medium' : 'low'; R.scale = hi ? 0.9 : 0.8; P.hold = 4; P.raised = false; P.triedHigh = true; game.applyQuality(); toast('Detail lowered to keep things smooth.'); }
 }
 function updateDynamics(dt, chars) {
@@ -118,8 +119,9 @@ let lastT = 0;
 function frame(tms) {
   requestAnimationFrame(frame);
   if (G.lost) return;
-  const dtMs = Math.min(tms - lastT, 100); lastT = tms;
+  const rawMs = tms - lastT, dtMs = Math.min(rawMs, 100); lastT = tms;
   if (dtMs <= 0 || document.hidden) return;
+  PerfHud.frame(rawMs);
   if (Perf.probeN > 0) { Perf.probeBuf.push(dtMs); if (--Perf.probeN === 0) cadenceDone(); return; }
   try {
     const env = tick(dtMs / 1000);
@@ -153,7 +155,7 @@ function startGame(cont) {
   const load = (t, f) => { $('loadText').textContent = t; $('barFill').style.width = Math.round(f * 100) + '%'; return new Promise(r => setTimeout(r, TEST ? 0 : 30)); };
   let t0 = performance.now(); const laps = game.laps = {}, lap = n => { const t = performance.now(); laps[n] = Math.round(t - t0); t0 = t; };
   try {
-    loadSettings(); gfxTexInit(game.qualitySetting === 'auto' ? (TEST && TEST.quality) : game.qualitySetting);
+    loadSettings(); if (PerfHud.url >= 0) { game.showFps = !!PerfHud.url; saveSettings(); } gfxTexInit(game.qualitySetting === 'auto' ? (TEST && TEST.quality) : game.qualitySetting);
     const canvas = $('view');
     try { await gfxInit(canvas); }
     catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'; console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
