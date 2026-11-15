@@ -35,6 +35,18 @@ if (mode === 'shots') {      // one picture per defect (defects.json from defect
       fs.writeFileSync(OUT + '/defects/' + d.id + '.jpg', Buffer.from(jpg, 'base64')); n++; } catch (e) { console.log('FAIL', d.id, String(e.message).slice(0, 160)); } }
   console.log('shots:', n, 'of', todo.length); await s.close(); process.exit(0);
 }
+if (mode === 'quick' || mode === 'baseline') {      // the cheap sweep: geometry, characters, 8 player spots, 12 views (jitter, black, white, flat, glow) at 13:00. Compares with test/qa/baseline.json; exit 1 on new defects.
+  const Q = OUT + '/quick'; fs.mkdirSync(Q, { recursive: true }); const t0 = Date.now(), W = (f, o) => fs.writeFileSync(Q + '/' + f + '.json', JSON.stringify(o));
+  { const s = await open({ webgl: 1, quality: 'low', audit: 1 }); W('geo', JSON.parse(await s.run('return JSON.stringify(QA.geo(null))'))); await s.close(); }
+  { const s = await open({ webgl: 1, quality: 'low' }); W('chars', JSON.parse(await s.run('return JSON.stringify(QA.chars())'))); await s.close(); }
+  { const s = await open({ webgl: 1, quality: 'low', play: 1 }); W('player', JSON.parse(await s.run('__game.step(2, 1/30); return JSON.stringify(QA.player(8, 6))'))); await s.close(); }
+  { const s = await open({ webgl: 1, quality: 'medium' }, [480, 219]); const ids = ['site.inn', 'site.smithy', 'site.elder', 'site.fisher', 'site.shop.s1', 'site.in.12', 'place.wild.mine', 'place.wild.hamlet', 'site.high.a', 'door', 'far', 'end.p.hamlet.b'];
+    const tour = {}; const V = JSON.parse(await s.run('return JSON.stringify(QA.views())')); const pick = []; for (const id of ids) { const v = V.find(q => q.id === id && (id !== 'door' && id !== 'far' || q.area === 'int.inn' || q.area === 'int.chapel')); if (v) pick.push(v); } const v2 = V.find(q => q.id === 'door' && q.area === 'int.chapel'); if (v2) pick.push(v2);
+    for (const v of pick) { const r = JSON.parse(await s.run(`const r = await QA.look(${JSON.stringify(v)}, 13, true); return JSON.stringify(r.out);`)); tour[v.area + '|' + v.id + '|13'] = Object.assign({ v }, r); }
+    W('tour', tour); if (s.msgs.length) console.log('console:', s.msgs.slice(0, 5).join('\n')); await s.close(); }
+  console.log('quick sweep rendered in', Math.round((Date.now() - t0) / 1000), 's');
+  const r = spawnSync('python3', ['-I', root + 'test/qa/defects.py', mode === 'baseline' ? 'baseline' : 'check'], { stdio: 'inherit' }); process.exit(r.status);
+}
 if (mode === 'sheets') { const r = spawnSync('python3', ['-I', root + 'test/qa/sheet.py', OUT], { stdio: 'inherit' }); process.exit(r.status); }
 if (mode === 'geo' || mode === 'chars' || mode === 'player') {
   const only = arg('only', ''), s = await open(mode === 'geo' ? { webgl: 1, quality: 'low', audit: 1 } : mode === 'player' ? { webgl: 1, quality: 'low', play: 1 } : { webgl: 1, quality: 'low' });

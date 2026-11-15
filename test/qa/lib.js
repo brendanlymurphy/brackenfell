@@ -75,7 +75,12 @@ Q.measure = (A, C, B) => {
     if (mx < 10) blk++; if (mn > 244) wht++;
     if (B) { const d = Math.abs(r - B.data[i * 4]) + Math.abs(g - B.data[i * 4 + 1]) + Math.abs(b - B.data[i * 4 + 2]); if (d > 60) part++; }
   }
-  const ns = Math.max(1, N - sky);
+  const ns = Math.max(1, N - sky); let glow1 = 0;
+  if (B) {            // the biggest single blob the particles add (a glow ball), in blocks of 6 x 6 where over half the pixels changed
+    const bw0 = Math.floor(W / 6), bh0 = Math.floor(H / 6), ch = new Uint8Array(bw0 * bh0), sn = new Uint8Array(bw0 * bh0), bd = B.data;
+    for (let by = 0; by < bh0; by++) for (let bx = 0; bx < bw0; bx++) { let c = 0; for (let y = by * 6; y < by * 6 + 6; y++) for (let x = bx * 6; x < bx * 6 + 6; x++) { const i = (y * W + x) * 4; if (Math.abs(a[i] - bd[i]) + Math.abs(a[i + 1] - bd[i + 1]) + Math.abs(a[i + 2] - bd[i + 2]) > 60) c++; } if (c > 18) ch[by * bw0 + bx] = 1; }
+    for (let o = 0; o < ch.length; o++) { if (!ch[o] || sn[o]) continue; const st = [o]; sn[o] = 1; let n = 0; while (st.length) { const q = st.pop(); n++; const qx = q % bw0, qy = (q / bw0) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = qx + dx, y = qy + dy; if (x < 0 || y < 0 || x >= bw0 || y >= bh0) continue; const p2 = y * bw0 + x; if (!ch[p2] || sn[p2]) continue; sn[p2] = 1; st.push(p2); } } glow1 = Math.max(glow1, n * 36 / ns); }
+  }
   // flat regions: 6x6 blocks whose colour never varies by more than 3 levels; join neighbours of the same colour
   const BS = 6, bw = Math.floor(W / BS), bh = Math.floor(H / BS), flat = new Int32Array(bw * bh).fill(-1), col = new Float32Array(bw * bh * 3), ok = new Uint8Array(bw * bh);
   for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
@@ -93,7 +98,7 @@ Q.measure = (A, C, B) => {
   }
   comp.sort((p, q) => q.f - p.f);
   // large black / white regions as components too (blocks of near-black or near-white pixels)
-  return { sky: +(sky / N).toFixed(3), black: +(blk / ns).toFixed(4), white: +(wht / ns).toFixed(4), part: B ? +(part / ns).toFixed(4) : 0, flat: comp[0] ? { f: +comp[0].f.toFixed(4), col: comp[0].col, at: comp[0].at } : null };
+  return { sky: +(sky / N).toFixed(3), black: +(blk / ns).toFixed(4), white: +(wht / ns).toFixed(4), part: B ? +(part / ns).toFixed(4) : 0, glow1: +glow1.toFixed(4), flat: comp[0] ? { f: +comp[0].f.toFixed(4), col: comp[0].col, at: comp[0].at } : null };
 };
 // ---------- one view: both renders and the numbers ----------
 Q.diff = (a, b) => { let n = 0; const x = a.data, y = b.data; for (let i = 0; i < x.length; i += 4) if (Math.abs(x[i] - y[i]) + Math.abs(x[i + 1] - y[i + 1]) + Math.abs(x[i + 2] - y[i + 2]) > 60) n++; return n / (x.length / 4); };

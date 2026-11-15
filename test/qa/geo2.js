@@ -41,12 +41,13 @@ if (want('road')) {
     for (let ci = 0; ci < col.length; ci++) { const c = col[ci]; if (c.y1 - gy < 0.35 || c.y0 > gy + 1.2) continue; if (Math.abs(c.x - x) > 8 || Math.abs(c.z - z) > 8) continue; if (!inObb(c, x, z, 0.1)) continue;
       if (flr.some(f => Math.abs(f.y - gy) > 0.4 && floorHeight(f, x, z) !== null)) continue;
       const k = r.id + '|' + ci; if (!hit.has(k)) hit.set(k, { r: r.id, c, x, z, n: 0 }); hit.get(k).n++; } } }
-  for (const e of hit.values()) push('road', areaAt(e.x, e.z), e.x, Terrain.y(e.x, e.z), e.z, 'road ' + e.r + ' centre line blocked by a ' + (e.c.r !== undefined ? 'round' : (e.c.hx * 2).toFixed(1) + 'x' + (e.c.hz * 2).toFixed(1)) + ' collider h ' + (e.c.y1 - e.c.y0).toFixed(1) + ' (' + e.n + ' samples)', e.n * 0.6);
+  for (const e of hit.values()) if (e.n >= 2) push('road', areaAt(e.x, e.z), e.x, Terrain.y(e.x, e.z), e.z, 'road ' + e.r + ' centre line blocked by a ' + (e.c.r !== undefined ? 'round' : (e.c.hx * 2).toFixed(1) + 'x' + (e.c.hz * 2).toFixed(1)) + ' collider h ' + (e.c.y1 - e.c.y0).toFixed(1) + ' (' + e.n + ' samples)', e.n * 0.6);
 }
 if (want('door')) {
-  for (const s of SITES) { const dl = siteDoorLocal(s, 0), dw = siteToWorld(s, dl[0], dl[1]); let bad = 0, where = '';
-    for (const dist of [1.2, 1.8, 2.6]) { const l = siteDoorLocal(s, dist), w = siteToWorld(s, l[0], l[1]), gy = Terrain.y(w[0], w[1]); for (const c of col) { if (c.y1 - gy < 0.35 || c.y0 > gy + 1.2) continue; if (Math.abs(c.x - w[0]) > 8 || Math.abs(c.z - w[1]) > 8) continue; if (inObb(c, w[0], w[1], 0.3)) { bad++; where += ' ' + dist + 'm'; break; } } }
-    if (bad) push('door', s.id, dw[0], Terrain.y(dw[0], dw[1]), dw[1], 'solid within 0.3 m of the approach at' + where + ' in front of the door', bad); }
+  // the way to a door: 1 m steps from 1 to 7 m straight out. Solid within 0.3 m of a step: the first blocked distance (under 3 m the door cannot be reached; under 7 m the street view is a wall)
+  for (const s of SITES) { const dl = siteDoorLocal(s, 0), dw = siteToWorld(s, dl[0], dl[1]); let first = 0;
+    for (let dist = 1; dist <= 7 && !first; dist += 0.8) { const l = siteDoorLocal(s, dist), w = siteToWorld(s, l[0], l[1]), gy = Terrain.y(w[0], w[1]); for (const c of col) { if (c.y1 - gy < 0.35 || c.y0 > gy + 1.2) continue; if (Math.abs(c.x - w[0]) > 8 || Math.abs(c.z - w[1]) > 8) continue; if (inObb(c, w[0], w[1], 0.3)) { first = dist; break; } } }
+    if (first) push(first < 3 ? 'door' : 'doorwall', s.id, dw[0], Terrain.y(dw[0], dw[1]), dw[1], first < 3 ? 'solid within 0.3 m of the approach ' + first.toFixed(1) + ' m in front of the door' : 'something solid stands ' + first.toFixed(1) + ' m in front of the door (the street view is a wall)', first < 3 ? 3 : 1); }
 }
 if (want('fence')) {
   const T = col.filter(thin).filter(c => c.y1 - c.y0 <= 2.0 && c.y1 - c.y0 >= 0.3 && c.x < 190), seg = c => { const lx = c.hx >= c.hz, hl = lx ? c.hx : c.hz, ux = lx ? c.ax : c.bx, uz = lx ? c.az : c.bz; return [c.x - ux * hl, c.z - uz * hl, c.x + ux * hl, c.z + uz * hl, ux, uz, hl, lx ? c.hz : c.hx]; };
@@ -91,8 +92,9 @@ if (want('walk')) {
   for (const f of flr) {
     if (f.x > 190 || f.y2 !== undefined) continue; const hl = Math.max(f.hx, f.hz), ex = f.hx >= f.hz;
     let gmax = -1e9, wet = 0; for (const [a, b] of [[0, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) { const lx = a * f.hx * 0.9, lz = b * f.hz * 0.9, x = f.x + lx * f.ax + lz * f.bx, z = f.z + lx * f.az + lz * f.bz; gmax = Math.max(gmax, Terrain.y(x, z)); if (waterDepth(x, z) > 0.1) wet++; }
-    if (wet === 0 && f.y - gmax > 0.55 && Math.min(f.hx, f.hz) < 3 && !flr.some(o => o !== f && o.y < f.y - 0.5 && Math.abs(o.x - f.x) < 6 && Math.abs(o.z - f.z) < 6 && floorHeight(o, f.x, f.z) !== null)) { nl++; push('deckfloat', areaAt(f.x, f.z), f.x, f.y, f.z, 'deck ' + (f.hx * 2).toFixed(1) + 'x' + (f.hz * 2).toFixed(1) + ' is ' + (f.y - gmax).toFixed(2) + ' m above land (no water under it)', f.y - gmax); }
-    if (Math.min(f.hx, f.hz) > 0.3 && Math.min(f.hx, f.hz) < 3 && f.y > Terrain.y(f.x, f.z) - 0.2) for (const sg of [-1, 1]) {
+    const rampTo = flr.some(o => o.y2 !== undefined && Math.hypot(o.x - f.x, o.z - f.z) < Math.max(o.hx, o.hz) + Math.max(f.hx, f.hz) + 0.5 && Math.abs(Math.max(o.y, o.y2) - f.y) < 0.4);
+    if (wet === 0 && !rampTo && f.y - gmax > 0.55 && Math.min(f.hx, f.hz) < 3 && !flr.some(o => o !== f && o.y < f.y - 0.5 && Math.abs(o.x - f.x) < 6 && Math.abs(o.z - f.z) < 6 && floorHeight(o, f.x, f.z) !== null)) { nl++; push('deckfloat', areaAt(f.x, f.z), f.x, f.y, f.z, 'deck ' + (f.hx * 2).toFixed(1) + 'x' + (f.hz * 2).toFixed(1) + ' is ' + (f.y - gmax).toFixed(2) + ' m above land (no water under it)', f.y - gmax); }
+    if (Math.min(f.hx, f.hz) > 0.3 && Math.min(f.hx, f.hz) < 3 && Math.max(f.hx, f.hz) > 1.8 * Math.min(f.hx, f.hz) && f.y > Terrain.y(f.x, f.z) - 0.2) for (const sg of [-1, 1]) {
       const ux = ex ? f.ax : f.bx, uz = ex ? f.az : f.bz, x = f.x + ux * sg * (hl + 0.45), z = f.z + uz * sg * (hl + 0.45), g = World.groundAt(x, z, f.y + 0.62), wd = waterDepth(x, z);
       if (g < f.y - 0.62 && !(wd > 0.1 && g > f.y - 4)) { const joined = flr.some(o => o !== f && Math.hypot(o.x - x, o.z - z) < Math.max(o.hx, o.hz) + 0.6 && Math.abs((o.y2 !== undefined ? Math.max(o.y, o.y2) : o.y) - f.y) < 1.4); if (!joined) push('walkdrop', areaAt(x, z), x, f.y, z, 'walkway end drops ' + (f.y - g).toFixed(2) + ' m (limit 0.62): ' + (f.hx * 2).toFixed(1) + 'x' + (f.hz * 2).toFixed(1) + ' deck at y ' + f.y.toFixed(2), f.y - g); }
     }
