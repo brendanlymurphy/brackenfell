@@ -19,6 +19,9 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - **25** Planned interiors for the inn (common room, kitchen, cellar, guest rooms, seven regulars) and chapel (crypt, key quest).
 - **26** Speech dry; open-air echo removed; no discovery jingle; dialogue as white subtitles; buildings no longer glow at night.
 - **27** Voices regenerated with the full-precision model, no pitch-shifting, blended voices for variety.
+- **28** Loading screen with real progress, offline cache (service worker, page fetched network-first), Add to Home Screen, touch
+  tuning, interact highlight, map, journal, settings pages, camera feel, dawn opening; indoor flicker fixes (coplanar faces, cells
+  moved near the origin, tighter depth range); inn regulars made distinct, one person per spot, hand props (lute, hammer, spears, mugs).
 
 ## In progress (branch, owner)
 
@@ -28,8 +31,10 @@ interiors lit by hearths and candles. As realistic as free art allows.
   faces); duplicated and overlapping inn regulars; instruments and hand props; much denser dressing for inn and chapel; then designed
   plans by trade (store, smithy, elder's hall, guardhouse and others), layout families for ordinary houses, cellars, a smugglers'
   tunnel and cave, the watchtower dungeon, the Old Mine, people at home.
-- **Interface** (`fork-u1`): loading screen with real progress, offline cache (service worker), Add to Home Screen, shader warm-up,
-  touch tuning, interact highlight, map, journal, settings, camera feel, first two minutes.
+- **Outdoor look** (`fork-look`, a separate Claude Code session): first-person sword and hand, night windows and glows, scanned
+  trees, one wind, weather. It pushes its branch only; the coordinating session merges.
+- **Defect hunt** (`fork-qa`): scripted walk of every place at four hours, coplanar-face audit outdoors, floating and sunk objects,
+  character problems; fixes in unowned files, reports for the rest.
 
 ## Next
 
