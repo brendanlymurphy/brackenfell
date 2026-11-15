@@ -6365,6 +6365,44 @@ const PLAN_SHIP = { inn: 1, chapel: 1 };          // designed and dressed plans 
 const PLAN_ALL = (TEST && TEST.plans === 'all') || (typeof location !== 'undefined' && /[?&]plans=all\b/.test(location.search));
 function planWanted(site, spec) { return PLAN_ON && !(TEST && TEST.plans === 0) && !!site && (!TEST || TEST.cells !== 0) && (PLAN_ALL || !!PLAN_SHIP[site.id]); }
 
+
+// ── the light budget (the engine lights a view with 6 points, 4 on low): at most TWO real lights per room, a hearth and one that serves night (lantern, torch, candle) and day (window)
+// alike; every other candle, sconce and lamp keeps its emissive flame and glow sprite and is not in World.lights. [c3]
+LIGHT_KINDS.dual = (l, e) => {
+  const a = l.D.power(e), b = l.N.power(e), t = a + b, w = t > 1e-6 ? a / t : 0;
+  for (let i = 0; i < 3; i++) l.c[i] = l.N.c[i] + (l.D.c[i] - l.N.c[i]) * w;
+  return Math.max(a, b);
+};
+function pLightCut(P) {
+  if (TEST && TEST.lightcut === 0) return;
+  const T = P.T, ax = [T[0], T[1], T[2]], ay = [T[4], T[5], T[6]], az = [T[8], T[9], T[10]], o = [T[12], T[13], T[14]];
+  const loc = p => { const d = [p[0] - o[0], p[1] - o[1], p[2] - o[2]]; return [d[0] * ax[0] + d[1] * ax[1] + d[2] * ax[2], d[0] * ay[0] + d[1] * ay[1] + d[2] * ay[2], d[0] * az[0] + d[1] * az[1] + d[2] * az[2]]; };
+  const mine = World.lights.slice(P.lights0).filter(l => l.zone === P.zone), by = {}, keep = new Set(), made = [];
+  for (const l of mine) {
+    const q = loc(l.p); let k = Math.min(...Object.keys(P.lv).map(Number)); for (const kk in P.lv) if (P.lv[kk].y <= q[1] + 0.35 && P.lv[kk].y >= P.lv[k].y) k = +kk;
+    let room = pRoomAt(P, k, q[0], q[2]);
+    if (!room) { let bd = 1e9; for (const id in P.rooms) { const r = P.rooms[id]; if (r.k !== k) continue; const dx = Math.max(r.x0 - q[0], 0, q[0] - r.x1), dz = Math.max(r.z0 - q[2], 0, q[2] - r.z1), d = dx * dx + dz * dz; if (d < bd) { bd = d; room = r; } } }
+    (by[room ? room.id : '-'] = by[room ? room.id : '-'] || []).push({ l, q, room });
+  }
+  P.lightCut = { before: mine.length, rooms: {} };
+  for (const id in by) {
+    const L = by[id], hearth = L.filter(x => x.l.kind === 'fire' && x.l.r >= 9).sort((a, b) => b.l.r - a.l.r)[0];
+    const nights = L.filter(x => x !== hearth && x.l.kind !== 'daylight' && !(x.l.kind === 'fire' && x.l.r >= 9)), days = L.filter(x => x.l.kind === 'daylight');
+    const rm = P.rooms[id], cx = rm ? (rm.x0 + rm.x1) / 2 : 0, cz = rm ? (rm.z0 + rm.z1) / 2 : 0, dc = x => Math.hypot(x.q[0] - cx, x.q[2] - cz);
+    nights.sort((a, b) => (b.l.kind === 'lantern') - (a.l.kind === 'lantern') || (b.l.kind === 'fire') - (a.l.kind === 'fire') || b.l.r - a.l.r || dc(a) - dc(b));
+    days.sort((a, b) => b.l.r - a.l.r || dc(a) - dc(b));
+    const N = nights[0] && nights[0].l, D = days[0] && days[0].l;
+    if (hearth) keep.add(hearth.l);
+    if (N && D) { const d = Object.assign({}, N, { kind: 'dual', N, D, c: N.c.slice(), r: Math.max(N.r, D.r) }); const f = LIGHT_KINDS.dual; d.power = e => f(d, e); made.push(d); keep.add(d); }
+    else if (N) { keep.add(N); if (!hearth && nights.length > 1) { const far = nights.slice(1).sort((a, b) => Math.hypot(b.q[0] - nights[0].q[0], b.q[2] - nights[0].q[2]) - Math.hypot(a.q[0] - nights[0].q[0], a.q[2] - nights[0].q[2]))[0]; if (far && Math.hypot(far.q[0] - nights[0].q[0], far.q[2] - nights[0].q[2]) > 4) keep.add(far.l); } }       // a cellar or crypt has no window: its two torches stand apart
+    else if (D) keep.add(D);
+    if (!hearth && !D && L.length > 3) for (const x of keep) if (L.some(y => y.l === x)) { x.r = Math.max(x.r, 8) * 1.55; x.c = x.c.map(v => v * 1.9); }          // a cellar or crypt that had a torch on every wall: the two that remain are stronger
+    P.lightCut.rooms[id] = (hearth ? 1 : 0) + (N || D ? 1 : 0) + (N && !D && !hearth && keep.size ? 0 : 0);
+  }
+  for (let i = World.lights.length - 1; i >= P.lights0; i--) { const l = World.lights[i]; if (l.zone === P.zone && !keep.has(l)) World.lights.splice(i, 1); }
+  for (const d of made) World.lights.push(d);
+  P.lightCut.after = World.lights.filter(l => l.zone === P.zone).length;
+}
 function planBuild(c) {
   const dd = c.doors[0], site = c.site, m = c.int;
   const inw = [dd.ins[0] - dd.sill[0], 0, dd.ins[2] - dd.sill[2]], il = Math.hypot(inw[0], inw[2]) || 1; inw[0] /= il; inw[2] /= il;
@@ -6386,6 +6424,7 @@ function planBuild(c) {
     for (const id in READS) if (id.startsWith(P.id + '.') && !World.interact.some(i => i.id === id)) pInteract(P, pos[0], pos[1] + 0.2, pos[2], Object.assign({ kind: 'read', id, r: 1.8 }, READS[id]), 0);
     if (P.id === 'store' && !World.interact.some(i => i.id === 'rope')) pInteract(P, pos[0], pos[1] + 0.2, pos[2], { kind: 'shopitem', id: 'rope', r: 1.6 }, 0); }
   { const fy = dd.sill[1]; c.cell.daylightFn = () => Player.pos[1] < fy - 1.0 ? 0 : undefined; }          // below the ground floor no daylight comes in
+  pLightCut(P);
   c.planDone = P; return P;
 }
 const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: { kind: 'study' }, guardhouse: { kind: 'guard' },  inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true } };
@@ -6664,8 +6703,11 @@ PD.try = function (P, room, sd, u, kind, R, fill) {
     case 'niche': return pHang(P, room, sd, u + 0.4, 0.8, 0.5, 1.4, PD.niche(R, R() < 0.5), id + 'ni', { pivot: 0.55 }) ? 0.8 : 0;
     case 'paint': return pArt(P, room, sd, u + 0.4, 'paint') ? 0.9 : 0;
     case 'rack': return pArt(P, room, sd, u + 0.5, 'rack') ? 1.0 : 0;
-    case 'sconce': return pSconce(P, room, sd, u + 0.15) ? 0.5 : 0;
-    case 'torch': return pTorch(P, room, sd, u + 0.15, 1.7, 7) ? 0.5 : 0;
+    case 'sconce': case 'torch': {          // [c3] a bare wall run used to fill with a torch every 0.6 m: a few per room, spaced
+      const q = (P.fixt = P.fixt || {}), key = room.id + kind, area = (room.x1 - room.x0) * (room.z1 - room.z0), cap = Math.max(2, Math.min(5, Math.round(area / 22)));
+      const last = q[key + 'u'] && q[key + 'u'].find(v => v.sd === sd && Math.abs(v.u - u) < 2.4); if ((q[key] || 0) >= cap || last) return 0;
+      const ok = kind === 'sconce' ? pSconce(P, room, sd, u + 0.15) : pTorch(P, room, sd, u + 0.15, 1.7, 7); if (!ok) return 0;
+      q[key] = (q[key] || 0) + 1; (q[key + 'u'] = q[key + 'u'] || []).push({ sd, u }); return 0.5; }
     default: if (KIT_ITEM[kind]) return pKitFloor(P, room, sd, kind, { at: u + (KIT_ITEM[kind][0] * KIT_ITEM[kind][3]) / 2, n: 'd' + n }) ? KIT_ITEM[kind][0] * KIT_ITEM[kind][3] : 0;
       if (KIT_WALL[kind]) return pKitWall(P, room, sd, u + KIT_WALL[kind][0] / 2, kind) ? KIT_WALL[kind][0] : 0;
   }

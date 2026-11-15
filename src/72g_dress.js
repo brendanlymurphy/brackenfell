@@ -111,8 +111,11 @@ PD.try = function (P, room, sd, u, kind, R, fill) {
     case 'niche': return pHang(P, room, sd, u + 0.4, 0.8, 0.5, 1.4, PD.niche(R, R() < 0.5), id + 'ni', { pivot: 0.55 }) ? 0.8 : 0;
     case 'paint': return pArt(P, room, sd, u + 0.4, 'paint') ? 0.9 : 0;
     case 'rack': return pArt(P, room, sd, u + 0.5, 'rack') ? 1.0 : 0;
-    case 'sconce': return pSconce(P, room, sd, u + 0.15) ? 0.5 : 0;
-    case 'torch': return pTorch(P, room, sd, u + 0.15, 1.7, 7) ? 0.5 : 0;
+    case 'sconce': case 'torch': {          // [c3] a bare wall run used to fill with a torch every 0.6 m: a few per room, spaced
+      const q = (P.fixt = P.fixt || {}), key = room.id + kind, area = (room.x1 - room.x0) * (room.z1 - room.z0), cap = Math.max(2, Math.min(5, Math.round(area / 22)));
+      const last = q[key + 'u'] && q[key + 'u'].find(v => v.sd === sd && Math.abs(v.u - u) < 2.4); if ((q[key] || 0) >= cap || last) return 0;
+      const ok = kind === 'sconce' ? pSconce(P, room, sd, u + 0.15) : pTorch(P, room, sd, u + 0.15, 1.7, 7); if (!ok) return 0;
+      q[key] = (q[key] || 0) + 1; (q[key + 'u'] = q[key + 'u'] || []).push({ sd, u }); return 0.5; }
     default: if (KIT_ITEM[kind]) return pKitFloor(P, room, sd, kind, { at: u + (KIT_ITEM[kind][0] * KIT_ITEM[kind][3]) / 2, n: 'd' + n }) ? KIT_ITEM[kind][0] * KIT_ITEM[kind][3] : 0;
       if (KIT_WALL[kind]) return pKitWall(P, room, sd, u + KIT_WALL[kind][0] / 2, kind) ? KIT_WALL[kind][0] : 0;
   }

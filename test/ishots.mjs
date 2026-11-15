@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 const [dir, prefix, list] = process.argv.slice(2), flags = process.argv.slice(5), L = JSON.parse(list), args = ['test/shot.mjs', '--timeout', '420000'];
 if (flags.includes('--webgl')) args.push('--opt', 'webgl=1'); args.push('--opt', 'quality=' + (flags.includes('--low') ? 'low' : 'medium'));
 if (flags.includes('--plans')) args.push('--opt', 'plans=all');
+for (let i = 0; i < flags.length; i++) if (flags[i] === '--opt') args.push('--opt', flags[++i]);
 let cur = null;
 for (const e of L) {
   const nm = `${dir}/${prefix}_${e.name}.png`;
