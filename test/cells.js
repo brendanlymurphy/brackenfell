@@ -30,7 +30,7 @@ for (const c of cells) {
   fx(Player.onGround && Math.abs(Player.pos[1] - c.floorY) < 0.9 && Math.abs(Player.pos[1] - d.ins[1]) < 1.2 || Player.pos[1] > c.floorY - 0.5, tag + ': not on the entrance floor (y ' + Player.pos[1].toFixed(2) + ' vs ' + c.floorY.toFixed(2) + ')');
   fx(World.indoor === 1, tag + ': World.indoor ' + World.indoor);
   fx(!Sky.mesh.visible, tag + ': sky drawn inside'); fx(!Grass.mesh || !Grass.mesh.visible, tag + ': grass drawn inside');
-  const stD = await game.draw(), st = await (async () => { const P = Player.pos, r = await game.shot(P[0], P[1] + 1.66, P[2], Player.yaw * 180 / Math.PI, 0); return { draws: r.draws, tris: r.tris }; })(); fx(stD.draws < 400, tag + ': game.draw ' + stD.draws + ' draws'); fx(R.shadows.lights[0].shadow.autoUpdate === false && !R.shadows.lights[0].shadow.needsUpdate && !R.shadows.lights[1].shadow.needsUpdate, tag + ': sun shadows still rendered inside');
+  const stD = await game.draw(), st = await (async () => { const P = Player.pos, r = await game.shot(P[0], P[1] + 1.66, P[2], Player.yaw * 180 / Math.PI, 0); game.playing = true; return { draws: r.draws, tris: r.tris }; })(); fx(stD.draws < 400, tag + ': game.draw ' + stD.draws + ' draws'); fx(R.shadows.lights[0].shadow.autoUpdate === false && !R.shadows.lights[0].shadow.needsUpdate && !R.shadows.lights[1].shadow.needsUpdate, tag + ': sun shadows still rendered inside');
 fx(ENV.keyCol[0] + ENV.keyCol[1] + ENV.keyCol[2] === 0, tag + ': sun on inside');
   fx(Cells.list.filter(k => k !== c).every(k => k.zones.length === 0 || true), 'x');
   fx(visCells() > 0, tag + ': the cell itself is not drawn'); fx(st.draws < 400, tag + ': ' + st.draws + ' draws inside');
