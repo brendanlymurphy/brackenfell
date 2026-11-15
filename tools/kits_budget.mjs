@@ -49,7 +49,10 @@ for (const file of files) {
     const prims = meshes.flatMap(m => m.listPrimitives()), total = prims.reduce((s, p) => s + trisOf(p), 0);
     if (total <= budget * 1.05) continue;
     const k = budget / total; let after = 0;
-    for (const p of prims) { if (!done.has(p)) { done.add(p); simplify(doc, p, trisOf(p) * k, CARDS.test(node.getName()) || CARDS.test((p.getMaterial() && p.getMaterial().getName()) || '')); } after += trisOf(p); }
+    for (const p of prims) {
+      if (!done.has(p)) { done.add(p); try { simplify(doc, p, trisOf(p) * k, CARDS.test(node.getName()) || CARDS.test((p.getMaterial() && p.getMaterial().getName()) || '')); } catch (e) { console.warn('  skipped a mesh of ' + node.getName() + ': ' + e.message); } }
+      after += trisOf(p);
+    }
     changed++; saved += total - after; log.push(node.getName() + ' ' + Math.round(total) + '>' + Math.round(after));
   }
   for (const a of r.listAccessors()) if (a.listParents().every(p => p.propertyType === 'Root')) a.dispose();

@@ -1,6 +1,6 @@
 // ───────────────────────── trees, bushes and boulders (instanced) ─────────────────────────
 // cell sizes (m) of the instanced groups: one draw per model per cell, so bigger cells mean fewer draws and coarser culling
-const FAR_TREE_CELL = 400, ROCK_CELL = 110;
+const FAR_TREE_CELL = 400, ROCK_CELL = 110, ROCK_SEGS = [8, 5];      // boulder: segments round and from top to bottom (was 9 x 6: 108 triangles, now 80)
 function buildVegetation() {
   const R = rng(9001), pack = new MeshPack();
   // leaf card helper: quad at centre c spanned by half-vectors a (u) and b (v), blob normal n
@@ -79,7 +79,7 @@ function buildVegetation() {
   // one boulder shape (vertex lod 3: the instance shader squashes it differently for every boulder), so boulders are one draw per cell, not three
   const rockAll = new Mesh(256);
   const rockM = [1].map((seed, kk) => {
-    const m = rockAll, nu = 9, nv = 6; m.mat(MAT.ROCK, [1, 1, 1], 0.7); m.m3 = 3 + kk;
+    const m = rockAll, nu = ROCK_SEGS[0], nv = ROCK_SEGS[1]; m.mat(MAT.ROCK, [1, 1, 1], 0.7); m.m3 = 3 + kk;
     const rad = (a, b) => 1 + 0.32 * gnoise(Math.cos(a) * Math.sin(b) * 1.6 + seed * 7.1, Math.cos(b) * 1.6 + Math.sin(a) * Math.sin(b) * 1.6, seed) + 0.12 * gnoise(Math.cos(a) * Math.sin(b) * 4 + 3, Math.sin(a) * Math.sin(b) * 4 + Math.cos(b) * 4, seed + 9);
     const pos = (i, j) => { const a = -(i % nu) / nu * TAU, b = clamp(j / nv, 0.001, 0.999) * PI, r = rad(a, b); return [Math.sin(b) * Math.cos(a) * r, Math.cos(b) * r * 0.62, Math.sin(b) * Math.sin(a) * r * 0.85]; };
     m.grid(nu, nv, (i, j) => { const p = pos(i, j), pa = pos(i + 1, j), pb = pos(i, Math.min(j + 1, nv)), pc = pos(i + nu - 1, j), pd = pos(i, Math.max(j - 1, 0));

@@ -17,7 +17,7 @@ const Grass = { mesh: null, N: 0, range: 0 };
       const t = new THREE.DataTexture(d, 256, 256, THREE.RGBAFormat, THREE.UnsignedByteType);
       t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; G.hashTex = t;
     }
-    const N = Math.max(8, Math.round(range * WINDOW / K.grassCell)), cellSz = K.grassCell, TH = K.terrainHalf, HN = K.heightN;
+    const cellSz = K.grassCell * ((quality && quality.grassThin) || 1), N = Math.max(8, Math.round(range * WINDOW / cellSz)), TH = K.terrainHalf, HN = K.heightN;
     const uOrg = uniform(new THREE.Vector2());
     const blades = range <= 32 ? 3 : 4;      // kept modest: every blade vertex samples several textures, and phones run the middle tier
     U.grassRange.value = range;
@@ -98,12 +98,12 @@ const Grass = { mesh: null, N: 0, range: 0 };
     const mesh = new THREE.Mesh(g, m);
     mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = 'grass';
     scene.add(mesh);
-    Object.assign(Grass, { mesh, N, range, uOrg, scene, blades, tufts: N * N, verts: N * N * blades * 3 });
+    Object.assign(Grass, { mesh, N, range, cellSz, uOrg, scene, blades, tufts: N * N, verts: N * N * blades * 3 });
     return mesh;
   };
   Grass.update = function (camPos, fwdXZ) {
     if (!Grass.mesh) return;
-    const r = Grass.range, c = K.grassCell, fl = Math.hypot(fwdXZ[0], fwdXZ[1]) || 1;
+    const r = Grass.range, c = Grass.cellSz, fl = Math.hypot(fwdXZ[0], fwdXZ[1]) || 1;
     const cx = camPos[0] + fwdXZ[0] / fl * r * AHEAD, cz = camPos[2] + fwdXZ[1] / fl * r * AHEAD;
     Grass.uOrg.value.set(Math.floor(cx / c) - (Grass.N >> 1), Math.floor(cz / c) - (Grass.N >> 1));
   };

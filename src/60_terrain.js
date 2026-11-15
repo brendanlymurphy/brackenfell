@@ -109,7 +109,7 @@ const Terrain = {
 World.groundY = (x, z) => Terrain.y(x, z);
 
 const TERRAIN_FINE = 64;      // was 96; the ground beyond this is drawn with 3 m cells (a 3 m cell at 64 m covers about as many pixels as a 1.5 m cell at 32 m)
-const TERRAIN_TILE = [24, 24, 20];      // cells per tile of the three coarse levels (was 48, 40, 50): a tile is culled as a whole, and the big ones were always in view, so smaller tiles draw less
+const TERRAIN_TILE = [48, 30, 25];      // cells per tile of the three coarse levels (was 48, 40, 50): a tile is culled as a whole, and the big ones were always in view, so smaller tiles draw less
 const TERRAIN_FLAT = 0.08, TERRAIN_BLOCK = 8;       // m: how far ground may stray from a plane before a block is split; cells: the biggest block (a power of two; a level whose tile size it does not divide is drawn cell by cell)
 // Quadtree over one level's grid: returns { corner: Set of (i * 4096 + j) of every leaf corner, byTile: tile key -> [[i, j, size], ...] }.
 function terrainLeaves(L, n, W, hgt, holeC, meshC) {
