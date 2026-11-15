@@ -144,7 +144,7 @@ if (typeof HOUSES !== 'undefined' && typeof KIT_STYLE !== 'undefined' && WILDS.o
 const WBUILD = {};
 WBUILD.shrine = (p, m, R) => {
   // a small stone shrine under a shingled gable, offerings in the niche, a candle that never quite goes out; a milestone and a leaning signpost at the fork
-  wPut(m, p, 0, -5.2, PI, mm => {
+  wPut(m, p, 3.4, -5.2, PI, mm => {   // QA: moved 3.4 m east, it stood on the lumber path
     mm.mat(MAT.STONE, [0.86, 0.86, 0.82], 0.8); mm.box(-0.95, -0.4, -0.7, 0.95, 0.3, 0.7); mm.box(-0.7, 0.3, -0.5, 0.7, 1.55, 0.5);
     mm.mat(MAT.PLAIN, [0.06, 0.05, 0.045]); mm.box(-0.34, 0.62, -0.52, 0.34, 1.32, -0.45);
     mm.mat(MAT.STONE, [0.7, 0.7, 0.66], 0.8); mm.box(-0.42, 0.6, -0.56, 0.42, 0.66, -0.4); mm.box(-0.42, 1.3, -0.56, 0.42, 1.36, -0.4);
@@ -154,9 +154,9 @@ WBUILD.shrine = (p, m, R) => {
     mm.mat(MAT.PLAIN, [0.8, 0.74, 0.55]); mm.cyl(-0.18, 0.66, -0.47, 0.035, 0.03, 0.16, 6, 2); mm.mat(MAT.PLAIN, [0.5, 0.24, 0.2]); mm.cyl(0.14, 0.66, -0.47, 0.05, 0.04, 0.05, 7, 3); mm.mat(MAT.PLAIN, [0.55, 0.62, 0.3]); mm.ball(0.02, 0.7, -0.47, 0.06, 0.04, 0.05, 6, 4);
     addBoxCollider(mm, -0.95, -0.7, 0.95, 0.7, 0, 2.0);
   });
-  { const c = wGround(p, 0, -5.9); World.emitters.push({ type: 'candle', p: [c[0] - 0.18, c[1] + 0.85, c[2] + 0.0], zone: 0, always: true, seed: 0.41 }); }
+  { const c = wGround(p, 3.4, -5.9); World.emitters.push({ type: 'candle', p: [c[0] - 0.18, c[1] + 0.85, c[2] + 0.0], zone: 0, always: true, seed: 0.41 }); }
   // two flat stones before it to kneel on, a bundle of rags on a dead branch
-  for (const [x, z, r] of [[-0.5, -3.9, 0.3], [0.55, -3.7, -0.2]]) wPut(m, p, x, z, r, mm => { mm.mat(MAT.STONE, [0.8, 0.8, 0.77], 0.8); mm.cbox(0, 0, 0, 0.7, 0.1, 0.5, 4); });
+  for (const [x, z, r] of [[2.9, -3.9, 0.3], [3.95, -3.7, -0.2]]) wPut(m, p, x, z, r, mm => { mm.mat(MAT.STONE, [0.8, 0.8, 0.77], 0.8); mm.cbox(0, 0, 0, 0.7, 0.1, 0.5, 4); });
   wPut(m, p, -4.2, -3.2, 0, mm => { mm.mat(MAT.BARK, [0.5, 0.45, 0.4], 0.6); mm.tube([[0, -0.2, 0], [0.04, 1.4, 0.02], [0.0, 2.4, -0.04]], [0.07, 0.05, 0.02], 6);
     mm.beam([0.02, 1.7, 0], [0.9, 2.3, 0.2], 0.04, 0.04); mm.beam([0.02, 1.2, 0], [-0.8, 1.9, -0.1], 0.04, 0.04); mm.mat(MAT.CLOTH, [0.55, 0.2, 0.16], 0.5); for (const [x, y, c] of [[0.6, 2.2, 0], [0.3, 2.0, 1], [-0.5, 1.75, 2], [-0.7, 1.9, 0]]) { mm.quad2([x, y, 0.02], [x - 0.03, y - 0.34, 0.02], [x + 0.06, y - 0.36, 0.04], [x + 0.08, y, 0.02]); }
     addCircleCollider(mm, 0, 0, 0.14, 0, 2); });
@@ -164,7 +164,7 @@ WBUILD.shrine = (p, m, R) => {
   wPut(m, p, 4.6, 2.9, 0.5, mm => { mm.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.5); mm.box(-0.22, -0.2, -0.12, 0.22, 0.85, 0.12); mm.push().T(0, 0.85, 0).RX(PI / 2).T(0, -0.12, 0); mm.cyl(0, 0, 0, 0.22, 0.22, 0.24, 8, 3); mm.pop(); mm.mat(MAT.PLAIN, [0.1, 0.1, 0.1]); mm.box(-0.12, 0.45, 0.118, 0.12, 0.6, 0.125); addBoxCollider(mm, -0.25, -0.15, 0.25, 0.15, 0, 1.2); });
   const sp = wPut(m, p, -3.4, 2.8, 0.25, mm => { Props.signPost(mm, 3); addCircleCollider(mm, 0, 0, 0.14, 0, 2.5); });
   wRead('sign.shrine', 'A weathered sign', 'Boards nailed one above another, the paint long gone and the letters cut deep:\n\nBRACKENFELL: east, along the road.\nTHE HUNTER’S BLIND, the old mill road and the south shore: ask the road.\nTHE LUMBER CAMP: up the track to the north. Mind the sleds.\nTOLL FORD and the passes beyond: west.\n\nBeneath, in a different hand and fresher: “Do not go in. — C.”', [sp[0], sp[1] + 1.6, sp[2]]);
-  for (const [x, z] of [[-2.2, -7.4], [3.2, -6.8], [5.4, -4.2]]) wPut(m, p, x, z, R() * 6, mm => { wCairn(mm, R, 3); });
+  for (const [x, z] of [[-2.2, -7.4], [7.0, -7.8], [5.4, -4.2]]) wPut(m, p, x, z, R() * 6, mm => { wCairn(mm, R, 3); });
 };
 
 WBUILD.lumber = (p, m, R) => {
@@ -405,10 +405,20 @@ WBUILD.bee = (p, m, R) => {
   for (let i = 0; i < 70; i++) { const a = R() * TAU, r = 1.5 + Math.sqrt(R()) * 12; wKit(p, R.pick(['Flower_3_Group', 'Flower_4_Group', 'Flower_3_Single', 'Flower_4_Single', 'Clover_1']), Math.cos(a) * r, Math.sin(a) * r, { s: 1.0 + R() * 0.8, ry: R() * TAU, inst: true, maxDist: 55 }); }
 };
 
+// QA: the drying net is a mesh of threads. dNet (73c_dress.js) was one flat grey-green sheet that read as a white board from a distance
+function wNet() {
+  const key = 'wd_net'; if (Kit.pieces[key]) return key;
+  const g = GP(), c = [0.26, 0.28, 0.22], W = 'MI_WoodTrim', C = 'MI_Trim_Cloth';
+  g.beam(W, [-1.0, 1.5, 0], [1.0, 1.5, 0], 0.014, [0.3, 0.25, 0.2]);
+  for (const x of [-1.0, 1.0]) g.box(W, x - 0.04, 0, -0.04, x + 0.04, 1.6, 0.04, [0.3, 0.25, 0.2], GPU.wood);
+  for (let i = 0; i <= 8; i++) { const x = -0.95 + i * 0.2375, y1 = 0.55 + 0.04 * ((i * 7) % 3); g.beam(C, [x, 1.5, 0.01], [x * 0.98, y1, 0.07], 0.007, c); }
+  for (let j = 1; j <= 5; j++) { const y = 1.5 - j * 0.17; g.beam(C, [-0.95 + 0.04 * j * 0.3, y, 0.012 + 0.012 * j], [0.95 - 0.04 * j * 0.3, y, 0.012 + 0.012 * j], 0.006, c); }
+  return g.make(key);
+}
 WBUILD.fishing = (p, m, R) => {
   // beached clinker boats, a drying rack hung with nets, a smoking rack over a small fire, a low shelter, barrels and baskets, a jetty into the lake
-  wKit(p, () => dBoat(rng(5)), -3.5, -3.0, { s: 1.5, ry: 0.35, col: 0.9, h: 0.5 }); wKit(p, () => dBoat(rng(5)), 2.2, -5.4, { s: 1.35, ry: -0.2, rz: 0.05, col: 0.85, h: 0.5 });
-  wKit(p, () => dNet(rng(5)), 5.2, 0.8, { s: 1.5, ry: 0.4, col: 0.4, h: 1.6 }); wKit(p, () => dNet(rng(5)), 7.4, -0.6, { s: 1.5, ry: -0.2, col: 0.4, h: 1.6 });
+  wKit(p, () => dBoat(rng(5)), -3.5, -3.0, { s: 1.5, ry: 0.35, col: 0.9, h: 0.5, dy: 0.6 }); wKit(p, () => dBoat(rng(5)), 2.2, -5.4, { s: 1.35, ry: -0.2, rz: 0.05, col: 0.85, h: 0.5, dy: 0.6 });
+  wKit(p, () => wNet(), 5.2, 0.8, { s: 1.5, ry: 0.4, col: 0.4, h: 1.6 }); wKit(p, () => wNet(), 7.4, -0.6, { s: 1.5, ry: -0.2, col: 0.4, h: 1.6 });
   wPut(m, p, 3.6, 4.0, 0.3, mm => { wHut(mm, 3.4, 2.6, { h: 1.9, rise: 0.8, wall: MAT.PLANKS, wc: [0.66, 0.6, 0.52], roof: MAT.THATCH, door: 0.6 }); });
   const fp = wPut(m, p, -2.2, 4.2, 0, mm => {
     mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; mm.ball(Math.cos(a) * 0.5, 0.06, Math.sin(a) * 0.5, 0.13, 0.1, 0.12, 6, 4); }
