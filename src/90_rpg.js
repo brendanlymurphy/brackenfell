@@ -133,7 +133,7 @@ const _M4 = () => new THREE.Matrix4();
 RPG.xf = (x, y, z, rx, ry, rz, sx, sy, sz) => _M4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx || 0, ry || 0, rz || 0)), new THREE.Vector3(sx === undefined ? 1 : sx, sy === undefined ? (sx === undefined ? 1 : sx) : sy, sz === undefined ? (sx === undefined ? 1 : sx) : sz));
 // a one-handed sword: grip at the origin, blade along +y. len = blade length, tone = blade brightness
 RPG.swordGeo = function (len, tone, wide) {
-  const T = THREE, st = [0.60 * tone, 0.62 * tone, 0.66 * tone], w = wide || 0.026;
+  const T = THREE, st = [0.30 * tone, 0.31 * tone, 0.34 * tone], w = wide || 0.026;
   return RPG.merge([
     [new T.CylinderGeometry(0.016, 0.019, 0.15, 7), RPG.xf(0, 0, 0), [0.07, 0.04, 0.025]],
     [new T.SphereGeometry(0.025, 8, 6), RPG.xf(0, -0.092, 0), [0.16, 0.13, 0.09]],
