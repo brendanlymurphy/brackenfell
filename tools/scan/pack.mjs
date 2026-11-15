@@ -1,3 +1,4 @@
+// SUPERSEDED by slim.mjs for the shipped pack (kits/scan.glb). Kept for the full 22+26 MB study packs.
 // Merges the converted per-model GLBs into themed packs and writes the catalogue.
 // usage: node tools/scan/pack.mjs <accepted.txt> <cache dir> <kits dir>
 import fs from 'node:fs';
