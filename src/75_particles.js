@@ -26,6 +26,10 @@ function fxUpdate(dt, time, env, cam) {
       if ((lit < 0.05 && !e.always) || dist > 40) continue;
       const k = e.always ? 1 : lit;
       put(e.p[0], e.p[1], e.p[2], 0.05, 1, 1, 1, 0.9 * k, 0, 2, 1.7, e.seed); put(e.p[0], e.p[1] + 0.01, e.p[2], 0.2, 1.0, 0.6, 0.22, 0.5 * k, 0, 0, 1, e.seed);
+    } else if (e.type === 'torch') {             // wall torches and standing candelabra: always burning
+      if (dist > 55) continue;
+      const fl = flick(time, e.seed * 9), sz = e.size || 0.16;
+      put(e.p[0], e.p[1] + sz * 0.45, e.p[2], sz, 1, 1, 1, 0.9 * fl, 0, 2, 1.5, e.seed); put(e.p[0], e.p[1] + sz * 0.4, e.p[2], sz * 4.2, 1.0, 0.5, 0.16, 0.2 * fl, 0, 0, 1, e.seed);
     } else if (e.type === 'lantern') {
       if (lit < 0.05 || dist > 170) continue;
       put(e.p[0], e.p[1], e.p[2], 0.11, 1.0, 0.75, 0.35, 3.0 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.75 + dist * 0.012, 1.0, 0.55, 0.2, 0.26 * lit, 0, 0, 1, e.seed);

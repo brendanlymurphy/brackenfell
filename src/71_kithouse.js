@@ -161,6 +161,7 @@ function kitShell(c) {
       ext.pop();
     }
   }
+  c.kCol0 = World.colliders.length;
   // lanterns by the doors
   for (const l of c.kDoorLamps) {
     add(l.F, 'Lantern_Wall', l.u, l.v, 0.03, 0.8, { zone: 0, skyVis: 1, lit: 1 });
@@ -177,7 +178,9 @@ function kitChimney(c, lx, lz) {
 }
 
 // ── furnishing: Props.* calls land here while kits are loaded and are answered with kit pieces at the same spot ──
-const KITP = { rnd: rng(4242) };
+const KITP = { rnd: rng(4242), lc: {} };
+// only the first few small flames in a room cast light: the renderer lights a view with its eight strongest lights, and hearths must stay among them
+const kitLightOk = (zone, cap) => { const n = KITP.lc[zone] = (KITP.lc[zone] || 0) + 1; return n <= cap; };
 function kitIntBatch(zone) {
   let k = World.kitInt[zone];
   if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
@@ -189,15 +192,27 @@ function kp(m, name, x, y, z, s, ry, extra) {
   let B; if (zone) B = kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: 40 }); B = World.kitYard; }
   B.add(name, KH.xf(new THREE.Matrix4().fromArray(m.m), x, y, z, s, ry), Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone }, extra || {}));
 }
+// a light-source piece: the piece itself with glowing wax, one flame per candle tip, one point light for the whole piece
+function kitLit(m, name, x, y, z, s, ry, o) {
+  const zone = m.m1 | 0, M = KH.xf(new THREE.Matrix4().fromArray(m.m), x, y, z, s, ry), pts = Kit.lights(name), v = new THREE.Vector3(), c = [0, 0, 0];
+  kp(m, name, x, y, z, s, ry, { lit: 1 });
+  for (const p of pts) { v.set(p[0], p[1], p[2]).applyMatrix4(M); c[0] += v.x / pts.length; c[1] += v.y / pts.length; c[2] += v.z / pts.length; World.emitters.push(o.flame === 'torch' ? { type: 'torch', p: [v.x, v.y, v.z], zone, size: o.size } : { type: 'candle', p: [v.x, v.y + 0.02, v.z], zone, always: !!o.always }); }
+  if (!pts.length) { v.set(0, 0.2, 0).applyMatrix4(M); c[0] = v.x; c[1] = v.y; c[2] = v.z; }
+  if (o.cap === undefined || kitLightOk(zone, o.cap)) addLight([c[0], c[1] + 0.1, c[2]], o.r || 5, o.c || [1.9, 1.15, 0.5], zone, o.kind || 'candle');
+}
 (function kitPropsInstall() {
   const wrap = (name, fn) => { const orig = Props[name]; Props[name] = function () { return kitReady() ? fn.apply(Props, arguments) : orig.apply(Props, arguments); }; };
-  wrap('table', (m, len, wid, h) => { h = h || 0.76; kp(m, 'Table_Large', 0, 0, 0, [len / 2.85, h / 0.81, wid / 1.1]); addBoxCollider(m, -len / 2, -wid / 2, len / 2, wid / 2, 0, h); });
+  wrap('table', (m, len, wid, h) => {
+    h = h || 0.76; kp(m, 'Table_Large', 0, 0, 0, [len / 2.85, h / 0.81, wid / 1.1]); addBoxCollider(m, -len / 2, -wid / 2, len / 2, wid / 2, 0, h);
+    if ((m.m1 | 0) && len >= 1.4 && KITP.rnd() < 0.65) kitLit(m, 'CandleStick_Triple', len * 0.18, h, 0.03, 1, KITP.rnd() * 3, { r: 5.0, c: [1.9, 1.15, 0.5], kind: 'candle', flame: 'candle', cap: 3 });
+  });
   wrap('bench', (m, len, noCol) => { kp(m, 'Bench', 0, 0, 0, [len / 2.78, 0.46 / 0.52, 0.66]); if (!noCol) addBoxCollider(m, -len / 2, -0.16, len / 2, 0.16, 0, 0.46); });
   wrap('stool', m => kp(m, 'Stool', 0, 0, 0, [0.8, 0.45 / 0.58, 0.8]));
   wrap('chair', m => kp(m, 'Chair_1', 0, 0, 0, [0.85, 0.9, 0.85], KITP.chairRy));
   wrap('bed', (m, w) => { w = w || 1.0; kp(m, KITP.rnd() < 0.5 ? 'Bed_Twin1' : 'Bed_Twin2', 0, 0, 0, [(w + 0.14) / 1.88, 0.74, 2.08 / 2.41], KITP.bedRy); addBoxCollider(m, -w / 2, -1, w / 2, 1, 0, 0.6); });
   wrap('chest', (m, w) => { w = w || 0.85; const s = w / 1.2; kp(m, 'Chest_Wood__Base', 0, 0.01, 0, s, KITP.chestRy); kp(m, 'Chest_Wood__Lid', 0, 0.01, 0, s, KITP.chestRy); addBoxCollider(m, -w / 2, -0.25, w / 2, 0.25, 0, 0.6); });
   wrap('barrel', (m, r, h, noCol) => { r = r || 0.33; h = h || 0.9; kp(m, 'Barrel', 0, 0, 0, [r / 0.35, h / 0.9, r / 0.35], KITP.rnd() * 6); if (!noCol) addCircleCollider(m, 0, 0, r, 0, h); });
+  wrap('keg', (m, r, len) => { const s = (2 * r + 0.3) / 1.25; kp(m, 'Barrel_Holder', 0, 0, 0, [len / 1.15, s, s]); });
   wrap('crate', (m, s, noCol) => { s = s || 0.6; const k = s / 0.88; kp(m, 'Crate_Wooden', 0, 0.05 * k, 0, k); if (!noCol) addBoxCollider(m, -s / 2, -s / 2, s / 2, s / 2, 0, s); });
   wrap('sack', (m, s) => { s = s || 0.3; kp(m, 'Bag', 0, 0, 0, 1.9 * s / 0.8, KITP.rnd() * 6); });
   wrap('pot', (m, s) => { s = s || 0.14; kp(m, KITP.rnd() < 0.5 ? 'Vase_4' : 'Vase_2', 0, 0, 0, 2.1 * s / 0.5); });
@@ -210,17 +225,107 @@ function kp(m, name, x, y, z, s, ry, extra) {
     const name = tall ? 'Candle_2' : 'Candle_1', lp = Kit.lights(name)[0] || [0, tall ? 0.27 : 0.15, 0];
     kp(m, name, 0, 0, 0, 1, 0, { lit: 1 });
     World.emitters.push({ type: 'candle', p: wp(m, lp[0], lp[1] + 0.02, lp[2]), zone: ctx.zone, always: !!ctx.always });
-    if (ctx.candleLight !== false) addLight(wp(m, lp[0], lp[1] + 0.1, lp[2]), 4.2, [1.5, 0.95, 0.42], ctx.zone, 'candle');
+    if (ctx.candleLight !== false && kitLightOk(ctx.zone | 0, 2)) addLight(wp(m, lp[0], lp[1] + 0.1, lp[2]), 4.6, [1.6, 1.0, 0.44], ctx.zone, 'candle');
   });
   wrap('cauldron', (m, r) => { r = r || 0.24; kp(m, 'Cauldron', 0, 0, 0, 2.1 * r / 0.99); });
   wrap('anvil', m => { kp(m, 'Anvil_Log', 0, 0, 0, 0.78); addCircleCollider(m, 0, 0, 0.32, 0, 0.8); });
   wrap('sword', m => kp(m, 'Sword_Bronze', 0, 0.2, 0, 0.9));
   wrap('shield', m => kp(m, 'Shield_Wooden', 0, 0, 0, 1.08));
 })();
-KITP.chairRy = 0; KITP.bedRy = 0; KITP.chestRy = 0;
+KITP.chairRy = PI; KITP.bedRy = 0; KITP.chestRy = PI;       // which way each kit piece faces relative to the generated prop it stands in for
 
 // extra dressing per building, once its own interior has been laid out
-function kitDress(c) { }
+// Floor pieces go against free wall, wall pieces hang where no window or tall furniture is in the way.
+// footprint along the wall, depth, tall, scale, [light]
+const KIT_ITEM = {
+  Bookcase_2: [1.46, 0.43, 1, 0.9], Cabinet: [1.36, 0.38, 0, 1], Nightstand_Shelf: [0.7, 0.4, 0, 0.9], Workbench: [2.02, 1.02, 0, 0.95], WeaponStand: [1.39, 0.98, 0, 0.85],
+  Dummy: [0.8, 0.6, 0, 0.95], Barrel: [0.7, 0.7, 0, 1], Barrel_Apples: [0.7, 0.7, 0, 1], Crate_Wooden: [0.86, 0.9, 0, 0.8], Bag: [0.66, 0.54, 0, 0.9], Bucket_Wooden_1: [0.43, 0.4, 0, 1],
+  Vase_2: [0.69, 0.69, 0, 0.8], FarmCrate_Apple: [0.71, 0.45, 0, 1], FarmCrate_Carrot: [0.71, 0.57, 0, 1], CandleStick_Stand: [0.6, 0.6, 0, 0.95, 1], BookStand: [0.51, 0.51, 0, 1],
+  Whetstone: [1.14, 0.9, 0, 0.8], Barrel_Holder: [1.36, 0.74, 0, 0.9],
+};
+const KIT_WALL = {            // width, height of the pivot above the floor, stand-off from the wall
+  Torch_Metal: [0.5, 1.85, 0.01], Shelf_Simple: [1.2, 1.55, 0.01], Shelf_Arch: [1.25, 1.8, 0.01], Shelf_Small_Bottles: [1.15, 1.5, 0.01], Peg_Rack: [1.2, 1.75, 0.01],
+  Shield_Wooden: [0.7, 1.9, 0.01], Banner_1_Cloth: [0.85, 2.7, 0.05], Banner_2_Cloth: [0.85, 2.6, 0.05], Axe_Bronze: [0.4, 1.75, 0.04], Pickaxe_Bronze: [0.85, 1.8, 0.08], Sword_Bronze: [0.35, 1.5, 0.04],
+};
+const KIT_DRESS = {
+  inn: { floor: ['CandleStick_Stand', 'Barrel_Holder', 'Cabinet', 'Barrel', 'Crate_Wooden', 'Bag', 'Barrel'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Shield_Wooden', 'Torch_Metal', 'Banner_2_Cloth', 'Peg_Rack', 'Shelf_Simple', 'Torch_Metal'] },
+  smithy: { floor: ['Workbench', 'WeaponStand', 'Barrel', 'Whetstone', 'Crate_Wooden', 'Bucket_Wooden_1'], wall: ['Torch_Metal', 'Peg_Rack', 'Pickaxe_Bronze', 'Axe_Bronze', 'Shield_Wooden', 'Torch_Metal'] },
+  store: { floor: ['Cabinet', 'Bookcase_2', 'Crate_Wooden', 'FarmCrate_Apple', 'Barrel', 'FarmCrate_Carrot', 'Bag', 'Vase_2', 'Nightstand_Shelf', 'Barrel_Apples'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch', 'Torch_Metal', 'Peg_Rack'] },
+  elder: { floor: ['Bookcase_2', 'BookStand', 'Bookcase_2', 'CandleStick_Stand', 'Cabinet', 'Nightstand_Shelf'], wall: ['Shelf_Arch', 'Torch_Metal', 'Banner_2_Cloth', 'Shelf_Simple'] },
+  herbalist: { floor: ['Cabinet', 'Nightstand_Shelf', 'Vase_2', 'Bucket_Wooden_1', 'Bag', 'Crate_Wooden'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch'] },
+  guardhouse: { floor: ['WeaponStand', 'Dummy', 'Barrel', 'Crate_Wooden', 'Nightstand_Shelf'], wall: ['Shield_Wooden', 'Torch_Metal', 'Peg_Rack', 'Banner_1_Cloth', 'Sword_Bronze', 'Torch_Metal'] },
+  weaver: { floor: ['Cabinet', 'Nightstand_Shelf', 'Bag', 'Crate_Wooden', 'Vase_2'], wall: ['Shelf_Simple', 'Torch_Metal', 'Banner_2_Cloth', 'Peg_Rack'] },
+  mill: { floor: ['Bag', 'Barrel', 'Bag', 'Crate_Wooden', 'Bag', 'Bucket_Wooden_1', 'Nightstand_Shelf'], wall: ['Torch_Metal', 'Peg_Rack', 'Shelf_Simple'] },
+  farm: { floor: ['FarmCrate_Apple', 'Barrel_Apples', 'FarmCrate_Carrot', 'Bag', 'Cabinet', 'Bucket_Wooden_1'], wall: ['Shelf_Simple', 'Torch_Metal', 'Peg_Rack'] },
+  hunter: { floor: ['Crate_Wooden', 'Barrel', 'Bag', 'WeaponStand'], wall: ['Torch_Metal', 'Peg_Rack', 'Axe_Bronze', 'Shield_Wooden'] },
+  fisher: { floor: ['Barrel', 'Bucket_Wooden_1', 'Crate_Wooden'], wall: ['Torch_Metal', 'Peg_Rack'] },
+  chapel: { floor: ['CandleStick_Stand', 'CandleStick_Stand', 'BookStand', 'CandleStick_Stand', 'CandleStick_Stand'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal', 'Banner_2_Cloth', 'Torch_Metal', 'Banner_1_Cloth', 'Torch_Metal'] },
+};
+// extra dressing per building, once its own interior has been laid out
+function kitDress(c) {
+  const { site, w, d, H, hd, zone, spec } = c, id = site.id, st = spec.kitStyle, R = c.kR, dress = KIT_DRESS[id] || {}, e = 0.21, sy = H / 3;
+  const X0 = -w / 2 + e, X1 = w / 2 - e, Z0 = -hd + e, Z1 = hd - e, m = { m: c.Ms, m1: zone, ao: INT_AO }, EXT = { zone: 0, skyVis: 1 };
+  // is this patch of floor (house-local) taken by something the house has already registered?
+  const blocked = (x, z, r) => {
+    const p = m4.tp(c.Ms, [x, 0, z]);
+    for (let i = c.kCol0; i < World.colliders.length; i++) {
+      const k = World.colliders[i]; if (k.y0 > p[1] + 2.2) continue;
+      if (k.r !== undefined) { if (hyp(k.x - p[0], k.z - p[2]) < k.r + r) return true; continue; }
+      const dx = p[0] - k.x, dz = p[2] - k.z; if (Math.abs(dx * k.ax + dz * k.az) < k.hx + r && Math.abs(dx * k.bx + dz * k.bz) < k.hz + r) return true;
+    }
+    for (const dd of c.doors) if (hyp(dd.ins[0] - p[0], dd.ins[2] - p[2]) < 1.25 + r) return true;
+    for (const k in World.spots) { const s = World.spots[k]; if (s.site === id && Math.abs(s.p[1] - p[1]) < 1.5 && hyp(s.p[0] - p[0], s.p[2] - p[2]) < 0.6 + r) return true; }
+    return false;
+  };
+  const sides = [
+    { wn: 'back', len: X1 - X0, at: (u, o) => [X0 + u, Z1 - o], ry: PI, lo: X0 }, { wn: 'left', len: Z1 - Z0, at: (u, o) => [X0 + o, Z0 + u], ry: PI / 2, lo: Z0 },
+    { wn: 'right', len: Z1 - Z0, at: (u, o) => [X1 - o, Z0 + u], ry: -PI / 2, lo: Z0 }, { wn: 'front', len: X1 - X0, at: (u, o) => [X0 + u, Z0 + o], ry: 0, lo: X0 }];
+  const nearOpening = (sd, u, half, doorsOnly) => c.openings[sd.wn].some(o => (!doorsOnly || o.door) && Math.abs((o.def.pos || 0) - sd.lo - u) < half + (o.door ? 1.0 : 0.75));
+  const tall = [];           // [side, u, half] of tall furniture, so nothing is hung behind it
+  // ── floor pieces along the walls ──
+  const queue = (dress.floor || []).slice(); let guard = 0;
+  for (let si = 0; si < 8 && queue.length; si++) {
+    const sd = sides[(si + (R() * 4 | 0)) % 4];
+    for (let u = 0.5; u < sd.len - 0.5 && queue.length && guard++ < 400; u += 0.3) {
+      const name = queue[0], it = KIT_ITEM[name]; if (!it) { queue.shift(); continue; }
+      const sc = it[3], wid = it[0] * sc, dep = it[1] * sc, half = wid / 2;
+      if (u - half < 0.12 || u + half > sd.len - 0.12 || nearOpening(sd, u, half, !it[2])) continue;
+      const p = sd.at(u, dep / 2 + 0.03), pa = sd.at(u - half * 0.7, dep / 2 + 0.03), pb = sd.at(u + half * 0.7, dep / 2 + 0.03), r = Math.min(dep, wid) * 0.5;
+      if (blocked(p[0], p[1], r) || blocked(pa[0], pa[1], r) || blocked(pb[0], pb[1], r)) continue;
+      const ry = sd.ry + (it[2] || wid > 1 ? 0 : R.s() * 0.5), y = 0.02 + (name === 'Crate_Wooden' ? 0.05 * sc : 0);
+      if (it[4]) kitLit(m, name, p[0], y, p[1], sc, ry, { r: 6.5, c: [2.3, 1.4, 0.6], kind: 'candle' }); else kp(m, name, p[0], y, p[1], sc, ry);
+      const fm = { m: m4.mul(m4.create(), c.Ms, m4.rotY(m4.translate(m4.create(), p[0], 0, p[1]), -sd.ry)) };
+      if (wid > 0.55) addBoxCollider(fm, -half, -dep / 2, half, dep / 2, 0, it[2] ? 2.2 : 0.9);
+      if (it[2]) tall.push([sd, u, half]);
+      queue.shift(); u += wid + 0.1 + R() * 0.5;
+    }
+  }
+  // ── things on the walls ──
+  const hung = []; let torches = 0;
+  const wq = (dress.wall || []).slice();
+  for (let si = 0; si < 8 && wq.length; si++) {
+    const sd = sides[(si + 1 + (R() * 4 | 0)) % 4];
+    for (let u = 0.8 + R() * 0.6; u < sd.len - 0.7 && wq.length; u += 0.45) {
+      const name = wq[0], it = KIT_WALL[name]; if (!it) { wq.shift(); continue; }
+      const half = it[0] / 2, y = Math.min(it[1] * (name.startsWith('Banner') ? sy : 1), H - 0.3);
+      if (nearOpening(sd, u, half, false) || tall.some(t => t[0] === sd && Math.abs(t[1] - u) < t[2] + half + 0.1) || hung.some(t => t[0] === sd && Math.abs(t[1] - u) < t[2] + half + 0.5)) continue;
+      const p = sd.at(u, it[2]);
+      if (blocked(sd.at(u, 0.3)[0], sd.at(u, 0.3)[1], 0.12) && y < 2.4) continue;           // a hearth or stair is in front of this stretch of wall
+      if (name === 'Torch_Metal') { kitLit(m, name, p[0], y, p[1], 1, sd.ry, { r: 6.2, c: [2.5, 1.45, 0.55], kind: 'fire', flame: 'torch', size: 0.14 }); torches++; }
+      else kp(m, name, p[0], y, p[1], 1, sd.ry);
+      if (name === 'Shelf_Simple') { const q = sd.at(u - 0.28, 0.19), q2 = sd.at(u + 0.26, 0.19); kp(m, R.pick(['SmallBottles_1', 'Book_Stack_1', 'Potion_2']), q[0], y + 0.11, q[1], 1, sd.ry); kp(m, R.pick(['Book_Stack_2', 'Bottle_1', 'Vase_4']), q2[0], y + 0.11, q2[1], 0.7, sd.ry + 0.4); }
+      hung.push([sd, u, half]); wq.shift(); u += it[0] + 1.2 + R() * 1.2;
+    }
+  }
+  if (id === 'chapel') for (const x of [-w * 0.2, w * 0.2]) kitLit(m, 'Chandelier', x, H + 0.9, 0, 1.1, 0, { r: 10, c: [3.0, 1.9, 0.85], kind: 'candle', always: true });
+  // ── outside: vines up the walls, a banner by the door ──
+  for (let i = 0; i < (st.vines || 0); i++) {
+    const wn = R.pick(['back', 'left', 'right', 'front', 'back']), L = WALLS[wn].len(w, d), u = 0.9 + R() * (L - 1.8), up = !!st.up && R() < 0.6;
+    if (!up && c.openings[wn].some(o => Math.abs((o.u0 + o.u1) / 2 - u) < 1.5)) continue;
+    c.kb.add(R.pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine1', 'Prop_Vine4']), KH.xf(c.kFrames[wn], u, up ? H + 2.45 : H * 0.84, 0.1, [1.2, up ? 1.2 : Math.min(1.2, H * 0.84 / 2.2), 1]), EXT);
+  }
+  if (st.banner) { const dw = spec.doors[0].wall, o = c.openings[dw].find(q => q.door), L = WALLS[dw].len(w, d); if (o) for (const sg of [-1, 1]) { const u = (o.u0 + o.u1) / 2 + sg * 2.3; if (u > 0.6 && u < L - 0.6) c.kb.add(sg < 0 ? 'Banner_1' : 'Banner_2', KH.xf(c.kFrames[dw], u, Math.min(3.1 * sy, H + 0.5), 0.12, 1, -PI / 2), EXT); } }
+}
 
 // ── scene: build the batches once the scene exists, hide interiors that are far away ──
 function kitAttach() {

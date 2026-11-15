@@ -286,6 +286,14 @@ function buildVillage() {
     }
   }
 
+  // a wagon or two parked beside the busier houses (kit style only)
+  if (typeof kitReady === 'function' && kitReady()) for (const [id, lx, lz, yaw] of [['inn', -11.8, 1.5, 0.25], ['store', 0.5, 6.4, 1.45], ['smithy', 1.5, 7.2, 1.7], ['elder', 0, 6.0, 1.5]]) {
+    const s = SITE[id], p = siteToWorld(s, lx, lz); let ok = Math.abs(Terrain.y(p[0], p[1]) - s.y) < 0.6;
+    for (const rd of Roads) if (rd.line.dist(p[0], p[1], 5) < rd.w / 2 + 2.2) ok = false;
+    for (const c of World.colliders) if (hyp(p[0] - c.x, p[1] - c.z) < (c.r !== undefined ? c.r : Math.max(c.hx, c.hz)) + 2.3) ok = false;
+    if (ok) put(p[0], p[1], s.yaw + yaw, m => { kp(m, 'Prop_Wagon', 0, 0, 1.14, 1); addBoxCollider(m, -1.0, -2.0, 1.0, 2.0, 0, 1.3); });
+  }
+
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {
     for (let i = 0; i < m.nv; i++) { if (m.u8[i * 32 + 29] !== 0 || m.u8[i * 32 + 27] < 250) continue; const y = m.f[i * 8 + 1] - Terrain.y(m.f[i * 8], m.f[i * 8 + 2]); if (y < 0.45) m.u8[i * 32 + 27] = Math.round(255 * lerp(0.62, 1, sat(y / 0.45))); }
