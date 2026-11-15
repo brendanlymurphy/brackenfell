@@ -6051,7 +6051,7 @@ function planHouse(P, c, info) {
 
 // Until every building has a designed plan, only those listed here use the plan engine in the published game: the generic plan gives every house the same hall
 // (a shop without its counter, a smithy without its forge). ?plans=all or --opt plans=all builds every house from a plan (work in progress).
-const PLAN_SHIP = { inn: 1, chapel: 1 };
+const PLAN_SHIP = {};          // none yet: the inn and chapel plans lose quest interacts (bell, inn.bed); add ids here when their plans pass test/quest.js
 const PLAN_ALL = (TEST && TEST.plans === 'all') || (typeof location !== 'undefined' && /[?&]plans=all\b/.test(location.search));
 function planWanted(site, spec) { return PLAN_ON && !(TEST && TEST.plans === 0) && !!site && (!TEST || TEST.cells !== 0) && (PLAN_ALL || !!PLAN_SHIP[site.id]); }
 
