@@ -184,7 +184,7 @@ function buildHouse(site, spec) {
     spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: site.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
     // hearth against a wall. frame: origin on the inner wall face, +x into the room. (x, z) = house-local position, rot = RY angle
     fireplace(x, z, rot, opt) {
-      opt = opt || {}; const wid = opt.w || 1.9, dep = 0.8, m = int;
+      opt = opt || {}; const wid = opt.w || 1.9, dep = 0.8, m = int; ctx.hearth = { x, z, rot, wid, dep };
       m.push().T(x, 0, z).RY(rot);
       m.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
       m.box(0, 0, -wid / 2, dep, 1.15, -wid / 2 + 0.38); m.box(0, 0, wid / 2 - 0.38, dep, 1.15, wid / 2);

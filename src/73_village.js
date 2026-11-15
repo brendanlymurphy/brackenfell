@@ -86,7 +86,7 @@ function buildVillage() {
   put(-6.8, -16.4, 0, m => Props.barrel(m)); put(-6.2, -15.9, 0.6, m => Props.barrel(m, 0.3, 0.75)); put(6.9, -16.3, 0.3, m => Props.crate(m, 0.7));
   put(19.2, -5.2, 0, m => Props.barrel(m)); put(19.0, -6.1, 0.4, m => Props.crate(m, 0.55)); put(19.1, -11.4, 0, m => Props.sack(m, 0.32));
   // lamps and signposts
-  for (const [x, z, a] of [[-13.2, -9.8, 0.8], [13.6, -10.2, -0.8], [-14.2, 5.2, 2.2], [13.2, 8.4, -2.4], [-31, -6.6, 0], [-50, -8.2, 0], [34, 3.4, PI], [47.5, -0.4, 0], [-12.2, -33, 1.6], [-8.6, -58.5, 1.2], [1.2, 30, -1.5], [4.4, 56, -1.5], [69, 0.2, 0], [86, -2.2, 0.2], [-63.5, 2, 1.5], [3.3, 78, -1.4], [70.2, 16, -1.6]]) put(x, z, a, m => Props.lampPost(m, OUT));
+  for (const [x, z, a] of [[-13.2, -9.8, 0.8], [13.6, -10.2, -0.8], [-14.2, 5.2, 2.2], [13.2, 8.4, -2.4], [-31, -6.6, 0], [-50, -8.2, 0], [34, 3.4, PI], [47.5, -0.4, 0], [-12.2, -33, 1.6], [-8.6, -58.5, 1.2], [1.2, 30, -1.5], [4.4, 56, -1.5], [69, 0.2, 0], [86, -2.2, 0.2], [-63.5, 2, 1.5], [3.3, 78, -1.4], [70.2, 16, -1.6], [-9.5, 3.5, 0.3], [9.2, 4.2, -0.3], [-6.5, -12.2, 0.2]]) put(x, z, a, m => Props.lampPost(m, OUT));
   put(14.6, 2.4, 0.4, m => Props.signPost(m, 3)); put(-58.5, -8.4, -0.3, m => Props.signPost(m, 2)); put(-8.9, -61.5, 0, m => Props.signPost(m, 2));
 
   // ── west gate ──
@@ -211,7 +211,7 @@ function buildVillage() {
   { const p = siteToWorld(H, H.w / 2 + 2.4, 1.0); spot('herbalist.garden', p[0], p[1], H.yaw + PI / 2); }
   for (const [lx, lz] of [[-H.w / 2 - 1.2, 1.2], [-H.w / 2 - 1.9, 0.3]]) { const p = siteToWorld(H, lx, lz); put(p[0], p[1], 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.35, 0, -0.35, 0.35, 0.3, 0.35); m.mat(MAT.THATCH, COL.hay, 0.4); m.lathe([[0.3, 0.3], [0.32, 0.5], [0.24, 0.75], [0.08, 0.9]], 10, 0); addCircleCollider(m, 0, 0, 0.36, 0, 0.9); }); }
   { const E = SITE.elder, p = siteToWorld(E, -E.w / 2 - 0.9, 0.4); put(p[0], p[1], E.yaw + PI / 2, m => Props.woodpile(m, 6, 5, 0.6)); const q = siteToWorld(E, 2.6, -E.d / 2 - 0.5); put(q[0], q[1], E.yaw, m => Props.bench(m, 1.5)); spot('elder.porch', q[0] + Math.sin(E.yaw) * 0.05, q[1] - Math.cos(E.yaw) * 0.05, E.yaw, { sit: 0.46 }); }
-  { const W2 = SITE.weaver, a = siteToWorld(W2, -W2.w / 2 - 0.6, -W2.d / 2 - 2.6), b = siteToWorld(W2, -W2.w / 2 - 5.2, -W2.d / 2 - 1.2);
+  { const W2 = SITE.weaver, a = siteToWorld(W2, -W2.w / 2 - 0.6, W2.d / 2 + 2.4), b = siteToWorld(W2, -W2.w / 2 - 5.2, W2.d / 2 + 1.0);
     for (const p of [a, b]) put(p[0], p[1], 0, m => { m.mat(MAT.TIMBER, COL.timber); m.cbox(0, -0.3, 0, 0.09, 2.2, 0.09, 4); });
     const ya = Terrain.y(a[0], a[1]) + 1.85, yb = Terrain.y(b[0], b[1]) + 1.85, m = bucket(a[0], a[1]); m.m1 = 0; m.ao = 1;
     m.mat(MAT.CLOTH, [0.7, 0.6, 0.4], 0.3); m.beam([a[0], ya, a[1]], [b[0], yb, b[1]], 0.02, 0.02);
@@ -293,6 +293,49 @@ function buildVillage() {
     }
   }
 
+  // ── backyards: a fenced vegetable plot behind some cottages, a laundry line behind others ──
+  {
+    const Rv = rng(5151), okSpot = (x, z, rad, s) => {
+      if (Math.abs(Terrain.y(x, z) - s.y) > 0.5) return false;
+      for (const rd of Roads) if (rd.line.dist(x, z, 4) < rd.w / 2 + 1.2) return false;
+      for (const c of World.colliders) { const r = c.r !== undefined ? c.r : Math.max(c.hx, c.hz); if (r > 1.6 && c.r === undefined) continue; if (hyp(x - c.x, z - c.z) < r + rad) return false; }
+      return true;
+    };
+    const veg = [[0, 0.3, 0.12], [0.5, 0.6, 0.2], [0.2, 0.35, 0.3]];
+    for (const id of ['elder', 'weaver', 'guardhouse', 'farm', 'hunter', 'mill', 'herbalist']) {
+      const s = SITE[id]; if (!s) continue;
+      const lx = (id === 'weaver' || id === 'hunter' ? -1 : 1) * s.w * 0.12, lz = s.d / 2 + 2.9, p = siteToWorld(s, lx, lz);
+      if (id !== 'herbalist') {
+        if (!okSpot(p[0], p[1], 2.4, s)) continue;
+        put(p[0], p[1], s.yaw, m => {
+          for (let r = 0; r < 3; r++) {
+            m.mat(MAT.PLANKS, COL.woodDark, 0.5); m.box(-1.5, 0, r * 0.95 - 0.3, 1.5, 0.2, r * 0.95 - 0.25); m.box(-1.5, 0, r * 0.95 + 0.25, 1.5, 0.2, r * 0.95 + 0.3);
+            m.mat(MAT.PLAIN, [0.2, 0.15, 0.1]); m.box(-1.5, 0.02, r * 0.95 - 0.25, 1.5, 0.18, r * 0.95 + 0.25);
+            const [g1, g2, g3] = [[0.22, 0.34, 0.14], [0.3, 0.38, 0.17], [0.4, 0.28, 0.2]][r];
+            m.mat(MAT.PLAIN, [g1, g2, g3]); for (let i = 0; i < 7; i++) m.ball(-1.2 + i * 0.4 + (r % 2) * 0.1, 0.24, r * 0.95, 0.15 + Rv() * 0.05, 0.12, 0.15, 5, 3);
+          }
+          addBoxCollider(m, -1.5, -0.35, 1.5, 2.2, 0, 0.3);
+        });
+        const q = [[-2.2, -0.9], [2.2, -0.9], [2.2, 2.6], [-2.2, 2.6]].map(o => { const c = Math.cos(s.yaw), sn = Math.sin(s.yaw); return [p[0] + o[0] * c + o[1] * sn, p[1] - o[0] * sn + o[1] * c]; });
+        fence([q[0], q[1], q[2], q[3], q[0]], { h: 0.8 });
+      }
+    }
+    // laundry lines: two posts, a rope and a few cloths, behind the elder's and guardhouse cottages
+    for (const [id, sg] of [['elder', -1], ['guardhouse', 1], ['farm', -1]]) {
+      const s = SITE[id]; if (!s) continue;
+      const a = siteToWorld(s, sg * (s.w / 2 + 0.6), s.d / 2 + 1.6), b = siteToWorld(s, sg * (s.w / 2 + 4.6), s.d / 2 + 1.0);
+      if (!okSpot(a[0], a[1], 0.5, s) || !okSpot(b[0], b[1], 0.5, s)) continue;
+      for (const q of [a, b]) put(q[0], q[1], 0, m => { m.mat(MAT.TIMBER, COL.timber); m.cbox(0, -0.3, 0, 0.09, 2.2, 0.09, 4); });
+      const ya = Terrain.y(a[0], a[1]) + 1.85, yb = Terrain.y(b[0], b[1]) + 1.85, m = bucket(a[0], a[1]); m.m1 = 0; m.ao = 1;
+      m.mat(MAT.CLOTH, [0.7, 0.6, 0.4], 0.3); m.beam([a[0], ya, a[1]], [b[0], yb, b[1]], 0.02, 0.02);
+      for (let i = 0; i < 4; i++) {
+        const k0 = 0.12 + i * 0.22, k1 = k0 + 0.14, c = [COL.linen, COL.wool, COL.linen, COL.blue][i], hgt = 0.55 + (i % 2) * 0.3; m.mat(MAT.CLOTH, c.map(v => v * 0.8), 0.6);
+        const p0 = [lerp(a[0], b[0], k0), lerp(ya, yb, k0), lerp(a[1], b[1], k0)], p1 = [lerp(a[0], b[0], k1), lerp(ya, yb, k1), lerp(a[1], b[1], k1)];
+        m.quad2(p0, [p0[0], p0[1] - hgt, p0[2]], [p1[0], p1[1] - hgt, p1[2]], p1);
+      }
+    }
+  }
+
   // a wagon or two parked beside the busier houses (kit style only)
   if (typeof kitReady === 'function' && kitReady()) for (const [id, lx, lz, yaw] of [['inn', -11.8, 1.5, 0.25], ['store', 0.5, 6.4, 1.45], ['smithy', 1.5, 7.2, 1.7], ['elder', 0, 6.0, 1.5]]) {
     const s = SITE[id], p = siteToWorld(s, lx, lz); let ok = Math.abs(Terrain.y(p[0], p[1]) - s.y) < 0.6;
@@ -300,6 +343,8 @@ function buildVillage() {
     for (const c of World.colliders) if (hyp(p[0] - c.x, p[1] - c.z) < (c.r !== undefined ? c.r : Math.max(c.hx, c.hz)) + 2.3) ok = false;
     if (ok) put(p[0], p[1], s.yaw + yaw, m => { kp(m, 'Prop_Wagon', 0, 0, 1.14, 1); addBoxCollider(m, -1.0, -2.0, 1.0, 2.0, 0, 1.3); });
   }
+
+  if (typeof buildAlley === 'function') buildAlley();
 
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {

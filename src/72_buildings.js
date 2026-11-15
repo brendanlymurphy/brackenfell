@@ -14,7 +14,7 @@ function tableSet(c, x, z, rot, len, wid, items, n, seats) {
     else if (seats === 'chairs') { at(m, -len / 4, 0, -wid / 2 - 0.32, PI, () => Props.chair(m)); at(m, len / 4, 0, wid / 2 + 0.32, 0, () => Props.chair(m)); } });
 }
 const ropeCoil = m => { m.mat(MAT.CLOTH, [0.78, 0.62, 0.38], 0.3); m.lathe([[0.10, 0], [0.16, 0.015], [0.165, 0.07], [0.10, 0.085], [0.10, 0]], 10, 0); };
-const clothBolt = (m, col) => { m.mat(MAT.CLOTH, col, 0.5); m.push().RZ(PI / 2).T(0.07, -0.3, 0); m.cyl(0, 0, 0, 0.07, 0.07, 0.6, 8, 3); m.pop(); };
+const clothBolt = (m, col) => { m.mat(MAT.CLOTH, [0.3 + col[0] * 0.45, 0.28 + col[1] * 0.4, 0.26 + col[2] * 0.38], 0.5); m.push().RZ(PI / 2).T(0.07, -0.3, 0); m.cyl(0, 0, 0, 0.07, 0.07, 0.6, 8, 3); m.pop(); };
 const herbs = (m, R) => { m.mat(MAT.PLAIN, R.pick([[0.35, 0.5, 0.25], [0.55, 0.5, 0.25], [0.5, 0.35, 0.5], [0.4, 0.45, 0.2]])); m.lathe([[0.01, -0.34], [0.07, -0.26], [0.035, -0.06], [0.012, 0]], 6, 0); };
 const pelt = (m, w, h) => { m.mat(MAT.CLOTH, COL.fur, 0.5); m.quad([-w / 2, h, 0], [-w / 2 * 0.8, 0, 0], [w / 2 * 0.8, 0, 0], [w / 2, h, 0]); };
 const antlers = m => { m.mat(MAT.PLAIN, [0.85, 0.78, 0.62]); for (const s of [-1, 1]) { m.tube([[s * 0.03, 0, 0], [s * 0.16, 0.12, 0.05], [s * 0.3, 0.3, 0.06], [s * 0.36, 0.5, 0.02]], [0.022, 0.018, 0.014, 0.006], 5); m.tube([[s * 0.16, 0.12, 0.05], [s * 0.2, 0.26, 0.16]], [0.014, 0.005], 5); m.tube([[s * 0.3, 0.3, 0.06], [s * 0.42, 0.4, 0.14]], [0.012, 0.004], 5); } m.mat(MAT.PLANKS, COL.woodDark, 0.4); m.box(-0.1, -0.1, -0.02, 0.1, 0.08, 0); };
@@ -115,7 +115,7 @@ const HOUSES = {
       tableSet(c, 0.4, -0.9, 0, 1.3, 0.75, ['mug', 'plate', 'loaf', 'candle'], 3, 'stools');
       at(m, 2.5, 0.02, B.z1 - 0.42, 0, () => { Props.table(m, 2.2, 0.75, 0.86); for (let i = 0; i < 3; i++) at(m, -0.7 + i * 0.5, 0.86, R.s() * 0.1, 0, () => { m.push().RZ(PI / 2).RX(R() * 3); Props.hammer(m); m.pop(); }); m.mat(MAT.METAL, COL.iron); m.box(0.6, 0.86, -0.15, 0.95, 0.92, 0.15); m.box(0.7, 0.92, -0.1, 0.85, 1.02, 0.1); });
       at(m, B.x1 - 0.06, 1.05, -1.0, 0, () => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.03, 0, -1.1, 0.02, 1.1, 1.1); for (let i = 0; i < 4; i++) at(m, -0.06, 0.05, -0.75 + i * 0.5, PI / 2, () => Props.sword(m)); });
-      at(m, 1.2, 1.5, B.z0 + 0.04, 0, () => Props.shield(m, COL.blue)); at(m, 2.0, 1.5, B.z0 + 0.04, 0, () => Props.shield(m, [0.6, 0.5, 0.2]));
+      at(m, -1.5, 1.6, B.z0 + 0.04, 0, () => Props.shield(m, COL.blue)); at(m, -2.5, 1.6, B.z0 + 0.04, 0, () => Props.shield(m, [0.6, 0.5, 0.2]));
       chestAt(c, 0.5, B.z1 - 0.4, 0, [['gold', 8]]);
       at(m, B.x1 - 0.5, 0.02, 2.4, 0, () => { Props.barrel(m, 0.3, 0.8); for (let i = 0; i < 3; i++) at(m, R.s() * 0.12, 0.3, R.s() * 0.12, R() * 3, () => { m.push().RZ(R.s() * 0.2); Props.sword(m); m.pop(); }); });
       c.spot('home', 0.9, 0.5, 0); seat(c, 'sit', 0.075, -1.6, PI);
@@ -258,6 +258,31 @@ const HOUSES = {
       c.spot('home', 0.3, -0.6, 0);
     },
   },
+  draper: {
+    H: 3.0, walls: 'timber', roof: 'shingle', roofCol: [0.7, 0.58, 0.5], ceiling: true, plaster: [1, 0.94, 0.82], shutter: [0.3, 0.38, 0.5],
+    doors: [{ wall: 'front', pos: 0 }],
+    windows: [{ wall: 'front', pos: -2.1, w: 1.5, shutters: false }, { wall: 'front', pos: 2.1, w: 1.5, shutters: false }, { wall: 'left', pos: 0.3 }, { wall: 'right', pos: -0.4 }],
+    interior(c) {
+      const m = c.int, R = c.R, B = bounds(c), bolt = () => R.pick([COL.red, COL.blue, COL.green, COL.linen, COL.gold, COL.purple, [0.7, 0.45, 0.25]]);
+      // counter across the middle, the draper stands behind it
+      m.mat(MAT.PLANKS, COL.woodDark); m.box(-2.6, 0.02, 0.0, 0.8, 0.96, 0.55); m.mat(MAT.PLANKS, COL.wood); m.box(-2.7, 0.96, -0.1, 0.9, 1.03, 0.65);
+      addBoxCollider(m, -2.7, -0.1, 0.9, 0.65, 0, 1.05);
+      at(m, -1.0, 1.03, 0.28, 0, () => { for (let i = 0; i < 3; i++) at(m, -0.7 + i * 0.5, 0, (i % 2) * 0.1 - 0.05, 0.4 * i, () => clothBolt(m, bolt())); });
+      at(m, 0.3, 1.03, 0.3, 0.3, () => ropeCoil(m)); at(m, -2.2, 1.03, 0.3, 0.8, () => Props.clutter(m, R, -0.3, 0.3, 0, 0, ['book', 'pot', 'candle'], 3, c));
+      c.interact(-1.0, 1.2, 0.3, { kind: 'read', id: 'draper.ledger', title: 'The draper’s ledger', text: 'Blue wool, six ells, for the miller’s coat. Red linen for the chapel banners, paid in apples. A bolt of green for Lark, who has promised a song instead of coin.', r: 1.8 });
+      // cloth shelves on the back wall and the right wall
+      at(m, -1.0, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 2.6, 2.1, 4, 0.32, (i, y) => { for (let k = 0; k < 4; k++) at(m, -0.95 + k * 0.62, y, 0, PI / 2, () => clothBolt(m, bolt())); }));
+      at(m, 1.7, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 1.6, 2.1, 4, 0.32, (i, y) => { for (let k = 0; k < 3; k++) at(m, -0.5 + k * 0.5, y, 0, PI / 2, () => clothBolt(m, bolt())); }));
+      at(m, B.x1 - 0.17, 0.02, -0.8, PI / 2, () => Props.shelf(m, 1.8, 2.0, 4, 0.32, (i, y) => Props.clutter(m, R, -0.75, 0.75, y, 0, ['pot', 'jug', 'book', 'bowl'], 4)));
+      // dye barrels and a stack of folded cloth by the door
+      at(m, B.x0 + 0.5, 0.02, B.z0 + 0.5, 0, () => Props.barrel(m)); at(m, B.x0 + 1.2, 0.02, B.z0 + 0.45, 0.4, () => Props.barrel(m, 0.28, 0.75));
+      at(m, 2.4, 0.02, -2.2, 0.3, () => Props.crate(m, 0.6)); at(m, 2.4, 0.02 + crateTop(0.6), -2.2, 0.5, () => { for (let k = 0; k < 3; k++) at(m, 0, k * 0.12, 0, k * 0.3, () => { m.mat(MAT.CLOTH, bolt(), 0.5); m.box(-0.22, 0, -0.15, 0.22, 0.1, 0.15, 4); }); });
+      at(m, -0.3, 0.02, -1.5, 0.15, () => Props.rug(m, 2.6, 1.8, COL.blue));
+      at(m, 1.6, 0.02, 0.6, 0, () => Props.rug(m, 1.5, 1.2, [0.6, 0.4, 0.2]));
+      at(m, 0.0, c.H, -0.9, 0, () => Props.lantern(m, c));
+      c.spot('counter', -1.0, 1.0, 0); c.spot('home', 1.6, 0.0, 0); c.spot('sit', 2.2, 1.2, PI);
+    },
+  },
   chapel: {
     H: 4.4, walls: 'stone', roof: 'shingle', roofCol: [0.55, 0.62, 0.74], pitch: 54, floor: 'stone', overhang: 0.4,
     doors: [{ wall: 'left', pos: 0, w: 1.5, h: 2.5, lamp: false }],
@@ -297,6 +322,7 @@ const HOUSES = {
       e.mat(MAT.TIMBER, COL.timberDark); e.box(x0 + 0.5, 8.95, -0.09, x1 - 0.5, 9.13, 0.09);
       e.mat(MAT.METAL, COL.bronze); e.push().T(cx, 8.0, 0); e.lathe([[0.48, 0], [0.42, 0.06], [0.33, 0.3], [0.27, 0.62], [0.17, 0.85], [0.03, 0.93]], 12, 0); e.mat(MAT.METAL, COL.black); e.box(-0.02, -0.12, -0.02, 0.02, 0.6, 0.02); e.ball(0, -0.12, 0, 0.07); e.pop();
       e.mat(MAT.CLOTH, [0.75, 0.62, 0.4], 0.3); e.box(cx + 0.7, 1.2, -0.012, cx + 0.724, 8.0, 0.012);
+      for (const lx of [x0 + 1.6, x1 - 1.7]) at(e, lx, 3.3, 0, 0, () => { e.mat(MAT.METAL, COL.black); e.box(-0.01, 0.2, -0.01, 0.01, 3.9, 0.01); Props.lantern(e, { zone: 0 }); });
       World.bell = { p: wp(e, cx, 8.3, 0) };
       World.interact.push({ p: wp(e, cx + 0.7, 1.4, 0), r: 1.9, zone: 0, kind: 'bell', id: 'bell' });
       at(e, x0 + 0.02, 2.6, -zh - 0.02, 0, () => Props.lantern(e, { zone: 0 }));

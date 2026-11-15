@@ -136,7 +136,15 @@ const Props = {
       });
     }
   },
-  rug(m, w, l, col) { const c = col || COL.red; m.mat(MAT.CLOTH, [c[0] * 0.5, c[1] * 0.42, c[2] * 0.4], 0.6); m.quad([-w / 2, 0.015, -l / 2], [-w / 2, 0.015, l / 2], [w / 2, 0.015, l / 2], [w / 2, 0.015, -l / 2], 0, 0, w / 0.6, l / 0.6); },
+  // woven rug: a darker border, a field of the main colour, a lighter band down the middle and a fringe at both ends
+  rug(m, w, l, col) {
+    const c = col || COL.red, lay = (i, x0, z0, x1, z1, k, y) => { m.mat(MAT.CLOTH, [c[0] * k[0], c[1] * k[1], c[2] * k[2]], 0.6); m.quad([x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0], 0, 0, (x1 - x0) / 0.6, (z1 - z0) / 0.6); };
+    const b = Math.min(0.12, w * 0.09);
+    lay(0, -w / 2, -l / 2, w / 2, l / 2, [0.3, 0.27, 0.26], 0.012);
+    lay(1, -w / 2 + b, -l / 2 + b, w / 2 - b, l / 2 - b, [0.52, 0.42, 0.38], 0.016);
+    if (w > 0.9 && l > 1.2) { lay(2, -w * 0.12, -l / 2 + b * 2, w * 0.12, l / 2 - b * 2, [0.78, 0.62, 0.45], 0.02); lay(3, -w * 0.05, -l / 2 + b * 3, w * 0.05, l / 2 - b * 3, [0.4, 0.3, 0.26], 0.024); }
+    for (const sz of [-1, 1]) lay(4, -w / 2 + b * 1.4, sz * (l / 2 - b * 1.4) - 0.015, w / 2 - b * 1.4, sz * (l / 2 - b * 1.4) + 0.015, [0.85, 0.72, 0.52], 0.022);
+  },
   cauldron(m, r) { r = r || 0.24; m.mat(MAT.METAL, COL.black); m.lathe([[r * 0.5, 0], [r * 0.95, r * 0.4], [r, r * 0.9], [r * 0.86, r * 1.25], [r * 0.92, r * 1.32]], 10, 1); m.mat(MAT.PLAIN, [0.35, 0.3, 0.18]); m.disc(0, r * 1.1, 0, r * 0.88, 10, 1); },
   logs(m, n, len, r) { m.mat(MAT.BARK, [1, 1, 1], 0.5); for (let i = 0; i < n; i++) { m.push().T(0, r + 0.01, (i - (n - 1) / 2) * r * 2.05).RZ(PI / 2).T(0, -len / 2, 0); m.cyl(0, 0, 0, r, r * 0.95, len, 7, 0); m.mat(MAT.PLAIN, [0.78, 0.62, 0.42]); m.disc(0, len, 0, r * 0.95, 7, 1); m.disc(0, 0, 0, r, 7, -1); m.mat(MAT.BARK, [1, 1, 1], 0.5); m.pop(); } },
   woodpile(m, cols, rows, len) { const r = 0.09; for (let j = 0; j < rows; j++) { m.push().T(0, j * r * 1.85, (j % 2) * r * 0.5); Props.logs(m, cols - (j % 2), len, r); m.pop(); } addBoxCollider(m, -len / 2, -cols * r, len / 2, cols * r, 0, rows * r * 1.9); },
