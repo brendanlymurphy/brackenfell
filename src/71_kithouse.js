@@ -48,7 +48,7 @@ function kitShell(c) {
   const { site, spec, w, d, H, t, hd, ext, glow, zone, Ms, openings, tanP } = c, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
   ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
-  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096 }); World.kitExt[site.id] = { batch: b, site };
+  const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096 }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
   const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: 0, inSkyVis: 0.12 };
   const frames = {}, wbs = {};
@@ -213,7 +213,7 @@ function kitLit(m, name, x, y, z, s, ry, o) {
   wrap('chest', (m, w) => { w = w || 0.85; const s = w / 1.2; kp(m, 'Chest_Wood__Base', 0, 0.01, 0, s, KITP.chestRy); kp(m, 'Chest_Wood__Lid', 0, 0.01, 0, s, KITP.chestRy); addBoxCollider(m, -w / 2, -0.25, w / 2, 0.25, 0, 0.6); });
   wrap('barrel', (m, r, h, noCol) => { r = r || 0.33; h = h || 0.9; kp(m, 'Barrel', 0, 0, 0, [r / 0.35, h / 0.9, r / 0.35], KITP.rnd() * 6); if (!noCol) addCircleCollider(m, 0, 0, r, 0, h); });
   wrap('keg', (m, r, len) => { const s = (2 * r + 0.3) / 1.25; kp(m, 'Barrel_Holder', 0, 0, 0, [len / 1.15, s, s]); });
-  wrap('crate', (m, s, noCol) => { s = s || 0.6; const k = s / 0.88; kp(m, 'Crate_Wooden', 0, 0.05 * k, 0, k); if (!noCol) addBoxCollider(m, -s / 2, -s / 2, s / 2, s / 2, 0, s); });
+  wrap('crate', (m, s, noCol) => { s = s || 0.6; const k = s / 0.88; if (m.m1 | 0) kp(m, 'Crate_Wooden', 0, 0.05 * k, 0, k); else kp(m, 'Prop_Crate', 0, 0, 0, s / 1.07); if (!noCol) addBoxCollider(m, -s / 2, -s / 2, s / 2, s / 2, 0, s); });
   wrap('sack', (m, s) => { s = s || 0.3; kp(m, 'Bag', 0, 0, 0, 1.9 * s / 0.8, KITP.rnd() * 6); });
   wrap('pot', (m, s) => { s = s || 0.14; kp(m, KITP.rnd() < 0.5 ? 'Vase_4' : 'Vase_2', 0, 0, 0, 2.1 * s / 0.5); });
   wrap('jug', m => kp(m, 'Vase_4', 0, 0, 0, 0.56));
@@ -331,7 +331,23 @@ function kitDress(c) {
 function kitAttach() {
   if (!kitReady() || !SC.scene) return;
   const addG = (g, info) => { g.traverse(o => { if (o.isMesh && info.interior) { o.layers.set(1); o.castShadow = false; } }); SC.scene.add(g); World.kitGroups.push(Object.assign({ g }, info)); };
-  for (const id in World.kitExt) { const k = World.kitExt[id]; if (k.batch.count) addG(k.batch.build(), { site: k.site }); }
+  // The modelled houses do not draw into the sun-shadow maps: tiled roofs and window frames would triple their cost. One plain
+  // box-and-prism stand-in per house casts the shadow instead, all in a single mesh the camera does not see (it writes nothing).
+  const tri = [], V = (M, x, y, z) => { const p = m4.tp(M, [x, y, z]); tri.push(p[0], p[1], p[2]); }, Q = (M, a, b2, c2, d2) => { for (const q of [a, b2, c2, a, c2, d2]) V(M, q[0], q[1], q[2]); };
+  for (const id in World.kitExt) {
+    let k = World.kitExt[id]; if (!k.batch.count) continue;
+    const g = k.batch.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g, { site: k.site });
+    const M = k.Ms, x = k.w / 2 + 0.3, xw = k.w / 2 - 0.12, z = k.hd + 0.4, y = k.top, r = y + k.rise + 0.4 * k.rise / k.hd - 0.25; k = Object.assign({}, k, { hd: k.hd - 0.12 });
+    Q(M, [-xw, -1, -k.hd], [xw, -1, -k.hd], [xw, y, -k.hd], [-xw, y, -k.hd]); Q(M, [-xw, -1, k.hd], [xw, -1, k.hd], [xw, y, k.hd], [-xw, y, k.hd]);
+    Q(M, [-xw, -1, -k.hd], [-xw, -1, k.hd], [-xw, y, k.hd], [-xw, y, -k.hd]); Q(M, [xw, -1, -k.hd], [xw, -1, k.hd], [xw, y, k.hd], [xw, y, -k.hd]);
+    Q(M, [-x, y - 0.55, -z], [x, y - 0.55, -z], [x, r, 0], [-x, r, 0]); Q(M, [-x, y - 0.55, z], [x, y - 0.55, z], [x, r, 0], [-x, r, 0]);
+    for (const sx of [-xw, xw]) { V(M, sx, y - 0.2, -k.hd); V(M, sx, y - 0.2, k.hd); V(M, sx, r - 0.2, 0); }
+  }
+  if (tri.length) {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(tri), 3));
+    const mat = new THREE.MeshBasicNodeMaterial(); mat.side = THREE.DoubleSide; mat.colorWrite = false; mat.depthWrite = false; mat.depthTest = false; mat.fog = false;
+    const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.frustumCulled = false; mesh.matrixAutoUpdate = false; mesh.renderOrder = -5; mesh.name = 'kit-shadow-proxy'; SC.scene.add(mesh);
+  }
   for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true }); }
   if (World.kitYard && World.kitYard.count) { const g = World.kitYard.build(); g.traverse(o => { if (o.isMesh) o.layers.set(1); }); addG(g, { yard: true }); }
   const inner = sceneUpdate;
@@ -339,8 +355,8 @@ function kitAttach() {
     inner(camPos, q);
     // furniture only shows through an open door or a window, so it is drawn for the nearest buildings alone
     for (const k of World.kitGroups) {
-      if (k.interior && k.site) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < 15 + Math.max(k.site.w, k.site.d) * 0.5;
-      else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) o.visible = hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < 75 + bs.radius; }
+      if (k.interior && k.site) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < 9 + Math.max(k.site.w, k.site.d) * 0.5;
+      else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) o.visible = hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < 58 + bs.radius; }
     }
     if (Kit.update) Kit.update(camPos);
   };
