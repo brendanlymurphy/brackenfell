@@ -1,39 +1,40 @@
 # Brackenfell roadmap
 
-Target look, from the reference images: a dense timber village on a misty lake, a crowded market alley of shop fronts,
-and warm cluttered interiors lit by hearths and candles. Realistic in mood, hand-painted in texture, because the
-free art that exists at this quality is stylized (Quaternius kits, CC0).
+Target look, from the reference images in the project chat: a dense timber village on a misty lake, a crowded market
+alley of shop fronts, and warm cluttered interiors lit by hearths and candles. As realistic as free art allows:
+simple shapes, photographed textures, muted colours, mist and firelight.
 
-## Build 5: new engine (in progress)
+## Done
 
-- [ ] Three.js renderer (WebGPU, WebGL 2 fallback) replacing the hand-written one: `fork-a`
-- [ ] Sky, grass, water, particles as modules: `fork-c`
-- [ ] Animated glTF characters with normal proportions (Quaternius base characters, fantasy outfits, animation library): `fork-b`
-- [ ] Kit pipeline: village, props and nature kits packed for the web, with a loader that batches pieces: `fork-d`
-- [ ] Merge, check on both backends, publish to `main` (GitHub Pages)
+- **Build 5** New engine: Three.js r187 (WebGPU, automatic WebGL 2 fallback), animated glTF villagers, overcast sky with mist, meadow grass, close-range fire. Old build kept at `classic/`.
+- **Build 6** Twelve of thirteen buildings rebuilt from the Quaternius village kit with a scanned-texture skin; interiors furnished and lit by torches, candles and chandeliers.
+- **Build 7** Sprint, jump, stamina, health, sword combat (chain, heavy, block, dodge), two outlaw camps with leaders, loot, inventory, trading with the smith, three quests, death and respawn.
+- **Build 8** Fifty photo-scanned Poly Haven props replace painted ones; scanned rocks, stumps and ferns.
+- **Build 9** Performance and memory pass: about half the draw calls, textures capped and shared on phones.
 
-## Build 6: the village rebuilt from kits
+## In progress
 
-- [ ] Building assembler: footprint on a 2 m grid, storeys of 3 m, timber or stone walls, doors, windows, shutters, roofs, chimneys, balconies, overhangs
-- [ ] Every existing site rebuilt with it (inn, smithy, mill, chapel, cottages, barn, tower), keeping doors, quests and schedules working
-- [ ] Interiors furnished from the props kit: beds, tables, bookcases, barrels, chandeliers, candles, each candle a real light
-- [ ] A market alley: two rows of tall shop fronts, stalls, banners, hanging signs, lanterns
-- [ ] Kit trees, rocks, ferns and flowers replace the generated ones
-- [ ] Village clutter pass: fences, wagons, crates, vines on walls
+- [ ] Realistic villagers and outlaws (MakeHuman-generated, CC0) merged with the performance path: `fork-h`
+- [ ] Village polish: muted roofs, inn dormers, chapel windows, scanned-furniture tints; a market alley on the east road; denser interiors and yards: `fork-v`
 
-## Build 7: things to do
+## Next
 
-- [ ] Sprint, jump, stamina
-- [ ] Sword and shield: attack chain, block, dodge, hit reactions
-- [ ] Enemies outside the village (wolves or bandits first), health, death, respawn
-- [ ] Loot, inventory, equipment, a shop that sells something useful
-- [ ] A dungeon under the tower built from the dungeon kit, with a boss and a reward
-- [ ] More quests that use all of the above
+- [ ] Texture compression for kits, props and characters (KTX2 / Basis, transcoded to ASTC on phones): cuts GPU memory several times over and shortens the first load (about 55 MB today)
+- [ ] Triangle budget: lower-detail far versions of houses and villagers, grass and terrain tuning (square is about 700k triangles on medium)
+- [ ] Realistic trees: scanned conifers with level-of-detail stand-ins; the generated trees are now the least realistic thing outdoors
+- [ ] A dungeon under the watchtower (trapdoor, three rooms, a lever gate, a boss, a chest)
+- [ ] Props in villagers' hands (hammer, lute, mug, broom), better eyes and hair on the realistic set, more outfit variety
+- [ ] Villagers path around furniture indoors; villagers visit the market alley by day
+- [ ] Jettied upper storeys and proper shop signs; thatch on the poorer cottages
+- [ ] Wolves or boar in the forest; a second, harder camp across the river
+- [ ] Shield bash and parry; bow and arrows
+- [ ] Weather: rain, wet ground, lake mist at dawn; seasons
+- [ ] Music and more ambient sound; footsteps by surface
+- [ ] Save slots; a map
 
-## Later
+## Known problems
 
-- Weather (overcast, rain, mist over the lake), seasons
-- More villagers with routines, a festival night
-- Music
-- Save slots
-- Compressed (KTX2) textures for the kits, level-of-detail for distant buildings
+- Never run on a real iPhone since Build 4. Frame rate, memory and touch feel are all unverified.
+- First load is large (about 55 MB).
+- Combat difficulty and feel were tuned by scripted input only.
+- Wall panels stretch on odd wall lengths; villagers walk through some furniture.
