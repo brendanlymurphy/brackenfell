@@ -171,6 +171,7 @@ function onCampCleared(id) {
 // ── interactions ──
 function interactLabel(it) {
   if (it.npc) { const w = it.npc.name.split(' '); return 'Talk to ' + (['Old', 'Brother', 'Elder', 'Warden', 'Guardsman'].includes(w[0]) ? w[1] : w[0]); }
+  if (it.kind === 'portal') return Cells.busy ? null : it.label;
   if (it.kind === 'chest') return S.opened[it.id] ? null : 'Open chest';
   if (it.kind === 'loot') return 'Search ' + it.name;
   if (it.kind === 'pickup') return it.gone ? null : it.label;
@@ -183,6 +184,7 @@ function interactLabel(it) {
 }
 function interactUse(it) {
   if (it.npc) { if (it.npc.anim === 'lie') return toast(it.npc.name + ' is fast asleep.'); return startTalk(it.npc); }
+  if (it.kind === 'portal') return Cells.use(it);
   if (it.kind === 'chest') {
     S.opened[it.id] = 1; Audio2.chest();
     const got = []; for (const [id, n] of it.loot || []) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
@@ -229,7 +231,7 @@ function festivalSpots() {
 function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
 function loadSave() { try { const j = JSON.parse(localStorage.getItem('brackenfell.v1') || 'null'); return j && j.S ? j : null; } catch (e) { return null; } }
 function applySave(j) {
-  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; }
+  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; const m = Cells.migrate(j.pos, j.yaw || 0); if (m) { Player.pos = m.pos; Player.yaw = m.yaw; } }
   for (const p of World.pickups) if (S.picked[p.id]) { p.gone = true; p.obj.visible = false; if (p.em) p.em.gone = true; }
   if (S.flags.fire) World.bonfire = true;
   if (S.rpg && S.rpg.v !== 2) S.rpg = null;
