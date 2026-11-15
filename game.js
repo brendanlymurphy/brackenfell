@@ -1029,11 +1029,13 @@ function sceneBuild() {
 }
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
-  const bd = R.boneData, e = camPos;
+  const bd = R.boneData, e = camPos, cur = World.cell;       // cur: the cell the player is in. Then only that cell is drawn (its generated meshes, kit groups, door leaf); outdoors, no cell is
   if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
-  const inside = World.deepIn = deepIndoors(e), ind = DRAW.indoor;
+  World.deepIn = cur ? true : deepIndoors(e); const inside = !cur && World.deepIn, ind = DRAW.indoor;
   for (const s of SC.statics) {
-    const it = s.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
+    const it = s.it;
+    if (cur || it.cell) { s.mesh.visible = !!cur && it.cell === cur.id; if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow; continue; }
+    const d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
     s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && far > ind);
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast) && !(s.farCapable && q.nearStatics === false);
@@ -1042,14 +1044,17 @@ function sceneUpdate(camPos, q) {
     if (s.farCapable) s.mesh.layers.mask = q.farStatics ? 1 : 2;
   }
   for (const s of SC.cells) {
+    if (cur) { s.mesh.visible = false; continue; }
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
     s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > Math.min(grp.maxDist, q.rockDist) + c.r) || (inside && grp.lod === 0 && dc - c.r > ind));
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }
-  if (Grass.mesh) Grass.mesh.visible = !inside;
+  if (Grass.mesh) Grass.mesh.visible = !inside && !cur;
   for (const r of SC.rigid) {
-    const o = r.obj, dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
+    const o = r.obj;
+    if (cur ? o.cell !== cur.id : o.cell) { r.mesh.visible = false; continue; }
+    const dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
     let vis = o.visible && d < dr.vis && !(inside && d > ind);
     if (dr.near) vis = vis && (r.whole ? d >= dr.near : d < dr.near);
     r.mesh.visible = vis; if (!vis) continue;
@@ -1223,10 +1228,11 @@ function renderFrame(time, env) {
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
   // near map every frame, far map every few frames (its centre only moves when it is redrawn)
   const fh = v3.norm([f[0], 0, f[2]]), r0 = q.shadowNear, r1 = 92, S = R.shadows;      // r0: radius (m) of the tight shadow map, which is drawn every frame
-  const upd1 = !R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || (!!TEST && !TEST.farCadence)));      // (test option farCadence=1 keeps the real cadence) deep inside a building the far map keeps what it last saw (see deepIndoors)
+  const cell = !!World.cell;          // in a cell: no sun, so neither sun-shadow map is drawn at all
+  const upd1 = !cell && (!R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || (!!TEST && !TEST.farCadence))));      // (test option farCadence=1 keeps the real cadence) deep inside a building the far map keeps what it last saw (see deepIndoors)
   shadowPlace(0, [e[0] + fh[0] * r0 * 0.72, e[1], e[2] + fh[2] * r0 * 0.72], r0, L, env);
   if (upd1) { shadowPlace(1, [e[0] + fh[0] * r1 * 0.6, e[1], e[2] + fh[2] * r1 * 0.6], r1, L, env); R.shadow1Ready = true; }
-  S.lights[1].shadow.needsUpdate = upd1;
+  S.lights[1].shadow.needsUpdate = upd1; S.lights[0].shadow.autoUpdate = !cell; if (cell) S.lights[0].shadow.needsUpdate = false;
   // ── world ──
   sceneUpdate(e, q);
   Sky.update(e); Grass.update(e, [f[0], f[2]]); Particles.update();
@@ -2474,7 +2480,8 @@ function updateEnv(time, indoor) {
   const outExp = lerp(lerp(0.56, 0.84, golden), 3.0, night);
   e.exposure = lerp(outExp, lerp(1.05, 1.25, night), indoor || 0);
   // weather: a light overcast with mist that gathers over the valley around dawn (Env.cover / Env.mist set the base amounts)
-  if (typeof Sky !== 'undefined' && Sky.applyWeather) { Sky.setWeather(Env.cover, Env.mist + 0.24 * Math.exp(-Math.pow((Env.hour - 6.6) / 1.5, 2))); Sky.applyWeather(e); }      // overcast and mist reshape the light, see 45_sky.js
+  if (typeof Sky !== 'undefined' && Sky.applyWeather) { Sky.setWeather(Env.cover, Env.mist + 0.24 * Math.exp(-Math.pow((Env.hour - 6.6) / 1.5, 2))); Sky.applyWeather(e); }
+  if (World.cell) Cells.env(e);      // overcast and mist reshape the light, see 45_sky.js
   return e;
 }
 
@@ -2810,6 +2817,137 @@ function wildsBrookY(at) {
   }
   const f = Math.min(Math.max(at, 0) / 3, WILDS._by.length - 1.001), i = f | 0; return WILDS._by[i] + (WILDS._by[i + 1] - WILDS._by[i]) * (f - i);
 }
+
+
+// ---- 56_cells.js ----
+// ───────────────────────── cells: every interior is a space of its own, reached through its door ─────────────────────────
+// A cell is built at its own origin in the same world and coordinate system (so colliders, floors, zones, spots, stairs, lights, particles, villagers and
+// saves work as they always did), but far below the terrain and 150 m from the next cell: x = CELL.x0 + col * CELL.step, z = row * CELL.step, y = CELL.y.
+// The village keeps only the shell of each building (closed doors, solid walls, glowing windows). A door is a portal: outside it reads "Enter <place>",
+// inside "Leave to <village>"; using it fades to black, names the place, moves the player to the other side and fades back in (Cells.travel).
+// Which cell the player is in follows from where the player stands (Cells.sync); while in one, 43_render.js draws only that cell: no sun, no sun shadows,
+// no sky, terrain, grass, trees or outdoor props (see sceneUpdate in 42_scene.js and the cell branches in renderFrame), and the fog is short and dark.
+// Villagers cross doors through portal edges of the nav graph (77_npc.js). CELLS_ON = false (test option cells=0) gives back the old seamless houses.
+const CELLS_ON = !(TEST && TEST.cells === 0);
+const CELL = { x0: 3000, y: -400, step: 150, cols: 8, half: 70 };
+const Cells = { list: [], by: {}, cur: null, busy: false, fadeIn: 0.3, fadeOut: 0.3, hold: 0.42 };
+// allocate the next free cell. cs is a site-like frame (x, z, y, yaw 0) that interior code uses where it used the site's
+Cells.make = function (id, name, extra) {
+  const i = Cells.list.length, col = i % CELL.cols, row = (i / CELL.cols) | 0;
+  const origin = [CELL.x0 + col * CELL.step, CELL.y, row * CELL.step];
+  const site = extra && extra.site;
+  const cs = Object.assign({}, site || {}, { id, name, x: origin[0], z: origin[2], y: origin[1], yaw: 0, real: site || null, cellFrame: true });
+  const c = Object.assign({ id, name, index: i, origin, cs, zones: [], floorY: origin[1] + 0.32, exit: 'Brackenfell', door: null, xdoor: null, enter: null, leave: null, kind: 'house' }, extra || {});
+  Cells.list.push(c); Cells.by[id] = c; return c;
+};
+// the cell around a point, or null (everything outdoors lives far above and away from the cell grid)
+Cells.at = function (x, y, z) {
+  if (x < CELL.x0 - CELL.half || y > CELL.y + 150) return null;
+  const col = Math.round((x - CELL.x0) / CELL.step), row = Math.round(z / CELL.step);
+  if (col < 0 || col >= CELL.cols || row < 0) return null;
+  return Cells.list[row * CELL.cols + col] || null;
+};
+Cells.inRegion = x => x >= CELL.x0 - CELL.half;
+Cells.spaceOf = p => { const c = Cells.at(p[0], p[1], p[2]); return c ? c.id : 0; };
+Cells.exitName = function (site) { return site.alleyRow ? 'Market Alley' : site.id === 'tower' ? 'the Greyspine Crag' : 'Brackenfell'; };
+// the two door interaction points of a house cell: outside "Enter ...", inside "Leave to ..."
+Cells.portals = function (cell, site) {
+  const d = cell.door, x = cell.xdoor, yawTo = (a, b) => Math.atan2(b[0] - a[0], -(b[2] - a[2]));
+  cell.exit = Cells.exitName(site);
+  cell.enter = { p: d.ins.slice(), yaw: yawTo(d.c, d.ins), cell: cell.id, name: site.name };
+  cell.leave = { p: x.out.slice(), yaw: yawTo(x.c, x.out), cell: null, name: cell.exit };
+  cell.portalOut = { kind: 'portal', id: 'door.' + cell.id + '.in', p: [x.c[0], x.c[1] + 0.1, x.c[2]], r: 2.7, zone: 0, cell: cell.id, label: 'Enter ' + site.name, dest: cell.enter, side: 'out' };
+  cell.portalIn = { kind: 'portal', id: 'door.' + cell.id + '.out', p: [d.c[0], d.c[1] + 0.1, d.c[2]], r: 2.7, zone: cell.zone, cell: cell.id, label: 'Leave to ' + cell.exit, dest: cell.leave, side: 'in' };
+  World.interact.push(cell.portalOut, cell.portalIn);
+};
+// a door's lock: it.lock() returns a message while the door is shut, or null (none of the village's doors lock yet; 93_ and the dungeons use it)
+Cells.lockMsg = it => (typeof it.lock === 'function' ? it.lock() : null);
+
+// ── which cell the player (or camera) is in ──
+Cells.sync = function (p) {
+  const c = Cells.at(p[0], p[1], p[2]);
+  if (c !== Cells.cur) Cells.change(c);
+  return c;
+};
+Cells.change = function (c) {
+  const prev = Cells.cur; Cells.cur = World.cell = c;
+  World.indoor = c ? 1 : 0;
+  if (c && typeof Foes !== 'undefined' && Foes.ready) Foes.breakOff();         // a fight does not follow through a door
+  if (!c && prev && typeof R !== 'undefined') R.shadow1Ready = false;            // the wide sun-shadow map was not drawn in there: redraw it at once
+  if (typeof Sky !== 'undefined' && Sky.mesh) Sky.mesh.visible = !c;
+};
+// move the player (instantly) to dest = { p: [x, y, z] feet, yaw }
+Cells.teleport = function (dest) {
+  const P = Player, p = dest.p;
+  P.pos = [p[0], World.groundAt(p[0], p[2], p[1] + 1.2), p[2]]; P.vel = [0, 0, 0]; P.yaw = dest.yaw || 0; P.pitch = 0; P.camY = P.pos[1]; P.onGround = true; P.coyote = 0.12;
+  Cells.sync(P.pos); World.camZone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
+  R.cam.pos[0] = P.pos[0]; R.cam.pos[1] = P.camY + P.eye; R.cam.pos[2] = P.pos[2]; R.cam.yaw = P.yaw; R.cam.pitch = 0;
+  if (typeof Input !== 'undefined') { Input.keys = {}; Input.lookX = Input.lookY = 0; }
+};
+// the doorway fade: black in about 0.3 s, the place's name for a moment (the cell's materials compile and upload during it), black out again in 0.3 s
+Cells.travel = function (dest, done) {
+  if (Cells.busy) return false;
+  Cells.busy = true; Player.locked = true; if (typeof RPG !== 'undefined') RPG.iframes = Math.max(RPG.iframes || 0, 2.2);
+  Audio2.door(1);
+  const f = $('portal'), nm = $('portalName'), ms = Cells.fadeIn * 1000;
+  f.classList.add('on');
+  setTimeout(() => {
+    nm.textContent = dest.name || ''; nm.classList.add('on');
+    Cells.teleport(dest);
+    try { game.step(2, 1 / 30); const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); } catch (e) { console.warn('cell warm-up: ' + (e && e.message || e)); }       // first draw of a cell: shaders and buffers are made here, under the black
+    setTimeout(() => {
+      nm.classList.remove('on'); f.classList.remove('on');
+      setTimeout(() => { Cells.busy = false; Player.locked = uiBusy(); if (done) done(); }, Cells.fadeOut * 1000);
+    }, Cells.hold * 1000);
+  }, ms);
+  return true;
+};
+// the E key / interact button on a door
+Cells.use = function (it) {
+  const msg = Cells.lockMsg(it); if (msg) { toast(msg); Audio2.door(0.4); return; }
+  Cells.travel(it.dest);
+};
+// the cell the player is in: the way to the compass's needle and the exit
+Cells.mapTarget = function (t) {
+  if (!t) return t;
+  const here = Cells.cur, there = Cells.at(t[0], t[1] === undefined ? CELL.y : t[1], t[2]);
+  if (here === there) return t;
+  if (here) return here.door ? here.door.c : null;       // inside, anything outside is "through the door"
+  return there && there.xdoor ? there.xdoor.c : t;        // outside, a person in a house is at its door
+};
+// distance for sounds from something in a cell to the listener, and whether a wall is in the way
+Cells.hear = function (pos, from) {
+  const a = Cells.at(pos[0], pos[1], pos[2]), b = Cells.cur;
+  if (a === b) return { d: hyp(pos[0] - from[0], pos[2] - from[2]), wall: false };
+  if (b) return { d: 999, wall: true };
+  const x = a && a.xdoor ? a.xdoor.c : pos;
+  return { d: hyp(x[0] - from[0], x[2] - from[2]) + 3, wall: true };
+};
+// frame environment: no sun, a short dark fog, the day's ambient kept (windows and the hour of day still reach the rooms through emissive panes and daylight lights)
+const CELL_DAYLIGHT = (typeof TEST !== 'undefined' && TEST && TEST.celllight !== undefined) ? +TEST.celllight : 6;
+Cells.env = function (e) {
+  const c = Cells.cur; if (!c) return e;
+  e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
+  // daylight: with the sun off, rooms lost the light that used to come in by day (midday was darker than night). Windows let the sky in: lift the day's ambient. c.daylight: 0 for a cellar or crypt, default for a room with windows.
+  { const k = c.daylight === undefined ? CELL_DAYLIGHT : c.daylight; if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); } else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
+  e.fogCol = c.fog || [0.030, 0.025, 0.020]; e.fogDensity = c.fogDensity || 0.022; e.cloud = 0; e.stars = 0; e.aurora = 0; e.sunDisc = 0; e.moonBright = 0;
+  return e;
+};
+// fell out of a cell (a gap in a floor): back to its door
+Cells.rescue = function () { const c = Cells.cur; if (c && c.enter) Cells.teleport(c.enter); };
+// an old save made inside a building (when interiors stood in the village): the same spot in the same building's cell (cells are built in the building's own frame)
+Cells.migrate = function (pos, yaw) {
+  if (!CELLS_ON || Cells.inRegion(pos[0])) return false;
+  for (const c of Cells.list) {
+    const real = c.cs.real, z = World.zones[c.zones[0] - 1]; if (!real || !z) continue;
+    if (Math.abs(pos[0] - real.x) > 14 || Math.abs(pos[2] - real.z) > 14) continue;
+    const l = worldToSite(real, pos[0], pos[2]);
+    if (Math.abs(l[0]) < z.hw && Math.abs(l[1]) < z.hd && pos[1] > real.y - 0.5 && pos[1] < real.y + (z.y1 - z.y0) + 1) {
+      return { pos: [c.cs.x + l[0], c.floorY + Math.max(0, pos[1] - (real.y + 0.32)), c.cs.z + l[1]], yaw: yaw - real.yaw };
+    }
+  }
+  return false;
+};
 
 
 // ---- 60_terrain.js ----
@@ -3389,7 +3527,7 @@ const WALLS = {
   left: { n: [-1, 0, 0], u: [0, 0, 1], start: (w, d) => [-w / 2, 0, -d / 2], len: (w, d) => d, toU: (p, w, d) => p + d / 2 },
   right: { n: [1, 0, 0], u: [0, 0, -1], start: (w, d) => [w / 2, 0, d / 2], len: (w, d) => d, toU: (p, w, d) => d / 2 - p },
 };
-World.doors = []; World.spots = {}; World.houses = {};
+World.doors = []; World.spots = {}; World.houses = {}; World.cell = null;
 const INT_AO = 0.30;       // sky visibility of interior surfaces
 function addFloor(m, x0, z0, x1, z1, y, y2, axis) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
@@ -3402,30 +3540,33 @@ function siteMatrix(site, y) { const M = m4.create(); m4.translate(M, site.x, y,
 function buildHouse(site, spec) {
   const kit = typeof kitWanted === 'function' && kitWanted(site, spec);      // kit-built shell (71_kithouse.js) or the procedural one below
   if (kit) spec = kitSpec(site, spec);
+  // Cells (56_cells.js): the interior is built in its own frame far from the village (isite, Ms) and only the shell stays on the site (site, Mx). Without cells both are the same.
+  const cell = kit && CELLS_ON ? Cells.make(site.id, site.name, { site }) : null, isite = cell ? cell.cs : site;
   const w = site.w, d = site.d, H = spec.H || 2.6, t = 0.3, P = (spec.pitch || 48) * PI / 180, tanP = Math.tan(P), hd = d / 2;
-  const floorY = site.y + 0.32, zone = World.zones.length + 1, R = rng(site.x * 131 + site.z * 17 + 5);
-  const Ms = siteMatrix(site, floorY);
-  const ext = new Mesh(4096), int = new Mesh(4096), glow = new Mesh(256);
-  for (const m of [ext, int, glow]) { m.m = Ms.slice(); m.dirty = true; m.seed = (site.x * 977 + site.z * 31) | 0; }
+  const floorY = isite.y + 0.32, xFloorY = site.y + 0.32, zone = World.zones.length + 1, R = rng(site.x * 131 + site.z * 17 + 5);
+  const Mx = siteMatrix(site, xFloorY), Ms = cell ? siteMatrix(isite, floorY) : Mx;
+  const ext = new Mesh(4096), ins = cell ? new Mesh(2048) : ext, int = new Mesh(4096), glow = new Mesh(256);
+  for (const m of [ext, ins, int, glow]) { m.m = (m === ext || m === glow ? Mx : Ms).slice(); m.dirty = true; m.seed = (site.x * 977 + site.z * 31) | 0; }
   const ridgeY = H + hd * tanP, roofY = z => H + (hd - Math.abs(z)) * tanP;
-  const zinfo = { id: zone, site, y0: floorY - 0.7, y1: floorY + ridgeY + 1.5, hw: w / 2, hd };
-  zinfo.H = H; zinfo.slope = spec.ceiling ? 0 : tanP; World.zones.push(zinfo);
-  const inner = () => { ext.m1 = zone; ext.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
+  const zinfo = { id: zone, site: isite, y0: floorY - 0.7, y1: floorY + ridgeY + 1.5, hw: w / 2, hd, cell: cell ? cell.id : null };
+  zinfo.H = H; zinfo.slope = spec.ceiling ? 0 : tanP; World.zones.push(zinfo); if (cell) cell.zones.push(zone);
+  const inner = () => { ins.m1 = zone; ins.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
+  const faces = [...new Set([ext, ins, int, glow])];
   int.m1 = zone; int.ao = INT_AO;
   const walls = spec.walls || 'timber', stoneH = walls === 'half' ? (spec.stoneH || 1.05) : 0;
   const plaster = spec.plaster || [1, 1, 1], timberC = spec.timber || COL.timberDark;
   const outerMat = v => { if (walls === 'stone' || v < stoneH) ext.mat(MAT.STONE, spec.stoneCol || [1, 1, 1]); else if (walls === 'log') ext.mat(MAT.TIMBER, [0.9, 0.84, 0.78], 1.6); else ext.mat(MAT.PLASTER, plaster); };
-  const innerMat = () => { if (walls === 'stone') ext.mat(MAT.STONE, [0.95, 0.93, 0.9]); else if (walls === 'log') ext.mat(MAT.TIMBER, [0.95, 0.88, 0.8], 1.6); else ext.mat(MAT.PLASTER, [0.97, 0.93, 0.86]); };
+  const innerMat = () => { if (walls === 'stone') ins.mat(MAT.STONE, [0.95, 0.93, 0.9]); else if (walls === 'log') ins.mat(MAT.TIMBER, [0.95, 0.88, 0.8], 1.6); else ins.mat(MAT.PLASTER, [0.97, 0.93, 0.86]); };
   const openings = { front: [], back: [], left: [], right: [] };
   for (const o of spec.doors || []) openings[o.wall].push({ door: true, pos: o.pos || 0, w: o.w || 1.05, v0: 0, v1: o.h || 2.05, def: o });
   for (const o of spec.windows || []) openings[o.wall].push({ pos: o.pos, w: o.w || 0.9, v0: o.sill === undefined ? 1.0 : o.sill, v1: (o.sill === undefined ? 1.0 : o.sill) + (o.h || 1.0), def: o });
   const aoOut = v => v > H - 0.7 ? lerp(1, 0.55, (v - (H - 0.7)) / 0.7) : v < 0.45 ? lerp(0.7, 1, v / 0.45) : 1;
-  const doorList = [];
+  const doorList = [], xdoorList = [];
 
   for (const wn of ['front', 'back', 'left', 'right']) {
     const W = WALLS[wn], L = W.len(w, d), gable = wn === 'left' || wn === 'right', Hin = gable ? H : H + t * tanP;
     const wb = m4.create(); m4.basis(wb, W.u, [0, 1, 0], W.n, W.start(w, d));
-    for (const m of [ext, int, glow]) { m.push(); m4.mul(m.m, m.m, wb); m.dirty = true; }
+    for (const m of faces) { m.push(); m4.mul(m.m, m.m, wb); m.dirty = true; }
     const ops = openings[wn].map(o => Object.assign(o, { u0: W.toU(o.pos, w, d) - o.w / 2, u1: W.toU(o.pos, w, d) + o.w / 2 })).sort((a, b) => a.u0 - b.u0);
     const inOp = (u, v) => ops.some(o => u > o.u0 && u < o.u1 && v > o.v0 && v < o.v1);
     const ub = [0, t, L - t, L], vb = [0, 0.45, H - 0.7, H]; if (stoneH) vb.push(stoneH);
@@ -3439,16 +3580,16 @@ function buildHouse(site, spec) {
       ext.quad([u0, v1, 0], [u0, v0, 0], [u1, v0, 0], [u1, v1, 0], u0 / ext.tile, (H - v1) / ext.tile, u1 / ext.tile, (H - v0) / ext.tile);
       if (u0 >= t - 0.001 && u1 <= L - t + 0.001) {
         const top = (j === vs.length - 2) ? Hin : v1;
-        inner(); innerMat(); ext.grad = [v1 > H - 0.4 ? 0.8 : 1, v0 < 0.3 ? 0.78 : 1];
-        ext.quad([u1, top, -t], [u1, v0, -t], [u0, v0, -t], [u0, top, -t], u1 / ext.tile, (H - top) / ext.tile, u0 / ext.tile, (H - v0) / ext.tile);
+        inner(); innerMat(); ins.grad = [v1 > H - 0.4 ? 0.8 : 1, v0 < 0.3 ? 0.78 : 1];
+        ins.quad([u1, top, -t], [u1, v0, -t], [u0, v0, -t], [u0, top, -t], u1 / ins.tile, (H - top) / ins.tile, u0 / ins.tile, (H - v0) / ins.tile);
       }
     }
-    ext.grad = null;
+    ext.grad = null; ins.grad = null;
     if (gable) {          // gable triangles
       const ay = H + L / 2 * tanP;
       outer(); outerMat(H + 1); if (walls === 'half' || walls === 'timber') ext.mat(MAT.PLASTER, plaster);
       ext.poly([[0, H, 0], [L, H, 0], [L / 2, ay, 0]]);
-      inner(); innerMat(); ext.poly([[L - t * 0.2, H, -t], [t * 0.2, H, -t], [L / 2, ay, -t]]);
+      inner(); innerMat(); ins.poly([[L - t * 0.2, H, -t], [t * 0.2, H, -t], [L / 2, ay, -t]]);
       if (walls !== 'stone' && walls !== 'log') {     // decorative truss
         outer(); ext.mat(MAT.TIMBER, timberC);
         ext.box(L / 2 - 0.08, H, 0, L / 2 + 0.08, ay - 0.25, 0.035, 16);
@@ -3469,11 +3610,13 @@ function buildHouse(site, spec) {
         ext.box(u0 - 0.13, 0, 0, u0, v1 + 0.14, 0.05, 16); ext.box(u1, 0, 0, u1 + 0.13, v1 + 0.14, 0.05, 16); ext.box(u0, v1, 0, u1, v1 + 0.14, 0.05, 16);
         ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(u0 - 0.35, -0.5, 0, u1 + 0.35, -0.02, 0.5); ext.box(u0 - 0.2, -0.5, 0.5, u1 + 0.2, -0.17, 0.95);
         addFloor(ext, u0 - 0.35, -t, u1 + 0.35, 0.5, -0.01); addFloor(ext, u0 - 0.2, 0.5, u1 + 0.2, 0.95, -0.17);
-        inner(); if (spec.floor === 'stone') ext.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ext.mat(MAT.PLANKS, COL.woodDark);
-        ext.quad([u0, 0.02, -t], [u0, 0.02, 0], [u1, 0.02, 0], [u1, 0.02, -t]);
-        const hinge = m4.tp(ext.m, [u0 + 0.02, 0, -t / 2]), dirU = m4.td(ext.m, [1, 0, 0]);
-        const dd = { site, zone, hinge, yaw: Math.atan2(dirU[0], -dirU[2]) - PI / 2, w: o.w - 0.04, h: v1 - 0.03, open: 0, c: m4.tp(ext.m, [(u0 + u1) / 2, 1, -t / 2]), out: m4.tp(ext.m, [(u0 + u1) / 2, -0.3, 1.6]), ins: m4.tp(ext.m, [(u0 + u1) / 2, 0, -t - 1.0]), baseM: m4.mul(m4.create(), ext.m, m4.translate(m4.create(), u0 + 0.02, 0, -t / 2)) };
-        if (!o.def.noLeaf) World.doors.push(dd); doorList.push(dd);
+        inner(); if (spec.floor === 'stone') ins.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ins.mat(MAT.PLANKS, COL.woodDark);
+        ins.quad([u0, 0.02, -t], [u0, 0.02, 0], [u1, 0.02, 0], [u1, 0.02, -t]);
+        // a door leaf on each side (one in the village, one in the cell); the doorway itself is closed to walkers, the leaf is a portal (56_cells.js)
+        const leaf = (m, side) => { const hinge = m4.tp(m.m, [u0 + 0.02, 0, -t / 2]), dirU = m4.td(m.m, [1, 0, 0]); return { site: side === 'in' ? isite : site, zone: side === 'in' ? zone : cell ? 0 : zone, side, cell: cell ? cell.id : null, hinge, yaw: Math.atan2(dirU[0], -dirU[2]) - PI / 2, w: o.w - 0.04, h: v1 - 0.03, open: 0, c: m4.tp(m.m, [(u0 + u1) / 2, 1, -t / 2]), out: m4.tp(m.m, [(u0 + u1) / 2, -0.3, 1.6]), ins: m4.tp(m.m, [(u0 + u1) / 2, 0, -t - 1.0]), sill: m4.tp(m.m, [(u0 + u1) / 2, 0, -t / 2]), baseM: m4.mul(m4.create(), m.m, m4.translate(m4.create(), u0 + 0.02, 0, -t / 2)) }; };
+        const dd = leaf(ins, 'in'), dx = cell ? leaf(ext, 'out') : null;
+        if (!o.def.noLeaf) { World.doors.push(dd); if (dx) World.doors.push(dx); } doorList.push(dd); if (dx) { dx.pair = dd; dd.pair = dx; xdoorList.push(dx); }
+        if (cell) { addBoxCollider(ext, u0, -t, u1, 0, 0, H + 3); addBoxCollider(ins, u0, -t, u1, 0, 0, H + 3); }
         if (o.def.lamp !== false) at(ext, u1 + 0.55, v1 + 0.25, 0.02, 0, () => { ext.mat(MAT.METAL, COL.black); ext.beam([0, 0.1, 0], [0, 0.1, 0.36], 0.03, 0.03); at(ext, 0, 0.1, 0.34, 0, () => Props.lantern(ext, { zone: 0 })); });
       } else {
         const z = -t * 0.45, uc = (u0 + u1) / 2;
@@ -3487,7 +3630,7 @@ function buildHouse(site, spec) {
         }
         glow.mat(MAT.PLAIN, o.def.glass || [1.0, 0.66, 0.30]); glow.m3 = 34;
         glow.quad([u0, v1, z - 0.04], [u0, v0, z - 0.04], [u1, v0, z - 0.04], [u1, v1, z - 0.04], 0, 0, (u1 - u0) / 0.9, (v1 - v0) / 0.9);
-        addLight(m4.tp(ext.m, [uc, (v0 + v1) / 2 + 0.1, -t - 0.7]), 5.6, [1.5, 1.42, 1.28], zone, 'daylight');
+        addLight(m4.tp(ins.m, [uc, (v0 + v1) / 2 + 0.1, -t - 0.7]), 5.6, [1.5, 1.42, 1.28], zone, 'daylight');
       }
     }
     // timber frame on the outside face
@@ -3508,18 +3651,18 @@ function buildHouse(site, spec) {
       if (a2.length && !ops.some(o => o.u0 < a2[0])) ext.beam([0.17, stoneH + 0.14, 0.018], [a2[0] - 0.08, mid, 0.018], 0.035, 0.12);
       if (a2.length && !ops.some(o => o.u1 > a2[a2.length - 1])) ext.beam([L - 0.17, stoneH + 0.14, 0.018], [a2[a2.length - 1] + 0.08, mid, 0.018], 0.035, 0.12);
       // interior posts
-      inner(); ext.mat(MAT.TIMBER, timberC);
-      for (const p of all) { if (p < t + 0.1 || p > L - t - 0.1 || ops.some(o => p > o.u0 - 0.05 && p < o.u1 + 0.05)) continue; ext.box(p - 0.07, 0, -t - 0.04, p + 0.07, Hin, -t, 32); }
+      inner(); ins.mat(MAT.TIMBER, timberC);
+      for (const p of all) { if (p < t + 0.1 || p > L - t - 0.1 || ops.some(o => p > o.u0 - 0.05 && p < o.u1 + 0.05)) continue; ins.box(p - 0.07, 0, -t - 0.04, p + 0.07, Hin, -t, 32); }
     }
     // collision: solid spans (windows block, doors don't)
-    { let a = 0; const cuts = ops.filter(o => o.door); for (const o of cuts) { if (o.u0 - a > 0.02) addBoxCollider(ext, a, -t, o.u0, 0, 0, H + 3); a = o.u1; } if (L - a > 0.02) addBoxCollider(ext, a, -t, L, 0, 0, H + 3); }
-    for (const m of [ext, int, glow]) m.pop();
+    { let a = 0; const cuts = ops.filter(o => o.door); for (const o of cuts) { if (o.u0 - a > 0.02) { addBoxCollider(ext, a, -t, o.u0, 0, 0, H + 3); if (cell) addBoxCollider(ins, a, -t, o.u0, 0, 0, H + 3); } a = o.u1; } if (L - a > 0.02) { addBoxCollider(ext, a, -t, L, 0, 0, H + 3); if (cell) addBoxCollider(ins, a, -t, L, 0, 0, H + 3); } }
+    for (const m of faces) m.pop();
   }
   // ── floor, plinth ──
-  inner(); if (spec.floor === 'stone') ext.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ext.mat(MAT.PLANKS, COL.woodDark);
-  ext.quad([-w / 2 + t, 0.02, -hd + t], [-w / 2 + t, 0.02, hd - t], [w / 2 - t, 0.02, hd - t], [w / 2 - t, 0.02, -hd + t], 0, 0, (w - 2 * t) / ext.tile, (d - 2 * t) / ext.tile);
+  inner(); if (spec.floor === 'stone') ins.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ins.mat(MAT.PLANKS, COL.woodDark);
+  ins.quad([-w / 2 + t, 0.02, -hd + t], [-w / 2 + t, 0.02, hd - t], [w / 2 - t, 0.02, hd - t], [w / 2 - t, 0.02, -hd + t], 0, 0, (w - 2 * t) / ins.tile, (d - 2 * t) / ins.tile);
   outer(); ext.mat(MAT.STONE, [0.92, 0.92, 0.92]); ext.grad = [1, 0.6]; ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4); ext.grad = null;
-  addFloor(ext, -w / 2, -hd, w / 2, hd, 0.02);
+  addFloor(ins, -w / 2, -hd, w / 2, hd, 0.02);
   // ── roof ──
   const thatch = (spec.roof || 'thatch') === 'thatch', rt = thatch ? 0.30 : 0.10, ov = spec.overhang || 0.55, og = 0.4, X = w / 2 + og;
   const eY = H - ov * tanP, sl = (hd + ov) / Math.cos(P), rc = spec.roofCol || (thatch ? [1, 1, 1] : [0.9, 0.85, 0.8]), rl = thatch ? MAT.THATCH : MAT.SHINGLE;
@@ -3541,15 +3684,15 @@ function buildHouse(site, spec) {
   // undersides: eaves + gable overhangs outside, the rest inside
   ext.mat(MAT.PLANKS, COL.woodDark); ext.ao = 0.5;
   for (const s of [-1, 1]) {
-    const q = (x0, x1, z0, z1) => { const a = [x0, roofY(z0), s * z0], b = [x0, roofY(z1), s * z1], c = [x1, roofY(z1), s * z1], e = [x1, roofY(z0), s * z0]; if (s < 0) ext.quad(a, b, c, e); else ext.quad(e, c, b, a); };
+    const q = (x0, x1, z0, z1, M) => { M = M || ext; const a = [x0, roofY(z0), s * z0], b = [x0, roofY(z1), s * z1], c = [x1, roofY(z1), s * z1], e = [x1, roofY(z0), s * z0]; if (s < 0) M.quad(a, b, c, e); else M.quad(e, c, b, a); };
     outer(); ext.ao = 0.5; q(-X, X, hd - t, hd + ov); q(-X, -w / 2 + t, 0, hd - t); q(w / 2 - t, X, 0, hd - t);
-    if (!spec.ceiling) { inner(); ext.ao = INT_AO * 0.9; q(-w / 2 + t, w / 2 - t, 0, hd - t); }
+    if (!spec.ceiling) { inner(); ins.mat(MAT.PLANKS, COL.woodDark); ins.ao = INT_AO * 0.9; q(-w / 2 + t, w / 2 - t, 0, hd - t, ins); }
   }
   // ── interior roof timbers ──
   int.mat(MAT.TIMBER, timberC);
   if (spec.ceiling) {
-    inner(); ext.mat(MAT.PLANKS, COL.wood); ext.ao = INT_AO * 0.85;
-    ext.quad([-w / 2 + t, H, hd - t], [-w / 2 + t, H, -hd + t], [w / 2 - t, H, -hd + t], [w / 2 - t, H, hd - t]);
+    inner(); ins.mat(MAT.PLANKS, COL.wood); ins.ao = INT_AO * 0.85;
+    ins.quad([-w / 2 + t, H, hd - t], [-w / 2 + t, H, -hd + t], [w / 2 - t, H, -hd + t], [w / 2 - t, H, hd - t]);
     for (let x = -w / 2 + t + 0.6; x < w / 2 - t; x += 1.2) int.box(x - 0.07, H - 0.16, -hd + t, x + 0.07, H, hd - t, 8);
   } else {
     const nb = Math.max(1, Math.round((w - 2 * t) / 2.5)), xs = []; for (let i = 1; i <= nb; i++) xs.push(-w / 2 + t + (w - 2 * t) * i / (nb + 1));
@@ -3561,11 +3704,12 @@ function buildHouse(site, spec) {
     int.box(-w / 2 + t, ridgeY - 0.24, -0.07, w / 2 - t, ridgeY - 0.1, 0.07);
     for (const s of [-1, 1]) { const z = s * (hd - t) * 0.5; int.box(-w / 2 + t, roofY(z) - 0.2, z - 0.06, w / 2 - t, roofY(z) - 0.08, z + 0.06); }
   }
-  ext.ao = 1; ext.m1 = 0;
+  ext.ao = 1; ext.m1 = 0; ins.ao = 1; ins.m1 = 0;
+  // ctx.site / ctx.ext / ctx.Ms are the INTERIOR frame (what the furnishing code builds in); ctx.xsite / xext / Mx are the shell on the village site
   const ctx = {
-    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList, kit, Ms, openings, tanP, zoneInfo: zinfo,
+    site: isite, xsite: site, cell, zone, w, d, H, t, hd, ext: ins, xext: ext, int, glow, R, floorY, xFloorY, ridgeY, roofY, spec, doors: doorList, xdoors: xdoorList, kit, Ms, Mx, openings, tanP, zoneInfo: zinfo,
     world: (x, y, z) => m4.tp(Ms, [x, y, z]),
-    spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: site.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
+    spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: isite.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
     // hearth against a wall. frame: origin on the inner wall face, +x into the room. (x, z) = house-local position, rot = RY angle
     fireplace(x, z, rot, opt) {
       opt = opt || {}; const wid = opt.w || 1.9, dep = 0.8, m = int; ctx.hearth = { x, z, rot, wid, dep }; World.zones[zone - 1].hearth = [x, z, wid];
@@ -3588,13 +3732,13 @@ function buildHouse(site, spec) {
       addBoxCollider(m, 0, -wid / 2 - 0.1, dep + 0.25, wid / 2 + 0.1, 0, 2);
       // chimney stack above the roof
       const sp = wp(m, dep * 0.5 - 0.02, 0, 0); m.pop();
-      const l = worldToSite(site, sp[0], sp[2]);
+      const l = worldToSite(isite, sp[0], sp[2]);
       if (kit) { kitChimney(ctx, l[0], l[1]); ctx.fire = fp; return; }
       outer(); ext.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
       const y0 = roofY(l[1]) - 0.5, y1 = Math.max(ridgeY + 0.9, roofY(l[1]) + 1.5);
       ext.cbox(l[0], y0, l[1], 0.85, y1 - y0, 0.85, 4); ext.cbox(l[0], y1, l[1], 1.02, 0.14, 1.02);
       ext.mat(MAT.PLAIN, [0.05, 0.05, 0.05]); ext.cbox(l[0], y1 + 0.14, l[1], 0.5, 0.01, 0.5, 4);
-      World.emitters.push({ type: 'smoke', p: m4.tp(Ms, [l[0], y1 + 0.2, l[1]]), zone: 0 });
+      World.emitters.push({ type: 'smoke', p: m4.tp(Mx, [l[0], y1 + 0.2, l[1]]), zone: 0 });
       ctx.fire = fp;
     },
     solid(x0, z0, x1, z1, h) { addBoxCollider(int, x0, z0, x1, z1, 0, h || 1); },
@@ -3606,8 +3750,13 @@ function buildHouse(site, spec) {
   if (kit) kitDress(ctx);
   if (kit && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
   int.grad = null;
-  World.houses[site.id] = { site, zone, ctx, floorY, door: doorList[0] };
-  return { ext, int, glow, ctx };
+  if (cell) {
+    int.append(ins);          // the interior's wall faces, floor and ceiling travel with the rest of the cell's generated meshes
+    cell.floorY = floorY; cell.zone = zone; cell.door = doorList[0]; cell.xdoor = xdoorList[0]; cell.w = w; cell.d = d; cell.ctx = ctx;
+    if (cell.door && cell.xdoor) Cells.portals(cell, site);
+  }
+  World.houses[site.id] = { site, isite, zone, ctx, floorY, xFloorY, door: doorList[0], xdoor: xdoorList[0], cell };
+  return { ext, int, glow, ctx, cell };
 }
 
 
@@ -3669,18 +3818,31 @@ const KH = (() => {
 })();
 
 let kitFB = null;
-function kitShell(c) {
-  const { site, spec, w, d, H, t, hd, ext, glow, zone, Ms, openings, tanP } = c, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
+// With cells the shell is laid twice: pass 'ext' on the village site (outside faces, a closed door, glowing windows, no interior) and pass 'int' in the cell's own
+// frame (the room's side of the same walls, floor, roof lining). Without cells one pass, 'both', lays it all on the site as it always was.
+function kitShell(c) { if (!c.cell) return kitShellPass(c, 'both'); kitShellPass(c, 'ext'); kitShellPass(c, 'int'); }
+function kitShellPass(c, pass) {
+  const { spec, w, d, H, t, hd, glow, zone, openings, tanP } = c, site = c.xsite, X = pass !== 'int', I = pass !== 'ext', ext = pass === 'int' ? c.ext : c.xext, Ms = pass === 'int' ? c.Ms : c.Mx, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
-  ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
-  const b = site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.floorY + H + (st.up ? 3 : 0) }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
+  if (X) { for (const m of [c.xext, c.ext, glow]) { m.nv = 0; m.ni = 0; m.min = [1e9, 1e9, 1e9]; m.max = [-1e9, -1e9, -1e9]; } }
+  const b = X ? (site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.xFloorY + H + (st.up ? 3 : 0) })) : kitIntBatch(zone);
+  if (X) World.kitExt[site.id] = { batch: b, site, Ms: c.Mx, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
-  const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: st.up ? zone : 0, inSkyVis: st.up ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
+  const cellExt = pass === 'ext';          // in a cell the village shell knows nothing of the room: its inside faces are plain dark
+  const OUT = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : st.up ? zone : 0, inSkyVis: st.up && !cellExt ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
+  const IN = { zone, skyVis: INT_AO, inZone: zone, inSkyVis: INT_AO };
   const frames = {}, wbs = {};
   for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); frames[wn] = new THREE.Matrix4().makeBasis(KH.V(W.u), KH.V([0, 1, 0]), KH.V(W.n)).setPosition(s0[0], s0[1], s0[2]).premultiply(MS); wbs[wn] = m4.basis(m4.create(), W.u, [0, 1, 0], W.n, s0); }
-  const add = (F, name, x, y, z, s, o, ry) => { o = o || OUT; if (st.timber && typeof infTimber === 'function') name = infTimber(name); if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] }); b.add(name, KH.xf(F, x, y, z, s, ry), o); };
+  const add = (F, name, x, y, z, s, o, ry) => {
+    o = o || OUT;
+    if (pass === 'int') { if (o === EXT) { if (!/^DoorFrame|^Door_1/.test(name)) return; o = IN; } else o = o.tint ? Object.assign({}, IN, { tint: o.tint }) : IN; }
+    else if (cellExt && o.inZone !== undefined && o !== OUT && o !== UP) o = Object.assign({}, o, { inZone: 0, inSkyVis: 0.12 });
+    if (st.timber && typeof infTimber === 'function') name = infTimber(name);
+    if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] });
+    b.add(name, KH.xf(F, x, y, z, s, ry), o);
+  };
   const Ytop = H + (st.up ? 3 : 0);
-  Object.assign(c, { kb: b, kMS: MS, kYtop: Ytop, kFrames: frames, kR: R });
+  if (X) Object.assign(c, { kb: b, kMX: MS, kFrames: frames }); if (I) c.kMS = MS; c.kYtop = Ytop; c.kR = c.kR || R;
   const G = stone ? 'Wall_UnevenBrick' : 'Wall_Plaster';
   const filler = (F, a, e, y, ys, isStone, endL, endR, o) => {
     const g = e - a; if (g < 0.05) return;
@@ -3701,7 +3863,7 @@ function kitShell(c) {
   };
   c.kDoorLamps = [];
   const infW = site.infill && typeof infKitWalls === 'function' && INFS.mats;
-  if (infW) infKitWalls(c, b, MS, frames, zone, sy, R);
+  if (infW) infKitWalls(c, b, MS, frames, zone, sy, R, pass);
   for (const wn of ['front', 'back', 'left', 'right']) {
     if (infW) continue;
     const F = frames[wn], L = WALLS[wn].len(w, d);
@@ -3716,12 +3878,12 @@ function kitShell(c) {
       filler(F, cur, s.c - sx, 0, sy, stone, cur === 0, false);
       if (o.door) {
         add(F, G + '_Door_Flat', s.c, 0, 0, S); add(F, st.arch ? 'DoorFrame_Round_Brick' : 'DoorFrame_Flat_WoodDark', s.c, 0, 0, st.arch ? [S[0], S[1] * 0.93, 1.1] : S, EXT);
-        if (o.def.kLamp) { const side = s.c + sx + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F, wn, u: s.c + side * (sx + 0.42), v: 1.5 * sy }); }
+        if (X && o.def.kLamp) { const side = s.c + sx + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F, wn, u: s.c + side * (sx + 0.42), v: 1.5 * sy }); }
       } else {
         const k = WIN[o.def.kwin] || WIN.wide;
         add(F, G + k[0], s.c, 0, 0, S); add(F, o.def.glass && Kit.pieces[k[1] + '_Stained'] ? k[1] + '_Stained' : k[1], s.c, 0, 0, S, o.def.glass ? Object.assign({}, OUT, { tint: o.def.glass }) : undefined);
         if (o.def.shutters !== false && sx > 0.9 && s.c - 1.3 > 0 && s.c + 1.3 < L) add(F, k[2], s.c, 0, 0, S, EXT);
-        if (!o.def.glass && !st.arch && sx > 0.9 && (wn === 'front' || R() < 0.3) && R() < 0.7) { const fb = (kitFB = kitFB || [0, 1, 2].map(i => genFlowerBox(1.25, rng(70 + i)))); c.kb.add(R.pick(fb), KH.xf(F, s.c, 0.9 * sy, 0.27, 1, 0), EXT); }
+        if (X && !o.def.glass && !st.arch && sx > 0.9 && (wn === 'front' || R() < 0.3) && R() < 0.7) { const fb = (kitFB = kitFB || [0, 1, 2].map(i => genFlowerBox(1.25, rng(70 + i)))); c.kb.add(R.pick(fb), KH.xf(F, s.c, 0.9 * sy, 0.27, 1, 0), EXT); }
       }
       cur = s.c + sx;
     }
@@ -3729,7 +3891,7 @@ function kitShell(c) {
     add(F, 'Corner_Exterior_Wood', 0, 0, 0, [1.25, sy, 1.25], EXT);
     // ── upper storey: timber and plaster, windows on alternate panels, a balcony over the door on some ──
     if (st.up) {
-      const n = Math.max(1, Math.round(L / 2)), m = L / n, sx = m / 2, S = [sx, 1, 1], mid = n >> 1;
+      const n = Math.max(1, Math.round(L / 2)), m = L / n, sx = m / 2, S = [sx, 1, 1], mid = n >> 1, RU = rng(site.x * 91 + site.z * 7 + wn.charCodeAt(0) * 13);       // its own sequence: the inside copy of the wall must pick the same windows
       for (let k = 0; k < n; k++) {
         const uc = (k + 0.5) * m;
         if (st.balcony === wn && n >= 3 && k === mid) {
@@ -3740,7 +3902,7 @@ function kitShell(c) {
         } else if (n > 1 && k === 0) add(F, 'Wall_Plaster_Straight_L', uc, H, 0, S, UP);
         else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, 0, S, UP);
         else if (n <= 3 || (k + (wn === 'front' || wn === 'back' ? 0 : 1)) % 2 === 1) {
-          const r = R();
+          const r = RU();
           if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); }
           else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
           else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, 0, S, UP); add(F, kitOpen('Window_Thin_Round1'), uc, H, 0, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
@@ -3751,36 +3913,36 @@ function kitShell(c) {
     // ── gable ends carry the timber triangle of the roof ──
     if ((wn === 'left' || wn === 'right') && !(st.shingle && typeof infRoofGen === 'function')) { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; const gw = spec.gableWin && spec.gableWin[wn] && Kit.pieces['Roof_Front_Brick' + span + '_Open'];
       add(F, 'Roof_Front_Brick' + span + (gw ? '_Open' : ''), L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO });
-      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT)); }
+      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT), pass, ext); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: st.up ? 0 : zone, inSky: st.up ? 0.2 : INT_AO, tint: st.timber ? [1, 1, 1] : [1, 1, 1] });
+  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: [1, 1, 1] }); }
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
     let name = 'Roof_RoundTiles_' + span + 'x' + len; const ridge = Kit.info(name).max[1]; if (st.shingle && typeof infR === 'function') name = infR(name);
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
-    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), { zone: 0, skyVis: 1, inZone: zone, inSkyVis: 0.2 });
+    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), pass === 'int' ? { zone, skyVis: INT_AO, inZone: zone, inSkyVis: 0.2 } : { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : 0.2 });
   }
-  // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance) ──
-  {
+  // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance; in a cell they are the cell's) ──
+  if (I) {
     const nx = Math.max(1, Math.round(w / 2)), nz = Math.max(1, Math.round(d / 2)), sx = (w - 0.3) / (2 * nx), sz = (d - 0.3) / (2 * nz), tile = spec.floor === 'stone' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';
     for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) b.add(tile, KH.xf(MS, (i - (nx - 1) / 2) * 2 * sx, 0.012, (j - (nz - 1) / 2) * 2 * sz, [sx, 1, sz]), { zone, skyVis: INT_AO, cast: false });
   }
   // ── generated parts that still make sense: stone plinth down to the ground, door steps, ceiling or roof lining ──
   const inner = () => { ext.m1 = zone; ext.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
-  outer(); ext.mat(MAT.STONE, [0.92, 0.92, 0.92]); ext.grad = [1, 0.6]; ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4); ext.grad = null;
-  for (const wn in WALLS) for (const o of openings[wn]) if (o.door) {
+  if (X) outer(), ext.mat(MAT.STONE, [0.92, 0.92, 0.92]), ext.grad = [1, 0.6], ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4), ext.grad = null;
+  if (X) for (const wn in WALLS) for (const o of openings[wn]) if (o.door) {
     ext.push(); m4.mul(ext.m, ext.m, wbs[wn]); ext.dirty = true;
     outer(); ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(o.u0 - 0.35, -0.5, 0, o.u1 + 0.35, -0.02, 0.5); ext.box(o.u0 - 0.2, -0.5, 0.5, o.u1 + 0.2, -0.17, 0.95);
     ext.pop();
   }
   const e = 0.16;          // the kit walls are thinner than the generated ones: reach to their inner face
   if (st.up) c.needUpper = true;           // a second storey: its floor, with the stairwell, is built by the building (upperFloor in 71b_storeys.js)
-  if (spec.ceiling && !st.up) {
+  if (I && spec.ceiling && !st.up) {
     inner(); ext.mat(MAT.PLANKS, COL.wood); ext.ao = INT_AO * 0.85;
     ext.quad([-w / 2 + e, H, hd - e], [-w / 2 + e, H, -hd + e], [w / 2 - e, H, -hd + e], [w / 2 - e, H, hd - e]);
-  } else if (!st.up) {
+  } else if (I && !st.up) {
     const roofY = c.roofY;
     ext.mat(MAT.PLANKS, COL.woodDark);
     for (const s of [-1, 1]) {
@@ -3793,9 +3955,9 @@ function kitShell(c) {
       ext.pop();
     }
   }
-  c.kCol0 = World.colliders.length;
+  if (I) c.kCol0 = World.colliders.length;
   // lanterns by the doors
-  for (const l of c.kDoorLamps) {
+  if (X) for (const l of c.kDoorLamps) {
     if (site.infill && typeof INFS !== 'undefined' && INFS.mats) {          // a small generated bracket lantern instead of the 2800-triangle kit lantern
       const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), q = KH.xf(l.F, l.u, 2.15, 0.1, 1, 0), p0 = new THREE.Vector3(0, -0.1, 0.42).applyMatrix4(q), p = [p0.x, p0.y, p0.z];
       b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
@@ -3809,8 +3971,8 @@ function kitShell(c) {
 // a kit chimney above a hearth at house-local (lx, lz), rising clear of the ridge
 function kitChimney(c, lx, lz) {
   lx = clamp(lx, -c.w / 2 + 0.6, c.w / 2 - 0.6); lz = clamp(lz, -c.hd * 0.3, c.hd * 0.3);          // inside the footprint, near the ridge
-  const top = infChimney(c.kb, c.kMS, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0, lift: 0.14 });
-  World.emitters.push({ type: 'smoke', p: m4.tp(c.Ms, [lx, top + 0.2, lz]), zone: 0 });
+  const top = infChimney(c.kb, c.kMX, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0, lift: 0.14 });
+  World.emitters.push({ type: 'smoke', p: m4.tp(c.Mx, [lx, top + 0.2, lz]), zone: 0 });
 }
 
 // ── furnishing: Props.* calls land here while kits are loaded and are answered with kit pieces at the same spot ──
@@ -3819,7 +3981,7 @@ const KITP = { rnd: rng(4242), lc: {} };
 const kitLightOk = (zone, cap) => { const n = KITP.lc[zone] = (KITP.lc[zone] || 0) + 1; return n <= cap; };
 function kitIntBatch(zone) {
   let k = World.kitInt[zone];
-  if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
+  if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null, cell: zi ? zi.cell : null }; }
   return k.batch;
 }
 // ── scanned stand-ins ──
@@ -4164,14 +4326,16 @@ function kitAttach() {
     const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.frustumCulled = false; mesh.matrixAutoUpdate = false; mesh.renderOrder = -5; mesh.name = 'kit-shadow-proxy'; SC.scene.add(mesh);
   }
   try { const sb = kitScatter(); if (sb) addG(sb.build(), { scatter: true }); } catch (e) { console.warn('scan scatter skipped: ' + (e && e.message || e)); }
-  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) { const g = k.batch.build(); furnBlobs(+z, g); addG(g, { site: k.site, interior: true }); } }
-  for (const z in World.kitFine) { const k = World.kitFine[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true, fine: true }); }
+  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) { const g = k.batch.build(); furnBlobs(+z, g); addG(g, { site: k.site, interior: true, cell: k.cell }); } }
+  for (const z in World.kitFine) { const k = World.kitFine[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true, fine: true, cell: k.cell }); }
   if (World.kitYard && World.kitYard.count) { const g = World.kitYard.build(); g.traverse(o => { if (o.isMesh) o.layers.set(1); }); addG(g, { yard: true }); }
   const inner = sceneUpdate;
   sceneUpdate = function (camPos, q) {
     inner(camPos, q);
     // furniture only shows through an open door or a window, so it is drawn for the nearest buildings alone
+    const cur = World.cell;
     for (const k of World.kitGroups) {
+      if (cur || k.cell) { k.g.visible = !!cur && k.cell === cur.id && !(k.fine && q.name === 'Low'); continue; }        // in a cell: that cell's groups only; outside: no cell's
       if (k.interior && k.site) k.g.visible = interiorShown(k.site, camPos) && !(k.fine && q.name === 'Low');
       else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
       else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
@@ -4179,7 +4343,7 @@ function kitAttach() {
       else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? 9 : q.yardRange * 1.6 + 8) && (!k.dress || q.scatter); }
       else k.g.visible = true;
     }
-    if (Kit.update) Kit.update(camPos);
+    if (Kit.update && !cur) Kit.update(camPos);
   };
 }
 
@@ -4476,8 +4640,9 @@ UPPER.mill = c => {
 
 // ── gable windows: the plaster of a gable end with holes cut in it, and the kit's open window frames in the holes ──
 // wb: the wall's basis (house-local), L: its length, Ytop: where the gable starts, wins: [{ u: position along the wall, sill: height above the gable's foot, s: scale of the kit window }]
-function gableFill(c, wb, L, Ytop, wins, placeWin) {
-  const ext = c.ext, { zone, tanP, hd } = c, T = 0.25, inset = 0.3, apex = Ytop + hd * tanP - 0.5, col = c.spec.plaster || [1, 0.96, 0.88];
+function gableFill(c, wb, L, Ytop, wins, placeWin, pass, ext) {
+  ext = ext || c.ext; pass = pass || 'both';
+  const { zone, tanP, hd } = c, T = 0.25, inset = 0.3, apex = Ytop + hd * tanP - 0.5, col = c.spec.plaster || [1, 0.96, 0.88];
   const P = (u, v, n) => m4.tp(wb, [u, v, n]);
   const hw = 0.6, holes = wins.map(w => (w = Object.assign({ u: L / 2 }, w), { u0: w.u - hw * w.s, u1: w.u + hw * w.s, v0: Ytop + w.sill, v1: Ytop + w.sill + 1.55 * w.s, w })).sort((a, b) => a.u0 - b.u0);
   const left = v => inset + (v - Ytop) / tanP, right = v => L - inset - (v - Ytop) / tanP;       // the fill stops inside the rafters
@@ -4493,13 +4658,13 @@ function gableFill(c, wb, L, Ytop, wins, placeWin) {
       for (const [a0, a1, b0, b1] of segs) { if (b0 - a0 < 0.02 && b1 - a1 < 0.02) continue; if (vb >= apex - 0.001 && Math.abs(b1 - a1) < 0.05) continue; q([a0, va], [b0, va], [b1, vb], [a1, vb]); }
     }
   };
-  ext.m1 = 0; ext.ao = 1; ext.mat(MAT.PLASTER, col); face(0, false);
-  ext.m1 = zone; ext.ao = INT_AO; ext.mat(MAT.PLASTER, [col[0] * 0.97, col[1] * 0.95, col[2] * 0.9]); face(-T, true);
+  if (pass !== 'int') { ext.m1 = 0; ext.ao = 1; ext.mat(MAT.PLASTER, col); face(0, false); }
+  if (pass !== 'ext') { ext.m1 = zone; ext.ao = INT_AO; ext.mat(MAT.PLASTER, [col[0] * 0.97, col[1] * 0.95, col[2] * 0.9]); face(-T, true); }
   // reveals round each hole, then the frame
   for (const h of holes) {
-    ext.m1 = 0; ext.ao = 0.8; ext.mat(MAT.TIMBER, c.spec.timber || COL.timber);
+    if (pass !== 'int') { ext.m1 = 0; ext.ao = 0.8; ext.mat(MAT.TIMBER, c.spec.timber || COL.timber);
     const a = [h.u0, h.v0], b = [h.u1, h.v0], e = [h.u1, h.v1], d = [h.u0, h.v1];
-    for (const [p0, p1] of [[a, b], [b, e], [e, d], [d, a]]) ext.quad(P(p0[0], p0[1], 0), P(p1[0], p1[1], 0), P(p1[0], p1[1], -T), P(p0[0], p0[1], -T), 0, 0, 1, 1);
+    for (const [p0, p1] of [[a, b], [b, e], [e, d], [d, a]]) ext.quad(P(p0[0], p0[1], 0), P(p1[0], p1[1], 0), P(p1[0], p1[1], -T), P(p0[0], p0[1], -T), 0, 0, 1, 1); }
     ext.ao = 1; ext.m1 = 0; placeWin(kitOpen('Window_Wide_Flat1'), (h.u0 + h.u1) / 2, h.v0 - 0.95 * h.w.s, h.w.s);
   }
   ext.m1 = 0; ext.ao = 1;
@@ -4876,7 +5041,7 @@ const FURN = { blobs: {} };
 // the fine group of a room: small objects, drawn on medium and high only (see kitAttach)
 World.kitFine = {};
 function furnFineBatch(zone) {
-  let k = World.kitFine[zone]; if (!k) { const zi = World.zones[zone - 1]; k = World.kitFine[zone] = { batch: Kit.batch({ name: 'kitfine-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
+  let k = World.kitFine[zone]; if (!k) { const zi = World.zones[zone - 1]; k = World.kitFine[zone] = { batch: Kit.batch({ name: 'kitfine-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null, cell: zi ? zi.cell : null }; }
   return k.batch;
 }
 function furnBlob(zone, P) {
@@ -5238,7 +5403,7 @@ function buildVillage() {
     const spec = HOUSES[site.id]; if (!spec) continue;
     const h = buildHouse(site, spec);
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
-    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true, cell: h.cell ? h.cell.id : null }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
   }
@@ -5460,7 +5625,7 @@ function buildVillage() {
   leaf.mat(MAT.METAL, COL.black); for (const y of [0.18, 0.82]) { leaf.box(0, y - 0.03, -0.04, 0.82, y + 0.03, -0.03, 32); leaf.box(0, y - 0.03, 0.03, 0.82, y + 0.03, 0.04, 16); }
   leaf.box(0.86, 0.48, -0.07, 0.9, 0.54, 0.07);
   const leafItem = skin.add(leaf);
-  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: 0, kind: 'door' }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;
@@ -6783,7 +6948,7 @@ function infillAttach() {
 }
 
 // the walls of an enterable infill house (called from kitShell): the plan comes from the building's own openings, the upper storey is laid out like a shell's
-function infKitWalls(c, b, MS, frames, zone, sy, R) {
+function infKitWalls(c, b, MS, frames, zone, sy, R, pass) {      // pass: 'ext' / 'int' in a cell (the village shell / the room), else both in one
   const { site, spec, w, d, H, openings } = c, st = spec.kitStyle, fl = st.up ? 2 : 1, plan = [];
   plan[0] = { front: [], back: [], left: [], right: [] };
   for (const wn of ['front', 'back', 'left', 'right']) {
@@ -6792,12 +6957,12 @@ function infKitWalls(c, b, MS, frames, zone, sy, R) {
       const cu = (o.u0 + o.u1) / 2, hw = o.door ? Math.min(0.55 * Math.max(1, o.def.ksx || 1), cu, L - cu) : Math.min(0.55, cu, L - cu);
       if (hw < 0.3) continue;
       plan[0][wn].push({ u0: cu - hw, u1: cu + hw, v0: o.door ? 0 : (o.def.sill || 0.95), v1: o.door ? (o.def.h || 2.12) : (o.def.sill || 0.95) + (o.def.h || 1.55), door: !!o.door, shutter: !o.door && hw > 0.5 && R() < 0.35 });
-      if (o.door && o.def.kLamp) { const side = cu + hw + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F: frames[wn], wn, u: cu + side * (hw + 0.42), v: 1.5 * sy }); }
+      if (o.door && o.def.kLamp && pass !== 'int') { const side = cu + hw + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F: frames[wn], wn, u: cu + side * (hw + 0.42), v: 1.5 * sy }); }
     }
   }
   if (fl > 1) { plan[1] = { front: [], back: [], left: [], right: [] }; const nF = Math.max(2, Math.round(w / 2)), mF = w / nF; for (let i = 0; i < nF; i++) { const cu = (i + 0.5) * mF; if (i % 2 === 0) plan[1].front.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1, shutter: R() < 0.4 }); if (i % 2 === 1) plan[1].back.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1 }); } plan[1].left.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); plan[1].right.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); }
   const tn = 0.85 + R() * 0.25;
-  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: [tn, tn * 0.98, tn * 0.95], jetty: false, R, plan, skip: {}, optsOf: k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 } });
+  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: [tn, tn * 0.98, tn * 0.95], jetty: false, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
 }
 
 
@@ -7098,7 +7263,10 @@ function fxUpdate(dt, time, env, cam) {
   const d = R.partData, max = R.partMax; let n = 0;
   const put = (x, y, z, size, r, g, b, a, rot, kind, aspect, seed) => { if (n >= max) return; const o = n++ * 12; d[o] = x; d[o + 1] = y; d[o + 2] = z; d[o + 3] = size; d[o + 4] = r; d[o + 5] = g; d[o + 6] = b; d[o + 7] = a; d[o + 8] = rot; d[o + 9] = kind; d[o + 10] = aspect; d[o + 11] = seed; };
   const lit = env.windowGlow, wx = env.windDir[0] * env.windStrength, wz = env.windDir[1] * env.windStrength;
+  const here = World.cell ? World.cell.id : null;
   for (const e of World.emitters) {
+    if (e.cell === undefined) { const zi = e.zone ? World.zones[e.zone - 1] : null; e.cell = zi && zi.cell || null; }
+    if (e.cell !== here) continue;          // in a cell only its own flames burn; outdoors none of them do
     const dx = e.p[0] - cam[0], dy = e.p[1] - cam[1], dz = e.p[2] - cam[2], dist = hyp(dx, dy, dz);
     if (e.type === 'fire' || e.type === 'bonfire') {
       if (e.type === 'bonfire' && !World.bonfire) continue;
@@ -7127,6 +7295,7 @@ function fxUpdate(dt, time, env, cam) {
     }
   }
   // chimney smoke drifts with the wind and thins out
+  if (World.cell) FX.smoke.length = 0;
   for (let i = FX.smoke.length - 1; i >= 0; i--) {
     const s = FX.smoke[i]; s.life += dt; if (s.life > s.max) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
     const k = s.life / s.max; s.p[0] += (wx * 0.9 * k + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) * dt; s.p[2] += (wz * 0.9 * k) * dt;
@@ -7410,7 +7579,7 @@ const NPC_DEFS = [
     sched: [[7.5, 'stall0', 'idle'], [18, 'barn.work', 'work'], [19.5, 'inn.stand1', 'idle'], [22, 'farm.bed2', 'lie']] },
 ];
 const NPCS = [], NPC = {};
-const Nav = { nodes: [], adj: [], spot: {} };
+const Nav = { nodes: [], adj: [], spot: {}, portal: {} };        // portal[a] = b: stepping from node a to b crosses a door between two spaces (an instant move)
 function navBuild() {
   const N = Nav.nodes, A = Nav.adj;
   const add = (x, y, z) => { N.push([x, y, z]); A.push([]); return N.length - 1; };
@@ -7430,8 +7599,12 @@ function navBuild() {
   const doorNode = {};
   for (const id in World.houses) {
     const h = World.houses[id], d = h.door; if (!d) continue;
-    const o = add(d.out[0], World.groundAt(d.out[0], d.out[2], d.out[1] + 1), d.out[2]), i = add(d.ins[0], h.floorY + 0.02, d.ins[2]);
-    link(o, i); link(o, nearest(d.out[0], d.out[2], outside, 40)); doorNode[id] = { o, i }; outside.push(o);
+    const x = h.xdoor || d, o = add(x.out[0], World.groundAt(x.out[0], x.out[2], x.out[1] + 1), x.out[2]), i = add(d.ins[0], h.floorY + 0.02, d.ins[2]);
+    if (h.cell) {         // the door is a portal: outside node o -> threshold ot (village) ~ threshold it (cell) -> inside node i
+      const ot = add(x.c[0], World.groundAt(x.c[0], x.c[2], x.c[1] + 1), x.c[2]), it = add(d.c[0], h.floorY + 0.02, d.c[2]);
+      link(o, ot); link(it, i); A[ot].push([it, 1.2]); A[it].push([ot, 1.2]); Nav.portal[ot] = it; Nav.portal[it] = ot; doorNode[id] = { o, i, ot, it };
+    } else { link(o, i); doorNode[id] = { o, i }; }
+    link(o, nearest(x.out[0], x.out[2], outside, 40)); outside.push(o);
   }
   for (const name in World.spots) {
     const s = World.spots[name], k = add(s.p[0], s.p[1], s.p[2]); Nav.spot[name] = k;
@@ -7503,6 +7676,7 @@ function npcArrive(n, spotName, anim) {
   n.anim = sp.lie ? 'lie' : sp.sit ? 'sit' : (anim === 'sit' || anim === 'lie') ? 'idle' : anim;
 }
 function npcUpdate(dt, playerPos) {
+  const pc = Cells.spaceOf(playerPos);
   for (const n of NPCS) {
     n.t += dt;
     const dPlayer = hyp(n.pos[0] - playerPos[0], n.pos[2] - playerPos[2]);
@@ -7526,7 +7700,7 @@ function npcUpdate(dt, playerPos) {
         const run = n.def.run, sp = (run ? 2.7 : 1.35) * (0.9 + n.scale * 0.1), N2 = Nav.nodes[n.path[n.pi]];
         const dx = N2[0] - n.pos[0], dz = N2[2] - n.pos[2], d = hyp(dx, dz);
         const blocked = dPlayer < 0.75 && (playerPos[0] - n.pos[0]) * dx + (playerPos[2] - n.pos[2]) * dz > 0;
-        if (d < 0.18) { n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
+        if (d < 0.18) { const k = n.path[n.pi], k2 = n.path[n.pi + 1]; if (k2 !== undefined && Nav.portal[k] === k2) { n.pos = Nav.nodes[k2].slice(); n.pi++; n.portalT = 0.4; } n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
         else if (!blocked) {
           const st = Math.min(d, sp * dt); n.pos[0] += dx / d * st; n.pos[2] += dz / d * st;
           const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 0.6); n.pos[1] += clamp(gy - n.pos[1], -3 * dt, 3 * dt); if (Math.abs(gy - n.pos[1]) > 1.2) n.pos[1] = gy;
@@ -7535,6 +7709,9 @@ function npcUpdate(dt, playerPos) {
         } else n.anim = 'idle';
       }
     }
+    // not in the player's space (another cell, or the village while the player is in one): position only, no pose, no drawing
+    if (pc !== Cells.spaceOf(n.pos)) { n.obj.visible = false; if (n.ch && !n.hid) { n.hid = true; n.ch.pivot.visible = false; } continue; }
+    n.hid = false;
     // head follows the player when close
     let lx = 0, ly = 0;
     if (dPlayer < 5.5 && n.anim !== 'lie' && n.anim !== 'hammer' && n.anim !== 'work') { const a = angDiff(Math.atan2(playerPos[0] - n.pos[0], -(playerPos[2] - n.pos[2])), n.yaw); if (Math.abs(a) < 1.9) { lx = clamp(-a, -1.1, 1.1); ly = clamp((n.pos[1] + 1.6 * n.scale - playerPos[1] - 1.6) * 0.25, -0.3, 0.3); } }
@@ -7713,7 +7890,7 @@ function floorHeight(f, x, z) {
 }
 // highest walkable surface at (x,z) that is not above maxY (terrain is always a candidate)
 World.groundAt = (x, z, maxY) => {
-  let best = Terrain.y(x, z);
+  let best = (CELLS_ON && Cells.inRegion(x)) ? -1e9 : Terrain.y(x, z);          // cells have no terrain: below them is nothing (the rescue in playerUpdate)
   for (const f of World.floors) { const y = floorHeight(f, x, z); if (y !== null && y <= maxY && y > best) best = y; }
   return best;
 };
@@ -7767,7 +7944,7 @@ function playerUpdate(dt) {
     colResolve(np, P.r, P.pos[1], P.pos[1] + 1.75);
     // stay inside the valley and out of deep water
     const rr = hyp(np[0], np[2]);
-    if (rr > WORLD_RADIUS) { np[0] *= WORLD_RADIUS / rr; np[2] *= WORLD_RADIUS / rr; if (P.warned <= 0) { P.warned = 8; if (typeof toast === 'function') toast('The wilds beyond Brackenfell are no place to wander alone.'); } }
+    if (rr > WORLD_RADIUS && !(CELLS_ON && Cells.inRegion(np[0]))) { np[0] *= WORLD_RADIUS / rr; np[2] *= WORLD_RADIUS / rr; if (P.warned <= 0) { P.warned = 8; if (typeof toast === 'function') toast('The wilds beyond Brackenfell are no place to wander alone.'); } }
     const w2 = World.waterAt(np[0], np[2]);
     if (w2 > -900 && w2 - World.groundAt(np[0], np[2], P.pos[1] + 0.6) > 1.12 && w2 - P.pos[1] > 0.9) { np[0] = P.pos[0]; np[2] = P.pos[2]; P.vel[0] *= 0.3; P.vel[2] *= 0.3; }
     P.pos[0] = np[0]; P.pos[2] = np[2];
@@ -7799,7 +7976,8 @@ function playerUpdate(dt) {
   P.dip += (0 - P.dip) * Math.min(1, dt * 9);
   // zone, surface
   const zone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
-  World.camZone = zone; World.indoor += ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
+  if (CELLS_ON) { Cells.sync(P.pos); if (P.pos[1] < CELL.y - 30 && Cells.cur) Cells.rescue(); }
+  World.camZone = zone; World.indoor = World.cell ? 1 : World.indoor + ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
   P.surface = zone ? (World.zones[zone - 1].site.id === 'chapel' ? 'stone' : 'wood') : P.inWater ? 'water' : (P.pos[1] > Terrain.y(P.pos[0], P.pos[2]) + 0.12 ? 'wood' : Terrain.splat(P.pos[0], P.pos[2], 1) > 0.4 ? 'stone' : Terrain.splat(P.pos[0], P.pos[2], 0) > 0.4 ? 'dirt' : 'grass');
   // head bob + footsteps
   const moving = P.speed > 0.4 && P.onGround; P.bobAmt += ((moving ? 1 : 0) - P.bobAmt) * Math.min(1, dt * 8);
@@ -8585,6 +8763,7 @@ function onCampCleared(id) {
 // ── interactions ──
 function interactLabel(it) {
   if (it.npc) { const w = it.npc.name.split(' '); return 'Talk to ' + (['Old', 'Brother', 'Elder', 'Warden', 'Guardsman'].includes(w[0]) ? w[1] : w[0]); }
+  if (it.kind === 'portal') return Cells.busy ? null : it.label;
   if (it.kind === 'chest') return S.opened[it.id] ? null : 'Open chest';
   if (it.kind === 'loot') return 'Search ' + it.name;
   if (it.kind === 'pickup') return it.gone ? null : it.label;
@@ -8597,6 +8776,7 @@ function interactLabel(it) {
 }
 function interactUse(it) {
   if (it.npc) { if (it.npc.anim === 'lie') return toast(it.npc.name + ' is fast asleep.'); return startTalk(it.npc); }
+  if (it.kind === 'portal') return Cells.use(it);
   if (it.kind === 'chest') {
     S.opened[it.id] = 1; Audio2.chest();
     const got = []; for (const [id, n] of it.loot || []) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
@@ -8643,7 +8823,7 @@ function festivalSpots() {
 function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
 function loadSave() { try { const j = JSON.parse(localStorage.getItem('brackenfell.v1') || 'null'); return j && j.S ? j : null; } catch (e) { return null; } }
 function applySave(j) {
-  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; }
+  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; const m = Cells.migrate(j.pos, j.yaw || 0); if (m) { Player.pos = m.pos; Player.yaw = m.yaw; } }
   for (const p of World.pickups) if (S.picked[p.id]) { p.gone = true; p.obj.visible = false; if (p.em) p.em.gone = true; }
   if (S.flags.fire) World.bonfire = true;
   if (S.rpg && S.rpg.v !== 2) S.rpg = null;
@@ -8752,7 +8932,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 18 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 22 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
@@ -8805,7 +8985,7 @@ function uiFrame(dt) {
     UI.lastYaw = P.yaw; const W = $('compass').clientWidth || 300, span = 1.9;
     for (const c of UI.compass) { const d = angDiff(c.a, P.yaw); c.el.style.display = Math.abs(d) < span / 2 ? '' : 'none'; c.el.style.left = (50 + d / span * 100) + '%'; }
     let k = 0;
-    for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
+    for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = CELLS_ON ? Cells.mapTarget(questTarget(id)) : questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
     for (; k < UI.marks.length; k++) { UI.marks[k].el.style.display = 'none'; UI.marks[k].d.style.display = 'none'; }
   }
   if ((R.frame & 31) === 0) { const h = Math.floor(Env.hour), m = Math.floor((Env.hour - h) * 60 / 10) * 10; const part = Env.hour < 5 ? 'Night' : Env.hour < 8 ? 'Dawn' : Env.hour < 12 ? 'Morning' : Env.hour < 17 ? 'Afternoon' : Env.hour < 20.5 ? 'Dusk' : 'Night'; $('clock').textContent = part + ' · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); uiObjective();
@@ -8848,97 +9028,878 @@ const PerfHud = (() => {
 
 
 // ---- 88_audio.js ----
-// ───────────────────────── sound: everything is synthesised with Web Audio ─────────────────────────
-const Audio2 = {
-  ctx: null, vol: 0.8, musicVol: 0.6, luteRequest: 0, t: { bird: 2, cricket: 0, crackle: 0, pad: 1, lute: 0, owl: 20 }, luteStep: 0, chord: 0, hammerK: 0, lastHour: -1,
+// ───────────────────────── Snd: the sound engine ─────────────────────────
+// 88_audio.js   engine: context, master chain (soft limiter), buses, reverb spaces, listener, positional routing, voices, iOS handling,
+//               Settings block, and the Audio2 shim the rest of the game still calls.
+// 88b_sfx.js    synthesised one-shots (footsteps, doors, combat, UI, bells, birds ...): Snd.lib[name] = { bus, prio, gap, fn }.
+// 88c_beds.js   ambience beds, positional loops (river, lake, fire, mill, forge, crowd) and scheduled nature sounds.
+// 88c_world.js  reads the game (player, zones, ENV, NPCs, foes) once per frame and drives footsteps, doors, bell, forge, combat.
+// 88c_music.js  procedural adaptive music and the lute tune.
+// Everything is built on any BaseAudioContext, so test/audio.mjs renders it offline. Nothing here allocates per frame, and every
+// call is safe when there is no audio device (the context stays null or suspended and update() returns at once).
+const Snd = {
+  ctx: null, disabled: false, T: 0, frame: 0, err: 0, errMsg: '', pausedMul: 1, ups: [], lib: {}, bus: {}, rin: {}, rret: {}, sp: { open: 1, room: 0, hall: 0, cave: 0 }, spT: { open: 1, room: 0, hall: 0, cave: 0 },
+  set: { master: 0.8, amb: 0.85, world: 0.85, foot: 0.85, ui: 0.85, music: 0.6, musicOn: true },
+  // base trims per bus (dB-ish scaling chosen so that ambience beds sit near -27 dB RMS, footsteps and interactions peak near -12 dB)
+  trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 0.8 },
+  rvSend: { amb: 0.1, world: 0.55, foot: 0.7, ui: 0.25, music: 0.4 },
+  L: { x: 0, y: 0, z: 0, yaw: 0, fx: 0, fz: -1, rx: 1, rz: 0 },
+  G: { x: 0, y: 0, z: 0, zone: 0, zid: '', indoor: 0, space: 'open', hour: 12, night: 0, day: 1, wind: 0.8, rain: 0, forest: 0, playing: false, menu: false, talk: false, dead: false, speed: 0, ground: true, outd: 1, nearTown: 0 },
+  dbg: {}, trims: {}, vEnd: new Float64Array(64), vPrio: new Uint8Array(64), vN: 0, last: {}, _s: { g: 0, lp: 16000, pan: 0, d: 0 },
+
+  // ── persistence of the volume block (master and music are shared with the older Sound / Music sliders through Audio2) ──
+  load() { try { const j = JSON.parse(localStorage.getItem('brackenfell.snd') || 'null'); if (j) for (const k in this.set) if (j[k] !== undefined && typeof j[k] === typeof this.set[k]) this.set[k] = j[k]; } catch (e) { } },
+  save() { try { localStorage.setItem('brackenfell.snd', JSON.stringify(this.set)); } catch (e) { } },
+
+  // ── context ──
   start() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
-    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    if (this.ctx) { this.resume(); return; }
+    if (this.disabled) return;
+    const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext); if (!AC) { this.disabled = true; return; }
     try {
-      const c = this.ctx = new AC(), o = this;
-      o.master = c.createGain(); o.master.gain.value = 0;
-      const comp = c.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 5; o.master.connect(comp); comp.connect(c.destination);
-      o.sfx = c.createGain(); o.sfx.connect(o.master); o.music = c.createGain(); o.music.connect(o.master);
-      // shared noise + a synthetic hall for the bell and the music
-      const nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1; o.noise = nb;
-      const ir = c.createBuffer(2, c.sampleRate * 2.6, c.sampleRate); for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); }
-      o.rev = c.createConvolver(); o.rev.buffer = ir; const rg = c.createGain(); rg.gain.value = 0.55; o.rev.connect(rg); rg.connect(o.master);
-      // continuous beds: wind, water, fire, crickets
-      const bed = (type, f, q) => { const s = c.createBufferSource(); s.buffer = nb; s.loop = true; s.playbackRate.value = 0.8 + Math.random() * 0.4; const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = c.createGain(); g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(o.sfx); s.start(); return { g, fl }; };
-      o.wind = bed('bandpass', 420, 0.5); o.water = bed('bandpass', 1100, 0.7); o.fire = bed('lowpass', 420, 0.6);
-      const cr = c.createOscillator(); cr.frequency.value = 4300; const cg = c.createGain(); cg.gain.value = 0; const lfo = c.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 31; const lg = c.createGain(); lg.gain.value = 0; lfo.connect(lg); lg.connect(cg.gain); cr.connect(cg); cg.connect(o.sfx); cr.start(); lfo.start(); o.crick = lg;
-    } catch (e) { this.ctx = null; }
+      const c = new AC({ latencyHint: 'interactive' }); this.build(c); this.ctx = c; this.running = c.state === 'running';
+      c.onstatechange = () => { this.running = c.state === 'running'; };
+      // iOS only starts a context from inside a gesture: play one silent sample now, and resume on every later gesture if it is suspended or interrupted
+      const b = c.createBuffer(1, 1, c.sampleRate), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0);
+      this.resume();
+    } catch (e) { this.ctx = null; this.disabled = true; this.errMsg = String(e); }
   },
-  // enveloped oscillator
-  tone(f, dur, vol, type, dest, f2, delay, attack) {
-    const c = this.ctx; if (!c) return; const t = c.currentTime + (delay || 0), o = c.createOscillator(), g = c.createGain();
-    o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(vol, 0.0002), t + (attack || 0.006)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(dest || this.sfx); o.start(t); o.stop(t + dur + 0.05);
-  },
-  burst(dur, vol, type, f, q, dest, delay, f2) {
-    const c = this.ctx; if (!c) return; const t = c.currentTime + (delay || 0), s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
-    s.buffer = this.noise; fl.type = type; fl.frequency.setValueAtTime(f, t); if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur); fl.Q.value = q || 0.7;
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    s.connect(fl); fl.connect(g); g.connect(dest || this.sfx); s.start(t, Math.random() * 1.5, dur + 0.05);
-  },
-  pluck(f, vol, delay, long) { const d = long || 0.9; this.tone(f, d, vol, 'triangle', this.lutebus, null, delay, 0.004); this.tone(f * 2.003, d * 0.5, vol * 0.35, 'sine', this.lutebus, null, delay, 0.003); this.tone(f * 3.01, d * 0.22, vol * 0.18, 'sine', this.lutebus, null, delay, 0.002); },
-  step(surface, run) {
-    if (!this.ctx) return; const v = run ? 0.16 : 0.10, j = 0.85 + Math.random() * 0.3;
-    if (surface === 'wood') { this.burst(0.09, v * 1.3, 'lowpass', 420 * j, 1.2); this.burst(0.03, v * 0.5, 'bandpass', 1900 * j, 2); }
-    else if (surface === 'stone') { this.burst(0.05, v * 0.9, 'bandpass', 2300 * j, 1.5); this.burst(0.08, v * 0.7, 'lowpass', 500, 1); }
-    else if (surface === 'water') { this.burst(0.22, v * 1.2, 'bandpass', 1400 * j, 0.8, null, 0, 600); }
-    else if (surface === 'dirt') { this.burst(0.07, v, 'lowpass', 1300 * j, 0.8); }
-    else { this.burst(0.11, v * 0.9, 'bandpass', 3200 * j, 0.6); this.burst(0.06, v * 0.6, 'lowpass', 600, 0.8); }
-  },
-  thud() { this.burst(0.18, 0.3, 'lowpass', 260, 1); },
-  ui() { this.tone(880, 0.06, 0.04, 'triangle'); },
-  page() { this.burst(0.16, 0.06, 'highpass', 2500, 0.5); },
-  coin() { this.tone(2400, 0.12, 0.05, 'sine'); this.tone(3200, 0.2, 0.04, 'sine', null, null, 0.05); },
-  pickup() { this.tone(520, 0.12, 0.07, 'triangle', null, 780); this.tone(1040, 0.18, 0.04, 'sine', null, null, 0.07); },
-  chest() { this.burst(0.25, 0.1, 'bandpass', 500, 2, null, 0, 900); this.tone(140, 0.3, 0.08, 'sawtooth', null, 190); },
-  drink() { for (let i = 0; i < 3; i++) this.tone(300 + i * 60, 0.09, 0.05, 'sine', null, 200, i * 0.16); },
-  door(vol) { if (!this.ctx) return; this.tone(95, 0.42, 0.045 * vol, 'sawtooth', null, 150); this.burst(0.3, 0.02 * vol, 'bandpass', 700, 4, null, 0, 1200); },
-  cluck(vol) { this.tone(700, 0.07, 0.06 * vol, 'square', null, 420); this.tone(760, 0.09, 0.05 * vol, 'square', null, 400, 0.12); },
-  clang(vol) { if (!this.ctx) return; for (const [f, d] of [[1870, 0.35], [2790, 0.28], [4150, 0.2], [5630, 0.12]]) this.tone(f * (0.99 + Math.random() * 0.02), d, 0.05 * vol, 'sine'); this.burst(0.03, 0.12 * vol, 'highpass', 3000, 0.5); },
-  quest(k) { const n = k === 0 ? [293.7, 440, 587.3] : k === 1 ? [440, 587.3] : [293.7, 370, 440, 587.3, 740]; n.forEach((f, i) => { this.tone(f, 1.6, 0.07, 'triangle', this.rev, null, i * 0.13, 0.01); this.tone(f, 0.5, 0.05, 'sine', null, null, i * 0.13); }); },
-  bell(vol) { if (!this.ctx) return; const f0 = 196; for (const [m, d, a] of [[0.5, 7, 0.25], [1, 6, 0.5], [1.19, 4.5, 0.3], [1.5, 3.8, 0.25], [2, 3.2, 0.3], [2.51, 2.4, 0.16], [3.01, 1.8, 0.12], [4.1, 1.2, 0.08]]) { this.tone(f0 * m, d, 0.16 * a * vol, 'sine', this.rev, null, 0, 0.004); this.tone(f0 * m, d * 0.7, 0.10 * a * vol, 'sine', null, null, 0, 0.004); } this.burst(0.05, 0.1 * vol, 'bandpass', 2600, 1); },
-  // called every frame with the listener's surroundings
-  update(dt, st) {
-    const c = this.ctx; if (!c || c.state !== 'running') return; const o = this, now = c.currentTime, T = o.t;
-    o.master.gain.setTargetAtTime(st.playing ? o.vol : o.vol * 0.5, now, 0.3);
-    const out = 1 - st.indoor;
-    o.wind.g.gain.setTargetAtTime((0.035 + 0.05 * st.wind + st.height * 0.05) * (0.25 + 0.75 * out), now, 0.6); o.wind.fl.frequency.setTargetAtTime(300 + 300 * st.wind - 120 * st.indoor, now, 0.8);
-    o.water.g.gain.setTargetAtTime(0.15 * st.water * (0.3 + 0.7 * out), now, 0.4);
-    o.fire.g.gain.setTargetAtTime(0.16 * st.fire, now, 0.3);
-    o.crick.gain.setTargetAtTime(0.012 * st.night * out, now, 1);
-    T.crackle -= dt; if (st.fire > 0.05 && T.crackle <= 0) { T.crackle = 0.04 + Math.random() * 0.35; o.burst(0.02 + Math.random() * 0.04, 0.12 * st.fire * Math.random(), 'highpass', 1500 + Math.random() * 3000, 0.7); }
-    T.bird -= dt; if (T.bird <= 0) { T.bird = 1.5 + Math.random() * 6; if (st.day > 0.4 && out > 0.3) { const f = 2400 + Math.random() * 2600, n = 2 + Math.floor(Math.random() * 5), v = 0.022 * out * (0.4 + Math.random() * 0.6); for (let i = 0; i < n; i++) o.tone(f * (1 + (Math.random() - 0.5) * 0.25), 0.07 + Math.random() * 0.07, v, 'sine', null, f * (0.8 + Math.random() * 0.5), i * (0.09 + Math.random() * 0.05)); } }
-    T.owl -= dt; if (T.owl <= 0) { T.owl = 18 + Math.random() * 30; if (st.night > 0.7 && out > 0.5) { o.tone(410, 0.5, 0.03, 'sine', o.rev, 380, 0, 0.08); o.tone(360, 0.8, 0.035, 'sine', o.rev, 330, 0.7, 0.1); } }
-    // the smith's hammer, the bell on the hour
-    if (st.hammer >= 0) { const k = (st.hammer * 0.9) % 1; if (o.hammerK < 0.66 && k >= 0.66 && st.hammerDist < 60) o.clang(clamp(1.3 - st.hammerDist / 45, 0.05, 1) * (st.indoor ? 0.4 : 1)); o.hammerK = k; }
-    const hr = Math.floor(st.hour); if (hr !== o.lastHour) { if (o.lastHour >= 0 && st.bellOn && (hr === 6 || hr === 12 || hr === 18)) o.bell(clamp(1.1 - st.bellDist / 160, 0.15, 0.8)); o.lastHour = hr; }
-    // music: a soft drone of slow chords outdoors, and Lark's lute wherever Lark is
-    if (!o.lutebus) { o.lutebus = c.createGain(); o.lutelp = c.createBiquadFilter(); o.lutelp.type = 'lowpass'; o.lutebus.connect(o.lutelp); o.lutelp.connect(o.music); const s = c.createGain(); s.gain.value = 0.5; o.lutelp.connect(s); s.connect(o.rev); o.padbus = c.createGain(); o.padbus.connect(o.rev); const pd = c.createGain(); pd.gain.value = 0.35; o.padbus.connect(pd); pd.connect(o.music); }
-    o.music.gain.setTargetAtTime(o.musicVol, now, 0.3);
-    o.luteRequest = Math.max(0, o.luteRequest - dt);
-    const playing = st.lute || o.luteRequest > 0, lv = playing ? clamp(1.25 - st.luteDist / 26, 0, 1) * (st.luteWall ? 0.45 : 1) : 0;
-    o.lutebus.gain.setTargetAtTime(lv * 0.9, now, 0.4); o.lutelp.frequency.setTargetAtTime(st.luteWall ? 900 : 5200, now, 0.4);
-    T.lute -= dt;
-    if (playing && lv > 0.02 && T.lute <= 0) {
-      const scale = [146.83, 164.81, 174.61, 196, 220, 246.94, 261.63, 293.66, 329.63, 349.23, 392, 440], mel = [7, 9, 10, 9, 7, 6, 4, 6, 7, 11, 10, 9, 7, 6, 7, -1, 4, 6, 7, 6, 4, 3, 2, 3, 4, 7, 6, 4, 3, 2, 0, -1], bass = [0, 0, 3, 3, 4, 4, 0, 0];
-      const i = o.luteStep++ % mel.length, beat = 0.27; T.lute = beat;
-      if (mel[i] >= 0) o.pluck(scale[mel[i]], 0.10, 0.02 + Math.random() * 0.012, 1.1);
-      if (i % 4 === 0) o.pluck(scale[bass[(i / 4) % 8]] / 2, 0.11, 0.02, 1.6); else if (i % 4 === 2) o.pluck(scale[bass[Math.floor(i / 4) % 8] + 4] / 2, 0.05, 0.02, 0.9);
+  resume() { const c = this.ctx; if (!c || this.hidden) return; if (c.state !== 'running') { try { const p = c.resume(); if (p && p.catch) p.catch(() => { }); } catch (e) { } } },
+  hush() { const c = this.ctx; if (c && c.state === 'running') { try { const p = c.suspend(); if (p && p.catch) p.catch(() => { }); } catch (e) { } } },
+
+  // ── graph ──
+  build(c, o) {
+    const S = this; S.ctx = S.ctx || null; S.c = c; S.sr = c.sampleRate; o = o || {};
+    S.master = c.createGain(); S.master.gain.value = 0;
+    S.shelf = c.createBiquadFilter(); S.shelf.type = 'highshelf'; S.shelf.frequency.value = 7000; S.shelf.gain.value = -2.5;           // phone speakers are bright: take the edge off
+    S.comp = c.createDynamicsCompressor(); S.comp.threshold.value = -4; S.comp.knee.value = 3; S.comp.ratio.value = 16;      // a limiter, not a leveller: the browsers add make-up gain to compressors, so keep it near +2 dB S.comp.attack.value = 0.004; S.comp.release.value = 0.14;
+    S.clip = c.createWaveShaper();            // the last word: a soft ceiling at 0.89 (-1 dBFS), linear below 0.6, so nothing can leave the chain above -1 dB
+    const n = 2048, cv = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1, a = Math.abs(x); cv[i] = (a < 0.6 ? a : 0.6 + 0.29 * Math.tanh((a - 0.6) / 0.29)) * Math.sign(x); } S.clip.curve = cv;
+    S.pre = c.createGain(); S.pre.connect(S.master); S.master.connect(S.shelf); S.shelf.connect(S.comp); S.comp.connect(S.clip); S.clip.connect(c.destination);
+    // noise stock: white, pink (Kellet), brown. Every bed and burst plays slices of these.
+    S.nz = {}; for (const k of ['white', 'pink', 'brown']) S.nz[k] = S.mkNoise(k, 4);
+    // slow random control signal in [-1, 1], features about 1 s long at rate 1 (play faster for quicker flutter): modulates levels and filters
+    { const n = 60 * 8000, b = c.createBuffer(1, n, 8000), d = b.getChannelData(0), pts = new Float32Array(62); let s = 4242; for (let i = 0; i < 62; i++) { s = (s * 1664525 + 1013904223) >>> 0; pts[i] = (s / 4294967296) * 2 - 1; } pts[60] = pts[0];
+      for (let i = 0; i < n; i++) { const x = i / 8000, k = Math.floor(x), f = x - k, u = f * f * (3 - 2 * f); d[i] = pts[k] + (pts[k + 1] - pts[k]) * u; } d[n - 1] = d[0]; S.slow = b; }
+    // reverb spaces: a small room, a hall (inn, chapel), a stone cellar; open air is a faint filtered slap
+    S.rv = {};
+    for (const [k, dur, dec, bright, pre, er] of [['room', 0.5, 5.5, 0.55, 0.004, 1], ['hall', 2.3, 3.4, 0.5, 0.018, 0.6], ['cave', 3.6, 2.6, 0.32, 0.03, 0.3]]) {
+      const cv2 = c.createConvolver(); cv2.buffer = S.mkIR(dur, dec, bright, pre, er); const rg = c.createGain(); rg.gain.value = 0; cv2.connect(rg); rg.connect(S.pre); S.rin[k] = cv2; S.rret[k] = rg;
     }
-    T.pad -= dt;
-    if (T.pad <= 0) {
-      T.pad = 9 + Math.random() * 5; const chords = [[146.83, 220, 349.23], [130.81, 196, 329.63], [116.54, 174.61, 293.66], [174.61, 261.63, 349.23], [146.83, 220, 293.66], [110, 164.81, 261.63]], ch = chords[o.chord++ % chords.length];
-      const v = 0.05 * out * (playing && lv > 0.2 ? 0 : 1) * (st.playing ? 1 : 1.4) * (0.6 + 0.4 * st.night);
-      if (v > 0.004) ch.forEach((f, k) => { for (const det of [0.997, 1.003]) { const os = c.createOscillator(), g = c.createGain(); os.type = k === 0 ? 'triangle' : 'sine'; os.frequency.value = f * det * (st.night > 0.5 && k === 2 ? 2 : 1); g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(v / (k + 1.2), now + 4.5); g.gain.linearRampToValueAtTime(0.0001, now + 13); os.connect(g); g.connect(o.padbus); os.start(now); os.stop(now + 13.2); } });
+    { const d = c.createDelay(0.5), fb = c.createGain(), lp = c.createBiquadFilter(), rg = c.createGain(); d.delayTime.value = 0.13; fb.gain.value = 0.22; lp.type = 'lowpass'; lp.frequency.value = 2200; rg.gain.value = 0;
+      const inn = c.createGain(); inn.connect(d); d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(rg); rg.connect(S.pre); S.rin.open = inn; S.rret.open = rg; }
+    S.rvList = ['open', 'room', 'hall', 'cave'];
+    for (const k of ['amb', 'world', 'foot', 'ui', 'music']) {
+      const g = c.createGain(); g.gain.value = S.set[k] * S.trim[k]; g.connect(S.pre);
+      const b = S.bus[k] = { g, in: g, snd: {} };
+      for (const s of S.rvList) { const sg = c.createGain(); sg.gain.value = 0; g.connect(sg); sg.connect(S.rin[s]); b.snd[s] = sg; }
+    }
+    S.out = S.bus.world.in;
+    S.master.gain.value = o.instant ? S.set.master : 0;
+    S.spT.open = 1; S.sp.open = 1; S.applySends(true);
+    S.buf = S.buf || {};
+    S.vN = 0; S.vEnd.fill(0);
+    for (const fn of S.inits || []) fn(S, c);
+    return S;
+  },
+  mkNoise(kind, secs) {
+    const c = this.c, n = Math.floor(c.sampleRate * secs), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+    let a0 = 0, a1 = 0, a2 = 0, a3 = 0, a4 = 0, a5 = 0, a6 = 0, br = 0, s = 12345;
+    for (let i = 0; i < n; i++) {
+      s = (s * 1664525 + 1013904223) >>> 0; const w = (s / 4294967296) * 2 - 1;
+      if (kind === 'white') d[i] = w;
+      else if (kind === 'pink') { a0 = 0.99886 * a0 + w * 0.0555179; a1 = 0.99332 * a1 + w * 0.0750759; a2 = 0.969 * a2 + w * 0.153852; a3 = 0.8665 * a3 + w * 0.3104856; a4 = 0.55 * a4 + w * 0.5329522; a5 = -0.7616 * a5 - w * 0.016898; d[i] = (a0 + a1 + a2 + a3 + a4 + a5 + a6 + w * 0.5362) * 0.11; a6 = w * 0.115926; }
+      else { br = (br + 0.02 * w) / 1.02; d[i] = br * 3.5; }
+    }
+    // make it loop seamlessly: crossfade the last 2000 samples into the first
+    const x = Math.min(2000, n >> 2); for (let i = 0; i < x; i++) { const k = i / x; d[i] = d[i] * k + d[n - x + i] * (1 - k); }
+    return b;
+  },
+  mkIR(dur, decay, bright, pre, er) {
+    const c = this.c, sr = c.sampleRate, n = Math.floor(sr * dur), b = c.createBuffer(2, n, sr);
+    let s = 987654321 + Math.floor(dur * 1000);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = b.getChannelData(ch); let lp = 0; const p0 = Math.floor(pre * sr);
+      for (let i = p0; i < n; i++) {
+        s = (s * 1664525 + 1013904223) >>> 0; const w = (s / 4294967296) * 2 - 1, t = (i - p0) / (n - p0);
+        const k = bright * Math.pow(1 - t, 1.6) + 0.05; lp += (w - lp) * Math.min(1, k * 0.9 + 0.03);       // the tail gets darker as it dies
+        d[i] = lp * Math.exp(-decay * 2.3 * t) * (1 - Math.exp(-(i - p0) / (sr * 0.004)));
+      }
+      // sparse early reflections
+      for (let e = 0; e < 7; e++) { s = (s * 1664525 + 1013904223) >>> 0; const at = p0 + Math.floor((0.004 + (s / 4294967296) * 0.05 * (dur > 1 ? 1.6 : 1)) * sr); if (at < n) d[at] += (ch ? -1 : 1) * er * (0.35 - e * 0.03); }
+    }
+    return b;
+  },
+
+  // ── reverb space and bus levels ──
+  applySends(now) {
+    const S = this, t = S.now(), tc = now ? 0.001 : 0.25;
+    for (const k of S.rvList) {
+      const w = S.sp[k], ret = k === 'open' ? 0.22 : k === 'room' ? 0.9 : k === 'hall' ? 1.0 : 1.0;
+      S.rret[k].gain.setTargetAtTime(ret, t, 0.05);
+      for (const bn of ['amb', 'world', 'foot', 'ui', 'music']) {
+        const b = S.bus[bn]; let lv = S.rvSend[bn] * w;
+        if (bn === 'music') lv = S.rvSend.music * (k === 'open' ? 0 : 0.6 * w) + (k === 'hall' ? 0.45 * (1 - 0.5 * w) : 0);        // the music always has a little hall around it
+        else if (k === 'open') lv *= bn === 'amb' || bn === 'ui' ? 0 : 0.5;
+        b.snd[k].gain.setTargetAtTime(lv, t, tc);
+      }
     }
   },
+  busLevels() {
+    const S = this, t = S.now(), u = S.set, m = S.G.talk ? 0.38 : 1;
+    S.master.gain.setTargetAtTime(u.master * S.pausedMul * S.fadeIn, t, 0.15);
+    const dk = 1 - 0.45 * (S.duck || 0);      // speech ducks the ambience and the world
+    S.bus.amb.g.gain.setTargetAtTime(u.amb * S.trim.amb * dk, t, 0.3);
+    S.bus.world.g.gain.setTargetAtTime(u.world * S.trim.world * dk, t, 0.3);
+    S.bus.foot.g.gain.setTargetAtTime(u.foot * S.trim.foot, t, 0.3);
+    S.bus.ui.g.gain.setTargetAtTime(u.ui * S.trim.ui, t, 0.3);
+    S.dbg.music = (u.musicOn ? u.music : 0) * S.trim.music * m * (1 - 0.6 * (S.duck || 0)); S.bus.music.g.gain.setTargetAtTime(S.dbg.music, t, S.G.talk ? 0.35 : 1.2);        // ducks under dialogue
+  },
+
+  // ── voices: a hard limit on one-shots, with room kept for important ones ──
+  voice(prio, dur) {
+    const S = this, now = S.now(); let n = 0, free = -1;
+    for (let i = 0; i < 64; i++) { if (S.vEnd[i] > now) n++; else if (free < 0) free = i; }
+    S.vN = n; const lim = prio >= 2 ? 40 : prio === 1 ? 30 : 22;
+    if (n >= lim || free < 0) return false;
+    S.vEnd[free] = now + dur; S.vPrio[free] = prio; S.vN = n + 1; return true;
+  },
+
+  // ── positional audibility: distance roll-off, air absorption, and a muffled wall when the source is in another zone ──
+  spat(x, y, z, zone, ref, maxD, out) {
+    const S = this, L = S.L, G = S.G, dx = x - L.x, dy = y - L.y, dz = z - L.z, d = Math.sqrt(dx * dx + dy * dy + dz * dz), o = out || S._s;
+    o.d = d; if (d > maxD) { o.g = 0; return false; }
+    let g = ref / Math.max(d, ref); const f = d / maxD; g *= 1 - f * f * f;
+    let lp = 16000 / (1 + d / 18); if (lp < 1400) lp = 1400;
+    if (zone !== G.zone) { g *= G.zone && zone ? 0.1 : 0.2; lp = Math.min(lp, G.zone && zone ? 450 : 700); }       // through a wall (or two)
+    const dl = d > 0.01 ? 1 / d : 0, hx = dx * dl, hz = dz * dl;
+    o.pan = d < 1.2 ? 0 : Math.max(-0.95, Math.min(0.95, (hx * L.rx + hz * L.rz) * 0.9));
+    const back = hx * L.fx + hz * L.fz; if (back < 0) lp *= 0.75 + 0.25 * (1 + back);                                  // head shadow behind you
+    o.g = g; o.lp = lp; return g > 0.004;
+  },
+  // a disposable chain for one voice: returns the node to connect the sound to, or null when it could not be heard
+  route(bus, x, y, z, zone, ref, maxD, v) {
+    const S = this, c = S.c, o = S._s; if (!S.spat(x, y, z, zone, ref || 2.5, maxD || 90, o)) return null;
+    const g = c.createGain(), lp = c.createBiquadFilter(), p = c.createStereoPanner ? c.createStereoPanner() : null;
+    g.gain.value = o.g * (v === undefined ? 1 : v); lp.type = 'lowpass'; lp.frequency.value = o.lp; lp.Q.value = 0.5; g.connect(lp);
+    if (p) { p.pan.value = o.pan; lp.connect(p); p.connect(S.bus[bus].in); } else lp.connect(S.bus[bus].in);
+    return g;
+  },
+  zoneOf(x, y, z) { return typeof World !== 'undefined' && World.zoneAt ? World.zoneAt(x, y + 1, z) : 0; },
+
+  // ── playing a library sound. pos = [x,y,z] or null for a sound at the listener. Returns true if it started. ──
+  play(name, pos, v, p) {
+    const S = this, c = S.c, e = S.lib[name]; if (!c || !e || S.off) return false;
+    const now = S.now();
+    if (e.gap && !(p && p.free)) { const l = S.last[name]; if (l !== undefined && now - l < e.gap) return false; S.last[name] = now; }
+    if (!S.voice(e.prio || 1, e.dur || 1)) return false;
+    let out = S.bus[e.bus || 'world'].in;
+    if (pos) { out = S.route(e.bus || 'world', pos[0], pos[1], pos[2], p && p.zone !== undefined ? p.zone : S.zoneOf(pos[0], pos[1], pos[2]), e.ref, e.max, 1); if (!out) return false; }
+    e.fn(S, c, out, now + (p && p.delay || 0.004), (v === undefined ? 1 : v) * (S.trims[name] || 1), p || null);
+    return true;
+  },
+  event(name, pos, v, p) { return this.play(name, pos || null, v, p); },
+
+  // ── helpers the library uses ──
+  // a started slice of the stock noise, stopped by the caller
+  src(kind, t, dur, rate) { const s = this.c.createBufferSource(), b = this.nz[kind || 'white']; s.buffer = b; if (rate) s.playbackRate.value = rate; s.start(t, Math.random() * (b.duration - dur - 0.1), dur + 0.05); return s; },
+  // enveloped filtered noise: o = { d, a, f, f2, q, type, v, kind, hp, rate }
+  nb(out, t, o) {
+    const c = this.c, d = o.d || 0.1, a = o.a || 0.003, s = this.src(o.kind, t, d + a, o.rate), fl = c.createBiquadFilter(), g = c.createGain();
+    fl.type = o.type || 'bandpass'; fl.frequency.setValueAtTime(o.f || 1000, t); if (o.f2) fl.frequency.exponentialRampToValueAtTime(o.f2, t + d); fl.Q.value = o.q || 0.8;
+    const v = Math.max(1e-4, o.v === undefined ? 0.5 : o.v); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+    s.connect(fl); let last = fl; if (o.hp) { const h = c.createBiquadFilter(); h.type = 'highpass'; h.frequency.value = o.hp; fl.connect(h); last = h; }
+    last.connect(g); g.connect(out); return g;
+  },
+  // enveloped oscillator: o = { f, f2, d, a, v, type, det, vib, vibf }
+  tn(out, t, o) {
+    const c = this.c, d = o.d || 0.2, a = o.a || 0.005, os = c.createOscillator(), g = c.createGain(); os.type = o.type || 'sine';
+    os.frequency.setValueAtTime(o.f, t); if (o.f2) os.frequency.exponentialRampToValueAtTime(o.f2, t + (o.fd || d)); if (o.det) os.detune.value = o.det;
+    if (o.vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = o.vibf || 5.5; lg.gain.value = o.vib; l.connect(lg); lg.connect(os.frequency); l.start(t); l.stop(t + a + d + 0.05); }
+    const v = Math.max(1e-4, o.v === undefined ? 0.2 : o.v); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+    os.connect(g); g.connect(out); os.start(t); os.stop(t + a + d + 0.05); return g;
+  },
+  // modal resonators: a struck object is a handful of decaying sines. parts: [[ratio, amp, decaySeconds], ...]
+  modal(out, t, f0, parts, v, o) {
+    const c = this.c, sum = c.createGain(); sum.gain.value = v; sum.connect(out); o = o || {};
+    for (let i = 0; i < parts.length; i++) { const p = parts[i], f = f0 * p[0] * (1 + (o.jit || 0) * (Math.random() - 0.5)); if (f > 18000) continue; this.tn(sum, t, { f, d: p[2], a: o.a || 0.0015, v: p[1] }); }
+    return sum;
+  },
+  // Karplus-Strong string, rendered once into a buffer and cached by pitch (lute, harp, plucked voices)
+  ks(f, dur, bright) {
+    const S = this, key = Math.round(f * 4) + ':' + dur + ':' + bright; S.buf.ks = S.buf.ks || {}; if (S.buf.ks[key]) return S.buf.ks[key];
+    const sr = S.sr, n = Math.floor(sr * dur), N = Math.max(2, Math.round(sr / f)), b = S.c.createBuffer(1, n, sr), d = b.getChannelData(0), ring = new Float32Array(N);
+    let s = Math.floor(f * 977) + 1; for (let i = 0; i < N; i++) { s = (s * 1664525 + 1013904223) >>> 0; ring[i] = ((s / 4294967296) * 2 - 1) * (0.3 + 0.7 * bright); }
+    let lp = 0; for (let i = 1; i < N; i++) { lp += (ring[i] - lp) * (0.35 + 0.6 * bright); ring[i] = lp; }
+    const damp = 0.996 - (1 - bright) * 0.004; let idx = 0;
+    for (let i = 0; i < n; i++) { const j = (idx + 1) % N, v = (ring[idx] + ring[j]) * 0.5 * damp; d[i] = ring[idx]; ring[idx] = v; idx = j; }
+    for (let i = 0; i < 64; i++) d[n - 1 - i] *= i / 64; S.buf.ks[key] = b; return b;
+  },
+  pluck(out, t, f, v, o) { const c = this.c, s = c.createBufferSource(), g = c.createGain(); o = o || {}; s.buffer = this.ks(f, o.dur || 1.6, o.bright === undefined ? 0.6 : o.bright); g.gain.value = v; s.connect(g); g.connect(out); s.start(t); return g; },
+  now() { return this.fakeNow !== undefined ? this.fakeNow : this.c.currentTime; },
+  rnd(a, b) { return a + Math.random() * (b - a); },
+  pick(a) { return a[Math.floor(Math.random() * a.length)]; },
 };
+Snd.inits = [];
+Snd.load();
+
+// the main per-frame call. Never throws, never allocates; after repeated failures it switches itself off and the game goes on silently.
+Snd.update = function (dt) {
+  const S = this, c = S.ctx; if (!c || S.off) return;
+  if (c.state !== 'running') { S.running = false; return; }
+  S.running = true; S.step(dt);
+};
+Snd.step = function (dt) {
+  const S = this;
+  try {
+    dt = Math.min(dt, 0.1); S.T += dt; S.frame++; S.dt = dt;
+    if (S.fadeIn === undefined) S.fadeIn = 0; S.fadeIn = Math.min(1, S.fadeIn + dt / 1.5);
+    if (S.gather) S.gather(dt);
+    const G = S.G; S.pausedMul += ((!G.playing ? 0.55 : G.menu ? 0.6 : G.dead ? 0.5 : 1) - S.pausedMul) * Math.min(1, dt * 3);
+    // reverb space: crossfade towards the one the listener is in
+    const tgt = S.spT; tgt.open = G.space === 'open' ? 1 : 0; tgt.room = G.space === 'room' ? 1 : 0; tgt.hall = G.space === 'hall' ? 1 : 0; tgt.cave = G.space === 'cave' ? 1 : 0;
+    const k = Math.min(1, dt / 0.7); for (const n of S.rvList) S.sp[n] += (tgt[n] - S.sp[n]) * k;
+    if ((S.frame & 3) === 0) { S.applySends(false); S.busLevels(); }
+    for (let i = 0; i < S.ups.length; i++) S.ups[i](S, dt, G);
+  } catch (e) { S.err++; if (S.err === 1) { S.errMsg = String(e && e.stack || e); if (typeof console !== 'undefined') console.warn('[Snd]', S.errMsg); } if (S.err > 30) S.off = true; }
+};
+
+// ── iOS and friends: unlock on the first touch, resume after the phone was locked, a call, or the tab was hidden ──
+if (typeof document !== 'undefined') {
+  const wake = () => { if (typeof game !== 'undefined' && !game.ready && !Snd.ctx) return; Snd.start(); };
+  for (const ev of ['touchstart', 'touchend', 'pointerup', 'mousedown', 'keydown']) document.addEventListener(ev, wake, { capture: true, passive: true });
+  const hide = () => { Snd.hidden = true; Snd.hush(); };
+  const show = () => { Snd.hidden = false; Snd.resume(); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) hide(); else show(); });
+  addEventListener('pagehide', hide); addEventListener('pageshow', show); addEventListener('blur', () => { if (document.hidden) hide(); });
+}
+
+// ── Settings: a small additive block under the existing Sound and Music sliders (built here so no other file needs to know) ──
+Snd.settingsUI = function () {
+  if (this.uiDone || typeof document === 'undefined') return; const m = document.getElementById('setMusic'); if (!m || !m.parentNode) return; this.uiDone = true;
+  const anchor = m.parentNode, S = this; let after = anchor;
+  const row = (label, id, key) => { const l = document.createElement('label'); l.className = 'row'; l.htmlFor = id; const s = document.createElement('span'); s.textContent = label; const i = document.createElement('input'); i.type = 'range'; i.min = 0; i.max = 1; i.step = 0.05; i.id = id; i.value = S.set[key]; i.addEventListener('input', e => { S.set[key] = +e.target.value; S.save(); if (S.ctx) S.busLevels(); }); l.appendChild(s); l.appendChild(i); after.after(l); after = l; };
+  row('Ambience', 'setAmb', 'amb'); row('World effects', 'setWorld', 'world'); row('Footsteps', 'setFoot', 'foot'); row('Voices and interface', 'setUi', 'ui');
+  const l = document.createElement('label'); l.className = 'row check'; l.htmlFor = 'setMusicOn'; const s = document.createElement('span'); s.textContent = 'Music on'; const i = document.createElement('input'); i.type = 'checkbox'; i.id = 'setMusicOn'; i.checked = S.set.musicOn;
+  i.addEventListener('change', e => { S.set.musicOn = e.target.checked; S.save(); if (S.ctx) S.busLevels(); }); l.appendChild(s); l.appendChild(i); after.after(l);
+  const l2 = document.createElement('label'); l2.className = 'row check'; l2.htmlFor = 'setVoices'; const s2 = document.createElement('span'); s2.textContent = 'Spoken voices'; const i2 = document.createElement('input'); i2.type = 'checkbox'; i2.id = 'setVoices'; i2.checked = S.set.voices; i2.addEventListener('change', e => { S.set.voices = e.target.checked; S.save(); if (!S.set.voices && S.vox) S.vox.stop(); }); l2.appendChild(s2); l2.appendChild(i2); l.after(l2);
+  const l3 = document.createElement('label'); l3.className = 'row'; l3.htmlFor = 'setVoiceVol'; const s3 = document.createElement('span'); s3.textContent = 'Voice volume'; const i3 = document.createElement('input'); i3.type = 'range'; i3.min = 0; i3.max = 1; i3.step = 0.05; i3.id = 'setVoiceVol'; i3.value = S.set.voiceVol; i3.addEventListener('input', e => { S.set.voiceVol = +e.target.value; S.save(); }); l3.appendChild(s3); l3.appendChild(i3); l2.after(l3);
+  const l4 = document.createElement('label'); l4.className = 'row check'; l4.htmlFor = 'setSubs'; const s4 = document.createElement('span'); s4.textContent = 'Subtitles while voiced'; const i4 = document.createElement('input'); i4.type = 'checkbox'; i4.id = 'setSubs'; i4.checked = S.set.subs; i4.addEventListener('change', e => { S.set.subs = e.target.checked; S.save(); document.body.classList.toggle('nosubs', !S.set.subs); }); l4.appendChild(s4); l4.appendChild(i4); l3.after(l4);
+  // the two older sliders write Audio2.vol / Audio2.musicVol: keep them in step with this block
+};
+Snd.ups.push(S => { if (!S.uiDone && (S.frame & 31) === 1) S.settingsUI(); });
+
+// ── Audio2: the old name, kept so the rest of the game keeps working; every method now plays a library sound ──
+const Audio2 = {
+  luteRequest: 0,
+  get ctx() { return Snd.ctx; },
+  get vol() { return Snd.set.master; }, set vol(v) { Snd.set.master = v; Snd.save(); },
+  get musicVol() { return Snd.set.music; }, set musicVol(v) { Snd.set.music = v; Snd.save(); },
+  start() { Snd.start(); }, update(dt) { Snd.update(dt); },
+  // positionless events from older call sites (a position is added where the caller knows one)
+  ui() { Snd.event('ui.click'); }, page() { Snd.event('ui.page'); }, coin() { Snd.event('pickup.coin'); }, pickup(m) { Snd.event('pickup.' + (m || Snd.lastMat || 'generic')); },
+  chest() { Snd.event('chest.open'); }, drink() { Snd.event('drink'); }, eat() { Snd.event('eat'); },
+  door(vol) { },                                    // doors are heard from their own animation (88c_world.js)
+  cluck(vol) { Snd.event('cluck', null, vol); }, clang(vol) { Snd.event('anvil', null, vol); },
+  quest(k) { Snd.event(k === 0 ? 'q.begin' : k === 1 ? 'q.update' : 'q.done'); },
+  bell(vol) { Snd.event('bell.ring', null, vol); },
+  swing(heavy) { Snd.event(heavy ? 'swing.heavy' : 'swing.light'); }, hitFlesh(heavy) { Snd.event(heavy ? 'hit.flesh.heavy' : 'hit.flesh'); },
+  clash(vol) { Snd.event(vol > 0.9 ? 'hit.metal' : 'hit.shield', null, 1); }, hurt() { Snd.event('hurt'); },
+  hop() { Snd.event('jump'); }, shout(deep) { Snd.event(deep ? 'foe.shout.deep' : 'foe.shout'); }, fall() { Snd.event('player.death'); },
+  thud() { Snd.event('land', null, 1, { v: typeof Player !== 'undefined' ? -Player.vel[1] : 7 }); },
+  step() { },                                       // footsteps are timed from the player's stride in 88c_world.js
+};
+
+
+// ---- 88b_sfx.js ----
+// ───────────────────────── Snd.lib: synthesised one-shots ─────────────────────────
+// Each entry: { bus, prio, dur, gap, ref, max, fn(S, c, out, t, v, p) }. v is a volume multiplier, p optional parameters. Recipes are filtered noise,
+// modal resonators (struck wood, metal, glass are a few decaying sines), formant-filtered saws for voices and short Karplus-Strong plucks.
+// Peak levels were set from the offline measurements in test/audio.mjs (footsteps and interactions near -12 dB after the master chain).
+(() => {
+  const L = Snd.lib, def = (name, bus, prio, dur, fn, x) => { L[name] = Object.assign({ bus, prio, dur, fn }, x); }, R = (a, b) => a + Math.random() * (b - a), J = (x, k) => x * (1 + (Math.random() - 0.5) * 2 * (k || 0.12));
+  // formant voice: a saw through parallel bandpass filters, with a little breath
+  Snd.voc = function (out, t, o) {
+    const c = this.c, d = o.d || 0.25, a = o.a || 0.02, os = c.createOscillator(), g = c.createGain(), sum = c.createGain(); os.type = 'sawtooth';
+    os.frequency.setValueAtTime(o.f0, t); os.frequency.linearRampToValueAtTime(o.f1 || o.f0, t + d);
+    if (o.vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = o.vibf || 5.5; lg.gain.value = o.vib; l.connect(lg); lg.connect(os.frequency); l.start(t); l.stop(t + d + a + 0.1); }
+    const v = Math.max(1e-4, o.v || 0.2); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.setTargetAtTime(0, t + a + d * 0.55, d * 0.22);
+    os.connect(g); for (const f of o.form || [[700, 5, 1], [1200, 6, 0.6], [2600, 8, 0.3]]) { const b = c.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f[0] * (o.fs || 1); b.Q.value = f[1]; const fg = c.createGain(); fg.gain.value = f[2]; g.connect(b); b.connect(fg); fg.connect(sum); }
+    sum.gain.value = 1; sum.connect(out); os.start(t); os.stop(t + a + d * 2.2 + 0.1);
+    if (o.breath) this.nb(out, t, { d: d * 0.9, a, f: 2400, q: 0.5, v: v * o.breath });
+  };
+  // hinge and floorboard creak: stick-slip friction, a saw with a wandering pitch through a sweeping resonance
+  Snd.creakSnd = function (out, t, o) {
+    const c = this.c, d = o.d || 0.5, os = c.createOscillator(), bp = c.createBiquadFilter(), g = c.createGain(), lf = c.createOscillator(), lg = c.createGain(), tr = c.createGain();
+    os.type = 'sawtooth'; const f = o.f || 110; os.frequency.setValueAtTime(f * 0.8, t); os.frequency.linearRampToValueAtTime(f * R(1.0, 1.35), t + d * 0.5); os.frequency.linearRampToValueAtTime(f * R(0.9, 1.2), t + d);
+    bp.type = 'bandpass'; bp.Q.value = 7; bp.frequency.setValueAtTime(o.fb || 600, t); bp.frequency.linearRampToValueAtTime((o.fb || 600) * R(1.3, 1.9), t + d);
+    lf.frequency.value = R(26, 52); lg.gain.value = 0.5; tr.gain.value = 0.5; lf.connect(lg); lg.connect(tr.gain);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(o.v || 0.1, t + d * 0.15); g.gain.linearRampToValueAtTime(0, t + d);
+    os.connect(bp); bp.connect(tr); tr.connect(g); g.connect(out); os.start(t); lf.start(t); os.stop(t + d + 0.05); lf.stop(t + d + 0.05);
+  };
+  // a wet send for stingers and bells that should bloom in the hall whatever room the player stands in
+  Snd.wet = function (out, k, lvl) { const g = this.c.createGain(); g.gain.value = lvl; out.connect(g); g.connect(this.rin[k || 'hall']); };
+
+  // ───────── footsteps ─────────
+  // p.w is stride weight (0.7 creeping .. 1.4 sprint); all are two-part: heel, then toe/sole a few hundredths later
+  const fs = (name, fn, x) => def(name, 'foot', 1, 0.5, (S, c, out, t, v, p) => { const w = (p && p.w) || 1; fn(S, c, out, t, v * (0.6 + 0.45 * w), w); S.nb(out, t, { f: 2800, q: 0.4, a: 0.02, d: 0.13, v: 0.05 * v * w }); }, Object.assign({ gap: 0.12 }, x));
+  fs('fs.cobble', (S, c, o, t, v, w) => { const j = R(0.88, 1.12);
+    S.nb(o, t, { f: 2300 * j, q: 1.6, d: 0.035, v: 0.5 * v }); S.modal(o, t, 1050 * j, [[1, 0.3, 0.05], [1.9, 0.2, 0.035], [3.1, 0.1, 0.025]], 0.55 * v); S.nb(o, t, { type: 'lowpass', f: 170, d: 0.09, v: 0.7 * v });
+    S.nb(o, t + 0.06, { f: 1900 * j, q: 1.2, d: 0.025, v: 0.25 * v }); });
+  fs('fs.dirt', (S, c, o, t, v, w) => { const j = R(0.85, 1.15);
+    S.nb(o, t, { type: 'lowpass', f: 1100 * j, q: 0.7, d: 0.085, v: 0.65 * v }); S.nb(o, t, { type: 'highpass', f: 3500, d: 0.03, v: 0.2 * v }); S.nb(o, t, { type: 'lowpass', f: 200, d: 0.07, v: 0.6 * v }); S.nb(o, t + 0.05, { type: 'lowpass', f: 1500 * j, d: 0.05, v: 0.25 * v }); });
+  fs('fs.grass', (S, c, o, t, v, w) => { const j = R(0.85, 1.15);
+    S.nb(o, t, { f: 3200 * j, q: 0.5, a: 0.012, d: 0.12, v: 0.32 * v }); S.nb(o, t, { type: 'lowpass', f: 420, d: 0.07, v: 0.6 * v }); if (Math.random() < 0.5) S.nb(o, t + 0.03, { type: 'highpass', f: 6000, d: 0.02, v: 0.1 * v }); });
+  fs('fs.mud', (S, c, o, t, v, w) => { const j = R(0.85, 1.15);
+    S.nb(o, t, { type: 'lowpass', f: 380 * j, d: 0.13, v: 0.9 * v }); S.nb(o, t, { f: 260, f2: 800, q: 3, a: 0.01, d: 0.08, v: 0.3 * v }); S.nb(o, t + 0.13, { f: 900, f2: 300, q: 2.5, a: 0.01, d: 0.1, v: 0.2 * v }); });
+  fs('fs.water', (S, c, o, t, v, w) => { const j = R(0.85, 1.15), deep = 0;
+    S.nb(o, t, { f: 1600 * j, f2: 700, q: 0.7, a: 0.01, d: 0.24, v: 0.5 * v }); S.nb(o, t, { type: 'lowpass', f: 260, d: 0.12, v: 0.6 * v });
+    for (let i = 0; i < 2; i++) S.tn(o, t + 0.03 + i * R(0.03, 0.07), { f: R(600, 1000), f2: R(1500, 2200), d: 0.035, a: 0.004, v: 0.07 * v }); });
+  fs('fs.wood', (S, c, o, t, v, w) => { const j = R(0.9, 1.1);
+    S.modal(o, t, 140 * j, [[1, 0.5, 0.13], [1.9, 0.3, 0.08], [3.2, 0.16, 0.05]], 0.9 * v); S.nb(o, t, { f: 900, q: 1, d: 0.03, v: 0.35 * v }); S.nb(o, t, { type: 'lowpass', f: 320, d: 0.07, v: 0.4 * v }); });
+  fs('fs.plank', (S, c, o, t, v, w) => { const j = R(0.9, 1.1);
+    S.modal(o, t, 190 * j, [[1, 0.4, 0.07], [2.3, 0.2, 0.04], [3.7, 0.1, 0.03]], 0.7 * v); S.nb(o, t, { f: 1200, q: 1, d: 0.025, v: 0.3 * v }); S.nb(o, t, { type: 'lowpass', f: 260, d: 0.06, v: 0.4 * v });
+    if (Math.random() < 0.09) S.creakSnd(o, t + 0.02, { d: R(0.2, 0.4), f: 140, fb: 500, v: 0.05 * v }); });
+  fs('fs.stone', (S, c, o, t, v, w) => { const j = R(0.9, 1.1);
+    S.nb(o, t, { f: 2600 * j, q: 2, d: 0.03, v: 0.5 * v }); S.modal(o, t, 1300 * j, [[1, 0.25, 0.08], [2.2, 0.15, 0.05]], 0.5 * v); S.nb(o, t, { type: 'lowpass', f: 200, d: 0.1, v: 0.6 * v }); S.nb(o, t + 0.055, { f: 2000, q: 1.5, d: 0.025, v: 0.2 * v }); });
+  fs('fs.stairs', (S, c, o, t, v, w) => { const j = R(0.9, 1.1);
+    S.modal(o, t, 150 * j, [[1, 0.55, 0.11], [2.1, 0.3, 0.07], [3.5, 0.15, 0.04]], 1.0 * v); S.nb(o, t, { f: 800, q: 1, d: 0.03, v: 0.3 * v }); S.nb(o, t, { type: 'lowpass', f: 240, d: 0.07, v: 0.5 * v }); });
+  // villagers use the same recipes quieter, through the world bus and a spatial route (see 88c_world.js)
+  def('rustle', 'foot', 0, 0.3, (S, c, o, t, v) => { S.nb(o, t, { f: 2800, q: 0.4, a: 0.03, d: 0.16, v: 0.12 * v, hp: 1200 }); }, { gap: 0.25 });
+
+  // ───────── body ─────────
+  def('land', 'foot', 2, 0.5, (S, c, o, t, v, p) => { const h = Math.min(1, ((p && p.v) || 6) / 12);
+    S.nb(o, t, { type: 'lowpass', f: 130, q: 0.7, d: 0.16 + 0.1 * h, v: (0.35 + 0.7 * h) * v }); S.nb(o, t, { type: 'lowpass', f: 700, d: 0.1, v: 0.35 * v * (0.4 + h) }); S.nb(o, t, { f: 3000, q: 0.5, a: 0.02, d: 0.12, v: 0.15 * v * (0.4 + h) });
+    if (h > 0.55) S.voc(o, t + 0.01, { f0: 150, f1: 95, d: 0.18, v: 0.3 * v * h, form: [[500, 5, 1], [900, 6, 0.5], [2400, 8, 0.2]], breath: 0.3 }); });
+  def('jump', 'foot', 1, 0.3, (S, c, o, t, v) => { S.voc(o, t, { f0: 150, f1: 185, d: 0.12, a: 0.015, v: 0.14 * v, form: [[600, 5, 1], [1000, 6, 0.5], [2500, 8, 0.2]], breath: 0.4 }); S.nb(o, t, { f: 2800, q: 0.4, a: 0.03, d: 0.14, v: 0.1 * v, hp: 1200 }); }, { gap: 0.2 });
+  def('breath', 'ui', 0, 1.2, (S, c, o, t, v, p) => { const lo = (p && p.lo) || 0.5;       // a gasp in, a push out; louder the more tired
+    S.nb(o, t, { f: 1100, f2: 1700, q: 0.7, a: 0.16, d: 0.3, v: (0.12 + 0.2 * lo) * v }); S.nb(o, t + 0.45, { f: 1500, f2: 800, q: 0.8, a: 0.05, d: 0.5, v: (0.1 + 0.16 * lo) * v }); }, { gap: 0.9 });
+  def('hurt', 'ui', 2, 0.6, (S, c, o, t, v) => { S.voc(o, t, { f0: 200, f1: 118, d: 0.28, a: 0.01, v: 0.3 * v, form: [[800, 5, 1], [1150, 6, 0.6], [2900, 8, 0.25]], breath: 0.3 }); S.nb(o, t, { type: 'lowpass', f: 330, d: 0.2, v: 0.55 * v }); S.nb(o, t, { f: 2500, q: 0.5, a: 0.02, d: 0.1, v: 0.1 * v }); }, { gap: 0.15 });
+  def('player.death', 'ui', 2, 2.2, (S, c, o, t, v) => { S.voc(o, t, { f0: 190, f1: 70, d: 0.9, a: 0.02, v: 0.3 * v, form: [[700, 5, 1], [1100, 6, 0.5], [2700, 8, 0.2]], breath: 0.4 }); S.nb(o, t + 0.5, { type: 'lowpass', f: 120, d: 0.5, v: 0.9 * v }); S.nb(o, t + 0.5, { type: 'lowpass', f: 600, d: 0.4, v: 0.4 * v }); S.nb(o, t + 0.55, { f: 3000, q: 0.5, d: 0.3, v: 0.12 * v }); });
+  def('heart', 'ui', 1, 0.7, (S, c, o, t, v) => { S.tn(o, t, { f: 62, f2: 42, d: 0.14, a: 0.008, v: 0.65 * v }); S.tn(o, t + 0.21, { f: 52, f2: 38, d: 0.13, a: 0.008, v: 0.45 * v }); }, { gap: 0.4 });
+
+  // ───────── doors, chests, things picked up ─────────
+  const latch = (S, o, t, v) => { S.nb(o, t, { f: 2400, q: 3, d: 0.012, v: 0.3 * v }); S.modal(o, t, 950, [[1, 0.2, 0.05], [2.6, 0.12, 0.03]], 0.3 * v); };
+  def('door.open', 'world', 1, 1.2, (S, c, o, t, v) => { latch(S, o, t, v); S.creakSnd(o, t + 0.04, { d: R(0.45, 0.7), f: R(95, 125), fb: R(500, 700), v: 0.28 * v }); S.nb(o, t + 0.1, { f: 300, q: 0.5, a: 0.2, d: 0.4, v: 0.05 * v }); S.nb(o, t + 0.55, { type: 'lowpass', f: 150, d: 0.12, v: 0.25 * v }); }, { ref: 3, max: 45, gap: 0.2 });
+  def('door.close', 'world', 1, 1.0, (S, c, o, t, v) => { S.nb(o, t, { f: 400, f2: 200, q: 0.5, a: 0.12, d: 0.3, v: 0.08 * v }); S.modal(o, t + 0.32, 110, [[1, 0.8, 0.16], [2.1, 0.35, 0.08], [3.4, 0.15, 0.05]], 0.9 * v); S.nb(o, t + 0.32, { type: 'lowpass', f: 420, d: 0.1, v: 0.6 * v }); latch(S, o, t + 0.36, v * 0.8); }, { ref: 3, max: 45, gap: 0.2 });
+  def('door.locked', 'world', 1, 0.8, (S, c, o, t, v) => { for (let i = 0; i < 3; i++) { S.nb(o, t + i * 0.075, { f: 1800, q: 4, d: 0.02, v: 0.35 * v }); S.modal(o, t + i * 0.075, 800 + i * 90, [[1, 0.25, 0.06], [2.7, 0.15, 0.04]], 0.35 * v); } S.modal(o, t, 130, [[1, 0.5, 0.09]], 0.4 * v); S.creakSnd(o, t + 0.2, { d: 0.18, f: 150, fb: 800, v: 0.07 * v }); }, { ref: 3, max: 30 });
+  def('chest.open', 'world', 1, 1.4, (S, c, o, t, v) => { latch(S, o, t, v); S.creakSnd(o, t + 0.05, { d: 0.6, f: 100, fb: 450, v: 0.28 * v }); S.modal(o, t + 0.62, 160, [[1, 0.5, 0.14], [2.3, 0.3, 0.07]], 0.6 * v); S.nb(o, t + 0.64, { f: 1500, q: 1, d: 0.05, v: 0.18 * v });
+    for (let i = 0; i < 3; i++) S.modal(o, t + 0.7 + i * 0.07, R(2300, 3000), [[1, 0.2, 0.15], [2.4, 0.12, 0.08]], 0.18 * v); }, { ref: 3, max: 30 });
+  def('pickup.coin', 'ui', 1, 0.7, (S, c, o, t, v) => { for (let i = 0; i < 2; i++) S.modal(o, t + i * 0.055, R(2400, 3000), [[1, 0.4, 0.22], [2.4, 0.22, 0.12], [4.1, 0.1, 0.07]], 0.5 * v); S.nb(o, t, { f: 5000, q: 1, d: 0.02, v: 0.1 * v }); });
+  def('coins', 'ui', 1, 1.0, (S, c, o, t, v) => { for (let i = 0; i < 5; i++) S.modal(o, t + i * R(0.04, 0.08), R(2200, 3200), [[1, 0.3, 0.2], [2.4, 0.18, 0.1]], 0.4 * v); });
+  def('pickup.cloth', 'ui', 1, 0.4, (S, c, o, t, v) => { S.nb(o, t, { f: 2200, q: 0.3, a: 0.035, d: 0.2, v: 0.3 * v, hp: 900 }); S.nb(o, t, { type: 'lowpass', f: 300, d: 0.08, v: 0.2 * v }); });
+  def('pickup.metal', 'ui', 1, 0.6, (S, c, o, t, v) => { S.modal(o, t, R(1700, 2300), [[1, 0.3, 0.3], [2.76, 0.2, 0.18], [5.4, 0.1, 0.08]], 0.5 * v); S.nb(o, t, { f: 4500, q: 1, d: 0.03, v: 0.15 * v }); S.nb(o, t + 0.05, { f: 2500, q: 1, a: 0.02, d: 0.1, v: 0.1 * v }); });
+  def('pickup.herb', 'ui', 1, 0.5, (S, c, o, t, v) => { S.nb(o, t, { type: 'highpass', f: 3000, a: 0.02, d: 0.1, v: 0.16 * v }); S.nb(o, t + 0.09, { f: 2600, q: 0.5, a: 0.02, d: 0.12, v: 0.18 * v }); S.nb(o, t, { type: 'lowpass', f: 400, d: 0.06, v: 0.2 * v }); });
+  def('pickup.wood', 'ui', 1, 0.4, (S, c, o, t, v) => { S.modal(o, t, R(380, 460), [[1, 0.6, 0.08], [2.4, 0.3, 0.05], [4.1, 0.1, 0.03]], 0.7 * v); S.nb(o, t, { f: 1500, q: 1, d: 0.025, v: 0.2 * v }); });
+  def('pickup.food', 'ui', 1, 0.4, (S, c, o, t, v) => { S.nb(o, t, { type: 'lowpass', f: 300, d: 0.09, v: 0.45 * v }); S.nb(o, t + 0.02, { f: 2000, q: 0.4, a: 0.03, d: 0.14, v: 0.15 * v, hp: 1000 }); });
+  def('pickup.paper', 'ui', 1, 0.5, (S, c, o, t, v) => { S.nb(o, t, { f: 2500, q: 0.5, a: 0.03, d: 0.22, v: 0.3 * v }); S.nb(o, t + 0.1, { type: 'highpass', f: 4500, d: 0.06, v: 0.1 * v }); });
+  def('pickup.generic', 'ui', 1, 0.5, (S, c, o, t, v) => { S.nb(o, t, { f: 2400, q: 0.4, a: 0.025, d: 0.15, v: 0.25 * v, hp: 1000 }); S.modal(o, t + 0.02, 600, [[1, 0.4, 0.07], [2.3, 0.2, 0.04]], 0.4 * v); });
+  def('ui.click', 'ui', 1, 0.2, (S, c, o, t, v) => { S.modal(o, t, 760, [[1, 0.4, 0.05], [2.8, 0.2, 0.03]], 0.5 * v); S.nb(o, t, { f: 3200, q: 1, d: 0.012, v: 0.18 * v }); }, { gap: 0.04 });
+  def('ui.page', 'ui', 1, 0.5, (S, c, o, t, v) => { S.nb(o, t, { f: 2500, q: 0.5, a: 0.035, d: 0.24, v: 0.32 * v }); S.nb(o, t + 0.12, { type: 'highpass', f: 4000, d: 0.07, v: 0.1 * v }); S.nb(o, t, { type: 'lowpass', f: 400, a: 0.05, d: 0.1, v: 0.1 * v }); }, { gap: 0.1 });
+  def('eat', 'ui', 1, 0.8, (S, c, o, t, v) => { for (let i = 0; i < 3; i++) { S.nb(o, t + i * 0.17, { f: R(1500, 2400), q: 2, d: 0.045, v: 0.4 * v }); S.nb(o, t + i * 0.17, { type: 'lowpass', f: 400, d: 0.05, v: 0.3 * v }); } });
+  def('drink', 'ui', 1, 1.2, (S, c, o, t, v) => { for (let i = 0; i < 3; i++) { S.tn(o, t + i * 0.2, { f: 260, f2: 150, d: 0.13, a: 0.02, v: 0.25 * v }); S.nb(o, t + i * 0.2, { f: 700, f2: 400, q: 1.5, a: 0.02, d: 0.12, v: 0.2 * v }); }
+    S.modal(o, t + 0.8, 520, [[1, 0.5, 0.1], [2.3, 0.3, 0.06]], 0.45 * v); S.nb(o, t + 0.82, { f: 1400, q: 1, d: 0.03, v: 0.15 * v }); });
+  def('mug', 'world', 0, 0.6, (S, c, o, t, v) => { S.modal(o, t, R(1300, 1700), [[1, 0.35, 0.2], [2.3, 0.25, 0.1], [4.4, 0.1, 0.05]], 0.5 * v); S.nb(o, t, { f: 3500, q: 1, d: 0.02, v: 0.15 * v }); }, { ref: 3, max: 25, gap: 0.5 });
+  def('cloth.flap', 'world', 0, 0.5, (S, c, o, t, v) => { let tt = t; for (let i = 0; i < 4; i++) { S.nb(o, tt, { f: R(1400, 2200), q: 1, d: 0.05, v: 0.3 * v }); tt += R(0.05, 0.11); } }, { ref: 3, max: 40, gap: 0.3 });
+
+  // ───────── stingers ─────────
+  const bell = (S, o, t, f, v, dec) => S.tn(o, t, { f, d: dec || 1.6, a: 0.006, v: 0.2 * v }) && S.tn(o, t, { f: f * 2.76, d: (dec || 1.6) * 0.3, a: 0.003, v: 0.05 * v });
+  def('q.begin', 'ui', 2, 3.5, (S, c, o, t, v) => { for (const [f, d] of [[293.7, 0], [440, 0.14], [587.3, 0.28]]) { S.pluck(o, t + d, f, 0.4 * v, { dur: 2, bright: 0.7 }); bell(S, o, t + d, f * 2, v * 0.8, 1.4); } S.wet(o, 'hall', 0.5); });
+  def('q.update', 'ui', 2, 2.5, (S, c, o, t, v) => { for (const [f, d] of [[440, 0], [587.3, 0.13]]) { S.pluck(o, t + d, f, 0.35 * v, { dur: 1.6, bright: 0.65 }); bell(S, o, t + d, f * 2, v * 0.6, 1.1); } S.wet(o, 'hall', 0.45); });
+  def('q.done', 'ui', 2, 4.5, (S, c, o, t, v) => { [293.7, 370, 440, 587.3, 740].forEach((f, i) => { S.pluck(o, t + i * 0.13, f, 0.35 * v, { dur: 2.4, bright: 0.7 }); bell(S, o, t + i * 0.13, f * 2, v * 0.7, 1.8); }); S.tn(o, t + 0.5, { f: 146.8, d: 3, a: 0.4, v: 0.14 * v, type: 'triangle' }); S.wet(o, 'hall', 0.6); });
+  def('discover', 'ui', 2, 5, (S, c, o, t, v) => { S.tn(o, t, { f: 110, d: 3.8, a: 1.0, v: 0.13 * v, type: 'triangle' }); S.tn(o, t, { f: 165, d: 3.6, a: 1.1, v: 0.08 * v }); [[587.3, 0.3], [740, 0.75], [880, 1.2]].forEach(([f, d]) => { S.pluck(o, t + d, f, 0.28 * v, { dur: 2.6, bright: 0.5 }); bell(S, o, t + d, f * 2, v * 0.5, 2); }); S.wet(o, 'hall', 0.7); });
+  // a church bell stroke: a low hum, the strike tone, and the inharmonic partials a cast bell really has
+  def('bell.stroke', 'world', 2, 9, (S, c, o, t, v, p) => { const f0 = 196; for (const [m, d, a] of [[0.5, 7, 0.25], [1, 6, 0.5], [1.19, 4.5, 0.3], [1.5, 3.8, 0.25], [2, 3.2, 0.3], [2.51, 2.4, 0.16], [3.01, 1.8, 0.12], [4.1, 1.2, 0.08]]) S.tn(o, t, { f: f0 * m * (1 + R(-0.002, 0.002)), d, a: 0.004, v: 0.17 * a * v });
+    S.nb(o, t, { f: 2600, q: 1, d: 0.05, v: 0.12 * v }); S.wet(o, 'hall', 0.35); }, { ref: 18, max: 420 });
+  L['bell.ring'] = Object.assign({}, L['bell.stroke'], { bus: 'ui' });
+
+  // ───────── combat ─────────
+  def('swing.light', 'ui', 1, 0.4, (S, c, o, t, v) => { S.nb(o, t, { f: 700, f2: 2100, q: 1.2, a: 0.06, d: 0.17, v: 0.3 * v }); }, { gap: 0.08 });
+  def('swing.heavy', 'ui', 1, 0.5, (S, c, o, t, v) => { S.nb(o, t, { f: 450, f2: 1500, q: 1.1, a: 0.1, d: 0.26, v: 0.4 * v }); S.nb(o, t, { type: 'lowpass', f: 320, a: 0.1, d: 0.25, v: 0.18 * v }); }, { gap: 0.08 });
+  const flesh = (S, o, t, v, h) => { S.tn(o, t, { f: h ? 70 : 95, f2: 45, d: 0.16, a: 0.004, v: (h ? 0.6 : 0.45) * v }); S.nb(o, t, { type: 'lowpass', f: 520, d: 0.11, v: (h ? 0.6 : 0.45) * v }); S.nb(o, t, { f: 1200, q: 1, d: 0.04, v: 0.28 * v }); if (h) S.nb(o, t + 0.02, { f: 2200, q: 2, d: 0.03, v: 0.2 * v }); };
+  def('hit.flesh', 'world', 2, 0.5, (S, c, o, t, v) => flesh(S, o, t, v, false), { ref: 4, max: 50, gap: 0.05 });
+  def('hit.flesh.heavy', 'world', 2, 0.5, (S, c, o, t, v) => flesh(S, o, t, v, true), { ref: 4, max: 50, gap: 0.05 });
+  def('hit.wood', 'world', 2, 0.5, (S, c, o, t, v) => { S.modal(o, t, R(280, 340), [[1, 0.5, 0.1], [2.3, 0.3, 0.06], [3.9, 0.2, 0.035]], 0.8 * v); S.nb(o, t, { f: 1500, q: 1, d: 0.03, v: 0.3 * v }); }, { ref: 4, max: 50, gap: 0.05 });
+  def('hit.metal', 'world', 2, 1.4, (S, c, o, t, v) => { const j = R(0.97, 1.03); S.modal(o, t, 1870 * j, [[1, 0.3, 0.55], [1.49, 0.22, 0.4], [2.22, 0.2, 0.3], [3.0, 0.12, 0.2], [4.1, 0.07, 0.12]], 0.7 * v); S.nb(o, t, { type: 'highpass', f: 3000, d: 0.04, v: 0.35 * v }); S.nb(o, t, { f: 900, q: 1, d: 0.03, v: 0.2 * v }); }, { ref: 4, max: 60, gap: 0.05 });
+  def('hit.shield', 'world', 2, 1.0, (S, c, o, t, v) => { S.modal(o, t, 520, [[1, 0.5, 0.14], [2.1, 0.3, 0.08], [3.2, 0.15, 0.05]], 0.75 * v); S.modal(o, t, 2200 * R(0.97, 1.03), [[1, 0.2, 0.3], [2.4, 0.1, 0.15]], 0.5 * v); S.nb(o, t, { f: 2500, q: 1, d: 0.03, v: 0.3 * v }); S.nb(o, t, { type: 'lowpass', f: 200, d: 0.08, v: 0.4 * v }); }, { ref: 4, max: 60, gap: 0.05 });
+  def('foe.effort', 'world', 1, 0.4, (S, c, o, t, v) => { S.voc(o, t, { f0: R(100, 115), f1: 80, d: 0.17, a: 0.015, v: 0.32 * v, form: [[570, 5, 1], [840, 6, 0.6], [2410, 8, 0.2]], breath: 0.35 }); }, { ref: 4, max: 45, gap: 0.3 });
+  def('foe.hurt', 'world', 1, 0.5, (S, c, o, t, v) => { S.voc(o, t, { f0: R(150, 175), f1: 100, d: 0.24, a: 0.01, v: 0.36 * v, form: [[640, 5, 1], [1000, 6, 0.6], [2500, 8, 0.2]], breath: 0.3 }); }, { ref: 4, max: 45, gap: 0.2 });
+  def('foe.shout', 'world', 2, 0.8, (S, c, o, t, v) => { S.voc(o, t, { f0: 165, f1: 128, d: 0.34, a: 0.03, v: 0.3 * v, vib: 6, form: [[700, 5, 1], [1100, 6, 0.6], [2600, 8, 0.25]], breath: 0.4 }); }, { ref: 6, max: 80, gap: 0.5 });
+  def('foe.shout.deep', 'world', 2, 0.8, (S, c, o, t, v) => { S.voc(o, t, { f0: 120, f1: 92, d: 0.4, a: 0.03, v: 0.34 * v, vib: 5, form: [[600, 5, 1], [900, 6, 0.6], [2400, 8, 0.25]], breath: 0.4 }); }, { ref: 6, max: 80, gap: 0.5 });
+  def('foe.death', 'world', 2, 1.8, (S, c, o, t, v) => { S.voc(o, t, { f0: 150, f1: 60, d: 0.7, a: 0.02, v: 0.34 * v, form: [[640, 5, 1], [1000, 6, 0.6], [2500, 8, 0.2]], breath: 0.4 }); S.nb(o, t + 0.55, { type: 'lowpass', f: 140, d: 0.4, v: 0.7 * v }); S.nb(o, t + 0.55, { type: 'lowpass', f: 700, d: 0.3, v: 0.3 * v }); }, { ref: 5, max: 70 });
+
+  // ───────── places ─────────
+  def('anvil', 'world', 1, 2.0, (S, c, o, t, v) => { const j = R(0.985, 1.015); S.modal(o, t, 1870 * j, [[1, 0.3, 0.9], [1.49, 0.2, 0.6], [2.22, 0.22, 0.45], [3.0, 0.12, 0.3], [4.16, 0.08, 0.2]], 0.55 * v); S.nb(o, t, { type: 'highpass', f: 3000, d: 0.025, v: 0.32 * v }); S.nb(o, t, { f: 700, q: 1, d: 0.03, v: 0.25 * v }); S.tn(o, t, { f: 120, f2: 80, d: 0.08, v: 0.3 * v }); }, { ref: 8, max: 120, gap: 0.2 });
+  def('bellows', 'world', 0, 2.0, (S, c, o, t, v) => { S.nb(o, t, { f: 500, f2: 1100, q: 0.5, a: 0.3, d: 0.35, v: 0.2 * v }); S.nb(o, t + 0.65, { f: 900, f2: 350, q: 0.6, a: 0.08, d: 0.7, v: 0.3 * v }); S.nb(o, t + 0.65, { type: 'lowpass', f: 250, a: 0.1, d: 0.7, v: 0.3 * v }); }, { ref: 5, max: 60, gap: 1.2 });
+  def('quench', 'world', 0, 2.0, (S, c, o, t, v) => { S.nb(o, t, { type: 'highpass', f: 3500, a: 0.04, d: 1.3, v: 0.2 * v }); S.nb(o, t, { f: 1500, q: 0.5, a: 0.05, d: 0.9, v: 0.1 * v }); }, { ref: 5, max: 60, gap: 5 });
+  def('paddle', 'world', 0, 1.0, (S, c, o, t, v) => { S.nb(o, t, { f: 800, f2: 300, q: 0.6, a: 0.03, d: 0.5, v: 0.3 * v }); S.tn(o, t, { f: 90, f2: 60, d: 0.25, a: 0.02, v: 0.25 * v, type: 'triangle' }); for (let i = 0; i < 3; i++) S.tn(o, t + R(0.1, 0.5), { f: R(900, 1500), f2: R(1800, 2600), d: 0.03, v: 0.05 * v }); }, { ref: 8, max: 60, gap: 0.3 });
+  def('drip', 'world', 0, 0.5, (S, c, o, t, v) => { S.tn(o, t, { f: R(900, 1500), f2: R(2200, 3200), d: 0.05, fd: 0.03, a: 0.002, v: 0.25 * v }); S.nb(o, t, { f: 3000, q: 1.5, d: 0.012, v: 0.06 * v }); }, { ref: 3, max: 35, gap: 0.8 });
+  def('creak', 'world', 0, 1.0, (S, c, o, t, v) => { S.creakSnd(o, t, { d: R(0.35, 0.8), f: R(80, 130), fb: R(500, 900), v: 0.16 * v }); }, { ref: 3, max: 30, gap: 1.2 });
+  def('cluck', 'world', 0, 0.5, (S, c, o, t, v) => { S.voc(o, t, { f0: 720, f1: 430, d: 0.07, a: 0.008, v: 0.2 * v, form: [[1000, 6, 1], [2200, 8, 0.4]] }); S.voc(o, t + 0.12, { f0: 770, f1: 420, d: 0.09, a: 0.008, v: 0.17 * v, form: [[1000, 6, 1], [2200, 8, 0.4]] }); }, { ref: 3, max: 25, gap: 0.3 });
+  def('dog', 'world', 0, 2.5, (S, c, o, t, v) => { const n = 2 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) { const tt = t + i * R(0.22, 0.3); S.voc(o, tt, { f0: R(480, 560), f1: 300, d: 0.13, a: 0.008, v: 0.45 * v, form: [[650, 6, 1], [1500, 7, 0.7], [2800, 8, 0.2]], breath: 0.5 }); } }, { ref: 10, max: 180, gap: 20 });
+  def('cow', 'world', 0, 3, (S, c, o, t, v) => { S.voc(o, t, { f0: 98, f1: 92, d: 1.3, a: 0.25, v: 0.5 * v, vib: 2.5, vibf: 6, form: [[450, 5, 1], [900, 6, 0.8], [1800, 8, 0.2]], breath: 0.1 }); }, { ref: 12, max: 200, gap: 30 });
+  def('rooster', 'world', 0, 3, (S, c, o, t, v) => { const form = [[900, 7, 1], [2100, 8, 0.7], [3200, 8, 0.3]]; [[0, 650, 820, 0.14], [0.2, 800, 980, 0.12], [0.36, 740, 1100, 0.14], [0.55, 980, 820, 0.9]].forEach(([d, a, b, du]) => S.voc(o, t + d, { f0: a, f1: b, d: du, a: 0.012, v: 0.4 * v, vib: du > 0.5 ? 25 : 0, vibf: 9, form, breath: 0.3 })); }, { ref: 12, max: 200, gap: 40 });
+  def('owl', 'world', 0, 3, (S, c, o, t, v) => { S.tn(o, t, { f: 410, f2: 385, d: 0.5, a: 0.07, v: 0.4 * v, vib: 6, vibf: 4 }); S.tn(o, t + 0.8, { f: 370, f2: 330, d: 0.25, a: 0.05, v: 0.35 * v }); S.tn(o, t + 1.15, { f: 370, f2: 310, d: 0.9, a: 0.08, v: 0.4 * v, vib: 6, vibf: 4 }); S.nb(o, t, { f: 600, q: 1, a: 0.1, d: 1.9, v: 0.02 * v }); }, { ref: 15, max: 220, gap: 20 });
+
+  // ───────── birdsong: one oscillator and one gain per call, each note a pitch glide and an amplitude puff ─────────
+  const song = (S, o, t, notes, v, wob) => {
+    const c = S.c, os = c.createOscillator(), g = c.createGain(); os.type = 'sine'; let end = t;
+    if (wob) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = wob[0]; lg.gain.value = wob[1]; l.connect(lg); lg.connect(os.frequency); l.start(t); l.stop(t + 4); }
+    g.gain.setValueAtTime(0, t); os.frequency.setValueAtTime(notes[0][1], t);
+    for (const n of notes) { const t0 = t + n[0], d = n[3]; os.frequency.setValueAtTime(n[1], t0); os.frequency.linearRampToValueAtTime(n[2], t0 + d); g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime((n[4] || 1) * v, t0 + d * 0.25); g.gain.linearRampToValueAtTime(0.0001, t0 + d); if (t0 + d > end) end = t0 + d; }
+    os.connect(g); g.connect(S._birdOut); os.start(t); os.stop(end + 0.05); return end - t;
+  };
+  const bird = (name, dur, mk, x) => def(name, 'amb', 1, dur, (S, c, o, t, v) => { S._birdOut = o; const n = mk(); song(S, o, t, n.notes, 0.22 * v, n.wob); }, Object.assign({ ref: 6, max: 140 }, x));
+  bird('bird.chaffinch', 2.2, () => { const n = [], f = R(3600, 4600); let t = 0; for (let i = 0; i < 9; i++) { n.push([t, f * (1 - i * 0.03), f * (0.86 - i * 0.03), 0.055, 1 - i * 0.04]); t += 0.085; } n.push([t + 0.05, f * 0.7, f * 1.05, 0.09, 1], [t + 0.17, f * 1.0, f * 0.8, 0.1, 0.8]); return { notes: n }; });
+  bird('bird.robin', 3.0, () => { const n = []; let t = 0; for (let i = 0; i < 7 + Math.floor(Math.random() * 4); i++) { const f = R(2800, 5600), d = R(0.05, 0.13); n.push([t, f, f * R(0.7, 1.35), d, R(0.5, 1)]); t += d + R(0.02, 0.12); } return { notes: n, wob: [38, 160] }; });
+  bird('bird.wren', 1.6, () => { const n = []; let t = 0, f = R(4300, 5400); for (let i = 0; i < 22; i++) { n.push([t, f, f * R(0.9, 1.1), 0.028, 1 - i * 0.012]); t += 0.04; if (i === 14) f *= 0.82; } return { notes: n }; });
+  bird('bird.thrush', 4.0, () => { const n = []; let t = 0; for (let k = 0; k < 3 + Math.floor(Math.random() * 3); k++) { const f = R(1700, 2700), d = R(0.12, 0.22); n.push([t, f, f * R(0.8, 1.25), d, 1], [t + d + 0.02, f * 1.1, f * 0.9, d * 0.6, 0.7]); t += d * 1.8 + R(0.15, 0.45); } return { notes: n, wob: [6, 20] }; });
+  bird('bird.pigeon', 3.0, () => { const f = R(430, 520), n = [], d = [0, 0.38, 0.9, 1.5, 1.85]; d.forEach((t, i) => n.push([t, f, f * 0.93, i === 1 || i === 3 ? 0.4 : 0.22, 1])); return { notes: n, wob: [3, 12] }; }, { max: 220 });
+  def('bird.crow', 'amb', 1, 2, (S, c, o, t, v) => { const n = 2 + Math.floor(Math.random() * 2); for (let i = 0; i < n; i++) S.voc(o, t + i * 0.4, { f0: R(380, 450), f1: 300, d: 0.22, a: 0.015, v: 0.34 * v, form: [[800, 4, 1], [1500, 5, 0.6], [2400, 6, 0.3]], breath: 0.9 }); }, { ref: 8, max: 220, gap: 8 });
+})();
+
+Snd.trims = {};
+
+// ── per-sound trims, generated from the median of three offline renders in test/audio.mjs (target peaks: footsteps and interactions -12 dB, combat -11, stingers -13, nature one-shots -22 at the listener) ──
+Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.grass": 1.259, "fs.mud": 1.274, "fs.water": 1.084, "fs.wood": 0.367, "fs.plank": 0.692, "fs.stone": 1.012, "fs.stairs": 0.331, "rustle": 0.61, "land": 1.995, "jump": 1.38, "breath": 0.923, "hurt": 1.622, "player.death": 1.928, "heart": 0.479, "door.open": 2.692, "door.close": 0.327, "door.locked": 0.75, "chest.open": 0.813, "pickup.coin": 0.933, "coins": 1.622, "pickup.cloth": 0.861, "pickup.metal": 0.861, "pickup.herb": 1.274, "pickup.wood": 0.403, "pickup.food": 2.138, "pickup.paper": 1.175, "pickup.generic": 0.804, "ui.click": 0.575, "ui.page": 0.891, "eat": 1.274, "drink": 0.733, "mug": 0.335, "cloth.flap": 0.495, "q.begin": 0.638, "q.update": 0.724, "q.done": 0.543, "discover": 0.684, "bell.stroke": 1.38, "bell.ring": 1.396, "swing.light": 2.089, "swing.heavy": 1.95, "hit.flesh": 0.7, "hit.flesh.heavy": 0.569, "hit.wood": 0.468, "hit.metal": 0.484, "hit.shield": 0.507, "foe.effort": 2.317, "foe.hurt": 1.95, "foe.shout": 2.018, "foe.shout.deep": 1.862, "foe.death": 1.841, "anvil": 0.473, "bellows": 2.57, "quench": 0.653, "paddle": 0.589, "drip": 0.403, "creak": 1.778, "cluck": 1.549, "dog": 0.484, "cow": 0.569, "rooster": 0.473, "owl": 0.302, "bird.chaffinch": 0.219, "bird.robin": 0.229, "bird.wren": 0.232, "bird.thrush": 0.219, "bird.pigeon": 0.219, "bird.crow": 0.143});
+
+
+// ---- 88c_beds.js ----
+// ───────────────────────── ambience: beds, positional loops, scheduled nature ─────────────────────────
+// Beds are looped noise through filters whose levels follow the world (see 88c_world.js for what is read). A bed whose level is ~0 is disconnected
+// from the graph, so a silent bed costs nothing. Positional loops (river, lake, fire, crowd, mill) run through distance, air absorption, zone
+// occlusion and a stereo pan. Birds, owls, drips and the rest are one-shots scheduled from update with random gaps, never on a fixed grid.
+(() => {
+  const S = Snd, sat = x => x < 0 ? 0 : x > 1 ? 1 : x, R = (a, b) => a + Math.random() * (b - a);
+  S.beds = {}; S.sch = { bird: 3, owl: 30, dog: 60, cow: 80, rooster: 30, drip: 2, lap: 1, mug: 4, creak: 5, flap: 3, cricket: 0 };
+
+  // a bed: sources connect to .in; .g is the level; .lp muffles it; .pan places it; connected to its bus only while audible
+  const mkLoop = (c, dest) => { const inn = c.createGain(), lp = c.createBiquadFilter(), pan = c.createStereoPanner ? c.createStereoPanner() : null, g = c.createGain(); lp.type = 'lowpass'; lp.frequency.value = 16000; lp.Q.value = 0.5; g.gain.value = 0; inn.connect(lp); let last = lp; if (pan) { lp.connect(pan); last = pan; } last.connect(g); return { in: inn, lp, pan, g, dest, conn: false, off: 0, lvl: 0 }; };
+  const loopSrc = (kind, rate) => { const s = S.c.createBufferSource(), b = S.nz[kind]; s.buffer = b; s.loop = true; s.playbackRate.value = rate || 1; s.start(0, Math.random() * b.duration); return s; };
+  const filt = (type, f, q) => { const b = S.c.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q || 0.7; return b; };
+  const gain = v => { const g = S.c.createGain(); g.gain.value = v; return g; };
+  // random modulation of a parameter: noise -> lowpass -> depth -> param
+  const modulate = (param, kind, hz, depth) => { const s = S.c.createBufferSource(); s.buffer = S.slow; s.loop = true; s.playbackRate.value = hz * R(0.8, 1.2); s.start(0, Math.random() * 40); const d = gain(depth); s.connect(d); d.connect(param); };
+  // one strand of a texture: a noise source, a band, optional random amplitude modulation, into the loop
+  const strand = (lp, kind, type, f, q, level, modHz, modDepth, f2, q2) => { const s = loopSrc(kind, R(0.85, 1.15)), b = filt(type, f, q); s.connect(b); let end = b; if (f2) { const b2 = filt(type === 'lowpass' ? 'highpass' : 'lowpass', f2, q2 || 0.7); b.connect(b2); end = b2; } const g = gain(level); end.connect(g); if (modHz) modulate(g.gain, 'pink', modHz, modDepth); g.connect(lp.in); return g; };
+  const bedSet = (b, v, tc) => {
+    const t = S.now(); v *= 1.5; b.lvl = v;   // 1.5: bed calibration (test/audio.mjs)
+    if (v > 0.0015) { if (!b.conn) { b.g.connect(b.dest); b.conn = true; } b.off = 0; b.g.gain.setTargetAtTime(v, t, tc || 0.35); }
+    else if (b.conn) { b.g.gain.setTargetAtTime(0, t, tc || 0.35); if (!b.off) b.off = t; else if (t - b.off > (tc || 0.35) * 7) { b.g.disconnect(); b.conn = false; b.off = 0; } }
+  };
+  S.bedSet = bedSet;
+  const place = (b, sp, extra) => { const t = S.now(); b.lp.frequency.setTargetAtTime(sp.lp, t, 0.25); if (b.pan) b.pan.pan.setTargetAtTime(sp.pan, t, 0.2); };
+
+  S.inits.push((S, c) => {
+    // the outdoor sub-bus: wind and weather lose their top end and most of their level when you step inside
+    const ob = S.outBus = { g: gain(1), lp: filt('lowpass', 16000, 0.5) }; ob.g.connect(ob.lp); ob.lp.connect(S.bus.amb.in);
+    const B = S.beds, amb = S.bus.amb.in, wor = S.bus.world.in;
+    // wind: broad body, a pitched howl and the sound of the gusts themselves
+    B.wind = mkLoop(c, ob.g); strand(B.wind, 'pink', 'bandpass', 480, 0.5, 0.9, 0.22, 0.45); strand(B.wind, 'pink', 'bandpass', 210, 4, 0.5, 0.13, 0.3); strand(B.wind, 'white', 'bandpass', 1400, 0.6, 0.08, 0.35, 0.06);
+    B.leaves = mkLoop(c, ob.g); strand(B.leaves, 'white', 'bandpass', 3600, 0.5, 0.5, 0.5, 0.35, 9000); strand(B.leaves, 'pink', 'bandpass', 650, 1.1, 0.7, 0.18, 0.4);
+    B.rain = mkLoop(c, ob.g); strand(B.rain, 'white', 'highpass', 1100, 0.5, 0.5, 0, 0, 9500); strand(B.rain, 'pink', 'lowpass', 420, 0.5, 0.45, 0.4, 0.15);
+    B.roof = mkLoop(c, amb); strand(B.roof, 'pink', 'bandpass', 900, 0.7, 0.6, 0.5, 0.25); strand(B.roof, 'brown', 'lowpass', 160, 0.5, 0.35);
+    B.room = mkLoop(c, amb); strand(B.room, 'brown', 'lowpass', 170, 0.5, 0.8); strand(B.room, 'pink', 'bandpass', 700, 0.5, 0.1, 0.1, 0.04);
+    B.cave = mkLoop(c, amb); strand(B.cave, 'brown', 'lowpass', 100, 0.5, 1.0, 0.07, 0.3); strand(B.cave, 'pink', 'bandpass', 320, 2.5, 0.12, 0.12, 0.08);
+    B.night = mkLoop(c, ob.g); strand(B.night, 'white', 'bandpass', 5800, 6, 0.05, 0.2, 0.025);        // the shimmer under the crickets
+    // water, crowds and the mill: positional (set each frame from the nearest point of the source)
+    B.river = mkLoop(c, amb); strand(B.river, 'pink', 'bandpass', 620, 0.5, 1.0, 0.35, 0.25); strand(B.river, 'white', 'highpass', 1700, 0.5, 0.2, 5, 0.18, 6500); strand(B.river, 'brown', 'lowpass', 150, 0.5, 0.5, 0.2, 0.2);
+    B.lake = mkLoop(c, amb); strand(B.lake, 'pink', 'lowpass', 520, 0.5, 0.8, 0.25, 0.5); strand(B.lake, 'white', 'bandpass', 2200, 0.5, 0.05, 0.3, 0.03);
+    B.mill = mkLoop(c, wor); strand(B.mill, 'pink', 'bandpass', 480, 0.5, 0.9, 0.5, 0.2); strand(B.mill, 'white', 'highpass', 1800, 0.5, 0.15, 4, 0.1, 6000); strand(B.mill, 'brown', 'lowpass', 120, 0.5, 0.5);
+    B.grind = mkLoop(c, wor); strand(B.grind, 'brown', 'lowpass', 240, 0.8, 0.9, 2.2, 0.5); strand(B.grind, 'pink', 'bandpass', 900, 1.2, 0.25, 3.8, 0.2);
+    const crowd = k => { const b = mkLoop(c, wor); strand(b, 'pink', 'bandpass', 420, 1.0, 0.7, 5, 0.45); strand(b, 'pink', 'bandpass', 1300, 1.2, 0.4, 7, 0.3); strand(b, 'pink', 'bandpass', 2500, 1.0, 0.12, 9, 0.08); return b; };
+    B.crowd = crowd(); B.market = crowd(); B.inn = crowd();
+    // fire: three loops that follow the nearest hearths. crackle is a looped buffer of random pops, rumble and flutter are noise
+    const cb = S.crack = c.createBuffer(1, Math.floor(c.sampleRate * 3), c.sampleRate), cd = cb.getChannelData(0);
+    for (let k = 0; k < 90; k++) { const at = Math.floor(Math.random() * (cb.length - 4000)), amp = Math.pow(Math.random(), 2.5) * 0.9 + 0.05, len = Math.floor(R(0.002, 0.02) * c.sampleRate), hi = Math.random(); let lp = 0; for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; lp += (w - lp) * (0.3 + 0.7 * hi); cd[at + i] += (w - lp * 0.5) * amp * Math.exp(-i / (len * 0.3)); } }
+    for (let i = 0; i < cd.length; i++) cd[i] = Math.max(-1, Math.min(1, cd[i]));
+    B.fire = []; for (let i = 0; i < 3; i++) { const b = mkLoop(c, wor), s = c.createBufferSource(); s.buffer = cb; s.loop = true; s.playbackRate.value = R(0.9, 1.1); s.start(0, Math.random() * 2.5); const h = filt('highpass', 800, 0.6), g = gain(0.7); s.connect(h); h.connect(g); g.connect(b.in);
+      strand(b, 'brown', 'lowpass', 520, 0.6, 0.9, 0.9, 0.5); strand(b, 'pink', 'bandpass', 1800, 0.7, 0.18, 8, 0.12); b.fire = null; B.fire.push(b); }
+    // crickets: three fixed pitches, each switched in short pulse groups from update
+    S.crick = []; for (let i = 0; i < 3; i++) { const o = c.createOscillator(), g = gain(0); o.frequency.value = 4100 + i * 330 + R(0, 120); o.connect(g); g.connect(ob.g); o.start(); S.crick.push({ o, g, lvl: 0, next: 0, f: 3.2 + i * 0.7, conn: true }); }
+  });
+
+  // ── per-frame update of everything above ──
+  const tmp = { g: 0, lp: 16000, pan: 0, d: 0 };
+  S.ups.push(function (S, dt, G) {
+    const c = S.c, t = S.now(), B = S.beds, f3 = (S.frame % 3) === 0; if (!B.wind) return;
+    // outdoor sub-bus follows how far inside the listener is
+    if (f3) {
+      S.outBus.g.gain.setTargetAtTime(1 - 0.86 * G.indoor, t, 0.3); S.outBus.lp.frequency.setTargetAtTime(16000 - 15300 * G.indoor, t, 0.3);
+      const out = 1 - G.indoor, ws = G.wind, rain = G.rain;
+      // wind follows ENV.windStrength (0.15 .. 1.35); trees add leaf hiss and low soughing
+      bedSet(B.wind, ((0.035 + 0.055 * ws * ws) * (0.5 + 0.5 * sat(ws)) * 0.95 + 0.012) * 2.5, 0.8);
+      bedSet(B.leaves, (0.045 * G.forest * (0.15 + 0.85 * sat(ws * 0.9)) + 0.008 * G.forest) * 2, 0.8);
+      bedSet(B.rain, rain * 0.12, 0.8); bedSet(B.roof, rain * 0.08 * G.indoor, 0.8);
+      bedSet(B.night, 1.0 * G.night * out * (1 - rain) * (0.4 + 0.6 * G.meadow), 2);
+      // indoors
+      const rm = G.indoor * (G.space === 'cave' ? 0 : 1), cv = G.indoor * (G.space === 'cave' ? 1 : 0);
+      bedSet(B.room, 0.12 * rm, 0.5); bedSet(B.cave, 0.13 * cv, 0.8);
+      // river: a line, so use the nearest point; muffled and quieter through walls (spat does that via zone)
+      if (G.riverD < 60) { if (S.spat(G.riverX, G.riverY, G.riverZ, 0, 9, 75, tmp)) { place(B.river, tmp); bedSet(B.river, 0.2 * tmp.g * (1 + 0.8 * sat(1 - G.riverD / 5)), 0.35); } else bedSet(B.river, 0, 0.5); } else bedSet(B.river, 0, 0.5);
+      if (G.lakeD < 70) { if (S.spat(G.lakeX, G.lakeY, G.lakeZ, 0, 7, 80, tmp)) { place(B.lake, tmp); bedSet(B.lake, 0.18 * tmp.g, 0.5); } else bedSet(B.lake, 0, 0.5); } else bedSet(B.lake, 0, 0.5);
+      // the town's murmur: by who is actually standing about
+      const day = G.day, sqL = 0.1 + 0.9 * sat(G.nSquare / 4);
+      const cd = G.nearSquare; if (cd < 95 && S.spat(G.sqX, G.sqY, G.sqZ, 0, 13, 95, tmp)) { place(B.crowd, tmp); bedSet(B.crowd, 0.34 * tmp.g * (0.3 + 0.7 * sqL) * (0.35 + 0.65 * day) * (1 - 0.7 * rain), 0.8); } else bedSet(B.crowd, 0, 0.8);
+      if (G.nearMarket < 60 && S.spat(G.mkX, G.mkY, G.mkZ, 0, 9, 60, tmp)) { place(B.market, tmp); bedSet(B.market, 0.22 * tmp.g * day * (1 - 0.5 * rain) * (0.4 + 0.6 * sat(G.nMarket / 2)), 0.8); } else bedSet(B.market, 0, 0.8);
+      if (G.innZone && G.nearInn < 60 && S.spat(G.innX, G.innY, G.innZ, G.innZone, 6, 60, tmp)) { place(B.inn, tmp); bedSet(B.inn, 0.24 * tmp.g * sat(G.nInn / 5), 0.8); } else bedSet(B.inn, 0, 0.8);
+      // the mill: wheel and race while the wheel is turning, the stone while the miller works
+      if (G.millOn && S.spat(G.millX, G.millY, G.millZ, 0, 8, 70, tmp)) { place(B.mill, tmp); bedSet(B.mill, 0.24 * tmp.g, 0.6); } else bedSet(B.mill, 0, 0.6);
+      if (G.grindOn && S.spat(G.millX, G.millY + 1, G.millZ, G.millZone, 4, 40, tmp)) { place(B.grind, tmp); bedSet(B.grind, 0.2 * tmp.g, 0.6); } else bedSet(B.grind, 0, 0.6);
+      // fires: the nearest three, each at its own place
+      for (let i = 0; i < 3; i++) { const b = B.fire[i], f = G.fires[i];
+        if (f.on && S.spat(f.x, f.y, f.z, f.zone, f.ref, f.max, tmp)) { place(b, tmp); bedSet(b, 0.3 * f.lvl * tmp.g, 0.2); } else bedSet(b, 0, 0.3); }
+      // crickets: night, outdoors, mostly away from the square
+      const cv2 = G.night * out * (1 - rain) * (0.35 + 0.65 * G.meadow); for (let i = 0; i < 3; i++) S.crick[i].lvl = cv2 * (i === 0 ? 1 : 0.7);
+    }
+    // cricket pulses: groups of three or four chirps of about 12 ms, a group every 0.3 .. 0.5 s, scheduled 0.3 s ahead
+    for (let i = 0; i < 3; i++) { const k = S.crick[i]; if (k.lvl < 0.01) { if (k.conn && k.next === 0) { } continue; }
+      while (k.next < t + 0.3) { if (k.next < t) k.next = t; const n = 3 + (Math.random() * 2 | 0); for (let j = 0; j < n; j++) { const a = k.next + j * 0.03; k.g.gain.setValueAtTime(0.022 * k.lvl, a); k.g.gain.setValueAtTime(0, a + 0.012); } k.next += 1 / k.f * R(0.85, 1.2); } }
+    // lake lapping, and scheduled one-shots
+    const T = S.sch; if (!G.playing) return;
+    if (B.lake.lvl > 0.004) { T.lap -= dt; if (T.lap <= 0) { T.lap = R(1.4, 3.6); S.nb(B.lake.in, t + 0.02, { f: R(500, 800), f2: R(180, 300), q: 0.8, a: R(0.08, 0.2), d: R(0.4, 0.9), v: 0.5, kind: 'pink' }); S.nb(B.lake.in, t + 0.1, { type: 'highpass', f: 3500, a: 0.1, d: 0.3, v: 0.05 }); } }
+    // birds: the dawn chorus, a quiet noon, a thrush at evening. One call at a random bearing, 8 .. 70 m off, up in the trees.
+    const h = G.hour, dawn = Math.exp(-Math.pow((h - 6.1) / 1.25, 2)), eve = Math.exp(-Math.pow((h - 18.1) / 1.4, 2)) * 0.55, mid = h > 7.8 && h < 17 ? 0.2 : 0, br = (dawn + eve + mid) * (1 - G.night) * (1 - G.rain * 0.9) * (0.35 + 0.65 * G.forest + 0.2 * G.meadow);
+    T.bird -= dt;
+    if (T.bird <= 0 && br > 0.02) {
+      T.bird = R(1.2, 3.2) / br; const a = Math.random() * 6.283, d = R(9, 70), x = G.x + Math.cos(a) * d, z = G.z + Math.sin(a) * d, y = G.y + R(3, 12), r = Math.random();
+      const nm = dawn > 0.35 ? (r < 0.26 ? 'robin' : r < 0.5 ? 'chaffinch' : r < 0.7 ? 'wren' : r < 0.9 ? 'thrush' : 'crow') : eve > 0.15 ? (r < 0.5 ? 'thrush' : r < 0.75 ? 'robin' : r < 0.9 ? 'chaffinch' : 'crow') : (r < 0.3 ? 'pigeon' : r < 0.55 ? 'chaffinch' : r < 0.75 ? 'wren' : r < 0.95 ? 'robin' : 'crow');
+      S.play('bird.' + nm, [x, y, z], R(0.7, 1.1));
+    }
+    T.owl -= dt; if (T.owl <= 0) { T.owl = R(22, 55); if (G.night > 0.7 && G.indoor < 0.5) { const a = Math.random() * 6.283, d = R(40, 120); S.play('owl', [G.x + Math.cos(a) * d, G.y + 8, G.z + Math.sin(a) * d], 1); } }
+    // livestock and dogs: far off, at the farm, the barn and the hunter's cabin; the route drops them if they cannot be heard from here
+    T.dog -= dt; if (T.dog <= 0) { T.dog = R(50, 140); const p = G.pHunter; if (p && G.night < 0.9) S.play('dog', p, 1); }
+    T.cow -= dt; if (T.cow <= 0) { T.cow = R(60, 150); const p = G.pBarn; if (p && G.day > 0.3) S.play('cow', p, 1); }
+    T.rooster -= dt; if (T.rooster <= 0) { T.rooster = R(35, 90); const p = G.pFarm; if (p && h > 4.6 && h < 8.5) S.play('rooster', p, 1); }
+    // cellar drip: a random drop somewhere in the room
+    T.drip -= dt; if (T.drip <= 0) { T.drip = R(1.2, 4.5); if (G.space === 'cave' && G.indoor > 0.5) S.play('drip', [G.x + R(-4, 4), G.y + 0.1, G.z + R(-4, 4)], R(0.6, 1)); }
+    // the inn: mugs and a clink of cutlery while it is full
+    T.mug -= dt; if (T.mug <= 0) { T.mug = R(2.5, 8); if (G.nInn >= 3 && G.nearInn < 40) S.play('mug', [G.innX + R(-4, 4), G.innY + 1, G.innZ + R(-3, 3)], R(0.5, 1)); }
+    // hanging signs and lanterns creak, bunting flaps, when the wind is up
+    T.creak -= dt; if (T.creak <= 0) { T.creak = R(2.5, 8) / Math.max(0.2, G.wind * G.wind); const p = G.lanternNear; if (G.wind > 0.85 && p) S.play('creak', p, 1); }
+    T.flap -= dt; if (T.flap <= 0) { T.flap = R(1.4, 4) / Math.max(0.2, G.wind); if (G.wind > 0.7 && G.nearMarket < 40) S.play('cloth.flap', [G.mkX + R(-6, 6), G.y + 3, G.mkZ + R(-2, 2)], 0.5 + 0.5 * sat(G.wind - 0.5)); }
+  });
+})();
+
+
+// ---- 88c_music.js ----
+// ───────────────────────── music: sparse, modal, procedural, with long silences ─────────────────────────
+// Voices: drone (detuned saws and a fifth), plucked string (Karplus-Strong), bowed string (saws, vibrato, slow attack), frame drum, small bells.
+// Cues (dawn, day, dusk, night, tavern, tension, combat, discovery) schedule one bar at a time from update, each bar made fresh from a random walk over
+// the mode, so nothing repeats. After an ambient cue comes a silence of one to three minutes. Dialogue ducks the music bus (88_audio.js, busLevels).
+// The lute that Lark plays is diegetic: a tune composed here, played from Lark's position through the world bus.
+(() => {
+  const K = Snd, R = (a, b) => a + Math.random() * (b - a), P = a => a[Math.floor(Math.random() * a.length)], sat = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const MODES = { dorian: [0, 2, 3, 5, 7, 9, 10], aeolian: [0, 2, 3, 5, 7, 8, 10], mixo: [0, 2, 4, 5, 7, 9, 10], lydian: [0, 2, 4, 6, 7, 9, 11], phryg: [0, 1, 3, 5, 7, 8, 10] };
+  const ROOTS = { d: 146.83, a: 110, g: 98, f: 87.31, e: 82.41 };
+  const fq = (root, mode, deg) => { const m = MODES[mode], o = Math.floor(deg / 7), i = ((deg % 7) + 7) % 7; return root * Math.pow(2, (m[i] + 12 * o) / 12); };
+  const M = K.music = { cue: null, cg: null, nextBar: 0, bar: 0, bars: 0, silentUntil: 0, t0: 0, want: null, wantT: 0, calmT: 0, mode: 'dorian', root: 146.83, walk: 3, lastCue: '', cues: {}, disc: 0, startT: 0 };
+  K.inits.push((K, c) => { M.cue = null; M.cg = null; M.silentUntil = 25 + R(0, 20); M.nextBar = 0; M.lute = { g: c.createGain(), lp: c.createBiquadFilter(), pan: c.createStereoPanner ? c.createStereoPanner() : null, ev: null, idx: 0, base: 0, end: 0, phrase: 0, gapUntil: 0, audible: false, dest: K.bus.world.in };
+    const l = M.lute; l.g.gain.value = 0; l.lp.type = 'lowpass'; l.lp.frequency.value = 6000; l.g.connect(l.lp); if (l.pan) { l.lp.connect(l.pan); l.pan.connect(l.dest); } else l.lp.connect(l.dest); });
+
+  // ── voices (all take an output node, a start time, a frequency) ──
+  const drone = (o, t, dur, f, v, fifth) => { const c = K.c, g = c.createGain(), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(220, t); lp.frequency.linearRampToValueAtTime(520, t + dur * 0.5); lp.frequency.linearRampToValueAtTime(240, t + dur); lp.Q.value = 0.7;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + Math.min(4, dur * 0.35)); g.gain.setValueAtTime(v, t + dur - Math.min(5, dur * 0.4)); g.gain.linearRampToValueAtTime(0, t + dur); lp.connect(g); g.connect(o);
+    for (const [m, det, ty, a] of [[1, -5, 'sawtooth', 0.5], [1, 6, 'sawtooth', 0.5], [0.5, 0, 'sine', 0.8], [fifth ? 1.5 : 2, 3, 'triangle', 0.35]]) { const os = c.createOscillator(), og = c.createGain(); os.type = ty; os.frequency.value = f * m; os.detune.value = det; og.gain.value = a; os.connect(og); og.connect(lp); os.start(t); os.stop(t + dur + 0.1); } };
+  const pluckV = (o, t, f, v, br) => K.pluck(o, t, f, v, { dur: 2.2, bright: br === undefined ? 0.55 : br });
+  const bowed = (o, t, f, dur, v) => { const c = K.c, g = c.createGain(), lp = c.createBiquadFilter(), vb = c.createOscillator(), vg = c.createGain(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(500, t); lp.frequency.linearRampToValueAtTime(1500, t + dur * 0.4); lp.frequency.linearRampToValueAtTime(600, t + dur); lp.Q.value = 1.2;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + Math.min(0.7, dur * 0.3)); g.gain.setValueAtTime(v, t + dur * 0.7); g.gain.linearRampToValueAtTime(0, t + dur); vb.frequency.value = R(4.8, 5.6); vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * 0.006, t + dur * 0.6); vb.connect(vg); lp.connect(g); g.connect(o);
+    for (const det of [-6, 5]) { const os = c.createOscillator(); os.type = 'sawtooth'; os.frequency.value = f; os.detune.value = det; vg.connect(os.frequency); os.connect(lp); os.start(t); os.stop(t + dur + 0.1); } vb.start(t); vb.stop(t + dur + 0.1); };
+  const frame = (o, t, v, low) => { K.tn(o, t, { f: low ? 62 : 95, f2: low ? 42 : 58, d: 0.28, a: 0.004, v: v }); K.nb(o, t, { type: 'lowpass', f: low ? 300 : 500, d: 0.12, v: v * 0.6 }); K.nb(o, t, { f: 1800, q: 1, d: 0.03, v: v * 0.14 }); };
+  const shaker = (o, t, v) => K.nb(o, t, { type: 'highpass', f: 5000, a: 0.012, d: 0.07, v });
+  const bellV = (o, t, f, v) => { K.tn(o, t, { f, d: 2.2, a: 0.004, v }); K.tn(o, t, { f: f * 2.76, d: 0.7, a: 0.002, v: v * 0.3 }); K.tn(o, t, { f: f * 5.4, d: 0.3, a: 0.002, v: v * 0.1 }); };
+
+  // ── a melody over a mode: a random walk with an arch, rests, and a landing on the tonic or the fifth ──
+  const walkMelody = (n, start, rest, spread) => { const out = []; let d = start; for (let i = 0; i < n; i++) { if (Math.random() < rest) { out.push(null); continue; } const s = P([-2, -1, -1, 0, 1, 1, 2, spread > 1 ? 3 : 1, spread > 1 ? -3 : -1]); d = Math.max(0, Math.min(11, d + s)); if (i === n - 1) d = P([0, 4, 7]); out.push(d); } return out; };
+
+  // ── cues: bar(t, i) schedules bar i starting at t (all into M.cg), len = bar length in seconds ──
+  const C = M.cues;
+  C.dawn = { dur: 78, len: () => 6, vol: 0.55, setup() { M.root = ROOTS.f * 2; M.mode = 'lydian'; M.walk = 7; },
+    bar(t, i, o) { if (i === 0) { drone(o, t, 70, M.root / 2, 0.06, true); } const n = P([2, 3, 3, 4]); for (let k = 0; k < n; k++) if (Math.random() < 0.75) { const d = M.walk = Math.max(2, Math.min(13, M.walk + P([-2, -1, 1, 2, 3, -3]))); pluckV(o, t + k * R(0.9, 1.6) + R(0, 0.4), fq(M.root, M.mode, d), 0.13, 0.5); }
+      if (i % 3 === 1) bellV(o, t + R(1, 4), fq(M.root, M.mode, P([7, 9, 11])) * 2, 0.025); } };
+  C.day = { dur: 96, len: () => 4, vol: 0.5, setup() { M.root = P([ROOTS.d, ROOTS.g]) * 2; M.mode = M.root > 250 ? 'dorian' : 'mixo'; M.walk = 6; },
+    bar(t, i, o) { if (i === 0) drone(o, t, 80, M.root / 2, 0.045, true); const m = walkMelody(4, M.walk, 0.5, 1); m.forEach((d, k) => { if (d === null) return; M.walk = d; pluckV(o, t + k * 0.95 + R(0, 0.08), fq(M.root, M.mode, d + 2), 0.14, 0.55); });
+      if (i % 6 === 3) bowed(o, t + 0.5, fq(M.root, M.mode, P([0, 4, 2])), R(3, 4.5), 0.05); } };
+  C.dusk = { dur: 84, len: () => 6, vol: 0.5, setup() { M.root = ROOTS.a * 2; M.mode = 'aeolian'; M.walk = 4; },
+    bar(t, i, o) { if (i === 0) drone(o, t, 76, M.root / 2, 0.06, true); if (i % 2 === 0) bowed(o, t, fq(M.root, M.mode, P([0, 2, 4, 5])), R(4, 5.5), 0.06); const n = P([1, 2]); for (let k = 0; k < n; k++) { M.walk = Math.max(0, Math.min(11, M.walk + P([-2, -1, 1, 2]))); pluckV(o, t + R(1.5, 5), fq(M.root, M.mode, M.walk + 3), 0.12, 0.45); } } };
+  C.night = { dur: 90, len: () => 8, vol: 0.4, setup() { M.root = ROOTS.e * 2; M.mode = 'phryg'; M.walk = 2; },
+    bar(t, i, o) { if (i === 0) drone(o, t, 82, M.root / 2, 0.05, false); if (Math.random() < 0.7) bellV(o, t + R(0.5, 6), fq(M.root, M.mode, P([4, 7, 9, 11])) * 2, 0.03); if (i % 3 === 1) bowed(o, t + R(0, 3), fq(M.root, M.mode, P([0, 1, 4])) * 2, R(5, 7), 0.035); } };
+  C.tavern = { dur: 46, len: () => 2.4, vol: 0.5, setup() { M.root = ROOTS.g * 2; M.mode = 'mixo'; M.walk = 6; },
+    bar(t, i, o) { const q = 0.3; const m = walkMelody(8, M.walk, 0.18, 1); m.forEach((d, k) => { if (d === null) return; M.walk = d; pluckV(o, t + k * q, fq(M.root, M.mode, d + 2), 0.17, 0.6); }); pluckV(o, t, fq(M.root, M.mode, 0) / 2, 0.2, 0.4); pluckV(o, t + q * 4, fq(M.root, M.mode, 4) / 2, 0.15, 0.4); frame(o, t, 0.2); frame(o, t + q * 4, 0.16); shaker(o, t + q * 2, 0.04); shaker(o, t + q * 6, 0.04); } };
+  C.tension = { dur: 1e9, len: () => 3, vol: 0.55, setup() { M.root = ROOTS.e; M.mode = 'phryg'; M.walk = 0; },
+    bar(t, i, o) { if (i === 0) { drone(o, t, 40, M.root, 0.08, false); drone(o, t, 40, M.root * 1.0595, 0.04, false); } if (i > 0 && i % 12 === 0) { drone(o, t, 40, M.root, 0.08, false); drone(o, t, 40, M.root * 1.0595, 0.04, false); } frame(o, t, 0.18, true); frame(o, t + 0.9, 0.1, true); if (Math.random() < 0.3) bowed(o, t + R(0, 2), fq(M.root, M.mode, P([1, 3, 6])) * 2, R(2.5, 3.5), 0.03); } };
+  C.combat = { dur: 1e9, len: () => 2.4, vol: 0.6, setup() { M.root = ROOTS.a; M.mode = 'aeolian'; M.walk = 0; },
+    bar(t, i, o) { const q = 0.3; if (i % 16 === 0) drone(o, t, 40, M.root, 0.07, true); for (let k = 0; k < 8; k++) { if (k % 4 === 0) frame(o, t + k * q, 0.32, true); else if (k === 6 || (k === 3 && Math.random() < 0.4)) frame(o, t + k * q, 0.2); else if (Math.random() < 0.3) frame(o, t + k * q, 0.08); }
+      const pat = i % 4 === 3 ? [0, 0, 1, 0, 4, 3, 1, 0] : [0, 0, 0, 2, 0, 0, 4, 3]; pat.forEach((d, k) => { const f = fq(M.root, M.mode, d) * 2; K.tn(o, t + k * q, { f, d: 0.25, a: 0.015, v: 0.05, type: 'sawtooth' }); }); if (i % 2 === 0) bowed(o, t, fq(M.root, M.mode, P([0, 4, 5])) * 2, 2.2, 0.04); } };
+  C.discovery = { dur: 9, len: () => 3, vol: 0.5, setup() { M.root = ROOTS.d * 2; M.mode = 'lydian'; M.walk = 2; },
+    bar(t, i, o) { if (i === 0) { drone(o, t, 9, M.root / 2, 0.06, true); [0, 2, 4, 6, 9].forEach((d, k) => { pluckV(o, t + 0.2 + k * 0.38, fq(M.root, M.mode, d + 2), 0.16, 0.5); bellV(o, t + 0.2 + k * 0.38, fq(M.root, M.mode, d + 2) * 2, 0.02); }); } } };
+
+  // ── the state machine ──
+  const startCue = (name, now) => { const c = K.c, cu = C[name]; if (M.cg) fadeOut(M.cg, 1.4, now); const g = c.createGain(); g.gain.value = 0; g.gain.setTargetAtTime(cu.vol, now, 0.6); g.connect(K.bus.music.in); M.cg = g; M.cue = cu; M.cueName = name; cu.setup(); M.bar = 0; M.nextBar = now + 0.3; M.t0 = now; };
+  const fadeOut = (g, s, now) => { g.gain.cancelScheduledValues(now); g.gain.setTargetAtTime(0, now, s / 4); setTimeout(() => { try { g.disconnect(); } catch (e) { } }, s * 1000 + 500); };
+  const stopCue = (now, fade) => { if (M.cg) fadeOut(M.cg, fade || 3, now); M.cg = null; M.cue = null; M.cueName = ''; };
+  M.threat = { tension: false, combat: false, d: 99 };
+  const sense = () => { let ten = false, com = false, dmin = 99; if (typeof Foes !== 'undefined' && Foes.list && typeof Player !== 'undefined') for (const f of Foes.list) { if (!f.alive) continue; const d = Math.hypot(f.pos[0] - Player.pos[0], f.pos[2] - Player.pos[2]); if (d > 55) continue; const s = f.state; if (s === 'idle' || s === 'return' || s === 'gone') continue; if (d < dmin) dmin = d; if (d < 16 && (s === 'circle' || s === 'attack' || s === 'guard' || s === 'stagger' || s === 'chase')) com = true; ten = true; }
+    if (typeof RPG !== 'undefined' && RPG.combatT < 4 && dmin < 30) com = true; M.threat.tension = ten; M.threat.combat = com; M.threat.d = dmin; };
+  const pickAmbient = G => { const h = G.hour, inn = G.zid === 'inn' && h >= 17 && !G.lark.on;
+    if (inn && Math.random() < 0.8) return 'tavern'; if (G.indoor > 0.5) return null;
+    if (h >= 5 && h < 8.6) return 'dawn'; if (h >= 8.6 && h < 17) return 'day'; if (h >= 17 && h < 20.5) return 'dusk'; return 'night'; };
+
+  K.ups.push(function (K, dt, G) {
+    if (!M.lute) return; const c = K.c, now = K.now();
+    luteUpdate(K, dt, G, now);
+    if (!G.playing) { if (M.cue) stopCue(now, 2); return; }
+    if ((K.frame & 7) === 0) sense();
+    const th = M.threat;
+    // priority: combat > tension > ambient; discovery is a short flourish that never interrupts a fight
+    if (th.combat) { M.calmT = 0; if (M.cueName !== 'combat') startCue('combat', now); }
+    else if (th.tension) { M.calmT = 0; if (M.cueName !== 'tension' && M.cueName !== 'combat') startCue('tension', now); else if (M.cueName === 'combat' && M.calmT === 0) { M.calmT = 0; } }
+    else if (M.cueName === 'combat' || M.cueName === 'tension') { M.calmT += dt; if (M.calmT > 7) { stopCue(now, 4); M.silentUntil = now + R(25, 50); M.calmT = 0; } }
+    if (M.disc && !th.tension && M.cueName !== 'discovery') { M.disc = 0; startCue('discovery', now); }
+    else if (M.cueName === 'combat' && !th.combat && th.tension) startCue('tension', now);
+    // ambient cues: only after a silence, and only when the place suits music
+    if (!M.cue && now >= M.silentUntil && !th.tension && !G.talk && !G.menu) { const nm = pickAmbient(G); if (nm) startCue(nm, now); else M.silentUntil = now + 20; }
+    else if (M.cue && M.cueName !== 'combat' && M.cueName !== 'tension' && (now - M.t0 > M.cue.dur || (G.indoor > 0.7 && M.cueName !== 'tavern') )) { stopCue(now, 5); M.silentUntil = now + R(70, 180); }
+    if (M.cue) while (M.nextBar < now + 1.5) { M.cue.bar(M.nextBar, M.bar++, M.cg); M.nextBar += M.cue.len(M.bar); }
+  });
+  K.discover = () => { M.disc = 1; };
+
+  // ── Lark's lute: a tune made up as it goes, in D dorian, played from where Lark stands. Events are [eighths, Hz, velocity] ──
+  const lutePhrase = l => { const root = ROOTS.d * 2, mode = 'dorian', out = [], rh = [[1, 1, 1, 1, 1, 1, 1, 1], [2, 1, 1, 2, 1, 1], [1, 1, 2, 1, 1, 2], [3, 1, 2, 2], [2, 2, 1, 1, 2], [1, 2, 1, 2, 2]], k = l.phrase % 4; let d = k === 2 ? 7 : 4;
+    for (let bar = 0; bar < 2; bar++) { const pat = P(rh); let tt = bar * 8; for (let i = 0; i < pat.length; i++) { d = Math.max(0, Math.min(11, d + P([-2, -1, -1, 0, 1, 1, 2]) + (k === 2 && Math.random() < 0.3 ? 1 : 0))); if (bar === 1 && i === pat.length - 1) d = P(k === 3 ? [0] : [0, 4, 4]); out.push([tt, fq(root, mode, d), 0.28 * R(0.8, 1)]); tt += pat[i]; } }
+    out.push([0, fq(root, mode, 0) / 2, 0.22], [4, fq(root, mode, 4) / 2, 0.16], [8, fq(root, mode, 0) / 2, 0.2], [12, fq(root, mode, k === 3 ? 0 : 3) / 2, 0.16]); out.sort((a, b) => a[0] - b[0]); return out; };
+  function luteUpdate(K, dt, G, now) {
+    const l = M.lute, Lk = G.lark, on = Lk.on && K.set.world > 0.01 && Lk.d < 45; Audio2.luteRequest = Math.max(0, Audio2.luteRequest - dt);
+    if ((K.frame & 3) === 0) { if (on && K.spat(Lk.x, Lk.y, Lk.z, Lk.zone, 3, 45, K._s)) { l.g.gain.setTargetAtTime(0.9 * K._s.g, now, 0.2); l.lp.frequency.setTargetAtTime(K._s.lp, now, 0.2); if (l.pan) l.pan.pan.setTargetAtTime(K._s.pan, now, 0.2); l.audible = true; } else { l.g.gain.setTargetAtTime(0, now, 0.25); l.audible = false; } }
+    if (!on || !l.audible) { l.ev = null; return; }        // nobody hears it, so it is not rendered; a fresh phrase begins when you come within earshot
+    const half = 0.17;
+    if (!l.ev) { if (now < l.gapUntil) return; l.ev = lutePhrase(l); l.idx = 0; l.base = now + 0.15; l.end = l.base + 16 * half; l.phrase++; }
+    while (l.idx < l.ev.length && l.base + l.ev[l.idx][0] * half < now + 0.5) { const e = l.ev[l.idx++]; K.pluck(l.g, Math.max(l.base + e[0] * half + R(0, 0.012), now), e[1], e[2], { dur: e[1] < 140 ? 2.2 : 1.5, bright: e[1] < 140 ? 0.35 : 0.55 }); }
+    if (l.idx >= l.ev.length && now >= l.end - 0.05) { l.ev = null; if (l.phrase % 4 === 0) l.gapUntil = now + R(3, 8); }
+  }
+  // test hooks
+  K.renderCue = (name, secs) => { const c = K.c, cu = C[name]; const g = c.createGain(); g.gain.value = cu.vol; g.connect(K.bus.music.in); cu.setup(); let t = 0.1, i = 0; while (t < secs) { cu.bar(t, i++, g); t += cu.len(i); } };
+})();
+
+
+// ---- 88c_world.js ----
+// ───────────────────────── Snd reads the game: state for the beds, and the sounds that follow gameplay ─────────────────────────
+// Everything here is read-only against the game (player, camera, World, ENV, NPCs, foes, doors); nothing is hooked except a few Audio2 shim calls.
+// Footsteps are timed from Player.step, doors from World.doors[].open, the smith's hammer from NPC.brandt.t, the bell from Env.hour, the lute from NPC.lark.
+(() => {
+  const K = Snd, G = K.G, sat = x => x < 0 ? 0 : x > 1 ? 1 : x, hyp2 = (a, b) => Math.sqrt(a * a + b * b), RN = (a, b) => a + Math.random() * (b - a);
+  const tick = (id, n) => K.frame % n === (id % n);
+  G.fires = [{ on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }, { on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }, { on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }];
+  G.lanternNear = null; G.nLan = 0; G.innZone = 0; G.millZone = 0; G.lark = { on: false, x: 0, y: 0, z: 0, zone: 0, d: 99 };
+  G.sqX = 0; G.sqY = 0; G.sqZ = -2; G.mkX = 34.5; G.mkY = 0; G.mkZ = 0.7; G.innX = 0; G.innY = 0; G.innZ = -22; G.millX = 0; G.millY = 0; G.millZ = 0;
+  G.riverD = 99; G.riverX = 0; G.riverY = 0; G.riverZ = 0; G.lakeD = 99; G.lakeX = 0; G.lakeY = 0; G.lakeZ = 0; G.meadow = 0.5; G.forest = 0;
+  G.nSquare = 0; G.nMarket = 0; G.nInn = 0; G.nearSquare = 99; G.nearMarket = 99; G.nearInn = 99; G.millOn = false; G.grindOn = false; G.pHunter = null; G.pBarn = null; G.pFarm = null;
+  let forestGrid = null, fireList = [], fireN = -1, lanList = [], lanN = -1, ready = false;
+  const CELL = 10, HALF = 180, NG = HALF * 2 / CELL;
+  const SPACE = id => /cellar|crypt|dungeon|cave|undercroft|tomb|mine|tower|vault/.test(id) ? 'cave' : /chapel|inn|hall|barn|temple|church/.test(id) ? 'hall' : 'room';
+  const STONE = /chapel|cellar|crypt|dungeon|cave|undercroft|tomb|tower|vault/;
+  const nearestRiver = (x, z, max) => {            // River.dist, but it also keeps the nearest point (no allocation)
+    const p = River.p; let best = max * max, bx = 0, bz = 0, at = -1;
+    for (const b of River.boxes) { if (x < b[0] - max || x > b[2] + max || z < b[1] - max || z > b[3] + max) continue;
+      for (let i = b[4]; i < b[5]; i++) { const ax = p[i][0], az = p[i][1], ex = p[i + 1][0] - ax, ez = p[i + 1][1] - az, l2 = ex * ex + ez * ez, t = l2 ? sat(((x - ax) * ex + (z - az) * ez) / l2) : 0, dx = x - ax - ex * t, dz = z - az - ez * t, dd = dx * dx + dz * dz; if (dd < best) { best = dd; bx = ax + ex * t; bz = az + ez * t; at = River.cum[i] + t * Math.sqrt(l2); } } }
+    G.riverX = bx; G.riverZ = bz; G.riverAt = at; return at < 0 ? max : Math.sqrt(best);
+  };
+  function setup() {
+    ready = true; const gy = (x, z) => World.groundY ? World.groundY(x, z) : 0;
+    forestGrid = new Uint8Array(NG * NG); const V = World.vegInst || {};
+    for (const [k, w] of [['pine', 1], ['birch', 1], ['oak', 3]]) for (const t of V[k] || []) { const i = Math.floor((t[0] + HALF) / CELL), j = Math.floor((t[2] + HALF) / CELL); if (i >= 0 && j >= 0 && i < NG && j < NG) forestGrid[j * NG + i] = Math.min(255, forestGrid[j * NG + i] + w); }
+    const inn = typeof SITE !== 'undefined' && SITE.inn; if (inn) { G.innX = inn.x; G.innZ = inn.z; G.innY = gy(inn.x, inn.z) + 1.2; }
+    G.sqX = SQUARE.x; G.sqZ = SQUARE.z; G.sqY = gy(SQUARE.x, SQUARE.z) + 1.5; G.mkY = gy(G.mkX, G.mkZ) + 1.5;
+    for (const z of World.zones) { if (z.site.id === 'inn') G.innZone = z.id; if (z.site.id === 'mill') G.millZone = z.id; }
+    const P = id => { const s = SITE[id]; return s ? [s.x, gy(s.x, s.z) + 1, s.z] : null; }; G.pHunter = P('hunter'); G.pBarn = P('barn'); G.pFarm = P('farm');
+    G.lakeY = LAKE.y;
+  }
+  const forestAt = (x, z) => { const i = Math.floor((x + HALF) / CELL), j = Math.floor((z + HALF) / CELL); if (i < 1 || j < 1 || i >= NG - 1 || j >= NG - 1) return 0.5; let n = 0; for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) n += forestGrid[(j + b) * NG + i + a]; return sat(n / 14); };
+
+  // ── the surface under a foot, at any place ──
+  K.surfaceAt = function (x, y, z, zone, inWater) {
+    if (zone) { const id = World.zones[zone - 1].site.id; return STONE.test(id) ? 'stone' : 'plank'; }
+    if (inWater) return 'water';
+    const ty = Terrain.y(x, z); if (y > ty + 0.12) return 'wood';
+    if (Terrain.splat(x, z, 1) > 0.4) return 'cobble'; if (Terrain.splat(x, z, 0) > 0.4 || Terrain.splat(x, z, 3) > 0.5) return 'dirt';
+    if (World.waterAt(x, z) > -900) return 'water';
+    if (nearestRiver(x, z, 9) < 7 || (hyp2(x - LAKE.x, z - LAKE.z) - LAKE.r) < 4) return 'mud';
+    return 'grass';
+  };
+
+  K.gather = function (dt) {
+    if (!ready) { if (typeof World === 'undefined' || !World.zones || !World.vegInst || typeof Player === 'undefined') return; setup(); }
+    const cam = R.cam, p = cam.pos, P = Player, f = K.frame;
+    G.x = p[0]; G.y = p[1]; G.z = p[2]; G.zone = World.camZone | 0; G.indoor = World.indoor;
+    const L = K.L; L.x = p[0]; L.y = p[1]; L.z = p[2]; L.yaw = cam.yaw; L.fx = Math.sin(cam.yaw); L.fz = -Math.cos(cam.yaw); L.rx = Math.cos(cam.yaw); L.rz = Math.sin(cam.yaw);
+    G.zid = G.zone ? World.zones[G.zone - 1].site.id : ''; G.space = G.zone ? SPACE(G.zid) : 'open';
+    G.hour = Env.hour; G.night = ENV.night; G.day = ENV.day; G.wind = Math.max(0.1, Math.min(1.4, ENV.windStrength));
+    G.rain = Math.max(Env.rain || 0, (typeof Sky !== 'undefined' && Sky.weather && Sky.weather.rain) || 0);
+    G.playing = !!game.playing; G.menu = !!(typeof UI !== 'undefined' && UI.menu); G.talk = !!(typeof UI !== 'undefined' && (UI.talk || UI.reader)); G.dead = !!(typeof RPG !== 'undefined' && RPG.dead);
+    if (K.testHold) return;
+    // places that move slowly: re-evaluated a few times a second
+    if (tick(1, 4)) {
+      G.forest = forestAt(G.x, G.z); G.meadow = sat((hyp2(G.x - SQUARE.x, G.z - SQUARE.z) - 22) / 45) * (1 - 0.6 * G.forest);
+      G.riverD = nearestRiver(G.x, G.z, 60); G.riverY = riverY(G.riverAt) + 0.3;
+      const dl = hyp2(G.x - LAKE.x, G.z - LAKE.z), lx = dl > 1 ? (G.x - LAKE.x) / dl : 1, lz = dl > 1 ? (G.z - LAKE.z) / dl : 0;
+      if (dl > LAKE.r) { G.lakeX = LAKE.x + lx * LAKE.r; G.lakeZ = LAKE.z + lz * LAKE.r; G.lakeD = dl - LAKE.r; } else { G.lakeX = G.x; G.lakeZ = G.z; G.lakeD = 0; } G.lakeY = LAKE.y + 0.2;
+      G.nearSquare = hyp2(G.x - G.sqX, G.z - G.sqZ); G.nearMarket = hyp2(G.x - G.mkX, G.z - G.mkZ); G.nearInn = hyp2(G.x - G.innX, G.z - G.innZ);
+      if (World.millPos) { G.millOn = true; G.millX = World.millPos[0]; G.millY = World.millPos[1]; G.millZ = World.millPos[2]; }
+    }
+    if (tick(2, 15) && typeof NPCS !== 'undefined') {
+      let a = 0, b = 0, c = 0; for (const n of NPCS) { const q = n.pos; if (hyp2(q[0] - SQUARE.x, q[2] - SQUARE.z) < 17) a++; if (hyp2(q[0] - G.mkX, q[2] - G.mkZ) < 10) b++; if (G.innZone && Math.abs(q[0] - G.innX) < 9 && Math.abs(q[2] - G.innZ) < 7 && World.zoneAt(q[0], q[1] + 1, q[2]) === G.innZone) c++; }
+      G.nSquare = a; G.nMarket = b; G.nInn = c;
+      const o = NPC.osric; G.grindOn = !!(o && o.anim === 'work' && !o.talking && G.millOn && hyp2(o.pos[0] - G.millX, o.pos[2] - G.millZ) < 9); if (G.millZone) G.grindOn = G.grindOn;
+    }
+    // fires: the nearest three emitters that burn
+    if (World.emitters.length !== fireN) { fireN = World.emitters.length; fireList.length = 0; lanList.length = 0; for (const e of World.emitters) { if (e.type === 'fire' || e.type === 'bonfire' || e.type === 'torch') fireList.push(e); else if (e.type === 'lantern' && !e.zone) lanList.push(e); } }
+    if (tick(3, 6)) {
+      for (const F of G.fires) F.on = false;
+      for (const e of fireList) {
+        if (e.type === 'bonfire' && !World.bonfire) continue; const d = Math.sqrt((e.p[0] - G.x) ** 2 + (e.p[1] - G.y) ** 2 + (e.p[2] - G.z) ** 2), big = e.type === 'bonfire', ref = big ? 4 : e.type === 'torch' ? 1.2 : 1.8, max = big ? 70 : 32;
+        if (d > max) continue; const lvl = big ? 1.5 : e.type === 'torch' ? 0.3 : Math.min(1.3, 0.5 + (e.size || 0.4)), sc = lvl * ref / Math.max(d, ref) * (e.zone === G.zone ? 1 : 0.3);
+        // insert into the three slots by score
+        let w = -1, low = sc; for (let i = 0; i < 3; i++) { const F = G.fires[i]; if (!F.on) { w = i; break; } if (F.sc < low) { low = F.sc; w = i; } }
+        if (w >= 0) { const F = G.fires[w]; F.on = true; F.sc = sc; F.x = e.p[0]; F.y = e.p[1]; F.z = e.p[2]; F.zone = e.zone | 0; F.ref = ref; F.max = max; F.lvl = lvl; }
+      }
+      // creak targets: lanterns within 18 m
+      G.nLan = 0; G.lanternNear = null; let bd = 18; for (const e of lanList) { const d = hyp2(e.p[0] - G.x, e.p[2] - G.z); if (d < bd) { bd = d; if (!G.lanternNear || Math.random() < 0.5) G.lanternNear = e.p; } }
+    }
+    const l = typeof NPC !== 'undefined' && NPC.lark, Lk = G.lark; if (l) { Lk.on = !!(l.anim === 'lute' && !l.talking) || Audio2.luteRequest > 0; Lk.x = l.pos[0]; Lk.y = l.pos[1] + 1.2; Lk.z = l.pos[2]; Lk.d = hyp2(l.pos[0] - G.x, l.pos[2] - G.z); if (tick(5, 10)) Lk.zone = World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]); }
+  };
+
+  // ── gameplay-driven sound ──
+  const q = { step: 0, vy: 0, prevY: 0, prevGround: true, sNext: 0, breathT: 0, heartT: 0, hour: -1, bellN: 0, bellT: 0, k: 0, bellowT: 0, foes: new Map(), placeSeen: 0, steps: 0, npcAcc: new Map() };
+  K.q = q; K.lastMat = null;
+  K.ups.push(function (K, dt, G) {
+    if (!ready || K.testHold) return; const c = K.c, now = K.now(), P = Player;
+    const playing = G.playing;
+    // ─ the player's feet ─
+    if (playing && !P.locked) {
+      const fl = Math.floor(P.step);
+      if (fl !== q.step) { q.step = fl;
+        if (P.speed > 0.4 && P.onGround) {
+          let sf = K.surfaceAt(P.pos[0], P.pos[1], P.pos[2], G.zone, P.inWater > 0.15);
+          const vy = Math.abs(q.vy); if (P.onGround && vy > 0.45 * P.speed && vy > 0.5) sf = 'stairs';
+          K.play('fs.' + sf, null, 1, { w: Math.max(0.55, Math.min(1.5, P.speed / 2.9)) }); K.lastSurface = sf; }
+      }
+      if (Math.abs(P.pos[1] - q.prevY) > 0.8) q.vy = 0; else q.vy += ((P.pos[1] - q.prevY) / Math.max(dt, 0.001) - q.vy) * Math.min(1, dt * 6); q.prevY = P.pos[1];
+      // breath: when stamina is nearly gone, and for a while after
+      if (typeof RPG !== 'undefined') { const r = RPG.st(), sta = r.sta / RPG.MAXST, hp = r.hp / RPG.MAXHP;
+        q.breathT -= dt; if (q.breathT <= 0 && (sta < 0.34 || RPG.exhausted) && !RPG.dead) { q.breathT = RN(1.2, 1.6); K.play('breath', null, 1, { lo: 1 - sta / 0.34 }); }
+        q.heartT -= dt; if (q.heartT <= 0 && hp < 0.3 && hp > 0 && !RPG.dead) { q.heartT = 0.55 + hp * 1.6; K.play('heart', null, 0.5 + (0.3 - hp) * 2.5); } }
+    } else q.prevY = P.pos[1];
+    // ─ villagers' feet: every stride's worth of distance, quieter, through the spatial route ─
+    if (typeof NPCS !== 'undefined' && playing) { let n = 0;
+      for (const v of NPCS) { const dx = v.pos[0] - G.x, dz = v.pos[2] - G.z; if (Math.abs(dx) > 16 || Math.abs(dz) > 16) { q.npcAcc.set(v, 0); continue; }
+        if (v.anim !== 'walk' && v.anim !== 'run') { q.npcAcc.set(v, 0); continue; }
+        let a = (q.npcAcc.get(v) || 0) + (v.anim === 'run' ? 2.7 : 1.35) * dt * 1; const stride = v.anim === 'run' ? 1.25 : 0.8 * v.scale;
+        if (a >= stride && n < 4) { a = 0; n++; const zn = K.zoneOf(v.pos[0], v.pos[1], v.pos[2]), sf = K.surfaceAt(v.pos[0], v.pos[1], v.pos[2], zn, false); K.play('fs.' + sf, v.pos, 0.55 * (0.6 + 0.4 * v.scale), { w: 0.9, free: true, zone: zn }); }
+        q.npcAcc.set(v, a); } }
+    // ─ doors: opening starts the creak, arriving closed is the thunk ─
+    if (World.doors && playing) for (const d of World.doors) {
+      const o = d.open; if (d._so === undefined) { d._so = o; continue; }
+      if (o !== d._so) { const dir = o > d._so ? 1 : -1;
+        if (dir === 1 && d._sd !== 1 && d._so < 0.02) { const dd = hyp2(d.c[0] - G.x, d.c[2] - G.z); if (dd < 40) K.play('door.open', d.c, 1, { zone: dd < 7 ? G.zone : 0, free: true }); }
+        if (dir === -1 && o < 0.02) { const dd = hyp2(d.c[0] - G.x, d.c[2] - G.z); if (dd < 40) K.play('door.close', d.c, 1, { zone: dd < 7 ? G.zone : 0, free: true }); }
+        d._sd = dir; d._so = o; } else if (d._sd) d._sd = 0;
+    }
+    // ─ the smith: hammer strike in step with his animation, bellows at the forge ─
+    const b = typeof NPC !== 'undefined' && NPC.brandt;
+    if (b && playing) {
+      if (b.anim === 'hammer' && !b.talking) { const k = (b.t * 0.9) % 1; if (q.k < 0.66 && k >= 0.66) { const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('anvil', [b.pos[0], b.pos[1] + 0.9, b.pos[2]], RN(0.85, 1.1), { zone: zn, free: true }); } q.k = k; }
+      else { q.k = 0; if (b.anim === 'work' && !b.talking) { q.bellowT -= dt; if (q.bellowT <= 0) { q.bellowT = RN(3.5, 6); const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('bellows', [b.pos[0] + 1, b.pos[1] + 0.9, b.pos[2]], 1, { zone: zn, free: true }); } } }
+    }
+    // ─ the mill wheel: a paddle splash twelve times a turn, in step with the visible wheel ─
+    const w = World.millWheel; if (w && playing) { const k = Math.floor(w.angle / (Math.PI * 2 / 12)); if (q.wk === undefined) q.wk = k; if (k !== q.wk) { q.wk = k; if (G.millOn) K.play('paddle', [G.millX, G.millY - 1.2, G.millZ], RN(0.7, 1), { zone: 0, free: true }); } }
+    // ─ the chapel bell: strokes spaced about three seconds apart; 6 and 12 o'clock count the hour, others strike once ─
+    const hr = Math.floor(Env.hour), flags = typeof S !== 'undefined' && S.flags;
+    if (hr !== q.hour) { if (q.hour >= 0 && hr === (q.hour + 1) % 24 && flags && flags.bell && playing) { q.bellN = hr === 12 ? 12 : (hr === 6 || hr === 18) ? 6 : 1; q.bellT = now + 0.6; } q.hour = hr; }
+    if (q.bellN > 0 && now >= q.bellT && World.bell) { q.bellN--; q.bellT = now + RN(3.1, 3.5); K.play('bell.stroke', World.bell.p, 1, { zone: 0, free: true }); }
+    // ─ foes: efforts when a swing starts, grunts when they stagger ─
+    if (typeof Foes !== 'undefined' && Foes.list && playing) for (const f of Foes.list) {
+      const st = f.alive ? f.state : 'gone', ps = q.foes.get(f); if (ps === undefined) { q.foes.set(f, st); continue; }
+      if (st !== ps) { q.foes.set(f, st); const pos = [f.pos[0], f.pos[1] + 1.2, f.pos[2]];
+        if (st === 'attack') K.play('foe.effort', pos, 1, { free: true }); else if (st === 'stagger') K.play('foe.hurt', pos, 1, { free: true }); }
+    }
+    // ─ a place discovered ─
+    if (typeof UI !== 'undefined' && UI.placeT !== q.placeSeen) { q.placeSeen = UI.placeT; const pl = document.getElementById('place'); if (pl && pl.firstChild && /Discovered/.test(pl.firstChild.textContent || '')) K.play('discover'); }
+  });
+  // the lute and the music are in 88c_music.js
+  // remember what was last picked up, so the older pickup() call can choose a material
+  const MAT = { gold: 'coin', apple: 'food', bread: 'food', ale: 'wood', rope: 'cloth', hammer: 'metal', knife: 'metal', tools: 'metal', frostcap: 'herb', malt: 'cloth', potion: 'generic', tonic: 'generic' };
+  K.ups.push(function (K) { if (!K.givePatched && typeof give === 'function') { K.givePatched = true; try { const g0 = give; give = function (id, n) { K.lastMat = MAT[id] || (typeof ITEMS !== 'undefined' && ITEMS[id] && ITEMS[id][2] && ITEMS[id][2].slot ? 'metal' : 'generic'); return g0.apply(this, arguments); }; } catch (e) { } } });
+})();
+
+
+// ---- 88d_voice.js ----
+// ───────────────────────── spoken dialogue and barks ─────────────────────────
+// Lines are generated at build time (tools/voice, Kokoro-82M) into audio/voice/*.m4a with a manifest keyed by a hash of speaker + on-screen text.
+// When a dialogue node is shown the line is fetched (the speaker's other lines are prefetched), decoded and played from the speaker's position on the
+// voice bus, ducking ambience and music. Subtitles stay, as a slim strip (body.voiced). Choices wait for the line to end or a tap, which skips it.
+// If the manifest, the file or the audio context is missing, nothing changes: the text box behaves exactly as before.
+// showNode / endTalk (85_ui.js) are wrapped here rather than edited; barks read NPC positions and Combat.swingN.
+(() => {
+  const K = Snd, V = K.vox = { man: null, loading: false, failed: false, buf: new Map(), pend: new Map(), cur: null, wait: false, lastBark: -99, perNpc: new Map(), swing: 0, key: null, wrapped: false, req: [], waitT: 0 };
+  const cyrb53 = (str, seed = 0) => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (let i = 0; i < str.length; i++) { const ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); };
+  V.keyOf = (speaker, text) => cyrb53(speaker + '\n' + text);
+  const BASE = 'audio/voice/';
+  K.set.voices = true; K.set.voiceVol = 0.9; K.set.subs = true; K.load();
+  // the slim subtitle strip and the waiting state (styles are injected here so the interface files stay untouched)
+  if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = '/* [voice] subtitle strip while a line is spoken */\nbody.voiced #dialog { padding: 8px 14px 10px; }\nbody.voiced #dname { font-size: 14px; }\nbody.voiced #dtext { font-size: 15px; line-height: 1.32; margin: 2px 0 8px; min-height: 0; max-height: 2.7em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }\nbody.voiced.nosubs #dtext { visibility: hidden; }\n#dopts.vwait { visibility: hidden; }\nbody.voiced #dopts button { min-height: 40px; padding: 6px 12px; font-size: 15px; }'; document.head.appendChild(st); }
+
+  V.init = function () { if (V.loading || V.man || V.failed) return; V.loading = true;
+    fetch(BASE + 'manifest.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { V.man = j; V.loading = false; }).catch(() => { V.failed = true; V.loading = false; }); };
+  const decode = (c, ab) => new Promise((res, rej) => { try { const p = c.decodeAudioData(ab, res, rej); if (p && p.catch) p.catch(rej); } catch (e) { rej(e); } });
+  // fetch and decode one file once; resolves to an AudioBuffer or null
+  V.load = function (file) { if (V.buf.has(file)) return Promise.resolve(V.buf.get(file)); if (V.pend.has(file)) return V.pend.get(file); const c = K.ctx; if (!c) return Promise.resolve(null);
+    const p = fetch(BASE + file).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status)).then(ab => decode(c, ab)).then(b => { V.buf.set(file, b); V.pend.delete(file); return b; }).catch(() => { V.pend.delete(file); return null; }); V.pend.set(file, p); return p; };
+  V.prefetch = function (speaker) { if (!V.man) return; const m = V.man.lines; let n = 0; for (const k in m) if (m[k].s === speaker && !V.buf.has(m[k].f) && !V.pend.has(m[k].f) && n++ < 16) setTimeout(() => V.load(m[k].f), 80 * n); };
+  V.stop = function (quiet) { const cu = V.cur; V.cur = null; if (cu) { try { cu.g.gain.setTargetAtTime(0, K.now(), 0.03); cu.src.stop(K.now() + 0.15); } catch (e) { } } V.reveal(); V.key = null; };
+  V.reveal = function () { V.wait = false; if (typeof document === 'undefined') return; const b = document.getElementById('dopts'); if (b) b.classList.remove('vwait'); };
+  // play a decoded buffer from a position (or at the listener) on the voice bus; returns the handle
+  V.play = function (buf, speaker, pos, vol, o) {
+    const c = K.ctx; if (!c || K.off) return null; const G = K.G; let dest = K.bus.ui.in, g = c.createGain(), src = c.createBufferSource(); src.buffer = buf; g.gain.value = vol * K.set.voiceVol * (o && o.trim || 1);
+    if (pos) { const node = K.route(o && o.bus || 'ui', pos[0], pos[1], pos[2], o && o.zone !== undefined ? o.zone : G.zone, o && o.ref || 3, o && o.max || 40, 1); if (!node) return null; g.connect(node); } else g.connect(dest);
+    src.connect(g); src.start(K.now() + 0.02); const h = { src, g, t0: K.now(), dur: buf.duration, speaker }; src.onended = () => { if (V.cur === h) { V.cur = null; V.reveal(); } }; return h; };
+  // a dialogue node was shown: returns true if the line is voiced. The speaker is an NPC object or id.
+  K.say = function (npc, text) {
+    V.stop(); if (!K.set.voices || !K.ctx || K.off || !npc || !V.man) return false; const id = npc.id || npc, e = V.man.lines[V.keyOf(id, text)]; if (!e) { document.body.classList.remove('voiced'); return false; }
+    const key = V.key = V.keyOf(id, text); V.wait = true; const box = document.getElementById('dopts'); if (box) box.classList.add('vwait'); document.body.classList.add('voiced'); document.body.classList.toggle('nosubs', !K.set.subs); V.waitT = K.now();
+    const pos = npc.pos ? [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]] : null;
+    V.load(e.f).then(buf => { if (V.key !== key) return; if (!buf) { V.reveal(); document.body.classList.remove('voiced'); return; }
+      if (K.ctx.state !== 'running') { V.reveal(); return; }
+      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40 }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; V.lastPlayed = { speaker: id, file: e.f, text }; });
+    // do not hold the choices hostage to a slow download
+    setTimeout(() => { if (V.key === key && !V.cur) { V.reveal(); } }, 2500);
+    return true; };
+  K.voiceBusy = () => !!V.cur || V.wait;
+  // the interface: tapping the dialogue skips the line (and does not pick an option); wrapped here so 85_ui.js stays untouched
+  function wrap() {
+    if (V.wrapped || typeof showNode !== 'function' || typeof endTalk !== 'function') return; V.wrapped = true;
+    const sn = showNode, et = endTalk;
+    showNode = function (n) { sn(n); try { if (n && UI.talk) { K.say(UI.talk, n.t); V.prefetch(UI.talk.id); } } catch (e) { } };
+    endTalk = function () { try { V.stop(); document.body.classList.remove('voiced'); } catch (e) { } return et.apply(this, arguments); };
+    const d = document.getElementById('dialog'); if (d) d.addEventListener('click', e => { if (V.wait || V.cur) { V.stop(); e.stopPropagation(); e.preventDefault(); } }, true);
+    addEventListener('keydown', e => { if ((V.wait || V.cur) && typeof UI !== 'undefined' && UI.talk && (e.code === 'Space' || e.code === 'Enter' || /^Digit\d$/.test(e.code))) { V.stop(); e.stopPropagation(); e.preventDefault(); } }, true);
+  }
+  // ── barks: a greeting by time of day for an idle villager close by, a protest when a sword is swung near them ──
+  const cat = h => h >= 5 && h < 11 ? 'morning' : h >= 11 && h < 17 ? 'day' : h >= 17 && h < 21 ? 'evening' : 'night';
+  V.bark = function (npc, c) { if (!V.man || !K.set.voices || !K.ctx) return false; const arr = V.man.barks && V.man.barks[npc.id] && V.man.barks[npc.id][c]; if (!arr || !arr.length) return false; const key = arr[Math.floor(Math.random() * arr.length)], e = V.man.lines[key]; if (!e) return false;
+    V.lastBark = K.T; V.perNpc.set(npc, K.T);
+    V.load(e.f).then(buf => { if (!buf || V.cur || K.ctx.state !== 'running') return; const h = V.play(buf, npc.id, [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]], 0.55, { ref: 2, max: 14, bus: 'world', zone: K.zoneOf(npc.pos[0], npc.pos[1], npc.pos[2]) }); if (h) { V.barkH = h; V.lastPlayed = { speaker: npc.id, file: e.f, bark: c }; } }); return true; };
+  K.ups.push(function (K, dt, G) {
+    if (!G.playing && !K.ctx) return; if (!V.man && !V.failed && !V.loading && K.T > 1) V.init(); if (!V.wrapped && typeof game !== 'undefined' && game.ready) wrap();
+    // ducking: ambience and music dip while anyone is speaking
+    const tgt = V.cur ? (V.cur.speaker && V.barkH === V.cur ? 0.25 : 1) : 0; K.duck = (K.duck || 0) + (tgt - (K.duck || 0)) * Math.min(1, dt * (tgt > (K.duck || 0) ? 6 : 1.5));
+    if (V.barkH && V.barkH.src && K.now() > V.barkH.t0 + V.barkH.dur + 0.2) V.barkH = null;
+    if (!G.playing || G.talk || G.menu || !K.set.voices || typeof NPCS === 'undefined' || (K.frame & 15) !== 0) return;
+    // a swung sword near a villager
+    if (typeof Combat !== 'undefined' && Combat.swingN !== V.swing) { V.swing = Combat.swingN; for (const n of NPCS) { if (n.anim === 'lie' || n.talking || Math.hypot(n.pos[0] - G.x, n.pos[2] - G.z) > 9) continue; if (K.T - (V.perNpc.get(n) || -99) < 25) continue; V.bark(n, 'weapon'); break; } return; }
+    if (K.T - V.lastBark < 22 || V.cur) return;
+    for (const n of NPCS) { const d = Math.hypot(n.pos[0] - G.x, n.pos[2] - G.z); if (d > 4.5 || d < 0.8 || n.anim === 'lie' || n.anim === 'sit' && G.night > 0.5 || n.talking) continue; if (K.T - (V.perNpc.get(n) || -99) < 150) continue; if (Math.random() < 0.5) { V.perNpc.set(n, K.T - 100); continue; } V.bark(n, cat(G.hour)); break; }
+  });
+})();
 
 
 // ---- 90_rpg.js ----
@@ -8954,17 +9915,7 @@ const RPG = {
   stDelay: 0, hurtT: 99, combatT: 99, flash: 0, shake: 0, kick: [0, 0], hitStop: 0, exhausted: false,
   dead: false, deadT: 0, inited: false, out: { run: false, speed: 1, jump: false, ov: null }, ov: [0, 0], fx: [], hud: {}, wasPlaying: false,
 };
-// sounds, built from the synth's two primitives
-Object.assign(Audio2, {
-  swing(heavy) { if (!this.ctx) return; this.burst(heavy ? 0.26 : 0.17, heavy ? 0.11 : 0.075, 'bandpass', heavy ? 480 : 700, 1.2, null, 0, heavy ? 1500 : 2100); },
-  hitFlesh(heavy) { if (!this.ctx) return; this.burst(0.11, heavy ? 0.3 : 0.2, 'lowpass', 520, 1); this.tone(heavy ? 70 : 95, 0.16, heavy ? 0.22 : 0.14, 'sine', null, 45); },
-  clash(vol) { if (!this.ctx) return; this.clang(vol === undefined ? 0.9 : vol); this.burst(0.07, 0.16, 'highpass', 3000, 0.7); },
-  hurt() { if (!this.ctx) return; this.burst(0.2, 0.3, 'lowpass', 330, 1); this.tone(150, 0.22, 0.12, 'sawtooth', null, 80); },
-  hop() { if (!this.ctx) return; this.burst(0.08, 0.05, 'bandpass', 420, 1.5); },
-  eat() { if (!this.ctx) return; for (let i = 0; i < 3; i++) this.burst(0.07, 0.07, 'bandpass', 900 + i * 150, 2, null, i * 0.17); },
-  shout(deep) { if (!this.ctx) return; this.tone(deep ? 120 : 165, 0.34, 0.09, 'sawtooth', null, deep ? 92 : 128); this.burst(0.3, 0.05, 'bandpass', 900, 2); },
-  fall() { if (!this.ctx) return; this.tone(110, 1.1, 0.14, 'sine', null, 48); this.burst(0.5, 0.2, 'lowpass', 240, 1, null, 0.25); },
-});
+// sounds: Audio2.swing / hitFlesh / clash / hurt / hop / eat / shout / fall are in the sound engine now (88_audio.js, 88b_sfx.js)
 
 // saved state, with defaults filled in for a new game or an older save
 RPG.st = function () {
@@ -9447,6 +10398,8 @@ const Foes = (() => {
   };
   // everyone goes home and forgets (after the player dies, or sleeps)
   F.calm = function (heal) { for (const f of F.list) { if (!f.alive) continue; release(f); f.state = 'idle'; f.t = 0; f.pos = f.spot.p.slice(); f.yaw = f.spot.yaw; f.alert = 0; if (heal) f.hp = f.maxHp; } };
+  // a fight does not follow through a door: everyone goes home, calm, and the fight timer clears
+  F.breakOff = function () { F.calm(false); F.target = null; F.attackers = 0; if (typeof RPG !== 'undefined') RPG.combatT = 99; for (const f of F.list) if (f.h && f.h.pivot.visible && f.alive) f.h.pivot.visible = false; };
   function campState() {
     const r = RPG.st(); r.cleared = r.cleared || {};
     for (const c of CAMPS) { const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
@@ -9461,7 +10414,7 @@ const Foes = (() => {
   function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < 34) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
   function die(f) {
     const r = RPG.st(); release(f); f.alive = false; f.hp = 0; f.state = 'dead'; f.t = 0; f.anim = Math.random() < 0.5 ? 'c-die' : 'c-die2'; f.h.curName = '';
-    r.kills++; r.dead[f.id] = r.day; Audio2.shout(f.leader);
+    r.kills++; r.dead[f.id] = r.day; Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
     const loot = [['gold', Math.round(f.leader ? rnd(22, 34) : rnd(4, 12))]];
     if (Math.random() < 0.45) loot.push([Math.random() < 0.5 ? 'bread' : 'apple', 1]); if (Math.random() < (f.leader ? 1 : 0.18)) loot.push(['potion', 1]);
     if (f.chief) { loot.push(['steelsword', 1]); if (!has('tools') && qAt('tools') !== 99) loot.push(['tools', 1]); } else if (f.leader) loot.push(['ironsword', 1]); else if (Math.random() < 0.1) loot.push(['buckler', 1]);
@@ -9513,7 +10466,7 @@ const Foes = (() => {
       case 'idle': {
         f.anim = f.spot.kind === 'sit' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
         const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
-        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); Audio2.shout(f.leader); if (!F.warned) { F.warned = true; toast('Outlaws! They have seen you.'); } }
+        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned) { F.warned = true; toast('Outlaws! They have seen you.'); } }
         break; }
       case 'notice': f.anim = 'c-idle'; if (f.t > 0) turn(f, toP, 6, dt); if (f.t > 0.45) { f.state = 'chase'; f.t = 0; } break;
       case 'chase': {
@@ -9557,6 +10510,7 @@ const Foes = (() => {
   }
   F.update = function (dt, rdt) {
     if (!F.ready) return;
+    if (World.cell) { F.target = null; return; }          // outlaws live outdoors: in a cell none is drawn, thought about or posed
     const P = game.playing ? Player.pos : R.cam.pos, live = game.playing && !RPG.dead, st = F.st, r = RPG.st();
     let target = null, tb = 0.55, fight = null;
     for (const f of F.list) {
@@ -9728,7 +10682,7 @@ function updateDynamics(dt, chars) {
   const bd = R.boneData, tmp = POSE.S, pp = Player.pos;
   for (const d of World.doors) {
     let near = false;
-    for (const c of chars) if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
+    for (const c of chars) if (CELLS_ON && c === chars[0]) continue; else if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
     if (near && d.open === 0 && game.playing) { const dd = hyp(pp[0] - d.c[0], pp[2] - d.c[2]); if (dd < 14) Audio2.door(clamp(1.2 - dd / 12, 0.1, 1)); }
     d.open = clamp(d.open + (near ? dt : -dt) * 2.4, 0, 1);
     if (d.open === d.last) continue; d.last = d.open;
@@ -9749,8 +10703,8 @@ function audioState() {
     const wd = River.dist(p[0], p[2], 30), ld = hyp(p[0] - LAKE.x, p[2] - LAKE.z) - LAKE.r, md = World.millPos ? hyp(p[0] - World.millPos[0], p[2] - World.millPos[2]) : 99;
     st.water = Math.max(sat(1 - wd / 26) * 0.8, sat(1 - ld / 20) * 0.35, sat(1 - md / 18));
   }
-  const b = NPC.brandt; st.hammer = b && b.anim === 'hammer' && !b.talking ? b.t : -1; st.hammerDist = b ? hyp(b.pos[0] - p[0], b.pos[2] - p[2]) : 999;
-  const l = NPC.lark; st.lute = !!(l && l.anim === 'lute' && !l.talking); st.luteDist = l ? hyp(l.pos[0] - p[0], l.pos[2] - p[2]) : 999; st.luteWall = !!l && World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]) !== World.camZone;
+  st.cell = !!World.cell; const b = NPC.brandt; st.hammer = b && b.anim === 'hammer' && !b.talking ? b.t : -1; const hb = b ? Cells.hear(b.pos, p) : null; st.hammerDist = b ? (CELLS_ON ? hb.d : hyp(b.pos[0] - p[0], b.pos[2] - p[2])) : 999; st.hammerWall = !!hb && hb.wall;
+  const l = NPC.lark; st.lute = !!(l && l.anim === 'lute' && !l.talking); const hl = l ? Cells.hear(l.pos, p) : null; st.luteDist = l ? (CELLS_ON ? hl.d : hyp(l.pos[0] - p[0], l.pos[2] - p[2])) : 999; st.luteWall = !!l && (CELLS_ON ? hl.wall : World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]) !== World.camZone);
   st.bellOn = !!S.flags.bell; st.bellDist = World.bell ? hyp(World.bell.p[0] - p[0], World.bell.p[2] - p[2]) : 999;
   for (const c of World.chickens) if (c.cluck) { c.cluck = false; Audio2.cluck(clamp(1.2 - hyp(c.pos[0] - p[0], c.pos[2] - p[2]) / 8, 0, 1)); }
   return st;
@@ -9805,7 +10759,7 @@ function startGame(cont) {
   Audio2.start();
   const sv = cont && loadSave(); if (sv) applySave(sv); else { clearSave(); }
   npcSnapAll(); uiPurse(); uiObjective();
-  game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + 50);
+  game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + (Cells.inRegion(Player.pos[0]) ? 0.8 : 50)); if (CELLS_ON) { Cells.sync(Player.pos); World.camZone = World.zoneAt(Player.pos[0], Player.pos[1] + 1, Player.pos[2]); }
   if (!Input.touch && !coarse() && !TEST) { try { const p = G.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
   setTimeout(() => { banner('The Greyspine Valley', 'Brackenfell'); }, 900);
   if (!sv) setTimeout(() => { if (qAt('welcome') < 0) qStart('welcome'); }, 5200);
@@ -9864,11 +10818,17 @@ function startGame(cont) {
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
         game.step = (n, dt) => { let env; for (let i = 0; i < (n || 1); i++) env = tick(dt || 1 / 30); return env; };
     game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); return R.stats; };
-    game.tp = (x, z, yawDeg, pitchDeg, y) => { Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180; World.indoor = World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; };
+    game.tp = (x, z, yawDeg, pitchDeg, y) => {       // tp(spotName, yawDeg?) goes to a named spot (inside a cell too); tp(x, z, ...) to coordinates, y optional
+      if (typeof x === 'string') { const sp = World.spots[x]; if (!sp) throw new Error('no spot ' + x); yawDeg = z === undefined ? sp.yaw * 180 / PI : z; pitchDeg = 0; y = sp.p[1]; z = sp.p[2]; x = sp.p[0]; }
+      Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180;
+      if (CELLS_ON) Cells.sync(Player.pos); World.indoor = World.cell || World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; World.camZone = World.zoneAt(x, Player.pos[1] + 1, z); R.cam.pos[0] = x; R.cam.pos[1] = Player.pos[1] + Player.eye; R.cam.pos[2] = z; Player.camY = Player.pos[1];
+    };
+    game.enter = id => { const c = Cells.by[id]; if (!c) throw new Error('no cell ' + id); Cells.teleport(c.enter); return c.id; };         // instant, no fade (tests); the door interaction is Cells.use
+    game.leave = () => { const c = Cells.cur; if (!c) return false; Cells.teleport(c.leave); return true; };
     game.shot = async (x, y, z, yaw, pitch, hour) => {
       if (hour !== undefined) { Env.hour = hour; npcSnapAll(); }
       game.playing = false; const save = attractCamera; R.cam.pos = [x, y === null ? Terrain.y(x, z) + 1.65 : y, z]; R.cam.yaw = yaw * PI / 180; R.cam.pitch = (pitch || 0) * PI / 180;
-      World.camZone = World.zoneAt(x, R.cam.pos[1], z); World.indoor = World.camZone ? 1 : 0;
+      if (CELLS_ON) Cells.sync(R.cam.pos); World.camZone = World.zoneAt(x, R.cam.pos[1], z); World.indoor = World.cell || World.camZone ? 1 : 0;
       game.time += 0.4; npcUpdate(0.4, R.cam.pos); updateDynamics(0.4, [R.cam.pos].concat(NPCS.map(n => n.pos)));
       const env = updateEnv(game.time, World.indoor); env.time = game.time; World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
       fxUpdate(0.4, game.time, env, R.cam.pos); fxUpdate(0.4, game.time, env, R.cam.pos);

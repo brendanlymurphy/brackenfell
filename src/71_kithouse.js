@@ -55,18 +55,31 @@ const KH = (() => {
 })();
 
 let kitFB = null;
-function kitShell(c) {
-  const { site, spec, w, d, H, t, hd, ext, glow, zone, Ms, openings, tanP } = c, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
+// With cells the shell is laid twice: pass 'ext' on the village site (outside faces, a closed door, glowing windows, no interior) and pass 'int' in the cell's own
+// frame (the room's side of the same walls, floor, roof lining). Without cells one pass, 'both', lays it all on the site as it always was.
+function kitShell(c) { if (!c.cell) return kitShellPass(c, 'both'); kitShellPass(c, 'ext'); kitShellPass(c, 'int'); }
+function kitShellPass(c, pass) {
+  const { spec, w, d, H, t, hd, glow, zone, openings, tanP } = c, site = c.xsite, X = pass !== 'int', I = pass !== 'ext', ext = pass === 'int' ? c.ext : c.xext, Ms = pass === 'int' ? c.Ms : c.Mx, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
-  ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
-  const b = site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.floorY + H + (st.up ? 3 : 0) }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
+  if (X) { for (const m of [c.xext, c.ext, glow]) { m.nv = 0; m.ni = 0; m.min = [1e9, 1e9, 1e9]; m.max = [-1e9, -1e9, -1e9]; } }
+  const b = X ? (site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.xFloorY + H + (st.up ? 3 : 0) })) : kitIntBatch(zone);
+  if (X) World.kitExt[site.id] = { batch: b, site, Ms: c.Mx, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
-  const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: st.up ? zone : 0, inSkyVis: st.up ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
+  const cellExt = pass === 'ext';          // in a cell the village shell knows nothing of the room: its inside faces are plain dark
+  const OUT = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : st.up ? zone : 0, inSkyVis: st.up && !cellExt ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
+  const IN = { zone, skyVis: INT_AO, inZone: zone, inSkyVis: INT_AO };
   const frames = {}, wbs = {};
   for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); frames[wn] = new THREE.Matrix4().makeBasis(KH.V(W.u), KH.V([0, 1, 0]), KH.V(W.n)).setPosition(s0[0], s0[1], s0[2]).premultiply(MS); wbs[wn] = m4.basis(m4.create(), W.u, [0, 1, 0], W.n, s0); }
-  const add = (F, name, x, y, z, s, o, ry) => { o = o || OUT; if (st.timber && typeof infTimber === 'function') name = infTimber(name); if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] }); b.add(name, KH.xf(F, x, y, z, s, ry), o); };
+  const add = (F, name, x, y, z, s, o, ry) => {
+    o = o || OUT;
+    if (pass === 'int') { if (o === EXT) { if (!/^DoorFrame|^Door_1/.test(name)) return; o = IN; } else o = o.tint ? Object.assign({}, IN, { tint: o.tint }) : IN; }
+    else if (cellExt && o.inZone !== undefined && o !== OUT && o !== UP) o = Object.assign({}, o, { inZone: 0, inSkyVis: 0.12 });
+    if (st.timber && typeof infTimber === 'function') name = infTimber(name);
+    if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] });
+    b.add(name, KH.xf(F, x, y, z, s, ry), o);
+  };
   const Ytop = H + (st.up ? 3 : 0);
-  Object.assign(c, { kb: b, kMS: MS, kYtop: Ytop, kFrames: frames, kR: R });
+  if (X) Object.assign(c, { kb: b, kMX: MS, kFrames: frames }); if (I) c.kMS = MS; c.kYtop = Ytop; c.kR = c.kR || R;
   const G = stone ? 'Wall_UnevenBrick' : 'Wall_Plaster';
   const filler = (F, a, e, y, ys, isStone, endL, endR, o) => {
     const g = e - a; if (g < 0.05) return;
@@ -87,7 +100,7 @@ function kitShell(c) {
   };
   c.kDoorLamps = [];
   const infW = site.infill && typeof infKitWalls === 'function' && INFS.mats;
-  if (infW) infKitWalls(c, b, MS, frames, zone, sy, R);
+  if (infW) infKitWalls(c, b, MS, frames, zone, sy, R, pass);
   for (const wn of ['front', 'back', 'left', 'right']) {
     if (infW) continue;
     const F = frames[wn], L = WALLS[wn].len(w, d);
@@ -102,12 +115,12 @@ function kitShell(c) {
       filler(F, cur, s.c - sx, 0, sy, stone, cur === 0, false);
       if (o.door) {
         add(F, G + '_Door_Flat', s.c, 0, 0, S); add(F, st.arch ? 'DoorFrame_Round_Brick' : 'DoorFrame_Flat_WoodDark', s.c, 0, 0, st.arch ? [S[0], S[1] * 0.93, 1.1] : S, EXT);
-        if (o.def.kLamp) { const side = s.c + sx + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F, wn, u: s.c + side * (sx + 0.42), v: 1.5 * sy }); }
+        if (X && o.def.kLamp) { const side = s.c + sx + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F, wn, u: s.c + side * (sx + 0.42), v: 1.5 * sy }); }
       } else {
         const k = WIN[o.def.kwin] || WIN.wide;
         add(F, G + k[0], s.c, 0, 0, S); add(F, o.def.glass && Kit.pieces[k[1] + '_Stained'] ? k[1] + '_Stained' : k[1], s.c, 0, 0, S, o.def.glass ? Object.assign({}, OUT, { tint: o.def.glass }) : undefined);
         if (o.def.shutters !== false && sx > 0.9 && s.c - 1.3 > 0 && s.c + 1.3 < L) add(F, k[2], s.c, 0, 0, S, EXT);
-        if (!o.def.glass && !st.arch && sx > 0.9 && (wn === 'front' || R() < 0.3) && R() < 0.7) { const fb = (kitFB = kitFB || [0, 1, 2].map(i => genFlowerBox(1.25, rng(70 + i)))); c.kb.add(R.pick(fb), KH.xf(F, s.c, 0.9 * sy, 0.27, 1, 0), EXT); }
+        if (X && !o.def.glass && !st.arch && sx > 0.9 && (wn === 'front' || R() < 0.3) && R() < 0.7) { const fb = (kitFB = kitFB || [0, 1, 2].map(i => genFlowerBox(1.25, rng(70 + i)))); c.kb.add(R.pick(fb), KH.xf(F, s.c, 0.9 * sy, 0.27, 1, 0), EXT); }
       }
       cur = s.c + sx;
     }
@@ -115,7 +128,7 @@ function kitShell(c) {
     add(F, 'Corner_Exterior_Wood', 0, 0, 0, [1.25, sy, 1.25], EXT);
     // ── upper storey: timber and plaster, windows on alternate panels, a balcony over the door on some ──
     if (st.up) {
-      const n = Math.max(1, Math.round(L / 2)), m = L / n, sx = m / 2, S = [sx, 1, 1], mid = n >> 1;
+      const n = Math.max(1, Math.round(L / 2)), m = L / n, sx = m / 2, S = [sx, 1, 1], mid = n >> 1, RU = rng(site.x * 91 + site.z * 7 + wn.charCodeAt(0) * 13);       // its own sequence: the inside copy of the wall must pick the same windows
       for (let k = 0; k < n; k++) {
         const uc = (k + 0.5) * m;
         if (st.balcony === wn && n >= 3 && k === mid) {
@@ -126,7 +139,7 @@ function kitShell(c) {
         } else if (n > 1 && k === 0) add(F, 'Wall_Plaster_Straight_L', uc, H, 0, S, UP);
         else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, 0, S, UP);
         else if (n <= 3 || (k + (wn === 'front' || wn === 'back' ? 0 : 1)) % 2 === 1) {
-          const r = R();
+          const r = RU();
           if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); }
           else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
           else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, 0, S, UP); add(F, kitOpen('Window_Thin_Round1'), uc, H, 0, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
@@ -137,36 +150,36 @@ function kitShell(c) {
     // ── gable ends carry the timber triangle of the roof ──
     if ((wn === 'left' || wn === 'right') && !(st.shingle && typeof infRoofGen === 'function')) { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; const gw = spec.gableWin && spec.gableWin[wn] && Kit.pieces['Roof_Front_Brick' + span + '_Open'];
       add(F, 'Roof_Front_Brick' + span + (gw ? '_Open' : ''), L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO });
-      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT)); }
+      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT), pass, ext); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: st.up ? 0 : zone, inSky: st.up ? 0.2 : INT_AO, tint: st.timber ? [1, 1, 1] : [1, 1, 1] });
+  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: [1, 1, 1] }); }
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
     let name = 'Roof_RoundTiles_' + span + 'x' + len; const ridge = Kit.info(name).max[1]; if (st.shingle && typeof infR === 'function') name = infR(name);
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
-    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), { zone: 0, skyVis: 1, inZone: zone, inSkyVis: 0.2 });
+    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), pass === 'int' ? { zone, skyVis: INT_AO, inZone: zone, inSkyVis: 0.2 } : { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : 0.2 });
   }
-  // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance) ──
-  {
+  // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance; in a cell they are the cell's) ──
+  if (I) {
     const nx = Math.max(1, Math.round(w / 2)), nz = Math.max(1, Math.round(d / 2)), sx = (w - 0.3) / (2 * nx), sz = (d - 0.3) / (2 * nz), tile = spec.floor === 'stone' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';
     for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) b.add(tile, KH.xf(MS, (i - (nx - 1) / 2) * 2 * sx, 0.012, (j - (nz - 1) / 2) * 2 * sz, [sx, 1, sz]), { zone, skyVis: INT_AO, cast: false });
   }
   // ── generated parts that still make sense: stone plinth down to the ground, door steps, ceiling or roof lining ──
   const inner = () => { ext.m1 = zone; ext.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
-  outer(); ext.mat(MAT.STONE, [0.92, 0.92, 0.92]); ext.grad = [1, 0.6]; ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4); ext.grad = null;
-  for (const wn in WALLS) for (const o of openings[wn]) if (o.door) {
+  if (X) outer(), ext.mat(MAT.STONE, [0.92, 0.92, 0.92]), ext.grad = [1, 0.6], ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4), ext.grad = null;
+  if (X) for (const wn in WALLS) for (const o of openings[wn]) if (o.door) {
     ext.push(); m4.mul(ext.m, ext.m, wbs[wn]); ext.dirty = true;
     outer(); ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(o.u0 - 0.35, -0.5, 0, o.u1 + 0.35, -0.02, 0.5); ext.box(o.u0 - 0.2, -0.5, 0.5, o.u1 + 0.2, -0.17, 0.95);
     ext.pop();
   }
   const e = 0.16;          // the kit walls are thinner than the generated ones: reach to their inner face
   if (st.up) c.needUpper = true;           // a second storey: its floor, with the stairwell, is built by the building (upperFloor in 71b_storeys.js)
-  if (spec.ceiling && !st.up) {
+  if (I && spec.ceiling && !st.up) {
     inner(); ext.mat(MAT.PLANKS, COL.wood); ext.ao = INT_AO * 0.85;
     ext.quad([-w / 2 + e, H, hd - e], [-w / 2 + e, H, -hd + e], [w / 2 - e, H, -hd + e], [w / 2 - e, H, hd - e]);
-  } else if (!st.up) {
+  } else if (I && !st.up) {
     const roofY = c.roofY;
     ext.mat(MAT.PLANKS, COL.woodDark);
     for (const s of [-1, 1]) {
@@ -179,9 +192,9 @@ function kitShell(c) {
       ext.pop();
     }
   }
-  c.kCol0 = World.colliders.length;
+  if (I) c.kCol0 = World.colliders.length;
   // lanterns by the doors
-  for (const l of c.kDoorLamps) {
+  if (X) for (const l of c.kDoorLamps) {
     if (site.infill && typeof INFS !== 'undefined' && INFS.mats) {          // a small generated bracket lantern instead of the 2800-triangle kit lantern
       const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), q = KH.xf(l.F, l.u, 2.15, 0.1, 1, 0), p0 = new THREE.Vector3(0, -0.1, 0.42).applyMatrix4(q), p = [p0.x, p0.y, p0.z];
       b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
@@ -195,8 +208,8 @@ function kitShell(c) {
 // a kit chimney above a hearth at house-local (lx, lz), rising clear of the ridge
 function kitChimney(c, lx, lz) {
   lx = clamp(lx, -c.w / 2 + 0.6, c.w / 2 - 0.6); lz = clamp(lz, -c.hd * 0.3, c.hd * 0.3);          // inside the footprint, near the ridge
-  const top = infChimney(c.kb, c.kMS, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0, lift: 0.14 });
-  World.emitters.push({ type: 'smoke', p: m4.tp(c.Ms, [lx, top + 0.2, lz]), zone: 0 });
+  const top = infChimney(c.kb, c.kMX, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0, lift: 0.14 });
+  World.emitters.push({ type: 'smoke', p: m4.tp(c.Mx, [lx, top + 0.2, lz]), zone: 0 });
 }
 
 // ── furnishing: Props.* calls land here while kits are loaded and are answered with kit pieces at the same spot ──
@@ -205,7 +218,7 @@ const KITP = { rnd: rng(4242), lc: {} };
 const kitLightOk = (zone, cap) => { const n = KITP.lc[zone] = (KITP.lc[zone] || 0) + 1; return n <= cap; };
 function kitIntBatch(zone) {
   let k = World.kitInt[zone];
-  if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
+  if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null, cell: zi ? zi.cell : null }; }
   return k.batch;
 }
 // ── scanned stand-ins ──
@@ -550,14 +563,16 @@ function kitAttach() {
     const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.frustumCulled = false; mesh.matrixAutoUpdate = false; mesh.renderOrder = -5; mesh.name = 'kit-shadow-proxy'; SC.scene.add(mesh);
   }
   try { const sb = kitScatter(); if (sb) addG(sb.build(), { scatter: true }); } catch (e) { console.warn('scan scatter skipped: ' + (e && e.message || e)); }
-  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) { const g = k.batch.build(); furnBlobs(+z, g); addG(g, { site: k.site, interior: true }); } }
-  for (const z in World.kitFine) { const k = World.kitFine[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true, fine: true }); }
+  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) { const g = k.batch.build(); furnBlobs(+z, g); addG(g, { site: k.site, interior: true, cell: k.cell }); } }
+  for (const z in World.kitFine) { const k = World.kitFine[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true, fine: true, cell: k.cell }); }
   if (World.kitYard && World.kitYard.count) { const g = World.kitYard.build(); g.traverse(o => { if (o.isMesh) o.layers.set(1); }); addG(g, { yard: true }); }
   const inner = sceneUpdate;
   sceneUpdate = function (camPos, q) {
     inner(camPos, q);
     // furniture only shows through an open door or a window, so it is drawn for the nearest buildings alone
+    const cur = World.cell;
     for (const k of World.kitGroups) {
+      if (cur || k.cell) { k.g.visible = !!cur && k.cell === cur.id && !(k.fine && q.name === 'Low'); continue; }        // in a cell: that cell's groups only; outside: no cell's
       if (k.interior && k.site) k.g.visible = interiorShown(k.site, camPos) && !(k.fine && q.name === 'Low');
       else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
       else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
@@ -565,6 +580,6 @@ function kitAttach() {
       else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? 9 : q.yardRange * 1.6 + 8) && (!k.dress || q.scatter); }
       else k.g.visible = true;
     }
-    if (Kit.update) Kit.update(camPos);
+    if (Kit.update && !cur) Kit.update(camPos);
   };
 }

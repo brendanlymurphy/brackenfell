@@ -49,7 +49,7 @@ function floorHeight(f, x, z) {
 }
 // highest walkable surface at (x,z) that is not above maxY (terrain is always a candidate)
 World.groundAt = (x, z, maxY) => {
-  let best = Terrain.y(x, z);
+  let best = (CELLS_ON && Cells.inRegion(x)) ? -1e9 : Terrain.y(x, z);          // cells have no terrain: below them is nothing (the rescue in playerUpdate)
   for (const f of World.floors) { const y = floorHeight(f, x, z); if (y !== null && y <= maxY && y > best) best = y; }
   return best;
 };
@@ -103,7 +103,7 @@ function playerUpdate(dt) {
     colResolve(np, P.r, P.pos[1], P.pos[1] + 1.75);
     // stay inside the valley and out of deep water
     const rr = hyp(np[0], np[2]);
-    if (rr > WORLD_RADIUS) { np[0] *= WORLD_RADIUS / rr; np[2] *= WORLD_RADIUS / rr; if (P.warned <= 0) { P.warned = 8; if (typeof toast === 'function') toast('The wilds beyond Brackenfell are no place to wander alone.'); } }
+    if (rr > WORLD_RADIUS && !(CELLS_ON && Cells.inRegion(np[0]))) { np[0] *= WORLD_RADIUS / rr; np[2] *= WORLD_RADIUS / rr; if (P.warned <= 0) { P.warned = 8; if (typeof toast === 'function') toast('The wilds beyond Brackenfell are no place to wander alone.'); } }
     const w2 = World.waterAt(np[0], np[2]);
     if (w2 > -900 && w2 - World.groundAt(np[0], np[2], P.pos[1] + 0.6) > 1.12 && w2 - P.pos[1] > 0.9) { np[0] = P.pos[0]; np[2] = P.pos[2]; P.vel[0] *= 0.3; P.vel[2] *= 0.3; }
     P.pos[0] = np[0]; P.pos[2] = np[2];
@@ -135,7 +135,8 @@ function playerUpdate(dt) {
   P.dip += (0 - P.dip) * Math.min(1, dt * 9);
   // zone, surface
   const zone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
-  World.camZone = zone; World.indoor += ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
+  if (CELLS_ON) { Cells.sync(P.pos); if (P.pos[1] < CELL.y - 30 && Cells.cur) Cells.rescue(); }
+  World.camZone = zone; World.indoor = World.cell ? 1 : World.indoor + ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
   P.surface = zone ? (World.zones[zone - 1].site.id === 'chapel' ? 'stone' : 'wood') : P.inWater ? 'water' : (P.pos[1] > Terrain.y(P.pos[0], P.pos[2]) + 0.12 ? 'wood' : Terrain.splat(P.pos[0], P.pos[2], 1) > 0.4 ? 'stone' : Terrain.splat(P.pos[0], P.pos[2], 0) > 0.4 ? 'dirt' : 'grass');
   // head bob + footsteps
   const moving = P.speed > 0.4 && P.onGround; P.bobAmt += ((moving ? 1 : 0) - P.bobAmt) * Math.min(1, dt * 8);

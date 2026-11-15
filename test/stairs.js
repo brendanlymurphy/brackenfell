@@ -97,9 +97,22 @@ for (const st of World.stairs) {
   // and straight from the spots themselves, both ways, once more
   walk(st, true, [a.p[0], a.p[1], a.p[2]], VARIANTS[0]); walk(st, false, [b.p[0], b.p[1], b.p[2]], VARIANTS[0]);
 }
-// every door, in and out
+// every door: a portal when cells are on (the full trip is test/cells.js): the entrance inside is free standing room and a walk straight in from it works;
+// with cells off (TEST cells=0) the old walk through the open door, in and out
 for (const id in World.houses) {
   const h = World.houses[id], d = h.door; if (!d) continue;
+  if (h.cell) {
+    const e = h.cell.enter.p, back = [e[0] + (e[0] - d.c[0]) * 1.2, 0, e[2] + (e[2] - d.c[2]) * 1.2];
+    put(e[0], World.groundAt(e[0], e[2], e[1] + 1), e[2], 0); let ok = false, f = 0;
+    for (const off of [0, 0.7, -0.7, 1.4, -1.4]) {          // straight in, then half left / right / sideways (a divider or a table can stand right behind the door): the player must get somewhere
+      put(e[0], World.groundAt(e[0], e[2], e[1] + 1), e[2], 0);
+      for (f = 0; f < 60; f++) { steer('diag', back[0], back[2], off, 1); fix(); __game.step(1, dt); }
+      if (Math.hypot(Player.pos[0] - e[0], Player.pos[2] - e[2]) > 0.55 && World.cell && World.cell.id === id) { ok = true; break; }       // (the infill cottages are 2.4 m deep and crowded: Phase B replaces them)
+    }
+    if (!ok) fails.push('door ' + id + ': cannot walk in from the entrance, stuck at ' + Player.pos.map(q => +q.toFixed(2)).join(','));
+    if (!World.interact.some(it => it.kind === 'portal' && it.cell === id && it.side === 'in') || !World.interact.some(it => it.kind === 'portal' && it.cell === id && it.side === 'out')) fails.push('door ' + id + ': portal prompts missing');
+    rows.push({ t: 'door ' + id, f, ok }); continue;
+  }
   for (const going of [1, 0]) {
     const A = going ? d.out : d.ins, Bp = going ? d.ins : d.out, ya = World.groundAt(A[0], A[2], 1e9) , yb = World.groundAt(Bp[0], Bp[2], A[1] + 1);
     const k = going ? 1.0 : 0.4, far = [A[0] + (A[0] - Bp[0]) * k, 0, A[2] + (A[2] - Bp[2]) * k];
