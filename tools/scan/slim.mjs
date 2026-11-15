@@ -44,6 +44,8 @@ for (const [name, srcId, trisS, baseS, nrmS, ormS] of list) {
   const ex = keep.getExtras() || {};
   for (const n of sc.listChildren()) if (n !== keep) n.dispose();
   await doc.transform(F.prune());
+  // glass panes of lamps must not be taken for window glass by the kit materials (those are dark mirrors)
+  for (const m of root.listMaterials()) if (/glass/i.test(m.getName())) m.setName(m.getName().replace(/glass/i, 'pane'));
   const mesh = keep.getMesh(), target = +trisS, before = mesh.listPrimitives().reduce((s, p) => s + trisOf(p), 0);
   for (const p of mesh.listPrimitives()) weld(doc, p);
   const cat = ex.category, organic = cat === 'rock' || cat === 'ground-cover', steps = organic ? [0.03, 0.08, 0.15] : cat === 'plant' ? [0.012, 0.03] : [0.008, 0.02, 0.05, 0.1];

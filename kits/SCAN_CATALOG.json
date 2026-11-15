@@ -473,7 +473,7 @@
   "tris": 903,
   "materials": [
    "Lantern_01_brass",
-   "Lantern_01_glass"
+   "Lantern_01_pane"
   ],
   "alpha": true,
   "lights": [
@@ -541,7 +541,7 @@
   "tris": 899,
   "materials": [
    "wooden_lantern_01",
-   "wooden_lantern_01_glass"
+   "wooden_lantern_01_pane"
   ],
   "alpha": true,
   "lights": [
