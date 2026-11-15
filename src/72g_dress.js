@@ -89,8 +89,8 @@ const PD_DEF = {      // [width, depth] of what a pool entry occupies along / ou
 };
 // something against a wall near u (not further than tol): returns its width or 0
 PD.floorAt = function (P, room, sd, id, w, d, h, draw, u, tol, o) {
-  const s = pWallSlot(P, room, sd, w, d, Object.assign({ at: u, h }, o || {})); if (!s) return 0;
-  const along = (sd === 'n' || sd === 's') ? s.cx : s.cz; if (Math.abs(along - u) > tol) return 0;
+  const s = pWallSlot(P, room, sd, w, d, Object.assign({ at: u + w / 2, h }, o || {})); if (!s) return 0;
+  const along = (sd === 'n' || sd === 's') ? s.cx : s.cz; if (Math.abs(along - u - w / 2) > tol) return 0;
   return pPut(P, room, id, s.cx, s.cz, rotBack(sd, +1), w, d, h, draw, Object.assign({ back: sd }, o || {})) ? w : 0;
 };
 PD.try = function (P, room, sd, u, kind, R, fill) {
@@ -100,7 +100,7 @@ PD.try = function (P, room, sd, u, kind, R, fill) {
     case 'books': return PD.floorAt(P, room, sd, id + 'bk', 1.8, 0.34, 1.8, pdShelf(1.8, 1.8, 3, PD.books(c, 1.8)), u, 0.3);
     case 'cabinet': return PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true });
     case 'cupboard': return PD.floorAt(P, room, sd, id + 'cu', 1.12, 0.6, 1.76, PD.cupboard, u, 0.3);
-    case 'cask': return PD.floorAt(P, room, sd, id + 'ck', 1.0, 0.95, 1.0, PD.cask(0.9, 0.32), u, 0.3, { lowOk: true });
+    case 'cask': return PD.floorAt(P, room, sd, id + 'ck', 1.0, 0.95, 0.8, PD.cask(0.9, 0.32), u, 0.3, { lowOk: true });
     case 'bench': return PD.floorAt(P, room, sd, id + 'bn', 1.6, 0.4, 0.46, m => Props.bench(m, 1.6), u, 0.3, { lowOk: true });
     case 'sacks': return PD.floorAt(P, room, sd, id + 'sk', 0.9, 0.6, 0.6, PD.sacks(R), u, 0.3, { lowOk: true });
     case 'broom': return PD.floorAt(P, room, sd, id + 'br', 0.3, 0.3, 1.45, PD.broom, u, 0.3);
@@ -113,7 +113,7 @@ PD.try = function (P, room, sd, u, kind, R, fill) {
     case 'rack': return pArt(P, room, sd, u + 0.5, 'rack') ? 1.0 : 0;
     case 'sconce': return pSconce(P, room, sd, u + 0.15) ? 0.5 : 0;
     case 'torch': return pTorch(P, room, sd, u + 0.15, 1.7, 7) ? 0.5 : 0;
-    default: if (KIT_ITEM[kind]) return pKitFloor(P, room, sd, kind, { at: u, n: 'd' + n }) ? KIT_ITEM[kind][0] * KIT_ITEM[kind][3] : 0;
+    default: if (KIT_ITEM[kind]) return pKitFloor(P, room, sd, kind, { at: u + (KIT_ITEM[kind][0] * KIT_ITEM[kind][3]) / 2, n: 'd' + n }) ? KIT_ITEM[kind][0] * KIT_ITEM[kind][3] : 0;
       if (KIT_WALL[kind]) return pKitWall(P, room, sd, u + KIT_WALL[kind][0] / 2, kind) ? KIT_WALL[kind][0] : 0;
   }
   return 0;
@@ -158,7 +158,7 @@ PD.middle = function (P, room, o) {
     const e = PD.emptiest(P, room); if (e.r < (o.min || 1.1)) break;
     const kind = (o.kinds || ['table', 'rug'])[i % (o.kinds || ['table', 'rug']).length];
     if (kind === 'table') { const dn = pDining(P, room, 1.8, 0.85, { near: [e.x, e.z], id: 'mt' + i, n: 3 }); if (dn) { dn.seats.forEach((s, j) => pSit(P, 'mt' + i + 's' + j, s[0], s[1], s[2], room.k)); pLamp(P, room, dn.x, dn.z); n++; continue; } }
-    if (kind === 'casks') { if (pFree(P, room, P.id + '.mc' + i, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { near: [e.x, e.z], lowOk: true })) { n++; continue; } }
+    if (kind === 'casks') { if (pFree(P, room, P.id + '.mc' + i, 0.9, 0.9, 0.8, 0, PD.cask(0.9, 0.32), { near: [e.x, e.z], lowOk: true })) { n++; continue; } }
     if (kind === 'sacks') { if (pFree(P, room, P.id + '.ms' + i, 0.9, 0.6, 0.6, 0, PD.sacks(P.R), { near: [e.x, e.z], lowOk: true })) { n++; continue; } }
     if (PD.rug(P, room, e.x, e.z, Math.min(2.4, e.r * 1.6), Math.min(3.2, e.r * 2.2), P.R.pick([COL.red, [0.3, 0.22, 0.18], [0.25, 0.3, 0.2], [0.35, 0.28, 0.14]]), P.R() < 0.5 ? 0 : PI / 2)) n++;
     else break;

@@ -188,8 +188,8 @@ function dressKitchen(P, room, o) {
 }
 function dressCellar(P, room, o) {
   o = o || {}; const R = P.R; let n = 0;
-  if (o.rows) { for (const sd of ['w', 'e']) { const lo = room.in.z0 + 1.2; for (let i = 0; i < o.barrels; i++) pAgainst(P, room, sd, P.id + '.cask' + n++, 0.9, 0.9, 1.0, 0, m => Props.keg(m, 0.36, 0.9), { at: lo + i * 1.05 }); } }
-  else for (const sd of pSidesLong(room)) for (let i = 0; i < (o.barrels || 2); i++) if (pAgainst(P, room, sd, P.id + '.cbarrel' + n++, 0.9, 0.9, 1.0, 0, m => Props.keg(m, 0.33, 0.9), { at: i ? 'end' : 'start' })) { }
+  if (o.rows) { for (const sd of ['w', 'e']) { const lo = room.in.z0 + 1.2; for (let i = 0; i < o.barrels; i++) pAgainst(P, room, sd, P.id + '.cask' + n++, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.34), { at: lo + i * 1.05, lowOk: true }); } }
+  else for (const sd of pSidesLong(room)) for (let i = 0; i < (o.barrels || 2); i++) if (pAgainst(P, room, sd, P.id + '.cbarrel' + n++, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: i ? 'end' : 'start', lowOk: true })) { }
   for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.cshelf', 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, ['jug', 'bottle', 'pot', 'bowl'])), { at: 'mid' })) break;
   for (let i = 0; i < (o.crates === undefined ? 3 : o.crates); i++) pFree(P, room, P.id + '.ccrate' + i, 0.6, 0.6, 0.6, R() * 0.5, pdCrate(0.6), { near: [room.in.x0 + 1, room.in.z1 - 1] });
   for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.csack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x1 - 1, room.in.z0 + 1] });
@@ -274,6 +274,15 @@ function planHouse(P, c, info) {
     if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); PD.gallery(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
     else { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false }); dressBedroom(P, P.rooms.chamber2, { beds: [], chest: false }); dressBedroom(P, P.rooms.loft, { beds: ['bed3'], chestId: 'chest3', chest: false }); }
   }
+  if (info.inn) {     /* the density pass (D): every wall run, corner and open floor of the inn carries something */
+    const rm = P.rooms, dn = (id, o) => rm[id] && PD.dense(P, rm[id], o);
+    dn('hall', { pool: ['tapestry', 'hooks', 'cabinet', 'paint', 'shelf', 'cask', 'paint', 'sconce'], corner: ['broom', 'cask', 'stack', 'sacks'], mid: { kinds: ['rug', 'casks'], max: 2 }, racks: 2, rackKinds: ['mug', 'herb', 'pot', 'herb'] });
+    dn('store', { pool: ['shelf', 'cupboard', 'hooks', 'cask', 'sacks', 'stack', 'cabinet'], corner: ['broom', 'sacks', 'stack'], mid: { kinds: ['table', 'sacks'], max: 1 }, racks: 1 });
+    dn('bed0', { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
+    for (const id of ['chamber1', 'chamber2']) dn(id, { pool: ['cupboard', 'hooks', 'paint', 'tapestry', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
+    dn('loft', { pool: ['tapestry', 'hooks', 'cabinet', 'paint', 'shelf', 'cupboard'], corner: ['broom', 'cask', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
+    for (const id of ['cellar', 'vault']) dn(id, { pool: ['cask', 'shelf', 'sacks', 'stack', 'cask', 'cabinet', 'torch'], corner: ['cask', 'sacks', 'stack', 'broom'], mid: { kinds: ['casks', 'sacks'], max: 2 }, racks: 1, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
+  }
   if (!hh) P.err.push('no hearth fits in the hall');
   for (const id of ['cellar', 'vault']) if (!P.lightIn[id]) pTorch(P, P.rooms[id], 'n', (P.rooms[id].in.x0 + P.rooms[id].in.x1) / 2 + 0.5, 1.7, 6.5) || pTorch(P, P.rooms[id], 's', (P.rooms[id].in.x0 + P.rooms[id].in.x1) / 2 + 0.5, 1.7, 6.5);
 }
@@ -314,7 +323,7 @@ function dressInn(P, c, room, hh) {
   const bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, 4.8, PI / 2, 3.8, 0.7, 1.05, m => { Props.table(m, 3.8, 0.7, 1.05); Props.clutter(m, R, -1.7, 1.7, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
   if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); P.bar = bar;
     pHang(P, room, 'e', bar.cz, 3.0, 1.45, 2.7, (m) => Props.shelf(m, 3.0, 1.2, 3, 0.3, (i, y) => Props.clutter(m, R, -1.3, 1.3, y, 0, ['bottle', 'bottle', 'mug', 'jug', 'bottle'], 6, c)), P.id + '.backshelf', {});
-    for (let i = 0; i < 3; i++) pAgainst(P, room, 'e', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, m => Props.keg(m, 0.33, 0.9), { at: bar.cz - 1.4 + i * 1.4 });
+    for (let i = 0; i < 3; i++) pAgainst(P, room, 'e', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: bar.cz - 1.4 + i * 1.4, lowOk: true });
     pLamp(P, room, bar.cx + 0.2, bar.cz); }
   let n = 0;
   for (const nr of [[-4.2, 5.0], [-0.5, 5.6], [-4.4, 2.8]]) {
