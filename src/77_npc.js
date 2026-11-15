@@ -66,11 +66,14 @@ function navBuild() {
   }
   for (const name in World.spots) {
     const s = World.spots[name], k = add(s.p[0], s.p[1], s.p[2]); Nav.spot[name] = k;
+    if (s.zone && s.site && World.houses[s.site] && World.houses[s.site].plan) continue;         // planned interiors join their rooms (planNav)
     if (s.zone && s.site && doorNode[s.site]) link(k, doorNode[s.site].i); else link(k, nearest(s.p[0], s.p[2], outside, 60));
   }
+  for (const id in World.houses) { const h = World.houses[id]; if (h.plan) planNav(h.plan, add, link, doorNode); }
   // upper floors are reached by their stairs only: bottom -> top -> (round the stairwell) -> the rooms above; nothing upstairs links straight to the door
   const unlink = k => { A[k].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k) a.splice(i, 1); };
   for (const st of World.stairs) {
+    if (st.plan) continue;
     const nb = Nav.spot[st.bottom], nt = Nav.spot[st.top]; if (nb === undefined || nt === undefined) continue;
     const chain = [nb, nt].concat(st.via.map(n => Nav.spot[n]).filter(k => k !== undefined)), fy = World.houses[st.site].floorY;
     for (const k of chain.slice(1)) unlink(k);

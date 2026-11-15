@@ -18,6 +18,7 @@ function siteMatrix(site, y) { const M = m4.create(); m4.translate(M, site.x, y,
 function buildHouse(site, spec) {
   const kit = typeof kitWanted === 'function' && kitWanted(site, spec);      // kit-built shell (71_kithouse.js) or the procedural one below
   if (kit) spec = kitSpec(site, spec);
+  const col0 = World.colliders.length, fl0 = World.floors.length, lt0 = World.lights.length;
   // Cells (56_cells.js): the interior is built in its own frame far from the village (isite, Ms) and only the shell stays on the site (site, Mx). Without cells both are the same.
   const cell = kit && CELLS_ON ? Cells.make(site.id, site.name, { site }) : null, isite = cell ? cell.cs : site;
   const w = site.w, d = site.d, H = spec.H || 2.6, t = 0.3, P = (spec.pitch || 48) * PI / 180, tanP = Math.tan(P), hd = d / 2;
@@ -222,17 +223,26 @@ function buildHouse(site, spec) {
     solid(x0, z0, x1, z1, h) { addBoxCollider(int, x0, z0, x1, z1, 0, h || 1); },
     interact(x, y, z, o) { const it = Object.assign({ p: m4.tp(Ms, [x, y, z]), r: 2.0, zone }, o); World.interact.push(it); return it; },
   };
+  const planned = !!(kit && cell && typeof planWanted === 'function' && planWanted(site, spec));
+  ctx.planned = planned;
   if (kit) kitShell(ctx);
-  if (kit && typeof UPPER !== 'undefined' && UPPER[site.id] && !(TEST && TEST.noUpper)) UPPER[site.id](ctx);       // stairs and upper floor first, so the ground-floor furniture goes round them
-  if (spec.interior) spec.interior(ctx);
-  if (kit) kitDress(ctx);
-  if (kit && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
+  if (planned) {          // the interior is a plan (72d_plan.js): drop the shell-shaped room the generator made and build the plan on the same door instead
+    for (const mm of [ins, int]) { mm.nv = 0; mm.ni = 0; mm.min = [1e9, 1e9, 1e9]; mm.max = [-1e9, -1e9, -1e9]; }
+    const cellSide = x => x > CELL.x0 - 100;
+    for (let i = World.colliders.length - 1; i >= col0; i--) if (cellSide(World.colliders[i].x)) World.colliders.splice(i, 1);
+    for (let i = World.floors.length - 1; i >= fl0; i--) if (cellSide(World.floors[i].x)) World.floors.splice(i, 1);
+    for (let i = World.lights.length - 1; i >= lt0; i--) if (cellSide(World.lights[i].p[0])) World.lights.splice(i, 1);
+    planBuild(ctx);
+  } else if (kit && typeof UPPER !== 'undefined' && UPPER[site.id] && !(TEST && TEST.noUpper)) UPPER[site.id](ctx);       // stairs and upper floor first, so the ground-floor furniture goes round them
+  if (!planned && spec.interior) spec.interior(ctx);
+  if (kit && !planned) kitDress(ctx);
+  if (kit && !planned && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
   int.grad = null;
   if (cell) {
     int.append(ins);          // the interior's wall faces, floor and ceiling travel with the rest of the cell's generated meshes
     cell.floorY = floorY; cell.zone = zone; cell.door = doorList[0]; cell.xdoor = xdoorList[0]; cell.w = w; cell.d = d; cell.ctx = ctx;
     if (cell.door && cell.xdoor) Cells.portals(cell, site);
   }
-  World.houses[site.id] = { site, isite, zone, ctx, floorY, xFloorY, door: doorList[0], xdoor: xdoorList[0], cell };
+  World.houses[site.id] = { site, isite, zone, ctx, floorY, xFloorY, door: doorList[0], xdoor: xdoorList[0], cell, plan: ctx.plan || null };
   return { ext, int, glow, ctx, cell };
 }
