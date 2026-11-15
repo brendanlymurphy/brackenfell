@@ -148,7 +148,7 @@ function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2)
 function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   o = o || {}; const r = pFoot(cx, cz, w, d, rot);
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
-  const L = P.lv[room.k], m = P.c.int; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m));
+  const L = P.lv[room.k], m = P.c.int, t0 = m.ni; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]);          // owner ranges: test/audit.js names the thing a face belongs to
   const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
   if (o.flat) it.kind = 'rug'; return it;
 }
@@ -285,7 +285,7 @@ function pStairEmit(P, s) {
   m.m1 = P.zone; m.ao = INT_AO;
   for (let i = 0; i < s.n; i++) {
     const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, s.lat - hw, s.lat + hw), top = y0 + (i + 1) * r - 0.02;
-    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0], top - 0.05, q[1], q[2], top, q[3], 4 | (ax === 'x' ? (d > 0 ? 0 : 0) : 0));
+    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4 | 8); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0] - 0.012, top - 0.05, q[1] - 0.012, q[2] + 0.012, top + 0.008, q[3] + 0.012, 4);          // the tread plate overhangs the block by 1 cm (nothing coplanar)
   }
   // side boards and a handrail up the open side
   m.mat(MAT.TIMBER, COL.timberDark);

@@ -566,6 +566,7 @@ class Mesh {
 class MeshPack {
   constructor() { this.items = []; this.nv = 0; this.ni = 0; }
   add(mesh, extra) {
+    if (typeof TEST !== 'undefined' && TEST && TEST.audit) (window.__AUDIT_MESH = window.__AUDIT_MESH || []).push(mesh);          // test/audit.js
     const it = Object.assign({ first: this.ni, count: mesh.ni, base: this.nv, mesh, c: mesh.center(), r: mesh.radius() }, extra || {});
     this.items.push(it); this.nv += mesh.nv; this.ni += mesh.ni; return it;
   }
@@ -1218,8 +1219,8 @@ function renderFrame(time, env) {
   const aspect = G.w / G.h;
   let fovy = aspect > 1 ? cam.fovMin : 2 * Math.atan(Math.tan(cam.fovMin / 2) / aspect);
   fovy = Math.min(fovy, 1.75); if (aspect > 1) { const hf = 2 * Math.atan(Math.tan(fovy / 2) * aspect); if (hf > 1.62) fovy = 2 * Math.atan(Math.tan(1.62 / 2) / aspect); }
-  const key = aspect.toFixed(4) + ':' + fovy.toFixed(4);
-  if (key !== R.camKey) { R.camKey = key; c3.aspect = aspect; c3.fov = fovy * 180 / Math.PI; c3.updateProjectionMatrix(); }
+  const key = aspect.toFixed(4) + ':' + fovy.toFixed(4) + (World.cell ? ':c' : '');          // in a cell: near 0.08, far 90 (a 400 m valley's far plane wastes depth precision indoors)
+  if (key !== R.camKey) { R.camKey = key; c3.aspect = aspect; c3.fov = fovy * 180 / Math.PI; c3.near = World.cell ? 0.08 : 0.09; c3.far = World.cell ? 90 : 12000; c3.updateProjectionMatrix(); }
   c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, 0); c3.updateMatrixWorld();
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
@@ -1490,6 +1491,7 @@ const Kit = (() => {
       const p = K_.pieces[name]; if (!p) { console.warn('Kit: unknown piece ' + name); return B; }
       o = o || {};
       const M = toMatrix(xf);
+      if (TEST && TEST.audit) (window.__AUDIT_KIT = window.__AUDIT_KIT || []).push({ name, M: M.clone(), zone: o.zone || 0 });          // test/audit.js: every placed piece (coplanar-face audit)
       _v.set((p.min[0] + p.max[0]) / 2, (p.min[1] + p.max[1]) / 2, (p.min[2] + p.max[2]) / 2).applyMatrix4(M);
       const ck = Math.floor((_v.x + (opts.off || 0)) / cell) + ',' + Math.floor((_v.z + (opts.off || 0)) / cell), cast = o.cast === false ? 0 : 1;
       for (const prim of p.prims) {
@@ -2836,7 +2838,9 @@ function wildsBrookY(at, k) {
 // no sky, terrain, grass, trees or outdoor props (see sceneUpdate in 42_scene.js and the cell branches in renderFrame), and the fog is short and dark.
 // Villagers cross doors through portal edges of the nav graph (77_npc.js). CELLS_ON = false (test option cells=0) gives back the old seamless houses.
 const CELLS_ON = !(TEST && TEST.cells === 0);
-const CELL = { x0: 3000, y: -400, step: 150, cols: 8, half: 70 };
+// x0: cells sit just outside the playable valley (WORLD_RADIUS 184) and 400 m under it: float32 vertices, the camera and world-space shader maths keep ~0.03-0.1 mm of precision (at x = 3000 a step was 0.24-0.5 mm and surfaces a few mm apart flickered). Builds up to 25 stored positions at x0 = 3000 (CELL_X0_OLD): Cells.migrate moves those.
+const CELL_X0_OLD = 3000;
+const CELL = { x0: 260, y: -400, step: 150, cols: 8, half: 70 };
 const Cells = { list: [], by: {}, cur: null, busy: false, fadeIn: 0.3, fadeOut: 0.3, hold: 0.42 };
 // allocate the next free cell. cs is a site-like frame (x, z, y, yaw 0) that interior code uses where it used the site's
 Cells.make = function (id, name, extra) {
@@ -2944,6 +2948,7 @@ Cells.env = function (e) {
 Cells.rescue = function () { const c = Cells.cur; if (c && c.enter) Cells.teleport(c.enter); };
 // an old save made inside a building (when interiors stood in the village): the same spot in the same building's cell (cells are built in the building's own frame)
 Cells.migrate = function (pos, yaw) {
+  if (CELLS_ON && pos[0] > CELL_X0_OLD - CELL.half && pos[1] < CELL.y + 100) return { pos: [pos[0] - CELL_X0_OLD + CELL.x0, pos[1], pos[2]], yaw };          // a save made inside a cell of Build 25 or earlier
   if (!CELLS_ON || Cells.inRegion(pos[0])) return false;
   for (const c of Cells.list) {
     const real = c.cs.real, z = World.zones[c.zones[0] - 1]; if (!real || !z) continue;
@@ -3428,8 +3433,8 @@ const Props = {
   shelf(m, len, h, levels, depth, fill) {
     depth = depth || 0.32; m.mat(MAT.PLANKS, COL.wood);
     for (const sx of [-1, 1]) m.box(sx * len / 2 - 0.025, 0, -depth / 2, sx * len / 2 + 0.025, h, depth / 2);
-    for (let i = 0; i <= levels; i++) { const y = 0.08 + (h - 0.12) * i / levels; m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2, y, -depth / 2, len / 2, y + 0.03, depth / 2); if (fill && i < levels) fill(i, y + 0.03); }
-    m.mat(MAT.PLANKS, COL.woodDark); m.box(-len / 2, 0, depth / 2 - 0.02, len / 2, h, depth / 2);
+    for (let i = 0; i <= levels; i++) { const y = 0.08 + (h - 0.12) * i / levels; m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2 + 0.025, y, -depth / 2 + 0.004, len / 2 - 0.025, y + 0.03, depth / 2 - 0.022); if (fill && i < levels) fill(i, y + 0.03); }
+    m.mat(MAT.PLANKS, COL.woodDark); m.box(-len / 2 + 0.025, 0.01, depth / 2 - 0.02, len / 2 - 0.025, h - 0.005, depth / 2);
     addBoxCollider(m, -len / 2, -depth / 2, len / 2, depth / 2, 0, h);
   },
   // random tableware along a strip
@@ -3447,7 +3452,8 @@ const Props = {
   },
   // woven rug: a darker border, a field of the main colour, a lighter band down the middle and a fringe at both ends
   rug(m, w, l, col) {
-    const c = col || COL.red, lay = (i, x0, z0, x1, z1, k, y) => { m.mat(MAT.CLOTH, [c[0] * k[0], c[1] * k[1], c[2] * k[2]], 0.6); m.quad([x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0], 0, 0, (x1 - x0) / 0.6, (z1 - z0) / 0.6); };
+    const c = col || COL.red, RL = ((m.rugN = (m.rugN || 0) + 1) % 5) * 0.011, lay = (i, x0, z0, x1, z1, k, y0) => { const y = y0 + RL;          // each rug in a mesh lies a centimetre above the one before (two coplanar rugs flicker)
+       m.mat(MAT.CLOTH, [c[0] * k[0], c[1] * k[1], c[2] * k[2]], 0.6); m.quad([x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0], 0, 0, (x1 - x0) / 0.6, (z1 - z0) / 0.6); };
     const b = Math.min(0.12, w * 0.09);
     lay(0, -w / 2, -l / 2, w / 2, l / 2, [0.3, 0.27, 0.26], 0.012);
     lay(1, -w / 2 + b, -l / 2 + b, w / 2 - b, l / 2 - b, [0.52, 0.42, 0.38], 0.016);
@@ -3757,7 +3763,7 @@ function buildHouse(site, spec) {
   if (kit) kitShell(ctx);
   if (planned) {          // the interior is a plan (72d_plan.js): drop the shell-shaped room the generator made and build the plan on the same door instead
     for (const mm of [ins, int]) { mm.nv = 0; mm.ni = 0; mm.min = [1e9, 1e9, 1e9]; mm.max = [-1e9, -1e9, -1e9]; }
-    const cellSide = x => x > CELL.x0 - 100;
+    const cellSide = x => x > CELL.x0 - CELL.half;
     for (let i = World.colliders.length - 1; i >= col0; i--) if (cellSide(World.colliders[i].x)) World.colliders.splice(i, 1);
     for (let i = World.floors.length - 1; i >= fl0; i--) if (cellSide(World.floors[i].x)) World.floors.splice(i, 1);
     for (let i = World.lights.length - 1; i >= lt0; i--) if (cellSide(World.lights[i].p[0])) World.lights.splice(i, 1);
@@ -5553,7 +5559,7 @@ function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2)
 function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   o = o || {}; const r = pFoot(cx, cz, w, d, rot);
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
-  const L = P.lv[room.k], m = P.c.int; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m));
+  const L = P.lv[room.k], m = P.c.int, t0 = m.ni; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]);          // owner ranges: test/audit.js names the thing a face belongs to
   const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
   if (o.flat) it.kind = 'rug'; return it;
 }
@@ -5690,7 +5696,7 @@ function pStairEmit(P, s) {
   m.m1 = P.zone; m.ao = INT_AO;
   for (let i = 0; i < s.n; i++) {
     const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, s.lat - hw, s.lat + hw), top = y0 + (i + 1) * r - 0.02;
-    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0], top - 0.05, q[1], q[2], top, q[3], 4 | (ax === 'x' ? (d > 0 ? 0 : 0) : 0));
+    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4 | 8); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0] - 0.012, top - 0.05, q[1] - 0.012, q[2] + 0.012, top + 0.008, q[3] + 0.012, 4);          // the tread plate overhangs the block by 1 cm (nothing coplanar)
   }
   // side boards and a handrail up the open side
   m.mat(MAT.TIMBER, COL.timberDark);
@@ -7624,7 +7630,7 @@ function infWalls(B, MS, o) {
       if ((wn === 'left' || wn === 'right') && k < ((o.skip && o.skip[wn]) || 0)) continue;
       const P = (u, y, dep) => [s0[0] + W.u[0] * u - W.n[0] * (dep || 0), y, s0[2] + W.u[2] * u - W.n[2] * (dep || 0) - off];       // dep: metres into the wall
       const q = (m2, ua, ub, ya, yb, dep, c2, uv, both) => { if (ub - ua < 0.015 || yb - ya < 0.015) return; g.quad(m2, P(ua, ya, dep), P(ub, ya, dep), P(ub, yb, dep), P(ua, yb, dep), c2, uv || [ua / ts, ya / ts, ub / ts, yb / ts], both); };
-      const bx = (ua, ub, ya, yb, d0, d1, c2) => { const a = P(ua, ya, d0), b = P(ub, yb, d1); g.box(W_, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2]), c2); };
+      const bx = (ua, ub, ya, yb, d0, d1, c2) => { if (d1 >= 0) d1 += 0.012; /* c2: trim boards stand 1.2 cm proud of the wall's back too: their faces were coplanar with the cladding and flickered from inside a cell */ const a = P(ua, ya, d0), b = P(ub, yb, d1); g.box(W_, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2]), c2); };
       const ops = ((o.plan[k] && o.plan[k][wn]) || []).slice().sort((a, b2) => a.u0 - b2.u0), fy = k * H;
       let cur = 0;
       for (const p of ops) { q(mat, cur, p.u0, yb, yt, 0, col); q(mat, p.u0, p.u1, yb, fy + p.v0, 0, col); q(mat, p.u0, p.u1, fy + p.v1, yt, 0, col); cur = p.u1; }
