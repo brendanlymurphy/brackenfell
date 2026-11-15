@@ -1,6 +1,8 @@
 // ───────────────────────── scene: Three objects built from the generated world ─────────────────────────
 // Layers: 0 = seen by the camera and both sun shadow maps; 1 = camera and the near shadow map only (interiors, full trees,
 // villagers, small props); 2 = the wide shadow map only (flat tree stand-ins that cast for every tree out there).
+// Layer 3 = the near sun-shadow map only: casters the camera never draws (the low copy of a villager, the plain pine used for shadows). The near map's camera enables it.
+const SHADOW_ONLY_LAYER = 3;
 const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {} };
 // Draw distances (m) for small things. vis: drawn by the camera up to here; cast: drawn into the near sun-shadow map up to here; near: a chicken
 // is drawn as separate parts up to this distance and as one rigid body beyond it. indoor: while the camera is inside a building, outdoor
@@ -94,6 +96,7 @@ function sceneBuild() {
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos;
+  if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
   const inside = World.deepIn = deepIndoors(e), ind = DRAW.indoor;
   for (const s of SC.statics) {
     const it = s.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
