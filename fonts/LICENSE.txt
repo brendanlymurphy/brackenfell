@@ -1,0 +1,2 @@
+Alegreya (Juan Pablo del Peral, Huerta Tipografica) and IM Fell English SC (Igino Marini, from the Fell Types of John Fell)
+are both licensed under the SIL Open Font License 1.1 (https://openfontlicense.org). Latin subsets, self-hosted from Google Fonts.
