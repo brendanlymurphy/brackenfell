@@ -8039,11 +8039,11 @@ const Snd = {
   ctx: null, disabled: false, T: 0, frame: 0, err: 0, errMsg: '', pausedMul: 1, ups: [], lib: {}, bus: {}, rin: {}, rret: {}, sp: { open: 1, room: 0, hall: 0, cave: 0 }, spT: { open: 1, room: 0, hall: 0, cave: 0 },
   set: { master: 0.8, amb: 0.85, world: 0.85, foot: 0.85, ui: 0.85, music: 0.6, musicOn: true },
   // base trims per bus (dB-ish scaling chosen so that ambience beds sit near -27 dB RMS, footsteps and interactions peak near -12 dB)
-  trim: { amb: 1.0, world: 1.0, foot: 1.0, ui: 1.0, music: 0.8 },
+  trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 0.8 },
   rvSend: { amb: 0.1, world: 0.55, foot: 0.7, ui: 0.25, music: 0.4 },
   L: { x: 0, y: 0, z: 0, yaw: 0, fx: 0, fz: -1, rx: 1, rz: 0 },
   G: { x: 0, y: 0, z: 0, zone: 0, zid: '', indoor: 0, space: 'open', hour: 12, night: 0, day: 1, wind: 0.8, rain: 0, forest: 0, playing: false, menu: false, talk: false, dead: false, speed: 0, ground: true, outd: 1, nearTown: 0 },
-  trims: {}, vEnd: new Float64Array(64), vPrio: new Uint8Array(64), vN: 0, last: {}, _s: { g: 0, lp: 16000, pan: 0, d: 0 },
+  dbg: {}, trims: {}, vEnd: new Float64Array(64), vPrio: new Uint8Array(64), vN: 0, last: {}, _s: { g: 0, lp: 16000, pan: 0, d: 0 },
 
   // ── persistence of the volume block (master and music are shared with the older Sound / Music sliders through Audio2) ──
   load() { try { const j = JSON.parse(localStorage.getItem('brackenfell.snd') || 'null'); if (j) for (const k in this.set) if (j[k] !== undefined && typeof j[k] === typeof this.set[k]) this.set[k] = j[k]; } catch (e) { } },
@@ -8070,7 +8070,7 @@ const Snd = {
     const S = this; S.ctx = S.ctx || null; S.c = c; S.sr = c.sampleRate; o = o || {};
     S.master = c.createGain(); S.master.gain.value = 0;
     S.shelf = c.createBiquadFilter(); S.shelf.type = 'highshelf'; S.shelf.frequency.value = 7000; S.shelf.gain.value = -2.5;           // phone speakers are bright: take the edge off
-    S.comp = c.createDynamicsCompressor(); S.comp.threshold.value = -9; S.comp.knee.value = 6; S.comp.ratio.value = 12; S.comp.attack.value = 0.004; S.comp.release.value = 0.14;
+    S.comp = c.createDynamicsCompressor(); S.comp.threshold.value = -4; S.comp.knee.value = 3; S.comp.ratio.value = 16;      // a limiter, not a leveller: the browsers add make-up gain to compressors, so keep it near +2 dB S.comp.attack.value = 0.004; S.comp.release.value = 0.14;
     S.clip = c.createWaveShaper();            // the last word: a soft ceiling at 0.89 (-1 dBFS), linear below 0.6, so nothing can leave the chain above -1 dB
     const n = 2048, cv = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1, a = Math.abs(x); cv[i] = (a < 0.6 ? a : 0.6 + 0.29 * Math.tanh((a - 0.6) / 0.29)) * Math.sign(x); } S.clip.curve = cv;
     S.pre = c.createGain(); S.pre.connect(S.master); S.master.connect(S.shelf); S.shelf.connect(S.comp); S.comp.connect(S.clip); S.clip.connect(c.destination);
@@ -8150,7 +8150,7 @@ const Snd = {
     S.bus.world.g.gain.setTargetAtTime(u.world * S.trim.world, t, 0.3);
     S.bus.foot.g.gain.setTargetAtTime(u.foot * S.trim.foot, t, 0.3);
     S.bus.ui.g.gain.setTargetAtTime(u.ui * S.trim.ui, t, 0.3);
-    S.bus.music.g.gain.setTargetAtTime((u.musicOn ? u.music : 0) * S.trim.music * m, t, S.G.talk ? 0.35 : 1.2);        // ducks under dialogue
+    S.dbg.music = (u.musicOn ? u.music : 0) * S.trim.music * m; S.bus.music.g.gain.setTargetAtTime(S.dbg.music, t, S.G.talk ? 0.35 : 1.2);        // ducks under dialogue
   },
 
   // ── voices: a hard limit on one-shots, with room kept for important ones ──
@@ -8168,7 +8168,7 @@ const Snd = {
     o.d = d; if (d > maxD) { o.g = 0; return false; }
     let g = ref / Math.max(d, ref); const f = d / maxD; g *= 1 - f * f * f;
     let lp = 16000 / (1 + d / 18); if (lp < 1400) lp = 1400;
-    if (zone !== G.zone) { g *= G.zone && zone ? 0.2 : 0.42; lp = Math.min(lp, G.zone && zone ? 500 : 800); }       // through a wall (or two)
+    if (zone !== G.zone) { g *= G.zone && zone ? 0.1 : 0.2; lp = Math.min(lp, G.zone && zone ? 450 : 700); }       // through a wall (or two)
     const dl = d > 0.01 ? 1 / d : 0, hx = dx * dl, hz = dz * dl;
     o.pan = d < 1.2 ? 0 : Math.max(-0.95, Math.min(0.95, (hx * L.rx + hz * L.rz) * 0.9));
     const back = hx * L.fx + hz * L.fz; if (back < 0) lp *= 0.75 + 0.25 * (1 + back);                                  // head shadow behind you
@@ -8452,6 +8452,11 @@ const Audio2 = {
   def('bird.crow', 'amb', 1, 2, (S, c, o, t, v) => { const n = 2 + Math.floor(Math.random() * 2); for (let i = 0; i < n; i++) S.voc(o, t + i * 0.4, { f0: R(380, 450), f1: 300, d: 0.22, a: 0.015, v: 0.34 * v, form: [[800, 4, 1], [1500, 5, 0.6], [2400, 6, 0.3]], breath: 0.9 }); }, { ref: 8, max: 220, gap: 8 });
 })();
 
+Snd.trims = {};
+
+// ── per-sound trims, generated from the median of three offline renders in test/audio.mjs (target peaks: footsteps and interactions -12 dB, combat -11, stingers -13, nature one-shots -22 at the listener) ──
+Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.grass": 1.259, "fs.mud": 1.274, "fs.water": 1.084, "fs.wood": 0.367, "fs.plank": 0.692, "fs.stone": 1.012, "fs.stairs": 0.331, "rustle": 0.61, "land": 1.995, "jump": 1.38, "breath": 0.923, "hurt": 1.622, "player.death": 1.928, "heart": 0.479, "door.open": 2.692, "door.close": 0.327, "door.locked": 0.75, "chest.open": 0.813, "pickup.coin": 0.933, "coins": 1.622, "pickup.cloth": 0.861, "pickup.metal": 0.861, "pickup.herb": 1.274, "pickup.wood": 0.403, "pickup.food": 2.138, "pickup.paper": 1.175, "pickup.generic": 0.804, "ui.click": 0.575, "ui.page": 0.891, "eat": 1.274, "drink": 0.733, "mug": 0.335, "cloth.flap": 0.495, "q.begin": 0.638, "q.update": 0.724, "q.done": 0.543, "discover": 0.684, "bell.stroke": 1.38, "bell.ring": 1.396, "swing.light": 2.089, "swing.heavy": 1.95, "hit.flesh": 0.7, "hit.flesh.heavy": 0.569, "hit.wood": 0.468, "hit.metal": 0.484, "hit.shield": 0.507, "foe.effort": 2.317, "foe.hurt": 1.95, "foe.shout": 2.018, "foe.shout.deep": 1.862, "foe.death": 1.841, "anvil": 0.473, "bellows": 2.57, "quench": 0.653, "paddle": 0.589, "drip": 0.403, "creak": 1.778, "cluck": 1.549, "dog": 0.484, "cow": 0.569, "rooster": 0.473, "owl": 0.302, "bird.chaffinch": 0.219, "bird.robin": 0.229, "bird.wren": 0.232, "bird.thrush": 0.219, "bird.pigeon": 0.219, "bird.crow": 0.143});
+
 
 // ---- 88c_beds.js ----
 // ───────────────────────── ambience: beds, positional loops, scheduled nature ─────────────────────────
@@ -8472,7 +8477,7 @@ const Audio2 = {
   // one strand of a texture: a noise source, a band, optional random amplitude modulation, into the loop
   const strand = (lp, kind, type, f, q, level, modHz, modDepth, f2, q2) => { const s = loopSrc(kind, R(0.85, 1.15)), b = filt(type, f, q); s.connect(b); let end = b; if (f2) { const b2 = filt(type === 'lowpass' ? 'highpass' : 'lowpass', f2, q2 || 0.7); b.connect(b2); end = b2; } const g = gain(level); end.connect(g); if (modHz) modulate(g.gain, 'pink', modHz, modDepth); g.connect(lp.in); return g; };
   const bedSet = (b, v, tc) => {
-    const t = S.now(); b.lvl = v;
+    const t = S.now(); v *= 1.5; b.lvl = v;   // 1.5: bed calibration (test/audio.mjs)
     if (v > 0.0015) { if (!b.conn) { b.g.connect(b.dest); b.conn = true; } b.off = 0; b.g.gain.setTargetAtTime(v, t, tc || 0.35); }
     else if (b.conn) { b.g.gain.setTargetAtTime(0, t, tc || 0.35); if (!b.off) b.off = t; else if (t - b.off > (tc || 0.35) * 7) { b.g.disconnect(); b.conn = false; b.off = 0; } }
   };
@@ -8505,7 +8510,7 @@ const Audio2 = {
     B.fire = []; for (let i = 0; i < 3; i++) { const b = mkLoop(c, wor), s = c.createBufferSource(); s.buffer = cb; s.loop = true; s.playbackRate.value = R(0.9, 1.1); s.start(0, Math.random() * 2.5); const h = filt('highpass', 800, 0.6), g = gain(0.7); s.connect(h); h.connect(g); g.connect(b.in);
       strand(b, 'brown', 'lowpass', 520, 0.6, 0.9, 0.9, 0.5); strand(b, 'pink', 'bandpass', 1800, 0.7, 0.18, 8, 0.12); b.fire = null; B.fire.push(b); }
     // crickets: three fixed pitches, each switched in short pulse groups from update
-    S.crick = []; for (let i = 0; i < 3; i++) { const o = c.createOscillator(), g = gain(0); o.frequency.value = 4100 + i * 330 + R(0, 120); o.connect(g); g.connect(ob.g); o.start(); S.crick.push({ o, g, next: 0, f: 3.2 + i * 0.7, conn: true }); }
+    S.crick = []; for (let i = 0; i < 3; i++) { const o = c.createOscillator(), g = gain(0); o.frequency.value = 4100 + i * 330 + R(0, 120); o.connect(g); g.connect(ob.g); o.start(); S.crick.push({ o, g, lvl: 0, next: 0, f: 3.2 + i * 0.7, conn: true }); }
   });
 
   // ── per-frame update of everything above ──
@@ -8517,27 +8522,27 @@ const Audio2 = {
       S.outBus.g.gain.setTargetAtTime(1 - 0.86 * G.indoor, t, 0.3); S.outBus.lp.frequency.setTargetAtTime(16000 - 15300 * G.indoor, t, 0.3);
       const out = 1 - G.indoor, ws = G.wind, rain = G.rain;
       // wind follows ENV.windStrength (0.15 .. 1.35); trees add leaf hiss and low soughing
-      bedSet(B.wind, (0.035 + 0.055 * ws * ws) * (0.5 + 0.5 * sat(ws)) * 0.95 + 0.012, 0.8);
-      bedSet(B.leaves, 0.045 * G.forest * (0.15 + 0.85 * sat(ws * 0.9)) + 0.008 * G.forest, 0.8);
-      bedSet(B.rain, rain * 0.1, 0.8); bedSet(B.roof, rain * 0.08 * G.indoor, 0.8);
-      bedSet(B.night, 0.7 * G.night * out * (1 - rain) * (0.4 + 0.6 * G.meadow), 2);
+      bedSet(B.wind, ((0.035 + 0.055 * ws * ws) * (0.5 + 0.5 * sat(ws)) * 0.95 + 0.012) * 2.5, 0.8);
+      bedSet(B.leaves, (0.045 * G.forest * (0.15 + 0.85 * sat(ws * 0.9)) + 0.008 * G.forest) * 2, 0.8);
+      bedSet(B.rain, rain * 0.12, 0.8); bedSet(B.roof, rain * 0.08 * G.indoor, 0.8);
+      bedSet(B.night, 1.0 * G.night * out * (1 - rain) * (0.4 + 0.6 * G.meadow), 2);
       // indoors
       const rm = G.indoor * (G.space === 'cave' ? 0 : 1), cv = G.indoor * (G.space === 'cave' ? 1 : 0);
-      bedSet(B.room, 0.08 * rm, 0.5); bedSet(B.cave, 0.085 * cv, 0.8);
+      bedSet(B.room, 0.12 * rm, 0.5); bedSet(B.cave, 0.13 * cv, 0.8);
       // river: a line, so use the nearest point; muffled and quieter through walls (spat does that via zone)
-      if (G.riverD < 60) { if (S.spat(G.riverX, G.riverY, G.riverZ, 0, 9, 75, tmp)) { place(B.river, tmp); bedSet(B.river, 0.13 * tmp.g * (1 + 0.8 * sat(1 - G.riverD / 5)), 0.35); } else bedSet(B.river, 0, 0.5); } else bedSet(B.river, 0, 0.5);
-      if (G.lakeD < 70) { if (S.spat(G.lakeX, G.lakeY, G.lakeZ, 0, 7, 80, tmp)) { place(B.lake, tmp); bedSet(B.lake, 0.06 * tmp.g, 0.5); } else bedSet(B.lake, 0, 0.5); } else bedSet(B.lake, 0, 0.5);
+      if (G.riverD < 60) { if (S.spat(G.riverX, G.riverY, G.riverZ, 0, 9, 75, tmp)) { place(B.river, tmp); bedSet(B.river, 0.2 * tmp.g * (1 + 0.8 * sat(1 - G.riverD / 5)), 0.35); } else bedSet(B.river, 0, 0.5); } else bedSet(B.river, 0, 0.5);
+      if (G.lakeD < 70) { if (S.spat(G.lakeX, G.lakeY, G.lakeZ, 0, 7, 80, tmp)) { place(B.lake, tmp); bedSet(B.lake, 0.18 * tmp.g, 0.5); } else bedSet(B.lake, 0, 0.5); } else bedSet(B.lake, 0, 0.5);
       // the town's murmur: by who is actually standing about
       const day = G.day, sqL = 0.1 + 0.9 * sat(G.nSquare / 4);
-      const cd = G.nearSquare; if (cd < 95 && S.spat(G.sqX, G.sqY, G.sqZ, 0, 13, 95, tmp)) { place(B.crowd, tmp); bedSet(B.crowd, 0.1 * tmp.g * (0.3 + 0.7 * sqL) * (0.35 + 0.65 * day) * (1 - 0.7 * rain), 0.8); } else bedSet(B.crowd, 0, 0.8);
-      if (G.nearMarket < 60 && S.spat(G.mkX, G.mkY, G.mkZ, 0, 9, 60, tmp)) { place(B.market, tmp); bedSet(B.market, 0.07 * tmp.g * day * (1 - 0.5 * rain) * (0.4 + 0.6 * sat(G.nMarket / 2)), 0.8); } else bedSet(B.market, 0, 0.8);
-      if (G.innZone && G.nearInn < 60 && S.spat(G.innX, G.innY, G.innZ, G.innZone, 6, 60, tmp)) { place(B.inn, tmp); bedSet(B.inn, 0.12 * tmp.g * sat(G.nInn / 5), 0.8); } else bedSet(B.inn, 0, 0.8);
+      const cd = G.nearSquare; if (cd < 95 && S.spat(G.sqX, G.sqY, G.sqZ, 0, 13, 95, tmp)) { place(B.crowd, tmp); bedSet(B.crowd, 0.34 * tmp.g * (0.3 + 0.7 * sqL) * (0.35 + 0.65 * day) * (1 - 0.7 * rain), 0.8); } else bedSet(B.crowd, 0, 0.8);
+      if (G.nearMarket < 60 && S.spat(G.mkX, G.mkY, G.mkZ, 0, 9, 60, tmp)) { place(B.market, tmp); bedSet(B.market, 0.22 * tmp.g * day * (1 - 0.5 * rain) * (0.4 + 0.6 * sat(G.nMarket / 2)), 0.8); } else bedSet(B.market, 0, 0.8);
+      if (G.innZone && G.nearInn < 60 && S.spat(G.innX, G.innY, G.innZ, G.innZone, 6, 60, tmp)) { place(B.inn, tmp); bedSet(B.inn, 0.24 * tmp.g * sat(G.nInn / 5), 0.8); } else bedSet(B.inn, 0, 0.8);
       // the mill: wheel and race while the wheel is turning, the stone while the miller works
-      if (G.millOn && S.spat(G.millX, G.millY, G.millZ, 0, 8, 70, tmp)) { place(B.mill, tmp); bedSet(B.mill, 0.12 * tmp.g, 0.6); } else bedSet(B.mill, 0, 0.6);
-      if (G.grindOn && S.spat(G.millX, G.millY + 1, G.millZ, G.millZone, 4, 40, tmp)) { place(B.grind, tmp); bedSet(B.grind, 0.1 * tmp.g, 0.6); } else bedSet(B.grind, 0, 0.6);
+      if (G.millOn && S.spat(G.millX, G.millY, G.millZ, 0, 8, 70, tmp)) { place(B.mill, tmp); bedSet(B.mill, 0.24 * tmp.g, 0.6); } else bedSet(B.mill, 0, 0.6);
+      if (G.grindOn && S.spat(G.millX, G.millY + 1, G.millZ, G.millZone, 4, 40, tmp)) { place(B.grind, tmp); bedSet(B.grind, 0.2 * tmp.g, 0.6); } else bedSet(B.grind, 0, 0.6);
       // fires: the nearest three, each at its own place
       for (let i = 0; i < 3; i++) { const b = B.fire[i], f = G.fires[i];
-        if (f.on && S.spat(f.x, f.y, f.z, f.zone, f.ref, f.max, tmp)) { place(b, tmp); bedSet(b, 0.15 * f.lvl * tmp.g, 0.2); } else bedSet(b, 0, 0.3); }
+        if (f.on && S.spat(f.x, f.y, f.z, f.zone, f.ref, f.max, tmp)) { place(b, tmp); bedSet(b, 0.3 * f.lvl * tmp.g, 0.2); } else bedSet(b, 0, 0.3); }
       // crickets: night, outdoors, mostly away from the square
       const cv2 = G.night * out * (1 - rain) * (0.35 + 0.65 * G.meadow); for (let i = 0; i < 3; i++) S.crick[i].lvl = cv2 * (i === 0 ? 1 : 0.7);
     }
@@ -8676,7 +8681,7 @@ const Audio2 = {
 // Everything here is read-only against the game (player, camera, World, ENV, NPCs, foes, doors); nothing is hooked except a few Audio2 shim calls.
 // Footsteps are timed from Player.step, doors from World.doors[].open, the smith's hammer from NPC.brandt.t, the bell from Env.hour, the lute from NPC.lark.
 (() => {
-  const K = Snd, G = K.G, sat = x => x < 0 ? 0 : x > 1 ? 1 : x, hyp2 = (a, b) => Math.sqrt(a * a + b * b), R = (a, b) => a + Math.random() * (b - a);
+  const K = Snd, G = K.G, sat = x => x < 0 ? 0 : x > 1 ? 1 : x, hyp2 = (a, b) => Math.sqrt(a * a + b * b), RN = (a, b) => a + Math.random() * (b - a);
   const tick = (id, n) => K.frame % n === (id % n);
   G.fires = [{ on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }, { on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }, { on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }];
   G.lanternNear = null; G.nLan = 0; G.innZone = 0; G.millZone = 0; G.lark = { on: false, x: 0, y: 0, z: 0, zone: 0, d: 99 };
@@ -8772,10 +8777,10 @@ const Audio2 = {
           const vy = Math.abs(q.vy); if (P.onGround && vy > 0.45 * P.speed && vy > 0.5) sf = 'stairs';
           K.play('fs.' + sf, null, 1, { w: Math.max(0.55, Math.min(1.5, P.speed / 2.9)) }); K.lastSurface = sf; }
       }
-      q.vy += ((P.pos[1] - q.prevY) / Math.max(dt, 0.001) - q.vy) * Math.min(1, dt * 6); q.prevY = P.pos[1];
+      if (Math.abs(P.pos[1] - q.prevY) > 0.8) q.vy = 0; else q.vy += ((P.pos[1] - q.prevY) / Math.max(dt, 0.001) - q.vy) * Math.min(1, dt * 6); q.prevY = P.pos[1];
       // breath: when stamina is nearly gone, and for a while after
       if (typeof RPG !== 'undefined') { const r = RPG.st(), sta = r.sta / RPG.MAXST, hp = r.hp / RPG.MAXHP;
-        q.breathT -= dt; if (q.breathT <= 0 && (sta < 0.34 || RPG.exhausted) && !RPG.dead) { q.breathT = R(1.2, 1.6); K.play('breath', null, 1, { lo: 1 - sta / 0.34 }); }
+        q.breathT -= dt; if (q.breathT <= 0 && (sta < 0.34 || RPG.exhausted) && !RPG.dead) { q.breathT = RN(1.2, 1.6); K.play('breath', null, 1, { lo: 1 - sta / 0.34 }); }
         q.heartT -= dt; if (q.heartT <= 0 && hp < 0.3 && hp > 0 && !RPG.dead) { q.heartT = 0.55 + hp * 1.6; K.play('heart', null, 0.5 + (0.3 - hp) * 2.5); } }
     } else q.prevY = P.pos[1];
     // ─ villagers' feet: every stride's worth of distance, quieter, through the spatial route ─
@@ -8796,15 +8801,15 @@ const Audio2 = {
     // ─ the smith: hammer strike in step with his animation, bellows at the forge ─
     const b = typeof NPC !== 'undefined' && NPC.brandt;
     if (b && playing) {
-      if (b.anim === 'hammer' && !b.talking) { const k = (b.t * 0.9) % 1; if (q.k < 0.66 && k >= 0.66) { const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('anvil', [b.pos[0], b.pos[1] + 0.9, b.pos[2]], R(0.85, 1.1), { zone: zn, free: true }); } q.k = k; }
-      else { q.k = 0; if (b.anim === 'work' && !b.talking) { q.bellowT -= dt; if (q.bellowT <= 0) { q.bellowT = R(3.5, 6); const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('bellows', [b.pos[0] + 1, b.pos[1] + 0.9, b.pos[2]], 1, { zone: zn, free: true }); } } }
+      if (b.anim === 'hammer' && !b.talking) { const k = (b.t * 0.9) % 1; if (q.k < 0.66 && k >= 0.66) { const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('anvil', [b.pos[0], b.pos[1] + 0.9, b.pos[2]], RN(0.85, 1.1), { zone: zn, free: true }); } q.k = k; }
+      else { q.k = 0; if (b.anim === 'work' && !b.talking) { q.bellowT -= dt; if (q.bellowT <= 0) { q.bellowT = RN(3.5, 6); const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('bellows', [b.pos[0] + 1, b.pos[1] + 0.9, b.pos[2]], 1, { zone: zn, free: true }); } } }
     }
     // ─ the mill wheel: a paddle splash twelve times a turn, in step with the visible wheel ─
-    const w = World.millWheel; if (w && playing) { const k = Math.floor(w.angle / (Math.PI * 2 / 12)); if (q.wk === undefined) q.wk = k; if (k !== q.wk) { q.wk = k; if (G.millOn) K.play('paddle', [G.millX, G.millY - 1.2, G.millZ], R(0.7, 1), { zone: 0, free: true }); } }
+    const w = World.millWheel; if (w && playing) { const k = Math.floor(w.angle / (Math.PI * 2 / 12)); if (q.wk === undefined) q.wk = k; if (k !== q.wk) { q.wk = k; if (G.millOn) K.play('paddle', [G.millX, G.millY - 1.2, G.millZ], RN(0.7, 1), { zone: 0, free: true }); } }
     // ─ the chapel bell: strokes spaced about three seconds apart; 6 and 12 o'clock count the hour, others strike once ─
     const hr = Math.floor(Env.hour), flags = typeof S !== 'undefined' && S.flags;
     if (hr !== q.hour) { if (q.hour >= 0 && hr === (q.hour + 1) % 24 && flags && flags.bell && playing) { q.bellN = hr === 12 ? 12 : (hr === 6 || hr === 18) ? 6 : 1; q.bellT = now + 0.6; } q.hour = hr; }
-    if (q.bellN > 0 && now >= q.bellT && World.bell) { q.bellN--; q.bellT = now + R(3.1, 3.5); K.play('bell.stroke', World.bell.p, 1, { zone: 0, free: true }); }
+    if (q.bellN > 0 && now >= q.bellT && World.bell) { q.bellN--; q.bellT = now + RN(3.1, 3.5); K.play('bell.stroke', World.bell.p, 1, { zone: 0, free: true }); }
     // ─ foes: efforts when a swing starts, grunts when they stagger ─
     if (typeof Foes !== 'undefined' && Foes.list && playing) for (const f of Foes.list) {
       const st = f.alive ? f.state : 'gone', ps = q.foes.get(f); if (ps === undefined) { q.foes.set(f, st); continue; }
@@ -9331,7 +9336,7 @@ const Foes = (() => {
   function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < 34) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
   function die(f) {
     const r = RPG.st(); release(f); f.alive = false; f.hp = 0; f.state = 'dead'; f.t = 0; f.anim = Math.random() < 0.5 ? 'c-die' : 'c-die2'; f.h.curName = '';
-    r.kills++; r.dead[f.id] = r.day; Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);   // [sound]
+    r.kills++; r.dead[f.id] = r.day; Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
     const loot = [['gold', Math.round(f.leader ? rnd(22, 34) : rnd(4, 12))]];
     if (Math.random() < 0.45) loot.push([Math.random() < 0.5 ? 'bread' : 'apple', 1]); if (Math.random() < (f.leader ? 1 : 0.18)) loot.push(['potion', 1]);
     if (f.chief) { loot.push(['steelsword', 1]); if (!has('tools') && qAt('tools') !== 99) loot.push(['tools', 1]); } else if (f.leader) loot.push(['ironsword', 1]); else if (Math.random() < 0.1) loot.push(['buckler', 1]);
@@ -9383,7 +9388,7 @@ const Foes = (() => {
       case 'idle': {
         f.anim = f.spot.kind === 'sit' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
         const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
-        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]);   // [sound] if (!F.warned) { F.warned = true; toast('Outlaws! They have seen you.'); } }
+        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned) { F.warned = true; toast('Outlaws! They have seen you.'); } }
         break; }
       case 'notice': f.anim = 'c-idle'; if (f.t > 0) turn(f, toP, 6, dt); if (f.t > 0.45) { f.state = 'chase'; f.t = 0; } break;
       case 'chase': {

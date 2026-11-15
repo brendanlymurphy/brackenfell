@@ -2,7 +2,7 @@
 // Everything here is read-only against the game (player, camera, World, ENV, NPCs, foes, doors); nothing is hooked except a few Audio2 shim calls.
 // Footsteps are timed from Player.step, doors from World.doors[].open, the smith's hammer from NPC.brandt.t, the bell from Env.hour, the lute from NPC.lark.
 (() => {
-  const K = Snd, G = K.G, sat = x => x < 0 ? 0 : x > 1 ? 1 : x, hyp2 = (a, b) => Math.sqrt(a * a + b * b), R = (a, b) => a + Math.random() * (b - a);
+  const K = Snd, G = K.G, sat = x => x < 0 ? 0 : x > 1 ? 1 : x, hyp2 = (a, b) => Math.sqrt(a * a + b * b), RN = (a, b) => a + Math.random() * (b - a);
   const tick = (id, n) => K.frame % n === (id % n);
   G.fires = [{ on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }, { on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }, { on: false, x: 0, y: 0, z: 0, zone: 0, ref: 1.5, max: 30, lvl: 0 }];
   G.lanternNear = null; G.nLan = 0; G.innZone = 0; G.millZone = 0; G.lark = { on: false, x: 0, y: 0, z: 0, zone: 0, d: 99 };
@@ -98,10 +98,10 @@
           const vy = Math.abs(q.vy); if (P.onGround && vy > 0.45 * P.speed && vy > 0.5) sf = 'stairs';
           K.play('fs.' + sf, null, 1, { w: Math.max(0.55, Math.min(1.5, P.speed / 2.9)) }); K.lastSurface = sf; }
       }
-      q.vy += ((P.pos[1] - q.prevY) / Math.max(dt, 0.001) - q.vy) * Math.min(1, dt * 6); q.prevY = P.pos[1];
+      if (Math.abs(P.pos[1] - q.prevY) > 0.8) q.vy = 0; else q.vy += ((P.pos[1] - q.prevY) / Math.max(dt, 0.001) - q.vy) * Math.min(1, dt * 6); q.prevY = P.pos[1];
       // breath: when stamina is nearly gone, and for a while after
       if (typeof RPG !== 'undefined') { const r = RPG.st(), sta = r.sta / RPG.MAXST, hp = r.hp / RPG.MAXHP;
-        q.breathT -= dt; if (q.breathT <= 0 && (sta < 0.34 || RPG.exhausted) && !RPG.dead) { q.breathT = R(1.2, 1.6); K.play('breath', null, 1, { lo: 1 - sta / 0.34 }); }
+        q.breathT -= dt; if (q.breathT <= 0 && (sta < 0.34 || RPG.exhausted) && !RPG.dead) { q.breathT = RN(1.2, 1.6); K.play('breath', null, 1, { lo: 1 - sta / 0.34 }); }
         q.heartT -= dt; if (q.heartT <= 0 && hp < 0.3 && hp > 0 && !RPG.dead) { q.heartT = 0.55 + hp * 1.6; K.play('heart', null, 0.5 + (0.3 - hp) * 2.5); } }
     } else q.prevY = P.pos[1];
     // ─ villagers' feet: every stride's worth of distance, quieter, through the spatial route ─
@@ -122,15 +122,15 @@
     // ─ the smith: hammer strike in step with his animation, bellows at the forge ─
     const b = typeof NPC !== 'undefined' && NPC.brandt;
     if (b && playing) {
-      if (b.anim === 'hammer' && !b.talking) { const k = (b.t * 0.9) % 1; if (q.k < 0.66 && k >= 0.66) { const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('anvil', [b.pos[0], b.pos[1] + 0.9, b.pos[2]], R(0.85, 1.1), { zone: zn, free: true }); } q.k = k; }
-      else { q.k = 0; if (b.anim === 'work' && !b.talking) { q.bellowT -= dt; if (q.bellowT <= 0) { q.bellowT = R(3.5, 6); const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('bellows', [b.pos[0] + 1, b.pos[1] + 0.9, b.pos[2]], 1, { zone: zn, free: true }); } } }
+      if (b.anim === 'hammer' && !b.talking) { const k = (b.t * 0.9) % 1; if (q.k < 0.66 && k >= 0.66) { const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('anvil', [b.pos[0], b.pos[1] + 0.9, b.pos[2]], RN(0.85, 1.1), { zone: zn, free: true }); } q.k = k; }
+      else { q.k = 0; if (b.anim === 'work' && !b.talking) { q.bellowT -= dt; if (q.bellowT <= 0) { q.bellowT = RN(3.5, 6); const zn = K.zoneOf(b.pos[0], b.pos[1], b.pos[2]); K.play('bellows', [b.pos[0] + 1, b.pos[1] + 0.9, b.pos[2]], 1, { zone: zn, free: true }); } } }
     }
     // ─ the mill wheel: a paddle splash twelve times a turn, in step with the visible wheel ─
-    const w = World.millWheel; if (w && playing) { const k = Math.floor(w.angle / (Math.PI * 2 / 12)); if (q.wk === undefined) q.wk = k; if (k !== q.wk) { q.wk = k; if (G.millOn) K.play('paddle', [G.millX, G.millY - 1.2, G.millZ], R(0.7, 1), { zone: 0, free: true }); } }
+    const w = World.millWheel; if (w && playing) { const k = Math.floor(w.angle / (Math.PI * 2 / 12)); if (q.wk === undefined) q.wk = k; if (k !== q.wk) { q.wk = k; if (G.millOn) K.play('paddle', [G.millX, G.millY - 1.2, G.millZ], RN(0.7, 1), { zone: 0, free: true }); } }
     // ─ the chapel bell: strokes spaced about three seconds apart; 6 and 12 o'clock count the hour, others strike once ─
     const hr = Math.floor(Env.hour), flags = typeof S !== 'undefined' && S.flags;
     if (hr !== q.hour) { if (q.hour >= 0 && hr === (q.hour + 1) % 24 && flags && flags.bell && playing) { q.bellN = hr === 12 ? 12 : (hr === 6 || hr === 18) ? 6 : 1; q.bellT = now + 0.6; } q.hour = hr; }
-    if (q.bellN > 0 && now >= q.bellT && World.bell) { q.bellN--; q.bellT = now + R(3.1, 3.5); K.play('bell.stroke', World.bell.p, 1, { zone: 0, free: true }); }
+    if (q.bellN > 0 && now >= q.bellT && World.bell) { q.bellN--; q.bellT = now + RN(3.1, 3.5); K.play('bell.stroke', World.bell.p, 1, { zone: 0, free: true }); }
     // ─ foes: efforts when a swing starts, grunts when they stagger ─
     if (typeof Foes !== 'undefined' && Foes.list && playing) for (const f of Foes.list) {
       const st = f.alive ? f.state : 'gone', ps = q.foes.get(f); if (ps === undefined) { q.foes.set(f, st); continue; }

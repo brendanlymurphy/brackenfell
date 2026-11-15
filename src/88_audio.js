@@ -15,7 +15,7 @@ const Snd = {
   rvSend: { amb: 0.1, world: 0.55, foot: 0.7, ui: 0.25, music: 0.4 },
   L: { x: 0, y: 0, z: 0, yaw: 0, fx: 0, fz: -1, rx: 1, rz: 0 },
   G: { x: 0, y: 0, z: 0, zone: 0, zid: '', indoor: 0, space: 'open', hour: 12, night: 0, day: 1, wind: 0.8, rain: 0, forest: 0, playing: false, menu: false, talk: false, dead: false, speed: 0, ground: true, outd: 1, nearTown: 0 },
-  trims: {}, vEnd: new Float64Array(64), vPrio: new Uint8Array(64), vN: 0, last: {}, _s: { g: 0, lp: 16000, pan: 0, d: 0 },
+  dbg: {}, trims: {}, vEnd: new Float64Array(64), vPrio: new Uint8Array(64), vN: 0, last: {}, _s: { g: 0, lp: 16000, pan: 0, d: 0 },
 
   // ── persistence of the volume block (master and music are shared with the older Sound / Music sliders through Audio2) ──
   load() { try { const j = JSON.parse(localStorage.getItem('brackenfell.snd') || 'null'); if (j) for (const k in this.set) if (j[k] !== undefined && typeof j[k] === typeof this.set[k]) this.set[k] = j[k]; } catch (e) { } },
@@ -122,7 +122,7 @@ const Snd = {
     S.bus.world.g.gain.setTargetAtTime(u.world * S.trim.world, t, 0.3);
     S.bus.foot.g.gain.setTargetAtTime(u.foot * S.trim.foot, t, 0.3);
     S.bus.ui.g.gain.setTargetAtTime(u.ui * S.trim.ui, t, 0.3);
-    S.bus.music.g.gain.setTargetAtTime((u.musicOn ? u.music : 0) * S.trim.music * m, t, S.G.talk ? 0.35 : 1.2);        // ducks under dialogue
+    S.dbg.music = (u.musicOn ? u.music : 0) * S.trim.music * m; S.bus.music.g.gain.setTargetAtTime(S.dbg.music, t, S.G.talk ? 0.35 : 1.2);        // ducks under dialogue
   },
 
   // ── voices: a hard limit on one-shots, with room kept for important ones ──

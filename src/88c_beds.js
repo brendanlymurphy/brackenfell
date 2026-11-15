@@ -16,7 +16,7 @@
   // one strand of a texture: a noise source, a band, optional random amplitude modulation, into the loop
   const strand = (lp, kind, type, f, q, level, modHz, modDepth, f2, q2) => { const s = loopSrc(kind, R(0.85, 1.15)), b = filt(type, f, q); s.connect(b); let end = b; if (f2) { const b2 = filt(type === 'lowpass' ? 'highpass' : 'lowpass', f2, q2 || 0.7); b.connect(b2); end = b2; } const g = gain(level); end.connect(g); if (modHz) modulate(g.gain, 'pink', modHz, modDepth); g.connect(lp.in); return g; };
   const bedSet = (b, v, tc) => {
-    const t = S.now(); b.lvl = v;
+    const t = S.now(); v *= 1.5; b.lvl = v;   // 1.5: bed calibration (test/audio.mjs)
     if (v > 0.0015) { if (!b.conn) { b.g.connect(b.dest); b.conn = true; } b.off = 0; b.g.gain.setTargetAtTime(v, t, tc || 0.35); }
     else if (b.conn) { b.g.gain.setTargetAtTime(0, t, tc || 0.35); if (!b.off) b.off = t; else if (t - b.off > (tc || 0.35) * 7) { b.g.disconnect(); b.conn = false; b.off = 0; } }
   };
