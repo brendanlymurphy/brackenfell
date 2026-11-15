@@ -16,7 +16,7 @@ GameMap.init = () => {
   $('mapZoom').addEventListener('click', () => { GameMap.zoom = GameMap.zoom > 1.01 ? 1 : 2.6; GameMap.center(true); GameMap.draw(); $('mapZoom').textContent = GameMap.zoom > 1.01 ? '−' : '+'; });
   $('mapHome').addEventListener('click', () => { GameMap.center(false); GameMap.draw(); });
 };
-GameMap.fit = () => Math.min(GameMap.cv.clientWidth, GameMap.cv.clientHeight) / (GameMap.SPAN * 0.78);
+GameMap.fit = () => Math.min(GameMap.cv.clientWidth, GameMap.cv.clientHeight) / (GameMap.SPAN * 0.6);
 GameMap.zoomBy = f => { const V = GameMap.view, lo = GameMap.fit() * 0.8, s = clamp(V.s * f, lo, GameMap.fit() * 6); V.s = s; GameMap.zoom = s / GameMap.fit(); };
 GameMap.center = onPlayer => { const V = GameMap.view, P = Player; V.s = GameMap.fit() * GameMap.zoom; if (onPlayer || GameMap.zoom > 1.01) { const p = GameMap.pos(); V.cx = p[0]; V.cz = p[1]; } else { V.cx = 0; V.cz = 5; } };
 // where the player is on the village map (inside a cell: at the door it was entered by)
@@ -80,7 +80,7 @@ GameMap.draw = () => {
   const vg = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.8); vg.addColorStop(0, 'rgba(120,84,40,0)'); vg.addColorStop(1, 'rgba(110,76,36,0.5)'); c.fillStyle = vg; c.fillRect(0, 0, W, H);
   // names of discovered places only, kept from overlapping
   const disc = UI.disc(), boxes = []; c.textBaseline = 'middle';
-  const place = (x, y, text, bold) => { c.font = (bold ? 'italic 500 ' : 'italic 400 ') + Math.round(14 * ts) + 'px Alegreya, Georgia, serif'; const w = c.measureText(text).width, h = 15 * ts; let bx = x + 7; if (bx + w > W - 4) bx = x - 7 - w; const r = [bx, y - h / 2, bx + w, y + h / 2]; if (boxes.some(o => r[0] < o[2] && r[2] > o[0] && r[1] < o[3] && r[3] > o[1])) return; boxes.push(r);
+  const place = (x, y, text, bold) => { c.font = (bold ? 'italic 500 ' : 'italic 400 ') + Math.round(14 * ts) + 'px Alegreya, Georgia, serif'; const w = c.measureText(text).width, h = 15 * ts; let bx = x + 7; if (bx + w > W - 4) bx = x - 7 - w; const r = [Math.min(bx, x) - 4, y - h / 2, Math.max(bx + w, x), y + h / 2]; if (boxes.some(o => r[0] < o[2] && r[2] > o[0] && r[1] < o[3] && r[3] > o[1])) return; boxes.push(r);
     c.lineWidth = 3; c.strokeStyle = 'rgba(228,214,179,0.85)'; c.strokeText(text, bx, y); c.fillStyle = '#2a2016'; c.fillText(text, bx, y); c.beginPath(); c.arc(x, y, 3, 0, TAU); c.fillStyle = '#2a2016'; c.fill(); };
   for (const pl of World.places) { if (!disc[pl.id]) continue; place(sx(pl.x), sz(pl.z), pl.name, V.s > GameMap.fit() * 1.4); }
   // quest targets: a gold diamond with an ink edge
