@@ -2102,8 +2102,8 @@ const Chars = (() => {
       grip: [1.384, 0.06, -0.916, 0.023, 0.024, 0.014],       // the Quaternius grip carried over by the hand's finger, across and palm axes (tools/humans/README notes)
       look(def) {
         if (def.foe) return { body: def.foe.body, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) };
-        const body = BODY[def.id] || (def.female ? 'f_farmer' : 'm_farmer');
-        return { body, fit: FIT[body] || 1, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id]) };
+        const body = BODY[def.id] || def.body || (def.female ? 'f_farmer' : 'm_farmer');          // def.body / def.tint: the inn's regulars (77c_patrons.js) wear other people's bodies in other colours
+        return { body, fit: FIT[body] || 1, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint) };
       },
     });
   }
@@ -8582,7 +8582,7 @@ function buildNPCs() {
 }
 
 // place every villager where the clock says they should be
-function npcSnapAll() { for (const n of NPCS) { const row = npcRow(n), sp = Array.isArray(row[1]) ? row[1][0] : row[1]; npcArrive(n, sp, row[2]); n.goal = sp; } }
+function npcSnapAll() { if (typeof npcClaimReset === 'function') npcClaimReset(); for (const n of NPCS) { const row = npcRow(n), sp0 = Array.isArray(row[1]) ? row[1][0] : row[1], sp = typeof npcClaim === 'function' ? npcClaim(n, sp0) : sp0; npcArrive(n, sp, row[2]); n.goal = sp; } }
 function npcRow(n) {
   const sc = n.override || n.def.sched; let h = Env.hour; if (h < sc[0][0]) h += 24;
   let row = sc[sc.length - 1]; for (const r of sc) if (r[0] <= h) row = r;
@@ -8606,6 +8606,7 @@ function npcUpdate(dt, playerPos) {
         if (!n.path && n.at === target[n.wIdx]) { if (n.dwell > 0) n.dwell -= dt; else n.wIdx = (n.wIdx + 1) % target.length; }
         target = target[n.wIdx];
       }
+      if (typeof npcClaim === 'function') target = npcClaim(n, target);          // anchors are claimed: nobody stands in another's place (77c_patrons.js)
       if (n.goal !== target) {
         const wasAt = !n.path && !!n.at;
         const from = n.path ? n.path[Math.min(n.pi, n.path.length - 1)] : Nav.spot[n.at], to = Nav.spot[target];
@@ -8760,17 +8761,48 @@ function ambUpdate(dt, playerPos) {
 // ───────────────────────── regulars of the Honeyed Hart: evening guests who fill the common room (inn.s6..s12) ─────────────────────────
 // By day they idle in the square or at a porch; from the evening bell they are at their table; they sleep in the infill cottages.
 (function () {
+  // id, name, body (49_chars.js 'real' set), skin, hair, tint (multipliers on the colours baked into the body), evening seat, bed, day: [[hour, spot(s), anim] ...]
   const L = [
-    ['pat1', 'Wat Cooper', 'tan', 'brown', [0.45, 0.36, 0.26], 'inn.s6', 'in.02.bed', 'square.bench'],
-    ['pat2', 'Edda Fenn', 'rosy', 'auburn', [0.5, 0.3, 0.3], 'inn.s7', 'in.04.bed', 'square.bench2'],
-    ['pat3', 'Hob the Carter', 'brown', 'black', [0.34, 0.4, 0.3], 'inn.s8', 'in.07.bed', 'square.well'],
-    ['pat4', 'Sorrel Vane', 'fair', 'blond', [0.42, 0.32, 0.5], 'inn.s9', 'in.13.bed', 'elder.porch'],
-    ['pat5', 'Piers Lowe', 'tan', 'grey', [0.4, 0.38, 0.34], 'inn.s10', 'in.21.bed', 'square.bench'],
-    ['pat6', 'Nell Marsh', 'rosy', 'brown', [0.3, 0.42, 0.46], 'inn.s11', 'in.23.bed', 'square.bench2'],
-    ['pat7', 'Jory Thatcher', 'brown', 'brown', [0.5, 0.42, 0.22], 'inn.s12', 'in.02.bed', 'square.well'],
+    ['pat1', 'Wat Cooper', 'm_farmer', 'tan', 'brown', { tunic: [1.55, 0.95, 0.6] }, 'inn.s6', 'in.02.bed', [[7.5, 'square.well', 'idle'], [11.5, 'stallfront0', 'idle'], [15, 'square.bench', 'sit']]],
+    ['pat2', 'Tilda Fenn', 'f_farmer', 'rosy', 'auburn', { tunic: [0.7, 0.85, 1.25], skirt: [1.2, 0.9, 0.8] }, 'inn.s7', 'in.04.bed', [[7.5, 'stallfront1', 'idle'], [13, 'square.bench2', 'sit'], [16, 'elder.porch', 'idle']]],
+    ['pat3', 'Hob the Carter', 'm_fisher', 'brown', 'black', { tunic: [1.1, 0.85, 0.7], pants: [0.8, 0.8, 0.8] }, 'inn.s8', 'in.07.bed', [[7.5, 'alley.stall0', 'idle'], [14, 'square.well', 'idle']]],
+    ['pat4', 'Sorrel Vane', 'm_youth', 'fair', 'blond', { tunic: [1.35, 0.75, 1.2] }, 'inn.s9', 'in.13.bed', [[7.5, 'elder.porch', 'idle'], [12, 'dstall0', 'idle'], [16, 'square.bench', 'sit']]],
+    ['pat5', 'Piers Lowe', 'm_elder', 'tan', 'grey', { tunic: [0.95, 1.0, 1.1] }, 'inn.s10', 'in.21.bed', [[7.5, 'in.21.bed', 'lie'], [10, 'stallfront2', 'idle'], [14.5, 'square.bench2', 'sit']]],
+    ['pat6', 'Nell Marsh', 'f_weaver', 'rosy', 'brown', { robe: [0.55, 1.0, 1.3], tunic: [0.6, 1.0, 1.3] }, 'inn.s11', 'in.23.bed', [[7.5, 'square.bench2', 'sit'], [12, 'alley.stall1', 'idle'], [16, 'square.well', 'idle']]],
+    ['pat7', 'Jory Thatcher', 'm_hunter', 'brown', 'brown', { tunic: [1.25, 1.15, 0.65] }, 'inn.s12', 'in.04.bed2', [[8, 'dstall1', 'idle'], [13, 'stallfront0', 'idle'], [16.5, 'square.bench', 'sit']]],
   ];
-  for (const [id, name, skin, hair, top, seat, bed, day] of L) NPC_DEFS.push({ id, name, skin, hair, top, legs: [0.3, 0.26, 0.22], dress: skin === 'rosy', sched: [[7.5, day, 'idle'], [18.5, seat, 'sit'], [23.5, bed, 'lie']] });
+  for (const [id, name, body, skin, hair, tint, seat, bed, day] of L) NPC_DEFS.push({ id, name, body, tint, skin, hair, top: [0.4, 0.36, 0.3], legs: [0.3, 0.26, 0.22], female: /^f_/.test(body), dress: /^f_/.test(body), sched: day.concat([[18.5, seat, 'sit'], [23.5, bed, 'lie']]) });
 })();
+
+// ── anchors are claimed (one person to a place) ──
+// A schedule names a spot; if another person already holds it, the next free spot beside it (name#1, name#2 ... on a ring 0.85 m round it, never in a wall) is used.
+// A taken seat or bed becomes a standing place beside it. The nav graph knows an alias by its parent's node.
+const NPC_CLAIMS = {};
+function npcClaimReset() { for (const k in NPC_CLAIMS) delete NPC_CLAIMS[k]; for (const n of NPCS) n.claim = null; }
+function npcClaim(n, name) {
+  const sp0 = World.spots[name]; if (!sp0 || typeof name !== 'string') return name;
+  const base = name.split('#')[0], spB = World.spots[base] || sp0, own = n.claim;
+  if (own && (own === base || own.startsWith(base + '#')) && NPC_CLAIMS[own] === n.id) return own;
+  const crowded = q => {          // standing people keep 0.7 m apart, whatever their spots are called (seats and beds are laid out by the plans)
+    if (q.sit || q.lie) return false;
+    for (const o in NPC_CLAIMS) { if (NPC_CLAIMS[o] === n.id) continue; const r = World.spots[o]; if (r && Math.abs(r.p[1] - q.p[1]) < 1.2 && Math.hypot(r.p[0] - q.p[0], r.p[2] - q.p[2]) < 0.7) return true; }
+    return false;
+  };
+  for (let k = 0; k < 9; k++) {
+    const cand = k ? base + '#' + k : base;
+    if (NPC_CLAIMS[cand] && NPC_CLAIMS[cand] !== n.id) continue;
+    if (k && !World.spots[cand]) {          // a ring of standing places round the spot, none inside a wall
+      const a = k * 2.4 + base.length, rr = 0.85 * (1 + (k > 4 ? 0.8 : 0)), x = spB.p[0] + Math.cos(a) * rr, z = spB.p[2] + Math.sin(a) * rr;
+      if (World.blockedAt && World.blockedAt(x, z, 0.3)) continue;
+      World.spots[cand] = Object.assign({}, spB, { p: [x, spB.p[1], z] }); delete World.spots[cand].sit; delete World.spots[cand].lie;
+      if (Nav.spot[base] !== undefined) Nav.spot[cand] = Nav.spot[base];
+    }
+    if (crowded(World.spots[cand] || spB)) continue;
+    if (own && own !== cand && NPC_CLAIMS[own] === n.id) delete NPC_CLAIMS[own];
+    NPC_CLAIMS[cand] = n.id; n.claim = cand; return cand;
+  }
+  return name;
+}
 
 
 // ---- 78_player.js ----

@@ -125,7 +125,7 @@ function buildNPCs() {
 }
 
 // place every villager where the clock says they should be
-function npcSnapAll() { for (const n of NPCS) { const row = npcRow(n), sp = Array.isArray(row[1]) ? row[1][0] : row[1]; npcArrive(n, sp, row[2]); n.goal = sp; } }
+function npcSnapAll() { if (typeof npcClaimReset === 'function') npcClaimReset(); for (const n of NPCS) { const row = npcRow(n), sp0 = Array.isArray(row[1]) ? row[1][0] : row[1], sp = typeof npcClaim === 'function' ? npcClaim(n, sp0) : sp0; npcArrive(n, sp, row[2]); n.goal = sp; } }
 function npcRow(n) {
   const sc = n.override || n.def.sched; let h = Env.hour; if (h < sc[0][0]) h += 24;
   let row = sc[sc.length - 1]; for (const r of sc) if (r[0] <= h) row = r;
@@ -149,6 +149,7 @@ function npcUpdate(dt, playerPos) {
         if (!n.path && n.at === target[n.wIdx]) { if (n.dwell > 0) n.dwell -= dt; else n.wIdx = (n.wIdx + 1) % target.length; }
         target = target[n.wIdx];
       }
+      if (typeof npcClaim === 'function') target = npcClaim(n, target);          // anchors are claimed: nobody stands in another's place (77c_patrons.js)
       if (n.goal !== target) {
         const wasAt = !n.path && !!n.at;
         const from = n.path ? n.path[Math.min(n.pi, n.path.length - 1)] : Nav.spot[n.at], to = Nav.spot[target];
