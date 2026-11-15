@@ -92,6 +92,7 @@ function sceneBuild() {
       scene.add(mesh); SC.rigid.push({ mesh, obj, o: obj.slot * 256 + p.bone * 16 });
     }
   }
+  if (typeof Trees !== 'undefined') Trees.build(scene);       // scanned trees (74b_trees.js)
   return scene;
 }
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
@@ -118,6 +119,7 @@ function sceneUpdate(camPos, q) {
     s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }
   if (Grass.mesh) Grass.mesh.visible = !inside && !cur;
+  if (typeof Trees !== 'undefined') Trees.update(e, q, !!cur);
   for (const r of SC.rigid) {
     const o = r.obj;
     if (cur ? o.cell !== cur.id : o.cell) { r.mesh.visible = false; continue; }

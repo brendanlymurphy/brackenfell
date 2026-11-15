@@ -184,7 +184,7 @@ function startGame(cont) {
     await load('Raising the Greyspine', 0.4); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
     await load('Framing timber, laying thatch', 0.55); buildVillage(); lap('village');
     await load('Waking the villagers', 0.68); buildNPCs(); festivalSpots(); lap('npcs');
-    await load('Planting pine and birch', 0.76); buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
+    await load('Planting pine and birch', 0.76); if (typeof Trees !== 'undefined') await Trees.load(); /* fork-look: scanned trees (74b_trees.js) */ buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
     World.villagePack.upload('village'); World.skinPack.upload('skin');
     buildSplat2(); colBuild(); navBuild(); fxInit(); lap('nav');
     await load('Lighting the lanterns', 0.88);

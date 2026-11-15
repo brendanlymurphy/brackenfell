@@ -95,6 +95,19 @@ SH.init = function () {
     const s = pow(max(dot(normalize(positionWorld.sub(U.camPos)), U.sunDisc), 0), 6);
     return mix(U.fogCol, U.fogCol.add(U.fogSun.mul(0.6)), s);
   });
+  // ── one wind ──
+  // U.wind = direction x, direction z, strength, time. Gusts are a slow noise pattern that travels downwind across the valley; everything
+  // that moves reads the gust at its own place, so a gust is seen to arrive: first the far trees, then the grass, then the washing.
+  // (On the CPU the same field is Wind.gust(x, z), see 50_env.js.)
+  SH.gust = Fn(([xz]) => noiseL(xz.mul(0.013).sub(U.wind.xy.mul(U.time.mul(0.035)))).r.sub(0.42));          // about -0.4 (lull) .. 0.6 (gust)
+  // how far a point on a tree is pushed: root = the foot of the tree (world), p = the point relative to the foot, ww = how freely it moves, ph = the tree's own phase
+  SH.sway = Fn(([root, p, ww, ph]) => {
+    const g = SH.gust(root.xz), wt = U.wind.w, k = U.wind.z.mul(max(g.mul(1.7).add(0.7), 0.12)), y2 = p.y.mul(p.y);
+    const lean = y2.mul(0.0008).mul(k).add(TSL.sin(wt.mul(0.9).add(ph)).mul(y2).mul(0.00032).mul(k));                       // the whole stem bends downwind and rocks slowly
+    const flut = TSL.sin(wt.mul(2.3).add(ph.mul(1.7)).add(p.x.mul(1.3)).add(p.y.mul(0.9))).mul(0.6).add(TSL.sin(wt.mul(3.7).add(ph).add(p.z.mul(1.9))).mul(0.4)).mul(ww).mul(0.055).mul(k);
+    const along = lean.add(flut);
+    return vec3(U.wind.x.mul(along), flut.mul(0.45), U.wind.y.mul(along));
+  });
   if (typeof Lamps !== 'undefined' && !G.lampTex) Lamps.init();
   SH.groundTint = (mn, mn2) => mix(vec3(0.80, 0.90, 0.70), vec3(1.16, 1.06, 0.80), mn.r).mul(mn2.a.mul(0.28).add(0.86));
 };

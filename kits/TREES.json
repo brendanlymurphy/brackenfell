@@ -1,0 +1,98 @@
+{
+ "tile": [
+  128,
+  256
+ ],
+ "count": 8,
+ "atlas": 2048,
+ "species": {
+  "fir_b": {
+   "source": "fir_tree_01",
+   "height": 14.2,
+   "halfWidth": 3.22,
+   "crownRadius": 3.29,
+   "crownBase": 3.96,
+   "tiles": [
+    0,
+    1
+   ],
+   "bark": [
+    0.215,
+    0.192,
+    0.135
+   ],
+   "tris": {
+    "wood": 699,
+    "leaves": 2040,
+    "woodFar": 89,
+    "leavesFar": 512
+   }
+  },
+  "fir_c": {
+   "source": "fir_tree_01",
+   "height": 14.76,
+   "halfWidth": 3.78,
+   "crownRadius": 3.72,
+   "crownBase": 6.99,
+   "tiles": [
+    2,
+    3
+   ],
+   "bark": [
+    0.28,
+    0.257,
+    0.217
+   ],
+   "tris": {
+    "wood": 697,
+    "leaves": 1800,
+    "woodFar": 87,
+    "leavesFar": 452
+   }
+  },
+  "pine_c": {
+   "source": "pine_tree_01",
+   "height": 17.77,
+   "halfWidth": 4.59,
+   "crownRadius": 4.5,
+   "crownBase": 4.4,
+   "tiles": [
+    4,
+    5
+   ],
+   "bark": [
+    0.246,
+    0.221,
+    0.192
+   ],
+   "tris": {
+    "wood": 698,
+    "leaves": 2280,
+    "woodFar": 89,
+    "leavesFar": 572
+   }
+  },
+  "broadleaf_small": {
+   "source": "tree_small_02",
+   "height": 4.76,
+   "halfWidth": 3.05,
+   "crownRadius": 3,
+   "crownBase": 1.48,
+   "tiles": [
+    6,
+    7
+   ],
+   "bark": [
+    0.453,
+    0.401,
+    0.354
+   ],
+   "tris": {
+    "wood": 675,
+    "leaves": 1680,
+    "woodFar": 82,
+    "leavesFar": 420
+   }
+  }
+ }
+}
