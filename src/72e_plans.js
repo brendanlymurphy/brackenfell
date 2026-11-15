@@ -268,7 +268,7 @@ function planHouse(P, c, info) {
   }
   if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
   let kh = null;
-  if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id] });
+  if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); } else if (KIT_DRESS[P.id] && info.kind) { dressKind(P, c, hall, hh, info); dressStore(P, store); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id] });
   dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
   if (up) {
     if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
@@ -307,7 +307,7 @@ function planBuild(c) {
   { const fy = dd.sill[1]; c.cell.daylightFn = () => Player.pos[1] < fy - 1.0 ? 0 : undefined; }          // below the ground floor no daylight comes in
   c.planDone = P; return P;
 }
-const PLANS_INFO = { inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true } };
+const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: { kind: 'study' }, guardhouse: { kind: 'guard' },  inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true } };
 // the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
 function dressInn(P, c, room, hh) {
   const R = P.R, a = room.in; P.hall = { room, hh };
@@ -334,4 +334,33 @@ function dressInn(P, c, room, hh) {
   pWalls(P, room, ['Torch_Metal', 'Banner_1_Cloth', 'Shield_Wooden', 'Banner_1_Cloth', 'Torch_Metal', 'paint', 'Shield_Wooden', 'rack', 'paint', 'Torch_Metal', 'paint']);
   pLamp(P, room, -4.0, 3.6); pLamp(P, room, 0.0, 4.4); pLamp(P, room, -4.2, 6.8);
   if (e) { pSconce(P, room, 'n', e.x + 1.8); pSconce(P, room, 'n', e.x - 1.8); }
+}
+
+// a main room designed for its trade: the focal piece first (counter, forge, desk, weapon wall), then the kit pieces its trade owns along the free walls, then the wall things
+function dressKind(P, c, room, hh, info) {
+  const id = P.id, D = KIT_DRESS[id] || {}, R = P.R, a = room.in, kind = info.kind; P.hall = { room, hh };
+  if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
+  if (kind === 'shop') {          // a counter across the room with the keeper behind it, wares on every wall
+    const t = pFree(P, room, id + '.counter', 2.6, 0.8, 1.0, 0, m => { Props.table(m, 2.6, 0.8, 1.0); Props.clutter(m, R, -1.1, 1.1, 1.0, 0, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple'], 5, c); }, { near: [-1.6, 2.4], surface: true });
+    if (t) { pSpot(P, 'counter', t.cx, t.cz + 0.8, PI, { k: 0 }); pSpot(P, 'front', t.cx, t.cz - 0.8, 0, { k: 0 }); }
+    for (const sd of ['w', 'e']) for (let i = 0; i < 2; i++) pAgainst(P, room, sd, id + '.ware' + sd + i, 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(c, ['pot', 'jug', 'bowl', 'cheese', 'bottle', 'loaf'])), { at: 'mid' === 0 ? 0 : 2.0 + i * 2.2 });
+  } else if (kind === 'smith') {          // the forge is the hearth; the anvil in front of it, a quench trough, a bench and weapons
+    const an = hh ? pPut(P, room, id + '.anvil', hh.front[0] + 0.9, hh.front[1] - 0.4, 0, 0.7, 0.45, 0.9, m => Props.anvil(m), {}) : null;
+    if (an) pSpot(P, 'anvil', an.cx, an.cz - 0.55, 0, { k: 0 }); if (hh) pSpot(P, 'forge', hh.front[0] - 0.9, hh.front[1] - 0.2, Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
+    pFree(P, room, id + '.trough', 1.2, 0.5, 0.6, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.6, 0, -0.25, 0.6, 0.55, 0.25); m.mat(MAT.PLAIN, [0.12, 0.2, 0.3]); m.quad([-0.55, 0.5, -0.2], [-0.55, 0.5, 0.2], [0.55, 0.5, 0.2], [0.55, 0.5, -0.2]); }, { near: [a.x0 + 1.2, 2.5], lowOk: true });
+    pFree(P, room, id + '.coal', 0.6, 0.6, 0.5, 0, m => Props.crate(m, 0.6), { near: [a.x1 - 1, 2] });
+  } else if (kind === 'study') {          // a desk with the chronicle, bookcases, a long table
+    const dk = pFree(P, room, id + '.desk', 1.6, 0.8, 0.8, 0, pdTable(1.6, 0.8, ['book', 'candle', 'book', 'mug'], 4, c), { near: [a.x0 + 2.0, 3.2], surface: true });
+    if (dk) { pSpot(P, 'sit', dk.cx, dk.cz + 0.8, PI, { k: 0 }); pSit(P, 'sit', dk.cx, dk.cz + 0.8, PI, 0); P.deskAt = dk; }
+    pDining(P, room, 2.0, 0.9, { near: [a.x1 - 2.5, 3.8], id: 'table', n: 3 });
+    for (const sd of ['w', 'e']) pKitFloor(P, room, sd, 'Bookcase_2', { n: sd, at: 'start' });
+  } else if (kind === 'guard') {          // weapon stands and a dummy, a table with the watch roster
+    pDining(P, room, 2.0, 0.9, { near: [0, 3.6], id: 'table', n: 3 });
+    for (const sd of ['w', 'e']) { pKitFloor(P, room, sd, 'WeaponStand', { n: sd, at: 'start' }); pKitFloor(P, room, sd, 'Dummy', { n: sd + 'd', at: 'end' }); }
+  }
+  for (const nm of D.floor || []) for (const sd of pSidesLong(room)) { if (pKitFloor(P, room, sd, nm, { n: sd + (R() * 99 | 0) })) break; }
+  pWalls(P, room, (D.wall || []).concat(['paint', 'Torch_Metal']));
+  const e = P.doors.find(d => d.b === null); if (e) pSconce(P, room, 'n', e.x + 1.5) || pSconce(P, room, 'n', e.x - 1.5);
+  if (hh) pLamp(P, room, 0, 3.2); else pLamp(P, room, 0, 3.0);
+  pFree(P, room, id + '.rug', 2.2, 1.5, 0.02, 0.1, pdRug(2.2, 1.5, [0.4, 0.26, 0.2]), { flat: true, noClear: true, near: [0, 4.2] });
 }
