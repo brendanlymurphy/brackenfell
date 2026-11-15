@@ -3191,7 +3191,7 @@ function buildHouse(site, spec) {
   }
   ext.ao = 1; ext.m1 = 0;
   const ctx = {
-    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList, kit, Ms, openings, tanP,
+    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList, kit, Ms, openings, tanP, zoneInfo: zinfo,
     world: (x, y, z) => m4.tp(Ms, [x, y, z]),
     spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: site.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
     // hearth against a wall. frame: origin on the inner wall face, +x into the room. (x, z) = house-local position, rot = RY angle
@@ -3229,8 +3229,10 @@ function buildHouse(site, spec) {
     interact(x, y, z, o) { const it = Object.assign({ p: m4.tp(Ms, [x, y, z]), r: 2.0, zone }, o); World.interact.push(it); return it; },
   };
   if (kit) kitShell(ctx);
+  if (kit && typeof UPPER !== 'undefined' && UPPER[site.id] && !(TEST && TEST.noUpper)) UPPER[site.id](ctx);       // stairs and upper floor first, so the ground-floor furniture goes round them
   if (spec.interior) spec.interior(ctx);
   if (kit) kitDress(ctx);
+  if (kit && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
   int.grad = null;
   World.houses[site.id] = { site, zone, ctx, floorY, door: doorList[0] };
   return { ext, int, glow, ctx };
@@ -3270,9 +3272,12 @@ async function kitBoot(progress) {
 // pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong
 function kitFixups() {
   for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) { Kit.defs[n].gain = 2.0; Kit.defs[n].sat = 0.85; }       // scanned rocks photograph dark
+  for (const n of ['Window_Wide_Flat1', 'Window_Wide_Round1', 'Window_Thin_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Open'] = Object.assign({}, p, { name: n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_WindowGlass') }); }       // the frame without the pane: upstairs windows you can look out of
+  for (const n of [4, 6, 8]) { const p = Kit.pieces['Roof_Front_Brick' + n]; if (p) Kit.pieces['Roof_Front_Brick' + n + '_Open'] = Object.assign({}, p, { name: 'Roof_Front_Brick' + n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_Plaster') }); }       // gable frames without their plaster, where a window is cut in (gableFill, 71c_upper.js)
   if (Kit.defs.MI_WindowGlass) Kit.defs.MI_StainedGlass = Object.assign({}, Kit.defs.MI_WindowGlass, { name: 'MI_StainedGlass' });
   for (const n of ['Window_Thin_Round1', 'Window_Wide_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Stained'] = Object.assign({}, p, { name: n + '_Stained', prims: p.prims.map(q => q.mat === 'MI_WindowGlass' ? Object.assign({}, q, { mat: 'MI_StainedGlass' }) : q) }); }
 }
+const kitOpen = n => (Kit.pieces[n + '_Open'] ? n + '_Open' : n);
 // the building's spec adjusted to what the kit panels can do: 3 m storeys, kit door and window sizes, no slit windows
 function kitSpec(site, spec) {
   const st = KIT_STYLE[site.id], s = Object.assign({}, spec, { kitStyle: st });
@@ -3298,7 +3303,7 @@ function kitShell(c) {
   ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
   const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
-  const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: 0, inSkyVis: 0.12 };
+  const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: st.up ? zone : 0, inSkyVis: st.up ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
   const frames = {}, wbs = {};
   for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); frames[wn] = new THREE.Matrix4().makeBasis(KH.V(W.u), KH.V([0, 1, 0]), KH.V(W.n)).setPosition(s0[0], s0[1], s0[2]).premultiply(MS); wbs[wn] = m4.basis(m4.create(), W.u, [0, 1, 0], W.n, s0); }
   const add = (F, name, x, y, z, s, o, ry) => { o = o || OUT; if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] }); b.add(name, KH.xf(F, x, y, z, s, ry), o); };
@@ -3361,15 +3366,17 @@ function kitShell(c) {
         else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, 0, S, UP);
         else if (n <= 3 || (k + (wn === 'front' || wn === 'back' ? 0 : 1)) % 2 === 1) {
           const r = R();
-          if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, 0, S, UP); add(F, 'Window_Wide_Flat1', uc, H, 0, S, UP); }
-          else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, 0, S, UP); add(F, 'Window_Wide_Flat1', uc, H, 0, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
-          else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, 0, S, UP); add(F, 'Window_Thin_Round1', uc, H, 0, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
+          if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); }
+          else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
+          else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, 0, S, UP); add(F, kitOpen('Window_Thin_Round1'), uc, H, 0, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
         } else add(F, 'Wall_Plaster_Straight', uc, H, 0, S, UP);
       }
       add(F, 'Corner_Exterior_Wood', 0, H, 0, [1.25, 1, 1.25], EXT);
     }
     // ── gable ends carry the timber triangle of the roof ──
-    if (wn === 'left' || wn === 'right') { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; add(F, 'Roof_Front_Brick' + span, L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: st.up ? 0 : zone, inSkyVis: INT_AO }); }
+    if (wn === 'left' || wn === 'right') { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; const gw = spec.gableWin && spec.gableWin[wn] && Kit.pieces['Roof_Front_Brick' + span + '_Open'];
+      add(F, 'Roof_Front_Brick' + span + (gw ? '_Open' : ''), L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO });
+      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT)); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
   {
@@ -3377,7 +3384,7 @@ function kitShell(c) {
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
     const name = 'Roof_RoundTiles_' + span + 'x' + len, ridge = Kit.info(name).max[1];
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
-    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), { zone: 0, skyVis: 1, inZone: st.up ? 0 : zone, inSkyVis: 0.2 });
+    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), { zone: 0, skyVis: 1, inZone: zone, inSkyVis: 0.2 });
   }
   // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance) ──
   {
@@ -3393,11 +3400,11 @@ function kitShell(c) {
     ext.pop();
   }
   const e = 0.16;          // the kit walls are thinner than the generated ones: reach to their inner face
-  if (spec.ceiling) {
+  if (st.up) c.needUpper = true;           // a second storey: its floor, with the stairwell, is built by the building (upperFloor in 71b_storeys.js)
+  if (spec.ceiling && !st.up) {
     inner(); ext.mat(MAT.PLANKS, COL.wood); ext.ao = INT_AO * 0.85;
     ext.quad([-w / 2 + e, H, hd - e], [-w / 2 + e, H, -hd + e], [w / 2 - e, H, -hd + e], [w / 2 - e, H, hd - e]);
-    if (st.up) { outer(); ext.ao = 0.15; ext.mat(MAT.PLANKS, COL.woodDark); ext.quad([-w / 2 + e, H + 0.05, -hd + e], [-w / 2 + e, H + 0.05, hd - e], [w / 2 - e, H + 0.05, hd - e], [w / 2 - e, H + 0.05, -hd + e]); }
-  } else {
+  } else if (!st.up) {
     const roofY = c.roofY;
     ext.mat(MAT.PLANKS, COL.woodDark);
     for (const s of [-1, 1]) {
@@ -3682,7 +3689,7 @@ function kitDress(c) {
       at(mm, 4.8, 2.5, 1.2, 0, () => Props.lantern(mm, c));
       at(mm, 4.4, 0.02, -1.0, 0.1, () => Props.rug(mm, 2.4, 1.6, [0.35, 0.34, 0.22]));
       at(mm, -1.0, 0.02, 3.3, 0.2, () => Props.rug(mm, 1.3, 0.9, [0.4, 0.22, 0.16]));
-      for (const x of [0.2, 1.5]) kp(m, 'Barrel', x, 0.02, 4.3, 0.9, R() * 6);
+      for (const x of [-6.0, -6.6]) kp(m, 'Barrel', x, 0.02, 4.3, 0.9, R() * 6);       // (the back wall between x = -2 and 2.4 is the stair)
     }
   }
   // ── outside: vines up the walls, a banner by the door ──
@@ -3796,6 +3803,347 @@ function kitAttach() {
 }
 
 
+// ---- 71b_storeys.js ----
+// ───────────────────────── upper storeys: stairs, floors with stairwells, lofts, rails ─────────────────────────
+// Everything that gives a building a second level lives here (the stair that was glitchy, the floors the facades only pretended to have).
+// All coordinates are house-local: x along the width, z along the depth, y up from the ground-floor surface (0.02 above the site's floorY).
+//   buildStair(c, o)     a straight stair of kit steps (or boxes without the kit) with a walkable ramp that follows the visible nosings,
+//                        side colliders so nothing can be fallen off, handrails, and spots + a World.stairs entry for villagers and tests
+//   upperFloor(c, o)     the slab of a second storey with stairwell holes, rails round them, rafters, a roof lining and a light
+//   roofClamp(c, ...)   walls of air under a sloping roof where a head would meet the rafters
+// The walkable surface is a ramp, not steps: World.floors entries with y2 (see addFloor / World.groundAt in 78_player.js).
+World.stairs = [];
+const KSTAIR = { name: 'Stair_Interior_Solid', halfW: 0.88, y0: 0.211, slope: 0.7095, topY: 3.028, endZ: 4.352, treads: 14, runStep: 0.3051, riseStep: 0.2165 };
+const STAIR_SHIFT = 0.07;        // m: the ramp runs this far below the nosing line, so it splits the difference between a tread's front and back edge
+const FLOOR_T = 0.12;            // m: thickness of a storey's slab
+
+// the numbers of a stair that climbs `rise` (relative to the base floor surface) with the kit stair scaled by (width, rise, run)
+function stairGeom(rise, H, runScale, widthScale) {
+  const sy = rise / KSTAIR.topY, sz = runScale || 1, sw = widthScale || 1, slope = KSTAIR.slope * sy / sz, b = KSTAIR.y0 * sy - STAIR_SHIFT;
+  const Z0 = Math.max(-b / slope, -0.34 * sz), Z1 = (rise - b) / slope, ZE = KSTAIR.endZ * sz;
+  return { sy, sz, sw, slope, b, Y: Z => b + slope * Z, Z0, Z1, ZE, Zh: Math.max(Z0, (H - 0.02 - 2.0 - b) / slope - 0.45), halfW: KSTAIR.halfW * sw };
+}
+
+// o: { name: 'stairs', axis: 'x'|'z', dir: +1|-1 (the way it climbs), lane: centre line, n0: coordinate of the first nosing, rise: top surface minus 0.02,
+//      H: height of the slab above (for the head-room of the stairwell), runScale, rails: [-1, 1] (sides with a handrail), spot0/spot1 names }
+function buildStair(c, o) {
+  const m = c.int, kit = c.kit && typeof Kit !== 'undefined' && Kit.pieces[KSTAIR.name], ax = o.axis, dir = o.dir, lane = o.lane, n0 = o.n0, base = 0.02;
+  const G = stairGeom(o.rise, o.H || 99, o.runScale, o.widthScale), hw = G.halfW, name = o.name || 'stairs', top = base + o.rise;
+  const P = (Z, l) => ax === 'x' ? [n0 + dir * Z, l] : [l, n0 + dir * Z];
+  const rect = (Za, Zb, la, lb) => { const p = P(Za, la), q = P(Zb, lb); return [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1])]; };
+  // ramp: low coordinate side first
+  const ramp = (Za, Zb, ya, yb, flat) => {
+    const r = rect(Za, Zb, lane - hw - 0.05, lane + hw + 0.05), lowFirst = dir > 0;       // a hand's breadth wider than the hole so no crack opens at the edge
+    if (flat) addFloor(m, r[0], r[1], r[2], r[3], ya); else addFloor(m, r[0], r[1], r[2], r[3], lowFirst ? ya : yb, lowFirst ? yb : ya, ax);
+  };
+  ramp(G.Z0, G.Z1, base + G.Y(G.Z0), base + G.Y(G.Z1));
+  ramp(G.Z1 - 0.03, G.ZE + 0.06, top, top, true);
+  // the stair itself
+  if (kit) {
+    const ry = ax === 'x' ? (dir > 0 ? -PI / 2 : PI / 2) : (dir > 0 ? PI : 0), p = P(0, lane);
+    kitIntBatch(c.zone).add(KSTAIR.name, KH.xf(c.kMS, p[0], base, p[1], [G.sw, G.sy, G.sz], ry), { zone: c.zone, skyVis: INT_AO });
+  } else {        // no kit: solid steps up the same nosing line
+    m.mat(MAT.PLANKS, COL.wood);
+    for (let k = 0; k < KSTAIR.treads; k++) {
+      const Zn = (0.002 + k * KSTAIR.runStep) * G.sz, Zb = Zn - KSTAIR.runStep * G.sz, y = base + G.sy * (KSTAIR.y0 + k * KSTAIR.riseStep), r = rect(Zb, Zn, lane - hw, lane + hw);
+      m.box(r[0], base, r[1], r[2], y, r[3]);
+    }
+    const r = rect(KSTAIR.treads * KSTAIR.runStep * G.sz - 0.1, G.ZE, lane - hw, lane + hw); m.box(r[0], base, r[1], r[2], top, r[3]);
+  }
+  const gap = o.exitGap || 0.5;       // how much of the room side, below the top, is left open to step off
+  // side colliders in short pieces following the slope: the player can neither fall off nor walk in under it
+  for (const s of [-1, 1]) {
+    const cut = s === o.exit ? Math.max(G.Z0, G.Z1 - gap) : G.ZE, l = lane + s * (hw + 0.04);
+    for (let Za = G.Z0; Za < cut - 0.01; Za += 0.45) { const Zb = Math.min(cut, Za + 0.45), r = rect(Za, Zb, l - 0.06, l + 0.06); addBoxCollider(m, r[0], r[1], r[2], r[3], base, base + Math.min(o.rise, G.Y(Zb)) + 1.5); }
+    if (cut < G.ZE - 0.01) { const r = rect(cut, G.ZE, l - 0.06, l + 0.06); addBoxCollider(m, r[0], r[1], r[2], r[3], base, top - 0.5); }       // the exit side stays closed to the floor below (the stair is solid there) and open to the one above
+  }
+  { const r = rect(G.ZE - 0.02, G.ZE + 0.04, lane - hw, lane + hw); addBoxCollider(m, r[0], r[1], r[2], r[3], base, top - 0.5); }       // the solid stair's top end: no walking in under the landing from the floor below
+  // keep furniture off the approaches (a collider that never stops the player but that kitDress's free-floor test respects)
+  for (const [Za, Zb] of [[-1.3, -0.1], [G.ZE, G.ZE + 0.9]]) { const r = rect(Za, Zb, lane - hw, lane + hw); addBoxCollider(m, r[0], r[1], r[2], r[3], -50, -49); }
+  // handrails on the open sides, up to where the slab (if any) begins
+  const rails = o.rails || [-1, 1], zEnd = o.H ? G.Zh : G.ZE;
+  m.mat(MAT.TIMBER, COL.timber);
+  for (const s of rails) {
+    const l = lane + s * (hw - 0.05), nP = Math.max(1, Math.round((zEnd - 0.0) / 1.1));
+    for (let i = 0; i <= nP; i++) { const Z = zEnd * i / nP, p = P(Z, l), y = base + Math.max(0, G.Y(Z)); m.cbox(p[0], y - (i === 0 ? 0 : 0.0), p[1], i === 0 ? 0.11 : 0.06, (i === 0 ? 1.1 : 0.92), i === 0 ? 0.11 : 0.06, 4); }
+    const a = P(0, l), b = P(zEnd, l); m.beam([a[0], base + G.Y(0) + 0.92, a[1]], [b[0], base + G.Y(zEnd) + 0.92, b[1]], 0.07, 0.06);
+  }
+  // villagers' and the test's way points: a step before the first tread, a step past the top
+  const heading = ax === 'x' ? (dir > 0 ? PI / 2 : -PI / 2) : (dir > 0 ? PI : 0), B = bounds(c), lim = o.limit || [-1e9, 1e9], clampP = p => ax === 'x' ? [clamp(p[0], Math.max(B.x0 + 0.45, lim[0]), Math.min(B.x1 - 0.45, lim[1])), p[1]] : [p[0], clamp(p[1], Math.max(B.z0 + 0.45, lim[0]), Math.min(B.z1 - 0.45, lim[1]))], pb = clampP(P(-0.7, lane)), pt = clampP(P(G.ZE + 0.75, lane)), n0s = o.spot0 || name + '0', n1s = o.spot1 || name + '1';
+  c.spot(n0s, pb[0], pb[1], heading, base);
+  const Zt = ((ax === 'x' ? pt[0] : pt[1]) - n0) * dir;       // a top spot pulled back by a low roof stands on the ramp, not above it
+  c.spot(n1s, pt[0], pt[1], heading, Zt >= G.Z1 ? top + 0.01 : base + Math.max(0, G.Y(Zt)) + 0.01);
+  // upstairs, the way from the stair's top round the stairwell to the rooms: a step to the side of the top, then past the near end of the well
+  const via = [];
+  if (o.exit) {
+    const lat = lane + o.exit * (hw + 1.0), pu = clampP(P(G.ZE + 0.75, lat)), pv = clampP(P(G.Zh - 0.6, lat));
+    c.spot(name + 'U', pu[0], pu[1], heading, top + 0.01); via.push(c.site.id + '.' + name + 'U');
+    if (!o.noV) { c.spot(name + 'V', pv[0], pv[1], heading, top + 0.01); via.push(c.site.id + '.' + name + 'V'); }
+  }
+  const exitL = o.exit ? P(G.Z1 - 0.2, lane + o.exit * (hw + 0.3)) : null, exitW = exitL ? m4.tp(c.Ms, [exitL[0], top, exitL[1]]) : null;
+  World.stairs.push({ slope: G.slope, via, exitPt: exitW, id: c.site.id + '.' + name, site: c.site.id, zone: c.zone, bottom: c.site.id + '.' + n0s, top: c.site.id + '.' + n1s, rise: o.rise, width: 2 * hw, upper: o.upper !== false });
+  // the stairwell in the slab above and the level rails round it: across the near end, along the sides (the exit side stops short of the top so one can step off)
+  const hole = rect(G.Zh, G.ZE, lane - hw - 0.06, lane + hw + 0.06), railSegs = [[P(G.Zh, lane - hw - 0.05), P(G.Zh, lane + hw + 0.05)]];
+  for (const s of [-1, 1]) railSegs.push([P(G.Zh, lane + s * (hw + 0.05)), P(s === o.exit ? G.Z1 - gap : G.ZE + 0.06, lane + s * (hw + 0.05))]);
+  if (o.H) {        // the slab's edge round the stairwell is solid to a head that has risen into its thickness (a jump on the stair, a jump out of the well)
+    const Hs = o.H + FLOOR_T, e = [rect(G.Zh - 0.03, G.Zh + 0.03, lane - hw - 0.15, lane + hw + 0.15), rect(G.Zh, G.ZE, lane - hw - 0.12, lane - hw - 0.06), rect(G.Zh, G.ZE, lane + hw + 0.06, lane + hw + 0.12)];
+    for (const r of e) addBoxCollider(m, r[0], r[1], r[2], r[3], o.H - 0.02, Hs);
+  }
+  return { hole, rails: railSegs, G, P, rect, lane, hw, top, Hf: top, ax, dir };
+}
+
+// a rail along the edge of a stairwell or gallery, local coordinates a -> b, standing on the floor at height y; collider included
+function floorRail(c, a, b, y, o) {
+  o = o || {}; const m = c.int, len = hyp(b[0] - a[0], b[1] - a[1]); if (len < 0.08) return;
+  m.mat(MAT.TIMBER, COL.timber);
+  const n = Math.max(1, Math.round(len / 1.1));
+  for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); m.cbox(x, y, z, i === 0 || i === n ? 0.1 : 0.06, 1.0, i === 0 || i === n ? 0.1 : 0.06, 4); }
+  m.beam([a[0], y + 1.0, a[1]], [b[0], y + 1.0, b[1]], 0.07, 0.06);
+  if (o.collide !== false) { const t = 0.08; addBoxCollider(m, Math.min(a[0], b[0]) - t, Math.min(a[1], b[1]) - t, Math.max(a[0], b[0]) + t, Math.max(a[1], b[1]) + t, y + 0.05, y + 1.5); /* from the floor up: a head passing under the slab on the stair must not meet it */ }
+}
+
+// the slab of a second storey. holes: local rects [x0, z0, x1, z1] (stairwells); the kit's upper walls, gables and roof are already there.
+// Draws floor, underside and the edges of the holes, rails the holes except on `open` sides, hangs rafters and a roof lining, and extends the zone.
+function upperFloor(c, o) {
+  o = o || {};
+  const { w, d, H, hd, zone, ext, int, tanP } = c, e = 0.16, Yu = o.y === undefined ? H : o.y, Hf = Yu + FLOOR_T, A = o.area || [-w / 2 + e, -hd + e, w / 2 - e, hd - e], X0 = A[0], Z0 = A[1], X1 = A[2], Z1 = A[3];
+  const holes = (o.holes || []).map(h => [clamp(h[0], X0, X1), clamp(h[1], Z0, Z1), clamp(h[2], X0, X1), clamp(h[3], Z0, Z1)]).filter(h => h[2] - h[0] > 0.1 && h[3] - h[1] > 0.1);
+  const xs = [...new Set([X0, X1].concat(holes.flatMap(h => [h[0], h[2]])).map(v => +v.toFixed(3)))].sort((a, b) => a - b), zs = [...new Set([Z0, Z1].concat(holes.flatMap(h => [h[1], h[3]])).map(v => +v.toFixed(3)))].sort((a, b) => a - b);
+  const inHole = (x, z) => holes.some(h => x > h[0] && x < h[2] && z > h[1] && z < h[3]);
+  ext.m1 = zone; ext.ao = INT_AO * 0.9;
+  for (let i = 0; i < xs.length - 1; i++) for (let j = 0; j < zs.length - 1; j++) {
+    const x0 = xs[i], x1 = xs[i + 1], z0 = zs[j], z1 = zs[j + 1]; if (inHole((x0 + x1) / 2, (z0 + z1) / 2)) continue;
+    const toHole = (x, z) => inHole(x, z), eps = 0.02, sk = 4 | 8 | (toHole(x0 - eps, (z0 + z1) / 2) ? 0 : 1) | (toHole(x1 + eps, (z0 + z1) / 2) ? 0 : 2) | (toHole((x0 + x1) / 2, z0 - eps) ? 0 : 16) | (toHole(x0 / 2 + x1 / 2, z1 + eps) ? 0 : 32);       // only the edges that face a stairwell are seen
+    ext.mat(MAT.PLANKS, COL.woodDark); ext.box(x0, Yu, z0, x1, Hf, z1, sk);
+    ext.quad([x0, Hf, z0], [x0, Hf, z1], [x1, Hf, z1], [x1, Hf, z0], 0, 0, (x1 - x0) / ext.tile, (z1 - z0) / ext.tile);
+    ext.mat(MAT.PLANKS, COL.wood); ext.quad([x0, Yu, z1], [x0, Yu, z0], [x1, Yu, z0], [x1, Yu, z1], 0, 0, (x1 - x0) / ext.tile, (z1 - z0) / ext.tile);
+    addFloor(ext, x0, z0, x1, z1, Hf);
+  }
+  // level rails round the holes and along the open edges of a loft: the segments that run along a wall are dropped
+  const onWall = (p, q) => (Math.abs(p[0] - X0) < 0.4 && Math.abs(q[0] - X0) < 0.4 && !o.area) || (Math.abs(p[0] - X1) < 0.4 && Math.abs(q[0] - X1) < 0.4 && !o.area) || (Math.abs(p[1] - Z0) < 0.4 && Math.abs(q[1] - Z0) < 0.4 && !o.area) || (Math.abs(p[1] - Z1) < 0.4 && Math.abs(q[1] - Z1) < 0.4 && !o.area);
+  for (const [p, q] of o.rails || []) if (!onWall(p, q)) floorRail(c, p, q, Hf);
+  // a roof lining and rafters: the room under the roof is part of the house
+  if (o.rafters !== false && c.kYtop && !o.area) {
+    const Yt = c.kYtop, roofU = z => Yt + (hd - Math.abs(z)) * tanP - 0.04;
+    ext.mat(MAT.PLANKS, COL.woodDark); ext.m1 = zone; ext.ao = INT_AO * 0.9;
+    for (const s of [-1, 1]) {
+      const zE = hd - e, a = [X0, roofU(zE), s * zE], b = [X0, roofU(0), 0], cc = [X1, roofU(0), 0], dd = [X1, roofU(zE), s * zE];
+      if (s < 0) ext.quad(a, b, cc, dd); else ext.quad(dd, cc, b, a);
+    }
+    int.mat(MAT.TIMBER, COL.timberDark);
+    const nb = Math.max(2, Math.round((w - 2 * e) / 2.2)), ridge = Yt + hd * tanP;
+    for (let i = 1; i <= nb; i++) {
+      const x = X0 + (X1 - X0) * i / (nb + 1);
+      if (o.ties !== false) int.box(x - 0.09, Yt - 0.2, Z0, x + 0.09, Yt, Z1);
+      for (const s of [-1, 1]) int.beam([x, roofU(hd - e) - 0.1, s * (hd - e - 0.02)], [x, ridge - 0.14, s * 0.02], 0.1, 0.13);
+    }
+    int.box(X0, ridge - 0.26, -0.07, X1, ridge - 0.12, 0.07);
+  }
+  if (!o.area) c.zoneInfo.y1 = Math.max(c.zoneInfo.y1, c.floorY + (c.kYtop || H + 3) + hd * tanP + 1.5);
+  ext.ao = 1; ext.m1 = 0;
+  if (!o.area) c.upperDone = true;
+  c.Hf = Hf;
+  return { Hf, X0, X1, Z0, Z1 };
+}
+
+// something stands on the upper floor at (x, z) turned by rot: fn() draws it into c.int (Props.* and the colliders see the raised frame)
+function upAt(c, x, z, rot, fn) { at(c.int, x, c.Hf, z, rot, fn); }
+function upBed(c, name, x, z, rot, w, blanket, fur) { upAt(c, x, z, rot, () => Props.bed(c.int, w || 1.0, blanket, fur)); c.spot(name, x, z, -rot, c.Hf + 0.56, { lie: true }); }
+function upChest(c, id, x, z, rot, loot) { upAt(c, x, z, rot, () => Props.chest(c.int)); c.interact(x, c.Hf + 0.5, z, { kind: 'chest', id: c.site.id + '.' + id, loot: loot || [['gold', 3]], r: 1.8 }); }
+// a lamp on a hook under the rafters or on the table, and the light that goes with it
+function upLantern(c, x, z, y) { at(c.int, x, y === undefined ? c.kYtop - 0.2 : y, z, 0, () => Props.lantern(c.int, c)); }
+
+// head-room under a sloping roof: from the eaves inward, where a head (about 2 m) would meet the lining, a wall of air. x0..x1 along the ridge, yFloor the floor surface (local y).
+function roofClamp(c, x0, x1, yFloor, roofBase, need) {
+  const { hd, tanP } = c, base = roofBase === undefined ? c.H : roofBase, lim = hd - (yFloor + (need || 2.05) - base) / tanP;       // |z| beyond this: too low
+  if (lim >= hd - 0.2) return lim;
+  const L = Math.max(lim, 0.4);
+  for (const s of [-1, 1]) addBoxCollider(c.int, x0, s > 0 ? L : -hd, x1, s > 0 ? hd : -L, yFloor - 0.1, yFloor + 3);
+  return L;
+}
+
+// ── the inn: kit stair along the back wall up to a gallery with a rail, two guest rooms off it, a gable window each ──
+// Spots (stairs0, stairs1, guestbed, bed2) and interact ids (inn.bed, inn.chest, inn.note) are what the quests and villagers use.
+function innGallery(c) {
+  const m = c.int, B = bounds(c), LY = 2.6, LX = 2.4, Hf = LY + 0.03, PX = 4.2, ZC = 0.3, sz0 = 2.67;
+  c.Hf = Hf;
+  const S = buildStair(c, { name: 'stairs', axis: 'x', dir: 1, lane: 3.55, n0: LX - KSTAIR.endZ, rise: Hf - 0.02, rails: [-1], spot0: 'stairs0', spot1: 'stairs1' });
+  // gallery floor, edge beam, joists, posts
+  m.mat(MAT.PLANKS, COL.wood); m.box(LX, LY - 0.07, B.z0, B.x1, LY + 0.02, B.z1);
+  m.mat(MAT.TIMBER, COL.timber); m.box(LX - 0.1, LY - 0.26, B.z0, LX + 0.1, LY - 0.07, B.z1);
+  for (let x = LX + 1.1; x < B.x1; x += 1.15) m.box(x - 0.07, LY - 0.24, B.z0, x + 0.07, LY - 0.07, B.z1, 8);
+  for (const z of [-2.2, 2.3]) { m.cbox(LX, 0.02, z, 0.18, LY - 0.28, 0.18, 12); addCircleCollider(m, LX, z, 0.12, 0.02, LY); }
+  addFloor(m, LX, B.z0, B.x1, B.z1, Hf);
+  floorRail(c, [LX + 0.06, B.z0 + 0.12], [LX + 0.06, sz0 - 0.1], Hf);
+  // head-room under the eaves
+  roofClamp(c, LX, B.x1, Hf);
+  // partitions: x = PX with a doorway into each room, z = ZC between them
+  const wall = (x0, z0, x1, z1) => {
+    m.mat(MAT.PLASTER, [0.97, 0.93, 0.86]); m.box(x0, Hf, z0, x1, Hf + 2.35, z1); m.mat(MAT.TIMBER, COL.timberDark);
+    if (x1 - x0 < z1 - z0) { m.box(x0 - 0.02, Hf, z0, x1 + 0.02, Hf + 0.12, z1); m.box(x0 - 0.03, Hf + 2.25, z0, x1 + 0.03, Hf + 2.38, z1); } else { m.box(x0, Hf, z0 - 0.02, x1, Hf + 0.12, z1 + 0.02); m.box(x0, Hf + 2.25, z0 - 0.03, x1, Hf + 2.38, z1 + 0.03); }
+    addBoxCollider(m, x0, z0, x1, z1, Hf, Hf + 2.4);
+  };
+  const dA = [-2.9, -1.9], dB = [1.25, 2.25], t = 0.07;
+  wall(PX - t, B.z0, PX + t, dA[0]); wall(PX - t, dA[1], PX + t, dB[0]); wall(PX - t, dB[1], PX + t, B.z1); wall(PX + t, ZC - t, B.x1, ZC + t);
+  m.mat(MAT.TIMBER, COL.timberDark); for (const d of [dA, dB]) { m.box(PX - 0.1, Hf, d[0] - 0.08, PX + 0.1, Hf + 2.38, d[0]); m.box(PX - 0.1, Hf, d[1], PX + 0.1, Hf + 2.38, d[1] + 0.08); m.box(PX - 0.1, Hf + 2.0, d[0], PX + 0.1, Hf + 2.38, d[1]); }
+  // room A: the player's bed by the window, a chest, the table with the note, a stool
+  upAt(c, 6.15, -2.0, -PI / 2, () => Props.bed(c.int, 1.0, COL.green));
+  c.spot('guestbed', 6.15, -2.0, PI / 2, Hf + 0.56, { lie: true });
+  upChest(c, 'chest', 6.7, -3.85, PI / 2, [['gold', 6], ['apple', 1]]);
+  upAt(c, 5.0, -3.9, 0, () => { Props.table(m, 1.0, 0.6); at(m, 0, 0.76, 0, 0, () => Props.candle(m, c, true)); at(m, 0.3, 0.76, 0.05, 0.4, () => Props.book(m, COL.blue)); });
+  upAt(c, 5.0, -3.2, 0, () => Props.stool(m));
+  upAt(c, 5.5, -1.0, 0.1, () => Props.rug(m, 1.8, 1.2, COL.blue));
+  // room B: two beds
+  upAt(c, 6.15, 1.5, -PI / 2, () => Props.bed(c.int, 1.0, COL.blue));
+  c.spot('bed2', 6.15, 1.5, PI / 2, Hf + 0.56, { lie: true });
+  upAt(c, 6.15, 3.15, -PI / 2, () => Props.bed(c.int, 0.9, [0.55, 0.35, 0.2]));
+  c.spot('bed3', 6.15, 3.15, PI / 2, Hf + 0.56, { lie: true });
+  upAt(c, 4.9, 2.2, 0, () => { Props.table(m, 0.7, 0.5); at(m, 0, 0.76, 0, 0, () => Props.candle(m, c, true)); });
+  upAt(c, 5.2, 0.9, 0, () => Props.rug(m, 1.4, 1.0, [0.55, 0.18, 0.14]));
+  // the corridor: a rug and a lamp
+  upAt(c, 3.3, -0.4, 0, () => Props.rug(m, 1.0, 3.2, [0.35, 0.3, 0.2]));
+  for (const z of [-0.7, 3.0]) { m.mat(MAT.METAL, COL.black); m.box(PX - 0.3, Hf + 2.05, z - 0.02, PX - 0.06, Hf + 2.09, z + 0.02); upLantern(c, PX - 0.28, z, Hf + 2.05); }       // lamps on brackets on the partition
+  c.interact(6.15, Hf + 0.55, -2.0, { kind: 'bed', id: 'inn.bed', r: 1.9 });
+  c.interact(6.7, Hf + 0.45, -3.85, { kind: 'chest', id: 'inn.chest', loot: [['gold', 6], ['apple', 1]], r: 1.7 });
+  c.interact(5.0, Hf + 0.9, -3.9, { kind: 'read', id: 'inn.note', title: 'A note on the table', text: 'Traveller — the bed by the window is yours for as long as you stay. Breakfast when the cock crows, ale when the sun sets. — G.', r: 1.5 });
+  return S;
+}
+
+
+// ---- 71c_upper.js ----
+// ───────────────────────── upper floors of the village buildings (the structure comes from 71b_storeys.js) ─────────────────────────
+// Each UPPER[id](c) runs inside buildHouse after the kit shell and before the ground floor is furnished: it lays the stair along the back wall
+// (bottom at the right-hand end, away from the hearth), the slab with its stairwell and rails, and furnishes the room above.
+// The spots it adds (bed, bed2, stairs0, stairs1) carry the names the villagers' schedules already use.
+const UPPER = {};
+const houseStair = (c, o) => { const B = bounds(c); return buildStair(c, Object.assign({ name: 'stairs', axis: 'x', dir: -1, lane: B.z1 - 1.05, n0: B.x1 - 1.25, H: c.H, rise: c.H + FLOOR_T - 0.02, exit: -1 }, o)); };
+const houseFloor = (c, S, o) => upperFloor(c, Object.assign({ holes: [S.hole], rails: S.rails }, o));
+function upShelf(c, x, z, rot, len, items, h) { const m = c.int; upAt(c, x, z, rot, () => Props.shelf(m, len, h || 1.9, 3, 0.3, (i, y) => Props.clutter(m, c.R, -len / 2 + 0.15, len / 2 - 0.15, y, 0, items || ['pot', 'jug', 'bowl', 'book', 'bottle'], 3))); }
+function upTable(c, x, z, rot, len, wid, items, stools) {
+  const m = c.int;
+  upAt(c, x, z, rot, () => { Props.table(m, len, wid); Props.clutter(m, c.R, -len / 2 + 0.2, len / 2 - 0.2, 0.76, 0, items || ['mug', 'candle', 'book'], 3, c); if (stools) at(m, 0, 0, wid / 2 + 0.3, 0, () => Props.stool(m)); });
+}
+const upRug = (c, x, z, w, d, col, rot) => upAt(c, x, z, rot || 0, () => Props.rug(c.int, w, d, col));
+
+UPPER.elder = c => {
+  const B = bounds(c), S = houseStair(c), Hf = (houseFloor(c, S), c.Hf), m = c.int;
+  upBed(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 1.0, [0.5, 0.42, 0.3]);
+  upChest(c, 'chest', B.x1 - 0.45, 0.2, PI / 2, [['gold', 5]]);
+  upTable(c, -0.4, -2.0, 0, 1.5, 0.7, ['book', 'candle', 'book', 'mug'], true);
+  upShelf(c, B.x0 + 0.17, -0.9, -PI / 2, 1.6, ['book', 'book', 'candle', 'book']);
+  upRug(c, 0.6, -0.5, 2.4, 1.6, COL.blue, 0.1);
+  upLantern(c, 0.4, -0.5, Hf + 2.35);
+};
+UPPER.guardhouse = c => {
+  const B = bounds(c), S = houseStair(c), Hf = (houseFloor(c, S), c.Hf), m = c.int;
+  upBed(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 1.0, [0.45, 0.2, 0.18]);
+  upBed(c, 'bed2', B.x1 - 0.62, B.z1 - 3.0, PI, 1.0, [0.45, 0.2, 0.18]);
+  upChest(c, 'chest', B.x0 + 0.5, -1.9, 0, [['gold', 6]]);
+  upTable(c, -0.6, -1.9, 0, 1.4, 0.7, ['mug', 'plate', 'candle'], true);
+  upAt(c, -0.4, B.z0 + 0.1, 0, () => Props.shield(m, [0.55, 0.15, 0.12]));
+  upRug(c, 0.4, -0.4, 2.2, 1.5, [0.5, 0.18, 0.14], 0.1);
+  upLantern(c, 0.4, -0.4, Hf + 2.35);
+};
+UPPER.store = c => {
+  const B = bounds(c), S = houseStair(c), Hf = (houseFloor(c, S), c.Hf), m = c.int;
+  upBed(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 1.0, COL.purple);
+  upChest(c, 'chest', B.x1 - 0.45, 0.0, PI / 2, [['gold', 8]]);
+  // stock room: crates and sacks along the front wall, shelves
+  for (const [x, z, r] of [[-3.2, -2.5, 0.2], [-2.45, -2.55, 0.5], [-3.3, -1.7, 0.1]]) upAt(c, x, z, r, () => Props.crate(m, 0.6));
+  for (const [x, z, s] of [[2.6, -2.5, 0.33], [3.2, -2.3, 0.3]]) upAt(c, x, z, 0.4, () => Props.sack(m, s));
+  upShelf(c, B.x0 + 0.17, 0.0, -PI / 2, 2.0, ['pot', 'jug', 'bowl', 'bottle', 'cheese']);
+  upTable(c, 0.8, -2.2, 0, 1.6, 0.7, ['book', 'candle', 'pot'], true);
+  upRug(c, 0.4, -0.4, 2.8, 1.8, COL.green, 0.1);
+  upLantern(c, 0.4, -0.4, Hf + 2.35);
+};
+UPPER.weaver = c => {
+  const B = bounds(c), S = houseStair(c), Hf = (houseFloor(c, S), c.Hf), m = c.int;
+  upBed(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 1.0, COL.blue);
+  upBed(c, 'bed2', B.x1 - 0.62, B.z1 - 3.0, PI, 1.0, [0.7, 0.4, 0.4]);
+  // the spinning corner: bolts on a rack, a table with a basket of wool
+  upTable(c, -1.8, -2.2, 0, 1.6, 0.7, ['candle', 'book'], true);
+  upAt(c, -3.0, -0.6, PI / 2, () => Props.shelf(m, 1.8, 1.9, 3, 0.3, (i, y) => { for (let k = 0; k < 4; k++) at(m, -0.6 + k * 0.4, y, 0, PI / 2, () => clothBolt(m, c.R.pick([COL.red, COL.blue, COL.green, COL.gold]))); }));
+  for (const [x, z] of [[1.4, -2.3], [2.1, -2.5]]) upAt(c, x, z, 0.3, () => Props.sack(m, 0.3, [0.92, 0.9, 0.85]));
+  upRug(c, 0.2, -0.5, 2.6, 1.7, COL.red, 0.1);
+  upLantern(c, 0.2, -0.5, Hf + 2.35);
+};
+UPPER.draper = c => {
+  const B = bounds(c), S = houseStair(c, { runScale: 0.86 }), Hf = (houseFloor(c, S), c.Hf), m = c.int;
+  upBed(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 1.0, COL.gold);
+  upChest(c, 'chest', B.x1 - 0.45, -0.3, PI / 2, [['gold', 6]]);
+  upShelf(c, B.x0 + 0.17, -0.6, -PI / 2, 2.0, ['book', 'pot', 'jug']);
+  upTable(c, -0.2, -2.0, 0, 1.6, 0.8, ['candle', 'book'], true);
+  upRug(c, 0.3, -0.5, 2.4, 1.6, COL.blue, 0.1);
+  upLantern(c, 0.3, -0.5, Hf + 2.35);
+};
+UPPER.mill = c => {
+  const B = bounds(c), S = houseStair(c), Hf = (houseFloor(c, S), c.Hf), m = c.int, hx = 0, hz = -0.6;
+  // the hopper above the stones, a grain bin and sacks: this is where the grain is tipped in
+  upBed(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 0.95, COL.wool);
+  upAt(c, hx, hz, 0, () => {
+    m.mat(MAT.TIMBER, COL.timber); for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.cbox(sx * 0.75, 0, sz * 0.75, 0.12, 1.1, 0.12, 12);
+    m.mat(MAT.PLANKS, COL.wood); m.box(-0.85, 1.1, -0.85, 0.85, 1.18, 0.85);
+    m.lathe([[0.2, 1.18], [0.78, 2.0]], 4, 0); m.mat(MAT.PLANKS, COL.woodDark); m.lathe([[0.76, 1.98], [0.82, 2.02], [0.82, 2.1]], 4, 0);
+    addBoxCollider(m, -0.9, -0.9, 0.9, 0.9, 0, 2.2);
+  });
+  for (const [x, z, r] of [[-3.0, -2.4, 0.3], [-2.2, -2.6, 0.6], [-3.1, -1.5, 0.1], [2.8, -2.5, 0.4], [3.2, -1.7, 0.2]]) upAt(c, x, z, r, () => Props.sack(m, 0.34, [0.93, 0.91, 0.86]));
+  upAt(c, -1.6, -2.55, 0, () => Props.crate(m, 0.7));
+  upAt(c, 1.6, -2.5, 0.3, () => Props.barrel(m));
+  upShelf(c, B.x0 + 0.17, -0.5, -PI / 2, 1.6, ['pot', 'jug', 'candle'], 1.8);
+  upLantern(c, 0.2, -2.2, Hf + 2.4);
+};
+
+// ── gable windows: the plaster of a gable end with holes cut in it, and the kit's open window frames in the holes ──
+// wb: the wall's basis (house-local), L: its length, Ytop: where the gable starts, wins: [{ u: position along the wall, sill: height above the gable's foot, s: scale of the kit window }]
+function gableFill(c, wb, L, Ytop, wins, placeWin) {
+  const ext = c.ext, { zone, tanP, hd } = c, T = 0.25, inset = 0.3, apex = Ytop + hd * tanP - 0.5, col = c.spec.plaster || [1, 0.96, 0.88];
+  const P = (u, v, n) => m4.tp(wb, [u, v, n]);
+  const hw = 0.6, holes = wins.map(w => (w = Object.assign({ u: L / 2 }, w), { u0: w.u - hw * w.s, u1: w.u + hw * w.s, v0: Ytop + w.sill, v1: Ytop + w.sill + 1.55 * w.s, w })).sort((a, b) => a.u0 - b.u0);
+  const left = v => inset + (v - Ytop) / tanP, right = v => L - inset - (v - Ytop) / tanP;       // the fill stops inside the rafters
+  const face = (n, flip) => {
+    const q = (a, b, cc, d) => flip ? ext.quad(P(a[0], a[1], n), P(d[0], d[1], n), P(cc[0], cc[1], n), P(b[0], b[1], n)) : ext.quad(P(a[0], a[1], n), P(b[0], b[1], n), P(cc[0], cc[1], n), P(d[0], d[1], n));
+    // horizontal bands between the window rows, vertical strips beside each hole
+    const vs = [Ytop, ...new Set(holes.flatMap(h => [h.v0, h.v1])), apex].sort((a, b) => a - b);
+    for (let i = 0; i < vs.length - 1; i++) {
+      const va = vs[i], vb = vs[i + 1], vm = (va + vb) / 2, hs = holes.filter(h => vm > h.v0 && vm < h.v1);
+      let ua = left(va), ub = left(vb); const segs = []; let cuA = ua, cuB = ub;
+      for (const h of hs) { segs.push([cuA, cuB, h.u0, h.u0]); cuA = cuB = h.u1; }
+      segs.push([cuA, cuB, right(va), right(vb)]);
+      for (const [a0, a1, b0, b1] of segs) { if (b0 - a0 < 0.02 && b1 - a1 < 0.02) continue; if (vb >= apex - 0.001 && Math.abs(b1 - a1) < 0.05) continue; q([a0, va], [b0, va], [b1, vb], [a1, vb]); }
+    }
+  };
+  ext.m1 = 0; ext.ao = 1; ext.mat(MAT.PLASTER, col); face(0, false);
+  ext.m1 = zone; ext.ao = INT_AO; ext.mat(MAT.PLASTER, [col[0] * 0.97, col[1] * 0.95, col[2] * 0.9]); face(-T, true);
+  // reveals round each hole, then the frame
+  for (const h of holes) {
+    ext.m1 = 0; ext.ao = 0.8; ext.mat(MAT.TIMBER, c.spec.timber || COL.timber);
+    const a = [h.u0, h.v0], b = [h.u1, h.v0], e = [h.u1, h.v1], d = [h.u0, h.v1];
+    for (const [p0, p1] of [[a, b], [b, e], [e, d], [d, a]]) ext.quad(P(p0[0], p0[1], 0), P(p1[0], p1[1], 0), P(p1[0], p1[1], -T), P(p0[0], p0[1], -T), 0, 0, 1, 1);
+    ext.ao = 1; ext.m1 = 0; placeWin(kitOpen('Window_Wide_Flat1'), (h.u0 + h.u1) / 2, h.v0 - 0.95 * h.w.s, h.w.s);
+  }
+  ext.m1 = 0; ext.ao = 1;
+}
+
+// ── the sleeping lofts of the single-storey cottages: a floor at the eaves, a steep stair up the end wall, a gable window, head-room clamped under the roof ──
+function loftHouse(c, o) {
+  const B = bounds(c), Yu = o.Yu || 2.6, lim = c.hd - (Yu + FLOOR_T + 1.9 - c.H) / c.tanP, n0 = B.z1 - 1.05, rs = clamp((n0 + lim - 0.15) / KSTAIR.endZ, 0.42, 0.8), m = c.int;
+  c.ceilY = Yu;
+  const S = buildStair(c, { name: 'stairs', axis: 'z', dir: -1, lane: B.x1 - 0.74, n0, H: Yu, rise: Yu + FLOOR_T - 0.02, runScale: rs, widthScale: 0.7, exit: -1, exitGap: 1.25, noV: true, limit: [-(lim - 0.55), 1e9] });
+  upperFloor(c, { y: Yu, holes: [S.hole], rails: S.rails, ties: false });
+  roofClamp(c, B.x0, B.x1, c.Hf, c.H, 1.9);
+  const Hf = c.Hf, ez = c.hd - 1.15;       // the beds lie under the eaves, where there is no head-room to waste; the middle strip stays clear
+  for (const [k, x, side, bl] of o.beds) upBed(c, k, B.x0 + x, side * ez, PI / 2, 0.95, bl);
+  for (const [x, side] of o.stuff || [[1.0, -1]]) upAt(c, B.x0 + x, side * (c.hd - 0.8), 0.3, () => Props.crate(m, 0.55));
+  upChest(c, 'chest', B.x0 + o.chest[0], -ez, 0, [['gold', 4]]);
+  upRug(c, o.rug === undefined ? -0.3 : o.rug, 0, 1.8, 1.0, o.rugCol || COL.red, 0.1);
+  upLantern(c, o.rug === undefined ? -0.3 : o.rug, 0.0, Hf + 2.2);
+}
+UPPER.hunter = c => loftHouse(c, { beds: [['bed', 1.2, 1, [0.4, 0.3, 0.2]]], chest: [1.0, -1], stuff: [[2.4, 1]], rugCol: [0.5, 0.4, 0.3] });
+UPPER.fisher = c => loftHouse(c, { Yu: 2.45, beds: [['bed', 1.1, 1, [0.3, 0.42, 0.5]]], chest: [1.0, -1], stuff: [[2.2, 1]], rug: -0.2, rugCol: [0.3, 0.4, 0.5] });
+UPPER.farm = c => loftHouse(c, { beds: [['bed', 1.2, 1, COL.gold], ['bed2', 3.4, 1, COL.green]], chest: [1.2, -1], stuff: [[2.6, -1], [4.0, -1]], rugCol: COL.gold });
+UPPER.herbalist = c => loftHouse(c, { beds: [['bed', 1.2, 1, COL.purple]], chest: [1.0, -1], stuff: [[2.6, 1], [2.6, -1]], rugCol: COL.green });
+
+
 // ---- 72_buildings.js ----
 // ───────────────────────── building specs and furnished interiors ─────────────────────────
 const bounds = c => ({ x0: -c.w / 2 + c.t, x1: c.w / 2 - c.t, z0: -c.hd + c.t, z1: c.hd - c.t });
@@ -3821,9 +4169,10 @@ const antlers = m => { m.mat(MAT.PLAIN, [0.85, 0.78, 0.62]); for (const s of [-1
 function cottageInterior(c, o) {
   o = o || {}; const m = c.int, R = c.R, B = bounds(c);
   c.fireplace(B.x0, o.fz || 0, 0, { w: 1.7, cauldron: o.cauldron });
-  bedAt(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 1.0, o.blanket, o.fur);
-  if (o.bed2) bedAt(c, 'bed2', B.x1 - 1.9, B.z1 - 1.08, PI, 1.0, o.blanket2 || COL.blue);
-  chestAt(c, B.x1 - 0.45, B.z1 - 2.5, PI / 2, o.loot || [['gold', 4 + R.i(0, 6)]]);
+  if (!o.noBed) bedAt(c, 'bed', B.x1 - 0.62, B.z1 - 1.08, PI, 1.0, o.blanket, o.fur);
+  if (o.bed2 && !o.noBed) bedAt(c, 'bed2', B.x1 - 1.9, B.z1 - 1.08, PI, 1.0, o.blanket2 || COL.blue);
+  const cp = o.chestRel || [-0.45, -2.5, PI / 2];       // (chestRel: where, relative to the back right corner, when the right wall is taken by a stair)
+  chestAt(c, B.x1 + cp[0], B.z1 + cp[1], cp[2], o.loot || [['gold', 4 + R.i(0, 6)]]);
   tableSet(c, o.tx === undefined ? -0.5 : o.tx, o.tz === undefined ? 0.35 : o.tz, 0, 1.5, 0.8, o.tableItems, 3, o.seats || 'stools');
   at(m, o.tx === undefined ? -0.5 : o.tx, 0.02, o.tz === undefined ? 0.35 : o.tz, 0.2, () => Props.rug(m, 2.2, 1.6, o.rug || COL.red));
   if (!o.noShelf) at(m, o.sx === undefined ? -0.3 : o.sx, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 1.6, 1.8, 3, 0.32, (i, y) => Props.clutter(m, R, -0.65, 0.65, y, 0, o.shelfItems || ['pot', 'jug', 'bowl', 'book', 'bottle', 'cheese'], 4)));
@@ -3851,36 +4200,7 @@ const HOUSES = {
       tableSet(c, -1.9, -2.3, 0, 3.0, 0.85, items, 6, 'bench'); tableSet(c, -1.9, 1.5, 0, 3.0, 0.85, items, 6, 'bench'); tableSet(c, 1.1, -2.9, 0, 1.8, 0.8, items, 3, 'bench');
       seat(c, 's1', -2.8, -3.05, PI); seat(c, 's2', -1.2, -1.55, 0); seat(c, 's3', -2.6, 0.75, PI); seat(c, 's4', -1.0, 2.25, 0); seat(c, 's5', -0.4, -3.05, PI); seat(c, 's6', 1.1, -2.15, 0);
       c.spot('bard', -4.2, 2.9, PI / 2); c.spot('stand1', 0.8, 0.2, -PI / 2); c.spot('stand2', -0.2, -0.3, PI * 0.8);
-      // stairs along the back wall up to the loft
-      const sx0 = -2.2, sz0 = 3.05, sz1 = 4.05, n = 13;
-      m.mat(MAT.TIMBER, COL.timber);
-      for (const z of [sz0 + 0.04, sz1 - 0.04]) m.beam([sx0, 0.02, z], [LX, LY - 0.05, z], 0.07, 0.24);
-      m.mat(MAT.PLANKS, COL.wood);
-      for (let i = 0; i < n; i++) { const x = lerp(sx0, LX, (i + 0.5) / n), y = LY * (i + 1) / n; m.box(x - 0.2, y - 0.045, sz0, x + 0.2, y, sz1); }
-      addFloor(m, sx0, sz0, LX, sz1, 0.02, LY + 0.02, 'x');
-      m.mat(MAT.TIMBER, COL.timber); m.beam([sx0, 0.95, sz0 + 0.03], [LX, LY + 0.95, sz0 + 0.03], 0.06, 0.07);
-      for (let i = 0; i <= 4; i++) { const k = i / 4, x = lerp(sx0, LX, k), y = LY * k; m.box(x - 0.035, y, sz0, x + 0.035, y + 0.95, sz0 + 0.07); }
-      // loft floor with joists, railing
-      m.mat(MAT.PLANKS, COL.wood); m.box(LX, LY - 0.07, B.z0, B.x1, LY + 0.02, B.z1);
-      m.mat(MAT.TIMBER, COL.timber); m.box(LX - 0.1, LY - 0.26, B.z0, LX + 0.1, LY - 0.07, B.z1);
-      for (let x = LX + 1.1; x < B.x1; x += 1.15) m.box(x - 0.07, LY - 0.24, B.z0, x + 0.07, LY - 0.07, B.z1, 8);
-      for (const z of [-2.2, 2.4]) m.cbox(LX, 0.02, z, 0.18, LY - 0.28, 0.18, 12);
-      addFloor(m, LX, B.z0, B.x1, B.z1, LY + 0.03);
-      m.box(LX - 0.03, LY + 0.92, B.z0 + 0.5, LX + 0.03, LY + 1.0, sz0 - 0.08); m.box(LX - 0.025, LY + 0.45, B.z0 + 0.5, LX + 0.025, LY + 0.51, sz0 - 0.08);
-      for (let z = B.z0 + 0.5; z <= sz0 - 0.05; z += 1.03) m.cbox(LX, LY, z, 0.07, 1.0, 0.07, 4);
-      addBoxCollider(m, LX - 0.08, B.z0, LX + 0.08, sz0 - 0.05, LY, LY + 1.1);
-      addBoxCollider(m, LX, B.z0, B.x1, -3.95, LY, LY + 2.2); addBoxCollider(m, LX, 4.02, B.x1, B.z1, LY, LY + 2.2);
-      // guest loft
-      m.push().T(0, LY, 0);
-      at(m, 6.15, 0.02, -2.0, -PI / 2, () => Props.bed(m, 1.0, COL.green)); at(m, 6.15, 0.02, 1.4, -PI / 2, () => Props.bed(m, 1.0, COL.blue));
-      at(m, 6.75, 0.02, -0.3, PI / 2, () => Props.chest(m)); at(m, 4.2, 0.02, -3.2, 0, () => { Props.table(m, 1.0, 0.6); at(m, 0, 0.76, 0, 0, () => Props.candle(m, c, true)); at(m, 0.3, 0.76, 0.05, 0.4, () => Props.book(m, COL.blue)); });
-      at(m, 4.6, 0.02, -0.3, 0, () => Props.rug(m, 1.8, 2.6, COL.blue)); at(m, 4.2, 0.02, -2.55, 0, () => Props.stool(m));
-      m.pop();
-      c.spot('guestbed', 6.15, -2.0, PI / 2, LY + 0.58, { lie: true }); c.spot('bed2', 6.15, 1.4, PI / 2, LY + 0.58, { lie: true });
-      c.spot('stairs0', sx0 - 0.5, 3.55, PI / 2); c.spot('stairs1', LX + 0.5, 3.55, PI / 2, LY + 0.03);
-      c.interact(6.15, LY + 0.6, -2.0, { kind: 'bed', id: 'inn.bed', r: 1.9 });
-      c.interact(6.75, LY + 0.5, -0.3, { kind: 'chest', id: 'inn.chest', loot: [['gold', 6], ['apple', 1]], r: 1.7 });
-      c.interact(4.5, LY + 0.9, -3.2, { kind: 'read', id: 'inn.note', title: 'A note on the table', text: 'Traveller — the bed by the window is yours for as long as you stay. Breakfast when the cock crows, ale when the sun sets. — G.', r: 1.5 });
+      innGallery(c);            // stairs, gallery with its rail, guest rooms and their beds: 71b_storeys.js
       // bar under the loft
       m.mat(MAT.PLANKS, COL.woodDark); m.box(3.1, 0.02, 0.9, 6.5, 1.02, 1.45); m.mat(MAT.PLANKS, COL.wood); m.box(3.0, 1.02, 0.8, 6.6, 1.09, 1.55);
       addBoxCollider(m, 3.0, 0.8, 6.6, 1.55, 0, 1.1);
@@ -3890,7 +4210,7 @@ const HOUSES = {
       at(m, B.x1 - 0.17, 0.02, 2.5, PI / 2, () => Props.shelf(m, 1.7, 1.9, 3, 0.3, (i, y) => Props.clutter(m, R, -0.7, 0.7, y, 0, ['bottle', 'mug', 'jug', 'bottle', 'pot'], 5)));
       c.spot('bar', 4.8, 2.5, 0); c.spot('barfront', 4.6, 0.25, PI);
       for (const [x, z] of [[6.55, -3.9], [5.75, -4.0], [6.6, -3.1]]) at(m, x, 0.02, z, 0, () => Props.barrel(m));
-      at(m, -0.6, 0.02, 3.6, 0.3, () => Props.crate(m, 0.6)); at(m, -1.5, 0.02, 3.8, 0, () => Props.barrel(m, 0.3, 0.8));
+      at(m, -4.4, 0.02, 4.1, 0.3, () => Props.crate(m, 0.6)); at(m, -5.2, 0.02, 4.1, 0, () => Props.barrel(m, 0.3, 0.8));
       at(m, 0, 0.02, -3.4, 0, () => Props.rug(m, 1.6, 1.4, [0.35, 0.3, 0.2]));
       // wheel chandelier over the hall
       at(m, -2.0, 4.3, -0.3, 0, () => {
@@ -3957,43 +4277,42 @@ const HOUSES = {
     windows: [{ wall: 'front', pos: 1.3, w: 1.5, shutters: false }, { wall: 'left', pos: 0.3 }, { wall: 'right', pos: -0.6 }, { wall: 'back', pos: -2.9, w: 0.7 }],
     interior(c) {
       const m = c.int, R = c.R, B = bounds(c);
-      m.mat(MAT.PLANKS, COL.woodDark); m.box(-1.2, 0.02, 0.3, 3.4, 0.98, 0.85); m.mat(MAT.PLANKS, COL.wood); m.box(-1.3, 0.98, 0.2, 3.5, 1.05, 0.95);
-      addBoxCollider(m, -1.3, 0.2, 3.5, 0.95, 0, 1.1);
-      at(m, 1.1, 1.05, 0.58, 0, () => { Props.clutter(m, R, -2.0, 2.0, 0, 0, ['candle', 'cheese', 'book', 'bottle', 'pot', 'loaf', 'jug'], 7, c); });
-      at(m, -0.6, 1.05, 0.55, 0.4, () => ropeCoil(m)); at(m, -0.6, 1.14, 0.55, 1.1, () => ropeCoil(m));
-      c.interact(-0.6, 1.2, 0.55, { kind: 'shopitem', id: 'rope', r: 1.6 });
-      at(m, 2.9, 1.05, 0.55, 0, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.012, 0, -0.012, 0.012, 0.32, 0.012); m.box(-0.22, 0.30, -0.01, 0.22, 0.32, 0.01); for (const s of [-1, 1]) { m.box(s * 0.2 - 0.004, 0.14, -0.004, s * 0.2 + 0.004, 0.3, 0.004); m.lathe([[0.02, 0.10], [0.09, 0.14]], 8, 1); m.push().T(s * 0.2, 0, 0); m.lathe([[0.02, 0.10], [0.09, 0.14]], 8, 1); m.pop(); } });
+      m.mat(MAT.PLANKS, COL.woodDark); m.box(-1.2, 0.02, -0.5, 2.0, 0.98, 0.05); m.mat(MAT.PLANKS, COL.wood); m.box(-1.3, 0.98, -0.6, 2.1, 1.05, 0.15);       // (shorter and further forward than it was: the stair to the upper floor runs along the back wall)
+      addBoxCollider(m, -1.3, -0.6, 2.1, 0.15, 0, 1.1);
+      at(m, 0.4, 1.05, -0.22, 0, () => { Props.clutter(m, R, -1.5, 1.5, 0, 0, ['candle', 'cheese', 'book', 'bottle', 'pot', 'loaf', 'jug'], 7, c); });
+      at(m, -0.6, 1.05, -0.25, 0.4, () => ropeCoil(m)); at(m, -0.6, 1.14, -0.25, 1.1, () => ropeCoil(m));
+      c.interact(-0.6, 1.2, -0.25, { kind: 'shopitem', id: 'rope', r: 1.6 });
+      at(m, 1.6, 1.05, -0.25, 0, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.012, 0, -0.012, 0.012, 0.32, 0.012); m.box(-0.22, 0.30, -0.01, 0.22, 0.32, 0.01); for (const s of [-1, 1]) { m.box(s * 0.2 - 0.004, 0.14, -0.004, s * 0.2 + 0.004, 0.3, 0.004); m.lathe([[0.02, 0.10], [0.09, 0.14]], 8, 1); m.push().T(s * 0.2, 0, 0); m.lathe([[0.02, 0.10], [0.09, 0.14]], 8, 1); m.pop(); } });
       const goods = ['pot', 'bottle', 'jug', 'book', 'cheese', 'bowl', 'pot', 'bottle'];
-      at(m, -0.7, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 2.4, 2.1, 4, 0.32, (i, y) => Props.clutter(m, R, -1.05, 1.05, y, 0, goods, 6)));
-      at(m, 2.25, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 2.6, 2.1, 4, 0.32, (i, y) => { if (i < 2) for (let k = 0; k < 4; k++) at(m, -0.9 + k * 0.6, y, 0, PI / 2, () => clothBolt(m, R.pick([COL.red, COL.blue, COL.green, COL.linen, COL.gold, COL.purple]))); else Props.clutter(m, R, -1.1, 1.1, y, 0, goods, 6); }));
+      at(m, B.x0 + 0.17, 0.02, 0.5, -PI / 2, () => Props.shelf(m, 2.0, 2.1, 4, 0.32, (i, y) => Props.clutter(m, R, -0.85, 0.85, y, 0, goods, 6)));
+      at(m, -2.8, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 2.0, 2.1, 4, 0.32, (i, y) => { if (i < 2) for (let k = 0; k < 3; k++) at(m, -0.7 + k * 0.6, y, 0, PI / 2, () => clothBolt(m, R.pick([COL.red, COL.blue, COL.green, COL.linen, COL.gold, COL.purple]))); else Props.clutter(m, R, -1.1, 1.1, y, 0, goods, 6); }));
       at(m, B.x1 - 0.17, 0.02, -1.6, PI / 2, () => Props.shelf(m, 2.0, 2.0, 4, 0.32, (i, y) => Props.clutter(m, R, -0.85, 0.85, y, 0, ['loaf', 'cheese', 'apple', 'cabbage', 'pot', 'jug'], 5)));
       for (const [x, z] of [[3.3, -2.5], [2.5, -2.55]]) at(m, x, 0.02, z, 0, () => { Props.barrel(m); for (let i = 0; i < 7; i++) at(m, R.s() * 0.18, 0.86, R.s() * 0.18, 0, () => Props.apple(m, x > 3 ? COL.apple : [0.62, 0.7, 0.22])); });
       at(m, 0.5, 0.02, -2.5, 0.2, () => Props.crate(m, 0.65)); at(m, 0.45, 0.02 + crateTop(0.65), -2.5, 0.6, () => { for (let i = 0; i < 4; i++) at(m, (i % 2) * 0.24 - 0.12, 0, (i >> 1) * 0.24 - 0.12, 0, () => Props.cabbage(m)); });
-      at(m, -3.3, 0.02, -0.6, 0, () => Props.sack(m, 0.33)); at(m, -3.35, 0.02, 0.1, 0.7, () => Props.sack(m, 0.3, [0.85, 0.82, 0.74])); at(m, -3.2, 0.02, -1.3, 0, () => Props.crate(m, 0.55));
+      at(m, -3.3, 0.02, -1.0, 0, () => Props.sack(m, 0.33)); at(m, -3.35, 0.02, -0.35, 0.7, () => Props.sack(m, 0.3, [0.85, 0.82, 0.74])); at(m, -3.2, 0.02, -1.3, 0, () => Props.crate(m, 0.55));
       at(m, B.x0 + 0.03, 1.5, -1.9, PI / 2, () => { m.push().RZ(PI / 2); ropeCoil(m); m.pop(); });
-      bedAt(c, 'bed', -3.1, 2.0, PI, 1.0, COL.purple);
       at(m, 0.2, c.H, -1.4, 0, () => Props.lantern(m, c));
       at(m, 0, 0.02, -1.6, 0, () => Props.rug(m, 2.4, 1.6, COL.green));
-      c.spot('counter', 1.2, 1.7, 0); c.spot('front', 1.0, -0.6, PI);
+      c.spot('counter', 0.6, 0.55, 0); c.spot('front', 1.0, -1.3, PI);
     },
   },
   elder: {
     H: 2.4, walls: 'timber', roof: 'thatch', plaster: [1, 1, 0.94], shutter: [0.42, 0.52, 0.36],
     doors: [{ wall: 'front', pos: 0.9 }], windows: [{ wall: 'front', pos: -1.7 }, { wall: 'back', pos: -1.3 }, { wall: 'right', pos: -0.9 }],
     interior(c) {
-      cottageInterior(c, { blanket: [0.5, 0.42, 0.3], shelfItems: ['book', 'book', 'book', 'pot', 'candle', 'book'], rug: COL.blue, seats: 'chairs', tableItems: ['book', 'candle', 'mug', 'book'] });
+      cottageInterior(c, { noBed: true, noShelf: true, blanket: [0.5, 0.42, 0.3], shelfItems: ['book', 'book', 'book', 'pot', 'candle', 'book'], rug: COL.blue, seats: 'chairs', tableItems: ['book', 'candle', 'mug', 'book'] });
       const m = c.int, B = bounds(c);
-      at(m, 1.4, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 1.2, 1.9, 4, 0.3, (i, y) => { for (let k = 0; k < 6; k++) at(m, -0.42 + k * 0.17, y + 0.12, 0, 0, () => { m.push().RZ(PI / 2).RY(PI / 2); Props.book(m, c.R.pick([COL.red, COL.blue, COL.green, COL.leather, COL.purple]), 0.035 + c.R() * 0.02); m.pop(); }); }));
+      at(m, B.x0 + 0.17, 0.02, -1.9, -PI / 2, () => Props.shelf(m, 1.4, 1.9, 4, 0.3, (i, y) => { for (let k = 0; k < 7; k++) at(m, -0.5 + k * 0.17, y + 0.12, 0, 0, () => { m.push().RZ(PI / 2).RY(PI / 2); Props.book(m, c.R.pick([COL.red, COL.blue, COL.green, COL.leather, COL.purple]), 0.035 + c.R() * 0.02); m.pop(); }); }));
       c.interact(-0.5, 0.9, 0.35, { kind: 'read', id: 'elder.book', title: 'Rowan’s chronicle', text: 'Year of the long frost. The beacon on the crag has stood dark since my grandfather’s day, yet the valley endures. We kept the Dawn bell ringing through every winter but this one.', r: 1.6 });
     },
   },
   herbalist: {
     H: 2.4, walls: 'timber', roof: 'thatch', plaster: [0.98, 0.95, 0.85], shutter: [0.5, 0.36, 0.5], roofCol: [0.95, 0.98, 0.9],
-    doors: [{ wall: 'front', pos: -0.9 }], windows: [{ wall: 'front', pos: 1.5 }, { wall: 'back', pos: 1.2 }, { wall: 'right', pos: 0.6 }],
+    doors: [{ wall: 'front', pos: -0.9 }], windows: [{ wall: 'front', pos: 1.5 }, { wall: 'back', pos: 1.2 }], gableWin: { right: [{ sill: 0.45, s: 0.8 }] },
     interior(c) {
-      cottageInterior(c, { cauldron: true, blanket: COL.purple, shelfItems: ['bottle', 'pot', 'bottle', 'jug', 'bowl', 'bottle'], rug: COL.green, tableItems: ['bowl', 'bottle', 'candle', 'pot'], sx: -0.9 });
+      cottageInterior(c, { noBed: true, chestRel: [-2.7, -0.32, PI], cauldron: true, blanket: COL.purple, shelfItems: ['bottle', 'pot', 'bottle', 'jug', 'bowl', 'bottle'], rug: COL.green, tableItems: ['bowl', 'bottle', 'candle', 'pot'], sx: -0.9 });
       const m = c.int, B = bounds(c);
-      for (let x = B.x0 + 1.2; x < B.x1 - 0.4; x += 0.42) at(m, x, c.H - 0.2, c.R.s() * 0.3 + (Math.round(x * 3) % 2 ? 1.1 : -1.3), 0, () => herbs(m, c.R));
+      for (let x = B.x0 + 1.2; x < B.x1 - 1.6; x += 0.42) at(m, x, (c.ceilY || c.H) - 0.2, c.R.s() * 0.3 + (Math.round(x * 3) % 2 ? 1.1 : -1.3), 0, () => herbs(m, c.R));
       at(m, 1.3, 0.02, B.z0 + 0.4, PI, () => { Props.table(m, 1.4, 0.6, 0.85); Props.clutter(m, c.R, -0.5, 0.5, 0.85, 0, ['bowl', 'bottle', 'pot', 'bottle'], 4); });
     },
   },
@@ -4001,9 +4320,9 @@ const HOUSES = {
     H: 2.5, walls: 'half', stoneH: 1.0, roof: 'shingle', roofCol: [0.7, 0.66, 0.62],
     doors: [{ wall: 'front', pos: 0.9 }], windows: [{ wall: 'front', pos: -1.7 }, { wall: 'back', pos: -1.2 }, { wall: 'right', pos: -0.8 }],
     interior(c) {
-      cottageInterior(c, { bed2: true, blanket: [0.45, 0.2, 0.18], blanket2: [0.45, 0.2, 0.18], tableItems: ['mug', 'plate', 'candle', 'loaf'], noShelf: true });
+      cottageInterior(c, { noBed: true, bed2: true, blanket: [0.45, 0.2, 0.18], blanket2: [0.45, 0.2, 0.18], tableItems: ['mug', 'plate', 'candle', 'loaf'], noShelf: true });
       const m = c.int, B = bounds(c);
-      at(m, -0.4, 0.02, B.z1 - 0.1, 0, () => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.8, 0.3, -0.04, 0.8, 0.42, 0.04); m.box(-0.8, 1.5, -0.04, 0.8, 1.6, 0.04); for (let i = 0; i < 4; i++) at(m, -0.55 + i * 0.37, 0.36, -0.08, 0, () => Props.sword(m)); });
+      at(m, B.x1 - 0.1, 0.02, -1.9, PI / 2, () => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.8, 0.3, -0.04, 0.8, 0.42, 0.04); m.box(-0.8, 1.5, -0.04, 0.8, 1.6, 0.04); for (let i = 0; i < 4; i++) at(m, -0.55 + i * 0.37, 0.36, -0.08, 0, () => Props.sword(m)); });
       at(m, 1.3, 1.6, B.z0 + 0.04, 0, () => Props.shield(m, [0.55, 0.15, 0.12])); at(m, 2.2, 1.6, B.z0 + 0.04, 0, () => Props.shield(m, [0.55, 0.15, 0.12]));
     },
   },
@@ -4011,33 +4330,33 @@ const HOUSES = {
     H: 2.4, walls: 'timber', roof: 'thatch', plaster: [1, 0.92, 0.86], shutter: [0.3, 0.42, 0.55],
     doors: [{ wall: 'front', pos: 0.9 }], windows: [{ wall: 'front', pos: -1.8 }, { wall: 'back', pos: -1.3 }, { wall: 'back', pos: 1.4 }, { wall: 'right', pos: -0.8 }],
     interior(c) {
-      cottageInterior(c, { blanket: COL.blue, bed2: true, blanket2: [0.7, 0.4, 0.4], tx: -1.3, tz: 1.2, noShelf: true });
+      cottageInterior(c, { noBed: true, blanket: COL.blue, bed2: true, blanket2: [0.7, 0.4, 0.4], tx: -1.3, tz: 0.1, noShelf: true });
       const m = c.int, B = bounds(c);
-      at(m, 1.2, 0.02, -1.6, 0.25, () => {       // loom
+      at(m, 2.55, 0.02, -1.7, 0.25, () => {       // loom (against the right wall, clear of the door and the stair)
         m.mat(MAT.TIMBER, COL.wood); for (const s of [-1, 1]) { m.cbox(s * 0.7, 0, -0.4, 0.08, 1.7, 0.08, 4); m.cbox(s * 0.7, 0, 0.4, 0.08, 1.0, 0.08, 4); m.beam([s * 0.7, 0.95, 0.4], [s * 0.7, 0.95, -0.4], 0.06, 0.06); }
         m.beam([-0.7, 1.65, -0.4], [0.7, 1.65, -0.4], 0.07, 0.07); m.beam([-0.7, 0.4, -0.4], [0.7, 0.4, -0.4], 0.07, 0.07); m.beam([-0.7, 0.95, 0.4], [0.7, 0.95, 0.4], 0.07, 0.07);
         m.mat(MAT.STRIPES, COL.red, 0.5); m.quad2([-0.6, 1.62, -0.38], [-0.6, 0.97, 0.38], [0.6, 0.97, 0.38], [0.6, 1.62, -0.38]);
         addBoxCollider(m, -0.75, -0.45, 0.75, 0.45, 0, 1.7);
       });
-      at(m, 2.7, 0.02, -2.0, 0, () => Props.sack(m, 0.3, [0.92, 0.9, 0.85])); at(m, 2.1, 0.02, -2.3, 0, () => Props.sack(m, 0.26, [0.92, 0.9, 0.85]));
-      at(m, 0.6, 0.02, B.z1 - 0.2, 0, () => { Props.table(m, 1.3, 0.4, 0.8); for (let k = 0; k < 3; k++) at(m, -0.4 + k * 0.4, 0.8, 0, PI / 2, () => clothBolt(m, [COL.red, COL.gold, COL.green][k])); });
+      at(m, 3.2, 0.02, 0.0, 0, () => Props.sack(m, 0.3, [0.92, 0.9, 0.85])); at(m, 3.15, 0.02, 0.6, 0.5, () => Props.sack(m, 0.26, [0.92, 0.9, 0.85]));
+      at(m, -2.3, 0.02, -2.4, 0, () => { Props.table(m, 1.3, 0.4, 0.8); for (let k = 0; k < 3; k++) at(m, -0.4 + k * 0.4, 0.8, 0, PI / 2, () => clothBolt(m, [COL.red, COL.gold, COL.green][k])); });
     },
   },
   farm: {
     H: 2.5, walls: 'timber', roof: 'thatch', plaster: [1, 0.96, 0.84], shutter: [0.5, 0.25, 0.2],
-    doors: [{ wall: 'front', pos: 1.0 }], windows: [{ wall: 'front', pos: -1.9 }, { wall: 'back', pos: -1.5 }, { wall: 'back', pos: 1.7 }, { wall: 'right', pos: -1.0 }],
+    doors: [{ wall: 'front', pos: 1.0 }], windows: [{ wall: 'front', pos: -1.9 }, { wall: 'back', pos: -1.5 }, { wall: 'back', pos: 1.7 }], gableWin: { right: [{ sill: 0.45, s: 0.8 }] },
     interior(c) {
-      cottageInterior(c, { cauldron: true, bed2: true, blanket: COL.gold, blanket2: COL.green, tableItems: ['loaf', 'cheese', 'bowl', 'mug', 'apple'], seats: 'bench', tx: -0.9, tz: 0.3 });
+      cottageInterior(c, { noBed: true, chestRel: [-2.7, -0.32, PI], cauldron: true, bed2: true, blanket: COL.gold, blanket2: COL.green, tableItems: ['loaf', 'cheese', 'bowl', 'mug', 'apple'], seats: 'bench', tx: -0.9, tz: 0.3 });
       const m = c.int, B = bounds(c);
-      for (let i = 0; i < 5; i++) at(m, B.x0 + 1.6 + i * 0.5, c.H - 0.2, -1.4, 0, () => herbs(m, c.R));
+      for (let i = 0; i < 5; i++) at(m, B.x0 + 1.6 + i * 0.5, (c.ceilY || c.H) - 0.2, -1.4, 0, () => herbs(m, c.R));
       at(m, B.x0 + 0.5, 0.02, B.z1 - 0.5, 0, () => Props.sack(m, 0.34)); at(m, B.x0 + 1.2, 0.02, B.z1 - 0.45, 0, () => Props.crate(m, 0.55));
     },
   },
   hunter: {
     H: 2.3, walls: 'log', roof: 'thatch', roofCol: [0.85, 0.85, 0.8],
-    doors: [{ wall: 'front', pos: 0.8 }], windows: [{ wall: 'front', pos: -1.4, w: 0.7, h: 0.8 }, { wall: 'back', pos: 0.3, w: 0.7, h: 0.8 }],
+    doors: [{ wall: 'front', pos: 0.8 }], windows: [{ wall: 'front', pos: -1.4, w: 0.7, h: 0.8 }, { wall: 'back', pos: 0.3, w: 0.7, h: 0.8 }], gableWin: { right: [{ sill: 0.45, s: 0.8 }] },
     interior(c) {
-      cottageInterior(c, { fur: true, blanket: [0.4, 0.3, 0.2], noShelf: true, tableItems: ['mug', 'bowl', 'candle'], rug: [0.5, 0.4, 0.3] });
+      cottageInterior(c, { noBed: true, chestRel: [-2.7, -0.32, PI], fur: true, blanket: [0.4, 0.3, 0.2], noShelf: true, tableItems: ['mug', 'bowl', 'candle'], rug: [0.5, 0.4, 0.3] });
       const m = c.int, B = bounds(c);
       at(m, -0.6, 1.3, B.z1 - 0.02, PI, () => pelt(m, 1.1, 0.9)); at(m, 1.0, 1.25, B.z1 - 0.02, PI, () => pelt(m, 0.8, 0.7));
       at(m, B.x0 + 0.68, 1.85, 0, PI / 2, () => antlers(m));
@@ -4046,11 +4365,10 @@ const HOUSES = {
   },
   fisher: {
     H: 2.2, walls: 'timber', roof: 'thatch', plaster: [0.94, 0.94, 0.9], shutter: [0.3, 0.45, 0.5], roofCol: [0.9, 0.9, 0.85],
-    doors: [{ wall: 'front', pos: 0.6 }], windows: [{ wall: 'front', pos: -1.2, w: 0.7 }, { wall: 'right', pos: 0, w: 0.7 }],
+    doors: [{ wall: 'front', pos: 0.6 }], windows: [{ wall: 'front', pos: -1.2, w: 0.7 }], gableWin: { right: [{ sill: 0.45, s: 0.8 }] },
     interior(c) {
       const m = c.int, B = bounds(c);
       c.fireplace(B.x0, 0, 0, { w: 1.5 });
-      bedAt(c, 'bed', B.x1 - 0.6, B.z1 - 1.05, PI, 0.95, [0.3, 0.42, 0.5]);
       tableSet(c, -0.3, 0.9, 0, 1.0, 0.65, ['bowl', 'mug', 'candle'], 2, 'stools');
       at(m, B.x0 + 0.45, 0.02, B.z0 + 0.45, 0, () => Props.barrel(m)); at(m, 1.2, 0.02, B.z0 + 0.4, 0, () => Props.crate(m, 0.5));
       chestAt(c, 0.6, B.z1 - 0.32, 0, [['gold', 5]]);
@@ -4064,22 +4382,22 @@ const HOUSES = {
     interior(c) {
       const m = c.int, R = c.R, B = bounds(c), bolt = () => R.pick([COL.red, COL.blue, COL.green, COL.linen, COL.gold, COL.purple, [0.7, 0.45, 0.25]]);
       // counter across the middle, the draper stands behind it
-      m.mat(MAT.PLANKS, COL.woodDark); m.box(-2.6, 0.02, 0.0, 0.8, 0.96, 0.55); m.mat(MAT.PLANKS, COL.wood); m.box(-2.7, 0.96, -0.1, 0.9, 1.03, 0.65);
-      addBoxCollider(m, -2.7, -0.1, 0.9, 0.65, 0, 1.05);
-      at(m, -1.0, 1.03, 0.28, 0, () => { for (let i = 0; i < 3; i++) at(m, -0.7 + i * 0.5, 0, (i % 2) * 0.1 - 0.05, 0.4 * i, () => clothBolt(m, bolt())); });
-      at(m, 0.3, 1.03, 0.3, 0.3, () => ropeCoil(m)); at(m, -2.2, 1.03, 0.3, 0.8, () => Props.clutter(m, R, -0.3, 0.3, 0, 0, ['book', 'pot', 'candle'], 3, c));
-      c.interact(-1.0, 1.2, 0.3, { kind: 'read', id: 'draper.ledger', title: 'The draper’s ledger', text: 'Blue wool, six ells, for the miller’s coat. Red linen for the chapel banners, paid in apples. A bolt of green for Lark, who has promised a song instead of coin.', r: 1.8 });
+      m.mat(MAT.PLANKS, COL.woodDark); m.box(-2.3, 0.02, -0.9, -0.4, 0.96, -0.35); m.mat(MAT.PLANKS, COL.wood); m.box(-2.4, 0.96, -1.0, -0.3, 1.03, -0.25);       // (forward of the middle: the stair takes the back wall)
+      addBoxCollider(m, -2.4, -1.0, -0.3, -0.25, 0, 1.05);
+      at(m, -1.35, 1.03, -0.62, 0, () => { for (let i = 0; i < 3; i++) at(m, -0.5 + i * 0.4, 0, (i % 2) * 0.1 - 0.05, 0.4 * i, () => clothBolt(m, bolt())); });
+      at(m, -0.7, 1.03, -0.6, 0.3, () => ropeCoil(m)); at(m, -2.0, 1.03, -0.6, 0.8, () => Props.clutter(m, R, -0.3, 0.3, 0, 0, ['book', 'pot', 'candle'], 3, c));
+      c.interact(-1.35, 1.2, -0.6, { kind: 'read', id: 'draper.ledger', title: 'The draper’s ledger', text: 'Blue wool, six ells, for the miller’s coat. Red linen for the chapel banners, paid in apples. A bolt of green for Lark, who has promised a song instead of coin.', r: 1.8 });
       // cloth shelves on the back wall and the right wall
-      at(m, -1.0, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 2.6, 2.1, 4, 0.32, (i, y) => { for (let k = 0; k < 4; k++) at(m, -0.95 + k * 0.62, y, 0, PI / 2, () => clothBolt(m, bolt())); }));
-      at(m, 1.7, 0.02, B.z1 - 0.17, 0, () => Props.shelf(m, 1.6, 2.1, 4, 0.32, (i, y) => { for (let k = 0; k < 3; k++) at(m, -0.5 + k * 0.5, y, 0, PI / 2, () => clothBolt(m, bolt())); }));
-      at(m, B.x1 - 0.17, 0.02, -0.8, PI / 2, () => Props.shelf(m, 1.8, 2.0, 4, 0.32, (i, y) => Props.clutter(m, R, -0.75, 0.75, y, 0, ['pot', 'jug', 'book', 'bowl'], 4)));
+      at(m, B.x0 + 0.17, 0.02, 0.6, -PI / 2, () => Props.shelf(m, 2.6, 2.1, 4, 0.32, (i, y) => { for (let k = 0; k < 4; k++) at(m, -0.95 + k * 0.62, y, 0, PI / 2, () => clothBolt(m, bolt())); }));
+      at(m, B.x1 - 0.17, 0.02, -0.3, PI / 2, () => Props.shelf(m, 1.0, 2.1, 4, 0.32, (i, y) => { for (let k = 0; k < 2; k++) at(m, -0.25 + k * 0.5, y, 0, PI / 2, () => clothBolt(m, bolt())); }));
+      at(m, B.x1 - 0.17, 0.02, -1.8, PI / 2, () => Props.shelf(m, 1.4, 2.0, 4, 0.32, (i, y) => Props.clutter(m, R, -0.55, 0.55, y, 0, ['pot', 'jug', 'book', 'bowl'], 4)));
       // dye barrels and a stack of folded cloth by the door
       at(m, B.x0 + 0.5, 0.02, B.z0 + 0.5, 0, () => Props.barrel(m)); at(m, B.x0 + 1.2, 0.02, B.z0 + 0.45, 0.4, () => Props.barrel(m, 0.28, 0.75));
       at(m, 2.4, 0.02, -2.2, 0.3, () => Props.crate(m, 0.6)); at(m, 2.4, 0.02 + crateTop(0.6), -2.2, 0.5, () => { for (let k = 0; k < 3; k++) at(m, 0, k * 0.12, 0, k * 0.3, () => { m.mat(MAT.CLOTH, bolt(), 0.5); m.box(-0.22, 0, -0.15, 0.22, 0.1, 0.15, 4); }); });
-      at(m, -0.3, 0.02, -1.5, 0.15, () => Props.rug(m, 2.6, 1.8, COL.blue));
-      at(m, 1.6, 0.02, 0.6, 0, () => Props.rug(m, 1.5, 1.2, [0.6, 0.4, 0.2]));
+      at(m, -0.3, 0.02, -1.9, 0.15, () => Props.rug(m, 2.6, 1.4, COL.blue));
+      at(m, 1.7, 0.02, 0.4, 0, () => Props.rug(m, 1.5, 1.2, [0.6, 0.4, 0.2]));
       at(m, 0.0, c.H, -0.9, 0, () => Props.lantern(m, c));
-      c.spot('counter', -1.0, 1.0, 0); c.spot('home', 1.6, 0.0, 0); c.spot('sit', 2.2, 1.2, PI);
+      c.spot('counter', -1.35, 0.2, 0); c.spot('home', 1.6, 0.0, 0); c.spot('sit', 2.2, -0.2, PI);
     },
   },
   chapel: {
@@ -4133,7 +4451,7 @@ const HOUSES = {
     interior(c) {
       const m = c.int, R = c.R, B = bounds(c);
       // hurst frame with the stones; gearing below (pit wheel is part of the turning water wheel)
-      const hx = 0, hz = 1.0, py = 1.25;
+      const hx = 0, hz = -0.6, py = 1.25;
       m.mat(MAT.TIMBER, COL.timber);
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.cbox(hx + sx * 0.95, 0.02, hz + sz * 0.85, 0.16, py, 0.16, 12);
       m.mat(MAT.PLANKS, COL.wood); m.box(hx - 1.1, py, hz - 1.0, hx + 1.1, py + 0.08, hz + 1.0);
@@ -4144,13 +4462,12 @@ const HOUSES = {
       m.push().T(hx, 0, hz); m.mat(MAT.PLANKS, COL.wood); m.lathe([[0.12, py + 0.72], [0.52, py + 1.32]], 4, 0); m.pop();
       addBoxCollider(m, hx - 1.1, hz - 1.0, hx + 1.1, hz + 1.0, 0, 2);
       m.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) m.beam([hx - 1.9, 0.02, hz - 0.6 + s * 0.22], [hx - 1.15, py + 0.05, hz - 0.6 + s * 0.22], 0.05, 0.07); for (let i = 1; i < 5; i++) m.box(hx - 1.9 + i * 0.15 - 0.02, i * 0.25, hz - 0.84, hx - 1.9 + i * 0.15 + 0.02, i * 0.25 + 0.03, hz - 0.36);
-      for (const [x, z, s2] of [[-2.9, -2.2, 0.36], [-2.3, -2.4, 0.33], [-2.75, -1.5, 0.3], [2.8, -2.3, 0.36], [2.2, -2.5, 0.3], [2.9, -1.6, 0.32], [2.9, 2.3, 0.34]]) at(m, x, 0.02, z, R() * 3, () => Props.sack(m, s2, R() < 0.5 ? [0.93, 0.91, 0.86] : COL.wool));
+      for (const [x, z, s2] of [[-2.9, -2.2, 0.36], [-2.3, -2.4, 0.33], [-2.75, -1.5, 0.3], [2.8, -2.3, 0.36], [2.2, -2.5, 0.3], [2.9, -1.6, 0.32], [3.1, -0.5, 0.34]]) at(m, x, 0.02, z, R() * 3, () => Props.sack(m, s2, R() < 0.5 ? [0.93, 0.91, 0.86] : COL.wool));
       at(m, -2.55, 0.74, -2.2, 0.3, () => Props.sack(m, 0.3, [0.93, 0.91, 0.86]));
-      bedAt(c, 'bed', B.x0 + 1.05, B.z1 - 0.6, PI / 2, 0.95, COL.wool);
-      at(m, 2.6, 0.02, 0.6, PI / 2, () => { Props.table(m, 1.0, 0.6); Props.clutter(m, R, -0.3, 0.3, 0.76, 0, ['mug', 'loaf', 'candle'], 3, c); });
+      at(m, 2.9, 0.02, 0.7, PI / 2, () => { Props.table(m, 1.0, 0.6); Props.clutter(m, R, -0.3, 0.3, 0.76, 0, ['mug', 'loaf', 'candle'], 3, c); });
       at(m, 0.2, c.H - 0.2, -1.6, 0, () => Props.lantern(m, c));
       at(m, 1.6, 0.02, -2.5, 0, () => Props.crate(m, 0.6)); at(m, -0.6, 0.02, -2.5, 0, () => Props.barrel(m));
-      c.spot('work', -1.2, -1.2, PI * 0.8); c.spot('home', 1.9, 0.6, PI / 2);
+      c.spot('work', -1.9, -1.9, PI * 0.8); c.spot('home', 1.9, 0.3, PI / 2);
     },
   },
   barn: {
@@ -5318,9 +5635,16 @@ function navBuild() {
     const s = World.spots[name], k = add(s.p[0], s.p[1], s.p[2]); Nav.spot[name] = k;
     if (s.zone && s.site && doorNode[s.site]) link(k, doorNode[s.site].i); else link(k, nearest(s.p[0], s.p[2], outside, 60));
   }
-  // the inn's loft is reached by its stairs
-  const S = Nav.spot; if (S['inn.stairs0'] !== undefined) { for (const n of ['inn.guestbed', 'inn.bed2']) { const k = S[n]; A[k].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k) a.splice(i, 1); link(k, S['inn.stairs1']); }
-    const k1 = S['inn.stairs1']; A[k1].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k1) a.splice(i, 1); link(k1, S['inn.stairs0']); for (const n of ['inn.guestbed', 'inn.bed2']) link(S[n], k1); }
+  // upper floors are reached by their stairs only: bottom -> top -> (round the stairwell) -> the rooms above; nothing upstairs links straight to the door
+  const unlink = k => { A[k].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k) a.splice(i, 1); };
+  for (const st of World.stairs) {
+    const nb = Nav.spot[st.bottom], nt = Nav.spot[st.top]; if (nb === undefined || nt === undefined) continue;
+    const chain = [nb, nt].concat(st.via.map(n => Nav.spot[n]).filter(k => k !== undefined)), fy = World.houses[st.site].floorY;
+    for (const k of chain.slice(1)) unlink(k);
+    for (let i = 1; i < chain.length; i++) link(chain[i - 1], chain[i]);
+    const hub = chain[chain.length - 1];
+    for (const name in World.spots) { const sp = World.spots[name]; if (sp.site !== st.site || sp.p[1] < fy + 1.5) continue; const k = Nav.spot[name]; if (chain.includes(k)) continue; unlink(k); link(k, hub); }
+  }
 }
 function navPath(a, b) {
   const N = Nav.nodes, A = Nav.adj, n = N.length, dist = new Float32Array(n).fill(1e9), prev = new Int32Array(n).fill(-1), done = new Uint8Array(n);
@@ -5487,22 +5811,30 @@ function colResolve(p, r, feet, head) {
   return hit;
 }
 World.blockedAt = (x, z, r) => { const l = Col.grid.get(Math.floor(x / Col.cell) * 4096 + Math.floor(z / Col.cell)); if (!l) return false; const p = [x, 0, z]; for (const c of l) if (colPush(p, r, c)) return true; return false; };
+// the height of floor f at (x,z), or null when (x,z) is not over it
+function floorHeight(f, x, z) {
+  const dx = x - f.x, dz = z - f.z; if (Math.abs(dx) > f.hx + f.hz || Math.abs(dz) > f.hx + f.hz) return null;
+  const lx = dx * f.ax + dz * f.az, lz = dx * f.bx + dz * f.bz;
+  if (Math.abs(lx) > f.hx || Math.abs(lz) > f.hz) return null;
+  return f.y2 === undefined ? f.y : lerp(f.y, f.y2, ((f.axis === 'x' ? lx / f.hx : lz / f.hz) + 1) / 2);
+}
 // highest walkable surface at (x,z) that is not above maxY (terrain is always a candidate)
 World.groundAt = (x, z, maxY) => {
   let best = Terrain.y(x, z);
-  for (const f of World.floors) {
-    const dx = x - f.x, dz = z - f.z; if (Math.abs(dx) > f.hx + f.hz || Math.abs(dz) > f.hx + f.hz) continue;
-    const lx = dx * f.ax + dz * f.az, lz = dx * f.bx + dz * f.bz;
-    if (Math.abs(lx) > f.hx || Math.abs(lz) > f.hz) continue;
-    const y = f.y2 === undefined ? f.y : lerp(f.y, f.y2, ((f.axis === 'x' ? lx / f.hx : lz / f.hz) + 1) / 2);
-    if (y <= maxY && y > best) best = y;
-  }
+  for (const f of World.floors) { const y = floorHeight(f, x, z); if (y !== null && y <= maxY && y > best) best = y; }
+  return best;
+};
+// the underside of the lowest slab, stair or floor that a head rising from y0 to y1 at (x,z) would run into (slabs are 0.12 thick), or null
+World.ceilingAt = (x, z, y0, y1) => {
+  let best = null;
+  for (const f of World.floors) { const y = floorHeight(f, x, z); if (y === null) continue; const u = y - 0.12; if (u >= y0 - 0.02 && u <= y1 && (best === null || u < best)) best = u; }
   return best;
 };
 World.zoneAt = (x, y, z) => { for (const zn of World.zones) { if (Math.abs(x - zn.site.x) > 12 || Math.abs(z - zn.site.z) > 12) continue; const l = worldToSite(zn.site, x, z); if (Math.abs(l[0]) < zn.hw && Math.abs(l[1]) < zn.hd && y > zn.y0 && y < zn.y1) return zn.id; } return 0; };
 World.waterAt = (x, z) => { if (hyp(x - LAKE.x, z - LAKE.z) < LAKE.r + 8 && Terrain.y(x, z) < LAKE.y) return LAKE.y; const d = River.dist(x, z, 6); if (d < 6) { const wy = riverY(River.at); if (Terrain.y(x, z) < wy) return wy; } return -999; };
 
-const Player = { pos: [-84, 0, -6.5], vel: [0, 0, 0], yaw: 1.45, pitch: 0.02, eye: 1.66, r: 0.32, onGround: true, bob: 0, bobAmt: 0, step: 0, speed: 0, inWater: 0, surface: 'grass', locked: false, warned: 0, coyote: 0, dip: 0 };
+const Player = { pos: [-84, 0, -6.5], vel: [0, 0, 0], yaw: 1.45, pitch: 0.02, eye: 1.66, r: 0.32, onGround: true, bob: 0, bobAmt: 0, step: 0, speed: 0, inWater: 0, surface: 'grass', locked: false, warned: 0, coyote: 0, dip: 0, camY: 0 };
+const PLAYER_HEAD = 1.8;       // m: the head's height for ceilings (colliders use 1.75)
 const Input = { keys: {}, mx: 0, mz: 0, run: false, lookX: 0, lookY: 0, joy: null, look: null, sens: 1, invertY: false, interact: false, touch: false };
 
 function playerUpdate(dt) {
@@ -5536,7 +5868,7 @@ function playerUpdate(dt) {
   P.vel[0] += (tx - P.vel[0]) * acc; P.vel[2] += (tz - P.vel[2]) * acc;
   const sp = hyp(P.vel[0], P.vel[2]); P.speed = sp;
   // integrate in small steps so thin walls can't be tunnelled
-  const steps = Math.max(1, Math.ceil(sp * dt / 0.2)), sdt = dt / steps;
+  const steps = Math.max(1, Math.ceil(sp * dt / 0.2)), sdt = dt / steps, px0 = P.pos[0], pz0 = P.pos[2];
   for (let i = 0; i < steps; i++) {
     const nx = P.pos[0] + P.vel[0] * sdt, nz = P.pos[2] + P.vel[2] * sdt, np = [nx, P.pos[1], nz];
     colResolve(np, P.r, P.pos[1], P.pos[1] + 1.75);
@@ -5547,30 +5879,40 @@ function playerUpdate(dt) {
     if (w2 > -900 && w2 - World.groundAt(np[0], np[2], P.pos[1] + 0.6) > 1.12 && w2 - P.pos[1] > 0.9) { np[0] = P.pos[0]; np[2] = P.pos[2]; P.vel[0] *= 0.3; P.vel[2] *= 0.3; }
     P.pos[0] = np[0]; P.pos[2] = np[2];
   }
+  // a wall, rail or piece of furniture takes the part of the velocity that pushes into it, so the player keeps sliding along it and the footsteps stop when it is stuck
+  { const got = hyp(P.pos[0] - px0, P.pos[2] - pz0), want = sp * dt; if (want > 1e-4 && got < want * 0.7) { P.vel[0] = (P.pos[0] - px0) / dt; P.vel[2] = (P.pos[2] - pz0) / dt; P.speed = got / dt; } }
   P.warned -= dt;
-  // ground / gravity
-  const gy = World.groundAt(P.pos[0], P.pos[2], P.pos[1] + 0.58);
+  // ground / gravity. On the ground the feet follow the surface exactly (ramps, stairs and drops of up to STEP_DOWN are walked, not fallen); the camera smooths the steps.
+  const wasGround = P.onGround, STEP_DOWN = 0.62;
+  const gy = World.groundAt(P.pos[0], P.pos[2], P.pos[1] + 0.6);
   // a jump is allowed for a moment after walking off an edge (coyote time)
   if (rp && rp.jump && (P.onGround || P.coyote > 0) && depth < 0.9) { P.vel[1] = 6.4 * (depth > 0.45 ? 0.7 : 1); P.onGround = false; P.coyote = 0; RPG.jumped(); }
-  if (P.vel[1] > 0 || P.pos[1] > gy + 0.12) {
-    P.vel[1] -= 20 * dt; P.pos[1] += P.vel[1] * dt; P.onGround = false; P.coyote = Math.max(0, P.coyote - dt);
+  if (P.vel[1] > 0 || P.pos[1] > gy + (wasGround && P.vel[1] <= 0 ? STEP_DOWN : 0.05)) {
+    P.vel[1] -= 20 * dt; let ny = P.pos[1] + P.vel[1] * dt; P.onGround = false; P.coyote = Math.max(0, P.coyote - dt);
+    if (P.vel[1] > 0) {      // a rising head stops under a slab, a stair or a loft instead of passing through it
+      const cu = World.ceilingAt(P.pos[0], P.pos[2], P.pos[1] + PLAYER_HEAD, ny + PLAYER_HEAD);
+      if (cu !== null) { ny = Math.min(ny, Math.max(P.pos[1], cu - PLAYER_HEAD)); P.vel[1] = Math.min(P.vel[1], 0); }
+    }
+    P.pos[1] = ny;
     if (P.vel[1] <= 0 && P.pos[1] <= gy) {
       P.pos[1] = gy; P.onGround = true; P.dip = Math.min(0.16, -P.vel[1] * 0.014);
       if (P.vel[1] < -5 && typeof Audio2 !== 'undefined') Audio2.thud();
       if (typeof RPG !== 'undefined') RPG.landed(-P.vel[1], depth);
       P.vel[1] = 0;
     }
-  } else { P.pos[1] += (gy - P.pos[1]) * Math.min(1, dt * 16); P.vel[1] = 0; P.onGround = true; P.coyote = 0.12; }
+  } else { P.pos[1] = gy; P.vel[1] = 0; P.onGround = true; P.coyote = 0.12; }
+  // camera height: smoothed while walking (steps, stairs, door sills), rigid in the air
+  if (!P.onGround || Math.abs(P.camY - P.pos[1]) > 1.3) P.camY = P.pos[1]; else P.camY += (P.pos[1] - P.camY) * Math.min(1, dt * 14);
   P.dip += (0 - P.dip) * Math.min(1, dt * 9);
   // zone, surface
   const zone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
   World.camZone = zone; World.indoor += ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
   P.surface = zone ? (World.zones[zone - 1].site.id === 'chapel' ? 'stone' : 'wood') : P.inWater ? 'water' : (P.pos[1] > Terrain.y(P.pos[0], P.pos[2]) + 0.12 ? 'wood' : Terrain.splat(P.pos[0], P.pos[2], 1) > 0.4 ? 'stone' : Terrain.splat(P.pos[0], P.pos[2], 0) > 0.4 ? 'dirt' : 'grass');
   // head bob + footsteps
-  const moving = sp > 0.4 && P.onGround; P.bobAmt += ((moving ? 1 : 0) - P.bobAmt) * Math.min(1, dt * 8);
-  if (moving) { const prev = P.step; P.step += sp * dt * (sp > 4 ? 0.42 : 0.56); if (Math.floor(prev) !== Math.floor(P.step) && typeof Audio2 !== 'undefined') Audio2.step(P.surface, sp > 4); }
+  const moving = P.speed > 0.4 && P.onGround; P.bobAmt += ((moving ? 1 : 0) - P.bobAmt) * Math.min(1, dt * 8);
+  if (moving) { const prev = P.step; P.step += P.speed * dt * (P.speed > 4 ? 0.42 : 0.56); if (Math.floor(prev) !== Math.floor(P.step) && typeof Audio2 !== 'undefined') Audio2.step(P.surface, P.speed > 4); }
   P.bob = Math.sin(P.step * TAU) * 0.028 * P.bobAmt;
-  const cam = R.cam; cam.pos[0] = P.pos[0]; cam.pos[1] = P.pos[1] + P.eye + P.bob - P.dip; cam.pos[2] = P.pos[2]; cam.yaw = P.yaw + Math.cos(P.step * PI) * 0.0025 * P.bobAmt; cam.pitch = P.pitch;
+  const cam = R.cam; cam.pos[0] = P.pos[0]; cam.pos[1] = P.camY + P.eye + P.bob - P.dip; cam.pos[2] = P.pos[2]; cam.yaw = P.yaw + Math.cos(P.step * PI) * 0.0025 * P.bobAmt; cam.pitch = P.pitch;
 }
 
 function inputInit(canvas, layer) {
@@ -5878,7 +6220,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 14 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 15 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
