@@ -363,6 +363,7 @@ function buildVillage() {
 function addSkinned(item, o) {
   const obj = Object.assign({ first: item.first, count: item.count, base: item.base, slot: World.skinned.length, visible: true, c: [0, 0, 0], r: 2, zone: 0, light: 1 }, o);
   World.skinned.push(obj); World.skinCount = World.skinned.length;
+  if ((obj.slot + 1) * 256 > R.boneData.length) { const nb = new Float32Array(R.boneData.length * 2); nb.set(R.boneData); R.boneData = nb; R.maxSkin *= 2; }      // grow instead of overflowing (96 slots ran out once the wilds and the inn's regulars arrived: two places stopped building)
   const bd = R.boneData, k = obj.slot * 256; for (let b = 0; b < 16; b++) { bd.fill(0, k + b * 16, k + b * 16 + 16); bd[k + b * 16] = bd[k + b * 16 + 5] = bd[k + b * 16 + 10] = bd[k + b * 16 + 15] = 1; }
   bd[k + 240] = obj.zone; bd[k + 241] = obj.light;
   return obj;

@@ -1081,7 +1081,7 @@ const QUALITY = {
 const R = {
   q: QUALITY.high, qName: 'high', scale: 1, frame: 0, P: null, busy: false,
   cam: { pos: [0, 2, 0], yaw: 0, pitch: 0, fovMin: 0.92 },
-  maxSkin: 96, boneData: new Float32Array(96 * 256),
+  maxSkin: 256, boneData: new Float32Array(256 * 256),
   partMax: 1536, partData: new Float32Array(1536 * 12), partCount: 0,
   stats: { draws: 0, tris: 0 },
 };
@@ -6560,6 +6560,7 @@ function buildVillage() {
 function addSkinned(item, o) {
   const obj = Object.assign({ first: item.first, count: item.count, base: item.base, slot: World.skinned.length, visible: true, c: [0, 0, 0], r: 2, zone: 0, light: 1 }, o);
   World.skinned.push(obj); World.skinCount = World.skinned.length;
+  if ((obj.slot + 1) * 256 > R.boneData.length) { const nb = new Float32Array(R.boneData.length * 2); nb.set(R.boneData); R.boneData = nb; R.maxSkin *= 2; }      // grow instead of overflowing (96 slots ran out once the wilds and the inn's regulars arrived: two places stopped building)
   const bd = R.boneData, k = obj.slot * 256; for (let b = 0; b < 16; b++) { bd.fill(0, k + b * 16, k + b * 16 + 16); bd[k + b * 16] = bd[k + b * 16 + 5] = bd[k + b * 16 + 10] = bd[k + b * 16 + 15] = 1; }
   bd[k + 240] = obj.zone; bd[k + 241] = obj.light;
   return obj;
@@ -9869,7 +9870,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 24 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 25 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
