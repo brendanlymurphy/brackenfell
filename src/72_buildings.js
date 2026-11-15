@@ -52,36 +52,7 @@ const HOUSES = {
       tableSet(c, -1.9, -2.3, 0, 3.0, 0.85, items, 6, 'bench'); tableSet(c, -1.9, 1.5, 0, 3.0, 0.85, items, 6, 'bench'); tableSet(c, 1.1, -2.9, 0, 1.8, 0.8, items, 3, 'bench');
       seat(c, 's1', -2.8, -3.05, PI); seat(c, 's2', -1.2, -1.55, 0); seat(c, 's3', -2.6, 0.75, PI); seat(c, 's4', -1.0, 2.25, 0); seat(c, 's5', -0.4, -3.05, PI); seat(c, 's6', 1.1, -2.15, 0);
       c.spot('bard', -4.2, 2.9, PI / 2); c.spot('stand1', 0.8, 0.2, -PI / 2); c.spot('stand2', -0.2, -0.3, PI * 0.8);
-      // stairs along the back wall up to the loft
-      const sx0 = -2.2, sz0 = 3.05, sz1 = 4.05, n = 13;
-      m.mat(MAT.TIMBER, COL.timber);
-      for (const z of [sz0 + 0.04, sz1 - 0.04]) m.beam([sx0, 0.02, z], [LX, LY - 0.05, z], 0.07, 0.24);
-      m.mat(MAT.PLANKS, COL.wood);
-      for (let i = 0; i < n; i++) { const x = lerp(sx0, LX, (i + 0.5) / n), y = LY * (i + 1) / n; m.box(x - 0.2, y - 0.045, sz0, x + 0.2, y, sz1); }
-      addFloor(m, sx0, sz0, LX, sz1, 0.02, LY + 0.02, 'x');
-      m.mat(MAT.TIMBER, COL.timber); m.beam([sx0, 0.95, sz0 + 0.03], [LX, LY + 0.95, sz0 + 0.03], 0.06, 0.07);
-      for (let i = 0; i <= 4; i++) { const k = i / 4, x = lerp(sx0, LX, k), y = LY * k; m.box(x - 0.035, y, sz0, x + 0.035, y + 0.95, sz0 + 0.07); }
-      // loft floor with joists, railing
-      m.mat(MAT.PLANKS, COL.wood); m.box(LX, LY - 0.07, B.z0, B.x1, LY + 0.02, B.z1);
-      m.mat(MAT.TIMBER, COL.timber); m.box(LX - 0.1, LY - 0.26, B.z0, LX + 0.1, LY - 0.07, B.z1);
-      for (let x = LX + 1.1; x < B.x1; x += 1.15) m.box(x - 0.07, LY - 0.24, B.z0, x + 0.07, LY - 0.07, B.z1, 8);
-      for (const z of [-2.2, 2.4]) m.cbox(LX, 0.02, z, 0.18, LY - 0.28, 0.18, 12);
-      addFloor(m, LX, B.z0, B.x1, B.z1, LY + 0.03);
-      m.box(LX - 0.03, LY + 0.92, B.z0 + 0.5, LX + 0.03, LY + 1.0, sz0 - 0.08); m.box(LX - 0.025, LY + 0.45, B.z0 + 0.5, LX + 0.025, LY + 0.51, sz0 - 0.08);
-      for (let z = B.z0 + 0.5; z <= sz0 - 0.05; z += 1.03) m.cbox(LX, LY, z, 0.07, 1.0, 0.07, 4);
-      addBoxCollider(m, LX - 0.08, B.z0, LX + 0.08, sz0 - 0.05, LY, LY + 1.1);
-      addBoxCollider(m, LX, B.z0, B.x1, -3.95, LY, LY + 2.2); addBoxCollider(m, LX, 4.02, B.x1, B.z1, LY, LY + 2.2);
-      // guest loft
-      m.push().T(0, LY, 0);
-      at(m, 6.15, 0.02, -2.0, -PI / 2, () => Props.bed(m, 1.0, COL.green)); at(m, 6.15, 0.02, 1.4, -PI / 2, () => Props.bed(m, 1.0, COL.blue));
-      at(m, 6.75, 0.02, -0.3, PI / 2, () => Props.chest(m)); at(m, 4.2, 0.02, -3.2, 0, () => { Props.table(m, 1.0, 0.6); at(m, 0, 0.76, 0, 0, () => Props.candle(m, c, true)); at(m, 0.3, 0.76, 0.05, 0.4, () => Props.book(m, COL.blue)); });
-      at(m, 4.6, 0.02, -0.3, 0, () => Props.rug(m, 1.8, 2.6, COL.blue)); at(m, 4.2, 0.02, -2.55, 0, () => Props.stool(m));
-      m.pop();
-      c.spot('guestbed', 6.15, -2.0, PI / 2, LY + 0.58, { lie: true }); c.spot('bed2', 6.15, 1.4, PI / 2, LY + 0.58, { lie: true });
-      c.spot('stairs0', sx0 - 0.5, 3.55, PI / 2); c.spot('stairs1', LX + 0.5, 3.55, PI / 2, LY + 0.03);
-      c.interact(6.15, LY + 0.6, -2.0, { kind: 'bed', id: 'inn.bed', r: 1.9 });
-      c.interact(6.75, LY + 0.5, -0.3, { kind: 'chest', id: 'inn.chest', loot: [['gold', 6], ['apple', 1]], r: 1.7 });
-      c.interact(4.5, LY + 0.9, -3.2, { kind: 'read', id: 'inn.note', title: 'A note on the table', text: 'Traveller — the bed by the window is yours for as long as you stay. Breakfast when the cock crows, ale when the sun sets. — G.', r: 1.5 });
+      innGallery(c);            // stairs, gallery with its rail, guest rooms and their beds: 71b_storeys.js
       // bar under the loft
       m.mat(MAT.PLANKS, COL.woodDark); m.box(3.1, 0.02, 0.9, 6.5, 1.02, 1.45); m.mat(MAT.PLANKS, COL.wood); m.box(3.0, 1.02, 0.8, 6.6, 1.09, 1.55);
       addBoxCollider(m, 3.0, 0.8, 6.6, 1.55, 0, 1.1);
@@ -91,7 +62,7 @@ const HOUSES = {
       at(m, B.x1 - 0.17, 0.02, 2.5, PI / 2, () => Props.shelf(m, 1.7, 1.9, 3, 0.3, (i, y) => Props.clutter(m, R, -0.7, 0.7, y, 0, ['bottle', 'mug', 'jug', 'bottle', 'pot'], 5)));
       c.spot('bar', 4.8, 2.5, 0); c.spot('barfront', 4.6, 0.25, PI);
       for (const [x, z] of [[6.55, -3.9], [5.75, -4.0], [6.6, -3.1]]) at(m, x, 0.02, z, 0, () => Props.barrel(m));
-      at(m, -0.6, 0.02, 3.6, 0.3, () => Props.crate(m, 0.6)); at(m, -1.5, 0.02, 3.8, 0, () => Props.barrel(m, 0.3, 0.8));
+      at(m, -4.4, 0.02, 4.1, 0.3, () => Props.crate(m, 0.6)); at(m, -5.2, 0.02, 4.1, 0, () => Props.barrel(m, 0.3, 0.8));
       at(m, 0, 0.02, -3.4, 0, () => Props.rug(m, 1.6, 1.4, [0.35, 0.3, 0.2]));
       // wheel chandelier over the hall
       at(m, -2.0, 4.3, -0.3, 0, () => {

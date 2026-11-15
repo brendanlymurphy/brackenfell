@@ -40,22 +40,30 @@ function colResolve(p, r, feet, head) {
   return hit;
 }
 World.blockedAt = (x, z, r) => { const l = Col.grid.get(Math.floor(x / Col.cell) * 4096 + Math.floor(z / Col.cell)); if (!l) return false; const p = [x, 0, z]; for (const c of l) if (colPush(p, r, c)) return true; return false; };
+// the height of floor f at (x,z), or null when (x,z) is not over it
+function floorHeight(f, x, z) {
+  const dx = x - f.x, dz = z - f.z; if (Math.abs(dx) > f.hx + f.hz || Math.abs(dz) > f.hx + f.hz) return null;
+  const lx = dx * f.ax + dz * f.az, lz = dx * f.bx + dz * f.bz;
+  if (Math.abs(lx) > f.hx || Math.abs(lz) > f.hz) return null;
+  return f.y2 === undefined ? f.y : lerp(f.y, f.y2, ((f.axis === 'x' ? lx / f.hx : lz / f.hz) + 1) / 2);
+}
 // highest walkable surface at (x,z) that is not above maxY (terrain is always a candidate)
 World.groundAt = (x, z, maxY) => {
   let best = Terrain.y(x, z);
-  for (const f of World.floors) {
-    const dx = x - f.x, dz = z - f.z; if (Math.abs(dx) > f.hx + f.hz || Math.abs(dz) > f.hx + f.hz) continue;
-    const lx = dx * f.ax + dz * f.az, lz = dx * f.bx + dz * f.bz;
-    if (Math.abs(lx) > f.hx || Math.abs(lz) > f.hz) continue;
-    const y = f.y2 === undefined ? f.y : lerp(f.y, f.y2, ((f.axis === 'x' ? lx / f.hx : lz / f.hz) + 1) / 2);
-    if (y <= maxY && y > best) best = y;
-  }
+  for (const f of World.floors) { const y = floorHeight(f, x, z); if (y !== null && y <= maxY && y > best) best = y; }
+  return best;
+};
+// the underside of the lowest slab, stair or floor that a head rising from y0 to y1 at (x,z) would run into (slabs are 0.12 thick), or null
+World.ceilingAt = (x, z, y0, y1) => {
+  let best = null;
+  for (const f of World.floors) { const y = floorHeight(f, x, z); if (y === null) continue; const u = y - 0.12; if (u >= y0 - 0.02 && u <= y1 && (best === null || u < best)) best = u; }
   return best;
 };
 World.zoneAt = (x, y, z) => { for (const zn of World.zones) { if (Math.abs(x - zn.site.x) > 12 || Math.abs(z - zn.site.z) > 12) continue; const l = worldToSite(zn.site, x, z); if (Math.abs(l[0]) < zn.hw && Math.abs(l[1]) < zn.hd && y > zn.y0 && y < zn.y1) return zn.id; } return 0; };
 World.waterAt = (x, z) => { if (hyp(x - LAKE.x, z - LAKE.z) < LAKE.r + 8 && Terrain.y(x, z) < LAKE.y) return LAKE.y; const d = River.dist(x, z, 6); if (d < 6) { const wy = riverY(River.at); if (Terrain.y(x, z) < wy) return wy; } return -999; };
 
-const Player = { pos: [-84, 0, -6.5], vel: [0, 0, 0], yaw: 1.45, pitch: 0.02, eye: 1.66, r: 0.32, onGround: true, bob: 0, bobAmt: 0, step: 0, speed: 0, inWater: 0, surface: 'grass', locked: false, warned: 0, coyote: 0, dip: 0 };
+const Player = { pos: [-84, 0, -6.5], vel: [0, 0, 0], yaw: 1.45, pitch: 0.02, eye: 1.66, r: 0.32, onGround: true, bob: 0, bobAmt: 0, step: 0, speed: 0, inWater: 0, surface: 'grass', locked: false, warned: 0, coyote: 0, dip: 0, camY: 0 };
+const PLAYER_HEAD = 1.8;       // m: the head's height for ceilings (colliders use 1.75)
 const Input = { keys: {}, mx: 0, mz: 0, run: false, lookX: 0, lookY: 0, joy: null, look: null, sens: 1, invertY: false, interact: false, touch: false };
 
 function playerUpdate(dt) {
@@ -89,7 +97,7 @@ function playerUpdate(dt) {
   P.vel[0] += (tx - P.vel[0]) * acc; P.vel[2] += (tz - P.vel[2]) * acc;
   const sp = hyp(P.vel[0], P.vel[2]); P.speed = sp;
   // integrate in small steps so thin walls can't be tunnelled
-  const steps = Math.max(1, Math.ceil(sp * dt / 0.2)), sdt = dt / steps;
+  const steps = Math.max(1, Math.ceil(sp * dt / 0.2)), sdt = dt / steps, px0 = P.pos[0], pz0 = P.pos[2];
   for (let i = 0; i < steps; i++) {
     const nx = P.pos[0] + P.vel[0] * sdt, nz = P.pos[2] + P.vel[2] * sdt, np = [nx, P.pos[1], nz];
     colResolve(np, P.r, P.pos[1], P.pos[1] + 1.75);
@@ -100,30 +108,40 @@ function playerUpdate(dt) {
     if (w2 > -900 && w2 - World.groundAt(np[0], np[2], P.pos[1] + 0.6) > 1.12 && w2 - P.pos[1] > 0.9) { np[0] = P.pos[0]; np[2] = P.pos[2]; P.vel[0] *= 0.3; P.vel[2] *= 0.3; }
     P.pos[0] = np[0]; P.pos[2] = np[2];
   }
+  // a wall, rail or piece of furniture takes the part of the velocity that pushes into it, so the player keeps sliding along it and the footsteps stop when it is stuck
+  { const got = hyp(P.pos[0] - px0, P.pos[2] - pz0), want = sp * dt; if (want > 1e-4 && got < want * 0.7) { P.vel[0] = (P.pos[0] - px0) / dt; P.vel[2] = (P.pos[2] - pz0) / dt; P.speed = got / dt; } }
   P.warned -= dt;
-  // ground / gravity
-  const gy = World.groundAt(P.pos[0], P.pos[2], P.pos[1] + 0.58);
+  // ground / gravity. On the ground the feet follow the surface exactly (ramps, stairs and drops of up to STEP_DOWN are walked, not fallen); the camera smooths the steps.
+  const wasGround = P.onGround, STEP_DOWN = 0.62;
+  const gy = World.groundAt(P.pos[0], P.pos[2], P.pos[1] + 0.6);
   // a jump is allowed for a moment after walking off an edge (coyote time)
   if (rp && rp.jump && (P.onGround || P.coyote > 0) && depth < 0.9) { P.vel[1] = 6.4 * (depth > 0.45 ? 0.7 : 1); P.onGround = false; P.coyote = 0; RPG.jumped(); }
-  if (P.vel[1] > 0 || P.pos[1] > gy + 0.12) {
-    P.vel[1] -= 20 * dt; P.pos[1] += P.vel[1] * dt; P.onGround = false; P.coyote = Math.max(0, P.coyote - dt);
+  if (P.vel[1] > 0 || P.pos[1] > gy + (wasGround && P.vel[1] <= 0 ? STEP_DOWN : 0.05)) {
+    P.vel[1] -= 20 * dt; let ny = P.pos[1] + P.vel[1] * dt; P.onGround = false; P.coyote = Math.max(0, P.coyote - dt);
+    if (P.vel[1] > 0) {      // a rising head stops under a slab, a stair or a loft instead of passing through it
+      const cu = World.ceilingAt(P.pos[0], P.pos[2], P.pos[1] + PLAYER_HEAD, ny + PLAYER_HEAD);
+      if (cu !== null) { ny = Math.min(ny, Math.max(P.pos[1], cu - PLAYER_HEAD)); P.vel[1] = Math.min(P.vel[1], 0); }
+    }
+    P.pos[1] = ny;
     if (P.vel[1] <= 0 && P.pos[1] <= gy) {
       P.pos[1] = gy; P.onGround = true; P.dip = Math.min(0.16, -P.vel[1] * 0.014);
       if (P.vel[1] < -5 && typeof Audio2 !== 'undefined') Audio2.thud();
       if (typeof RPG !== 'undefined') RPG.landed(-P.vel[1], depth);
       P.vel[1] = 0;
     }
-  } else { P.pos[1] += (gy - P.pos[1]) * Math.min(1, dt * 16); P.vel[1] = 0; P.onGround = true; P.coyote = 0.12; }
+  } else { P.pos[1] = gy; P.vel[1] = 0; P.onGround = true; P.coyote = 0.12; }
+  // camera height: smoothed while walking (steps, stairs, door sills), rigid in the air
+  if (!P.onGround || Math.abs(P.camY - P.pos[1]) > 1.3) P.camY = P.pos[1]; else P.camY += (P.pos[1] - P.camY) * Math.min(1, dt * 14);
   P.dip += (0 - P.dip) * Math.min(1, dt * 9);
   // zone, surface
   const zone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
   World.camZone = zone; World.indoor += ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
   P.surface = zone ? (World.zones[zone - 1].site.id === 'chapel' ? 'stone' : 'wood') : P.inWater ? 'water' : (P.pos[1] > Terrain.y(P.pos[0], P.pos[2]) + 0.12 ? 'wood' : Terrain.splat(P.pos[0], P.pos[2], 1) > 0.4 ? 'stone' : Terrain.splat(P.pos[0], P.pos[2], 0) > 0.4 ? 'dirt' : 'grass');
   // head bob + footsteps
-  const moving = sp > 0.4 && P.onGround; P.bobAmt += ((moving ? 1 : 0) - P.bobAmt) * Math.min(1, dt * 8);
-  if (moving) { const prev = P.step; P.step += sp * dt * (sp > 4 ? 0.42 : 0.56); if (Math.floor(prev) !== Math.floor(P.step) && typeof Audio2 !== 'undefined') Audio2.step(P.surface, sp > 4); }
+  const moving = P.speed > 0.4 && P.onGround; P.bobAmt += ((moving ? 1 : 0) - P.bobAmt) * Math.min(1, dt * 8);
+  if (moving) { const prev = P.step; P.step += P.speed * dt * (P.speed > 4 ? 0.42 : 0.56); if (Math.floor(prev) !== Math.floor(P.step) && typeof Audio2 !== 'undefined') Audio2.step(P.surface, P.speed > 4); }
   P.bob = Math.sin(P.step * TAU) * 0.028 * P.bobAmt;
-  const cam = R.cam; cam.pos[0] = P.pos[0]; cam.pos[1] = P.pos[1] + P.eye + P.bob - P.dip; cam.pos[2] = P.pos[2]; cam.yaw = P.yaw + Math.cos(P.step * PI) * 0.0025 * P.bobAmt; cam.pitch = P.pitch;
+  const cam = R.cam; cam.pos[0] = P.pos[0]; cam.pos[1] = P.camY + P.eye + P.bob - P.dip; cam.pos[2] = P.pos[2]; cam.yaw = P.yaw + Math.cos(P.step * PI) * 0.0025 * P.bobAmt; cam.pitch = P.pitch;
 }
 
 function inputInit(canvas, layer) {
