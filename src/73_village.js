@@ -345,6 +345,7 @@ function buildVillage() {
   }
 
   if (typeof buildAlley === 'function') buildAlley();
+  if (typeof buildDress === 'function') buildDress();
 
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {
