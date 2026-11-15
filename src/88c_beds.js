@@ -49,7 +49,7 @@
     B.fire = []; for (let i = 0; i < 3; i++) { const b = mkLoop(c, wor), s = c.createBufferSource(); s.buffer = cb; s.loop = true; s.playbackRate.value = R(0.9, 1.1); s.start(0, Math.random() * 2.5); const h = filt('highpass', 800, 0.6), g = gain(0.7); s.connect(h); h.connect(g); g.connect(b.in);
       strand(b, 'brown', 'lowpass', 520, 0.6, 0.9, 0.9, 0.5); strand(b, 'pink', 'bandpass', 1800, 0.7, 0.18, 8, 0.12); b.fire = null; B.fire.push(b); }
     // crickets: three fixed pitches, each switched in short pulse groups from update
-    S.crick = []; for (let i = 0; i < 3; i++) { const o = c.createOscillator(), g = gain(0); o.frequency.value = 4100 + i * 330 + R(0, 120); o.connect(g); g.connect(ob.g); o.start(); S.crick.push({ o, g, next: 0, f: 3.2 + i * 0.7, conn: true }); }
+    S.crick = []; for (let i = 0; i < 3; i++) { const o = c.createOscillator(), g = gain(0); o.frequency.value = 4100 + i * 330 + R(0, 120); o.connect(g); g.connect(ob.g); o.start(); S.crick.push({ o, g, lvl: 0, next: 0, f: 3.2 + i * 0.7, conn: true }); }
   });
 
   // ── per-frame update of everything above ──
@@ -61,27 +61,27 @@
       S.outBus.g.gain.setTargetAtTime(1 - 0.86 * G.indoor, t, 0.3); S.outBus.lp.frequency.setTargetAtTime(16000 - 15300 * G.indoor, t, 0.3);
       const out = 1 - G.indoor, ws = G.wind, rain = G.rain;
       // wind follows ENV.windStrength (0.15 .. 1.35); trees add leaf hiss and low soughing
-      bedSet(B.wind, (0.035 + 0.055 * ws * ws) * (0.5 + 0.5 * sat(ws)) * 0.95 + 0.012, 0.8);
-      bedSet(B.leaves, 0.045 * G.forest * (0.15 + 0.85 * sat(ws * 0.9)) + 0.008 * G.forest, 0.8);
-      bedSet(B.rain, rain * 0.1, 0.8); bedSet(B.roof, rain * 0.08 * G.indoor, 0.8);
-      bedSet(B.night, 0.7 * G.night * out * (1 - rain) * (0.4 + 0.6 * G.meadow), 2);
+      bedSet(B.wind, ((0.035 + 0.055 * ws * ws) * (0.5 + 0.5 * sat(ws)) * 0.95 + 0.012) * 2.5, 0.8);
+      bedSet(B.leaves, (0.045 * G.forest * (0.15 + 0.85 * sat(ws * 0.9)) + 0.008 * G.forest) * 2, 0.8);
+      bedSet(B.rain, rain * 0.12, 0.8); bedSet(B.roof, rain * 0.08 * G.indoor, 0.8);
+      bedSet(B.night, 1.0 * G.night * out * (1 - rain) * (0.4 + 0.6 * G.meadow), 2);
       // indoors
       const rm = G.indoor * (G.space === 'cave' ? 0 : 1), cv = G.indoor * (G.space === 'cave' ? 1 : 0);
-      bedSet(B.room, 0.08 * rm, 0.5); bedSet(B.cave, 0.085 * cv, 0.8);
+      bedSet(B.room, 0.12 * rm, 0.5); bedSet(B.cave, 0.13 * cv, 0.8);
       // river: a line, so use the nearest point; muffled and quieter through walls (spat does that via zone)
-      if (G.riverD < 60) { if (S.spat(G.riverX, G.riverY, G.riverZ, 0, 9, 75, tmp)) { place(B.river, tmp); bedSet(B.river, 0.13 * tmp.g * (1 + 0.8 * sat(1 - G.riverD / 5)), 0.35); } else bedSet(B.river, 0, 0.5); } else bedSet(B.river, 0, 0.5);
-      if (G.lakeD < 70) { if (S.spat(G.lakeX, G.lakeY, G.lakeZ, 0, 7, 80, tmp)) { place(B.lake, tmp); bedSet(B.lake, 0.06 * tmp.g, 0.5); } else bedSet(B.lake, 0, 0.5); } else bedSet(B.lake, 0, 0.5);
+      if (G.riverD < 60) { if (S.spat(G.riverX, G.riverY, G.riverZ, 0, 9, 75, tmp)) { place(B.river, tmp); bedSet(B.river, 0.2 * tmp.g * (1 + 0.8 * sat(1 - G.riverD / 5)), 0.35); } else bedSet(B.river, 0, 0.5); } else bedSet(B.river, 0, 0.5);
+      if (G.lakeD < 70) { if (S.spat(G.lakeX, G.lakeY, G.lakeZ, 0, 7, 80, tmp)) { place(B.lake, tmp); bedSet(B.lake, 0.18 * tmp.g, 0.5); } else bedSet(B.lake, 0, 0.5); } else bedSet(B.lake, 0, 0.5);
       // the town's murmur: by who is actually standing about
       const day = G.day, sqL = 0.1 + 0.9 * sat(G.nSquare / 4);
-      const cd = G.nearSquare; if (cd < 95 && S.spat(G.sqX, G.sqY, G.sqZ, 0, 13, 95, tmp)) { place(B.crowd, tmp); bedSet(B.crowd, 0.1 * tmp.g * (0.3 + 0.7 * sqL) * (0.35 + 0.65 * day) * (1 - 0.7 * rain), 0.8); } else bedSet(B.crowd, 0, 0.8);
-      if (G.nearMarket < 60 && S.spat(G.mkX, G.mkY, G.mkZ, 0, 9, 60, tmp)) { place(B.market, tmp); bedSet(B.market, 0.07 * tmp.g * day * (1 - 0.5 * rain) * (0.4 + 0.6 * sat(G.nMarket / 2)), 0.8); } else bedSet(B.market, 0, 0.8);
-      if (G.innZone && G.nearInn < 60 && S.spat(G.innX, G.innY, G.innZ, G.innZone, 6, 60, tmp)) { place(B.inn, tmp); bedSet(B.inn, 0.12 * tmp.g * sat(G.nInn / 5), 0.8); } else bedSet(B.inn, 0, 0.8);
+      const cd = G.nearSquare; if (cd < 95 && S.spat(G.sqX, G.sqY, G.sqZ, 0, 13, 95, tmp)) { place(B.crowd, tmp); bedSet(B.crowd, 0.34 * tmp.g * (0.3 + 0.7 * sqL) * (0.35 + 0.65 * day) * (1 - 0.7 * rain), 0.8); } else bedSet(B.crowd, 0, 0.8);
+      if (G.nearMarket < 60 && S.spat(G.mkX, G.mkY, G.mkZ, 0, 9, 60, tmp)) { place(B.market, tmp); bedSet(B.market, 0.22 * tmp.g * day * (1 - 0.5 * rain) * (0.4 + 0.6 * sat(G.nMarket / 2)), 0.8); } else bedSet(B.market, 0, 0.8);
+      if (G.innZone && G.nearInn < 60 && S.spat(G.innX, G.innY, G.innZ, G.innZone, 6, 60, tmp)) { place(B.inn, tmp); bedSet(B.inn, 0.24 * tmp.g * sat(G.nInn / 5), 0.8); } else bedSet(B.inn, 0, 0.8);
       // the mill: wheel and race while the wheel is turning, the stone while the miller works
-      if (G.millOn && S.spat(G.millX, G.millY, G.millZ, 0, 8, 70, tmp)) { place(B.mill, tmp); bedSet(B.mill, 0.12 * tmp.g, 0.6); } else bedSet(B.mill, 0, 0.6);
-      if (G.grindOn && S.spat(G.millX, G.millY + 1, G.millZ, G.millZone, 4, 40, tmp)) { place(B.grind, tmp); bedSet(B.grind, 0.1 * tmp.g, 0.6); } else bedSet(B.grind, 0, 0.6);
+      if (G.millOn && S.spat(G.millX, G.millY, G.millZ, 0, 8, 70, tmp)) { place(B.mill, tmp); bedSet(B.mill, 0.24 * tmp.g, 0.6); } else bedSet(B.mill, 0, 0.6);
+      if (G.grindOn && S.spat(G.millX, G.millY + 1, G.millZ, G.millZone, 4, 40, tmp)) { place(B.grind, tmp); bedSet(B.grind, 0.2 * tmp.g, 0.6); } else bedSet(B.grind, 0, 0.6);
       // fires: the nearest three, each at its own place
       for (let i = 0; i < 3; i++) { const b = B.fire[i], f = G.fires[i];
-        if (f.on && S.spat(f.x, f.y, f.z, f.zone, f.ref, f.max, tmp)) { place(b, tmp); bedSet(b, 0.15 * f.lvl * tmp.g, 0.2); } else bedSet(b, 0, 0.3); }
+        if (f.on && S.spat(f.x, f.y, f.z, f.zone, f.ref, f.max, tmp)) { place(b, tmp); bedSet(b, 0.3 * f.lvl * tmp.g, 0.2); } else bedSet(b, 0, 0.3); }
       // crickets: night, outdoors, mostly away from the square
       const cv2 = G.night * out * (1 - rain) * (0.35 + 0.65 * G.meadow); for (let i = 0; i < 3; i++) S.crick[i].lvl = cv2 * (i === 0 ? 1 : 0.7);
     }

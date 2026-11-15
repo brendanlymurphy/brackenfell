@@ -11,7 +11,7 @@ const Snd = {
   ctx: null, disabled: false, T: 0, frame: 0, err: 0, errMsg: '', pausedMul: 1, ups: [], lib: {}, bus: {}, rin: {}, rret: {}, sp: { open: 1, room: 0, hall: 0, cave: 0 }, spT: { open: 1, room: 0, hall: 0, cave: 0 },
   set: { master: 0.8, amb: 0.85, world: 0.85, foot: 0.85, ui: 0.85, music: 0.6, musicOn: true },
   // base trims per bus (dB-ish scaling chosen so that ambience beds sit near -27 dB RMS, footsteps and interactions peak near -12 dB)
-  trim: { amb: 1.0, world: 1.0, foot: 1.0, ui: 1.0, music: 0.8 },
+  trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 0.8 },
   rvSend: { amb: 0.1, world: 0.55, foot: 0.7, ui: 0.25, music: 0.4 },
   L: { x: 0, y: 0, z: 0, yaw: 0, fx: 0, fz: -1, rx: 1, rz: 0 },
   G: { x: 0, y: 0, z: 0, zone: 0, zid: '', indoor: 0, space: 'open', hour: 12, night: 0, day: 1, wind: 0.8, rain: 0, forest: 0, playing: false, menu: false, talk: false, dead: false, speed: 0, ground: true, outd: 1, nearTown: 0 },
@@ -140,7 +140,7 @@ const Snd = {
     o.d = d; if (d > maxD) { o.g = 0; return false; }
     let g = ref / Math.max(d, ref); const f = d / maxD; g *= 1 - f * f * f;
     let lp = 16000 / (1 + d / 18); if (lp < 1400) lp = 1400;
-    if (zone !== G.zone) { g *= G.zone && zone ? 0.2 : 0.42; lp = Math.min(lp, G.zone && zone ? 500 : 800); }       // through a wall (or two)
+    if (zone !== G.zone) { g *= G.zone && zone ? 0.1 : 0.2; lp = Math.min(lp, G.zone && zone ? 450 : 700); }       // through a wall (or two)
     const dl = d > 0.01 ? 1 / d : 0, hx = dx * dl, hz = dz * dl;
     o.pan = d < 1.2 ? 0 : Math.max(-0.95, Math.min(0.95, (hx * L.rx + hz * L.rz) * 0.9));
     const back = hx * L.fx + hz * L.fz; if (back < 0) lp *= 0.75 + 0.25 * (1 + back);                                  // head shadow behind you
