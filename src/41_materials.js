@@ -93,7 +93,7 @@ function terrainMaterial() {
     const slope = Nv.y.oneMinus();
     const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(2.5).toVar(), uvR = vec2(wp.x.add(wp.z), wp.y.mul(1.3)).mul(0.16).toVar();
     const dGx = dFdx(uvG).toVar(), dGy = dFdy(uvG).toVar(), dFx = dFdx(uvF).toVar(), dFy = dFdy(uvF).toVar(), dCx = dFdx(uvC).toVar(), dCy = dFdy(uvC).toVar(), dRx = dFdx(uvR).toVar(), dRy = dFdy(uvR).toVar();
-    const det = dist.lessThan(110);                             // normal maps only matter near the camera
+    const det = dist.lessThan(56);                              // normal maps only matter near the camera (one sample less per layer beyond that)
     const farK = smoothstep(16, 55, dist).toVar();
     const wRock = sat(slope.sub(0.24).add(mn2.r.sub(0.5).mul(0.22)).sub(smoothstep(120, 300, wp.y).mul(0.12)).mul(7)).toVar();
     const wSnow = smoothstep(400, 540, wp.y.add(mn.r.mul(170))).mul(smoothstep(0.30, 0.60, slope).oneMinus()).toVar();
@@ -115,7 +115,7 @@ function terrainMaterial() {
       G0.c.assign(mix(G0.c, b.c, k)); G0.h.assign(mix(G0.h, b.h, k)); G0.n.assign(mix(G0.n, b.n, k)); G0.ao.assign(mix(G0.ao, b.ao, k)); G0.r.assign(mix(G0.r, b.r, k));
     };
     const w2 = sat(sat(mn.g.sub(0.47).mul(6).add(mn2.r.sub(0.5).mul(1.6))).mul(0.8).add(s2.a.mul(1.2))).toVar();
-    If(w2.greaterThan(0.004), () => { const g2 = samp(MAT.GRASS2, uvG.mul(1.31), dGx.mul(1.31), dGy.mul(1.31)); g2.c.mulAssign(tintG); over(g2, w2); });
+    If(w2.greaterThan(0.004).and(U.terrLayers.greaterThan(0.5)), () => { const g2 = samp(MAT.GRASS2, uvG.mul(1.31), dGx.mul(1.31), dGy.mul(1.31)); g2.c.mulAssign(tintG); over(g2, w2); });
     If(s2.r.greaterThan(0.004), () => { over(samp(MAT.FOREST, uvG, dGx, dGy), s2.r); });
     G0.c.assign(mix(G0.c, vec3(0.030, 0.062, 0.030).mul(mn2.r.mul(0.9).add(0.6)), wFar));
     const wSoil = max(sp.b, sp.a.mul(0.92)).toVar();
@@ -142,7 +142,7 @@ function terrainMaterial() {
       G0.c.assign(mix(G0.c, q.c, wRock)); G0.ao.assign(mix(G0.ao, q.ao, wRock)); G0.r.assign(mix(G0.r, q.r, wRock)); G0.n.assign(mix(G0.n, vec2(0.5), wRock));
     });
     G0.c.assign(mix(G0.c, vec3(0.80, 0.84, 0.90), wSnow));
-    const N = SH.perturb(Nv, wp, uvG, G0.n, smoothstep(80, 110, dist).oneMinus()).toVar();
+    const N = SH.perturb(Nv, wp, uvG, G0.n, smoothstep(38, 56, dist).oneMinus()).toVar();
     const ao = G0.ao.mul(s2.b.mul(0.55).oneMinus()), contact = s2.b.mul(0.32).oneMinus();        // soft contact shade at the foot of walls and trunks
     // standing water mirrors the sky
     const V = normalize(U.camPos.sub(wp)), Rf = reflect(V.negate(), N), F = pow(sat(dot(N, V).oneMinus()), 5).mul(0.97).add(0.03);

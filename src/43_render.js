@@ -1,6 +1,6 @@
 // ───────────────────────── renderer: quality tiers, camera, sun and shadows, post, frame ─────────────────────────
 const QUALITY = {
-  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassThin: 1.45, treeLod: 40, lights: 4, aniso: 2, far1: 4, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 900, houseFar: 30, farStatics: false, nearStatics: false, rockCast: false },
+  low:    { name: 'Low',    terrLayers: false, pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassThin: 1.45, treeLod: 40, lights: 4, aniso: 2, far1: 4, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 900, houseFar: 30, farStatics: false, nearStatics: false, rockCast: false },
   medium: { name: 'Medium', pr: 1.5, msaa: 4, bloomScale: 0.3, bloomMips: 4, shadowRes: 1280, bloom: true,  grassRange: 30, grassThin: 1.15, treeLod: 65, lights: 6, aniso: 4, far1: 3, shadowNear: 20, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1280, houseFar: 50, farStatics: false },
   high:   { name: 'High',   pr: 2.0, msaa: 4, bloomScale: 0.5, bloomMips: 5, shadowRes: 2048, bloom: true,  grassRange: 36, grassThin: 1, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1920, houseFar: 80, farStatics: true },
 };
@@ -40,7 +40,7 @@ async function setQuality(name) {
   // sun shadows: a tight map around the player and a wide one beyond it
   if (!R.shadows) { R.shadows = makeSunShadows(R.sun); for (const l of R.shadows.lights) { SC.scene.add(l); SC.scene.add(l.target); } R.sun.shadow.shadowNode = R.shadows; }
   if (!prev || prev.shadowRes !== q.shadowRes) for (const l of R.shadows.lights) { l.shadow.mapSize.set(q.shadowRes, q.shadowRes); if (l.shadow.map) { l.shadow.map.dispose(); l.shadow.map = null; } }
-  U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
+  U.terrLayers.value = q.terrLayers === false ? 0 : 1; U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
   { const lf = SC.mats.leaf, a2c = q.msaa > 1; if (lf.alphaToCoverage !== a2c) { lf.alphaToCoverage = a2c; lf.alphaTest = a2c ? 0.06 : 0.5; lf.needsUpdate = true; } }
   if (!prev || prev.grassRange !== q.grassRange || prev.grassThin !== q.grassThin) { if (prev) Grass.dispose(); Grass.build(SC.scene, q); }
   if (!prev || prev.msaa !== q.msaa || prev.bloom !== q.bloom || prev.bloomScale !== q.bloomScale || prev.bloomMips !== q.bloomMips) buildPipeline();

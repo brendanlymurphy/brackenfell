@@ -615,7 +615,7 @@ SH.init = function () {
     cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0),
     lightPos: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // xyz, radius
     lightCol: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // rgb, zone (255 = everywhere)
-    lightN: uniform(8, 'int'), lightNOut: uniform(8, 'int'),         // lights in use, and how many of them (listed first) reach surfaces outdoors: the loop below stops there
+    terrLayers: uniform(1), lightN: uniform(8, 'int'), lightNOut: uniform(8, 'int'),         // lights in use, and how many of them (listed first) reach surfaces outdoors: the loop below stops there
   };
   const sat = SH.sat = x => clamp(x, 0, 1);
   const noiseL = SH.noiseL = uvn => texture(G.noiseTex, uvn).level(0);
@@ -785,7 +785,7 @@ function terrainMaterial() {
     const slope = Nv.y.oneMinus();
     const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(2.5).toVar(), uvR = vec2(wp.x.add(wp.z), wp.y.mul(1.3)).mul(0.16).toVar();
     const dGx = dFdx(uvG).toVar(), dGy = dFdy(uvG).toVar(), dFx = dFdx(uvF).toVar(), dFy = dFdy(uvF).toVar(), dCx = dFdx(uvC).toVar(), dCy = dFdy(uvC).toVar(), dRx = dFdx(uvR).toVar(), dRy = dFdy(uvR).toVar();
-    const det = dist.lessThan(110);                             // normal maps only matter near the camera
+    const det = dist.lessThan(56);                              // normal maps only matter near the camera (one sample less per layer beyond that)
     const farK = smoothstep(16, 55, dist).toVar();
     const wRock = sat(slope.sub(0.24).add(mn2.r.sub(0.5).mul(0.22)).sub(smoothstep(120, 300, wp.y).mul(0.12)).mul(7)).toVar();
     const wSnow = smoothstep(400, 540, wp.y.add(mn.r.mul(170))).mul(smoothstep(0.30, 0.60, slope).oneMinus()).toVar();
@@ -807,7 +807,7 @@ function terrainMaterial() {
       G0.c.assign(mix(G0.c, b.c, k)); G0.h.assign(mix(G0.h, b.h, k)); G0.n.assign(mix(G0.n, b.n, k)); G0.ao.assign(mix(G0.ao, b.ao, k)); G0.r.assign(mix(G0.r, b.r, k));
     };
     const w2 = sat(sat(mn.g.sub(0.47).mul(6).add(mn2.r.sub(0.5).mul(1.6))).mul(0.8).add(s2.a.mul(1.2))).toVar();
-    If(w2.greaterThan(0.004), () => { const g2 = samp(MAT.GRASS2, uvG.mul(1.31), dGx.mul(1.31), dGy.mul(1.31)); g2.c.mulAssign(tintG); over(g2, w2); });
+    If(w2.greaterThan(0.004).and(U.terrLayers.greaterThan(0.5)), () => { const g2 = samp(MAT.GRASS2, uvG.mul(1.31), dGx.mul(1.31), dGy.mul(1.31)); g2.c.mulAssign(tintG); over(g2, w2); });
     If(s2.r.greaterThan(0.004), () => { over(samp(MAT.FOREST, uvG, dGx, dGy), s2.r); });
     G0.c.assign(mix(G0.c, vec3(0.030, 0.062, 0.030).mul(mn2.r.mul(0.9).add(0.6)), wFar));
     const wSoil = max(sp.b, sp.a.mul(0.92)).toVar();
@@ -834,7 +834,7 @@ function terrainMaterial() {
       G0.c.assign(mix(G0.c, q.c, wRock)); G0.ao.assign(mix(G0.ao, q.ao, wRock)); G0.r.assign(mix(G0.r, q.r, wRock)); G0.n.assign(mix(G0.n, vec2(0.5), wRock));
     });
     G0.c.assign(mix(G0.c, vec3(0.80, 0.84, 0.90), wSnow));
-    const N = SH.perturb(Nv, wp, uvG, G0.n, smoothstep(80, 110, dist).oneMinus()).toVar();
+    const N = SH.perturb(Nv, wp, uvG, G0.n, smoothstep(38, 56, dist).oneMinus()).toVar();
     const ao = G0.ao.mul(s2.b.mul(0.55).oneMinus()), contact = s2.b.mul(0.32).oneMinus();        // soft contact shade at the foot of walls and trunks
     // standing water mirrors the sky
     const V = normalize(U.camPos.sub(wp)), Rf = reflect(V.negate(), N), F = pow(sat(dot(N, V).oneMinus()), 5).mul(0.97).add(0.03);
@@ -904,6 +904,7 @@ function sceneBuild() {
     const g = geo(pk, it.first, it.count); g.boundingSphere = sphere(it.c, it.r);
     const mesh = new THREE.Mesh(g, mat); mesh.matrixAutoUpdate = false;
     mesh.castShadow = !!pk.shadow && !it.noShadow && it.kind === 'opaque'; mesh.receiveShadow = it.kind === 'opaque' || it.kind === 'terrain';
+    if (it.kind === 'terrain') mesh.renderOrder = 1;      // after the other opaque draws, so the ground shader only runs where nothing nearer already stands
     if (it.kind === 'water') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
     if (it.nearOnly) mesh.layers.set(1);
     scene.add(mesh); SC.statics.push({ mesh, it });
@@ -987,7 +988,7 @@ function sceneUpdate(camPos, q) {
 // ---- 43_render.js ----
 // ───────────────────────── renderer: quality tiers, camera, sun and shadows, post, frame ─────────────────────────
 const QUALITY = {
-  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassThin: 1.45, treeLod: 40, lights: 4, aniso: 2, far1: 4, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 900, houseFar: 30, farStatics: false, nearStatics: false, rockCast: false },
+  low:    { name: 'Low',    terrLayers: false, pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassThin: 1.45, treeLod: 40, lights: 4, aniso: 2, far1: 4, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 900, houseFar: 30, farStatics: false, nearStatics: false, rockCast: false },
   medium: { name: 'Medium', pr: 1.5, msaa: 4, bloomScale: 0.3, bloomMips: 4, shadowRes: 1280, bloom: true,  grassRange: 30, grassThin: 1.15, treeLod: 65, lights: 6, aniso: 4, far1: 3, shadowNear: 20, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1280, houseFar: 50, farStatics: false },
   high:   { name: 'High',   pr: 2.0, msaa: 4, bloomScale: 0.5, bloomMips: 5, shadowRes: 2048, bloom: true,  grassRange: 36, grassThin: 1, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1920, houseFar: 80, farStatics: true },
 };
@@ -1027,7 +1028,7 @@ async function setQuality(name) {
   // sun shadows: a tight map around the player and a wide one beyond it
   if (!R.shadows) { R.shadows = makeSunShadows(R.sun); for (const l of R.shadows.lights) { SC.scene.add(l); SC.scene.add(l.target); } R.sun.shadow.shadowNode = R.shadows; }
   if (!prev || prev.shadowRes !== q.shadowRes) for (const l of R.shadows.lights) { l.shadow.mapSize.set(q.shadowRes, q.shadowRes); if (l.shadow.map) { l.shadow.map.dispose(); l.shadow.map = null; } }
-  U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
+  U.terrLayers.value = q.terrLayers === false ? 0 : 1; U.grassRange.value = q.grassRange; U.treeLod.value = q.treeLod;
   { const lf = SC.mats.leaf, a2c = q.msaa > 1; if (lf.alphaToCoverage !== a2c) { lf.alphaToCoverage = a2c; lf.alphaTest = a2c ? 0.06 : 0.5; lf.needsUpdate = true; } }
   if (!prev || prev.grassRange !== q.grassRange || prev.grassThin !== q.grassThin) { if (prev) Grass.dispose(); Grass.build(SC.scene, q); }
   if (!prev || prev.msaa !== q.msaa || prev.bloom !== q.bloom || prev.bloomScale !== q.bloomScale || prev.bloomMips !== q.bloomMips) buildPipeline();

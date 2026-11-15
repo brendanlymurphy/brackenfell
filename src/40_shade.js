@@ -17,7 +17,7 @@ SH.init = function () {
     cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0),
     lightPos: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // xyz, radius
     lightCol: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // rgb, zone (255 = everywhere)
-    lightN: uniform(8, 'int'), lightNOut: uniform(8, 'int'),         // lights in use, and how many of them (listed first) reach surfaces outdoors: the loop below stops there
+    terrLayers: uniform(1), lightN: uniform(8, 'int'), lightNOut: uniform(8, 'int'),         // lights in use, and how many of them (listed first) reach surfaces outdoors: the loop below stops there
   };
   const sat = SH.sat = x => clamp(x, 0, 1);
   const noiseL = SH.noiseL = uvn => texture(G.noiseTex, uvn).level(0);
