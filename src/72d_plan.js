@@ -267,7 +267,8 @@ function pWallEmit(P, wl, B, IN) {
       const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];
       add(G + tbl[0], sp.s, S); add(st ? tbl[1] + '_Stained' : tbl[1], sp.s, S, st ? Object.assign({}, IN, { tint: sp.o.glass }) : undefined);
       // the light the window lets in, a little inside it
-      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, sp.o.glass ? sp.o.glass.map(v => 0.5 + v * 1.4) : [1.5, 1.42, 1.28], 'daylight', wl.k);
+      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, sp.o.glass ? sp.o.glass.map(v => 0.35 + v * 1.1) : [1.5, 1.42, 1.28], 'daylight', wl.k);
+      if (sp.o.glass) { const fx = hor ? sp.o.pos : wl.c - ns * 2.1, fz = hor ? wl.c - ns * 2.1 : sp.o.pos; pLight(P, fx, 0.5, fz, 3.4, sp.o.glass.map(v => v * 3.2), 'daylight', wl.k); }          // the coloured pool the window throws on the floor by day
     }
     cur = Math.max(cur, s1);
   }
