@@ -148,7 +148,7 @@ WBUILD.shrine = (p, m, R) => {
   // milestone and signpost at the foot of the lumber path
   wPut(m, p, 4.6, 2.9, 0.5, mm => { mm.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.5); mm.box(-0.22, -0.2, -0.12, 0.22, 0.85, 0.12); mm.push().T(0, 0.85, 0).RX(PI / 2).T(0, -0.12, 0); mm.cyl(0, 0, 0, 0.22, 0.22, 0.24, 8, 3); mm.pop(); mm.mat(MAT.PLAIN, [0.1, 0.1, 0.1]); mm.box(-0.12, 0.45, 0.118, 0.12, 0.6, 0.125); addBoxCollider(mm, -0.25, -0.15, 0.25, 0.15, 0, 1.2); });
   const sp = wPut(m, p, -3.4, 2.8, 0.25, mm => { Props.signPost(mm, 3); addCircleCollider(mm, 0, 0, 0.14, 0, 2.5); });
-  wRead('sign.shrine', 'A weathered sign', 'Boards nailed one above another, the paint long gone and the letters cut deep:\n\nBRACKENFELL: three hundred paces east.\nTHE HUNTER’S BLIND, the old mill road and the south shore: ask the road.\nTHE LUMBER CAMP: up the track to the north. Mind the sleds.\nTOLL FORD and the passes beyond: west.\n\nBeneath, in a different hand and fresher: “Do not go in. — C.”', [sp[0], sp[1] + 1.6, sp[2]]);
+  wRead('sign.shrine', 'A weathered sign', 'Boards nailed one above another, the paint long gone and the letters cut deep:\n\nBRACKENFELL: east, along the road.\nTHE HUNTER’S BLIND, the old mill road and the south shore: ask the road.\nTHE LUMBER CAMP: up the track to the north. Mind the sleds.\nTOLL FORD and the passes beyond: west.\n\nBeneath, in a different hand and fresher: “Do not go in. — C.”', [sp[0], sp[1] + 1.6, sp[2]]);
   for (const [x, z] of [[-2.2, -7.4], [3.2, -6.8], [5.4, -4.2]]) wPut(m, p, x, z, R() * 6, mm => { wCairn(mm, R, 3); });
 };
 
@@ -191,7 +191,7 @@ WBUILD.lumber = (p, m, R) => {
   for (const [x, z, r] of [[-2.4, 6.6, 0.1], [-4.7, 4.4, 1.5], [-0.3, 3.8, -1.2]]) wPut(m, p, x, z, r, mm => wLog(mm, 1.5, 0.19));
   for (let i = 0; i < 14; i++) { const a = R() * TAU, r = 3 + R() * 8; wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, R() * 6, mm => { mm.mat(MAT.PLAIN, [0.72, 0.56, 0.36]); mm.cbox(0, 0, 0, 0.12 + R() * 0.1, 0.1, 0.07, 4); }); }
   // a felled pine lying across the clearing's edge, branches lopped
-  wPut(m, p, 3.0, -12.4, 0.5, mm => { mm.push().T(0, 0.4, 0); wLog(mm, 8, 0.38); mm.pop(); mm.mat(MAT.BARK, [0.9, 0.85, 0.8], 0.5); for (let i = 0; i < 4; i++) mm.beam([-3 + i * 1.7, 0.7, 0], [-3 + i * 1.7 + 0.3, 1.1, (i % 2 ? 0.5 : -0.5)], 0.06, 0.06); addBoxCollider(mm, -4, -0.4, 4, 0.4, 0, 0.9); });
+  wPut(m, p, 13.0, -9.0, 0.5, mm => { mm.push().T(0, 0.4, 0); wLog(mm, 8, 0.38); mm.pop(); mm.mat(MAT.BARK, [0.9, 0.85, 0.8], 0.5); for (let i = 0; i < 4; i++) mm.beam([-3 + i * 1.7, 0.7, 0], [-3 + i * 1.7 + 0.3, 1.1, (i % 2 ? 0.5 : -0.5)], 0.06, 0.06); addBoxCollider(mm, -4, -0.4, 4, 0.4, 0, 0.9); });
   // stumps: scanned, all round the clearing
   for (let i = 0; i < 16; i++) { const a = R() * TAU, r = 9 + R() * 8; wKit(p, i % 2 ? 'tree_stump_01' : 'tree_stump_02', Math.cos(a) * r, Math.sin(a) * r, { s: 0.7 + R() * 0.6, ry: R() * TAU, col: 0.5, h: 0.5, dy: -0.04 }); }
   wKit(p, 'dead_tree_trunk', 11, 2, { s: 1.2, ry: 0.4, dy: -0.02 }); wKit(p, 'dead_tree_trunk', -10, -9, { s: 1.0, ry: 2.2 });
@@ -366,7 +366,7 @@ WBUILD.battle = (p, m, R) => {
 
 WBUILD.bee = (p, m, R) => {
   // skeps on benches inside a ring of low wattle fence, wooden hives on legs, a lean-to for the smoker and the barrels
-  const ring = []; for (let i = 0; i <= 28; i++) { const a = i / 28 * (TAU - 0.5) + 0.8, r = 7.4; ring.push([p.x + Math.cos(a) * r, p.z + Math.sin(a) * r]); }
+  const ring = []; for (let i = 0; i <= 28; i++) { const a = i / 28 * (TAU - 0.5) + PI + 0.55 - 0.01 * 0, r = 7.4; ring.push([p.x + Math.cos(a) * r, p.z + Math.sin(a) * r]); }
   wFence(m, ring, { h: 0.9, col: [0.62, 0.55, 0.44], rails: [0.4, 0.72] });
   for (const [x, z, rot] of [[-2.6, -2.2, 0], [0.4, -3.2, 0.2], [3.0, -2.0, -0.2]]) wPut(m, p, x, z, rot, mm => {
     mm.mat(MAT.PLANKS, COL.wood, 0.5); mm.box(-1.0, 0.5, -0.3, 1.0, 0.56, 0.3); for (const s of [-1, 1]) mm.box(s * 0.9 - 0.05, 0, -0.25, s * 0.9 + 0.05, 0.5, 0.25);
@@ -407,7 +407,7 @@ WBUILD.fishing = (p, m, R) => {
     m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1, 1]) m.cbox(b[0] + Math.cos(Math.atan2(uz, ux) + PI / 2) * sx * 0.78, LAKE.y - 1.2, b[1] + Math.sin(Math.atan2(uz, ux) + PI / 2) * sx * 0.78, 0.2, 2.2, 0.2, 4);
     p.jetty = { end: [b[0] - ux * 0.6, LAKE.y + 0.5, b[1] - uz * 0.6], dir: Math.atan2(ux, -uz) };
   }
-  const fh = wGround(p, 1.2, 4.4); wPick('fs.fish', [fh[0] + 1.6, fh[1] + 1.0, fh[2]], 'Take the smoked fish', 'smokedfish', 'fish');
+  const fh = wGround(p, 6.7, 3.8); wPick('fs.fish', [fh[0], fh[1] + 0.9, fh[2]], 'Take the smoked fish', 'smokedfish', 'fish');
   for (let i = 0; i < 5; i++) { const a = R() * TAU, r = 2.5 + R() * 9; wKit(p, 'wooden_bucket_02', Math.cos(a) * r * 0.6 + 4, Math.sin(a) * r * 0.6 - 1, { s: 1.2, ry: R() * 6 }); if (i > 1) break; }
 };
 
@@ -449,8 +449,33 @@ WBUILD.hamlet = (p, m, R) => {
   });
   for (const h of WILDS.houses) { const q = siteToWorld(h, h.w / 2 + 0.9, -h.d / 2 + 1.2); m.push().T(q[0], wy(q[0], q[1]), q[1]).RY(-h.yaw); m.m1 = 0; m.ao = 1; m.grad = null; Props.woodpile(m, 3, 3, 1.1); m.pop(); }
   // the apple pickups hang under the orchard birches
-  for (const [x, z] of [[143, 126], [147, 121]]) { const c = [x, wy(x, z), z]; wPick('hf.apple' + (x > 145 ? 2 : 1), c, 'Gather apples', 'apple', 'apple'); }
-  wFence(m, [[106, 120], [106, 130], [114, 132]], { h: 1.0 });
+  for (const [x, z] of [[129, 123], [125, 126]]) { const c = [x, wy(x, z), z]; wPick("hf.apple" + (x > 127 ? 2 : 1), c, 'Gather apples', 'apple', 'apple'); }
+};
+
+
+// ───────────────────────── wayfinding: signposts where a path leaves the road, cairns along it, milestones, the footbridge over the Stonewater ─────────────────────────
+const WSIGN = {
+  lumber: ['Lumber camp, north-west', 'Back to the Shrine of the Turn'], burnt: ['The burnt cottage', 'Lumber camp'], mine: ['The old mine: barred', 'Burnt cottage'],
+  tower: ['The Old Watchtower, east', 'Mine road, west'], hermit: ['Hermit’s Fall, north-east', 'Watchtower path'], bridge: ['Footbridge over the Stonewater', 'Hermit’s Fall'],
+  stones: ['The Standing Stones, on the hill', 'Footbridge'], battle: ['Greyspine Field: graves, take care', 'The road home'], hamlet: ['Highfold, up the hill', 'Brackenfell'],
+  fishing: ['The south shore and the boats', 'Highfold'], lakeside: ['Lake path', 'Fishing hamlet'], bee: ['Bee meadow, the skeps', 'Watch Road'], blind: ['Hunter’s blind', 'Brackenfell']
+};
+WBUILD.__net = (p, mk, R) => {
+  for (const id of WILDS.paths) {
+    const rd = Roads.find(r => r.id === 'p.' + id); if (!rd) continue; const L = rd.line, lab = WSIGN[id] || [id, ''];
+    const q0 = L.point(1.2), nx = -q0[3], nz = q0[2], sx = q0[0] + nx * 1.7, sz = q0[1] + nz * 1.7;
+    if (!['lakeside'].includes(id)) {
+      const y = wy(sx, sz), m = mk(sx, sz); m.push().T(sx, y, sz).RY(R() * 0.6 - 0.3); m.m1 = 0; m.ao = 1; m.grad = null; Props.signPost(m, 2); addCircleCollider(m, 0, 0, 0.14, 0, 2.5); m.pop();
+      wRead('sign.' + id, 'Signpost', lab.filter(Boolean).join('\n'), [sx, y + 1.7, sz], 2.6);
+    }
+    for (let d = 28 + R() * 14; d < L.len - 10; d += 38 + R() * 14) { const q = L.point(d), o = (R() < 0.5 ? 1 : -1) * (1.5 + R() * 0.8), x = q[0] - q[3] * o, z = q[1] + q[2] * o, m = mk(x, z); m.push().T(x, wy(x, z), z); m.m1 = 0; m.ao = 1; m.grad = null; wCairn(m, R, 3 + (R() * 3 | 0)); m.pop(); }
+  }
+  // milestones along the main roads out of the square
+  for (const [x, z, a] of [[-92, 1.2, 0], [-148, 3.6, 0], [96, -4, PI]]) { const y = wy(x, z), m = mk(x, z); m.push().T(x, y, z).RY(a); m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.5); m.box(-0.22, -0.2, -0.12, 0.22, 0.85, 0.12); m.cyl(0, 0.85, 0, 0.22, 0.2, 0.0, 8, 0); m.mat(MAT.PLAIN, [0.1, 0.1, 0.1]); m.box(-0.12, 0.45, 0.118, 0.12, 0.6, 0.125); addBoxCollider(m, -0.25, -0.15, 0.25, 0.15, 0, 1.2); m.pop(); }
+  // footbridge over the river where the Hermit's path crosses it
+  { const r0 = River.dist(47, -150, 20), at = River.at, q = River.point(at), nx = -q[3], nz = q[2], hs = 6.4;
+    const a = [q[0] - nx * hs, q[1] - nz * hs], b = [q[0] + nx * hs, q[1] + nz * hs]; const ya = wy(a[0], a[1]) + 0.12, yb = wy(b[0], b[1]) + 0.12, mid = Math.max(ya, yb) + 0.1;
+    wBridge(mk(q[0], q[1]), a, b, { w: 1.6, ya: Math.max(ya, yb), yb: Math.max(ya, yb) }); WB.river = { a, b, y: Math.max(ya, yb) }; }
 };
 
 // ───────────────────────── build ─────────────────────────
@@ -464,6 +489,9 @@ function buildWilds() {
     if (m.ni) { pack.add(m, { kind: 'opaque', maxDist: 125, noShadow: true }); WB.tris += m.ni / 3; }
     World.places.push({ id: 'wild.' + p.id, name: p.name, x: p.x, z: p.z, r: p.disc });
   }
+  { const cells = new Map(), mk = (x, z) => { const k = Math.floor(x / 60) * 1000 + Math.floor(z / 60); let m = cells.get(k); if (!m) cells.set(k, m = new Mesh(2048)); return m; };
+    try { WBUILD.__net({ x: 0, z: 0, yaw: 0 }, mk, rng(4242)); } catch (e) { console.warn('wilds net: ' + (e && e.stack || e)); }
+    for (const m of cells.values()) if (m.ni) { pack.add(m, { kind: 'opaque', maxDist: 110, noShadow: true }); WB.tris += m.ni / 3; } }
   // water: the pool under the fall, the brook at the toll ford, the fall itself
   const wp2 = new MeshPack(); wp2.shadow = false;
   const wm = new Mesh(4096); wm.mat(MAT.PLAIN, [1, 1, 1]);
@@ -525,4 +553,20 @@ function wildsAttach() {
     if (WB.builtFor !== R.qName) wildsKitBuild();
     for (const k of WB.groups) k.g.visible = !World.deepIn && hyp(camPos[0] - k.p.x, camPos[2] - k.p.z) < 125 + k.p.r;
   };
+}
+
+// ───────────────────────── splat painting (called from buildSplat / buildSplat2 in 60_terrain.js) ─────────────────────────
+function wildsSplat(A, B, T) {
+  if (!WILDS.on) return; const { ell, stroke, red } = T;
+  for (const c of WILDS.cliffs) { const x = c.x + c.dx * (c.at - 2), z = c.z + c.dz * (c.at - 2); ell(B, x, z, 9, 9, red); }       // bare rock and scree under the cliffs
+  ell(B, WILDS.P.burnt.x, WILDS.P.burnt.z, 4.2, 3.4, red);                                                                 // ash
+  const st = WILDS.P.stones; ell(B, st.x, st.z, 9, 9, a => red(a * 0.55));                                                  // the hilltop is thin soil
+  ell(B, WILDS.P.mine.x, WILDS.P.mine.z, 6, 6, red);
+  const lc = WILDS.P.lumber; ell(B, lc.x, lc.z, 8, 7, a => red(a * 0.5));
+}
+function wildsSplat2(blob, line, A, B) {
+  if (!WILDS.on) return;
+  if (WILDS.pool) { const q = WILDS.pool; for (const [r, a] of [[q.r + 4, 0.35], [q.r + 2.4, 0.5], [q.r + 1, 0.7]]) blob(A, 1, q.x, q.z, r, a, 0.5); }
+  if (WILDS.brookLine) line(A, 1, WILDS.brookLine.p, 7, 0.55);
+  for (const id of ['lumber', 'fishing', 'bee', 'battle', 'hermit']) { const p = WILDS.P[id]; if (p) blob(B, 2, p.x, p.z, p.r * 0.7, 0.4, 0.3); }
 }

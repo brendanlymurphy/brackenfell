@@ -2692,18 +2692,24 @@ const WILDS = { places: [], P: {}, pads: [], bumps: [], cliffs: [], groves: [], 
   // ── paths (id, width, points). Each begins on an existing road or at the end of another path. ──
   const path = (id, w, pts) => { ROADS.push({ id: 'p.' + id, w, pts, path: true }); WILDS.paths.push(id); };
   path('lumber', 1.3, [[-110, -8], [-115, -22], [-125, -40], [-136, -54]]);
-  path('burnt', 1.2, [[-139, -66], [-134, -80], [-122, -96], [-112, -105]]);
-  path('mine', 1.2, [[-104, -111], [-94, -124], [-83, -137], [-74, -145]]);
+  path('burnt', 1.2, [[-139, -66], [-134, -80], [-122, -96], [-114, -102], [-100, -101]]);
+  path('mine', 1.2, [[-100, -101], [-96, -116], [-88, -130], [-80, -141], [-74, -146]]);
   path('tower', 1.3, [[-66, -142], [-50, -138], [-32, -133], [-10, -127], [12, -120], [19, -116]]);
-  path('hermit', 1.2, [[-32, -133], [-24, -147], [-8, -159], [8, -166], [22, -168]]);
-  path('bridge', 1.2, [[38, -166], [39, -156], [41, -150], [56, -150], [68, -143], [86, -132], [102, -123]]);
-  path('stones', 1.3, [[112, -111], [122, -97], [134, -81], [145, -66], [150, -58]]);
+  path('hermit', 1.2, [[-32, -133], [-24, -147], [-8, -159], [8, -166], [22, -168], [30, -163], [37, -158]]);
+  path('bridge', 1.2, [[37, -158], [39, -154], [41, -150], [56, -150], [68, -143], [86, -132], [102, -123], [110, -115]]);
+  path('stones', 1.3, [[110, -115], [112, -111], [122, -97], [134, -81], [145, -66], [150, -58]]);
   path('battle', 1.4, [[150, -46], [146, -34], [138, -24], [128, -15], [124, -13]]);
-  path('hamlet', 1.4, [[66.8, 20.6], [74, 38], [86, 60], [99, 80], [110, 96], [116, 102]]);
+  path('hamlet', 1.4, [[78, 0], [74.5, 14], [76, 30], [78, 52], [87, 68], [100, 84], [110, 96], [116, 102]]);
   path('fishing', 1.3, [[118, 114], [100, 130], [78, 144], [54, 153], [36, 158]]);
   path('lakeside', 1.2, [[24, 160], [4, 166], [-22, 156], [-40, 134], [-40, 110], [-27, 93], [-8, 83]]);
   path('bee', 1.2, [[11, -77.5], [20, -74], [29, -71.5]]);
-  path('blind', 1.2, [[-67.6, 44], [-84, 51], [-100, 57], [-113, 60]]);
+  path('blind', 1.2, [[-67, 28], [-82, 34], [-98, 46], [-113, 59]]);
+  // every path ends exactly on the road (or path) it springs from, so that the nav graph (nodes 3 m apart join) and the splat painting have no gaps
+  { const segNear = (x, z, skip) => { let best = null, bd = 1e9; for (const r of ROADS) { if (r === skip) continue; for (let i = 0; i < r.pts.length - 1; i++) { const a = r.pts[i], b = r.pts[i + 1], bx = b[0] - a[0], bz = b[1] - a[1], l2 = bx * bx + bz * bz || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * bx + (z - a[1]) * bz) / l2)), px = a[0] + bx * t, pz = a[1] + bz * t, d = Math.hypot(px - x, pz - z); if (d < bd) { bd = d; best = [px, pz]; } } } return [best, bd]; };
+    for (const r of ROADS) { if (!r.path) continue;
+      for (const end of [0, 1]) { const q = end ? r.pts[r.pts.length - 1] : r.pts[0], [b, d] = segNear(q[0], q[1], r); if (b && d > 0.3 && d < 24 && !(r.id === 'p.hermit' && end) && !(r.id === 'p.stones' && end) && !(r.id === 'p.battle' && end) && !(r.id === 'p.lumber' && end) && !(r.id === 'p.bee' && end)) { if (end) r.pts.push([b[0], b[1]]); else r.pts.unshift([b[0], b[1]]); } } } }
+  // navBuild joins roads where their nodes meet, but never the last node of one road to the first of the next in the list: keep paths that spring from each other apart in ROADS
+  { const ord = ['lumber', 'hamlet', 'burnt', 'fishing', 'mine', 'bee', 'tower', 'blind', 'hermit', 'stones', 'bridge', 'battle', 'lakeside'], i0 = ROADS.findIndex(r => r.path), ps = ROADS.splice(i0).sort((a, b) => ord.indexOf(a.id.slice(2)) - ord.indexOf(b.id.slice(2))); ROADS.push(...ps); }
   // (the Toll Ford stands on the main road itself; the shrine at the turn of the lumber path)
 
   // ── Highfold: four timber houses and a barn on a hillside green. high.a and high.c are marked `enter` so the cell system can give them interiors later;
@@ -3055,6 +3061,7 @@ function buildSplat() {
   ell(B, SITE.tower.x, SITE.tower.z, 4.6, 4.6, red);
   stroke(B, River.p, 9.4, red, 1.2);
   ell(B, LAKE.x, LAKE.z, LAKE.r + 4, LAKE.r + 4, red);
+  if (typeof wildsSplat === 'function') wildsSplat(A, B, { P, stroke, ell, red, grn, blu });       // (79_wilds.js: footpath cobbles, scree, ash)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = da[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
   Terrain.splatData = out;
@@ -3106,6 +3113,7 @@ function buildSplat2() {
   blob(B, 0, SQUARE.x, SQUARE.z, Math.max(SQUARE.rx, SQUARE.rz) + 6, 0.5, 0.75);
   // ── outdoor dressing: damp patches on the cobbles, mud and worn turf around troughs, hay, carts, benches (73c_dress.js; this block is separate from the LOD work) ──
   if (typeof splat2Dress === 'function') splat2Dress(blob, A, B);
+  if (typeof wildsSplat2 === 'function') wildsSplat2(blob, line, A, B);       // (79_wilds.js: mud at the pool and brook, trodden ground at the camps)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = db[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
   G.splat2Tex = gfxDataTex(out, Rz, Rz, THREE.RGBAFormat, THREE.UnsignedByteType);
@@ -7938,7 +7946,7 @@ WBUILD.shrine = (p, m, R) => {
   // milestone and signpost at the foot of the lumber path
   wPut(m, p, 4.6, 2.9, 0.5, mm => { mm.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.5); mm.box(-0.22, -0.2, -0.12, 0.22, 0.85, 0.12); mm.push().T(0, 0.85, 0).RX(PI / 2).T(0, -0.12, 0); mm.cyl(0, 0, 0, 0.22, 0.22, 0.24, 8, 3); mm.pop(); mm.mat(MAT.PLAIN, [0.1, 0.1, 0.1]); mm.box(-0.12, 0.45, 0.118, 0.12, 0.6, 0.125); addBoxCollider(mm, -0.25, -0.15, 0.25, 0.15, 0, 1.2); });
   const sp = wPut(m, p, -3.4, 2.8, 0.25, mm => { Props.signPost(mm, 3); addCircleCollider(mm, 0, 0, 0.14, 0, 2.5); });
-  wRead('sign.shrine', 'A weathered sign', 'Boards nailed one above another, the paint long gone and the letters cut deep:\n\nBRACKENFELL: three hundred paces east.\nTHE HUNTER’S BLIND, the old mill road and the south shore: ask the road.\nTHE LUMBER CAMP: up the track to the north. Mind the sleds.\nTOLL FORD and the passes beyond: west.\n\nBeneath, in a different hand and fresher: “Do not go in. — C.”', [sp[0], sp[1] + 1.6, sp[2]]);
+  wRead('sign.shrine', 'A weathered sign', 'Boards nailed one above another, the paint long gone and the letters cut deep:\n\nBRACKENFELL: east, along the road.\nTHE HUNTER’S BLIND, the old mill road and the south shore: ask the road.\nTHE LUMBER CAMP: up the track to the north. Mind the sleds.\nTOLL FORD and the passes beyond: west.\n\nBeneath, in a different hand and fresher: “Do not go in. — C.”', [sp[0], sp[1] + 1.6, sp[2]]);
   for (const [x, z] of [[-2.2, -7.4], [3.2, -6.8], [5.4, -4.2]]) wPut(m, p, x, z, R() * 6, mm => { wCairn(mm, R, 3); });
 };
 
@@ -7981,7 +7989,7 @@ WBUILD.lumber = (p, m, R) => {
   for (const [x, z, r] of [[-2.4, 6.6, 0.1], [-4.7, 4.4, 1.5], [-0.3, 3.8, -1.2]]) wPut(m, p, x, z, r, mm => wLog(mm, 1.5, 0.19));
   for (let i = 0; i < 14; i++) { const a = R() * TAU, r = 3 + R() * 8; wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, R() * 6, mm => { mm.mat(MAT.PLAIN, [0.72, 0.56, 0.36]); mm.cbox(0, 0, 0, 0.12 + R() * 0.1, 0.1, 0.07, 4); }); }
   // a felled pine lying across the clearing's edge, branches lopped
-  wPut(m, p, 3.0, -12.4, 0.5, mm => { mm.push().T(0, 0.4, 0); wLog(mm, 8, 0.38); mm.pop(); mm.mat(MAT.BARK, [0.9, 0.85, 0.8], 0.5); for (let i = 0; i < 4; i++) mm.beam([-3 + i * 1.7, 0.7, 0], [-3 + i * 1.7 + 0.3, 1.1, (i % 2 ? 0.5 : -0.5)], 0.06, 0.06); addBoxCollider(mm, -4, -0.4, 4, 0.4, 0, 0.9); });
+  wPut(m, p, 13.0, -9.0, 0.5, mm => { mm.push().T(0, 0.4, 0); wLog(mm, 8, 0.38); mm.pop(); mm.mat(MAT.BARK, [0.9, 0.85, 0.8], 0.5); for (let i = 0; i < 4; i++) mm.beam([-3 + i * 1.7, 0.7, 0], [-3 + i * 1.7 + 0.3, 1.1, (i % 2 ? 0.5 : -0.5)], 0.06, 0.06); addBoxCollider(mm, -4, -0.4, 4, 0.4, 0, 0.9); });
   // stumps: scanned, all round the clearing
   for (let i = 0; i < 16; i++) { const a = R() * TAU, r = 9 + R() * 8; wKit(p, i % 2 ? 'tree_stump_01' : 'tree_stump_02', Math.cos(a) * r, Math.sin(a) * r, { s: 0.7 + R() * 0.6, ry: R() * TAU, col: 0.5, h: 0.5, dy: -0.04 }); }
   wKit(p, 'dead_tree_trunk', 11, 2, { s: 1.2, ry: 0.4, dy: -0.02 }); wKit(p, 'dead_tree_trunk', -10, -9, { s: 1.0, ry: 2.2 });
@@ -8156,7 +8164,7 @@ WBUILD.battle = (p, m, R) => {
 
 WBUILD.bee = (p, m, R) => {
   // skeps on benches inside a ring of low wattle fence, wooden hives on legs, a lean-to for the smoker and the barrels
-  const ring = []; for (let i = 0; i <= 28; i++) { const a = i / 28 * (TAU - 0.5) + 0.8, r = 7.4; ring.push([p.x + Math.cos(a) * r, p.z + Math.sin(a) * r]); }
+  const ring = []; for (let i = 0; i <= 28; i++) { const a = i / 28 * (TAU - 0.5) + PI + 0.55 - 0.01 * 0, r = 7.4; ring.push([p.x + Math.cos(a) * r, p.z + Math.sin(a) * r]); }
   wFence(m, ring, { h: 0.9, col: [0.62, 0.55, 0.44], rails: [0.4, 0.72] });
   for (const [x, z, rot] of [[-2.6, -2.2, 0], [0.4, -3.2, 0.2], [3.0, -2.0, -0.2]]) wPut(m, p, x, z, rot, mm => {
     mm.mat(MAT.PLANKS, COL.wood, 0.5); mm.box(-1.0, 0.5, -0.3, 1.0, 0.56, 0.3); for (const s of [-1, 1]) mm.box(s * 0.9 - 0.05, 0, -0.25, s * 0.9 + 0.05, 0.5, 0.25);
@@ -8197,7 +8205,7 @@ WBUILD.fishing = (p, m, R) => {
     m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1, 1]) m.cbox(b[0] + Math.cos(Math.atan2(uz, ux) + PI / 2) * sx * 0.78, LAKE.y - 1.2, b[1] + Math.sin(Math.atan2(uz, ux) + PI / 2) * sx * 0.78, 0.2, 2.2, 0.2, 4);
     p.jetty = { end: [b[0] - ux * 0.6, LAKE.y + 0.5, b[1] - uz * 0.6], dir: Math.atan2(ux, -uz) };
   }
-  const fh = wGround(p, 1.2, 4.4); wPick('fs.fish', [fh[0] + 1.6, fh[1] + 1.0, fh[2]], 'Take the smoked fish', 'smokedfish', 'fish');
+  const fh = wGround(p, 6.7, 3.8); wPick('fs.fish', [fh[0], fh[1] + 0.9, fh[2]], 'Take the smoked fish', 'smokedfish', 'fish');
   for (let i = 0; i < 5; i++) { const a = R() * TAU, r = 2.5 + R() * 9; wKit(p, 'wooden_bucket_02', Math.cos(a) * r * 0.6 + 4, Math.sin(a) * r * 0.6 - 1, { s: 1.2, ry: R() * 6 }); if (i > 1) break; }
 };
 
@@ -8239,8 +8247,33 @@ WBUILD.hamlet = (p, m, R) => {
   });
   for (const h of WILDS.houses) { const q = siteToWorld(h, h.w / 2 + 0.9, -h.d / 2 + 1.2); m.push().T(q[0], wy(q[0], q[1]), q[1]).RY(-h.yaw); m.m1 = 0; m.ao = 1; m.grad = null; Props.woodpile(m, 3, 3, 1.1); m.pop(); }
   // the apple pickups hang under the orchard birches
-  for (const [x, z] of [[143, 126], [147, 121]]) { const c = [x, wy(x, z), z]; wPick('hf.apple' + (x > 145 ? 2 : 1), c, 'Gather apples', 'apple', 'apple'); }
-  wFence(m, [[106, 120], [106, 130], [114, 132]], { h: 1.0 });
+  for (const [x, z] of [[129, 123], [125, 126]]) { const c = [x, wy(x, z), z]; wPick("hf.apple" + (x > 127 ? 2 : 1), c, 'Gather apples', 'apple', 'apple'); }
+};
+
+
+// ───────────────────────── wayfinding: signposts where a path leaves the road, cairns along it, milestones, the footbridge over the Stonewater ─────────────────────────
+const WSIGN = {
+  lumber: ['Lumber camp, north-west', 'Back to the Shrine of the Turn'], burnt: ['The burnt cottage', 'Lumber camp'], mine: ['The old mine: barred', 'Burnt cottage'],
+  tower: ['The Old Watchtower, east', 'Mine road, west'], hermit: ['Hermit’s Fall, north-east', 'Watchtower path'], bridge: ['Footbridge over the Stonewater', 'Hermit’s Fall'],
+  stones: ['The Standing Stones, on the hill', 'Footbridge'], battle: ['Greyspine Field: graves, take care', 'The road home'], hamlet: ['Highfold, up the hill', 'Brackenfell'],
+  fishing: ['The south shore and the boats', 'Highfold'], lakeside: ['Lake path', 'Fishing hamlet'], bee: ['Bee meadow, the skeps', 'Watch Road'], blind: ['Hunter’s blind', 'Brackenfell']
+};
+WBUILD.__net = (p, mk, R) => {
+  for (const id of WILDS.paths) {
+    const rd = Roads.find(r => r.id === 'p.' + id); if (!rd) continue; const L = rd.line, lab = WSIGN[id] || [id, ''];
+    const q0 = L.point(1.2), nx = -q0[3], nz = q0[2], sx = q0[0] + nx * 1.7, sz = q0[1] + nz * 1.7;
+    if (!['lakeside'].includes(id)) {
+      const y = wy(sx, sz), m = mk(sx, sz); m.push().T(sx, y, sz).RY(R() * 0.6 - 0.3); m.m1 = 0; m.ao = 1; m.grad = null; Props.signPost(m, 2); addCircleCollider(m, 0, 0, 0.14, 0, 2.5); m.pop();
+      wRead('sign.' + id, 'Signpost', lab.filter(Boolean).join('\n'), [sx, y + 1.7, sz], 2.6);
+    }
+    for (let d = 28 + R() * 14; d < L.len - 10; d += 38 + R() * 14) { const q = L.point(d), o = (R() < 0.5 ? 1 : -1) * (1.5 + R() * 0.8), x = q[0] - q[3] * o, z = q[1] + q[2] * o, m = mk(x, z); m.push().T(x, wy(x, z), z); m.m1 = 0; m.ao = 1; m.grad = null; wCairn(m, R, 3 + (R() * 3 | 0)); m.pop(); }
+  }
+  // milestones along the main roads out of the square
+  for (const [x, z, a] of [[-92, 1.2, 0], [-148, 3.6, 0], [96, -4, PI]]) { const y = wy(x, z), m = mk(x, z); m.push().T(x, y, z).RY(a); m.m1 = 0; m.ao = 1; m.grad = null; m.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.5); m.box(-0.22, -0.2, -0.12, 0.22, 0.85, 0.12); m.cyl(0, 0.85, 0, 0.22, 0.2, 0.0, 8, 0); m.mat(MAT.PLAIN, [0.1, 0.1, 0.1]); m.box(-0.12, 0.45, 0.118, 0.12, 0.6, 0.125); addBoxCollider(m, -0.25, -0.15, 0.25, 0.15, 0, 1.2); m.pop(); }
+  // footbridge over the river where the Hermit's path crosses it
+  { const r0 = River.dist(47, -150, 20), at = River.at, q = River.point(at), nx = -q[3], nz = q[2], hs = 6.4;
+    const a = [q[0] - nx * hs, q[1] - nz * hs], b = [q[0] + nx * hs, q[1] + nz * hs]; const ya = wy(a[0], a[1]) + 0.12, yb = wy(b[0], b[1]) + 0.12, mid = Math.max(ya, yb) + 0.1;
+    wBridge(mk(q[0], q[1]), a, b, { w: 1.6, ya: Math.max(ya, yb), yb: Math.max(ya, yb) }); WB.river = { a, b, y: Math.max(ya, yb) }; }
 };
 
 // ───────────────────────── build ─────────────────────────
@@ -8254,6 +8287,9 @@ function buildWilds() {
     if (m.ni) { pack.add(m, { kind: 'opaque', maxDist: 125, noShadow: true }); WB.tris += m.ni / 3; }
     World.places.push({ id: 'wild.' + p.id, name: p.name, x: p.x, z: p.z, r: p.disc });
   }
+  { const cells = new Map(), mk = (x, z) => { const k = Math.floor(x / 60) * 1000 + Math.floor(z / 60); let m = cells.get(k); if (!m) cells.set(k, m = new Mesh(2048)); return m; };
+    try { WBUILD.__net({ x: 0, z: 0, yaw: 0 }, mk, rng(4242)); } catch (e) { console.warn('wilds net: ' + (e && e.stack || e)); }
+    for (const m of cells.values()) if (m.ni) { pack.add(m, { kind: 'opaque', maxDist: 110, noShadow: true }); WB.tris += m.ni / 3; } }
   // water: the pool under the fall, the brook at the toll ford, the fall itself
   const wp2 = new MeshPack(); wp2.shadow = false;
   const wm = new Mesh(4096); wm.mat(MAT.PLAIN, [1, 1, 1]);
@@ -8315,6 +8351,22 @@ function wildsAttach() {
     if (WB.builtFor !== R.qName) wildsKitBuild();
     for (const k of WB.groups) k.g.visible = !World.deepIn && hyp(camPos[0] - k.p.x, camPos[2] - k.p.z) < 125 + k.p.r;
   };
+}
+
+// ───────────────────────── splat painting (called from buildSplat / buildSplat2 in 60_terrain.js) ─────────────────────────
+function wildsSplat(A, B, T) {
+  if (!WILDS.on) return; const { ell, stroke, red } = T;
+  for (const c of WILDS.cliffs) { const x = c.x + c.dx * (c.at - 2), z = c.z + c.dz * (c.at - 2); ell(B, x, z, 9, 9, red); }       // bare rock and scree under the cliffs
+  ell(B, WILDS.P.burnt.x, WILDS.P.burnt.z, 4.2, 3.4, red);                                                                 // ash
+  const st = WILDS.P.stones; ell(B, st.x, st.z, 9, 9, a => red(a * 0.55));                                                  // the hilltop is thin soil
+  ell(B, WILDS.P.mine.x, WILDS.P.mine.z, 6, 6, red);
+  const lc = WILDS.P.lumber; ell(B, lc.x, lc.z, 8, 7, a => red(a * 0.5));
+}
+function wildsSplat2(blob, line, A, B) {
+  if (!WILDS.on) return;
+  if (WILDS.pool) { const q = WILDS.pool; for (const [r, a] of [[q.r + 4, 0.35], [q.r + 2.4, 0.5], [q.r + 1, 0.7]]) blob(A, 1, q.x, q.z, r, a, 0.5); }
+  if (WILDS.brookLine) line(A, 1, WILDS.brookLine.p, 7, 0.55);
+  for (const id of ['lumber', 'fishing', 'bee', 'battle', 'hermit']) { const p = WILDS.P[id]; if (p) blob(B, 2, p.x, p.z, p.r * 0.7, 0.4, 0.3); }
 }
 
 
@@ -8557,6 +8609,70 @@ function applySave(j) {
   RPG.st(); bountyText(); if (typeof Combat !== 'undefined') Combat.refresh();
 }
 function clearSave() { try { localStorage.removeItem('brackenfell.v1'); } catch (e) { } }
+
+
+// ---- 81_wilds_story.js ----
+// ───────────────────────── the wilds, as story: items, two small quests, the barred mine door and the strongbox ─────────────────────────
+// Loaded after 80_game.js, whose S / ITEMS / QUESTS / TALK it extends. Old saves load unchanged: every new thing is keyed by its own id.
+Object.assign(ITEMS, {
+  woodaxe: ['Woodcutter’s axe', 'Left on a block at the lumber camp. Heavy in the head, and it bites.', { slot: 'weapon', dmg: 13, speed: 0.85, reach: -0.15, blade: [0.42, 0.9, 0.05], value: 14 }],
+  oldsword: ['Rusted levy sword', 'Pitted, but straight. It has been in the ground a long time.', { slot: 'weapon', dmg: 11, blade: [0.62, 0.55], value: 6 }],
+  oldcoins: ['Old coins', 'Worn thin, an unfamiliar king. The smith will weigh them.', { value: 18 }],
+  chanterelle: ['Chanterelles', 'Apricot-gold and smelling of fruit. Good fried in butter.', { heal: 10, value: 2 }],
+  honeycomb: ['Honeycomb', 'Dripping and warm from the skep.', { heal: 22, sta: 40, value: 3 }],
+  smokedfish: ['Smoked trout', 'Dark and salty; it keeps for a month.', { heal: 20, value: 2 }],
+  ashkey: ['Small iron key', 'Black with soot. It was under the third hearthstone.'],
+  corwincap: ['Corwin’s cap', 'Wool, patched twice, with a miner’s candle-stub in the band.'],
+  bogbean: ['Bogbean', 'A bitter white-flowered herb from the hermit’s pool.'],
+  sunwort: ['Sunwort', 'Yellow heads that follow the day. Maren swears by it.'],
+  stonecrop: ['Stonecrop', 'A fleshy little plant from the hilltop stones.'],
+});
+QUESTS.tea = { name: 'Maren’s Three-Herb Tea', stages: ['Gather bogbean (the pool in the north), sunwort (the bee meadow) and stonecrop (the standing stones)', 'Bring the herbs to Maren'] };
+QUESTS.brother = { name: 'What Became of Corwin', stages: ['Find what happened to Corwin: the old mine lies in the south-west cliffs', 'Bring Corwin’s cap to Elder Rowan'] };
+QORDER.push('tea', 'brother');
+const TEA = ['bogbean', 'sunwort', 'stonecrop'];
+const wildPick = id => World.pickups.find(p => p.item === id && !p.gone);
+const _qt = questTarget;
+questTarget = function (id) {
+  const st = qAt(id);
+  if (id === 'tea') { if (st === 1) return NPC.maren && NPC.maren.pos; let best = null, bd = 1e9; for (const t of TEA) { if (has(t)) continue; const p = wildPick(t); if (!p) continue; const d = hyp(p.p[0] - Player.pos[0], p.p[2] - Player.pos[2]); if (d < bd) { bd = d; best = p.p; } } return best; }
+  if (id === 'brother') { if (st === 1) return NPC.rowan && NPC.rowan.pos; const m = WILDS.P.mine; return m ? [m.x, 0, m.z] : null; }
+  return _qt(id);
+};
+const _il = interactLabel, _iu = interactUse;
+interactLabel = function (it) {
+  if (it.kind === 'door' && it.id === 'mine.door') return 'Try the mine door';
+  if (it.kind === 'wbox') return S.opened[it.id] ? null : has(it.need) ? 'Unlock the strongbox' : 'Strongbox (locked)';
+  return _il(it);
+};
+interactUse = function (it) {
+  if (it.kind === 'door' && it.id === 'mine.door') { Audio2.chest && Audio2.chest(); return toast('Barred from the far side. Iron and oak: you will not shift it.'); }
+  if (it.kind === 'wbox') {
+    if (S.opened[it.id]) return;
+    if (!has(it.need)) return toast('Locked. The keyhole is small and clean; someone oils it.');
+    give(it.need, -1); toast('The key turns.'); return _iu(Object.assign({}, it, { kind: 'chest' }));
+  }
+  _iu(it);
+  if (it.kind === 'pickup' && it.wild) {
+    if (it.item === 'corwincap' && qAt('brother') === 0) qStage('brother', 1);
+    if (qAt('tea') === 0 && TEA.every(t => has(t))) qStage('tea', 1);
+  }
+  if (it.kind === 'read' && it.id === 'note.mine' && qAt('brother') < 0) toast('Corwin. Elder Rowan may know the name.');
+};
+const _maren = TALK.maren;
+TALK.maren = function () {
+  if (qAt('herbs') === 99 && qAt('tea') < 0) return node('Since you are the sort who walks: I have a tea I used to make from three herbs and my knees now refuse. Bogbean from the hermit’s pool, sunwort from the bee meadow, stonecrop from the old stones on the eastern hill. It is the only thing that lets Edda’s widow sleep.', [['I’ll fetch them.', () => { qStart('tea'); if (TEA.every(t => has(t))) qStage('tea', 1); return null; }, 1], bye]);
+  if (qAt('tea') >= 0 && qAt('tea') !== 99 && TEA.every(t => has(t))) return node('All three. And the stonecrop still wet. Sit, sit. I will brew it now, and you shall have the first cup.', [['Thank you, Maren.', () => { for (const t of TEA) give(t, -1); give('potion'); gold(40); qDone('tea'); return null; }, 1]]);
+  if (qAt('tea') === 0) return node('Bogbean ' + (has('bogbean') ? 'in hand' : 'still wanting') + ', sunwort ' + (has('sunwort') ? 'in hand' : 'still wanting') + ', stonecrop ' + (has('stonecrop') ? 'in hand' : 'still wanting') + '. Take your time. The herbs are not going anywhere.');
+  return _maren();
+};
+const _rowan = TALK.rowan;
+TALK.rowan = function () {
+  if (qAt('brother') !== 99 && has('corwincap')) return node('Where did you… that is Corwin’s cap. Hob’s brother went down the old mine after silver, a good while back. So. It is the end of a long hope. Thank you for bringing it home rather than leaving it to the damp.', [['I am sorry, Elder.', () => { give('corwincap', -1); gold(60); if (qAt('brother') < 0) qStart('brother', 1); qDone('brother'); return null; }, 1]]);
+  const n = _rowan();
+  if (qAt('brother') < 0 && qAt('welcome') >= 0 && n && n.o) n.o.unshift(['Do you know of a man called Corwin?', () => node('Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.', [['I’ll look into it.', () => { qStart('brother'); return null; }, 1], bye]), 1]);
+  return n;
+};
 
 
 // ---- 85_ui.js ----

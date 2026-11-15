@@ -22,18 +22,24 @@ const WILDS = { places: [], P: {}, pads: [], bumps: [], cliffs: [], groves: [], 
   // ── paths (id, width, points). Each begins on an existing road or at the end of another path. ──
   const path = (id, w, pts) => { ROADS.push({ id: 'p.' + id, w, pts, path: true }); WILDS.paths.push(id); };
   path('lumber', 1.3, [[-110, -8], [-115, -22], [-125, -40], [-136, -54]]);
-  path('burnt', 1.2, [[-139, -66], [-134, -80], [-122, -96], [-112, -105]]);
-  path('mine', 1.2, [[-104, -111], [-94, -124], [-83, -137], [-74, -145]]);
+  path('burnt', 1.2, [[-139, -66], [-134, -80], [-122, -96], [-114, -102], [-100, -101]]);
+  path('mine', 1.2, [[-100, -101], [-96, -116], [-88, -130], [-80, -141], [-74, -146]]);
   path('tower', 1.3, [[-66, -142], [-50, -138], [-32, -133], [-10, -127], [12, -120], [19, -116]]);
-  path('hermit', 1.2, [[-32, -133], [-24, -147], [-8, -159], [8, -166], [22, -168]]);
-  path('bridge', 1.2, [[38, -166], [39, -156], [41, -150], [56, -150], [68, -143], [86, -132], [102, -123]]);
-  path('stones', 1.3, [[112, -111], [122, -97], [134, -81], [145, -66], [150, -58]]);
+  path('hermit', 1.2, [[-32, -133], [-24, -147], [-8, -159], [8, -166], [22, -168], [30, -163], [37, -158]]);
+  path('bridge', 1.2, [[37, -158], [39, -154], [41, -150], [56, -150], [68, -143], [86, -132], [102, -123], [110, -115]]);
+  path('stones', 1.3, [[110, -115], [112, -111], [122, -97], [134, -81], [145, -66], [150, -58]]);
   path('battle', 1.4, [[150, -46], [146, -34], [138, -24], [128, -15], [124, -13]]);
-  path('hamlet', 1.4, [[66.8, 20.6], [74, 38], [86, 60], [99, 80], [110, 96], [116, 102]]);
+  path('hamlet', 1.4, [[78, 0], [74.5, 14], [76, 30], [78, 52], [87, 68], [100, 84], [110, 96], [116, 102]]);
   path('fishing', 1.3, [[118, 114], [100, 130], [78, 144], [54, 153], [36, 158]]);
   path('lakeside', 1.2, [[24, 160], [4, 166], [-22, 156], [-40, 134], [-40, 110], [-27, 93], [-8, 83]]);
   path('bee', 1.2, [[11, -77.5], [20, -74], [29, -71.5]]);
-  path('blind', 1.2, [[-67.6, 44], [-84, 51], [-100, 57], [-113, 60]]);
+  path('blind', 1.2, [[-67, 28], [-82, 34], [-98, 46], [-113, 59]]);
+  // every path ends exactly on the road (or path) it springs from, so that the nav graph (nodes 3 m apart join) and the splat painting have no gaps
+  { const segNear = (x, z, skip) => { let best = null, bd = 1e9; for (const r of ROADS) { if (r === skip) continue; for (let i = 0; i < r.pts.length - 1; i++) { const a = r.pts[i], b = r.pts[i + 1], bx = b[0] - a[0], bz = b[1] - a[1], l2 = bx * bx + bz * bz || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * bx + (z - a[1]) * bz) / l2)), px = a[0] + bx * t, pz = a[1] + bz * t, d = Math.hypot(px - x, pz - z); if (d < bd) { bd = d; best = [px, pz]; } } } return [best, bd]; };
+    for (const r of ROADS) { if (!r.path) continue;
+      for (const end of [0, 1]) { const q = end ? r.pts[r.pts.length - 1] : r.pts[0], [b, d] = segNear(q[0], q[1], r); if (b && d > 0.3 && d < 24 && !(r.id === 'p.hermit' && end) && !(r.id === 'p.stones' && end) && !(r.id === 'p.battle' && end) && !(r.id === 'p.lumber' && end) && !(r.id === 'p.bee' && end)) { if (end) r.pts.push([b[0], b[1]]); else r.pts.unshift([b[0], b[1]]); } } } }
+  // navBuild joins roads where their nodes meet, but never the last node of one road to the first of the next in the list: keep paths that spring from each other apart in ROADS
+  { const ord = ['lumber', 'hamlet', 'burnt', 'fishing', 'mine', 'bee', 'tower', 'blind', 'hermit', 'stones', 'bridge', 'battle', 'lakeside'], i0 = ROADS.findIndex(r => r.path), ps = ROADS.splice(i0).sort((a, b) => ord.indexOf(a.id.slice(2)) - ord.indexOf(b.id.slice(2))); ROADS.push(...ps); }
   // (the Toll Ford stands on the main road itself; the shrine at the turn of the lumber path)
 
   // ── Highfold: four timber houses and a barn on a hillside green. high.a and high.c are marked `enter` so the cell system can give them interiors later;

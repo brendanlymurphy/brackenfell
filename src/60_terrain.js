@@ -254,6 +254,7 @@ function buildSplat() {
   ell(B, SITE.tower.x, SITE.tower.z, 4.6, 4.6, red);
   stroke(B, River.p, 9.4, red, 1.2);
   ell(B, LAKE.x, LAKE.z, LAKE.r + 4, LAKE.r + 4, red);
+  if (typeof wildsSplat === 'function') wildsSplat(A, B, { P, stroke, ell, red, grn, blu });       // (79_wilds.js: footpath cobbles, scree, ash)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = da[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
   Terrain.splatData = out;
@@ -305,6 +306,7 @@ function buildSplat2() {
   blob(B, 0, SQUARE.x, SQUARE.z, Math.max(SQUARE.rx, SQUARE.rz) + 6, 0.5, 0.75);
   // ── outdoor dressing: damp patches on the cobbles, mud and worn turf around troughs, hay, carts, benches (73c_dress.js; this block is separate from the LOD work) ──
   if (typeof splat2Dress === 'function') splat2Dress(blob, A, B);
+  if (typeof wildsSplat2 === 'function') wildsSplat2(blob, line, A, B);       // (79_wilds.js: mud at the pool and brook, trodden ground at the camps)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = db[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
   G.splat2Tex = gfxDataTex(out, Rz, Rz, THREE.RGBAFormat, THREE.UnsignedByteType);
