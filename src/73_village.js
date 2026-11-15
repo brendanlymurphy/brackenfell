@@ -12,7 +12,7 @@ function buildVillage() {
   for (const site of SITES) {
     const spec = HOUSES[site.id]; if (!spec) continue;
     const h = buildHouse(site, spec);
-    pack.add(h.ext, { kind: 'opaque' }); if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.ext.ni) pack.add(h.ext, { kind: 'opaque' }); if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
   }

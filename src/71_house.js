@@ -16,6 +16,8 @@ function addFloor(m, x0, z0, x1, z1, y, y2, axis) {
 function siteMatrix(site, y) { const M = m4.create(); m4.translate(M, site.x, y, site.z); m4.rotY(M, -site.yaw); return M; }
 
 function buildHouse(site, spec) {
+  const kit = typeof kitWanted === 'function' && kitWanted(site, spec);      // kit-built shell (71_kithouse.js) or the procedural one below
+  if (kit) spec = kitSpec(site, spec);
   const w = site.w, d = site.d, H = spec.H || 2.6, t = 0.3, P = (spec.pitch || 48) * PI / 180, tanP = Math.tan(P), hd = d / 2;
   const floorY = site.y + 0.32, zone = World.zones.length + 1, R = rng(site.x * 131 + site.z * 17 + 5);
   const Ms = siteMatrix(site, floorY);
@@ -177,7 +179,7 @@ function buildHouse(site, spec) {
   }
   ext.ao = 1; ext.m1 = 0;
   const ctx = {
-    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList,
+    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList, kit, Ms, openings, tanP,
     world: (x, y, z) => m4.tp(Ms, [x, y, z]),
     spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: site.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
     // hearth against a wall. frame: origin on the inner wall face, +x into the room. (x, z) = house-local position, rot = RY angle
@@ -203,6 +205,7 @@ function buildHouse(site, spec) {
       // chimney stack above the roof
       const sp = wp(m, dep * 0.5 - 0.02, 0, 0); m.pop();
       const l = worldToSite(site, sp[0], sp[2]);
+      if (kit) { kitChimney(ctx, l[0], l[1]); ctx.fire = fp; return; }
       outer(); ext.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
       const y0 = roofY(l[1]) - 0.5, y1 = Math.max(ridgeY + 0.9, roofY(l[1]) + 1.5);
       ext.cbox(l[0], y0, l[1], 0.85, y1 - y0, 0.85, 4); ext.cbox(l[0], y1, l[1], 1.02, 0.14, 1.02);
@@ -213,7 +216,9 @@ function buildHouse(site, spec) {
     solid(x0, z0, x1, z1, h) { addBoxCollider(int, x0, z0, x1, z1, 0, h || 1); },
     interact(x, y, z, o) { const it = Object.assign({ p: m4.tp(Ms, [x, y, z]), r: 2.0, zone }, o); World.interact.push(it); return it; },
   };
+  if (kit) kitShell(ctx);
   if (spec.interior) spec.interior(ctx);
+  if (kit) kitDress(ctx);
   int.grad = null;
   World.houses[site.id] = { site, zone, ctx, floorY, door: doorList[0] };
   return { ext, int, glow, ctx };
