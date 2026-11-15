@@ -1029,11 +1029,13 @@ function sceneBuild() {
 }
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
-  const bd = R.boneData, e = camPos;
+  const bd = R.boneData, e = camPos, cur = World.cell;       // cur: the cell the player is in. Then only that cell is drawn (its generated meshes, kit groups, door leaf); outdoors, no cell is
   if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
-  const inside = World.deepIn = deepIndoors(e), ind = DRAW.indoor;
+  World.deepIn = cur ? true : deepIndoors(e); const inside = !cur && World.deepIn, ind = DRAW.indoor;
   for (const s of SC.statics) {
-    const it = s.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
+    const it = s.it;
+    if (cur || it.cell) { s.mesh.visible = !!cur && it.cell === cur.id; if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow; continue; }
+    const d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
     s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && far > ind);
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast) && !(s.farCapable && q.nearStatics === false);
@@ -1042,14 +1044,17 @@ function sceneUpdate(camPos, q) {
     if (s.farCapable) s.mesh.layers.mask = q.farStatics ? 1 : 2;
   }
   for (const s of SC.cells) {
+    if (cur) { s.mesh.visible = false; continue; }
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
     s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > Math.min(grp.maxDist, q.rockDist) + c.r) || (inside && grp.lod === 0 && dc - c.r > ind));
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }
-  if (Grass.mesh) Grass.mesh.visible = !inside;
+  if (Grass.mesh) Grass.mesh.visible = !inside && !cur;
   for (const r of SC.rigid) {
-    const o = r.obj, dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
+    const o = r.obj;
+    if (cur ? o.cell !== cur.id : o.cell) { r.mesh.visible = false; continue; }
+    const dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
     let vis = o.visible && d < dr.vis && !(inside && d > ind);
     if (dr.near) vis = vis && (r.whole ? d >= dr.near : d < dr.near);
     r.mesh.visible = vis; if (!vis) continue;
@@ -1223,10 +1228,11 @@ function renderFrame(time, env) {
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
   // near map every frame, far map every few frames (its centre only moves when it is redrawn)
   const fh = v3.norm([f[0], 0, f[2]]), r0 = q.shadowNear, r1 = 92, S = R.shadows;      // r0: radius (m) of the tight shadow map, which is drawn every frame
-  const upd1 = !R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || (!!TEST && !TEST.farCadence)));      // (test option farCadence=1 keeps the real cadence) deep inside a building the far map keeps what it last saw (see deepIndoors)
+  const cell = !!World.cell;          // in a cell: no sun, so neither sun-shadow map is drawn at all
+  const upd1 = !cell && (!R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || (!!TEST && !TEST.farCadence))));      // (test option farCadence=1 keeps the real cadence) deep inside a building the far map keeps what it last saw (see deepIndoors)
   shadowPlace(0, [e[0] + fh[0] * r0 * 0.72, e[1], e[2] + fh[2] * r0 * 0.72], r0, L, env);
   if (upd1) { shadowPlace(1, [e[0] + fh[0] * r1 * 0.6, e[1], e[2] + fh[2] * r1 * 0.6], r1, L, env); R.shadow1Ready = true; }
-  S.lights[1].shadow.needsUpdate = upd1;
+  S.lights[1].shadow.needsUpdate = upd1; S.lights[0].shadow.autoUpdate = !cell; if (cell) S.lights[0].shadow.needsUpdate = false;
   // ── world ──
   sceneUpdate(e, q);
   Sky.update(e); Grass.update(e, [f[0], f[2]]); Particles.update();
@@ -2466,7 +2472,8 @@ function updateEnv(time, indoor) {
   const outExp = lerp(lerp(0.56, 0.84, golden), 3.0, night);
   e.exposure = lerp(outExp, lerp(1.05, 1.25, night), indoor || 0);
   // weather: a light overcast with mist that gathers over the valley around dawn (Env.cover / Env.mist set the base amounts)
-  if (typeof Sky !== 'undefined' && Sky.applyWeather) { Sky.setWeather(Env.cover, Env.mist + 0.24 * Math.exp(-Math.pow((Env.hour - 6.6) / 1.5, 2))); Sky.applyWeather(e); }      // overcast and mist reshape the light, see 45_sky.js
+  if (typeof Sky !== 'undefined' && Sky.applyWeather) { Sky.setWeather(Env.cover, Env.mist + 0.24 * Math.exp(-Math.pow((Env.hour - 6.6) / 1.5, 2))); Sky.applyWeather(e); }
+  if (World.cell) Cells.env(e);      // overcast and mist reshape the light, see 45_sky.js
   return e;
 }
 
@@ -2665,6 +2672,134 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
   INF.enterIds = INF.houses.filter(h => h.enter).map(h => h.id);
   INF.count = INF.houses.length;
 })();
+
+
+// ---- 56_cells.js ----
+// ───────────────────────── cells: every interior is a space of its own, reached through its door ─────────────────────────
+// A cell is built at its own origin in the same world and coordinate system (so colliders, floors, zones, spots, stairs, lights, particles, villagers and
+// saves work as they always did), but far below the terrain and 150 m from the next cell: x = CELL.x0 + col * CELL.step, z = row * CELL.step, y = CELL.y.
+// The village keeps only the shell of each building (closed doors, solid walls, glowing windows). A door is a portal: outside it reads "Enter <place>",
+// inside "Leave to <village>"; using it fades to black, names the place, moves the player to the other side and fades back in (Cells.travel).
+// Which cell the player is in follows from where the player stands (Cells.sync); while in one, 43_render.js draws only that cell: no sun, no sun shadows,
+// no sky, terrain, grass, trees or outdoor props (see sceneUpdate in 42_scene.js and the cell branches in renderFrame), and the fog is short and dark.
+// Villagers cross doors through portal edges of the nav graph (77_npc.js). CELLS_ON = false (test option cells=0) gives back the old seamless houses.
+const CELLS_ON = !(TEST && TEST.cells === 0);
+const CELL = { x0: 3000, y: -400, step: 150, cols: 8, half: 70 };
+const Cells = { list: [], by: {}, cur: null, busy: false, fadeIn: 0.3, fadeOut: 0.3, hold: 0.42 };
+// allocate the next free cell. cs is a site-like frame (x, z, y, yaw 0) that interior code uses where it used the site's
+Cells.make = function (id, name, extra) {
+  const i = Cells.list.length, col = i % CELL.cols, row = (i / CELL.cols) | 0;
+  const origin = [CELL.x0 + col * CELL.step, CELL.y, row * CELL.step];
+  const site = extra && extra.site;
+  const cs = Object.assign({}, site || {}, { id, name, x: origin[0], z: origin[2], y: origin[1], yaw: 0, real: site || null, cellFrame: true });
+  const c = Object.assign({ id, name, index: i, origin, cs, zones: [], floorY: origin[1] + 0.32, exit: 'Brackenfell', door: null, xdoor: null, enter: null, leave: null, kind: 'house' }, extra || {});
+  Cells.list.push(c); Cells.by[id] = c; return c;
+};
+// the cell around a point, or null (everything outdoors lives far above and away from the cell grid)
+Cells.at = function (x, y, z) {
+  if (x < CELL.x0 - CELL.half || y > CELL.y + 150) return null;
+  const col = Math.round((x - CELL.x0) / CELL.step), row = Math.round(z / CELL.step);
+  if (col < 0 || col >= CELL.cols || row < 0) return null;
+  return Cells.list[row * CELL.cols + col] || null;
+};
+Cells.inRegion = x => x >= CELL.x0 - CELL.half;
+Cells.spaceOf = p => { const c = Cells.at(p[0], p[1], p[2]); return c ? c.id : 0; };
+Cells.exitName = function (site) { return site.alleyRow ? 'Market Alley' : site.id === 'tower' ? 'the Greyspine Crag' : 'Brackenfell'; };
+// the two door interaction points of a house cell: outside "Enter ...", inside "Leave to ..."
+Cells.portals = function (cell, site) {
+  const d = cell.door, x = cell.xdoor, yawTo = (a, b) => Math.atan2(b[0] - a[0], -(b[2] - a[2]));
+  cell.exit = Cells.exitName(site);
+  cell.enter = { p: d.ins.slice(), yaw: yawTo(d.c, d.ins), cell: cell.id, name: site.name };
+  cell.leave = { p: x.out.slice(), yaw: yawTo(x.c, x.out), cell: null, name: cell.exit };
+  cell.portalOut = { kind: 'portal', id: 'door.' + cell.id + '.in', p: [x.c[0], x.c[1] + 0.1, x.c[2]], r: 2.7, zone: 0, cell: cell.id, label: 'Enter ' + site.name, dest: cell.enter, side: 'out' };
+  cell.portalIn = { kind: 'portal', id: 'door.' + cell.id + '.out', p: [d.c[0], d.c[1] + 0.1, d.c[2]], r: 2.7, zone: cell.zone, cell: cell.id, label: 'Leave to ' + cell.exit, dest: cell.leave, side: 'in' };
+  World.interact.push(cell.portalOut, cell.portalIn);
+};
+// a door's lock: it.lock() returns a message while the door is shut, or null (none of the village's doors lock yet; 93_ and the dungeons use it)
+Cells.lockMsg = it => (typeof it.lock === 'function' ? it.lock() : null);
+
+// ── which cell the player (or camera) is in ──
+Cells.sync = function (p) {
+  const c = Cells.at(p[0], p[1], p[2]);
+  if (c !== Cells.cur) Cells.change(c);
+  return c;
+};
+Cells.change = function (c) {
+  const prev = Cells.cur; Cells.cur = World.cell = c;
+  World.indoor = c ? 1 : 0;
+  if (c && typeof Foes !== 'undefined' && Foes.ready) Foes.breakOff();         // a fight does not follow through a door
+  if (!c && prev && typeof R !== 'undefined') R.shadow1Ready = false;            // the wide sun-shadow map was not drawn in there: redraw it at once
+  if (typeof Sky !== 'undefined' && Sky.mesh) Sky.mesh.visible = !c;
+};
+// move the player (instantly) to dest = { p: [x, y, z] feet, yaw }
+Cells.teleport = function (dest) {
+  const P = Player, p = dest.p;
+  P.pos = [p[0], World.groundAt(p[0], p[2], p[1] + 1.2), p[2]]; P.vel = [0, 0, 0]; P.yaw = dest.yaw || 0; P.pitch = 0; P.camY = P.pos[1]; P.onGround = true; P.coyote = 0.12;
+  Cells.sync(P.pos); World.camZone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
+  R.cam.pos[0] = P.pos[0]; R.cam.pos[1] = P.camY + P.eye; R.cam.pos[2] = P.pos[2]; R.cam.yaw = P.yaw; R.cam.pitch = 0;
+  if (typeof Input !== 'undefined') { Input.keys = {}; Input.lookX = Input.lookY = 0; }
+};
+// the doorway fade: black in about 0.3 s, the place's name for a moment (the cell's materials compile and upload during it), black out again in 0.3 s
+Cells.travel = function (dest, done) {
+  if (Cells.busy) return false;
+  Cells.busy = true; Player.locked = true; if (typeof RPG !== 'undefined') RPG.iframes = Math.max(RPG.iframes || 0, 2.2);
+  Audio2.door(1);
+  const f = $('portal'), nm = $('portalName'), ms = Cells.fadeIn * 1000;
+  f.classList.add('on');
+  setTimeout(() => {
+    nm.textContent = dest.name || ''; nm.classList.add('on');
+    Cells.teleport(dest);
+    try { game.step(2, 1 / 30); const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); } catch (e) { console.warn('cell warm-up: ' + (e && e.message || e)); }       // first draw of a cell: shaders and buffers are made here, under the black
+    setTimeout(() => {
+      nm.classList.remove('on'); f.classList.remove('on');
+      setTimeout(() => { Cells.busy = false; Player.locked = uiBusy(); if (done) done(); }, Cells.fadeOut * 1000);
+    }, Cells.hold * 1000);
+  }, ms);
+  return true;
+};
+// the E key / interact button on a door
+Cells.use = function (it) {
+  const msg = Cells.lockMsg(it); if (msg) { toast(msg); Audio2.door(0.4); return; }
+  Cells.travel(it.dest);
+};
+// the cell the player is in: the way to the compass's needle and the exit
+Cells.mapTarget = function (t) {
+  if (!t) return t;
+  const here = Cells.cur, there = Cells.at(t[0], t[1] === undefined ? CELL.y : t[1], t[2]);
+  if (here === there) return t;
+  if (here) return here.door ? here.door.c : null;       // inside, anything outside is "through the door"
+  return there && there.xdoor ? there.xdoor.c : t;        // outside, a person in a house is at its door
+};
+// distance for sounds from something in a cell to the listener, and whether a wall is in the way
+Cells.hear = function (pos, from) {
+  const a = Cells.at(pos[0], pos[1], pos[2]), b = Cells.cur;
+  if (a === b) return { d: hyp(pos[0] - from[0], pos[2] - from[2]), wall: false };
+  if (b) return { d: 999, wall: true };
+  const x = a && a.xdoor ? a.xdoor.c : pos;
+  return { d: hyp(x[0] - from[0], x[2] - from[2]) + 3, wall: true };
+};
+// frame environment: no sun, a short dark fog, the day's ambient kept (windows and the hour of day still reach the rooms through emissive panes and daylight lights)
+Cells.env = function (e) {
+  const c = Cells.cur; if (!c) return e;
+  e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
+  e.fogCol = c.fog || [0.030, 0.025, 0.020]; e.fogDensity = c.fogDensity || 0.022; e.cloud = 0; e.stars = 0; e.aurora = 0; e.sunDisc = 0; e.moonBright = 0;
+  return e;
+};
+// fell out of a cell (a gap in a floor): back to its door
+Cells.rescue = function () { const c = Cells.cur; if (c && c.enter) Cells.teleport(c.enter); };
+// an old save made inside a building (when interiors stood in the village): the same spot in the same building's cell (cells are built in the building's own frame)
+Cells.migrate = function (pos, yaw) {
+  if (!CELLS_ON || Cells.inRegion(pos[0])) return false;
+  for (const c of Cells.list) {
+    const real = c.cs.real, z = World.zones[c.zones[0] - 1]; if (!real || !z) continue;
+    if (Math.abs(pos[0] - real.x) > 14 || Math.abs(pos[2] - real.z) > 14) continue;
+    const l = worldToSite(real, pos[0], pos[2]);
+    if (Math.abs(l[0]) < z.hw && Math.abs(l[1]) < z.hd && pos[1] > real.y - 0.5 && pos[1] < real.y + (z.y1 - z.y0) + 1) {
+      return { pos: [c.cs.x + l[0], c.floorY + Math.max(0, pos[1] - (real.y + 0.32)), c.cs.z + l[1]], yaw: yaw - real.yaw };
+    }
+  }
+  return false;
+};
 
 
 // ---- 60_terrain.js ----
@@ -3241,7 +3376,7 @@ const WALLS = {
   left: { n: [-1, 0, 0], u: [0, 0, 1], start: (w, d) => [-w / 2, 0, -d / 2], len: (w, d) => d, toU: (p, w, d) => p + d / 2 },
   right: { n: [1, 0, 0], u: [0, 0, -1], start: (w, d) => [w / 2, 0, d / 2], len: (w, d) => d, toU: (p, w, d) => d / 2 - p },
 };
-World.doors = []; World.spots = {}; World.houses = {};
+World.doors = []; World.spots = {}; World.houses = {}; World.cell = null;
 const INT_AO = 0.30;       // sky visibility of interior surfaces
 function addFloor(m, x0, z0, x1, z1, y, y2, axis) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
@@ -3254,30 +3389,33 @@ function siteMatrix(site, y) { const M = m4.create(); m4.translate(M, site.x, y,
 function buildHouse(site, spec) {
   const kit = typeof kitWanted === 'function' && kitWanted(site, spec);      // kit-built shell (71_kithouse.js) or the procedural one below
   if (kit) spec = kitSpec(site, spec);
+  // Cells (56_cells.js): the interior is built in its own frame far from the village (isite, Ms) and only the shell stays on the site (site, Mx). Without cells both are the same.
+  const cell = kit && CELLS_ON ? Cells.make(site.id, site.name, { site }) : null, isite = cell ? cell.cs : site;
   const w = site.w, d = site.d, H = spec.H || 2.6, t = 0.3, P = (spec.pitch || 48) * PI / 180, tanP = Math.tan(P), hd = d / 2;
-  const floorY = site.y + 0.32, zone = World.zones.length + 1, R = rng(site.x * 131 + site.z * 17 + 5);
-  const Ms = siteMatrix(site, floorY);
-  const ext = new Mesh(4096), int = new Mesh(4096), glow = new Mesh(256);
-  for (const m of [ext, int, glow]) { m.m = Ms.slice(); m.dirty = true; m.seed = (site.x * 977 + site.z * 31) | 0; }
+  const floorY = isite.y + 0.32, xFloorY = site.y + 0.32, zone = World.zones.length + 1, R = rng(site.x * 131 + site.z * 17 + 5);
+  const Mx = siteMatrix(site, xFloorY), Ms = cell ? siteMatrix(isite, floorY) : Mx;
+  const ext = new Mesh(4096), ins = cell ? new Mesh(2048) : ext, int = new Mesh(4096), glow = new Mesh(256);
+  for (const m of [ext, ins, int, glow]) { m.m = (m === ext || m === glow ? Mx : Ms).slice(); m.dirty = true; m.seed = (site.x * 977 + site.z * 31) | 0; }
   const ridgeY = H + hd * tanP, roofY = z => H + (hd - Math.abs(z)) * tanP;
-  const zinfo = { id: zone, site, y0: floorY - 0.7, y1: floorY + ridgeY + 1.5, hw: w / 2, hd };
-  zinfo.H = H; zinfo.slope = spec.ceiling ? 0 : tanP; World.zones.push(zinfo);
-  const inner = () => { ext.m1 = zone; ext.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
+  const zinfo = { id: zone, site: isite, y0: floorY - 0.7, y1: floorY + ridgeY + 1.5, hw: w / 2, hd, cell: cell ? cell.id : null };
+  zinfo.H = H; zinfo.slope = spec.ceiling ? 0 : tanP; World.zones.push(zinfo); if (cell) cell.zones.push(zone);
+  const inner = () => { ins.m1 = zone; ins.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
+  const faces = [...new Set([ext, ins, int, glow])];
   int.m1 = zone; int.ao = INT_AO;
   const walls = spec.walls || 'timber', stoneH = walls === 'half' ? (spec.stoneH || 1.05) : 0;
   const plaster = spec.plaster || [1, 1, 1], timberC = spec.timber || COL.timberDark;
   const outerMat = v => { if (walls === 'stone' || v < stoneH) ext.mat(MAT.STONE, spec.stoneCol || [1, 1, 1]); else if (walls === 'log') ext.mat(MAT.TIMBER, [0.9, 0.84, 0.78], 1.6); else ext.mat(MAT.PLASTER, plaster); };
-  const innerMat = () => { if (walls === 'stone') ext.mat(MAT.STONE, [0.95, 0.93, 0.9]); else if (walls === 'log') ext.mat(MAT.TIMBER, [0.95, 0.88, 0.8], 1.6); else ext.mat(MAT.PLASTER, [0.97, 0.93, 0.86]); };
+  const innerMat = () => { if (walls === 'stone') ins.mat(MAT.STONE, [0.95, 0.93, 0.9]); else if (walls === 'log') ins.mat(MAT.TIMBER, [0.95, 0.88, 0.8], 1.6); else ins.mat(MAT.PLASTER, [0.97, 0.93, 0.86]); };
   const openings = { front: [], back: [], left: [], right: [] };
   for (const o of spec.doors || []) openings[o.wall].push({ door: true, pos: o.pos || 0, w: o.w || 1.05, v0: 0, v1: o.h || 2.05, def: o });
   for (const o of spec.windows || []) openings[o.wall].push({ pos: o.pos, w: o.w || 0.9, v0: o.sill === undefined ? 1.0 : o.sill, v1: (o.sill === undefined ? 1.0 : o.sill) + (o.h || 1.0), def: o });
   const aoOut = v => v > H - 0.7 ? lerp(1, 0.55, (v - (H - 0.7)) / 0.7) : v < 0.45 ? lerp(0.7, 1, v / 0.45) : 1;
-  const doorList = [];
+  const doorList = [], xdoorList = [];
 
   for (const wn of ['front', 'back', 'left', 'right']) {
     const W = WALLS[wn], L = W.len(w, d), gable = wn === 'left' || wn === 'right', Hin = gable ? H : H + t * tanP;
     const wb = m4.create(); m4.basis(wb, W.u, [0, 1, 0], W.n, W.start(w, d));
-    for (const m of [ext, int, glow]) { m.push(); m4.mul(m.m, m.m, wb); m.dirty = true; }
+    for (const m of faces) { m.push(); m4.mul(m.m, m.m, wb); m.dirty = true; }
     const ops = openings[wn].map(o => Object.assign(o, { u0: W.toU(o.pos, w, d) - o.w / 2, u1: W.toU(o.pos, w, d) + o.w / 2 })).sort((a, b) => a.u0 - b.u0);
     const inOp = (u, v) => ops.some(o => u > o.u0 && u < o.u1 && v > o.v0 && v < o.v1);
     const ub = [0, t, L - t, L], vb = [0, 0.45, H - 0.7, H]; if (stoneH) vb.push(stoneH);
@@ -3291,16 +3429,16 @@ function buildHouse(site, spec) {
       ext.quad([u0, v1, 0], [u0, v0, 0], [u1, v0, 0], [u1, v1, 0], u0 / ext.tile, (H - v1) / ext.tile, u1 / ext.tile, (H - v0) / ext.tile);
       if (u0 >= t - 0.001 && u1 <= L - t + 0.001) {
         const top = (j === vs.length - 2) ? Hin : v1;
-        inner(); innerMat(); ext.grad = [v1 > H - 0.4 ? 0.8 : 1, v0 < 0.3 ? 0.78 : 1];
-        ext.quad([u1, top, -t], [u1, v0, -t], [u0, v0, -t], [u0, top, -t], u1 / ext.tile, (H - top) / ext.tile, u0 / ext.tile, (H - v0) / ext.tile);
+        inner(); innerMat(); ins.grad = [v1 > H - 0.4 ? 0.8 : 1, v0 < 0.3 ? 0.78 : 1];
+        ins.quad([u1, top, -t], [u1, v0, -t], [u0, v0, -t], [u0, top, -t], u1 / ins.tile, (H - top) / ins.tile, u0 / ins.tile, (H - v0) / ins.tile);
       }
     }
-    ext.grad = null;
+    ext.grad = null; ins.grad = null;
     if (gable) {          // gable triangles
       const ay = H + L / 2 * tanP;
       outer(); outerMat(H + 1); if (walls === 'half' || walls === 'timber') ext.mat(MAT.PLASTER, plaster);
       ext.poly([[0, H, 0], [L, H, 0], [L / 2, ay, 0]]);
-      inner(); innerMat(); ext.poly([[L - t * 0.2, H, -t], [t * 0.2, H, -t], [L / 2, ay, -t]]);
+      inner(); innerMat(); ins.poly([[L - t * 0.2, H, -t], [t * 0.2, H, -t], [L / 2, ay, -t]]);
       if (walls !== 'stone' && walls !== 'log') {     // decorative truss
         outer(); ext.mat(MAT.TIMBER, timberC);
         ext.box(L / 2 - 0.08, H, 0, L / 2 + 0.08, ay - 0.25, 0.035, 16);
@@ -3321,11 +3459,13 @@ function buildHouse(site, spec) {
         ext.box(u0 - 0.13, 0, 0, u0, v1 + 0.14, 0.05, 16); ext.box(u1, 0, 0, u1 + 0.13, v1 + 0.14, 0.05, 16); ext.box(u0, v1, 0, u1, v1 + 0.14, 0.05, 16);
         ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(u0 - 0.35, -0.5, 0, u1 + 0.35, -0.02, 0.5); ext.box(u0 - 0.2, -0.5, 0.5, u1 + 0.2, -0.17, 0.95);
         addFloor(ext, u0 - 0.35, -t, u1 + 0.35, 0.5, -0.01); addFloor(ext, u0 - 0.2, 0.5, u1 + 0.2, 0.95, -0.17);
-        inner(); if (spec.floor === 'stone') ext.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ext.mat(MAT.PLANKS, COL.woodDark);
-        ext.quad([u0, 0.02, -t], [u0, 0.02, 0], [u1, 0.02, 0], [u1, 0.02, -t]);
-        const hinge = m4.tp(ext.m, [u0 + 0.02, 0, -t / 2]), dirU = m4.td(ext.m, [1, 0, 0]);
-        const dd = { site, zone, hinge, yaw: Math.atan2(dirU[0], -dirU[2]) - PI / 2, w: o.w - 0.04, h: v1 - 0.03, open: 0, c: m4.tp(ext.m, [(u0 + u1) / 2, 1, -t / 2]), out: m4.tp(ext.m, [(u0 + u1) / 2, -0.3, 1.6]), ins: m4.tp(ext.m, [(u0 + u1) / 2, 0, -t - 1.0]), baseM: m4.mul(m4.create(), ext.m, m4.translate(m4.create(), u0 + 0.02, 0, -t / 2)) };
-        if (!o.def.noLeaf) World.doors.push(dd); doorList.push(dd);
+        inner(); if (spec.floor === 'stone') ins.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ins.mat(MAT.PLANKS, COL.woodDark);
+        ins.quad([u0, 0.02, -t], [u0, 0.02, 0], [u1, 0.02, 0], [u1, 0.02, -t]);
+        // a door leaf on each side (one in the village, one in the cell); the doorway itself is closed to walkers, the leaf is a portal (56_cells.js)
+        const leaf = (m, side) => { const hinge = m4.tp(m.m, [u0 + 0.02, 0, -t / 2]), dirU = m4.td(m.m, [1, 0, 0]); return { site: side === 'in' ? isite : site, zone: side === 'in' ? zone : cell ? 0 : zone, side, cell: cell ? cell.id : null, hinge, yaw: Math.atan2(dirU[0], -dirU[2]) - PI / 2, w: o.w - 0.04, h: v1 - 0.03, open: 0, c: m4.tp(m.m, [(u0 + u1) / 2, 1, -t / 2]), out: m4.tp(m.m, [(u0 + u1) / 2, -0.3, 1.6]), ins: m4.tp(m.m, [(u0 + u1) / 2, 0, -t - 1.0]), sill: m4.tp(m.m, [(u0 + u1) / 2, 0, -t / 2]), baseM: m4.mul(m4.create(), m.m, m4.translate(m4.create(), u0 + 0.02, 0, -t / 2)) }; };
+        const dd = leaf(ins, 'in'), dx = cell ? leaf(ext, 'out') : null;
+        if (!o.def.noLeaf) { World.doors.push(dd); if (dx) World.doors.push(dx); } doorList.push(dd); if (dx) { dx.pair = dd; dd.pair = dx; xdoorList.push(dx); }
+        if (cell) { addBoxCollider(ext, u0, -t, u1, 0, 0, H + 3); addBoxCollider(ins, u0, -t, u1, 0, 0, H + 3); }
         if (o.def.lamp !== false) at(ext, u1 + 0.55, v1 + 0.25, 0.02, 0, () => { ext.mat(MAT.METAL, COL.black); ext.beam([0, 0.1, 0], [0, 0.1, 0.36], 0.03, 0.03); at(ext, 0, 0.1, 0.34, 0, () => Props.lantern(ext, { zone: 0 })); });
       } else {
         const z = -t * 0.45, uc = (u0 + u1) / 2;
@@ -3339,7 +3479,7 @@ function buildHouse(site, spec) {
         }
         glow.mat(MAT.PLAIN, o.def.glass || [1.0, 0.66, 0.30]); glow.m3 = 34;
         glow.quad([u0, v1, z - 0.04], [u0, v0, z - 0.04], [u1, v0, z - 0.04], [u1, v1, z - 0.04], 0, 0, (u1 - u0) / 0.9, (v1 - v0) / 0.9);
-        addLight(m4.tp(ext.m, [uc, (v0 + v1) / 2 + 0.1, -t - 0.7]), 5.6, [1.5, 1.42, 1.28], zone, 'daylight');
+        addLight(m4.tp(ins.m, [uc, (v0 + v1) / 2 + 0.1, -t - 0.7]), 5.6, [1.5, 1.42, 1.28], zone, 'daylight');
       }
     }
     // timber frame on the outside face
@@ -3360,18 +3500,18 @@ function buildHouse(site, spec) {
       if (a2.length && !ops.some(o => o.u0 < a2[0])) ext.beam([0.17, stoneH + 0.14, 0.018], [a2[0] - 0.08, mid, 0.018], 0.035, 0.12);
       if (a2.length && !ops.some(o => o.u1 > a2[a2.length - 1])) ext.beam([L - 0.17, stoneH + 0.14, 0.018], [a2[a2.length - 1] + 0.08, mid, 0.018], 0.035, 0.12);
       // interior posts
-      inner(); ext.mat(MAT.TIMBER, timberC);
-      for (const p of all) { if (p < t + 0.1 || p > L - t - 0.1 || ops.some(o => p > o.u0 - 0.05 && p < o.u1 + 0.05)) continue; ext.box(p - 0.07, 0, -t - 0.04, p + 0.07, Hin, -t, 32); }
+      inner(); ins.mat(MAT.TIMBER, timberC);
+      for (const p of all) { if (p < t + 0.1 || p > L - t - 0.1 || ops.some(o => p > o.u0 - 0.05 && p < o.u1 + 0.05)) continue; ins.box(p - 0.07, 0, -t - 0.04, p + 0.07, Hin, -t, 32); }
     }
     // collision: solid spans (windows block, doors don't)
-    { let a = 0; const cuts = ops.filter(o => o.door); for (const o of cuts) { if (o.u0 - a > 0.02) addBoxCollider(ext, a, -t, o.u0, 0, 0, H + 3); a = o.u1; } if (L - a > 0.02) addBoxCollider(ext, a, -t, L, 0, 0, H + 3); }
-    for (const m of [ext, int, glow]) m.pop();
+    { let a = 0; const cuts = ops.filter(o => o.door); for (const o of cuts) { if (o.u0 - a > 0.02) { addBoxCollider(ext, a, -t, o.u0, 0, 0, H + 3); if (cell) addBoxCollider(ins, a, -t, o.u0, 0, 0, H + 3); } a = o.u1; } if (L - a > 0.02) { addBoxCollider(ext, a, -t, L, 0, 0, H + 3); if (cell) addBoxCollider(ins, a, -t, L, 0, 0, H + 3); } }
+    for (const m of faces) m.pop();
   }
   // ── floor, plinth ──
-  inner(); if (spec.floor === 'stone') ext.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ext.mat(MAT.PLANKS, COL.woodDark);
-  ext.quad([-w / 2 + t, 0.02, -hd + t], [-w / 2 + t, 0.02, hd - t], [w / 2 - t, 0.02, hd - t], [w / 2 - t, 0.02, -hd + t], 0, 0, (w - 2 * t) / ext.tile, (d - 2 * t) / ext.tile);
+  inner(); if (spec.floor === 'stone') ins.mat(MAT.COBBLE, [1, 1, 1], 1.4); else ins.mat(MAT.PLANKS, COL.woodDark);
+  ins.quad([-w / 2 + t, 0.02, -hd + t], [-w / 2 + t, 0.02, hd - t], [w / 2 - t, 0.02, hd - t], [w / 2 - t, 0.02, -hd + t], 0, 0, (w - 2 * t) / ins.tile, (d - 2 * t) / ins.tile);
   outer(); ext.mat(MAT.STONE, [0.92, 0.92, 0.92]); ext.grad = [1, 0.6]; ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4); ext.grad = null;
-  addFloor(ext, -w / 2, -hd, w / 2, hd, 0.02);
+  addFloor(ins, -w / 2, -hd, w / 2, hd, 0.02);
   // ── roof ──
   const thatch = (spec.roof || 'thatch') === 'thatch', rt = thatch ? 0.30 : 0.10, ov = spec.overhang || 0.55, og = 0.4, X = w / 2 + og;
   const eY = H - ov * tanP, sl = (hd + ov) / Math.cos(P), rc = spec.roofCol || (thatch ? [1, 1, 1] : [0.9, 0.85, 0.8]), rl = thatch ? MAT.THATCH : MAT.SHINGLE;
@@ -3393,15 +3533,15 @@ function buildHouse(site, spec) {
   // undersides: eaves + gable overhangs outside, the rest inside
   ext.mat(MAT.PLANKS, COL.woodDark); ext.ao = 0.5;
   for (const s of [-1, 1]) {
-    const q = (x0, x1, z0, z1) => { const a = [x0, roofY(z0), s * z0], b = [x0, roofY(z1), s * z1], c = [x1, roofY(z1), s * z1], e = [x1, roofY(z0), s * z0]; if (s < 0) ext.quad(a, b, c, e); else ext.quad(e, c, b, a); };
+    const q = (x0, x1, z0, z1, M) => { M = M || ext; const a = [x0, roofY(z0), s * z0], b = [x0, roofY(z1), s * z1], c = [x1, roofY(z1), s * z1], e = [x1, roofY(z0), s * z0]; if (s < 0) M.quad(a, b, c, e); else M.quad(e, c, b, a); };
     outer(); ext.ao = 0.5; q(-X, X, hd - t, hd + ov); q(-X, -w / 2 + t, 0, hd - t); q(w / 2 - t, X, 0, hd - t);
-    if (!spec.ceiling) { inner(); ext.ao = INT_AO * 0.9; q(-w / 2 + t, w / 2 - t, 0, hd - t); }
+    if (!spec.ceiling) { inner(); ins.mat(MAT.PLANKS, COL.woodDark); ins.ao = INT_AO * 0.9; q(-w / 2 + t, w / 2 - t, 0, hd - t, ins); }
   }
   // ── interior roof timbers ──
   int.mat(MAT.TIMBER, timberC);
   if (spec.ceiling) {
-    inner(); ext.mat(MAT.PLANKS, COL.wood); ext.ao = INT_AO * 0.85;
-    ext.quad([-w / 2 + t, H, hd - t], [-w / 2 + t, H, -hd + t], [w / 2 - t, H, -hd + t], [w / 2 - t, H, hd - t]);
+    inner(); ins.mat(MAT.PLANKS, COL.wood); ins.ao = INT_AO * 0.85;
+    ins.quad([-w / 2 + t, H, hd - t], [-w / 2 + t, H, -hd + t], [w / 2 - t, H, -hd + t], [w / 2 - t, H, hd - t]);
     for (let x = -w / 2 + t + 0.6; x < w / 2 - t; x += 1.2) int.box(x - 0.07, H - 0.16, -hd + t, x + 0.07, H, hd - t, 8);
   } else {
     const nb = Math.max(1, Math.round((w - 2 * t) / 2.5)), xs = []; for (let i = 1; i <= nb; i++) xs.push(-w / 2 + t + (w - 2 * t) * i / (nb + 1));
@@ -3413,11 +3553,12 @@ function buildHouse(site, spec) {
     int.box(-w / 2 + t, ridgeY - 0.24, -0.07, w / 2 - t, ridgeY - 0.1, 0.07);
     for (const s of [-1, 1]) { const z = s * (hd - t) * 0.5; int.box(-w / 2 + t, roofY(z) - 0.2, z - 0.06, w / 2 - t, roofY(z) - 0.08, z + 0.06); }
   }
-  ext.ao = 1; ext.m1 = 0;
+  ext.ao = 1; ext.m1 = 0; ins.ao = 1; ins.m1 = 0;
+  // ctx.site / ctx.ext / ctx.Ms are the INTERIOR frame (what the furnishing code builds in); ctx.xsite / xext / Mx are the shell on the village site
   const ctx = {
-    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList, kit, Ms, openings, tanP, zoneInfo: zinfo,
+    site: isite, xsite: site, cell, zone, w, d, H, t, hd, ext: ins, xext: ext, int, glow, R, floorY, xFloorY, ridgeY, roofY, spec, doors: doorList, xdoors: xdoorList, kit, Ms, Mx, openings, tanP, zoneInfo: zinfo,
     world: (x, y, z) => m4.tp(Ms, [x, y, z]),
-    spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: site.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
+    spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: isite.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
     // hearth against a wall. frame: origin on the inner wall face, +x into the room. (x, z) = house-local position, rot = RY angle
     fireplace(x, z, rot, opt) {
       opt = opt || {}; const wid = opt.w || 1.9, dep = 0.8, m = int; ctx.hearth = { x, z, rot, wid, dep }; World.zones[zone - 1].hearth = [x, z, wid];
@@ -3440,13 +3581,13 @@ function buildHouse(site, spec) {
       addBoxCollider(m, 0, -wid / 2 - 0.1, dep + 0.25, wid / 2 + 0.1, 0, 2);
       // chimney stack above the roof
       const sp = wp(m, dep * 0.5 - 0.02, 0, 0); m.pop();
-      const l = worldToSite(site, sp[0], sp[2]);
+      const l = worldToSite(isite, sp[0], sp[2]);
       if (kit) { kitChimney(ctx, l[0], l[1]); ctx.fire = fp; return; }
       outer(); ext.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
       const y0 = roofY(l[1]) - 0.5, y1 = Math.max(ridgeY + 0.9, roofY(l[1]) + 1.5);
       ext.cbox(l[0], y0, l[1], 0.85, y1 - y0, 0.85, 4); ext.cbox(l[0], y1, l[1], 1.02, 0.14, 1.02);
       ext.mat(MAT.PLAIN, [0.05, 0.05, 0.05]); ext.cbox(l[0], y1 + 0.14, l[1], 0.5, 0.01, 0.5, 4);
-      World.emitters.push({ type: 'smoke', p: m4.tp(Ms, [l[0], y1 + 0.2, l[1]]), zone: 0 });
+      World.emitters.push({ type: 'smoke', p: m4.tp(Mx, [l[0], y1 + 0.2, l[1]]), zone: 0 });
       ctx.fire = fp;
     },
     solid(x0, z0, x1, z1, h) { addBoxCollider(int, x0, z0, x1, z1, 0, h || 1); },
@@ -3458,8 +3599,13 @@ function buildHouse(site, spec) {
   if (kit) kitDress(ctx);
   if (kit && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
   int.grad = null;
-  World.houses[site.id] = { site, zone, ctx, floorY, door: doorList[0] };
-  return { ext, int, glow, ctx };
+  if (cell) {
+    int.append(ins);          // the interior's wall faces, floor and ceiling travel with the rest of the cell's generated meshes
+    cell.floorY = floorY; cell.zone = zone; cell.door = doorList[0]; cell.xdoor = xdoorList[0]; cell.w = w; cell.d = d; cell.ctx = ctx;
+    if (cell.door && cell.xdoor) Cells.portals(cell, site);
+  }
+  World.houses[site.id] = { site, isite, zone, ctx, floorY, xFloorY, door: doorList[0], xdoor: xdoorList[0], cell };
+  return { ext, int, glow, ctx, cell };
 }
 
 
@@ -3521,18 +3667,31 @@ const KH = (() => {
 })();
 
 let kitFB = null;
-function kitShell(c) {
-  const { site, spec, w, d, H, t, hd, ext, glow, zone, Ms, openings, tanP } = c, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
+// With cells the shell is laid twice: pass 'ext' on the village site (outside faces, a closed door, glowing windows, no interior) and pass 'int' in the cell's own
+// frame (the room's side of the same walls, floor, roof lining). Without cells one pass, 'both', lays it all on the site as it always was.
+function kitShell(c) { if (!c.cell) return kitShellPass(c, 'both'); kitShellPass(c, 'ext'); kitShellPass(c, 'int'); }
+function kitShellPass(c, pass) {
+  const { spec, w, d, H, t, hd, glow, zone, openings, tanP } = c, site = c.xsite, X = pass !== 'int', I = pass !== 'ext', ext = pass === 'int' ? c.ext : c.xext, Ms = pass === 'int' ? c.Ms : c.Mx, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
-  ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
-  const b = site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.floorY + H + (st.up ? 3 : 0) }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
+  if (X) { for (const m of [c.xext, c.ext, glow]) { m.nv = 0; m.ni = 0; m.min = [1e9, 1e9, 1e9]; m.max = [-1e9, -1e9, -1e9]; } }
+  const b = X ? (site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.xFloorY + H + (st.up ? 3 : 0) })) : kitIntBatch(zone);
+  if (X) World.kitExt[site.id] = { batch: b, site, Ms: c.Mx, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
-  const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: st.up ? zone : 0, inSkyVis: st.up ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
+  const cellExt = pass === 'ext';          // in a cell the village shell knows nothing of the room: its inside faces are plain dark
+  const OUT = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : st.up ? zone : 0, inSkyVis: st.up && !cellExt ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
+  const IN = { zone, skyVis: INT_AO, inZone: zone, inSkyVis: INT_AO };
   const frames = {}, wbs = {};
   for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); frames[wn] = new THREE.Matrix4().makeBasis(KH.V(W.u), KH.V([0, 1, 0]), KH.V(W.n)).setPosition(s0[0], s0[1], s0[2]).premultiply(MS); wbs[wn] = m4.basis(m4.create(), W.u, [0, 1, 0], W.n, s0); }
-  const add = (F, name, x, y, z, s, o, ry) => { o = o || OUT; if (st.timber && typeof infTimber === 'function') name = infTimber(name); if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] }); b.add(name, KH.xf(F, x, y, z, s, ry), o); };
+  const add = (F, name, x, y, z, s, o, ry) => {
+    o = o || OUT;
+    if (pass === 'int') { if (o === EXT) { if (!/^DoorFrame|^Door_1/.test(name)) return; o = IN; } else o = o.tint ? Object.assign({}, IN, { tint: o.tint }) : IN; }
+    else if (cellExt && o.inZone !== undefined && o !== OUT && o !== UP) o = Object.assign({}, o, { inZone: 0, inSkyVis: 0.12 });
+    if (st.timber && typeof infTimber === 'function') name = infTimber(name);
+    if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] });
+    b.add(name, KH.xf(F, x, y, z, s, ry), o);
+  };
   const Ytop = H + (st.up ? 3 : 0);
-  Object.assign(c, { kb: b, kMS: MS, kYtop: Ytop, kFrames: frames, kR: R });
+  if (X) Object.assign(c, { kb: b, kMX: MS, kFrames: frames }); if (I) c.kMS = MS; c.kYtop = Ytop; c.kR = c.kR || R;
   const G = stone ? 'Wall_UnevenBrick' : 'Wall_Plaster';
   const filler = (F, a, e, y, ys, isStone, endL, endR, o) => {
     const g = e - a; if (g < 0.05) return;
@@ -3553,7 +3712,7 @@ function kitShell(c) {
   };
   c.kDoorLamps = [];
   const infW = site.infill && typeof infKitWalls === 'function' && INFS.mats;
-  if (infW) infKitWalls(c, b, MS, frames, zone, sy, R);
+  if (infW) infKitWalls(c, b, MS, frames, zone, sy, R, pass);
   for (const wn of ['front', 'back', 'left', 'right']) {
     if (infW) continue;
     const F = frames[wn], L = WALLS[wn].len(w, d);
@@ -3568,12 +3727,12 @@ function kitShell(c) {
       filler(F, cur, s.c - sx, 0, sy, stone, cur === 0, false);
       if (o.door) {
         add(F, G + '_Door_Flat', s.c, 0, 0, S); add(F, st.arch ? 'DoorFrame_Round_Brick' : 'DoorFrame_Flat_WoodDark', s.c, 0, 0, st.arch ? [S[0], S[1] * 0.93, 1.1] : S, EXT);
-        if (o.def.kLamp) { const side = s.c + sx + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F, wn, u: s.c + side * (sx + 0.42), v: 1.5 * sy }); }
+        if (X && o.def.kLamp) { const side = s.c + sx + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F, wn, u: s.c + side * (sx + 0.42), v: 1.5 * sy }); }
       } else {
         const k = WIN[o.def.kwin] || WIN.wide;
         add(F, G + k[0], s.c, 0, 0, S); add(F, o.def.glass && Kit.pieces[k[1] + '_Stained'] ? k[1] + '_Stained' : k[1], s.c, 0, 0, S, o.def.glass ? Object.assign({}, OUT, { tint: o.def.glass }) : undefined);
         if (o.def.shutters !== false && sx > 0.9 && s.c - 1.3 > 0 && s.c + 1.3 < L) add(F, k[2], s.c, 0, 0, S, EXT);
-        if (!o.def.glass && !st.arch && sx > 0.9 && (wn === 'front' || R() < 0.3) && R() < 0.7) { const fb = (kitFB = kitFB || [0, 1, 2].map(i => genFlowerBox(1.25, rng(70 + i)))); c.kb.add(R.pick(fb), KH.xf(F, s.c, 0.9 * sy, 0.27, 1, 0), EXT); }
+        if (X && !o.def.glass && !st.arch && sx > 0.9 && (wn === 'front' || R() < 0.3) && R() < 0.7) { const fb = (kitFB = kitFB || [0, 1, 2].map(i => genFlowerBox(1.25, rng(70 + i)))); c.kb.add(R.pick(fb), KH.xf(F, s.c, 0.9 * sy, 0.27, 1, 0), EXT); }
       }
       cur = s.c + sx;
     }
@@ -3581,7 +3740,7 @@ function kitShell(c) {
     add(F, 'Corner_Exterior_Wood', 0, 0, 0, [1.25, sy, 1.25], EXT);
     // ── upper storey: timber and plaster, windows on alternate panels, a balcony over the door on some ──
     if (st.up) {
-      const n = Math.max(1, Math.round(L / 2)), m = L / n, sx = m / 2, S = [sx, 1, 1], mid = n >> 1;
+      const n = Math.max(1, Math.round(L / 2)), m = L / n, sx = m / 2, S = [sx, 1, 1], mid = n >> 1, RU = rng(site.x * 91 + site.z * 7 + wn.charCodeAt(0) * 13);       // its own sequence: the inside copy of the wall must pick the same windows
       for (let k = 0; k < n; k++) {
         const uc = (k + 0.5) * m;
         if (st.balcony === wn && n >= 3 && k === mid) {
@@ -3592,7 +3751,7 @@ function kitShell(c) {
         } else if (n > 1 && k === 0) add(F, 'Wall_Plaster_Straight_L', uc, H, 0, S, UP);
         else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, 0, S, UP);
         else if (n <= 3 || (k + (wn === 'front' || wn === 'back' ? 0 : 1)) % 2 === 1) {
-          const r = R();
+          const r = RU();
           if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); }
           else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
           else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, 0, S, UP); add(F, kitOpen('Window_Thin_Round1'), uc, H, 0, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
@@ -3603,36 +3762,36 @@ function kitShell(c) {
     // ── gable ends carry the timber triangle of the roof ──
     if ((wn === 'left' || wn === 'right') && !(st.shingle && typeof infRoofGen === 'function')) { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; const gw = spec.gableWin && spec.gableWin[wn] && Kit.pieces['Roof_Front_Brick' + span + '_Open'];
       add(F, 'Roof_Front_Brick' + span + (gw ? '_Open' : ''), L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO });
-      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT)); }
+      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT), pass, ext); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.45, inZone: st.up ? 0 : zone, inSky: st.up ? 0.2 : INT_AO, tint: st.timber ? [1, 1, 1] : [1, 1, 1] });
+  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.45, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: [1, 1, 1] }); }
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
     let name = 'Roof_RoundTiles_' + span + 'x' + len; const ridge = Kit.info(name).max[1]; if (st.shingle && typeof infR === 'function') name = infR(name);
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
-    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), { zone: 0, skyVis: 1, inZone: zone, inSkyVis: 0.2 });
+    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), pass === 'int' ? { zone, skyVis: INT_AO, inZone: zone, inSkyVis: 0.2 } : { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : 0.2 });
   }
-  // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance) ──
-  {
+  // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance; in a cell they are the cell's) ──
+  if (I) {
     const nx = Math.max(1, Math.round(w / 2)), nz = Math.max(1, Math.round(d / 2)), sx = (w - 0.3) / (2 * nx), sz = (d - 0.3) / (2 * nz), tile = spec.floor === 'stone' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';
     for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) b.add(tile, KH.xf(MS, (i - (nx - 1) / 2) * 2 * sx, 0.012, (j - (nz - 1) / 2) * 2 * sz, [sx, 1, sz]), { zone, skyVis: INT_AO, cast: false });
   }
   // ── generated parts that still make sense: stone plinth down to the ground, door steps, ceiling or roof lining ──
   const inner = () => { ext.m1 = zone; ext.ao = INT_AO; }, outer = () => { ext.m1 = 0; ext.ao = 1; };
-  outer(); ext.mat(MAT.STONE, [0.92, 0.92, 0.92]); ext.grad = [1, 0.6]; ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4); ext.grad = null;
-  for (const wn in WALLS) for (const o of openings[wn]) if (o.door) {
+  if (X) outer(), ext.mat(MAT.STONE, [0.92, 0.92, 0.92]), ext.grad = [1, 0.6], ext.box(-w / 2 - 0.07, -1.7, -hd - 0.07, w / 2 + 0.07, 0, hd + 0.07, 4), ext.grad = null;
+  if (X) for (const wn in WALLS) for (const o of openings[wn]) if (o.door) {
     ext.push(); m4.mul(ext.m, ext.m, wbs[wn]); ext.dirty = true;
     outer(); ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(o.u0 - 0.35, -0.5, 0, o.u1 + 0.35, -0.02, 0.5); ext.box(o.u0 - 0.2, -0.5, 0.5, o.u1 + 0.2, -0.17, 0.95);
     ext.pop();
   }
   const e = 0.16;          // the kit walls are thinner than the generated ones: reach to their inner face
   if (st.up) c.needUpper = true;           // a second storey: its floor, with the stairwell, is built by the building (upperFloor in 71b_storeys.js)
-  if (spec.ceiling && !st.up) {
+  if (I && spec.ceiling && !st.up) {
     inner(); ext.mat(MAT.PLANKS, COL.wood); ext.ao = INT_AO * 0.85;
     ext.quad([-w / 2 + e, H, hd - e], [-w / 2 + e, H, -hd + e], [w / 2 - e, H, -hd + e], [w / 2 - e, H, hd - e]);
-  } else if (!st.up) {
+  } else if (I && !st.up) {
     const roofY = c.roofY;
     ext.mat(MAT.PLANKS, COL.woodDark);
     for (const s of [-1, 1]) {
@@ -3645,9 +3804,9 @@ function kitShell(c) {
       ext.pop();
     }
   }
-  c.kCol0 = World.colliders.length;
+  if (I) c.kCol0 = World.colliders.length;
   // lanterns by the doors
-  for (const l of c.kDoorLamps) {
+  if (X) for (const l of c.kDoorLamps) {
     if (site.infill && typeof INFS !== 'undefined' && INFS.mats) {          // a small generated bracket lantern instead of the 2800-triangle kit lantern
       const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), q = KH.xf(l.F, l.u, 2.15, 0.1, 1, 0), p0 = new THREE.Vector3(0, -0.1, 0.42).applyMatrix4(q), p = [p0.x, p0.y, p0.z];
       b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
@@ -3662,8 +3821,8 @@ function kitShell(c) {
 function kitChimney(c, lx, lz) {
   lz = Math.max(-c.hd * 0.3, Math.min(c.hd * 0.3, lz));          // keep it near the ridge: out on the slope its stretched base hangs below the eave
   const ridge = c.kYtop + c.hd * c.tanP, base = c.kYtop + (c.hd - Math.abs(lz)) * c.tanP - 1.0, hgt = Math.max(3.18, ridge + 1.1 - base);
-  c.kb.add('Prop_Chimney', KH.xf(c.kMS, lx, base, lz, [1.1, hgt / 3.18, 1.1]), { zone: 0, skyVis: 1 });
-  World.emitters.push({ type: 'smoke', p: m4.tp(c.Ms, [lx, base + hgt + 0.2, lz]), zone: 0 });
+  c.kb.add('Prop_Chimney', KH.xf(c.kMX, lx, base, lz, [1.1, hgt / 3.18, 1.1]), { zone: 0, skyVis: 1 });
+  World.emitters.push({ type: 'smoke', p: m4.tp(c.Mx, [lx, base + hgt + 0.2, lz]), zone: 0 });
 }
 
 // ── furnishing: Props.* calls land here while kits are loaded and are answered with kit pieces at the same spot ──
@@ -3672,7 +3831,7 @@ const KITP = { rnd: rng(4242), lc: {} };
 const kitLightOk = (zone, cap) => { const n = KITP.lc[zone] = (KITP.lc[zone] || 0) + 1; return n <= cap; };
 function kitIntBatch(zone) {
   let k = World.kitInt[zone];
-  if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
+  if (!k) { const zi = World.zones[zone - 1]; k = World.kitInt[zone] = { batch: Kit.batch({ name: 'kitint-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null, cell: zi ? zi.cell : null }; }
   return k.batch;
 }
 // ── scanned stand-ins ──
@@ -4017,14 +4176,16 @@ function kitAttach() {
     const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.frustumCulled = false; mesh.matrixAutoUpdate = false; mesh.renderOrder = -5; mesh.name = 'kit-shadow-proxy'; SC.scene.add(mesh);
   }
   try { const sb = kitScatter(); if (sb) addG(sb.build(), { scatter: true }); } catch (e) { console.warn('scan scatter skipped: ' + (e && e.message || e)); }
-  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) { const g = k.batch.build(); furnBlobs(+z, g); addG(g, { site: k.site, interior: true }); } }
-  for (const z in World.kitFine) { const k = World.kitFine[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true, fine: true }); }
+  for (const z in World.kitInt) { const k = World.kitInt[z]; if (k.batch.count) { const g = k.batch.build(); furnBlobs(+z, g); addG(g, { site: k.site, interior: true, cell: k.cell }); } }
+  for (const z in World.kitFine) { const k = World.kitFine[z]; if (k.batch.count) addG(k.batch.build(), { site: k.site, interior: true, fine: true, cell: k.cell }); }
   if (World.kitYard && World.kitYard.count) { const g = World.kitYard.build(); g.traverse(o => { if (o.isMesh) o.layers.set(1); }); addG(g, { yard: true }); }
   const inner = sceneUpdate;
   sceneUpdate = function (camPos, q) {
     inner(camPos, q);
     // furniture only shows through an open door or a window, so it is drawn for the nearest buildings alone
+    const cur = World.cell;
     for (const k of World.kitGroups) {
+      if (cur || k.cell) { k.g.visible = !!cur && k.cell === cur.id && !(k.fine && q.name === 'Low'); continue; }        // in a cell: that cell's groups only; outside: no cell's
       if (k.interior && k.site) k.g.visible = interiorShown(k.site, camPos) && !(k.fine && q.name === 'Low');
       else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
       else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
@@ -4032,7 +4193,7 @@ function kitAttach() {
       else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? 9 : q.yardRange * 1.6 + 8) && (!k.dress || q.scatter); }
       else k.g.visible = true;
     }
-    if (Kit.update) Kit.update(camPos);
+    if (Kit.update && !cur) Kit.update(camPos);
   };
 }
 
@@ -4329,8 +4490,9 @@ UPPER.mill = c => {
 
 // ── gable windows: the plaster of a gable end with holes cut in it, and the kit's open window frames in the holes ──
 // wb: the wall's basis (house-local), L: its length, Ytop: where the gable starts, wins: [{ u: position along the wall, sill: height above the gable's foot, s: scale of the kit window }]
-function gableFill(c, wb, L, Ytop, wins, placeWin) {
-  const ext = c.ext, { zone, tanP, hd } = c, T = 0.25, inset = 0.3, apex = Ytop + hd * tanP - 0.5, col = c.spec.plaster || [1, 0.96, 0.88];
+function gableFill(c, wb, L, Ytop, wins, placeWin, pass, ext) {
+  ext = ext || c.ext; pass = pass || 'both';
+  const { zone, tanP, hd } = c, T = 0.25, inset = 0.3, apex = Ytop + hd * tanP - 0.5, col = c.spec.plaster || [1, 0.96, 0.88];
   const P = (u, v, n) => m4.tp(wb, [u, v, n]);
   const hw = 0.6, holes = wins.map(w => (w = Object.assign({ u: L / 2 }, w), { u0: w.u - hw * w.s, u1: w.u + hw * w.s, v0: Ytop + w.sill, v1: Ytop + w.sill + 1.55 * w.s, w })).sort((a, b) => a.u0 - b.u0);
   const left = v => inset + (v - Ytop) / tanP, right = v => L - inset - (v - Ytop) / tanP;       // the fill stops inside the rafters
@@ -4346,13 +4508,13 @@ function gableFill(c, wb, L, Ytop, wins, placeWin) {
       for (const [a0, a1, b0, b1] of segs) { if (b0 - a0 < 0.02 && b1 - a1 < 0.02) continue; if (vb >= apex - 0.001 && Math.abs(b1 - a1) < 0.05) continue; q([a0, va], [b0, va], [b1, vb], [a1, vb]); }
     }
   };
-  ext.m1 = 0; ext.ao = 1; ext.mat(MAT.PLASTER, col); face(0, false);
-  ext.m1 = zone; ext.ao = INT_AO; ext.mat(MAT.PLASTER, [col[0] * 0.97, col[1] * 0.95, col[2] * 0.9]); face(-T, true);
+  if (pass !== 'int') { ext.m1 = 0; ext.ao = 1; ext.mat(MAT.PLASTER, col); face(0, false); }
+  if (pass !== 'ext') { ext.m1 = zone; ext.ao = INT_AO; ext.mat(MAT.PLASTER, [col[0] * 0.97, col[1] * 0.95, col[2] * 0.9]); face(-T, true); }
   // reveals round each hole, then the frame
   for (const h of holes) {
-    ext.m1 = 0; ext.ao = 0.8; ext.mat(MAT.TIMBER, c.spec.timber || COL.timber);
+    if (pass !== 'int') { ext.m1 = 0; ext.ao = 0.8; ext.mat(MAT.TIMBER, c.spec.timber || COL.timber);
     const a = [h.u0, h.v0], b = [h.u1, h.v0], e = [h.u1, h.v1], d = [h.u0, h.v1];
-    for (const [p0, p1] of [[a, b], [b, e], [e, d], [d, a]]) ext.quad(P(p0[0], p0[1], 0), P(p1[0], p1[1], 0), P(p1[0], p1[1], -T), P(p0[0], p0[1], -T), 0, 0, 1, 1);
+    for (const [p0, p1] of [[a, b], [b, e], [e, d], [d, a]]) ext.quad(P(p0[0], p0[1], 0), P(p1[0], p1[1], 0), P(p1[0], p1[1], -T), P(p0[0], p0[1], -T), 0, 0, 1, 1); }
     ext.ao = 1; ext.m1 = 0; placeWin(kitOpen('Window_Wide_Flat1'), (h.u0 + h.u1) / 2, h.v0 - 0.95 * h.w.s, h.w.s);
   }
   ext.m1 = 0; ext.ao = 1;
@@ -4729,7 +4891,7 @@ const FURN = { blobs: {} };
 // the fine group of a room: small objects, drawn on medium and high only (see kitAttach)
 World.kitFine = {};
 function furnFineBatch(zone) {
-  let k = World.kitFine[zone]; if (!k) { const zi = World.zones[zone - 1]; k = World.kitFine[zone] = { batch: Kit.batch({ name: 'kitfine-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
+  let k = World.kitFine[zone]; if (!k) { const zi = World.zones[zone - 1]; k = World.kitFine[zone] = { batch: Kit.batch({ name: 'kitfine-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null, cell: zi ? zi.cell : null }; }
   return k.batch;
 }
 function furnBlob(zone, P) {
@@ -5089,7 +5251,7 @@ function buildVillage() {
     const spec = HOUSES[site.id]; if (!spec) continue;
     const h = buildHouse(site, spec);
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
-    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true, cell: h.cell ? h.cell.id : null }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
   }
@@ -5311,7 +5473,7 @@ function buildVillage() {
   leaf.mat(MAT.METAL, COL.black); for (const y of [0.18, 0.82]) { leaf.box(0, y - 0.03, -0.04, 0.82, y + 0.03, -0.03, 32); leaf.box(0, y - 0.03, 0.03, 0.82, y + 0.03, 0.04, 16); }
   leaf.box(0.86, 0.48, -0.07, 0.9, 0.54, 0.07);
   const leafItem = skin.add(leaf);
-  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: 0, kind: 'door' }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;
@@ -6604,7 +6766,7 @@ function infillAttach() {
 }
 
 // the walls of an enterable infill house (called from kitShell): the plan comes from the building's own openings, the upper storey is laid out like a shell's
-function infKitWalls(c, b, MS, frames, zone, sy, R) {
+function infKitWalls(c, b, MS, frames, zone, sy, R, pass) {      // pass: 'ext' / 'int' in a cell (the village shell / the room), else both in one
   const { site, spec, w, d, H, openings } = c, st = spec.kitStyle, fl = st.up ? 2 : 1, plan = [];
   plan[0] = { front: [], back: [], left: [], right: [] };
   for (const wn of ['front', 'back', 'left', 'right']) {
@@ -6613,12 +6775,12 @@ function infKitWalls(c, b, MS, frames, zone, sy, R) {
       const cu = (o.u0 + o.u1) / 2, hw = o.door ? Math.min(0.55 * Math.max(1, o.def.ksx || 1), cu, L - cu) : Math.min(0.55, cu, L - cu);
       if (hw < 0.3) continue;
       plan[0][wn].push({ u0: cu - hw, u1: cu + hw, v0: o.door ? 0 : (o.def.sill || 0.95), v1: o.door ? (o.def.h || 2.12) : (o.def.sill || 0.95) + (o.def.h || 1.55), door: !!o.door, shutter: !o.door && hw > 0.5 && R() < 0.35 });
-      if (o.door && o.def.kLamp) { const side = cu + hw + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F: frames[wn], wn, u: cu + side * (hw + 0.42), v: 1.5 * sy }); }
+      if (o.door && o.def.kLamp && pass !== 'int') { const side = cu + hw + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F: frames[wn], wn, u: cu + side * (hw + 0.42), v: 1.5 * sy }); }
     }
   }
   if (fl > 1) { plan[1] = { front: [], back: [], left: [], right: [] }; const nF = Math.max(2, Math.round(w / 2)), mF = w / nF; for (let i = 0; i < nF; i++) { const cu = (i + 0.5) * mF; if (i % 2 === 0) plan[1].front.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1, shutter: R() < 0.4 }); if (i % 2 === 1) plan[1].back.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1 }); } plan[1].left.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); plan[1].right.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); }
   const tn = 0.85 + R() * 0.25;
-  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: [tn, tn * 0.98, tn * 0.95], jetty: false, R, plan, skip: {}, optsOf: k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 } });
+  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: [tn, tn * 0.98, tn * 0.95], jetty: false, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
 }
 
 
@@ -6917,7 +7079,10 @@ function fxUpdate(dt, time, env, cam) {
   const d = R.partData, max = R.partMax; let n = 0;
   const put = (x, y, z, size, r, g, b, a, rot, kind, aspect, seed) => { if (n >= max) return; const o = n++ * 12; d[o] = x; d[o + 1] = y; d[o + 2] = z; d[o + 3] = size; d[o + 4] = r; d[o + 5] = g; d[o + 6] = b; d[o + 7] = a; d[o + 8] = rot; d[o + 9] = kind; d[o + 10] = aspect; d[o + 11] = seed; };
   const lit = env.windowGlow, wx = env.windDir[0] * env.windStrength, wz = env.windDir[1] * env.windStrength;
+  const here = World.cell ? World.cell.id : null;
   for (const e of World.emitters) {
+    if (e.cell === undefined) { const zi = e.zone ? World.zones[e.zone - 1] : null; e.cell = zi && zi.cell || null; }
+    if (e.cell !== here) continue;          // in a cell only its own flames burn; outdoors none of them do
     const dx = e.p[0] - cam[0], dy = e.p[1] - cam[1], dz = e.p[2] - cam[2], dist = hyp(dx, dy, dz);
     if (e.type === 'fire' || e.type === 'bonfire') {
       if (e.type === 'bonfire' && !World.bonfire) continue;
@@ -6946,6 +7111,7 @@ function fxUpdate(dt, time, env, cam) {
     }
   }
   // chimney smoke drifts with the wind and thins out
+  if (World.cell) FX.smoke.length = 0;
   for (let i = FX.smoke.length - 1; i >= 0; i--) {
     const s = FX.smoke[i]; s.life += dt; if (s.life > s.max) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
     const k = s.life / s.max; s.p[0] += (wx * 0.9 * k + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) * dt; s.p[2] += (wz * 0.9 * k) * dt;
@@ -7229,7 +7395,7 @@ const NPC_DEFS = [
     sched: [[7.5, 'stall0', 'idle'], [18, 'barn.work', 'work'], [19.5, 'inn.stand1', 'idle'], [22, 'farm.bed2', 'lie']] },
 ];
 const NPCS = [], NPC = {};
-const Nav = { nodes: [], adj: [], spot: {} };
+const Nav = { nodes: [], adj: [], spot: {}, portal: {} };        // portal[a] = b: stepping from node a to b crosses a door between two spaces (an instant move)
 function navBuild() {
   const N = Nav.nodes, A = Nav.adj;
   const add = (x, y, z) => { N.push([x, y, z]); A.push([]); return N.length - 1; };
@@ -7249,8 +7415,12 @@ function navBuild() {
   const doorNode = {};
   for (const id in World.houses) {
     const h = World.houses[id], d = h.door; if (!d) continue;
-    const o = add(d.out[0], World.groundAt(d.out[0], d.out[2], d.out[1] + 1), d.out[2]), i = add(d.ins[0], h.floorY + 0.02, d.ins[2]);
-    link(o, i); link(o, nearest(d.out[0], d.out[2], outside, 40)); doorNode[id] = { o, i }; outside.push(o);
+    const x = h.xdoor || d, o = add(x.out[0], World.groundAt(x.out[0], x.out[2], x.out[1] + 1), x.out[2]), i = add(d.ins[0], h.floorY + 0.02, d.ins[2]);
+    if (h.cell) {         // the door is a portal: outside node o -> threshold ot (village) ~ threshold it (cell) -> inside node i
+      const ot = add(x.c[0], World.groundAt(x.c[0], x.c[2], x.c[1] + 1), x.c[2]), it = add(d.c[0], h.floorY + 0.02, d.c[2]);
+      link(o, ot); link(it, i); A[ot].push([it, 1.2]); A[it].push([ot, 1.2]); Nav.portal[ot] = it; Nav.portal[it] = ot; doorNode[id] = { o, i, ot, it };
+    } else { link(o, i); doorNode[id] = { o, i }; }
+    link(o, nearest(x.out[0], x.out[2], outside, 40)); outside.push(o);
   }
   for (const name in World.spots) {
     const s = World.spots[name], k = add(s.p[0], s.p[1], s.p[2]); Nav.spot[name] = k;
@@ -7322,6 +7492,7 @@ function npcArrive(n, spotName, anim) {
   n.anim = sp.lie ? 'lie' : sp.sit ? 'sit' : (anim === 'sit' || anim === 'lie') ? 'idle' : anim;
 }
 function npcUpdate(dt, playerPos) {
+  const pc = Cells.spaceOf(playerPos);
   for (const n of NPCS) {
     n.t += dt;
     const dPlayer = hyp(n.pos[0] - playerPos[0], n.pos[2] - playerPos[2]);
@@ -7345,7 +7516,7 @@ function npcUpdate(dt, playerPos) {
         const run = n.def.run, sp = (run ? 2.7 : 1.35) * (0.9 + n.scale * 0.1), N2 = Nav.nodes[n.path[n.pi]];
         const dx = N2[0] - n.pos[0], dz = N2[2] - n.pos[2], d = hyp(dx, dz);
         const blocked = dPlayer < 0.75 && (playerPos[0] - n.pos[0]) * dx + (playerPos[2] - n.pos[2]) * dz > 0;
-        if (d < 0.18) { n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
+        if (d < 0.18) { const k = n.path[n.pi], k2 = n.path[n.pi + 1]; if (k2 !== undefined && Nav.portal[k] === k2) { n.pos = Nav.nodes[k2].slice(); n.pi++; n.portalT = 0.4; } n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
         else if (!blocked) {
           const st = Math.min(d, sp * dt); n.pos[0] += dx / d * st; n.pos[2] += dz / d * st;
           const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 0.6); n.pos[1] += clamp(gy - n.pos[1], -3 * dt, 3 * dt); if (Math.abs(gy - n.pos[1]) > 1.2) n.pos[1] = gy;
@@ -7354,6 +7525,9 @@ function npcUpdate(dt, playerPos) {
         } else n.anim = 'idle';
       }
     }
+    // not in the player's space (another cell, or the village while the player is in one): position only, no pose, no drawing
+    if (pc !== Cells.spaceOf(n.pos)) { n.obj.visible = false; if (n.ch && !n.hid) { n.hid = true; n.ch.pivot.visible = false; } continue; }
+    n.hid = false;
     // head follows the player when close
     let lx = 0, ly = 0;
     if (dPlayer < 5.5 && n.anim !== 'lie' && n.anim !== 'hammer' && n.anim !== 'work') { const a = angDiff(Math.atan2(playerPos[0] - n.pos[0], -(playerPos[2] - n.pos[2])), n.yaw); if (Math.abs(a) < 1.9) { lx = clamp(-a, -1.1, 1.1); ly = clamp((n.pos[1] + 1.6 * n.scale - playerPos[1] - 1.6) * 0.25, -0.3, 0.3); } }
@@ -7532,7 +7706,7 @@ function floorHeight(f, x, z) {
 }
 // highest walkable surface at (x,z) that is not above maxY (terrain is always a candidate)
 World.groundAt = (x, z, maxY) => {
-  let best = Terrain.y(x, z);
+  let best = (CELLS_ON && Cells.inRegion(x)) ? -1e9 : Terrain.y(x, z);          // cells have no terrain: below them is nothing (the rescue in playerUpdate)
   for (const f of World.floors) { const y = floorHeight(f, x, z); if (y !== null && y <= maxY && y > best) best = y; }
   return best;
 };
@@ -7586,7 +7760,7 @@ function playerUpdate(dt) {
     colResolve(np, P.r, P.pos[1], P.pos[1] + 1.75);
     // stay inside the valley and out of deep water
     const rr = hyp(np[0], np[2]);
-    if (rr > WORLD_RADIUS) { np[0] *= WORLD_RADIUS / rr; np[2] *= WORLD_RADIUS / rr; if (P.warned <= 0) { P.warned = 8; if (typeof toast === 'function') toast('The wilds beyond Brackenfell are no place to wander alone.'); } }
+    if (rr > WORLD_RADIUS && !(CELLS_ON && Cells.inRegion(np[0]))) { np[0] *= WORLD_RADIUS / rr; np[2] *= WORLD_RADIUS / rr; if (P.warned <= 0) { P.warned = 8; if (typeof toast === 'function') toast('The wilds beyond Brackenfell are no place to wander alone.'); } }
     const w2 = World.waterAt(np[0], np[2]);
     if (w2 > -900 && w2 - World.groundAt(np[0], np[2], P.pos[1] + 0.6) > 1.12 && w2 - P.pos[1] > 0.9) { np[0] = P.pos[0]; np[2] = P.pos[2]; P.vel[0] *= 0.3; P.vel[2] *= 0.3; }
     P.pos[0] = np[0]; P.pos[2] = np[2];
@@ -7618,7 +7792,8 @@ function playerUpdate(dt) {
   P.dip += (0 - P.dip) * Math.min(1, dt * 9);
   // zone, surface
   const zone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
-  World.camZone = zone; World.indoor += ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
+  if (CELLS_ON) { Cells.sync(P.pos); if (P.pos[1] < CELL.y - 30 && Cells.cur) Cells.rescue(); }
+  World.camZone = zone; World.indoor = World.cell ? 1 : World.indoor + ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
   P.surface = zone ? (World.zones[zone - 1].site.id === 'chapel' ? 'stone' : 'wood') : P.inWater ? 'water' : (P.pos[1] > Terrain.y(P.pos[0], P.pos[2]) + 0.12 ? 'wood' : Terrain.splat(P.pos[0], P.pos[2], 1) > 0.4 ? 'stone' : Terrain.splat(P.pos[0], P.pos[2], 0) > 0.4 ? 'dirt' : 'grass');
   // head bob + footsteps
   const moving = P.speed > 0.4 && P.onGround; P.bobAmt += ((moving ? 1 : 0) - P.bobAmt) * Math.min(1, dt * 8);
@@ -7829,6 +8004,7 @@ function onCampCleared(id) {
 // ── interactions ──
 function interactLabel(it) {
   if (it.npc) { const w = it.npc.name.split(' '); return 'Talk to ' + (['Old', 'Brother', 'Elder', 'Warden', 'Guardsman'].includes(w[0]) ? w[1] : w[0]); }
+  if (it.kind === 'portal') return Cells.busy ? null : it.label;
   if (it.kind === 'chest') return S.opened[it.id] ? null : 'Open chest';
   if (it.kind === 'loot') return 'Search ' + it.name;
   if (it.kind === 'pickup') return it.gone ? null : it.label;
@@ -7841,6 +8017,7 @@ function interactLabel(it) {
 }
 function interactUse(it) {
   if (it.npc) { if (it.npc.anim === 'lie') return toast(it.npc.name + ' is fast asleep.'); return startTalk(it.npc); }
+  if (it.kind === 'portal') return Cells.use(it);
   if (it.kind === 'chest') {
     S.opened[it.id] = 1; Audio2.chest();
     const got = []; for (const [id, n] of it.loot || []) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
@@ -7887,7 +8064,7 @@ function festivalSpots() {
 function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
 function loadSave() { try { const j = JSON.parse(localStorage.getItem('brackenfell.v1') || 'null'); return j && j.S ? j : null; } catch (e) { return null; } }
 function applySave(j) {
-  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; }
+  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; const m = Cells.migrate(j.pos, j.yaw || 0); if (m) { Player.pos = m.pos; Player.yaw = m.yaw; } }
   for (const p of World.pickups) if (S.picked[p.id]) { p.gone = true; p.obj.visible = false; if (p.em) p.em.gone = true; }
   if (S.flags.fire) World.bonfire = true;
   if (S.rpg && S.rpg.v !== 2) S.rpg = null;
@@ -7932,7 +8109,7 @@ function openMenu(tab) {
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
   Inv.render(); $('setTime').value = Env.hour;
-  const inf = G.gpuName || ''; $('diag').textContent = 'Build 18 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 19 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
@@ -7985,7 +8162,7 @@ function uiFrame(dt) {
     UI.lastYaw = P.yaw; const W = $('compass').clientWidth || 300, span = 1.9;
     for (const c of UI.compass) { const d = angDiff(c.a, P.yaw); c.el.style.display = Math.abs(d) < span / 2 ? '' : 'none'; c.el.style.left = (50 + d / span * 100) + '%'; }
     let k = 0;
-    for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
+    for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = CELLS_ON ? Cells.mapTarget(questTarget(id)) : questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
     for (; k < UI.marks.length; k++) { UI.marks[k].el.style.display = 'none'; UI.marks[k].d.style.display = 'none'; }
   }
   if ((R.frame & 31) === 0) { const h = Math.floor(Env.hour), m = Math.floor((Env.hour - h) * 60 / 10) * 10; const part = Env.hour < 5 ? 'Night' : Env.hour < 8 ? 'Dawn' : Env.hour < 12 ? 'Morning' : Env.hour < 17 ? 'Afternoon' : Env.hour < 20.5 ? 'Dusk' : 'Night'; $('clock').textContent = part + ' · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); uiObjective();
@@ -9324,6 +9501,8 @@ const Foes = (() => {
   };
   // everyone goes home and forgets (after the player dies, or sleeps)
   F.calm = function (heal) { for (const f of F.list) { if (!f.alive) continue; release(f); f.state = 'idle'; f.t = 0; f.pos = f.spot.p.slice(); f.yaw = f.spot.yaw; f.alert = 0; if (heal) f.hp = f.maxHp; } };
+  // a fight does not follow through a door: everyone goes home, calm, and the fight timer clears
+  F.breakOff = function () { F.calm(false); F.target = null; F.attackers = 0; if (typeof RPG !== 'undefined') RPG.combatT = 99; for (const f of F.list) if (f.h && f.h.pivot.visible && f.alive) f.h.pivot.visible = false; };
   function campState() {
     const r = RPG.st(); r.cleared = r.cleared || {};
     for (const c of CAMPS) { const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
@@ -9434,6 +9613,7 @@ const Foes = (() => {
   }
   F.update = function (dt, rdt) {
     if (!F.ready) return;
+    if (World.cell) { F.target = null; return; }          // outlaws live outdoors: in a cell none is drawn, thought about or posed
     const P = game.playing ? Player.pos : R.cam.pos, live = game.playing && !RPG.dead, st = F.st, r = RPG.st();
     let target = null, tb = 0.55, fight = null;
     for (const f of F.list) {
@@ -9605,7 +9785,7 @@ function updateDynamics(dt, chars) {
   const bd = R.boneData, tmp = POSE.S, pp = Player.pos;
   for (const d of World.doors) {
     let near = false;
-    for (const c of chars) if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
+    for (const c of chars) if (CELLS_ON && c === chars[0]) continue; else if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
     if (near && d.open === 0 && game.playing) { const dd = hyp(pp[0] - d.c[0], pp[2] - d.c[2]); if (dd < 14) Audio2.door(clamp(1.2 - dd / 12, 0.1, 1)); }
     d.open = clamp(d.open + (near ? dt : -dt) * 2.4, 0, 1);
     if (d.open === d.last) continue; d.last = d.open;
@@ -9626,8 +9806,8 @@ function audioState() {
     const wd = River.dist(p[0], p[2], 30), ld = hyp(p[0] - LAKE.x, p[2] - LAKE.z) - LAKE.r, md = World.millPos ? hyp(p[0] - World.millPos[0], p[2] - World.millPos[2]) : 99;
     st.water = Math.max(sat(1 - wd / 26) * 0.8, sat(1 - ld / 20) * 0.35, sat(1 - md / 18));
   }
-  const b = NPC.brandt; st.hammer = b && b.anim === 'hammer' && !b.talking ? b.t : -1; st.hammerDist = b ? hyp(b.pos[0] - p[0], b.pos[2] - p[2]) : 999;
-  const l = NPC.lark; st.lute = !!(l && l.anim === 'lute' && !l.talking); st.luteDist = l ? hyp(l.pos[0] - p[0], l.pos[2] - p[2]) : 999; st.luteWall = !!l && World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]) !== World.camZone;
+  st.cell = !!World.cell; const b = NPC.brandt; st.hammer = b && b.anim === 'hammer' && !b.talking ? b.t : -1; const hb = b ? Cells.hear(b.pos, p) : null; st.hammerDist = b ? (CELLS_ON ? hb.d : hyp(b.pos[0] - p[0], b.pos[2] - p[2])) : 999; st.hammerWall = !!hb && hb.wall;
+  const l = NPC.lark; st.lute = !!(l && l.anim === 'lute' && !l.talking); const hl = l ? Cells.hear(l.pos, p) : null; st.luteDist = l ? (CELLS_ON ? hl.d : hyp(l.pos[0] - p[0], l.pos[2] - p[2])) : 999; st.luteWall = !!l && (CELLS_ON ? hl.wall : World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]) !== World.camZone);
   st.bellOn = !!S.flags.bell; st.bellDist = World.bell ? hyp(World.bell.p[0] - p[0], World.bell.p[2] - p[2]) : 999;
   for (const c of World.chickens) if (c.cluck) { c.cluck = false; Audio2.cluck(clamp(1.2 - hyp(c.pos[0] - p[0], c.pos[2] - p[2]) / 8, 0, 1)); }
   return st;
@@ -9682,7 +9862,7 @@ function startGame(cont) {
   Audio2.start();
   const sv = cont && loadSave(); if (sv) applySave(sv); else { clearSave(); }
   npcSnapAll(); uiPurse(); uiObjective();
-  game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + 50);
+  game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + (Cells.inRegion(Player.pos[0]) ? 0.8 : 50)); if (CELLS_ON) { Cells.sync(Player.pos); World.camZone = World.zoneAt(Player.pos[0], Player.pos[1] + 1, Player.pos[2]); }
   if (!Input.touch && !coarse() && !TEST) { try { const p = G.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
   setTimeout(() => { banner('The Greyspine Valley', 'Brackenfell'); }, 900);
   if (!sv) setTimeout(() => { if (qAt('welcome') < 0) qStart('welcome'); }, 5200);
@@ -9740,11 +9920,17 @@ function startGame(cont) {
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
         game.step = (n, dt) => { let env; for (let i = 0; i < (n || 1); i++) env = tick(dt || 1 / 30); return env; };
     game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); return R.stats; };
-    game.tp = (x, z, yawDeg, pitchDeg, y) => { Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180; World.indoor = World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; };
+    game.tp = (x, z, yawDeg, pitchDeg, y) => {       // tp(spotName, yawDeg?) goes to a named spot (inside a cell too); tp(x, z, ...) to coordinates, y optional
+      if (typeof x === 'string') { const sp = World.spots[x]; if (!sp) throw new Error('no spot ' + x); yawDeg = z === undefined ? sp.yaw * 180 / PI : z; pitchDeg = 0; y = sp.p[1]; z = sp.p[2]; x = sp.p[0]; }
+      Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180;
+      if (CELLS_ON) Cells.sync(Player.pos); World.indoor = World.cell || World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; World.camZone = World.zoneAt(x, Player.pos[1] + 1, z); R.cam.pos[0] = x; R.cam.pos[1] = Player.pos[1] + Player.eye; R.cam.pos[2] = z; Player.camY = Player.pos[1];
+    };
+    game.enter = id => { const c = Cells.by[id]; if (!c) throw new Error('no cell ' + id); Cells.teleport(c.enter); return c.id; };         // instant, no fade (tests); the door interaction is Cells.use
+    game.leave = () => { const c = Cells.cur; if (!c) return false; Cells.teleport(c.leave); return true; };
     game.shot = async (x, y, z, yaw, pitch, hour) => {
       if (hour !== undefined) { Env.hour = hour; npcSnapAll(); }
       game.playing = false; const save = attractCamera; R.cam.pos = [x, y === null ? Terrain.y(x, z) + 1.65 : y, z]; R.cam.yaw = yaw * PI / 180; R.cam.pitch = (pitch || 0) * PI / 180;
-      World.camZone = World.zoneAt(x, R.cam.pos[1], z); World.indoor = World.camZone ? 1 : 0;
+      if (CELLS_ON) Cells.sync(R.cam.pos); World.camZone = World.zoneAt(x, R.cam.pos[1], z); World.indoor = World.cell || World.camZone ? 1 : 0;
       game.time += 0.4; npcUpdate(0.4, R.cam.pos); updateDynamics(0.4, [R.cam.pos].concat(NPCS.map(n => n.pos)));
       const env = updateEnv(game.time, World.indoor); env.time = game.time; World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
       fxUpdate(0.4, game.time, env, R.cam.pos); fxUpdate(0.4, game.time, env, R.cam.pos);

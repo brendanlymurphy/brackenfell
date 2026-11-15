@@ -40,6 +40,7 @@ function updateEnv(time, indoor) {
   const outExp = lerp(lerp(0.56, 0.84, golden), 3.0, night);
   e.exposure = lerp(outExp, lerp(1.05, 1.25, night), indoor || 0);
   // weather: a light overcast with mist that gathers over the valley around dawn (Env.cover / Env.mist set the base amounts)
-  if (typeof Sky !== 'undefined' && Sky.applyWeather) { Sky.setWeather(Env.cover, Env.mist + 0.24 * Math.exp(-Math.pow((Env.hour - 6.6) / 1.5, 2))); Sky.applyWeather(e); }      // overcast and mist reshape the light, see 45_sky.js
+  if (typeof Sky !== 'undefined' && Sky.applyWeather) { Sky.setWeather(Env.cover, Env.mist + 0.24 * Math.exp(-Math.pow((Env.hour - 6.6) / 1.5, 2))); Sky.applyWeather(e); }
+  if (World.cell) Cells.env(e);      // overcast and mist reshape the light, see 45_sky.js
   return e;
 }
