@@ -34,7 +34,7 @@ const Kit = (() => {
     K_.defs[name] = {
       name, map: m.map || null, normalMap: m.normalMap || null, orm, aoInOrm: !!m.aoMap || (!!orm && /ORM|_arm|_orm/i.test(orm.name || '')),
       color: m.color ? [m.color.r, m.color.g, m.color.b] : [1, 1, 1], rough: m.roughness === undefined ? 1 : m.roughness, metal: m.metalness || 0,
-      alphaTest: m.alphaTest || 0, blend: !!m.transparent, doubleSided: m.side === THREE.DoubleSide,
+      alphaTest: m.alphaTest || 0, blend: !!m.transparent, opacity: m.transparent && m.opacity < 1 ? m.opacity : 1, doubleSided: m.side === THREE.DoubleSide,
       emissive: m.emissive ? [m.emissive.r * (m.emissiveIntensity || 1), m.emissive.g * (m.emissiveIntensity || 1), m.emissive.b * (m.emissiveIntensity || 1)] : [0, 0, 0], emissiveMap: m.emissiveMap || null,
       uvScale: [1, 1], gain: 1, nScale: 1,
     };
@@ -155,7 +155,7 @@ const Kit = (() => {
     const raw = base.rgb.mul(vec3(d.color[0] * d.gain, d.color[1] * d.gain, d.color[2] * d.gain)).mul(tint);
     const alb = gradeFn(d.sat === undefined ? raw : mix(vec3(dot(raw, vec3(0.2126, 0.7152, 0.0722))), raw, d.sat)).mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
-    m.colorNode = vec4(alb, base.a);
+    m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
     m.roughnessNode = orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough);
     m.metalnessNode = float(0);

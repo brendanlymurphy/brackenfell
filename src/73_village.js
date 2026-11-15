@@ -262,15 +262,19 @@ function buildVillage() {
     };
     const piles = {
       barrels: (m) => { Props.barrel(m); if (Rd() < 0.6) at(m, 0.74, 0, 0.1, 0, () => Props.barrel(m, 0.28, 0.72)); },
-      crates: (m) => { Props.crate(m, 0.62); if (Rd() < 0.7) at(m, 0.05, 0.62, 0.03, 0.4, () => Props.crate(m, 0.44, true)); if (Rd() < 0.5) at(m, 0.72, 0, 0.05, 0.2, () => Props.crate(m, 0.5)); },
+      crates: (m) => { Props.crate(m, 0.62); if (Rd() < 0.7) at(m, 0.05, crateTop(0.62), 0.03, 0.4, () => Props.crate(m, 0.44, true)); if (Rd() < 0.5) at(m, 0.72, 0, 0.05, 0.2, () => Props.crate(m, 0.5)); },
       wood: (m) => Props.woodpile(m, 6, 3 + (Rd() < 0.5 ? 1 : 0), 0.85),
       sacks: (m) => { Props.sack(m, 0.32); at(m, 0.55, 0, 0.12, 0, () => Props.sack(m, 0.27, COL.linen)); if (Rd() < 0.5) at(m, 0.25, 0, 0.5, 0, () => Props.sack(m, 0.25)); },
       pots: (m) => { Props.pot(m, 0.2); at(m, 0.5, 0, 0.1, 0, () => Props.pot(m, 0.15, COL.wool)); },
       hay: (m) => Props.haybale(m),
+      // scanned yard dressing: a bucket and a basket by the door, a chopping stump (only offered when the scan pack is loaded)
+      buckets: (m) => { kp(m, 'wooden_bucket_01', 0, 0, 0, 1, Rd() * 6); kp(m, 'wooden_bucket_01', 0.5, 0, 0.15, 0.8, Rd() * 6); if (Rd() < 0.6) kp(m, 'wicker_basket_02', -0.45, 0, 0.3, 1.1, Rd() * 6); },
+      stump: (m) => { kp(m, 'tree_stump_01', 0, -0.03, 0, 0.55, Rd() * 6); addCircleCollider(m, 0, 0, 0.35, 0, 0.3); },
     };
     for (const s of SITES) {
       if (!HOUSES[s.id]) continue;
       const kinds = (s.id === 'farm' || s.id === 'barn' || s.id === 'mill') ? ['hay', 'wood', 'barrels', 'sacks', 'crates'] : s.id === 'chapel' ? ['pots'] : ['wood', 'barrels', 'crates', 'sacks', 'pots', 'wood'];
+      if (typeof scanOn === 'function' && scanOn() && s.id !== 'chapel') kinds.push('buckets', 'stump');
       const dl = siteDoorLocal(s, 0), n = s.id === 'chapel' ? 1 : 3 + Rd.i(0, 1);
       for (let k = 0, tries = 0; k < n && tries < 30; tries++) {
         const side = Rd.i(0, 3), t = Rd.s() * 0.42, off = 0.62;
