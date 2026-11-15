@@ -27,12 +27,12 @@ questTarget = function (id) {
 };
 const _il = interactLabel, _iu = interactUse;
 interactLabel = function (it) {
-  if (it.kind === 'door' && it.id === 'mine.door') return 'Try the mine door';
+  if (it.kind === 'door' && it.shut) return 'Try the door';
   if (it.kind === 'wbox') return S.opened[it.id] ? null : has(it.need) ? 'Unlock the strongbox' : 'Strongbox (locked)';
   return _il(it);
 };
 interactUse = function (it) {
-  if (it.kind === 'door' && it.id === 'mine.door') { Audio2.chest && Audio2.chest(); return toast('Barred from the far side. Iron and oak: you will not shift it.'); }
+  if (it.kind === 'door' && it.shut) { Audio2.chest && Audio2.chest(); return toast(it.msg); }
   if (it.kind === 'wbox') {
     if (S.opened[it.id]) return;
     if (!has(it.need)) return toast('Locked. The keyhole is small and clean; someone oils it.');

@@ -17,6 +17,7 @@ function wildsLifeBuild() {
     try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('wild folk ' + def.id + ': ' + (e && e.message || e)); continue; }
     const q = siteToWorld(p, def.at[0], def.at[1]); let pos = [q[0], World.groundY(q[0], q[1]), q[1]];
     if (def.place === 'fishing' && p.jetty) pos = [p.jetty.end[0], p.jetty.end[1], p.jetty.end[2]];
+    Chars.update(ch, { pos, yaw: def.yaw, anim: 'idle', scale: 1, zone: 0, light: 1, visible: false, cast: false, look: [0, 0], speed: 0 }, 0);
     WF.list.push({ def, ch, pos, yaw: def.yaw, look: [0, 0], t: Math.random() * 9, greet: -99, n: 0, shown: true });
   }
   WF.ready = WF.list.length > 0;
