@@ -29,6 +29,10 @@ Read this before touching anything. It replaces having the whole conversation in
 
 Kits and sources live outside the repo in `/home/claude/ext/` (kits, scan, chars2, humans).
 
+## Gameplay layer (fork-g)
+
+`90_rpg.js` (health, stamina, damage, death, HUD, hit effects), `91_combat.js` (sword and shield in view), `92_foes.js` (two outlaw camps, `Chars` bodies), `93_inventory.js` (pack tab, smith trade). Called from `tick` (`RPG.tick`) and `playerUpdate` (`RPG.move`). Saved in `S.rpg`; old saves get defaults. Tests: `test/combat.js` (set `window.__clear = true` to clear the camp), `test/death.js`, `test/rpgquest.js`. Foes load after the first tick: `game.step(1); await Foes.loading`. In headless shots wait about 1.5 s before a screenshot or the title fade is still showing.
+
 ## Art direction
 
 The user wants it as realistic as possible, like Skyrim: simple shapes, photographed textures, muted colours, mist, firelight. Hand-painted kit art is acceptable only with the scanned-texture skin. Chibi or cartoon assets are not.
