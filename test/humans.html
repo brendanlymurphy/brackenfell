@@ -1,0 +1,39 @@
+<!doctype html><html><body style="margin:0;background:#222"><canvas id="c"></canvas>
+<script src="/three.js"></script>
+<script>
+// Proof viewer for the MakeHuman-based villagers: ?files=a.glb,b.glb&clips=clips.glb&anim=Walk&t=0.4&cam=full|face|side
+(async () => {
+  const T = window.__TEST__ || {}, q = new URLSearchParams(location.search);
+  const opt = k => T[k] !== undefined ? String(T[k]) : q.get(k);
+  const W = innerWidth, H = innerHeight, cv = document.getElementById('c');
+  const r = new THREE.WebGPURenderer({ canvas: cv, antialias: true, forceWebGL: true }); await r.init(); r.setSize(W, H, false);
+  r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0; r.shadowMap.enabled = true;
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x6f7f8c);
+  scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x5a4a3a, 1.6));
+  const sun = new THREE.DirectionalLight(0xfff1dc, 3.2); sun.position.set(2.5, 4, 3.5); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 5, bottom: -1, near: 0.1, far: 20 }); sun.shadow.bias = -0.0005; scene.add(sun);
+  const g = new THREE.Mesh(new THREE.PlaneGeometry(40, 40).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x66604f, roughness: 1 })); g.receiveShadow = true; scene.add(g);
+  const files = (opt('files') || '').split(',').filter(Boolean), loader = new T3X.GLTFLoader(), info = [];
+  let clips = [];
+  if (opt('clips')) { const cg = await loader.loadAsync(opt('clips')); clips = cg.animations; }
+  const sp = +(opt('spacing') || 0.95), mixers = [];
+  const anims = (opt('anim') || '').split(',');
+  for (let i = 0; i < files.length; i++) {
+    const gl = await loader.loadAsync(files[i]), o = gl.scene; let tris = 0, bones = 0;
+    o.traverse(m => { if (m.isMesh) { m.castShadow = m.receiveShadow = true; m.frustumCulled = false; tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3; if (m.skeleton) bones = m.skeleton.bones.length; } });
+    o.position.x = (i - (files.length - 1) / 2) * sp; scene.add(o);
+    const box = new THREE.Box3().setFromObject(o); info.push({ file: files[i].split('/').pop(), tris, bones, height: +(box.max.y - box.min.y).toFixed(3) });
+    const an = anims[i % anims.length];
+    if (an && clips.length) { const c = clips.find(c => c.name === an); if (c) { const mx = new THREE.AnimationMixer(o); mx.clipAction(c).play(); mx.setTime((+(opt('t') || 0.5)) * c.duration); mixers.push(mx); } else info.push('no clip ' + an); }
+  }
+  const cam = new THREE.PerspectiveCamera(28, W / H, 0.05, 100), mode = opt('cam') || 'full', n = Math.max(files.length, 1), span = n * sp;
+  if (mode === 'face') { cam.fov = 14; cam.position.set(0.35 * 1, 1.62, 2.4 + span * 0.9); cam.lookAt(0, 1.6, 0); }
+  else if (mode === 'side') { cam.position.set(span * 0.9 + 3.2, 1.4, 2.6); cam.lookAt(0, 0.95, 0); }
+  else { cam.position.set(0.6, 1.25, 3.4 + span * 1.05); cam.lookAt(0, 0.92, 0); }
+  if (opt('camy')) { cam.position.y = +opt('camy'); }
+  cam.updateProjectionMatrix();
+  scene.updateMatrixWorld(true);
+  r.render(scene, cam); r.render(scene, cam);
+  window.__info = info; window.__clips = clips.map(c => c.name); window.__ready = true;
+})().catch(e => { console.error('VIEW FAIL', e.stack || e); window.__ready = true; });
+</script></body></html>

@@ -27,12 +27,12 @@ function gfxTexInit(settingTier) {
   const small = phone || settingTier === 'low' || settingTier === 'medium';
   const o = TEST && TEST.texcap || +((location.search.match(/[?&]texcap=(\d+)/) || [])[1]) || 0;
   const tiny = settingTier === 'low' || (navigator.deviceMemory || 8) <= 3;
-  GFX_TEX.color = o || (small ? 512 : 1024); GFX_TEX.data = o || (tiny ? 256 : small ? 512 : 1024);
+  GFX_TEX.tiny = !o && tiny; GFX_TEX.color = o || (small ? 512 : 1024); GFX_TEX.data = o || (tiny ? 256 : small ? 512 : 1024);
 }
-async function gfxTex(t, kind) {
+async function gfxTex(t, kind, max) {
   if (!t || !t.image) return t;
   const im = t.image, w = im.width || im.naturalWidth || 0, h = im.height || im.naturalHeight || 0; if (!w || !h || t.isCompressedTexture || t.isDataTexture) return t;
-  const cap = kind === 'data' ? GFX_TEX.data : GFX_TEX.color;
+  let cap = kind === 'data' ? GFX_TEX.data : GFX_TEX.color; if (max) cap = Math.min(cap, GFX_TEX.tiny ? Math.max(32, max >> 1) : max);      // max: this texture's own ceiling (half of it on the Low tier)
   if (Math.max(w, h) > cap) {
     const k = cap / Math.max(w, h), nw = Math.max(4, Math.round(w * k)), nh = Math.max(4, Math.round(h * k));
     try { const bmp = await createImageBitmap(im, { resizeWidth: nw, resizeHeight: nh, resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' }); if (im.close) im.close(); t.image = bmp; t.needsUpdate = true; GFX_TEX.shrunk++; } catch (e) { }

@@ -188,12 +188,12 @@ function gfxTexInit(settingTier) {
   const small = phone || settingTier === 'low' || settingTier === 'medium';
   const o = TEST && TEST.texcap || +((location.search.match(/[?&]texcap=(\d+)/) || [])[1]) || 0;
   const tiny = settingTier === 'low' || (navigator.deviceMemory || 8) <= 3;
-  GFX_TEX.color = o || (small ? 512 : 1024); GFX_TEX.data = o || (tiny ? 256 : small ? 512 : 1024);
+  GFX_TEX.tiny = !o && tiny; GFX_TEX.color = o || (small ? 512 : 1024); GFX_TEX.data = o || (tiny ? 256 : small ? 512 : 1024);
 }
-async function gfxTex(t, kind) {
+async function gfxTex(t, kind, max) {
   if (!t || !t.image) return t;
   const im = t.image, w = im.width || im.naturalWidth || 0, h = im.height || im.naturalHeight || 0; if (!w || !h || t.isCompressedTexture || t.isDataTexture) return t;
-  const cap = kind === 'data' ? GFX_TEX.data : GFX_TEX.color;
+  let cap = kind === 'data' ? GFX_TEX.data : GFX_TEX.color; if (max) cap = Math.min(cap, GFX_TEX.tiny ? Math.max(32, max >> 1) : max);      // max: this texture's own ceiling (half of it on the Low tier)
   if (Math.max(w, h) > cap) {
     const k = cap / Math.max(w, h), nw = Math.max(4, Math.round(w * k)), nh = Math.max(4, Math.round(h * k));
     try { const bmp = await createImageBitmap(im, { resizeWidth: nw, resizeHeight: nh, resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' }); if (im.close) im.close(); t.image = bmp; t.needsUpdate = true; GFX_TEX.shrunk++; } catch (e) { }
@@ -1801,7 +1801,8 @@ const Particles = { mesh: null };
 // Asset-agnostic: everything about a character set lives in one config (Chars.define). To move to another set, put its files
 // under chars/ and write a config; nothing below the configs needs to change.
 //
-//   await Chars.load('quaternius', progress)   load bodies, textures and clips of a set (once)
+//   await Chars.load('real', progress)         load bodies, textures and clips of a set (once); 'real' = MakeHuman people, 'quaternius' = the stylized set
+//   await Chars.ensure(['o_brute'])            load bodies a set keeps back (cfg.lazy) until they are needed
 //   const h = Chars.spawn(def)                 def: an entry of NPC_DEFS; the villager is added to Chars.group
 //   Chars.update(h, state, dt)                 state: { pos, yaw, anim, scale, zone, light, visible, look: [yaw, pitch], talking, seatHeight }
 //   Chars.attach(h, 'handR', object3D)         parent a prop to a named bone
@@ -1821,6 +1822,9 @@ const Chars = (() => {
   // materials         glTF material name -> { map: key | { body: key }, normal: key, rough, kind: 'skin' | 'hair', oneSided }
   // faces             +1 if the models face +Z (the glTF convention), -1 if they face -Z like the game
   // scale             model scale that makes an adult 1.72 m tall, the height the village was built for
+// lazy              bodies not fetched by load() but by ensure() (the outlaws)
+// matOf(material)   material description for sets whose GLBs carry their own textures: { kind, part, rough, oneSided, alpha, gltf: true }
+// look() may also return fit: an extra scale for that body (children are built at their own height and stood up to adult size, then scaled by the villager)
   // bones             the rig's names for the joints the game talks to
   // anims             game animation -> clip name, or a list to pick from per villager; 'sit+talk' plays when a seated villager talks
   // once, rate        clips that must not loop; optional playback rate per game animation
@@ -1883,13 +1887,57 @@ const Chars = (() => {
     });
   }
 
+  // Real: people built with Blender and MakeHuman (MPFB2), one GLB per person (mesh, textures, 53-joint rig; no clips) plus one clips.glb
+  // retargeted from the Quaternius clips onto the MakeHuman game rig. Built by tools/humans/; chars/real/PROVENANCE.md has the sources, all CC0.
+  // Every body has its own proportions, rest pose and textures, so a body is one villager (a few look-alikes are tinted apart at run time).
+  {
+    const BODY = { hale: 'm_guard', greta: 'f_maid', brandt: 'm_smith', tobin: 'm_boy', marta: 'f_herbalist', aldous: 'm_monk', maren: 'f_elder', osric: 'm_innkeeper', edda: 'f_farmer',
+      finn: 'm_fisher', lark: 'm_youth', wren: 'f_girl', rowan: 'm_elder', pip: 'f_child', ivo: 'm_hunter', hilda: 'f_weaver', bram: 'm_farmer' };
+    const NAT = { m_boy: 1.293, f_child: 1.213 };      // height of the children as built; a child is stood up to 1.72 m so the villager's own scale (0.74, 0.66) brings it to the height the village expects
+    const FIT = { m_boy: 1.72 / NAT.m_boy, f_child: 1.72 / NAT.f_child, f_elder: 1 / 0.93, m_elder: 1 / 0.97 };
+    const TINT = {      // light touches on top of the colours baked into each body, to keep neighbours apart
+      hale: { tunic: [0.92, 0.92, 0.98] }, brandt: { boots: [0.34, 0.32, 0.3] }, marta: { boots: [0.34, 0.32, 0.3] },      // these two came with very pale boots
+       ivo: { tunic: [0.8, 0.88, 1.1], pants: [0.8, 0.8, 0.85] }, bram: { tunic: [1.05, 1.0, 0.9] }, hilda: { robe: [0.95, 0.95, 1.1] },
+    };
+    const FOES = [{ body: 'o_hood_m' }, { body: 'o_brute' }, { body: 'o_hood_f' }, { body: 'o_rogue' }], FOE_LEADER = { body: 'o_brute', tint: { tunic: [1.35, 0.7, 0.6], pants: [0.9, 0.8, 0.8] } };
+    const SKIN_T = { light: [0.88, 0.82, 0.78], m_hunter: [1, 1, 1], f_herbalist: [1, 1, 1], o_rogue: [1, 1, 1] };      // the stock light skins are very bright under a sun-lit sky
+    const PART = [[/tunic|bodice|dress/, 'tunic'], [/robe/, 'robe'], [/hood|helmet/, 'head'], [/pants/, 'pants'], [/boots/, 'boots'], [/skirt/, 'skirt']];
+    const names = Object.values(BODY).concat(FOES.map(f => f.body));
+    const bodies = {}; for (const n of new Set(names)) bodies[n] = n + '.glb';
+    const ANIMS = { idle: ['idle-a', 'idle-foldarms', 'idle-a'], walk: ['walk', 'walk-relaxed'], run: 'jog', sit: 'sitting-idle', 'sit+talk': 'sitting-talking', talk: 'idle-talking',
+      hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-harvest', sweep: 'shovel-dig', lie: 'sleeping', cheer: 'clapping',
+      pickup: 'pick-up', jump: 'jump-air', block: 'sword-block', hit: 'hit-chest', die: 'death-a' };
+    C.define('real', {
+      dir: 'chars/real/', clips: 'clips.glb', bodies, lazy: FOES.map(f => f.body), foeLooks: { list: FOES, leader: FOE_LEADER }, textures: {}, materials: {},
+      matOf(m) {
+        const k = m.userData && m.userData.kind, n = m.name || '';
+        if (k === 'body') return { kind: 'skin', gltf: true, rough: 0.72, oneSided: true, warm: [1.0, 0.9, 0.86] };
+        if (k === 'hair') return { kind: 'hair', gltf: true, rough: 0.6, alpha: 0.18 };
+        if (k === 'brow') return { kind: 'brow', gltf: true, rough: 0.8, alpha: 0.4 };
+        if (k === 'eye') return { kind: 'eye', gltf: true, rough: 0.3, oneSided: true };
+        const part = (PART.find(p => p[0].test(n)) || [0, 'cloth'])[1];
+        return { kind: 'cloth', part, gltf: true, rough: 0.88 };
+      },
+      texMax(md) { return md.kind === 'skin' ? 512 : md.kind === 'hair' ? 256 : md.kind === 'brow' ? 64 : md.kind === 'eye' ? 128 : /tunic|robe|skirt/.test(md.part) ? 384 : md.part === 'pants' ? 128 : 256; },      // pixel ceiling per texture, on top of gfxTex's tier caps (halved on Low)
+      faces: 1, scale: 1,
+      bones: { hips: 'pelvis', head: 'head', neck: 'neck_01', handR: 'hand_r', handL: 'hand_l', footR: 'foot_r', footL: 'foot_l' },
+      anims: ANIMS, once: SETS.quaternius.once.slice(), rate: { hammer: 0.9 }, maxRate: 2.6,
+      grip: [1.384, 0.06, -0.916, 0.023, 0.024, 0.014],       // the Quaternius grip carried over by the hand's finger, across and palm axes (tools/humans/README notes)
+      look(def) {
+        if (def.foe) return { body: def.foe.body, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) };
+        const body = BODY[def.id] || (def.female ? 'f_farmer' : 'm_farmer');
+        return { body, fit: FIT[body] || 1, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id]) };
+      },
+    });
+  }
+
   // ── loading ──
   C.load = async function (setName, progress) {
     const cfg = SETS[setName]; if (!cfg) throw new Error('unknown character set ' + setName);
-    const bodyNames = Object.keys(cfg.bodies), texKeys = Object.keys(cfg.textures || {}), total = bodyNames.length + texKeys.length + 1; let done = 0;
+    const bodyNames = Object.keys(cfg.bodies).filter(n => !(cfg.lazy || []).includes(n)), texKeys = Object.keys(cfg.textures || {}), total = bodyNames.length + texKeys.length + 1; let done = 0;
     const tick = () => { if (progress) progress(++done / total); };
-    const GL = new T3X.GLTFLoader(), TL = new THREE.TextureLoader();
-    const get = async f => { const g = await GL.loadAsync(cfg.dir + f); tick(); return g; };
+    const TL = new THREE.TextureLoader();
+    const get = async f => { const g = await GL().loadAsync(cfg.dir + f); tick(); return g; };
     const tex = async k => {
       const d = cfg.textures[k], t = await TL.loadAsync(cfg.dir + (d.file || d));
       t.flipY = false; t.colorSpace = d.data ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.needsUpdate = true; tick(); return [k, await gfxTex(t, d.data ? 'data' : 'color')];
@@ -1898,25 +1946,42 @@ const Chars = (() => {
     const S = { name: setName, cfg, clips: {}, bodies: {}, tex: Object.fromEntries(texList), measure: {}, fitted: new Map(), geo: new Map() };
     for (const c of clipFile.animations) S.clips[c.name] = c;
     S.src = restPose(clipFile.scene);
-    bodyNames.forEach((n, i) => {
-      const scene = bodyFiles[i].scene; scene.updateMatrixWorld(true);
-      for (const c of bodyFiles[i].animations || []) if (!S.clips[c.name]) S.clips[c.name] = c;       // a body file may bring its own clips
-      const B = { scene, rest: restPose(scene), parts: {}, skel: null, armature: null };
-      scene.traverse(o => {
-        if (!o.isSkinnedMesh) return;
-        if (!B.skel) { B.skel = o.skeleton; B.bindMatrix = o.bindMatrix.clone(); }
-        const g = o.parent, part = g && g !== scene && !g.isBone && g.children.length && g.children.every(c => c.isSkinnedMesh) ? g.name : o.name;   // a mesh with several materials loads as a group
-        (B.parts[part] = B.parts[part] || []).push(o);
-      });
-      if (!B.skel) throw new Error(cfg.bodies[n] + ' has no skinned mesh');
-      let a = B.skel.bones[0]; while (a.parent && a.parent !== scene) a = a.parent; B.armature = a;
-      const hs = S.src.pos[cfg.bones.hips], ht = B.rest.pos[cfg.bones.hips]; B.hipsRatio = hs && ht && hs.length() > 1e-4 ? ht.length() / hs.length() : 1;
-      S.bodies[n] = B;
-    });
+    for (let i = 0; i < bodyNames.length; i++) await addBody(S, bodyNames[i], bodyFiles[i]);
     for (const key of Object.keys(cfg.anims)) for (const cn of [].concat(cfg.anims[key])) if (!S.clips[cn]) console.warn('character set ' + setName + ': no clip "' + cn + '" for ' + key);
-    C.set = S; C.cfg = cfg; C.ready = true;
+    C.set = S; C.cfg = cfg; C.ready = true; C.name = setName;
     return S;
   };
+  const GL = () => GL.l || (GL.l = new T3X.GLTFLoader());
+  C.ensure = async function (names) {
+    const S = C.set; if (!S) throw new Error('Chars.load first');
+    const need = [...new Set(names)].filter(n => !S.bodies[n] && S.cfg.bodies[n]);
+    const files = await Promise.all(need.map(n => GL().loadAsync(S.cfg.dir + S.cfg.bodies[n])));
+    for (let i = 0; i < need.length; i++) await addBody(S, need[i], files[i]);
+  };
+  async function addBody(S, n, gltf) {
+    const cfg = S.cfg, scene = gltf.scene; scene.updateMatrixWorld(true);
+    if (cfg.matOf) {      // textures that came inside the GLB: capped and shared through gfxTex like every other character texture
+      const seen = new Set();
+      scene.traverse(o => { if (o.isMesh && o.material) seen.add(o.material); });
+      for (const m of seen) {
+        if (!m.map) continue;
+        const md = cfg.matOf(m) || {}; m.map.anisotropy = 4;
+        m.map = await gfxTex(m.map, 'color', cfg.texMax ? cfg.texMax(md, m) : 0);
+      }
+    }
+    for (const c of gltf.animations || []) if (!S.clips[c.name]) S.clips[c.name] = c;       // a body file may bring its own clips
+    const B = { scene, rest: restPose(scene), parts: {}, skel: null, armature: null };
+    scene.traverse(o => {
+      if (!o.isSkinnedMesh) return;
+      if (!B.skel) { B.skel = o.skeleton; B.bindMatrix = o.bindMatrix.clone(); }
+      const g = o.parent, part = g && g !== scene && !g.isBone && g.children.length && g.children.every(c => c.isSkinnedMesh) ? g.name : o.name;   // a mesh with several materials loads as a group
+      (B.parts[part] = B.parts[part] || []).push(o);
+    });
+    if (!B.skel) throw new Error(cfg.bodies[n] + ' has no skinned mesh');
+    let a = B.skel.bones[0]; while (a.parent && a.parent !== scene) a = a.parent; B.armature = a;
+    const hs = S.src.pos[cfg.bones.hips], ht = B.rest.pos[cfg.bones.hips]; B.hipsRatio = hs && ht && hs.length() > 1e-4 ? ht.length() / hs.length() : 1;
+    S.bodies[n] = B;
+  }
   // rest pose of a skeleton: per node name its parent, local rotation, local position and world rotation
   function restPose(scene) {
     const R = { order: [], parent: {}, q: {}, pos: {}, w: {} };
@@ -1978,40 +2043,55 @@ const Chars = (() => {
   }
 
   // ── material: the pack's colour maps, lit like the rest of the world (sun from the scene light; sky, bounce and hearths through emissive) ──
-  function makeMaterial(S, H, matName, look) {
-    const md = S.cfg.materials[matName] || {}, m = new THREE.MeshStandardNodeMaterial(); m.name = matName;
+  function makeMaterial(S, H, matName, look, src) {
+    const md = S.cfg.materials[matName] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, m = new THREE.MeshStandardNodeMaterial(); m.name = matName;
     let key = (look.maps && look.maps[matName]) || md.map; if (key && typeof key === 'object') key = key[H.body];
-    const map = key ? S.tex[key] : null, tint = look.tint && (look.tint[matName] || (md.kind && look.tint[md.kind]));
+    const map = key ? S.tex[key] : (md.gltf && src && src.map) || null, tint = look.tint && (look.tint[matName] || (md.part && look.tint[md.part]) || (md.kind && look.tint[md.kind]));
     if (tint) m.color.setRGB(tint[0], tint[1], tint[2]);
     m.roughness = md.rough === undefined ? 0.85 : md.rough; m.metalness = 0; m.side = md.oneSided ? THREE.FrontSide : THREE.DoubleSide;
-    const albedo = (map ? texture(map, uv()).rgb : vec3(1, 1, 1)).mul(materialColor);
-    m.colorNode = vec4(albedo, 1);
+    const tx = map ? texture(map, uv()) : null, albedo = (tx ? tx.rgb : vec3(1, 1, 1)).mul(materialColor);
+    m.colorNode = md.alpha && tx ? vec4(albedo, tx.a) : vec4(albedo, 1);
+    if (md.alpha && tx) m.alphaTest = md.alpha;
     if (C.normalMaps && md.normal && S.tex[md.normal]) m.normalNode = normalMap(texture(S.tex[md.normal], uv()));
     const N = normalWorld.normalize();
-    m.emissiveNode = albedo.mul(SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25))));
+    let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
+    if (md.warm) lit = lit.mul(vec3(...md.warm));       // skin keeps a little red in the shade, as light scattered under it does
+    m.emissiveNode = albedo.mul(lit);
     return m;
   }
 
   // One material for a whole villager (skin, face, eyes, hair, clothes): a per-vertex 'mid' picks which of the pack's textures, tint and
   // roughness a fragment uses, so the villager is one draw call (and one shadow draw) instead of five or six. Textures keep their own UVs.
-  function makeMergedMaterial(S, H, names, look) {
-    const { attribute, abs, select, Discard, If, frontFacing, normalView, clamp } = TSL;
+  function makeMergedMaterial(S, H, names, look, srcOf) {
+    const { attribute, abs, Discard, If, frontFacing, normalView, clamp } = TSL;
     const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
     const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
-    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0);
+    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false;
     names.forEach((mn, i) => {
-      const md = S.cfg.materials[mn] || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
+      const src = srcOf && srcOf[mn], md = S.cfg.materials[mn] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
       let key = (look.maps && look.maps[mn]) || md.map; if (key && typeof key === 'object') key = key[H.body];
-      const map = key ? S.tex[key] : null, tint = look.tint && (look.tint[mn] || (md.kind && look.tint[md.kind])) || [1, 1, 1];
-      albedo = albedo.add((map ? texture(map, U).rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
+      const map = key ? S.tex[key] : (md.gltf && src && src.map) || null, tint = look.tint && (look.tint[mn] || (md.part && look.tint[md.part]) || (md.kind && look.tint[md.kind])) || [1, 1, 1];
+      const tx = map ? texture(map, U) : null;
+      albedo = albedo.add((tx ? tx.rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
       rough = rough.add(w.mul(md.rough === undefined ? 0.85 : md.rough));
       if (md.oneSided) one = one.add(w);
+      if (md.kind === 'eye') { eyeW = eyeW.add(w); anyEye = true; }
+      if (md.alpha && tx) { anyAlpha = true; alpha = alpha.add(w.mul(tx.a.sub(1))); cut = cut.add(w.mul(md.alpha)); }      // cut-out hair and brows: this fragment's alpha and threshold
+      const wm = md.warm || [1, 1, 1]; if (md.warm) anyWarm = true; warm = warm.add(vec3(wm[0], wm[1], wm[2]).mul(w));
       if (C.normalMaps && md.normal && S.tex[md.normal]) { const nm = normalMap(texture(S.tex[md.normal], U)); nrm = nrm ? nrm.add(nm.mul(w)) : nm.mul(w); nw = nw.add(w); }
     });
-    m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
+    m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
-    m.emissiveNode = albedo.mul(SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25))));
+    let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
+    if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
+    let emis = albedo.mul(lit);
+    if (anyEye) {      // a catch-light: the key light's glint on the wet eye (no specular on the stock eye texture), off indoors where the hemisphere is a lamp-lit room
+      const V = SH.U.camPos.sub(positionWorld).normalize(), Hs = SH.U.sunDir.add(V).normalize(), Hs2 = V.add(V.add(vec3(0, 0.8, 0)).normalize()).normalize();      // the key light, and a soft light from above the viewer so a face looking at you always has one
+      const day = float(1).sub(H.uZone).mul(H.uLight), glint = TSL.pow(TSL.max(N.dot(Hs), 0), float(130)).mul(0.6).mul(TSL.min(SH.U.sunCol.x.mul(1.4), 1)).add(TSL.pow(TSL.max(N.dot(Hs2), 0), float(24)).mul(0.8)).mul(day).mul(eyeW);
+      emis = emis.add(vec3(1, 0.97, 0.9).mul(glint));
+    }
+    m.emissiveNode = emis;
     return m;
   }
 
@@ -2026,18 +2106,20 @@ const Chars = (() => {
     for (let i = 0, id = String(def.id || C.list.length); i < id.length; i++) H.seed = (H.seed * 31 + id.charCodeAt(i)) >>> 0;
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p]).sort(), names = new Set();
     for (const p of parts) for (const m of B.parts[p]) names.add(m.material.name);
-    const nameList = [...names].sort();
+    H.fit = look.fit || 1;
+    const nameList = [...names].sort(), srcOf = {};      // the body's own glTF material per name (the 'real' set keeps its textures and kinds there)
+    for (const p of parts) for (const m of B.parts[p]) if (!srcOf[m.material.name]) srcOf[m.material.name] = m.material;
     if (C.merge && nameList.length > 1) {
       const g = mergedGeometry(S, body, parts, null, nameList);
       if (g) {
-        const mat = makeMergedMaterial(S, H, nameList, look), mesh = new THREE.SkinnedMesh(g, mat);
+        const mat = makeMergedMaterial(S, H, nameList, look, srcOf), mesh = new THREE.SkinnedMesh(g, mat);
         mesh.name = 'villager'; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
         mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;
         H.mats.push(mat); H.meshes.push(mesh);
       }
     } else for (const mn of nameList) {
       const g = mergedGeometry(S, body, parts, mn); if (!g) continue;
-      const mat = makeMaterial(S, H, mn, look), mesh = new THREE.SkinnedMesh(g, mat);
+      const mat = makeMaterial(S, H, mn, look, srcOf[mn]), mesh = new THREE.SkinnedMesh(g, mat);
       mesh.name = mn; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
       mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;      // a fixed sphere: each pass (camera, shadow maps) culls villagers itself
       H.mats.push(mat); H.meshes.push(mesh);
@@ -2119,8 +2201,8 @@ const Chars = (() => {
     const base = st.anim || 'idle', seated = base === 'sit', lying = base === 'lie';
     const key = st.talking ? (lying ? 'lie' : seated ? (cfg.anims['sit+talk'] ? 'sit+talk' : 'sit') : 'talk') : base;
     play(H, key);
-    const s = st.scale || 1, k = (cfg.scale || 1) * s;
-    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1; H.cur.setEffectiveTimeScale(st.speed > 0 && g > 0.2 ? Math.min(Math.max(st.speed / g, 0.6), 1.8) : rate); }
+    const s = st.scale || 1, k = (cfg.scale || 1) * s * H.fit;
+    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1; H.cur.setEffectiveTimeScale(st.speed > 0 && g > 0.2 ? Math.min(Math.max(st.speed / g, 0.6), cfg.maxRate || 1.8) : rate); }
     H.mixer.update(dt);
     const p = st.pos, yaw = st.yaw || 0, face = cfg.faces === -1 ? 0 : Math.PI;
     H.root.scale.setScalar(k);
@@ -5801,10 +5883,11 @@ const Foes = (() => {
   function prepareChars() {
     const cfg = Chars.cfg; Object.assign(cfg.anims, ANIMS);
     for (const n of ['sword-block']) if (cfg.once && cfg.once.includes(n)) cfg.once.splice(cfg.once.indexOf(n), 1);
+    if (cfg.foeLooks) cfg.lookFoe = true;       // sets that bring their own outlaws (cfg.foeLooks) already answer def.foe in look()
     if (!cfg.lookFoe) { const orig = cfg.look; cfg.lookFoe = true; cfg.look = def => { if (!def.foe) return orig(def); const b = orig({ id: '\u0000', skin: def.foe.skin, hair: def.foe.hair }); return { body: def.foe.body, parts: ['HeadSkin', 'Eyes', 'Brows'].concat(def.foe.parts), maps: def.foe.maps || {}, tint: Object.assign({ skin: b.tint.skin, hair: b.tint.hair }, def.foe.tint) }; }; }
     // when in each attack clip the sword hand is furthest forward: that is the moment the blow lands
     try {
-      const body = Chars.set.bodies.male, rig = T3X.SkeletonUtils.clone(body.armature), mx = new THREE.AnimationMixer(rig), hand = rig.getObjectByName(cfg.bones.handR), hips = rig.getObjectByName(cfg.bones.hips), a = new THREE.Vector3(), b = new THREE.Vector3();
+      const body = Chars.set.bodies.male || Chars.set.bodies[(cfg.foeLooks ? cfg.foeLooks.list[0] : { body: Object.keys(Chars.set.bodies)[0] }).body], rig = T3X.SkeletonUtils.clone(body.armature), mx = new THREE.AnimationMixer(rig), hand = rig.getObjectByName(cfg.bones.handR), hips = rig.getObjectByName(cfg.bones.hips), a = new THREE.Vector3(), b = new THREE.Vector3();
       for (const key of ['c-atk1', 'c-atk2', 'c-atk3']) {
         const clip = Chars.set.clips[ANIMS[key]]; if (!clip || !hand || !hips) continue;
         const act = mx.clipAction(clip); act.play(); let best = -1e9, bt = 0.45;
@@ -5819,14 +5902,14 @@ const Foes = (() => {
     const r = RPG.st();
     for (const c of CAMPS) {
       for (let i = 0; i <= c.n; i++) {
-        const lead = i === c.n ? c.leader : null, id = c.id + '.' + i, look = lead ? LEADER : LOOKS[(i + (c.id === 'crag' ? 2 : 0)) % LOOKS.length];
+        const lead = i === c.n ? c.leader : null, id = c.id + '.' + i, look = Chars.cfg.foeLooks ? (lead ? Chars.cfg.foeLooks.leader : Chars.cfg.foeLooks.list[(i + (c.id === 'crag' ? 2 : 0)) % Chars.cfg.foeLooks.list.length]) : lead ? LEADER : LOOKS[(i + (c.id === 'crag' ? 2 : 0)) % LOOKS.length];
         const sp = i === 0 ? c.watch : c.spots[(i - 1) % c.spots.length];
         const f = { id, camp: c, name: lead ? lead.name : 'Outlaw', leader: !!lead, chief: !!(lead && lead.chief), maxHp: lead ? lead.hp : 38, dmg: lead ? lead.dmg : 8, scale: lead ? lead.scale : 0.97 + (i % 3) * 0.03,
           spot: sp, pos: sp.p.slice(), yaw: sp.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0 };
         f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
         f.h = Chars.spawn({ id: 'foe.' + id, foe: look });
         const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.layers.set(1);
-        sw.rotation.set(F.grip[0], F.grip[1], F.grip[2]); sw.position.set(F.grip[3], F.grip[4], F.grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });      // near sun-shadow map only, like the villagers
+        const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });      // near sun-shadow map only, like the villagers
         if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
         F.list.push(f);
       }
@@ -5838,7 +5921,7 @@ const Foes = (() => {
   F.grip = [PI / 2, 0, 0, 0, 0.02, 0.03];       // how a sword sits in the rig's right hand: rotation xyz, offset xyz (hand space)
   F.init = function () {
     buildCamps();
-    F.loading = (Chars.ready ? Promise.resolve() : Chars.load('quaternius')).then(spawnAll).catch(e => { F.failed = true; console.warn('outlaws could not be loaded: ' + (e && e.message || e)); });
+    F.loading = (Chars.ready ? Promise.resolve() : Chars.load(G.charSet || 'quaternius')).then(() => Chars.cfg.lazy && Chars.cfg.foeLooks ? Chars.ensure(Chars.cfg.foeLooks.list.map(l => l.body).concat(Chars.cfg.foeLooks.leader.body)) : 0).then(spawnAll).catch(e => { F.failed = true; console.warn('outlaws could not be loaded: ' + (e && e.message || e)); });
   };
   // everyone goes home and forgets (after the player dies, or sleeps)
   F.calm = function (heal) { for (const f of F.list) { if (!f.alive) continue; release(f); f.state = 'idle'; f.t = 0; f.pos = f.spot.p.slice(); f.yaw = f.spot.yaw; f.alert = 0; if (heal) f.hp = f.maxHp; } };
@@ -6219,7 +6302,14 @@ function startGame(cont) {
     SH.init();
     // animated villagers; if their files cannot be loaded the old hand-built bodies stand in
     $('loadText').textContent = 'Dressing the villagers';
-    if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) { try { await Chars.load('quaternius', f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; } catch (e) { console.warn('villager models unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); } }
+    // the realistic set first, the stylized one if its files cannot be loaded; ?chars=quaternius (or TEST.chars) picks one set and no fallback
+    if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) {
+      const want = (TEST && TEST.chars) || (/[?&]chars=(\w+)/.exec(location.search) || [])[1], order = want ? [want] : ['real', 'quaternius'];
+      for (const name of order) {
+        try { await Chars.load(name, f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; G.charSet = name; break; }
+        catch (e) { console.warn('character set ' + name + ' unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); Chars.ready = false; Chars.set = null; }
+      }
+    }
     lap('chars');
     if (typeof kitBoot === 'function') await kitBoot(f => { $('loadText').textContent = 'Carting in beams, barrels and roof tiles'; $('barFill').style.width = Math.round(38 + f * 2) + '%'; });
     renderInit();

@@ -78,10 +78,11 @@ const Foes = (() => {
   function prepareChars() {
     const cfg = Chars.cfg; Object.assign(cfg.anims, ANIMS);
     for (const n of ['sword-block']) if (cfg.once && cfg.once.includes(n)) cfg.once.splice(cfg.once.indexOf(n), 1);
+    if (cfg.foeLooks) cfg.lookFoe = true;       // sets that bring their own outlaws (cfg.foeLooks) already answer def.foe in look()
     if (!cfg.lookFoe) { const orig = cfg.look; cfg.lookFoe = true; cfg.look = def => { if (!def.foe) return orig(def); const b = orig({ id: '\u0000', skin: def.foe.skin, hair: def.foe.hair }); return { body: def.foe.body, parts: ['HeadSkin', 'Eyes', 'Brows'].concat(def.foe.parts), maps: def.foe.maps || {}, tint: Object.assign({ skin: b.tint.skin, hair: b.tint.hair }, def.foe.tint) }; }; }
     // when in each attack clip the sword hand is furthest forward: that is the moment the blow lands
     try {
-      const body = Chars.set.bodies.male, rig = T3X.SkeletonUtils.clone(body.armature), mx = new THREE.AnimationMixer(rig), hand = rig.getObjectByName(cfg.bones.handR), hips = rig.getObjectByName(cfg.bones.hips), a = new THREE.Vector3(), b = new THREE.Vector3();
+      const body = Chars.set.bodies.male || Chars.set.bodies[(cfg.foeLooks ? cfg.foeLooks.list[0] : { body: Object.keys(Chars.set.bodies)[0] }).body], rig = T3X.SkeletonUtils.clone(body.armature), mx = new THREE.AnimationMixer(rig), hand = rig.getObjectByName(cfg.bones.handR), hips = rig.getObjectByName(cfg.bones.hips), a = new THREE.Vector3(), b = new THREE.Vector3();
       for (const key of ['c-atk1', 'c-atk2', 'c-atk3']) {
         const clip = Chars.set.clips[ANIMS[key]]; if (!clip || !hand || !hips) continue;
         const act = mx.clipAction(clip); act.play(); let best = -1e9, bt = 0.45;
@@ -96,14 +97,14 @@ const Foes = (() => {
     const r = RPG.st();
     for (const c of CAMPS) {
       for (let i = 0; i <= c.n; i++) {
-        const lead = i === c.n ? c.leader : null, id = c.id + '.' + i, look = lead ? LEADER : LOOKS[(i + (c.id === 'crag' ? 2 : 0)) % LOOKS.length];
+        const lead = i === c.n ? c.leader : null, id = c.id + '.' + i, look = Chars.cfg.foeLooks ? (lead ? Chars.cfg.foeLooks.leader : Chars.cfg.foeLooks.list[(i + (c.id === 'crag' ? 2 : 0)) % Chars.cfg.foeLooks.list.length]) : lead ? LEADER : LOOKS[(i + (c.id === 'crag' ? 2 : 0)) % LOOKS.length];
         const sp = i === 0 ? c.watch : c.spots[(i - 1) % c.spots.length];
         const f = { id, camp: c, name: lead ? lead.name : 'Outlaw', leader: !!lead, chief: !!(lead && lead.chief), maxHp: lead ? lead.hp : 38, dmg: lead ? lead.dmg : 8, scale: lead ? lead.scale : 0.97 + (i % 3) * 0.03,
           spot: sp, pos: sp.p.slice(), yaw: sp.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0 };
         f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
         f.h = Chars.spawn({ id: 'foe.' + id, foe: look });
         const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.layers.set(1);
-        sw.rotation.set(F.grip[0], F.grip[1], F.grip[2]); sw.position.set(F.grip[3], F.grip[4], F.grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });      // near sun-shadow map only, like the villagers
+        const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });      // near sun-shadow map only, like the villagers
         if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
         F.list.push(f);
       }
@@ -115,7 +116,7 @@ const Foes = (() => {
   F.grip = [PI / 2, 0, 0, 0, 0.02, 0.03];       // how a sword sits in the rig's right hand: rotation xyz, offset xyz (hand space)
   F.init = function () {
     buildCamps();
-    F.loading = (Chars.ready ? Promise.resolve() : Chars.load('quaternius')).then(spawnAll).catch(e => { F.failed = true; console.warn('outlaws could not be loaded: ' + (e && e.message || e)); });
+    F.loading = (Chars.ready ? Promise.resolve() : Chars.load(G.charSet || 'quaternius')).then(() => Chars.cfg.lazy && Chars.cfg.foeLooks ? Chars.ensure(Chars.cfg.foeLooks.list.map(l => l.body).concat(Chars.cfg.foeLooks.leader.body)) : 0).then(spawnAll).catch(e => { F.failed = true; console.warn('outlaws could not be loaded: ' + (e && e.message || e)); });
   };
   // everyone goes home and forgets (after the player dies, or sleeps)
   F.calm = function (heal) { for (const f of F.list) { if (!f.alive) continue; release(f); f.state = 'idle'; f.t = 0; f.pos = f.spot.p.slice(); f.yaw = f.spot.yaw; f.alert = 0; if (heal) f.hp = f.maxHp; } };
