@@ -64,9 +64,16 @@ function navBuild() {
     const s = World.spots[name], k = add(s.p[0], s.p[1], s.p[2]); Nav.spot[name] = k;
     if (s.zone && s.site && doorNode[s.site]) link(k, doorNode[s.site].i); else link(k, nearest(s.p[0], s.p[2], outside, 60));
   }
-  // the inn's loft is reached by its stairs
-  const S = Nav.spot; if (S['inn.stairs0'] !== undefined) { for (const n of ['inn.guestbed', 'inn.bed2']) { const k = S[n]; A[k].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k) a.splice(i, 1); link(k, S['inn.stairs1']); }
-    const k1 = S['inn.stairs1']; A[k1].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k1) a.splice(i, 1); link(k1, S['inn.stairs0']); for (const n of ['inn.guestbed', 'inn.bed2']) link(S[n], k1); }
+  // upper floors are reached by their stairs only: bottom -> top -> (round the stairwell) -> the rooms above; nothing upstairs links straight to the door
+  const unlink = k => { A[k].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k) a.splice(i, 1); };
+  for (const st of World.stairs) {
+    const nb = Nav.spot[st.bottom], nt = Nav.spot[st.top]; if (nb === undefined || nt === undefined) continue;
+    const chain = [nb, nt].concat(st.via.map(n => Nav.spot[n]).filter(k => k !== undefined)), fy = World.houses[st.site].floorY;
+    for (const k of chain.slice(1)) unlink(k);
+    for (let i = 1; i < chain.length; i++) link(chain[i - 1], chain[i]);
+    const hub = chain[chain.length - 1];
+    for (const name in World.spots) { const sp = World.spots[name]; if (sp.site !== st.site || sp.p[1] < fy + 1.5) continue; const k = Nav.spot[name]; if (chain.includes(k)) continue; unlink(k); link(k, hub); }
+  }
 }
 function navPath(a, b) {
   const N = Nav.nodes, A = Nav.adj, n = N.length, dist = new Float32Array(n).fill(1e9), prev = new Int32Array(n).fill(-1), done = new Uint8Array(n);

@@ -179,7 +179,7 @@ function buildHouse(site, spec) {
   }
   ext.ao = 1; ext.m1 = 0;
   const ctx = {
-    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList, kit, Ms, openings, tanP,
+    site, zone, w, d, H, t, hd, ext, int, glow, R, floorY, ridgeY, roofY, spec, doors: doorList, kit, Ms, openings, tanP, zoneInfo: zinfo,
     world: (x, y, z) => m4.tp(Ms, [x, y, z]),
     spot(name, x, z, yawLocal, y, extra) { const p = m4.tp(Ms, [x, y || 0.02, z]); World.spots[site.id + '.' + name] = Object.assign({ p, yaw: site.yaw + (yawLocal || 0), zone, site: site.id }, extra || {}); },
     // hearth against a wall. frame: origin on the inner wall face, +x into the room. (x, z) = house-local position, rot = RY angle
@@ -217,8 +217,10 @@ function buildHouse(site, spec) {
     interact(x, y, z, o) { const it = Object.assign({ p: m4.tp(Ms, [x, y, z]), r: 2.0, zone }, o); World.interact.push(it); return it; },
   };
   if (kit) kitShell(ctx);
+  if (kit && typeof UPPER !== 'undefined' && UPPER[site.id] && !(TEST && TEST.noUpper)) UPPER[site.id](ctx);       // stairs and upper floor first, so the ground-floor furniture goes round them
   if (spec.interior) spec.interior(ctx);
   if (kit) kitDress(ctx);
+  if (kit && ctx.needUpper && !ctx.upperDone) upperFloor(ctx, {});        // a building whose interior did not build its own second storey still gets a closed one
   int.grad = null;
   World.houses[site.id] = { site, zone, ctx, floorY, door: doorList[0] };
   return { ext, int, glow, ctx };

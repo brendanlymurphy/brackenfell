@@ -30,9 +30,12 @@ async function kitBoot(progress) {
 // pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong
 function kitFixups() {
   for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) { Kit.defs[n].gain = 2.0; Kit.defs[n].sat = 0.85; }       // scanned rocks photograph dark
+  for (const n of ['Window_Wide_Flat1', 'Window_Wide_Round1', 'Window_Thin_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Open'] = Object.assign({}, p, { name: n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_WindowGlass') }); }       // the frame without the pane: upstairs windows you can look out of
+  for (const n of [4, 6, 8]) { const p = Kit.pieces['Roof_Front_Brick' + n]; if (p) Kit.pieces['Roof_Front_Brick' + n + '_Open'] = Object.assign({}, p, { name: 'Roof_Front_Brick' + n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_Plaster') }); }       // gable frames without their plaster, where a window is cut in (gableFill, 71c_upper.js)
   if (Kit.defs.MI_WindowGlass) Kit.defs.MI_StainedGlass = Object.assign({}, Kit.defs.MI_WindowGlass, { name: 'MI_StainedGlass' });
   for (const n of ['Window_Thin_Round1', 'Window_Wide_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Stained'] = Object.assign({}, p, { name: n + '_Stained', prims: p.prims.map(q => q.mat === 'MI_WindowGlass' ? Object.assign({}, q, { mat: 'MI_StainedGlass' }) : q) }); }
 }
+const kitOpen = n => (Kit.pieces[n + '_Open'] ? n + '_Open' : n);
 // the building's spec adjusted to what the kit panels can do: 3 m storeys, kit door and window sizes, no slit windows
 function kitSpec(site, spec) {
   const st = KIT_STYLE[site.id], s = Object.assign({}, spec, { kitStyle: st });
@@ -58,7 +61,7 @@ function kitShell(c) {
   ext.nv = 0; ext.ni = 0; ext.min = [1e9, 1e9, 1e9]; ext.max = [-1e9, -1e9, -1e9]; glow.nv = 0; glow.ni = 0;
   const b = Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true }); World.kitExt[site.id] = { batch: b, site, Ms, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
-  const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: 0, inSkyVis: 0.12 };
+  const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: st.up ? zone : 0, inSkyVis: st.up ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
   const frames = {}, wbs = {};
   for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); frames[wn] = new THREE.Matrix4().makeBasis(KH.V(W.u), KH.V([0, 1, 0]), KH.V(W.n)).setPosition(s0[0], s0[1], s0[2]).premultiply(MS); wbs[wn] = m4.basis(m4.create(), W.u, [0, 1, 0], W.n, s0); }
   const add = (F, name, x, y, z, s, o, ry) => { o = o || OUT; if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] }); b.add(name, KH.xf(F, x, y, z, s, ry), o); };
@@ -121,15 +124,17 @@ function kitShell(c) {
         else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, 0, S, UP);
         else if (n <= 3 || (k + (wn === 'front' || wn === 'back' ? 0 : 1)) % 2 === 1) {
           const r = R();
-          if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, 0, S, UP); add(F, 'Window_Wide_Flat1', uc, H, 0, S, UP); }
-          else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, 0, S, UP); add(F, 'Window_Wide_Flat1', uc, H, 0, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
-          else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, 0, S, UP); add(F, 'Window_Thin_Round1', uc, H, 0, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
+          if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); }
+          else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
+          else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, 0, S, UP); add(F, kitOpen('Window_Thin_Round1'), uc, H, 0, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
         } else add(F, 'Wall_Plaster_Straight', uc, H, 0, S, UP);
       }
       add(F, 'Corner_Exterior_Wood', 0, H, 0, [1.25, 1, 1.25], EXT);
     }
     // ── gable ends carry the timber triangle of the roof ──
-    if (wn === 'left' || wn === 'right') { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; add(F, 'Roof_Front_Brick' + span, L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: st.up ? 0 : zone, inSkyVis: INT_AO }); }
+    if (wn === 'left' || wn === 'right') { const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, ridge = Kit.info('Roof_RoundTiles_' + span + 'x8').max[1]; const gw = spec.gableWin && spec.gableWin[wn] && Kit.pieces['Roof_Front_Brick' + span + '_Open'];
+      add(F, 'Roof_Front_Brick' + span + (gw ? '_Open' : ''), L / 2, Ytop, 0, [d / span, hd * tanP / ridge, 1], { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO });
+      if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT)); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
   {
@@ -137,7 +142,7 @@ function kitShell(c) {
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
     const name = 'Roof_RoundTiles_' + span + 'x' + len, ridge = Kit.info(name).max[1];
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
-    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), { zone: 0, skyVis: 1, inZone: st.up ? 0 : zone, inSkyVis: 0.2 });
+    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), { zone: 0, skyVis: 1, inZone: zone, inSkyVis: 0.2 });
   }
   // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance) ──
   {
@@ -153,11 +158,11 @@ function kitShell(c) {
     ext.pop();
   }
   const e = 0.16;          // the kit walls are thinner than the generated ones: reach to their inner face
-  if (spec.ceiling) {
+  if (st.up) c.needUpper = true;           // a second storey: its floor, with the stairwell, is built by the building (upperFloor in 71b_storeys.js)
+  if (spec.ceiling && !st.up) {
     inner(); ext.mat(MAT.PLANKS, COL.wood); ext.ao = INT_AO * 0.85;
     ext.quad([-w / 2 + e, H, hd - e], [-w / 2 + e, H, -hd + e], [w / 2 - e, H, -hd + e], [w / 2 - e, H, hd - e]);
-    if (st.up) { outer(); ext.ao = 0.15; ext.mat(MAT.PLANKS, COL.woodDark); ext.quad([-w / 2 + e, H + 0.05, -hd + e], [-w / 2 + e, H + 0.05, hd - e], [w / 2 - e, H + 0.05, hd - e], [w / 2 - e, H + 0.05, -hd + e]); }
-  } else {
+  } else if (!st.up) {
     const roofY = c.roofY;
     ext.mat(MAT.PLANKS, COL.woodDark);
     for (const s of [-1, 1]) {
@@ -442,7 +447,7 @@ function kitDress(c) {
       at(mm, 4.8, 2.5, 1.2, 0, () => Props.lantern(mm, c));
       at(mm, 4.4, 0.02, -1.0, 0.1, () => Props.rug(mm, 2.4, 1.6, [0.35, 0.34, 0.22]));
       at(mm, -1.0, 0.02, 3.3, 0.2, () => Props.rug(mm, 1.3, 0.9, [0.4, 0.22, 0.16]));
-      for (const x of [0.2, 1.5]) kp(m, 'Barrel', x, 0.02, 4.3, 0.9, R() * 6);
+      for (const x of [-6.0, -6.6]) kp(m, 'Barrel', x, 0.02, 4.3, 0.9, R() * 6);       // (the back wall between x = -2 and 2.4 is the stair)
     }
   }
   // ── outside: vines up the walls, a banner by the door ──
