@@ -23,10 +23,10 @@ function pStock(P, room, o) {
 PLANS.store = (P, c, info) => {
   const R = P.R, id = P.id; P.dims = { W: 14, D: 12, Dh: 7 };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, 3.3); pLevel(P, 1, 3.3 + PW.SLAB, H_UP);
-  pRoom(P, 0, 'shop', 'shop', -7, 0, 7, 7); pRoom(P, 0, 'stock', 'store', -7, 7, 0, 12); pRoom(P, 0, 'keeper', 'hall', 0, 7, 7, 12);
+  pRoom(P, 0, 'shop', 'shop', -7, 0, 7, 7, { floor: 'stone' }); pRoom(P, 0, 'stock', 'store', -7, 7, 0, 12); pRoom(P, 0, 'keeper', 'hall', 0, 7, 7, 12);
   pRoom(P, 1, 'solar', 'bedroom', 0, 7, 7, 12); pRoom(P, 1, 'attic', 'bedroom', -7, 7, 0, 12);
   pRoom(P, -1, 'cellar', 'cellar', -7, 7, 7, 12, { floor: 'stone', win: false });
-  pDoor(P, 'shop', null, 0, 0); pDoor(P, 'shop', 'stock', -3.5, 7); pDoor(P, 'shop', 'keeper', 3.5, 7); pDoor(P, 'solar', 'attic', 0, 11.0);
+  pDoor(P, 'shop', null, 0, 0); pDoor(P, 'stock', 'keeper', 0, 10.8); pDoor(P, 'shop', 'keeper', 3.5, 7); pDoor(P, 'solar', 'attic', 0, 11.0);
   pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: -5.8, z: 8.9, width: 1.0, tread: 0.22 });
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: 1.5, z: 11.0, width: 1.0, tread: 0.22 });
   pLayout(P);
@@ -35,10 +35,10 @@ PLANS.store = (P, c, info) => {
   const hh = pHearth(P, keeper, 'e', 1.6, { cauldron: true, size: 0.45, at: 8.6 }); P.hall = { room: keeper, hh };
   if (hh) { pPier(P, -1, hh); pPier(P, 1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); }
   // the shop floor: the counter runs along the back of the customers' half, closed at its west end; the way to the keeper's door stays open at its east end
-  const ct = pPut(P, shop, id + '.counter', -3.5, 4.8, 0, 6.6, 0.8, 1.0, pdCounter(6.6, c, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple', 'bottle', 'candle'], 9), { surface: true, noClear: true });
+  const ct = pPut(P, shop, id + '.counter', -3.8, 4.8, 0, 6.0, 0.8, 0.84, pdCounter(6.0, c, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple', 'bottle', 'candle'], 9), { surface: true, noClear: true, lowOk: true });
   if (ct) { pSpot(P, 'counter', ct.cx + 0.4, ct.cz + 0.85, PI, { k: 0 }); pSpot(P, 'front', ct.cx + 0.4, ct.cz - 0.85, 0, { k: 0 }); }
   // behind the counter: a flap of floor, scales and a tall shelf wall; the stockroom door is on this side
-  pShelfRun(P, shop, 's', -7, -4.3, ['jug', 'pot', 'bowl', 'bottle'], { id: 'back' }); pShelfRun(P, shop, 's', -2.7, -0.2, ['cheese', 'loaf', 'pot', 'jug'], { id: 'back' }); pShelfRun(P, shop, 's', 0.2, 2.7, ['bottle', 'jug', 'bowl', 'pot'], { id: 'back' }); pShelfRun(P, shop, 's', 4.3, 7, ['pot', 'cheese', 'bowl', 'loaf'], { id: 'back' });
+  pShelfRun(P, shop, 's', -7, -0.2, ['cheese', 'loaf', 'pot', 'jug'], { id: 'back' }); pShelfRun(P, shop, 's', 0.2, 2.7, ['bottle', 'jug', 'bowl', 'pot'], { id: 'back' }); pShelfRun(P, shop, 's', 4.3, 7, ['pot', 'cheese', 'bowl', 'loaf'], { id: 'back' });
   // the side walls: wares from floor to ceiling, barrels and sacks by the door where goods arrive
   pShelfRun(P, shop, 'w', 0, 4.4, ['bowl', 'jug', 'pot', 'cheese', 'bottle'], { id: 'side' }); pShelfRun(P, shop, 'e', 2.8, 7, ['bottle', 'pot', 'jug', 'loaf'], { id: 'side' });
   for (let i = 0; i < 3; i++) pAgainst(P, shop, 'e', id + '.sbarrel' + i, 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { at: 0.8 + i * 0.85, lowOk: true });
