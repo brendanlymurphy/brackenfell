@@ -11,7 +11,7 @@
   var L = window.Load = {
     M: M, base: base, want: {}, total: 0, got: 0, per: {}, groups: [], build: 0, shown: 0, first: true, raf: 0, persist: false,
     hints: [
-      'Doors open as you walk up to them. Most of them lead somewhere.',
+      'Walk up to a door and use it to step inside. Every door leads somewhere.',
       'Everyone in Brackenfell has something to say. Walk up and speak.',
       'The compass at the top shows where your quest leads, and places you have found.',
       'Your journal holds your quests, your pack and a map that fills in as you explore.',

@@ -119,7 +119,7 @@ Mark.draw = () => {
   const front = (x, y, z) => ((x - e[0]) * fx + (y - e[1]) * fy + (z - e[2]) * fz) / (hyp(x - e[0], y - e[1], z - e[2]) || 1);
   // 1. the thing you can use: a small ink diamond above it, breathing
   if (UI.prompt && UI.promptPos) {
-    const p = UI.promptPos, s = Mark.at(p[0], p[1] + 0.32, p[2]);
+    const p = UI.promptPos, s = Mark.at(p[0], p[1] + (UI.prompt.npc ? 0.62 : 0.32), p[2]);
     if (s) { const k = rm ? 0 : Math.sin(t * 3.2); c.globalAlpha = 0.28 + 0.1 * k; c.beginPath(); c.arc(s[0], s[1], 13 + 2.5 * k, 0, TAU); c.fillStyle = '#f6e7b4'; c.fill(); Mark.diamond(c, s[0], s[1], 6.5, '#ebe0c6', '#14110d', 0.95); Mark.drawn = true; }
   }
   // 2. doors: where this one leads (outside only, the nearest two, in front of you, not the one you are about to use)

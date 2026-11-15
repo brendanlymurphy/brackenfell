@@ -229,7 +229,7 @@ async function warmShaders() {
     if (!TEST || TEST.warm) await warmShaders();
     bootStage(1); if (typeof Load !== 'undefined') Load.complete(); else $('barFill').style.transform = 'scaleX(1)';
     $('loadBox').hidden = true; $('startRow').hidden = false; $('title').classList.remove('loading'); $('title').classList.add('ready');
-    $('hint').textContent = coarse() ? 'Drag on the left to walk, on the right to look. Push the stick all the way to run. Doors open as you walk up to them.' : 'W A S D to walk, mouse to look, Shift to run, E to use, Tab for your journal and map, Esc to pause.';
+    $('hint').textContent = coarse() ? 'Drag on the left to walk, on the right to look. Push the stick all the way to run. Walk up to a door to go in.' : 'W A S D to walk, mouse to look, Shift to run, E to use, Tab for your journal and map, Esc to pause.';
     if (loadSave()) $('contBtn').hidden = false;
     $('startBtn').addEventListener('click', () => startGame(false)); $('contBtn').addEventListener('click', () => startGame(true));
     if (typeof Load !== 'undefined') { Load.update = () => UI.updateAvailable(); if (Load.updateReady) UI.updateAvailable(); setTimeout(() => { Load.register(); setTimeout(() => Load.warm().then(() => UI.storageNote()), 4000); }, 1500); }
