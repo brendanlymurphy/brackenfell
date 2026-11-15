@@ -120,6 +120,8 @@ const Foes = (() => {
   };
   // everyone goes home and forgets (after the player dies, or sleeps)
   F.calm = function (heal) { for (const f of F.list) { if (!f.alive) continue; release(f); f.state = 'idle'; f.t = 0; f.pos = f.spot.p.slice(); f.yaw = f.spot.yaw; f.alert = 0; if (heal) f.hp = f.maxHp; } };
+  // a fight does not follow through a door: everyone goes home, calm, and the fight timer clears
+  F.breakOff = function () { F.calm(false); F.target = null; F.attackers = 0; if (typeof RPG !== 'undefined') RPG.combatT = 99; for (const f of F.list) if (f.h && f.h.pivot.visible && f.alive) f.h.pivot.visible = false; };
   function campState() {
     const r = RPG.st(); r.cleared = r.cleared || {};
     for (const c of CAMPS) { const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
@@ -230,6 +232,7 @@ const Foes = (() => {
   }
   F.update = function (dt, rdt) {
     if (!F.ready) return;
+    if (World.cell) { F.target = null; return; }          // outlaws live outdoors: in a cell none is drawn, thought about or posed
     const P = game.playing ? Player.pos : R.cam.pos, live = game.playing && !RPG.dead, st = F.st, r = RPG.st();
     let target = null, tb = 0.55, fight = null;
     for (const f of F.list) {

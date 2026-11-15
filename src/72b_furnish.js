@@ -4,7 +4,7 @@ const FURN = { blobs: {} };
 // the fine group of a room: small objects, drawn on medium and high only (see kitAttach)
 World.kitFine = {};
 function furnFineBatch(zone) {
-  let k = World.kitFine[zone]; if (!k) { const zi = World.zones[zone - 1]; k = World.kitFine[zone] = { batch: Kit.batch({ name: 'kitfine-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null }; }
+  let k = World.kitFine[zone]; if (!k) { const zi = World.zones[zone - 1]; k = World.kitFine[zone] = { batch: Kit.batch({ name: 'kitfine-' + (zi ? zi.site.id : zone), cell: 4096 }), site: zi ? zi.site : null, cell: zi ? zi.cell : null }; }
   return k.batch;
 }
 function furnBlob(zone, P) {

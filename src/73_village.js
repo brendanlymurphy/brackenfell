@@ -15,7 +15,7 @@ function buildVillage() {
     const spec = HOUSES[site.id]; if (!spec) continue;
     const h = buildHouse(site, spec);
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
-    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true, cell: h.cell ? h.cell.id : null }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
   }
@@ -235,7 +235,7 @@ function buildVillage() {
   leaf.mat(MAT.METAL, COL.black); for (const y of [0.18, 0.82]) { leaf.box(0, y - 0.03, -0.04, 0.82, y + 0.03, -0.03, 32); leaf.box(0, y - 0.03, 0.03, 0.82, y + 0.03, 0.04, 16); }
   leaf.box(0.86, 0.48, -0.07, 0.9, 0.54, 0.07);
   const leafItem = skin.add(leaf);
-  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: 0, kind: 'door' }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;

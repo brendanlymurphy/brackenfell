@@ -86,7 +86,7 @@ function uiFrame(dt) {
     UI.lastYaw = P.yaw; const W = $('compass').clientWidth || 300, span = 1.9;
     for (const c of UI.compass) { const d = angDiff(c.a, P.yaw); c.el.style.display = Math.abs(d) < span / 2 ? '' : 'none'; c.el.style.left = (50 + d / span * 100) + '%'; }
     let k = 0;
-    for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
+    for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = CELLS_ON ? Cells.mapTarget(questTarget(id)) : questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
     for (; k < UI.marks.length; k++) { UI.marks[k].el.style.display = 'none'; UI.marks[k].d.style.display = 'none'; }
   }
   if ((R.frame & 31) === 0) { const h = Math.floor(Env.hour), m = Math.floor((Env.hour - h) * 60 / 10) * 10; const part = Env.hour < 5 ? 'Night' : Env.hour < 8 ? 'Dawn' : Env.hour < 12 ? 'Morning' : Env.hour < 17 ? 'Afternoon' : Env.hour < 20.5 ? 'Dusk' : 'Night'; $('clock').textContent = part + ' · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); uiObjective();

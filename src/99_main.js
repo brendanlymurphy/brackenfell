@@ -69,7 +69,7 @@ function updateDynamics(dt, chars) {
   const bd = R.boneData, tmp = POSE.S, pp = Player.pos;
   for (const d of World.doors) {
     let near = false;
-    for (const c of chars) if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
+    for (const c of chars) if (CELLS_ON && c === chars[0]) continue; else if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
     if (near && d.open === 0 && game.playing) { const dd = hyp(pp[0] - d.c[0], pp[2] - d.c[2]); if (dd < 14) Audio2.door(clamp(1.2 - dd / 12, 0.1, 1)); }
     d.open = clamp(d.open + (near ? dt : -dt) * 2.4, 0, 1);
     if (d.open === d.last) continue; d.last = d.open;
@@ -90,8 +90,8 @@ function audioState() {
     const wd = River.dist(p[0], p[2], 30), ld = hyp(p[0] - LAKE.x, p[2] - LAKE.z) - LAKE.r, md = World.millPos ? hyp(p[0] - World.millPos[0], p[2] - World.millPos[2]) : 99;
     st.water = Math.max(sat(1 - wd / 26) * 0.8, sat(1 - ld / 20) * 0.35, sat(1 - md / 18));
   }
-  const b = NPC.brandt; st.hammer = b && b.anim === 'hammer' && !b.talking ? b.t : -1; st.hammerDist = b ? hyp(b.pos[0] - p[0], b.pos[2] - p[2]) : 999;
-  const l = NPC.lark; st.lute = !!(l && l.anim === 'lute' && !l.talking); st.luteDist = l ? hyp(l.pos[0] - p[0], l.pos[2] - p[2]) : 999; st.luteWall = !!l && World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]) !== World.camZone;
+  st.cell = !!World.cell; const b = NPC.brandt; st.hammer = b && b.anim === 'hammer' && !b.talking ? b.t : -1; const hb = b ? Cells.hear(b.pos, p) : null; st.hammerDist = b ? (CELLS_ON ? hb.d : hyp(b.pos[0] - p[0], b.pos[2] - p[2])) : 999; st.hammerWall = !!hb && hb.wall;
+  const l = NPC.lark; st.lute = !!(l && l.anim === 'lute' && !l.talking); const hl = l ? Cells.hear(l.pos, p) : null; st.luteDist = l ? (CELLS_ON ? hl.d : hyp(l.pos[0] - p[0], l.pos[2] - p[2])) : 999; st.luteWall = !!l && (CELLS_ON ? hl.wall : World.zoneAt(l.pos[0], l.pos[1] + 1, l.pos[2]) !== World.camZone);
   st.bellOn = !!S.flags.bell; st.bellDist = World.bell ? hyp(World.bell.p[0] - p[0], World.bell.p[2] - p[2]) : 999;
   for (const c of World.chickens) if (c.cluck) { c.cluck = false; Audio2.cluck(clamp(1.2 - hyp(c.pos[0] - p[0], c.pos[2] - p[2]) / 8, 0, 1)); }
   return st;
@@ -146,7 +146,7 @@ function startGame(cont) {
   Audio2.start();
   const sv = cont && loadSave(); if (sv) applySave(sv); else { clearSave(); }
   npcSnapAll(); uiPurse(); uiObjective();
-  game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + 50);
+  game.playing = true; Perf.first = 0.45; Perf.ft = Perf.T = 16.7; Perf.hold = 3; R.scale = 1; $('title').classList.add('gone'); $('hud').hidden = false; Player.pos[1] = World.groundAt(Player.pos[0], Player.pos[2], Player.pos[1] + (Cells.inRegion(Player.pos[0]) ? 0.8 : 50)); if (CELLS_ON) { Cells.sync(Player.pos); World.camZone = World.zoneAt(Player.pos[0], Player.pos[1] + 1, Player.pos[2]); }
   if (!Input.touch && !coarse() && !TEST) { try { const p = G.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
   setTimeout(() => { banner('The Greyspine Valley', 'Brackenfell'); }, 900);
   if (!sv) setTimeout(() => { if (qAt('welcome') < 0) qStart('welcome'); }, 5200);
@@ -202,11 +202,17 @@ function startGame(cont) {
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
         game.step = (n, dt) => { let env; for (let i = 0; i < (n || 1); i++) env = tick(dt || 1 / 30); return env; };
     game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); return R.stats; };
-    game.tp = (x, z, yawDeg, pitchDeg, y) => { Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180; World.indoor = World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; };
+    game.tp = (x, z, yawDeg, pitchDeg, y) => {       // tp(spotName, yawDeg?) goes to a named spot (inside a cell too); tp(x, z, ...) to coordinates, y optional
+      if (typeof x === 'string') { const sp = World.spots[x]; if (!sp) throw new Error('no spot ' + x); yawDeg = z === undefined ? sp.yaw * 180 / PI : z; pitchDeg = 0; y = sp.p[1]; z = sp.p[2]; x = sp.p[0]; }
+      Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180;
+      if (CELLS_ON) Cells.sync(Player.pos); World.indoor = World.cell || World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; World.camZone = World.zoneAt(x, Player.pos[1] + 1, z); R.cam.pos[0] = x; R.cam.pos[1] = Player.pos[1] + Player.eye; R.cam.pos[2] = z; Player.camY = Player.pos[1];
+    };
+    game.enter = id => { const c = Cells.by[id]; if (!c) throw new Error('no cell ' + id); Cells.teleport(c.enter); return c.id; };         // instant, no fade (tests); the door interaction is Cells.use
+    game.leave = () => { const c = Cells.cur; if (!c) return false; Cells.teleport(c.leave); return true; };
     game.shot = async (x, y, z, yaw, pitch, hour) => {
       if (hour !== undefined) { Env.hour = hour; npcSnapAll(); }
       game.playing = false; const save = attractCamera; R.cam.pos = [x, y === null ? Terrain.y(x, z) + 1.65 : y, z]; R.cam.yaw = yaw * PI / 180; R.cam.pitch = (pitch || 0) * PI / 180;
-      World.camZone = World.zoneAt(x, R.cam.pos[1], z); World.indoor = World.camZone ? 1 : 0;
+      if (CELLS_ON) Cells.sync(R.cam.pos); World.camZone = World.zoneAt(x, R.cam.pos[1], z); World.indoor = World.cell || World.camZone ? 1 : 0;
       game.time += 0.4; npcUpdate(0.4, R.cam.pos); updateDynamics(0.4, [R.cam.pos].concat(NPCS.map(n => n.pos)));
       const env = updateEnv(game.time, World.indoor); env.time = game.time; World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
       fxUpdate(0.4, game.time, env, R.cam.pos); fxUpdate(0.4, game.time, env, R.cam.pos);
