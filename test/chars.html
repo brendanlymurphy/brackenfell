@@ -1,0 +1,65 @@
+<!doctype html><html><head><meta charset="utf-8"><base href="/"><style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#view{width:100vw;height:100vh;display:block}</style></head><body>
+<canvas id="view"></canvas>
+<script src="/three.js"></script>
+<script src="/src/00_math.js"></script><script src="/src/10_gfx.js"></script><script src="/src/40_shade.js"></script><script src="/src/50_env.js"></script><script src="/src/49_chars.js"></script>
+<script>
+// Standalone check of the character system: a row of villagers, each in a different game animation, under the game's own light.
+// options (window.__TEST__): set, anims (comma list), hour, webgl, cam ("x,y,z,tx,ty,tz"), spacing, extra (JSON of a set config to define first)
+const World = { lakeY: 0, indoor: 0 };
+(async () => {
+  const T = TEST || {}, { Fn, vec3, vec4, float, pass, mix, dot, clamp, max, pow, smoothstep, uniform } = TSL;
+  const canvas = document.getElementById('view'); await gfxInit(canvas); gfxResize(innerWidth, innerHeight);
+  await loadNoise(); SH.init();
+  if (window.__defineSets) window.__defineSets();
+  Env.hour = T.hour === undefined ? 10 : T.hour; const env = updateEnv(0, 0);
+  const scene = new THREE.Scene(), U = SH.U;
+  const lin = a => new THREE.Color(a[0], a[1], a[2]);
+  scene.background = lin(mix3(env.horizon, env.zenith, 0.35));
+  const anims = String(T.anims || 'idle,walk,run,talk,sit,sit+talk,hammer,lute,pray,guard,work,sweep,fish,cheer,lie').split(','), n = T.lineup ? 17 : anims.length, sp = T.spacing || 1.15;
+  // ground, benches and a bed, lit the way world surfaces are: sun from the scene light, ambient and hearths through emissive
+  const surf = (col, zone) => { const m = new THREE.MeshStandardNodeMaterial(); m.color.setRGB(col[0], col[1], col[2]); m.roughness = 0.95; const N = TSL.normalWorld.normalize(); m.emissiveNode = TSL.materialColor.mul(SH.hemi(N, float(1), float(zone || 0)).add(SH.pointLights(TSL.positionWorld, N, float(zone || 0), float(0.25)))); return m; };
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60).rotateX(-Math.PI / 2), surf([0.16, 0.20, 0.10])); ground.receiveShadow = true; scene.add(ground);
+  const wood = surf([0.30, 0.20, 0.12]), box = (x, y, z, w, h, d) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wood); b.position.set(x, y + h / 2, z); b.castShadow = b.receiveShadow = true; scene.add(b); };
+  const sun = new THREE.DirectionalLight(lin(env.keyCol), Math.PI); sun.position.set(env.keyDir[0] * 30, env.keyDir[1] * 30, env.keyDir[2] * 30);
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); const sc = sun.shadow.camera; sc.left = -n * sp / 2 - 2; sc.right = n * sp / 2 + 2; sc.top = 6; sc.bottom = -6; sc.near = 1; sc.far = 80; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03; scene.add(sun);
+  await Chars.load(T.set || 'quaternius'); scene.add(Chars.group);
+  // the village's people (id, skin, hair, scale as in NPC_DEFS); T.lineup shows all of them standing, otherwise one per animation
+  const WHO = [['hale', 'tan', 'brown'], ['greta', 'rosy', 'auburn'], ['brandt', 'tan', 'black'], ['tobin', 'fair', 'blond', 0.74], ['marta', 'brown', 'black'], ['aldous', 'fair', 'grey'], ['maren', 'fair', 'white', 0.93], ['osric', 'fair', 'brown'], ['edda', 'tan', 'blond'],
+    ['finn', 'tan', 'grey'], ['lark', 'fair', 'red'], ['wren', 'brown', 'black'], ['rowan', 'fair', 'white', 0.97], ['pip', 'rosy', 'brown', 0.66], ['ivo', 'deep', 'black'], ['hilda', 'rosy', 'brown'], ['bram', 'tan', 'auburn']];
+  const eye = [0, 1.6, 6.5], list = [], rows = T.lineup ? WHO.map(() => 'idle') : anims, cnt = rows.length, start = T.first || 0;
+  rows.forEach((a, i) => {
+    const x = (i - (cnt - 1) / 2) * sp, talking = a.endsWith('+talk') || a === 'talk', base = a === 'talk' ? 'idle' : a.replace('+talk', ''), w = WHO[(i + start) % WHO.length];
+    const def = { id: w[0], skin: w[1], hair: w[2], scale: w[3] || 1 };
+    const st = { pos: [x, 0, 0], yaw: Math.PI, anim: base, talking, scale: def.scale, zone: 0, light: 1, visible: true, look: [0, 0], seatHeight: 0.46 };
+    if (base === 'sit') box(x, 0, -0.05, 0.6, 0.46, 0.5);
+    if (base === 'lie') { box(x, 0, 0, 0.9, 0.4, 2.0); st.pos[1] = 0.4; st.yaw = 0; }
+    if (i === (T.indoor === undefined ? 0 : T.indoor)) { st.zone = 1; st.light = 0.34; }
+    if (i === 1 && !T.lineup) {      // the second villager looks at a point off to one side, worked out the way npcUpdate does it
+      const tgt = [x + 3, 1.6, 3], ad = angDiff(Math.atan2(tgt[0] - x, -(tgt[2] - 0)), st.yaw); st.look = [Math.max(-1.1, Math.min(1.1, -ad)), 0.15];
+    }
+    list.push({ h: Chars.spawn(def), st });
+  });
+  // a hearth beside the indoor villager: reaches zone 1 only, so the ground (zone 0) must stay dark while the villager is lit
+  const ix = (list[T.indoor === undefined ? 0 : T.indoor] || list[0]).st.pos[0];
+  env.windDir = env.windDir || [0.8, 0.6];
+  SH.update(env, eye, 0);
+  U.lightPos.array[0].set(ix + 0.9, 1.3, 0.9, 5); U.lightCol.array[0].set(2.6, 1.5, 0.6, 1);
+  const cam = new THREE.PerspectiveCamera(T.fov || 32, innerWidth / innerHeight, 0.1, 200);
+  const cp = T.cam ? String(T.cam).split(',').map(Number) : [0, 1.5, n * sp * 0.5 / Math.tan(16 * Math.PI / 180) / (innerWidth / innerHeight) + 2.5, 0, 0.85, 0];
+  cam.position.set(cp[0], cp[1], cp[2]); cam.lookAt(cp[3], cp[4], cp[5]);
+  const pipe = new THREE.RenderPipeline(G.renderer), col = pass(scene, cam, { samples: 4 }), exposure = uniform(env.exposure);
+  pipe.outputColorTransform = false;
+  pipe.outputNode = Fn(() => {      // the game's final step: exposure, ACES, a little grade, gamma
+    const x = max(col.rgb, vec3(0)).mul(exposure).toVar();
+    const c = clamp(x.mul(x.mul(2.51).add(0.03)).div(x.mul(x.mul(2.43).add(0.59)).add(0.14)), 0, 1).toVar();
+    c.assign(mix(vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))), c, 1.14)); c.assign(mix(c, c.mul(c).mul(vec3(3).sub(c.mul(2))), 0.22));
+    const l = dot(c, vec3(0.2126, 0.7152, 0.0722)); c.mulAssign(mix(vec3(0.93, 0.99, 1.07), vec3(1.045, 1.0, 0.93), smoothstep(0.06, 0.62, l)));
+    return vec4(pow(max(c, vec3(0)), vec3(1 / 2.2)), 1);
+  })();
+  const step = dt => { for (const c of list) Chars.update(c.h, c.st, dt); };
+  window.__step = async (t, k) => { k = k || 1; for (let i = 0; i < k; i++) step(t / k); await gfxCapture(() => pipe.render()); return { backend: G.backend, errors: G.errors.length, calls: G.renderer.info.render.drawCalls, tris: G.renderer.info.render.triangles }; };
+  window.__chars = list; window.__gpuErrors = () => G.errors;
+  await window.__step(0.001); await window.__step(T.t === undefined ? 0.7 : T.t, 12);
+  window.__ready = true;
+})().catch(e => { console.error('CHARS FAIL', e.stack || e); G.errors.push(String(e)); window.__ready = true; });
+</script></body></html>

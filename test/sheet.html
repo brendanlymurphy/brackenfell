@@ -1,0 +1,27 @@
+<!doctype html><html><body style="margin:0;background:#222"><canvas id="c"></canvas>
+<script src="/three.js"></script>
+<script>
+// Contact sheet for candidate character files: every GLB in __TEST__.files side by side under neutral light.
+(async () => {
+  const T = window.__TEST__ || {}, files = String(T.files || '').split(','), cols = T.cols || files.length, W = innerWidth, H = innerHeight;
+  const cv = document.getElementById('c'); cv.width = W; cv.height = H;
+  const r = new THREE.WebGPURenderer({ canvas: cv, antialias: true, forceWebGL: true }); await r.init(); r.setSize(W, H, false);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x8fa3b5);
+  scene.add(new THREE.HemisphereLight(0xdfeaff, 0x5a5040, 2.2)); const sun = new THREE.DirectionalLight(0xfff2dd, 2.6); sun.position.set(2, 5, 4); scene.add(sun);
+  const loader = new T3X.GLTFLoader(), info = [], rows = Math.ceil(files.length / cols), sp = T.spacing || 1.3, rowH = T.rowH || 2.3;
+  for (let i = 0; i < files.length; i++) {
+    const g = await loader.loadAsync(files[i]); const o = g.scene; scene.add(o);
+    const anim = T.clip !== undefined && g.animations.length ? g.animations[Math.min(T.clip, g.animations.length - 1)] : null;
+    if (anim) { const mx = new THREE.AnimationMixer(o); mx.clipAction(anim).play(); mx.setTime(T.t || 0.5); }
+    o.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(o), s = b.getSize(new THREE.Vector3());
+    let tris = 0, bones = 0; o.traverse(m => { if (m.isMesh) tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3; if (m.isBone) bones++; });
+    info.push({ f: files[i].split('/').pop(), h: +s.y.toFixed(2), w: +s.x.toFixed(2), tris: tris | 0, bones, clips: g.animations.length });
+    const k = T.norm ? 1.8 / s.y : 1; o.scale.multiplyScalar(k);
+    o.position.x += (i % cols - (cols - 1) / 2) * sp - (b.min.x + b.max.x) / 2 * k; o.position.y += -((i / cols) | 0) * rowH - b.min.y * k; if (T.yaw) o.rotation.y = T.yaw;
+  }
+  const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 200), hh = rows * rowH, cy = -(rows - 1) * rowH / 2 + 0.95, ww = cols * sp;
+  const dist = Math.max(hh / 2 / Math.tan(15 * Math.PI / 180), ww / 2 / Math.tan(15 * Math.PI / 180) / (W / H)) * 1.05;
+  cam.position.set(0, cy, dist); cam.lookAt(0, cy, 0);
+  r.render(scene, cam); window.__info = info; window.__ready = true;
+})().catch(e => { console.error('SHEET FAIL', e.stack || e); window.__ready = true; });
+</script></body></html>
