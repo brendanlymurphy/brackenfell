@@ -2889,7 +2889,7 @@ const kitReady = () => HOUSE_STYLE === 'kit' && typeof Kit !== 'undefined' && !!
 function kitWanted(site, spec) { return kitReady() && !!KIT_STYLE[site.id]; }
 async function kitBoot(progress) {
   if (HOUSE_STYLE !== 'kit' || typeof Kit === 'undefined') return;
-  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan/.test(p.glb)) }); }
+  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan/.test(p.glb)) }); for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) Kit.defs[n].gain = 1.3; }       // scanned rocks photograph dark; lift them a little
   catch (e) { console.warn('kits unavailable, building the generated houses instead: ' + (e && e.message || e)); G.kitNote = String(e && e.message || e); }
 }
 // the building's spec adjusted to what the kit panels can do: 3 m storeys, kit door and window sizes, no slit windows
@@ -3061,7 +3061,7 @@ const SCANR = {
   Table_Large: { n: ['woodentable_01'], fit: 'box', tint: [0.85, 0.72, 0.6] },
   Bench: { n: ['woodentable_01'], fit: 'box', tint: [0.9, 0.8, 0.7] },
   Stool: { n: ['painted_wooden_stool'], fit: 'contain', tint: [0.5, 0.4, 0.31] },
-  Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.42, 0.34, 0.27] },
+  Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.36, 0.29, 0.22] },
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
   Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
   Barrel: { n: ['wine_barrel_01', 'wooden_barrels_01_a'], fit: 'xz', one: 1 },
