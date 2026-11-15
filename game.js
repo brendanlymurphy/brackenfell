@@ -1211,7 +1211,7 @@ const Kit = (() => {
     const jobs = [];
     for (const name of Object.keys(S.materials || {})) {
       const s = S.materials[name], d = K_.defs[name]; if (!d) continue;
-      if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
+      if (s.tint) d.color = d.color.map((v, i) => v * s.tint[i]); if (s.moss !== undefined) d.moss = s.moss; if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
       if (s.a) jobs.push(texLoad('kits/skin/' + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
       if (s.n) jobs.push(texLoad('kits/skin/' + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
       if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
@@ -1283,6 +1283,18 @@ const Kit = (() => {
     const skyVis = batch ? select(inside, kz.w, kc.a) : float(o.skyVis === undefined ? 1 : o.skyVis), zone = batch ? select(inside, kz.z, kz.x).mul(255).round() : float(o.zone || 0);
     const glow = batch ? kz.y.mul(255 / 16) : float(0);          // extra self-illumination in HDR units (candle wax near the flame, embers)
     const N = normalWorld, wp = positionWorld;
+    if (isGlass(d) && /stained/i.test(d.name)) {       // leaded coloured glass (kc.rgb = the pane's base colour): jewel colours from inside by day, a lamp-lit glow from outside after dusk
+      const h2 = abs(N.z), hc = wp.x.mul(h2).add(wp.z.mul(abs(N.x))), cell = floor(vec2(hc.mul(3.4), wp.y.mul(3.0))), fr = vec2(fract(hc.mul(3.4)), fract(wp.y.mul(3.0)));
+      const hh = fract(sin(dot(cell, vec2(12.9898, 78.233))).mul(43758.5453)), h3 = fract(hh.mul(7.31).add(0.37));
+      const lead = float(1).sub(smoothstep(0.0, 0.09, fr.x.min(fr.y).min(float(1).sub(fr.x).min(float(1).sub(fr.y)))));
+      const base = kc.rgb, pane = mix(base, base.zxy.mul(0.9).add(vec3(0.05, 0.03, 0.0)), smoothstep(0.55, 0.62, hh)).mul(h3.mul(0.7).add(0.55)).mul(lead.oneMinus().mul(0.92).add(0.08));
+      const V = normalize(wp.sub(U.camPos)), R = reflect(V, N), sky = SH.skyBase(vec3(R.x, max(R.y, 0.02), R.z)).mul(0.12);
+      m.colorNode = vec3(0.01, 0.012, 0.015); m.roughnessNode = float(0.2); m.metalnessNode = float(0);
+      const dayF = float(1).sub(U.windowGlow);
+      const jew = pane.mul(pane).mul(1.6);
+      m.emissiveNode = select(frontFacing, sky.add(jew.mul(U.windowGlow.mul(1.5).add(0.05))), jew.mul(dayF.mul(0.9).add(0.08)));
+      m.side = THREE.DoubleSide; K_.mats.set(key, m); return m;
+    }
     if (isGlass(d)) {         // window panes: dark by day with a little sky in them, lit from inside after dusk (each pane a slightly different warmth)
       const cell = floor(wp.mul(0.9)), h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))).mul(43758.5453));
       const V = normalize(wp.sub(U.camPos)), R = reflect(V, N);
@@ -1300,7 +1312,12 @@ const Kit = (() => {
     const metal = orm ? orm.b : float(d.metal || 0);
     // no reflection probes here, so metal keeps a darkened diffuse instead of going black, and gets its shine from a lower roughness
     const raw = base.rgb.mul(vec3(d.color[0] * d.gain, d.color[1] * d.gain, d.color[2] * d.gain)).mul(tint);
-    const alb = gradeFn(d.sat === undefined ? raw : mix(vec3(dot(raw, vec3(0.2126, 0.7152, 0.0722))), raw, d.sat)).mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
+    let rawS = d.sat === undefined ? raw : mix(vec3(dot(raw, vec3(0.2126, 0.7152, 0.0722))), raw, d.sat);
+    if (d.moss) {         // roofs: patches of moss and lichen at a scale no tile texture repeats at
+      const mn = texture(G.noiseTex, vec2(wp.x.mul(0.37).add(wp.z.mul(0.21)), wp.z.mul(0.33).sub(wp.y.mul(0.25)))), mk = smoothstep(0.62, 0.8, mn.r.mul(0.7).add(mn.g.mul(0.3))).mul(d.moss);
+      rawS = mix(rawS, vec3(0.2, 0.27, 0.1).mul(dot(raw, vec3(1.4, 1.4, 1.4)).add(0.5)), mk);
+    }
+    const alb = gradeFn(rawS).mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
     m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
@@ -1334,6 +1351,7 @@ const Kit = (() => {
     const cell = opts.cell || 24, buckets = new Map(), inst = [], B = { count: 0 };
     // o: { zone: 0 outdoors | n the interior of building n, skyVis: 1 outdoors .. ~0.3 indoors, tint: [r,g,b] linear, cast: true, glow: HDR self-illumination,
     //      lit: 0..1 for light-source pieces: the wax around each flame position glows (the flame itself is a particle the game adds),
+    //      uvs: [sx, sy] the panel's scale, so plaster and brick keep their texel size instead of stretching
     //      inZone, inSkyVis: for wall, gable and roof pieces (outside face = local +z or up): the room side gets this zone / sky visibility instead }
     B.add = function (name, xf, o) {
       const p = K_.pieces[name]; if (!p) { console.warn('Kit: unknown piece ' + name); return B; }
@@ -1344,7 +1362,7 @@ const Kit = (() => {
       for (const prim of p.prims) {
         const key = prim.mat + '|' + ck + '|' + cast; let b = buckets.get(key);
         if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
-        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis }); b.nv += prim.n; b.ni += prim.idx.length;
+        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
       }
       B.count++; return B;
     };
@@ -1366,7 +1384,7 @@ const Kit = (() => {
             const o = vo + i;
             v.set(pr.pos[i * 3], pr.pos[i * 3 + 1], pr.pos[i * 3 + 2]).applyMatrix4(M); pos[o * 3] = v.x; pos[o * 3 + 1] = v.y; pos[o * 3 + 2] = v.z;
             v.set(pr.nrm[i * 3], pr.nrm[i * 3 + 1], pr.nrm[i * 3 + 2]).applyMatrix3(nm).normalize(); nrm[o * 4] = Math.round(v.x * 127); nrm[o * 4 + 1] = Math.round(v.y * 127); nrm[o * 4 + 2] = Math.round(v.z * 127);
-            uvs[o * 2] = pr.uv[i * 2]; uvs[o * 2 + 1] = pr.uv[i * 2 + 1];
+            uvs[o * 2] = pr.uv[i * 2] * (it.uvs ? it.uvs[0] : 1); uvs[o * 2 + 1] = pr.uv[i * 2 + 1] * (it.uvs ? it.uvs[1] : 1);
             const c = pr.col;
             kc[o * 4] = Math.min(255, Math.round((c ? c[i * 3] : 1) * tr * 255)); kc[o * 4 + 1] = Math.min(255, Math.round((c ? c[i * 3 + 1] : 1) * tg * 255)); kc[o * 4 + 2] = Math.min(255, Math.round((c ? c[i * 3 + 2] : 1) * tb * 255));
             // faces modelled toward the room (inner plaster, the ceiling beam, reveals) are indoors outright; single sheets switch by facing in the shader
@@ -2993,14 +3011,14 @@ function buildHouse(site, spec) {
 // buildings a second storey with a balcony. Props.* calls made while furnishing are swapped for kit props at the same place.
 const HOUSE_STYLE = (TEST && TEST.house) || 'kit';        // 'kit' | 'legacy' (the generated houses)
 const KIT_STYLE = {
-  inn: { ground: 'stone', pitch: 50, vines: 4, banner: true, round: true, dormers: [-4.2, 4.2] },
+  inn: { ground: 'stone', pitch: 50, vines: 4, banner: true, round: true },
   smithy: { ground: 'stone', vines: 1 },
   store: { ground: 'plaster', up: 1, balcony: 'front', vines: 2 },
   elder: { ground: 'stone', up: 1, vines: 3 },
   herbalist: { ground: 'plaster', vines: 4, round: true },
   guardhouse: { ground: 'stone', up: 1, balcony: 'front' },
   weaver: { ground: 'plaster', up: 1, vines: 2 },
-  chapel: { ground: 'stone', pitch: 56, thin: true, banner: true },
+  chapel: { ground: 'stone', pitch: 56, thin: true, banner: true, arch: true },
   mill: { ground: 'stone', up: 1, vines: 2 },
   farm: { ground: 'plaster', vines: 2 },
   hunter: { ground: 'stone', vines: 1 },
@@ -3011,8 +3029,14 @@ const kitReady = () => HOUSE_STYLE === 'kit' && typeof Kit !== 'undefined' && !!
 function kitWanted(site, spec) { return kitReady() && !!KIT_STYLE[site.id]; }
 async function kitBoot(progress) {
   if (HOUSE_STYLE !== 'kit' || typeof Kit === 'undefined') return;
-  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan/.test(p.glb)) }); for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) Kit.defs[n].gain = 1.3; }       // scanned rocks photograph dark; lift them a little
+  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan/.test(p.glb)) }); kitFixups(); }       // scanned rocks photograph dark; lift them a little
   catch (e) { console.warn('kits unavailable, building the generated houses instead: ' + (e && e.message || e)); G.kitNote = String(e && e.message || e); }
+}
+// pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong
+function kitFixups() {
+  for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) { Kit.defs[n].gain = 2.0; Kit.defs[n].sat = 0.85; }       // scanned rocks photograph dark
+  if (Kit.defs.MI_WindowGlass) Kit.defs.MI_StainedGlass = Object.assign({}, Kit.defs.MI_WindowGlass, { name: 'MI_StainedGlass' });
+  for (const n of ['Window_Thin_Round1', 'Window_Wide_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Stained'] = Object.assign({}, p, { name: n + '_Stained', prims: p.prims.map(q => q.mat === 'MI_WindowGlass' ? Object.assign({}, q, { mat: 'MI_StainedGlass' }) : q) }); }
 }
 // the building's spec adjusted to what the kit panels can do: 3 m storeys, kit door and window sizes, no slit windows
 function kitSpec(site, spec) {
@@ -3020,7 +3044,7 @@ function kitSpec(site, spec) {
   s.H = Math.max(spec.H || 2.6, 3.0); s.pitch = st.pitch || 52;
   const sy = s.H / 3;
   s.doors = (spec.doors || []).map(o => { const sx = clamp((o.w || 1.05) / 1.08, 1.0, 1.4); return Object.assign({}, o, { w: 1.1 * sx, h: 2.12 * sy, ksx: sx, lamp: false, kLamp: o.lamp !== false }); });
-  s.windows = (spec.windows || []).filter(o => (o.sill === undefined ? 1 : o.sill) < 2.0).map(o => Object.assign({}, o, { w: 1.2, sill: 0.95 * sy, h: 1.55 * sy, kwin: st.thin || (o.w || 0.9) < 0.85 ? 'thin' : st.round ? 'round' : 'wide' }));
+  s.windows = (spec.windows || []).filter(o => (o.sill === undefined ? 1 : o.sill) < 2.0).map(o => Object.assign({}, o, { w: 1.2, sill: 0.95 * sy, h: 1.55 * sy, kwin: st.thin || (o.w || 0.9) < 0.85 ? 'thin' : st.round ? 'round' : 'wide', khw: st.thin ? 1.3 : 1, shutters: st.thin ? false : o.shutters }));
   if (st.up) s.ceiling = true;
   return s;
 }
@@ -3041,7 +3065,7 @@ function kitShell(c) {
   const OUT = { zone: 0, skyVis: 1, inZone: zone, inSkyVis: INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: 0, inSkyVis: 0.12 };
   const frames = {}, wbs = {};
   for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); frames[wn] = new THREE.Matrix4().makeBasis(KH.V(W.u), KH.V([0, 1, 0]), KH.V(W.n)).setPosition(s0[0], s0[1], s0[2]).premultiply(MS); wbs[wn] = m4.basis(m4.create(), W.u, [0, 1, 0], W.n, s0); }
-  const add = (F, name, x, y, z, s, o, ry) => b.add(name, KH.xf(F, x, y, z, s, ry), o || OUT);
+  const add = (F, name, x, y, z, s, o, ry) => { o = o || OUT; if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] }); b.add(name, KH.xf(F, x, y, z, s, ry), o); };
   const Ytop = H + (st.up ? 3 : 0);
   Object.assign(c, { kb: b, kMS: MS, kYtop: Ytop, kFrames: frames, kR: R });
   const G = stone ? 'Wall_UnevenBrick' : 'Wall_Plaster';
@@ -3066,7 +3090,7 @@ function kitShell(c) {
   for (const wn of ['front', 'back', 'left', 'right']) {
     const F = frames[wn], L = WALLS[wn].len(w, d);
     // ── ground storey: door and window panels where the openings are, plain panels scaled to fill between them ──
-    const slots = openings[wn].map(o => ({ o, c: (o.u0 + o.u1) / 2, hw: o.door ? (o.def.ksx || 1) : 1 })).sort((a, e) => a.c - e.c);
+    const slots = openings[wn].map(o => ({ o, c: (o.u0 + o.u1) / 2, hw: o.door ? (o.def.ksx || 1) : (o.def.khw || 1) })).sort((a, e) => a.c - e.c);
     for (const s of slots) s.hw = Math.min(s.hw, s.c, L - s.c);
     for (let i = 0; i < slots.length - 1; i++) { const a = slots[i], n = slots[i + 1], gap = n.c - a.c, sum = a.hw + n.hw; if (sum > gap) { a.hw *= gap / sum; n.hw *= gap / sum; } }
     let cur = 0;
@@ -3075,11 +3099,11 @@ function kitShell(c) {
       if (!o.door && sx < 0.5) continue;                      // no room for a window panel: the wall stays solid there
       filler(F, cur, s.c - sx, 0, sy, stone, cur === 0, false);
       if (o.door) {
-        add(F, G + '_Door_Flat', s.c, 0, 0, S); add(F, 'DoorFrame_Flat_WoodDark', s.c, 0, 0, S, EXT);
+        add(F, G + '_Door_Flat', s.c, 0, 0, S); add(F, st.arch ? 'DoorFrame_Round_Brick' : 'DoorFrame_Flat_WoodDark', s.c, 0, 0, st.arch ? [S[0], S[1] * 0.93, 1.1] : S, EXT);
         if (o.def.kLamp) { const side = s.c + sx + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F, wn, u: s.c + side * (sx + 0.42), v: 1.5 * sy }); }
       } else {
         const k = WIN[o.def.kwin] || WIN.wide;
-        add(F, G + k[0], s.c, 0, 0, S); add(F, k[1], s.c, 0, 0, S);
+        add(F, G + k[0], s.c, 0, 0, S); add(F, o.def.glass && Kit.pieces[k[1] + '_Stained'] ? k[1] + '_Stained' : k[1], s.c, 0, 0, S, o.def.glass ? Object.assign({}, OUT, { tint: o.def.glass }) : undefined);
         if (o.def.shutters !== false && sx > 0.9 && s.c - 1.3 > 0 && s.c + 1.3 < L) add(F, k[2], s.c, 0, 0, S, EXT);
       }
       cur = s.c + sx;
@@ -3180,14 +3204,13 @@ function kitIntBatch(zone) {
 // fit = 'box' (stretch to the box, within lo..hi), 'contain' (uniform, as big as fits), 'xz' (uniform on the footprint, height within 25%),
 // one = outdoors only the first model is used (fewer materials, fewer draw calls), k = extra per-axis factor, mul = extra scale, y = lift in metres, ry = turn in radians (a quarter turn swaps the footprint), tint = colour factor, skip = draw nothing.
 const SCANR = {
-  Table_Large: { n: ['woodentable_01'], fit: 'box', tint: [0.85, 0.72, 0.6] },
-  Bench: { n: ['woodentable_01'], fit: 'box', tint: [0.9, 0.8, 0.7] },
-  Stool: { n: ['painted_wooden_stool'], fit: 'contain', tint: [0.5, 0.4, 0.31] },
-  Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.36, 0.29, 0.22] },
+  Table_Large: { n: ['wooden_table_02'], fit: 'row', tint: [0.8, 0.66, 0.52] },
+  Bench: { n: ['woodentable_01'], fit: 'row', tint: [0.8, 0.68, 0.55] },
+  Stool: { n: ['painted_wooden_stool'], fit: 'contain', tint: [0.3, 0.23, 0.17] },
+  Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
   Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
   Barrel: { n: ['wine_barrel_01', 'wooden_barrels_01_a'], fit: 'xz', one: 1 },
-  Crate_Wooden: { n: ['wooden_crate_01'], fit: 'contain', k: [1, 1.75, 1.45] }, Prop_Crate: { n: ['wooden_crate_01'], fit: 'contain', k: [1, 1.75, 1.45] },
   Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' }, Bottle_1: { n: ['ceramic_vase_04'], fit: 'contain' },
   Table_Plate: { n: ['carved_wooden_plate'], fit: 'contain' },
   Candle_1: { n: ['wooden_candlestick'], fit: 'contain', mul: 1.25 }, Candle_2: { n: ['wooden_candlestick'], fit: 'contain' },
@@ -3200,7 +3223,7 @@ const SCANR = {
 };
 const SCAN_FLAT = { wooden_axe_03: 1, rusted_spade_01: 1, kite_shield: 1, cross_pein_hammer: 1, picke_dirty_01: 1 };
 // top of a crate of nominal size s (things stacked on crates are placed with this)
-const crateTop = s => (scanOn() ? 0.71 : 1) * s;
+const crateTop = s => s;       // crates stay the painted kit piece (the scanned crate is a flat box): its top is at the nominal size
 const scanOn = () => kitReady() && !!Kit.pieces.wine_barrel_01 && !(TEST && TEST.scan === 0);
 const _sm = new THREE.Matrix4(), _sv = new THREE.Vector3(), _sq = new THREE.Quaternion(), _su = new THREE.Vector3(0, 1, 0);
 // where a painted piece placed at (x, y, z) with scale s and turn ry ends up: { name, M, tint }, the scan stand-in if there is one
@@ -3213,7 +3236,13 @@ function kplace(m, name, x, y, z, s, ry) {
   const tcx = (P.min[0] + P.max[0]) / 2 * sv[0], tcz = (P.min[2] + P.max[2]) / 2 * sv[2], tby = P.min[1] * sv[1];
   const sn = E.n[E.n.length > 1 && !(E.one && !(m.m1 | 0)) ? Math.floor(KITP.rnd() * E.n.length) : 0], Q = Kit.pieces[sn]; if (!Q) return { name, M: KH.xf(base, x, y, z, s, ry) };
   const quarter = Math.abs(Math.sin(E.ry || 0)) > 0.9, sw = quarter ? Q.max[2] - Q.min[2] : Q.max[0] - Q.min[0], sh = Q.max[1] - Q.min[1], sd = quarter ? Q.max[0] - Q.min[0] : Q.max[2] - Q.min[2];
-  const mul = E.mul || 1, k = E.k || [1, 1, 1]; let f;
+  const mul = E.mul || 1, k = E.k || [1, 1, 1]; let f, more = null;
+  if (E.fit === 'row') {       // long pieces (tables, benches) as a row of uniformly scaled short ones: no stretched grain
+    const u0 = th / sh, n = Math.max(1, Math.round(tw / (sw * u0))), sx = tw / n / sw, sz = Math.min(u0 * 1.3, Math.max(u0 * 0.8, td / sd)); f = [sx, u0, sz];
+    const L0 = KH.xf(base, x, y, z, 1, ry), loc0 = new THREE.Matrix4().makeTranslation(-(Q.min[0] + Q.max[0]) / 2, -Q.min[1], -(Q.min[2] + Q.max[2]) / 2), res = [];
+    for (let i = 0; i < n; i++) { _sm.compose(_sv.set(tcx + (i - (n - 1) / 2) * tw / n, tby, tcz), _sq.identity(), new THREE.Vector3(f[0], f[1], f[2])); res.push({ name: sn, M: new THREE.Matrix4().multiplyMatrices(L0, _sm).multiply(loc0), tint: E.tint }); }
+    res[0].more = res.slice(1); return res[0];
+  }
   if (E.fit === 'box') { const lo = E.lo || 0.5, hi = E.hi || 2.2, c = v => Math.min(hi, Math.max(lo, v)); f = [c(tw / sw), c(th / sh), c(td / sd)]; }
   else if (E.fit === 'xz') { const u = Math.min(tw / sw, td / sd); f = [u, Math.min(u * 1.25, Math.max(u * 0.8, th / sh)), u]; }
   else { const u = Math.min(tw / sw, th / sh, td / sd); f = [u, u, u]; }
@@ -3235,7 +3264,7 @@ function kadd(m, P, extra) {
   B.add(P.name, P.M, o);
 }
 // place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
-function kp(m, name, x, y, z, s, ry, extra) { const P = kplace(m, name, x, y, z, s, ry); if (P) kadd(m, P, extra); }
+function kp(m, name, x, y, z, s, ry, extra) { const P = kplace(m, name, x, y, z, s, ry); if (P) { kadd(m, P, extra); if (P.more) for (const Q of P.more) kadd(m, Q, extra); } }
 // a light-source piece: the piece itself with glowing wax, one flame per candle tip, one point light for the whole piece
 function kitLit(m, name, x, y, z, s, ry, o) {
   const zone = m.m1 | 0, P = kplace(m, name, x, y, z, s, ry), M = P.M, pts = Kit.lights(P.name), v = new THREE.Vector3(), c = [0, 0, 0];
@@ -3604,7 +3633,7 @@ const HOUSES = {
       tableSet(c, 0.4, -0.9, 0, 1.3, 0.75, ['mug', 'plate', 'loaf', 'candle'], 3, 'stools');
       at(m, 2.5, 0.02, B.z1 - 0.42, 0, () => { Props.table(m, 2.2, 0.75, 0.86); for (let i = 0; i < 3; i++) at(m, -0.7 + i * 0.5, 0.86, R.s() * 0.1, 0, () => { m.push().RZ(PI / 2).RX(R() * 3); Props.hammer(m); m.pop(); }); m.mat(MAT.METAL, COL.iron); m.box(0.6, 0.86, -0.15, 0.95, 0.92, 0.15); m.box(0.7, 0.92, -0.1, 0.85, 1.02, 0.1); });
       at(m, B.x1 - 0.06, 1.05, -1.0, 0, () => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.03, 0, -1.1, 0.02, 1.1, 1.1); for (let i = 0; i < 4; i++) at(m, -0.06, 0.05, -0.75 + i * 0.5, PI / 2, () => Props.sword(m)); });
-      at(m, 1.2, 1.5, B.z0 + 0.04, 0, () => Props.shield(m, COL.blue)); at(m, 2.0, 1.5, B.z0 + 0.04, 0, () => Props.shield(m, [0.6, 0.5, 0.2]));
+      at(m, -1.5, 1.6, B.z0 + 0.04, 0, () => Props.shield(m, COL.blue)); at(m, -2.5, 1.6, B.z0 + 0.04, 0, () => Props.shield(m, [0.6, 0.5, 0.2]));
       chestAt(c, 0.5, B.z1 - 0.4, 0, [['gold', 8]]);
       at(m, B.x1 - 0.5, 0.02, 2.4, 0, () => { Props.barrel(m, 0.3, 0.8); for (let i = 0; i < 3; i++) at(m, R.s() * 0.12, 0.3, R.s() * 0.12, R() * 3, () => { m.push().RZ(R.s() * 0.2); Props.sword(m); m.pop(); }); });
       c.spot('home', 0.9, 0.5, 0); seat(c, 'sit', 0.075, -1.6, PI);
@@ -3786,6 +3815,7 @@ const HOUSES = {
       e.mat(MAT.TIMBER, COL.timberDark); e.box(x0 + 0.5, 8.95, -0.09, x1 - 0.5, 9.13, 0.09);
       e.mat(MAT.METAL, COL.bronze); e.push().T(cx, 8.0, 0); e.lathe([[0.48, 0], [0.42, 0.06], [0.33, 0.3], [0.27, 0.62], [0.17, 0.85], [0.03, 0.93]], 12, 0); e.mat(MAT.METAL, COL.black); e.box(-0.02, -0.12, -0.02, 0.02, 0.6, 0.02); e.ball(0, -0.12, 0, 0.07); e.pop();
       e.mat(MAT.CLOTH, [0.75, 0.62, 0.4], 0.3); e.box(cx + 0.7, 1.2, -0.012, cx + 0.724, 8.0, 0.012);
+      for (const lx of [x0 + 1.6, x1 - 1.7]) at(e, lx, 3.3, 0, 0, () => { e.mat(MAT.METAL, COL.black); e.box(-0.01, 0.2, -0.01, 0.01, 3.9, 0.01); Props.lantern(e, { zone: 0 }); });
       World.bell = { p: wp(e, cx, 8.3, 0) };
       World.interact.push({ p: wp(e, cx + 0.7, 1.4, 0), r: 1.9, zone: 0, kind: 'bell', id: 'bell' });
       at(e, x0 + 0.02, 2.6, -zh - 0.02, 0, () => Props.lantern(e, { zone: 0 }));

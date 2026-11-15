@@ -115,7 +115,7 @@ const HOUSES = {
       tableSet(c, 0.4, -0.9, 0, 1.3, 0.75, ['mug', 'plate', 'loaf', 'candle'], 3, 'stools');
       at(m, 2.5, 0.02, B.z1 - 0.42, 0, () => { Props.table(m, 2.2, 0.75, 0.86); for (let i = 0; i < 3; i++) at(m, -0.7 + i * 0.5, 0.86, R.s() * 0.1, 0, () => { m.push().RZ(PI / 2).RX(R() * 3); Props.hammer(m); m.pop(); }); m.mat(MAT.METAL, COL.iron); m.box(0.6, 0.86, -0.15, 0.95, 0.92, 0.15); m.box(0.7, 0.92, -0.1, 0.85, 1.02, 0.1); });
       at(m, B.x1 - 0.06, 1.05, -1.0, 0, () => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.03, 0, -1.1, 0.02, 1.1, 1.1); for (let i = 0; i < 4; i++) at(m, -0.06, 0.05, -0.75 + i * 0.5, PI / 2, () => Props.sword(m)); });
-      at(m, 1.2, 1.5, B.z0 + 0.04, 0, () => Props.shield(m, COL.blue)); at(m, 2.0, 1.5, B.z0 + 0.04, 0, () => Props.shield(m, [0.6, 0.5, 0.2]));
+      at(m, -1.5, 1.6, B.z0 + 0.04, 0, () => Props.shield(m, COL.blue)); at(m, -2.5, 1.6, B.z0 + 0.04, 0, () => Props.shield(m, [0.6, 0.5, 0.2]));
       chestAt(c, 0.5, B.z1 - 0.4, 0, [['gold', 8]]);
       at(m, B.x1 - 0.5, 0.02, 2.4, 0, () => { Props.barrel(m, 0.3, 0.8); for (let i = 0; i < 3; i++) at(m, R.s() * 0.12, 0.3, R.s() * 0.12, R() * 3, () => { m.push().RZ(R.s() * 0.2); Props.sword(m); m.pop(); }); });
       c.spot('home', 0.9, 0.5, 0); seat(c, 'sit', 0.075, -1.6, PI);
@@ -297,6 +297,7 @@ const HOUSES = {
       e.mat(MAT.TIMBER, COL.timberDark); e.box(x0 + 0.5, 8.95, -0.09, x1 - 0.5, 9.13, 0.09);
       e.mat(MAT.METAL, COL.bronze); e.push().T(cx, 8.0, 0); e.lathe([[0.48, 0], [0.42, 0.06], [0.33, 0.3], [0.27, 0.62], [0.17, 0.85], [0.03, 0.93]], 12, 0); e.mat(MAT.METAL, COL.black); e.box(-0.02, -0.12, -0.02, 0.02, 0.6, 0.02); e.ball(0, -0.12, 0, 0.07); e.pop();
       e.mat(MAT.CLOTH, [0.75, 0.62, 0.4], 0.3); e.box(cx + 0.7, 1.2, -0.012, cx + 0.724, 8.0, 0.012);
+      for (const lx of [x0 + 1.6, x1 - 1.7]) at(e, lx, 3.3, 0, 0, () => { e.mat(MAT.METAL, COL.black); e.box(-0.01, 0.2, -0.01, 0.01, 3.9, 0.01); Props.lantern(e, { zone: 0 }); });
       World.bell = { p: wp(e, cx, 8.3, 0) };
       World.interact.push({ p: wp(e, cx + 0.7, 1.4, 0), r: 1.9, zone: 0, kind: 'bell', id: 'bell' });
       at(e, x0 + 0.02, 2.6, -zh - 0.02, 0, () => Props.lantern(e, { zone: 0 }));

@@ -73,6 +73,7 @@
    "source": "restyled:T_RockTrim_BaseColor.png"
   },
   "MI_RoundTiles": {
+   "sat": 0.28, "gain": 0.52, "tint": [0.92, 0.88, 0.85], "moss": 0.55,
    "a": "MI_RoundTiles_a.webp",
    "n": "MI_RoundTiles_n.webp",
    "orm": "MI_RoundTiles_orm.webp",

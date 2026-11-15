@@ -68,7 +68,7 @@ const Kit = (() => {
     const jobs = [];
     for (const name of Object.keys(S.materials || {})) {
       const s = S.materials[name], d = K_.defs[name]; if (!d) continue;
-      if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
+      if (s.tint) d.color = d.color.map((v, i) => v * s.tint[i]); if (s.moss !== undefined) d.moss = s.moss; if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
       if (s.a) jobs.push(texLoad('kits/skin/' + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
       if (s.n) jobs.push(texLoad('kits/skin/' + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
       if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
@@ -140,6 +140,18 @@ const Kit = (() => {
     const skyVis = batch ? select(inside, kz.w, kc.a) : float(o.skyVis === undefined ? 1 : o.skyVis), zone = batch ? select(inside, kz.z, kz.x).mul(255).round() : float(o.zone || 0);
     const glow = batch ? kz.y.mul(255 / 16) : float(0);          // extra self-illumination in HDR units (candle wax near the flame, embers)
     const N = normalWorld, wp = positionWorld;
+    if (isGlass(d) && /stained/i.test(d.name)) {       // leaded coloured glass (kc.rgb = the pane's base colour): jewel colours from inside by day, a lamp-lit glow from outside after dusk
+      const h2 = abs(N.z), hc = wp.x.mul(h2).add(wp.z.mul(abs(N.x))), cell = floor(vec2(hc.mul(3.4), wp.y.mul(3.0))), fr = vec2(fract(hc.mul(3.4)), fract(wp.y.mul(3.0)));
+      const hh = fract(sin(dot(cell, vec2(12.9898, 78.233))).mul(43758.5453)), h3 = fract(hh.mul(7.31).add(0.37));
+      const lead = float(1).sub(smoothstep(0.0, 0.09, fr.x.min(fr.y).min(float(1).sub(fr.x).min(float(1).sub(fr.y)))));
+      const base = kc.rgb, pane = mix(base, base.zxy.mul(0.9).add(vec3(0.05, 0.03, 0.0)), smoothstep(0.55, 0.62, hh)).mul(h3.mul(0.7).add(0.55)).mul(lead.oneMinus().mul(0.92).add(0.08));
+      const V = normalize(wp.sub(U.camPos)), R = reflect(V, N), sky = SH.skyBase(vec3(R.x, max(R.y, 0.02), R.z)).mul(0.12);
+      m.colorNode = vec3(0.01, 0.012, 0.015); m.roughnessNode = float(0.2); m.metalnessNode = float(0);
+      const dayF = float(1).sub(U.windowGlow);
+      const jew = pane.mul(pane).mul(1.6);
+      m.emissiveNode = select(frontFacing, sky.add(jew.mul(U.windowGlow.mul(1.5).add(0.05))), jew.mul(dayF.mul(0.9).add(0.08)));
+      m.side = THREE.DoubleSide; K_.mats.set(key, m); return m;
+    }
     if (isGlass(d)) {         // window panes: dark by day with a little sky in them, lit from inside after dusk (each pane a slightly different warmth)
       const cell = floor(wp.mul(0.9)), h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))).mul(43758.5453));
       const V = normalize(wp.sub(U.camPos)), R = reflect(V, N);
@@ -157,7 +169,12 @@ const Kit = (() => {
     const metal = orm ? orm.b : float(d.metal || 0);
     // no reflection probes here, so metal keeps a darkened diffuse instead of going black, and gets its shine from a lower roughness
     const raw = base.rgb.mul(vec3(d.color[0] * d.gain, d.color[1] * d.gain, d.color[2] * d.gain)).mul(tint);
-    const alb = gradeFn(d.sat === undefined ? raw : mix(vec3(dot(raw, vec3(0.2126, 0.7152, 0.0722))), raw, d.sat)).mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
+    let rawS = d.sat === undefined ? raw : mix(vec3(dot(raw, vec3(0.2126, 0.7152, 0.0722))), raw, d.sat);
+    if (d.moss) {         // roofs: patches of moss and lichen at a scale no tile texture repeats at
+      const mn = texture(G.noiseTex, vec2(wp.x.mul(0.37).add(wp.z.mul(0.21)), wp.z.mul(0.33).sub(wp.y.mul(0.25)))), mk = smoothstep(0.62, 0.8, mn.r.mul(0.7).add(mn.g.mul(0.3))).mul(d.moss);
+      rawS = mix(rawS, vec3(0.2, 0.27, 0.1).mul(dot(raw, vec3(1.4, 1.4, 1.4)).add(0.5)), mk);
+    }
+    const alb = gradeFn(rawS).mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
     m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
@@ -191,6 +208,7 @@ const Kit = (() => {
     const cell = opts.cell || 24, buckets = new Map(), inst = [], B = { count: 0 };
     // o: { zone: 0 outdoors | n the interior of building n, skyVis: 1 outdoors .. ~0.3 indoors, tint: [r,g,b] linear, cast: true, glow: HDR self-illumination,
     //      lit: 0..1 for light-source pieces: the wax around each flame position glows (the flame itself is a particle the game adds),
+    //      uvs: [sx, sy] the panel's scale, so plaster and brick keep their texel size instead of stretching
     //      inZone, inSkyVis: for wall, gable and roof pieces (outside face = local +z or up): the room side gets this zone / sky visibility instead }
     B.add = function (name, xf, o) {
       const p = K_.pieces[name]; if (!p) { console.warn('Kit: unknown piece ' + name); return B; }
@@ -201,7 +219,7 @@ const Kit = (() => {
       for (const prim of p.prims) {
         const key = prim.mat + '|' + ck + '|' + cast; let b = buckets.get(key);
         if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
-        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis }); b.nv += prim.n; b.ni += prim.idx.length;
+        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
       }
       B.count++; return B;
     };
@@ -223,7 +241,7 @@ const Kit = (() => {
             const o = vo + i;
             v.set(pr.pos[i * 3], pr.pos[i * 3 + 1], pr.pos[i * 3 + 2]).applyMatrix4(M); pos[o * 3] = v.x; pos[o * 3 + 1] = v.y; pos[o * 3 + 2] = v.z;
             v.set(pr.nrm[i * 3], pr.nrm[i * 3 + 1], pr.nrm[i * 3 + 2]).applyMatrix3(nm).normalize(); nrm[o * 4] = Math.round(v.x * 127); nrm[o * 4 + 1] = Math.round(v.y * 127); nrm[o * 4 + 2] = Math.round(v.z * 127);
-            uvs[o * 2] = pr.uv[i * 2]; uvs[o * 2 + 1] = pr.uv[i * 2 + 1];
+            uvs[o * 2] = pr.uv[i * 2] * (it.uvs ? it.uvs[0] : 1); uvs[o * 2 + 1] = pr.uv[i * 2 + 1] * (it.uvs ? it.uvs[1] : 1);
             const c = pr.col;
             kc[o * 4] = Math.min(255, Math.round((c ? c[i * 3] : 1) * tr * 255)); kc[o * 4 + 1] = Math.min(255, Math.round((c ? c[i * 3 + 1] : 1) * tg * 255)); kc[o * 4 + 2] = Math.min(255, Math.round((c ? c[i * 3 + 2] : 1) * tb * 255));
             // faces modelled toward the room (inner plaster, the ceiling beam, reveals) are indoors outright; single sheets switch by facing in the shader
