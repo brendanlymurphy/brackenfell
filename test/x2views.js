@@ -6,7 +6,7 @@ window.__corner = async (id, sx, sz, hour, pitch, k) => {
   return await game.shot(a[0], y, a[1], Math.atan2(dx, -dz) * 180 / Math.PI, pitch || 0, hour);
 };
 window.__inn = async (hour, which) => {
-  const a = World.spots[which ? 'inn.barfront' : 'inn.s1'].p, b = World.spots[which ? 'inn.s4' : 'inn.fire1'].p, dx = b[0] - a[0], dz = b[2] - a[2], y = a[1] + 1.65;
+  const A = ['inn.s1', 'inn.barfront', 'inn.fire1'][which | 0], B = ['inn.fire1', 'inn.s4', 'inn.bar'][which | 0], a = World.spots[A].p, b = World.spots[B].p, dx = b[0] - a[0], dz = b[2] - a[2], y = a[1] + 1.65;
   return await game.shot(a[0], y, a[2], Math.atan2(dx, -dz) * 180 / Math.PI, Math.atan2(b[1] - y, Math.hypot(dx, dz)) * 180 / Math.PI, hour);
 };
 window.__wall = async (id, lx, dist, hour) => {
