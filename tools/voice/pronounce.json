@@ -1,8 +1,12 @@
 {
-  "_note": "whole-word, case-insensitive respellings for the speech engine. Only the audio is affected; the subtitle keeps the real spelling.",
-  "Brackenfell": "Bracken-fell", "Highfold": "High-fold", "Greyspine": "Grey-spine", "Stonewater": "Stone-water", "Mirrormere": "Mirror-meer",
-  "Aldous": "Awldus", "Osric": "Ozrick", "Edda": "Edda", "Edda's": "Edda's", "Rowan": "Roh-an", "Brandt": "Brant", "Greta": "Gretta", "Greta's": "Gretta's", "Maren": "Marren", "Maren's": "Marren's",
-  "Hilda": "Hilda", "Ivo": "Eevo", "Tobin": "Tobbin", "Bram": "Bram", "Corwin": "Corwin", "Corwin's": "Corwin's", "Hob": "Hob", "Hob's": "Hob's",
-  "Barleybrooks": "Barley-brooks", "Barleybrook": "Barley-brook", "Fairweather": "Fair-weather", "Quill's": "Quill's", "bogbean": "bog-bean", "frostcaps": "frost-caps", "frostcap": "frost-cap",
-  "sunwort": "sun-wort", "stonecrop": "stone-crop", "Honeyed": "Honeyed", "Quill": "Quill"
+ "_note": "whole-word, case-insensitive respellings for the speech engine. Only the audio is affected; the subtitle keeps the real spelling.",
+ "Greta": "Gretta",
+ "Greta's": "Gretta's",
+ "Brandt": "Brant",
+ "Brandt's": "Brant's",
+ "Ivo": "Eevo",
+ "Tobin": "Tobbin",
+ "Maren": "Marren",
+ "Maren's": "Marren's",
+ "Mirrormere": "Mirror meer"
 }

@@ -4,9 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#14110d">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Brackenfell">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="Brackenfell: a first-person highland village to wander, in the browser.">
 <title>Brackenfell</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/IMFellEnglishSC.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/Alegreya.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /*__CSS__*/
 </style>
@@ -14,7 +24,8 @@
 <body>
 <canvas id="view" aria-label="Brackenfell, a village you can walk through"></canvas>
 <div id="touch"></div>
-<div id="stick"><div id="knob"></div></div>
+<canvas id="ovl" aria-hidden="true"></canvas>
+<div id="stick" aria-hidden="true"><div id="knob"></div></div>
 
 <div id="hud" hidden>
   <div id="compass" aria-hidden="true"><div id="ctrack"></div><div id="cneedle"></div></div>
@@ -22,9 +33,11 @@
   <div id="objective"></div>
   <div id="place"></div>
   <div id="toasts" aria-live="polite"></div>
-  <button id="act" type="button" hidden><span id="actKey">E</span><span id="actLabel"></span></button>
-  <button id="menuBtn" type="button" aria-label="Open journal and settings"><span></span><span></span><span></span></button>
+  <div id="tip" hidden aria-live="polite"></div>
+  <button id="act" type="button" hidden><span id="actKey">E</span><span id="actText"><b id="actVerb"></b><small id="actName"></small><span id="actLabel" class="sr"></span></span><i id="actHold"></i></button>
+  <button id="menuBtn" type="button" aria-label="Open journal, map and settings"><span></span><span></span><span></span></button>
   <div id="purse"></div>
+  <div id="lookcue" hidden><b>Click to look</b><small>Esc pauses</small></div>
   <div id="fps" hidden></div>
 </div>
 
@@ -61,50 +74,121 @@
   <div class="sheet">
     <nav id="tabs">
       <button type="button" data-tab="journal" class="on">Journal</button>
+      <button type="button" data-tab="map">Map</button>
       <button type="button" data-tab="pack">Pack</button>
       <button type="button" data-tab="settings">Settings</button>
       <button type="button" id="mclose" aria-label="Close">Close</button>
     </nav>
     <div id="tab-journal" class="tab"></div>
+    <div id="tab-map" class="tab" hidden>
+      <div id="mapWrap"><canvas id="mapCv"></canvas>
+        <div id="mapBtns"><button type="button" id="mapZoom" aria-label="Zoom the map">+</button><button type="button" id="mapHome" aria-label="Centre on you">&#9678;</button></div>
+        <p id="mapKey"></p></div>
+    </div>
     <div id="tab-pack" class="tab" hidden></div>
     <div id="tab-settings" class="tab" hidden>
-      <label class="row" for="setQuality"><span>Detail</span>
-        <select id="setQuality"><option value="auto">Auto</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
-      <label class="row" for="setSens"><span>Look speed</span><input id="setSens" type="range" min="0.4" max="2.2" step="0.1" value="1"></label>
-      <label class="row" for="setVol"><span>Sound</span><input id="setVol" type="range" min="0" max="1" step="0.05" value="0.8"></label>
-      <label class="row" for="setMusic"><span>Music</span><input id="setMusic" type="range" min="0" max="1" step="0.05" value="0.6"></label>
-      <label class="row" for="setTime"><span>Time of day</span><input id="setTime" type="range" min="0" max="24" step="0.25" value="9.5"></label>
-      <label class="row" for="setFlow"><span>Day length</span>
-        <select id="setFlow"><option value="720">12 minutes</option><option value="1440">24 minutes</option><option value="360">6 minutes</option><option value="0">Stop the clock</option></select></label>
-      <label class="row" for="setGfx"><span>Graphics engine</span>
-        <select id="setGfx"><option value="webgpu">WebGPU (default)</option><option value="webgl">WebGL 2 (if things look wrong)</option></select></label>
-      <label class="row check" for="setInvert"><span>Invert look up and down</span><input id="setInvert" type="checkbox"></label>
-      <label class="row check" for="setFps"><span>Show performance</span><input id="setFps" type="checkbox"></label>
+      <nav id="setTabs">
+        <button type="button" data-set="gfx" class="on">Graphics</button>
+        <button type="button" data-set="ctl">Controls</button>
+        <button type="button" data-set="snd">Sound</button>
+        <button type="button" data-set="acc">Accessibility</button>
+      </nav>
+      <div class="sp" id="set-gfx">
+        <label class="row" for="setQuality"><span>Detail</span>
+          <select id="setQuality"><option value="auto">Auto</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
+        <label class="row" for="setGfx"><span>Graphics engine<small>Switch to WebGL 2 if things look wrong</small></span>
+          <select id="setGfx"><option value="webgpu">WebGPU</option><option value="webgl">WebGL 2</option></select></label>
+        <label class="row" for="setTime"><span>Time of day</span><input id="setTime" type="range" min="0" max="24" step="0.25" value="9.5"></label>
+        <label class="row" for="setFlow"><span>Day length</span>
+          <select id="setFlow"><option value="720">12 minutes</option><option value="1440">24 minutes</option><option value="360">6 minutes</option><option value="0">Stop the clock</option></select></label>
+        <label class="row check" for="setFps"><span>Show performance</span><input id="setFps" type="checkbox"></label>
+      </div>
+      <div class="sp" id="set-ctl" hidden>
+        <label class="row" for="setSens"><span>Look speed</span><input id="setSens" type="range" min="0.4" max="2.2" step="0.1" value="1"></label>
+        <label class="row check" for="setInvert"><span>Invert look up and down</span><input id="setInvert" type="checkbox"></label>
+        <label class="row check" for="setLefty"><span>Left-handed layout<small>Buttons on the left, stick and look on the right</small></span><input id="setLefty" type="checkbox"></label>
+        <label class="row" for="setBtn"><span>Button size</span><input id="setBtn" type="range" min="0.9" max="1.4" step="0.05" value="1"></label>
+        <p class="note" id="kbNote">Keyboard: W A S D walk, Shift runs, Space jumps, E uses, Tab opens the journal, M the map, Esc pauses.</p>
+      </div>
+      <div class="sp" id="set-snd" hidden>
+        <label class="row" for="setVol"><span>Sound</span><input id="setVol" type="range" min="0" max="1" step="0.05" value="0.8"></label>
+        <label class="row" for="setMusic"><span>Music</span><input id="setMusic" type="range" min="0" max="1" step="0.05" value="0.6"></label>
+        <div id="sndExtra"></div>
+      </div>
+      <div class="sp" id="set-acc" hidden>
+        <label class="row" for="setText"><span>Text size</span>
+          <select id="setText"><option value="1">Normal</option><option value="1.15">Large</option><option value="1.3">Larger</option></select></label>
+        <label class="row check" for="setContrast"><span>High-contrast prompts</span><input id="setContrast" type="checkbox"></label>
+        <label class="row check" for="setMotion"><span>Reduce motion<small>No head bob, camera kick or field-of-view changes</small></span><input id="setMotion" type="checkbox"></label>
+        <label class="row check" for="setHold"><span>Hold to interact<small>Hold the use button for half a second, so a stray tap does nothing</small></span><input id="setHold" type="checkbox"></label>
+      </div>
       <button id="resetBtn" type="button" class="btn ghost">Start the story over</button>
+      <button id="updBtn" type="button" class="btn small" hidden>Update available: reload</button>
       <p id="diag"></p>
-        <p id="credits">Built on Three.js. Surface scans from ambientCG, cgbookcase and Nobiax; villagers from Quaternius; their animations from Mesh2Motion. All public domain (CC0).</p>
+      <p id="credits">Built on Three.js. Surface scans from ambientCG, cgbookcase and Nobiax; villagers from Quaternius; their animations from Mesh2Motion. Fonts: Alegreya and IM Fell English SC. All public domain (CC0) or open licence.</p>
     </div>
   </div>
 </section>
 
-<section id="title">
+<section id="pause" hidden>
+  <div class="card">
+    <h2>Paused</h2>
+    <p id="pauseNote">Your progress is saved.</p>
+    <div class="col">
+      <button id="pResume" type="button" class="btn big">Resume</button>
+      <button id="pJournal" type="button" class="btn ghost">Journal and map</button>
+      <button id="pSettings" type="button" class="btn ghost">Settings</button>
+    </div>
+  </div>
+</section>
+
+<div id="rotate" aria-hidden="true">
+  <svg viewBox="0 0 120 120" width="104" height="104"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect class="ph" x="42" y="18" width="36" height="64" rx="7"/><path d="M52 24h16"/><path class="ar" d="M20 98c12 12 38 14 56 2m0 0 0-11m0 11-11 0"/></g></svg>
+  <b>Turn your phone sideways</b><small>Brackenfell is played in landscape. The game is paused.</small>
+</div>
+
+<section id="title" class="loading">
+  <div id="parch" aria-hidden="true">
+    <svg viewBox="0 0 560 300" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="430" cy="64" r="24" stroke-width="1.4"/><path d="M430 24v-9M430 113v-9M470 64h9M381 64h9M458 36l6-6M396 92l-6 6M458 92l6 6M396 36l-6-6" stroke-width="1.2" opacity="0.7"/>
+      <path d="M0 196 L58 138 L96 168 L160 96 L214 150 L262 118 L330 178 L390 130 L452 176 L520 120 L560 150"/>
+      <path d="M160 96 L148 118 M160 96 L174 120 M58 138 L50 154 M390 130 L378 150 M520 120 L508 140" opacity="0.6" stroke-width="1.2"/>
+      <path d="M0 232 Q70 196 140 214 T290 206 T440 216 T560 196" opacity="0.9"/>
+      <path d="M20 214 L40 214 M36 220 L62 220 M90 208 L118 208 M300 214 L330 214 M360 220 L392 220 M470 212 L500 212" opacity="0.45" stroke-width="1.2"/>
+      <path d="M262 300 Q250 268 278 252 T300 224 T330 206" stroke-width="1.3"/><path d="M276 300 Q266 272 292 258 T314 228 T340 210" stroke-width="1.3" opacity="0.7"/>
+      <g stroke-width="1.5"><path d="M392 262 v-26 h28 v26 z M388 237 L406 220 L424 237"/><path d="M402 262 v-10 h8 v10"/><path d="M412 226 q-3-9 3-14 q6-5 1-13" opacity="0.6"/>
+        <path d="M452 270 v-20 h22 v20 z M448 251 L463 237 L478 251"/><path d="M340 276 v-16 h20 v16 z M337 261 L350 249 L363 261"/></g>
+      <g stroke-width="1.4"><path d="M60 280 l14-34 l14 34 z M64 262 l10-24 l10 24 M74 280 v10"/><path d="M104 288 l11-28 l11 28 z M108 274 l7-18 l7 18 M115 288 v8"/><path d="M26 292 l10-24 l10 24 z M30 280 l6-14 l6 14"/><path d="M196 284 l12-30 l12 30 z M200 270 l8-20 l8 20 M208 284 v8"/><path d="M520 290 l11-28 l11 28 z M524 276 l7-18 l7 18"/></g>
+    </svg>
+  </div>
   <div class="inner">
     <p class="over">A highland village to wander</p>
     <h1>Brackenfell</h1>
-    <p id="loadText">Waking the valley</p>
-    <div id="bar"><i id="barFill"></i></div>
-    <div id="startRow" hidden>
-      <button id="startBtn" type="button" class="btn big">Enter the village</button>
-      <button id="contBtn" type="button" class="btn big ghost" hidden>Continue your stay</button>
+    <div class="rule" aria-hidden="true"><i></i><b></b><i></i></div>
+    <div id="slot">
+      <div id="loadBox">
+        <p id="loadText">Waking the valley</p>
+        <div id="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="barFill"></i></div>
+        <p id="loadNums"><span id="loadPct">0%</span><span id="loadMB"></span></p>
+      </div>
+      <div id="startRow" hidden>
+        <button id="startBtn" type="button" class="btn big">Enter the village</button>
+        <button id="contBtn" type="button" class="btn big ghost" hidden>Continue your stay</button>
+      </div>
     </div>
+    <p id="loadHint" aria-live="off"></p>
     <p id="hint"></p>
     <p id="gpuNote" hidden></p>
+    <p id="updateNote" hidden><button id="updBtn2" type="button" class="linkbtn">Update available: reload</button></p>
     <p id="classic"><a href="classic/">Classic version</a> (the build before this one)</p>
   </div>
 </section>
 <div id="fade"></div>
 <div id="portal"><div id="portalName"></div></div>
-<script src="__THREE__"></script>
-<script src="__GAME__"></script>
+<noscript><p style="position:fixed;inset:0;display:grid;place-content:center;color:#ebe0c6;background:#14110d;font:18px Georgia,serif;text-align:center">Brackenfell needs JavaScript.</p></noscript>
+<script>window.__MANIFEST__ = /*__MANIFEST__*/;</script>
+<script>
+/*__BOOT__*/
+</script>
 </body>
 </html>

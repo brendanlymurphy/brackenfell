@@ -119,8 +119,8 @@ const Props = {
   shelf(m, len, h, levels, depth, fill) {
     depth = depth || 0.32; m.mat(MAT.PLANKS, COL.wood);
     for (const sx of [-1, 1]) m.box(sx * len / 2 - 0.025, 0, -depth / 2, sx * len / 2 + 0.025, h, depth / 2);
-    for (let i = 0; i <= levels; i++) { const y = 0.08 + (h - 0.12) * i / levels; m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2, y, -depth / 2, len / 2, y + 0.03, depth / 2); if (fill && i < levels) fill(i, y + 0.03); }
-    m.mat(MAT.PLANKS, COL.woodDark); m.box(-len / 2, 0, depth / 2 - 0.02, len / 2, h, depth / 2);
+    for (let i = 0; i <= levels; i++) { const y = 0.08 + (h - 0.12) * i / levels; m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2 + 0.025, y, -depth / 2 + 0.004, len / 2 - 0.025, y + 0.03, depth / 2 - 0.022); if (fill && i < levels) fill(i, y + 0.03); }
+    m.mat(MAT.PLANKS, COL.woodDark); m.box(-len / 2 + 0.025, 0.01, depth / 2 - 0.02, len / 2 - 0.025, h - 0.005, depth / 2);
     addBoxCollider(m, -len / 2, -depth / 2, len / 2, depth / 2, 0, h);
   },
   // random tableware along a strip
@@ -138,7 +138,8 @@ const Props = {
   },
   // woven rug: a darker border, a field of the main colour, a lighter band down the middle and a fringe at both ends
   rug(m, w, l, col) {
-    const c = col || COL.red, lay = (i, x0, z0, x1, z1, k, y) => { m.mat(MAT.CLOTH, [c[0] * k[0], c[1] * k[1], c[2] * k[2]], 0.6); m.quad([x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0], 0, 0, (x1 - x0) / 0.6, (z1 - z0) / 0.6); };
+    const c = col || COL.red, RL = ((m.rugN = (m.rugN || 0) + 1) % 5) * 0.011, lay = (i, x0, z0, x1, z1, k, y0) => { const y = y0 + RL;          // each rug in a mesh lies a centimetre above the one before (two coplanar rugs flicker)
+       m.mat(MAT.CLOTH, [c[0] * k[0], c[1] * k[1], c[2] * k[2]], 0.6); m.quad([x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0], 0, 0, (x1 - x0) / 0.6, (z1 - z0) / 0.6); };
     const b = Math.min(0.12, w * 0.09);
     lay(0, -w / 2, -l / 2, w / 2, l / 2, [0.3, 0.27, 0.26], 0.012);
     lay(1, -w / 2 + b, -l / 2 + b, w / 2 - b, l / 2 - b, [0.52, 0.42, 0.38], 0.016);

@@ -209,6 +209,7 @@ class Mesh {
 class MeshPack {
   constructor() { this.items = []; this.nv = 0; this.ni = 0; }
   add(mesh, extra) {
+    if (typeof TEST !== 'undefined' && TEST && TEST.audit) (window.__AUDIT_MESH = window.__AUDIT_MESH || []).push(mesh);          // test/audit.js
     const it = Object.assign({ first: this.ni, count: mesh.ni, base: this.nv, mesh, c: mesh.center(), r: mesh.radius() }, extra || {});
     this.items.push(it); this.nv += mesh.nv; this.ni += mesh.ni; return it;
   }

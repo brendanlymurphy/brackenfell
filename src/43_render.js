@@ -144,9 +144,9 @@ function renderFrame(time, env) {
   const aspect = G.w / G.h;
   let fovy = aspect > 1 ? cam.fovMin : 2 * Math.atan(Math.tan(cam.fovMin / 2) / aspect);
   fovy = Math.min(fovy, 1.75); if (aspect > 1) { const hf = 2 * Math.atan(Math.tan(fovy / 2) * aspect); if (hf > 1.62) fovy = 2 * Math.atan(Math.tan(1.62 / 2) / aspect); }
-  const key = aspect.toFixed(4) + ':' + fovy.toFixed(4);
-  if (key !== R.camKey) { R.camKey = key; c3.aspect = aspect; c3.fov = fovy * 180 / Math.PI; c3.updateProjectionMatrix(); }
-  c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, 0); c3.updateMatrixWorld();
+  const key = aspect.toFixed(4) + ':' + fovy.toFixed(4) + (World.cell ? ':c' : '');          // in a cell: near 0.08, far 90 (a 400 m valley's far plane wastes depth precision indoors)
+  if (key !== R.camKey) { R.camKey = key; c3.aspect = aspect; c3.fov = fovy * 180 / Math.PI; c3.near = World.cell ? 0.08 : 0.09; c3.far = World.cell ? 90 : 12000; c3.updateProjectionMatrix(); }
+  c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, cam.roll || 0);   /* [ui] roll from 87_feel.js */ c3.updateMatrixWorld();
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
   SH.update(env, e, time);

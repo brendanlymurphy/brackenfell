@@ -7,7 +7,9 @@
 // no sky, terrain, grass, trees or outdoor props (see sceneUpdate in 42_scene.js and the cell branches in renderFrame), and the fog is short and dark.
 // Villagers cross doors through portal edges of the nav graph (77_npc.js). CELLS_ON = false (test option cells=0) gives back the old seamless houses.
 const CELLS_ON = !(TEST && TEST.cells === 0);
-const CELL = { x0: 3000, y: -400, step: 150, cols: 8, half: 70 };
+// x0: cells sit just outside the playable valley (WORLD_RADIUS 184) and 400 m under it: float32 vertices, the camera and world-space shader maths keep ~0.03-0.1 mm of precision (at x = 3000 a step was 0.24-0.5 mm and surfaces a few mm apart flickered). Builds up to 25 stored positions at x0 = 3000 (CELL_X0_OLD): Cells.migrate moves those.
+const CELL_X0_OLD = 3000;
+const CELL = { x0: 260, y: -400, step: 150, cols: 8, half: 70 };
 const Cells = { list: [], by: {}, cur: null, busy: false, fadeIn: 0.3, fadeOut: 0.3, hold: 0.42 };
 // allocate the next free cell. cs is a site-like frame (x, z, y, yaw 0) that interior code uses where it used the site's
 Cells.make = function (id, name, extra) {
@@ -115,6 +117,7 @@ Cells.env = function (e) {
 Cells.rescue = function () { const c = Cells.cur; if (c && c.enter) Cells.teleport(c.enter); };
 // an old save made inside a building (when interiors stood in the village): the same spot in the same building's cell (cells are built in the building's own frame)
 Cells.migrate = function (pos, yaw) {
+  if (CELLS_ON && pos[0] > CELL_X0_OLD - CELL.half && pos[1] < CELL.y + 100) return { pos: [pos[0] - CELL_X0_OLD + CELL.x0, pos[1], pos[2]], yaw };          // a save made inside a cell of Build 25 or earlier
   if (!CELLS_ON || Cells.inRegion(pos[0])) return false;
   for (const c of Cells.list) {
     const real = c.cs.real, z = World.zones[c.zones[0] - 1]; if (!real || !z) continue;

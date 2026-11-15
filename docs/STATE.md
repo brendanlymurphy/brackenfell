@@ -4,9 +4,7 @@ Read this before touching anything. It replaces having the whole conversation in
 
 ## What is live
 
-- `main` is what GitHub Pages serves: Build 5, the village on Three.js r187. Built files (`index.html`, `game.js`, `three.js`) are committed on `main` only.
-- `classic/` is Build 4 (hand-written WebGPU renderer). `legacy/` is its source.
-- `threejs` is the development branch. Merge finished work here, test, then merge to `main`, run `node tools/build.mjs`, commit the built files, push.
+See `ROADMAP.md` for the build list and `AGENTS.md` for build, test and publish steps. `main` and `threejs` are kept at the same commit after every publish.
 
 ## How it is put together
 
@@ -17,17 +15,9 @@ Read this before touching anything. It replaces having the whole conversation in
 - Tests: `node test/shot.mjs [--opt webgl=1] [--opt quality=medium] --do "<js>" --out file.png`. On WebGPU a headless browser cannot present the canvas, so test mode renders to a target and reads it back; never render straight to the canvas in a WebGPU test. `test/quest.js` is the scripted quest (must end with `fire 99 bonfire true`). Run one browser test at a time: the machine has 2 cores.
 - Commits end with the two trailer lines used throughout the log (`Co-Authored-By`, `Claude-Session`).
 
-## Unfinished work, by worktree
+## Unfinished work
 
-| Worktree | Branch | State |
-|---|---|---|
-| `/home/claude/wt/e` | `fork-e` | Village rebuild from the Quaternius kit (`71_kithouse.js`). Just started; uncommitted files. Brief: every building from kit pieces on a 2 m grid, furnished candle-lit interiors, game logic unchanged. |
-| `/home/claude/wt/g` | `fork-g` | Gameplay (sprint, jump, stamina, sword, bandit camps, loot, inventory, quests, dungeon). Just started; uncommitted files. |
-| `/home/claude/wt/f` | `fork-f` | Poly Haven scanned props. `kits/scan.glb` (50 CC0 models, 5 MB, built by `tools/scan/slim.mjs` from `tools/scan/slim.txt`) is loaded by `kitBoot`; `kp()` in `71_kithouse.js` answers painted pieces with scans (`SCANR` table), houses, yards and the lake shore get scanned clutter and ground cover. Without the pack the painted props stay (`--opt scan=0` simulates that, `--opt scatter=0` drops the ground cover). Screenshots in `/home/claude/shots/F2/`. |
-| `/home/claude/wt/h` | `fork-h` | Realistic humans: the `real` character set (21 MakeHuman people + `clips.glb` in `chars/real/`, built by `tools/humans/`), wired into `49_chars.js`; default set, `quaternius` is the fallback and `?chars=quaternius` picks it. Renders in `/home/claude/shots/H2/`. |
-| `/home/claude/wt/d` | `fork-d` | Done: kits packed in `kits/`, `Kit` loader, realistic skin. Merged into `fork-e`, not into `threejs`. |
-
-Kits and sources live outside the repo in `/home/claude/ext/` (kits, scan, chars2, humans).
+See the In progress section of `ROADMAP.md`. Worker branches are `fork-<name>`; finished ones are merged and can be deleted.
 
 ## Gameplay layer (fork-g)
 
@@ -58,3 +48,20 @@ The user wants it as realistic as possible, like Skyrim: simple shapes, photogra
 - Interiors of other houses cost nothing (interiorShown in 42_scene.js). Terrain flat blocks merge into fans (60_terrain.js); grass thins per tier.
 - Point lights loop is bounded by U.lightN / U.lightNOut. Add `?perf` for the overlay (86_perf.js).
 - Rebuild order after kit edits: kits_budget, kits_far, then tools/build.mjs.
+
+## Interiors as cells (Build 19 on)
+
+- `src/56_cells.js`: every enterable building's interior is built at a remote origin; the village keeps only the shell. `Cells.use`
+  is the door portal (fade, place name). `Cells.env` sets indoor light: the sun is off, `CELL_DAYLIGHT` lifts the day's ambient for
+  rooms with windows, `daylight: 0` / `daylightFn` for cellars. `--opt cells=0` restores the old seamless houses.
+- `src/72d_plan.js` is the plan engine (rooms on a 0.5 m grid, doors, stairs, cellars, placement helpers, `planValidate`).
+  `PLAN_SHIP` in `src/72e_plans.js` lists the buildings whose plan is used in the published game; everything else keeps its old
+  hand-made interior until its plan is designed and dressed. `test/parity.mjs` fails if a plan drops a quest object.
+- `R.boneData` holds one slot per hinged, carried or animated thing (doors, pickups, characters). It grows on demand since Build 25;
+  it overflowed silently at 96 slots once.
+
+## Sound (Build 18 on)
+
+- `Snd` in `src/88_audio.js`: buses amb / world / foot / ui / music into a master chain with a soft ceiling. Reverb spaces room,
+  hall, cave; open air is dry. Sends are deliberately low. Speech bypasses the buses and goes dry to the master (`88d_voice.js`).
+- No discovery jingle. Place banners only for landmarks (`minor: true` places are silent and bannerless).

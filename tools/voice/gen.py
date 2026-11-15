@@ -28,11 +28,15 @@ def process(wav, sr, pitch, dst):
         if pk > 10 ** (-2.5 / 20): g *= (10 ** (-2.5 / 20)) / pk                      # dialogue about -18 dB RMS, peaks under -2.5 dB
         for attempt in range(4):                           # AAC can overshoot by a couple of dB: re-encode quieter until the decoded peak is under -1.5 dB
             y = np.concatenate([np.zeros(int(sr2 * 0.03)), x * g, np.zeros(int(sr2 * 0.08))]); c = os.path.join(td, 'c.wav'); sf.write(c, y, sr2)
-            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', c, '-ac', '1', '-c:a', 'aac', '-b:a', '32k', '-movflags', '+faststart', dst], check=True)
+            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', c, '-ac', '1', '-c:a', 'aac', '-b:a', '56k', '-movflags', '+faststart', dst], check=True)
             raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', dst, '-f', 'f32le', '-ac', '1', '-ar', '24000', '-'], capture_output=True).stdout
             pk = float(np.max(np.abs(np.frombuffer(raw, dtype=np.float32)))) if raw else 1.0
             if pk < 10 ** (-1.5 / 20): break
             g *= (10 ** (-2.0 / 20)) / pk
+def style(k, v):                                   # 'bm_george' or a blend 'bm_george:0.6+am_onyx:0.4' (weights optional): blends give more distinct natural voices than pitch-shifting one
+    if '+' not in v and ':' not in v: return v
+    parts = [(a.split(':') + ['1'])[:2] for a in v.split('+')]; w = np.array([float(b) for _, b in parts], dtype=np.float32); w /= w.sum()
+    return sum(k.get_voice_style(a) * wi for (a, _), wi in zip(parts, w)).astype(np.float32)
 todo = [p for p in plan['plan'] if (not only or p['speaker'] == only)]
 k = None; done = 0; t0 = time.time()
 for p in todo:
@@ -43,7 +47,7 @@ for p in todo:
     if done >= limit: break
     if k is None:
         from kokoro_onnx import Kokoro; k = Kokoro(model, voices)
-    t = time.time(); wav, sr = k.create(p['say'], voice=p['voice'], speed=p['speed'], lang='en-gb')
+    t = time.time(); wav, sr = k.create(p['say'], voice=style(k, p['voice']), speed=p['speed'], lang='en-gb')
     tmp = dst + '.part.m4a'; process(wav, sr, p['pitch'], tmp); os.replace(tmp, dst)
     d, e = analyse(dst); man['lines'][p['key']] = {'f': p['file'], 'd': d, 'e': e, 's': p['speaker']}; save(); done += 1
     print('%s %s %.1fs audio in %.0fs  [%d]' % (p['speaker'], p['file'], d, time.time() - t, done), flush=True)
