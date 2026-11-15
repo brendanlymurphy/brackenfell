@@ -23,16 +23,16 @@ const roadZ = x => x < 36 ? (x - 13) / 23 : 1 + (x - 36) / 14;        // the mai
 const ALLEY = { x0: 22, x1: 51, setback: 5.5 };
 const ALLEY_SHOPS = [
   { id: 'draper', row: 'N', x0: 29.2, w: 6.4, d: 5.6, name: 'Lindqvist’s Draper' },
-  { id: 'shop.n2', row: 'N', x0: 35.9, w: 4, d: 4, floors: 3, pitch: 58, kind: 'apothecary', glyph: 'potion', awn: [[0.28, 0.45, 0.30], [0.85, 0.8, 0.65]], layout: 'DW', balcony: 0 },
-  { id: 'shop.n3', row: 'N', x0: 40.2, w: 6, d: 4, floors: 2, pitch: 46, kind: 'cutler', glyph: 'axes', awn: [[0.55, 0.2, 0.16], [0.85, 0.8, 0.65]], layout: 'WDW', balcony: 1 },
-  { id: 'shop.n4', row: 'N', x0: 46.5, w: 4, d: 4, floors: 3, pitch: 52, kind: 'grocer', glyph: 'herbs', awn: [[0.6, 0.35, 0.14], [0.85, 0.8, 0.65]], layout: 'WD', balcony: 0 },
-  { id: 'shop.s0', row: 'S', x0: 23.4, w: 4, d: 4, floors: 2, pitch: 54, kind: 'baker', glyph: 'mugs', awn: [[0.5, 0.32, 0.18], [0.85, 0.8, 0.65]], layout: 'DW', balcony: 0 },
-  { id: 'shop.s1', row: 'S', x0: 27.7, w: 6, d: 4, floors: 3, pitch: 50, kind: 'books', glyph: 'crest', awn: [[0.22, 0.32, 0.5], [0.85, 0.8, 0.65]], layout: 'WDW', balcony: 1 },
+  { id: 'shop.n2', row: 'N', x0: 35.9, w: 4, d: 4, floors: 3, pitch: 42, kind: 'apothecary', glyph: 'potion', awn: [[0.28, 0.45, 0.30], [0.85, 0.8, 0.65]], layout: 'DW', balcony: 0 },
+  { id: 'shop.n3', row: 'N', x0: 40.2, w: 6, d: 4, floors: 2, pitch: 38, kind: 'cutler', glyph: 'axes', awn: [[0.55, 0.2, 0.16], [0.85, 0.8, 0.65]], layout: 'WDW', balcony: 1 },
+  { id: 'shop.n4', row: 'N', x0: 46.5, w: 4, d: 4, floors: 3, pitch: 44, kind: 'grocer', glyph: 'herbs', awn: [[0.6, 0.35, 0.14], [0.85, 0.8, 0.65]], layout: 'WD', balcony: 0 },
+  { id: 'shop.s0', row: 'S', x0: 23.4, w: 4, d: 4, floors: 2, pitch: 40, kind: 'baker', glyph: 'mugs', awn: [[0.5, 0.32, 0.18], [0.85, 0.8, 0.65]], layout: 'DW', balcony: 0 },
+  { id: 'shop.s1', row: 'S', x0: 27.7, w: 6, d: 4, floors: 3, pitch: 42, kind: 'books', glyph: 'crest', awn: [[0.22, 0.32, 0.5], [0.85, 0.8, 0.65]], layout: 'WDW', balcony: 1 },
   { id: 'shop.s2', row: 'S', x0: 43.4, w: 6, d: 4, floors: 2, pitch: 44, kind: 'tinker', glyph: 'anvil', awn: [[0.4, 0.4, 0.42], [0.8, 0.75, 0.6]], layout: 'WDW', balcony: 0 },
 ];
 for (const a of ALLEY_SHOPS) {
   const xc = a.x0 + a.w / 2, zf = roadZ(xc) + (a.row === 'N' ? -ALLEY.setback : ALLEY.setback);
-  SITES.push({ id: a.id, name: a.name || 'Shop', x: xc, z: a.row === 'N' ? zf - a.d / 2 : zf + a.d / 2, yaw: a.row === 'N' ? PI : 0, w: a.w, d: a.d, doorPos: 0, pad: 0.6, facade: !!a.layout });
+  SITES.push({ id: a.id, name: a.name || 'Shop', x: xc, z: a.row === 'N' ? zf - a.d / 2 : zf + a.d / 2, yaw: a.row === 'N' ? PI : 0, w: a.w, d: a.d, doorPos: 0, pad: 0.6, facade: !!a.layout, alleyRow: true });
 }
 const SITE = {}; for (const s of SITES) SITE[s.id] = s;
 const siteToWorld = (s, lx, lz) => { const c = Math.cos(s.yaw), sn = Math.sin(s.yaw); return [s.x + lx * c - lz * sn, s.z + lx * sn + lz * c]; };
