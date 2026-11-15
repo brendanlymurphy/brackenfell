@@ -60,7 +60,7 @@ function terrainBase(x, z) {
 }
 function terrainH(x, z) {
   let h = terrainBase(x, z);
-  if (Math.abs(x) < 160 && Math.abs(z) < 170) {
+  if (Math.abs(x) < 210 && Math.abs(z) < 210) {
     // village square
     const sq = hyp((x - SQUARE.x) / (SQUARE.rx + 3), (z - SQUARE.z) / (SQUARE.rz + 3));
     if (sq < 2) h = lerp(h, 0, 1 - smooth(1, 1.9, sq));
@@ -153,7 +153,7 @@ function buildTerrain() {
   // TERRAIN_FINE: the ground is drawn with 1.5 m cells out to this distance from the centre and with 3 m cells (a quarter of the triangles) from there to the
   // edge of the height grid. Terrain.y still reads the 1.5 m grid. 144 puts the whole grid back on 1.5 m cells.
   const FINE = TERRAIN_FINE, ring = FINE < K.terrainHalf;
-  const levels = [{ cell: 1.5, half: 144, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: 144, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: 144, tile: TERRAIN_TILE[0] }, { cell: 24, half: 1440, hole: 432, tile: TERRAIN_TILE[1] }, { cell: 96, half: 4800, hole: 1440, tile: TERRAIN_TILE[2] }]);
+  const TH = K.terrainHalf, levels = [{ cell: 1.5, half: TH, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: TH, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: TH, tile: TERRAIN_TILE[0] }, { cell: 24, half: 1440, hole: 432, tile: TERRAIN_TILE[1] }, { cell: 96, half: 4800, hole: 1440, tile: TERRAIN_TILE[2] }]);
   const pack = new MeshPack(); pack.shadow = true;
   let prev = null;
   for (let li = levels.length - 1; li >= 0; li--) {            // coarse first so fine borders can be stitched to them

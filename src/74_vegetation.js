@@ -103,7 +103,7 @@ function buildVegetation() {
     if (hyp((x - SQUARE.x) / (SQUARE.rx + 2), (z - SQUARE.z) / (SQUARE.rz + 2)) < 1) return true;
     return false;
   };
-  const gy = (x, z) => (Math.abs(x) < 143 && Math.abs(z) < 143) ? Terrain.y(x, z) : terrainH(x, z);
+  const gy = (x, z) => Terrain.y(x, z);
   const addTree = (kind, x, z, scale) => {
     const y = gy(x, z);
     inst[kind].push([x, y - 0.05, z, scale, R() * TAU, R(), R(), 0]);
