@@ -62,8 +62,8 @@ const Combat = (() => {
     const res = Foes.sweep(P.pos, P.yaw, reach, a.arc, dmg, C.heavy);
     if (res.n) {
       RPG.hitStop = C.heavy ? 0.11 : 0.07; RPG.kick[0] += a.kick[0]; RPG.kick[1] += a.kick[1]; RPG.shake = Math.max(RPG.shake, C.heavy ? 0.5 : 0.28); RPG.combatT = 0;
-      if (res.blocked) { Audio2.clash(0.8); RPG.spark(res.p, 9, [1, 0.8, 0.4], 3.5, 3, 0.028, 0.3); }
-      else { Audio2.hitFlesh(C.heavy); RPG.spark(res.p, C.heavy ? 5 : 3, [0.42, 0.05, 0.035], 1.6, 1, 0.07, 0.5); RPG.spark(res.p, 4, [1, 0.7, 0.35], 2.5, 3, 0.022, 0.22); }
+      if (res.blocked) { Audio2.clash(0.8); RPG.spark(res.p, 12, [1, 0.8, 0.4], 3.5, 3, 0.04, 0.3); }
+      else { Audio2.hitFlesh(C.heavy); RPG.spark(res.p, C.heavy ? 6 : 4, [0.30, 0.035, 0.025], 1.5, 1, 0.11, 0.55); RPG.spark(res.p, 5, [1, 0.62, 0.28], 2.5, 3, 0.04, 0.26); }
     } else { RPG.kick[0] += a.kick[0] * 0.35; RPG.kick[1] += a.kick[1] * 0.35; }
   };
   // a blow is coming in: the guard takes what it can. Returns the damage that gets through.

@@ -106,7 +106,7 @@ RPG.fxWrite = function (dt) {
     s.p[0] += s.v[0] * dt; s.p[1] += s.v[1] * dt; s.p[2] += s.v[2] * dt; s.v[1] -= (smoke ? -0.4 : 9) * dt; if (smoke) { s.v[0] *= 1 - 2 * dt; s.v[2] *= 1 - 2 * dt; }
     if (n >= max) continue;
     const o = n++ * 12; d[o] = s.p[0]; d[o + 1] = s.p[1]; d[o + 2] = s.p[2]; d[o + 3] = smoke ? s.size * (1 + k * 2.5) : s.size;
-    d[o + 4] = s.col[0]; d[o + 5] = s.col[1]; d[o + 6] = s.col[2]; d[o + 7] = smoke ? (1 - k) * 0.4 : 3.2 * (1 - k); d[o + 8] = s.seed * 6; d[o + 9] = s.kind; d[o + 10] = 1; d[o + 11] = s.seed;
+    d[o + 4] = s.col[0]; d[o + 5] = s.col[1]; d[o + 6] = s.col[2]; d[o + 7] = smoke ? (1 - k) * 0.75 : 3.2 * (1 - k); d[o + 8] = s.seed * 6; d[o + 9] = s.kind; d[o + 10] = 1; d[o + 11] = s.seed;
   }
   R.partCount = n;
 };
@@ -210,7 +210,7 @@ RPG.tick = function (dt) {
     if (RPG.hurtT > 7 && RPG.combatT > 7 && r.hp > 0 && r.hp < RPG.MAXHP) r.hp = Math.min(RPG.MAXHP, r.hp + 1.4 * dt);
     Combat.update(dt * slow, dt);
   }
-  Foes.update(dt * slow, dt);
+  Foes.update(UI.menu || UI.reader ? 0 : dt * slow, dt);        // the journal is a pause: nobody swings while you read it
   // camera: recoil from blows given and taken, and the slump of a fall
   const cam = R.cam, K = RPG.kick;
   if (playing) {
