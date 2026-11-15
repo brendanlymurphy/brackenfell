@@ -118,11 +118,12 @@ const Snd = {
   busLevels() {
     const S = this, t = S.now(), u = S.set, m = S.G.talk ? 0.38 : 1;
     S.master.gain.setTargetAtTime(u.master * S.pausedMul * S.fadeIn, t, 0.15);
-    S.bus.amb.g.gain.setTargetAtTime(u.amb * S.trim.amb, t, 0.3);
-    S.bus.world.g.gain.setTargetAtTime(u.world * S.trim.world, t, 0.3);
+    const dk = 1 - 0.45 * (S.duck || 0);      // speech ducks the ambience and the world
+    S.bus.amb.g.gain.setTargetAtTime(u.amb * S.trim.amb * dk, t, 0.3);
+    S.bus.world.g.gain.setTargetAtTime(u.world * S.trim.world * dk, t, 0.3);
     S.bus.foot.g.gain.setTargetAtTime(u.foot * S.trim.foot, t, 0.3);
     S.bus.ui.g.gain.setTargetAtTime(u.ui * S.trim.ui, t, 0.3);
-    S.dbg.music = (u.musicOn ? u.music : 0) * S.trim.music * m; S.bus.music.g.gain.setTargetAtTime(S.dbg.music, t, S.G.talk ? 0.35 : 1.2);        // ducks under dialogue
+    S.dbg.music = (u.musicOn ? u.music : 0) * S.trim.music * m * (1 - 0.6 * (S.duck || 0)); S.bus.music.g.gain.setTargetAtTime(S.dbg.music, t, S.G.talk ? 0.35 : 1.2);        // ducks under dialogue
   },
 
   // ── voices: a hard limit on one-shots, with room kept for important ones ──
@@ -251,6 +252,9 @@ Snd.settingsUI = function () {
   row('Ambience', 'setAmb', 'amb'); row('World effects', 'setWorld', 'world'); row('Footsteps', 'setFoot', 'foot'); row('Voices and interface', 'setUi', 'ui');
   const l = document.createElement('label'); l.className = 'row check'; l.htmlFor = 'setMusicOn'; const s = document.createElement('span'); s.textContent = 'Music on'; const i = document.createElement('input'); i.type = 'checkbox'; i.id = 'setMusicOn'; i.checked = S.set.musicOn;
   i.addEventListener('change', e => { S.set.musicOn = e.target.checked; S.save(); if (S.ctx) S.busLevels(); }); l.appendChild(s); l.appendChild(i); after.after(l);
+  const l2 = document.createElement('label'); l2.className = 'row check'; l2.htmlFor = 'setVoices'; const s2 = document.createElement('span'); s2.textContent = 'Spoken voices'; const i2 = document.createElement('input'); i2.type = 'checkbox'; i2.id = 'setVoices'; i2.checked = S.set.voices; i2.addEventListener('change', e => { S.set.voices = e.target.checked; S.save(); if (!S.set.voices && S.vox) S.vox.stop(); }); l2.appendChild(s2); l2.appendChild(i2); l.after(l2);
+  const l3 = document.createElement('label'); l3.className = 'row'; l3.htmlFor = 'setVoiceVol'; const s3 = document.createElement('span'); s3.textContent = 'Voice volume'; const i3 = document.createElement('input'); i3.type = 'range'; i3.min = 0; i3.max = 1; i3.step = 0.05; i3.id = 'setVoiceVol'; i3.value = S.set.voiceVol; i3.addEventListener('input', e => { S.set.voiceVol = +e.target.value; S.save(); }); l3.appendChild(s3); l3.appendChild(i3); l2.after(l3);
+  const l4 = document.createElement('label'); l4.className = 'row check'; l4.htmlFor = 'setSubs'; const s4 = document.createElement('span'); s4.textContent = 'Subtitles while voiced'; const i4 = document.createElement('input'); i4.type = 'checkbox'; i4.id = 'setSubs'; i4.checked = S.set.subs; i4.addEventListener('change', e => { S.set.subs = e.target.checked; S.save(); document.body.classList.toggle('nosubs', !S.set.subs); }); l4.appendChild(s4); l4.appendChild(i4); l3.after(l4);
   // the two older sliders write Audio2.vol / Audio2.musicVol: keep them in step with this block
 };
 Snd.ups.push(S => { if (!S.uiDone && (S.frame & 31) === 1) S.settingsUI(); });

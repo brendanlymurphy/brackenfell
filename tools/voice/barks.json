@@ -1,0 +1,20 @@
+{
+  "_note": "short spoken barks, played quietly for villagers who are close and idle. Categories: morning (5-11), day (11-17), evening (17-21), night (21-5), weapon (sword drawn near them), hurt (they were struck by nothing; unused)",
+  "hale":   { "morning": ["Morning, traveller."], "day": ["Keep to the road."], "evening": ["Evening. Mind the dark."], "night": ["Late to be walking."], "weapon": ["Put that blade away, friend."] },
+  "ivo":    { "morning": ["Fair morning."], "day": ["All quiet, so far."], "evening": ["Evening, friend."], "night": ["Keep to the lamplight."], "weapon": ["Easy now. Sheathe it."] },
+  "greta":  { "morning": ["Good morning, love."], "day": ["There's stew on, if you're hungry."], "evening": ["Come in, come in. There's a fire."], "night": ["Still up? Go on to bed."], "weapon": ["Not in my house, thank you."] },
+  "brandt": { "morning": ["Morning."], "day": ["Mind the sparks."], "evening": ["Done for the day, nearly."], "night": ["Hm. Late."], "weapon": ["Careful with that. I made half of them."] },
+  "tobin":  { "morning": ["Hello!"], "day": ["Race you to the well!"], "evening": ["I'm not tired."], "night": ["Shh! I'm supposed to be in bed."], "weapon": ["Whoa! Is that real?"] },
+  "marta":  { "morning": ["Good morning, dear."], "day": ["Take a look, take a look."], "evening": ["Closing soon, dear."], "night": ["We're shut, dear."], "weapon": ["Oh, put that away, do."] },
+  "aldous": { "morning": ["Peace of the morning."], "day": ["Peace be with you."], "evening": ["The evening bell is near."], "night": ["Go gently, traveller."], "weapon": ["No blades in this place, please."] },
+  "maren":  { "morning": ["Up with the larks, are we?"], "day": ["Mind my herbs, child."], "evening": ["Cold coming in."], "night": ["The night air is no good for you."], "weapon": ["Oh, you foolish child. Put it away."] },
+  "osric":  { "morning": ["Morning! Mind the dust."], "day": ["Grinding away, as ever."], "evening": ["Off to the inn, I think."], "night": ["Evening to you."], "weapon": ["Whoa now! Flour and steel don't mix!"] },
+  "edda":   { "morning": ["Morning."], "day": ["Wheat won't cut itself."], "evening": ["Long day."], "night": ["Night, then."], "weapon": ["Put that down, there's good folk about."] },
+  "finn":   { "morning": ["Shh. Fish."], "day": ["Quiet, now."], "evening": ["They'll bite at dusk."], "night": ["Night, friend."], "weapon": ["You'll frighten the fish."] },
+  "lark":   { "morning": ["Good morning to you."], "day": ["A song for the road?"], "evening": ["Come and listen, traveller."], "night": ["Sleep well."], "weapon": ["Ooh. Dramatic."] },
+  "wren":   { "morning": ["Hm."], "day": ["You walk loud."], "evening": ["Evening."], "night": ["Quiet night."], "weapon": ["Keep it down."] },
+  "rowan":  { "morning": ["A good morning to you."], "day": ["Sit a while."], "evening": ["The light is going."], "night": ["Good night."], "weapon": ["Violence is a poor answer."] },
+  "pip":    { "morning": ["Hello!"], "day": ["Seen a chicken?"], "evening": ["Mum says I have to go in."], "night": ["Goodnight!"], "weapon": ["Wow! Can I hold it?"] },
+  "hilda":  { "morning": ["Good morning."], "day": ["Lovely wool, this."], "evening": ["Evening, dear."], "night": ["Goodnight, dear."], "weapon": ["Put that away, there's children."] },
+  "bram":   { "morning": ["Morning!"], "day": ["Apples! Cabbages!"], "evening": ["Evening!"], "night": ["Night!"], "weapon": ["Hey! I only sell apples!"] }
+}
