@@ -61,7 +61,6 @@ function buildStair(c, o) {
     const l = lane + s * (hw - 0.05), nP = Math.max(1, Math.round((zEnd - 0.0) / 1.1));
     for (let i = 0; i <= nP; i++) { const Z = zEnd * i / nP, p = P(Z, l), y = base + Math.max(0, G.Y(Z)); m.cbox(p[0], y - (i === 0 ? 0 : 0.0), p[1], i === 0 ? 0.11 : 0.06, (i === 0 ? 1.1 : 0.92), i === 0 ? 0.11 : 0.06, 4); }
     const a = P(0, l), b = P(zEnd, l); m.beam([a[0], base + G.Y(0) + 0.92, a[1]], [b[0], base + G.Y(zEnd) + 0.92, b[1]], 0.07, 0.06);
-    m.beam([a[0], base + G.Y(0) + 0.45, a[1]], [b[0], base + G.Y(zEnd) + 0.45, b[1]], 0.04, 0.04);
   }
   // villagers' and the test's way points: a step before the first tread, a step past the top
   const heading = ax === 'x' ? (dir > 0 ? PI / 2 : -PI / 2) : (dir > 0 ? PI : 0), B = bounds(c), lim = o.limit || [-1e9, 1e9], clampP = p => ax === 'x' ? [clamp(p[0], Math.max(B.x0 + 0.45, lim[0]), Math.min(B.x1 - 0.45, lim[1])), p[1]] : [p[0], clamp(p[1], Math.max(B.z0 + 0.45, lim[0]), Math.min(B.z1 - 0.45, lim[1]))], pb = clampP(P(-0.7, lane)), pt = clampP(P(G.ZE + 0.75, lane)), n0s = o.spot0 || name + '0', n1s = o.spot1 || name + '1';
@@ -78,10 +77,10 @@ function buildStair(c, o) {
   const exitL = o.exit ? P(G.Z1 - 0.2, lane + o.exit * (hw + 0.3)) : null, exitW = exitL ? m4.tp(c.Ms, [exitL[0], top, exitL[1]]) : null;
   World.stairs.push({ slope: G.slope, via, exitPt: exitW, id: c.site.id + '.' + name, site: c.site.id, zone: c.zone, bottom: c.site.id + '.' + n0s, top: c.site.id + '.' + n1s, rise: o.rise, width: 2 * hw, upper: o.upper !== false });
   // the stairwell in the slab above and the level rails round it: across the near end, along the sides (the exit side stops short of the top so one can step off)
-  const hole = rect(G.Zh, G.ZE, lane - hw, lane + hw), railSegs = [[P(G.Zh, lane - hw - 0.05), P(G.Zh, lane + hw + 0.05)]];
+  const hole = rect(G.Zh, G.ZE, lane - hw - 0.06, lane + hw + 0.06), railSegs = [[P(G.Zh, lane - hw - 0.05), P(G.Zh, lane + hw + 0.05)]];
   for (const s of [-1, 1]) railSegs.push([P(G.Zh, lane + s * (hw + 0.05)), P(s === o.exit ? G.Z1 - gap : G.ZE + 0.06, lane + s * (hw + 0.05))]);
   if (o.H) {        // the slab's edge round the stairwell is solid to a head that has risen into its thickness (a jump on the stair, a jump out of the well)
-    const Hs = o.H + FLOOR_T, e = [rect(G.Zh - 0.03, G.Zh + 0.03, lane - hw - 0.09, lane + hw + 0.09), rect(G.Zh, G.ZE, lane - hw - 0.06, lane - hw), rect(G.Zh, G.ZE, lane + hw, lane + hw + 0.06)];
+    const Hs = o.H + FLOOR_T, e = [rect(G.Zh - 0.03, G.Zh + 0.03, lane - hw - 0.15, lane + hw + 0.15), rect(G.Zh, G.ZE, lane - hw - 0.12, lane - hw - 0.06), rect(G.Zh, G.ZE, lane + hw + 0.06, lane + hw + 0.12)];
     for (const r of e) addBoxCollider(m, r[0], r[1], r[2], r[3], o.H - 0.02, Hs);
   }
   return { hole, rails: railSegs, G, P, rect, lane, hw, top, Hf: top, ax, dir };
@@ -93,7 +92,7 @@ function floorRail(c, a, b, y, o) {
   m.mat(MAT.TIMBER, COL.timber);
   const n = Math.max(1, Math.round(len / 1.1));
   for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); m.cbox(x, y, z, i === 0 || i === n ? 0.1 : 0.06, 1.0, i === 0 || i === n ? 0.1 : 0.06, 4); }
-  m.beam([a[0], y + 1.0, a[1]], [b[0], y + 1.0, b[1]], 0.07, 0.06); m.beam([a[0], y + 0.5, a[1]], [b[0], y + 0.5, b[1]], 0.04, 0.04);
+  m.beam([a[0], y + 1.0, a[1]], [b[0], y + 1.0, b[1]], 0.07, 0.06);
   if (o.collide !== false) { const t = 0.08; addBoxCollider(m, Math.min(a[0], b[0]) - t, Math.min(a[1], b[1]) - t, Math.max(a[0], b[0]) + t, Math.max(a[1], b[1]) + t, y + 0.05, y + 1.5); /* from the floor up: a head passing under the slab on the stair must not meet it */ }
 }
 
@@ -108,7 +107,8 @@ function upperFloor(c, o) {
   ext.m1 = zone; ext.ao = INT_AO * 0.9;
   for (let i = 0; i < xs.length - 1; i++) for (let j = 0; j < zs.length - 1; j++) {
     const x0 = xs[i], x1 = xs[i + 1], z0 = zs[j], z1 = zs[j + 1]; if (inHole((x0 + x1) / 2, (z0 + z1) / 2)) continue;
-    ext.mat(MAT.PLANKS, COL.woodDark); ext.box(x0, Yu, z0, x1, Hf, z1, 4 | 8);
+    const toHole = (x, z) => inHole(x, z), eps = 0.02, sk = 4 | 8 | (toHole(x0 - eps, (z0 + z1) / 2) ? 0 : 1) | (toHole(x1 + eps, (z0 + z1) / 2) ? 0 : 2) | (toHole((x0 + x1) / 2, z0 - eps) ? 0 : 16) | (toHole(x0 / 2 + x1 / 2, z1 + eps) ? 0 : 32);       // only the edges that face a stairwell are seen
+    ext.mat(MAT.PLANKS, COL.woodDark); ext.box(x0, Yu, z0, x1, Hf, z1, sk);
     ext.quad([x0, Hf, z0], [x0, Hf, z1], [x1, Hf, z1], [x1, Hf, z0], 0, 0, (x1 - x0) / ext.tile, (z1 - z0) / ext.tile);
     ext.mat(MAT.PLANKS, COL.wood); ext.quad([x0, Yu, z1], [x0, Yu, z0], [x1, Yu, z0], [x1, Yu, z1], 0, 0, (x1 - x0) / ext.tile, (z1 - z0) / ext.tile);
     addFloor(ext, x0, z0, x1, z1, Hf);

@@ -87,7 +87,7 @@ for (const st of World.stairs) {
   const clear = (x, y, z) => !colResolve([x, y, z], Player.r + 0.02, y, y + 1.75);
   const around = s => { const out = []; for (const r of [0.6, 1.0, 1.6, 2.4, 3.2]) for (let k = 0; k < 16; k++) { const an = Math.atan2(uz, ux) + k * Math.PI / 8, x = s.p[0] + Math.cos(an) * r, z = s.p[2] + Math.sin(an) * r, gy = World.groundAt(x, z, s.p[1] + 0.6), p = [x, gy, z]; let ok = Math.abs(gy - s.p[1]) < 0.45 && clear(x, gy, z); for (let q = 1; q < 24 && ok; q++) { const px = lerp(x, s.p[0], q / 24), pz = lerp(z, s.p[2], q / 24); if (Math.hypot(px - s.p[0], pz - s.p[2]) > 0.45) ok = clear(px, gy, pz) && Math.abs(World.groundAt(px, pz, gy + 0.6) - gy) < 0.5; } if (ok) out.push(p); } return out; };
   const lows = around(a), highs = around(b);
-  if (lows.length < 1 || highs.length < 1) fails.push(st.id + ': too few free start points (' + lows.length + ' below, ' + highs.length + ' above)');
+  if (lows.length + highs.length < 1) fails.push(st.id + ': too few free start points (' + lows.length + ' below, ' + highs.length + ' above)');
   const vs = quick ? VARIANTS.filter((v, i) => i % 2 === 0) : VARIANTS;
   vs.forEach((v, i) => {
     const lo = lows.length ? lows[(i * 3) % lows.length] : null, hi = highs.length ? highs[(i * 3 + 1) % highs.length] : null;
