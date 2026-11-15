@@ -258,7 +258,7 @@ function kadd(m, P, extra) {
   const zone = m.m1 | 0;
   let B; if (zone) B = kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: YARD_CELL }); B = World.kitYard; }
   const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone && yardCasts(P) }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
-  B.add(P.name, P.M, o); if (zone && !(o.tint && o.noBlob)) furnBlob(zone, P);
+  B.add(P.name, P.M, o); if (zone && !o.noBlob) furnBlob(zone, P);
 }
 // place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
 function kp(m, name, x, y, z, s, ry, extra) { const P = kplace(m, name, x, y, z, s, ry); if (P) { kadd(m, P, extra); if (P.more) for (const Q of P.more) kadd(m, Q, extra); } }
@@ -351,6 +351,7 @@ const KIT_DRESS = {
 };
 // extra dressing per building, once its own interior has been laid out
 function kitDress(c) {
+  if (typeof furnishHouse === 'function') furnishHouse(c);
   const { site, w, d, H, hd, zone, spec } = c, id = site.id, st = spec.kitStyle, R = c.kR, dress = KIT_DRESS[id] || {}, e = 0.21, sy = H / 3;
   const X0 = -w / 2 + e, X1 = w / 2 - e, Z0 = -hd + e, Z1 = hd - e, m = { m: c.Ms, m1: zone, ao: INT_AO }, EXT = { zone: 0, skyVis: 1 };
   // is this patch of floor (house-local) taken by something the house has already registered?
