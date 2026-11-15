@@ -15,7 +15,7 @@ function buildVillage() {
     const spec = HOUSES[site.id]; if (!spec) continue;
     const h = buildHouse(site, spec);
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
-    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5 });
   }
@@ -47,7 +47,7 @@ function buildVillage() {
   const rect = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]];
 
   // ── the square ──
-  put(6.2, -8.6, 0.3, m => Props.well(m));
+  put(6.2, -8.6, 0.3, m => typeof wellRound === 'function' ? wellRound(m) : Props.well(m));
   const OAK = World.oakPos = [-7.6, 6.4];
   for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.3; put(OAK[0] + Math.cos(a) * 1.75, OAK[1] + Math.sin(a) * 1.75, a + PI / 2, m => Props.bench(m, 1.75, true)); }
   { const m = bucket(OAK[0], OAK[1]); m.push().T(OAK[0], Terrain.y(OAK[0], OAK[1]), OAK[1]); addCircleCollider(m, 0, 0, 2.0, 0, 0.5); m.pop(); }
@@ -186,6 +186,8 @@ function buildVillage() {
     put(-5.6, 84.6, 0, mm => Props.barrel(mm)); put(-3.0, 83.8, 0.5, mm => Props.crate(mm, 0.5));
     World.places.push({ id: 'lake', name: 'Mirrormere', x: 7, z: 90, r: 9 });
   }
+
+  if (typeof buildBoards === 'function') buildBoards(bucket, fence, R);
 
   // ── farm: fields, coop, scarecrow, hay ──
   for (const f of FIELDS) { const p = rect(f.x0 - 0.8, f.z0 - 0.8, f.x1 + 0.8, f.z1 + 0.8); fence([p[0], [lerp(p[0][0], p[1][0], 0.38), p[0][1]]]); fence([[lerp(p[0][0], p[1][0], 0.52), p[0][1]], p[1], p[2], p[3], p[4]]); }
@@ -345,6 +347,8 @@ function buildVillage() {
   }
 
   if (typeof buildAlley === 'function') buildAlley();
+  if (typeof buildInfill === 'function') buildInfill();
+  if (typeof buildDress === 'function') buildDress();
 
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {

@@ -59,5 +59,6 @@ function fxUpdate(dt, time, env, cam) {
     const x = cam[0] + ((f.o[0] - cam[0] + time * 0.15) % 18 + 27) % 18 - 9, y = cam[1] - 1.2 + ((f.o[1] + time * 0.05) % 4), z = cam[2] + ((f.o[2] - cam[2]) % 18 + 27) % 18 - 9 + Math.sin(time * 0.3 + f.ph) * 0.4;
     put(x, y, z, 0.022, 1.0, 0.95, 0.8, 0.5 * env.day * (0.5 + 0.5 * Math.sin(time + f.ph)), 0, 3, 1, 0);
   }
+  if (typeof airUpdate === 'function') airUpdate(put, dt, time, env, cam);
   R.partCount = n;
 }

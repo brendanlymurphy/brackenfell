@@ -113,6 +113,8 @@ function buildVegetation() {
   { const p = siteToWorld(SITE.chapel, 5.5, -13.5); addTree('oak', p[0], p[1], 0.85); }
   addTree('oak', 88, -30, 0.9);
   for (const [k, x, z, s] of [['birch', -29, 9, 1], ['birch', 31, -17, 1.1], ['birch', -31, -27, 0.95], ['birch', 13, -33, 1.05], ['birch', 28, 25, 1], ['birch', -9, 35, 0.9], ['birch', 45, -9, 1.1], ['birch', -47, 7, 1], ['pine', -20, -33, 1.1], ['pine', 9, -36, 1.25], ['pine', -34, 31, 1.0], ['birch', 47, 20, 1.0], ['birch', 50, 34, 0.9], ['birch', 66, 40, 1.05], ['birch', 30, 70, 1], ['birch', -22, 60, 1.1], ['pine', 40, -40, 1.2], ['birch', 74, -12, 1], ['birch', -6, -44, 0.95]]) if (!blocked(x, z, 0.5)) addTree(k, x, z, s);
+  // autumn birches standing in the courts behind the infill houses
+  if (typeof INF !== 'undefined') { let nb = 0; for (const h of INF.houses) { if (nb >= 8 || R() > 0.38) continue; const lx = R.s() * h.w * 0.3, p = siteToWorld(h, lx, h.d / 2 + 2.1 + R() * 0.6); if (hyp(p[0] - SQUARE.x, p[1] - SQUARE.z) < 22 || blocked(p[0], p[1], 1.9)) continue; addTree('birch', p[0], p[1], 0.78 + R() * 0.3); nb++; } }
   const cell = 7.5, ext = 430;
   for (let gz = -ext; gz < ext; gz += cell) for (let gx = -ext; gx < ext; gx += cell) {
     const x = gx + R() * cell, z = gz + R() * cell, r = hyp(x, z);

@@ -1,0 +1,268 @@
+// ───────────────────────── infill houses: dark timber walls, grey shingle roofs, built from the village kit ─────────────────────────
+// Sites come from 55b_infill.js. Six of them are enterable (HOUSES specs in 72c_infill.js, shell by kitShell); the rest are shells only, assembled here
+// in the same way as the market alley (2 m wall panels scaled to the wall, kit window and door modules, jettied upper storeys, kit roof turned to a ridge
+// that suits the street). All of it goes into ONE batch (one draw per material) which is hidden when the camera is far away or indoors and does not
+// cast into the sun-shadow maps: one prism stand-in per house does that.
+const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
+const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof';
+function infBatch() {
+  if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 4096, off: 2048 }), add = b.add; b.add = (n, x, o) => add(n, x, Object.assign({ cast: false }, o || {})); }       // nothing in the batch casts: one mesh per material, not two
+  return INFS.batch;
+}
+
+// the two material variants: a plank cladding and a shingle roof (texture sets from tools/gen_timber_tex.py, 512 px)
+async function infillMaterials() {
+  if (typeof Kit === 'undefined' || !Kit.ready || !Kit.defs.MI_Plaster || !Kit.defs.MI_RoundTiles) return;
+  const load = (url, kind) => new Promise(res => new THREE.TextureLoader().load(url, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = 4; t.colorSpace = kind === 'data' ? THREE.NoColorSpace : THREE.SRGBColorSpace; gfxTex(t, kind).then(res, () => res(t)); }, undefined, () => res(null)));
+  const mk = async (name, base, set, over) => {
+    const [a, n, o] = await Promise.all([load('kits/skin/' + set + '_a.webp', 'color'), load('kits/skin/' + set + '_n.webp', 'data'), load('kits/skin/' + set + '_orm.webp', 'data')]);
+    if (!a) return false;
+    Kit.defs[name] = Object.assign({}, Kit.defs[base], { name, map: a, normalMap: n || Kit.defs[base].normalMap, orm: o || Kit.defs[base].orm, aoInOrm: true, color: [1, 1, 1], uvScale: [1, 1], gain: 1, sat: 1 }, over || {});
+    return true;
+  };
+  const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0 });
+  const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 1.9, nScale: 1.0, moss: 0.6 });
+  if (Kit.defs.MI_UnevenBrick) Kit.defs[INF_B] = Object.assign({}, Kit.defs.MI_UnevenBrick, { name: INF_B, doubleSided: true });
+  if (Kit.defs[INF_T]) Kit.defs[INF_T].doubleSided = true;
+  INFS.mats = ok1 && ok2 && !!Kit.defs[INF_B];
+}
+// a copy of a kit piece with its plaster / tiles replaced by the plank / shingle variants
+function infSwap(name, from, to, tag) {
+  if (!INFS.mats) return name; const nn = tag + name, p = Kit.pieces[name]; if (!p) return name;
+  if (!Kit.pieces[nn]) Kit.pieces[nn] = Object.assign({}, p, { name: nn, prims: p.prims.map(q => q.mat === from ? Object.assign({}, q, { mat: to }) : q) });
+  return nn;
+}
+const infT = name => infSwap(name, 'MI_Plaster', INF_T, 'T_');
+const infR = name => infSwap(name, 'MI_RoundTiles', INF_S, 'S_');
+const infTimber = name => /^(Wall_Plaster|Roof_Front_Brick)/.test(name) ? infT(name) : name;
+
+// ── generated walls ──
+// Plank (or stone) cladding as flat quads with holes where the doors and windows are, then reveals, a pane, frames, sills and lintels for each opening, corner posts,
+// bay posts and belt rails. About 700 triangles for a two-storey house, in 4 materials (the kit's 2 m panels with their window pieces cost 3-4 thousand).
+// o: w d fl H stone tint jetty R lo; plan[k][wall] = [{ u0, u1, v0, v1, door, shutter }] (u along the wall as WALLS defines it, v above the storey's floor);
+// skip[wall] = storeys of a neighbour against that side wall (those storeys get no wall); optsOf(k) = batch options for storey k
+const INF_B = 'MI_Stone_DS';
+function infWalls(B, MS, o) {
+  const w = o.w, d = o.d, fl = o.fl, H = o.H || 3, sh = o.jetty ? 0.5 : 0, lo = !!o.lo, DK = [0.17, 0.14, 0.11], SC = [[0.3, 0.38, 0.28], [0.42, 0.2, 0.16], [0.22, 0.3, 0.4], [0.36, 0.31, 0.22]];
+  const R = o.R || rng(3);
+  for (let k = 0; k < fl; k++) {
+    const g = GP(), yb = k === 0 ? -0.35 : k * H, yt = (k + 1) * H, off = k > 0 ? sh : 0, stone = k === 0 && o.stone, mat = stone ? INF_B : INF_T, ts = stone ? 2.2 : 1.25, col = stone ? [0.95, 0.95, 0.95] : (o.tint || [1, 1, 1]);
+    for (const wn of ['front', 'back', 'left', 'right']) {
+      const W = WALLS[wn], L = W.len(w, d), s0 = W.start(w, d);
+      if ((wn === 'left' || wn === 'right') && k < ((o.skip && o.skip[wn]) || 0)) continue;
+      const P = (u, y, dep) => [s0[0] + W.u[0] * u - W.n[0] * (dep || 0), y, s0[2] + W.u[2] * u - W.n[2] * (dep || 0) - off];       // dep: metres into the wall
+      const q = (m2, ua, ub, ya, yb, dep, c2, uv, both) => { if (ub - ua < 0.015 || yb - ya < 0.015) return; g.quad(m2, P(ua, ya, dep), P(ub, ya, dep), P(ub, yb, dep), P(ua, yb, dep), c2, uv || [ua / ts, ya / ts, ub / ts, yb / ts], both); };
+      const bx = (ua, ub, ya, yb, d0, d1, c2) => { const a = P(ua, ya, d0), b = P(ub, yb, d1); g.box(W_, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2]), c2); };
+      const ops = ((o.plan[k] && o.plan[k][wn]) || []).slice().sort((a, b2) => a.u0 - b2.u0), fy = k * H;
+      let cur = 0;
+      for (const p of ops) { q(mat, cur, p.u0, yb, yt, 0, col); q(mat, p.u0, p.u1, yb, fy + p.v0, 0, col); q(mat, p.u0, p.u1, fy + p.v1, yt, 0, col); cur = p.u1; }
+      q(mat, cur, L, yb, yt, 0, col);
+      for (const p of ops) {
+        const y0 = fy + p.v0, y1 = fy + p.v1, dep = 0.18;
+        for (const [ua, ub, ya, yb2] of [[p.u0, p.u0, y0, y1], [p.u1, p.u1, y0, y1]]) g.quad(mat, P(ua, ya, 0), P(ua, ya, dep), P(ub, yb2, dep), P(ub, yb2, 0), col, [0, 0, 0.2, 1], true);       // jambs
+        g.quad(mat, P(p.u0, y1, 0), P(p.u1, y1, 0), P(p.u1, y1, dep), P(p.u0, y1, dep), col, [0, 0, 1, 0.2], true);
+        if (!p.door) g.quad(mat, P(p.u0, y0, 0), P(p.u1, y0, 0), P(p.u1, y0, dep), P(p.u0, y0, dep), col, [0, 0, 1, 0.2], true);
+        if (p.door) {
+          q(W_, p.u0, p.u1, y0, y1, 0.12, [0.3, 0.22, 0.16], GPU.wood); if (!lo) { q(W_, p.u0, p.u1, y0 + 0.45, y0 + 0.55, 0.1, [0.12, 0.11, 0.1], GPU.wood); q(W_, p.u0, p.u1, y0 + 1.5, y0 + 1.6, 0.1, [0.12, 0.11, 0.1], GPU.wood); }
+          bx(p.u0 - 0.1, p.u0, y0, y1 + 0.1, -0.06, 0.0, DK); bx(p.u1, p.u1 + 0.1, y0, y1 + 0.1, -0.06, 0.0, DK); bx(p.u0 - 0.1, p.u1 + 0.1, y1, y1 + 0.12, -0.08, 0.0, DK);
+          if (k === 0) bx(p.u0 - 0.15, p.u1 + 0.15, -0.35, 0.1, -0.35, 0.0, [0.5, 0.48, 0.45]);          // a stone step
+        } else if (lo) {
+          g.quad('MI_WindowGlass', P(p.u0, y0, 0.05), P(p.u1, y0, 0.05), P(p.u1, y1, 0.05), P(p.u0, y1, 0.05), [1, 1, 1], [0, 0, 1, 1], false);
+        } else {
+          g.quad('MI_WindowGlass', P(p.u0, y0, 0.16), P(p.u1, y0, 0.16), P(p.u1, y1, 0.16), P(p.u0, y1, 0.16), [1, 1, 1], [0, 0, 1, 1], false);
+          const uc = (p.u0 + p.u1) / 2; q(W_, uc - 0.02, uc + 0.02, y0, y1, 0.1, DK, GPU.wood, true); q(W_, p.u0, p.u1, (y0 + y1) / 2 - 0.02, (y0 + y1) / 2 + 0.02, 0.1, DK, GPU.wood, true);
+          bx(p.u0 - 0.07, p.u0, y0 - 0.05, y1 + 0.05, -0.04, 0.0, DK); bx(p.u1, p.u1 + 0.07, y0 - 0.05, y1 + 0.05, -0.04, 0.0, DK);
+          bx(p.u0 - 0.1, p.u1 + 0.1, y0 - 0.08, y0 + 0.02, -0.11, 0.0, [0.28, 0.24, 0.21]); bx(p.u0 - 0.08, p.u1 + 0.08, y1, y1 + 0.1, -0.06, 0.0, DK);
+          if (p.shutter) { const sc = SC[(R() * SC.length) | 0]; bx(p.u0 - 0.56, p.u0 - 0.07, y0, y1, -0.05, -0.01, sc); bx(p.u1 + 0.07, p.u1 + 0.56, y0, y1, -0.05, -0.01, sc); }
+        }
+      }
+      if (!lo) {
+        if (wn === 'front' || wn === 'back') { const n = Math.max(1, Math.round(L / 2)); for (let i = 1; i < n; i++) { const u = i * L / n; if (!ops.some(p => u > p.u0 - 0.15 && u < p.u1 + 0.15)) bx(u - 0.07, u + 0.07, yb, yt, -0.05, 0.0, DK); } }
+        if (k < fl - 1) bx(0, L, yt - 0.07, yt + 0.07, -0.06, 0.0, DK);
+        if (k === 0 && !stone) bx(0, L, -0.35, 0.12, -0.04, 0.0, [0.3, 0.28, 0.26]);                // a stone plinth under the planks
+      }
+    }
+    // corner posts
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.box(W_, sx * w / 2 - 0.09 - (sx > 0 ? 0.0 : 0.0), yb, sz * d / 2 - off - 0.09, sx * w / 2 + 0.09, yt, sz * d / 2 - off + 0.09, DK);
+    B.add(g.make('gen_walls_' + (_gn++)), MS, o.optsOf ? o.optsOf(k) : { zone: 0, skyVis: 1, cast: false });
+  }
+}
+// A generated shingle roof: two planes (double-sided), deep eaves, fascia and ridge boards, barge boards and plank gables, about 100 triangles
+// (the kit's round-tile roofs cost 2500-4700). o: w d (footprint), top (wall top y), tanP, ridgeX (ridge along the width), zc (roof centre offset along z), ov (eaves), gov (overhang at an exposed gable),
+// gl / gr: gable at the two ends of the ridge (false: party wall), tint, moss (0..1 darker patches in the vertex colour)
+function infRoofGen(B, MS, o) {
+  const g = GP(), w = o.w, d = o.d, tanP = o.tanP, ridgeX = o.ridgeX !== false, len = ridgeX ? w : d, span = ridgeX ? d : w, ov = o.ov === undefined ? 0.5 : o.ov, gov = o.gov === undefined ? 0.2 : o.gov, zc = o.zc || 0, top = o.top;
+  const hs = span / 2, yR = top + hs * tanP, yE = top - ov * tanP, a0 = -len / 2 - (o.gl === false ? 0.04 : gov), a1 = len / 2 + (o.gr === false ? 0.04 : gov), ve = hs + ov;
+  const P = (u, v, y) => ridgeX ? [u, y, zc + v] : [v, y, zc + u];
+  const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE);
+  const plane = (v0, y0, v1, y1) => {
+    const A = P(a0, v0, y0), Bp = P(a1, v0, y0), C = P(a1, v1, y1), D = P(a0, v1, y1);
+    const uv = [0, 0, (a1 - a0) / 1.25, slopeLen / 1.25];
+    g.quad(INF_S, A, Bp, C, D, col, uv, true);
+  };
+  plane(-ve, yE, 0, yR); plane(ve, yE, 0, yR);
+  const wood = [0.2, 0.17, 0.15];
+  // fascia boards along both eaves, ridge cap, barge boards up the rakes
+  for (const s of [-1, 1]) { const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE); g.beam(W_, [A[0], A[1] - 0.04, A[2]], [Bp[0], Bp[1] - 0.04, Bp[2]], 0.09, wood); }
+  { const A = P(a0, 0, yR + 0.04), Bp = P(a1, 0, yR + 0.04); g.beam(W_, A, Bp, 0.14, [0.24, 0.2, 0.17]); }
+  for (const [u, on] of [[a0, o.gl !== false], [a1, o.gr !== false]]) if (on) for (const s of [-1, 1]) { const A = P(u, s * ve, yE), Bp = P(u, 0, yR + 0.02); g.beam(W_, A, Bp, 0.08, wood); }
+  // plank gables on the wall plane, closing the roof over an exposed end wall
+  for (const [u, on, sg] of [[-len / 2, o.gl !== false, -1], [len / 2, o.gr !== false, 1]]) if (on) {
+    const A = P(u, -hs, top), Bp = P(u, hs, top), C = P(u, 0, yR);
+    g.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], true);
+  }
+  B.add(g.make('gen_roof_' + (_gn++)), MS, { zone: 0, skyVis: 1, cast: false, inZone: o.inZone || 0, inSkyVis: o.inSky === undefined ? 0.2 : o.inSky });
+}
+const hypot2 = Math.hypot;
+
+// a plain plank door with two iron straps (about 40 triangles) instead of the kit's 300-triangle door
+function infDoor() {
+  if (INFS.door) return INFS.door; const g = GP(), c = [0.3, 0.22, 0.16], f = [0.14, 0.13, 0.12];
+  g.box(W_, -0.46, 0, -0.07, 0.46, 2.04, 0.0, c); g.box(W_, -0.46, 0.45, 0.0, 0.46, 0.55, 0.02, f); g.box(W_, -0.46, 1.5, 0.0, 0.46, 1.6, 0.02, f); g.box(W_, 0.3, 1.0, 0.0, 0.36, 1.12, 0.04, f);
+  return INFS.door = g.make('gen_door_' + (_gn++));
+}
+// storeys of whatever stands against a house's side (0: nothing)
+function infNeighbour(h, east) {
+  const c = Math.cos(h.yaw), sn = Math.sin(h.yaw), lx = (east ? 1 : -1) * (h.w / 2 + 0.3), x = h.x + lx * c, z = h.z + lx * sn;
+  for (const o of INF.houses) { if (o === h) continue; const l = worldToSite(o, x, z); if (Math.abs(l[0]) < o.w / 2 && Math.abs(l[1]) < o.d / 2) return o.floors; }
+  for (const s of SITES) { if (s.infill || !s.w) continue; const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + 0.1 && Math.abs(l[1]) < s.d / 2 + 0.1) return 2; }
+  return 0;
+}
+
+function buildInfill() {
+  if (!kitReady() || !INF.houses.length || (TEST && TEST.infill === 0)) return;
+  infBatch();
+  for (const h of INF.houses) {
+    const site = SITE[h.id]; if (!site) continue;
+    const c = Math.cos(h.yaw), sn = Math.sin(h.yaw);
+    INFS.box[0] = Math.min(INFS.box[0], h.x - 12); INFS.box[1] = Math.min(INFS.box[1], h.z - 12); INFS.box[2] = Math.max(INFS.box[2], h.x + 12); INFS.box[3] = Math.max(INFS.box[3], h.z + 12);
+    if (h.enter) continue;                      // enterable houses: buildHouse + kitShell (same batch)
+    World.colliders.push({ x: site.x, z: site.z, hx: h.w / 2, hz: h.d / 2, ax: c, az: sn, bx: -sn, bz: c, y0: site.y - 1, y1: site.y + 14 });
+    INFS.shells.push(h);
+  }
+}
+
+// one shell. lo: the simple version for low quality (plain walls and roof)
+function infShell(B, h, lo) {
+  const site = SITE[h.id], R = rng(h.x * 37 + h.z * 11 + 5), V = KH.V, up = [0, 1, 0], w = h.w, d = h.d, fl = h.floors, H = 3, tanP = Math.tan(h.pitch * PI / 180);
+  const OUT = { zone: 0, skyVis: 1, cast: false }, EXT = OUT, MS = new THREE.Matrix4().fromArray(siteMatrix(site, site.y + 0.02));
+  const tn = 0.8 + R() * 0.28, tint = [tn, tn * (0.96 + R() * 0.08), tn * (0.92 + R() * 0.1)];
+  const jetty = !lo && fl >= 2 && h.jetty, sh = jetty ? 0.5 : 0;
+  const frames = k => { const o = {}, s2 = k > 0 ? sh : 0; for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); o[wn] = new THREE.Matrix4().makeBasis(V(W.u), V(up), V(W.n)).setPosition(s0[0], k * H, s0[2] - s2).premultiply(MS); } return o; };
+  const add = (name, F, x, y, z, s, ry, o) => { s = s === undefined ? 1 : s; o = o || OUT; if (Array.isArray(s) && (Math.abs(s[0] - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] }); B.add(name, KH.xf(F, x, y, z, s, ry || 0), o); };
+  const wallT = Object.assign({}, OUT, { tint });
+  const stone = h.stone;
+  const nbW = !lo || true ? infNeighbour(h, false) : 0, nbE = infNeighbour(h, true), gableFront = h.gable;
+  const doorBay = h.doorBay === undefined ? ((Math.round(w / 2) >> 1) + (h.doorSide || 0)) : h.doorBay;
+  // ── storeys: a plan of doors and windows, then the generated walls ──
+  const plan = [], nF = Math.max(1, Math.round(w / 2)), mF = w / nF;
+  for (let k = 0; k < fl; k++) {
+    const pl = plan[k] = { front: [], back: [], left: [], right: [] }, win = (c, hwid) => ({ u0: c - hwid, u1: c + hwid, v0: 0.95, v1: 2.1, shutter: R() < 0.3 });
+    for (let i = 0; i < nF; i++) {
+      const c = (i + 0.5) * mF;
+      if (k === 0) { if (i === Math.min(doorBay, nF - 1)) pl.front.push({ u0: c - 0.52, u1: c + 0.52, v0: 0, v1: 2.12, door: true }); else if (!lo && (nF < 3 || i % 2 === 0 || R() < 0.4)) pl.front.push(win(c, 0.5)); }
+      else if (h.stairs && k === 1 && i === (h.stairs > 0 ? nF - 1 : 0)) pl.front.push({ u0: c - 0.52, u1: c + 0.52, v0: 0, v1: 2.12, door: true });
+      else if (!lo && (i + k) % 2 === (h.par || 0)) pl.front.push(win(c, 0.5));
+      if (!lo && k > 0 && i % 2 === 1 && R() < 0.35) pl.back.push(win(c, 0.5));
+      if (!lo && k === 0 && R() < 0.2) pl.back.push(win(c, 0.5));
+    }
+    if (!lo) for (const wn of ['left', 'right']) if (R() < 0.3) pl[wn].push(win(d / 2, 0.45));
+  }
+  infWalls(B, MS, { w, d, fl, H, stone, tint, jetty, R, lo, plan, skip: { left: nbW, right: nbE } });
+  const F0 = frames(0);
+  if (jetty) for (let k = 1; k < fl; k++) {       // the overhanging storey rests on a deep joist beam along the front, with brackets under it
+    const g = GP(); g.box(W_, -w / 2, -0.3, -d / 2 - 0.62, w / 2, 0.02, -d / 2 + 0.1, [0.42, 0.37, 0.33]); g.box(W_, -w / 2 - 0.05, -0.34, -d / 2 - 0.58, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.36, 0.32, 0.29]);
+    for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * mF; g.beam(W_, [x, -0.7, -d / 2 - 0.5], [x, -0.3, -d / 2 + 0.02], 0.1, [0.34, 0.3, 0.27]); }
+    B.add(g.make('gen_joist_' + (_gn++)), KH.xf(MS, 0, k * H, 0, 1, 0), OUT);
+  }
+  // ── roof: generated shingles; ridge parallel to the street (eaves to the street) or gable to the street ──
+  const Ytop = fl * H, rx = !gableFront, zc = -sh, rise = (rx ? d : w) / 2 * tanP;
+  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: 0.5, gl: rx ? nbW < fl : true, gr: rx ? nbE < fl : true, tint: [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
+  if (!lo) {
+    if (h.chimney) {          // a chimney standing on the ridge
+      const cx = rx ? (h.chimney > 0 ? 1 : -1) * w * 0.28 : 0, cz = rx ? zc : d * 0.2 * (h.chimney > 0 ? 1 : -1), cb = Ytop + rise - 2.1;
+      B.add('Prop_Chimney', KH.xf(MS, cx, cb, cz, [0.9, 3.0 / 3.18, 0.9], 0), OUT);
+      if (INFS.nChim++ % 3 === 0) World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, cb + 3.2, cz).applyMatrix4(MS).toArray(), zone: 0 });
+    }
+    // front: flower boxes under upper windows, a lantern by the door, a sheltering gallery with an outside stair on some
+    const Ff = F0.front, nF = Math.max(1, Math.round(w / 2)), mF = w / nF;
+    if (fl > 1 && h.boxes) for (let i = 0; i < nF; i++) if ((i + 1) % 2 === (h.par || 0)) B.add(R.pick(INFS.fb || (INFS.fb = [0, 1, 2].map(q => genFlowerBox(1.25, rng(90 + q))))), KH.xf(frames(1).front, (i + 0.5) * mF, 0.93, 0.26, 1, 0), OUT);
+    const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), du = (Math.min(doorBay, nF - 1) + 0.5) * mF + (doorBay >= nF / 2 ? -1.0 : 1.0);
+    if (du > 0.3 && du < w - 0.3) { B.add(lf, KH.xf(Ff, du, 2.15, 0.1, 1, 0), OUT); B.add(lg, KH.xf(Ff, du, 2.15, 0.1, 1, 0), { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); }
+    if (h.stairs && fl >= 2) {
+      const sg = h.stairs, g = GP(), col = [0.34, 0.29, 0.25], zf = -d / 2, x0 = -w / 2 + 0.1, x1 = w / 2 - 0.1, dep = 1.0;
+      g.box(W_, x0, H - 0.14, zf - dep, x1, H - 0.02, zf, col);                                       // gallery floor
+      for (let i = 0; i <= Math.round((x1 - x0) / 1.1); i++) { const x = x0 + i * (x1 - x0) / Math.round((x1 - x0) / 1.1); g.box(W_, x - 0.04, H, zf - dep, x + 0.04, H + 0.95, zf - dep + 0.08, col); }
+      g.box(W_, x0, H + 0.92, zf - dep - 0.02, x1, H + 1.0, zf - dep + 0.1, col);
+      // the stair: climbs along the gallery's front edge, from the far end toward the door
+      const n = 12, run = 3.6, sa = sg > 0 ? x1 : x0, sd = sg > 0 ? -1 : 1;   // sg > 0: the door is at the west end (local x -), the stair starts at the east end and climbs west
+      for (let s = 0; s < n; s++) { const xa = sa + sd * s * run / n, xb = sa + sd * (s + 1) * run / n; g.box(W_, Math.min(xa, xb), (s + 1) * H / n - 0.09, zf - dep - 0.95, Math.max(xa, xb), (s + 1) * H / n, zf - dep, [0.4, 0.34, 0.29]); }
+      g.beam(W_, [sa, 0.1, zf - dep - 0.98], [sa + sd * run, H - 0.05, zf - dep - 0.98], 0.05, col);
+      g.beam(W_, [sa, 1.05, zf - dep - 0.98], [sa + sd * run, H + 1.0, zf - dep - 0.98], 0.04, col);
+      B.add(g.make('gen_stair_' + (_gn++)), KH.xf(MS, 0, 0, 0, 1, 0), OUT);
+      const q = siteToWorld(site, sa + sd * run / 2, zf - dep - 0.5), c = Math.cos(site.yaw), sn = Math.sin(site.yaw);
+      World.colliders.push({ x: q[0], z: q[1], hx: run / 2 + 0.1, hz: 0.55, ax: c, az: sn, bx: -sn, bz: c, y0: site.y - 1, y1: site.y + 2.6 });
+    }
+  }
+  const ok = { Ms: siteMatrix(site, site.y + 0.02), w, d, top: Ytop, rise, rx, zc, sh };
+  INFS.proxies.push(ok);
+}
+
+// scene: build the shells for the quality tier, then the batch (enterable houses added theirs through kitShell), a shadow stand-in per house
+function infillAttach() {
+  if (!INFS.batch || !SC.scene || INFS.built) return; INFS.built = true;
+  const B = INFS.batch, lowQ = (R.qName === 'low');
+  for (const h of INFS.shells) { try { infShell(B, h, lowQ && h.tier === 1); } catch (e) { console.warn('infill shell ' + h.id + ': ' + (e && e.message || e)); } }
+  if (!lowQ) {       // pennant ropes across the lanes, between houses that face each other
+    const hs = INF.houses, used = new Set(), cols = [[0.62, 0.24, 0.17], [0.72, 0.56, 0.24], [0.24, 0.36, 0.3], [0.58, 0.52, 0.4], [0.5, 0.2, 0.2]], I = new THREE.Matrix4(), rr = rng(606); let nr = 0;
+    const front = h => { const p = siteToWorld(h, (rr() - 0.5) * h.w * 0.3, -h.d / 2 - (h.jetty ? 0.58 : 0.14)); return [p[0], site0(h) + (h.floors >= 2 ? 3.75 : 2.9), p[1]]; };
+    const site0 = h => SITE[h.id].y;
+    for (const a of hs) for (const b of hs) {
+      if (nr >= 8 || a.id >= b.id || used.has(a.id) || used.has(b.id)) continue;
+      const fa = [Math.sin(a.yaw), -Math.cos(a.yaw)], fb = [Math.sin(b.yaw), -Math.cos(b.yaw)], dx = b.x - a.x, dz = b.z - a.z, dist = hyp(dx, dz);
+      if (fa[0] * fb[0] + fa[1] * fb[1] > -0.9 || dist < 6.5 || dist > 12.5) continue;
+      if (Math.abs(dx * fa[0] + dz * fa[1]) < dist * 0.9) continue;
+      const pa = front(a), pb = front(b); if (Math.abs(pa[1] - pb[1]) > 1.2) continue;
+      B.add(genBunting(pa, pb, rr, cols, 11), I, { zone: 0, skyVis: 1, cast: false }); used.add(a.id); used.add(b.id); nr++;
+    }
+  }
+  if (!B.count) return;
+  { const st = {}; for (const x of B.items || []) { const k = x.prim.mat; st[k] = st[k] || [0, 0]; st[k][0] += x.prim.idx.length / 3; st[k][1]++; } INFS.stat = st; }
+  const g = B.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); SC.scene.add(g);
+  World.kitGroups.push({ g, ext: true, infill: true, site: { x: (INFS.box[0] + INFS.box[2]) / 2, z: (INFS.box[1] + INFS.box[3]) / 2, w: INFS.box[2] - INFS.box[0], d: INFS.box[3] - INFS.box[1] } });
+  const tri = [], Vv = (M, x, y, z) => { const p = m4.tp(M, [x, y, z]); tri.push(p[0], p[1], p[2]); }, Q = (M, a, b2, c2, d2) => { for (const q of [a, b2, c2, a, c2, d2]) Vv(M, q[0], q[1], q[2]); };
+  for (const p of INFS.proxies) {
+    const M = p.Ms, xw = p.w / 2 - 0.1, z0 = -p.d / 2 - 0.55, z1 = p.d / 2 - 0.1, y = p.top, r = y + p.rise;
+    Q(M, [-xw, -1, z0], [xw, -1, z0], [xw, y, z0], [-xw, y, z0]); Q(M, [xw, -1, z1], [-xw, -1, z1], [-xw, y, z1], [xw, y, z1]); Q(M, [-xw, -1, z1], [-xw, -1, z0], [-xw, y, z0], [-xw, y, z1]); Q(M, [xw, -1, z0], [xw, -1, z1], [xw, y, z1], [xw, y, z0]);
+    if (p.rx) { const zc = (z0 + z1) / 2 - 0.25, xe = p.w / 2 + 0.05; Q(M, [-xe, y - 0.25, z0 - 0.3], [xe, y - 0.25, z0 - 0.3], [xe, r, zc], [-xe, r, zc]); Q(M, [xe, y - 0.25, z1 + 0.3], [-xe, y - 0.25, z1 + 0.3], [-xe, r, zc], [xe, r, zc]); }
+    else { const x = p.w / 2 + 0.3; Q(M, [-x, y - 0.25, z0 - 0.3], [-x, y - 0.25, z1 + 0.3], [0, r, z1 + 0.3], [0, r, z0 - 0.3]); Q(M, [x, y - 0.25, z1 + 0.3], [x, y - 0.25, z0 - 0.3], [0, r, z0 - 0.3], [0, r, z1 + 0.3]); }
+  }
+  if (tri.length) {
+    const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(tri), 3));
+    const mat = new THREE.MeshBasicNodeMaterial(); mat.side = THREE.DoubleSide; mat.colorWrite = false; mat.depthWrite = false; mat.depthTest = false; mat.fog = false;
+    const mesh = new THREE.Mesh(gg, mat); mesh.castShadow = true; mesh.frustumCulled = false; mesh.matrixAutoUpdate = false; mesh.renderOrder = -5; mesh.name = 'infill-shadow-proxy'; SC.scene.add(mesh);
+  }
+  const inner = sceneUpdate;
+  sceneUpdate = function (camPos, q) {
+    inner(camPos, q);
+    for (const k of World.kitGroups) if (k.infill) { const b = INFS.box, dx = Math.max(0, b[0] - camPos[0], camPos[0] - b[2]), dz = Math.max(0, b[1] - camPos[2], camPos[2] - b[3]); k.g.visible = !World.deepIn && hyp(dx, dz) < q.yardRange * 2.6 + 30; }
+  };
+}
+
+// the walls of an enterable infill house (called from kitShell): the plan comes from the building's own openings, the upper storey is laid out like a shell's
+function infKitWalls(c, b, MS, frames, zone, sy, R) {
+  const { site, spec, w, d, H, openings } = c, st = spec.kitStyle, fl = st.up ? 2 : 1, plan = [];
+  plan[0] = { front: [], back: [], left: [], right: [] };
+  for (const wn of ['front', 'back', 'left', 'right']) {
+    const L = WALLS[wn].len(w, d);
+    for (const o of openings[wn]) {
+      const cu = (o.u0 + o.u1) / 2, hw = o.door ? Math.min(0.55 * Math.max(1, o.def.ksx || 1), cu, L - cu) : Math.min(0.55, cu, L - cu);
+      if (hw < 0.3) continue;
+      plan[0][wn].push({ u0: cu - hw, u1: cu + hw, v0: o.door ? 0 : (o.def.sill || 0.95), v1: o.door ? (o.def.h || 2.12) : (o.def.sill || 0.95) + (o.def.h || 1.55), door: !!o.door, shutter: !o.door && hw > 0.5 && R() < 0.35 });
+      if (o.door && o.def.kLamp) { const side = cu + hw + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F: frames[wn], wn, u: cu + side * (hw + 0.42), v: 1.5 * sy }); }
+    }
+  }
+  if (fl > 1) { plan[1] = { front: [], back: [], left: [], right: [] }; const nF = Math.max(2, Math.round(w / 2)), mF = w / nF; for (let i = 0; i < nF; i++) { const cu = (i + 0.5) * mF; if (i % 2 === 0) plan[1].front.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1, shutter: R() < 0.4 }); if (i % 2 === 1) plan[1].back.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1 }); } plan[1].left.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); plan[1].right.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); }
+  const tn = 0.85 + R() * 0.25;
+  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: [tn, tn * 0.98, tn * 0.95], jetty: false, R, plan, skip: {}, optsOf: k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 } });
+}
