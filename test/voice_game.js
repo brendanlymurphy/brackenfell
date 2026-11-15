@@ -7,7 +7,7 @@ ok(!!V.man, 'manifest loaded (' + (V.man ? Object.keys(V.man.lines).length : 0) 
 const requested = []; const l0 = V.load; V.load = function (f) { requested.push(f); return l0.apply(this, arguments); };
 const waitFor = async (fn, ms) => { for (let t = 0; t < ms; t += 100) { if (fn()) return true; await sleep(100); game.step(1, dt); } return fn(); };
 const talk = async (id, mode) => {
-  const npc = NPC[id]; requested.length = 0; game.tp(npc.pos[0] + 1.5, npc.pos[2], 270); Player.locked = false; startTalk(npc);
+  const npc = NPC[id]; requested.length = 0; game.tp(npc.pos[0] + 1.5, npc.pos[2], 270); Player.locked = false; game.step(3, dt); startTalk(npc);
   const text = document.getElementById('dtext').textContent, e = V.man.lines[V.keyOf(id, text)];
   ok(!!e, id + ': the node text has a voice entry'); if (!e) { endTalk(); return; }
   ok(requested.includes(e.f), id + ': requested ' + e.f);
