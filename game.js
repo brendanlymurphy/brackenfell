@@ -5336,10 +5336,10 @@ function pLayout(P) {
   }
   for (const id in P.rooms) {
     const r = P.rooms[id], cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2, pts = r.doors.filter(d => d.wall).map(d => d.wall.ax === 'x' ? [d.x, d.z + (cz > d.z ? 1 : -1) * Math.min(1.9, Math.abs(cz - d.z))] : [d.x + (cx > d.x ? 1 : -1) * Math.min(1.9, Math.abs(cx - d.x)), d.z]);
-    for (const s of P.stairs) { if (s.k0 === r.k && rOv(s.low, rGrow(r, 0.1))) pts.push(s.lowPt); if (s.k1 === r.k && rOv(s.high, rGrow(r, 0.1))) pts.push(s.highPt); }
+    for (const s of P.stairs) { if (s.k0 === r.k && rOv(s.low, rGrow(r, 0.1))) { const q = s.lowPt.slice(); q.stair = 1; pts.push(q); } if (s.k1 === r.k && rOv(s.high, rGrow(r, 0.1))) { const q = s.highPt.slice(); q.stair = 1; pts.push(q); } }
     r.pts = pts;
     for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
-      const a = pts[i], b = pts[j], x0 = Math.min(a[0], b[0]) - 0.45, x1 = Math.max(a[0], b[0]) + 0.45, z0 = Math.min(a[1], b[1]) - 0.45, z1 = Math.max(a[1], b[1]) + 0.45;
+      const a = pts[i], b = pts[j]; if (a.stair && b.stair) continue; const x0 = Math.min(a[0], b[0]) - 0.45, x1 = Math.max(a[0], b[0]) + 0.45, z0 = Math.min(a[1], b[1]) - 0.45, z1 = Math.max(a[1], b[1]) + 0.45;
       // an L or diagonal path: the bend is at whichever end lies nearer the middle of the room
       const dx = Math.abs(a[0] - b[0]), dz = Math.abs(a[1] - b[1]);
       if (dx < 0.01 || dz < 0.01) P.clear.push({ x0, x1, z0, z1, k: r.k, kind: 'path', room: r });
@@ -5362,7 +5362,7 @@ function pStairGeom(P, s) {
   const rect = (a, b, la, lb) => ax === 'x' ? { x0: Math.min(a, b), x1: Math.max(a, b), z0: la, z1: lb } : { x0: la, x1: lb, z0: Math.min(a, b), z1: Math.max(a, b) };
   s.p0 = p0; s.p1 = p1; s.lat = lat; s.hw = hw;
   s.low = rect(p0, p1, lat - hw, lat + hw); s.high = s.low;
-  s.hole = rect(p0, p1 + d * 0.0, lat - hw, lat + hw);        // the opening in the slab of the level above: the whole run
+  s.hole = rect(p0 - d * 0.4, p1, lat - hw - 0.1, lat + hw + 0.1);        // the opening in the slab of the level above: the whole run
   s.lowPt = ax === 'x' ? [p0 - d * 0.7, lat] : [lat, p0 - d * 0.7];       // where one stands to start up
   s.highPt = ax === 'x' ? [p1 + d * 0.8, lat] : [lat, p1 + d * 0.8];      // where one stands when arrived
   P.holes.push({ k: s.k1, r: s.hole, stair: s });
@@ -5805,11 +5805,11 @@ function dressLanding(P, room) { pLamp(P, room, ...pCentre(room)); for (const sd
 //   up:     a loft over the east half (the stairwell, a bed) and two chambers over the west half, round the chimney stack
 //   below:  a cellar under the hall and a second vault under the store, joined by a door; the stair arrives in the hall
 const stepTo = (v, a, b) => clamp(Math.round(v), a, b);
-const H_GROUND = 2.7, H_UP = 2.4, H_CELLAR = 2.4;
+const H_GROUND = 2.7, H_UP = 2.4, H_CELLAR = 3.0;
 function planHouse(P, c, info) {
   info = info || {};
   const st = c.spec.kitStyle || {}, up = info.up !== undefined ? info.up : !!st.up, need = P.need;
-  const W = info.W || stepTo(c.w * 1.35, 8, 11), D = info.D || stepTo(c.d * 1.6, 9, 11), Dh = 6, x0 = -W / 2, x1 = W / 2;
+  const W = info.W || stepTo(c.w * 1.35, 8, 11), D = info.D || stepTo(c.d * 1.6, 10, 12), Dh = 7, x0 = -W / 2, x1 = W / 2;
   P.dims = { W, D, Dh };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H_GROUND); if (up) pLevel(P, 1, H_GROUND + PW.SLAB, H_UP);
   const hall = pRoom(P, 0, 'hall', 'hall', x0, 0, x1, Dh), store = pRoom(P, 0, 'store', 'store', x0, Dh, 0, D), bed0 = pRoom(P, 0, 'bedroom', 'bedroom', 0, Dh, x1, D);
@@ -5819,12 +5819,12 @@ function planHouse(P, c, info) {
   const cel = pRoom(P, -1, 'cellar', 'cellar', x0, 0, x1, Dh, { floor: 'stone', win: false }), vault = pRoom(P, -1, 'vault', 'cellar', x0, Dh, 0, D, { floor: 'stone', win: false });
   pDoor(P, 'cellar', 'vault', x0 / 2, Dh);
   // the stairs: cellar -> hall along the west wall (toward +z), hall -> loft along the east wall (toward +z)
-  const tr = 0.24;
+  const tr = 0.22;
   pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: x0 + 0.95, z: 1.3, width: 1.0, tread: tr });
   if (up) {
     pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: x1 - 0.95, z: 1.3, width: 1.0, tread: tr });
     pRoom(P, 1, 'loft', 'bedroom', 0, 0, x1, D); pRoom(P, 1, 'chamber1', 'bedroom', x0, 0, 0, Dh); pRoom(P, 1, 'chamber2', 'bedroom', x0, Dh, 0, D);
-    pDoor(P, 'loft', 'chamber1', 0, 2.5); pDoor(P, 'loft', 'chamber2', 0, 7.5);
+    pDoor(P, 'loft', 'chamber1', 0, 2.5); pDoor(P, 'loft', 'chamber2', 0, 8.5);
   }
   pLayout(P);
   // ground floor

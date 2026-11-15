@@ -90,10 +90,10 @@ function pLayout(P) {
   }
   for (const id in P.rooms) {
     const r = P.rooms[id], cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2, pts = r.doors.filter(d => d.wall).map(d => d.wall.ax === 'x' ? [d.x, d.z + (cz > d.z ? 1 : -1) * Math.min(1.9, Math.abs(cz - d.z))] : [d.x + (cx > d.x ? 1 : -1) * Math.min(1.9, Math.abs(cx - d.x)), d.z]);
-    for (const s of P.stairs) { if (s.k0 === r.k && rOv(s.low, rGrow(r, 0.1))) pts.push(s.lowPt); if (s.k1 === r.k && rOv(s.high, rGrow(r, 0.1))) pts.push(s.highPt); }
+    for (const s of P.stairs) { if (s.k0 === r.k && rOv(s.low, rGrow(r, 0.1))) { const q = s.lowPt.slice(); q.stair = 1; pts.push(q); } if (s.k1 === r.k && rOv(s.high, rGrow(r, 0.1))) { const q = s.highPt.slice(); q.stair = 1; pts.push(q); } }
     r.pts = pts;
     for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
-      const a = pts[i], b = pts[j], x0 = Math.min(a[0], b[0]) - 0.45, x1 = Math.max(a[0], b[0]) + 0.45, z0 = Math.min(a[1], b[1]) - 0.45, z1 = Math.max(a[1], b[1]) + 0.45;
+      const a = pts[i], b = pts[j]; if (a.stair && b.stair) continue; const x0 = Math.min(a[0], b[0]) - 0.45, x1 = Math.max(a[0], b[0]) + 0.45, z0 = Math.min(a[1], b[1]) - 0.45, z1 = Math.max(a[1], b[1]) + 0.45;
       // an L or diagonal path: the bend is at whichever end lies nearer the middle of the room
       const dx = Math.abs(a[0] - b[0]), dz = Math.abs(a[1] - b[1]);
       if (dx < 0.01 || dz < 0.01) P.clear.push({ x0, x1, z0, z1, k: r.k, kind: 'path', room: r });
@@ -116,7 +116,7 @@ function pStairGeom(P, s) {
   const rect = (a, b, la, lb) => ax === 'x' ? { x0: Math.min(a, b), x1: Math.max(a, b), z0: la, z1: lb } : { x0: la, x1: lb, z0: Math.min(a, b), z1: Math.max(a, b) };
   s.p0 = p0; s.p1 = p1; s.lat = lat; s.hw = hw;
   s.low = rect(p0, p1, lat - hw, lat + hw); s.high = s.low;
-  s.hole = rect(p0, p1 + d * 0.0, lat - hw, lat + hw);        // the opening in the slab of the level above: the whole run
+  s.hole = rect(p0 - d * 0.4, p1, lat - hw - 0.1, lat + hw + 0.1);        // the opening in the slab of the level above: the whole run
   s.lowPt = ax === 'x' ? [p0 - d * 0.7, lat] : [lat, p0 - d * 0.7];       // where one stands to start up
   s.highPt = ax === 'x' ? [p1 + d * 0.8, lat] : [lat, p1 + d * 0.8];      // where one stands when arrived
   P.holes.push({ k: s.k1, r: s.hole, stair: s });

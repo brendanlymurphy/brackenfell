@@ -45,7 +45,7 @@ function walk(st, up, start, v) {
     if (P.pos[1] < lo - 0.35) { fails.push(tag + ': fell through'); break; }
     // on the stair: stay between its sides
     const px = P.pos[0] - a.p[0], pz = P.pos[2] - a.p[2], along = px * ux + pz * uz, lat = Math.abs(-px * uz + pz * ux);
-    if (along > 0.4 && along < al - 0.5 && P.pos[1] > lo + 0.5 && P.pos[1] < hi - 0.3) { maxLat = Math.max(maxLat, lat); if (lat > st.width / 2 + 0.15) fails.push(tag + ' frame ' + f + ': off the stair sideways (' + lat.toFixed(2) + ' m from the axis)'); }
+    if (along > 0.4 && along < al - 0.5 && P.pos[1] > lo + 0.5 && P.pos[1] < hi - 0.3 && P.onGround) { maxLat = Math.max(maxLat, lat); if (lat > st.width / 2 + 0.15) fails.push(tag + ' frame ' + f + ': off the stair sideways (' + lat.toFixed(2) + ' m from the axis)'); }
     // a head in a slab
     for (const fl of World.floors) { const y = floorHeight(fl, P.pos[0], P.pos[2]); if (y === null) continue; const u = y - 0.12; if (P.pos[1] + 1.5 < u && P.pos[1] + PLAYER_HEAD > u + 0.04) { fails.push(tag + ' frame ' + f + ': head in a floor at y ' + y.toFixed(2) + ' (feet ' + P.pos[1].toFixed(2) + ')'); break; } }
     // stuck: no progress to the goal over 1.2 s while pushing

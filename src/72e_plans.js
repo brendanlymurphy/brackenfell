@@ -186,11 +186,11 @@ function dressLanding(P, room) { pLamp(P, room, ...pCentre(room)); for (const sd
 //   up:     a loft over the east half (the stairwell, a bed) and two chambers over the west half, round the chimney stack
 //   below:  a cellar under the hall and a second vault under the store, joined by a door; the stair arrives in the hall
 const stepTo = (v, a, b) => clamp(Math.round(v), a, b);
-const H_GROUND = 2.7, H_UP = 2.4, H_CELLAR = 2.4;
+const H_GROUND = 2.7, H_UP = 2.4, H_CELLAR = 3.0;
 function planHouse(P, c, info) {
   info = info || {};
   const st = c.spec.kitStyle || {}, up = info.up !== undefined ? info.up : !!st.up, need = P.need;
-  const W = info.W || stepTo(c.w * 1.35, 8, 11), D = info.D || stepTo(c.d * 1.6, 9, 11), Dh = 6, x0 = -W / 2, x1 = W / 2;
+  const W = info.W || stepTo(c.w * 1.35, 8, 11), D = info.D || stepTo(c.d * 1.6, 10, 12), Dh = 7, x0 = -W / 2, x1 = W / 2;
   P.dims = { W, D, Dh };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H_GROUND); if (up) pLevel(P, 1, H_GROUND + PW.SLAB, H_UP);
   const hall = pRoom(P, 0, 'hall', 'hall', x0, 0, x1, Dh), store = pRoom(P, 0, 'store', 'store', x0, Dh, 0, D), bed0 = pRoom(P, 0, 'bedroom', 'bedroom', 0, Dh, x1, D);
@@ -200,12 +200,12 @@ function planHouse(P, c, info) {
   const cel = pRoom(P, -1, 'cellar', 'cellar', x0, 0, x1, Dh, { floor: 'stone', win: false }), vault = pRoom(P, -1, 'vault', 'cellar', x0, Dh, 0, D, { floor: 'stone', win: false });
   pDoor(P, 'cellar', 'vault', x0 / 2, Dh);
   // the stairs: cellar -> hall along the west wall (toward +z), hall -> loft along the east wall (toward +z)
-  const tr = 0.24;
+  const tr = 0.22;
   pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: x0 + 0.95, z: 1.3, width: 1.0, tread: tr });
   if (up) {
     pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: x1 - 0.95, z: 1.3, width: 1.0, tread: tr });
     pRoom(P, 1, 'loft', 'bedroom', 0, 0, x1, D); pRoom(P, 1, 'chamber1', 'bedroom', x0, 0, 0, Dh); pRoom(P, 1, 'chamber2', 'bedroom', x0, Dh, 0, D);
-    pDoor(P, 'loft', 'chamber1', 0, 2.5); pDoor(P, 'loft', 'chamber2', 0, 7.5);
+    pDoor(P, 'loft', 'chamber1', 0, 2.5); pDoor(P, 'loft', 'chamber2', 0, 8.5);
   }
   pLayout(P);
   // ground floor
