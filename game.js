@@ -8148,6 +8148,21 @@ function wPick(id, p3, label, item, mesh, glow) {
 }
 const wGround = (p, lx, lz) => { const q = siteToWorld(p, lx, lz); return [q[0], wy(q[0], q[1]), q[1]]; };
 
+// ── Highfold's two enterable houses go through the village's own path (HOUSES -> buildHouse -> a cell reached by its door); the other two stay shells ──
+if (typeof HOUSES !== 'undefined' && typeof KIT_STYLE !== 'undefined' && WILDS.on) {
+  HOUSES['high.a'] = {
+    H: 2.4, walls: 'timber', roof: 'thatch', plaster: [1, 0.93, 0.84], shutter: [0.32, 0.44, 0.34],
+    doors: [{ wall: 'front', pos: 0.9 }], windows: [{ wall: 'front', pos: -1.6 }, { wall: 'back', pos: -1.2 }, { wall: 'right', pos: -0.8 }],
+    interior(c) { cottageInterior(c, { blanket: COL.green, tableItems: ['mug', 'plate', 'candle', 'loaf'], loot: [['gold', 9]] }); }
+  };
+  HOUSES['high.c'] = {
+    H: 2.4, walls: 'timber', roof: 'thatch', plaster: [0.96, 0.92, 0.82], shutter: [0.5, 0.36, 0.3],
+    doors: [{ wall: 'front', pos: -0.9 }], windows: [{ wall: 'front', pos: 1.5 }, { wall: 'back', pos: 1.2 }],
+    interior(c) { cottageInterior(c, { blanket: COL.purple, fur: true, tableItems: ['bowl', 'bottle', 'candle', 'pot'], loot: [['gold', 6], ['apple', 2]] }); }
+  };
+  KIT_STYLE['high.a'] = { timber: true, shingle: true, ground: 'plaster', vines: 2 }; KIT_STYLE['high.c'] = { timber: true, shingle: true, ground: 'plaster', vines: 1 };
+  for (const id of ['high.a', 'high.c']) { const st = SITE[id], h = WILDS.houses.find(k => k.id === id); if (st) { st.floors = 1; st.w = h.w = id === 'high.a' ? 6.4 : 6.0; st.d = h.d = id === 'high.a' ? 5.2 : 5.0; h.floors = 1; h.cell = true; } }
+}
 // ───────────────────────── the builders: one per place ─────────────────────────
 const WBUILD = {};
 WBUILD.shrine = (p, m, R) => {
@@ -8566,7 +8581,7 @@ function wildsKitBuild() {
       if (k.inst) { const key = name + '|' + (k.maxDist || 0); (insts[key] = insts[key] || { name, maxDist: k.maxDist, mats: [] }).mats.push(M); } else B.add(name, M, k.tint ? { tint: k.tint } : undefined);
     }
     for (const it of Object.values(insts)) B.addInstanced(it.name, it.mats, { cell: 64, maxDist: it.maxDist || 70, cast: false });
-    if (houses) for (const h of houses) { try { if (h.barn) wBarn(B, h, low); else infShell(B, h, low); } catch (e) { console.warn('hamlet house ' + h.id + ': ' + (e && e.stack || e)); } }
+    if (houses) for (const h of houses) { if (h.cell && Cells.by[h.id]) continue; try { if (h.barn) wBarn(B, h, low); else infShell(B, h, low); } catch (e) { console.warn('hamlet house ' + h.id + ': ' + (e && e.stack || e)); } }
     if (!B.count && !Object.keys(insts).length) continue;
     const g = B.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); SC.scene.add(g);
     let t = 0; g.traverse(o => { if (o.isMesh) t += o.geometry.index.count / 3 * (o.isInstancedMesh ? o.count : 1); });
