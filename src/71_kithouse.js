@@ -57,7 +57,7 @@ const KH = (() => {
 let kitFB = null;
 // With cells the shell is laid twice: pass 'ext' on the village site (outside faces, a closed door, glowing windows, no interior) and pass 'int' in the cell's own
 // frame (the room's side of the same walls, floor, roof lining). Without cells one pass, 'both', lays it all on the site as it always was.
-function kitShell(c) { if (!c.cell) return kitShellPass(c, 'both'); kitShellPass(c, 'ext'); kitShellPass(c, 'int'); }
+function kitShell(c) { if (!c.cell) return kitShellPass(c, 'both'); kitShellPass(c, 'ext'); if (!c.planned) kitShellPass(c, 'int'); }
 function kitShellPass(c, pass) {
   const { spec, w, d, H, t, hd, glow, zone, openings, tanP } = c, site = c.xsite, X = pass !== 'int', I = pass !== 'ext', ext = pass === 'int' ? c.ext : c.xext, Ms = pass === 'int' ? c.Ms : c.Mx, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays

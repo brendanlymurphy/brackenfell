@@ -1,6 +1,8 @@
 // ───────────────────────── story: state, quests, dialogue, things you can do ─────────────────────────
 const S = { gold: 6, items: {}, q: {}, flags: {}, opened: {}, picked: {} };
 const ITEMS = {
+  cryptkey: ['Iron crypt key', 'Cold and heavy, with a cross cut in the bow. It hung in the sacristy for a generation.'],
+  rusty: ['Rusted cellar key', 'Left behind by someone in a hurry. It fits the heavy door under the tower.'],
   malt: ['Sack of malt', 'Osric’s malted barley, bound for the Honeyed Hart.'],
   hammer: ['Cross-peen hammer', 'Brandt’s favourite. The handle is worn smooth.'],
   frostcap: ['Frostcap', 'A pale blue flower that glows faintly at dusk.'],
@@ -33,9 +35,10 @@ const QUESTS = {
   fire: { name: 'The Harvest Fire', stages: ['Speak with Elder Rowan', 'Light the fire pit in the square'] },
   camp: { name: 'Smoke in the Pines', stages: ['Drive the outlaws from their camp in the pines, north-west of the gate', 'Tell Elder Rowan the camp is empty'] },
   tools: { name: 'Tongs and Temper', stages: ['Find Garrick One-Ear, camped west of the watchtower path', 'Bring Brandt his tools'] },
+  crypt: { name: 'The Sexton’s Key', stages: ['Find the crypt key in the chapel sacristy', 'Unlock the gate in the crypt under the chapel', 'Open the reliquary behind the gate'] },
   bounty: { name: 'Bounty: Outlaws', stages: ['Put down five outlaws', 'Collect the bounty from Warden Hale'] },
 };
-const QORDER = ['welcome', 'ale', 'hammer', 'herbs', 'bell', 'fire', 'camp', 'tools', 'bounty'];
+const QORDER = ['welcome', 'ale', 'hammer', 'herbs', 'bell', 'fire', 'camp', 'tools', 'crypt', 'bounty'];
 const BOUNTY_N = 5;
 const qAt = id => { const q = S.q[id]; return !q ? -1 : q.done ? 99 : q.stage; };
 const has = (id, n) => (S.items[id] || 0) >= (n || 1);
@@ -53,6 +56,7 @@ function questTarget(id) {
   if (id === 'ale') return st === 0 ? npc('osric') : npc('greta');
   if (id === 'hammer') return st === 0 ? npc('tobin') : st === 1 ? [SITE.tower.x, 0, SITE.tower.z] : npc('brandt');
   if (id === 'herbs') { if (st === 1) return npc('maren'); let best = null, bd = 1e9; for (const p of World.pickups) { if (p.item !== 'frostcap' || p.gone) continue; const d = hyp(p.p[0] - Player.pos[0], p.p[2] - Player.pos[2]); if (d < bd) { bd = d; best = p.p; } } return best; }
+  if (id === 'crypt') { const h = World.houses.chapel; return h ? [h.site.x, 0, h.site.z] : null; }
   if (id === 'bell') return st === 0 ? npc('marta') : st === 1 ? npc('aldous') : World.bell.p;
   if (id === 'fire') return st === 0 ? npc('rowan') : [World.bonfirePos[0], 0, World.bonfirePos[1]];
   const camp = cid => { const c = Foes.camps.find(k => k.id === cid); return [c.x, 0, c.z]; };
@@ -176,6 +180,7 @@ function interactLabel(it) {
   if (it.kind === 'loot') return 'Search ' + it.name;
   if (it.kind === 'pickup') return it.gone ? null : it.label;
   if (it.kind === 'read') return 'Read';
+  if (it.kind === 'gate') return S.opened[it.id] ? null : has(it.key) ? 'Unlock the gate' : 'Iron gate';
   if (it.kind === 'bed') return 'Sleep';
   if (it.kind === 'bell') return qAt('bell') >= 2 ? 'Ring the bell' : null;
   if (it.kind === 'shopitem') return 'Hemp rope';
@@ -189,6 +194,10 @@ function interactUse(it) {
     S.opened[it.id] = 1; Audio2.chest();
     const got = []; for (const [id, n] of it.loot || []) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
     toast('Found: ' + got.join(', ')); uiPurse(); save();
+    if (it.id === 'chapel.sacristy' && qAt('crypt') < 0) { qStart('crypt', 0); qStage('crypt', 1); } else if (it.id === 'chapel.relic') qDone('crypt');
+  } else if (it.kind === 'gate') {
+    if (!has(it.key)) toast('The gate is locked. A heavy iron lock, old and cared for.');
+    else { S.opened[it.id] = 1; Audio2.chest(); toast('The lock turns with a groan.'); const i = World.colliders.indexOf(it.col); if (i >= 0) World.colliders.splice(i, 1); if (it.mesh) it.mesh.gone = true; if (it.hide) it.hide(); if (it.id === 'chapel.gate') qStage('crypt', 2); save(); }
   } else if (it.kind === 'loot') {
     const got = []; Audio2.pickup();
     for (const [id, n] of it.loot) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
