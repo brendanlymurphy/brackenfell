@@ -78,7 +78,8 @@ const Grass = { mesh: null, N: 0, range: 0 };
           base.assign(mix(base, vec3(0.30, 0.21, 0.06), field)); tip.assign(mix(tip, vec3(0.72, 0.52, 0.17), field));
           const flower = step(float(1 - 0.006).sub(smoothstep(0.55, 0.80, mn2.b).mul(0.05)), r0.w).mul(field.oneMinus()).mul(step(0.5, t)).mul(0.85);
           const fc = mix(mix(vec3(0.95, 0.9, 0.85), vec3(0.95, 0.75, 0.15), step(0.5, r1.x)), vec3(0.55, 0.35, 0.85), step(0.75, r1.y));
-          const c = mix(mix(base.mul(0.55), tip, t), fc, flower);
+          const c = mix(mix(base.mul(0.55), tip, t), fc, flower).toVar();
+          c.mulAssign(mix(float(1), 0.74, U.wet));                 // wet grass is darker, like the turf under it
           vCol.assign(c);
           const amb = mix(U.ambGnd, U.ambSky, 0.85).mul(mix(0.5, 1.0, t));
           vEm.assign(c.mul(amb.add(SH.pointLights(root.add(vec3(0, 0.2, 0)), vec3(0, 1, 0), float(0), float(0.5)))));

@@ -8,7 +8,7 @@ const R = {
   q: QUALITY.high, qName: 'high', scale: 1, frame: 0, P: null, busy: false,
   cam: { pos: [0, 2, 0], yaw: 0, pitch: 0, fovMin: 0.92 },
   maxSkin: 256, boneData: new Float32Array(256 * 256),
-  partMax: 1536, partData: new Float32Array(1536 * 12), partCount: 0,
+  partMax: 2560, partData: new Float32Array(2560 * 12), partCount: 0,      // room for rain (up to 900 streaks and their splashes) on top of smoke, flames and wildlife
   stats: { draws: 0, tris: 0 },
 };
 function renderInit() {

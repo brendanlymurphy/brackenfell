@@ -37,11 +37,16 @@ function airUpdate(put, dt, time, env, cam) {
       if (f.t > 12) { f.st = 'gone'; f.t = 0; f.wait = 40 + (f.ph % 30); }
     } else { f.wait -= dt; if (f.wait <= 0 && d > 25) f.st = 'perch'; }
   }
-  // lake mist in the first and last light of the day, drifting over the water
-  const mist = Math.max(Math.exp(-Math.pow((hr - 6.0) / 1.6, 2)), Math.exp(-Math.pow((hr - 19.2) / 1.4, 2)));
-  if (mist > 0.04 && hyp(cam[0] - LAKE.x, cam[2] - LAKE.z) < 120) for (let i = 0; i < 26; i++) {
-    const a = i * 2.399 + 0.4, r = LAKE.r * (0.15 + 0.8 * ((i * 0.618) % 1)), x = LAKE.x + Math.cos(a) * r + Math.sin(time * 0.05 + i) * 3 + wx * time * 0.1 % 6, z = LAKE.z + Math.sin(a) * r + Math.cos(time * 0.04 + i * 1.7) * 3;
-    put(x, LAKE.y + 0.5 + (i % 3) * 0.35, z, 7 + (i % 4) * 1.6, 0.74, 0.78, 0.82, 0.075 * mist, i, 1, 1, i * 0.13);
+  // lake mist: banks lying on the water in the first light (and thinly at dusk), sliding downwind and spilling a little way up the shore
+  const mist = typeof Weather !== 'undefined' ? Weather.lakeMist(hr) : Math.max(Math.exp(-Math.pow((hr - 6.0) / 1.6, 2)), Math.exp(-Math.pow((hr - 19.2) / 1.4, 2)));
+  if (mist > 0.04 && hyp(cam[0] - LAKE.x, cam[2] - LAKE.z) < 190) {
+    const lit = 0.55 + 0.45 * sat(env.day * 1.5), span = LAKE.r * 2.6, dr = [Wind.off[0] * 0.12, Wind.off[1] * 0.12];
+    for (let i = 0; i < 46; i++) {
+      const hx = (i * 0.61803398875) % 1, hz = (i * 0.75487766625) % 1, low = i % 3 !== 0;
+      const x = LAKE.x + ((hx * span + dr[0]) % span + span) % span - span / 2 + Math.sin(time * 0.05 + i) * 2, z = LAKE.z + ((hz * span + dr[1]) % span + span) % span - span / 2 + Math.cos(time * 0.04 + i * 1.7) * 2;
+      const rr = hyp(x - LAKE.x, z - LAKE.z) / (LAKE.r * 1.3), edge = 1 - smooth(0.75, 1.0, rr); if (edge <= 0.01) continue;        // thins out past the shore
+      put(x, LAKE.y + (low ? 0.7 : 2.1) + (i % 4) * 0.25, z, (low ? 8 : 11) + (i % 5) * 1.5, 0.80 * lit, 0.84 * lit, 0.90 * lit, (low ? 0.15 : 0.085) * mist * edge, i, 1, low ? 0.55 : 0.7, i * 0.13);
+    }
   }
   // leaves loosen from the nearest trees by day and spiral down on the wind
   if (day > 0.3 && AIR.near.length) for (let k = 0; k < AIR.near.length; k++) for (let j = 0; j < 4; j++) {

@@ -612,6 +612,7 @@ SH.init = function () {
     zenith: uniform(V3()), horizon: uniform(V3()), stars: uniform(0), aurora: uniform(0),
     moonDir: uniform(new THREE.Vector3(0, 1, 0)), moonBright: uniform(0), sunDisc: uniform(new THREE.Vector3(0, 1, 0)), sunDiscI: uniform(0),
     wind: uniform(V4()), windOff: uniform(new THREE.Vector2()),     // wind: dir.x, dir.z, strength, time. windOff: how far (m) the air has travelled, which carries the gust pattern
+    rain: uniform(0), wet: uniform(0),                        // falling now (0..1), and how wet the ground is (lags behind)
     cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0),
     lightPos: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // xyz, radius
     lightCol: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // rgb, zone (255 = everywhere)
@@ -733,6 +734,7 @@ SH.update = function (env, camPos, time) {
   s3(U.zenith, env.zenith); s3(U.horizon, env.horizon); U.stars.value = env.stars; U.aurora.value = env.aurora;
   s3(U.moonDir, env.moonDir); U.moonBright.value = env.moonBright; s3(U.sunDisc, env.sunDir); U.sunDiscI.value = env.sunDisc;
   U.wind.value.set(env.windDir[0], env.windDir[1], env.windStrength, time); U.windOff.value.set(Wind.off[0], Wind.off[1]);
+  U.rain.value = env.rain || 0; U.wet.value = env.wet || 0;
   U.cloud.value = env.cloud; U.windowGlow.value = env.windowGlow; U.lakeY.value = World.lakeY || 0; U.indoor.value = World.indoor || 0;
 };
 
@@ -950,10 +952,14 @@ function terrainMaterial() {
     If(wGrav.greaterThan(0.004), () => { over(samp(MAT.GRAVEL, uvG.mul(1.4), dGx.mul(1.4), dGy.mul(1.4)), wGrav); });
     If(sp.g.greaterThan(0.004), () => { const c = samp(MAT.COBBLE, uvC, dCx, dCy); c.h.assign(c.h.mul(0.2).add(0.72)); over(c, sat(sp.g.mul(1.15)).toVar()); });
     // puddles collect in the low spots of roads and wet banks
-    const wetGround = max(max(wMud, wPath.mul(0.8)), s2.g.mul(0.9)).mul(sp.g.oneMinus());
-    const pud = smoothstep(0.58, 0.70, mn2.a.mul(0.50).add(mn3.b.mul(0.28)).add(s2.g.mul(0.55))).mul(wetGround).mul(smoothstep(0.02, 0.09, slope).oneMinus()).mul(smoothstep(0.30, 0.55, G0.h).oneMinus()).mul(farK.mul(0.6).oneMinus()).toVar();
-    const damp = sat(s2.g.mul(0.7).add(pud)).toVar();
-    G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, 0.45, damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
+    // rain: water stands on every road, between the cobbles and on bare earth, the ground darkens and takes a sheen
+    const wet = U.wet, hard = max(max(road, sp.g), sp.a);
+    const wetGround = max(max(max(wMud, wPath.mul(0.8)), s2.g.mul(0.9)).mul(sp.g.oneMinus()), wet.mul(hard.mul(0.75).add(0.2)));
+    const pud = smoothstep(float(0.58).sub(wet.mul(0.20)), float(0.70).sub(wet.mul(0.17)), mn2.a.mul(0.50).add(mn3.b.mul(0.28)).add(s2.g.mul(0.55))).mul(wetGround).mul(smoothstep(0.02, 0.09, slope).oneMinus()).mul(smoothstep(0.30, 0.55, G0.h).oneMinus()).mul(farK.mul(0.6).oneMinus()).toVar();
+    // in rain, broad shallow pools also lie over cobbles and packed road whatever the stones' height
+    pud.assign(max(pud, smoothstep(0.50, 0.60, mn2.a.mul(0.55).add(mn3.b.mul(0.15)).add(mn.r.mul(0.30))).mul(wet).mul(hard).mul(smoothstep(0.02, 0.07, slope).oneMinus()).mul(farK.mul(0.5).oneMinus())));
+    const damp = sat(s2.g.mul(0.7).add(pud).add(wet.mul(0.7))).toVar();
+    G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, mix(float(0.45), 0.24, wet), damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
     If(wRock.greaterThan(0.004), () => {
       const q = samp(MAT.ROCK, uvR, dRx, dRy), q2 = samp(MAT.ROCK, uvR2, dR2x, dR2y), kx = Nv.z.mul(Nv.z).div(Nv.x.mul(Nv.x).add(Nv.z.mul(Nv.z)).add(0.0001)).toVar();       // kx: weight of the x-y plane (faces looking along z)
       q.c.assign(mix(q2.c, q.c, kx)); q.ao.assign(mix(q2.ao, q.ao, kx)); q.r.assign(mix(q2.r, q.r, kx)); q.c.mulAssign(vec3(0.97, 0.98, 1.04).mul(mn.g.mul(0.45).add(0.80)));
@@ -961,6 +967,14 @@ function terrainMaterial() {
     });
     G0.c.assign(mix(G0.c, vec3(0.80, 0.84, 0.90), wSnow));
     const N = SH.perturb(Nv, wp, uvG, G0.n, smoothstep(38, 56, dist).oneMinus()).toVar();
+    // raindrops ring the standing water: one expanding ring per half-metre cell, each on its own clock
+    If(U.rain.greaterThan(0.02).and(pud.greaterThan(0.03)).and(dist.lessThan(30)), () => {
+      const g = wp.xz.mul(2.1), cell = TSL.floor(g), h = TSL.fract(sin(vec3(dot(cell, vec2(127.1, 311.7)), dot(cell, vec2(269.5, 183.3)), dot(cell, vec2(419.2, 371.9)))).mul(43758.5453));
+      const ph = TSL.fract(U.time.mul(1.15).add(h.x)), d2 = TSL.fract(g).sub(0.5).sub(h.yz.sub(0.5).mul(0.45)), dl = length(d2), rr = ph.mul(0.42);
+      const ring = sin(dl.sub(rr).mul(46)).mul(smoothstep(0.075, 0.0, abs(dl.sub(rr)))).mul(ph.oneMinus()).mul(smoothstep(0.0, 0.08, ph));
+      const push = d2.div(max(dl, 0.01)).mul(ring.mul(0.42).mul(U.rain).mul(pud));
+      N.assign(normalize(N.add(vec3(push.x, 0, push.y))));
+    });
     const ao = G0.ao.mul(s2.b.mul(0.55).oneMinus()), contact = s2.b.mul(0.32).oneMinus();        // soft contact shade at the foot of walls and trunks
     // standing water mirrors the sky
     const V = normalize(U.camPos.sub(wp)), Rf = reflect(V.negate(), N), F = pow(sat(dot(N, V).oneMinus()), 5).mul(0.97).add(0.03);
@@ -968,7 +982,10 @@ function terrainMaterial() {
     const sky = SH.skyBase(vec3(Rf.x, abs(Rf.y).add(0.02), Rf.z));
     const albedo = G0.c.mul(contact).mul(k.oneMinus()).toVar();
     pN.assign(N); pRough.assign(mix(G0.r, 0.6, wSnow));
-    pEmis.assign(albedo.mul(SH.hemi(N, ao, float(0)).add(SH.pointLightsGround(wp, N, float(0), float(0.25)).add(SH.lampPool(wp).mul(inside)).mul(mix(float(0.6), 1.0, ao)))).add(sky.mul(k).mul(contact)));
+    const lamp = SH.lampPool(wp).mul(inside).toVar();
+    // wet ground throws lamp light back at the eye: puddles and wet cobbles under a lantern shine
+    const shine = lamp.mul(pud.mul(0.55).add(damp.mul(wet).mul(0.12))).mul(F.mul(2.5).add(0.35));
+    pEmis.assign(albedo.mul(SH.hemi(N, ao, float(0)).add(SH.pointLightsGround(wp, N, float(0), float(0.25)).add(lamp).mul(mix(float(0.6), 1.0, ao)))).add(sky.mul(k).mul(contact)).add(shine));
     return vec4(albedo, 1);
   })();
   m.normalNode = transformNormalToView(pN); m.roughnessNode = pRough; m.metalnessNode = float(0); m.emissiveNode = pEmis;
@@ -1129,7 +1146,7 @@ const R = {
   q: QUALITY.high, qName: 'high', scale: 1, frame: 0, P: null, busy: false,
   cam: { pos: [0, 2, 0], yaw: 0, pitch: 0, fovMin: 0.92 },
   maxSkin: 256, boneData: new Float32Array(256 * 256),
-  partMax: 1536, partData: new Float32Array(1536 * 12), partCount: 0,
+  partMax: 2560, partData: new Float32Array(2560 * 12), partCount: 0,      // room for rain (up to 900 streaks and their splashes) on top of smoke, flames and wildlife
   stats: { draws: 0, tris: 0 },
 };
 function renderInit() {
@@ -1894,7 +1911,8 @@ const Grass = { mesh: null, N: 0, range: 0 };
           base.assign(mix(base, vec3(0.30, 0.21, 0.06), field)); tip.assign(mix(tip, vec3(0.72, 0.52, 0.17), field));
           const flower = step(float(1 - 0.006).sub(smoothstep(0.55, 0.80, mn2.b).mul(0.05)), r0.w).mul(field.oneMinus()).mul(step(0.5, t)).mul(0.85);
           const fc = mix(mix(vec3(0.95, 0.9, 0.85), vec3(0.95, 0.75, 0.15), step(0.5, r1.x)), vec3(0.55, 0.35, 0.85), step(0.75, r1.y));
-          const c = mix(mix(base.mul(0.55), tip, t), fc, flower);
+          const c = mix(mix(base.mul(0.55), tip, t), fc, flower).toVar();
+          c.mulAssign(mix(float(1), 0.74, U.wet));                 // wet grass is darker, like the turf under it
           vCol.assign(c);
           const amb = mix(U.ambGnd, U.ambSky, 0.85).mul(mix(0.5, 1.0, t));
           vEm.assign(c.mul(amb.add(SH.pointLights(root.add(vec3(0, 0.2, 0)), vec3(0, 1, 0), float(0), float(0.5)))));
@@ -2018,13 +2036,16 @@ const Particles = { mesh: null };
     m.positionNode = Fn(() => {
       const camR = normalize(cameraWorldMatrix.mul(vec4(1, 0, 0, 0)).xyz), camU = normalize(cameraWorldMatrix.mul(vec4(0, 1, 0, 0)).xyz);
       const upright = prm.y.greaterThan(1.5).and(prm.y.lessThan(2.5));          // flames stand up instead of tilting with the view
-      const right = select(upright, normalize(vec3(camR.x, 0, camR.z)), camR), up = select(upright, vec3(0, 1, 0), camU);
+      // rain (kind 4): a streak lying along its fall line (slanted by the wind), turned about that line to face the eye
+      const isRain = prm.y.greaterThan(3.5), fall = normalize(vec3(U.wind.x.mul(U.wind.z).mul(-0.27), 1, U.wind.y.mul(U.wind.z).mul(-0.27)));
+      const right = select(isRain, normalize(TSL.cross(fall, U.camPos.sub(ps.xyz))), select(upright, normalize(vec3(camR.x, 0, camR.z)), camR)), up = select(isRain, fall, select(upright, vec3(0, 1, 0), camU));
       const cr = cos(prm.x), sr = sin(prm.x);
       const cc = vec2(corner.x.mul(cr).sub(corner.y.mul(sr)), corner.x.mul(sr).add(corner.y.mul(cr)));
       // glows and sparks are never drawn larger than a set angle: a firefly at arm's length stays a speck and a lamp's halo near the eye stays a halo
-      const dEye = distance(ps.xyz, U.camPos), lim = select(prm.y.lessThan(0.5), float(0.11), select(prm.y.greaterThan(2.5), float(0.02), float(1e6)));
+      const dEye = distance(ps.xyz, U.camPos), lim = select(prm.y.lessThan(0.5), float(0.11), select(prm.y.greaterThan(2.5).and(prm.y.lessThan(3.5)), float(0.02), float(1e6)));
       const size = min(ps.w, dEye.mul(lim));
-      vNear.assign(select(prm.y.greaterThan(2.5), smoothstep(0.2, 0.9, dEye), select(prm.y.lessThan(0.5), smoothstep(0.1, 0.6, dEye), float(1))));
+      // (mist banks, kind 1 and metres across, thin out as the eye enters them instead of filling the screen)
+      vNear.assign(select(prm.y.greaterThan(3.5), smoothstep(0.8, 3.2, dEye), select(prm.y.greaterThan(2.5), smoothstep(0.2, 0.9, dEye), select(prm.y.lessThan(0.5), smoothstep(0.1, 0.6, dEye), mix(float(1), smoothstep(ps.w.mul(0.25), ps.w.mul(1.1), dEye), TSL.step(2.0, ps.w))))));
       const wp = ps.xyz.add(right.mul(cc.x).add(up.mul(cc.y.mul(prm.z))).mul(size));
       return wp.add(normalize(U.camPos.sub(ps.xyz)).mul(min(size.mul(0.35), 0.3)));      // pull toward the eye so sprites don't slice into walls (capped: a big glow must not float in front of its fire)
     })();
@@ -2037,7 +2058,7 @@ const Particles = { mesh: null };
         const a = exp(r2.mul(-4.5)).mul(smoothstep(0.7, 1.0, r2).oneMinus());
         out.assign(vec4(pcol.rgb.mul(a.mul(pcol.a).mul(fogf).mul(vNear)), 0));
       }).ElseIf(kind.lessThan(1.5), () => {                // smoke puff, lit by the sky
-        const a = sat(r2.oneMinus().mul(n.r.mul(1.3).add(0.35)).sub(0.25)).mul(pcol.a);
+        const a = sat(r2.oneMinus().mul(n.r.mul(1.3).add(0.35)).sub(0.25)).mul(pcol.a).mul(vNear);
         const lit = U.ambSky.mul(1.3).add(U.sunCol.mul(0.35)).mul(pcol.rgb);
         out.assign(vec4(mix(lit, SH.fogColor(), SH.fogAmount()).mul(a), a));
       }).ElseIf(kind.lessThan(2.5), () => {                // flame tongue: a teardrop that sways and is eaten away from the top by rising noise
@@ -2056,8 +2077,11 @@ const Particles = { mesh: null };
         const fc = mix(mix(vec3(1.0, 0.10, 0.01), vec3(1.0, 0.46, 0.08), smoothstep(0.10, 0.50, heat)), vec3(1.0, 0.86, 0.58), core).toVar();
         fc.addAssign(vec3(0.10, 0.22, 0.75).mul(smoothstep(0.30, 0.02, y).mul(sat(d.oneMinus())).mul(turb.oneMinus()).mul(0.7)));   // the blue foot of a candle flame
         out.assign(vec4(fc.mul(a.mul(core.mul(0.8).add(0.36))).mul(pcol.a.mul(mix(1.9, 1.0, turb))).mul(pcol.rgb), 0));
-      }).Else(() => {                                      // firefly / ember
+      }).ElseIf(kind.lessThan(3.5), () => {                // firefly / ember
         out.assign(vec4(pcol.rgb.mul(exp(r2.mul(-7.0)).mul(pcol.a).mul(fogf).mul(vNear)), 0));
+      }).Else(() => {                                      // rain streak: bright in the middle, fading to both ends; mostly added light, a little cover
+        const a = abs(q.x).oneMinus().mul(q.y.mul(q.y).oneMinus()).mul(pcol.a).mul(fogf).mul(vNear);
+        out.assign(vec4(pcol.rgb.mul(a), a.mul(0.35)));
       });
       return out;
     })();
@@ -2550,7 +2574,7 @@ const Env = { hour: 7.9, dayLength: 1200, paused: false, cover: 0.38, mist: 0.07
 const ENV = {
   keyDir: [0, 1, 0], keyCol: [3, 3, 3], sunDir: [0, 1, 0], moonDir: [0, 1, 0], ambSky: [0, 0, 0], ambGnd: [0, 0, 0],
   fogCol: [0, 0, 0], fogSun: [0, 0, 0], zenith: [0, 0, 0], horizon: [0, 0, 0], windDir: [0.8, 0.6], windStrength: 1,
-  exposure: 0.6, shadowStrength: 1, night: 0, day: 1, cloud: 0.45, fogDensity: 0.001, stars: 0, aurora: 0, moonBright: 0, sunDisc: 0, windowGlow: 0,
+  exposure: 0.6, shadowStrength: 1, night: 0, day: 1, rain: 0, wet: 0, cloud: 0.45, fogDensity: 0.001, stars: 0, aurora: 0, moonBright: 0, sunDisc: 0, windowGlow: 0,
 };
 // ── one wind ──
 // The whole valley shares one moving air: a direction that veers slowly, a strength, and gusts: a noise pattern carried downwind
@@ -2621,10 +2645,90 @@ function updateEnv(time, indoor) {
   const outExp = lerp(lerp(0.56, 0.84, golden), 3.0, night);
   e.exposure = lerp(outExp, lerp(1.05, 1.25, night), indoor || 0);
   // weather: a light overcast with mist that gathers over the valley around dawn (Env.cover / Env.mist set the base amounts)
+  if (typeof Weather !== 'undefined') Weather.step(time);          // fair, overcast, rain: sets Env.cover, Env.mist, Env.rain (50b_weather.js)
+  e.rain = 0; e.wet = 0;
   if (typeof Sky !== 'undefined' && Sky.applyWeather) { Sky.setWeather(Env.cover, Env.mist + 0.24 * Math.exp(-Math.pow((Env.hour - 6.6) / 1.5, 2))); Sky.applyWeather(e); }
+  if (typeof Weather !== 'undefined') Weather.apply(e);
   if (World.cell) Cells.env(e);      // overcast and mist reshape the light, see 45_sky.js
   return e;
 }
+
+
+// ---- 50b_weather.js ----
+// ───────────────────────── weather: fair, overcast and rain, drifting from one to the next ─────────────────────────
+// Weather.step() runs inside updateEnv() and writes the existing hooks: Env.cover (cloud), Env.mist, Env.rain (the sky in 45_sky.js and the
+// rain and roof sound beds in 88c already read those). It also keeps Weather.wet, how wet the ground is: it rises within a minute of
+// rain starting and dries slowly afterwards; the terrain shader turns that into dark ground, a sheen and puddles (41_materials.js).
+// The sequence is fixed (a slow noise of game time), so a given moment of a play-through always has the same weather. The first minutes
+// are always fair: the arrival at dawn should show the valley. Tests and the console: Weather.set('fair' | 'overcast' | 'rain' | 'auto').
+const Weather = { cover: 0.38, rain: 0, wet: 0, time: -1, forced: null, base: null, now: 'fair', drops: { low: 260, medium: 520, high: 900 } };
+Weather.KINDS = { fair: { cover: 0.34, rain: 0 }, overcast: { cover: 0.92, rain: 0 }, rain: { cover: 1, rain: 0.8 } };
+Weather.set = function (kind, instant) {
+  Weather.forced = kind === 'auto' ? null : (Weather.KINDS[kind] || null);
+  if (Weather.forced && instant !== false) { Weather.cover = Weather.forced.cover; Weather.rain = Weather.forced.rain; Weather.wet = Weather.forced.rain > 0 ? 1 : 0; }
+};
+Weather.target = function (time) {
+  if (Weather.forced) return Weather.forced;
+  // one slow value: below 0.54 fair (more or less cloud), then overcast, above 0.60 rain that grows heavier
+  const n = 0.5 + 0.5 * fbm(time / 380 + 7.7, 3.1, 2, 91), k = n * smooth(200, 420, time);
+  if (k < 0.54) return { cover: 0.18 + 0.42 * smooth(0.25, 0.54, k), rain: 0 };
+  if (k < 0.60) return { cover: 0.92, rain: 0 };
+  return { cover: 1, rain: 0.35 + 0.65 * smooth(0.60, 0.72, k) };
+};
+Weather.step = function (time) {
+  if (!Weather.base) { Weather.base = { cover: Env.cover, mist: Env.mist }; if (TEST && TEST.weather) Weather.set(TEST.weather); }
+  const dt = Weather.time < 0 ? 0 : clamp(time - Weather.time, 0, 0.5); Weather.time = time;
+  const T = Weather.target(time), go = (v, to, per) => v + clamp(to - v, -dt / per, dt / per);
+  Weather.cover = go(Weather.cover, T.cover, 40); Weather.rain = go(Weather.rain, Weather.cover > 0.85 ? T.rain : 0, 18);       // rain waits for the cloud to close in
+  Weather.wet = Weather.rain > 0.02 ? Math.min(1, Weather.wet + dt * Weather.rain / 35) : Math.max(0, Weather.wet - dt / 240);
+  Weather.now = Weather.rain > 0.05 ? 'rain' : Weather.cover > 0.75 ? 'overcast' : 'fair';
+  // a clear, still dawn after a dry night draws the most mist off the lake; rain flattens it into a general haze
+  Env.cover = Weather.cover; Env.rain = Weather.rain; Env.mist = Weather.base.mist + 0.16 * Weather.rain + 0.05 * Weather.wet;
+  if (typeof Sky !== 'undefined') Sky.weather.rain = Weather.rain;
+};
+// applied to ENV after the sky has taken cover and mist (45_sky.js)
+Weather.apply = function (e) {
+  const r = Weather.rain, c = Weather.cover;
+  e.rain = r; e.wet = Weather.wet; e.windStrength += 0.4 * r;
+  e.windowGlow = Math.max(e.windowGlow, 0.75 * smooth(0.25, 0.8, r) + 0.2 * smooth(0.85, 1, c));        // lamps and hearths are lit against a dark wet day
+  e.exposure *= 1 + 0.12 * r * e.day;                                                               // eyes open a little under the low cloud
+  // rain darkens and cools timber, stone and roofs outdoors (one knob on the kit's grade; rooms are left alone)
+  if (typeof Kit !== 'undefined' && Kit.grade && Kit.grade.gain) { if (Weather.kitGain === undefined) Weather.kitGain = Kit.grade.gain.value; Kit.grade.gain.value = Weather.kitGain * (World.cell ? 1 : 1 - 0.2 * Weather.wet); }
+};
+// how strong the lake's dawn (and faint dusk) mist is right now, 0..1
+Weather.lakeMist = function (hour) {
+  const dawn = Math.exp(-Math.pow((hour - 6.1) / 1.7, 2)), dusk = 0.45 * Math.exp(-Math.pow((hour - 19.4) / 1.4, 2));
+  return Math.max(dawn, dusk) * (1 - 0.7 * Weather.rain) * (1.15 - 0.35 * sat((ENV.windStrength - 0.6) / 0.6));
+};
+// roofs: no rain is drawn inside a building's footprint (the player may stand in a doorway or under an upper storey)
+Weather.roofed = function (x, z) {
+  if (!Weather.grid) {
+    const TH = K.terrainHalf, N = Weather.gridN = 2 * TH, g = Weather.grid = new Uint8Array(N * N);
+    for (const s of SITES.concat(typeof INF !== 'undefined' ? INF.houses : [])) { if (!s || !s.w || !s.d) continue; const r = Math.ceil(0.75 * Math.max(s.w, s.d));
+      for (let j = Math.floor(s.z - r); j <= s.z + r; j++) for (let i = Math.floor(s.x - r); i <= s.x + r; i++) { const l = worldToSite(s, i + 0.5, j + 0.5); if (Math.abs(l[0]) < s.w / 2 + 0.2 && Math.abs(l[1]) < s.d / 2 + 0.2 && Math.abs(i) < TH - 1 && Math.abs(j) < TH - 1) g[(j + TH) * N + i + TH] = 1; } }
+  }
+  const TH = K.terrainHalf, i = Math.floor(x) + TH, j = Math.floor(z) + TH; return i >= 0 && j >= 0 && i < Weather.gridN && j < Weather.gridN && Weather.grid[j * Weather.gridN + i] === 1;
+};
+// rain streaks round the camera and splashes where they land: billboards in the shared particle buffer (kind 4 streak, kind 0 splash)
+Weather.particles = function (put, dt, time, env, cam) {
+  const r = Weather.rain; if (r < 0.02 || World.cell || World.indoor) return;
+  const n = Math.round((Weather.drops[R.qName] || 520) * (0.35 + 0.65 * r)), RAD = 8, H = 10, SP = 9.5;
+  const lum = 0.2126 * env.ambSky[0] + 0.7152 * env.ambSky[1] + 0.0722 * env.ambSky[2] + 0.05 * (env.keyCol[0] + env.keyCol[1] + env.keyCol[2]) / 3, c = [lum * 1.9, lum * 2.0, lum * 2.2];
+  const wv = [env.windDir[0] * env.windStrength * 2.6, env.windDir[1] * env.windStrength * 2.6], top = cam[1] + 6.5;
+  for (let i = 0; i < n; i++) {
+    const hx = (i * 0.61803398875) % 1, hz = (i * 0.75487766625) % 1, hy = (i * 0.56984029099) % 1, ph = (hy + time * SP / H * (0.85 + 0.3 * hx)) % 1, fallT = ph * H / SP;
+    const x = cam[0] + ((hx * 2 * RAD + wv[0] * fallT - cam[0]) % (2 * RAD) + 2 * RAD) % (2 * RAD) - RAD, z = cam[2] + ((hz * 2 * RAD + wv[1] * fallT - cam[2]) % (2 * RAD) + 2 * RAD) % (2 * RAD) - RAD;
+    if (Weather.roofed(x, z)) continue;
+    put(x, top - ph * H, z, 0.0035 + 0.0025 * hz, c[0], c[1], c[2], 0.34 * (0.4 + 0.6 * r), 0, 4, 70 + 50 * hy, hx);
+  }
+  // splashes: a fixed set of spots, each flashing for a moment and moving on
+  const ns = Math.round(n / 9);
+  for (let i = 0; i < ns; i++) {
+    const slot = time * 3.1 + i * 0.37, k = slot % 1, id = Math.floor(slot) * 7.13 + i * 3.71, a = (Math.sin(id * 12.9898) * 43758.5453) % 1, b = (Math.sin(id * 78.233) * 12543.123) % 1;
+    const x = cam[0] + a * 7.5, z = cam[2] + b * 7.5; if (Weather.roofed(x, z)) continue;
+    put(x, World.groundY(x, z) + 0.03 + k * 0.05, z, 0.025 + k * 0.07, c[0], c[1], c[2], 0.5 * (1 - k) * r, 0, 0, 1, a);
+  }
+};
 
 
 // ---- 55_layout.js ----
@@ -8511,7 +8615,7 @@ function fxUpdate(dt, time, env, cam) {
     put(s.p[0], s.p[1], s.p[2], 0.035, 1.0, 0.5, 0.12, 2.6 * (1 - s.life / s.max), 0, 3, 1, 0);
   }
   // fireflies after dusk, drifting specks of dust by day (both wrap around the camera)
-  if (env.night > 0.05 && !World.indoor) for (const f of FX.flies) {
+  if (env.night > 0.05 && !World.indoor && !(env.rain > 0.1)) for (const f of FX.flies) {
     const x = cam[0] + ((f.o[0] - cam[0]) % 44 + 66) % 44 - 22 + Math.sin(time * f.sp + f.ph) * 1.5, z = cam[2] + ((f.o[2] - cam[2]) % 44 + 66) % 44 - 22 + Math.cos(time * f.sp * 0.8 + f.ph) * 1.5;
     const b = Math.max(0, Math.sin(time * 1.3 + f.ph * 3)) * env.night;
     if (b > 0.02) put(x, World.groundY(x, z) + f.o[1] + Math.sin(time * 0.7 + f.ph) * 0.3, z, 0.07, 0.75, 1.0, 0.35, 2.2 * b, 0, 3, 1, 0);
@@ -8521,6 +8625,7 @@ function fxUpdate(dt, time, env, cam) {
     put(x, y, z, 0.022, 1.0, 0.95, 0.8, 0.5 * env.day * (0.5 + 0.5 * Math.sin(time + f.ph)), 0, 3, 1, 0);
   }
   if (typeof airUpdate === 'function') airUpdate(put, dt, time, env, cam);
+  if (typeof Weather !== 'undefined') Weather.particles(put, dt, time, env, cam);
   R.partCount = n;
 }
 
@@ -8565,11 +8670,16 @@ function airUpdate(put, dt, time, env, cam) {
       if (f.t > 12) { f.st = 'gone'; f.t = 0; f.wait = 40 + (f.ph % 30); }
     } else { f.wait -= dt; if (f.wait <= 0 && d > 25) f.st = 'perch'; }
   }
-  // lake mist in the first and last light of the day, drifting over the water
-  const mist = Math.max(Math.exp(-Math.pow((hr - 6.0) / 1.6, 2)), Math.exp(-Math.pow((hr - 19.2) / 1.4, 2)));
-  if (mist > 0.04 && hyp(cam[0] - LAKE.x, cam[2] - LAKE.z) < 120) for (let i = 0; i < 26; i++) {
-    const a = i * 2.399 + 0.4, r = LAKE.r * (0.15 + 0.8 * ((i * 0.618) % 1)), x = LAKE.x + Math.cos(a) * r + Math.sin(time * 0.05 + i) * 3 + wx * time * 0.1 % 6, z = LAKE.z + Math.sin(a) * r + Math.cos(time * 0.04 + i * 1.7) * 3;
-    put(x, LAKE.y + 0.5 + (i % 3) * 0.35, z, 7 + (i % 4) * 1.6, 0.74, 0.78, 0.82, 0.075 * mist, i, 1, 1, i * 0.13);
+  // lake mist: banks lying on the water in the first light (and thinly at dusk), sliding downwind and spilling a little way up the shore
+  const mist = typeof Weather !== 'undefined' ? Weather.lakeMist(hr) : Math.max(Math.exp(-Math.pow((hr - 6.0) / 1.6, 2)), Math.exp(-Math.pow((hr - 19.2) / 1.4, 2)));
+  if (mist > 0.04 && hyp(cam[0] - LAKE.x, cam[2] - LAKE.z) < 190) {
+    const lit = 0.55 + 0.45 * sat(env.day * 1.5), span = LAKE.r * 2.6, dr = [Wind.off[0] * 0.12, Wind.off[1] * 0.12];
+    for (let i = 0; i < 46; i++) {
+      const hx = (i * 0.61803398875) % 1, hz = (i * 0.75487766625) % 1, low = i % 3 !== 0;
+      const x = LAKE.x + ((hx * span + dr[0]) % span + span) % span - span / 2 + Math.sin(time * 0.05 + i) * 2, z = LAKE.z + ((hz * span + dr[1]) % span + span) % span - span / 2 + Math.cos(time * 0.04 + i * 1.7) * 2;
+      const rr = hyp(x - LAKE.x, z - LAKE.z) / (LAKE.r * 1.3), edge = 1 - smooth(0.75, 1.0, rr); if (edge <= 0.01) continue;        // thins out past the shore
+      put(x, LAKE.y + (low ? 0.7 : 2.1) + (i % 4) * 0.25, z, (low ? 8 : 11) + (i % 5) * 1.5, 0.80 * lit, 0.84 * lit, 0.90 * lit, (low ? 0.15 : 0.085) * mist * edge, i, 1, low ? 0.55 : 0.7, i * 0.13);
+    }
   }
   // leaves loosen from the nearest trees by day and spiral down on the wind
   if (day > 0.3 && AIR.near.length) for (let k = 0; k < AIR.near.length; k++) for (let j = 0; j < 4; j++) {

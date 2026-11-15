@@ -3,7 +3,7 @@ const Env = { hour: 7.9, dayLength: 1200, paused: false, cover: 0.38, mist: 0.07
 const ENV = {
   keyDir: [0, 1, 0], keyCol: [3, 3, 3], sunDir: [0, 1, 0], moonDir: [0, 1, 0], ambSky: [0, 0, 0], ambGnd: [0, 0, 0],
   fogCol: [0, 0, 0], fogSun: [0, 0, 0], zenith: [0, 0, 0], horizon: [0, 0, 0], windDir: [0.8, 0.6], windStrength: 1,
-  exposure: 0.6, shadowStrength: 1, night: 0, day: 1, cloud: 0.45, fogDensity: 0.001, stars: 0, aurora: 0, moonBright: 0, sunDisc: 0, windowGlow: 0,
+  exposure: 0.6, shadowStrength: 1, night: 0, day: 1, rain: 0, wet: 0, cloud: 0.45, fogDensity: 0.001, stars: 0, aurora: 0, moonBright: 0, sunDisc: 0, windowGlow: 0,
 };
 // ── one wind ──
 // The whole valley shares one moving air: a direction that veers slowly, a strength, and gusts: a noise pattern carried downwind
@@ -74,7 +74,10 @@ function updateEnv(time, indoor) {
   const outExp = lerp(lerp(0.56, 0.84, golden), 3.0, night);
   e.exposure = lerp(outExp, lerp(1.05, 1.25, night), indoor || 0);
   // weather: a light overcast with mist that gathers over the valley around dawn (Env.cover / Env.mist set the base amounts)
+  if (typeof Weather !== 'undefined') Weather.step(time);          // fair, overcast, rain: sets Env.cover, Env.mist, Env.rain (50b_weather.js)
+  e.rain = 0; e.wet = 0;
   if (typeof Sky !== 'undefined' && Sky.applyWeather) { Sky.setWeather(Env.cover, Env.mist + 0.24 * Math.exp(-Math.pow((Env.hour - 6.6) / 1.5, 2))); Sky.applyWeather(e); }
+  if (typeof Weather !== 'undefined') Weather.apply(e);
   if (World.cell) Cells.env(e);      // overcast and mist reshape the light, see 45_sky.js
   return e;
 }

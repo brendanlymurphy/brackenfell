@@ -65,3 +65,23 @@ The user wants it as realistic as possible, like Skyrim: simple shapes, photogra
 - `Snd` in `src/88_audio.js`: buses amb / world / foot / ui / music into a master chain with a soft ceiling. Reverb spaces room,
   hall, cave; open air is dry. Sends are deliberately low. Speech bypasses the buses and goes dry to the master (`88d_voice.js`).
 - No discovery jingle. Place banners only for landmarks (`minor: true` places are silent and bannerless).
+
+## Outdoor look (fork-look)
+
+- **View model** (`90_rpg.js`, `91_combat.js`): `RPG.swordGeo` (lofted fullered blade, guard, corded grip, wheel pommel), `RPG.fistGeo`,
+  `RPG.forearmGeo`, material `RPG.gearMat` (per-vertex metal / roughness in attribute `mr`; steel mirrors `SH.skyBase` and glints from point
+  lights, there is no environment map). The forearm is aimed every frame from the wrist at a fixed elbow point (`C.place`). Poses are unchanged.
+- **Night**: window panes are `SH.paneLit` (called from one marked line in `44_kit.js`): values are tuned for the night exposure of 3, so keep
+  them under about 0.6. Glows and sparks have an angular size limit in `48_particles.js`. `43b_lamps.js` bakes every outdoor lantern's pool
+  into `G.lampTex` (640 px over the terrain square, houses block it); the terrain adds it with `SH.lampPool` and skips those lanterns as real
+  lights (stored with a negative radius). Outdoors, indoor lights no longer take light slots.
+- **Trees** (`74b_trees.js`, assets in `kits/trees.glb`, `trees_far.webp`, `TREES.json`; sources in `kits/TREES_PROVENANCE.md`): scanned
+  Poly Haven firs, a pine and a small broadleaf. Three rings: near model, thinned middle model (also the near-shadow caster), flat
+  stand-ins in 400 m cells. The inner rings are instance lists refilled when the player moves 1.2 m. `--opt trees=0` plants the old
+  generated trees (also the fallback if the files fail to load). The big oaks and bushes are still generated.
+- **Wind** (`Wind` in `50_env.js`, `SH.gust` / `SH.sway` / `SH.hangSway` in `40_shade.js`): one gust field carried downwind. Kit pieces
+  named `gen_sign_*`, `gen_bunt_*` and `dr_laundry*` get hang weights in the batch attribute `kg.z / kg.w` (`SH.hangOf`, two marked lines
+  in `44_kit.js`): a new hanging piece only needs a rule there.
+- **Weather** (`50b_weather.js`): `Weather.set('fair' | 'overcast' | 'rain' | 'auto')`, `--opt weather=rain`. Writes `Env.cover`,
+  `Env.mist`, `Env.rain`; `ENV.wet` drives the terrain (dark ground, pools, rings, lamp shine). Rain is particle kind 4. The sequence
+  is a fixed function of game time; the first three minutes are always fair.

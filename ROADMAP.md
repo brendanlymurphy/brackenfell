@@ -31,6 +31,9 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - **Interface** (`fork-u1`): loading screen with real progress, offline cache (service worker), Add to Home Screen, shader warm-up,
   touch tuning, interact highlight, map, journal, settings, camera feel, first two minutes.
 
+- **Outdoor look** (`fork-look`, waiting to be merged): first-person arming sword and gloved hand; night with leaded amber windows, clamped
+  glows and pools of lamp light; scanned trees; one wind for trees, grass, cloth, signs, smoke and sound; rain, wet ground, overcast, lake mist.
+
 ## Next
 
 - Lighting and weather as composition: pools of light at night, shafts through windows, eye adaptation at doors, rain and wet ground.
