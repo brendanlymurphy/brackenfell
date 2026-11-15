@@ -18,14 +18,19 @@ const Particles = { mesh: null };
     m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; m.fog = false; m.lights = false; m.toneMapped = false;
     m.blending = THREE.CustomBlending; m.blendEquation = THREE.AddEquation; m.blendSrc = THREE.OneFactor; m.blendDst = THREE.OneMinusSrcAlphaFactor; m.blendSrcAlpha = THREE.OneFactor; m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
     const ps = attribute('ps', 'vec4'), pcol = attribute('pcol', 'vec4'), prm = attribute('prm', 'vec4'), corner = attribute('position', 'vec3').xy;
+    const vNear = TSL.varyingProperty('float', 'vPartNear');       // fades a glow or spark out as it passes through the eye
     m.positionNode = Fn(() => {
       const camR = normalize(cameraWorldMatrix.mul(vec4(1, 0, 0, 0)).xyz), camU = normalize(cameraWorldMatrix.mul(vec4(0, 1, 0, 0)).xyz);
       const upright = prm.y.greaterThan(1.5).and(prm.y.lessThan(2.5));          // flames stand up instead of tilting with the view
       const right = select(upright, normalize(vec3(camR.x, 0, camR.z)), camR), up = select(upright, vec3(0, 1, 0), camU);
       const cr = cos(prm.x), sr = sin(prm.x);
       const cc = vec2(corner.x.mul(cr).sub(corner.y.mul(sr)), corner.x.mul(sr).add(corner.y.mul(cr)));
-      const wp = ps.xyz.add(right.mul(cc.x).add(up.mul(cc.y.mul(prm.z))).mul(ps.w));
-      return wp.add(normalize(U.camPos.sub(ps.xyz)).mul(min(ps.w.mul(0.35), 0.3)));      // pull toward the eye so sprites don't slice into walls (capped: a big glow must not float in front of its fire)
+      // glows and sparks are never drawn larger than a set angle: a firefly at arm's length stays a speck and a lamp's halo near the eye stays a halo
+      const dEye = distance(ps.xyz, U.camPos), lim = select(prm.y.lessThan(0.5), float(0.17), select(prm.y.greaterThan(2.5), float(0.02), float(1e6)));
+      const size = min(ps.w, dEye.mul(lim));
+      vNear.assign(select(prm.y.greaterThan(2.5), smoothstep(0.2, 0.9, dEye), select(prm.y.lessThan(0.5), smoothstep(0.1, 0.6, dEye), float(1))));
+      const wp = ps.xyz.add(right.mul(cc.x).add(up.mul(cc.y.mul(prm.z))).mul(size));
+      return wp.add(normalize(U.camPos.sub(ps.xyz)).mul(min(size.mul(0.35), 0.3)));      // pull toward the eye so sprites don't slice into walls (capped: a big glow must not float in front of its fire)
     })();
     m.fragmentNode = Fn(() => {
       const q = corner, wp = positionWorld, r2 = dot(q, q), kind = prm.y, seed = prm.w;
@@ -34,7 +39,7 @@ const Particles = { mesh: null };
       const out = vec4(0).toVar();
       If(kind.lessThan(0.5), () => {                       // soft additive glow
         const a = exp(r2.mul(-4.5)).mul(smoothstep(0.7, 1.0, r2).oneMinus());
-        out.assign(vec4(pcol.rgb.mul(a.mul(pcol.a).mul(fogf)), 0));
+        out.assign(vec4(pcol.rgb.mul(a.mul(pcol.a).mul(fogf).mul(vNear)), 0));
       }).ElseIf(kind.lessThan(1.5), () => {                // smoke puff, lit by the sky
         const a = sat(r2.oneMinus().mul(n.r.mul(1.3).add(0.35)).sub(0.25)).mul(pcol.a);
         const lit = U.ambSky.mul(1.3).add(U.sunCol.mul(0.35)).mul(pcol.rgb);
@@ -56,7 +61,7 @@ const Particles = { mesh: null };
         fc.addAssign(vec3(0.10, 0.22, 0.75).mul(smoothstep(0.30, 0.02, y).mul(sat(d.oneMinus())).mul(turb.oneMinus()).mul(0.7)));   // the blue foot of a candle flame
         out.assign(vec4(fc.mul(a.mul(core.mul(0.8).add(0.36))).mul(pcol.a.mul(mix(1.9, 1.0, turb))).mul(pcol.rgb), 0));
       }).Else(() => {                                      // firefly / ember
-        out.assign(vec4(pcol.rgb.mul(exp(r2.mul(-7.0)).mul(pcol.a).mul(fogf)), 0));
+        out.assign(vec4(pcol.rgb.mul(exp(r2.mul(-7.0)).mul(pcol.a).mul(fogf).mul(vNear)), 0));
       });
       return out;
     })();

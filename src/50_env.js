@@ -18,7 +18,7 @@ function updateEnv(time, indoor) {
   const sunI = smooth(-0.015, 0.11, sy), moonI = smooth(0.02, 0.2, moon[1]) * smooth(-0.04, -0.12, sy);
   const sunCol = mix3([1.0, 0.42, 0.14], [1.0, 0.925, 0.79], smooth(0.0, 0.42, sy));
   if (sunI > 0.001 || moonI <= 0) { e.keyDir = sun[1] > 0.02 ? sun : v3.norm([sun[0], 0.02, sun[2]]); e.keyCol = v3.scale(sunCol, 3.7 * sunI); }
-  else { e.keyDir = moon; e.keyCol = v3.scale([0.50, 0.64, 1.0], 0.20 * moonI); }
+  else { e.keyDir = moon; e.keyCol = v3.scale([0.36, 0.54, 1.0], 0.17 * moonI); }
   e.shadowStrength = sunI > 0.001 ? smooth(0.0, 0.25, sunI) : smooth(0.0, 0.3, moonI) * 0.9;
   // sky
   const zDay = [0.115, 0.28, 0.72], hDay = [0.52, 0.68, 0.90], zSet = [0.10, 0.15, 0.36], hSet = [0.95, 0.50, 0.24], zNight = [0.0035, 0.007, 0.020], hNight = [0.010, 0.019, 0.040];
@@ -29,6 +29,8 @@ function updateEnv(time, indoor) {
   e.sunDisc = 26 * smooth(-0.03, 0.05, sy);
   e.ambSky = v3.add(v3.add(v3.scale(mix3(z, h, 0.45), 1.0), v3.scale(sunCol, 0.07 * sunI)), [0.004, 0.006, 0.012]);
   e.ambGnd = v3.add(v3.scale(mix3([0.20, 0.17, 0.12], [0.30, 0.20, 0.14], golden), (0.10 + 0.55 * day)), [0.002, 0.003, 0.006]);
+  // night: what little bounces up from the ground is moonlit blue, not the warm earth of the day, so unlit streets read as dark blue
+  e.ambGnd = mix3(e.ambGnd, [0.0045, 0.0075, 0.017], night); e.ambSky = mix3(e.ambSky, [0.008, 0.016, 0.040], night * 0.6);
   const mist = Math.exp(-Math.pow((Env.hour - 6.3) / 1.3, 2)) * 0.9 + Math.exp(-Math.pow((Env.hour - 19.6) / 1.5, 2)) * 0.2;
   e.fogCol = mix3(mix3(h, z, 0.42), [0.5 * (h[0] + h[1]), 0.5 * (h[0] + h[1]), 0.5 * (h[1] + h[2])], 0.25);
   e.fogDensity = 0.00115 * (1 + mist * 1.3 + golden * 0.5) + 0.0005 * night;

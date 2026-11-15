@@ -154,7 +154,7 @@ function terrainMaterial() {
     const sky = SH.skyBase(vec3(Rf.x, abs(Rf.y).add(0.02), Rf.z));
     const albedo = G0.c.mul(contact).mul(k.oneMinus()).toVar();
     pN.assign(N); pRough.assign(mix(G0.r, 0.6, wSnow));
-    pEmis.assign(albedo.mul(SH.hemi(N, ao, float(0)).add(SH.pointLights(wp, N, float(0), float(0.25)).mul(mix(float(0.6), 1.0, ao)))).add(sky.mul(k).mul(contact)));
+    pEmis.assign(albedo.mul(SH.hemi(N, ao, float(0)).add(SH.pointLightsGround(wp, N, float(0), float(0.25)).add(SH.lampPool(wp).mul(inside)).mul(mix(float(0.6), 1.0, ao)))).add(sky.mul(k).mul(contact)));
     return vec4(albedo, 1);
   })();
   m.normalNode = transformNormalToView(pN); m.roughnessNode = pRough; m.metalnessNode = float(0); m.emissiveNode = pEmis;

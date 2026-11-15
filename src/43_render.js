@@ -122,7 +122,7 @@ function pickLights(camPos, camZone, env) {
     const dx = l.p[0] - camPos[0], dy = l.p[1] - camPos[1], dz = l.p[2] - camPos[2], d2 = dx * dx + dy * dy + dz * dz;
     const reach = l.r + 34; if (d2 > reach * reach) continue;
     let score = inten * l.r / (d2 + 4);
-    if (l.zone === camZone) score *= 6; else if (l.zone !== 0 && camZone === 0) score *= 0.5; else if (l.zone !== 0) score *= 0.05;
+    if (l.zone === camZone) score *= 6; else if (l.zone !== 0 && camZone === 0) score *= 0.04; else if (l.zone !== 0) score *= 0.05;      // out in the street the lamps come first: a hearth behind a wall lights nothing out here but used to take a slot
     cand.push([score, l, inten * (1 - smooth(l.r + 20, l.r + 34, Math.sqrt(d2)))]);
   }
   cand.sort((a, b) => b[0] - a[0]);
@@ -132,7 +132,7 @@ function pickLights(camPos, camZone, env) {
   for (let i = 0; i < 8; i++) {
     if (i >= n) { P[i].set(0, -9999, 0, 0); C[i].set(0, 0, 0, 0); continue; }
     const l = sorted[i][0], k = sorted[i][1];
-    P[i].set(l.p[0], l.p[1], l.p[2], l.r); C[i].set(l.c[0] * k, l.c[1] * k, l.c[2] * k, l.zone);
+    P[i].set(l.p[0], l.p[1], l.p[2], l.baked ? -l.r : l.r); C[i].set(l.c[0] * k, l.c[1] * k, l.c[2] * k, l.zone);
   }
   U.lightN.value = n; U.lightNOut.value = outdoor.length;
   return n;
@@ -149,7 +149,7 @@ function renderFrame(time, env) {
   c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, 0); c3.updateMatrixWorld();
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
-  SH.update(env, e, time);
+  SH.update(env, e, time); Lamps.sync();
   pickLights(e, World.camZone | 0, env);
   const L = env.keyDir, sun = R.sun;
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);

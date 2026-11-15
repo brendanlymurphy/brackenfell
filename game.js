@@ -599,7 +599,7 @@ class MeshPack {
 // ───────────────────────── shared shading: frame uniforms and TSL helpers every material uses ─────────────────────────
 // SH.init() must run after the textures in G exist. Other files take what they need from SH and from TSL inside their own closure,
 // because TSL names such as clamp, mix or length would collide with the game's own maths helpers at the top level.
-const SH = { U: null };
+const SH = { U: null, LAMP_PEAK: 1.6 };
 SH.init = function () {
   const { Fn, If, Loop, float, int, vec2, vec3, step, uniform, uniformArray, texture, positionWorld, mix, smoothstep, clamp, max, pow, exp, abs, dot, normalize, length, sqrt, select, dFdx, dFdy } = TSL;
   const V3 = () => new THREE.Vector3(), V4 = () => new THREE.Vector4();
@@ -639,19 +639,38 @@ SH.init = function () {
     return mix(h, room, step(0.5, zone));      // arithmetic, not select(): select() with these branches makes Three r187 emit a redeclared variable
   });
   // the eight nearest point lights (hearths, lanterns). A light only reaches surfaces of its own zone, so it cannot leak through walls.
-  SH.pointLights = Fn(([wp, N, zone, wrap]) => {
+  // A light stored with a negative radius is a street lantern whose pool on the ground is already in the lamp map (43b_lamps.js):
+  // the terrain skips those (SH.pointLightsGround), everything else lights from them as usual.
+  const pointFn = ground => Fn(([wp, N, zone, wrap]) => {
     const acc = vec3(0).toVar();
     const nEnd = select(zone.lessThan(0.5), U.lightNOut, U.lightN);      // an outdoor surface only loops over the outdoor lights; none near: no iterations
     Loop({ start: int(0), end: nEnd, type: 'int', condition: '<' }, ({ i }) => {
       const lc = U.lightCol.element(i), lp = U.lightPos.element(i);
       const d = lp.xyz.sub(wp), d2 = dot(d, d), r2 = lp.w.mul(lp.w);
-      If(abs(lc.w.sub(zone)).lessThan(0.5).or(lc.w.greaterThan(254.5)).and(d2.lessThan(r2)), () => {
+      let ok = abs(lc.w.sub(zone)).lessThan(0.5).or(lc.w.greaterThan(254.5)).and(d2.lessThan(r2)); if (ground) ok = ok.and(lp.w.greaterThan(0));
+      If(ok, () => {
         const f = float(1).sub(d2.div(r2)), att = f.mul(f).div(d2.mul(0.55).add(1));
         const ndl = dot(N, d).mul(max(d2, 1e-4).inverseSqrt()).add(wrap).div(float(1).add(wrap));
         acc.addAssign(lc.rgb.mul(att.mul(max(ndl, 0))));
       });
     });
     return acc;
+  });
+  SH.pointLights = pointFn(false); SH.pointLightsGround = pointFn(true);
+  // warm light lying on the ground under every street lantern, from the baked lamp map (one sample; lit with the windows at dusk)
+  SH.lampPool = Fn(([wp]) => { if (!G.lampTex) Lamps.init(); const t = texture(G.lampTex, wp.xz.div(2 * K.terrainHalf).add(0.5)).r; return vec3(1.0, 0.56, 0.22).mul(t.mul(t).mul(SH.LAMP_PEAK).mul(U.windowGlow)); });
+  // A window pane lit from inside, as seen from the street: small leaded diamonds, each a little different, the room behind unevenly
+  // bright. Values are chosen for the night exposure so the glass stays amber instead of clipping to white. h: a random number per window.
+  SH.paneLit = Fn(([wp, N, h]) => {
+    const hc = wp.x.mul(abs(N.z)).add(wp.z.mul(abs(N.x))), q = vec2(hc, wp.y).mul(5.2);
+    const a = q.x.add(q.y), b = q.x.sub(q.y), lat = TSL.min(abs(TSL.fract(a).sub(0.5)), abs(TSL.fract(b).sub(0.5)));
+    const lead = smoothstep(0.035, 0.10, lat);
+    const id = TSL.floor(vec2(a.add(0.5), b.add(0.5))), hv = TSL.fract(TSL.sin(dot(id, vec2(127.1, 311.7))).mul(43758.5453));
+    const room = texture(G.noiseTex, vec2(hc.mul(0.11), wp.y.mul(0.13))).r;                     // furniture, curtains and people between the fire and the glass
+    const flick = TSL.sin(U.time.mul(6.0).add(h.mul(40))).mul(0.04).add(0.96);
+    const on = smoothstep(0.26, 0.34, h);                                                       // a quarter of the windows are dark
+    const warm = mix(vec3(1.0, 0.50, 0.16), vec3(1.0, 0.66, 0.30), hv);
+    return warm.mul(lead.mul(0.92).add(0.08)).mul(hv.mul(0.35).add(0.65)).mul(smoothstep(0.15, 0.75, room).mul(0.75).add(0.35)).mul(h.mul(0.5).add(0.55)).mul(flick).mul(on).mul(U.windowGlow).mul(0.52);
   });
   // tangent frame from screen derivatives, then a tangent-space normal (xy in 0..1) applied to the world normal N
   SH.perturb = Fn(([N, wp, uvn, nxy, strength]) => {
@@ -674,6 +693,7 @@ SH.init = function () {
     const s = pow(max(dot(normalize(positionWorld.sub(U.camPos)), U.sunDisc), 0), 6);
     return mix(U.fogCol, U.fogCol.add(U.fogSun.mul(0.6)), s);
   });
+  if (typeof Lamps !== 'undefined' && !G.lampTex) Lamps.init();
   SH.groundTint = (mn, mn2) => mix(vec3(0.80, 0.90, 0.70), vec3(1.16, 1.06, 0.80), mn.r).mul(mn2.a.mul(0.28).add(0.86));
 };
 // copies ENV (see 50_env.js) and the camera into the frame uniforms
@@ -923,7 +943,7 @@ function terrainMaterial() {
     const sky = SH.skyBase(vec3(Rf.x, abs(Rf.y).add(0.02), Rf.z));
     const albedo = G0.c.mul(contact).mul(k.oneMinus()).toVar();
     pN.assign(N); pRough.assign(mix(G0.r, 0.6, wSnow));
-    pEmis.assign(albedo.mul(SH.hemi(N, ao, float(0)).add(SH.pointLights(wp, N, float(0), float(0.25)).mul(mix(float(0.6), 1.0, ao)))).add(sky.mul(k).mul(contact)));
+    pEmis.assign(albedo.mul(SH.hemi(N, ao, float(0)).add(SH.pointLightsGround(wp, N, float(0), float(0.25)).add(SH.lampPool(wp).mul(inside)).mul(mix(float(0.6), 1.0, ao)))).add(sky.mul(k).mul(contact)));
     return vec4(albedo, 1);
   })();
   m.normalNode = transformNormalToView(pN); m.roughnessNode = pRough; m.metalnessNode = float(0); m.emissiveNode = pEmis;
@@ -1196,7 +1216,7 @@ function pickLights(camPos, camZone, env) {
     const dx = l.p[0] - camPos[0], dy = l.p[1] - camPos[1], dz = l.p[2] - camPos[2], d2 = dx * dx + dy * dy + dz * dz;
     const reach = l.r + 34; if (d2 > reach * reach) continue;
     let score = inten * l.r / (d2 + 4);
-    if (l.zone === camZone) score *= 6; else if (l.zone !== 0 && camZone === 0) score *= 0.5; else if (l.zone !== 0) score *= 0.05;
+    if (l.zone === camZone) score *= 6; else if (l.zone !== 0 && camZone === 0) score *= 0.04; else if (l.zone !== 0) score *= 0.05;      // out in the street the lamps come first: a hearth behind a wall lights nothing out here but used to take a slot
     cand.push([score, l, inten * (1 - smooth(l.r + 20, l.r + 34, Math.sqrt(d2)))]);
   }
   cand.sort((a, b) => b[0] - a[0]);
@@ -1206,7 +1226,7 @@ function pickLights(camPos, camZone, env) {
   for (let i = 0; i < 8; i++) {
     if (i >= n) { P[i].set(0, -9999, 0, 0); C[i].set(0, 0, 0, 0); continue; }
     const l = sorted[i][0], k = sorted[i][1];
-    P[i].set(l.p[0], l.p[1], l.p[2], l.r); C[i].set(l.c[0] * k, l.c[1] * k, l.c[2] * k, l.zone);
+    P[i].set(l.p[0], l.p[1], l.p[2], l.baked ? -l.r : l.r); C[i].set(l.c[0] * k, l.c[1] * k, l.c[2] * k, l.zone);
   }
   U.lightN.value = n; U.lightNOut.value = outdoor.length;
   return n;
@@ -1223,7 +1243,7 @@ function renderFrame(time, env) {
   c3.position.set(e[0], e[1], e[2]); c3.rotation.set(cam.pitch, -cam.yaw, 0); c3.updateMatrixWorld();
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
-  SH.update(env, e, time);
+  SH.update(env, e, time); Lamps.sync();
   pickLights(e, World.camZone | 0, env);
   const L = env.keyDir, sun = R.sun;
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
@@ -1252,6 +1272,55 @@ function renderFrame(time, env) {
   if (off) r.setRenderTarget(null);
   R.stats.draws = R.stats.n; R.stats.tris = Math.round(R.stats.t);
 }
+
+
+// ---- 43b_lamps.js ----
+// ───────────────────────── lamp map: the pool of light each street lantern throws on the ground ─────────────────────────
+// Only the few nearest lights are real point lights (R.q.lights). Every lantern still needs its pool, near or far, so the ground
+// term of all outdoor lanterns is baked once into one small texture over the terrain square (the same mapping as the splat maps) and
+// the terrain reads it with a single sample. Houses block it: a lantern does not light the lane behind its own building.
+// Lights baked here are flagged (l.baked) so the terrain does not also add them as real lights.
+const Lamps = { N: 640, count: -1, tex: null };
+Lamps.init = function () {
+  const N = Lamps.N, d = Lamps.data = new Uint8Array(N * N);
+  const t = Lamps.tex = new THREE.DataTexture(d, N, N, THREE.RedFormat, THREE.UnsignedByteType);
+  t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true;
+  G.lampTex = t;
+};
+// called every frame; rebakes only when lanterns were added (places outside the village attach theirs after the first build)
+Lamps.sync = function () {
+  if (!Lamps.tex || World.emitters.length === Lamps.count) return;
+  Lamps.count = World.emitters.length;
+  const N = Lamps.N, TH = K.terrainHalf, cell = 2 * TH / N, acc = new Float32Array(N * N), R_ = 9, H = 2.2;
+  const lamps = World.emitters.filter(e => e.type === 'lantern' && !e.zone && Math.abs(e.p[0]) < TH - R_ && Math.abs(e.p[2]) < TH - R_);
+  const houses = SITES.concat(typeof INF !== 'undefined' ? INF.houses : []).filter(s => s && s.w && s.d);
+  for (const l of World.lights) if (l.kind === 'lantern' && !l.zone && lamps.some(e => hyp(e.p[0] - l.p[0], e.p[2] - l.p[2]) < 0.6)) l.baked = true;
+  // does the straight line from the lamp to a point on the ground pass through a house? (2D, footprints drawn in a little so a lamp on a wall is outside its own)
+  const blockers = (x, z) => houses.filter(s => hyp(s.x - x, s.z - z) < R_ + 0.75 * Math.max(s.w, s.d)).map(s => ({ s, a: worldToSite(s, x, z), hw: s.w / 2 - 0.45, hd: s.d / 2 - 0.45 }));
+  const cut = (b, x, z) => {
+    const q = worldToSite(b.s, x, z), ax = b.a[0], az = b.a[1], dx = q[0] - ax, dz = q[1] - az; let t0 = 0, t1 = 1;
+    for (const [o, d, h] of [[ax, dx, b.hw], [az, dz, b.hd]]) {
+      if (Math.abs(d) < 1e-9) { if (Math.abs(o) > h) return false; continue; }
+      let u0 = (-h - o) / d, u1 = (h - o) / d; if (u0 > u1) { const t = u0; u0 = u1; u1 = t; }
+      t0 = Math.max(t0, u0); t1 = Math.min(t1, u1); if (t0 > t1) return false;
+    }
+    return true;
+  };
+  for (const e of lamps) {
+    const lx = e.p[0], lz = e.p[2], gy = World.groundY ? World.groundY(lx, lz) : Terrain.y(lx, lz), h = clamp(e.p[1] - gy, 1.2, 4), B = blockers(lx, lz);
+    const i0 = Math.floor((lx - R_ + TH) / cell), i1 = Math.ceil((lx + R_ + TH) / cell), j0 = Math.floor((lz - R_ + TH) / cell), j1 = Math.ceil((lz + R_ + TH) / cell);
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const x = (i + 0.5) * cell - TH, z = (j + 0.5) * cell - TH, d2 = (x - lx) * (x - lx) + (z - lz) * (z - lz) + h * h; if (d2 >= R_ * R_) continue;
+      let hit = false; for (const b of B) if (cut(b, x, z)) { hit = true; break; } if (hit) continue;
+      const f = 1 - d2 / (R_ * R_), ndl = (h / Math.sqrt(d2) + 0.25) / 1.25;        // the same falloff as SH.pointLights, for ground facing up
+      acc[j * N + i] += 3.4 * f * f / (d2 * 0.55 + 1) * ndl;
+    }
+  }
+  // soften the hard edge the footprint test leaves, then store the square root (the shader squares it) so dim edges keep their steps
+  const d = Lamps.data, pk = SH.LAMP_PEAK;
+  for (let j = 1; j < N - 1; j++) for (let i = 1; i < N - 1; i++) { const o = j * N + i, v = (acc[o] * 4 + acc[o - 1] + acc[o + 1] + acc[o - N] + acc[o + N]) / 8; d[o] = Math.min(255, Math.round(Math.sqrt(Math.min(v / pk, 1)) * 255)); }
+  Lamps.tex.needsUpdate = true; Lamps.lamps = lamps.length;
+};
 
 
 // ---- 44_kit.js ----
@@ -1417,7 +1486,7 @@ const Kit = (() => {
       const cell = floor(wp.mul(0.9)), h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))).mul(43758.5453));
       const V = normalize(wp.sub(U.camPos)), R = reflect(V, N);
       const sky = SH.skyBase(vec3(R.x, max(R.y, 0.02), R.z)).mul(0.22);
-      const lit = vec3(1.0, 0.60, 0.24).mul(h.mul(0.9).add(0.35)).mul(U.windowGlow).mul(2.4).mul(smoothstep(0.12, 0.3, h));
+      const lit = SH.paneLit ? SH.paneLit(wp, N, h) : vec3(1.0, 0.60, 0.24).mul(h.mul(0.9).add(0.35)).mul(U.windowGlow).mul(2.4).mul(smoothstep(0.12, 0.3, h));      // fork-look: leaded amber panes that do not clip (40_shade.js)
       m.colorNode = vec3(0.012, 0.016, 0.02); m.roughnessNode = float(0.15); m.metalnessNode = float(0);
       // from the room side a pane just shows the dim sky outside
       const outsideView = batch ? frontFacing : frontFacing;
@@ -1914,14 +1983,19 @@ const Particles = { mesh: null };
     m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; m.fog = false; m.lights = false; m.toneMapped = false;
     m.blending = THREE.CustomBlending; m.blendEquation = THREE.AddEquation; m.blendSrc = THREE.OneFactor; m.blendDst = THREE.OneMinusSrcAlphaFactor; m.blendSrcAlpha = THREE.OneFactor; m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
     const ps = attribute('ps', 'vec4'), pcol = attribute('pcol', 'vec4'), prm = attribute('prm', 'vec4'), corner = attribute('position', 'vec3').xy;
+    const vNear = TSL.varyingProperty('float', 'vPartNear');       // fades a glow or spark out as it passes through the eye
     m.positionNode = Fn(() => {
       const camR = normalize(cameraWorldMatrix.mul(vec4(1, 0, 0, 0)).xyz), camU = normalize(cameraWorldMatrix.mul(vec4(0, 1, 0, 0)).xyz);
       const upright = prm.y.greaterThan(1.5).and(prm.y.lessThan(2.5));          // flames stand up instead of tilting with the view
       const right = select(upright, normalize(vec3(camR.x, 0, camR.z)), camR), up = select(upright, vec3(0, 1, 0), camU);
       const cr = cos(prm.x), sr = sin(prm.x);
       const cc = vec2(corner.x.mul(cr).sub(corner.y.mul(sr)), corner.x.mul(sr).add(corner.y.mul(cr)));
-      const wp = ps.xyz.add(right.mul(cc.x).add(up.mul(cc.y.mul(prm.z))).mul(ps.w));
-      return wp.add(normalize(U.camPos.sub(ps.xyz)).mul(min(ps.w.mul(0.35), 0.3)));      // pull toward the eye so sprites don't slice into walls (capped: a big glow must not float in front of its fire)
+      // glows and sparks are never drawn larger than a set angle: a firefly at arm's length stays a speck and a lamp's halo near the eye stays a halo
+      const dEye = distance(ps.xyz, U.camPos), lim = select(prm.y.lessThan(0.5), float(0.17), select(prm.y.greaterThan(2.5), float(0.02), float(1e6)));
+      const size = min(ps.w, dEye.mul(lim));
+      vNear.assign(select(prm.y.greaterThan(2.5), smoothstep(0.2, 0.9, dEye), select(prm.y.lessThan(0.5), smoothstep(0.1, 0.6, dEye), float(1))));
+      const wp = ps.xyz.add(right.mul(cc.x).add(up.mul(cc.y.mul(prm.z))).mul(size));
+      return wp.add(normalize(U.camPos.sub(ps.xyz)).mul(min(size.mul(0.35), 0.3)));      // pull toward the eye so sprites don't slice into walls (capped: a big glow must not float in front of its fire)
     })();
     m.fragmentNode = Fn(() => {
       const q = corner, wp = positionWorld, r2 = dot(q, q), kind = prm.y, seed = prm.w;
@@ -1930,7 +2004,7 @@ const Particles = { mesh: null };
       const out = vec4(0).toVar();
       If(kind.lessThan(0.5), () => {                       // soft additive glow
         const a = exp(r2.mul(-4.5)).mul(smoothstep(0.7, 1.0, r2).oneMinus());
-        out.assign(vec4(pcol.rgb.mul(a.mul(pcol.a).mul(fogf)), 0));
+        out.assign(vec4(pcol.rgb.mul(a.mul(pcol.a).mul(fogf).mul(vNear)), 0));
       }).ElseIf(kind.lessThan(1.5), () => {                // smoke puff, lit by the sky
         const a = sat(r2.oneMinus().mul(n.r.mul(1.3).add(0.35)).sub(0.25)).mul(pcol.a);
         const lit = U.ambSky.mul(1.3).add(U.sunCol.mul(0.35)).mul(pcol.rgb);
@@ -1952,7 +2026,7 @@ const Particles = { mesh: null };
         fc.addAssign(vec3(0.10, 0.22, 0.75).mul(smoothstep(0.30, 0.02, y).mul(sat(d.oneMinus())).mul(turb.oneMinus()).mul(0.7)));   // the blue foot of a candle flame
         out.assign(vec4(fc.mul(a.mul(core.mul(0.8).add(0.36))).mul(pcol.a.mul(mix(1.9, 1.0, turb))).mul(pcol.rgb), 0));
       }).Else(() => {                                      // firefly / ember
-        out.assign(vec4(pcol.rgb.mul(exp(r2.mul(-7.0)).mul(pcol.a).mul(fogf)), 0));
+        out.assign(vec4(pcol.rgb.mul(exp(r2.mul(-7.0)).mul(pcol.a).mul(fogf).mul(vNear)), 0));
       });
       return out;
     })();
@@ -2460,7 +2534,7 @@ function updateEnv(time, indoor) {
   const sunI = smooth(-0.015, 0.11, sy), moonI = smooth(0.02, 0.2, moon[1]) * smooth(-0.04, -0.12, sy);
   const sunCol = mix3([1.0, 0.42, 0.14], [1.0, 0.925, 0.79], smooth(0.0, 0.42, sy));
   if (sunI > 0.001 || moonI <= 0) { e.keyDir = sun[1] > 0.02 ? sun : v3.norm([sun[0], 0.02, sun[2]]); e.keyCol = v3.scale(sunCol, 3.7 * sunI); }
-  else { e.keyDir = moon; e.keyCol = v3.scale([0.50, 0.64, 1.0], 0.20 * moonI); }
+  else { e.keyDir = moon; e.keyCol = v3.scale([0.36, 0.54, 1.0], 0.17 * moonI); }
   e.shadowStrength = sunI > 0.001 ? smooth(0.0, 0.25, sunI) : smooth(0.0, 0.3, moonI) * 0.9;
   // sky
   const zDay = [0.115, 0.28, 0.72], hDay = [0.52, 0.68, 0.90], zSet = [0.10, 0.15, 0.36], hSet = [0.95, 0.50, 0.24], zNight = [0.0035, 0.007, 0.020], hNight = [0.010, 0.019, 0.040];
@@ -2471,6 +2545,8 @@ function updateEnv(time, indoor) {
   e.sunDisc = 26 * smooth(-0.03, 0.05, sy);
   e.ambSky = v3.add(v3.add(v3.scale(mix3(z, h, 0.45), 1.0), v3.scale(sunCol, 0.07 * sunI)), [0.004, 0.006, 0.012]);
   e.ambGnd = v3.add(v3.scale(mix3([0.20, 0.17, 0.12], [0.30, 0.20, 0.14], golden), (0.10 + 0.55 * day)), [0.002, 0.003, 0.006]);
+  // night: what little bounces up from the ground is moonlit blue, not the warm earth of the day, so unlit streets read as dark blue
+  e.ambGnd = mix3(e.ambGnd, [0.0045, 0.0075, 0.017], night); e.ambSky = mix3(e.ambSky, [0.008, 0.016, 0.040], night * 0.6);
   const mist = Math.exp(-Math.pow((Env.hour - 6.3) / 1.3, 2)) * 0.9 + Math.exp(-Math.pow((Env.hour - 19.6) / 1.5, 2)) * 0.2;
   e.fogCol = mix3(mix3(h, z, 0.42), [0.5 * (h[0] + h[1]), 0.5 * (h[0] + h[1]), 0.5 * (h[1] + h[2])], 0.25);
   e.fogDensity = 0.00115 * (1 + mist * 1.3 + golden * 0.5) + 0.0005 * night;
@@ -8136,7 +8212,7 @@ function fxUpdate(dt, time, env, cam) {
       put(e.p[0], e.p[1] + sz * 0.45, e.p[2], sz, 1, 1, 1, 0.9 * fl, 0, 2, 1.5, e.seed); put(e.p[0], e.p[1] + sz * 0.4, e.p[2], sz * 4.2, 1.0, 0.5, 0.16, 0.2 * fl, 0, 0, 1, e.seed);
     } else if (e.type === 'lantern') {
       if (lit < 0.05 || dist > 170) continue;
-      put(e.p[0], e.p[1], e.p[2], 0.11, 1.0, 0.75, 0.35, 3.0 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.75 + dist * 0.012, 1.0, 0.55, 0.2, 0.26 * lit, 0, 0, 1, e.seed);
+      put(e.p[0], e.p[1], e.p[2], 0.085 + dist * 0.0012, 1.0, 0.66, 0.26, 1.5 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.42 + dist * 0.006, 1.0, 0.50, 0.17, 0.11 * lit, 0, 0, 1, e.seed);      // a small bright flame and a faint halo (it was a white ball a metre across)
     } else if (e.type === 'herb') {
       if (e.gone || dist > 60) continue;
       put(e.p[0], e.p[1] + 0.12, e.p[2], 0.34, 0.55, 0.85, 1.0, 0.16 + 0.10 * Math.sin(time * 2 + e.seed * 20) + env.night * 0.25, 0, 0, 1, e.seed);
