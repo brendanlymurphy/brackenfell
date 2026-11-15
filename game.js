@@ -1454,7 +1454,8 @@ const Kit = (() => {
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
       const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
       em = em.add(alb.mul(U.sunCol.mul(F.x.add(F2.x.mul(wallK))).add(U.ambSky.mul(F.y.add(F2.y.mul(wallK))))).mul(skyVis).mul(outM));
-      const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM);
+      const dayK = smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(0.97).add(0.03);       // the floor follows the daylight: constant, it left roofs and walls glowing pale at night while the ground went dark
+      const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
     }
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
@@ -7531,7 +7532,7 @@ async function infillMaterials() {
     return true;
   };
   const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0 });
-  const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 1.9, nScale: 1.0, moss: 0.6 });
+  const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 1.2, nScale: 1.0, moss: 0.6 });
   if (Kit.defs.MI_UnevenBrick) Kit.defs[INF_B] = Object.assign({}, Kit.defs.MI_UnevenBrick, { name: INF_B, doubleSided: true });
   if (Kit.defs[INF_T]) Kit.defs[INF_T].doubleSided = true;
   INFS.mats = ok1 && ok2 && !!Kit.defs[INF_B];
