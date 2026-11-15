@@ -615,6 +615,7 @@ SH.init = function () {
     cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0),
     lightPos: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // xyz, radius
     lightCol: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // rgb, zone (255 = everywhere)
+    lightN: uniform(8, 'int'), lightNOut: uniform(8, 'int'),         // lights in use, and how many of them (listed first) reach surfaces outdoors: the loop below stops there
   };
   const sat = SH.sat = x => clamp(x, 0, 1);
   const noiseL = SH.noiseL = uvn => texture(G.noiseTex, uvn).level(0);
@@ -640,7 +641,8 @@ SH.init = function () {
   // the eight nearest point lights (hearths, lanterns). A light only reaches surfaces of its own zone, so it cannot leak through walls.
   SH.pointLights = Fn(([wp, N, zone, wrap]) => {
     const acc = vec3(0).toVar();
-    Loop({ start: int(0), end: int(8), type: 'int', condition: '<' }, ({ i }) => {
+    const nEnd = select(zone.lessThan(0.5), U.lightNOut, U.lightN);      // an outdoor surface only loops over the outdoor lights; none near: no iterations
+    Loop({ start: int(0), end: nEnd, type: 'int', condition: '<' }, ({ i }) => {
       const lc = U.lightCol.element(i), lp = U.lightPos.element(i);
       const d = lp.xyz.sub(wp), d2 = dot(d, d), r2 = lp.w.mul(lp.w);
       If(abs(lc.w.sub(zone)).lessThan(0.5).or(lc.w.greaterThan(254.5)).and(d2.lessThan(r2)), () => {
@@ -970,9 +972,9 @@ function sceneUpdate(camPos, q) {
 // ---- 43_render.js ----
 // ───────────────────────── renderer: quality tiers, camera, sun and shadows, post, frame ─────────────────────────
 const QUALITY = {
-  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassDensity: 0.30, treeLod: 40, lights: 4, aniso: 2, far1: 3, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16 },
-  medium: { name: 'Medium', pr: 1.5, msaa: 4, shadowRes: 1536, bloom: true,  grassRange: 30, grassDensity: 0.60, treeLod: 65, lights: 6, aniso: 4, far1: 2, shadowNear: 20, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32 },
-  high:   { name: 'High',   pr: 2.0, msaa: 4, shadowRes: 2048, bloom: true,  grassRange: 36, grassDensity: 1.00, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32 },
+  low:    { name: 'Low',    pr: 1.0, msaa: 1, shadowRes: 1024, bloom: false, grassRange: 18, grassDensity: 0.30, treeLod: 40, lights: 4, aniso: 2, far1: 3, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 1024 },
+  medium: { name: 'Medium', pr: 1.5, msaa: 4, shadowRes: 1536, bloom: true,  grassRange: 30, grassDensity: 0.60, treeLod: 65, lights: 6, aniso: 4, far1: 2, shadowNear: 20, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1280 },
+  high:   { name: 'High',   pr: 2.0, msaa: 4, shadowRes: 2048, bloom: true,  grassRange: 36, grassDensity: 1.00, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1920 },
 };
 const R = {
   q: QUALITY.high, qName: 'high', scale: 1, frame: 0, P: null, busy: false,
@@ -1091,11 +1093,14 @@ function pickLights(camPos, camZone, env) {
   }
   cand.sort((a, b) => b[0] - a[0]);
   const n = Math.min(cand.length, maxN);
+  const pick = cand.slice(0, n).map((c, i) => [c[1], c[2] * (i >= maxN - 1 && cand.length > maxN ? 0.5 : 1)]);
+  const outdoor = pick.filter(x => x[0].zone === 0 || x[0].zone > 254.5), sorted = outdoor.concat(pick.filter(x => !(x[0].zone === 0 || x[0].zone > 254.5)));      // lights that reach the open air first, so outdoor surfaces stop their loop early
   for (let i = 0; i < 8; i++) {
     if (i >= n) { P[i].set(0, -9999, 0, 0); C[i].set(0, 0, 0, 0); continue; }
-    const l = cand[i][1], k = cand[i][2] * (i >= maxN - 1 && cand.length > maxN ? 0.5 : 1);
+    const l = sorted[i][0], k = sorted[i][1];
     P[i].set(l.p[0], l.p[1], l.p[2], l.r); C[i].set(l.c[0] * k, l.c[1] * k, l.c[2] * k, l.zone);
   }
+  U.lightN.value = n; U.lightNOut.value = outdoor.length;
   return n;
 }
 function renderFrame(time, env) {
@@ -1348,7 +1353,7 @@ const Kit = (() => {
   // ── batches ──
   K_.batch = function (opts) {
     opts = opts || {};
-    const cell = opts.cell || 24, buckets = new Map(), inst = [], B = { count: 0 };
+    const cell = opts.cell || 24, buckets = new Map(), inst = [], B = { count: 0, tally: {} };      // tally: how often each piece was placed (for budgets)
     // o: { zone: 0 outdoors | n the interior of building n, skyVis: 1 outdoors .. ~0.3 indoors, tint: [r,g,b] linear, cast: true, glow: HDR self-illumination,
     //      lit: 0..1 for light-source pieces: the wax around each flame position glows (the flame itself is a particle the game adds),
     //      uvs: [sx, sy] the panel's scale, so plaster and brick keep their texel size instead of stretching
@@ -1364,7 +1369,7 @@ const Kit = (() => {
         if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
         b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null }); b.nv += prim.n; b.ni += prim.idx.length;
       }
-      B.count++; return B;
+      B.count++; B.tally[name] = (B.tally[name] || 0) + 1; return B;
     };
     // many copies of one piece (trees, rocks, tufts). matrices: array of Matrix4 / shorthand. o: { tints: [[r,g,b]...], wind, cast, cell, maxDist, zone, skyVis }
     B.addInstanced = function (name, matrices, o) {
@@ -1988,11 +1993,12 @@ const Chars = (() => {
       }
     }
     for (const c of gltf.animations || []) if (!S.clips[c.name]) S.clips[c.name] = c;       // a body file may bring its own clips
-    const B = { scene, rest: restPose(scene), parts: {}, skel: null, armature: null };
+    const B = { scene, rest: restPose(scene), parts: {}, lodParts: {}, skel: null, armature: null };
     scene.traverse(o => {
       if (!o.isSkinnedMesh) return;
       if (!B.skel) { B.skel = o.skeleton; B.bindMatrix = o.bindMatrix.clone(); }
       const g = o.parent, part = g && g !== scene && !g.isBone && g.children.length && g.children.every(c => c.isSkinnedMesh) ? g.name : o.name;   // a mesh with several materials loads as a group
+      if (/@lod$/.test(part)) { const k = part.slice(0, -4); (B.lodParts[k] = B.lodParts[k] || []).push(o); return; }      // low-detail copies (tools/chars_lod.mjs) are kept apart
       (B.parts[part] = B.parts[part] || []).push(o);
     });
     if (!B.skel) throw new Error(cfg.bodies[n] + ' has no skinned mesh');
@@ -2043,9 +2049,9 @@ const Chars = (() => {
 
   // ── geometry: the chosen parts of a body, merged per material so a villager costs a handful of draws ──
   const ATTR = [['position', 3], ['normal', 3], ['uv', 2], ['skinIndex', 4], ['skinWeight', 4]];
-  function mergedGeometry(S, body, parts, matName, names) {
-    const key = body + '|' + (matName || '*') + '|' + parts.join(','); let g = S.geo.get(key); if (g !== undefined) return g;
-    const src = [], mids = []; for (const p of parts) for (const m of S.bodies[body].parts[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
+  function mergedGeometry(S, body, parts, matName, names, lod) {
+    const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|lod' : ''); let g = S.geo.get(key); if (g !== undefined) return g;
+    const src = [], mids = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
     if (!src.length) { S.geo.set(key, null); return null; }
     let nv = 0, ni = 0; for (const s of src) { nv += s.attributes.position.count; ni += s.index ? s.index.count : s.attributes.position.count; }
     g = new THREE.BufferGeometry(); const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
@@ -2113,6 +2119,33 @@ const Chars = (() => {
     return m;
   }
 
+  // ── level of detail ──
+  // A body file may carry a low-detail copy of every mesh (tools/chars_lod.mjs, "<mesh>@lod": about a fifth of the triangles, same skeleton and
+  // material). Beyond LOD.dist[tier] metres the villager is drawn with the copy only. The copy is also what casts the sun shadow, always: close
+  // up it sits on a layer only the near shadow map sees (LOD.shadowLayer), so the full mesh never casts and is never drawn twice.
+  // Far villagers (beyond LOD.slowDist) advance their animation every LOD.slowEvery frames only.
+  const LOD = C.LOD = { dist: { low: 8, medium: 12, high: 20 }, hyst: 1.5, shadowLayer: 3, slowDist: 45, slowEvery: 3, force: TEST && TEST.charlod !== undefined ? TEST.charlod : -1 };    // force: 0 full mesh only, 1 low only, -1 by distance
+  function lodMesh(S, H, root, skeleton, B, body, parts, matName, names, mat) {
+    if (!B.lodParts) return;
+    const g = mergedGeometry(S, body, parts, matName, names, true); if (!g) return;
+    const mesh = new THREE.SkinnedMesh(g, mat); mesh.name = 'villager.lod'; mesh.receiveShadow = true; mesh.castShadow = false; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
+    mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true; mesh.visible = false;
+    (H.lods = H.lods || []).push({ hi: H.meshes[H.meshes.length - 1], lo: mesh });
+  }
+  function lodUpdate(H, d, cast) {
+    if (!H.lods) { for (const m of H.meshes) m.castShadow = cast; return; }
+    const far = LOD.force === 1 ? true : LOD.force === 0 ? false : H.far ? d > (LOD.dist[R.qName] || 13) - LOD.hyst : d > (LOD.dist[R.qName] || 13) + LOD.hyst;
+    if (far !== H.far || H.lodCast !== cast) {
+      H.far = far; H.lodCast = cast;
+      for (const l of H.lods) {
+        if (l.mask === undefined) l.mask = l.hi.layers.mask;           // the layers the game gave this villager
+        l.hi.visible = !far; l.hi.castShadow = false;
+        l.lo.visible = far || cast; l.lo.castShadow = cast; l.lo.layers.mask = far ? l.mask : (1 << LOD.shadowLayer);
+      }
+    }
+    if (!C.shadowLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(LOD.shadowLayer); C.shadowLayerOn = true; }
+  }
+
   // ── spawning ──
   const cloneBones = o => { const c = o.clone(false); for (const ch of o.children) if (ch.isBone) c.add(cloneBones(ch)); return c; };
   C.spawn = function (def) {
@@ -2134,6 +2167,7 @@ const Chars = (() => {
         mesh.name = 'villager'; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
         mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;
         H.mats.push(mat); H.meshes.push(mesh);
+        lodMesh(S, H, root, skeleton, B, body, parts, null, nameList, mat);
       }
     } else for (const mn of nameList) {
       const g = mergedGeometry(S, body, parts, mn); if (!g) continue;
@@ -2141,6 +2175,7 @@ const Chars = (() => {
       mesh.name = mn; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
       mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;      // a fixed sphere: each pass (camera, shadow maps) culls villagers itself
       H.mats.push(mat); H.meshes.push(mesh);
+      lodMesh(S, H, root, skeleton, B, body, parts, mn, null, mat);
     }
     for (const k of Object.keys(cfg.bones)) H.bones[k] = byName[cfg.bones[k]] || null;
     H.mixer = new THREE.AnimationMixer(root);
@@ -2221,7 +2256,9 @@ const Chars = (() => {
     play(H, key);
     const s = st.scale || 1, k = (cfg.scale || 1) * s * H.fit;
     if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1; H.cur.setEffectiveTimeScale(st.speed > 0 && g > 0.2 ? Math.min(Math.max(st.speed / g, 0.6), cfg.maxRate || 1.8) : rate); }
-    H.mixer.update(dt);
+    const dcam = hyp(st.pos[0] - R.cam.pos[0], st.pos[1] - R.cam.pos[1], st.pos[2] - R.cam.pos[2]);
+    if (dcam > LOD.slowDist && H.seed % LOD.slowEvery !== R.frame % LOD.slowEvery) H.slowDt = (H.slowDt || 0) + dt;      // far away: the pose changes on one frame in a few
+    else { H.mixer.update(dt + (H.slowDt || 0)); H.slowDt = 0; }
     const p = st.pos, yaw = st.yaw || 0, face = cfg.faces === -1 ? 0 : Math.PI;
     H.root.scale.setScalar(k);
     if (lying) {
@@ -2235,7 +2272,7 @@ const Chars = (() => {
       }
       pv.rotation.y = th; pv.position.set(x, y, z);
     }
-    if (st.cast !== undefined && st.cast !== H.cast) { H.cast = st.cast; for (const m of H.meshes) m.castShadow = st.cast; }
+    lodUpdate(H, dcam, st.cast === undefined ? !!H.cast : st.cast); H.cast = st.cast === undefined ? H.cast : st.cast;
     H.uZone.value = st.zone || 0; H.uLight.value = st.light === undefined ? 1 : st.light;
     // Head look. The mixer only rewrites a joint when its animated value changed, so a turn added last frame may still be in the
     // joint: take it out again before adding this frame's.
@@ -5801,6 +5838,40 @@ function uiFrame(dt) {
 }
 
 
+// ---- 86_perf.js ----
+// ───────────────────────── performance overlay: "Show performance" in Settings, or ?perf in the address (?perf=0 turns it off) ─────────────────────────
+// Measures real frame intervals (requestAnimationFrame timestamps, not capped), averaged over the last second, and the longest one in that second.
+// Draw calls and triangles are what the renderer drew for the whole frame (scene pass and both sun shadow maps). Cheap: one array write a frame and
+// a text update twice a second, only while shown. game.showFps is the switch (saved with the other settings).
+const PerfHud = (() => {
+  const H = { ring: new Float32Array(240), n: 0, i: 0, t: 0, last: '' };
+  H.frame = function (rawMs) {
+    if (!game.showFps) return;
+    H.ring[H.i] = rawMs; H.i = (H.i + 1) % H.ring.length; if (H.n < H.ring.length) H.n++;
+  };
+  H.text = function () {
+    // frames of the last second, newest first
+    let sum = 0, worst = 0, k = 0; for (let j = 1; j <= H.n && sum < 1000; j++) { const v = H.ring[(H.i - j + H.ring.length) % H.ring.length]; sum += v; if (v > worst) worst = v; k++; }
+    const fps = sum > 0 ? Math.round(1000 * k / sum) : 0, info = G.renderer && G.renderer.info, mem = info && info.memory, w = Math.round(G.w * R.scale), h = Math.round(G.h * R.scale);
+    return fps + ' fps  worst ' + Math.round(worst) + ' ms' + (Perf.T > 20 ? ' (browser cap ' + Math.round(1000 / Perf.T) + ')' : '') + '\n' +
+      R.stats.draws + ' draws  ' + (R.stats.tris >= 1000 ? Math.round(R.stats.tris / 1000) + 'k' : R.stats.tris) + ' tris\n' +
+      w + 'x' + h + ' (' + Math.round(R.scale * 100) + '% of ' + G.w + 'x' + G.h + ')\n' +
+      game.tier + '  ' + (G.backend || '?') + '  chars ' + (G.chars ? (Chars.name || '?') : 'old') + '\n' +
+      (mem ? 'tex ' + mem.textures + '  geo ' + mem.geometries : '');
+  };
+  H.update = function (dtMs) {       // call every frame
+    const el = $('fps'); if (!el) return;
+    if (!game.showFps) { if (!el.hidden) el.hidden = true; return; }
+    el.hidden = false; H.t += dtMs; if (H.t < 500) return; H.t = 0;
+    const s = H.text(); if (s !== H.last) { H.last = s; el.textContent = s; }
+  };
+  // ?perf in the address switches it on and remembers it
+  const m = /[?&]perf(?:=(\w+))?/.exec(location.search);
+  H.url = m ? (m[1] === '0' || m[1] === 'off' ? 0 : 1) : -1;
+  return H;
+})();
+
+
 // ---- 88_audio.js ----
 // ───────────────────────── sound: everything is synthesised with Web Audio ─────────────────────────
 const Audio2 = {
@@ -6618,7 +6689,8 @@ const Perf = { ft: 16.7, T: 16.7, hold: 3, ceil: 1, ceilT: 0, lowT: 0, acc: 0, n
 const coarse = () => (window.matchMedia && matchMedia('(pointer: coarse)').matches) || Math.min(innerWidth, innerHeight) < 520;
 
 function resize() {
-  const c = G.canvas, pr = Math.min(window.devicePixelRatio || 1, R.q.pr);
+  const c = G.canvas; let pr = Math.min(window.devicePixelRatio || 1, R.q.pr);
+  const long = Math.max(c.clientWidth, c.clientHeight) * pr; if (R.q.maxLong && long > R.q.maxLong) pr *= R.q.maxLong / long;      // cap the long side of the canvas per tier (high-DPI phones and tablets)
   gfxResize(Math.round(c.clientWidth * pr), Math.round(c.clientHeight * pr));
 }
 game.applyQuality = async () => {
@@ -6638,10 +6710,9 @@ function cadenceDone() {
 }
 // keep the frame rate by trading resolution first, then detail
 function perfUpdate(dtMs, dt) {
-  const P = Perf; P.ft += (dtMs - P.ft) * 0.06; P.acc += dtMs; P.n++;
+  const P = Perf; PerfHud.update(dtMs); P.ft += (dtMs - P.ft) * 0.06; P.acc += dtMs; P.n++;
   if (P.acc > 500) {
     P.fps = Math.round(1000 * P.n / P.acc); P.acc = 0; P.n = 0;
-    if (game.showFps) $('fps').textContent = P.fps + ' fps' + (P.T > 20 ? ' (browser cap)' : '') + '  ' + Math.round(R.scale * 100) + '%  ' + game.tier + '\n' + Math.round(R.stats.tris / 1000) + 'k tris  ' + R.stats.draws + ' draws';
     if (G.errors.length && !game.errSaid) { game.errSaid = true; const m = 'This device reported a graphics error, so the valley may not draw correctly: ' + G.errors[0].slice(0, 260); const n = $('gpuNote'); n.textContent = m; n.hidden = false; if (game.playing) toast(m.slice(0, 190)); }
   }
   if ((TEST && !TEST.loop) || R.busy || document.hidden || !game.playing) return;
@@ -6656,7 +6727,8 @@ function perfUpdate(dtMs, dt) {
   } else P.capT = 0;
   // a phone that holds full resolution with ease gets one try at the next tier up
   if (game.qualitySetting === 'auto') {
-    if (game.tier === 'medium' && !P.triedHigh) { P.goodT = (R.scale >= 1 && r < 1.04) ? (P.goodT || 0) + dt : 0; if (P.goodT > 9) { P.triedHigh = true; P.probeT = 14; game.autoTier = 'high'; game.applyQuality(); } }
+    if (game.tier === 'medium' && !P.triedHigh && !coarse()) {      // phones and tablets stay on medium: a failed trial of high costs seconds of stutter
+       P.goodT = (R.scale >= 1 && r < 1.04) ? (P.goodT || 0) + dt : 0; if (P.goodT > 9) { P.triedHigh = true; P.probeT = 14; game.autoTier = 'high'; game.applyQuality(); } }
     else if (P.probeT > 0) { P.probeT -= dt; if (R.scale < 0.86) { P.probeT = 0; game.autoTier = 'medium'; R.scale = 1; P.hold = 3; game.applyQuality(); } }
   }
   P.hold -= dt; P.ceilT -= dt;
@@ -6673,7 +6745,7 @@ function perfUpdate(dtMs, dt) {
   else { P.hold = 0.5; if (r < 1.04) P.raised = false; }
   // out of resolution to give: drop a detail tier (auto only). High detail is not worth keeping below 70% resolution.
   const hi = game.tier === 'high';
-  if (R.scale <= (hi ? 0.7 : 0.55) + 1e-6 && (hi || r > 1.17)) P.lowT += 1; else P.lowT = Math.max(0, P.lowT - 0.5);
+  if (R.scale <= 0.7 + 1e-6 && (hi || r > 1.10)) P.lowT += 1;      // out of resolution to give: below 70% the picture is soft enough that a lighter tier is the better trade else P.lowT = Math.max(0, P.lowT - 0.5);
   if (P.lowT > 5 && game.qualitySetting === 'auto' && game.tier !== 'low') { P.lowT = 0; game.autoTier = hi ? 'medium' : 'low'; R.scale = hi ? 0.9 : 0.8; P.hold = 4; P.raised = false; P.triedHigh = true; game.applyQuality(); toast('Detail lowered to keep things smooth.'); }
 }
 function updateDynamics(dt, chars) {
@@ -6730,8 +6802,9 @@ let lastT = 0;
 function frame(tms) {
   requestAnimationFrame(frame);
   if (G.lost) return;
-  const dtMs = Math.min(tms - lastT, 100); lastT = tms;
+  const rawMs = tms - lastT, dtMs = Math.min(rawMs, 100); lastT = tms;
   if (dtMs <= 0 || document.hidden) return;
+  PerfHud.frame(rawMs);
   if (Perf.probeN > 0) { Perf.probeBuf.push(dtMs); if (--Perf.probeN === 0) cadenceDone(); return; }
   try {
     const env = tick(dtMs / 1000);
@@ -6765,7 +6838,7 @@ function startGame(cont) {
   const load = (t, f) => { $('loadText').textContent = t; $('barFill').style.width = Math.round(f * 100) + '%'; return new Promise(r => setTimeout(r, TEST ? 0 : 30)); };
   let t0 = performance.now(); const laps = game.laps = {}, lap = n => { const t = performance.now(); laps[n] = Math.round(t - t0); t0 = t; };
   try {
-    loadSettings(); gfxTexInit(game.qualitySetting === 'auto' ? (TEST && TEST.quality) : game.qualitySetting);
+    loadSettings(); if (PerfHud.url >= 0) { game.showFps = !!PerfHud.url; saveSettings(); } gfxTexInit(game.qualitySetting === 'auto' ? (TEST && TEST.quality) : game.qualitySetting);
     const canvas = $('view');
     try { await gfxInit(canvas); }
     catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'; console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
