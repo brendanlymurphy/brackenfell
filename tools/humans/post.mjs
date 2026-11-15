@@ -31,8 +31,18 @@ for (const x of prims) {
   if (ratio < 0.97) simplifyPrimitive(x.p, { simplifier: MeshoptSimplifier, ratio, error: 0.05, lockBorder: false });
   x.after = tri(x.p);
 }
-await doc.transform(
-  textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024], quality: 80, slots: /baseColor/ }),
-  dedup(), quantize({ quantizePosition: 14, quantizeNormal: 10, quantizeTexcoord: 12 }), prune());
+// textures: colour only, WebP, sized by what they cover (the face needs the pixels, boots and hair do not)
+const SIZE = { body: 1024, cloth: 512, hair: 512, brow: 128, lash: 128, eye: 256 };
+for (const m of root.listMaterials()) { m.setNormalTexture(null).setOcclusionTexture(null).setMetallicRoughnessTexture(null).setEmissiveTexture(null); }
+for (const m of root.listMaterials()) {
+  const t = m.getBaseColorTexture(); if (!t) continue;
+  const k = m.getExtras().kind, name = m.getName(); let size = SIZE[k] || 512;
+  if (k === 'cloth' && /robe|tunic|bodice|dress|hood|helmet/i.test(name)) size = 1024;
+  const q = k === 'body' ? 78 : 70;
+  let img = sharp(Buffer.from(t.getImage())).resize(size, size, { fit: 'fill' });
+  if (k === 'hair' || k === 'brow') img = img.ensureAlpha(); else img = img.removeAlpha();
+  t.setImage(new Uint8Array(await img.webp({ quality: q, alphaQuality: 90 }).toBuffer())).setMimeType('image/webp');
+}
+await doc.transform(dedup(), quantize({ pattern: /^(NORMAL|TEXCOORD_.*)$/, quantizeNormal: 10, quantizeTexcoord: 12 }), prune());
 await io.write(dst, doc);
 console.log(JSON.stringify({ out: dst.split('/').pop(), tris: Math.round(prims.reduce((s, x) => s + (x.after || x.n), 0)), parts: prims.map(x => x.name + ':' + x.k + ':' + Math.round(x.n) + '>' + Math.round(x.after || x.n)).join(' ') }));

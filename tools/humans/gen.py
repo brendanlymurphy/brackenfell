@@ -9,7 +9,7 @@ What it does beyond assembling the MakeHuman assets:
   * removes the body surface that clothes cover (no skin poking through cloth, far fewer triangles);
   * blanks the parts of the skin texture nothing uses any more, and bakes clothing tints into 1K textures.
 """
-import sys, os, json
+import sys, os, json, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy, bmesh, numpy as np, mh_common as C
 from mathutils import Vector
@@ -79,7 +79,7 @@ def grade(pil, tint, sat, size, contrast=None):
 # eyes: iris colour by swapping the texture
 node = base_image_node(eyes); eye_png = Asset.find_asset_absolute_path(spec.get('eyes', 'brown') + '_eye.png', asset_subdir='eyes/materials') or os.path.join(os.path.dirname(bpy.path.abspath(node.image.filepath)), '..', 'materials', spec.get('eyes', 'brown') + '_eye.png')
 if not os.path.exists(eye_png): eye_png = bpy.path.abspath(node.image.filepath)
-set_image(node, Image.open(eye_png).convert('RGBA').resize((256, 256), Image.LANCZOS), 'eye.png')
+set_image(node, grade(Image.open(eye_png).convert('RGBA'), [0.92, 0.9, 0.9], 0.8, 256), 'eye.png')       # a little less saturated: the stock irises are lurid at game distance
 for o, tag in ((brows, 'brows'),):
     node = base_image_node(o)
     if node: set_image(node, grade(load_rgba(node.image), spec.get('browTint'), 1.0, 256), tag + '.png')
@@ -126,6 +126,36 @@ nb = len(b.faces); bmesh.ops.delete(b, geom=dead, context='FACES')
 loose = [v for v in b.verts if not v.link_faces]; bmesh.ops.delete(b, geom=loose, context='VERTS')
 b.to_mesh(me); b.free(); me.update()
 print('body faces', nb, '->', len(me.polygons))
+
+# ── layered clothes: take away what an outer garment hides (trousers under a tunic, boots under a robe), so inner cloth cannot poke through and no triangles go to it ──
+def layer(c):
+    n = c[0]
+    return 4 if re.search(r'hood|helmet|hat', n) else 3 if re.search(r'bodice', n) else 2.5 if re.search(r'skirt', n) else 2 if re.search(r'tunic|robe|dress|top', n) else 1 if re.search(r'boots|shoes', n) else 0
+for o, c in clothes:
+    outer = [(oo, cc) for oo, cc in clothes if layer(cc) > layer(c)]
+    if not outer: continue
+    ov, op = [], []
+    for oo, _ in outer:
+        base = len(ov); omw = oo.matrix_world
+        ov += [omw @ v.co for v in oo.data.vertices]; op += [tuple(base + i for i in p.vertices) for p in oo.data.polygons]
+    ob = BVHTree.FromPolygons(ov, op); me2 = o.data; mw2 = o.matrix_world; nm2 = mw2.to_3x3().inverted().transposed()
+    cov = np.zeros(len(me2.vertices), bool)
+    for v in me2.vertices:
+        co = mw2 @ v.co; n = (nm2 @ v.normal).normalized()
+        cov[v.index] = ob.ray_cast(co + n * 0.001, n, 0.08)[0] is not None or ob.ray_cast(co - n * 0.001, -n, 0.035)[0] is not None       # hidden under it, or lying just outside it (poking through)
+    b2 = bmesh.new(); b2.from_mesh(me2); b2.verts.ensure_lookup_table()
+    for _ in range(1):
+        nxt = cov.copy()
+        for v in b2.verts:
+            if cov[v.index] and any(not cov[e.other_vert(v).index] for e in v.link_edges): nxt[v.index] = False
+        cov = nxt
+    gar = [oo for oo, cc in outer if 2 <= layer(cc) < 3]
+    hem = min(min((oo.matrix_world @ v.co).z for v in oo.data.vertices) for oo in gar) if gar else None
+    if hem is not None and layer(c) == 0 and hem < 0.95:        # a skirt hem swings away from the legs when they move: trousers above it would show through, so they end under it
+        for v in b2.verts: cov[v.index] = cov[v.index] or (mw2 @ v.co).z > hem + 0.10
+    dead = [f for f in b2.faces if all(cov[v.index] for v in f.verts)]; n0 = len(b2.faces)
+    bmesh.ops.delete(b2, geom=dead, context='FACES'); bmesh.ops.delete(b2, geom=[v for v in b2.verts if not v.link_faces], context='VERTS')
+    b2.to_mesh(me2); b2.free(); me2.update(); print('cloth', c[0], n0, '->', len(me2.polygons))
 
 info_eye_z = max((eyes.matrix_world @ v.co).z for v in eyes.data.vertices) + 0.02
 # ── skin texture: 1K, with everything no remaining face uses painted flat ──

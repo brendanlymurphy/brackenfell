@@ -6,5 +6,5 @@ names=${@:-$(python3 -c "import json;print(' '.join(json.load(open('$here/specs.
 mkdir -p "$work" "$out"
 for n in $names; do
   nice -n 10 $PY "$here/gen.py" "$here/specs.json" $n "$work" 2>&1 | grep "^body faces\|^{'name\|Error\|rror:\|fallback\|missing asset"
-  [ -f "$work/${n}_raw.glb" ] && nice -n 10 node "$here/post.mjs" "$work/${n}_raw.glb" "$out/$n.glb" 11000 2>&1 | grep "^{\|rror"
+  [ -f "$work/${n}_raw.glb" ] && nice -n 10 node "$here/post.mjs" "$work/${n}_raw.glb" "$out/$n.glb" 10000 2>&1 | grep "^{\|rror"
 done
