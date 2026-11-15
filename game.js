@@ -8260,7 +8260,7 @@ const Snd = {
   ctx: null, disabled: false, T: 0, frame: 0, err: 0, errMsg: '', pausedMul: 1, ups: [], lib: {}, bus: {}, rin: {}, rret: {}, sp: { open: 1, room: 0, hall: 0, cave: 0 }, spT: { open: 1, room: 0, hall: 0, cave: 0 },
   set: { master: 0.8, amb: 0.85, world: 0.85, foot: 0.85, ui: 0.85, music: 0.6, musicOn: true },
   // base trims per bus (dB-ish scaling chosen so that ambience beds sit near -27 dB RMS, footsteps and interactions peak near -12 dB)
-  trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 0.8 },
+  trim: { amb: 2.0, world: 1.0, foot: 1.0, ui: 1.0, music: 2.5 },
   rvSend: { amb: 0.1, world: 0.55, foot: 0.7, ui: 0.25, music: 0.4 },
   L: { x: 0, y: 0, z: 0, yaw: 0, fx: 0, fz: -1, rx: 1, rz: 0 },
   G: { x: 0, y: 0, z: 0, zone: 0, zid: '', indoor: 0, space: 'open', hour: 12, night: 0, day: 1, wind: 0.8, rain: 0, forest: 0, playing: false, menu: false, talk: false, dead: false, speed: 0, ground: true, outd: 1, nearTown: 0 },
@@ -8844,7 +8844,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
   C.night = { dur: 90, len: () => 8, vol: 0.4, setup() { M.root = ROOTS.e * 2; M.mode = 'phryg'; M.walk = 2; },
     bar(t, i, o) { if (i === 0) drone(o, t, 82, M.root / 2, 0.05, false); if (Math.random() < 0.7) bellV(o, t + R(0.5, 6), fq(M.root, M.mode, P([4, 7, 9, 11])) * 2, 0.03); if (i % 3 === 1) bowed(o, t + R(0, 3), fq(M.root, M.mode, P([0, 1, 4])) * 2, R(5, 7), 0.035); } };
   C.tavern = { dur: 46, len: () => 2.4, vol: 0.5, setup() { M.root = ROOTS.g * 2; M.mode = 'mixo'; M.walk = 6; },
-    bar(t, i, o) { const q = 0.3; const m = walkMelody(8, M.walk, 0.18, 1); m.forEach((d, k) => { if (d === null) return; M.walk = d; pluckV(o, t + k * q, fq(M.root, M.mode, d + 2), 0.17, 0.6); }); pluckV(o, t, fq(M.root, M.mode, 0) / 2, 0.2, 0.4); pluckV(o, t + q * 4, fq(M.root, M.mode, 4) / 2, 0.15, 0.4); frame(o, t, 0.2); frame(o, t + q * 4, 0.16); shaker(o, t + q * 2, 0.04); shaker(o, t + q * 6, 0.04); } };
+    bar(t, i, o) { const q = 0.3; const m = walkMelody(8, M.walk, 0.18, 1); m.forEach((d, k) => { if (d === null) return; M.walk = d; pluckV(o, t + k * q, fq(M.root, M.mode, d + 2), 0.08, 0.6); }); pluckV(o, t, fq(M.root, M.mode, 0) / 2, 0.1, 0.4); pluckV(o, t + q * 4, fq(M.root, M.mode, 4) / 2, 0.08, 0.4); frame(o, t, 0.1); frame(o, t + q * 4, 0.08); shaker(o, t + q * 2, 0.012); shaker(o, t + q * 6, 0.012); } };
   C.tension = { dur: 1e9, len: () => 3, vol: 0.55, setup() { M.root = ROOTS.e; M.mode = 'phryg'; M.walk = 0; },
     bar(t, i, o) { if (i === 0) { drone(o, t, 40, M.root, 0.08, false); drone(o, t, 40, M.root * 1.0595, 0.04, false); } if (i > 0 && i % 12 === 0) { drone(o, t, 40, M.root, 0.08, false); drone(o, t, 40, M.root * 1.0595, 0.04, false); } frame(o, t, 0.18, true); frame(o, t + 0.9, 0.1, true); if (Math.random() < 0.3) bowed(o, t + R(0, 2), fq(M.root, M.mode, P([1, 3, 6])) * 2, R(2.5, 3.5), 0.03); } };
   C.combat = { dur: 1e9, len: () => 2.4, vol: 0.6, setup() { M.root = ROOTS.a; M.mode = 'aeolian'; M.walk = 0; },
