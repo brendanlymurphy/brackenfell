@@ -23,7 +23,7 @@ function ambSpots() {
   ['elder', 'weaver', 'guardhouse', 'herbalist'].forEach((id, i) => { const h = World.houses[id], d = h && h.door; if (d) World.spots['amb.home' + i] = { p: [d.out[0], d.out[1], d.out[2]], yaw: 0, zone: 0 }; });
 }
 function buildAmbient() {
-  if (!G.chars || !Chars.ready) return;
+  if (!G.chars || !Chars.ready || (TEST && TEST.amb === 0)) return;
   AMB.list.length = 0;
   AMB_DEFS.forEach((def, i) => {
     let ch = null; try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('ambient ' + def.id + ': ' + (e && e.message || e)); return; }

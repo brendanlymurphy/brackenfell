@@ -12,6 +12,7 @@ function airInit() {
   AIR.ready = true;
 }
 function airUpdate(put, dt, time, env, cam) {
+  if (TEST && TEST.air === 0) return;
   if (!AIR.ready) airInit();
   const day = env.day, night = env.night, hr = Env.hour, wx = env.windDir[0] * env.windStrength, wz = env.windDir[1] * env.windStrength, outdoors = !World.indoor;
   AIR.t += dt;

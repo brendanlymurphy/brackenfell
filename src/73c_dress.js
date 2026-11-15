@@ -467,7 +467,7 @@ function buildDress() {
     const y = gy(x, z), name = dStall(kind, R, R.pick(stallCols)), ry = face;
     add(name, x, y, z, 1.1, ry, false, DRS.stalls.length < 3 ? { es: true } : null);
     const fx = Math.sin(ry), fz = Math.cos(ry);
-    solid(x, z, 1.25, 2.2); claim(x, z, 1.6);
+    claim(x, z, 1.6);
     World.colliders.push({ x, z, hx: 1.3, hz: 0.55, ax: Math.cos(ry), az: -Math.sin(ry), bx: Math.sin(ry), bz: Math.cos(ry), y0: y - 0.5, y1: y + 1.0 });
     const k = DRS.stalls.length; DRS.stalls.push({ x, z, kind });
     World.spots['dstall' + k] = { p: [x + fx * 1.5, gy(x + fx * 1.5, z + fz * 1.5), z + fz * 1.5], yaw: ry + PI, zone: 0 };
