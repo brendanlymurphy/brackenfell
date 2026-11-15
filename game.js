@@ -814,8 +814,20 @@ const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {
 // meshes whose bounding sphere lies beyond this are not drawn at all (they can only show through a window). Raise a number to back a cut out.
 const DRAW = {
   door: { vis: 90, cast: 22 }, chicken: { vis: 60, cast: 14, near: 14 }, pickup: { vis: 45, cast: 0 }, mill: { vis: 160, cast: 40 }, misc: { vis: 160, cast: 160 },
-  indoor: 70, indoorCast: 18,
+  indoor: 45, indoorCast: 18, doorSee: 14,
 };
+// true while the camera is inside a building and no open door within DRAW.doorSee metres is in front of it: then little outside can be seen (only through a
+// window), so grass, scatter and small outdoor things are not drawn, the outdoors is drawn short and the far sun-shadow map is left as it was
+function deepIndoors(e) {
+  if (!World.camZone) return false;
+  const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw);
+  for (const d of World.doors) {         // an open door that is behind the camera shows nothing of the outdoors
+    if (!(d.open > 0.02)) continue;
+    const dx = d.c[0] - e[0], dz = d.c[2] - e[2], l = hyp(dx, dz);
+    if (l < DRAW.doorSee && (l < 2.5 || (dx * fx + dz * fz) / l > 0.3)) return false;
+  }
+  return true;
+}
 function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
@@ -880,12 +892,20 @@ function sceneBuild() {
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos;
-  const inside = !!World.camZone, ind = DRAW.indoor;
-  for (const s of SC.statics) { const it = s.it; if (it.maxDist) s.mesh.visible = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]) <= it.maxDist + it.r; }
+  const inside = World.deepIn = deepIndoors(e), ind = DRAW.indoor;
+  for (const s of SC.statics) {
+    const it = s.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
+    s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && far > ind);
+    if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
+    s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast);
+  }
   for (const s of SC.cells) {
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
-    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > grp.maxDist + c.r) || (inside && dc - c.r > ind));
+    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > grp.maxDist + c.r) || (inside && grp.lod === 0 && dc - c.r > ind));
+    if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
+    s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast);
   }
+  if (Grass.mesh) Grass.mesh.visible = !inside;
   for (const r of SC.rigid) {
     const o = r.obj, dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
     let vis = o.visible && d < dr.vis && !(inside && d > ind);
@@ -1052,7 +1072,7 @@ function renderFrame(time, env) {
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
   // near map every frame, far map every few frames (its centre only moves when it is redrawn)
   const fh = v3.norm([f[0], 0, f[2]]), r0 = 24, r1 = 92, S = R.shadows;
-  const upd1 = (R.frame % q.far1) === 1 || !R.shadow1Ready || !!TEST;
+  const upd1 = !R.shadow1Ready || (!World.deepIn && ((R.frame % q.far1) === 1 || !!TEST));      // deep inside a building the far map keeps what it last saw (see deepIndoors)
   shadowPlace(0, [e[0] + fh[0] * r0 * 0.72, e[1], e[2] + fh[2] * r0 * 0.72], r0, L, env);
   if (upd1) { shadowPlace(1, [e[0] + fh[0] * r1 * 0.6, e[1], e[2] + fh[2] * r1 * 0.6], r1, L, env); R.shadow1Ready = true; }
   S.lights[1].shadow.needsUpdate = upd1;
@@ -3146,10 +3166,13 @@ function kplace(m, name, x, y, z, s, ry) {
   const loc = new THREE.Matrix4().makeTranslation(-cx, -Q.min[1], -cz);
   return { name: sn, M: new THREE.Matrix4().multiplyMatrices(L, _sm).multiply(loc), tint: E.tint };
 }
+// outdoor props too small to leave a shadow worth a draw call in the sun-shadow maps stay out of them (and so out of a second mesh per material)
+const YARD_CAST_MIN = 0.6;        // m: the largest side a yard prop needs to cast. 0 = every prop casts
+function yardCasts(P) { if (!(YARD_CAST_MIN > 0)) return true; const b = Kit.box(P.name, P.M); return !b || Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) >= YARD_CAST_MIN; }
 function kadd(m, P, extra) {
   const zone = m.m1 | 0;
   let B; if (zone) B = kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: 40 }); B = World.kitYard; }
-  const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
+  const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone && yardCasts(P) }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
   B.add(P.name, P.M, o);
 }
 // place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
@@ -3373,7 +3396,7 @@ function kitAttach() {
   const tri = [], V = (M, x, y, z) => { const p = m4.tp(M, [x, y, z]); tri.push(p[0], p[1], p[2]); }, Q = (M, a, b2, c2, d2) => { for (const q of [a, b2, c2, a, c2, d2]) V(M, q[0], q[1], q[2]); };
   for (const id in World.kitExt) {
     let k = World.kitExt[id]; if (!k.batch.count) continue;
-    const g = k.batch.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g, { site: k.site });
+    const g = k.batch.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g, { site: k.site, ext: true });
     const M = k.Ms, x = k.w / 2 + 0.3, xw = k.w / 2 - 0.12, z = k.hd + 0.4, y = k.top, r = y + k.rise + 0.4 * k.rise / k.hd - 0.25; k = Object.assign({}, k, { hd: k.hd - 0.12 });
     Q(M, [-xw, -1, -k.hd], [xw, -1, -k.hd], [xw, y, -k.hd], [-xw, y, -k.hd]); Q(M, [-xw, -1, k.hd], [xw, -1, k.hd], [xw, y, k.hd], [-xw, y, k.hd]);
     Q(M, [-xw, -1, -k.hd], [-xw, -1, k.hd], [-xw, y, k.hd], [-xw, y, -k.hd]); Q(M, [xw, -1, -k.hd], [xw, -1, k.hd], [xw, y, k.hd], [xw, y, -k.hd]);
@@ -3394,7 +3417,10 @@ function kitAttach() {
     // furniture only shows through an open door or a window, so it is drawn for the nearest buildings alone
     for (const k of World.kitGroups) {
       if (k.interior && k.site) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < 9 + Math.max(k.site.w, k.site.d) * 0.5;
-      else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) o.visible = hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < 58 + bs.radius; }
+      else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
+      else if (k.scatter) k.g.visible = !World.deepIn;
+      else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) o.visible = !World.deepIn && hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < 58 + bs.radius; }
+      else k.g.visible = true;
     }
     if (Kit.update) Kit.update(camPos);
   };
@@ -3754,10 +3780,11 @@ for (const id of ['elder', 'herbalist', 'guardhouse', 'weaver', 'farm', 'hunter'
 // ───────────────────────── the village: houses, square, bridge, ruin, fences, dock ─────────────────────────
 const headingTo = (x, z, tx, tz) => Math.atan2(tx - x, -(tz - z));
 World.pickups = [];
+const VILLAGE_CELL = 80;        // m: the generated props (walls, fences, bridges, wells ...) are merged into one mesh per cell
 function buildVillage() {
   const pack = new MeshPack(); pack.shadow = true;
   const buckets = new Map(), R = rng(777), OUT = { zone: 0 };
-  const bucket = (x, z) => { const k = Math.floor(x / 40) + ',' + Math.floor(z / 40); let m = buckets.get(k); if (!m) { m = new Mesh(2048); m.seed = buckets.size * 7919 + 13; buckets.set(k, m); } return m; };
+  const bucket = (x, z) => { const k = Math.floor(x / VILLAGE_CELL) + ',' + Math.floor(z / VILLAGE_CELL); let m = buckets.get(k); if (!m) { m = new Mesh(2048); m.seed = buckets.size * 7919 + 13; buckets.set(k, m); } return m; };
   // place something on the ground. rot is a heading: the prop's local -Z ends up facing that way
   const put = (x, z, yaw, fn, dy) => { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z) + (dy || 0), z); if (yaw) m.RY(-yaw); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); };
   const spot = (name, x, z, yaw, extra) => { World.spots[name] = Object.assign({ p: [x, Terrain.y(x, z), z], yaw: yaw || 0, zone: 0 }, extra || {}); };
@@ -4071,6 +4098,8 @@ function addSkinned(item, o) {
 
 // ---- 74_vegetation.js ----
 // ───────────────────────── trees, bushes and boulders (instanced) ─────────────────────────
+// cell sizes (m) of the instanced groups: one draw per model per cell, so bigger cells mean fewer draws and coarser culling
+const FAR_TREE_CELL = 260, ROCK_CELL = 110;
 function buildVegetation() {
   const R = rng(9001), pack = new MeshPack();
   // leaf card helper: quad at centre c spanned by half-vectors a (u) and b (v), blob normal n
@@ -4226,12 +4255,12 @@ function buildVegetation() {
     for (const g of defs) World.instGroups.push(Object.assign({ ibuf, cells: list, first: g.item.first, count: g.item.count, base: g.item.base, shadow: true }, g));
   };
   mkGroups(inst.pine, [{ item: I.pineT, kind: 'opaque', lod: 1 }, { item: I.pineL, kind: 'leaf', lod: 1 }], 48);
-  mkGroups(inst.pine, [{ item: I.pineF, kind: 'leaf', lod: 2, nearOnly: false }], 130);
+  mkGroups(inst.pine, [{ item: I.pineF, kind: 'leaf', lod: 2, nearOnly: false }], FAR_TREE_CELL);
   mkGroups(inst.birch, [{ item: I.birchT, kind: 'opaque', lod: 1 }, { item: I.birchL, kind: 'leaf', lod: 1 }], 48);
-  mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], 130);
+  mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
   mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
-  for (let k = 0; k < 3; k++) mkGroups(inst['rock' + k], [{ item: I.rocks[k], kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], 110);
+  for (let k = 0; k < 3; k++) mkGroups(inst['rock' + k], [{ item: I.rocks[k], kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;
 }
 

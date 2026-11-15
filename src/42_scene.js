@@ -7,8 +7,20 @@ const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {
 // meshes whose bounding sphere lies beyond this are not drawn at all (they can only show through a window). Raise a number to back a cut out.
 const DRAW = {
   door: { vis: 90, cast: 22 }, chicken: { vis: 60, cast: 14, near: 14 }, pickup: { vis: 45, cast: 0 }, mill: { vis: 160, cast: 40 }, misc: { vis: 160, cast: 160 },
-  indoor: 70, indoorCast: 18,
+  indoor: 45, indoorCast: 18, doorSee: 14,
 };
+// true while the camera is inside a building and no open door within DRAW.doorSee metres is in front of it: then little outside can be seen (only through a
+// window), so grass, scatter and small outdoor things are not drawn, the outdoors is drawn short and the far sun-shadow map is left as it was
+function deepIndoors(e) {
+  if (!World.camZone) return false;
+  const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw);
+  for (const d of World.doors) {         // an open door that is behind the camera shows nothing of the outdoors
+    if (!(d.open > 0.02)) continue;
+    const dx = d.c[0] - e[0], dz = d.c[2] - e[2], l = hyp(dx, dz);
+    if (l < DRAW.doorSee && (l < 2.5 || (dx * fx + dz * fz) / l > 0.3)) return false;
+  }
+  return true;
+}
 function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
@@ -73,12 +85,20 @@ function sceneBuild() {
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos;
-  const inside = !!World.camZone, ind = DRAW.indoor;
-  for (const s of SC.statics) { const it = s.it; if (it.maxDist) s.mesh.visible = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]) <= it.maxDist + it.r; }
+  const inside = World.deepIn = deepIndoors(e), ind = DRAW.indoor;
+  for (const s of SC.statics) {
+    const it = s.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
+    s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && far > ind);
+    if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
+    s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast);
+  }
   for (const s of SC.cells) {
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
-    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > grp.maxDist + c.r) || (inside && dc - c.r > ind));
+    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > grp.maxDist + c.r) || (inside && grp.lod === 0 && dc - c.r > ind));
+    if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
+    s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast);
   }
+  if (Grass.mesh) Grass.mesh.visible = !inside;
   for (const r of SC.rigid) {
     const o = r.obj, dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
     let vis = o.visible && d < dr.vis && !(inside && d > ind);
