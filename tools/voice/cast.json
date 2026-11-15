@@ -107,5 +107,47 @@
   "speed": 0.95,
   "pitch": 0,
   "note": "notes and signs; off by default (nothing is generated unless lines name this speaker)"
+ },
+ "pat1": {
+  "voice": "bm_lewis",
+  "speed": 0.98,
+  "pitch": 0,
+  "note": "Wat Cooper, farmer"
+ },
+ "pat2": {
+  "voice": "bf_isabella",
+  "speed": 1.0,
+  "pitch": 0,
+  "note": "Tilda Fenn, farmwife"
+ },
+ "pat3": {
+  "voice": "bm_george:0.5+bm_lewis:0.5",
+  "speed": 0.97,
+  "pitch": 0,
+  "note": "Hob the Carter"
+ },
+ "pat4": {
+  "voice": "bm_daniel",
+  "speed": 1.02,
+  "pitch": 0,
+  "note": "Sorrel Vane, youth"
+ },
+ "pat5": {
+  "voice": "bm_fable",
+  "speed": 0.94,
+  "pitch": 0,
+  "note": "Piers Lowe, old"
+ },
+ "pat6": {
+  "voice": "bf_alice",
+  "speed": 1.0,
+  "pitch": 0,
+  "note": "Nell Marsh, weaver"
+ },
+ "pat7": {
+  "voice": "bm_daniel:0.5+bm_lewis:0.5",
+  "speed": 1.0,
+  "pitch": 0,
+  "note": "Jory Thatcher"
  }
 }
