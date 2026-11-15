@@ -17,7 +17,6 @@ function stairGeom(rise, H, runScale, widthScale) {
   const Z0 = Math.max(-b / slope, -0.34 * sz), Z1 = (rise - b) / slope, ZE = KSTAIR.endZ * sz;
   return { sy, sz, sw, slope, b, Y: Z => b + slope * Z, Z0, Z1, ZE, Zh: Math.max(Z0, (H - 0.02 - 2.0 - b) / slope), halfW: KSTAIR.halfW * sw };
 }
-const innerBox = m => { m.m1 = m.zoneId; m.ao = INT_AO; };
 
 // o: { name: 'stairs', axis: 'x'|'z', dir: +1|-1 (the way it climbs), lane: centre line, n0: coordinate of the first nosing, rise: top surface minus 0.02,
 //      H: height of the slab above (for the head-room of the stairwell), runScale, rails: [-1, 1] (sides with a handrail), spot0/spot1 names }
@@ -28,11 +27,11 @@ function buildStair(c, o) {
   const rect = (Za, Zb, la, lb) => { const p = P(Za, la), q = P(Zb, lb); return [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1])]; };
   // ramp: low coordinate side first
   const ramp = (Za, Zb, ya, yb, flat) => {
-    const r = rect(Za, Zb, lane - hw, lane + hw), lowFirst = dir > 0;
+    const r = rect(Za, Zb, lane - hw - 0.05, lane + hw + 0.05), lowFirst = dir > 0;       // a hand's breadth wider than the hole so no crack opens at the edge
     if (flat) addFloor(m, r[0], r[1], r[2], r[3], ya); else addFloor(m, r[0], r[1], r[2], r[3], lowFirst ? ya : yb, lowFirst ? yb : ya, ax);
   };
   ramp(G.Z0, G.Z1, base + G.Y(G.Z0), base + G.Y(G.Z1));
-  if (G.ZE > G.Z1 + 0.02) ramp(G.Z1, G.ZE, top, top, true);
+  ramp(G.Z1 - 0.03, G.ZE + 0.06, top, top, true);
   // the stair itself
   if (kit) {
     const ry = ax === 'x' ? (dir > 0 ? -PI / 2 : PI / 2) : (dir > 0 ? PI : 0), p = P(0, lane);
@@ -48,7 +47,7 @@ function buildStair(c, o) {
   // side colliders in short pieces following the slope: the player can neither fall off nor walk in under it
   for (let Za = G.Z0; Za < G.ZE - 0.01; Za += 0.45) {
     const Zb = Math.min(G.ZE, Za + 0.45), yTop = base + Math.min(o.rise, G.Y(Zb)) + 1.5;
-    for (const s of [-1, 1]) { const r = rect(Za, Zb, lane + s * (hw + 0.04) - 0.06, lane + s * (hw + 0.04) + 0.06); addBoxCollider(m, r[0], r[1], r[2], r[3], base, yTop); }
+    for (const s of [-1, 1]) { if (s === o.exit && Za >= G.Z1 - 0.5) continue; const r = rect(Za, Zb, lane + s * (hw + 0.04) - 0.06, lane + s * (hw + 0.04) + 0.06); addBoxCollider(m, r[0], r[1], r[2], r[3], base, yTop); }
   }
   // keep furniture off the approaches (a collider that never stops the player but that kitDress's free-floor test respects)
   for (const [Za, Zb] of [[-1.3, -0.1], [G.ZE, G.ZE + 0.9]]) { const r = rect(Za, Zb, lane - hw, lane + hw); addBoxCollider(m, r[0], r[1], r[2], r[3], -50, -49); }
@@ -66,8 +65,10 @@ function buildStair(c, o) {
   c.spot(n0s, pb[0], pb[1], heading, base);
   c.spot(n1s, pt[0], pt[1], heading, top + 0.01);
   World.stairs.push({ id: c.site.id + '.' + name, site: c.site.id, zone: c.zone, bottom: c.site.id + '.' + n0s, top: c.site.id + '.' + n1s, rise: o.rise, width: 2 * hw, upper: o.upper !== false });
-  const hole = rect(G.Zh, G.ZE, lane - hw - 0.06, lane + hw + 0.06);
-  return { hole, G, P, rect, lane, hw, top, Hf: top, ax, dir };
+  // the stairwell in the slab above and the level rails round it: across the near end, along the sides (the exit side stops short of the top so one can step off)
+  const hole = rect(G.Zh, G.ZE, lane - hw, lane + hw), railSegs = [[P(G.Zh, lane - hw - 0.05), P(G.Zh, lane + hw + 0.05)]];
+  for (const s of [-1, 1]) railSegs.push([P(G.Zh, lane + s * (hw + 0.05)), P(s === o.exit ? G.Z1 - 0.5 : G.ZE + 0.06, lane + s * (hw + 0.05))]);
+  return { hole, rails: railSegs, G, P, rect, lane, hw, top, Hf: top, ax, dir };
 }
 
 // a rail along the edge of a stairwell or gallery, local coordinates a -> b, standing on the floor at height y; collider included
@@ -84,32 +85,23 @@ function floorRail(c, a, b, y, o) {
 // Draws floor, underside and the edges of the holes, rails the holes except on `open` sides, hangs rafters and a roof lining, and extends the zone.
 function upperFloor(c, o) {
   o = o || {};
-  const { w, d, H, hd, zone, ext, int, tanP } = c, e = 0.16, Hf = H + FLOOR_T, X0 = -w / 2 + e, X1 = w / 2 - e, Z0 = -hd + e, Z1 = hd - e;
+  const { w, d, H, hd, zone, ext, int, tanP } = c, e = 0.16, Yu = o.y === undefined ? H : o.y, Hf = Yu + FLOOR_T, A = o.area || [-w / 2 + e, -hd + e, w / 2 - e, hd - e], X0 = A[0], Z0 = A[1], X1 = A[2], Z1 = A[3];
   const holes = (o.holes || []).map(h => [clamp(h[0], X0, X1), clamp(h[1], Z0, Z1), clamp(h[2], X0, X1), clamp(h[3], Z0, Z1)]).filter(h => h[2] - h[0] > 0.1 && h[3] - h[1] > 0.1);
   const xs = [...new Set([X0, X1].concat(holes.flatMap(h => [h[0], h[2]])).map(v => +v.toFixed(3)))].sort((a, b) => a - b), zs = [...new Set([Z0, Z1].concat(holes.flatMap(h => [h[1], h[3]])).map(v => +v.toFixed(3)))].sort((a, b) => a - b);
   const inHole = (x, z) => holes.some(h => x > h[0] && x < h[2] && z > h[1] && z < h[3]);
   ext.m1 = zone; ext.ao = INT_AO * 0.9;
   for (let i = 0; i < xs.length - 1; i++) for (let j = 0; j < zs.length - 1; j++) {
     const x0 = xs[i], x1 = xs[i + 1], z0 = zs[j], z1 = zs[j + 1]; if (inHole((x0 + x1) / 2, (z0 + z1) / 2)) continue;
-    ext.mat(MAT.PLANKS, COL.woodDark); ext.box(x0, H, z0, x1, Hf, z1, 4 | 8);
+    ext.mat(MAT.PLANKS, COL.woodDark); ext.box(x0, Yu, z0, x1, Hf, z1, 4 | 8);
     ext.quad([x0, Hf, z0], [x0, Hf, z1], [x1, Hf, z1], [x1, Hf, z0], 0, 0, (x1 - x0) / ext.tile, (z1 - z0) / ext.tile);
-    ext.mat(MAT.PLANKS, COL.wood); ext.quad([x0, H, z1], [x0, H, z0], [x1, H, z0], [x1, H, z1], 0, 0, (x1 - x0) / ext.tile, (z1 - z0) / ext.tile);
+    ext.mat(MAT.PLANKS, COL.wood); ext.quad([x0, Yu, z1], [x0, Yu, z0], [x1, Yu, z0], [x1, Yu, z1], 0, 0, (x1 - x0) / ext.tile, (z1 - z0) / ext.tile);
     addFloor(ext, x0, z0, x1, z1, Hf);
   }
-  // rails round the holes: every edge except the open side(s) and those against a wall
-  const wallNear = (v, lim, tol) => Math.abs(v - lim) < tol;
-  for (const h of o.holeRails || []) {
-    const r = h.rect, y = Hf, sides = [['x0', [r[0], r[1]], [r[0], r[3]]], ['x1', [r[2], r[1]], [r[2], r[3]]], ['z0', [r[0], r[1]], [r[2], r[1]]], ['z1', [r[0], r[3]], [r[2], r[3]]]];
-    for (const [k, a, b] of sides) {
-      if (h.open && h.open.includes(k)) continue;
-      if ((k === 'x0' && wallNear(r[0], X0, 0.35)) || (k === 'x1' && wallNear(r[2], X1, 0.35)) || (k === 'z0' && wallNear(r[1], Z0, 0.35)) || (k === 'z1' && wallNear(r[3], Z1, 0.35))) continue;
-      // the rail stands on the slab, just outside the hole
-      const out = 0.05, push = k === 'x0' ? [-out, 0] : k === 'x1' ? [out, 0] : k === 'z0' ? [0, -out] : [0, out];
-      floorRail(c, [a[0] + push[0], a[1] + push[1]], [b[0] + push[0], b[1] + push[1]], y);
-    }
-  }
+  // level rails round the holes and along the open edges of a loft: the segments that run along a wall are dropped
+  const onWall = (p, q) => (Math.abs(p[0] - X0) < 0.4 && Math.abs(q[0] - X0) < 0.4 && !o.area) || (Math.abs(p[0] - X1) < 0.4 && Math.abs(q[0] - X1) < 0.4 && !o.area) || (Math.abs(p[1] - Z0) < 0.4 && Math.abs(q[1] - Z0) < 0.4 && !o.area) || (Math.abs(p[1] - Z1) < 0.4 && Math.abs(q[1] - Z1) < 0.4 && !o.area);
+  for (const [p, q] of o.rails || []) if (!onWall(p, q)) floorRail(c, p, q, Hf);
   // a roof lining and rafters: the room under the roof is part of the house
-  if (o.rafters !== false && c.kYtop) {
+  if (o.rafters !== false && c.kYtop && !o.area) {
     const Yt = c.kYtop, roofU = z => Yt + (hd - Math.abs(z)) * tanP - 0.04;
     ext.mat(MAT.PLANKS, COL.woodDark); ext.m1 = zone; ext.ao = INT_AO * 0.9;
     for (const s of [-1, 1]) {
@@ -125,9 +117,10 @@ function upperFloor(c, o) {
     }
     int.box(X0, ridge - 0.26, -0.07, X1, ridge - 0.12, 0.07);
   }
-  c.zoneInfo.y1 = Math.max(c.zoneInfo.y1, c.floorY + (c.kYtop || H + 3) + hd * tanP + 1.5);
+  if (!o.area) c.zoneInfo.y1 = Math.max(c.zoneInfo.y1, c.floorY + (c.kYtop || H + 3) + hd * tanP + 1.5);
   ext.ao = 1; ext.m1 = 0;
-  c.Hf = Hf; c.upperDone = true;
+  if (!o.area) c.upperDone = true;
+  c.Hf = Hf;
   return { Hf, X0, X1, Z0, Z1 };
 }
 
