@@ -2102,8 +2102,8 @@ const Chars = (() => {
       grip: [1.384, 0.06, -0.916, 0.023, 0.024, 0.014],       // the Quaternius grip carried over by the hand's finger, across and palm axes (tools/humans/README notes)
       look(def) {
         if (def.foe) return { body: def.foe.body, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) };
-        const body = BODY[def.id] || (def.female ? 'f_farmer' : 'm_farmer');
-        return { body, fit: FIT[body] || 1, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id]) };
+        const body = BODY[def.id] || def.body || (def.female ? 'f_farmer' : 'm_farmer');          // def.body / def.tint: the inn's regulars (77c_patrons.js) wear other people's bodies in other colours
+        return { body, fit: FIT[body] || 1, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint) };
       },
     });
   }
@@ -8561,7 +8561,7 @@ function buildNPCs() {
     const mesh = buildCharacter(def), item = World.skinPack.add(mesh);
     const npc = { def, id: def.id, name: def.name, scale: def.scale || 1, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, wander: 0, dwell: 0, talking: false, look: [0, 0], ang: new Float32Array(33) };
     npc.obj = addSkinned(item, { r: 1.4, zone: 0, npc: true });
-    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; } }
+    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; if (typeof npcHandProp === 'function') npcHandProp(npc); /* lute, hammer, spear, mug ... (77d_handprops.js) */ } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; } }
     NPCS.push(npc); NPC[def.id] = npc;
   }
   // chickens
@@ -8583,7 +8583,7 @@ function buildNPCs() {
 }
 
 // place every villager where the clock says they should be
-function npcSnapAll() { for (const n of NPCS) { const row = npcRow(n), sp = Array.isArray(row[1]) ? row[1][0] : row[1]; npcArrive(n, sp, row[2]); n.goal = sp; } }
+function npcSnapAll() { if (typeof npcClaimReset === 'function') npcClaimReset(); for (const n of NPCS) { const row = npcRow(n), sp0 = Array.isArray(row[1]) ? row[1][0] : row[1], sp = typeof npcClaim === 'function' ? npcClaim(n, sp0) : sp0; npcArrive(n, sp, row[2]); n.goal = sp; } }
 function npcRow(n) {
   const sc = n.override || n.def.sched; let h = Env.hour; if (h < sc[0][0]) h += 24;
   let row = sc[sc.length - 1]; for (const r of sc) if (r[0] <= h) row = r;
@@ -8607,6 +8607,7 @@ function npcUpdate(dt, playerPos) {
         if (!n.path && n.at === target[n.wIdx]) { if (n.dwell > 0) n.dwell -= dt; else n.wIdx = (n.wIdx + 1) % target.length; }
         target = target[n.wIdx];
       }
+      if (typeof npcClaim === 'function') target = npcClaim(n, target);          // anchors are claimed: nobody stands in another's place (77c_patrons.js)
       if (n.goal !== target) {
         const wasAt = !n.path && !!n.at;
         const from = n.path ? n.path[Math.min(n.pi, n.path.length - 1)] : Nav.spot[n.at], to = Nav.spot[target];
@@ -8761,17 +8762,98 @@ function ambUpdate(dt, playerPos) {
 // ───────────────────────── regulars of the Honeyed Hart: evening guests who fill the common room (inn.s6..s12) ─────────────────────────
 // By day they idle in the square or at a porch; from the evening bell they are at their table; they sleep in the infill cottages.
 (function () {
+  // id, name, body (49_chars.js 'real' set), skin, hair, tint (multipliers on the colours baked into the body), evening seat, bed, day: [[hour, spot(s), anim] ...]
   const L = [
-    ['pat1', 'Wat Cooper', 'tan', 'brown', [0.45, 0.36, 0.26], 'inn.s6', 'in.02.bed', 'square.bench'],
-    ['pat2', 'Edda Fenn', 'rosy', 'auburn', [0.5, 0.3, 0.3], 'inn.s7', 'in.04.bed', 'square.bench2'],
-    ['pat3', 'Hob the Carter', 'brown', 'black', [0.34, 0.4, 0.3], 'inn.s8', 'in.07.bed', 'square.well'],
-    ['pat4', 'Sorrel Vane', 'fair', 'blond', [0.42, 0.32, 0.5], 'inn.s9', 'in.13.bed', 'elder.porch'],
-    ['pat5', 'Piers Lowe', 'tan', 'grey', [0.4, 0.38, 0.34], 'inn.s10', 'in.21.bed', 'square.bench'],
-    ['pat6', 'Nell Marsh', 'rosy', 'brown', [0.3, 0.42, 0.46], 'inn.s11', 'in.23.bed', 'square.bench2'],
-    ['pat7', 'Jory Thatcher', 'brown', 'brown', [0.5, 0.42, 0.22], 'inn.s12', 'in.02.bed', 'square.well'],
+    ['pat1', 'Wat Cooper', 'm_farmer', 'tan', 'brown', { tunic: [1.55, 0.95, 0.6] }, 'inn.s6', 'in.02.bed', [[7.5, 'square.well', 'idle'], [11.5, 'stallfront0', 'idle'], [15, 'square.bench', 'sit']]],
+    ['pat2', 'Tilda Fenn', 'f_farmer', 'rosy', 'auburn', { tunic: [0.7, 0.85, 1.25], skirt: [1.2, 0.9, 0.8] }, 'inn.s7', 'in.04.bed', [[7.5, 'stallfront1', 'idle'], [13, 'square.bench2', 'sit'], [16, 'elder.porch', 'idle']]],
+    ['pat3', 'Hob the Carter', 'm_fisher', 'brown', 'black', { tunic: [1.1, 0.85, 0.7], pants: [0.8, 0.8, 0.8] }, 'inn.s8', 'in.07.bed', [[7.5, 'alley.stall0', 'idle'], [14, 'square.well', 'idle']]],
+    ['pat4', 'Sorrel Vane', 'm_youth', 'fair', 'blond', { tunic: [1.35, 0.75, 1.2] }, 'inn.s9', 'in.13.bed', [[7.5, 'elder.porch', 'idle'], [12, 'dstall0', 'idle'], [16, 'square.bench', 'sit']]],
+    ['pat5', 'Piers Lowe', 'm_elder', 'tan', 'grey', { tunic: [0.95, 1.0, 1.1] }, 'inn.s10', 'in.21.bed', [[7.5, 'in.21.bed', 'lie'], [10, 'stallfront2', 'idle'], [14.5, 'square.bench2', 'sit']]],
+    ['pat6', 'Nell Marsh', 'f_weaver', 'rosy', 'brown', { robe: [0.55, 1.0, 1.3], tunic: [0.6, 1.0, 1.3] }, 'inn.s11', 'in.23.bed', [[7.5, 'square.bench2', 'sit'], [12, 'alley.stall1', 'idle'], [16, 'square.well', 'idle']]],
+    ['pat7', 'Jory Thatcher', 'm_hunter', 'brown', 'brown', { tunic: [1.25, 1.15, 0.65] }, 'inn.s12', 'in.04.bed2', [[8, 'dstall1', 'idle'], [13, 'stallfront0', 'idle'], [16.5, 'square.bench', 'sit']]],
   ];
-  for (const [id, name, skin, hair, top, seat, bed, day] of L) NPC_DEFS.push({ id, name, skin, hair, top, legs: [0.3, 0.26, 0.22], dress: skin === 'rosy', sched: [[7.5, day, 'idle'], [18.5, seat, 'sit'], [23.5, bed, 'lie']] });
+  for (const [id, name, body, skin, hair, tint, seat, bed, day] of L) NPC_DEFS.push({ id, name, body, tint, skin, hair, top: [0.4, 0.36, 0.3], legs: [0.3, 0.26, 0.22], female: /^f_/.test(body), dress: /^f_/.test(body), sched: day.concat([[18.5, seat, 'sit'], [23.5, bed, 'lie']]) });
 })();
+
+// ── anchors are claimed (one person to a place) ──
+// A schedule names a spot; if another person already holds it, the next free spot beside it (name#1, name#2 ... on a ring 0.85 m round it, never in a wall) is used.
+// A taken seat or bed becomes a standing place beside it. The nav graph knows an alias by its parent's node.
+const NPC_CLAIMS = {};
+function npcClaimReset() { for (const k in NPC_CLAIMS) delete NPC_CLAIMS[k]; for (const n of NPCS) n.claim = null; }
+function npcClaim(n, name) {
+  const sp0 = World.spots[name]; if (!sp0 || typeof name !== 'string') return name;
+  const base = name.split('#')[0], spB = World.spots[base] || sp0, own = n.claim;
+  if (own && (own === base || own.startsWith(base + '#')) && NPC_CLAIMS[own] === n.id) return own;
+  const crowded = q => {          // standing people keep 0.7 m apart, whatever their spots are called (seats and beds are laid out by the plans)
+    if (q.sit || q.lie) return false;
+    for (const o in NPC_CLAIMS) { if (NPC_CLAIMS[o] === n.id) continue; const r = World.spots[o]; if (r && Math.abs(r.p[1] - q.p[1]) < 1.2 && Math.hypot(r.p[0] - q.p[0], r.p[2] - q.p[2]) < 0.7) return true; }
+    return false;
+  };
+  for (let k = 0; k < 9; k++) {
+    const cand = k ? base + '#' + k : base;
+    if (NPC_CLAIMS[cand] && NPC_CLAIMS[cand] !== n.id) continue;
+    if (k && !World.spots[cand]) {          // a ring of standing places round the spot, none inside a wall
+      const a = k * 2.4 + base.length, rr = 0.85 * (1 + (k > 4 ? 0.8 : 0)), x = spB.p[0] + Math.cos(a) * rr, z = spB.p[2] + Math.sin(a) * rr;
+      if (World.blockedAt && World.blockedAt(x, z, 0.3)) continue;
+      World.spots[cand] = Object.assign({}, spB, { p: [x, spB.p[1], z] }); delete World.spots[cand].sit; delete World.spots[cand].lie;
+      if (Nav.spot[base] !== undefined) Nav.spot[cand] = Nav.spot[base];
+    }
+    if (crowded(World.spots[cand] || spB)) continue;
+    if (own && own !== cand && NPC_CLAIMS[own] === n.id) delete NPC_CLAIMS[own];
+    NPC_CLAIMS[cand] = n.id; n.claim = cand; return cand;
+  }
+  return name;
+}
+
+
+// ---- 77d_handprops.js ----
+// ───────────────────────── things in people's hands: lute, hammer, spear, staff, rod, mug, flute, drum ─────────────────────────
+// The 'real' characters carry nothing of their own (def.prop was only drawn by the old procedural body). Each prop is a small vertex-coloured mesh in the sword's grip frame
+// (origin where the hand closes, long axis +y), parented to a hand bone with Chars.attach, lit like the villagers (RPG.litMat). The lute is held by the left hand on its neck
+// with its body against the player's hip while the 'lute' clip runs: HP.LUTE is the pose (rotation, position in the hand bone's frame), tuned by eye.
+const HP = { cache: {}, LUTE: [0, 0, 1.5, 0, 0.05, 0.04] };
+function hpGeo(kind) {
+  if (HP.cache[kind]) return HP.cache[kind];
+  const T = THREE, X = RPG.xf, WD = [0.16, 0.08, 0.035], WL = [0.26, 0.15, 0.07], DK = [0.04, 0.025, 0.015], ST = [0.3, 0.31, 0.34], IR = [0.12, 0.12, 0.13], CL = [0.5, 0.36, 0.2];
+  let P;
+  if (kind === 'lute') P = [
+    [new T.SphereGeometry(1, 14, 10), X(0, -0.3, 0, 0, 0, 0, 0.17, 0.23, 0.095), WD],                                      // the pear-shaped bowl
+    [new T.CylinderGeometry(0.045, 0.045, 0.012, 12), X(0, -0.25, 0.088, PI / 2, 0, 0), DK],                                   // the sound hole
+    [new T.BoxGeometry(0.15, 0.012, 0.014), X(0, -0.42, 0.09), WL],                                                         // the bridge
+    [new T.BoxGeometry(0.05, 0.56, 0.03), X(0, 0.17, 0, 0, 0, 0), WD],                                                        // the neck
+    [new T.BoxGeometry(0.04, 0.46, 0.012), X(0, 0.2, 0.02), DK],                                                           // the fingerboard
+    [new T.BoxGeometry(0.06, 0.14, 0.03), X(0, 0.52, -0.035, -0.55, 0, 0), WD],                                              // the pegbox, bent back
+    [new T.BoxGeometry(0.004, 0.8, 0.004), X(-0.012, 0.0, 0.026), [0.7, 0.66, 0.55]], [new T.BoxGeometry(0.004, 0.8, 0.004), X(0.012, 0.0, 0.026), [0.7, 0.66, 0.55]],
+  ];
+  else if (kind === 'hammer') P = [[new T.CylinderGeometry(0.02, 0.024, 0.5, 7), X(0, 0.12, 0), WD], [new T.BoxGeometry(0.17, 0.075, 0.08), X(0, 0.4, 0), IR], [new T.BoxGeometry(0.04, 0.1, 0.07), X(0.095, 0.4, 0), IR]];
+  else if (kind === 'spear') P = [[new T.CylinderGeometry(0.014, 0.016, 1.9, 6), X(0, 0.35, 0), WD], [new T.ConeGeometry(0.035, 0.26, 4), X(0, 1.43, 0), ST], [new T.CylinderGeometry(0.022, 0.022, 0.06, 6), X(0, 1.29, 0), IR]];
+  else if (kind === 'staff') P = [[new T.CylinderGeometry(0.02, 0.026, 1.7, 6), X(0, 0.35, 0), WD], [new T.SphereGeometry(0.045, 8, 6), X(0, 1.22, 0), WL]];
+  else if (kind === 'rod') P = [[new T.CylinderGeometry(0.006, 0.014, 2.0, 5), X(0, 0.7, 0), WL]];
+  else if (kind === 'mug') P = [[new T.CylinderGeometry(0.042, 0.036, 0.1, 10), X(0, 0.05, 0), CL], [new T.TorusGeometry(0.03, 0.007, 5, 8, PI), X(0.044, 0.05, 0, 0, 0, -PI / 2), CL], [new T.CylinderGeometry(0.038, 0.038, 0.006, 10), X(0, 0.093, 0), [0.45, 0.28, 0.08]]];
+  else if (kind === 'flute') P = [[new T.CylinderGeometry(0.011, 0.011, 0.42, 6), X(0, 0.1, 0, 0, 0, 0), WL], [new T.CylinderGeometry(0.0125, 0.0125, 0.02, 6), X(0, 0.31, 0), DK]];
+  else if (kind === 'drum') P = [[new T.CylinderGeometry(0.17, 0.17, 0.12, 14), X(0, 0, 0), WD], [new T.CylinderGeometry(0.16, 0.16, 0.012, 14), X(0, 0.062, 0), [0.55, 0.45, 0.3]], [new T.CylinderGeometry(0.172, 0.172, 0.015, 14), X(0, -0.04, 0), IR]];
+  else return null;
+  return HP.cache[kind] = RPG.merge(P);
+}
+// the props each person carries (def.prop from the schedules table, plus the regulars' mugs and flute)
+function hpKinds(def) {
+  const k = [];
+  if (def.prop && ['lute', 'hammer', 'spear', 'staff', 'rod'].includes(def.prop)) k.push(def.prop);
+  if (def.id === 'osric' || def.id === 'greta') k.push('mug');
+  if (/^pat\d/.test(def.id)) k.push(def.id === 'pat4' ? 'flute' : 'mug');
+  return k;
+}
+function npcHandProp(npc) {
+  const ch = npc.ch; if (!ch || typeof RPG === 'undefined' || !RPG.merge) return;
+  for (const kind of hpKinds(npc.def)) {
+    const g = hpGeo(kind); if (!g) continue;
+    const mesh = new THREE.Mesh(g, RPG.litMat(ch.uZone, ch.uLight, 0.55)); mesh.layers.set(1); mesh.castShadow = false; mesh.name = 'prop:' + kind;
+    const grip = (Chars.cfg && Chars.cfg.grip) || [1.384, 0.06, -0.916, 0.023, 0.024, 0.014], sc = 1 / (((Chars.cfg && Chars.cfg.scale) || 1) * (npc.scale || 1));
+    if (kind === 'lute') { const L = HP.LUTE; mesh.rotation.set(L[0], L[1], L[2]); mesh.position.set(L[3], L[4], L[5]); mesh.scale.setScalar(sc); Chars.attach(ch, 'handL', mesh); }
+    else { mesh.rotation.set(grip[0], grip[1], grip[2]); mesh.position.set(grip[3], grip[4], grip[5]); mesh.scale.setScalar(kind === 'mug' || kind === 'flute' ? sc * 1.0 : sc); Chars.attach(ch, 'handR', mesh); }
+    npc.props = (npc.props || []).concat([mesh]);
+  }
+}
 
 
 // ---- 78_player.js ----
