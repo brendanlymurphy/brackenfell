@@ -64,7 +64,7 @@ function pLayout(P) {
     for (const id of [d.a, d.b]) if (id) P.rooms[id].doors.push(d);
   }
   // windows on outside walls (levels at or above the ground; the cellar gets high slits only)
-  const WIN = ['Wide_Flat', 'Thin_Round', 'Wide_Round'];
+  const WIN0 = ['Wide_Flat', 'Thin_Round', 'Wide_Round'];
   for (const wl of P.walls) {
     if (!wl.ext || wl.k < 0) continue;
     for (const rid of wl.rooms) {
@@ -75,7 +75,7 @@ function pLayout(P) {
       for (let i = 0; i < n; i++) {
         const p = Math.round((lo + pitch * (i + 0.5)) * 2) / 2;
         if (wl.open.some(o => Math.abs(o.pos - p) < o.hw + 1.45) || p - 0.8 < lo + 0.3 || p + 0.8 > hi - 0.3) continue;
-        const kind = WIN[Math.abs(Math.round(wl.c * 3 + p * 7)) % 3], o = { type: 'win', pos: p, hw: 0.8, kind };
+        const WIN = room.winKinds || WIN0, kind = WIN[Math.abs(Math.round(wl.c * 3 + p * 7)) % WIN.length], o = { type: 'win', pos: p, hw: 0.8, kind, glass: room.glass ? room.glass[P.windows.length % room.glass.length] : null };
         wl.open.push(o); P.windows.push({ wall: wl, pos: p, kind, k: wl.k, room });
       }
     }
@@ -149,7 +149,7 @@ function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   o = o || {}; const r = pFoot(cx, cz, w, d, rot);
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
   const L = P.lv[room.k], m = P.c.int; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m));
-  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), top: o.surface ? h : 0, back: o.back });
+  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
   if (o.flat) it.kind = 'rug'; return it;
 }
 // along a wall of the room, w wide (along the wall) and d deep; o.at: 'start' | 'end' | 'mid' | a coordinate along the wall to be near. Tries every 0.25 m.
@@ -264,9 +264,10 @@ function pWallEmit(P, wl, B, IN) {
     if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); }
     else {
       const tbl = { Wide_Flat: ['_Window_Wide_Flat', 'Window_Wide_Flat1'], Thin_Round: ['_Window_Thin_Round', 'Window_Thin_Round1'], Wide_Round: ['_Window_Wide_Round', 'Window_Wide_Round1'] }[sp.o.kind] || ['_Window_Wide_Flat', 'Window_Wide_Flat1'];
-      add(G + tbl[0], sp.s, S); add(tbl[1], sp.s, S);
+      const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];
+      add(G + tbl[0], sp.s, S); add(st ? tbl[1] + '_Stained' : tbl[1], sp.s, S, st ? Object.assign({}, IN, { tint: sp.o.glass }) : undefined);
       // the light the window lets in, a little inside it
-      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, [1.5, 1.42, 1.28], 'daylight', wl.k);
+      const px = hor ? sp.o.pos : wl.c - ns * 0.8, pz = hor ? wl.c - ns * 0.8 : sp.o.pos; pLight(P, px, 1.7 * sy, pz, 5.6, sp.o.glass ? sp.o.glass.map(v => 0.5 + v * 1.4) : [1.5, 1.42, 1.28], 'daylight', wl.k);
     }
     cur = Math.max(cur, s1);
   }
