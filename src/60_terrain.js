@@ -157,8 +157,7 @@ function buildTerrain() {
   // height texture for the grass shader
   const N = Terrain.N, hh = new Uint16Array(N * N);
   for (let i = 0; i < N * N; i++) hh[i] = f2h(Terrain.h[i]);
-  G.heightTex = G.device.createTexture({ size: [N, N], format: 'r16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-  G.device.queue.writeTexture({ texture: G.heightTex }, hh, { bytesPerRow: N * 2 }, [N, N]);
+  G.heightTex = gfxDataTex(hh, N, N, THREE.RedFormat, THREE.HalfFloatType);
 }
 
 // roads, square, fields and bare ground painted with Canvas2D, then used by the ground shader, the grass and footsteps
@@ -202,8 +201,7 @@ function buildSplat() {
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = da[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
   Terrain.splatData = out;
-  G.splatTex = G.device.createTexture({ size: [Rz, Rz], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-  G.device.queue.writeTexture({ texture: G.splatTex }, out, { bytesPerRow: Rz * 4 }, [Rz, Rz]);
+  G.splatTex = gfxDataTex(out, Rz, Rz, THREE.RGBAFormat, THREE.UnsignedByteType);
 }
 
 // second ground mask, painted once everything is placed: r shade under trees, g wet ground, b contact shade around solid things, a worn turf
@@ -251,8 +249,7 @@ function buildSplat2() {
   blob(B, 0, SQUARE.x, SQUARE.z, Math.max(SQUARE.rx, SQUARE.rz) + 6, 0.5, 0.75);
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = db[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
-  G.splat2Tex = G.device.createTexture({ size: [Rz, Rz], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-  G.device.queue.writeTexture({ texture: G.splat2Tex }, out, { bytesPerRow: Rz * 4 }, [Rz, Rz]);
+  G.splat2Tex = gfxDataTex(out, Rz, Rz, THREE.RGBAFormat, THREE.UnsignedByteType);
 }
 
 function buildWater() {

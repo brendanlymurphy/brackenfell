@@ -7,7 +7,7 @@ const coarse = () => (window.matchMedia && matchMedia('(pointer: coarse)').match
 
 function resize() {
   const c = G.canvas, pr = Math.min(window.devicePixelRatio || 1, R.q.pr);
-  gpuResize(Math.round(c.clientWidth * pr), Math.round(c.clientHeight * pr));
+  gfxResize(Math.round(c.clientWidth * pr), Math.round(c.clientHeight * pr));
 }
 game.applyQuality = async () => {
   let tier = game.qualitySetting;
@@ -115,7 +115,7 @@ function tick(dt) {
 }
 let lastT = 0;
 function frame(tms) {
-  if (TEST) G.device.queue.onSubmittedWorkDone().then(() => requestAnimationFrame(frame)); else requestAnimationFrame(frame);
+  requestAnimationFrame(frame);
   if (G.lost) return;
   const dtMs = Math.min(tms - lastT, 100); lastT = tms;
   if (dtMs <= 0 || document.hidden) return;
@@ -142,19 +142,15 @@ function startGame(cont) {
   try {
     loadSettings();
     const canvas = $('view');
-    try { await gpuInit(canvas); }
-    catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell needs WebGPU, which this browser does not offer here. Open this page in a current Chrome or Edge, or in Safari on iOS 26 or newer.'; console.warn(e); window.__ready = true; return; }
-    gpuResize(canvas.clientWidth, canvas.clientHeight);
+    try { await gfxInit(canvas); }
+    catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'; console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
+    gfxResize(canvas.clientWidth, canvas.clientHeight);
     await load('Mixing lime, straw and river stone', 0.06);
     const lowMem = (navigator.deviceMemory || 8) <= 3;
-    await genTextures(TEST && TEST.texRes || (lowMem ? 256 : 512), f => { $('barFill').style.width = Math.round(4 + f * 8) + '%'; }); lap('tex');
-    // scanned surfaces come from the texture pack beside the page; anything going wrong there falls back to generated ones
-    if (!TEST || !TEST.texRes || TEST.pack) {
-      $('loadText').textContent = 'Unpacking stone, timber and thatch (about 25 MB the first time)';
-      try { await loadPack(lowMem, f => { $('barFill').style.width = Math.round(12 + f * 26) + '%'; }); }
-      catch (e) { console.warn('texture pack unavailable: ' + (e && e.message || e)); G.packError = String(e && e.message || e); }
-    }
-    if (!G.albedoArr) await genSurfaces(TEST && TEST.texRes || (lowMem ? 256 : 512)); lap('pack');
+    $('loadText').textContent = 'Unpacking stone, timber and thatch (about 35 MB the first time)';
+    await loadNoise();
+    await loadPack(lowMem, f => { $('barFill').style.width = Math.round(6 + f * 32) + '%'; }); lap('pack');
+    SH.init();
     renderInit();
     await load('Raising the Greyspine', 0.4); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
     await load('Framing timber, laying thatch', 0.55); buildVillage(); lap('village');
@@ -176,9 +172,8 @@ function startGame(cont) {
     game.ready = true;
     // ── test hooks ──
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
-    game.debugTextures = debugTextures;
-    game.step = (n, dt) => { let env; for (let i = 0; i < (n || 1); i++) env = tick(dt || 1 / 30); return env; };
-    game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); renderFrame(game.time, env); if (TEST) await gpuCapture(); return R.stats; };
+        game.step = (n, dt) => { let env; for (let i = 0; i < (n || 1); i++) env = tick(dt || 1 / 30); return env; };
+    game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); return R.stats; };
     game.tp = (x, z, yawDeg, pitchDeg, y) => { Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180; World.indoor = World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; };
     game.shot = async (x, y, z, yaw, pitch, hour) => {
       if (hour !== undefined) { Env.hour = hour; npcSnapAll(); }
@@ -187,8 +182,7 @@ function startGame(cont) {
       game.time += 0.4; npcUpdate(0.4, R.cam.pos); updateDynamics(0.4, [R.cam.pos].concat(NPCS.map(n => n.pos)));
       const env = updateEnv(game.time, World.indoor); env.time = game.time; World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
       fxUpdate(0.4, game.time, env, R.cam.pos); fxUpdate(0.4, game.time, env, R.cam.pos);
-      renderFrame(game.time, env); renderFrame(game.time, env);
-      if (TEST) await gpuCapture();
+      renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env));
       return R.stats;
     };
     if (TEST && !TEST.title) $('title').classList.add('gone');

@@ -204,10 +204,26 @@ class MeshPack {
     const it = Object.assign({ first: this.ni, count: mesh.ni, base: this.nv, mesh, c: mesh.center(), r: mesh.radius() }, extra || {});
     this.items.push(it); this.nv += mesh.nv; this.ni += mesh.ni; return it;
   }
+  // de-interleaves the 32-byte vertices into attributes every item's geometry shares; indices become absolute
   upload(label) {
-    const v = new Uint8Array(Math.max(this.nv, 1) * 32), ix = new Uint32Array(Math.max(this.ni, 3));
-    for (const it of this.items) { v.set(it.mesh.bytes, it.base * 32); ix.set(it.mesh.indices, it.first); it.mesh = null; }
-    this.vb = makeBuffer(v, GPUBufferUsage.VERTEX, label + '-v'); this.ib = makeBuffer(ix, GPUBufferUsage.INDEX, label + '-i');
+    const nv = Math.max(this.nv, 1), pos = new Float32Array(nv * 3), nrm = new Int8Array(nv * 4), uv = new Float32Array(nv * 2), tint = new Uint8Array(nv * 4), mm = new Uint8Array(nv * 4), wind = new Float32Array(nv);
+    const ix = new Uint32Array(Math.max(this.ni, 3));
+    for (const it of this.items) {
+      const m = it.mesh, f = m.f, u8 = m.u8, i8 = m.i8, b0 = it.base;
+      for (let v = 0; v < m.nv; v++) {
+        const o = v * 8, b = v * 32, d = b0 + v;
+        pos[d * 3] = f[o]; pos[d * 3 + 1] = f[o + 1]; pos[d * 3 + 2] = f[o + 2];
+        nrm[d * 4] = i8[b + 12]; nrm[d * 4 + 1] = i8[b + 13]; nrm[d * 4 + 2] = i8[b + 14]; wind[d] = Math.max(i8[b + 15], 0) / 127;
+        uv[d * 2] = f[o + 4]; uv[d * 2 + 1] = f[o + 5];
+        tint[d * 4] = u8[b + 24]; tint[d * 4 + 1] = u8[b + 25]; tint[d * 4 + 2] = u8[b + 26]; tint[d * 4 + 3] = u8[b + 27];
+        mm[d * 4] = u8[b + 28]; mm[d * 4 + 1] = u8[b + 29]; mm[d * 4 + 2] = u8[b + 30]; mm[d * 4 + 3] = u8[b + 31];
+      }
+      const src = m.indices; for (let k = 0; k < src.length; k++) ix[it.first + k] = src[k] + b0;
+      it.mesh = null;
+    }
+    const BA = THREE.BufferAttribute;
+    this.attr = { position: new BA(pos, 3), normal: new BA(nrm, 4, true), uv: new BA(uv, 2), tint: new BA(tint, 4, true), mm: new BA(mm, 4, true), wind: new BA(wind, 1) };
+    this.index = new BA(ix, 1); this.label = label;
     this.tris = this.ni / 3;
     return this;
   }
