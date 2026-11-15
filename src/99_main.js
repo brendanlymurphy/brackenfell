@@ -152,54 +152,85 @@ function startGame(cont) {
   setTimeout(() => { banner('The Greyspine Valley', 'Brackenfell'); }, 900);
   if (!sv) setTimeout(() => { if (qAt('welcome') < 0) qStart('welcome'); }, 5200);
 }
+// every label the loading screen shows while the valley is made; Load (index.html's inline script) draws the bar and the byte counts
+const bootSay = t => { if (typeof Load !== 'undefined') Load.say(t); else $('loadText').textContent = t; };
+const bootStage = f => { if (typeof Load !== 'undefined') Load.stage(f); };
+const gfxSync = async () => { try { const b = G.renderer && G.renderer.backend; if (b && b.device && b.device.queue && b.device.queue.onSubmittedWorkDone) await b.device.queue.onSubmittedWorkDone(); else if (b && b.gl && b.gl.finish) b.gl.finish(); } catch (e) { } };
+// Draw a few frames from places that between them put every kind of surface on screen (roads, houses, people, grass, water, a lit room), so the
+// shader and pipeline compiles happen behind the loading screen instead of as a hitch in the first seconds of play. Safe on both backends: these are
+// ordinary frames of the same pipeline; nothing here is compiled separately. A failed frame is only a skipped warm-up.
+async function warmShaders() {
+  const here = [R.cam.pos.slice(), R.cam.yaw, R.cam.pitch], zone0 = World.camZone, ind0 = World.indoor;
+  const sx = SITE.inn, y0 = Terrain.y(sx.x, sx.z);
+  const views = [[-84, null, -6.5, 90, 2], [0, null, 8, 0, 4], [sx.x, y0 + 1.75, sx.z, 150, 0], [10, null, 84, 0, 2], [-40, null, -2, 270, 8]];
+  let i = 0;
+  for (const v of views) {
+    bootSay('Warming the lanterns'); bootStage(0.84 + 0.14 * (i++ / views.length));
+    try {
+      R.cam.pos = [v[0], v[1] === null ? Terrain.y(v[0], v[2]) + 1.7 : v[1], v[2]]; R.cam.yaw = v[3] * PI / 180; R.cam.pitch = v[4] * PI / 180;
+      World.camZone = World.zoneAt(v[0], R.cam.pos[1], v[2]); World.indoor = World.camZone ? 1 : 0;
+      npcUpdate(0.05, R.cam.pos); fxUpdate(0.05, game.time, updateEnv(game.time, World.indoor), R.cam.pos);
+      const env = updateEnv(game.time, World.indoor); env.time = game.time;
+      renderFrame(game.time, env); renderFrame(game.time + 0.03, env);
+      await gfxSync();
+    } catch (e) { console.warn('warm-up frame skipped', e && e.message); }
+    await new Promise(r => setTimeout(r, 16));
+  }
+  R.cam.pos = here[0]; R.cam.yaw = here[1]; R.cam.pitch = here[2]; World.camZone = zone0; World.indoor = ind0;
+}
 (async function boot() {
-  const load = (t, f) => { $('loadText').textContent = t; $('barFill').style.width = Math.round(f * 100) + '%'; return new Promise(r => setTimeout(r, TEST ? 0 : 30)); };
+  const load = (t, f) => { bootSay(t); bootStage(f); return new Promise(r => setTimeout(r, TEST ? 0 : 30)); };
   let t0 = performance.now(); const laps = game.laps = {}, lap = n => { const t = performance.now(); laps[n] = Math.round(t - t0); t0 = t; };
   try {
     loadSettings(); if (PerfHud.url >= 0) { game.showFps = !!PerfHud.url; saveSettings(); } gfxTexInit(game.qualitySetting === 'auto' ? (TEST && TEST.quality) : game.qualitySetting);
     const canvas = $('view');
+    bootSay('Waking the valley');
     try { await gfxInit(canvas); }
-    catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'; console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
+    catch (e) { $('bar').hidden = true; $('loadNums').hidden = true; bootSay('Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'); console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
+    if (typeof Load !== 'undefined' && !G.astc) Load.use(['app', 'imgs', 'kits', 'chars']);        // no ASTC on this GPU: the WebP and JPEG texture files are fetched instead
     gfxResize(G.canvas.clientWidth, G.canvas.clientHeight);
-    await load('Mixing lime, straw and river stone', 0.06);
+    await load('Mixing lime, straw and river stone', 0.02);
     const lowMem = (navigator.deviceMemory || 8) <= 3;
-    $('loadText').textContent = 'Unpacking stone, timber and thatch (about 35 MB the first time)';
+    bootSay(Load.first ? 'Unpacking stone, timber and thatch (first visit: kept on this device for next time)' : 'Unpacking stone, timber and thatch');
     await loadNoise();
-    await loadPack(lowMem, f => { $('barFill').style.width = Math.round(6 + f * 32) + '%'; }); lap('pack');
+    await loadPack(lowMem, f => { }); lap('pack');
     SH.init();
     // animated villagers; if their files cannot be loaded the old hand-built bodies stand in
-    $('loadText').textContent = 'Dressing the villagers';
+    bootSay('Dressing the villagers');
     // the realistic set first, the stylized one if its files cannot be loaded; ?chars=quaternius (or TEST.chars) picks one set and no fallback
     if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) {
       const want = (TEST && TEST.chars) || (/[?&]chars=(\w+)/.exec(location.search) || [])[1], order = want ? [want] : ['real', 'quaternius'];
       for (const name of order) {
-        try { await Chars.load(name, f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; G.charSet = name; break; }
+        try { if (name === 'quaternius' && typeof Load !== 'undefined') Load.use(Load.groups.concat('charsq')); await Chars.load(name, f => { }); G.chars = true; G.charSet = name; break; }
         catch (e) { console.warn('character set ' + name + ' unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); Chars.ready = false; Chars.set = null; }
       }
     }
     lap('chars');
-    if (typeof kitBoot === 'function') await kitBoot(f => { $('loadText').textContent = 'Carting in beams, barrels and roof tiles'; $('barFill').style.width = Math.round(38 + f * 2) + '%'; });
+    if (typeof kitBoot === 'function') await kitBoot(f => { bootSay('Carting in beams, barrels and roof tiles'); });
     renderInit();
-    await load('Raising the Greyspine', 0.4); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
-    await load('Framing timber, laying thatch', 0.55); buildVillage(); lap('village');
-    await load('Waking the villagers', 0.68); buildNPCs(); festivalSpots(); lap('npcs');
-    await load('Planting pine and birch', 0.76); buildVegetation(); lap('veg');
+    await load('Raising the Greyspine', 0.1); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
+    await load('Framing timber, laying thatch', 0.25); buildVillage(); lap('village');
+    await load('Waking the villagers', 0.5); buildNPCs(); festivalSpots(); lap('npcs');
+    await load('Planting pine and birch', 0.62); buildVegetation(); lap('veg');
     World.villagePack.upload('village'); World.skinPack.upload('skin');
     buildSplat2(); colBuild(); navBuild(); fxInit(); lap('nav');
-    await load('Lighting the lanterns', 0.88);
+    await load('Lighting the lanterns', 0.74);
     if (TEST && TEST.quality) game.qualitySetting = TEST.quality;
     await game.applyQuality(); lap('pipelines');
     if (typeof kitAttach === 'function') kitAttach();
     if (typeof infillAttach === 'function') infillAttach();
   if (typeof dressAttach === 'function') dressAttach();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
-    npcSnapAll(); uiInit(); inputInit(G.canvas, $('touch'));
+    npcSnapAll(); uiInit(); inputInit2(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));
-    document.addEventListener('visibilitychange', () => { if (Audio2.ctx) { if (document.hidden) Audio2.ctx.suspend(); else if (game.playing) Audio2.ctx.resume(); } lastT = performance.now(); });
-    $('barFill').style.width = '100%'; $('loadText').textContent = ''; $('bar').hidden = true; $('startRow').hidden = false;
-    $('hint').textContent = coarse() ? 'Drag on the left to walk, on the right to look. Push the stick all the way to run. Doors open as you walk up to them. Turn your phone sideways for a wider view.' : 'W A S D to walk, mouse to look, Shift to run, E to interact, Tab for your journal. Doors open as you walk up to them.';
+    UI.lifecycle();
+    if (!TEST || TEST.warm) await warmShaders();
+    bootStage(1); if (typeof Load !== 'undefined') Load.complete(); else $('barFill').style.transform = 'scaleX(1)';
+    $('loadBox').hidden = true; $('startRow').hidden = false; $('title').classList.remove('loading'); $('title').classList.add('ready');
+    $('hint').textContent = coarse() ? 'Drag on the left to walk, on the right to look. Push the stick all the way to run. Doors open as you walk up to them.' : 'W A S D to walk, mouse to look, Shift to run, E to use, Tab for your journal and map, Esc to pause.';
     if (loadSave()) $('contBtn').hidden = false;
     $('startBtn').addEventListener('click', () => startGame(false)); $('contBtn').addEventListener('click', () => startGame(true));
+    if (typeof Load !== 'undefined') { Load.update = () => UI.updateAvailable(); if (Load.updateReady) UI.updateAvailable(); setTimeout(() => { Load.register(); setTimeout(() => Load.warm().then(() => UI.storageNote()), 4000); }, 1500); }
     game.ready = true;
     // ── test hooks ──
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
