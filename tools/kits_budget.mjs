@@ -2,7 +2,7 @@
 // reduces a piece that is above its budget, so running it twice changes nothing).
 // usage: node tools/kits_budget.mjs [tools/kit_budget.json] [kits/village.glb kits/props.glb ...]
 //   kit_budget.json: { "<piece name>": maxTriangles, ... }   (a piece is one top-level node of a pack)
-// Simplification is meshoptimizer's, aware of normals and UVs; borders of open meshes (leaf cards, sheets) are locked so cut-outs keep their outline.
+// Simplification is meshoptimizer's, aware of normals and UVs; borders are locked for pieces made of cut-out cards (ferns, weeds) so they keep their outline; solid pieces may shrink at open edges.
 import { NodeIO } from '@gltf-transform/core';
 import { KHRMeshQuantization, EXTTextureWebP } from '@gltf-transform/extensions';
 import { MeshoptSimplifier } from 'meshoptimizer';
@@ -14,7 +14,8 @@ const files = args.length ? args : ['village', 'props', 'nature', 'scan'].map(n 
 const BUDGET = JSON.parse(fs.readFileSync(budgetFile, 'utf8'));
 const io = new NodeIO().registerExtensions([KHRMeshQuantization, EXTTextureWebP]);
 const trisOf = p => (p.getIndices() ? p.getIndices().getCount() : p.getAttribute('POSITION').getCount()) / 3;
-function simplify(doc, prim, target) {
+const CARDS = /fern|weed|grass|plant|leaf|leaves|flower|vine|clover/i;      // pieces made of cut-out cards keep their borders
+function simplify(doc, prim, target, lock) {
   const ia = prim.getIndices(); if (!ia) return false;
   const idx = Uint32Array.from(ia.getArray()), pa = prim.getAttribute('POSITION'), nv = pa.getCount();
   const nrm = prim.getAttribute('NORMAL'), uv = prim.getAttribute('TEXCOORD_0'), col = prim.getAttribute('COLOR_0');
@@ -27,7 +28,7 @@ function simplify(doc, prim, target) {
   }
   const W = [0.6, 0.6, 0.6, 1.2, 1.2, 0.3, 0.3, 0.3];
   let out = idx;
-  for (const err of [0.1, 0.3, 1]) { [out] = MeshoptSimplifier.simplifyWithAttributes(idx, pos, 3, att, 8, W, null, Math.max(12, Math.round(target)) * 3, err, ['LockBorder']); if (out.length <= Math.max(12, Math.round(target)) * 3 * 1.15) break; }      // a stubborn piece gets a looser error limit
+  for (const [err, W2] of [[0.1, W], [0.3, W], [1, W], [1, W.map(w => w * 0.15)]]) { [out] = MeshoptSimplifier.simplifyWithAttributes(idx, pos, 3, att, 8, W2, null, Math.max(12, Math.round(target)) * 3, err, lock ? ['LockBorder'] : []); if (out.length <= Math.max(12, Math.round(target)) * 3 * 1.15) break; }      // a stubborn piece gets a looser error limit
   if (out.length >= idx.length) return false;
   const remap = new Map(), keep = []; for (const v of out) if (!remap.has(v)) { remap.set(v, keep.length); keep.push(v); }
   for (const sem of prim.listSemantics()) {
@@ -48,7 +49,7 @@ for (const file of files) {
     const prims = meshes.flatMap(m => m.listPrimitives()), total = prims.reduce((s, p) => s + trisOf(p), 0);
     if (total <= budget * 1.05) continue;
     const k = budget / total; let after = 0;
-    for (const p of prims) { if (!done.has(p)) { done.add(p); simplify(doc, p, trisOf(p) * k); } after += trisOf(p); }
+    for (const p of prims) { if (!done.has(p)) { done.add(p); simplify(doc, p, trisOf(p) * k, CARDS.test(node.getName()) || CARDS.test((p.getMaterial() && p.getMaterial().getName()) || '')); } after += trisOf(p); }
     changed++; saved += total - after; log.push(node.getName() + ' ' + Math.round(total) + '>' + Math.round(after));
   }
   for (const a of r.listAccessors()) if (a.listParents().every(p => p.propertyType === 'Root')) a.dispose();
