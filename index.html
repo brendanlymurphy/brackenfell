@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#14110d">
+<title>Brackenfell</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* one visual world: ink panels, parchment text, a worn-gold accent. layout: a quiet frame of small HUD pieces around a full-bleed 3D view */
+  --ink: #14110d;
+  --panel: rgba(20, 17, 13, 0.80);
+  --parch: #ebe0c6;
+  --dim: #a99b7b;
+  --gold: #d8b563;
+  --line: rgba(216, 181, 99, 0.34);
+  --ember: #e0703a;
+  --display: "IM Fell English SC", "Palatino Linotype", Palatino, Georgia, serif;
+  --body: "Alegreya", "Palatino Linotype", Palatino, Georgia, serif;
+  --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; margin: 0; background: var(--ink); color: var(--parch); overflow: hidden; font-family: var(--body); font-size: 16px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
+[hidden] { display: none !important; }
+#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+#touch { position: fixed; inset: 0; touch-action: none; }
+#stick { position: fixed; width: 116px; height: 116px; margin: -58px 0 0 -58px; border-radius: 50%; border: 1px solid var(--line); background: radial-gradient(circle, rgba(20,17,13,0.10), rgba(20,17,13,0.42)); display: none; pointer-events: none; }
+#knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; border-radius: 50%; background: rgba(235, 224, 198, 0.42); border: 1px solid rgba(235, 224, 198, 0.7); transform: translate(-50%, -50%); }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ── HUD ── */
+#hud { position: fixed; inset: 0; pointer-events: none; }
+#compass { position: absolute; top: calc(var(--sat) + 10px); left: 50%; width: min(340px, 56vw); height: 30px; transform: translateX(-50%); overflow: hidden; border-bottom: 1px solid var(--line);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); }
+#ctrack span { position: absolute; top: 3px; transform: translateX(-50%); font-family: var(--display); font-size: 15px; letter-spacing: 0.04em; color: var(--parch); text-shadow: 0 1px 3px #000; white-space: nowrap; }
+#ctrack span.minor { font-size: 11px; color: var(--dim); top: 7px; }
+#ctrack span.mark { top: 2px; width: 13px; height: 13px; border: 2px solid var(--gold); background: rgba(216, 181, 99, 0.25); transform: translateX(-50%) rotate(45deg); box-shadow: 0 0 8px rgba(216, 181, 99, 0.7); }
+#ctrack span.dist { top: 17px; font-family: var(--body); font-size: 10px; color: var(--gold); letter-spacing: 0; }
+#cneedle { position: absolute; left: 50%; bottom: 0; width: 1px; height: 7px; background: var(--gold); }
+#clock { position: absolute; top: calc(var(--sat) + 44px); left: 50%; transform: translateX(-50%); font-size: 12px; letter-spacing: 0.12em; color: var(--dim); text-shadow: 0 1px 3px #000; font-variant-numeric: tabular-nums; text-transform: uppercase; }
+#objective { position: absolute; top: calc(var(--sat) + 12px); left: calc(var(--sal) + 14px); max-width: min(240px, 34vw); font-size: 13px; line-height: 1.3; text-shadow: 0 1px 4px #000, 0 0 2px #000; }
+#objective b { display: block; font-family: var(--display); font-weight: 400; font-size: 14px; color: var(--gold); letter-spacing: 0.03em; }
+#objective div { margin-bottom: 7px; padding-left: 9px; border-left: 2px solid var(--line); }
+#place { position: absolute; top: 24%; left: 0; right: 0; text-align: center; font-family: var(--display); font-size: clamp(26px, 5.4vw, 46px); letter-spacing: 0.06em; text-shadow: 0 2px 12px #000, 0 0 2px #000; opacity: 0; transition: opacity 1.4s ease; text-wrap: balance; padding: 0 16px; }
+#place small { display: block; font-family: var(--body); font-size: 13px; letter-spacing: 0.3em; color: var(--gold); text-transform: uppercase; margin-bottom: 4px; }
+#place.on { opacity: 1; }
+#toasts { position: absolute; left: calc(var(--sal) + 14px); bottom: calc(var(--sab) + 150px); display: flex; flex-direction: column; gap: 6px; align-items: flex-start; max-width: min(320px, 62vw); }
+#toasts div { background: var(--panel); border-left: 2px solid var(--gold); padding: 7px 12px; font-size: 14px; line-height: 1.3; animation: toast 5.2s ease forwards; }
+@keyframes toast { 0% { opacity: 0; transform: translateX(-10px); } 7% { opacity: 1; transform: none; } 86% { opacity: 1; } 100% { opacity: 0; } }
+#act { pointer-events: auto; position: absolute; right: calc(var(--sar) + 22px); bottom: calc(var(--sab) + 86px); display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 10px 20px 10px 12px; background: var(--panel); border: 1px solid var(--gold); border-radius: 28px; font-size: 17px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5); }
+#act:active { background: rgba(216, 181, 99, 0.3); }
+#actKey { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--gold); color: var(--ink); font-weight: 700; font-size: 14px; }
+#menuBtn { pointer-events: auto; position: absolute; top: calc(var(--sat) + 8px); right: calc(var(--sar) + 10px); width: 46px; height: 46px; display: grid; place-content: center; gap: 5px; background: var(--panel); border: 1px solid var(--line); border-radius: 50%; }
+#menuBtn span { display: block; width: 18px; height: 2px; background: var(--parch); }
+#purse { position: absolute; top: calc(var(--sat) + 62px); right: calc(var(--sar) + 14px); font-size: 13px; color: var(--gold); text-shadow: 0 1px 3px #000; font-variant-numeric: tabular-nums; }
+#fps { position: absolute; right: calc(var(--sar) + 14px); bottom: calc(var(--sab) + 8px); font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; text-align: right; white-space: pre; text-shadow: 0 1px 2px #000; }
+
+/* ── dialogue ── */
+#dialog { position: fixed; left: 50%; bottom: calc(var(--sab) + 14px); transform: translateX(-50%); width: min(680px, calc(100% - 32px - var(--sal) - var(--sar))); max-height: 78%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--gold); padding: 14px 18px 16px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+#dname { font-family: var(--display); font-size: 20px; color: var(--gold); letter-spacing: 0.04em; }
+#dtext { margin: 6px 0 12px; font-size: 17px; line-height: 1.42; max-width: 62ch; min-height: 2.8em; }
+#dopts { display: flex; flex-wrap: wrap; gap: 8px; }
+#dopts button { flex: 1 1 200px; text-align: left; min-height: 44px; padding: 9px 14px; background: rgba(235, 224, 198, 0.07); border: 1px solid var(--line); border-radius: 3px; font-size: 16px; line-height: 1.25; }
+#dopts button:active, #dopts button:hover { background: rgba(216, 181, 99, 0.22); border-color: var(--gold); }
+#dopts button.quest { border-color: var(--gold); color: var(--gold); }
+
+/* ── sheets: journal, reader ── */
+#menu, #reader { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(8, 7, 5, 0.6); padding: calc(var(--sat) + 12px) calc(var(--sar) + 16px) calc(var(--sab) + 12px) calc(var(--sal) + 16px); }
+.sheet { width: min(620px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--gold); padding: 16px 20px 20px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+#tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+#tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; min-height: 44px; font-family: var(--display); font-size: 17px; color: var(--dim); letter-spacing: 0.04em; }
+#tabs button.on { color: var(--gold); border-bottom-color: var(--gold); }
+#mclose { margin-left: auto; }
+.tab h3 { font-family: var(--display); font-weight: 400; font-size: 18px; color: var(--gold); margin: 14px 0 2px; letter-spacing: 0.03em; }
+.tab h3:first-child { margin-top: 0; }
+.tab p { margin: 2px 0 0; line-height: 1.4; max-width: 60ch; }
+.tab p.done { color: var(--dim); text-decoration: line-through; text-decoration-color: rgba(169, 155, 123, 0.5); }
+.tab .empty { color: var(--dim); font-style: italic; }
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.items div { border: 1px solid var(--line); padding: 8px 10px; }
+.items b { display: block; font-weight: 500; }
+.items span { font-size: 13px; color: var(--dim); line-height: 1.25; display: block; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 46px; border-bottom: 1px solid rgba(216, 181, 99, 0.12); }
+.row input[type=range] { flex: 0 1 220px; accent-color: var(--gold); }
+.row select { font: inherit; color: var(--parch); background: var(--ink); border: 1px solid var(--line); padding: 6px 8px; min-height: 36px; }
+.row input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--gold); }
+.btn { min-height: 46px; padding: 10px 22px; background: var(--gold); color: var(--ink); border: 1px solid var(--gold); border-radius: 3px; font-family: var(--display); font-size: 18px; letter-spacing: 0.05em; }
+.btn.ghost { background: transparent; color: var(--parch); border-color: var(--line); }
+.btn.big { min-height: 54px; padding: 12px 30px; font-size: 21px; }
+.btn:active { filter: brightness(1.2); }
+#resetBtn { margin-top: 16px; }
+#diag { margin: 14px 0 0; font-size: 12px; color: var(--dim); line-height: 1.35; overflow-wrap: anywhere; }
+#credits { margin: 6px 0 0; font-size: 12px; color: var(--dim); opacity: 0.8; }
+#reader h2 { font-family: var(--display); font-weight: 400; font-size: 24px; color: var(--gold); margin: 0 0 8px; text-wrap: balance; }
+#reader p { font-size: 18px; line-height: 1.5; font-style: italic; margin: 0 0 18px; max-width: 58ch; }
+
+/* ── title ── */
+#title { position: fixed; inset: 0; display: grid; align-items: end; justify-items: start; padding: calc(var(--sat) + 20px) calc(var(--sar) + 24px) calc(var(--sab) + 26px) calc(var(--sal) + 28px); background: linear-gradient(200deg, rgba(20,17,13,0) 30%, rgba(20,17,13,0.55) 62%, rgba(20,17,13,0.9)); transition: opacity 1.2s ease; }
+#title.gone { opacity: 0; pointer-events: none; }
+#title .inner { max-width: 560px; }
+#title .over { margin: 0; font-size: 14px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold); }
+#title h1 { margin: 2px 0 6px; font-family: var(--display); font-weight: 400; font-size: clamp(54px, 13vw, 118px); line-height: 0.95; letter-spacing: 0.02em; text-shadow: 0 3px 30px rgba(0, 0, 0, 0.7); }
+#loadText { margin: 0 0 8px; color: var(--dim); font-style: italic; min-height: 1.4em; overflow-wrap: anywhere; }
+#bar { width: min(320px, 70vw); height: 2px; background: rgba(235, 224, 198, 0.16); margin-bottom: 14px; }
+#barFill { display: block; height: 100%; width: 0; background: var(--gold); transition: width 0.3s ease; }
+#startRow { display: flex; flex-wrap: wrap; gap: 12px; margin: 4px 0 14px; }
+#hint { margin: 0; font-size: 14px; line-height: 1.45; color: var(--dim); max-width: 46ch; }
+#gpuNote { margin: 10px 0 0; max-width: 60ch; font-size: 13px; line-height: 1.4; color: #e9b08a; overflow-wrap: anywhere; }
+#fade { position: fixed; inset: 0; background: #060504; opacity: 0; pointer-events: none; transition: opacity 0.9s ease; }
+#fade.on { opacity: 1; pointer-events: auto; }
+@media (max-width: 600px) { #objective { top: calc(var(--sat) + 66px); max-width: 62vw; } #purse { top: calc(var(--sat) + 60px); } }
+@media (max-height: 430px) { #title h1 { font-size: clamp(44px, 16vh, 84px); } #toasts { bottom: calc(var(--sab) + 96px); } #act { bottom: calc(var(--sab) + 58px); } #dtext { font-size: 16px; margin: 4px 0 9px; min-height: 0; } #dialog { padding: 10px 14px 12px; } }
+@media (prefers-reduced-motion: reduce) { #place, #title, #fade, #barFill { transition: none; } #toasts div { animation-duration: 5.2s; } }
+
+#classic { margin: 14px 0 0; font-size: 12px; color: var(--dim); opacity: 0.85; }
+#classic a { color: inherit; text-decoration: underline; }
+
+</style>
+</head>
+<body>
+<canvas id="view" aria-label="Brackenfell, a village you can walk through"></canvas>
+<div id="touch"></div>
+<div id="stick"><div id="knob"></div></div>
+
+<div id="hud" hidden>
+  <div id="compass" aria-hidden="true"><div id="ctrack"></div><div id="cneedle"></div></div>
+  <div id="clock"></div>
+  <div id="objective"></div>
+  <div id="place"></div>
+  <div id="toasts" aria-live="polite"></div>
+  <button id="act" type="button" hidden><span id="actKey">E</span><span id="actLabel"></span></button>
+  <button id="menuBtn" type="button" aria-label="Open journal and settings"><span></span><span></span><span></span></button>
+  <div id="purse"></div>
+  <div id="fps" hidden></div>
+</div>
+
+<section id="dialog" hidden aria-live="polite">
+  <div id="dname"></div>
+  <p id="dtext"></p>
+  <div id="dopts"></div>
+</section>
+
+<section id="reader" hidden>
+  <div class="sheet">
+    <h2 id="rtitle"></h2>
+    <p id="rtext"></p>
+    <button id="rclose" type="button" class="btn">Close</button>
+  </div>
+</section>
+
+<section id="menu" hidden>
+  <div class="sheet">
+    <nav id="tabs">
+      <button type="button" data-tab="journal" class="on">Journal</button>
+      <button type="button" data-tab="pack">Pack</button>
+      <button type="button" data-tab="settings">Settings</button>
+      <button type="button" id="mclose" aria-label="Close">Close</button>
+    </nav>
+    <div id="tab-journal" class="tab"></div>
+    <div id="tab-pack" class="tab" hidden></div>
+    <div id="tab-settings" class="tab" hidden>
+      <label class="row" for="setQuality"><span>Detail</span>
+        <select id="setQuality"><option value="auto">Auto</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
+      <label class="row" for="setSens"><span>Look speed</span><input id="setSens" type="range" min="0.4" max="2.2" step="0.1" value="1"></label>
+      <label class="row" for="setVol"><span>Sound</span><input id="setVol" type="range" min="0" max="1" step="0.05" value="0.8"></label>
+      <label class="row" for="setMusic"><span>Music</span><input id="setMusic" type="range" min="0" max="1" step="0.05" value="0.6"></label>
+      <label class="row" for="setTime"><span>Time of day</span><input id="setTime" type="range" min="0" max="24" step="0.25" value="9.5"></label>
+      <label class="row" for="setFlow"><span>Day length</span>
+        <select id="setFlow"><option value="720">12 minutes</option><option value="1440">24 minutes</option><option value="360">6 minutes</option><option value="0">Stop the clock</option></select></label>
+      <label class="row" for="setGfx"><span>Graphics engine</span>
+        <select id="setGfx"><option value="webgpu">WebGPU (default)</option><option value="webgl">WebGL 2 (if things look wrong)</option></select></label>
+      <label class="row check" for="setInvert"><span>Invert look up and down</span><input id="setInvert" type="checkbox"></label>
+      <label class="row check" for="setFps"><span>Show frame rate</span><input id="setFps" type="checkbox"></label>
+      <button id="resetBtn" type="button" class="btn ghost">Start the story over</button>
+      <p id="diag"></p>
+        <p id="credits">Built on Three.js. Surface scans from ambientCG, cgbookcase and Nobiax; villagers from Quaternius; their animations from Mesh2Motion. All public domain (CC0).</p>
+    </div>
+  </div>
+</section>
+
+<section id="title">
+  <div class="inner">
+    <p class="over">A highland village to wander</p>
+    <h1>Brackenfell</h1>
+    <p id="loadText">Waking the valley</p>
+    <div id="bar"><i id="barFill"></i></div>
+    <div id="startRow" hidden>
+      <button id="startBtn" type="button" class="btn big">Enter the village</button>
+      <button id="contBtn" type="button" class="btn big ghost" hidden>Continue your stay</button>
+    </div>
+    <p id="hint"></p>
+    <p id="gpuNote" hidden></p>
+    <p id="classic"><a href="classic/">Classic version</a> (the build before this one)</p>
+  </div>
+</section>
+<div id="fade"></div>
+<script src="three.js?v=e87dfbcc"></script>
+<script src="game.js?v=cad986d2"></script>
+</body>
+</html>
