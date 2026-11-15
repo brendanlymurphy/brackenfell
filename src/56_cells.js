@@ -114,7 +114,7 @@ Cells.rescue = function () { const c = Cells.cur; if (c && c.enter) Cells.telepo
 Cells.migrate = function (pos, yaw) {
   if (!CELLS_ON || Cells.inRegion(pos[0])) return false;
   for (const c of Cells.list) {
-    const real = c.cs.real, z = c.zones[0]; if (!real || !z) continue;
+    const real = c.cs.real, z = World.zones[c.zones[0] - 1]; if (!real || !z) continue;
     if (Math.abs(pos[0] - real.x) > 14 || Math.abs(pos[2] - real.z) > 14) continue;
     const l = worldToSite(real, pos[0], pos[2]);
     if (Math.abs(l[0]) < z.hw && Math.abs(l[1]) < z.hd && pos[1] > real.y - 0.5 && pos[1] < real.y + (z.y1 - z.y0) + 1) {
