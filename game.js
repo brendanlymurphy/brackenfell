@@ -1722,7 +1722,8 @@ const Particles = { mesh: null };
 // Asset-agnostic: everything about a character set lives in one config (Chars.define). To move to another set, put its files
 // under chars/ and write a config; nothing below the configs needs to change.
 //
-//   await Chars.load('quaternius', progress)   load bodies, textures and clips of a set (once)
+//   await Chars.load('real', progress)         load bodies, textures and clips of a set (once); 'real' = MakeHuman people, 'quaternius' = the stylized set
+//   await Chars.ensure(['o_brute'])            load bodies a set keeps back (cfg.lazy) until they are needed
 //   const h = Chars.spawn(def)                 def: an entry of NPC_DEFS; the villager is added to Chars.group
 //   Chars.update(h, state, dt)                 state: { pos, yaw, anim, scale, zone, light, visible, look: [yaw, pitch], talking, seatHeight }
 //   Chars.attach(h, 'handR', object3D)         parent a prop to a named bone
@@ -1742,6 +1743,9 @@ const Chars = (() => {
   // materials         glTF material name -> { map: key | { body: key }, normal: key, rough, kind: 'skin' | 'hair', oneSided }
   // faces             +1 if the models face +Z (the glTF convention), -1 if they face -Z like the game
   // scale             model scale that makes an adult 1.72 m tall, the height the village was built for
+// lazy              bodies not fetched by load() but by ensure() (the outlaws)
+// matOf(material)   material description for sets whose GLBs carry their own textures: { kind, part, rough, oneSided, alpha, gltf: true }
+// look() may also return fit: an extra scale for that body (children are built at their own height and stood up to adult size, then scaled by the villager)
   // bones             the rig's names for the joints the game talks to
   // anims             game animation -> clip name, or a list to pick from per villager; 'sit+talk' plays when a seated villager talks
   // once, rate        clips that must not loop; optional playback rate per game animation
@@ -1804,13 +1808,55 @@ const Chars = (() => {
     });
   }
 
+  // Real: people built with Blender and MakeHuman (MPFB2), one GLB per person (mesh, textures, 53-joint rig; no clips) plus one clips.glb
+  // retargeted from the Quaternius clips onto the MakeHuman game rig. Built by tools/humans/; chars/real/PROVENANCE.md has the sources, all CC0.
+  // Every body has its own proportions, rest pose and textures, so a body is one villager (a few look-alikes are tinted apart at run time).
+  {
+    const BODY = { hale: 'm_guard', greta: 'f_maid', brandt: 'm_smith', tobin: 'm_boy', marta: 'f_herbalist', aldous: 'm_monk', maren: 'f_elder', osric: 'm_innkeeper', edda: 'f_farmer',
+      finn: 'm_fisher', lark: 'm_youth', wren: 'f_girl', rowan: 'm_elder', pip: 'f_child', ivo: 'm_hunter', hilda: 'f_weaver', bram: 'm_farmer' };
+    const NAT = { m_boy: 1.293, f_child: 1.213 };      // height of the children as built; a child is stood up to 1.72 m so the villager's own scale (0.74, 0.66) brings it to the height the village expects
+    const FIT = { m_boy: 1.72 / NAT.m_boy, f_child: 1.72 / NAT.f_child, f_elder: 1 / 0.93, m_elder: 1 / 0.97 };
+    const TINT = {      // light touches on top of the colours baked into each body, to keep neighbours apart
+      hale: { tunic: [0.92, 0.92, 0.98] }, ivo: { tunic: [0.8, 0.88, 1.1], pants: [0.8, 0.8, 0.85] }, bram: { tunic: [1.05, 1.0, 0.9] }, hilda: { robe: [0.95, 0.95, 1.1] },
+    };
+    const FOES = [{ body: 'o_hood_m' }, { body: 'o_brute' }, { body: 'o_hood_f' }, { body: 'o_rogue' }], FOE_LEADER = { body: 'o_brute', tint: { tunic: [1.35, 0.7, 0.6], pants: [0.9, 0.8, 0.8] } };
+    const SKIN_T = { light: [0.88, 0.82, 0.78], m_hunter: [1, 1, 1], f_herbalist: [1, 1, 1], o_rogue: [1, 1, 1] };      // the stock light skins are very bright under a sun-lit sky
+    const PART = [[/tunic|bodice|dress/, 'tunic'], [/robe/, 'robe'], [/hood|helmet/, 'head'], [/pants/, 'pants'], [/boots/, 'boots'], [/skirt/, 'skirt']];
+    const names = Object.values(BODY).concat(FOES.map(f => f.body));
+    const bodies = {}; for (const n of new Set(names)) bodies[n] = n + '.glb';
+    const ANIMS = { idle: ['idle-a', 'idle-foldarms', 'idle-a'], walk: ['walk', 'walk-relaxed'], run: 'jog', sit: 'sitting-idle', 'sit+talk': 'sitting-talking', talk: 'idle-talking',
+      hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-harvest', sweep: 'shovel-dig', lie: 'sleeping', cheer: 'clapping',
+      pickup: 'pick-up', jump: 'jump-air', block: 'sword-block', hit: 'hit-chest', die: 'death-a' };
+    C.define('real', {
+      dir: 'chars/real/', clips: 'clips.glb', bodies, lazy: FOES.map(f => f.body), foeLooks: { list: FOES, leader: FOE_LEADER }, textures: {}, materials: {},
+      matOf(m) {
+        const k = m.userData && m.userData.kind, n = m.name || '';
+        if (k === 'body') return { kind: 'skin', gltf: true, rough: 0.72, oneSided: true, warm: [1.0, 0.9, 0.86] };
+        if (k === 'hair') return { kind: 'hair', gltf: true, rough: 0.6, alpha: 0.18 };
+        if (k === 'brow') return { kind: 'brow', gltf: true, rough: 0.8, alpha: 0.4 };
+        if (k === 'eye') return { kind: 'eye', gltf: true, rough: 0.3, oneSided: true };
+        const part = (PART.find(p => p[0].test(n)) || [0, 'cloth'])[1];
+        return { kind: 'cloth', part, gltf: true, rough: 0.88 };
+      },
+      faces: 1, scale: 1,
+      bones: { hips: 'pelvis', head: 'head', neck: 'neck_01', handR: 'hand_r', handL: 'hand_l', footR: 'foot_r', footL: 'foot_l' },
+      anims: ANIMS, once: SETS.quaternius.once.slice(), rate: { hammer: 0.9 }, maxRate: 2.6,
+      grip: [1.384, 0.06, -0.916, 0.023, 0.024, 0.014],       // the Quaternius grip carried over by the hand's finger, across and palm axes (tools/humans/README notes)
+      look(def) {
+        if (def.foe) return { body: def.foe.body, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) };
+        const body = BODY[def.id] || (def.female ? 'f_farmer' : 'm_farmer');
+        return { body, fit: FIT[body] || 1, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id]) };
+      },
+    });
+  }
+
   // ── loading ──
   C.load = async function (setName, progress) {
     const cfg = SETS[setName]; if (!cfg) throw new Error('unknown character set ' + setName);
-    const bodyNames = Object.keys(cfg.bodies), texKeys = Object.keys(cfg.textures || {}), total = bodyNames.length + texKeys.length + 1; let done = 0;
+    const bodyNames = Object.keys(cfg.bodies).filter(n => !(cfg.lazy || []).includes(n)), texKeys = Object.keys(cfg.textures || {}), total = bodyNames.length + texKeys.length + 1; let done = 0;
     const tick = () => { if (progress) progress(++done / total); };
-    const GL = new T3X.GLTFLoader(), TL = new THREE.TextureLoader();
-    const get = async f => { const g = await GL.loadAsync(cfg.dir + f); tick(); return g; };
+    const TL = new THREE.TextureLoader();
+    const get = async f => { const g = await GL().loadAsync(cfg.dir + f); tick(); return g; };
     const tex = async k => {
       const d = cfg.textures[k], t = await TL.loadAsync(cfg.dir + (d.file || d));
       t.flipY = false; t.colorSpace = d.data ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.needsUpdate = true; tick(); return [k, t];
@@ -1819,25 +1865,33 @@ const Chars = (() => {
     const S = { name: setName, cfg, clips: {}, bodies: {}, tex: Object.fromEntries(texList), measure: {}, fitted: new Map(), geo: new Map() };
     for (const c of clipFile.animations) S.clips[c.name] = c;
     S.src = restPose(clipFile.scene);
-    bodyNames.forEach((n, i) => {
-      const scene = bodyFiles[i].scene; scene.updateMatrixWorld(true);
-      for (const c of bodyFiles[i].animations || []) if (!S.clips[c.name]) S.clips[c.name] = c;       // a body file may bring its own clips
-      const B = { scene, rest: restPose(scene), parts: {}, skel: null, armature: null };
-      scene.traverse(o => {
-        if (!o.isSkinnedMesh) return;
-        if (!B.skel) { B.skel = o.skeleton; B.bindMatrix = o.bindMatrix.clone(); }
-        const g = o.parent, part = g && g !== scene && !g.isBone && g.children.length && g.children.every(c => c.isSkinnedMesh) ? g.name : o.name;   // a mesh with several materials loads as a group
-        (B.parts[part] = B.parts[part] || []).push(o);
-      });
-      if (!B.skel) throw new Error(cfg.bodies[n] + ' has no skinned mesh');
-      let a = B.skel.bones[0]; while (a.parent && a.parent !== scene) a = a.parent; B.armature = a;
-      const hs = S.src.pos[cfg.bones.hips], ht = B.rest.pos[cfg.bones.hips]; B.hipsRatio = hs && ht && hs.length() > 1e-4 ? ht.length() / hs.length() : 1;
-      S.bodies[n] = B;
-    });
+    bodyNames.forEach((n, i) => addBody(S, n, bodyFiles[i]));
     for (const key of Object.keys(cfg.anims)) for (const cn of [].concat(cfg.anims[key])) if (!S.clips[cn]) console.warn('character set ' + setName + ': no clip "' + cn + '" for ' + key);
-    C.set = S; C.cfg = cfg; C.ready = true;
+    C.set = S; C.cfg = cfg; C.ready = true; C.name = setName;
     return S;
   };
+  const GL = () => GL.l || (GL.l = new T3X.GLTFLoader());
+  C.ensure = async function (names) {
+    const S = C.set; if (!S) throw new Error('Chars.load first');
+    const need = [...new Set(names)].filter(n => !S.bodies[n] && S.cfg.bodies[n]);
+    const files = await Promise.all(need.map(n => GL().loadAsync(S.cfg.dir + S.cfg.bodies[n])));
+    need.forEach((n, i) => addBody(S, n, files[i]));
+  };
+  function addBody(S, n, gltf) {
+    const cfg = S.cfg, scene = gltf.scene; scene.updateMatrixWorld(true);
+    for (const c of gltf.animations || []) if (!S.clips[c.name]) S.clips[c.name] = c;       // a body file may bring its own clips
+    const B = { scene, rest: restPose(scene), parts: {}, skel: null, armature: null };
+    scene.traverse(o => {
+      if (!o.isSkinnedMesh) return;
+      if (!B.skel) { B.skel = o.skeleton; B.bindMatrix = o.bindMatrix.clone(); }
+      const g = o.parent, part = g && g !== scene && !g.isBone && g.children.length && g.children.every(c => c.isSkinnedMesh) ? g.name : o.name;   // a mesh with several materials loads as a group
+      (B.parts[part] = B.parts[part] || []).push(o);
+    });
+    if (!B.skel) throw new Error(cfg.bodies[n] + ' has no skinned mesh');
+    let a = B.skel.bones[0]; while (a.parent && a.parent !== scene) a = a.parent; B.armature = a;
+    const hs = S.src.pos[cfg.bones.hips], ht = B.rest.pos[cfg.bones.hips]; B.hipsRatio = hs && ht && hs.length() > 1e-4 ? ht.length() / hs.length() : 1;
+    S.bodies[n] = B;
+  }
   // rest pose of a skeleton: per node name its parent, local rotation, local position and world rotation
   function restPose(scene) {
     const R = { order: [], parent: {}, q: {}, pos: {}, w: {} };
@@ -1898,17 +1952,20 @@ const Chars = (() => {
   }
 
   // ── material: the pack's colour maps, lit like the rest of the world (sun from the scene light; sky, bounce and hearths through emissive) ──
-  function makeMaterial(S, H, matName, look) {
-    const md = S.cfg.materials[matName] || {}, m = new THREE.MeshStandardNodeMaterial(); m.name = matName;
+  function makeMaterial(S, H, matName, look, src) {
+    const md = S.cfg.materials[matName] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, m = new THREE.MeshStandardNodeMaterial(); m.name = matName;
     let key = (look.maps && look.maps[matName]) || md.map; if (key && typeof key === 'object') key = key[H.body];
-    const map = key ? S.tex[key] : null, tint = look.tint && (look.tint[matName] || (md.kind && look.tint[md.kind]));
+    const map = key ? S.tex[key] : (md.gltf && src && src.map) || null, tint = look.tint && (look.tint[matName] || (md.part && look.tint[md.part]) || (md.kind && look.tint[md.kind]));
     if (tint) m.color.setRGB(tint[0], tint[1], tint[2]);
     m.roughness = md.rough === undefined ? 0.85 : md.rough; m.metalness = 0; m.side = md.oneSided ? THREE.FrontSide : THREE.DoubleSide;
-    const albedo = (map ? texture(map, uv()).rgb : vec3(1, 1, 1)).mul(materialColor);
-    m.colorNode = vec4(albedo, 1);
+    const tx = map ? texture(map, uv()) : null, albedo = (tx ? tx.rgb : vec3(1, 1, 1)).mul(materialColor);
+    m.colorNode = md.alpha && tx ? vec4(albedo, tx.a) : vec4(albedo, 1);
+    if (md.alpha && tx) m.alphaTest = md.alpha;
     if (C.normalMaps && md.normal && S.tex[md.normal]) m.normalNode = normalMap(texture(S.tex[md.normal], uv()));
     const N = normalWorld.normalize();
-    m.emissiveNode = albedo.mul(SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25))));
+    let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
+    if (md.warm) lit = lit.mul(vec3(...md.warm));       // skin keeps a little red in the shade, as light scattered under it does
+    m.emissiveNode = albedo.mul(lit);
     return m;
   }
 
@@ -1923,9 +1980,11 @@ const Chars = (() => {
     for (let i = 0, id = String(def.id || C.list.length); i < id.length; i++) H.seed = (H.seed * 31 + id.charCodeAt(i)) >>> 0;
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p]).sort(), names = new Set();
     for (const p of parts) for (const m of B.parts[p]) names.add(m.material.name);
+    H.fit = look.fit || 1;
     for (const mn of names) {
       const g = mergedGeometry(S, body, parts, mn); if (!g) continue;
-      const mat = makeMaterial(S, H, mn, look), mesh = new THREE.SkinnedMesh(g, mat);
+      let src = null; for (const p of parts) for (const m of B.parts[p]) if (!src && m.material.name === mn) src = m.material;
+      const mat = makeMaterial(S, H, mn, look, src), mesh = new THREE.SkinnedMesh(g, mat);
       mesh.name = mn; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
       mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;      // a fixed sphere: each pass (camera, shadow maps) culls villagers itself
       H.mats.push(mat); H.meshes.push(mesh);
@@ -2007,8 +2066,8 @@ const Chars = (() => {
     const base = st.anim || 'idle', seated = base === 'sit', lying = base === 'lie';
     const key = st.talking ? (lying ? 'lie' : seated ? (cfg.anims['sit+talk'] ? 'sit+talk' : 'sit') : 'talk') : base;
     play(H, key);
-    const s = st.scale || 1, k = (cfg.scale || 1) * s;
-    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1; H.cur.setEffectiveTimeScale(st.speed > 0 && g > 0.2 ? Math.min(Math.max(st.speed / g, 0.6), 1.8) : rate); }
+    const s = st.scale || 1, k = (cfg.scale || 1) * s * H.fit;
+    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1; H.cur.setEffectiveTimeScale(st.speed > 0 && g > 0.2 ? Math.min(Math.max(st.speed / g, 0.6), cfg.maxRate || 1.8) : rate); }
     H.mixer.update(dt);
     const p = st.pos, yaw = st.yaw || 0, face = cfg.faces === -1 ? 0 : Math.PI;
     H.root.scale.setScalar(k);
@@ -5664,10 +5723,11 @@ const Foes = (() => {
   function prepareChars() {
     const cfg = Chars.cfg; Object.assign(cfg.anims, ANIMS);
     for (const n of ['sword-block']) if (cfg.once && cfg.once.includes(n)) cfg.once.splice(cfg.once.indexOf(n), 1);
+    if (cfg.foeLooks) cfg.lookFoe = true;       // sets that bring their own outlaws (cfg.foeLooks) already answer def.foe in look()
     if (!cfg.lookFoe) { const orig = cfg.look; cfg.lookFoe = true; cfg.look = def => { if (!def.foe) return orig(def); const b = orig({ id: '\u0000', skin: def.foe.skin, hair: def.foe.hair }); return { body: def.foe.body, parts: ['HeadSkin', 'Eyes', 'Brows'].concat(def.foe.parts), maps: def.foe.maps || {}, tint: Object.assign({ skin: b.tint.skin, hair: b.tint.hair }, def.foe.tint) }; }; }
     // when in each attack clip the sword hand is furthest forward: that is the moment the blow lands
     try {
-      const body = Chars.set.bodies.male, rig = T3X.SkeletonUtils.clone(body.armature), mx = new THREE.AnimationMixer(rig), hand = rig.getObjectByName(cfg.bones.handR), hips = rig.getObjectByName(cfg.bones.hips), a = new THREE.Vector3(), b = new THREE.Vector3();
+      const body = Chars.set.bodies.male || Chars.set.bodies[(cfg.foeLooks ? cfg.foeLooks.list[0] : { body: Object.keys(Chars.set.bodies)[0] }).body], rig = T3X.SkeletonUtils.clone(body.armature), mx = new THREE.AnimationMixer(rig), hand = rig.getObjectByName(cfg.bones.handR), hips = rig.getObjectByName(cfg.bones.hips), a = new THREE.Vector3(), b = new THREE.Vector3();
       for (const key of ['c-atk1', 'c-atk2', 'c-atk3']) {
         const clip = Chars.set.clips[ANIMS[key]]; if (!clip || !hand || !hips) continue;
         const act = mx.clipAction(clip); act.play(); let best = -1e9, bt = 0.45;
@@ -5682,14 +5742,14 @@ const Foes = (() => {
     const r = RPG.st();
     for (const c of CAMPS) {
       for (let i = 0; i <= c.n; i++) {
-        const lead = i === c.n ? c.leader : null, id = c.id + '.' + i, look = lead ? LEADER : LOOKS[(i + (c.id === 'crag' ? 2 : 0)) % LOOKS.length];
+        const lead = i === c.n ? c.leader : null, id = c.id + '.' + i, look = Chars.cfg.foeLooks ? (lead ? Chars.cfg.foeLooks.leader : Chars.cfg.foeLooks.list[(i + (c.id === 'crag' ? 2 : 0)) % Chars.cfg.foeLooks.list.length]) : lead ? LEADER : LOOKS[(i + (c.id === 'crag' ? 2 : 0)) % LOOKS.length];
         const sp = i === 0 ? c.watch : c.spots[(i - 1) % c.spots.length];
         const f = { id, camp: c, name: lead ? lead.name : 'Outlaw', leader: !!lead, chief: !!(lead && lead.chief), maxHp: lead ? lead.hp : 38, dmg: lead ? lead.dmg : 8, scale: lead ? lead.scale : 0.97 + (i % 3) * 0.03,
           spot: sp, pos: sp.p.slice(), yaw: sp.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0 };
         f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
         f.h = Chars.spawn({ id: 'foe.' + id, foe: look });
         const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.frustumCulled = false; sw.layers.set(1);
-        sw.rotation.set(F.grip[0], F.grip[1], F.grip[2]); sw.position.set(F.grip[3], F.grip[4], F.grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw;
+        const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw;
         if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
         F.list.push(f);
       }
@@ -5700,7 +5760,7 @@ const Foes = (() => {
   F.grip = [PI / 2, 0, 0, 0, 0.02, 0.03];       // how a sword sits in the rig's right hand: rotation xyz, offset xyz (hand space)
   F.init = function () {
     buildCamps();
-    F.loading = (Chars.ready ? Promise.resolve() : Chars.load('quaternius')).then(spawnAll).catch(e => { F.failed = true; console.warn('outlaws could not be loaded: ' + (e && e.message || e)); });
+    F.loading = (Chars.ready ? Promise.resolve() : Chars.load(G.charSet || 'quaternius')).then(() => Chars.cfg.lazy && Chars.cfg.foeLooks ? Chars.ensure(Chars.cfg.foeLooks.list.map(l => l.body).concat(Chars.cfg.foeLooks.leader.body)) : 0).then(spawnAll).catch(e => { F.failed = true; console.warn('outlaws could not be loaded: ' + (e && e.message || e)); });
   };
   // everyone goes home and forgets (after the player dies, or sleeps)
   F.calm = function (heal) { for (const f of F.list) { if (!f.alive) continue; release(f); f.state = 'idle'; f.t = 0; f.pos = f.spot.p.slice(); f.yaw = f.spot.yaw; f.alert = 0; if (heal) f.hp = f.maxHp; } };
@@ -6081,7 +6141,14 @@ function startGame(cont) {
     SH.init();
     // animated villagers; if their files cannot be loaded the old hand-built bodies stand in
     $('loadText').textContent = 'Dressing the villagers';
-    if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) { try { await Chars.load('quaternius', f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; } catch (e) { console.warn('villager models unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); } }
+    // the realistic set first, the stylized one if its files cannot be loaded; ?chars=quaternius (or TEST.chars) picks one set and no fallback
+    if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) {
+      const want = (TEST && TEST.chars) || (/[?&]chars=(\w+)/.exec(location.search) || [])[1], order = want ? [want] : ['real', 'quaternius'];
+      for (const name of order) {
+        try { await Chars.load(name, f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; G.charSet = name; break; }
+        catch (e) { console.warn('character set ' + name + ' unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); Chars.ready = false; Chars.set = null; }
+      }
+    }
     lap('chars');
     if (typeof kitBoot === 'function') await kitBoot(f => { $('loadText').textContent = 'Carting in beams, barrels and roof tiles'; $('barFill').style.width = Math.round(38 + f * 2) + '%'; });
     renderInit();
