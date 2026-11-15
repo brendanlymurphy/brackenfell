@@ -8,7 +8,7 @@ const Kit = (() => {
     mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs } = TSL;
   const K_ = {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
-    pieces: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [],
+    pieces: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
     grade: null,
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
@@ -39,6 +39,7 @@ const Kit = (() => {
       uvScale: [1, 1], gain: 1, nScale: 1,
     };
     for (const t of [m.map, m.normalMap, orm, m.emissiveMap]) if (t) { t.anisotropy = 4; }
+    const d = K_.defs[name]; K_.pending.push(Promise.all([['map', 'color'], ['normalMap', 'data'], ['orm', 'data'], ['emissiveMap', 'color']].map(async ([k, kind]) => { if (d[k]) d[k] = await gfxTex(d[k], kind); })));
   }
   async function loadPack(pack, progress) {
     const loader = new T3X.GLTFLoader();
@@ -56,8 +57,10 @@ const Kit = (() => {
     }
     return true;
   }
-  const texLoad = url => new Promise((res, rej) => new THREE.TextureLoader().load(url, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = 4; res(t); }, undefined, () => rej(new Error('texture ' + url))));
+  const texLoad = (url, kind) => new Promise((res, rej) => new THREE.TextureLoader().load(url, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = 4; t.colorSpace = kind === 'data' ? THREE.NoColorSpace : THREE.SRGBColorSpace; gfxTex(t, kind).then(res, () => res(t)); }, undefined, () => rej(new Error('texture ' + url))));
   // the realistic skin: scanned or re-worked texture sets that replace the kit's painted ones, material by material (kits/skin/SKIN.json)
+  // a painted texture the realistic skin replaces is never uploaded: free its decoded image too
+  const dropPainted = (old, now) => { if (old && old !== now) { if (old.image && old.image.close) old.image.close(); old.dispose(); } };
   async function loadSkin() {
     const S = await fetchJson('kits/skin/SKIN.json', true); if (!S) { K_.skin = 'painted'; return; }
     K_.skinDef = S;
@@ -66,9 +69,9 @@ const Kit = (() => {
     for (const name of Object.keys(S.materials || {})) {
       const s = S.materials[name], d = K_.defs[name]; if (!d) continue;
       if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
-      if (s.a) jobs.push(texLoad('kits/skin/' + s.a).then(t => { t.colorSpace = THREE.SRGBColorSpace; d.map = t; }));
-      if (s.n) jobs.push(texLoad('kits/skin/' + s.n).then(t => { t.colorSpace = THREE.NoColorSpace; d.normalMap = t; }));
-      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm).then(t => { t.colorSpace = THREE.NoColorSpace; d.orm = t; d.aoInOrm = s.ao !== false; }));
+      if (s.a) jobs.push(texLoad('kits/skin/' + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
+      if (s.n) jobs.push(texLoad('kits/skin/' + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
+      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
     }
     await Promise.all(jobs);
   }
@@ -78,6 +81,7 @@ const Kit = (() => {
     opts = opts || {};
     const packs = opts.packs || K_.PACKS; K_.skin = opts.skin || (TEST && TEST.skin) || 'realistic';
     for (let i = 0; i < packs.length; i++) await loadPack(packs[i], f => progress && progress((i + f) / (packs.length + 1)));
+    await Promise.all(K_.pending); K_.pending.length = 0;
     if (K_.skin === 'realistic') await loadSkin();
     const g = K_.gradeInit;
     K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };

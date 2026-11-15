@@ -93,7 +93,7 @@ const Chars = (() => {
     const get = async f => { const g = await GL.loadAsync(cfg.dir + f); tick(); return g; };
     const tex = async k => {
       const d = cfg.textures[k], t = await TL.loadAsync(cfg.dir + (d.file || d));
-      t.flipY = false; t.colorSpace = d.data ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.needsUpdate = true; tick(); return [k, t];
+      t.flipY = false; t.colorSpace = d.data ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.needsUpdate = true; tick(); return [k, await gfxTex(t, d.data ? 'data' : 'color')];
     };
     const [clipFile, bodyFiles, texList] = await Promise.all([get(cfg.clips), Promise.all(bodyNames.map(n => get(cfg.bodies[n]))), Promise.all(texKeys.map(tex))]);
     const S = { name: setName, cfg, clips: {}, bodies: {}, tex: Object.fromEntries(texList), measure: {}, fitted: new Map(), geo: new Map() };

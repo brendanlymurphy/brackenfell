@@ -176,6 +176,38 @@ const K = {
   grassCell: 0.30,
 };
 
+
+// ── texture memory: one place that caps decoded texture size and shares identical images ──
+// Uncompressed textures cost width x height x 4 x 1.33 bytes of GPU memory (a 1024 map is 5.3 MB), and a phone's Safari tab is killed long before a
+// desktop would notice. Every loader of kit, scanned-prop and character textures passes its textures through gfxTex(), before the first upload.
+// Colour maps are capped at GFX_TEX.color, normal / ORM maps at GFX_TEX.data (pixels per side). The cap is lower on phones, low-memory devices and
+// the Low and Medium tiers; ?texcap=N or --opt texcap=N overrides it. Textures with the same size and content are uploaded once.
+const GFX_TEX = { color: 1024, data: 1024, seen: new Map(), shrunk: 0, shared: 0 };
+function gfxTexInit(settingTier) {
+  const phone = (typeof window !== 'undefined' && window.matchMedia && matchMedia('(pointer: coarse)').matches) || Math.min(innerWidth, innerHeight) < 520 || (navigator.deviceMemory || 8) <= 3;
+  const small = phone || settingTier === 'low' || settingTier === 'medium';
+  const o = TEST && TEST.texcap || +((location.search.match(/[?&]texcap=(\d+)/) || [])[1]) || 0;
+  const tiny = settingTier === 'low' || (navigator.deviceMemory || 8) <= 3;
+  GFX_TEX.color = o || (small ? 512 : 1024); GFX_TEX.data = o || (tiny ? 256 : small ? 512 : 1024);
+}
+async function gfxTex(t, kind) {
+  if (!t || !t.image) return t;
+  const im = t.image, w = im.width || im.naturalWidth || 0, h = im.height || im.naturalHeight || 0; if (!w || !h || t.isCompressedTexture || t.isDataTexture) return t;
+  const cap = kind === 'data' ? GFX_TEX.data : GFX_TEX.color;
+  if (Math.max(w, h) > cap) {
+    const k = cap / Math.max(w, h), nw = Math.max(4, Math.round(w * k)), nh = Math.max(4, Math.round(h * k));
+    try { const bmp = await createImageBitmap(im, { resizeWidth: nw, resizeHeight: nh, resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' }); if (im.close) im.close(); t.image = bmp; t.needsUpdate = true; GFX_TEX.shrunk++; } catch (e) { }
+  }
+  // identical content under another name (the same image in two GLB files): keep the first texture object
+  try {
+    const cw = t.image.width, ch = t.image.height, c = gfxTex.cv || (gfxTex.cv = document.createElement('canvas')); c.width = c.height = 8;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(t.image, 0, 0, 8, 8); const d = x.getImageData(0, 0, 8, 8).data;
+    const key = cw + 'x' + ch + '|' + t.colorSpace + '|' + t.wrapS + '|' + t.flipY + '|' + Array.from(d).join(',');
+    const prev = GFX_TEX.seen.get(key); if (prev && prev !== t) { GFX_TEX.shared++; return prev; } GFX_TEX.seen.set(key, t);
+  } catch (e) { }
+  return t;
+}
+
 // Which graphics backend to start: WebGPU unless this device has already shown it cannot run it (remembered in localStorage),
 // or the address says otherwise (?webgl or ?webgpu).
 const GFX_KEY = 'brackenfell.gfx';
@@ -200,6 +232,8 @@ async function gfxInit(canvas) {
     r = await make(canvas, true);
   }
   G.renderer = r; G.canvas = canvas; G.t0 = performance.now();
+  // test hook: record every texture the backend uploads (window.__texLog: Map texture -> { w, h, mb }); ?texlog or --opt texlog=1
+  if (TEST && TEST.texlog) { const be = r.backend, ct = be.createTexture.bind(be), log = window.__texLog = new Map(); be.createTexture = function (t, o) { try { const im = t.image || {}, w = (o && o.width) || im.width || (t.mipmaps && t.mipmaps[0] && t.mipmaps[0].width) || 0, h = (o && o.height) || im.height || 0, d = (o && o.depth) || im.depth || 1; let b = w * h * d * 4 * (t.generateMipmaps === false && !(o && o.levels > 1) ? 1 : 1.33); if (t.isCompressedTexture && t.mipmaps) b = t.mipmaps.reduce((a, m) => a + (m.data ? m.data.byteLength : 0), 0) * (t.isCompressedArrayTexture ? 1 : 1); log.set(t, { name: t.name || t.source && t.source.data && (t.source.data.src || '').slice(-40) || t.constructor.name, w, h, d, mb: b / 1048576, comp: !!t.isCompressedTexture }); } catch (e) { } return ct(t, o); }; }
   G.backend = r.backend.isWebGPUBackend ? 'WebGPU' : 'WebGL 2';
   if (G.backend === 'WebGL 2' && want === 'webgpu' && !G.gfxWhy) G.gfxWhy = 'WebGPU is not available here';
   G.astc = !!r.hasFeature('texture-compression-astc') && !(TEST && TEST.noAstc);
@@ -1117,7 +1151,7 @@ const Kit = (() => {
     mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs } = TSL;
   const K_ = {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
-    pieces: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [],
+    pieces: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
     grade: null,
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
@@ -1148,6 +1182,7 @@ const Kit = (() => {
       uvScale: [1, 1], gain: 1, nScale: 1,
     };
     for (const t of [m.map, m.normalMap, orm, m.emissiveMap]) if (t) { t.anisotropy = 4; }
+    const d = K_.defs[name]; K_.pending.push(Promise.all([['map', 'color'], ['normalMap', 'data'], ['orm', 'data'], ['emissiveMap', 'color']].map(async ([k, kind]) => { if (d[k]) d[k] = await gfxTex(d[k], kind); })));
   }
   async function loadPack(pack, progress) {
     const loader = new T3X.GLTFLoader();
@@ -1165,8 +1200,10 @@ const Kit = (() => {
     }
     return true;
   }
-  const texLoad = url => new Promise((res, rej) => new THREE.TextureLoader().load(url, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = 4; res(t); }, undefined, () => rej(new Error('texture ' + url))));
+  const texLoad = (url, kind) => new Promise((res, rej) => new THREE.TextureLoader().load(url, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = 4; t.colorSpace = kind === 'data' ? THREE.NoColorSpace : THREE.SRGBColorSpace; gfxTex(t, kind).then(res, () => res(t)); }, undefined, () => rej(new Error('texture ' + url))));
   // the realistic skin: scanned or re-worked texture sets that replace the kit's painted ones, material by material (kits/skin/SKIN.json)
+  // a painted texture the realistic skin replaces is never uploaded: free its decoded image too
+  const dropPainted = (old, now) => { if (old && old !== now) { if (old.image && old.image.close) old.image.close(); old.dispose(); } };
   async function loadSkin() {
     const S = await fetchJson('kits/skin/SKIN.json', true); if (!S) { K_.skin = 'painted'; return; }
     K_.skinDef = S;
@@ -1175,9 +1212,9 @@ const Kit = (() => {
     for (const name of Object.keys(S.materials || {})) {
       const s = S.materials[name], d = K_.defs[name]; if (!d) continue;
       if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
-      if (s.a) jobs.push(texLoad('kits/skin/' + s.a).then(t => { t.colorSpace = THREE.SRGBColorSpace; d.map = t; }));
-      if (s.n) jobs.push(texLoad('kits/skin/' + s.n).then(t => { t.colorSpace = THREE.NoColorSpace; d.normalMap = t; }));
-      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm).then(t => { t.colorSpace = THREE.NoColorSpace; d.orm = t; d.aoInOrm = s.ao !== false; }));
+      if (s.a) jobs.push(texLoad('kits/skin/' + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
+      if (s.n) jobs.push(texLoad('kits/skin/' + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
+      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
     }
     await Promise.all(jobs);
   }
@@ -1187,6 +1224,7 @@ const Kit = (() => {
     opts = opts || {};
     const packs = opts.packs || K_.PACKS; K_.skin = opts.skin || (TEST && TEST.skin) || 'realistic';
     for (let i = 0; i < packs.length; i++) await loadPack(packs[i], f => progress && progress((i + f) / (packs.length + 1)));
+    await Promise.all(K_.pending); K_.pending.length = 0;
     if (K_.skin === 'realistic') await loadSkin();
     const g = K_.gradeInit;
     K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };
@@ -1854,7 +1892,7 @@ const Chars = (() => {
     const get = async f => { const g = await GL.loadAsync(cfg.dir + f); tick(); return g; };
     const tex = async k => {
       const d = cfg.textures[k], t = await TL.loadAsync(cfg.dir + (d.file || d));
-      t.flipY = false; t.colorSpace = d.data ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.needsUpdate = true; tick(); return [k, t];
+      t.flipY = false; t.colorSpace = d.data ? THREE.NoColorSpace : THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.needsUpdate = true; tick(); return [k, await gfxTex(t, d.data ? 'data' : 'color')];
     };
     const [clipFile, bodyFiles, texList] = await Promise.all([get(cfg.clips), Promise.all(bodyNames.map(n => get(cfg.bodies[n]))), Promise.all(texKeys.map(tex))]);
     const S = { name: setName, cfg, clips: {}, bodies: {}, tex: Object.fromEntries(texList), measure: {}, fitted: new Map(), geo: new Map() };
@@ -6167,7 +6205,7 @@ function startGame(cont) {
   const load = (t, f) => { $('loadText').textContent = t; $('barFill').style.width = Math.round(f * 100) + '%'; return new Promise(r => setTimeout(r, TEST ? 0 : 30)); };
   let t0 = performance.now(); const laps = game.laps = {}, lap = n => { const t = performance.now(); laps[n] = Math.round(t - t0); t0 = t; };
   try {
-    loadSettings();
+    loadSettings(); gfxTexInit(game.qualitySetting === 'auto' ? (TEST && TEST.quality) : game.qualitySetting);
     const canvas = $('view');
     try { await gfxInit(canvas); }
     catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'; console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
