@@ -10,9 +10,9 @@
 //
 // Game conventions kept: feet at pos, yaw 0 faces -Z and grows clockwise seen from above, animation names as in 77_npc.js.
 const Chars = (() => {
-  const { vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap } = TSL;
+  const { vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap, Fn } = TSL;
   const SETS = {};
-  const C = { group: new THREE.Group(), set: null, cfg: null, list: [], ready: false, normalMaps: true };
+  const C = { group: new THREE.Group(), set: null, cfg: null, list: [], ready: false, normalMaps: true, merge: !(TEST && TEST.chars === 'split') };   // merge: one mesh and material per villager; false = one per texture (the old way)
   C.group.name = 'villagers';
 
   // ── character sets ──
@@ -161,9 +161,9 @@ const Chars = (() => {
 
   // ── geometry: the chosen parts of a body, merged per material so a villager costs a handful of draws ──
   const ATTR = [['position', 3], ['normal', 3], ['uv', 2], ['skinIndex', 4], ['skinWeight', 4]];
-  function mergedGeometry(S, body, parts, matName) {
-    const key = body + '|' + matName + '|' + parts.join(','); let g = S.geo.get(key); if (g !== undefined) return g;
-    const src = []; for (const p of parts) for (const m of S.bodies[body].parts[p] || []) if (m.material.name === matName) src.push(m.geometry);
+  function mergedGeometry(S, body, parts, matName, names) {
+    const key = body + '|' + (matName || '*') + '|' + parts.join(','); let g = S.geo.get(key); if (g !== undefined) return g;
+    const src = [], mids = []; for (const p of parts) for (const m of S.bodies[body].parts[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
     if (!src.length) { S.geo.set(key, null); return null; }
     let nv = 0, ni = 0; for (const s of src) { nv += s.attributes.position.count; ni += s.index ? s.index.count : s.attributes.position.count; }
     g = new THREE.BufferGeometry(); const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
@@ -172,6 +172,7 @@ const Chars = (() => {
       for (const s of src) { const a = s.attributes[name], c = s.attributes.position.count; for (let v = 0; v < c; v++) for (let k = 0; k < size; k++) arr[o++] = a ? a.getComponent(v, k) : 0; }
       g.setAttribute(name, new THREE.BufferAttribute(arr, size));
     }
+    if (names) { const mid = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; mid.fill(mids[i], o, o + c); o += c; }); g.setAttribute('mid', new THREE.BufferAttribute(mid, 1)); }
     let io = 0, base = 0; for (const s of src) { const c = s.attributes.position.count; if (s.index) for (let i = 0; i < s.index.count; i++) idx[io++] = s.index.getX(i) + base; else for (let i = 0; i < c; i++) idx[io++] = i + base; base += c; }
     g.setIndex(new THREE.BufferAttribute(idx, 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.6);
     S.geo.set(key, g); return g;
@@ -192,6 +193,29 @@ const Chars = (() => {
     return m;
   }
 
+  // One material for a whole villager (skin, face, eyes, hair, clothes): a per-vertex 'mid' picks which of the pack's textures, tint and
+  // roughness a fragment uses, so the villager is one draw call (and one shadow draw) instead of five or six. Textures keep their own UVs.
+  function makeMergedMaterial(S, H, names, look) {
+    const { attribute, abs, select, Discard, If, frontFacing, normalView, clamp } = TSL;
+    const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
+    const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
+    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0);
+    names.forEach((mn, i) => {
+      const md = S.cfg.materials[mn] || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
+      let key = (look.maps && look.maps[mn]) || md.map; if (key && typeof key === 'object') key = key[H.body];
+      const map = key ? S.tex[key] : null, tint = look.tint && (look.tint[mn] || (md.kind && look.tint[md.kind])) || [1, 1, 1];
+      albedo = albedo.add((map ? texture(map, U).rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
+      rough = rough.add(w.mul(md.rough === undefined ? 0.85 : md.rough));
+      if (md.oneSided) one = one.add(w);
+      if (C.normalMaps && md.normal && S.tex[md.normal]) { const nm = normalMap(texture(S.tex[md.normal], U)); nrm = nrm ? nrm.add(nm.mul(w)) : nm.mul(w); nw = nw.add(w); }
+    });
+    m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
+    m.roughnessNode = rough;
+    if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
+    m.emissiveNode = albedo.mul(SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25))));
+    return m;
+  }
+
   // ── spawning ──
   const cloneBones = o => { const c = o.clone(false); for (const ch of o.children) if (ch.isBone) c.add(cloneBones(ch)); return c; };
   C.spawn = function (def) {
@@ -203,7 +227,16 @@ const Chars = (() => {
     for (let i = 0, id = String(def.id || C.list.length); i < id.length; i++) H.seed = (H.seed * 31 + id.charCodeAt(i)) >>> 0;
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p]).sort(), names = new Set();
     for (const p of parts) for (const m of B.parts[p]) names.add(m.material.name);
-    for (const mn of names) {
+    const nameList = [...names].sort();
+    if (C.merge && nameList.length > 1) {
+      const g = mergedGeometry(S, body, parts, null, nameList);
+      if (g) {
+        const mat = makeMergedMaterial(S, H, nameList, look), mesh = new THREE.SkinnedMesh(g, mat);
+        mesh.name = 'villager'; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
+        mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;
+        H.mats.push(mat); H.meshes.push(mesh);
+      }
+    } else for (const mn of nameList) {
       const g = mergedGeometry(S, body, parts, mn); if (!g) continue;
       const mat = makeMaterial(S, H, mn, look), mesh = new THREE.SkinnedMesh(g, mat);
       mesh.name = mn; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);

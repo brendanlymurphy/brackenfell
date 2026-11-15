@@ -96,7 +96,7 @@ function buildNPCs() {
   World.chickens = [];
   const cm = [buildChicken([0.92, 0.9, 0.85]), buildChicken([0.62, 0.36, 0.2]), buildChicken([0.25, 0.22, 0.2])].map(m => World.skinPack.add(m));
   const homes = [[World.coop[0] + 1.5, World.coop[1] + 2], [World.coop[0] - 1, World.coop[1] + 3], [World.coop[0] + 2.5, World.coop[1] + 0.5], [World.coop[0] + 0.5, World.coop[1] + 4.2], [100.5, -13.5], [-13, 13.5], [-15.5, 15], [13.5, 17]];
-  homes.forEach((h, i) => World.chickens.push({ home: h, pos: [h[0], 0, h[1]], yaw: i * 1.7, st: 'idle', t: i, tt: 1 + i * 0.3, obj: addSkinned(cm[i % 3], { r: 0.5, zone: 0 }), ph: i * 2.1 }));
+  homes.forEach((h, i) => World.chickens.push({ home: h, pos: [h[0], 0, h[1]], yaw: i * 1.7, st: 'idle', t: i, tt: 1 + i * 0.3, obj: addSkinned(cm[i % 3], { r: 0.5, zone: 0, kind: 'chicken' }), ph: i * 2.1 }));
   // things to pick up
   const hm = new Mesh(128); hm.push().RZ(PI / 2 - 0.25).RY(0.4); Props.hammer(hm); hm.pop();
   const herb = new Mesh(256);
@@ -104,7 +104,7 @@ function buildNPCs() {
   for (let i = 0; i < 4; i++) { const a = i * TAU / 4; herb.quad2([Math.cos(a) * 0.16, 0.07, Math.sin(a) * 0.16], [Math.cos(a + 0.5) * 0.05, 0.02, Math.sin(a + 0.5) * 0.05], [0, 0.03, 0], [Math.cos(a - 0.5) * 0.05, 0.02, Math.sin(a - 0.5) * 0.05]); }
   herb.mat(MAT.PLAIN, [0.72, 0.88, 1.0]); herb.lathe([[0.008, 0.2], [0.07, 0.235], [0.075, 0.25], [0.0, 0.29]], 7, 0); herb.mat(MAT.PLAIN, [0.9, 0.95, 1.0]); herb.lathe([[0.075, 0.25], [0.008, 0.2]], 7, 0);
   const hmItem = World.skinPack.add(hm), herbItem = World.skinPack.add(herb);
-  const pick = (id, item, p, label, itemId, glow) => { const obj = addSkinned(item, { c: p, r: 0.6, zone: 0 }); R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256); const it = { kind: 'pickup', id, item: itemId, p: [p[0], p[1] + 0.2, p[2]], r: 1.9, zone: 0, obj, label }; World.interact.push(it); World.pickups.push(it); if (glow) { it.em = { type: 'herb', p, zone: 0 }; World.emitters.push(it.em); } };
+  const pick = (id, item, p, label, itemId, glow) => { const obj = addSkinned(item, { c: p, r: 0.6, zone: 0, kind: 'pickup' }); R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256); const it = { kind: 'pickup', id, item: itemId, p: [p[0], p[1] + 0.2, p[2]], r: 1.9, zone: 0, obj, label }; World.interact.push(it); World.pickups.push(it); if (glow) { it.em = { type: 'herb', p, zone: 0 }; World.emitters.push(it.em); } };
   pick('hammer', hmItem, World.pickupSpot.hammer, 'Take the hammer', 'hammer');
   [[-3.5, 93.5], [-57, -47], [45, -57], [5.5, -91], [84, -42], [-46, 63], [12, -98], [-30, 40]].forEach((p, i) => pick('frostcap' + i, herbItem, [p[0], World.groundY(p[0], p[1]), p[1]], 'Pick frostcap', 'frostcap', true));
 }

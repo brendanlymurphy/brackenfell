@@ -809,6 +809,13 @@ function terrainMaterial() {
 // Layers: 0 = seen by the camera and both sun shadow maps; 1 = camera and the near shadow map only (interiors, full trees,
 // villagers, small props); 2 = the wide shadow map only (flat tree stand-ins that cast for every tree out there).
 const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {} };
+// Draw distances (m) for small things. vis: drawn by the camera up to here; cast: drawn into the near sun-shadow map up to here; near: a chicken
+// is drawn as separate parts up to this distance and as one rigid body beyond it. indoor: while the camera is inside a building, outdoor
+// meshes whose bounding sphere lies beyond this are not drawn at all (they can only show through a window). Raise a number to back a cut out.
+const DRAW = {
+  door: { vis: 90, cast: 22 }, chicken: { vis: 60, cast: 14, near: 14 }, pickup: { vis: 45, cast: 0 }, mill: { vis: 160, cast: 40 }, misc: { vis: 160, cast: 160 },
+  indoor: 70, indoorCast: 18,
+};
 function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
@@ -873,14 +880,18 @@ function sceneBuild() {
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos;
+  const inside = !!World.camZone, ind = DRAW.indoor;
   for (const s of SC.statics) { const it = s.it; if (it.maxDist) s.mesh.visible = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]) <= it.maxDist + it.r; }
   for (const s of SC.cells) {
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
-    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > grp.maxDist + c.r));
+    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > grp.maxDist + c.r) || (inside && dc - c.r > ind));
   }
   for (const r of SC.rigid) {
-    const o = r.obj, vis = o.visible && hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]) < 160;
+    const o = r.obj, dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
+    let vis = o.visible && d < dr.vis && !(inside && d > ind);
+    if (dr.near) vis = vis && (r.whole ? d >= dr.near : d < dr.near);
     r.mesh.visible = vis; if (!vis) continue;
+    r.mesh.castShadow = !r.whole && d < Math.min(dr.cast, inside ? DRAW.indoorCast : 1e9);
     r.mesh.matrix.fromArray(bd, r.o); r.mesh.matrixWorld.copy(r.mesh.matrix);
   }
   for (const b of SC.bodies) {
@@ -1730,9 +1741,9 @@ const Particles = { mesh: null };
 //
 // Game conventions kept: feet at pos, yaw 0 faces -Z and grows clockwise seen from above, animation names as in 77_npc.js.
 const Chars = (() => {
-  const { vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap } = TSL;
+  const { vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap, Fn } = TSL;
   const SETS = {};
-  const C = { group: new THREE.Group(), set: null, cfg: null, list: [], ready: false, normalMaps: true };
+  const C = { group: new THREE.Group(), set: null, cfg: null, list: [], ready: false, normalMaps: true, merge: !(TEST && TEST.chars === 'split') };   // merge: one mesh and material per villager; false = one per texture (the old way)
   C.group.name = 'villagers';
 
   // ── character sets ──
@@ -1881,9 +1892,9 @@ const Chars = (() => {
 
   // ── geometry: the chosen parts of a body, merged per material so a villager costs a handful of draws ──
   const ATTR = [['position', 3], ['normal', 3], ['uv', 2], ['skinIndex', 4], ['skinWeight', 4]];
-  function mergedGeometry(S, body, parts, matName) {
-    const key = body + '|' + matName + '|' + parts.join(','); let g = S.geo.get(key); if (g !== undefined) return g;
-    const src = []; for (const p of parts) for (const m of S.bodies[body].parts[p] || []) if (m.material.name === matName) src.push(m.geometry);
+  function mergedGeometry(S, body, parts, matName, names) {
+    const key = body + '|' + (matName || '*') + '|' + parts.join(','); let g = S.geo.get(key); if (g !== undefined) return g;
+    const src = [], mids = []; for (const p of parts) for (const m of S.bodies[body].parts[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
     if (!src.length) { S.geo.set(key, null); return null; }
     let nv = 0, ni = 0; for (const s of src) { nv += s.attributes.position.count; ni += s.index ? s.index.count : s.attributes.position.count; }
     g = new THREE.BufferGeometry(); const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
@@ -1892,6 +1903,7 @@ const Chars = (() => {
       for (const s of src) { const a = s.attributes[name], c = s.attributes.position.count; for (let v = 0; v < c; v++) for (let k = 0; k < size; k++) arr[o++] = a ? a.getComponent(v, k) : 0; }
       g.setAttribute(name, new THREE.BufferAttribute(arr, size));
     }
+    if (names) { const mid = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; mid.fill(mids[i], o, o + c); o += c; }); g.setAttribute('mid', new THREE.BufferAttribute(mid, 1)); }
     let io = 0, base = 0; for (const s of src) { const c = s.attributes.position.count; if (s.index) for (let i = 0; i < s.index.count; i++) idx[io++] = s.index.getX(i) + base; else for (let i = 0; i < c; i++) idx[io++] = i + base; base += c; }
     g.setIndex(new THREE.BufferAttribute(idx, 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.6);
     S.geo.set(key, g); return g;
@@ -1912,6 +1924,29 @@ const Chars = (() => {
     return m;
   }
 
+  // One material for a whole villager (skin, face, eyes, hair, clothes): a per-vertex 'mid' picks which of the pack's textures, tint and
+  // roughness a fragment uses, so the villager is one draw call (and one shadow draw) instead of five or six. Textures keep their own UVs.
+  function makeMergedMaterial(S, H, names, look) {
+    const { attribute, abs, select, Discard, If, frontFacing, normalView, clamp } = TSL;
+    const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
+    const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
+    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0);
+    names.forEach((mn, i) => {
+      const md = S.cfg.materials[mn] || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
+      let key = (look.maps && look.maps[mn]) || md.map; if (key && typeof key === 'object') key = key[H.body];
+      const map = key ? S.tex[key] : null, tint = look.tint && (look.tint[mn] || (md.kind && look.tint[md.kind])) || [1, 1, 1];
+      albedo = albedo.add((map ? texture(map, U).rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
+      rough = rough.add(w.mul(md.rough === undefined ? 0.85 : md.rough));
+      if (md.oneSided) one = one.add(w);
+      if (C.normalMaps && md.normal && S.tex[md.normal]) { const nm = normalMap(texture(S.tex[md.normal], U)); nrm = nrm ? nrm.add(nm.mul(w)) : nm.mul(w); nw = nw.add(w); }
+    });
+    m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
+    m.roughnessNode = rough;
+    if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
+    m.emissiveNode = albedo.mul(SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25))));
+    return m;
+  }
+
   // ── spawning ──
   const cloneBones = o => { const c = o.clone(false); for (const ch of o.children) if (ch.isBone) c.add(cloneBones(ch)); return c; };
   C.spawn = function (def) {
@@ -1923,7 +1958,16 @@ const Chars = (() => {
     for (let i = 0, id = String(def.id || C.list.length); i < id.length; i++) H.seed = (H.seed * 31 + id.charCodeAt(i)) >>> 0;
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p]).sort(), names = new Set();
     for (const p of parts) for (const m of B.parts[p]) names.add(m.material.name);
-    for (const mn of names) {
+    const nameList = [...names].sort();
+    if (C.merge && nameList.length > 1) {
+      const g = mergedGeometry(S, body, parts, null, nameList);
+      if (g) {
+        const mat = makeMergedMaterial(S, H, nameList, look), mesh = new THREE.SkinnedMesh(g, mat);
+        mesh.name = 'villager'; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
+        mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true;
+        H.mats.push(mat); H.meshes.push(mesh);
+      }
+    } else for (const mn of nameList) {
       const g = mergedGeometry(S, body, parts, mn); if (!g) continue;
       const mat = makeMaterial(S, H, mn, look), mesh = new THREE.SkinnedMesh(g, mat);
       mesh.name = mn; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
@@ -3941,7 +3985,7 @@ function buildVillage() {
   leaf.mat(MAT.METAL, COL.black); for (const y of [0.18, 0.82]) { leaf.box(0, y - 0.03, -0.04, 0.82, y + 0.03, -0.03, 32); leaf.box(0, y - 0.03, 0.03, 0.82, y + 0.03, 0.04, 16); }
   leaf.box(0.86, 0.48, -0.07, 0.9, 0.54, 0.07);
   const leafItem = skin.add(leaf);
-  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: 0 }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: 0, kind: 'door' }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;
@@ -3950,7 +3994,7 @@ function buildVillage() {
     wm.mat(MAT.TIMBER, COL.woodDark); wm.push().RX(PI / 2).T(0, -2.0, 0); wm.cyl(0, 0, 0, 0.16, 0.16, 3.5, 10, 3); wm.pop();
     wm.m1 = 0; const pz = -1.8; wm.push().T(0, 0, pz).RX(PI / 2).T(0, -0.05, 0); wm.cyl(0, 0, 0, 0.5, 0.5, 0.1, 14, 3); wm.pop(); for (let i = 0; i < 12; i++) { const a = i * TAU / 12; wm.box(Math.cos(a) * 0.46 - 0.03, Math.sin(a) * 0.46 - 0.03, pz - 0.2, Math.cos(a) * 0.46 + 0.03, Math.sin(a) * 0.46 + 0.03, pz + 0.05); }
     const base = siteMatrix(M, M.y + 0.32); m4.translate(base, 0, 0.62, M.d / 2);
-    World.millWheel = { obj: addSkinned(skin.add(wm), { c: m4.tp(base, [0, 0, 0.8]), r: 3.2, zone: 0 }), base, angle: 0 };
+    World.millWheel = { obj: addSkinned(skin.add(wm), { c: m4.tp(base, [0, 0, 0.8]), r: 3.2, zone: 0, kind: 'mill' }), base, angle: 0 };
     World.millPos = m4.tp(base, [0, 0, 0.8]);
   }
   World.skinPack = skin; World.skinItems = { leaf: leafItem };
@@ -4517,7 +4561,7 @@ function buildNPCs() {
   World.chickens = [];
   const cm = [buildChicken([0.92, 0.9, 0.85]), buildChicken([0.62, 0.36, 0.2]), buildChicken([0.25, 0.22, 0.2])].map(m => World.skinPack.add(m));
   const homes = [[World.coop[0] + 1.5, World.coop[1] + 2], [World.coop[0] - 1, World.coop[1] + 3], [World.coop[0] + 2.5, World.coop[1] + 0.5], [World.coop[0] + 0.5, World.coop[1] + 4.2], [100.5, -13.5], [-13, 13.5], [-15.5, 15], [13.5, 17]];
-  homes.forEach((h, i) => World.chickens.push({ home: h, pos: [h[0], 0, h[1]], yaw: i * 1.7, st: 'idle', t: i, tt: 1 + i * 0.3, obj: addSkinned(cm[i % 3], { r: 0.5, zone: 0 }), ph: i * 2.1 }));
+  homes.forEach((h, i) => World.chickens.push({ home: h, pos: [h[0], 0, h[1]], yaw: i * 1.7, st: 'idle', t: i, tt: 1 + i * 0.3, obj: addSkinned(cm[i % 3], { r: 0.5, zone: 0, kind: 'chicken' }), ph: i * 2.1 }));
   // things to pick up
   const hm = new Mesh(128); hm.push().RZ(PI / 2 - 0.25).RY(0.4); Props.hammer(hm); hm.pop();
   const herb = new Mesh(256);
@@ -4525,7 +4569,7 @@ function buildNPCs() {
   for (let i = 0; i < 4; i++) { const a = i * TAU / 4; herb.quad2([Math.cos(a) * 0.16, 0.07, Math.sin(a) * 0.16], [Math.cos(a + 0.5) * 0.05, 0.02, Math.sin(a + 0.5) * 0.05], [0, 0.03, 0], [Math.cos(a - 0.5) * 0.05, 0.02, Math.sin(a - 0.5) * 0.05]); }
   herb.mat(MAT.PLAIN, [0.72, 0.88, 1.0]); herb.lathe([[0.008, 0.2], [0.07, 0.235], [0.075, 0.25], [0.0, 0.29]], 7, 0); herb.mat(MAT.PLAIN, [0.9, 0.95, 1.0]); herb.lathe([[0.075, 0.25], [0.008, 0.2]], 7, 0);
   const hmItem = World.skinPack.add(hm), herbItem = World.skinPack.add(herb);
-  const pick = (id, item, p, label, itemId, glow) => { const obj = addSkinned(item, { c: p, r: 0.6, zone: 0 }); R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256); const it = { kind: 'pickup', id, item: itemId, p: [p[0], p[1] + 0.2, p[2]], r: 1.9, zone: 0, obj, label }; World.interact.push(it); World.pickups.push(it); if (glow) { it.em = { type: 'herb', p, zone: 0 }; World.emitters.push(it.em); } };
+  const pick = (id, item, p, label, itemId, glow) => { const obj = addSkinned(item, { c: p, r: 0.6, zone: 0, kind: 'pickup' }); R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256); const it = { kind: 'pickup', id, item: itemId, p: [p[0], p[1] + 0.2, p[2]], r: 1.9, zone: 0, obj, label }; World.interact.push(it); World.pickups.push(it); if (glow) { it.em = { type: 'herb', p, zone: 0 }; World.emitters.push(it.em); } };
   pick('hammer', hmItem, World.pickupSpot.hammer, 'Take the hammer', 'hammer');
   [[-3.5, 93.5], [-57, -47], [45, -57], [5.5, -91], [84, -42], [-46, 63], [12, -98], [-30, 40]].forEach((p, i) => pick('frostcap' + i, herbItem, [p[0], World.groundY(p[0], p[1]), p[1]], 'Pick frostcap', 'frostcap', true));
 }
@@ -5688,8 +5732,8 @@ const Foes = (() => {
           spot: sp, pos: sp.p.slice(), yaw: sp.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0 };
         f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
         f.h = Chars.spawn({ id: 'foe.' + id, foe: look });
-        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.frustumCulled = false; sw.layers.set(1);
-        sw.rotation.set(F.grip[0], F.grip[1], F.grip[2]); sw.position.set(F.grip[3], F.grip[4], F.grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw;
+        const sw = new THREE.Mesh(RPG.swordGeo(lead ? 0.72 : 0.58, lead ? 1.0 : 0.75), RPG.litMat(f.h.uZone, f.h.uLight, 0.45)); sw.castShadow = true; sw.layers.set(1);
+        sw.rotation.set(F.grip[0], F.grip[1], F.grip[2]); sw.position.set(F.grip[3], F.grip[4], F.grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });      // near sun-shadow map only, like the villagers
         if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
         F.list.push(f);
       }
@@ -5697,6 +5741,7 @@ const Foes = (() => {
     if (!Chars.group.parent) SC.scene.add(Chars.group);
     F.ready = true; campState();
   }
+  const FOE_DRAW = 110;        // outlaws farther than this are not drawn at all (and stop posing)
   F.grip = [PI / 2, 0, 0, 0, 0.02, 0.03];       // how a sword sits in the rig's right hand: rotation xyz, offset xyz (hand space)
   F.init = function () {
     buildCamps();
@@ -5819,7 +5864,7 @@ const Foes = (() => {
     for (const f of F.list) {
       if (f.state === 'gone') continue;
       const d = hyp(f.pos[0] - P[0], f.pos[2] - P[2]);
-      f.vis = d < 135;
+      f.vis = d < FOE_DRAW;
       if (!f.vis) { if (f.h.pivot.visible) f.h.pivot.visible = false; if (f.alive && f.state !== 'idle') { f.acc += dt; if (f.acc > 0.25) { think(f, f.acc, P, d, live); f.acc = 0; } } continue; }
       // far away, think and pose less often
       f.acc += dt; const every = d > 90 ? 0.2 : d > 48 ? 0.09 : 0; if (f.acc < every) continue; const fdt = f.acc; f.acc = 0;
@@ -5833,7 +5878,7 @@ const Foes = (() => {
         f.t += fdt;
         if (f.state === 'dead' && (f.t > (f.looted ? 40 : 300)) && d > 30) { f.state = 'gone'; f.h.pivot.visible = false; if (f.lootIt) { const i = World.interact.indexOf(f.lootIt); if (i >= 0) World.interact.splice(i, 1); } continue; }
       }
-      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = 1; st.visible = true;
+      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = 1; st.visible = true; st.cast = d < 32; f.sword.castShadow = st.cast;
       st.look[0] = 0; st.look[1] = 0;
       Chars.update(f.h, st, fdt * (f.state === 'attack' && f.atk ? f.atk.rate : 1));
     }

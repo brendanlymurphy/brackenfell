@@ -33,3 +33,4 @@ const errs = await page.evaluate(() => (window.__gpuErrors ? window.__gpuErrors(
 if (errs.length) console.log('GPU ERRORS:\n' + errs.slice(0, 12).join('\n').slice(0, 5000));
 for (const [k, n] of seen) if (n > 1) console.log('  (x' + n + ')', k.slice(0, 110));
 await browser.close(); srv.close();
+process.exit(0);

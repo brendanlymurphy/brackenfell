@@ -2,6 +2,13 @@
 // Layers: 0 = seen by the camera and both sun shadow maps; 1 = camera and the near shadow map only (interiors, full trees,
 // villagers, small props); 2 = the wide shadow map only (flat tree stand-ins that cast for every tree out there).
 const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {} };
+// Draw distances (m) for small things. vis: drawn by the camera up to here; cast: drawn into the near sun-shadow map up to here; near: a chicken
+// is drawn as separate parts up to this distance and as one rigid body beyond it. indoor: while the camera is inside a building, outdoor
+// meshes whose bounding sphere lies beyond this are not drawn at all (they can only show through a window). Raise a number to back a cut out.
+const DRAW = {
+  door: { vis: 90, cast: 22 }, chicken: { vis: 60, cast: 14, near: 14 }, pickup: { vis: 45, cast: 0 }, mill: { vis: 160, cast: 40 }, misc: { vis: 160, cast: 160 },
+  indoor: 70, indoorCast: 18,
+};
 function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
@@ -66,14 +73,18 @@ function sceneBuild() {
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos;
+  const inside = !!World.camZone, ind = DRAW.indoor;
   for (const s of SC.statics) { const it = s.it; if (it.maxDist) s.mesh.visible = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]) <= it.maxDist + it.r; }
   for (const s of SC.cells) {
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
-    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > grp.maxDist + c.r));
+    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > grp.maxDist + c.r) || (inside && dc - c.r > ind));
   }
   for (const r of SC.rigid) {
-    const o = r.obj, vis = o.visible && hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]) < 160;
+    const o = r.obj, dr = DRAW[o.kind || 'misc'], d = hyp(bd[o.slot * 256 + 12] - e[0], bd[o.slot * 256 + 14] - e[2]);
+    let vis = o.visible && d < dr.vis && !(inside && d > ind);
+    if (dr.near) vis = vis && (r.whole ? d >= dr.near : d < dr.near);
     r.mesh.visible = vis; if (!vis) continue;
+    r.mesh.castShadow = !r.whole && d < Math.min(dr.cast, inside ? DRAW.indoorCast : 1e9);
     r.mesh.matrix.fromArray(bd, r.o); r.mesh.matrixWorld.copy(r.mesh.matrix);
   }
   for (const b of SC.bodies) {

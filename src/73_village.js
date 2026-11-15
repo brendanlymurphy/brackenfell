@@ -232,7 +232,7 @@ function buildVillage() {
   leaf.mat(MAT.METAL, COL.black); for (const y of [0.18, 0.82]) { leaf.box(0, y - 0.03, -0.04, 0.82, y + 0.03, -0.03, 32); leaf.box(0, y - 0.03, 0.03, 0.82, y + 0.03, 0.04, 16); }
   leaf.box(0.86, 0.48, -0.07, 0.9, 0.54, 0.07);
   const leafItem = skin.add(leaf);
-  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: 0 }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: 0, kind: 'door' }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;
@@ -241,7 +241,7 @@ function buildVillage() {
     wm.mat(MAT.TIMBER, COL.woodDark); wm.push().RX(PI / 2).T(0, -2.0, 0); wm.cyl(0, 0, 0, 0.16, 0.16, 3.5, 10, 3); wm.pop();
     wm.m1 = 0; const pz = -1.8; wm.push().T(0, 0, pz).RX(PI / 2).T(0, -0.05, 0); wm.cyl(0, 0, 0, 0.5, 0.5, 0.1, 14, 3); wm.pop(); for (let i = 0; i < 12; i++) { const a = i * TAU / 12; wm.box(Math.cos(a) * 0.46 - 0.03, Math.sin(a) * 0.46 - 0.03, pz - 0.2, Math.cos(a) * 0.46 + 0.03, Math.sin(a) * 0.46 + 0.03, pz + 0.05); }
     const base = siteMatrix(M, M.y + 0.32); m4.translate(base, 0, 0.62, M.d / 2);
-    World.millWheel = { obj: addSkinned(skin.add(wm), { c: m4.tp(base, [0, 0, 0.8]), r: 3.2, zone: 0 }), base, angle: 0 };
+    World.millWheel = { obj: addSkinned(skin.add(wm), { c: m4.tp(base, [0, 0, 0.8]), r: 3.2, zone: 0, kind: 'mill' }), base, angle: 0 };
     World.millPos = m4.tp(base, [0, 0, 0.8]);
   }
   World.skinPack = skin; World.skinItems = { leaf: leafItem };
