@@ -563,7 +563,7 @@ function dressBuild() {
   const q = R.q; if (!q || !DRS.items) return;
   for (const k of DRS.groups) { SC.scene.remove(k.g); k.g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
   DRS.groups = []; DRS.builtFor = R.qName;
-  const low = !q.scatter, town = Kit.batch({ name: 'dress-town', cell: 4096, off: 2048 }), out = Kit.batch({ name: 'dress-out', cell: 64, off: 20 });
+  const low = !q.scatter, town = Kit.batch({ name: 'dress-town', cell: 40, off: 2048 }), out = Kit.batch({ name: 'dress-out', cell: 64, off: 20 });
   const inTown = (x, z) => x > -22 && x < 58 && z > -30 && z < 30;
   for (const it of DRS.items) { if (low && it.tier > 0) continue; (inTown(it.x, it.z) ? town : out).add(it.name, it.M, it.o); }
   const mk = (B, isTown) => { if (!B.count) return; const g = B.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); SC.scene.add(g); let t = 0; g.traverse(o => { if (o.isMesh) t += o.geometry.index.count / 3; }); DRS.groups.push({ g, town: isTown, tris: t, meshes: g.children.length }); };
@@ -579,7 +579,6 @@ function dressAttach() {
     const range = q.yardRange * 1.1 + 4, hide = World.deepIn;
     for (const k of DRS.groups) {
       if (hide) { k.g.visible = false; continue; }
-      if (k.town) { k.g.visible = hyp(camPos[0] - 18, camPos[2] - 0) < range + 48; continue; }
       k.g.visible = true; for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) o.visible = hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < range + bs.radius; }
     }
   };

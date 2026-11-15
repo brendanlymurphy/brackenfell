@@ -2682,6 +2682,27 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
       const h2 = add(x, z, h.yaw, w, d, { floors: R.pick([1, 2, 2, 3]), pitch: 40 + (R() * 12 | 0), tier: 1, second: true });
       if (R() < 0.4) { const w3 = R.pick([4.4, 5, 5.6]), d3 = R.pick([4.4, 5.2]), lz3 = h2.d / 2 + 2.0 + d3 / 2, x3 = h2.x + R.s() * 0.6 * c - lz3 * sn, z3 = h2.z + R.s() * 0.6 * sn + lz3 * c; if (free(x3, z3, h.yaw + PI, w3, d3, { sq: 4 })) add(x3, z3, h.yaw + PI, w3, d3, { floors: R.pick([1, 2]), pitch: 40 + (R() * 12 | 0), tier: 1, second: true }); }
     }
+    // blocks: districts filled with rows that face each other across 2.3 m lanes (front rows: yaw 0 looks north, yaw PI looks south), a cross-lane now and then, back-to-back pairs 1 m apart.
+    // A district is a rectangle [x0, z0, x1, z1] with a cap; free() leaves the roads, the square, the existing houses and the door paths alone, so cross streets appear where roads run.
+    const RB = rng(9091);
+    const districts = INF.districts = [
+      { id: 'north-west', r: [-46, -66, -17, -12], cap: 16 }, { id: 'north-east', r: [-11, -62, 32, -31], cap: 14 }, { id: 'west', r: [-62, -12, -27, 34], cap: 16 },
+      { id: 'south-west', r: [-33, 14, -4, 72], cap: 14 }, { id: 'south-east', r: [6, 14, 34, 72], cap: 14 }, { id: 'east-bank', r: [31, 7, 46, 40], cap: 6 },
+    ];
+    for (const D of districts) {
+      let placed = 0; const [x0, z0, x1, z1] = D.r; D.n = 0;
+      for (let row = 0, z = z0 + 3; z < z1 && placed < D.cap; row++) {
+        const pair = row % 2, d = RB.pick([4.6, 5.0, 5.4]), yaw = pair ? PI : 0;
+        let x = x0 + RB() * 3, k = 0;
+        while (x < x1 && placed < D.cap) {
+          const w = RB.pick([4.4, 5, 5.6, 6.2, 7]);
+          if (RB() < 0.1) { x += 2.6; continue; }                                  // a gap: a yard or a cross-lane
+          if (free(x + w / 2, z + d / 2, yaw, w, d, { sq: 2.5, road: 1.0 })) { add(x + w / 2, z + d / 2, yaw, w, d, { floors: RB.pick([1, 2, 2, 3]), pitch: 38 + (RB() * 14 | 0), tier: 1, second: true, block: D.id }); placed++; D.n++; x += w + (k++ % 3 === 2 ? 2.3 : 0.1); }
+          else x += 1.0;
+        }
+        z += d + (pair ? 1.1 : 2.3);                                               // the lane after a front pair's first row, a narrow back yard after its second
+      }
+    }
     INF.dense = INF.houses.length - base;
   }
   // per-house features (so the painted door paths know where each door is)
@@ -7498,7 +7519,7 @@ function dressBuild() {
   const q = R.q; if (!q || !DRS.items) return;
   for (const k of DRS.groups) { SC.scene.remove(k.g); k.g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
   DRS.groups = []; DRS.builtFor = R.qName;
-  const low = !q.scatter, town = Kit.batch({ name: 'dress-town', cell: 4096, off: 2048 }), out = Kit.batch({ name: 'dress-out', cell: 64, off: 20 });
+  const low = !q.scatter, town = Kit.batch({ name: 'dress-town', cell: 40, off: 2048 }), out = Kit.batch({ name: 'dress-out', cell: 64, off: 20 });
   const inTown = (x, z) => x > -22 && x < 58 && z > -30 && z < 30;
   for (const it of DRS.items) { if (low && it.tier > 0) continue; (inTown(it.x, it.z) ? town : out).add(it.name, it.M, it.o); }
   const mk = (B, isTown) => { if (!B.count) return; const g = B.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); SC.scene.add(g); let t = 0; g.traverse(o => { if (o.isMesh) t += o.geometry.index.count / 3; }); DRS.groups.push({ g, town: isTown, tris: t, meshes: g.children.length }); };
@@ -7514,7 +7535,6 @@ function dressAttach() {
     const range = q.yardRange * 1.1 + 4, hide = World.deepIn;
     for (const k of DRS.groups) {
       if (hide) { k.g.visible = false; continue; }
-      if (k.town) { k.g.visible = hyp(camPos[0] - 18, camPos[2] - 0) < range + 48; continue; }
       k.g.visible = true; for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) o.visible = hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < range + bs.radius; }
     }
   };

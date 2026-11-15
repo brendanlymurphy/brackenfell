@@ -127,6 +127,27 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
       const h2 = add(x, z, h.yaw, w, d, { floors: R.pick([1, 2, 2, 3]), pitch: 40 + (R() * 12 | 0), tier: 1, second: true });
       if (R() < 0.4) { const w3 = R.pick([4.4, 5, 5.6]), d3 = R.pick([4.4, 5.2]), lz3 = h2.d / 2 + 2.0 + d3 / 2, x3 = h2.x + R.s() * 0.6 * c - lz3 * sn, z3 = h2.z + R.s() * 0.6 * sn + lz3 * c; if (free(x3, z3, h.yaw + PI, w3, d3, { sq: 4 })) add(x3, z3, h.yaw + PI, w3, d3, { floors: R.pick([1, 2]), pitch: 40 + (R() * 12 | 0), tier: 1, second: true }); }
     }
+    // blocks: districts filled with rows that face each other across 2.3 m lanes (front rows: yaw 0 looks north, yaw PI looks south), a cross-lane now and then, back-to-back pairs 1 m apart.
+    // A district is a rectangle [x0, z0, x1, z1] with a cap; free() leaves the roads, the square, the existing houses and the door paths alone, so cross streets appear where roads run.
+    const RB = rng(9091);
+    const districts = INF.districts = [
+      { id: 'north-west', r: [-46, -66, -17, -12], cap: 16 }, { id: 'north-east', r: [-11, -62, 32, -31], cap: 14 }, { id: 'west', r: [-62, -12, -27, 34], cap: 16 },
+      { id: 'south-west', r: [-33, 14, -4, 72], cap: 14 }, { id: 'south-east', r: [6, 14, 34, 72], cap: 14 }, { id: 'east-bank', r: [31, 7, 46, 40], cap: 6 },
+    ];
+    for (const D of districts) {
+      let placed = 0; const [x0, z0, x1, z1] = D.r; D.n = 0;
+      for (let row = 0, z = z0 + 3; z < z1 && placed < D.cap; row++) {
+        const pair = row % 2, d = RB.pick([4.6, 5.0, 5.4]), yaw = pair ? PI : 0;
+        let x = x0 + RB() * 3, k = 0;
+        while (x < x1 && placed < D.cap) {
+          const w = RB.pick([4.4, 5, 5.6, 6.2, 7]);
+          if (RB() < 0.1) { x += 2.6; continue; }                                  // a gap: a yard or a cross-lane
+          if (free(x + w / 2, z + d / 2, yaw, w, d, { sq: 2.5, road: 1.0 })) { add(x + w / 2, z + d / 2, yaw, w, d, { floors: RB.pick([1, 2, 2, 3]), pitch: 38 + (RB() * 14 | 0), tier: 1, second: true, block: D.id }); placed++; D.n++; x += w + (k++ % 3 === 2 ? 2.3 : 0.1); }
+          else x += 1.0;
+        }
+        z += d + (pair ? 1.1 : 2.3);                                               // the lane after a front pair's first row, a narrow back yard after its second
+      }
+    }
     INF.dense = INF.houses.length - base;
   }
   // per-house features (so the painted door paths know where each door is)

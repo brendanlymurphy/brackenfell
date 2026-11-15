@@ -56,5 +56,23 @@ if (want('density')) {
   rows.push('density avg ' + avg.toFixed(2) + ' min ' + Math.min(...res) + ' ' + JSON.stringify(res));
   fx(avg >= 0.7, 'horizon closed within 30 m averages ' + avg.toFixed(2) + ' (need 0.70)'); fx(Math.min(...res) >= 0.45, 'a viewpoint has only ' + Math.min(...res) + ' of its horizon closed');
 }
+// footprints: no two buildings overlap (rotated rectangles, separating axis), no building lies on a road's centre line, no named spot (bench, bed, NPC post) is inside a building's footprint
+if (want('footprints')) {
+  const R = SITES.filter(q => q.w && q.d && q.id !== 'tower' ? true : false), corners = (q, e) => { const c = Math.cos(q.yaw), sn = Math.sin(q.yaw), hw = q.w / 2 + e, hd = q.d / 2 + e; return [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(([a, b]) => [q.x + a * c - b * sn, q.z + a * sn + b * c]); };
+  const axes = q => { const c = Math.cos(q.yaw), sn = Math.sin(q.yaw); return [[c, sn], [-sn, c]]; };
+  const proj = (P, ax) => { let lo = 1e9, hi = -1e9; for (const p of P) { const v = p[0] * ax[0] + p[1] * ax[1]; lo = Math.min(lo, v); hi = Math.max(hi, v); } return [lo, hi]; };
+  let overlaps = 0;
+  for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++) {
+    const a = R[i], b = R[j]; if (hyp(a.x - b.x, a.z - b.z) > (a.w + a.d + b.w + b.d) / 2) continue;
+    const A = corners(a, -0.08), B = corners(b, -0.08); let sep = false;
+    for (const ax of axes(a).concat(axes(b))) { const pa = proj(A, ax), pb = proj(B, ax); if (pa[1] < pb[0] || pb[1] < pa[0]) { sep = true; break; } }
+    if (!sep) { overlaps++; if (overlaps <= 8) fails.push('footprints overlap: ' + a.id + ' and ' + b.id + ' at ' + a.x.toFixed(0) + ',' + a.z.toFixed(0)); }
+  }
+  let onRoad = 0;
+  for (const q of R) { if (['barn', 'farm', 'mill'].includes(q.id)) continue; for (const rd of ROADS) { if (rd.id === 'crag') continue; const L = INF.LN && INF.LN[rd.id]; if (!L) continue; const d = INF.dist(L, q.x, q.z)[0]; for (const [cx, cz] of corners(q, 0)) { const dd = INF.dist(L, cx, cz)[0]; if (dd < rd.w / 2 - 0.05) { onRoad++; if (onRoad <= 6) fails.push('building ' + q.id + ' on road ' + rd.id); break; } } } }
+  let inSpot = 0;
+  for (const k in World.spots) { const sp = World.spots[k]; if (!sp || !sp.p || sp.zone) continue; for (const q of R) { if (q.shell === false) continue; const l = worldToSite(q, sp.p[0], sp.p[2]); if (Math.abs(l[0]) < q.w / 2 - 0.05 && Math.abs(l[1]) < q.d / 2 - 0.05 && sp.p[1] < World.groundAt(sp.p[0], sp.p[2], 99) + 2.5 && !(World.houses[q.id] && World.houses[q.id].cell)) { inSpot++; if (inSpot <= 8) fails.push('spot ' + k + ' is inside ' + q.id); } } }
+  rows.push('footprints ' + R.length + ' overlaps ' + overlaps + ' onRoad ' + onRoad + ' spotsInside ' + inSpot);
+}
 if (fails.length) throw new Error('TOWN FAIL ' + JSON.stringify({ rows, fails }));
 return 'town PASS ' + JSON.stringify(rows);
