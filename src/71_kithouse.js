@@ -489,6 +489,7 @@ function kitAttach() {
   }
   if (AL.batch && AL.batch.count) {
     const g = AL.batch.build(); g.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g, { alley: true });
+    if (AL.batch2.count) { const g2 = AL.batch2.build(); g2.traverse(o => { if (o.isMesh) o.castShadow = false; }); addG(g2, { alley: true, dress: true }); }
     for (const p of AL.proxies) { const M = p.Ms, xw = p.w / 2 - 0.1, x = p.w / 2 + 0.3, z0 = -p.d / 2 - 0.55, z1 = p.d / 2 - 0.1, y = p.top, r = y + p.rise;
       Q(M, [-xw, -1, z0], [xw, -1, z0], [xw, y, z0], [-xw, y, z0]); Q(M, [xw, -1, z1], [-xw, -1, z1], [-xw, y, z1], [xw, y, z1]); Q(M, [-xw, -1, z1], [-xw, -1, z0], [-xw, y, z0], [-xw, y, z1]); Q(M, [xw, -1, z0], [xw, -1, z1], [xw, y, z1], [xw, y, z0]);
       Q(M, [-x, y - 0.25, z0 - 0.3], [-x, y - 0.25, z1 + 0.3], [0, r, z1 + 0.3], [0, r, z0 - 0.3]); Q(M, [x, y - 0.25, z1 + 0.3], [x, y - 0.25, z0 - 0.3], [0, r, z0 - 0.3], [0, r, z1 + 0.3]); V(M, -xw, y, z0); V(M, xw, y, z0); V(M, 0, r, z0); V(M, xw, y, z1); V(M, -xw, y, z1); V(M, 0, r, z1); }
@@ -510,7 +511,7 @@ function kitAttach() {
       else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
       else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
       else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) { o.visible = !World.deepIn && hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < q.yardRange + bs.radius; if (o.userData.cast0 === undefined) o.userData.cast0 = o.castShadow; o.castShadow = q.yardCast && o.userData.cast0; } }
-      else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? DRAW.indoor + 6 : q.yardRange * 1.6 + 8); }
+      else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? 9 : q.yardRange * 1.6 + 8) && (!k.dress || q.scatter); }
       else k.g.visible = true;
     }
     if (Kit.update) Kit.update(camPos);

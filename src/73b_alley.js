@@ -76,8 +76,8 @@ function genSign(glyph, tint) {
 function genFlowerBox(w, R) {
   const g = GP(); g.box(W_, -w / 2, -0.2, 0, w / 2, 0.02, 0.26, [0.7, 0.62, 0.55]);
   const cols = [[0.85, 0.25, 0.3], [0.95, 0.8, 0.3], [0.9, 0.9, 0.85], [0.6, 0.35, 0.7], [0.9, 0.5, 0.25]];
-  for (let i = 0; i < Math.round(w * 5); i++) {
-    const x = -w / 2 + 0.07 + (w - 0.14) * (i + R() * 0.6) / Math.round(w * 5), z = 0.06 + R() * 0.14, h = 0.12 + R() * 0.16;
+  for (let i = 0; i < Math.round(w * 3.5); i++) {
+    const x = -w / 2 + 0.07 + (w - 0.14) * (i + R() * 0.6) / Math.round(w * 3.5), z = 0.06 + R() * 0.14, h = 0.12 + R() * 0.16;
     g.box(C_, x - 0.06, 0.02, z - 0.05, x + 0.06, 0.02 + h * 0.6, z + 0.05, [0.2, 0.32, 0.12], GPU.cloth);
     g.box(C_, x - 0.035, 0.02 + h * 0.5, z - 0.035, x + 0.035, 0.02 + h, z + 0.035, R.pick(cols), GPU.cloth);
   }
@@ -100,6 +100,11 @@ function genBunting(a, b, R, cols, flags) {      // world-space rope with pennan
   }
   return g.make('gen_bunt_' + (_gn++));
 }
+function genProduce(cols, R) {            // a shallow crate heaped with fruit or vegetables (about 100 triangles)
+  const g = GP(); g.box(W_, -0.3, 0, -0.2, 0.3, 0.1, 0.2, [0.6, 0.5, 0.4]);
+  for (let i = 0; i < 9; i++) { const x = -0.22 + (i % 3) * 0.22 + R.s() * 0.03, z = -0.12 + Math.floor(i / 3) * 0.12, h = 0.12 + R() * 0.06, c = cols[i % cols.length]; g.box(C_, x - 0.07, 0.08, z - 0.06, x + 0.07, 0.08 + h, z + 0.06, c, GPU.cloth); }
+  return g.make('gen_prod_' + (_gn++));
+}
 function genBracketLantern() {          // wall bracket + small lantern, split so only the glass glows
   const f = GP(), gl = GP();
   f.box(W_, -0.02, -0.02, 0, 0.02, 0.02, 0.42, [0.2, 0.19, 0.18]); f.beam(W_, [0, -0.3, 0.0], [0, -0.02, 0.34], 0.015, [0.2, 0.19, 0.18]);
@@ -119,7 +124,7 @@ function genStripCloth(w, h, cols) {       // a hanging cloth / banner with vert
 const AL = { shops: [], proxies: [], batch: null, lanterns: 0 };
 function buildAlley() {
   if (!kitReady()) return;
-  const R = rng(5150), B = Kit.batch({ name: 'alley', cell: 4096 }); AL.batch = B; AL.shops = []; AL.proxies = [];
+  const R = rng(5150), B = Kit.batch({ name: 'alley', cell: 4096, off: 2048 }), B2 = Kit.batch({ name: 'alley-dress', cell: 4096, off: 2048 }); AL.batch = B; AL.batch2 = B2; AL.shops = []; AL.proxies = [];
   const OUT = { zone: 0, skyVis: 1, cast: false }, V = KH.V, up = [0, 1, 0];
   AL.R = R;
   const shopOf = id => ALLEY_SHOPS.find(a => a.id === id);
@@ -151,7 +156,7 @@ function buildAlley() {
             else if ((i + k) % 2 === 0) { name = 'Wall_Plaster_Window_Wide_Flat'; glass = true; shutter = R() < 0.5 ? 'WindowShutters_Wide_Flat_Open' : null; }
             else name = k === fl - 1 && i % 2 ? 'Wall_Plaster_Straight' : 'Wall_Plaster_WoodGrid';
           } else if (wn === 'back') name = k === 0 ? (stone ? 'Wall_UnevenBrick_Straight' : 'Wall_Plaster_Straight_Base') : 'Wall_Plaster_Straight';
-          else name = k === 0 ? (stone ? 'Wall_UnevenBrick_Straight' : 'Wall_Plaster_Straight_Base') : (i % 2 ? 'Wall_Plaster_WoodGrid' : 'Wall_Plaster_Straight');
+          else name = k === 0 ? (stone ? 'Wall_UnevenBrick_Straight' : 'Wall_Plaster_Straight_Base') : (i % 3 === 1 && k === 1 ? 'Wall_Plaster_WoodGrid' : 'Wall_Plaster_Straight');
           if (k === 0 && !stone && wn === 'front' && !door && !glass) name = 'Wall_Plaster_Straight_Base';
           addP(MS, name, F[wn], uc, 0, 0, 1, 0);
           if (glass) { addP(MS, 'Window_Wide_Flat1', F[wn], uc, 0, 0, 1, 0); if (shutter && uc > 0.9 && uc < L - 0.9 && !(k === 0)) addP(MS, shutter, F[wn], uc, 0, 0, 1, 0); }
@@ -180,7 +185,7 @@ function buildAlley() {
     const awn = genAwning(w - 0.2, cols1, cols2, 0.5); addP(MS, awn, Ff, w / 2, 2.72, 0.12);
     const sg = genSign(a.glyph, [1.1, 0.85, 0.45]); addP(MS, sg, Fu, 1.0, 2.35, 0.1, 1, 0);           // projecting from a solid bay of the upper wall, over the street
     // flower boxes under the upper windows
-    for (let k = 1; k < fl; k++) for (let i = 0; i < nF; i++) { if ((i + k) % 2 === 0 && !(a.balcony && k === 1 && i === (nF >> 1))) addP(MS, genFlowerBox(1.3, R), frames(k).front, i * 2 + 1, 0.93, 0.26); }
+    for (let k = 1; k < fl; k++) for (let i = 0; i < nF; i++) { if ((i + k) % 2 === 0 && !(a.balcony && k === 1 && i === (nF >> 1))) B2.add(genFlowerBox(1.3, R), KH.xf(frames(k).front, i * 2 + 1, 0.93, 0.26, 1, 0), OUT); }
     // balcony over the door
     if (a.balcony && fl > 1) {
       const Fb = frames(1).front, uc = (nF >> 1) * 2 + 1;
@@ -197,35 +202,36 @@ function buildAlley() {
     // shadow stand-in (prism)
     AL.proxies.push({ Ms: siteMatrix(site, site.y + 0.02), w, d, top: Ytop, rise });
   }
-  alleyDress(B, R);
+  alleyDress(B, B2, R);
 }
 
 // ── street dressing: wares on counters and doorsteps, stalls, barrels, crates, bunting across the street ──
-function alleyDress(B, R) {
+function alleyDress(B, B2, R) {
   const OUT = { zone: 0, skyVis: 1, cast: false }, I = new THREE.Matrix4();
   // a piece standing with its bottom centre at (u, y, z) of frame F
   const put = (F, name, u, y, z, s, ry, o) => {
     const P = Kit.pieces[name]; if (!P) return null;
     const sv = s === undefined ? [1, 1, 1] : typeof s === 'number' ? [s, s, s] : s, cx = (P.min[0] + P.max[0]) / 2, cz = (P.min[2] + P.max[2]) / 2;
     const M = KH.xf(F, u, y, z, 1, ry || 0).multiply(new THREE.Matrix4().makeScale(sv[0], sv[1], sv[2])).multiply(new THREE.Matrix4().makeTranslation(-cx, -P.min[1], -cz));
-    B.add(name, M, Object.assign({}, OUT, o || {})); return M;
+    B2.add(name, M, Object.assign({}, OUT, o || {})); return M;
   };
   const solid = (x, z, r, h, y0) => World.colliders.push({ x, z, r, y0: y0 - 0.5, y1: y0 + (h || 1) });
   const wpos = (F, u, y, z) => { const v = new THREE.Vector3(u, y, z).applyMatrix4(F); return [v.x, v.y, v.z]; };
   const counterPiece = (() => { const g = GP(); g.box(W_, -0.9, 0.86, 0, 0.9, 0.93, 0.58, [0.55, 0.47, 0.4]); g.box(W_, -0.9, 0.0, 0.0, -0.84, 0.86, 0.5, DARKW); g.box(W_, 0.84, 0.0, 0.0, 0.9, 0.86, 0.5, DARKW); g.box(W_, -0.9, 0.5, 0.52, 0.9, 0.86, 0.58, [0.5, 0.42, 0.36]); return g.make('gen_counter'); })();
+  const prods = { '@apple': genProduce([[0.7, 0.15, 0.12], [0.75, 0.6, 0.15]], R), '@carrot': genProduce([[0.85, 0.45, 0.12], [0.8, 0.55, 0.15]], R), '@cabbage': genProduce([[0.4, 0.55, 0.22], [0.5, 0.62, 0.3]], R) }, prod = n => prods[n];
   const goods = {
     apothecary: ['Potion_2', 'SmallBottles_1', 'Potion_4', 'Bottle_1', 'Potion_2', 'ceramic_pot', 'Potion_4'],
     baker: ['hamburger_buns_a', 'wooden_bowl_01', 'hamburger_buns_a', 'carved_wooden_plate', 'hamburger_buns_a', 'Mug'],
     books: ['BookGroup_Medium_1', 'Book_Stack_1', 'BookGroup_Medium_3', 'Scroll_1', 'Book_Stack_2'],
-    grocer: ['FarmCrate_Apple', 'FarmCrate_Carrot', 'wicker_basket_02', 'food_pears_asian_01', 'yellow_onion'],
-    cutler: ['Sword_Bronze', 'Axe_Bronze', 'Shield_Wooden', 'Whetstone'],
-    tinker: ['Bucket_Metal', 'Pot_1', 'Chain_Coil', 'Pot_1', 'Rope_1'],
+    grocer: ['@apple', '@carrot', 'wicker_basket_02', '@cabbage', 'yellow_onion'],
+    cutler: ['Axe_Bronze', 'Bucket_Metal', 'Axe_Bronze'],
+    tinker: ['Bucket_Metal', 'Pot_1', 'Bucket_Metal', 'Pot_1'],
   };
   const gscale = { Potion_2: 1.6, Potion_4: 1.6, Potion_1: 1.6, SmallBottles_1: 1.6, Bottle_1: 1.3, hamburger_buns_a: 2.2, wooden_bowl_01: 1.1, carved_wooden_plate: 1.1, Mug: 1.3, Scroll_1: 1.4, yellow_onion: 2.0, food_pears_asian_01: 2.0, ceramic_pot: 0.6, Sword_Bronze: 0.6, Axe_Bronze: 0.7, Shield_Wooden: 0.8, Whetstone: 0.35, wicker_basket_02: 1.5, Chain_Coil: 0.5, Rope_1: 0.8, Pot_1: 0.7, Bucket_Metal: 0.6, Book_Stack_1: 1.3, Book_Stack_2: 1.3, BookGroup_Medium_1: 0.9, BookGroup_Medium_3: 0.9 };
   const outside = {
-    apothecary: [['Barrel', 0.9], ['Vase_2', 1.0], ['wicker_basket_02', 1.8]], baker: [['Barrel', 0.9], ['Bag', 0.9], ['Barrel', 0.8], ['Bag', 0.8]],
-    books: [['Crate_Wooden', 0.8], ['BookStand', 1.0], ['Chest_Wood__Base', 0.7]], grocer: [['Barrel_Apples', 1.0], ['FarmCrate_Carrot', 1.2], ['Bag', 0.9], ['Barrel_Apples', 0.9], ['FarmCrate_Apple', 1.2]],
-    cutler: [['WeaponStand', 0.8], ['Barrel', 0.9], ['Crate_Wooden', 0.7]], tinker: [['Cauldron', 0.8], ['Bucket_Metal', 1.0], ['Crate_Metal', 0.7], ['Barrel', 0.9]],
+    apothecary: [['Barrel', 0.9], ['Vase_2', 1.0]], baker: [['Barrel', 0.9], ['Bag', 0.9]],
+    books: [['Barrel', 0.8], ['Bag', 0.7]], grocer: [['@apple', 1.0], ['Bag', 0.9], ['@carrot', 1.0]],
+    cutler: [['Barrel', 0.9], ['Bucket_Metal', 1.0]], tinker: [['Bucket_Metal', 1.0], ['Barrel', 0.9]],
   };
   const hang = { apothecary: [[0.3, 0.45, 0.25], [0.55, 0.3, 0.6], [0.7, 0.6, 0.25]], baker: [[0.75, 0.55, 0.3]], books: [[0.5, 0.4, 0.3]], grocer: [[0.8, 0.6, 0.2], [0.55, 0.15, 0.12], [0.3, 0.5, 0.2]], cutler: [[0.45, 0.45, 0.48]], tinker: [[0.4, 0.4, 0.42]] };
   for (const sh of AL.shops) {
@@ -236,31 +242,31 @@ function alleyDress(B, R) {
     for (let i = 0; i < Math.round(w / 2); i++) {
       if ((layout || 'WD')[Math.min(i, layout.length - 1)] !== 'W') continue;
       const u = i * 2 + 1; put(F, counterPiece, u, 0, 0.42, 1, 0);
-      for (let k = 0; k < 4; k++) { const n = list[gi++ % list.length], sc = gscale[n] || 1; put(F, n, u - 0.62 + k * 0.42, 0.93, 0.74 + R.s() * 0.05, sc, R() * 6.28); }
+      for (let k = 0; k < 3; k++) { let n = list[gi++ % list.length]; const sc = gscale[n] || 1; if (n[0] === '@') n = prod(n); put(F, n, u - 0.55 + k * 0.55, 0.93, 0.74 + R.s() * 0.05, sc, R() * 6.28); }
     }
     // goods piled on the doorstep and against the wall
     const di = layout.indexOf('D'), du = di * 2 + 1, side = du > w / 2 ? -1 : 1, outs = outside[kind] || [];
     outs.forEach(([n, sc], k) => {
       const u = du + side * (1.25 + k * 0.62) * (k % 2 ? -1 : 1) * (k > 1 ? 1 : 1), uu = Math.max(0.4, Math.min(w - 0.4, u)), z = 0.55 + (k % 2) * 0.35, p = wpos(F, uu, 0, z);
-      put(F, n, uu, 0, z, sc, R() * 6.28); if (/Barrel|Crate|Chest|Cauldron|Weapon/.test(n)) solid(p[0], p[2], 0.4 * sc, 0.9, p[1]);
+      if (n[0] === '@') n = prod(n); put(F, n, uu, 0, z, sc, R() * 6.28); if (/Barrel|Crate|Chest|Cauldron|Weapon/.test(n)) solid(p[0], p[2], 0.4 * sc, 0.9, p[1]);
     });
     // hanging goods along the awning rail
     const cols = hang[kind] || hang.baker, nb = Math.round(w * 1.6);
     for (let i = 0; i < nb; i++) { const u = 0.35 + (w - 0.7) * (i + 0.5) / nb; put(F, genBundle(cols[i % cols.length], 0.28), u, 2.18 + 0, 1.52, 1, 0); }
   }
   // ── the weaver-side stalls, the middle of the street stays clear ──
-  const stalls = [[36.6, 5.1, 'FarmCrate_Carrot'], [40.8, 5.1, 'Pot_1']];
+  const stalls = [[36.6, 5.1, '@carrot'], [40.8, 5.1, 'Pot_1']];
   stalls.forEach(([x, z, kind], k) => {
     const y = Terrain.y(x, z), F = KH.xf(I, x, y, z, 1, PI); put(F, 'Stall_Empty', 0, 0, 0, 1.15, 0);
     World.colliders.push({ x, z, hx: 1.1, hz: 0.55, ax: 1, az: 0, bx: 0, bz: 1, y0: y - 0.5, y1: y + 2.6 });
-    for (let i = 0; i < 4; i++) put(F, kind, -0.7 + i * 0.47, 0.96, 0.0, kind === 'Pot_1' ? 0.7 : 1.15, i);
+    for (let i = 0; i < 3; i++) put(F, kind[0] === '@' ? prod(kind) : kind, -0.6 + i * 0.6, 0.96, 0.0, kind === 'Pot_1' ? 0.7 : 1.0, i);
     World.spots['alley.stall' + k] = { p: [x, y, z - 1.35], yaw: PI, zone: 0 };
   });
   // crates and barrels on the corners, a wagon pulled in beside the south row
   const lump = (x, z, list) => { const y = Terrain.y(x, z), F = KH.xf(I, x, y, z, 1, 0); list.forEach(([n, dx, dz, s, ry], k) => { put(F, n, dx, 0, dz, s, ry); if (/Barrel|Crate/.test(n)) solid(x + dx, z + dz, 0.4 * s, 0.9, y); }); };
   lump(28.2, -3.9, [['Barrel', 0, 0, 0.9, 0], ['Barrel', 0.7, 0.2, 0.8, 1], ['Crate_Wooden', 0.3, 0.9, 0.8, 0.4]]);
-  lump(35.2, 4.7, [['Crate_Wooden', 0, 0, 0.8, 0.2], ['Bag', 0.7, 0.1, 0.9, 1], ['Crate_Wooden', 0.1, 0.1, 0.55, 0.5]]);
-  lump(47.2, 5.2, [['Barrel_Apples', 0, 0, 1, 0], ['FarmCrate_Apple', 0.8, 0.1, 1.2, 0.3], ['Bag', 1.4, -0.2, 0.9, 2]]);
+  lump(35.2, 4.7, [['Crate_Wooden', 0, 0, 0.8, 0.2], ['Bag', 0.7, 0.1, 0.9, 1]]);
+  lump(47.2, 5.2, [['Barrel', 0, 0, 1, 0], ['Bag', 0.8, 0.1, 0.9, 0.3], ['Bag', 1.4, -0.2, 0.8, 2]]);
   { const x = 45.6, z = 4.2, y = Terrain.y(x, z); put(KH.xf(I, x, y, z, 1, 0.5), 'Prop_Wagon', 0, 0, 0, 0.8, 0); World.colliders.push({ x, z, hx: 0.8, hz: 1.7, ax: Math.cos(0.5), az: Math.sin(0.5), bx: -Math.sin(0.5), bz: Math.cos(0.5), y0: y - 0.5, y1: y + 1.4 }); }
   // ── bunting across the street ──
   const shopAt = id => AL.shops.find(s => s.a.id === id);
