@@ -430,7 +430,7 @@ function buildDress() {
   const kindOf = s => s.id === 'inn' ? 'inn' : s.id === 'smithy' ? 'smithy' : s.id === 'store' ? 'store' : /^(farm|barn|mill)$/.test(s.id) ? 'farm' : s.id === 'chapel' ? 'chapel' : s.id === 'tower' ? null : /^(shop\.|draper)/.test(s.id) ? 'shop' : 'house';
   for (const s of SITES) {
     const kind = kindOf(s); if (!kind) continue;
-    const alley = kind === 'shop', n = alley ? 7 : kind === 'chapel' ? 3 : 5 + R.i(0, 2), list = kinds[kind];
+    const alley = kind === 'shop', n = alley ? 7 : kind === 'chapel' ? 3 : s.infill ? 3 + R.i(0, 1) : 5 + R.i(0, 2), list = kinds[kind];
     let placed = 0;
     for (let tries = 0; tries < 220 && placed < n; tries++) {
       const t = pick(list), face = R() < (alley ? 0.8 : 0.4) ? 'front' : R() < 0.5 ? 'back' : R() < 0.5 ? 'left' : 'right';
@@ -581,4 +581,8 @@ function dressAttach() {
 function splat2Dress(blob, A, B) {
   for (const w of DRS.wet || []) blob(A, 1, w[0], w[1], w[2], w[3], 0.25);
   for (const w of DRS.worn || []) blob(B, 0, w[0], w[1], w[2], w[3], 0.3);
+  if (typeof INF !== 'undefined') for (const h of INF.houses) {        // worn turf at each infill door, a damp strip along the street front
+    const dp = SITE[h.id].doorPos || 0, p = siteToWorld(h, dp, -h.d / 2 - 1.0), q = siteToWorld(h, 0, -h.d / 2 - 0.7);
+    blob(B, 0, p[0], p[1], 1.9, 0.75, 0.3); blob(A, 1, q[0], q[1], Math.max(2, h.w * 0.45), 0.28, 0.25);
+  }
 }
