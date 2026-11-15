@@ -17,7 +17,8 @@ const srv = http.createServer((q, s) => { try { const u = decodeURIComponent(q.u
 const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--use-webgpu-adapter=swiftshader', '--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 1, hasTouch: !!opts.touch });
 page.setDefaultTimeout(timeout);
-page.on('console', m => { const t = m.text(); if (!t.includes('Failed to load resource') && !t.startsWith('[wgsl') && !t.startsWith('[gpu]')) console.log('[console.' + m.type() + ']', t.slice(0, 600)); });
+const seen = new Map();
+page.on('console', m => { const t = m.text(); if (t.includes('Failed to load resource') || t.includes('GPU stall due to ReadPixels')) return; const k = t.replace(/0x[0-9a-f]+/g, '').slice(0, 160); const n = (seen.get(k) || 0) + 1; seen.set(k, n); if (n === 1) { console.log('[console.' + m.type() + ']', t.slice(0, 700)); if (t.length > 700) fs.appendFileSync('/tmp/shot_long.txt', '\n=====\n' + t); } });
 page.on('pageerror', e => { const t = (e.stack || e.message); if (!t.includes('is invalid due to a previous error')) console.log('[pageerror]', t.slice(0, 800)); });
 await page.addInitScript(o => { window.__TEST__ = o; }, opts);
 const t0 = Date.now();
@@ -30,4 +31,5 @@ for (const s of steps) {
 }
 const errs = await page.evaluate(() => (window.__gpuErrors ? window.__gpuErrors() : []));
 if (errs.length) console.log('GPU ERRORS:\n' + errs.slice(0, 12).join('\n').slice(0, 5000));
+for (const [k, n] of seen) if (n > 1) console.log('  (x' + n + ')', k.slice(0, 110));
 await browser.close(); srv.close();

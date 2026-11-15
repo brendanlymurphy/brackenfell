@@ -150,7 +150,7 @@ function buildVegetation() {
       for (let q = 0; q < c.length; q++) { const it = c[q]; data.set(it, (n + q) * 8); x0 = Math.min(x0, it[0]); x1 = Math.max(x1, it[0]); y0 = Math.min(y0, it[1]); y1 = Math.max(y1, it[1] + 12 * it[3]); z0 = Math.min(z0, it[2]); z1 = Math.max(z1, it[2]); }
       list.push({ first: n, count: c.length, c: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2], r: 0.5 * hyp(x1 - x0, y1 - y0, z1 - z0) + 7 }); n += c.length;
     }
-    const ibuf = makeBuffer(data, GPUBufferUsage.VERTEX, 'inst');
+    const ibuf = data;
     for (const g of defs) World.instGroups.push(Object.assign({ ibuf, cells: list, first: g.item.first, count: g.item.count, base: g.item.base, shadow: true }, g));
   };
   mkGroups(inst.pine, [{ item: I.pineT, kind: 'opaque', lod: 1 }, { item: I.pineL, kind: 'leaf', lod: 1 }], 48);

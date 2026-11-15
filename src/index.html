@@ -28,6 +28,21 @@
   <div id="fps" hidden></div>
 </div>
 
+<!-- gameplay layer (90_rpg.js): health and stamina, the foe in front of you, touch buttons, the death screen -->
+<div id="rpg" hidden>
+  <div id="vitals" class="rest"><div class="vbar hp"><i id="hpFill"></i></div><div class="vbar st"><i id="stFill"></i></div></div>
+  <div id="foe" hidden><span id="foeName"></span><div class="vbar"><i id="foeFill"></i></div></div>
+  <div id="hurt"></div>
+  <div id="rpgTouch" hidden>
+    <button id="tJump" type="button" aria-label="Jump"><svg viewBox="0 0 24 24"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5"/></svg></button>
+    <button id="tDodge" type="button" aria-label="Dodge"><svg viewBox="0 0 24 24"><path d="M5 8h9M5 16h9M16 6l4 6-4 6"/></svg></button>
+    <button id="tBlock" type="button" aria-label="Block"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/></svg></button>
+    <button id="tAtk" type="button" aria-label="Attack"><svg viewBox="0 0 24 24"><path d="M19 4 9 14M7 12l5 5M6 18l-3 3M19 4v5M19 4h-5"/></svg></button>
+    <button id="tEat" type="button" aria-label="Eat or drink"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v4l-4 8a4 4 0 0 0 4 6h4a4 4 0 0 0 4-6l-4-8V3"/></svg></button>
+  </div>
+</div>
+<div id="deadMsg" hidden><b>You were cut down.</b><small>The valley goes quiet.</small></div>
+
 <section id="dialog" hidden aria-live="polite">
   <div id="dname"></div>
   <p id="dtext"></p>
@@ -61,11 +76,13 @@
       <label class="row" for="setTime"><span>Time of day</span><input id="setTime" type="range" min="0" max="24" step="0.25" value="9.5"></label>
       <label class="row" for="setFlow"><span>Day length</span>
         <select id="setFlow"><option value="720">12 minutes</option><option value="1440">24 minutes</option><option value="360">6 minutes</option><option value="0">Stop the clock</option></select></label>
+      <label class="row" for="setGfx"><span>Graphics engine</span>
+        <select id="setGfx"><option value="webgpu">WebGPU (default)</option><option value="webgl">WebGL 2 (if things look wrong)</option></select></label>
       <label class="row check" for="setInvert"><span>Invert look up and down</span><input id="setInvert" type="checkbox"></label>
       <label class="row check" for="setFps"><span>Show frame rate</span><input id="setFps" type="checkbox"></label>
       <button id="resetBtn" type="button" class="btn ghost">Start the story over</button>
       <p id="diag"></p>
-        <p id="credits">Surface scans are public-domain (CC0) textures from ambientCG, cgbookcase and Nobiax.</p>
+        <p id="credits">Built on Three.js. Surface scans from ambientCG, cgbookcase and Nobiax; villagers from Quaternius; their animations from Mesh2Motion. All public domain (CC0).</p>
     </div>
   </div>
 </section>
@@ -82,11 +99,11 @@
     </div>
     <p id="hint"></p>
     <p id="gpuNote" hidden></p>
+    <p id="classic"><a href="classic/">Classic version</a> (the build before this one)</p>
   </div>
 </section>
 <div id="fade"></div>
-<script>
-/*__JS__*/
-</script>
+<script src="__THREE__"></script>
+<script src="__GAME__"></script>
 </body>
 </html>

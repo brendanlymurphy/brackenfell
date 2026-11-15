@@ -4,7 +4,7 @@ const COL = {
   iron: [0.72, 0.72, 0.76], steel: [1, 1, 1.02], bronze: [1.0, 0.80, 0.45], black: [0.22, 0.21, 0.2],
   linen: [0.92, 0.89, 0.80], wool: [0.78, 0.72, 0.62], red: [0.70, 0.17, 0.13], blue: [0.20, 0.32, 0.60], green: [0.24, 0.46, 0.22], gold: [0.92, 0.72, 0.22],
   purple: [0.42, 0.22, 0.50], clay: [0.74, 0.40, 0.26], wax: [0.95, 0.90, 0.75], hay: [1, 0.95, 0.8], leather: [0.45, 0.28, 0.16], fur: [0.42, 0.32, 0.24],
-  bread: [0.80, 0.56, 0.28], cheese: [0.93, 0.76, 0.28], apple: [0.75, 0.14, 0.10], cabbage: [0.42, 0.62, 0.28], glass: [0.35, 0.55, 0.40], parchment: [0.90, 0.82, 0.62],
+  bread: [0.62, 0.44, 0.24], cheese: [0.74, 0.62, 0.30], apple: [0.52, 0.13, 0.10], cabbage: [0.34, 0.46, 0.25], glass: [0.35, 0.55, 0.40], parchment: [0.90, 0.82, 0.62],
 };
 // colliders / lights / emitters are registered in world space using the mesh's current matrix
 function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
@@ -136,7 +136,7 @@ const Props = {
       });
     }
   },
-  rug(m, w, l, col) { m.mat(MAT.STRIPES, col || COL.red, 0.6); m.quad([-w / 2, 0.015, -l / 2], [-w / 2, 0.015, l / 2], [w / 2, 0.015, l / 2], [w / 2, 0.015, -l / 2], 0, 0, w / 0.6, l / 0.6); },
+  rug(m, w, l, col) { const c = col || COL.red; m.mat(MAT.CLOTH, [c[0] * 0.5, c[1] * 0.42, c[2] * 0.4], 0.6); m.quad([-w / 2, 0.015, -l / 2], [-w / 2, 0.015, l / 2], [w / 2, 0.015, l / 2], [w / 2, 0.015, -l / 2], 0, 0, w / 0.6, l / 0.6); },
   cauldron(m, r) { r = r || 0.24; m.mat(MAT.METAL, COL.black); m.lathe([[r * 0.5, 0], [r * 0.95, r * 0.4], [r, r * 0.9], [r * 0.86, r * 1.25], [r * 0.92, r * 1.32]], 10, 1); m.mat(MAT.PLAIN, [0.35, 0.3, 0.18]); m.disc(0, r * 1.1, 0, r * 0.88, 10, 1); },
   logs(m, n, len, r) { m.mat(MAT.BARK, [1, 1, 1], 0.5); for (let i = 0; i < n; i++) { m.push().T(0, r + 0.01, (i - (n - 1) / 2) * r * 2.05).RZ(PI / 2).T(0, -len / 2, 0); m.cyl(0, 0, 0, r, r * 0.95, len, 7, 0); m.mat(MAT.PLAIN, [0.78, 0.62, 0.42]); m.disc(0, len, 0, r * 0.95, 7, 1); m.disc(0, 0, 0, r, 7, -1); m.mat(MAT.BARK, [1, 1, 1], 0.5); m.pop(); } },
   woodpile(m, cols, rows, len) { const r = 0.09; for (let j = 0; j < rows; j++) { m.push().T(0, j * r * 1.85, (j % 2) * r * 0.5); Props.logs(m, cols - (j % 2), len, r); m.pop(); } addBoxCollider(m, -len / 2, -cols * r, len / 2, cols * r, 0, rows * r * 1.9); },

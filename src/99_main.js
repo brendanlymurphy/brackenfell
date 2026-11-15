@@ -7,7 +7,7 @@ const coarse = () => (window.matchMedia && matchMedia('(pointer: coarse)').match
 
 function resize() {
   const c = G.canvas, pr = Math.min(window.devicePixelRatio || 1, R.q.pr);
-  gpuResize(Math.round(c.clientWidth * pr), Math.round(c.clientHeight * pr));
+  gfxResize(Math.round(c.clientWidth * pr), Math.round(c.clientHeight * pr));
 }
 game.applyQuality = async () => {
   let tier = game.qualitySetting;
@@ -109,13 +109,14 @@ function tick(dt) {
   if (World.festival && Env.hour > 23.4 && Env.hour < 23.9) { World.festival = false; for (const n of NPCS) n.override = null; }
   const env = updateEnv(game.time, World.indoor); env.time = game.time;
   fxUpdate(dt, game.time, env, R.cam.pos);
+  RPG.tick(dt);
   if (game.playing) uiFrame(dt);
   Audio2.update(dt, audioState());
   return env;
 }
 let lastT = 0;
 function frame(tms) {
-  if (TEST) G.device.queue.onSubmittedWorkDone().then(() => requestAnimationFrame(frame)); else requestAnimationFrame(frame);
+  requestAnimationFrame(frame);
   if (G.lost) return;
   const dtMs = Math.min(tms - lastT, 100); lastT = tms;
   if (dtMs <= 0 || document.hidden) return;
@@ -125,8 +126,20 @@ function frame(tms) {
     perfUpdate(dtMs, dtMs / 1000);
     if (!R.busy) renderFrame(game.time, env);
   } catch (e) { if (!game.crashed) { game.crashed = true; console.error(e); G.errors.push(String(e && e.stack || e)); } }
+  // WebGPU that reports errors (or throws) in its first seconds of drawing will not get better: switch this device to WebGL 2
+  if (!G.gfxChecked) { if (!G.tDraw) G.tDraw = tms; if (G.errors.length) { G.gfxChecked = true; gfxFallback(G.errors[0]); } else if (tms - G.tDraw > 12000) G.gfxChecked = true; }
 }
-function onDeviceLost() { $('title').classList.remove('gone'); $('startRow').hidden = true; $('bar').hidden = true; $('loadText').textContent = 'The graphics device was lost. Reload the page to return to Brackenfell.'; }
+function onDeviceLost() {
+  $('title').classList.remove('gone'); $('startRow').hidden = true; $('bar').hidden = true; $('loadText').textContent = 'The graphics device was lost. Reloading to return to Brackenfell.';
+  if (TEST) return;
+  try { if (game.playing && typeof save === 'function') save(); } catch (e) { }
+  let n = 1; try { n = (+sessionStorage.getItem('brackenfell.lost') || 0) + 1; sessionStorage.setItem('brackenfell.lost', String(n)); } catch (e) { }
+  // lost while starting up, or for the second time: this device and WebGPU do not get along, so come back on WebGL 2
+  if ((performance.now() - (G.t0 || 0) < 30000 || n >= 2) && gfxFallback('graphics device lost')) return;
+  if (n > 3) { $('loadText').textContent = 'The graphics device keeps being lost. Reload the page to try again.'; return; }
+  const again = () => { if (!document.hidden) location.reload(); };
+  if (document.hidden) document.addEventListener('visibilitychange', again); else setTimeout(again, 1200);
+}
 function startGame(cont) {
   Audio2.start();
   const sv = cont && loadSave(); if (sv) applySave(sv); else { clearSave(); }
@@ -142,19 +155,20 @@ function startGame(cont) {
   try {
     loadSettings();
     const canvas = $('view');
-    try { await gpuInit(canvas); }
-    catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell needs WebGPU, which this browser does not offer here. Open this page in a current Chrome or Edge, or in Safari on iOS 26 or newer.'; console.warn(e); window.__ready = true; return; }
-    gpuResize(canvas.clientWidth, canvas.clientHeight);
+    try { await gfxInit(canvas); }
+    catch (e) { $('bar').hidden = true; $('loadText').textContent = 'Brackenfell could not start 3D graphics in this browser. Try a current Chrome, Edge or Safari.'; console.warn(e); G.errors.push(String(e && e.stack || e)); window.__ready = true; return; }
+    gfxResize(G.canvas.clientWidth, G.canvas.clientHeight);
     await load('Mixing lime, straw and river stone', 0.06);
     const lowMem = (navigator.deviceMemory || 8) <= 3;
-    await genTextures(TEST && TEST.texRes || (lowMem ? 256 : 512), f => { $('barFill').style.width = Math.round(4 + f * 8) + '%'; }); lap('tex');
-    // scanned surfaces come from the texture pack beside the page; anything going wrong there falls back to generated ones
-    if (!TEST || !TEST.texRes || TEST.pack) {
-      $('loadText').textContent = 'Unpacking stone, timber and thatch (about 25 MB the first time)';
-      try { await loadPack(lowMem, f => { $('barFill').style.width = Math.round(12 + f * 26) + '%'; }); }
-      catch (e) { console.warn('texture pack unavailable: ' + (e && e.message || e)); G.packError = String(e && e.message || e); }
-    }
-    if (!G.albedoArr) await genSurfaces(TEST && TEST.texRes || (lowMem ? 256 : 512)); lap('pack');
+    $('loadText').textContent = 'Unpacking stone, timber and thatch (about 35 MB the first time)';
+    await loadNoise();
+    await loadPack(lowMem, f => { $('barFill').style.width = Math.round(6 + f * 32) + '%'; }); lap('pack');
+    SH.init();
+    // animated villagers; if their files cannot be loaded the old hand-built bodies stand in
+    $('loadText').textContent = 'Dressing the villagers';
+    if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) { try { await Chars.load('quaternius', f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; } catch (e) { console.warn('villager models unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); } }
+    lap('chars');
+    if (typeof kitBoot === 'function') await kitBoot(f => { $('loadText').textContent = 'Carting in beams, barrels and roof tiles'; $('barFill').style.width = Math.round(38 + f * 2) + '%'; });
     renderInit();
     await load('Raising the Greyspine', 0.4); buildTerrain(); buildSplat(); buildWater(); lap('terrain');
     await load('Framing timber, laying thatch', 0.55); buildVillage(); lap('village');
@@ -165,8 +179,9 @@ function startGame(cont) {
     await load('Lighting the lanterns', 0.88);
     if (TEST && TEST.quality) game.qualitySetting = TEST.quality;
     await game.applyQuality(); lap('pipelines');
+    if (typeof kitAttach === 'function') kitAttach();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
-    npcSnapAll(); uiInit(); inputInit(canvas, $('touch'));
+    npcSnapAll(); uiInit(); inputInit(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));
     document.addEventListener('visibilitychange', () => { if (Audio2.ctx) { if (document.hidden) Audio2.ctx.suspend(); else if (game.playing) Audio2.ctx.resume(); } lastT = performance.now(); });
     $('barFill').style.width = '100%'; $('loadText').textContent = ''; $('bar').hidden = true; $('startRow').hidden = false;
@@ -176,9 +191,8 @@ function startGame(cont) {
     game.ready = true;
     // ── test hooks ──
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
-    game.debugTextures = debugTextures;
-    game.step = (n, dt) => { let env; for (let i = 0; i < (n || 1); i++) env = tick(dt || 1 / 30); return env; };
-    game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); renderFrame(game.time, env); if (TEST) await gpuCapture(); return R.stats; };
+        game.step = (n, dt) => { let env; for (let i = 0; i < (n || 1); i++) env = tick(dt || 1 / 30); return env; };
+    game.draw = async () => { const env = updateEnv(game.time, World.indoor); env.time = game.time; renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env)); return R.stats; };
     game.tp = (x, z, yawDeg, pitchDeg, y) => { Player.pos = [x, y === undefined ? World.groundAt(x, z, 1e9) : y, z]; Player.vel = [0, 0, 0]; if (yawDeg !== undefined) Player.yaw = yawDeg * PI / 180; Player.pitch = (pitchDeg || 0) * PI / 180; World.indoor = World.zoneAt(x, Player.pos[1] + 1, z) ? 1 : 0; };
     game.shot = async (x, y, z, yaw, pitch, hour) => {
       if (hour !== undefined) { Env.hour = hour; npcSnapAll(); }
@@ -187,8 +201,7 @@ function startGame(cont) {
       game.time += 0.4; npcUpdate(0.4, R.cam.pos); updateDynamics(0.4, [R.cam.pos].concat(NPCS.map(n => n.pos)));
       const env = updateEnv(game.time, World.indoor); env.time = game.time; World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
       fxUpdate(0.4, game.time, env, R.cam.pos); fxUpdate(0.4, game.time, env, R.cam.pos);
-      renderFrame(game.time, env); renderFrame(game.time, env);
-      if (TEST) await gpuCapture();
+      renderFrame(game.time, env); await gfxCapture(() => renderFrame(game.time, env));
       return R.stats;
     };
     if (TEST && !TEST.title) $('title').classList.add('gone');
@@ -198,6 +211,7 @@ function startGame(cont) {
   } catch (e) {
     console.error(e && e.stack || e);
     // shader and pipeline messages arrive a moment later; show them too so a screenshot of this screen says what failed
+    if (gfxFallback('start-up failed: ' + (e && e.message || e))) return;
     const show = () => { $('bar').hidden = true; $('loadText').textContent = 'Something went wrong while building the village: ' + (e && e.message || e) + (G.errors.length ? ' [' + G.errors.slice(0, 2).join(' | ').slice(0, 420) + ']' : ''); };
     show(); setTimeout(show, 900); setTimeout(() => { G.errors.push(String(e && e.stack || e)); }, 1000); window.__ready = true;
   }

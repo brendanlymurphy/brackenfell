@@ -19,7 +19,7 @@ const Grass = { mesh: null, N: 0, range: 0 };
     }
     const N = Math.max(8, Math.round(range * WINDOW / K.grassCell)), cellSz = K.grassCell, TH = K.terrainHalf, HN = K.heightN;
     const uOrg = uniform(new THREE.Vector2());
-    const blades = range <= 20 ? 3 : range <= 32 ? 4 : 5;
+    const blades = range <= 32 ? 3 : 4;      // kept modest: every blade vertex samples several textures, and phones run the middle tier
     U.grassRange.value = range;
     const vCol = varyingProperty('vec3', 'vGrassCol'), vEm = varyingProperty('vec3', 'vGrassEm');
     const m = new THREE.MeshLambertNodeMaterial({ side: THREE.DoubleSide });

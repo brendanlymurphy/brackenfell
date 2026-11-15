@@ -11,6 +11,19 @@ const ITEMS = {
   apple: ['Apple', 'Crisp, from the valley orchards.'],
   bread: ['Rye loaf', 'Still a little warm.'],
 };
+// What things do (93_inventory.js reads the third field): food heals, blades cut, shields and jerkins protect.
+// value = what the smith pays for it, cost = what it sells for, blade = [length, brightness, half-width] of the sword in view.
+Object.assign(ITEMS, {
+  shortsword: ['Worn shortsword', 'Notched, but it holds an edge. It came up the road with you.', { slot: 'weapon', dmg: 10, blade: [0.60, 0.85], value: 8 }],
+  ironsword: ['Iron arming sword', 'Brandt’s plain, honest work.', { slot: 'weapon', dmg: 15, blade: [0.70, 1.0], value: 30, cost: 70 }],
+  steelsword: ['Garrick’s blade', 'Good steel, taken from a man who deserved it less than you.', { slot: 'weapon', dmg: 21, blade: [0.78, 1.25, 0.028], value: 70 }],
+  buckler: ['Oak buckler', 'Small, round, and better than an arm.', { slot: 'shield', value: 14, cost: 38 }],
+  leather: ['Leather jerkin', 'Boiled hide over wool. Turns a glancing blow.', { slot: 'armor', armor: 0.25, value: 22, cost: 55 }],
+  potion: ['Red tonic', 'Maren’s strongest. Knits a wound in a breath.', { heal: 60, value: 9, cost: 24 }],
+  tools: ['Brandt’s tongs and files', 'A smith’s bench tools, rolled in oilcloth.'],
+});
+ITEMS.apple[2] = { heal: 8 }; ITEMS.bread[2] = { heal: 18, value: 1 }; ITEMS.ale[2] = { heal: 10, sta: 60, value: 1 }; ITEMS.tonic[2] = { heal: 45 };
+ITEMS.knife[2] = { slot: 'weapon', dmg: 7, speed: 1.3, reach: -0.45, blade: [0.26, 1.1] };
 const QUESTS = {
   welcome: { name: 'A Stranger at the Gate', stages: ['Speak to the guard at the gate', 'Find Greta at the Honeyed Hart, the inn on the square'] },
   ale: { name: 'Ale for the Hart', stages: ['Fetch the malt from Osric at the mill, east over the bridge', 'Carry the malt back to Greta'] },
@@ -18,8 +31,12 @@ const QUESTS = {
   herbs: { name: 'Frostcaps for Maren', stages: ['Gather five frostcaps around the valley', 'Bring the frostcaps to Maren'] },
   bell: { name: 'The Silent Bell', stages: ['Buy a rope from Marta at Quill’s Sundries', 'Take the rope to Brother Aldous at the chapel', 'Ring the bell under the chapel tower'] },
   fire: { name: 'The Harvest Fire', stages: ['Speak with Elder Rowan', 'Light the fire pit in the square'] },
+  camp: { name: 'Smoke in the Pines', stages: ['Drive the outlaws from their camp in the pines, north-west of the gate', 'Tell Elder Rowan the camp is empty'] },
+  tools: { name: 'Tongs and Temper', stages: ['Find Garrick One-Ear, camped west of the watchtower path', 'Bring Brandt his tools'] },
+  bounty: { name: 'Bounty: Outlaws', stages: ['Put down five outlaws', 'Collect the bounty from Warden Hale'] },
 };
-const QORDER = ['welcome', 'ale', 'hammer', 'herbs', 'bell', 'fire'];
+const QORDER = ['welcome', 'ale', 'hammer', 'herbs', 'bell', 'fire', 'camp', 'tools', 'bounty'];
+const BOUNTY_N = 5;
 const qAt = id => { const q = S.q[id]; return !q ? -1 : q.done ? 99 : q.stage; };
 const has = (id, n) => (S.items[id] || 0) >= (n || 1);
 function give(id, n) { S.items[id] = (S.items[id] || 0) + (n || 1); if (S.items[id] <= 0) delete S.items[id]; }
@@ -38,6 +55,10 @@ function questTarget(id) {
   if (id === 'herbs') { if (st === 1) return npc('maren'); let best = null, bd = 1e9; for (const p of World.pickups) { if (p.item !== 'frostcap' || p.gone) continue; const d = hyp(p.p[0] - Player.pos[0], p.p[2] - Player.pos[2]); if (d < bd) { bd = d; best = p.p; } } return best; }
   if (id === 'bell') return st === 0 ? npc('marta') : st === 1 ? npc('aldous') : World.bell.p;
   if (id === 'fire') return st === 0 ? npc('rowan') : [World.bonfirePos[0], 0, World.bonfirePos[1]];
+  const camp = cid => { const c = Foes.camps.find(k => k.id === cid); return [c.x, 0, c.z]; };
+  if (id === 'camp') return st === 0 ? camp('pines') : npc('rowan');
+  if (id === 'tools') return st === 0 ? camp('crag') : npc('brandt');
+  if (id === 'bounty') { if (st === 1) return npc('hale'); const f = Foes.nearest(Player.pos); return f ? f.pos : null; }
   return null;
 }
 
@@ -115,10 +136,43 @@ const TALK = {
   bram: () => node('Apples! Cabbages! Oh. Sorry. Habit.', [['An apple, please. (1 gold)', () => { if (S.gold < 1) return node('Not a coin? Go on, then. Don’t tell Edda.', [['Thanks, Bram.', () => { give('apple'); toast('Received: Apple'); return null; }]]); gold(-1); give('apple'); toast('Bought: Apple'); return node('Best in the valley. Only in the valley, mind, but still.'); }], bye]),
 };
 
+// ── outlaw trouble (92_foes.js): extra lines for the elder, the smith, the warden and the herbalist, slotted in before their farewell ──
+{
+  const base = { rowan: TALK.rowan, brandt: TALK.brandt, hale: TALK.hale, maren: TALK.maren };
+  const add = (n, opts) => { const i = n && n.o ? n.o.indexOf(bye) : -1; if (i >= 0) n.o.splice(i, 0, ...opts.filter(Boolean)); return n; };
+  TALK.rowan = () => add(base.rowan(), [
+    qAt('camp') < 0 && qAt('welcome') === 99 && ['Is the valley safe?', () => node('Safer than most. But there has been smoke in the pines north-west of the gate these three nights, and it is not Wren’s. Outlaws, come down off the passes before the snow. Hale cannot leave the gate, and I am too old to do more than worry. If you carry a blade and know its use, drive them off. Mind the big one.', [['I’ll see to it.', () => { qStart('camp'); if (RPG.st().cleared && RPG.st().cleared.pines !== undefined) qStage('camp', 1); return null; }, 1], ['Not today.', null]])],
+    qAt('camp') === 0 && ['About the outlaws…', () => node('North-west of the gate, among the pines. You will see their rag on a pole before they see you, if you are careful. Eat before you go, and do not be too proud to run.')],
+    qAt('camp') === 1 && ['The camp in the pines is empty.', () => { gold(60); give('buckler'); toast('Received: ' + ITEMS.buckler[0]); qDone('camp'); return node('Then the children can pick berries at the wood’s edge again. This was my father’s, and it has hung on the wall long enough. Take it, with the village’s thanks.'); }, 1],
+  ]);
+  TALK.brandt = () => add(base.brandt(), [
+    qAt('tools') < 0 && ['Have the outlaws troubled you?', () => node('Troubled me? They had my second-best tongs and a roll of files off the cart at the ford, a week gone. Their chief wears them on his belt like trophies. One ear, red beard. They camp west of the path up to the old watchtower. Bring my tools back and I’ll put a proper sword in your hand, not that kitchen iron.', [['I’ll get them back.', () => { qStart('tools'); if (has('tools')) qStage('tools', 1); return null; }, 1], ['Another time.', null]])],
+    has('tools') && qAt('tools') !== 99 && ['I have your tongs and files.', () => { give('tools', -1); give('ironsword'); toast('Received: ' + ITEMS.ironsword[0]); gold(20); if (qAt('tools') < 0) qStart('tools', 1); qDone('tools'); return node('Hah! Not a scratch on them. As promised: an arming sword, drawn out this spring and waiting for a hand. Keep the point low and your feet moving.'); }, 1],
+    ['Show me what you have for sale.', () => Inv.shop('brandt')],
+    ['I have things to sell.', () => Inv.sell('brandt')],
+  ]);
+  TALK.hale = () => add(base.hale(), [
+    qAt('bounty') < 0 && qAt('welcome') > 0 && ['Any work for a sword?', () => { qStart('bounty'); bountyText(); return node('There’s coin on the board for outlaws, and I’ll pay it myself. Five of them put down and the road is a road again. Two camps: one in the pines north-west of here, one under the old watchtower. Don’t take on more than you can see.'); }, 1],
+    qAt('bounty') === 1 && ['I’ve come for the bounty.', () => { gold(45); qDone('bounty'); return node('Five, by my count and yours. Paid in full. You’ve done the valley a turn, and I’ll not forget it.'); }, 1],
+  ]);
+  TALK.maren = () => add(base.maren(), [['A red tonic. (24 gold)', () => { if (S.gold < 24) return node('Twenty-four, child. Frostcaps do not pick themselves.'); gold(-24); give('potion'); toast('Bought: ' + ITEMS.potion[0]); save(); return node('Drink it when you bleed, not before. It is no use against foolishness.'); }]]);
+}
+const bountyN = () => Math.min(BOUNTY_N, (S.rpg && S.rpg.bounty) || 0);
+function bountyText() { QUESTS.bounty.stages[0] = 'Put down five outlaws (' + bountyN() + ' of ' + BOUNTY_N + ')'; }
+// called by 92_foes.js
+function onFoeKilled(f) {
+  if (qAt('bounty') === 0) { S.rpg.bounty = (S.rpg.bounty || 0) + 1; bountyText(); if (S.rpg.bounty >= BOUNTY_N) qStage('bounty', 1); else toast('<b>Bounty</b> ' + bountyN() + ' of ' + BOUNTY_N + ' outlaws'); uiObjective(); }
+}
+function onCampCleared(id) {
+  toast(id === 'pines' ? 'The camp in the pines is silent.' : 'Garrick’s camp is silent.');
+  if (id === 'pines' && qAt('camp') === 0) qStage('camp', 1);
+}
+
 // ── interactions ──
 function interactLabel(it) {
   if (it.npc) { const w = it.npc.name.split(' '); return 'Talk to ' + (['Old', 'Brother', 'Elder', 'Warden', 'Guardsman'].includes(w[0]) ? w[1] : w[0]); }
   if (it.kind === 'chest') return S.opened[it.id] ? null : 'Open chest';
+  if (it.kind === 'loot') return 'Search ' + it.name;
   if (it.kind === 'pickup') return it.gone ? null : it.label;
   if (it.kind === 'read') return 'Read';
   if (it.kind === 'bed') return 'Sleep';
@@ -133,15 +187,25 @@ function interactUse(it) {
     S.opened[it.id] = 1; Audio2.chest();
     const got = []; for (const [id, n] of it.loot || []) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
     toast('Found: ' + got.join(', ')); uiPurse(); save();
+  } else if (it.kind === 'loot') {
+    const got = []; Audio2.pickup();
+    for (const [id, n] of it.loot) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
+    const i = World.interact.indexOf(it); if (i >= 0) World.interact.splice(i, 1); if (it.foe) it.foe.looted = true;
+    toast('Taken: ' + got.join(', ')); uiPurse();
+    if (has('tools') && qAt('tools') !== 99) { if (qAt('tools') < 0) qStart('tools', 1); else qStage('tools', 1); }
+    save();
   } else if (it.kind === 'pickup') {
     it.gone = true; it.obj.visible = false; if (it.em) it.em.gone = true; S.picked[it.id] = 1; give(it.item); Audio2.pickup();
     if (it.item === 'frostcap') { toast('Frostcap gathered (' + Math.min(frostN(), 5) + ' of 5)'); if (qAt('herbs') === 0 && frostN() >= 5) qStage('herbs', 1); }
     else { toast('Taken: ' + ITEMS[it.item][0]); if (it.item === 'hammer') { if (qAt('hammer') < 0) qStart('hammer', 2); else qStage('hammer', 2); } }
     save();
-  } else if (it.kind === 'read') openReader(it.title, it.text);
+  } else if (it.kind === 'read') {
+    openReader(it.title, it.text + (it.id === 'board' ? '\n\nBOUNTY. Outlaws on the passes. Coin paid for five put down. See Warden Hale at the gate.' : ''));
+    if (it.id === 'board' && qAt('bounty') < 0 && qAt('welcome') >= 0) { qStart('bounty'); bountyText(); }
+  }
   else if (it.kind === 'bed') {
     if (!S.flags.bed) return toast('This bed isn’t yours. Greta at the bar lets rooms.');
-    fadeDo(() => { Env.hour = 7; World.festival = false; for (const n of NPCS) n.override = null; npcSnapAll(); toast('You wake rested. A new morning in Brackenfell.'); save(); });
+    fadeDo(() => { Env.hour = 7; World.festival = false; for (const n of NPCS) n.override = null; npcSnapAll(); const r = RPG.st(); r.hp = RPG.MAXHP; r.sta = RPG.MAXST; Foes.calm(true); toast('You wake rested. A new morning in Brackenfell.'); save(); });
   } else if (it.kind === 'bell') { Audio2.bell(1); World.bellSwing = 3; if (qAt('bell') === 2) { qDone('bell'); S.flags.bell = 1; toast('The Dawn bell rings out over the valley.'); } }
   else if (it.kind === 'shopitem') toast('Marta: “Fifteen gold, dear. Ask me at the counter.”');
   else if (it.kind === 'bonfire') lightHarvestFire();
@@ -161,11 +225,14 @@ function festivalSpots() {
   World.interact.push({ p: [b[0], World.groundY(b[0], b[1]) + 0.8, b[1]], r: 3.0, zone: 0, kind: 'bonfire', id: 'bonfire' });
 }
 // ── saving (a convenience only: one browser, may be unavailable) ──
-function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
+// v 2 adds S.rpg (health, gear, outlaws). Saves without it still load: RPG.st() fills in what is missing.
+function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
 function loadSave() { try { const j = JSON.parse(localStorage.getItem('brackenfell.v1') || 'null'); return j && j.S ? j : null; } catch (e) { return null; } }
 function applySave(j) {
-  Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; }
+  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; }
   for (const p of World.pickups) if (S.picked[p.id]) { p.gone = true; p.obj.visible = false; if (p.em) p.em.gone = true; }
   if (S.flags.fire) World.bonfire = true;
+  if (S.rpg && S.rpg.v !== 2) S.rpg = null;
+  RPG.st(); bountyText(); if (typeof Combat !== 'undefined') Combat.refresh();
 }
 function clearSave() { try { localStorage.removeItem('brackenfell.v1'); } catch (e) { } }

@@ -32,9 +32,8 @@ function openMenu(tab) {
   UI.menu = true; Player.locked = true; releaseLook(); $('menu').hidden = false; showTab(tab || 'journal'); Audio2.page();
   let h = ''; for (const id of QORDER) { const q = S.q[id]; if (!q) continue; h += '<h3>' + QUESTS[id].name + '</h3>'; QUESTS[id].stages.forEach((s, i) => { if (i < q.stage || q.done) h += '<p class="done">' + s + '</p>'; else if (i === q.stage) h += '<p>' + s + (id === 'herbs' && i === 0 ? ' (' + Math.min(frostN(), 5) + ' of 5)' : '') + '</p>'; }); }
   $('tab-journal').innerHTML = h || '<p class="empty">Nothing yet. Speak with the guard at the gate.</p>';
-  let p = '<div class="items"><div><b>' + S.gold + ' gold</b><span>Coin of the valley.</span></div>'; for (const id in S.items) p += '<div><b>' + ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + '</b><span>' + ITEMS[id][1] + '</span></div>';
-  $('tab-pack').innerHTML = p + '</div>'; $('setTime').value = Env.hour;
-  const inf = G.adapter && G.adapter.info ? [G.adapter.info.vendor, G.adapter.info.architecture].filter(Boolean).join(' ') : ''; $('diag').textContent = 'Build 4 \u00b7 WebGPU \u00b7 textures ' + (G.pack || '?') + (G.packError ? ' (pack failed: ' + G.packError.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
+  Inv.render(); $('setTime').value = Env.hour;
+  const inf = G.gpuName || ''; $('diag').textContent = 'Build 8 \u00b7 ' + G.backend + (G.gfxWhy ? ' (' + G.gfxWhy.slice(0, 90) + ')' : '') + (G.chars ? '' : ' \u00b7 old villagers') + ' \u00b7 textures ' + (G.pack || '?') + (G.packNote ? ' (' + G.packNote.slice(0, 60) + ')' : '') + (inf ? ' (' + inf + ')' : '') + ' \u00b7 ' + G.w + ' \u00d7 ' + G.h + ' at ' + Math.round(R.scale * 100) + '% \u00b7 detail ' + game.tier + (Perf.T > 20 ? ' \u00b7 browser cap ' + Math.round(1000 / Perf.T) + ' fps' : '') + (G.errors.length ? ' \u00b7 ' + G.errors.length + ' warnings: ' + G.errors[0].slice(0, 160) : '');
 }
 function showTab(t) { for (const b of $('tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === t; b.classList.toggle('on', on); $('tab-' + b.dataset.tab).hidden = !on; } }
 function closeMenu() { UI.menu = false; $('menu').hidden = true; Player.locked = uiBusy(); saveSettings(); }
@@ -49,6 +48,7 @@ function uiInit() {
   for (const b of $('tabs').querySelectorAll('[data-tab]')) b.addEventListener('click', () => showTab(b.dataset.tab));
   $('setQuality').value = game.qualitySetting; $('setSens').value = Input.sens; $('setVol').value = Audio2.vol; $('setMusic').value = Audio2.musicVol; $('setInvert').checked = Input.invertY; $('setFps').checked = game.showFps; $('setFlow').value = String(Env.dayLength);
   $('setQuality').addEventListener('change', e => { game.qualitySetting = e.target.value; game.applyQuality(); });
+  $('setGfx').value = G.backend === 'WebGPU' ? 'webgpu' : 'webgl'; $('setGfx').addEventListener('change', e => { saveSettings(); try { if (game.playing) save(); } catch (er) { } gfxPrefer(e.target.value); });
   $('setSens').addEventListener('input', e => { Input.sens = +e.target.value; });
   $('setVol').addEventListener('input', e => { Audio2.vol = +e.target.value; });
   $('setMusic').addEventListener('input', e => { Audio2.musicVol = +e.target.value; });

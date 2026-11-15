@@ -1,8 +1,5 @@
-node_modules/
+node_modules
 shots/
 *.log
 .DS_Store
-/three.js
-/game.js
-/index.html
-/chars/
+/cand

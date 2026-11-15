@@ -1,0 +1,3 @@
+// screenshot helper: window.__tour(name, spotOrXZ, yawDeg, pitchDeg, hour, eye)
+window.__sp = (name, yaw, pitch, hour, dx, dz, eye) => { const s = World.spots[name]; if (!s) throw new Error('no spot ' + name); return game.shot(s.p[0] + (dx || 0), s.p[1] + (eye || 1.62), s.p[2] + (dz || 0), yaw, pitch || 0, hour); };
+window.__site = (id, dist, side, hour, pitch, eye) => { const s = SITE[id], dl = siteDoorLocal(s, dist), p = siteToWorld(s, dl[0] + (side || 0), dl[1]), dw = siteToWorld(s, 0, 0); const yaw = Math.atan2(dw[0] - p[0], -(dw[1] - p[1])) * 180 / Math.PI; return game.shot(p[0], Terrain.y(p[0], p[1]) + (eye || 1.7), p[1], yaw, pitch === undefined ? 6 : pitch, hour); };
