@@ -27,4 +27,11 @@ if (mode === 'tour') {
   await s.close(); process.exit(0);
 }
 if (mode === 'sheets') { const r = spawnSync('python3', ['-I', root + 'test/qa/sheet.py', OUT], { stdio: 'inherit' }); process.exit(r.status); }
+if (mode === 'geo' || mode === 'chars' || mode === 'player') {
+  const only = arg('only', ''), s = await open(mode === 'geo' ? { webgl: 1, quality: 'low', audit: 1 } : mode === 'player' ? { webgl: 1, quality: 'low', play: 1 } : { webgl: 1, quality: 'low' });
+  const t0 = Date.now(), r = JSON.parse(await s.run(mode === 'geo' ? `return JSON.stringify(QA.geo(${only ? JSON.stringify(only.split(',')) : 'null'}))` : mode === 'player' ? `__game.step(2, 1/30); return JSON.stringify(QA.player(${arg('spots', 40)}, ${arg('secs', 10)}))` : 'return JSON.stringify(QA.chars())'));
+  fs.writeFileSync(OUT + '/' + mode + '.json', JSON.stringify(r, null, 1)); const by = {}; for (const d of r.defects) by[d.k] = (by[d.k] || 0) + 1;
+  console.log(mode, 'defects', r.defects.length, JSON.stringify(by), JSON.stringify(r.stats), Math.round((Date.now() - t0) / 1000) + 's'); if (s.msgs.length) console.log('console:', s.msgs.slice(0, 6).join('\n'));
+  await s.close(); process.exit(0);
+}
 console.log('unknown mode'); process.exit(2);
