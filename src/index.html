@@ -28,6 +28,21 @@
   <div id="fps" hidden></div>
 </div>
 
+<!-- gameplay layer (90_rpg.js): health and stamina, the foe in front of you, touch buttons, the death screen -->
+<div id="rpg" hidden>
+  <div id="vitals" class="rest"><div class="vbar hp"><i id="hpFill"></i></div><div class="vbar st"><i id="stFill"></i></div></div>
+  <div id="foe" hidden><span id="foeName"></span><div class="vbar"><i id="foeFill"></i></div></div>
+  <div id="hurt"></div>
+  <div id="rpgTouch" hidden>
+    <button id="tJump" type="button" aria-label="Jump"><svg viewBox="0 0 24 24"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5"/></svg></button>
+    <button id="tDodge" type="button" aria-label="Dodge"><svg viewBox="0 0 24 24"><path d="M5 8h9M5 16h9M16 6l4 6-4 6"/></svg></button>
+    <button id="tBlock" type="button" aria-label="Block"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/></svg></button>
+    <button id="tAtk" type="button" aria-label="Attack"><svg viewBox="0 0 24 24"><path d="M19 4 9 14M7 12l5 5M6 18l-3 3M19 4v5M19 4h-5"/></svg></button>
+    <button id="tEat" type="button" aria-label="Eat or drink"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v4l-4 8a4 4 0 0 0 4 6h4a4 4 0 0 0 4-6l-4-8V3"/></svg></button>
+  </div>
+</div>
+<div id="deadMsg" hidden><b>You were cut down.</b><small>The valley goes quiet.</small></div>
+
 <section id="dialog" hidden aria-live="polite">
   <div id="dname"></div>
   <p id="dtext"></p>

@@ -75,7 +75,7 @@ RPG.die = function (why) {
   if (RPG.dead) return;
   RPG.dead = true; RPG.deadT = 0; Player.locked = true; Combat.interrupt(); Audio2.fall();
   if (typeof releaseLook === 'function') releaseLook();
-  const d = $('deadMsg'); d.querySelector('b').textContent = why; d.hidden = false;
+  const d = $('deadMsg'); d.querySelector('b').textContent = why; d.style.opacity = 0; d.hidden = false;
   setTimeout(() => fadeDo(RPG.respawn), TEST ? 300 : 2400);
 };
 RPG.respawn = function () {
@@ -83,7 +83,7 @@ RPG.respawn = function () {
   const lost = Math.min(25, Math.floor(S.gold * 0.2)); S.gold -= lost; uiPurse();
   if (S.flags.bed && bed) { P.pos = [bed.p[0] + 0.9, bed.p[1] - 0.5, bed.p[2]]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], bed.p[1] + 0.4); }
   else { P.pos = [-84, 0, -6.5]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], 50); P.yaw = 1.45; }
-  P.vel = [0, 0, 0]; P.pitch = 0; r.hp = RPG.MAXHP; r.sta = RPG.MAXST; RPG.dead = false; RPG.flash = 0; RPG.shake = 0; RPG.iframes = 2;
+  P.vel = [0, 0, 0]; P.pitch = 0; r.hp = RPG.MAXHP; r.sta = RPG.MAXST; RPG.dead = false; RPG.hud.deadMsg.style.opacity = 0; RPG.flash = 0; RPG.shake = 0; RPG.iframes = 2;
   Env.hour = 7; World.festival = false; for (const n of NPCS) n.override = null; npcSnapAll();
   if (typeof Foes !== 'undefined') Foes.calm(true);
   $('deadMsg').hidden = true;
@@ -162,6 +162,8 @@ RPG.hudInit = function () {
     b.addEventListener('contextmenu', e => e.preventDefault());
   };
   hold('tAtk', 'atk'); hold('tBlock', 'block'); hold('tJump', 'jump'); hold('tDodge', 'dodge');
+  const eat = $('tEat'); if (eat) { eat.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Input.touch = true; if (!Player.locked && !RPG.dead) Inv.quick(); }); eat.addEventListener('contextmenu', e => e.preventDefault()); }
+  addEventListener('keydown', e => { if (e.code === 'KeyH' && !e.repeat && game.playing && !Player.locked && !RPG.dead) Inv.quick(); });
   // mouse: left attacks, right blocks, while the pointer is captured by the view
   addEventListener('mousedown', e => { if (!Input.plock || Player.locked) return; if (e.button === 0) RPG.in.atk = true; else if (e.button === 2) RPG.in.block = true; });
   addEventListener('mouseup', e => { if (e.button === 0) RPG.in.atk = false; else if (e.button === 2) RPG.in.block = false; });
@@ -215,7 +217,7 @@ RPG.tick = function (dt) {
     K[0] += (0 - K[0]) * Math.min(1, dt * 11); K[1] += (0 - K[1]) * Math.min(1, dt * 11); RPG.shake = Math.max(0, RPG.shake - dt * 2.6);
     const sh = RPG.shake * RPG.shake * 0.05, t = game.time * 47;
     cam.yaw += K[0] + Math.sin(t) * sh; cam.pitch += K[1] + Math.cos(t * 1.31) * sh;
-    if (RPG.dead) { RPG.deadT += dt; const d = smooth(0, 1.1, RPG.deadT); cam.pos[1] -= d * 1.25; cam.pitch += d * 0.5; cam.yaw += d * 0.35; }
+    if (RPG.dead) { RPG.deadT += dt; const d = smooth(0, 1.1, RPG.deadT); RPG.hud.deadMsg.style.opacity = smooth(0.5, 1.6, RPG.deadT).toFixed(2); cam.pos[1] -= d * 1.25; cam.pitch += d * 0.5; cam.yaw += d * 0.35; }
     RPG.hudFrame(dt);
   }
   Combat.place();

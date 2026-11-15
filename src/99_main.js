@@ -109,6 +109,7 @@ function tick(dt) {
   if (World.festival && Env.hour > 23.4 && Env.hour < 23.9) { World.festival = false; for (const n of NPCS) n.override = null; }
   const env = updateEnv(game.time, World.indoor); env.time = game.time;
   fxUpdate(dt, game.time, env, R.cam.pos);
+  RPG.tick(dt);
   if (game.playing) uiFrame(dt);
   Audio2.update(dt, audioState());
   return env;
