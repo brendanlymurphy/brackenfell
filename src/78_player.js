@@ -55,7 +55,7 @@ World.groundAt = (x, z, maxY) => {
 World.zoneAt = (x, y, z) => { for (const zn of World.zones) { if (Math.abs(x - zn.site.x) > 12 || Math.abs(z - zn.site.z) > 12) continue; const l = worldToSite(zn.site, x, z); if (Math.abs(l[0]) < zn.hw && Math.abs(l[1]) < zn.hd && y > zn.y0 && y < zn.y1) return zn.id; } return 0; };
 World.waterAt = (x, z) => { if (hyp(x - LAKE.x, z - LAKE.z) < LAKE.r + 8 && Terrain.y(x, z) < LAKE.y) return LAKE.y; const d = River.dist(x, z, 6); if (d < 6) { const wy = riverY(River.at); if (Terrain.y(x, z) < wy) return wy; } return -999; };
 
-const Player = { pos: [-84, 0, -6.5], vel: [0, 0, 0], yaw: 1.45, pitch: 0.02, eye: 1.66, r: 0.32, onGround: true, bob: 0, bobAmt: 0, step: 0, speed: 0, inWater: 0, surface: 'grass', locked: false, warned: 0 };
+const Player = { pos: [-84, 0, -6.5], vel: [0, 0, 0], yaw: 1.45, pitch: 0.02, eye: 1.66, r: 0.32, onGround: true, bob: 0, bobAmt: 0, step: 0, speed: 0, inWater: 0, surface: 'grass', locked: false, warned: 0, coyote: 0, dip: 0 };
 const Input = { keys: {}, mx: 0, mz: 0, run: false, lookX: 0, lookY: 0, joy: null, look: null, sens: 1, invertY: false, interact: false, touch: false };
 
 function playerUpdate(dt) {
@@ -76,9 +76,16 @@ function playerUpdate(dt) {
   }
   const feet = P.pos[1], water = World.waterAt(P.pos[0], P.pos[2]), depth = water - feet;
   P.inWater = depth > 0.15 ? depth : 0;
-  const maxSp = (run ? 5.4 : 2.9) * (depth > 0.45 ? 0.55 : 1);
+  // wading slows you, chest-deep water more so, and nobody sprints through it
+  const wade = depth > 0.9 ? 0.42 : depth > 0.45 ? 0.55 : depth > 0.15 ? 0.8 : 1;
+  if (depth > 0.45) run = false;
+  // stamina, jumping, dodging and combat stance live in 90_rpg.js; it answers { run, speed, jump, ov: [vx, vz] | null }
+  const rp = typeof RPG !== 'undefined' && !P.locked ? RPG.move(dt, run, mx, mz, depth) : null;
+  if (rp) run = rp.run;
+  const maxSp = (run ? 5.4 : 2.9) * wade * (rp ? rp.speed : 1);
   const fx = Math.sin(P.yaw), fz = -Math.cos(P.yaw), rx = Math.cos(P.yaw), rz = Math.sin(P.yaw);
-  const tx = (fx * mz + rx * mx) * maxSp, tz = (fz * mz + rz * mx) * maxSp, acc = Math.min(1, dt * (P.onGround ? 11 : 2.5));
+  let tx = (fx * mz + rx * mx) * maxSp, tz = (fz * mz + rz * mx) * maxSp, acc = Math.min(1, dt * (P.onGround ? 11 : 2.5));
+  if (rp && rp.ov) { tx = rp.ov[0]; tz = rp.ov[1]; acc = Math.min(1, dt * 30); }
   P.vel[0] += (tx - P.vel[0]) * acc; P.vel[2] += (tz - P.vel[2]) * acc;
   const sp = hyp(P.vel[0], P.vel[2]); P.speed = sp;
   // integrate in small steps so thin walls can't be tunnelled
@@ -96,8 +103,18 @@ function playerUpdate(dt) {
   P.warned -= dt;
   // ground / gravity
   const gy = World.groundAt(P.pos[0], P.pos[2], P.pos[1] + 0.58);
-  if (P.pos[1] > gy + 0.12) { P.vel[1] -= 20 * dt; P.pos[1] += P.vel[1] * dt; P.onGround = false; if (P.pos[1] <= gy) { P.pos[1] = gy; P.onGround = true; if (P.vel[1] < -5 && typeof Audio2 !== 'undefined') Audio2.thud(); P.vel[1] = 0; } }
-  else { P.pos[1] += (gy - P.pos[1]) * Math.min(1, dt * 16); P.vel[1] = 0; P.onGround = true; }
+  // a jump is allowed for a moment after walking off an edge (coyote time)
+  if (rp && rp.jump && (P.onGround || P.coyote > 0) && depth < 0.9) { P.vel[1] = 6.4 * (depth > 0.45 ? 0.7 : 1); P.onGround = false; P.coyote = 0; RPG.jumped(); }
+  if (P.vel[1] > 0 || P.pos[1] > gy + 0.12) {
+    P.vel[1] -= 20 * dt; P.pos[1] += P.vel[1] * dt; P.onGround = false; P.coyote = Math.max(0, P.coyote - dt);
+    if (P.vel[1] <= 0 && P.pos[1] <= gy) {
+      P.pos[1] = gy; P.onGround = true; P.dip = Math.min(0.16, -P.vel[1] * 0.014);
+      if (P.vel[1] < -5 && typeof Audio2 !== 'undefined') Audio2.thud();
+      if (typeof RPG !== 'undefined') RPG.landed(-P.vel[1], depth);
+      P.vel[1] = 0;
+    }
+  } else { P.pos[1] += (gy - P.pos[1]) * Math.min(1, dt * 16); P.vel[1] = 0; P.onGround = true; P.coyote = 0.12; }
+  P.dip += (0 - P.dip) * Math.min(1, dt * 9);
   // zone, surface
   const zone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
   World.camZone = zone; World.indoor += ((zone ? 1 : 0) - World.indoor) * Math.min(1, dt * 3.5);
@@ -106,7 +123,7 @@ function playerUpdate(dt) {
   const moving = sp > 0.4 && P.onGround; P.bobAmt += ((moving ? 1 : 0) - P.bobAmt) * Math.min(1, dt * 8);
   if (moving) { const prev = P.step; P.step += sp * dt * (sp > 4 ? 0.42 : 0.56); if (Math.floor(prev) !== Math.floor(P.step) && typeof Audio2 !== 'undefined') Audio2.step(P.surface, sp > 4); }
   P.bob = Math.sin(P.step * TAU) * 0.028 * P.bobAmt;
-  const cam = R.cam; cam.pos[0] = P.pos[0]; cam.pos[1] = P.pos[1] + P.eye + P.bob - Math.min(P.inWater, 0) * 0; cam.pos[2] = P.pos[2]; cam.yaw = P.yaw + Math.cos(P.step * PI) * 0.0025 * P.bobAmt; cam.pitch = P.pitch;
+  const cam = R.cam; cam.pos[0] = P.pos[0]; cam.pos[1] = P.pos[1] + P.eye + P.bob - P.dip; cam.pos[2] = P.pos[2]; cam.yaw = P.yaw + Math.cos(P.step * PI) * 0.0025 * P.bobAmt; cam.pitch = P.pitch;
 }
 
 function inputInit(canvas, layer) {
