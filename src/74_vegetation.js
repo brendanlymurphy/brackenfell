@@ -1,6 +1,6 @@
 // ───────────────────────── trees, bushes and boulders (instanced) ─────────────────────────
 // cell sizes (m) of the instanced groups: one draw per model per cell, so bigger cells mean fewer draws and coarser culling
-const FAR_TREE_CELL = 260, ROCK_CELL = 110;
+const FAR_TREE_CELL = 400, ROCK_CELL = 110;
 function buildVegetation() {
   const R = rng(9001), pack = new MeshPack();
   // leaf card helper: quad at centre c spanned by half-vectors a (u) and b (v), blob normal n
