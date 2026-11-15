@@ -52,7 +52,7 @@ const ROADS = [
   { id: 'hunter', w: 1.3, pts: [[-62, -4.5], [-63, 10], [-67, 28], [-68.5, 40], [-67.6, 44]] },
   { id: 'fisher', w: 1.3, pts: [[3.5, 70], [-1, 77], [-5.4, 82.2]] },
 ];
-const WORLD_RADIUS = 136;       // how far the player may wander from the square
+const WORLD_RADIUS = 184;       // how far the player may wander from the square (was 136; the fine terrain, splat maps and grass reach 192)
 const SQUARE = { x: 0, z: -2, rx: 15.5, rz: 14 };
 // a point `dist` metres outside a site's main door, in site-local coordinates
 function siteDoorLocal(s, dist) {
