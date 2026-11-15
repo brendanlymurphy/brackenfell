@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><base href="/"><style>html,body{margin:0;background:#000;overflow:hidden}#view{position:fixed;inset:0;width:100%;height:100%}</style></head><body><canvas id="view"></canvas>
+<script src="/three.js"></script><script src="/src/00_math.js"></script><script src="/src/10_gfx.js"></script><script src="/src/40_shade.js"></script><script src="/src/50_env.js"></script><script src="/src/44_kit.js"></script><script src="/test/kit_harness.js"></script><script src="/test/kit_house.js"></script>
+<script>
+// Sample scene for the kits. TEST opts: view = ext | ext2 | int | up, hour, skin = realistic | painted
+(async () => {
+  const T = window.__TEST__ || {};
+  const scene = await H.boot({ skin: T.skin });
+  const b = Kit.batch(), house = sampleHouse(b, 0, 0, 0, 1);
+  // a little nature around it
+  const R = rng(7), trees = { CommonTree_3: [], Pine_2: [], CommonTree_5: [], Rock_Medium_1: [], Rock_Medium_2: [], Bush_Common: [], Grass_Common_Tall: [], Fern_1: [] };
+  for (const [n, x, z, s] of [['CommonTree_3', -9, -3, 1.1], ['Pine_2', -8, 8, 1.2], ['CommonTree_5', 10, -9, 1.3], ['Pine_2', 12, 4, 1.0], ['CommonTree_3', 4, -14, 1.2], ['Rock_Medium_1', -6, 6, 1], ['Rock_Medium_2', 7, 8, 0.8], ['Bush_Common', 4.5, 5.2, 1], ['Bush_Common', -4.6, 2, 1.2], ['Fern_1', -4, 5.5, 1]]) trees[n].push({ p: [x, 0, z], ry: R() * 6.28, s });
+  for (let i = 0; i < 260; i++) { const x = R.s() * 20, z = R.s() * 20; if (Math.abs(x) < 3.6 && Math.abs(z) < 5.8) continue; trees.Grass_Common_Tall.push({ p: [x, 0, z], ry: R() * 6.28, s: 0.28 + R() * 0.22 }); }
+  for (const n of Object.keys(trees)) if (trees[n].length) b.addInstanced(n, trees[n], { cast: n !== 'Grass_Common_Tall' });
+  const grp = b.build(); scene.add(grp);
+  // ground
+  const { vec3, positionWorld, normalWorld, float, texture } = TSL;
+  const gm = new THREE.MeshStandardNodeMaterial(); const galb = vec3(0.075, 0.095, 0.04).mul(texture(G.noiseTex, positionWorld.xz.mul(0.05)).r.mul(0.6).add(0.7));
+  gm.colorNode = galb; gm.roughnessNode = float(0.95); gm.emissiveNode = galb.mul(SH.hemi(normalWorld, float(1), float(0)).add(SH.pointLights(positionWorld, normalWorld, float(0), 0.25)));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), gm); ground.receiveShadow = true; ground.position.y = 0; scene.add(ground);
+  const views = { ext: [[11.5, 3.2, 15], [0, 3.4, 0]], ext2: [[-12, 5.5, 12], [0, 3, 0]], int: [[2.3, 1.65, 3.1], [-0.6, 1.2, -1.8]], up: [[1.5, 4.6, 2.5], [-1, 4.0, -3]], door: [[1.2, 1.2, 9.5], [-0.3, 1.6, 0]] };
+  const v = views[T.view || 'ext'], indoor = (T.view === 'int' || T.view === 'up') ? 1 : 0;
+  const cam = new THREE.PerspectiveCamera(indoor ? 68 : 52, innerWidth / innerHeight, 0.09, 4000); cam.position.set(v[0][0], v[0][1], v[0][2]); cam.lookAt(v[1][0], v[1][1], v[1][2]); cam.updateMatrixWorld();
+  const pipe = H.pipeline(scene, cam, 4);
+  const hour = T.hour === undefined ? 10 : T.hour, e = H.env(hour, v[0], [0, 2, 0], indoor);
+  // interior point lights: the chandelier and the candles, zone 1. Flames glow as soft sprites would in the game; here they are just lights.
+  const U = SH.U, cands = house.lights, groups = {};
+  for (const l of cands) (groups[l.piece] = groups[l.piece] || []).push(l.p);
+  let n = 0; const lit = hour > 17.5 || hour < 6.5 || indoor ? 1 : 0.0;
+  for (const k of Object.keys(groups)) { if (n >= 8) break; const g = groups[k], c = [0, 0, 0]; g.forEach(p => { c[0] += p[0] / g.length; c[1] += p[1] / g.length; c[2] += p[2] / g.length; });
+    const pw = k === 'Chandelier' ? 2.6 : k === 'Lantern_Wall' ? 1.5 : k === 'CandleStick_Triple' ? 1.2 : 0.7;
+    U.lightPos.array[n].set(c[0], c[1] + 0.12, c[2], k === 'Chandelier' ? 8 : 5); U.lightCol.array[n].set(1.0 * pw * lit, 0.60 * pw * lit, 0.27 * pw * lit, 1); n++; }
+  window.__lights = cands.length;
+  await H.draw(pipe); const info = G.renderer.info.render;
+  window.__info = { calls: info.drawCalls, tris: info.triangles, meshes: grp.children.length, skin: Kit.skin, backend: G.backend };
+  window.__ready = true;
+})().catch(e => { console.error('KIT FAIL', e && e.stack || e); window.__ready = true; });
+</script></body></html>

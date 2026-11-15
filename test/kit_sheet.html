@@ -1,0 +1,44 @@
+<!doctype html><html><head><meta charset="utf-8"><base href="/"><style>
+html,body{margin:0;background:#1b1d22;color:#e8e6df;font:11px/1.25 system-ui,sans-serif;overflow:hidden}
+#view{position:fixed;inset:0;width:100%;height:100%}
+#labels div{position:fixed;text-align:center;text-shadow:0 1px 2px #000;z-index:2}
+#labels b{font-size:12px;font-weight:600}
+#head{position:fixed;left:8px;top:4px;font-size:14px;z-index:3;color:#ffd98a}
+</style></head><body><canvas id="view"></canvas><div id="head"></div><div id="labels"></div>
+<script src="/three.js"></script><script src="/src/00_math.js"></script><script src="/src/10_gfx.js"></script><script src="/src/40_shade.js"></script><script src="/src/50_env.js"></script><script src="/src/44_kit.js"></script><script src="/test/kit_harness.js"></script>
+<script>
+// Contact sheet: every piece of the chosen categories on a screen-aligned grid, each scaled to fit its tile.
+// TEST opts: cat (comma list of categories, or 'kit:village'), page, cols, rows, flip (show the back), skin
+(async () => {
+  const T = window.__TEST__ || {}, cols = T.cols || 7, rows = T.rows || 5;
+  const scene = await H.boot({ skin: T.skin || 'painted' });
+  const want = String(T.cat || 'wall').split(','), all = Kit.names(i => want.includes(i.category) || want.includes('kit:' + i.kit) || want.includes('*'));
+  const page = T.page || 0, names = all.slice(page * cols * rows, (page + 1) * cols * rows);
+  window.__sheet = { total: all.length, pages: Math.ceil(all.length / (cols * rows)), shown: names.length };
+  const W = innerWidth, Hh = innerHeight, aspect = W / Hh, tileW = 2.3, tileH = tileW * (Hh / rows) / (W / cols);
+  const dir = new THREE.Vector3(0.55, 0.42, 0.85).normalize();                 // from the camera's side: we see the +z and +x faces
+  const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), dir).normalize(), up = new THREE.Vector3().crossVectors(dir, right);
+  const cam = new THREE.OrthographicCamera(-cols * tileW / 2, cols * tileW / 2, rows * tileH / 2, -rows * tileH / 2, 0.1, 400);
+  cam.position.copy(dir).multiplyScalar(150); cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
+  const b = Kit.batch({ cell: 1000 }), L = document.getElementById('labels');
+  names.forEach((n, k) => {
+    const i = k % cols, j = (k / cols) | 0, info = Kit.info(n), s = 1.55 / Math.max(info.size[0], info.size[1], info.size[2], 0.001);
+    const c = right.clone().multiplyScalar((i - (cols - 1) / 2) * tileW).add(up.clone().multiplyScalar(((rows - 1) / 2 - j) * tileH + 0.12));
+    const ry = T.flip ? Math.PI : 0, cx = (info.min[0] + info.max[0]) / 2, cy = (info.min[1] + info.max[1]) / 2, cz = (info.min[2] + info.max[2]) / 2;
+    const M = new THREE.Matrix4().makeTranslation(c.x, c.y, c.z).multiply(new THREE.Matrix4().makeRotationY(ry)).multiply(new THREE.Matrix4().makeScale(s, s, s)).multiply(new THREE.Matrix4().makeTranslation(-cx, -cy, -cz));
+    b.add(n, M, { cast: false });
+    const d = document.createElement('div'); d.style.left = (i * W / cols) + 'px'; d.style.width = (W / cols) + 'px'; d.style.top = ((j + 1) * Hh / rows - 30) + 'px';
+    d.innerHTML = '<b>' + n + '</b><br>' + info.size.map(v => v.toFixed(2)).join(' × ') + ' m · ' + (info.tris || '?') + ' tris' + (info.heavy ? ' · heavy' : '');
+    L.appendChild(d);
+  });
+  document.getElementById('head').textContent = want.join(', ') + (T.flip ? ' (back view)' : '') + '  ·  page ' + (page + 1) + ' / ' + window.__sheet.pages + '  ·  skin ' + Kit.skin;
+  scene.add(b.build());
+  const pipe = H.pipeline(scene, cam, 4);
+  H.env(T.hour === undefined ? 10.5 : T.hour, [cam.position.x, cam.position.y, cam.position.z]);
+  SH.U.fogDens.value = 0; H.bg.value.setRGB(0.012, 0.013, 0.016); H.sun.castShadow = false;
+  // light from the camera's left so faces read clearly
+  const l = right.clone().multiplyScalar(-0.6).add(up.clone().multiplyScalar(0.5)).add(dir.clone().multiplyScalar(0.6)).normalize(); H.sun.position.set(l.x * 90, l.y * 90, l.z * 90); SH.U.sunDir.value.copy(l);
+  window.__info = await H.draw(pipe);
+  window.__ready = true;
+})().catch(e => { console.error('SHEET FAIL', e && e.stack || e); document.getElementById('head').textContent = 'FAIL ' + e; window.__ready = true; });
+</script></body></html>
