@@ -67,8 +67,14 @@ function buildStair(c, o) {
   const heading = ax === 'x' ? (dir > 0 ? PI / 2 : -PI / 2) : (dir > 0 ? PI : 0), B = bounds(c), clampP = p => ax === 'x' ? [clamp(p[0], B.x0 + 0.45, B.x1 - 0.45), p[1]] : [p[0], clamp(p[1], B.z0 + 0.45, B.z1 - 0.45)], pb = clampP(P(-0.7, lane)), pt = clampP(P(G.ZE + 0.75, lane)), n0s = o.spot0 || name + '0', n1s = o.spot1 || name + '1';
   c.spot(n0s, pb[0], pb[1], heading, base);
   c.spot(n1s, pt[0], pt[1], heading, top + 0.01);
+  // upstairs, the way from the stair's top round the stairwell to the rooms: a step to the side of the top, then past the near end of the well
+  const via = [];
+  if (o.exit) {
+    const lat = lane + o.exit * (hw + 1.0), pu = clampP(P(G.ZE + 0.75, lat)), pv = clampP(P(G.Zh - 0.6, lat));
+    c.spot(name + 'U', pu[0], pu[1], heading, top + 0.01); c.spot(name + 'V', pv[0], pv[1], heading, top + 0.01); via.push(c.site.id + '.' + name + 'U', c.site.id + '.' + name + 'V');
+  }
   const exitL = o.exit ? P(G.Z1 - 0.2, lane + o.exit * (hw + 0.3)) : null, exitW = exitL ? m4.tp(c.Ms, [exitL[0], top, exitL[1]]) : null;
-  World.stairs.push({ exitPt: exitW, id: c.site.id + '.' + name, site: c.site.id, zone: c.zone, bottom: c.site.id + '.' + n0s, top: c.site.id + '.' + n1s, rise: o.rise, width: 2 * hw, upper: o.upper !== false });
+  World.stairs.push({ via, exitPt: exitW, id: c.site.id + '.' + name, site: c.site.id, zone: c.zone, bottom: c.site.id + '.' + n0s, top: c.site.id + '.' + n1s, rise: o.rise, width: 2 * hw, upper: o.upper !== false });
   // the stairwell in the slab above and the level rails round it: across the near end, along the sides (the exit side stops short of the top so one can step off)
   const hole = rect(G.Zh, G.ZE, lane - hw, lane + hw), railSegs = [[P(G.Zh, lane - hw - 0.05), P(G.Zh, lane + hw + 0.05)]];
   for (const s of [-1, 1]) railSegs.push([P(G.Zh, lane + s * (hw + 0.05)), P(s === o.exit ? G.Z1 - 0.5 : G.ZE + 0.06, lane + s * (hw + 0.05))]);
