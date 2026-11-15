@@ -208,6 +208,7 @@ const Kit = (() => {
     if (d.alphaTest > 0) { m.alphaTest = Math.max(d.alphaTest, 0.35); m.side = THREE.DoubleSide; }
     else m.side = d.doubleSided && !o.frontOnly ? THREE.DoubleSide : THREE.FrontSide;
     if (d.blend && !(d.alphaTest > 0)) { m.transparent = true; m.depthWrite = false; }
+    if (batch && SH.hangSway) m.positionNode = SH.hangSway();      // fork-look: vertices marked as hanging (kg.z) sway; all others are untouched
     if (o.wind) {             // trees lean with the gusts, leaves and grass flutter on top; the root stays planted
       m.positionNode = Fn(() => {
         const p = positionLocal, h = max(positionGeometry.y, 0), t = U.wind.w, ph = p.x.mul(0.31).add(p.z.mul(0.27));
@@ -265,6 +266,7 @@ const Kit = (() => {
         const idx = b.nv > 65535 ? new Uint32Array(b.ni) : new Uint16Array(b.ni); let vo = 0, io = 0;
         for (const it of b.items) {
           const pr = it.prim, M = it.M, flip = M.determinant() < 0; nm.getNormalMatrix(M);
+          const hang = SH.hangOf && !it.zone ? SH.hangOf(pr, M) : null;      // fork-look: pennants, washing and hung signs move with the wind (50_env.js)
           const sky = Math.round(Math.min(Math.max(it.skyVis, 0), 1) * 255), skyIn = Math.round(Math.min(Math.max(it.inSky, 0), 1) * 255), split = it.inZone !== undefined, tr = it.tint ? it.tint[0] : 1, tg = it.tint ? it.tint[1] : 1, tb = it.tint ? it.tint[2] : 1, gl = Math.min(255, Math.round(it.glow * 16));
           for (let i = 0; i < pr.n; i++) {
             const o = vo + i;
@@ -281,6 +283,7 @@ const Kit = (() => {
             if (it.lights) { let best = 9; for (const L of it.lights) { const dx = pr.pos[i * 3] - L[0], dy = pr.pos[i * 3 + 1] - L[1], dz = pr.pos[i * 3 + 2] - L[2]; best = Math.min(best, Math.sqrt(dx * dx + dy * dy * 0.5 + dz * dz)); } g1 = Math.min(255, gl + Math.round(Math.max(0, 1 - best / 0.11) * it.lit * 40)); }
             kz[o * 4 + 1] = g1;
             kz[o * 4 + 2] = split ? it.inZone : it.zone; kz[o * 4 + 3] = split ? skyIn : sky;
+            if (hang) { kg[o * 4 + 2] = hang.w(i); kg[o * 4 + 3] = hang.dir; }      // fork-look
           }
           const src = pr.idx;
           if (flip) for (let i = 0; i < src.length; i += 3) { idx[io + i] = src[i] + vo; idx[io + i + 1] = src[i + 2] + vo; idx[io + i + 2] = src[i + 1] + vo; }

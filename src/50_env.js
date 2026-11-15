@@ -5,6 +5,38 @@ const ENV = {
   fogCol: [0, 0, 0], fogSun: [0, 0, 0], zenith: [0, 0, 0], horizon: [0, 0, 0], windDir: [0.8, 0.6], windStrength: 1,
   exposure: 0.6, shadowStrength: 1, night: 0, day: 1, cloud: 0.45, fogDensity: 0.001, stars: 0, aurora: 0, moonBright: 0, sunDisc: 0, windowGlow: 0,
 };
+// ── one wind ──
+// The whole valley shares one moving air: a direction that veers slowly, a strength, and gusts: a noise pattern carried downwind
+// (Wind.off is how far the air has travelled). The shaders read the same pattern (SH.gust in 40_shade.js), so smoke, falling leaves and
+// the sound of the wind (CPU) agree with grass, trees, washing and signs (GPU).
+const Wind = { off: [0, 0], time: -1, SPEED: 2.7 };
+Wind.step = function (time, env) {
+  const dt = Wind.time < 0 ? 0 : clamp(time - Wind.time, 0, 0.5); Wind.time = time;
+  const a = 0.6435 + 0.30 * Math.sin(time * 0.011) + 0.12 * Math.sin(time * 0.037);       // about the old fixed heading (0.8, 0.6), swinging some 20 degrees either way
+  env.windDir = [Math.cos(a), Math.sin(a)];
+  Wind.off[0] += env.windDir[0] * Wind.SPEED * dt; Wind.off[1] += env.windDir[1] * Wind.SPEED * dt;
+};
+Wind.gust = function (x, z) {        // the same value as SH.gust: about -0.4 in a lull .. 0.6 in a gust
+  const t = G.noiseTex, d = t && t.image && t.image.data; if (!d) return 0;
+  const u = (x - Wind.off[0]) * 0.013 * 256 - 0.5, v = (z - Wind.off[1]) * 0.013 * 256 - 0.5, i = Math.floor(u), j = Math.floor(v), fu = u - i, fv = v - j;
+  const at = (a, b) => d[(((b % 256) + 256) % 256 * 256 + ((a % 256) + 256) % 256) * 4];
+  return (lerp(lerp(at(i, j), at(i + 1, j), fu), lerp(at(i, j + 1), at(i + 1, j + 1), fu), fv)) / 255 - 0.42;
+};
+Wind.feel = (x, z) => ENV.windStrength * Math.max(0.12, 0.7 + 1.7 * Wind.gust(x, z));         // wind speed felt at a place, 1 = a steady breeze
+Wind.at = (x, z) => { const k = Wind.feel(x, z); return [ENV.windDir[0] * k, ENV.windDir[1] * k]; };
+// Which vertices of a kit piece hang free, for the kit batcher (it calls this per primitive; two marked lines in 44_kit.js).
+// Returns null, or { w(i): byte 255 = fixed .. 0 = free, dir: byte 255 = cloth, else the compass direction a hung board swings in }.
+SH.hangOf = function (prim, M) {
+  let name = SH.hangNames.get(prim);
+  if (name === undefined) { for (const n in Kit.pieces) for (const q of Kit.pieces[n].prims) SH.hangNames.set(q, n); name = SH.hangNames.get(prim) || ''; SH.hangNames.set(prim, name); }
+  if (/^gen_sign_/.test(name)) {          // the board and its chains, below the arm (73b_alley.js genSign): hung at y = -0.04, the board ends at -0.82
+    const e = M.elements, ang = Math.atan2(e[2], e[0]);
+    return { w: i => prim.pos[i * 3 + 2] > 0.4 ? 255 - Math.round(255 * sat((-0.04 - prim.pos[i * 3 + 1]) / 0.78)) : 255, dir: Math.round((((ang % TAU) + TAU) % TAU) / TAU * 254) };
+  }
+  if (/^gen_bunt_|^dr_laundry/.test(name) && /Cloth/.test(prim.mat)) return { w: i => 255 - Math.round(255 * sat((prim.uv[i * 2 + 1] - 0.27) / 0.18)), dir: 255 };      // pennants and washing: the cloth quads run from the line (v 0.27) to the free edge (v 0.45)
+  return null;
+};
+SH.hangNames = new Map();
 const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 function updateEnv(time, indoor) {
   const e = ENV, th = (Env.hour - 6) / 12 * PI, maxEl = 0.62;      // a northern autumn sun: it never climbs high, so shadows stay long
@@ -37,7 +69,7 @@ function updateEnv(time, indoor) {
   e.stars = night; e.aurora = night * (0.55 + 0.45 * Math.sin(time * 0.05));
   e.moonBright = smooth(-0.02, -0.14, sy) * 1.4;
   e.cloud = 0.44 + 0.16 * Math.sin(time * 0.011 + 1.3);
-  e.windStrength = 0.75 + 0.4 * Math.sin(time * 0.07) + 0.2 * Math.sin(time * 0.23);
+  e.windStrength = 0.75 + 0.4 * Math.sin(time * 0.07) + 0.2 * Math.sin(time * 0.23); Wind.step(time, e);
   e.windowGlow = smooth(0.62, 0.22, day);
   const outExp = lerp(lerp(0.56, 0.84, golden), 3.0, night);
   e.exposure = lerp(outExp, lerp(1.05, 1.25, night), indoor || 0);

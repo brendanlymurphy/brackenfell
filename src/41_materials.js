@@ -15,11 +15,8 @@ function instNodes(noLod) {
     // vertex lod 3 marks the one boulder shape: every instance squashes it by its own random amounts (iprm.y, iprm.z), so one mesh gives many shapes
     const sq = TSL.mix(vec3(1, 1, 1), vec3(iprm.y.mul(0.55).add(0.8), iprm.z.mul(0.4).add(0.8), float(1.3).sub(iprm.y.mul(0.55))), TSL.step(2.5, lod)), lp = positionLocal.mul(ipos.w).mul(sq);
     const p = vec3(lp.x.mul(c).add(lp.z.mul(s)), lp.y, lp.x.negate().mul(s).add(lp.z.mul(c)));
-    const wt = U.wind.w, ph = iprm.z.mul(40);
-    const sway = sin(wt.mul(1.1).add(ph).add(p.y.mul(0.2))).mul(0.6).add(sin(wt.mul(2.3).add(ph.mul(1.7)).add(lp.x.mul(1.3))).mul(0.4));
-    const lean = p.y.mul(p.y).mul(0.0004).mul(sin(wt.mul(0.7).add(ph)).add(0.5));
-    const off = sway.mul(ww).mul(0.10).add(lean).mul(U.wind.z);
-    const w = vec3(p.x.add(U.wind.x.mul(off)), p.y.add(sin(wt.mul(2.9).add(ph).add(lp.x.mul(2.1)).add(lp.z.mul(1.7))).mul(ww).mul(0.03).mul(U.wind.z)), p.z.add(U.wind.y.mul(off))).add(ipos.xyz);
+    // the same sway as the scanned trees (SH.sway): the stem leans with the gust passing over it, leaves flutter on top
+    const w = p.add(SH.sway(ipos.xyz, p, ww, iprm.z.mul(40))).add(ipos.xyz);
     // full trees near the player, flat stand-ins beyond; measured from the player even while a shadow map is drawn
     const d = distance(ipos.xyz, U.camPos);
     const far = TSL.step(U.treeLod, d), is1 = TSL.step(TSL.abs(lod.sub(1)), 0.5), is2 = TSL.step(TSL.abs(lod.sub(2)), 0.5);

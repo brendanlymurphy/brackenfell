@@ -14,7 +14,7 @@ let WaterMat, GlowMat;
       const t = U.time, wp = positionWorld, p = wp.xz, fd = uv(), depth = attribute('tint', 'vec4').a;
       const n1 = noise(p.mul(0.09).sub(fd.mul(t.mul(0.05)))).rg;
       const n2 = noise(p.mul(0.23).sub(fd.mul(t.mul(0.09))).add(vec2(0.37, 0.11))).ga;
-      const n3 = noise(p.mul(0.71).add(vec2(t.mul(0.02), t.mul(-0.017)))).rb;
+      const n3 = noise(p.sub(U.windOff.mul(0.05)).mul(0.71)).rb;                 // the fine ripples run before the wind
       const nn = n1.add(n2.mul(0.7)).add(n3.mul(0.35)).sub(1.025);
       const N = normalize(vec3(nn.x.mul(0.55), 1.0, nn.y.mul(0.55)));
       const V = normalize(U.camPos.sub(wp));

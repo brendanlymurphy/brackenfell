@@ -13,7 +13,7 @@ SH.init = function () {
     fogCol: uniform(V3()), fogDens: uniform(0.001), fogSun: uniform(V3()), fogFall: uniform(0.011),
     zenith: uniform(V3()), horizon: uniform(V3()), stars: uniform(0), aurora: uniform(0),
     moonDir: uniform(new THREE.Vector3(0, 1, 0)), moonBright: uniform(0), sunDisc: uniform(new THREE.Vector3(0, 1, 0)), sunDiscI: uniform(0),
-    wind: uniform(V4()),                                      // dir.x, dir.z, strength, time
+    wind: uniform(V4()), windOff: uniform(new THREE.Vector2()),     // wind: dir.x, dir.z, strength, time. windOff: how far (m) the air has travelled, which carries the gust pattern
     cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0),
     lightPos: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // xyz, radius
     lightCol: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // rgb, zone (255 = everywhere)
@@ -30,7 +30,7 @@ SH.init = function () {
     return mix(c, U.fogCol, smoothstep(-0.10, 0.03, dir.y).oneMinus());
   });
   SH.cloudDensity = Fn(([p]) => {
-    const t = U.time, uvc = p.mul(0.00022).add(vec2(t.mul(0.0030), t.mul(0.0011)));
+    const t = U.time, uvc = p.mul(0.00022).sub(vec2(t.mul(0.0026), t.mul(0.0019)));      // clouds travel the way the wind blows (they used to drift against it)
     const d = noiseL(uvc).r.mul(0.64).add(noiseL(uvc.mul(3.1).add(vec2(t.mul(0.002), 0))).g.mul(0.36));
     return smoothstep(float(0.86).sub(U.cloud.mul(0.62)), float(1.10).sub(U.cloud.mul(0.62)), d);
   });
@@ -99,7 +99,22 @@ SH.init = function () {
   // U.wind = direction x, direction z, strength, time. Gusts are a slow noise pattern that travels downwind across the valley; everything
   // that moves reads the gust at its own place, so a gust is seen to arrive: first the far trees, then the grass, then the washing.
   // (On the CPU the same field is Wind.gust(x, z), see 50_env.js.)
-  SH.gust = Fn(([xz]) => noiseL(xz.mul(0.013).sub(U.wind.xy.mul(U.time.mul(0.035)))).r.sub(0.42));          // about -0.4 (lull) .. 0.6 (gust)
+  SH.gust = Fn(([xz]) => noiseL(xz.sub(U.windOff).mul(0.013)).r.sub(0.42));          // about -0.4 (lull) .. 0.6 (gust)
+  SH.gustK = Fn(([xz]) => U.wind.z.mul(max(SH.gust(xz).mul(1.7).add(0.7), 0.12)));      // wind speed felt at a place (Wind.feel on the CPU)
+  // Things that hang (kit batches, see SH.hangOf in 50_env.js): kg.z = 1 - how freely the vertex moves, kg.w = 1 for cloth, else the
+  // compass direction a board on chains can swing in. Cloth billows downwind and flutters; a sign swings across its own face.
+  SH.hangSway = () => Fn(() => {
+    const kg = TSL.attribute('kg', 'vec4'), w = kg.z.oneMinus(), p = TSL.positionLocal.toVar();
+    If(w.greaterThan(0.012), () => {
+      const k = SH.gustK(p.xz), t = U.wind.w, free = step(0.995, kg.w), ang = kg.w.mul(255 / 254 * 6.2831853), axis = vec2(TSL.cos(ang), TSL.sin(ang));
+      const swing = dot(U.wind.xy, axis).mul(k).mul(0.085).add(TSL.sin(t.mul(2.7).add(p.x.mul(0.11)).add(p.z.mul(0.09))).mul(k).mul(0.05));
+      const fl = TSL.sin(t.mul(5.3).add(p.x.mul(3.1)).add(p.z.mul(2.7)).add(p.y.mul(4.0))).mul(0.6).add(TSL.sin(t.mul(8.1).add(p.x.mul(5.3)).sub(p.y.mul(6.0))).mul(0.4));
+      const cloth = U.wind.xy.mul(k.mul(0.15).add(fl.mul(k).mul(0.055)).mul(w.mul(w.mul(0.5).add(0.5))));
+      const off = mix(axis.mul(swing.mul(w)), cloth, free);
+      p.addAssign(vec3(off.x, mix(swing.mul(swing).mul(w).mul(0.5), k.mul(0.045).mul(w), free), off.y));
+    });
+    return p;
+  })();
   // how far a point on a tree is pushed: root = the foot of the tree (world), p = the point relative to the foot, ww = how freely it moves, ph = the tree's own phase
   SH.sway = Fn(([root, p, ww, ph]) => {
     const g = SH.gust(root.xz), wt = U.wind.w, k = U.wind.z.mul(max(g.mul(1.7).add(0.7), 0.12)), y2 = p.y.mul(p.y);
@@ -119,6 +134,6 @@ SH.update = function (env, camPos, time) {
   s3(U.fogCol, env.fogCol); U.fogDens.value = env.fogDensity; s3(U.fogSun, env.fogSun);
   s3(U.zenith, env.zenith); s3(U.horizon, env.horizon); U.stars.value = env.stars; U.aurora.value = env.aurora;
   s3(U.moonDir, env.moonDir); U.moonBright.value = env.moonBright; s3(U.sunDisc, env.sunDir); U.sunDiscI.value = env.sunDisc;
-  U.wind.value.set(env.windDir[0], env.windDir[1], env.windStrength, time);
+  U.wind.value.set(env.windDir[0], env.windDir[1], env.windStrength, time); U.windOff.value.set(Wind.off[0], Wind.off[1]);
   U.cloud.value = env.cloud; U.windowGlow.value = env.windowGlow; U.lakeY.value = World.lakeY || 0; U.indoor.value = World.indoor || 0;
 };

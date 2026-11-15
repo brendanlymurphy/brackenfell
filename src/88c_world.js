@@ -48,7 +48,7 @@
     G.x = p[0]; G.y = p[1]; G.z = p[2]; G.zone = World.camZone | 0; G.indoor = World.indoor;
     const L = K.L; L.x = p[0]; L.y = p[1]; L.z = p[2]; L.yaw = cam.yaw; L.fx = Math.sin(cam.yaw); L.fz = -Math.cos(cam.yaw); L.rx = Math.cos(cam.yaw); L.rz = Math.sin(cam.yaw);
     G.zid = G.zone ? World.zones[G.zone - 1].site.id : ''; G.space = G.zone ? SPACE(G.zid) : 'open';
-    G.hour = Env.hour; G.night = ENV.night; G.day = ENV.day; G.wind = Math.max(0.1, Math.min(1.4, ENV.windStrength));
+    G.hour = Env.hour; G.night = ENV.night; G.day = ENV.day; G.wind = Math.max(0.1, Math.min(1.4, typeof Wind !== 'undefined' ? Wind.feel(Player.pos[0], Player.pos[2]) : ENV.windStrength));      // the gust passing over the player, the same one the grass shows
     G.rain = Math.max(Env.rain || 0, (typeof Sky !== 'undefined' && Sky.weather && Sky.weather.rain) || 0);
     G.playing = !!game.playing; G.menu = !!(typeof UI !== 'undefined' && UI.menu); G.talk = !!(typeof UI !== 'undefined' && (UI.talk || UI.reader)); G.dead = !!(typeof RPG !== 'undefined' && RPG.dead);
     if (K.testHold) return;

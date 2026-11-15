@@ -57,7 +57,7 @@ const Grass = { mesh: null, N: 0, range: 0 };
           const t = b.y, ang = b.z.add(r1.y.mul(6.2831853)), dirv = vec2(cos(ang), sin(ang));
           const p0 = vec3(root.x.add(dirv.x.mul(b.w).mul(0.08)), root.y, root.z.add(dirv.y.mul(b.w).mul(0.08)));
           // wind: slow gusts drifting across the meadow plus a quick shiver; `wave` is kept for the colour
-          const wv = noiseL(root2.mul(0.013).sub(U.wind.xy.mul(U.time.mul(0.035)))).r.sub(0.42);
+          const wv = SH.gust(root2);                                                                              // the valley's one gust field (40_shade.js)
           const gust = wv.mul(2.2).add(sin(U.time.mul(2.6).add(root2.x.mul(0.9)).add(root2.y.mul(1.3))).mul(0.18));
           const toP = root2.sub(U.camPos.xz), dP = length(toP);
           const pushAmt = smoothstep(0.25, 1.0, dP).oneMinus().mul(step(abs(U.camPos.y.sub(1.6).sub(hy)), 1.2));      // blades part around the player

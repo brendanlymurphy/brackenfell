@@ -611,7 +611,7 @@ SH.init = function () {
     fogCol: uniform(V3()), fogDens: uniform(0.001), fogSun: uniform(V3()), fogFall: uniform(0.011),
     zenith: uniform(V3()), horizon: uniform(V3()), stars: uniform(0), aurora: uniform(0),
     moonDir: uniform(new THREE.Vector3(0, 1, 0)), moonBright: uniform(0), sunDisc: uniform(new THREE.Vector3(0, 1, 0)), sunDiscI: uniform(0),
-    wind: uniform(V4()),                                      // dir.x, dir.z, strength, time
+    wind: uniform(V4()), windOff: uniform(new THREE.Vector2()),     // wind: dir.x, dir.z, strength, time. windOff: how far (m) the air has travelled, which carries the gust pattern
     cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0),
     lightPos: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // xyz, radius
     lightCol: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // rgb, zone (255 = everywhere)
@@ -628,7 +628,7 @@ SH.init = function () {
     return mix(c, U.fogCol, smoothstep(-0.10, 0.03, dir.y).oneMinus());
   });
   SH.cloudDensity = Fn(([p]) => {
-    const t = U.time, uvc = p.mul(0.00022).add(vec2(t.mul(0.0030), t.mul(0.0011)));
+    const t = U.time, uvc = p.mul(0.00022).sub(vec2(t.mul(0.0026), t.mul(0.0019)));      // clouds travel the way the wind blows (they used to drift against it)
     const d = noiseL(uvc).r.mul(0.64).add(noiseL(uvc.mul(3.1).add(vec2(t.mul(0.002), 0))).g.mul(0.36));
     return smoothstep(float(0.86).sub(U.cloud.mul(0.62)), float(1.10).sub(U.cloud.mul(0.62)), d);
   });
@@ -697,7 +697,22 @@ SH.init = function () {
   // U.wind = direction x, direction z, strength, time. Gusts are a slow noise pattern that travels downwind across the valley; everything
   // that moves reads the gust at its own place, so a gust is seen to arrive: first the far trees, then the grass, then the washing.
   // (On the CPU the same field is Wind.gust(x, z), see 50_env.js.)
-  SH.gust = Fn(([xz]) => noiseL(xz.mul(0.013).sub(U.wind.xy.mul(U.time.mul(0.035)))).r.sub(0.42));          // about -0.4 (lull) .. 0.6 (gust)
+  SH.gust = Fn(([xz]) => noiseL(xz.sub(U.windOff).mul(0.013)).r.sub(0.42));          // about -0.4 (lull) .. 0.6 (gust)
+  SH.gustK = Fn(([xz]) => U.wind.z.mul(max(SH.gust(xz).mul(1.7).add(0.7), 0.12)));      // wind speed felt at a place (Wind.feel on the CPU)
+  // Things that hang (kit batches, see SH.hangOf in 50_env.js): kg.z = 1 - how freely the vertex moves, kg.w = 1 for cloth, else the
+  // compass direction a board on chains can swing in. Cloth billows downwind and flutters; a sign swings across its own face.
+  SH.hangSway = () => Fn(() => {
+    const kg = TSL.attribute('kg', 'vec4'), w = kg.z.oneMinus(), p = TSL.positionLocal.toVar();
+    If(w.greaterThan(0.012), () => {
+      const k = SH.gustK(p.xz), t = U.wind.w, free = step(0.995, kg.w), ang = kg.w.mul(255 / 254 * 6.2831853), axis = vec2(TSL.cos(ang), TSL.sin(ang));
+      const swing = dot(U.wind.xy, axis).mul(k).mul(0.085).add(TSL.sin(t.mul(2.7).add(p.x.mul(0.11)).add(p.z.mul(0.09))).mul(k).mul(0.05));
+      const fl = TSL.sin(t.mul(5.3).add(p.x.mul(3.1)).add(p.z.mul(2.7)).add(p.y.mul(4.0))).mul(0.6).add(TSL.sin(t.mul(8.1).add(p.x.mul(5.3)).sub(p.y.mul(6.0))).mul(0.4));
+      const cloth = U.wind.xy.mul(k.mul(0.15).add(fl.mul(k).mul(0.055)).mul(w.mul(w.mul(0.5).add(0.5))));
+      const off = mix(axis.mul(swing.mul(w)), cloth, free);
+      p.addAssign(vec3(off.x, mix(swing.mul(swing).mul(w).mul(0.5), k.mul(0.045).mul(w), free), off.y));
+    });
+    return p;
+  })();
   // how far a point on a tree is pushed: root = the foot of the tree (world), p = the point relative to the foot, ww = how freely it moves, ph = the tree's own phase
   SH.sway = Fn(([root, p, ww, ph]) => {
     const g = SH.gust(root.xz), wt = U.wind.w, k = U.wind.z.mul(max(g.mul(1.7).add(0.7), 0.12)), y2 = p.y.mul(p.y);
@@ -717,7 +732,7 @@ SH.update = function (env, camPos, time) {
   s3(U.fogCol, env.fogCol); U.fogDens.value = env.fogDensity; s3(U.fogSun, env.fogSun);
   s3(U.zenith, env.zenith); s3(U.horizon, env.horizon); U.stars.value = env.stars; U.aurora.value = env.aurora;
   s3(U.moonDir, env.moonDir); U.moonBright.value = env.moonBright; s3(U.sunDisc, env.sunDir); U.sunDiscI.value = env.sunDisc;
-  U.wind.value.set(env.windDir[0], env.windDir[1], env.windStrength, time);
+  U.wind.value.set(env.windDir[0], env.windDir[1], env.windStrength, time); U.windOff.value.set(Wind.off[0], Wind.off[1]);
   U.cloud.value = env.cloud; U.windowGlow.value = env.windowGlow; U.lakeY.value = World.lakeY || 0; U.indoor.value = World.indoor || 0;
 };
 
@@ -817,11 +832,8 @@ function instNodes(noLod) {
     // vertex lod 3 marks the one boulder shape: every instance squashes it by its own random amounts (iprm.y, iprm.z), so one mesh gives many shapes
     const sq = TSL.mix(vec3(1, 1, 1), vec3(iprm.y.mul(0.55).add(0.8), iprm.z.mul(0.4).add(0.8), float(1.3).sub(iprm.y.mul(0.55))), TSL.step(2.5, lod)), lp = positionLocal.mul(ipos.w).mul(sq);
     const p = vec3(lp.x.mul(c).add(lp.z.mul(s)), lp.y, lp.x.negate().mul(s).add(lp.z.mul(c)));
-    const wt = U.wind.w, ph = iprm.z.mul(40);
-    const sway = sin(wt.mul(1.1).add(ph).add(p.y.mul(0.2))).mul(0.6).add(sin(wt.mul(2.3).add(ph.mul(1.7)).add(lp.x.mul(1.3))).mul(0.4));
-    const lean = p.y.mul(p.y).mul(0.0004).mul(sin(wt.mul(0.7).add(ph)).add(0.5));
-    const off = sway.mul(ww).mul(0.10).add(lean).mul(U.wind.z);
-    const w = vec3(p.x.add(U.wind.x.mul(off)), p.y.add(sin(wt.mul(2.9).add(ph).add(lp.x.mul(2.1)).add(lp.z.mul(1.7))).mul(ww).mul(0.03).mul(U.wind.z)), p.z.add(U.wind.y.mul(off))).add(ipos.xyz);
+    // the same sway as the scanned trees (SH.sway): the stem leans with the gust passing over it, leaves flutter on top
+    const w = p.add(SH.sway(ipos.xyz, p, ww, iprm.z.mul(40))).add(ipos.xyz);
     // full trees near the player, flat stand-ins beyond; measured from the player even while a shadow map is drawn
     const d = distance(ipos.xyz, U.camPos);
     const far = TSL.step(U.treeLod, d), is1 = TSL.step(TSL.abs(lod.sub(1)), 0.5), is2 = TSL.step(TSL.abs(lod.sub(2)), 0.5);
@@ -1550,6 +1562,7 @@ const Kit = (() => {
     if (d.alphaTest > 0) { m.alphaTest = Math.max(d.alphaTest, 0.35); m.side = THREE.DoubleSide; }
     else m.side = d.doubleSided && !o.frontOnly ? THREE.DoubleSide : THREE.FrontSide;
     if (d.blend && !(d.alphaTest > 0)) { m.transparent = true; m.depthWrite = false; }
+    if (batch && SH.hangSway) m.positionNode = SH.hangSway();      // fork-look: vertices marked as hanging (kg.z) sway; all others are untouched
     if (o.wind) {             // trees lean with the gusts, leaves and grass flutter on top; the root stays planted
       m.positionNode = Fn(() => {
         const p = positionLocal, h = max(positionGeometry.y, 0), t = U.wind.w, ph = p.x.mul(0.31).add(p.z.mul(0.27));
@@ -1607,6 +1620,7 @@ const Kit = (() => {
         const idx = b.nv > 65535 ? new Uint32Array(b.ni) : new Uint16Array(b.ni); let vo = 0, io = 0;
         for (const it of b.items) {
           const pr = it.prim, M = it.M, flip = M.determinant() < 0; nm.getNormalMatrix(M);
+          const hang = SH.hangOf && !it.zone ? SH.hangOf(pr, M) : null;      // fork-look: pennants, washing and hung signs move with the wind (50_env.js)
           const sky = Math.round(Math.min(Math.max(it.skyVis, 0), 1) * 255), skyIn = Math.round(Math.min(Math.max(it.inSky, 0), 1) * 255), split = it.inZone !== undefined, tr = it.tint ? it.tint[0] : 1, tg = it.tint ? it.tint[1] : 1, tb = it.tint ? it.tint[2] : 1, gl = Math.min(255, Math.round(it.glow * 16));
           for (let i = 0; i < pr.n; i++) {
             const o = vo + i;
@@ -1623,6 +1637,7 @@ const Kit = (() => {
             if (it.lights) { let best = 9; for (const L of it.lights) { const dx = pr.pos[i * 3] - L[0], dy = pr.pos[i * 3 + 1] - L[1], dz = pr.pos[i * 3 + 2] - L[2]; best = Math.min(best, Math.sqrt(dx * dx + dy * dy * 0.5 + dz * dz)); } g1 = Math.min(255, gl + Math.round(Math.max(0, 1 - best / 0.11) * it.lit * 40)); }
             kz[o * 4 + 1] = g1;
             kz[o * 4 + 2] = split ? it.inZone : it.zone; kz[o * 4 + 3] = split ? skyIn : sky;
+            if (hang) { kg[o * 4 + 2] = hang.w(i); kg[o * 4 + 3] = hang.dir; }      // fork-look
           }
           const src = pr.idx;
           if (flip) for (let i = 0; i < src.length; i += 3) { idx[io + i] = src[i] + vo; idx[io + i + 1] = src[i + 2] + vo; idx[io + i + 2] = src[i + 1] + vo; }
@@ -1858,7 +1873,7 @@ const Grass = { mesh: null, N: 0, range: 0 };
           const t = b.y, ang = b.z.add(r1.y.mul(6.2831853)), dirv = vec2(cos(ang), sin(ang));
           const p0 = vec3(root.x.add(dirv.x.mul(b.w).mul(0.08)), root.y, root.z.add(dirv.y.mul(b.w).mul(0.08)));
           // wind: slow gusts drifting across the meadow plus a quick shiver; `wave` is kept for the colour
-          const wv = noiseL(root2.mul(0.013).sub(U.wind.xy.mul(U.time.mul(0.035)))).r.sub(0.42);
+          const wv = SH.gust(root2);                                                                              // the valley's one gust field (40_shade.js)
           const gust = wv.mul(2.2).add(sin(U.time.mul(2.6).add(root2.x.mul(0.9)).add(root2.y.mul(1.3))).mul(0.18));
           const toP = root2.sub(U.camPos.xz), dP = length(toP);
           const pushAmt = smoothstep(0.25, 1.0, dP).oneMinus().mul(step(abs(U.camPos.y.sub(1.6).sub(hy)), 1.2));      // blades part around the player
@@ -1933,7 +1948,7 @@ let WaterMat, GlowMat;
       const t = U.time, wp = positionWorld, p = wp.xz, fd = uv(), depth = attribute('tint', 'vec4').a;
       const n1 = noise(p.mul(0.09).sub(fd.mul(t.mul(0.05)))).rg;
       const n2 = noise(p.mul(0.23).sub(fd.mul(t.mul(0.09))).add(vec2(0.37, 0.11))).ga;
-      const n3 = noise(p.mul(0.71).add(vec2(t.mul(0.02), t.mul(-0.017)))).rb;
+      const n3 = noise(p.sub(U.windOff.mul(0.05)).mul(0.71)).rb;                 // the fine ripples run before the wind
       const nn = n1.add(n2.mul(0.7)).add(n3.mul(0.35)).sub(1.025);
       const N = normalize(vec3(nn.x.mul(0.55), 1.0, nn.y.mul(0.55)));
       const V = normalize(U.camPos.sub(wp));
@@ -2537,6 +2552,38 @@ const ENV = {
   fogCol: [0, 0, 0], fogSun: [0, 0, 0], zenith: [0, 0, 0], horizon: [0, 0, 0], windDir: [0.8, 0.6], windStrength: 1,
   exposure: 0.6, shadowStrength: 1, night: 0, day: 1, cloud: 0.45, fogDensity: 0.001, stars: 0, aurora: 0, moonBright: 0, sunDisc: 0, windowGlow: 0,
 };
+// ── one wind ──
+// The whole valley shares one moving air: a direction that veers slowly, a strength, and gusts: a noise pattern carried downwind
+// (Wind.off is how far the air has travelled). The shaders read the same pattern (SH.gust in 40_shade.js), so smoke, falling leaves and
+// the sound of the wind (CPU) agree with grass, trees, washing and signs (GPU).
+const Wind = { off: [0, 0], time: -1, SPEED: 2.7 };
+Wind.step = function (time, env) {
+  const dt = Wind.time < 0 ? 0 : clamp(time - Wind.time, 0, 0.5); Wind.time = time;
+  const a = 0.6435 + 0.30 * Math.sin(time * 0.011) + 0.12 * Math.sin(time * 0.037);       // about the old fixed heading (0.8, 0.6), swinging some 20 degrees either way
+  env.windDir = [Math.cos(a), Math.sin(a)];
+  Wind.off[0] += env.windDir[0] * Wind.SPEED * dt; Wind.off[1] += env.windDir[1] * Wind.SPEED * dt;
+};
+Wind.gust = function (x, z) {        // the same value as SH.gust: about -0.4 in a lull .. 0.6 in a gust
+  const t = G.noiseTex, d = t && t.image && t.image.data; if (!d) return 0;
+  const u = (x - Wind.off[0]) * 0.013 * 256 - 0.5, v = (z - Wind.off[1]) * 0.013 * 256 - 0.5, i = Math.floor(u), j = Math.floor(v), fu = u - i, fv = v - j;
+  const at = (a, b) => d[(((b % 256) + 256) % 256 * 256 + ((a % 256) + 256) % 256) * 4];
+  return (lerp(lerp(at(i, j), at(i + 1, j), fu), lerp(at(i, j + 1), at(i + 1, j + 1), fu), fv)) / 255 - 0.42;
+};
+Wind.feel = (x, z) => ENV.windStrength * Math.max(0.12, 0.7 + 1.7 * Wind.gust(x, z));         // wind speed felt at a place, 1 = a steady breeze
+Wind.at = (x, z) => { const k = Wind.feel(x, z); return [ENV.windDir[0] * k, ENV.windDir[1] * k]; };
+// Which vertices of a kit piece hang free, for the kit batcher (it calls this per primitive; two marked lines in 44_kit.js).
+// Returns null, or { w(i): byte 255 = fixed .. 0 = free, dir: byte 255 = cloth, else the compass direction a hung board swings in }.
+SH.hangOf = function (prim, M) {
+  let name = SH.hangNames.get(prim);
+  if (name === undefined) { for (const n in Kit.pieces) for (const q of Kit.pieces[n].prims) SH.hangNames.set(q, n); name = SH.hangNames.get(prim) || ''; SH.hangNames.set(prim, name); }
+  if (/^gen_sign_/.test(name)) {          // the board and its chains, below the arm (73b_alley.js genSign): hung at y = -0.04, the board ends at -0.82
+    const e = M.elements, ang = Math.atan2(e[2], e[0]);
+    return { w: i => prim.pos[i * 3 + 2] > 0.4 ? 255 - Math.round(255 * sat((-0.04 - prim.pos[i * 3 + 1]) / 0.78)) : 255, dir: Math.round((((ang % TAU) + TAU) % TAU) / TAU * 254) };
+  }
+  if (/^gen_bunt_|^dr_laundry/.test(name) && /Cloth/.test(prim.mat)) return { w: i => 255 - Math.round(255 * sat((prim.uv[i * 2 + 1] - 0.27) / 0.18)), dir: 255 };      // pennants and washing: the cloth quads run from the line (v 0.27) to the free edge (v 0.45)
+  return null;
+};
+SH.hangNames = new Map();
 const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 function updateEnv(time, indoor) {
   const e = ENV, th = (Env.hour - 6) / 12 * PI, maxEl = 0.62;      // a northern autumn sun: it never climbs high, so shadows stay long
@@ -2569,7 +2616,7 @@ function updateEnv(time, indoor) {
   e.stars = night; e.aurora = night * (0.55 + 0.45 * Math.sin(time * 0.05));
   e.moonBright = smooth(-0.02, -0.14, sy) * 1.4;
   e.cloud = 0.44 + 0.16 * Math.sin(time * 0.011 + 1.3);
-  e.windStrength = 0.75 + 0.4 * Math.sin(time * 0.07) + 0.2 * Math.sin(time * 0.23);
+  e.windStrength = 0.75 + 0.4 * Math.sin(time * 0.07) + 0.2 * Math.sin(time * 0.23); Wind.step(time, e);
   e.windowGlow = smooth(0.62, 0.22, day);
   const outExp = lerp(lerp(0.56, 0.84, golden), 3.0, night);
   e.exposure = lerp(outExp, lerp(1.05, 1.25, night), indoor || 0);
@@ -8453,12 +8500,14 @@ function fxUpdate(dt, time, env, cam) {
   if (World.cell) FX.smoke.length = 0;
   for (let i = FX.smoke.length - 1; i >= 0; i--) {
     const s = FX.smoke[i]; s.life += dt; if (s.life > s.max) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
-    const k = s.life / s.max; s.p[0] += (wx * 0.9 * k + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) * dt; s.p[2] += (wz * 0.9 * k) * dt;
+    const k = s.life / s.max, wv = Wind.at(s.p[0], s.p[2]), wk = 0.25 + 0.95 * k;          // the gust over this chimney, taking hold as the smoke leaves its shelter
+    s.p[0] += (wv[0] * wk + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) / (1 + 0.35 * Math.hypot(wv[0], wv[1])) * dt; s.p[2] += (wv[1] * wk) * dt;
     put(s.p[0], s.p[1], s.p[2], 0.14 + k * 0.95, 0.30, 0.30, 0.31, Math.min(k * 5, 1) * Math.pow(1 - k, 1.3) * 0.42, s.rot + s.life * 0.2, 1, 1.5 + k, s.seed);       // thin grey wisps that fade out (they were large opaque white blobs from above)
   }
   for (let i = FX.embers.length - 1; i >= 0; i--) {
     const s = FX.embers[i]; s.life += dt; if (s.life > s.max) { FX.embers[i] = FX.embers[FX.embers.length - 1]; FX.embers.pop(); continue; }
-    s.p[0] += (s.v[0] + Math.sin(s.ph + s.life * 7) * 0.4) * dt; s.p[1] += s.v[1] * dt; s.p[2] += (s.v[2] + Math.cos(s.ph + s.life * 6) * 0.4) * dt;
+    const ew = World.cell ? [0, 0] : Wind.at(s.p[0], s.p[2]);
+    s.p[0] += (s.v[0] + ew[0] * 0.5 + Math.sin(s.ph + s.life * 7) * 0.4) * dt; s.p[1] += s.v[1] * dt; s.p[2] += (s.v[2] + ew[1] * 0.5 + Math.cos(s.ph + s.life * 6) * 0.4) * dt;
     put(s.p[0], s.p[1], s.p[2], 0.035, 1.0, 0.5, 0.12, 2.6 * (1 - s.life / s.max), 0, 3, 1, 0);
   }
   // fireflies after dusk, drifting specks of dust by day (both wrap around the camera)
@@ -8524,7 +8573,7 @@ function airUpdate(put, dt, time, env, cam) {
   }
   // leaves loosen from the nearest trees by day and spiral down on the wind
   if (day > 0.3 && AIR.near.length) for (let k = 0; k < AIR.near.length; k++) for (let j = 0; j < 4; j++) {
-    const t = AIR.near[k], ph = (time * 0.12 + (k * 4 + j) * 0.21) % 1, h = 9 * t[3] * 0.6 * (1 - ph) + 0.1, a = (k * 4 + j) * 2.1 + time * 0.2;
+    const t = AIR.near[k], ph = (time * 0.12 + (k * 4 + j) * 0.21) % 1, h = 9 * t[3] * 0.6 * (1 - ph) + 0.1, a = (k * 4 + j) * 2.1 + time * 0.2, wv = Wind.at(t[0], t[2]), wx = wv[0], wz = wv[1];      // the gust at this tree
     put(t[0] + Math.cos(a) * 2.4 * t[3] * 0.5 + wx * ph * 5 + Math.sin(time * 1.5 + j) * 0.4, World.groundY(t[0], t[2]) + h, t[2] + Math.sin(a) * 2.4 * t[3] * 0.5 + wz * ph * 5, 0.045, 0.5, 0.36, 0.14, 0.9 * Math.sin(ph * 3.14), time * 2 + j, 1, 1, j);
   }
   // moths around lanterns after dusk
@@ -11016,7 +11065,7 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
     G.x = p[0]; G.y = p[1]; G.z = p[2]; G.zone = World.camZone | 0; G.indoor = World.indoor;
     const L = K.L; L.x = p[0]; L.y = p[1]; L.z = p[2]; L.yaw = cam.yaw; L.fx = Math.sin(cam.yaw); L.fz = -Math.cos(cam.yaw); L.rx = Math.cos(cam.yaw); L.rz = Math.sin(cam.yaw);
     G.zid = G.zone ? World.zones[G.zone - 1].site.id : ''; G.space = G.zone ? SPACE(G.zid) : 'open';
-    G.hour = Env.hour; G.night = ENV.night; G.day = ENV.day; G.wind = Math.max(0.1, Math.min(1.4, ENV.windStrength));
+    G.hour = Env.hour; G.night = ENV.night; G.day = ENV.day; G.wind = Math.max(0.1, Math.min(1.4, typeof Wind !== 'undefined' ? Wind.feel(Player.pos[0], Player.pos[2]) : ENV.windStrength));      // the gust passing over the player, the same one the grass shows
     G.rain = Math.max(Env.rain || 0, (typeof Sky !== 'undefined' && Sky.weather && Sky.weather.rain) || 0);
     G.playing = !!game.playing; G.menu = !!(typeof UI !== 'undefined' && UI.menu); G.talk = !!(typeof UI !== 'undefined' && (UI.talk || UI.reader)); G.dead = !!(typeof RPG !== 'undefined' && RPG.dead);
     if (K.testHold) return;
