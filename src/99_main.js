@@ -166,7 +166,14 @@ function startGame(cont) {
     SH.init();
     // animated villagers; if their files cannot be loaded the old hand-built bodies stand in
     $('loadText').textContent = 'Dressing the villagers';
-    if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) { try { await Chars.load('quaternius', f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; } catch (e) { console.warn('villager models unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); } }
+    // the realistic set first, the stylized one if its files cannot be loaded; ?chars=quaternius (or TEST.chars) picks one set and no fallback
+    if (typeof Chars !== 'undefined' && !(TEST && TEST.oldBodies)) {
+      const want = (TEST && TEST.chars) || (/[?&]chars=(\w+)/.exec(location.search) || [])[1], order = want ? [want] : ['real', 'quaternius'];
+      for (const name of order) {
+        try { await Chars.load(name, f => { $('barFill').style.width = Math.round(38 + f * 4) + '%'; }); G.chars = true; G.charSet = name; break; }
+        catch (e) { console.warn('character set ' + name + ' unavailable: ' + (e && e.message || e)); G.charsNote = String(e && e.message || e); Chars.ready = false; Chars.set = null; }
+      }
+    }
     lap('chars');
     if (typeof kitBoot === 'function') await kitBoot(f => { $('loadText').textContent = 'Carting in beams, barrels and roof tiles'; $('barFill').style.width = Math.round(38 + f * 2) + '%'; });
     renderInit();
