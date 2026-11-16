@@ -68,7 +68,7 @@ function pLayout(P) {
   for (const wl of P.walls) {
     if (!wl.ext || wl.k < 0) continue;
     for (const rid of wl.rooms) {
-      const room = P.rooms[rid]; if (!room || room.win === false) continue;
+      const room = P.rooms[rid]; if (!room || room.win === false || (room.skipWin && room.skipWin.includes(wl.ax + wl.c))) continue;       /* [c3] skipWin: ['x9'] leaves that wall without windows (a bed corner) */
       const lo = Math.max(wl.a, wl.ax === 'x' ? room.x0 : room.z0), hi = Math.min(wl.b, wl.ax === 'x' ? room.x1 : room.z1), L = hi - lo;
       if (L < 2.8) continue;
       const n = Math.max(1, Math.floor(L / 3.0)), pitch = L / n;
