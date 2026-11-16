@@ -15582,11 +15582,11 @@ function mine_wire(cell, wpos) {
   cell.portalIn = { kind: 'portal', id: 'door.mine.out', p: wpos(0, 1.1, 0.7), r: 2.4, zone: 0, cell: 'mine', label: 'Leave to the hillside', dest: cell.leave, side: 'in' };
   World.interact.push(cell.portalOut, cell.portalIn);
   // the second way out: a cleft in the rock above the Hermit's Pool, found from inside
-  const cx = 27.5, cz = -185.6, cy = Terrain.y(cx, cz);
-  cell.cleft = { p: [cx, cy, cz + 1.4], yaw: PI, cell: null, name: 'The cliffs above the Hermit’s Pool' };
+  const cx = 27.5, cz = -182.6, cy = Terrain.y(cx, cz);       // the rock face beside the fall, above the pool (the valley ends at radius 184: nothing can stand beyond it)
+  cell.cleft = { p: [cx, Terrain.y(cx, cz + 1.8), cz + 1.8], yaw: PI, cell: null, name: 'The cliffs above the Hermit’s Pool' };
   const cin = { p: wpos(-33.5, 3.45, 60), yaw: -PI / 2, cell: 'mine', name: 'The Old Mine' };
   World.interact.push({ kind: 'portal', id: 'door.mine.cleft', p: wpos(-36, 4.5, 60), r: 2.6, zone: 0, cell: 'mine', label: 'Climb out by the cleft', dest: cell.cleft, side: 'in' });
-  World.interact.push({ kind: 'portal', id: 'door.mine.cleft.in', p: [cx, cy + 1.0, cz - 0.4], r: 2.4, zone: 0, label: 'Squeeze into the cleft', dest: cin, side: 'out' });
+  World.interact.push({ kind: 'portal', id: 'door.mine.cleft.in', p: [cx, cy + 0.9, cz + 0.9], r: 2.6, zone: 0, label: 'Squeeze into the cleft', dest: cin, side: 'out' });
   mine_cleftOutside(cx, cz, cy);
   // oil and a few other things on the floor
   const mi = (kind, id, x, y, z, label, item, extra) => {
@@ -15610,14 +15610,14 @@ function mine_wire(cell, wpos) {
 function mine_cleftOutside(cx, cz, cy) {
   // a fissure in the cliff above the fall: two leaning slabs, a black slot between, ferns and a trickle
   const pack = new MeshPack(); pack.shadow = false; const m = new Mesh(1024); m.seed = 77; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
-  m.push().T(cx, cy, cz).RY(PI);
+  m.push().T(cx, cy, cz);
   m.mat(MAT.PLAIN, [0.015, 0.015, 0.018]); m.box(-0.55, -0.1, -2.2, 0.55, 2.7, -0.2);
   m.mat(MAT.ROCK, [0.52, 0.5, 0.47], 0.6); for (const s of [-1, 1]) { m.push().T(s * 0.95, 0, 0).RZ(-s * 0.1); m.lathe([[1.0, -0.6], [0.8, 0.8], [0.55, 2.2], [0.3, 3.2], [0.04, 3.6]], 7, 0); m.pop(); }
   m.mat(MAT.ROCK, [0.4, 0.38, 0.36], 0.6); m.box(-1.2, 2.55, -0.9, 1.2, 3.1, 0.5); for (let i = 0; i < 10; i++) { const a = (i - 4.5) * 0.45; m.ball(Math.sin(a) * 2.1, 0.2, 0.3 + Math.cos(a) * 0.8, 0.35 + (i % 3) * 0.12, 0.3, 0.35, 6, 3); }
   m.pop();
-  addBoxCollider(m, cx - 1.8, cz - 0.4, cx + 1.8, cz + 0.4, cy - 1, cy + 3);
+  addBoxCollider(m, cx - 1.8, cz - 0.4, cx + 1.8, cz + 0.4, cy - 1, cy + 3);      // (the slabs; the slot between them is open)
   pack.add(m, { kind: 'opaque', maxDist: 100, noShadow: true }); pack.upload('mine-cleft'); World.packs.push(pack);
-  WB.kit.hermit = WB.kit.hermit || []; for (const [dx, dz, n, s] of [[-1.5, 0.9, 'Fern_1', 1.4], [1.6, 1.1, 'Fern_1', 1.2], [0.2, 1.8, 'weed_plant_02_a', 2.2]]) WB.kit.hermit.push({ name: n, x: cx + dx, y: cy, z: cz + dz, s, ry: dx, rx: 0, rz: 0 });
+  WB.kit.hermit = WB.kit.hermit || []; for (const [dx, dz, n, s] of [[-1.5, 1.0, 'Fern_1', 1.4], [1.6, 1.2, 'Fern_1', 1.2], [0.2, 1.9, 'weed_plant_02_a', 2.2]]) WB.kit.hermit.push({ name: n, x: cx + dx, y: cy, z: cz + dz, s, ry: dx, rx: 0, rz: 0 });
 }
 // ── the trap: a cord across the adit at ankle height, a slab on a rope above it. Step over it (jump), cut it, or take the slab on the head ──
 function mine_trap(wpos) {
@@ -15711,6 +15711,8 @@ function mineKit() {
 }
 const _wa94b = wildsAttach;
 wildsAttach = function () { _wa94b(); try { mineKit(); } catch (e) { console.warn('mine kit: ' + (e && e.stack || e)); } };
+// the objective marker: outside, the door; inside, Corwin's station
+MINE.target = function () { const P = WILDS.P.mine; if (!(World.cell && World.cell.id === 'mine')) return [P.x, 0, P.z]; const w = MINE.wpos(-9.4, 0.8, 66.2); return [w[0], w[1], w[2]]; };
 
 
 // ---- 99_main.js ----
