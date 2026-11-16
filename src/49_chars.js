@@ -153,7 +153,7 @@ const Chars = (() => {
         const WC = { leather: acc.col[1], hat: acc.col[0], metal: acc.col[2], apron: def.apron ? sq(def.apron) : pal[Math.floor(r(8) * pal.length)], cloak: def.cloak ? sq(def.cloak) : pal[Math.floor(r(9) * pal.length)], tabard: def.apron ? sq(def.apron) : [0.3, 0.1, 0.1],
           linen: [0.62, 0.58, 0.48].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: [0.3, 0.26, 0.2], teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
         wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
-        return { body, fit: FIT[body] || 1, wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
+        return { body, fit: FIT[body] || 1, hairGrey: { f_elder: 0.96, m_elder: 0.92, m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 }[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
       },
     });
   }
@@ -374,6 +374,8 @@ const Chars = (() => {
       // dyed cloth: the garment keeps its weave and folds (the texture's light and dark) but takes the villager's own colour
       const dye = md.kind === 'cloth' && look.dye && look.dye[md.part];
       if (dye && tx) { const ml = meanLum(map); albedo = albedo.add(vec3(dye[0], dye[1], dye[2]).mul(TSL.clamp(tx.rgb.dot(vec3(0.3, 0.6, 0.1)).div(ml), 0.35, 1.9)).mul(w)); }
+      else if (md.kind === 'hair' && tx && look.hairGrey) { const g = look.hairGrey, base = tx.rgb.mul(vec3(tint[0], tint[1], tint[2])), lum = TSL.clamp(base.dot(vec3(0.3, 0.6, 0.1)).mul(2.6).add(0.55), 0.6, 1.25);      // [ch1] greying: toward a warm grey-white that keeps the strands' light and dark
+        albedo = albedo.add(TSL.mix(base, vec3(0.50, 0.485, 0.45).mul(lum), g).mul(w)); }
       else albedo = albedo.add((tx ? tx.rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
       rough = rough.add(w.mul(md.rough === undefined ? 0.85 : md.rough));
       if (md.oneSided) one = one.add(w);
