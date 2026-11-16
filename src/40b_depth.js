@@ -4,6 +4,9 @@
 // the floor and soot above the hearth, and outdoor kit walls gather mud, moss and eave stains from two per-vertex heights (kg).
 // Extends SH from 40_shade.js: SH.init and SH.update are wrapped so nothing there has to change.
 SH.ROOMS = 64;
+const RK = { cw: 1.3, cs: 0.85, fh: 1.0, fs: 0.8, ch: 1.1, cs2: 0.8, up: 0.38, low: 0.3 };      // [l1] room mood: corner width/strength, floor height/strength, ceiling height/strength, upper-wall dim, wall-foot dim
+if (typeof TEST !== 'undefined' && TEST && TEST.room === 0) Object.assign(RK, { cw: 0.9, cs: 0.5, fh: 0.7, fs: 0.7, ch: 0.6, cs2: 0.65, up: 0, low: 0 });
+if (typeof TEST !== 'undefined' && TEST && TEST.roomk) Object.assign(RK, JSON.parse(TEST.roomk));
 (function () {
   const _init = SH.init, _upd = SH.update;
   SH.init = function () {
@@ -23,17 +26,18 @@ SH.ROOMS = 64;
         const dx = wp.x.sub(A.x), dz = wp.z.sub(A.y);
         const lx = dx.mul(A.z).add(dz.mul(A.w)), lz = dz.mul(A.z).sub(dx.mul(A.w));
         const nx = N.x.mul(A.z).add(N.z.mul(A.w)), nzl = N.z.mul(A.z).sub(N.x.mul(A.w));
-        const tx = sat(B.x.sub(0.16).sub(abs(lx)).div(0.9)).oneMinus(), tz = sat(B.y.sub(0.16).sub(abs(lz)).div(0.9)).oneMinus();
-        const wallAo = float(1).sub(tx.mul(0.5).mul(float(1).sub(abs(nx)))).mul(float(1).sub(tz.mul(0.5).mul(float(1).sub(abs(nzl)))));
+        const tx = sat(B.x.sub(0.12).sub(abs(lx)).div(RK.cw)).oneMinus(), tz = sat(B.y.sub(0.12).sub(abs(lz)).div(RK.cw)).oneMinus();      // [l1] RK: room mood knobs
+        const wallAo = float(1).sub(tx.mul(tx).mul(RK.cs).mul(float(1).sub(abs(nx)))).mul(float(1).sub(tz.mul(tz).mul(RK.cs).mul(float(1).sub(abs(nzl)))));
         const onLoft = wp.y.greaterThan(C.y.sub(0.3)).and(lx.greaterThan(C.z.sub(0.1)));
         const underLoft = lx.greaterThan(C.z).and(onLoft.not());
         const fl = select(onLoft, C.y, B.z), h = wp.y.sub(fl);
         const roofTop = B.z.add(B.w).add(max(B.y.sub(abs(lz)), 0).mul(C.x));
         const top = select(onLoft, roofTop, select(underLoft, C.y.sub(0.3), roofTop)), g = top.sub(wp.y);
-        const fa = sat(h.div(0.7)).oneMinus(), ca = sat(g.div(0.6)).oneMinus();
-        const flAo = float(1).sub(fa.mul(fa).mul(0.7).mul(float(1).sub(max(N.y, 0))));
-        const clAo = float(1).sub(ca.mul(ca).mul(0.65).mul(float(1).sub(max(N.y.negate(), 0))));
-        out.x.assign(wallAo.mul(flAo).mul(clAo).mul(1));
+        const fa = sat(h.div(RK.fh)).oneMinus(), ca = sat(g.div(RK.ch)).oneMinus();
+        const flAo = float(1).sub(fa.mul(fa).mul(RK.fs).mul(float(1).sub(max(N.y, 0))));
+        const clAo = float(1).sub(ca.mul(RK.cs2).mul(float(1).sub(max(N.y.negate(), 0))));
+        const upper = float(1).sub(smoothstep(1.7, 2.9, h).mul(RK.up)), wallL = float(1).sub(float(1).sub(smoothstep(0.0, 1.1, h)).mul(RK.low).mul(float(1).sub(abs(N.y))));      // [l1] the upper third and the foot of a wall go dim: the light sits at table height
+        out.x.assign(wallAo.mul(flAo).mul(clAo).mul(upper).mul(wallL));
         const wallness = float(1).sub(abs(N.y));
         const nn = nz1(vec2(lx.add(lz).mul(0.55), wp.y.mul(0.8).add(lz.mul(0.2)))).toVar();
         out.y.assign(sat(h.div(nn.r.mul(1.0).add(0.55))).oneMinus().mul(wallness));

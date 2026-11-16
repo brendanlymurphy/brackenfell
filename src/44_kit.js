@@ -195,7 +195,8 @@ const Kit = (() => {
     m.roughnessNode = orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough);
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
-    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.6).add(0.4)))));      // [l1] window light (40c_light.js)
+    const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back
+    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(pls.mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.6).add(0.4)))));      // [l1] window light (40c_light.js)
     em = em.add(alb.mul(glow));
     if (batch && /Floor_Wood|Table|Counter|Bar_/.test(name) && !(TEST && TEST.gloss === 0)) em = em.add(SH.pointSpec(wp, N, normalize(U.camPos.sub(wp)), float(0.55), zone).mul(0.3));      // [l1] worn boards and table tops catch the fire
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
@@ -204,13 +205,14 @@ const Kit = (() => {
       const dayK = smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(0.97).add(0.03);       // the floor follows the daylight: constant, it left roofs and walls glowing pale at night while the ground went dark
       const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
+      if (!(TEST && TEST.shade === 0)) em = em.mul(mix(vec3(1), vec3(0.74, 0.86, 1.1), outM.mul(wallK).mul(skyVis).mul(float(1).sub(lampK))));      // [l1] shade is sky: upright faces out of the sun go cooler and darker
     }
     // [l1] contact and eave occlusion on outdoor walls (kg.x: metres above the ground, kg.y: metres below the eaves; 8 = none): a wall darkens where it meets the ground and under its eaves, sun included
     let occK = float(1);
     if (batch && !isFoliage(d)) {
       const kgo = attribute('kg', 'vec4'), hg = kgo.x.mul(8), ev = kgo.y.mul(8), wl = float(1).sub(abs(N.y)), outM2 = float(1).sub(step(0.5, zone));
       const occ = mix(float(1), mix(K_.occ.x, float(1), smoothstep(0.0, 1.3, hg)), wl).mul(mix(float(1), mix(K_.occ.y, float(1), smoothstep(0.0, 0.8, ev)), wl));
-      occK = mix(float(1), occ, outM2); em = em.mul(occK);
+      occK = mix(float(1), occ, outM2.mul(float(1).sub(lampK.mul(0.8)))); em = em.mul(occK);
     }
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
     else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));
