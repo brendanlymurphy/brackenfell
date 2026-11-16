@@ -159,7 +159,17 @@ Trees.build = function (scene) {
   const pos = [], q = [], idx = [];
   for (let j = 0; j < 2; j++) { const ax = j ? [0, 0, 1] : [1, 0, 0], o = j * 4; for (const [s, v] of [[-1, 0], [1, 0], [1, 1], [-1, 1]]) { pos.push(ax[0] * s, v, ax[2] * s); q.push(s * 0.5 + 0.5, v, j); } idx.push(o, o + 1, o + 2, o, o + 2, o + 3); }
   const farMat = Trees.farMat = Trees.farMaterial(false), farCast = Trees.farMaterial(true); Trees.farMeshes = [];
-  for (const list of cells.values()) {
+  const ringOf = (cap, mat) => { const g = new T.InstancedBufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('q', new T.Float32BufferAttribute(q, 3)); g.setIndex(idx);
+    const F = { g, cap, n: 0, a: new Float32Array(cap * 4), b: new Float32Array(cap * 4), d: new Float32Array(cap * 4), gn: new Float32Array(cap * 3), last: [1e9, 1e9, 9] };
+    for (const [k, arr, w] of [['ipos', F.a, 4], ['iprm', F.b, 4], ['idim', F.d, 4], ['igain', F.gn, 3]]) { const at = new IBA(arr, w); at.setUsage(T.DynamicDrawUsage); g.setAttribute(k, at); }
+    g.instanceCount = 0; g.boundingSphere = new T.Sphere(new T.Vector3(), 1e6);
+    F.mesh = new T.Mesh(g, mat); F.mesh.matrixAutoUpdate = false; F.mesh.frustumCulled = false; F.mesh.visible = false; scene.add(F.mesh);
+    F.put = it => { if (F.n >= F.cap) return; const o = F.n++, m = it.sp.m; F.a.set([it.x, it.y, it.z, it.s], o * 4); F.b.set([it.yaw, it.tint, it.ph, 0], o * 4); F.d.set([m.halfWidth * it.s, m.height * it.s, m.tiles[0], it.sp.autumn ? 1 : 0], o * 4); F.gn.set(it.sp.gain, o * 3); };
+    F.flush = () => { for (const k of ['ipos', 'iprm', 'idim', 'igain']) { const at = g.attributes[k]; at.clearUpdateRanges(); if (F.n) { at.addUpdateRange(0, F.n * at.itemSize); at.needsUpdate = true; } } g.instanceCount = F.n; };
+    return F; };
+  // the camera's stand-ins: every tree beyond the middle ring that lies in the view cone (cut 20 degrees wide), one draw
+  if (!(TEST && TEST.treering === 0)) { Trees.farRing = ringOf(Trees.items.length, farMat); Trees.farRing.mesh.receiveShadow = true; }
+  for (const list of Trees.farRing ? [] : cells.values()) {
     const n = list.length, a = new Float32Array(n * 4), b = new Float32Array(n * 4), d = new Float32Array(n * 4), gn = new Float32Array(n * 3); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, z0 = 1e9, z1 = -1e9;
     list.forEach((it, i) => { const m = it.sp.m; a.set([it.x, it.y, it.z, it.s], i * 4); b.set([it.yaw, it.tint, it.ph, 0], i * 4); d.set([m.halfWidth * it.s, m.height * it.s, m.tiles[0], it.sp.autumn ? 1 : 0], i * 4); gn.set(it.sp.gain, i * 3);
       x0 = Math.min(x0, it.x); x1 = Math.max(x1, it.x); y0 = Math.min(y0, it.y); y1 = Math.max(y1, it.y + m.height * it.s); z0 = Math.min(z0, it.z); z1 = Math.max(z1, it.z); });
@@ -169,12 +179,7 @@ Trees.build = function (scene) {
     const m1 = new T.Mesh(g, farMat); m1.matrixAutoUpdate = false; m1.receiveShadow = true; scene.add(m1); Trees.farMeshes.push(m1);
   }
   // the wide sun-shadow map only needs the stand-ins of trees standing in or beside it: one instance list, refilled as the player moves or turns
-  { const cap = 1536, g = new T.InstancedBufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('q', new T.Float32BufferAttribute(q, 3)); g.setIndex(idx);
-    const F = Trees.farCastRing = { g, cap, n: 0, a: new Float32Array(cap * 4), b: new Float32Array(cap * 4), d: new Float32Array(cap * 4), gn: new Float32Array(cap * 3), last: [1e9, 1e9] };
-    for (const [k, arr, w] of [['ipos', F.a, 4], ['iprm', F.b, 4], ['idim', F.d, 4], ['igain', F.gn, 3]]) { const at = new IBA(arr, w); at.setUsage(T.DynamicDrawUsage); g.setAttribute(k, at); }
-    g.instanceCount = 0; g.boundingSphere = new T.Sphere(new T.Vector3(), 1e6);
-    const m2 = F.mesh = new T.Mesh(g, farCast); m2.matrixAutoUpdate = false; m2.frustumCulled = false; m2.castShadow = true; m2.layers.set(2); m2.visible = false; scene.add(m2);
-  }
+  { const F = Trees.farCastRing = ringOf(1536, farCast); F.mesh.castShadow = true; F.mesh.layers.set(2); }
   Trees.lastPos = [1e9, 0, 1e9];
 };
 // multisampled tiers smooth the cut-out edges with alpha to coverage (as the old leaf material did)
@@ -188,17 +193,27 @@ Trees.update = function (e, q, hidden) {
   if (!Trees.sets) return;
   for (const s of Trees.sets) { s.nearMeshes[0].visible = s.nearMeshes[1].visible = !hidden && s.near.n > 0; s.midMesh.visible = !hidden && s.mid.n > 0; s.castMesh.visible = !hidden && s.cast.n > 0; }
   for (const m of Trees.farMeshes) m.visible = !hidden;
-  const FC = Trees.farCastRing; FC.mesh.visible = !hidden && FC.n > 0;
+  const FC = Trees.farCastRing; FC.mesh.visible = !hidden && FC.n > 0; if (Trees.farRing) Trees.farRing.mesh.visible = !hidden && Trees.farRing.n > 0;
   if (hidden) return;
   { // centre of the wide shadow map (43_render.js: 92 m radius, pushed 0.6 of that ahead of the view)
-    const cx = e[0] + Math.sin(R.cam.yaw) * 55, cz = e[2] - Math.cos(R.cam.yaw) * 55, RF = 92 + 16;
+    const cx = e[0] + Math.sin(R.cam.yaw) * 55, cz = e[2] - Math.cos(R.cam.yaw) * 55, RR = 92 + 22;
     if (hyp(cx - FC.last[0], cz - FC.last[1]) > 6) {
-      FC.last = [cx, cz]; FC.n = 0; const C = Trees.CELL, G_ = Trees.grid, RR = RF + 6;
-      for (let gz = Math.floor((cz - RR) / C); gz <= Math.floor((cz + RR) / C); gz++) for (let gx = Math.floor((cx - RR) / C); gx <= Math.floor((cx + RR) / C); gx++) { const l = G_.get(gx + ',' + gz); if (!l) continue;
-        for (const it of l) { if (FC.n >= FC.cap || hyp(it.x - cx, it.z - cz) > RR) continue; const o = FC.n++, m = it.sp.m; FC.a.set([it.x, it.y, it.z, it.s], o * 4); FC.b.set([it.yaw, it.tint, it.ph, 0], o * 4); FC.d.set([m.halfWidth * it.s, m.height * it.s, m.tiles[0], it.sp.autumn ? 1 : 0], o * 4); FC.gn.set(it.sp.gain, o * 3); } }
-      for (const k of ['ipos', 'iprm', 'idim', 'igain']) { const at = FC.g.attributes[k]; at.clearUpdateRanges(); at.addUpdateRange(0, FC.n * at.itemSize); at.needsUpdate = true; }
-      FC.g.instanceCount = FC.n; FC.mesh.visible = FC.n > 0;
+      FC.last = [cx, cz]; FC.n = 0; const C = Trees.CELL, G_ = Trees.grid;
+      for (let gz = Math.floor((cz - RR) / C); gz <= Math.floor((cz + RR) / C); gz++) for (let gx = Math.floor((cx - RR) / C); gx <= Math.floor((cx + RR) / C); gx++) { const l = G_.get(gx + ',' + gz); if (!l) continue; for (const it of l) if (hyp(it.x - cx, it.z - cz) <= RR) FC.put(it); }
+      FC.flush(); FC.mesh.visible = FC.n > 0;
     }
+  }
+  const FR = Trees.farRing;
+  if (FR) {
+    let dy = R.cam.yaw - FR.last[2]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    if (hyp(e[0] - FR.last[0], e[2] - FR.last[1]) > 2 || Math.abs(dy) > 0.19 || FR.lod !== q.treeLod) {
+      FR.last = [e[0], e[2], R.cam.yaw]; FR.lod = q.treeLod; FR.n = 0;
+      const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw), half = Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) + 0.35, cone = Math.abs(R.cam.pitch) < 0.9, near = q.treeLod - 4;
+      for (const it of Trees.items) { const dx = it.x - e[0], dz = it.z - e[2], d = Math.sqrt(dx * dx + dz * dz); if (d < near) continue;        // the shader hides those inside treeLod exactly; this only keeps the list short
+        if (cone && Math.acos(Math.max(-1, Math.min(1, (dx * fx + dz * fz) / d))) > half + Math.asin(Math.min(1, 6 / d))) continue; FR.put(it); }
+      FR.flush();
+    }
+    FR.mesh.visible = FR.n > 0;
   }
   const R1 = q.treeLod + 2.5, R0 = Trees.NEAR[R.qName] || 20, RS = Math.min(R1, q.shadowNear * 1.72 + 9);
   if (hyp(e[0] - Trees.lastPos[0], e[2] - Trees.lastPos[2]) < 1.2 && Trees.lastLod === R1 + R0) return;

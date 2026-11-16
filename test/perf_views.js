@@ -16,7 +16,7 @@ const classify = () => {
     if (o.name === 'sky' || o.name === 'particles') return put(o, 'sky+particles');
     if (o.name === 'static-shadow') return put(o, 'props'); if (/^rocks/.test(o.name)) return put(o, 'rocks+bushes');
     if (o.name === 'terrain-pool') return put(o, 'terrain'); if (o.name === 'water-pool') return put(o, 'water');
-    if (typeof Trees !== 'undefined' && Trees.farCastRing && o === Trees.farCastRing.mesh) return put(o, 'trees');
+    if (typeof Trees !== 'undefined' && ((Trees.farCastRing && o === Trees.farCastRing.mesh) || (Trees.farRing && o === Trees.farRing.mesh))) return put(o, 'trees');
     if (o.userData && o.userData.kitDyn) return put(o, 'houses+kit near');
     if (o.userData && o.userData.lod === 2) return put(o, 'houses far');
     if (o.isInstancedMesh) return put(o, 'kit instances');

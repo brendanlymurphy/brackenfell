@@ -1067,7 +1067,9 @@ function sceneBuild() {
     if ((it.kind === 'terrain' || it.kind === 'water') && !it.cell && !it.nearOnly && !(TEST && TEST.pool === 0)) {
       let P = SC.pools.find(q => q.pk === pk && q.kind === it.kind);
       if (!P) { P = { pk, kind: it.kind, tiles: [], mat, n: 0 }; SC.pools.push(P); }
-      P.tiles.push({ it, sph: sphere(it.c, it.r), big: sphere(it.c, it.r + 14), on: false }); P.n += it.count; continue;
+      if (it.kind === 'water' && it.r > 30) { for (const c of squares(pk, it.first, it.count, 16)) P.tiles.push({ it, idx: c.idx, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 14), on: false }); }       // a river or lake tile is hundreds of metres long: cut it into 16 m squares
+      else P.tiles.push({ it, sph: sphere(it.c, it.r), big: sphere(it.c, it.r + 14), on: false });
+      P.n += it.count; continue;
     }
     const g = geo(pk, it.first, it.count); g.boundingSphere = sphere(it.c, it.r);
     const mesh = new THREE.Mesh(g, mat); mesh.matrixAutoUpdate = false;
@@ -1078,13 +1080,18 @@ function sceneBuild() {
     const st = { mesh, it }; scene.add(mesh); SC.statics.push(st);
     // A big merged piece of the village (fences, wells, stalls over 100 m) used to go into the near sun-shadow map whole. Its triangles are
     // sorted into 8 m squares here; a twin that only that shadow map draws holds just the squares the map covers (subUpdate).
-    if (mesh.castShadow && !it.cell && it.r > 18 && !(TEST && TEST.sub === 0)) {
-      const ix = pk.index.array, P_ = pk.attr.position.array, cells = new Map();
-      for (let k = it.first; k < it.first + it.count; k += 3) { const a = ix[k] * 3, b = ix[k + 1] * 3, c = ix[k + 2] * 3, key = Math.floor((P_[a] + P_[b] + P_[c]) / 24) + ',' + Math.floor((P_[a + 2] + P_[b + 2] + P_[c + 2]) / 24); let l = cells.get(key); if (!l) cells.set(key, l = []); l.push(ix[k], ix[k + 1], ix[k + 2]); }
+    if (it.kind === 'opaque' && !it.cell && it.r > 18 && !(TEST && TEST.sub === 0)) {
+      const cellList = squares(pk, it.first, it.count, 8);
       const g2 = new THREE.BufferGeometry(); for (const k in pk.attr) if (k !== 'wind') g2.setAttribute(k, pk.attr[k]);
       const cur = new Uint32Array(it.count), at = new THREE.BufferAttribute(cur, 1); at.setUsage(THREE.DynamicDrawUsage); g2.setIndex(at); g2.setDrawRange(0, 0); g2.boundingSphere = g.boundingSphere;
       const tw = new THREE.Mesh(g2, mat); tw.matrixAutoUpdate = false; tw.frustumCulled = false; tw.castShadow = true; tw.receiveShadow = false; tw.layers.set(SHADOW_ONLY_LAYER); tw.visible = false; tw.name = 'static-shadow'; scene.add(tw);
-      st.sub = { mesh: tw, geo: g2, cur, cells: [...cells].map(([key, l]) => { const q = key.split(','); return { x: +q[0] * 8 + 4, z: +q[1] * 8 + 4, idx: Uint32Array.from(l) }; }), last: [1e9, 1e9], n: 0 };
+      tw.castShadow = mesh.castShadow;
+      st.sub = { mesh: tw, geo: g2, cur, cells: cellList, last: [1e9, 1e9], n: 0, casts: mesh.castShadow };
+      // and the camera draws the same mesh from the squares in view (while the mesh itself casts no shadow: see sceneUpdate)
+      const g1 = new THREE.BufferGeometry(); for (const k in pk.attr) if (k !== 'wind') g1.setAttribute(k, pk.attr[k]);
+      const c1 = new Uint32Array(it.count), a1 = new THREE.BufferAttribute(c1, 1); a1.setUsage(THREE.DynamicDrawUsage); g1.setIndex(a1); g1.boundingSphere = g.boundingSphere;
+      c1.set(pk.index.array.subarray(it.first, it.first + it.count)); g1.setDrawRange(0, it.count);
+      st.view = { geo: g1, cur: c1, full: true, n: it.count, total: it.count, pk, it }; mesh.geometry = g1; g.dispose();
     }
   }
   for (const P of SC.pools) {
@@ -1158,13 +1165,34 @@ function poolUpdate(e, cur, inside) {
     }
     if (miss || have > need * 2 + 6 || P.stale) {
       let n = 0; const src = P.pk.index.array; P.stale = false;
-      for (const t of P.tiles) { t.on = t.ok && (t.in || _fr.intersectsSphere(t.big)); if (t.on) { P.cur.set(src.subarray(t.it.first, t.it.first + t.it.count), n); n += t.it.count; } }
+      for (const t of P.tiles) { t.on = t.ok && (t.in || _fr.intersectsSphere(t.big)); if (t.on) { if (t.idx) { P.cur.set(t.idx, n); n += t.idx.length; } else { P.cur.set(src.subarray(t.it.first, t.it.first + t.it.count), n); n += t.it.count; } } }
       P.geo.setDrawRange(0, n); P.count = n;
       if (n) { const at = P.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
     }
     P.mesh.visible = P.count > 0;
   }
 }
+// sorts a pack item's triangles into squares of `size` metres (seen from above); each square knows a sphere round its triangles
+function squares(pk, first, count, size) {
+  const ix = pk.index.array, P_ = pk.attr.position.array, cells = new Map();
+  for (let k = first; k < first + count; k += 3) { const a = ix[k] * 3, b = ix[k + 1] * 3, c = ix[k + 2] * 3, key = Math.floor((P_[a] + P_[b] + P_[c]) / (3 * size)) + ',' + Math.floor((P_[a + 2] + P_[b + 2] + P_[c + 2]) / (3 * size));
+    let l = cells.get(key); if (!l) cells.set(key, l = { idx: [], lo: [1e9, 1e9, 1e9], hi: [-1e9, -1e9, -1e9] }); l.idx.push(ix[k], ix[k + 1], ix[k + 2]);
+    for (const v of [a, b, c]) for (let d = 0; d < 3; d++) { const p = P_[v + d]; if (p < l.lo[d]) l.lo[d] = p; if (p > l.hi[d]) l.hi[d] = p; } }
+  return [...cells.values()].map(l => { const c = [(l.lo[0] + l.hi[0]) / 2, (l.lo[1] + l.hi[1]) / 2, (l.lo[2] + l.hi[2]) / 2], r = 0.5 * hyp(l.hi[0] - l.lo[0], l.hi[1] - l.lo[1], l.hi[2] - l.lo[2]);
+    return { x: c[0], z: c[2], idx: Uint32Array.from(l.idx), sph: new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r), big: new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r + 10), on: true }; });
+}
+// camera side of a big static mesh: all of it while it casts shadow itself, else the squares in (or within 10 m of) the view, refilled when one comes into view that is missing
+function viewUpdate(s, subset) {
+  const v = s.view, cells = s.sub.cells;
+  if (!subset) { if (!v.full) { v.cur.set(v.pk.index.array.subarray(v.it.first, v.it.first + v.it.count)); v.geo.setDrawRange(0, v.total); const at = v.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, v.total); at.needsUpdate = true; v.full = true; for (const c of cells) c.on = true; } return; }
+  let miss = v.full, need = 0, have = 0;
+  for (const c of cells) { c.in = _fr.intersectsSphere(c.sph); if (c.in) { need++; if (!c.on) miss = true; } if (c.on) have++; }
+  if (!miss && have <= need * 2 + 8) return;
+  let n = 0; v.full = false;
+  for (const c of cells) { c.on = c.in || _fr.intersectsSphere(c.big); if (c.on) { v.cur.set(c.idx, n); n += c.idx.length; } }
+  v.n = n; v.geo.setDrawRange(0, n); if (n) { const at = v.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
+}
+const sb_casts = s => s.sub.casts;
 function subUpdate(sb, e, q) {
   const r0 = q.shadowNear, cx = e[0] + Math.sin(R.cam.yaw) * r0 * 0.72, cz = e[2] - Math.cos(R.cam.yaw) * r0 * 0.72;       // centre of the near shadow map (43_render.js)
   if (hyp(cx - sb.last[0], cz - sb.last[1]) < 2 && sb.r0 === r0) return; sb.last = [cx, cz]; sb.r0 = r0;
@@ -1196,6 +1224,7 @@ function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos, cur = World.cell;       // cur: the cell the player is in. Then only that cell is drawn (its generated meshes, kit groups, door leaf); outdoors, no cell is
   if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
   World.deepIn = cur ? true : deepIndoors(e); const inside = !cur && World.deepIn, ind = DRAW.indoor;
+  _fr.setFromProjectionMatrix(_pm.multiplyMatrices(R.camera.projectionMatrix, R.camera.matrixWorldInverse));
   for (const s of SC.statics) {
     const it = s.it;
     if (cur || it.cell) { s.mesh.visible = !!cur && it.cell === cur.id; if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow; continue; }
@@ -1207,8 +1236,9 @@ function sceneUpdate(camPos, q) {
     if (s.farCapable === undefined) s.farCapable = !!s.cast0 && it.kind === 'opaque' && !it.nearOnly && s.mesh.layers.mask === 1;
     if (s.farCapable) s.mesh.layers.mask = q.farStatics ? 1 : 2;
     if (s.sub) {         // while this mesh would only cast into the near map anyway, the twin casts for it
-      const use = s.mesh.castShadow && s.mesh.visible && !(s.farCapable && q.farStatics), sb = s.sub;
+      const use = sb_casts(s) && s.mesh.castShadow && s.mesh.visible && !(s.farCapable && q.farStatics), sb = s.sub;
       if (use) { s.mesh.castShadow = false; subUpdate(sb, e, q); } sb.mesh.visible = use && sb.n > 0;
+      if (s.mesh.visible) { viewUpdate(s, !s.mesh.castShadow); if (!s.view.full && !s.view.n) s.mesh.visible = false; }
     }
   }
   for (const s of SC.cells) {
@@ -2100,8 +2130,7 @@ const Grass = { mesh: null, N: 0, range: 0 };
     const m = new THREE.MeshLambertNodeMaterial({ side: THREE.DoubleSide });
     const b = attribute('b', 'vec4');         // side (-1, 0, 1), height along the blade (0..1), blade angle, radial offset
     m.positionNode = Fn(() => {
-      const fi = float(instanceIndex), iz = floor(fi.add(0.5).div(N)), ix = fi.sub(iz.mul(N));
-      const cell = uOrg.add(vec2(ix, iz));
+      const cell = attribute('gc', 'vec2');            // this tuft's cell of the world-wide grid, from the list Grass.update keeps
       const r0 = textureLoad(G.hashTex, ivec2(cell.add(65536.5).mod(256)));
       const root2 = cell.add(r0.xy).mul(cellSz);
       const out = vec3(0, -10000, 0).toVar();
@@ -2169,19 +2198,46 @@ const Grass = { mesh: null, N: 0, range: 0 };
     const gv = [], pv = []; for (let k = 0; k < blades; k++) { const a = k * 2.2 + 0.4, ro = 0.3 + k * 0.35; gv.push(-1, 0, a, ro, 1, 0, a, ro, 0, 1, a, ro); pv.push(-1, 0, 0, 1, 0, 0, 0, 1, 0); }
     const g = new THREE.InstancedBufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pv, 3)); g.setAttribute('b', new THREE.Float32BufferAttribute(gv, 4));
-    g.instanceCount = N * N;
+    const gc = new Float32Array(N * N * 2), gcA = new THREE.InstancedBufferAttribute(gc, 2); gcA.setUsage(THREE.DynamicDrawUsage); g.setAttribute('gc', gcA);
+    g.instanceCount = 0;
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     const mesh = new THREE.Mesh(g, m);
     mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = 'grass';
     scene.add(mesh);
-    Object.assign(Grass, { mesh, N, range, cellSz, uOrg, scene, blades, tufts: N * N, verts: N * N * blades * 3 });
+    Object.assign(Grass, { mesh, N, range, cellSz, uOrg, scene, blades, tufts: N * N, verts: N * N * blades * 3, gc, gcA, geo: g, last: [1e9, 1e9, 9], has: Grass.has || new Map() });
     return mesh;
+  };
+  // The cells that can hold grass at all, out of the window ahead of the camera: the list is rebuilt when the player has moved a metre
+  // or turned 11 degrees. Cells are taken 8 x 8 at a time; a block is skipped when it lies beyond the grass range, outside the view cone
+  // (cut 20 degrees wider than the screen) or wholly on road, cobbles, bare earth or lake bed (checked once per block and remembered).
+  // On the cobbled square that leaves a few hundred tufts to place instead of fifteen thousand.
+  const BLK = 8;
+  Grass.blockHasGrass = function (bx, bz) {
+    const key = bx + ',' + bz; let v = Grass.has.get(key); if (v !== undefined) return v; v = false;
+    const c = Grass.cellSz, x0 = bx * BLK * c, z0 = bz * BLK * c, n = 9, TH = K.terrainHalf, lake = (World.lakeY || -1e9) + 0.05;
+    for (let j = 0; j < n && !v; j++) for (let i = 0; i < n; i++) { const x = x0 + (i / (n - 1)) * (BLK + 1) * c, z = z0 + (j / (n - 1)) * (BLK + 1) * c;
+      if (Math.abs(x) > TH || Math.abs(z) > TH) continue;
+      if (Math.max(Terrain.splat(x, z, 0), Terrain.splat(x, z, 1), Terrain.splat(x, z, 3)) < 0.5 && Terrain.y(x, z) > lake - 0.3) { v = true; break; } }
+    Grass.has.set(key, v); return v;
   };
   Grass.update = function (camPos, fwdXZ) {
     if (!Grass.mesh) return;
-    const r = Grass.range, c = Grass.cellSz, fl = Math.hypot(fwdXZ[0], fwdXZ[1]) || 1;
-    const cx = camPos[0] + fwdXZ[0] / fl * r * AHEAD, cz = camPos[2] + fwdXZ[1] / fl * r * AHEAD;
-    Grass.uOrg.value.set(Math.floor(cx / c) - (Grass.N >> 1), Math.floor(cz / c) - (Grass.N >> 1));
+    const r = Grass.range, c = Grass.cellSz, fl = Math.hypot(fwdXZ[0], fwdXZ[1]) || 1, fx = fwdXZ[0] / fl, fz = fwdXZ[1] / fl, yaw = Math.atan2(fx, -fz);
+    let dy = yaw - Grass.last[2]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    if (Math.hypot(camPos[0] - Grass.last[0], camPos[2] - Grass.last[1]) < 1 && Math.abs(dy) < 0.19) return; Grass.last = [camPos[0], camPos[2], yaw];
+    const cx = camPos[0] + fx * r * AHEAD, cz = camPos[2] + fz * r * AHEAD, N = Grass.N, ox = Math.floor(cx / c) - (N >> 1), oz = Math.floor(cz / c) - (N >> 1);
+    const half = (typeof R !== 'undefined' && R.camera ? Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) : 0.81) + 0.35, cone = !(TEST && TEST.grasscone === 0) && Math.abs(R.cam.pitch) < 0.9;
+    const gc = Grass.gc, bh = BLK * c * 0.7072, R1 = r + 1.5; let n = 0;                   // tufts stand up to one cell off their cell's corner, and the list is a metre stale at worst
+    for (let bz = Math.floor(oz / BLK); bz <= Math.floor((oz + N - 1) / BLK); bz++) for (let bx = Math.floor(ox / BLK); bx <= Math.floor((ox + N - 1) / BLK); bx++) {
+      const mx = (bx + 0.5) * BLK * c - camPos[0], mz = (bz + 0.5) * BLK * c - camPos[2], d = Math.hypot(mx, mz);
+      if (d - bh > R1) continue;
+      if (cone && d > 5 + bh && Math.acos(Math.max(-1, Math.min(1, (mx * fx + mz * fz) / d))) > half + Math.asin(Math.min(1, bh / d))) continue;
+      if (!(TEST && TEST.grassall) && !Grass.blockHasGrass(bx, bz)) continue;
+      for (let j = 0; j < BLK; j++) { const z = bz * BLK + j; if (z < oz || z >= oz + N) continue; const dz = (z + 0.5) * c - camPos[2];
+        for (let i = 0; i < BLK; i++) { const x = bx * BLK + i; if (x < ox || x >= ox + N) continue; const dx = (x + 0.5) * c - camPos[0]; if (dx * dx + dz * dz > R1 * R1) continue; gc[n * 2] = x; gc[n * 2 + 1] = z; n++; } }
+    }
+    Grass.geo.instanceCount = n; Grass.count = n;
+    if (n) { const at = Grass.gcA; at.clearUpdateRanges(); at.addUpdateRange(0, n * 2); at.needsUpdate = true; }
   };
   Grass.dispose = function () {
     if (!Grass.mesh) return;
@@ -9980,7 +10036,17 @@ Trees.build = function (scene) {
   const pos = [], q = [], idx = [];
   for (let j = 0; j < 2; j++) { const ax = j ? [0, 0, 1] : [1, 0, 0], o = j * 4; for (const [s, v] of [[-1, 0], [1, 0], [1, 1], [-1, 1]]) { pos.push(ax[0] * s, v, ax[2] * s); q.push(s * 0.5 + 0.5, v, j); } idx.push(o, o + 1, o + 2, o, o + 2, o + 3); }
   const farMat = Trees.farMat = Trees.farMaterial(false), farCast = Trees.farMaterial(true); Trees.farMeshes = [];
-  for (const list of cells.values()) {
+  const ringOf = (cap, mat) => { const g = new T.InstancedBufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('q', new T.Float32BufferAttribute(q, 3)); g.setIndex(idx);
+    const F = { g, cap, n: 0, a: new Float32Array(cap * 4), b: new Float32Array(cap * 4), d: new Float32Array(cap * 4), gn: new Float32Array(cap * 3), last: [1e9, 1e9, 9] };
+    for (const [k, arr, w] of [['ipos', F.a, 4], ['iprm', F.b, 4], ['idim', F.d, 4], ['igain', F.gn, 3]]) { const at = new IBA(arr, w); at.setUsage(T.DynamicDrawUsage); g.setAttribute(k, at); }
+    g.instanceCount = 0; g.boundingSphere = new T.Sphere(new T.Vector3(), 1e6);
+    F.mesh = new T.Mesh(g, mat); F.mesh.matrixAutoUpdate = false; F.mesh.frustumCulled = false; F.mesh.visible = false; scene.add(F.mesh);
+    F.put = it => { if (F.n >= F.cap) return; const o = F.n++, m = it.sp.m; F.a.set([it.x, it.y, it.z, it.s], o * 4); F.b.set([it.yaw, it.tint, it.ph, 0], o * 4); F.d.set([m.halfWidth * it.s, m.height * it.s, m.tiles[0], it.sp.autumn ? 1 : 0], o * 4); F.gn.set(it.sp.gain, o * 3); };
+    F.flush = () => { for (const k of ['ipos', 'iprm', 'idim', 'igain']) { const at = g.attributes[k]; at.clearUpdateRanges(); if (F.n) { at.addUpdateRange(0, F.n * at.itemSize); at.needsUpdate = true; } } g.instanceCount = F.n; };
+    return F; };
+  // the camera's stand-ins: every tree beyond the middle ring that lies in the view cone (cut 20 degrees wide), one draw
+  if (!(TEST && TEST.treering === 0)) { Trees.farRing = ringOf(Trees.items.length, farMat); Trees.farRing.mesh.receiveShadow = true; }
+  for (const list of Trees.farRing ? [] : cells.values()) {
     const n = list.length, a = new Float32Array(n * 4), b = new Float32Array(n * 4), d = new Float32Array(n * 4), gn = new Float32Array(n * 3); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, z0 = 1e9, z1 = -1e9;
     list.forEach((it, i) => { const m = it.sp.m; a.set([it.x, it.y, it.z, it.s], i * 4); b.set([it.yaw, it.tint, it.ph, 0], i * 4); d.set([m.halfWidth * it.s, m.height * it.s, m.tiles[0], it.sp.autumn ? 1 : 0], i * 4); gn.set(it.sp.gain, i * 3);
       x0 = Math.min(x0, it.x); x1 = Math.max(x1, it.x); y0 = Math.min(y0, it.y); y1 = Math.max(y1, it.y + m.height * it.s); z0 = Math.min(z0, it.z); z1 = Math.max(z1, it.z); });
@@ -9990,12 +10056,7 @@ Trees.build = function (scene) {
     const m1 = new T.Mesh(g, farMat); m1.matrixAutoUpdate = false; m1.receiveShadow = true; scene.add(m1); Trees.farMeshes.push(m1);
   }
   // the wide sun-shadow map only needs the stand-ins of trees standing in or beside it: one instance list, refilled as the player moves or turns
-  { const cap = 1536, g = new T.InstancedBufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('q', new T.Float32BufferAttribute(q, 3)); g.setIndex(idx);
-    const F = Trees.farCastRing = { g, cap, n: 0, a: new Float32Array(cap * 4), b: new Float32Array(cap * 4), d: new Float32Array(cap * 4), gn: new Float32Array(cap * 3), last: [1e9, 1e9] };
-    for (const [k, arr, w] of [['ipos', F.a, 4], ['iprm', F.b, 4], ['idim', F.d, 4], ['igain', F.gn, 3]]) { const at = new IBA(arr, w); at.setUsage(T.DynamicDrawUsage); g.setAttribute(k, at); }
-    g.instanceCount = 0; g.boundingSphere = new T.Sphere(new T.Vector3(), 1e6);
-    const m2 = F.mesh = new T.Mesh(g, farCast); m2.matrixAutoUpdate = false; m2.frustumCulled = false; m2.castShadow = true; m2.layers.set(2); m2.visible = false; scene.add(m2);
-  }
+  { const F = Trees.farCastRing = ringOf(1536, farCast); F.mesh.castShadow = true; F.mesh.layers.set(2); }
   Trees.lastPos = [1e9, 0, 1e9];
 };
 // multisampled tiers smooth the cut-out edges with alpha to coverage (as the old leaf material did)
@@ -10009,17 +10070,27 @@ Trees.update = function (e, q, hidden) {
   if (!Trees.sets) return;
   for (const s of Trees.sets) { s.nearMeshes[0].visible = s.nearMeshes[1].visible = !hidden && s.near.n > 0; s.midMesh.visible = !hidden && s.mid.n > 0; s.castMesh.visible = !hidden && s.cast.n > 0; }
   for (const m of Trees.farMeshes) m.visible = !hidden;
-  const FC = Trees.farCastRing; FC.mesh.visible = !hidden && FC.n > 0;
+  const FC = Trees.farCastRing; FC.mesh.visible = !hidden && FC.n > 0; if (Trees.farRing) Trees.farRing.mesh.visible = !hidden && Trees.farRing.n > 0;
   if (hidden) return;
   { // centre of the wide shadow map (43_render.js: 92 m radius, pushed 0.6 of that ahead of the view)
-    const cx = e[0] + Math.sin(R.cam.yaw) * 55, cz = e[2] - Math.cos(R.cam.yaw) * 55, RF = 92 + 16;
+    const cx = e[0] + Math.sin(R.cam.yaw) * 55, cz = e[2] - Math.cos(R.cam.yaw) * 55, RR = 92 + 22;
     if (hyp(cx - FC.last[0], cz - FC.last[1]) > 6) {
-      FC.last = [cx, cz]; FC.n = 0; const C = Trees.CELL, G_ = Trees.grid, RR = RF + 6;
-      for (let gz = Math.floor((cz - RR) / C); gz <= Math.floor((cz + RR) / C); gz++) for (let gx = Math.floor((cx - RR) / C); gx <= Math.floor((cx + RR) / C); gx++) { const l = G_.get(gx + ',' + gz); if (!l) continue;
-        for (const it of l) { if (FC.n >= FC.cap || hyp(it.x - cx, it.z - cz) > RR) continue; const o = FC.n++, m = it.sp.m; FC.a.set([it.x, it.y, it.z, it.s], o * 4); FC.b.set([it.yaw, it.tint, it.ph, 0], o * 4); FC.d.set([m.halfWidth * it.s, m.height * it.s, m.tiles[0], it.sp.autumn ? 1 : 0], o * 4); FC.gn.set(it.sp.gain, o * 3); } }
-      for (const k of ['ipos', 'iprm', 'idim', 'igain']) { const at = FC.g.attributes[k]; at.clearUpdateRanges(); at.addUpdateRange(0, FC.n * at.itemSize); at.needsUpdate = true; }
-      FC.g.instanceCount = FC.n; FC.mesh.visible = FC.n > 0;
+      FC.last = [cx, cz]; FC.n = 0; const C = Trees.CELL, G_ = Trees.grid;
+      for (let gz = Math.floor((cz - RR) / C); gz <= Math.floor((cz + RR) / C); gz++) for (let gx = Math.floor((cx - RR) / C); gx <= Math.floor((cx + RR) / C); gx++) { const l = G_.get(gx + ',' + gz); if (!l) continue; for (const it of l) if (hyp(it.x - cx, it.z - cz) <= RR) FC.put(it); }
+      FC.flush(); FC.mesh.visible = FC.n > 0;
     }
+  }
+  const FR = Trees.farRing;
+  if (FR) {
+    let dy = R.cam.yaw - FR.last[2]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    if (hyp(e[0] - FR.last[0], e[2] - FR.last[1]) > 2 || Math.abs(dy) > 0.19 || FR.lod !== q.treeLod) {
+      FR.last = [e[0], e[2], R.cam.yaw]; FR.lod = q.treeLod; FR.n = 0;
+      const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw), half = Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) + 0.35, cone = Math.abs(R.cam.pitch) < 0.9, near = q.treeLod - 4;
+      for (const it of Trees.items) { const dx = it.x - e[0], dz = it.z - e[2], d = Math.sqrt(dx * dx + dz * dz); if (d < near) continue;        // the shader hides those inside treeLod exactly; this only keeps the list short
+        if (cone && Math.acos(Math.max(-1, Math.min(1, (dx * fx + dz * fz) / d))) > half + Math.asin(Math.min(1, 6 / d))) continue; FR.put(it); }
+      FR.flush();
+    }
+    FR.mesh.visible = FR.n > 0;
   }
   const R1 = q.treeLod + 2.5, R0 = Trees.NEAR[R.qName] || 20, RS = Math.min(R1, q.shadowNear * 1.72 + 9);
   if (hyp(e[0] - Trees.lastPos[0], e[2] - Trees.lastPos[2]) < 1.2 && Trees.lastLod === R1 + R0) return;
