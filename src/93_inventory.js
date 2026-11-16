@@ -31,7 +31,7 @@ const Inv = {
   use(id) {
     const r = RPG.st(), m = RPG.meta(id); if (!m.heal || !has(id)) return;
     if (r.hp >= RPG.MAXHP - 0.5 && !(m.sta && r.sta < RPG.MAXST - 1)) { toast('You are not hurt.'); return; }
-    give(id, -1); RPG.heal(m.heal); if (m.sta) r.sta = Math.min(RPG.MAXST, r.sta + m.sta);
+    give(id, -1); RPG.heal(m.heal * (RPG.perk && RPG.perk('forager') ? 1.5 : 1)); if (m.sta) r.sta = Math.min(RPG.MAXST, r.sta + m.sta);
     if (id === 'ale' || id === 'potion' || id === 'tonic') Audio2.drink(); else Audio2.eat();
     toast(ITEMS[id][0] + ': +' + m.heal + ' health'); save(); Inv.render();
   },
@@ -41,7 +41,7 @@ const Inv = {
     const box = $('tab-pack'), r = RPG.st(); if (!box) return;
     let h = '<div class="vit"><span>Health <b>' + Math.round(r.hp) + ' / ' + RPG.MAXHP + '</b></span><span>Stamina <b>' + Math.round(r.sta) + ' / ' + RPG.MAXST + '</b></span><span><b>' + S.gold + '</b> gold</span></div><div class="gear">';
     for (const [slot, label] of Inv.SLOTS) { const id = r.eq[slot]; h += '<div><small>' + label + '</small><b>' + (id && has(id) ? ITEMS[id][0] : 'None') + '</b><span>' + (id && has(id) ? Inv.facts(id) : slot === 'weapon' ? 'Bare hands will not serve you.' : '') + '</span></div>'; }
-    h += '</div><div class="items">';
+    h += '</div>' + (typeof econPerkHtml === 'function' ? econPerkHtml() : '') + '<div class="items">';
     const ids = Object.keys(S.items).sort((a, b) => (RPG.meta(b).slot ? 1 : 0) - (RPG.meta(a).slot ? 1 : 0) || (RPG.meta(b).heal ? 1 : 0) - (RPG.meta(a).heal ? 1 : 0));
     for (const id of ids) {
       const m = RPG.meta(id), on = m.slot && r.eq[m.slot] === id, f = Inv.facts(id);
@@ -53,7 +53,7 @@ const Inv = {
     }
     if (!ids.length) h += '<p class="empty">Your pack is empty.</p>';
     box.innerHTML = h + '</div>';
-    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.lamp) { if (typeof mineLamp === 'function') mineLamp(); Inv.render(); } else if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
+    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.perk) { if (typeof econChoose === 'function' && econChoose(b.dataset.perk)) Inv.render(); } else if (b.dataset.lamp) { if (typeof mineLamp === 'function') mineLamp(); Inv.render(); } else if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
   },
   // ── trade, as dialogue ──
   shop(who) {
