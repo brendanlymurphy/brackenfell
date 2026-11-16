@@ -280,7 +280,7 @@ function alleyDress(B, B2, R) {
   // ── bunting across the street ──
   const shopAt = id => AL.shops.find(s => s.a.id === id);
   const pt = (id, wx, y) => { const s = shopAt(id); if (!s) return null; if (s.house) { const si = SITE[id], z = si.z + (si.yaw === PI ? 1 : -1) * (si.d / 2 + 0.12); return [wx, si.y + y, z]; } const sgn = s.site.yaw === PI ? -1 : 1; return wpos(s.MS, (wx - s.site.x) * sgn, y, -s.d / 2 - 0.55); };
-  const flags = [[0.5, 0.27, 0.23], [0.64, 0.58, 0.44], [0.3, 0.36, 0.46], [0.58, 0.44, 0.24], [0.34, 0.4, 0.3]];      // Build 42: faded
+  const flags = [[0.5, 0.27, 0.23], [0.64, 0.58, 0.44], [0.3, 0.36, 0.46], [0.58, 0.44, 0.24], [0.34, 0.4, 0.3]].map(c => c.map(v => v * 0.2));      // Build 42: faded; [fx1] and the cloth material brightens: they read as white flags
   for (const [i1, x1, y1, i2, x2, y2] of [['shop.n3', 42.2, 5.2, 'shop.s2', 45.2, 5.4], ['shop.n4', 48.0, 6.4, 'shop.s2', 47.4, 5.0], ['draper', 31.6, 5.4, 'shop.s1', 30.8, 6.2], ['shop.n2', 38.0, 6.6, 'shop.s1', 33.0, 6.4]]) {
     const A_ = pt(i1, x1, y1), B_ = pt(i2, x2, y2); if (!A_ || !B_) continue;
     B.add(genBunting(A_, B_, R, flags, 12), I, OUT);
@@ -318,8 +318,8 @@ function kitGen(kind, R) {
     else { Q(-w / 2, 0.0, w / 2, L, [0.48, 0.52, 0.56]); Q(-w / 2, -L, w / 2, 0.0, [0.3, 0.32, 0.2]); T3([-w / 2, -h * 0.1], [w / 2, -h * 0.1], [w * 0.1, h * 0.12], [0.26, 0.28, 0.18]); Q(-w * 0.04, h * 0.02, w * 0.08, h * 0.3, [0.4, 0.36, 0.3]); T3([-w * 0.06, h * 0.3], [w * 0.1, h * 0.3], [w * 0.02, h * 0.42], [0.3, 0.2, 0.16]); }
   } else {       // a bar with bundles of herbs, onions and dried flowers
     g.box(W_, -0.55, -0.02, 0, 0.55, 0.03, 0.06, DARKW);
-    const cols = [[0.3, 0.45, 0.22], [0.5, 0.38, 0.2], [0.55, 0.3, 0.45], [0.7, 0.62, 0.3], [0.3, 0.42, 0.2], [0.6, 0.45, 0.2]];
-    for (let i = 0; i < 6; i++) { const x = -0.45 + i * 0.18, len = 0.28 + R() * 0.2, c = cols[i]; g.quad(C_, [x - 0.04, -0.02, 0.06], [x + 0.04, -0.02, 0.06], [x + 0.08, -0.02 - len, 0.08], [x - 0.08, -0.02 - len, 0.08], c, GPU.cloth, true); g.quad(C_, [x, -0.02, 0.02], [x, -0.02, 0.1], [x + 0.02, -0.02 - len, 0.14], [x - 0.02, -0.02 - len, 0.02], c.map(v => v * 0.8), GPU.cloth, true); }
+    const cols = [[0.3, 0.45, 0.22], [0.5, 0.38, 0.2], [0.55, 0.3, 0.45], [0.7, 0.62, 0.3], [0.3, 0.42, 0.2], [0.6, 0.45, 0.2]].map(c => c.map(v => v * 0.52));       // [fx1] cloth material brightens: dried herbs are dull green and brown, not mint and lilac
+    for (let i = 0; i < 6; i++) { const x = -0.45 + i * 0.18, len = 0.28 + R() * 0.2, c = cols[i]; g.quad(C_, [x - 0.04, -0.02, 0.06], [x + 0.04, -0.02, 0.06], [x + 0.08, -0.02 - len, 0.08], [x - 0.08, -0.02 - len, 0.08], c, GPU.cloth, true); g.quad(C_, [x, -0.02, 0.02], [x, -0.02, 0.1], [x + 0.02, -0.02 - len, 0.14], [x - 0.02, -0.02 - len, 0.02], c.map(v => v * 0.8), GPU.cloth, true); g.quad(C_, [x - 0.03, -0.03, 0.02], [x + 0.03, -0.03, 0.1], [x + 0.05, -0.03 - len * 0.9, 0.12], [x - 0.05, -0.03 - len * 0.9, 0.04], c.map(v => v * 0.9), GPU.cloth, true); }
   }
   return KGEN[key] = g.make('gen_' + key + '_' + (_gn++));
 }

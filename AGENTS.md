@@ -67,6 +67,7 @@ your own screenshots: tests passing has repeatedly not meant it looks right.
    `three.js` are never resolved by hand: resolve the source conflicts, then `node tools/build.mjs && git add game.js index.html
    sw.js three.js` and commit. A conflict in `audio/voice/manifest.json`: take either side, then
    `python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json audio/voice --have`.
+10. (outdoors) `test/overlap.js` is a gate step (`--only overlap`); its `severe` and `solid` counts have ceilings in tools/gate.mjs that may only fall; run `window.__ovTop=60;` before it to list the worst.
 10. Before a push: `node tools/gate.mjs --quick` plus the steps for your area. After it: read the GitHub `gate` result.
 11. Report to the coordinator with a commit hash as soon as a visible chunk passes, so it ships early. A report says: what changed,
     the gate result, what you looked at yourself, and what could not be verified headless. Do not end your turn after a report:

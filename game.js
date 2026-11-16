@@ -4169,6 +4169,7 @@ function terrainH(x, z) {
     // building pads
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 26 || Math.abs(z - s.z) > 26) continue;
+      { const u = LV.up; if (s.x > u.x0 && s.x < u.x1 && s.z > u.z0 && s.z < u.z1 && (x < u.x0 || x > u.x1 || z < u.z0 || z > u.z1)) continue; }          // [fx1] a house on the terrace levels the terrace, not a 6 m heap of ground outside its retaining wall
       const l = worldToSite(s, x, z), m = s.pad || 1.1;
       const dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
       if (dd < 6) h = lerp(h, s.y, 1 - smooth(0, 6, dd));
@@ -4177,6 +4178,7 @@ function terrainH(x, z) {
     // Build 33: neighbouring pads blend over each other for 6 m and the last one won, leaving a porch hanging over a hollow: every site's own footprint and doorstep margin is levelled again
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 14 || Math.abs(z - s.z) > 14) continue;
+      { const u = LV.up; if (s.x > u.x0 && s.x < u.x1 && s.z > u.z0 && s.z < u.z1 && (x < u.x0 || x > u.x1 || z < u.z0 || z > u.z1)) continue; }          // [fx1] as above
       const l = worldToSite(s, x, z), m = (s.pad || 1.1) + 0.2 + (s.porch || 0), dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
       if (dd < 1.5) h = lerp(h, s.y, 1 - smooth(0, 1.5, dd));
     }
@@ -5193,7 +5195,7 @@ const SCANR = {
   Candle_1: { n: ['wooden_candlestick'], fit: 'contain', mul: 1.25 }, Candle_2: { n: ['wooden_candlestick'], fit: 'contain' },
   CandleStick_Triple: { n: ['brass_candleholders_c'], fit: 'contain', mul: 0.75 },
   Bucket_Wooden_1: { n: ['wooden_bucket_01', 'wooden_bucket_02'], fit: 'contain', mul: 1.1, one: 1 },
-  Bookcase_2: { n: ['wooden_bookshelf_worn'], fit: 'box', lo: 0.7, hi: 1.3 }, Cabinet: { n: ['painted_wooden_cabinet'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.7, 0.6, 0.5] },
+  Bookcase_2: { n: ['wooden_bookshelf_worn'], fit: 'box', lo: 0.7, hi: 1.3 }, Cabinet: { n: ['painted_wooden_cabinet'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.46, 0.4, 0.32] },
   Nightstand_Shelf: { n: ['painted_wooden_shelves'], fit: 'box', lo: 0.7, hi: 1.4, tint: [0.8, 0.75, 0.7] },
   Workbench: { n: ['painted_wooden_table'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.6, 0.5, 0.42] },
   Pickaxe_Bronze: { n: ['picke_dirty_01'], fit: 'contain' }, Axe_Bronze: { n: ['wooden_axe_03'], fit: 'contain', ry: PI / 2 },
@@ -9340,8 +9342,8 @@ function buildVillage() {
       if (hyp(x - SQUARE.x, z - SQUARE.z) < Math.max(SQUARE.rx, SQUARE.rz) + 1) return false;
       for (const c of World.colliders) {
         if (c.r !== undefined) { if (hyp(x - c.x, z - c.z) < c.r + rad) return false; continue; }
-        if (Math.max(c.hx, c.hz) > 1.6) continue;                               // walls: the pile is meant to lean on those
         const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz;
+        if (Math.max(c.hx, c.hz) > 1.6) { if (c.y1 - c.y0 > 6 && Math.abs(dx) < c.hx + 0.1 && Math.abs(dz) < c.hz + 0.1) return false; continue; }   // walls: the pile is meant to lean on those, but never from inside a building body ([fx1])
         if (hyp(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < rad) return false;
       }
       return true;
@@ -9370,6 +9372,7 @@ function buildVillage() {
         if ((s.bare || []).some(b => lx > b[0] - 0.6 && lx < b[2] + 0.6 && lz > b[1] - 0.6 && lz < b[3] + 0.6)) continue;
         const p = siteToWorld(s, lx, lz);
         if (!free(p[0], p[1], 1.0) || Math.abs(Terrain.y(p[0], p[1]) - s.y) > 0.45) continue;
+        if (SITES.some(o => { if (o === s) return false; const q = (p[0] - o.x) * Math.cos(o.yaw) + (p[1] - o.z) * Math.sin(o.yaw), r = -(p[0] - o.x) * Math.sin(o.yaw) + (p[1] - o.z) * Math.cos(o.yaw); return Math.abs(q) < o.w / 2 + 0.5 && Math.abs(r) < o.d / 2 + 0.5; })) continue;   // [fx1] terraced shops stand 0.3 m apart: a pile in that gap was inside the neighbour
         const kind = Rd.pick(kinds);
         put(p[0], p[1], s.yaw + out + PI / 2, piles[kind]); k++;
       }
@@ -9735,7 +9738,7 @@ function alleyDress(B, B2, R) {
   // ── bunting across the street ──
   const shopAt = id => AL.shops.find(s => s.a.id === id);
   const pt = (id, wx, y) => { const s = shopAt(id); if (!s) return null; if (s.house) { const si = SITE[id], z = si.z + (si.yaw === PI ? 1 : -1) * (si.d / 2 + 0.12); return [wx, si.y + y, z]; } const sgn = s.site.yaw === PI ? -1 : 1; return wpos(s.MS, (wx - s.site.x) * sgn, y, -s.d / 2 - 0.55); };
-  const flags = [[0.5, 0.27, 0.23], [0.64, 0.58, 0.44], [0.3, 0.36, 0.46], [0.58, 0.44, 0.24], [0.34, 0.4, 0.3]];      // Build 42: faded
+  const flags = [[0.5, 0.27, 0.23], [0.64, 0.58, 0.44], [0.3, 0.36, 0.46], [0.58, 0.44, 0.24], [0.34, 0.4, 0.3]].map(c => c.map(v => v * 0.2));      // Build 42: faded; [fx1] and the cloth material brightens: they read as white flags
   for (const [i1, x1, y1, i2, x2, y2] of [['shop.n3', 42.2, 5.2, 'shop.s2', 45.2, 5.4], ['shop.n4', 48.0, 6.4, 'shop.s2', 47.4, 5.0], ['draper', 31.6, 5.4, 'shop.s1', 30.8, 6.2], ['shop.n2', 38.0, 6.6, 'shop.s1', 33.0, 6.4]]) {
     const A_ = pt(i1, x1, y1), B_ = pt(i2, x2, y2); if (!A_ || !B_) continue;
     B.add(genBunting(A_, B_, R, flags, 12), I, OUT);
@@ -9773,8 +9776,8 @@ function kitGen(kind, R) {
     else { Q(-w / 2, 0.0, w / 2, L, [0.48, 0.52, 0.56]); Q(-w / 2, -L, w / 2, 0.0, [0.3, 0.32, 0.2]); T3([-w / 2, -h * 0.1], [w / 2, -h * 0.1], [w * 0.1, h * 0.12], [0.26, 0.28, 0.18]); Q(-w * 0.04, h * 0.02, w * 0.08, h * 0.3, [0.4, 0.36, 0.3]); T3([-w * 0.06, h * 0.3], [w * 0.1, h * 0.3], [w * 0.02, h * 0.42], [0.3, 0.2, 0.16]); }
   } else {       // a bar with bundles of herbs, onions and dried flowers
     g.box(W_, -0.55, -0.02, 0, 0.55, 0.03, 0.06, DARKW);
-    const cols = [[0.3, 0.45, 0.22], [0.5, 0.38, 0.2], [0.55, 0.3, 0.45], [0.7, 0.62, 0.3], [0.3, 0.42, 0.2], [0.6, 0.45, 0.2]];
-    for (let i = 0; i < 6; i++) { const x = -0.45 + i * 0.18, len = 0.28 + R() * 0.2, c = cols[i]; g.quad(C_, [x - 0.04, -0.02, 0.06], [x + 0.04, -0.02, 0.06], [x + 0.08, -0.02 - len, 0.08], [x - 0.08, -0.02 - len, 0.08], c, GPU.cloth, true); g.quad(C_, [x, -0.02, 0.02], [x, -0.02, 0.1], [x + 0.02, -0.02 - len, 0.14], [x - 0.02, -0.02 - len, 0.02], c.map(v => v * 0.8), GPU.cloth, true); }
+    const cols = [[0.3, 0.45, 0.22], [0.5, 0.38, 0.2], [0.55, 0.3, 0.45], [0.7, 0.62, 0.3], [0.3, 0.42, 0.2], [0.6, 0.45, 0.2]].map(c => c.map(v => v * 0.52));       // [fx1] cloth material brightens: dried herbs are dull green and brown, not mint and lilac
+    for (let i = 0; i < 6; i++) { const x = -0.45 + i * 0.18, len = 0.28 + R() * 0.2, c = cols[i]; g.quad(C_, [x - 0.04, -0.02, 0.06], [x + 0.04, -0.02, 0.06], [x + 0.08, -0.02 - len, 0.08], [x - 0.08, -0.02 - len, 0.08], c, GPU.cloth, true); g.quad(C_, [x, -0.02, 0.02], [x, -0.02, 0.1], [x + 0.02, -0.02 - len, 0.14], [x - 0.02, -0.02 - len, 0.02], c.map(v => v * 0.8), GPU.cloth, true); g.quad(C_, [x - 0.03, -0.03, 0.02], [x + 0.03, -0.03, 0.1], [x + 0.05, -0.03 - len * 0.9, 0.12], [x - 0.05, -0.03 - len * 0.9, 0.04], c.map(v => v * 0.9), GPU.cloth, true); }
   }
   return KGEN[key] = g.make('gen_' + key + '_' + (_gn++));
 }
@@ -9791,7 +9794,7 @@ const DRU = { wood: [0.02, 0.07, 0.62, 0.27], cloth: [0.3, 0.27, 0.55, 0.45] };
 // muted palettes (linear-ish tints: the kit materials are already warm and fairly bright)
 const DRCOL = {
   wood: [[0.44, 0.34, 0.24], [0.38, 0.30, 0.23], [0.48, 0.38, 0.27], [0.32, 0.26, 0.2], [0.42, 0.36, 0.29]],
-  cloth: [[0.55, 0.30, 0.22], [0.62, 0.50, 0.30], [0.30, 0.34, 0.46], [0.72, 0.66, 0.54], [0.34, 0.40, 0.26], [0.50, 0.42, 0.34], [0.45, 0.24, 0.30], [0.64, 0.58, 0.46]],
+  cloth: [[0.55, 0.30, 0.22], [0.62, 0.50, 0.30], [0.30, 0.34, 0.46], [0.72, 0.66, 0.54], [0.34, 0.40, 0.26], [0.50, 0.42, 0.34], [0.45, 0.24, 0.30], [0.64, 0.58, 0.46]].map(c => c.map(v => v * 0.24)),       // [fx1] the kit cloth material brightens about 2x: this is what reads as pastel pink, mint and pale blue on the market stalls
   sack: [[0.26, 0.22, 0.16], [0.22, 0.19, 0.14], [0.28, 0.24, 0.18], [0.19, 0.16, 0.12]],
   straw: [[0.46, 0.36, 0.16], [0.42, 0.34, 0.16], [0.5, 0.4, 0.18]],
   iron: [0.24, 0.22, 0.21],
@@ -10150,6 +10153,8 @@ function buildDress() {
     carts = V(dHandcart, 2), troughs = V(dTrough, 2), ladders = V(dLadder, 3), brooms = V(dBroom, 2), tools = V(dToolRack, 2), fences = V(dFence, 3);
   const pick = a => a[Math.floor(R() * a.length)];
   const solid = (x, z, r, h) => World.colliders.push({ x, z, r, y0: gy(x, z) - 0.5, y1: gy(x, z) + (h || 0.9) });
+  // [fx1] a row of barrels or crates is a long thin box, not a circle as wide as its length (the circles reached into the house walls beside them)
+  const solidRow = (x, z, dx, dz, half, hw, h) => World.colliders.push({ x, z, hx: half, hz: hw, ax: dx, az: dz, bx: -dz, bz: dx, y0: gy(x, z) - 0.5, y1: gy(x, z) + h });
   const spotsOut = Object.values(World.spots).filter(s => !s.zone);
   const stones = [[0, -2], [-6, -4], [6, -3], [0, -10], [0, 6], [-9, 2], [9, 3], [0, -15.5]];
   const inAlley = (x, z) => x > ALLEY.x0 - 3 && x < ALLEY.x1 + 3 && Math.abs(z - roadZ(x)) < 8;
@@ -10174,7 +10179,7 @@ function buildDress() {
     for (const c of World.colliders) {
       if (c.r !== undefined) { if (hyp(x - c.x, z - c.z) < c.r + r) return false; continue; }
       const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz, big = Math.max(c.hx, c.hz) > 1.6;
-      if (hyp(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < (big ? 0.12 : r)) return false;
+      if (hyp(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < (big ? 0.55 : r)) return false;       // [fx1] 0.12 let a 2.9 m row of barrels sit half inside a house wall
     }
     if (o.flat !== undefined && Math.abs(gy(x, z) - o.flat) > 0.5) return false;
     return true;
@@ -10193,7 +10198,7 @@ function buildDress() {
     for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * 0.66; add(pick(barrels), x + dx * o + R.s() * 0.03, y, z + dz * o + R.s() * 0.03, 0.95 + R() * 0.15, R() * TAU, ex); top = i; }
     if (n >= 2 && R() < 0.7) add(pick(barrels), x + R.s() * 0.05, y + 0.78, z + R.s() * 0.05, 0.9, R() * TAU, ex);
     if (R() < 0.5) add(pick(buckets), x + dx * 0.95 + 0.1, y, z + dz * 0.95, 1, R() * TAU, ex);
-    solid(x, z, 0.38 + n * 0.3, 1.5); claim(x, z, 0.4 + n * 0.3);
+    solidRow(x, z, dx, dz, n * 0.33 + 0.12, 0.46, 1.5); claim(x, z, 0.4 + n * 0.3);
   };
   const crateTop = (n, y) => y + dpH(n);
   const cratePile = (x, z, ry, ex) => {
@@ -10202,7 +10207,7 @@ function buildDress() {
     for (let i = 0; i < k + 1; i++) { const n = pick(crates), o = (i - k / 2) * 0.62; add(n, x + dx * o, y, z + dz * o, 1, ry + R.s() * 0.2, ex); cs.push([n, o]); }
     if (R() < 0.8) { const n = pick(crates), o = cs[0][1] + 0.3; add(n, x + dx * o, crateTop(cs[0][0], y) - 0.02, z + dz * o, 0.92, ry + R.s() * 0.4, ex); if (R() < 0.45) add(pick(crates), x + dx * (o + 0.05), crateTop(n, crateTop(cs[0][0], y)) - 0.03, z + dz * (o + 0.05), 0.75, ry + R.s() * 0.6, ex); }
     if (R() < 0.5) add(pick(sacks), x + dx * (k / 2 * 0.62 + 0.5), y, z + dz * (k / 2 * 0.62 + 0.5), 1, R() * TAU, ex);
-    solid(x, z, 0.5 + k * 0.28, 1.3); claim(x, z, 0.5 + k * 0.3);
+    solidRow(x, z, dx, dz, (k + 1) * 0.31 + 0.15, 0.5, 1.3); claim(x, z, 0.5 + k * 0.3);
   };
   const sackPile = (x, z, ry, ex) => {
     const y = gy(x, z), n = R.i(2, 4);
@@ -10236,8 +10241,8 @@ function buildDress() {
       if (!ok(w2.x, w2.z, r * (wm ? 0.9 : alley ? 0.7 : 1), { flat: s.y })) continue;
       const y = gy(w.x, w.z), ex = placed > 2 && R() < 0.5, along = w.ry + PI / 2;        // direction along the wall as a heading
       // a heading `ry` (piece +z toward it) -> the along-wall axis for piles
-      if (t === 'barrels') barrelPile(w.x, w.z, w.ry + PI / 2, ex);
-      else if (t === 'crates') cratePile(w.x, w.z, w.ry + PI / 2, ex);
+      if (t === 'barrels') barrelPile(w.x, w.z, w.ry, ex);
+      else if (t === 'crates') cratePile(w.x, w.z, w.ry, ex);
       else if (t === 'sacks') sackPile(w.x, w.z, w.ry, ex);
       else if (t === 'logs') { add(pick(logs), w.x, y, w.z, 1, w.ry + PI, ex); claim(w.x, w.z, 0.55); if (R() < 0.7) add(dChips(R, R.i(0, 2)), w.x + Math.sin(w.ry) * 0.7, y, w.z + Math.cos(w.ry) * 0.7, 1, R() * TAU, true); }
       else if (t === 'bucket') { add(pick(buckets), w.x, y, w.z, 1, R() * TAU, ex); if (R() < 0.5) add(pick(buckets), w.x + 0.34, y, w.z + 0.1, 0.9, R() * TAU, ex); claim(w.x, w.z, 0.4); }
@@ -10703,7 +10708,7 @@ function infillAttach() {
   const B = INFS.batch, lowQ = (R.qName === 'low');
   for (const h of INFS.shells) { try { infShell(B, h, lowQ && h.tier === 1); } catch (e) { console.warn('infill shell ' + h.id + ': ' + (e && e.message || e)); } }
   if (!lowQ) {       // pennant ropes across the lanes, between houses that face each other
-    const hs = INF.houses, used = new Set(), cols = [[0.46, 0.25, 0.21], [0.56, 0.46, 0.26], [0.27, 0.33, 0.29], [0.5, 0.46, 0.38], [0.42, 0.22, 0.2]], I = new THREE.Matrix4(), rr = rng(606); let nr = 0;
+    const hs = INF.houses, used = new Set(), cols = [[0.46, 0.25, 0.21], [0.56, 0.46, 0.26], [0.27, 0.33, 0.29], [0.5, 0.46, 0.38], [0.42, 0.22, 0.2]].map(c => c.map(v => v * 0.25)), I = new THREE.Matrix4(), rr = rng(606); let nr = 0;
     const front = h => { const p = siteToWorld(h, (rr() - 0.5) * h.w * 0.3, -h.d / 2 - (h.jetty ? 0.58 : 0.14)); return [p[0], site0(h) + (h.floors >= 2 ? 3.75 : 2.9), p[1]]; };
     const site0 = h => SITE[h.id].y;
     for (const a of hs) for (const b of hs) {
@@ -10900,7 +10905,7 @@ function buildLevels(bucket, fence, R) {
     const os = Math.sign(vo - vi), v0 = Math.min(vo, vi), v1 = Math.max(vo, vi), mid = (u0 + u1) / 2;
     const P = ax ? (u, v) => [v, u] : (u, v) => [u, v], mm = M(...P(mid, vo));
     const bx = (a, y0, b, c, y1, d, skip) => { if (ax) mm.box(b, y0, a, d, y1, c, sw(skip || 0)); else mm.box(a, y0, b, c, y1, d, skip || 0); };
-    let base = 1e9; for (let i = 0; i <= 8; i++) { const u = u0 + (u1 - u0) * i / 8, p = P(u, vo + os * 0.4); base = Math.min(base, Terrain.y(p[0], p[1])); } base -= 0.7;
+    let base = 1e9; for (let i = 0; i <= 8; i++) { const u = u0 + (u1 - u0) * i / 8; for (const o of [0.4, 1.0, 1.8]) { const p = P(u, vo + os * o); base = Math.min(base, Terrain.y(p[0], p[1])); } } base -= 0.7;          // [fx1] down to where the ground has settled, not the first 0.4 m of the fall
     mm.mat(ax === 0 && os < 0 ? MAT.PLASTER : MAT.STONE, ax === 0 && os < 0 ? [1.0, 0.96, 0.88] : sc(0.9 + rr() * 0.08), 0.7); bx(u0, base, v0, u1, TOP, v1, 4 | 8);      // Build 42: the north face (never in the sun) is limewashed rubble, it was near-black
     mm.mat(MAT.STONE, sc(1), 0.6);
     if (parapet) { bx(u0, TOP, v0 + 0.12, u1, H + 0.95, v1 - 0.12, 4 | 8); bx(u0 - 0.05, H + 0.95, v0 - 0.02, u1 + 0.05, H + 1.07, v1 + 0.02, 4); }
@@ -11492,19 +11497,24 @@ function buildLanes(bucket) {
         m.mat(MAT.CLOTH, cc, 0.5); m.quad2([px - w, py, pz], [px - w * 0.9, py - h, pz + 0.04], [px + w * 0.9, py - h, pz + 0.04], [px + w, py, pz]); } }
     K.place('washlane', 'Washing Lane', xm, l.zc, 4); l.role = 'wash'; }
   // ── 2. the dead end with a hidden yard: a lane in the north-east or south-east block that is open to grass at one end ──
-  const dead = lanes.filter(l => !used.has(l) && l.len >= 3.6 && strip(l, l.x0, l.x1) && (l.block === 'north-east' || l.block === 'south-east' || l.block === 'south-west')).sort((p, q) => q.len - p.len)[0];
+  const yardGap = l => { let a = l.zc - 3.0, b = l.zc + 3.0; const ex = l.x1; for (const o of SITES) { const cy = Math.abs(Math.cos(o.yaw)), hw = (cy * o.w + (1 - cy) * o.d) / 2, hd = (cy * o.d + (1 - cy) * o.w) / 2; if (o.x + hw < ex + 0.1 - 0.3 || o.x - hw > ex + 5.2 + 0.3) continue; if (o.z < l.zc && o.z + hd > a - 0.2 && o.z + hd < l.zc) a = o.z + hd + 0.35; if (o.z > l.zc && o.z - hd < b + 0.2 && o.z - hd > l.zc) b = o.z - hd - 0.35; } return b - a; };          // [fx1] the yard needs room for its well and bench beside the walking line
+  const dead = lanes.filter(l => !used.has(l) && l.len >= 3.6 && strip(l, l.x0, l.x1) && (l.block === 'north-east' || l.block === 'south-east' || l.block === 'south-west')).sort((p, q) => (yardGap(q) >= 4.6) - (yardGap(p) >= 4.6) || q.len - p.len)[0];
   if (dead) { used.add(dead); const l = dead, g = gy(l.x1 + 2, l.zc), ex = l.x1;
     // the end is shut by a board fence with a gate that stands ajar; beyond it a small yard: fence, well, bench, a hen coop box, something to take
     for (const [za, zb] of [[l.A.z1, l.zc - 0.55], [l.zc + 0.55, l.B.z0]]) { box(MAT.PLANKS, [0.58, 0.48, 0.36], 0.5, ex - 0.1, gy(ex, l.zc) - 0.2, za, ex + 0.08, gy(ex, l.zc) + 2.1, zb, 4 | 8, 1); col(ex - 0.1, za, ex + 0.08, zb, gy(ex, l.zc) - 0.3, gy(ex, l.zc) + 2.2); }
     box(MAT.PLANKS, [0.5, 0.4, 0.3], 0.5, ex + 0.08, gy(ex + 0.5, l.zc) + 0.05, l.zc + 0.55, ex + 0.95, gy(ex + 0.5, l.zc) + 1.95, l.zc + 0.61, 4 | 8, 1);    // the gate leaf, swung open into the yard
-    const yx0 = ex + 0.1, yx1 = ex + 5.2, yz0 = l.zc - 3.0, yz1 = l.zc + 3.0, yg = gy(ex + 2.5, l.zc);
+    // [fx1] the yard is only as wide as the gap the houses on either side leave it (a house stood in the north fence and swallowed the barrel)
+    let yz0 = l.zc - 3.0, yz1 = l.zc + 3.0; const yx0 = ex + 0.1, yx1 = ex + 5.2;
+    for (const o of SITES) { const cy = Math.abs(Math.cos(o.yaw)), hw = (cy * o.w + (1 - cy) * o.d) / 2, hd = (cy * o.d + (1 - cy) * o.w) / 2; if (o.x + hw < yx0 - 0.3 || o.x - hw > yx1 + 0.3) continue; if (o.z < l.zc && o.z + hd > yz0 - 0.2 && o.z + hd < l.zc) yz0 = o.z + hd + 0.35; if (o.z > l.zc && o.z - hd < yz1 + 0.2 && o.z - hd > l.zc) yz1 = o.z - hd - 0.35; }
+    const yg = gy(ex + 2.5, l.zc), cz = (z, r) => Math.max(yz0 + r, Math.min(yz1 - r, z));
     for (const z of [yz0, yz1]) { beam([yx0, yg + 0.55, z], [yx1, yg + 0.55, z], 0.06, 0.1); beam([yx0, yg + 1.05, z], [yx1, yg + 1.05, z], 0.06, 0.1); col(yx0, z - 0.05, yx1, z + 0.05, yg - 0.2, yg + 1.15); for (let x = yx0; x <= yx1; x += 1.7) post(x, z, gy(x, z) - 0.2, gy(x, z) + 1.15, 0.1, true); }
     beam([yx1, yg + 0.55, yz0], [yx1, yg + 0.55, yz1], 0.06, 0.1); beam([yx1, yg + 1.05, yz0], [yx1, yg + 1.05, yz1], 0.06, 0.1); col(yx1 - 0.05, yz0, yx1 + 0.05, yz1, yg - 0.2, yg + 1.15);
-    { const m = M(ex + 3, l.zc); m.push().T(ex + 3.6, gy(ex + 3.6, l.zc - 2.2), l.zc - 2.2); Props.barrel(m, 0.34, 0.9); m.pop(); m.push().T(ex + 3.9, gy(ex + 3.9, l.zc + 1.6), l.zc + 1.6).RY(0.6); Props.crate(m, 0.6); m.pop();
-      m.push().T(ex + 2.2, gy(ex + 2.2, l.zc + 2.2), l.zc + 2.2).RY(PI / 2); Props.bench(m, 1.6); m.pop(); m.push().T(ex + 2.0, gy(ex + 2.0, l.zc - 2.0), l.zc - 2.0); m.mat(MAT.STONE, [0.9, 0.87, 0.82], 0.7); m.lathe([[0.6, 0], [0.6, 0.62], [0.5, 0.7], [0.36, 0.7], [0.36, 0.3]], 12, 0); m.mat(MAT.PLAIN, [0.1, 0.16, 0.2]); m.disc(0, 0.5, 0, 0.38, 12, 1); addCircleCollider(m, 0, 0, 0.62, 0, 0.7); m.pop(); }
+    { const m = M(ex + 3, l.zc), nar = yz1 - yz0 < 4.6; if (!nar) { m.push().T(ex + 3.6, gy(ex + 3.6, l.zc - 2.2), cz(l.zc - 2.2, 0.5)); Props.barrel(m, 0.34, 0.9); m.pop(); m.push().T(ex + 3.9, gy(ex + 3.9, cz(l.zc + 1.6, 0.6)), cz(l.zc + 1.6, 0.6)).RY(0.6); Props.crate(m, 0.6); m.pop(); }
+      if (!nar) { m.push().T(ex + 2.2, gy(ex + 2.2, cz(l.zc + 2.2, 0.5)), cz(l.zc + 2.2, 0.5)).RY(PI / 2); Props.bench(m, 1.6); m.pop(); } m.push().T(nar ? ex + 4.15 : ex + 2.0, gy(nar ? ex + 4.15 : ex + 2.0, nar ? l.zc : cz(l.zc - 2.0, 0.8)), nar ? l.zc : cz(l.zc - 2.0, 0.8));          // [fx1] in a corridor-wide yard the well closes the end and the bench is left out, so the way in stays clear
+       m.mat(MAT.STONE, [0.9, 0.87, 0.82], 0.7); m.lathe([[0.6, 0], [0.6, 0.62], [0.5, 0.7], [0.36, 0.7], [0.36, 0.3]], 12, 0); m.mat(MAT.PLAIN, [0.1, 0.16, 0.2]); m.disc(0, 0.5, 0, 0.38, 12, 1); addCircleCollider(m, 0, 0, 0.62, 0, 0.7); m.pop(); }
     K.pick('purse2', 'purse', [ex + 4.1, gy(ex + 4.1, l.zc - 0.4) + 0.46, l.zc - 0.4], 'Take the pouch', 'purse', mm => { mm.mat(MAT.CLOTH, [0.3, 0.34, 0.3], 0.4); mm.ball(0, 0.06, 0, 0.08, 0.07, 0.08, 8, 5); });
     K.read(ex + 2.6, yg + 0.9, l.zc + 1.0, 3.0, 'yard.note', 'A hidden yard', 'A yard no wider than a cart, shut in by the backs of four houses and a gate that does not close. Somebody keeps it: the bench is oiled, the well is clear, and there is a stool for a person who comes here to be on their own. Scratched into the well-lip: “NOBODY FINDS THIS ONE. SAY NOTHING.”');
-    K.place('hiddenyard', 'The Hidden Yard', ex + 2.5, l.zc, 4); K.route('deadyard', [[l.x0 - 0.6, gy(l.x0, l.zc), l.zc], [ex - 0.5, gy(ex, l.zc), l.zc], [ex + 2.0, yg, l.zc], [ex + 3.6, yg, l.zc - 0.4]]); l.role = 'dead'; }
+    K.place('hiddenyard', 'The Hidden Yard', ex + 2.5, l.zc, 4); K.route('deadyard', [[l.x0 - 0.6, gy(l.x0, l.zc), l.zc], [ex - 0.5, gy(ex, l.zc), l.zc], [ex + 2.0, yg, l.zc], [ex + (yz1 - yz0 < 4.6 ? 2.8 : 3.6), yg, l.zc - 0.4]]); l.role = 'dead'; }
   // ── 3. the stepped lane: a short flight up, a landing, a flight down, on a lane with no door on it ──
   const step = lanes.filter(l => !used.has(l) && l.len >= 3.6 && strip(l, l.x0, l.x1)).sort((p, q) => (q.block === 'north-west') - (p.block === 'north-west') || q.len - p.len)[0];
   if (step) { used.add(step); const l = step, n = 3, run = 0.5, up = n * 0.19, x0 = l.x0 + 0.1, x1 = l.x1 - 0.1, xa = x0 + n * run, xb = x1 - n * run, z0 = l.A.z1 + 0.1, z1 = l.B.z0 - 0.1, base = Math.max(gy(x0, l.zc), gy(x1, l.zc));
@@ -11781,7 +11791,8 @@ function buildVegetation() {
   }
   for (const s of SITES) { if (!HOUSES[s.id] || s.id === 'barn') continue; for (let k = 0; k < 5; k++) { const side = R() < 0.5 ? -1 : 1, lx = R.s() * s.w * 0.45, p = siteToWorld(s, lx, side * (s.d / 2 + 0.8)); const dl = siteDoorLocal(s, 0); if (hyp(lx - dl[0], side * (s.d / 2) - dl[1]) < 1.8 || s.id === 'smithy' && side < 0) continue; inst.bush.push([p[0], Terrain.y(p[0], p[1]) - 0.05, p[1], 0.45 + R() * 0.4, R() * TAU, R(), R(), 0]); } }
   for (const g of World.gardenPlants || []) inst.bush.push([g[0], Terrain.y(g[0], g[1]) - 0.02, g[1], 0.42 + R() * 0.15, R() * TAU, g[2] * 0.45, R(), 0]);
-  const addRock = (x, z, s) => { const y = gy(x, z); inst.rock.push([x, y - 0.22 * s, z, s, R() * TAU, R(), R(), 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
+  const colHit = (x, z, r) => { for (const c of World.colliders) { if (c.r !== undefined) { if (Math.hypot(x - c.x, z - c.z) < c.r + r * 0.7) return true; continue; } const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz; if (Math.hypot(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < r * 0.7) return true; } return false; };   // [fx1] a boulder never settles on a wall, a post or a building laid down before it
+  const addRock = (x, z, s) => { if (s > 0.6 && colHit(x, z, 0.78 * s)) return; const y = gy(x, z); inst.rock.push([x, y - 0.22 * s, z, s, R() * TAU, R(), R(), 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
   for (let i = 0; i < 420; i++) {
     const a = R() * TAU, r = 30 + R() * 210, x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (r < 200 && blocked(x, z, 1.0)) continue;
@@ -13452,7 +13463,7 @@ WBUILD.hamlet = (p, m, R) => {
   wWall(m, [[96, 94], [108, 92], [112, 88]], { h: 0.85 }); wWall(m, [[112, 108], [121, 104]], { h: 0.8, gaps: [[116, 106]] });
   for (const [x, z, r] of [[133, 118, 1.3], [137, 120, 1.1]]) wPut(m, p, x - p.x, z - p.z, 0, mm => Props.haystack(mm, r));
   wPut(m, p, -5.6, 10.2, 1.0, mm => { Props.cart(mm, true); });
-  wPut(m, p, 1.4, 1.5, 0, mm => { // a well with a pitched roof
+  wPut(m, p, 1.4, -1.3, 0, mm => { // a well with a pitched roof ([fx1] it stood in the dry-stone wall, 1.5 m further out)
     mm.mat(MAT.STONE, [0.85, 0.85, 0.8], 0.7); mm.lathe([[0.95, -0.3], [0.95, 0.85], [0.82, 0.92], [0.6, 0.92], [0.6, -0.3]], 12, 0);
     mm.mat(MAT.PLAIN, [0.04, 0.07, 0.08]); mm.disc(0, 0.2, 0, 0.6, 10, 1); mm.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) mm.cbox(s * 0.85, 0.8, 0, 0.12, 1.3, 0.12, 4); mm.beam([-0.9, 2.05, 0], [0.9, 2.05, 0], 0.11, 0.11);
     mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.6); mm.quad2([-1.1, 2.3, 0], [-1.1, 1.95, -0.8], [1.1, 1.95, -0.8], [1.1, 2.3, 0]); mm.quad2([1.1, 2.3, 0], [1.1, 1.95, 0.8], [-1.1, 1.95, 0.8], [-1.1, 2.3, 0]); addCircleCollider(mm, 0, 0, 1.0, 0, 1.2);
@@ -13895,7 +13906,7 @@ function lightHarvestFire() {
 }
 function festivalSpots() {
   const b = World.bonfirePos;
-  NPC_DEFS.forEach((d, i) => { const a = i / NPC_DEFS.length * TAU + 0.2, r = 4.3 + (i % 3) * 0.9, x = b[0] + Math.cos(a) * r, z = b[1] + Math.sin(a) * r; World.spots['fire.' + i] = { p: [x, World.groundY(x, z), z], yaw: headingTo(x, z, b[0], b[1]), zone: 0 }; });
+  NPC_DEFS.forEach((d, i) => { const a = i / NPC_DEFS.length * TAU + 0.2, r = 4.3 + (i % 3) * 0.9, x = b[0] + Math.cos(a) * r, z = b[1] + Math.sin(a) * r; World.spots['fire.' + i] = { p: [x, World.groundY(x, z), z], yaw: headingTo(x, z, b[0], b[1]), zone: 0, ring: [a, r] }; });
   World.interact.push({ p: [b[0], World.groundY(b[0], b[1]) + 0.8, b[1]], r: 3.0, zone: 0, kind: 'bonfire', id: 'bonfire' });
 }
 // ── saving (a convenience only: one browser, may be unavailable) ──
@@ -13910,6 +13921,23 @@ function applySave(j) {
   RPG.st(); bountyText(); if (typeof Combat !== 'undefined') Combat.refresh();
 }
 function clearSave() { try { localStorage.removeItem('brackenfell.v1'); } catch (e) { } }
+
+// [fx1] once every stall, pile and fence is down (dressAttach and friends push colliders late), the ring of feasters steps round whatever stands on its spots
+function festivalClear() {
+  const b = World.bonfirePos, bad = (x, z, y) => World.colliders.some(c => {
+    if (c.y1 < y + 0.1 || c.y0 > y + 1.0) return false;
+    if (c.r !== undefined) return Math.hypot(x - c.x, z - c.z) < c.r + 0.45;
+    const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz;
+    return Math.abs(dx) < c.hx + 0.45 && Math.abs(dz) < c.hz + 0.45;
+  });
+  for (const k in World.spots) {
+    const s = World.spots[k]; if (!s.ring) continue;
+    for (let t = 0; t < 40; t++) {
+      const aa = s.ring[0] + (t % 2 ? 1 : -1) * Math.floor((t + 1) / 2) * 0.1, rr = s.ring[1] + (t > 15 ? 0.8 : 0) + (t > 30 ? 0.8 : 0), x = b[0] + Math.cos(aa) * rr, z = b[1] + Math.sin(aa) * rr, y = World.groundY(x, z);
+      if (!bad(x, z, y)) { if (t) { s.p = [x, y, z]; s.yaw = headingTo(x, z, b[0], b[1]); } break; }
+    }
+  }
+}
 
 
 // ---- 81_wilds_story.js ----
@@ -17705,6 +17733,7 @@ async function warmShaders() {
     if (typeof infillAttach === 'function') infillAttach();
   if (typeof dressAttach === 'function') dressAttach();
     if (typeof wildsAttach === 'function') wildsAttach();
+    festivalClear();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
     npcSnapAll(); uiInit(); inputInit2(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));
