@@ -2,7 +2,7 @@
 const headingTo = (x, z, tx, tz) => Math.atan2(tx - x, -(tz - z));
 World.pickups = [];
 // Build 42: faded, patched canvas for awnings (dull madder, ochre, woad, undyed linen), never candy stripes
-const AWN = { madder: [0.5, 0.29, 0.25], ochre: [0.6, 0.47, 0.26], woad: [0.3, 0.37, 0.48], linen: [0.66, 0.62, 0.52] };
+const AWN = { madder: [0.5, 0.27, 0.23], ochre: [0.58, 0.44, 0.24], woad: [0.28, 0.34, 0.45], linen: [0.62, 0.58, 0.48] };
 const VILLAGE_CELL = 80;        // m: the generated props (walls, fences, bridges, wells ...) are merged into one mesh per cell
 function buildVillage() {
   const pack = new MeshPack(); pack.shadow = true;
@@ -99,7 +99,7 @@ function buildVillage() {
     m.box(-3.5, 4.35, -0.18, 3.5, 4.7, 0.18); m.box(-3.2, 4.7, -0.12, 3.2, 4.85, 0.12);
     m.mat(MAT.PLANKS, COL.wood); m.box(-1.0, 3.5, -0.035, 1.0, 4.2, 0.035);
     m.mat(MAT.PLAIN, [0.2, 0.42, 0.2]); for (const zf of [-0.04, 0.04]) for (let i = 0; i < 4; i++) { const y = 3.6 + i * 0.13, w2 = 0.3 - i * 0.065; const pts = [[-w2, y, zf], [w2, y, zf], [0, y + 0.22, zf]]; m.poly(zf < 0 ? pts.reverse() : pts); }
-    for (const s of [-1, 1]) { m.mat(MAT.STRIPES, AWN.madder, 0.5); m.quad2([s * 2.35 - 0.35, 4.3, 0.02], [s * 2.35 - 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 4.3, 0.02], 0, 0, 1.2, 2.4); }
+    for (const s of [-1, 1]) { m.mat(MAT.CLOTH, AWN.madder, 0.5); m.quad2([s * 2.35 - 0.35, 4.3, 0.02], [s * 2.35 - 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 4.3, 0.02], 0, 0, 1.2, 2.4); }
   });
   for (const s of [-1, 1]) for (let i = 0; i < 16; i++) {
     const z = -5.2 + s * (3.4 + i * 0.36), x = -62 + Math.sin(i * 0.4) * 0.12 - i * i * 0.012;

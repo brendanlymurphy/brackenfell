@@ -3940,10 +3940,10 @@ const Props = {
     for (const sx of [-1, 1]) { m.cbox(sx * w / 2, 0, -d / 2, 0.09, 2.05, 0.09, 4); m.cbox(sx * w / 2, 0, d / 2, 0.09, 2.5, 0.09, 4); m.beam([sx * w / 2, 2.02, -d / 2], [sx * w / 2, 2.47, d / 2], 0.06, 0.07); }
     m.beam([-w / 2, 2.02, -d / 2], [w / 2, 2.02, -d / 2], 0.06, 0.07); m.beam([-w / 2, 2.47, d / 2], [w / 2, 2.47, d / 2], 0.06, 0.07);
     m.mat(MAT.PLANKS, COL.wood); m.box(-w / 2, 0.74, -d / 2, w / 2, 0.80, d / 2 - 0.3); m.box(-w / 2, 0.1, -d / 2 + 0.02, w / 2, 0.74, -d / 2 + 0.05);
-    m.mat(col === AWN.woad ? MAT.CLOTH : MAT.STRIPES, col, 0.9); const e = 0.3;      // Build 42: faded canvas, sagging between the poles, with a patch; one stall is plain cloth
+    m.mat(MAT.CLOTH, col, 0.9); const e = 0.3;      // Build 42: faded canvas, sagging between the poles, with a patch; one stall is plain cloth
     { const sg = 0.1, xm = 0; m.quad2([-w / 2 - e, 2.56, d / 2 + 0.12], [-w / 2 - e, 1.98, -d / 2 - e], [xm, 1.98 - sg, -d / 2 - e], [xm, 2.56 - sg, d / 2 + 0.12], 0, 0, (w / 2 + e) / 0.9, 2.2);
       m.quad2([xm, 2.56 - sg, d / 2 + 0.12], [xm, 1.98 - sg, -d / 2 - e], [w / 2 + e, 1.98, -d / 2 - e], [w / 2 + e, 2.56, d / 2 + 0.12], 0, 0, (w / 2 + e) / 0.9, 2.2);
-      m.mat(MAT.CLOTH, [col[0] * 0.8 + 0.12, col[1] * 0.8 + 0.1, col[2] * 0.8 + 0.06], 0.4); m.quad2([0.35, 2.43 - sg, 0.2], [0.35, 2.14 - sg, -0.35], [0.75, 2.14 - sg, -0.35], [0.75, 2.43 - sg, 0.2]); m.mat(col === AWN.woad ? MAT.CLOTH : MAT.STRIPES, col, 0.9); }
+      m.mat(MAT.CLOTH, [col[0] * 0.8 + 0.12, col[1] * 0.8 + 0.1, col[2] * 0.8 + 0.06], 0.4); m.quad2([0.35, 2.43 - sg, 0.2], [0.35, 2.14 - sg, -0.35], [0.75, 2.14 - sg, -0.35], [0.75, 2.43 - sg, 0.2]); m.mat(MAT.CLOTH, col, 0.9); }
     m.quad2([-w / 2 - e, 1.98, -d / 2 - e], [-w / 2 - e, 1.78, -d / 2 - e - 0.02], [w / 2 + e, 1.78, -d / 2 - e - 0.02], [w / 2 + e, 1.98, -d / 2 - e], 0, 0, (w + 2 * e) / 0.9, 0.3);
     if (goods) goods(0.80);
     addBoxCollider(m, -w / 2, -d / 2, w / 2, d / 2 - 0.3, 0, 1);
@@ -5337,7 +5337,7 @@ const HOUSES = {
       at(m, 2.55, 0.02, -1.7, 0.25, () => {       // loom (against the right wall, clear of the door and the stair)
         m.mat(MAT.TIMBER, COL.wood); for (const s of [-1, 1]) { m.cbox(s * 0.7, 0, -0.4, 0.08, 1.7, 0.08, 4); m.cbox(s * 0.7, 0, 0.4, 0.08, 1.0, 0.08, 4); m.beam([s * 0.7, 0.95, 0.4], [s * 0.7, 0.95, -0.4], 0.06, 0.06); }
         m.beam([-0.7, 1.65, -0.4], [0.7, 1.65, -0.4], 0.07, 0.07); m.beam([-0.7, 0.4, -0.4], [0.7, 0.4, -0.4], 0.07, 0.07); m.beam([-0.7, 0.95, 0.4], [0.7, 0.95, 0.4], 0.07, 0.07);
-        m.mat(MAT.STRIPES, AWN.madder, 0.5); m.quad2([-0.6, 1.62, -0.38], [-0.6, 0.97, 0.38], [0.6, 0.97, 0.38], [0.6, 1.62, -0.38]);
+        m.mat(MAT.CLOTH, AWN.madder, 0.5); m.quad2([-0.6, 1.62, -0.38], [-0.6, 0.97, 0.38], [0.6, 0.97, 0.38], [0.6, 1.62, -0.38]);
         addBoxCollider(m, -0.75, -0.45, 0.75, 0.45, 0, 1.7);
       });
       at(m, 3.2, 0.02, 0.0, 0, () => Props.sack(m, 0.3, [0.92, 0.9, 0.85])); at(m, 3.15, 0.02, 0.6, 0.5, () => Props.sack(m, 0.26, [0.92, 0.9, 0.85]));
@@ -8028,7 +8028,7 @@ HT.household = (P, c, room, F) => { hPlace(P, room, 'spinning', { sides: ['w', '
 const headingTo = (x, z, tx, tz) => Math.atan2(tx - x, -(tz - z));
 World.pickups = [];
 // Build 42: faded, patched canvas for awnings (dull madder, ochre, woad, undyed linen), never candy stripes
-const AWN = { madder: [0.5, 0.29, 0.25], ochre: [0.6, 0.47, 0.26], woad: [0.3, 0.37, 0.48], linen: [0.66, 0.62, 0.52] };
+const AWN = { madder: [0.5, 0.27, 0.23], ochre: [0.58, 0.44, 0.24], woad: [0.28, 0.34, 0.45], linen: [0.62, 0.58, 0.48] };
 const VILLAGE_CELL = 80;        // m: the generated props (walls, fences, bridges, wells ...) are merged into one mesh per cell
 function buildVillage() {
   const pack = new MeshPack(); pack.shadow = true;
@@ -8125,7 +8125,7 @@ function buildVillage() {
     m.box(-3.5, 4.35, -0.18, 3.5, 4.7, 0.18); m.box(-3.2, 4.7, -0.12, 3.2, 4.85, 0.12);
     m.mat(MAT.PLANKS, COL.wood); m.box(-1.0, 3.5, -0.035, 1.0, 4.2, 0.035);
     m.mat(MAT.PLAIN, [0.2, 0.42, 0.2]); for (const zf of [-0.04, 0.04]) for (let i = 0; i < 4; i++) { const y = 3.6 + i * 0.13, w2 = 0.3 - i * 0.065; const pts = [[-w2, y, zf], [w2, y, zf], [0, y + 0.22, zf]]; m.poly(zf < 0 ? pts.reverse() : pts); }
-    for (const s of [-1, 1]) { m.mat(MAT.STRIPES, AWN.madder, 0.5); m.quad2([s * 2.35 - 0.35, 4.3, 0.02], [s * 2.35 - 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 4.3, 0.02], 0, 0, 1.2, 2.4); }
+    for (const s of [-1, 1]) { m.mat(MAT.CLOTH, AWN.madder, 0.5); m.quad2([s * 2.35 - 0.35, 4.3, 0.02], [s * 2.35 - 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 4.3, 0.02], 0, 0, 1.2, 2.4); }
   });
   for (const s of [-1, 1]) for (let i = 0; i < 16; i++) {
     const z = -5.2 + s * (3.4 + i * 0.36), x = -62 + Math.sin(i * 0.4) * 0.12 - i * i * 0.012;
@@ -9191,10 +9191,10 @@ function buildDress() {
     (DRS.cnt = DRS.cnt || {})[s.id] = placed;
   }
   // ── market stalls: the square's rim and the alley's middle band, each stocked ──
-  const stallKinds = ['greens', 'bread', 'cloth', 'pots', 'fish', 'meat'], stallCols = [[[0.55, 0.2, 0.16], [0.8, 0.74, 0.6]], [[0.22, 0.32, 0.5], [0.8, 0.74, 0.6]], [[0.34, 0.42, 0.24], [0.76, 0.7, 0.55]], [[0.6, 0.4, 0.16], [0.78, 0.72, 0.58]], [[0.45, 0.3, 0.3], [0.78, 0.72, 0.6]]];
+  const stallKinds = ['greens', 'bread', 'cloth', 'pots', 'fish', 'meat'], stallCols = [[[0.44, 0.23, 0.19], [0.6, 0.55, 0.45]], [[0.21, 0.27, 0.37], [0.6, 0.55, 0.45]], [[0.29, 0.35, 0.21], [0.58, 0.54, 0.43]], [[0.48, 0.36, 0.19], [0.6, 0.55, 0.44]], [[0.36, 0.25, 0.24], [0.58, 0.54, 0.45]]];      // Build 42: faded madder, woad, moss, ochre on undyed linen
   DRS.stalls = [];
   const placeStall = (x, z, face, kind) => {          // face: heading toward which the stall opens
-    const y = gy(x, z), name = dStall(kind, R, R.pick(stallCols)), ry = face;
+    const y = gy(x, z), name = dStall(kind, R, (sc => R() < 0.4 ? [sc[0], sc[0]] : sc)(R.pick(stallCols))), ry = face;
     add(name, x, y, z, 1.1, ry, false, DRS.stalls.length < 3 ? { es: true } : null);
     const fx = Math.sin(ry), fz = Math.cos(ry);
     claim(x, z, 1.6);

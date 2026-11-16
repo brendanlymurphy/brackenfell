@@ -472,10 +472,10 @@ function buildDress() {
     (DRS.cnt = DRS.cnt || {})[s.id] = placed;
   }
   // ── market stalls: the square's rim and the alley's middle band, each stocked ──
-  const stallKinds = ['greens', 'bread', 'cloth', 'pots', 'fish', 'meat'], stallCols = [[[0.55, 0.2, 0.16], [0.8, 0.74, 0.6]], [[0.22, 0.32, 0.5], [0.8, 0.74, 0.6]], [[0.34, 0.42, 0.24], [0.76, 0.7, 0.55]], [[0.6, 0.4, 0.16], [0.78, 0.72, 0.58]], [[0.45, 0.3, 0.3], [0.78, 0.72, 0.6]]];
+  const stallKinds = ['greens', 'bread', 'cloth', 'pots', 'fish', 'meat'], stallCols = [[[0.44, 0.23, 0.19], [0.6, 0.55, 0.45]], [[0.21, 0.27, 0.37], [0.6, 0.55, 0.45]], [[0.29, 0.35, 0.21], [0.58, 0.54, 0.43]], [[0.48, 0.36, 0.19], [0.6, 0.55, 0.44]], [[0.36, 0.25, 0.24], [0.58, 0.54, 0.45]]];      // Build 42: faded madder, woad, moss, ochre on undyed linen
   DRS.stalls = [];
   const placeStall = (x, z, face, kind) => {          // face: heading toward which the stall opens
-    const y = gy(x, z), name = dStall(kind, R, R.pick(stallCols)), ry = face;
+    const y = gy(x, z), name = dStall(kind, R, (sc => R() < 0.4 ? [sc[0], sc[0]] : sc)(R.pick(stallCols))), ry = face;
     add(name, x, y, z, 1.1, ry, false, DRS.stalls.length < 3 ? { es: true } : null);
     const fx = Math.sin(ry), fz = Math.cos(ry);
     claim(x, z, 1.6);
