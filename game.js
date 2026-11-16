@@ -655,7 +655,7 @@ SH.init = function () {
       const d = lp.xyz.sub(wp), d2 = dot(d, d), r2 = lp.w.mul(lp.w);
       let ok = abs(lc.w.sub(zone)).lessThan(0.5).or(lc.w.greaterThan(254.5)).and(d2.lessThan(r2)); if (ground) ok = ok.and(lp.w.greaterThan(0));
       If(ok, () => {
-        const f = float(1).sub(d2.div(r2)), att = f.mul(f).div(d2.mul(0.55).add(1));
+        const f = float(1).sub(d2.div(r2)), att = f.mul(f).div(d2.mul(step(0.5, zone).mul(0.7).add(0.55)).add(1)).mul(step(0.5, zone).mul(0.45).add(1));      // [l1] in a room the fire's pool is tighter and brighter: a pool, then dark
         const ndl = dot(N, d).mul(max(d2, 1e-4).inverseSqrt()).add(wrap).div(float(1).add(wrap));
         acc.addAssign(lc.rgb.mul(att.mul(max(ndl, 0))));
       });
