@@ -871,7 +871,7 @@ SH.WINMAX = 6;
         const d = wp.sub(P.xyz), d2 = dot(d, d), r2 = P.w.mul(P.w);
         If(d2.lessThan(r2), () => {
           const f = float(1).sub(d2.div(r2)), dn = d.mul(max(d2, 1e-4).inverseSqrt());
-          const lobe = smoothstep(-0.9, 0.45, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
+          const lobe = smoothstep(-0.15, 0.6, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
           const ndl = max(dot(N, dn.negate()).mul(0.7).add(0.3), 0);                 // surfaces that face the glass catch more
           const up = float(1).sub(TSL.clamp(d.y.sub(0.2).div(1.5), 0, 1).mul(0.75));      // above the glass the light thins out: ceilings stay dark
           acc.addAssign(C.rgb.mul(f.mul(f).div(d2.mul(0.18).add(1)).mul(lobe).mul(ndl).mul(up)));
@@ -1800,7 +1800,7 @@ const Kit = (() => {
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
     const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back
-    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(pls.mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.6).add(0.4))).mul(smoothstep(0.55, 0.9, N.y).mul(0.9).add(1))));      // [l1] window light (40c_light.js)
+    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(pls.mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(aoR).mul(0.85).add(0.15))).mul(smoothstep(0.55, 0.9, N.y).mul(0.9).add(1))));      // [l1] window light (40c_light.js)
     em = em.add(alb.mul(glow));
     if (batch && /Floor_Wood|Table|Counter|Bar_/.test(name) && !(TEST && TEST.gloss === 0)) em = em.add(SH.pointSpec(wp, N, normalize(U.camPos.sub(wp)), float(0.55), zone).mul(0.3));      // [l1] worn boards and table tops catch the fire
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
