@@ -4194,6 +4194,8 @@ const COL = {
   purple: [0.42, 0.22, 0.50], clay: [0.74, 0.40, 0.26], wax: [0.95, 0.90, 0.75], hay: [1, 0.95, 0.8], leather: [0.45, 0.28, 0.16], fur: [0.42, 0.32, 0.24],
   bread: [0.62, 0.44, 0.24], cheese: [0.74, 0.62, 0.30], apple: [0.52, 0.13, 0.10], cabbage: [0.34, 0.46, 0.25], glass: [0.35, 0.55, 0.40], parchment: [0.90, 0.82, 0.62],
 };
+// [c5] medieval dyes: madder, woad, weld, walnut, a little dull green; low saturation (cloth, rugs, blankets)
+const DYE = { red: [0.46, 0.23, 0.17], blue: [0.31, 0.38, 0.46], green: [0.34, 0.40, 0.25], purple: [0.38, 0.28, 0.30], yellow: [0.62, 0.52, 0.26], cream: [0.72, 0.67, 0.56], grey: [0.48, 0.46, 0.43], brown: [0.36, 0.27, 0.19] };
 // colliders / lights / emitters are registered in world space using the mesh's current matrix
 function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y0, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
@@ -6186,7 +6188,7 @@ function furnishHouse(c) {
     }
   }
   // ── layered rugs on free floor, away from the walking line between door and hearth ──
-  const palette = [COL.red, COL.blue, COL.green, [0.5, 0.36, 0.2], [0.32, 0.26, 0.2], COL.purple];
+  const palette = [DYE.red, DYE.blue, DYE.green, [0.5, 0.36, 0.2], [0.32, 0.26, 0.2], DYE.purple];
   for (let i = 0, n = cfg.rugs; i < 40 && n > 0; i++) {
     const rw = 1.0 + R() * 0.7, rl = 1.5 + R() * 0.9, x = X0 + 1.0 + R() * (X1 - X0 - 2.0), z = Z0 + 1.0 + R() * (Z1 - Z0 - 2.0);
     if (blocked(x, z, 0.3) || blocked(x + rw * 0.4, z, 0.2) || blocked(x - rw * 0.4, z, 0.2) || blocked(x, z + rl * 0.4, 0.2) || blocked(x, z - rl * 0.4, 0.2)) continue;
@@ -6265,10 +6267,10 @@ for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].s
   const VARIANTS = [
     { opt: { blanket: [0.45, 0.3, 0.2], shelfItems: ['jug', 'bowl', 'pot', 'bowl', 'cheese', 'jug'], rug: [0.45, 0.3, 0.2], tableItems: ['bowl', 'loaf', 'mug', 'cheese'], seats: 'stools' }, up: 0, ground: 'plaster' },
     { opt: { fur: true, blanket: [0.38, 0.3, 0.22], noShelf: true, tableItems: ['mug', 'bowl', 'candle'], rug: [0.5, 0.4, 0.3], bed2: true, blanket2: [0.4, 0.3, 0.25] }, up: 1, ground: 'stone' },
-    { opt: { blanket: COL.green, shelfItems: ['pot', 'pot', 'jug', 'bowl', 'pot', 'jug'], rug: COL.green, tableItems: ['pot', 'bowl', 'jug'], seats: 'chairs' }, up: 0, ground: 'plaster' },
-    { opt: { blanket: [0.5, 0.42, 0.3], shelfItems: ['book', 'candle', 'book', 'bottle', 'book', 'mug'], rug: COL.blue, tableItems: ['candle', 'book', 'mug', 'plate'], seats: 'chairs', cauldron: true }, up: 1, ground: 'plaster' },
-    { opt: { blanket: COL.red, noShelf: true, tableItems: ['loaf', 'mug', 'plate', 'apple'], rug: COL.red, bed2: true, blanket2: COL.blue, seats: 'bench', tx: -0.9, tz: 0.3 }, up: 0, ground: 'stone' },
-    { opt: { blanket: COL.purple, shelfItems: ['bottle', 'bowl', 'jug', 'pot', 'bottle', 'bowl'], rug: COL.purple, tableItems: ['bowl', 'bottle', 'candle', 'jug'], cauldron: true }, up: 1, ground: 'plaster' },
+    { opt: { blanket: DYE.green, shelfItems: ['pot', 'pot', 'jug', 'bowl', 'pot', 'jug'], rug: DYE.green, tableItems: ['pot', 'bowl', 'jug'], seats: 'chairs' }, up: 0, ground: 'plaster' },
+    { opt: { blanket: [0.5, 0.42, 0.3], shelfItems: ['book', 'candle', 'book', 'bottle', 'book', 'mug'], rug: DYE.blue, tableItems: ['candle', 'book', 'mug', 'plate'], seats: 'chairs', cauldron: true }, up: 1, ground: 'plaster' },
+    { opt: { blanket: DYE.red, noShelf: true, tableItems: ['loaf', 'mug', 'plate', 'apple'], rug: DYE.red, bed2: true, blanket2: DYE.blue, seats: 'bench', tx: -0.9, tz: 0.3 }, up: 0, ground: 'stone' },
+    { opt: { blanket: DYE.purple, shelfItems: ['bottle', 'bowl', 'jug', 'pot', 'bottle', 'bowl'], rug: DYE.purple, tableItems: ['bowl', 'bottle', 'candle', 'jug'], cauldron: true }, up: 1, ground: 'plaster' },
   ];
   (INF.enterIds || []).forEach((id, i) => {
     const h = INF.byId[id], v = VARIANTS[i % VARIANTS.length], dp = [0.9, -0.9, 0.9, -0.9, 0.9, -0.9][i % 6], ww = h.w;
@@ -6517,10 +6519,10 @@ function pBuild(P) {
       // ceiling slab underside + beams (not over a stairwell)
       const yc = L.y + L.H; m.m1 = zone; m.ao = INT_AO * 0.9; m.mat(r.floor === 'stone' ? MAT.STONE : MAT.PLANKS, r.floor === 'stone' ? [0.8, 0.78, 0.74] : COL.woodDark);
       for (const q of rSubAll({ x0: r.x0 + PW.IN, z0: r.z0 + PW.IN, x1: r.x1 - PW.IN, z1: r.z1 - PW.IN }, above)) m.quad([q.x0, yc, q.z1], [q.x0, yc, q.z0], [q.x1, yc, q.z0], [q.x1, yc, q.z1], 0, 0, (q.x1 - q.x0) / m.tile, (q.z1 - q.z0) / m.tile);
-      m.mat(MAT.TIMBER, COL.timberDark); const wide = (r.x1 - r.x0) >= (r.z1 - r.z0), span = wide ? r.z1 - r.z0 : r.x1 - r.x0, len = wide ? r.x1 - r.x0 : r.z1 - r.z0, nb = Math.max(1, Math.round(len / 1.7));
+      m.mat(MAT.TIMBER, COL.timberDark); const wide = r.beamDir === 'x' ? true : r.beamDir === 'z' ? false : (r.x1 - r.x0) >= (r.z1 - r.z0), span = wide ? r.z1 - r.z0 : r.x1 - r.x0, len = wide ? r.x1 - r.x0 : r.z1 - r.z0, nb = Math.max(1, Math.round(len / (r.beamSp || 1.7))), bh = r.beamH || 0.2, bw = r.beamW || 0.08;      // [c5] room.beamDir / beamSp / beamH / beamW: the ceiling differs room to room
       if (L.H > 2.2) for (let i = 0; i < nb; i++) {
-        const t = (wide ? r.x0 : r.z0) + len * (i + 0.5) / nb, bq = wide ? { x0: t - 0.08, x1: t + 0.08, z0: r.z0 + 0.2, z1: r.z1 - 0.2 } : { x0: r.x0 + 0.2, x1: r.x1 - 0.2, z0: t - 0.08, z1: t + 0.08 };
-        if (above.some(h => rOv(bq, h))) continue; m.box(bq.x0, yc - 0.2, bq.z0, bq.x1, yc, bq.z1, 8);
+        const t = (wide ? r.x0 : r.z0) + len * (i + 0.5) / nb, bq = wide ? { x0: t - bw, x1: t + bw, z0: r.z0 + 0.2, z1: r.z1 - 0.2 } : { x0: r.x0 + 0.2, x1: r.x1 - 0.2, z0: t - bw, z1: t + bw };
+        if (above.some(h => rOv(bq, h))) continue; m.box(bq.x0, yc - bh, bq.z0, bq.x1, yc, bq.z1, 8);
       }
     }
   }
@@ -6826,7 +6828,7 @@ function dressHall(P, room, o) {
   const dn = pDining(P, room, o.len || 2.0, 0.9, { near, items: o.items, n: 4 });
   if (dn) {
     dn.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], k));
-    pPut(P, room, P.id + '.rug', dn.x, dn.z, 0, dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, 0.02, pdRug(dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, o.rug || COL.red), { flat: true, noClear: true });
+    pPut(P, room, P.id + '.rug', dn.x, dn.z, 0, dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, 0.02, pdRug(dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, o.rug || DYE.red), { flat: true, noClear: true });
     pLamp(P, room, dn.x, dn.z);
   }
   if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k });
@@ -6841,7 +6843,7 @@ function dressHall(P, room, o) {
 }
 function pBarrelCorner(P, room, sd) { return pAgainst(P, room, sd, P.id + '.barrel', 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: 'end' }); }
 function dressBedroom(P, room, o) {
-  o = o || {}; const k = room.k, R = P.R, beds = o.beds || ['bed'], col = o.blanket || R.pick([COL.red, COL.blue, COL.green, [0.5, 0.42, 0.3], COL.purple]);
+  o = o || {}; const k = room.k, R = P.R, beds = o.beds || ['bed'], col = o.blanket || R.pick([DYE.red, DYE.blue, DYE.green, [0.5, 0.42, 0.3], DYE.purple]);
   let placed = 0;
   for (const nm of beds) {
     let it = null;
@@ -7216,9 +7218,9 @@ PLANS.chapel = (P, c, info) => {
 const PD = {};
 // a bookcase's contents: upright spines of varied colour, height and lean, with gaps
 PD.books = (c, len) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.06;
-  while (x < len / 2 - 0.12) { if (R() < 0.12) { x += 0.1 + R() * 0.15; continue; } const w = 0.05 + R() * 0.09, h = 0.18 + R() * 0.1; m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, COL.leather, COL.purple, [0.3, 0.22, 0.14]]), 0.5); m.box(x, y, -0.11, x + w, y + h, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(x + 0.005, y + 0.005, -0.112, x + w - 0.005, y + h - 0.005, -0.1, 0); x += w + 0.004; } };
+  while (x < len / 2 - 0.12) { if (R() < 0.12) { x += 0.1 + R() * 0.15; continue; } const w = 0.05 + R() * 0.09, h = 0.18 + R() * 0.1; m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, COL.leather, DYE.purple, [0.3, 0.22, 0.14]]), 0.5); m.box(x, y, -0.11, x + w, y + h, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(x + 0.005, y + 0.005, -0.112, x + w - 0.005, y + h - 0.005, -0.1, 0); x += w + 0.004; } };
 // shelves filled with rolled bolts of cloth lying end-on, in a few colours
-PD.bolts = (c, len, cols) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.1; cols = cols || [COL.red, COL.blue, COL.green, COL.purple, [0.7, 0.62, 0.45], [0.55, 0.5, 0.42], [0.25, 0.3, 0.4]];
+PD.bolts = (c, len, cols) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.1; cols = cols || [DYE.red, DYE.blue, DYE.green, DYE.yellow, DYE.cream, DYE.grey, DYE.brown];
   while (x < len / 2 - 0.12) { const r = 0.07 + R() * 0.03; m.mat(MAT.CLOTH, R.pick(cols), 0.5); m.push().T(x + r, y + r, -0.02).RX(PI / 2); m.lathe([[r, -0.14], [r, 0.14]], 7, 2); m.pop(); x += r * 2 + 0.01; } };
 // sacks and jars on a shelf: a plain row of grain bags and pots, for a store
 PD.goods = (c, len) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.1;
@@ -7235,14 +7237,14 @@ PD.rack = function (P, room, x, z, len, rot, kinds) {
       m.mat(MAT.METAL, COL.black); m.box(px - 0.006, -0.78, -0.006, px + 0.006, -0.6, 0.006);
       if (k === 'herb') { const hc = R.pick([[0.3, 0.33, 0.2], [0.36, 0.34, 0.22], [0.38, 0.3, 0.2], [0.3, 0.28, 0.19]]); m.mat(MAT.CLOTH, hc, 0.6); for (let q = 0; q < 6; q++) { const a = q / 6 * 6.283, rr = 0.03 + (q % 2) * 0.015; m.cyl(px + j + Math.cos(a) * rr, -1.06 - (q % 3) * 0.03, Math.sin(a) * rr, 0.012, 0.004, 0.26 + (q % 3) * 0.03, 4, 1); } m.mat(MAT.CLOTH, [0.42, 0.34, 0.22], 0.5); m.cyl(px + j, -0.84, 0, 0.026, 0.026, 0.025, 6, 2); }      // [c5] a bundle of stems tied at the neck, 0.3 m, not a cone
       else if (k === 'ham') { m.mat(MAT.THATCH, [0.42, 0.24, 0.19], 0.4); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
-      else if (k === 'pot') { m.mat(MAT.METAL, COL.black); m.cyl(px, -1.0, 0, 0.13, 0.16, 0.2, 8, 2); }
+      else if (k === 'pot') { m.mat(MAT.METAL, R.pick([[0.42, 0.28, 0.17], [0.36, 0.3, 0.24], [0.45, 0.33, 0.2]])); at(m, px, 0, 0, 0, () => m.lathe([[0.005, -1.08], [0.06, -1.07], [0.085, -0.98], [0.07, -0.9], [0.075, -0.88]], 8, 0)); }      // [c5] a small copper pot, not a black tub
       else { m.mat(MAT.PLAIN, [0.78, 0.7, 0.5]); m.ball(px, -0.95, 0, 0.06, 0.08, 0.06, 5, 3); m.ball(px + 0.02, -1.08, 0, 0.06, 0.08, 0.06, 5, 3); }
     }
   });
   P.lightIn[room.id] = P.lightIn[room.id] || 0;
 };
 // a runner rug along a line (flat, any room): w x len, centred
-PD.rug = (P, room, x, z, w, l, col, rot) => pPut(P, room, P.id + '.rug' + (P.items.length), x, z, rot || 0, w, l, 0.02, pdRug(w, l, col || COL.red), { flat: true, noClear: true });
+PD.rug = (P, room, x, z, w, l, col, rot) => pPut(P, room, P.id + '.rug' + (P.items.length), x, z, rot || 0, w, l, 0.02, pdRug(w, l, col || DYE.red), { flat: true, noClear: true });
 // the landing or gallery of a house: a reading table with chairs by a window, a bookcase, a runner rug, banners
 PD.gallery = function (P, room) {
   const c = P.c, R = P.R, a = room.in;
@@ -7269,12 +7271,12 @@ PD.stack = (R) => m => { Props.woodpile(m, 5, 4, 0.7); };
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, [0.4, 0.33, 0.25], [0.25, 0.22, 0.2], [0.55, 0.45, 0.3]]), 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.14, -l, -0.11, x + 0.14, 0.0, -0.075); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, [0.4, 0.33, 0.25], [0.25, 0.22, 0.2], [0.55, 0.45, 0.3]]), 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.14, -l, -0.11, x + 0.14, 0.0, -0.075); } }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2 - 0.04, h - 0.04, -0.09, w / 2 + 0.04, h + 0.02, -0.03);
-  const c = R.pick([COL.red, COL.blue, COL.green, COL.purple]); m.mat(MAT.CLOTH, [c[0] * 0.8, c[1] * 0.8, c[2] * 0.8], 0.6); m.box(-w / 2, 0, -0.07, w / 2, h, -0.04);
+  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.8, c[1] * 0.8, c[2] * 0.8], 0.6); m.box(-w / 2, 0, -0.07, w / 2, h, -0.04);
   m.mat(MAT.CLOTH, [0.7, 0.6, 0.35], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
   m.box(-0.07, h * 0.3, -0.08, 0.07, h * 0.75, -0.04); m.box(-w * 0.22, h * 0.5, -0.08, w * 0.22, h * 0.56, -0.04);
 };
@@ -7376,7 +7378,7 @@ PD.middle = function (P, room, o) {
     if (kind === 'table') { const dn = pDining(P, room, 1.8, 0.85, { near: [e.x, e.z], id: 'mt' + i, n: 3 }); if (dn) { dn.seats.forEach((s, j) => pSit(P, 'mt' + i + 's' + j, s[0], s[1], s[2], room.k)); pLamp(P, room, dn.x, dn.z); n++; continue; } }
     if (kind === 'casks') { if (pFree(P, room, P.id + '.mc' + i, 0.9, 0.9, 0.8, 0, PD.cask(0.9, 0.32), { near: [e.x, e.z], lowOk: true })) { n++; continue; } }
     if (kind === 'sacks') { if (pFree(P, room, P.id + '.ms' + i, 0.9, 0.6, 0.6, 0, PD.sacks(P.R), { near: [e.x, e.z], lowOk: true })) { n++; continue; } }
-    if (PD.rug(P, room, e.x, e.z, Math.min(2.4, e.r * 1.6), Math.min(3.2, e.r * 2.2), P.R.pick([COL.red, [0.3, 0.22, 0.18], [0.25, 0.3, 0.2], [0.35, 0.28, 0.14]]), P.R() < 0.5 ? 0 : PI / 2)) n++;
+    if (PD.rug(P, room, e.x, e.z, Math.min(2.4, e.r * 1.6), Math.min(3.2, e.r * 2.2), P.R.pick([DYE.red, [0.3, 0.22, 0.18], [0.25, 0.3, 0.2], [0.35, 0.28, 0.14]]), P.R() < 0.5 ? 0 : PI / 2)) n++;
     else break;
   }
   return n;
@@ -7733,12 +7735,12 @@ PD.ware = {
   tall: (m, R) => { m.mat(MAT.PLAIN, R.pick(GL)); m.lathe([[0.01, 0], [0.04, 0.01], [0.042, 0.2], [0.02, 0.27], [0.02, 0.32]], 8, 1); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(0, 0.315, 0, 0.02, 0.02, 0.035, 6, 2); },
   jar: (m, R) => { m.mat(MAT.PLAIN, R.pick([COL.clay, [0.5, 0.42, 0.3], [0.3, 0.3, 0.32], [0.62, 0.55, 0.4]])); m.lathe([[0.01, 0], [0.075, 0.01], [0.09, 0.08], [0.07, 0.15], [0.05, 0.17]], 8, 1); m.mat(MAT.CLOTH, [0.6, 0.55, 0.42], 0.5); m.cyl(0, 0.17, 0, 0.055, 0.055, 0.025, 7, 2); },
   demijohn: (m, R) => { m.mat(MAT.THATCH, [0.75, 0.62, 0.4], 0.5); m.lathe([[0.01, 0], [0.1, 0.02], [0.13, 0.12], [0.1, 0.24], [0.04, 0.3], [0.035, 0.36]], 9, 1); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(0, 0.35, 0, 0.035, 0.035, 0.04, 6, 2); },
-  bolt: (m, R) => { m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, COL.purple, [0.7, 0.62, 0.45], [0.3, 0.28, 0.26]]), 0.5); m.push().T(0, 0.075, 0).RX(PI / 2); m.lathe([[0.075, -0.15], [0.075, 0.15]], 8, 2); m.pop(); },
-  folded: (m, R) => { let y = 0; for (let i = 0; i < 4; i++) { m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, COL.purple, [0.7, 0.62, 0.45], [0.55, 0.5, 0.42]]), 0.5); m.box(-0.14, y, -0.1, 0.14 - R() * 0.02, y + 0.035, 0.1); y += 0.035; } },
+  bolt: (m, R) => { { const q = R.pick([DYE.red, DYE.blue, DYE.green, DYE.yellow, DYE.cream, DYE.grey, DYE.brown]), v = 0.88 + R.s() * 0.24; m.mat(MAT.CLOTH, [q[0] * v, q[1] * v, q[2] * v], 0.5); }; m.push().T(0, 0.075, 0).RX(PI / 2); m.lathe([[0.075, -0.15], [0.075, 0.15]], 8, 2); m.pop(); },
+  folded: (m, R) => { let y = 0; for (let i = 0; i < 4; i++) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple, [0.7, 0.62, 0.45], [0.55, 0.5, 0.42]]), 0.5); m.box(-0.14, y, -0.1, 0.14 - R() * 0.02, y + 0.035, 0.1); y += 0.035; } },
   sack: (m, R) => Props.sack(m, 0.13 + R() * 0.05, R.pick([[0.7, 0.62, 0.45], [0.6, 0.55, 0.42], [0.5, 0.45, 0.32]])),
   box: (m, R) => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.12, 0, -0.08, 0.12, 0.1, 0.08); m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.125, 0.1, -0.085, 0.125, 0.115, 0.085); m.mat(MAT.METAL, COL.black); m.box(-0.01, 0.07, 0.078, 0.01, 0.105, 0.088); },
   candles: (m, R) => { m.mat(MAT.PLAIN, COL.wax); for (let i = 0; i < 5; i++) m.cyl(-0.06 + i * 0.03, 0, R.s() * 0.02, 0.011, 0.011, 0.2 + R() * 0.05, 5, 2); m.mat(MAT.CLOTH, COL.leather, 0.5); m.box(-0.08, 0.06, -0.025, 0.08, 0.075, 0.03); },
-  spools: (m, R) => { for (let i = 0; i < 3; i++) { m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, [0.7, 0.62, 0.45]]), 0.5); m.cyl(-0.1 + i * 0.1, 0, R.s() * 0.03, 0.04, 0.04, 0.1, 7, 2); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(-0.1 + i * 0.1, -0.005, R.s() * 0.03, 0.05, 0.05, 0.01, 7, 2); m.cyl(-0.1 + i * 0.1, 0.1, R.s() * 0.03, 0.05, 0.05, 0.01, 7, 2); } },
+  spools: (m, R) => { for (let i = 0; i < 3; i++) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, [0.7, 0.62, 0.45]]), 0.5); m.cyl(-0.1 + i * 0.1, 0, R.s() * 0.03, 0.04, 0.04, 0.1, 7, 2); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(-0.1 + i * 0.1, -0.005, R.s() * 0.03, 0.05, 0.05, 0.01, 7, 2); m.cyl(-0.1 + i * 0.1, 0.1, R.s() * 0.03, 0.05, 0.05, 0.01, 7, 2); } },
   tools: (m, R) => { m.mat(MAT.TIMBER, COL.wood); m.box(-0.2, 0.01, -0.02, 0.1, 0.03, 0.02); m.mat(MAT.METAL, WS.steel); m.box(0.1, 0.005, -0.04, 0.2, 0.035, 0.04); m.box(-0.18, 0.04, 0.05, 0.12, 0.06, 0.07); m.mat(MAT.TIMBER, COL.wood); m.box(-0.18, 0.06, 0.05, -0.08, 0.075, 0.07); },
   cheese: (m, R) => Props.cheese(m), loaf: (m, R) => Props.loaf(m), bowl: (m, R) => Props.bowl(m), pot: (m, R) => Props.pot(m, 0.08 + R() * 0.04, R.pick([COL.clay, [0.55, 0.5, 0.42], [0.3, 0.4, 0.5]])),
   ham: (m, R) => { m.mat(MAT.PLAIN, [0.5, 0.26, 0.2]); m.ball(0, 0.08, 0, 0.1, 0.08, 0.1, 6, 4); m.mat(MAT.CLOTH, [0.6, 0.55, 0.42], 0.5); m.box(-0.012, 0.15, -0.012, 0.012, 0.2, 0.012); },
@@ -7932,7 +7934,7 @@ const HTRADES = {
   household: { w: 1 },
 };
 const H_TINTS = [[1, 1, 1], [1.0, 0.93, 0.78], [0.88, 0.95, 0.86], [1.0, 0.86, 0.8], [0.84, 0.82, 0.8], [0.95, 0.9, 0.72], [0.9, 0.9, 1.0]];          // whitewash, ochre, sage, rose, grey, straw, lime-blue
-const H_RUGS = [[0.5, 0.2, 0.16], [0.3, 0.22, 0.16], [0.24, 0.32, 0.2], [0.26, 0.28, 0.44], [0.45, 0.32, 0.14], [0.4, 0.2, 0.3]];
+const H_RUGS = [[0.5, 0.2, 0.16], [0.3, 0.22, 0.16], [0.24, 0.32, 0.2], [0.3, 0.31, 0.4], [0.45, 0.32, 0.14], [0.38, 0.24, 0.28]];
 const hHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d), h = Math.imul(h ^ (h >>> 12), 0x297a2d39), ((h ^ (h >>> 15)) >>> 0) / 4294967296); };
 const stRun = (rise, tread) => Math.ceil(rise / 0.19) * tread;
 const ceil2 = v => Math.ceil(v * 2 - 1e-9) / 2;
@@ -7942,18 +7944,19 @@ function hCtx(P, c) {
   const T = HTRADES[trade] || HTRADES.household, wealth = D0.wealth !== undefined ? D0.wealth : T.w, area = (c.w || 6) * (c.d || 5);
   let fam = (TEST && TEST.fam) || D0.fam || T.fam; if (!fam) fam = area < 30 ? 'cottage' : R.pick(['hallchamber', 'crosspassage', 'hallchamber']);
   for (let i = 0; i < 6; i++) R();
-  const F = { id, R, sx: hHash(id + 'mirror') < 0.5 ? 1 : -1, trade, wealth, fam, T, tint: R.pick(H_TINTS), tint2: R.pick(H_TINTS), rug: R.pick(H_RUGS), blanket: R.pick([COL.red, COL.blue, COL.green, [0.5, 0.42, 0.3], COL.purple, [0.42, 0.32, 0.2]]), shop: HFAM_SHOP[fam] || false };
+  const F = { id, R, sx: hHash(id + 'mirror') < 0.5 ? 1 : -1, trade, wealth, fam, T, tint: R.pick(H_TINTS), tint2: R.pick(H_TINTS), rug: R.pick(H_RUGS), blanket: R.pick([DYE.red, DYE.blue, DYE.green, [0.5, 0.42, 0.3], DYE.purple, [0.42, 0.32, 0.2]]), shop: HFAM_SHOP[fam] || false };
   F.H0 = [2.5, 2.7, 2.9][clamp(wealth, 0, 2)] + (R() < 0.4 ? 0.1 : 0); F.stone0 = !!T.stone || (wealth === 0 && R() < 0.5);
   F.winKinds = R.pick([['Wide_Flat'], ['Wide_Flat', 'Wide_Round'], ['Thin_Round', 'Wide_Flat'], ['Wide_Round']]);
   F.X = x => F.sx * x; F.S = s => F.sx > 0 ? s : ({ w: 'e', e: 'w' }[s] || s);
   F.rm = (k, rid, kind, x0, z0, x1, z1, o) => pRoom(P, k, rid, kind, F.sx > 0 ? x0 : -x1, z0, F.sx > 0 ? x1 : -x0, z1, Object.assign({ winKinds: F.winKinds }, o || {}));
-  F.memo = hMemoIdx(id);
+  F.memo = hMemoIdx(id); F.beamDir = R.pick(['x', 'z', 'x', 'z', undefined]); F.beamSp = R.pick([1.1, 1.5, 2.0, 2.6, 3.2]); F.beamH = R.pick([0.16, 0.24, 0.34]); F.beamW = F.beamH > 0.3 ? 0.14 : 0.08;
   // finishes: the wall the door faces and the floor differ house to house (stone, timber boarding, plaster, ochre wattle; flags, boards, earth, slate)
   F.wallKind = R.pick(F.stone0 ? ['stone', 'stone', 'timber', 'plaster'] : wealth > 1 ? ['plaster', 'timber', 'plaster', 'stone'] : ['plaster', 'timber', 'wattle', 'stone', 'plaster']); F.floorKind = F.stone0 ? R.pick(['flags', 'earth', 'slate', 'flags']) : wealth > 1 ? R.pick(['boards', 'boards', 'slate']) : R.pick(['boards', 'earth', 'boards']);
   F.fin = (k, o) => {
     const u = { floor: 'wood', tint: F.tint2 }; if (k !== 0) return Object.assign(u, o || {});
+    const bm = { beamDir: F.beamDir, beamSp: F.beamSp, beamH: F.beamH, beamW: F.beamW };
     const w = { stone: { walls: 'stone', tint: [0.92, 0.9, 0.86] }, timber: { tint: [0.5, 0.38, 0.27] }, wattle: { tint: [0.86, 0.74, 0.5] }, plaster: { tint: F.tint } }[F.wallKind], f = { flags: { floor: 'stone' }, earth: { floor: 'stone', ftint: [0.5, 0.4, 0.28] }, slate: { floor: 'stone', ftint: [0.62, 0.68, 0.74] }, boards: { floor: 'wood', ftint: wealth > 1 ? [1.0, 0.9, 0.78] : undefined } }[F.floorKind];
-    const r = Object.assign({}, w, f, o || {}); if (o && o.floor && o.floor !== (f && f.floor)) delete r.ftint; return r;
+    const r = Object.assign({}, w, f, bm, o || {}); if (o && o.floor && o.floor !== (f && f.floor)) delete r.ftint; return r;
   };
   F.door = (a, b, x, z, o) => { const d = pDoor(P, a, b, F.X(x), z, o); if (b === null && P.rooms[a]) P.clear.push({ x0: F.X(x) - 0.8, x1: F.X(x) + 0.8, z0: z, z1: z + 2.6, k: P.rooms[a].k, kind: 'path', room: P.rooms[a] }); return d; };      // [c5] nothing stands in the first 2.6 m inside the street door
   return F;
@@ -7995,8 +7998,11 @@ const hLoot = F => [['gold', 2 + F.wealth * 3 + F.R.i(0, 4)]];
 const hHearthTry = (P, room, sides, wid, o) => { for (const [sd, at] of sides) { const hh = pHearth(P, room, sd, wid, Object.assign({ at }, o || {})); if (hh) return hh; } return null; };
 
 // ── cottage: one room, a loft over its back part ──
+const H_LOWOK = new Set(['widow', 'shepherd', 'woodcutter', 'household', 'basketmaker']);
 HFAM.cottage = (P, c, F) => {
-  const R = F.R, sx = F.sx, W = 7, D = R.pick([8, 8.5, 9]), H0 = Math.min(F.H0, 2.7), run = stRun(H0 + PW.SLAB, 0.2), p0 = D - run - 1.5, zl = Math.floor((p0 - 0.8) * 2) / 2;
+  const kind = hHash(P.id + '|vol'), tall = kind < 0.3, low = !tall && kind < 0.6 && F.wealth === 0 && H_LOWOK.has(F.trade);
+  if (tall) return HFAM.cottageTall(P, c, F);
+  const R = F.R, sx = F.sx, W = R.pick([6, 7, 7, 8]), D = R.pick([8, 8.5, 9]), H0 = low ? 2.2 : Math.min(F.H0, 2.7), run = stRun(H0 + PW.SLAB, 0.2), p0 = D - run - 1.5, zl = Math.floor((p0 - 0.8) * 2) / 2;
   P.dims = { W, D, Dh: zl }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
   const rm = F.rm(0, 'room', 'hall', -W / 2, 0, W / 2, D, F.fin(0)), loft = F.rm(1, 'loft', 'bedroom', -W / 2, zl, W / 2, D, F.fin(1));
   F.door('room', null, 0, 0);
@@ -8008,6 +8014,20 @@ HFAM.cottage = (P, c, F) => {
   dressHall(P, rm, { hh, rug: F.rug, items: ['bowl', 'loaf', 'mug', 'cheese'], shelfItems: ['jug', 'bowl', 'pot', 'cheese'], len: 1.8 });
   hTrade(P, c, rm, F);
   dressBedroom(P, loft, { bedH: 0.85, beds: F.wealth > 0 ? ['bed', 'bed2'] : ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth === 0 });
+  hFinish(P, c, F);
+};
+// ── a tall cottage: one room open to the rafters, no loft, the bed in the corner by the hearth [c5] ──
+HFAM.cottageTall = (P, c, F) => {
+  const R = F.R, W = R.pick([6, 7, 8]), D = R.pick([7, 7.5, 8]), H0 = R.pick([3.4, 3.7, 4.0]);
+  P.dims = { W, D, Dh: D }; pLevel(P, 0, 0, H0);
+  const rm = F.rm(0, 'room', 'hall', -W / 2, 0, W / 2, D, F.fin(0, { beamDir: 'x', beamSp: 2.2, beamH: 0.36, beamW: 0.15 }));
+  F.door('room', null, 0, 0);
+  pLayout(P);
+  const hh = hHearthTry(P, rm, [['s', F.X(-1.3)], [F.S('w'), D * 0.5], [F.S('e'), D * 0.5]], 1.9, { cauldron: true, size: 0.55 });
+  P.hall = { room: rm, hh };
+  dressBedroom(P, rm, { beds: ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth === 0 });
+  dressHall(P, rm, { hh, rug: F.rug, items: ['bowl', 'loaf', 'mug', 'cheese'], shelfItems: ['jug', 'bowl', 'pot', 'cheese'], len: 1.8 });
+  hTrade(P, c, rm, F);
   hFinish(P, c, F);
 };
 // ── hall and chamber: the open hall with its hearth on a side wall, the chamber (stair to the solar) and the pantry behind it ──
@@ -8047,11 +8067,12 @@ HFAM.crosspassage = (P, c, F) => {
   dressBedroom(P, chamber, { beds: ['bed', 'bed2'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth > 0 });
   dressBedroom(P, solar, { beds: ['bed3'], chestId: 'chest2', chest: true, blanket: F.blanket, loot: [['gold', 2 + F.wealth * 3]] });
   pLamp(P, pass, 0, Dh); pLamp(P, landing, 0, 3.0);
+  pLight(P, 0, 1.5, D - 0.5, 6, [1.7, 1.62, 1.4], 'daylight', 0);          // [c5] the barred back door lets daylight down the passage
   hFinish(P, c, F);
 };
 // ── shop front: the shop with its counter across it, the keeper's living room behind (hearth, stair up, a cellar stair when the keeper can afford one), two rooms above ──
 HFAM.shopfront = (P, c, F) => {
-  const R = F.R, W = 8, Dh = 6, H0 = Math.min(F.H0, 2.7), run = stRun(H0 + PW.SLAB, 0.2), D = Dh + ceil2(run + 2.6), cellar = F.wealth > 0 || F.trade === 'butcher' || R() < 0.4;
+  const narrow = F.R() < 0.4, R = F.R, W = narrow ? 6 : 8, Dh = narrow ? 8 : 6, H0 = Math.min(F.H0, 2.7), run = stRun(H0 + PW.SLAB, 0.2), D = Dh + ceil2(run + 2.6), cellar = F.wealth > 0 || F.trade === 'butcher' || R() < 0.4;      // [c5] one in three shops is long and narrow
   P.dims = { W, D, Dh }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP); if (cellar) pLevel(P, -1, -(2.6 + PW.SLAB), 2.6);
   const shop = F.rm(0, 'shop', 'shop', -W / 2, 0, W / 2, Dh, F.fin(0, { floor: F.trade === 'butcher' || F.trade === 'baker' ? 'stone' : F.stone0 ? 'stone' : 'wood' })), back = F.rm(0, 'back', 'hall', -W / 2, Dh, W / 2, D, F.fin(0, { floor: 'wood', tint: F.tint2 }));
   const upf = F.rm(1, 'upfront', 'bedroom', -W / 2, 0, W / 2, Dh, F.fin(1)), upb = F.rm(1, 'upback', 'bedroom', -W / 2, Dh, W / 2, D, F.fin(1));

@@ -18,7 +18,7 @@ const HTRADES = {
   household: { w: 1 },
 };
 const H_TINTS = [[1, 1, 1], [1.0, 0.93, 0.78], [0.88, 0.95, 0.86], [1.0, 0.86, 0.8], [0.84, 0.82, 0.8], [0.95, 0.9, 0.72], [0.9, 0.9, 1.0]];          // whitewash, ochre, sage, rose, grey, straw, lime-blue
-const H_RUGS = [[0.5, 0.2, 0.16], [0.3, 0.22, 0.16], [0.24, 0.32, 0.2], [0.26, 0.28, 0.44], [0.45, 0.32, 0.14], [0.4, 0.2, 0.3]];
+const H_RUGS = [[0.5, 0.2, 0.16], [0.3, 0.22, 0.16], [0.24, 0.32, 0.2], [0.3, 0.31, 0.4], [0.45, 0.32, 0.14], [0.38, 0.24, 0.28]];
 const hHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d), h = Math.imul(h ^ (h >>> 12), 0x297a2d39), ((h ^ (h >>> 15)) >>> 0) / 4294967296); };
 const stRun = (rise, tread) => Math.ceil(rise / 0.19) * tread;
 const ceil2 = v => Math.ceil(v * 2 - 1e-9) / 2;
@@ -28,18 +28,19 @@ function hCtx(P, c) {
   const T = HTRADES[trade] || HTRADES.household, wealth = D0.wealth !== undefined ? D0.wealth : T.w, area = (c.w || 6) * (c.d || 5);
   let fam = (TEST && TEST.fam) || D0.fam || T.fam; if (!fam) fam = area < 30 ? 'cottage' : R.pick(['hallchamber', 'crosspassage', 'hallchamber']);
   for (let i = 0; i < 6; i++) R();
-  const F = { id, R, sx: hHash(id + 'mirror') < 0.5 ? 1 : -1, trade, wealth, fam, T, tint: R.pick(H_TINTS), tint2: R.pick(H_TINTS), rug: R.pick(H_RUGS), blanket: R.pick([COL.red, COL.blue, COL.green, [0.5, 0.42, 0.3], COL.purple, [0.42, 0.32, 0.2]]), shop: HFAM_SHOP[fam] || false };
+  const F = { id, R, sx: hHash(id + 'mirror') < 0.5 ? 1 : -1, trade, wealth, fam, T, tint: R.pick(H_TINTS), tint2: R.pick(H_TINTS), rug: R.pick(H_RUGS), blanket: R.pick([DYE.red, DYE.blue, DYE.green, [0.5, 0.42, 0.3], DYE.purple, [0.42, 0.32, 0.2]]), shop: HFAM_SHOP[fam] || false };
   F.H0 = [2.5, 2.7, 2.9][clamp(wealth, 0, 2)] + (R() < 0.4 ? 0.1 : 0); F.stone0 = !!T.stone || (wealth === 0 && R() < 0.5);
   F.winKinds = R.pick([['Wide_Flat'], ['Wide_Flat', 'Wide_Round'], ['Thin_Round', 'Wide_Flat'], ['Wide_Round']]);
   F.X = x => F.sx * x; F.S = s => F.sx > 0 ? s : ({ w: 'e', e: 'w' }[s] || s);
   F.rm = (k, rid, kind, x0, z0, x1, z1, o) => pRoom(P, k, rid, kind, F.sx > 0 ? x0 : -x1, z0, F.sx > 0 ? x1 : -x0, z1, Object.assign({ winKinds: F.winKinds }, o || {}));
-  F.memo = hMemoIdx(id);
+  F.memo = hMemoIdx(id); F.beamDir = R.pick(['x', 'z', 'x', 'z', undefined]); F.beamSp = R.pick([1.1, 1.5, 2.0, 2.6, 3.2]); F.beamH = R.pick([0.16, 0.24, 0.34]); F.beamW = F.beamH > 0.3 ? 0.14 : 0.08;
   // finishes: the wall the door faces and the floor differ house to house (stone, timber boarding, plaster, ochre wattle; flags, boards, earth, slate)
   F.wallKind = R.pick(F.stone0 ? ['stone', 'stone', 'timber', 'plaster'] : wealth > 1 ? ['plaster', 'timber', 'plaster', 'stone'] : ['plaster', 'timber', 'wattle', 'stone', 'plaster']); F.floorKind = F.stone0 ? R.pick(['flags', 'earth', 'slate', 'flags']) : wealth > 1 ? R.pick(['boards', 'boards', 'slate']) : R.pick(['boards', 'earth', 'boards']);
   F.fin = (k, o) => {
     const u = { floor: 'wood', tint: F.tint2 }; if (k !== 0) return Object.assign(u, o || {});
+    const bm = { beamDir: F.beamDir, beamSp: F.beamSp, beamH: F.beamH, beamW: F.beamW };
     const w = { stone: { walls: 'stone', tint: [0.92, 0.9, 0.86] }, timber: { tint: [0.5, 0.38, 0.27] }, wattle: { tint: [0.86, 0.74, 0.5] }, plaster: { tint: F.tint } }[F.wallKind], f = { flags: { floor: 'stone' }, earth: { floor: 'stone', ftint: [0.5, 0.4, 0.28] }, slate: { floor: 'stone', ftint: [0.62, 0.68, 0.74] }, boards: { floor: 'wood', ftint: wealth > 1 ? [1.0, 0.9, 0.78] : undefined } }[F.floorKind];
-    const r = Object.assign({}, w, f, o || {}); if (o && o.floor && o.floor !== (f && f.floor)) delete r.ftint; return r;
+    const r = Object.assign({}, w, f, bm, o || {}); if (o && o.floor && o.floor !== (f && f.floor)) delete r.ftint; return r;
   };
   F.door = (a, b, x, z, o) => { const d = pDoor(P, a, b, F.X(x), z, o); if (b === null && P.rooms[a]) P.clear.push({ x0: F.X(x) - 0.8, x1: F.X(x) + 0.8, z0: z, z1: z + 2.6, k: P.rooms[a].k, kind: 'path', room: P.rooms[a] }); return d; };      // [c5] nothing stands in the first 2.6 m inside the street door
   return F;
@@ -81,8 +82,11 @@ const hLoot = F => [['gold', 2 + F.wealth * 3 + F.R.i(0, 4)]];
 const hHearthTry = (P, room, sides, wid, o) => { for (const [sd, at] of sides) { const hh = pHearth(P, room, sd, wid, Object.assign({ at }, o || {})); if (hh) return hh; } return null; };
 
 // ── cottage: one room, a loft over its back part ──
+const H_LOWOK = new Set(['widow', 'shepherd', 'woodcutter', 'household', 'basketmaker']);
 HFAM.cottage = (P, c, F) => {
-  const R = F.R, sx = F.sx, W = 7, D = R.pick([8, 8.5, 9]), H0 = Math.min(F.H0, 2.7), run = stRun(H0 + PW.SLAB, 0.2), p0 = D - run - 1.5, zl = Math.floor((p0 - 0.8) * 2) / 2;
+  const kind = hHash(P.id + '|vol'), tall = kind < 0.3, low = !tall && kind < 0.6 && F.wealth === 0 && H_LOWOK.has(F.trade);
+  if (tall) return HFAM.cottageTall(P, c, F);
+  const R = F.R, sx = F.sx, W = R.pick([6, 7, 7, 8]), D = R.pick([8, 8.5, 9]), H0 = low ? 2.2 : Math.min(F.H0, 2.7), run = stRun(H0 + PW.SLAB, 0.2), p0 = D - run - 1.5, zl = Math.floor((p0 - 0.8) * 2) / 2;
   P.dims = { W, D, Dh: zl }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
   const rm = F.rm(0, 'room', 'hall', -W / 2, 0, W / 2, D, F.fin(0)), loft = F.rm(1, 'loft', 'bedroom', -W / 2, zl, W / 2, D, F.fin(1));
   F.door('room', null, 0, 0);
@@ -94,6 +98,20 @@ HFAM.cottage = (P, c, F) => {
   dressHall(P, rm, { hh, rug: F.rug, items: ['bowl', 'loaf', 'mug', 'cheese'], shelfItems: ['jug', 'bowl', 'pot', 'cheese'], len: 1.8 });
   hTrade(P, c, rm, F);
   dressBedroom(P, loft, { bedH: 0.85, beds: F.wealth > 0 ? ['bed', 'bed2'] : ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth === 0 });
+  hFinish(P, c, F);
+};
+// ── a tall cottage: one room open to the rafters, no loft, the bed in the corner by the hearth [c5] ──
+HFAM.cottageTall = (P, c, F) => {
+  const R = F.R, W = R.pick([6, 7, 8]), D = R.pick([7, 7.5, 8]), H0 = R.pick([3.4, 3.7, 4.0]);
+  P.dims = { W, D, Dh: D }; pLevel(P, 0, 0, H0);
+  const rm = F.rm(0, 'room', 'hall', -W / 2, 0, W / 2, D, F.fin(0, { beamDir: 'x', beamSp: 2.2, beamH: 0.36, beamW: 0.15 }));
+  F.door('room', null, 0, 0);
+  pLayout(P);
+  const hh = hHearthTry(P, rm, [['s', F.X(-1.3)], [F.S('w'), D * 0.5], [F.S('e'), D * 0.5]], 1.9, { cauldron: true, size: 0.55 });
+  P.hall = { room: rm, hh };
+  dressBedroom(P, rm, { beds: ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth === 0 });
+  dressHall(P, rm, { hh, rug: F.rug, items: ['bowl', 'loaf', 'mug', 'cheese'], shelfItems: ['jug', 'bowl', 'pot', 'cheese'], len: 1.8 });
+  hTrade(P, c, rm, F);
   hFinish(P, c, F);
 };
 // ── hall and chamber: the open hall with its hearth on a side wall, the chamber (stair to the solar) and the pantry behind it ──
@@ -133,11 +151,12 @@ HFAM.crosspassage = (P, c, F) => {
   dressBedroom(P, chamber, { beds: ['bed', 'bed2'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth > 0 });
   dressBedroom(P, solar, { beds: ['bed3'], chestId: 'chest2', chest: true, blanket: F.blanket, loot: [['gold', 2 + F.wealth * 3]] });
   pLamp(P, pass, 0, Dh); pLamp(P, landing, 0, 3.0);
+  pLight(P, 0, 1.5, D - 0.5, 6, [1.7, 1.62, 1.4], 'daylight', 0);          // [c5] the barred back door lets daylight down the passage
   hFinish(P, c, F);
 };
 // ── shop front: the shop with its counter across it, the keeper's living room behind (hearth, stair up, a cellar stair when the keeper can afford one), two rooms above ──
 HFAM.shopfront = (P, c, F) => {
-  const R = F.R, W = 8, Dh = 6, H0 = Math.min(F.H0, 2.7), run = stRun(H0 + PW.SLAB, 0.2), D = Dh + ceil2(run + 2.6), cellar = F.wealth > 0 || F.trade === 'butcher' || R() < 0.4;
+  const narrow = F.R() < 0.4, R = F.R, W = narrow ? 6 : 8, Dh = narrow ? 8 : 6, H0 = Math.min(F.H0, 2.7), run = stRun(H0 + PW.SLAB, 0.2), D = Dh + ceil2(run + 2.6), cellar = F.wealth > 0 || F.trade === 'butcher' || R() < 0.4;      // [c5] one in three shops is long and narrow
   P.dims = { W, D, Dh }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP); if (cellar) pLevel(P, -1, -(2.6 + PW.SLAB), 2.6);
   const shop = F.rm(0, 'shop', 'shop', -W / 2, 0, W / 2, Dh, F.fin(0, { floor: F.trade === 'butcher' || F.trade === 'baker' ? 'stone' : F.stone0 ? 'stone' : 'wood' })), back = F.rm(0, 'back', 'hall', -W / 2, Dh, W / 2, D, F.fin(0, { floor: 'wood', tint: F.tint2 }));
   const upf = F.rm(1, 'upfront', 'bedroom', -W / 2, 0, W / 2, Dh, F.fin(1)), upb = F.rm(1, 'upback', 'bedroom', -W / 2, Dh, W / 2, D, F.fin(1));
