@@ -151,7 +151,7 @@ const Chars = (() => {
         if (def.apron) { if (guard) wear.tabard = true; else { wear.apron = true; wear.straps = true; } } else if (fem && !isRobe && r(5) < 0.28) { wear.apron = true; wear.straps = true; }
         if (def.cloakBack || (!def.sched && r(6) < 0.12) || (def.house && r(6) < 0.1)) wear.cloak = true;
         const WC = { leather: acc.col[1], hat: acc.col[0], metal: acc.col[2], apron: def.apron ? sq(def.apron) : pal[Math.floor(r(8) * pal.length)], cloak: def.cloak ? sq(def.cloak) : pal[Math.floor(r(9) * pal.length)], tabard: def.apron ? sq(def.apron) : [0.3, 0.1, 0.1],
-          linen: [0.62, 0.58, 0.48].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: [0.3, 0.26, 0.2], teeth: [0.62, 0.56, 0.42], tongue: [0.36, 0.10, 0.10] };
+          linen: [0.62, 0.58, 0.48].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: [0.3, 0.26, 0.2], teeth: [0.5, 0.45, 0.34], tongue: [0.2, 0.07, 0.07] };
         wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
         return { body, fit: FIT[body] || 1, wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
       },
@@ -696,6 +696,7 @@ const Chars = (() => {
   // snap), so neighbouring shapes overlap the way sounds do. On top: the jaw by the loudness at low gain, a lift of the brows and a nod on stressed syllables.
   // A line with no track (a bark, silent talking) opens the jaw by loudness and moves between a few vowel shapes.
   const VISEME_OF = { A: [['PP', 1]], B: [['I', 0.55], ['SS', 0.35]], C: [['E', 0.7], ['aa', 0.35]], D: [['aa', 1]], E: [['O', 0.85], ['E', 0.15]], F: [['U', 1]], G: [['FF', 1]], H: [['nn', 0.6], ['DD', 0.4]], X: [] };
+  const VIS_GAIN = TEST && TEST.visgain ? +TEST.visgain : 2.1;      // the targets are the pack's own size: a villager seen across a room needs them stronger to read
   const _tg = new Float32Array(20);
   function cuesOf(cur) { if (cur.cu !== undefined) return cur.cu; const out = []; if (typeof cur.cues === 'string') { const re = /(\d+)([A-HX])/g; let m; while ((m = re.exec(cur.cues))) out.push([+m[1] / 100, m[2]]); } return cur.cu = out.length ? out : null; }
   function visemeUpdate(H, F, st, dt, open, cur) {
@@ -719,7 +720,7 @@ const Chars = (() => {
     for (let j = 0; j < 5; j++) H.uVis[j].value.set(w[j * 4], w[j * 4 + 1], w[j * 4 + 2], w[j * 4 + 3]);
     if (H.visTest) for (const k in H.visTest) { const i = ix[k]; w[i] = H.visTest[k]; H.uVis[i >> 2].value.setComponent(i & 3, w[i]); }
     // the table is in metres for the adult head: scale it to this head (the head bone's length against the reference)
-    if (H.visK.value === 1 && H.bones.head) { const hb = H.bones.head, c = hb.children.find(o => o.isBone); if (c) H.visK.value = Math.max(0.5, Math.min(1.3, c.position.length() / V.ref)); }
+    if (!H.visKSet && H.bones.head) { const hb = H.bones.head, c = hb.children.find(o => o.isBone || o.isObject3D && o.position.lengthSq() > 1e-6); H.visKSet = 1; H.visK.value = (c ? Math.max(0.5, Math.min(1.3, c.position.length() / V.ref)) : 1) * VIS_GAIN; }
   }
   // ── per frame ──
   C.update = function (H, st, dt) {

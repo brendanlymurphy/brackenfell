@@ -12,10 +12,10 @@ for (const who of ['hale', 'greta', 'maren']) {
   let checked = 0, ok = 0;
   for (let i = 0; i < cu.length - 1 && checked < 40; i++) {
     const [t0, sh] = cu[i], dur = cu[i + 1][0] - t0; if (dur < 0.12 || !SH[sh]) continue;
-    const w = at(t0 + Math.min(0.2, dur - 0.02)); checked++; const want = Math.max(...SH[sh].map(n => w[ix[n]]));
+    const w = at(t0 + Math.min(0.2, dur * 0.5) - 0.035); checked++; const want = Math.max(...SH[sh].map(n => w[ix[n]]));
     if (want > 0.45) ok++; else fails.push(who + ' ' + sh + ' at ' + t0.toFixed(2) + 's: ' + SH[sh][0] + ' = ' + want.toFixed(2));
   }
-  const rest = at(line.dur + 1.5); for (let i = 0; i < 40; i++) { V.cur = null; Chars.update(h, st, 0.016); }
+  st.talking = false; const rest = at(line.dur + 1.5); for (let i = 0; i < 40; i++) { V.cur = null; Chars.update(h, st, 0.016); }
   const after = Math.max(...Array.from(h.visW).slice(0, 19));
   if (after > 0.05) fails.push(who + ': mouth did not return to rest (' + after.toFixed(2) + ')');
   report.push(who + ' ' + ok + '/' + checked + ' cues followed; ' + cu.length + ' cues in ' + line.dur.toFixed(1) + 's; rest ' + after.toFixed(3));
