@@ -1075,7 +1075,17 @@ function sceneBuild() {
     if (it.kind === 'terrain') mesh.renderOrder = 1;      // after the other opaque draws, so the ground shader only runs where nothing nearer already stands
     if (it.kind === 'water') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
     if (it.nearOnly) mesh.layers.set(1);
-    scene.add(mesh); SC.statics.push({ mesh, it });
+    const st = { mesh, it }; scene.add(mesh); SC.statics.push(st);
+    // A big merged piece of the village (fences, wells, stalls over 100 m) used to go into the near sun-shadow map whole. Its triangles are
+    // sorted into 8 m squares here; a twin that only that shadow map draws holds just the squares the map covers (subUpdate).
+    if (mesh.castShadow && !it.cell && it.r > 18 && !(TEST && TEST.sub === 0)) {
+      const ix = pk.index.array, P_ = pk.attr.position.array, cells = new Map();
+      for (let k = it.first; k < it.first + it.count; k += 3) { const a = ix[k] * 3, b = ix[k + 1] * 3, c = ix[k + 2] * 3, key = Math.floor((P_[a] + P_[b] + P_[c]) / 24) + ',' + Math.floor((P_[a + 2] + P_[b + 2] + P_[c + 2]) / 24); let l = cells.get(key); if (!l) cells.set(key, l = []); l.push(ix[k], ix[k + 1], ix[k + 2]); }
+      const g2 = new THREE.BufferGeometry(); for (const k in pk.attr) if (k !== 'wind') g2.setAttribute(k, pk.attr[k]);
+      const cur = new Uint32Array(it.count), at = new THREE.BufferAttribute(cur, 1); at.setUsage(THREE.DynamicDrawUsage); g2.setIndex(at); g2.setDrawRange(0, 0); g2.boundingSphere = g.boundingSphere;
+      const tw = new THREE.Mesh(g2, mat); tw.matrixAutoUpdate = false; tw.frustumCulled = false; tw.castShadow = true; tw.receiveShadow = false; tw.layers.set(SHADOW_ONLY_LAYER); tw.visible = false; tw.name = 'static-shadow'; scene.add(tw);
+      st.sub = { mesh: tw, geo: g2, cur, cells: [...cells].map(([key, l]) => { const q = key.split(','); return { x: +q[0] * 8 + 4, z: +q[1] * 8 + 4, idx: Uint32Array.from(l) }; }), last: [1e9, 1e9], n: 0 };
+    }
   }
   for (const P of SC.pools) {
     const g = new THREE.BufferGeometry(); for (const k in P.pk.attr) if (k !== 'wind') g.setAttribute(k, P.pk.attr[k]);
@@ -1085,7 +1095,17 @@ function sceneBuild() {
   }
   // ── instanced trees, bushes and boulders: one mesh per (model, cell) so cells cull and switch level of detail ──
   const IBA = THREE.InstancedBufferAttribute;
+  for (const grp of World.instGroups) {
+    if (!(grp.kind === 'opaque' && grp.maxDist && grp.nearOnly) || SC.rocks || (TEST && TEST.rockring === 0)) continue;
+    const n = grp.cells.reduce((a, c) => a + c.count, 0), src = new Float32Array(n * 8); let o = 0; for (const c of grp.cells) { src.set(grp.ibuf.subarray(c.first * 8, (c.first + c.count) * 8), o); o += c.count * 8; }
+    const ring = (cap, layer, cast) => { const g = geo(World.instPack, grp.first, grp.count, true), a = new Float32Array(cap * 4), b = new Float32Array(cap * 4), ia = new IBA(a, 4), ib = new IBA(b, 4); ia.setUsage(THREE.DynamicDrawUsage); ib.setUsage(THREE.DynamicDrawUsage);
+      g.setAttribute('ipos', ia); g.setAttribute('iprm', ib); g.instanceCount = 0; g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+      const mesh = new THREE.Mesh(g, M.inst); mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.castShadow = cast; mesh.receiveShadow = !cast; mesh.layers.set(layer); mesh.visible = false; mesh.name = cast ? 'rocks-shadow' : 'rocks'; scene.add(mesh);
+      return { g, a, b, ia, ib, cap, n: 0, mesh }; };
+    SC.rocks = { grp, src, maxDist: grp.maxDist, cam: ring(Math.min(n, 512), 1, false), cast: ring(Math.min(n, 96), SHADOW_ONLY_LAYER, true), last: [1e9, 0, 1e9, 9, ''] };
+  }
   for (const grp of World.instGroups) for (const c of grp.cells) {
+    if (SC.rocks && SC.rocks.grp === grp) continue;
     if (!c.ipos) {
       const a = new Float32Array(c.count * 4), b = new Float32Array(c.count * 4), src = grp.ibuf;
       for (let i = 0; i < c.count; i++) { const o = (c.first + i) * 8; a.set(src.subarray(o, o + 4), i * 4); b.set(src.subarray(o + 4, o + 8), i * 4); }
@@ -1145,6 +1165,32 @@ function poolUpdate(e, cur, inside) {
     P.mesh.visible = P.count > 0;
   }
 }
+function subUpdate(sb, e, q) {
+  const r0 = q.shadowNear, cx = e[0] + Math.sin(R.cam.yaw) * r0 * 0.72, cz = e[2] - Math.cos(R.cam.yaw) * r0 * 0.72;       // centre of the near shadow map (43_render.js)
+  if (hyp(cx - sb.last[0], cz - sb.last[1]) < 2 && sb.r0 === r0) return; sb.last = [cx, cz]; sb.r0 = r0;
+  let n = 0; const reach = r0 + 6 + 8;          // the map, the 8 m squares' own half-diagonal, and room for long shadows falling in from outside
+  for (const c of sb.cells) if (hyp(c.x - cx, c.z - cz) < reach) { sb.cur.set(c.idx, n); n += c.idx.length; }
+  sb.n = n; sb.geo.setDrawRange(0, n); if (n) { const at = sb.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
+}
+// Boulders: instead of one instanced mesh per 110 m cell (every boulder of a cell drawn, and drawn again into the shadow map), two short
+// lists refilled as the player moves: those worth drawing from here, and the few big ones near enough to cast a shadow that shows.
+function rocksUpdate(e, q, hidden) {
+  const K_ = SC.rocks; if (!K_) return;
+  K_.cam.mesh.visible = !hidden && K_.cam.n > 0; K_.cast.mesh.visible = !hidden && K_.cast.n > 0; if (hidden) return;
+  let dy = R.cam.yaw - K_.last[3]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  if (hyp(e[0] - K_.last[0], e[2] - K_.last[2]) < 1.5 && Math.abs(dy) < 0.19 && K_.last[4] === R.qName) return; K_.last = [e[0], e[1], e[2], R.cam.yaw, R.qName];
+  const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw), half = Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) + 0.35, cone = Math.abs(R.cam.pitch) < 0.9;
+  const far = Math.min(K_.maxDist, q.rockDist), RS = q.rockCast === false ? -1 : q.shadowNear * 1.72 + 3, src = K_.src; K_.cam.n = K_.cast.n = 0;
+  const put = (r, o) => { if (r.n >= r.cap) return; const j = r.n++ * 4; r.a.set(src.subarray(o, o + 4), j); r.b.set(src.subarray(o + 4, o + 8), j); };
+  for (let o = 0; o < src.length; o += 8) {
+    const dx = src[o] - e[0], dz = src[o + 2] - e[2], d = Math.sqrt(dx * dx + dz * dz), sc = src[o + 3];
+    if (d > far || d > Math.max(45, sc * 150)) continue;                         // a pebble is not drawn at 150 m
+    if (d < RS && sc > 0.45) put(K_.cast, o);
+    if (cone && d > 10 && Math.acos(clamp((dx * fx + dz * fz) / d, -1, 1)) > half + Math.asin(Math.min(1, 1.6 * sc / d))) continue;
+    put(K_.cam, o);
+  }
+  for (const r of [K_.cam, K_.cast]) { for (const at of [r.ia, r.ib]) { at.clearUpdateRanges(); if (r.n) { at.addUpdateRange(0, r.n * 4); at.needsUpdate = true; } } r.g.instanceCount = r.n; r.mesh.visible = r.n > 0; }
+}
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos, cur = World.cell;       // cur: the cell the player is in. Then only that cell is drawn (its generated meshes, kit groups, door leaf); outdoors, no cell is
@@ -1160,6 +1206,10 @@ function sceneUpdate(camPos, q) {
     // generated village props (fences, walls, wells ...) cast into the wide sun-shadow map only on tiers that have q.farStatics; the near map always gets them
     if (s.farCapable === undefined) s.farCapable = !!s.cast0 && it.kind === 'opaque' && !it.nearOnly && s.mesh.layers.mask === 1;
     if (s.farCapable) s.mesh.layers.mask = q.farStatics ? 1 : 2;
+    if (s.sub) {         // while this mesh would only cast into the near map anyway, the twin casts for it
+      const use = s.mesh.castShadow && s.mesh.visible && !(s.farCapable && q.farStatics), sb = s.sub;
+      if (use) { s.mesh.castShadow = false; subUpdate(sb, e, q); } sb.mesh.visible = use && sb.n > 0;
+    }
   }
   for (const s of SC.cells) {
     if (cur) { s.mesh.visible = false; continue; }
@@ -1168,7 +1218,7 @@ function sceneUpdate(camPos, q) {
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }
-  poolUpdate(e, cur, inside);
+  poolUpdate(e, cur, inside); rocksUpdate(e, q, !!cur || inside);
   if (Grass.mesh) Grass.mesh.visible = !inside && !cur;
   if (typeof Trees !== 'undefined') Trees.update(e, q, !!cur);
   if (typeof Kit !== 'undefined' && Kit.poolGroup) Kit.poolGroup.visible = !cur;       // the town's pooled kit meshes (44_kit.js) are not drawn from inside a cell
@@ -1745,7 +1795,8 @@ const Kit = (() => {
         if (opts.far && !D) { mesh.userData.lod = b.far ? 2 : 1; K_.lodMeshes.push(mesh); mesh.visible = !b.far; }       // 1 = the full mesh, 2 = its far copy: K_.update swaps them by distance
         group.add(mesh);
       }
-      if (D) { for (const b of D.buckets) b.items = null; for (const u of units) u.D = D; K_.dyn.push(D); K_.dynNew.push(D); group.userData.kitDyn = D; }
+      if (D) { D.buckets = D.buckets.map(b => ({ mat: b.mat, ents: b.ents, all: b.all, cur: b.cur, geo: b.geo, mesh: b.mesh })); for (const b of buckets.values()) { b.ents = null; b.all = b.cur = b.geo = b.mesh = null; }       // the batch keeps its own bucket list untouched (pieces added after the build are ignored, as before)
+        for (const u of units) { u.D = D; u.ents = []; } K_.dyn.push(D); K_.dynNew.push(D); group.userData.kitDyn = D; }
       for (const it of inst) {
         const o = it.o, cs = o.cell || 48, cells = new Map();
         it.matrices.forEach((M, i) => { const k = Math.floor(M.elements[12] / cs) + ',' + Math.floor(M.elements[14] / cs); let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(i); });

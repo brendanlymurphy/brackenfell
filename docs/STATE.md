@@ -121,3 +121,24 @@ shadow at all (the shadow passes hold only props, boulders, trees and people); t
 grass is a flat 45k on medium; the wide shadow map spends 23k triangles on tree stand-ins; props and boulders cost almost as much
 again in the near shadow map as in the camera pass. On low the same views are terrain 59k, trees 28k + 23k, houses 64k to 106k.
 
+### After step 2 (houses, pooling, shadow casters)
+
+| Tier | Square | Alley | Terrace | Lake |
+|---|---|---|---|---|
+| medium | 159 / 381k | 171 / 382k | 146 / 274k | 127 / 288k |
+| low | 118 / 261k | 127 / 258k | 120 / 201k | 94 / 204k |
+
+How it works now:
+- `44_kit.js`: every outdoor batch is "dynamic". Each placed piece is a unit with its own index range; `Kit.update` gives each unit a
+  state (full model, far copy, not drawn) from its distance (`R.q.houseFar`, or `Kit.DROP` x its size for pieces without a far copy,
+  or `Kit.RANGE[batch name]`), the view cone (20 degrees wider than the screen) and occlusion (`Kit.occlude`: a 720-bin horizon built
+  from the houses' shadow stand-in boxes). All batches share one pooled mesh per material (`Kit.poolGroup`); a batch's own group is
+  only the handle other code shows and hides. Index buffers are rewritten when the camera has moved 1.5 m or turned 11 degrees.
+  `--opt kitdyn=0` restores the old per-cell meshes; `--opt kitocc=0` / `kitcone=0` switch off one test. `node test/kitcull.mjs <dir>`
+  renders 16 viewpoints with culling off and on and must report them identical.
+- `42_scene.js`: terrain and water tiles of a pack are one mesh each (`SC.pools`, refilled when a tile comes into view); big static
+  prop meshes cast into the near shadow map through a twin holding only the 8 m squares the map covers (`st.sub`); boulders are two
+  instance lists (`SC.rocks`: worth drawing from here / near and big enough to cast).
+- `74b_trees.js`: the wide shadow map draws tree stand-ins from a list round the map (`Trees.farCastRing`), not every tree in the valley.
+- Pieces added to a batch after it was built are still ignored (as before): the outlaw camps' props go to `kit-yard` on the first tick.
+
