@@ -135,7 +135,7 @@ const Chars = (() => {
         if (def.foe) { // [ch1] scavenged kit: a belt, a pouch, one cuff or two, a cloak or straps and a bit of headwear, each picked by the foe's id and in dull, mismatched colours
           let fh = 0; for (const ch of String(def.id || def.foe.body)) fh = (fh * 31 + ch.charCodeAt(0)) >>> 0; const fr = k => ((fh >>> (k * 4)) % 89) / 89, hoodie = /hood/.test(def.foe.body), DULL = [[0.17, 0.14, 0.10], [0.22, 0.17, 0.11], [0.15, 0.16, 0.13], [0.26, 0.20, 0.14], [0.20, 0.12, 0.09], [0.14, 0.13, 0.14]], pk = k => DULL[Math.floor(fr(k) * DULL.length)];
           const wear = { belt: true, pouch: fr(1) < 0.65, cuffs: fr(2) < 0.5, cloak: !hoodie && fr(3) < 0.4, straps: !hoodie && fr(4) < 0.45, hat: hoodie ? null : fr(5) < 0.45 ? 'cap' : fr(5) < 0.6 ? 'coif' : null };
-          const WC = { leather: [0.13, 0.085, 0.05].map(v => v * (0.8 + 0.5 * fr(6))), hat: pk(7), metal: [0.22, 0.21, 0.19], apron: pk(8), cloak: pk(9), tabard: pk(10), linen: [0.40, 0.37, 0.30], strap: [0.17, 0.12, 0.08], straw: [0.40, 0.32, 0.16], wool: pk(11), teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
+          const WC = { leather: [0.13, 0.085, 0.05].map(v => v * (0.8 + 0.5 * fr(6))), hat: pk(7), metal: [0.22, 0.21, 0.19], apron: pk(8), cloak: pk(9), tabard: pk(10), linen: [0.32, 0.30, 0.25], strap: [0.17, 0.12, 0.08], straw: [0.40, 0.32, 0.16], wool: pk(11), teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
           wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
           return { body: def.foe.body, wear, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) }; }
         const body = BODY[def.id] || def.body || (def.female ? 'f_farmer' : 'm_farmer');          // def.body / def.tint: the inn's regulars (77c_patrons.js) wear other people's bodies in other colours
@@ -156,7 +156,7 @@ const Chars = (() => {
         if (def.apron) { if (guard) wear.tabard = true; else { wear.apron = true; wear.straps = true; } } else if (fem && !isRobe && r(5) < 0.28) { wear.apron = true; wear.straps = true; }
         if (def.cloakBack || (!def.sched && r(6) < 0.12) || (def.house && r(6) < 0.1)) wear.cloak = true;
         const WC = { leather: acc.col[1], hat: acc.col[0], metal: acc.col[2], apron: def.apron ? sq(def.apron) : pal[Math.floor(r(8) * pal.length)], cloak: def.cloak ? sq(def.cloak) : pal[Math.floor(r(9) * pal.length)], tabard: def.apron ? sq(def.apron) : [0.3, 0.1, 0.1],
-          linen: [0.62, 0.58, 0.48].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: [0.3, 0.26, 0.2], teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
+          linen: [0.47, 0.44, 0.36].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: [0.3, 0.26, 0.2], teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
         wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
         return { body, fit: FIT[body] || 1, hairGrey: { f_elder: 0.96, m_elder: 0.92, m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 }[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
       },
