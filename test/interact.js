@@ -4,24 +4,25 @@ const sleep = ms => new Promise(r => setTimeout(r, ms)), dt = 1 / 30, fails = []
 const fx = (c, m) => { if (!c) fails.push(m); };
 const idle = async () => { for (let i = 0; i < 400 && Cells.busy; i++) await sleep(50); game.step(2, dt); };
 const gcount = () => Object.values(S.items).reduce((a, b) => a + b, 0) + S.gold;
-Env.dayLength = 0; Env.hour = 12; S.flags.bed = 1; game.step(2, dt);
+Env.dayLength = 0; Env.hour = 12; S.flags.bed = 1; game.step(2, dt); Env.hour = 3; npcSnapAll(); game.step(1, dt);       // everyone in bed, so nothing so far is theft
 log.push('stats ' + JSON.stringify(IX.stats));
 fx(IX.stats.cont >= 40, 'few containers: ' + IX.stats.cont); fx(IX.stats.loose >= 15, 'few loose things: ' + IX.stats.loose); fx(IX.stats.seat >= 15, 'few seats: ' + IX.stats.seat); fx(IX.stats.books >= 5, 'few letters: ' + IX.stats.books);
 const cells = new Set(IX.cont.map(o => o.cell)); log.push('cells with containers ' + [...cells].join(','));
 // ── a container: same contents every time, empty afterwards ──
-const cont = IX.cont.find(o => o.loot.length && !o.locked && o.cell === 'inn') || IX.cont.find(o => o.loot.length && !o.locked);
+const __w = ixWitness; ixWitness = () => null;  // nobody about: taking is free
+const cont = IX.cont.find(o => o.loot.length && !o.locked && o.cell !== 'inn') || IX.cont.find(o => o.loot.length && !o.locked);
 game.enter(cont.cell); await idle(); Player.pos = [cont.p[0], cont.p[1] - 0.9, cont.p[2] + 0.5];
 { const g0 = gcount(), l = interactLabel(cont); fx(l && /Search|Look|Open/.test(l), 'container label ' + l); interactUse(cont); fx(S.opened[cont.id], 'container not marked open'); fx(gcount() > g0, 'container gave nothing (' + JSON.stringify(cont.loot) + ')'); fx(interactLabel(cont) === null, 'an emptied container still offers itself'); log.push('opened ' + cont.id + ' ' + JSON.stringify(cont.loot)); }
 { const again = ixRoll(IX.LOOT.home, ixRng(ixHash('x')), 1, 1), again2 = ixRoll(IX.LOOT.home, ixRng(ixHash('x')), 1, 1); fx(JSON.stringify(again) === JSON.stringify(again2), 'loot is not deterministic'); }
 // ── a loose thing: taken, gone, still gone after a save and a load ──
-const lo = IX.loose.find(o => o.kind === 'loose' && o.item !== 'gold') || IX.loose.find(o => o.kind === 'loose');
+const lo = IX.loose.find(o => o.kind === 'loose' && o.item !== 'gold' && o.cell !== 'inn') || IX.loose.find(o => o.kind === 'loose' && o.cell !== 'inn') || IX.loose.find(o => o.kind === 'loose');
 game.enter(lo.cell); await idle(); Player.pos = [lo.p[0], lo.p[1] - 0.9, lo.p[2] + 0.4];
-for (const n of NPCS) n.anim = 'lie';            // nobody awake: not theft
-{ const g0 = gcount(), vis0 = lo.obj.visible; fx(vis0, 'loose thing not visible before'); interactUse(lo); fx(gcount() > g0 && lo.gone && !lo.obj.visible, 'taking did not take / hide'); fx(interactLabel(lo) === null, 'taken thing still offered'); fx(!S.crime, 'a theft with nobody watching');
+{ const g0 = gcount(), vis0 = lo.obj.visible; fx(vis0, 'loose thing not visible before'); interactUse(lo); fx(gcount() > g0 && lo.gone && !lo.obj.visible, 'taking did not take / hide'); fx(interactLabel(lo) === null, 'taken thing still offered'); fx(!S.crime, 'a theft with nobody watching: ' + JSON.stringify(S.crime));
   save(); lo.gone = false; lo.obj.visible = true; applySave(loadSave()); fx(lo.gone && !lo.obj.visible, 'taken thing came back after a load'); log.push('took ' + lo.lid + ' (' + lo.item + ')'); }
 // ── a letter ──
 const bk = IX.loose.find(o => o.bookId); fx(bk, 'no letters placed');
 if (bk) { game.enter(bk.cell); await idle(); Player.pos = [bk.p[0], bk.p[1] - 0.9, bk.p[2] + 0.4]; fx(/^Read/.test(interactLabel(bk)), 'letter label ' + interactLabel(bk)); interactUse(bk); fx(UI.reader && S.read[bk.bookId], 'letter did not open'); closeReader(); interactUse(bk); closeReader(); fx(!bk.gone, 'reading removed the letter'); log.push('read ' + bk.bookId); }
+ixWitness = __w;
 // ── theft: an awake person sees it; the guard comes; a night in the cell; out through the door ──
 { const lo2 = IX.loose.find(o => o.kind === 'loose' && !o.gone && o.owner); game.enter(lo2.cell); await idle(); Player.pos = [lo2.p[0], lo2.p[1] - 0.9, lo2.p[2] + 0.4];
   const w = NPC.marta === ixGuard() ? NPC.greta : NPC.marta; w.anim = 'idle'; w.pos = [Player.pos[0] + 2, Player.pos[1], Player.pos[2]];

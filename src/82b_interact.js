@@ -218,7 +218,7 @@ IX.jail = function (g) {
   });
   return null;
 };
-IX.release = function (how) { const c = Cells.by.guardhouse; if (!c) return; S.jail = 0; fadeDo(() => { Cells.teleport(c.enter); if (how === 'pick') { S.crime = { fine: 10, pending: false, by: 'hale' }; toast('You slip out while the watch is at breakfast. They will remember.'); } else toast('Hale lets you out at first light. “Don’t make me do that twice.”'); save(); }); };
+IX.release = function (how) { const c = Cells.by.guardhouse; if (!c) return; S.jail = 0; fadeDo(() => { Cells.teleport(c.leave); if (how === 'pick') { S.crime = { fine: 10, pending: false, by: 'hale' }; toast('You slip out while the watch is at breakfast. They will remember.'); } else toast('Hale lets you out at first light. “Don’t make me do that twice.”'); save(); }); };
 
 // ── wiring into the story layer ──
 const _il2 = interactLabel, _iu2 = interactUse;
