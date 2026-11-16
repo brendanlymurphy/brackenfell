@@ -215,7 +215,7 @@ function interactUse(it) {
     if (it.id === 'board' && qAt('bounty') < 0 && qAt('welcome') >= 0) { qStart('bounty'); bountyText(); }
   }
   else if (it.kind === 'bed') {
-    if (!S.flags.bed) return toast('This bed isn’t yours. Greta at the bar lets rooms.');
+    if (!S.flags.bed && S.flags.rent !== RPG.st().day) return toast('This bed isn’t yours. Greta at the bar lets rooms.');
     fadeDo(() => { Env.hour = 7; World.festival = false; for (const n of NPCS) n.override = null; npcSnapAll(); const r = RPG.st(); r.hp = RPG.MAXHP; r.sta = RPG.MAXST; Foes.calm(true); toast('You wake rested. A new morning in Brackenfell.'); save(); });
   } else if (it.kind === 'bell') { Audio2.bell(1); World.bellSwing = 3; if (qAt('bell') === 2) { qDone('bell'); S.flags.bell = 1; toast('The Dawn bell rings out over the valley.'); } }
   else if (it.kind === 'shopitem') toast('Marta: “Fifteen gold, dear. Ask me at the counter.”');

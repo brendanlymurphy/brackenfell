@@ -3049,6 +3049,17 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
   }
   for (const h of INF.houses.filter(h => +h.id.slice(3) <= 25 && !h.enter)) if (clearDist(SITE[h.id], 2.4, F.len + 0.4)[0] < F.len + 0.3) drop(h);       // whatever could not be nudged goes
   INF.enterIds = INF.houses.filter(h => h.enter).map(h => h.id);
+  // [c5] thirty more enterable houses, spread over the lanes (farthest point first): only the flag and the household name are set here; 72c_infill.js gives each a door and a cell, 72k_houses.js a plan by the name
+  if (!(TEST && TEST.moreEnter === 0)) {
+    const NAMES = ['Wheelwright’s House', 'Carpenter’s House', 'Mason’s House', 'Saddler’s House', 'Ropemaker’s House', 'Basketmaker’s House', 'Shepherd’s House', 'Woodcutter’s House', 'Glover’s House', 'Brewer’s House', 'Scribe’s House', 'Merchant’s House', 'Cobbler’s House', 'Chandler’s House', 'Tailor’s House', 'Butcher’s House', 'Baker’s House', 'Grocer’s House', 'Cutler’s House', 'Tinker’s House', 'Ferrin’s House', 'Marsh House', 'Thorne House', 'Wren Cottage', 'Garrick’s House', 'Pell House', 'Hobb’s Cottage', 'Tamsin’s House', 'Bram’s House', 'Alder House'];
+    const cand = INF.houses.filter(h => !h.enter && hyp(h.x - 29.8, h.z + 60.6) > 7 && h.w >= 4.6 && h.d >= 4.4 && SITE[h.id] && clearDist(SITE[h.id], 1.6, 3.0)[0] >= 3.0), chosen = INF.houses.filter(h => h.enter);
+    const more = []; while (more.length < NAMES.length && cand.length > more.length) {
+      let best = null, bd = -1; for (const h of cand) { if (more.includes(h)) continue; const d = Math.min(...chosen.concat(more).map(c => hyp(c.x - h.x, c.z - h.z)), 99); if (d > bd) { bd = d; best = h; } }
+      more.push(best);
+    }
+    more.forEach((h, i) => { h.enter = true; h.name = NAMES[i]; SITE[h.id].name = h.name; });
+    INF.enterIds = INF.houses.filter(h => h.enter).map(h => h.id);
+  }
   INF.count = INF.houses.length;
 })();
 
@@ -3346,7 +3357,7 @@ Cells.hear = function (pos, from) {
 };
 // frame environment: no sun, a short dark fog, the day's ambient kept (windows and the hour of day still reach the rooms through emissive panes and daylight lights)
 const CELL_DAYLIGHT = (typeof TEST !== 'undefined' && TEST && TEST.celllight !== undefined) ? +TEST.celllight : 6;
-const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 1;
+const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 1.7;
 Cells.env = function (e) {
   const c = Cells.cur; if (!c) return e;
   e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
@@ -6051,10 +6062,11 @@ function pBuild(P) {
   for (const k in P.lv) {
     const L = P.lv[k], holes = P.holes.filter(h => h.k === L.k).map(h => h.r), above = P.holes.filter(h => h.k === L.k + 1).map(h => h.r);
     for (const r of L.rooms) {
+      const FLr = r.ftint ? Object.assign({}, FL, { tint: r.ftint }) : FL;      // [c5] room.ftint: rushes on earth, scrubbed boards, dark flags
       const tile = r.floor === 'stone' ? 'Floor_UnevenBrick' : r.floor === 'cobble' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';
       for (const q of rSubAll({ x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1 }, holes)) {
         const nx = Math.max(1, Math.round((q.x1 - q.x0) / 2)), nz = Math.max(1, Math.round((q.z1 - q.z0) / 2)), sx = (q.x1 - q.x0) / (2 * nx), sz = (q.z1 - q.z0) / (2 * nz);
-        for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) B.add(tile, KH.xf(MS, q.x0 + (i + 0.5) * 2 * sx, L.y + 0.012, q.z0 + (j + 0.5) * 2 * sz, [sx, 1, sz]), FL);
+        for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) B.add(tile, KH.xf(MS, q.x0 + (i + 0.5) * 2 * sx, L.y + 0.012, q.z0 + (j + 0.5) * 2 * sz, [sx, 1, sz]), FLr);
         addFloor(m, q.x0, q.z0, q.x1, q.z1, L.y + 0.02);
       }
       // ceiling slab underside + beams (not over a stairwell)
@@ -6776,8 +6788,8 @@ PD.rack = function (P, room, x, z, len, rot, kinds) {
     for (let i = 0; i < n; i++) {
       const px = -len / 2 + 0.2 + i * (len - 0.4) / (n - 1), k = R.pick(kinds), j = R.s() * 0.03;
       m.mat(MAT.METAL, COL.black); m.box(px - 0.006, -0.78, -0.006, px + 0.006, -0.6, 0.006);
-      if (k === 'herb') { m.mat(MAT.CLOTH, R.pick([[0.3, 0.4, 0.18], [0.42, 0.4, 0.2], [0.5, 0.38, 0.2]]), 0.5); m.cyl(px + j, -1.12, 0, 0.1, 0.02, 0.34, 6, 1); }
-      else if (k === 'ham') { m.mat(MAT.PLAIN, [0.5, 0.26, 0.2]); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
+      if (k === 'herb') { const hc = R.pick([[0.3, 0.33, 0.2], [0.36, 0.34, 0.22], [0.38, 0.3, 0.2], [0.3, 0.28, 0.19]]); m.mat(MAT.CLOTH, hc, 0.6); for (let q = 0; q < 6; q++) { const a = q / 6 * 6.283, rr = 0.03 + (q % 2) * 0.015; m.cyl(px + j + Math.cos(a) * rr, -1.06 - (q % 3) * 0.03, Math.sin(a) * rr, 0.012, 0.004, 0.26 + (q % 3) * 0.03, 4, 1); } m.mat(MAT.CLOTH, [0.42, 0.34, 0.22], 0.5); m.cyl(px + j, -0.84, 0, 0.026, 0.026, 0.025, 6, 2); }      // [c5] a bundle of stems tied at the neck, 0.3 m, not a cone
+      else if (k === 'ham') { m.mat(MAT.THATCH, [0.42, 0.24, 0.19], 0.4); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
       else if (k === 'pot') { m.mat(MAT.METAL, COL.black); m.cyl(px, -1.0, 0, 0.13, 0.16, 0.2, 8, 2); }
       else { m.mat(MAT.PLAIN, [0.78, 0.7, 0.5]); m.ball(px, -0.95, 0, 0.06, 0.08, 0.06, 5, 3); m.ball(px + 0.02, -1.08, 0, 0.06, 0.08, 0.06, 5, 3); }
     }
@@ -7268,7 +7280,7 @@ function pCeil(P, room, x, z, draw, rot) {
 }
 
 // ── general wares: varied small goods for shelves and tables (kept a few dozen triangles each) ──
-const GL = [[0.35, 0.55, 0.4], [0.5, 0.3, 0.15], [0.3, 0.4, 0.55], [0.62, 0.58, 0.45], [0.4, 0.2, 0.25]];
+const GL = [[0.3, 0.4, 0.33], [0.4, 0.3, 0.2], [0.3, 0.34, 0.4], [0.5, 0.46, 0.38], [0.34, 0.24, 0.25]];      // [c5] muted glass and clay, not primary colours
 PD.ware = {
   rope: (m, R) => { m.mat(MAT.CLOTH, [0.62, 0.52, 0.34], 0.5); m.lathe([[0.05, 0], [0.12, 0.005], [0.14, 0.04], [0.13, 0.09], [0.06, 0.1], [0.05, 0.05]], 9, 1); },
   lantern: (m, R) => { m.mat(MAT.METAL, COL.black); m.box(-0.055, 0, -0.055, 0.055, 0.015, 0.055); m.box(-0.06, 0.2, -0.06, 0.06, 0.225, 0.06); for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.box(sx * 0.05 - 0.005, 0.015, sz * 0.05 - 0.005, sx * 0.05 + 0.005, 0.2, sz * 0.05 + 0.005); m.box(-0.02, 0.225, -0.005, 0.02, 0.27, 0.005); emit(m, 0.6, () => { m.mat(MAT.PLAIN, [1, 0.7, 0.3]); m.box(-0.035, 0.03, -0.035, 0.035, 0.12, 0.035, 4 | 8); }); },
@@ -7392,8 +7404,8 @@ PLANS.guardhouse = (P, c, info) => {
   const tb = pDining(P, guard, 3.0, 0.95, { near: [-0.5, 3.0], id: 'table', n: 5, items: ['mug', 'plate', 'bowl', 'book', 'candle', 'loaf'], rots: [0] });
   if (tb) { tb.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); pLamp(P, guard, tb.x, tb.z); }
   // the wall opposite the door: weapon stands either side of the cell and armoury doors, spears, a notice board, shields
-  pKitFloor(P, guard, 's', 'WeaponStand', { n: 'a', at: -1.2 }); pKitFloor(P, guard, 's', 'WeaponStand', { n: 'b', at: 1.2 }); pAgainst(P, guard, 's', id + '.spears1', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: -5.0 }); pAgainst(P, guard, 's', id + '.spears2', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 5.0 });
-  pHang(P, guard, 's', 1.1, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 }) || pHang(P, guard, 's', -1.1, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 }); pHang(P, guard, 's', -1.0, 1.3, 1.1, 2.0, PD.bladeWall(R, 1.3), id + '.blades2', { pivot: 2.0 });
+  pKitFloor(P, guard, 's', 'WeaponStand', { n: 'a', at: -1.95 }); pKitFloor(P, guard, 's', 'WeaponStand', { n: 'b', at: 1.95 }); pAgainst(P, guard, 's', id + '.spears1', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: -5.0 }); pAgainst(P, guard, 's', id + '.spears2', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 5.0 });
+  pHang(P, guard, 's', 0, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 });      // [c5] centred between the two doors, the stands moved out (it was refused beside them)
   pHang(P, guard, 'n', -3.2, 1.3, 1.1, 2.0, PD.tapestry(R, 1.3, 0.9), id + '.board', { pivot: 2.0 });
   pKitFloor(P, guard, 'w', 'Dummy', { n: 'd', at: 'mid' }); pKitFloor(P, guard, 'n', 'WeaponStand', { n: 'c', at: 4.2 });
   pWalls(P, guard, ['Banner_1_Cloth', 'kite_shield', 'Torch_Metal', 'kite_shield', 'Shield_Wooden', 'Banner_2_Cloth', 'Torch_Metal', 'Axe_Bronze', 'Sword_Bronze']);
@@ -7490,18 +7502,33 @@ function hCtx(P, c) {
   F.winKinds = R.pick([['Wide_Flat'], ['Wide_Flat', 'Wide_Round'], ['Thin_Round', 'Wide_Flat'], ['Wide_Round']]);
   F.X = x => F.sx * x; F.S = s => F.sx > 0 ? s : ({ w: 'e', e: 'w' }[s] || s);
   F.rm = (k, rid, kind, x0, z0, x1, z1, o) => pRoom(P, k, rid, kind, F.sx > 0 ? x0 : -x1, z0, F.sx > 0 ? x1 : -x0, z1, Object.assign({ winKinds: F.winKinds }, o || {}));
-  F.fin = (k, o) => Object.assign(k === 0 ? { floor: F.stone0 ? 'stone' : 'wood', tint: F.stone0 ? [0.78, 0.74, 0.7] : F.tint } : { floor: 'wood', tint: F.tint2 }, o || {});
-  F.door = (a, b, x, z, o) => pDoor(P, a, b, F.X(x), z, o);
+  F.memo = hMemoIdx(id);
+  // finishes: the wall the door faces and the floor differ house to house (stone, timber boarding, plaster, ochre wattle; flags, boards, earth, slate)
+  F.wallKind = R.pick(F.stone0 ? ['stone', 'stone', 'timber', 'plaster'] : wealth > 1 ? ['plaster', 'timber', 'plaster', 'stone'] : ['plaster', 'timber', 'wattle', 'stone', 'plaster']); F.floorKind = F.stone0 ? R.pick(['flags', 'earth', 'slate', 'flags']) : wealth > 1 ? R.pick(['boards', 'boards', 'slate']) : R.pick(['boards', 'earth', 'boards']);
+  F.fin = (k, o) => {
+    const u = { floor: 'wood', tint: F.tint2 }; if (k !== 0) return Object.assign(u, o || {});
+    const w = { stone: { walls: 'stone', tint: [0.92, 0.9, 0.86] }, timber: { tint: [0.5, 0.38, 0.27] }, wattle: { tint: [0.86, 0.74, 0.5] }, plaster: { tint: F.tint } }[F.wallKind], f = { flags: { floor: 'stone' }, earth: { floor: 'stone', ftint: [0.5, 0.4, 0.28] }, slate: { floor: 'stone', ftint: [0.62, 0.68, 0.74] }, boards: { floor: 'wood', ftint: wealth > 1 ? [1.0, 0.9, 0.78] : undefined } }[F.floorKind];
+    const r = Object.assign({}, w, f, o || {}); if (o && o.floor && o.floor !== (f && f.floor)) delete r.ftint; return r;
+  };
+  F.door = (a, b, x, z, o) => { const d = pDoor(P, a, b, F.X(x), z, o); if (b === null && P.rooms[a]) P.clear.push({ x0: F.X(x) - 0.8, x1: F.X(x) + 0.8, z0: z, z1: z + 2.6, k: P.rooms[a].k, kind: 'path', room: P.rooms[a] }); return d; };      // [c5] nothing stands in the first 2.6 m inside the street door
   return F;
 }
 const HFAM_SHOP = { shopfront: true };
+let HMEMO_IDS = [];          // every enterable house, in a fixed scattered order: its rank picks its one memorable object (72l_hobjects.js)
+const hMemoIdx = id => Math.max(0, HMEMO_IDS.indexOf(id));
 const hRugs = (P, room, F, n) => { for (let i = 0; i < (n || 1); i++) { const e = PD.emptiest(P, room); if (e.r > 1.0) PD.rug(P, room, e.x, e.z, Math.min(2.2, e.r * 1.5), Math.min(3.0, e.r * 2.0), F.rug, P.R() < 0.5 ? 0 : PI / 2); } };
 const hPool = (kind, F) => ({
   hall: F.wealth > 1 ? ['tapestry', 'paint', 'cabinet', 'hooks', 'sconce', 'shelf', 'tapestry'] : ['hooks', 'cabinet', 'paint', 'tapestry', 'sconce', 'shelf', 'cask'], bedroom: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet', 'sconce'],
   store: ['shelf', 'hooks', 'sacks', 'cask', 'torch', 'cabinet'], cellar: ['cask', 'shelf', 'sacks', 'stack', 'torch'], corridor: ['hooks', 'paint', 'sconce', 'tapestry'], yard: ['stack', 'sacks', 'cask'],
 }[kind] || ['hooks', 'cabinet', 'paint', 'sconce']);
 // the density pass and the light for every room of a finished layout
+function hEntryTorch(P, F) {          // [c5] one visible warm source in the first view at night: a torch or a sconce on the wall facing the door, beside the focal piece
+  const e = P.doors.find(d => d.b === null); if (!e) return; const room = P.rooms[e.a]; if (!room || P.torchDone) return;
+  for (const u of [F.X(-2.2), F.X(2.2), F.X(-3.2), F.X(3.2), F.X(-1.4), F.X(1.4)]) if ((F.memo % 2 ? pSconce(P, room, 's', u, 1.6) || pTorch(P, room, 's', u, 1.65, 6) : pTorch(P, room, 's', u, 1.65, 6) || pSconce(P, room, 's', u, 1.6))) { P.torchDone = 1; return; }
+  for (const sd of ['w', 'e']) for (const z of [room.z0 + 3, room.z0 + 4, room.z0 + 2]) if (pTorch(P, room, sd, z, 1.65, 6)) { P.torchDone = 1; return; }
+}
 function hFinish(P, c, F) {
+  hMemo(P, F); hEntryTorch(P, F);
   for (const id in P.rooms) {
     const r = P.rooms[id], k = r.kind === 'cellar' ? 'cellar' : r.kind === 'bedroom' ? 'bedroom' : r.kind === 'store' ? 'store' : r.kind === 'corridor' ? 'corridor' : r.kind === 'yard' ? 'yard' : 'hall';
     PD.dense(P, r, { pool: hPool(k, F), corner: k === 'cellar' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack', 'cask'], mid: { kinds: k === 'cellar' || k === 'store' ? ['casks', 'sacks'] : ['rug'], max: k === 'corridor' ? 0 : 1, min: 0.9 }, middle: k !== 'corridor', racks: k === 'cellar' ? 1 : 0, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
@@ -7604,7 +7631,7 @@ HFAM.workshop = (P, c, F) => {
   P.dims = { W, D, Dh }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
   const work = F.rm(0, 'work', 'hall', -5, 0, 5, Dh, F.fin(0, { floor: F.T.stone || F.wealth === 0 ? 'stone' : 'wood' })), living = F.rm(0, 'living', 'hall', -5, Dh, -0.5, D, F.fin(0, { floor: 'wood', tint: F.tint2 })), yard = F.rm(0, 'yard', 'yard', -0.5, Dh, 5, D, { floor: 'cobble', tint: [0.8, 0.77, 0.72] });
   const loft = F.rm(1, 'loft', 'bedroom', -5, Dh, -0.5, D, F.fin(1));
-  F.door('work', null, 0, 0); F.door('work', 'living', -2.75, Dh); F.door('work', 'yard', 2.25, Dh);
+  F.door('work', null, 0, 0); F.door('work', 'living', -2.75 + R.pick([-0.5, 0.5]), Dh); F.door('work', 'yard', 2.25 + R.pick([-0.5, 0, 0.5, 1]), Dh);      // [c5] the openings in different places
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: F.X(-5 + 0.95), z: Dh + 1.25, width: 0.9, tread: 0.2 });
   pLayout(P);
   hTrade(P, c, work, F); P.hall = { room: work, hh: null }; const e = P.doors.find(d => d.b === null); if (e) pPut(P, work, P.id + '.mat', e.x, 1.4, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, F.rug), { flat: true, noClear: true });
@@ -7652,6 +7679,8 @@ if (typeof HOUSES !== 'undefined' && typeof ALLEY_SHOPS !== 'undefined') {
   }
 }
 
+{ const ids = (typeof INF !== 'undefined' && INF.enterIds || []).concat(['high.a', 'high.c'], typeof ALLEY_SHOPS !== 'undefined' ? ALLEY_SHOPS.filter(a => a.layout).map(a => a.id) : []); const first = ['in.02', 'in.04', 'in.07', 'in.13', 'in.21', 'in.23', 'high.a', 'high.c', 'shop.n2', 'shop.n3', 'shop.n4', 'shop.s0', 'shop.s1', 'shop.s2'], sc = a => hHash(a + '|memo'); HMEMO_IDS = first.filter(a => ids.includes(a)).sort((a, b) => sc(a) - sc(b)).concat(ids.filter(a => !first.includes(a)).sort((a, b) => sc(a) - sc(b))); }
+
 
 // ---- 72l_hobjects.js ----
 // ───────────────────────── trade props and trade recipes for ordinary houses and shops [c5] ─────────────────────────
@@ -7676,7 +7705,7 @@ TP.oven = (P, room, lit) => m => {
 };
 TP.vat = (col, r, h) => m => {
   r = r || 0.55; h = h || 0.72; m.mat(MAT.PLANKS, COL.woodDark, 0.5); m.lathe([[r * 0.9, 0], [r, h * 0.45], [r * 0.96, h]], 12, 0);
-  m.mat(MAT.PLAIN, col); m.disc(0, h - 0.07, 0, r * 0.92, 12, 1);
+  m.mat(MAT.METAL, col.map(v => v * 0.4)); m.disc(0, h - 0.07, 0, r * 0.92, 12, 1);      // [c5] a dark surface with a sheen
   m.mat(MAT.METAL, COL.iron); for (const t of [0.15, 0.55, 0.93]) { const rr = r * (0.9 + 0.1 * Math.sin(t * PI * 0.9)) + 0.008; m.lathe([[rr, h * t - 0.02], [rr, h * t + 0.02]], 12, 0); }
   m.mat(MAT.TIMBER, COL.wood); m.beam([r * 0.5, h + 0.55, 0.05], [r * 0.1, h - 0.15, 0], 0.035, 0.035);
   addCircleCollider(m, 0, 0, r, 0, h);
@@ -7743,9 +7772,13 @@ TP.dipRack = m => {
   addBoxCollider(m, -0.75, -0.1, 0.75, 0.9, 0, 1.4);
 };
 TP.carcassBar = (len, R) => m => {
-  m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015); for (const sx of [-1, 1]) m.box(sx * len * 0.46 - 0.006, -0.4, -0.006, sx * len * 0.46 + 0.006, 0, 0.006);
-  const n = Math.max(2, Math.round(len / 0.55));
-  for (let i = 0; i < n; i++) { const x = -len / 2 + 0.3 + i * (len - 0.6) / Math.max(1, n - 1); m.mat(MAT.METAL, COL.black); m.box(x - 0.006, -0.55, -0.006, x + 0.006, -0.37, 0.006); m.mat(MAT.PLAIN, R.pick([[0.36, 0.2, 0.17], [0.42, 0.28, 0.22], [0.32, 0.18, 0.15]])); m.ball(x, -0.8, 0, 0.11, 0.3, 0.08, 7, 5); m.mat(MAT.PLAIN, [0.8, 0.74, 0.64]); m.box(x - 0.02, -0.9, -0.085, x + 0.02, -0.5, -0.07); }
+  m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015);
+  const n = Math.max(2, Math.round(len / 0.6));
+  for (let i = 0; i < n; i++) { const x = -len / 2 + 0.3 + i * (len - 0.6) / Math.max(1, n - 1); m.mat(MAT.METAL, COL.black); m.box(x - 0.006, -0.52, -0.006, x + 0.006, -0.37, 0.006); m.mat(MAT.THATCH, R.pick([[0.45, 0.3, 0.24], [0.4, 0.27, 0.21], [0.5, 0.35, 0.27]]), 0.4); m.ball(x, -0.74, 0, 0.09, 0.22, 0.07, 7, 5); }
+};
+TP.hideBar = (len, R) => m => {
+  m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015);
+  for (let i = 0; i < 4; i++) { const x = -len / 2 + 0.25 + i * (len - 0.5) / 3, h = 0.7 + R() * 0.25; m.mat(MAT.CLOTH, R.pick([[0.36, 0.27, 0.18], [0.3, 0.24, 0.17], [0.42, 0.32, 0.22]]), 0.45); m.box(x - 0.2, -0.37 - h, -0.012, x + 0.2, -0.37, 0.012); }
 };
 TP.sausages = (len, R) => m => { m.mat(MAT.METAL, COL.black); m.box(-len / 2, -0.04, -0.012, len / 2, -0.015, 0.012); for (let i = 0; i < Math.round(len / 0.12); i++) { const x = -len / 2 + 0.08 + i * 0.12; m.mat(MAT.PLAIN, R.pick([[0.42, 0.22, 0.17], [0.5, 0.3, 0.22]])); m.ball(x, -0.2, 0, 0.035, 0.18, 0.035, 5, 4); } };
 TP.arrows = R => (m, hh) => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.35, -0.95, -0.03, 0.35, 0.0, 0); for (let i = 0; i < 9; i++) { const x = -0.28 + i * 0.07; m.mat(MAT.TIMBER, COL.wood); m.box(x - 0.007, -0.9, -0.05, x + 0.007, -0.05, -0.036); m.mat(MAT.PLAIN, R.pick([[0.75, 0.74, 0.7], [0.5, 0.2, 0.15], [0.7, 0.66, 0.5]])); m.box(x - 0.02, -0.28, -0.06, x + 0.02, -0.05, -0.04); } };
@@ -7793,6 +7826,45 @@ const HPR = {
   barrel: [0.7, 0.7, 0.9, () => pdBarrel(0.33, 0.9)], bucket: [0.5, 0.5, 0.5, () => m => kp(m, 'Bucket_Wooden_1', 0, 0, 0, 1, 0)], cart: [1.8, 2.8, 1.3, () => m => Props.cart(m, false)],
   appleCrate: [0.8, 0.5, 0.5, () => m => kp(m, 'FarmCrate_Apple', 0, 0, 0, 1, 0)], applesBrl: [0.7, 0.7, 0.9, () => m => kp(m, 'Barrel_Apples', 0, 0, 0, 1, 0)],
 };
+// ───────── one memorable object per house [c5]: floor pieces (HPR) and wall pieces (HMEMO.wall) ─────────
+const MWOOD = [0.36, 0.26, 0.17];
+TP.cradle = m => { m.mat(MAT.PLANKS, [0.42, 0.3, 0.2]); m.box(-0.4, 0.1, -0.22, 0.4, 0.14, 0.22); for (const sx of [-1, 1]) { m.box(sx * 0.4 - 0.02, 0.14, -0.22, sx * 0.4 + 0.02, 0.5, 0.22); m.box(sx * 0.4 - 0.03, 0.0, -0.3, sx * 0.4 + 0.03, 0.06, 0.3); } m.box(-0.4, 0.14, -0.24, 0.4, 0.4, -0.2); m.box(-0.4, 0.14, 0.2, 0.4, 0.3, 0.24); m.mat(MAT.CLOTH, [0.72, 0.68, 0.58], 0.5); m.box(-0.36, 0.14, -0.19, 0.36, 0.24, 0.19); m.mat(MAT.CLOTH, [0.45, 0.4, 0.34], 0.5); m.ball(-0.2, 0.26, 0, 0.12, 0.07, 0.1, 6, 4); addBoxCollider(m, -0.45, -0.3, 0.45, 0.3, 0, 0.5); };
+TP.shipModel = m => { m.mat(MAT.PLANKS, COL.woodDark); for (const [x, z] of [[-0.35, -0.2], [0.35, -0.2], [-0.35, 0.2], [0.35, 0.2]]) m.box(x - 0.03, 0, z - 0.03, x + 0.03, 0.78, z + 0.03); m.box(-0.42, 0.78, -0.26, 0.42, 0.82, 0.26);
+  at(m, 0, 0.84, 0, 0, () => { m.mat(MAT.PLANKS, [0.38, 0.26, 0.16]); m.lathe([[0.01, 0], [0.12, 0.03], [0.14, 0.1], [0.1, 0.14]], 8, 0); m.box(-0.34, 0.02, -0.07, 0.34, 0.11, 0.07); m.box(-0.4, 0.09, -0.05, -0.3, 0.16, 0.05); m.mat(MAT.TIMBER, COL.wood); m.cyl(-0.05, 0.1, 0, 0.012, 0.012, 0.55, 5, 1); m.cyl(0.15, 0.1, 0, 0.011, 0.011, 0.45, 5, 1); m.mat(MAT.CLOTH, [0.66, 0.62, 0.5], 0.5); m.box(-0.1, 0.25, -0.004, 0.0, 0.62, 0.004); m.box(0.1, 0.24, -0.004, 0.2, 0.5, 0.004); }); addBoxCollider(m, -0.45, -0.3, 0.45, 0.3, 0, 0.85); };
+TP.paintedChest = m => { m.mat(MAT.PLANKS, [0.3, 0.38, 0.4]); m.box(-0.5, 0.0, -0.27, 0.5, 0.45, 0.27); m.ball(0, 0.45, 0, 0.5, 0.14, 0.27, 8, 3); m.mat(MAT.CLOTH, [0.5, 0.22, 0.17], 0.5); for (const x of [-0.38, 0.38]) m.box(x - 0.04, 0.0, -0.28, x + 0.04, 0.5, 0.28); m.mat(MAT.CLOTH, [0.68, 0.58, 0.32], 0.5); m.box(-0.2, 0.14, 0.268, 0.2, 0.32, 0.275); m.mat(MAT.METAL, COL.iron); m.box(-0.03, 0.3, 0.27, 0.03, 0.38, 0.285); addBoxCollider(m, -0.5, -0.28, 0.5, 0.28, 0, 0.55); };
+TP.harp = m => { m.mat(MAT.PLANKS, [0.4, 0.28, 0.17]); m.box(-0.22, 0, -0.18, 0.22, 0.04, 0.18); m.tube([[-0.1, 0.04, 0], [-0.12, 0.6, 0], [-0.04, 1.1, 0], [0.12, 1.25, 0]], [0.03, 0.025, 0.025, 0.02], 5); m.box(0.12, 0.2, -0.015, 0.16, 1.22, 0.015); m.mat(MAT.CLOTH, [0.78, 0.74, 0.6], 0.3); for (let i = 0; i < 9; i++) { const t = i / 8; m.box(-0.095 + t * 0.2 - 0.002, 0.2 + t * 0.0, -0.002, -0.095 + t * 0.2 + 0.002, 0.62 + t * 0.58, 0.002); } addBoxCollider(m, -0.25, -0.2, 0.25, 0.2, 0, 1.3); };
+TP.birdcage = m => { m.mat(MAT.METAL, COL.iron); m.cyl(0, 0, 0, 0.12, 0.12, 0.04, 8, 2); m.cyl(0, 0, 0, 0.015, 0.015, 1.3, 5, 1); m.box(-0.2, 1.28, -0.012, 0.2, 1.3, 0.012); at(m, 0, 1.34, 0, 0, () => { m.mat(MAT.METAL, [0.3, 0.26, 0.2]); m.cyl(0, 0, 0, 0.2, 0.2, 0.025, 10, 2); m.cyl(0, 0.3, 0, 0.2, 0.2, 0.025, 10, 2); m.lathe([[0.2, 0.3], [0.1, 0.38], [0.01, 0.46]], 10, 0); for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; m.cyl(Math.cos(a) * 0.19, 0.02, Math.sin(a) * 0.19, 0.006, 0.006, 0.29, 4, 1); } m.mat(MAT.CLOTH, [0.6, 0.5, 0.2], 0.4); m.ball(0, 0.1, 0, 0.05, 0.04, 0.035, 6, 4); m.mat(MAT.CLOTH, [0.45, 0.42, 0.3], 0.4); m.ball(0.06, 0.22, 0.02, 0.04, 0.035, 0.03, 6, 4); }); addCircleCollider(m, 0, 0, 0.2, 0, 1.0); };
+TP.longClock = m => { m.mat(MAT.PLANKS, [0.3, 0.2, 0.13]); m.box(-0.22, 0, -0.16, 0.22, 0.28, 0.16); m.box(-0.16, 0.28, -0.12, 0.16, 1.45, 0.12); m.box(-0.22, 1.45, -0.16, 0.22, 1.9, 0.16); m.ball(0, 1.9, 0, 0.22, 0.12, 0.16, 8, 3); m.mat(MAT.PLAIN, [0.8, 0.76, 0.64]); m.disc(0, 1.67, 0.162, 0.15, 12, 2); m.mat(MAT.METAL, COL.black); m.box(-0.006, 1.67, 0.165, 0.006, 1.78, 0.168); m.box(0.0, 1.664, 0.165, 0.08, 1.676, 0.168); m.mat(MAT.METAL, [0.55, 0.45, 0.2]); m.cyl(0, 0.5, 0.1, 0.045, 0.045, 0.02, 8, 2); m.box(-0.004, 0.52, 0.11, 0.004, 1.3, 0.114); addBoxCollider(m, -0.24, -0.18, 0.24, 0.18, 0, 1.95); };
+TP.loomFrame = m => { m.mat(MAT.TIMBER, COL.wood); for (const sx of [-1, 1]) { m.box(sx * 0.6 - 0.04, 0, -0.35, sx * 0.6 + 0.04, 1.6, -0.27); m.box(sx * 0.6 - 0.04, 0, 0.27, sx * 0.6 + 0.04, 1.6, 0.35); m.box(sx * 0.6 - 0.03, 0.5, -0.35, sx * 0.6 + 0.03, 0.56, 0.35); } m.box(-0.62, 1.5, -0.35, 0.62, 1.58, -0.27); m.box(-0.62, 0.3, 0.27, 0.62, 0.36, 0.35); m.mat(MAT.CLOTH, [0.7, 0.66, 0.55], 0.3); for (let i = 0; i < 20; i++) { const x = -0.5 + i * 0.055; m.box(x - 0.002, 0.4, -0.31, x + 0.002, 1.5, -0.3); } m.mat(MAT.CLOTH, [0.36, 0.3, 0.4], 0.5); m.box(-0.52, 0.4, -0.305, 0.52, 0.8, -0.295); addBoxCollider(m, -0.65, -0.37, 0.65, 0.37, 0, 1.6); };
+TP.mirrorStand = m => { m.mat(MAT.PLANKS, [0.34, 0.24, 0.16]); m.box(-0.3, 0, -0.1, 0.3, 0.05, 0.1); m.box(-0.28, 0.05, -0.02, -0.24, 1.6, 0.02); m.box(0.24, 0.05, -0.02, 0.28, 1.6, 0.02); m.box(-0.28, 1.56, -0.02, 0.28, 1.6, 0.02); m.mat(MAT.METAL, [0.5, 0.54, 0.55]); m.box(-0.24, 0.3, -0.004, 0.24, 1.56, 0.004); addBoxCollider(m, -0.32, -0.12, 0.32, 0.12, 0, 1.6); };
+
+TP.anchor = m => { m.mat(MAT.METAL, [0.22, 0.2, 0.19]); m.box(-0.04, 0, -0.04, 0.04, 1.5, 0.04); m.box(-0.3, 1.3, -0.03, 0.3, 1.38, 0.03); m.tube([[-0.5, 0.35, 0], [-0.4, 0.08, 0], [0, 0.02, 0], [0.4, 0.08, 0], [0.5, 0.35, 0]], [0.03, 0.04, 0.04, 0.04, 0.03], 6); m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.45, 0, -0.2, 0.45, 0.06, 0.2); addBoxCollider(m, -0.5, -0.22, 0.5, 0.22, 0, 1.5); };
+TP.skeps = m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.7, 0.55, -0.22, 0.7, 0.6, 0.22); for (const x of [-0.65, 0.65]) m.box(x - 0.03, 0, -0.18, x + 0.03, 0.55, 0.18); for (const x of [-0.42, 0, 0.42]) { m.mat(MAT.THATCH, [0.72, 0.6, 0.36], 0.4); at(m, x, 0, 0, 0, () => m.lathe([[0.2, 0.6], [0.2, 0.7], [0.15, 0.84], [0.07, 0.92], [0.01, 0.95]], 9, 0)); } addBoxCollider(m, -0.72, -0.24, 0.72, 0.24, 0, 0.62); };
+TP.cheesePress = m => { m.mat(MAT.TIMBER, COL.wood); for (const sx of [-1, 1]) m.box(sx * 0.3 - 0.05, 0, -0.1, sx * 0.3 + 0.05, 1.2, 0.1); m.box(-0.35, 1.1, -0.1, 0.35, 1.2, 0.1); m.cyl(0, 0.5, 0, 0.03, 0.03, 0.75, 5, 2); m.box(-0.3, 1.25, -0.03, 0.3, 1.3, 0.03); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(0, 0, 0, 0.25, 0.25, 0.3, 10, 2); m.mat(MAT.CLOTH, [0.78, 0.72, 0.52], 0.4); m.cyl(0, 0.3, 0, 0.21, 0.21, 0.12, 10, 2); addBoxCollider(m, -0.38, -0.25, 0.38, 0.25, 0, 1.3); };
+TP.scales = m => { m.mat(MAT.METAL, [0.3, 0.26, 0.2]); m.box(-0.03, 0, -0.03, 0.03, 1.25, 0.03); m.box(-0.25, 0, -0.25, 0.25, 0.04, 0.25); m.box(-0.5, 1.22, -0.015, 0.5, 1.26, 0.015); for (const sx of [-1, 1]) { m.box(sx * 0.48 - 0.004, 0.72, -0.004, sx * 0.48 + 0.004, 1.22, 0.004); m.disc(sx * 0.48, 0.72, 0, 0.14, 10, 2); } addBoxCollider(m, -0.3, -0.3, 0.3, 0.3, 0, 1.3); };
+Object.assign(HPR, {
+  m_anchor: [1.0, 0.45, 1.5, () => TP.anchor], m_skeps: [1.5, 0.5, 0.95, () => TP.skeps], m_press: [0.8, 0.55, 1.3, () => TP.cheesePress], m_scales: [0.6, 0.6, 1.3, () => TP.scales],
+  m_cradle: [0.9, 0.6, 0.55, () => TP.cradle], m_ship: [0.9, 0.6, 1.3, () => TP.shipModel], m_chest: [1.0, 0.56, 0.6, () => TP.paintedChest], m_harp: [0.5, 0.4, 1.3, () => TP.harp],
+  m_cage: [0.5, 0.5, 1.8, () => TP.birdcage], m_clock: [0.5, 0.36, 1.95, () => TP.longClock], m_loom: [1.3, 0.76, 1.6, () => TP.loomFrame], m_mirror: [0.62, 0.3, 1.6, () => TP.mirrorStand],
+});
+const HMEMO = {
+  floor: ['m_anchor', 'm_skeps', 'm_press', 'm_scales', 'm_cradle', 'm_ship', 'm_chest', 'm_harp', 'm_cage', 'm_clock', 'm_loom', 'm_mirror'],
+  wall: [
+    { id: 'pike', w: 1.5, y0: 1.2, y1: 1.9, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.34, 0.24, 0.16]); m.box(-0.75, -0.7, -0.03, 0.75, 0, 0); m.mat(MAT.THATCH, [0.5, 0.52, 0.5], 0.4); m.ball(0, -0.35, -0.08, 0.62, 0.11, 0.05, 10, 6); m.mat(MAT.THATCH, [0.34, 0.36, 0.34], 0.4); m.ball(0.0, -0.27, -0.1, 0.55, 0.04, 0.03, 8, 4); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.ball(0.55, -0.33, -0.13, 0.025, 0.025, 0.02, 4, 3); m.mat(MAT.THATCH, [0.42, 0.4, 0.34], 0.4); m.box(-0.75, -0.42, -0.1, -0.58, -0.28, -0.07); } },
+    { id: 'clocks', w: 1.8, y0: 0.9, y1: 2.1, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.3, 0.22, 0.15]); m.box(-0.9, -1.2, -0.03, 0.9, 0, 0); for (const [x, y, r] of [[-0.5, -0.35, 0.22], [0.05, -0.28, 0.17], [0.55, -0.4, 0.25], [-0.3, -0.85, 0.16], [0.25, -0.88, 0.2], [0.7, -0.95, 0.12]]) { m.mat(MAT.METAL, [0.5, 0.42, 0.22]); m.disc(x, y, -0.04, r, 12, 2); m.mat(MAT.PLAIN, [0.78, 0.74, 0.62]); m.disc(x, y, -0.045, r * 0.85, 12, 2); m.mat(MAT.METAL, COL.black); m.box(x - 0.004, y, -0.05, x + 0.004, y + r * 0.7, -0.052); m.box(x, y - 0.004, -0.05, x + r * 0.5, y + 0.004, -0.052); } } },
+    { id: 'antlers', w: 1.2, y0: 1.5, y1: 2.1, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.34, 0.24, 0.16]); m.box(-0.2, -0.5, -0.03, 0.2, 0, 0); m.mat(MAT.THATCH, [0.7, 0.64, 0.5], 0.4); for (const sx of [-1, 1]) { m.tube([[sx * 0.08, -0.15, -0.06], [sx * 0.3, -0.12, -0.14], [sx * 0.46, -0.02, -0.2], [sx * 0.55, 0.2, -0.24]], [0.03, 0.025, 0.02, 0.01], 5); m.tube([[sx * 0.3, -0.12, -0.14], [sx * 0.36, 0.1, -0.2], [sx * 0.34, 0.3, -0.22]], [0.02, 0.012, 0.006], 4); } } },
+  ],
+};
+const HMEMO_USED = {};
+function hMemo(P, F) {          // one object no other house has, in the first room if it will go there (the next in the list when it will not)
+  const e = P.doors.find(d => d.b === null); if (!e) return; const room = P.rooms[e.a]; if (!room) return;
+  const all = HMEMO.floor.length + HMEMO.wall.length;
+  for (let t = 0; t < all; t++) {
+    const k = (F.memo + t * 3) % all; if (HMEMO_USED[k] && t < all - 1) continue;
+    if (k >= HMEMO.floor.length) { const w = HMEMO.wall[k - HMEMO.floor.length]; for (const sd of ['s', 'w', 'e', 'n']) { const [a, b] = hWallRange(room, sd); for (let u = (a + b) / 2, i = 0; i < 12; i++, u = (a + b) / 2 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.7) if (u > a + w.w / 2 && u < b - w.w / 2 && pHang(P, room, sd, u, w.w, w.y0, w.y1, w.fn(P.R), P.id + '.memo_' + w.id, { pivot: w.y1 })) { P.memo = w.id; HMEMO_USED[k] = 1; return; } }
+    } else if (hPlace(P, room, HMEMO.floor[k], { sides: ['s', 'w', 'e', 'n'], free: true })) { P.memo = HMEMO.floor[k]; HMEMO_USED[k] = 1; return; }
+  }
+}
 // put a floor prop by name against one of the room's walls (sides in order of preference), at a coordinate along the wall, back to the wall; falls back to open floor near `near`
 function hPlace(P, room, name, o) {
   o = o || {}; const e = HPR[name]; if (!e) return null; const R = P.R, draw = e[3](P, room, R, o), h = e[2], id = P.id + '.' + name + (P.items.length);
@@ -7889,12 +7961,12 @@ HT.tanner = (P, c, room, F) => {
   const cols = [[0.34, 0.26, 0.17], [0.28, 0.34, 0.2], [0.45, 0.34, 0.2]];
   hFocalAt(P, room, 'vat', F, { col: cols[0], at: [-F.sx * 1.6] }); hFocalAt(P, room, 'vat', F, { col: cols[1], at: [F.sx * 0.2] }); hFocalAt(P, room, 'vat', F, { col: cols[2], at: [F.sx * 2.0] });
   hPlace(P, room, 'hides', { sides: ['w', 'e'] }); hPlace(P, room, 'hides', { sides: ['e', 'w'] }); hPlace(P, room, 'bench', { sides: ['w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['w', 'e'] }); hPlace(P, room, 'bucket', { sides: ['s', 'e'] });
-  hCeil(P, room, 0, room.z0 + 3.0, TP.carcassBar(2.0, P.R));
+  hCeil(P, room, 0, room.z0 + 3.0, TP.hideBar(2.0, P.R));
 };
 HT.dyer = (P, c, room, F) => {
   const cols = [[0.22, 0.3, 0.46], [0.5, 0.22, 0.18], [0.62, 0.5, 0.2]];
   hFocalAt(P, room, 'vat', F, { col: cols[0], at: [F.sx * 1.8] }); hFocalAt(P, room, 'vat', F, { col: cols[1], at: [-F.sx * 0.1] }); hFocalAt(P, room, 'vat', F, { col: cols[2], at: [-F.sx * 2.1] });
-  for (const [x, z, col] of [[-3.3, 3.6, [0.24, 0.32, 0.5]], [3.0, 4.2, [0.55, 0.26, 0.2]], [-1.0, 5.0, [0.6, 0.5, 0.28]]]) hCeil(P, room, x * F.sx, room.z0 + z, (mm) => { mm.mat(MAT.TIMBER, COL.woodDark); mm.box(-0.5, -0.1, -0.02, 0.5, -0.06, 0.02); mm.mat(MAT.CLOTH, col.map(v => v * 0.8), 0.5); mm.box(-0.45, -1.0, -0.02, 0.45, -0.1, 0.02); });
+  for (const [x, z, col] of [[-3.3, 3.6, [0.22, 0.27, 0.36]], [3.0, 4.2, [0.42, 0.24, 0.2]], [-1.0, 5.0, [0.45, 0.39, 0.25]]]) hCeil(P, room, x * F.sx, room.z0 + z, (mm) => { mm.mat(MAT.TIMBER, COL.woodDark); mm.box(-0.5, -0.1, -0.02, 0.5, -0.06, 0.02); mm.mat(MAT.CLOTH, col.map(v => v * 0.8), 0.5); mm.box(-0.45, -1.0, -0.02, 0.45, -0.1, 0.02); });
   hPlace(P, room, 'barrel', { sides: ['w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['e', 'w'] }); hPlace(P, room, 'sacks', { sides: ['w', 'e'] }); hShelfWalls(P, room, PD.WARES.cloth, { sides: ['w', 'e'], id: 'wdy', lv: 4 });
 };
 HT.carpenter = (P, c, room, F) => {
@@ -12243,6 +12315,7 @@ function buildWilds() {
     return wrap(x, z);
   };
   if (typeof wildsLifeBuild === 'function') wildsLifeBuild();
+  if (typeof storyBuild === 'function') { try { storyBuild(); } catch (e) { console.warn('story: ' + (e && e.stack || e)); } }       // 82_story.js: the body on the wharf, [q1] the Old Mine and the rest
 }
 
 // the kit half: batches made when the kit and the quality tier are known (and again if the tier changes). Each place is hidden beyond 125 m.
@@ -12591,7 +12664,7 @@ function interactUse(it) {
     if (it.id === 'board' && qAt('bounty') < 0 && qAt('welcome') >= 0) { qStart('bounty'); bountyText(); }
   }
   else if (it.kind === 'bed') {
-    if (!S.flags.bed) return toast('This bed isn’t yours. Greta at the bar lets rooms.');
+    if (!S.flags.bed && S.flags.rent !== RPG.st().day) return toast('This bed isn’t yours. Greta at the bar lets rooms.');
     fadeDo(() => { Env.hour = 7; World.festival = false; for (const n of NPCS) n.override = null; npcSnapAll(); const r = RPG.st(); r.hp = RPG.MAXHP; r.sta = RPG.MAXST; Foes.calm(true); toast('You wake rested. A new morning in Brackenfell.'); save(); });
   } else if (it.kind === 'bell') { Audio2.bell(1); World.bellSwing = 3; if (qAt('bell') === 2) { qDone('bell'); S.flags.bell = 1; toast('The Dawn bell rings out over the valley.'); } }
   else if (it.kind === 'shopitem') toast('Marta: “Fifteen gold, dear. Ask me at the counter.”');
@@ -12689,13 +12762,396 @@ TALK.rowan = function () {
 };
 
 
+// ---- 82_story.js ----
+// ───────────────────────── the main story, Act 1: "Dry Lungs" (docs/STORY.md) ─────────────────────────
+// Loaded after 81_wilds_story.js and wraps what it wraps (questTarget, interactLabel, interactUse, TALK). Every fact is a flag or an item, so the steps can be done
+// in any order: the objective shown is simply the first fact still missing (mainSync). Old saves load unchanged: every flag is keyed by its own name.
+Object.assign(ITEMS, {
+  tally: ['Miner’s tally token', 'Brass, stamped OM 14. It was round a drowned man’s neck on a bootlace.'],
+  minekey: ['Sexton’s mine key', 'Long, black and heavier than it looks. The bow is cut with a pick and a bell.'],
+  lantern: ['Miner’s lantern', 'Horn panes, a stub of wick and a tin of oil. Down there it is the difference between a path and a wall.', { value: 8, cost: 12 }],
+  ledger: ['Sexton’s ledger', 'A thin book bound in sealskin. The last pages are in two hands.'],
+  journal: ['Corwin’s journal', 'Water-stained, pages stuck together at the corners. The writing gets smaller towards the end.'],
+});
+QUESTS.main = { name: 'The Quiet Under Brackenfell', stages: [
+  'Go to the wharf: a man has been found on the shingle',
+  'Show Old Maren the miner’s tally token',
+  'Find the Sexton’s mine key in the crypt under the chapel',
+  'Unlock the Old Mine in the south-west cliffs and go down',
+  'Find Corwin in the deep workings',
+  'Take Corwin’s journal to Warden Hale',
+  'Ask Elder Rowan what has been left at the lake',
+] };
+QORDER.unshift('main');
+const BODY = [14.6, 0, 79.2];
+const MAIN_FACTS = () => [!!S.flags.sawBody, !!S.flags.pell, has('minekey') || !!S.flags.mineOpen, !!S.flags.mineOpen, has('journal') || !!S.flags.corwin, !!S.flags.act1];
+let _mainBusy = false;
+function mainSync() {
+  if (_mainBusy || qAt('main') < 0 || qAt('main') === 99) return; _mainBusy = true;
+  try { const f = MAIN_FACTS(); let i = f.indexOf(false); if (i < 0) i = f.length; if (S.flags.act1 && i >= 6) i = 6; qStage('main', i); } finally { _mainBusy = false; }
+}
+const _uiObj = uiObjective; uiObjective = function () { mainSync(); return _uiObj(); };
+function mainStart(stage) { if (qAt('main') < 0) { qStart('main', stage || 0); } mainSync(); }
+
+// ── map and compass ──
+const _qt82 = questTarget;
+questTarget = function (id) {
+  if (id !== 'main') return _qt82(id);
+  const st = qAt('main'), npc = n => NPC[n] && NPC[n].pos;
+  if (st === 0) return BODY.slice();
+  if (st === 1) return npc('maren');
+  if (st === 2) { const h = World.houses.chapel; return h ? [h.site.x, 0, h.site.z] : null; }
+  if (st === 3) { const m = WILDS.P.mine; return [m.x, 0, m.z]; }
+  if (st === 4) return (typeof MINE !== 'undefined' && MINE.built) ? MINE.target() : [WILDS.P.mine.x, 0, WILDS.P.mine.z];
+  if (st === 5) return npc('hale');
+  if (st === 6) return npc('rowan');
+  return null;
+};
+
+// ── the man on the wharf ──
+function storyBuild() {
+  const pack = new MeshPack(); pack.shadow = false;
+  const m = new Mesh(2048); m.seed = 4711;
+  const x = BODY[0], z = BODY[2];
+  m.push().T(x, BODY[1], z).RY(0.12); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
+  // a bier of two trestles and boards, mud still on it
+  m.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-0.7, 0.7]) { m.beam([sx - 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx - 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); }
+  m.mat(MAT.PLANKS, [0.5, 0.42, 0.34], 0.5); m.box(-1.15, 0.6, -0.34, 1.15, 0.66, 0.34, 4);
+  // the shape under the sailcloth: head, shoulders, long thin legs, the boots left bare
+  m.mat(MAT.CLOTH, [0.7, 0.68, 0.6], 0.6);
+  m.ball(0.9, 0.79, 0, 0.14, 0.11, 0.12, 10, 6); m.ball(0.48, 0.77, 0, 0.36, 0.13, 0.27, 12, 6); m.ball(-0.06, 0.74, 0, 0.3, 0.09, 0.2, 10, 6); m.ball(-0.58, 0.72, 0.0, 0.42, 0.075, 0.17, 10, 5);
+  m.box(-0.25, 0.66, -0.3, 0.95, 0.74, -0.27, 0); m.box(-0.25, 0.66, 0.27, 0.95, 0.74, 0.3, 0);
+  m.mat(MAT.CLOTH, [0.62, 0.6, 0.52], 0.6); m.box(-1.0, 0.66, -0.2, -0.82, 0.69, 0.2, 0);
+  m.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); for (const s of [-1, 1]) { m.push().T(-1.12, 0.72, s * 0.1).RZ(0.18); m.cyl(0, 0, 0, 0.055, 0.07, 0.24, 7, 3); m.pop(); m.box(-1.2, 0.66, s * 0.1 - 0.05, -1.0, 0.76, s * 0.1 + 0.05, 0); }
+  // a wet dark patch of the quay and a bucket
+  m.mat(MAT.PLAIN, [0.07, 0.065, 0.06]); m.quad2([-1.6, 0.012, -0.9], [-1.6, 0.012, 0.9], [1.6, 0.012, 0.9], [1.6, 0.012, -0.9]);
+  m.push().T(1.5, 0.0, 0.7); m.mat(MAT.PLANKS, COL.wood, 0.5); m.cyl(0, 0, 0, 0.17, 0.2, 0.3, 9, 1); m.pop();
+  addBoxCollider(m, -1.2, -0.4, 1.2, 0.4, 0, 1.0); m.pop();
+  pack.add(m, { kind: 'opaque', maxDist: 80, noShadow: true }); pack.upload('story'); World.packs.push(pack);
+  World.emitters.push({ type: 'candle', p: [x - 1.5, 0.5, z - 0.5], zone: 0, always: true, seed: 0.77 });
+  World.interact.push({ p: [x, 0.9, z], r: 2.6, zone: 0, kind: 'read', id: 'wharf.body', title: 'The drowned man', text: 'Sailcloth over him; Finn’s doing. A man of fifty, thin as a rake.\n\nNo water has been in him. His palms are scarred white across, pick-work. There is silver in his back teeth, a bright vein of it, as though he had bitten rock.\n\nRound his neck on a bootlace: a brass tally stamped OM 14. In his fist, folded small in oilcloth:\n\n“TELL ROWAN THE BREAD DID NOT COME.”' });
+  if (typeof ixScan === 'function') { try { ixScan(); } catch (e) { console.warn('interact: ' + (e && e.stack || e)); } }
+}
+// the sailcloth hides nothing from a man who looks: the first reading takes the token and starts the thread (a stranger who never met Hale still gets the quest)
+const _il82 = interactLabel, _iu82 = interactUse;
+interactLabel = function (it) {
+  if (it.id === 'wharf.body') return 'Examine the body';
+  return _il82(it);
+};
+interactUse = function (it) {
+  const relicFirst = it.id === 'chapel.relic' && !S.opened[it.id];
+  _iu82(it);
+  if (it.id === 'wharf.body') { S.flags.sawBody = 1; if (!has('tally') && !S.flags.tallyGiven) { S.flags.tallyGiven = 1; give('tally'); toast('Taken: ' + ITEMS.tally[0]); } mainStart(); save(); }
+  if (relicFirst && S.opened[it.id]) {
+    give('minekey'); if (!has('lantern')) give('lantern'); give('ledger'); toast('Found: ' + ITEMS.minekey[0] + ', ' + ITEMS.lantern[0] + ', ' + ITEMS.ledger[0]);
+    setTimeout(() => openReader('The Sexton’s ledger', LEDGER_TEXT), 350); mainSync(); save();
+  }
+};
+const LEDGER_TEXT = 'Each dawn: the bell, then one loaf and one pail of water to the cave on the shore, by the cellar way. Four loaves if the frost is hard.\n\nThe Quiet takes what is left on the table. It has not yet taken what is given.\n\nR. says the Warden is never to be told.\n\n— in a different, later hand —\n\nThe Warden knows. He has always known. He bars the door and does not ask what he is barring.\n\nThe key goes in the reliquary with the Sexton, so that no one who loves him can ever be asked for it.';
+
+// ── people ──
+const addOpt = (id, fn, first) => { const base = TALK[id]; TALK[id] = function () { const n = base.call(this); const o = fn(n); if (o && n && n.o) { const i = n.o.indexOf(bye); if (first) n.o.unshift(o); else n.o.splice(i < 0 ? n.o.length : i, 0, o); } return n; }; };
+const _hale82 = TALK.hale;
+TALK.hale = function () {
+  if (has('journal') && !S.flags.act1) return TALK.haleJournal();
+  const n = _hale82();
+  if (n && /^Hold there/.test(n.t)) { const o = n.o.slice(); n.o = [['You look like a man with something on his mind.', () => node('Finn pulled a man out of the lake at first light. He’s on a bier at the wharf, south end of the town. Go and look, if you’ve the stomach, before the gossips make a story of him.', o)]].concat(o); mainStart(); }       // his greeting keeps its recorded words (a changed line would lose its voice); the wharf is a question you can ask, and the journal points there
+  return n;
+};
+TALK.haleJournal = () => node('That’s Corwin’s hand. Alive, then, or he was. Let me see.\n\nBread. Fifty years of bread, in a cave on the shore. I barred that door and told myself it was to keep them out.', [['What did you know?', () => node('That something went wrong below, before I wore this helmet. That Rowan went out to the shore every dawn and never said why. I didn’t ask. A man can keep a gate for thirty years that way.', [['What now?', () => { S.flags.act1 = 1; mainSync(); toast('<b>Act one ends.</b> The way on is under the Honeyed Hart.'); save(); return node('Not here. Rowan knows the way to the lake cave; he’s walked it with a pail more mornings than I’ve slept. Go and ask him, and don’t let him tell you it’s nothing.'); }, 1]])], ['Keep it. I’ll find Rowan.', () => { S.flags.act1 = 1; mainSync(); save(); return null; }, 1]]);
+const marenPell = () => node('Brass, and a number. OM fourteen: the Old Mine, Dunstan Pell. He dug under Corwin, a good while back.', [['He wasn’t drowned.', marenDry]]);
+const marenDry = () => node('No. Dry as a bone inside and thin as a rake: he walked a long way on nothing, in the dark. That’s no lake’s work.', [['Where did he come from?', marenDoor, 1]]);
+const marenDoor = () => { S.flags.pell = 1; S.flags.sawBody = 1; mainStart(); mainSync(); save(); return node('The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.'); };
+addOpt('maren', n => has('tally') && !S.flags.pell ? ['I found this on a dead man at the wharf.', marenPell, 1] : null, true);
+addOpt('aldous', n => qAt('main') >= 1 && !has('minekey') && !S.flags.mineOpen ? ['The Sexton’s key. Where is it kept?', () => node('There’s a vestment chest in the sacristy that I’ve never had the heart to open. The Sexton’s things are in it. The crypt gate under the nave has a lock to match.')] : null);
+addOpt('finn', n => ['The man you found.', () => node('First light, face down in the reeds. The lake gives drowned men back swollen. This one was thin as a rake and dry as kindling. Whatever he was, he walked to the water; he didn’t fall in.')]);
+addOpt('pip', n => ['What’s the crowd at the wharf?', () => node('A man under a sheet! Hale said not to look. I looked. He’s got silver in his teeth.')]);
+const _marta82 = TALK.marta;
+TALK.marta = function () { const n = _marta82(); if (n && n.o) { const i = n.o.indexOf(bye); n.o.splice(i < 0 ? n.o.length : i, 0, ['A miner’s lantern. (12 gold)', () => { if (has('lantern')) return node('You’ve one already, dear. Don’t be greedy with light.'); return TALK.buy('lantern', 12, 'Fill it before you go and mind the oil. Where you’re going, you’ll want it.'); }]); } return n; };
+const _rowan82 = TALK.rowan;
+TALK.rowan = function () {
+  if (S.flags.act1 && !S.flags.rowanAsked) return node('Sit down, you’re making me tired. ... Hale has read it, then. I thought he might. I thought it would be me they came for one day.\n\nThe cave on the lake shore. The cellar of the Hart. I’ll tell you the rest, but not on my feet, and not today.', [['I’ll be back.', () => { S.flags.rowanAsked = 1; save(); return null; }, 1]]);
+  return _rowan82();
+};
+
+
+// ---- 82b_interact.js ----
+// ───────────────────────── the world answers: containers, loose things, letters, ownership, locks, seats ─────────────────────────
+// One generic rule for each, driven by data tables, over what the plan engine already recorded (Cells.list[].ctx.planDone.items): no per-object code.
+//   containers  every recorded chest, cupboard, barrel, sack, crate or shelf becomes a thing you can open; its contents come from IX.LOOT by the household's trade
+//               (and wealth), rolled from the object's id so a given barrel always holds the same; opened ones are saved in S.opened
+//   loose       a few things (food, coin, candles, books) lie on the tables of each interior as small skinned objects: taking one hides it for good (S.taken)
+//   letters     IX.BOOKS: read as often as you like; reading is saved (S.read) and feeds the inn's rumours and the story
+//   ownership   everything in a village interior belongs to someone; taking it in front of an awake person is theft (crime, a fine, or the cell in the guardhouse)
+//   locks       IX.LOCKS: a door or chest that wants a key or a pick; a pick may snap
+//   seats       any recorded chair, stool, bench or pew can be sat on
+Object.assign(ITEMS, {
+  candle: ['Tallow candle', 'Smells of mutton. Better than the dark.', { value: 1 }],
+  cheese: ['Hard cheese', 'A wedge, rind and all.', { heal: 14, value: 1 }],
+  flint: ['Flint and steel', 'Every house has one and none has two.', { value: 2 }],
+  pewter: ['Pewter cup', 'Dented, with someone’s initials on the foot.', { value: 6 }],
+  thread: ['Spool of thread', 'Linen thread on a bobbin of birch.', { value: 2 }],
+  nails: ['Handful of nails', 'Hand-forged and a little crooked.', { value: 2 }],
+  herbs: ['Dried herbs', 'Tied in a bundle and smelling of summer.', { value: 3, heal: 6 }],
+  silverring: ['Plain silver ring', 'A wedding ring, or the copy of one.', { value: 14 }],
+  lockpick: ['Lockpick', 'A bent length of spring steel in a leather wrap. It will not last for ever.', { value: 4 }],
+  stew: ['Bowl of stew', 'Mutton, barley and a heel of bread.', { heal: 40, value: 0 }],
+});
+const IX = { cont: [], loose: [], reads: {}, seat: [], pick: {}, sit: null, built: false, witnessed: 0, stats: { cont: 0, loose: 0, seat: 0, books: 0 } };
+// loot tables: [item, weight, min, max]; gold is multiplied by the household's wealth
+IX.LOOT = {
+  inn: [['bread', 3], ['apple', 2], ['ale', 2], ['cheese', 2], ['gold', 3, 1, 6], ['candle', 2], ['pewter', 1], ['stew', 0.5]],
+  store: [['rope', 0.6], ['candle', 3], ['thread', 2], ['gold', 3, 2, 8], ['nails', 2], ['flint', 2], ['cheese', 1]],
+  smith: [['nails', 3], ['gold', 2, 2, 9], ['flint', 2], ['pewter', 1], ['tools', 0.15]],
+  herb: [['herbs', 4], ['frostcap', 1.5], ['tonic', 0.6], ['gold', 2, 1, 5], ['candle', 1]],
+  guard: [['gold', 3, 2, 9], ['bread', 2], ['lockpick', 0.6], ['flint', 1], ['cheese', 1]],
+  chapel: [['candle', 4], ['gold', 2, 1, 4], ['bread', 1]],
+  elder: [['gold', 3, 3, 12], ['candle', 2], ['silverring', 0.5], ['pewter', 1]],
+  home: [['bread', 3], ['apple', 2], ['cheese', 2], ['thread', 2], ['candle', 2], ['gold', 3, 1, 5], ['flint', 1], ['silverring', 0.25], ['lockpick', 0.15], ['herbs', 1]],
+};
+IX.TRADE = { inn: 'inn', store: 'store', smithy: 'smith', herbalist: 'herb', guardhouse: 'guard', chapel: 'chapel', elder: 'elder' };
+// container kinds: first match on the recorded id wins. [pattern, label, verb, locked share, loot multiplier]
+IX.KINDS = [
+  [/strongbox|chest|trunk|footlocker|srchest|cellarchest/, 'chest', 'Open the chest', 0.35, 1.3],
+  [/wardrobe|cupboard|cabinet|dresser|press/, 'cupboard', 'Look in the cupboard', 0.08, 1],
+  [/barrel|cask|keg|waterbrl/, 'barrel', 'Search the barrel', 0, 0.6],
+  [/sack/, 'sacks', 'Search the sacks', 0, 0.6],
+  [/crate|apile|cspile|hamper|basket/, 'crate', 'Search the crates', 0, 0.8],
+  [/shelf|ware|books|backshelf/, 'shelf', 'Look along the shelf', 0, 0.7],
+];
+IX.SEAT = /chair|stool|bench|pew|seat|sbench/;
+// letters and books. tags say where they may lie. 'feeds' sets a flag the rumours and the story read.
+IX.BOOKS = [
+  ['mill', 'A miller’s tally', 'MILL, THIS QUARTER.\nGround for the Hart: 40 sacks. Flour gone from the loft: 46.\nOsric says the Elder takes the difference at first light, and pays in coin with the wrong king’s face on it.\nThe sums do not close and I have stopped asking.', ['store', 'home', 'elder'], 'bread'],
+  ['love', 'A letter, folded small', 'Wren,\nI’ll be at the stile when the bell would ring, if it rang. Bring nothing. Bring yourself.\nYours, and no one else’s,\nT.', ['home'], null],
+  ['recipe', 'Greta’s ale', 'HEATHER ALE. Three parts malt, one of oats, honey from the high skeps. Steep till the kitchen smells of a good argument. Never boil. Never hurry. Never let Bram near it.', ['inn', 'home'], null],
+  ['warn', 'A note under a candlestick', 'Do not walk the shore path after the new moon. The cave is not for us. We leave it what it is owed and we do not look.\nR.', ['home', 'elder'], 'cave'],
+  ['gossip', 'A page of gossip', 'Hilda says Brandt has not paid for last winter’s cloth. Brandt says Hilda’s thumb is on the scale. Ask Marta, who knows both and tells each the other’s side.', ['inn', 'store'], null],
+  ['drawing', 'A child’s drawing', 'A man with a lamp for a head, standing in water. Underneath, in a careful hand: THE MAN WHO DOES NOT SPEAK. Underneath that, smaller: do not tell mum.', ['home'], 'hollow'],
+  ['pickheads', 'The smith’s order book', 'Forty pick-heads, drawn and tempered, for the Old Mine, the Elder’s father paying. Delivered and the carter never came for the bill. Brandt has kept the dies, for no reason he would say.', ['smith'], 'mine'],
+  ['roster', 'The gate roster', 'GATE: Hale, Ivo. Dawn watch changes on the last day of each month. Hale takes it himself, always, and says it is the cold air he likes.', ['guard'], null],
+  ['burial', 'The burial register', 'The last page: “Dunstan Pell, miner. Buried.” There is a stone. Beneath, in pencil, in the Sexton’s hand: there is no one in it.', ['chapel'], 'pell'],
+  ['invoice', 'Marta’s invoice', 'To the Elder: candles, three gross, tallow. “For the cave.” Paid in silver. Whose cave? Do not ask. Do not write it down.', ['store', 'elder'], 'cave'],
+  ['tobin', 'A scrawled note', 'I only borrowed the hammer. If you find this, B., it is by the fire ring at the tower. I am sorry. Do not tell my mum I was up there. There were lights.', ['smith', 'home'], null],
+  ['herbs', 'Maren’s margin note', 'Frostcap steeped three nights quiets a hungry thing, so the old women say. I have never tried it on a man. I have thought about it.', ['herb'], 'frostcap'],
+  ['will', 'A will, unsigned', 'To my sister the loom, to my brother the dog, to the Elder nothing, for he has had enough of everyone’s. If I do not wake, bury me with my face to the lake.', ['home', 'elder'], null],
+  ['assay', 'A merchant’s letter', 'To the keeper of the Hart: the silver you sent to be assayed is purer than anything the Crown mints. We will buy as much as you can bring. We would very much like to know where you get it.', ['inn', 'store', 'elder'], 'silver'],
+  ['fisher', 'Finn’s log', 'Third night this week: lights under the water off the north shore. Not boats. They go out when the bell would ring.', ['home', 'inn'], 'cave'],
+  ['prayer', 'A prayer card', 'Dawn, who ends the night: keep the ones below who cannot climb. Keep the ones above who will not look down. Keep the bread.', ['chapel', 'home'], 'bread'],
+  ['pip', 'Pip’s list', 'THINGS I KNOW. 1. Hale cries on the last day of the month. 2. The Elder talks to the lake. 3. There is a door in the Hart’s cellar that is not a cellar door.', ['home', 'inn'], 'cellar'],
+  ['debt', 'A scrap with a smudge', 'Greta, I owe you three and six. Will pay when the silver’s in. — D. Pell.', ['inn', 'home'], 'pell'],
+  ['cave', 'A map, drawn on a flour sack', 'THE BREAD CAVE. North shore, past the reeds, under the grey rock. Three knocks on the stone and set the pail down. Do not wait.', ['elder', 'home'], 'cave'],
+  ['bounty', 'A notice', 'WANTED: the thief called the Magpie, who takes only silver and only after dark. Last seen on the weavers’ lane. Five gold from the Warden.', ['guard', 'inn', 'store'], 'magpie'],
+];
+IX.READ = {};
+// ── helpers ──
+const ixHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+const ixRng = seed => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+function ixRoll(table, rnd, mult, wealth) {
+  const out = [], n = rnd() < 0.22 ? 0 : 1 + (rnd() < 0.4 ? 1 : 0) + (mult > 1 && rnd() < 0.6 ? 1 : 0), tot = table.reduce((a, r) => a + r[1], 0);
+  for (let i = 0; i < n; i++) { let w = rnd() * tot, row = table[0]; for (const r of table) { w -= r[1]; if (w <= 0) { row = r; break; } } const q = row[0] === 'gold' ? Math.max(1, Math.round((row[2] + rnd() * (row[3] - row[2])) * mult * (wealth || 1))) : 1; out.push([row[0], q]); }
+  return out;
+}
+function ixTrade(c) { const id = c.id, d = typeof HDESC !== 'undefined' ? HDESC[id] : null; if (IX.TRADE[id]) return IX.TRADE[id]; if (d && d.trade && IX.LOOT[IX.TRADE[d.trade] || d.trade]) return IX.TRADE[d.trade] || d.trade; return 'home'; }
+const ixWealth = c => { const d = typeof HDESC !== 'undefined' ? HDESC[c.id] : null; return d && d.wealth ? 0.7 + d.wealth * 0.5 : 1; };
+const ixSpace = p => (typeof Cells !== 'undefined' && CELLS_ON) ? Cells.spaceOf(p) : 0;
+const ixGot = list => list.map(([id, n]) => id === 'gold' ? n + ' gold' : (n > 1 ? n + ' × ' : '') + ITEMS[id][0]);
+function ixGive(list) { for (const [id, n] of list) { if (id === 'gold') { S.gold += n; } else give(id, n); } uiPurse(); }
+
+// ── small skinned meshes for things that lie about (made once per kind; wPickMesh is 79_wilds.js) ──
+const IXMESH = {
+  book(m) { m.push().RY(0.4); m.mat(MAT.CLOTH, [0.34, 0.16, 0.12], 0.4); m.box(-0.11, 0, -0.08, 0.11, 0.045, 0.08); m.mat(MAT.PLAIN, [0.82, 0.78, 0.66]); m.box(-0.1, 0.006, -0.075, 0.1, 0.039, 0.085); m.pop(); },
+  letter(m) { m.push().RY(-0.3); m.mat(MAT.PLAIN, [0.84, 0.8, 0.68]); m.box(-0.09, 0, -0.06, 0.09, 0.006, 0.06); m.mat(MAT.PLAIN, [0.5, 0.1, 0.08]); m.cyl(0.03, 0.006, 0, 0.022, 0.022, 0.006, 7, 2); m.pop(); },
+  candle(m) { m.mat(MAT.PLAIN, [0.86, 0.8, 0.62]); m.cyl(0, 0, 0, 0.02, 0.02, 0.17, 7, 2); m.mat(MAT.PLAIN, [0.1, 0.08, 0.06]); m.cyl(0, 0.17, 0, 0.003, 0.003, 0.02, 4, 2); },
+  loaf(m) { m.mat(MAT.PLAIN, [0.62, 0.44, 0.22]); m.ball(0, 0.05, 0, 0.14, 0.06, 0.08, 9, 5); },
+  cheese(m) { m.mat(MAT.PLAIN, [0.86, 0.72, 0.32]); m.poly([[-0.09, 0, -0.07], [0.09, 0, -0.07], [0.09, 0, 0.07]].reverse()); m.box(-0.07, 0, -0.05, 0.07, 0.07, 0.05); },
+  mug(m) { m.mat(MAT.PLAIN, [0.46, 0.4, 0.34]); m.cyl(0, 0, 0, 0.05, 0.045, 0.11, 9, 3); },
+  coins(m) { PICKMESH.coins(m); },
+  apple(m) { PICKMESH.apple(m); },
+  ring(m) { m.mat(MAT.METAL, [0.78, 0.78, 0.8]); m.cyl(0, 0, 0, 0.016, 0.016, 0.01, 8, 3); },
+  tool(m) { m.mat(MAT.METAL, [0.5, 0.5, 0.52]); m.box(-0.09, 0, -0.012, 0.09, 0.014, 0.012); m.mat(MAT.TIMBER, COL.wood); m.box(0.0, 0, -0.016, 0.1, 0.02, 0.016); },
+};
+IX.MESHOF = { book: 'book', letter: 'letter', candle: 'candle', bread: 'loaf', cheese: 'cheese', apple: 'apple', gold: 'coins', pewter: 'mug', silverring: 'ring', nails: 'tool', flint: 'tool' };
+IX.mesh = kind => { IX._pm = IX._pm || {}; return IX._pm[kind] || (IX._pm[kind] = wPickMesh(IXMESH[kind])); };
+
+// ── the scan: every planned interior ──
+function ixScan() {
+  if (IX.built) return; IX.built = true;
+  const used = new Set();
+  for (const c of Cells.list) {
+    const P = c.ctx && (c.ctx.planDone || c.ctx.plan); if (!P || !P.items || !P.w2) continue;
+    const trade = ixTrade(c), wealth = ixWealth(c), table = IX.LOOT[trade] || IX.LOOT.home, owner = c.id, name = c.name;
+    const surf = [];
+    for (const it of P.items) {
+      if (it.kind !== 'floor' && it.kind !== 'rug') continue; const id = String(it.id || '');
+      if (it.kind === 'floor') {
+        const L = P.lv[it.k] || P.lv[0], y0 = it.y0 !== undefined ? it.y0 : L.y;
+        if (IX.SEAT.test(id) && it.h <= 1.1) { const p = P.w2(it.cx, y0 + (it.h || 0.45), it.cz); const s = { kind: 'seat', id: 'seat.' + id, p, r: 1.8, zone: P.zone, cell: c.id, yaw: (it.rot || 0) + P.yaw, h: it.h || 0.45 }; IX.seat.push(s); World.interact.push(s); IX.stats.seat++; continue; }
+        const k = IX.KINDS.find(k => k[0].test(id)); if (k && !used.has(id)) { used.add(id); const rnd = ixRng(ixHash(id)); const p = P.w2(it.cx, y0 + Math.min(it.h || 0.6, 1.2) * 0.7, it.cz);
+          const o = { kind: 'cont', id: 'cont.' + id, ck: k[1], verb: k[2], p, r: 1.9, zone: P.zone, cell: c.id, owner, ownerName: name, locked: rnd() < k[3] * (trade === 'guard' || trade === 'elder' ? 1.5 : 1), loot: ixRoll(table, rnd, k[4], wealth) };
+          IX.cont.push(o); World.interact.push(o); IX.stats.cont++; }
+        if (it.top > 0.5 && it.w && it.d) surf.push({ it, y: y0 + it.top });
+      }
+    }
+    // loose things on the tables and counters: at most four per interior, one of them a letter or book when the pool has one for this trade
+    const rnd = ixRng(ixHash('loose.' + c.id)); const slots = surf.sort(() => rnd() - 0.5).slice(0, 4); let n = 0;
+    const pool = IX.BOOKS.filter(b => b[3].includes(trade === 'smith' ? 'smith' : trade === 'herb' ? 'herb' : trade === 'chapel' ? 'chapel' : trade === 'guard' ? 'guard' : trade === 'inn' ? 'inn' : trade === 'store' ? 'store' : trade === 'elder' ? 'elder' : 'home'));
+    for (const sl of slots) {
+      const it = sl.it, lx = it.cx + (rnd() - 0.5) * Math.max(0.2, it.w * 0.5), lz = it.cz + (rnd() - 0.5) * Math.max(0.2, it.d * 0.5), p = P.w2(lx, sl.y + 0.01, lz);
+      const id = 'loose.' + c.id + '.' + (n++);
+      let rec;
+      if (n === 1 && pool.length) { const b = pool[(ixHash(c.id) >>> 3) % pool.length]; if (!IX.READ[b[0]] || rnd() < 0.2) { IX.READ[b[0]] = id; rec = { kind: 'read', mesh: rnd() < 0.5 ? 'book' : 'letter', id: 'book.' + b[0], book: b, title: b[1], text: b[2], feeds: b[4] }; IX.stats.books++; } }
+      if (!rec) { const row = IX.PUT[(rnd() * IX.PUT.length) | 0]; rec = { kind: 'loose', mesh: row[0], item: row[1], qty: row[2] ? 1 + ((rnd() * row[2]) | 0) : 1, id }; }
+      const mi = IX.mesh(rec.mesh), obj = addSkinned(mi, { c: p, r: 0.5, zone: P.zone, kind: 'pickup', cell: c.id });
+      R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256);
+      const o = Object.assign(rec, { p: [p[0], p[1] + 0.12, p[2]], r: 1.7, zone: P.zone, cell: c.id, obj, owner, ownerName: name, lid: id });
+      o.kind0 = rec.kind; o.kind = rec.kind === 'read' ? 'read' : 'loose'; if (rec.kind === 'read') { o.kind = 'read'; o.title = rec.title; o.text = rec.text; o.bookId = rec.id; }
+      IX.loose.push(o); World.interact.push(o); IX.stats.loose++;
+    }
+  }
+  ixApplyLocks();
+}
+IX.PUT = [['loaf', 'bread'], ['apple', 'apple'], ['candle', 'candle', 2], ['cheese', 'cheese'], ['coins', 'gold', 4], ['mug', 'pewter'], ['loaf', 'bread'], ['candle', 'candle'], ['coins', 'gold', 3], ['tool', 'nails']];
+
+// ── what happens ──
+function ixOwned(it) { return !!it.owner; }
+// someone awake, near, in the same space as the player
+function ixWitness(extra) {
+  const sp = ixSpace(Player.pos); let best = null, bd = 1e9;
+  for (const n of NPCS) { if (n.anim === 'lie' || n.anim === 'sleep' || ixSpace(n.pos) !== sp) continue; const d = hyp(n.pos[0] - Player.pos[0], n.pos[2] - Player.pos[2]); if (d < (extra || (sp ? 9 : 16)) && d < bd) { bd = d; best = n; } }
+  return best;
+}
+function ixTheft(it, value) {
+  const w = ixWitness(); if (!w) return false;
+  const fine = Math.max(6, Math.round(value * 2 + 6)); const c = S.crime = S.crime || { fine: 0, by: w.id, at: RPG.st().day, n: 0 }; c.fine += fine; c.n++; c.by = w.id; c.pending = true; c.t = 5;
+  toast('<b>' + w.name + '</b>: “Oi! Put that back! Guards!”'); Audio2.shout(false); w.alarm = 2; w.alarmAt = Player.pos.slice();
+  return true;
+}
+const ixValue = list => list.reduce((a, [id, n]) => a + (id === 'gold' ? n : ((RPG.meta(id).value || 1) * n)), 0);
+function ixStolen(list) { S.stolen = S.stolen || {}; for (const [id, n] of list) if (id !== 'gold') S.stolen[id] = (S.stolen[id] || 0) + n; }
+// the pick: a lock wants a key (S.items[key]) or a lockpick, which may snap
+function ixLockTry(lk) {          // null when it opens, else the message
+  if (lk.key && has(lk.key)) return null;
+  if (has('lockpick')) { if (Math.random() < (lk.hard || 0.62)) { if (Math.random() < 0.3) { give('lockpick', -1); toast('The pick snaps as the lock gives.'); } return null; } give('lockpick', -1); return 'The pick snaps in the lock.'; }
+  return lk.msg || 'Locked. You would need a key, or a steady hand and a pick.';
+}
+IX.LOCKS = {};          // cell id -> { key, msg, hard, when() } : a door that wants a key, a pick, or an hour (town secrets fill this)
+function ixApplyLocks() {
+  for (const id in IX.LOCKS) { const c = Cells.by[id], lk = IX.LOCKS[id]; if (!c || !c.portalOut) continue;
+    c.portalOut.lock = () => { S.unlocked = S.unlocked || {}; if (S.unlocked['door.' + id]) return null; if (lk.when && !lk.when()) return lk.whenMsg || lk.msg; const m = ixLockTry(lk); if (m) return m; S.unlocked['door.' + id] = 1; toast('The lock gives.'); save(); return null; }; }
+}
+function ixTakeLoose(it) {
+  if (it.kind0 === 'read') return;
+  const list = [[it.item, it.qty || 1]]; const stolen = ixOwned(it) && ixTheft(it, ixValue(list));
+  ixGive(list); if (ixOwned(it)) ixStolen(list);
+  S.taken = S.taken || {}; S.taken[it.lid] = 1; it.gone = true; it.obj.visible = false; Audio2.pickup(); toast('Taken: ' + ixGot(list).join(', ') + (stolen ? '' : ''));
+  if (it.item === 'gold') Audio2.coin();
+  save();
+}
+function ixOpenCont(it) {
+  if (S.opened[it.id]) return toast('Empty.');
+  if (it.locked && !(S.unlocked && S.unlocked[it.id])) { { const m = ixLockTry({ key: it.key, msg: 'Locked. A small, well-oiled lock: someone cares what is in here.' }); if (m) return toast(m); } S.unlocked = S.unlocked || {}; S.unlocked[it.id] = 1; }
+  S.opened[it.id] = 1; Audio2.chest();
+  const list = it.loot || []; if (!list.length) { toast(it.ck === 'barrel' ? 'Nothing but damp stave and a smell of apples.' : 'Nothing. Dust, and a moth.'); save(); return; }
+  const stolen = ixOwned(it) && ixTheft(it, ixValue(list)); ixGive(list); if (ixOwned(it)) ixStolen(list); toast('Found: ' + ixGot(list).join(', ')); save();
+}
+function ixRead(it) {
+  S.read = S.read || {}; const first = !S.read[it.bookId]; S.read[it.bookId] = 1; openReader(it.title, it.text);
+  if (it.feeds) { S.flags['hear_' + it.feeds] = 1; }
+  if (first) { S.notes = S.notes || []; S.notes.push(it.bookId); }
+}
+function ixSit(it) {
+  if (IX.sit) return ixStand();
+  IX.sit = { x: it.p[0], z: it.p[2], y: it.p[1], eye0: Player.eye, yaw: Player.yaw }; Player.pos[0] = it.p[0]; Player.pos[2] = it.p[2]; Player.vel = [0, 0, 0]; Player.eye = Math.max(1.05, Player.eye - (0.5 + (it.h < 0.4 ? 0.1 : 0)));
+  toast('You sit. Any move stands you up.'); Audio2.pickup('wood');
+}
+function ixStand() { if (!IX.sit) return; Player.eye = IX.sit.eye0; IX.sit = null; }
+// per frame (called from RPG.tick): sitting, the crime timer, the guard arriving, the jail door
+function ixTick(dt) {
+  if (IX.sit) { const k = Input.keys, mv = k.KeyW || k.KeyA || k.KeyS || k.KeyD || k.ArrowUp || k.ArrowDown || (Input.joy && Input.joy.active !== false && (Math.abs(Input.mx) + Math.abs(Input.mz) > 0.2)); if (mv || Player.locked && !UI.talk) ixStand(); else { Player.pos[0] = IX.sit.x; Player.pos[2] = IX.sit.z; Player.vel[0] = Player.vel[2] = 0; } }
+  const c = S.crime; if (c && c.pending && game.playing && !uiBusy() && !Cells.busy && !RPG.dead) { c.t -= dt; if (c.t <= 0) ixGuardComes(); }
+  if (S.jail && !World.cell) S.jail = 0;
+}
+function ixGuard() { const g = ['hale', 'ivo'].map(id => NPC[id]).filter(Boolean).sort((a, b) => hyp(a.pos[0] - Player.pos[0], a.pos[2] - Player.pos[2]) - hyp(b.pos[0] - Player.pos[0], b.pos[2] - Player.pos[2])); return g[0]; }
+function ixGuardComes() {
+  const c = S.crime; if (!c || !c.pending) return; c.pending = false; const g = ixGuard(); if (!g) return;
+  fadeDo(() => { const a = Player.yaw, x = Player.pos[0] + Math.sin(a) * 1.4, z = Player.pos[2] - Math.cos(a) * 1.4; g.pos = [x, Player.pos[1], z]; g.path = null; g.yaw = headingTo(x, z, Player.pos[0], Player.pos[2]); g.anim = 'idle'; setTimeout(() => startTalk(g), 400); });
+}
+IX.crimeNode = function (g) {
+  const c = S.crime, fine = c.fine, held = Object.keys(S.stolen || {}).filter(id => has(id));
+  const done = () => { S.crime = null; S.stolen = {}; Audio2.ui(); };
+  const opts = [];
+  if (held.length) opts.push(['Hand it back.', () => { for (const id of held) give(id, -Math.min(S.items[id], S.stolen[id] || 1)); S.crime = null; S.stolen = {}; save(); return node('Good. That’s the end of it. This time.'); }]);
+  opts.push(['Pay the fine. (' + fine + ' gold)', () => { if (S.gold < fine) return node('You haven’t the coin. Then it’s the cell. Come on.', [['Lead on.', () => IX.jail(g), 1]]); gold(-fine); done(); save(); return node('Paid. Keep your hands in your pockets in future.'); }]);
+  opts.push(['Go quietly.', () => IX.jail(g), 1]);
+  return node('Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is ' + fine + ' gold, or you hand it back, or you sleep in the cell and think about it.', opts);
+};
+IX.jail = function (g) {
+  const c = Cells.by.guardhouse, P = c && c.ctx && (c.ctx.planDone || c.ctx.plan); if (!P) { gold(-Math.min(S.gold, S.crime ? S.crime.fine : 0)); S.crime = null; return node('There’s no cell to hold you. Go on, then.'); }
+  setTimeout(() => endTalk && UI.talk && endTalk(), 0);
+  fadeDo(() => {
+    for (const id in S.stolen || {}) if (has(id)) give(id, -Math.min(S.items[id], S.stolen[id])); S.crime = null; S.stolen = {}; S.jail = 1; Env.hour = 6.5; const r = RPG.st(); r.hp = RPG.MAXHP;
+    const q = P.w2(-3.0, 0.02, 9.6); Cells.teleport({ p: q, yaw: PI }); IX.jailDoor = IX.jailDoor || (() => { const w = P.w2(-3.0, 1.1, 8.1), it = { kind: 'jaildoor', id: 'jail.door', p: w, r: 3.0, zone: P.zone }; World.interact.push(it); return it; })();
+    toast('You wake on straw. The door is locked.'); save();
+  });
+  return null;
+};
+IX.release = function (how) { const c = Cells.by.guardhouse; if (!c) return; S.jail = 0; fadeDo(() => { Cells.teleport(c.leave); if (how === 'pick') { S.crime = { fine: 10, pending: false, by: 'hale' }; toast('You slip out while the watch is at breakfast. They will remember.'); } else toast('Hale lets you out at first light. “Don’t make me do that twice.”'); save(); }); };
+
+// ── wiring into the story layer ──
+const _il2 = interactLabel, _iu2 = interactUse;
+interactLabel = function (it) {
+  if (it.kind === 'cont') return S.opened[it.id] ? null : (it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb);
+  if (it.kind === 'loose') return it.gone ? null : 'Take ' + (it.item === 'gold' ? 'the coins' : ITEMS[it.item][0].toLowerCase());
+  if (it.kind === 'seat') return IX.sit ? 'Stand up' : 'Sit down';
+  if (it.kind === 'jaildoor') return S.jail ? (has('lockpick') ? 'Pick the lock' : 'Call for the guard') : null;
+  if (it.bookId) return 'Read the ' + it.title.replace(/^A /, '').toLowerCase();
+  return _il2(it);
+};
+interactUse = function (it) {
+  if (it.kind === 'cont') return ixOpenCont(it);
+  if (it.kind === 'loose') return ixTakeLoose(it);
+  if (it.kind === 'seat') return ixSit(it);
+  if (it.kind === 'jaildoor') { if (has('lockpick') && Math.random() < 0.7) { give('lockpick', -1); return IX.release('pick'); } if (has('lockpick')) { give('lockpick', -1); return toast('The pick snaps.'); } return IX.release('wait'); }
+  if (it.bookId) return ixRead(it);
+  return _iu2(it);
+};
+for (const id of ['hale', 'ivo']) { const base = TALK[id] || (() => node('Move along.')); TALK[id] = function () { if (S.crime && S.crime.pending === false && S.crime.fine > 0 && !S.jail) { const n = IX.crimeNode(NPC[id]); return n; } return base.call(this); }; }
+const _as2 = applySave; applySave = function (j) { _as2(j); IX.restore(); };
+IX.restore = function () { for (const o of IX.loose) if (S.taken && S.taken[o.lid]) { o.gone = true; o.obj.visible = false; } IX.sit = null; };
+// ── the inn: a bed for the night and a bowl of stew (eating restores; sleeping restores) ──
+{ const base = TALK.greta;
+  const stew = () => { if (S.gold < 3) return node('Three gold, love. Your purse says otherwise.'); gold(-3); RPG.heal(40); Audio2.eat(); toast('The stew is hot and thick: +40 health'); return node('Eat it while it’s hot. I don’t do cold.'); };
+  const room = () => { if (S.gold < 4) return node('Four gold, love, and I’ll not haggle with a purse that light.'); gold(-4); S.flags.rent = RPG.st().day; save(); return node('Up the stairs, the bed by the window. Sleep till you’re done.'); };
+  TALK.greta = function () { const n = base.call(this); if (n && n.o && qAt('ale') >= 0) { const i = n.o.indexOf(bye), add = [['A bowl of stew. (3 gold)', stew]]; if (!S.flags.bed) add.push(['A bed for the night. (4 gold)', room]); n.o.splice(i < 0 ? n.o.length : i, 0, ...add); } return n; }; }
+
+// ── what people say about what you carry, what you did and the hour (a line before their own, at most once in a while) ──
+IX.SAY = [
+  ['*', () => S.crime && S.crime.fine > 0, 'I heard about the business with the shop. Keep your hands to yourself.'],
+  ['*', () => Env.hour >= 22 || Env.hour < 4.5, 'You’re about late. Mind the dark.'],
+  ['*', () => S.gold >= 120, 'You’re jingling, friend. Mind the lanes after dusk.'],
+  ['*', () => S.flags.mineOpen && !S.flags.corwin, 'They say the old mine door is open. Folk are talking.'],
+  ['hale', () => RPG.meta(RPG.st().eq.weapon).dmg >= 21, 'That’s a fine blade. Don’t draw it in my square.'],
+  ['brandt', () => RPG.st().eq.weapon === 'ironsword', 'Good. It sits well in your hand. My work.'],
+  ['brandt', () => RPG.st().eq.weapon === 'silverpick', 'Where did you get that? That’s my dies, fifty years back. Old Mine steel.'],
+  ['maren', () => RPG.st().hp < RPG.MAXHP * 0.4, 'You’re bleeding on my floor. Sit.'],
+  ['greta', () => has('lantern') && qAt('main') >= 3 && qAt('main') < 5, 'Off down a hole, love? I’ll keep the bed made.'],
+  ['marta', () => has('lockpick'), 'Odd thing to carry. I’ll not ask.'],
+  ['aldous', () => S.flags.pell && qAt('main') < 5, 'The Dawn keep you. You look as though you have seen the dead.'],
+  ['finn', () => S.flags.sawBody && qAt('main') < 5, 'Still thinking about that man, aren’t you. So am I.'],
+  ['ivo', () => has('lantern'), 'A lantern by day. Either you’re lost, or you’re going somewhere I’d not.'],
+];
+for (const id of Object.keys(TALK)) { if (typeof TALK[id] !== 'function' || id.startsWith('hale') && id !== 'hale' || ['buy', 'gretaMenu', 'brandtAbout'].includes(id)) continue; const base = TALK[id];
+  TALK[id] = function () { const n = base.apply(this, arguments); const npc = NPC[id]; if (n && npc && game.playing) { const now = Env.hour + (RPG.st().day || 0) * 24; if (!(npc._said > now - 0.5)) { const row = IX.SAY.find(r => (r[0] === '*' || r[0] === id) && r[1]()); if (row) { npc._said = now; n.t = row[2] + '\n\n' + n.t; } } } return n; }; }
+
+
 // ---- 85_ui.js ----
 // ───────────────────────── HUD, dialogue, journal, pause, settings ─────────────────────────
 // The interface is parchment and ink and keeps out of the way: bars and quest text rest when nothing changes and return on change; the one thing
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 44';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 46';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -12704,7 +13160,7 @@ const uiBusy = () => !!(UI.talk || UI.menu || UI.reader || UI.paused);
 function uiPurse() { $('purse').textContent = S.gold + ' gold'; if (S.gold !== UI.lastGold) { if (UI.lastGold >= 0) UI.hudT = Math.max(UI.hudT, 6); UI.lastGold = S.gold; } }
 function questLine(id) { let st = QUESTS[id].stages[S.q[id].stage]; if (id === 'herbs' && S.q[id].stage === 0) st += ' (' + Math.min(frostN(), 5) + ' of 5)'; return st; }
 function uiObjective() {
-  let h = ''; const act = QORDER.filter(id => S.q[id] && !S.q[id].done).sort((a, b) => S.q[b].t - S.q[a].t).slice(0, 3);
+  let h = ''; const act = QORDER.filter(id => S.q[id] && !S.q[id].done).sort((a, b) => (b === 'main') - (a === 'main') || S.q[b].t - S.q[a].t).slice(0, 3);
   for (const id of act) h += '<div><b>' + QUESTS[id].name + '</b>' + questLine(id) + '</div>';
   if (h !== UI.lastObj) { $('objective').innerHTML = h; if (UI.lastObj !== '' || h) UI.hudT = Math.max(UI.hudT, 9); UI.lastObj = h; }
 }
@@ -14407,6 +14863,7 @@ RPG.tick = function (dt) {
   if (!SC.scene) return;
   if (!RPG.inited) { RPG.inited = true; RPG.hudInit(); Combat.init(); Foes.init(); }
   const r = RPG.st(), playing = game.playing, I = RPG.in, k = Input.keys;
+  if (playing && typeof ixTick === 'function') ixTick(dt);       // [q1] 82b_interact.js: sitting, the watch
   if (playing !== RPG.wasPlaying) { RPG.wasPlaying = playing; RPG.hud.rpg.hidden = !playing; }
   // days pass (outlaws drift back to an emptied camp after a few)
   if (Env.hour < r.hour - 12) r.day++; r.hour = Env.hour;
