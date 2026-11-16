@@ -2,7 +2,7 @@
 const headingTo = (x, z, tx, tz) => Math.atan2(tx - x, -(tz - z));
 World.pickups = [];
 // Build 42: faded, patched canvas for awnings (dull madder, ochre, woad, undyed linen), never candy stripes
-const AWN = { madder: [0.5, 0.27, 0.23], ochre: [0.58, 0.44, 0.24], woad: [0.28, 0.34, 0.45], linen: [0.62, 0.58, 0.48] };
+const AWN = { madder: [0.34, 0.18, 0.15], ochre: [0.4, 0.3, 0.16], woad: [0.17, 0.21, 0.3], linen: [0.42, 0.39, 0.32] };
 const VILLAGE_CELL = 80;        // m: the generated props (walls, fences, bridges, wells ...) are merged into one mesh per cell
 function buildVillage() {
   const pack = new MeshPack(); pack.shadow = true;

@@ -472,7 +472,7 @@ function buildDress() {
     (DRS.cnt = DRS.cnt || {})[s.id] = placed;
   }
   // ── market stalls: the square's rim and the alley's middle band, each stocked ──
-  const stallKinds = ['greens', 'bread', 'cloth', 'pots', 'fish', 'meat'], stallCols = [[[0.44, 0.23, 0.19], [0.6, 0.55, 0.45]], [[0.21, 0.27, 0.37], [0.6, 0.55, 0.45]], [[0.29, 0.35, 0.21], [0.58, 0.54, 0.43]], [[0.48, 0.36, 0.19], [0.6, 0.55, 0.44]], [[0.36, 0.25, 0.24], [0.58, 0.54, 0.45]]];      // Build 42: faded madder, woad, moss, ochre on undyed linen
+  const stallKinds = ['greens', 'bread', 'cloth', 'pots', 'fish', 'meat'], stallCols = [[[0.28, 0.14, 0.12], [0.4, 0.37, 0.3]], [[0.13, 0.17, 0.24], [0.4, 0.37, 0.3]], [[0.18, 0.22, 0.13], [0.39, 0.36, 0.29]], [[0.31, 0.23, 0.12], [0.4, 0.37, 0.29]], [[0.23, 0.16, 0.15], [0.39, 0.36, 0.3]]];      // Build 42: faded madder, woad, moss, ochre on undyed linen (the canopy material brightens these about 1.6x)
   DRS.stalls = [];
   const placeStall = (x, z, face, kind) => {          // face: heading toward which the stall opens
     const y = gy(x, z), name = dStall(kind, R, (sc => R() < 0.4 ? [sc[0], sc[0]] : sc)(R.pick(stallCols))), ry = face;
