@@ -4,7 +4,7 @@
 // a barrow). Everything asks KEEP.hit first (nothing in a door's approach strip or on a road's centre line) and is merged into the village cells through `bucket`.
 function buildLanes(bucket) {
   if (TEST && TEST.levels === 0) return;
-  const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, dark, wood, gy } = K, rr = rng(5151);
+  const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, dark, wood, gy } = K, rr = rng(5151); K.fine = true; K.maxDist = 40; K.noShadow = true;
   const hs = INF.houses.filter(h => h.block && Math.abs(Math.sin(h.yaw)) < 0.1), ext = s => ({ x0: s.x - s.w / 2, x1: s.x + s.w / 2, z0: s.z - s.d / 2, z1: s.z + s.d / 2 });
   const lanes = [];
   for (const a of hs) for (const b of hs) {
