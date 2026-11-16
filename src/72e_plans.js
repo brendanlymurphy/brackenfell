@@ -264,7 +264,7 @@ function planHouse(P, c, info) {
   const hall0 = hall, hh = pHearth(P, hall, 's', info.inn ? 2.4 : 1.7, { cauldron: true, at: 0 });
   P.hall = { room: hall, hh };
   if (need.has('counter')) {
-    const t = pFree(P, hall, P.id + '.counter', 2.0, 0.7, 1.0, 0, m => { Props.table(m, 2.0, 0.7); Props.clutter(m, c.R, -0.8, 0.8, 0.76, 0, ['jug', 'bowl', 'cheese', 'loaf'], 3, c); }, { near: [x0 / 2 + 0.2, 2.2], surface: true });
+    const t = pFree(P, hall, P.id + '.counter', 2.0, 0.7, 1.0, 0, m => { Props.table(m, 2.0, 0.7); Props.clutter(m, c.R, -0.8, 0.8, 0.76, 0, ['jug', 'bowl', 'cheese', 'loaf'], 3, c); }, { near: [x0 / 2 + 0.2, 2.2], surface: true, keeper: 0.75 });
     if (t) pSpot(P, 'counter', t.cx, t.cz + 0.75, PI, { k: 0 });
   }
   if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
@@ -392,7 +392,7 @@ function dressKind(P, c, room, hh, info) {
   const id = P.id, D = KIT_DRESS[id] || {}, R = P.R, a = room.in, kind = info.kind; P.hall = { room, hh };
   if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
   if (kind === 'shop') {          // a counter across the room with the keeper behind it, wares on every wall
-    const t = pFree(P, room, id + '.counter', 2.6, 0.8, 1.0, 0, m => { Props.table(m, 2.6, 0.8, 1.0); Props.clutter(m, R, -1.1, 1.1, 1.0, 0, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple'], 5, c); }, { near: [-1.6, 2.4], surface: true });
+    const t = pFree(P, room, id + '.counter', 2.6, 0.8, 1.0, 0, m => { Props.table(m, 2.6, 0.8, 1.0); Props.clutter(m, R, -1.1, 1.1, 1.0, 0, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple'], 5, c); }, { near: [-1.6, 2.4], surface: true, keeper: 0.8 });
     if (t) { pSpot(P, 'counter', t.cx, t.cz + 0.8, PI, { k: 0 }); pSpot(P, 'front', t.cx, t.cz - 0.8, 0, { k: 0 }); }
     for (const sd of ['w', 'e']) for (let i = 0; i < 2; i++) pAgainst(P, room, sd, id + '.ware' + sd + i, 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(c, ['pot', 'jug', 'bowl', 'cheese', 'bottle', 'loaf'])), { at: 'mid' === 0 ? 0 : 2.0 + i * 2.2 });
   } else if (kind === 'smith') {          // the forge is the hearth; the anvil in front of it, a quench trough, a bench and weapons

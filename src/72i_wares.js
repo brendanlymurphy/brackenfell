@@ -56,7 +56,7 @@ PD.ironStand = R => m => {
 };
 // a heap of coal against a wall, with a few lumps spilled
 PD.coalHeap = R => m => {
-  m.mat(MAT.PLAIN, WS.coal); m.ball(0, 0.18, 0, 0.62, 0.3, 0.42, 8, 5); m.ball(-0.28, 0.12, 0.1, 0.32, 0.2, 0.3, 7, 4); m.ball(0.3, 0.1, -0.05, 0.3, 0.18, 0.26, 7, 4);
+  m.mat(MAT.PLAIN, WS.coal); m.ball(0, 0.28, 0, 0.62, 0.3, 0.42, 8, 5); m.ball(-0.28, 0.2, 0.1, 0.32, 0.2, 0.3, 7, 4); m.ball(0.3, 0.18, -0.05, 0.3, 0.18, 0.26, 7, 4);
   for (let i = 0; i < 6; i++) { m.mat(MAT.PLAIN, [0.07, 0.07, 0.08]); m.ball(R.s() * 0.7, 0.03, 0.3 + R() * 0.2, 0.05, 0.03, 0.05, 4, 3); }
   addBoxCollider(m, -0.7, -0.45, 0.7, 0.45, 0, 0.5);
 };

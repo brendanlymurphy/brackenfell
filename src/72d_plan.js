@@ -236,7 +236,7 @@ function pAgainst(P, room, side, name, w, d, h, back, draw, o) {
 // anywhere free in the room: tries the centre, then rings round it (o.near = [x, z] to start from), o.step 0.25
 function pFree(P, room, name, w, d, h, rot, draw, o) {
   o = Object.assign({ _hon: {} }, o || {}); const a = room.in, c0 = o.near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = [];
-  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3; z += 0.25) pts.push([x, z]);
+  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3 - (o.keeper ? o.keeper + 0.35 - 0.3 : 0); z += 0.25) pts.push([x, z]);   // [fx2] o.keeper: room behind a counter for the keeper
   pts.sort((p, q) => Math.hypot(p[0] - c0[0], p[1] - c0[1]) - Math.hypot(q[0] - c0[0], q[1] - c0[1]));
   for (const p of pts) { const it = pPut(P, room, name, p[0], p[1], rot, w, d, h, draw, o); if (it) return it; }
   return null;
@@ -280,9 +280,10 @@ function pSpotsClear(P) {
   P.spotMoves = [];
   for (const nm in P.spots) {
     const sp = P.spots[nm], W = World.spots[P.id + '.' + nm]; if (!W || W.sit || W.lie) continue;
-    const room = pRoomAt(P, sp.k, sp.x, sp.z); if (!room || !busy(sp.k, sp.x, sp.z)) continue;
+    let room = pRoomAt(P, sp.k, sp.x, sp.z); if (!room) for (const id in P.rooms) { const q = P.rooms[id], a = q.in; if (q.k === sp.k && sp.x > a.x0 - 0.45 && sp.x < a.x1 + 0.45 && sp.z > a.z0 - 0.45 && sp.z < a.z1 + 0.45) { room = q; break; } }
+    if (!room || !busy(sp.k, sp.x, sp.z)) continue;
     const a = room.in; let best = null;
-    for (let r = 0.1; r <= 1.1 && !best; r += 0.1) { let bd = 1e9; for (let q = 0; q < 24; q++) { const ang = q / 24 * TAU, x = sp.x + Math.cos(ang) * r, z = sp.z + Math.sin(ang) * r; if (x < a.x0 + 0.3 || x > a.x1 - 0.3 || z < a.z0 + 0.3 || z > a.z1 - 0.3 || busy(sp.k, x, z)) continue; const d = r + (W.face ? 0 : 0); if (d < bd) { bd = d; best = [x, z]; } } }
+    for (const wi of [0.3, 0.22]) for (let r = 0.1; r <= 1.1 && !best; r += 0.1) { let bd = 1e9; for (let q = 0; q < 24; q++) { const ang = q / 24 * TAU, x = sp.x + Math.cos(ang) * r, z = sp.z + Math.sin(ang) * r; if (x < a.x0 + wi || x > a.x1 - wi || z < a.z0 + wi || z > a.z1 - wi || busy(sp.k, x, z)) continue; const d = r + (W.face ? 0 : 0); if (d < bd) { bd = d; best = [x, z]; } } }
     if (!best) continue; P.spotMoves.push(nm + ' ' + sp.x.toFixed(2) + ',' + sp.z.toFixed(2) + ' -> ' + best[0].toFixed(2) + ',' + best[1].toFixed(2));
     const p = P.w2(best[0], 0, best[1]); sp.x = best[0]; sp.z = best[1]; sp.p = [p[0], W.p[1], p[2]]; W.p = sp.p.slice();
   }
@@ -292,6 +293,7 @@ function pSpot(P, name, x, z, yaw, o) {
   o = o || {}; const k = o.k === undefined ? 0 : o.k, L = P.lv[k], y = (o.y === undefined ? 0.02 : o.y) + L.y;
   const p = P.w2(x, y, z); World.spots[P.id + '.' + name] = Object.assign({ p, yaw: yaw + P.yaw, zone: P.zone, site: P.id, k, room: (pRoomAt(P, k, x, z) || {}).id }, o.extra || {});
   P.spots[name] = { x, z, k, yaw, p };
+  if (name === 'counter') P.clear.push({ x0: x - 0.3, x1: x + 0.3, z0: z - 0.3, z1: z + 0.3, k, kind: 'path' });   // [fx2] the keeper's standing room stays free
 }
 function pInteract(P, x, y, z, o, k) { const L = P.lv[k || 0]; const it = Object.assign({ p: P.w2(x, y + L.y, z), r: 2.0, zone: P.zone }, o); World.interact.push(it); return it; }
 function pLight(P, x, y, z, r, col, kind, k) { const L = P.lv[k || 0], rm = pRoomAt(P, k || 0, x, z); if (rm) P.lightIn[rm.id] = 1; P.lights++; return addLight(P.w2(x, y + L.y, z), r, col, P.zone, kind); }

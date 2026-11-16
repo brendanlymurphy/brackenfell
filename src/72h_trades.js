@@ -108,7 +108,7 @@ PLANS.smithy = (P, c, info) => {
     pSpot(P, 'home', fx + 1.9, fz - 0.4, face, { k: 0 });
     const an = pPut(P, forge, id + '.anvil', fx - 0.25, fz - 0.5, 0, 0.7, 0.5, 0.9, mm => Props.anvil(mm), { allow: ['hearth'] });
     if (an) { pSpot(P, 'anvil', an.cx + 0.15, an.cz + 0.75, 0, { k: 0 }); }
-    pSpot(P, 'forge', fx + 1.0, fz + 0.1, PI / 2 + 0.3, { k: 0 });
+    pSpot(P, 'forge', fx + 1.0, fz - 0.2, PI / 2 + 0.3, { k: 0 });
     // the forge itself: a billet glowing in the coals, a stone hood already (the breast), smoke going up, the bellows on the right with its handle out
     at(m, hh.px, 0.02, hh.pz, PI / 2, () => {
       emit(m, 1.6, () => { m.mat(MAT.PLAIN, [1, 0.5, 0.12]); m.box(0.2, 0.1, -0.5, 0.6, 0.125, 0.5, 4); m.box(0.25, 0.125, -0.12, 0.55, 0.14, 0.12, 4); });

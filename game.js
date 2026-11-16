@@ -6811,7 +6811,7 @@ function pAgainst(P, room, side, name, w, d, h, back, draw, o) {
 // anywhere free in the room: tries the centre, then rings round it (o.near = [x, z] to start from), o.step 0.25
 function pFree(P, room, name, w, d, h, rot, draw, o) {
   o = Object.assign({ _hon: {} }, o || {}); const a = room.in, c0 = o.near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = [];
-  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3; z += 0.25) pts.push([x, z]);
+  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3 - (o.keeper ? o.keeper + 0.35 - 0.3 : 0); z += 0.25) pts.push([x, z]);   // [fx2] o.keeper: room behind a counter for the keeper
   pts.sort((p, q) => Math.hypot(p[0] - c0[0], p[1] - c0[1]) - Math.hypot(q[0] - c0[0], q[1] - c0[1]));
   for (const p of pts) { const it = pPut(P, room, name, p[0], p[1], rot, w, d, h, draw, o); if (it) return it; }
   return null;
@@ -6855,9 +6855,10 @@ function pSpotsClear(P) {
   P.spotMoves = [];
   for (const nm in P.spots) {
     const sp = P.spots[nm], W = World.spots[P.id + '.' + nm]; if (!W || W.sit || W.lie) continue;
-    const room = pRoomAt(P, sp.k, sp.x, sp.z); if (!room || !busy(sp.k, sp.x, sp.z)) continue;
+    let room = pRoomAt(P, sp.k, sp.x, sp.z); if (!room) for (const id in P.rooms) { const q = P.rooms[id], a = q.in; if (q.k === sp.k && sp.x > a.x0 - 0.45 && sp.x < a.x1 + 0.45 && sp.z > a.z0 - 0.45 && sp.z < a.z1 + 0.45) { room = q; break; } }
+    if (!room || !busy(sp.k, sp.x, sp.z)) continue;
     const a = room.in; let best = null;
-    for (let r = 0.1; r <= 1.1 && !best; r += 0.1) { let bd = 1e9; for (let q = 0; q < 24; q++) { const ang = q / 24 * TAU, x = sp.x + Math.cos(ang) * r, z = sp.z + Math.sin(ang) * r; if (x < a.x0 + 0.3 || x > a.x1 - 0.3 || z < a.z0 + 0.3 || z > a.z1 - 0.3 || busy(sp.k, x, z)) continue; const d = r + (W.face ? 0 : 0); if (d < bd) { bd = d; best = [x, z]; } } }
+    for (const wi of [0.3, 0.22]) for (let r = 0.1; r <= 1.1 && !best; r += 0.1) { let bd = 1e9; for (let q = 0; q < 24; q++) { const ang = q / 24 * TAU, x = sp.x + Math.cos(ang) * r, z = sp.z + Math.sin(ang) * r; if (x < a.x0 + wi || x > a.x1 - wi || z < a.z0 + wi || z > a.z1 - wi || busy(sp.k, x, z)) continue; const d = r + (W.face ? 0 : 0); if (d < bd) { bd = d; best = [x, z]; } } }
     if (!best) continue; P.spotMoves.push(nm + ' ' + sp.x.toFixed(2) + ',' + sp.z.toFixed(2) + ' -> ' + best[0].toFixed(2) + ',' + best[1].toFixed(2));
     const p = P.w2(best[0], 0, best[1]); sp.x = best[0]; sp.z = best[1]; sp.p = [p[0], W.p[1], p[2]]; W.p = sp.p.slice();
   }
@@ -6867,6 +6868,7 @@ function pSpot(P, name, x, z, yaw, o) {
   o = o || {}; const k = o.k === undefined ? 0 : o.k, L = P.lv[k], y = (o.y === undefined ? 0.02 : o.y) + L.y;
   const p = P.w2(x, y, z); World.spots[P.id + '.' + name] = Object.assign({ p, yaw: yaw + P.yaw, zone: P.zone, site: P.id, k, room: (pRoomAt(P, k, x, z) || {}).id }, o.extra || {});
   P.spots[name] = { x, z, k, yaw, p };
+  if (name === 'counter') P.clear.push({ x0: x - 0.3, x1: x + 0.3, z0: z - 0.3, z1: z + 0.3, k, kind: 'path' });   // [fx2] the keeper's standing room stays free
 }
 function pInteract(P, x, y, z, o, k) { const L = P.lv[k || 0]; const it = Object.assign({ p: P.w2(x, y + L.y, z), r: 2.0, zone: P.zone }, o); World.interact.push(it); return it; }
 function pLight(P, x, y, z, r, col, kind, k) { const L = P.lv[k || 0], rm = pRoomAt(P, k || 0, x, z); if (rm) P.lightIn[rm.id] = 1; P.lights++; return addLight(P.w2(x, y + L.y, z), r, col, P.zone, kind); }
@@ -7344,7 +7346,7 @@ function planHouse(P, c, info) {
   const hall0 = hall, hh = pHearth(P, hall, 's', info.inn ? 2.4 : 1.7, { cauldron: true, at: 0 });
   P.hall = { room: hall, hh };
   if (need.has('counter')) {
-    const t = pFree(P, hall, P.id + '.counter', 2.0, 0.7, 1.0, 0, m => { Props.table(m, 2.0, 0.7); Props.clutter(m, c.R, -0.8, 0.8, 0.76, 0, ['jug', 'bowl', 'cheese', 'loaf'], 3, c); }, { near: [x0 / 2 + 0.2, 2.2], surface: true });
+    const t = pFree(P, hall, P.id + '.counter', 2.0, 0.7, 1.0, 0, m => { Props.table(m, 2.0, 0.7); Props.clutter(m, c.R, -0.8, 0.8, 0.76, 0, ['jug', 'bowl', 'cheese', 'loaf'], 3, c); }, { near: [x0 / 2 + 0.2, 2.2], surface: true, keeper: 0.75 });
     if (t) pSpot(P, 'counter', t.cx, t.cz + 0.75, PI, { k: 0 });
   }
   if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
@@ -7472,7 +7474,7 @@ function dressKind(P, c, room, hh, info) {
   const id = P.id, D = KIT_DRESS[id] || {}, R = P.R, a = room.in, kind = info.kind; P.hall = { room, hh };
   if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
   if (kind === 'shop') {          // a counter across the room with the keeper behind it, wares on every wall
-    const t = pFree(P, room, id + '.counter', 2.6, 0.8, 1.0, 0, m => { Props.table(m, 2.6, 0.8, 1.0); Props.clutter(m, R, -1.1, 1.1, 1.0, 0, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple'], 5, c); }, { near: [-1.6, 2.4], surface: true });
+    const t = pFree(P, room, id + '.counter', 2.6, 0.8, 1.0, 0, m => { Props.table(m, 2.6, 0.8, 1.0); Props.clutter(m, R, -1.1, 1.1, 1.0, 0, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple'], 5, c); }, { near: [-1.6, 2.4], surface: true, keeper: 0.8 });
     if (t) { pSpot(P, 'counter', t.cx, t.cz + 0.8, PI, { k: 0 }); pSpot(P, 'front', t.cx, t.cz - 0.8, 0, { k: 0 }); }
     for (const sd of ['w', 'e']) for (let i = 0; i < 2; i++) pAgainst(P, room, sd, id + '.ware' + sd + i, 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(c, ['pot', 'jug', 'bowl', 'cheese', 'bottle', 'loaf'])), { at: 'mid' === 0 ? 0 : 2.0 + i * 2.2 });
   } else if (kind === 'smith') {          // the forge is the hearth; the anvil in front of it, a quench trough, a bench and weapons
@@ -7917,7 +7919,7 @@ PLANS.smithy = (P, c, info) => {
     pSpot(P, 'home', fx + 1.9, fz - 0.4, face, { k: 0 });
     const an = pPut(P, forge, id + '.anvil', fx - 0.25, fz - 0.5, 0, 0.7, 0.5, 0.9, mm => Props.anvil(mm), { allow: ['hearth'] });
     if (an) { pSpot(P, 'anvil', an.cx + 0.15, an.cz + 0.75, 0, { k: 0 }); }
-    pSpot(P, 'forge', fx + 1.0, fz + 0.1, PI / 2 + 0.3, { k: 0 });
+    pSpot(P, 'forge', fx + 1.0, fz - 0.2, PI / 2 + 0.3, { k: 0 });
     // the forge itself: a billet glowing in the coals, a stone hood already (the breast), smoke going up, the bellows on the right with its handle out
     at(m, hh.px, 0.02, hh.pz, PI / 2, () => {
       emit(m, 1.6, () => { m.mat(MAT.PLAIN, [1, 0.5, 0.12]); m.box(0.2, 0.1, -0.5, 0.6, 0.125, 0.5, 4); m.box(0.25, 0.125, -0.12, 0.55, 0.14, 0.12, 4); });
@@ -8069,7 +8071,7 @@ PD.ironStand = R => m => {
 };
 // a heap of coal against a wall, with a few lumps spilled
 PD.coalHeap = R => m => {
-  m.mat(MAT.PLAIN, WS.coal); m.ball(0, 0.18, 0, 0.62, 0.3, 0.42, 8, 5); m.ball(-0.28, 0.12, 0.1, 0.32, 0.2, 0.3, 7, 4); m.ball(0.3, 0.1, -0.05, 0.3, 0.18, 0.26, 7, 4);
+  m.mat(MAT.PLAIN, WS.coal); m.ball(0, 0.28, 0, 0.62, 0.3, 0.42, 8, 5); m.ball(-0.28, 0.2, 0.1, 0.32, 0.2, 0.3, 7, 4); m.ball(0.3, 0.18, -0.05, 0.3, 0.18, 0.26, 7, 4);
   for (let i = 0; i < 6; i++) { m.mat(MAT.PLAIN, [0.07, 0.07, 0.08]); m.ball(R.s() * 0.7, 0.03, 0.3 + R() * 0.2, 0.05, 0.03, 0.05, 4, 3); }
   addBoxCollider(m, -0.7, -0.45, 0.7, 0.45, 0, 0.5);
 };
@@ -8818,7 +8820,7 @@ const pAnyHang = (P, room, kinds, o) => { let n = 0; for (const sd of ['n', 'w',
 const HT = {};
 const cnt = (P, room, F, len, kinds, nm) => {
   const R = P.R, c = P.c, near = F.counterAt || [-0.6 * F.sx, room.z0 + (room.z1 - room.z0) * 0.62];
-  const t = pFree(P, room, P.id + '.counter', len, 0.8, 1.0, 0, pdCounter(len, c, kinds, 8), { near, surface: true, noClear: false, lowOk: false });
+  const t = pFree(P, room, P.id + '.counter', len, 0.8, 1.0, 0, pdCounter(len, c, kinds, 8), { near, surface: true, noClear: false, lowOk: false, keeper: 0.85 });
   if (t) { pSpot(P, 'counter', t.cx + 0.4, t.cz + 0.85, PI, { k: room.k }); pSpot(P, 'front', t.cx + 0.4, t.cz - 0.85, 0, { k: room.k }); P.counter = t; } return t;
 };
 const hFocalAt = (P, room, name, F, o) => { const r = hPlace(P, room, name, Object.assign({ sides: ['s'], at: [F.fx === undefined ? 0 : F.fx, -F.sx * 2.2, F.sx * 2.2, -F.sx * 3.2] }, o || {})); if (r && !P.focal) P.focal = { name, x: r.cx, z: r.cz }; return r; };

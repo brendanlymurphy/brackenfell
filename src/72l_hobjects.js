@@ -267,7 +267,7 @@ const pAnyHang = (P, room, kinds, o) => { let n = 0; for (const sd of ['n', 'w',
 const HT = {};
 const cnt = (P, room, F, len, kinds, nm) => {
   const R = P.R, c = P.c, near = F.counterAt || [-0.6 * F.sx, room.z0 + (room.z1 - room.z0) * 0.62];
-  const t = pFree(P, room, P.id + '.counter', len, 0.8, 1.0, 0, pdCounter(len, c, kinds, 8), { near, surface: true, noClear: false, lowOk: false });
+  const t = pFree(P, room, P.id + '.counter', len, 0.8, 1.0, 0, pdCounter(len, c, kinds, 8), { near, surface: true, noClear: false, lowOk: false, keeper: 0.85 });
   if (t) { pSpot(P, 'counter', t.cx + 0.4, t.cz + 0.85, PI, { k: room.k }); pSpot(P, 'front', t.cx + 0.4, t.cz - 0.85, 0, { k: room.k }); P.counter = t; } return t;
 };
 const hFocalAt = (P, room, name, F, o) => { const r = hPlace(P, room, name, Object.assign({ sides: ['s'], at: [F.fx === undefined ? 0 : F.fx, -F.sx * 2.2, F.sx * 2.2, -F.sx * 3.2] }, o || {})); if (r && !P.focal) P.focal = { name, x: r.cx, z: r.cz }; return r; };
