@@ -149,7 +149,7 @@ function pFoot(cx, cz, w, d, rot) { const c = Math.abs(Math.cos(rot)), s = Math.
 // that is already there, into a doorway or stair clearance, or (when tall) across a window, it is undone (mesh, kit pieces, colliders, lights, emitters) and the
 // caller tries the next place. So no generator can put a footprint lie into the world: a flaw of this kind disappears from all interiors at once.
 let P_REC = null;
-const pRecBegin = defer => (P_REC = { parts: [], defer: !!defer, pend: [] });
+const pRecBegin = defer => (P_REC = { parts: [], defer: !!defer, pend: [], c0: World.colliders.length });
 const pRecEnd = (rc, m, t0) => { if (!rc) return; rc.t0 = t0; rc.t1 = m.ni; P_REC = null; };
 const P_ROUND = /^(Barrel|wine_barrel|wooden_barrels|Vase|ceramic|Cauldron|Stool|painted_wooden_stool|Candle|CandleStick|brass_candle|wooden_candlestick|Bucket|wooden_bucket|Mug|Anvil)/;
 function pToLocal(P) { if (P._tl) return P._tl; const T = P.T, ax = [T[0], T[1], T[2]], ay = [T[4], T[5], T[6]], az = [T[8], T[9], T[10]], o = [T[12], T[13], T[14]]; return P._tl = (x, y, z) => { const dx = x - o[0], dy = y - o[1], dz = z - o[2]; return [dx * ax[0] + dy * ax[1] + dz * ax[2], dx * ay[0] + dy * ay[1] + dz * ay[2], dx * az[0] + dy * az[1] + dz * az[2]]; }; }
@@ -163,22 +163,37 @@ function pMeasure(P, m, rc) {
     if (P_ROUND.test(pt.name)) { const e = M.elements, ex = Math.hypot(e[0], e[1], e[2]) * (pc.max[0] - pc.min[0]), ez = Math.hypot(e[8], e[9], e[10]) * (pc.max[2] - pc.min[2]), r = Math.max(ex, ez) / 2, h = Math.hypot(e[4], e[5], e[6]) * (pc.max[1] - pc.min[1]) / 2, v = new THREE.Vector3((pc.min[0] + pc.max[0]) / 2, (pc.min[1] + pc.max[1]) / 2, (pc.min[2] + pc.max[2]) / 2).applyMatrix4(M), w = to(v.x, v.y, v.z); g([w[0] - r, w[1] - h, w[2] - r]); g([w[0] + r, w[1] + h, w[2] + r]); any = true; continue; }
     const q = Kit.box(pt.name, M); if (!q) continue; for (let i = 0; i < 8; i++) g(to(i & 1 ? q.max[0] : q.min[0], i & 2 ? q.max[1] : q.min[1], i & 4 ? q.max[2] : q.min[2])); any = true;
   }
-  return any ? { min, max } : null;
+  const res = any ? { min, max } : null;
+  if (res && rc.c0 !== undefined) {          // [fx2] the colliders the draw added: where a person is stopped must not lie in a wall either
+    const cmin = [1e9, 1e9], cmax = [-1e9, -1e9]; let nc = 0;
+    for (let i = rc.c0; i < World.colliders.length; i++) {
+      const c = World.colliders[i]; if (!isFinite(c.x) || (c.y1 - c.y0) < 0.2) continue; nc++;
+      const pts = c.r !== undefined ? [[c.r, 0, 0], [-c.r, 0, 0], [0, 0, c.r], [0, 0, -c.r]] : [[c.hx, 0, c.hz], [-c.hx, 0, c.hz], [c.hx, 0, -c.hz], [-c.hx, 0, -c.hz]];
+      for (const q of pts) { const w = c.r !== undefined ? [c.x + q[0], c.y0, c.z + q[2]] : [c.x + q[0] * c.ax + q[2] * c.bx, c.y0, c.z + q[0] * c.az + q[2] * c.bz], l = to(w[0], w[1], w[2]); if (l[0] < cmin[0]) cmin[0] = l[0]; if (l[0] > cmax[0]) cmax[0] = l[0]; if (l[2] < cmin[1]) cmin[1] = l[2]; if (l[2] > cmax[1]) cmax[1] = l[2]; }
+    }
+    if (nc) res.cb = { min: cmin, max: cmax };
+  }
+  return res;
 }
 // everything an undone draw must give back
-function pSnap(P, m) { const W = World; return { nv: m.nv, ni: m.ni, own: (m.own || []).length, col: W.colliders.length, flr: W.floors.length, lit: W.lights.length, emi: W.emitters.length, ixn: W.interact.length, lc: Object.assign({}, KITP.lc), seed: m.seed }; }
+function pSnap(P, m) { const W = World; return { nv: m.nv, ni: m.ni, own: (m.own || []).length, col: W.colliders.length, flr: W.floors.length, lit: W.lights.length, emi: W.emitters.length, ixn: W.interact.length, lc: Object.assign({}, KITP.lc), seed: m.seed, st: m.st.length, mm: m.m.slice() }; }
+// [fx2] a draw that pushes and never pops would shift everything drawn after it (a floor item 0.15 m up): put the transform back and say which draw it was
+function pBase(P, m) { if (!P.base) P.base = { st: m.st.length, mm: m.m.slice() }; else if (m.st.length !== P.base.st || m.m[12] !== P.base.mm[12] || m.m[13] !== P.base.mm[13] || m.m[14] !== P.base.mm[14]) { (P.leaks = P.leaks || []).push('between draws'); m.st.length = P.base.st; m.m = P.base.mm.slice(); m.dirty = true; } }
+function pFixStack(P, m, sn, name) { if (m.st.length !== sn.st || m.m[13] !== sn.mm[13] || m.m[12] !== sn.mm[12] || m.m[14] !== sn.mm[14]) { (P.leaks = P.leaks || []).push(name); m.st.length = sn.st; m.m = sn.mm.slice(); m.dirty = true; } }
 function pUndo(P, m, sn) { const W = World; m.nv = sn.nv; m.ni = sn.ni; if (m.own) m.own.length = sn.own; W.colliders.length = sn.col; W.floors.length = sn.flr; W.lights.length = sn.lit; W.emitters.length = sn.emi; W.interact.length = sn.ixn; KITP.lc = sn.lc; }
 function pCommitKit(m, rc) { const z = m.m1; for (const [mm, pp, ex] of rc.pend) kaddNow(mm, pp, ex); m.m1 = z; rc.pend.length = 0; }
 // does the measured box b (plan frame, level k) sit on the floor of room without going through anything? returns '' or why not
 function pBoxOK(P, room, b, o, flat) {
   const k = room.k, a = room.in, L = P.lv[k], tol = 0.02;
   if (b.min[0] < a.x0 - tol || b.max[0] > a.x1 + tol || b.min[2] < a.z0 - tol || b.max[2] > a.z1 + tol) return 'wall';
+  if (b.cb && (b.cb.min[0] < a.x0 - 0.04 || b.cb.max[0] > a.x1 + 0.04 || b.cb.min[1] < a.z0 - 0.04 || b.cb.max[1] > a.z1 + 0.04)) return 'wall collider';
   if (b.max[1] > L.y + L.H + 0.02 && !o.tall) return 'ceiling';
   if (flat) return '';
   const r = { x0: b.min[0], x1: b.max[0], z0: b.min[2], z1: b.max[2] }, lifted = (o.lift || 0) > 0.1;
   if (!lifted) for (const it of P.items) {
     if (it.k !== k || !P_SOLID[it.kind]) continue; const ib = it.bx;
     if (ib && it.kind !== 'stair' && it.kind !== 'hole') { const ox = Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]), oz = Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]), oy = Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]); if (ox > 0.02 && oz > 0.02 && !(o.allow && o.allow.includes(it.kind))) return 'item ' + it.id; }
+    if (ib && ib.cb && b.cb && it.kind === 'floor' && !(o.allow && o.allow.includes(it.kind)) && Math.min(b.cb.max[0], ib.cb.max[0]) - Math.max(b.cb.min[0], ib.cb.min[0]) > 0.06 && Math.min(b.cb.max[1], ib.cb.max[1]) - Math.max(b.cb.min[1], ib.cb.min[1]) > 0.06) return 'collider ' + it.id;   // [fx2] where people are stopped
     else if (rOv(r, it, 0.02) && !(it.kind === 'hearth' && o.allow && o.allow.includes('hearth'))) return 'item ' + it.id;
   }
   for (const q of P.wallItems) if (q.k === k && q.bx) { const ib = q.bx; if (Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]) > 0.03 && Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]) > 0.03 && Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]) > 0.03) return 'hung ' + q.id; }
@@ -193,8 +208,8 @@ function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   const hon = o._hon; if (hon && hon.rel) r = { x0: Math.min(r.x0, cx + hon.rel.x0), x1: Math.max(r.x1, cx + hon.rel.x1), z0: Math.min(r.z0, cz + hon.rel.z0), z1: Math.max(r.z1, cz + hon.rel.z1) };
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
   if (hon && hon.rel && pBoxOK(P, room, { min: [r.x0, P.lv[room.k].y + 0.1, r.z0], max: [r.x1, P.lv[room.k].y + h, r.z1] }, o, o.flat)) return null;
-  const L = P.lv[room.k], m = P.c.int, sn = pSnap(P, m), t0 = m.ni, rc = pRecBegin(true), flat = !!o.flat;
-  at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); pRecEnd(rc, m, t0);
+  const L = P.lv[room.k], m = P.c.int; pBase(P, m); const sn = pSnap(P, m), t0 = m.ni, rc = pRecBegin(true), flat = !!o.flat;
+  at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); pRecEnd(rc, m, t0); pFixStack(P, m, sn, name);
   const b = pMeasure(P, m, rc);
   if (b) {
     const why = o.nomeasure ? '' : pBoxOK(P, room, b, o, flat);
@@ -254,7 +269,7 @@ function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
   for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.hh || it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
   const m = P.c.int, p = hor ? [u, side === 'n' ? a.z0 : a.z1] : [side === 'w' ? a.x0 : a.x1, u];
   const rot = rotBack(side, +1);
-  const sn = pSnap(P, m), rc = pRecBegin(true), t0 = m.ni; at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0)); pRecEnd(rc, m, t0);
+  pBase(P, m); const sn = pSnap(P, m), rc = pRecBegin(true), t0 = m.ni; at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0)); pRecEnd(rc, m, t0); pFixStack(P, m, sn, name);
   const b = pMeasure(P, m, rc);
   if (b) {          // [fx2] measured: through a door or window, another hung thing, furniture, the ceiling or down to the floor undoes it
     const iu = hor ? 0 : 2, u0 = b.min[iu], u1 = b.max[iu], by0 = b.min[1] - L.y, by1 = b.max[1] - L.y; let why = '';

@@ -47,6 +47,9 @@ function pHearth(P, room, side, wid, o) {
     addBoxCollider(m, 0, -wid / 2 - 0.1, dep + 0.25, wid / 2 + 0.1, 0, 2);
   });
   pRecEnd(rc, m, t0);
+  // [fx2] the firewood beside the hearth is a real thing on the floor: it needs its own place (inside the room, off every other item) and is recorded so nothing is put through it
+  let wp_ok = false; { const cs = Math.cos(rot), sn = Math.sin(rot), lx = 0.4, lz = wid / 2 + 0.55, wx = px + lx * cs + lz * sn, wz = pz - lx * sn + lz * cs, wr = pFoot(wx, wz, 0.5, 0.72, rot), a_ = room.in;
+    if (o.deco !== false && wr.x0 >= a_.x0 - 0.01 && wr.x1 <= a_.x1 + 0.01 && wr.z0 >= a_.z0 - 0.01 && wr.z1 <= a_.z1 + 0.01 && pFit(P, room, wr, { h: 0.7, lowOk: true, noClear: true })) { wp_ok = true; P.occ(room.k, wr, 'floor', P.id + '.hlogs' + P.items.length, { h: 0.7, hh: 0.7, room: room.id, back: side }); } }
   if (o.deco !== false) {          // mantel objects, antlers over the breast, a rug and firewood by the fire
     at(m, px, L.y + 0.02, pz, rot, () => {
       if (typeof kitLit === 'function' && Kit.pieces.CandleStick_Triple) for (const sg of [-1, 1]) kitLit(m, 'CandleStick_Triple', 0.42, 1.6 - 0.02, sg * (wid / 2 - 0.32), 0.8, sg, { cap: 0, kind: 'candle', flame: 'candle' });
@@ -54,7 +57,7 @@ function pHearth(P, room, side, wid, o) {
       if (Kit.pieces.Mug) kp(m, 'Mug', 0.3, 1.6, 0.3, 0.9, 1);
       if (H > 2.9) at(m, 0.68, Math.min(H - 0.55, 2.85) - 0.02, 0, PI / 2, () => antlers(m));
       at(m, dep + 0.8, 0, 0, 0, () => Props.rug(m, 1.2, wid + 0.6, o.rug || [0.5, 0.32, 0.2]));
-      at(m, 0.4, 0, wid / 2 + 0.55, 0, () => Props.woodpile(m, 4, 4, 0.5));
+      if (wp_ok) at(m, 0.4, 0, wid / 2 + 0.55, 0, () => Props.woodpile(m, 4, 4, 0.5));
     });
   }
   const fp = s.rect;
@@ -208,12 +211,13 @@ function dressLanding(P, room) { pLamp(P, room, ...pCentre(room)); for (const sd
 function pKitFloor(P, room, side, name, o) {
   const it = KIT_ITEM[name]; if (!it || !Kit.pieces[name]) return null;
   const sc = it[3], w = it[0] * sc, d = it[1] * sc, h = it[2] ? 2.0 : 0.8;
-  const draw = it[4] ? m => kitLit(m, name, 0, 0, 0, sc, 0, { r: 6.5, c: [2.3, 1.4, 0.6], kind: 'candle' }) : m => kp(m, name, 0, 0, 0, sc, 0);
+  const draw = it[4] ? m => kitLit(m, name, 0, 0, 0, sc, 0, { r: 6.5, c: [2.3, 1.4, 0.6], kind: 'candle' }) : m => kp(m, name, 0, name === 'Crate_Wooden' ? 0.04 : 0, 0, sc, 0);
   const r = pAgainst(P, room, side, P.id + '.' + name + (o && o.n || ''), w, d, h, -1, draw, Object.assign({ lowOk: !it[2] }, o || {}));
   if (r && it[4]) P.lightIn[room.id] = 1; return r;
 }
 function pKitWall(P, room, side, u, name, o) {
   const it = KIT_WALL[name]; if (!it || !Kit.pieces[name]) return null;
+  if (name.startsWith('Banner') && !/^(inn|elder|chapel|guardhouse|draper|store)$/.test(P.id)) return null;          // [fx2] heraldic cloth only where there is something to declare
   const y = Math.min(it[1], P.lv[room.k].H - 0.3), ban = name.startsWith('Banner'), lit = name === 'Torch_Metal';
   const rec = pHang(P, room, side, u, it[0], ban ? Math.max(1.0, y - 1.6) : y - 0.45, y + 0.35, m => {
     if (lit) kitLit(m, name, 0, 0, -it[2], 1, PI, { r: 6.2, c: [2.5, 1.45, 0.55], kind: 'fire', flame: 'torch', size: 0.14 }); else kp(m, name, 0, 0, -it[2], it[3] || 1, PI);
@@ -221,6 +225,7 @@ function pKitWall(P, room, side, u, name, o) {
   if (rec && lit) P.lightIn[room.id] = 1; return rec;
 }
 function pArt(P, room, side, u, kind) {
+  if (kind === 'paint' && !PD.paintOK(P)) return null;          // [fx2] pictures only where someone owns pictures
   const R = P.R, nm = kitGen(kind, R), rack = kind === 'rack';
   return pHang(P, room, side, u, rack ? 1.0 : 0.8, rack ? 1.85 : 1.45, rack ? 2.25 : 2.1, m => kp(m, nm, 0, 0, -0.03, 1, PI), P.id + '.' + kind, { pivot: rack ? 2.05 : 1.6 });
 }
@@ -345,6 +350,7 @@ function planBuild(c) {
   const W = P.dims ? P.dims.W : 9, D = P.dims ? P.dims.D : 10, zi = c.zoneInfo, ctr = P.w2(0, 0, D / 2);
   zi.site = Object.assign({}, c.site, { x: ctr[0], z: ctr[2], yaw: P.yaw }); zi.hw = W / 2; zi.hd = D / 2; zi.y0 = dd.sill[1] - 3.6; zi.y1 = dd.sill[1] + 7; zi.slope = 0; zi.H = H_GROUND;
   if (P.hearths && P.hearths[0]) { const h = P.hearths[0], hp = P.w2(h.x, 0, h.z); zi.hearth = [hp[0], hp[2], h.wid]; }
+  if (P.c && P.c.int) pBase(P, P.c.int);          // [fx2] nothing drawn after the plan starts from a leaked transform
   PD.topup(P);             // [fx2] rooms that measured placement left thin get a second fill
   pSpotsClear(P);          // [fx2] nobody stands inside a counter, chair or cabinet
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
