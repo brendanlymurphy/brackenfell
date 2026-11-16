@@ -128,3 +128,29 @@ Notes and letters (`IX` book pickups): the miller’s tally, a letter folded sma
 
 ### Reading text (notes found in the secrets)
 Tobin’s box; Behind the stone; The Magpie’s cellar; The Hart’s ledger; Behind the bricks; The strongbox; The Magpie’s sack; Letters in a hatbox. Items: Bar of grey silver, Cellar key, Key with a wren cut in the bow, Wharf strongbox key.
+
+## Reasons to care (94b_economy.js)
+
+### brandt
+- option: Can you do anything with this silver?  -> Grey silver, never stamped. Aye, I can. Three bars and ninety gold, and the edge will outlast the blade. Mind, I’ll want to know where you had it.
+- option: Forge it. (90 gold, 3 silver bars) -> Done. Don’t draw it in the Hart.  (short of coin: Ninety gold, and you’ve N.)
+- shop: That’s N gold, and you’ve M. The board in the square pays for honest work.  (replaces the older shortfall line for the shop only)
+
+### marta
+- option: Lamp oil. (7 gold) -> Whale oil. It stinks and it burns. Don’t spill it near the candles.
+- option: I have things to sell. -> Let’s have a look, dear.
+
+### board (the notice board, speaker id `board`)
+- Notices, pinned over notices. Three of them are in a clean hand and have not yellowed.
+- Your notice is still on you.
+- options: Outlaws on the passes (35 gold) / The Old Mine (50 gold) / Lamp oil for the watch (30 gold) / Collect the pay. / Where was I up to? / Tear the notice down.
+- WANTED: four outlaws put down on the passes. Thirty-five gold, paid at the board.
+- WANTED: three of the things that live in the Old Mine put down, delver or lurker. Fifty gold, and the Warden does not ask how.
+- WANTED: three flasks of lamp oil for the gate. Thirty gold. Marta has it.
+- You take the notice. / Paid. The board has fresh ink every few days: come back. / The nail is still there.
+- toasts: Notice board: that is the job done. Report to the board in the square. / Level N: choose a perk in your pack.
+
+### greta (option: What’s the talk in the Hart tonight?)
+Fourteen rumours, each told once, the ones pointing at secrets you have not found first: Tobin and the Watch Bell; the crooked stone under the plaque; the Magpie’s cellar on Washing Lane; the trunk on the Hart’s roof walk; the east cellar wall; the strongbox in the quay; lights behind the chapel; the Magpie’s dusk road; the shut house on the south lane; the barred mine door; the Foreman’s strongbox; the drowned man; Hale cries on the last day of the month; the Elder talks to the lake. Exact text is in `RUMOURS` in `src/94b_economy.js`.
+
+### Perk names and descriptions (reading text in the pack): Hardy, Long wind, Keen edge, Thick hide, Quiet feet, Hard bargainer, Forager.
