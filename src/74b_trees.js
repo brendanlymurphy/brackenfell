@@ -8,7 +8,7 @@
 //   beyond                two crossed flat pictures, in 400 m cells, which also cast into the wide shadow map
 // The first two rings are instance lists refilled when the player has moved a little; nothing is switched in the shader there.
 // If the files cannot be loaded, Trees.ready stays false and 74_vegetation.js plants the old generated trees instead.
-const Trees = { ready: false, sp: {}, items: [], NEAR: { low: 13, medium: 20, high: 30 }, lastPos: [1e9, 0, 1e9], lastLod: -1 };
+const Trees = { ready: false, sp: {}, items: [], NEAR: { low: 11, medium: 20, high: 30 }, lastPos: [1e9, 0, 1e9], lastLod: -1 };
 // which scan stands in for which planted tree, how tall it grows (m, at planting scale 1) and how its baked colours are corrected
 Trees.SPEC = {
   fir_b: { tall: 13.5, gain: [1.1, 1.28, 1.15] }, fir_c: { tall: 14.5, gain: [1.15, 1.3, 1.15] }, pine_c: { tall: 16, gain: [2.0, 2.25, 1.95] },

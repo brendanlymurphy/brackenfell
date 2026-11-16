@@ -364,7 +364,7 @@ const Kit = (() => {
   // 20 degrees wider than the screen, so nothing can turn into view before the next run).
   // how far each kind of batch is drawn at all (m from the camera; the code that made the batch used to hide its cells at these ranges)
   K_.RANGE = { 'kit-yard': q => q.yardRange || 58, 'dress-town': q => (q.yardRange || 58) * 1.1 + 4, 'dress-out': q => (q.yardRange || 58) * 1.1 + 4 };
-  K_.dyn = []; K_.dynNew = []; K_.pool = []; K_.dynLast = [1e9, 0, 1e9, 9, '']; K_.DROP = { low: 48, medium: 70, high: 100 };       // DROP: a piece without a far copy is drawn out to this many times its own size (m)
+  K_.dyn = []; K_.dynNew = []; K_.pool = []; K_.dynLast = [1e9, 0, 1e9, 9, '']; K_.DROP = { low: 40, medium: 70, high: 100 };       // DROP: a piece without a far copy is drawn out to this many times its own size (m)
   // Pooling: batches built since the last run hand their meshes over; meshes with the same material, shadow flags and layers become one
   // mesh for the whole town (in K_.poolGroup). A batch's own group stays as the handle other code shows and hides: its units follow it.
   function poolNew() {

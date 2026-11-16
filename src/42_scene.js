@@ -53,7 +53,7 @@ function sceneBuild() {
       let P = SC.pools.find(q => q.pk === pk && q.kind === it.kind);
       if (!P) { P = { pk, kind: it.kind, tiles: [], mat, n: 0 }; SC.pools.push(P); }
       if (it.kind === 'water' && it.r > 30) { for (const c of squares(pk, it.first, it.count, 16)) P.tiles.push({ it, idx: c.idx, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 14), on: false }); }       // a river or lake tile is hundreds of metres long: cut it into 16 m squares
-      else P.tiles.push({ it, sph: sphere(it.c, it.r), big: sphere(it.c, it.r + 14), on: false });
+      else P.tiles.push({ it, sph: sphere(it.c, it.r), big: sphere(it.c, it.r + 6), on: false });
       P.n += it.count; continue;
     }
     const g = geo(pk, it.first, it.count); g.boundingSphere = sphere(it.c, it.r);

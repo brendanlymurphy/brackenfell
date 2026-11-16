@@ -176,7 +176,7 @@ const Chars = (() => {
       if (!o.isSkinnedMesh) return;
       if (!B.skel) { B.skel = o.skeleton; B.bindMatrix = o.bindMatrix.clone(); }
       const g = o.parent, part = g && g !== scene && !g.isBone && g.children.length && g.children.every(c => c.isSkinnedMesh) ? g.name : o.name;   // a mesh with several materials loads as a group
-      if (/@lod$/.test(part)) { const k = part.slice(0, -4); (B.lodParts[k] = B.lodParts[k] || []).push(o); return; }      // low-detail copies (tools/chars_lod.mjs) are kept apart
+      { const lv = /@(lod|mid|far)$/.exec(part); if (lv) { const k = part.slice(0, -4), L = B.lodParts[lv[1]] || (B.lodParts[lv[1]] = {}); (L[k] = L[k] || []).push(o); return; } }      // lighter copies (tools/chars_lod.mjs: mid, lod, far) are kept apart
       (B.parts[part] = B.parts[part] || []).push(o);
     });
     if (!B.skel) throw new Error(cfg.bodies[n] + ' has no skinned mesh');
@@ -228,8 +228,8 @@ const Chars = (() => {
   // ── geometry: the chosen parts of a body, merged per material so a villager costs a handful of draws ──
   const ATTR = [['position', 3], ['normal', 3], ['uv', 2], ['skinIndex', 4], ['skinWeight', 4]];
   function mergedGeometry(S, body, parts, matName, names, lod) {
-    const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|lod' : ''); let g = S.geo.get(key); if (g !== undefined) return g;
-    const src = [], mids = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
+    const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|' + lod : ''); let g = S.geo.get(key); if (g !== undefined) return g;
+    const src = [], mids = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts[lod] || {} : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
     if (!src.length) { S.geo.set(key, null); return null; }
     let nv = 0, ni = 0; for (const s of src) { nv += s.attributes.position.count; ni += s.index ? s.index.count : s.attributes.position.count; }
     g = new THREE.BufferGeometry(); const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
@@ -298,27 +298,33 @@ const Chars = (() => {
   }
 
   // ── level of detail ──
-  // A body file may carry a low-detail copy of every mesh (tools/chars_lod.mjs, "<mesh>@lod": about a fifth of the triangles, same skeleton and
-  // material). Beyond LOD.dist[tier] metres the villager is drawn with the copy only. The copy is also what casts the sun shadow, always: close
-  // up it sits on a layer only the near shadow map sees (LOD.shadowLayer), so the full mesh never casts and is never drawn twice.
+  // A body file may carry lighter copies of every mesh (tools/chars_lod.mjs: "<mesh>@mid" about 4600 triangles, "@lod" 2200, "@far" 700; same
+  // skeleton and materials). The full body (about 10 000) is drawn inside LOD.dist[tier].hi metres, the mid copy to .mid, the low copy to .lo,
+  // the far copy beyond. The lightest copy the file has is also what casts the sun shadow, always: while the camera draws another copy it sits
+  // on a layer only the near shadow map sees (LOD.shadowLayer), so no body is ever drawn twice at full weight.
   // Far villagers (beyond LOD.slowDist) advance their animation every LOD.slowEvery frames only.
-  const LOD = C.LOD = { dist: { low: 8, medium: 12, high: 20 }, hyst: 1.5, shadowLayer: SHADOW_ONLY_LAYER, slowDist: 45, slowEvery: 3, force: TEST && TEST.charlod !== undefined ? TEST.charlod : -1 };    // force: 0 full mesh only, 1 low only, -1 by distance
+  const LOD = C.LOD = { dist: { low: { hi: 3.5, mid: 7, lo: 16 }, medium: { hi: 4.5, mid: 11, lo: 26 }, high: { hi: 7, mid: 18, lo: 40 } }, hyst: 0.8, shadowLayer: SHADOW_ONLY_LAYER, slowDist: 45, slowEvery: 3, force: TEST && TEST.charlod !== undefined ? TEST.charlod : -1 };    // force: 0 full mesh only, 1 low only, -1 by distance
   function lodMesh(S, H, root, skeleton, B, body, parts, matName, names, mat) {
-    if (!B.lodParts) return;
-    const g = mergedGeometry(S, body, parts, matName, names, true); if (!g) return;
-    const mesh = new THREE.SkinnedMesh(g, mat); mesh.name = 'villager.lod'; mesh.receiveShadow = true; mesh.castShadow = false; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
-    mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true; mesh.visible = false;
-    (H.lods = H.lods || []).push({ hi: H.meshes[H.meshes.length - 1], lo: mesh });
+    if (!B.lodParts) return; const e = { hi: H.meshes[H.meshes.length - 1] }; let any = false;
+    for (const lv of ['mid', 'lod', 'far']) {
+      if (!B.lodParts[lv]) continue; const g = mergedGeometry(S, body, parts, matName, names, lv); if (!g) continue;
+      const mesh = new THREE.SkinnedMesh(g, mat); mesh.name = 'villager.' + lv; mesh.receiveShadow = true; mesh.castShadow = false; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
+      mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true; mesh.visible = false; e[lv] = mesh; any = true;
+    }
+    if (any) (H.lods = H.lods || []).push(e);
   }
   function lodUpdate(H, d, cast) {
     if (!H.lods) { for (const m of H.meshes) m.castShadow = cast; return; }
-    const far = LOD.force === 1 ? true : LOD.force === 0 ? false : H.far ? d > (LOD.dist[R.qName] || 13) - LOD.hyst : d > (LOD.dist[R.qName] || 13) + LOD.hyst;
-    if (far !== H.far || H.lodCast !== cast) {
-      H.far = far; H.lodCast = cast;
+    const D = LOD.dist[R.qName] || LOD.dist.medium, h = LOD.hyst, was = H.lodLevel === undefined ? 0 : H.lodLevel, up = k => d > D[k] + (was > ['hi', 'mid', 'lo'].indexOf(k) ? -h : h);
+    const level = LOD.force === 1 ? 2 : LOD.force === 0 ? 0 : up('lo') ? 3 : up('mid') ? 2 : up('hi') ? 1 : 0;
+    if (level !== H.lodLevel || H.lodCast !== cast) {
+      H.lodLevel = level; H.lodCast = cast; H.far = level > 0;
       for (const l of H.lods) {
         if (l.mask === undefined) l.mask = l.hi.layers.mask;           // the layers the game gave this villager
-        l.hi.visible = !far; l.hi.castShadow = false;
-        l.lo.visible = far || cast; l.lo.castShadow = cast; l.lo.layers.mask = far ? l.mask : (1 << LOD.shadowLayer);
+        const cam = [l.hi, l.mid || l.hi, l.lod || l.mid || l.hi, l.far || l.lod || l.mid || l.hi][level], sh = l.far || l.lod || l.mid || l.hi;
+        for (const m of [l.hi, l.mid, l.lod, l.far]) if (m) { m.visible = false; m.castShadow = false; }
+        cam.visible = true; cam.layers.mask = l.mask;
+        if (cast) { if (sh === cam) cam.castShadow = true; else { sh.visible = true; sh.castShadow = true; sh.layers.mask = 1 << LOD.shadowLayer; } }
       }
     }
   }

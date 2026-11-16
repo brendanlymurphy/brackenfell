@@ -157,3 +157,18 @@ How it works now:
   model keeps a sixth of the cards (`TREE_KEEP=0.17 TREE_GROW=2.05` in `tree_pack.mjs`).
 - Switches for comparing: `--opt pool=0`, `sub=0`, `rockring=0`, `treering=0`, `grassall=1`, `grasscone=0`.
 
+### After step 4 (characters)
+
+| Tier | Square | Alley | Terrace | Lake | Budget |
+|---|---|---|---|---|---|
+| medium | 154 / 282k | 165 / 297k | 140 / 204k | 120 / 223k | 220 / 380k |
+| low | 113 / 193k | 121 / 199k | 115 / 149k | 87 / 166k | 140 / 200k |
+
+Inn hall (`game.enter('inn')`, looking in, 15 people): 95 draw calls / 248k triangles (was 293k; budget 260k).
+
+- Bodies now have four weights: full (about 10 000 triangles), `@mid` (4600, hair and brows kept), `@lod` (2200), `@far` (700).
+  `Chars.LOD.dist[tier]` = `{ hi, mid, lo }` metres (medium 4.5 / 11 / 26, low 3.5 / 7 / 16, high 7 / 18 / 40); the far copy also casts
+  the sun shadow. Regenerate after changing a body: `node tools/chars_lod.mjs --level mid --tris 4600 chars/real/[fmo]_*.glb`, then
+  `--level lod --tris 2200`, then `--level far --tris 700`. The copies add about 170 KB per body file.
+- Low tier: `houseFar` 26 (was 30), `Kit.DROP.low` 40, near trees inside 11 m.
+
