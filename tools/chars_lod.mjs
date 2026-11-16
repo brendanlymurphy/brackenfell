@@ -32,13 +32,15 @@ for (const file of files) {
     const mesh = node.getMesh(); if (!mesh || !node.getSkin() || isCopy(node.getName())) continue;
     for (const prim of mesh.listPrimitives()) items.push({ node, mesh, prim, kind: kindOf(prim.getMaterial(), mesh.getName()), n: prim.getIndices().getCount() / 3 });
   }
-  const MOUTH_N = level === 'mid' ? items.filter(x => x.kind === 'mouth').reduce((a, x) => a + x.n, 0) : 0, WEAR_RATIO = level === 'mid' ? 0.55 : level === 'lod' ? 0.28 : 0.10, WEAR_MAX = Math.round(700 * WEAR_RATIO), rest = budget - items.filter(x => x.kind === 'eye').length * EYE_TRIS - (items.some(x => x.kind === 'wear') ? WEAR_MAX : 0) - MOUTH_N, sums = {};
+  const MOUTH_N = level === 'mid' ? items.filter(x => x.kind === 'mouth').reduce((a, x) => a + x.n, 0) : 0, WEAR_RATIO = level === 'mid' ? 0.34 : level === 'lod' ? 0.28 : 0.10, WEAR_MAX = Math.round(700 * WEAR_RATIO), rest = budget - items.filter(x => x.kind === 'eye').length * EYE_TRIS - (items.some(x => x.kind === 'wear') ? WEAR_MAX : 0) - MOUTH_N, sums = {};
   for (const x of items) if (SHARE[x.kind] !== undefined) sums[x.kind] = (sums[x.kind] || 0) + Math.sqrt(x.n);
   let total = 0; const log = [];
   for (const x of items) {
     if ((x.kind === 'brow' || x.kind === 'lash') && level !== 'mid') continue;                       // 1 to 2 pixels at the distance this is used
     if (x.kind === 'eye' && !EYE_TRIS) continue;
     if (x.kind === 'mouth' && level !== 'mid') continue;
+    if (x.kind === 'wear' && level === 'far') continue;                       // 700-triangle copies are seen beyond 26 m: no garments of their own (the silhouette is the body's)
+    if (x.kind === 'wear' && level !== 'mid' && /^w_(belt|pouch|cuff|straps)/.test(x.mesh.getName()) && !(level === 'mid' && /^w_(belt|straps)/.test(x.mesh.getName()))) continue;               // belts, pouches, cuffs and straps are a few pixels beyond mid distance
     const target = x.kind === 'eye' ? EYE_TRIS : x.kind === 'wear' ? Math.max(12, x.n * WEAR_RATIO) : x.kind === 'mouth' ? x.n : SHARE[x.kind] === undefined ? x.n : Math.max(level === 'far' ? 30 : 80, rest * SHARE[x.kind] * Math.sqrt(x.n) / sums[x.kind]);
     const prim = x.prim, ia = prim.getIndices(), idx = Uint32Array.from(ia.getArray()), pa = prim.getAttribute('POSITION'), nv = pa.getCount();
     const pos = new Float32Array(nv * 3), nrm = prim.getAttribute('NORMAL'), uv = prim.getAttribute('TEXCOORD_0'), wt = prim.getAttribute('WEIGHTS_0'), e = [0, 0, 0, 0];

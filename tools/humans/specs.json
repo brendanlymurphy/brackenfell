@@ -665,6 +665,19 @@
     ],
     0.8
    ]
+  ],
+  "wear": [
+   "belt",
+   "pouch",
+   "hat:kettle",
+   "hat:cap",
+   "hat:coif",
+   "hat:straw",
+   "apron",
+   "straps",
+   "cloak",
+   "cuffs",
+   "tabard"
   ]
  },
  "m_fisher": {

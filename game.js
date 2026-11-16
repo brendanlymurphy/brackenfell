@@ -2645,7 +2645,12 @@ const Chars = (() => {
       wears(look, part) { const w = look.wear; if (!w) return false; const m = /^w_hat_(.*)$/.exec(part); if (m) return w.hat === m[1];
         return part === 'w_belt' ? !!w.belt : part === 'w_pouch' ? !!w.pouch : part === 'w_apron' ? !!w.apron : part === 'w_straps' ? !!w.straps : /^w_tabard/.test(part) ? !!w.tabard : part === 'w_cloak' ? !!w.cloak : /^w_cuff/.test(part) ? !!w.cuffs : false; },
       look(def) {
-        if (def.foe) return { body: def.foe.body, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) };
+        if (def.foe) { // [ch1] scavenged kit: a belt, a pouch, one cuff or two, a cloak or straps and a bit of headwear, each picked by the foe's id and in dull, mismatched colours
+          let fh = 0; for (const ch of String(def.id || def.foe.body)) fh = (fh * 31 + ch.charCodeAt(0)) >>> 0; const fr = k => ((fh >>> (k * 4)) % 89) / 89, hoodie = /hood/.test(def.foe.body), DULL = [[0.17, 0.14, 0.10], [0.22, 0.17, 0.11], [0.15, 0.16, 0.13], [0.26, 0.20, 0.14], [0.20, 0.12, 0.09], [0.14, 0.13, 0.14]], pk = k => DULL[Math.floor(fr(k) * DULL.length)];
+          const wear = { belt: true, pouch: fr(1) < 0.65, cuffs: fr(2) < 0.5, cloak: !hoodie && fr(3) < 0.4, straps: !hoodie && fr(4) < 0.45, hat: hoodie ? null : fr(5) < 0.45 ? 'cap' : fr(5) < 0.6 ? 'coif' : null };
+          const WC = { leather: [0.13, 0.085, 0.05].map(v => v * (0.8 + 0.5 * fr(6))), hat: pk(7), metal: [0.22, 0.21, 0.19], apron: pk(8), cloak: pk(9), tabard: pk(10), linen: [0.40, 0.37, 0.30], strap: [0.17, 0.12, 0.08], straw: [0.40, 0.32, 0.16], wool: pk(11), teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
+          wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
+          return { body: def.foe.body, wear, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) }; }
         const body = BODY[def.id] || def.body || (def.female ? 'f_farmer' : 'm_farmer');          // def.body / def.tint: the inn's regulars (77c_patrons.js) wear other people's bodies in other colours
         // Clothes by person: the villager's own colours (NPC_DEFS top / legs, chosen for their trade) dye the tunic, robe or dress and the
         // trousers; headwear and belt come from the same table. People without an entry (inn regulars, passers-by) get muted wool and
@@ -2660,7 +2665,7 @@ const Chars = (() => {
         // The wardrobe the body carries (w_* parts, tools/humans/garb.py): what this person wears of it, and in what colours (slots: leather, hat, metal, apron, cloak, tabard, linen, strap, straw, wool)
         const fem = !!(def.female || /^f_/.test(body)), guard = def.prop === 'spear' || def.hat === 'helmet', wear = { belt: acc.belt, pouch: acc.pouch, cuffs: !isRobe };
         { const hd = def.hat === 'hood' ? (fem ? 'kerchief' : null) : def.hat || (def.foe || def.sched && !def.house ? null : r(3) < 0.7 ? (fem ? ['kerchief', 'coif', 'straw'][Math.floor(r(7) * 3)] : ['cap', 'straw', 'cap', 'coif'][Math.floor(r(7) * 4)]) : null);
-          wear.hat = hd === 'helmet' ? 'kettle' : hd; }
+          wear.hat = hd === 'helmet' ? (body === 'm_guard' ? 'kettle' : 'cap') : hd; }
         if (def.apron) { if (guard) wear.tabard = true; else { wear.apron = true; wear.straps = true; } } else if (fem && !isRobe && r(5) < 0.28) { wear.apron = true; wear.straps = true; }
         if (def.cloakBack || (!def.sched && r(6) < 0.12) || (def.house && r(6) < 0.1)) wear.cloak = true;
         const WC = { leather: acc.col[1], hat: acc.col[0], metal: acc.col[2], apron: def.apron ? sq(def.apron) : pal[Math.floor(r(8) * pal.length)], cloak: def.cloak ? sq(def.cloak) : pal[Math.floor(r(9) * pal.length)], tabard: def.apron ? sq(def.apron) : [0.3, 0.1, 0.1],
@@ -2875,7 +2880,7 @@ const Chars = (() => {
     const { attribute, abs, Discard, If, frontFacing, normalView, clamp } = TSL;
     const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
     const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
-    let mouthW = float(0), albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), skinW = float(0), hairW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false, skinI = -1, clothW = float(0), trimW = float(0), anyTrim = false;
+    let weaveN = null, mouthW = float(0), albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), skinW = float(0), hairW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false, skinI = -1, clothW = float(0), trimW = float(0), anyTrim = false;
     const F = S.cfg.face || null, UE = F ? U.add(H.uGaze) : U;          // the eye texture is read a little off-centre: that is how the eyes move
     names.forEach((mn, i) => {
       const src = srcOf && srcOf[mn], md = S.cfg.materials[mn] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
@@ -2904,8 +2909,11 @@ const Chars = (() => {
       if (anyTrim && WCOL) {
         const slot = cv.w.mul(12).add(0.5); let col = vec3(...WCOL[WCOL.length - 1]);
         for (let k = WCOL.length - 2; k >= 0; k--) col = TSL.mix(col, vec3(...WCOL[k]), TSL.step(slot, k + 0.5));
-        const grain = texture(G.noiseTex, positionWorld.xy.mul(14).add(positionWorld.z.mul(11))).r.mul(0.35).add(0.82);
+        const grain = texture(G.noiseTex, TSL.positionLocal.xy.mul(14).add(TSL.positionLocal.z.mul(11))).r.mul(0.35).add(0.82);      // [ch1] in the body's own space: the grain no longer crawls as people walk
         albedo = albedo.mul(trimW.oneMinus()).add(col.mul(grain).mul(trimW));
+        // woven cloth: a fine thread pattern (two crossed sine ridges in the body's own space) bends the shading normal a little, so the wool and linen have a weave and not a plastic sheen
+        { const pl = TSL.positionLocal, th = TSL.sin(pl.x.add(pl.z.mul(0.7)).mul(520)).mul(0.5).add(TSL.sin(pl.y.mul(470).add(pl.z.mul(180))).mul(0.5)), wv = TSL.vec3(TSL.cos(pl.x.add(pl.z.mul(0.7)).mul(520)).mul(0.5), TSL.cos(pl.y.mul(470).add(pl.z.mul(180))).mul(0.5), 0).mul(0.10);
+          weaveN = wv.mul(trimW).mul(TSL.smoothstep(2.2, 0.8, SH.U.camPos.sub(positionWorld).length())); void th; }
       }
       const isMouth = TSL.step(9.5, cv.w.mul(12)); mouthW = mouthW.add(isMouth.mul(trimW));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening
       albedo = albedo.mul(TSL.mix(TSL.mix(float(1), TSL.mix(cv.x, float(1), 0.15), 0.9), float(1), isMouth));
@@ -2950,6 +2958,7 @@ const Chars = (() => {
     m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
+    else if (weaveN) m.normalNode = normalView.add(TSL.transformNormalToView(weaveN)).normalize();      // [ch1]
     let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
     if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
     let emis = albedo.mul(lit).add(albedo.mul(0.32).mul(mouthW));      // [ch1] teeth and tongue are never darker than the lips
