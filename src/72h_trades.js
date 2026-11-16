@@ -1,7 +1,18 @@
 // ───────────────────────── designed plans by trade [c3] ─────────────────────────
 // One function per building in PLANS (72e_plans.js): its rooms, doors and stairs laid out as an architect would for that trade, then dressed by the placement
 // rules. Each is added to PLAN_SHIP at the foot of this file only when it is designed, dressed, lit and validated. Frame: the street door at (0, 0) on the z = 0 wall.
-const pdCounter = (len, c, kinds, n) => m => { Props.table(m, len, 0.8, 1.0); Props.clutter(m, c.R, -len / 2 + 0.3, len / 2 - 0.3, 1.0, 0, kinds, n, c); };
+const pdCounter = (len, c, kinds, n) => m => {          // a closed shop counter: panelled front, overhanging top, a hinged flap at the keeper's end, a balance, a ledger and wares
+  const R = c.R, h = 1.0, x0 = -len / 2, x1 = len / 2;
+  m.mat(MAT.PLANKS, COL.woodDark); m.box(x0, 0, -0.38, x1, h - 0.06, 0.36); m.mat(MAT.PLANKS, COL.wood);
+  for (let x = x0 + 0.15; x < x1 - 0.5; x += 0.78) m.box(x, 0.12, -0.395, x + 0.7, h - 0.16, -0.38);          // panels on the customers' side
+  m.mat(MAT.TIMBER, COL.woodDark); m.box(x0 - 0.03, 0, -0.4, x1 + 0.03, 0.1, -0.37); m.box(x0 - 0.05, h - 0.06, -0.45, x1 + 0.05, h, 0.42);          // plinth and the overhanging top
+  m.mat(MAT.PLANKS, COL.wood); m.box(x1 - 0.82, h, -0.42, x1 - 0.02, h + 0.03, 0.4);          // the flap, lifted for the keeper
+  m.mat(MAT.METAL, COL.bronze); for (const z of [-0.2, 0.2]) m.box(x1 - 0.84, h + 0.01, z - 0.02, x1 - 0.78, h + 0.035, z + 0.02);
+  at(m, x0 + 0.9, h, 0.0, 0.3, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.015, 0, -0.015, 0.015, 0.34, 0.015); m.box(-0.2, 0.33, -0.01, 0.2, 0.345, 0.01); for (const sx of [-0.19, 0.19]) { m.box(sx - 0.003, 0.2, -0.003, sx + 0.003, 0.33, 0.003); m.lathe([[0.0, 0.2], [0.07, 0.205], [0.075, 0.215]], 8, 1); } m.cyl(0, 0, 0, 0.06, 0.05, 0.02, 8, 1); });
+  at(m, x0 + 2.2, h, 0.05, -0.2, () => { m.mat(MAT.CLOTH, COL.leather, 0.5); m.box(-0.17, 0, -0.12, 0.17, 0.045, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(-0.16, 0.01, -0.11, 0.16, 0.04, 0.115, 4 | 8 | 1); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cyl(0.26, 0, 0.0, 0.03, 0.03, 0.07, 6, 1); });
+  m.push().T(0, h, 0.0); Props.clutter(m, R, x0 + 3.0, x1 - 1.2, 0, 0.0, kinds, Math.max(4, n - 3), c); m.pop();
+  addBoxCollider(m, x0, -0.45, x1, 0.42, 0, h);
+};
 const pdShelfTall = (len, h, lv, fill) => m => Props.shelf(m, len, h, lv, 0.34, fill);
 // a row of tall shelves along a wall from u0 to u1 (floor to ceiling, stocked with `kinds`); returns how many fitted
 function pShelfRun(P, room, side, u0, u1, kinds, o) {
