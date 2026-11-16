@@ -13296,7 +13296,7 @@ WBUILD.hamlet = (p, m, R) => {
   wWall(m, [[96, 94], [108, 92], [112, 88]], { h: 0.85 }); wWall(m, [[112, 108], [121, 104]], { h: 0.8, gaps: [[116, 106]] });
   for (const [x, z, r] of [[133, 118, 1.3], [137, 120, 1.1]]) wPut(m, p, x - p.x, z - p.z, 0, mm => Props.haystack(mm, r));
   wPut(m, p, -5.6, 10.2, 1.0, mm => { Props.cart(mm, true); });
-  wPut(m, p, 1.4, 1.5, 0, mm => { // a well with a pitched roof
+  wPut(m, p, 1.4, -1.3, 0, mm => { // a well with a pitched roof ([fx1] it stood in the dry-stone wall, 1.5 m further out)
     mm.mat(MAT.STONE, [0.85, 0.85, 0.8], 0.7); mm.lathe([[0.95, -0.3], [0.95, 0.85], [0.82, 0.92], [0.6, 0.92], [0.6, -0.3]], 12, 0);
     mm.mat(MAT.PLAIN, [0.04, 0.07, 0.08]); mm.disc(0, 0.2, 0, 0.6, 10, 1); mm.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) mm.cbox(s * 0.85, 0.8, 0, 0.12, 1.3, 0.12, 4); mm.beam([-0.9, 2.05, 0], [0.9, 2.05, 0], 0.11, 0.11);
     mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.6); mm.quad2([-1.1, 2.3, 0], [-1.1, 1.95, -0.8], [1.1, 1.95, -0.8], [1.1, 2.3, 0]); mm.quad2([1.1, 2.3, 0], [1.1, 1.95, 0.8], [-1.1, 1.95, 0.8], [-1.1, 2.3, 0]); addCircleCollider(mm, 0, 0, 1.0, 0, 1.2);
