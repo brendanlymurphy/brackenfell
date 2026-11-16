@@ -181,6 +181,45 @@ const HMEMO = {
   ],
 };
 const HMEMO_USED = {};
+// ───────── everyday furniture variety [c5]: every house gets a different mix of scanned tables, cabinets, seats and small things ─────────
+const vk = (m, n, x, y, z, sc, ry) => kp(m, n, x, y, z, sc, ry || 0);
+TP.vRound = m => { vk(m, 'round_wooden_table_01', 0, 0, 0, 0.78); vk(m, 'wooden_bowl_01', 0.1, 0.78, 0.05, 0.9); vk(m, 'brass_goblets', -0.2, 0.78, -0.12, 0.7, 0.5); vk(m, 'folding_wooden_stool', 0, 0, 0.72, 0.8, PI); vk(m, 'folding_wooden_stool', 0.05, 0, -0.72, 0.8, 0.3); addBoxCollider(m, -0.55, -0.55, 0.55, 0.55, 0, 0.8); };
+TP.vPTable = m => { vk(m, 'painted_wooden_table', 0, 0, 0, 0.8); vk(m, 'carved_wooden_plate', -0.4, 0.77, 0.1, 1.0); vk(m, 'wooden_candlestick', 0.5, 0.77, -0.1, 1.0); vk(m, 'painted_wooden_stool', -0.5, 0, 0.7, 0.8, 0.4); vk(m, 'painted_wooden_stool', 0.45, 0, -0.7, 0.8, 2.6); addBoxCollider(m, -0.97, -0.46, 0.97, 0.46, 0, 0.8); };
+TP.vTrestle = m => { vk(m, 'woodentable_01', 0, 0, 0, 1.2); vk(m, 'food_pears_asian_01', -0.5, 0.66, 0, 1.6); vk(m, 'wicker_basket_02', 0.4, 0.66, 0.05, 1.1); vk(m, 'painted_wooden_chair_01', 1.35, 0, 0, 0.85, -PI / 2); addBoxCollider(m, -1.1, -0.4, 1.1, 0.4, 0, 0.7); };
+TP.vSmall = m => { vk(m, 'wooden_table_02', 0, 0, 0, 1.0); vk(m, 'wooden_candlestick', 0.2, 0.8, 0, 1.0); vk(m, 'ceramic_vase_04', -0.25, 0.8, 0.05, 1.0); vk(m, 'painted_wooden_chair_01', 0, 0, 0.62, 0.85, PI); addBoxCollider(m, -0.58, -0.38, 0.58, 0.38, 0, 0.82); };
+TP.vPCab = m => { vk(m, 'painted_wooden_cabinet', 0, 0, 0, 0.95); vk(m, 'ceramic_vase_02', -0.3, 1.12, 0, 1.0); vk(m, 'wooden_bowl_01', 0.25, 1.12, 0, 0.9); addBoxCollider(m, -0.58, -0.3, 0.58, 0.3, 0, 1.15); };
+TP.vGCab = m => { vk(m, 'gothiccabinet_01', 0, 0, 0, 0.72); addBoxCollider(m, -0.62, -0.42, 0.62, 0.42, 0, 1.7); };
+TP.vShelf = m => { vk(m, 'painted_wooden_shelves', -0.3, 0, 0, 1.25); vk(m, 'painted_wooden_shelves', 0.35, 0, 0, 1.25, 0); vk(m, 'ceramic_pot', -0.3, 1.4, 0, 0.5); vk(m, 'wooden_lantern_01', 0.35, 1.4, 0, 0.8); addBoxCollider(m, -0.65, -0.25, 0.65, 0.25, 0, 1.45); };
+TP.vBooks = m => { vk(m, 'wooden_bookshelf_worn', 0, 0, 0, 1.0); addBoxCollider(m, -0.7, -0.3, 0.7, 0.3, 0, 2.05); };
+TP.vNight = m => { vk(m, 'classicnightstand_01', 0, 0, 0, 1.0); vk(m, 'wooden_candlestick', 0.0, 0.7, 0, 1.0); addBoxCollider(m, -0.3, -0.23, 0.3, 0.23, 0, 0.72); };
+TP.vBaskets = m => { vk(m, 'wicker_basket_02', -0.2, 0, 0, 1.4); vk(m, 'wicker_basket_02', 0.25, 0, 0.1, 1.2, 1.0); vk(m, 'yellow_onion', -0.2, 0.28, 0, 2.0); vk(m, 'wooden_bucket_02', 0, 0, -0.45, 0.8); addBoxCollider(m, -0.45, -0.7, 0.45, 0.3, 0, 0.45); };
+TP.vVases = m => { vk(m, 'painted_wooden_stool', 0, 0, 0, 1.0); vk(m, 'ceramic_vase_04', -0.05, 0.58, 0, 1.4); vk(m, 'ceramic_vase_02', 0.08, 0.58, 0.04, 1.2); addBoxCollider(m, -0.22, -0.22, 0.22, 0.22, 0, 0.6); };
+TP.vPots = m => { vk(m, 'folding_wooden_stool', 0, 0, 0, 1.0); vk(m, 'ceramic_pot', 0, 0.44, 0, 0.6); vk(m, 'brass_pan_01', 0.45, 0, 0.1, 1.2, 0.4); addBoxCollider(m, -0.28, -0.28, 0.28, 0.28, 0, 0.5); };
+TP.vChairs = m => { vk(m, 'painted_wooden_chair_01', -0.3, 0, 0, 0.9, PI); vk(m, 'painted_wooden_chair_01', 0.3, 0, 0, 0.9, PI + 0.3); addBoxCollider(m, -0.55, -0.3, 0.55, 0.3, 0, 0.9); };
+Object.assign(HPR, {
+  v_round: [1.5, 1.7, 0.8, () => TP.vRound], v_ptable: [2.0, 1.7, 0.8, () => TP.vPTable], v_trestle: [2.6, 1.0, 0.7, () => TP.vTrestle], v_small: [1.2, 1.3, 0.82, () => TP.vSmall],
+  v_pcab: [1.2, 0.6, 1.2, () => TP.vPCab], v_gcab: [1.3, 0.85, 1.75, () => TP.vGCab], v_shelf: [1.4, 0.5, 1.5, () => TP.vShelf], v_books: [1.45, 0.65, 2.1, () => TP.vBooks],
+  v_night: [0.6, 0.5, 0.75, () => TP.vNight], v_baskets: [1.0, 1.0, 0.5, () => TP.vBaskets], v_vases: [0.5, 0.5, 0.65, () => TP.vVases], v_pots: [1.1, 0.6, 0.5, () => TP.vPots], v_chairs: [1.2, 0.6, 0.95, () => TP.vChairs],
+});
+const HV = {
+  table: ['v_round', 'v_ptable', 'v_trestle', 'v_small', 'v_round', 'v_trestle'],
+  store: ['v_pcab', 'v_gcab', 'v_shelf', 'v_pcab', 'v_books', 'v_gcab'],
+  small: ['m_rocker', 'v_baskets', 'v_vases', 'v_pots', 'v_chairs', 'v_vases', 'v_baskets', 'v_pots'],
+};
+function hVariety(P, F) {
+  const rooms = Object.values(P.rooms), main = (P.hall && P.hall.room) || rooms.find(r => r.kind === 'hall') || rooms[0], hv = (k, n) => (hHash(P.id + '|v' + k) * n) | 0;
+  const rich = F.wealth > 0 || ['scribe', 'merchant', 'bookseller', 'elder'].includes(F.trade), pick = (pool, k) => { let n = pool[hv(k, pool.length)]; if (n === 'v_books' && !rich) n = 'v_gcab'; return n; };
+  const side = (k) => ['w', 'e', 'n', 's'].sort((a, b) => hHash(P.id + a + k) - hHash(P.id + b + k));
+  const t = pick(HV.table, 't'), s = pick(HV.store, 's'), x = pick(HV.small, 'x');
+  const got = [];
+  const cand = [main].concat(rooms.filter(r => r !== main && r.k === 0 && (r.kind === 'hall' || r.kind === 'study') && r.id !== 'corridor' && r.kind !== 'yard')).filter(Boolean);
+  const put = (n, k, free) => { for (const r of cand) if (hPlace(P, r, n, { sides: side(k), free })) { got.push(n); return true; } return false; };
+  if (hHash(P.id + '|vt') < 0.6) put(t, 't', true);
+  put(s, 's', true); put(x, 'x', true);
+  for (const r of rooms) if (r.kind === 'bedroom' && r.k === 0 || r.kind === 'bedroom') { const b = P.firstBed && P.firstBed.room === r ? P.firstBed : null; if (b && hHash(P.id + r.id + 'n') < 0.7 && hPlace(P, r, 'v_night', { sides: ['w', 'e', 'n', 's'], near: [b.cx, b.cz], free: true })) got.push('v_night'); break; }
+  P.variety = got;
+}
+
 function hMemo(P, F) {          // one object no other house has, in the first room if it will go there (the next in the list when it will not)
   const e = P.doors.find(d => d.b === null); if (!e) return; const room = P.rooms[e.a]; if (!room) return;
   const all = HMEMO.floor.length + HMEMO.wall.length;
