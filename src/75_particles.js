@@ -35,7 +35,7 @@ function fxUpdate(dt, time, env, cam) {
       put(e.p[0], e.p[1] + sz * 0.45, e.p[2], sz, 1, 1, 1, 0.9 * fl, 0, 2, 1.5, e.seed); put(e.p[0], e.p[1] + sz * 0.4, e.p[2], sz * 4.2, 1.0, 0.5, 0.16, 0.2 * fl, 0, 0, 1, e.seed);
     } else if (e.type === 'lantern') {
       if (lit < 0.05 || dist > 170) continue;
-      put(e.p[0], e.p[1], e.p[2], 0.055 + dist * 0.0016, 1.0, 0.66, 0.26, 1.5 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], 0.42 + dist * 0.006, 1.0, 0.50, 0.17, 0.11 * lit, 0, 0, 1, e.seed);      // a small bright flame and a faint halo (it was a white ball a metre across)
+      put(e.p[0], e.p[1], e.p[2], 0.055 + dist * 0.0016, 1.0, 0.66, 0.26, 1.5 * lit, 0, 0, 1, e.seed); put(e.p[0], e.p[1], e.p[2], (0.42 + dist * 0.006) * (e.halo || 1), 1.0, 0.50, 0.17, 0.11 * lit, 0, 0, 1, e.seed);      /* e.halo: Build 33, smaller halos for the dense infill doors */      // a small bright flame and a faint halo (it was a white ball a metre across)
     } else if (e.type === 'herb') {
       if (e.gone || dist > 60) continue;
       put(e.p[0], e.p[1] + 0.12, e.p[2], 0.34, 0.55, 0.85, 1.0, 0.16 + 0.10 * Math.sin(time * 2 + e.seed * 20) + env.night * 0.25, 0, 0, 1, e.seed);

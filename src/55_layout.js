@@ -32,7 +32,7 @@ const ALLEY_SHOPS = [
 ];
 for (const a of ALLEY_SHOPS) {
   const xc = a.x0 + a.w / 2, zf = roadZ(xc) + (a.row === 'N' ? -ALLEY.setback : ALLEY.setback);
-  SITES.push({ id: a.id, name: a.name || 'Shop', x: xc, z: a.row === 'N' ? zf - a.d / 2 : zf + a.d / 2, yaw: a.row === 'N' ? PI : 0, w: a.w, d: a.d, doorPos: 0, pad: 0.6, facade: !!a.layout, alleyRow: true });
+  SITES.push({ id: a.id, name: a.name || 'Shop', x: xc, z: a.row === 'N' ? zf - a.d / 2 : zf + a.d / 2, yaw: a.row === 'N' ? PI : 0, w: a.w, d: a.d, doorPos: a.layout ? a.w / 2 - (a.layout.indexOf('D') * 2 + 1) : 0, pad: 0.6, facade: !!a.layout, alleyRow: true });      // Build 33: the site's door is where the shop front puts it (73b_alley.js), not at the middle
 }
 const SITE = {}; for (const s of SITES) SITE[s.id] = s;
 const siteToWorld = (s, lx, lz) => { const c = Math.cos(s.yaw), sn = Math.sin(s.yaw); return [s.x + lx * c - lz * sn, s.z + lx * sn + lz * c]; };

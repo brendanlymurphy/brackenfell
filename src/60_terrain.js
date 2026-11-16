@@ -71,6 +71,12 @@ function terrainH(x, z) {
       const dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
       if (dd < 6) h = lerp(h, s.y, 1 - smooth(0, 6, dd));
     }
+    // Build 33: neighbouring pads blend over each other for 6 m and the last one won, leaving a porch hanging over a hollow: every site's own footprint and doorstep margin is levelled again
+    for (const s of SITES) {
+      if (Math.abs(x - s.x) > 14 || Math.abs(z - s.z) > 14) continue;
+      const l = worldToSite(s, x, z), m = (s.pad || 1.1) + 0.2 + (s.porch || 0), dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
+      if (dd < 1.5) h = lerp(h, s.y, 1 - smooth(0, 1.5, dd));
+    }
   }
   if (typeof wildsH === 'function') h = wildsH(x, z, h);        // hills, cliffs, yards and the toll-ford brook (55c_wilds.js)
   // river: level banks, then a channel

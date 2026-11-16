@@ -54,7 +54,25 @@ function infWalls(B, MS, o) {
       const W = WALLS[wn], L = W.len(w, d), s0 = W.start(w, d);
       if ((wn === 'left' || wn === 'right') && k < ((o.skip && o.skip[wn]) || 0)) continue;
       const P = (u, y, dep) => [s0[0] + W.u[0] * u - W.n[0] * (dep || 0), y, s0[2] + W.u[2] * u - W.n[2] * (dep || 0) - off];       // dep: metres into the wall
-      const q = (m2, ua, ub, ya, yb, dep, c2, uv, both) => { if (ub - ua < 0.015 || yb - ya < 0.015) return; g.quad(m2, P(ua, ya, dep), P(ub, ya, dep), P(ub, yb, dep), P(ua, yb, dep), c2, uv || [ua / ts, ya / ts, ub / ts, yb / ts], both); };
+      const nCell = Math.max(1, Math.round(L / 2)), cw = L / nCell, wOff = R() * 7, hs = 0.82 + R() * 0.4, wScale = ts * hs;       // Build 33: panels the width of a bay get their own texture offset and a little colour, and the foot of the wall is darker (weathering)
+      const BAND = [[-1, 0.62], [0.35, 0.74], [0.75, 0.86], [1.15, 0.95], [1.9, 1.0]];
+      const q = (m2, ua, ub, ya, yb, dep, c2, uv, both) => {
+        if (ub - ua < 0.015 || yb - ya < 0.015) return;
+        if (m2 === INF_T && !uv && dep === 0) {
+          for (let ci = Math.max(0, Math.floor(ua / cw + 1e-6)); ci < nCell && ci * cw < ub - 1e-6; ci++) {
+            const u0 = Math.max(ua, ci * cw), u1 = Math.min(ub, (ci + 1) * cw); if (u1 - u0 < 0.015) continue;
+            const hh = ((ci * 7919 + wn.length * 31 + (k + 1) * 977 + Math.floor(wOff * 100)) % 101) / 101, ou = hh * 5.3 + wOff, ov = hh * 3.1, cm = 0.92 + 0.16 * ((hh * 13) % 1);
+            const edges = [ya]; for (const [yy] of BAND) if (yy > ya + 0.02 && yy < yb - 0.02) edges.push(yy); edges.push(yb);
+            for (let e = 0; e + 1 < edges.length; e++) {
+              const y0 = edges[e], y1 = edges[e + 1], ym = (y0 + y1) / 2; let bk = 1; for (const [yy, kk] of BAND) if (ym >= yy) bk = kk;
+              const cc = [c2[0] * bk * cm, c2[1] * bk * cm, c2[2] * bk * cm];
+              g.quad(m2, P(u0, y0, dep), P(u1, y0, dep), P(u1, y1, dep), P(u0, y1, dep), cc, [u0 / wScale + ou, y0 / wScale + ov, u1 / wScale + ou, y1 / wScale + ov], both);
+            }
+          }
+          return;
+        }
+        g.quad(m2, P(ua, ya, dep), P(ub, ya, dep), P(ub, yb, dep), P(ua, yb, dep), c2, uv || [ua / ts, ya / ts, ub / ts, yb / ts], both);
+      };
       const bx = (ua, ub, ya, yb, d0, d1, c2) => { if (d1 >= 0) d1 += 0.012; /* c2: trim boards stand 1.2 cm proud of the wall's back too: their faces were coplanar with the cladding and flickered from inside a cell */ const a = P(ua, ya, d0), b = P(ub, yb, d1); g.box(W_, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2]), c2); };
       const ops = ((o.plan[k] && o.plan[k][wn]) || []).slice().sort((a, b2) => a.u0 - b2.u0), fy = k * H;
       let cur = 0;
@@ -66,8 +84,14 @@ function infWalls(B, MS, o) {
         g.quad(mat, P(p.u0, y1, 0), P(p.u1, y1, 0), P(p.u1, y1, dep), P(p.u0, y1, dep), col, [0, 0, 1, 0.2], true);
         if (!p.door) g.quad(mat, P(p.u0, y0, 0), P(p.u1, y0, 0), P(p.u1, y0, dep), P(p.u0, y0, dep), col, [0, 0, 1, 0.2], true);
         if (p.door) {
-          q(W_, p.u0, p.u1, y0, y1, 0.12, [0.3, 0.22, 0.16], GPU.wood); if (!lo) { q(W_, p.u0, p.u1, y0 + 0.45, y0 + 0.55, 0.1, [0.12, 0.11, 0.1], GPU.wood); q(W_, p.u0, p.u1, y0 + 1.5, y0 + 1.6, 0.1, [0.12, 0.11, 0.1], GPU.wood); }
-          bx(p.u0 - 0.1, p.u0, y0, y1 + 0.1, -0.06, 0.0, DK); bx(p.u1, p.u1 + 0.1, y0, y1 + 0.1, -0.06, 0.0, DK); bx(p.u0 - 0.1, p.u1 + 0.1, y1, y1 + 0.12, -0.08, 0.0, DK);
+          // Build 33: a plank door of real boards (solid boxes: the old single quad faced the wrong way for the single-sided wood material and showed the dark inside), iron straps, a ring handle, a threshold
+          { const nb = Math.max(4, Math.round((p.u1 - p.u0) / 0.2)), bw = (p.u1 - p.u0) / nb, dc = [[0.5, 0.37, 0.25], [0.44, 0.33, 0.22], [0.55, 0.41, 0.28], [0.47, 0.35, 0.24]], IR = [0.2, 0.19, 0.18];
+            for (let i = 0; i < nb; i++) bx(p.u0 + i * bw + 0.005, p.u0 + (i + 1) * bw - 0.005, y0 + 0.02, y1 - 0.02, 0.08, 0.13, dc[(i * 7 + (R() * 4 | 0)) % 4]);
+            if (!lo) { for (const yy of [0.42, 1.58]) { bx(p.u0 + 0.02, p.u1 - 0.02, y0 + yy, y0 + yy + 0.1, 0.045, 0.08, IR); bx(p.u0 + 0.02, p.u0 + 0.2, y0 + yy - 0.02, y0 + yy + 0.12, 0.03, 0.045, IR); }
+              bx(p.u1 - 0.24, p.u1 - 0.17, y0 + 0.98, y0 + 1.12, 0.02, 0.045, IR); bx(p.u1 - 0.2, p.u1 - 0.1, y0 + 0.95, y0 + 0.98, 0.02, 0.045, IR);
+              bx(p.u0 - 0.12, p.u1 + 0.12, y0, y0 + 0.07, 0.0, 0.2, [0.4, 0.38, 0.35]); }       // the sill
+          }
+          bx(p.u0 - 0.1, p.u0, y0, y1 + 0.1, -0.06, 0.0, [0.3, 0.23, 0.17]); bx(p.u1, p.u1 + 0.1, y0, y1 + 0.1, -0.06, 0.0, [0.3, 0.23, 0.17]); bx(p.u0 - 0.1, p.u1 + 0.1, y1, y1 + 0.12, -0.08, 0.0, [0.3, 0.23, 0.17]);
           if (k === 0) bx(p.u0 - 0.15, p.u1 + 0.15, -0.35, 0.1, -0.35, 0.0, [0.5, 0.48, 0.45]);          // a stone step
         } else if (lo) {
           g.quad('MI_WindowGlass', P(p.u0, y0, 0.05), P(p.u1, y0, 0.05), P(p.u1, y1, 0.05), P(p.u0, y1, 0.05), [1, 1, 1], [0, 0, 1, 1], false);
@@ -113,7 +137,8 @@ function infRoofGen(B, MS, o) {
       G.quad(INF_S, A, Bp, C, D, col, [0, 0, (a1 - a0) / 1.25, slopeLen / 1.25], up);
     }
     for (const [u, sg] of [[-len / 2, -1], [len / 2, 1]]) {
-      const A = P(u, -hs, top), Bp = P(u, hs, top), C = P(u, 0, yR - T * 0.5);
+      const uo = u + sg * 0.015;          // Build 33: the gable plane stands 1.5 cm proud of the wall below (their top beams were coplanar)
+      const A = P(uo, -hs, top), Bp = P(uo, hs, top), C = P(uo, 0, yR - T * 0.5);
       G.tri(INF_T, A, Bp, C, col, [0, 0, span / 1.6, (yR - top) / 1.6], OUTV(sg, 0, 0));
     }
   };

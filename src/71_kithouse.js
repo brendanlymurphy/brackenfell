@@ -132,18 +132,18 @@ function kitShellPass(c, pass) {
       for (let k = 0; k < n; k++) {
         const uc = (k + 0.5) * m;
         if (st.balcony === wn && n >= 3 && k === mid) {
-          add(F, 'Wall_Plaster_Door_Flat', uc, H, 0, S, UP); add(F, 'DoorFrame_Flat_WoodDark', uc, H, 0, S, EXT); add(F, 'Door_1_Flat', uc - 0.54 * sx, H, -0.05, S, EXT);
+          add(F, 'Wall_Plaster_Door_Flat', uc, H, -0.015, S, UP); add(F, 'DoorFrame_Flat_WoodDark', uc, H, 0, S, EXT); add(F, 'Door_1_Flat', uc - 0.54 * sx, H, -0.05, S, EXT);
           add(F, 'Balcony_Simple_Corner', uc + sx, H, 0, S, EXT); add(F, 'Balcony_Simple_Corner', uc - sx, H, 0, [-sx, 1, 1], EXT);
           add(F, 'Floor_WoodDark_Half3', uc - sx, H, 1, S, EXT); add(F, 'Floor_WoodDark_Half3', uc + sx, H, 1, S, EXT);
           for (const sg of [-1, 1]) add(F, 'Roof_Support2', uc + sg * 1.7 * sx, H - 0.74, 0.02, 1, EXT);
-        } else if (n > 1 && k === 0) add(F, 'Wall_Plaster_Straight_L', uc, H, 0, S, UP);
-        else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, 0, S, UP);
+        } else if (n > 1 && k === 0) add(F, 'Wall_Plaster_Straight_L', uc, H, -0.015, S, UP);
+        else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, -0.015, S, UP);
         else if (n <= 3 || (k + (wn === 'front' || wn === 'back' ? 0 : 1)) % 2 === 1) {
           const r = RU();
-          if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); }
-          else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, 0, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, 0, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
-          else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, 0, S, UP); add(F, kitOpen('Window_Thin_Round1'), uc, H, 0, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
-        } else add(F, 'Wall_Plaster_Straight', uc, H, 0, S, UP);
+          if (r < 0.4) { add(F, 'Wall_Plaster_Window_Wide_Flat2', uc, H, -0.015, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, -0.015, S, UP); }
+          else if (r < 0.75) { add(F, 'Wall_Plaster_Window_Wide_Flat', uc, H, -0.015, S, UP); add(F, kitOpen('Window_Wide_Flat1'), uc, H, -0.015, S, UP); if (uc > 1.4 && uc < L - 1.4) add(F, 'WindowShutters_Wide_Flat_Open', uc, H, 0, S, EXT); }
+          else { add(F, 'Wall_Plaster_Window_Thin_Round', uc, H, -0.015, S, UP); add(F, kitOpen('Window_Thin_Round1'), uc, H, -0.015, S, UP); add(F, 'WindowShutters_Thin_Round_Closed', uc, H, 0, S, EXT); }
+        } else add(F, 'Wall_Plaster_Straight', uc, H, -0.015, S, UP);
       }
       add(F, 'Corner_Exterior_Wood', 0, H, 0, [1.25, 1, 1.25], EXT);
     }

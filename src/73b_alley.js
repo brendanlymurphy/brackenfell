@@ -158,9 +158,9 @@ function buildAlley() {
             if (k === 0) { if (ch === 'D') { name = 'Wall_Plaster_Door_Flat'; door = true; } else { name = stone ? 'Wall_UnevenBrick_Window_Wide_Flat' : 'Wall_Plaster_Window_Wide_Flat'; glass = true; shutter = 'WindowShutters_Wide_Flat_Open'; } }
             else if (a.balcony && k === 1 && i === (n >> 1)) { name = 'Wall_Plaster_Door_Flat'; door = true; }
             else if ((i + k) % 2 === 0) { name = 'Wall_Plaster_Window_Wide_Flat'; glass = true; shutter = R() < 0.5 ? 'WindowShutters_Wide_Flat_Open' : null; }
-            else name = k === fl - 1 && i % 2 ? 'Wall_Plaster_Straight' : 'Wall_Plaster_WoodGrid';
+            else name = k === fl - 1 && i % 2 ? 'Wall_Plaster_Straight' : 'Wall_Plaster_Straight';
           } else if (wn === 'back') name = k === 0 ? (stone ? 'Wall_UnevenBrick_Straight' : 'Wall_Plaster_Straight_Base') : 'Wall_Plaster_Straight';
-          else name = k === 0 ? (stone ? 'Wall_UnevenBrick_Straight' : 'Wall_Plaster_Straight_Base') : (i % 3 === 1 && k === 1 ? 'Wall_Plaster_WoodGrid' : 'Wall_Plaster_Straight');
+          else name = k === 0 ? (stone ? 'Wall_UnevenBrick_Straight' : 'Wall_Plaster_Straight_Base') : 'Wall_Plaster_Straight';
           if (k === 0 && !stone && wn === 'front' && !door && !glass) name = 'Wall_Plaster_Straight_Base';
           addP(MS, name, F[wn], uc, 0, 0, 1, 0);
           if (glass) { addP(MS, 'Window_Wide_Flat1', F[wn], uc, 0, 0, 1, 0); if (shutter && uc > 0.9 && uc < L - 0.9 && !(k === 0)) addP(MS, shutter, F[wn], uc, 0, 0, 1, 0); }
@@ -254,6 +254,7 @@ function alleyDress(B, B2, R) {
     const di = layout.indexOf('D'), du = di * 2 + 1, side = du > w / 2 ? -1 : 1, outs = outside[kind] || [];
     outs.forEach(([n, sc], k) => {
       const u = du + side * (1.25 + k * 0.62) * (k % 2 ? -1 : 1) * (k > 1 ? 1 : 1), uu = Math.max(0.4, Math.min(w - 0.4, u)), z = 0.55 + (k % 2) * 0.35, p = wpos(F, uu, 0, z);
+      if (Math.abs(uu - du) < 1.0) return;          // Build 33: nothing on the doorstep line (the clamped one landed beside the door)
       if (n[0] === '@') n = prod(n); put(F, n, uu, 0, z, sc, R() * 6.28); if (/Barrel|Crate|Chest|Cauldron|Weapon/.test(n)) solid(p[0], p[2], 0.4 * sc, 0.9, p[1]);
     });
     // hanging goods along the awning rail
@@ -262,18 +263,19 @@ function alleyDress(B, B2, R) {
   }
   // ── the weaver-side stalls, the middle of the street stays clear ──
   const stalls = [[36.6, 5.1, '@carrot'], [40.8, 5.1, 'Pot_1']];
-  stalls.forEach(([x, z, kind], k) => {
+  stalls.forEach(([x0, z0, kind], k) => {
+    const [x, z] = KEEP.slide(x0, z0, 1.3);          // Build 33: off any door approach
     const y = Terrain.y(x, z), F = KH.xf(I, x, y, z, 1, PI); put(F, 'Stall_Empty', 0, 0, 0, 1.15, 0);
     World.colliders.push({ x, z, hx: 1.1, hz: 0.55, ax: 1, az: 0, bx: 0, bz: 1, y0: y - 0.5, y1: y + 2.6 });
     for (let i = 0; i < 3; i++) put(F, kind[0] === '@' ? prod(kind) : kind, -0.6 + i * 0.6, 0.96, 0.0, kind === 'Pot_1' ? 0.7 : 1.0, i);
     World.spots['alley.stall' + k] = { p: [x, y, z - 1.35], yaw: PI, zone: 0 };
   });
   // crates and barrels on the corners, a wagon pulled in beside the south row
-  const lump = (x, z, list) => { const y = Terrain.y(x, z), F = KH.xf(I, x, y, z, 1, 0); list.forEach(([n, dx, dz, s, ry], k) => { put(F, n, dx, 0, dz, s, ry); if (/Barrel|Crate/.test(n)) solid(x + dx, z + dz, 0.4 * s, 0.9, y); }); };
+  const lump = (x, z, list) => { if (KEEP.hit(x, z, 1.2)) return; const y = Terrain.y(x, z), F = KH.xf(I, x, y, z, 1, 0); list.forEach(([n, dx, dz, s, ry], k) => { put(F, n, dx, 0, dz, s, ry); if (/Barrel|Crate/.test(n)) solid(x + dx, z + dz, 0.4 * s, 0.9, y); }); };
   lump(28.2, -3.9, [['Barrel', 0, 0, 0.9, 0], ['Barrel', 0.7, 0.2, 0.8, 1], ['Crate_Wooden', 0.3, 0.9, 0.8, 0.4]]);
   lump(35.2, 4.7, [['Crate_Wooden', 0, 0, 0.8, 0.2], ['Bag', 0.7, 0.1, 0.9, 1]]);
   lump(47.2, 5.2, [['Barrel', 0, 0, 1, 0], ['Bag', 0.8, 0.1, 0.9, 0.3], ['Bag', 1.4, -0.2, 0.8, 2]]);
-  { const x = 45.6, z = 4.2, y = Terrain.y(x, z); put(KH.xf(I, x, y, z, 1, 0.5), 'Prop_Wagon', 0, 0, 0, 0.8, 0); World.colliders.push({ x, z, hx: 0.8, hz: 1.7, ax: Math.cos(0.5), az: Math.sin(0.5), bx: -Math.sin(0.5), bz: Math.cos(0.5), y0: y - 0.5, y1: y + 1.4 }); }
+  if (!KEEP.hit(45.6, 4.2, 1.6)) { const x = 45.6, z = 4.2, y = Terrain.y(x, z); put(KH.xf(I, x, y, z, 1, 0.5), 'Prop_Wagon', 0, 0, 0, 0.8, 0); World.colliders.push({ x, z, hx: 0.8, hz: 1.7, ax: Math.cos(0.5), az: Math.sin(0.5), bx: -Math.sin(0.5), bz: Math.cos(0.5), y0: y - 0.5, y1: y + 1.4 }); }
   // ── bunting across the street ──
   const shopAt = id => AL.shops.find(s => s.a.id === id);
   const pt = (id, wx, y) => { const s = shopAt(id); if (!s) return null; if (s.house) { const si = SITE[id], z = si.z + (si.yaw === PI ? 1 : -1) * (si.d / 2 + 0.12); return [wx, si.y + y, z]; } const sgn = s.site.yaw === PI ? -1 : 1; return wpos(s.MS, (wx - s.site.x) * sgn, y, -s.d / 2 - 0.55); };

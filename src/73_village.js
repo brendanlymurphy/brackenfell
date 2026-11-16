@@ -8,6 +8,7 @@ function buildVillage() {
   const bucket = (x, z) => { const k = Math.floor(x / VILLAGE_CELL) + ',' + Math.floor(z / VILLAGE_CELL); let m = buckets.get(k); if (!m) { m = new Mesh(2048); m.seed = buckets.size * 7919 + 13; buckets.set(k, m); } return m; };
   // place something on the ground. rot is a heading: the prop's local -Z ends up facing that way
   const put = (x, z, yaw, fn, dy) => { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z) + (dy || 0), z); if (yaw) m.RY(-yaw); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); };
+  const putc = (x, z, yaw, fn, dy) => { const q = KEEP.slide(x, z, 0.55); return put(q[0], q[1], yaw, fn, dy); };      // Build 33: small props slide off door approaches and road centre lines
   const spot = (name, x, z, yaw, extra) => { World.spots[name] = Object.assign({ p: [x, Terrain.y(x, z), z], yaw: yaw || 0, zone: 0 }, extra || {}); };
 
   const houseExt = new Map();
@@ -63,8 +64,8 @@ function buildVillage() {
     const b = [x - Math.sin(yaw) * 1.05, z + Math.cos(yaw) * 1.05];
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);
   }
-  put(11.8, 6.3, 0.4, m => Props.barrel(m)); put(12.2, 5.2, 0, m => Props.crate(m, 0.6)); put(4.0, 10.6, 0.2, m => Props.crate(m, 0.55)); put(-12.9, -4.2, 0, m => Props.barrel(m));
-  put(-11.2, 9.0, 2.2, m => Props.cart(m, true));
+  putc(11.8, 6.3, 0.4, m => Props.barrel(m)); putc(12.2, 5.2, 0, m => Props.crate(m, 0.6)); putc(4.0, 10.6, 0.2, m => Props.crate(m, 0.55)); putc(-12.9, -4.2, 0, m => Props.barrel(m));
+  putc(-11.2, 9.0, 2.2, m => Props.cart(m, true));
   // festival fire pit (lit at the end of the story)
   World.bonfirePos = [-2.6, -7.4];
   put(-2.6, -7.4, 0, m => {
@@ -82,12 +83,12 @@ function buildVillage() {
     addBoxCollider(m, -0.85, -0.08, 0.85, 0.08, 0, 2);
     World.interact.push({ p: wp(m, 0, 1.4, -0.3), r: 2.0, zone: 0, kind: 'read', id: 'board', title: 'Village notices', text: 'WANTED: steady hands at Fairweather Farm.  •  LOST: one smith’s hammer, last seen with a certain apprentice.  •  Frostcap gatherers — see Maren.  •  The Dawn bell wants a new rope.' });
   });
-  for (const [x, z] of [[-3.6, -16.3], [3.2, -16.5]]) put(x, z, PI, m => Props.bench(m, 1.8));
-  put(-6.8, -16.4, 0, m => Props.barrel(m)); put(-6.2, -15.9, 0.6, m => Props.barrel(m, 0.3, 0.75)); put(6.9, -16.3, 0.3, m => Props.crate(m, 0.7));
-  put(19.2, -5.2, 0, m => Props.barrel(m)); put(19.0, -6.1, 0.4, m => Props.crate(m, 0.55)); put(19.1, -11.4, 0, m => Props.sack(m, 0.32));
+  for (const [x, z] of [[-3.6, -16.3], [3.2, -16.5]]) putc(x, z, PI, m => Props.bench(m, 1.8));
+  putc(-6.8, -16.4, 0, m => Props.barrel(m)); putc(-6.2, -15.9, 0.6, m => Props.barrel(m, 0.3, 0.75)); putc(6.9, -16.3, 0.3, m => Props.crate(m, 0.7));
+  putc(19.2, -5.2, 0, m => Props.barrel(m)); putc(19.0, -6.1, 0.4, m => Props.crate(m, 0.55)); putc(19.1, -11.4, 0, m => Props.sack(m, 0.32));
   // lamps and signposts
-  for (const [x, z, a] of [[-13.2, -9.8, 0.8], [13.6, -10.2, -0.8], [-14.2, 5.2, 2.2], [13.2, 8.4, -2.4], [-31, -6.6, 0], [-50, -8.2, 0], [34, 3.4, PI], [47.5, -0.4, 0], [-12.2, -33, 1.6], [-8.6, -58.5, 1.2], [1.2, 30, -1.5], [4.4, 56, -1.5], [69, 0.2, 0], [86, -2.2, 0.2], [-63.5, 2, 1.5], [3.3, 78, -1.4], [70.2, 16, -1.6], [-9.5, 3.5, 0.3], [9.2, 4.2, -0.3], [-6.5, -12.2, 0.2]]) put(x, z, a, m => Props.lampPost(m, OUT));
-  put(14.6, 2.4, 0.4, m => Props.signPost(m, 3)); put(-58.5, -8.4, -0.3, m => Props.signPost(m, 2)); put(-8.9, -61.5, 0, m => Props.signPost(m, 2));
+  for (const [x, z, a] of [[-13.2, -8.3, 0.8], [13.6, -10.2, -0.8], [-14.2, 5.2, 2.2], [13.2, 8.4, -2.4], [-31, -6.6, 0], [-50, -8.2, 0], [34, 3.4, PI], [47.5, -0.4, 0], [-12.2, -33, 1.6], [-8.6, -58.5, 1.2], [1.2, 30, -1.5], [4.4, 56, -1.5], [69, 0.2, 0], [86, -2.2, 0.2], [-63.5, 2, 1.5], [3.3, 78, -1.4], [70.2, 16, -1.6], [-9.5, 3.5, 0.3], [9.2, 4.2, -0.3], [-6.5, -12.2, 0.2]]) putc(x, z, a, m => Props.lampPost(m, OUT));
+  putc(14.6, 2.4, 0.4, m => Props.signPost(m, 3)); putc(-58.5, -8.4, -0.3, m => Props.signPost(m, 2)); putc(-8.9, -61.5, 0, m => Props.signPost(m, 2));
 
   // ── west gate ──
   put(-62, -5.2, PI / 2, m => {
@@ -183,7 +184,8 @@ function buildVillage() {
     m.mat(MAT.PLANKS, COL.wood, 0.6); for (const z of [-0.8, 0.5]) m.box(-0.5, 0.3, z - 0.12, 0.5, 0.33, z + 0.12);
     m.pop(); m.pop();
     put(-4.2, 86.2, 0.6, mm => { mm.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) { mm.beam([s * 1.1, -0.2, -0.3], [s * 1.1, 1.7, 0], 0.07, 0.07); mm.beam([s * 1.1, -0.2, 0.3], [s * 1.1, 1.7, 0], 0.07, 0.07); } mm.beam([-1.3, 1.7, 0], [1.3, 1.7, 0], 0.06, 0.06); for (let i = 0; i < 7; i++) { mm.mat(MAT.METAL, [0.8, 0.85, 0.9]); mm.push().T(-0.9 + i * 0.3, 1.35, 0); mm.ball(0, 0, 0, 0.035, 0.2, 0.08, 6, 5); mm.pop(); } });
-    put(-5.6, 84.6, 0, mm => Props.barrel(mm)); put(-3.0, 83.8, 0.5, mm => Props.crate(mm, 0.5));
+    { const fs = SITE.fisher, fx = Math.sin(fs.yaw), fz = -Math.cos(fs.yaw), p0 = [fs.x + fx * (fs.d / 2 + 1.8), fs.z + fz * (fs.d / 2 + 1.8)]; let ux = LAKE.x - p0[0], uz = LAKE.z - p0[1]; const ul = hyp(ux, uz); ux /= ul; uz /= ul;
+      put(p0[0] + ux * 2.2 - uz * 1.7, p0[1] + uz * 2.2 + ux * 1.7, 0, mm => Props.barrel(mm)); put(p0[0] + ux * 3.4 - uz * 1.9, p0[1] + uz * 3.4 + ux * 1.9, 0.5, mm => Props.crate(mm, 0.5)); }      // beside the pier, not on its line (Build 33)
     World.places.push({ id: 'lake', name: 'Mirrormere', x: 7, z: 90, r: 9 });
   }
 
@@ -201,8 +203,8 @@ function buildVillage() {
     addBoxCollider(m, -0.9, -0.7, 0.9, 0.7, 0, 1.5);
   });
   World.coop = [104.5, -17.5];
-  fence(rect(101.5, -21, 108.5, -13.5).slice(0, 4)); put(102.6, -9.6, 0.2, m => Props.cart(m, false));
-  put(95.2, -17, 1.2, m => Props.woodpile(m, 5, 4, 0.7)); put(93.6, -19.8, 0, m => Props.barrel(m));
+  fence(rect(101.5, -21, 108.5, -13.5).slice(0, 4)); putc(102.6, -9.6, 0.2, m => Props.cart(m, false));
+  putc(95.2, -17, 1.2, m => Props.woodpile(m, 5, 4, 0.7)); putc(93.6, -19.8, 0, m => Props.barrel(m));
   spot('farm.field', 93, 16, 2.4); spot('farm.field2', 112, 20, -1.0); spot('farm.yard', 101, -15.5, 1.0); spot('barn.front', 108.2, -3, PI / 2);
   World.places.push({ id: 'fields', name: 'Fairweather Fields', x: 96, z: 22, r: 16, minor: true });
 
@@ -212,7 +214,7 @@ function buildVillage() {
   for (let i = 0; i < 3; i++) for (let k = 0; k < 5; k++) { const p = siteToWorld(H, H.w / 2 + 0.7 + k * 0.85, -1.6 + i * 1.5); (World.gardenPlants = World.gardenPlants || []).push([p[0], p[1], i]); }
   { const p = siteToWorld(H, H.w / 2 + 2.4, 1.0); spot('herbalist.garden', p[0], p[1], H.yaw + PI / 2); }
   for (const [lx, lz] of [[-H.w / 2 - 1.2, 1.2], [-H.w / 2 - 1.9, 0.3]]) { const p = siteToWorld(H, lx, lz); put(p[0], p[1], 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.35, 0, -0.35, 0.35, 0.3, 0.35); m.mat(MAT.THATCH, COL.hay, 0.4); m.lathe([[0.3, 0.3], [0.32, 0.5], [0.24, 0.75], [0.08, 0.9]], 10, 0); addCircleCollider(m, 0, 0, 0.36, 0, 0.9); }); }
-  { const E = SITE.elder, p = siteToWorld(E, -E.w / 2 - 0.9, 0.4); put(p[0], p[1], E.yaw + PI / 2, m => Props.woodpile(m, 6, 5, 0.6)); const q = siteToWorld(E, 2.6, -E.d / 2 - 0.5); put(q[0], q[1], E.yaw, m => Props.bench(m, 1.5)); spot('elder.porch', q[0] + Math.sin(E.yaw) * 0.05, q[1] - Math.cos(E.yaw) * 0.05, E.yaw, { sit: 0.46 }); }
+  { const E = SITE.elder, p = siteToWorld(E, -E.w / 2 - 0.9, 0.4); putc(p[0], p[1], E.yaw + PI / 2, m => Props.woodpile(m, 6, 5, 0.6)); const q = siteToWorld(E, 2.6, -E.d / 2 - 0.5); putc(q[0], q[1], E.yaw, m => Props.bench(m, 1.5)); spot('elder.porch', q[0] + Math.sin(E.yaw) * 0.05, q[1] - Math.cos(E.yaw) * 0.05, E.yaw, { sit: 0.46 }); }
   { const W2 = SITE.weaver, a = siteToWorld(W2, -W2.w / 2 - 0.6, W2.d / 2 + 2.4), b = siteToWorld(W2, -W2.w / 2 - 5.2, W2.d / 2 + 1.0);
     for (const p of [a, b]) put(p[0], p[1], 0, m => { m.mat(MAT.TIMBER, COL.timber); m.cbox(0, -0.3, 0, 0.09, 2.2, 0.09, 4); });
     const ya = Terrain.y(a[0], a[1]) + 1.85, yb = Terrain.y(b[0], b[1]) + 1.85, m = bucket(a[0], a[1]); m.m1 = 0; m.ao = 1;
@@ -228,7 +230,7 @@ function buildVillage() {
     World.places.push({ id: 'graves', name: 'The Quiet Yard', x: siteToWorld(C, 0, -11)[0], z: siteToWorld(C, 0, -11)[1], r: 7 }); }
   // mill surroundings
   { const M = SITE.mill; for (const [lx, lz, s] of [[-M.w / 2 - 1.2, -2.2, 0.34], [-M.w / 2 - 1.9, -1.6, 0.3], [-M.w / 2 - 1.3, -1.4, 0.28]]) { const p = siteToWorld(M, lx, lz); put(p[0], p[1], R() * 3, m => Props.sack(m, s, [0.9, 0.88, 0.8])); }
-    const p = siteToWorld(M, -M.w / 2 - 2.2, 1.4); put(p[0], p[1], 1.0, m => Props.cart(m, false)); const q = siteToWorld(M, -M.w / 2 - 1.5, -0.2); spot('mill.door', q[0], q[1], M.yaw - PI / 2); }
+    const p = siteToWorld(M, -M.w / 2 - 2.2, 1.4); putc(p[0], p[1], 1.0, m => Props.cart(m, false)); const q = siteToWorld(M, -M.w / 2 - 1.5, -0.2); spot('mill.door', q[0], q[1], M.yaw - PI / 2); }
 
   // ── dynamic objects: door leaves, mill wheel, pickups ──
   const skin = new MeshPack();
