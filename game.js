@@ -904,7 +904,7 @@ SH.WINMAX = 6;
     if (!W || !W.length || !env.winCol) { U.winN.value = 0; if (Bake.shaftU) Bake.shaftU.value = 0; return; }
     const cand = W.filter(w => Math.abs(w.p[1] - cam[1]) < 2.6).map(w => [(w.p[0] - cam[0]) ** 2 + (w.p[2] - cam[2]) ** 2, w]).sort((a, b) => a[0] - b[0]).slice(0, SH.WINMAX);
     const P = U.winP.array, D = U.winD.array, C = U.winC.array, col = env.winCol;
-    cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); C[i].set(col[0] * w.k, col[1] * w.k, col[2] * w.k, 0); });
+    cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); const tc = w.c || [1, 1, 1]; C[i].set(col[0] * w.k * tc[0], col[1] * w.k * tc[1], col[2] * w.k * tc[2], 0); });
     U.winN.value = cand.length;
     if (Bake.shaftU) Bake.shaftU.value = Math.min(0.5, (col[0] + col[1] + col[2]) / 3 * (TEST && TEST.shaft !== undefined ? +TEST.shaft : 0.009));
   };
@@ -1798,7 +1798,7 @@ const Kit = (() => {
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
     const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back
-    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(pls.mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.6).add(0.4)))));      // [l1] window light (40c_light.js)
+    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(pls.mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.6).add(0.4))).mul(smoothstep(0.55, 0.9, N.y).mul(0.9).add(1))));      // [l1] window light (40c_light.js)
     em = em.add(alb.mul(glow));
     if (batch && /Floor_Wood|Table|Counter|Bar_/.test(name) && !(TEST && TEST.gloss === 0)) em = em.add(SH.pointSpec(wp, N, normalize(U.camPos.sub(wp)), float(0.55), zone).mul(0.3));      // [l1] worn boards and table tops catch the fire
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
@@ -3908,7 +3908,7 @@ Cells.env = function (e) {
   e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
   // daylight: with the sun off, rooms lost the light that used to come in by day (midday was darker than night). Windows let the sky in: lift the day's ambient. c.daylight: 0 for a cellar or crypt, default for a room with windows.
   e.winCol = null;
-  { let dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0 && c.wins && c.wins.length && !(TEST && TEST.winlight === 0)) { /* [l1] daylight from the panes (40c_light.js): a small uniform lift, the rest is window light */ const b = e.ambSky, l = (b[0] + b[1] + b[2]) / 3, g = WIN_GAIN; e.winCol = [(l * 0.55 + b[0] * 0.45) * g * 1.04, (l * 0.55 + b[1] * 0.45) * g, (l * 0.55 + b[2] * 0.45) * g * 0.92]; k *= WIN_KEEP; } if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT * (e.winCol ? 0.8 + 0.2 * (e.night || 0) : 1); e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
+  { let dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0 && c.wins && c.wins.length && !(TEST && TEST.winlight === 0)) { /* [l1] daylight from the panes (40c_light.js): a small uniform lift, the rest is window light */ const b = e.ambSky, l = (b[0] + b[1] + b[2]) / 3, g = WIN_GAIN * (c.id === "chapel" ? 1.5 : 1); e.winCol = [(l * 0.55 + b[0] * 0.45) * g * 1.04, (l * 0.55 + b[1] * 0.45) * g, (l * 0.55 + b[2] * 0.45) * g * 0.92]; k *= (c.id === "chapel" ? 0.5 : WIN_KEEP); } if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT * (e.winCol ? 0.8 + 0.2 * (e.night || 0) : 1); e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
   e.fogCol = c.fog || [0.030, 0.025, 0.020]; e.fogDensity = c.fogDensity || 0.022; e.cloud = 0; e.stars = 0; e.aurora = 0; e.sunDisc = 0; e.moonBright = 0;
   return e;
 };
@@ -8722,7 +8722,7 @@ Bake.shaftMat = function () {
   const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide;
   const q = uv(), across = smoothstep(0.0, 1.0, TSL.float(1).sub(abs(q.x.mul(2).sub(1)))), along = pow(TSL.float(1).sub(q.y), 1.6).mul(smoothstep(0.0, 0.35, q.y));
-  const ta = attribute('tint', 'vec4').a, pk = TSL.mix(TSL.float(9), TSL.float(1), TSL.step(0.75, ta));      // a < 0.75: the floor patch
+  const ta = attribute('tint', 'vec4').a, pk = TSL.mix(TSL.float(14), TSL.float(1), TSL.step(0.75, ta));      // a < 0.75: the floor patch
   m.colorNode = attribute('tint', 'vec4').rgb.mul(across.mul(across)).mul(along).mul(Bake.shaftU).mul(pk);
   return m;
 };
@@ -8754,6 +8754,7 @@ Bake.interior = function (P) {
   { const sm = new Mesh(256); sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 232; sm.cb = 190; sm.ao = 1;
     for (const w of P.windows) {
       const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
+      const og = wl.open.find(o => o.type === 'win' && o.pos === w.pos), gc = og && og.glass; if (gc) { sm.cr = Math.round(Math.min(1, 0.25 + gc[0]) * 255); sm.cg = Math.round(Math.min(1, 0.25 + gc[1]) * 255); sm.cb = Math.round(Math.min(1, 0.25 + gc[2]) * 255); } else { sm.cr = 255; sm.cg = 232; sm.cb = 190; }      // stained glass throws its own colour
       const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, len = 3.4, fy = L.y + 0.05;
       const at = (a, b, y) => P.w2(cx + dx * a + tx * b, y, cz + dz * a + tz * b);
       const quad = (v) => { const [p0, p1, p2, p3] = v; const a = sm.vert(p0[0], p0[1], p0[2], 0, 1, 0, 0, 0), b = sm.vert(p1[0], p1[1], p1[2], 0, 1, 0, 1, 0), c = sm.vert(p2[0], p2[1], p2[2], 0, 1, 0, 1, 1), d = sm.vert(p3[0], p3[1], p3[2], 0, 1, 0, 0, 1); sm.tri(a, b, c); sm.tri(a, c, d); sm.flip = false; };
@@ -8769,7 +8770,8 @@ Bake.interior = function (P) {
     const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0;
     const p0 = P.w2(cx + dx * 0.25, L.y + 1.5, cz + dz * 0.25), p1 = P.w2(cx + dx * 1.25, L.y + 1.5, cz + dz * 1.25);
     const dd = Math.hypot(p1[0] - p0[0], p1[2] - p0[2]) || 1;
-    cell.wins.push({ p: p0, d: [(p1[0] - p0[0]) / dd, (p1[2] - p0[2]) / dd], r: 9, k: 1, k0: w.k });
+    const og = wl.open.find(o => o.type === 'win' && o.pos === w.pos), gc = og && og.glass;
+    cell.wins.push({ p: p0, d: [(p1[0] - p0[0]) / dd, (p1[2] - p0[2]) / dd], r: Math.max(9, Math.min(13, Math.max(w.room.x1 - w.room.x0, w.room.z1 - w.room.z0) * 0.9)), k: 1, k0: w.k, c: gc ? [0.45 + gc[0] * 0.9, 0.45 + gc[1] * 0.9, 0.45 + gc[2] * 0.9] : null });
     Bake.stats.wins++;
   }
 };
@@ -8814,7 +8816,7 @@ Bake.buildGround = function () {
   for (const c of World.colliders) {
     if (Cells.inRegion(c.x) || Math.abs(c.x) > 190 || Math.abs(c.z) > 190) continue;
     const ty = Terrain.y(c.x, c.z), ht = c.y1 - c.y0; if (c.y0 > ty + 0.7 || ht < 0.35) continue;
-    const h = c.y0 + 0.9, A = ht > 1.2 ? 0.82 : 0.62, m = clamp(0.8 + 0.18 * ht, 0.9, 1.9);
+    const h = c.y0 + 0.9, A = ht > 1.2 ? 0.9 : 0.66, m = clamp(0.9 + 0.3 * ht, 1.0, 2.5);
     if (c.r !== undefined) {
       if (c.r > 4) continue; const R = c.r + m * 0.9, n = 8, ring0 = [], ring1 = [];
       for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); ring0.push(vert(c.x + ca * c.r * 0.85, c.z + sa * c.r * 0.85, h, A)); ring1.push(vert(c.x + ca * R, c.z + sa * R, h, 0)); }
@@ -8822,9 +8824,10 @@ Bake.buildGround = function () {
       continue;
     }
     if (c.hx * c.hz < 0.004 || (c.hx > 40 || c.hz > 40)) continue;
-    const P = (lx, lz) => [c.x + c.ax * lx + c.bx * lz, c.z + c.az * lx + c.bz * lz], e = m * 0.55;
+    const cc = c.shade ? Object.assign({}, c, { hx: c.hx + 0.1, hz: c.hz + 0.55 }) : c;      // a canopy: the whole shaded rectangle goes dark
+    const P = (lx, lz) => [cc.x + cc.ax * lx + cc.bx * lz, cc.z + cc.az * lx + cc.bz * lz], e = m * 0.55;
     // four sides, each a strip along its edge (a little longer than the edge so the corners are covered), inner edge dark, outer edge clear
-    for (const [ux, uz, ox, oz, half, hl] of [[1, 0, 0, 1, c.hx, c.hz], [1, 0, 0, -1, c.hx, c.hz], [0, 1, 1, 0, c.hz, c.hx], [0, 1, -1, 0, c.hz, c.hx]]) {
+    for (const [ux, uz, ox, oz, half, hl] of [[1, 0, 0, 1, cc.hx, cc.hz], [1, 0, 0, -1, cc.hx, cc.hz], [0, 1, 1, 0, cc.hz, cc.hx], [0, 1, -1, 0, cc.hz, cc.hx]]) {
       const len = 2 * half + 2 * e, n = Math.max(1, Math.ceil(len / 2.4)); let pi = -1, po = -1;
       for (let k = 0; k <= n; k++) {
         const t = -half - e + len * k / n, endK = (k === 0 || k === n) ? 0.55 : 1, lx = ux ? t : ox * hl, lz = uz ? t : oz * hl;
@@ -8834,6 +8837,7 @@ Bake.buildGround = function () {
         pi = ai; po = ao;
       }
     }
+    if (c.shade) { const q = [P(-cc.hx, -cc.hz), P(cc.hx, -cc.hz), P(cc.hx, cc.hz), P(-cc.hx, cc.hz)].map(p => vert(p[0], p[1], h, A * 0.85)); tri(q[0], q[1], q[2]); tri(q[0], q[2], q[3]); }
   }
   GR.pos = new Float32Array(pos); GR.tint = new Uint8Array(al.length * 4); for (let i = 0; i < al.length; i++) GR.tint[i * 4 + 3] = Math.round(al[i] * 255);
   GR.sq = [...sq.entries()].map(([k, l]) => { const [a, b] = k.split(',').map(Number); return { x: (a + 0.5) * S, z: (b + 0.5) * S, idx: Uint32Array.from(l.i) }; });
@@ -10033,7 +10037,7 @@ function buildDress() {
     add(name, x, y, z, 1.1, ry, false, DRS.stalls.length < 3 ? { es: true } : null);
     const fx = Math.sin(ry), fz = Math.cos(ry);
     claim(x, z, 1.6);
-    World.colliders.push({ x, z, hx: 1.3, hz: 0.55, ax: Math.cos(ry), az: -Math.sin(ry), bx: Math.sin(ry), bz: Math.cos(ry), y0: y - 0.5, y1: y + 1.0 });
+    World.colliders.push({ x, z, hx: 1.3, hz: 0.55, ax: Math.cos(ry), az: -Math.sin(ry), bx: Math.sin(ry), bz: Math.cos(ry), y0: y - 0.5, y1: y + 1.0, shade: true });
     const k = DRS.stalls.length; DRS.stalls.push({ x, z, kind });
     World.spots['dstall' + k] = { p: [x + fx * 1.5, gy(x + fx * 1.5, z + fz * 1.5), z + fz * 1.5], yaw: ry + PI, zone: 0 };
     if (R() < 0.8) { const sx = x - Math.cos(ry) * 1.8, sz = z + Math.sin(ry) * 1.8; if (ok(sx, sz, 0.6, { square: true })) { add(pick(R() < 0.5 ? barrels : crates), sx, gy(sx, sz), sz, 1, R() * TAU, false); solid(sx, sz, 0.4, 0.9); claim(sx, sz, 0.5); } }
