@@ -4,3 +4,4 @@ shots/
 .DS_Store
 /cand
 /_h
+__pycache__/
