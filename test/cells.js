@@ -14,8 +14,8 @@ for (const c of cells) {
   const tag = c.id, x = c.xdoor, d = c.door;
   // outside: stand 1.4 m before the door looking at it
   const yaw = Math.atan2(x.c[0] - x.out[0], -(x.c[2] - x.out[2]));
-  game.tp(x.out[0], x.out[2], yaw * 180 / Math.PI, 0); fix(); game.step(3, dt);
-  fx(!World.cell, tag + ': outside but in a cell'); fx(Math.abs(Player.pos[1] - World.groundAt(x.out[0], x.out[2], 1e9)) < 0.6, tag + ': not on the ground outside');
+  game.tp(x.out[0], x.out[2], yaw * 180 / Math.PI, 0); const gOut = World.groundAt(x.out[0], x.out[2], x.c[1] + 1.2); Player.pos[1] = gOut; Player.vy = 0; fix(); game.step(3, dt);       // the ground at the door, not a gallery or roof above it (the Hart's gallery runs over the inn door)
+  fx(!World.cell, tag + ': outside but in a cell'); fx(Math.abs(Player.pos[1] - gOut) < 0.6, tag + ': not on the ground outside');
   fx(UI.prompt && UI.prompt.kind === 'portal' && UI.prompt.cell === c.id, tag + ': no portal prompt outside (' + (UI.prompt && (UI.prompt.label || UI.prompt.kind)) + ')');
   fx($('actLabel').textContent === 'Enter ' + c.name, tag + ': outside label "' + $('actLabel').textContent + '"');
   await game.draw(); fx(visCells() === 0, tag + ': a cell is drawn outside');
