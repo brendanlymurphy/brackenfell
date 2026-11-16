@@ -26,7 +26,8 @@ function addLight(p, r, c, zone, kind) { const l = { p, r, c, zone: zone | 0, se
 const wp = (m, x, y, z) => m4.tp(m.m, [x, y, z]);
 // emissive geometry (fire glow, candle wax tips ...): strength in HDR units
 const emit = (m, k, fn) => { const a = m.m2, b = m.m3; m.m2 = a | 2; m.m3 = clamp(Math.round(k * 16), 1, 255); fn(); m.m2 = a; m.m3 = b; };
-const at = (m, x, y, z, rot, fn) => { m.push().T(x, y, z); if (rot) m.RY(rot); fn(); m.pop(); };
+const at = (m, x, y, z, rot, fn) => { m.push().T(x, y, z); if (rot) m.RY(rot); const d = m.st.length; fn(); if (m.st.length !== d) pushPopWarn(m, 'at'); m.pop(); };
+const pushPopWarn = (m, who) => { if (!pushPopWarn.n) pushPopWarn.n = 0; if (pushPopWarn.n++ < 4) console.warn('[fx1] unbalanced push/pop inside ' + who + ' (a builder popped or pushed once too often: whatever it drew next landed at the wrong place)'); };          // [fx1]
 
 const Props = {
   table(m, len, wid, h) {

@@ -4310,7 +4310,8 @@ function addLight(p, r, c, zone, kind) { const l = { p, r, c, zone: zone | 0, se
 const wp = (m, x, y, z) => m4.tp(m.m, [x, y, z]);
 // emissive geometry (fire glow, candle wax tips ...): strength in HDR units
 const emit = (m, k, fn) => { const a = m.m2, b = m.m3; m.m2 = a | 2; m.m3 = clamp(Math.round(k * 16), 1, 255); fn(); m.m2 = a; m.m3 = b; };
-const at = (m, x, y, z, rot, fn) => { m.push().T(x, y, z); if (rot) m.RY(rot); fn(); m.pop(); };
+const at = (m, x, y, z, rot, fn) => { m.push().T(x, y, z); if (rot) m.RY(rot); const d = m.st.length; fn(); if (m.st.length !== d) pushPopWarn(m, 'at'); m.pop(); };
+const pushPopWarn = (m, who) => { if (!pushPopWarn.n) pushPopWarn.n = 0; if (pushPopWarn.n++ < 4) console.warn('[fx1] unbalanced push/pop inside ' + who + ' (a builder popped or pushed once too often: whatever it drew next landed at the wrong place)'); };          // [fx1]
 
 const Props = {
   table(m, len, wid, h) {
@@ -8874,7 +8875,7 @@ function buildVillage() {
   const buckets = new Map(), R = rng(777), OUT = { zone: 0 };
   const bucket = (x, z) => { const k = Math.floor(x / VILLAGE_CELL) + ',' + Math.floor(z / VILLAGE_CELL); let m = buckets.get(k); if (!m) { m = new Mesh(2048); m.seed = buckets.size * 7919 + 13; buckets.set(k, m); } return m; };
   // place something on the ground. rot is a heading: the prop's local -Z ends up facing that way
-  const put = (x, z, yaw, fn, dy) => { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z) + (dy || 0), z); if (yaw) m.RY(-yaw); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); };
+  const put = (x, z, yaw, fn, dy) => { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z) + (dy || 0), z); if (yaw) m.RY(-yaw); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; const d = m.st.length; fn(m); if (m.st.length !== d) pushPopWarn(m, 'put'); m.pop(); };
   const putc = (x, z, yaw, fn, dy) => { const q = KEEP.slide(x, z, 0.55); return put(q[0], q[1], yaw, fn, dy); };      // Build 33: small props slide off door approaches and road centre lines
   const spot = (name, x, z, yaw, extra) => { World.spots[name] = Object.assign({ p: [x, Terrain.y(x, z), z], yaw: yaw || 0, zone: 0 }, extra || {}); };
 
@@ -12768,7 +12769,7 @@ const wcol = (x, z, r, h, y0) => { const y = wy(x, z); World.colliders.push({ x,
 function wPut(m, p, lx, lz, rot, fn, dy) {
   const q = siteToWorld(p, lx, lz), y = wy(q[0], q[1]);
   m.push().T(q[0], y + (dy || 0), q[1]).RY(-(p.yaw + (rot || 0))); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
-  fn(m, q[0], y, q[1]); m.pop(); return [q[0], y, q[1]];
+  const d = m.st.length; fn(m, q[0], y, q[1]); if (m.st.length !== d) pushPopWarn(m, 'wPut'); m.pop(); return [q[0], y, q[1]];
 }
 // kit pieces to be placed when the kit is ready: name (or a function returning one), world x z, { s, ry, dy, tint, col: collider radius, h }
 function wKit(p, name, lx, lz, o) {

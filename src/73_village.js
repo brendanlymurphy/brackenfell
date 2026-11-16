@@ -9,7 +9,7 @@ function buildVillage() {
   const buckets = new Map(), R = rng(777), OUT = { zone: 0 };
   const bucket = (x, z) => { const k = Math.floor(x / VILLAGE_CELL) + ',' + Math.floor(z / VILLAGE_CELL); let m = buckets.get(k); if (!m) { m = new Mesh(2048); m.seed = buckets.size * 7919 + 13; buckets.set(k, m); } return m; };
   // place something on the ground. rot is a heading: the prop's local -Z ends up facing that way
-  const put = (x, z, yaw, fn, dy) => { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z) + (dy || 0), z); if (yaw) m.RY(-yaw); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); };
+  const put = (x, z, yaw, fn, dy) => { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z) + (dy || 0), z); if (yaw) m.RY(-yaw); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; const d = m.st.length; fn(m); if (m.st.length !== d) pushPopWarn(m, 'put'); m.pop(); };
   const putc = (x, z, yaw, fn, dy) => { const q = KEEP.slide(x, z, 0.55); return put(q[0], q[1], yaw, fn, dy); };      // Build 33: small props slide off door approaches and road centre lines
   const spot = (name, x, z, yaw, extra) => { World.spots[name] = Object.assign({ p: [x, Terrain.y(x, z), z], yaw: yaw || 0, zone: 0 }, extra || {}); };
 

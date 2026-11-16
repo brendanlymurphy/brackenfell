@@ -10,7 +10,7 @@ const wcol = (x, z, r, h, y0) => { const y = wy(x, z); World.colliders.push({ x,
 function wPut(m, p, lx, lz, rot, fn, dy) {
   const q = siteToWorld(p, lx, lz), y = wy(q[0], q[1]);
   m.push().T(q[0], y + (dy || 0), q[1]).RY(-(p.yaw + (rot || 0))); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
-  fn(m, q[0], y, q[1]); m.pop(); return [q[0], y, q[1]];
+  const d = m.st.length; fn(m, q[0], y, q[1]); if (m.st.length !== d) pushPopWarn(m, 'wPut'); m.pop(); return [q[0], y, q[1]];
 }
 // kit pieces to be placed when the kit is ready: name (or a function returning one), world x z, { s, ry, dy, tint, col: collider radius, h }
 function wKit(p, name, lx, lz, o) {
