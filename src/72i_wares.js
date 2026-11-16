@@ -102,7 +102,7 @@ function pCeil(P, room, x, z, draw, rot) {
 }
 
 // ── general wares: varied small goods for shelves and tables (kept a few dozen triangles each) ──
-const GL = [[0.35, 0.55, 0.4], [0.5, 0.3, 0.15], [0.3, 0.4, 0.55], [0.62, 0.58, 0.45], [0.4, 0.2, 0.25]];
+const GL = [[0.3, 0.4, 0.33], [0.4, 0.3, 0.2], [0.3, 0.34, 0.4], [0.5, 0.46, 0.38], [0.34, 0.24, 0.25]];      // [c5] muted glass and clay, not primary colours
 PD.ware = {
   rope: (m, R) => { m.mat(MAT.CLOTH, [0.62, 0.52, 0.34], 0.5); m.lathe([[0.05, 0], [0.12, 0.005], [0.14, 0.04], [0.13, 0.09], [0.06, 0.1], [0.05, 0.05]], 9, 1); },
   lantern: (m, R) => { m.mat(MAT.METAL, COL.black); m.box(-0.055, 0, -0.055, 0.055, 0.015, 0.055); m.box(-0.06, 0.2, -0.06, 0.06, 0.225, 0.06); for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.box(sx * 0.05 - 0.005, 0.015, sz * 0.05 - 0.005, sx * 0.05 + 0.005, 0.2, sz * 0.05 + 0.005); m.box(-0.02, 0.225, -0.005, 0.02, 0.27, 0.005); emit(m, 0.6, () => { m.mat(MAT.PLAIN, [1, 0.7, 0.3]); m.box(-0.035, 0.03, -0.035, 0.035, 0.12, 0.035, 4 | 8); }); },

@@ -113,7 +113,7 @@ Cells.hear = function (pos, from) {
 };
 // frame environment: no sun, a short dark fog, the day's ambient kept (windows and the hour of day still reach the rooms through emissive panes and daylight lights)
 const CELL_DAYLIGHT = (typeof TEST !== 'undefined' && TEST && TEST.celllight !== undefined) ? +TEST.celllight : 6;
-const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 1;
+const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 1.7;
 Cells.env = function (e) {
   const c = Cells.cur; if (!c) return e;
   e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
