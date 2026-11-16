@@ -10101,11 +10101,12 @@ function dMilestone(R, k) {
 }
 function dBoat(R) {
   const key = 'dr_boat'; if (Kit.pieces[key]) return key;
-  const g = GP(), c = [0.33, 0.27, 0.21], L = 1.7, W = 0.62, H = 0.42;
+  const g = GP(), c = [0.5, 0.43, 0.35], L = 1.7, W = 0.62, H = 0.42;          // [fx1] weathered grey-brown with strakes and a gunwale (it was one black plank-less hull)
   const P = (u, v, y) => [v * W * (1 - 0.65 * Math.pow(Math.abs(u), 2.2)), y, u * L];
   const N = 8; for (let i = 0; i < N; i++) { const u0 = i / N * 2 - 1, u1 = (i + 1) / N * 2 - 1;
     for (const s of [-1, 1]) { const a = P(u0, s, H * (0.45 + 0.55 * u0 * u0)), b = P(u1, s, H * (0.45 + 0.55 * u1 * u1)), c0 = P(u0, s * 0.45, 0.04), c1 = P(u1, s * 0.45, 0.04); if (s > 0) g.quad(DRW, c0, c1, b, a, c, DRU.wood, true); else g.quad(DRW, c1, c0, a, b, c, DRU.wood, true); }
     g.quad(DRW, P(u0, 0.45, 0.04), P(u1, 0.45, 0.04), P(u1, -0.45, 0.04), P(u0, -0.45, 0.04), dscale(c, 0.8), DRU.wood, true); }
+  for (const s of [-1, 1]) for (const f of [0.34, 0.67, 1.0]) for (let i = 0; i < N; i++) { const u0 = i / N * 2 - 1, u1 = (i + 1) / N * 2 - 1, q = u => P(u, s * (0.45 + 0.55 * f) * 1.012, 0.04 + (H * (0.45 + 0.55 * u * u) - 0.04) * f); g.beam(DRW, q(u0), q(u1), f === 1 ? 0.022 : 0.012, f === 1 ? dscale(c, 0.8) : dscale(c, 0.55)); }
   for (const z of [-0.6, 0.35]) g.box(DRW, -0.5 * W, H * 0.62, z - 0.07, 0.5 * W, H * 0.67, z + 0.07, dscale(c, 1.2), DRU.wood);
   return g.make(key);
 }
