@@ -44,6 +44,7 @@ const STEPS = [
   { id: 'interiors', quick: 1, run: expect(/interiors ok/, play, 'interiors.js') },
   { id: 'parity', run: () => { const out = node(['test/parity.mjs']); return { out, fail: /parity ok/.test(out) ? null : (out.trim().split('\n').pop() || 'failed').slice(0, 200) }; } },
   { id: 'voice_game', quick: 1, run: expect(/PASSED/, play, 'voice_game.js') },
+  { id: 'voice_parts', why: 'a remark before a line, and overheard talk, play their recordings in turn', run: expect(/voice parts PASSED/, play, 'voice_parts.js') },
   { id: 'audio_game', run: expect(/PASSED/, play, 'audio_game.js') },
   { id: 'voices', quick: 1, why: 'every listed voice file exists and is a sane length and level', run: () => { const out = node(['tools/voice/check.mjs', '--allow-missing']); return { out, fail: /voice files ok/.test(out) ? null : (out.match(/\d+ FAILURES/) || ['failed'])[0] + ': ' + (out.match(/FAIL .*/) || [''])[0].slice(0, 120), note: (out.match(/\d+\/\d+ files/) || [''])[0] }; } },
   ...['medium', 'low'].map(q => ({ id: 'budget-' + q, quick: q === 'medium', why: 'draw calls and triangles of the four reference views', run: () => {
@@ -59,7 +60,8 @@ const STEPS = [
   { id: 'webgpu', why: 'one frame in the square and one in the inn without a GPU error', run: () => {
     const out = shot(['quality=medium'], "const a = (await game.shot(4, null, -14, 200, 0, 10)).draws; game.enter('inn'); const p = R.cam.pos; const b = (await game.shot(p[0], p[1], p[2], 180, 0, 20)).draws; return ['gpu', G.backend, a, b, window.__gpuErrors().length];", ['--out', OUT + '/webgpu_inn.png']), m = /\["gpu","(\w+)",(\d+),(\d+),(\d+)\]/.exec(out);
     return { out, fail: evalFail(out) || (!m ? 'no result' : m[1] !== 'WebGPU' ? 'ran on ' + m[1] : +m[4] ? m[4] + ' GPU errors' : null), note: m ? m[1] + ' ' + m[2] + ' / ' + m[3] + ' draws' : '' }; } },
-  { id: 'real', quick: 1, why: 'production boot, no test hooks', run: () => { const out = node(['test/real.mjs', OUT + '/real.png']); let fail = 'no status line'; const m = out.match(/\{"backend".*\}/g); if (m) { try { const s = JSON.parse(m[m.length - 1]);       /* the last status line: after Start was pressed */ fail = s.crashed ? 'crashed: ' + (s.errors[0] || '').slice(0, 200) : !s.ready ? 'not ready' : !s.playing ? 'not playing' : s.errors.length ? s.errors[0].slice(0, 200) : null; } catch (e) { fail = 'unreadable status'; } } return { out, fail }; } },
+  { id: 'real', quick: 1, why: 'production boot, no test hooks, from the folder Pages would serve (tools/site.mjs)', run: () => { const site = node(['tools/site.mjs', '_site', '--no-build']); if (!/site: \d+ files/.test(site)) return { out: site, fail: 'the site folder could not be assembled' };
+    const out = site + node(['test/real.mjs', OUT + '/real.png', '--root', '_site']); let fail = 'no status line'; const m = out.match(/\{"backend".*\}/g); if (m) { try { const s = JSON.parse(m[m.length - 1]);       /* the last status line: after Start was pressed */ fail = s.crashed ? 'crashed: ' + (s.errors[0] || '').slice(0, 200) : !s.ready ? 'not ready' : !s.playing ? 'not playing' : s.errors.length ? s.errors[0].slice(0, 200) : null; } catch (e) { fail = 'unreadable status'; } } return { out, fail }; } },
 ];
 // Steps known to be sensitive to timing in a software-rendered tab. They are still required; the table says so when one needed its second try.
 // Tests that have failed by chance. mine: the lurker's creaks are random draws ("heard 3x" could be 1x), so the gate runs it with a fixed

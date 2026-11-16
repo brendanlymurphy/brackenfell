@@ -33,7 +33,7 @@ after it, and do not run `--full` on a small shared machine.
 
 What `--full` runs: build; silent boot (no `warn` or `error` line: a builder that throws only logs a warning, and a build shipped
 that way once); `quest` (ends `fire 99 bonfire true`); `stairs`, `npcstairs`, `npcsep`, `routes`, `combat`, `wilds`, `story`, `mine`,
-`secrets`, `interact`, `econ`; `interiors`, `parity`; `voice_game`, `audio_game`, `voices` (`tools/voice/check.mjs`); the budget
+`secrets`, `interact`, `econ`; `interiors`, `parity`; `voice_game`, `voice_parts`, `audio_game`, `voices` (`tools/voice/check.mjs`); the budget
 views on medium and low; every cell in chunks of 8 (a software-rendered tab dies after about a dozen); `kitcull`; one WebGPU
 shot in the square and in the inn with no GPU errors; `test/real.mjs` (production boot).
 
