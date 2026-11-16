@@ -25,6 +25,11 @@ MINE.AT = {
   arrive: [0, 2.6], trap: [0, 14.5], tally: [0, 30], niche: [-10.5, 30], gallery: [20, 32], sump: [38, 32], stope: [38, 55], rubble: [[31.5, 53], [48, 56]], way: [28, 31.5, 53, 56],
   deep: [-2, 60], boss: [-2, 58], station: [-11.5, 66], chest: [-12, 52.5], exitDoor: [-35, 60], cave: { x: 20, z: -172.5 },
 };
+MINE.SPAWN = [
+  { kind: 'delver', x: 3.5, z: 31, yaw: PI }, { kind: 'delver', x: 37, z: 35, yaw: -PI / 2 }, { kind: 'delver', x: 31, z: 59, yaw: PI },
+  { kind: 'lurker', x: 26.5, z: 31.5, yaw: PI }, { kind: 'lurker', x: 29.8, z: 54.5, yaw: 0 }, { kind: 'lurker', x: -12.5, z: 60, yaw: PI / 2 },
+  { kind: 'foreman', x: -2, z: 60.5, yaw: PI / 2 },
+];
 const mhash = (a, b, c) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(c | 0, 1274126177)) | 0; h = Math.imul(h ^ (h >>> 13), 1103515245); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
 const mnoise = (a, b, c) => mhash(a, b, c) * 2 - 1;
 // the grid: occupied 1 m cells -> { reg, fl (floor, cell frame), h }
@@ -329,8 +334,7 @@ function mineTrapCheck() {
   const ms = MINE_S(); if (ms.trap) return; const O = MINE.O, FY = MINE.FY, P = Player.pos, [tx, tz] = MINE.AT.trap;
   if (Math.abs(P[0] - (O[0] + tx)) < 1.9 && Math.abs(P[2] - (O[2] + tz)) < 0.3 && P[1] < FY + 0.42) {
     ms.trap = 1; Snd.event('hit.wood', [P[0], P[1] + 1, P[2]]); setTimeout(() => Snd.event('hit.metal', [P[0], P[1], P[2]]), 120);
-    const hit = Math.abs(P[2] - (O[2] + tz)) < 0.2 && Math.abs(P[0] - (O[0] + tx)) < 1.0;
-    toast(hit ? 'The cord snaps. A slab of rock comes down.' : 'The cord snaps. A slab thumps down behind you.'); if (hit) RPG.damage(24, null, 'fall'); RPG.shake = 1; save();
+    toast('The cord snaps. A slab of rock comes down on you.'); RPG.damage(24, null, 'fall'); RPG.shake = 1; save();
   }
 }
 // the lantern key; the cell's dark; the first time through either door the mine counts as open
