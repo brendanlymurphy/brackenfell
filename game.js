@@ -4266,7 +4266,7 @@ function kitShellPass(c, pass) {
   const { spec, w, d, H, t, hd, glow, zone, openings, tanP } = c, site = c.xsite, X = pass !== 'int', I = pass !== 'ext', ext = pass === 'int' ? c.ext : c.xext, Ms = pass === 'int' ? c.Ms : c.Mx, st = spec.kitStyle, sy = H / 3, stone = st.ground === 'stone';
   // drop the generated shell; everything it registered in the world (colliders, floors, doors, window light) stays
   if (X) { for (const m of [c.xext, c.ext, glow]) { m.nv = 0; m.ni = 0; m.min = [1e9, 1e9, 1e9]; m.max = [-1e9, -1e9, -1e9]; } }
-  const b = X ? (site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.xFloorY + H + (st.up ? 3 : 0) })) : kitIntBatch(zone);
+  const b = X ? (site.facade ? (() => { const nb = Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true }); nb.add = () => {}; return nb; })() : site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.xFloorY + H + (st.up ? 3 : 0) })) : kitIntBatch(zone);
   if (X) World.kitExt[site.id] = { batch: b, site, Ms: c.Mx, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
   const cellExt = pass === 'ext';          // in a cell the village shell knows nothing of the room: its inside faces are plain dark
@@ -7474,7 +7474,7 @@ const HTRADES = {
 };
 const H_TINTS = [[1, 1, 1], [1.0, 0.93, 0.78], [0.88, 0.95, 0.86], [1.0, 0.86, 0.8], [0.84, 0.82, 0.8], [0.95, 0.9, 0.72], [0.9, 0.9, 1.0]];          // whitewash, ochre, sage, rose, grey, straw, lime-blue
 const H_RUGS = [[0.5, 0.2, 0.16], [0.3, 0.22, 0.16], [0.24, 0.32, 0.2], [0.26, 0.28, 0.44], [0.45, 0.32, 0.14], [0.4, 0.2, 0.3]];
-const hHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0) / 4294967296; };
+const hHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d), h = Math.imul(h ^ (h >>> 12), 0x297a2d39), ((h ^ (h >>> 15)) >>> 0) / 4294967296); };
 const stRun = (rise, tread) => Math.ceil(rise / 0.19) * tread;
 const ceil2 = v => Math.ceil(v * 2 - 1e-9) / 2;
 function hCtx(P, c) {
@@ -7638,6 +7638,17 @@ function hBuild(P, c, info) { const F = hCtx(P, c); P.fam = F; HFAM[F.fam](P, c,
 for (const id of (typeof INF !== 'undefined' && INF.enterIds || [])) { PLANS[id] = hBuild; PLAN_SHIP[id] = 1; }
 for (const id of ['high.a', 'high.c']) if (typeof SITE !== 'undefined' && SITE[id]) { PLANS[id] = hBuild; PLAN_SHIP[id] = 1; }
 HDESC['high.a'] = { trade: 'shepherd', fam: 'cottage', wealth: 0 }; HDESC['high.c'] = { trade: 'woodcutter', fam: 'hallchamber', wealth: 0 };
+
+// ── the market alley's six shop fronts (73b_alley.js draws the facade; its door leaf is the portal of a cell built here) [c5] ──
+if (typeof HOUSES !== 'undefined' && typeof ALLEY_SHOPS !== 'undefined') {
+  const AT = { 'shop.n2': 'apothecary', 'shop.n3': 'cutler', 'shop.n4': 'grocer', 'shop.s0': 'baker', 'shop.s1': 'bookseller', 'shop.s2': 'tinker' };
+  for (const a of ALLEY_SHOPS) if (a.layout && AT[a.id]) {
+    const st = SITE[a.id], t = AT[a.id];
+    HOUSES[a.id] = { H: 2.6, walls: 'timber', roof: 'thatch', doors: [{ wall: 'front', pos: st.doorPos, lamp: false }], windows: [], interior() {} };
+    KIT_STYLE[a.id] = { ground: 'plaster', up: 0, timber: true, shingle: true };
+    HDESC[a.id] = { trade: t, fam: 'shopfront', wealth: 1 }; PLANS[a.id] = hBuild; PLAN_SHIP[a.id] = 1;
+  }
+}
 
 
 // ---- 72l_hobjects.js ----
@@ -8480,7 +8491,7 @@ function buildAlley() {
           if (k === 0 && !stone && wn === 'front' && !door && !glass) name = 'Wall_Plaster_Straight_Base';
           addP(MS, name, F[wn], uc, 0, 0, 1, 0);
           if (glass) { addP(MS, 'Window_Wide_Flat1', F[wn], uc, 0, 0, 1, 0); if (shutter && uc > 0.9 && uc < L - 0.9 && !(k === 0)) addP(MS, shutter, F[wn], uc, 0, 0, 1, 0); }
-          if (door) { addP(MS, 'DoorFrame_Flat_WoodDark', F[wn], uc, 0, 0, 1, 0); addP(MS, 'Door_1_Flat', F[wn], uc - 0.54, 0, -0.05, 1, 0); }
+          if (door) { addP(MS, 'DoorFrame_Flat_WoodDark', F[wn], uc, 0, 0, 1, 0); if (!(k === 0 && HOUSES[a.id])) addP(MS, 'Door_1_Flat', F[wn], uc - 0.54, 0, -0.05, 1, 0); }      // [c5] an enterable shop's door leaf is the portal leaf of its cell (72k_houses.js)
         }
         addP(MS, 'Corner_Exterior_Wood', F[wn], 0, 0, 0, [1.25, 1, 1.25]);
       }
