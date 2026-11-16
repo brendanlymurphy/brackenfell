@@ -873,15 +873,35 @@ SH.WINMAX = 6;
       return acc;
     });
   };
+  // firelight on worn wood: a soft highlight from the room's lights on glossy boards and table tops (indoors only; the loop does not run outdoors)
+  SH.pointSpec = null;
+  const _init2 = SH.init;
+  SH.init = function () {
+    _init2.apply(this, arguments);
+    const { Fn, If, Loop, int, float, vec3, dot, max, select, abs, pow, normalize } = TSL, U = SH.U;
+    SH.pointSpec = Fn(([wp, N, V, gloss, zone]) => {
+      const acc = vec3(0).toVar(), shin = gloss.mul(46).add(6);
+      const nEnd = select(zone.lessThan(0.5), int(0), U.lightN);
+      Loop({ start: int(0), end: nEnd, type: 'int', condition: '<' }, ({ i }) => {
+        const lc = U.lightCol.element(i), lp = U.lightPos.element(i), d = lp.xyz.sub(wp), d2 = dot(d, d), r2 = lp.w.mul(lp.w);
+        If(abs(lc.w.sub(zone)).lessThan(0.5).or(lc.w.greaterThan(254.5)).and(d2.lessThan(r2)), () => {
+          const f = float(1).sub(d2.div(r2)), att = f.mul(f).div(d2.mul(0.55).add(1)), L = d.mul(max(d2, 1e-4).inverseSqrt()), H = normalize(L.add(V));
+          acc.addAssign(lc.rgb.mul(att.mul(pow(max(dot(N, H), 0), shin))));
+        });
+      });
+      return acc.mul(gloss);
+    });
+  };
   // choose the windows of the cell the camera is in (the nearest few) and write the uniforms; env.winCol is set by Cells.env
   SH.winSet = function (env, cam) {
     const U = SH.U, c = World.cell, W = c && c.wins;
     if (!U || !U.winP) return;
-    if (!W || !W.length || !env.winCol) { U.winN.value = 0; return; }
+    if (!W || !W.length || !env.winCol) { U.winN.value = 0; if (Bake.shaftU) Bake.shaftU.value = 0; return; }
     const cand = W.filter(w => Math.abs(w.p[1] - cam[1]) < 2.6).map(w => [(w.p[0] - cam[0]) ** 2 + (w.p[2] - cam[2]) ** 2, w]).sort((a, b) => a[0] - b[0]).slice(0, SH.WINMAX);
     const P = U.winP.array, D = U.winD.array, C = U.winC.array, col = env.winCol;
     cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); C[i].set(col[0] * w.k, col[1] * w.k, col[2] * w.k, 0); });
     U.winN.value = cand.length;
+    if (Bake.shaftU) Bake.shaftU.value = Math.min(0.5, (col[0] + col[1] + col[2]) / 3 * (TEST && TEST.shaft !== undefined ? +TEST.shaft : 0.028));
   };
 })();
 
@@ -942,7 +962,7 @@ function surfaceMaterial(mode) {
   const amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35))).add(SH.winLight(positionWorld, N, zone).mul(aoR.mul(0.6).add(0.4)));      // [l1] window light (40c_light.js)
   const sootK = rm ? mix(vec3(1), vec3(0.22, 0.21, 0.2), rm.z.mul(0.9)) : vec3(1);
   m.colorNode = albedo.mul(sootK).mul(unlit.oneMinus());
-  m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit));
+  m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit)).add(mode === 'static' && !(TEST && TEST.gloss === 0) ? SH.pointSpec(positionWorld, N, normalize(SH.U.camPos.sub(positionWorld)), step(TSL.abs(mm.x.sub(MAT.PLANKS)), 0.5).mul(0.5), zone).mul(0.16) : vec3(0));      // [l1] worn planks catch the firelight
   m.normalNode = transformNormalToView(N);
   m.roughnessNode = nt.w; m.metalnessNode = float(0);
   return m;
@@ -1102,7 +1122,7 @@ function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
   M.static = surfaceMaterial('static'); M.inst = surfaceMaterial('inst'); M.rigid = surfaceMaterial('rigid'); M.leaf = foliageMaterial(); M.leafFar = foliageMaterial(true); M.terrain = terrainMaterial();
-  M.water = WaterMat(); M.glow = GlowMat(); M.decal = Bake.mat();      // [l1] decal: 72m_bake.js
+  M.water = WaterMat(); M.glow = GlowMat(); M.decal = Bake.mat(); M.shaft = Bake.shaftMat();      // [l1] decal: 72m_bake.js
   const sphere = (c, r) => new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r);
   const geo = (pk, first, count, inst) => {
     const g = inst ? new THREE.InstancedBufferGeometry() : new THREE.BufferGeometry();
@@ -1112,7 +1132,7 @@ function sceneBuild() {
   };
   // ── static world: terrain tiles, houses inside and out, props, water, window panes ──
   for (const pk of World.packs) for (const it of pk.items) {
-    const mat = it.kind === 'terrain' ? M.terrain : it.kind === 'water' ? M.water : it.kind === 'glow' ? M.glow : it.kind === 'decal' ? M.decal : M.static;
+    const mat = it.kind === 'terrain' ? M.terrain : it.kind === 'water' ? M.water : it.kind === 'glow' ? M.glow : it.kind === 'decal' ? M.decal : it.kind === 'shaft' ? M.shaft : M.static;
     if (!mat || !it.count) continue;
     // terrain and water tiles of one pack are drawn together: one mesh whose index buffer is refilled from the tiles in view (see poolUpdate)
     if ((it.kind === 'terrain' || it.kind === 'water') && !it.cell && !it.nearOnly && !(TEST && TEST.pool === 0)) {
@@ -1126,7 +1146,7 @@ function sceneBuild() {
     const mesh = new THREE.Mesh(g, mat); mesh.matrixAutoUpdate = false;
     mesh.castShadow = !!pk.shadow && !it.noShadow && it.kind === 'opaque'; mesh.receiveShadow = it.kind === 'opaque' || it.kind === 'terrain';
     if (it.kind === 'terrain') mesh.renderOrder = 1;      // after the other opaque draws, so the ground shader only runs where nothing nearer already stands
-    if (it.kind === 'water' || it.kind === 'decal') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
+    if (it.kind === 'water' || it.kind === 'decal') mesh.renderOrder = 2; else if (it.kind === 'glow' || it.kind === 'shaft') mesh.renderOrder = 3;
     if (it.nearOnly) mesh.layers.set(1);
     const st = { mesh, it }; scene.add(mesh); SC.statics.push(st);
     // A big merged piece of the village (fences, wells, stalls over 100 m) used to go into the near sun-shadow map whole. Its triangles are
@@ -1774,6 +1794,7 @@ const Kit = (() => {
     const aoR = rm ? rm.x : float(1);
     let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.6).add(0.4)))));      // [l1] window light (40c_light.js)
     em = em.add(alb.mul(glow));
+    if (batch && /Floor_Wood|Table|Counter|Bar_/.test(name) && !(TEST && TEST.gloss === 0)) em = em.add(SH.pointSpec(wp, N, normalize(U.camPos.sub(wp)), float(0.55), zone).mul(0.3));      // [l1] worn boards and table tops catch the fire
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
       const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
       em = em.add(alb.mul(U.sunCol.mul(F.x.add(F2.x.mul(wallK))).add(U.ambSky.mul(F.y.add(F2.y.mul(wallK))))).mul(skyVis).mul(outM));
@@ -8628,7 +8649,18 @@ Bake.mat = function () {
   const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
   m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide; m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2;
   const a = attribute('tint', 'vec4').a, t = clamp(a.div(0.7), 0, 1);
-  m.colorNode = vec4(vec3(0.0), t.mul(t).mul(t.mul(-2).add(3)).mul(0.7));
+  m.colorNode = vec4(TEST && TEST.bakedebug ? vec3(1.0, 0.0, 0.0) : vec3(0.0), t.mul(t).mul(t.mul(-2).add(3)).mul(TEST && TEST.bakedebug ? 1.0 : 0.7));
+  return m;
+};
+// light shafts: a few additive quads from each window into the room, by day only (no volumetric pass). Strength Bake.shaftU is set by SH.winSet.
+Bake.shaftU = null;
+Bake.shaftMat = function () {
+  const { vec4, vec3, attribute, uv, uniform, smoothstep, abs, pow } = TSL;
+  Bake.shaftU = uniform(0);
+  const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide;
+  const q = uv(), across = smoothstep(0.0, 0.5, TSL.float(1).sub(abs(q.x.mul(2).sub(1)))), along = pow(TSL.float(1).sub(q.y), 1.4).mul(smoothstep(0.0, 0.12, q.y));
+  m.colorNode = attribute('tint', 'vec4').rgb.mul(across.mul(across)).mul(along).mul(Bake.shaftU);
   return m;
 };
 // ring pool round a rectangle given by its four world corners in order (a, b, c, d), margin mg (m) along the outward directions
@@ -8655,6 +8687,17 @@ Bake.interior = function (P) {
     const y3 = P.w2(0, y, 0)[1]; Bake.pool(m, y3, c, mg, A); Bake.stats.pools++;
   }
   if (m.ni) cell.decal = m;
+  // light shafts: two stacked quads from the pane down to the floor in front of it
+  { const sm = new Mesh(256); sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 255; sm.cb = 255; sm.ao = 1;
+    for (const w of P.windows) {
+      const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
+      const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, len = 3.4, fy = L.y + 0.05;
+      const at = (a, b, y) => P.w2(cx + dx * a + tx * b, y, cz + dz * a + tz * b);
+      const quad = (v) => { const [p0, p1, p2, p3] = v; const a = sm.vert(p0[0], p0[1], p0[2], 0, 1, 0, 0, 0), b = sm.vert(p1[0], p1[1], p1[2], 0, 1, 0, 1, 0), c = sm.vert(p2[0], p2[1], p2[2], 0, 1, 0, 1, 1), d = sm.vert(p3[0], p3[1], p3[2], 0, 1, 0, 0, 1); sm.tri(a, b, c); sm.tri(a, c, d); sm.flip = false; };
+      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, 1.1, fy), at(len, -1.1, fy)]);        // u across (the wall's own direction), v from the pane to the floor
+      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, 0.8, fy + 0.5), at(len * 0.8, -0.8, fy + 0.5)]);        // a second, inner sheet gives the beam some depth
+    }
+    if (sm.ni) cell.shaft = sm; }
   // windows: a pane centre, its inward direction on the floor plane (world), the reach and a strength by size
   cell.wins = [];
   for (const w of P.windows) {
@@ -8671,6 +8714,7 @@ Bake.interior = function (P) {
 Bake.People = { N: 56, mesh: null, u: null };
 Bake.people = function (cam, env) {
   if (!Bake.on || !SC.scene || typeof NPCS === 'undefined') return;
+  Bake.groundUpdate(cam);
   const B = Bake.People;
   if (!B.mesh) {
     const { vec4, vec3, uv, uniform, smoothstep, length } = TSL, N = B.N;
@@ -8691,6 +8735,60 @@ Bake.people = function (cam, env) {
   for (let i = 0; i < n; i++) { const p = list[i][1], r = 0.62 * list[i][2], y = p[1] + 0.03, o = i * 12;
     P[o] = p[0] - r; P[o + 1] = y; P[o + 2] = p[2] - r; P[o + 3] = p[0] + r; P[o + 4] = y; P[o + 5] = p[2] - r; P[o + 6] = p[0] + r; P[o + 7] = y; P[o + 8] = p[2] + r; P[o + 9] = p[0] - r; P[o + 10] = y; P[o + 11] = p[2] + r; }
   B.pa.clearUpdateRanges(); if (n) B.pa.addUpdateRange(0, n * 12); B.pa.needsUpdate = true; B.g.setDrawRange(0, n * 6); B.mesh.visible = n > 0;
+};
+// ── outdoor contact: a soft dark band round everything solid that stands on the ground ──
+// Built once from World.colliders (walls, fences, props, trunks), the same footprints the splat map uses, but as geometry laid on whatever the ground really is
+// there (terrain, paving, steps), so it also shows on the square's paving, which the terrain shader never sees. One mesh, one draw call: its index list is
+// refilled from the 32 m squares round the camera (like the terrain pool), so only a few thousand triangles are ever drawn.
+Bake.GR = { S: 32, built: false, mesh: null, sq: null, last: [1e9, 1e9], tris: 0 };
+Bake.buildGround = function () {
+  if (!Bake.on || (TEST && TEST.bakeg === 0) || Bake.GR.built) return;
+  const GR = Bake.GR, S = GR.S, pos = [], al = [], sq = new Map(), t0 = performance.now();
+  const gy = (x, z, h) => { let y = Terrain.y(x, z); const g = World.groundAt(x, z, h); if (isFinite(g) && g > y - 0.3 && g < h + 0.2) y = g; return y + 0.05; };
+  const vert = (x, z, h, a) => { pos.push(x, gy(x, z, h), z); al.push(a); return al.length - 1; };
+  const tri = (a, b, c) => { const k = Math.floor((pos[a * 3] + pos[b * 3] + pos[c * 3]) / (3 * S)) + ',' + Math.floor((pos[a * 3 + 2] + pos[b * 3 + 2] + pos[c * 3 + 2]) / (3 * S)); let l = sq.get(k); if (!l) sq.set(k, l = { i: [], x: 0, z: 0 }); l.i.push(a, b, c); };
+  for (const c of World.colliders) {
+    if (Cells.inRegion(c.x) || Math.abs(c.x) > 190 || Math.abs(c.z) > 190) continue;
+    const ty = Terrain.y(c.x, c.z), ht = c.y1 - c.y0; if (c.y0 > ty + 0.7 || ht < 0.35) continue;
+    const h = c.y0 + 0.9, A = ht > 1.2 ? 0.6 : 0.46, m = clamp(0.7 + 0.16 * ht, 0.8, 1.7);
+    if (c.r !== undefined) {
+      if (c.r > 4) continue; const R = c.r + m * 0.9, n = 8, ring0 = [], ring1 = [];
+      for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); ring0.push(vert(c.x + ca * c.r * 0.85, c.z + sa * c.r * 0.85, h, A)); ring1.push(vert(c.x + ca * R, c.z + sa * R, h, 0)); }
+      for (let i = 0; i < n; i++) { const j = (i + 1) % n; tri(ring0[i], ring1[i], ring1[j]); tri(ring0[i], ring1[j], ring0[j]); }
+      continue;
+    }
+    if (c.hx * c.hz < 0.004 || (c.hx > 40 || c.hz > 40)) continue;
+    const P = (lx, lz) => [c.x + c.ax * lx + c.bx * lz, c.z + c.az * lx + c.bz * lz], e = m * 0.55;
+    // four sides, each a strip along its edge (a little longer than the edge so the corners are covered), inner edge dark, outer edge clear
+    for (const [ux, uz, ox, oz, half, hl] of [[1, 0, 0, 1, c.hx, c.hz], [1, 0, 0, -1, c.hx, c.hz], [0, 1, 1, 0, c.hz, c.hx], [0, 1, -1, 0, c.hz, c.hx]]) {
+      const len = 2 * half + 2 * e, n = Math.max(1, Math.ceil(len / 2.4)); let pi = -1, po = -1;
+      for (let k = 0; k <= n; k++) {
+        const t = -half - e + len * k / n, endK = (k === 0 || k === n) ? 0.55 : 1, lx = ux ? t : ox * hl, lz = uz ? t : oz * hl;
+        const pin = P(lx, lz), pout = P(lx + ox * m, lz + oz * m);
+        const ai = vert(pin[0], pin[1], h, A * endK), ao = vert(pout[0], pout[1], h, 0);
+        if (pi >= 0) { tri(pi, po, ao); tri(pi, ao, ai); }
+        pi = ai; po = ao;
+      }
+    }
+  }
+  GR.pos = new Float32Array(pos); GR.tint = new Uint8Array(al.length * 4); for (let i = 0; i < al.length; i++) GR.tint[i * 4 + 3] = Math.round(al[i] * 255);
+  GR.sq = [...sq.entries()].map(([k, l]) => { const [a, b] = k.split(',').map(Number); return { x: (a + 0.5) * S, z: (b + 0.5) * S, idx: Uint32Array.from(l.i) }; });
+  GR.tris = GR.sq.reduce((s, q) => s + q.idx.length / 3, 0); GR.built = true; GR.ms = Math.round(performance.now() - t0);
+};
+Bake.groundUpdate = function (cam) {
+  const GR = Bake.GR; if (!GR.built || !SC.scene) return;
+  if (!GR.mesh) {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(GR.pos, 3)); g.setAttribute('tint', new THREE.BufferAttribute(GR.tint, 4, true));
+    GR.cur = new Uint32Array(Math.min(GR.tris * 3, 1 << 20)); const ia = new THREE.BufferAttribute(GR.cur, 1); ia.setUsage(THREE.DynamicDrawUsage); g.setIndex(ia); g.setDrawRange(0, 0); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+    GR.mesh = new THREE.Mesh(g, Bake.groundMat || (Bake.groundMat = Bake.mat())); GR.mesh.frustumCulled = false; GR.mesh.renderOrder = 2; GR.mesh.name = 'ground-contact'; SC.scene.add(GR.mesh); GR.geo = g; GR.ia = ia;
+  }
+  GR.mesh.visible = !World.cell && GR.n !== 0;
+  if (World.cell) return;
+  if (Math.hypot(cam[0] - GR.last[0], cam[2] - GR.last[1]) < 4 && !GR.stale) return;
+  GR.last = [cam[0], cam[2]]; GR.stale = false;
+  const reach = (R.q && R.q.houseFar ? Math.min(R.q.houseFar, 56) : 50) + 14; let n = 0;
+  for (const q of GR.sq) if (Math.hypot(q.x - cam[0], q.z - cam[2]) < reach + GR.S * 0.71 && n + q.idx.length <= GR.cur.length) { GR.cur.set(q.idx, n); n += q.idx.length; }
+  GR.n = n; GR.geo.setDrawRange(0, n); GR.ia.clearUpdateRanges(); if (n) GR.ia.addUpdateRange(0, n); GR.ia.needsUpdate = true; GR.mesh.visible = n > 0;
 };
 
 
@@ -8717,6 +8815,7 @@ function buildVillage() {
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
     if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true, cell: h.cell ? h.cell.id : null }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
     if (h.cell && h.cell.decal && h.cell.decal.ni) pack.add(h.cell.decal, { kind: 'decal', cell: h.cell.id, noShadow: true, nearOnly: true });      // [l1] 72m_bake.js
+    if (h.cell && h.cell.shaft && h.cell.shaft.ni) pack.add(h.cell.shaft, { kind: 'shaft', cell: h.cell.id, noShadow: true, nearOnly: true });
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5, minor: true });      // minor: on the map, but no banner when you walk past a house
   }
@@ -16593,7 +16692,7 @@ function mineTick(dt) {
   const on = mineLampOn(); MINE.lamp.on = on;
   if (on) { ms.oil = Math.max(0, ms.oil - dt); if (ms.oil < 45 && !MINE.lamp.warnedLow) { MINE.lamp.warnedLow = true; toast('The lantern gutters. It wants oil.'); } if (ms.oil > 90) MINE.lamp.warnedLow = false; }
   const L = MINE.lamp.light, P = Player.pos, f = [Math.sin(Player.yaw), 0, -Math.cos(Player.yaw)];
-  L.p[0] = P[0] + f[0] * 0.35; L.p[1] = P[1] + 1.35; L.p[2] = P[2] + f[2] * 0.35; L.r = on ? 19 : 2.6; L.c[0] = on ? 15 : 0.5; L.c[1] = on ? 8.6 : 0.3; L.c[2] = on ? 3.4 : 0.12;      /* coordinator: at 2.9 the lit lantern showed almost nothing on screen (mean pixel 14 of 255); the carried light must make the tunnel readable for ten metres */
+  L.p[0] = P[0] + f[0] * 0.35; L.p[1] = P[1] + 1.35; L.p[2] = P[2] + f[2] * 0.35; const LK = TEST && TEST.lantern === 0 ? 0 : 1; L.r = on ? 15 + 4 * LK : 2.6; L.c[0] = on ? 10.5 + 4.5 * LK : 0.5; L.c[1] = on ? 6.4 + 2.2 * LK : 0.3; L.c[2] = on ? 2.9 + 0.5 * LK : 0.12;      /* coordinator: at 2.9 the lit lantern showed almost nothing on screen (mean pixel 14 of 255); the carried light must make the tunnel readable for ten metres */
   MINE.lamp.dark = !on;
   if (mineTrapCheck) mineTrapCheck();
 }
@@ -16607,7 +16706,7 @@ function mineTrapCheck() {
 // the lantern key; the cell's dark; the first time through either door the mine counts as open
 document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && game.playing && !Player.locked && World.cell && World.cell.id === 'mine' && has('lantern')) { S.flags.lampOff = S.flags.lampOff === 1 ? 0 : 1; toast(S.flags.lampOff === 1 ? 'You douse the lantern.' : (MINE_S().oil > 0 ? 'You light the lantern.' : 'The lantern is dry.')); } });
 const _ce94 = Cells.env;
-Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.095, 0.07, 0.045]; e.ambGnd = [0.055, 0.04, 0.026]; e.fogDensity = 0.062;      /* [l1] the point light was fine (zone 0 reaches everything in here); its steep falloff left the walls 5 m off dark, so the hack ambient was doubled. Now the light carries wider (below) and the ambient is half of what it was: the lantern makes a pool with dark beyond it */ } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
+Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = TEST && TEST.lantern === 0 ? [0.21, 0.155, 0.095] : [0.095, 0.07, 0.045]; e.ambGnd = TEST && TEST.lantern === 0 ? [0.125, 0.09, 0.055] : [0.055, 0.04, 0.026]; e.fogDensity = 0.062;      /* [l1] the point light was fine (zone 0 reaches everything in here); its steep falloff left the walls 5 m off dark, so the hack ambient was doubled. Now the light carries wider (below) and the ambient is half of what it was: the lantern makes a pool with dark beyond it */ } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
 const _cc94 = Cells.change;
 Cells.change = function (c) { _cc94(c); if (c && c.id === 'mine') { if (!S.flags.mineOpen) { S.flags.mineOpen = 1; if (typeof uiObjective === 'function') uiObjective(); } if (has('lantern') && !MINE_S().oil) MINE_S().oil = 600; } };
 const _wa94 = World.waterAt;
@@ -16875,7 +16974,7 @@ async function warmShaders() {
     await load('Waking the villagers', 0.5); buildNPCs(); festivalSpots(); lap('npcs');
     await load('Planting pine and birch', 0.62); if (typeof Trees !== 'undefined') await Trees.load(); /* fork-look: scanned trees (74b_trees.js) */ buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
     World.villagePack.upload('village'); World.skinPack.upload('skin');
-    buildSplat2(); colBuild(); navBuild(); fxInit(); lap('nav');
+    buildSplat2(); colBuild(); if (typeof Bake !== 'undefined') Bake.buildGround(); /* [l1] 72m_bake.js */ navBuild(); fxInit(); lap('nav');
     await load('Lighting the lanterns', 0.74);
     if (TEST && TEST.quality) game.qualitySetting = TEST.quality;
     await game.applyQuality(); lap('pipelines');

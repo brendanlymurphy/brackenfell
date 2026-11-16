@@ -214,7 +214,7 @@ async function warmShaders() {
     await load('Waking the villagers', 0.5); buildNPCs(); festivalSpots(); lap('npcs');
     await load('Planting pine and birch', 0.62); if (typeof Trees !== 'undefined') await Trees.load(); /* fork-look: scanned trees (74b_trees.js) */ buildVegetation(); if (typeof buildWilds === 'function') buildWilds(); lap('veg');
     World.villagePack.upload('village'); World.skinPack.upload('skin');
-    buildSplat2(); colBuild(); navBuild(); fxInit(); lap('nav');
+    buildSplat2(); colBuild(); if (typeof Bake !== 'undefined') Bake.buildGround(); /* [l1] 72m_bake.js */ navBuild(); fxInit(); lap('nav');
     await load('Lighting the lanterns', 0.74);
     if (TEST && TEST.quality) game.qualitySetting = TEST.quality;
     await game.applyQuality(); lap('pipelines');

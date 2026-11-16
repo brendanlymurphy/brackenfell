@@ -30,14 +30,34 @@ SH.WINMAX = 6;
       return acc;
     });
   };
+  // firelight on worn wood: a soft highlight from the room's lights on glossy boards and table tops (indoors only; the loop does not run outdoors)
+  SH.pointSpec = null;
+  const _init2 = SH.init;
+  SH.init = function () {
+    _init2.apply(this, arguments);
+    const { Fn, If, Loop, int, float, vec3, dot, max, select, abs, pow, normalize } = TSL, U = SH.U;
+    SH.pointSpec = Fn(([wp, N, V, gloss, zone]) => {
+      const acc = vec3(0).toVar(), shin = gloss.mul(46).add(6);
+      const nEnd = select(zone.lessThan(0.5), int(0), U.lightN);
+      Loop({ start: int(0), end: nEnd, type: 'int', condition: '<' }, ({ i }) => {
+        const lc = U.lightCol.element(i), lp = U.lightPos.element(i), d = lp.xyz.sub(wp), d2 = dot(d, d), r2 = lp.w.mul(lp.w);
+        If(abs(lc.w.sub(zone)).lessThan(0.5).or(lc.w.greaterThan(254.5)).and(d2.lessThan(r2)), () => {
+          const f = float(1).sub(d2.div(r2)), att = f.mul(f).div(d2.mul(0.55).add(1)), L = d.mul(max(d2, 1e-4).inverseSqrt()), H = normalize(L.add(V));
+          acc.addAssign(lc.rgb.mul(att.mul(pow(max(dot(N, H), 0), shin))));
+        });
+      });
+      return acc.mul(gloss);
+    });
+  };
   // choose the windows of the cell the camera is in (the nearest few) and write the uniforms; env.winCol is set by Cells.env
   SH.winSet = function (env, cam) {
     const U = SH.U, c = World.cell, W = c && c.wins;
     if (!U || !U.winP) return;
-    if (!W || !W.length || !env.winCol) { U.winN.value = 0; return; }
+    if (!W || !W.length || !env.winCol) { U.winN.value = 0; if (Bake.shaftU) Bake.shaftU.value = 0; return; }
     const cand = W.filter(w => Math.abs(w.p[1] - cam[1]) < 2.6).map(w => [(w.p[0] - cam[0]) ** 2 + (w.p[2] - cam[2]) ** 2, w]).sort((a, b) => a[0] - b[0]).slice(0, SH.WINMAX);
     const P = U.winP.array, D = U.winD.array, C = U.winC.array, col = env.winCol;
     cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); C[i].set(col[0] * w.k, col[1] * w.k, col[2] * w.k, 0); });
     U.winN.value = cand.length;
+    if (Bake.shaftU) Bake.shaftU.value = Math.min(0.5, (col[0] + col[1] + col[2]) / 3 * (TEST && TEST.shaft !== undefined ? +TEST.shaft : 0.028));
   };
 })();

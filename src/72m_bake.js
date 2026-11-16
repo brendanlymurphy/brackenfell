@@ -10,7 +10,18 @@ Bake.mat = function () {
   const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
   m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide; m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2;
   const a = attribute('tint', 'vec4').a, t = clamp(a.div(0.7), 0, 1);
-  m.colorNode = vec4(vec3(0.0), t.mul(t).mul(t.mul(-2).add(3)).mul(0.7));
+  m.colorNode = vec4(TEST && TEST.bakedebug ? vec3(1.0, 0.0, 0.0) : vec3(0.0), t.mul(t).mul(t.mul(-2).add(3)).mul(TEST && TEST.bakedebug ? 1.0 : 0.7));
+  return m;
+};
+// light shafts: a few additive quads from each window into the room, by day only (no volumetric pass). Strength Bake.shaftU is set by SH.winSet.
+Bake.shaftU = null;
+Bake.shaftMat = function () {
+  const { vec4, vec3, attribute, uv, uniform, smoothstep, abs, pow } = TSL;
+  Bake.shaftU = uniform(0);
+  const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide;
+  const q = uv(), across = smoothstep(0.0, 0.5, TSL.float(1).sub(abs(q.x.mul(2).sub(1)))), along = pow(TSL.float(1).sub(q.y), 1.4).mul(smoothstep(0.0, 0.12, q.y));
+  m.colorNode = attribute('tint', 'vec4').rgb.mul(across.mul(across)).mul(along).mul(Bake.shaftU);
   return m;
 };
 // ring pool round a rectangle given by its four world corners in order (a, b, c, d), margin mg (m) along the outward directions
@@ -37,6 +48,17 @@ Bake.interior = function (P) {
     const y3 = P.w2(0, y, 0)[1]; Bake.pool(m, y3, c, mg, A); Bake.stats.pools++;
   }
   if (m.ni) cell.decal = m;
+  // light shafts: two stacked quads from the pane down to the floor in front of it
+  { const sm = new Mesh(256); sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 255; sm.cb = 255; sm.ao = 1;
+    for (const w of P.windows) {
+      const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
+      const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, len = 3.4, fy = L.y + 0.05;
+      const at = (a, b, y) => P.w2(cx + dx * a + tx * b, y, cz + dz * a + tz * b);
+      const quad = (v) => { const [p0, p1, p2, p3] = v; const a = sm.vert(p0[0], p0[1], p0[2], 0, 1, 0, 0, 0), b = sm.vert(p1[0], p1[1], p1[2], 0, 1, 0, 1, 0), c = sm.vert(p2[0], p2[1], p2[2], 0, 1, 0, 1, 1), d = sm.vert(p3[0], p3[1], p3[2], 0, 1, 0, 0, 1); sm.tri(a, b, c); sm.tri(a, c, d); sm.flip = false; };
+      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, 1.1, fy), at(len, -1.1, fy)]);        // u across (the wall's own direction), v from the pane to the floor
+      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, 0.8, fy + 0.5), at(len * 0.8, -0.8, fy + 0.5)]);        // a second, inner sheet gives the beam some depth
+    }
+    if (sm.ni) cell.shaft = sm; }
   // windows: a pane centre, its inward direction on the floor plane (world), the reach and a strength by size
   cell.wins = [];
   for (const w of P.windows) {
@@ -53,6 +75,7 @@ Bake.interior = function (P) {
 Bake.People = { N: 56, mesh: null, u: null };
 Bake.people = function (cam, env) {
   if (!Bake.on || !SC.scene || typeof NPCS === 'undefined') return;
+  Bake.groundUpdate(cam);
   const B = Bake.People;
   if (!B.mesh) {
     const { vec4, vec3, uv, uniform, smoothstep, length } = TSL, N = B.N;
@@ -73,4 +96,58 @@ Bake.people = function (cam, env) {
   for (let i = 0; i < n; i++) { const p = list[i][1], r = 0.62 * list[i][2], y = p[1] + 0.03, o = i * 12;
     P[o] = p[0] - r; P[o + 1] = y; P[o + 2] = p[2] - r; P[o + 3] = p[0] + r; P[o + 4] = y; P[o + 5] = p[2] - r; P[o + 6] = p[0] + r; P[o + 7] = y; P[o + 8] = p[2] + r; P[o + 9] = p[0] - r; P[o + 10] = y; P[o + 11] = p[2] + r; }
   B.pa.clearUpdateRanges(); if (n) B.pa.addUpdateRange(0, n * 12); B.pa.needsUpdate = true; B.g.setDrawRange(0, n * 6); B.mesh.visible = n > 0;
+};
+// ── outdoor contact: a soft dark band round everything solid that stands on the ground ──
+// Built once from World.colliders (walls, fences, props, trunks), the same footprints the splat map uses, but as geometry laid on whatever the ground really is
+// there (terrain, paving, steps), so it also shows on the square's paving, which the terrain shader never sees. One mesh, one draw call: its index list is
+// refilled from the 32 m squares round the camera (like the terrain pool), so only a few thousand triangles are ever drawn.
+Bake.GR = { S: 32, built: false, mesh: null, sq: null, last: [1e9, 1e9], tris: 0 };
+Bake.buildGround = function () {
+  if (!Bake.on || (TEST && TEST.bakeg === 0) || Bake.GR.built) return;
+  const GR = Bake.GR, S = GR.S, pos = [], al = [], sq = new Map(), t0 = performance.now();
+  const gy = (x, z, h) => { let y = Terrain.y(x, z); const g = World.groundAt(x, z, h); if (isFinite(g) && g > y - 0.3 && g < h + 0.2) y = g; return y + 0.05; };
+  const vert = (x, z, h, a) => { pos.push(x, gy(x, z, h), z); al.push(a); return al.length - 1; };
+  const tri = (a, b, c) => { const k = Math.floor((pos[a * 3] + pos[b * 3] + pos[c * 3]) / (3 * S)) + ',' + Math.floor((pos[a * 3 + 2] + pos[b * 3 + 2] + pos[c * 3 + 2]) / (3 * S)); let l = sq.get(k); if (!l) sq.set(k, l = { i: [], x: 0, z: 0 }); l.i.push(a, b, c); };
+  for (const c of World.colliders) {
+    if (Cells.inRegion(c.x) || Math.abs(c.x) > 190 || Math.abs(c.z) > 190) continue;
+    const ty = Terrain.y(c.x, c.z), ht = c.y1 - c.y0; if (c.y0 > ty + 0.7 || ht < 0.35) continue;
+    const h = c.y0 + 0.9, A = ht > 1.2 ? 0.6 : 0.46, m = clamp(0.7 + 0.16 * ht, 0.8, 1.7);
+    if (c.r !== undefined) {
+      if (c.r > 4) continue; const R = c.r + m * 0.9, n = 8, ring0 = [], ring1 = [];
+      for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); ring0.push(vert(c.x + ca * c.r * 0.85, c.z + sa * c.r * 0.85, h, A)); ring1.push(vert(c.x + ca * R, c.z + sa * R, h, 0)); }
+      for (let i = 0; i < n; i++) { const j = (i + 1) % n; tri(ring0[i], ring1[i], ring1[j]); tri(ring0[i], ring1[j], ring0[j]); }
+      continue;
+    }
+    if (c.hx * c.hz < 0.004 || (c.hx > 40 || c.hz > 40)) continue;
+    const P = (lx, lz) => [c.x + c.ax * lx + c.bx * lz, c.z + c.az * lx + c.bz * lz], e = m * 0.55;
+    // four sides, each a strip along its edge (a little longer than the edge so the corners are covered), inner edge dark, outer edge clear
+    for (const [ux, uz, ox, oz, half, hl] of [[1, 0, 0, 1, c.hx, c.hz], [1, 0, 0, -1, c.hx, c.hz], [0, 1, 1, 0, c.hz, c.hx], [0, 1, -1, 0, c.hz, c.hx]]) {
+      const len = 2 * half + 2 * e, n = Math.max(1, Math.ceil(len / 2.4)); let pi = -1, po = -1;
+      for (let k = 0; k <= n; k++) {
+        const t = -half - e + len * k / n, endK = (k === 0 || k === n) ? 0.55 : 1, lx = ux ? t : ox * hl, lz = uz ? t : oz * hl;
+        const pin = P(lx, lz), pout = P(lx + ox * m, lz + oz * m);
+        const ai = vert(pin[0], pin[1], h, A * endK), ao = vert(pout[0], pout[1], h, 0);
+        if (pi >= 0) { tri(pi, po, ao); tri(pi, ao, ai); }
+        pi = ai; po = ao;
+      }
+    }
+  }
+  GR.pos = new Float32Array(pos); GR.tint = new Uint8Array(al.length * 4); for (let i = 0; i < al.length; i++) GR.tint[i * 4 + 3] = Math.round(al[i] * 255);
+  GR.sq = [...sq.entries()].map(([k, l]) => { const [a, b] = k.split(',').map(Number); return { x: (a + 0.5) * S, z: (b + 0.5) * S, idx: Uint32Array.from(l.i) }; });
+  GR.tris = GR.sq.reduce((s, q) => s + q.idx.length / 3, 0); GR.built = true; GR.ms = Math.round(performance.now() - t0);
+};
+Bake.groundUpdate = function (cam) {
+  const GR = Bake.GR; if (!GR.built || !SC.scene) return;
+  if (!GR.mesh) {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(GR.pos, 3)); g.setAttribute('tint', new THREE.BufferAttribute(GR.tint, 4, true));
+    GR.cur = new Uint32Array(Math.min(GR.tris * 3, 1 << 20)); const ia = new THREE.BufferAttribute(GR.cur, 1); ia.setUsage(THREE.DynamicDrawUsage); g.setIndex(ia); g.setDrawRange(0, 0); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+    GR.mesh = new THREE.Mesh(g, Bake.groundMat || (Bake.groundMat = Bake.mat())); GR.mesh.frustumCulled = false; GR.mesh.renderOrder = 2; GR.mesh.name = 'ground-contact'; SC.scene.add(GR.mesh); GR.geo = g; GR.ia = ia;
+  }
+  GR.mesh.visible = !World.cell && GR.n !== 0;
+  if (World.cell) return;
+  if (Math.hypot(cam[0] - GR.last[0], cam[2] - GR.last[1]) < 4 && !GR.stale) return;
+  GR.last = [cam[0], cam[2]]; GR.stale = false;
+  const reach = (R.q && R.q.houseFar ? Math.min(R.q.houseFar, 56) : 50) + 14; let n = 0;
+  for (const q of GR.sq) if (Math.hypot(q.x - cam[0], q.z - cam[2]) < reach + GR.S * 0.71 && n + q.idx.length <= GR.cur.length) { GR.cur.set(q.idx, n); n += q.idx.length; }
+  GR.n = n; GR.geo.setDrawRange(0, n); GR.ia.clearUpdateRanges(); if (n) GR.ia.addUpdateRange(0, n); GR.ia.needsUpdate = true; GR.mesh.visible = n > 0;
 };
