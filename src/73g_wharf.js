@@ -21,7 +21,7 @@ function buildWharf(bucket, fence, R) {
     // boat-house doors in the north face (the road side): a stone arch, a dark recess, plank doors with straps
     for (const x of [11.6, 16.4]) { const g = Terrain.y(x, Z0 - 0.2), zf = Z0 - 0.03;
       m.mat(MAT.STONE, sc(1), 0.6); m.box(x - 0.95, g + 1.55, Z0 - 0.12, x + 0.95, g + 1.8, Z0, 4); m.box(x - 0.95, g, Z0 - 0.12, x - 0.7, g + 1.55, Z0, 4); m.box(x + 0.7, g, Z0 - 0.12, x + 0.95, g + 1.55, Z0, 4);
-      m.mat(MAT.PLANKS, [0.62, 0.5, 0.38], 0.5); m.box(x - 0.7, g, zf - 0.02, x + 0.7, g + 1.55, zf, 4 | 8 | 16);
+      m.mat(MAT.PLANKS, [0.62, 0.5, 0.38], 0.5); m.box(x - 0.7, g, zf - 0.02, x + 0.7, g + 1.55, zf, 4 | 8 | 32);          // [fx1] the road-side face is -z: skipping it (16) left the straps floating on bare stone
       m.mat(MAT.PLAIN, [0.09, 0.08, 0.07]); m.box(x - 0.7, g + 0.4, zf - 0.04, x + 0.7, g + 0.5, zf - 0.015, 4 | 8 | 32); m.box(x - 0.7, g + 1.1, zf - 0.04, x + 0.7, g + 1.2, zf - 0.015, 4 | 8 | 32); }
   }
   // flight up from the south road (west face): 2 m wide, cheeks as beams
