@@ -24,6 +24,7 @@ function steer(style, tx, tz, yawOff, mag) {
 // one walk: from (sx, sy, sz) via the entrance way point to the goal spot
 function walk(st, up, start, v) {
   const a = sp(up ? st.bottom : st.top), b = sp(up ? st.top : st.bottom), lo = Math.min(a.p[1], b.p[1]), hi = Math.max(a.p[1], b.p[1]);
+  Env.hour = 13; npcSnapAll();      // [c5] a villager walking the stair at the clock's moment is not what this test is about (npcstairs.js tests the people)
   put(start[0], start[1], start[2], 0); Player.yaw0 = undefined;
   const tag = st.id + (up ? ' up ' : ' down ') + v.name + ' from ' + start.map(q => +q.toFixed(1)).join(',');
   const trace = []; let phase = 0, prevY = Player.pos[1], prevG = true, win = [], f = 0, pauseT = 0, maxLat = 0, maxDy = 0, jumpT = 0, ok = false, stopped = false;
