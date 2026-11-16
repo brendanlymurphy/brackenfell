@@ -32,7 +32,7 @@ function pHearth(P, room, side, wid, o) {
   o = o || {}; const L = P.lv[room.k], H = L.H, dep = 0.8, m = P.c.int, hor = side === 'n' || side === 's';
   const s = pWallSlot(P, room, side, wid + 0.3, dep + 0.1, Object.assign({ lowOk: false, at: o.at, noClear: false }, o)); if (!s) return null;
   const rot = { w: 0, e: PI, n: -PI / 2, s: PI / 2 }[side], px = hor ? s.cx : (side === 'w' ? room.in.x0 : room.in.x1), pz = hor ? (side === 'n' ? room.in.z0 : room.in.z1) : s.cz;
-  m.m1 = P.zone; m.ao = INT_AO; const rc = pRecBegin(), t0 = m.ni;
+  m.m1 = P.zone; m.ao = INT_AO; const rc = pRecBegin(false), t0 = m.ni;
   at(m, px, L.y + 0.02, pz, rot, () => {
     m.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
     m.box(0, 0, -wid / 2, dep, 1.15, -wid / 2 + 0.38); m.box(0, 0, wid / 2 - 0.38, dep, 1.15, wid / 2); m.box(0, 1.15, -wid / 2, dep, H - 0.02, wid / 2);
@@ -112,12 +112,12 @@ function pDining(P, room, len, wid, opt) {
       const [tx, tz] = p, tr = rectOf(tx, tz, tw, td);
       if (!pFit(P, room, tr, { h: 0.78 })) continue;
       const bs = [-1, 1].map(sg => rot ? [tx + sg * (wid / 2 + 0.34), tz] : [tx, tz + sg * (wid / 2 + 0.34)]);
-      const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.34, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.34));
+      const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.46, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.46));
       if (!brs.every(r => pFit(P, room, r, { h: 0.46 })) || (opt.sideRoom && !brs.every(r => true))) continue;
       const t = pPut(P, room, P.id + '.' + (opt.id || 'table'), tx, tz, 0, tw, td, 0.78, m => { m.push(); if (rot) m.RY(rot); pdTable(len, wid, items, opt.n || 3, c)(m); m.pop(); }, { surface: true });
       if (!t) continue;
       const seats = [];
-      bs.forEach((b, i) => { const sg = i ? 1 : -1; pPut(P, room, P.id + '.' + (opt.id || 'table') + 'bench' + i, b[0], b[1], rot ? PI / 2 : 0, len * 0.9, 0.34, 0.46, pdBench(len * 0.9), {}); for (const q of [-0.5, 0.5]) seats.push([rot ? b[0] : tx + q * len * 0.5, rot ? tz + q * len * 0.5 : b[1], rot ? (sg < 0 ? PI / 2 : -PI / 2) : (sg < 0 ? PI : 0)]); });
+      bs.forEach((b, i) => { const sg = i ? 1 : -1; pPut(P, room, P.id + '.' + (opt.id || 'table') + 'bench' + i, b[0], b[1], rot ? PI / 2 : 0, len * 0.9, 0.46, 0.46, pdBench(len * 0.9), {}); for (const q of [-0.5, 0.5]) seats.push([rot ? b[0] : tx + q * len * 0.5, rot ? tz + q * len * 0.5 : b[1], rot ? (sg < 0 ? PI / 2 : -PI / 2) : (sg < 0 ? PI : 0)]); });
       return { x: tx, z: tz, rot, seats, t };
     }
   }
@@ -153,7 +153,7 @@ function dressBedroom(P, room, o) {
   let placed = 0;
   for (const nm of beds) {
     let it = null;
-    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { const s = pWallSlot(P, room, sd, 1.1, 2.1, { h: o.bedH || 0.95, at: o.bedAt }); if (!s) continue; it = pPut(P, room, P.id + '.' + nm, s.cx, s.cz, rotBack(sd, -1), 1.1, 2.1, o.bedH || 0.95, pdBed(1.0, col, !!o.fur), { back: sd }); if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
+    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { it = pAgainst(P, room, sd, P.id + '.' + nm, 1.06, 2.1, o.bedH || 0.95, -1, pdBed(0.9, col, !!o.fur), { at: o.bedAt }); const s = it ? { cx: it.cx, cz: it.cz } : null; if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
     if (!it && nm === 'bed') P.err.push('no room for ' + nm + ' in ' + room.id);
   }
   // a chest at the foot of the first bed (or against any free wall)
@@ -172,7 +172,7 @@ function dressStore(P, room, o) {
   let n = 0; for (const sd of pSidesLong(room)) { if (pAgainst(P, room, sd, P.id + '.shelf' + n, 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, o.items || ['pot', 'jug', 'bowl', 'bottle', 'cheese'])), { at: n ? 'end' : 'start' })) n++; if (n >= 2) break; }
   for (let i = 0; i < 3; i++) for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.barrel' + i, 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: i ? 'end' : 'start' })) break;
   for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.crate' + i, 0.6, 0.6, 0.6, R() * 0.4, pdCrate(0.6), { near: [room.in.x1 - 1, room.in.z1 - 1] });
-  for (let i = 0; i < 2; i++) pFree(P, room, P.id + '.sack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x0 + 1, room.in.z1 - 1], noClear: false });
+  for (let i = 0; i < 2; i++) pFree(P, room, P.id + '.sack' + i, 0.62, 0.62, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x0 + 1, room.in.z1 - 1], noClear: false });
   pWalls(P, room, ['Shelf_Small_Bottles', 'Peg_Rack', 'Torch_Metal', 'Shelf_Simple']);
   pLamp(P, room, ...pCentre(room));
 }
@@ -193,7 +193,7 @@ function dressCellar(P, room, o) {
   else for (const sd of pSidesLong(room)) for (let i = 0; i < (o.barrels || 2); i++) if (pAgainst(P, room, sd, P.id + '.cbarrel' + n++, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: i ? 'end' : 'start', lowOk: true })) { }
   for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.cshelf', 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, ['jug', 'bottle', 'pot', 'bowl'])), { at: 'mid' })) break;
   for (let i = 0; i < (o.crates === undefined ? 3 : o.crates); i++) pFree(P, room, P.id + '.ccrate' + i, 0.6, 0.6, 0.6, R() * 0.5, pdCrate(0.6), { near: [room.in.x0 + 1, room.in.z1 - 1] });
-  for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.csack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x1 - 1, room.in.z0 + 1] });
+  for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.csack' + i, 0.62, 0.62, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x1 - 1, room.in.z0 + 1] });
   let t = 0; for (const sd of ['n', 's', 'w', 'e']) { const s = (room.x1 - room.x0 > 3 ? 0.25 : 0.5); if (pTorch(P, room, sd, (sd === 'n' || sd === 's' ? (room.in.x0 + room.in.x1) / 2 : (room.in.z0 + room.in.z1) / 2) + (t++ % 2 ? 1.2 : -1.2), 1.7, 6.5)) break; }
   if (!P.lightIn[room.id]) pTorch(P, room, 'n', (room.in.x0 + room.in.x1) / 2, 1.7, 6.5) || pTorch(P, room, 's', (room.in.x0 + room.in.x1) / 2, 1.7, 6.5);
 }
@@ -345,6 +345,7 @@ function planBuild(c) {
   const W = P.dims ? P.dims.W : 9, D = P.dims ? P.dims.D : 10, zi = c.zoneInfo, ctr = P.w2(0, 0, D / 2);
   zi.site = Object.assign({}, c.site, { x: ctr[0], z: ctr[2], yaw: P.yaw }); zi.hw = W / 2; zi.hd = D / 2; zi.y0 = dd.sill[1] - 3.6; zi.y1 = dd.sill[1] + 7; zi.slope = 0; zi.H = H_GROUND;
   if (P.hearths && P.hearths[0]) { const h = P.hearths[0], hp = P.w2(h.x, 0, h.z); zi.hearth = [hp[0], hp[2], h.wid]; }
+  pSpotsClear(P);          // [fx2] nobody stands inside a counter, chair or cabinet
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
   const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
   for (const n of new Set([...P.need, 'fire1', 'stand2', 'guestbed', 'barfront', 'front', 'pew1', 'pew2', 'sit', 'bed2', 'home'])) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });

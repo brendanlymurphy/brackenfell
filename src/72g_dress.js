@@ -52,7 +52,7 @@ PD.cask = (len, r) => m => {
 };
 PD.broom = m => { m.mat(MAT.TIMBER, COL.wood); m.push().RZ(0.09); m.box(-0.012, 0, -0.012, 0.012, 1.45, 0.012); m.mat(MAT.THATCH, COL.hay, 0.5); m.cyl(0, 0, 0, 0.08, 0.035, 0.3, 6, 1); m.pop(); addBoxCollider(m, -0.12, -0.12, 0.12, 0.12, 0, 1.4); };
 PD.sacks = (R) => m => { const cols = [[0.7, 0.62, 0.45], [0.6, 0.55, 0.42], [0.55, 0.5, 0.36]]; for (const [x, z, s, y] of [[-0.18, 0, 0.24, 0], [0.2, 0.02, 0.22, 0], [0.0, -0.04, 0.2, 0.3]]) { m.mat(MAT.CLOTH, R.pick(cols), 0.5); m.ball(x, y + s * 0.9, z, s * 0.85, s, s * 0.8, 6, 4); } addBoxCollider(m, -0.4, -0.3, 0.4, 0.3, 0, 0.6); };
-PD.stack = (R) => m => { Props.woodpile(m, 5, 4, 0.7); };
+PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 columns = 0.55 m deep (5 drew 0.91 m into a 0.5 m slot)
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
@@ -104,7 +104,7 @@ PD.try = function (P, room, sd, u, kind, R, fill) {
     case 'bench': return PD.floorAt(P, room, sd, id + 'bn', 1.6, 0.4, 0.46, m => Props.bench(m, 1.6), u, 0.3, { lowOk: true });
     case 'sacks': return PD.floorAt(P, room, sd, id + 'sk', 0.9, 0.6, 0.6, PD.sacks(R), u, 0.3, { lowOk: true });
     case 'broom': return PD.floorAt(P, room, sd, id + 'br', 0.3, 0.3, 1.45, PD.broom, u, 0.3);
-    case 'stack': return PD.floorAt(P, room, sd, id + 'ws', 0.8, 0.5, 0.7, PD.stack(R), u, 0.3, { lowOk: true });
+    case 'stack': return PD.floorAt(P, room, sd, id + 'ws', 0.8, 0.58, 0.7, PD.stack(R), u, 0.3, { lowOk: true });
     case 'shrine': return PD.floorAt(P, room, sd, id + 'sr', 1.32, 0.6, 1.3, PD.shrine, u, 0.3);
     case 'hooks': { const w = 0.9 + R() * 0.6; return pHang(P, room, sd, u + w / 2, w, 1.0, 1.9, PD.hooks(R, w), id + 'hk', { pivot: 1.75 }) ? w : 0; }
     case 'tapestry': { const w = 1.4 + R() * 0.4; return pHang(P, room, sd, u + w / 2, w, 1.1, 2.4, PD.tapestry(R, w, 1.2), id + 'tp', { pivot: 1.15 }) ? w : 0; }

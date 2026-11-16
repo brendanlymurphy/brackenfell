@@ -5227,10 +5227,14 @@ const YARD_CELL = 40;        // m: yard props are merged into one mesh per mater
 const YARD_CAST_MIN = 0.6;        // m: the largest side a yard prop needs to cast. 0 = every prop casts
 function yardCasts(P) { if (!(YARD_CAST_MIN > 0)) return true; const b = Kit.box(P.name, P.M); return !b || Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) >= YARD_CAST_MIN; }
 function kadd(m, P, extra) {
+  if (typeof P_REC !== 'undefined' && P_REC) { P_REC.parts.push({ name: P.name, M: P.M.clone() }); if (P_REC.defer) { P_REC.pend.push([m, P, extra]); return; } }          // [fx2] 72d_plan.js pPut: pieces are measured before they are committed
+  kaddNow(m, P, extra);
+}
+function kaddNow(m, P, extra) {
   const zone = m.m1 | 0;
   let B; if (zone) B = extra && extra.fine ? furnFineBatch(zone) : kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: YARD_CELL }); B = World.kitYard; }
   const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone && yardCasts(P) }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
-  B.add(P.name, P.M, o); if (typeof P_REC !== 'undefined' && P_REC) P_REC.parts.push({ name: P.name, M: P.M.clone() }); if (zone && !o.noBlob) furnBlob(zone, P);
+  B.add(P.name, P.M, o); if (zone && !o.noBlob) furnBlob(zone, P);
 }
 // place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
 function kp(m, name, x, y, z, s, ry, extra) { const P = kplace(m, name, x, y, z, s, ry); if (P) { kadd(m, P, extra); if (P.more) for (const Q of P.more) kadd(m, Q, extra); } }
@@ -6714,40 +6718,99 @@ function pWinZone(w) {
   return wl.ax === 'x' ? { x0: w.pos - hw, x1: w.pos + hw, z0: ns < 0 ? wl.c - 0.2 : wl.c - 0.2 - depth, z1: ns < 0 ? wl.c + 0.2 + depth : wl.c + 0.2 } : { x0: ns < 0 ? wl.c - 0.2 : wl.c - 0.2 - depth, x1: ns < 0 ? wl.c + 0.2 + depth : wl.c + 0.2, z0: w.pos - hw, z1: w.pos + hw };
 }
 // the footprint of a w x d item (w along x, d along z before turning) turned by rot (a multiple of PI/2)
-function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2))) & 1; return q ? rectOf(cx, cz, d, w) : rectOf(cx, cz, w, d); }
-// [fx2] test-only geometry recording (--opt ovl=1): what an item actually drew (mesh index range + kit pieces), for test/overlap_in.js
+function pFoot(cx, cz, w, d, rot) { const c = Math.abs(Math.cos(rot)), s = Math.abs(Math.sin(rot)); return rectOf(cx, cz, w * c + d * s, w * s + d * c); }          // [fx2] honest for any turn: a crate turned 0.4 rad is wider than its square
+// [fx2] MEASURED PLACEMENT. An item is drawn first and measured (every vertex it made and every kit piece's box, in the plan's frame); only then is it kept.
+// Its recorded footprint is what it really occupies (not the w x d its caller guessed). When the measured thing pokes through its room's walls, through a solid
+// that is already there, into a doorway or stair clearance, or (when tall) across a window, it is undone (mesh, kit pieces, colliders, lights, emitters) and the
+// caller tries the next place. So no generator can put a footprint lie into the world: a flaw of this kind disappears from all interiors at once.
 let P_REC = null;
-const pRecBegin = () => (TEST && TEST.ovl) ? (P_REC = { parts: [] }) : null;
+const pRecBegin = defer => (P_REC = { parts: [], defer: !!defer, pend: [] });
 const pRecEnd = (rc, m, t0) => { if (!rc) return; rc.t0 = t0; rc.t1 = m.ni; P_REC = null; };
-// put an item: it is drawn with draw(m) at (cx, cz) turned by rot, on the level's floor (or at y = lift above it), and recorded. Returns the record or null when it does not fit.
+const P_ROUND = /^(Barrel|wine_barrel|wooden_barrels|Vase|ceramic|Cauldron|Stool|painted_wooden_stool|Candle|CandleStick|brass_candle|wooden_candlestick|Bucket|wooden_bucket|Mug|Anvil)/;
+function pToLocal(P) { if (P._tl) return P._tl; const T = P.T, ax = [T[0], T[1], T[2]], ay = [T[4], T[5], T[6]], az = [T[8], T[9], T[10]], o = [T[12], T[13], T[14]]; return P._tl = (x, y, z) => { const dx = x - o[0], dy = y - o[1], dz = z - o[2]; return [dx * ax[0] + dy * ax[1] + dz * ax[2], dx * ay[0] + dy * ay[1] + dz * ay[2], dx * az[0] + dy * az[1] + dz * az[2]]; }; }
+// the box (plan frame) of what was drawn since rec began: { min, max } or null
+function pMeasure(P, m, rc) {
+  const to = pToLocal(P), min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9], g = p => { for (let k = 0; k < 3; k++) { if (p[k] < min[k]) min[k] = p[k]; if (p[k] > max[k]) max[k] = p[k]; } }; let any = false;
+  const f = m.f, idx = m.idx, seen = new Set();
+  for (let i = rc.t0; i < rc.t1; i++) { const v = idx[i]; if (seen.has(v)) continue; seen.add(v); g(to(f[v * 8], f[v * 8 + 1], f[v * 8 + 2])); any = true; }
+  for (const pt of rc.parts) {
+    const pc = Kit.pieces[pt.name]; if (!pc) continue; const M = pt.M;
+    if (P_ROUND.test(pt.name)) { const e = M.elements, ex = Math.hypot(e[0], e[1], e[2]) * (pc.max[0] - pc.min[0]), ez = Math.hypot(e[8], e[9], e[10]) * (pc.max[2] - pc.min[2]), r = Math.max(ex, ez) / 2, h = Math.hypot(e[4], e[5], e[6]) * (pc.max[1] - pc.min[1]) / 2, v = new THREE.Vector3((pc.min[0] + pc.max[0]) / 2, (pc.min[1] + pc.max[1]) / 2, (pc.min[2] + pc.max[2]) / 2).applyMatrix4(M), w = to(v.x, v.y, v.z); g([w[0] - r, w[1] - h, w[2] - r]); g([w[0] + r, w[1] + h, w[2] + r]); any = true; continue; }
+    const q = Kit.box(pt.name, M); if (!q) continue; for (let i = 0; i < 8; i++) g(to(i & 1 ? q.max[0] : q.min[0], i & 2 ? q.max[1] : q.min[1], i & 4 ? q.max[2] : q.min[2])); any = true;
+  }
+  return any ? { min, max } : null;
+}
+// everything an undone draw must give back
+function pSnap(P, m) { const W = World; return { nv: m.nv, ni: m.ni, own: (m.own || []).length, col: W.colliders.length, flr: W.floors.length, lit: W.lights.length, emi: W.emitters.length, ixn: W.interact.length, lc: Object.assign({}, KITP.lc), seed: m.seed }; }
+function pUndo(P, m, sn) { const W = World; m.nv = sn.nv; m.ni = sn.ni; if (m.own) m.own.length = sn.own; W.colliders.length = sn.col; W.floors.length = sn.flr; W.lights.length = sn.lit; W.emitters.length = sn.emi; W.interact.length = sn.ixn; KITP.lc = sn.lc; }
+function pCommitKit(m, rc) { const z = m.m1; for (const [mm, pp, ex] of rc.pend) kaddNow(mm, pp, ex); m.m1 = z; rc.pend.length = 0; }
+// does the measured box b (plan frame, level k) sit on the floor of room without going through anything? returns '' or why not
+function pBoxOK(P, room, b, o, flat) {
+  const k = room.k, a = room.in, L = P.lv[k], tol = 0.02;
+  if (b.min[0] < a.x0 - tol || b.max[0] > a.x1 + tol || b.min[2] < a.z0 - tol || b.max[2] > a.z1 + tol) return 'wall';
+  if (b.max[1] > L.y + L.H + 0.02 && !o.tall) return 'ceiling';
+  if (flat) return '';
+  const r = { x0: b.min[0], x1: b.max[0], z0: b.min[2], z1: b.max[2] }, lifted = (o.lift || 0) > 0.1;
+  if (!lifted) for (const it of P.items) {
+    if (it.k !== k || !P_SOLID[it.kind]) continue; const ib = it.bx;
+    if (ib && it.kind !== 'stair' && it.kind !== 'hole') { const ox = Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]), oz = Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]), oy = Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]); if (ox > 0.02 && oz > 0.02 && !(o.allow && o.allow.includes(it.kind))) return 'item ' + it.id; }
+    else if (rOv(r, it, 0.02) && !(it.kind === 'hearth' && o.allow && o.allow.includes('hearth'))) return 'item ' + it.id;
+  }
+  for (const q of P.wallItems) if (q.k === k && q.bx) { const ib = q.bx; if (Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]) > 0.03 && Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]) > 0.03 && Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]) > 0.03) return 'hung ' + q.id; }
+  if (!o.noClear) for (const z of P.clear) if (z.k === k && rOv(r, z, 0.01) && !(o.allow && o.allow.includes(z.kind))) return 'clear ' + z.kind;
+  if (b.max[1] - L.y > 1.0 && !o.lowOk && (o.h || 1) > 0.85) for (const w of P.windows) if (w.k === k && w.room === room && rOv(r, pWinZone(w), 0.01)) return 'window';
+  return '';
+}
+// put an item: it is drawn with draw(m) at (cx, cz) turned by rot, on the level's floor (or at y = lift above it), measured, and recorded. Returns the record or null when it does not fit.
+// o._hon: shared by the candidates of one search (pFree, pWallSlot): the first measurement gives the others their real footprint before anything is drawn.
 function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
-  o = o || {}; const r = pFoot(cx, cz, w, d, rot);
+  o = o || {}; let r = pFoot(cx, cz, w, d, rot); if (TEST && TEST.nomeasure) o = Object.assign({}, o, { nomeasure: true, _hon: null });
+  const hon = o._hon; if (hon && hon.rel) r = { x0: Math.min(r.x0, cx + hon.rel.x0), x1: Math.max(r.x1, cx + hon.rel.x1), z0: Math.min(r.z0, cz + hon.rel.z0), z1: Math.max(r.z1, cz + hon.rel.z1) };
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
-  const L = P.lv[room.k], m = P.c.int, t0 = m.ni, rc = pRecBegin(); at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]); pRecEnd(rc, m, t0);          // owner ranges: test/audit.js names the thing a face belongs to
-  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back }); if (rc) it.rec = rc;
+  if (hon && hon.rel && pBoxOK(P, room, { min: [r.x0, P.lv[room.k].y + 0.1, r.z0], max: [r.x1, P.lv[room.k].y + h, r.z1] }, o, o.flat)) return null;
+  const L = P.lv[room.k], m = P.c.int, sn = pSnap(P, m), t0 = m.ni, rc = pRecBegin(true), flat = !!o.flat;
+  at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); pRecEnd(rc, m, t0);
+  const b = pMeasure(P, m, rc);
+  if (b) {
+    const why = o.nomeasure ? '' : pBoxOK(P, room, b, o, flat);
+    if (hon) hon.rel = { x0: Math.min(hon.rel ? hon.rel.x0 : 0, b.min[0] - cx), x1: Math.max(hon.rel ? hon.rel.x1 : 0, b.max[0] - cx), z0: Math.min(hon.rel ? hon.rel.z0 : 0, b.min[2] - cz), z1: Math.max(hon.rel ? hon.rel.z1 : 0, b.max[2] - cz) };
+    if (why) { pUndo(P, m, sn); P.refused = (P.refused || 0) + 1; (P.refusedWhy = P.refusedWhy || []).push(name + ' @' + cx.toFixed(2) + ',' + cz.toFixed(2) + ' box ' + b.min.map(v => v.toFixed(2)) + ' / ' + b.max.map(v => v.toFixed(2)) + ' ' + why.split(' ')[0] + (why.indexOf(' ') > 0 ? ' ' + why.slice(why.indexOf(' ') + 1) : '')); return null; }
+    r = { x0: Math.max(b.min[0], room.in.x0), x1: Math.min(b.max[0], room.in.x1), z0: Math.max(b.min[2], room.in.z0), z1: Math.min(b.max[2], room.in.z1) };          // the recorded footprint is what it really occupies
+  }
+  pCommitKit(m, rc); (m.own = m.own || []).push([t0, m.ni, name]);
+  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, hh: b ? Math.max(h, b.max[1] - L.y) : h, bx: b || null, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back }); it.rec = rc; rc.t1 = m.ni;
   if (o.flat) it.kind = 'rug'; return it;
 }
 // along a wall of the room, w wide (along the wall) and d deep; o.at: 'start' | 'end' | 'mid' | a coordinate along the wall to be near. Tries every 0.25 m.
 function pWallSlot(P, room, side, w, d, o) {
-  o = o || {}; const a = room.in, hor = side === 'n' || side === 's', lo = (hor ? a.x0 : a.z0) + w / 2, hi = (hor ? a.x1 : a.z1) - w / 2, pts = [];
+  o = o || {}; const a = room.in, hor = side === 'n' || side === 's', rel = o._hon && o._hon.rel, pts = [];
+  // [fx2] once one candidate has been drawn and measured, the slots are flush for what it really occupies: its depth against the wall, its extent along it inside the room
+  let lo = (hor ? a.x0 : a.z0) + w / 2, hi = (hor ? a.x1 : a.z1) - w / 2;
+  if (rel) { lo = hor ? a.x0 - rel.x0 : a.z0 - rel.z0; hi = hor ? a.x1 - rel.x1 : a.z1 - rel.z1; }
   for (let t = lo; t <= hi + 1e-6; t += 0.25) pts.push(t);
   const want = o.at === 'end' ? hi : o.at === 'mid' || o.at === undefined ? (lo + hi) / 2 : o.at === 'start' ? lo : o.at;
   pts.sort((p, q) => Math.abs(p - want) - Math.abs(q - want));
+  let nth = o.nth || 0;
   for (const t of pts) {
-    const cz = side === 'n' ? a.z0 + d / 2 : side === 's' ? a.z1 - d / 2 : t, cx = side === 'w' ? a.x0 + d / 2 : side === 'e' ? a.x1 - d / 2 : t;
-    const px = hor ? t : cx, pz = hor ? cz : t, r = hor ? rectOf(px, pz, w, d) : rectOf(px, pz, d, w);
-    if (pFit(P, room, r, o)) return { cx: px, cz: pz, rect: r };
+    let cz = side === 'n' ? a.z0 + d / 2 : side === 's' ? a.z1 - d / 2 : t, cx = side === 'w' ? a.x0 + d / 2 : side === 'e' ? a.x1 - d / 2 : t;
+    if (rel) { if (side === 'n') cz = a.z0 - rel.z0 + 0.003; else if (side === 's') cz = a.z1 - rel.z1 - 0.003; else if (side === 'w') cx = a.x0 - rel.x0 + 0.003; else cx = a.x1 - rel.x1 - 0.003; }
+    const px = hor ? t : cx, pz = hor ? cz : t, r = rel ? { x0: px + rel.x0, x1: px + rel.x1, z0: pz + rel.z0, z1: pz + rel.z1 } : hor ? rectOf(px, pz, w, d) : rectOf(px, pz, d, w);
+    if (pFit(P, room, r, o) && nth-- <= 0) return { cx: px, cz: pz, rect: r };
   }
   return null;
 }
 // an item with its back to a wall (back = -1: its local -z is the back, as a bed's head; +1: its +z, as a shelf's)
 function pAgainst(P, room, side, name, w, d, h, back, draw, o) {
-  o = Object.assign({ h }, o || {}); const s = pWallSlot(P, room, side, w, d, o); if (!s) return null;
-  return pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side }));
+  o = Object.assign({ h, _hon: {} }, o || {});
+  for (let n = 0; n < 14; n++) {          // [fx2] the first free slot that the measured thing really fits
+    const s = pWallSlot(P, room, side, w, d, Object.assign({}, o, { nth: n })); if (!s) return null;
+    const it = pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side })); if (it) return it;
+  }
+  return null;
 }
 // anywhere free in the room: tries the centre, then rings round it (o.near = [x, z] to start from), o.step 0.25
 function pFree(P, room, name, w, d, h, rot, draw, o) {
-  o = o || {}; const a = room.in, c0 = o.near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = [];
+  o = Object.assign({ _hon: {} }, o || {}); const a = room.in, c0 = o.near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = [];
   for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3; z += 0.25) pts.push([x, z]);
   pts.sort((p, q) => Math.hypot(p[0] - c0[0], p[1] - c0[1]) - Math.hypot(q[0] - c0[0], q[1] - c0[1]));
   for (const p of pts) { const it = pPut(P, room, name, p[0], p[1], rot, w, d, h, draw, o); if (it) return it; }
@@ -6762,15 +6825,43 @@ function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
   if (rec.u0 < (hor ? a.x0 : a.z0) - 1e-6 || rec.u1 > (hor ? a.x1 : a.z1) + 1e-6) return null;
   for (const op of wl.open) { const hw = op.type === 'door' ? op.hw + 0.1 : 0.9; if (rec.u0 < op.pos + hw && rec.u1 > op.pos - hw && (op.type === 'door' || (y1 > 0.85 && y0 < 2.4))) return null; }
   for (const q of P.wallItems) if (q.k === rec.k && q.wall === wl && q.side === side && rec.u0 < q.u1 + 0.05 && rec.u1 > q.u0 - 0.05 && rec.y0 < q.y1 + 0.05 && rec.y1 > q.y0 - 0.05) return null;
-  for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
+  for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.hh || it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
   const m = P.c.int, p = hor ? [u, side === 'n' ? a.z0 : a.z1] : [side === 'w' ? a.x0 : a.x1, u];
   const rot = rotBack(side, +1);
-  const rc = pRecBegin(), t0 = m.ni; at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0)); pRecEnd(rc, m, t0); if (rc) rec.rec = rc;
+  const sn = pSnap(P, m), rc = pRecBegin(true), t0 = m.ni; at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0)); pRecEnd(rc, m, t0);
+  const b = pMeasure(P, m, rc);
+  if (b) {          // [fx2] measured: through a door or window, another hung thing, furniture, the ceiling or down to the floor undoes it
+    const iu = hor ? 0 : 2, u0 = b.min[iu], u1 = b.max[iu], by0 = b.min[1] - L.y, by1 = b.max[1] - L.y; let why = '';
+    if (u0 < (hor ? a.x0 : a.z0) - 0.02 || u1 > (hor ? a.x1 : a.z1) + 0.02) why = 'room';
+    if (!why) for (const op of wl.open) { const hw = op.type === 'door' ? op.hw + 0.05 : 0.85; if (u0 < op.pos + hw && u1 > op.pos - hw && (op.type === 'door' ? by0 < 2.15 : by1 > 0.85 && by0 < 2.4)) { why = op.type; break; } }
+    if (!why && by1 > L.H + 0.01) why = 'ceiling';
+    if (!why && by0 < 0.3 && y0 > 0.5 && !o.toFloor) why = 'floor';
+    if (!why) for (const q of P.wallItems) if (q.k === rec.k && q.wall === wl && q.side === side) { const qu0 = q.bu0 === undefined ? q.u0 : q.bu0, qu1 = q.bu1 === undefined ? q.u1 : q.bu1, qy0 = q.by0 === undefined ? q.y0 : q.by0, qy1 = q.by1 === undefined ? q.y1 : q.by1; if (u0 < qu1 - 0.03 && u1 > qu0 + 0.03 && by0 < qy1 - 0.03 && by1 > qy0 + 0.03) { why = 'hung ' + q.id; break; } }
+    if (!why) for (const it of P.items) { if (it.k !== room.k || !(it.kind === 'floor' || it.kind === 'hearth') || !it.bx) { if (it.k === room.k && it.kind === 'hearth' && !it.bx && it.back === side && rec.u0 < (hor ? it.x1 : it.z1) && rec.u1 > (hor ? it.x0 : it.z0) && by0 < L.H) { why = 'hearth'; break; } continue; } const ib = it.bx; if (Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]) > 0.03 && Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]) > 0.03 && Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]) > 0.03) { why = 'item ' + it.id; break; } }
+    if (why) { pUndo(P, m, sn); P.refused = (P.refused || 0) + 1; return null; }
+    rec.bu0 = u0; rec.bu1 = u1; rec.by0 = by0; rec.by1 = by1; rec.bx = b;
+  }
+  pCommitKit(m, rc); rec.rec = rc; rc.t1 = m.ni;
   P.wallItems.push(rec); return rec;
 }
 const pCentre = r => [(r.in.x0 + r.in.x1) / 2, (r.in.z0 + r.in.z1) / 2];
 const pRoomAt = (P, k, x, z) => { for (const id in P.rooms) { const r = P.rooms[id]; if (r.k === k && x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) return r; } return null; };
 
+// [fx2] a person's standing spot must not lie inside a solid: counters, chairs, cabinets and wall shelves are found by their real footprints. A spot that does is moved to the nearest free floor
+// (searched outward in 0.1 m rings, at most 1.1 m, the same room, off stairwells and doorways); sleeping and sitting spots are left to their furniture.
+function pSpotsClear(P) {
+  const R_ = 0.3, solid = P.items.filter(i => (i.kind === 'floor' || i.kind === 'hearth' || i.kind === 'stair') && (i.h === undefined || i.h > 0.3 || i.kind !== 'floor'));
+  const busy = (k, x, z) => { for (const it of solid) if (it.k === k && x > it.x0 - R_ && x < it.x1 + R_ && z > it.z0 - R_ && z < it.z1 + R_) return it; for (const h of P.holes) if (h.k === k && x > h.r.x0 - 0.2 && x < h.r.x1 + 0.2 && z > h.r.z0 - 0.2 && z < h.r.z1 + 0.2) return h; return null; };
+  P.spotMoves = [];
+  for (const nm in P.spots) {
+    const sp = P.spots[nm], W = World.spots[P.id + '.' + nm]; if (!W || W.sit || W.lie) continue;
+    const room = pRoomAt(P, sp.k, sp.x, sp.z); if (!room || !busy(sp.k, sp.x, sp.z)) continue;
+    const a = room.in; let best = null;
+    for (let r = 0.1; r <= 1.1 && !best; r += 0.1) { let bd = 1e9; for (let q = 0; q < 24; q++) { const ang = q / 24 * TAU, x = sp.x + Math.cos(ang) * r, z = sp.z + Math.sin(ang) * r; if (x < a.x0 + 0.3 || x > a.x1 - 0.3 || z < a.z0 + 0.3 || z > a.z1 - 0.3 || busy(sp.k, x, z)) continue; const d = r + (W.face ? 0 : 0); if (d < bd) { bd = d; best = [x, z]; } } }
+    if (!best) continue; P.spotMoves.push(nm + ' ' + sp.x.toFixed(2) + ',' + sp.z.toFixed(2) + ' -> ' + best[0].toFixed(2) + ',' + best[1].toFixed(2));
+    const p = P.w2(best[0], 0, best[1]); sp.x = best[0]; sp.z = best[1]; sp.p = [p[0], W.p[1], p[2]]; W.p = sp.p.slice();
+  }
+}
 // ── registration of the things the village looks for: spots, interact points, lights ──
 function pSpot(P, name, x, z, yaw, o) {
   o = o || {}; const k = o.k === undefined ? 0 : o.k, L = P.lv[k], y = (o.y === undefined ? 0.02 : o.y) + L.y;
@@ -7021,7 +7112,7 @@ function pHearth(P, room, side, wid, o) {
   o = o || {}; const L = P.lv[room.k], H = L.H, dep = 0.8, m = P.c.int, hor = side === 'n' || side === 's';
   const s = pWallSlot(P, room, side, wid + 0.3, dep + 0.1, Object.assign({ lowOk: false, at: o.at, noClear: false }, o)); if (!s) return null;
   const rot = { w: 0, e: PI, n: -PI / 2, s: PI / 2 }[side], px = hor ? s.cx : (side === 'w' ? room.in.x0 : room.in.x1), pz = hor ? (side === 'n' ? room.in.z0 : room.in.z1) : s.cz;
-  m.m1 = P.zone; m.ao = INT_AO; const rc = pRecBegin(), t0 = m.ni;
+  m.m1 = P.zone; m.ao = INT_AO; const rc = pRecBegin(false), t0 = m.ni;
   at(m, px, L.y + 0.02, pz, rot, () => {
     m.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
     m.box(0, 0, -wid / 2, dep, 1.15, -wid / 2 + 0.38); m.box(0, 0, wid / 2 - 0.38, dep, 1.15, wid / 2); m.box(0, 1.15, -wid / 2, dep, H - 0.02, wid / 2);
@@ -7101,12 +7192,12 @@ function pDining(P, room, len, wid, opt) {
       const [tx, tz] = p, tr = rectOf(tx, tz, tw, td);
       if (!pFit(P, room, tr, { h: 0.78 })) continue;
       const bs = [-1, 1].map(sg => rot ? [tx + sg * (wid / 2 + 0.34), tz] : [tx, tz + sg * (wid / 2 + 0.34)]);
-      const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.34, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.34));
+      const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.46, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.46));
       if (!brs.every(r => pFit(P, room, r, { h: 0.46 })) || (opt.sideRoom && !brs.every(r => true))) continue;
       const t = pPut(P, room, P.id + '.' + (opt.id || 'table'), tx, tz, 0, tw, td, 0.78, m => { m.push(); if (rot) m.RY(rot); pdTable(len, wid, items, opt.n || 3, c)(m); m.pop(); }, { surface: true });
       if (!t) continue;
       const seats = [];
-      bs.forEach((b, i) => { const sg = i ? 1 : -1; pPut(P, room, P.id + '.' + (opt.id || 'table') + 'bench' + i, b[0], b[1], rot ? PI / 2 : 0, len * 0.9, 0.34, 0.46, pdBench(len * 0.9), {}); for (const q of [-0.5, 0.5]) seats.push([rot ? b[0] : tx + q * len * 0.5, rot ? tz + q * len * 0.5 : b[1], rot ? (sg < 0 ? PI / 2 : -PI / 2) : (sg < 0 ? PI : 0)]); });
+      bs.forEach((b, i) => { const sg = i ? 1 : -1; pPut(P, room, P.id + '.' + (opt.id || 'table') + 'bench' + i, b[0], b[1], rot ? PI / 2 : 0, len * 0.9, 0.46, 0.46, pdBench(len * 0.9), {}); for (const q of [-0.5, 0.5]) seats.push([rot ? b[0] : tx + q * len * 0.5, rot ? tz + q * len * 0.5 : b[1], rot ? (sg < 0 ? PI / 2 : -PI / 2) : (sg < 0 ? PI : 0)]); });
       return { x: tx, z: tz, rot, seats, t };
     }
   }
@@ -7142,7 +7233,7 @@ function dressBedroom(P, room, o) {
   let placed = 0;
   for (const nm of beds) {
     let it = null;
-    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { const s = pWallSlot(P, room, sd, 1.1, 2.1, { h: o.bedH || 0.95, at: o.bedAt }); if (!s) continue; it = pPut(P, room, P.id + '.' + nm, s.cx, s.cz, rotBack(sd, -1), 1.1, 2.1, o.bedH || 0.95, pdBed(1.0, col, !!o.fur), { back: sd }); if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
+    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { it = pAgainst(P, room, sd, P.id + '.' + nm, 1.06, 2.1, o.bedH || 0.95, -1, pdBed(0.9, col, !!o.fur), { at: o.bedAt }); const s = it ? { cx: it.cx, cz: it.cz } : null; if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
     if (!it && nm === 'bed') P.err.push('no room for ' + nm + ' in ' + room.id);
   }
   // a chest at the foot of the first bed (or against any free wall)
@@ -7161,7 +7252,7 @@ function dressStore(P, room, o) {
   let n = 0; for (const sd of pSidesLong(room)) { if (pAgainst(P, room, sd, P.id + '.shelf' + n, 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, o.items || ['pot', 'jug', 'bowl', 'bottle', 'cheese'])), { at: n ? 'end' : 'start' })) n++; if (n >= 2) break; }
   for (let i = 0; i < 3; i++) for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.barrel' + i, 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: i ? 'end' : 'start' })) break;
   for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.crate' + i, 0.6, 0.6, 0.6, R() * 0.4, pdCrate(0.6), { near: [room.in.x1 - 1, room.in.z1 - 1] });
-  for (let i = 0; i < 2; i++) pFree(P, room, P.id + '.sack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x0 + 1, room.in.z1 - 1], noClear: false });
+  for (let i = 0; i < 2; i++) pFree(P, room, P.id + '.sack' + i, 0.62, 0.62, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x0 + 1, room.in.z1 - 1], noClear: false });
   pWalls(P, room, ['Shelf_Small_Bottles', 'Peg_Rack', 'Torch_Metal', 'Shelf_Simple']);
   pLamp(P, room, ...pCentre(room));
 }
@@ -7182,7 +7273,7 @@ function dressCellar(P, room, o) {
   else for (const sd of pSidesLong(room)) for (let i = 0; i < (o.barrels || 2); i++) if (pAgainst(P, room, sd, P.id + '.cbarrel' + n++, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: i ? 'end' : 'start', lowOk: true })) { }
   for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.cshelf', 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, ['jug', 'bottle', 'pot', 'bowl'])), { at: 'mid' })) break;
   for (let i = 0; i < (o.crates === undefined ? 3 : o.crates); i++) pFree(P, room, P.id + '.ccrate' + i, 0.6, 0.6, 0.6, R() * 0.5, pdCrate(0.6), { near: [room.in.x0 + 1, room.in.z1 - 1] });
-  for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.csack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x1 - 1, room.in.z0 + 1] });
+  for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.csack' + i, 0.62, 0.62, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x1 - 1, room.in.z0 + 1] });
   let t = 0; for (const sd of ['n', 's', 'w', 'e']) { const s = (room.x1 - room.x0 > 3 ? 0.25 : 0.5); if (pTorch(P, room, sd, (sd === 'n' || sd === 's' ? (room.in.x0 + room.in.x1) / 2 : (room.in.z0 + room.in.z1) / 2) + (t++ % 2 ? 1.2 : -1.2), 1.7, 6.5)) break; }
   if (!P.lightIn[room.id]) pTorch(P, room, 'n', (room.in.x0 + room.in.x1) / 2, 1.7, 6.5) || pTorch(P, room, 's', (room.in.x0 + room.in.x1) / 2, 1.7, 6.5);
 }
@@ -7334,6 +7425,7 @@ function planBuild(c) {
   const W = P.dims ? P.dims.W : 9, D = P.dims ? P.dims.D : 10, zi = c.zoneInfo, ctr = P.w2(0, 0, D / 2);
   zi.site = Object.assign({}, c.site, { x: ctr[0], z: ctr[2], yaw: P.yaw }); zi.hw = W / 2; zi.hd = D / 2; zi.y0 = dd.sill[1] - 3.6; zi.y1 = dd.sill[1] + 7; zi.slope = 0; zi.H = H_GROUND;
   if (P.hearths && P.hearths[0]) { const h = P.hearths[0], hp = P.w2(h.x, 0, h.z); zi.hearth = [hp[0], hp[2], h.wid]; }
+  pSpotsClear(P);          // [fx2] nobody stands inside a counter, chair or cabinet
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
   const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
   for (const n of new Set([...P.need, 'fire1', 'stand2', 'guestbed', 'barfront', 'front', 'pew1', 'pew2', 'sit', 'bed2', 'home'])) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });
@@ -7563,7 +7655,7 @@ PD.cask = (len, r) => m => {
 };
 PD.broom = m => { m.mat(MAT.TIMBER, COL.wood); m.push().RZ(0.09); m.box(-0.012, 0, -0.012, 0.012, 1.45, 0.012); m.mat(MAT.THATCH, COL.hay, 0.5); m.cyl(0, 0, 0, 0.08, 0.035, 0.3, 6, 1); m.pop(); addBoxCollider(m, -0.12, -0.12, 0.12, 0.12, 0, 1.4); };
 PD.sacks = (R) => m => { const cols = [[0.7, 0.62, 0.45], [0.6, 0.55, 0.42], [0.55, 0.5, 0.36]]; for (const [x, z, s, y] of [[-0.18, 0, 0.24, 0], [0.2, 0.02, 0.22, 0], [0.0, -0.04, 0.2, 0.3]]) { m.mat(MAT.CLOTH, R.pick(cols), 0.5); m.ball(x, y + s * 0.9, z, s * 0.85, s, s * 0.8, 6, 4); } addBoxCollider(m, -0.4, -0.3, 0.4, 0.3, 0, 0.6); };
-PD.stack = (R) => m => { Props.woodpile(m, 5, 4, 0.7); };
+PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 columns = 0.55 m deep (5 drew 0.91 m into a 0.5 m slot)
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
@@ -7615,7 +7707,7 @@ PD.try = function (P, room, sd, u, kind, R, fill) {
     case 'bench': return PD.floorAt(P, room, sd, id + 'bn', 1.6, 0.4, 0.46, m => Props.bench(m, 1.6), u, 0.3, { lowOk: true });
     case 'sacks': return PD.floorAt(P, room, sd, id + 'sk', 0.9, 0.6, 0.6, PD.sacks(R), u, 0.3, { lowOk: true });
     case 'broom': return PD.floorAt(P, room, sd, id + 'br', 0.3, 0.3, 1.45, PD.broom, u, 0.3);
-    case 'stack': return PD.floorAt(P, room, sd, id + 'ws', 0.8, 0.5, 0.7, PD.stack(R), u, 0.3, { lowOk: true });
+    case 'stack': return PD.floorAt(P, room, sd, id + 'ws', 0.8, 0.58, 0.7, PD.stack(R), u, 0.3, { lowOk: true });
     case 'shrine': return PD.floorAt(P, room, sd, id + 'sr', 1.32, 0.6, 1.3, PD.shrine, u, 0.3);
     case 'hooks': { const w = 0.9 + R() * 0.6; return pHang(P, room, sd, u + w / 2, w, 1.0, 1.9, PD.hooks(R, w), id + 'hk', { pivot: 1.75 }) ? w : 0; }
     case 'tapestry': { const w = 1.4 + R() * 0.4; return pHang(P, room, sd, u + w / 2, w, 1.1, 2.4, PD.tapestry(R, w, 1.2), id + 'tp', { pivot: 1.15 }) ? w : 0; }
@@ -7726,8 +7818,8 @@ const pdCounter = (len, c, kinds, n) => m => {          // a closed shop counter
   m.mat(MAT.PLANKS, COL.wood); m.box(x1 - 0.82, h, -0.42, x1 - 0.02, h + 0.03, 0.4);          // the flap, lifted for the keeper
   m.mat(MAT.METAL, COL.bronze); for (const z of [-0.2, 0.2]) m.box(x1 - 0.84, h + 0.01, z - 0.02, x1 - 0.78, h + 0.035, z + 0.02);
   at(m, x0 + 0.9, h, 0.0, 0.3, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.015, 0, -0.015, 0.015, 0.34, 0.015); m.box(-0.2, 0.33, -0.01, 0.2, 0.345, 0.01); for (const sx of [-0.19, 0.19]) { m.box(sx - 0.003, 0.2, -0.003, sx + 0.003, 0.33, 0.003); m.lathe([[0.0, 0.2], [0.07, 0.205], [0.075, 0.215]], 8, 1); } m.cyl(0, 0, 0, 0.06, 0.05, 0.02, 8, 1); });
-  at(m, x0 + 2.2, h, 0.05, -0.2, () => { m.mat(MAT.CLOTH, COL.leather, 0.5); m.box(-0.17, 0, -0.12, 0.17, 0.045, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(-0.16, 0.01, -0.11, 0.16, 0.04, 0.115, 4 | 8 | 1); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cyl(0.26, 0, 0.0, 0.03, 0.03, 0.07, 6, 1); });
-  m.push().T(0, h, 0.0); Props.clutter(m, R, x0 + 3.0, x1 - 1.2, 0, 0.0, kinds, Math.max(4, n - 3), c); m.pop();
+  at(m, Math.min(x0 + 2.2, x1 - 1.15), h, 0.05, -0.2, () => { m.mat(MAT.CLOTH, COL.leather, 0.5); m.box(-0.17, 0, -0.12, 0.17, 0.045, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(-0.16, 0.01, -0.11, 0.16, 0.04, 0.115, 4 | 8 | 1); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cyl(0.26, 0, 0.0, 0.03, 0.03, 0.07, 6, 1); });
+  m.push().T(0, h, 0.0); { const ca = len > 4 ? x0 + 3.0 : x0 + 0.5, cb = Math.max(ca + 0.3, x1 - (len > 4 ? 1.2 : 1.0)); Props.clutter(m, R, ca, Math.min(cb, x1 - 0.35), 0, 0.0, kinds, len > 4 ? Math.max(4, n - 3) : Math.max(2, Math.round(len)), c); } m.pop();          // [fx2] a short counter's wares stay on the counter
   addBoxCollider(m, x0, -0.45, x1, 0.42, 0, h);
 };
 const pdShelfTall = (len, h, lv, fill) => m => Props.shelf(m, len, h, lv, 0.34, fill);
@@ -7741,7 +7833,7 @@ function pShelfRun(P, room, side, u0, u1, kinds, o) {
 function pStock(P, room, o) {
   o = o || {}; const R = P.R;
   for (let i = 0; i < (o.crates || 0); i++) pFree(P, room, P.id + '.' + room.id + 'crate' + i, 0.6, 0.6, 0.6, R() * 0.5, pdCrate(0.6), { near: o.near || pCentre(room) });
-  for (let i = 0; i < (o.sacks || 0); i++) pFree(P, room, P.id + '.' + room.id + 'sack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: o.nearS || o.near || pCentre(room) });
+  for (let i = 0; i < (o.sacks || 0); i++) pFree(P, room, P.id + '.' + room.id + 'sack' + i, 0.62, 0.62, 0.5, R() * 6, pdSack(0.3), { near: o.nearS || o.near || pCentre(room) });
   for (let i = 0; i < (o.barrels || 0); i++) pFree(P, room, P.id + '.' + room.id + 'brl' + i, 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { near: o.nearB || o.near || pCentre(room), lowOk: true });
 }
 
@@ -8586,6 +8678,15 @@ Object.assign(PD.WARES, {
 });
 
 // floor props by name: [w, d, h, factory(P, room, R) -> draw(m)]
+// [fx2] a hand cart for a yard: the body 1.5 x 2.4 m on two wheels, the shafts lowered to the ground 1.1 m beyond (the street cart's shafts reach 1.7 m and drew 1.5 m through the yard wall)
+TP.cart = m => {
+  m.push().T(0, 0, 0.525); m.mat(MAT.PLANKS, COL.wood); m.box(-0.75, 0.62, -1.2, 0.75, 0.70, 1.2);
+  for (const sx of [-1, 1]) m.box(sx * 0.75 - 0.03, 0.70, -1.2, sx * 0.75 + 0.03, 1.08, 1.2);
+  m.box(-0.75, 0.70, 1.17, 0.75, 1.08, 1.23); m.box(-0.75, 0.70, -1.23, 0.75, 0.95, -1.17);
+  m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.9, 0.52, -0.05, 0.9, 0.62, 0.05);
+  for (const sx of [-1, 1]) { m.beam([sx * 0.45, 0.6, -1.2], [sx * 0.42, 0.05, -2.3], 0.07, 0.07); at(m, sx * 0.92, 0.57, 0, PI / 2, () => Props.wheel(m, 0.57, 0.09)); }
+  addBoxCollider(m, -1.0, -2.4, 1.0, 1.25, 0, 1.1); m.pop();
+};
 const HPR = {
   oven: [2.0, 1.5, 2.2, (P, rm) => TP.oven(P, rm, true)], kiln: [2.0, 1.5, 2.2, (P, rm) => TP.oven(P, rm, false)],
   vat: [1.3, 1.3, 0.75, (P, rm, R, o) => TP.vat((o && o.col) || [0.3, 0.38, 0.5])], tun: [1.8, 1.8, 1.1, () => TP.tun],
@@ -8597,7 +8698,7 @@ const HPR = {
   strongbox: [1.0, 0.6, 0.65, () => TP.strongbox], anvil: [0.8, 0.5, 0.9, () => TP.anvilSmall], still: [1.5, 0.9, 1.4, () => PD.still],
   bench: [2.1, 1.1, 1.0, () => m => kp(m, 'Workbench', 0, 0, 0, 0.95, 0)], spinning: [0.6, 1.1, 1.05, () => m => kp(m, 'spinning_wheel_01', 0, 0, 0, 1, 0)], dummy: [0.8, 0.7, 1.9, () => m => kp(m, 'Dummy', 0, 0, 0, 0.95, 0)],
   cask: [1.0, 0.95, 0.95, () => PD.cask(0.9, 0.34)], sacks: [0.9, 0.6, 0.6, (P, rm, R) => PD.sacks(R)], stack: [0.9, 0.5, 0.75, (P, rm, R) => PD.stack(R)], crates: [1.5, 0.8, 1.15, (P, rm, R) => PD.cratePile(R)],
-  barrel: [0.7, 0.7, 0.9, () => pdBarrel(0.33, 0.9)], bucket: [0.5, 0.5, 0.5, () => m => kp(m, 'Bucket_Wooden_1', 0, 0, 0, 1, 0)], cart: [1.8, 2.8, 1.3, () => m => Props.cart(m, false)],
+  barrel: [0.7, 0.7, 0.9, () => pdBarrel(0.33, 0.9)], bucket: [0.5, 0.5, 0.5, () => m => kp(m, 'Bucket_Wooden_1', 0, 0, 0, 1, 0)], cart: [2.05, 3.7, 1.15, () => TP.cart],
   appleCrate: [0.8, 0.5, 0.5, () => m => kp(m, 'FarmCrate_Apple', 0, 0, 0, 1, 0)], applesBrl: [0.7, 0.7, 0.9, () => m => kp(m, 'Barrel_Apples', 0, 0, 0, 1, 0)],
 };
 // ───────── one memorable object per house [c5]: floor pieces (HPR) and wall pieces (HMEMO.wall) ─────────

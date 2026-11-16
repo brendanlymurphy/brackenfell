@@ -283,10 +283,14 @@ const YARD_CELL = 40;        // m: yard props are merged into one mesh per mater
 const YARD_CAST_MIN = 0.6;        // m: the largest side a yard prop needs to cast. 0 = every prop casts
 function yardCasts(P) { if (!(YARD_CAST_MIN > 0)) return true; const b = Kit.box(P.name, P.M); return !b || Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) >= YARD_CAST_MIN; }
 function kadd(m, P, extra) {
+  if (typeof P_REC !== 'undefined' && P_REC) { P_REC.parts.push({ name: P.name, M: P.M.clone() }); if (P_REC.defer) { P_REC.pend.push([m, P, extra]); return; } }          // [fx2] 72d_plan.js pPut: pieces are measured before they are committed
+  kaddNow(m, P, extra);
+}
+function kaddNow(m, P, extra) {
   const zone = m.m1 | 0;
   let B; if (zone) B = extra && extra.fine ? furnFineBatch(zone) : kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: YARD_CELL }); B = World.kitYard; }
   const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone && yardCasts(P) }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
-  B.add(P.name, P.M, o); if (typeof P_REC !== 'undefined' && P_REC) P_REC.parts.push({ name: P.name, M: P.M.clone() }); if (zone && !o.noBlob) furnBlob(zone, P);
+  B.add(P.name, P.M, o); if (zone && !o.noBlob) furnBlob(zone, P);
 }
 // place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
 function kp(m, name, x, y, z, s, ry, extra) { const P = kplace(m, name, x, y, z, s, ry); if (P) { kadd(m, P, extra); if (P.more) for (const Q of P.more) kadd(m, Q, extra); } }
