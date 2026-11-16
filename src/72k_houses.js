@@ -151,6 +151,7 @@ HFAM.crosspassage = (P, c, F) => {
   dressBedroom(P, chamber, { beds: ['bed', 'bed2'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth > 0 });
   dressBedroom(P, solar, { beds: ['bed3'], chestId: 'chest2', chest: true, blanket: F.blanket, loot: [['gold', 2 + F.wealth * 3]] });
   pLamp(P, pass, 0, Dh); pLamp(P, landing, 0, 3.0);
+  pLight(P, 0, 1.5, D - 0.5, 6, [1.7, 1.62, 1.4], 'daylight', 0);          // [c5] the barred back door lets daylight down the passage
   hFinish(P, c, F);
 };
 // ── shop front: the shop with its counter across it, the keeper's living room behind (hearth, stair up, a cellar stair when the keeper can afford one), two rooms above ──
