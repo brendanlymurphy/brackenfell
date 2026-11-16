@@ -3049,6 +3049,14 @@ const Chars = (() => {
 
   // ── spawning ──
   const cloneBones = o => { const c = o.clone(false); for (const ch of o.children) if (ch.isBone) c.add(cloneBones(ch)); return c; };
+  // [ch1] Every person must map to a body that is loaded and has all four weights: returns the problems (a person drawn as the old code-built body, or as another person's body, is a bug)
+  C.audit = function (defs) {
+    const S = C.set, bad = []; if (!S) return ['no character set loaded'];
+    for (const def of defs) { let look; try { look = S.cfg.look ? S.cfg.look(def) : {}; } catch (e) { bad.push(def.id + ': look failed ' + (e && e.message)); continue; }
+      const B = S.bodies[look.body]; if (!B) { if (!(S.cfg.lazy && def.foe)) bad.push(def.id + ': no body ' + look.body); continue; }
+      for (const lv of ['mid', 'lod', 'far']) if (!B.lodParts || !B.lodParts[lv]) bad.push(def.id + ': body ' + look.body + ' has no ' + lv + ' weight'); }
+    return bad;
+  };
   C.spawn = function (def) {
     const S = C.set; if (!S) throw new Error('Chars.load first');
     const cfg = S.cfg, look = cfg.look ? cfg.look(def) : {}, body = S.bodies[look.body] ? look.body : Object.keys(S.bodies)[0], B = S.bodies[body];
@@ -12469,9 +12477,10 @@ function buildNPCs() {
     const mesh = buildCharacter(def), item = World.skinPack.add(mesh);
     const npc = { def, id: def.id, name: def.name, scale: def.scale || 1, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, wander: 0, dwell: 0, talking: false, look: [0, 0], ang: new Float32Array(33) };
     npc.obj = addSkinned(item, { r: 1.4, zone: 0, npc: true });
-    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; if (typeof npcHandProp === 'function') npcHandProp(npc); /* lute, hammer, spear, mug ... (77d_handprops.js) */ } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; } }
+    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; if (typeof npcHandProp === 'function') npcHandProp(npc); /* lute, hammer, spear, mug ... (77d_handprops.js) */ } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; npc.obj.hasChar = true; /* [ch1] the old code-built body is never shown beside the realistic set */ } }
     NPCS.push(npc); NPC[def.id] = npc;
   }
+  if (G.chars && typeof Chars !== 'undefined' && Chars.audit) { const bad = Chars.audit(NPC_DEFS); if (bad.length) console.warn('[ch1] villagers without a full body: ' + bad.join('; ')); }      // [ch1] nobody is ever the fallback body
   // chickens
   World.chickens = [];
   const cm = [buildChicken([0.92, 0.9, 0.85]), buildChicken([0.62, 0.36, 0.2]), buildChicken([0.25, 0.22, 0.2])].map(m => World.skinPack.add(m));
@@ -12605,6 +12614,7 @@ function ambSpots() {
 function buildAmbient() {
   if (!G.chars || !Chars.ready || (TEST && TEST.amb === 0)) return;
   AMB.list.length = 0;
+  { const bad = Chars.audit ? Chars.audit(AMB_DEFS) : []; if (bad.length) console.warn('[ch1] passers-by without a full body: ' + bad.join('; ')); }      // [ch1]
   AMB_DEFS.forEach((def, i) => {
     let ch = null; try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('ambient ' + def.id + ': ' + (e && e.message || e)); return; }
     AMB.list.push({ def, i, ch, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, dwell: 0, state: 'away', next: 0, ang: null, look: [0, 0], seat: null, stops: null, talking: false, speed: 1.1 + Math.random() * 0.25 });

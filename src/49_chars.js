@@ -534,6 +534,14 @@ const Chars = (() => {
 
   // ── spawning ──
   const cloneBones = o => { const c = o.clone(false); for (const ch of o.children) if (ch.isBone) c.add(cloneBones(ch)); return c; };
+  // [ch1] Every person must map to a body that is loaded and has all four weights: returns the problems (a person drawn as the old code-built body, or as another person's body, is a bug)
+  C.audit = function (defs) {
+    const S = C.set, bad = []; if (!S) return ['no character set loaded'];
+    for (const def of defs) { let look; try { look = S.cfg.look ? S.cfg.look(def) : {}; } catch (e) { bad.push(def.id + ': look failed ' + (e && e.message)); continue; }
+      const B = S.bodies[look.body]; if (!B) { if (!(S.cfg.lazy && def.foe)) bad.push(def.id + ': no body ' + look.body); continue; }
+      for (const lv of ['mid', 'lod', 'far']) if (!B.lodParts || !B.lodParts[lv]) bad.push(def.id + ': body ' + look.body + ' has no ' + lv + ' weight'); }
+    return bad;
+  };
   C.spawn = function (def) {
     const S = C.set; if (!S) throw new Error('Chars.load first');
     const cfg = S.cfg, look = cfg.look ? cfg.look(def) : {}, body = S.bodies[look.body] ? look.body : Object.keys(S.bodies)[0], B = S.bodies[body];
