@@ -8838,13 +8838,15 @@ Bake.buildGround = function () {
   const GR = Bake.GR, S = GR.S, pos = [], al = [], sq = new Map(), t0 = performance.now();
   const gy = (x, z, h) => { let y = Terrain.y(x, z); const g = World.groundAt(x, z, h); if (isFinite(g) && g > y - 0.3 && g < h + 0.2) y = g; return y + 0.05; };
   const vert = (x, z, h, a) => { pos.push(x, gy(x, z, h), z); al.push(a); return al.length - 1; };
-  const tri = (a, b, c) => { const k = Math.floor((pos[a * 3] + pos[b * 3] + pos[c * 3]) / (3 * S)) + ',' + Math.floor((pos[a * 3 + 2] + pos[b * 3 + 2] + pos[c * 3 + 2]) / (3 * S)); let l = sq.get(k); if (!l) sq.set(k, l = { i: [], x: 0, z: 0 }); l.i.push(a, b, c); };
+  const tri = (a, b, c) => { const k = Math.floor((pos[a * 3] + pos[b * 3] + pos[c * 3]) / (3 * S)) + ',' + Math.floor((pos[a * 3 + 2] + pos[b * 3 + 2] + pos[c * 3 + 2]) / (3 * S)); let l = sq.get(k); if (!l) sq.set(k, l = { i: [], m: [], x: 0, z: 0 }); (minor ? l.m : l.i).push(a, b, c); };
+  let minor = false;
   for (const c of World.colliders) {
     if (Cells.inRegion(c.x) || Math.abs(c.x) > 190 || Math.abs(c.z) > 190) continue;
     const ty = Terrain.y(c.x, c.z), ht = c.y1 - c.y0; if (c.y0 > ty + 0.7 || ht < 0.35) continue;
+    minor = ht < 1.2 && !c.shade;      // low things (crates, benches, stones) only get their band near the camera
     const h = c.y0 + 0.9, A = ht > 1.2 ? 0.9 : 0.66, m = clamp(0.55 + 0.18 * ht, 0.7, 1.35);
     if (c.r !== undefined) {
-      if (c.r > 4) continue; const R = c.r + m * 0.9, n = 8, ring0 = [], ring1 = [];
+      if (c.r > 4) continue; const R = c.r + m * 0.9, n = c.r < 0.6 ? 6 : 8, ring0 = [], ring1 = [];
       for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); ring0.push(vert(c.x + ca * c.r * 0.85, c.z + sa * c.r * 0.85, h, A)); ring1.push(vert(c.x + ca * R, c.z + sa * R, h, 0)); }
       for (let i = 0; i < n; i++) { const j = (i + 1) % n; tri(ring0[i], ring1[i], ring1[j]); tri(ring0[i], ring1[j], ring0[j]); }
       continue;
@@ -8854,7 +8856,7 @@ Bake.buildGround = function () {
     const P = (lx, lz) => [cc.x + cc.ax * lx + cc.bx * lz, cc.z + cc.az * lx + cc.bz * lz], e = m * 0.55;
     // four sides, each a strip along its edge (a little longer than the edge so the corners are covered), inner edge dark, outer edge clear
     for (const [ux, uz, ox, oz, half, hl] of [[1, 0, 0, 1, cc.hx, cc.hz], [1, 0, 0, -1, cc.hx, cc.hz], [0, 1, 1, 0, cc.hz, cc.hx], [0, 1, -1, 0, cc.hz, cc.hx]]) {
-      const len = 2 * half + 2 * e, n = Math.max(1, Math.ceil(len / 2.4)); let pi = -1, po = -1;
+      const len = 2 * half + 2 * e, n = Math.max(1, Math.ceil(len / 3.4)); let pi = -1, po = -1;
       for (let k = 0; k <= n; k++) {
         const t = -half - e + len * k / n, endK = (k === 0 || k === n) ? 0.55 : 1, lx = ux ? t : ox * hl, lz = uz ? t : oz * hl;
         const pin = P(lx, lz), pout = P(lx + ox * m, lz + oz * m);
@@ -8866,8 +8868,8 @@ Bake.buildGround = function () {
     if (c.shade) { const q = [P(-cc.hx, -cc.hz), P(cc.hx, -cc.hz), P(cc.hx, cc.hz), P(-cc.hx, cc.hz)].map(p => vert(p[0], p[1], h, A * 0.85)); tri(q[0], q[1], q[2]); tri(q[0], q[2], q[3]); }
   }
   GR.pos = new Float32Array(pos); GR.tint = new Uint8Array(al.length * 4); for (let i = 0; i < al.length; i++) GR.tint[i * 4 + 3] = Math.round(al[i] * 255);
-  GR.sq = [...sq.entries()].map(([k, l]) => { const [a, b] = k.split(',').map(Number); return { x: (a + 0.5) * S, z: (b + 0.5) * S, idx: Uint32Array.from(l.i) }; });
-  GR.tris = GR.sq.reduce((s, q) => s + q.idx.length / 3, 0); GR.built = true; GR.ms = Math.round(performance.now() - t0);
+  GR.sq = [...sq.entries()].map(([k, l]) => { const [a, b] = k.split(',').map(Number); return { x: (a + 0.5) * S, z: (b + 0.5) * S, idx: Uint32Array.from(l.i), idm: Uint32Array.from(l.m) }; });
+  GR.tris = GR.sq.reduce((s, q) => s + (q.idx.length + q.idm.length) / 3, 0); GR.built = true; GR.ms = Math.round(performance.now() - t0);
 };
 Bake.groundUpdate = function (cam) {
   const GR = Bake.GR; if (!GR.built || !SC.scene) return;
@@ -8880,8 +8882,8 @@ Bake.groundUpdate = function (cam) {
   if (World.cell) return;
   if (Math.hypot(cam[0] - GR.last[0], cam[2] - GR.last[1]) < 4 && !GR.stale) return;
   GR.last = [cam[0], cam[2]]; GR.stale = false;
-  const reach = (R.q && R.q.houseFar ? Math.min(R.q.houseFar, 56) : 50) * 0.45 + 6; let n = 0;
-  for (const q of GR.sq) if (Math.hypot(q.x - cam[0], q.z - cam[2]) < reach + GR.S * 0.71 && n + q.idx.length <= GR.cur.length) { GR.cur.set(q.idx, n); n += q.idx.length; }
+  const reach = (R.q && R.q.houseFar ? Math.min(R.q.houseFar, 56) : 50) * 0.3 + 4; let n = 0;
+  for (const q of GR.sq) { const dq = Math.hypot(q.x - cam[0], q.z - cam[2]); if (dq < reach + GR.S * 0.71 && n + q.idx.length <= GR.cur.length) { GR.cur.set(q.idx, n); n += q.idx.length; } if (dq < 16 + GR.S * 0.71 && n + q.idm.length <= GR.cur.length) { GR.cur.set(q.idm, n); n += q.idm.length; } }
   GR.n = n; GR.geo.setDrawRange(0, n); GR.ia.clearUpdateRanges(); if (n) GR.ia.addUpdateRange(0, n); GR.ia.needsUpdate = true; GR.mesh.visible = n > 0;
 };
 
