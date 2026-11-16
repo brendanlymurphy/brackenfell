@@ -353,6 +353,7 @@ function planBuild(c) {
   if (P.c && P.c.int) pBase(P, P.c.int);          // [fx2] nothing drawn after the plan starts from a leaked transform
   PD.topup(P);             // [fx2] rooms that measured placement left thin get a second fill
   pSpotsClear(P);          // [fx2] nobody stands inside a counter, chair or cabinet
+  pCullHidden(P, P.c.int);   // [fx2] faces against the wall, floor and ceiling that nobody sees
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
   const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
   for (const n of new Set([...P.need, 'fire1', 'stand2', 'guestbed', 'barfront', 'front', 'pew1', 'pew2', 'sit', 'bed2', 'home'])) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });

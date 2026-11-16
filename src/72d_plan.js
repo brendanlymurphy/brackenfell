@@ -182,6 +182,34 @@ function pBase(P, m) { if (!P.base) P.base = { st: m.st.length, mm: m.m.slice() 
 function pFixStack(P, m, sn, name) { if (m.st.length !== sn.st || m.m[13] !== sn.mm[13] || m.m[12] !== sn.mm[12] || m.m[14] !== sn.mm[14]) { (P.leaks = P.leaks || []).push(name); m.st.length = sn.st; m.m = sn.mm.slice(); m.dirty = true; } }
 function pUndo(P, m, sn) { const W = World; m.nv = sn.nv; m.ni = sn.ni; if (m.own) m.own.length = sn.own; W.colliders.length = sn.col; W.floors.length = sn.flr; W.lights.length = sn.lit; W.emitters.length = sn.emi; W.interact.length = sn.ixn; KITP.lc = sn.lc; }
 function pCommitKit(m, rc) { const z = m.m1; for (const [mm, pp, ex] of rc.pend) kaddNow(mm, pp, ex); m.m1 = z; rc.pend.length = 0; }
+
+// [fx2] faces nobody can see: the bottom of a thing standing on the floor, the top of a thing against the ceiling and the back of a thing against a wall lie on the plane they touch (within 12 mm)
+// and face into it. They are only coplanar duplicates of the wall, floor and ceiling (z-fighting in motion, wasted triangles). Dropped from the index list after the plan is drawn; the
+// ranges that the plan recorded move with the compaction.
+function pCullHidden(P, m) {
+  if (TEST && TEST.nocull) return 0;
+  const to = pToLocal(P), f = m.f, idx = m.idx, ni = m.ni, drop = new Uint8Array(Math.ceil(ni / 3)), E = 0.012; let n = 0;
+  const recs = []; for (const it of P.items) if (it.rec && it.kind !== 'rug') recs.push([it.rec, P.rooms[it.room]]); for (const w of P.wallItems) if (w.rec) recs.push([w.rec, P.rooms[w.room]]);
+  for (const [rc, room] of recs) {
+    if (!room) continue; const a = room.in, L = P.lv[room.k], y0 = L.y, y1 = L.y + L.H;
+    for (let i = rc.t0; i + 2 < rc.t1; i += 3) {
+      const v = [0, 1, 2].map(j => { const k = idx[i + j]; return to(f[k * 8], f[k * 8 + 1], f[k * 8 + 2]); }), u = [v[1][0] - v[0][0], v[1][1] - v[0][1], v[1][2] - v[0][2]], w = [v[2][0] - v[0][0], v[2][1] - v[0][1], v[2][2] - v[0][2]];
+      let nx = u[1] * w[2] - u[2] * w[1], ny = u[2] * w[0] - u[0] * w[2], nz = u[0] * w[1] - u[1] * w[0]; const nl = Math.hypot(nx, ny, nz); if (nl < 1e-9) continue; nx /= nl; ny /= nl; nz /= nl;
+      const all = (ax, c) => v[0][ax] > c - E && v[0][ax] < c + E && v[1][ax] > c - E && v[1][ax] < c + E && v[2][ax] > c - E && v[2][ax] < c + E;
+      let hid = false;
+      if (ny < -0.95 && all(1, y0 + 0.02)) hid = true; else if (ny < -0.95 && all(1, y0)) hid = true; else if (ny > 0.95 && all(1, y1)) hid = true;
+      else if (nx < -0.95 && all(0, a.x0)) hid = true; else if (nx > 0.95 && all(0, a.x1)) hid = true; else if (nz < -0.95 && all(2, a.z0)) hid = true; else if (nz > 0.95 && all(2, a.z1)) hid = true;
+      if (hid) { drop[i / 3] = 1; n++; }
+    }
+  }
+  if (!n) return 0;
+  const map = new Int32Array(ni + 1); let w = 0;
+  for (let i = 0; i < ni; i += 3) { map[i] = w; if (!drop[i / 3]) { idx[w++] = idx[i]; idx[w++] = idx[i + 1]; idx[w++] = idx[i + 2]; } }
+  map[ni] = w; const mp = i => map[Math.min(i, ni)];
+  for (const [rc] of recs) { rc.t0 = mp(rc.t0); rc.t1 = mp(rc.t1); }
+  if (m.own) for (const o of m.own) { o[0] = mp(o[0]); o[1] = mp(o[1]); }
+  m.ni = w; P.culled = n; return n;
+}
 // does the measured box b (plan frame, level k) sit on the floor of room without going through anything? returns '' or why not
 function pBoxOK(P, room, b, o, flat) {
   const k = room.k, a = room.in, L = P.lv[k], tol = 0.02;
