@@ -56,10 +56,18 @@ Cells.change = function (c) {
   if (!c && prev && typeof R !== 'undefined') R.shadow1Ready = false;            // the wide sun-shadow map was not drawn in there: redraw it at once
   if (typeof Sky !== 'undefined' && Sky.mesh) Sky.mesh.visible = !c;
 };
+// [c3] arriving through a door with a stair right ahead (old hand-made interiors): turn the view away from the stair so the entry opens on floor, not on a wall of steps
+Cells.entryYaw = function (dest) {
+  const y = dest.yaw || 0, c = dest.cell && Cells.by[dest.cell]; if (!c || dest !== c.enter) return y;
+  const sp = World.spots[c.id + '.stairs0'] || World.spots[c.id + '.stairs1']; if (!sp) return y;
+  const p = dest.p, ys = Math.atan2(sp.p[0] - p[0], -(sp.p[2] - p[2])); let d = y - ys; d = Math.atan2(Math.sin(d), Math.cos(d));
+  if (Math.abs(d) > 0.9 || hyp(sp.p[0] - p[0], sp.p[2] - p[2]) > 7) return y;
+  return ys + (d >= 0 ? 1 : -1) * 0.95;
+};
 // move the player (instantly) to dest = { p: [x, y, z] feet, yaw }
 Cells.teleport = function (dest) {
   const P = Player, p = dest.p;
-  P.pos = [p[0], World.groundAt(p[0], p[2], p[1] + 1.2), p[2]]; P.vel = [0, 0, 0]; P.yaw = dest.yaw || 0; P.pitch = 0; P.camY = P.pos[1]; P.onGround = true; P.coyote = 0.12;
+  P.pos = [p[0], World.groundAt(p[0], p[2], p[1] + 1.2), p[2]]; P.vel = [0, 0, 0]; P.yaw = Cells.entryYaw(dest); P.pitch = 0; P.camY = P.pos[1]; P.onGround = true; P.coyote = 0.12;
   Cells.sync(P.pos); World.camZone = World.zoneAt(P.pos[0], P.pos[1] + 1.0, P.pos[2]);
   R.cam.pos[0] = P.pos[0]; R.cam.pos[1] = P.camY + P.eye; R.cam.pos[2] = P.pos[2]; R.cam.yaw = P.yaw; R.cam.pitch = 0;
   if (typeof Input !== 'undefined') { Input.keys = {}; Input.lookX = Input.lookY = 0; }

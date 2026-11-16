@@ -321,7 +321,7 @@ function pLightCut(P) {
     days.sort((a, b) => b.l.r - a.l.r || dc(a) - dc(b));
     const N = nights[0] && nights[0].l, D = days[0] && days[0].l;
     if (hearth) keep.add(hearth.l);
-    if (N && D) { const d = Object.assign({}, N, { kind: 'dual', N, D, c: N.c.slice(), r: Math.max(N.r, D.r) }); const f = LIGHT_KINDS.dual; d.power = e => f(d, e); made.push(d); keep.add(d); }
+    if (N && D) { const big = !hearth && days.length >= 3 ? 1.5 : 1, d = Object.assign({}, N, { kind: 'dual', N: Object.assign({}, N, { c: N.c.map(v => v * big) }), D: Object.assign({}, D, { c: D.c.map(v => v * big) }), c: N.c.slice(), r: Math.max(N.r, D.r) * big }); /* many windows, no hearth (a shop): one stronger light */ const f = LIGHT_KINDS.dual; d.power = e => f(d, e); made.push(d); keep.add(d); }
     else if (N) { keep.add(N); if (!hearth && nights.length > 1) { const far = nights.slice(1).sort((a, b) => Math.hypot(b.q[0] - nights[0].q[0], b.q[2] - nights[0].q[2]) - Math.hypot(a.q[0] - nights[0].q[0], a.q[2] - nights[0].q[2]))[0]; if (far && Math.hypot(far.q[0] - nights[0].q[0], far.q[2] - nights[0].q[2]) > 4) keep.add(far.l); } }       // a cellar or crypt has no window: its two torches stand apart
     else if (D) keep.add(D);
     if (!hearth && !D && L.length > 3) for (const x of keep) if (L.some(y => y.l === x)) { x.r = Math.max(x.r, 8) * 1.55; x.c = x.c.map(v => v * 1.9); }          // a cellar or crypt that had a torch on every wall: the two that remain are stronger
