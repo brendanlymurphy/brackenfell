@@ -3050,7 +3050,7 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
   // [c5] thirty more enterable houses, spread over the lanes (farthest point first): only the flag and the household name are set here; 72c_infill.js gives each a door and a cell, 72k_houses.js a plan by the name
   if (!(TEST && TEST.moreEnter === 0)) {
     const NAMES = ['Wheelwright’s House', 'Carpenter’s House', 'Mason’s House', 'Saddler’s House', 'Ropemaker’s House', 'Basketmaker’s House', 'Shepherd’s House', 'Woodcutter’s House', 'Glover’s House', 'Brewer’s House', 'Scribe’s House', 'Merchant’s House', 'Cobbler’s House', 'Chandler’s House', 'Tailor’s House', 'Butcher’s House', 'Baker’s House', 'Grocer’s House', 'Cutler’s House', 'Tinker’s House', 'Ferrin’s House', 'Marsh House', 'Thorne House', 'Wren Cottage', 'Garrick’s House', 'Pell House', 'Hobb’s Cottage', 'Tamsin’s House', 'Bram’s House', 'Alder House'];
-    const cand = INF.houses.filter(h => !h.enter && h.w >= 4.6 && h.d >= 4.4 && SITE[h.id] && clearDist(SITE[h.id], 1.6, 3.0)[0] >= 3.0), chosen = INF.houses.filter(h => h.enter);
+    const cand = INF.houses.filter(h => !h.enter && hyp(h.x - 29.8, h.z + 60.6) > 7 && h.w >= 4.6 && h.d >= 4.4 && SITE[h.id] && clearDist(SITE[h.id], 1.6, 3.0)[0] >= 3.0), chosen = INF.houses.filter(h => h.enter);
     const more = []; while (more.length < NAMES.length && cand.length > more.length) {
       let best = null, bd = -1; for (const h of cand) { if (more.includes(h)) continue; const d = Math.min(...chosen.concat(more).map(c => hyp(c.x - h.x, c.z - h.z)), 99); if (d > bd) { bd = d; best = h; } }
       more.push(best);
