@@ -10119,11 +10119,12 @@ function dMilestone(R, k) {
 }
 function dBoat(R) {
   const key = 'dr_boat'; if (Kit.pieces[key]) return key;
-  const g = GP(), c = [0.33, 0.27, 0.21], L = 1.7, W = 0.62, H = 0.42;
+  const g = GP(), c = [0.5, 0.43, 0.35], L = 1.7, W = 0.62, H = 0.42;          // [fx1] weathered grey-brown with strakes and a gunwale (it was one black plank-less hull)
   const P = (u, v, y) => [v * W * (1 - 0.65 * Math.pow(Math.abs(u), 2.2)), y, u * L];
   const N = 8; for (let i = 0; i < N; i++) { const u0 = i / N * 2 - 1, u1 = (i + 1) / N * 2 - 1;
     for (const s of [-1, 1]) { const a = P(u0, s, H * (0.45 + 0.55 * u0 * u0)), b = P(u1, s, H * (0.45 + 0.55 * u1 * u1)), c0 = P(u0, s * 0.45, 0.04), c1 = P(u1, s * 0.45, 0.04); if (s > 0) g.quad(DRW, c0, c1, b, a, c, DRU.wood, true); else g.quad(DRW, c1, c0, a, b, c, DRU.wood, true); }
     g.quad(DRW, P(u0, 0.45, 0.04), P(u1, 0.45, 0.04), P(u1, -0.45, 0.04), P(u0, -0.45, 0.04), dscale(c, 0.8), DRU.wood, true); }
+  for (const s of [-1, 1]) for (const f of [0.34, 0.67, 1.0]) for (let i = 0; i < N; i++) { const u0 = i / N * 2 - 1, u1 = (i + 1) / N * 2 - 1, q = u => P(u, s * (0.45 + 0.55 * f) * 1.012, 0.04 + (H * (0.45 + 0.55 * u * u) - 0.04) * f); g.beam(DRW, q(u0), q(u1), f === 1 ? 0.022 : 0.012, f === 1 ? dscale(c, 0.8) : dscale(c, 0.55)); }
   for (const z of [-0.6, 0.35]) g.box(DRW, -0.5 * W, H * 0.62, z - 0.07, 0.5 * W, H * 0.67, z + 0.07, dscale(c, 1.2), DRU.wood);
   return g.make(key);
 }
@@ -11437,14 +11438,19 @@ function buildBell(K, touch) {
   for (const k of [0, 1, 2, 3]) for (const z of cz) { const x0 = k % 2 ? WX0 : EX1 - 3, x1 = k % 2 ? WX0 + 3 : EX1; beam([x0, L[k] - 0.2, z], [x1, L[k + 1] - 0.2, z], 0.12, 0.14); beam([x0, L[k + 1] - 0.2, z], [x1, L[k] - 0.2, z], 0.1, 0.12); }
   // the cladding (Build 42): a stone foot and weatherboard between the posts, slit windows at each landing, a door on the west: the frame reads as a tower from the square, not as scaffolding
   for (let k = 0; k < 4; k++) {
-    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.3, st = k === 0, mat = st ? MAT.STONE : MAT.PLASTER, c = st ? [0.86, 0.83, 0.78] : [0.95, 0.9 - 0.02 * k, 0.8 - 0.02 * k], ys = [[y0, L[k] + 1.25], [L[k] + 1.75, y1]];
-    for (const [ya, yb] of ys) {
-      if (yb - ya < 0.1) continue;
-      box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.2, EX1 - 0.02, yb, ZN0 - 0.12, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZS1 + 0.12, EX1 - 0.02, yb, ZS1 + 0.2, 0);
-      box(mat, c, 0.5, EX1 - 0.1, ya, ZN0 - 0.12, EX1 - 0.02, yb, ZS1 + 0.12, 0);
-      if (k === 0) { box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZN0 + 0.0, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 + 1.25, WX0 + 0.1, yb, ZS1 + 0.12, 0); }
-      else box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZS1 + 0.12, 0);
+    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.12, st = k === 0, mat = st ? MAT.STONE : MAT.PLANKS, c = st ? [0.86, 0.83, 0.78] : [0.8 - 0.02 * k, 0.75 - 0.02 * k, 0.69 - 0.02 * k];          // [fx1] weatherboard like the rest of the village, whole storeys with slit windows (the pale plaster slabs with open bands read as signboards on a scaffold)
+    const ya = y0, yb = y1;
+    box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.2, EX1 - 0.02, yb, ZN0 - 0.12, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZS1 + 0.12, EX1 - 0.02, yb, ZS1 + 0.2, 0);
+    box(mat, c, 0.5, EX1 - 0.1, ya, ZN0 - 0.12, EX1 - 0.02, yb, ZS1 + 0.12, 0);
+    if (k === 0) { box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZN0 + 0.0, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 + 1.25, WX0 + 0.1, yb, ZS1 + 0.12, 0); }
+    else box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZS1 + 0.12, 0);
+    // slit windows: a dark opening with a timber head and sill, three along the long faces, one on the east
+    const sa = L[k] + 1.3, sb = L[k] + 1.9, dk = [0.05, 0.045, 0.04], xs = [WX0 + (EX1 - WX0) * 0.2, (WX0 + EX1) / 2, WX0 + (EX1 - WX0) * 0.8], zc = (ZN0 + ZS1) / 2;
+    for (const x of xs) for (const [zf, o] of [[ZN0 - 0.2, -1], [ZS1 + 0.2, 1]]) {
+      box(MAT.PLAIN, dk, 0.5, x - 0.16, sa, o < 0 ? zf - 0.03 : zf, x + 0.16, sb, o < 0 ? zf : zf + 0.03, 0);
+      box(MAT.TIMBER, dark, 0.5, x - 0.24, sb, o < 0 ? zf - 0.06 : zf, x + 0.24, sb + 0.07, o < 0 ? zf : zf + 0.06, 0); box(MAT.TIMBER, dark, 0.5, x - 0.24, sa - 0.07, o < 0 ? zf - 0.06 : zf, x + 0.24, sa, o < 0 ? zf : zf + 0.06, 0);
     }
+    box(MAT.PLAIN, dk, 0.5, EX1, sa, zc - 0.16, EX1 + 0.03 - 0.02, sb, zc + 0.16, 0);
   }
   box(MAT.STONE, [0.86, 0.83, 0.78], 0.5, WX0 + 0.02, g + 1.95, ZN0 + 0.0, WX0 + 0.1, g + 2.4, ZN0 + 1.25, 0);
   box(MAT.TIMBER, dark, 0.5, WX0 - 0.1, g + 2.3, ZN0 - 0.28, WX0 + 0.12, g + 2.42, ZS1 + 0.28, 0);     // the lintel course under the first storey
@@ -13187,7 +13193,7 @@ WBUILD.lumber = (p, m, R) => {
     mm.mat(MAT.PLANKS, COL.woodDark, 0.9); mm.box(-1.8, 0, 1.2, 1.8, 2.2, 1.3); mm.box(-1.85, 0, -1.2, -1.75, 1.85, 1.3); mm.box(1.75, 0, -1.2, 1.85, 1.85, 1.3);
     mm.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1.8, 1.8]) mm.cbox(sx, -0.3, -1.25, 0.14, 2.6, 0.14, 4); mm.cbox(-1.8, -0.3, 1.25, 0.14, 2.7, 0.14, 4); mm.cbox(1.8, -0.3, 1.25, 0.14, 2.7, 0.14, 4);
     mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.8); mm.quad2([-2.1, 2.3, 1.45], [-2.1, 1.75, -1.55], [2.1, 1.75, -1.55], [2.1, 2.3, 1.45]);
-    mm.mat(MAT.CLOTH, COL.fur, 0.6); mm.box(-1.2, 0.3, 0.2, 0.2, 0.42, 1.15); mm.mat(MAT.CLOTH, COL.wool, 0.6); mm.box(-1.15, 0.42, 0.7, -0.35, 0.52, 1.1);
+    mm.mat(MAT.CLOTH, COL.fur.map(v => v * 0.45), 0.6); mm.box(-1.2, 0.3, 0.2, 0.2, 0.42, 1.15); mm.mat(MAT.CLOTH, COL.wool.map(v => v * 0.55), 0.6); mm.box(-1.15, 0.42, 0.7, -0.35, 0.52, 1.1);
     mm.mat(MAT.TIMBER, COL.timber); mm.box(-1.25, 0, 0.15, -1.15, 0.3, 0.25); mm.box(0.15, 0, 0.15, 0.25, 0.3, 0.25); mm.box(-1.25, 0, 1.05, -1.15, 0.3, 1.15); mm.box(0.15, 0, 1.05, 0.25, 0.3, 1.15);
     Props.barrel(mm);
     addBoxCollider(mm, -1.9, -1.3, 1.9, 1.35, 0, 2.2);
@@ -13243,7 +13249,7 @@ WBUILD.blind = (p, m, R) => {
   wPut(m, p, -7, -12, 0.4, mm => { mm.mat(MAT.ROCK, [0.95, 0.95, 0.92], 0.5); mm.ball(0, 0.15, 0, 0.55, 0.28, 0.4, 8, 4); mm.mat(MAT.PLAIN, [0.88, 0.85, 0.78]); mm.ball(0, 0.36, 0, 0.3, 0.05, 0.22, 7, 3); addCircleCollider(mm, 0, 0, 0.5, 0, 0.5); });
   // a cold fire ring and a skinning rack
   wPut(m, p, -4.5, 3.5, 0, mm => { mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; mm.ball(Math.cos(a) * 0.5, 0.06, Math.sin(a) * 0.5, 0.13, 0.1, 0.12, 6, 4); } mm.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); mm.disc(0, 0.03, 0, 0.42, 9, 1); });
-  wPut(m, p, 3.2, 4.8, 0.5, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.beam([s * 0.9, 0, -0.3], [s * 0.7, 1.7, 0], 0.07, 0.07), mm.beam([s * 0.9, 0, 0.3], [s * 0.7, 1.7, 0], 0.07, 0.07); mm.beam([-0.75, 1.65, 0], [0.75, 1.65, 0], 0.06, 0.06); mm.mat(MAT.CLOTH, COL.fur, 0.6); mm.quad2([-0.5, 1.62, 0], [-0.55, 0.75, 0.02], [-0.1, 0.7, 0.02], [-0.1, 1.62, 0]); mm.quad2([0.1, 1.62, 0], [0.05, 0.8, 0.02], [0.55, 0.78, 0.02], [0.5, 1.62, 0]); addBoxCollider(mm, -0.9, -0.3, 0.9, 0.3, 0, 1.7); });
+  wPut(m, p, 3.2, 4.8, 0.5, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.beam([s * 0.9, 0, -0.3], [s * 0.7, 1.7, 0], 0.07, 0.07), mm.beam([s * 0.9, 0, 0.3], [s * 0.7, 1.7, 0], 0.07, 0.07); mm.beam([-0.75, 1.65, 0], [0.75, 1.65, 0], 0.06, 0.06); mm.mat(MAT.CLOTH, COL.fur.map(v => v * 0.45), 0.6); mm.quad2([-0.5, 1.62, 0], [-0.55, 0.75, 0.02], [-0.1, 0.7, 0.02], [-0.1, 1.62, 0]); mm.quad2([0.1, 1.62, 0], [0.05, 0.8, 0.02], [0.55, 0.78, 0.02], [0.5, 1.62, 0]); addBoxCollider(mm, -0.9, -0.3, 0.9, 0.3, 0, 1.7); });
   for (const [x, z, r] of [[2, 6.5, 0], [-2.4, 7.6, 1.4], [6, 8.5, 2.2], [-6.5, 8.0, 0.6]]) wKit(p, 'Mushroom_Common', x, z, { s: 1.4 + R() * 0.8, ry: R() * 6 });
   for (let i = 0; i < 18; i++) { const a = R() * TAU, r = 4 + R() * 12; wKit(p, 'Fern_1', Math.cos(a) * r, Math.sin(a) * r, { s: 0.9 + R() * 0.7, ry: R() * TAU, inst: true, maxDist: 70 }); }
   for (const [x, z] of [[1.6, 7.0], [-3, 9.2]]) { const c = wGround(p, x, z); wPick('bl.m' + (x > 0 ? 1 : 2), c, 'Pick chanterelles', 'chanterelle', 'mushrooms'); }
@@ -14556,7 +14562,7 @@ for (const [id, line] of [['greta', 'The house on the south lane? Nobody’s liv
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 64';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 65';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
