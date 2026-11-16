@@ -6800,11 +6800,13 @@ function pWallSlot(P, room, side, w, d, o) {
   return null;
 }
 // an item with its back to a wall (back = -1: its local -z is the back, as a bed's head; +1: its +z, as a shelf's)
+const HON_C = {};
 function pAgainst(P, room, side, name, w, d, h, back, draw, o) {
   o = Object.assign({ h, _hon: {} }, o || {});
+  const hk = name.replace(/^[^.]*\./, '').replace(/\d+/g, '') + side + w.toFixed(2) + d.toFixed(2); if (!o._hon.rel && HON_C[hk]) o._hon.rel = Object.assign({}, HON_C[hk]);   // [fx2] what this kind really occupies, learnt once
   for (let n = 0; n < 14; n++) {          // [fx2] the first free slot that the measured thing really fits
     const s = pWallSlot(P, room, side, w, d, Object.assign({}, o, { nth: n })); if (!s) return null;
-    const it = pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side })); if (it) return it;
+    const it = pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side })); if (o._hon.rel) HON_C[hk] = Object.assign({}, o._hon.rel); if (it) return it;
   }
   return null;
 }
@@ -6834,6 +6836,7 @@ function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
     const iu = hor ? 0 : 2, u0 = b.min[iu], u1 = b.max[iu], by0 = b.min[1] - L.y, by1 = b.max[1] - L.y; let why = '';
     if (u0 < (hor ? a.x0 : a.z0) - 0.02 || u1 > (hor ? a.x1 : a.z1) + 0.02) why = 'room';
     if (!why) for (const op of wl.open) { const hw = op.type === 'door' ? op.hw + 0.05 : 0.85; if (u0 < op.pos + hw && u1 > op.pos - hw && (op.type === 'door' ? by0 < 2.15 : by1 > 0.85 && by0 < 2.4)) { why = op.type; break; } }
+    if (!why) for (const q of P.wallItems) if (q.wall === wl && q.side !== side && q.bx && [0, 1, 2].every(ax => Math.min(b.max[ax], q.bx.max[ax]) - Math.max(b.min[ax], q.bx.min[ax]) > 0.01)) { why = 'back to back ' + q.id; break; }   // [fx2] two things hung on both faces of one wall do not meet inside it
     if (!why && by1 > L.H + 0.01) why = 'ceiling';
     if (!why && by0 < 0.3 && y0 > 0.5 && !o.toFloor) why = 'floor';
     if (!why) for (const q of P.wallItems) if (q.k === rec.k && q.wall === wl && q.side === side) { const qu0 = q.bu0 === undefined ? q.u0 : q.bu0, qu1 = q.bu1 === undefined ? q.u1 : q.bu1, qy0 = q.by0 === undefined ? q.y0 : q.by0, qy1 = q.by1 === undefined ? q.y1 : q.by1; if (u0 < qu1 - 0.03 && u1 > qu0 + 0.03 && by0 < qy1 - 0.03 && by1 > qy0 + 0.03) { why = 'hung ' + q.id; break; } }
@@ -7694,9 +7697,11 @@ const PD_DEF = {      // [width, depth] of what a pool entry occupies along / ou
 };
 // something against a wall near u (not further than tol): returns its width or 0
 PD.floorAt = function (P, room, sd, id, w, d, h, draw, u, tol, o) {
-  const s = pWallSlot(P, room, sd, w, d, Object.assign({ at: u + w / 2, h }, o || {})); if (!s) return 0;
+  const hk = id.replace(/^[^.]*\./, '').replace(/\d+/g, '') + sd + w.toFixed(2) + d.toFixed(2), hon = {}; if (HON_C[hk]) hon.rel = Object.assign({}, HON_C[hk]);   // [fx2] flush for what this kind really occupies
+  const s = pWallSlot(P, room, sd, w, d, Object.assign({ at: u + w / 2, h, _hon: hon }, o || {})); if (!s) return 0;
   const along = (sd === 'n' || sd === 's') ? s.cx : s.cz; if (Math.abs(along - u - w / 2) > tol) return 0;
-  return pPut(P, room, id, s.cx, s.cz, rotBack(sd, +1), w, d, h, draw, Object.assign({ back: sd }, o || {})) ? w : 0;
+  const it = pPut(P, room, id, s.cx, s.cz, rotBack(sd, +1), w, d, h, draw, Object.assign({ back: sd, _hon: hon }, o || {})); if (hon.rel) HON_C[hk] = Object.assign({}, hon.rel);
+  return it ? w : 0;
 };
 PD.try = function (P, room, sd, u, kind, R, fill) {
   const c = P.c, n = P.items.length, id = P.id + '.d' + n;
