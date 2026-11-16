@@ -42,6 +42,9 @@ so it matters for the women) or ask the MakeHuman team.
 | `wdg_mycenaean_tunic` | `clothes/` | WDG | CC0 (header says AGPL3, see above) | `dress01` |
 | Hoods `culturalibre_hero-heroine_hood_1`, `_hood_2` (the outlaws) | `clothes/` | culturalibre | CC0 | `masks01`, https://files.makehumancommunity.org/asset_packs/masks01/masks01_cc0.zip, sha256 `868e0e92…` |
 | 48 animation clips | Quaternius Universal Animation Library clips via Mesh2Motion | Quaternius, Mesh2Motion contributors | CC0 | see `chars/PROVENANCE.md` |
+| Face morph targets (15 Oculus visemes, jawOpen, brows, smile) | `visemes02` and `faceunits01` MakeHuman functional packs | Mika Suominen / MakeHuman Community | CC0 | https://files.makehumancommunity.org/functional/visemes02.zip (sha256 `a69ab6fb95ddd5f56f70acc7e859f5f9c6ae613c527d577ea1571eff2183d29e`), https://files.makehumancommunity.org/functional/faceunits01.zip (sha256 `d113107bd7eb59f3af4df6fc0ec29bfcc593f496d0b336aec14f086a80ce7146`); baked by `tools/humans/visemes_table.py` into `visemes.png`/`visemes.json` |
+| Mouth-shape tracks (`c` in `audio/voice/manifest.json`) | Rhubarb Lip Sync (wasm build `rhubarb-lip-sync-wasm`) run by `tools/voice/visemes.mjs` | Daniel Wolf | MIT | the tool is not shipped; its output is data |
+| Wardrobe (belts, pouches, aprons, straps, cloaks, hats, cuffs, tabard, kettle hat) | modelled procedurally by `tools/humans/garb.py` | this project | n/a | no outside asset |
 
 All textures were re-graded (tint, saturation) and resized by `gen.py` and `post.mjs`; those are changes to CC0 material and need no credit.
 

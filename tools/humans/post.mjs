@@ -21,8 +21,11 @@ await doc.transform(weld());
 const tri = p => (p.getIndices() ? p.getIndices().getCount() : p.getAttribute('POSITION').getCount()) / 3;
 const prims = []; for (const mesh of root.listMeshes()) for (const p of mesh.listPrimitives()) prims.push({ p, k: kind(p.getMaterial().getName()), n: tri(p), name: mesh.getName() });
 // small parts keep their triangles; the rest share what is left of the budget, the head-and-hands mesh getting the biggest share
-const isMouth = x => /teeth|tongue/i.test(x.name), MOUTH_TRIS = x => /tongue/i.test(x.name) ? 110 : 340;      // teeth and tongue (morph.py): kept small, they only show when the mouth opens
+const isMouth = x => /teeth|tongue/i.test(x.name), MOUTH_TRIS = x => /tongue/i.test(x.name) ? 64 : 220;      // teeth and tongue (morph.py): kept small, they only show when the mouth opens
 for (const x of prims) if (isMouth(x)) { simplifyPrimitive(x.p, { simplifier: MeshoptSimplifier, ratio: Math.min(1, MOUTH_TRIS(x) / x.n), error: 0.2, lockBorder: false }); x.after = tri(x.p); }
+// wardrobe pieces are thin shells: a modest cap each keeps a fully dressed guard under the old figures (a hat or tabard ring has more rings than it needs)
+const WEAR_CAP = n => /^w_hat_/.test(n) ? 300 : /^w_tabard/.test(n) ? 110 : /^w_cloak/.test(n) ? 360 : /^w_apron/.test(n) ? 150 : /^w_belt/.test(n) ? 150 : 1e9;
+for (const x of prims) if (/^w_/.test(x.name) && x.n > WEAR_CAP(x.name)) { simplifyPrimitive(x.p, { simplifier: MeshoptSimplifier, ratio: WEAR_CAP(x.name) / x.n, error: 0.05, lockBorder: false }); x.after = tri(x.p); }
 const fixed = prims.filter(x => x.k === 'brow' || x.k === 'lash' || x.k === 'eye').reduce((s, x) => s + x.n, 0) + prims.filter(isMouth).reduce((s, x) => s + x.after, 0);
 // the head-and-hands mesh gets a fixed share so heavy boots or robes cannot starve the face; clothes split theirs by sqrt(size)
 const hasHair = prims.some(x => x.k === 'hair'), share = hasHair ? { body: 0.45, hair: 0.15, cloth: 0.40 } : { body: 0.52, hair: 0, cloth: 0.48 };

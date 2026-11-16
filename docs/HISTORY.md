@@ -24,7 +24,8 @@ an intermediate, and run `assets_pack.mjs` once at the end of a change, not afte
 **The gate.** `--full` on the infrastructure session's machine (4 cores, software rendering): 35 min 31 s for 32 steps. The 58
 cells are 22 minutes of it (8 chunks of about 170 s), `kitcull` 5 minutes, the 18 gameplay and audio steps together 5 minutes,
 budgets 2, production boot 1 to 2. `--quick`: 4 min 31 s. On GitHub the gate runs as three jobs side by side
-(`--shard k/3`); their times are in the run's summary.
+(`--shard k/3`): first green run 24 min 50 s from push to result (jobs of 18, 13 and 24 minutes; 55 machine-minutes, so GitHub's
+machines are about 1.5 times slower than this one at software rendering). The repository is public, so the minutes cost nothing.
 
 **Other waste found.**
 - Double gating: a worker ran the list, then the coordinator ran it again before merging, on two cores. Now the branch arrives

@@ -104,9 +104,10 @@ function buildNPCs() {
     const mesh = buildCharacter(def), item = World.skinPack.add(mesh);
     const npc = { def, id: def.id, name: def.name, scale: def.scale || 1, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, wander: 0, dwell: 0, talking: false, look: [0, 0], ang: new Float32Array(33) };
     npc.obj = addSkinned(item, { r: 1.4, zone: 0, npc: true });
-    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; if (typeof npcHandProp === 'function') npcHandProp(npc); /* lute, hammer, spear, mug ... (77d_handprops.js) */ } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; } }
+    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; if (typeof npcHandProp === 'function') npcHandProp(npc); /* lute, hammer, spear, mug ... (77d_handprops.js) */ } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; npc.obj.hasChar = true; /* [ch1] the old code-built body is never shown beside the realistic set */ } }
     NPCS.push(npc); NPC[def.id] = npc;
   }
+  if (G.chars && typeof Chars !== 'undefined' && Chars.audit) { const bad = Chars.audit(NPC_DEFS); if (bad.length) console.warn('[ch1] villagers without a full body: ' + bad.join('; ')); }      // [ch1] nobody is ever the fallback body
   // chickens
   World.chickens = [];
   const cm = [buildChicken([0.92, 0.9, 0.85]), buildChicken([0.62, 0.36, 0.2]), buildChicken([0.25, 0.22, 0.2])].map(m => World.skinPack.add(m));

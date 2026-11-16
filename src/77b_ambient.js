@@ -25,6 +25,7 @@ function ambSpots() {
 function buildAmbient() {
   if (!G.chars || !Chars.ready || (TEST && TEST.amb === 0)) return;
   AMB.list.length = 0;
+  { const bad = Chars.audit ? Chars.audit(AMB_DEFS) : []; if (bad.length) console.warn('[ch1] passers-by without a full body: ' + bad.join('; ')); }      // [ch1]
   AMB_DEFS.forEach((def, i) => {
     let ch = null; try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('ambient ' + def.id + ': ' + (e && e.message || e)); return; }
     AMB.list.push({ def, i, ch, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, dwell: 0, state: 'away', next: 0, ang: null, look: [0, 0], seat: null, stops: null, talking: false, speed: 1.1 + Math.random() * 0.25 });

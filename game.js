@@ -2620,7 +2620,7 @@ const Chars = (() => {
     const PART = [[/trim/, 'trim'], [/tunic|bodice|dress/, 'tunic'], [/robe/, 'robe'], [/hood|helmet/, 'head'], [/pants/, 'pants'], [/boots/, 'boots'], [/skirt/, 'skirt']];
     const names = Object.values(BODY).concat(FOES.map(f => f.body));
     const bodies = {}; for (const n of new Set(names)) bodies[n] = n + '.glb';
-    const ANIMS = { idle: ['idle-a', 'idle-foldarms', 'idle-a'], walk: ['walk', 'walk-relaxed'], run: 'jog', sit: 'sitting-idle', 'sit+talk': 'sitting-talking', talk: 'idle-talking',
+    const ANIMS = { idle: ['idle-a', 'idle-foldarms', 'idle-subtle', 'idle-a', 'idle-listening', 'idle-subtle', 'idle-foldarms'], walk: ['walk', 'walk-relaxed'], run: 'jog', sit: 'sitting-idle', 'sit+talk': 'sitting-talking', talk: 'idle-talking',
       hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-harvest', sweep: 'shovel-dig', lie: 'sleeping', cheer: 'clapping',
       pickup: 'pick-up', jump: 'jump-air', block: 'sword-block', hit: 'hit-chest', die: 'death-a' };
     C.define('real', {
@@ -2647,7 +2647,12 @@ const Chars = (() => {
       wears(look, part) { const w = look.wear; if (!w) return false; const m = /^w_hat_(.*)$/.exec(part); if (m) return w.hat === m[1];
         return part === 'w_belt' ? !!w.belt : part === 'w_pouch' ? !!w.pouch : part === 'w_apron' ? !!w.apron : part === 'w_straps' ? !!w.straps : /^w_tabard/.test(part) ? !!w.tabard : part === 'w_cloak' ? !!w.cloak : /^w_cuff/.test(part) ? !!w.cuffs : false; },
       look(def) {
-        if (def.foe) return { body: def.foe.body, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) };
+        if (def.foe) { // [ch1] scavenged kit: a belt, a pouch, one cuff or two, a cloak or straps and a bit of headwear, each picked by the foe's id and in dull, mismatched colours
+          let fh = 0; for (const ch of String(def.id || def.foe.body)) fh = (fh * 31 + ch.charCodeAt(0)) >>> 0; const fr = k => ((fh >>> (k * 4)) % 89) / 89, hoodie = /hood/.test(def.foe.body), DULL = [[0.17, 0.14, 0.10], [0.22, 0.17, 0.11], [0.15, 0.16, 0.13], [0.26, 0.20, 0.14], [0.20, 0.12, 0.09], [0.14, 0.13, 0.14]], pk = k => DULL[Math.floor(fr(k) * DULL.length)];
+          const wear = { belt: true, pouch: fr(1) < 0.65, cuffs: fr(2) < 0.5, cloak: !hoodie && fr(3) < 0.4, straps: !hoodie && fr(4) < 0.45, hat: hoodie ? null : fr(5) < 0.45 ? 'cap' : fr(5) < 0.6 ? 'coif' : null };
+          const WC = { leather: [0.13, 0.085, 0.05].map(v => v * (0.8 + 0.5 * fr(6))), hat: pk(7), metal: [0.22, 0.21, 0.19], apron: pk(8), cloak: pk(9), tabard: pk(10), linen: [0.32, 0.30, 0.25], strap: [0.17, 0.12, 0.08], straw: [0.40, 0.32, 0.16], wool: pk(11), teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
+          wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
+          return { body: def.foe.body, wear, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) }; }
         const body = BODY[def.id] || def.body || (def.female ? 'f_farmer' : 'm_farmer');          // def.body / def.tint: the inn's regulars (77c_patrons.js) wear other people's bodies in other colours
         // Clothes by person: the villager's own colours (NPC_DEFS top / legs, chosen for their trade) dye the tunic, robe or dress and the
         // trousers; headwear and belt come from the same table. People without an entry (inn regulars, passers-by) get muted wool and
@@ -2660,13 +2665,13 @@ const Chars = (() => {
         const hatT = def.hat === 'hood' ? null : def.hat || (def.foe || def.sched ? null : r(3) < 0.3 ? 'cap' : null), HATC = { straw: [0.42, 0.33, 0.15], helmet: [0.17, 0.175, 0.19], kerchief: [0.62, 0.58, 0.48], cap: pal[Math.floor(r(4) * pal.length)], feather: [0.16, 0.22, 0.14] };
         const acc = { hat: hatT, belt: !isRobe || !!def.belt, pouch: !!def.belt || rich > 0.6, col: [def.hatCol && def.hat !== 'helmet' ? sq(def.hatCol).map(v => v * 0.85 * (Math.max(...sq(def.hatCol)) > 0.5 ? 0.6 : 1)) : HATC[hatT] || HATC.cap, def.belt ? sq(def.belt).map(v => v * 0.8) : [0.14, 0.09, 0.055], def.hat === 'helmet' ? HATC.helmet : [0.30, 0.29, 0.27], [0.19, 0.12, 0.07]] };
         // The wardrobe the body carries (w_* parts, tools/humans/garb.py): what this person wears of it, and in what colours (slots: leather, hat, metal, apron, cloak, tabard, linen, strap, straw, wool)
-        const fem = !!(def.female || /^f_/.test(body)), guard = def.prop === 'spear' || def.hat === 'helmet', wear = { belt: acc.belt, pouch: acc.pouch, cuffs: !isRobe };
+        const fem = !!(def.female || /^f_/.test(body)), guard = def.prop === 'spear' || def.hat === 'helmet', wear = { belt: acc.belt, pouch: acc.pouch, cuffs: !isRobe && !/child/.test(body) };
         { const hd = def.hat === 'hood' ? (fem ? 'kerchief' : null) : def.hat || (def.foe || def.sched && !def.house ? null : r(3) < 0.7 ? (fem ? ['kerchief', 'coif', 'straw'][Math.floor(r(7) * 3)] : ['cap', 'straw', 'cap', 'coif'][Math.floor(r(7) * 4)]) : null);
-          wear.hat = hd === 'helmet' ? 'kettle' : hd; }
+          wear.hat = hd === 'helmet' ? (body === 'm_guard' ? 'kettle' : 'cap') : hd; }
         if (def.apron) { if (guard) wear.tabard = true; else { wear.apron = true; wear.straps = true; } } else if (fem && !isRobe && r(5) < 0.28) { wear.apron = true; wear.straps = true; }
         if (def.cloakBack || (!def.sched && r(6) < 0.12) || (def.house && r(6) < 0.1)) wear.cloak = true;
         const WC = { leather: acc.col[1], hat: acc.col[0], metal: acc.col[2], apron: def.apron ? sq(def.apron) : pal[Math.floor(r(8) * pal.length)], cloak: def.cloak ? sq(def.cloak) : pal[Math.floor(r(9) * pal.length)], tabard: def.apron ? sq(def.apron) : [0.3, 0.1, 0.1],
-          linen: [0.62, 0.58, 0.48].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: [0.3, 0.26, 0.2], teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
+          linen: [0.47, 0.44, 0.36].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: [0.3, 0.26, 0.2], teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
         wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
         return { body, fit: FIT[body] || 1, hairGrey: { f_elder: 0.96, m_elder: 0.92, m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 }[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
       },
@@ -2877,7 +2882,7 @@ const Chars = (() => {
     const { attribute, abs, Discard, If, frontFacing, normalView, clamp } = TSL;
     const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
     const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
-    let mouthW = float(0), albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), skinW = float(0), hairW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false, skinI = -1, clothW = float(0), trimW = float(0), anyTrim = false;
+    let weaveN = null, mouthW = float(0), albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), skinW = float(0), hairW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false, skinI = -1, clothW = float(0), trimW = float(0), anyTrim = false;
     const F = S.cfg.face || null, UE = F ? U.add(H.uGaze) : U;          // the eye texture is read a little off-centre: that is how the eyes move
     names.forEach((mn, i) => {
       const src = srcOf && srcOf[mn], md = S.cfg.materials[mn] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
@@ -2904,12 +2909,15 @@ const Chars = (() => {
     // every garment gets its folds and creases darkened, mud up the hem, a few stains, and darker worn bands at cuffs, hems and necklines.
     { const cv = attribute('color', 'vec4'), WCOL = H.wearCol;
       if (anyTrim && WCOL) {
-        const slot = cv.w.mul(12).add(0.5); let col = vec3(...WCOL[WCOL.length - 1]);
-        for (let k = WCOL.length - 2; k >= 0; k--) col = TSL.mix(col, vec3(...WCOL[k]), TSL.step(slot, k + 0.5));
-        const grain = texture(G.noiseTex, positionWorld.xy.mul(14).add(positionWorld.z.mul(11))).r.mul(0.35).add(0.82);
+        const slot = TSL.floor(cv.w.mul(12).add(0.5)); let col = vec3(...WCOL[WCOL.length - 1]);
+        for (let k = WCOL.length - 2; k >= 0; k--) col = TSL.mix(col, vec3(...WCOL[k]), TSL.step(slot, float(k)));
+        const grain = texture(G.noiseTex, TSL.positionLocal.xy.mul(14).add(TSL.positionLocal.z.mul(11))).r.mul(0.35).add(0.82);      // [ch1] in the body's own space: the grain no longer crawls as people walk
         albedo = albedo.mul(trimW.oneMinus()).add(col.mul(grain).mul(trimW));
+        // woven cloth: a fine thread pattern (two crossed sine ridges in the body's own space) bends the shading normal a little, so the wool and linen have a weave and not a plastic sheen
+        { const pl = TSL.positionLocal, th = TSL.sin(pl.x.add(pl.z.mul(0.7)).mul(520)).mul(0.5).add(TSL.sin(pl.y.mul(470).add(pl.z.mul(180))).mul(0.5)), wv = TSL.vec3(TSL.cos(pl.x.add(pl.z.mul(0.7)).mul(520)).mul(0.5), TSL.cos(pl.y.mul(470).add(pl.z.mul(180))).mul(0.5), 0).mul(0.10);
+          weaveN = wv.mul(trimW).mul(TSL.smoothstep(2.2, 0.8, SH.U.camPos.sub(positionWorld).length())); void th; }
       }
-      const isMouth = TSL.step(9.5, cv.w.mul(12)); mouthW = mouthW.add(isMouth.mul(trimW));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening
+      const isMouth = TSL.step(9.5, cv.w.mul(12));      // (slot values arrive as bytes: 2 is 2.02) mouthW = mouthW.add(isMouth.mul(trimW));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening
       albedo = albedo.mul(TSL.mix(TSL.mix(float(1), TSL.mix(cv.x, float(1), 0.15), 0.9), float(1), isMouth));
       const dirt = TSL.mix(vec3(0.46, 0.38, 0.29), vec3(1, 1, 1), TSL.smoothstep(0.05, 0.85, cv.y));
       albedo = albedo.mul(TSL.mix(vec3(1, 1, 1), dirt, clothW.mul(isMouth.oneMinus()))).mul(float(1).sub(cv.z.mul(clothW).mul(0.4).mul(isMouth.oneMinus())));
@@ -2952,6 +2960,7 @@ const Chars = (() => {
     m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
+    else if (weaveN) m.normalNode = normalView.add(weaveN).normalize();      // [ch1]
     let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
     if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
     let emis = albedo.mul(lit).add(albedo.mul(0.32).mul(mouthW));      // [ch1] teeth and tongue are never darker than the lips
@@ -3040,6 +3049,14 @@ const Chars = (() => {
 
   // ── spawning ──
   const cloneBones = o => { const c = o.clone(false); for (const ch of o.children) if (ch.isBone) c.add(cloneBones(ch)); return c; };
+  // [ch1] Every person must map to a body that is loaded and has all four weights: returns the problems (a person drawn as the old code-built body, or as another person's body, is a bug)
+  C.audit = function (defs) {
+    const S = C.set, bad = []; if (!S) return ['no character set loaded'];
+    for (const def of defs) { let look; try { look = S.cfg.look ? S.cfg.look(def) : {}; } catch (e) { bad.push(def.id + ': look failed ' + (e && e.message)); continue; }
+      const B = S.bodies[look.body]; if (!B) { if (!(S.cfg.lazy && def.foe)) bad.push(def.id + ': no body ' + look.body); continue; }
+      for (const lv of ['mid', 'lod', 'far']) if (!B.lodParts || !B.lodParts[lv]) bad.push(def.id + ': body ' + look.body + ' has no ' + lv + ' weight'); }
+    return bad;
+  };
   C.spawn = function (def) {
     const S = C.set; if (!S) throw new Error('Chars.load first');
     const cfg = S.cfg, look = cfg.look ? cfg.look(def) : {}, body = S.bodies[look.body] ? look.body : Object.keys(S.bodies)[0], B = S.bodies[body];
@@ -3047,6 +3064,7 @@ const Chars = (() => {
     const skeleton = new THREE.Skeleton(B.skel.bones.map(b => byName[b.name]), B.skel.boneInverses);
     const H = { def, set: S, body, root, pivot: new THREE.Group(), skeleton, uVis: [0, 1, 2, 3, 4].map(() => uniform(new THREE.Vector4())), visK: uniform(1), visW: new Float32Array(20), uZone: uniform(0), uLight: uniform(1), uMouth: uniform(0), uBlink: uniform(0), uPupil: uniform(0.05), uGaze: uniform(new THREE.Vector2()), uHead: uniform(new THREE.Matrix3()), bones: {}, actions: {}, cur: null, curName: '', seed: 0, mats: [], meshes: [] };
     for (let i = 0, id = String(def.id || C.list.length); i < id.length; i++) H.seed = (H.seed * 31 + id.charCodeAt(i)) >>> 0;
+    { const u1 = ((H.seed >>> 3) % 97) / 97, u2 = ((H.seed >>> 9) % 89) / 89, kid = /child|boy|girl/.test(body); H.wide = kid ? 1 : 0.93 + 0.15 * u1; H.tall = kid ? 1 : 0.965 + 0.07 * u2; }      // [ch1]
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p] && (!/^w_/.test(p) || (cfg.wears && cfg.wears(look, p)))).sort(), names = new Set(), hasWear = parts.some(p => /^w_/.test(p));
     for (const p of parts) for (const m of B.parts[p]) names.add(m.material.name);
     H.fit = look.fit || 1;
@@ -3255,13 +3273,13 @@ const Chars = (() => {
     // is measured from how far the villager really moved (callers only pass a nominal figure, and people slow down in turns and at doors).
     { const lp = H.lastP, mv = lp && dt > 1e-4 ? Math.hypot(st.pos[0] - lp[0], st.pos[2] - lp[2]) / dt : -1; H.lastP = [st.pos[0], st.pos[1], st.pos[2]];
       if (mv >= 0 && mv < 12) H.realSpeed = H.realSpeed === undefined ? mv : H.realSpeed + (mv - H.realSpeed) * Math.min(1, dt * 8); }
-    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1, sp = TEST && TEST.feetnominal ? st.speed : (H.realSpeed !== undefined && dt > 0 ? H.realSpeed : st.speed);
+    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k * H.tall, rate = (cfg.rate && cfg.rate[key]) || 1, sp = TEST && TEST.feetnominal ? st.speed : (H.realSpeed !== undefined && dt > 0 ? H.realSpeed : st.speed);
       H.cur.setEffectiveTimeScale(sp > 0.05 && g > 0.2 ? Math.min(Math.max(sp / g * ((TEST && TEST.feetk) || 1), 0.25), cfg.maxRate || 1.8) : sp !== undefined && sp <= 0.05 && dt > 0 ? 0.25 : rate); }
     const dcam = hyp(st.pos[0] - R.cam.pos[0], st.pos[1] - R.cam.pos[1], st.pos[2] - R.cam.pos[2]);
     if (dcam > LOD.slowDist && H.seed % LOD.slowEvery !== R.frame % LOD.slowEvery) H.slowDt = (H.slowDt || 0) + dt;      // far away: the pose changes on one frame in a few
     else { H.mixer.update(dt + (H.slowDt || 0)); H.slowDt = 0; }
     const p = st.pos, yaw = st.yaw || 0, face = cfg.faces === -1 ? 0 : Math.PI;
-    H.root.scale.setScalar(k);
+    H.root.scale.set(k * H.wide, k * H.tall, k);      // [ch1] each person's own girth and height on top of the body: 21 bodies become dozens of builds
     if (lying) {
       const m = measure(H, 'lie'), th = Math.PI - yaw - m.ang, c = Math.cos(th), sn = Math.sin(th);      // head toward the spot's heading, body centred on it
       pv.rotation.y = th; pv.position.set(p[0] - (m.cx * c + m.cz * sn) * k, p[1] + 0.02, p[2] - (-m.cx * sn + m.cz * c) * k);
@@ -12481,9 +12499,10 @@ function buildNPCs() {
     const mesh = buildCharacter(def), item = World.skinPack.add(mesh);
     const npc = { def, id: def.id, name: def.name, scale: def.scale || 1, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, wander: 0, dwell: 0, talking: false, look: [0, 0], ang: new Float32Array(33) };
     npc.obj = addSkinned(item, { r: 1.4, zone: 0, npc: true });
-    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; if (typeof npcHandProp === 'function') npcHandProp(npc); /* lute, hammer, spear, mug ... (77d_handprops.js) */ } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; } }
+    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; if (typeof npcHandProp === 'function') npcHandProp(npc); /* lute, hammer, spear, mug ... (77d_handprops.js) */ } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; npc.obj.hasChar = true; /* [ch1] the old code-built body is never shown beside the realistic set */ } }
     NPCS.push(npc); NPC[def.id] = npc;
   }
+  if (G.chars && typeof Chars !== 'undefined' && Chars.audit) { const bad = Chars.audit(NPC_DEFS); if (bad.length) console.warn('[ch1] villagers without a full body: ' + bad.join('; ')); }      // [ch1] nobody is ever the fallback body
   // chickens
   World.chickens = [];
   const cm = [buildChicken([0.92, 0.9, 0.85]), buildChicken([0.62, 0.36, 0.2]), buildChicken([0.25, 0.22, 0.2])].map(m => World.skinPack.add(m));
@@ -12617,6 +12636,7 @@ function ambSpots() {
 function buildAmbient() {
   if (!G.chars || !Chars.ready || (TEST && TEST.amb === 0)) return;
   AMB.list.length = 0;
+  { const bad = Chars.audit ? Chars.audit(AMB_DEFS) : []; if (bad.length) console.warn('[ch1] passers-by without a full body: ' + bad.join('; ')); }      // [ch1]
   AMB_DEFS.forEach((def, i) => {
     let ch = null; try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('ambient ' + def.id + ': ' + (e && e.message || e)); return; }
     AMB.list.push({ def, i, ch, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, dwell: 0, state: 'away', next: 0, ang: null, look: [0, 0], seat: null, stops: null, talking: false, speed: 1.1 + Math.random() * 0.25 });
@@ -14546,7 +14566,7 @@ for (const [id, line] of [['greta', 'The house on the south lane? Nobody’s liv
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 62';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 64';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }

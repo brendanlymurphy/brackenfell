@@ -57,6 +57,13 @@ about to touch. Measurements and step-by-step records are in `docs/HISTORY.md`; 
 - Faces: there are no jaw or eye joints and no morph targets. Skin vertices are moved in the vertex shader by their place in the
   shared skin atlas (`cfg.face`): `H.uMouth`, `H.uBlink`, `H.uGaze`. `faceUpdate` reads the playing line (`Snd.vox.cur`).
   Clothes are dyed per person from `NPC_DEFS` (`top`, `legs`); hats, belts and pouches are merged into the body mesh (`accGeometry`).
+- Lip sync (ch1): the 15 Oculus visemes, jawOpen, brows and smile are one shared table (`chars/real/visemes.png/.json`, from the CC0 MakeHuman
+  packs visemes02 and faceunits01, `tools/humans/visemes_table.py`); a `_VID` attribute on the head vertices indexes it and the vertex shader sums the
+  weighted deltas (`H.uVis`, `VIS_GAIN`). Teeth and tongue are two extra columns that follow the jaw. Rhubarb tracks (`c` per line in
+  `audio/voice/manifest.json`, made by `tools/voice/visemes.mjs`) drive `visemeUpdate`; with no track the loudness opens the jaw. `test/lipsync.js` checks it.
+- Wardrobe (ch1): `w_*` parts in each body GLB (`tools/humans/garb.py`: belt, pouch, cuffs, apron, straps, cloak, hats, kettle hat, tabard) are chosen per
+  person by `cfg.wears`/`look.wear` and take colours from `look.wear.col` (COLOR_0.a is the slot, read as bytes). Foes get a scavenged mix. Hair greying is a
+  shader term (`look.hairGrey`). `tools/_trim.mjs` (dev) drops parts a body never wears to stay under the download limit; `test/chars_levels.sh` shoots all weights.
 - `77_npc.js` who people are and their schedules; `77b_ambient.js` passers-by; `77c_patrons.js` inn regulars; `77d_handprops.js`;
   `77e_households.js` people at home and at work. `R.boneData` holds one slot per hinged, carried or animated thing.
 - Test hooks on a handle: `ch.mouthTest` (0..1), `ch.blinkTest`, `ch.gazeTest = [u, v]`.

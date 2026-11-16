@@ -27,8 +27,8 @@ node tools/gate.mjs --only story,mine      named steps      --skip cells      --
 
 It runs one browser at a time, retries a failed step once (a pass on the second try is printed as flaky), prints one PASS/FAIL
 table with timings, writes `shots/gate/gate.md`, a log per step and screenshots, and exits non-zero on failure. Every push to
-`threejs` or a `fork-*` branch runs `--full` on GitHub (workflow `gate`): the result is the check mark on the commit, and the table
-and screenshots are the run's `gate` artifact. So: run `--quick` (or `--only` your area) before a push, read the GitHub result
+`threejs` or a `fork-*` branch runs `--full` on GitHub (workflow `gate`, three jobs side by side, about 25 minutes): the result is
+the check mark on the commit, and the tables and screenshots are the run's `gate-1..3` artifacts. So: run `--quick` (or `--only` your area) before a push, read the GitHub result
 after it, and do not run `--full` on a small shared machine.
 
 What `--full` runs: build; silent boot (no `warn` or `error` line: a builder that throws only logs a warning, and a build shipped
