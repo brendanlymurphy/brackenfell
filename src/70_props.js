@@ -13,7 +13,7 @@ function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y0, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
   World.colliders.push({ x: c[0], z: c[2], hx: Math.abs(x1 - x0) / 2 * sx, hz: Math.abs(z1 - z0) / 2 * sz, ax: M[0] / sx, az: M[2] / sx, bx: M[8] / sz, bz: M[10] / sz, y0: c[1], y1: c[1] + (y1 - y0) });
 }
-function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]), o = { x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }; if (TEST && TEST.colstack && Math.hypot(o.x, o.z) < 1.5) o.stk = new Error().stack.split('\n').slice(2, 6).join(' < '); World.colliders.push(o); }          // [fx1] --opt colstack=1 records where an origin collider came from
+function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]), o = { x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }; if (TEST && TEST.colstack && (TEST.colstack === 2 || Math.hypot(o.x, o.z) < 1.5)) o.stk = new Error().stack.split('\n').slice(2, 6).join(' < '); World.colliders.push(o); }          // [fx1] --opt colstack=1 records where an origin collider came from
 const flick = (t, s) => 0.86 + 0.09 * Math.sin(t * 11.3 + s * 7.1) + 0.07 * Math.sin(t * 23.7 + s * 3.3) + 0.05 * Math.sin(t * 5.1 + s);
 const LIGHT_KINDS = {
   fire: (l, e) => flick(e.time, l.seed),
