@@ -47,12 +47,13 @@ const Inv = {
       const m = RPG.meta(id), on = m.slot && r.eq[m.slot] === id, f = Inv.facts(id);
       h += '<div' + (on ? ' class="worn"' : '') + '>' + invIcon(id) + '<b>' + ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + '</b><span>' + ITEMS[id][1] + (f ? ' <i>' + f + '</i>' : '') + '</span>';
       if (m.slot) h += '<button type="button" class="btn small" data-equip="' + id + '">' + (on ? (m.slot === 'weapon' ? 'In hand' : 'Take off') : m.slot === 'weapon' ? 'Wield' : 'Wear') + '</button>';
+      else if (id === 'lantern') h += '<button type="button" class="btn small" data-lamp="1">' + (S.flags.lampOff === 1 ? 'Light' : 'Douse') + '</button>';       // [q1] a phone has no L key
       else if (m.heal) h += '<button type="button" class="btn small" data-use="' + id + '">' + (id === 'ale' || id === 'potion' || id === 'tonic' ? 'Drink' : 'Eat') + '</button>';
       h += '</div>';
     }
     if (!ids.length) h += '<p class="empty">Your pack is empty.</p>';
     box.innerHTML = h + '</div>';
-    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
+    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.lamp) { if (typeof mineLamp === 'function') mineLamp(); Inv.render(); } else if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
   },
   // ── trade, as dialogue ──
   shop(who) {

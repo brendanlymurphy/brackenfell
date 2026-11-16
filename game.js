@@ -15641,12 +15641,13 @@ const Inv = {
       const m = RPG.meta(id), on = m.slot && r.eq[m.slot] === id, f = Inv.facts(id);
       h += '<div' + (on ? ' class="worn"' : '') + '>' + invIcon(id) + '<b>' + ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + '</b><span>' + ITEMS[id][1] + (f ? ' <i>' + f + '</i>' : '') + '</span>';
       if (m.slot) h += '<button type="button" class="btn small" data-equip="' + id + '">' + (on ? (m.slot === 'weapon' ? 'In hand' : 'Take off') : m.slot === 'weapon' ? 'Wield' : 'Wear') + '</button>';
+      else if (id === 'lantern') h += '<button type="button" class="btn small" data-lamp="1">' + (S.flags.lampOff === 1 ? 'Light' : 'Douse') + '</button>';       // [q1] a phone has no L key
       else if (m.heal) h += '<button type="button" class="btn small" data-use="' + id + '">' + (id === 'ale' || id === 'potion' || id === 'tonic' ? 'Drink' : 'Eat') + '</button>';
       h += '</div>';
     }
     if (!ids.length) h += '<p class="empty">Your pack is empty.</p>';
     box.innerHTML = h + '</div>';
-    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
+    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.lamp) { if (typeof mineLamp === 'function') mineLamp(); Inv.render(); } else if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
   },
   // ── trade, as dialogue ──
   shop(who) {
@@ -15733,7 +15734,7 @@ function mineShell(m, O, FY, V) {
     // walls where the neighbour is rock: A left, B right as seen from inside
     const wall = (kind, a0, b0, a1, b1, along) => {
       const nrm = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }[kind];
-      m.mat(MAT.GRAVEL, rockCol(i + a0, j + b0, 1).map(v => v * 0.52), 0.55);      // the rock texture reads near-black under a carried light; the cut face takes the floor's grit
+      m.mat(MAT.GRAVEL, rockCol(i + a0, j + b0, 1).map(v => v * 0.75), 0.55);      // the rock texture reads near-black under a carried light; the cut face takes the floor's grit
       const lev = (a, b, k) => { const f = fl(a, b) - 0.4, t = ceilY(a, b); return P(a, b, k, f + (t - f) * k / 3); };
       for (let k = 0; k < 3; k++) m.quad(lev(a0, b0, k + 1), lev(a0, b0, k), lev(a1, b1, k), lev(a1, b1, k + 1), (along) / T, k * 1.2 / T, (along + 1) / T, (k + 1) * 1.2 / T);
       edges[kind].push([i, j]);
@@ -15986,7 +15987,8 @@ function mine_trap(wpos) {
 // ── the lantern: carried, lit with L, burning oil while the mine is dark; a dry lantern is no light at all ──
 function mineLampOn() { return !!(World.cell && World.cell.id === 'mine' && has('lantern') && S.flags.lampOff !== 1 && MINE_S().oil > 0); }
 function mineTick(dt) {
-  const c = World.cell; if (!MINE.built || !c || c.id !== 'mine') { MINE.lamp.on = false; return; }
+  const c = World.cell; if (!MINE.built || !c || c.id !== 'mine') { MINE.lamp.on = false; mineGauge(false); return; }
+  mineGauge(has('lantern'));
   const ms = MINE_S();
   if (has('lantern') && S.flags.lampOff !== 1 && ms.oil <= 0) {
     if (has('oil')) { give('oil', -1); ms.oil = 600; toast('You trim the wick and fill the lantern from a flask.'); } else if (!MINE.lamp.warnedDry) { MINE.lamp.warnedDry = true; toast('The lantern is dry. Without oil the dark is complete.'); }
@@ -16006,7 +16008,11 @@ function mineTrapCheck() {
   }
 }
 // the lantern key; the cell's dark; the first time through either door the mine counts as open
-document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && game.playing && !Player.locked && World.cell && World.cell.id === 'mine' && has('lantern')) { S.flags.lampOff = S.flags.lampOff === 1 ? 0 : 1; toast(S.flags.lampOff === 1 ? 'You douse the lantern.' : (MINE_S().oil > 0 ? 'You light the lantern.' : 'The lantern is dry.')); } });
+function mineLamp() { if (!(World.cell && World.cell.id === 'mine' && has('lantern'))) return toast('There is no use for a lantern here.'); S.flags.lampOff = S.flags.lampOff === 1 ? 0 : 1; toast(S.flags.lampOff === 1 ? 'You douse the lantern.' : (MINE_S().oil > 0 ? 'You light the lantern.' : 'The lantern is dry.')); if (typeof Inv !== 'undefined' && Inv.render && UI.inv) Inv.render(); }
+document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && game.playing && !Player.locked && World.cell && World.cell.id === 'mine' && has('lantern')) mineLamp(); });
+// the oil gauge: a thin amber bar under the objective while the lantern is carried in the mine (a phone has no L key: the inventory's Light/Douse button does the same)
+function mineGauge(show) { let g = document.getElementById('oilgauge'); if (!g) { if (!show) return; g = document.createElement('div'); g.id = 'oilgauge'; g.style.cssText = 'position:fixed;left:calc(var(--pl,0px) + 14px);top:62px;width:70px;height:5px;background:rgba(0,0,0,.45);border:1px solid rgba(214,180,110,.35);z-index:5;pointer-events:none'; g.innerHTML = '<i style="display:block;height:100%;background:#d9a441;width:100%"></i>'; document.body.appendChild(g); } g.style.display = show ? '' : 'none'; if (show) { const o = MINE_S().oil, f = g.firstChild; f.style.width = Math.max(0, Math.min(100, o / 6)) + '%'; f.style.background = S.flags.lampOff === 1 ? '#6b5a3a' : (o < 90 ? '#c8502a' : '#d9a441'); } }
+
 const _ce94 = Cells.env;
 Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.34, 0.25, 0.15]; e.ambGnd = [0.2, 0.145, 0.088]; e.fogDensity = 0.062; } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
 const _cc94 = Cells.change;
