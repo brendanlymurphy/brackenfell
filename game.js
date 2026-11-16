@@ -9909,11 +9909,14 @@ function kitGen(kind, R) {
   if (kind === 'paint') {
     const t = +key.slice(5), W = [0.8, 0.55, 0.62, 0.86, 0.6, 0.5, 0.7, 0.88, 0.62, 0.5, 0.9, 0.56][t], H = [0.5, 0.7, 0.55, 0.5, 0.5, 0.62, 0.5, 0.52, 0.5, 0.7, 0.5, 0.72][t], w = W, h = H;
     const frame = [[0.5, 0.42, 0.34], [0.3, 0.23, 0.17], [0.46, 0.38, 0.22], [0.26, 0.2, 0.15]][t % 4];
-    g.box(W_, -w / 2 - 0.05, -h / 2 - 0.05, 0, w / 2 + 0.05, h / 2 + 0.05, 0.04, frame);
+    const vv = c => c.map((v, i) => (v * 0.5 + [0.17, 0.115, 0.06][i]) * 0.6);          // [fx1] old brown varnish over the paint: low contrast, dark, warm (it read as a flat cartoon hill under a flat sky)
+    g.box(W_, -w / 2 - 0.07, -h / 2 - 0.07, 0, w / 2 + 0.07, h / 2 + 0.07, 0.04, frame);
+    const ring = (o, z0, z1, k) => { const f = frame.map(v => v * k), x0 = -w / 2 - o, x1 = w / 2 + o, y0 = -h / 2 - o, y1 = h / 2 + o, e = 0.03; g.box(W_, x0, y0, z0, x1, y0 + e, z1, f); g.box(W_, x0, y1 - e, z0, x1, y1, z1, f); g.box(W_, x0, y0 + e, z0, x0 + e, y1 - e, z1, f); g.box(W_, x1 - e, y0 + e, z0, x1, y1 - e, z1, f); };
+    ring(0.04, 0.04, 0.052, 0.78); ring(0.012, 0.052, 0.06, 1.12);          // stepped moulding: the frame has depth
     g.box(W_, -w / 2 - 0.02, -h / 2 - 0.02, 0.0405, w / 2 + 0.02, -h / 2, 0.0415, frame.map(v => v * 0.7));
-    let zq = 0; const z = 0.042, Q = (x0, y0, x1, y1, col) => { const zz = z + (zq++) * 0.0012; g.quad(C_, [x0, y0, zz], [x1, y0, zz], [x1, y1, zz], [x0, y1, zz], col, GPU.cloth); };          // [c3] each layer of the picture a hair in front of the last: overlapping layers at one depth flickered
-    const T3 = (a, b, c, col) => { const zz = z + (zq++) * 0.0012; g.tri(C_, [a[0], a[1], zz], [b[0], b[1], zz], [c[0], c[1], zz], col, GPU.cloth); };
-    const disc = (cx, cy, rx, ry, col, n) => { n = n || 8; for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU, zz = z + (zq) * 0.0012; g.tri(C_, [cx, cy, zz], [cx + Math.cos(a0) * rx, cy + Math.sin(a0) * ry, zz], [cx + Math.cos(a1) * rx, cy + Math.sin(a1) * ry, zz], col, GPU.cloth); } zq++; };
+    let zq = 0; const z = 0.042, Q = (x0, y0, x1, y1, col) => { const zz = z + (zq++) * 0.0012; g.quad(C_, [x0, y0, zz], [x1, y0, zz], [x1, y1, zz], [x0, y1, zz], vv(col), GPU.cloth); };          // [c3] each layer of the picture a hair in front of the last: overlapping layers at one depth flickered
+    const T3 = (a, b, c, col) => { const zz = z + (zq++) * 0.0012; g.tri(C_, [a[0], a[1], zz], [b[0], b[1], zz], [c[0], c[1], zz], vv(col), GPU.cloth); };
+    const disc = (cx, cy, rx, ry, col, n) => { n = n || 8; for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU, zz = z + (zq) * 0.0012; g.tri(C_, [cx, cy, zz], [cx + Math.cos(a0) * rx, cy + Math.sin(a0) * ry, zz], [cx + Math.cos(a1) * rx, cy + Math.sin(a1) * ry, zz], vv(col), GPU.cloth); } zq++; };
     const L = h * 0.5;
     if (t === 0) { Q(-w / 2, 0, w / 2, L, [0.45, 0.52, 0.58]); Q(-w / 2, -L, w / 2, 0, [0.3, 0.36, 0.2]); Q(-w / 2, -L, w / 2, -h * 0.15, [0.2, 0.24, 0.14]); T3([-w * 0.4, 0.0], [w * 0.1, 0.0], [-w * 0.15, h * 0.28], [0.3, 0.32, 0.34]); }
     else if (t === 1) { Q(-w / 2, -L, w / 2, L, [0.12, 0.1, 0.08]); disc(0, h * 0.14, w * 0.17, h * 0.15, [0.55, 0.42, 0.34], 8); Q(-w * 0.3, -L, w * 0.3, -h * 0.05, [0.22, 0.17, 0.14]); Q(-w * 0.12, -h * 0.08, w * 0.12, 0, [0.5, 0.4, 0.32]); }
@@ -9927,6 +9930,7 @@ function kitGen(kind, R) {
     else if (t === 9) { Q(-w / 2, -L, w / 2, L, [0.5, 0.38, 0.16]); disc(0, h * 0.2, w * 0.28, w * 0.28, [0.62, 0.5, 0.24], 10); disc(0, h * 0.2, w * 0.17, w * 0.17, [0.5, 0.4, 0.3], 8); T3([-w * 0.4, -L], [w * 0.4, -L], [0, h * 0.05], [0.22, 0.18, 0.22]); }
     else if (t === 10) { Q(-w / 2, 0.06 * h, w / 2, L, [0.55, 0.57, 0.52]); Q(-w / 2, -L, w / 2, 0.06 * h, [0.5, 0.42, 0.2]); for (let i = 0; i < 4; i++) T3([-w * 0.35 + i * w * 0.2, -h * 0.05], [-w * 0.27 + i * w * 0.2, -h * 0.05], [-w * 0.31 + i * w * 0.2, h * 0.08], [0.42, 0.33, 0.14]); }
     else { Q(-w / 2, 0.0, w / 2, L, [0.48, 0.52, 0.56]); Q(-w / 2, -L, w / 2, 0.0, [0.3, 0.32, 0.2]); T3([-w / 2, -h * 0.1], [w / 2, -h * 0.1], [w * 0.1, h * 0.12], [0.26, 0.28, 0.18]); Q(-w * 0.04, h * 0.02, w * 0.08, h * 0.3, [0.4, 0.36, 0.3]); T3([-w * 0.06, h * 0.3], [w * 0.1, h * 0.3], [w * 0.02, h * 0.42], [0.3, 0.2, 0.16]); }
+    for (let i = 0; i < 7; i++) { const x = (((i * 37 + t * 11) % 17) / 17 - 0.5) * w * 0.9, y = (((i * 53 + t * 7) % 13) / 13 - 0.5) * h * 0.8, l = 0.05 + ((i * 7 + t) % 5) * 0.025, zz = z + (zq++) * 0.0012; g.quad(C_, [x, y, zz], [x + 0.004, y, zz], [x + 0.004 + l * 0.5, y - l, zz], [x + l * 0.5, y - l, zz], [0.05, 0.035, 0.02], GPU.cloth); }          // craquelure
   } else {       // a bar with bundles of herbs, onions and dried flowers
     g.box(W_, -0.55, -0.02, 0, 0.55, 0.03, 0.06, DARKW);
     const cols = [[0.3, 0.45, 0.22], [0.5, 0.38, 0.2], [0.55, 0.3, 0.45], [0.7, 0.62, 0.3], [0.3, 0.42, 0.2], [0.6, 0.45, 0.2]].map(c => c.map(v => v * 0.52));       // [fx1] cloth material brightens: dried herbs are dull green and brown, not mint and lilac
@@ -14706,7 +14710,7 @@ for (const [id, line] of [['greta', 'The house on the south lane? Nobody’s liv
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 65';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 66';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
