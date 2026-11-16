@@ -25,7 +25,8 @@ harness details, publishing checklist), `ROADMAP.md` (what is done, in progress,
 - The list that must pass before anything is published:
   - `--opt webgl=1 --opt quality=low --do "$(cat test/quest.js)"` ends with `fire 99 bonfire true`
   - with `--opt play=1`: `test/stairs.js` (prints `stairs PASS`), `test/combat.js` (kills an outlaw), `test/wilds.js` (PASS, 14 pickups),
-    `test/voice_game.js` and `test/audio_game.js` (print PASSED), `test/cells.js` in chunks (put
+    `test/voice_game.js` and `test/audio_game.js` (print PASSED), `test/npcstairs.js` (villagers reach their beds), `test/npcsep.js`
+    (no two people in one spot), `test/cells.js` in chunks (put
     `window.__cells=['inn','chapel']; window.__noRest=true;` before the script: a software-rendered tab dies after about a dozen)
   - `node test/parity.mjs`, `test/interiors.js` (interiors keep every quest object; placement validator)
   - once on WebGPU (no `webgl` option): a `game.shot` in the square and inside the inn with `window.__gpuErrors().length === 0`
