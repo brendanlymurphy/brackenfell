@@ -113,12 +113,14 @@ Cells.hear = function (pos, from) {
 };
 // frame environment: no sun, a short dark fog, the day's ambient kept (windows and the hour of day still reach the rooms through emissive panes and daylight lights)
 const CELL_DAYLIGHT = (typeof TEST !== 'undefined' && TEST && TEST.celllight !== undefined) ? +TEST.celllight : 6;
+const WIN_GAIN = (typeof TEST !== 'undefined' && TEST && TEST.wingain !== undefined) ? +TEST.wingain : 3.2, WIN_KEEP = (typeof TEST !== 'undefined' && TEST && TEST.winkeep !== undefined) ? +TEST.winkeep : 0.3;      // [l1]
 const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 1.7;
 Cells.env = function (e) {
   const c = Cells.cur; if (!c) return e;
   e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
   // daylight: with the sun off, rooms lost the light that used to come in by day (midday was darker than night). Windows let the sky in: lift the day's ambient. c.daylight: 0 for a cellar or crypt, default for a room with windows.
-  { const dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT; e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
+  e.winCol = null;
+  { let dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0 && c.wins && c.wins.length && !(TEST && TEST.winlight === 0)) { /* [l1] daylight from the panes (40c_light.js): a small uniform lift, the rest is window light */ const b = e.ambSky, l = (b[0] + b[1] + b[2]) / 3, g = WIN_GAIN; e.winCol = [(l * 0.55 + b[0] * 0.45) * g * 1.04, (l * 0.55 + b[1] * 0.45) * g, (l * 0.55 + b[2] * 0.45) * g * 0.92]; k *= WIN_KEEP; } if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT; e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
   e.fogCol = c.fog || [0.030, 0.025, 0.020]; e.fogDensity = c.fogDensity || 0.022; e.cloud = 0; e.stars = 0; e.aurora = 0; e.sunDisc = 0; e.moonBright = 0;
   return e;
 };

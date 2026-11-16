@@ -19,6 +19,7 @@ function buildVillage() {
     const h = buildHouse(site, spec);
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
     if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true, cell: h.cell ? h.cell.id : null }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.cell && h.cell.decal && h.cell.decal.ni) pack.add(h.cell.decal, { kind: 'decal', cell: h.cell.id, noShadow: true, nearOnly: true });      // [l1] 72m_bake.js
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5, minor: true });      // minor: on the map, but no banner when you walk past a house
   }

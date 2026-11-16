@@ -152,7 +152,7 @@ function renderFrame(time, env) {
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
   SH.update(env, e, time); Lamps.sync();
-  pickLights(e, World.camZone | 0, env);
+  pickLights(e, World.camZone | 0, env); SH.winSet(env, e);      // [l1] window light
   const L = env.keyDir, sun = R.sun;
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
   // near map every frame, far map every few frames (its centre only moves when it is redrawn)

@@ -839,6 +839,52 @@ SH.ROOMS = 64;
 })();
 
 
+// ---- 40c_light.js ----
+// ───────────────────────── [l1] window light: daylight that comes from the panes, not from a uniform lift ─────────────────────────
+// Rooms with windows used to get the day's ambient multiplied up evenly (Cells.env, CELL_DAYLIGHT), so a room was as bright in its far corner as at the glass.
+// Now a cell that knows its windows (c.wins, filled by Bake.interior in 72m_bake.js) gets a small ambient and up to SH.WINMAX window lights: each is a soft
+// cool light that falls off with distance, lights what is in front of the pane (a floor pool, the facing wall) and not what is behind it.
+// Same loop shape as SH.pointLights; only drawn indoors (zone != 0), and the loop does not run at all outdoors.
+SH.WINMAX = 6;
+(function () {
+  const _init = SH.init;
+  SH.init = function () {
+    _init.apply(this, arguments);
+    const { Fn, If, Loop, int, float, vec3, uniform, uniformArray, dot, max, select, smoothstep } = TSL, U = SH.U;
+    const mk = () => uniformArray(Array.from({ length: SH.WINMAX }, () => new THREE.Vector4()), 'vec4');
+    U.winP = mk();         // xyz: centre of the pane, w: reach (m)
+    U.winD = mk();         // x, y: inward direction on the floor plane (x, z), z: unused, w: unused
+    U.winC = mk();         // rgb: colour of the light in HDR units
+    U.winN = uniform(0, 'int');
+    SH.winLight = Fn(([wp, N, zone]) => {
+      const acc = vec3(0).toVar();
+      const nEnd = select(zone.lessThan(0.5), int(0), U.winN);
+      Loop({ start: int(0), end: nEnd, type: 'int', condition: '<' }, ({ i }) => {
+        const P = U.winP.element(i), D = U.winD.element(i), C = U.winC.element(i);
+        const d = wp.sub(P.xyz), d2 = dot(d, d), r2 = P.w.mul(P.w);
+        If(d2.lessThan(r2), () => {
+          const f = float(1).sub(d2.div(r2)), dn = d.mul(max(d2, 1e-4).inverseSqrt());
+          const lobe = smoothstep(-0.12, 0.5, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
+          const ndl = max(dot(N, dn.negate()).mul(0.7).add(0.3), 0);                 // surfaces that face the glass catch more
+          acc.addAssign(C.rgb.mul(f.mul(f).div(d2.mul(0.18).add(1)).mul(lobe).mul(ndl)));
+        });
+      });
+      return acc;
+    });
+  };
+  // choose the windows of the cell the camera is in (the nearest few) and write the uniforms; env.winCol is set by Cells.env
+  SH.winSet = function (env, cam) {
+    const U = SH.U, c = World.cell, W = c && c.wins;
+    if (!U || !U.winP) return;
+    if (!W || !W.length || !env.winCol) { U.winN.value = 0; return; }
+    const cand = W.map(w => [(w.p[0] - cam[0]) ** 2 + (w.p[1] - cam[1]) ** 2 * 0.25 + (w.p[2] - cam[2]) ** 2, w]).sort((a, b) => a[0] - b[0]).slice(0, SH.WINMAX);
+    const P = U.winP.array, D = U.winD.array, C = U.winC.array, col = env.winCol;
+    cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); C[i].set(col[0] * w.k, col[1] * w.k, col[2] * w.k, 0); });
+    U.winN.value = cand.length;
+  };
+})();
+
+
 // ---- 41_materials.js ----
 // ───────────────────────── materials: buildings and props, terrain, foliage ─────────────────────────
 // The sun (diffuse, specular, shadow) is Three's own DirectionalLight. Everything else a surface receives (sky and ground
@@ -892,7 +938,7 @@ function surfaceMaterial(mode) {
   const N = SH.perturb(normalize(vN), positionWorld, uv(), nt.xy, float(1));
   // rooms: occlusion near floor, ceiling and corners, soot over the hearth (40b_depth.js); only generated room geometry and people carry a zone
   const rm = (mode === 'static' || mode === 'skin') ? SH.room(positionWorld, N, zone).toVar() : null, aoR = rm ? rm.x : float(1);
-  const amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35)));
+  const amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35))).add(SH.winLight(positionWorld, N, zone).mul(aoR.mul(0.6).add(0.4)));      // [l1] window light (40c_light.js)
   const sootK = rm ? mix(vec3(1), vec3(0.22, 0.21, 0.2), rm.z.mul(0.9)) : vec3(1);
   m.colorNode = albedo.mul(sootK).mul(unlit.oneMinus());
   m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit));
@@ -1055,7 +1101,7 @@ function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
   M.static = surfaceMaterial('static'); M.inst = surfaceMaterial('inst'); M.rigid = surfaceMaterial('rigid'); M.leaf = foliageMaterial(); M.leafFar = foliageMaterial(true); M.terrain = terrainMaterial();
-  M.water = WaterMat(); M.glow = GlowMat();
+  M.water = WaterMat(); M.glow = GlowMat(); M.decal = Bake.mat();      // [l1] decal: 72m_bake.js
   const sphere = (c, r) => new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r);
   const geo = (pk, first, count, inst) => {
     const g = inst ? new THREE.InstancedBufferGeometry() : new THREE.BufferGeometry();
@@ -1065,7 +1111,7 @@ function sceneBuild() {
   };
   // ── static world: terrain tiles, houses inside and out, props, water, window panes ──
   for (const pk of World.packs) for (const it of pk.items) {
-    const mat = it.kind === 'terrain' ? M.terrain : it.kind === 'water' ? M.water : it.kind === 'glow' ? M.glow : M.static;
+    const mat = it.kind === 'terrain' ? M.terrain : it.kind === 'water' ? M.water : it.kind === 'glow' ? M.glow : it.kind === 'decal' ? M.decal : M.static;
     if (!mat || !it.count) continue;
     // terrain and water tiles of one pack are drawn together: one mesh whose index buffer is refilled from the tiles in view (see poolUpdate)
     if ((it.kind === 'terrain' || it.kind === 'water') && !it.cell && !it.nearOnly && !(TEST && TEST.pool === 0)) {
@@ -1079,7 +1125,7 @@ function sceneBuild() {
     const mesh = new THREE.Mesh(g, mat); mesh.matrixAutoUpdate = false;
     mesh.castShadow = !!pk.shadow && !it.noShadow && it.kind === 'opaque'; mesh.receiveShadow = it.kind === 'opaque' || it.kind === 'terrain';
     if (it.kind === 'terrain') mesh.renderOrder = 1;      // after the other opaque draws, so the ground shader only runs where nothing nearer already stands
-    if (it.kind === 'water') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
+    if (it.kind === 'water' || it.kind === 'decal') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
     if (it.nearOnly) mesh.layers.set(1);
     const st = { mesh, it }; scene.add(mesh); SC.statics.push(st);
     // A big merged piece of the village (fences, wells, stalls over 100 m) used to go into the near sun-shadow map whole. Its triangles are
@@ -1430,7 +1476,7 @@ function renderFrame(time, env) {
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
   SH.update(env, e, time); Lamps.sync();
-  pickLights(e, World.camZone | 0, env);
+  pickLights(e, World.camZone | 0, env); SH.winSet(env, e);      // [l1] window light
   const L = env.keyDir, sun = R.sun;
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
   // near map every frame, far map every few frames (its centre only moves when it is redrawn)
@@ -1706,7 +1752,7 @@ const Kit = (() => {
     m.roughnessNode = orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough);
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
-    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35))));
+    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.6).add(0.4)))));      // [l1] window light (40c_light.js)
     em = em.add(alb.mul(glow));
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
       const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
@@ -3800,12 +3846,14 @@ Cells.hear = function (pos, from) {
 };
 // frame environment: no sun, a short dark fog, the day's ambient kept (windows and the hour of day still reach the rooms through emissive panes and daylight lights)
 const CELL_DAYLIGHT = (typeof TEST !== 'undefined' && TEST && TEST.celllight !== undefined) ? +TEST.celllight : 6;
+const WIN_GAIN = (typeof TEST !== 'undefined' && TEST && TEST.wingain !== undefined) ? +TEST.wingain : 3.2, WIN_KEEP = (typeof TEST !== 'undefined' && TEST && TEST.winkeep !== undefined) ? +TEST.winkeep : 0.3;      // [l1]
 const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 1.7;
 Cells.env = function (e) {
   const c = Cells.cur; if (!c) return e;
   e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
   // daylight: with the sun off, rooms lost the light that used to come in by day (midday was darker than night). Windows let the sky in: lift the day's ambient. c.daylight: 0 for a cellar or crypt, default for a room with windows.
-  { const dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT; e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
+  e.winCol = null;
+  { let dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0 && c.wins && c.wins.length && !(TEST && TEST.winlight === 0)) { /* [l1] daylight from the panes (40c_light.js): a small uniform lift, the rest is window light */ const b = e.ambSky, l = (b[0] + b[1] + b[2]) / 3, g = WIN_GAIN; e.winCol = [(l * 0.55 + b[0] * 0.45) * g * 1.04, (l * 0.55 + b[1] * 0.45) * g, (l * 0.55 + b[2] * 0.45) * g * 0.92]; k *= WIN_KEEP; } if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT; e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
   e.fogCol = c.fog || [0.030, 0.025, 0.020]; e.fogDensity = c.fogDensity || 0.022; e.cloud = 0; e.stars = 0; e.aurora = 0; e.sunDisc = 0; e.moonBright = 0;
   return e;
 };
@@ -7048,6 +7096,7 @@ function planBuild(c) {
     if (P.id === 'store' && !World.interact.some(i => i.id === 'rope')) pInteract(P, pos[0], pos[1] + 0.2, pos[2], { kind: 'shopitem', id: 'rope', r: 1.6 }, 0); }
   { const fy = dd.sill[1]; c.cell.daylightFn = () => Player.pos[1] < fy - 1.0 ? 0 : undefined; }          // below the ground floor no daylight comes in
   pLightCut(P);
+  if (typeof Bake !== 'undefined') Bake.interior(P);          // [l1] 72m_bake.js: contact pools under furniture, window data for the window light
   c.planDone = P; return P;
 }
 const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: { kind: 'study' }, guardhouse: { kind: 'guard' },  inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true } };
@@ -8539,6 +8588,59 @@ HT.farmer = (P, c, room, F) => {
 HT.household = (P, c, room, F) => { hPlace(P, room, 'spinning', { sides: ['w', 'e'] }); hPlace(P, room, 'bucket', { sides: ['w', 'e', 's'] }); };
 
 
+// ---- 72m_bake.js ----
+// ───────────────────────── [l1] baked contact: soft dark pools under furniture, window data for the window light ─────────────────────────
+// A post-step over the plan engine's output (called from one marked line at the end of planBuild in 72e_plans.js). It reads the plan's records, never
+// changes them, and adds two things to the cell:
+//   c.cell.decal  one merged mesh of soft dark pools on the floor round everything that stands on it (kind 'decal' in the pack, one draw call per cell);
+//   c.cell.wins   the windows in world space, which SH.winSet (40c_light.js) turns into the cell's daylight.
+// The pool is a ring: 4 inner vertices (alpha A, under the object) and 4 outer vertices (alpha 0, a margin away), so the shade fades out smoothly.
+const Bake = { on: !(typeof TEST !== 'undefined' && TEST && TEST.bake === 0), stats: { pools: 0, wins: 0 } };
+Bake.mat = function () {
+  const { vec4, vec3, attribute, clamp, smoothstep } = TSL;
+  const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
+  m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide; m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2;
+  const a = attribute('tint', 'vec4').a, t = clamp(a.div(0.7), 0, 1);
+  m.colorNode = vec4(vec3(0.0), t.mul(t).mul(t.mul(-2).add(3)).mul(0.7));
+  return m;
+};
+// ring pool round a rectangle given by its four world corners in order (a, b, c, d), margin mg (m) along the outward directions
+Bake.pool = function (m, y, q, mg, A) {
+  const cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, cz = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
+  m.ao = A; const inner = q.map(p => m.vert(p[0], y, p[1], 0, 1, 0, 0, 0));
+  m.ao = 0; const outer = q.map(p => { const dx = p[0] - cx, dz = p[1] - cz, l = Math.hypot(dx, dz) || 1; return m.vert(p[0] + dx / l * mg * 1.3, y, p[1] + dz / l * mg * 1.3, 0, 1, 0, 0, 0); });
+  for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; m.tri(inner[i], outer[i], outer[j]); m.tri(inner[i], outer[j], inner[j]); }
+  m.tri(inner[0], inner[1], inner[2]); m.tri(inner[0], inner[2], inner[3]);
+  m.flip = false;
+};
+Bake.interior = function (P) {
+  if (!Bake.on || !P || !P.c || !P.c.cell) return;
+  const cell = P.c.cell, m = new Mesh(512); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.layer = 0; m.cr = m.cg = m.cb = 0; m.grad = null; m.wind = 0;
+  const T = P.T, ax = [T[0], T[2]], az = [T[8], T[10]];             // canonical x and z axes in world (x, z)
+  const w2 = (x, z) => [T[12] + x * ax[0] + z * az[0], T[14] + x * ax[1] + z * az[1]];
+  for (const it of P.items) {
+    if (it.kind !== 'floor' && it.kind !== 'hearth') continue;
+    if ((it.lift || 0) > 0.35 || !(it.x1 > it.x0)) continue;
+    const L = P.lv[it.k]; if (!L) continue;
+    const h = it.h || 0.5, y = L.y + 0.034;
+    const hearth = it.kind === 'hearth', A = hearth ? 0.55 : clamp(0.34 + h * 0.3, 0.38, 0.62), mg = hearth ? 0.5 : clamp(0.14 + h * 0.2, 0.16, 0.42);
+    const pad = 0.03, c = [[it.x0 + pad, it.z0 + pad], [it.x1 - pad, it.z0 + pad], [it.x1 - pad, it.z1 - pad], [it.x0 + pad, it.z1 - pad]].map(p => w2(p[0], p[1]));
+    const y3 = P.w2(0, y, 0)[1]; Bake.pool(m, y3, c, mg, A); Bake.stats.pools++;
+  }
+  if (m.ni) cell.decal = m;
+  // windows: a pane centre, its inward direction on the floor plane (world), the reach and a strength by size
+  cell.wins = [];
+  for (const w of P.windows) {
+    const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L) continue;
+    const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0;
+    const p0 = P.w2(cx + dx * 0.25, L.y + 1.5, cz + dz * 0.25), p1 = P.w2(cx + dx * 1.25, L.y + 1.5, cz + dz * 1.25);
+    const dd = Math.hypot(p1[0] - p0[0], p1[2] - p0[2]) || 1;
+    cell.wins.push({ p: p0, d: [(p1[0] - p0[0]) / dd, (p1[2] - p0[2]) / dd], r: 7.5, k: 1, k0: w.k });
+    Bake.stats.wins++;
+  }
+};
+
+
 // ---- 73_village.js ----
 // ───────────────────────── the village: houses, square, bridge, ruin, fences, dock ─────────────────────────
 const headingTo = (x, z, tx, tz) => Math.atan2(tx - x, -(tz - z));
@@ -8561,6 +8663,7 @@ function buildVillage() {
     const h = buildHouse(site, spec);
     if (h.ext.ni) { const k = Math.floor(site.x / VILLAGE_CELL) + ',' + Math.floor(site.z / VILLAGE_CELL); let m = houseExt.get(k); if (!m) houseExt.set(k, m = new Mesh(1024)); m.append(h.ext); }      // the buildings' outer shells share one mesh per cell
     if (h.int.ni) pack.add(h.int, { kind: 'opaque', maxDist: site.infill ? 20 : 46, nearOnly: true, cell: h.cell ? h.cell.id : null }); if (h.glow.ni) pack.add(h.glow, { kind: 'glow', noShadow: true });
+    if (h.cell && h.cell.decal && h.cell.decal.ni) pack.add(h.cell.decal, { kind: 'decal', cell: h.cell.id, noShadow: true, nearOnly: true });      // [l1] 72m_bake.js
     const dl = siteDoorLocal(site, 0), dw = siteToWorld(site, dl[0], dl[1]);
     World.places.push({ id: site.id, name: site.name, x: dw[0], z: dw[1], r: Math.max(site.w, site.d) * 0.5 + 5, minor: true });      // minor: on the map, but no banner when you walk past a house
   }

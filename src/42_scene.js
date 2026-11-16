@@ -36,7 +36,7 @@ function sceneBuild() {
   const scene = SC.scene = new THREE.Scene(), M = SC.mats;
   scene.matrixWorldAutoUpdate = true;
   M.static = surfaceMaterial('static'); M.inst = surfaceMaterial('inst'); M.rigid = surfaceMaterial('rigid'); M.leaf = foliageMaterial(); M.leafFar = foliageMaterial(true); M.terrain = terrainMaterial();
-  M.water = WaterMat(); M.glow = GlowMat();
+  M.water = WaterMat(); M.glow = GlowMat(); M.decal = Bake.mat();      // [l1] decal: 72m_bake.js
   const sphere = (c, r) => new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r);
   const geo = (pk, first, count, inst) => {
     const g = inst ? new THREE.InstancedBufferGeometry() : new THREE.BufferGeometry();
@@ -46,7 +46,7 @@ function sceneBuild() {
   };
   // ── static world: terrain tiles, houses inside and out, props, water, window panes ──
   for (const pk of World.packs) for (const it of pk.items) {
-    const mat = it.kind === 'terrain' ? M.terrain : it.kind === 'water' ? M.water : it.kind === 'glow' ? M.glow : M.static;
+    const mat = it.kind === 'terrain' ? M.terrain : it.kind === 'water' ? M.water : it.kind === 'glow' ? M.glow : it.kind === 'decal' ? M.decal : M.static;
     if (!mat || !it.count) continue;
     // terrain and water tiles of one pack are drawn together: one mesh whose index buffer is refilled from the tiles in view (see poolUpdate)
     if ((it.kind === 'terrain' || it.kind === 'water') && !it.cell && !it.nearOnly && !(TEST && TEST.pool === 0)) {
@@ -60,7 +60,7 @@ function sceneBuild() {
     const mesh = new THREE.Mesh(g, mat); mesh.matrixAutoUpdate = false;
     mesh.castShadow = !!pk.shadow && !it.noShadow && it.kind === 'opaque'; mesh.receiveShadow = it.kind === 'opaque' || it.kind === 'terrain';
     if (it.kind === 'terrain') mesh.renderOrder = 1;      // after the other opaque draws, so the ground shader only runs where nothing nearer already stands
-    if (it.kind === 'water') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
+    if (it.kind === 'water' || it.kind === 'decal') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
     if (it.nearOnly) mesh.layers.set(1);
     const st = { mesh, it }; scene.add(mesh); SC.statics.push(st);
     // A big merged piece of the village (fences, wells, stalls over 100 m) used to go into the near sun-shadow map whole. Its triangles are
