@@ -36,12 +36,17 @@
     src.connect(g); src.start(K.now() + 0.02); const h = { src, g, t0: K.now(), dur: buf.duration, speaker }; src.onended = () => { if (V.cur === h) { V.cur = null; V.reveal(); } }; return h; };
   // a dialogue node was shown: returns true if the line is voiced. The speaker is an NPC object or id.
   K.say = function (npc, text) {
-    V.stop(); if (!K.set.voices || !K.ctx || K.off || !npc || !V.man) return false; const id = npc.id || npc, e = V.man.lines[V.keyOf(id, text)]; if (!e) { document.body.classList.remove('voiced'); return false; }
+    V.stop(); if (!K.set.voices || !K.ctx || K.off || !npc || !V.man) return false; const id = npc.id || npc, whole = V.man.lines[V.keyOf(id, text)];
+    // [voice parts] A remark put in front of a villager's own line (IX.SAY in 82b_interact.js joins them with a blank line) is recorded on its
+    // own: when the whole text has no file, the paragraphs that have one are played one after another. Before this, such a remark silenced the line.
+    const seq = whole ? [whole] : String(text).indexOf('\n\n') > 0 ? String(text).split('\n\n').map(t => V.man.lines[V.keyOf(id, t)]).filter(Boolean) : [];
+    if (!seq.length) { document.body.classList.remove('voiced'); return false; }
     const key = V.key = V.keyOf(id, text); V.wait = true; const box = document.getElementById('dopts'); if (box) box.classList.add('vwait'); document.body.classList.add('voiced'); document.body.classList.toggle('nosubs', !K.set.subs); V.waitT = K.now();
     const pos = npc.pos ? [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]] : null;
-    V.load(e.f).then(buf => { if (V.key !== key) return; if (!buf) { V.reveal(); document.body.classList.remove('voiced'); return; }
-      if (K.ctx.state !== 'running') { V.reveal(); return; }
-      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40, dry: true }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; V.lastPlayed = { speaker: id, file: e.f, text }; });
+    const run = (bufs, i) => { const h = V.play(bufs[i][0], id, pos, 1, { ref: 3, max: 40, dry: true }); if (!h) { V.reveal(); return; } V.cur = h; h.env = bufs[i][1].e; V.lastPlayed = { speaker: id, file: bufs[i][1].f, text };
+      if (i + 1 < bufs.length) h.src.onended = () => { if (V.cur !== h) return; V.cur = null; if (V.key !== key) { V.reveal(); return; } V.wait = true; setTimeout(() => { if (V.key === key) run(bufs, i + 1); }, 260); }; };
+    Promise.all(seq.map(e => V.load(e.f))).then(got => { if (V.key !== key) return; const bufs = got.map((b, i) => [b, seq[i]]).filter(x => x[0]); if (!bufs.length) { V.reveal(); document.body.classList.remove('voiced'); return; }
+      if (K.ctx.state !== 'running') { V.reveal(); return; } run(bufs, 0); });
     // do not hold the choices hostage to a slow download
     setTimeout(() => { if (V.key === key && !V.cur) { V.reveal(); } }, 2500);
     return true; };
@@ -50,6 +55,9 @@
   function wrap() {
     if (V.wrapped || typeof showNode !== 'function' || typeof endTalk !== 'function') return; V.wrapped = true;
     const sn = showNode, et = endTalk;
+    // [voice overheard] talk you overhear is shown as a notice, '<b>Rowan</b>: “line”' (the night meeting in 82c_secrets.js): play its recording if there is one, one after another
+    if (typeof toast === 'function') { const ts = toast; toast = function (h) { const r = ts.apply(this, arguments); try { const m = /^<b>(\w+)<\/b>: “(.+)”$/.exec(String(h)), e = m && V.man && K.set.voices && K.ctx && !K.off && V.man.lines[V.keyOf(m[1].toLowerCase(), m[2])];
+      if (e) V.load(e.f).then(buf => { if (!buf || K.ctx.state !== 'running') return; const at = Math.max(K.now(), V.overT || 0); V.overT = at + buf.duration + 0.3; setTimeout(() => { if (!V.cur && !V.wait) V.play(buf, m[1].toLowerCase(), null, 0.8, { dry: true }); }, (at - K.now()) * 1000); }); } catch (e) { } return r; }; }
     showNode = function (n) { sn(n); try { if (n && UI.talk) { K.say(UI.talk, n.t); V.prefetch(UI.talk.id); } } catch (e) { } };
     endTalk = function () { try { V.stop(); document.body.classList.remove('voiced'); } catch (e) { } return et.apply(this, arguments); };
     const d = document.getElementById('dialog'); if (d) d.addEventListener('click', e => { if (V.wait || V.cur) { V.stop(); e.stopPropagation(); e.preventDefault(); } }, true);
