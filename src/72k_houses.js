@@ -113,7 +113,7 @@ HFAM.crosspassage = (P, c, F) => {
   const hh = hHearthTry(P, hall, [[F.S('w'), 3.4], [F.S('w'), 3.0], ['s', F.X(-3.5)]], 1.9, { cauldron: true, size: 0.5 }); if (hh) { pPier(P, 1, hh); }
   P.hall = { room: hall, hh };
   dressHall(P, hall, { hh, rug: F.rug, items: ['mug', 'plate', 'bowl', 'loaf'], len: 2.2 }); hTrade(P, c, hall, F);
-  dressKitchen(P, service, {}); dressStore(P, buttery, { items: ['jug', 'cheese', 'bottle', 'jar'] });
+  dressKitchen(P, service, {}); dressStore(P, butt, { items: ['jug', 'cheese', 'bottle', 'jar'] });
   dressHall(P, parlour, { hh: null, rug: F.rug, items: ['book', 'candle', 'mug', 'plate'], len: 1.8 });
   dressBedroom(P, chamber, { beds: ['bed', 'bed2'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth > 0 });
   dressBedroom(P, solar, { beds: ['bed3'], chestId: 'chest2', chest: true, blanket: F.blanket, loot: [['gold', 2 + F.wealth * 3]] });
