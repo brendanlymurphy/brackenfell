@@ -23,7 +23,8 @@ CS.forEach((a, n) => {
     const p = pen(a, b); if (p < MINPEN) continue;
     const vol = Math.min(a.hx * a.hz, b.hx * b.hz) * 4;
     if (p > Math.min(a.hx, a.hz, b.hx, b.hz) * 1.9 && (Math.min(a.hx * a.hz, b.hx * b.hz) < 0.02)) continue;       // a post inside a wall
-    const small = Math.max(a.hx, a.hz, b.hx, b.hz) < 1.0 && oy < 0.75 && p < 0.6;       // a chair tucked under a table, a stool by a hearth: furniture meets furniture
+    const natural = Math.abs(a.hx - a.hz) < 1e-6 && Math.abs(b.hx - b.hz) < 1e-6 && Math.min(a.hx, b.hx) >= 0.6;       // tree against tree, boulder against boulder: a stand grows together
+    const small = natural || Math.max(a.hx, a.hz, b.hx, b.hz) < 1.0 && oy < 0.75 && p < 0.6;       // a chair tucked under a table, a stool by a hearth: furniture meets furniture
     out.push({ kind: small ? 'tucked' : 'solid', score: small ? 0 : p * Math.min(oy, 3), at: [(a.x + b.x) / 2, (Math.max(a.y0, b.y0) + Math.min(a.y1, b.y1)) / 2, (a.z + b.z) / 2], d: 'pen ' + p.toFixed(2) + ' h ' + oy.toFixed(2) + ' a ' + a.hx.toFixed(2) + 'x' + a.hz.toFixed(2) + ' b ' + b.hx.toFixed(2) + 'x' + b.hz.toFixed(2) });
   }
 });
