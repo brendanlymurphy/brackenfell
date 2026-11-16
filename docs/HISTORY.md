@@ -3,6 +3,41 @@
 Moved out of `docs/STATE.md` so that file stays short. Nothing here is needed to work on the game; it is the evidence behind what
 `STATE.md` and `DECISIONS.md` state. Newest numbers first where a section has several.
 
+## Measurements at Build 59 (fork-infra, 16 November)
+
+**Repository.** A checkout was 332 MB of files and a 406 MB `.git`. Of the files, 202 MB was `tools/scan/_bake` (tree-baking
+intermediates, now untracked), 57 MB `tex`, 42 MB `kits`, 14 MB `chars`, 8 MB `audio`, 3 MB built files. Of the 321 MB of packed
+history: `tools` 155 MB (the bake folder; it stays in history), `kits` 127 MB (42 MB live: every repack of a GLB stores the whole
+file again), `tex` 57 MB, `chars` 30 MB (14 live), `audio` 16 MB (8 live: the Kokoro files), built files 9 MB over 288 commits.
+
+**What makes it grow.** Not code: a build that only changes source adds well under 1 MB (the bundle delta-compresses to roughly
+25 KB per commit). Binary assets rewritten whole: Builds 49 to 52 added 66 MB (kits 37, chars 18, tex 7: the meshopt repack, extra
+detail levels and the half-size packs), Build 56 added 1.7 MB of audio. So: batch asset regeneration into one commit, never commit
+an intermediate, and run `assets_pack.mjs` once at the end of a change, not after every experiment.
+
+**What the live site serves.** Pages published the whole repository: 332 MB including sources, tests and the bake folder.
+`tools/site.mjs` assembles what the game needs: 485 files, 125 MB.
+
+**First visit** (from `tools/build.mjs`): Low tier 39.3 MB, phone or Medium 59.9 MB, desktop on High 72.0 MB; of which the shell
+(page, `game.js` 1.8 MB, `three.js` 1.4 MB) is 3.4 MB. Without ASTC support a device loads 66.5 MB of images instead.
+
+**The gate.** `--full` on the infrastructure session's machine (4 cores, software rendering): 35 min 31 s for 32 steps. The 58
+cells are 22 minutes of it (8 chunks of about 170 s), `kitcull` 5 minutes, the 18 gameplay and audio steps together 5 minutes,
+budgets 2, production boot 1 to 2. `--quick`: 4 min 31 s. On GitHub the gate runs as three jobs side by side
+(`--shard k/3`); their times are in the run's summary.
+
+**Other waste found.**
+- Double gating: a worker ran the list, then the coordinator ran it again before merging, on two cores. Now the branch arrives
+  with GitHub's result on the commit.
+- Every merge conflicted in the four built files, and the fix was a rebuild each time (see the Pages plan in `ROADMAP.md`).
+- Two gameplay tests failed by chance and were re-run by hand (`mine`: random creaks; `interact`: a fixed 1.5 s sleep across a
+  real-time fade). Both are repeatable now.
+- The old voice check's pace band was tuned for Kokoro and flagged 12 good Gemini lines on every run, so its output was ignored.
+- A remark from `IX.SAY` in front of a villager's line changed the node's text, so the recorded line under it went silent.
+- `AGENTS.md`, `ROADMAP.md` and `STATE.md` described Build 36 to 51; every brief repeated a page of rules to make up for it.
+- The cloud containers ship Playwright under `/opt`; tests hard-coded that path and one test hard-coded the checkout path, so
+  nothing ran anywhere else.
+
 ## Performance work of Build 49 (fork-perf): where the frame went at Build 41, and after each step
 
 `node test/shot.mjs --opt webgl=1 --opt quality=medium --do "window.__cat=true; $(cat test/perf_views.js)"` prints this for the four
