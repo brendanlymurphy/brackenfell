@@ -1,11 +1,11 @@
 // Production-mode boot (no test hooks): phone-sized touch page, WebGL 2 backend because a headless browser cannot present WebGPU.
-// usage: node test/real.mjs [out.png]
-import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
-import http from 'node:http'; import fs from 'node:fs';
-const root = new URL('../', import.meta.url).pathname, port = 8377 + Math.floor(Math.random() * 300), out = process.argv[2];
+// usage: node test/real.mjs [out.png] [--root dir]     (--root serves another folder, e.g. the _site folder that tools/site.mjs assembles for Pages)
+import { chromium, CHROME } from './pw.mjs';
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+const ri = process.argv.indexOf('--root'), root = ri > 0 ? path.resolve(process.argv[ri + 1]) + '/' : new URL('../', import.meta.url).pathname, port = 8377 + Math.floor(Math.random() * 300), out = process.argv.slice(2).find((a, i, l) => !a.startsWith('--') && l[i - 1] !== '--root');
 const TYPES = { html: 'text/html', js: 'text/javascript', png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', glb: 'model/gltf-binary', bin: 'application/octet-stream' };
 const srv = http.createServer((q, s) => { try { const u = decodeURIComponent(q.url.split('?')[0]); const f = root + (u.endsWith('/') ? u.slice(1) + 'index.html' : u.slice(1)); const b = fs.readFileSync(f); s.writeHead(200, { 'content-type': TYPES[f.split('.').pop()] || 'application/octet-stream' }); s.end(b); } catch (e) { s.writeHead(404); s.end('nf'); } }).listen(port);
-const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
 const logs = [];
 page.on('console', m => { const t = m.text(); if (!t.includes('Failed to load resource') && !t.includes('GL Driver Message')) logs.push('[' + m.type() + '] ' + t.slice(0, 300)); });
