@@ -57,3 +57,29 @@ Rules added so far: origin-collider guards (secProp, wPickMesh) and boot asserti
 ## Overlap finder (test/overlap.js)
 `node test/shot.mjs --opt webgl=1 --opt quality=low --do "window.__ovTop=60; $(cat test/overlap.js)"` ranks solid x solid intersections (walls meeting walls excluded), door approaches blocked by a low solid, spots and stairs inside solids, each with a shot call. Baseline at Build 59 + fx1: 325 solids, 0 blocked doors, 18 spots. Most solid hits are stall and rock circles against house boxes (conservative circles); the spots are counters and fires whose spot lies in the counter's own collider.
 Open from the second tour (t2): hunter.1f black slab is a pine trunk in shade (lighting: tree bark in shade), wall lamps still pale by day, tower door view faces a blank wall, bunting flags read white.
+
+## INTERIORS (fx2)
+
+Style sheet (interiors). Scale reference: a person is 1.75 m. Door 0.95 x 2.0 m, table top 0.76 m, chair seat 0.45 m, bed 0.9-1.1 x 2.0 m, counter 1.0 m, hearth opening 0.9-1.2 m wide.
+- Floor boards: oak/pine planks 0.18-0.22 m wide, weathered grey-brown, roughness 0.85; flags (kitchen, smithy, cellar, crypt): 0.5-0.7 m stones, cool grey, roughness 0.9.
+- Plaster: lime wash, off-white to ochre, roughness 0.95, never pure white. Beams and frame timber: dark oak, 0.18-0.25 m section, roughness 0.8.
+- Hearth stone: rough grey fieldstone, roughness 0.95, chimney above the hearth through the ceiling.
+- Cloth dyes (muted): madder brown-red, woad grey-blue, weld ochre, undyed linen, lichen green. No saturated red, blue or gold.
+- Lights: tallow candle (warm 2200 K, small), oil lamp (iron, hung from a hook), torch only in smithy, guardhouse, mine. Hung things hang from a hook, rope or bracket.
+
+Rules in the generators (fixed for all 57 cells at once)
+- [x] Measured placement: every item is drawn, measured and refused if it pokes through wall, ceiling, another item, a door, stair or window zone. Overlap scoreboard (test/overlap_in.mjs): 617 -> 7.
+- [x] Honest footprints for rotated and round pieces, standing spots moved out of solids.
+- [x] Counters keep wares on the counter; one scanned barrel (the second had doubled staves).
+- [x] Tiny hung hammers and spades ("T" marks on walls, spade up at the ceiling) removed or re-pivoted.
+
+Open flaws, by severity
+1. [ ] Hidden coplanar faces (about 41k pairs at 1.5 mm): cull faces against walls and floors in the cell mesh.
+2. [ ] Inn at 19:40 with patrons over budget (100 draws, 301k triangles): drop unseen geometry.
+3. [ ] Window panes flush with walls: need reveals on the inside.
+4. [ ] Cartoon pictures (flat landscape, moon) and the flat red banner with gold cross.
+5. [ ] Door leaf straps bright blue.
+6. [ ] Beige lumpy ball sacks and pots in the chapel.
+7. [ ] Bare dark walls and corners (smithy, chapel): dress by the room's rule.
+8. [ ] Remaining overlap: smithy cscoal0/1 sink 0.10 m; forge and 'counter' spots inside solids (shop.s0, draper, in.70, in.15, in.116, in.02); store torch pair.
+9. [ ] Mine coplanar meshes 420-422; cellars, crypt, tunnel not yet toured.
