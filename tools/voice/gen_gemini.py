@@ -1,7 +1,7 @@
 # Generates the voice files listed in plan.json with Google's Gemini 3.1 Flash TTS (hosted), then trims, normalises and encodes each to mono
 # AAC .m4a, exactly like gen.py does for Kokoro. Needs an API key in the environment variable GEMINI_API_KEY (never put the key in the repo
 # or on the command line) and network access to generativelanguage.googleapis.com.
-# usage:  python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json OUTDIR [--limit N] [--only speaker] [--sample] [--partial]
+# usage:  python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json OUTDIR [--limit N] [--only speaker] [--sample] [--partial] [--batch N]
 #   OUTDIR is audio/voice for the real thing, or a scratch folder with --sample (one mid-length line per speaker, joined into OUTDIR/sample.m4a).
 # Files that exist are skipped (resumable). File names hash the speaker, Gemini voice, direction and text, so a changed casting regenerates.
 # NOT YET RUN AGAINST THE LIVE API (written without a key): check the request shape against https://ai.google.dev/gemini-api/docs/speech-generation
@@ -40,6 +40,29 @@ def tts(text, voice, direction):
             sys.exit('Gemini API error %d: %s' % (e.code, msg))
         except (KeyError, IndexError, StopIteration): time.sleep(4); continue                         # an empty candidate now and then: ask again
     sys.exit('gave up on: ' + text[:60])
+
+# --batch N: several lines of one character in one request (the daily limit counts requests, not seconds of speech). The lines are sent
+# numbered, the model is asked to leave a long pause between them, and the take is cut at its N - 1 longest silences. Each piece must
+# then have a plausible length for its text, or the whole batch is thrown away and those lines are asked for one by one as before.
+def tts_batch(says, voice, direction):
+    listing = '\n'.join('%d. %s' % (i + 1, t) for i, t in enumerate(says))
+    x, sr = tts('(%d separate lines follow, numbered. Say each one exactly, in character, as its own remark. Leave three full seconds of silence after each line. Never say the numbers.)\n%s' % (len(says), listing), voice, direction)
+    n = int(sr * 0.02); fr = np.array([np.sqrt(np.mean(x[i:i + n] ** 2) + 1e-12) for i in range(0, len(x) - n + 1, n)]); quiet = fr < max(fr.max() * 0.02, 1e-4)
+    gaps = []; i = 0
+    while i < len(quiet):
+        if quiet[i]:
+            j = i
+            while j < len(quiet) and quiet[j]: j += 1
+            if i > 0 and j < len(quiet): gaps.append((j - i, i, j))            # silences inside the take, not at its ends
+            i = j
+        else: i += 1
+    gaps.sort(reverse=True); cuts = sorted((a + b) // 2 for _, a, b in gaps[:len(says) - 1])
+    if len(cuts) < len(says) - 1 or any(g[0] * 0.02 < 0.7 for g in gaps[:len(says) - 1]): return None            # the pauses are not all there: do not guess
+    edges = [0] + [c * n for c in cuts] + [len(x)]; parts = [x[edges[k]:edges[k + 1]] for k in range(len(says))]
+    rate = [len(t) / max(0.2, float(np.sum(np.abs(p) > max(np.abs(x).max() * 0.02, 1e-4))) / sr) for t, p in zip(says, parts)]            # characters per second of actual sound
+    med = sorted(rate)[len(rate) // 2]
+    if any(r < med * 0.45 or r > med * 2.2 for r in rate): return None            # a piece far too long or short for its text: a cut landed inside a line, or lines ran together
+    return parts, sr
 
 def encode(x, sr, dst):
     with tempfile.TemporaryDirectory() as td:
@@ -86,6 +109,22 @@ if '--partial' in args:
         if (p['speaker'], p['kind']) in ready: d, e = analyse(os.path.join(out, name_of[p['key']])); old['lines'][p['key']] = { 'f': name_of[p['key']], 'd': d, 'e': e, 's': p['speaker'] }; n += 1
     json.dump(old, open(mf + '.tmp', 'w'), separators=(',', ':')); os.replace(mf + '.tmp', mf)
     print('%d lines now Gemini:' % n, ', '.join('%s %ss' % g for g in ready) or 'none'); print('still Kokoro:', ', '.join('%s %ss' % g for g in sorted(set(by) - set(ready)))); sys.exit(0)
+batch = int(args[args.index('--batch') + 1]) if '--batch' in args else 0
+if batch > 1:            # first pass: missing lines, character by character, several per request; whatever fails is left for the one-by-one pass below
+    def fname(p):
+        c = cast.get(p['speaker']) or cast['narrator']; return hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'
+    by = {}
+    for p in todo:
+        if not os.path.exists(os.path.join(out, fname(p))): by.setdefault(p['speaker'], []).append(p)
+    for sp, ps in by.items():
+        c = cast.get(sp) or cast['narrator']
+        for k in range(0, len(ps), batch):
+            grp = ps[k:k + batch]
+            if len(grp) < 2 or done >= limit: continue
+            got = tts_batch([p['say'] for p in grp], c['voice'], c['direction']); done += 1
+            if not got: print('%s: batch of %d could not be cut cleanly, falling back to single lines' % (sp, len(grp)), flush=True); continue
+            for p, part in zip(grp, got[0]): dst = os.path.join(out, fname(p)); tmp = dst + '.part.m4a'; encode(part, got[1], tmp); os.replace(tmp, dst)
+            print('%s: %d lines in one request' % (sp, len(grp)), flush=True)
 for p in todo:
     c = cast.get(p['speaker']) or cast['narrator']
     name = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'; dst = os.path.join(out, name); keep.add(name)
