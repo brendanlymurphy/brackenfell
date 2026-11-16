@@ -5,7 +5,8 @@
 function buildWharf(bucket, fence, R) {
   if (TEST && TEST.levels === 0) return;
   const WD = 0.0, X0 = 9.0, X1 = 20.0, Z0 = 75.0, Z1 = 82.5, LY = LAKE.y, LAND = LY + 0.55, BASE = -3.3;
-  const M = (x, z) => { const m = bucket(x, z); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
+  const touch = new Map();
+  const M = (x, z) => { const m = bucket(x, z); if (!touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
   const sc = v => [1.0 * v, 0.97 * v, 0.92 * v];
   const col = (x0, z0, x1, z1, y0, y1) => addBoxCollider(M((x0 + x1) / 2, (z0 + z1) / 2), x0, z0, x1, z1, y0, y1);
   const flo = (x0, z0, x1, z1, y, y2, axis) => { const f = { x: (x0 + x1) / 2, z: (z0 + z1) / 2, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, ax: 1, az: 0, bx: 0, bz: 1, y }; if (y2 !== undefined) { f.y2 = y2; f.axis = axis; } World.floors.push(f); };
@@ -56,6 +57,7 @@ function buildWharf(bucket, fence, R) {
   { const bx = 13.6, bz = Z0 + 0.5, m = M(bx, bz); m.push().T(bx, WD, bz); m.mat(MAT.TIMBER, COL.timberDark, 0.5); for (const s of [-1, 1]) { m.cbox(s * 0.7, 0, 0, 0.12, 1.9, 0.12, 4); addCircleCollider(m, s * 0.7, 0, 0.1, 0, 1.9); }
     m.mat(MAT.PLANKS, [0.62, 0.52, 0.4], 0.5); m.box(-0.8, 1.0, -0.05, 0.8, 1.75, 0.05, 4); m.mat(MAT.PLAIN, [0.72, 0.68, 0.58]); m.quad2([-0.5, 1.2, 0.055], [-0.5, 1.62, 0.055], [0.1, 1.62, 0.055], [0.1, 1.2, 0.055]); m.pop();
     World.interact.push({ p: [bx, WD + 1.4, bz + 0.5], r: 2.4, zone: 0, kind: 'read', id: 'wharf.tally', title: 'The boatwright’s board', text: 'BOATS MENDED, PITCHED AND HIRED BY THE HOUR. The doors under the quay are the boat-houses: knock first, the keys are with Old Wenn. Scratched below: the lake stood this high in the Long Frost, and not a hand higher since.' }); }
+  lvLift(touch, 1.0);
   World.places.push({ id: 'wharf', name: 'The Wharf', x: 14, z: 80, r: 11 });
   World.spots['wharf.view'] = { p: [14, WD, 80], yaw: Math.PI, zone: 0 };
 }

@@ -7520,7 +7520,7 @@ function buildVillage() {
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);
   }
   putc(11.8, 6.3, 0.4, m => Props.barrel(m)); putc(12.2, 5.2, 0, m => Props.crate(m, 0.6)); putc(4.0, 10.6, 0.2, m => Props.crate(m, 0.55)); putc(-12.9, -4.2, 0, m => Props.barrel(m));
-  putc(-11.2, 9.0, 2.2, m => Props.cart(m, true));
+  putc(-6.4, 11.3, 0.08, m => Props.cart(m, true));      // Build 42: parked against the terrace wall east of the flight (it stood on the steps' first treads)
   // festival fire pit (lit at the end of the story)
   World.bonfirePos = [-2.6, -7.4];
   put(-2.6, -7.4, 0, m => {
@@ -7808,6 +7808,7 @@ function buildVillage() {
   if (typeof buildAlley === 'function') buildAlley();
   if (typeof buildInfill === 'function') buildInfill();
   if (typeof buildDress === 'function') buildDress();
+  if (typeof townFinish === 'function') townFinish();      // Build 42 (73f_levels.js)
 
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {
@@ -9200,6 +9201,14 @@ function buildBoards(bucket, fence, R) {
 //    square, a ramped lane climbs along the south wall from the south road. On top: paving, a fountain, a garden with a tree, three outbuildings, a lookout corner.
 // Everything is boxes and quads merged into the village cells through `bucket`; every walkable surface is a World.floors entry, every wall a box collider.
 const LVL = { n: 0 };
+// Build 42: the stone of the terrace and the Wharf, on the sides that the sun does not reach, read near-black (a vertical face takes only the horizon's ambient). Tilting the normals of
+// vertical stone faces upward by `k` lets them take more of the sky's light; the sun still sees them as before on the lit side. `touch` maps each bucket mesh to its vertex count before the builder began.
+function lvLift(touch, k) {
+  for (const [m, n0] of touch) for (let i = n0; i < m.nv; i++) {
+    const b = i * 32; if (m.u8[b + 28] !== MAT.STONE) continue; const ny = m.i8[b + 13]; if (Math.abs(ny) > 40) continue;
+    let x = m.i8[b + 12], y = ny + k * 127, z = m.i8[b + 14]; const l = 127 / Math.hypot(x, y, z); m.i8[b + 12] = Math.round(x * l); m.i8[b + 13] = Math.round(y * l); m.i8[b + 14] = Math.round(z * l);
+  }
+}
 function lvFloor(x0, z0, x1, z1, y, y2, axis) {
   const f = { x: (x0 + x1) / 2, z: (z0 + z1) / 2, hx: Math.abs(x1 - x0) / 2, hz: Math.abs(z1 - z0) / 2, ax: 1, az: 0, bx: 0, bz: 1, y };
   if (y2 !== undefined) { f.y2 = y2; f.axis = axis; } World.floors.push(f); return f;
@@ -9207,7 +9216,8 @@ function lvFloor(x0, z0, x1, z1, y, y2, axis) {
 function buildLevels(bucket, fence, R) {
   if (TEST && TEST.levels === 0) return;
   const rr = rng(3317), T = LV.up, H = T.h, wt = T.slope, TOP = H + 0.1;
-  const M = (x, z) => { const m = bucket(x, z); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
+  const touch = new Map();
+  const M = (x, z) => { const m = bucket(x, z); if (!touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
   const sc = v => [1.0 * v, 0.97 * v, 0.92 * v];
   const gmin = (x0, z0, x1, z1) => { let g = 1e9; for (let i = 0; i <= 6; i++) g = Math.min(g, Terrain.y(x0 + (x1 - x0) * i / 6, z0 + (z1 - z0) * i / 6)); return g; };
   const col = (x0, z0, x1, z1, y0, y1) => { addBoxCollider(M((x0 + x1) / 2, (z0 + z1) / 2), x0, z0, x1, z1, y0, y1); };
@@ -9220,7 +9230,7 @@ function buildLevels(bucket, fence, R) {
     const P = ax ? (u, v) => [v, u] : (u, v) => [u, v], mm = M(...P(mid, vo));
     const bx = (a, y0, b, c, y1, d, skip) => { if (ax) mm.box(b, y0, a, d, y1, c, sw(skip || 0)); else mm.box(a, y0, b, c, y1, d, skip || 0); };
     let base = 1e9; for (let i = 0; i <= 8; i++) { const u = u0 + (u1 - u0) * i / 8, p = P(u, vo + os * 0.4); base = Math.min(base, Terrain.y(p[0], p[1])); } base -= 0.7;
-    mm.mat(MAT.STONE, sc(0.9 + rr() * 0.08), 0.7); bx(u0, base, v0, u1, TOP, v1, 4 | 8);
+    mm.mat(ax === 0 && os < 0 ? MAT.PLASTER : MAT.STONE, ax === 0 && os < 0 ? [1.0, 0.96, 0.88] : sc(0.9 + rr() * 0.08), 0.7); bx(u0, base, v0, u1, TOP, v1, 4 | 8);      // Build 42: the north face (never in the sun) is limewashed rubble, it was near-black
     mm.mat(MAT.STONE, sc(1), 0.6);
     if (parapet) { bx(u0, TOP, v0 + 0.12, u1, H + 0.95, v1 - 0.12, 4 | 8); bx(u0 - 0.05, H + 0.95, v0 - 0.02, u1 + 0.05, H + 1.07, v1 + 0.02, 4); }
     else bx(u0 - 0.04, TOP, v0 - 0.1, u1 + 0.04, H + 0.2, v1 + 0.1, 4);
@@ -9280,7 +9290,7 @@ function buildLevels(bucket, fence, R) {
     const lb = gmin(-36.8, T.z1, -34, lz1) - 0.6;
     stoneBox(-36.8, lb, T.z1 + wt, -34.0, H, lz1 + 0.3, sc(0.95), 4 | 16, 0.7);
     lvFloor(-36.0, T.z1 - 0.3, -34.0, lz1, H);
-    stoneBox(-36.8, H, T.z1 + wt, -36.3, H + 0.95, lz1 + 0.3, sc(1), 4 | 16, 0.6); stoneBox(-36.8, H, lz1 - 0.1, -34.0, H + 0.95, lz1 + 0.3, sc(1), 4 | 2, 0.6);
+    stoneBox(-36.8, H, T.z1 + wt, -36.3, H + 0.95, lz1 - 0.1, sc(1), 4 | 16 | 32, 0.6); stoneBox(-36.8, H, lz1 - 0.1, -34.0, H + 0.95, lz1 + 0.3, sc(1), 4 | 2, 0.6);
     col(-36.8, T.z1 + wt, -36.3, lz1 + 0.3, lb, H + 1.1); col(-36.8, lz1 - 0.1, -34.0, lz1 + 0.3, lb, H + 1.1);
     const m = M(xE, lz0), y = Terrain.y(xE + 0.6, lz1 + 0.8); m.push().T(xE + 0.6, y, lz1 + 0.8); m.mat(MAT.TIMBER, COL.timberDark); m.cbox(0, 0, 0, 0.14, 2.2, 0.14, 4); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cbox(0, 2.2, 0, 0.3, 0.34, 0.3, 4); m.pop();
     World.emitters.push({ type: 'lantern', p: [xE + 0.6, y + 2.4, lz1 + 0.8], zone: 0, halo: 0.5 });
@@ -9345,9 +9355,17 @@ function buildLevels(bucket, fence, R) {
     m.mat(MAT.CLOTH, [0.5, 0.13, 0.1], 0.5); m.quad2([0.05, 4.1, 0], [0.05, 3.45, 0], [1.1, 3.55, 0.15], [1.1, 4.05, 0.15]); addCircleCollider(m, 0, 0, 0.12, 0, 4); m.pop();
     World.interact.push({ p: [lx, H + 1.3, lz + 0.2], r: 2.4, zone: 0, kind: 'read', id: 'terrace.glass', title: 'A brass spyglass on a tripod', text: 'You put your eye to the glass. The whole market is laid out like a pinned map: the notice board, the well, the baker’s awning, a boy chasing a goose. Someone has scratched a tally of floods on the tripod leg. There are nine marks.' });
   }
+  lvLift(touch, 1.0);
   World.places.push({ id: 'uward', name: 'Rowan’s Terrace', x: -21, z: 21, r: 13 });
   World.spots['terrace.view'] = { p: [-20, H, T.z0 + 1.4], yaw: 0, zone: 0 };
   World.levelsBuilt = (World.levelsBuilt || 0) + 1;
+}
+
+// Build 42: small fixes that need every builder to have run (called at the end of buildVillage)
+function townFinish() {
+  // the chimney of in.04 stands 4 m below the terrace's north edge, where the camera looks straight at its smoke: the full-size puffs (1 m across) stack into a tall white sheet there.
+  // A thin emitter (smaller, fainter, shorter-lived puffs, see 75_particles.js) makes it a wisp like the other infill chimneys.
+  for (const e of World.emitters) if (e.type === 'smoke' && Math.abs(e.p[0] + 19.5) < 0.8 && Math.abs(e.p[2] - 4.1) < 0.8 && e.p[1] > 8) { e.thin = true; e.p[1] += 0.05; }
 }
 
 
@@ -9359,7 +9377,8 @@ function buildLevels(bucket, fence, R) {
 function buildWharf(bucket, fence, R) {
   if (TEST && TEST.levels === 0) return;
   const WD = 0.0, X0 = 9.0, X1 = 20.0, Z0 = 75.0, Z1 = 82.5, LY = LAKE.y, LAND = LY + 0.55, BASE = -3.3;
-  const M = (x, z) => { const m = bucket(x, z); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
+  const touch = new Map();
+  const M = (x, z) => { const m = bucket(x, z); if (!touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
   const sc = v => [1.0 * v, 0.97 * v, 0.92 * v];
   const col = (x0, z0, x1, z1, y0, y1) => addBoxCollider(M((x0 + x1) / 2, (z0 + z1) / 2), x0, z0, x1, z1, y0, y1);
   const flo = (x0, z0, x1, z1, y, y2, axis) => { const f = { x: (x0 + x1) / 2, z: (z0 + z1) / 2, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, ax: 1, az: 0, bx: 0, bz: 1, y }; if (y2 !== undefined) { f.y2 = y2; f.axis = axis; } World.floors.push(f); };
@@ -9410,6 +9429,7 @@ function buildWharf(bucket, fence, R) {
   { const bx = 13.6, bz = Z0 + 0.5, m = M(bx, bz); m.push().T(bx, WD, bz); m.mat(MAT.TIMBER, COL.timberDark, 0.5); for (const s of [-1, 1]) { m.cbox(s * 0.7, 0, 0, 0.12, 1.9, 0.12, 4); addCircleCollider(m, s * 0.7, 0, 0.1, 0, 1.9); }
     m.mat(MAT.PLANKS, [0.62, 0.52, 0.4], 0.5); m.box(-0.8, 1.0, -0.05, 0.8, 1.75, 0.05, 4); m.mat(MAT.PLAIN, [0.72, 0.68, 0.58]); m.quad2([-0.5, 1.2, 0.055], [-0.5, 1.62, 0.055], [0.1, 1.62, 0.055], [0.1, 1.2, 0.055]); m.pop();
     World.interact.push({ p: [bx, WD + 1.4, bz + 0.5], r: 2.4, zone: 0, kind: 'read', id: 'wharf.tally', title: 'The boatwright’s board', text: 'BOATS MENDED, PITCHED AND HIRED BY THE HOUR. The doors under the quay are the boat-houses: knock first, the keys are with Old Wenn. Scratched below: the lake stood this high in the Long Frost, and not a hand higher since.' }); }
+  lvLift(touch, 1.0);
   World.places.push({ id: 'wharf', name: 'The Wharf', x: 14, z: 80, r: 11 });
   World.spots['wharf.view'] = { p: [14, WD, 80], yaw: Math.PI, zone: 0 };
 }
