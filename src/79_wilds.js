@@ -289,10 +289,10 @@ WBUILD.mine = (p, m, R) => {
     mm.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1.35, 1.35]) { mm.cbox(sx, -0.3, Z, 0.34, 3.0, 0.34, 4); addBoxCollider(mm, sx - 0.2, Z - 0.2, sx + 0.2, Z + 0.2, 0, 3); }
     mm.box(-1.75, 2.65, Z - 0.18, 1.75, 3.0, Z + 0.2); for (const s of [-1, 1]) mm.beam([s * 1.35, 2.2, Z - 0.18], [s * 0.7, 2.7, Z - 0.18], 0.16, 0.16);
     mm.mat(MAT.TIMBER, COL.timber); mm.cbox(0, 3.0, Z + 0.35, 3.0, 0.22, 0.3, 4);
-    // boards nailed across the opening, some askew
-    mm.mat(MAT.PLANKS, [0.75, 0.68, 0.6], 0.6); for (let i = 0; i < 6; i++) { const y = 0.3 + i * 0.38, sl = (i % 3 - 1) * 0.05; mm.beam([-1.2, y - sl, Z - 0.2], [1.2, y + sl, Z - 0.2], 0.2, 0.05); }
-    mm.beam([-1.15, 0.35, Z - 0.26], [1.1, 2.4, Z - 0.26], 0.18, 0.04); mm.beam([1.1, 0.4, Z - 0.26], [-1.1, 2.3, Z - 0.26], 0.18, 0.04);
-    mm.mat(MAT.METAL, COL.black); for (const [x, y] of [[-0.9, 0.75], [0.9, 1.1], [0.1, 1.6], [-0.5, 2.0]]) mm.cbox(x, y, Z - 0.3, 0.07, 0.07, 0.03, 4);
+    // [q1] an oak door hung in the frame, iron-strapped, a bar across it (the Sexton's key lifts it; 94_mine.js makes it a portal)
+    mm.mat(MAT.PLANKS, [0.42, 0.36, 0.3], 0.6); mm.box(-1.12, 0, Z - 0.28, 1.12, 2.36, Z - 0.12); mm.mat(MAT.METAL, COL.black);
+    for (const y of [0.4, 1.2, 2.0]) mm.box(-1.12, y, Z - 0.31, 1.12, y + 0.1, Z - 0.28); mm.box(-0.05, 0.1, Z - 0.31, 0.05, 2.3, Z - 0.28); mm.cyl(0.55, 1.1, Z - 0.34, 0.07, 0.07, 0.03, 8, 3);
+    mm.mat(MAT.TIMBER, COL.timberDark); mm.box(-1.3, 1.05, Z - 0.42, 1.3, 1.25, Z - 0.3); for (const sx of [-1.2, 1.2]) mm.box(sx - 0.07, 0.9, Z - 0.46, sx + 0.07, 1.4, Z - 0.28);
     addBoxCollider(mm, -1.4, Z - 0.3, 1.4, Z - 0.1, 0, 2.8);
     // rails running out, a cart half loaded with stone, sleepers
     mm.mat(MAT.TIMBER, COL.timberDark); for (let z = Z - 0.2; z > -8; z -= 0.8) mm.box(-0.7, 0, z - 0.06, 0.7, 0.06, z + 0.06);

@@ -28,8 +28,11 @@ const G = {
   imgs: [...walk('tex/', n => /^a_.*\.webp$/.test(n)), ...walk('tex/', n => /^n_.*\.jpg$/.test(n)), 'tex/noise.bin'].map(add),
   kits: [...walk('kits/', n => /\.(glb|json)$/.test(n)), ...walk('kits/skin/', n => /\.(webp|json|png|jpg)$/.test(n))].map(add),
   chars: walk('chars/real/', n => n.endsWith('.glb')).map(add),
+  astcs: [...walk('tex/s/', n => /^[an]_.*\.png$/.test(n)), 'tex/noise.bin'].map(add),        // the half-resolution pack (tools/tex_half.mjs): Low tier and low-memory devices
+  kitss: [],        // what a device with the 512 texture cap fetches instead of `kits` (tools/assets_pack.mjs writes the small copies under kits/s and kits/skin/s; 44_kit.js and 74b_trees.js pick them)
   charsq: walk('chars/', n => /^q_/.test(n)).map(add),
 };
+G.kitss = G.kits.map(p => { const q = p.replace(/^kits\/skin\//, 'kits/skin/s/').replace(/^kits\/([^/]+\.glb)$/, 'kits/s/$1'); return q !== p && fs.existsSync(root + q) ? add(q) : p; });
 // the three built files are hashed after the fact (index.html is the template output below, so its hash is the build id)
 F['three.js'] = [fs.statSync(root + 'three.js').size, threeV]; F['game.js'] = [Buffer.byteLength(js), gameV]; F['index.html'] = [0, BUILD];
 const scripts = ['three.js?v=' + threeV, 'game.js?v=' + gameV];
@@ -41,10 +44,11 @@ html = html.replace(/("index\.html":\[)0(,)/, '$1' + F['index.html'][0] + '$2');
 
 // ── service worker ──
 const APP = [...G.app.filter(p => p !== 'index.html' && p !== 'three.js' && p !== 'game.js'), ...scripts, 'index.html'];
-const ASSETS = {}; for (const g of ['astc', 'imgs', 'kits', 'chars', 'charsq']) for (const p of G[g]) ASSETS[p] = F[p][1];
+const ASSETS = {}; for (const g of ['astc', 'astcs', 'imgs', 'kits', 'kitss', 'chars', 'charsq']) for (const p of G[g]) ASSETS[p] = F[p][1];
 fs.writeFileSync(root + 'sw.js', fs.readFileSync(src + 'sw.tpl', 'utf8').replace('__BUILD__', BUILD).replace('/*__APP__*/[]', JSON.stringify(APP)).replace('/*__ASSETS__*/{}', JSON.stringify(ASSETS)));
 
 const sum = names => names.reduce((a, g) => a + G[g].reduce((s, p) => s + F[p][0], 0), 0);
 const mb = n => (n / 1048576).toFixed(1) + ' MB';
 console.log('built game.js', (js.length / 1024).toFixed(1) + ' KB', files.length + ' files; build', BUILD);
-console.log('first visit downloads (astc phone/desktop):', mb(sum(['app', 'astc', 'kits', 'chars'])), '| without ASTC (images):', mb(sum(['app', 'imgs', 'kits', 'chars'])), '| app shell only:', mb(sum(['app'])));
+console.log('first visit downloads: Low tier or low-memory device', mb(sum(['app', 'astcs', 'kitss', 'chars'])), '| phone or Medium tier (512 texture cap)', mb(sum(['app', 'astc', 'kitss', 'chars'])), '| desktop High', mb(sum(['app', 'astc', 'kits', 'chars'])), '| without ASTC (images):', mb(sum(['app', 'imgs', 'kits', 'chars'])), '| app shell only:', mb(sum(['app'])));
+console.log('  by group:', ['app', 'astc', 'astcs', 'imgs', 'kits', 'kitss', 'chars'].map(g => g + ' ' + mb(sum([g]))).join(', '));

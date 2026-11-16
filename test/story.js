@@ -26,6 +26,22 @@ log.push('act1 up to the mine door ok, stage ' + qAt('main'));
   give('minekey'); give('lantern'); mainStart(); fx(qAt('main') === 0, 'late start: first objective is ' + qAt('main'));
   use('wharf.body'); fx(qAt('main') === 1, 'out of order: body stage ' + qAt('main')); talk('maren', 0, 0, 0); fx(qAt('main') === 3, 'out of order: Maren should move the story to the mine (' + qAt('main') + ')');
   const [f, i, q, o] = JSON.parse(keep); S.flags = f; S.items = i; S.q = q; S.opened = o; }
-if (window.__storyMine) { const r = await window.__storyMine(); log.push(r); }
+// ── the Old Mine, by script: the door wants the key; the key opens it; down to the journal; the chest wants the Foreman's key; out by the cleft and back; the journal to Hale ──
+{ const P0 = WILDS.P.mine, door = World.interact.find(i => i.id === 'door.mine.in'); fx(door && door.kind === 'portal', 'the mine door is not a portal');
+  const A = siteToWorld(P0, 0, -0.5); game.tp(A[0], A[1], 0, 0); game.step(2, dt); fx(!World.cell, 'not outside at the mine');
+  { const k = S.items.minekey; delete S.items.minekey; const f = S.flags.mineOpen; delete S.flags.mineOpen; fx(Cells.lockMsg(door), 'the barred door opened without the key'); S.items.minekey = k; S.flags.mineOpen = f; }
+  fx(!Cells.lockMsg(door), 'the key did not open the door'); fx(S.flags.mineOpen, 'mineOpen not set'); Cells.use(door); await sleep(300); await idle(); fx(World.cell && World.cell.id === 'mine', 'did not go down into the mine');
+  fx(qAt('main') === 4, 'stage in the mine ' + qAt('main')); fx(has('lantern'), 'no lantern'); log.push('mine entered by the door, stage ' + qAt('main'));
+  const mc = Cells.by.mine, O = mc.origin, FY = mc.floorY, at = (x, z, y) => { Cells.teleport({ p: [O[0] + x, FY + (y || 0.1), O[2] + z], yaw: 0, cell: 'mine' }); game.step(3, dt); };
+  fx(questTarget('main') && hyp(questTarget('main')[0] - (O[0] - 9.4), questTarget('main')[2] - (O[2] + 66.2)) < 3, 'marker in the mine is not at the journal');
+  // the chest: shut to a man without the Foreman's key
+  at(-12.2, 54); { const ch = World.interact.find(i => i.id === 'mine.chest'); interactUse(ch); fx(!S.opened['mine.chest'], 'the strongbox opened without the key'); give('foremankey'); interactUse(ch); fx(S.opened['mine.chest'] && has('silverthread'), 'the strongbox gave no Silverthread'); fx(ITEMS.silverthread[2].dmg > ITEMS.steelsword[2].dmg, 'Silverthread is not better than the best sword'); log.push('strongbox -> Silverthread'); }
+  at(-9.4, 65.6); use('mine.journal'); fx(has('journal') && S.flags.corwin, 'no journal'); fx(qAt('main') === 5, 'stage after the journal ' + qAt('main')); log.push('journal taken, stage ' + qAt('main'));
+  // the second way out comes out above the Hermit's Pool, and goes back in
+  at(-33.5, 60, 3.5); { const ex = World.interact.find(i => i.id === 'door.mine.cleft'); Cells.use(ex); await sleep(300); await idle(); fx(!World.cell && hyp(Player.pos[0] - 27.5, Player.pos[2] + 180.8) < 4, 'the cleft did not come out above the pool: ' + Player.pos.map(v => +v.toFixed(1)));
+    fx(Player.pos[1] > 3.9, 'above the pool is not high up (' + Player.pos[1].toFixed(1) + ')'); const back = World.interact.find(i => i.id === 'door.mine.cleft.in'); fx(hyp(back.p[0] - Player.pos[0], back.p[2] - Player.pos[2]) < 4, 'no way back into the cleft ' + back.p.map(v => +v.toFixed(1)) + ' vs ' + Player.pos.map(v => +v.toFixed(1))); Cells.use(back); await sleep(300); await idle(); fx(World.cell && World.cell.id === 'mine', 'the cleft did not lead back in'); log.push('cleft out and in'); }
+  at(0, 2.6); { const out = World.interact.find(i => i.id === 'door.mine.out'); Cells.use(out); await sleep(300); await idle(); fx(!World.cell && hyp(Player.pos[0] - A[0], Player.pos[2] - A[1]) < 3, 'the main door did not lead out ' + Player.pos.map(v => +v.toFixed(1))); }
+  talk('hale', 0, 0); fx(S.flags.act1, 'Hale did not close Act 1'); fx(qAt('main') === 6, 'stage after Hale ' + qAt('main')); log.push('journal to Hale: act 1 done'); }
+
 if (fails.length) throw new Error('STORY FAIL ' + JSON.stringify(fails));
 return 'story PASS ' + JSON.stringify(log);

@@ -298,8 +298,12 @@ async function packBlob(url) {
 const ASTC_FMT = { '6x6': () => THREE.RGBA_ASTC_6x6_Format, '5x5': () => THREE.RGBA_ASTC_5x5_Format };
 async function loadPackAstc(progress) {
   const L = MAT_NAMES.length; let done = 0;
+  // the Low tier and low-memory devices take the half-resolution pack (tex/s, a quarter of the bytes and of the memory; tools/tex_half.mjs).
+  // ?texpack=half or full (--opt texpack=...) forces one.
+  const want = (TEST && TEST.texpack) || (location.search.match(/[?&]texpack=(\w+)/) || [])[1], half = want ? want === 'half' : GFX_TEX.tiny, dir = half ? 'tex/s/' : 'tex/';
+  if (half && typeof Load !== 'undefined' && Load.groups && Load.groups.indexOf('astc') >= 0) Load.use(Load.groups.map(g => g === 'astc' ? 'astcs' : g));
   const load = async pre => {
-    const blobs = await Promise.all(MAT_NAMES.map(async n => { const d = await packBlob('tex/' + pre + n + '.png'); progress(++done / (L * 2)); return d; }));
+    const blobs = await Promise.all(MAT_NAMES.map(async n => { const d = await packBlob(dir + pre + n + '.png'); progress(++done / (L * 2)); return d; }));
     const dv = new DataView(blobs[0].buffer, blobs[0].byteOffset);
     if (dv.getUint32(0, true) !== 0x58544642) throw new Error('bad pack header');
     const bw = blobs[0][4], bh = blobs[0][5], res = dv.getUint16(6, true), nm = blobs[0][8], mips = [];
@@ -1018,7 +1022,7 @@ function terrainMaterial() {
 // villagers, small props); 2 = the wide shadow map only (flat tree stand-ins that cast for every tree out there).
 // Layer 3 = the near sun-shadow map only: casters the camera never draws (the low copy of a villager, the plain pine used for shadows). The near map's camera enables it.
 const SHADOW_ONLY_LAYER = 3;
-const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {} };
+const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {}, pools: [] };
 // Draw distances (m) for small things. vis: drawn by the camera up to here; cast: drawn into the near sun-shadow map up to here; near: a chicken
 // is drawn as separate parts up to this distance and as one rigid body beyond it. indoor: while the camera is inside a building, outdoor
 // meshes whose bounding sphere lies beyond this are not drawn at all (they can only show through a window). Raise a number to back a cut out.
@@ -1063,17 +1067,56 @@ function sceneBuild() {
   for (const pk of World.packs) for (const it of pk.items) {
     const mat = it.kind === 'terrain' ? M.terrain : it.kind === 'water' ? M.water : it.kind === 'glow' ? M.glow : M.static;
     if (!mat || !it.count) continue;
+    // terrain and water tiles of one pack are drawn together: one mesh whose index buffer is refilled from the tiles in view (see poolUpdate)
+    if ((it.kind === 'terrain' || it.kind === 'water') && !it.cell && !it.nearOnly && !(TEST && TEST.pool === 0)) {
+      let P = SC.pools.find(q => q.pk === pk && q.kind === it.kind);
+      if (!P) { P = { pk, kind: it.kind, tiles: [], mat, n: 0 }; SC.pools.push(P); }
+      if (it.kind === 'water' && it.r > 30) { for (const c of squares(pk, it.first, it.count, 16)) P.tiles.push({ it, idx: c.idx, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 14), on: false }); }       // a river or lake tile is hundreds of metres long: cut it into 16 m squares
+      else P.tiles.push({ it, sph: sphere(it.c, it.r), big: sphere(it.c, it.r + 6), on: false });
+      P.n += it.count; continue;
+    }
     const g = geo(pk, it.first, it.count); g.boundingSphere = sphere(it.c, it.r);
     const mesh = new THREE.Mesh(g, mat); mesh.matrixAutoUpdate = false;
     mesh.castShadow = !!pk.shadow && !it.noShadow && it.kind === 'opaque'; mesh.receiveShadow = it.kind === 'opaque' || it.kind === 'terrain';
     if (it.kind === 'terrain') mesh.renderOrder = 1;      // after the other opaque draws, so the ground shader only runs where nothing nearer already stands
     if (it.kind === 'water') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
     if (it.nearOnly) mesh.layers.set(1);
-    scene.add(mesh); SC.statics.push({ mesh, it });
+    const st = { mesh, it }; scene.add(mesh); SC.statics.push(st);
+    // A big merged piece of the village (fences, wells, stalls over 100 m) used to go into the near sun-shadow map whole. Its triangles are
+    // sorted into 8 m squares here; a twin that only that shadow map draws holds just the squares the map covers (subUpdate).
+    if (it.kind === 'opaque' && !it.cell && it.r > 18 && !(TEST && TEST.sub === 0)) {
+      const cellList = squares(pk, it.first, it.count, 8);
+      const g2 = new THREE.BufferGeometry(); for (const k in pk.attr) if (k !== 'wind') g2.setAttribute(k, pk.attr[k]);
+      const cur = new Uint32Array(it.count), at = new THREE.BufferAttribute(cur, 1); at.setUsage(THREE.DynamicDrawUsage); g2.setIndex(at); g2.setDrawRange(0, 0); g2.boundingSphere = g.boundingSphere;
+      const tw = new THREE.Mesh(g2, mat); tw.matrixAutoUpdate = false; tw.frustumCulled = false; tw.castShadow = true; tw.receiveShadow = false; tw.layers.set(SHADOW_ONLY_LAYER); tw.visible = false; tw.name = 'static-shadow'; scene.add(tw);
+      tw.castShadow = mesh.castShadow;
+      st.sub = { mesh: tw, geo: g2, cur, cells: cellList, last: [1e9, 1e9], n: 0, casts: mesh.castShadow };
+      // and the camera draws the same mesh from the squares in view (while the mesh itself casts no shadow: see sceneUpdate)
+      const g1 = new THREE.BufferGeometry(); for (const k in pk.attr) if (k !== 'wind') g1.setAttribute(k, pk.attr[k]);
+      const c1 = new Uint32Array(it.count), a1 = new THREE.BufferAttribute(c1, 1); a1.setUsage(THREE.DynamicDrawUsage); g1.setIndex(a1); g1.boundingSphere = g.boundingSphere;
+      c1.set(pk.index.array.subarray(it.first, it.first + it.count)); g1.setDrawRange(0, it.count);
+      st.view = { geo: g1, cur: c1, full: true, n: it.count, total: it.count, pk, it }; mesh.geometry = g1; g.dispose();
+    }
+  }
+  for (const P of SC.pools) {
+    const g = new THREE.BufferGeometry(); for (const k in P.pk.attr) if (k !== 'wind') g.setAttribute(k, P.pk.attr[k]);
+    P.cur = new Uint32Array(P.n); const at = new THREE.BufferAttribute(P.cur, 1); at.setUsage(THREE.DynamicDrawUsage); g.setIndex(at); g.setDrawRange(0, 0); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+    const mesh = P.mesh = new THREE.Mesh(g, P.mat); mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = P.kind === 'terrain'; mesh.renderOrder = P.kind === 'terrain' ? 1 : 2; mesh.name = P.kind + '-pool'; mesh.visible = false;
+    P.geo = g; scene.add(mesh);
   }
   // ── instanced trees, bushes and boulders: one mesh per (model, cell) so cells cull and switch level of detail ──
   const IBA = THREE.InstancedBufferAttribute;
+  for (const grp of World.instGroups) {
+    if (!(grp.kind === 'opaque' && grp.maxDist && grp.nearOnly) || SC.rocks || (TEST && TEST.rockring === 0)) continue;
+    const n = grp.cells.reduce((a, c) => a + c.count, 0), src = new Float32Array(n * 8); let o = 0; for (const c of grp.cells) { src.set(grp.ibuf.subarray(c.first * 8, (c.first + c.count) * 8), o); o += c.count * 8; }
+    const ring = (cap, layer, cast) => { const g = geo(World.instPack, grp.first, grp.count, true), a = new Float32Array(cap * 4), b = new Float32Array(cap * 4), ia = new IBA(a, 4), ib = new IBA(b, 4); ia.setUsage(THREE.DynamicDrawUsage); ib.setUsage(THREE.DynamicDrawUsage);
+      g.setAttribute('ipos', ia); g.setAttribute('iprm', ib); g.instanceCount = 0; g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+      const mesh = new THREE.Mesh(g, M.inst); mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.castShadow = cast; mesh.receiveShadow = !cast; mesh.layers.set(layer); mesh.visible = false; mesh.name = cast ? 'rocks-shadow' : 'rocks'; scene.add(mesh);
+      return { g, a, b, ia, ib, cap, n: 0, mesh }; };
+    SC.rocks = { grp, src, maxDist: grp.maxDist, cam: ring(Math.min(n, 512), 1, false), cast: ring(Math.min(n, 96), SHADOW_ONLY_LAYER, true), last: [1e9, 0, 1e9, 9, ''] };
+  }
   for (const grp of World.instGroups) for (const c of grp.cells) {
+    if (SC.rocks && SC.rocks.grp === grp) continue;
     if (!c.ipos) {
       const a = new Float32Array(c.count * 4), b = new Float32Array(c.count * 4), src = grp.ibuf;
       for (let i = 0; i < c.count; i++) { const o = (c.first + i) * 8; a.set(src.subarray(o, o + 4), i * 4); b.set(src.subarray(o + 4, o + 8), i * 4); }
@@ -1110,11 +1153,82 @@ function sceneBuild() {
   if (typeof Trees !== 'undefined') Trees.build(scene);       // scanned trees (74b_trees.js)
   return scene;
 }
+// Pooled terrain and water: every frame each tile is tested against the camera's view; the index buffer is only rewritten when a tile
+// comes into view that is not in it yet, and then it takes every tile within 14 m of the view, so turning the head rarely costs an upload.
+const _fr = new THREE.Frustum(), _pm = new THREE.Matrix4();
+function poolUpdate(e, cur, inside) {
+  if (!SC.pools.length) return;
+  _fr.setFromProjectionMatrix(_pm.multiplyMatrices(R.camera.projectionMatrix, R.camera.matrixWorldInverse));
+  for (const P of SC.pools) {
+    if (cur) { P.mesh.visible = false; continue; }
+    let miss = false, need = 0, have = 0;
+    for (const t of P.tiles) {
+      const it = t.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]);
+      t.ok = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && d - it.r > DRAW.indoor);
+      t.in = t.ok && _fr.intersectsSphere(t.sph); if (t.in) { need++; if (!t.on) miss = true; } if (t.on) { have++; if (!t.ok) miss = true; }
+    }
+    if (miss || have > need * 2 + 6 || P.stale) {
+      let n = 0; const src = P.pk.index.array; P.stale = false;
+      for (const t of P.tiles) { t.on = t.ok && (t.in || _fr.intersectsSphere(t.big)); if (t.on) { if (t.idx) { P.cur.set(t.idx, n); n += t.idx.length; } else { P.cur.set(src.subarray(t.it.first, t.it.first + t.it.count), n); n += t.it.count; } } }
+      P.geo.setDrawRange(0, n); P.count = n;
+      if (n) { const at = P.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
+    }
+    P.mesh.visible = P.count > 0;
+  }
+}
+// sorts a pack item's triangles into squares of `size` metres (seen from above); each square knows a sphere round its triangles
+function squares(pk, first, count, size) {
+  const ix = pk.index.array, P_ = pk.attr.position.array, cells = new Map();
+  for (let k = first; k < first + count; k += 3) { const a = ix[k] * 3, b = ix[k + 1] * 3, c = ix[k + 2] * 3, key = Math.floor((P_[a] + P_[b] + P_[c]) / (3 * size)) + ',' + Math.floor((P_[a + 2] + P_[b + 2] + P_[c + 2]) / (3 * size));
+    let l = cells.get(key); if (!l) cells.set(key, l = { idx: [], lo: [1e9, 1e9, 1e9], hi: [-1e9, -1e9, -1e9] }); l.idx.push(ix[k], ix[k + 1], ix[k + 2]);
+    for (const v of [a, b, c]) for (let d = 0; d < 3; d++) { const p = P_[v + d]; if (p < l.lo[d]) l.lo[d] = p; if (p > l.hi[d]) l.hi[d] = p; } }
+  return [...cells.values()].map(l => { const c = [(l.lo[0] + l.hi[0]) / 2, (l.lo[1] + l.hi[1]) / 2, (l.lo[2] + l.hi[2]) / 2], r = 0.5 * hyp(l.hi[0] - l.lo[0], l.hi[1] - l.lo[1], l.hi[2] - l.lo[2]);
+    return { x: c[0], z: c[2], idx: Uint32Array.from(l.idx), sph: new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r), big: new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r + 10), on: true }; });
+}
+// camera side of a big static mesh: all of it while it casts shadow itself, else the squares in (or within 10 m of) the view, refilled when one comes into view that is missing
+function viewUpdate(s, subset) {
+  const v = s.view, cells = s.sub.cells;
+  if (!subset) { if (!v.full) { v.cur.set(v.pk.index.array.subarray(v.it.first, v.it.first + v.it.count)); v.geo.setDrawRange(0, v.total); const at = v.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, v.total); at.needsUpdate = true; v.full = true; for (const c of cells) c.on = true; } return; }
+  let miss = v.full, need = 0, have = 0;
+  for (const c of cells) { c.in = _fr.intersectsSphere(c.sph); if (c.in) { need++; if (!c.on) miss = true; } if (c.on) have++; }
+  if (!miss && have <= need * 2 + 8) return;
+  let n = 0; v.full = false;
+  for (const c of cells) { c.on = c.in || _fr.intersectsSphere(c.big); if (c.on) { v.cur.set(c.idx, n); n += c.idx.length; } }
+  v.n = n; v.geo.setDrawRange(0, n); if (n) { const at = v.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
+}
+const sb_casts = s => s.sub.casts;
+function subUpdate(sb, e, q) {
+  const r0 = q.shadowNear, cx = e[0] + Math.sin(R.cam.yaw) * r0 * 0.72, cz = e[2] - Math.cos(R.cam.yaw) * r0 * 0.72;       // centre of the near shadow map (43_render.js)
+  if (hyp(cx - sb.last[0], cz - sb.last[1]) < 2 && sb.r0 === r0) return; sb.last = [cx, cz]; sb.r0 = r0;
+  let n = 0; const reach = r0 + 6 + 8;          // the map, the 8 m squares' own half-diagonal, and room for long shadows falling in from outside
+  for (const c of sb.cells) if (hyp(c.x - cx, c.z - cz) < reach) { sb.cur.set(c.idx, n); n += c.idx.length; }
+  sb.n = n; sb.geo.setDrawRange(0, n); if (n) { const at = sb.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
+}
+// Boulders: instead of one instanced mesh per 110 m cell (every boulder of a cell drawn, and drawn again into the shadow map), two short
+// lists refilled as the player moves: those worth drawing from here, and the few big ones near enough to cast a shadow that shows.
+function rocksUpdate(e, q, hidden) {
+  const K_ = SC.rocks; if (!K_) return;
+  K_.cam.mesh.visible = !hidden && K_.cam.n > 0; K_.cast.mesh.visible = !hidden && K_.cast.n > 0; if (hidden) return;
+  let dy = R.cam.yaw - K_.last[3]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  if (hyp(e[0] - K_.last[0], e[2] - K_.last[2]) < 1.5 && Math.abs(dy) < 0.19 && K_.last[4] === R.qName) return; K_.last = [e[0], e[1], e[2], R.cam.yaw, R.qName];
+  const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw), half = Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) + 0.35, cone = Math.abs(R.cam.pitch) < 0.9;
+  const far = Math.min(K_.maxDist, q.rockDist), RS = q.rockCast === false ? -1 : q.shadowNear * 1.72 + 3, src = K_.src; K_.cam.n = K_.cast.n = 0;
+  const put = (r, o) => { if (r.n >= r.cap) return; const j = r.n++ * 4; r.a.set(src.subarray(o, o + 4), j); r.b.set(src.subarray(o + 4, o + 8), j); };
+  for (let o = 0; o < src.length; o += 8) {
+    const dx = src[o] - e[0], dz = src[o + 2] - e[2], d = Math.sqrt(dx * dx + dz * dz), sc = src[o + 3];
+    if (d > far || d > Math.max(45, sc * 150)) continue;                         // a pebble is not drawn at 150 m
+    if (d < RS && sc > 0.45) put(K_.cast, o);
+    if (cone && d > 10 && Math.acos(clamp((dx * fx + dz * fz) / d, -1, 1)) > half + Math.asin(Math.min(1, 1.6 * sc / d))) continue;
+    put(K_.cam, o);
+  }
+  for (const r of [K_.cam, K_.cast]) { for (const at of [r.ia, r.ib]) { at.clearUpdateRanges(); if (r.n) { at.addUpdateRange(0, r.n * 4); at.needsUpdate = true; } } r.g.instanceCount = r.n; r.mesh.visible = r.n > 0; }
+}
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos, cur = World.cell;       // cur: the cell the player is in. Then only that cell is drawn (its generated meshes, kit groups, door leaf); outdoors, no cell is
   if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
   World.deepIn = cur ? true : deepIndoors(e); const inside = !cur && World.deepIn, ind = DRAW.indoor;
+  _fr.setFromProjectionMatrix(_pm.multiplyMatrices(R.camera.projectionMatrix, R.camera.matrixWorldInverse));
   for (const s of SC.statics) {
     const it = s.it;
     if (cur || it.cell) { s.mesh.visible = !!cur && it.cell === cur.id; if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow; continue; }
@@ -1125,6 +1239,11 @@ function sceneUpdate(camPos, q) {
     // generated village props (fences, walls, wells ...) cast into the wide sun-shadow map only on tiers that have q.farStatics; the near map always gets them
     if (s.farCapable === undefined) s.farCapable = !!s.cast0 && it.kind === 'opaque' && !it.nearOnly && s.mesh.layers.mask === 1;
     if (s.farCapable) s.mesh.layers.mask = q.farStatics ? 1 : 2;
+    if (s.sub) {         // while this mesh would only cast into the near map anyway, the twin casts for it
+      const use = sb_casts(s) && s.mesh.castShadow && s.mesh.visible && !(s.farCapable && q.farStatics), sb = s.sub;
+      if (use) { s.mesh.castShadow = false; subUpdate(sb, e, q); } sb.mesh.visible = use && sb.n > 0;
+      if (s.mesh.visible) { viewUpdate(s, !s.mesh.castShadow); if (!s.view.full && !s.view.n) s.mesh.visible = false; }
+    }
   }
   for (const s of SC.cells) {
     if (cur) { s.mesh.visible = false; continue; }
@@ -1133,8 +1252,10 @@ function sceneUpdate(camPos, q) {
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }
+  poolUpdate(e, cur, inside); rocksUpdate(e, q, !!cur || inside);
   if (Grass.mesh) Grass.mesh.visible = !inside && !cur;
   if (typeof Trees !== 'undefined') Trees.update(e, q, !!cur);
+  if (typeof Kit !== 'undefined' && Kit.poolGroup) Kit.poolGroup.visible = !cur;       // the town's pooled kit meshes (44_kit.js) are not drawn from inside a cell
   for (const r of SC.rigid) {
     const o = r.obj;
     if (cur ? o.cell !== cur.id : o.cell) { r.mesh.visible = false; continue; }
@@ -1157,7 +1278,7 @@ function sceneUpdate(camPos, q) {
 // ---- 43_render.js ----
 // ───────────────────────── renderer: quality tiers, camera, sun and shadows, post, frame ─────────────────────────
 const QUALITY = {
-  low:    { name: 'Low',    terrLayers: false, pr: 1.0, msaa: 1, shadowRes: 768, bloom: false, grassRange: 18, grassThin: 1.45, treeLod: 40, lights: 4, aniso: 2, far1: 4, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 900, houseFar: 30, farStatics: false, nearStatics: false, rockCast: false },
+  low:    { name: 'Low',    terrLayers: false, pr: 1.0, msaa: 1, shadowRes: 768, bloom: false, grassRange: 18, grassThin: 1.45, treeLod: 40, lights: 4, aniso: 2, far1: 4, shadowNear: 16, scatter: false, yardRange: 32, yardCast: false, rockDist: 90, villagerCast: 16, maxLong: 900, houseFar: 26, farStatics: false, nearStatics: false, rockCast: false },
   medium: { name: 'Medium', pr: 1.5, msaa: 4, bloomScale: 0.3, bloomMips: 4, shadowRes: 1024, bloom: true,  grassRange: 30, grassThin: 1.15, treeLod: 65, lights: 6, aniso: 4, far1: 3, shadowNear: 20, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1280, houseFar: 50, farStatics: false },
   high:   { name: 'High',   pr: 2.0, msaa: 4, bloomScale: 0.5, bloomMips: 5, shadowRes: 2048, bloom: true,  grassRange: 36, grassThin: 1, treeLod: 90, lights: 8, aniso: 8, far1: 2, shadowNear: 24, scatter: true, yardRange: 58, yardCast: true, rockDist: 170, villagerCast: 32, maxLong: 1920, houseFar: 80, farStatics: true },
 };
@@ -1398,10 +1519,10 @@ const Kit = (() => {
   const { Fn, float, vec2, vec3, vec4, uniform, attribute, texture, uv, positionWorld, positionLocal, positionGeometry, normalWorld, normalMap,
     mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs, step } = TSL;
   const K_ = {
-    PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
+    PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }, { glb: 'kits/dungeon.glb', catalog: 'kits/DUNGEON_CATALOG.json', optional: true }]  /* q1: dungeon pack */,
     pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
     fill: null, fill2: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
-    lodMeshes: [],
+    lodMeshes: [], SMALL: /kits\/(village|props|nature)\.glb$/,
     ROOF: /^(S_|T_)?(Roof_(RoundTile|Modular|Tower|Wooden|2x4|Log|Dormer)|Overhang_Roof)|^gen_/,       // slope pieces and generated pieces: outside faces are marked by their own normals (down = room side), not by the kit wall convention (outside = +z)
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
@@ -1435,9 +1556,10 @@ const Kit = (() => {
     const d = K_.defs[name]; K_.pending.push(Promise.all([['map', 'color'], ['normalMap', 'data'], ['orm', 'data'], ['emissiveMap', 'color']].map(async ([k, kind]) => { if (d[k]) d[k] = await gfxTex(d[k], kind); })));
   }
   async function loadPack(pack, progress) {
-    const loader = new T3X.GLTFLoader();
+    const loader = T3X.gltf();
     let gltf;
-    try { gltf = await loader.loadAsync(pack.glb, e => { if (progress && e.total) progress(e.loaded / e.total); }); }
+    const small = GFX_TEX.color <= 512 && K_.SMALL.test(pack.glb), url = small ? pack.glb.replace('kits/', 'kits/s/') : pack.glb;       // phones and the lighter tiers cap textures at 512: they fetch the pack that only holds that much
+    try { gltf = await loader.loadAsync(url, e => { if (progress && e.total) progress(e.loaded / e.total); }); }
     catch (e) { if (pack.optional) return false; throw new Error('kit ' + pack.glb + ': ' + (e && e.message || e)); }
     if (pack.catalog) { const c = await fetchJson(pack.catalog, pack.optional); if (c) Object.assign(K_.cat, c.pieces || c); }
     gltf.scene.updateMatrixWorld(true);
@@ -1459,19 +1581,20 @@ const Kit = (() => {
     const S = await fetchJson('kits/skin/SKIN.json', true); if (!S) { K_.skin = 'painted'; return; }
     K_.skinDef = S;
     if (S.grade) Object.assign(K_.gradeInit, S.grade);
-    const jobs = [];
+    const jobs = [], skinDir = GFX_TEX.color <= 512 && GFX_TEX.data <= 512 ? 'kits/skin/s/' : 'kits/skin/';       // half-size copies (tools/assets_pack.mjs) where the cap would halve them anyway
     for (const name of Object.keys(S.materials || {})) {
       const s = S.materials[name], d = K_.defs[name]; if (!d) continue;
       if (s.tint) d.color = d.color.map((v, i) => v * s.tint[i]); if (s.moss !== undefined) d.moss = s.moss; if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
-      if (s.a) jobs.push(texLoad('kits/skin/' + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
-      if (s.n) jobs.push(texLoad('kits/skin/' + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
-      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
+      if (s.a) jobs.push(texLoad(skinDir + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
+      if (s.n) jobs.push(texLoad(skinDir + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
+      if (s.orm) jobs.push(texLoad(skinDir + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
     }
     await Promise.all(jobs);
   }
   K_.gradeInit = { sat: 1, gain: 1, tint: [1, 1, 1], weather: 0 };
   // opts: { packs: [{ glb, catalog, optional }], skin: 'realistic' | 'painted' }
   K_.load = async function (progress, opts) {
+    if (GFX_TEX.color <= 512 && typeof Load !== 'undefined' && Load.groups && Load.groups.indexOf('kits') >= 0) Load.use(Load.groups.map(g => g === 'kits' ? 'kitss' : g));       // the loading bar counts the small packs this device fetches
     opts = opts || {};
     const packs = opts.packs || K_.PACKS; K_.skin = opts.skin || (TEST && TEST.skin) || 'realistic';
     for (let i = 0; i < packs.length; i++) await loadPack(packs[i], f => progress && progress((i + f) / (packs.length + 1)));
@@ -1616,7 +1739,13 @@ const Kit = (() => {
   // ── batches ──
   K_.batch = function (opts) {
     opts = opts || {};
-    const cell = opts.cell || 24, buckets = new Map(), inst = [], B = { count: 0, tally: {} };      // tally: how often each piece was placed (for budgets)
+    // Outdoor batches are "dynamic": every placed piece (a unit) keeps its own range of indices in the merged meshes, and K_.update
+    // rewrites each mesh's index buffer from the units that matter now: full model near the camera, the far copy beyond R.q.houseFar,
+    // nothing when it is too small to see at that distance, outside the view cone or hidden behind nearer houses. So detail is decided
+    // house by house (it used to be per 48 m cell) and a batch is one draw call per material, not one per material and cell.
+    // Interior batches (their own cell, a few rooms) stay static: merged per material and opts.cell, drawn whole.
+    const dyn = !(TEST && TEST.kitdyn === 0) && opts.dynamic !== false && !/^kitint|^kitfine/.test(opts.name || ''), units = [];
+    const cell = dyn ? 1e7 : (opts.cell || 24), buckets = new Map(), inst = [], B = { count: 0, tally: {} };      // tally: how often each piece was placed (for budgets)
     // o: { zone: 0 outdoors | n the interior of building n, skyVis: 1 outdoors .. ~0.3 indoors, tint: [r,g,b] linear, cast: true, glow: HDR self-illumination,
     //      lit: 0..1 for light-source pieces: the wax around each flame position glows (the flame itself is a particle the game adds),
     //      uvs: [sx, sy] the panel's scale, so plaster and brick keep their texel size instead of stretching
@@ -1628,18 +1757,23 @@ const Kit = (() => {
       if (TEST && TEST.audit) (window.__AUDIT_KIT = window.__AUDIT_KIT || []).push({ name, M: M.clone(), zone: o.zone || 0 });          // test/audit.js: every placed piece (coplanar-face audit)
       _v.set((p.min[0] + p.max[0]) / 2, (p.min[1] + p.max[1]) / 2, (p.min[2] + p.max[2]) / 2).applyMatrix4(M);
       const ck = Math.floor((_v.x + (opts.off || 0)) / cell) + ',' + Math.floor((_v.z + (opts.off || 0)) / cell), cast = o.cast === false ? 0 : 1;
+      // the unit: where the piece stands and how big it is (for distance, view-cone and occlusion tests), and its outline seen from above (as an occluder)
+      const e = M.elements, sc = Math.max(Math.hypot(e[0], e[1], e[2]), Math.hypot(e[4], e[5], e[6]), Math.hypot(e[8], e[9], e[10]));
+      const unit = { x: _v.x, y: _v.y, z: _v.z, r: 0.5 * Math.hypot(p.max[0] - p.min[0], p.max[1] - p.min[1], p.max[2] - p.min[2]) * sc, name, state: 1, hasFar: false, always: !!o.zone, y0: 1e9, y1: -1e9, foot: null, ents: [] };
+      { const foot = []; for (let k = 0; k < 8; k++) { const q = new THREE.Vector3(k & 1 ? p.max[0] : p.min[0], k & 2 ? p.max[1] : p.min[1], k & 4 ? p.max[2] : p.min[2]).applyMatrix4(M); unit.y0 = Math.min(unit.y0, q.y); unit.y1 = Math.max(unit.y1, q.y); if (!(k & 2)) foot.push([q.x, q.z]); } unit.foot = foot; }
+      if (dyn) units.push(unit);
       for (const prim of p.prims) {
         const key = prim.mat + '|' + ck + '|' + cast; let b = buckets.get(key);
         if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
-        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name) }); b.nv += prim.n; b.ni += prim.idx.length;
+        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name), unit, farCopy: false }); b.nv += prim.n; b.ni += prim.idx.length;
       }
       // the far copy of this piece: its own light version if the pack has one, nothing for small things (under FAR_KEEP metres across), else the piece itself
       if (opts.far) {
         const fp = K_.far[name] || ((Math.max(p.max[0] - p.min[0], p.max[1] - p.min[1], p.max[2] - p.min[2]) >= K_.FAR_KEEP && !(K_.FAR_DROP.test(name))) ? p.prims : []);
         for (const prim of fp) {
-          const key = prim.mat + '|' + ck + '|far'; let b = buckets.get(key);
-          if (!b) buckets.set(key, b = { mat: prim.mat, cast: 0, far: true, items: [], nv: 0, ni: 0 });
-          b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: 0, lit: 0, lights: null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name) }); b.nv += prim.n; b.ni += prim.idx.length;
+          const key = prim.mat + '|' + ck + (dyn ? '|0' : '|far'); let b = buckets.get(key);      // dynamic: far copies share the material's mesh with the full models
+          if (!b) buckets.set(key, b = { mat: prim.mat, cast: 0, far: !dyn, items: [], nv: 0, ni: 0 }); unit.hasFar = true;
+          b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: 0, lit: 0, lights: null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name), unit, farCopy: true }); b.nv += prim.n; b.ni += prim.idx.length;
         }
       }
       B.count++; B.tally[name] = (B.tally[name] || 0) + 1; return B;
@@ -1651,7 +1785,7 @@ const Kit = (() => {
     };
     B.build = function () {
       const group = new THREE.Group(); group.name = opts.name || 'kit-batch'; group.matrixAutoUpdate = false;
-      const nm = new THREE.Matrix3(), v = new THREE.Vector3();
+      const nm = new THREE.Matrix3(), v = new THREE.Vector3(), D = dyn ? { name: group.name, group, far: !!opts.far, units, buckets: [], key: '' } : null;
       for (const b of buckets.values()) {
         const pos = new Float32Array(b.nv * 3), nrm = new Int8Array(b.nv * 4), uvs = new Float32Array(b.nv * 2), kc = new Uint8Array(b.nv * 4), kz = new Uint8Array(b.nv * 4), kg = new Uint8Array(b.nv * 4).fill(255);
         const gB = opts.gBase, gT = opts.gTop;
@@ -1680,17 +1814,25 @@ const Kit = (() => {
           const src = pr.idx;
           if (flip) for (let i = 0; i < src.length; i += 3) { idx[io + i] = src[i] + vo; idx[io + i + 1] = src[i + 2] + vo; idx[io + i + 2] = src[i + 1] + vo; }
           else for (let i = 0; i < src.length; i++) idx[io + i] = src[i] + vo;
+          if (D) { (b.ents || (b.ents = [])).push({ unit: it.unit, far: it.farCopy, start: io, count: src.length }); it.unit.ents.push(b); }
           vo += pr.n; io += src.length;
         }
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nrm, 4, true)); g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
         g.setAttribute('kc', new THREE.BufferAttribute(kc, 4, true)); g.setAttribute('kz', new THREE.BufferAttribute(kz, 4, true)); g.setAttribute('kg', new THREE.BufferAttribute(kg, 4, true)); g.setIndex(new THREE.BufferAttribute(idx, 1));
         g.computeBoundingBox(); g.computeBoundingSphere();
-        const mesh = new THREE.Mesh(g, material(b.mat, 'batch'));
+        if (D) {         // the index buffer on the GPU is a working copy: K_.update fills it from the units' ranges of `all`
+          const cur = new (idx.constructor)(idx.length), at = new THREE.BufferAttribute(cur, 1); at.setUsage(THREE.DynamicDrawUsage); g.setIndex(at);
+          let n = 0; for (const e of b.ents) if (!e.far) { cur.set(idx.subarray(e.start, e.start + e.count), n); n += e.count; } g.setDrawRange(0, n);
+          b.all = idx; b.cur = cur; b.geo = g; b.dirty = false; D.buckets.push(b);
+        }
+        const mesh = new THREE.Mesh(g, material(b.mat, 'batch')); if (D) { b.mesh = mesh; mesh.frustumCulled = false; mesh.userData.kitDyn = true; }
         mesh.castShadow = !!b.cast && !isGlass(K_.defs[b.mat] || { name: b.mat }); mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = b.mat;
-        if (opts.far) { mesh.userData.lod = b.far ? 2 : 1; K_.lodMeshes.push(mesh); mesh.visible = !b.far; }       // 1 = the full mesh, 2 = its far copy: K_.update swaps them by distance
+        if (opts.far && !D) { mesh.userData.lod = b.far ? 2 : 1; K_.lodMeshes.push(mesh); mesh.visible = !b.far; }       // 1 = the full mesh, 2 = its far copy: K_.update swaps them by distance
         group.add(mesh);
       }
+      if (D) { D.buckets = D.buckets.map(b => ({ mat: b.mat, ents: b.ents, all: b.all, cur: b.cur, geo: b.geo, mesh: b.mesh })); for (const b of buckets.values()) { b.ents = null; b.all = b.cur = b.geo = b.mesh = null; }       // the batch keeps its own bucket list untouched (pieces added after the build are ignored, as before)
+        for (const u of units) { u.D = D; u.ents = []; } K_.dyn.push(D); K_.dynNew.push(D); group.userData.kitDyn = D; }
       for (const it of inst) {
         const o = it.o, cs = o.cell || 48, cells = new Map();
         it.matrices.forEach((M, i) => { const k = Math.floor(M.elements[12] / cs) + ',' + Math.floor(M.elements[14] / cs); let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(i); });
@@ -1731,8 +1873,123 @@ const Kit = (() => {
       m.visible = m.userData.lod === 2 ? far : !far;
     }
   }
+  // ── dynamic batches: decide every unit's state, rewrite the index buffers that changed ──
+  // state 0 = not drawn, 1 = full model, 2 = far copy. Runs when the camera has moved 1.5 m or turned 11 degrees (the view cone is cut
+  // 20 degrees wider than the screen, so nothing can turn into view before the next run).
+  // how far each kind of batch is drawn at all (m from the camera; the code that made the batch used to hide its cells at these ranges)
+  K_.RANGE = { 'kit-yard': q => q.yardRange || 58, 'dress-town': q => (q.yardRange || 58) * 1.1 + 4, 'dress-out': q => (q.yardRange || 58) * 1.1 + 4 };
+  K_.dyn = []; K_.dynNew = []; K_.pool = []; K_.dynLast = [1e9, 0, 1e9, 9, '']; K_.DROP = { low: 40, medium: 70, high: 100 };       // DROP: a piece without a far copy is drawn out to this many times its own size (m)
+  // Pooling: batches built since the last run hand their meshes over; meshes with the same material, shadow flags and layers become one
+  // mesh for the whole town (in K_.poolGroup). A batch's own group stays as the handle other code shows and hides: its units follow it.
+  function poolNew() {
+    const by = new Map(), fresh = K_.dynNew; K_.dynNew = [];
+    for (const D of fresh) for (const b of D.buckets) { const m = b.mesh, k = b.mat + '|' + (m.castShadow ? 1 : 0) + (m.receiveShadow ? 1 : 0) + '|' + m.layers.mask + '|' + m.renderOrder; let l = by.get(k); if (!l) by.set(k, l = []); l.push(b); }
+    if (!K_.poolGroup) { K_.poolGroup = new THREE.Group(); K_.poolGroup.name = 'kit-pool'; K_.poolGroup.matrixAutoUpdate = false; SC.scene.add(K_.poolGroup); }
+    for (const list of by.values()) {
+      const m0 = list[0].mesh; let nv = 0, ni = 0; for (const b of list) { nv += b.geo.attributes.position.count; ni += b.all.length; }
+      const g = new THREE.BufferGeometry(), all = new Uint32Array(ni), ents = [];
+      for (const k of Object.keys(m0.geometry.attributes)) { const a0 = m0.geometry.attributes[k], arr = new (a0.array.constructor)(nv * a0.itemSize); let o = 0; for (const b of list) { const a = b.geo.attributes[k].array; arr.set(a, o); o += a.length; } g.setAttribute(k, new THREE.BufferAttribute(arr, a0.itemSize, a0.normalized)); }
+      let vo = 0, io = 0; for (const b of list) { const src = b.all; for (let i = 0; i < src.length; i++) all[io + i] = src[i] + vo; for (const e of b.ents) ents.push({ unit: e.unit, far: e.far, start: e.start + io, count: e.count }); vo += b.geo.attributes.position.count; io += src.length; }
+      const cur = new Uint32Array(ni), at = new THREE.BufferAttribute(cur, 1); at.setUsage(THREE.DynamicDrawUsage); g.setIndex(at); g.setDrawRange(0, 0);
+      g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+      const mesh = new THREE.Mesh(g, m0.material); mesh.castShadow = m0.castShadow; mesh.receiveShadow = m0.receiveShadow; mesh.layers.mask = m0.layers.mask; mesh.renderOrder = m0.renderOrder; mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.name = m0.name; mesh.visible = false; mesh.userData.kitDyn = true;
+      const P = { mat: list[0].mat, ents, all, cur, geo: g, mesh, dirty: true };
+      // a pool that casts sun shadow gets a twin that only the near shadow map draws, holding just the units close enough (and big enough) to throw a shadow that matters
+      if (m0.castShadow) {
+        mesh.castShadow = false; const g2 = new THREE.BufferGeometry(); for (const k of Object.keys(g.attributes)) g2.setAttribute(k, g.attributes[k]);
+        const cur2 = new Uint32Array(ni), at2 = new THREE.BufferAttribute(cur2, 1); at2.setUsage(THREE.DynamicDrawUsage); g2.setIndex(at2); g2.setDrawRange(0, 0); g2.boundingSphere = g.boundingSphere;
+        const tw = new THREE.Mesh(g2, m0.material); tw.castShadow = true; tw.receiveShadow = false; tw.layers.set(typeof SHADOW_ONLY_LAYER !== 'undefined' ? SHADOW_ONLY_LAYER : 3); tw.matrixAutoUpdate = false; tw.frustumCulled = false; tw.visible = false; tw.name = m0.name + ':shadow';
+        K_.poolGroup.add(tw); P.cast = { geo: g2, cur: cur2, mesh: tw, dirty: true };
+      }
+      K_.poolGroup.add(mesh); K_.pool.push(P);
+      for (const b of list) { if (b.mesh.parent) b.mesh.parent.remove(b.mesh); b.geo.dispose(); b.all = b.cur = b.geo = b.mesh = b.ents = null; }
+    }
+    for (const D of fresh) { D.buckets = []; for (const u of D.units) { u.ents = []; u.state = -1; } }
+    for (const P of K_.pool) for (const e of P.ents) if (e.unit.ents.indexOf(P) < 0) e.unit.ents.push(P);
+  }
+  // ── occlusion: what stands wholly behind nearer houses is not drawn ──
+  // Occluders are the plain boxes that already stand in for each house in the shadow map (wall footprint, ground to eaves): solid, no
+  // openings. Around the camera the compass is cut into 720 bins; each occluder writes, into the bins it spans completely, how steeply
+  // one must look up to see over it and how far away its far side is. A unit is hidden when, in every bin it touches, some occluder
+  // nearer than the unit's nearest point rises above the unit's highest point. Every step errs toward drawing: bins at an occluder's
+  // edges are left out, eaves count 0.25 m lower, and the unit is taken as a cylinder round its bounding sphere.
+  const OCC = { N: 720, K: 3, slope: null, far: null, boxes: null, n: 0 };
+  function occBoxes() {
+    const out = [], add = (M, hw, z0, z1, top) => { const c = [[-hw, z0], [hw, z0], [hw, z1], [-hw, z1]].map(q => { const p = m4.tp(M, [q[0], 0, q[1]]); return [p[0], p[2]]; }); out.push({ c, top: m4.tp(M, [0, top, 0])[1] - 0.25 }); };
+    if (typeof World !== 'undefined' && World.kitExt) for (const id in World.kitExt) { const k = World.kitExt[id]; if (k.shared || !k.Ms || !(k.w > 2)) continue; add(k.Ms, k.w / 2 - 0.2, -k.hd + 0.2, k.hd - 0.2, k.top); }
+    if (typeof INFS !== 'undefined' && INFS.proxies) for (const p of INFS.proxies) add(p.Ms, p.w / 2 - 0.2, -p.d / 2 + 0.1, p.d / 2 - 0.2, p.top);
+    return out;
+  }
+  K_.occlude = function (cam) {
+    const n = (typeof World !== 'undefined' && World.kitExt ? Object.keys(World.kitExt).length : 0) + (typeof INFS !== 'undefined' && INFS.proxies ? INFS.proxies.length : 0);
+    if (!OCC.boxes || OCC.n !== n) { OCC.boxes = occBoxes(); OCC.n = n; OCC.slope = new Float32Array(OCC.N * OCC.K); OCC.far = new Float32Array(OCC.N * OCC.K); }
+    const N = OCC.N, K = OCC.K, S = OCC.slope, Fd = OCC.far, TAU_ = Math.PI * 2; S.fill(-1e9); Fd.fill(0);
+    for (const b of OCC.boxes) {
+      let a0 = 0, lo = 1e9, hi = -1e9, dmax = 0, dmin = 1e9;
+      for (let i = 0; i < 4; i++) { const dx = b.c[i][0] - cam[0], dz = b.c[i][1] - cam[2], d = Math.hypot(dx, dz); let a = Math.atan2(dz, dx); if (i === 0) a0 = a; else { a -= a0; a = Math.atan2(Math.sin(a), Math.cos(a)) + a0; } lo = Math.min(lo, a); hi = Math.max(hi, a); dmax = Math.max(dmax, d); dmin = Math.min(dmin, d); }
+      if (dmin < 2.5 || dmax > 170 || hi - lo > 2.6) continue;          // too close (the camera may be beside or inside it), or too far to matter
+      const h = b.top - cam[1], sl = h > 0 ? h / dmax : h / dmin, i0 = Math.ceil(lo / TAU_ * N) + 1, i1 = Math.floor(hi / TAU_ * N) - 1;
+      for (let i = i0; i < i1; i++) {         // bin i covers i..i+1: only bins wholly inside the span, less one at each edge
+        const o = (((i % N) + N) % N) * K;
+        // keep the K most useful per bin: the steepest, and among those the nearest
+        let w = -1, ws = sl; for (let k = 0; k < K; k++) if (S[o + k] < ws) { ws = S[o + k]; w = k; }
+        if (w >= 0) { S[o + w] = sl; Fd[o + w] = dmax; }
+      }
+    }
+    return function (u, dc) {
+      const near = dc - u.r; if (near < 3) return false;
+      const h = u.y1 - cam[1], sl = h > 0 ? h / near : h / (dc + u.r), a = Math.atan2(u.z - cam[2], u.x - cam[0]), w = Math.asin(Math.min(1, u.r / dc));
+      const i0 = Math.floor((a - w) / TAU_ * N), i1 = Math.floor((a + w) / TAU_ * N);
+      for (let i = i0; i <= i1; i++) { const o = (((i % N) + N) % N) * K; let ok = false; for (let k = 0; k < K; k++) if (Fd[o + k] > 0 && Fd[o + k] < near && S[o + k] >= sl) { ok = true; break; } if (!ok) return false; }
+      return true;
+    };
+  };
+  function dynUpdate(camPos) {
+    const fresh = K_.dynNew.length > 0; if (fresh) { if (typeof SC === 'undefined' || !SC.scene) return; poolNew(); }
+    const L = K_.dynLast, cam = (typeof R !== 'undefined' && R.cam) || { yaw: 0, pitch: 0 }, qn = (typeof R !== 'undefined' && R.qName) || 'medium';
+    const F = (typeof R !== 'undefined' && R.q && R.q.houseFar) || K_.farDist; let key = qn + F; for (const D of K_.dyn) key += D.group.visible ? '1' : '0';
+    let dy = cam.yaw - L[3]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    if (!fresh && Math.hypot(camPos[0] - L[0], camPos[2] - L[2]) < 1.5 && Math.abs(camPos[1] - L[1]) < 1 && Math.abs(dy) < 0.19 && key === L[4]) return;
+    L[0] = camPos[0]; L[1] = camPos[1]; L[2] = camPos[2]; L[3] = cam.yaw; L[4] = key;
+    const fx = Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), drop = K_.DROP[qn] || 70;
+    const half = (typeof R !== 'undefined' && R.camera ? Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) : 0.81) + 0.35, cone = Math.abs(cam.pitch) < 0.9 && !(TEST && TEST.kitcone === 0);
+    const occ = K_.occlude && !(TEST && TEST.kitocc === 0) ? K_.occlude(camPos) : null;
+    const q_ = (typeof R !== 'undefined' && R.q) || {}, RS = q_.yardCast === false ? -1 : (q_.shadowNear || 20) * 1.72 + 2;       // reach of the near sun-shadow map from the camera
+    const S_ = K_.dynStat = { units: 0, near: 0, far: 0, cone: 0, dist: 0, hidden: 0, draws: 0 };
+    // batches rebuilt for another tier (dressing, the wilds) take their old group off the scene: drop those units from the pools
+    for (let i = K_.dyn.length - 1; i >= 0; i--) { const D = K_.dyn[i]; if (D.group.parent) D.seen = true; else if (D.seen) { D.dead = true; K_.dyn.splice(i, 1);
+      for (const P of K_.pool) { const n = P.ents.length; P.ents = P.ents.filter(e => !e.unit.D.dead); if (P.ents.length !== n) { P.dirty = true; if (P.cast) P.cast.dirty = true; } } } }
+    for (const D of K_.dyn) {
+      const shown = D.group.visible, range = K_.RANGE[D.name] ? K_.RANGE[D.name](q_) : 1e9;
+      for (const u of D.units) {
+        const dx = u.x - camPos[0], dz = u.z - camPos[2], dc = Math.sqrt(dx * dx + dz * dz), d = Math.max(0, dc - u.r); let st;
+        S_.units++;
+        if (!shown) st = 0;
+        else if (u.always) st = 1;
+        else if (d > range || (!D.far && d > Math.max(26, 2 * u.r * drop))) { st = 0; S_.dist++; }
+        else if (cone && d > 12 && Math.acos(Math.max(-1, Math.min(1, (dx * fx + dz * fz) / dc))) > half + Math.asin(Math.min(1, u.r / dc))) { st = 0; S_.cone++; }
+        else if (occ && d > 6 && occ(u, dc)) { st = 0; S_.hidden++; }
+        else if (D.far) { st = (u.wasFar ? d > F - 3 : d > F + 3) ? (u.hasFar ? 2 : 0) : 1; u.wasFar = st !== 1; }
+        else st = 1;
+        if (st === 1) S_.near++; else if (st === 2) S_.far++;
+        if (st !== u.state) { u.state = st; for (const b of u.ents) b.dirty = true; }
+        const sh = shown && !u.always && dc - u.r < RS && u.r > 0.3 ? 1 : 0; if (sh !== u.sh) { u.sh = sh; for (const b of u.ents) if (b.cast) b.cast.dirty = true; }
+      }
+    }
+    for (const b of K_.pool) {
+      if (b.dirty) {
+        b.dirty = false; let n = 0; const cur = b.cur, all = b.all;
+        for (const e of b.ents) if (e.unit.state === (e.far ? 2 : 1)) { cur.set(all.subarray(e.start, e.start + e.count), n); n += e.count; }
+        b.geo.setDrawRange(0, n); b.mesh.visible = n > 0;
+        if (n) { const at = b.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
+      }
+      if (b.cast && b.cast.dirty) { const c = b.cast; c.dirty = false; let n = 0; for (const e of b.ents) if (!e.far && e.unit.sh) { c.cur.set(b.all.subarray(e.start, e.start + e.count), n); n += e.count; }
+        c.geo.setDrawRange(0, n); c.mesh.visible = n > 0; if (n) { const at = c.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; } }
+      if (b.mesh.visible) S_.draws++;
+    }
+  }
   K_.update = function (camPos) {
-    lodUpdate(camPos);
+    lodUpdate(camPos); dynUpdate(camPos);
     for (const im of K_.instanced) { const s = im.boundingSphere, dx = s.center.x - camPos[0], dz = s.center.z - camPos[2]; im.visible = Math.sqrt(dx * dx + dz * dz) - s.radius < im.userData.maxDist; }
   };
   return K_;
@@ -1879,8 +2136,7 @@ const Grass = { mesh: null, N: 0, range: 0 };
     const m = new THREE.MeshLambertNodeMaterial({ side: THREE.DoubleSide });
     const b = attribute('b', 'vec4');         // side (-1, 0, 1), height along the blade (0..1), blade angle, radial offset
     m.positionNode = Fn(() => {
-      const fi = float(instanceIndex), iz = floor(fi.add(0.5).div(N)), ix = fi.sub(iz.mul(N));
-      const cell = uOrg.add(vec2(ix, iz));
+      const cell = attribute('gc', 'vec2');            // this tuft's cell of the world-wide grid, from the list Grass.update keeps
       const r0 = textureLoad(G.hashTex, ivec2(cell.add(65536.5).mod(256)));
       const root2 = cell.add(r0.xy).mul(cellSz);
       const out = vec3(0, -10000, 0).toVar();
@@ -1948,19 +2204,46 @@ const Grass = { mesh: null, N: 0, range: 0 };
     const gv = [], pv = []; for (let k = 0; k < blades; k++) { const a = k * 2.2 + 0.4, ro = 0.3 + k * 0.35; gv.push(-1, 0, a, ro, 1, 0, a, ro, 0, 1, a, ro); pv.push(-1, 0, 0, 1, 0, 0, 0, 1, 0); }
     const g = new THREE.InstancedBufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pv, 3)); g.setAttribute('b', new THREE.Float32BufferAttribute(gv, 4));
-    g.instanceCount = N * N;
+    const gc = new Float32Array(N * N * 2), gcA = new THREE.InstancedBufferAttribute(gc, 2); gcA.setUsage(THREE.DynamicDrawUsage); g.setAttribute('gc', gcA);
+    g.instanceCount = 0;
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     const mesh = new THREE.Mesh(g, m);
     mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = 'grass';
     scene.add(mesh);
-    Object.assign(Grass, { mesh, N, range, cellSz, uOrg, scene, blades, tufts: N * N, verts: N * N * blades * 3 });
+    Object.assign(Grass, { mesh, N, range, cellSz, uOrg, scene, blades, tufts: N * N, verts: N * N * blades * 3, gc, gcA, geo: g, last: [1e9, 1e9, 9], has: Grass.has || new Map() });
     return mesh;
+  };
+  // The cells that can hold grass at all, out of the window ahead of the camera: the list is rebuilt when the player has moved a metre
+  // or turned 11 degrees. Cells are taken 8 x 8 at a time; a block is skipped when it lies beyond the grass range, outside the view cone
+  // (cut 20 degrees wider than the screen) or wholly on road, cobbles, bare earth or lake bed (checked once per block and remembered).
+  // On the cobbled square that leaves a few hundred tufts to place instead of fifteen thousand.
+  const BLK = 8;
+  Grass.blockHasGrass = function (bx, bz) {
+    const key = bx + ',' + bz; let v = Grass.has.get(key); if (v !== undefined) return v; v = false;
+    const c = Grass.cellSz, x0 = bx * BLK * c, z0 = bz * BLK * c, n = 9, TH = K.terrainHalf, lake = (World.lakeY || -1e9) + 0.05;
+    for (let j = 0; j < n && !v; j++) for (let i = 0; i < n; i++) { const x = x0 + (i / (n - 1)) * (BLK + 1) * c, z = z0 + (j / (n - 1)) * (BLK + 1) * c;
+      if (Math.abs(x) > TH || Math.abs(z) > TH) continue;
+      if (Math.max(Terrain.splat(x, z, 0), Terrain.splat(x, z, 1), Terrain.splat(x, z, 3)) < 0.5 && Terrain.y(x, z) > lake - 0.3) { v = true; break; } }
+    Grass.has.set(key, v); return v;
   };
   Grass.update = function (camPos, fwdXZ) {
     if (!Grass.mesh) return;
-    const r = Grass.range, c = Grass.cellSz, fl = Math.hypot(fwdXZ[0], fwdXZ[1]) || 1;
-    const cx = camPos[0] + fwdXZ[0] / fl * r * AHEAD, cz = camPos[2] + fwdXZ[1] / fl * r * AHEAD;
-    Grass.uOrg.value.set(Math.floor(cx / c) - (Grass.N >> 1), Math.floor(cz / c) - (Grass.N >> 1));
+    const r = Grass.range, c = Grass.cellSz, fl = Math.hypot(fwdXZ[0], fwdXZ[1]) || 1, fx = fwdXZ[0] / fl, fz = fwdXZ[1] / fl, yaw = Math.atan2(fx, -fz);
+    let dy = yaw - Grass.last[2]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    if (Math.hypot(camPos[0] - Grass.last[0], camPos[2] - Grass.last[1]) < 1 && Math.abs(dy) < 0.19) return; Grass.last = [camPos[0], camPos[2], yaw];
+    const cx = camPos[0] + fx * r * AHEAD, cz = camPos[2] + fz * r * AHEAD, N = Grass.N, ox = Math.floor(cx / c) - (N >> 1), oz = Math.floor(cz / c) - (N >> 1);
+    const half = (typeof R !== 'undefined' && R.camera ? Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) : 0.81) + 0.35, cone = !(TEST && TEST.grasscone === 0) && Math.abs(R.cam.pitch) < 0.9;
+    const gc = Grass.gc, bh = BLK * c * 0.7072, R1 = r + 1.5; let n = 0;                   // tufts stand up to one cell off their cell's corner, and the list is a metre stale at worst
+    for (let bz = Math.floor(oz / BLK); bz <= Math.floor((oz + N - 1) / BLK); bz++) for (let bx = Math.floor(ox / BLK); bx <= Math.floor((ox + N - 1) / BLK); bx++) {
+      const mx = (bx + 0.5) * BLK * c - camPos[0], mz = (bz + 0.5) * BLK * c - camPos[2], d = Math.hypot(mx, mz);
+      if (d - bh > R1) continue;
+      if (cone && d > 5 + bh && Math.acos(Math.max(-1, Math.min(1, (mx * fx + mz * fz) / d))) > half + Math.asin(Math.min(1, bh / d))) continue;
+      if (!(TEST && TEST.grassall) && !Grass.blockHasGrass(bx, bz)) continue;
+      for (let j = 0; j < BLK; j++) { const z = bz * BLK + j; if (z < oz || z >= oz + N) continue; const dz = (z + 0.5) * c - camPos[2];
+        for (let i = 0; i < BLK; i++) { const x = bx * BLK + i; if (x < ox || x >= ox + N) continue; const dx = (x + 0.5) * c - camPos[0]; if (dx * dx + dz * dz > R1 * R1) continue; gc[n * 2] = x; gc[n * 2 + 1] = z; n++; } }
+    }
+    Grass.geo.instanceCount = n; Grass.count = n;
+    if (n) { const at = Grass.gcA; at.clearUpdateRanges(); at.addUpdateRange(0, n * 2); at.needsUpdate = true; }
   };
   Grass.dispose = function () {
     if (!Grass.mesh) return;
@@ -2135,7 +2418,7 @@ const Particles = { mesh: null };
 //
 // Game conventions kept: feet at pos, yaw 0 faces -Z and grows clockwise seen from above, animation names as in 77_npc.js.
 const Chars = (() => {
-  const { vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap, Fn } = TSL;
+  const { vec2, vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap, Fn } = TSL;
   const SETS = {};
   const C = { group: new THREE.Group(), set: null, cfg: null, list: [], ready: false, normalMaps: true, merge: !(TEST && TEST.chars === 'split') };   // merge: one mesh and material per villager; false = one per texture (the old way)
   C.group.name = 'villagers';
@@ -2237,21 +2520,35 @@ const Chars = (() => {
       matOf(m) {
         const k = m.userData && m.userData.kind, n = m.name || '';
         if (k === 'body') return { kind: 'skin', gltf: true, rough: 0.72, oneSided: true, warm: [1.0, 0.9, 0.86] };
-        if (k === 'hair') return { kind: 'hair', gltf: true, rough: 0.6, alpha: 0.18 };
-        if (k === 'brow') return { kind: 'brow', gltf: true, rough: 0.8, alpha: 0.4 };
+        if (k === 'hair') return { kind: 'hair', gltf: true, rough: 0.9, alpha: 0.18 };
+        if (k === 'brow') return { kind: 'brow', gltf: true, rough: 0.8, alpha: 0.22 };
         if (k === 'eye') return { kind: 'eye', gltf: true, rough: 0.3, oneSided: true };
         const part = (PART.find(p => p[0].test(n)) || [0, 'cloth'])[1];
         return { kind: 'cloth', part, gltf: true, rough: 0.88 };
       },
-      texMax(md) { return md.kind === 'skin' ? 512 : md.kind === 'hair' ? 256 : md.kind === 'brow' ? 64 : md.kind === 'eye' ? 128 : /tunic|robe|skirt/.test(md.part) ? 384 : md.part === 'pants' ? 128 : 256; },      // pixel ceiling per texture, on top of gfxTex's tier caps (halved on Low)
+      texMax(md) { return md.kind === 'skin' ? 512 : md.kind === 'hair' ? 256 : md.kind === 'brow' ? 128 : md.kind === 'eye' ? 128 : /tunic|robe|skirt/.test(md.part) ? 384 : md.part === 'pants' ? 128 : 256; },      // pixel ceiling per texture, on top of gfxTex's tier caps (halved on Low)
       faces: 1, scale: 1,
+      // Where things are in the textures every MakeHuman body shares. Skin atlas: u runs down the face (eyes 0.83, nose 0.87, lips 0.905,
+      // chin 0.955), v across it (0.517 is the middle). Eye texture: the two irises' centres and radius. Used to open the mouth, blink
+      // and move the eyes without any face joints (the rig has none).
+      face: { mouth: [0.906, 0.517], lids: [0.482, 0.552], iris: [[0.705, 0.295], [0.29, 0.705]], irisR: 0.118 },
       bones: { hips: 'pelvis', head: 'head', neck: 'neck_01', handR: 'hand_r', handL: 'hand_l', footR: 'foot_r', footL: 'foot_l' },
       anims: ANIMS, once: SETS.quaternius.once.slice(), rate: { hammer: 0.9 }, maxRate: 2.6,
       grip: [1.384, 0.06, -0.916, 0.023, 0.024, 0.014],       // the Quaternius grip carried over by the hand's finger, across and palm axes (tools/humans/README notes)
       look(def) {
         if (def.foe) return { body: def.foe.body, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) };
         const body = BODY[def.id] || def.body || (def.female ? 'f_farmer' : 'm_farmer');          // def.body / def.tint: the inn's regulars (77c_patrons.js) wear other people's bodies in other colours
-        return { body, fit: FIT[body] || 1, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint) };
+        // Clothes by person: the villager's own colours (NPC_DEFS top / legs, chosen for their trade) dye the tunic, robe or dress and the
+        // trousers; headwear and belt come from the same table. People without an entry (inn regulars, passers-by) get muted wool and
+        // linen colours and, some of them, a cap, by their id: the better-off wear deeper dyes, a pouch and a buckle.
+        let h = 0; for (const ch of String(def.id || body)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; const r = k => ((h >>> (k * 5)) % 97) / 97;
+        const POOR = [[0.30, 0.25, 0.19], [0.36, 0.33, 0.27], [0.24, 0.23, 0.21], [0.33, 0.27, 0.17], [0.27, 0.29, 0.22]], RICH = [[0.34, 0.10, 0.09], [0.11, 0.17, 0.33], [0.13, 0.25, 0.15], [0.30, 0.20, 0.34], [0.09, 0.09, 0.10]];
+        const sq = c => { if (!c) return c; const q = c.map(v => v * v), g = 0.3 * q[0] + 0.6 * q[1] + 0.1 * q[2]; return q.map(v => (g + (v - g) * 0.62) * 0.9); };          // the table's colours are written the way the old bodies used them (squared before use); plant dyes are duller than paint, so they are also pulled toward grey
+        const rich = def.wealth !== undefined ? def.wealth : r(0), pal = rich > 0.72 ? RICH : POOR, top = sq(def.top) || (def.tint ? null : pal[Math.floor(r(1) * pal.length)]), legs = sq(def.legs) || [0.10 + r(2) * 0.06, 0.085 + r(2) * 0.05, 0.065 + r(2) * 0.04];
+        const isRobe = /monk|elder/.test(body), dye = def.foe ? null : Object.assign({}, top && !isRobe ? { tunic: top, skirt: top } : {}, top && isRobe && def.top ? { robe: top } : {}, { pants: legs });
+        const hatT = def.hat === 'hood' ? null : def.hat || (def.foe || def.sched ? null : r(3) < 0.3 ? 'cap' : null), HATC = { straw: [0.42, 0.33, 0.15], helmet: [0.17, 0.175, 0.19], kerchief: [0.62, 0.58, 0.48], cap: pal[Math.floor(r(4) * pal.length)], feather: [0.16, 0.22, 0.14] };
+        const acc = { hat: hatT, belt: !isRobe || !!def.belt, pouch: !!def.belt || rich > 0.6, col: [def.hatCol && def.hat !== 'helmet' ? sq(def.hatCol).map(v => v * 0.85) : HATC[hatT] || HATC.cap, def.belt ? sq(def.belt).map(v => v * 0.8) : [0.14, 0.09, 0.055], def.hat === 'helmet' ? HATC.helmet : [0.30, 0.29, 0.27], [0.19, 0.12, 0.07]] };
+        return { body, fit: FIT[body] || 1, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
       },
     });
   }
@@ -2276,7 +2573,7 @@ const Chars = (() => {
     C.set = S; C.cfg = cfg; C.ready = true; C.name = setName;
     return S;
   };
-  const GL = () => GL.l || (GL.l = new T3X.GLTFLoader());
+  const GL = () => GL.l || (GL.l = T3X.gltf());
   C.ensure = async function (names) {
     const S = C.set; if (!S) throw new Error('Chars.load first');
     const need = [...new Set(names)].filter(n => !S.bodies[n] && S.cfg.bodies[n]);
@@ -2300,8 +2597,8 @@ const Chars = (() => {
       if (!o.isSkinnedMesh) return;
       if (!B.skel) { B.skel = o.skeleton; B.bindMatrix = o.bindMatrix.clone(); }
       const g = o.parent, part = g && g !== scene && !g.isBone && g.children.length && g.children.every(c => c.isSkinnedMesh) ? g.name : o.name;   // a mesh with several materials loads as a group
-      if (/@lod$/.test(part)) { const k = part.slice(0, -4); (B.lodParts[k] = B.lodParts[k] || []).push(o); return; }      // low-detail copies (tools/chars_lod.mjs) are kept apart
-      (B.parts[part] = B.parts[part] || []).push(o);
+      { const lv = /@(lod|mid|far)$/.exec(part); if (lv) { const k = part.slice(0, -4), L = B.lodParts[lv[1]] || (B.lodParts[lv[1]] = {}); (L[k] = L[k] || []).push(o); return; } }      // lighter copies (tools/chars_lod.mjs: mid, lod, far) are kept apart
+      (B.parts[part] = B.parts[part] || []).push(o); if (o.material && o.material.userData && o.material.userData.kind === 'body') B.skinName = o.material.name;
     });
     if (!B.skel) throw new Error(cfg.bodies[n] + ' has no skinned mesh');
     let a = B.skel.bones[0]; while (a.parent && a.parent !== scene) a = a.parent; B.armature = a;
@@ -2351,10 +2648,65 @@ const Chars = (() => {
 
   // ── geometry: the chosen parts of a body, merged per material so a villager costs a handful of draws ──
   const ATTR = [['position', 3], ['normal', 3], ['uv', 2], ['skinIndex', 4], ['skinWeight', 4]];
-  function mergedGeometry(S, body, parts, matName, names, lod) {
-    const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|lod' : ''); let g = S.geo.get(key); if (g !== undefined) return g;
-    const src = [], mids = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
+  // ── things worn on top of a body: headwear and a belt, built here to the body's own measure ──
+  // They are part of the villager's one mesh (no extra draw call): each piece hangs on a single joint (head or lower spine) and its
+  // texture coordinate u = 3 + slot tells the material which of the villager's four accessory colours to use (0 headwear, 1 belt, 2 metal, 3 pouch).
+  // acc: { hat: 'cap' | 'straw' | 'kerchief' | 'helmet' | 'feather', belt: true, pouch: true }
+  function accGeometry(S, body, src, acc) {
+    const B = S.bodies[body], bones = B.skel.bones, bi = n => bones.findIndex(b => b.name === n), headI = bi(S.cfg.bones.head), spineI = bi('spine_01');
+    const P = [], UV = [], SI = [], IX = [], v = (x, y, z, slot, bone) => { P.push(x, y, z); UV.push(3 + slot, 0.5); SI.push(bone); return P.length / 3 - 1; };
+    const quad = (a, b, c, d) => IX.push(a, b, c, a, c, d);
+    const pts = []; for (const g of src) { const A = g.attributes.position; for (let i = 0; i < A.count; i++) pts.push([A.getX(i), A.getY(i), A.getZ(i)]); }
+    const pct = (arr, q) => { arr.sort((a, b) => a - b); return arr.length ? arr[Math.min(arr.length - 1, Math.floor(arr.length * q))] : 0; };
+    if (acc.hat && headI >= 0) {
+      let top = -1e9; for (const p of pts) if (Math.abs(p[0]) < 0.2) top = Math.max(top, p[1]);
+      const sl = pts.filter(p => p[1] > top - 0.13 && p[1] < top - 0.045 && Math.abs(p[0]) < 0.16), cx = sl.reduce((a, p) => a + p[0], 0) / sl.length, cz = sl.reduce((a, p) => a + p[2], 0) / sl.length;
+      const rx = pct(sl.map(p => Math.abs(p[0] - cx)), 0.94) + 0.010, rz = pct(sl.map(p => Math.abs(p[2] - cz)), 0.94) + 0.012, t = acc.hat;
+      // a dome from a base ring up over the crown; drop(angle) lowers the base (a kerchief hangs lower at the back)
+      const dome = (y0, h, kx, kz, slot, drop, segs, rings) => { const rows = [];
+        for (let j = 0; j <= rings; j++) { const f = j / rings, ph = f * Math.PI / 2, row = []; for (let i = 0; i < segs; i++) { const th = i / segs * TAU, d = drop ? drop(th) * (1 - f) : 0; row.push(v(cx + Math.cos(th) * rx * kx * Math.cos(ph), y0 - d + (h + d) * Math.sin(ph), cz + Math.sin(th) * rz * kz * Math.cos(ph), slot, headI)); } rows.push(row); }
+        for (let j = 0; j < rings; j++) for (let i = 0; i < segs; i++) quad(rows[j][i], rows[j + 1][i], rows[j + 1][(i + 1) % segs], rows[j][(i + 1) % segs]); };
+      const brim = (y, k0, k1, droop, slot, segs) => { const a = [], b = []; for (let i = 0; i < segs; i++) { const th = i / segs * TAU; a.push(v(cx + Math.cos(th) * rx * k0, y, cz + Math.sin(th) * rz * k0, slot, headI)); b.push(v(cx + Math.cos(th) * (rx * k0 + k1), y - droop, cz + Math.sin(th) * (rz * k0 + k1), slot, headI)); }
+        for (let i = 0; i < segs; i++) quad(a[i], a[(i + 1) % segs], b[(i + 1) % segs], b[i]); };
+      if (t === 'cap' || t === 'feather') { dome(top - 0.050, 0.068, 1.0, 1.0, 0, th => 0.045 * Math.max(0, -Math.sin(th)) + 0.012 * Math.abs(Math.cos(th)), 10, 3); if (t === 'feather') { const a = v(cx + rx * 0.7, top - 0.02, cz, 2, headI), b = v(cx + rx * 0.9, top - 0.03, cz - 0.02, 2, headI), c = v(cx + rx * 0.75, top + 0.12, cz - 0.07, 2, headI); IX.push(a, b, c); } }
+      else if (t === 'straw') { dome(top - 0.048, 0.062, 0.96, 0.96, 0, null, 10, 2); brim(top - 0.046, 0.97, 0.15, 0.03, 0, 12); }
+      else if (t === 'helmet') { dome(top - 0.052, 0.074, 1.03, 1.03, 2, th => 0.02 * Math.max(0, -Math.sin(th)), 10, 3); brim(top - 0.050, 1.03, 0.04, 0.018, 2, 12); }
+      else if (t === 'kerchief') { dome(top - 0.052, 0.070, 1.02, 1.03, 0, th => 0.10 * Math.max(0, -Math.sin(th)) + 0.045 * Math.abs(Math.cos(th)), 12, 3); }
+    }
+    if (acc.belt && spineI >= 0) {
+      // the waist: lower-spine joint's height at rest; the belt follows the body's outline there, a finger's width outside the clothes
+      const m = new THREE.Matrix4().copy(B.skel.boneInverses[spineI]).invert(), yw = m.elements[13] + 0.01, sl = pts.filter(p => Math.abs(p[1] - yw) < 0.03 && Math.abs(p[0]) < 0.24);
+      if (sl.length > 12) { const cx = sl.reduce((a, p) => a + p[0], 0) / sl.length, cz = sl.reduce((a, p) => a + p[2], 0) / sl.length, N = 14, rad = new Array(N).fill(0);
+        for (const p of sl) { const a = Math.atan2(p[2] - cz, p[0] - cx), k = ((Math.round(a / TAU * N) % N) + N) % N; rad[k] = Math.max(rad[k], Math.hypot(p[0] - cx, p[2] - cz)); }
+        const mean = rad.reduce((a, b) => a + b, 0) / N; for (let k = 0; k < N; k++) if (rad[k] < mean * 0.6) rad[k] = Math.max(rad[(k + 1) % N], rad[(k + N - 1) % N], mean * 0.8);
+        const sm = rad.map((r, k) => Math.max(r, (rad[(k + 1) % N] + rad[(k + N - 1) % N]) / 2) + 0.007), lo = [], hi = [];
+        for (let k = 0; k < N; k++) { const th = k / N * TAU; lo.push(v(cx + Math.cos(th) * sm[k], yw - 0.019, cz + Math.sin(th) * sm[k], 1, spineI)); hi.push(v(cx + Math.cos(th) * sm[k], yw + 0.019, cz + Math.sin(th) * sm[k], 1, spineI)); }
+        for (let k = 0; k < N; k++) quad(lo[k], lo[(k + 1) % N], hi[(k + 1) % N], hi[k]);
+        const box = (x, y, z, hx, hy, hz, slot) => { const c = []; for (let i = 0; i < 8; i++) c.push(v(x + (i & 1 ? hx : -hx), y + (i & 2 ? hy : -hy), z + (i & 4 ? hz : -hz), slot, spineI)); for (const f of [[0, 2, 3, 1], [4, 5, 7, 6], [0, 1, 5, 4], [2, 6, 7, 3], [0, 4, 6, 2], [1, 3, 7, 5]]) quad(c[f[0]], c[f[1]], c[f[2]], c[f[3]]); };
+        const kf = Math.round(N / 4), rf = sm[kf]; box(cx, yw, cz + rf + 0.002, 0.013, 0.015, 0.004, 2);                                   // buckle, in front
+        if (acc.pouch) { const k = Math.round(N * 0.11), th = k / N * TAU; box(cx + Math.cos(th) * (sm[k] + 0.018), yw - 0.052, cz + Math.sin(th) * (sm[k] + 0.018), 0.032, 0.040, 0.020, 3); } }
+    }
+    if (!IX.length) return null;
+    const n = P.length / 3, g = new THREE.BufferGeometry(), BA = THREE.BufferAttribute, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4); for (let i = 0; i < n; i++) { si[i * 4] = SI[i]; sw[i * 4] = 1; }
+    g.setAttribute('position', new BA(new Float32Array(P), 3)); g.setAttribute('uv', new BA(new Float32Array(UV), 2)); g.setAttribute('skinIndex', new BA(si, 4)); g.setAttribute('skinWeight', new BA(sw, 4)); g.setIndex(new BA(new Uint16Array(IX), 1)); g.computeVertexNormals();
+    return g;
+  }
+  function mergedGeometry(S, body, parts, matName, names, lod, acc) {
+    const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|' + lod : '') + (acc && names ? '|' + (acc.hat || '') + (acc.belt ? 'b' : '') + (acc.pouch ? 'p' : '') : ''); let g = S.geo.get(key); if (g !== undefined) return g;
+    const src = [], mids = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts[lod] || {} : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
     if (!src.length) { S.geo.set(key, null); return null; }
+    // Behind the lips: a small dark card on the head joint, so an opening mouth shows a mouth and not the street behind the head.
+    // Its texture coordinate (2, 2) is what the material reads as "inside of the mouth". Only the two close-up weights carry it.
+    if (names && (!lod || lod === 'mid') && S.cfg.face) { const B = S.bodies[body], F = S.cfg.face;
+      let skinMid = -1, cx = 0, cy = 0, cz = 0, n = 0;
+      src.forEach((g, i) => { const U_ = g.attributes.uv, P_ = g.attributes.position; if (!U_ || !B.skinName || names[mids[i]] !== B.skinName) return; skinMid = mids[i];
+        for (let v = 0; v < P_.count; v++) if (Math.abs(U_.getX(v) - F.mouth[0]) < 0.006 && Math.abs(U_.getY(v) - F.mouth[1]) < 0.022) { cx += P_.getX(v); cy += P_.getY(v); cz += P_.getZ(v); n++; } });
+      const hi = B.skel ? B.skel.bones.findIndex(b => b.name === S.cfg.bones.head) : -1;
+      if (n && hi >= 0 && skinMid >= 0) { cx /= n; cy /= n; cz /= n; const w = 0.021, h = 0.017, z = cz - 0.011, y = cy - 0.005, g = new THREE.BufferGeometry(), BA = THREE.BufferAttribute;
+        g.setAttribute('position', new BA(new Float32Array([cx - w, y - h, z, cx + w, y - h, z, cx + w, y + h, z, cx - w, y + h, z]), 3)); g.setAttribute('normal', new BA(new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]), 3));
+        g.setAttribute('uv', new BA(new Float32Array([2, 2, 2, 2, 2, 2, 2, 2]), 2)); g.setAttribute('skinIndex', new BA(new Uint16Array([hi, 0, 0, 0, hi, 0, 0, 0, hi, 0, 0, 0, hi, 0, 0, 0]), 4)); g.setAttribute('skinWeight', new BA(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]), 4));
+        g.setIndex(new BA(new Uint16Array([0, 1, 2, 0, 2, 3]), 1)); src.push(g); mids.push(skinMid); } }
+    if (names && acc && (acc.hat || acc.belt) && S.cfg.face) { const B = S.bodies[body], si = names.indexOf(B.skinName); let ag = null; try { ag = si >= 0 ? accGeometry(S, body, src.slice(), acc) : null; } catch (e) { console.warn('accessories for ' + body + ': ' + (e && e.message || e)); } if (ag) { src.push(ag); mids.push(si); } }
     let nv = 0, ni = 0; for (const s of src) { nv += s.attributes.position.count; ni += s.index ? s.index.count : s.attributes.position.count; }
     g = new THREE.BufferGeometry(); const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
     for (const [name, size] of ATTR) {
@@ -2369,6 +2721,12 @@ const Chars = (() => {
   }
 
   // ── material: the pack's colour maps, lit like the rest of the world (sun from the scene light; sky, bounce and hearths through emissive) ──
+  // average brightness of a texture (linear, 0..1), from an 8 x 8 copy: lets a dye keep the cloth's own light and shade
+  function meanLum(map) {
+    if (map.userData.meanLum) return map.userData.meanLum; let v = 0.3;
+    try { const c = meanLum.cv || (meanLum.cv = document.createElement('canvas')); c.width = c.height = 8; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(map.image, 0, 0, 8, 8); const d = x.getImageData(0, 0, 8, 8).data; let a = 0; for (let i = 0; i < 256; i += 4) a += Math.pow((0.3 * d[i] + 0.6 * d[i + 1] + 0.1 * d[i + 2]) / 255, 2.2); v = Math.max(0.03, a / 64); } catch (e) { }
+    return map.userData.meanLum = v;
+  }
   function makeMaterial(S, H, matName, look, src) {
     const md = S.cfg.materials[matName] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, m = new THREE.MeshStandardNodeMaterial(); m.name = matName;
     let key = (look.maps && look.maps[matName]) || md.map; if (key && typeof key === 'object') key = key[H.body];
@@ -2392,13 +2750,18 @@ const Chars = (() => {
     const { attribute, abs, Discard, If, frontFacing, normalView, clamp } = TSL;
     const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
     const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
-    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false;
+    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), skinW = float(0), hairW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false, skinI = -1;
+    const F = S.cfg.face || null, UE = F ? U.add(H.uGaze) : U;          // the eye texture is read a little off-centre: that is how the eyes move
     names.forEach((mn, i) => {
       const src = srcOf && srcOf[mn], md = S.cfg.materials[mn] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
       let key = (look.maps && look.maps[mn]) || md.map; if (key && typeof key === 'object') key = key[H.body];
       const map = key ? S.tex[key] : (md.gltf && src && src.map) || null, tint = look.tint && (look.tint[mn] || (md.part && look.tint[md.part]) || (md.kind && look.tint[md.kind])) || [1, 1, 1];
-      const tx = map ? texture(map, U) : null;
-      albedo = albedo.add((tx ? tx.rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
+      const tx = map ? texture(map, md.kind === 'eye' ? UE : U) : null;
+      if (md.kind === 'skin') { skinW = skinW.add(w); skinI = i; } if (md.kind === 'hair') hairW = hairW.add(w);
+      // dyed cloth: the garment keeps its weave and folds (the texture's light and dark) but takes the villager's own colour
+      const dye = md.kind === 'cloth' && look.dye && look.dye[md.part];
+      if (dye && tx) { const ml = meanLum(map); albedo = albedo.add(vec3(dye[0], dye[1], dye[2]).mul(TSL.clamp(tx.rgb.dot(vec3(0.3, 0.6, 0.1)).div(ml), 0.35, 1.9)).mul(w)); }
+      else albedo = albedo.add((tx ? tx.rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
       rough = rough.add(w.mul(md.rough === undefined ? 0.85 : md.rough));
       if (md.oneSided) one = one.add(w);
       if (md.kind === 'eye') { eyeW = eyeW.add(w); anyEye = true; }
@@ -2406,43 +2769,90 @@ const Chars = (() => {
       const wm = md.warm || [1, 1, 1]; if (md.warm) anyWarm = true; warm = warm.add(vec3(wm[0], wm[1], wm[2]).mul(w));
       if (C.normalMaps && md.normal && S.tex[md.normal]) { const nm = normalMap(texture(S.tex[md.normal], U)); nrm = nrm ? nrm.add(nm.mul(w)) : nm.mul(w); nw = nw.add(w); }
     });
+    const V_ = SH.U.camPos.sub(positionWorld).normalize(), up = F ? H.uHead.mul(vec3(0, 1, 0)).normalize() : vec3(0, 1, 0);
+    if (F && anyEye) {
+      // Eyes. The stock texture has a pin-point pupil and a flat pale iris, which is what reads as dead. Here: a pupil that opens in the
+      // dark, an iris that deepens toward its rim, whites that are not paper white and fall into shadow under the upper lid.
+      const r = TSL.min(TSL.distance(UE, vec2(F.iris[0][0], F.iris[0][1])), TSL.distance(UE, vec2(F.iris[1][0], F.iris[1][1]))), iris = float(1).sub(TSL.smoothstep(F.irisR * 0.9, F.irisR * 1.04, r));
+      const lum = albedo.dot(vec3(0.3, 0.6, 0.1)), deep = TSL.mix(vec3(lum), albedo, 1.5).mul(TSL.mix(float(1.0), 0.42, TSL.smoothstep(F.irisR * 0.55, F.irisR, r))).mul(0.85);
+      let e = TSL.mix(albedo.mul(vec3(0.80, 0.77, 0.74)), deep, iris);
+      e = e.mul(TSL.smoothstep(H.uPupil.sub(0.006), H.uPupil.add(0.008), r).mul(0.97).add(0.03));
+      e = e.mul(TSL.mix(float(0.42), 1.0, TSL.smoothstep(0.62, 0.05, N.dot(up))));
+      albedo = TSL.mix(albedo, e, eyeW);
+    }
+    let accW = float(0);
+    if (F) { const cav = TSL.step(1.5, U.x).mul(TSL.step(U.x, 2.5)); albedo = TSL.mix(albedo, vec3(0.030, 0.008, 0.007), cav);       // the card behind the lips
+      // worn pieces (accGeometry): u = 3 + slot picks one of the villager's accessory colours; cloth and leather are matt, metal a little less
+      accW = TSL.step(2.5, U.x); const slot = U.x.sub(3), A = H.accCol, ac = TSL.mix(TSL.mix(vec3(A[0][0], A[0][1], A[0][2]), vec3(A[1][0], A[1][1], A[1][2]), TSL.step(0.5, slot)), TSL.mix(vec3(A[2][0], A[2][1], A[2][2]), vec3(A[3][0], A[3][1], A[3][2]), TSL.step(2.5, slot)), TSL.step(1.5, slot));
+      const grain = texture(G.noiseTex, positionWorld.xy.mul(9).add(positionWorld.z.mul(7))).r.mul(0.3).add(0.85);
+      albedo = TSL.mix(albedo, ac.mul(grain), accW); skinW = skinW.mul(cav.oneMinus()).mul(accW.oneMinus()); one = one.mul(accW.oneMinus());
+      rough = TSL.mix(rough, TSL.mix(float(0.92), 0.55, TSL.step(1.5, slot).mul(TSL.step(slot, 2.5))), accW); }
     m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
     let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
     if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
     let emis = albedo.mul(lit);
+    if (F) {
+      // skin: where the sun grazes it the light carries on a little way round, reddened (blood under the skin), and the edge facing away from the eye takes a soft sheen
+      const day = float(1).sub(TSL.step(0.5, H.uZone)).mul(H.uLight), ndl = N.dot(SH.U.sunDir);
+      emis = emis.add(albedo.mul(vec3(1.0, 0.36, 0.22)).mul(SH.U.sunCol).mul(TSL.smoothstep(-0.35, 0.05, ndl).mul(TSL.smoothstep(0.45, 0.05, ndl)).mul(0.11)).mul(day).mul(skinW));
+      const rim = TSL.pow(float(1).sub(TSL.max(N.dot(V_), 0)), float(3));
+      emis = emis.add(SH.hemi(V_.negate().add(vec3(0, 0.6, 0)).normalize(), H.uLight, H.uZone).mul(rim).mul(skinW.mul(0.10).add(hairW.mul(0.32))).mul(albedo.add(0.04)));       // hair catches the sky along its outline instead of one hard blotch
+    }
     if (anyEye) {      // a catch-light: the key light's glint on the wet eye (no specular on the stock eye texture), off indoors where the hemisphere is a lamp-lit room
       const V = SH.U.camPos.sub(positionWorld).normalize(), Hs = SH.U.sunDir.add(V).normalize(), Hs2 = V.add(V.add(vec3(0, 0.8, 0)).normalize()).normalize();      // the key light, and a soft light from above the viewer so a face looking at you always has one
       const day = float(1).sub(H.uZone).mul(H.uLight), glint = TSL.pow(TSL.max(N.dot(Hs), 0), float(130)).mul(0.6).mul(TSL.min(SH.U.sunCol.x.mul(1.4), 1)).add(TSL.pow(TSL.max(N.dot(Hs2), 0), float(24)).mul(0.8)).mul(day).mul(eyeW);
       emis = emis.add(vec3(1, 0.97, 0.9).mul(glint));
     }
     m.emissiveNode = emis;
+    if (F && skinI >= 0) {
+      // Face motion without face joints: skin vertices are moved by where they are in the skin atlas. The jaw (lower lip to chin) drops
+      // with H.uMouth, the upper lip lifts a little, the upper eyelids come down with H.uBlink. Directions are turned by the head joint.
+      const { positionLocal, smoothstep } = TSL, sv = clamp(float(1).sub(abs(mid.sub(skinI))), 0, 1).mul(TSL.step(U.x, 1.5));
+      m.positionNode = Fn(() => {
+        const u = U.x, dv = abs(U.y.sub(F.mouth[1])), p = positionLocal.toVar();
+        If(sv.greaterThan(0.5).and(u.greaterThan(0.80)), () => {
+          const jaw = smoothstep(F.mouth[0] - 0.0015, F.mouth[0] + 0.004, u).mul(smoothstep(0.995, 0.957, u)).mul(smoothstep(0.105, 0.040, dv));
+          const lip = smoothstep(F.mouth[0] - 0.020, F.mouth[0] - 0.009, u).mul(smoothstep(F.mouth[0] - 0.0005, F.mouth[0] - 0.004, u)).mul(smoothstep(0.045, 0.018, dv));
+          const de = TSL.min(abs(U.y.sub(F.lids[0])), abs(U.y.sub(F.lids[1]))), lid = smoothstep(0.821, 0.830, u).mul(smoothstep(0.8405, 0.8365, u)).mul(smoothstep(0.034, 0.022, de));
+          const off = vec3(0, -0.0135, -0.0035).mul(jaw.mul(H.uMouth)).add(vec3(0, 0.0022, 0).mul(lip.mul(H.uMouth))).add(vec3(0, -0.0105, 0.0022).mul(lid.mul(H.uBlink)));
+          p.addAssign(H.uHead.mul(off));
+        });
+        return p;
+      })();
+    }
     return m;
   }
 
   // ── level of detail ──
-  // A body file may carry a low-detail copy of every mesh (tools/chars_lod.mjs, "<mesh>@lod": about a fifth of the triangles, same skeleton and
-  // material). Beyond LOD.dist[tier] metres the villager is drawn with the copy only. The copy is also what casts the sun shadow, always: close
-  // up it sits on a layer only the near shadow map sees (LOD.shadowLayer), so the full mesh never casts and is never drawn twice.
+  // A body file may carry lighter copies of every mesh (tools/chars_lod.mjs: "<mesh>@mid" about 4600 triangles, "@lod" 2200, "@far" 700; same
+  // skeleton and materials). The full body (about 10 000) is drawn inside LOD.dist[tier].hi metres, the mid copy to .mid, the low copy to .lo,
+  // the far copy beyond. The lightest copy the file has is also what casts the sun shadow, always: while the camera draws another copy it sits
+  // on a layer only the near shadow map sees (LOD.shadowLayer), so no body is ever drawn twice at full weight.
   // Far villagers (beyond LOD.slowDist) advance their animation every LOD.slowEvery frames only.
-  const LOD = C.LOD = { dist: { low: 8, medium: 12, high: 20 }, hyst: 1.5, shadowLayer: SHADOW_ONLY_LAYER, slowDist: 45, slowEvery: 3, force: TEST && TEST.charlod !== undefined ? TEST.charlod : -1 };    // force: 0 full mesh only, 1 low only, -1 by distance
+  const LOD = C.LOD = { dist: { low: { hi: 3.5, mid: 7, lo: 16 }, medium: { hi: 4.5, mid: 11, lo: 26 }, high: { hi: 7, mid: 18, lo: 40 } }, hyst: 0.8, shadowLayer: SHADOW_ONLY_LAYER, slowDist: 45, slowEvery: 3, force: TEST && TEST.charlod !== undefined ? TEST.charlod : -1 };    // force: 0 full mesh only, 1 low only, -1 by distance
   function lodMesh(S, H, root, skeleton, B, body, parts, matName, names, mat) {
-    if (!B.lodParts) return;
-    const g = mergedGeometry(S, body, parts, matName, names, true); if (!g) return;
-    const mesh = new THREE.SkinnedMesh(g, mat); mesh.name = 'villager.lod'; mesh.receiveShadow = true; mesh.castShadow = false; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
-    mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true; mesh.visible = false;
-    (H.lods = H.lods || []).push({ hi: H.meshes[H.meshes.length - 1], lo: mesh });
+    if (!B.lodParts) return; const e = { hi: H.meshes[H.meshes.length - 1] }; let any = false;
+    for (const lv of ['mid', 'lod', 'far']) {
+      if (!B.lodParts[lv]) continue; const g = mergedGeometry(S, body, parts, matName, names, lv, H.acc); if (!g) continue;
+      const mesh = new THREE.SkinnedMesh(g, mat); mesh.name = 'villager.' + lv; mesh.receiveShadow = true; mesh.castShadow = false; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
+      mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true; mesh.visible = false; e[lv] = mesh; any = true;
+    }
+    if (any) (H.lods = H.lods || []).push(e);
   }
   function lodUpdate(H, d, cast) {
     if (!H.lods) { for (const m of H.meshes) m.castShadow = cast; return; }
-    const far = LOD.force === 1 ? true : LOD.force === 0 ? false : H.far ? d > (LOD.dist[R.qName] || 13) - LOD.hyst : d > (LOD.dist[R.qName] || 13) + LOD.hyst;
-    if (far !== H.far || H.lodCast !== cast) {
-      H.far = far; H.lodCast = cast;
+    const D = LOD.dist[R.qName] || LOD.dist.medium, h = LOD.hyst, was = H.lodLevel === undefined ? 0 : H.lodLevel, up = k => d > D[k] + (was > ['hi', 'mid', 'lo'].indexOf(k) ? -h : h);
+    const level = LOD.force === 1 ? 2 : LOD.force === 0 ? 0 : up('lo') ? 3 : up('mid') ? 2 : up('hi') ? 1 : 0;
+    if (level !== H.lodLevel || H.lodCast !== cast) {
+      H.lodLevel = level; H.lodCast = cast; H.far = level > 0;
       for (const l of H.lods) {
         if (l.mask === undefined) l.mask = l.hi.layers.mask;           // the layers the game gave this villager
-        l.hi.visible = !far; l.hi.castShadow = false;
-        l.lo.visible = far || cast; l.lo.castShadow = cast; l.lo.layers.mask = far ? l.mask : (1 << LOD.shadowLayer);
+        const cam = [l.hi, l.mid || l.hi, l.lod || l.mid || l.hi, l.far || l.lod || l.mid || l.hi][level], sh = l.far || l.lod || l.mid || l.hi;
+        for (const m of [l.hi, l.mid, l.lod, l.far]) if (m) { m.visible = false; m.castShadow = false; }
+        cam.visible = true; cam.layers.mask = l.mask;
+        if (cast) { if (sh === cam) cam.castShadow = true; else { sh.visible = true; sh.castShadow = true; sh.layers.mask = 1 << LOD.shadowLayer; } }
       }
     }
   }
@@ -2454,7 +2864,7 @@ const Chars = (() => {
     const cfg = S.cfg, look = cfg.look ? cfg.look(def) : {}, body = S.bodies[look.body] ? look.body : Object.keys(S.bodies)[0], B = S.bodies[body];
     const root = cloneBones(B.armature), byName = {}; root.traverse(o => { byName[o.name] = o; });
     const skeleton = new THREE.Skeleton(B.skel.bones.map(b => byName[b.name]), B.skel.boneInverses);
-    const H = { def, set: S, body, root, pivot: new THREE.Group(), skeleton, uZone: uniform(0), uLight: uniform(1), bones: {}, actions: {}, cur: null, curName: '', seed: 0, mats: [], meshes: [] };
+    const H = { def, set: S, body, root, pivot: new THREE.Group(), skeleton, uZone: uniform(0), uLight: uniform(1), uMouth: uniform(0), uBlink: uniform(0), uPupil: uniform(0.05), uGaze: uniform(new THREE.Vector2()), uHead: uniform(new THREE.Matrix3()), bones: {}, actions: {}, cur: null, curName: '', seed: 0, mats: [], meshes: [] };
     for (let i = 0, id = String(def.id || C.list.length); i < id.length; i++) H.seed = (H.seed * 31 + id.charCodeAt(i)) >>> 0;
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p]).sort(), names = new Set();
     for (const p of parts) for (const m of B.parts[p]) names.add(m.material.name);
@@ -2462,7 +2872,7 @@ const Chars = (() => {
     const nameList = [...names].sort(), srcOf = {};      // the body's own glTF material per name (the 'real' set keeps its textures and kinds there)
     for (const p of parts) for (const m of B.parts[p]) if (!srcOf[m.material.name]) srcOf[m.material.name] = m.material;
     if (C.merge && nameList.length > 1) {
-      const g = mergedGeometry(S, body, parts, null, nameList);
+      H.acc = look.acc || null; H.accCol = (look.acc && look.acc.col) || [[0.3, 0.26, 0.2], [0.14, 0.09, 0.055], [0.30, 0.29, 0.27], [0.19, 0.12, 0.07]]; const g = mergedGeometry(S, body, parts, null, nameList, null, H.acc);
       if (g) {
         const mat = makeMergedMaterial(S, H, nameList, look, srcOf), mesh = new THREE.SkinnedMesh(g, mat);
         mesh.name = 'villager'; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
@@ -2525,16 +2935,21 @@ const Chars = (() => {
     mx.stopAllAction(); mx.uncacheRoot(tmp);
     return m;
   }
-  // ground speed a walking or running clip was animated for, in model units per second: twice the distance one foot covers
-  // front to back, per cycle. Lets the clip be played at the rate that matches how fast the villager really moves.
+  // ground speed a walking or running clip was animated for, in model units per second. Lets the clip be played at the rate that
+  // matches how fast the villager really moves.
   function gait(H, key) {
     const name = clipNameFor(H, key), id = H.body + '/gait/' + name; let v = H.set.measure[id]; if (v !== undefined) return v;
     const clip = clipFor(H.set, H.body, name); v = 0;
     if (clip && clip.duration > 0.05) {
       const tmp = cloneBones(H.set.bodies[H.body].armature), mx = new THREE.AnimationMixer(tmp), foot = tmp.getObjectByName(H.set.cfg.bones.footL), P = new THREE.Vector3();
-      mx.clipAction(clip).play(); let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
-      if (foot) for (let i = 0; i < 24; i++) { mx.setTime(clip.duration * i / 24); tmp.updateMatrixWorld(true); foot.getWorldPosition(P); x0 = Math.min(x0, P.x); x1 = Math.max(x1, P.x); z0 = Math.min(z0, P.z); z1 = Math.max(z1, P.z); }
-      if (foot) v = 2 * Math.max(x1 - x0, z1 - z0) / clip.duration;
+      mx.clipAction(clip).play();
+      // While a foot is planted it travels backward under the body at exactly the speed the body is meant to move forward. So: sample the
+      // cycle, take the frames where the foot is in the lowest quarter of its height, and use the median speed over the ground there.
+      // (The old estimate, twice the foot's front-to-back range per cycle, came out a third too slow for these clips: planted feet slid.)
+      if (foot) { const n = 60, pts = []; for (let i = 0; i <= n; i++) { mx.setTime(clip.duration * i / n); tmp.updateMatrixWorld(true); foot.getWorldPosition(P); pts.push([P.x, P.y, P.z]); }
+        let lo = 1e9, hi = -1e9; for (const q of pts) { lo = Math.min(lo, q[1]); hi = Math.max(hi, q[1]); }
+        const sp = []; for (let i = 0; i < n; i++) if (Math.max(pts[i][1], pts[i + 1][1]) <= lo + (hi - lo) * 0.25) sp.push(Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][2] - pts[i][2]) / (clip.duration / n));
+        sp.sort((a, b) => a - b); v = sp.length ? sp[sp.length >> 1] : 0; }
       mx.stopAllAction(); mx.uncacheRoot(tmp);
     }
     return H.set.measure[id] = v;
@@ -2548,6 +2963,28 @@ const Chars = (() => {
     bone.quaternion.premultiply(_p).premultiply(_q).premultiply(_pi);
   }
 
+  // ── faces: mouth from the spoken line's loudness, blinking, eyes that move ──
+  const _m4 = new THREE.Matrix4(), _mi = new THREE.Matrix4();
+  function faceUpdate(H, st, dt, dcam) {
+    const F = H.face || (H.face = { open: 0, blinkT: 1 + (H.seed % 7) * 0.6, blink: 0, gx: 0, gy: 0, tx: 0, ty: 0, sacT: 0.5, hi: H.skeleton.bones.indexOf(H.bones.head) });
+    // the head joint's skinning matrix, in the body's own space: turns "down the face" into where down is for this pose (one frame old, which is plenty)
+    const hb = H.bones.head; if (hb && F.hi >= 0) { _mi.copy(H.root.matrixWorld).invert(); _m4.multiplyMatrices(_mi, hb.matrixWorld).multiply(H.skeleton.boneInverses[F.hi]); H.uHead.value.setFromMatrix4(_m4); }
+    // mouth: the line being spoken has a loudness value every 50 ms (audio/voice/manifest.json); with no sound (a bark, or sound off) a talking villager mumbles
+    let tgt = 0; const vx = typeof Snd !== 'undefined' && Snd.vox, cur = vx && vx.cur, id = H.def && H.def.id;
+    if (H.mouthTest !== undefined) tgt = H.mouthTest;
+    else if (cur && cur.speaker === id && cur.env && cur.env.length) { const t = Snd.now() - cur.t0, i = t / 0.05, e = cur.env, a = e[Math.max(0, Math.min(e.length - 1, Math.floor(i)))] || 0, b = e[Math.max(0, Math.min(e.length - 1, Math.floor(i) + 1))] || 0, v = (a + (b - a) * (i - Math.floor(i))) / 99;
+      tgt = t < 0 || t > cur.dur ? 0 : Math.min(1, Math.pow(Math.max(0, v - 0.04) * 2.6, 0.75)); }
+    else if (st.talking || (vx && vx.barkH && vx.barkH === cur && cur.speaker === id)) { const t = (typeof game !== 'undefined' ? game.time : 0) + H.seed; tgt = Math.max(0, 0.42 + 0.4 * Math.sin(t * 11.3) * Math.sin(t * 3.9 + 1) + 0.18 * Math.sin(t * 23)); }
+    F.open += (tgt - F.open) * Math.min(1, dt * (tgt > F.open ? 26 : 16)); H.uMouth.value = F.open;
+    // blink: every few seconds, 0.13 s shut; asleep the eyes stay shut
+    F.blinkT -= dt; if (F.blinkT < 0) F.blinkT = 2.2 + ((H.seed * 7.13 + (typeof game !== 'undefined' ? game.time : 0) * 3.1) % 4.2);
+    const lying = st.anim === 'lie'; H.uBlink.value = H.blinkTest !== undefined ? H.blinkTest : lying ? 1 : F.blinkT < 0.13 ? Math.sin(F.blinkT / 0.13 * Math.PI) : 0;
+    // eyes: small jumps every second or so; talking to the player they come back to the middle (the head is already turned to the player)
+    F.sacT -= dt; if (F.sacT < 0) { F.sacT = 0.6 + ((H.seed * 3.7 + F.gx * 91) % 1.9 + 1.9) % 1.9; const k = st.talking ? 0.25 : 1; F.tx = (((H.seed * 12.9 + F.sacT * 78.2) % 2 + 2) % 2 - 1) * 0.011 * k; F.ty = (((H.seed * 5.3 + F.sacT * 37.7) % 2 + 2) % 2 - 1) * 0.005 * k; }
+    F.gx += (F.tx - F.gx) * Math.min(1, dt * 30); F.gy += (F.ty - F.gy) * Math.min(1, dt * 30);
+    if (H.gazeTest) H.uGaze.value.set(H.gazeTest[0], H.gazeTest[1]); else H.uGaze.value.set(F.gy, F.gx);          // in the eye texture, u runs up and down the eye and v across it
+    H.uPupil.value = 0.040 + 0.022 * (typeof ENV !== 'undefined' ? (st.zone ? 0.8 : ENV.night) : 0);
+  }
   // ── per frame ──
   C.update = function (H, st, dt) {
     const cfg = H.set.cfg, pv = H.pivot;
@@ -2556,7 +2993,12 @@ const Chars = (() => {
     const key = st.talking ? (lying ? 'lie' : seated ? (cfg.anims['sit+talk'] ? 'sit+talk' : 'sit') : 'talk') : base;
     play(H, key);
     const s = st.scale || 1, k = (cfg.scale || 1) * s * H.fit;
-    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1; H.cur.setEffectiveTimeScale(st.speed > 0 && g > 0.2 ? Math.min(Math.max(st.speed / g, 0.6), cfg.maxRate || 1.8) : rate); }
+    // Feet: the clip is played at the rate at which its planted foot moves backward exactly as fast as the villager moves forward. The speed
+    // is measured from how far the villager really moved (callers only pass a nominal figure, and people slow down in turns and at doors).
+    { const lp = H.lastP, mv = lp && dt > 1e-4 ? Math.hypot(st.pos[0] - lp[0], st.pos[2] - lp[2]) / dt : -1; H.lastP = [st.pos[0], st.pos[1], st.pos[2]];
+      if (mv >= 0 && mv < 12) H.realSpeed = H.realSpeed === undefined ? mv : H.realSpeed + (mv - H.realSpeed) * Math.min(1, dt * 8); }
+    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1, sp = TEST && TEST.feetnominal ? st.speed : (H.realSpeed !== undefined && dt > 0 ? H.realSpeed : st.speed);
+      H.cur.setEffectiveTimeScale(sp > 0.05 && g > 0.2 ? Math.min(Math.max(sp / g * ((TEST && TEST.feetk) || 1), 0.25), cfg.maxRate || 1.8) : sp !== undefined && sp <= 0.05 && dt > 0 ? 0.25 : rate); }
     const dcam = hyp(st.pos[0] - R.cam.pos[0], st.pos[1] - R.cam.pos[1], st.pos[2] - R.cam.pos[2]);
     if (dcam > LOD.slowDist && H.seed % LOD.slowEvery !== R.frame % LOD.slowEvery) H.slowDt = (H.slowDt || 0) + dt;      // far away: the pose changes on one frame in a few
     else { H.mixer.update(dt + (H.slowDt || 0)); H.slowDt = 0; }
@@ -2575,6 +3017,7 @@ const Chars = (() => {
     }
     lodUpdate(H, dcam, st.cast === undefined ? !!H.cast : st.cast); H.cast = st.cast === undefined ? H.cast : st.cast;
     H.uZone.value = st.zone || 0; H.uLight.value = st.light === undefined ? 1 : st.light;
+    if (cfg.face && dcam < 14) faceUpdate(H, st, dt, dcam);
     // Head look. The mixer only rewrites a joint when its animated value changed, so a turn added last frame may still be in the
     // joint: take it out again before adding this frame's.
     const lk = st.look, nb = H.bones.neck, hb = H.bones.head, L = H.lookState || (H.lookState = [nb, hb].map(() => ({ base: new THREE.Quaternion(), mine: new THREE.Quaternion(), on: false })));
@@ -4243,7 +4686,7 @@ const kitReady = () => HOUSE_STYLE === 'kit' && typeof Kit !== 'undefined' && !!
 function kitWanted(site, spec) { return kitReady() && !!KIT_STYLE[site.id]; }
 async function kitBoot(progress) {
   if (HOUSE_STYLE !== 'kit' || typeof Kit === 'undefined') return;
-  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan/.test(p.glb)) }); kitFixups(); if (typeof infillMaterials === 'function') await infillMaterials(); }       // scanned rocks photograph dark; lift them a little
+  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan|dungeon/.test(p.glb)) }); kitFixups(); if (typeof infillMaterials === 'function') await infillMaterials(); }       // scanned rocks photograph dark; lift them a little /* [q1] dungeon pack */
   catch (e) { console.warn('kits unavailable, building the generated houses instead: ' + (e && e.message || e)); G.kitNote = String(e && e.message || e); }
 }
 // pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong
@@ -7683,6 +8126,12 @@ if (typeof HOUSES !== 'undefined' && typeof ALLEY_SHOPS !== 'undefined') {
 
 { const ids = (typeof INF !== 'undefined' && INF.enterIds || []).concat(['high.a', 'high.c'], typeof ALLEY_SHOPS !== 'undefined' ? ALLEY_SHOPS.filter(a => a.layout).map(a => a.id) : []); const first = ['in.02', 'in.04', 'in.07', 'in.13', 'in.21', 'in.23', 'high.a', 'high.c', 'shop.n2', 'shop.n3', 'shop.n4', 'shop.s0', 'shop.s1', 'shop.s2'], sc = a => hHash(a + '|memo'); HMEMO_IDS = first.filter(a => ids.includes(a)).sort((a, b) => sc(a) - sc(b)).concat(ids.filter(a => !first.includes(a)).sort((a, b) => sc(a) - sc(b))); }
 
+// ── the working buildings (weaver, draper, mill, hunter, fisher, farm) go through the same engine: a trade each [c5] ──
+{
+  const WK = { weaver: { trade: 'weaver', fam: 'workshop', wealth: 1 }, draper: { trade: 'draper', fam: 'shopfront', wealth: 2 }, mill: { trade: 'miller', fam: 'workshop', wealth: 1 }, hunter: { trade: 'hunter', fam: 'cottage', wealth: 0 }, fisher: { trade: 'fisher', fam: 'cottage', wealth: 0 }, farm: { trade: 'farmer', fam: 'crosspassage', wealth: 1 } };
+  for (const id in WK) if (typeof SITE !== 'undefined' && SITE[id] && HOUSES[id]) { HDESC[id] = WK[id]; PLANS[id] = hBuild; PLAN_SHIP[id] = 1; }
+}
+
 
 // ---- 72l_hobjects.js ----
 // ───────────────────────── trade props and trade recipes for ordinary houses and shops [c5] ─────────────────────────
@@ -7831,8 +8280,7 @@ const HPR = {
 // ───────── one memorable object per house [c5]: floor pieces (HPR) and wall pieces (HMEMO.wall) ─────────
 const MWOOD = [0.36, 0.26, 0.17];
 TP.cradle = m => { m.mat(MAT.PLANKS, [0.42, 0.3, 0.2]); m.box(-0.4, 0.1, -0.22, 0.4, 0.14, 0.22); for (const sx of [-1, 1]) { m.box(sx * 0.4 - 0.02, 0.14, -0.22, sx * 0.4 + 0.02, 0.5, 0.22); m.box(sx * 0.4 - 0.03, 0.0, -0.3, sx * 0.4 + 0.03, 0.06, 0.3); } m.box(-0.4, 0.14, -0.24, 0.4, 0.4, -0.2); m.box(-0.4, 0.14, 0.2, 0.4, 0.3, 0.24); m.mat(MAT.CLOTH, [0.72, 0.68, 0.58], 0.5); m.box(-0.36, 0.14, -0.19, 0.36, 0.24, 0.19); m.mat(MAT.CLOTH, [0.45, 0.4, 0.34], 0.5); m.ball(-0.2, 0.26, 0, 0.12, 0.07, 0.1, 6, 4); addBoxCollider(m, -0.45, -0.3, 0.45, 0.3, 0, 0.5); };
-TP.shipModel = m => { m.mat(MAT.PLANKS, COL.woodDark); for (const [x, z] of [[-0.35, -0.2], [0.35, -0.2], [-0.35, 0.2], [0.35, 0.2]]) m.box(x - 0.03, 0, z - 0.03, x + 0.03, 0.78, z + 0.03); m.box(-0.42, 0.78, -0.26, 0.42, 0.82, 0.26);
-  at(m, 0, 0.84, 0, 0, () => { m.mat(MAT.PLANKS, [0.38, 0.26, 0.16]); m.lathe([[0.01, 0], [0.12, 0.03], [0.14, 0.1], [0.1, 0.14]], 8, 0); m.box(-0.34, 0.02, -0.07, 0.34, 0.11, 0.07); m.box(-0.4, 0.09, -0.05, -0.3, 0.16, 0.05); m.mat(MAT.TIMBER, COL.wood); m.cyl(-0.05, 0.1, 0, 0.012, 0.012, 0.55, 5, 1); m.cyl(0.15, 0.1, 0, 0.011, 0.011, 0.45, 5, 1); m.mat(MAT.CLOTH, [0.66, 0.62, 0.5], 0.5); m.box(-0.1, 0.25, -0.004, 0.0, 0.62, 0.004); m.box(0.1, 0.24, -0.004, 0.2, 0.5, 0.004); }); addBoxCollider(m, -0.45, -0.3, 0.45, 0.3, 0, 0.85); };
+TP.shipModel = m => { m.mat(MAT.PLANKS, COL.woodDark); for (const [x, z] of [[-0.45, -0.2], [0.45, -0.2], [-0.45, 0.2], [0.45, 0.2]]) m.box(x - 0.03, 0, z - 0.03, x + 0.03, 0.78, z + 0.03); m.box(-0.55, 0.78, -0.3, 0.55, 0.82, 0.3); kp(m, 'ship_pinnace', 0, 0.82, 0, 0.027, PI / 2); addBoxCollider(m, -0.55, -0.3, 0.55, 0.3, 0, 0.85); };      // [c5] the scanned pinnace on a trestle
 TP.paintedChest = m => { m.mat(MAT.PLANKS, [0.3, 0.38, 0.4]); m.box(-0.5, 0.0, -0.27, 0.5, 0.45, 0.27); m.ball(0, 0.45, 0, 0.5, 0.14, 0.27, 8, 3); m.mat(MAT.CLOTH, [0.5, 0.22, 0.17], 0.5); for (const x of [-0.38, 0.38]) m.box(x - 0.04, 0.0, -0.28, x + 0.04, 0.5, 0.28); m.mat(MAT.CLOTH, [0.68, 0.58, 0.32], 0.5); m.box(-0.2, 0.14, 0.268, 0.2, 0.32, 0.275); m.mat(MAT.METAL, COL.iron); m.box(-0.03, 0.3, 0.27, 0.03, 0.38, 0.285); addBoxCollider(m, -0.5, -0.28, 0.5, 0.28, 0, 0.55); };
 TP.harp = m => { m.mat(MAT.PLANKS, [0.4, 0.28, 0.17]); m.box(-0.22, 0, -0.18, 0.22, 0.04, 0.18); m.tube([[-0.1, 0.04, 0], [-0.12, 0.6, 0], [-0.04, 1.1, 0], [0.12, 1.25, 0]], [0.03, 0.025, 0.025, 0.02], 5); m.box(0.12, 0.2, -0.015, 0.16, 1.22, 0.015); m.mat(MAT.CLOTH, [0.78, 0.74, 0.6], 0.3); for (let i = 0; i < 9; i++) { const t = i / 8; m.box(-0.095 + t * 0.2 - 0.002, 0.2 + t * 0.0, -0.002, -0.095 + t * 0.2 + 0.002, 0.62 + t * 0.58, 0.002); } addBoxCollider(m, -0.25, -0.2, 0.25, 0.2, 0, 1.3); };
 TP.birdcage = m => { m.mat(MAT.METAL, COL.iron); m.cyl(0, 0, 0, 0.12, 0.12, 0.04, 8, 2); m.cyl(0, 0, 0, 0.015, 0.015, 1.3, 5, 1); m.box(-0.2, 1.28, -0.012, 0.2, 1.3, 0.012); at(m, 0, 1.34, 0, 0, () => { m.mat(MAT.METAL, [0.3, 0.26, 0.2]); m.cyl(0, 0, 0, 0.2, 0.2, 0.025, 10, 2); m.cyl(0, 0.3, 0, 0.2, 0.2, 0.025, 10, 2); m.lathe([[0.2, 0.3], [0.1, 0.38], [0.01, 0.46]], 10, 0); for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; m.cyl(Math.cos(a) * 0.19, 0.02, Math.sin(a) * 0.19, 0.006, 0.006, 0.29, 4, 1); } m.mat(MAT.CLOTH, [0.6, 0.5, 0.2], 0.4); m.ball(0, 0.1, 0, 0.05, 0.04, 0.035, 6, 4); m.mat(MAT.CLOTH, [0.45, 0.42, 0.3], 0.4); m.ball(0.06, 0.22, 0.02, 0.04, 0.035, 0.03, 6, 4); }); addCircleCollider(m, 0, 0, 0.2, 0, 1.0); };
@@ -7844,14 +8292,25 @@ TP.anchor = m => { m.mat(MAT.METAL, [0.22, 0.2, 0.19]); m.box(-0.04, 0, -0.04, 0
 TP.skeps = m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.7, 0.55, -0.22, 0.7, 0.6, 0.22); for (const x of [-0.65, 0.65]) m.box(x - 0.03, 0, -0.18, x + 0.03, 0.55, 0.18); for (const x of [-0.42, 0, 0.42]) { m.mat(MAT.THATCH, [0.72, 0.6, 0.36], 0.4); at(m, x, 0, 0, 0, () => m.lathe([[0.2, 0.6], [0.2, 0.7], [0.15, 0.84], [0.07, 0.92], [0.01, 0.95]], 9, 0)); } addBoxCollider(m, -0.72, -0.24, 0.72, 0.24, 0, 0.62); };
 TP.cheesePress = m => { m.mat(MAT.TIMBER, COL.wood); for (const sx of [-1, 1]) m.box(sx * 0.3 - 0.05, 0, -0.1, sx * 0.3 + 0.05, 1.2, 0.1); m.box(-0.35, 1.1, -0.1, 0.35, 1.2, 0.1); m.cyl(0, 0.5, 0, 0.03, 0.03, 0.75, 5, 2); m.box(-0.3, 1.25, -0.03, 0.3, 1.3, 0.03); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(0, 0, 0, 0.25, 0.25, 0.3, 10, 2); m.mat(MAT.CLOTH, [0.78, 0.72, 0.52], 0.4); m.cyl(0, 0.3, 0, 0.21, 0.21, 0.12, 10, 2); addBoxCollider(m, -0.38, -0.25, 0.38, 0.25, 0, 1.3); };
 TP.scales = m => { m.mat(MAT.METAL, [0.3, 0.26, 0.2]); m.box(-0.03, 0, -0.03, 0.03, 1.25, 0.03); m.box(-0.25, 0, -0.25, 0.25, 0.04, 0.25); m.box(-0.5, 1.22, -0.015, 0.5, 1.26, 0.015); for (const sx of [-1, 1]) { m.box(sx * 0.48 - 0.004, 0.72, -0.004, sx * 0.48 + 0.004, 1.22, 0.004); m.disc(sx * 0.48, 0.72, 0, 0.14, 10, 2); } addBoxCollider(m, -0.3, -0.3, 0.3, 0.3, 0, 1.3); };
+
+TP.bustPlinth = m => { m.mat(MAT.STONE, [0.7, 0.68, 0.64]); m.box(-0.22, 0, -0.22, 0.22, 0.9, 0.22); m.box(-0.27, 0.9, -0.27, 0.27, 0.95, 0.27); kp(m, 'marble_bust_01', 0, 0.95, 0, 1.3, 0); addBoxCollider(m, -0.28, -0.28, 0.28, 0.28, 0, 1.65); };
+TP.chessTable = m => { kp(m, 'round_wooden_table_01', 0, 0, 0, 0.7, 0); kp(m, 'chess_set', 0, 0.7, 0, 1.3, 0); kp(m, 'folding_wooden_stool', 0, 0, 0.62, 0.8, PI); kp(m, 'folding_wooden_stool', 0, 0, -0.62, 0.8, 0); addBoxCollider(m, -0.5, -0.85, 0.5, 0.85, 0, 0.75); };
+TP.rocker = m => { kp(m, 'rockingchair_01', 0, 0, 0, 1.0, PI); addBoxCollider(m, -0.36, -0.42, 0.36, 0.42, 0, 0.9); };
+TP.mantelCase = m => { kp(m, 'classicnightstand_01', 0, 0, 0, 1.2, 0); kp(m, 'mantel_clock_01', 0, 0.84, 0, 1.6, 0); addBoxCollider(m, -0.35, -0.27, 0.35, 0.27, 0, 1.0); };
+TP.cabinetBig = m => { kp(m, 'gothiccabinet_01', 0, 0, 0, 0.75, 0); kp(m, 'carved_wooden_elephant', 0.3, 1.77, 0, 3.0, 0.4); addBoxCollider(m, -0.65, -0.43, 0.65, 0.43, 0, 1.8); };
+TP.compassTable = m => { kp(m, 'round_wooden_table_01', 0, 0, 0, 0.5, 0); kp(m, 'seadogs_compass', 0, 0.5, 0, 2.2, 0.6); kp(m, 'brass_pan_01', -0.15, 0.5, 0.1, 0.9, 1.0); addBoxCollider(m, -0.35, -0.35, 0.35, 0.35, 0, 0.75); };
 Object.assign(HPR, {
+  m_bust: [0.6, 0.6, 1.7, () => TP.bustPlinth], m_chess: [1.1, 1.8, 0.8, () => TP.chessTable], m_rocker: [0.8, 0.9, 0.95, () => TP.rocker], m_mantel: [0.7, 0.55, 1.0, () => TP.mantelCase], m_bigcab: [1.4, 0.9, 1.8, () => TP.cabinetBig], m_compass: [0.8, 0.8, 0.8, () => TP.compassTable],
   m_anchor: [1.0, 0.45, 1.5, () => TP.anchor], m_skeps: [1.5, 0.5, 0.95, () => TP.skeps], m_press: [0.8, 0.55, 1.3, () => TP.cheesePress], m_scales: [0.6, 0.6, 1.3, () => TP.scales],
   m_cradle: [0.9, 0.6, 0.55, () => TP.cradle], m_ship: [0.9, 0.6, 1.3, () => TP.shipModel], m_chest: [1.0, 0.56, 0.6, () => TP.paintedChest], m_harp: [0.5, 0.4, 1.3, () => TP.harp],
   m_cage: [0.5, 0.5, 1.8, () => TP.birdcage], m_clock: [0.5, 0.36, 1.95, () => TP.longClock], m_loom: [1.3, 0.76, 1.6, () => TP.loomFrame], m_mirror: [0.62, 0.3, 1.6, () => TP.mirrorStand],
 });
 const HMEMO = {
-  floor: ['m_anchor', 'm_skeps', 'm_press', 'm_scales', 'm_cradle', 'm_ship', 'm_chest', 'm_harp', 'm_cage', 'm_clock', 'm_loom', 'm_mirror'],
+  floor: ['m_bust', 'm_chess', 'm_rocker', 'm_mantel', 'm_bigcab', 'm_compass', 'm_anchor', 'm_skeps', 'm_press', 'm_scales', 'm_cradle', 'm_ship', 'm_chest', 'm_harp', 'm_cage', 'm_clock', 'm_loom', 'm_mirror'],
   wall: [
+    { id: 'bullhead', w: 0.9, y0: 1.3, y1: 2.0, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.34, 0.24, 0.16]); m.box(-0.28, -0.7, -0.03, 0.28, 0, 0); kp(m, 'bull_head', 0, -0.62, -0.03, 1.4, PI); } },
+    { id: 'horsehead', w: 0.9, y0: 1.3, y1: 2.0, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.34, 0.24, 0.16]); m.box(-0.28, -0.7, -0.03, 0.28, 0, 0); kp(m, 'horse_head', 0, -0.62, -0.03, 1.5, PI); } },
+    { id: 'mirror', w: 0.8, y0: 1.2, y1: 2.0, fn: R => (m, hh) => { kp(m, 'ornate_mirror_01', 0, -0.8, -0.015, 1.05, PI); } },
     { id: 'pike', w: 1.5, y0: 1.2, y1: 1.9, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.34, 0.24, 0.16]); m.box(-0.75, -0.7, -0.03, 0.75, 0, 0); m.mat(MAT.THATCH, [0.5, 0.52, 0.5], 0.4); m.ball(0, -0.35, -0.08, 0.62, 0.11, 0.05, 10, 6); m.mat(MAT.THATCH, [0.34, 0.36, 0.34], 0.4); m.ball(0.0, -0.27, -0.1, 0.55, 0.04, 0.03, 8, 4); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.ball(0.55, -0.33, -0.13, 0.025, 0.025, 0.02, 4, 3); m.mat(MAT.THATCH, [0.42, 0.4, 0.34], 0.4); m.box(-0.75, -0.42, -0.1, -0.58, -0.28, -0.07); } },
     { id: 'clocks', w: 1.8, y0: 0.9, y1: 2.1, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.3, 0.22, 0.15]); m.box(-0.9, -1.2, -0.03, 0.9, 0, 0); for (const [x, y, r] of [[-0.5, -0.35, 0.22], [0.05, -0.28, 0.17], [0.55, -0.4, 0.25], [-0.3, -0.85, 0.16], [0.25, -0.88, 0.2], [0.7, -0.95, 0.12]]) { m.mat(MAT.METAL, [0.5, 0.42, 0.22]); m.disc(x, y, -0.04, r, 12, 2); m.mat(MAT.PLAIN, [0.78, 0.74, 0.62]); m.disc(x, y, -0.045, r * 0.85, 12, 2); m.mat(MAT.METAL, COL.black); m.box(x - 0.004, y, -0.05, x + 0.004, y + r * 0.7, -0.052); m.box(x, y - 0.004, -0.05, x + r * 0.5, y + 0.004, -0.052); } } },
     { id: 'antlers', w: 1.2, y0: 1.5, y1: 2.1, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.34, 0.24, 0.16]); m.box(-0.2, -0.5, -0.03, 0.2, 0, 0); m.mat(MAT.THATCH, [0.7, 0.64, 0.5], 0.4); for (const sx of [-1, 1]) { m.tube([[sx * 0.08, -0.15, -0.06], [sx * 0.3, -0.12, -0.14], [sx * 0.46, -0.02, -0.2], [sx * 0.55, 0.2, -0.24]], [0.03, 0.025, 0.02, 0.01], 5); m.tube([[sx * 0.3, -0.12, -0.14], [sx * 0.36, 0.1, -0.2], [sx * 0.34, 0.3, -0.22]], [0.02, 0.012, 0.006], 4); } } },
@@ -8020,6 +8479,42 @@ HT.widow = (P, c, room, F) => { hPlace(P, room, 'spinning', { sides: ['w', 'e', 
 HT.shepherd = (P, c, room, F) => { hPlace(P, room, 'fleeces', { sides: ['w', 'e', 's'] }); hPlace(P, room, 'hurdle', { sides: ['w', 'e'] }); hPlace(P, room, 'bucket', { sides: ['s', 'w', 'e'] }); hShelfWalls(P, room, ['cheese', 'bowl', 'jug', 'cheese', 'loaf'], { sides: ['w', 'e'], id: 'wsp', lv: 3 }); hPlace(P, room, 'sacks', { sides: ['e', 'w'] }); };
 HT.woodcutter = (P, c, room, F) => { hPlace(P, room, 'stack', { sides: ['w', 'e', 's'] }); hPlace(P, room, 'stack', { sides: ['e', 'w'] }); hPlace(P, room, 'block', { sides: ['s', 'w', 'e'] }); hPlace(P, room, 'horse', { sides: ['w', 'e'] }); pAnyHang(P, room, [{ id: 'wcx', w: 1.8, y0: 1.0, y1: 2.1, pivot: 2.05, fn: PD.toolRack(P.R, 1.8, ['saw', 'hammer', 'sledge', 'saw']) }], { max: 2 }); };
 HT.basketmaker = (P, c, room, F) => { hPlace(P, room, 'baskets', { sides: ['s', 'w', 'e'] }); hPlace(P, room, 'baskets', { sides: ['w', 'e'] }); hPlace(P, room, 'willow', { sides: ['w', 'e', 's'] }); hPlace(P, room, 'willow', { sides: ['e', 'w'] }); hPlace(P, room, 'bench', { sides: ['w', 'e'] }); };
+
+// ───────── the working buildings: weaver, draper, mill, hunter, fisher, farm [c5] ─────────
+TP.millstones = m => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.95, 0, -0.95, 0.95, 0.12, 0.95); for (const [x, z] of [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]]) m.box(x - 0.06, 0.12, z - 0.06, x + 0.06, 0.95, z + 0.06); m.box(-0.95, 0.9, -0.95, 0.95, 0.96, 0.95);
+  m.mat(MAT.STONE, [0.62, 0.6, 0.56]); m.cyl(0, 0.12, 0, 0.78, 0.78, 0.2, 14, 2); m.cyl(0, 0.34, 0, 0.74, 0.74, 0.18, 14, 2); m.mat(MAT.PLANKS, [0.42, 0.3, 0.2]); m.lathe([[0.82, 0.52], [0.84, 0.82], [0.8, 0.9]], 14, 0);
+  m.mat(MAT.PLANKS, COL.wood); m.beam([0.0, 1.9, 0.0], [0.0, 1.05, 0.0], 0.05, 0.38); m.box(-0.3, 1.95, -0.3, 0.3, 2.0, 0.3); m.mat(MAT.CLOTH, [0.72, 0.68, 0.56], 0.4); m.box(0.5, 0.0, 0.82, 0.9, 0.2, 0.98); addBoxCollider(m, -0.95, -0.95, 0.95, 0.95, 0, 1.0); };
+TP.shaft = m => { m.mat(MAT.TIMBER, COL.woodDark); m.cyl(0, 1.55, -0.1, 0.13, 0.13, 0.01, 8, 2); m.box(-0.14, 1.4, -0.3, 0.14, 1.7, 0.3); m.mat(MAT.PLANKS, [0.4, 0.28, 0.17]); m.cyl(0, 1.55, 0.2, 0.42, 0.42, 0.12, 12, 2); for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; m.box(Math.cos(a) * 0.46 - 0.03, 1.55 + Math.sin(a) * 0.46 - 0.04, 0.14, Math.cos(a) * 0.46 + 0.03, 1.55 + Math.sin(a) * 0.46 + 0.04, 0.26); } m.mat(MAT.TIMBER, COL.wood); m.box(-0.12, 0.0, -0.1, 0.12, 1.4, 0.1); };
+TP.net = (w, R) => (m, hh) => { m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, -0.04, -0.04, w / 2, 0, 0); m.mat(MAT.CLOTH, [0.46, 0.4, 0.28], 0.5); const nx = Math.round(w / 0.1), ny = 12; for (let i = 0; i <= nx; i++) m.box(-w / 2 + i * w / nx - 0.003, -1.15 - (i % 3) * 0.06, -0.035, -w / 2 + i * w / nx + 0.003, -0.04, -0.03); for (let j = 1; j < ny; j++) m.box(-w / 2, -0.04 - j * 0.09, -0.035, w / 2, -0.036 - j * 0.09, -0.03); for (let i = 0; i < 4; i++) { m.mat(MAT.WOODDARK || MAT.TIMBER, COL.wood); m.ball(-w / 2 + 0.2 + i * (w - 0.4) / 3, -0.5 - R() * 0.4, -0.05, 0.035, 0.035, 0.03, 5, 3); } };
+TP.fishBar = (len, R) => m => { m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015); const n = Math.round(len / 0.28); for (let i = 0; i < n; i++) { const x = -len / 2 + 0.18 + i * (len - 0.36) / Math.max(1, n - 1); m.mat(MAT.CLOTH, [0.2, 0.19, 0.18], 0.4); m.box(x - 0.003, -0.5, -0.003, x + 0.003, -0.37, 0.003); m.mat(MAT.THATCH, R.pick([[0.45, 0.43, 0.36], [0.4, 0.4, 0.36]]), 0.4); m.ball(x, -0.68, 0, 0.035, 0.17, 0.02, 6, 4); } };
+TP.rods = m => { m.mat(MAT.TIMBER, COL.wood); for (let i = 0; i < 4; i++) m.beam([-0.3 + i * 0.2, 0.0, 0.05], [-0.15 + i * 0.2, 2.1, 0.12], 0.013, 0.006); m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.4, 0.0, -0.05, 0.4, 0.06, 0.2); };
+TP.furFrame = (R) => m => { m.mat(MAT.TIMBER, COL.wood); for (const sx of [-1, 1]) m.box(sx * 0.5 - 0.03, 0, -0.05, sx * 0.5 + 0.03, 1.5, 0.05); m.box(-0.5, 1.45, -0.05, 0.5, 1.5, 0.05); m.box(-0.5, 0.2, -0.05, 0.5, 0.25, 0.05); m.mat(MAT.CLOTH, R.pick([[0.36, 0.27, 0.19], [0.3, 0.26, 0.22], [0.4, 0.32, 0.22]]), 0.45); m.box(-0.44, 0.28, -0.015, 0.44, 1.42, 0.015); m.mat(MAT.CLOTH, [0.34, 0.28, 0.2], 0.4); for (let i = 0; i < 6; i++) m.box(-0.5, 0.3 + i * 0.2, -0.03, -0.44, 0.31 + i * 0.2, 0.03); addBoxCollider(m, -0.55, -0.1, 0.55, 0.1, 0, 1.5); };
+Object.assign(HPR, { millstones: [2.0, 2.0, 2.0, () => TP.millstones], shaft: [0.5, 1.0, 1.9, () => TP.shaft], rods: [0.9, 0.3, 2.1, () => TP.rods], furframe: [1.2, 0.3, 1.5, (P, rm, R) => TP.furFrame(R)] });
+HT.weaver = (P, c, room, F) => {
+  hFocalAt(P, room, 'm_loom', F, { at: [F.sx * 0.2, -F.sx * 2.6] }); hPlace(P, room, 'm_loom', { sides: ['w', 'e'] }); hPlace(P, room, 'spinning', { sides: ['w', 'e', 's'] }); hPlace(P, room, 'spinning', { sides: ['e', 'w'] });
+  hPlace(P, room, 'vat', { col: [0.2, 0.26, 0.4], sides: ['w', 'e'] }); hShelfWalls(P, room, PD.WARES.cloth.concat(PD.WARES.yarns || []), { sides: ['w', 'e', 's'], id: 'wv', lv: 5 }); hPlace(P, room, 'baskets', { sides: ['w', 'e'] });
+  hCeil(P, room, F.X(-1.2), room.z0 + 4.2, TP.fishBar(0.1, P.R)); P.hall = P.hall || null;
+};
+HT.draper = (P, c, room, F) => {
+  cnt(P, room, F, 4.2, ['folded', 'bolt', 'spools', 'folded'], 'draper'); hShelfWalls(P, room, PD.WARES.cloth, { sides: ['w', 'e', 's'], id: 'wd', lv: 6 }); hPlace(P, room, 'cuttable', { sides: ['w', 'e'] }); hPlace(P, room, 'dip', { sides: ['w', 'e'] });
+  pAnyHang(P, room, [{ id: 'dr', w: 1.4, y0: 0.9, y1: 2.0, pivot: 2.0, fn: PD.tapestry(P.R, 1.4, 1.1) }], { max: 2 }); hPlace(P, room, 'm_mirror', { sides: ['w', 'e', 's'] });
+};
+HT.miller = (P, c, room, F) => {
+  hFocalAt(P, room, 'millstones', F, { at: [F.sx * 0.5, -F.sx * 2.5] }); hPlace(P, room, 'shaft', { sides: ['w', 'e'] }); for (let i = 0; i < 4; i++) hPlace(P, room, 'sacks', { sides: ['w', 'e', 's'] });
+  hCeil(P, room, F.X(-0.3), room.z0 + 3.2, TP.ropeCoils ? (m => { m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.5, -0.1, -0.05, 0.5, -0.04, 0.05); m.mat(MAT.CLOTH, [0.55, 0.45, 0.3], 0.4); m.cyl(0, -1.2, 0, 0.012, 0.012, 1.1, 4, 1); m.mat(MAT.METAL, COL.iron); m.box(-0.06, -1.3, -0.06, 0.06, -1.2, 0.06); }) : null); hPlace(P, room, 'cart', { sides: ['w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['e', 'w'] });
+};
+HT.hunter = (P, c, room, F) => {
+  hPlace(P, room, 'furframe', { sides: ['w', 'e'], free: false }); hPlace(P, room, 'furframe', { sides: ['e', 'w'], free: false }); hPlace(P, room, 'fleeces', { sides: ['w', 'e'] }); hPlace(P, room, 'brazier', { sides: ['e', 'w'] });
+  hCeil(P, room, F.X(1.2), room.z0 + 3.0, TP.sausages(1.4, P.R)); pAnyHang(P, room, [{ id: 'hb', w: 1.2, y0: 0.9, y1: 1.9, pivot: 1.9, fn: TP.bows(P.R) }], { max: 2 }); hPlace(P, room, 'bucket', { sides: ['s', 'w', 'e'] });
+};
+HT.fisher = (P, c, room, F) => {
+  pAnyHang(P, room, [{ id: 'nt', w: 2.0, y0: 0.7, y1: 2.0, pivot: 2.0, fn: TP.net(2.0, P.R) }], { max: 3 }); hPlace(P, room, 'rods', { sides: ['s', 'w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['w', 'e'] }); hPlace(P, room, 'baskets', { sides: ['w', 'e', 's'] });
+  hCeil(P, room, F.X(1.2), room.z0 + 3.0, TP.fishBar(1.8, P.R)); hPlace(P, room, 'ropes', { sides: ['w', 'e'] }); hPlace(P, room, 'bucket', { sides: ['s', 'w', 'e'] });
+};
+HT.farmer = (P, c, room, F) => {
+  hPlace(P, room, 'm_press', { sides: ['s', 'w', 'e'] }); hPlace(P, room, 'sacks', { sides: ['w', 'e'] }); hPlace(P, room, 'appleCrate', { sides: ['w', 'e'] }); hPlace(P, room, 'applesBrl', { sides: ['e', 'w'] }); hShelfWalls(P, room, ['cheese', 'jug', 'loaf', 'bowl', 'cheese'], { sides: ['w', 'e'], id: 'wf', lv: 3 });
+  pAnyHang(P, room, [{ id: 'ft', w: 1.8, y0: 1.0, y1: 2.1, pivot: 2.05, fn: PD.toolRack(P.R, 1.8, ['saw', 'hammer', 'file', 'chisel']) }], { max: 2 });
+};
 HT.household = (P, c, room, F) => { hPlace(P, room, 'spinning', { sides: ['w', 'e'] }); hPlace(P, room, 'bucket', { sides: ['w', 'e', 's'] }); };
 
 
@@ -9327,7 +9822,7 @@ function splat2Dress(blob, A, B) {
 
 // ---- 73d_infill.js ----
 // Budget: yard props, dressing and the alley are culled nearer on Medium (the town is dense; beyond ~24 m they are small and cost a draw call each)
-QUALITY.low.houseFar = 18; QUALITY.low.yardRange = 24; QUALITY.medium.yardRange = 24; QUALITY.medium.houseFar = 22; QUALITY.medium.yardCast = false;
+QUALITY.low.houseFar = 30; QUALITY.low.yardRange = 24; QUALITY.medium.yardRange = 24; QUALITY.medium.houseFar = 45; QUALITY.medium.yardCast = false;
 // ───────────────────────── infill houses: dark timber walls, grey shingle roofs, built from the village kit ─────────────────────────
 // Sites come from 55b_infill.js. Six of them are enterable (HOUSES specs in 72c_infill.js, shell by kitShell); the rest are shells only, assembled here
 // in the same way as the market alley (2 m wall panels scaled to the wall, kit window and door modules, jettied upper storeys, kit roof turned to a ridge
@@ -10768,7 +11263,7 @@ function buildVegetation() {
 //   beyond                two crossed flat pictures, in 400 m cells, which also cast into the wide shadow map
 // The first two rings are instance lists refilled when the player has moved a little; nothing is switched in the shader there.
 // If the files cannot be loaded, Trees.ready stays false and 74_vegetation.js plants the old generated trees instead.
-const Trees = { ready: false, sp: {}, items: [], NEAR: { low: 13, medium: 20, high: 30 }, lastPos: [1e9, 0, 1e9], lastLod: -1 };
+const Trees = { ready: false, sp: {}, items: [], NEAR: { low: 11, medium: 20, high: 30 }, lastPos: [1e9, 0, 1e9], lastLod: -1 };
 // which scan stands in for which planted tree, how tall it grows (m, at planting scale 1) and how its baked colours are corrected
 Trees.SPEC = {
   fir_b: { tall: 13.5, gain: [1.1, 1.28, 1.15] }, fir_c: { tall: 14.5, gain: [1.15, 1.3, 1.15] }, pine_c: { tall: 16, gain: [2.0, 2.25, 1.95] },
@@ -10778,7 +11273,7 @@ Trees.load = async function () {
   if (TEST && TEST.trees === 0) return;
   try {
     const meta = await (await fetch('kits/TREES.json')).json();
-    const [gltf, farTex] = await Promise.all([new T3X.GLTFLoader().loadAsync('kits/trees.glb'), new THREE.TextureLoader().loadAsync('kits/trees_far.webp')]);
+    const [gltf, farTex] = await Promise.all([T3X.gltf().loadAsync(((TEST && TEST.treeAtlas) || Math.min(2048, GFX_TEX.color * 2)) <= 1024 ? 'kits/s/trees.glb' : 'kits/trees.glb'), new THREE.TextureLoader().loadAsync('kits/trees_far.webp')]);
     farTex.colorSpace = THREE.SRGBColorSpace; farTex.wrapS = farTex.wrapT = THREE.ClampToEdgeWrapping; farTex.anisotropy = 2; farTex.premultiplyAlpha = false;
     Trees.farTex = farTex; Trees.meta = meta;
     const BA = THREE.BufferAttribute;
@@ -10919,7 +11414,17 @@ Trees.build = function (scene) {
   const pos = [], q = [], idx = [];
   for (let j = 0; j < 2; j++) { const ax = j ? [0, 0, 1] : [1, 0, 0], o = j * 4; for (const [s, v] of [[-1, 0], [1, 0], [1, 1], [-1, 1]]) { pos.push(ax[0] * s, v, ax[2] * s); q.push(s * 0.5 + 0.5, v, j); } idx.push(o, o + 1, o + 2, o, o + 2, o + 3); }
   const farMat = Trees.farMat = Trees.farMaterial(false), farCast = Trees.farMaterial(true); Trees.farMeshes = [];
-  for (const list of cells.values()) {
+  const ringOf = (cap, mat) => { const g = new T.InstancedBufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('q', new T.Float32BufferAttribute(q, 3)); g.setIndex(idx);
+    const F = { g, cap, n: 0, a: new Float32Array(cap * 4), b: new Float32Array(cap * 4), d: new Float32Array(cap * 4), gn: new Float32Array(cap * 3), last: [1e9, 1e9, 9] };
+    for (const [k, arr, w] of [['ipos', F.a, 4], ['iprm', F.b, 4], ['idim', F.d, 4], ['igain', F.gn, 3]]) { const at = new IBA(arr, w); at.setUsage(T.DynamicDrawUsage); g.setAttribute(k, at); }
+    g.instanceCount = 0; g.boundingSphere = new T.Sphere(new T.Vector3(), 1e6);
+    F.mesh = new T.Mesh(g, mat); F.mesh.matrixAutoUpdate = false; F.mesh.frustumCulled = false; F.mesh.visible = false; scene.add(F.mesh);
+    F.put = it => { if (F.n >= F.cap) return; const o = F.n++, m = it.sp.m; F.a.set([it.x, it.y, it.z, it.s], o * 4); F.b.set([it.yaw, it.tint, it.ph, 0], o * 4); F.d.set([m.halfWidth * it.s, m.height * it.s, m.tiles[0], it.sp.autumn ? 1 : 0], o * 4); F.gn.set(it.sp.gain, o * 3); };
+    F.flush = () => { for (const k of ['ipos', 'iprm', 'idim', 'igain']) { const at = g.attributes[k]; at.clearUpdateRanges(); if (F.n) { at.addUpdateRange(0, F.n * at.itemSize); at.needsUpdate = true; } } g.instanceCount = F.n; };
+    return F; };
+  // the camera's stand-ins: every tree beyond the middle ring that lies in the view cone (cut 20 degrees wide), one draw
+  if (!(TEST && TEST.treering === 0)) { Trees.farRing = ringOf(Trees.items.length, farMat); Trees.farRing.mesh.receiveShadow = true; }
+  for (const list of Trees.farRing ? [] : cells.values()) {
     const n = list.length, a = new Float32Array(n * 4), b = new Float32Array(n * 4), d = new Float32Array(n * 4), gn = new Float32Array(n * 3); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, z0 = 1e9, z1 = -1e9;
     list.forEach((it, i) => { const m = it.sp.m; a.set([it.x, it.y, it.z, it.s], i * 4); b.set([it.yaw, it.tint, it.ph, 0], i * 4); d.set([m.halfWidth * it.s, m.height * it.s, m.tiles[0], it.sp.autumn ? 1 : 0], i * 4); gn.set(it.sp.gain, i * 3);
       x0 = Math.min(x0, it.x); x1 = Math.max(x1, it.x); y0 = Math.min(y0, it.y); y1 = Math.max(y1, it.y + m.height * it.s); z0 = Math.min(z0, it.z); z1 = Math.max(z1, it.z); });
@@ -10927,8 +11432,9 @@ Trees.build = function (scene) {
     g.setAttribute('ipos', new IBA(a, 4)); g.setAttribute('iprm', new IBA(b, 4)); g.setAttribute('idim', new IBA(d, 4)); g.setAttribute('igain', new IBA(gn, 3)); g.instanceCount = n;
     g.boundingSphere = new T.Sphere(new T.Vector3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), 0.5 * hyp(x1 - x0, y1 - y0, z1 - z0) + 8);
     const m1 = new T.Mesh(g, farMat); m1.matrixAutoUpdate = false; m1.receiveShadow = true; scene.add(m1); Trees.farMeshes.push(m1);
-    const m2 = new T.Mesh(g, farCast); m2.matrixAutoUpdate = false; m2.castShadow = true; m2.layers.set(2); scene.add(m2); Trees.farMeshes.push(m2);
   }
+  // the wide sun-shadow map only needs the stand-ins of trees standing in or beside it: one instance list, refilled as the player moves or turns
+  { const F = Trees.farCastRing = ringOf(1536, farCast); F.mesh.castShadow = true; F.mesh.layers.set(2); }
   Trees.lastPos = [1e9, 0, 1e9];
 };
 // multisampled tiers smooth the cut-out edges with alpha to coverage (as the old leaf material did)
@@ -10942,7 +11448,28 @@ Trees.update = function (e, q, hidden) {
   if (!Trees.sets) return;
   for (const s of Trees.sets) { s.nearMeshes[0].visible = s.nearMeshes[1].visible = !hidden && s.near.n > 0; s.midMesh.visible = !hidden && s.mid.n > 0; s.castMesh.visible = !hidden && s.cast.n > 0; }
   for (const m of Trees.farMeshes) m.visible = !hidden;
+  const FC = Trees.farCastRing; FC.mesh.visible = !hidden && FC.n > 0; if (Trees.farRing) Trees.farRing.mesh.visible = !hidden && Trees.farRing.n > 0;
   if (hidden) return;
+  { // centre of the wide shadow map (43_render.js: 92 m radius, pushed 0.6 of that ahead of the view)
+    const cx = e[0] + Math.sin(R.cam.yaw) * 55, cz = e[2] - Math.cos(R.cam.yaw) * 55, RR = 92 + 22;
+    if (hyp(cx - FC.last[0], cz - FC.last[1]) > 6) {
+      FC.last = [cx, cz]; FC.n = 0; const C = Trees.CELL, G_ = Trees.grid;
+      for (let gz = Math.floor((cz - RR) / C); gz <= Math.floor((cz + RR) / C); gz++) for (let gx = Math.floor((cx - RR) / C); gx <= Math.floor((cx + RR) / C); gx++) { const l = G_.get(gx + ',' + gz); if (!l) continue; for (const it of l) if (hyp(it.x - cx, it.z - cz) <= RR) FC.put(it); }
+      FC.flush(); FC.mesh.visible = FC.n > 0;
+    }
+  }
+  const FR = Trees.farRing;
+  if (FR) {
+    let dy = R.cam.yaw - FR.last[2]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    if (hyp(e[0] - FR.last[0], e[2] - FR.last[1]) > 2 || Math.abs(dy) > 0.19 || FR.lod !== q.treeLod) {
+      FR.last = [e[0], e[2], R.cam.yaw]; FR.lod = q.treeLod; FR.n = 0;
+      const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw), half = Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) + 0.35, cone = Math.abs(R.cam.pitch) < 0.9, near = q.treeLod - 4;
+      for (const it of Trees.items) { const dx = it.x - e[0], dz = it.z - e[2], d = Math.sqrt(dx * dx + dz * dz); if (d < near) continue;        // the shader hides those inside treeLod exactly; this only keeps the list short
+        if (cone && Math.acos(Math.max(-1, Math.min(1, (dx * fx + dz * fz) / d))) > half + Math.asin(Math.min(1, 6 / d))) continue; FR.put(it); }
+      FR.flush();
+    }
+    FR.mesh.visible = FR.n > 0;
+  }
   const R1 = q.treeLod + 2.5, R0 = Trees.NEAR[R.qName] || 20, RS = Math.min(R1, q.shadowNear * 1.72 + 9);
   if (hyp(e[0] - Trees.lastPos[0], e[2] - Trees.lastPos[2]) < 1.2 && Trees.lastLod === R1 + R0) return;
   Trees.lastPos = [e[0], e[1], e[2]]; Trees.lastLod = R1 + R0;
@@ -12134,10 +12661,10 @@ WBUILD.mine = (p, m, R) => {
     mm.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1.35, 1.35]) { mm.cbox(sx, -0.3, Z, 0.34, 3.0, 0.34, 4); addBoxCollider(mm, sx - 0.2, Z - 0.2, sx + 0.2, Z + 0.2, 0, 3); }
     mm.box(-1.75, 2.65, Z - 0.18, 1.75, 3.0, Z + 0.2); for (const s of [-1, 1]) mm.beam([s * 1.35, 2.2, Z - 0.18], [s * 0.7, 2.7, Z - 0.18], 0.16, 0.16);
     mm.mat(MAT.TIMBER, COL.timber); mm.cbox(0, 3.0, Z + 0.35, 3.0, 0.22, 0.3, 4);
-    // boards nailed across the opening, some askew
-    mm.mat(MAT.PLANKS, [0.75, 0.68, 0.6], 0.6); for (let i = 0; i < 6; i++) { const y = 0.3 + i * 0.38, sl = (i % 3 - 1) * 0.05; mm.beam([-1.2, y - sl, Z - 0.2], [1.2, y + sl, Z - 0.2], 0.2, 0.05); }
-    mm.beam([-1.15, 0.35, Z - 0.26], [1.1, 2.4, Z - 0.26], 0.18, 0.04); mm.beam([1.1, 0.4, Z - 0.26], [-1.1, 2.3, Z - 0.26], 0.18, 0.04);
-    mm.mat(MAT.METAL, COL.black); for (const [x, y] of [[-0.9, 0.75], [0.9, 1.1], [0.1, 1.6], [-0.5, 2.0]]) mm.cbox(x, y, Z - 0.3, 0.07, 0.07, 0.03, 4);
+    // [q1] an oak door hung in the frame, iron-strapped, a bar across it (the Sexton's key lifts it; 94_mine.js makes it a portal)
+    mm.mat(MAT.PLANKS, [0.42, 0.36, 0.3], 0.6); mm.box(-1.12, 0, Z - 0.28, 1.12, 2.36, Z - 0.12); mm.mat(MAT.METAL, COL.black);
+    for (const y of [0.4, 1.2, 2.0]) mm.box(-1.12, y, Z - 0.31, 1.12, y + 0.1, Z - 0.28); mm.box(-0.05, 0.1, Z - 0.31, 0.05, 2.3, Z - 0.28); mm.cyl(0.55, 1.1, Z - 0.34, 0.07, 0.07, 0.03, 8, 3);
+    mm.mat(MAT.TIMBER, COL.timberDark); mm.box(-1.3, 1.05, Z - 0.42, 1.3, 1.25, Z - 0.3); for (const sx of [-1.2, 1.2]) mm.box(sx - 0.07, 0.9, Z - 0.46, sx + 0.07, 1.4, Z - 0.28);
     addBoxCollider(mm, -1.4, Z - 0.3, 1.4, Z - 0.1, 0, 2.8);
     // rails running out, a cart half loaded with stone, sleepers
     mm.mat(MAT.TIMBER, COL.timberDark); for (let z = Z - 0.2; z > -8; z -= 0.8) mm.box(-0.7, 0, z - 0.06, 0.7, 0.06, z + 0.06);
@@ -12898,12 +13425,22 @@ function storyBuild() {
   // a bier of two trestles and boards, mud still on it
   m.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-0.7, 0.7]) { m.beam([sx - 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx - 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); }
   m.mat(MAT.PLANKS, [0.5, 0.42, 0.34], 0.5); m.box(-1.15, 0.6, -0.34, 1.15, 0.66, 0.34, 4);
-  // the shape under the sailcloth: head, shoulders, long thin legs, the boots left bare
-  m.mat(MAT.CLOTH, [0.7, 0.68, 0.6], 0.6);
-  m.ball(0.9, 0.79, 0, 0.14, 0.11, 0.12, 10, 6); m.ball(0.48, 0.77, 0, 0.36, 0.13, 0.27, 12, 6); m.ball(-0.06, 0.74, 0, 0.3, 0.09, 0.2, 10, 6); m.ball(-0.58, 0.72, 0.0, 0.42, 0.075, 0.17, 10, 5);
-  m.box(-0.25, 0.66, -0.3, 0.95, 0.74, -0.27, 0); m.box(-0.25, 0.66, 0.27, 0.95, 0.74, 0.3, 0);
-  m.mat(MAT.CLOTH, [0.62, 0.6, 0.52], 0.6); m.box(-1.0, 0.66, -0.2, -0.82, 0.69, 0.2, 0);
-  m.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); for (const s of [-1, 1]) { m.push().T(-1.12, 0.72, s * 0.1).RZ(0.18); m.cyl(0, 0, 0, 0.055, 0.07, 0.24, 7, 3); m.pop(); m.box(-1.2, 0.66, s * 0.1 - 0.05, -1.0, 0.76, s * 0.1 + 0.05, 0); }
+  // a drowned man under stained sailcloth: head, shoulders, chest, hips and two long legs under the canvas; boots out at the foot, one blue-white hand slipped off the edge, rope ties, wet boards
+  const cv = [0.30, 0.27, 0.21], cv2 = [0.24, 0.21, 0.16];
+  m.mat(MAT.CLOTH, cv, 0.6);
+  m.ball(0.97, 0.78, 0, 0.15, 0.12, 0.12, 10, 6); m.ball(1.08, 0.79, 0, 0.045, 0.045, 0.035, 6, 4); m.ball(0.78, 0.74, 0, 0.11, 0.07, 0.1, 8, 4);
+  m.ball(0.6, 0.79, 0, 0.18, 0.14, 0.34, 12, 6); m.ball(0.33, 0.8, 0, 0.3, 0.13, 0.25, 12, 6); m.ball(0.0, 0.76, 0, 0.28, 0.1, 0.2, 10, 5); m.ball(-0.3, 0.77, 0, 0.2, 0.11, 0.22, 10, 5);
+  m.ball(-0.72, 0.75, 0.1, 0.45, 0.08, 0.1, 10, 5); m.ball(-0.72, 0.75, -0.1, 0.45, 0.08, 0.1, 10, 5); m.ball(-0.4, 0.8, 0.1, 0.07, 0.07, 0.08, 6, 4); m.ball(-0.4, 0.8, -0.1, 0.07, 0.07, 0.08, 6, 4);
+  m.ball(0.3, 0.73, 0.3, 0.4, 0.06, 0.07, 8, 4);
+  m.mat(MAT.CLOTH, cv2, 0.6); for (const s of [-1, 1]) for (let k = 0; k < 9; k++) { const x = -0.95 + k * 0.22 + (k % 2) * 0.03; m.quad2([x, 0.72, s * 0.29], [x + 0.02, 0.45 + (k % 3) * 0.03, s * 0.43], [x + 0.2, 0.46 + ((k + 1) % 3) * 0.03, s * 0.43], [x + 0.2, 0.72, s * 0.29]); }
+  m.mat(MAT.CLOTH, [0.25, 0.2, 0.15], 0.5); for (const x of [0.52, 0.12, -0.5]) { m.box(x - 0.014, 0.66, -0.3, x + 0.014, 0.9, -0.28, 0); m.box(x - 0.014, 0.66, 0.28, x + 0.014, 0.9, 0.3, 0); m.box(x - 0.014, 0.86, -0.3, x + 0.014, 0.9, 0.3, 0); m.beam([x, 0.7, 0.3], [x + 0.05, 0.4, 0.38], 0.012, 0.012); }
+  // the boots, left bare at the foot of the canvas, toes up
+  m.mat(MAT.PLAIN, [0.1, 0.08, 0.06]); for (const s of [-1, 1]) { m.push().T(-1.17, 0.7, s * 0.1).RZ(0.35); m.box(-0.06, 0, -0.06, 0.2, 0.1, 0.06); m.box(-0.02, 0.1, -0.05, 0.1, 0.34, 0.05); m.pop(); }
+  // the hand slipped from under the canvas and hanging off the edge: blue-white, fingers curled
+  m.mat(MAT.PLAIN, [0.62, 0.7, 0.74]); m.beam([0.18, 0.7, -0.27], [0.12, 0.5, -0.4], 0.07, 0.06); m.ball(0.1, 0.44, -0.42, 0.045, 0.06, 0.04, 7, 4); for (let f = 0; f < 4; f++) m.beam([0.07 + f * 0.022, 0.42, -0.42], [0.075 + f * 0.022, 0.31 - (f % 2) * 0.02, -0.425], 0.014, 0.014);
+  m.mat(MAT.PLAIN, [0.5, 0.55, 0.57]); m.ball(0.0, 0.7, -0.34, 0.03, 0.02, 0.03, 4, 3);
+  // wet boards under the bier, a drip line off the cloth, a dropped rope end
+  m.mat(MAT.PLAIN, [0.05, 0.045, 0.04]); m.quad2([-1.3, 0.014, -0.65], [-1.3, 0.014, 0.65], [1.3, 0.014, 0.65], [1.3, 0.014, -0.65]); m.mat(MAT.PLANKS, [0.28, 0.24, 0.2], 0.5); m.box(-1.14, 0.58, -0.335, 1.14, 0.6, 0.335, 4);
   // a wet dark patch of the quay and a bucket
   m.mat(MAT.PLAIN, [0.07, 0.065, 0.06]); m.quad2([-1.6, 0.012, -0.9], [-1.6, 0.012, 0.9], [1.6, 0.012, 0.9], [1.6, 0.012, -0.9]);
   m.push().T(1.5, 0.0, 0.7); m.mat(MAT.PLANKS, COL.wood, 0.5); m.cyl(0, 0, 0, 0.17, 0.2, 0.3, 9, 1); m.pop();
@@ -12911,6 +13448,7 @@ function storyBuild() {
   pack.add(m, { kind: 'opaque', maxDist: 80, noShadow: true }); pack.upload('story'); World.packs.push(pack);
   World.emitters.push({ type: 'candle', p: [x - 1.5, 0.5, z - 0.5], zone: 0, always: true, seed: 0.77 });
   World.interact.push({ p: [x, 0.9, z], r: 2.6, zone: 0, kind: 'read', id: 'wharf.body', title: 'The drowned man', text: 'Sailcloth over him; Finn’s doing. A man of fifty, thin as a rake.\n\nNo water has been in him. His palms are scarred white across, pick-work. There is silver in his back teeth, a bright vein of it, as though he had bitten rock.\n\nRound his neck on a bootlace: a brass tally stamped OM 14. In his fist, folded small in oilcloth:\n\n“TELL ROWAN THE BREAD DID NOT COME.”' });
+  if (typeof mineBuild === 'function') { try { mineBuild(); } catch (e) { console.warn('mine: ' + (e && e.stack || e)); } }       // 94_mine.js
   if (typeof ixScan === 'function') { try { ixScan(); } catch (e) { console.warn('interact: ' + (e && e.stack || e)); } }
 }
 // the sailcloth hides nothing from a man who looks: the first reading takes the token and starts the thread (a stranger who never met Hale still gets the quest)
@@ -13134,7 +13672,7 @@ function ixOpenCont(it) {
   if (it.locked && !(S.unlocked && S.unlocked[it.id])) { { const m = ixLockTry({ key: it.key, msg: 'Locked. A small, well-oiled lock: someone cares what is in here.' }); if (m) return toast(m); } S.unlocked = S.unlocked || {}; S.unlocked[it.id] = 1; }
   S.opened[it.id] = 1; Audio2.chest();
   const list = it.loot || []; if (!list.length) { toast(it.ck === 'barrel' ? 'Nothing but damp stave and a smell of apples.' : 'Nothing. Dust, and a moth.'); save(); return; }
-  const stolen = ixOwned(it) && ixTheft(it, ixValue(list)); ixGive(list); if (ixOwned(it)) ixStolen(list); toast('Found: ' + ixGot(list).join(', ')); save();
+  const stolen = ixOwned(it) && ixTheft(it, ixValue(list)); ixGive(list); if (ixOwned(it)) ixStolen(list); toast('Taken: ' + ixGot(list).join(', ')); save();
 }
 function ixRead(it) {
   S.read = S.read || {}; const first = !S.read[it.bookId]; S.read[it.bookId] = 1; openReader(it.title, it.text);
@@ -13182,7 +13720,7 @@ IX.release = function (how) { const c = Cells.by.guardhouse; if (!c) return; S.j
 // ── wiring into the story layer ──
 const _il2 = interactLabel, _iu2 = interactUse;
 interactLabel = function (it) {
-  if (it.kind === 'cont') return S.opened[it.id] ? null : (it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb);
+  if (it.kind === 'cont') return S.opened[it.id] ? 'Empty' : (it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb);
   if (it.kind === 'loose') return it.gone ? null : 'Take ' + (it.item === 'gold' ? 'the coins' : ITEMS[it.item][0].toLowerCase());
   if (it.kind === 'seat') return IX.sit ? 'Stand up' : 'Sit down';
   if (it.kind === 'jaildoor') return S.jail ? (has('lockpick') ? 'Pick the lock' : 'Call for the guard') : null;
@@ -13232,7 +13770,7 @@ for (const id of Object.keys(TALK)) { if (typeof TALK[id] !== 'function' || id.s
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 47';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 49';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -14944,7 +15482,8 @@ RPG.tick = function (dt) {
   if (!SC.scene) return;
   if (!RPG.inited) { RPG.inited = true; RPG.hudInit(); Combat.init(); Foes.init(); }
   const r = RPG.st(), playing = game.playing, I = RPG.in, k = Input.keys;
-  if (playing && typeof ixTick === 'function') ixTick(dt);       // [q1] 82b_interact.js: sitting, the watch
+  if (playing && typeof ixTick === 'function') ixTick(dt);
+  if (playing && typeof mineTick === 'function') mineTick(dt);       // [q1] 82b_interact.js: sitting, the watch
   if (playing !== RPG.wasPlaying) { RPG.wasPlaying = playing; RPG.hud.rpg.hidden = !playing; }
   // days pass (outlaws drift back to an emptied camp after a few)
   if (Env.hour < r.hour - 12) r.day++; r.hour = Env.hour;
@@ -15144,6 +15683,7 @@ const Foes = (() => {
   const CAMPS = [
     { id: 'pines', label: 'the camp in the pines', x: -96, z: -44, yaw: 0.6, n: 3, leader: { name: 'Outlaw Brute', hp: 84, dmg: 14, scale: 1.09 } },
     { id: 'crag', label: 'the camp below the watchtower', x: -6, z: -100, yaw: 2.5, n: 3, leader: { name: 'Garrick One-Ear', hp: 112, dmg: 17, scale: 1.07, chief: true } },
+    { id: 'mine', cell: 'mine', label: 'the Old Mine', x: 0, z: 0, yaw: 0, n: 0, leash: 140, spawns: [] },       // [q1] the Old Mine (94_mine.js): its people are placed when the mine is built
   ];
   const R4 = ['Ranger_Body', 'Ranger_Arms', 'Ranger_Legs', 'Ranger_Feet'];
   const LOOKS = [
@@ -15163,6 +15703,7 @@ const Foes = (() => {
   function buildCamps() {
     const pack = new MeshPack(); pack.shadow = true;
     for (const c of CAMPS) {
+      if (c.cell) continue;
       const m = new Mesh(4096), ca = Math.cos(c.yaw), sa = Math.sin(c.yaw);
       const W = (lx, lz) => { const x = c.x + lx * ca - lz * sa, z = c.z + lx * sa + lz * ca; return [x, Terrain.y(x, z), z]; };
       const put = (lx, lz, rot, fn) => { const p = W(lx, lz); m.push().T(p[0], p[1], p[2]).RY(-(c.yaw + (rot || 0))); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); return p; };
@@ -15234,6 +15775,7 @@ const Foes = (() => {
     prepareChars();
     const r = RPG.st();
     for (const c of CAMPS) {
+      if (c.cell) { spawnMine(c, r); continue; }
       for (let i = 0; i <= c.n; i++) {
         const lead = i === c.n ? c.leader : null, id = c.id + '.' + i, look = Chars.cfg.foeLooks ? (lead ? Chars.cfg.foeLooks.leader : Chars.cfg.foeLooks.list[(i + (c.id === 'crag' ? 2 : 0)) % Chars.cfg.foeLooks.list.length]) : lead ? LEADER : LOOKS[(i + (c.id === 'crag' ? 2 : 0)) % LOOKS.length];
         const sp = i === 0 ? c.watch : c.spots[(i - 1) % c.spots.length];
@@ -15250,6 +15792,28 @@ const Foes = (() => {
     if (!Chars.group.parent) SC.scene.add(Chars.group);
     F.ready = true; campState();
   }
+  // [q1] the people of the Old Mine: delvers rush, lurkers wait in the dark and are heard before they are seen, the Foreman keeps the deep chamber
+  const MKIND = {
+    delver: { name: 'Delver', hp: 36, dmg: 10, scale: 0.99, sp: 5.6, see: 13, look: { body: 'o_rogue', tint: { tunic: [0.62, 0.68, 0.78], pants: [0.55, 0.58, 0.64] } }, sw: [0.5, 0.6] },
+    lurker: { name: 'Lurker', hp: 30, dmg: 15, scale: 0.94, sp: 6.4, see: 3.4, look: { body: 'o_hood_f', tint: { tunic: [0.3, 0.32, 0.4], pants: [0.35, 0.36, 0.42], head: [0.34, 0.36, 0.44] } }, sw: [0.42, 0.55] },
+    foreman: { name: 'The Foreman', hp: 380, dmg: 24, scale: 1.26, sp: 3.0, see: 15, look: { body: 'o_brute', tint: { tunic: [0.5, 0.55, 0.68], pants: [0.4, 0.42, 0.5] } }, sw: [0.78, 1.1] },
+  };
+  F.MKIND = MKIND;
+  function spawnMine(c, r) {
+    if (typeof MINE === 'undefined' || !MINE.built) return; const O = MINE.O, FY = MINE.FY; c.x = O[0] + 20; c.z = O[2] + 40;
+    MINE.SPAWN.forEach((sp, i) => {
+      const k = MKIND[sp.kind], id = 'mine.' + sp.kind + i, p = [O[0] + sp.x, World.groundAt(O[0] + sp.x, O[2] + sp.z, FY + 4), O[2] + sp.z];
+      const spot = { p, kind: sp.kind === 'lurker' ? 'crouch' : sp.kind === 'foreman' ? 'guard' : 'stand', yaw: sp.yaw || 0 };
+      const f = { id, camp: c, kind: sp.kind, name: k.name, leader: sp.kind === 'foreman', chief: sp.kind === 'foreman', boss: sp.kind === 'foreman', maxHp: k.hp, dmg: k.dmg, scale: k.scale, sp: k.sp, see: k.see,
+        spot, pos: p.slice(), yaw: spot.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0, cueT: rnd(1, 3), bp: 0 };
+      f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
+      const base = Chars.cfg.foeLooks ? k.look : LOOKS[i % LOOKS.length]; f.h = Chars.spawn({ id: 'foe.' + id, foe: base });
+      const sw = new THREE.Mesh(RPG.swordGeo(k.sw[0], k.sw[1]), RPG.gearMat(f.h.uZone, f.h.uLight)); sw.castShadow = false; sw.layers.set(1);
+      const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });
+      if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
+      F.list.push(f);
+    });
+  }
   const FOE_DRAW = 110;        // outlaws farther than this are not drawn at all (and stop posing)
   F.grip = [PI / 2, 0, 0, 0, 0.02, 0.03];       // how a sword sits in the rig's right hand: rotation xyz, offset xyz (hand space)
   F.init = function () {
@@ -15262,7 +15826,7 @@ const Foes = (() => {
   F.breakOff = function () { F.calm(false); F.target = null; F.attackers = 0; if (typeof RPG !== 'undefined') RPG.combatT = 99; for (const f of F.list) if (f.h && f.h.pivot.visible && f.alive) f.h.pivot.visible = false; };
   function campState() {
     const r = RPG.st(); r.cleared = r.cleared || {};
-    for (const c of CAMPS) { const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
+    for (const c of CAMPS) { if (c.cell) continue; const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
   }
   F.alive = id => F.list.filter(f => f.alive && (!id || f.camp.id === id));
   F.nearest = function (pos, id) { let best = null, bd = 1e9; for (const f of F.list) { if (!f.alive || (id && f.camp.id !== id)) continue; const d = hyp(f.pos[0] - pos[0], f.pos[2] - pos[2]); if (d < bd) { bd = d; best = f; } } return best; };
@@ -15271,19 +15835,25 @@ const Foes = (() => {
   const release = f => { if (f.token) { f.token = false; F.attackers = Math.max(0, F.attackers - 1); } };
   function stagger(f, dur, hard) { if (!f.alive) return; release(f); f.state = 'stagger'; f.t = 0; f.stagT = dur; f.anim = hard || Math.random() < 0.5 ? 'c-hit2' : 'c-hit'; f.h.curName = ''; }
   function rouse(f, delay) { if (f.alive && (f.state === 'idle' || f.state === 'return')) { f.state = 'notice'; f.t = -(delay || 0); } f.alert = 12; }
-  function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < 34) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
+  function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < (camp.cell ? 12 : 34)) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
   function die(f) {
     const r = RPG.st(); release(f); f.alive = false; f.hp = 0; f.state = 'dead'; f.t = 0; f.anim = Math.random() < 0.5 ? 'c-die' : 'c-die2'; f.h.curName = '';
     r.kills++; r.dead[f.id] = r.day; Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
     const loot = [['gold', Math.round(f.leader ? rnd(22, 34) : rnd(4, 12))]];
     if (Math.random() < 0.45) loot.push([Math.random() < 0.5 ? 'bread' : 'apple', 1]); if (Math.random() < (f.leader ? 1 : 0.18)) loot.push(['potion', 1]);
     if (f.chief) { loot.push(['steelsword', 1]); if (!has('tools') && qAt('tools') !== 99) loot.push(['tools', 1]); } else if (f.leader) loot.push(['ironsword', 1]); else if (Math.random() < 0.1) loot.push(['buckler', 1]);
+    if (f.camp.cell) { loot.length = 0; loot.push(['gold', Math.round(f.boss ? rnd(40, 60) : rnd(3, 9))]); if (f.boss) loot.push(['foremankey', 1]); else if (Math.random() < 0.4) loot.push(['oil', 1]); }
     f.lootIt = { kind: 'loot', id: 'loot.' + f.id, p: [f.pos[0], f.pos[1] + 0.35, f.pos[2]], r: 2.1, zone: 0, name: f.name, loot, foe: f }; World.interact.push(f.lootIt);
     campState(); if (typeof onFoeKilled === 'function') onFoeKilled(f); save();
   }
   function hurt(f, dmg, heavy, from) {
     const dx = f.pos[0] - from[0], dz = f.pos[2] - from[2], l = hyp(dx, dz) || 1;
     alarm(f.camp, f.pos); f.alert = 14;
+    if (f.boss) {       // [q1] the Foreman does not flinch from a blade; he is open to one thing, a charge that ends against stone
+      const stun = f.state === 'b_stun'; f.hp -= dmg * (stun ? 2 : 1); f.hits++; f.kv[0] = dx / l * 0.6; f.kv[1] = dz / l * 0.6;
+      if (f.hp <= 0) { die(f); return false; } if (f.state === 'idle') { f.state = 'b_roar'; f.t = 0; }
+      if (heavy && f.state === 'circle') stagger(f, 0.45, true); return false;
+    }
     // a leader who sees it coming gets steel in the way
     if (f.leader && !heavy && (f.state === 'circle' || f.state === 'chase') && Math.random() < 0.38) { f.state = 'guard'; f.t = 0; f.anim = 'c-block'; f.hp -= dmg * 0.15; f.kv[0] = dx / l * 1.2; f.kv[1] = dz / l * 1.2; if (f.hp <= 0) die(f); return true; }
     f.hp -= dmg; f.hits++; f.kv[0] = dx / l * (heavy ? 4.6 : 2.2); f.kv[1] = dz / l * (heavy ? 4.6 : 2.2);
@@ -15314,24 +15884,58 @@ const Foes = (() => {
     const p = f.pos, ox = p[0], oz = p[2];
     p[0] += (vx + f.kv[0]) * dt; p[2] += (vz + f.kv[1]) * dt; f.kv[0] *= Math.max(0, 1 - dt * 7); f.kv[1] *= Math.max(0, 1 - dt * 7);
     colResolve(p, 0.3, p[1], p[1] + 1.7);
-    if (World.waterAt(p[0], p[2]) - Terrain.y(p[0], p[2]) > 0.5 || hyp(p[0], p[2]) > WORLD_RADIUS + 6) { p[0] = ox; p[2] = oz; }
+    if (!f.camp.cell && (World.waterAt(p[0], p[2]) - Terrain.y(p[0], p[2]) > 0.5 || hyp(p[0], p[2]) > WORLD_RADIUS + 6)) { p[0] = ox; p[2] = oz; }
     for (const g of F.list) { if (g === f || !g.alive) continue; const dx = p[0] - g.pos[0], dz = p[2] - g.pos[2], d2 = dx * dx + dz * dz; if (d2 < 0.49 && d2 > 1e-6) { const d = Math.sqrt(d2), k = (0.7 - d) / d * 0.5; p[0] += dx * k; p[2] += dz * k; } }
-    p[1] = Terrain.y(p[0], p[2]);
+    if (f.camp.cell) { const gy = World.groundAt(p[0], p[2], p[1] + 0.7); if (gy > -1e8) p[1] = gy; else { p[0] = ox; p[2] = oz; } } else p[1] = Terrain.y(p[0], p[2]);
+  }
+  // [q1] the Foreman: walk in, then slam (a long raised pick, the ground blow lands at 1.1 s: step back), two blows, then a charge (he backs off, roars, runs the line he was facing:
+  // stand behind a column and he crashes into it and is open for three seconds, every hit counting double), two blows, again
+  function bossThink(f, dt, P, d, live, toP, lost) {
+    const fx = Math.sin(f.yaw), fz = -Math.cos(f.yaw), at = [f.pos[0], f.pos[1] + 1.2, f.pos[2]];
+    switch (f.state) {
+      case 'idle': f.anim = 'c-idle'; turn(f, f.spot.yaw, 2, dt); if (live && d < f.see && Math.abs(P[1] - f.pos[1]) < 4) { f.state = 'b_roar'; f.t = 0; Snd.event('foe.shout.deep', at, 1.4); } return true;
+      case 'notice': f.state = 'b_roar'; f.t = 0; return true;
+      case 'b_roar': f.anim = 'c-block'; turn(f, toP, 4, dt); step(f, 0, 0, dt); if (f.t > 1.3) { f.state = 'b_walk'; f.t = 0; f.bp = 0; } return true;
+      case 'b_walk': {
+        if (lost) { f.state = 'return'; f.t = 0; return true; }
+        turn(f, toP, 2.8, dt); const sp = d > 3.2 ? f.sp : 0; f.anim = sp ? 'c-walk' : 'c-idle'; step(f, fx * sp, fz * sp, dt);
+        if ((f.t > 1.4 && d < 5) || f.t > 5) {
+          const nx = ['b_slam', 'melee', 'b_charge', 'melee'][f.bp++ % 4]; f.t = 0; f.hitDone = false; f.h.curName = '';
+          if (nx === 'melee') { f.state = 'circle'; f.cd = 0.2; f.meleeN = 2; } else { f.state = nx; Snd.event('foe.shout.deep', at, 1.4); if (nx === 'b_slam') f.anim = 'c-atk3'; }
+        }
+        return true; }
+      case 'b_slam': {
+        turn(f, toP, f.t < 0.7 ? 2 : 0, dt); step(f, 0, 0, dt);
+        if (!f.hitDone && f.t >= 1.1) { f.hitDone = true; Snd.event('hit.wood', at, 1.6); Audio2.swing(true); if (live && d < 3.7) RPG.damage(f.dmg * 1.4, f); if (d < 12) RPG.shake = Math.max(RPG.shake || 0, 0.55); }
+        if (f.t > 2.5) { f.state = 'b_walk'; f.t = 0; f.anim = 'c-idle'; } return true; }
+      case 'b_charge': {
+        if (f.t < 1.5) { turn(f, toP, 3.2, dt); f.anim = 'c-back'; step(f, -fx * 1.2, -fz * 1.2, dt); f.cdir = f.yaw; return true; }
+        if (f.t < 1.5 + dt * 1.5) { Snd.event('foe.shout.deep', at, 1.6); }
+        const bx = f.pos[0], bz = f.pos[2]; f.anim = 'c-sprint'; step(f, Math.sin(f.cdir) * 9.5, -Math.cos(f.cdir) * 9.5, dt);
+        const mv = hyp(f.pos[0] - bx, f.pos[2] - bz);
+        if (!f.hitDone && live && d < 1.5 && Math.abs(P[1] - f.pos[1]) < 1.6) { f.hitDone = true; RPG.damage(f.dmg * 1.5, f); Player.vel[0] += Math.sin(f.cdir) * 6; Player.vel[2] += -Math.cos(f.cdir) * 6; }
+        if (mv < 9.5 * dt * 0.5 || f.t > 4.2) { f.state = 'b_stun'; f.t = 0; f.h.curName = ''; f.anim = 'c-hit2'; Snd.event('hit.wood', at, 1.8); Snd.event('foe.hurt', at, 1.2); if (d < 14) RPG.shake = Math.max(RPG.shake || 0, 0.7); }
+        return true; }
+      case 'b_stun': step(f, 0, 0, dt); if (f.t > 3.2) { f.state = 'b_walk'; f.t = 0; f.anim = 'c-idle'; f.h.curName = ''; } return true;
+    }
+    return false;
   }
   function think(f, dt, P, d, live) {
     const toP = Math.atan2(P[0] - f.pos[0], -(P[2] - f.pos[2])), home = f.spot.p, dHome = hyp(f.pos[0] - home[0], f.pos[2] - home[2]), camp = f.camp;
-    const lost = !live || inVillage(P[0], P[2]) || hyp(f.pos[0] - camp.x, f.pos[2] - camp.z) > LEASH;
+    const lost = !live || inVillage(P[0], P[2]) || hyp(f.pos[0] - camp.x, f.pos[2] - camp.z) > (camp.leash || LEASH);
     f.t += dt; f.cd -= dt; f.alert -= dt;
+    if (f.boss && bossThink(f, dt, P, d, live, toP, lost)) return;
     switch (f.state) {
       case 'idle': {
-        f.anim = f.spot.kind === 'sit' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
-        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
-        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned) { F.warned = true; toast('Outlaws! They have seen you.'); } }
+        f.anim = f.spot.kind === 'sit' || f.spot.kind === 'crouch' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
+        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
+        if (f.kind === 'lurker' && live && d < 24 && d >= see) { f.cueT -= dt; if (f.cueT <= 0) { f.cueT = rnd(2.2, 4.6); Snd.event(Math.random() < 0.5 ? 'creak' : 'rustle', [f.pos[0], f.pos[1] + 0.4, f.pos[2]], 1.3); } }       // heard before seen
+        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); if (f.kind !== 'lurker') Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned && !camp.cell) { F.warned = true; toast('Outlaws! They have seen you.'); } }
         break; }
-      case 'notice': f.anim = 'c-idle'; if (f.t > 0) turn(f, toP, 6, dt); if (f.t > 0.45) { f.state = 'chase'; f.t = 0; } break;
+      case 'notice': f.anim = 'c-idle'; if (f.t > 0) turn(f, toP, 6, dt); if (f.t > (f.kind === 'lurker' ? 0.12 : f.kind === 'delver' ? 0.3 : 0.45)) { f.state = 'chase'; f.t = 0; } break;
       case 'chase': {
         if (lost) { f.state = 'return'; f.t = 0; break; }
-        turn(f, toP, 7, dt); const sp = f.leader ? 3.9 : 4.5; f.anim = 'c-run'; step(f, Math.sin(f.yaw) * sp, -Math.cos(f.yaw) * sp, dt);
+        turn(f, toP, 7, dt); const sp = f.sp || (f.leader ? 3.9 : 4.5); f.anim = 'c-run'; step(f, Math.sin(f.yaw) * sp, -Math.cos(f.yaw) * sp, dt);
         if (d < 3.0) { f.state = 'circle'; f.t = 0; f.strafeT = rnd(0.8, 2); }
         break; }
       case 'circle': {
@@ -15352,7 +15956,7 @@ const Foes = (() => {
       case 'attack': {
         const a = f.atk; if (!a.done) { turn(f, toP, 2.6, dt); if (d > 1.5) step(f, Math.sin(f.yaw) * 1.5, -Math.cos(f.yaw) * 1.5, dt); else step(f, 0, 0, dt); } else step(f, 0, 0, dt);
         if (!a.done && f.t >= a.hitT) { a.done = true; if (live && d < 2.4 && Math.abs(angDiff(toP, f.yaw)) < 0.95 && Math.abs(P[1] - f.pos[1]) < 1.6) { RPG.damage(f.dmg * (a.heavy ? 1.35 : 1), f); } else Audio2.swing(false); }
-        if (f.t >= a.end) { release(f); f.state = 'circle'; f.t = 0; f.cd = f.leader ? rnd(0.7, 1.5) : rnd(1.4, 2.8); }
+        if (f.t >= a.end) { release(f); f.state = f.boss && --f.meleeN <= 0 ? 'b_walk' : 'circle'; f.t = 0; f.cd = f.leader ? rnd(0.7, 1.5) : rnd(1.4, 2.8); }
         break; }
       case 'guard': f.anim = 'c-block'; turn(f, toP, 6, dt); step(f, 0, 0, dt); if (f.t > 0.5) { f.state = 'circle'; f.t = 0; f.cd = Math.min(f.cd, 0.25); } break;
       case 'stagger': step(f, 0, 0, dt); if (f.t > f.stagT) { f.state = 'circle'; f.t = 0; f.cd = Math.max(f.cd, 0.35); } break;
@@ -15370,11 +15974,13 @@ const Foes = (() => {
   }
   F.update = function (dt, rdt) {
     if (!F.ready) return;
-    if (World.cell) { F.target = null; return; }          // outlaws live outdoors: in a cell none is drawn, thought about or posed
+    const here = World.cell ? World.cell.id : null;          // outlaws live outdoors, and the Old Mine's people in the mine (94_mine.js): in any other cell none is drawn, thought about or posed
+    if (here && !F.list.some(g => g.camp.cell === here)) { F.target = null; return; }
     const P = game.playing ? Player.pos : R.cam.pos, live = game.playing && !RPG.dead, st = F.st, r = RPG.st();
     let target = null, tb = 0.55, fight = null;
     for (const f of F.list) {
       if (f.state === 'gone') continue;
+      if ((f.camp.cell || null) !== here) { f.vis = false; if (f.h.pivot.visible) f.h.pivot.visible = false; continue; }
       const d = hyp(f.pos[0] - P[0], f.pos[2] - P[2]);
       f.vis = d < FOE_DRAW;
       if (!f.vis) { if (f.h.pivot.visible) f.h.pivot.visible = false; if (f.alive && f.state !== 'idle') { f.acc += dt; if (f.acc > 0.25) { think(f, f.acc, P, d, live); f.acc = 0; } } continue; }
@@ -15390,7 +15996,7 @@ const Foes = (() => {
         f.t += fdt;
         if (f.state === 'dead' && (f.t > (f.looted ? 40 : 300)) && d > 30) { f.state = 'gone'; f.h.pivot.visible = false; if (f.lootIt) { const i = World.interact.indexOf(f.lootIt); if (i >= 0) World.interact.splice(i, 1); } continue; }
       }
-      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = 1; st.visible = true; st.cast = d < 32; f.sword.castShadow = st.cast;
+      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = f.camp.cell ? 0.55 : 1; st.visible = true; st.cast = d < 32; f.sword.castShadow = st.cast;
       st.look[0] = 0; st.look[1] = 0;
       Chars.update(f.h, st, fdt * (f.state === 'attack' && f.atk ? f.atk.rate : 1));
     }
@@ -15478,6 +16084,401 @@ const Inv = {
     return node(opts.length ? 'Let’s see it, then.' : 'You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.', opts.slice(0, 7).concat([bye]));
   },
 };
+
+
+// ---- 94_mine.js ----
+// ───────────────────────── the Old Mine: a dungeon of its own, reached through the barred door in the south-west cliffs ─────────────────────────
+// A cell (56_cells.js) with no house in it: rock, timber, water, rails, carts and bones. It is built from rectangles of floor (REG) rasterised on a 1 m grid; the walls,
+// floor and roof are made from that grid (walls and roof pushed about by a lattice noise so no wall is straight), the colliders from the rectangles. Scanned rock, roots,
+// the castle door and the unique weapon come from kits/dungeon.glb once the kit is ready. Light: none but what is carried (the lantern, key L) and what burns on the walls.
+// Everything is zone 0 (no room AO), lit by fire lights placed here; the cell's env is overridden to near black (Cells.env wrapper below).
+const MINE = { built: false, cell: null, O: null, FY: 0, lamp: { on: false, oil: 0 }, kit: [], lights: [], torches: [], foes: [], pieces: {} };
+// ── the plan: rectangles in the cell's frame (x east, z deeper in). fl: floor height above the cell floor; ramp: floor runs y0 -> y1 along an axis from a to b ──
+MINE.REG = [
+  { id: 'adit',  x0: -2, z0: 0,  x1: 2,  z1: 24, h: 3.1, kind: 'timber' },
+  { id: 'tally', x0: -8, z0: 24, x1: 8,  z1: 36, h: 4.4, kind: 'cave' },
+  { id: 'niche', x0: -13, z0: 27, x1: -8, z1: 33, h: 3.0, kind: 'cave' },
+  { id: 'rampA', x0: 8,  z0: 29, x1: 10, z1: 35, h: 3.4, kind: 'cave', ramp: { ax: 'x', a: 8, b: 10, y0: 0, y1: -0.8 } },
+  { id: 'flood', x0: 10, z0: 29, x1: 30, z1: 35, h: 3.4, kind: 'cave', fl: -0.8 },
+  { id: 'rampB', x0: 30, z0: 29, x1: 32, z1: 35, h: 3.4, kind: 'cave', ramp: { ax: 'x', a: 30, b: 32, y0: -0.8, y1: 0 } },
+  { id: 'sump',  x0: 32, z0: 24, x1: 44, z1: 40, h: 4.2, kind: 'cave' },
+  { id: 'north', x0: 36, z0: 40, x1: 40, z1: 48, h: 3.1, kind: 'timber' },
+  { id: 'stope', x0: 28, z0: 48, x1: 48, z1: 62, h: 5.6, kind: 'cave' },
+  { id: 'duct',  x0: 10, z0: 58, x1: 28, z1: 62, h: 3.2, kind: 'timber' },
+  { id: 'deep',  x0: -14, z0: 48, x1: 10, z1: 70, h: 8.0, kind: 'cave' },
+  { id: 'exitr', x0: -26, z0: 58, x1: -14, z1: 62, h: 3.4, kind: 'cave', ramp: { ax: 'x', a: -14, b: -26, y0: 0, y1: 3.4 } },
+  { id: 'cleft', x0: -38, z0: 54, x1: -26, z1: 66, h: 7.0, kind: 'cave', fl: 3.4 },
+];
+// where things are (cell frame)
+MINE.AT = {
+  arrive: [0, 2.6], trap: [0, 14.5], tally: [0, 30], niche: [-10.5, 30], gallery: [20, 32], sump: [38, 32], stope: [38, 55], rubble: [[31.5, 53], [48, 56]], way: [28, 31.5, 53, 56],
+  deep: [-2, 60], boss: [-2, 58], station: [-11.5, 66], chest: [-12, 52.5], exitDoor: [-35, 60], cave: { x: 20, z: -172.5 },
+};
+MINE.SPAWN = [
+  { kind: 'delver', x: 3.5, z: 31, yaw: PI }, { kind: 'delver', x: 37, z: 35, yaw: -PI / 2 }, { kind: 'delver', x: 31, z: 59, yaw: PI },
+  { kind: 'lurker', x: 26.5, z: 31.5, yaw: PI }, { kind: 'lurker', x: 29.8, z: 54.5, yaw: 0 }, { kind: 'lurker', x: -12.5, z: 60, yaw: PI / 2 },
+  { kind: 'foreman', x: -2, z: 60.5, yaw: PI / 2 },
+];
+const mhash = (a, b, c) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(c | 0, 1274126177)) | 0; h = Math.imul(h ^ (h >>> 13), 1103515245); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+const mnoise = (a, b, c) => mhash(a, b, c) * 2 - 1;
+// the grid: occupied 1 m cells -> { reg, fl (floor, cell frame), h }
+function mineGrid() {
+  const G = new Map(), key = (i, j) => (i + 200) * 1000 + (j + 200);
+  const flat = (r, x, z) => { if (!r.ramp) return r.fl || 0; const q = r.ramp, c = q.ax === 'x' ? x : z; return q.y0 + (q.y1 - q.y0) * clamp((c - q.a) / (q.b - q.a), 0, 1); };
+  for (const r of MINE.REG) for (let i = r.x0; i < r.x1; i++) for (let j = r.z0; j < r.z1; j++) G.set(key(i, j), { i, j, reg: r });
+  const get = (i, j) => G.get(key(i, j)) || null;
+  // ceiling at a lattice point: the highest roof of the (up to four) cells that meet there; floor at a point: from the cell's own region
+  const hc = (i, j) => { let h = 0; for (const [a, b] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) { const c = get(i + a, j + b); if (c) h = Math.max(h, c.reg.h + flat(c.reg, i, j)); } return h; };
+  return { G, get, flat, hc, key };
+}
+// push a point about: the same displacement wherever the lattice point is used, so the surfaces stay closed
+function mdisp(i, j, k, amp) { return [mnoise(i, j, k * 7 + 1) * amp, mnoise(i, j, k * 7 + 2) * amp]; }
+// ── the shell: floor, roof, walls, colliders ──
+function mineShell(m, O, FY, V) {
+  const g = mineGrid(), W = (x, y, z) => [O[0] + x, FY + y, O[2] + z], cells = [...g.G.values()];
+  const cave = (a, b) => [[0, 0], [-1, 0], [0, -1], [-1, -1]].some(([p, q]) => { const c = g.get(a + p, b + q); return c && c.reg.kind === 'cave'; });
+  const ceilY = (a, b) => g.hc(a, b) + (cave(a, b) ? mnoise(a, b, 9) * 0.42 : 0);
+  const amp = (a, b, k) => k === 0 ? 0 : (cave(a, b) ? 0.3 : 0.07) * (k === 3 ? 0.7 : 1);
+  const P = (a, b, k, y) => { const d = mdisp(a, b, k, amp(a, b, k)); return W(a + d[0], y, b + d[1]); };
+  const T = 3.2, rockCol = (i, j, s) => { const v = 0.80 + mhash(i, j, s) * 0.4; return [0.74 * v, 0.70 * v, 0.66 * v]; };
+  m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
+  const edges = { W: [], E: [], S: [], N: [] };
+  for (const c of cells) {
+    const { i, j, reg } = c, fl = (a, b) => g.flat(reg, a, b);
+    // floor
+    m.mat(reg.id === 'flood' || reg.id.startsWith('ramp') ? MAT.MUD : MAT.GRAVEL, reg.id === 'flood' || reg.id.startsWith('ramp') ? [0.44, 0.41, 0.38] : [0.72 + mhash(i, j, 3) * 0.12, 0.66, 0.6], 0.8);
+    m.quad(W(i, fl(i, j), j), W(i, fl(i, j + 1), j + 1), W(i + 1, fl(i + 1, j + 1), j + 1), W(i + 1, fl(i + 1, j), j), i / T, j / T, (i + 1) / T, (j + 1) / T);
+    // roof
+    m.mat(MAT.ROCK, rockCol(i, j, 5).map(v => v * 0.8), 0.7);
+    m.quad(P(i, j + 1, 3, ceilY(i, j + 1)), P(i, j, 3, ceilY(i, j)), P(i + 1, j, 3, ceilY(i + 1, j)), P(i + 1, j + 1, 3, ceilY(i + 1, j + 1)), i / T, j / T, (i + 1) / T, (j + 1) / T);
+    if (V && V.roof(reg, i, j)) { const q = [P(i, j + 1, 3, ceilY(i, j + 1)), P(i, j, 3, ceilY(i, j)), P(i + 1, j, 3, ceilY(i + 1, j)), P(i + 1, j + 1, 3, ceilY(i + 1, j + 1))], c = [0, 1, 2].map(d => (q[0][d] + q[1][d] + q[2][d] + q[3][d]) / 4), sh = (p, s2) => [c[0] + (p[0] - c[0]) * s2, c[1] + (p[1] - c[1]) * s2 - 0.05, c[2] + (p[2] - c[2]) * s2]; V.mesh.quad(sh(q[0], 0.7), sh(q[1], 0.35), sh(q[2], 0.6), sh(q[3], 0.3), 0, 0, 1, 1); }
+    // walls where the neighbour is rock: A left, B right as seen from inside
+    const wall = (kind, a0, b0, a1, b1, along) => {
+      const nrm = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }[kind];
+      m.mat(MAT.ROCK, rockCol(i + a0, j + b0, 1), 0.7);
+      const lev = (a, b, k) => { const f = fl(a, b) - 0.4, t = ceilY(a, b); return P(a, b, k, f + (t - f) * k / 3); };
+      for (let k = 0; k < 3; k++) m.quad(lev(a0, b0, k + 1), lev(a0, b0, k), lev(a1, b1, k), lev(a1, b1, k + 1), (along) / T, k * 1.2 / T, (along + 1) / T, (k + 1) * 1.2 / T);
+      edges[kind].push([i, j]);
+      if (V && V.want(reg, i, j, kind)) {      // a vein of silver laid on the wall: a ragged patch, a hand's breadth off the rock
+        const k = 1 + ((i * 7 + j * 3 + a0) & 1), q = [lev(a0, b0, k + 1), lev(a0, b0, k), lev(a1, b1, k), lev(a1, b1, k + 1)], c = [0, 1, 2].map(d => (q[0][d] + q[1][d] + q[2][d] + q[3][d]) / 4);
+        const sh = (p, s2) => [c[0] + (p[0] - c[0]) * s2 + nrm[0] * 0.05, c[1] + (p[1] - c[1]) * s2, c[2] + (p[2] - c[2]) * s2 + nrm[2] * 0.05];
+        V.mesh.quad(sh(q[0], 0.55 + mhash(i, j, 21) * 0.3), sh(q[1], 0.3 + mhash(i, j, 22) * 0.4), sh(q[2], 0.5 + mhash(i, j, 23) * 0.3), sh(q[3], 0.3 + mhash(i, j, 24) * 0.4), 0, 0, 1, 1);
+      }
+    };
+    if (!g.get(i - 1, j)) wall('W', i, j + 1, i, j, j);
+    if (!g.get(i + 1, j)) wall('E', i + 1, j, i + 1, j + 1, j);
+    if (!g.get(i, j + 1)) wall('N', i + 1, j + 1, i, j + 1, i);
+    if (!g.get(i, j - 1)) wall('S', i, j, i + 1, j, i);
+  }
+  // colliders: runs of wall edges merged into boxes, a metre thick outside the plane and 0.35 into the space
+  const run = (list, fixed, mover, mk) => {
+    const by = new Map(); for (const e of list) { const f = fixed(e), v = mover(e); (by.get(f) || by.set(f, []).get(f)).push(v); }
+    for (const [f, vs] of by) { vs.sort((a, b) => a - b); let s = vs[0], p = vs[0]; for (let q = 1; q <= vs.length; q++) { if (q === vs.length || vs[q] !== p + 1) { mk(f, s, p + 1); s = vs[q]; } p = vs[q]; } }
+  };
+  const y0 = -3, y1 = 12; m.push();
+  const box = (x0, z0, x1, z1) => addBoxCollider(m, O[0] + x0, O[2] + z0, O[0] + x1, O[2] + z1, FY + y0, FY + y1);
+  run(edges.W, e => e[0], e => e[1], (f, a, b) => box(f - 1, a, f + 0.35, b));
+  run(edges.E, e => e[0] + 1, e => e[1], (f, a, b) => box(f - 0.35, a, f + 1, b));
+  run(edges.S, e => e[1], e => e[0], (f, a, b) => box(a, f - 1, b, f + 0.35));
+  run(edges.N, e => e[1] + 1, e => e[0], (f, a, b) => box(a, f - 0.35, b, f + 1));
+  m.pop();
+  // floors you can stand on: one per rectangle (flat or ramp), same height as the drawn floor
+  for (const r of MINE.REG) {
+    if (r.ramp) addFloor(m, O[0] + r.x0, O[2] + r.z0, O[0] + r.x1, O[2] + r.z1, FY + (r.ramp.ax === 'x' ? (r.ramp.a < r.ramp.b ? r.ramp.y0 : r.ramp.y1) : 0), FY + (r.ramp.ax === 'x' ? (r.ramp.a < r.ramp.b ? r.ramp.y1 : r.ramp.y0) : 0), 'x');
+    else addFloor(m, O[0] + r.x0, O[2] + r.z0, O[0] + r.x1, O[2] + r.z1, FY + (r.fl || 0));
+  }
+  g.edges = edges; return g;
+}
+// ── the fittings ──
+LIGHT_KINDS.mine = (l, e) => 1;
+LIGHT_KINDS.hum = (l, e) => 0.82 + 0.18 * Math.sin(e.time * 1.7 + l.seed);
+function mineBuild() {
+  if (MINE.built || !CELLS_ON) return;
+  const cell = Cells.make('mine', 'The Old Mine', { kind: 'dungeon', daylight: 0, fog: [0.010, 0.011, 0.014], fogDensity: 0.055, exit: 'the hillside' });
+  const O = cell.origin, FY = cell.floorY; MINE.cell = cell; MINE.O = O; MINE.FY = FY;
+  const pack = new MeshPack(); pack.shadow = false;
+  const m = new Mesh(1 << 16); m.seed = 9301;
+  const gm = new Mesh(2048); gm.m1 = 0; gm.m2 = 0; gm.m3 = 0; gm.ao = 1; gm.grad = null; gm.wind = 0; gm.mat(MAT.PLAIN, [0.55, 0.75, 1.0]);
+  const grid = mineShell(m, O, FY, { mesh: gm, want: (r, i, j, k) => (r.id === 'deep' && mhash(i, j, 31) < 0.6) || (r.id === 'stope' && mhash(i, j, 32) < 0.16) || (r.id === 'cleft' && mhash(i, j, 33) < 0.1), roof: (r, i, j) => (r.id === 'deep' && mhash(i, j, 34) < 0.16) || (r.id === 'stope' && mhash(i, j, 35) < 0.05) }); MINE.grid = grid;
+  const wpos = (x, y, z) => [O[0] + x, FY + y, O[2] + z];
+  const put = (x, z, rot, fn, y) => { m.push().T(O[0] + x, FY + (y || 0), O[2] + z).RY(rot || 0); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; fn(m); m.pop(); return wpos(x, y || 0, z); };
+  const rnd = rng(9301), em = o => { o.cell = 'mine'; o.zone = 0; o.seed = (World.emitters.length * 0.618) % 1; o.t = 0; World.emitters.push(o); return o; };
+  // light: a fire on the wall
+  const torch = (x, z, rot) => put(x, z, rot, mm => {
+    mm.mat(MAT.METAL, COL.black); mm.box(-0.04, 1.62, -0.02, 0.04, 1.7, 0.2); mm.box(-0.03, 1.6, 0.16, 0.03, 1.8, 0.2);
+    mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([0, 1.7, 0.1], [0, 2.18, 0.26], 0.07, 0.07); mm.mat(MAT.PLAIN, [0.09, 0.05, 0.03]); mm.cyl(0, 2.16, 0.25, 0.055, 0.04, 0.12, 6, 1);
+    const p = wp(mm, 0, 2.3, 0.26); em({ type: 'fire', p, size: 0.3 }); MINE.torches.push(addLight(p, 10, [3.3, 1.75, 0.62], 0, 'fire'));
+  });
+  // an iron brazier on three legs, for the deep chamber
+  const brazier = (x, z) => put(x, z, 0, mm => {
+    mm.mat(MAT.METAL, COL.black); for (let i = 0; i < 3; i++) { const a = i * TAU / 3; mm.beam([Math.cos(a) * 0.4, 0, Math.sin(a) * 0.4], [Math.cos(a) * 0.12, 0.85, Math.sin(a) * 0.12], 0.06, 0.06); }
+    mm.lathe([[0.12, 0.8], [0.4, 0.98], [0.44, 1.1], [0.38, 1.1]], 9, 0); mm.mat(MAT.PLAIN, [0.1, 0.06, 0.04]); mm.cyl(0, 0.9, 0, 0.36, 0.34, 0.12, 9, 1);
+    const p = wp(mm, 0, 1.2, 0); em({ type: 'fire', p, size: 0.55 }); MINE.torches.push(addLight(p, 13, [3.4, 1.8, 0.7], 0, 'fire')); addCircleCollider(mm, 0, 0, 0.42, 0, 1.2);
+  });
+  // timber sets in the timbered drifts: two posts, a cap, lagging above; rails and sleepers down the middle of the adit and the tally room
+  for (const r of MINE.REG.filter(r => r.kind === 'timber')) {
+    for (let z = r.z0 + 1.5; z < r.z1 - 0.5; z += 3) put(0, z, 0, mm => {
+      const hx = (r.x1 - r.x0) / 2, cx = (r.x0 + r.x1) / 2; mm.mat(MAT.TIMBER, COL.timberDark, 0.8);
+      for (const s of [-1, 1]) { mm.cbox(cx + s * (hx - 0.28), -0.3, 0, 0.3, r.h + 0.1, 0.3, 4); if (rnd() < 0.5) mm.beam([cx + s * (hx - 0.28), 0.6, 0.15], [cx + s * (hx - 0.8), 0.1, 0.55], 0.1, 0.1); }
+      mm.mat(MAT.TIMBER, COL.timber, 0.8); mm.box(cx - hx + 0.1, r.h - 0.42, -0.17, cx + hx - 0.1, r.h - 0.12, 0.17);
+      for (const s of [-1, 1]) mm.beam([cx + s * (hx - 0.28), r.h - 0.5, 0], [cx + s * (hx - 1.1), r.h - 0.12, 0], 0.14, 0.14);
+      mm.mat(MAT.PLANKS, [0.5, 0.44, 0.38], 0.7); for (let k = 0; k < 3; k++) mm.box(cx - hx + 0.15, r.h - 0.1, -1.2 + k * 1.0, cx + hx - 0.15, r.h - 0.04, -0.4 + k * 1.0);
+    });
+  }
+  const rails = (z0, z1) => { put(0, 0, 0, mm => {
+    mm.mat(MAT.TIMBER, COL.timberDark); for (let z = z0; z < z1; z += 0.85) mm.box(-0.8, 0, z - 0.07, 0.8, 0.07, z + 0.07);
+    mm.mat(MAT.METAL, [0.34, 0.27, 0.22]); for (const sx of [-0.5, 0.5]) mm.box(sx - 0.035, 0.07, z0, sx + 0.035, 0.12, z1); }, 0.0); };
+  rails(1.5, 34);
+  // a cart: planks, iron bands, wheels; load = rock | none | tipped
+  const cart = (x, z, rot, load, tip) => put(x, z, rot, mm => {
+    if (tip) mm.RZ(tip).T(0, 0.35, 0);
+    mm.mat(MAT.PLANKS, [0.5, 0.4, 0.3], 0.6); mm.box(-0.55, 0.28, -0.85, 0.55, 0.34, 0.85); for (const sx of [-1, 1]) mm.box(sx * 0.55 - 0.03, 0.3, -0.85, sx * 0.55 + 0.03, 0.98, 0.85); for (const sz of [-1, 1]) mm.box(-0.55, 0.3, sz * 0.85 - 0.03, 0.55, 0.92, sz * 0.85 + 0.03);
+    mm.mat(MAT.METAL, [0.3, 0.26, 0.23]); mm.box(-0.58, 0.88, -0.88, 0.58, 0.94, 0.88, 0); for (const sx of [-0.5, 0.5]) for (const sz of [-0.5, 0.5]) { mm.push().T(sx, 0.2, sz).RZ(PI / 2); mm.cyl(0, -0.03, 0, 0.18, 0.18, 0.06, 10, 3); mm.pop(); }
+    if (load === 'rock') { mm.mat(MAT.ROCK, [0.45, 0.43, 0.42], 0.5); for (let i = 0; i < 9; i++) mm.ball((rnd() - 0.5) * 0.7, 0.95 + rnd() * 0.12, (rnd() - 0.5) * 1.2, 0.18 + rnd() * 0.12, 0.14, 0.18, 6, 3); mm.mat(MAT.METAL, [0.62, 0.7, 0.8]); for (let i = 0; i < 3; i++) mm.ball((rnd() - 0.5) * 0.6, 1.02, (rnd() - 0.5) * 1.0, 0.07, 0.05, 0.07, 5, 3); }
+    if (!tip) addBoxCollider(mm, -0.6, -0.9, 0.6, 0.9, 0, 1.0);
+  });
+  cart(0, 9, 0.02, 'rock'); cart(-3.2, 27.5, 1.1, null, 0.8); cart(3.5, 33.2, -0.3, 'rock');
+  // bones: a skull, a ribcage, a few long bones
+  const bones = (x, z, rot, n) => put(x, z, rot, mm => {
+    mm.mat(MAT.PLAIN, [0.72, 0.68, 0.58]); mm.ball(0, 0.07, 0, 0.09, 0.075, 0.1, 8, 5); mm.box(-0.045, 0.0, 0.06, 0.045, 0.045, 0.13, 0);
+    for (let i = 0; i < (n || 5); i++) { const a = (i + 1) * 0.45 - 1.2; mm.beam([0.3 + i * 0.08, 0.02, 0.05 + Math.sin(a) * 0.12], [0.3 + i * 0.08 + 0.03, 0.06, 0.05 + Math.sin(a) * 0.3], 0.025, 0.025); mm.beam([0.3 + i * 0.08, 0.02, 0.05 - Math.sin(a) * 0.12], [0.3 + i * 0.08 + 0.03, 0.06, 0.05 - Math.sin(a) * 0.3], 0.025, 0.025); }
+    mm.beam([0.1, 0.02, -0.3], [1.0, 0.03, -0.45], 0.04, 0.04); mm.beam([0.0, 0.02, 0.4], [0.7, 0.03, 0.6], 0.035, 0.035);
+    mm.mat(MAT.CLOTH, [0.22, 0.18, 0.14], 0.5); mm.ball(0.5, 0.025, 0.05, 0.4, 0.03, 0.22, 8, 3);
+  });
+  MINE.bones = bones; MINE.put = put; MINE.wpos = wpos; MINE.em = em;
+  // ── torches: pools of light with dark between ──
+  torch(-1.85, 5, PI / 2); torch(1.85, 18.5, -PI / 2); torch(7.85, 33, -PI / 2); torch(-7.85, 25.4, PI / 2); torch(14, 29.15, 0); torch(27.5, 34.85, PI);
+  torch(43.85, 28, -PI / 2); torch(28.15, 50.5, PI / 2); torch(19, 58.15, 0); torch(-2, 47.9, 0, 0);
+  brazier(-8, 54); brazier(4, 54); brazier(-8, 66); brazier(4, 66);
+  // ── the tally room: a table of tally boards, racks of tools, barrels, a tipped cart; Dunstan's crew drew their pay here ──
+  put(-5.2, 34, 0, mm => { mm.mat(MAT.PLANKS, COL.woodDark, 0.6); mm.box(-1.1, 0.7, -0.4, 1.1, 0.78, 0.4); for (const sx of [-1, 1]) for (const sz of [-1, 1]) mm.box(sx * 0.95 - 0.05, 0, sz * 0.3 - 0.05, sx * 0.95 + 0.05, 0.7, sz * 0.3 + 0.05); addBoxCollider(mm, -1.15, -0.45, 1.15, 0.45, 0, 0.8);
+    mm.mat(MAT.PLAIN, COL.parchment); mm.box(-0.8, 0.78, -0.2, -0.3, 0.8, 0.2); mm.mat(MAT.PLANKS, [0.45, 0.36, 0.26], 0.4); for (let i = 0; i < 7; i++) mm.box(0.0 + i * 0.1, 0.78, -0.2, 0.04 + i * 0.1, 0.84, 0.15); });
+  put(-6.6, 29, PI / 2, mm => { Props.barrel(mm); }); put(-6.7, 30.3, PI / 2 + 0.4, mm => { Props.barrel(mm); }); put(6.8, 26.5, 0, mm => Props.crate(mm, 0.8)); put(6.2, 26.7, 0.4, mm => { mm.T(0, 0.8, 0); Props.crate(mm, 0.55); });
+  put(-7.6, 30, PI / 2, mm => { mm.mat(MAT.TIMBER, COL.timberDark); mm.box(-1.0, 0.9, -0.03, 1.0, 1.0, 0.03); mm.box(-1.0, 1.5, -0.03, 1.0, 1.6, 0.03); mm.mat(MAT.METAL, [0.5, 0.5, 0.54]); for (let i = 0; i < 5; i++) { mm.beam([-0.8 + i * 0.4, 0.95, 0.05], [-0.75 + i * 0.4, 1.9, 0.12], 0.03, 0.045); mm.box(-0.85 + i * 0.4, 1.9, 0.06, -0.65 + i * 0.4, 2.0, 0.16); } });
+  bones(2.4, 29.5, 0.7, 6); bones(-3.6, 25.5, 2.2, 4);
+  // the niche: a bedroll, a cold hearth, an oil flask on the ledge
+  put(-10.5, 30, 0, mm => { mm.mat(MAT.CLOTH, [0.32, 0.27, 0.2], 0.5); mm.box(-0.45, 0.02, -0.9, 0.45, 0.12, 0.9); mm.mat(MAT.CLOTH, [0.4, 0.36, 0.28], 0.5); mm.box(-0.35, 0.12, 0.45, 0.35, 0.2, 0.85); mm.mat(MAT.ROCK, [0.3, 0.3, 0.3], 0.5); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; mm.ball(Math.cos(a) * 0.5 + 1.2, 0.05, Math.sin(a) * 0.5 + 0.6, 0.12, 0.08, 0.1, 6, 3); } mm.mat(MAT.PLAIN, [0.06, 0.05, 0.04]); mm.cyl(1.2, 0.0, 0.6, 0.36, 0.36, 0.02, 9, 1); });
+  // ── the flooded gallery: a boarded walk along the north wall with a gap, posts, a tilted ladder, a sunk cart ──
+  put(0, 0, 0, mm => {
+    mm.mat(MAT.PLANKS, [0.45, 0.38, 0.3], 0.5);
+    for (const [a, b] of [[10.5, 18], [22, 29.5]]) { for (let x = a; x < b; x += 0.34) { const w = 0.3 + (mhash(x * 10, 3, 4) * 0.04); mm.box(x, -0.07, 33.45 + mnoise(x * 7, 1, 1) * 0.03, x + w, 0.0, 34.9); }
+      for (const x of [a + 0.3, (a + b) / 2, b - 0.3]) { mm.mat(MAT.TIMBER, COL.timberDark); mm.cbox(x, -0.9, 33.6, 0.14, 0.9, 0.14, 0); mm.cbox(x, -0.9, 34.8, 0.14, 0.9, 0.14, 0); } mm.mat(MAT.PLANKS, [0.45, 0.38, 0.3], 0.5); mm.box(a, -0.2, 33.4, b, -0.12, 33.5); mm.box(a, -0.2, 34.85, b, -0.12, 34.95); }
+    mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([18, 0.0, 33.8], [17.3, -0.9, 33.0], 0.1, 0.06); mm.beam([22, 0.0, 34.2], [22.5, -0.7, 33.4], 0.1, 0.06);     // the broken ends
+  });
+  for (const [a, b] of [[10.5, 18], [22, 29.5]]) { m.push(); addBoxCollider(m, O[0] + a, O[2] + 33.4, O[0] + b, O[2] + 34.95, FY - 3, FY + 0.9); m.pop(); }
+  // the walk is a floor of its own, at the cell floor
+  addFloor(m, O[0] + 10.5, O[2] + 33.4, O[0] + 18, O[2] + 34.95, FY); addFloor(m, O[0] + 22, O[2] + 33.4, O[0] + 29.5, O[2] + 34.95, FY);
+  // (the rail, the tilted cart under the water)
+  put(24, 31, 0.5, mm => { mm.mat(MAT.PLANKS, [0.3, 0.27, 0.22], 0.6); mm.box(-0.55, -0.7, -0.85, 0.55, -0.62, 0.85); for (const sx of [-1, 1]) mm.box(sx * 0.55 - 0.03, -0.65, -0.85, sx * 0.55 + 0.03, -0.1, 0.85); });
+  bones(14.5, 30.5, 1.2, 5); bones(26.2, 29.8, 0.2, 3);
+  // ── the sump: spoil, a pump, tools left in a heap ──
+  put(38, 36, 0.3, mm => { mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([-0.9, 0, 0], [-0.1, 1.9, 0], 0.12, 0.12); mm.beam([0.9, 0, 0], [0.1, 1.9, 0], 0.12, 0.12); mm.box(-0.15, 1.8, -0.15, 0.15, 1.95, 0.15); mm.mat(MAT.METAL, [0.3, 0.27, 0.24]); mm.beam([0, 1.9, 0], [0.6, 1.2, 0.2], 0.04, 0.04); mm.cyl(0.7, 0.0, 0.2, 0.12, 0.12, 1.2, 8, 1); addCircleCollider(mm, 0, 0, 0.9, 0, 2); });
+  put(41.2, 30.5, 0, mm => Props.chest(mm)); bones(41.5, 36.5, 2.8, 5);
+  // ── the collapsed stope: the roof came down across the route; rubble with a way round on the west side ──
+  mine_rubble(m, put, rnd, O, FY);
+  // ── the deep chamber: the Foreman's ground ──
+  mine_deep(m, put, rnd, O, FY, wpos, em);
+  pack.add(m, { kind: 'opaque', cell: 'mine', nearOnly: true, noShadow: true });
+  // water: the flooded gallery, a puddle in the sump, the silver pool
+  const wm = new Mesh(512); wm.mat(MAT.PLAIN, [0.03, 0.045, 0.05]); wm.ao = 1; wm.m1 = 0; wm.m2 = 0; wm.m3 = 0; wm.grad = null; wm.wind = 0;
+  const wq = (x0, z0, x1, z1, y) => wm.quad(wpos(x0, y, z0), wpos(x0, y, z1), wpos(x1, y, z1), wpos(x1, y, z0));
+  wq(9, 29, 31, 35, -0.06); wq(36, 25, 42, 30, 0.01); wq(-5, 66, 1, 69, 0.01);
+  gm.quad(wpos(-4.6, 0.04, 66.4), wpos(-4.6, 0.04, 68.6), wpos(0.6, 0.04, 68.6), wpos(0.6, 0.04, 66.4), 0, 0, 1, 1);      // the silver pool glows
+  pack.add(wm, { kind: 'opaque', cell: 'mine', noShadow: true, nearOnly: true });
+  // the veins of silver in the roof and walls of the deep chamber and the stope: emissive, cold
+  pack.add(gm, { kind: 'glow', cell: 'mine', noShadow: true, nearOnly: true });
+  pack.upload('mine'); World.packs.push(pack); MINE.pack = pack;
+  MINE.built = true;
+  mine_wire(cell, wpos);
+}
+function mine_rubble(m, put, rnd, O, FY) {
+  // the fall: a wall of broken rock from the east wall to the crawl on the west side, two layers of boulders and a slope of scree, timbers jutting out
+  const A = MINE.AT.rubble;
+  put(0, 0, 0, mm => {
+    mm.mat(MAT.ROCK, [0.62, 0.6, 0.57], 0.5);
+    for (let layer = 0; layer < 3; layer++) for (let x = A[0][0] + 0.3 + layer * 0.5; x < A[1][0] + 0.8; x += 1.1) for (let z = A[0][1] + 0.2; z < A[1][1]; z += 1.0) {
+      const r = (0.55 + rnd() * 0.55) * (1 - layer * 0.18); if (rnd() < 0.18 + layer * 0.22) continue;
+      mm.ball(x + (rnd() - 0.5) * 0.5, 0.35 + layer * 0.7 + rnd() * 0.3, z + (rnd() - 0.5) * 0.5, r, r * (0.7 + rnd() * 0.3), r * (0.8 + rnd() * 0.3), 7, 4);
+    }
+    mm.mat(MAT.GRAVEL, [0.4, 0.38, 0.36], 0.8); for (let i = 0; i < 40; i++) mm.ball(A[0][0] + rnd() * 16.5, 0.08, A[0][1] - 1.2 - rnd() * 2.6 * (0.4 + rnd()), 0.25 + rnd() * 0.5, 0.12, 0.25 + rnd() * 0.4, 6, 3);
+    mm.mat(MAT.TIMBER, COL.timberDark); for (const [x, y, z, x2, y2, z2] of [[36, 2.4, 53.4, 38.2, 3.9, 56.4], [42, 2.9, 53.1, 40.8, 1.5, 51.0], [34, 2.0, 55.6, 33.2, 3.6, 52.6]]) mm.beam([x, y, z], [x2, y2, z2], 0.3, 0.3);
+    // the crawl: a leaning beam and a shed of stone at the west wall, so the way round is plainly a way
+    mm.beam([28.3, 0, 57.2], [30.8, 2.5, 55.2], 0.28, 0.28); mm.beam([31.3, 0.0, 52.8], [29.2, 2.7, 54.1], 0.24, 0.24);
+  });
+  m.push(); addBoxCollider(m, O[0] + A[0][0], O[2] + 53.1, O[0] + A[1][0], O[2] + 55.9, FY - 2, FY + 8); m.pop();
+}
+function mine_deep(m, put, rnd, O, FY, wpos, em) {
+  // three stone columns left standing in the Foreman's ground: cover when he charges
+  for (const [x, z] of [[-7.5, 58], [3.5, 58], [-2, 63]]) put(x, z, 0, mm => {
+    mm.mat(MAT.ROCK, [0.48, 0.45, 0.43], 0.6); mm.lathe([[1.5, -0.4], [1.0, 0.5], [0.85, 2.0], [0.95, 4.0], [0.8, 6.0], [1.3, 8.2]], 10, 0);
+    mm.mat(MAT.ROCK, [0.36, 0.34, 0.33], 0.6); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; mm.ball(Math.cos(a) * 1.25, 0.15, Math.sin(a) * 1.25, 0.5, 0.3, 0.5, 6, 3); }
+    addCircleCollider(mm, 0, 0, 1.02, -1, 9);
+  });
+  // the miners' boots, in a row facing the silver pool, with the hats beside them: nobody has moved them in fifty years
+  put(0, 65.2, 0, mm => { for (let i = 0; i < 12; i++) { const x = -5.5 + i * 0.62; mm.push().T(x, 0, 0).RY(PI + (mhash(i, 4, 4) - 0.5) * 0.15); mm.mat(MAT.PLAIN, [0.13, 0.095, 0.07]); for (const s of [-1, 1]) { mm.box(s * 0.1 - 0.05, 0, -0.1, s * 0.1 + 0.05, 0.12, 0.12); mm.box(s * 0.1 - 0.045, 0.12, -0.08, s * 0.1 + 0.045, 0.3, 0.05); } mm.pop(); mm.mat(MAT.CLOTH, [0.3, 0.25, 0.19], 0.4); mm.ball(x, 0.05, 0.55, 0.14, 0.06, 0.14, 7, 3); } });
+  // bread laid on a slab at the mouth of the chamber: the offering the village stopped sending
+  put(8.6, 51.5, 0.2, mm => { mm.mat(MAT.STONE, [0.4, 0.38, 0.36], 0.6); mm.box(-0.9, 0, -0.45, 0.9, 0.7, 0.45); mm.mat(MAT.CLOTH, [0.55, 0.5, 0.42], 0.5); mm.box(-0.7, 0.7, -0.35, 0.7, 0.72, 0.35); mm.mat(MAT.PLAIN, [0.36, 0.27, 0.16]); for (let i = 0; i < 5; i++) mm.ball(-0.5 + i * 0.25, 0.8, (i % 2 - 0.5) * 0.2, 0.11, 0.07, 0.07, 6, 4); mm.mat(MAT.PLAIN, [0.5, 0.52, 0.4]); mm.ball(0.5, 0.78, 0.15, 0.05, 0.04, 0.04, 5, 3); addBoxCollider(mm, -0.95, -0.5, 0.95, 0.5, 0, 0.9); });
+  // Corwin's station in the alcove: a bedroll, a lamp gone cold, a table and a chest; a pick leaning on the wall
+  put(-11.2, 66.2, 0.3, mm => { mm.mat(MAT.CLOTH, [0.3, 0.26, 0.2], 0.5); mm.box(-0.5, 0.02, -1.0, 0.5, 0.12, 0.9); mm.mat(MAT.PLANKS, COL.woodDark, 0.6); mm.box(1.0, 0.7, -0.5, 2.0, 0.78, 0.5); for (const sx of [1.05, 1.9]) for (const sz of [-0.45, 0.45]) mm.box(sx - 0.04, 0, sz - 0.04, sx + 0.04, 0.7, sz + 0.04); addBoxCollider(mm, 0.98, -0.52, 2.02, 0.52, 0, 0.8);
+    mm.mat(MAT.METAL, COL.black); mm.lathe([[0.06, 0.78], [0.08, 0.9], [0.05, 0.98]], 6, 1); mm.mat(MAT.PLAIN, COL.parchment); mm.box(1.5, 0.78, -0.3, 1.8, 0.79, 0.1); });
+  put(-12.2, 52.5, PI / 2, mm => Props.chest(mm, 1.1));
+  bones(-5, 51, 1, 4); MINE.bones(5.5, 62.5, 2.1, 6); MINE.bones(-11, 58.4, 0.3, 5); MINE.bones(7.5, 67.5, 1.2, 4); MINE.bones(9.5, 60, 0.6, 5);
+  // ── the foot of the second way out: a sagging rope ladder of roots and a trickle on the stone ──
+  put(-30, 60, 0, mm => { mm.mat(MAT.ROCK, [0.4, 0.4, 0.38], 0.6); for (let i = 0; i < 9; i++) mm.ball(-4 + rnd() * 8, 3.4 + 0.1, -5 + rnd() * 10, 0.3 + rnd() * 0.3, 0.2, 0.3 + rnd() * 0.3, 6, 3); });
+}
+function bones(x, z, rot, n) { return MINE.bones(x, z, rot, n); }
+// ───────────────────────── items ─────────────────────────
+Object.assign(ITEMS, {
+  oil: ['Lamp oil', 'A stoppered clay flask of whale oil, enough to keep a miner’s lantern burning for ten minutes.', { value: 4, cost: 7 }],
+  foremankey: ['The Foreman’s key', 'A short brass key worn bright, on a loop of leather that still smells of tallow smoke. Every shift’s count is scratched on the bow.'],
+  silverthread: ['Silverthread', 'A long estoc of grey silver steel drawn from the deep seam. Plain, balanced and a little too light. It hums in the hand when the Hollow are near.', { slot: 'weapon', dmg: 27, blade: [0.92, 1.7, 0.026], value: 160 }],
+});
+// ───────────────────────── wiring: doors, the lantern, the trap, what you can pick up ─────────────────────────
+const MINE_S = () => (S.mine = S.mine || { oil: 0, trap: 0 });
+function mine_wire(cell, wpos) {
+  const O = MINE.O, FY = MINE.FY, P = WILDS.P.mine;
+  // the door on the hill becomes a portal pair (the barred door of 79_wilds.js)
+  const di = World.interact.findIndex(i => i.id === 'mine.door'), door = di >= 0 ? World.interact[di] : null; if (di >= 0) World.interact.splice(di, 1);
+  const A = siteToWorld(P, 0, -0.5), Dn = siteToWorld(P, 0, 3.0), ay = Terrain.y(A[0], A[1]), yawOut = Math.atan2(Dn[0] - A[0], -(Dn[1] - A[1]));
+  const dp = door ? door.p : [A[0], ay + 1.2, A[1]];
+  cell.enter = { p: wpos(0, 0.05, 2.6), yaw: PI, cell: 'mine', name: 'The Old Mine' };
+  cell.leave = { p: [A[0], ay, A[1]], yaw: yawOut, cell: null, name: 'the hillside' };
+  const open = () => { if (S.flags.mineOpen) return true; if (has('minekey')) { S.flags.mineOpen = 1; toast('The Sexton’s key turns with a groan. The bar lifts out of its brackets.'); if (typeof uiObjective === 'function') uiObjective(); save(); return true; } return false; };
+  cell.portalOut = { kind: 'portal', id: 'door.mine.in', p: dp, r: 3.0, zone: 0, cell: 'mine', label: 'Enter the Old Mine', dest: cell.enter, side: 'out', lock: () => open() ? null : 'Barred from the far side. Iron and oak: you will not shift it. Somebody, once, kept a key for it.' };
+  cell.portalIn = { kind: 'portal', id: 'door.mine.out', p: wpos(0, 1.1, 0.7), r: 2.4, zone: 0, cell: 'mine', label: 'Leave to the hillside', dest: cell.leave, side: 'in' };
+  World.interact.push(cell.portalOut, cell.portalIn);
+  // the second way out: a cleft in the rock above the Hermit's Pool, found from inside
+  const cx = 27.5, cz = -182.6, cy = Terrain.y(cx, cz);       // the rock face beside the fall, above the pool (the valley ends at radius 184: nothing can stand beyond it)
+  cell.cleft = { p: [cx, Terrain.y(cx, cz + 1.8), cz + 1.8], yaw: PI, cell: null, name: 'The cliffs above the Hermit’s Pool' };
+  const cin = { p: wpos(-33.5, 3.45, 60), yaw: -PI / 2, cell: 'mine', name: 'The Old Mine' };
+  World.interact.push({ kind: 'portal', id: 'door.mine.cleft', p: wpos(-36, 4.5, 60), r: 2.6, zone: 0, cell: 'mine', label: 'Climb out by the cleft', dest: cell.cleft, side: 'in' });
+  World.interact.push({ kind: 'portal', id: 'door.mine.cleft.in', p: [cx, cy + 0.9, cz + 0.9], r: 2.6, zone: 0, label: 'Squeeze into the cleft', dest: cin, side: 'out' });
+  mine_cleftOutside(cx, cz, cy);
+  // oil and a few other things on the floor
+  const mi = (kind, id, x, y, z, label, item, extra) => {
+    const key = 'mp.' + kind; MINE.pm = MINE.pm || {}; const mesh = MINE.pm[key] || (MINE.pm[key] = IX.mesh(kind)); const p3 = wpos(x, y, z);
+    const obj = addSkinned(mesh, { c: p3, r: 0.6, zone: 0, kind: 'pickup', cell: 'mine', light: 0.7 }); R.boneData.set(m4.translate(m4.create(), p3[0], p3[1], p3[2]), obj.slot * 256);
+    const it = Object.assign({ kind: 'pickup', id, item, p: [p3[0], p3[1] + 0.2, p3[2]], r: 1.9, zone: 0, obj, label, cell: 'mine' }, extra || {}); World.interact.push(it); World.pickups.push(it); return it;
+  };
+  MINE.mi = mi;
+  mi('candle', 'mine.oil.1', -9.2, 0.0, 28.4, 'Take the oil', 'oil'); mi('candle', 'mine.oil.2', 5.4, 0.0, 25.2, 'Take the oil', 'oil'); mi('candle', 'mine.oil.3', 40.6, 0.0, 33.8, 'Take the oil', 'oil'); mi('candle', 'mine.oil.4', -9.6, 0.0, 64.8, 'Take the oil', 'oil');
+  mi('loaf', 'mine.bread', 8.4, 0.82, 51.4, 'Take the bread', 'bread');
+  MINE.journal = mi('book', 'mine.journal', -9.4, 0.79, 66.2, 'Take Corwin’s journal', 'journal', { journal: true });
+  // the Foreman's strongbox
+  World.interact.push({ p: wpos(-12.2, 0.5, 52.5), r: 2.2, zone: 0, kind: 'chest', id: 'mine.chest', cell: 'mine', loot: [['silverthread', 1], ['gold', 55], ['oil', 2], ['potion', 1]], foremanLock: true });
+  // the trap: cord, slab, three states
+  mine_trap(wpos);
+  // the lantern's light
+  const L = MINE.lamp.light = addLight([0, -9999, 0], 9.5, [2.9, 1.7, 0.7], 0, 'mine'); L.power = e => (World.cell && World.cell.id === "mine") ? (MINE.lamp.on ? 0.92 + 0.08 * Math.sin(e.time * 9.1) : 0.12) : 0;
+  // the cold light of the deep, and of the cleft
+  for (const [x, y, z, r, c] of [[-2, 4.6, 67, 14, [0.9, 1.5, 2.6]], [-12, 3.2, 56, 10, [0.7, 1.2, 2.2]], [44, 3.0, 58, 9, [0.6, 1.0, 1.8]], [-3, 5, 54, 10, [0.7, 1.2, 2.2]], [-32, 6.8, 60, 12, [0.85, 1.15, 1.35]]]) { const l = addLight(wpos(x, y, z), r, c, 0, 'hum'); MINE.lights.push(l); }
+}
+function mine_cleftOutside(cx, cz, cy) {
+  // a fissure in the cliff above the fall: two leaning slabs, a black slot between, ferns and a trickle
+  const pack = new MeshPack(); pack.shadow = false; const m = new Mesh(1024); m.seed = 77; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
+  m.push().T(cx, cy, cz);
+  m.mat(MAT.PLAIN, [0.015, 0.015, 0.018]); m.box(-0.55, -0.1, -2.2, 0.55, 2.7, -0.2);
+  m.mat(MAT.ROCK, [0.52, 0.5, 0.47], 0.6); for (const s of [-1, 1]) { m.push().T(s * 0.95, 0, 0).RZ(-s * 0.1); m.lathe([[1.0, -0.6], [0.8, 0.8], [0.55, 2.2], [0.3, 3.2], [0.04, 3.6]], 7, 0); m.pop(); }
+  m.mat(MAT.ROCK, [0.4, 0.38, 0.36], 0.6); m.box(-1.2, 2.55, -0.9, 1.2, 3.1, 0.5); for (let i = 0; i < 10; i++) { const a = (i - 4.5) * 0.45; m.ball(Math.sin(a) * 2.1, 0.2, 0.3 + Math.cos(a) * 0.8, 0.35 + (i % 3) * 0.12, 0.3, 0.35, 6, 3); }
+  m.pop();
+  addBoxCollider(m, cx - 1.8, cz - 0.4, cx + 1.8, cz + 0.4, cy - 1, cy + 3);      // (the slabs; the slot between them is open)
+  pack.add(m, { kind: 'opaque', maxDist: 100, noShadow: true }); pack.upload('mine-cleft'); World.packs.push(pack);
+  WB.kit.hermit = WB.kit.hermit || []; for (const [dx, dz, n, s] of [[-1.5, 1.0, 'Fern_1', 1.4], [1.6, 1.2, 'Fern_1', 1.2], [0.2, 1.9, 'weed_plant_02_a', 2.2]]) WB.kit.hermit.push({ name: n, x: cx + dx, y: cy, z: cz + dz, s, ry: dx, rx: 0, rz: 0 });
+}
+// ── the trap: a cord across the adit at ankle height, a slab on a rope above it. Step over it (jump), cut it, or take the slab on the head ──
+function mine_trap(wpos) {
+  const [tx, tz] = MINE.AT.trap, O = MINE.O, FY = MINE.FY, pack = new MeshPack(); pack.shadow = false;
+  const mk = fn => { const m = new Mesh(512); m.seed = 5; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; m.push().T(O[0] + tx, FY, O[2] + tz); fn(m); m.pop(); return m; };
+  const posts = mm => { mm.mat(MAT.METAL, COL.black); for (const s of [-1, 1]) { mm.cbox(s * 1.72, 0.12, 0, 0.1, 0.34, 0.1, 4); mm.cbox(s * 1.72, 0.5, 0, 0.16, 0.05, 0.16, 4); } };
+  const slab = (mm, y) => { mm.mat(MAT.ROCK, [0.46, 0.44, 0.42], 0.6); mm.box(-1.05, y, -1.0, 1.05, y + 0.45, 1.0); mm.ball(0, y + 0.45, 0, 0.8, 0.2, 0.7, 7, 3); };
+  const cordTaut = mm => { mm.mat(MAT.CLOTH, [0.8, 0.74, 0.58], 0.3); mm.beam([-1.72, 0.3, 0], [1.72, 0.3, 0], 0.025, 0.025); mm.beam([1.72, 0.3, 0], [1.72, 1.2, 0.1], 0.02, 0.02); mm.beam([1.72, 1.2, 0.1], [1.1, 2.66, 0.9], 0.02, 0.02); };
+  const ropes = mm => { mm.mat(MAT.CLOTH, [0.55, 0.46, 0.33], 0.3); for (const [x, z] of [[-0.9, -0.9], [0.9, -0.9], [0.9, 0.9], [-0.9, 0.9]]) mm.beam([x, 2.9, z], [x * 0.3, 3.1, z * 0.3], 0.03, 0.03); mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([-1.9, 3.08, 0], [1.9, 3.08, 0], 0.2, 0.2); };
+  const set = mk(mm => { posts(mm); cordTaut(mm); ropes(mm); slab(mm, 2.45); });
+  const sprung = mk(mm => { posts(mm); mm.mat(MAT.CLOTH, [0.8, 0.74, 0.58], 0.3); mm.beam([-1.72, 0.3, 0], [-1.0, 0.04, 0.3], 0.025, 0.025); mm.beam([1.72, 0.3, 0], [0.9, 0.04, -0.2], 0.025, 0.025); ropes(mm); slab(mm, 0.0); mm.mat(MAT.ROCK, [0.4, 0.38, 0.36], 0.5); for (let i = 0; i < 7; i++) mm.ball(-1.0 + i * 0.35, 0.1, (i % 2 ? 1 : -1) * 1.15, 0.2, 0.14, 0.2, 5, 3); });
+  const cut = mk(mm => { posts(mm); mm.mat(MAT.CLOTH, [0.8, 0.74, 0.58], 0.3); mm.beam([-1.72, 0.3, 0], [-1.3, 0.05, 0.2], 0.025, 0.025); mm.beam([1.72, 0.3, 0], [1.4, 0.06, -0.2], 0.025, 0.025); mm.beam([1.72, 0.3, 0], [1.72, 1.2, 0.1], 0.02, 0.02); ropes(mm); slab(mm, 2.45); });
+  MINE.trapItems = [pack.add(set, { kind: 'opaque', cell: 'mine', nearOnly: true, noShadow: true }), pack.add(sprung, { kind: 'opaque', cell: 'mine', nearOnly: true, noShadow: true }), pack.add(cut, { kind: 'opaque', cell: 'mine', nearOnly: true, noShadow: true })];
+  pack.upload('mine-trap'); World.packs.push(pack);
+  World.interact.push({ kind: 'cord', id: 'mine.cord', p: wpos(tx + 1.6, 0.5, tz), r: 2.0, zone: 0, cell: 'mine' });
+  const inner = sceneUpdate; sceneUpdate = function (camPos, q) {
+    inner(camPos, q);
+    if (!MINE.trapMeshes) { MINE.trapMeshes = MINE.trapItems.map(it => (SC.statics.find(s => s.it === it) || {}).mesh); }
+    const st = MINE_S().trap | 0; MINE.trapMeshes.forEach((me, i) => { if (me) me.visible = me.visible && i === st; });
+  };
+}
+// ── the lantern: carried, lit with L, burning oil while the mine is dark; a dry lantern is no light at all ──
+function mineLampOn() { return !!(World.cell && World.cell.id === 'mine' && has('lantern') && S.flags.lampOff !== 1 && MINE_S().oil > 0); }
+function mineTick(dt) {
+  const c = World.cell; if (!MINE.built || !c || c.id !== 'mine') { MINE.lamp.on = false; return; }
+  const ms = MINE_S();
+  if (has('lantern') && S.flags.lampOff !== 1 && ms.oil <= 0) {
+    if (has('oil')) { give('oil', -1); ms.oil = 600; toast('You trim the wick and fill the lantern from a flask.'); } else if (!MINE.lamp.warnedDry) { MINE.lamp.warnedDry = true; toast('The lantern is dry. Without oil the dark is complete.'); }
+  } else if (ms.oil > 0) MINE.lamp.warnedDry = false;
+  const on = mineLampOn(); MINE.lamp.on = on;
+  if (on) { ms.oil = Math.max(0, ms.oil - dt); if (ms.oil < 45 && !MINE.lamp.warnedLow) { MINE.lamp.warnedLow = true; toast('The lantern gutters. It wants oil.'); } if (ms.oil > 90) MINE.lamp.warnedLow = false; }
+  const L = MINE.lamp.light, P = Player.pos, f = [Math.sin(Player.yaw), 0, -Math.cos(Player.yaw)];
+  L.p[0] = P[0] + f[0] * 0.35; L.p[1] = P[1] + 1.35; L.p[2] = P[2] + f[2] * 0.35; L.r = on ? 15 : 2.6; L.c[0] = on ? 10.5 : 0.5; L.c[1] = on ? 6.4 : 0.3; L.c[2] = on ? 2.9 : 0.12;      /* coordinator: at 2.9 the lit lantern showed almost nothing on screen (mean pixel 14 of 255); the carried light must make the tunnel readable for ten metres */
+  MINE.lamp.dark = !on;
+  if (mineTrapCheck) mineTrapCheck();
+}
+function mineTrapCheck() {
+  const ms = MINE_S(); if (ms.trap) return; const O = MINE.O, FY = MINE.FY, P = Player.pos, [tx, tz] = MINE.AT.trap;
+  if (Math.abs(P[0] - (O[0] + tx)) < 1.9 && Math.abs(P[2] - (O[2] + tz)) < 0.3 && P[1] < FY + 0.42) {
+    ms.trap = 1; Snd.event('hit.wood', [P[0], P[1] + 1, P[2]]); setTimeout(() => Snd.event('hit.metal', [P[0], P[1], P[2]]), 120);
+    toast('The cord snaps. A slab of rock comes down on you.'); RPG.damage(24, null, 'fall'); RPG.shake = 1; save();
+  }
+}
+// the lantern key; the cell's dark; the first time through either door the mine counts as open
+document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && game.playing && !Player.locked && World.cell && World.cell.id === 'mine' && has('lantern')) { S.flags.lampOff = S.flags.lampOff === 1 ? 0 : 1; toast(S.flags.lampOff === 1 ? 'You douse the lantern.' : (MINE_S().oil > 0 ? 'You light the lantern.' : 'The lantern is dry.')); } });
+const _ce94 = Cells.env;
+Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.21, 0.155, 0.095]; e.ambGnd = [0.125, 0.09, 0.055]; e.fogDensity = 0.062; } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
+const _cc94 = Cells.change;
+Cells.change = function (c) { _cc94(c); if (c && c.id === 'mine') { if (!S.flags.mineOpen) { S.flags.mineOpen = 1; if (typeof uiObjective === 'function') uiObjective(); } if (has('lantern') && !MINE_S().oil) MINE_S().oil = 600; } };
+const _wa94 = World.waterAt;
+World.waterAt = (x, z) => { if (MINE.built && x > MINE.O[0] + 9 && x < MINE.O[0] + 31 && z > MINE.O[2] + 29 && z < MINE.O[2] + 35) return MINE.FY - 0.06; return _wa94(x, z); };
+// ── use: cut the cord; the Foreman's chest wants his key; Corwin's journal ──
+const _il94 = interactLabel, _iu94 = interactUse;
+interactLabel = function (it) {
+  if (it.kind === 'cord') return (MINE_S().trap | 0) === 0 ? 'Cut the cord' : null;
+  if (it.id === 'mine.chest' && !S.opened[it.id]) return has('foremankey') ? 'Open the Foreman’s strongbox' : 'Strongbox';
+  return _il94(it);
+};
+interactUse = function (it) {
+  if (it.kind === 'cord') { MINE_S().trap = 2; Snd.event('hit.metal', it.p); toast('You cut the cord. The slab stays up on its rope.'); save(); return; }
+  if (it.foremanLock && !S.opened[it.id] && !has('foremankey')) { Audio2.door(0.4); return toast('Locked. A brass lock, worn bright. The man who counted heads will have the key.'); }
+  if (it.journal && !it.gone) { const r = _iu94(it); S.flags.corwin = 1; setTimeout(() => openReader('Corwin’s journal', MINE_JOURNAL), 350); if (typeof mainSync === 'function') mainSync(); save(); return r; }
+  return _iu94(it);
+};
+const MINE_JOURNAL = 'Corwin, miner. Third week of the dry.\n\nI came down for the silver and I have found it, and it is singing.\n\nThe seal at the bottom of the adit was never a seal: the sexton’s key turns it from this side. They put bread out on the slab at the mouth of the deep each dawn. Somebody is eating it. Somebody is counting heads in the dark: one, two, three, all the way to eleven. I make it twelve. Twelve boots stood in a row by the water, and the Foreman standing in front of them, patient.\n\nThe bread stopped coming. I heard the rope stop. I have not been hungry. That frightens me more than the dark does.\n\nIf you read this, go back up. Go to the Hart. The cellar has a way down to the lake shore, and the bread went out by that road. Tell Hale. Tell him the bell.\n\nI will go and ask the Foreman for my shift.';
+// ── scanned rock, roots and timber (kits/dungeon.glb), placed once the kit is ready ──
+const MINE_ROCKS = [['rock_face_02', 1.06, 0.4], ['boulder_01', 0.91, 0.25], ['namaqualand_boulder_03', 1.53, 0.2], ['rock_face_01', 1.91, 0.15]];
+function mineKit() {
+  if (!MINE.built || MINE.kitDone || typeof kitReady !== 'function' || !kitReady() || !Kit.pieces.rock_face_01) return; MINE.kitDone = true;
+  const O = MINE.O, FY = MINE.FY, G = MINE.grid, B = Kit.batch({ name: 'mine', cell: 14 });
+  const add = (n, x, y, z, ry, s, rx) => { if (!Kit.pieces[n]) return; B.add(n, Kit.matrix({ p: [O[0] + x, FY + y, O[2] + z], r: [rx || 0, ry || 0, 0], s: s || 1 }), { zone: 0, skyVis: 0.3, cast: false }); };
+  const NRM = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }, POS = { W: (i, j) => [i, j + 0.5], E: (i, j) => [i + 1, j + 0.5], N: (i, j) => [i + 0.5, j + 1], S: (i, j) => [i + 0.5, j] };
+  const pick = h => { let a = 0; for (const r of MINE_ROCKS) { a += r[2]; if (h < a) return r; } return MINE_ROCKS[0]; };
+  for (const k of ['W', 'E', 'N', 'S']) for (const [i, j] of G.edges[k]) {
+    const h = mhash(i, j, 50 + k.charCodeAt(0)); if (h > 0.14) continue;
+    const r = pick(mhash(i, j, 61)), n = NRM[k], p = POS[k](i, j), s = 0.8 + mhash(i, j, 62) * 0.5, hd = r[1] * s, prot = 0.12 + mhash(i, j, 63) * 0.18;
+    add(r[0], p[0] + n[0] * (prot - hd), -0.15, p[1] + n[1] * (prot - hd), Math.atan2(n[0], n[2]) + (mhash(i, j, 64) < 0.5 ? 0 : PI) * 0, s);
+  }
+  // roots hanging from the roof where the ground above is thin
+  // (roots hung from the roof read as slabs: left out)
+  // the fall across the stope: scanned boulders heaped over the procedural ones
+  { const A = MINE.AT.rubble, nm = ['namaqualand_boulder_04', 'namaqualand_boulder_02', 'boulder_01', 'namaqualand_boulder_03'];
+    for (let layer = 0; layer < 2; layer++) for (let x = A[0][0] + 0.2; x < A[1][0] - 0.4; x += 2.3 - layer * 0.5) for (let z = A[0][1] + 0.4 + layer * 0.5; z < A[1][1] - 0.3; z += 1.5) add(nm[(Math.round(x * 3 + z) & 3)], x + (mhash(x * 9, z * 9, 80) - 0.5) * 0.6, layer * 0.9 - 0.15, z + (mhash(x * 9, z * 9, 81) - 0.5) * 0.5, mhash(x * 9, z * 9, 82) * TAU, 0.95 + mhash(x * 9, z * 9, 83) * 0.5); }
+  // roots along the floor and fallen timber
+  for (const [x, z, r] of [[-11, 31.5, 0.4], [42, 36, 1.2], [12, 59.4, 2], [36.5, 44, 0.3]]) add('single_root', x, 0, z, r, 1.0);
+  add('dead_tree_trunk_02', 33.4, 0, 51.2, 0.5, 1.0); add('dead_tree_trunk_02', 44.5, 1.1, 54.6, 2.3, 0.9); add('dead_tree_trunk_02', 7.5, 0, 35.2, 1.3, 0.7);
+  // the doors: the hillside door's twin standing open at the foot of the adit; a bulkhead leaf folded back at the mouth of the deep
+  add('large_castle_door', 1.15, 0, 1.4, -PI / 2 - 0.35, 1.0); add('large_castle_door', 9.7, 0, 58.2, PI / 2, 1.0);
+  const g = B.build(); g.traverse(o => { if (o.isMesh) { o.layers.set(1); o.castShadow = false; } }); SC.scene.add(g);
+  World.kitGroups = World.kitGroups || []; World.kitGroups.push({ g, interior: true, cell: 'mine' }); MINE.kitCount = B.count;
+}
+const _wa94b = wildsAttach;
+wildsAttach = function () { _wa94b(); try { mineKit(); } catch (e) { console.warn('mine kit: ' + (e && e.stack || e)); } };
+// the objective marker: outside, the door; inside, Corwin's station
+MINE.target = function () { const P = WILDS.P.mine; if (!(World.cell && World.cell.id === 'mine')) return [P.x, 0, P.z]; const w = MINE.wpos(-9.4, 0.8, 66.2); return [w[0], w[1], w[2]]; };
 
 
 // ---- 99_main.js ----

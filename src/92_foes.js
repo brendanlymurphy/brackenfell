@@ -6,6 +6,7 @@ const Foes = (() => {
   const CAMPS = [
     { id: 'pines', label: 'the camp in the pines', x: -96, z: -44, yaw: 0.6, n: 3, leader: { name: 'Outlaw Brute', hp: 84, dmg: 14, scale: 1.09 } },
     { id: 'crag', label: 'the camp below the watchtower', x: -6, z: -100, yaw: 2.5, n: 3, leader: { name: 'Garrick One-Ear', hp: 112, dmg: 17, scale: 1.07, chief: true } },
+    { id: 'mine', cell: 'mine', label: 'the Old Mine', x: 0, z: 0, yaw: 0, n: 0, leash: 140, spawns: [] },       // [q1] the Old Mine (94_mine.js): its people are placed when the mine is built
   ];
   const R4 = ['Ranger_Body', 'Ranger_Arms', 'Ranger_Legs', 'Ranger_Feet'];
   const LOOKS = [
@@ -25,6 +26,7 @@ const Foes = (() => {
   function buildCamps() {
     const pack = new MeshPack(); pack.shadow = true;
     for (const c of CAMPS) {
+      if (c.cell) continue;
       const m = new Mesh(4096), ca = Math.cos(c.yaw), sa = Math.sin(c.yaw);
       const W = (lx, lz) => { const x = c.x + lx * ca - lz * sa, z = c.z + lx * sa + lz * ca; return [x, Terrain.y(x, z), z]; };
       const put = (lx, lz, rot, fn) => { const p = W(lx, lz); m.push().T(p[0], p[1], p[2]).RY(-(c.yaw + (rot || 0))); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); return p; };
@@ -96,6 +98,7 @@ const Foes = (() => {
     prepareChars();
     const r = RPG.st();
     for (const c of CAMPS) {
+      if (c.cell) { spawnMine(c, r); continue; }
       for (let i = 0; i <= c.n; i++) {
         const lead = i === c.n ? c.leader : null, id = c.id + '.' + i, look = Chars.cfg.foeLooks ? (lead ? Chars.cfg.foeLooks.leader : Chars.cfg.foeLooks.list[(i + (c.id === 'crag' ? 2 : 0)) % Chars.cfg.foeLooks.list.length]) : lead ? LEADER : LOOKS[(i + (c.id === 'crag' ? 2 : 0)) % LOOKS.length];
         const sp = i === 0 ? c.watch : c.spots[(i - 1) % c.spots.length];
@@ -112,6 +115,28 @@ const Foes = (() => {
     if (!Chars.group.parent) SC.scene.add(Chars.group);
     F.ready = true; campState();
   }
+  // [q1] the people of the Old Mine: delvers rush, lurkers wait in the dark and are heard before they are seen, the Foreman keeps the deep chamber
+  const MKIND = {
+    delver: { name: 'Delver', hp: 36, dmg: 10, scale: 0.99, sp: 5.6, see: 13, look: { body: 'o_rogue', tint: { tunic: [0.62, 0.68, 0.78], pants: [0.55, 0.58, 0.64] } }, sw: [0.5, 0.6] },
+    lurker: { name: 'Lurker', hp: 30, dmg: 15, scale: 0.94, sp: 6.4, see: 3.4, look: { body: 'o_hood_f', tint: { tunic: [0.3, 0.32, 0.4], pants: [0.35, 0.36, 0.42], head: [0.34, 0.36, 0.44] } }, sw: [0.42, 0.55] },
+    foreman: { name: 'The Foreman', hp: 380, dmg: 24, scale: 1.26, sp: 3.0, see: 15, look: { body: 'o_brute', tint: { tunic: [0.5, 0.55, 0.68], pants: [0.4, 0.42, 0.5] } }, sw: [0.78, 1.1] },
+  };
+  F.MKIND = MKIND;
+  function spawnMine(c, r) {
+    if (typeof MINE === 'undefined' || !MINE.built) return; const O = MINE.O, FY = MINE.FY; c.x = O[0] + 20; c.z = O[2] + 40;
+    MINE.SPAWN.forEach((sp, i) => {
+      const k = MKIND[sp.kind], id = 'mine.' + sp.kind + i, p = [O[0] + sp.x, World.groundAt(O[0] + sp.x, O[2] + sp.z, FY + 4), O[2] + sp.z];
+      const spot = { p, kind: sp.kind === 'lurker' ? 'crouch' : sp.kind === 'foreman' ? 'guard' : 'stand', yaw: sp.yaw || 0 };
+      const f = { id, camp: c, kind: sp.kind, name: k.name, leader: sp.kind === 'foreman', chief: sp.kind === 'foreman', boss: sp.kind === 'foreman', maxHp: k.hp, dmg: k.dmg, scale: k.scale, sp: k.sp, see: k.see,
+        spot, pos: p.slice(), yaw: spot.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0, cueT: rnd(1, 3), bp: 0 };
+      f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
+      const base = Chars.cfg.foeLooks ? k.look : LOOKS[i % LOOKS.length]; f.h = Chars.spawn({ id: 'foe.' + id, foe: base });
+      const sw = new THREE.Mesh(RPG.swordGeo(k.sw[0], k.sw[1]), RPG.gearMat(f.h.uZone, f.h.uLight)); sw.castShadow = false; sw.layers.set(1);
+      const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });
+      if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
+      F.list.push(f);
+    });
+  }
   const FOE_DRAW = 110;        // outlaws farther than this are not drawn at all (and stop posing)
   F.grip = [PI / 2, 0, 0, 0, 0.02, 0.03];       // how a sword sits in the rig's right hand: rotation xyz, offset xyz (hand space)
   F.init = function () {
@@ -124,7 +149,7 @@ const Foes = (() => {
   F.breakOff = function () { F.calm(false); F.target = null; F.attackers = 0; if (typeof RPG !== 'undefined') RPG.combatT = 99; for (const f of F.list) if (f.h && f.h.pivot.visible && f.alive) f.h.pivot.visible = false; };
   function campState() {
     const r = RPG.st(); r.cleared = r.cleared || {};
-    for (const c of CAMPS) { const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
+    for (const c of CAMPS) { if (c.cell) continue; const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
   }
   F.alive = id => F.list.filter(f => f.alive && (!id || f.camp.id === id));
   F.nearest = function (pos, id) { let best = null, bd = 1e9; for (const f of F.list) { if (!f.alive || (id && f.camp.id !== id)) continue; const d = hyp(f.pos[0] - pos[0], f.pos[2] - pos[2]); if (d < bd) { bd = d; best = f; } } return best; };
@@ -133,19 +158,25 @@ const Foes = (() => {
   const release = f => { if (f.token) { f.token = false; F.attackers = Math.max(0, F.attackers - 1); } };
   function stagger(f, dur, hard) { if (!f.alive) return; release(f); f.state = 'stagger'; f.t = 0; f.stagT = dur; f.anim = hard || Math.random() < 0.5 ? 'c-hit2' : 'c-hit'; f.h.curName = ''; }
   function rouse(f, delay) { if (f.alive && (f.state === 'idle' || f.state === 'return')) { f.state = 'notice'; f.t = -(delay || 0); } f.alert = 12; }
-  function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < 34) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
+  function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < (camp.cell ? 12 : 34)) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
   function die(f) {
     const r = RPG.st(); release(f); f.alive = false; f.hp = 0; f.state = 'dead'; f.t = 0; f.anim = Math.random() < 0.5 ? 'c-die' : 'c-die2'; f.h.curName = '';
     r.kills++; r.dead[f.id] = r.day; Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
     const loot = [['gold', Math.round(f.leader ? rnd(22, 34) : rnd(4, 12))]];
     if (Math.random() < 0.45) loot.push([Math.random() < 0.5 ? 'bread' : 'apple', 1]); if (Math.random() < (f.leader ? 1 : 0.18)) loot.push(['potion', 1]);
     if (f.chief) { loot.push(['steelsword', 1]); if (!has('tools') && qAt('tools') !== 99) loot.push(['tools', 1]); } else if (f.leader) loot.push(['ironsword', 1]); else if (Math.random() < 0.1) loot.push(['buckler', 1]);
+    if (f.camp.cell) { loot.length = 0; loot.push(['gold', Math.round(f.boss ? rnd(40, 60) : rnd(3, 9))]); if (f.boss) loot.push(['foremankey', 1]); else if (Math.random() < 0.4) loot.push(['oil', 1]); }
     f.lootIt = { kind: 'loot', id: 'loot.' + f.id, p: [f.pos[0], f.pos[1] + 0.35, f.pos[2]], r: 2.1, zone: 0, name: f.name, loot, foe: f }; World.interact.push(f.lootIt);
     campState(); if (typeof onFoeKilled === 'function') onFoeKilled(f); save();
   }
   function hurt(f, dmg, heavy, from) {
     const dx = f.pos[0] - from[0], dz = f.pos[2] - from[2], l = hyp(dx, dz) || 1;
     alarm(f.camp, f.pos); f.alert = 14;
+    if (f.boss) {       // [q1] the Foreman does not flinch from a blade; he is open to one thing, a charge that ends against stone
+      const stun = f.state === 'b_stun'; f.hp -= dmg * (stun ? 2 : 1); f.hits++; f.kv[0] = dx / l * 0.6; f.kv[1] = dz / l * 0.6;
+      if (f.hp <= 0) { die(f); return false; } if (f.state === 'idle') { f.state = 'b_roar'; f.t = 0; }
+      if (heavy && f.state === 'circle') stagger(f, 0.45, true); return false;
+    }
     // a leader who sees it coming gets steel in the way
     if (f.leader && !heavy && (f.state === 'circle' || f.state === 'chase') && Math.random() < 0.38) { f.state = 'guard'; f.t = 0; f.anim = 'c-block'; f.hp -= dmg * 0.15; f.kv[0] = dx / l * 1.2; f.kv[1] = dz / l * 1.2; if (f.hp <= 0) die(f); return true; }
     f.hp -= dmg; f.hits++; f.kv[0] = dx / l * (heavy ? 4.6 : 2.2); f.kv[1] = dz / l * (heavy ? 4.6 : 2.2);
@@ -176,24 +207,58 @@ const Foes = (() => {
     const p = f.pos, ox = p[0], oz = p[2];
     p[0] += (vx + f.kv[0]) * dt; p[2] += (vz + f.kv[1]) * dt; f.kv[0] *= Math.max(0, 1 - dt * 7); f.kv[1] *= Math.max(0, 1 - dt * 7);
     colResolve(p, 0.3, p[1], p[1] + 1.7);
-    if (World.waterAt(p[0], p[2]) - Terrain.y(p[0], p[2]) > 0.5 || hyp(p[0], p[2]) > WORLD_RADIUS + 6) { p[0] = ox; p[2] = oz; }
+    if (!f.camp.cell && (World.waterAt(p[0], p[2]) - Terrain.y(p[0], p[2]) > 0.5 || hyp(p[0], p[2]) > WORLD_RADIUS + 6)) { p[0] = ox; p[2] = oz; }
     for (const g of F.list) { if (g === f || !g.alive) continue; const dx = p[0] - g.pos[0], dz = p[2] - g.pos[2], d2 = dx * dx + dz * dz; if (d2 < 0.49 && d2 > 1e-6) { const d = Math.sqrt(d2), k = (0.7 - d) / d * 0.5; p[0] += dx * k; p[2] += dz * k; } }
-    p[1] = Terrain.y(p[0], p[2]);
+    if (f.camp.cell) { const gy = World.groundAt(p[0], p[2], p[1] + 0.7); if (gy > -1e8) p[1] = gy; else { p[0] = ox; p[2] = oz; } } else p[1] = Terrain.y(p[0], p[2]);
+  }
+  // [q1] the Foreman: walk in, then slam (a long raised pick, the ground blow lands at 1.1 s: step back), two blows, then a charge (he backs off, roars, runs the line he was facing:
+  // stand behind a column and he crashes into it and is open for three seconds, every hit counting double), two blows, again
+  function bossThink(f, dt, P, d, live, toP, lost) {
+    const fx = Math.sin(f.yaw), fz = -Math.cos(f.yaw), at = [f.pos[0], f.pos[1] + 1.2, f.pos[2]];
+    switch (f.state) {
+      case 'idle': f.anim = 'c-idle'; turn(f, f.spot.yaw, 2, dt); if (live && d < f.see && Math.abs(P[1] - f.pos[1]) < 4) { f.state = 'b_roar'; f.t = 0; Snd.event('foe.shout.deep', at, 1.4); } return true;
+      case 'notice': f.state = 'b_roar'; f.t = 0; return true;
+      case 'b_roar': f.anim = 'c-block'; turn(f, toP, 4, dt); step(f, 0, 0, dt); if (f.t > 1.3) { f.state = 'b_walk'; f.t = 0; f.bp = 0; } return true;
+      case 'b_walk': {
+        if (lost) { f.state = 'return'; f.t = 0; return true; }
+        turn(f, toP, 2.8, dt); const sp = d > 3.2 ? f.sp : 0; f.anim = sp ? 'c-walk' : 'c-idle'; step(f, fx * sp, fz * sp, dt);
+        if ((f.t > 1.4 && d < 5) || f.t > 5) {
+          const nx = ['b_slam', 'melee', 'b_charge', 'melee'][f.bp++ % 4]; f.t = 0; f.hitDone = false; f.h.curName = '';
+          if (nx === 'melee') { f.state = 'circle'; f.cd = 0.2; f.meleeN = 2; } else { f.state = nx; Snd.event('foe.shout.deep', at, 1.4); if (nx === 'b_slam') f.anim = 'c-atk3'; }
+        }
+        return true; }
+      case 'b_slam': {
+        turn(f, toP, f.t < 0.7 ? 2 : 0, dt); step(f, 0, 0, dt);
+        if (!f.hitDone && f.t >= 1.1) { f.hitDone = true; Snd.event('hit.wood', at, 1.6); Audio2.swing(true); if (live && d < 3.7) RPG.damage(f.dmg * 1.4, f); if (d < 12) RPG.shake = Math.max(RPG.shake || 0, 0.55); }
+        if (f.t > 2.5) { f.state = 'b_walk'; f.t = 0; f.anim = 'c-idle'; } return true; }
+      case 'b_charge': {
+        if (f.t < 1.5) { turn(f, toP, 3.2, dt); f.anim = 'c-back'; step(f, -fx * 1.2, -fz * 1.2, dt); f.cdir = f.yaw; return true; }
+        if (f.t < 1.5 + dt * 1.5) { Snd.event('foe.shout.deep', at, 1.6); }
+        const bx = f.pos[0], bz = f.pos[2]; f.anim = 'c-sprint'; step(f, Math.sin(f.cdir) * 9.5, -Math.cos(f.cdir) * 9.5, dt);
+        const mv = hyp(f.pos[0] - bx, f.pos[2] - bz);
+        if (!f.hitDone && live && d < 1.5 && Math.abs(P[1] - f.pos[1]) < 1.6) { f.hitDone = true; RPG.damage(f.dmg * 1.5, f); Player.vel[0] += Math.sin(f.cdir) * 6; Player.vel[2] += -Math.cos(f.cdir) * 6; }
+        if (mv < 9.5 * dt * 0.5 || f.t > 4.2) { f.state = 'b_stun'; f.t = 0; f.h.curName = ''; f.anim = 'c-hit2'; Snd.event('hit.wood', at, 1.8); Snd.event('foe.hurt', at, 1.2); if (d < 14) RPG.shake = Math.max(RPG.shake || 0, 0.7); }
+        return true; }
+      case 'b_stun': step(f, 0, 0, dt); if (f.t > 3.2) { f.state = 'b_walk'; f.t = 0; f.anim = 'c-idle'; f.h.curName = ''; } return true;
+    }
+    return false;
   }
   function think(f, dt, P, d, live) {
     const toP = Math.atan2(P[0] - f.pos[0], -(P[2] - f.pos[2])), home = f.spot.p, dHome = hyp(f.pos[0] - home[0], f.pos[2] - home[2]), camp = f.camp;
-    const lost = !live || inVillage(P[0], P[2]) || hyp(f.pos[0] - camp.x, f.pos[2] - camp.z) > LEASH;
+    const lost = !live || inVillage(P[0], P[2]) || hyp(f.pos[0] - camp.x, f.pos[2] - camp.z) > (camp.leash || LEASH);
     f.t += dt; f.cd -= dt; f.alert -= dt;
+    if (f.boss && bossThink(f, dt, P, d, live, toP, lost)) return;
     switch (f.state) {
       case 'idle': {
-        f.anim = f.spot.kind === 'sit' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
-        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
-        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned) { F.warned = true; toast('Outlaws! They have seen you.'); } }
+        f.anim = f.spot.kind === 'sit' || f.spot.kind === 'crouch' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
+        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
+        if (f.kind === 'lurker' && live && d < 24 && d >= see) { f.cueT -= dt; if (f.cueT <= 0) { f.cueT = rnd(2.2, 4.6); Snd.event(Math.random() < 0.5 ? 'creak' : 'rustle', [f.pos[0], f.pos[1] + 0.4, f.pos[2]], 1.3); } }       // heard before seen
+        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); if (f.kind !== 'lurker') Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned && !camp.cell) { F.warned = true; toast('Outlaws! They have seen you.'); } }
         break; }
-      case 'notice': f.anim = 'c-idle'; if (f.t > 0) turn(f, toP, 6, dt); if (f.t > 0.45) { f.state = 'chase'; f.t = 0; } break;
+      case 'notice': f.anim = 'c-idle'; if (f.t > 0) turn(f, toP, 6, dt); if (f.t > (f.kind === 'lurker' ? 0.12 : f.kind === 'delver' ? 0.3 : 0.45)) { f.state = 'chase'; f.t = 0; } break;
       case 'chase': {
         if (lost) { f.state = 'return'; f.t = 0; break; }
-        turn(f, toP, 7, dt); const sp = f.leader ? 3.9 : 4.5; f.anim = 'c-run'; step(f, Math.sin(f.yaw) * sp, -Math.cos(f.yaw) * sp, dt);
+        turn(f, toP, 7, dt); const sp = f.sp || (f.leader ? 3.9 : 4.5); f.anim = 'c-run'; step(f, Math.sin(f.yaw) * sp, -Math.cos(f.yaw) * sp, dt);
         if (d < 3.0) { f.state = 'circle'; f.t = 0; f.strafeT = rnd(0.8, 2); }
         break; }
       case 'circle': {
@@ -214,7 +279,7 @@ const Foes = (() => {
       case 'attack': {
         const a = f.atk; if (!a.done) { turn(f, toP, 2.6, dt); if (d > 1.5) step(f, Math.sin(f.yaw) * 1.5, -Math.cos(f.yaw) * 1.5, dt); else step(f, 0, 0, dt); } else step(f, 0, 0, dt);
         if (!a.done && f.t >= a.hitT) { a.done = true; if (live && d < 2.4 && Math.abs(angDiff(toP, f.yaw)) < 0.95 && Math.abs(P[1] - f.pos[1]) < 1.6) { RPG.damage(f.dmg * (a.heavy ? 1.35 : 1), f); } else Audio2.swing(false); }
-        if (f.t >= a.end) { release(f); f.state = 'circle'; f.t = 0; f.cd = f.leader ? rnd(0.7, 1.5) : rnd(1.4, 2.8); }
+        if (f.t >= a.end) { release(f); f.state = f.boss && --f.meleeN <= 0 ? 'b_walk' : 'circle'; f.t = 0; f.cd = f.leader ? rnd(0.7, 1.5) : rnd(1.4, 2.8); }
         break; }
       case 'guard': f.anim = 'c-block'; turn(f, toP, 6, dt); step(f, 0, 0, dt); if (f.t > 0.5) { f.state = 'circle'; f.t = 0; f.cd = Math.min(f.cd, 0.25); } break;
       case 'stagger': step(f, 0, 0, dt); if (f.t > f.stagT) { f.state = 'circle'; f.t = 0; f.cd = Math.max(f.cd, 0.35); } break;
@@ -232,11 +297,13 @@ const Foes = (() => {
   }
   F.update = function (dt, rdt) {
     if (!F.ready) return;
-    if (World.cell) { F.target = null; return; }          // outlaws live outdoors: in a cell none is drawn, thought about or posed
+    const here = World.cell ? World.cell.id : null;          // outlaws live outdoors, and the Old Mine's people in the mine (94_mine.js): in any other cell none is drawn, thought about or posed
+    if (here && !F.list.some(g => g.camp.cell === here)) { F.target = null; return; }
     const P = game.playing ? Player.pos : R.cam.pos, live = game.playing && !RPG.dead, st = F.st, r = RPG.st();
     let target = null, tb = 0.55, fight = null;
     for (const f of F.list) {
       if (f.state === 'gone') continue;
+      if ((f.camp.cell || null) !== here) { f.vis = false; if (f.h.pivot.visible) f.h.pivot.visible = false; continue; }
       const d = hyp(f.pos[0] - P[0], f.pos[2] - P[2]);
       f.vis = d < FOE_DRAW;
       if (!f.vis) { if (f.h.pivot.visible) f.h.pivot.visible = false; if (f.alive && f.state !== 'idle') { f.acc += dt; if (f.acc > 0.25) { think(f, f.acc, P, d, live); f.acc = 0; } } continue; }
@@ -252,7 +319,7 @@ const Foes = (() => {
         f.t += fdt;
         if (f.state === 'dead' && (f.t > (f.looted ? 40 : 300)) && d > 30) { f.state = 'gone'; f.h.pivot.visible = false; if (f.lootIt) { const i = World.interact.indexOf(f.lootIt); if (i >= 0) World.interact.splice(i, 1); } continue; }
       }
-      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = 1; st.visible = true; st.cast = d < 32; f.sword.castShadow = st.cast;
+      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = f.camp.cell ? 0.55 : 1; st.visible = true; st.cast = d < 32; f.sword.castShadow = st.cast;
       st.look[0] = 0; st.look[1] = 0;
       Chars.update(f.h, st, fdt * (f.state === 'attack' && f.atk ? f.atk.rate : 1));
     }

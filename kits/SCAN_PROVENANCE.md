@@ -59,3 +59,32 @@ phone-sized pack by `tools/scan/slim.mjs` (list and budgets in `tools/scan/slim.
 | dead_tree_trunk | https://polyhaven.com/a/dead_tree_trunk | Rob Tuytel | ground-cover | dead_tree_trunk |
 | fern_02 | https://polyhaven.com/a/fern_02 | Rico Cilliers, Rob Tuytel | plant | fern_02_a |
 | weed_plant_02 | https://polyhaven.com/a/weed_plant_02 | Rico Cilliers, Rob Tuytel | plant | weed_plant_02_a |
+| ship_pinnace | https://polyhaven.com/a/ship_pinnace | James Ray Cock, Nicolò Zubbini, Rico Cilliers, Yann Kervran | decor | ship_pinnace |
+| mantel_clock_01 | https://polyhaven.com/a/mantel_clock_01 | Rico Cilliers, Yann Kervran | decor | mantel_clock_01 |
+| horse_head | https://polyhaven.com/a/horse_head | Tina | decor | horse_head |
+| bull_head | https://polyhaven.com/a/bull_head | Tina | decor | bull_head |
+| carved_wooden_elephant | https://polyhaven.com/a/carved_wooden_elephant | Greg Zaal | decor | carved_wooden_elephant |
+| seadogs_compass | https://polyhaven.com/a/seadogs_compass | Benny Weimer | prop-small | seadogs_compass |
+| chess_set | https://polyhaven.com/a/chess_set | Riley Queen | prop-small | chess_set |
+| hatchet | https://polyhaven.com/a/hatchet | James Ray Cock, Ulan Cabanilla | tool | hatchet |
+| sledgehammer_01 | https://polyhaven.com/a/sledgehammer_01 | Dylan Guzman | tool | sledgehammer_01 |
+| hand_plane_no4 | https://polyhaven.com/a/hand_plane_no4 | Satyaki Mandal | tool | hand_plane_no4 |
+| bench_vice_01 | https://polyhaven.com/a/bench_vice_01 | Antanas Kep, Yann Kervran | tool | bench_vice_01 |
+| marble_bust_01 | https://polyhaven.com/a/marble_bust_01 | Rico Cilliers | decor | marble_bust_01 |
+| ornate_mirror_01 | https://polyhaven.com/a/ornate_mirror_01 | James Ray Cock | decor | ornate_mirror_01 |
+| fancy_picture_frame_01 | https://polyhaven.com/a/fancy_picture_frame_01 | Rico Cilliers, Rob Tuytel | decor | fancy_picture_frame_01 |
+| book_encyclopedia_set_01 | https://polyhaven.com/a/book_encyclopedia_set_01 | John Malcolm | prop-small | book_encyclopedia_set_01 |
+| Rockingchair_01 | https://polyhaven.com/a/Rockingchair_01 | Jorge Camacho | prop-furniture | rockingchair_01 |
+| GothicCabinet_01 | https://polyhaven.com/a/GothicCabinet_01 | Kirill Sannikov | prop-furniture | gothiccabinet_01 |
+| ClassicNightstand_01 | https://polyhaven.com/a/ClassicNightstand_01 | Kirill Sannikov | prop-furniture | classicnightstand_01 |
+| round_wooden_table_01 | https://polyhaven.com/a/round_wooden_table_01 | Ulan Cabanilla | prop-furniture | round_wooden_table_01 |
+| folding_wooden_stool | https://polyhaven.com/a/folding_wooden_stool | Ulan Cabanilla | prop-furniture | folding_wooden_stool |
+| brass_pot_01 | https://polyhaven.com/a/brass_pot_01 | Rico Cilliers | prop-small | brass_pot_01 |
+| brass_pan_01 | https://polyhaven.com/a/brass_pan_01 | Rico Cilliers | prop-small | brass_pan_01 |
+| metal_jug | https://polyhaven.com/a/metal_jug | Anzor Lezhava | container | metal_jug |
+| antique_ceramic_vase_01 | https://polyhaven.com/a/antique_ceramic_vase_01 | James Ray Cock | prop-small | antique_ceramic_vase_01 |
+| ceramic_vase_01 | https://polyhaven.com/a/ceramic_vase_01 | James Ray Cock | prop-small | ceramic_vase_01 |
+| handsaw_wood | https://polyhaven.com/a/handsaw_wood | Konrad Szałankiewicz | tool | handsaw_wood |
+| antique_estoc | https://polyhaven.com/a/antique_estoc | James Ray Cock, Ulan Cabanilla | weapon | antique_estoc |
+| ornate_medieval_dagger | https://polyhaven.com/a/ornate_medieval_dagger | Sofia Pahaoja | weapon | ornate_medieval_dagger |
+| ornate_war_hammer | https://polyhaven.com/a/ornate_war_hammer | James Ray Cock, Ulan Cabanilla | weapon | ornate_war_hammer |

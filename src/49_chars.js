@@ -11,7 +11,7 @@
 //
 // Game conventions kept: feet at pos, yaw 0 faces -Z and grows clockwise seen from above, animation names as in 77_npc.js.
 const Chars = (() => {
-  const { vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap, Fn } = TSL;
+  const { vec2, vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap, Fn } = TSL;
   const SETS = {};
   const C = { group: new THREE.Group(), set: null, cfg: null, list: [], ready: false, normalMaps: true, merge: !(TEST && TEST.chars === 'split') };   // merge: one mesh and material per villager; false = one per texture (the old way)
   C.group.name = 'villagers';
@@ -113,21 +113,35 @@ const Chars = (() => {
       matOf(m) {
         const k = m.userData && m.userData.kind, n = m.name || '';
         if (k === 'body') return { kind: 'skin', gltf: true, rough: 0.72, oneSided: true, warm: [1.0, 0.9, 0.86] };
-        if (k === 'hair') return { kind: 'hair', gltf: true, rough: 0.6, alpha: 0.18 };
-        if (k === 'brow') return { kind: 'brow', gltf: true, rough: 0.8, alpha: 0.4 };
+        if (k === 'hair') return { kind: 'hair', gltf: true, rough: 0.9, alpha: 0.18 };
+        if (k === 'brow') return { kind: 'brow', gltf: true, rough: 0.8, alpha: 0.22 };
         if (k === 'eye') return { kind: 'eye', gltf: true, rough: 0.3, oneSided: true };
         const part = (PART.find(p => p[0].test(n)) || [0, 'cloth'])[1];
         return { kind: 'cloth', part, gltf: true, rough: 0.88 };
       },
-      texMax(md) { return md.kind === 'skin' ? 512 : md.kind === 'hair' ? 256 : md.kind === 'brow' ? 64 : md.kind === 'eye' ? 128 : /tunic|robe|skirt/.test(md.part) ? 384 : md.part === 'pants' ? 128 : 256; },      // pixel ceiling per texture, on top of gfxTex's tier caps (halved on Low)
+      texMax(md) { return md.kind === 'skin' ? 512 : md.kind === 'hair' ? 256 : md.kind === 'brow' ? 128 : md.kind === 'eye' ? 128 : /tunic|robe|skirt/.test(md.part) ? 384 : md.part === 'pants' ? 128 : 256; },      // pixel ceiling per texture, on top of gfxTex's tier caps (halved on Low)
       faces: 1, scale: 1,
+      // Where things are in the textures every MakeHuman body shares. Skin atlas: u runs down the face (eyes 0.83, nose 0.87, lips 0.905,
+      // chin 0.955), v across it (0.517 is the middle). Eye texture: the two irises' centres and radius. Used to open the mouth, blink
+      // and move the eyes without any face joints (the rig has none).
+      face: { mouth: [0.906, 0.517], lids: [0.482, 0.552], iris: [[0.705, 0.295], [0.29, 0.705]], irisR: 0.118 },
       bones: { hips: 'pelvis', head: 'head', neck: 'neck_01', handR: 'hand_r', handL: 'hand_l', footR: 'foot_r', footL: 'foot_l' },
       anims: ANIMS, once: SETS.quaternius.once.slice(), rate: { hammer: 0.9 }, maxRate: 2.6,
       grip: [1.384, 0.06, -0.916, 0.023, 0.024, 0.014],       // the Quaternius grip carried over by the hand's finger, across and palm axes (tools/humans/README notes)
       look(def) {
         if (def.foe) return { body: def.foe.body, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) };
         const body = BODY[def.id] || def.body || (def.female ? 'f_farmer' : 'm_farmer');          // def.body / def.tint: the inn's regulars (77c_patrons.js) wear other people's bodies in other colours
-        return { body, fit: FIT[body] || 1, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint) };
+        // Clothes by person: the villager's own colours (NPC_DEFS top / legs, chosen for their trade) dye the tunic, robe or dress and the
+        // trousers; headwear and belt come from the same table. People without an entry (inn regulars, passers-by) get muted wool and
+        // linen colours and, some of them, a cap, by their id: the better-off wear deeper dyes, a pouch and a buckle.
+        let h = 0; for (const ch of String(def.id || body)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; const r = k => ((h >>> (k * 5)) % 97) / 97;
+        const POOR = [[0.30, 0.25, 0.19], [0.36, 0.33, 0.27], [0.24, 0.23, 0.21], [0.33, 0.27, 0.17], [0.27, 0.29, 0.22]], RICH = [[0.34, 0.10, 0.09], [0.11, 0.17, 0.33], [0.13, 0.25, 0.15], [0.30, 0.20, 0.34], [0.09, 0.09, 0.10]];
+        const sq = c => { if (!c) return c; const q = c.map(v => v * v), g = 0.3 * q[0] + 0.6 * q[1] + 0.1 * q[2]; return q.map(v => (g + (v - g) * 0.62) * 0.9); };          // the table's colours are written the way the old bodies used them (squared before use); plant dyes are duller than paint, so they are also pulled toward grey
+        const rich = def.wealth !== undefined ? def.wealth : r(0), pal = rich > 0.72 ? RICH : POOR, top = sq(def.top) || (def.tint ? null : pal[Math.floor(r(1) * pal.length)]), legs = sq(def.legs) || [0.10 + r(2) * 0.06, 0.085 + r(2) * 0.05, 0.065 + r(2) * 0.04];
+        const isRobe = /monk|elder/.test(body), dye = def.foe ? null : Object.assign({}, top && !isRobe ? { tunic: top, skirt: top } : {}, top && isRobe && def.top ? { robe: top } : {}, { pants: legs });
+        const hatT = def.hat === 'hood' ? null : def.hat || (def.foe || def.sched ? null : r(3) < 0.3 ? 'cap' : null), HATC = { straw: [0.42, 0.33, 0.15], helmet: [0.17, 0.175, 0.19], kerchief: [0.62, 0.58, 0.48], cap: pal[Math.floor(r(4) * pal.length)], feather: [0.16, 0.22, 0.14] };
+        const acc = { hat: hatT, belt: !isRobe || !!def.belt, pouch: !!def.belt || rich > 0.6, col: [def.hatCol && def.hat !== 'helmet' ? sq(def.hatCol).map(v => v * 0.85) : HATC[hatT] || HATC.cap, def.belt ? sq(def.belt).map(v => v * 0.8) : [0.14, 0.09, 0.055], def.hat === 'helmet' ? HATC.helmet : [0.30, 0.29, 0.27], [0.19, 0.12, 0.07]] };
+        return { body, fit: FIT[body] || 1, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
       },
     });
   }
@@ -152,7 +166,7 @@ const Chars = (() => {
     C.set = S; C.cfg = cfg; C.ready = true; C.name = setName;
     return S;
   };
-  const GL = () => GL.l || (GL.l = new T3X.GLTFLoader());
+  const GL = () => GL.l || (GL.l = T3X.gltf());
   C.ensure = async function (names) {
     const S = C.set; if (!S) throw new Error('Chars.load first');
     const need = [...new Set(names)].filter(n => !S.bodies[n] && S.cfg.bodies[n]);
@@ -176,8 +190,8 @@ const Chars = (() => {
       if (!o.isSkinnedMesh) return;
       if (!B.skel) { B.skel = o.skeleton; B.bindMatrix = o.bindMatrix.clone(); }
       const g = o.parent, part = g && g !== scene && !g.isBone && g.children.length && g.children.every(c => c.isSkinnedMesh) ? g.name : o.name;   // a mesh with several materials loads as a group
-      if (/@lod$/.test(part)) { const k = part.slice(0, -4); (B.lodParts[k] = B.lodParts[k] || []).push(o); return; }      // low-detail copies (tools/chars_lod.mjs) are kept apart
-      (B.parts[part] = B.parts[part] || []).push(o);
+      { const lv = /@(lod|mid|far)$/.exec(part); if (lv) { const k = part.slice(0, -4), L = B.lodParts[lv[1]] || (B.lodParts[lv[1]] = {}); (L[k] = L[k] || []).push(o); return; } }      // lighter copies (tools/chars_lod.mjs: mid, lod, far) are kept apart
+      (B.parts[part] = B.parts[part] || []).push(o); if (o.material && o.material.userData && o.material.userData.kind === 'body') B.skinName = o.material.name;
     });
     if (!B.skel) throw new Error(cfg.bodies[n] + ' has no skinned mesh');
     let a = B.skel.bones[0]; while (a.parent && a.parent !== scene) a = a.parent; B.armature = a;
@@ -227,10 +241,65 @@ const Chars = (() => {
 
   // ── geometry: the chosen parts of a body, merged per material so a villager costs a handful of draws ──
   const ATTR = [['position', 3], ['normal', 3], ['uv', 2], ['skinIndex', 4], ['skinWeight', 4]];
-  function mergedGeometry(S, body, parts, matName, names, lod) {
-    const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|lod' : ''); let g = S.geo.get(key); if (g !== undefined) return g;
-    const src = [], mids = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
+  // ── things worn on top of a body: headwear and a belt, built here to the body's own measure ──
+  // They are part of the villager's one mesh (no extra draw call): each piece hangs on a single joint (head or lower spine) and its
+  // texture coordinate u = 3 + slot tells the material which of the villager's four accessory colours to use (0 headwear, 1 belt, 2 metal, 3 pouch).
+  // acc: { hat: 'cap' | 'straw' | 'kerchief' | 'helmet' | 'feather', belt: true, pouch: true }
+  function accGeometry(S, body, src, acc) {
+    const B = S.bodies[body], bones = B.skel.bones, bi = n => bones.findIndex(b => b.name === n), headI = bi(S.cfg.bones.head), spineI = bi('spine_01');
+    const P = [], UV = [], SI = [], IX = [], v = (x, y, z, slot, bone) => { P.push(x, y, z); UV.push(3 + slot, 0.5); SI.push(bone); return P.length / 3 - 1; };
+    const quad = (a, b, c, d) => IX.push(a, b, c, a, c, d);
+    const pts = []; for (const g of src) { const A = g.attributes.position; for (let i = 0; i < A.count; i++) pts.push([A.getX(i), A.getY(i), A.getZ(i)]); }
+    const pct = (arr, q) => { arr.sort((a, b) => a - b); return arr.length ? arr[Math.min(arr.length - 1, Math.floor(arr.length * q))] : 0; };
+    if (acc.hat && headI >= 0) {
+      let top = -1e9; for (const p of pts) if (Math.abs(p[0]) < 0.2) top = Math.max(top, p[1]);
+      const sl = pts.filter(p => p[1] > top - 0.13 && p[1] < top - 0.045 && Math.abs(p[0]) < 0.16), cx = sl.reduce((a, p) => a + p[0], 0) / sl.length, cz = sl.reduce((a, p) => a + p[2], 0) / sl.length;
+      const rx = pct(sl.map(p => Math.abs(p[0] - cx)), 0.94) + 0.010, rz = pct(sl.map(p => Math.abs(p[2] - cz)), 0.94) + 0.012, t = acc.hat;
+      // a dome from a base ring up over the crown; drop(angle) lowers the base (a kerchief hangs lower at the back)
+      const dome = (y0, h, kx, kz, slot, drop, segs, rings) => { const rows = [];
+        for (let j = 0; j <= rings; j++) { const f = j / rings, ph = f * Math.PI / 2, row = []; for (let i = 0; i < segs; i++) { const th = i / segs * TAU, d = drop ? drop(th) * (1 - f) : 0; row.push(v(cx + Math.cos(th) * rx * kx * Math.cos(ph), y0 - d + (h + d) * Math.sin(ph), cz + Math.sin(th) * rz * kz * Math.cos(ph), slot, headI)); } rows.push(row); }
+        for (let j = 0; j < rings; j++) for (let i = 0; i < segs; i++) quad(rows[j][i], rows[j + 1][i], rows[j + 1][(i + 1) % segs], rows[j][(i + 1) % segs]); };
+      const brim = (y, k0, k1, droop, slot, segs) => { const a = [], b = []; for (let i = 0; i < segs; i++) { const th = i / segs * TAU; a.push(v(cx + Math.cos(th) * rx * k0, y, cz + Math.sin(th) * rz * k0, slot, headI)); b.push(v(cx + Math.cos(th) * (rx * k0 + k1), y - droop, cz + Math.sin(th) * (rz * k0 + k1), slot, headI)); }
+        for (let i = 0; i < segs; i++) quad(a[i], a[(i + 1) % segs], b[(i + 1) % segs], b[i]); };
+      if (t === 'cap' || t === 'feather') { dome(top - 0.050, 0.068, 1.0, 1.0, 0, th => 0.045 * Math.max(0, -Math.sin(th)) + 0.012 * Math.abs(Math.cos(th)), 10, 3); if (t === 'feather') { const a = v(cx + rx * 0.7, top - 0.02, cz, 2, headI), b = v(cx + rx * 0.9, top - 0.03, cz - 0.02, 2, headI), c = v(cx + rx * 0.75, top + 0.12, cz - 0.07, 2, headI); IX.push(a, b, c); } }
+      else if (t === 'straw') { dome(top - 0.048, 0.062, 0.96, 0.96, 0, null, 10, 2); brim(top - 0.046, 0.97, 0.15, 0.03, 0, 12); }
+      else if (t === 'helmet') { dome(top - 0.052, 0.074, 1.03, 1.03, 2, th => 0.02 * Math.max(0, -Math.sin(th)), 10, 3); brim(top - 0.050, 1.03, 0.04, 0.018, 2, 12); }
+      else if (t === 'kerchief') { dome(top - 0.052, 0.070, 1.02, 1.03, 0, th => 0.10 * Math.max(0, -Math.sin(th)) + 0.045 * Math.abs(Math.cos(th)), 12, 3); }
+    }
+    if (acc.belt && spineI >= 0) {
+      // the waist: lower-spine joint's height at rest; the belt follows the body's outline there, a finger's width outside the clothes
+      const m = new THREE.Matrix4().copy(B.skel.boneInverses[spineI]).invert(), yw = m.elements[13] + 0.01, sl = pts.filter(p => Math.abs(p[1] - yw) < 0.03 && Math.abs(p[0]) < 0.24);
+      if (sl.length > 12) { const cx = sl.reduce((a, p) => a + p[0], 0) / sl.length, cz = sl.reduce((a, p) => a + p[2], 0) / sl.length, N = 14, rad = new Array(N).fill(0);
+        for (const p of sl) { const a = Math.atan2(p[2] - cz, p[0] - cx), k = ((Math.round(a / TAU * N) % N) + N) % N; rad[k] = Math.max(rad[k], Math.hypot(p[0] - cx, p[2] - cz)); }
+        const mean = rad.reduce((a, b) => a + b, 0) / N; for (let k = 0; k < N; k++) if (rad[k] < mean * 0.6) rad[k] = Math.max(rad[(k + 1) % N], rad[(k + N - 1) % N], mean * 0.8);
+        const sm = rad.map((r, k) => Math.max(r, (rad[(k + 1) % N] + rad[(k + N - 1) % N]) / 2) + 0.007), lo = [], hi = [];
+        for (let k = 0; k < N; k++) { const th = k / N * TAU; lo.push(v(cx + Math.cos(th) * sm[k], yw - 0.019, cz + Math.sin(th) * sm[k], 1, spineI)); hi.push(v(cx + Math.cos(th) * sm[k], yw + 0.019, cz + Math.sin(th) * sm[k], 1, spineI)); }
+        for (let k = 0; k < N; k++) quad(lo[k], lo[(k + 1) % N], hi[(k + 1) % N], hi[k]);
+        const box = (x, y, z, hx, hy, hz, slot) => { const c = []; for (let i = 0; i < 8; i++) c.push(v(x + (i & 1 ? hx : -hx), y + (i & 2 ? hy : -hy), z + (i & 4 ? hz : -hz), slot, spineI)); for (const f of [[0, 2, 3, 1], [4, 5, 7, 6], [0, 1, 5, 4], [2, 6, 7, 3], [0, 4, 6, 2], [1, 3, 7, 5]]) quad(c[f[0]], c[f[1]], c[f[2]], c[f[3]]); };
+        const kf = Math.round(N / 4), rf = sm[kf]; box(cx, yw, cz + rf + 0.002, 0.013, 0.015, 0.004, 2);                                   // buckle, in front
+        if (acc.pouch) { const k = Math.round(N * 0.11), th = k / N * TAU; box(cx + Math.cos(th) * (sm[k] + 0.018), yw - 0.052, cz + Math.sin(th) * (sm[k] + 0.018), 0.032, 0.040, 0.020, 3); } }
+    }
+    if (!IX.length) return null;
+    const n = P.length / 3, g = new THREE.BufferGeometry(), BA = THREE.BufferAttribute, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4); for (let i = 0; i < n; i++) { si[i * 4] = SI[i]; sw[i * 4] = 1; }
+    g.setAttribute('position', new BA(new Float32Array(P), 3)); g.setAttribute('uv', new BA(new Float32Array(UV), 2)); g.setAttribute('skinIndex', new BA(si, 4)); g.setAttribute('skinWeight', new BA(sw, 4)); g.setIndex(new BA(new Uint16Array(IX), 1)); g.computeVertexNormals();
+    return g;
+  }
+  function mergedGeometry(S, body, parts, matName, names, lod, acc) {
+    const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|' + lod : '') + (acc && names ? '|' + (acc.hat || '') + (acc.belt ? 'b' : '') + (acc.pouch ? 'p' : '') : ''); let g = S.geo.get(key); if (g !== undefined) return g;
+    const src = [], mids = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts[lod] || {} : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
     if (!src.length) { S.geo.set(key, null); return null; }
+    // Behind the lips: a small dark card on the head joint, so an opening mouth shows a mouth and not the street behind the head.
+    // Its texture coordinate (2, 2) is what the material reads as "inside of the mouth". Only the two close-up weights carry it.
+    if (names && (!lod || lod === 'mid') && S.cfg.face) { const B = S.bodies[body], F = S.cfg.face;
+      let skinMid = -1, cx = 0, cy = 0, cz = 0, n = 0;
+      src.forEach((g, i) => { const U_ = g.attributes.uv, P_ = g.attributes.position; if (!U_ || !B.skinName || names[mids[i]] !== B.skinName) return; skinMid = mids[i];
+        for (let v = 0; v < P_.count; v++) if (Math.abs(U_.getX(v) - F.mouth[0]) < 0.006 && Math.abs(U_.getY(v) - F.mouth[1]) < 0.022) { cx += P_.getX(v); cy += P_.getY(v); cz += P_.getZ(v); n++; } });
+      const hi = B.skel ? B.skel.bones.findIndex(b => b.name === S.cfg.bones.head) : -1;
+      if (n && hi >= 0 && skinMid >= 0) { cx /= n; cy /= n; cz /= n; const w = 0.021, h = 0.017, z = cz - 0.011, y = cy - 0.005, g = new THREE.BufferGeometry(), BA = THREE.BufferAttribute;
+        g.setAttribute('position', new BA(new Float32Array([cx - w, y - h, z, cx + w, y - h, z, cx + w, y + h, z, cx - w, y + h, z]), 3)); g.setAttribute('normal', new BA(new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]), 3));
+        g.setAttribute('uv', new BA(new Float32Array([2, 2, 2, 2, 2, 2, 2, 2]), 2)); g.setAttribute('skinIndex', new BA(new Uint16Array([hi, 0, 0, 0, hi, 0, 0, 0, hi, 0, 0, 0, hi, 0, 0, 0]), 4)); g.setAttribute('skinWeight', new BA(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]), 4));
+        g.setIndex(new BA(new Uint16Array([0, 1, 2, 0, 2, 3]), 1)); src.push(g); mids.push(skinMid); } }
+    if (names && acc && (acc.hat || acc.belt) && S.cfg.face) { const B = S.bodies[body], si = names.indexOf(B.skinName); let ag = null; try { ag = si >= 0 ? accGeometry(S, body, src.slice(), acc) : null; } catch (e) { console.warn('accessories for ' + body + ': ' + (e && e.message || e)); } if (ag) { src.push(ag); mids.push(si); } }
     let nv = 0, ni = 0; for (const s of src) { nv += s.attributes.position.count; ni += s.index ? s.index.count : s.attributes.position.count; }
     g = new THREE.BufferGeometry(); const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
     for (const [name, size] of ATTR) {
@@ -245,6 +314,12 @@ const Chars = (() => {
   }
 
   // ── material: the pack's colour maps, lit like the rest of the world (sun from the scene light; sky, bounce and hearths through emissive) ──
+  // average brightness of a texture (linear, 0..1), from an 8 x 8 copy: lets a dye keep the cloth's own light and shade
+  function meanLum(map) {
+    if (map.userData.meanLum) return map.userData.meanLum; let v = 0.3;
+    try { const c = meanLum.cv || (meanLum.cv = document.createElement('canvas')); c.width = c.height = 8; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(map.image, 0, 0, 8, 8); const d = x.getImageData(0, 0, 8, 8).data; let a = 0; for (let i = 0; i < 256; i += 4) a += Math.pow((0.3 * d[i] + 0.6 * d[i + 1] + 0.1 * d[i + 2]) / 255, 2.2); v = Math.max(0.03, a / 64); } catch (e) { }
+    return map.userData.meanLum = v;
+  }
   function makeMaterial(S, H, matName, look, src) {
     const md = S.cfg.materials[matName] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, m = new THREE.MeshStandardNodeMaterial(); m.name = matName;
     let key = (look.maps && look.maps[matName]) || md.map; if (key && typeof key === 'object') key = key[H.body];
@@ -268,13 +343,18 @@ const Chars = (() => {
     const { attribute, abs, Discard, If, frontFacing, normalView, clamp } = TSL;
     const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
     const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
-    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false;
+    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), skinW = float(0), hairW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false, skinI = -1;
+    const F = S.cfg.face || null, UE = F ? U.add(H.uGaze) : U;          // the eye texture is read a little off-centre: that is how the eyes move
     names.forEach((mn, i) => {
       const src = srcOf && srcOf[mn], md = S.cfg.materials[mn] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
       let key = (look.maps && look.maps[mn]) || md.map; if (key && typeof key === 'object') key = key[H.body];
       const map = key ? S.tex[key] : (md.gltf && src && src.map) || null, tint = look.tint && (look.tint[mn] || (md.part && look.tint[md.part]) || (md.kind && look.tint[md.kind])) || [1, 1, 1];
-      const tx = map ? texture(map, U) : null;
-      albedo = albedo.add((tx ? tx.rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
+      const tx = map ? texture(map, md.kind === 'eye' ? UE : U) : null;
+      if (md.kind === 'skin') { skinW = skinW.add(w); skinI = i; } if (md.kind === 'hair') hairW = hairW.add(w);
+      // dyed cloth: the garment keeps its weave and folds (the texture's light and dark) but takes the villager's own colour
+      const dye = md.kind === 'cloth' && look.dye && look.dye[md.part];
+      if (dye && tx) { const ml = meanLum(map); albedo = albedo.add(vec3(dye[0], dye[1], dye[2]).mul(TSL.clamp(tx.rgb.dot(vec3(0.3, 0.6, 0.1)).div(ml), 0.35, 1.9)).mul(w)); }
+      else albedo = albedo.add((tx ? tx.rgb : vec3(1, 1, 1)).mul(vec3(tint[0], tint[1], tint[2])).mul(w));
       rough = rough.add(w.mul(md.rough === undefined ? 0.85 : md.rough));
       if (md.oneSided) one = one.add(w);
       if (md.kind === 'eye') { eyeW = eyeW.add(w); anyEye = true; }
@@ -282,43 +362,90 @@ const Chars = (() => {
       const wm = md.warm || [1, 1, 1]; if (md.warm) anyWarm = true; warm = warm.add(vec3(wm[0], wm[1], wm[2]).mul(w));
       if (C.normalMaps && md.normal && S.tex[md.normal]) { const nm = normalMap(texture(S.tex[md.normal], U)); nrm = nrm ? nrm.add(nm.mul(w)) : nm.mul(w); nw = nw.add(w); }
     });
+    const V_ = SH.U.camPos.sub(positionWorld).normalize(), up = F ? H.uHead.mul(vec3(0, 1, 0)).normalize() : vec3(0, 1, 0);
+    if (F && anyEye) {
+      // Eyes. The stock texture has a pin-point pupil and a flat pale iris, which is what reads as dead. Here: a pupil that opens in the
+      // dark, an iris that deepens toward its rim, whites that are not paper white and fall into shadow under the upper lid.
+      const r = TSL.min(TSL.distance(UE, vec2(F.iris[0][0], F.iris[0][1])), TSL.distance(UE, vec2(F.iris[1][0], F.iris[1][1]))), iris = float(1).sub(TSL.smoothstep(F.irisR * 0.9, F.irisR * 1.04, r));
+      const lum = albedo.dot(vec3(0.3, 0.6, 0.1)), deep = TSL.mix(vec3(lum), albedo, 1.5).mul(TSL.mix(float(1.0), 0.42, TSL.smoothstep(F.irisR * 0.55, F.irisR, r))).mul(0.85);
+      let e = TSL.mix(albedo.mul(vec3(0.80, 0.77, 0.74)), deep, iris);
+      e = e.mul(TSL.smoothstep(H.uPupil.sub(0.006), H.uPupil.add(0.008), r).mul(0.97).add(0.03));
+      e = e.mul(TSL.mix(float(0.42), 1.0, TSL.smoothstep(0.62, 0.05, N.dot(up))));
+      albedo = TSL.mix(albedo, e, eyeW);
+    }
+    let accW = float(0);
+    if (F) { const cav = TSL.step(1.5, U.x).mul(TSL.step(U.x, 2.5)); albedo = TSL.mix(albedo, vec3(0.030, 0.008, 0.007), cav);       // the card behind the lips
+      // worn pieces (accGeometry): u = 3 + slot picks one of the villager's accessory colours; cloth and leather are matt, metal a little less
+      accW = TSL.step(2.5, U.x); const slot = U.x.sub(3), A = H.accCol, ac = TSL.mix(TSL.mix(vec3(A[0][0], A[0][1], A[0][2]), vec3(A[1][0], A[1][1], A[1][2]), TSL.step(0.5, slot)), TSL.mix(vec3(A[2][0], A[2][1], A[2][2]), vec3(A[3][0], A[3][1], A[3][2]), TSL.step(2.5, slot)), TSL.step(1.5, slot));
+      const grain = texture(G.noiseTex, positionWorld.xy.mul(9).add(positionWorld.z.mul(7))).r.mul(0.3).add(0.85);
+      albedo = TSL.mix(albedo, ac.mul(grain), accW); skinW = skinW.mul(cav.oneMinus()).mul(accW.oneMinus()); one = one.mul(accW.oneMinus());
+      rough = TSL.mix(rough, TSL.mix(float(0.92), 0.55, TSL.step(1.5, slot).mul(TSL.step(slot, 2.5))), accW); }
     m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
     let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
     if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
     let emis = albedo.mul(lit);
+    if (F) {
+      // skin: where the sun grazes it the light carries on a little way round, reddened (blood under the skin), and the edge facing away from the eye takes a soft sheen
+      const day = float(1).sub(TSL.step(0.5, H.uZone)).mul(H.uLight), ndl = N.dot(SH.U.sunDir);
+      emis = emis.add(albedo.mul(vec3(1.0, 0.36, 0.22)).mul(SH.U.sunCol).mul(TSL.smoothstep(-0.35, 0.05, ndl).mul(TSL.smoothstep(0.45, 0.05, ndl)).mul(0.11)).mul(day).mul(skinW));
+      const rim = TSL.pow(float(1).sub(TSL.max(N.dot(V_), 0)), float(3));
+      emis = emis.add(SH.hemi(V_.negate().add(vec3(0, 0.6, 0)).normalize(), H.uLight, H.uZone).mul(rim).mul(skinW.mul(0.10).add(hairW.mul(0.32))).mul(albedo.add(0.04)));       // hair catches the sky along its outline instead of one hard blotch
+    }
     if (anyEye) {      // a catch-light: the key light's glint on the wet eye (no specular on the stock eye texture), off indoors where the hemisphere is a lamp-lit room
       const V = SH.U.camPos.sub(positionWorld).normalize(), Hs = SH.U.sunDir.add(V).normalize(), Hs2 = V.add(V.add(vec3(0, 0.8, 0)).normalize()).normalize();      // the key light, and a soft light from above the viewer so a face looking at you always has one
       const day = float(1).sub(H.uZone).mul(H.uLight), glint = TSL.pow(TSL.max(N.dot(Hs), 0), float(130)).mul(0.6).mul(TSL.min(SH.U.sunCol.x.mul(1.4), 1)).add(TSL.pow(TSL.max(N.dot(Hs2), 0), float(24)).mul(0.8)).mul(day).mul(eyeW);
       emis = emis.add(vec3(1, 0.97, 0.9).mul(glint));
     }
     m.emissiveNode = emis;
+    if (F && skinI >= 0) {
+      // Face motion without face joints: skin vertices are moved by where they are in the skin atlas. The jaw (lower lip to chin) drops
+      // with H.uMouth, the upper lip lifts a little, the upper eyelids come down with H.uBlink. Directions are turned by the head joint.
+      const { positionLocal, smoothstep } = TSL, sv = clamp(float(1).sub(abs(mid.sub(skinI))), 0, 1).mul(TSL.step(U.x, 1.5));
+      m.positionNode = Fn(() => {
+        const u = U.x, dv = abs(U.y.sub(F.mouth[1])), p = positionLocal.toVar();
+        If(sv.greaterThan(0.5).and(u.greaterThan(0.80)), () => {
+          const jaw = smoothstep(F.mouth[0] - 0.0015, F.mouth[0] + 0.004, u).mul(smoothstep(0.995, 0.957, u)).mul(smoothstep(0.105, 0.040, dv));
+          const lip = smoothstep(F.mouth[0] - 0.020, F.mouth[0] - 0.009, u).mul(smoothstep(F.mouth[0] - 0.0005, F.mouth[0] - 0.004, u)).mul(smoothstep(0.045, 0.018, dv));
+          const de = TSL.min(abs(U.y.sub(F.lids[0])), abs(U.y.sub(F.lids[1]))), lid = smoothstep(0.821, 0.830, u).mul(smoothstep(0.8405, 0.8365, u)).mul(smoothstep(0.034, 0.022, de));
+          const off = vec3(0, -0.0135, -0.0035).mul(jaw.mul(H.uMouth)).add(vec3(0, 0.0022, 0).mul(lip.mul(H.uMouth))).add(vec3(0, -0.0105, 0.0022).mul(lid.mul(H.uBlink)));
+          p.addAssign(H.uHead.mul(off));
+        });
+        return p;
+      })();
+    }
     return m;
   }
 
   // ── level of detail ──
-  // A body file may carry a low-detail copy of every mesh (tools/chars_lod.mjs, "<mesh>@lod": about a fifth of the triangles, same skeleton and
-  // material). Beyond LOD.dist[tier] metres the villager is drawn with the copy only. The copy is also what casts the sun shadow, always: close
-  // up it sits on a layer only the near shadow map sees (LOD.shadowLayer), so the full mesh never casts and is never drawn twice.
+  // A body file may carry lighter copies of every mesh (tools/chars_lod.mjs: "<mesh>@mid" about 4600 triangles, "@lod" 2200, "@far" 700; same
+  // skeleton and materials). The full body (about 10 000) is drawn inside LOD.dist[tier].hi metres, the mid copy to .mid, the low copy to .lo,
+  // the far copy beyond. The lightest copy the file has is also what casts the sun shadow, always: while the camera draws another copy it sits
+  // on a layer only the near shadow map sees (LOD.shadowLayer), so no body is ever drawn twice at full weight.
   // Far villagers (beyond LOD.slowDist) advance their animation every LOD.slowEvery frames only.
-  const LOD = C.LOD = { dist: { low: 8, medium: 12, high: 20 }, hyst: 1.5, shadowLayer: SHADOW_ONLY_LAYER, slowDist: 45, slowEvery: 3, force: TEST && TEST.charlod !== undefined ? TEST.charlod : -1 };    // force: 0 full mesh only, 1 low only, -1 by distance
+  const LOD = C.LOD = { dist: { low: { hi: 3.5, mid: 7, lo: 16 }, medium: { hi: 4.5, mid: 11, lo: 26 }, high: { hi: 7, mid: 18, lo: 40 } }, hyst: 0.8, shadowLayer: SHADOW_ONLY_LAYER, slowDist: 45, slowEvery: 3, force: TEST && TEST.charlod !== undefined ? TEST.charlod : -1 };    // force: 0 full mesh only, 1 low only, -1 by distance
   function lodMesh(S, H, root, skeleton, B, body, parts, matName, names, mat) {
-    if (!B.lodParts) return;
-    const g = mergedGeometry(S, body, parts, matName, names, true); if (!g) return;
-    const mesh = new THREE.SkinnedMesh(g, mat); mesh.name = 'villager.lod'; mesh.receiveShadow = true; mesh.castShadow = false; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
-    mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true; mesh.visible = false;
-    (H.lods = H.lods || []).push({ hi: H.meshes[H.meshes.length - 1], lo: mesh });
+    if (!B.lodParts) return; const e = { hi: H.meshes[H.meshes.length - 1] }; let any = false;
+    for (const lv of ['mid', 'lod', 'far']) {
+      if (!B.lodParts[lv]) continue; const g = mergedGeometry(S, body, parts, matName, names, lv, H.acc); if (!g) continue;
+      const mesh = new THREE.SkinnedMesh(g, mat); mesh.name = 'villager.' + lv; mesh.receiveShadow = true; mesh.castShadow = false; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
+      mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.0); mesh.frustumCulled = true; mesh.visible = false; e[lv] = mesh; any = true;
+    }
+    if (any) (H.lods = H.lods || []).push(e);
   }
   function lodUpdate(H, d, cast) {
     if (!H.lods) { for (const m of H.meshes) m.castShadow = cast; return; }
-    const far = LOD.force === 1 ? true : LOD.force === 0 ? false : H.far ? d > (LOD.dist[R.qName] || 13) - LOD.hyst : d > (LOD.dist[R.qName] || 13) + LOD.hyst;
-    if (far !== H.far || H.lodCast !== cast) {
-      H.far = far; H.lodCast = cast;
+    const D = LOD.dist[R.qName] || LOD.dist.medium, h = LOD.hyst, was = H.lodLevel === undefined ? 0 : H.lodLevel, up = k => d > D[k] + (was > ['hi', 'mid', 'lo'].indexOf(k) ? -h : h);
+    const level = LOD.force === 1 ? 2 : LOD.force === 0 ? 0 : up('lo') ? 3 : up('mid') ? 2 : up('hi') ? 1 : 0;
+    if (level !== H.lodLevel || H.lodCast !== cast) {
+      H.lodLevel = level; H.lodCast = cast; H.far = level > 0;
       for (const l of H.lods) {
         if (l.mask === undefined) l.mask = l.hi.layers.mask;           // the layers the game gave this villager
-        l.hi.visible = !far; l.hi.castShadow = false;
-        l.lo.visible = far || cast; l.lo.castShadow = cast; l.lo.layers.mask = far ? l.mask : (1 << LOD.shadowLayer);
+        const cam = [l.hi, l.mid || l.hi, l.lod || l.mid || l.hi, l.far || l.lod || l.mid || l.hi][level], sh = l.far || l.lod || l.mid || l.hi;
+        for (const m of [l.hi, l.mid, l.lod, l.far]) if (m) { m.visible = false; m.castShadow = false; }
+        cam.visible = true; cam.layers.mask = l.mask;
+        if (cast) { if (sh === cam) cam.castShadow = true; else { sh.visible = true; sh.castShadow = true; sh.layers.mask = 1 << LOD.shadowLayer; } }
       }
     }
   }
@@ -330,7 +457,7 @@ const Chars = (() => {
     const cfg = S.cfg, look = cfg.look ? cfg.look(def) : {}, body = S.bodies[look.body] ? look.body : Object.keys(S.bodies)[0], B = S.bodies[body];
     const root = cloneBones(B.armature), byName = {}; root.traverse(o => { byName[o.name] = o; });
     const skeleton = new THREE.Skeleton(B.skel.bones.map(b => byName[b.name]), B.skel.boneInverses);
-    const H = { def, set: S, body, root, pivot: new THREE.Group(), skeleton, uZone: uniform(0), uLight: uniform(1), bones: {}, actions: {}, cur: null, curName: '', seed: 0, mats: [], meshes: [] };
+    const H = { def, set: S, body, root, pivot: new THREE.Group(), skeleton, uZone: uniform(0), uLight: uniform(1), uMouth: uniform(0), uBlink: uniform(0), uPupil: uniform(0.05), uGaze: uniform(new THREE.Vector2()), uHead: uniform(new THREE.Matrix3()), bones: {}, actions: {}, cur: null, curName: '', seed: 0, mats: [], meshes: [] };
     for (let i = 0, id = String(def.id || C.list.length); i < id.length; i++) H.seed = (H.seed * 31 + id.charCodeAt(i)) >>> 0;
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p]).sort(), names = new Set();
     for (const p of parts) for (const m of B.parts[p]) names.add(m.material.name);
@@ -338,7 +465,7 @@ const Chars = (() => {
     const nameList = [...names].sort(), srcOf = {};      // the body's own glTF material per name (the 'real' set keeps its textures and kinds there)
     for (const p of parts) for (const m of B.parts[p]) if (!srcOf[m.material.name]) srcOf[m.material.name] = m.material;
     if (C.merge && nameList.length > 1) {
-      const g = mergedGeometry(S, body, parts, null, nameList);
+      H.acc = look.acc || null; H.accCol = (look.acc && look.acc.col) || [[0.3, 0.26, 0.2], [0.14, 0.09, 0.055], [0.30, 0.29, 0.27], [0.19, 0.12, 0.07]]; const g = mergedGeometry(S, body, parts, null, nameList, null, H.acc);
       if (g) {
         const mat = makeMergedMaterial(S, H, nameList, look, srcOf), mesh = new THREE.SkinnedMesh(g, mat);
         mesh.name = 'villager'; mesh.castShadow = mesh.receiveShadow = true; root.add(mesh); mesh.bind(skeleton, B.bindMatrix);
@@ -401,16 +528,21 @@ const Chars = (() => {
     mx.stopAllAction(); mx.uncacheRoot(tmp);
     return m;
   }
-  // ground speed a walking or running clip was animated for, in model units per second: twice the distance one foot covers
-  // front to back, per cycle. Lets the clip be played at the rate that matches how fast the villager really moves.
+  // ground speed a walking or running clip was animated for, in model units per second. Lets the clip be played at the rate that
+  // matches how fast the villager really moves.
   function gait(H, key) {
     const name = clipNameFor(H, key), id = H.body + '/gait/' + name; let v = H.set.measure[id]; if (v !== undefined) return v;
     const clip = clipFor(H.set, H.body, name); v = 0;
     if (clip && clip.duration > 0.05) {
       const tmp = cloneBones(H.set.bodies[H.body].armature), mx = new THREE.AnimationMixer(tmp), foot = tmp.getObjectByName(H.set.cfg.bones.footL), P = new THREE.Vector3();
-      mx.clipAction(clip).play(); let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
-      if (foot) for (let i = 0; i < 24; i++) { mx.setTime(clip.duration * i / 24); tmp.updateMatrixWorld(true); foot.getWorldPosition(P); x0 = Math.min(x0, P.x); x1 = Math.max(x1, P.x); z0 = Math.min(z0, P.z); z1 = Math.max(z1, P.z); }
-      if (foot) v = 2 * Math.max(x1 - x0, z1 - z0) / clip.duration;
+      mx.clipAction(clip).play();
+      // While a foot is planted it travels backward under the body at exactly the speed the body is meant to move forward. So: sample the
+      // cycle, take the frames where the foot is in the lowest quarter of its height, and use the median speed over the ground there.
+      // (The old estimate, twice the foot's front-to-back range per cycle, came out a third too slow for these clips: planted feet slid.)
+      if (foot) { const n = 60, pts = []; for (let i = 0; i <= n; i++) { mx.setTime(clip.duration * i / n); tmp.updateMatrixWorld(true); foot.getWorldPosition(P); pts.push([P.x, P.y, P.z]); }
+        let lo = 1e9, hi = -1e9; for (const q of pts) { lo = Math.min(lo, q[1]); hi = Math.max(hi, q[1]); }
+        const sp = []; for (let i = 0; i < n; i++) if (Math.max(pts[i][1], pts[i + 1][1]) <= lo + (hi - lo) * 0.25) sp.push(Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][2] - pts[i][2]) / (clip.duration / n));
+        sp.sort((a, b) => a - b); v = sp.length ? sp[sp.length >> 1] : 0; }
       mx.stopAllAction(); mx.uncacheRoot(tmp);
     }
     return H.set.measure[id] = v;
@@ -424,6 +556,28 @@ const Chars = (() => {
     bone.quaternion.premultiply(_p).premultiply(_q).premultiply(_pi);
   }
 
+  // ── faces: mouth from the spoken line's loudness, blinking, eyes that move ──
+  const _m4 = new THREE.Matrix4(), _mi = new THREE.Matrix4();
+  function faceUpdate(H, st, dt, dcam) {
+    const F = H.face || (H.face = { open: 0, blinkT: 1 + (H.seed % 7) * 0.6, blink: 0, gx: 0, gy: 0, tx: 0, ty: 0, sacT: 0.5, hi: H.skeleton.bones.indexOf(H.bones.head) });
+    // the head joint's skinning matrix, in the body's own space: turns "down the face" into where down is for this pose (one frame old, which is plenty)
+    const hb = H.bones.head; if (hb && F.hi >= 0) { _mi.copy(H.root.matrixWorld).invert(); _m4.multiplyMatrices(_mi, hb.matrixWorld).multiply(H.skeleton.boneInverses[F.hi]); H.uHead.value.setFromMatrix4(_m4); }
+    // mouth: the line being spoken has a loudness value every 50 ms (audio/voice/manifest.json); with no sound (a bark, or sound off) a talking villager mumbles
+    let tgt = 0; const vx = typeof Snd !== 'undefined' && Snd.vox, cur = vx && vx.cur, id = H.def && H.def.id;
+    if (H.mouthTest !== undefined) tgt = H.mouthTest;
+    else if (cur && cur.speaker === id && cur.env && cur.env.length) { const t = Snd.now() - cur.t0, i = t / 0.05, e = cur.env, a = e[Math.max(0, Math.min(e.length - 1, Math.floor(i)))] || 0, b = e[Math.max(0, Math.min(e.length - 1, Math.floor(i) + 1))] || 0, v = (a + (b - a) * (i - Math.floor(i))) / 99;
+      tgt = t < 0 || t > cur.dur ? 0 : Math.min(1, Math.pow(Math.max(0, v - 0.04) * 2.6, 0.75)); }
+    else if (st.talking || (vx && vx.barkH && vx.barkH === cur && cur.speaker === id)) { const t = (typeof game !== 'undefined' ? game.time : 0) + H.seed; tgt = Math.max(0, 0.42 + 0.4 * Math.sin(t * 11.3) * Math.sin(t * 3.9 + 1) + 0.18 * Math.sin(t * 23)); }
+    F.open += (tgt - F.open) * Math.min(1, dt * (tgt > F.open ? 26 : 16)); H.uMouth.value = F.open;
+    // blink: every few seconds, 0.13 s shut; asleep the eyes stay shut
+    F.blinkT -= dt; if (F.blinkT < 0) F.blinkT = 2.2 + ((H.seed * 7.13 + (typeof game !== 'undefined' ? game.time : 0) * 3.1) % 4.2);
+    const lying = st.anim === 'lie'; H.uBlink.value = H.blinkTest !== undefined ? H.blinkTest : lying ? 1 : F.blinkT < 0.13 ? Math.sin(F.blinkT / 0.13 * Math.PI) : 0;
+    // eyes: small jumps every second or so; talking to the player they come back to the middle (the head is already turned to the player)
+    F.sacT -= dt; if (F.sacT < 0) { F.sacT = 0.6 + ((H.seed * 3.7 + F.gx * 91) % 1.9 + 1.9) % 1.9; const k = st.talking ? 0.25 : 1; F.tx = (((H.seed * 12.9 + F.sacT * 78.2) % 2 + 2) % 2 - 1) * 0.011 * k; F.ty = (((H.seed * 5.3 + F.sacT * 37.7) % 2 + 2) % 2 - 1) * 0.005 * k; }
+    F.gx += (F.tx - F.gx) * Math.min(1, dt * 30); F.gy += (F.ty - F.gy) * Math.min(1, dt * 30);
+    if (H.gazeTest) H.uGaze.value.set(H.gazeTest[0], H.gazeTest[1]); else H.uGaze.value.set(F.gy, F.gx);          // in the eye texture, u runs up and down the eye and v across it
+    H.uPupil.value = 0.040 + 0.022 * (typeof ENV !== 'undefined' ? (st.zone ? 0.8 : ENV.night) : 0);
+  }
   // ── per frame ──
   C.update = function (H, st, dt) {
     const cfg = H.set.cfg, pv = H.pivot;
@@ -432,7 +586,12 @@ const Chars = (() => {
     const key = st.talking ? (lying ? 'lie' : seated ? (cfg.anims['sit+talk'] ? 'sit+talk' : 'sit') : 'talk') : base;
     play(H, key);
     const s = st.scale || 1, k = (cfg.scale || 1) * s * H.fit;
-    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1; H.cur.setEffectiveTimeScale(st.speed > 0 && g > 0.2 ? Math.min(Math.max(st.speed / g, 0.6), cfg.maxRate || 1.8) : rate); }
+    // Feet: the clip is played at the rate at which its planted foot moves backward exactly as fast as the villager moves forward. The speed
+    // is measured from how far the villager really moved (callers only pass a nominal figure, and people slow down in turns and at doors).
+    { const lp = H.lastP, mv = lp && dt > 1e-4 ? Math.hypot(st.pos[0] - lp[0], st.pos[2] - lp[2]) / dt : -1; H.lastP = [st.pos[0], st.pos[1], st.pos[2]];
+      if (mv >= 0 && mv < 12) H.realSpeed = H.realSpeed === undefined ? mv : H.realSpeed + (mv - H.realSpeed) * Math.min(1, dt * 8); }
+    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1, sp = TEST && TEST.feetnominal ? st.speed : (H.realSpeed !== undefined && dt > 0 ? H.realSpeed : st.speed);
+      H.cur.setEffectiveTimeScale(sp > 0.05 && g > 0.2 ? Math.min(Math.max(sp / g * ((TEST && TEST.feetk) || 1), 0.25), cfg.maxRate || 1.8) : sp !== undefined && sp <= 0.05 && dt > 0 ? 0.25 : rate); }
     const dcam = hyp(st.pos[0] - R.cam.pos[0], st.pos[1] - R.cam.pos[1], st.pos[2] - R.cam.pos[2]);
     if (dcam > LOD.slowDist && H.seed % LOD.slowEvery !== R.frame % LOD.slowEvery) H.slowDt = (H.slowDt || 0) + dt;      // far away: the pose changes on one frame in a few
     else { H.mixer.update(dt + (H.slowDt || 0)); H.slowDt = 0; }
@@ -451,6 +610,7 @@ const Chars = (() => {
     }
     lodUpdate(H, dcam, st.cast === undefined ? !!H.cast : st.cast); H.cast = st.cast === undefined ? H.cast : st.cast;
     H.uZone.value = st.zone || 0; H.uLight.value = st.light === undefined ? 1 : st.light;
+    if (cfg.face && dcam < 14) faceUpdate(H, st, dt, dcam);
     // Head look. The mixer only rewrites a joint when its animated value changed, so a turn added last frame may still be in the
     // joint: take it out again before adding this frame's.
     const lk = st.look, nb = H.bones.neck, hb = H.bones.head, L = H.lookState || (H.lookState = [nb, hb].map(() => ({ base: new THREE.Quaternion(), mine: new THREE.Quaternion(), on: false })));
