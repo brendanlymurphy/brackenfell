@@ -85,3 +85,39 @@ The user wants it as realistic as possible, like Skyrim: simple shapes, photogra
 - **Weather** (`50b_weather.js`): `Weather.set('fair' | 'overcast' | 'rain' | 'auto')`, `--opt weather=rain`. Writes `Env.cover`,
   `Env.mist`, `Env.rain`; `ENV.wet` drives the terrain (dark ground, pools, rings, lamp shine). Rain is particle kind 4. The sequence
   is a fixed function of game time; the first three minutes are always fair.
+
+## Where the frame goes (fork-perf, measured at Build 41)
+
+`node test/shot.mjs --opt webgl=1 --opt quality=medium --do "window.__cat=true; $(cat test/perf_views.js)"` prints this for the four
+budget views (square, alley, terrace, lake). One frame = camera pass + near sun-shadow map + wide sun-shadow map. A test redraws the
+wide map every frame; the game redraws it every third frame on medium and every fourth on low, so its share is smaller in play.
+Budget: medium 220 draw calls / 380k triangles, low 140 / 200k.
+
+Totals at Build 41 (draw calls / triangles):
+
+| Tier | Square | Alley | Terrace | Lake |
+|---|---|---|---|---|
+| medium | 280 / 566k | 328 / 583k | 244 / 434k | 280 / 440k |
+| low | 215 / 317k | 264 / 347k | 199 / 260k | 231 / 269k |
+
+Medium, by category, draw calls / thousand triangles (camera + near shadow + wide shadow where they differ from zero):
+
+| Category | Square | Alley | Terrace | Lake |
+|---|---|---|---|---|
+| Houses and kit batches, full detail | 73 / 170 | 83 / 192 | 56 / 131 | 22 / 90 |
+| Houses, distant copies | 20 / 3 | 44 / 7 | 16 / 2 | 87 / 19 |
+| Kit instances (plants, tufts, repeated props) | 13 / 29 | 15 / 31 | 4 / 8 | 13 / 20 |
+| Generated props and yard things | 31 / 36 + 10 / 29 near shadow | 30 / 33 + 15 / 38 | 38 / 34 + 19 / 31 | 26 / 36 + 7 / 16 |
+| Terrain | 35 / 59 | 35 / 59 | 32 / 55 | 38 / 65 |
+| Grass | 1 / 45 | 1 / 45 | 1 / 45 | 1 / 45 |
+| Trees | 16 / 33 + 2 / 1 near + 6 / 23 wide | 17 / 36 + 4 / 3 + 7 / 24 | 16 / 31 + 3 / 2 + 8 / 24 | 19 / 42 + 2 / 2 + 8 / 24 |
+| Boulders and bushes | 9 / 21 + 7 / 19 near + 2 / 1 wide | 8 / 22 + 9 / 22 + 3 / 1 | 7 / 12 + 6 / 15 + 3 / 1 | 11 / 24 + 6 / 16 + 3 / 1 |
+| Characters | 19 / 51 + 10 / 23 near | 26 / 36 + 5 / 11 | 1 / 2 + 8 / 19 | 10 / 14 + 1 / 2 |
+| Water | 6 / 15 | 6 / 15 | 6 / 15 | 6 / 15 |
+| Sky, particles, view model, other | 16 / 5 + 4 / 4 shadow | same | same | same |
+
+What stands out: full-detail houses are a third of the triangles and a quarter of the draw calls in town; kit batches cast no sun
+shadow at all (the shadow passes hold only props, boulders, trees and people); terrain is 32 to 38 draw calls whatever the view;
+grass is a flat 45k on medium; the wide shadow map spends 23k triangles on tree stand-ins; props and boulders cost almost as much
+again in the near shadow map as in the camera pass. On low the same views are terrain 59k, trees 28k + 23k, houses 64k to 106k.
+
