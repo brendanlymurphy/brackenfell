@@ -38,7 +38,7 @@ const Chars = (() => {
     const lin = c => c.map(v => v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
     // multipliers over the pack's one mid-tone skin texture and its grey hair texture
     const SKIN_T = { fair: [1.36, 1.42, 1.50], rosy: [1.40, 1.34, 1.36], tan: [1.08, 1.08, 1.08], brown: [0.72, 0.68, 0.66], deep: [0.46, 0.42, 0.40] };
-    const HAIR_C = { black: [0.13, 0.11, 0.10], brown: [0.32, 0.20, 0.12], auburn: [0.52, 0.24, 0.12], blond: [0.80, 0.64, 0.34], grey: [0.62, 0.61, 0.60], white: [0.90, 0.89, 0.86], red: [0.66, 0.26, 0.10] };
+    const HAIR_C = { black: [0.13, 0.11, 0.10], brown: [0.32, 0.20, 0.12], auburn: [0.52, 0.24, 0.12], blond: [0.80, 0.64, 0.34], grey: [0.58, 0.57, 0.55], white: [0.80, 0.78, 0.73], red: [0.66, 0.26, 0.10] };
     const hairTint = n => { const c = lin(HAIR_C[n] || HAIR_C.brown), g = (c[0] + c[1] + c[2]) / 3; return c.map(v => Math.min((v * 0.75 + g * 0.25) / 0.27 * 0.8, 2.2)); };
     const P = ['Peasant_Body', 'Peasant_Arms', 'Peasant_Legs', 'Peasant_Feet'], R = ['Ranger_Body', 'Ranger_Arms', 'Ranger_Legs', 'Ranger_Feet'], FACE = ['HeadSkin', 'Eyes', 'Brows'];
     // who wears what. Outfit pieces: P peasant, R ranger; maps pick the pack's alternative colourways; tints stay muted and natural.
@@ -282,7 +282,7 @@ const Chars = (() => {
         for (let i = 0; i < segs; i++) quad(a[i], a[(i + 1) % segs], b[(i + 1) % segs], b[i]); };
       if (t === 'cap' || t === 'feather') { dome(top - 0.050, 0.068, 1.0, 1.0, 0, th => 0.045 * Math.max(0, -Math.sin(th)) + 0.012 * Math.abs(Math.cos(th)), 10, 3); if (t === 'feather') { const a = v(cx + rx * 0.7, top - 0.02, cz, 2, headI), b = v(cx + rx * 0.9, top - 0.03, cz - 0.02, 2, headI), c = v(cx + rx * 0.75, top + 0.12, cz - 0.07, 2, headI); IX.push(a, b, c); } }
       else if (t === 'straw') { dome(top - 0.048, 0.062, 0.96, 0.96, 0, null, 10, 2); brim(top - 0.046, 0.97, 0.15, 0.03, 0, 12); }
-      else if (t === 'helmet') { dome(top - 0.052, 0.074, 1.03, 1.03, 2, th => 0.02 * Math.max(0, -Math.sin(th)), 10, 3); brim(top - 0.050, 1.03, 0.04, 0.018, 2, 12); }
+      else if (t === 'helmet') { dome(top - 0.085, 0.100, 1.04, 1.04, 2, th => 0.02 * Math.max(0, -Math.sin(th)), 12, 4); brim(top - 0.083, 1.04, 0.028, 0.030, 2, 14); }      // [ch1] sits down on the brow instead of hovering
       else if (t === 'kerchief') { dome(top - 0.052, 0.086, 1.07, 1.08, 0, th => 0.10 * Math.max(0, -Math.sin(th)) + 0.045 * Math.abs(Math.cos(th)), 12, 3); }
     }
     if (acc.belt && spineI >= 0) {
