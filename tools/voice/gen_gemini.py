@@ -1,7 +1,7 @@
 # Generates the voice files listed in plan.json with Google's Gemini 3.1 Flash TTS (hosted), then trims, normalises and encodes each to mono
 # AAC .m4a, exactly like gen.py does for Kokoro. Needs an API key in the environment variable GEMINI_API_KEY (never put the key in the repo
 # or on the command line) and network access to generativelanguage.googleapis.com.
-# usage:  python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json OUTDIR [--limit N] [--only speaker] [--sample]
+# usage:  python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json OUTDIR [--limit N] [--only speaker] [--sample] [--partial]
 #   OUTDIR is audio/voice for the real thing, or a scratch folder with --sample (one mid-length line per speaker, joined into OUTDIR/sample.m4a).
 # Files that exist are skipped (resumable). File names hash the speaker, Gemini voice, direction and text, so a changed casting regenerates.
 # NOT YET RUN AGAINST THE LIVE API (written without a key): check the request shape against https://ai.google.dev/gemini-api/docs/speech-generation
@@ -27,13 +27,15 @@ def tts(text, voice, direction):
     for attempt in range(6):
         try:
             with urllib.request.urlopen(req, timeout=120) as r: j = json.load(r)
-            part = j['candidates'][0]['content']['parts'][0]['inlineData']
-            return np.frombuffer(base64.b64decode(part['data']), dtype='<i2').astype(np.float32) / 32768.0, 24000
+            part = next(q['inlineData'] for q in j['candidates'][0]['content']['parts'] if 'inlineData' in q)       # the audio part (mimeType audio/L16;codec=pcm;rate=24000)
+            rate = int((part.get('mimeType', '').split('rate=') + ['24000'])[1].split(';')[0] or 24000)
+            return np.frombuffer(base64.b64decode(part['data']), dtype='<i2').astype(np.float32) / 32768.0, rate
         except urllib.error.HTTPError as e:
-            msg = e.read().decode('utf8', 'replace')[:300]
+            msg = e.read().decode('utf8', 'replace')[:900]
+            if e.code == 429 and 'per_day' in msg: sys.exit('Daily request limit for this model reached (' + text[:40] + '...). Run again after it resets: finished files are kept. ' + msg[-120:].replace('\n', ' '))
             if e.code in (429, 500, 503): time.sleep(8 * (attempt + 1)); continue       # rate limit (the free tier is slow) or a hiccup: wait and retry
             sys.exit('Gemini API error %d: %s' % (e.code, msg))
-        except (KeyError, IndexError): time.sleep(4); continue                         # an empty candidate now and then: ask again
+        except (KeyError, IndexError, StopIteration): time.sleep(4); continue                         # an empty candidate now and then: ask again
     sys.exit('gave up on: ' + text[:60])
 
 def encode(x, sr, dst):
@@ -67,6 +69,20 @@ if sample:
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', w, '-c:a', 'aac', '-b:a', '64k', os.path.join(out, 'sample.m4a')], check=True); print('wrote', os.path.join(out, 'sample.m4a')); sys.exit(0)
 
 mf = os.path.join(out, 'manifest.json'); man = { 'v': 1, 'lines': {}, 'barks': plan['barks'] }; done = 0; keep = set()
+if '--partial' in args:
+    # No API calls. For each character, the conversation lines switch to Gemini once all of them have a file, and likewise the barks
+    # (the short calls in passing); every other line keeps the manifest's current (Kokoro) file. Use while a run is waiting for the
+    # daily limit; a later full run finishes the job. Until then a character can converse in one voice and call out in the other.
+    old = json.load(open(mf)); name_of = {}; by = {}
+    for p in todo:
+        c = cast.get(p['speaker']) or cast['narrator']
+        name_of[p['key']] = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'
+        by.setdefault((p['speaker'], p['kind']), []).append(p)
+    ready = sorted(g for g, ps in by.items() if all(os.path.exists(os.path.join(out, name_of[p['key']])) for p in ps)); n = 0
+    for p in todo:
+        if (p['speaker'], p['kind']) in ready: d, e = analyse(os.path.join(out, name_of[p['key']])); old['lines'][p['key']] = { 'f': name_of[p['key']], 'd': d, 'e': e, 's': p['speaker'] }; n += 1
+    json.dump(old, open(mf + '.tmp', 'w'), separators=(',', ':')); os.replace(mf + '.tmp', mf)
+    print('%d lines now Gemini:' % n, ', '.join('%s %ss' % g for g in ready) or 'none'); print('still Kokoro:', ', '.join('%s %ss' % g for g in sorted(set(by) - set(ready)))); sys.exit(0)
 for p in todo:
     c = cast.get(p['speaker']) or cast['narrator']
     name = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'; dst = os.path.join(out, name); keep.add(name)
@@ -75,8 +91,9 @@ for p in todo:
         x, sr = tts(p['say'], c['voice'], c['direction']); tmp = dst + '.part.m4a'; encode(x, sr, tmp); os.replace(tmp, dst); done += 1
         print('%s %s [%d]' % (p['speaker'], name, done), flush=True)
     d, e = analyse(dst); man['lines'][p['key']] = { 'f': name, 'd': d, 'e': e, 's': p['speaker'] }
-    json.dump(man, open(mf + '.tmp', 'w'), separators=(',', ':')); os.replace(mf + '.tmp', mf)
+    json.dump(man, open(mf + '.tmp', 'w'), separators=(',', ':')); os.replace(mf + '.tmp', os.path.join(out, 'manifest.partial.json'))      # the game's own manifest is only replaced when the set is complete (below): a half-finished run must not leave lines without a file
 missing = len(todo) - len(man['lines'])
+if not missing and not only: os.replace(os.path.join(out, 'manifest.partial.json'), mf)
 print('done: %d generated, %d of %d lines in the manifest%s' % (done, len(man['lines']), len(todo), '' if missing else '; every line has a file'))
 if not missing and not only:                                                             # only once the set is complete: drop the old engine's files
     for f in os.listdir(out):

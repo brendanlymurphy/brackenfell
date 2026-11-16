@@ -25,7 +25,8 @@ harness details, publishing checklist), `ROADMAP.md` (what is done, in progress,
 - The list that must pass before anything is published:
   - `--opt webgl=1 --opt quality=low --do "$(cat test/quest.js)"` ends with `fire 99 bonfire true`
   - with `--opt play=1`: `test/stairs.js` (prints `stairs PASS`), `test/combat.js` (kills an outlaw), `test/wilds.js` (PASS, 14 pickups),
-    `test/voice_game.js` and `test/audio_game.js` (print PASSED), `test/cells.js` in chunks (put
+    `test/voice_game.js` and `test/audio_game.js` (print PASSED), `test/npcstairs.js` (villagers reach their beds), `test/npcsep.js`
+    (no two people in one spot), `test/cells.js` in chunks (put
     `window.__cells=['inn','chapel']; window.__noRest=true;` before the script: a software-rendered tab dies after about a dozen)
   - `node test/parity.mjs`, `test/interiors.js` (interiors keep every quest object; placement validator)
   - once on WebGPU (no `webgl` option): a `game.shot` in the square and inside the inn with `window.__gpuErrors().length === 0`
@@ -75,13 +76,17 @@ Lines are generated offline with Kokoro-82M (Apache 2.0) and shipped as AAC file
 (`'bm_george:0.5+am_onyx:0.5'`) make distinct voices. Speech is played dry: never route it through reverb. Any new spoken text must go
 in the same tables, then regenerate.
 
-The owner finds Kokoro too artificial (it scores about 1055 in the Artificial Analysis blind-listening arena; hosted leaders score
-about 1200). The replacement path is ready but has not been run: `tools/voice/gen_gemini.py` with `tools/voice/cast_gemini.json`
-(Gemini 3.1 Flash TTS, one prebuilt voice and a one-line acting direction per character). It needs `GEMINI_API_KEY` in the
-environment (never in the repo or the chat) and network access to generativelanguage.googleapis.com. First run
-`python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json /tmp/vsample --sample`, give the owner
-`/tmp/vsample/sample.m4a` to approve by ear, then run it with `audio/voice` as the output folder, run `node tools/voice/check.mjs`
-and `test/voice_game.js`, and push.
+The owner rejected Kokoro as too artificial (about 1055 in the Artificial Analysis blind-listening arena; hosted leaders are about
+1200) and approved Gemini 3.1 Flash TTS by ear. Voices now come from `tools/voice/gen_gemini.py` with `tools/voice/cast_gemini.json`
+(model `gemini-3.1-flash-tts-preview`, one prebuilt voice and a one-line acting direction per character). The key is a network
+secret on the cloud environment for generativelanguage.googleapis.com (header `x-goog-api-key`), so nothing is needed on the machine;
+only an environment that has that secret can generate. The key allows 100 speech requests per model per day: the script stops
+cleanly at the limit and resumes on the next run; `--partial` switches finished groups in the manifest without calling the API;
+`--sample` makes one clip per character for the owner to approve. State at Build 36: 79 conversation lines of 13 characters are
+Gemini; barks and the lines of Bram, Hilda, Ivo and Pip have no audio (subtitles only) until the rest is generated on branch
+`fork-voice`: the old-engine files were removed so the two engines are never heard together. `audio/voice/manifest.json` lists only
+lines that have audio. `tools/voice/check.mjs` still expects all 172 files and a pace tuned for Kokoro (0.11 s per character): widen
+it for Gemini once the owner has judged the three lines it flags as slow. Only the owner's ear counts for voice quality.
 
 ## Working with several agents at once
 

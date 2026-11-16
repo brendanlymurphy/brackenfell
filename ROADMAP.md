@@ -23,6 +23,12 @@ interiors lit by hearths and candles. As realistic as free art allows.
   tuning, interact highlight, map, journal, settings pages, camera feel, dawn opening; indoor flicker fixes (coplanar faces, cells
   moved near the origin, tighter depth range); inn regulars made distinct, one person per spot, hand props (lute, hammer, spears, mugs).
 
+- **29 to 31** Denser inn and chapel; dense town (128 infill houses in lanes); fork-look: first-person sword, night windows and
+  glows, scanned trees, one wind, weather.
+- **32 to 35** Two real lights per room; QA sweep and `docs/DEFECTS.md`; wilds fixes; interior windows with sky and lattice;
+  village defect fixes (clear door approaches, forecourts, plank doors, nets, plank wall variation).
+- **36** Gemini voices for the conversation lines of 13 characters; old-engine audio removed.
+
 ## In progress (branch, owner)
 
 - **Town with levels** (`fork-v2`): cost first; then an upper ward on a terrace, a lower quay level, alleys and covered passages,
