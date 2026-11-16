@@ -315,22 +315,39 @@ function pStairEmit(P, s) {
 // Called from navBuild (77_npc.js) for every planned house. Walls are never crossed: spots join their room's hub, hubs join through doorways, levels through stairs.
 function planNav(P, add, link, doorNode) {
   const hub = {}, N = Nav.nodes, L0 = P.lv[0];
-  for (const id in P.rooms) { const r = P.rooms[id], p = pCentre(r), L = P.lv[r.k]; hub[id] = add(...P.w2(p[0], L.y + 0.02, p[1])); }
+  // [c4] a walk between two points of one level never crosses a stairwell opening (the floor is not there: a walker fell to the level below) or the steps of a stair:
+  // such a link is bent round the blocking rectangle through the nearest clear corner
+  const blockers = k => P.holes.filter(h => h.k === k).map(h => h.r).concat(P.items.filter(i => i.k === k && i.kind === 'stair'));
+  const hit = (k, a, b) => { const bl = blockers(k), n = Math.max(2, Math.ceil(Math.hypot(a[0] - b[0], a[1] - b[1]) / 0.15)); for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); for (const r of bl) if (x > r.x0 + 0.02 && x < r.x1 - 0.02 && z > r.z0 + 0.02 && z < r.z1 - 0.02) return true; } return false; };
+  const linkSafe = (k, na, pa, nb, pb) => {
+    if (!hit(k, pa, pb)) { link(na, nb); return; }
+    const L = P.lv[k], cands = []; for (const r of blockers(k)) { const g = 0.7; for (const x of [r.x0 - g, r.x1 + g]) for (const z of [r.z0 - g, r.z1 + g]) cands.push([x, z]); }
+    cands.sort((u, v) => Math.hypot(u[0] - pa[0], u[1] - pa[1]) + Math.hypot(u[0] - pb[0], u[1] - pb[1]) - Math.hypot(v[0] - pa[0], v[1] - pa[1]) - Math.hypot(v[0] - pb[0], v[1] - pb[1]));
+    for (const c of cands) { if (pRoomAt(P, k, c[0], c[1]) && !hit(k, pa, c) && !hit(k, c, pb)) { const nc = add(...P.w2(c[0], L.y + 0.02, c[1])); link(na, nc); link(nc, nb); return; } }
+    for (const c of cands) for (const d of cands) if (c !== d && pRoomAt(P, k, c[0], c[1]) && pRoomAt(P, k, d[0], d[1]) && !hit(k, pa, c) && !hit(k, c, d) && !hit(k, d, pb)) { const n1 = add(...P.w2(c[0], L.y + 0.02, c[1])), n2 = add(...P.w2(d[0], L.y + 0.02, d[1])); link(na, n1); link(n1, n2); link(n2, nb); return; }
+    link(na, nb);
+  };
+  const hubAt = {};
+  for (const id in P.rooms) {
+    const r = P.rooms[id], L = P.lv[r.k]; let p = pCentre(r); const bl = blockers(r.k), inB = q => bl.some(b => q[0] > b.x0 - 0.3 && q[0] < b.x1 + 0.3 && q[1] > b.z0 - 0.3 && q[1] < b.z1 + 0.3);
+    if (inB(p)) { let best = null; for (let x = r.in.x0 + 0.5; x < r.in.x1 - 0.4; x += 0.5) for (let z = r.in.z0 + 0.5; z < r.in.z1 - 0.4; z += 0.5) if (!inB([x, z]) && (!best || Math.hypot(x - p[0], z - p[1]) < best.d)) best = { x, z, d: Math.hypot(x - p[0], z - p[1]) }; if (best) p = [best.x, best.z]; }
+    hubAt[id] = p; hub[id] = add(...P.w2(p[0], L.y + 0.02, p[1]));
+  }
   for (const d of P.doors) {
     const L = P.lv[d.k], k = add(...P.w2(d.x, L.y + 0.02, d.z));
-    if (d.b === null) { const dn = doorNode[P.id]; if (dn) { link(dn.i, k); link(k, hub[d.a]); } }
-    else { link(hub[d.a], k); link(k, hub[d.b]); }
+    if (d.b === null) { const dn = doorNode[P.id]; if (dn) { link(dn.i, k); linkSafe(d.k, k, [d.x, d.z], hub[d.a], hubAt[d.a]); } }
+    else { linkSafe(d.k, hub[d.a], hubAt[d.a], k, [d.x, d.z]); linkSafe(d.k, k, [d.x, d.z], hub[d.b], hubAt[d.b]); }
   }
   const stairSpot = new Set(); for (const s of P.stairs) { stairSpot.add(s.name + '0'); stairSpot.add(s.name + '1'); }
-  for (const name in P.spots) { if (stairSpot.has(name)) continue; const sp = P.spots[name], k = Nav.spot[P.id + '.' + name]; if (k === undefined) continue; const r = pRoomAt(P, sp.k, sp.x, sp.z); if (r) link(k, hub[r.id]); }
+  for (const name in P.spots) { if (stairSpot.has(name)) continue; const sp = P.spots[name], k = Nav.spot[P.id + '.' + name]; if (k === undefined) continue; const r = pRoomAt(P, sp.k, sp.x, sp.z); if (r) linkSafe(sp.k, k, [sp.x, sp.z], hub[r.id], hubAt[r.id]); }
   for (const s of P.stairs) {
     const a = Nav.spot[P.id + '.' + s.name + '0'], b = Nav.spot[P.id + '.' + s.name + '1']; if (a === undefined || b === undefined) continue;
     const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]);
     link(a, b);
     // a walker leaves a stair by stepping aside first (never straight across the stairwell)
-    const side = (pt, r, k) => { if (!r) return null; const c = pCentre(r), sg = s.axis === 'x' ? (c[1] > s.lat ? 1 : -1) : (c[0] > s.lat ? 1 : -1), off = s.hw + 0.95, L = P.lv[k]; return add(...P.w2(s.axis === 'x' ? pt[0] : pt[0] + sg * off, L.y + 0.02, s.axis === 'x' ? pt[1] + sg * off : pt[1])); };
+    const side = (pt, r, k) => { if (!r) return null; const c = pCentre(r), sg = s.axis === 'x' ? (c[1] > s.lat ? 1 : -1) : (c[0] > s.lat ? 1 : -1), off = s.hw + 0.95, L = P.lv[k], q = s.axis === 'x' ? [pt[0], pt[1] + sg * off] : [pt[0] + sg * off, pt[1]]; return { n: add(...P.w2(q[0], L.y + 0.02, q[1])), q }; };
     const wa = side(s.lowPt, ra, s.k0), wb = side(s.highPt, rb, s.k1);
-    if (wa) { link(a, wa); link(wa, hub[ra.id]); } if (wb) { link(b, wb); link(wb, hub[rb.id]); }
+    if (wa) { link(a, wa.n); linkSafe(s.k0, wa.n, wa.q, hub[ra.id], hubAt[ra.id]); } if (wb) { link(b, wb.n); linkSafe(s.k1, wb.n, wb.q, hub[rb.id], hubAt[rb.id]); }
   }
   P.hub = hub;
 }
@@ -376,6 +393,9 @@ function planValidate(P) {
   for (const id in P.rooms) if (!seen.has(id)) out.push('room ' + id + ' cannot be reached from the street door');
   for (const id in P.rooms) { const r = P.rooms[id]; if (r.kind === 'closet' || r.kind === 'corridor') continue; if (!r.doors.length && !P.stairs.length) out.push('room ' + id + ' has no door'); }
   for (const id in P.rooms) { const r = P.rooms[id]; if (r.k === 0 && r.kind === 'corridor' && Math.min(r.x1 - r.x0, r.z1 - r.z0) < 1.5) out.push('corridor ' + id + ' is narrower than 1.1 m clear'); }
+  // [c4] sleepers: every resident scheduled to lie down in this building has a bed anchor of their own (a spot that lies), in a room reachable from the street door
+  { const own = {}; for (const d of NPC_DEFS) for (const r of d.sched) { if (r[2] !== 'lie') continue; for (const sp of [].concat(r[1])) if (typeof sp === 'string' && sp.startsWith(P.id + '.')) {
+      const w = World.spots[sp]; if (!w || !w.lie) out.push(d.id + ' sleeps at ' + sp + ' which is not a bed anchor'); else { if (own[sp] && own[sp] !== d.id) out.push(d.id + ' and ' + own[sp] + ' share the bed ' + sp); own[sp] = d.id; const rm = pRoomAt(P, w.k || 0, ...(() => { const q = P.spots[sp.slice(P.id.length + 1)]; return q ? [q.x, q.z] : [0, 0]; })()); if (rm && !seen.has(rm.id)) out.push(sp + ' is in an unreachable room'); } } } }
   // lit: every room has a window, a hearth, a candle or a lamp
   for (const id in P.rooms) { const r = P.rooms[id]; if (!P.lightIn || !P.lightIn[id]) out.push('room ' + id + ' has no visible light source'); }
   return out;

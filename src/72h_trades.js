@@ -17,7 +17,7 @@ const pdShelfTall = (len, h, lv, fill) => m => Props.shelf(m, len, h, lv, 0.34, 
 // a row of tall shelves along a wall from u0 to u1 (floor to ceiling, stocked with `kinds`); returns how many fitted
 function pShelfRun(P, room, side, u0, u1, kinds, o) {
   o = o || {}; const c = P.c, H = Math.min(P.lv[room.k].H - 0.35, 2.7); let n = 0;
-  for (let u = u0; u + 1.8 <= u1 + 1e-6; u += 1.9) if (pAgainst(P, room, side, P.id + '.' + (o.id || 'wall') + side + n, 1.8, 0.34, H, +1, pdShelfTall(1.8, H, o.lv || 5, o.bolts ? PD.bolts(c, 1.8, o.cols) : o.books ? PD.books(c, 1.8) : o.mixed ? PD.mixed(c, 1.8, o.mixed) : stockFill(c, kinds)), { at: u + 0.9, lowOk: false })) n++;
+  for (let u = u0; u + 1.8 <= u1 + 1e-6; u += 1.9) if (pAgainst(P, room, side, P.id + '.' + (o.id || 'wall') + side + n, 1.8, 0.34, H, +1, pdShelfTall(1.8, H, o.lv || 5, o.bolts ? PD.bolts(c, 1.8, o.cols) : o.books ? PD.books(c, 1.8) : PD.mixed(c, 1.8, o.mixed || PD.WARES.store)), { at: u + 0.9, lowOk: false })) n++;
   return n;
 }
 // the stair pair every two-storey trade plan needs is declared by hand (the rooms differ); this places loose stock in a room by name
@@ -155,7 +155,7 @@ PLANS.smithy = (P, c, info) => {
 PLANS.elder = (P, c, info) => {
   const R = P.R, id = P.id; P.dims = { W: 14, D: 14, Dh: 9 };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, 3.8); pLevel(P, 1, 3.8 + PW.SLAB, H_UP);
-  pRoom(P, 0, 'hall', 'hall', -7, 0, 7, 9); pRoom(P, 0, 'study', 'study', -7, 9, 0, 14); pRoom(P, 0, 'stairhall', 'corridor', 0, 9, 7, 14);
+  pRoom(P, 0, 'hall', 'hall', -7, 0, 7, 9, { floor: 'stone' }); pRoom(P, 0, 'study', 'study', -7, 9, 0, 14); pRoom(P, 0, 'stairhall', 'corridor', 0, 9, 7, 14);
   pRoom(P, 1, 'chamber', 'bedroom', 0, 9, 7, 14, { skipWin: ['x9'] }); pRoom(P, 1, 'solar', 'bedroom', -7, 9, 0, 14, { skipWin: ['x9'] });
   pRoom(P, -1, 'strongroom', 'cellar', 0, 9, 7, 14, { floor: 'stone', win: false });
   pDoor(P, 'hall', null, 0, 0); pDoor(P, 'hall', 'stairhall', 3.5, 9); pDoor(P, 'hall', 'study', -3.5, 9); pDoor(P, 'chamber', 'solar', 0, 11.5);

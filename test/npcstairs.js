@@ -4,6 +4,7 @@
 const out = [], fails = [];
 const n = NPCS[0];
 function run(from, to, minY, maxY) {
+  npcClaimReset();          // [c4] the walker is not a resident: a sleeper already in the bed (Rowan until 8:00) must not turn the bed into a ring of standing places
   n.path = null; n.talking = false; npcArrive(n, from, 'idle'); n.goal = from; n.override = [[0, to, 'idle']];
   let t = 0, lo = 1e9, hi = -1e9;
   for (; t < 120 && (n.path || n.goal !== to || n.at !== to); t += 0.1) { npcUpdate(0.1, [9999, 0, 9999]); lo = Math.min(lo, n.pos[1]); hi = Math.max(hi, n.pos[1]); if (n.goal === to && n.at === to) break; }
@@ -15,7 +16,7 @@ function run(from, to, minY, maxY) {
 for (const st of World.stairs) {
   const fy = World.houses[st.site].floorY;
   for (const name in World.spots) {
-    const sp = World.spots[name]; if (sp.site !== st.site || sp.p[1] < fy + 1.5 || name === st.top || st.via.includes(name)) continue;
+    const sp = World.spots[name]; if (name.includes('#') || sp.site !== st.site || sp.p[1] < fy + 1.5 || name === st.top || st.via.includes(name)) continue;
     run(st.bottom, name); run(name, st.bottom);
   }
 }
