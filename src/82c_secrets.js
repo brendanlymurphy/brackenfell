@@ -21,7 +21,8 @@ const secFlag = id => !!(S.flags && S.flags['sec_' + id]);
 const secCount = () => SEC.list.filter(s => secFlag(s.sec)).length;
 // a prop that is a skinned mesh (so it can sit in a cell, move, and hide): the builder draws it at the origin facing +z
 function secProp(fn, p, yaw, o) {
-  o = o || {}; const m = new Mesh(o.cap || 1200); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; fn(m);
+  o = o || {}; const m = new Mesh(o.cap || 1200); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; const nc = World.colliders.length, nl = World.lights.length, ne = World.emitters.length; fn(m);
+  World.colliders.length = nc; World.lights.length = nl; World.emitters.length = ne;          // [fx1] the builder draws at the origin: anything it registers (crate and barrel colliders, lights, emitters) would sit by the bonfire, not on the prop
   const mi = World.skinPack.add(m), obj = addSkinned(mi, { c: p.slice(), r: o.r || 1.6, zone: o.zone || 0, kind: 'misc', cell: o.cell, light: o.light === undefined ? 1 : o.light });
   secPlace(obj, p, yaw); return obj;
 }
