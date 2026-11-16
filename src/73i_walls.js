@@ -120,7 +120,7 @@ function buildBell(K, touch) {
   for (const k of [0, 1, 2, 3]) for (const z of cz) { const x0 = k % 2 ? WX0 : EX1 - 3, x1 = k % 2 ? WX0 + 3 : EX1; beam([x0, L[k] - 0.2, z], [x1, L[k + 1] - 0.2, z], 0.12, 0.14); beam([x0, L[k + 1] - 0.2, z], [x1, L[k] - 0.2, z], 0.1, 0.12); }
   // the cladding (Build 42): a stone foot and weatherboard between the posts, slit windows at each landing, a door on the west: the frame reads as a tower from the square, not as scaffolding
   for (let k = 0; k < 4; k++) {
-    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.3, st = k === 0, mat = st ? MAT.STONE : MAT.PLANKS, c = st ? [0.86, 0.83, 0.78] : [0.8 + 0.02 * k, 0.7 + 0.02 * k, 0.56], ys = [[y0, L[k] + 1.25], [L[k] + 1.75, y1]];
+    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.3, st = k === 0, mat = st ? MAT.STONE : MAT.PLASTER, c = st ? [0.86, 0.83, 0.78] : [0.95, 0.9 - 0.02 * k, 0.8 - 0.02 * k], ys = [[y0, L[k] + 1.25], [L[k] + 1.75, y1]];
     for (const [ya, yb] of ys) {
       if (yb - ya < 0.1) continue;
       box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.2, EX1 - 0.02, yb, ZN0 - 0.12, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZS1 + 0.12, EX1 - 0.02, yb, ZS1 + 0.2, 0);
@@ -137,13 +137,13 @@ function buildBell(K, touch) {
   rl(WX0, EX1, ZN0 - 0.1, L[4]); rl(X1, EX1, ZS1 + 0.1, L[4]); rl(WX0, X0, ZS1 + 0.1, L[4]); rl(ZN0, ZS1, WX0 + 0.1, L[4], true); rl(ZN0, ZS1, EX1 - 0.1, L[4], true);
   for (const k of [1, 2, 3]) { if (k === 2) { rl(ZN0, ZS1, WX0 + 0.1, L[k], true); rl(WX0, X0, ZN0 - 0.1, L[k]); rl(WX0, X0, ZS1 + 0.1, L[k]); } else { rl(ZN0, ZS1, EX1 - 0.1, L[k], true); rl(X1, EX1, ZN0 - 0.1, L[k]); rl(X1, EX1, ZS1 + 0.1, L[k]); } }
   // the hip roof, the bell, a tally board
-  { const ye = top, yr = ye + 1.9, x0 = WX0 - 0.6, x1 = EX1 + 0.6, z0 = ZN0 - 0.7, z1 = ZS1 + 0.7, xm = (x0 + x1) / 2, zm = (z0 + z1) / 2, m = M(xm, zm); m.mat(MAT.SHINGLE, [0.46, 0.42, 0.38], 0.5);
+  { const ye = top, yr = ye + 2.0, x0 = WX0 - 1.2, x1 = EX1 + 1.2, z0 = ZN0 - 1.3, z1 = ZS1 + 1.3, xm = (x0 + x1) / 2, zm = (z0 + z1) / 2, m = M(xm, zm); m.mat(MAT.SHINGLE, [0.62, 0.56, 0.5], 0.5);
     m.quad2([x0, ye, z0], [x1, ye, z0], [xm + 0.4, yr, zm], [xm - 0.4, yr, zm]); m.quad2([xm - 0.4, yr, zm], [xm + 0.4, yr, zm], [x1, ye, z1], [x0, ye, z1]);
     m.quad2([x0, ye, z0], [xm - 0.4, yr, zm], [xm - 0.4, yr, zm], [x0, ye, z1]); m.quad2([x1, ye, z0], [x1, ye, z1], [xm + 0.4, yr, zm], [xm + 0.4, yr, zm]);
     m.mat(MAT.TIMBER, dark, 0.5); m.cbox(xm, yr, zm, 0.12, 0.7, 0.12, 4);
     beam([WX0, top - 0.1, zm], [EX1, top - 0.1, zm], 0.2, 0.24);
-    m.mat(MAT.METAL, [0.58, 0.42, 0.18], 0.4); m.push().T(xm, top - 1.9, zm); m.lathe([[0.14, 1.0], [0.2, 0.85], [0.34, 0.45], [0.5, 0.0], [0.45, -0.05]], 12, 0); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.ball(0, -0.18, 0, 0.07, 0.07, 0.07, 6, 4); m.pop();
-    beam([xm, top - 0.1, zm], [xm, top - 0.92, zm], 0.05, 0.05); }
+    m.mat(MAT.METAL, [0.58, 0.42, 0.18], 0.4); m.push().T(xm, top - 1.45, zm); m.lathe([[0.14, 1.0], [0.2, 0.85], [0.34, 0.45], [0.5, 0.0], [0.45, -0.05]], 12, 0); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.ball(0, -0.18, 0, 0.07, 0.07, 0.07, 6, 4); m.pop();
+    beam([xm, top - 0.1, zm], [xm, top - 0.45, zm], 0.05, 0.05); }
   K.lantern((WX0 + EX1) / 2 + 0.9, L[4] + 2.3, ZN0 + 0.1, 0.7); K.lantern(WX0 + 0.5, L[2] + 2.2, ZS1 - 0.2); K.lantern(EX1 - 0.5, L[1] + 2.2, ZN0 + 0.2);
   World.emitters.push({ type: 'torch', p: [WX0 + 0.3, L[4] + 1.6, ZN0 + 0.4], zone: 0, size: 0.18 });
   K.read(9.0, L[4] + 0.9, 18.0, 2.4, 'bell.view', 'The Watchman’s Mark', 'A compass rose burnt into the rail, and the watchman’s own notes beside it. NORTH: the chapel hill and the crag, and the old tower on its rock, with a thread of smoke. EAST: the river, the mill wheel turning, the bridge and its new gate. SOUTH: the roofs falling away to Mirrormere and the white of the Wharf. WEST: the road out, the smithy’s smoke, and the pass. At night you can count a dozen windows. By dawn, none.');

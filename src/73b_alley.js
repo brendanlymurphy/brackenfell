@@ -279,7 +279,7 @@ function alleyDress(B, B2, R) {
   // ── bunting across the street ──
   const shopAt = id => AL.shops.find(s => s.a.id === id);
   const pt = (id, wx, y) => { const s = shopAt(id); if (!s) return null; if (s.house) { const si = SITE[id], z = si.z + (si.yaw === PI ? 1 : -1) * (si.d / 2 + 0.12); return [wx, si.y + y, z]; } const sgn = s.site.yaw === PI ? -1 : 1; return wpos(s.MS, (wx - s.site.x) * sgn, y, -s.d / 2 - 0.55); };
-  const flags = [[0.72, 0.2, 0.16], [0.85, 0.75, 0.5], [0.2, 0.34, 0.55], [0.82, 0.55, 0.2], [0.3, 0.5, 0.3]];
+  const flags = [[0.5, 0.27, 0.23], [0.64, 0.58, 0.44], [0.3, 0.36, 0.46], [0.58, 0.44, 0.24], [0.34, 0.4, 0.3]];      // Build 42: faded
   for (const [i1, x1, y1, i2, x2, y2] of [['shop.n3', 42.2, 5.2, 'shop.s2', 45.2, 5.4], ['shop.n4', 48.0, 6.4, 'shop.s2', 47.4, 5.0], ['draper', 31.6, 5.4, 'shop.s1', 30.8, 6.2], ['shop.n2', 38.0, 6.6, 'shop.s1', 33.0, 6.4]]) {
     const A_ = pt(i1, x1, y1), B_ = pt(i2, x2, y2); if (!A_ || !B_) continue;
     B.add(genBunting(A_, B_, R, flags, 12), I, OUT);
