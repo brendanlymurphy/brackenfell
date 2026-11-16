@@ -15276,7 +15276,7 @@ const Snd = {
     for (let i = 0; i < 64; i++) d[n - 1 - i] *= i / 64; S.buf.ks[key] = b; return b;
   },
   pluck(out, t, f, v, o) { const c = this.c, s = c.createBufferSource(), g = c.createGain(); o = o || {}; s.buffer = this.ks(f, o.dur || 1.6, o.bright === undefined ? 0.6 : o.bright); g.gain.value = v; s.connect(g); g.connect(out); s.start(t); return g; },
-  now() { return this.fakeNow !== undefined ? this.fakeNow : this.c.currentTime; },
+  now() { return this.fakeNow !== undefined ? this.fakeNow : (this.c ? this.c.currentTime : 0); }      // no audio context yet (before the first tap, or sound unavailable): the clock reads 0 and never throws (the lip-sync update calls this every frame),
   rnd(a, b) { return a + Math.random() * (b - a); },
   pick(a) { return a[Math.floor(Math.random() * a.length)]; },
 };
