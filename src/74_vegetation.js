@@ -144,7 +144,7 @@ function buildVegetation() {
     if (r < 200 && blocked(x, z, 1.0)) continue;
     addRock(x, z, 0.25 + Math.pow(R(), 2.2) * 2.0);
   }
-  for (let s = 20; s < River.len - 30; s += 4.5) { const p = River.point(s); if (hyp(p[0], p[1]) > 200) continue; for (const side of [-1, 1]) { if (R() < 0.6) continue; const o = 4.6 + R() * 2.2, x = p[0] - p[3] * o * side, z = p[1] + p[2] * o * side; if (Math.abs(x - BRIDGE.x) < 10 && Math.abs(z - BRIDGE.z) < 5) continue; if (SITES.some(st => { const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 2.5 && Math.abs(l[1]) < st.d / 2 + 2.5; })) continue; addRock(x, z, 0.3 + R() * 0.8); } }
+  for (let s = 20; s < River.len - 30; s += 4.5) { const p = River.point(s); if (hyp(p[0], p[1]) > 200) continue; for (const side of [-1, 1]) { if (R() < 0.6) continue; const o = 4.6 + R() * 2.2, x = p[0] - p[3] * o * side, z = p[1] + p[2] * o * side; if (Math.abs(x - BRIDGE.x) < 10 && Math.abs(z - BRIDGE.z) < 5) continue; if (Roads.some(r => r.path && r.line.dist(x, z, 3) < 2.6)) continue; /* Build 33: nothing on a wilds path or footbridge approach */ if (SITES.some(st => { const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 2.5 && Math.abs(l[1]) < st.d / 2 + 2.5; })) continue; addRock(x, z, 0.3 + R() * 0.8); } }
   for (let i = 0; i < 40; i++) { const a = R() * TAU, r = 7 + R() * 16, x = SITE.tower.x + Math.cos(a) * r, z = SITE.tower.z + Math.sin(a) * r; if (Roads[2].line.dist(x, z, 3) < 2.5) continue; addRock(x, z, 0.4 + R() * 1.6); }
 
   World.vegInst = inst;
