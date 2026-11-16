@@ -245,7 +245,7 @@ function infShell(B, h, lo) {
   if (!lo) {
     if (h.chimney) {          // a chimney that rises through the roof (stack, flashing, cap)
       const cx = rx ? (h.chimney > 0 ? 1 : -1) * w * 0.28 : 0, cz = rx ? zc : d * 0.2 * (h.chimney > 0 ? 1 : -1) + zc * 0, top = infChimney(B, MS, { x: cx, z: cz, top: Ytop, tanP, hs: (rx ? d : w) / 2, ridgeX: rx, zc: rx ? zc : 0 });
-      if (INFS.nChim++ % 3 === 0) World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, top + 0.2, cz).applyMatrix4(MS).toArray(), zone: 0 });
+      if (INFS.nChim++ % 3 === 0) World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, top + 0.2, cz).applyMatrix4(MS).toArray(), zone: 0, thin: true });
     }
     // front: flower boxes under upper windows, a lantern by the door, a sheltering gallery with an outside stair on some
     const Ff = F0.front, nF = Math.max(1, Math.round(w / 2)), mF = w / nF;
