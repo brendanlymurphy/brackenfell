@@ -22,7 +22,7 @@ SH.WINMAX = 6;
         const d = wp.sub(P.xyz), d2 = dot(d, d), r2 = P.w.mul(P.w);
         If(d2.lessThan(r2), () => {
           const f = float(1).sub(d2.div(r2)), dn = d.mul(max(d2, 1e-4).inverseSqrt());
-          const lobe = smoothstep(-0.12, 0.5, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
+          const lobe = smoothstep(-0.9, 0.45, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
           const ndl = max(dot(N, dn.negate()).mul(0.7).add(0.3), 0);                 // surfaces that face the glass catch more
           acc.addAssign(C.rgb.mul(f.mul(f).div(d2.mul(0.18).add(1)).mul(lobe).mul(ndl)));
         });
@@ -35,7 +35,7 @@ SH.WINMAX = 6;
     const U = SH.U, c = World.cell, W = c && c.wins;
     if (!U || !U.winP) return;
     if (!W || !W.length || !env.winCol) { U.winN.value = 0; return; }
-    const cand = W.map(w => [(w.p[0] - cam[0]) ** 2 + (w.p[1] - cam[1]) ** 2 * 0.25 + (w.p[2] - cam[2]) ** 2, w]).sort((a, b) => a[0] - b[0]).slice(0, SH.WINMAX);
+    const cand = W.filter(w => Math.abs(w.p[1] - cam[1]) < 2.6).map(w => [(w.p[0] - cam[0]) ** 2 + (w.p[2] - cam[2]) ** 2, w]).sort((a, b) => a[0] - b[0]).slice(0, SH.WINMAX);
     const P = U.winP.array, D = U.winD.array, C = U.winC.array, col = env.winCol;
     cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); C[i].set(col[0] * w.k, col[1] * w.k, col[2] * w.k, 0); });
     U.winN.value = cand.length;

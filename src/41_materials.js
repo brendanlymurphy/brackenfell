@@ -156,7 +156,7 @@ function terrainMaterial() {
       const push = d2.div(max(dl, 0.01)).mul(ring.mul(0.42).mul(U.rain).mul(pud));
       N.assign(normalize(N.add(vec3(push.x, 0, push.y))));
     });
-    const ao = G0.ao.mul(s2.b.mul(0.55).oneMinus()), contact = s2.b.mul(0.32).oneMinus();        // soft contact shade at the foot of walls and trunks
+    const ao = G0.ao.mul(s2.b.mul(0.7).oneMinus()), contact = sat(s2.b.mul(0.44).add(s2.b.mul(s2.b).mul(0.34)).oneMinus());        // [l1] a deeper contact band at the foot of walls and trunks        // soft contact shade at the foot of walls and trunks
     // standing water mirrors the sky
     const V = normalize(U.camPos.sub(wp)), Rf = reflect(V.negate(), N), F = pow(sat(dot(N, V).oneMinus()), 5).mul(0.97).add(0.03);
     const k = F.mul(pud).mul(0.85).mul(step(0.01, pud)).toVar();

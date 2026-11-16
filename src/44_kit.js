@@ -91,7 +91,8 @@ const Kit = (() => {
     const g = K_.gradeInit;
     K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };
     if (K_.skin !== 'realistic') { K_.grade.sat.value = 1; K_.grade.gain.value = 1; K_.grade.tint.value.set(1, 1, 1); K_.grade.weather.value = 0; }
-    K_.fill = uniform(new THREE.Vector3(0.0, 0.02, 0.012)); K_.fill2 = uniform(new THREE.Vector3(0.25, 0.3, 0.02));
+    K_.fill = uniform(new THREE.Vector3(0.0, 0.02, 0.012)); K_.occ = uniform(new THREE.Vector3(0.42, 0.62, 0.8));      // [l1] occlusion at the ground, under eaves, share taken from the sun
+    K_.fill2 = uniform(new THREE.Vector3(0.25, 0.3, 0.02));
     K_.ready = true; if (progress) progress(1);
   };
   // one knob set for the whole kit look: saturation, brightness, a colour cast, and weathering (large soft stains so no two walls match)
@@ -203,10 +204,17 @@ const Kit = (() => {
       const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
     }
+    // [l1] contact and eave occlusion on outdoor walls (kg.x: metres above the ground, kg.y: metres below the eaves; 8 = none): a wall darkens where it meets the ground and under its eaves, sun included
+    let occK = float(1);
+    if (batch && !isFoliage(d)) {
+      const kgo = attribute('kg', 'vec4'), hg = kgo.x.mul(8), ev = kgo.y.mul(8), wl = float(1).sub(abs(N.y)), outM2 = float(1).sub(step(0.5, zone));
+      const occ = mix(float(1), mix(K_.occ.x, float(1), smoothstep(0.0, 1.3, hg)), wl).mul(mix(float(1), mix(K_.occ.y, float(1), smoothstep(0.0, 0.8, ev)), wl));
+      occK = mix(float(1), occ, outM2); em = em.mul(occK);
+    }
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
     else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));
     m.emissiveNode = em;
-    if (batch) m.receivedShadowNode = Fn(([shadow]) => shadow.mul(select(inside, float(0), float(1))));      // the sheet would not shadow its own back face
+    if (batch) m.receivedShadowNode = Fn(([shadow]) => shadow.mul(select(inside, float(0), float(1))).mul(mix(float(1), occK, K_.occ.z)));      // [l1] occK: contact and eave occlusion also takes some of the sun      // the sheet would not shadow its own back face
     if (d.alphaTest > 0) { m.alphaTest = Math.max(d.alphaTest, 0.35); m.side = THREE.DoubleSide; }
     else m.side = d.doubleSided && !o.frontOnly ? THREE.DoubleSide : THREE.FrontSide;
     if (d.blend && !(d.alphaTest > 0)) { m.transparent = true; m.depthWrite = false; }

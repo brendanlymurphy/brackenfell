@@ -694,7 +694,7 @@ SH.init = function () {
     col = col.mul(float(1).sub(spec.mul(float(1).sub(U.windowGlow)).mul(0.4))).add(vec3(1.0, 0.55, 0.2).mul(spec).mul(U.windowGlow).mul(0.5));
     const hc = wp.x.mul(abs(N.z)).add(wp.z.mul(abs(N.x))), q = vec2(hc, wp.y).mul(4.2), a = q.x.add(q.y), b = q.x.sub(q.y);
     const lat = TSL.min(abs(TSL.fract(a).sub(0.5)), abs(TSL.fract(b).sub(0.5))), lead = smoothstep(0.03, 0.075, lat);
-    return col.mul(lead.mul(0.88).add(0.12));
+    return col.mul(lead.mul(0.88).add(0.12)).mul(float(1).sub(U.windowGlow).mul(TEST && TEST.pane === 0 ? 0 : 1.9).add(1));      // [l1] by day the sky in a pane is the brightest thing in a room
   });
   // tangent frame from screen derivatives, then a tangent-space normal (xy in 0..1) applied to the world normal N
   SH.perturb = Fn(([N, wp, uvn, nxy, strength]) => {
@@ -864,7 +864,7 @@ SH.WINMAX = 6;
         const d = wp.sub(P.xyz), d2 = dot(d, d), r2 = P.w.mul(P.w);
         If(d2.lessThan(r2), () => {
           const f = float(1).sub(d2.div(r2)), dn = d.mul(max(d2, 1e-4).inverseSqrt());
-          const lobe = smoothstep(-0.12, 0.5, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
+          const lobe = smoothstep(-0.9, 0.45, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
           const ndl = max(dot(N, dn.negate()).mul(0.7).add(0.3), 0);                 // surfaces that face the glass catch more
           acc.addAssign(C.rgb.mul(f.mul(f).div(d2.mul(0.18).add(1)).mul(lobe).mul(ndl)));
         });
@@ -877,7 +877,7 @@ SH.WINMAX = 6;
     const U = SH.U, c = World.cell, W = c && c.wins;
     if (!U || !U.winP) return;
     if (!W || !W.length || !env.winCol) { U.winN.value = 0; return; }
-    const cand = W.map(w => [(w.p[0] - cam[0]) ** 2 + (w.p[1] - cam[1]) ** 2 * 0.25 + (w.p[2] - cam[2]) ** 2, w]).sort((a, b) => a[0] - b[0]).slice(0, SH.WINMAX);
+    const cand = W.filter(w => Math.abs(w.p[1] - cam[1]) < 2.6).map(w => [(w.p[0] - cam[0]) ** 2 + (w.p[2] - cam[2]) ** 2, w]).sort((a, b) => a[0] - b[0]).slice(0, SH.WINMAX);
     const P = U.winP.array, D = U.winD.array, C = U.winC.array, col = env.winCol;
     cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); C[i].set(col[0] * w.k, col[1] * w.k, col[2] * w.k, 0); });
     U.winN.value = cand.length;
@@ -1044,7 +1044,7 @@ function terrainMaterial() {
       const push = d2.div(max(dl, 0.01)).mul(ring.mul(0.42).mul(U.rain).mul(pud));
       N.assign(normalize(N.add(vec3(push.x, 0, push.y))));
     });
-    const ao = G0.ao.mul(s2.b.mul(0.55).oneMinus()), contact = s2.b.mul(0.32).oneMinus();        // soft contact shade at the foot of walls and trunks
+    const ao = G0.ao.mul(s2.b.mul(0.7).oneMinus()), contact = sat(s2.b.mul(0.44).add(s2.b.mul(s2.b).mul(0.34)).oneMinus());        // [l1] a deeper contact band at the foot of walls and trunks        // soft contact shade at the foot of walls and trunks
     // standing water mirrors the sky
     const V = normalize(U.camPos.sub(wp)), Rf = reflect(V.negate(), N), F = pow(sat(dot(N, V).oneMinus()), 5).mul(0.97).add(0.03);
     const k = F.mul(pud).mul(0.85).mul(step(0.01, pud)).toVar();
@@ -1386,16 +1386,17 @@ function buildPipeline() {
   let hdr = col.rgb;
   R.bloomNode = null;
   if (q.bloom) { R.bloomNode = T3X.bloom(col, 0.22, 0.55, 1.6); bloomTrim(R.bloomNode, q); hdr = hdr.add(R.bloomNode.rgb); }
-  const P = R.pu = { exposure: uniform(0.6), vignette: uniform(0.55), sat: uniform(1.0), frame: uniform(0) };
+  const P = R.pu = { exposure: uniform(0.6), vignette: uniform(0.55), sat: uniform(1.0), frame: uniform(0), con: uniform(0.22), shadowT: uniform(new THREE.Vector3(0.93, 0.99, 1.07)), hiT: uniform(new THREE.Vector3(1.045, 1.0, 0.93)), lift: uniform(new THREE.Vector3(0, 0, 0)) };
   const lum = vec3(0.2126, 0.7152, 0.0722);
   const fin = Fn(() => {
     const qv = screenUV.sub(0.5);
     const x = max(hdr, vec3(0)).mul(P.exposure).mul(dot(qv, qv).mul(P.vignette).oneMinus()).toVar();
     const c = clamp(x.mul(x.mul(2.51).add(0.03)).div(x.mul(x.mul(2.43).add(0.59)).add(0.14)), 0, 1).toVar();      // ACES (Narkowicz)
-    // grade: a little more contrast and colour, shadows leaning cool and highlights warm
+    // grade [l1]: saturation, an S-curve, cool or violet shadows and warm highlights, lifted blacks (R.gradeFor sets these by hour and place)
     c.assign(mix(vec3(dot(c, lum)), c, P.sat));
-    c.assign(mix(c, c.mul(c).mul(c.mul(-2).add(3)), 0.22));
-    c.mulAssign(mix(vec3(0.93, 0.99, 1.07), vec3(1.045, 1.0, 0.93), smoothstep(0.06, 0.62, dot(c, lum))));
+    c.assign(mix(c, c.mul(c).mul(c.mul(-2).add(3)), P.con));
+    c.mulAssign(mix(P.shadowT, P.hiT, smoothstep(0.06, 0.62, dot(c, lum))));
+    c.addAssign(P.lift.mul(c.oneMinus()));
     c.assign(pow(max(c, vec3(0)), vec3(1 / 2.2)));
     const n = fract(sin(dot(screenCoordinate.xy.add(P.frame), vec2(12.9898, 78.233))).mul(43758.5453));
     return vec4(c.add(n.sub(0.5).div(255)), 1);
@@ -1463,6 +1464,23 @@ function pickLights(camPos, camZone, env) {
   U.lightN.value = n; U.lightNOut.value = outdoor.length;
   return n;
 }
+// [l1] colour grade by hour and place: day (cool shadow, warm light), golden hour (amber light, violet shade), night (blue blacks), rooms (warm, low contrast in shadow), mine (cold, crushed)
+R.grade = null;
+function gradeFor(env) {
+  const cell = World.cell, mix3_ = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), g = env.golden || 0, n = env.night || 0;
+  let t = { sat: 0.92, con: 0.24, sh: [0.94, 0.99, 1.07], hi: [1.045, 1.0, 0.93], lift: [0.004, 0.005, 0.008] };
+  const gold = { sat: 1.02, con: 0.26, sh: [0.97, 0.95, 1.09], hi: [1.12, 1.0, 0.82], lift: [0.008, 0.004, 0.010] }, night = { sat: 0.80, con: 0.30, sh: [0.90, 0.97, 1.12], hi: [1.0, 0.97, 0.92], lift: [0.0, 0.004, 0.014] };
+  const mixT = (a, b, k) => ({ sat: a.sat + (b.sat - a.sat) * k, con: a.con + (b.con - a.con) * k, sh: mix3_(a.sh, b.sh, k), hi: mix3_(a.hi, b.hi, k), lift: mix3_(a.lift, b.lift, k) });
+  t = mixT(t, gold, clamp(g * 1.15, 0, 1)); t = mixT(t, night, n);
+  if (cell) {
+    const room = { sat: 0.95, con: 0.17, sh: [1.04, 0.99, 0.92], hi: [1.07, 1.0, 0.89], lift: [0.012, 0.008, 0.004] }, mine = { sat: 0.66, con: 0.34, sh: [0.90, 0.98, 1.10], hi: [1.05, 0.98, 0.88], lift: [0, 0, 0.003] };
+    t = cell.id === 'mine' || cell.daylight === 0 ? mixT(room, mine, cell.id === 'mine' ? 1 : 0.6) : room;
+  }
+  if (TEST && TEST.grade === 0) t = { sat: 1, con: 0.22, sh: [0.93, 0.99, 1.07], hi: [1.045, 1.0, 0.93], lift: [0, 0, 0] };
+  const cur = R.grade || (R.grade = t), k = TEST ? 1 : 0.06;
+  cur.sat += (t.sat - cur.sat) * k; cur.con += (t.con - cur.con) * k; for (const f of ['sh', 'hi', 'lift']) for (let i = 0; i < 3; i++) cur[f][i] += (t[f][i] - cur[f][i]) * k;
+  const P = R.pu; P.sat.value = cur.sat; P.con.value = cur.con; P.shadowT.value.set(...cur.sh); P.hiT.value.set(...cur.hi); P.lift.value.set(...cur.lift);
+}
 function renderFrame(time, env) {
   const q = R.q, cam = R.cam, c3 = R.camera, r = G.renderer, e = cam.pos;
   R.frame++;
@@ -1488,10 +1506,10 @@ function renderFrame(time, env) {
   S.lights[1].shadow.needsUpdate = upd1; S.lights[0].shadow.autoUpdate = !cell; if (cell) S.lights[0].shadow.needsUpdate = false;
   // ── world ──
   sceneUpdate(e, q);
-  Sky.update(e); Grass.update(e, [f[0], f[2]]); Particles.update();
+  Sky.update(e); Grass.update(e, [f[0], f[2]]); Particles.update(); Bake.people(e, env);      // [l1] 72m_bake.js: blob shadows under people
   // ── post ──
   if (R.passScale !== R.scale) { R.scenePass.setResolutionScale(R.scale); R.passScale = R.scale; }
-  R.pu.exposure.value = env.exposure; R.pu.frame.value = (R.frame % 64) * 1.37;
+  gradeFor(env); R.pu.exposure.value = env.exposure; R.pu.frame.value = (R.frame % 64) * 1.37;
   if (R.bloomNode) R.bloomNode.threshold.value = 1.15 / env.exposure;
   R.stats.n = 0; R.stats.t = 0;
   // Three advances its frame counter in its own animation loop; this game drives the loop itself, so step it here or
@@ -1649,7 +1667,8 @@ const Kit = (() => {
     const g = K_.gradeInit;
     K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };
     if (K_.skin !== 'realistic') { K_.grade.sat.value = 1; K_.grade.gain.value = 1; K_.grade.tint.value.set(1, 1, 1); K_.grade.weather.value = 0; }
-    K_.fill = uniform(new THREE.Vector3(0.0, 0.02, 0.012)); K_.fill2 = uniform(new THREE.Vector3(0.25, 0.3, 0.02));
+    K_.fill = uniform(new THREE.Vector3(0.0, 0.02, 0.012)); K_.occ = uniform(new THREE.Vector3(0.42, 0.62, 0.8));      // [l1] occlusion at the ground, under eaves, share taken from the sun
+    K_.fill2 = uniform(new THREE.Vector3(0.25, 0.3, 0.02));
     K_.ready = true; if (progress) progress(1);
   };
   // one knob set for the whole kit look: saturation, brightness, a colour cast, and weathering (large soft stains so no two walls match)
@@ -1761,10 +1780,17 @@ const Kit = (() => {
       const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
     }
+    // [l1] contact and eave occlusion on outdoor walls (kg.x: metres above the ground, kg.y: metres below the eaves; 8 = none): a wall darkens where it meets the ground and under its eaves, sun included
+    let occK = float(1);
+    if (batch && !isFoliage(d)) {
+      const kgo = attribute('kg', 'vec4'), hg = kgo.x.mul(8), ev = kgo.y.mul(8), wl = float(1).sub(abs(N.y)), outM2 = float(1).sub(step(0.5, zone));
+      const occ = mix(float(1), mix(K_.occ.x, float(1), smoothstep(0.0, 1.3, hg)), wl).mul(mix(float(1), mix(K_.occ.y, float(1), smoothstep(0.0, 0.8, ev)), wl));
+      occK = mix(float(1), occ, outM2); em = em.mul(occK);
+    }
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
     else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));
     m.emissiveNode = em;
-    if (batch) m.receivedShadowNode = Fn(([shadow]) => shadow.mul(select(inside, float(0), float(1))));      // the sheet would not shadow its own back face
+    if (batch) m.receivedShadowNode = Fn(([shadow]) => shadow.mul(select(inside, float(0), float(1))).mul(mix(float(1), occK, K_.occ.z)));      // [l1] occK: contact and eave occlusion also takes some of the sun      // the sheet would not shadow its own back face
     if (d.alphaTest > 0) { m.alphaTest = Math.max(d.alphaTest, 0.35); m.side = THREE.DoubleSide; }
     else m.side = d.doubleSided && !o.frontOnly ? THREE.DoubleSide : THREE.FrontSide;
     if (d.blend && !(d.alphaTest > 0)) { m.transparent = true; m.depthWrite = false; }
@@ -3127,7 +3153,7 @@ function updateEnv(time, indoor) {
   const sy = sun[1];
   const day = smooth(-0.10, 0.14, sy), night = 1 - smooth(-0.22, -0.02, sy);
   const golden = Math.exp(-(sy * sy) / 0.06);                 // peaks at the horizon
-  e.day = day; e.night = night;
+  e.day = day; e.night = night; e.golden = golden;
   const sunI = smooth(-0.015, 0.11, sy), moonI = smooth(0.02, 0.2, moon[1]) * smooth(-0.04, -0.12, sy);
   const sunCol = mix3([1.0, 0.42, 0.14], [1.0, 0.925, 0.79], smooth(0.0, 0.42, sy));
   if (sunI > 0.001 || moonI <= 0) { e.keyDir = sun[1] > 0.02 ? sun : v3.norm([sun[0], 0.02, sun[2]]); e.keyCol = v3.scale(sunCol, 3.7 * sunI); }
@@ -3846,14 +3872,14 @@ Cells.hear = function (pos, from) {
 };
 // frame environment: no sun, a short dark fog, the day's ambient kept (windows and the hour of day still reach the rooms through emissive panes and daylight lights)
 const CELL_DAYLIGHT = (typeof TEST !== 'undefined' && TEST && TEST.celllight !== undefined) ? +TEST.celllight : 6;
-const WIN_GAIN = (typeof TEST !== 'undefined' && TEST && TEST.wingain !== undefined) ? +TEST.wingain : 3.2, WIN_KEEP = (typeof TEST !== 'undefined' && TEST && TEST.winkeep !== undefined) ? +TEST.winkeep : 0.3;      // [l1]
+const WIN_GAIN = (typeof TEST !== 'undefined' && TEST && TEST.wingain !== undefined) ? +TEST.wingain : 6.5, WIN_KEEP = (typeof TEST !== 'undefined' && TEST && TEST.winkeep !== undefined) ? +TEST.winkeep : 0.15;      // [l1]
 const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 1.7;
 Cells.env = function (e) {
   const c = Cells.cur; if (!c) return e;
   e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
   // daylight: with the sun off, rooms lost the light that used to come in by day (midday was darker than night). Windows let the sky in: lift the day's ambient. c.daylight: 0 for a cellar or crypt, default for a room with windows.
   e.winCol = null;
-  { let dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0 && c.wins && c.wins.length && !(TEST && TEST.winlight === 0)) { /* [l1] daylight from the panes (40c_light.js): a small uniform lift, the rest is window light */ const b = e.ambSky, l = (b[0] + b[1] + b[2]) / 3, g = WIN_GAIN; e.winCol = [(l * 0.55 + b[0] * 0.45) * g * 1.04, (l * 0.55 + b[1] * 0.45) * g, (l * 0.55 + b[2] * 0.45) * g * 0.92]; k *= WIN_KEEP; } if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT; e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
+  { let dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0 && c.wins && c.wins.length && !(TEST && TEST.winlight === 0)) { /* [l1] daylight from the panes (40c_light.js): a small uniform lift, the rest is window light */ const b = e.ambSky, l = (b[0] + b[1] + b[2]) / 3, g = WIN_GAIN; e.winCol = [(l * 0.55 + b[0] * 0.45) * g * 1.04, (l * 0.55 + b[1] * 0.45) * g, (l * 0.55 + b[2] * 0.45) * g * 0.92]; k *= WIN_KEEP; } if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT * (e.winCol ? 0.55 + 0.45 * (e.night || 0) : 1); e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
   e.fogCol = c.fog || [0.030, 0.025, 0.020]; e.fogDensity = c.fogDensity || 0.022; e.cloud = 0; e.stars = 0; e.aurora = 0; e.sunDisc = 0; e.moonBright = 0;
   return e;
 };
@@ -8622,7 +8648,7 @@ Bake.interior = function (P) {
     if (it.kind !== 'floor' && it.kind !== 'hearth') continue;
     if ((it.lift || 0) > 0.35 || !(it.x1 > it.x0)) continue;
     const L = P.lv[it.k]; if (!L) continue;
-    const h = it.h || 0.5, y = L.y + 0.034;
+    const h = it.h || 0.5, y = L.y + 0.034; if (it.kind === 'floor' && h < 0.25 && (it.x1 - it.x0) * (it.z1 - it.z0) < 0.35) continue;
     const hearth = it.kind === 'hearth', A = hearth ? 0.55 : clamp(0.34 + h * 0.3, 0.38, 0.62), mg = hearth ? 0.5 : clamp(0.14 + h * 0.2, 0.16, 0.42);
     const pad = 0.03, c = [[it.x0 + pad, it.z0 + pad], [it.x1 - pad, it.z0 + pad], [it.x1 - pad, it.z1 - pad], [it.x0 + pad, it.z1 - pad]].map(p => w2(p[0], p[1]));
     const y3 = P.w2(0, y, 0)[1]; Bake.pool(m, y3, c, mg, A); Bake.stats.pools++;
@@ -8635,9 +8661,35 @@ Bake.interior = function (P) {
     const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0;
     const p0 = P.w2(cx + dx * 0.25, L.y + 1.5, cz + dz * 0.25), p1 = P.w2(cx + dx * 1.25, L.y + 1.5, cz + dz * 1.25);
     const dd = Math.hypot(p1[0] - p0[0], p1[2] - p0[2]) || 1;
-    cell.wins.push({ p: p0, d: [(p1[0] - p0[0]) / dd, (p1[2] - p0[2]) / dd], r: 7.5, k: 1, k0: w.k });
+    cell.wins.push({ p: p0, d: [(p1[0] - p0[0]) / dd, (p1[2] - p0[2]) / dd], r: 9, k: 1, k0: w.k });
     Bake.stats.wins++;
   }
+};
+// ── blob shadows under people (one dynamic quad list, one draw call) ──
+// In sun the real shadow shows (villagers cast within R.q.villagerCast), so the blob fades with the key light; at night, in rooms and in overcast it is the only contact.
+Bake.People = { N: 56, mesh: null, u: null };
+Bake.people = function (cam, env) {
+  if (!Bake.on || !SC.scene || typeof NPCS === 'undefined') return;
+  const B = Bake.People;
+  if (!B.mesh) {
+    const { vec4, vec3, uv, uniform, smoothstep, length } = TSL, N = B.N;
+    const g = new THREE.BufferGeometry(); B.pos = new Float32Array(N * 12); const uvs = new Float32Array(N * 8), ix = new Uint16Array(N * 6);
+    for (let i = 0; i < N; i++) { uvs.set([0, 0, 1, 0, 1, 1, 0, 1], i * 8); ix.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6); }
+    const pa = new THREE.BufferAttribute(B.pos, 3); pa.setUsage(THREE.DynamicDrawUsage); g.setAttribute('position', pa); g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2)); g.setIndex(new THREE.BufferAttribute(ix, 1)); g.setDrawRange(0, 0);
+    B.u = uniform(0.4); const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
+    m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide; m.polygonOffset = true; m.polygonOffsetFactor = -3; m.polygonOffsetUnits = -3;
+    const d = length(uv().sub(0.5)).mul(2), a = smoothstep(1.0, 0.1, d);
+    m.colorNode = vec4(vec3(0.0), a.mul(a).mul(B.u));
+    const mesh = B.mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = 2; mesh.layers.set(1); mesh.name = 'blobs'; SC.scene.add(mesh); B.pa = pa; B.g = g;
+  }
+  const kl = (env.keyCol[0] + env.keyCol[1] + env.keyCol[2]) / 3; B.u.value = (TEST && TEST.blob !== undefined ? +TEST.blob : 0.46) / (1 + kl * 0.8);
+  const list = [], push = (p, s) => { const dx = p[0] - cam[0], dz = p[2] - cam[2], d2 = dx * dx + dz * dz; if (d2 < 48 * 48 && Math.abs(p[1] - cam[1]) < 6) list.push([d2, p, s]); };
+  for (const n of NPCS) { if (n.hid || !n.pos || n.anim === 'lie' || (n.obj && n.obj.visible === false && !n.ch)) continue; push(n.pos, n.scale || 1); }
+  if (typeof Foes !== 'undefined' && Foes.list) for (const f of Foes.list) if (f.alive && f.pos && Cells.spaceOf(f.pos) === (Cells.cur ? Cells.cur.id : 0)) push(f.pos, f.scale || 1);
+  list.sort((a, b) => a[0] - b[0]); const n = Math.min(list.length, B.N), P = B.pos;
+  for (let i = 0; i < n; i++) { const p = list[i][1], r = 0.62 * list[i][2], y = p[1] + 0.03, o = i * 12;
+    P[o] = p[0] - r; P[o + 1] = y; P[o + 2] = p[2] - r; P[o + 3] = p[0] + r; P[o + 4] = y; P[o + 5] = p[2] - r; P[o + 6] = p[0] + r; P[o + 7] = y; P[o + 8] = p[2] + r; P[o + 9] = p[0] - r; P[o + 10] = y; P[o + 11] = p[2] + r; }
+  B.pa.clearUpdateRanges(); if (n) B.pa.addUpdateRange(0, n * 12); B.pa.needsUpdate = true; B.g.setDrawRange(0, n * 6); B.mesh.visible = n > 0;
 };
 
 

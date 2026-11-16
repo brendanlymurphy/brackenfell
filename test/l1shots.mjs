@@ -17,6 +17,7 @@ const VIEWS = [
   // interiors, from just inside the street door looking in (canonical plan frame: 180 = into the house)
   { n: 'inn20', cell: 'inn', hour: 20 }, { n: 'inn13', cell: 'inn', hour: 13 }, { n: 'store13', cell: 'store', hour: 13 }, { n: 'store21', cell: 'store', hour: 21 },
   { n: 'chapel13', cell: 'chapel', hour: 13 }, { n: 'chapel21', cell: 'chapel', hour: 21 }, { n: 'house_in13', cell: 'in.21', hour: 13 }, { n: 'house_in21', cell: 'in.21', hour: 21 },
+  { n: 'inn13w', cell: 'inn', at: [-3, 6], yaw: 90, hour: 13 }, { n: 'store13w', cell: 'store', at: [-3, 5.5], yaw: 90, hour: 13 }, { n: 'chapel13w', cell: 'chapel', at: [-2, 9], yaw: 90, hour: 13 }, { n: 'house13w', cell: 'in.21', at: [-1, 8], yaw: 90, hour: 13 }, { n: 'inn13o', cell: 'inn', at: [5, 11.5], yaw: -50, hour: 13 }, { n: 'store13o', cell: 'store', at: [5, 9], yaw: -50, hour: 13 }, { n: 'chapel13o', cell: 'chapel', at: [3, 10.5], yaw: -60, hour: 13 }, { n: 'house13o', cell: 'in.21', at: [3, 11], yaw: -45, hour: 13 }, { n: 'inn18w', cell: 'inn', at: [-3, 6], yaw: 90, hour: 18 },
   { n: 'cabin_in21', cell: 'hunter', hour: 21 }, { n: 'smithy18', cell: 'smithy', hour: 18 },
 ];
 const code = e => {
@@ -24,13 +25,14 @@ const code = e => {
   if (e.door) return `const c = Cells.by[${JSON.stringify(e.door[0])}], s = c.cs.real, dl = siteDoorLocal(s, ${e.door[1]}), p = siteToWorld(s, dl[0], dl[1]), d0 = siteToWorld(s, ...siteDoorLocal(s, 0)), yaw = Math.atan2(d0[0] - p[0], -(d0[1] - p[1])) * 180 / Math.PI; game.leave && Cells.cur && game.leave();
     const r = await game.shot(p[0], Terrain.y(p[0], p[1]) + 1.65, p[1], yaw, 3, ${e.door[2]}); return '${e.n} ' + r.draws + ' draws ' + (r.tris / 1000 | 0) + 'k';`;
   if (e.cell) return `if (!Cells.cur || Cells.cur.id !== ${JSON.stringify(e.cell)}) game.enter(${JSON.stringify(e.cell)});
-    const P = World.houses[${JSON.stringify(e.cell)}].plan, dr = P.doors.find(d => d.b === null) || P.doors[0], L = P.lv[0], p = P.w2(dr.x, L.y + 1.6, 1.3);
+    const P = World.houses[${JSON.stringify(e.cell)}].plan, dr = P.doors.find(d => d.b === null) || P.doors[0], L = P.lv[0], p = ${e.at ? `P.w2(${e.at[0]}, L.y + 1.6, ${e.at[1]})` : 'P.w2(dr.x, L.y + 1.6, 1.3)'};
     Player.pos = [p[0], p[1] - 1.6, p[2]];
-    const r = await game.shot(p[0], p[1], p[2], 180 + P.yaw * 180 / Math.PI, ${e.pitch || 4}, ${e.hour}); return '${e.n} ' + r.draws + ' draws ' + (r.tris / 1000 | 0) + 'k';`;
+    const r = await game.shot(p[0], p[1], p[2], ${e.yaw === undefined ? 180 : e.yaw} + P.yaw * 180 / Math.PI, ${e.pitch || 4}, ${e.hour}); return '${e.n} ' + r.draws + ' draws ' + (r.tris / 1000 | 0) + 'k';`;
 };
 const args = ['test/shot.mjs', '--size', '844x390', '--timeout', '480000'];
 if (flag('--webgl')) args.push('--opt', 'webgl=1'); args.push('--opt', 'quality=' + (val('--quality') || 'medium'));
 
+for (let i = 0; i < argv.length; i++) if (argv[i] === '--opt') args.push('--opt', argv[i + 1]);
 let n = 0;
 for (const e of VIEWS) { if (only && !only.includes(e.n)) continue; args.push('--do', code(e), '--out', `${dir}/${e.n}.png`); n++; }
 if (!flag('--noMine') && (!only || only.includes('mine'))) {
@@ -39,7 +41,7 @@ if (!flag('--noMine') && (!only || only.includes('mine'))) {
 }
 console.log('shooting', n, 'views ->', dir);
 let o = ''; try { o = execFileSync('node', args, { encoding: 'utf8', timeout: 590000, maxBuffer: 1 << 26, cwd: new URL('../', import.meta.url).pathname }); } catch (e) { o = (e.stdout || '') + '\n' + (e.stderr || ''); }
-console.log(o.split('\n').filter(l => /^do:|warn|rror|GPU|EVAL FAIL|pageerror|console/i.test(l)).map(l => l.slice(0, 220)).join('\n'));
+console.log(o.split('\n').filter(l => /->|warn|rror|GPU|EVAL FAIL|pageerror|console/i.test(l)).map(l => l.slice(0, 220)).join('\n'));
 if (val('--vs')) {
   const base = val('--vs'), pd = `${OUT}/pairs/${base}__${tag}`; fs.mkdirSync(pd, { recursive: true });
   const py = `

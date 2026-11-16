@@ -91,7 +91,7 @@ SH.init = function () {
     col = col.mul(float(1).sub(spec.mul(float(1).sub(U.windowGlow)).mul(0.4))).add(vec3(1.0, 0.55, 0.2).mul(spec).mul(U.windowGlow).mul(0.5));
     const hc = wp.x.mul(abs(N.z)).add(wp.z.mul(abs(N.x))), q = vec2(hc, wp.y).mul(4.2), a = q.x.add(q.y), b = q.x.sub(q.y);
     const lat = TSL.min(abs(TSL.fract(a).sub(0.5)), abs(TSL.fract(b).sub(0.5))), lead = smoothstep(0.03, 0.075, lat);
-    return col.mul(lead.mul(0.88).add(0.12));
+    return col.mul(lead.mul(0.88).add(0.12)).mul(float(1).sub(U.windowGlow).mul(TEST && TEST.pane === 0 ? 0 : 1.9).add(1));      // [l1] by day the sky in a pane is the brightest thing in a room
   });
   // tangent frame from screen derivatives, then a tangent-space normal (xy in 0..1) applied to the world normal N
   SH.perturb = Fn(([N, wp, uvn, nxy, strength]) => {
