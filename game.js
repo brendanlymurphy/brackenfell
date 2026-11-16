@@ -8102,13 +8102,17 @@ HFAM.shopfront = (P, c, F) => {
 HFAM.workshop = (P, c, F) => {
   const R = F.R, W = 10, Dh = 6.5, H0 = Math.min(F.H0, 2.7), run = stRun(H0 + PW.SLAB, 0.2), D = Dh + ceil2(run + 2.6);
   P.dims = { W, D, Dh }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
-  const work = F.rm(0, 'work', 'hall', -5, 0, 5, Dh, F.fin(0, { floor: F.T.stone || F.wealth === 0 ? 'stone' : 'wood' })), living = F.rm(0, 'living', 'hall', -5, Dh, -0.5, D, F.fin(0, { floor: 'wood', tint: F.tint2 })), yard = F.rm(0, 'yard', 'yard', -0.5, Dh, 5, D, { floor: 'cobble', tint: [0.8, 0.77, 0.72] });
+  const L = hHash(P.id + '|L') < 0.4, wfl = { floor: F.T.stone || F.wealth === 0 ? 'stone' : 'wood' };          // [c5] an L-shaped work room: the front strip and a leg behind it on one side, the yard's notch open air
+  const work = F.rm(0, 'work', 'hall', -5, 0, 5, L ? 3.5 : Dh, F.fin(0, wfl)), leg = L ? F.rm(0, 'leg', 'hall', -5, 3.5, -0.5, Dh, F.fin(0, wfl)) : null, living = F.rm(0, 'living', 'hall', -5, Dh, -0.5, D, F.fin(0, { floor: 'wood', tint: F.tint2 })), yard = F.rm(0, 'yard', 'yard', -0.5, Dh, 5, D, { floor: 'cobble', tint: [0.8, 0.77, 0.72] });
   const loft = F.rm(1, 'loft', 'bedroom', -5, Dh, -0.5, D, F.fin(1));
-  F.door('work', null, 0, 0); F.door('work', 'living', -2.75 + R.pick([-0.5, 0.5]), Dh); F.door('work', 'yard', 2.25 + R.pick([-0.5, 0, 0.5, 1]), Dh);      // [c5] the openings in different places
+  F.door('work', null, 0, 0);
+  if (L) { F.door('work', 'leg', -2.75, 3.5, { w: 2.2 }); F.door('leg', 'living', -2.75 + R.pick([-0.5, 0.5]), Dh); F.door('living', 'yard', -0.5, Dh + 2.2); }
+  else { F.door('work', 'living', -2.75 + R.pick([-0.5, 0.5]), Dh); F.door('work', 'yard', 2.25 + R.pick([-0.5, 0, 0.5, 1]), Dh); }      // [c5] the openings in different places
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: F.X(-5 + 0.95), z: Dh + 1.25, width: 0.9, tread: 0.2 });
   pLayout(P);
   hTrade(P, c, work, F); P.hall = { room: work, hh: null }; const e = P.doors.find(d => d.b === null); if (e) pPut(P, work, P.id + '.mat', e.x, 1.4, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, F.rug), { flat: true, noClear: true });
-  pLamp(P, work, F.X(-2.6), 2.4); pLamp(P, work, F.X(2.6), 2.4);
+  pLamp(P, work, F.X(-2.6), L ? 1.6 : 2.4); pLamp(P, work, F.X(2.6), L ? 1.6 : 2.4);
+  if (leg) { dressHall(P, leg, { hh: null, rug: F.rug, items: ['bowl', 'mug', 'candle'], len: 1.8 }); for (const [nm, sd] of [['stack', 'w'], ['sacks', 'n'], ['cask', 'w'], ['bucket', 'n']]) hPlace(P, leg, nm, { sides: [sd, 'n', 'w'] }); pLamp(P, leg, F.X(-2.75), 5.4); }
   const lh = hHearthTry(P, living, [[F.S('e'), D - 2.6], [F.S('e'), D - 3.6]], 1.7, { cauldron: true, size: 0.45 }); if (lh) pPier(P, 1, lh); P.hall = { room: living, hh: lh };
   dressHall(P, living, { hh: lh, rug: F.rug, items: ['bowl', 'loaf', 'mug', 'cheese'], len: 1.8 });
   dressBedroom(P, loft, { bedH: 0.85, beds: F.wealth > 0 ? ['bed', 'bed2'] : ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, table: true });
