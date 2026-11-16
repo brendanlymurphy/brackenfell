@@ -1,4 +1,30 @@
 {
+ "metal_jug": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "metal_jug",
+  "category": "container",
+  "min": [
+   -0.098,
+   0,
+   -0.098
+  ],
+  "max": [
+   0.098,
+   0.288,
+   0.098
+  ],
+  "size": [
+   0.196,
+   0.288,
+   0.195
+  ],
+  "tris": 700,
+  "materials": [
+   "metal_jug"
+  ],
+  "alpha": false
+ },
  "treasure_chest": {
   "kit": "scan",
   "file": "scan.glb",
@@ -181,6 +207,225 @@
    "wooden_crate_01"
   ],
   "alpha": false
+ },
+ "bull_head": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "bull_head",
+  "category": "decor",
+  "min": [
+   -0.153,
+   0,
+   -0.14
+  ],
+  "max": [
+   0.153,
+   0.432,
+   0.14
+  ],
+  "size": [
+   0.306,
+   0.432,
+   0.28
+  ],
+  "tris": 1400,
+  "materials": [
+   "bull_head"
+  ],
+  "alpha": false,
+  "metal": 0.79
+ },
+ "carved_wooden_elephant": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "carved_wooden_elephant",
+  "category": "decor",
+  "min": [
+   -0.054,
+   0,
+   -0.028
+  ],
+  "max": [
+   0.054,
+   0.096,
+   0.028
+  ],
+  "size": [
+   0.109,
+   0.096,
+   0.057
+  ],
+  "tris": 900,
+  "materials": [
+   "carved_wooden_elephant"
+  ],
+  "alpha": false
+ },
+ "fancy_picture_frame_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "fancy_picture_frame_01",
+  "category": "decor",
+  "min": [
+   -0.302,
+   0,
+   -0.01
+  ],
+  "max": [
+   0.302,
+   0.464,
+   0.01
+  ],
+  "size": [
+   0.603,
+   0.464,
+   0.02
+  ],
+  "tris": 800,
+  "materials": [
+   "fancy_picture_frame_01",
+   "fancy_picture_frame_01_canvas"
+  ],
+  "alpha": false
+ },
+ "horse_head": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "horse_head",
+  "category": "decor",
+  "min": [
+   -0.107,
+   0,
+   -0.167
+  ],
+  "max": [
+   0.107,
+   0.417,
+   0.167
+  ],
+  "size": [
+   0.214,
+   0.417,
+   0.334
+  ],
+  "tris": 1400,
+  "materials": [
+   "horse_head"
+  ],
+  "alpha": false,
+  "metal": 0.87
+ },
+ "mantel_clock_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "mantel_clock_01",
+  "category": "decor",
+  "min": [
+   -0.171,
+   0,
+   -0.063
+  ],
+  "max": [
+   0.171,
+   0.16,
+   0.063
+  ],
+  "size": [
+   0.342,
+   0.16,
+   0.125
+  ],
+  "tris": 1197,
+  "materials": [
+   "mantel_clock_01",
+   "mantel_clock_01_pane"
+  ],
+  "alpha": true
+ },
+ "marble_bust_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "marble_bust_01",
+  "category": "decor",
+  "min": [
+   -0.136,
+   0,
+   -0.149
+  ],
+  "max": [
+   0.136,
+   0.514,
+   0.149
+  ],
+  "size": [
+   0.272,
+   0.514,
+   0.298
+  ],
+  "tris": 1500,
+  "materials": [
+   "marble_bust_01"
+  ],
+  "alpha": false
+ },
+ "ornate_mirror_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "ornate_mirror_01",
+  "category": "decor",
+  "min": [
+   -0.243,
+   0,
+   -0.013
+  ],
+  "max": [
+   0.243,
+   0.744,
+   0.013
+  ],
+  "size": [
+   0.486,
+   0.744,
+   0.026
+  ],
+  "tris": 1499,
+  "materials": [
+   "ornate_mirror_01"
+  ],
+  "alpha": false,
+  "metal": 0.72
+ },
+ "ship_pinnace": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "ship_pinnace",
+  "category": "decor",
+  "min": [
+   -4.762,
+   0.001,
+   -18.602
+  ],
+  "max": [
+   4.762,
+   32.495,
+   18.602
+  ],
+  "size": [
+   9.525,
+   32.494,
+   37.204
+  ],
+  "tris": 15503,
+  "materials": [
+   "ship_pinnace_aft",
+   "ship_pinnace_rigging",
+   "ship_pinnace_details",
+   "ship_pinnace_hull",
+   "ship_pinnace_deck",
+   "ship_pinnace_interior",
+   "ship_pinnace_sails"
+  ],
+  "alpha": true
  },
  "food_apple_01": {
   "kit": "scan",
@@ -604,6 +849,58 @@
   ],
   "alpha": true
  },
+ "classicnightstand_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "ClassicNightstand_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.284,
+   0,
+   -0.212
+  ],
+  "max": [
+   0.284,
+   0.7,
+   0.212
+  ],
+  "size": [
+   0.568,
+   0.7,
+   0.424
+  ],
+  "tris": 1499,
+  "materials": [
+   "ClassicNightstand_01"
+  ],
+  "alpha": false
+ },
+ "folding_wooden_stool": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "folding_wooden_stool",
+  "category": "prop-furniture",
+  "min": [
+   -0.263,
+   0,
+   -0.271
+  ],
+  "max": [
+   0.263,
+   0.44,
+   0.271
+  ],
+  "size": [
+   0.526,
+   0.44,
+   0.542
+  ],
+  "tris": 994,
+  "materials": [
+   "folding_wooden_stool"
+  ],
+  "alpha": false
+ },
  "gothicbed_01": {
   "kit": "scan",
   "file": "scan.glb",
@@ -627,6 +924,32 @@
   "tris": 2198,
   "materials": [
    "GothicBed_01"
+  ],
+  "alpha": false
+ },
+ "gothiccabinet_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "GothicCabinet_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.859,
+   0,
+   -0.558
+  ],
+  "max": [
+   0.859,
+   2.361,
+   0.558
+  ],
+  "size": [
+   1.719,
+   2.361,
+   1.117
+  ],
+  "tris": 1998,
+  "materials": [
+   "GothicCabinet_01"
   ],
   "alpha": false
  },
@@ -786,6 +1109,58 @@
   ],
   "alpha": false
  },
+ "rockingchair_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "Rockingchair_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.352,
+   0,
+   -0.417
+  ],
+  "max": [
+   0.352,
+   0.995,
+   0.417
+  ],
+  "size": [
+   0.705,
+   0.995,
+   0.834
+  ],
+  "tris": 1800,
+  "materials": [
+   "Rockingchair_01"
+  ],
+  "alpha": false
+ },
+ "round_wooden_table_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "round_wooden_table_01",
+  "category": "prop-furniture",
+  "min": [
+   -0.698,
+   0,
+   -0.699
+  ],
+  "max": [
+   0.698,
+   1.004,
+   0.699
+  ],
+  "size": [
+   1.397,
+   1.004,
+   1.398
+  ],
+  "tris": 1500,
+  "materials": [
+   "round_wooden_table_01"
+  ],
+  "alpha": false
+ },
  "wooden_bookshelf_worn": {
   "kit": "scan",
   "file": "scan.glb",
@@ -864,6 +1239,59 @@
   ],
   "alpha": false
  },
+ "antique_ceramic_vase_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "antique_ceramic_vase_01",
+  "category": "prop-small",
+  "min": [
+   -0.127,
+   0,
+   -0.128
+  ],
+  "max": [
+   0.127,
+   0.44,
+   0.128
+  ],
+  "size": [
+   0.254,
+   0.44,
+   0.255
+  ],
+  "tris": 900,
+  "materials": [
+   "antique_ceramic_vase_01"
+  ],
+  "alpha": false
+ },
+ "book_encyclopedia_set_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "book_encyclopedia_set_01",
+  "category": "prop-small",
+  "min": [
+   -0.276,
+   0,
+   -0.081
+  ],
+  "max": [
+   0.276,
+   0.237,
+   0.081
+  ],
+  "size": [
+   0.551,
+   0.237,
+   0.162
+  ],
+  "tris": 998,
+  "materials": [
+   "book_encyclopedia_set_01_cover",
+   "book_encyclopedia_set_01_paper"
+  ],
+  "alpha": false
+ },
  "brass_goblets": {
   "kit": "scan",
   "file": "scan.glb",
@@ -892,6 +1320,60 @@
   ],
   "alpha": false,
   "metal": 1
+ },
+ "brass_pan_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "brass_pan_01",
+  "category": "prop-small",
+  "min": [
+   -0.096,
+   0,
+   -0.225
+  ],
+  "max": [
+   0.096,
+   0.052,
+   0.225
+  ],
+  "size": [
+   0.191,
+   0.052,
+   0.449
+  ],
+  "tris": 900,
+  "materials": [
+   "brass_pan_01"
+  ],
+  "alpha": false,
+  "metal": 0.89
+ },
+ "brass_pot_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "brass_pot_01",
+  "category": "prop-small",
+  "min": [
+   -0.15,
+   0,
+   -0.15
+  ],
+  "max": [
+   0.15,
+   0.289,
+   0.15
+  ],
+  "size": [
+   0.299,
+   0.289,
+   0.299
+  ],
+  "tris": 1200,
+  "materials": [
+   "brass_pot_01"
+  ],
+  "alpha": false,
+  "metal": 0.95
  },
  "carved_wooden_plate": {
   "kit": "scan",
@@ -942,6 +1424,32 @@
   "tris": 900,
   "materials": [
    "ceramic_pot"
+  ],
+  "alpha": false
+ },
+ "ceramic_vase_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "ceramic_vase_01",
+  "category": "prop-small",
+  "min": [
+   -0.101,
+   0,
+   -0.101
+  ],
+  "max": [
+   0.101,
+   0.4,
+   0.101
+  ],
+  "size": [
+   0.202,
+   0.4,
+   0.202
+  ],
+  "tris": 800,
+  "materials": [
+   "ceramic_vase_01"
   ],
   "alpha": false
  },
@@ -996,6 +1504,61 @@
    "ceramic_vase_04"
   ],
   "alpha": false
+ },
+ "chess_set": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "chess_set",
+  "category": "prop-small",
+  "min": [
+   -0.274,
+   0,
+   -0.274
+  ],
+  "max": [
+   0.274,
+   0.101,
+   0.274
+  ],
+  "size": [
+   0.548,
+   0.101,
+   0.548
+  ],
+  "tris": 1614,
+  "materials": [
+   "chess_set_pieces_white",
+   "chess_set_board",
+   "chess_set_pieces_black"
+  ],
+  "alpha": false
+ },
+ "seadogs_compass": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "seadogs_compass",
+  "category": "prop-small",
+  "min": [
+   -0.04,
+   0,
+   -0.07
+  ],
+  "max": [
+   0.04,
+   0.086,
+   0.07
+  ],
+  "size": [
+   0.08,
+   0.086,
+   0.14
+  ],
+  "tris": 695,
+  "materials": [
+   "seadogs_compass"
+  ],
+  "alpha": false,
+  "metal": 0.58
  },
  "wooden_bowl_01": {
   "kit": "scan",
@@ -1127,6 +1690,32 @@
   ],
   "alpha": false
  },
+ "bench_vice_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "bench_vice_01",
+  "category": "tool",
+  "min": [
+   -0.1,
+   0,
+   -0.197
+  ],
+  "max": [
+   0.1,
+   0.284,
+   0.197
+  ],
+  "size": [
+   0.201,
+   0.284,
+   0.395
+  ],
+  "tris": 944,
+  "materials": [
+   "bench_vice_01"
+  ],
+  "alpha": false
+ },
  "cross_pein_hammer": {
   "kit": "scan",
   "file": "scan.glb",
@@ -1153,6 +1742,85 @@
   ],
   "alpha": false,
   "metal": 0.31
+ },
+ "hand_plane_no4": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "hand_plane_no4",
+  "category": "tool",
+  "min": [
+   -0.165,
+   0,
+   -0.042
+  ],
+  "max": [
+   0.165,
+   0.198,
+   0.042
+  ],
+  "size": [
+   0.33,
+   0.198,
+   0.084
+  ],
+  "tris": 807,
+  "materials": [
+   "hand_plane_no4"
+  ],
+  "alpha": false
+ },
+ "handsaw_wood": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "handsaw_wood",
+  "category": "tool",
+  "min": [
+   -0.02,
+   0,
+   -0.316
+  ],
+  "max": [
+   0.02,
+   0.167,
+   0.316
+  ],
+  "size": [
+   0.04,
+   0.167,
+   0.633
+  ],
+  "tris": 999,
+  "materials": [
+   "handsaw_wood"
+  ],
+  "alpha": false
+ },
+ "hatchet": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "hatchet",
+  "category": "tool",
+  "min": [
+   -0.013,
+   0,
+   -0.051
+  ],
+  "max": [
+   0.013,
+   0.289,
+   0.051
+  ],
+  "size": [
+   0.025,
+   0.289,
+   0.103
+  ],
+  "tris": 722,
+  "materials": [
+   "hatchet"
+  ],
+  "alpha": false,
+  "metal": 0.49
  },
  "picke_dirty_01": {
   "kit": "scan",
@@ -1206,6 +1874,33 @@
   ],
   "alpha": false,
   "metal": 0.36
+ },
+ "sledgehammer_01": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "sledgehammer_01",
+  "category": "tool",
+  "min": [
+   -0.104,
+   0,
+   -0.045
+  ],
+  "max": [
+   0.104,
+   1.005,
+   0.045
+  ],
+  "size": [
+   0.208,
+   1.005,
+   0.09
+  ],
+  "tris": 900,
+  "materials": [
+   "sledgehammer_01"
+  ],
+  "alpha": false,
+  "metal": 0.48
  },
  "spinning_wheel_01": {
   "kit": "scan",
@@ -1285,6 +1980,33 @@
   ],
   "alpha": false
  },
+ "antique_estoc": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "antique_estoc",
+  "category": "weapon",
+  "min": [
+   -0.186,
+   0,
+   -0.075
+  ],
+  "max": [
+   0.186,
+   1.492,
+   0.075
+  ],
+  "size": [
+   0.371,
+   1.492,
+   0.149
+  ],
+  "tris": 1200,
+  "materials": [
+   "antique_estoc"
+  ],
+  "alpha": false,
+  "metal": 0.66
+ },
  "kite_shield": {
   "kit": "scan",
   "file": "scan.glb",
@@ -1312,6 +2034,33 @@
   ],
   "alpha": false
  },
+ "ornate_medieval_dagger": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "ornate_medieval_dagger",
+  "category": "weapon",
+  "min": [
+   -0.06,
+   0,
+   -0.012
+  ],
+  "max": [
+   0.06,
+   0.349,
+   0.012
+  ],
+  "size": [
+   0.119,
+   0.349,
+   0.025
+  ],
+  "tris": 900,
+  "materials": [
+   "ornate_medieval_dagger"
+  ],
+  "alpha": false,
+  "metal": 0.46
+ },
  "ornate_medieval_mace": {
   "kit": "scan",
   "file": "scan.glb",
@@ -1338,5 +2087,32 @@
   ],
   "alpha": false,
   "metal": 0.79
+ },
+ "ornate_war_hammer": {
+  "kit": "scan",
+  "file": "scan.glb",
+  "source": "ornate_war_hammer",
+  "category": "weapon",
+  "min": [
+   -0.072,
+   0,
+   -0.017
+  ],
+  "max": [
+   0.072,
+   0.71,
+   0.017
+  ],
+  "size": [
+   0.144,
+   0.71,
+   0.034
+  ],
+  "tris": 1500,
+  "materials": [
+   "ornate_war_hammer"
+  ],
+  "alpha": false,
+  "metal": 0.57
  }
 }
