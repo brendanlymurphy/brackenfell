@@ -343,4 +343,40 @@ HT.widow = (P, c, room, F) => { hPlace(P, room, 'spinning', { sides: ['w', 'e', 
 HT.shepherd = (P, c, room, F) => { hPlace(P, room, 'fleeces', { sides: ['w', 'e', 's'] }); hPlace(P, room, 'hurdle', { sides: ['w', 'e'] }); hPlace(P, room, 'bucket', { sides: ['s', 'w', 'e'] }); hShelfWalls(P, room, ['cheese', 'bowl', 'jug', 'cheese', 'loaf'], { sides: ['w', 'e'], id: 'wsp', lv: 3 }); hPlace(P, room, 'sacks', { sides: ['e', 'w'] }); };
 HT.woodcutter = (P, c, room, F) => { hPlace(P, room, 'stack', { sides: ['w', 'e', 's'] }); hPlace(P, room, 'stack', { sides: ['e', 'w'] }); hPlace(P, room, 'block', { sides: ['s', 'w', 'e'] }); hPlace(P, room, 'horse', { sides: ['w', 'e'] }); pAnyHang(P, room, [{ id: 'wcx', w: 1.8, y0: 1.0, y1: 2.1, pivot: 2.05, fn: PD.toolRack(P.R, 1.8, ['saw', 'hammer', 'sledge', 'saw']) }], { max: 2 }); };
 HT.basketmaker = (P, c, room, F) => { hPlace(P, room, 'baskets', { sides: ['s', 'w', 'e'] }); hPlace(P, room, 'baskets', { sides: ['w', 'e'] }); hPlace(P, room, 'willow', { sides: ['w', 'e', 's'] }); hPlace(P, room, 'willow', { sides: ['e', 'w'] }); hPlace(P, room, 'bench', { sides: ['w', 'e'] }); };
+
+// ───────── the working buildings: weaver, draper, mill, hunter, fisher, farm [c5] ─────────
+TP.millstones = m => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.95, 0, -0.95, 0.95, 0.12, 0.95); for (const [x, z] of [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]]) m.box(x - 0.06, 0.12, z - 0.06, x + 0.06, 0.95, z + 0.06); m.box(-0.95, 0.9, -0.95, 0.95, 0.96, 0.95);
+  m.mat(MAT.STONE, [0.62, 0.6, 0.56]); m.cyl(0, 0.12, 0, 0.78, 0.78, 0.2, 14, 2); m.cyl(0, 0.34, 0, 0.74, 0.74, 0.18, 14, 2); m.mat(MAT.PLANKS, [0.42, 0.3, 0.2]); m.lathe([[0.82, 0.52], [0.84, 0.82], [0.8, 0.9]], 14, 0);
+  m.mat(MAT.PLANKS, COL.wood); m.beam([0.0, 1.9, 0.0], [0.0, 1.05, 0.0], 0.05, 0.38); m.box(-0.3, 1.95, -0.3, 0.3, 2.0, 0.3); m.mat(MAT.CLOTH, [0.72, 0.68, 0.56], 0.4); m.box(0.5, 0.0, 0.82, 0.9, 0.2, 0.98); addBoxCollider(m, -0.95, -0.95, 0.95, 0.95, 0, 1.0); };
+TP.shaft = m => { m.mat(MAT.TIMBER, COL.woodDark); m.cyl(0, 1.55, -0.1, 0.13, 0.13, 0.01, 8, 2); m.box(-0.14, 1.4, -0.3, 0.14, 1.7, 0.3); m.mat(MAT.PLANKS, [0.4, 0.28, 0.17]); m.cyl(0, 1.55, 0.2, 0.42, 0.42, 0.12, 12, 2); for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; m.box(Math.cos(a) * 0.46 - 0.03, 1.55 + Math.sin(a) * 0.46 - 0.04, 0.14, Math.cos(a) * 0.46 + 0.03, 1.55 + Math.sin(a) * 0.46 + 0.04, 0.26); } m.mat(MAT.TIMBER, COL.wood); m.box(-0.12, 0.0, -0.1, 0.12, 1.4, 0.1); };
+TP.net = (w, R) => (m, hh) => { m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, -0.04, -0.04, w / 2, 0, 0); m.mat(MAT.CLOTH, [0.46, 0.4, 0.28], 0.5); const nx = Math.round(w / 0.1), ny = 12; for (let i = 0; i <= nx; i++) m.box(-w / 2 + i * w / nx - 0.003, -1.15 - (i % 3) * 0.06, -0.035, -w / 2 + i * w / nx + 0.003, -0.04, -0.03); for (let j = 1; j < ny; j++) m.box(-w / 2, -0.04 - j * 0.09, -0.035, w / 2, -0.036 - j * 0.09, -0.03); for (let i = 0; i < 4; i++) { m.mat(MAT.WOODDARK || MAT.TIMBER, COL.wood); m.ball(-w / 2 + 0.2 + i * (w - 0.4) / 3, -0.5 - R() * 0.4, -0.05, 0.035, 0.035, 0.03, 5, 3); } };
+TP.fishBar = (len, R) => m => { m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015); const n = Math.round(len / 0.28); for (let i = 0; i < n; i++) { const x = -len / 2 + 0.18 + i * (len - 0.36) / Math.max(1, n - 1); m.mat(MAT.CLOTH, [0.2, 0.19, 0.18], 0.4); m.box(x - 0.003, -0.5, -0.003, x + 0.003, -0.37, 0.003); m.mat(MAT.THATCH, R.pick([[0.45, 0.43, 0.36], [0.4, 0.4, 0.36]]), 0.4); m.ball(x, -0.68, 0, 0.035, 0.17, 0.02, 6, 4); } };
+TP.rods = m => { m.mat(MAT.TIMBER, COL.wood); for (let i = 0; i < 4; i++) m.beam([-0.3 + i * 0.2, 0.0, 0.05], [-0.15 + i * 0.2, 2.1, 0.12], 0.013, 0.006); m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.4, 0.0, -0.05, 0.4, 0.06, 0.2); };
+TP.furFrame = (R) => m => { m.mat(MAT.TIMBER, COL.wood); for (const sx of [-1, 1]) m.box(sx * 0.5 - 0.03, 0, -0.05, sx * 0.5 + 0.03, 1.5, 0.05); m.box(-0.5, 1.45, -0.05, 0.5, 1.5, 0.05); m.box(-0.5, 0.2, -0.05, 0.5, 0.25, 0.05); m.mat(MAT.CLOTH, R.pick([[0.36, 0.27, 0.19], [0.3, 0.26, 0.22], [0.4, 0.32, 0.22]]), 0.45); m.box(-0.44, 0.28, -0.015, 0.44, 1.42, 0.015); m.mat(MAT.CLOTH, [0.34, 0.28, 0.2], 0.4); for (let i = 0; i < 6; i++) m.box(-0.5, 0.3 + i * 0.2, -0.03, -0.44, 0.31 + i * 0.2, 0.03); addBoxCollider(m, -0.55, -0.1, 0.55, 0.1, 0, 1.5); };
+Object.assign(HPR, { millstones: [2.0, 2.0, 2.0, () => TP.millstones], shaft: [0.5, 1.0, 1.9, () => TP.shaft], rods: [0.9, 0.3, 2.1, () => TP.rods], furframe: [1.2, 0.3, 1.5, (P, rm, R) => TP.furFrame(R)] });
+HT.weaver = (P, c, room, F) => {
+  hFocalAt(P, room, 'm_loom', F, { at: [F.sx * 0.2, -F.sx * 2.6] }); hPlace(P, room, 'm_loom', { sides: ['w', 'e'] }); hPlace(P, room, 'spinning', { sides: ['w', 'e', 's'] }); hPlace(P, room, 'spinning', { sides: ['e', 'w'] });
+  hPlace(P, room, 'vat', { col: [0.2, 0.26, 0.4], sides: ['w', 'e'] }); hShelfWalls(P, room, PD.WARES.cloth.concat(PD.WARES.yarns || []), { sides: ['w', 'e', 's'], id: 'wv', lv: 5 }); hPlace(P, room, 'baskets', { sides: ['w', 'e'] });
+  hCeil(P, room, F.X(-1.2), room.z0 + 4.2, TP.fishBar(0.1, P.R)); P.hall = P.hall || null;
+};
+HT.draper = (P, c, room, F) => {
+  cnt(P, room, F, 4.2, ['folded', 'bolt', 'spools', 'folded'], 'draper'); hShelfWalls(P, room, PD.WARES.cloth, { sides: ['w', 'e', 's'], id: 'wd', lv: 6 }); hPlace(P, room, 'cuttable', { sides: ['w', 'e'] }); hPlace(P, room, 'dip', { sides: ['w', 'e'] });
+  pAnyHang(P, room, [{ id: 'dr', w: 1.4, y0: 0.9, y1: 2.0, pivot: 2.0, fn: PD.tapestry(P.R, 1.4, 1.1) }], { max: 2 }); hPlace(P, room, 'm_mirror', { sides: ['w', 'e', 's'] });
+};
+HT.miller = (P, c, room, F) => {
+  hFocalAt(P, room, 'millstones', F, { at: [F.sx * 0.5, -F.sx * 2.5] }); hPlace(P, room, 'shaft', { sides: ['w', 'e'] }); for (let i = 0; i < 4; i++) hPlace(P, room, 'sacks', { sides: ['w', 'e', 's'] });
+  hCeil(P, room, F.X(-0.3), room.z0 + 3.2, TP.ropeCoils ? (m => { m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.5, -0.1, -0.05, 0.5, -0.04, 0.05); m.mat(MAT.CLOTH, [0.55, 0.45, 0.3], 0.4); m.cyl(0, -1.2, 0, 0.012, 0.012, 1.1, 4, 1); m.mat(MAT.METAL, COL.iron); m.box(-0.06, -1.3, -0.06, 0.06, -1.2, 0.06); }) : null); hPlace(P, room, 'cart', { sides: ['w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['e', 'w'] });
+};
+HT.hunter = (P, c, room, F) => {
+  hPlace(P, room, 'furframe', { sides: ['w', 'e'], free: false }); hPlace(P, room, 'furframe', { sides: ['e', 'w'], free: false }); hPlace(P, room, 'fleeces', { sides: ['w', 'e'] }); hPlace(P, room, 'brazier', { sides: ['e', 'w'] });
+  hCeil(P, room, F.X(1.2), room.z0 + 3.0, TP.sausages(1.4, P.R)); pAnyHang(P, room, [{ id: 'hb', w: 1.2, y0: 0.9, y1: 1.9, pivot: 1.9, fn: TP.bows(P.R) }], { max: 2 }); hPlace(P, room, 'bucket', { sides: ['s', 'w', 'e'] });
+};
+HT.fisher = (P, c, room, F) => {
+  pAnyHang(P, room, [{ id: 'nt', w: 2.0, y0: 0.7, y1: 2.0, pivot: 2.0, fn: TP.net(2.0, P.R) }], { max: 3 }); hPlace(P, room, 'rods', { sides: ['s', 'w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['w', 'e'] }); hPlace(P, room, 'baskets', { sides: ['w', 'e', 's'] });
+  hCeil(P, room, F.X(1.2), room.z0 + 3.0, TP.fishBar(1.8, P.R)); hPlace(P, room, 'ropes', { sides: ['w', 'e'] }); hPlace(P, room, 'bucket', { sides: ['s', 'w', 'e'] });
+};
+HT.farmer = (P, c, room, F) => {
+  hPlace(P, room, 'm_press', { sides: ['s', 'w', 'e'] }); hPlace(P, room, 'sacks', { sides: ['w', 'e'] }); hPlace(P, room, 'appleCrate', { sides: ['w', 'e'] }); hPlace(P, room, 'applesBrl', { sides: ['e', 'w'] }); hShelfWalls(P, room, ['cheese', 'jug', 'loaf', 'bowl', 'cheese'], { sides: ['w', 'e'], id: 'wf', lv: 3 });
+  pAnyHang(P, room, [{ id: 'ft', w: 1.8, y0: 1.0, y1: 2.1, pivot: 2.05, fn: PD.toolRack(P.R, 1.8, ['saw', 'hammer', 'file', 'chisel']) }], { max: 2 });
+};
 HT.household = (P, c, room, F) => { hPlace(P, room, 'spinning', { sides: ['w', 'e'] }); hPlace(P, room, 'bucket', { sides: ['w', 'e', 's'] }); };
