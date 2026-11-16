@@ -15,6 +15,8 @@ const SUF = '@' + level, isCopy = n => /@(lod|mid|far)$/.test(n), isMine = n => 
 const io = new NodeIO().registerExtensions([KHRMeshQuantization, EXTTextureWebP, EXTMeshoptCompression]).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });
 // what a mesh is, from its material (the MakeHuman bodies carry extras.kind; the Quaternius ones are told by name)
 const kindOf = (mat, name) => {
+  if (/teeth|tongue/i.test(name)) return 'mouth';          // morph.py: only the two close weights have them
+  if (/^w_/.test(name)) return 'wear';          // wardrobe pieces (tools/humans/garb.py): a villager wears about 700 triangles of them at full weight
   const k = mat.getExtras() && mat.getExtras().kind; if (k) return k;
   const n = (mat.getName() + ' ' + name);
   return /eye/i.test(n) ? 'eye' : /brow/i.test(n) ? 'brow' : /hair|beard/i.test(n) ? 'hair' : /skin|head|regular/i.test(n) ? 'body' : 'cloth';
@@ -30,13 +32,14 @@ for (const file of files) {
     const mesh = node.getMesh(); if (!mesh || !node.getSkin() || isCopy(node.getName())) continue;
     for (const prim of mesh.listPrimitives()) items.push({ node, mesh, prim, kind: kindOf(prim.getMaterial(), mesh.getName()), n: prim.getIndices().getCount() / 3 });
   }
-  const rest = budget - items.filter(x => x.kind === 'eye').length * EYE_TRIS, sums = {};
+  const MOUTH_N = level === 'mid' ? items.filter(x => x.kind === 'mouth').reduce((a, x) => a + x.n, 0) : 0, WEAR_RATIO = level === 'mid' ? 0.55 : level === 'lod' ? 0.28 : 0.10, WEAR_MAX = Math.round(700 * WEAR_RATIO), rest = budget - items.filter(x => x.kind === 'eye').length * EYE_TRIS - (items.some(x => x.kind === 'wear') ? WEAR_MAX : 0) - MOUTH_N, sums = {};
   for (const x of items) if (SHARE[x.kind] !== undefined) sums[x.kind] = (sums[x.kind] || 0) + Math.sqrt(x.n);
   let total = 0; const log = [];
   for (const x of items) {
     if ((x.kind === 'brow' || x.kind === 'lash') && level !== 'mid') continue;                       // 1 to 2 pixels at the distance this is used
     if (x.kind === 'eye' && !EYE_TRIS) continue;
-    const target = x.kind === 'eye' ? EYE_TRIS : SHARE[x.kind] === undefined ? x.n : Math.max(level === 'far' ? 30 : 80, rest * SHARE[x.kind] * Math.sqrt(x.n) / sums[x.kind]);
+    if (x.kind === 'mouth' && level !== 'mid') continue;
+    const target = x.kind === 'eye' ? EYE_TRIS : x.kind === 'wear' ? Math.max(12, x.n * WEAR_RATIO) : x.kind === 'mouth' ? x.n : SHARE[x.kind] === undefined ? x.n : Math.max(level === 'far' ? 30 : 80, rest * SHARE[x.kind] * Math.sqrt(x.n) / sums[x.kind]);
     const prim = x.prim, ia = prim.getIndices(), idx = Uint32Array.from(ia.getArray()), pa = prim.getAttribute('POSITION'), nv = pa.getCount();
     const pos = new Float32Array(nv * 3), nrm = prim.getAttribute('NORMAL'), uv = prim.getAttribute('TEXCOORD_0'), wt = prim.getAttribute('WEIGHTS_0'), e = [0, 0, 0, 0];
     const att = new Float32Array(nv * 9);              // normal (3), uv (2), skin weights (4)
