@@ -33,12 +33,20 @@ function hCtx(P, c) {
   F.winKinds = R.pick([['Wide_Flat'], ['Wide_Flat', 'Wide_Round'], ['Thin_Round', 'Wide_Flat'], ['Wide_Round']]);
   F.X = x => F.sx * x; F.S = s => F.sx > 0 ? s : ({ w: 'e', e: 'w' }[s] || s);
   F.rm = (k, rid, kind, x0, z0, x1, z1, o) => pRoom(P, k, rid, kind, F.sx > 0 ? x0 : -x1, z0, F.sx > 0 ? x1 : -x0, z1, Object.assign({ winKinds: F.winKinds }, o || {}));
-  F.stoneWalls = hHash(id + '|walls') < (F.stone0 ? 0.7 : 0.18);      // [c5] a stone shell inside as well: the first view is not always plaster
-  F.fin = (k, o) => Object.assign(k === 0 ? { floor: F.stone0 ? 'stone' : 'wood', tint: F.stone0 ? [0.78, 0.74, 0.7] : F.tint } : { floor: 'wood', tint: F.tint2 }, k === 0 && F.stoneWalls ? { walls: 'stone', tint: [0.9, 0.88, 0.84] } : {}, o || {});
+  F.memo = hMemoIdx(id);
+  // finishes: the wall the door faces and the floor differ house to house (stone, timber boarding, plaster, ochre wattle; flags, boards, earth, slate)
+  F.wallKind = R.pick(F.stone0 ? ['stone', 'stone', 'timber', 'plaster'] : wealth > 1 ? ['plaster', 'timber', 'plaster', 'stone'] : ['plaster', 'timber', 'wattle', 'stone', 'plaster']); F.floorKind = F.stone0 ? R.pick(['flags', 'earth', 'slate', 'flags']) : wealth > 1 ? R.pick(['boards', 'boards', 'slate']) : R.pick(['boards', 'earth', 'boards']);
+  F.fin = (k, o) => {
+    const u = { floor: 'wood', tint: F.tint2 }; if (k !== 0) return Object.assign(u, o || {});
+    const w = { stone: { walls: 'stone', tint: [0.92, 0.9, 0.86] }, timber: { tint: [0.5, 0.38, 0.27] }, wattle: { tint: [0.86, 0.74, 0.5] }, plaster: { tint: F.tint } }[F.wallKind], f = { flags: { floor: 'stone' }, earth: { floor: 'stone', ftint: [0.5, 0.4, 0.28] }, slate: { floor: 'stone', ftint: [0.62, 0.68, 0.74] }, boards: { floor: 'wood', ftint: wealth > 1 ? [1.0, 0.9, 0.78] : undefined } }[F.floorKind];
+    const r = Object.assign({}, w, f, o || {}); if (o && o.floor && o.floor !== (f && f.floor)) delete r.ftint; return r;
+  };
   F.door = (a, b, x, z, o) => pDoor(P, a, b, F.X(x), z, o);
   return F;
 }
 const HFAM_SHOP = { shopfront: true };
+let HMEMO_IDS = [];          // every enterable house, in a fixed scattered order: its rank picks its one memorable object (72l_hobjects.js)
+const hMemoIdx = id => Math.max(0, HMEMO_IDS.indexOf(id));
 const hRugs = (P, room, F, n) => { for (let i = 0; i < (n || 1); i++) { const e = PD.emptiest(P, room); if (e.r > 1.0) PD.rug(P, room, e.x, e.z, Math.min(2.2, e.r * 1.5), Math.min(3.0, e.r * 2.0), F.rug, P.R() < 0.5 ? 0 : PI / 2); } };
 const hPool = (kind, F) => ({
   hall: F.wealth > 1 ? ['tapestry', 'paint', 'cabinet', 'hooks', 'sconce', 'shelf', 'tapestry'] : ['hooks', 'cabinet', 'paint', 'tapestry', 'sconce', 'shelf', 'cask'], bedroom: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet', 'sconce'],
@@ -47,11 +55,11 @@ const hPool = (kind, F) => ({
 // the density pass and the light for every room of a finished layout
 function hEntryTorch(P, F) {          // [c5] one visible warm source in the first view at night: a torch or a sconce on the wall facing the door, beside the focal piece
   const e = P.doors.find(d => d.b === null); if (!e) return; const room = P.rooms[e.a]; if (!room || P.torchDone) return;
-  for (const u of [F.X(-2.2), F.X(2.2), F.X(-3.2), F.X(3.2), F.X(-1.4), F.X(1.4)]) if (pTorch(P, room, 's', u, 1.65, 6) || pSconce(P, room, 's', u, 1.6)) { P.torchDone = 1; return; }
+  for (const u of [F.X(-2.2), F.X(2.2), F.X(-3.2), F.X(3.2), F.X(-1.4), F.X(1.4)]) if ((F.memo % 2 ? pSconce(P, room, 's', u, 1.6) || pTorch(P, room, 's', u, 1.65, 6) : pTorch(P, room, 's', u, 1.65, 6) || pSconce(P, room, 's', u, 1.6))) { P.torchDone = 1; return; }
   for (const sd of ['w', 'e']) for (const z of [room.z0 + 3, room.z0 + 4, room.z0 + 2]) if (pTorch(P, room, sd, z, 1.65, 6)) { P.torchDone = 1; return; }
 }
 function hFinish(P, c, F) {
-  hEntryTorch(P, F);
+  hMemo(P, F); hEntryTorch(P, F);
   for (const id in P.rooms) {
     const r = P.rooms[id], k = r.kind === 'cellar' ? 'cellar' : r.kind === 'bedroom' ? 'bedroom' : r.kind === 'store' ? 'store' : r.kind === 'corridor' ? 'corridor' : r.kind === 'yard' ? 'yard' : 'hall';
     PD.dense(P, r, { pool: hPool(k, F), corner: k === 'cellar' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack', 'cask'], mid: { kinds: k === 'cellar' || k === 'store' ? ['casks', 'sacks'] : ['rug'], max: k === 'corridor' ? 0 : 1, min: 0.9 }, middle: k !== 'corridor', racks: k === 'cellar' ? 1 : 0, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
@@ -154,7 +162,7 @@ HFAM.workshop = (P, c, F) => {
   P.dims = { W, D, Dh }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
   const work = F.rm(0, 'work', 'hall', -5, 0, 5, Dh, F.fin(0, { floor: F.T.stone || F.wealth === 0 ? 'stone' : 'wood' })), living = F.rm(0, 'living', 'hall', -5, Dh, -0.5, D, F.fin(0, { floor: 'wood', tint: F.tint2 })), yard = F.rm(0, 'yard', 'yard', -0.5, Dh, 5, D, { floor: 'cobble', tint: [0.8, 0.77, 0.72] });
   const loft = F.rm(1, 'loft', 'bedroom', -5, Dh, -0.5, D, F.fin(1));
-  F.door('work', null, 0, 0); F.door('work', 'living', -2.75, Dh); F.door('work', 'yard', 2.25, Dh);
+  F.door('work', null, R.pick([-1, 0, 0, 1]), 0); F.door('work', 'living', -2.75 + R.pick([-0.5, 0.5]), Dh); F.door('work', 'yard', 2.25 + R.pick([-0.5, 0, 0.5, 1]), Dh);      // [c5] the openings in different places
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: F.X(-5 + 0.95), z: Dh + 1.25, width: 0.9, tread: 0.2 });
   pLayout(P);
   hTrade(P, c, work, F); P.hall = { room: work, hh: null }; const e = P.doors.find(d => d.b === null); if (e) pPut(P, work, P.id + '.mat', e.x, 1.4, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, F.rug), { flat: true, noClear: true });
@@ -201,3 +209,5 @@ if (typeof HOUSES !== 'undefined' && typeof ALLEY_SHOPS !== 'undefined') {
     HDESC[a.id] = { trade: t, fam: 'shopfront', wealth: 1 }; PLANS[a.id] = hBuild; PLAN_SHIP[a.id] = 1;
   }
 }
+
+{ const ids = (typeof INF !== 'undefined' && INF.enterIds || []).concat(['high.a', 'high.c'], typeof ALLEY_SHOPS !== 'undefined' ? ALLEY_SHOPS.filter(a => a.layout).map(a => a.id) : []); const first = ['in.02', 'in.04', 'in.07', 'in.13', 'in.21', 'in.23', 'high.a', 'high.c', 'shop.n2', 'shop.n3', 'shop.n4', 'shop.s0', 'shop.s1', 'shop.s2'], sc = a => hHash(a + '|memo'); HMEMO_IDS = first.filter(a => ids.includes(a)).sort((a, b) => sc(a) - sc(b)).concat(ids.filter(a => !first.includes(a)).sort((a, b) => sc(a) - sc(b))); }
