@@ -191,6 +191,7 @@ function buildVillage() {
 
   if (typeof buildBoards === 'function') buildBoards(bucket, fence, R);
   if (typeof buildLevels === 'function') buildLevels(bucket, fence, R);      // Build 33: upper ward (73f_levels.js)
+  if (typeof buildWharf === 'function') buildWharf(bucket, fence, R);      // Build 33: the lower ward (73g_wharf.js)
 
   // ── farm: fields, coop, scarecrow, hay ──
   for (const f of FIELDS) { const p = rect(f.x0 - 0.8, f.z0 - 0.8, f.x1 + 0.8, f.z1 + 0.8); fence([p[0], [lerp(p[0][0], p[1][0], 0.38), p[0][1]]]); fence([[lerp(p[0][0], p[1][0], 0.52), p[0][1]], p[1], p[2], p[3], p[4]]); }
