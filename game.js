@@ -4385,15 +4385,15 @@ const Props = {
   },
   sack(m, s, col) { s = s || 0.3; m.mat(MAT.CLOTH, col || COL.wool, 0.6); m.ball(0, s * 0.85, 0, s, s * 0.9, s * 0.8, 8, 6); m.cyl(0, s * 1.6, 0, s * 0.22, s * 0.3, s * 0.3, 6, 2); },
   pot(m, s, col) { s = s || 0.14; m.mat(MAT.PLAIN, col || COL.clay); m.lathe([[s * 0.5, 0], [s, s * 0.7], [s * 0.9, s * 1.5], [s * 0.55, s * 1.9], [s * 0.7, s * 2.1]], 8, 1); },
-  jug(m, col) { m.mat(MAT.PLAIN, col || COL.clay); m.lathe([[0.05, 0], [0.085, 0.08], [0.07, 0.18], [0.035, 0.23], [0.045, 0.27]], 8, 1); m.mat(MAT.PLAIN, col || COL.clay); m.beam([0.07, 0.19, 0], [0.11, 0.13, 0], 0.02, 0.02); m.beam([0.11, 0.13, 0], [0.08, 0.07, 0], 0.02, 0.02); },
+  jug(m, col) { const c = col || [0.50, 0.33, 0.22]; m.mat(MAT.PLAIN, c); m.lathe([[0.04, 0], [0.075, 0.03], [0.088, 0.09], [0.07, 0.17], [0.038, 0.215], [0.046, 0.25], [0.05, 0.262]], 9, 1); m.mat(MAT.PLAIN, [c[0] * 0.6, c[1] * 0.6, c[2] * 0.6]); m.disc(0, 0.255, 0, 0.034, 8, 1); m.mat(MAT.PLAIN, c); m.beam([0.05, 0.215, 0], [0.105, 0.17, 0], 0.016, 0.016); m.beam([0.105, 0.17, 0], [0.085, 0.09, 0], 0.016, 0.016); },
   bottle(m, col) { m.mat(MAT.PLAIN, col || COL.glass); m.lathe([[0.035, 0], [0.04, 0.02], [0.04, 0.14], [0.014, 0.20], [0.014, 0.27]], 7, 3); },
   mug(m) { m.mat(MAT.PLANKS, COL.wood, 0.3); m.lathe([[0.045, 0], [0.05, 0.12]], 8, 1); m.mat(MAT.PLAIN, [0.3, 0.2, 0.1]); m.disc(0, 0.10, 0, 0.044, 8, 1); m.mat(MAT.METAL, COL.iron); m.lathe([[0.052, 0.09], [0.052, 0.105]], 8, 0); },
   plate(m, col) { m.mat(MAT.PLAIN, col || [0.72, 0.60, 0.42]); m.lathe([[0.07, 0], [0.12, 0.018]], 10, 1); m.disc(0, 0.004, 0, 0.07, 10, 1); },
   bowl(m, col) { m.mat(MAT.PLAIN, col || [0.60, 0.42, 0.26]); m.lathe([[0.04, 0], [0.09, 0.05], [0.10, 0.07]], 9, 1); m.disc(0, 0.045, 0, 0.085, 9, 1); },
-  loaf(m) { m.mat(MAT.PLAIN, COL.bread); m.ball(0, 0.045, 0, 0.13, 0.055, 0.08, 8, 5); },
-  cheese(m) { m.mat(MAT.PLAIN, COL.cheese); m.cyl(0, 0, 0, 0.12, 0.12, 0.07, 10, 2); },
-  apple(m, col) { m.mat(MAT.PLAIN, col || COL.apple); m.ball(0, 0.04, 0, 0.04, 0.04, 0.04, 6, 4); },
-  cabbage(m) { m.mat(MAT.PLAIN, COL.cabbage); m.ball(0, 0.09, 0, 0.1, 0.09, 0.1, 7, 5); },
+  loaf(m) { m.mat(MAT.PLAIN, [0.52, 0.36, 0.19]); m.ball(0, 0.045, 0, 0.13, 0.055, 0.08, 9, 5); m.mat(MAT.PLAIN, [0.72, 0.58, 0.36]); for (const x of [-0.06, 0, 0.06]) m.beam([x - 0.02, 0.098, -0.04], [x + 0.02, 0.098, 0.04], 0.01, 0.008); },
+  cheese(m) { m.mat(MAT.PLAIN, [0.58, 0.46, 0.24]); m.cyl(0, 0, 0, 0.12, 0.12, 0.07, 10, 2); m.mat(MAT.PLAIN, [0.82, 0.70, 0.40]); m.box(0.0, 0.0, -0.12, 0.12, 0.07, 0.0, 1 | 4 | 8 | 16); },
+  apple(m, col) { const c = col || COL.apple; m.mat(MAT.PLAIN, [c[0] * 0.85, c[1] * 0.85, c[2] * 0.85]); m.ball(0, 0.04, 0, 0.042, 0.037, 0.042, 7, 4); m.mat(MAT.PLAIN, [0.22, 0.14, 0.07]); m.beam([0, 0.072, 0], [0.004, 0.092, 0], 0.003, 0.003); },
+  cabbage(m) { m.mat(MAT.PLAIN, [0.30, 0.40, 0.22]); m.ball(0, 0.085, 0, 0.1, 0.085, 0.1, 8, 5); m.mat(MAT.PLAIN, [0.40, 0.50, 0.28]); for (let i = 0; i < 4; i++) { const a = i * PI / 2 + 0.4; m.ball(Math.cos(a) * 0.075, 0.06, Math.sin(a) * 0.075, 0.055, 0.05, 0.035, 5, 3); } },
   book(m, col, w) { m.mat(MAT.CLOTH, col || COL.red, 0.5); m.box(-0.09, 0, -0.12, 0.09, w || 0.04, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(-0.082, 0.004, -0.115, 0.088, (w || 0.04) - 0.004, 0.118, 4 | 8 | 1); },
   // candle with flame + light. returns nothing; registers emitter
   candle(m, ctx, tall) {
@@ -4817,6 +4817,7 @@ async function kitBoot(progress) {
 }
 // pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong
 function kitFixups() {
+  for (const n of ['ceramic_vase_02', 'ceramic_vase_04', 'ceramic_pot']) if (Kit.defs[n]) { Kit.defs[n].gain = 0.5; Kit.defs[n].color = [0.7, 0.46, 0.31]; }       // [fx1] scanned glazed pots photographed white in the sun: now read as earthenware
   for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) { Kit.defs[n].gain = 2.0; Kit.defs[n].sat = 0.85; }       // scanned rocks photograph dark
   for (const n of ['Window_Wide_Flat1', 'Window_Wide_Round1', 'Window_Thin_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Open'] = Object.assign({}, p, { name: n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_WindowGlass') }); }       // the frame without the pane: upstairs windows you can look out of
   for (const n of [4, 6, 8]) { const p = Kit.pieces['Roof_Front_Brick' + n]; if (p) Kit.pieces['Roof_Front_Brick' + n + '_Open'] = Object.assign({}, p, { name: 'Roof_Front_Brick' + n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_Plaster') }); }       // gable frames without their plaster, where a window is cut in (gableFill, 71c_upper.js)
@@ -8943,7 +8944,7 @@ function buildVillage() {
     put(x, z, yaw, m => Props.stall(m, col, y => {
       if (kind === 0) { for (const [cx, kindG] of [[-0.85, 'apple'], [0, 'cabbage'], [0.85, 'apple']]) at(m, cx, y, -0.3, 0, () => { m.mat(MAT.PLANKS, COL.wood, 0.5); m.box(-0.36, 0, -0.26, 0.36, 0.14, 0.26, 8); for (let i = 0; i < 12; i++) at(m, (i % 4) * 0.17 - 0.26, 0.12, Math.floor(i / 4) * 0.16 - 0.16, 0, () => kindG === 'apple' ? Props.apple(m, cx < 0 ? COL.apple : [0.62, 0.72, 0.22]) : Props.cabbage(m)); }); }
       else if (kind === 1) Props.clutter(m, R, -1.1, 1.1, y, -0.25, ['loaf', 'cheese', 'loaf', 'cheese', 'jug', 'loaf'], 7);
-      else { Props.clutter(m, R, -1.1, 0.2, y, -0.25, ['pot', 'pot', 'jug', 'bowl', 'pot'], 5); for (let k = 0; k < 3; k++) at(m, 0.55 + k * 0.22, y, -0.3, PI / 2, () => clothBolt(m, [COL.red, COL.gold, COL.blue][k])); }
+      else { Props.clutter(m, R, -1.1, 0.2, y, -0.25, ['pot', 'pot', 'jug', 'bowl', 'pot'], 5); for (let k = 0; k < 3; k++) at(m, 0.55 + k * 0.22, y, -0.3, PI / 2, () => clothBolt(m, [DYE.red, DYE.yellow, DYE.blue][k])); }
     }));
     const b = [x - Math.sin(yaw) * 1.05, z + Math.cos(yaw) * 1.05];
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);
