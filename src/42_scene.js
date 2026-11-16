@@ -3,7 +3,7 @@
 // villagers, small props); 2 = the wide shadow map only (flat tree stand-ins that cast for every tree out there).
 // Layer 3 = the near sun-shadow map only: casters the camera never draws (the low copy of a villager, the plain pine used for shadows). The near map's camera enables it.
 const SHADOW_ONLY_LAYER = 3;
-const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {} };
+const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {}, pools: [] };
 // Draw distances (m) for small things. vis: drawn by the camera up to here; cast: drawn into the near sun-shadow map up to here; near: a chicken
 // is drawn as separate parts up to this distance and as one rigid body beyond it. indoor: while the camera is inside a building, outdoor
 // meshes whose bounding sphere lies beyond this are not drawn at all (they can only show through a window). Raise a number to back a cut out.
@@ -48,17 +48,56 @@ function sceneBuild() {
   for (const pk of World.packs) for (const it of pk.items) {
     const mat = it.kind === 'terrain' ? M.terrain : it.kind === 'water' ? M.water : it.kind === 'glow' ? M.glow : M.static;
     if (!mat || !it.count) continue;
+    // terrain and water tiles of one pack are drawn together: one mesh whose index buffer is refilled from the tiles in view (see poolUpdate)
+    if ((it.kind === 'terrain' || it.kind === 'water') && !it.cell && !it.nearOnly && !(TEST && TEST.pool === 0)) {
+      let P = SC.pools.find(q => q.pk === pk && q.kind === it.kind);
+      if (!P) { P = { pk, kind: it.kind, tiles: [], mat, n: 0 }; SC.pools.push(P); }
+      if (it.kind === 'water' && it.r > 30) { for (const c of squares(pk, it.first, it.count, 16)) P.tiles.push({ it, idx: c.idx, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 14), on: false }); }       // a river or lake tile is hundreds of metres long: cut it into 16 m squares
+      else P.tiles.push({ it, sph: sphere(it.c, it.r), big: sphere(it.c, it.r + 6), on: false });
+      P.n += it.count; continue;
+    }
     const g = geo(pk, it.first, it.count); g.boundingSphere = sphere(it.c, it.r);
     const mesh = new THREE.Mesh(g, mat); mesh.matrixAutoUpdate = false;
     mesh.castShadow = !!pk.shadow && !it.noShadow && it.kind === 'opaque'; mesh.receiveShadow = it.kind === 'opaque' || it.kind === 'terrain';
     if (it.kind === 'terrain') mesh.renderOrder = 1;      // after the other opaque draws, so the ground shader only runs where nothing nearer already stands
     if (it.kind === 'water') mesh.renderOrder = 2; else if (it.kind === 'glow') mesh.renderOrder = 3;
     if (it.nearOnly) mesh.layers.set(1);
-    scene.add(mesh); SC.statics.push({ mesh, it });
+    const st = { mesh, it }; scene.add(mesh); SC.statics.push(st);
+    // A big merged piece of the village (fences, wells, stalls over 100 m) used to go into the near sun-shadow map whole. Its triangles are
+    // sorted into 8 m squares here; a twin that only that shadow map draws holds just the squares the map covers (subUpdate).
+    if (it.kind === 'opaque' && !it.cell && it.r > 18 && !(TEST && TEST.sub === 0)) {
+      const cellList = squares(pk, it.first, it.count, 8);
+      const g2 = new THREE.BufferGeometry(); for (const k in pk.attr) if (k !== 'wind') g2.setAttribute(k, pk.attr[k]);
+      const cur = new Uint32Array(it.count), at = new THREE.BufferAttribute(cur, 1); at.setUsage(THREE.DynamicDrawUsage); g2.setIndex(at); g2.setDrawRange(0, 0); g2.boundingSphere = g.boundingSphere;
+      const tw = new THREE.Mesh(g2, mat); tw.matrixAutoUpdate = false; tw.frustumCulled = false; tw.castShadow = true; tw.receiveShadow = false; tw.layers.set(SHADOW_ONLY_LAYER); tw.visible = false; tw.name = 'static-shadow'; scene.add(tw);
+      tw.castShadow = mesh.castShadow;
+      st.sub = { mesh: tw, geo: g2, cur, cells: cellList, last: [1e9, 1e9], n: 0, casts: mesh.castShadow };
+      // and the camera draws the same mesh from the squares in view (while the mesh itself casts no shadow: see sceneUpdate)
+      const g1 = new THREE.BufferGeometry(); for (const k in pk.attr) if (k !== 'wind') g1.setAttribute(k, pk.attr[k]);
+      const c1 = new Uint32Array(it.count), a1 = new THREE.BufferAttribute(c1, 1); a1.setUsage(THREE.DynamicDrawUsage); g1.setIndex(a1); g1.boundingSphere = g.boundingSphere;
+      c1.set(pk.index.array.subarray(it.first, it.first + it.count)); g1.setDrawRange(0, it.count);
+      st.view = { geo: g1, cur: c1, full: true, n: it.count, total: it.count, pk, it }; mesh.geometry = g1; g.dispose();
+    }
+  }
+  for (const P of SC.pools) {
+    const g = new THREE.BufferGeometry(); for (const k in P.pk.attr) if (k !== 'wind') g.setAttribute(k, P.pk.attr[k]);
+    P.cur = new Uint32Array(P.n); const at = new THREE.BufferAttribute(P.cur, 1); at.setUsage(THREE.DynamicDrawUsage); g.setIndex(at); g.setDrawRange(0, 0); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+    const mesh = P.mesh = new THREE.Mesh(g, P.mat); mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = P.kind === 'terrain'; mesh.renderOrder = P.kind === 'terrain' ? 1 : 2; mesh.name = P.kind + '-pool'; mesh.visible = false;
+    P.geo = g; scene.add(mesh);
   }
   // ── instanced trees, bushes and boulders: one mesh per (model, cell) so cells cull and switch level of detail ──
   const IBA = THREE.InstancedBufferAttribute;
+  for (const grp of World.instGroups) {
+    if (!(grp.kind === 'opaque' && grp.maxDist && grp.nearOnly) || SC.rocks || (TEST && TEST.rockring === 0)) continue;
+    const n = grp.cells.reduce((a, c) => a + c.count, 0), src = new Float32Array(n * 8); let o = 0; for (const c of grp.cells) { src.set(grp.ibuf.subarray(c.first * 8, (c.first + c.count) * 8), o); o += c.count * 8; }
+    const ring = (cap, layer, cast) => { const g = geo(World.instPack, grp.first, grp.count, true), a = new Float32Array(cap * 4), b = new Float32Array(cap * 4), ia = new IBA(a, 4), ib = new IBA(b, 4); ia.setUsage(THREE.DynamicDrawUsage); ib.setUsage(THREE.DynamicDrawUsage);
+      g.setAttribute('ipos', ia); g.setAttribute('iprm', ib); g.instanceCount = 0; g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+      const mesh = new THREE.Mesh(g, M.inst); mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.castShadow = cast; mesh.receiveShadow = !cast; mesh.layers.set(layer); mesh.visible = false; mesh.name = cast ? 'rocks-shadow' : 'rocks'; scene.add(mesh);
+      return { g, a, b, ia, ib, cap, n: 0, mesh }; };
+    SC.rocks = { grp, src, maxDist: grp.maxDist, cam: ring(Math.min(n, 512), 1, false), cast: ring(Math.min(n, 96), SHADOW_ONLY_LAYER, true), last: [1e9, 0, 1e9, 9, ''] };
+  }
   for (const grp of World.instGroups) for (const c of grp.cells) {
+    if (SC.rocks && SC.rocks.grp === grp) continue;
     if (!c.ipos) {
       const a = new Float32Array(c.count * 4), b = new Float32Array(c.count * 4), src = grp.ibuf;
       for (let i = 0; i < c.count; i++) { const o = (c.first + i) * 8; a.set(src.subarray(o, o + 4), i * 4); b.set(src.subarray(o + 4, o + 8), i * 4); }
@@ -95,11 +134,82 @@ function sceneBuild() {
   if (typeof Trees !== 'undefined') Trees.build(scene);       // scanned trees (74b_trees.js)
   return scene;
 }
+// Pooled terrain and water: every frame each tile is tested against the camera's view; the index buffer is only rewritten when a tile
+// comes into view that is not in it yet, and then it takes every tile within 14 m of the view, so turning the head rarely costs an upload.
+const _fr = new THREE.Frustum(), _pm = new THREE.Matrix4();
+function poolUpdate(e, cur, inside) {
+  if (!SC.pools.length) return;
+  _fr.setFromProjectionMatrix(_pm.multiplyMatrices(R.camera.projectionMatrix, R.camera.matrixWorldInverse));
+  for (const P of SC.pools) {
+    if (cur) { P.mesh.visible = false; continue; }
+    let miss = false, need = 0, have = 0;
+    for (const t of P.tiles) {
+      const it = t.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]);
+      t.ok = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && d - it.r > DRAW.indoor);
+      t.in = t.ok && _fr.intersectsSphere(t.sph); if (t.in) { need++; if (!t.on) miss = true; } if (t.on) { have++; if (!t.ok) miss = true; }
+    }
+    if (miss || have > need * 2 + 6 || P.stale) {
+      let n = 0; const src = P.pk.index.array; P.stale = false;
+      for (const t of P.tiles) { t.on = t.ok && (t.in || _fr.intersectsSphere(t.big)); if (t.on) { if (t.idx) { P.cur.set(t.idx, n); n += t.idx.length; } else { P.cur.set(src.subarray(t.it.first, t.it.first + t.it.count), n); n += t.it.count; } } }
+      P.geo.setDrawRange(0, n); P.count = n;
+      if (n) { const at = P.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
+    }
+    P.mesh.visible = P.count > 0;
+  }
+}
+// sorts a pack item's triangles into squares of `size` metres (seen from above); each square knows a sphere round its triangles
+function squares(pk, first, count, size) {
+  const ix = pk.index.array, P_ = pk.attr.position.array, cells = new Map();
+  for (let k = first; k < first + count; k += 3) { const a = ix[k] * 3, b = ix[k + 1] * 3, c = ix[k + 2] * 3, key = Math.floor((P_[a] + P_[b] + P_[c]) / (3 * size)) + ',' + Math.floor((P_[a + 2] + P_[b + 2] + P_[c + 2]) / (3 * size));
+    let l = cells.get(key); if (!l) cells.set(key, l = { idx: [], lo: [1e9, 1e9, 1e9], hi: [-1e9, -1e9, -1e9] }); l.idx.push(ix[k], ix[k + 1], ix[k + 2]);
+    for (const v of [a, b, c]) for (let d = 0; d < 3; d++) { const p = P_[v + d]; if (p < l.lo[d]) l.lo[d] = p; if (p > l.hi[d]) l.hi[d] = p; } }
+  return [...cells.values()].map(l => { const c = [(l.lo[0] + l.hi[0]) / 2, (l.lo[1] + l.hi[1]) / 2, (l.lo[2] + l.hi[2]) / 2], r = 0.5 * hyp(l.hi[0] - l.lo[0], l.hi[1] - l.lo[1], l.hi[2] - l.lo[2]);
+    return { x: c[0], z: c[2], idx: Uint32Array.from(l.idx), sph: new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r), big: new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r + 10), on: true }; });
+}
+// camera side of a big static mesh: all of it while it casts shadow itself, else the squares in (or within 10 m of) the view, refilled when one comes into view that is missing
+function viewUpdate(s, subset) {
+  const v = s.view, cells = s.sub.cells;
+  if (!subset) { if (!v.full) { v.cur.set(v.pk.index.array.subarray(v.it.first, v.it.first + v.it.count)); v.geo.setDrawRange(0, v.total); const at = v.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, v.total); at.needsUpdate = true; v.full = true; for (const c of cells) c.on = true; } return; }
+  let miss = v.full, need = 0, have = 0;
+  for (const c of cells) { c.in = _fr.intersectsSphere(c.sph); if (c.in) { need++; if (!c.on) miss = true; } if (c.on) have++; }
+  if (!miss && have <= need * 2 + 8) return;
+  let n = 0; v.full = false;
+  for (const c of cells) { c.on = c.in || _fr.intersectsSphere(c.big); if (c.on) { v.cur.set(c.idx, n); n += c.idx.length; } }
+  v.n = n; v.geo.setDrawRange(0, n); if (n) { const at = v.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
+}
+const sb_casts = s => s.sub.casts;
+function subUpdate(sb, e, q) {
+  const r0 = q.shadowNear, cx = e[0] + Math.sin(R.cam.yaw) * r0 * 0.72, cz = e[2] - Math.cos(R.cam.yaw) * r0 * 0.72;       // centre of the near shadow map (43_render.js)
+  if (hyp(cx - sb.last[0], cz - sb.last[1]) < 2 && sb.r0 === r0) return; sb.last = [cx, cz]; sb.r0 = r0;
+  let n = 0; const reach = r0 + 6 + 8;          // the map, the 8 m squares' own half-diagonal, and room for long shadows falling in from outside
+  for (const c of sb.cells) if (hyp(c.x - cx, c.z - cz) < reach) { sb.cur.set(c.idx, n); n += c.idx.length; }
+  sb.n = n; sb.geo.setDrawRange(0, n); if (n) { const at = sb.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
+}
+// Boulders: instead of one instanced mesh per 110 m cell (every boulder of a cell drawn, and drawn again into the shadow map), two short
+// lists refilled as the player moves: those worth drawing from here, and the few big ones near enough to cast a shadow that shows.
+function rocksUpdate(e, q, hidden) {
+  const K_ = SC.rocks; if (!K_) return;
+  K_.cam.mesh.visible = !hidden && K_.cam.n > 0; K_.cast.mesh.visible = !hidden && K_.cast.n > 0; if (hidden) return;
+  let dy = R.cam.yaw - K_.last[3]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  if (hyp(e[0] - K_.last[0], e[2] - K_.last[2]) < 1.5 && Math.abs(dy) < 0.19 && K_.last[4] === R.qName) return; K_.last = [e[0], e[1], e[2], R.cam.yaw, R.qName];
+  const fx = Math.sin(R.cam.yaw), fz = -Math.cos(R.cam.yaw), half = Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) + 0.35, cone = Math.abs(R.cam.pitch) < 0.9;
+  const far = Math.min(K_.maxDist, q.rockDist), RS = q.rockCast === false ? -1 : q.shadowNear * 1.72 + 3, src = K_.src; K_.cam.n = K_.cast.n = 0;
+  const put = (r, o) => { if (r.n >= r.cap) return; const j = r.n++ * 4; r.a.set(src.subarray(o, o + 4), j); r.b.set(src.subarray(o + 4, o + 8), j); };
+  for (let o = 0; o < src.length; o += 8) {
+    const dx = src[o] - e[0], dz = src[o + 2] - e[2], d = Math.sqrt(dx * dx + dz * dz), sc = src[o + 3];
+    if (d > far || d > Math.max(45, sc * 150)) continue;                         // a pebble is not drawn at 150 m
+    if (d < RS && sc > 0.45) put(K_.cast, o);
+    if (cone && d > 10 && Math.acos(clamp((dx * fx + dz * fz) / d, -1, 1)) > half + Math.asin(Math.min(1, 1.6 * sc / d))) continue;
+    put(K_.cam, o);
+  }
+  for (const r of [K_.cam, K_.cast]) { for (const at of [r.ia, r.ib]) { at.clearUpdateRanges(); if (r.n) { at.addUpdateRange(0, r.n * 4); at.needsUpdate = true; } } r.g.instanceCount = r.n; r.mesh.visible = r.n > 0; }
+}
 // per frame: move the dynamic pieces, switch tree detail, hide what is too far to matter
 function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos, cur = World.cell;       // cur: the cell the player is in. Then only that cell is drawn (its generated meshes, kit groups, door leaf); outdoors, no cell is
   if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
   World.deepIn = cur ? true : deepIndoors(e); const inside = !cur && World.deepIn, ind = DRAW.indoor;
+  _fr.setFromProjectionMatrix(_pm.multiplyMatrices(R.camera.projectionMatrix, R.camera.matrixWorldInverse));
   for (const s of SC.statics) {
     const it = s.it;
     if (cur || it.cell) { s.mesh.visible = !!cur && it.cell === cur.id; if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow; continue; }
@@ -110,6 +220,11 @@ function sceneUpdate(camPos, q) {
     // generated village props (fences, walls, wells ...) cast into the wide sun-shadow map only on tiers that have q.farStatics; the near map always gets them
     if (s.farCapable === undefined) s.farCapable = !!s.cast0 && it.kind === 'opaque' && !it.nearOnly && s.mesh.layers.mask === 1;
     if (s.farCapable) s.mesh.layers.mask = q.farStatics ? 1 : 2;
+    if (s.sub) {         // while this mesh would only cast into the near map anyway, the twin casts for it
+      const use = sb_casts(s) && s.mesh.castShadow && s.mesh.visible && !(s.farCapable && q.farStatics), sb = s.sub;
+      if (use) { s.mesh.castShadow = false; subUpdate(sb, e, q); } sb.mesh.visible = use && sb.n > 0;
+      if (s.mesh.visible) { viewUpdate(s, !s.mesh.castShadow); if (!s.view.full && !s.view.n) s.mesh.visible = false; }
+    }
   }
   for (const s of SC.cells) {
     if (cur) { s.mesh.visible = false; continue; }
@@ -118,8 +233,10 @@ function sceneUpdate(camPos, q) {
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }
+  poolUpdate(e, cur, inside); rocksUpdate(e, q, !!cur || inside);
   if (Grass.mesh) Grass.mesh.visible = !inside && !cur;
   if (typeof Trees !== 'undefined') Trees.update(e, q, !!cur);
+  if (typeof Kit !== 'undefined' && Kit.poolGroup) Kit.poolGroup.visible = !cur;       // the town's pooled kit meshes (44_kit.js) are not drawn from inside a cell
   for (const r of SC.rigid) {
     const o = r.obj;
     if (cur ? o.cell !== cur.id : o.cell) { r.mesh.visible = false; continue; }

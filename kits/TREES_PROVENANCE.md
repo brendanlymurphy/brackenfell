@@ -20,7 +20,7 @@ Baked but not shipped yet (in `tools/scan/_bake`): `fir_a`, `pine_b`, `fir_sapli
    atlas usable with alpha testing, `trees.mjs` simplifies the wood and writes one compact model per tree into the cache.
    The intermediate results of these steps are kept in `tools/scan/_bake`, so step 2 can be rerun without the original downloads.
 2. `node tools/scan/trees.mjs tools/scan/_bake <cache dir> <names>` then
-   `TREE_ATLAS=2048 node tools/scan/tree_pack.mjs <cache dir> kits fir_b fir_c pine_c broadleaf_small`
+   `TREE_ATLAS=2048 TREE_KEEP=0.17 TREE_GROW=2.05 node tools/scan/tree_pack.mjs <cache dir> kits fir_b fir_c pine_c broadleaf_small`
    writes the three shipped files: wood simplified to about 700 triangles (90 for the far model), the far model's foliage made from a
    quarter of the near cards enlarged, atlases as WebP at 2048 (the game halves them on phones and on the Low and Medium tiers), and
    the flat stand-in pictures drawn by a small software rasteriser.
