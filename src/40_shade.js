@@ -61,7 +61,7 @@ SH.init = function () {
   });
   SH.pointLights = pointFn(false); SH.pointLightsGround = pointFn(true);
   // warm light lying on the ground under every street lantern, from the baked lamp map (one sample; lit with the windows at dusk)
-  SH.lampPool = Fn(([wp]) => { if (!G.lampTex) Lamps.init(); const t = texture(G.lampTex, wp.xz.div(2 * K.terrainHalf).add(0.5)).r; return vec3(1.0, 0.56, 0.22).mul(t.mul(t).mul(SH.LAMP_PEAK).mul(U.windowGlow)); });
+  SH.lampPool = Fn(([wp]) => { if (!G.lampTex) Lamps.init(); const t = texture(G.lampTex, wp.xz.div(2 * K.terrainHalf).add(0.5)).r; return vec3(1.0, 0.56, 0.22).mul(t.mul(t).mul(SH.LAMP_PEAK).mul(U.windowGlow).mul(1.9)); });
   // A window pane lit from inside, as seen from the street: small leaded diamonds, each a little different, the room behind unevenly
   // bright. Values are chosen for the night exposure so the glass stays amber instead of clipping to white. h: a random number per window.
   SH.paneLit = Fn(([wp, N, h]) => {

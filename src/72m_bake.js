@@ -5,12 +5,14 @@
 //   c.cell.wins   the windows in world space, which SH.winSet (40c_light.js) turns into the cell's daylight.
 // The pool is a ring: 4 inner vertices (alpha A, under the object) and 4 outer vertices (alpha 0, a margin away), so the shade fades out smoothly.
 const Bake = { on: !(typeof TEST !== 'undefined' && TEST && TEST.bake === 0), stats: { pools: 0, wins: 0 } };
+Bake.cap = TEST && TEST.bakecap !== undefined ? +TEST.bakecap : 0.95;
+Bake.dayU = null;
 Bake.mat = function () {
   const { vec4, vec3, attribute, clamp, smoothstep } = TSL;
   const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
   m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide; m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2;
-  const a = attribute('tint', 'vec4').a, t = clamp(a.div(0.7), 0, 1);
-  m.colorNode = vec4(TEST && TEST.bakedebug ? vec3(1.0, 0.0, 0.0) : vec3(0.0), t.mul(t).mul(t.mul(-2).add(3)).mul(TEST && TEST.bakedebug ? 1.0 : 0.7));
+  const a = attribute('tint', 'vec4').a, t = clamp(a.div(0.95), 0, 1); if (!Bake.dayU) Bake.dayU = TSL.uniform(1);
+  m.colorNode = vec4(TEST && TEST.bakedebug ? vec3(1.0, 0.0, 0.0) : vec3(0.0), t.mul(t).mul(t.mul(-2).add(3)).mul(TEST && TEST.bakedebug ? 1.0 : Bake.dayU.mul(Bake.cap)));
   return m;
 };
 // light shafts: a few additive quads from each window into the room, by day only (no volumetric pass). Strength Bake.shaftU is set by SH.winSet.
@@ -20,8 +22,9 @@ Bake.shaftMat = function () {
   Bake.shaftU = uniform(0);
   const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide;
-  const q = uv(), across = smoothstep(0.0, 0.5, TSL.float(1).sub(abs(q.x.mul(2).sub(1)))), along = pow(TSL.float(1).sub(q.y), 1.4).mul(smoothstep(0.0, 0.12, q.y));
-  m.colorNode = attribute('tint', 'vec4').rgb.mul(across.mul(across)).mul(along).mul(Bake.shaftU);
+  const q = uv(), across = smoothstep(0.0, 1.0, TSL.float(1).sub(abs(q.x.mul(2).sub(1)))), along = pow(TSL.float(1).sub(q.y), 1.6).mul(smoothstep(0.0, 0.35, q.y));
+  const ta = attribute('tint', 'vec4').a, pk = TSL.mix(TSL.float(9), TSL.float(1), TSL.step(0.75, ta));      // a < 0.75: the floor patch
+  m.colorNode = attribute('tint', 'vec4').rgb.mul(across.mul(across)).mul(along).mul(Bake.shaftU).mul(pk);
   return m;
 };
 // ring pool round a rectangle given by its four world corners in order (a, b, c, d), margin mg (m) along the outward directions
@@ -43,20 +46,21 @@ Bake.interior = function (P) {
     if ((it.lift || 0) > 0.35 || !(it.x1 > it.x0)) continue;
     const L = P.lv[it.k]; if (!L) continue;
     const h = it.h || 0.5, y = L.y + 0.034; if (it.kind === 'floor' && h < 0.25 && (it.x1 - it.x0) * (it.z1 - it.z0) < 0.35) continue;
-    const hearth = it.kind === 'hearth', A = hearth ? 0.55 : clamp(0.34 + h * 0.3, 0.38, 0.62), mg = hearth ? 0.5 : clamp(0.14 + h * 0.2, 0.16, 0.42);
+    const hearth = it.kind === 'hearth', A = hearth ? 0.7 : clamp(0.62 + h * 0.3, 0.66, 0.92), mg = hearth ? 0.7 : clamp(0.3 + h * 0.3, 0.34, 0.7);
     const pad = 0.03, c = [[it.x0 + pad, it.z0 + pad], [it.x1 - pad, it.z0 + pad], [it.x1 - pad, it.z1 - pad], [it.x0 + pad, it.z1 - pad]].map(p => w2(p[0], p[1]));
     const y3 = P.w2(0, y, 0)[1]; Bake.pool(m, y3, c, mg, A); Bake.stats.pools++;
   }
   if (m.ni) cell.decal = m;
   // light shafts: two stacked quads from the pane down to the floor in front of it
-  { const sm = new Mesh(256); sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 255; sm.cb = 255; sm.ao = 1;
+  { const sm = new Mesh(256); sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 232; sm.cb = 190; sm.ao = 1;
     for (const w of P.windows) {
       const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
       const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, len = 3.4, fy = L.y + 0.05;
       const at = (a, b, y) => P.w2(cx + dx * a + tx * b, y, cz + dz * a + tz * b);
       const quad = (v) => { const [p0, p1, p2, p3] = v; const a = sm.vert(p0[0], p0[1], p0[2], 0, 1, 0, 0, 0), b = sm.vert(p1[0], p1[1], p1[2], 0, 1, 0, 1, 0), c = sm.vert(p2[0], p2[1], p2[2], 0, 1, 0, 1, 1), d = sm.vert(p3[0], p3[1], p3[2], 0, 1, 0, 0, 1); sm.tri(a, b, c); sm.tri(a, c, d); sm.flip = false; };
-      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, 1.1, fy), at(len, -1.1, fy)]);        // u across (the wall's own direction), v from the pane to the floor
-      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, 0.8, fy + 0.5), at(len * 0.8, -0.8, fy + 0.5)]);        // a second, inner sheet gives the beam some depth
+      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, 1.9, fy), at(len, -1.9, fy)]);        // u across (the wall's own direction), v from the pane to the floor
+      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, 1.4, fy + 0.5), at(len * 0.8, -1.4, fy + 0.5)]);        // a second, inner sheet gives the beam some depth
+      { const fp = L.y + 0.045, ws = (w.w || 1.0) * 0.5 + 0.35; sm.ao = 0.5; quad([at(0.35, -ws, fp), at(0.35, ws, fp), at(3.3, ws * 1.5, fp), at(3.3, -ws * 1.5, fp)]); sm.ao = 1; }      // the pool of window light on the floor
     }
     if (sm.ni) cell.shaft = sm; }
   // windows: a pane centre, its inward direction on the floor plane (world), the reach and a strength by size
@@ -88,7 +92,7 @@ Bake.people = function (cam, env) {
     m.colorNode = vec4(vec3(0.0), a.mul(a).mul(B.u));
     const mesh = B.mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = 2; mesh.layers.set(1); mesh.name = 'blobs'; SC.scene.add(mesh); B.pa = pa; B.g = g;
   }
-  const kl = (env.keyCol[0] + env.keyCol[1] + env.keyCol[2]) / 3; B.u.value = (TEST && TEST.blob !== undefined ? +TEST.blob : 0.46) / (1 + kl * 0.8);
+  const kl = (env.keyCol[0] + env.keyCol[1] + env.keyCol[2]) / 3; if (Bake.dayU) Bake.dayU.value = World.cell ? 1 : 0.4 + 0.6 * Math.min(1, kl * 1.6); B.u.value = (TEST && TEST.blob !== undefined ? +TEST.blob : 0.46) / (1 + kl * 0.8);
   const list = [], push = (p, s) => { const dx = p[0] - cam[0], dz = p[2] - cam[2], d2 = dx * dx + dz * dz; if (d2 < 48 * 48 && Math.abs(p[1] - cam[1]) < 6) list.push([d2, p, s]); };
   for (const n of NPCS) { if (n.hid || !n.pos || n.anim === 'lie' || (n.obj && n.obj.visible === false && !n.ch)) continue; push(n.pos, n.scale || 1); }
   if (typeof Foes !== 'undefined' && Foes.list) for (const f of Foes.list) if (f.alive && f.pos && Cells.spaceOf(f.pos) === (Cells.cur ? Cells.cur.id : 0)) push(f.pos, f.scale || 1);
@@ -111,7 +115,7 @@ Bake.buildGround = function () {
   for (const c of World.colliders) {
     if (Cells.inRegion(c.x) || Math.abs(c.x) > 190 || Math.abs(c.z) > 190) continue;
     const ty = Terrain.y(c.x, c.z), ht = c.y1 - c.y0; if (c.y0 > ty + 0.7 || ht < 0.35) continue;
-    const h = c.y0 + 0.9, A = ht > 1.2 ? 0.6 : 0.46, m = clamp(0.7 + 0.16 * ht, 0.8, 1.7);
+    const h = c.y0 + 0.9, A = ht > 1.2 ? 0.82 : 0.62, m = clamp(0.8 + 0.18 * ht, 0.9, 1.9);
     if (c.r !== undefined) {
       if (c.r > 4) continue; const R = c.r + m * 0.9, n = 8, ring0 = [], ring1 = [];
       for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); ring0.push(vert(c.x + ca * c.r * 0.85, c.z + sa * c.r * 0.85, h, A)); ring1.push(vert(c.x + ca * R, c.z + sa * R, h, 0)); }

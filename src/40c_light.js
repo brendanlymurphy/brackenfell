@@ -24,7 +24,8 @@ SH.WINMAX = 6;
           const f = float(1).sub(d2.div(r2)), dn = d.mul(max(d2, 1e-4).inverseSqrt());
           const lobe = smoothstep(-0.9, 0.45, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
           const ndl = max(dot(N, dn.negate()).mul(0.7).add(0.3), 0);                 // surfaces that face the glass catch more
-          acc.addAssign(C.rgb.mul(f.mul(f).div(d2.mul(0.18).add(1)).mul(lobe).mul(ndl)));
+          const up = float(1).sub(TSL.clamp(d.y.sub(0.2).div(1.5), 0, 1).mul(0.75));      // above the glass the light thins out: ceilings stay dark
+          acc.addAssign(C.rgb.mul(f.mul(f).div(d2.mul(0.18).add(1)).mul(lobe).mul(ndl).mul(up)));
         });
       });
       return acc;
@@ -58,6 +59,6 @@ SH.WINMAX = 6;
     const P = U.winP.array, D = U.winD.array, C = U.winC.array, col = env.winCol;
     cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); C[i].set(col[0] * w.k, col[1] * w.k, col[2] * w.k, 0); });
     U.winN.value = cand.length;
-    if (Bake.shaftU) Bake.shaftU.value = Math.min(0.5, (col[0] + col[1] + col[2]) / 3 * (TEST && TEST.shaft !== undefined ? +TEST.shaft : 0.028));
+    if (Bake.shaftU) Bake.shaftU.value = Math.min(0.5, (col[0] + col[1] + col[2]) / 3 * (TEST && TEST.shaft !== undefined ? +TEST.shaft : 0.009));
   };
 })();
