@@ -51,25 +51,25 @@ PLANS.guardhouse = (P, c, info) => {
   if (tb) { tb.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); pLamp(P, guard, tb.x, tb.z); }
   // the wall opposite the door: weapon stands either side of the cell and armoury doors, spears, a notice board, shields
   pKitFloor(P, guard, 's', 'WeaponStand', { n: 'a', at: -1.2 }); pKitFloor(P, guard, 's', 'WeaponStand', { n: 'b', at: 1.2 }); pAgainst(P, guard, 's', id + '.spears1', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: -5.0 }); pAgainst(P, guard, 's', id + '.spears2', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 5.0 });
-  pHang(P, guard, 's', 0, 1.6, 1.0, 2.0, PD.bladeWall(R, 1.6), id + '.blades', { pivot: 2.0 });
+  pHang(P, guard, 's', 1.1, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 }) || pHang(P, guard, 's', -1.1, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 }); pHang(P, guard, 's', -1.0, 1.3, 1.1, 2.0, PD.bladeWall(R, 1.3), id + '.blades2', { pivot: 2.0 });
   pHang(P, guard, 'n', -3.2, 1.3, 1.1, 2.0, PD.tapestry(R, 1.3, 0.9), id + '.board', { pivot: 2.0 });
   pKitFloor(P, guard, 'w', 'Dummy', { n: 'd', at: 'mid' }); pKitFloor(P, guard, 'n', 'WeaponStand', { n: 'c', at: 4.2 });
   pWalls(P, guard, ['Banner_1_Cloth', 'kite_shield', 'Torch_Metal', 'kite_shield', 'Shield_Wooden', 'Banner_2_Cloth', 'Torch_Metal', 'Axe_Bronze', 'Sword_Bronze']);
   PD.dense(P, guard, { pool: ['sconce', 'cask', 'stack', 'hooks', 'sacks'], corner: ['broom', 'cask', 'stack'], mid: { kinds: ['rug'], max: 1 } });
   { const e = P.doors.find(d => d.b === null); if (e) pPut(P, guard, id + '.mat', e.x, 1.4, 0, 2.6, 1.6, 0.02, pdRug(2.6, 1.6, [0.28, 0.22, 0.2]), { flat: true, noClear: true }); pLamp(P, guard, 0, 2.2); }
   // the cells: the west half is the barred cell (a gate gap kept in the bars), a straw pallet, a bucket, chains on the wall; the guards' strongbox outside it
-  pPut(P, cells, id + '.bars', -3.0, 8.4, 0, 6.0, 0.14, 2.5, PD.bars(5.2), { lowOk: true, noClear: true, allow: ['path', 'door'] });
+  pPut(P, cells, id + '.bars', -3.0, 8.4, 0, 5.4, 0.14, 0.84, PD.bars(5.2), { lowOk: true, noClear: true, allow: ['path', 'door'] });
   pAgainst(P, cells, 'w', id + '.pallet', 1.9, 0.9, 0.3, 0, m2 => { m2.mat(MAT.THATCH, COL.hay, 0.5); m2.box(-0.95, 0, -0.4, 0.95, 0.14, 0.4); m2.mat(MAT.CLOTH, [0.4, 0.34, 0.26], 0.5); m2.box(-0.7, 0.14, -0.3, 0.2, 0.19, 0.3); }, { at: 9.5, lowOk: true });
   pKitFloor(P, cells, 'w', 'Bucket_Wooden_1', { n: 'q', at: 'end' }); pKitFloor(P, cells, 's', 'Barrel', { n: 'q2', at: 'start' });
   for (const u of [8.2, 9.8]) pHang(P, cells, 'w', u, 0.5, 0.6, 1.9, PD.chainHang(0.9, R), id + '.cchain' + u, { pivot: 1.9 });
   pPut(P, cells, id + '.strongbox', -1.2, 6.9, 0, 0.9, 0.5, 0.58, pdChest, { lowOk: true });
-  PD.dense(P, cells, { pool: ['torch', 'stack', 'sacks'], corner: ['stack', 'sacks'], middle: false }); pTorch(P, cells, 'e', 8.5, 1.7, 7) || pTorch(P, cells, 's', -2.5, 1.7, 7);
+  PD.dense(P, cells, { pool: ['torch', 'sacks', 'cask'], corner: ['sacks', 'cask'], middle: false }); pTorch(P, cells, 'e', 8.5, 1.7, 7) || pTorch(P, cells, 's', -2.5, 1.7, 7);
   // the armoury: racks of spears and swords, shields on the walls, helmets and crates of arrows
   pShelfRun(P, arm, 's', 0, 6, null, { id: 'ar', lv: 3, mixed: ['tools', 'box', 'jar', 'rope', 'lantern'] });
   for (let i = 0; i < 3; i++) pAgainst(P, arm, i % 2 ? 'e' : 'w', id + '.arms' + i, 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 7.4 + i * 1.5 });
   pHang(P, arm, 'e', 8.5, 1.6, 1.0, 2.0, PD.bladeWall(R, 1.6), id + '.ablades', { pivot: 2.0 }); pHang(P, arm, 'w', 8.5, 1.6, 1.0, 2.0, PD.bladeWall(R, 1.6), id + '.ablades2', { pivot: 2.0 });
   pFree(P, arm, id + '.apile', 1.3, 0.7, 1.1, 0, PD.cratePile(R), { near: [3, 9.5], lowOk: true }); pStock(P, arm, { crates: 1, barrels: 1, near: [4.6, 7.2] });
-  pWalls(P, arm, ['kite_shield', 'Shield_Wooden', 'Torch_Metal', 'Sword_Bronze', 'Axe_Bronze', 'kite_shield']); PD.dense(P, arm, { pool: ['torch', 'sacks', 'stack'], corner: ['stack', 'sacks'], mid: { kinds: ['sacks'], max: 1 } }); pLamp(P, arm, 3, 8.6);
+  pWalls(P, arm, ['kite_shield', 'Shield_Wooden', 'Torch_Metal', 'Sword_Bronze', 'Axe_Bronze', 'kite_shield']); PD.dense(P, arm, { pool: ['torch', 'sacks', 'cask'], corner: ['cask', 'sacks'], mid: { kinds: ['sacks'], max: 1 } }); pLamp(P, arm, 3, 8.6);
   // upstairs: the bunks (the night guard's bed is the first), a footlocker each; quarters for the sergeant
   dressBedroom(P, bar, { beds: ['bed', 'bed2', 'bed3', 'bed4'], loot: [['gold', 6]], bedInteract: true, table: true }); PD.dense(P, bar, { pool: ['hooks', 'cupboard', 'paint', 'sconce', 'rack'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
   if (!hh) P.err.push('no hearth fits in the guard room');
@@ -80,7 +80,7 @@ PLANS.guardhouse = (P, c, info) => {
 PLANS.herbalist = (P, c, info) => {
   const R = P.R, id = P.id; P.dims = { W: 10, D: 11, Dh: 6 };
   pLevel(P, 0, 0, 2.9);
-  pRoom(P, 0, 'shop', 'shop', -5, 0, 5, 6); pRoom(P, 0, 'workroom', 'store', -5, 6, 0, 11); pRoom(P, 0, 'chamber', 'hall', 0, 6, 5, 11);
+  pRoom(P, 0, 'shop', 'shop', -5, 0, 5, 6, { floor: 'stone' }); pRoom(P, 0, 'workroom', 'store', -5, 6, 0, 11, { floor: 'stone' }); pRoom(P, 0, 'chamber', 'hall', 0, 6, 5, 11);
   pDoor(P, 'shop', null, 0, 0); pDoor(P, 'shop', 'workroom', -2.5, 6); pDoor(P, 'workroom', 'chamber', 0, 8.5);
   pLayout(P);
   const shop = P.rooms.shop, wk = P.rooms.workroom, ch = P.rooms.chamber;
