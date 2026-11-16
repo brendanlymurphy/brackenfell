@@ -8740,7 +8740,7 @@ Bake.people = function (cam, env) {
 // Built once from World.colliders (walls, fences, props, trunks), the same footprints the splat map uses, but as geometry laid on whatever the ground really is
 // there (terrain, paving, steps), so it also shows on the square's paving, which the terrain shader never sees. One mesh, one draw call: its index list is
 // refilled from the 32 m squares round the camera (like the terrain pool), so only a few thousand triangles are ever drawn.
-Bake.GR = { S: 32, built: false, mesh: null, sq: null, last: [1e9, 1e9], tris: 0 };
+Bake.GR = { S: 16, built: false, mesh: null, sq: null, last: [1e9, 1e9], tris: 0 };
 Bake.buildGround = function () {
   if (!Bake.on || (TEST && TEST.bakeg === 0) || Bake.GR.built) return;
   const GR = Bake.GR, S = GR.S, pos = [], al = [], sq = new Map(), t0 = performance.now();
@@ -8786,7 +8786,7 @@ Bake.groundUpdate = function (cam) {
   if (World.cell) return;
   if (Math.hypot(cam[0] - GR.last[0], cam[2] - GR.last[1]) < 4 && !GR.stale) return;
   GR.last = [cam[0], cam[2]]; GR.stale = false;
-  const reach = (R.q && R.q.houseFar ? Math.min(R.q.houseFar, 56) : 50) + 14; let n = 0;
+  const reach = (R.q && R.q.houseFar ? Math.min(R.q.houseFar, 56) : 50) * 0.45 + 6; let n = 0;
   for (const q of GR.sq) if (Math.hypot(q.x - cam[0], q.z - cam[2]) < reach + GR.S * 0.71 && n + q.idx.length <= GR.cur.length) { GR.cur.set(q.idx, n); n += q.idx.length; }
   GR.n = n; GR.geo.setDrawRange(0, n); GR.ia.clearUpdateRanges(); if (n) GR.ia.addUpdateRange(0, n); GR.ia.needsUpdate = true; GR.mesh.visible = n > 0;
 };
