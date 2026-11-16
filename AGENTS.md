@@ -28,7 +28,7 @@ harness details, publishing checklist), `ROADMAP.md` (what is done, in progress,
     `test/voice_game.js` and `test/audio_game.js` (print PASSED), `test/npcstairs.js` (villagers reach their beds), `test/npcsep.js`
     (no two people in one spot), `test/cells.js` in chunks (put
     `window.__cells=['inn','chapel']; window.__noRest=true;` before the script: a software-rendered tab dies after about a dozen)
-  - `test/overlap.js` (overlap finder; `severe` must not rise above its ceiling, 37 at Build 61: solids through solids by 0.35 m or more, blocked door approaches, spots and stairs inside solids; run `window.__ovTop=60;` first to list the worst with shot calls)
+  - `test/overlap.js` (overlap finder; `severe` must not rise above its ceiling, 8 at Build 61, from 37: solids through solids by 0.35 m or more, blocked door approaches, spots and stairs inside solids; run `window.__ovTop=60;` first to list the worst with shot calls)
   - `node test/parity.mjs`, `test/interiors.js` (interiors keep every quest object; placement validator)
   - once on WebGPU (no `webgl` option): a `game.shot` in the square and inside the inn with `window.__gpuErrors().length === 0`
   - `node test/real.mjs` (production boot)
