@@ -134,7 +134,7 @@ function terrainMaterial() {
     If(sp.g.greaterThan(0.004), () => { const c = samp(MAT.COBBLE, uvC, dCx, dCy); c.h.assign(c.h.mul(0.2).add(0.72)); over(c, sat(sp.g.mul(1.15)).toVar()); });
     // puddles collect in the low spots of roads and wet banks
     // rain: water stands on every road, between the cobbles and on bare earth, the ground darkens and takes a sheen
-    const wet = U.wet, hard = max(max(road, sp.g), sp.a);
+    const wet = (TEST && TEST.shore === 0) ? U.wet : max(U.wet, smoothstep(17, 3, TSL.length(wp.xz.sub(vec2(14, 80)))).mul(0.8)), hard = max(max(road, sp.g), sp.a);      // [l1] the wharf's cobbles are always wet
     const wetGround = max(max(max(wMud, wPath.mul(0.8)), s2.g.mul(0.9)).mul(sp.g.oneMinus()), wet.mul(hard.mul(0.75).add(0.2)));
     const pud = smoothstep(float(0.58).sub(wet.mul(0.20)), float(0.70).sub(wet.mul(0.17)), mn2.a.mul(0.50).add(mn3.b.mul(0.28)).add(s2.g.mul(0.55))).mul(wetGround).mul(smoothstep(0.02, 0.09, slope).oneMinus()).mul(smoothstep(0.30, 0.55, G0.h).oneMinus()).mul(farK.mul(0.6).oneMinus()).toVar();
     // in rain, broad shallow pools also lie over cobbles and packed road whatever the stones' height

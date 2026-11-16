@@ -66,6 +66,7 @@ function updateEnv(time, indoor) {
   const mist = Math.exp(-Math.pow((Env.hour - 6.3) / 1.3, 2)) * 0.9 + Math.exp(-Math.pow((Env.hour - 19.6) / 1.5, 2)) * 0.2;
   e.fogCol = mix3(mix3(h, z, 0.42), [0.5 * (h[0] + h[1]), 0.5 * (h[0] + h[1]), 0.5 * (h[1] + h[2])], 0.25);
   e.fogDensity = 0.00115 * (1 + mist * 1.3 + golden * 0.5) + 0.0005 * night;
+  e.mistK = (TEST && TEST.mist === 0) ? 0 : 0.0042 * (mist * 1.5 + golden * 0.55 + (e.wet || 0) * 0.3 + 0.1);
   e.stars = night; e.aurora = night * (0.55 + 0.45 * Math.sin(time * 0.05));
   e.moonBright = smooth(-0.02, -0.14, sy) * 1.4;
   e.cloud = 0.44 + 0.16 * Math.sin(time * 0.011 + 1.3);

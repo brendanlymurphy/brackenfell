@@ -613,7 +613,7 @@ SH.init = function () {
     time: uniform(0), camPos: uniform(V3()),                 // camPos is always the player's eye, also inside shadow passes
     sunDir: uniform(new THREE.Vector3(0, 1, 0)), sunCol: uniform(V3()),      // active key light (sun or moon)
     ambSky: uniform(V3()), ambGnd: uniform(V3()),
-    fogCol: uniform(V3()), fogDens: uniform(0.001), fogSun: uniform(V3()), fogFall: uniform(0.011),
+    fogCol: uniform(V3()), mistK: uniform(0), fogDens: uniform(0.001), fogSun: uniform(V3()), fogFall: uniform(0.011),
     zenith: uniform(V3()), horizon: uniform(V3()), stars: uniform(0), aurora: uniform(0),
     moonDir: uniform(new THREE.Vector3(0, 1, 0)), moonBright: uniform(0), sunDisc: uniform(new THREE.Vector3(0, 1, 0)), sunDiscI: uniform(0),
     wind: uniform(V4()), windOff: uniform(new THREE.Vector2()),     // wind: dir.x, dir.z, strength, time. windOff: how far (m) the air has travelled, which carries the gust pattern
@@ -711,7 +711,9 @@ SH.init = function () {
     const d = positionWorld.sub(U.camPos), dist = length(d), k = U.fogFall.mul(d.y);
     const ks = mix(k, float(0.002), step(abs(k), 0.002)), integ = dist.mul(float(1).sub(exp(ks.negate()))).div(ks);
     const dens = U.fogDens.mul(exp(U.fogFall.negate().mul(max(U.camPos.y.sub(K.fogBase), 0))));
-    return float(1).sub(exp(dens.negate().mul(integ)));
+    // [l1] a low mist: thick near the ground (3.5 m deep, measured from the camera's feet), thinning upward; dawn, dusk and wet weather
+    const lay = U.mistK.mul(dist).mul(exp(max(positionWorld.y.sub(U.camPos.y.sub(1.7)), 0).div(-3.5)));
+    return float(1).sub(exp(dens.negate().mul(integ).sub(lay)));
   });
   SH.fogColor = Fn(() => {
     const vd = normalize(positionWorld.sub(U.camPos)), s = pow(max(dot(vd, U.sunDisc), 0), 6);
@@ -754,7 +756,7 @@ SH.update = function (env, camPos, time) {
   const U = SH.U, s3 = (u, a) => u.value.set(a[0], a[1], a[2]);
   U.time.value = time; s3(U.camPos, camPos);
   s3(U.sunDir, env.keyDir); s3(U.sunCol, env.keyCol); s3(U.ambSky, env.ambSky); s3(U.ambGnd, env.ambGnd);
-  s3(U.fogCol, env.fogCol); U.fogDens.value = env.fogDensity; s3(U.fogSun, env.fogSun);
+  s3(U.fogCol, env.fogCol); U.fogDens.value = env.fogDensity; U.mistK.value = env.mistK || 0; s3(U.fogSun, env.fogSun);
   s3(U.zenith, env.zenith); s3(U.horizon, env.horizon); U.stars.value = env.stars; U.aurora.value = env.aurora;
   s3(U.moonDir, env.moonDir); U.moonBright.value = env.moonBright; s3(U.sunDisc, env.sunDir); U.sunDiscI.value = env.sunDisc;
   U.wind.value.set(env.windDir[0], env.windDir[1], env.windStrength, time); U.windOff.value.set(Wind.off[0], Wind.off[1]);
@@ -1048,7 +1050,7 @@ function terrainMaterial() {
     If(sp.g.greaterThan(0.004), () => { const c = samp(MAT.COBBLE, uvC, dCx, dCy); c.h.assign(c.h.mul(0.2).add(0.72)); over(c, sat(sp.g.mul(1.15)).toVar()); });
     // puddles collect in the low spots of roads and wet banks
     // rain: water stands on every road, between the cobbles and on bare earth, the ground darkens and takes a sheen
-    const wet = U.wet, hard = max(max(road, sp.g), sp.a);
+    const wet = (TEST && TEST.shore === 0) ? U.wet : max(U.wet, smoothstep(17, 3, TSL.length(wp.xz.sub(vec2(14, 80)))).mul(0.8)), hard = max(max(road, sp.g), sp.a);      // [l1] the wharf's cobbles are always wet
     const wetGround = max(max(max(wMud, wPath.mul(0.8)), s2.g.mul(0.9)).mul(sp.g.oneMinus()), wet.mul(hard.mul(0.75).add(0.2)));
     const pud = smoothstep(float(0.58).sub(wet.mul(0.20)), float(0.70).sub(wet.mul(0.17)), mn2.a.mul(0.50).add(mn3.b.mul(0.28)).add(s2.g.mul(0.55))).mul(wetGround).mul(smoothstep(0.02, 0.09, slope).oneMinus()).mul(smoothstep(0.30, 0.55, G0.h).oneMinus()).mul(farK.mul(0.6).oneMinus()).toVar();
     // in rain, broad shallow pools also lie over cobbles and packed road whatever the stones' height
@@ -3202,6 +3204,7 @@ function updateEnv(time, indoor) {
   const mist = Math.exp(-Math.pow((Env.hour - 6.3) / 1.3, 2)) * 0.9 + Math.exp(-Math.pow((Env.hour - 19.6) / 1.5, 2)) * 0.2;
   e.fogCol = mix3(mix3(h, z, 0.42), [0.5 * (h[0] + h[1]), 0.5 * (h[0] + h[1]), 0.5 * (h[1] + h[2])], 0.25);
   e.fogDensity = 0.00115 * (1 + mist * 1.3 + golden * 0.5) + 0.0005 * night;
+  e.mistK = (TEST && TEST.mist === 0) ? 0 : 0.0042 * (mist * 1.5 + golden * 0.55 + (e.wet || 0) * 0.3 + 0.1);
   e.stars = night; e.aurora = night * (0.55 + 0.45 * Math.sin(time * 0.05));
   e.moonBright = smooth(-0.02, -0.14, sy) * 1.4;
   e.cloud = 0.44 + 0.16 * Math.sin(time * 0.011 + 1.3);
@@ -3907,7 +3910,7 @@ Cells.env = function (e) {
   const c = Cells.cur; if (!c) return e;
   e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
   // daylight: with the sun off, rooms lost the light that used to come in by day (midday was darker than night). Windows let the sky in: lift the day's ambient. c.daylight: 0 for a cellar or crypt, default for a room with windows.
-  e.winCol = null;
+  e.winCol = null; e.mistK = 0;
   { let dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0 && c.wins && c.wins.length && !(TEST && TEST.winlight === 0)) { /* [l1] daylight from the panes (40c_light.js): a small uniform lift, the rest is window light */ const b = e.ambSky, l = (b[0] + b[1] + b[2]) / 3, g = WIN_GAIN * (c.id === "chapel" ? 1.5 : 1); e.winCol = [(l * 0.55 + b[0] * 0.45) * g * 1.04, (l * 0.55 + b[1] * 0.45) * g, (l * 0.55 + b[2] * 0.45) * g * 0.92]; k *= (c.id === "chapel" ? 0.5 : WIN_KEEP); } if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT * (e.winCol ? 0.8 + 0.2 * (e.night || 0) : 1); e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
   e.fogCol = c.fog || [0.030, 0.025, 0.020]; e.fogDensity = c.fogDensity || 0.022; e.cloud = 0; e.stars = 0; e.aurora = 0; e.sunDisc = 0; e.moonBright = 0;
   return e;
