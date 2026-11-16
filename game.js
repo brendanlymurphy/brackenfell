@@ -1771,7 +1771,10 @@ const Kit = (() => {
       m.colorNode = vec3(0.012, 0.016, 0.02); m.roughnessNode = float(0.15); m.metalnessNode = float(0);
       // from the room side a pane just shows the dim sky outside
       const outsideView = batch ? frontFacing : frontFacing;
-      m.emissiveNode = select(outsideView, sky.add(lit), (SH.paneOut ? SH.paneOut(wp, N, V) : SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55))).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
+      // [fx1] a reveal and a reflection so the pane is not one flat rectangle: the glass edge sits in the frame's shadow, each pane catches the sky differently (a soft diagonal sheen, a faint grime toward the sill)
+      const pu = uv(), edge = smoothstep(0.0, 0.16, pu.x.min(pu.y).min(float(1).sub(pu.x)).min(float(1).sub(pu.y))), sheen = smoothstep(0.35, 0.5, fract(pu.x.mul(0.7).add(pu.y.mul(0.5)).add(h.mul(0.9)))).mul(float(1).sub(smoothstep(0.5, 0.62, fract(pu.x.mul(0.7).add(pu.y.mul(0.5)).add(h.mul(0.9)))))), grime = float(1).sub(float(1).sub(pu.y).mul(0.0)).mul(float(0.7).add(pu.y.mul(0.3)));
+      const dayK = float(0.55).add(edge.mul(0.45)).mul(grime), skyDay = sky.mul(dayK).add(sky.mul(sheen.mul(0.9)).mul(edge));
+      m.emissiveNode = select(outsideView, skyDay.add(lit.mul(edge.mul(0.5).add(0.5))), (SH.paneOut ? SH.paneOut(wp, N, V) : SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55))).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
       m.side = THREE.DoubleSide;
       K_.mats.set(key, m); return m;
     }
@@ -4385,15 +4388,15 @@ const Props = {
   },
   sack(m, s, col) { s = s || 0.3; m.mat(MAT.CLOTH, col || COL.wool, 0.6); m.ball(0, s * 0.85, 0, s, s * 0.9, s * 0.8, 8, 6); m.cyl(0, s * 1.6, 0, s * 0.22, s * 0.3, s * 0.3, 6, 2); },
   pot(m, s, col) { s = s || 0.14; m.mat(MAT.PLAIN, col || COL.clay); m.lathe([[s * 0.5, 0], [s, s * 0.7], [s * 0.9, s * 1.5], [s * 0.55, s * 1.9], [s * 0.7, s * 2.1]], 8, 1); },
-  jug(m, col) { m.mat(MAT.PLAIN, col || COL.clay); m.lathe([[0.05, 0], [0.085, 0.08], [0.07, 0.18], [0.035, 0.23], [0.045, 0.27]], 8, 1); m.mat(MAT.PLAIN, col || COL.clay); m.beam([0.07, 0.19, 0], [0.11, 0.13, 0], 0.02, 0.02); m.beam([0.11, 0.13, 0], [0.08, 0.07, 0], 0.02, 0.02); },
+  jug(m, col) { const c = col || [0.50, 0.33, 0.22]; m.mat(MAT.PLAIN, c); m.lathe([[0.04, 0], [0.075, 0.03], [0.088, 0.09], [0.07, 0.17], [0.038, 0.215], [0.046, 0.25], [0.05, 0.262]], 9, 1); m.mat(MAT.PLAIN, [c[0] * 0.6, c[1] * 0.6, c[2] * 0.6]); m.disc(0, 0.255, 0, 0.034, 8, 1); m.mat(MAT.PLAIN, c); m.beam([0.05, 0.215, 0], [0.105, 0.17, 0], 0.016, 0.016); m.beam([0.105, 0.17, 0], [0.085, 0.09, 0], 0.016, 0.016); },
   bottle(m, col) { m.mat(MAT.PLAIN, col || COL.glass); m.lathe([[0.035, 0], [0.04, 0.02], [0.04, 0.14], [0.014, 0.20], [0.014, 0.27]], 7, 3); },
   mug(m) { m.mat(MAT.PLANKS, COL.wood, 0.3); m.lathe([[0.045, 0], [0.05, 0.12]], 8, 1); m.mat(MAT.PLAIN, [0.3, 0.2, 0.1]); m.disc(0, 0.10, 0, 0.044, 8, 1); m.mat(MAT.METAL, COL.iron); m.lathe([[0.052, 0.09], [0.052, 0.105]], 8, 0); },
   plate(m, col) { m.mat(MAT.PLAIN, col || [0.72, 0.60, 0.42]); m.lathe([[0.07, 0], [0.12, 0.018]], 10, 1); m.disc(0, 0.004, 0, 0.07, 10, 1); },
   bowl(m, col) { m.mat(MAT.PLAIN, col || [0.60, 0.42, 0.26]); m.lathe([[0.04, 0], [0.09, 0.05], [0.10, 0.07]], 9, 1); m.disc(0, 0.045, 0, 0.085, 9, 1); },
-  loaf(m) { m.mat(MAT.PLAIN, COL.bread); m.ball(0, 0.045, 0, 0.13, 0.055, 0.08, 8, 5); },
-  cheese(m) { m.mat(MAT.PLAIN, COL.cheese); m.cyl(0, 0, 0, 0.12, 0.12, 0.07, 10, 2); },
-  apple(m, col) { m.mat(MAT.PLAIN, col || COL.apple); m.ball(0, 0.04, 0, 0.04, 0.04, 0.04, 6, 4); },
-  cabbage(m) { m.mat(MAT.PLAIN, COL.cabbage); m.ball(0, 0.09, 0, 0.1, 0.09, 0.1, 7, 5); },
+  loaf(m) { m.mat(MAT.PLAIN, [0.52, 0.36, 0.19]); m.ball(0, 0.045, 0, 0.13, 0.055, 0.08, 9, 5); m.mat(MAT.PLAIN, [0.72, 0.58, 0.36]); for (const x of [-0.06, 0, 0.06]) m.beam([x - 0.02, 0.098, -0.04], [x + 0.02, 0.098, 0.04], 0.01, 0.008); },
+  cheese(m) { m.mat(MAT.PLAIN, [0.58, 0.46, 0.24]); m.cyl(0, 0, 0, 0.12, 0.12, 0.07, 10, 2); m.mat(MAT.PLAIN, [0.82, 0.70, 0.40]); m.box(0.0, 0.0, -0.12, 0.12, 0.07, 0.0, 1 | 4 | 8 | 16); },
+  apple(m, col) { const c = col || COL.apple; m.mat(MAT.PLAIN, [c[0] * 0.85, c[1] * 0.85, c[2] * 0.85]); m.ball(0, 0.04, 0, 0.042, 0.037, 0.042, 7, 4); m.mat(MAT.PLAIN, [0.22, 0.14, 0.07]); m.beam([0, 0.072, 0], [0.004, 0.092, 0], 0.003, 0.003); },
+  cabbage(m) { m.mat(MAT.PLAIN, [0.30, 0.40, 0.22]); m.ball(0, 0.085, 0, 0.1, 0.085, 0.1, 8, 5); m.mat(MAT.PLAIN, [0.40, 0.50, 0.28]); for (let i = 0; i < 4; i++) { const a = i * PI / 2 + 0.4; m.ball(Math.cos(a) * 0.075, 0.06, Math.sin(a) * 0.075, 0.055, 0.05, 0.035, 5, 3); } },
   book(m, col, w) { m.mat(MAT.CLOTH, col || COL.red, 0.5); m.box(-0.09, 0, -0.12, 0.09, w || 0.04, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(-0.082, 0.004, -0.115, 0.088, (w || 0.04) - 0.004, 0.118, 4 | 8 | 1); },
   // candle with flame + light. returns nothing; registers emitter
   candle(m, ctx, tall) {
@@ -4817,6 +4820,7 @@ async function kitBoot(progress) {
 }
 // pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong
 function kitFixups() {
+  for (const n of ['ceramic_vase_02', 'ceramic_vase_04', 'ceramic_pot']) if (Kit.defs[n]) { Kit.defs[n].gain = 0.5; Kit.defs[n].color = [0.7, 0.46, 0.31]; }       // [fx1] scanned glazed pots photographed white in the sun: now read as earthenware
   for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) { Kit.defs[n].gain = 2.0; Kit.defs[n].sat = 0.85; }       // scanned rocks photograph dark
   for (const n of ['Window_Wide_Flat1', 'Window_Wide_Round1', 'Window_Thin_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Open'] = Object.assign({}, p, { name: n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_WindowGlass') }); }       // the frame without the pane: upstairs windows you can look out of
   for (const n of [4, 6, 8]) { const p = Kit.pieces['Roof_Front_Brick' + n]; if (p) Kit.pieces['Roof_Front_Brick' + n + '_Open'] = Object.assign({}, p, { name: 'Roof_Front_Brick' + n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_Plaster') }); }       // gable frames without their plaster, where a window is cut in (gableFill, 71c_upper.js)
@@ -8948,7 +8952,7 @@ function buildVillage() {
     put(x, z, yaw, m => Props.stall(m, col, y => {
       if (kind === 0) { for (const [cx, kindG] of [[-0.85, 'apple'], [0, 'cabbage'], [0.85, 'apple']]) at(m, cx, y, -0.3, 0, () => { m.mat(MAT.PLANKS, COL.wood, 0.5); m.box(-0.36, 0, -0.26, 0.36, 0.14, 0.26, 8); for (let i = 0; i < 12; i++) at(m, (i % 4) * 0.17 - 0.26, 0.12, Math.floor(i / 4) * 0.16 - 0.16, 0, () => kindG === 'apple' ? Props.apple(m, cx < 0 ? COL.apple : [0.62, 0.72, 0.22]) : Props.cabbage(m)); }); }
       else if (kind === 1) Props.clutter(m, R, -1.1, 1.1, y, -0.25, ['loaf', 'cheese', 'loaf', 'cheese', 'jug', 'loaf'], 7);
-      else { Props.clutter(m, R, -1.1, 0.2, y, -0.25, ['pot', 'pot', 'jug', 'bowl', 'pot'], 5); for (let k = 0; k < 3; k++) at(m, 0.55 + k * 0.22, y, -0.3, PI / 2, () => clothBolt(m, [COL.red, COL.gold, COL.blue][k])); }
+      else { Props.clutter(m, R, -1.1, 0.2, y, -0.25, ['pot', 'pot', 'jug', 'bowl', 'pot'], 5); for (let k = 0; k < 3; k++) at(m, 0.55 + k * 0.22, y, -0.3, PI / 2, () => clothBolt(m, [DYE.red, DYE.yellow, DYE.blue][k])); }
     }));
     const b = [x - Math.sin(yaw) * 1.05, z + Math.cos(yaw) * 1.05];
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);
@@ -9127,10 +9131,10 @@ function buildVillage() {
   const skin = new MeshPack();
   const leaf = new Mesh(512);
   // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
-  leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.05, 0.04, 0.035]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
-  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [0.8 * k, 0.62 * k, 0.45 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
-  leaf.mat(MAT.PLANKS, [0.56, 0.43, 0.31], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
-  leaf.mat(MAT.METAL, [0.2, 0.19, 0.18]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
+  leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
+  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [1.7 * k, 1.35 * k, 0.98 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
+  leaf.mat(MAT.PLANKS, [1.2, 0.95, 0.7], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
+  leaf.mat(MAT.METAL, [0.42, 0.4, 0.37]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   const leafItem = skin.add(leaf);
   for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
@@ -14237,18 +14241,25 @@ function secBuild() {
   if (SEC.built) return; SEC.built = true;
   const g = (x, z, y) => World.groundAt(x, z, y === undefined ? 8 : y);
   // 1: a tin box in the bell frame
-  { const s = SECRETS.bell; secProp(m => { m.mat(MAT.METAL, [0.5, 0.5, 0.46]); m.box(-0.2, 0, -0.14, 0.2, 0.16, 0.14, 0); m.mat(MAT.METAL, [0.62, 0.62, 0.58]); m.box(-0.21, 0.16, -0.15, 0.21, 0.2, 0.15, 0); m.mat(MAT.CLOTH, [0.5, 0.4, 0.3], 0.5); m.box(-0.1, 0.2, -0.06, 0.12, 0.23, 0.07, 0); }, [s.p[0], s.p[1], s.p[2]], 0.3, { r: 1.0 }); secMakeCont('bell', s); }
+  { const s = SECRETS.bell; secProp(m => { m.mat(MAT.PLANKS, [0.30, 0.22, 0.15], 0.5); m.box(-0.22, 0, -0.15, 0.22, 0.17, 0.15, 4); m.box(-0.23, 0.17, -0.16, 0.23, 0.2, 0.16, 4); m.mat(MAT.METAL, [0.3, 0.28, 0.25]); for (const x of [-0.15, 0.15]) m.box(x - 0.016, -0.001, -0.162, x + 0.016, 0.2, 0.162, 4); m.box(-0.235, 0.17, -0.002, 0.235, 0.2, 0.002, 0); m.cyl(0, 0.15, 0.16, 0.02, 0.02, 0.012, 6, 2); m.mat(MAT.CLOTH, [0.42, 0.36, 0.27], 0.5); m.box(-0.1, 0.2, -0.06, 0.12, 0.215, 0.07, 0); }, [s.p[0], s.p[1], s.p[2]], 0.3, { r: 1.0 }); secMakeCont('bell', s); }
   // 2: a loose stone in the terrace's north wall, west of the plaque: a block that stands proud with a dark gap round it
   { const s = SECRETS.stone; secProp(m => { m.mat(MAT.PLAIN, [0.03, 0.028, 0.024]); m.box(-0.27, -0.2, -0.04, 0.27, 0.2, 0.02, 0); m.mat(MAT.STONE, [1.0, 0.96, 0.9], 0.8); m.box(-0.23, -0.16, -0.1, 0.23, 0.16, 0.0, 4); m.mat(MAT.PLAIN, [0.55, 0.52, 0.46]); m.box(-0.23, -0.16, -0.11, -0.2, 0.16, -0.09, 0); }, s.p, 0, { r: 1.0 }); secMakeCont('stone', s); }
   // 3: a hatch in Washing Lane
   { const s = SECRETS.cellar, l = (INF.lanes || []).find(l => l.role === 'wash'); if (l) { s.p = [l.x1 - 1.0, 0, l.zc]; } s.p[1] = g(s.p[0], s.p[2], 1) + 0.03;
-    secProp(m => { m.mat(MAT.PLANKS, [0.36, 0.28, 0.2], 0.5); m.box(-0.45, 0, -0.45, 0.45, 0.07, 0.45, 4); m.mat(MAT.METAL, [0.2, 0.19, 0.18]); for (const z of [-0.28, 0.28]) m.box(-0.46, 0.065, z - 0.03, 0.46, 0.085, z + 0.03, 0); m.cyl(0, 0.07, 0, 0.07, 0.07, 0.025, 8, 0); m.mat(MAT.PLAIN, [0.1, 0.06, 0.05]); m.box(-0.05, 0.085, 0.36, 0.05, 0.12, 0.42, 0); }, s.p, 0, { r: 1.0 }); secMakeCont('cellar', s); }
+    secProp(m => { m.mat(MAT.STONE, [0.62, 0.6, 0.55], 0.8); m.box(-0.56, 0, -0.56, 0.56, 0.03, -0.46, 4); m.box(-0.56, 0, 0.46, 0.56, 0.03, 0.56, 4); m.box(-0.56, 0, -0.46, -0.46, 0.03, 0.46, 4); m.box(0.46, 0, -0.46, 0.56, 0.03, 0.46, 4);
+      for (let k = 0; k < 4; k++) { const q = 0.9 / 4, c = [[0.40, 0.31, 0.22], [0.34, 0.26, 0.19], [0.38, 0.29, 0.21], [0.32, 0.25, 0.18]][k]; m.mat(MAT.PLANKS, c, 0.5); m.box(-0.45 + k * q + 0.006, 0.0, -0.45, -0.45 + (k + 1) * q - 0.006, 0.065, 0.45, 4); }
+      m.mat(MAT.PLANKS, [0.28, 0.21, 0.15], 0.5); for (const z of [-0.28, 0.28]) m.box(-0.44, 0.065, z - 0.05, 0.44, 0.08, z + 0.05, 4);
+      m.mat(MAT.METAL, [0.24, 0.22, 0.2]); for (const z of [-0.28, 0.28]) { m.box(-0.45, 0.08, z - 0.022, -0.02, 0.092, z + 0.022, 4); for (const x of [-0.38, -0.28, -0.18, -0.08]) m.cyl(x, 0.092, z, 0.013, 0.013, 0.006, 5, 2); }
+      m.cyl(0.18, 0.065, 0, 0.055, 0.055, 0.016, 8, 2); m.mat(MAT.PLAIN, [0.1, 0.07, 0.05]); m.lathe([[0.05, 0.078], [0.05, 0.1], [0.04, 0.12]], 8, 0); m.box(-0.012, 0.081, 0.34, 0.012, 0.1, 0.44, 0); }, s.p, 0, { r: 1.0 }); secMakeCont('cellar', s); }
   // 4: a trunk in the loft
   { const s = SECRETS.attic; secProp(m => secChest(m, 0.9, 0.46, 0.5, [0.34, 0.26, 0.18]), s.p, 0.4, { r: 1.2 }); secMakeCont('attic', s); }
   // 5: fresh brick in the Hart's cellar (the east wall, between two casks)
   { const s = SECRETS.wall; SEC.wallObj = secProp(m => { m.mat(MAT.PLASTER, [0.82, 0.74, 0.62], 0.6); m.box(-0.95, 0, -0.06, 0.95, 2.0, 0.0, 4); m.mat(MAT.PLAIN, [0.45, 0.2, 0.14]); for (let r = 0; r < 12; r++) for (let c = 0; c < 6; c++) if ((r * 7 + c * 3) % 4) m.box(-0.9 + c * 0.3 + (r % 2) * 0.12, 0.08 + r * 0.16, 0.0, -0.64 + c * 0.3 + (r % 2) * 0.12, 0.2 + r * 0.16, 0.025, 0); }, [s.p[0] + 0.45, s.p[1] - 0.5, s.p[2]], -Math.PI / 2, { r: 2.0, zone: 1, cell: 'inn', light: 0.9, cap: 1500 }); secMakeCont('wall', s); }
   // 6: an iron plate in the quay wall, at the water-level landing
-  { const s = SECRETS.strongbox; s.p[1] = LAKE.y + 0.95; secProp(m => { m.mat(MAT.METAL, [0.2, 0.19, 0.18]); m.box(-0.38, -0.3, 0, 0.38, 0.3, 0.07, 0); m.mat(MAT.METAL, [0.3, 0.27, 0.24]); for (const [x, y] of [[-0.3, -0.22], [0.3, -0.22], [-0.3, 0.22], [0.3, 0.22]]) m.cyl(x, y, 0.07, 0.03, 0.03, 0.03, 6, 0); m.cyl(0, 0, 0.07, 0.06, 0.06, 0.04, 8, 0); m.mat(MAT.PLAIN, [0.04, 0.035, 0.03]); m.box(-0.03, -0.12, 0.07, 0.03, -0.04, 0.1, 0); }, [s.p[0], s.p[1], s.p[2] + 0.02], 0, { r: 1.2 }); secMakeCont('strongbox', s); }
+  { const s = SECRETS.strongbox; s.p[1] = LAKE.y + 0.95; secProp(m => { m.mat(MAT.STONE, [0.58, 0.56, 0.5], 0.8); m.box(-0.5, -0.4, -0.02, 0.5, -0.34, 0.06, 0); m.box(-0.5, 0.34, -0.02, 0.5, 0.4, 0.06, 0); m.box(-0.5, -0.34, -0.02, -0.44, 0.34, 0.06, 0); m.box(0.44, -0.34, -0.02, 0.5, 0.34, 0.06, 0);
+      m.mat(MAT.METAL, [0.2, 0.18, 0.16]); m.box(-0.38, -0.3, 0, 0.38, 0.3, 0.07, 4); m.mat(MAT.METAL, [0.24, 0.17, 0.13]); m.box(-0.3, -0.3, 0.072, -0.12, -0.1, 0.075, 0); m.box(0.14, 0.02, 0.072, 0.34, 0.28, 0.075, 0);
+      m.mat(MAT.METAL, [0.3, 0.27, 0.24]); for (let k = 0; k < 5; k++) for (const y of [-0.26, 0.26]) m.cyl(-0.32 + k * 0.16, y, 0.07, 0.022, 0.022, 0.018, 6, 2); for (const x of [-0.34, 0.34]) for (const y of [-0.08, 0.08]) m.cyl(x, y, 0.07, 0.022, 0.022, 0.018, 6, 2);
+      m.cyl(0, 0, 0.07, 0.07, 0.07, 0.03, 8, 2); m.mat(MAT.PLAIN, [0.04, 0.035, 0.03]); m.box(-0.012, -0.05, 0.1, 0.012, 0.04, 0.104, 0); m.disc(0, 0.045, 0.104, 0.02, 8, 1); }, [s.p[0], s.p[1], s.p[2] + 0.02], 0, { r: 1.2 }); secMakeCont('strongbox', s); }
   // 7: the meeting behind the chapel: two cloaks, a candle between them, only between 23:00 and 03:30
   { const cx = -6.0, cz = -85.3; SEC.meet = { st: 'off', t: 0, x: cx, z: cz, a: secProp(m => secCloak(m, [0.2, 0.16, 0.14], 1.0), [cx - 0.7, g(cx, cz), cz], 1.4, { r: 1.2 }), b: secProp(m => secCloak(m, [0.26, 0.2, 0.22], 0.9), [cx + 0.7, g(cx, cz), cz], -1.7, { r: 1.2 }) };
     SEC.meet.a.visible = SEC.meet.b.visible = false; SEC.meet.em = { type: 'candle', p: [cx, g(cx, cz) + 0.5, cz], zone: 0, always: false, seed: 0.3 };
@@ -17019,7 +17030,7 @@ function mineKit() {
   const NRM = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }, POS = { W: (i, j) => [i, j + 0.5], E: (i, j) => [i + 1, j + 0.5], N: (i, j) => [i + 0.5, j + 1], S: (i, j) => [i + 0.5, j] };
   const pick = h => { let a = 0; for (const r of MINE_ROCKS) { a += r[2]; if (h < a) return r; } return MINE_ROCKS[0]; };
   for (const k of ['W', 'E', 'N', 'S']) for (const [i, j] of G.edges[k]) {
-    const h = mhash(i, j, 50 + k.charCodeAt(0)); if (h > 0.14) continue;
+    const h = mhash(i, j, 50 + k.charCodeAt(0)); if (h > 0.4) continue;       // [fx1] 0.14 left the gravel heap bare between a few rocks
     const r = pick(mhash(i, j, 61)), n = NRM[k], p = POS[k](i, j), s = 0.8 + mhash(i, j, 62) * 0.5, hd = r[1] * s, prot = 0.12 + mhash(i, j, 63) * 0.18;
     add(r[0], p[0] + n[0] * (prot - hd), -0.15, p[1] + n[1] * (prot - hd), Math.atan2(n[0], n[2]) + (mhash(i, j, 64) < 0.5 ? 0 : PI) * 0, s);
   }
