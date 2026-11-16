@@ -4,11 +4,11 @@
 //   node test/tour.mjs --run r1 --sheets                       contact sheets of 12 (3 x 4, labelled) from what has been shot
 //   node test/tour.mjs --run r1 --views v.json [--force] [--size 960x440]   shoot views from a json file
 //   node test/tour.mjs --run r1 --only name1,name2             re-shoot named views (any set, searched in all)
-// Pictures: /home/claude/shots/fx1/tour/<run>/<name>_<hour>.jpg ; metrics in meta.json (mean luminance per shot).
+// Pictures: /home/claude/shots/fx2/tour/<run>/<name>_<hour>.jpg ; metrics in meta.json (mean luminance per shot).
 import fs from 'node:fs'; import { spawnSync } from 'node:child_process';
 import { open, root } from './qa/harness.mjs';
 const argv = process.argv.slice(2), arg = (k, d) => { const i = argv.indexOf('--' + k); return i < 0 ? d : argv[i + 1]; }, has = k => argv.includes('--' + k);
-const run = arg('run', 'r1'), OUT = '/home/claude/shots/fx1/tour/' + run; fs.mkdirSync(OUT, { recursive: true });
+const run = arg('run', 'r1'), OUT = '/home/claude/shots/fx2/tour/' + run; fs.mkdirSync(OUT, { recursive: true });
 const metaF = OUT + '/meta.json', meta = fs.existsSync(metaF) ? JSON.parse(fs.readFileSync(metaF, 'utf8')) : {};
 const safe = s => s.replace(/[^A-Za-z0-9.,@_-]+/g, '_');
 if (has('sheets')) {

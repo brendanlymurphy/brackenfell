@@ -144,12 +144,16 @@ function pWinZone(w) {
 }
 // the footprint of a w x d item (w along x, d along z before turning) turned by rot (a multiple of PI/2)
 function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2))) & 1; return q ? rectOf(cx, cz, d, w) : rectOf(cx, cz, w, d); }
+// [fx2] test-only geometry recording (--opt ovl=1): what an item actually drew (mesh index range + kit pieces), for test/overlap_in.js
+let P_REC = null;
+const pRecBegin = () => (TEST && TEST.ovl) ? (P_REC = { parts: [] }) : null;
+const pRecEnd = (rc, m, t0) => { if (!rc) return; rc.t0 = t0; rc.t1 = m.ni; P_REC = null; };
 // put an item: it is drawn with draw(m) at (cx, cz) turned by rot, on the level's floor (or at y = lift above it), and recorded. Returns the record or null when it does not fit.
 function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   o = o || {}; const r = pFoot(cx, cz, w, d, rot);
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
-  const L = P.lv[room.k], m = P.c.int, t0 = m.ni; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]);          // owner ranges: test/audit.js names the thing a face belongs to
-  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
+  const L = P.lv[room.k], m = P.c.int, t0 = m.ni, rc = pRecBegin(); at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]); pRecEnd(rc, m, t0);          // owner ranges: test/audit.js names the thing a face belongs to
+  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back }); if (rc) it.rec = rc;
   if (o.flat) it.kind = 'rug'; return it;
 }
 // along a wall of the room, w wide (along the wall) and d deep; o.at: 'start' | 'end' | 'mid' | a coordinate along the wall to be near. Tries every 0.25 m.
@@ -190,7 +194,7 @@ function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
   for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
   const m = P.c.int, p = hor ? [u, side === 'n' ? a.z0 : a.z1] : [side === 'w' ? a.x0 : a.x1, u];
   const rot = rotBack(side, +1);
-  at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0));
+  const rc = pRecBegin(), t0 = m.ni; at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0)); pRecEnd(rc, m, t0); if (rc) rec.rec = rc;
   P.wallItems.push(rec); return rec;
 }
 const pCentre = r => [(r.in.x0 + r.in.x1) / 2, (r.in.z0 + r.in.z1) / 2];

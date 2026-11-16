@@ -32,7 +32,7 @@ function pHearth(P, room, side, wid, o) {
   o = o || {}; const L = P.lv[room.k], H = L.H, dep = 0.8, m = P.c.int, hor = side === 'n' || side === 's';
   const s = pWallSlot(P, room, side, wid + 0.3, dep + 0.1, Object.assign({ lowOk: false, at: o.at, noClear: false }, o)); if (!s) return null;
   const rot = { w: 0, e: PI, n: -PI / 2, s: PI / 2 }[side], px = hor ? s.cx : (side === 'w' ? room.in.x0 : room.in.x1), pz = hor ? (side === 'n' ? room.in.z0 : room.in.z1) : s.cz;
-  m.m1 = P.zone; m.ao = INT_AO;
+  m.m1 = P.zone; m.ao = INT_AO; const rc = pRecBegin(), t0 = m.ni;
   at(m, px, L.y + 0.02, pz, rot, () => {
     m.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
     m.box(0, 0, -wid / 2, dep, 1.15, -wid / 2 + 0.38); m.box(0, 0, wid / 2 - 0.38, dep, 1.15, wid / 2); m.box(0, 1.15, -wid / 2, dep, H - 0.02, wid / 2);
@@ -46,6 +46,7 @@ function pHearth(P, room, side, wid, o) {
     addLight(wp(m, dep + 0.7, 0.85, 0), o.r || 9.5, o.c || [3.4, 1.75, 0.62], P.zone, 'fire');
     addBoxCollider(m, 0, -wid / 2 - 0.1, dep + 0.25, wid / 2 + 0.1, 0, 2);
   });
+  pRecEnd(rc, m, t0);
   if (o.deco !== false) {          // mantel objects, antlers over the breast, a rug and firewood by the fire
     at(m, px, L.y + 0.02, pz, rot, () => {
       if (typeof kitLit === 'function' && Kit.pieces.CandleStick_Triple) for (const sg of [-1, 1]) kitLit(m, 'CandleStick_Triple', 0.42, 1.6 - 0.02, sg * (wid / 2 - 0.32), 0.8, sg, { cap: 0, kind: 'candle', flame: 'candle' });
@@ -57,7 +58,7 @@ function pHearth(P, room, side, wid, o) {
     });
   }
   const fp = s.rect;
-  P.occ(room.k, fp, 'hearth', P.id + '.hearth', { h: H, back: side, room: room.id, wid });
+  P.occ(room.k, fp, 'hearth', P.id + '.hearth', { h: H, back: side, room: room.id, wid, rec: rc });
   P.clear.push(Object.assign(side === 'n' ? { x0: fp.x0, x1: fp.x1, z0: fp.z1, z1: fp.z1 + 1.0 } : side === 's' ? { x0: fp.x0, x1: fp.x1, z0: fp.z0 - 1.0, z1: fp.z0 } : side === 'w' ? { x0: fp.x1, x1: fp.x1 + 1.0, z0: fp.z0, z1: fp.z1 } : { x0: fp.x0 - 1.0, x1: fp.x0, z0: fp.z0, z1: fp.z1 }, { k: room.k, kind: 'hearth' }));
   P.lightIn[room.id] = 1; P.hearths = (P.hearths || []).concat([{ k: room.k, x: px, z: pz, side, wid, rect: fp }]);
   return { px, pz, side, fp, wid, front: hor ? [px, pz + (side === 'n' ? 1 : -1) * (dep + 0.6)] : [px + (side === 'w' ? 1 : -1) * (dep + 0.6), pz] };

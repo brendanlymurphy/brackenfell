@@ -5230,7 +5230,7 @@ function kadd(m, P, extra) {
   const zone = m.m1 | 0;
   let B; if (zone) B = extra && extra.fine ? furnFineBatch(zone) : kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: YARD_CELL }); B = World.kitYard; }
   const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone && yardCasts(P) }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
-  B.add(P.name, P.M, o); if (zone && !o.noBlob) furnBlob(zone, P);
+  B.add(P.name, P.M, o); if (typeof P_REC !== 'undefined' && P_REC) P_REC.parts.push({ name: P.name, M: P.M.clone() }); if (zone && !o.noBlob) furnBlob(zone, P);
 }
 // place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
 function kp(m, name, x, y, z, s, ry, extra) { const P = kplace(m, name, x, y, z, s, ry); if (P) { kadd(m, P, extra); if (P.more) for (const Q of P.more) kadd(m, Q, extra); } }
@@ -6715,12 +6715,16 @@ function pWinZone(w) {
 }
 // the footprint of a w x d item (w along x, d along z before turning) turned by rot (a multiple of PI/2)
 function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2))) & 1; return q ? rectOf(cx, cz, d, w) : rectOf(cx, cz, w, d); }
+// [fx2] test-only geometry recording (--opt ovl=1): what an item actually drew (mesh index range + kit pieces), for test/overlap_in.js
+let P_REC = null;
+const pRecBegin = () => (TEST && TEST.ovl) ? (P_REC = { parts: [] }) : null;
+const pRecEnd = (rc, m, t0) => { if (!rc) return; rc.t0 = t0; rc.t1 = m.ni; P_REC = null; };
 // put an item: it is drawn with draw(m) at (cx, cz) turned by rot, on the level's floor (or at y = lift above it), and recorded. Returns the record or null when it does not fit.
 function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   o = o || {}; const r = pFoot(cx, cz, w, d, rot);
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
-  const L = P.lv[room.k], m = P.c.int, t0 = m.ni; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]);          // owner ranges: test/audit.js names the thing a face belongs to
-  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
+  const L = P.lv[room.k], m = P.c.int, t0 = m.ni, rc = pRecBegin(); at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]); pRecEnd(rc, m, t0);          // owner ranges: test/audit.js names the thing a face belongs to
+  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back }); if (rc) it.rec = rc;
   if (o.flat) it.kind = 'rug'; return it;
 }
 // along a wall of the room, w wide (along the wall) and d deep; o.at: 'start' | 'end' | 'mid' | a coordinate along the wall to be near. Tries every 0.25 m.
@@ -6761,7 +6765,7 @@ function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
   for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
   const m = P.c.int, p = hor ? [u, side === 'n' ? a.z0 : a.z1] : [side === 'w' ? a.x0 : a.x1, u];
   const rot = rotBack(side, +1);
-  at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0));
+  const rc = pRecBegin(), t0 = m.ni; at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0)); pRecEnd(rc, m, t0); if (rc) rec.rec = rc;
   P.wallItems.push(rec); return rec;
 }
 const pCentre = r => [(r.in.x0 + r.in.x1) / 2, (r.in.z0 + r.in.z1) / 2];
@@ -7017,7 +7021,7 @@ function pHearth(P, room, side, wid, o) {
   o = o || {}; const L = P.lv[room.k], H = L.H, dep = 0.8, m = P.c.int, hor = side === 'n' || side === 's';
   const s = pWallSlot(P, room, side, wid + 0.3, dep + 0.1, Object.assign({ lowOk: false, at: o.at, noClear: false }, o)); if (!s) return null;
   const rot = { w: 0, e: PI, n: -PI / 2, s: PI / 2 }[side], px = hor ? s.cx : (side === 'w' ? room.in.x0 : room.in.x1), pz = hor ? (side === 'n' ? room.in.z0 : room.in.z1) : s.cz;
-  m.m1 = P.zone; m.ao = INT_AO;
+  m.m1 = P.zone; m.ao = INT_AO; const rc = pRecBegin(), t0 = m.ni;
   at(m, px, L.y + 0.02, pz, rot, () => {
     m.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
     m.box(0, 0, -wid / 2, dep, 1.15, -wid / 2 + 0.38); m.box(0, 0, wid / 2 - 0.38, dep, 1.15, wid / 2); m.box(0, 1.15, -wid / 2, dep, H - 0.02, wid / 2);
@@ -7031,6 +7035,7 @@ function pHearth(P, room, side, wid, o) {
     addLight(wp(m, dep + 0.7, 0.85, 0), o.r || 9.5, o.c || [3.4, 1.75, 0.62], P.zone, 'fire');
     addBoxCollider(m, 0, -wid / 2 - 0.1, dep + 0.25, wid / 2 + 0.1, 0, 2);
   });
+  pRecEnd(rc, m, t0);
   if (o.deco !== false) {          // mantel objects, antlers over the breast, a rug and firewood by the fire
     at(m, px, L.y + 0.02, pz, rot, () => {
       if (typeof kitLit === 'function' && Kit.pieces.CandleStick_Triple) for (const sg of [-1, 1]) kitLit(m, 'CandleStick_Triple', 0.42, 1.6 - 0.02, sg * (wid / 2 - 0.32), 0.8, sg, { cap: 0, kind: 'candle', flame: 'candle' });
@@ -7042,7 +7047,7 @@ function pHearth(P, room, side, wid, o) {
     });
   }
   const fp = s.rect;
-  P.occ(room.k, fp, 'hearth', P.id + '.hearth', { h: H, back: side, room: room.id, wid });
+  P.occ(room.k, fp, 'hearth', P.id + '.hearth', { h: H, back: side, room: room.id, wid, rec: rc });
   P.clear.push(Object.assign(side === 'n' ? { x0: fp.x0, x1: fp.x1, z0: fp.z1, z1: fp.z1 + 1.0 } : side === 's' ? { x0: fp.x0, x1: fp.x1, z0: fp.z0 - 1.0, z1: fp.z0 } : side === 'w' ? { x0: fp.x1, x1: fp.x1 + 1.0, z0: fp.z0, z1: fp.z1 } : { x0: fp.x0 - 1.0, x1: fp.x0, z0: fp.z0, z1: fp.z1 }, { k: room.k, kind: 'hearth' }));
   P.lightIn[room.id] = 1; P.hearths = (P.hearths || []).concat([{ k: room.k, x: px, z: pz, side, wid, rect: fp }]);
   return { px, pz, side, fp, wid, front: hor ? [px, pz + (side === 'n' ? 1 : -1) * (dep + 0.6)] : [px + (side === 'w' ? 1 : -1) * (dep + 0.6), pz] };
