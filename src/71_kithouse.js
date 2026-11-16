@@ -24,7 +24,7 @@ const kitReady = () => HOUSE_STYLE === 'kit' && typeof Kit !== 'undefined' && !!
 function kitWanted(site, spec) { return kitReady() && !!KIT_STYLE[site.id]; }
 async function kitBoot(progress) {
   if (HOUSE_STYLE !== 'kit' || typeof Kit === 'undefined') return;
-  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan/.test(p.glb)) }); kitFixups(); if (typeof infillMaterials === 'function') await infillMaterials(); }       // scanned rocks photograph dark; lift them a little
+  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan|dungeon/.test(p.glb)) }); kitFixups(); if (typeof infillMaterials === 'function') await infillMaterials(); }       // scanned rocks photograph dark; lift them a little /* [q1] dungeon pack */
   catch (e) { console.warn('kits unavailable, building the generated houses instead: ' + (e && e.message || e)); G.kitNote = String(e && e.message || e); }
 }
 // pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong

@@ -186,10 +186,10 @@ function mineBuild() {
   mine_deep(m, put, rnd, O, FY, wpos, em);
   pack.add(m, { kind: 'opaque', cell: 'mine', nearOnly: true, noShadow: true });
   // water: the flooded gallery, a puddle in the sump, the silver pool
-  const wm = new Mesh(512); wm.mat(MAT.PLAIN, [0.07, 0.085, 0.095]); wm.ao = 0.8; wm.m1 = 0; wm.m2 = 0; wm.m3 = 0; wm.grad = null; wm.wind = 0;
+  const wm = new Mesh(512); wm.mat(MAT.PLAIN, [0.03, 0.045, 0.05]); wm.ao = 1; wm.m1 = 0; wm.m2 = 0; wm.m3 = 0; wm.grad = null; wm.wind = 0;
   const wq = (x0, z0, x1, z1, y) => wm.quad(wpos(x0, y, z0), wpos(x0, y, z1), wpos(x1, y, z1), wpos(x1, y, z0));
   wq(9, 29, 31, 35, -0.06); wq(36, 25, 42, 30, 0.01); wq(-5, 66, 1, 69, 0.01);
-  pack.add(wm, { kind: 'water', cell: 'mine', noShadow: true, nearOnly: true });
+  pack.add(wm, { kind: 'opaque', cell: 'mine', noShadow: true, nearOnly: true });
   // the veins of silver in the roof and walls of the deep chamber and the stope: emissive, cold
   pack.add(gm, { kind: 'glow', cell: 'mine', noShadow: true, nearOnly: true });
   pack.upload('mine'); World.packs.push(pack); MINE.pack = pack;
@@ -200,7 +200,7 @@ function mine_rubble(m, put, rnd, O, FY) {
   // the fall: a wall of broken rock from the east wall to the crawl on the west side, two layers of boulders and a slope of scree, timbers jutting out
   const A = MINE.AT.rubble;
   put(0, 0, 0, mm => {
-    mm.mat(MAT.ROCK, [0.42, 0.4, 0.38], 0.5);
+    mm.mat(MAT.ROCK, [0.62, 0.6, 0.57], 0.5);
     for (let layer = 0; layer < 3; layer++) for (let x = A[0][0] + 0.3 + layer * 0.5; x < A[1][0] + 0.8; x += 1.1) for (let z = A[0][1] + 0.2; z < A[1][1]; z += 1.0) {
       const r = (0.55 + rnd() * 0.55) * (1 - layer * 0.18); if (rnd() < 0.18 + layer * 0.22) continue;
       mm.ball(x + (rnd() - 0.5) * 0.5, 0.35 + layer * 0.7 + rnd() * 0.3, z + (rnd() - 0.5) * 0.5, r, r * (0.7 + rnd() * 0.3), r * (0.8 + rnd() * 0.3), 7, 4);
@@ -336,7 +336,7 @@ function mineTrapCheck() {
 // the lantern key; the cell's dark; the first time through either door the mine counts as open
 document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && game.playing && !Player.locked && World.cell && World.cell.id === 'mine' && has('lantern')) { S.flags.lampOff = S.flags.lampOff === 1 ? 0 : 1; toast(S.flags.lampOff === 1 ? 'You douse the lantern.' : (MINE_S().oil > 0 ? 'You light the lantern.' : 'The lantern is dry.')); } });
 const _ce94 = Cells.env;
-Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { e.ambSky = [0.018, 0.020, 0.026]; e.ambGnd = [0.010, 0.011, 0.013]; e.fogDensity = MINE.lamp.on ? 0.05 : 0.085; } return e; };
+Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1; e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = MINE.lamp.on ? 0.05 : 0.085; } return e; };
 const _cc94 = Cells.change;
 Cells.change = function (c) { _cc94(c); if (c && c.id === 'mine') { if (!S.flags.mineOpen) { S.flags.mineOpen = 1; if (typeof uiObjective === 'function') uiObjective(); } if (has('lantern') && !MINE_S().oil) MINE_S().oil = 600; } };
 const _wa94 = World.waterAt;
@@ -369,7 +369,10 @@ function mineKit() {
     add(r[0], p[0] + n[0] * (prot - hd), -0.15, p[1] + n[1] * (prot - hd), Math.atan2(n[0], n[2]) + (mhash(i, j, 64) < 0.5 ? 0 : PI) * 0, s);
   }
   // roots hanging from the roof where the ground above is thin
-  for (const c of G.G.values()) { if (c.reg.kind !== 'cave' || c.reg.id === 'deep') continue; if (mhash(c.i, c.j, 70) > 0.035) continue; add('root_cluster_01', c.i + 0.5, c.reg.h + (c.reg.fl || 0) - 0.05, c.j + 0.5, mhash(c.i, c.j, 71) * TAU, 0.7 + mhash(c.i, c.j, 72) * 0.5, PI); }
+  // (roots hung from the roof read as slabs: left out)
+  // the fall across the stope: scanned boulders heaped over the procedural ones
+  { const A = MINE.AT.rubble, nm = ['namaqualand_boulder_04', 'namaqualand_boulder_02', 'boulder_01', 'namaqualand_boulder_03'];
+    for (let layer = 0; layer < 2; layer++) for (let x = A[0][0] + 0.2; x < A[1][0] - 0.4; x += 2.3 - layer * 0.5) for (let z = A[0][1] + 0.4 + layer * 0.5; z < A[1][1] - 0.3; z += 1.5) add(nm[(Math.round(x * 3 + z) & 3)], x + (mhash(x * 9, z * 9, 80) - 0.5) * 0.6, layer * 0.9 - 0.15, z + (mhash(x * 9, z * 9, 81) - 0.5) * 0.5, mhash(x * 9, z * 9, 82) * TAU, 0.95 + mhash(x * 9, z * 9, 83) * 0.5); }
   // roots along the floor and fallen timber
   for (const [x, z, r] of [[-11, 31.5, 0.4], [42, 36, 1.2], [12, 59.4, 2], [36.5, 44, 0.3]]) add('single_root', x, 0, z, r, 1.0);
   add('dead_tree_trunk_02', 33.4, 0, 51.2, 0.5, 1.0); add('dead_tree_trunk_02', 44.5, 1.1, 54.6, 2.3, 0.9); add('dead_tree_trunk_02', 7.5, 0, 35.2, 1.3, 0.7);
