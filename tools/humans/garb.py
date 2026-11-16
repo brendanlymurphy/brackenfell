@@ -467,7 +467,7 @@ def kirtle_pieces(fit, mat, hem='ankle', sleeve='long', slot='wool', flare=0.17,
     out = [body]
     for sd in ('l', 'r'):
         if sleeve == 'none': break
-        out.append(tube_piece(fit, mat, 'w_sleeve' + sd.upper(), 'upperarm_' + sd, -0.10, 1.0 if sleeve == 'long' else 0.45, 0.008, rings=7, N=12, slot=slot, bone2='lowerarm_' + sd, flare=0.012))
+        out.append(tube_piece(fit, mat, 'w_sleeve' + sd.upper(), 'upperarm_' + sd, -0.22, 1.0 if sleeve == 'long' else 0.45, 0.008, rings=7, N=12, slot=slot, bone2='lowerarm_' + sd, flare=0.012))
     return out
 
 # ───────────────────────── a wardrobe ─────────────────────────

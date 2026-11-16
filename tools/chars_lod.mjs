@@ -32,7 +32,7 @@ for (const file of files) {
     const mesh = node.getMesh(); if (!mesh || !node.getSkin() || isCopy(node.getName())) continue;
     for (const prim of mesh.listPrimitives()) items.push({ node, mesh, prim, kind: kindOf(prim.getMaterial(), mesh.getName()), n: prim.getIndices().getCount() / 3 });
   }
-  const MOUTH_N = level === 'mid' ? items.filter(x => x.kind === 'mouth').reduce((a, x) => a + x.n, 0) : 0, WEAR_RATIO = level === 'mid' ? 0.34 : level === 'lod' ? 0.28 : 0.10, WEAR_MAX = Math.round(700 * WEAR_RATIO), rest = budget - items.filter(x => x.kind === 'eye').length * EYE_TRIS - (items.some(x => x.kind === 'wear') ? WEAR_MAX : 0) - MOUTH_N, sums = {};
+  const MOUTH_N = level === 'mid' ? items.filter(x => x.kind === 'mouth').reduce((a, x) => a + x.n, 0) : 0, WEAR_RATIO = level === 'mid' ? 0.34 : level === 'lod' ? 0.28 : 0.10, WEAR_MAX = Math.round(700 * WEAR_RATIO), rest = budget - items.filter(x => x.kind === 'eye').length * EYE_TRIS - (items.some(x => x.kind === 'wear') ? WEAR_MAX : 0) - MOUTH_N - items.filter(x => /^w_(kirtle|sleeve)/.test(x.mesh.getName())).reduce((a, x) => a + x.n * WEAR_RATIO, 0), sums = {};
   for (const x of items) if (SHARE[x.kind] !== undefined) sums[x.kind] = (sums[x.kind] || 0) + Math.sqrt(x.n);
   let total = 0; const log = [];
   for (const x of items) {
