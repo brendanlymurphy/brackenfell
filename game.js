@@ -5179,7 +5179,7 @@ const SCANR = {
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
   Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
   Barrel: { n: ['wine_barrel_01'], fit: 'xz', one: 1, inOnly: 1 },          // [fx2] the second scan has doubled coplanar staves inside it (9000 audit pairs): one model
-  Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' }, Bottle_1: { n: ['ceramic_vase_04'], fit: 'contain' },
+  Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' },
   Table_Plate: { n: ['carved_wooden_plate'], fit: 'contain' },
   Candle_1: { n: ['wooden_candlestick'], fit: 'contain', mul: 1.25 }, Candle_2: { n: ['wooden_candlestick'], fit: 'contain' },
   CandleStick_Triple: { n: ['brass_candleholders_c'], fit: 'contain', mul: 0.75 },
@@ -5230,8 +5230,10 @@ function kadd(m, P, extra) {
   if (typeof P_REC !== 'undefined' && P_REC) { P_REC.parts.push({ name: P.name, M: P.M.clone() }); if (P_REC.defer) { P_REC.pend.push([m, P, extra]); return; } }          // [fx2] 72d_plan.js pPut: pieces are measured before they are committed
   kaddNow(m, P, extra);
 }
+const KIT_CAP = { ceramic_vase_04: 12, ceramic_vase_02: 8, ceramic_pot: 6, wooden_bowl_01: 8, wooden_candlestick: 8 };
 function kaddNow(m, P, extra) {
   const zone = m.m1 | 0;
+  if (zone) { const ck = zone + '|' + P.name, cap = KIT_CAP[P.name]; KITP.sc = KITP.sc || {}; if (cap && (KITP.sc[ck] = (KITP.sc[ck] || 0) + 1) > cap) return; }          // [fx2] a few hundred tiny, 600-triangle pots on shelves nobody reads: a room keeps at most a handful of each
   let B; if (zone) B = extra && extra.fine ? furnFineBatch(zone) : kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: YARD_CELL }); B = World.kitYard; }
   const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone && yardCasts(P) }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
   B.add(P.name, P.M, o); if (zone && !o.noBlob) furnBlob(zone, P);
@@ -7709,7 +7711,7 @@ PD.try = function (P, room, sd, u, kind, R, fill) {
   switch (kind) {
     case 'shelf': return PD.floorAt(P, room, sd, id + 'sh', 1.5, 0.34, 1.8, pdShelf(1.5, 1.8, 3, fill || PD.goods(c, 1.5)), u, 0.3);
     case 'books': return PD.floorAt(P, room, sd, id + 'bk', 1.8, 0.34, 1.8, pdShelf(1.8, 1.8, 3, PD.books(c, 1.8)), u, 0.3);
-    case 'cabinet': return PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true });
+    case 'cabinet': { const q = (P.fixt = P.fixt || {}), key = room.id + 'cabinet'; if ((q[key] || 0) >= 2) return 0; const w = PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true }); if (w) q[key] = (q[key] || 0) + 1; return w; }
     case 'cupboard': return PD.floorAt(P, room, sd, id + 'cu', 1.12, 0.6, 1.76, PD.cupboard, u, 0.3);
     case 'cask': return PD.floorAt(P, room, sd, id + 'ck', 1.0, 0.95, 0.8, PD.cask(0.9, 0.32), u, 0.3, { lowOk: true });
     case 'bench': return PD.floorAt(P, room, sd, id + 'bn', 1.6, 0.4, 0.46, m => Props.bench(m, 1.6), u, 0.3, { lowOk: true });
