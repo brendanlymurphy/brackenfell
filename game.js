@@ -17022,7 +17022,7 @@ function mineKit() {
   const NRM = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }, POS = { W: (i, j) => [i, j + 0.5], E: (i, j) => [i + 1, j + 0.5], N: (i, j) => [i + 0.5, j + 1], S: (i, j) => [i + 0.5, j] };
   const pick = h => { let a = 0; for (const r of MINE_ROCKS) { a += r[2]; if (h < a) return r; } return MINE_ROCKS[0]; };
   for (const k of ['W', 'E', 'N', 'S']) for (const [i, j] of G.edges[k]) {
-    const h = mhash(i, j, 50 + k.charCodeAt(0)); if (h > 0.14) continue;
+    const h = mhash(i, j, 50 + k.charCodeAt(0)); if (h > 0.4) continue;       // [fx1] 0.14 left the gravel heap bare between a few rocks
     const r = pick(mhash(i, j, 61)), n = NRM[k], p = POS[k](i, j), s = 0.8 + mhash(i, j, 62) * 0.5, hd = r[1] * s, prot = 0.12 + mhash(i, j, 63) * 0.18;
     add(r[0], p[0] + n[0] * (prot - hd), -0.15, p[1] + n[1] * (prot - hd), Math.atan2(n[0], n[2]) + (mhash(i, j, 64) < 0.5 ? 0 : PI) * 0, s);
   }
