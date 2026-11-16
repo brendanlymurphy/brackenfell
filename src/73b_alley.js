@@ -295,8 +295,8 @@ function kitGen(kind, R) {
   if (kind === 'paint') {
     const t = R.i(0, 3), w = [0.8, 0.55, 0.62, 0.9][t], h = [0.52, 0.72, 0.5, 0.6][t];
     g.box(W_, -w / 2 - 0.05, -h / 2 - 0.05, 0, w / 2 + 0.05, h / 2 + 0.05, 0.04, [0.5, 0.42, 0.34]);
-    const z = 0.042, Q = (x0, y0, x1, y1, col) => g.quad(C_, [x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z], col, GPU.cloth);
-    if (t === 0 || t === 3) { Q(-w / 2, 0, w / 2, h / 2, [0.45, 0.52, 0.58]); Q(-w / 2, -h / 2, w / 2, 0, [0.3, 0.36, 0.2]); Q(-w / 2, -h / 2, w / 2, -h * 0.15, [0.2, 0.24, 0.14]); g.tri(C_, [-w * 0.4, 0.0, z + 0.001], [w * 0.1, 0.0, z + 0.001], [-w * 0.15, h * 0.28, z + 0.001], [0.3, 0.32, 0.34], GPU.cloth); }
+    let zq = 0; const z = 0.042, Q = (x0, y0, x1, y1, col) => { const zz = z + (zq++) * 0.0012; g.quad(C_, [x0, y0, zz], [x1, y0, zz], [x1, y1, zz], [x0, y1, zz], col, GPU.cloth); };          // [c3] each layer of the picture a hair in front of the last: overlapping layers at one depth flickered
+    if (t === 0 || t === 3) { Q(-w / 2, 0, w / 2, h / 2, [0.45, 0.52, 0.58]); Q(-w / 2, -h / 2, w / 2, 0, [0.3, 0.36, 0.2]); Q(-w / 2, -h / 2, w / 2, -h * 0.15, [0.2, 0.24, 0.14]); g.tri(C_, [-w * 0.4, 0.0, z + 0.006], [w * 0.1, 0.0, z + 0.006], [-w * 0.15, h * 0.28, z + 0.006], [0.3, 0.32, 0.34], GPU.cloth); }
     else if (t === 1) { Q(-w / 2, -h / 2, w / 2, h / 2, [0.2, 0.15, 0.1]); Q(-w * 0.22, -h * 0.05, w * 0.22, h * 0.32, [0.55, 0.42, 0.33]); Q(-w * 0.4, -h / 2, w * 0.4, -h * 0.1, [0.32, 0.2, 0.16]); }
     else { for (let i = 0; i < 5; i++) Q(-w / 2 + i * w / 5, -h / 2, -w / 2 + (i + 1) * w / 5, h / 2, [[0.5, 0.2, 0.15], [0.7, 0.55, 0.3], [0.25, 0.3, 0.4], [0.7, 0.55, 0.3], [0.5, 0.2, 0.15]][i]); }
   } else {       // a bar with bundles of herbs, onions and dried flowers
