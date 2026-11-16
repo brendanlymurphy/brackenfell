@@ -12,7 +12,7 @@ const uiBusy = () => !!(UI.talk || UI.menu || UI.reader || UI.paused);
 function uiPurse() { $('purse').textContent = S.gold + ' gold'; if (S.gold !== UI.lastGold) { if (UI.lastGold >= 0) UI.hudT = Math.max(UI.hudT, 6); UI.lastGold = S.gold; } }
 function questLine(id) { let st = QUESTS[id].stages[S.q[id].stage]; if (id === 'herbs' && S.q[id].stage === 0) st += ' (' + Math.min(frostN(), 5) + ' of 5)'; return st; }
 function uiObjective() {
-  let h = ''; const act = QORDER.filter(id => S.q[id] && !S.q[id].done).sort((a, b) => S.q[b].t - S.q[a].t).slice(0, 3);
+  let h = ''; const act = QORDER.filter(id => S.q[id] && !S.q[id].done).sort((a, b) => (b === 'main') - (a === 'main') || S.q[b].t - S.q[a].t).slice(0, 3);
   for (const id of act) h += '<div><b>' + QUESTS[id].name + '</b>' + questLine(id) + '</div>';
   if (h !== UI.lastObj) { $('objective').innerHTML = h; if (UI.lastObj !== '' || h) UI.hudT = Math.max(UI.hudT, 9); UI.lastObj = h; }
 }

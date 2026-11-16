@@ -551,6 +551,7 @@ function buildWilds() {
     return wrap(x, z);
   };
   if (typeof wildsLifeBuild === 'function') wildsLifeBuild();
+  if (typeof storyBuild === 'function') { try { storyBuild(); } catch (e) { console.warn('story: ' + (e && e.stack || e)); } }       // 82_story.js: the body on the wharf, [q1] the Old Mine and the rest
 }
 
 // the kit half: batches made when the kit and the quality tier are known (and again if the tier changes). Each place is hidden beyond 125 m.
