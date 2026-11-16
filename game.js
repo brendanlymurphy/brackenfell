@@ -9555,7 +9555,7 @@ function alleyDress(B, B2, R) {
   // ── bunting across the street ──
   const shopAt = id => AL.shops.find(s => s.a.id === id);
   const pt = (id, wx, y) => { const s = shopAt(id); if (!s) return null; if (s.house) { const si = SITE[id], z = si.z + (si.yaw === PI ? 1 : -1) * (si.d / 2 + 0.12); return [wx, si.y + y, z]; } const sgn = s.site.yaw === PI ? -1 : 1; return wpos(s.MS, (wx - s.site.x) * sgn, y, -s.d / 2 - 0.55); };
-  const flags = [[0.5, 0.27, 0.23], [0.64, 0.58, 0.44], [0.3, 0.36, 0.46], [0.58, 0.44, 0.24], [0.34, 0.4, 0.3]];      // Build 42: faded
+  const flags = [[0.5, 0.27, 0.23], [0.64, 0.58, 0.44], [0.3, 0.36, 0.46], [0.58, 0.44, 0.24], [0.34, 0.4, 0.3]].map(c => c.map(v => v * 0.34));      // Build 42: faded; [fx1] and the cloth material brightens: they read as white flags
   for (const [i1, x1, y1, i2, x2, y2] of [['shop.n3', 42.2, 5.2, 'shop.s2', 45.2, 5.4], ['shop.n4', 48.0, 6.4, 'shop.s2', 47.4, 5.0], ['draper', 31.6, 5.4, 'shop.s1', 30.8, 6.2], ['shop.n2', 38.0, 6.6, 'shop.s1', 33.0, 6.4]]) {
     const A_ = pt(i1, x1, y1), B_ = pt(i2, x2, y2); if (!A_ || !B_) continue;
     B.add(genBunting(A_, B_, R, flags, 12), I, OUT);
@@ -10525,7 +10525,7 @@ function infillAttach() {
   const B = INFS.batch, lowQ = (R.qName === 'low');
   for (const h of INFS.shells) { try { infShell(B, h, lowQ && h.tier === 1); } catch (e) { console.warn('infill shell ' + h.id + ': ' + (e && e.message || e)); } }
   if (!lowQ) {       // pennant ropes across the lanes, between houses that face each other
-    const hs = INF.houses, used = new Set(), cols = [[0.46, 0.25, 0.21], [0.56, 0.46, 0.26], [0.27, 0.33, 0.29], [0.5, 0.46, 0.38], [0.42, 0.22, 0.2]], I = new THREE.Matrix4(), rr = rng(606); let nr = 0;
+    const hs = INF.houses, used = new Set(), cols = [[0.46, 0.25, 0.21], [0.56, 0.46, 0.26], [0.27, 0.33, 0.29], [0.5, 0.46, 0.38], [0.42, 0.22, 0.2]].map(c => c.map(v => v * 0.4)), I = new THREE.Matrix4(), rr = rng(606); let nr = 0;
     const front = h => { const p = siteToWorld(h, (rr() - 0.5) * h.w * 0.3, -h.d / 2 - (h.jetty ? 0.58 : 0.14)); return [p[0], site0(h) + (h.floors >= 2 ? 3.75 : 2.9), p[1]]; };
     const site0 = h => SITE[h.id].y;
     for (const a of hs) for (const b of hs) {
