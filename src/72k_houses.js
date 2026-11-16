@@ -162,7 +162,7 @@ HFAM.workshop = (P, c, F) => {
   P.dims = { W, D, Dh }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
   const work = F.rm(0, 'work', 'hall', -5, 0, 5, Dh, F.fin(0, { floor: F.T.stone || F.wealth === 0 ? 'stone' : 'wood' })), living = F.rm(0, 'living', 'hall', -5, Dh, -0.5, D, F.fin(0, { floor: 'wood', tint: F.tint2 })), yard = F.rm(0, 'yard', 'yard', -0.5, Dh, 5, D, { floor: 'cobble', tint: [0.8, 0.77, 0.72] });
   const loft = F.rm(1, 'loft', 'bedroom', -5, Dh, -0.5, D, F.fin(1));
-  F.door('work', null, R.pick([-1, 0, 0, 1]), 0); F.door('work', 'living', -2.75 + R.pick([-0.5, 0.5]), Dh); F.door('work', 'yard', 2.25 + R.pick([-0.5, 0, 0.5, 1]), Dh);      // [c5] the openings in different places
+  F.door('work', null, 0, 0); F.door('work', 'living', -2.75 + R.pick([-0.5, 0.5]), Dh); F.door('work', 'yard', 2.25 + R.pick([-0.5, 0, 0.5, 1]), Dh);      // [c5] the openings in different places
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: F.X(-5 + 0.95), z: Dh + 1.25, width: 0.9, tread: 0.2 });
   pLayout(P);
   hTrade(P, c, work, F); P.hall = { room: work, hh: null }; const e = P.doors.find(d => d.b === null); if (e) pPut(P, work, P.id + '.mat', e.x, 1.4, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, F.rug), { flat: true, noClear: true });
