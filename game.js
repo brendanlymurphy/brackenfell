@@ -7430,6 +7430,7 @@ function planBuild(c) {
   const W = P.dims ? P.dims.W : 9, D = P.dims ? P.dims.D : 10, zi = c.zoneInfo, ctr = P.w2(0, 0, D / 2);
   zi.site = Object.assign({}, c.site, { x: ctr[0], z: ctr[2], yaw: P.yaw }); zi.hw = W / 2; zi.hd = D / 2; zi.y0 = dd.sill[1] - 3.6; zi.y1 = dd.sill[1] + 7; zi.slope = 0; zi.H = H_GROUND;
   if (P.hearths && P.hearths[0]) { const h = P.hearths[0], hp = P.w2(h.x, 0, h.z); zi.hearth = [hp[0], hp[2], h.wid]; }
+  PD.topup(P);             // [fx2] rooms that measured placement left thin get a second fill
   pSpotsClear(P);          // [fx2] nobody stands inside a counter, chair or cabinet
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
   const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
@@ -7810,6 +7811,34 @@ PD.stats = function (P) {
     const e = PD.emptiest(P, r); rows[id] = { wall: +(cov / Math.max(free, 1)).toFixed(2), empty: +(2 * e.r).toFixed(1) };
   }
   return rows;
+};
+
+// [fx2] top-up: measured placement refuses what really does not fit, so a room can come out thinner than its rule meant. Any room whose walls are less than 58% covered gets a second fill pass
+// from a pool that suits it; corners that are still bare get their kind of thing. Nothing here is a new kind of object: every pool entry is one PD.try already knows.
+PD.POOLS = {
+  cellar: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], store: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], bedroom: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet', 'cask'],
+  hall: ['shelf', 'cabinet', 'hooks', 'paint', 'tapestry', 'sacks', 'stack', 'cupboard'], shop: ['shelf', 'cabinet', 'hooks', 'paint', 'tapestry', 'sacks', 'stack'], keeper: ['cupboard', 'hooks', 'paint', 'shelf', 'cabinet'],
+  common: ['shelf', 'cabinet', 'hooks', 'paint', 'cask', 'stack'], kitchen: ['shelf', 'cabinet', 'hooks', 'cask', 'sacks', 'stack'], study: ['books', 'paint', 'hooks', 'cabinet'], sacristy: ['cupboard', 'hooks', 'paint', 'shelf'], gallery: ['paint', 'hooks', 'tapestry']
+};
+PD.cover = function (P, r) {
+  const a = r.in; let free = 0, cov = 0;
+  for (const sd of ['n', 's', 'w', 'e']) {
+    const hor = sd === 'n' || sd === 's', lo = hor ? a.x0 : a.z0, hi = hor ? a.x1 : a.z1; free += hi - lo;
+    const door = r.doors.filter(d => d.wall && (hor ? d.wall.ax === 'x' : d.wall.ax === 'z') && Math.abs(d.wall.c - (sd === 'n' ? r.z0 : sd === 's' ? r.z1 : sd === 'w' ? r.x0 : r.x1)) < 0.01);
+    for (const d of door) free -= d.w; const iv = [];
+    for (const it of P.items) if (it.k === r.k && it.room === r.id && it.back === sd) iv.push(hor ? [it.x0, it.x1] : [it.z0, it.z1]);
+    for (const w of P.wallItems) if (w.k === r.k && w.room === r.id && w.side === sd) iv.push([w.u0, w.u1]);
+    iv.sort((x, y) => x[0] - y[0]); let end = -1e9; for (const [s, e] of iv) { const s2 = Math.max(s, lo, end), e2 = Math.min(e, hi); if (e2 > s2) cov += e2 - s2; end = Math.max(end, e2); }
+  }
+  return cov / Math.max(free, 1);
+};
+PD.topup = function (P) {
+  P.topped = 0;
+  for (const id in P.rooms) {
+    const r = P.rooms[id], pool = PD.POOLS[r.kind]; if (!pool) continue;
+    for (let pass = 0; pass < 5 && PD.cover(P, r) < 0.64; pass++) { const n = PD.fill(P, r, pool, { max: 6 }); P.topped += n; if (!n) break; }
+    if (PD.cover(P, r) < 0.64) P.topped += PD.corners(P, r, r.kind === 'cellar' || r.kind === 'store' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack']);
+  }
 };
 
 
