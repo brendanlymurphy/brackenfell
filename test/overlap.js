@@ -34,7 +34,7 @@ for (const d of World.doors) {
   for (const s of [-1, 1]) { const x = d.c[0] + dir[0] * 0.9 * s, z = d.c[2] + dir[1] * 0.9 * s; const c = inSolid(x, y, z, 0); if (!c) free++; else if (c.y1 - c.y0 < 2.4) blocked++; }
   if (blocked) { out.push({ kind: 'door', score: 3, at: [d.c[0], d.c[1], d.c[2]], d: 'door ' + (d.site && d.site.id || d.cell || '?') + ' ' + (d.side || '') + ' approach holds a low solid' }); nd++; }
 }
-for (const k in World.spots) { const s = World.spots[k]; if (!s.p) continue; const c = inSolid(s.p[0], s.p[1] + 0.5, s.p[2], 0); if (c) out.push({ kind: 'spot', score: 2, at: s.p, d: 'spot ' + k + ' inside a solid' }); }
+for (const k in World.spots) { const s = World.spots[k]; if (!s.p) continue; const c = inSolid(s.p[0], s.p[1] + 0.5, s.p[2], -0.35); if (c) out.push({ kind: 'spot', score: 2, at: s.p, d: 'spot ' + k + ' inside a solid' }); }
 for (const st of World.stairs || []) for (const w of ['bottom', 'top']) { const sp = World.spots[st[w]]; if (!sp || !sp.p) continue; const c = inSolid(sp.p[0], sp.p[1] + 0.6, sp.p[2], 0); if (c) out.push({ kind: 'stair', score: 4, at: sp.p, d: 'stair ' + st.id + ' ' + w + ' inside a solid' }); }
 out.sort((a, b) => b.score - a.score);
 const count = {}; out.forEach(o => count[o.kind] = (count[o.kind] || 0) + 1);
