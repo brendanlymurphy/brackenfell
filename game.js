@@ -966,7 +966,8 @@ function surfaceMaterial(mode) {
   const N = SH.perturb(normalize(vN), positionWorld, uv(), nt.xy, float(1));
   // rooms: occlusion near floor, ceiling and corners, soot over the hearth (40b_depth.js); only generated room geometry and people carry a zone
   const rm = (mode === 'static' || mode === 'skin') ? SH.room(positionWorld, N, zone).toVar() : null, aoR = rm ? rm.x : float(1);
-  const amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35))).add(SH.winLight(positionWorld, N, zone).mul(aoR.mul(0.6).add(0.4)));      // [l1] window light (40c_light.js)
+  let amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35))).add(SH.winLight(positionWorld, N, zone).mul(aoR.mul(0.6).add(0.4)));      // [l1] window light (40c_light.js)
+  if (!(TEST && TEST.shade === 0)) amb = amb.add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)).mul(float(1).sub(step(0.5, zone))).mul(tint.a.mul(0.5).add(0.5)));      // [l1] shade keeps a floor of sky and bounce: bark, posts and fences do not go black out of the sun
   const sootK = rm ? mix(vec3(1), vec3(0.22, 0.21, 0.2), rm.z.mul(0.9)) : vec3(1);
   m.colorNode = albedo.mul(sootK).mul(unlit.oneMinus());
   m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit)).add(mode === 'static' && !(TEST && TEST.gloss === 0) ? SH.pointSpec(positionWorld, N, normalize(SH.U.camPos.sub(positionWorld)), step(TSL.abs(mm.x.sub(MAT.PLANKS)), 0.5).mul(0.5), zone).mul(0.16) : vec3(0));      // [l1] worn planks catch the firelight
@@ -1795,11 +1796,12 @@ const Kit = (() => {
       const kg = attribute('kg', 'vec4'), gr = SH.grime(wp, N, kg.x.mul(8), kg.y.mul(8), rm.y, rm.z, float(/Brick|Rock/.test(name) ? 1 : 0)).toVar();
       gcol = mix(gcol.mul(gr.rgb), vec3(0.15, 0.22, 0.07).mul(dot(gcol, vec3(1.2)).add(0.35)), gr.w.mul(0.75));
     }
-    const alb = gcol.mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
+    const lampDay = step(0.05, glow).mul(float(1).sub(step(0.5, zone))).mul(smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))));      // [l1] unlit lamp glass by day: smoky and glossy, not a cream box
+    const alb = gcol.mul(metal.mul(0.45).oneMinus()).mul(float(1).sub(lampDay.mul(0.78))).toVar('kitAlbedo');
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
     m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
-    m.roughnessNode = orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough);
+    m.roughnessNode = (orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough)).mul(float(1).sub(lampDay.mul(0.7)));
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
     const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back
@@ -11926,7 +11928,7 @@ Trees.materials = function (sp) {
   const leaf = lambert({}, leafCol, cut(a.a), skyL);
   const wood = new THREE.MeshStandardNodeMaterial(); wood.positionNode = place({});
   { const N = normalize(varying(rotN())), alb = texture(sp.bark, uv()).rgb.mul(0.8); wood.colorNode = alb; wood.normalNode = transformNormalToView(N); wood.roughnessNode = float(0.95); wood.metalnessNode = float(0);
-    wood.emissiveNode = alb.mul(SH.hemi(N, float(0.75), float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.25)))); }
+    wood.emissiveNode = alb.mul(SH.hemi(N, float(0.75), float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.25))).add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)))); }      // [l1] shaded trunks keep a floor of sky and bounce
   // middle ring: wood and cards in one draw; wood takes the bark's average colour
   const tk = varying(attribute('tk', 'float')), barkC = vec3(sp.m.bark[0], sp.m.bark[1], sp.m.bark[2]).mul(vec3(sp.m.bark[0], sp.m.bark[1], sp.m.bark[2])).mul(0.8);
   const midCol = mix(leafCol, barkC, tk), midA = max(cut(a.a), tk);
