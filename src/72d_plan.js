@@ -230,10 +230,10 @@ function pBuild(P) {
       // ceiling slab underside + beams (not over a stairwell)
       const yc = L.y + L.H; m.m1 = zone; m.ao = INT_AO * 0.9; m.mat(r.floor === 'stone' ? MAT.STONE : MAT.PLANKS, r.floor === 'stone' ? [0.8, 0.78, 0.74] : COL.woodDark);
       for (const q of rSubAll({ x0: r.x0 + PW.IN, z0: r.z0 + PW.IN, x1: r.x1 - PW.IN, z1: r.z1 - PW.IN }, above)) m.quad([q.x0, yc, q.z1], [q.x0, yc, q.z0], [q.x1, yc, q.z0], [q.x1, yc, q.z1], 0, 0, (q.x1 - q.x0) / m.tile, (q.z1 - q.z0) / m.tile);
-      m.mat(MAT.TIMBER, COL.timberDark); const wide = (r.x1 - r.x0) >= (r.z1 - r.z0), span = wide ? r.z1 - r.z0 : r.x1 - r.x0, len = wide ? r.x1 - r.x0 : r.z1 - r.z0, nb = Math.max(1, Math.round(len / 1.7));
+      m.mat(MAT.TIMBER, COL.timberDark); const wide = r.beamDir === 'x' ? true : r.beamDir === 'z' ? false : (r.x1 - r.x0) >= (r.z1 - r.z0), span = wide ? r.z1 - r.z0 : r.x1 - r.x0, len = wide ? r.x1 - r.x0 : r.z1 - r.z0, nb = Math.max(1, Math.round(len / (r.beamSp || 1.7))), bh = r.beamH || 0.2, bw = r.beamW || 0.08;      // [c5] room.beamDir / beamSp / beamH / beamW: the ceiling differs room to room
       if (L.H > 2.2) for (let i = 0; i < nb; i++) {
-        const t = (wide ? r.x0 : r.z0) + len * (i + 0.5) / nb, bq = wide ? { x0: t - 0.08, x1: t + 0.08, z0: r.z0 + 0.2, z1: r.z1 - 0.2 } : { x0: r.x0 + 0.2, x1: r.x1 - 0.2, z0: t - 0.08, z1: t + 0.08 };
-        if (above.some(h => rOv(bq, h))) continue; m.box(bq.x0, yc - 0.2, bq.z0, bq.x1, yc, bq.z1, 8);
+        const t = (wide ? r.x0 : r.z0) + len * (i + 0.5) / nb, bq = wide ? { x0: t - bw, x1: t + bw, z0: r.z0 + 0.2, z1: r.z1 - 0.2 } : { x0: r.x0 + 0.2, x1: r.x1 - 0.2, z0: t - bw, z1: t + bw };
+        if (above.some(h => rOv(bq, h))) continue; m.box(bq.x0, yc - bh, bq.z0, bq.x1, yc, bq.z1, 8);
       }
     }
   }
