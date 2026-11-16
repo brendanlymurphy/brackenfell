@@ -1769,7 +1769,10 @@ const Kit = (() => {
       m.colorNode = vec3(0.012, 0.016, 0.02); m.roughnessNode = float(0.15); m.metalnessNode = float(0);
       // from the room side a pane just shows the dim sky outside
       const outsideView = batch ? frontFacing : frontFacing;
-      m.emissiveNode = select(outsideView, sky.add(lit), (SH.paneOut ? SH.paneOut(wp, N, V) : SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55))).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
+      // [fx1] a reveal and a reflection so the pane is not one flat rectangle: the glass edge sits in the frame's shadow, each pane catches the sky differently (a soft diagonal sheen, a faint grime toward the sill)
+      const pu = uv(), edge = smoothstep(0.0, 0.16, pu.x.min(pu.y).min(float(1).sub(pu.x)).min(float(1).sub(pu.y))), sheen = smoothstep(0.35, 0.5, fract(pu.x.mul(0.7).add(pu.y.mul(0.5)).add(h.mul(0.9)))).mul(float(1).sub(smoothstep(0.5, 0.62, fract(pu.x.mul(0.7).add(pu.y.mul(0.5)).add(h.mul(0.9)))))), grime = float(1).sub(float(1).sub(pu.y).mul(0.0)).mul(float(0.7).add(pu.y.mul(0.3)));
+      const dayK = float(0.55).add(edge.mul(0.45)).mul(grime), skyDay = sky.mul(dayK).add(sky.mul(sheen.mul(0.9)).mul(edge));
+      m.emissiveNode = select(outsideView, skyDay.add(lit.mul(edge.mul(0.5).add(0.5))), (SH.paneOut ? SH.paneOut(wp, N, V) : SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55))).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
       m.side = THREE.DoubleSide;
       K_.mats.set(key, m); return m;
     }
@@ -9119,10 +9122,10 @@ function buildVillage() {
   const skin = new MeshPack();
   const leaf = new Mesh(512);
   // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
-  leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.05, 0.04, 0.035]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
-  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [0.8 * k, 0.62 * k, 0.45 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
-  leaf.mat(MAT.PLANKS, [0.56, 0.43, 0.31], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
-  leaf.mat(MAT.METAL, [0.2, 0.19, 0.18]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
+  leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
+  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [1.7 * k, 1.35 * k, 0.98 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
+  leaf.mat(MAT.PLANKS, [1.2, 0.95, 0.7], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
+  leaf.mat(MAT.METAL, [0.42, 0.4, 0.37]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   const leafItem = skin.add(leaf);
   for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
