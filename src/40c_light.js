@@ -22,7 +22,7 @@ SH.WINMAX = 6;
         const d = wp.sub(P.xyz), d2 = dot(d, d), r2 = P.w.mul(P.w);
         If(d2.lessThan(r2), () => {
           const f = float(1).sub(d2.div(r2)), dn = d.mul(max(d2, 1e-4).inverseSqrt());
-          const lobe = smoothstep(-0.9, 0.45, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
+          const lobe = smoothstep(-0.15, 0.6, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
           const ndl = max(dot(N, dn.negate()).mul(0.7).add(0.3), 0);                 // surfaces that face the glass catch more
           const up = float(1).sub(TSL.clamp(d.y.sub(0.2).div(1.5), 0, 1).mul(0.75));      // above the glass the light thins out: ceilings stay dark
           acc.addAssign(C.rgb.mul(f.mul(f).div(d2.mul(0.18).add(1)).mul(lobe).mul(ndl).mul(up)));
