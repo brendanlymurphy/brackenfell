@@ -13,7 +13,7 @@ function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y0, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
   World.colliders.push({ x: c[0], z: c[2], hx: Math.abs(x1 - x0) / 2 * sx, hz: Math.abs(z1 - z0) / 2 * sz, ax: M[0] / sx, az: M[2] / sx, bx: M[8] / sz, bz: M[10] / sz, y0: c[1], y1: c[1] + (y1 - y0) });
 }
-function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]); World.colliders.push({ x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }); }
+function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]), o = { x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }; if (TEST && TEST.colstack && Math.hypot(o.x, o.z) < 1.5) o.stk = new Error().stack.split('\n').slice(2, 6).join(' < '); World.colliders.push(o); }          // [fx1] --opt colstack=1 records where an origin collider came from
 const flick = (t, s) => 0.86 + 0.09 * Math.sin(t * 11.3 + s * 7.1) + 0.07 * Math.sin(t * 23.7 + s * 3.3) + 0.05 * Math.sin(t * 5.1 + s);
 const LIGHT_KINDS = {
   fire: (l, e) => flick(e.time, l.seed),
@@ -26,7 +26,8 @@ function addLight(p, r, c, zone, kind) { const l = { p, r, c, zone: zone | 0, se
 const wp = (m, x, y, z) => m4.tp(m.m, [x, y, z]);
 // emissive geometry (fire glow, candle wax tips ...): strength in HDR units
 const emit = (m, k, fn) => { const a = m.m2, b = m.m3; m.m2 = a | 2; m.m3 = clamp(Math.round(k * 16), 1, 255); fn(); m.m2 = a; m.m3 = b; };
-const at = (m, x, y, z, rot, fn) => { m.push().T(x, y, z); if (rot) m.RY(rot); fn(); m.pop(); };
+const at = (m, x, y, z, rot, fn) => { m.push().T(x, y, z); if (rot) m.RY(rot); const d = m.st.length; fn(); if (m.st.length !== d) pushPopWarn(m, 'at'); m.pop(); };
+const pushPopWarn = (m, who) => { if (!pushPopWarn.n) pushPopWarn.n = 0; if (pushPopWarn.n++ < 4) console.warn('[fx1] unbalanced push/pop inside ' + who + ' (a builder popped or pushed once too often: whatever it drew next landed at the wrong place)'); };          // [fx1]
 
 const Props = {
   table(m, len, wid, h) {
@@ -165,8 +166,25 @@ const Props = {
     m.box(-0.75, 0.70, 1.17, 0.75, 1.08, 1.23); m.box(-0.75, 0.70, -1.23, 0.75, 0.95, -1.17);
     m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.9, 0.52, -0.05, 0.9, 0.62, 0.05);
     for (const sx of [-1, 1]) { m.beam([sx * 0.45, 0.6, -1.2], [sx * 0.42, 0.42, -2.9], 0.07, 0.07); at(m, sx * 0.92, 0.57, 0, PI / 2, () => Props.wheel(m, 0.57, 0.09)); }
-    if (hay) { m.mat(MAT.THATCH, COL.hay, 0.8); m.ball(0, 0.95, 0, 0.7, 0.5, 1.1, 10, 6); }
+    if (hay) Props.hayLoad(m, 0.68, 1.12, 0.78, 0.36);
     addBoxCollider(m, -0.95, -1.25, 0.95, 1.25, 0, 1.1);
+  },
+  // [fx1] a load of loose hay: a shallow mound of overlapping lumps (not one ball) with straw stalks sticking out, in dry golden straw, not the thatch tile's green
+  hayLoad(m, hw, hl, y0, hh) {
+    const R = rng(Math.round(hw * 977 + hl * 131)), straw = [0.92, 0.76, 0.46];
+    m.mat(MAT.THATCH, straw, 0.8);
+    for (let i = 0; i < 7; i++) { const u = (i / 6) * 2 - 1, x = u * 0.2 * hw + R.s() * 0.18, z = u * hl * 0.8 + R.s() * 0.12, rx = hw * (0.55 + R() * 0.25), rz = hl * 0.3 + R() * 0.12, ry = hh * (0.55 + 0.4 * (1 - Math.abs(u))); m.ball(x, y0 + ry * 0.35, z, rx, ry, rz, 7, 4); }
+    m.mat(MAT.THATCH, [1.0, 0.86, 0.52], 0.6);
+    for (let i = 0; i < 14; i++) { const x = R.s() * hw * 0.9, z = R.s() * hl * 0.95, h0 = y0 + hh * (0.5 + R() * 0.45) * (1 - 0.5 * Math.abs(z) / hl); m.beam([x, h0, z], [x + R.s() * 0.22, h0 + 0.06 + R() * 0.16, z + R.s() * 0.22], 0.012, 0.01); }
+  },
+  // [fx1] a hanging cloth banner, origin at the top centre, hanging down -y, facing +-z: a rod and two cords, the cloth in strips that wave a little (not one flat slab), a darker hem, a swallow-tail
+  banner(m, w, h, col, seed) {
+    const n = 5, dw = w / n, R = rng(7 + (seed || 0) * 31), f = i => Math.sin(i * 1.7 + (seed || 0)) * 0.03 + R.s() * 0.008;
+    m.mat(MAT.TIMBER, COL.timberDark, 0.6); m.box(-w / 2 - 0.07, 0, -0.025, w / 2 + 0.07, 0.05, 0.025, 0);
+    for (const sx of [-1, 1]) m.box(sx * (w / 2 - 0.05) - 0.006, 0.05, -0.006, sx * (w / 2 - 0.05) + 0.006, 0.16, 0.006, 0);
+    m.mat(MAT.CLOTH, col, 0.5);
+    for (let i = 0; i < n; i++) { const x0 = -w / 2 + i * dw, x1 = x0 + dw, tail = h * (i % 2 ? 0.88 : 0.97) * (0.9 + 0.1 * Math.abs(i - n / 2 + 0.5) / (n / 2)); m.quad2([x0, 0, f(i)], [x0, -tail, f(i + 0.5) * 1.6], [x1, -tail, f(i + 1.5) * 1.6], [x1, 0, f(i + 1)], 0, 0, 0.3, 1); }
+    m.mat(MAT.CLOTH, col.map(v => v * 0.55), 0.5); m.quad2([-w / 2, -0.04, 0.012], [-w / 2, -0.04 - 0.07, 0.016], [w / 2, -0.04 - 0.07, 0.016], [w / 2, -0.04, 0.012], 0, 0, 1, 0.1);
   },
   fencePost(m, h) { m.mat(MAT.TIMBER, COL.timber); m.cbox(0, -0.3, 0, 0.1, h + 0.3, 0.1, 4); },
   gravestone(m, R) {

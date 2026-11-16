@@ -10,7 +10,7 @@ const wcol = (x, z, r, h, y0) => { const y = wy(x, z); World.colliders.push({ x,
 function wPut(m, p, lx, lz, rot, fn, dy) {
   const q = siteToWorld(p, lx, lz), y = wy(q[0], q[1]);
   m.push().T(q[0], y + (dy || 0), q[1]).RY(-(p.yaw + (rot || 0))); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
-  fn(m, q[0], y, q[1]); m.pop(); return [q[0], y, q[1]];
+  const d = m.st.length; fn(m, q[0], y, q[1]); if (m.st.length !== d) pushPopWarn(m, 'wPut'); m.pop(); return [q[0], y, q[1]];
 }
 // kit pieces to be placed when the kit is ready: name (or a function returning one), world x z, { s, ry, dy, tint, col: collider radius, h }
 function wKit(p, name, lx, lz, o) {
@@ -101,7 +101,7 @@ function wBridge(m, a, b, o) {
   m.pop(); return { L, ang };
 }
 // a tiny pickup mesh (one per kind): fn draws it around the origin on the ground
-function wPickMesh(fn) { const m = new Mesh(256); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); return World.skinPack.add(m); }
+function wPickMesh(fn) { const m = new Mesh(256); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; const nc = World.colliders.length, nl = World.lights.length, ne = World.emitters.length; fn(m); World.colliders.length = nc; World.lights.length = nl; World.emitters.length = ne; return World.skinPack.add(m); }          // [fx1] origin-built: nothing it registers is where it ends up
 const PICKMESH = {
   tuft(m, c1, c2, n) { m.mat(MAT.PLAIN, c1); m.tube([[0, 0, 0], [0.02, 0.13, 0.01], [0, 0.24, 0]], 0.012, 5); for (let i = 0; i < (n || 5); i++) { const a = i * TAU / (n || 5); m.quad2([Math.cos(a) * 0.17, 0.07, Math.sin(a) * 0.17], [Math.cos(a + 0.5) * 0.05, 0.02, Math.sin(a + 0.5) * 0.05], [0, 0.03, 0], [Math.cos(a - 0.5) * 0.05, 0.02, Math.sin(a - 0.5) * 0.05]); } m.mat(MAT.PLAIN, c2); m.ball(0, 0.27, 0, 0.055, 0.05, 0.055, 7, 4); for (let i = 0; i < 3; i++) { const a = i * 2.1; m.ball(Math.cos(a) * 0.09, 0.22 + i * 0.01, Math.sin(a) * 0.09, 0.035, 0.03, 0.035, 6, 4); } },
   mushrooms(m) { for (const [x, z, s] of [[0, 0, 1], [0.12, 0.07, 0.7], [-0.1, 0.09, 0.8]]) { m.mat(MAT.PLAIN, [0.84, 0.78, 0.6]); m.cyl(x, 0, z, 0.025 * s, 0.032 * s, 0.09 * s, 6, 0); m.mat(MAT.PLAIN, [0.9, 0.62, 0.18]); m.ball(x, 0.1 * s, z, 0.07 * s, 0.035 * s, 0.07 * s, 8, 4); } },
@@ -198,7 +198,7 @@ WBUILD.lumber = (p, m, R) => {
     mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; mm.ball(Math.cos(a) * 0.62, 0.07, Math.sin(a) * 0.62, 0.15, 0.11, 0.13, 6, 4); }
     mm.mat(MAT.BARK, [0.3, 0.26, 0.24], 0.5); for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.3; mm.beam([Math.cos(a) * 0.38, 0.02, Math.sin(a) * 0.38], [Math.cos(a + 2.4) * 0.06, 0.3, Math.sin(a + 2.4) * 0.06], 0.08, 0.08); }
     mm.mat(MAT.TIMBER, COL.timberDark); for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; mm.beam([Math.cos(a) * 0.9, 0, Math.sin(a) * 0.9], [0, 1.55, 0], 0.07, 0.07); }
-    mm.mat(MAT.METAL, COL.black); mm.beam([0, 1.5, 0], [0, 0.95, 0], 0.025, 0.025); Props.cauldron(mm, 0.26); mm.pop(); mm.push().T(0, 0.7, 0); Props.cauldron(mm, 0.26);
+    mm.mat(MAT.METAL, COL.black); mm.beam([0, 1.5, 0], [0, 0.95, 0], 0.025, 0.025); mm.push().T(0, 0.62, 0); Props.cauldron(mm, 0.26); mm.pop();          // [fx1] a stray pop() put the second cauldron (and a 0.7 m collider) at the world origin, in the middle of the square
     addCircleCollider(mm, 0, 0, 0.7, 0, 0.5);
   });
   World.emitters.push({ type: 'fire', p: [fp[0], fp[1] + 0.2, fp[2]], size: 0.55, zone: 0, seed: 0.23, t: 0 }); addLight([fp[0], fp[1] + 1.0, fp[2]], 12, [3.4, 1.7, 0.6], 0, 'fire'); World.emitters.push({ type: 'smoke', p: [fp[0], fp[1] + 1.3, fp[2]], zone: 0, seed: 0.5, t: 0 });

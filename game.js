@@ -1801,7 +1801,7 @@ const Kit = (() => {
     const aoR = rm ? rm.x : float(1);
     const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back
     let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(pls.mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(aoR).mul(0.85).add(0.15))).mul(smoothstep(0.55, 0.9, N.y).mul(0.9).add(1))));      // [l1] window light (40c_light.js)
-    em = em.add(alb.mul(glow));
+    em = em.add(alb.mul(glow).mul(float(1).sub(smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(float(0.82).mul(float(1).sub(step(0.5, zone)))))));          // [fx1] outdoor lamp glass glows at night only (it read as a cream box by day)
     if (batch && /Floor_Wood|Table|Counter|Bar_/.test(name) && !(TEST && TEST.gloss === 0)) em = em.add(SH.pointSpec(wp, N, normalize(U.camPos.sub(wp)), float(0.55), zone).mul(0.3));      // [l1] worn boards and table tops catch the fire
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
       const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
@@ -4307,7 +4307,7 @@ function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y0, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
   World.colliders.push({ x: c[0], z: c[2], hx: Math.abs(x1 - x0) / 2 * sx, hz: Math.abs(z1 - z0) / 2 * sz, ax: M[0] / sx, az: M[2] / sx, bx: M[8] / sz, bz: M[10] / sz, y0: c[1], y1: c[1] + (y1 - y0) });
 }
-function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]); World.colliders.push({ x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }); }
+function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]), o = { x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }; if (TEST && TEST.colstack && Math.hypot(o.x, o.z) < 1.5) o.stk = new Error().stack.split('\n').slice(2, 6).join(' < '); World.colliders.push(o); }          // [fx1] --opt colstack=1 records where an origin collider came from
 const flick = (t, s) => 0.86 + 0.09 * Math.sin(t * 11.3 + s * 7.1) + 0.07 * Math.sin(t * 23.7 + s * 3.3) + 0.05 * Math.sin(t * 5.1 + s);
 const LIGHT_KINDS = {
   fire: (l, e) => flick(e.time, l.seed),
@@ -4320,7 +4320,8 @@ function addLight(p, r, c, zone, kind) { const l = { p, r, c, zone: zone | 0, se
 const wp = (m, x, y, z) => m4.tp(m.m, [x, y, z]);
 // emissive geometry (fire glow, candle wax tips ...): strength in HDR units
 const emit = (m, k, fn) => { const a = m.m2, b = m.m3; m.m2 = a | 2; m.m3 = clamp(Math.round(k * 16), 1, 255); fn(); m.m2 = a; m.m3 = b; };
-const at = (m, x, y, z, rot, fn) => { m.push().T(x, y, z); if (rot) m.RY(rot); fn(); m.pop(); };
+const at = (m, x, y, z, rot, fn) => { m.push().T(x, y, z); if (rot) m.RY(rot); const d = m.st.length; fn(); if (m.st.length !== d) pushPopWarn(m, 'at'); m.pop(); };
+const pushPopWarn = (m, who) => { if (!pushPopWarn.n) pushPopWarn.n = 0; if (pushPopWarn.n++ < 4) console.warn('[fx1] unbalanced push/pop inside ' + who + ' (a builder popped or pushed once too often: whatever it drew next landed at the wrong place)'); };          // [fx1]
 
 const Props = {
   table(m, len, wid, h) {
@@ -4459,8 +4460,25 @@ const Props = {
     m.box(-0.75, 0.70, 1.17, 0.75, 1.08, 1.23); m.box(-0.75, 0.70, -1.23, 0.75, 0.95, -1.17);
     m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.9, 0.52, -0.05, 0.9, 0.62, 0.05);
     for (const sx of [-1, 1]) { m.beam([sx * 0.45, 0.6, -1.2], [sx * 0.42, 0.42, -2.9], 0.07, 0.07); at(m, sx * 0.92, 0.57, 0, PI / 2, () => Props.wheel(m, 0.57, 0.09)); }
-    if (hay) { m.mat(MAT.THATCH, COL.hay, 0.8); m.ball(0, 0.95, 0, 0.7, 0.5, 1.1, 10, 6); }
+    if (hay) Props.hayLoad(m, 0.68, 1.12, 0.78, 0.36);
     addBoxCollider(m, -0.95, -1.25, 0.95, 1.25, 0, 1.1);
+  },
+  // [fx1] a load of loose hay: a shallow mound of overlapping lumps (not one ball) with straw stalks sticking out, in dry golden straw, not the thatch tile's green
+  hayLoad(m, hw, hl, y0, hh) {
+    const R = rng(Math.round(hw * 977 + hl * 131)), straw = [0.92, 0.76, 0.46];
+    m.mat(MAT.THATCH, straw, 0.8);
+    for (let i = 0; i < 7; i++) { const u = (i / 6) * 2 - 1, x = u * 0.2 * hw + R.s() * 0.18, z = u * hl * 0.8 + R.s() * 0.12, rx = hw * (0.55 + R() * 0.25), rz = hl * 0.3 + R() * 0.12, ry = hh * (0.55 + 0.4 * (1 - Math.abs(u))); m.ball(x, y0 + ry * 0.35, z, rx, ry, rz, 7, 4); }
+    m.mat(MAT.THATCH, [1.0, 0.86, 0.52], 0.6);
+    for (let i = 0; i < 14; i++) { const x = R.s() * hw * 0.9, z = R.s() * hl * 0.95, h0 = y0 + hh * (0.5 + R() * 0.45) * (1 - 0.5 * Math.abs(z) / hl); m.beam([x, h0, z], [x + R.s() * 0.22, h0 + 0.06 + R() * 0.16, z + R.s() * 0.22], 0.012, 0.01); }
+  },
+  // [fx1] a hanging cloth banner, origin at the top centre, hanging down -y, facing +-z: a rod and two cords, the cloth in strips that wave a little (not one flat slab), a darker hem, a swallow-tail
+  banner(m, w, h, col, seed) {
+    const n = 5, dw = w / n, R = rng(7 + (seed || 0) * 31), f = i => Math.sin(i * 1.7 + (seed || 0)) * 0.03 + R.s() * 0.008;
+    m.mat(MAT.TIMBER, COL.timberDark, 0.6); m.box(-w / 2 - 0.07, 0, -0.025, w / 2 + 0.07, 0.05, 0.025, 0);
+    for (const sx of [-1, 1]) m.box(sx * (w / 2 - 0.05) - 0.006, 0.05, -0.006, sx * (w / 2 - 0.05) + 0.006, 0.16, 0.006, 0);
+    m.mat(MAT.CLOTH, col, 0.5);
+    for (let i = 0; i < n; i++) { const x0 = -w / 2 + i * dw, x1 = x0 + dw, tail = h * (i % 2 ? 0.88 : 0.97) * (0.9 + 0.1 * Math.abs(i - n / 2 + 0.5) / (n / 2)); m.quad2([x0, 0, f(i)], [x0, -tail, f(i + 0.5) * 1.6], [x1, -tail, f(i + 1.5) * 1.6], [x1, 0, f(i + 1)], 0, 0, 0.3, 1); }
+    m.mat(MAT.CLOTH, col.map(v => v * 0.55), 0.5); m.quad2([-w / 2, -0.04, 0.012], [-w / 2, -0.04 - 0.07, 0.016], [w / 2, -0.04 - 0.07, 0.016], [w / 2, -0.04, 0.012], 0, 0, 1, 0.1);
   },
   fencePost(m, h) { m.mat(MAT.TIMBER, COL.timber); m.cbox(0, -0.3, 0, 0.1, h + 0.3, 0.1, 4); },
   gravestone(m, R) {
@@ -5347,7 +5365,7 @@ function kitAttach() {
       else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
       else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
       else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) { o.visible = !World.deepIn && hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < q.yardRange + bs.radius; if (o.userData.cast0 === undefined) o.userData.cast0 = o.castShadow; o.castShadow = q.yardCast && o.userData.cast0; } }
-      else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? 9 : q.yardRange * 1.6 + 8) && (!k.dress || q.scatter); }
+      else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? 9 : q.yardRange * 1.6 + 8) && (!k.dress || q.scatter || d < 28); }
       else k.g.visible = true;
     }
     if (Kit.update && !cur) Kit.update(camPos);
@@ -8875,7 +8893,7 @@ function buildVillage() {
   const buckets = new Map(), R = rng(777), OUT = { zone: 0 };
   const bucket = (x, z) => { const k = Math.floor(x / VILLAGE_CELL) + ',' + Math.floor(z / VILLAGE_CELL); let m = buckets.get(k); if (!m) { m = new Mesh(2048); m.seed = buckets.size * 7919 + 13; buckets.set(k, m); } return m; };
   // place something on the ground. rot is a heading: the prop's local -Z ends up facing that way
-  const put = (x, z, yaw, fn, dy) => { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z) + (dy || 0), z); if (yaw) m.RY(-yaw); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); };
+  const put = (x, z, yaw, fn, dy) => { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z) + (dy || 0), z); if (yaw) m.RY(-yaw); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; const d = m.st.length; fn(m); if (m.st.length !== d) pushPopWarn(m, 'put'); m.pop(); };
   const putc = (x, z, yaw, fn, dy) => { const q = KEEP.slide(x, z, 0.55); return put(q[0], q[1], yaw, fn, dy); };      // Build 33: small props slide off door approaches and road centre lines
   const spot = (name, x, z, yaw, extra) => { World.spots[name] = Object.assign({ p: [x, Terrain.y(x, z), z], yaw: yaw || 0, zone: 0 }, extra || {}); };
 
@@ -8967,7 +8985,7 @@ function buildVillage() {
     m.box(-3.5, 4.35, -0.18, 3.5, 4.7, 0.18); m.box(-3.2, 4.7, -0.12, 3.2, 4.85, 0.12);
     m.mat(MAT.PLANKS, COL.wood); m.box(-1.0, 3.5, -0.035, 1.0, 4.2, 0.035);
     m.mat(MAT.PLAIN, [0.2, 0.42, 0.2]); for (const zf of [-0.04, 0.04]) for (let i = 0; i < 4; i++) { const y = 3.6 + i * 0.13, w2 = 0.3 - i * 0.065; const pts = [[-w2, y, zf], [w2, y, zf], [0, y + 0.22, zf]]; m.poly(zf < 0 ? pts.reverse() : pts); }
-    for (const s of [-1, 1]) { m.mat(MAT.CLOTH, AWN.madder, 0.5); m.quad2([s * 2.35 - 0.35, 4.3, 0.02], [s * 2.35 - 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 4.3, 0.02], 0, 0, 1.2, 2.4); }
+    for (const s of [-1, 1]) { m.push().T(s * 2.35, 4.3, 0.02); Props.banner(m, 0.62, 1.5, AWN.madder, s); m.pop(); }          // [fx1] a hung banner with folds, a hem and a rod, not a flat red slab
   });
   for (const s of [-1, 1]) for (let i = 0; i < 16; i++) {
     const z = -5.2 + s * (3.4 + i * 0.36), x = -62 + Math.sin(i * 0.4) * 0.12 - i * i * 0.012;
@@ -9107,9 +9125,12 @@ function buildVillage() {
   // ── dynamic objects: door leaves, mill wheel, pickups ──
   const skin = new MeshPack();
   const leaf = new Mesh(512);
-  leaf.mat(MAT.PLANKS, COL.woodDark, 0.6); leaf.ao = 0.8; leaf.box(0, 0.02, -0.03, 1, 1, 0.03);
-  leaf.mat(MAT.METAL, COL.black); for (const y of [0.18, 0.82]) { leaf.box(0, y - 0.03, -0.04, 0.82, y + 0.03, -0.03, 32); leaf.box(0, y - 0.03, 0.03, 0.82, y + 0.03, 0.04, 16); }
-  leaf.box(0.86, 0.48, -0.07, 0.9, 0.54, 0.07);
+  // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
+  leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.05, 0.04, 0.035]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
+  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [0.8 * k, 0.62 * k, 0.45 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
+  leaf.mat(MAT.PLANKS, [0.56, 0.43, 0.31], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
+  leaf.mat(MAT.METAL, [0.2, 0.19, 0.18]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
+  leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   const leafItem = skin.add(leaf);
   for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
@@ -9298,11 +9319,12 @@ const W_ = 'MI_WoodTrim', C_ = 'MI_Trim_Cloth', DARKW = [0.62, 0.55, 0.5];
 // ── generated pieces (origin where they attach to the wall: x along the wall, y up, z out into the street) ──
 let _gn = 0;
 function genAwning(w, c1, c2, drop) {
+  c1 = c1.map(v => v * 0.74); c2 = c2.map(v => v * 0.7);          // [fx1] cloth that has hung in the weather for years: the stripes read as candy at full dye
   const g = GP(), n = Math.max(2, Math.round(w / 0.3)), sw = (w - 0.1) / n, out = 1.45, dy = drop || 0.62;
   for (let i = 0; i < n; i++) {
     const x0 = -w / 2 + 0.05 + i * sw, x1 = x0 + sw, c = i % 2 ? c2 : c1;
     g.quad(C_, [x0, 0, 0], [x1, 0, 0], [x1, -dy, out], [x0, -dy, out], c, GPU.cloth, true);                    // the sloping cloth
-    g.quad(C_, [x0, -dy, out], [x1, -dy, out], [x1, -dy - 0.2, out + 0.03], [x0, -dy - 0.2, out + 0.03], c, GPU.cloth, true);    // valance
+    g.quad(C_, [x0, -dy, out], [x1, -dy, out], [x1, -dy - 0.2, out + 0.03], [x0, -dy - 0.2, out + 0.03], c.map(v => v * 0.86), GPU.cloth, true);    // valance (grimier)
     g.tri(C_, [x0, -dy - 0.2, out + 0.03], [x1, -dy - 0.2, out + 0.03], [(x0 + x1) / 2, -dy - 0.32, out + 0.04], c, GPU.cloth, true);     // scalloped hem
   }
   g.box(W_, -w / 2, -dy - 0.02, out - 0.02, w / 2, -dy + 0.04, out + 0.05, DARKW);
@@ -9539,16 +9561,30 @@ function alleyDress(B, B2, R) {
 // ── small generated wall dressing for the interiors (paintings, herb racks): the same kit wood and cloth, so no new textures ──
 const KGEN = {};
 function kitGen(kind, R) {
-  const key = kind + (kind === 'paint' ? R.i(0, 3) : '');
+  const key = kind + (kind === 'paint' ? R.i(0, 11) : '');          // [fx1] twelve muted pictures, not the same sky-and-field in every house
   if (KGEN[key]) return KGEN[key];
   const g = GP();
   if (kind === 'paint') {
-    const t = R.i(0, 3), w = [0.8, 0.55, 0.62, 0.9][t], h = [0.52, 0.72, 0.5, 0.6][t];
-    g.box(W_, -w / 2 - 0.05, -h / 2 - 0.05, 0, w / 2 + 0.05, h / 2 + 0.05, 0.04, [0.5, 0.42, 0.34]);
+    const t = +key.slice(5), W = [0.8, 0.55, 0.62, 0.86, 0.6, 0.5, 0.7, 0.88, 0.62, 0.5, 0.9, 0.56][t], H = [0.5, 0.7, 0.55, 0.5, 0.5, 0.62, 0.5, 0.52, 0.5, 0.7, 0.5, 0.72][t], w = W, h = H;
+    const frame = [[0.5, 0.42, 0.34], [0.3, 0.23, 0.17], [0.46, 0.38, 0.22], [0.26, 0.2, 0.15]][t % 4];
+    g.box(W_, -w / 2 - 0.05, -h / 2 - 0.05, 0, w / 2 + 0.05, h / 2 + 0.05, 0.04, frame);
+    g.box(W_, -w / 2 - 0.02, -h / 2 - 0.02, 0.0405, w / 2 + 0.02, -h / 2, 0.0415, frame.map(v => v * 0.7));
     let zq = 0; const z = 0.042, Q = (x0, y0, x1, y1, col) => { const zz = z + (zq++) * 0.0012; g.quad(C_, [x0, y0, zz], [x1, y0, zz], [x1, y1, zz], [x0, y1, zz], col, GPU.cloth); };          // [c3] each layer of the picture a hair in front of the last: overlapping layers at one depth flickered
-    if (t === 0 || t === 3) { Q(-w / 2, 0, w / 2, h / 2, [0.45, 0.52, 0.58]); Q(-w / 2, -h / 2, w / 2, 0, [0.3, 0.36, 0.2]); Q(-w / 2, -h / 2, w / 2, -h * 0.15, [0.2, 0.24, 0.14]); g.tri(C_, [-w * 0.4, 0.0, z + 0.006], [w * 0.1, 0.0, z + 0.006], [-w * 0.15, h * 0.28, z + 0.006], [0.3, 0.32, 0.34], GPU.cloth); }
-    else if (t === 1) { Q(-w / 2, -h / 2, w / 2, h / 2, [0.2, 0.15, 0.1]); Q(-w * 0.22, -h * 0.05, w * 0.22, h * 0.32, [0.55, 0.42, 0.33]); Q(-w * 0.4, -h / 2, w * 0.4, -h * 0.1, [0.32, 0.2, 0.16]); }
-    else { for (let i = 0; i < 5; i++) Q(-w / 2 + i * w / 5, -h / 2, -w / 2 + (i + 1) * w / 5, h / 2, [[0.5, 0.2, 0.15], [0.7, 0.55, 0.3], [0.25, 0.3, 0.4], [0.7, 0.55, 0.3], [0.5, 0.2, 0.15]][i]); }
+    const T3 = (a, b, c, col) => { const zz = z + (zq++) * 0.0012; g.tri(C_, [a[0], a[1], zz], [b[0], b[1], zz], [c[0], c[1], zz], col, GPU.cloth); };
+    const disc = (cx, cy, rx, ry, col, n) => { n = n || 8; for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU, zz = z + (zq) * 0.0012; g.tri(C_, [cx, cy, zz], [cx + Math.cos(a0) * rx, cy + Math.sin(a0) * ry, zz], [cx + Math.cos(a1) * rx, cy + Math.sin(a1) * ry, zz], col, GPU.cloth); } zq++; };
+    const L = h * 0.5;
+    if (t === 0) { Q(-w / 2, 0, w / 2, L, [0.45, 0.52, 0.58]); Q(-w / 2, -L, w / 2, 0, [0.3, 0.36, 0.2]); Q(-w / 2, -L, w / 2, -h * 0.15, [0.2, 0.24, 0.14]); T3([-w * 0.4, 0.0], [w * 0.1, 0.0], [-w * 0.15, h * 0.28], [0.3, 0.32, 0.34]); }
+    else if (t === 1) { Q(-w / 2, -L, w / 2, L, [0.12, 0.1, 0.08]); disc(0, h * 0.14, w * 0.17, h * 0.15, [0.55, 0.42, 0.34], 8); Q(-w * 0.3, -L, w * 0.3, -h * 0.05, [0.22, 0.17, 0.14]); Q(-w * 0.12, -h * 0.08, w * 0.12, 0, [0.5, 0.4, 0.32]); }
+    else if (t === 2) { for (let i = 0; i < 5; i++) Q(-w / 2 + i * w / 5, -L, -w / 2 + (i + 1) * w / 5, L, [[0.42, 0.2, 0.16], [0.55, 0.45, 0.28], [0.25, 0.28, 0.34], [0.55, 0.45, 0.28], [0.42, 0.2, 0.16]][i]); Q(-w / 2, -L * 0.1, w / 2, L * 0.1, [0.3, 0.26, 0.2]); }
+    else if (t === 3) { Q(-w / 2, 0.05 * h, w / 2, L, [0.55, 0.58, 0.58]); Q(-w / 2, -L, w / 2, 0.05 * h, [0.28, 0.36, 0.38]); T3([-w / 2, 0.05 * h], [-w * 0.15, 0.05 * h], [-w * 0.35, h * 0.3], [0.2, 0.24, 0.2]); T3([w * 0.05, 0.05 * h], [w / 2, 0.05 * h], [w * 0.32, h * 0.22], [0.24, 0.27, 0.22]); }
+    else if (t === 4) { Q(-w / 2, -L, w / 2, L, [0.1, 0.08, 0.06]); Q(-w / 2, -L, w / 2, -h * 0.22, [0.34, 0.24, 0.15]); Q(-w * 0.12, -h * 0.22, w * 0.08, h * 0.05, [0.5, 0.34, 0.2]); Q(-w * 0.05, h * 0.05, w * 0.03, h * 0.16, [0.5, 0.34, 0.2]); disc(w * 0.22, -h * 0.14, w * 0.07, w * 0.07, [0.5, 0.18, 0.12], 6); }
+    else if (t === 5) { Q(-w / 2, -L, w / 2, L, [0.3, 0.22, 0.12]); Q(-w * 0.38, -L * 0.8, w * 0.38, L * 0.3, [0.52, 0.18, 0.14]); T3([-w * 0.38, L * 0.3], [w * 0.38, L * 0.3], [0, -L * 0.95], [0.52, 0.18, 0.14]); Q(-w * 0.04, -L * 0.7, w * 0.04, L * 0.2, [0.64, 0.56, 0.34]); Q(-w * 0.2, -h * 0.05, w * 0.2, h * 0.03, [0.64, 0.56, 0.34]); }
+    else if (t === 6) { Q(-w / 2, -L, w / 2, L, [0.08, 0.1, 0.16]); disc(w * 0.18, h * 0.16, w * 0.09, w * 0.09, [0.72, 0.7, 0.6], 8); Q(-w / 2, -L, w / 2, -h * 0.28, [0.05, 0.06, 0.07]); T3([-w / 2, -h * 0.28], [-w * 0.2, -h * 0.28], [-w * 0.35, 0.0], [0.05, 0.06, 0.07]); }
+    else if (t === 7) { Q(-w / 2, -L, w / 2, L, [0.2, 0.28, 0.16]); for (let i = 0; i < 6; i++) Q(-w / 2 + i * w / 6 + 0.02, -L * 0.2, -w / 2 + i * w / 6 + 0.07, L, [0.1, 0.16, 0.09]); Q(-w / 2, -L, w / 2, -h * 0.2, [0.36, 0.34, 0.2]); Q(w * 0.05, -h * 0.2, w * 0.2, -h * 0.04, [0.55, 0.45, 0.3]); Q(w * 0.17, -h * 0.04, w * 0.22, h * 0.02, [0.55, 0.45, 0.3]); }
+    else if (t === 8) { Q(-w / 2, -L, w / 2, L, [0.58, 0.5, 0.34]); for (const [x0, y0, x1, y1] of [[-0.35, -0.3, 0.3, -0.27], [-0.3, 0.0, 0.35, 0.03], [-0.2, 0.2, 0.1, 0.23], [-0.05, -0.35, -0.02, 0.35]]) Q(x0 * w, y0 * h, x1 * w, y1 * h, [0.3, 0.2, 0.12]); disc(w * 0.18, -h * 0.1, w * 0.05, w * 0.05, [0.42, 0.16, 0.12], 6); }
+    else if (t === 9) { Q(-w / 2, -L, w / 2, L, [0.5, 0.38, 0.16]); disc(0, h * 0.2, w * 0.28, w * 0.28, [0.62, 0.5, 0.24], 10); disc(0, h * 0.2, w * 0.17, w * 0.17, [0.5, 0.4, 0.3], 8); T3([-w * 0.4, -L], [w * 0.4, -L], [0, h * 0.05], [0.22, 0.18, 0.22]); }
+    else if (t === 10) { Q(-w / 2, 0.06 * h, w / 2, L, [0.55, 0.57, 0.52]); Q(-w / 2, -L, w / 2, 0.06 * h, [0.5, 0.42, 0.2]); for (let i = 0; i < 4; i++) T3([-w * 0.35 + i * w * 0.2, -h * 0.05], [-w * 0.27 + i * w * 0.2, -h * 0.05], [-w * 0.31 + i * w * 0.2, h * 0.08], [0.42, 0.33, 0.14]); }
+    else { Q(-w / 2, 0.0, w / 2, L, [0.48, 0.52, 0.56]); Q(-w / 2, -L, w / 2, 0.0, [0.3, 0.32, 0.2]); T3([-w / 2, -h * 0.1], [w / 2, -h * 0.1], [w * 0.1, h * 0.12], [0.26, 0.28, 0.18]); Q(-w * 0.04, h * 0.02, w * 0.08, h * 0.3, [0.4, 0.36, 0.3]); T3([-w * 0.06, h * 0.3], [w * 0.1, h * 0.3], [w * 0.02, h * 0.42], [0.3, 0.2, 0.16]); }
   } else {       // a bar with bundles of herbs, onions and dried flowers
     g.box(W_, -0.55, -0.02, 0, 0.55, 0.03, 0.06, DARKW);
     const cols = [[0.3, 0.45, 0.22], [0.5, 0.38, 0.2], [0.55, 0.3, 0.45], [0.7, 0.62, 0.3], [0.3, 0.42, 0.2], [0.6, 0.45, 0.2]];
@@ -10654,7 +10690,7 @@ const LVL = { n: 0 };
 // vertical stone faces upward by `k` lets them take more of the sky's light; the sun still sees them as before on the lit side. `touch` maps each bucket mesh to its vertex count before the builder began.
 function lvLift(touch, k) {
   for (const [m, n0] of touch) for (let i = n0; i < m.nv; i++) {
-    const b = i * 32; if (m.u8[b + 28] !== MAT.STONE) continue; const ny = m.i8[b + 13]; if (Math.abs(ny) > 40) continue;
+    const b = i * 32; if (m.u8[b + 28] !== MAT.STONE && m.u8[b + 28] !== MAT.PLANKS && m.u8[b + 28] !== MAT.TIMBER) continue; /* [fx1] boards and beams in shade went black beside the lifted stone (wharf doors) */ const ny = m.i8[b + 13]; if (Math.abs(ny) > 40) continue;
     let x = m.i8[b + 12], y = ny + k * 127, z = m.i8[b + 14]; const l = 127 / Math.hypot(x, y, z); m.i8[b + 12] = Math.round(x * l); m.i8[b + 13] = Math.round(y * l); m.i8[b + 14] = Math.round(z * l);
   }
 }
@@ -10846,7 +10882,7 @@ function buildWharf(bucket, fence, R) {
     // boat-house doors in the north face (the road side): a stone arch, a dark recess, plank doors with straps
     for (const x of [11.6, 16.4]) { const g = Terrain.y(x, Z0 - 0.2), zf = Z0 - 0.03;
       m.mat(MAT.STONE, sc(1), 0.6); m.box(x - 0.95, g + 1.55, Z0 - 0.12, x + 0.95, g + 1.8, Z0, 4); m.box(x - 0.95, g, Z0 - 0.12, x - 0.7, g + 1.55, Z0, 4); m.box(x + 0.7, g, Z0 - 0.12, x + 0.95, g + 1.55, Z0, 4);
-      m.mat(MAT.PLANKS, [0.62, 0.5, 0.38], 0.5); m.box(x - 0.7, g, zf - 0.02, x + 0.7, g + 1.55, zf, 4 | 8 | 16);
+      m.mat(MAT.PLANKS, [0.62, 0.5, 0.38], 0.5); m.box(x - 0.7, g, zf - 0.02, x + 0.7, g + 1.55, zf, 4 | 8 | 32);          // [fx1] the road-side face is -z: skipping it (16) left the straps floating on bare stone
       m.mat(MAT.PLAIN, [0.09, 0.08, 0.07]); m.box(x - 0.7, g + 0.4, zf - 0.04, x + 0.7, g + 0.5, zf - 0.015, 4 | 8 | 32); m.box(x - 0.7, g + 1.1, zf - 0.04, x + 0.7, g + 1.2, zf - 0.015, 4 | 8 | 32); }
   }
   // flight up from the south road (west face): 2 m wide, cheeks as beams
@@ -12765,7 +12801,7 @@ const wcol = (x, z, r, h, y0) => { const y = wy(x, z); World.colliders.push({ x,
 function wPut(m, p, lx, lz, rot, fn, dy) {
   const q = siteToWorld(p, lx, lz), y = wy(q[0], q[1]);
   m.push().T(q[0], y + (dy || 0), q[1]).RY(-(p.yaw + (rot || 0))); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
-  fn(m, q[0], y, q[1]); m.pop(); return [q[0], y, q[1]];
+  const d = m.st.length; fn(m, q[0], y, q[1]); if (m.st.length !== d) pushPopWarn(m, 'wPut'); m.pop(); return [q[0], y, q[1]];
 }
 // kit pieces to be placed when the kit is ready: name (or a function returning one), world x z, { s, ry, dy, tint, col: collider radius, h }
 function wKit(p, name, lx, lz, o) {
@@ -12856,7 +12892,7 @@ function wBridge(m, a, b, o) {
   m.pop(); return { L, ang };
 }
 // a tiny pickup mesh (one per kind): fn draws it around the origin on the ground
-function wPickMesh(fn) { const m = new Mesh(256); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); return World.skinPack.add(m); }
+function wPickMesh(fn) { const m = new Mesh(256); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; const nc = World.colliders.length, nl = World.lights.length, ne = World.emitters.length; fn(m); World.colliders.length = nc; World.lights.length = nl; World.emitters.length = ne; return World.skinPack.add(m); }          // [fx1] origin-built: nothing it registers is where it ends up
 const PICKMESH = {
   tuft(m, c1, c2, n) { m.mat(MAT.PLAIN, c1); m.tube([[0, 0, 0], [0.02, 0.13, 0.01], [0, 0.24, 0]], 0.012, 5); for (let i = 0; i < (n || 5); i++) { const a = i * TAU / (n || 5); m.quad2([Math.cos(a) * 0.17, 0.07, Math.sin(a) * 0.17], [Math.cos(a + 0.5) * 0.05, 0.02, Math.sin(a + 0.5) * 0.05], [0, 0.03, 0], [Math.cos(a - 0.5) * 0.05, 0.02, Math.sin(a - 0.5) * 0.05]); } m.mat(MAT.PLAIN, c2); m.ball(0, 0.27, 0, 0.055, 0.05, 0.055, 7, 4); for (let i = 0; i < 3; i++) { const a = i * 2.1; m.ball(Math.cos(a) * 0.09, 0.22 + i * 0.01, Math.sin(a) * 0.09, 0.035, 0.03, 0.035, 6, 4); } },
   mushrooms(m) { for (const [x, z, s] of [[0, 0, 1], [0.12, 0.07, 0.7], [-0.1, 0.09, 0.8]]) { m.mat(MAT.PLAIN, [0.84, 0.78, 0.6]); m.cyl(x, 0, z, 0.025 * s, 0.032 * s, 0.09 * s, 6, 0); m.mat(MAT.PLAIN, [0.9, 0.62, 0.18]); m.ball(x, 0.1 * s, z, 0.07 * s, 0.035 * s, 0.07 * s, 8, 4); } },
@@ -12953,7 +12989,7 @@ WBUILD.lumber = (p, m, R) => {
     mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; mm.ball(Math.cos(a) * 0.62, 0.07, Math.sin(a) * 0.62, 0.15, 0.11, 0.13, 6, 4); }
     mm.mat(MAT.BARK, [0.3, 0.26, 0.24], 0.5); for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.3; mm.beam([Math.cos(a) * 0.38, 0.02, Math.sin(a) * 0.38], [Math.cos(a + 2.4) * 0.06, 0.3, Math.sin(a + 2.4) * 0.06], 0.08, 0.08); }
     mm.mat(MAT.TIMBER, COL.timberDark); for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; mm.beam([Math.cos(a) * 0.9, 0, Math.sin(a) * 0.9], [0, 1.55, 0], 0.07, 0.07); }
-    mm.mat(MAT.METAL, COL.black); mm.beam([0, 1.5, 0], [0, 0.95, 0], 0.025, 0.025); Props.cauldron(mm, 0.26); mm.pop(); mm.push().T(0, 0.7, 0); Props.cauldron(mm, 0.26);
+    mm.mat(MAT.METAL, COL.black); mm.beam([0, 1.5, 0], [0, 0.95, 0], 0.025, 0.025); mm.push().T(0, 0.62, 0); Props.cauldron(mm, 0.26); mm.pop();          // [fx1] a stray pop() put the second cauldron (and a 0.7 m collider) at the world origin, in the middle of the square
     addCircleCollider(mm, 0, 0, 0.7, 0, 0.5);
   });
   World.emitters.push({ type: 'fire', p: [fp[0], fp[1] + 0.2, fp[2]], size: 0.55, zone: 0, seed: 0.23, t: 0 }); addLight([fp[0], fp[1] + 1.0, fp[2]], 12, [3.4, 1.7, 0.6], 0, 'fire'); World.emitters.push({ type: 'smoke', p: [fp[0], fp[1] + 1.3, fp[2]], zone: 0, seed: 0.5, t: 0 });
@@ -14172,7 +14208,8 @@ const secFlag = id => !!(S.flags && S.flags['sec_' + id]);
 const secCount = () => SEC.list.filter(s => secFlag(s.sec)).length;
 // a prop that is a skinned mesh (so it can sit in a cell, move, and hide): the builder draws it at the origin facing +z
 function secProp(fn, p, yaw, o) {
-  o = o || {}; const m = new Mesh(o.cap || 1200); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; fn(m);
+  o = o || {}; const m = new Mesh(o.cap || 1200); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; const nc = World.colliders.length, nl = World.lights.length, ne = World.emitters.length; fn(m);
+  World.colliders.length = nc; World.lights.length = nl; World.emitters.length = ne;          // [fx1] the builder draws at the origin: anything it registers (crate and barrel colliders, lights, emitters) would sit by the bonfire, not on the prop
   const mi = World.skinPack.add(m), obj = addSkinned(mi, { c: p.slice(), r: o.r || 1.6, zone: o.zone || 0, kind: 'misc', cell: o.cell, light: o.light === undefined ? 1 : o.light });
   secPlace(obj, p, yaw); return obj;
 }
@@ -14286,7 +14323,7 @@ for (const [id, line] of [['greta', 'The house on the south lane? Nobody’s liv
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 57';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 58';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -17477,6 +17514,7 @@ async function warmShaders() {
     if (loadSave()) $('contBtn').hidden = false;
     $('startBtn').addEventListener('click', () => startGame(false)); $('contBtn').addEventListener('click', () => startGame(true));
     if (typeof Load !== 'undefined') { Load.update = () => UI.updateAvailable(); if (Load.updateReady) UI.updateAvailable(); setTimeout(() => { Load.register(); setTimeout(() => Load.warm().then(() => UI.storageNote()), 4000); }, 1500); }
+    { const bad = World.colliders.filter(c => Math.hypot(c.x, c.z) < 1.5 && !(c.bonfire)); if (bad.length) console.warn('[fx1] ' + bad.length + ' colliders within 1.5 m of the world origin (a prop built at the origin and moved registered them):', JSON.stringify(bad.slice(0, 4))); }          // boot assertion
     game.ready = true;
     // ── test hooks ──
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
