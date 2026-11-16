@@ -167,7 +167,13 @@ Trees.build = function (scene) {
     g.setAttribute('ipos', new IBA(a, 4)); g.setAttribute('iprm', new IBA(b, 4)); g.setAttribute('idim', new IBA(d, 4)); g.setAttribute('igain', new IBA(gn, 3)); g.instanceCount = n;
     g.boundingSphere = new T.Sphere(new T.Vector3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), 0.5 * hyp(x1 - x0, y1 - y0, z1 - z0) + 8);
     const m1 = new T.Mesh(g, farMat); m1.matrixAutoUpdate = false; m1.receiveShadow = true; scene.add(m1); Trees.farMeshes.push(m1);
-    const m2 = new T.Mesh(g, farCast); m2.matrixAutoUpdate = false; m2.castShadow = true; m2.layers.set(2); scene.add(m2); Trees.farMeshes.push(m2);
+  }
+  // the wide sun-shadow map only needs the stand-ins of trees standing in or beside it: one instance list, refilled as the player moves or turns
+  { const cap = 1536, g = new T.InstancedBufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('q', new T.Float32BufferAttribute(q, 3)); g.setIndex(idx);
+    const F = Trees.farCastRing = { g, cap, n: 0, a: new Float32Array(cap * 4), b: new Float32Array(cap * 4), d: new Float32Array(cap * 4), gn: new Float32Array(cap * 3), last: [1e9, 1e9] };
+    for (const [k, arr, w] of [['ipos', F.a, 4], ['iprm', F.b, 4], ['idim', F.d, 4], ['igain', F.gn, 3]]) { const at = new IBA(arr, w); at.setUsage(T.DynamicDrawUsage); g.setAttribute(k, at); }
+    g.instanceCount = 0; g.boundingSphere = new T.Sphere(new T.Vector3(), 1e6);
+    const m2 = F.mesh = new T.Mesh(g, farCast); m2.matrixAutoUpdate = false; m2.frustumCulled = false; m2.castShadow = true; m2.layers.set(2); m2.visible = false; scene.add(m2);
   }
   Trees.lastPos = [1e9, 0, 1e9];
 };
@@ -182,7 +188,18 @@ Trees.update = function (e, q, hidden) {
   if (!Trees.sets) return;
   for (const s of Trees.sets) { s.nearMeshes[0].visible = s.nearMeshes[1].visible = !hidden && s.near.n > 0; s.midMesh.visible = !hidden && s.mid.n > 0; s.castMesh.visible = !hidden && s.cast.n > 0; }
   for (const m of Trees.farMeshes) m.visible = !hidden;
+  const FC = Trees.farCastRing; FC.mesh.visible = !hidden && FC.n > 0;
   if (hidden) return;
+  { // centre of the wide shadow map (43_render.js: 92 m radius, pushed 0.6 of that ahead of the view)
+    const cx = e[0] + Math.sin(R.cam.yaw) * 55, cz = e[2] - Math.cos(R.cam.yaw) * 55, RF = 92 + 16;
+    if (hyp(cx - FC.last[0], cz - FC.last[1]) > 6) {
+      FC.last = [cx, cz]; FC.n = 0; const C = Trees.CELL, G_ = Trees.grid, RR = RF + 6;
+      for (let gz = Math.floor((cz - RR) / C); gz <= Math.floor((cz + RR) / C); gz++) for (let gx = Math.floor((cx - RR) / C); gx <= Math.floor((cx + RR) / C); gx++) { const l = G_.get(gx + ',' + gz); if (!l) continue;
+        for (const it of l) { if (FC.n >= FC.cap || hyp(it.x - cx, it.z - cz) > RR) continue; const o = FC.n++, m = it.sp.m; FC.a.set([it.x, it.y, it.z, it.s], o * 4); FC.b.set([it.yaw, it.tint, it.ph, 0], o * 4); FC.d.set([m.halfWidth * it.s, m.height * it.s, m.tiles[0], it.sp.autumn ? 1 : 0], o * 4); FC.gn.set(it.sp.gain, o * 3); } }
+      for (const k of ['ipos', 'iprm', 'idim', 'igain']) { const at = FC.g.attributes[k]; at.clearUpdateRanges(); at.addUpdateRange(0, FC.n * at.itemSize); at.needsUpdate = true; }
+      FC.g.instanceCount = FC.n; FC.mesh.visible = FC.n > 0;
+    }
+  }
   const R1 = q.treeLod + 2.5, R0 = Trees.NEAR[R.qName] || 20, RS = Math.min(R1, q.shadowNear * 1.72 + 9);
   if (hyp(e[0] - Trees.lastPos[0], e[2] - Trees.lastPos[2]) < 1.2 && Trees.lastLod === R1 + R0) return;
   Trees.lastPos = [e[0], e[1], e[2]]; Trees.lastLod = R1 + R0;

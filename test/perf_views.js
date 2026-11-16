@@ -14,6 +14,9 @@ const classify = () => {
   SC.scene.traverse(o => { if (!o.isMesh || cat.has(o)) return;
     let p = o, kit = null; while (p) { if (/^kit|infill|alley|dress|village|wilds|boards|terrace|wharf/i.test(p.name || '') && p !== o) kit = p.name; p = p.parent; }
     if (o.name === 'sky' || o.name === 'particles') return put(o, 'sky+particles');
+    if (o.name === 'terrain-pool') return put(o, 'terrain'); if (o.name === 'water-pool') return put(o, 'water');
+    if (typeof Trees !== 'undefined' && Trees.farCastRing && o === Trees.farCastRing.mesh) return put(o, 'trees');
+    if (o.userData && o.userData.kitDyn) return put(o, 'houses+kit near');
     if (o.userData && o.userData.lod === 2) return put(o, 'houses far');
     if (o.isInstancedMesh) return put(o, 'kit instances');
     if (o.geometry && o.geometry.attributes.kc) return put(o, 'houses+kit near');
