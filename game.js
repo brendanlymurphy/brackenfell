@@ -3000,6 +3000,7 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
     }
   }
   { const h5 = INF.byId['in.05']; if (h5 && !h5.enter) drop(h5); }      // Build 42: the passage house and the Hart's gallery stand where in.05 was (73h_routes.js)
+  for (const id of ['in.01', 'in.09']) { const h = INF.byId[id]; if (h && !h.enter) drop(h); }      // Build 42: fewer, better: two repeats that crowd the square's corners (the square pass)
   // ── 6. forecourts (Build 33): every original building keeps 9 m of open ground in front of its door, every one of the first 25 infill houses faces 9 m of street, and enterable doors stay reachable.
   // Houses that stand in a forecourt are nudged back, moved along their street, or deleted (the six enterable ones are only ever moved). test/layout.mjs checks the result in node.
   INF.fore = { len: 9, wid: 3.2, skip: ['tower', 'barn', 'mill', 'farm', 'hunter', 'fisher'] };
@@ -8309,7 +8310,7 @@ function buildVillage() {
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {
     for (let i = 0; i < m.nv; i++) { if (m.u8[i * 32 + 29] !== 0 || m.u8[i * 32 + 27] < 250) continue; const y = m.f[i * 8 + 1] - Terrain.y(m.f[i * 8], m.f[i * 8 + 2]); if (y < 0.45) m.u8[i * 32 + 27] = Math.round(255 * lerp(0.62, 1, sat(y / 0.45))); }
-    if (m.ni) pack.add(m, { kind: 'opaque' });
+    if (m.ni) pack.add(m, { kind: 'opaque', maxDist: m.maxDist || 0, noShadow: !!m.noShadow });      // maxDist: Build 42 (73h_routes.js fine cells)
   }
   for (const m of houseExt.values()) pack.add(m, { kind: 'opaque' });
   World.villagePack = pack;
@@ -9250,7 +9251,7 @@ function splat2Dress(blob, A, B) {
 
 // ---- 73d_infill.js ----
 // Budget: yard props, dressing and the alley are culled nearer on Medium (the town is dense; beyond ~24 m they are small and cost a draw call each)
-QUALITY.medium.yardRange = 24; QUALITY.medium.houseFar = 34; QUALITY.medium.yardCast = false;
+QUALITY.low.houseFar = 18; QUALITY.low.yardRange = 24; QUALITY.medium.yardRange = 24; QUALITY.medium.houseFar = 22; QUALITY.medium.yardCast = false;
 // ───────────────────────── infill houses: dark timber walls, grey shingle roofs, built from the village kit ─────────────────────────
 // Sites come from 55b_infill.js. Six of them are enterable (HOUSES specs in 72c_infill.js, shell by kitShell); the rest are shells only, assembled here
 // in the same way as the market alley (2 m wall panels scaled to the wall, kit window and door modules, jettied upper storeys, kit roof turned to a ridge
@@ -9949,8 +9950,9 @@ World.routes = [];
 // quarters of the world that the helpers below draw into; `rtKit` gives the builders their shared helpers (also used by 73i_walls.js)
 function rtKit(bucket, touch) {
   const dark = COL.timberDark, wood = [0.62, 0.52, 0.42];
-  const M = (x, z) => { const m = bucket(x, z); if (touch && !touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
-  const K = { M, dark, wood, gy: (x, z) => Terrain.y(x, z) };
+  // Build 42: our geometry goes into 30 m cells of its own (fake bucket keys far outside the map) so the frustum and K.maxDist cull it by itself, not with the whole 80 m cell
+  const M = (x, z) => { const m = K.fine ? bucket((K.noShadow ? 2e6 : 1e6) + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80) : bucket(x, z); m.maxDist = m.maxDist === undefined ? K.maxDist : (m.maxDist && K.maxDist ? Math.max(m.maxDist, K.maxDist) : 0); m.noShadow = m.noShadow === undefined ? !!K.noShadow : m.noShadow && !!K.noShadow; if (touch && !touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
+  const K = { M, fine: false, maxDist: 0, noShadow: false, dark, wood, gy: (x, z) => Terrain.y(x, z) };
   K.col = (x0, z0, x1, z1, y0, y1) => addBoxCollider(M((x0 + x1) / 2, (z0 + z1) / 2), Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y0, y1);
   K.box = (mat, c, tile, x0, y0, z0, x1, y1, z1, skip, ao) => { const m = M((x0 + x1) / 2, (z0 + z1) / 2); m.mat(mat, c, tile); if (ao !== undefined) m.ao = ao; m.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.max(x0, x1), y1, Math.max(z0, z1), skip || 0); m.ao = 1; return m; };
   K.beam = (p, q, w, h, c) => { const m = M((p[0] + q[0]) / 2, (p[2] + q[2]) / 2); m.mat(MAT.TIMBER, c || dark, 0.5); m.beam(p, q, w, h); };
@@ -9998,6 +10000,8 @@ function rtKit(bucket, touch) {
     const mi = wPickMesh(mesh), obj = addSkinned(mi, { c: p, r: 0.6, zone: 0, kind: 'pickup' }); R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256);
     const it = { kind: 'pickup', id, item, p: [p[0], p[1] + 0.2, p[2]], r: 1.9, zone: 0, obj, label }; World.interact.push(it); World.pickups.push(it); return it;
   };
+  const ns = fn => (...a) => { const o = K.noShadow; K.noShadow = true; try { return fn(...a); } finally { K.noShadow = o; } };      // rails and stairs are thin: they do not cast into the sun-shadow maps (they would be drawn again there)
+  K.rail = ns(K.rail); K.stair = ns(K.stair);
   return K;
 }
 function buildRoutes(bucket) {
@@ -10129,6 +10133,7 @@ function buildRoutes(bucket) {
 function buildWalls(bucket) {
   if (TEST && TEST.levels === 0) return;
   const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, stair, dark, wood, gy } = K;
+  K.fine = true; K.maxDist = 85; K.noShadow = true;       // the palisades and gate towers are hidden beyond 150 m (their 30 m cells)
   const roadAt = (id, axis, v) => { const L = INF.LN[id].p; for (let i = 0; i < L.length - 1; i++) { const a = L[i], b = L[i + 1], k = axis === 'z' ? 1 : 0, o = axis === 'z' ? 0 : 1; if ((a[k] - v) * (b[k] - v) <= 0 && a[k] !== b[k]) return a[o] + (b[o] - a[o]) * (v - a[k]) / (b[k] - a[k]); } return null; };
   // a wall run. P maps (u along, v across: 0 outside, + inside) to the world; axis 'x' or 'z' is the world axis that u runs along
   const wallRun = (id, axis, c, sgn, u0, u1, ug, o) => {
@@ -10221,7 +10226,7 @@ function buildWalls(bucket) {
     const pt = P(W.ug + 3.4, 2.4); pts.push([pt[0], W.Y, pt[1]]); const pg = P(W.ug, 1.2); pts.push([pg[0], W.Y, pg[1]]); const pw = P(W.ug - 6.5, 1.1); pts.push([pw[0], W.yAt(W.ug - 6.5), pw[1]]); void top; void ax;
     K.route(nm, pts);
   }
-  buildBell(K, touch);
+  K.fine = false; K.maxDist = 0; K.noShadow = false; buildBell(K, touch);
   lvLift(touch, 0.4);
 }
 // ── the watch bell tower at (8, 19): four flights of 2.7 m in two lanes, landings alternate east and west ──
@@ -10283,7 +10288,7 @@ function buildBell(K, touch) {
 // a barrow). Everything asks KEEP.hit first (nothing in a door's approach strip or on a road's centre line) and is merged into the village cells through `bucket`.
 function buildLanes(bucket) {
   if (TEST && TEST.levels === 0) return;
-  const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, dark, wood, gy } = K, rr = rng(5151);
+  const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, dark, wood, gy } = K, rr = rng(5151); K.fine = true; K.maxDist = 40; K.noShadow = true;
   const hs = INF.houses.filter(h => h.block && Math.abs(Math.sin(h.yaw)) < 0.1), ext = s => ({ x0: s.x - s.w / 2, x1: s.x + s.w / 2, z0: s.z - s.d / 2, z1: s.z + s.d / 2 });
   const lanes = [];
   for (const a of hs) for (const b of hs) {
