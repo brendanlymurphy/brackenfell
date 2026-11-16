@@ -195,3 +195,31 @@ Inn hall (`game.enter('inn')`, looking in, 15 people): 95 draw calls / 248k tria
 - Not done: KTX2 / Basis. No encoder is installed here and the asset hosts are blocked; the WebP textures are still decoded to
   uncompressed RGBA on the GPU (a 512 map is 1.4 MB, a 1024 map 5.6 MB).
 
+## Characters (fork-perf, Task B)
+
+The MakeHuman rig has no jaw, eye or eyelid joints and the bodies have no morph targets, and no new assets could be fetched (asset
+hosts are blocked here). So everything below is done in `49_chars.js` on the existing bodies:
+
+- **Faces move.** Skin vertices are moved in the vertex shader by where they are in the skin atlas, which every body shares
+  (`cfg.face`: u runs down the face, lips at 0.905; v across). `H.uMouth` drops the jaw (lower lip to chin) and lifts the upper lip;
+  `H.uBlink` brings the upper lids down; the head joint's skinning matrix (`H.uHead`) turns the directions. A dark card behind the
+  lips is part of the merged mesh (texture coordinate u = 2), so an open mouth shows a mouth.
+- **Mouths follow the voice.** `faceUpdate` reads the playing line's loudness envelope (`Snd.vox.cur.env`, one value per 50 ms from
+  `audio/voice/manifest.json`). Barks and silent talking use a mumble pattern. Runs inside 14 m only.
+- **Eyes.** A pupil that widens in the dark and indoors, an iris that deepens to its rim, greyer whites, shadow under the upper lid;
+  the eyes make small jumps every second or so (`H.uGaze` shifts the eye texture) and blink every few seconds; asleep they stay shut.
+- **Skin and hair.** Red light carried round the shadow edge in sun, a soft rim from the sky; hair is matt with a sky-lit outline
+  (the hard blotch on the crown is gone); eyebrows are no longer dotted.
+- **Clothes by person.** `look()` dyes tunic, dress, robe and trousers with the villager's own colours from `NPC_DEFS` (`top`, `legs`),
+  keeping the cloth texture's light and shade (`meanLum`), muted toward grey. People without an entry get wool and linen colours by
+  their id, the better-off (`def.wealth`, or by id) deeper dyes and a pouch.
+- **Headwear and belts** (`accGeometry`): cap, straw hat, kerchief, kettle helmet, feathered cap (from `def.hat`), a belt with a
+  buckle, a pouch. Built to each body's measure, hung on one joint each, and merged into the villager's one mesh (texture coordinate
+  u = 3 + slot picks one of four colours in `H.accCol`): no extra draw calls, about 150 triangles.
+- **Feet.** The walk clip's pace is now measured from its planted foot and the playback rate follows the distance the villager really
+  moved. `test/feet.js` measures planted-foot speed: 0.25 m/s at the ball of the foot for a 1.5 m/s walk, which is the clip's own
+  residue (sweeping the rate shows the minimum is where it now sits). Removing the rest needs foot-planting IK or better walk clips.
+- Test hooks on a handle: `ch.mouthTest` (0..1), `ch.blinkTest`, `ch.gazeTest = [u, v]`.
+- Not done: new face shapes, new hair meshes, new garments (all need the Blender / MakeHuman pipeline in `tools/humans`, which is not
+  set up here), lip shapes per sound (the mouth only opens and closes with loudness), cloth that swings.
+
