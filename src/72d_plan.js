@@ -247,7 +247,7 @@ function pWallEmit(P, wl, B, IN) {
   const origin = fwd ? a : b, perp = wl.c + 0.11 * ns, O = hor ? [origin, perp] : [perp, origin];
   const nv = hor ? [0, 0, ns] : [ns, 0, 0];          // outward normal; u = up x n = (nz, 0, -nx)
   const F = new THREE.Matrix4().makeBasis(KH.V([nv[2], 0, -nv[0]]), KH.V([0, 1, 0]), KH.V(nv)).setPosition(O[0], L.y, O[1]).premultiply(P.MS);
-  const INW = wl.cellar ? Object.assign({}, IN, { tint: [0.42, 0.38, 0.35] }) : IN;          // cellar walls: damp, darker stone
+  const rt = P.rooms[[...wl.rooms][0]].tint, INW = wl.cellar ? Object.assign({}, IN, { tint: [0.42, 0.38, 0.35] }) : rt ? Object.assign({}, IN, { tint: rt }) : IN;          // [c4] room.tint: soot          // cellar walls: damp, darker stone
   const add = (name, uc, s, o) => B.add(name, KH.xf(F, uc, 0, 0, s), o || INW);
   const spans = wl.open.map(o => ({ o, s: sOf(o.pos), w: o.type === 'door' ? (o.d.w >= 1.2 ? 2.0 * o.d.w / PW.DOOR : 2.0) : 2.0 })).sort((p, q) => p.s - q.s);
   let cur = 0;
