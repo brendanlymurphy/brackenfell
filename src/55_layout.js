@@ -59,3 +59,11 @@ function siteDoorLocal(s, dist) {
   const wall = s.doorWall || 'front', p = s.doorPos || 0, e = dist + (s.porch || 0);
   return wall === 'front' ? [p, -s.d / 2 - e] : wall === 'back' ? [p, s.d / 2 + e] : wall === 'left' ? [-s.w / 2 - e, p] : [s.w / 2 + e, p];
 }
+
+// ───────────────────────── levels (Build 33): the upper ward terrace under the elder's hall; built in 73f_levels.js, ground shaped in 60_terrain.js ─────────────────────────
+// A flat terrace LV.up.h above the market square. Retaining walls stand just outside its edge (0.8 m thick: the ground rises inside them), flights and a ramped lane reach it.
+const LV = { up: { x0: -36, z0: 13.5, x1: -5, z1: 31, h: 3.4, slope: 0.8 } };
+LV.upW = (x, z) => {       // 1 on the terrace, 0 beyond `slope` metres outside it
+  const u = LV.up, dx = Math.max(u.x0 - x, 0, x - u.x1), dz = Math.max(u.z0 - z, 0, z - u.z1), d = Math.hypot(dx, dz);
+  return d >= u.slope ? 0 : 1 - Math.min(1, Math.max(0, d / u.slope));
+};

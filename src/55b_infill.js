@@ -161,6 +161,16 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
     h.doorBay = h.stairs ? (h.stairs > 0 ? n - 1 : 0) : (Rh() * n | 0);
     SITE[h.id].doorPos = h.w / 2 - (h.doorBay + 0.5) * (h.w / n);
   }
+  // ── 5b. levels (Build 33): the terrace under the elder's hall and the lane that climbs to it. Infill houses (never the enterable ones) that straddle its walls, stand on the lane or the stairs are deleted ──
+  { const h21 = INF.byId['in.21'], s21 = SITE['in.21']; if (h21 && s21) { h21.x = s21.x = -9; h21.z = s21.z = 24.5; h21.yaw = s21.yaw = 0; } }       // the enterable Dyer's House stands in the terrace yard, its door to the north (the market view)
+  { const u = LV.up, inRectP = (x, z, m) => x > u.x0 - m && x < u.x1 + m && z > u.z0 - m && z < u.z1 + m, keepOut = [[-38, 31.2, -2.6, 36.2], [-14.6, 6.4, -9.6, 14.2]];
+    for (const h of INF.houses.slice()) {
+      if (h.enter) continue; const pts = rectPts(h.x, h.z, h.yaw, h.w + 1.0, h.d + 1.0, 1.5); let inside = 0, near = 0, out = 0;
+      for (const [px, pz] of pts) { if (inRectP(px, pz, -0.4)) inside++; else if (inRectP(px, pz, 2.6)) near++; else out++; }
+      const stairs = pts.some(([px, pz]) => keepOut.some(k => px > k[0] && px < k[2] && pz > k[1] && pz < k[3]));
+      if (stairs || near > 0 || (inside > 0 && out + near > 0)) drop(h);
+    }
+  }
   // ── 6. forecourts (Build 33): every original building keeps 9 m of open ground in front of its door, every one of the first 25 infill houses faces 9 m of street, and enterable doors stay reachable.
   // Houses that stand in a forecourt are nudged back, moved along their street, or deleted (the six enterable ones are only ever moved). test/layout.mjs checks the result in node.
   INF.fore = { len: 9, wid: 3.2, skip: ['tower', 'barn', 'mill', 'farm', 'hunter', 'fisher'] };
@@ -173,7 +183,8 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
     return [max, null];
   };
   INF.clearDist = clearDist;
-  const nudge = (h, dx, dz) => {                // move an infill house by (dx, dz) in its own frame if the spot is free (its own footprint ignored)
+  const nudge = (h, dx, dz) => {
+    if (h.id === 'in.21') return false;          // (it stands in the terrace yard: 5b)                // move an infill house by (dx, dz) in its own frame if the spot is free (its own footprint ignored)
     const st = SITE[h.id], c = Math.cos(h.yaw), sn = Math.sin(h.yaw), nx = h.x + dx * c - dz * sn, nz = h.z + dx * sn + dz * c, ox = st.x, oz = st.z; st.x = 1e5;
     const ok = free(nx, nz, h.yaw, h.w, h.d, { sq: 1.2 }); st.x = ox;
     if (ok) { h.x = st.x = nx; h.z = st.z = nz; } return ok;
@@ -195,7 +206,7 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
   }
   // (b) the first 25 infill houses: at least 9 m between their door and the next wall (a street is 2.5 m of that). Nudge back (both sides share it), else delete the one that is not enterable
   for (let pass = 0; pass < 3; pass++) for (const h of INF.houses.filter(h => +h.id.slice(3) <= 25)) {
-    const st = SITE[h.id]; if (!st) continue;
+    const st = SITE[h.id]; if (!st || h.id === 'in.21') continue;
     for (let guard = 0; guard < 4; guard++) {
       const [d, o] = clearDist(st, 2.4, F.len + 0.4); if (d >= F.len + 0.3 || !o) break;
       const need = F.len + 0.3 - d, other = o.infill ? INF.byId[o.id] : null;
