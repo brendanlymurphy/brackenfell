@@ -142,3 +142,18 @@ How it works now:
 - `74b_trees.js`: the wide shadow map draws tree stand-ins from a list round the map (`Trees.farCastRing`), not every tree in the valley.
 - Pieces added to a batch after it was built are still ignored (as before): the outlaw camps' props go to `kit-yard` on the first tick.
 
+### After step 3 (grass, trees, props and water by what is in view)
+
+| Tier | Square | Alley | Terrace | Lake |
+|---|---|---|---|---|
+| medium | 154 / 314k | 165 / 323k | 140 / 221k | 120 / 233k |
+| low | 113 / 220k | 121 / 224k | 115 / 163k | 87 / 176k |
+
+- `46_grass.js`: tufts come from a list of grid cells (`gc` attribute), rebuilt when the player moves 1 m or turns 11 degrees: 8 x 8
+  blocks inside the grass range and the view cone that can hold grass at all (`Grass.blockHasGrass`, remembered per block).
+- `42_scene.js`: big static prop meshes and long water tiles are cut into squares (`squares()`: 8 m props, 16 m water); the camera
+  draws the squares in or within 10 m of the view (`viewUpdate`), unless the mesh itself still casts shadow (high tier), then all of it.
+- `74b_trees.js`: the camera's flat stand-ins are one instance list of the trees in the view cone (`Trees.farRing`); the middle
+  model keeps a sixth of the cards (`TREE_KEEP=0.17 TREE_GROW=2.05` in `tree_pack.mjs`).
+- Switches for comparing: `--opt pool=0`, `sub=0`, `rockring=0`, `treering=0`, `grassall=1`, `grasscone=0`.
+

@@ -25,7 +25,7 @@
     "wood": 699,
     "leaves": 2040,
     "woodFar": 89,
-    "leavesFar": 512
+    "leavesFar": 340
    }
   },
   "fir_c": {
@@ -47,7 +47,7 @@
     "wood": 697,
     "leaves": 1800,
     "woodFar": 87,
-    "leavesFar": 452
+    "leavesFar": 300
    }
   },
   "pine_c": {
@@ -69,7 +69,7 @@
     "wood": 698,
     "leaves": 2280,
     "woodFar": 89,
-    "leavesFar": 572
+    "leavesFar": 380
    }
   },
   "broadleaf_small": {
@@ -91,7 +91,7 @@
     "wood": 675,
     "leaves": 1680,
     "woodFar": 82,
-    "leavesFar": 420
+    "leavesFar": 280
    }
   }
  }
