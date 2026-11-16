@@ -71,13 +71,20 @@ Rules in the generators (fixed for all 57 cells at once)
 - [x] Counters keep wares on the counter; one scanned barrel (the second had doubled staves).
 - [x] Tiny hung hammers and spades ("T" marks on walls, spade up at the ceiling) removed or re-pivoted.
 
+- [x] Keeper room behind counters; standing spots outside a room edge move in; colliders are measured with the item (nothing stops a person inside a wall).
+- [x] The firewood beside a hearth is a recorded floor item (it was drawn and given a collider but unknown to the plan; casks were put through it).
+- [x] Sconce is a bracket with a dish and a candle (it read as a black T); hook cloth and tapestries are muted; door straps are blackened iron.
+- [x] Inn at 19:40 on medium: 95 draws / 278k -> 94 / 204k triangles (cabinet cap per room with a cupboard fallback, caps on 600-triangle small pots, no vase scan as a bottle).
+- [x] Top-up pass restores wall coverage lost to measured placement (0.524 -> 0.594; before measured placement 0.611), by the room's trade (PD.TRADE) and never with pictures.
+- [x] Pictures only in the elder's hall, the inn, store and draper and now and then a better house (2-3 each); banners only where there is something to declare.
+- [x] Slumped sacks with a tied neck instead of balls (Props.sack, one marked line in 70_props.js).
+- [x] A draw that leaves a transform pushed (high.a) lifted every later item 0.15 m: guarded in pPut/pHang.
+- [x] Hidden faces (wall backs, floor bottoms, ceiling tops of recorded items) dropped after the plan: 9,350 triangles over 57 cells.
+
 Open flaws, by severity
-1. [ ] Hidden coplanar faces (about 41k pairs at 1.5 mm): cull faces against walls and floors in the cell mesh.
-2. [ ] Inn at 19:40 with patrons over budget (100 draws, 301k triangles): drop unseen geometry.
-3. [ ] Window panes flush with walls: need reveals on the inside.
-4. [ ] Cartoon pictures (flat landscape, moon) and the flat red banner with gold cross.
-5. [ ] Door leaf straps bright blue.
-6. [ ] Beige lumpy ball sacks and pots in the chapel.
-7. [ ] Bare dark walls and corners (smithy, chapel): dress by the room's rule.
-8. [ ] Remaining overlap: smithy cscoal0/1 sink 0.10 m; forge and 'counter' spots inside solids (shop.s0, draper, in.70, in.15, in.116, in.02); store torch pair.
-9. [ ] Mine coplanar meshes 420-422; cellars, crypt, tunnel not yet toured.
+1. [ ] Coplanar kit wall trims where wall panels meet (MI_WoodTrim x MI_WoodTrim, mostly below the floor line): instanced kit pieces, not yet trimmed. Inn: 1,519 pairs at 1.5 mm.
+2. [ ] Bare dark walls and corners in lofts and back rooms (inn.loft 0.35, smithy.coalstore, guardhouse.cells); 51 rooms under 0.5 wall coverage.
+3. [ ] Flat landscape pictures from kitGen (73b_alley.js, fx1): cartoon, left to fx1.
+4. [ ] Window reveals: casings are dark boxes with no sill in many rooms.
+5. [ ] Remaining overlap: in.116 counter spot inside a bench; one rug pair.
+6. [ ] Mine coplanar meshes 420-422; cellars, crypt, tunnel not yet toured.
