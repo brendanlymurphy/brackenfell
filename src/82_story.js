@@ -19,7 +19,7 @@ QUESTS.main = { name: 'The Quiet Under Brackenfell', stages: [
 ] };
 QORDER.unshift('main');
 const BODY = [14.6, 0, 79.2];
-const MAIN_FACTS = () => [!!S.flags.sawBody, !!S.flags.pell, has('minekey') || !!S.flags.mineOpen, !!S.flags.mineOpen, has('journal') || !!S.flags.corwin, !!S.flags.act1];
+let MAIN_FACTS = () => [!!S.flags.sawBody, !!S.flags.pell, has('minekey') || !!S.flags.mineOpen, !!S.flags.mineOpen, has('journal') || !!S.flags.corwin, !!S.flags.act1];
 let _mainBusy = false;
 function mainSync() {
   if (_mainBusy || qAt('main') < 0 || qAt('main') === 99) return; _mainBusy = true;
