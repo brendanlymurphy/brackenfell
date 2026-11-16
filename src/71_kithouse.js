@@ -198,7 +198,7 @@ function kitShellPass(c, pass) {
   if (X) for (const l of c.kDoorLamps) {
     if (site.infill && typeof INFS !== 'undefined' && INFS.mats) {          // a small generated bracket lantern instead of the 2800-triangle kit lantern
       const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), q = KH.xf(l.F, l.u, 2.15, 0.1, 1, 0), p0 = new THREE.Vector3(0, -0.1, 0.42).applyMatrix4(q), p = [p0.x, p0.y, p0.z];
-      b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
+      b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 2.2 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
     }
     add(l.F, 'Lantern_Wall', l.u, l.v, 0.03, 0.8, { zone: 0, skyVis: 1, lit: 1 });
     const lp = Kit.lights('Lantern_Wall')[0] || [0, 0.53, 0.76], v = new THREE.Vector3(lp[0] * 0.8, lp[1] * 0.8, lp[2] * 0.8).applyMatrix4(KH.xf(l.F, l.u, l.v, 0.03)), p = [v.x, v.y, v.z];
@@ -234,7 +234,7 @@ const SCANR = {
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
   Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
-  Barrel: { n: ['wine_barrel_01', 'wooden_barrels_01_a'], fit: 'xz', one: 1 },
+  Barrel: { n: ['wine_barrel_01', 'wooden_barrels_01_a'], fit: 'xz', one: 1, inOnly: 1 },
   Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' }, Bottle_1: { n: ['ceramic_vase_04'], fit: 'contain' },
   Table_Plate: { n: ['carved_wooden_plate'], fit: 'contain' },
   Candle_1: { n: ['wooden_candlestick'], fit: 'contain', mul: 1.25 }, Candle_2: { n: ['wooden_candlestick'], fit: 'contain' },
@@ -255,6 +255,7 @@ function kplace(m, name, x, y, z, s, ry) {
   const base = new THREE.Matrix4().fromArray(m.m), E = scanOn() ? SCANR[name] : null, P = Kit.pieces[name];
   if (!E || !P) { if (scanOn() && SCAN_FLAT[name]) { const q = Kit.pieces[name]; if (q) return { name, M: KH.xf(base, x, y + (q.max[1] - q.min[1]) * 0.5 * (typeof s === 'number' ? s : s[1]), z, s, ry) }; } return { name, M: KH.xf(base, x, y, z, s, ry) }; }
   if (E.skip) return null;
+  if (E.inOnly && !(m.m1 | 0)) return { name, M: KH.xf(base, x, y, z, s, ry) };       // [fx1] a scanned barrel is 1957 triangles: out in the street the painted kit barrel (654) does
   const sv = s === undefined ? [1, 1, 1] : typeof s === 'number' ? [s, s, s] : s, W = [P.max[0] - P.min[0], P.max[1] - P.min[1], P.max[2] - P.min[2]];
   const tw = Math.abs(W[0] * sv[0]) * (E.box ? E.box[0] : 1), th = Math.abs(W[1] * sv[1]) * (E.box ? E.box[1] : 1), td = Math.abs(W[2] * sv[2]) * (E.box ? E.box[2] : 1);
   const tcx = (P.min[0] + P.max[0]) / 2 * sv[0], tcz = (P.min[2] + P.max[2]) / 2 * sv[2], tby = P.min[1] * sv[1];

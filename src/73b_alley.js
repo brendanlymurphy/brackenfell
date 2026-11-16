@@ -50,7 +50,7 @@ const W_ = 'MI_WoodTrim', C_ = 'MI_Trim_Cloth', DARKW = [0.62, 0.55, 0.5];
 // ── generated pieces (origin where they attach to the wall: x along the wall, y up, z out into the street) ──
 let _gn = 0;
 function genAwning(w, c1, c2, drop) {
-  c1 = c1.map(v => v * 0.74); c2 = c2.map(v => v * 0.7);          // [fx1] cloth that has hung in the weather for years: the stripes read as candy at full dye
+  const dd = (c, k) => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => (l + (v - l) * 0.75) * k); }; c1 = dd(c1, 0.44); c2 = dd(c2, 0.38);          // [fx1] cloth that has hung in the weather for years: the stripes read as candy at full dye
   const g = GP(), n = Math.max(2, Math.round(w / 0.3)), sw = (w - 0.1) / n, out = 1.45, dy = drop || 0.62;
   for (let i = 0; i < n; i++) {
     const x0 = -w / 2 + 0.05 + i * sw, x1 = x0 + sw, c = i % 2 ? c2 : c1;
@@ -113,7 +113,7 @@ function genBracketLantern() {          // wall bracket + small lantern, split s
   f.box(W_, -0.02, -0.02, 0, 0.02, 0.02, 0.42, [0.2, 0.19, 0.18]); f.beam(W_, [0, -0.3, 0.0], [0, -0.02, 0.34], 0.015, [0.2, 0.19, 0.18]);
   f.box(W_, -0.1, -0.2, 0.32, 0.1, -0.17, 0.52, [0.2, 0.19, 0.18]); f.box(W_, -0.12, -0.02, 0.3, 0.12, 0.02, 0.54, [0.2, 0.19, 0.18]);
   for (const sx of [-1, 1]) for (const sz of [0.32, 0.52]) f.box(W_, sx * 0.1 - 0.008, -0.2, sz - 0.008, sx * 0.1 + 0.008, 0.0, sz + 0.008, [0.2, 0.19, 0.18]);
-  gl.box(C_, -0.085, -0.17, 0.335, 0.085, -0.01, 0.505, [1.0, 0.68, 0.3], GPU.cloth);
+  gl.box(C_, -0.085, -0.17, 0.335, 0.085, -0.01, 0.505, [0.5, 0.32, 0.13], GPU.cloth);       // [fx1] half the albedo (a cream box in daylight), the glow doubled where it is used
   return [f.make('gen_lanf_' + (_gn++)), gl.make('gen_lang_' + (_gn++))];
 }
 function genStripCloth(w, h, cols) {       // a hanging cloth / banner with vertical stripes: origin at top centre, facing +z
@@ -201,7 +201,7 @@ function buildAlley() {
     }
     // wall lanterns beside the door
     const [lf, lg] = AL.lan || (AL.lan = genBracketLantern()), doorI = (a.layout || 'WD').indexOf('D');
-    for (const du of [-1.0, 1.0]) { const uc = doorI * 2 + 1 + du; if (uc < 0.3 || uc > w - 0.3) continue; addP(MS, lf, Ff, uc, 2.15, 0.1); addP(MS, lg, Ff, uc, 2.15, 0.1, 1, 0, { zone: 0, skyVis: 1, cast: false, glow: 2.2 });
+    for (const du of [-1.0, 1.0]) { const uc = doorI * 2 + 1 + du; if (uc < 0.3 || uc > w - 0.3) continue; addP(MS, lf, Ff, uc, 2.15, 0.1); addP(MS, lg, Ff, uc, 2.15, 0.1, 1, 0, { zone: 0, skyVis: 1, cast: false, glow: 4.4 });
       const p = new THREE.Vector3(uc, 2.05, 0.42).applyMatrix4(Ff), q = [p.x, p.y, p.z]; World.emitters.push({ type: 'lantern', p: q, zone: 0 }); if (AL.lanterns++ % 2 === 0) addLight(q, 9.5, [3.4, 1.9, 0.75], 0, 'lantern'); break; }
     AL.shops.push({ a, site, MS, F0, w, d, H, fl, Ytop, rise, zc });
     // collision: the shop's footprint, with a little off the front so the doorstep is a stand-in for the sill

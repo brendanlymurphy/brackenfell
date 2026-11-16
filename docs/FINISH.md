@@ -37,3 +37,21 @@ Fixed: A2 door leaves (new oak leaf), A7 wharf boat-house door planks drawn, B2 
 Mine tour (r1/mine.*, lantern off): walls are the gravel-heap texture with large flat facets (flood, rampA, niche); not yet faced with scanned rock_face. Open, medium.
 Fixed A8: alley-dress group (crates, barrels with colliders) was hidden on Low (src/71_kithouse.js alley visibility); now shown within 28 m.
 Still open: terrace embankment bare dirt, low-quality alley crates (A8), stall goods, secrets as dark boxes, drowned man, herb racks, plank wall scale, window panes, bell tower coplanar (U112), mill beams, hunter black slab.
+
+## Style sheet (canonical materials; outliers are brought to these by rule)
+| Material | Tone (albedo, linear) | Scale | Notes |
+|---|---|---|---|
+| Stone (rubble walls, plinths) | 0.45 to 0.6, neutral grey, no saturation | blocks 0.25 to 0.4 m (MAT.STONE tile 0.7) | shade faces lifted by lvLift so they never go black |
+| Timber framing | COL.timberDark 0.12 to 0.2 brown | posts 0.12 to 0.2 m | cbox with chamfer; never pure black |
+| Plank cladding | 0.30 to 0.45 warm brown, grain visible | boards 0.18 to 0.22 m | one tile scale per wall |
+| Plaster / limewash | 0.65 to 0.8 warm off-white | n/a | stained near the foot |
+| Roof | thatch or shingle, 0.3 to 0.45 | n/a | one material per roof |
+| Cloth (awnings, banners, bunting, canopies) | dull madder 0.34/0.18/0.15, woad 0.17/0.21/0.3, weld 0.4/0.3/0.16, walnut, undyed 0.42; stalls and awnings go through the kit cloth material, which brightens about 1.6x: feed 0.34 to 0.66 of the table value | stripes 0.3 m | no pastel, no mint, no candy stripes |
+| Iron | 0.2 to 0.3 dark, straps catch light at 0.42 on door leaves | straps 0.04 m | |
+| Earthenware | 0.5/0.33/0.22 brown glaze, scanned pots tinted 0.7/0.46/0.31 at gain 0.5 | 0.2 to 0.3 m | never white |
+
+Rules added so far: origin-collider guards (secProp, wPickMesh) and boot assertion; push/pop balance warnings; door leaf is one shared oak leaf; street barrels use the painted 654-triangle barrel, scanned ones indoors only; awning, canopy and bunting colours go through desaturation and a 0.4 to 0.66 scale; lantern glass albedo is halved and its glow doubled, outdoor glow is off by day.
+
+## Overlap finder (test/overlap.js)
+`node test/shot.mjs --opt webgl=1 --opt quality=low --do "window.__ovTop=60; $(cat test/overlap.js)"` ranks solid x solid intersections (walls meeting walls excluded), door approaches blocked by a low solid, spots and stairs inside solids, each with a shot call. Baseline at Build 59 + fx1: 325 solids, 0 blocked doors, 18 spots. Most solid hits are stall and rock circles against house boxes (conservative circles); the spots are counters and fires whose spot lies in the counter's own collider.
+Open from the second tour (t2): hunter.1f black slab is a pine trunk in shade (lighting: tree bark in shade), wall lamps still pale by day, tower door view faces a blank wall, bunting flags read white.
