@@ -2824,7 +2824,7 @@ const Chars = (() => {
       src.forEach((g, i) => { const U_ = g.attributes.uv, P_ = g.attributes.position; if (!U_ || !B.skinName || names[mids[i]] !== B.skinName) return; skinMid = mids[i];
         for (let v = 0; v < P_.count; v++) if (Math.abs(U_.getX(v) - F.mouth[0]) < 0.006 && Math.abs(U_.getY(v) - F.mouth[1]) < 0.022) { cx += P_.getX(v); cy += P_.getY(v); cz += P_.getZ(v); n++; } });
       const hi = B.skel ? B.skel.bones.findIndex(b => b.name === S.cfg.bones.head) : -1;
-      if (n && hi >= 0 && skinMid >= 0) { cx /= n; cy /= n; cz /= n; const w = 0.021, h = 0.017, z = cz - 0.011, y = cy - 0.005, g = new THREE.BufferGeometry(), BA = THREE.BufferAttribute;
+      if (n && hi >= 0 && skinMid >= 0) { cx /= n; cy /= n; cz /= n; const w = 0.0165, h = 0.017, z = cz - 0.013, y = cy - 0.005, g = new THREE.BufferGeometry(), BA = THREE.BufferAttribute;
         g.setAttribute('position', new BA(new Float32Array([cx - w, y - h, z, cx + w, y - h, z, cx + w, y + h, z, cx - w, y + h, z]), 3)); g.setAttribute('normal', new BA(new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]), 3));
         g.setAttribute('uv', new BA(new Float32Array([2, 2, 2, 2, 2, 2, 2, 2]), 2)); g.setAttribute('skinIndex', new BA(new Uint16Array([hi, 0, 0, 0, hi, 0, 0, 0, hi, 0, 0, 0, hi, 0, 0, 0]), 4)); g.setAttribute('skinWeight', new BA(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]), 4));
         g.setIndex(new BA(new Uint16Array([0, 1, 2, 0, 2, 3]), 1)); src.push(g); mids.push(skinMid); } }
@@ -2902,9 +2902,10 @@ const Chars = (() => {
         const grain = texture(G.noiseTex, positionWorld.xy.mul(14).add(positionWorld.z.mul(11))).r.mul(0.35).add(0.82);
         albedo = albedo.mul(trimW.oneMinus()).add(col.mul(grain).mul(trimW));
       }
-      albedo = albedo.mul(TSL.mix(float(1), TSL.mix(cv.x, float(1), 0.15), 0.9));
+      const isMouth = TSL.step(9.5, cv.w.mul(12));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening
+      albedo = albedo.mul(TSL.mix(TSL.mix(float(1), TSL.mix(cv.x, float(1), 0.15), 0.9), float(1), isMouth));
       const dirt = TSL.mix(vec3(0.46, 0.38, 0.29), vec3(1, 1, 1), TSL.smoothstep(0.05, 0.85, cv.y));
-      albedo = albedo.mul(TSL.mix(vec3(1, 1, 1), dirt, clothW)).mul(float(1).sub(cv.z.mul(clothW).mul(0.4)));
+      albedo = albedo.mul(TSL.mix(vec3(1, 1, 1), dirt, clothW.mul(isMouth.oneMinus()))).mul(float(1).sub(cv.z.mul(clothW).mul(0.4).mul(isMouth.oneMinus())));
     }
     const V_ = SH.U.camPos.sub(positionWorld).normalize(), up = F ? H.uHead.mul(vec3(0, 1, 0)).normalize() : vec3(0, 1, 0);
     if (F && anyEye) {
@@ -2919,7 +2920,7 @@ const Chars = (() => {
       albedo = TSL.mix(albedo, e, eyeW);
     }
     let accW = float(0);
-    if (F) { const cav = TSL.step(1.5, U.x).mul(TSL.step(U.x, 2.5)); albedo = TSL.mix(albedo, vec3(0.030, 0.008, 0.007), cav);       // the card behind the lips
+    if (F) { const cav = TSL.step(1.5, U.x).mul(TSL.step(U.x, 2.5)); albedo = TSL.mix(albedo, vec3(0.085, 0.028, 0.026), cav);       // the card behind the lips
       // worn pieces (accGeometry): u = 3 + slot picks one of the villager's accessory colours; cloth and leather are matt, metal a little less
       accW = TSL.step(2.5, U.x); const slot = U.x.sub(3), A = H.accCol, ac = TSL.mix(TSL.mix(vec3(A[0][0], A[0][1], A[0][2]), vec3(A[1][0], A[1][1], A[1][2]), TSL.step(0.5, slot)), TSL.mix(vec3(A[2][0], A[2][1], A[2][2]), vec3(A[3][0], A[3][1], A[3][2]), TSL.step(2.5, slot)), TSL.step(1.5, slot));
       const grain = texture(G.noiseTex, positionWorld.xy.mul(9).add(positionWorld.z.mul(7))).r.mul(0.3).add(0.85);
@@ -2950,8 +2951,8 @@ const Chars = (() => {
     if (F) {
       // skin: where the sun grazes it the light carries on a little way round, reddened (blood under the skin), and the edge facing away from the eye takes a soft sheen
       const day = float(1).sub(TSL.step(0.5, H.uZone)).mul(H.uLight), ndl = N.dot(SH.U.sunDir);
-      emis = emis.add(albedo.mul(vec3(1.0, 0.34, 0.20)).mul(SH.U.sunCol).mul(TSL.smoothstep(-0.55, 0.0, ndl).mul(TSL.smoothstep(0.55, 0.0, ndl)).mul(0.24)).mul(day).mul(skinW));      // wrap lighting: the terminator is soft and red
-      emis = emis.add(albedo.mul(lit).mul(vec3(0.24, 0.06, 0.02)).mul(TSL.smoothstep(0.35, -0.45, ndl).mul(0.8).add(0.2)).mul(skinW));      // cheap subsurface: in shade, and indoors, the skin glows warm from within
+      emis = emis.add(albedo.mul(vec3(1.0, 0.45, 0.30)).mul(SH.U.sunCol).mul(TSL.smoothstep(-0.55, 0.0, ndl).mul(TSL.smoothstep(0.55, 0.0, ndl)).mul(0.09)).mul(day).mul(skinW));      // wrap lighting: the terminator is soft and red
+      emis = emis.add(albedo.mul(lit).mul(vec3(0.15, 0.05, 0.02)).mul(TSL.smoothstep(0.35, -0.45, ndl).mul(0.75).add(0.03)).mul(skinW));      // cheap subsurface: in shade, and indoors, the skin glows warm from within
       const rim = TSL.pow(float(1).sub(TSL.max(N.dot(V_), 0)), float(3));
       emis = emis.add(SH.hemi(V_.negate().add(vec3(0, 0.6, 0)).normalize(), H.uLight, H.uZone).mul(rim).mul(skinW.mul(0.10).add(hairW.mul(0.32))).mul(albedo.add(0.04)));       // hair catches the sky along its outline instead of one hard blotch
     }
@@ -3206,7 +3207,7 @@ const Chars = (() => {
   // snap), so neighbouring shapes overlap the way sounds do. On top: the jaw by the loudness at low gain, a lift of the brows and a nod on stressed syllables.
   // A line with no track (a bark, silent talking) opens the jaw by loudness and moves between a few vowel shapes.
   const VISEME_OF = { A: [['PP', 1]], B: [['I', 0.55], ['SS', 0.35]], C: [['E', 0.7], ['aa', 0.35]], D: [['aa', 1]], E: [['O', 0.85], ['E', 0.15]], F: [['U', 1]], G: [['FF', 1]], H: [['nn', 0.6], ['DD', 0.4]], X: [] };
-  const VIS_GAIN = TEST && TEST.visgain ? +TEST.visgain : 2.1;      // the targets are the pack's own size: a villager seen across a room needs them stronger to read
+  const VIS_GAIN = TEST && TEST.visgain ? +TEST.visgain : 1.15;      // the targets are the pack's own size: a villager seen across a room needs them stronger to read
   const _tg = new Float32Array(20);
   function cuesOf(cur) { if (cur.cu !== undefined) return cur.cu; const out = []; if (typeof cur.cues === 'string') { const re = /(\d+)([A-HX])/g; let m; while ((m = re.exec(cur.cues))) out.push([+m[1] / 100, m[2]]); } return cur.cu = out.length ? out : null; }
   function visemeUpdate(H, F, st, dt, open, cur) {
@@ -3216,17 +3217,17 @@ const Chars = (() => {
     if (cu) {
       const t = now - cur.t0 + 0.035; let i = F.ci | 0; if (!(cur === F.cur && i < cu.length)) { i = 0; F.cur = cur; }      // a little ahead of the sound: the mouth shapes before the sound is heard
       while (i + 1 < cu.length && cu[i + 1][0] <= t) i++; F.ci = i;
-      if (t >= 0 && t <= cur.dur + 0.1) { talk = true; for (const [n, v] of VISEME_OF[cu[i][1]] || []) tg[ix[n]] = Math.max(tg[ix[n]], v); }
+      if (t >= 0 && t <= cur.dur + 0.1) { talk = true; for (const [n, v] of VISEME_OF[cu[i][1]] || []) tg[ix[n]] = Math.max(tg[ix[n]], v * 0.85); }
       const e = cur.env; if (e && e.length && t >= 0) { const k = Math.min(e.length - 1, Math.floor(t / 0.05)); loud = Math.min(1, (e[k] || 0) / 70); }
     } else if (open > 0.02 || H.mouthTest !== undefined) {      // no track: loudness (or the mumble) opens the jaw and a few vowel shapes follow it
       talk = true; loud = open; const ph = ((typeof game !== 'undefined' ? game.time : 0) + H.seed) * 5.3, a = Math.sin(ph) * 0.5 + 0.5, b = Math.sin(ph * 0.61 + 1.7) * 0.5 + 0.5;
       tg[ix.aa] = open * 0.55 * a; tg[ix.O] = open * 0.5 * (1 - a) * b; tg[ix.E] = open * 0.4 * (1 - b); if (Math.sin(ph * 0.37) > 0.8) tg[ix.PP] = 0.8;
     }
-    tg[ix.jawOpen] = talk ? loud * 0.22 : 0;
+    tg[ix.jawOpen] = talk ? loud * 0.18 : 0;
     F.stress += (Math.max(0, loud - F.slow) - F.stress) * Math.min(1, dt * 14); F.slow += (loud - F.slow) * Math.min(1, dt * 1.6);
     tg[ix.browInnerUp] = talk ? Math.min(1, F.stress * 3.2) * 0.55 : 0;
     F.nod = talk ? Math.min(1, F.stress * 4) * 0.06 : 0;
-    for (let k = 0; k < 19; k++) { const a = tg[k] > w[k] ? 1 - Math.exp(-dt / 0.06) : 1 - Math.exp(-dt / 0.09); w[k] += (tg[k] - w[k]) * a; }
+    for (let k = 0; k < 19; k++) { const a = tg[k] > w[k] ? 1 - Math.exp(-dt / 0.075) : 1 - Math.exp(-dt / 0.11); w[k] += (tg[k] - w[k]) * a; }
     for (let j = 0; j < 5; j++) H.uVis[j].value.set(w[j * 4], w[j * 4 + 1], w[j * 4 + 2], w[j * 4 + 3]);
     if (H.visTest) for (const k in H.visTest) { const i = ix[k]; w[i] = H.visTest[k]; H.uVis[i >> 2].value.setComponent(i & 3, w[i]); }
     // the table is in metres for the adult head: scale it to this head (the head bone's length against the reference)
