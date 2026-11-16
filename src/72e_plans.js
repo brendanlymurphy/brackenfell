@@ -152,7 +152,7 @@ function dressBedroom(P, room, o) {
   let placed = 0;
   for (const nm of beds) {
     let it = null;
-    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { const s = pWallSlot(P, room, sd, 1.1, 2.1, { h: 0.95, at: o.bedAt }); if (!s) continue; it = pPut(P, room, P.id + '.' + nm, s.cx, s.cz, rotBack(sd, -1), 1.1, 2.1, 0.95, pdBed(1.0, col, !!o.fur), { back: sd }); if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
+    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { const s = pWallSlot(P, room, sd, 1.1, 2.1, { h: o.bedH || 0.95, at: o.bedAt }); if (!s) continue; it = pPut(P, room, P.id + '.' + nm, s.cx, s.cz, rotBack(sd, -1), 1.1, 2.1, o.bedH || 0.95, pdBed(1.0, col, !!o.fur), { back: sd }); if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
     if (!it && nm === 'bed') P.err.push('no room for ' + nm + ' in ' + room.id);
   }
   // a chest at the foot of the first bed (or against any free wall)

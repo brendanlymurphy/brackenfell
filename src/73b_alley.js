@@ -164,7 +164,7 @@ function buildAlley() {
           if (k === 0 && !stone && wn === 'front' && !door && !glass) name = 'Wall_Plaster_Straight_Base';
           addP(MS, name, F[wn], uc, 0, 0, 1, 0);
           if (glass) { addP(MS, 'Window_Wide_Flat1', F[wn], uc, 0, 0, 1, 0); if (shutter && uc > 0.9 && uc < L - 0.9 && !(k === 0)) addP(MS, shutter, F[wn], uc, 0, 0, 1, 0); }
-          if (door) { addP(MS, 'DoorFrame_Flat_WoodDark', F[wn], uc, 0, 0, 1, 0); addP(MS, 'Door_1_Flat', F[wn], uc - 0.54, 0, -0.05, 1, 0); }
+          if (door) { addP(MS, 'DoorFrame_Flat_WoodDark', F[wn], uc, 0, 0, 1, 0); if (!(k === 0 && HOUSES[a.id])) addP(MS, 'Door_1_Flat', F[wn], uc - 0.54, 0, -0.05, 1, 0); }      // [c5] an enterable shop's door leaf is the portal leaf of its cell (72k_houses.js)
         }
         addP(MS, 'Corner_Exterior_Wood', F[wn], 0, 0, 0, [1.25, 1, 1.25]);
       }
