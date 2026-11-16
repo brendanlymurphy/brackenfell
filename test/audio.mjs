@@ -1,14 +1,14 @@
 // Offline audio test: renders every library sound and a set of ambience states through an OfflineAudioContext (the real engine, the real master chain),
 // measures duration, peak, RMS, spectral centroid and silence, fails on NaN, clipping or silence, and saves WAV files and spectrogram PNGs.
 // usage: node test/audio.mjs [--out /home/claude/shots/a1] [--only sfx|beds|music] [--json file]
-import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+import { chromium, CHROME } from './pw.mjs';
 import fs from 'node:fs';
 const args = process.argv.slice(2); let out = '/home/claude/shots/a1', only = '', json = '';
 for (let i = 0; i < args.length; i++) { if (args[i] === '--out') out = args[++i]; else if (args[i] === '--only') only = args[++i]; else if (args[i] === '--json') json = args[++i]; }
 fs.mkdirSync(out, { recursive: true });
 const root = new URL('../', import.meta.url).pathname;
 const code = ['88_audio', '88b_sfx', '88c_beds', '88c_world', '88c_music'].map(f => fs.readFileSync(root + 'src/' + f + '.js', 'utf8')).join('\n');
-const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage();
 page.on('pageerror', e => console.log('[pageerror]', e.message.slice(0, 300)));
 page.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') console.log('[console]', m.text().slice(0, 300)); });

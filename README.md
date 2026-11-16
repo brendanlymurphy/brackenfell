@@ -1,28 +1,16 @@
 # Brackenfell
 
-A small highland village you can walk around in the browser, on a phone or a laptop: houses you can enter, villagers
-with daily routines, a short chain of errands, day and night, weather.
+Play it: https://brendanlymurphy.github.io/brackenfell/ (phone or laptop browser).
 
-Play it: https://brendanlymurphy.github.io/brackenfell/
+A first-person medieval town on a misty lake: 58 interiors to enter, villagers with daily routines and voices, a main story in three
+acts with two endings, an old mine, shops, secrets, day and night, weather. Runs on [Three.js](https://threejs.org) r187: WebGPU where
+the browser has it, WebGL 2 otherwise (`?webgl` / `?webgpu` in the address forces one). The first engine is kept at [`classic/`](classic/).
 
-## Build 11 (market alley, muted roofs, chapel windows, denser interiors; realistic MakeHuman villagers and outlaws, CC0; performance and texture-memory pass; photo-scanned Poly Haven props; sprint, jump, sword combat, outlaw camps, loot, inventory, three new quests; on top of Build 6: kit-built houses with scanned-texture skin; Quaternius Medieval Village and Fantasy Props kits, CC0)
+## Working on it
 
-- Runs on [Three.js](https://threejs.org) r187: WebGPU where the browser has it, WebGL 2 otherwise. If WebGPU reports errors
-  or loses its device while starting, the page remembers that and reloads itself on WebGL 2. Menu → Settings → Graphics engine
-  switches by hand, and `?webgl` / `?webgpu` in the address overrides both.
-- Animated villagers (Quaternius bodies and outfits, Mesh2Motion animation clips) replace the hand-built ones.
-- Overcast sky with dawn mist, meadow grass, water, fire and smoke as separate modules.
-- The previous build is kept at [`classic/`](classic/).
-
-## Layout
-
-- `src/` game source. Plain scripts, concatenated in file-name order; `src/lib/three-entry.js` lists what is used from Three.js.
-- `tools/build.mjs` builds `three.js`, `game.js` and `index.html` into the repo root (`npm install`, then `npm run build`).
-- `tex/` texture pack (25 surface layers as ASTC and as WebP/JPEG), `chars/` villager models and clips.
-- `test/` headless-browser checks: `node test/shot.mjs --opt webgl=1 --do "$(cat test/quest.js)"` plays the whole errand chain;
-  `test/real.mjs` is a production-mode boot; `test/fallback.mjs` checks the WebGPU → WebGL 2 fallback.
-- `classic/`, `legacy/` Build 4 (hand-written WebGPU renderer), its source, texture bake tools and tests.
-- `ROADMAP.md` what comes next; `tools/release.md` how a build is published.
+Everything is in [`AGENTS.md`](AGENTS.md): build (`npm ci`, `node tools/build.mjs`), test (`node tools/gate.mjs --quick`), publish,
+where each area's code lives, and the rules. `ROADMAP.md` lists what each build added and what is next; `docs/` has the design,
+the engine by area, the story, and the decisions already taken.
 
 ## Credits
 

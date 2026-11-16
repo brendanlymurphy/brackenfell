@@ -3,402 +3,402 @@
   {
    "speaker": "hale",
    "text": "Hold there, traveller. Brackenfell is a quiet place and I mean to keep it so. But you have the look of the road on you: tired, and honest enough. Greta at the Honeyed Hart keeps a bed for folk like you. Straight down this road to the square. It’s the tall house with the lantern.",
-   "where": "80_game.js:70"
+   "where": "80_game.js:74"
   },
   {
    "speaker": "hale",
    "text": "You lit the harvest fire. I never thought to see it burn again. You’re one of us now, whether you like it or not.",
-   "where": "80_game.js:71"
+   "where": "80_game.js:75"
   },
   {
    "speaker": "hale",
    "text": "Road’s quiet. Just how I like it.",
-   "where": "80_game.js:72"
+   "where": "80_game.js:76"
   },
   {
    "speaker": "hale",
    "text": "The old watchtower, up the crag to the north-east. It held a beacon once. Burned out before my grandfather’s day. Children dare each other up there, though they swear to me they don’t.",
-   "where": "80_game.js:72"
+   "where": "80_game.js:76"
   },
   {
    "speaker": "hale",
    "text": "Last village before the Greyspine passes. Sixty souls, one inn, one forge, and a chapel bell that no longer rings. Mind the river. The Stonewater is colder than she looks, and she doesn’t give back what she takes.",
-   "where": "80_game.js:74"
+   "where": "80_game.js:78"
   },
   {
    "speaker": "greta",
    "text": "Well now, a new face! Hale sent you? Then you’re welcome under this roof. There’s a bed up the stairs, by the window. It’s yours while you stay. But I’ll ask a kindness in return. Osric at the mill owes me a sack of malt, and I can’t brew on promises. Fetch it for me?",
-   "where": "80_game.js:78"
+   "where": "80_game.js:82"
   },
   {
    "speaker": "greta",
    "text": "You’re a treasure. Over the bridge east of the square, then follow the river downstream. You’ll hear the wheel before you see it.",
-   "where": "80_game.js:78"
+   "where": "80_game.js:82"
   },
   {
    "speaker": "greta",
    "text": "The mill is over the bridge east of the square, then down the river. Osric will know what I’m owed.",
-   "where": "80_game.js:80"
+   "where": "80_game.js:84"
   },
   {
    "speaker": "greta",
    "text": "That’s the malt! Oh, bless you. There’ll be ale by week’s end. Here, for your trouble, and a bottle of the last batch.",
-   "where": "80_game.js:81"
+   "where": "80_game.js:85"
   },
   {
    "speaker": "greta",
    "text": "If you’ve a mind to stay useful: Brandt has been storming about since his hammer went missing, old Maren is short of frostcaps, and Brother Aldous frets over that silent bell of his. And the Elder likes company, out under the oak.",
-   "where": "80_game.js:81"
+   "where": "80_game.js:85"
   },
   {
    "speaker": "greta",
    "text": "The whole village in my hall, and the fire lit in the square. I could weep. Sit, drink!",
-   "where": "80_game.js:82"
+   "where": "80_game.js:86"
   },
   {
    "speaker": "greta",
    "text": "What can I get you, love?",
-   "where": "80_game.js:82"
+   "where": "80_game.js:86"
   },
   {
    "speaker": "greta",
    "text": "It’s two gold, love, and your purse is light. Help a few folk around the village and come back.",
-   "where": "80_game.js:84"
+   "where": "80_game.js:88"
   },
   {
    "speaker": "greta",
    "text": "Warm, and sweet with heather honey. The room feels friendlier already.",
-   "where": "80_game.js:84"
+   "where": "80_game.js:88"
   },
   {
    "speaker": "greta",
    "text": "Three generations of Barleybrooks have kept this hearth. The beams came down from the beacon forest, and the recipe for the ale came from my gran, who took it from a traveller in trade for a night’s lodging. So you see, I’ve a soft spot for strangers.",
-   "where": "80_game.js:84"
+   "where": "80_game.js:88"
   },
   {
    "speaker": "greta",
    "text": "Up the stairs at the back, the bed by the window. Sleep as late as you like.",
-   "where": "80_game.js:84"
+   "where": "80_game.js:88"
   },
   {
    "speaker": "greta",
    "text": "Do me one small favour first and there’s a bed in it for you.",
-   "where": "80_game.js:84"
+   "where": "80_game.js:88"
   },
   {
    "speaker": "osric",
    "text": "Greta’s malt! I’d clean forgot, what with the wheel groaning all week. Here, take it, and tell her the next sack is on me. I’d carry it myself, but the stones won’t dress themselves.",
-   "where": "80_game.js:86"
+   "where": "80_game.js:90"
   },
   {
    "speaker": "osric",
    "text": "Mind the dust. A mill is no place for a naked flame, or a fool.",
-   "where": "80_game.js:87"
+   "where": "80_game.js:91"
   },
   {
    "speaker": "osric",
    "text": "The Stonewater turns my wheel, the wheel turns the stones, and the stones feed the valley. Simple as bread. Listen: you can hear her running true.",
-   "where": "80_game.js:87"
+   "where": "80_game.js:91"
   },
   {
    "speaker": "brandt",
    "text": "Unless you’ve come to tell me where my hammer is, I’ve work to do. My best cross-peen, gone from the bench three days back. And that boy Tobin can’t look me in the eye.",
-   "where": "80_game.js:91"
+   "where": "80_game.js:95"
   },
   {
    "speaker": "brandt",
    "text": "Hm. Start with the boy. He’s always underfoot in the square, when he should be at the bellows.",
-   "where": "80_game.js:91"
+   "where": "80_game.js:95"
   },
   {
    "speaker": "brandt",
    "text": "That’s her! Where was she? The watchtower? I’ll tan his... no. No, I was a boy once, and that tower was a castle then too. Take this. I made it for no one in particular, and it seems that was you.",
-   "where": "80_game.js:92"
+   "where": "80_game.js:96"
   },
   {
    "speaker": "brandt",
    "text": "She rings true again. Hear that? That’s the sound of a village with a working forge.",
-   "where": "80_game.js:93"
+   "where": "80_game.js:97"
   },
   {
    "speaker": "brandt",
    "text": "Find the boy. Tobin. Fair hair, guilty face.",
-   "where": "80_game.js:94"
+   "where": "80_game.js:98"
   },
   {
    "speaker": "brandt",
    "text": "The watchtower, he said? Up the crag past the chapel. Mind your footing.",
-   "where": "80_game.js:94"
+   "where": "80_game.js:98"
   },
   {
    "speaker": "brandt",
    "text": "Iron from the Greyspine, charcoal from the pine, water from the Stonewater. Everything in this valley was made within sight of it. That’s rarer than you’d think.",
-   "where": "80_game.js:96"
+   "where": "80_game.js:100"
   },
   {
    "speaker": "tobin",
    "text": "The hammer? I, um. I only borrowed it! I was playing knights up at the old watchtower, and then it got dark, and I ran, and... I left it by the fire ring. Please don’t tell him it was me.",
-   "where": "80_game.js:98"
+   "where": "80_game.js:102"
   },
   {
    "speaker": "tobin",
    "text": "He wasn’t even cross! Well. He was a bit cross.",
-   "where": "80_game.js:99"
+   "where": "80_game.js:103"
   },
   {
    "speaker": "tobin",
    "text": "Bet you can’t beat me to the well!",
-   "where": "80_game.js:99"
+   "where": "80_game.js:103"
   },
   {
    "speaker": "tobin",
    "text": "A smith, like Brandt. I’m going to forge a sword as tall as Warden Hale. Taller!",
-   "where": "80_game.js:99"
-  },
-  {
-   "speaker": "maren",
-   "text": "Hm. Young eyes. Good. The frost came early and my stores are thin. I need frostcaps: pale blue, and they glow a little at dusk. They grow where it is cold and quiet. By the lake, at the forest’s edge, near old stones. Bring me five.",
    "where": "80_game.js:103"
   },
   {
    "speaker": "maren",
+   "text": "Hm. Young eyes. Good. The frost came early and my stores are thin. I need frostcaps: pale blue, and they glow a little at dusk. They grow where it is cold and quiet. By the lake, at the forest’s edge, near old stones. Bring me five.",
+   "where": "80_game.js:107"
+  },
+  {
+   "speaker": "maren",
    "text": "Five, and not one bruised! You have gentle hands. Take this tonic. It will keep the mountain chill from your bones.",
-   "where": "80_game.js:104"
+   "where": "80_game.js:108"
   },
   {
    "speaker": "maren",
    "text": "Sixty winters in this valley. I have buried more secrets in that garden than turnips.",
-   "where": "80_game.js:106"
+   "where": "80_game.js:110"
   },
   {
    "speaker": "maren",
    "text": "Fevers, mostly. And grief, a little, though I don’t tell them that’s what’s in the tea.",
-   "where": "80_game.js:106"
+   "where": "80_game.js:110"
   },
   {
    "speaker": "aldous",
    "text": "The peace of the Dawn upon you. Forgive the quiet. Our bell rope rotted through at midsummer, and I have neither the coin nor the knees to replace it. A village without its bell is a body without a voice.",
-   "where": "80_game.js:110"
+   "where": "80_game.js:114"
   },
   {
    "speaker": "aldous",
    "text": "Would you? Marta keeps good hemp at her shop on the square. The Dawn remembers a kindness.",
-   "where": "80_game.js:110"
+   "where": "80_game.js:114"
   },
   {
    "speaker": "aldous",
    "text": "Hemp, and well laid! Give me one moment in the tower... there. It is done. Would you ring it? It ought to be a friend who rings it first.",
-   "where": "80_game.js:111"
+   "where": "80_game.js:115"
   },
   {
    "speaker": "aldous",
    "text": "Marta keeps good hemp rope at her shop on the square, east side.",
-   "where": "80_game.js:112"
+   "where": "80_game.js:116"
   },
   {
    "speaker": "aldous",
    "text": "The rope hangs under the tower, by the door. Pull, and let the valley hear.",
-   "where": "80_game.js:113"
+   "where": "80_game.js:117"
   },
   {
    "speaker": "aldous",
    "text": "Listen. The valley has its voice again.",
-   "where": "80_game.js:114"
+   "where": "80_game.js:118"
   },
   {
    "speaker": "aldous",
    "text": "Only that the night ends. Every night, without fail. We find that worth a small stone house and a bell.",
-   "where": "80_game.js:114"
+   "where": "80_game.js:118"
   },
   {
    "speaker": "marta",
    "text": "Quill’s Sundries. If I don’t have it, you don’t need it.",
-   "where": "80_game.js:117"
+   "where": "80_game.js:121"
   },
   {
    "speaker": "marta",
    "text": "Thirty feet of the best. Don’t hang anything you can’t lift.",
-   "where": "80_game.js:117"
+   "where": "80_game.js:121"
   },
   {
    "speaker": "marta",
    "text": "Baked this morning. Mostly.",
-   "where": "80_game.js:117"
+   "where": "80_game.js:121"
   },
   {
    "speaker": "marta",
    "text": "From Edda’s trees. Sweetest in the valley.",
-   "where": "80_game.js:117"
+   "where": "80_game.js:121"
   },
   {
    "speaker": "marta",
    "text": "I trade with the lowland caravans twice a year. The rest of the time I trade in gossip, and the price is always fair.",
-   "where": "80_game.js:117"
-  },
-  {
-   "speaker": "rowan",
-   "text": "Brackenfell remembers its friends. Stay as long as you like. Stay for good, if the road will let you.",
    "where": "80_game.js:121"
   },
   {
    "speaker": "rowan",
+   "text": "Brackenfell remembers its friends. Stay as long as you like. Stay for good, if the road will let you.",
+   "where": "80_game.js:125"
+  },
+  {
+   "speaker": "rowan",
    "text": "The inn has its ale, the forge its hammer, Maren her remedies, and the bell its voice. Do you know how long it has been since Brackenfell was whole? We used to light a fire in the square at harvest’s end, and the whole valley would come. Light it tonight. You have earned the tinder.",
-   "where": "80_game.js:124"
+   "where": "80_game.js:128"
   },
   {
    "speaker": "rowan",
    "text": "Sit a while. An old man’s stories are all the entertainment this square can afford.",
-   "where": "80_game.js:127"
+   "where": "80_game.js:131"
   },
   {
    "speaker": "rowan",
    "text": "Before the bell there was the beacon on the crag, and before the beacon, only the stars. We have always found some way to say: here we are. Come and find us.",
-   "where": "80_game.js:127"
+   "where": "80_game.js:131"
   },
   {
    "speaker": "rowan",
    "text": "Begin with Greta at the inn. Everything in Brackenfell begins there.",
-   "where": "80_game.js:127"
+   "where": "80_game.js:131"
   },
   {
    "speaker": "edda",
    "text": "Wheat’s in, mostly. Chickens are out, always.",
-   "where": "80_game.js:129"
+   "where": "80_game.js:133"
   },
   {
    "speaker": "edda",
    "text": "Fairweather land, five generations. The soil is thin and the summers short, but the bread tastes of it. If you see Bram dawdling at the market, tell him the barn won’t sweep itself.",
-   "where": "80_game.js:129"
+   "where": "80_game.js:133"
   },
   {
    "speaker": "finn",
    "text": "Shh. You’ll scare the char.",
-   "where": "80_game.js:130"
+   "where": "80_game.js:134"
   },
   {
    "speaker": "finn",
    "text": "Mirrormere gives what she gives. She’s deep in the middle, mind. Deeper than the watchtower is tall, they say. Oh, and there’s one of Maren’s blue flowers on the shore yonder, if you’re collecting.",
-   "where": "80_game.js:130"
+   "where": "80_game.js:134"
   },
   {
    "speaker": "lark",
    "text": "A song for the traveller? I know nine. Seven of them are sad.",
-   "where": "80_game.js:131"
+   "where": "80_game.js:135"
   },
   {
    "speaker": "lark",
    "text": "This one’s called “The Road Goes Ever Up.” It isn’t about anything. The good ones never are.",
-   "where": "80_game.js:131"
+   "where": "80_game.js:135"
   },
   {
    "speaker": "lark",
    "text": "I came for one night, two winters ago. Greta’s ale is a kind of gravity.",
-   "where": "80_game.js:131"
+   "where": "80_game.js:135"
   },
   {
    "speaker": "wren",
    "text": "You walk loud.",
-   "where": "80_game.js:132"
+   "where": "80_game.js:136"
   },
   {
    "speaker": "wren",
    "text": "Forest edge, north-west of the gate. Another on the rocks above the river, north of the bridge. And one past my cabin, where the ground stays cold. Don’t trample them.",
-   "where": "80_game.js:132"
+   "where": "80_game.js:136"
   },
   {
    "speaker": "wren",
    "text": "Hare. Grouse. Silence, mostly.",
-   "where": "80_game.js:132"
+   "where": "80_game.js:136"
   },
   {
    "speaker": "pip",
    "text": "Have you seen a chicken? Not for any reason.",
-   "where": "80_game.js:133"
+   "where": "80_game.js:137"
   },
   {
    "speaker": "pip",
    "text": "My mum sells cloth and says I have to stay where she can see me. So I’m going to be a knight. Or a chicken farmer. I haven’t decided.",
-   "where": "80_game.js:133"
+   "where": "80_game.js:137"
   },
   {
    "speaker": "ivo",
    "text": "Patrol’s quiet. Keep to the roads after dark, friend.",
-   "where": "80_game.js:134"
+   "where": "80_game.js:138"
   },
   {
    "speaker": "ivo",
    "text": "Stonewater Bridge? Older than the village. Older than the chapel. Whoever built it meant for something to be on the other side.",
-   "where": "80_game.js:134"
+   "where": "80_game.js:138"
   },
   {
    "speaker": "hilda",
    "text": "Wool from the high pastures, dyed with Maren’s roots. Feel that. Go on.",
-   "where": "80_game.js:135"
+   "where": "80_game.js:139"
   },
   {
    "speaker": "hilda",
    "text": "It keeps us fed. And if my Pip offers to sell you a chicken, it isn’t hers.",
-   "where": "80_game.js:135"
+   "where": "80_game.js:139"
   },
   {
    "speaker": "bram",
    "text": "Apples! Cabbages! Oh. Sorry. Habit.",
-   "where": "80_game.js:136"
+   "where": "80_game.js:140"
   },
   {
    "speaker": "bram",
    "text": "Not a coin? Go on, then. Don’t tell Edda.",
-   "where": "80_game.js:136"
+   "where": "80_game.js:140"
   },
   {
    "speaker": "bram",
    "text": "Best in the valley. Only in the valley, mind, but still.",
-   "where": "80_game.js:136"
+   "where": "80_game.js:140"
   },
   {
    "speaker": "rowan",
    "text": "Safer than most. But there has been smoke in the pines north-west of the gate these three nights, and it is not Wren’s. Outlaws, come down off the passes before the snow. Hale cannot leave the gate, and I am too old to do more than worry. If you carry a blade and know its use, drive them off. Mind the big one.",
-   "where": "80_game.js:144"
+   "where": "80_game.js:148"
   },
   {
    "speaker": "rowan",
    "text": "North-west of the gate, among the pines. You will see their rag on a pole before they see you, if you are careful. Eat before you go, and do not be too proud to run.",
-   "where": "80_game.js:145"
+   "where": "80_game.js:149"
   },
   {
    "speaker": "rowan",
    "text": "Then the children can pick berries at the wood’s edge again. This was my father’s, and it has hung on the wall long enough. Take it, with the village’s thanks.",
-   "where": "80_game.js:146"
+   "where": "80_game.js:150"
   },
   {
    "speaker": "brandt",
    "text": "Troubled me? They had my second-best tongs and a roll of files off the cart at the ford, a week gone. Their chief wears them on his belt like trophies. One ear, red beard. They camp west of the path up to the old watchtower. Bring my tools back and I’ll put a proper sword in your hand, not that kitchen iron.",
-   "where": "80_game.js:149"
+   "where": "80_game.js:153"
   },
   {
    "speaker": "brandt",
    "text": "Hah! Not a scratch on them. As promised: an arming sword, drawn out this spring and waiting for a hand. Keep the point low and your feet moving.",
-   "where": "80_game.js:150"
+   "where": "80_game.js:154"
   },
   {
    "speaker": "hale",
    "text": "There’s coin on the board for outlaws, and I’ll pay it myself. Five of them put down and the road is a road again. Two camps: one in the pines north-west of here, one under the old watchtower. Don’t take on more than you can see.",
-   "where": "80_game.js:155"
+   "where": "80_game.js:159"
   },
   {
    "speaker": "hale",
    "text": "Five, by my count and yours. Paid in full. You’ve done the valley a turn, and I’ll not forget it.",
-   "where": "80_game.js:156"
+   "where": "80_game.js:160"
   },
   {
    "speaker": "maren",
    "text": "Twenty-four, child. Frostcaps do not pick themselves.",
-   "where": "80_game.js:158"
+   "where": "80_game.js:162"
   },
   {
    "speaker": "maren",
    "text": "Drink it when you bleed, not before. It is no use against foolishness.",
-   "where": "80_game.js:158"
+   "where": "80_game.js:162"
   },
   {
    "speaker": "maren",
@@ -421,40 +421,420 @@
    "where": "81_wilds_story.js:59"
   },
   {
+   "speaker": "hale",
+   "text": "Finn pulled a man out of the lake at first light. He’s on a bier at the wharf, south end of the town. Go and look, if you’ve the stomach, before the gossips make a story of him.",
+   "where": "82_story.js:105"
+  },
+  {
+   "speaker": "hale",
+   "text": "That’s Corwin’s hand. Alive, then, or he was. Let me see.\n\nBread. Fifty years of bread, in a cave on the shore. I barred that door and told myself it was to keep them out.",
+   "where": "82_story.js:108"
+  },
+  {
+   "speaker": "hale",
+   "text": "That something went wrong below, before I wore this helmet. That Rowan went out to the shore every dawn and never said why. I didn’t ask. A man can keep a gate for thirty years that way.",
+   "where": "82_story.js:108"
+  },
+  {
+   "speaker": "hale",
+   "text": "Not here. Rowan knows the way to the lake cave; he’s walked it with a pail more mornings than I’ve slept. Go and ask him, and don’t let him tell you it’s nothing.",
+   "where": "82_story.js:108"
+  },
+  {
+   "speaker": "maren",
+   "text": "Brass, and a number. OM fourteen: the Old Mine, Dunstan Pell. He dug under Corwin, a good while back.",
+   "where": "82_story.js:109"
+  },
+  {
+   "speaker": "maren",
+   "text": "No. Dry as a bone inside and thin as a rake: he walked a long way on nothing, in the dark. That’s no lake’s work.",
+   "where": "82_story.js:110"
+  },
+  {
+   "speaker": "maren",
+   "text": "The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
+   "where": "82_story.js:111"
+  },
+  {
+   "speaker": "aldous",
+   "text": "There’s a vestment chest in the sacristy that I’ve never had the heart to open. The Sexton’s things are in it. The crypt gate under the nave has a lock to match.",
+   "where": "82_story.js:113"
+  },
+  {
+   "speaker": "finn",
+   "text": "First light, face down in the reeds. The lake gives drowned men back swollen. This one was thin as a rake and dry as kindling. Whatever he was, he walked to the water; he didn’t fall in.",
+   "where": "82_story.js:114"
+  },
+  {
+   "speaker": "pip",
+   "text": "A man under a sheet! Hale said not to look. I looked. He’s got silver in his teeth.",
+   "where": "82_story.js:115"
+  },
+  {
+   "speaker": "marta",
+   "text": "You’ve one already, dear. Don’t be greedy with light.",
+   "where": "82_story.js:117"
+  },
+  {
+   "speaker": "marta",
+   "text": "Fill it before you go and mind the oil. Where you’re going, you’ll want it.",
+   "where": "82_story.js:117"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Sit down, you’re making me tired. ... Hale has read it, then. I thought he might. I thought it would be me they came for one day.\n\nThe cave on the lake shore. The cellar of the Hart. I’ll tell you the rest, but not on my feet, and not today.",
+   "where": "82_story.js:120"
+  },
+  {
+   "speaker": "hale",
+   "text": "Good. That’s the end of it. This time.",
+   "where": "82b_interact.js:206"
+  },
+  {
+   "speaker": "hale",
+   "text": "You haven’t the coin. Then it’s the cell. Come on.",
+   "where": "82b_interact.js:207"
+  },
+  {
+   "speaker": "hale",
+   "text": "Paid. Keep your hands in your pockets in future.",
+   "where": "82b_interact.js:207"
+  },
+  {
+   "speaker": "hale",
+   "text": "There’s no cell to hold you. Go on, then.",
+   "where": "82b_interact.js:212"
+  },
+  {
+   "speaker": "greta",
+   "text": "Three gold, love. Your purse says otherwise.",
+   "where": "82b_interact.js:246"
+  },
+  {
+   "speaker": "greta",
+   "text": "Eat it while it’s hot. I don’t do cold.",
+   "where": "82b_interact.js:246"
+  },
+  {
+   "speaker": "greta",
+   "text": "Four gold, love, and I’ll not haggle with a purse that light.",
+   "where": "82b_interact.js:247"
+  },
+  {
+   "speaker": "greta",
+   "text": "Up the stairs, the bed by the window. Sleep till you’re done.",
+   "where": "82b_interact.js:247"
+  },
+  {
+   "speaker": "hale",
+   "text": "That’s a fine blade. Don’t draw it in my square.",
+   "where": "82b_interact.js:256"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Good. It sits well in your hand. My work.",
+   "where": "82b_interact.js:257"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Where did you get that? That’s my dies, fifty years back. Old Mine steel.",
+   "where": "82b_interact.js:258"
+  },
+  {
+   "speaker": "maren",
+   "text": "You’re bleeding on my floor. Sit.",
+   "where": "82b_interact.js:259"
+  },
+  {
+   "speaker": "greta",
+   "text": "Off down a hole, love? I’ll keep the bed made.",
+   "where": "82b_interact.js:260"
+  },
+  {
+   "speaker": "marta",
+   "text": "Odd thing to carry. I’ll not ask.",
+   "where": "82b_interact.js:261"
+  },
+  {
+   "speaker": "aldous",
+   "text": "The Dawn keep you. You look as though you have seen the dead.",
+   "where": "82b_interact.js:262"
+  },
+  {
+   "speaker": "finn",
+   "text": "Still thinking about that man, aren’t you. So am I.",
+   "where": "82b_interact.js:263"
+  },
+  {
+   "speaker": "ivo",
+   "text": "A lantern by day. Either you’re lost, or you’re going somewhere I’d not.",
+   "where": "82b_interact.js:264"
+  },
+  {
+   "speaker": "rowan",
+   "text": "The bread was late twice this week.",
+   "where": "82c_secrets.js:110"
+  },
+  {
+   "speaker": "greta",
+   "text": "The new one has been asking about the mine door.",
+   "where": "82c_secrets.js:110"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Then Hale is closer than I would like. Say nothing in the Hart.",
+   "where": "82c_secrets.js:110"
+  },
+  {
+   "speaker": "greta",
+   "text": "And if they go down?",
+   "where": "82c_secrets.js:110"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Then they find what Corwin found. Go. Go before the bell.",
+   "where": "82c_secrets.js:110"
+  },
+  {
+   "speaker": "greta",
+   "text": "The house on the south lane? Nobody’s lived there in years. Pass the salt, love, and don’t ask me twice.",
+   "where": "82c_secrets.js:136"
+  },
+  {
+   "speaker": "marta",
+   "text": "Oh, that. I sell nothing to that house and I take nothing from it. Will you be wanting candles?",
+   "where": "82c_secrets.js:136"
+  },
+  {
+   "speaker": "finn",
+   "text": "Don’t look at the shutters. My father said never to look at the shutters.",
+   "where": "82c_secrets.js:136"
+  },
+  {
+   "speaker": "aldous",
+   "text": "There are houses the Dawn will not name, child. That is one. Leave it to her.",
+   "where": "82c_secrets.js:136"
+  },
+  {
    "speaker": "brandt",
    "text": "Sound work, that. Look after it and it will look after you.",
-   "where": "93_inventory.js:51"
+   "where": "93_inventory.js:63"
   },
   {
    "speaker": "brandt",
    "text": "Iron from the Greyspine, every piece. I don’t haggle.",
-   "where": "93_inventory.js:52"
+   "where": "93_inventory.js:64"
   },
   {
    "speaker": "brandt",
    "text": "Let’s see it, then.",
-   "where": "93_inventory.js:57"
+   "where": "93_inventory.js:69"
   },
   {
    "speaker": "brandt",
    "text": "You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.",
-   "where": "93_inventory.js:57"
+   "where": "93_inventory.js:69"
+  },
+  {
+   "speaker": "marta",
+   "text": "Let’s have a look, dear.",
+   "where": "94b_economy.js:47"
+  },
+  {
+   "speaker": "marta",
+   "text": "Whale oil. It stinks and it burns. Don’t spill it near the candles.",
+   "where": "94b_economy.js:50"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Grey silver, never stamped. Aye, I can. Three bars and ninety gold, and the edge will outlast the blade. Mind, I’ll want to know where you had it.",
+   "where": "94b_economy.js:51"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Done. Don’t draw it in the Hart.",
+   "where": "94b_economy.js:51"
+  },
+  {
+   "speaker": "greta",
+   "text": "They say Tobin’s been up the Watch Bell more than the Watch has. A tin box, a lockpick, and a boy who will not say what he saw from the top.",
+   "where": "94b_economy.js:77"
+  },
+  {
+   "speaker": "greta",
+   "text": "There’s a stone in the terrace wall below the Elder’s plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.",
+   "where": "94b_economy.js:78"
+  },
+  {
+   "speaker": "greta",
+   "text": "The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.",
+   "where": "94b_economy.js:79"
+  },
+  {
+   "speaker": "greta",
+   "text": "Up on the Hart’s roof walk there’s a trunk under the eaves that nobody here owns. Greta says it came with the building.",
+   "where": "94b_economy.js:80"
+  },
+  {
+   "speaker": "greta",
+   "text": "The cellar wall in this very house, the east one: newer brick than the rest. Ask me no more, love.",
+   "where": "94b_economy.js:81"
+  },
+  {
+   "speaker": "greta",
+   "text": "The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.",
+   "where": "94b_economy.js:82"
+  },
+  {
+   "speaker": "greta",
+   "text": "Lights behind the chapel after midnight, and two folk talking low who’d not thank you for listening. Stand off, if you’re bold. Don’t get close.",
+   "where": "94b_economy.js:83"
+  },
+  {
+   "speaker": "greta",
+   "text": "The Magpie walks at dusk from the square to somewhere west of the weavers, same road each time. Nobody follows her. You’d have to be patient.",
+   "where": "94b_economy.js:84"
+  },
+  {
+   "speaker": "greta",
+   "text": "The shut house on the south lane. Don’t ask Marta. Don’t ask Finn. Ask nobody. Take a key, if you’ve one with a wren on it.",
+   "where": "94b_economy.js:85"
+  },
+  {
+   "speaker": "greta",
+   "text": "The mine door has been barred for fifty years. The Sexton kept the key, and old Sextons keep everything.",
+   "where": "94b_economy.js:86"
+  },
+  {
+   "speaker": "greta",
+   "text": "They say the Foreman had a strongbox down there and the only key hangs round his neck. Hung.",
+   "where": "94b_economy.js:87"
+  },
+  {
+   "speaker": "greta",
+   "text": "A drowned man on the wharf, dry as bone. The wise folk are keeping their windows shut.",
+   "where": "94b_economy.js:88"
+  },
+  {
+   "speaker": "greta",
+   "text": "Hale cries on the last day of the month. Pip told me. Pip tells everybody.",
+   "where": "94b_economy.js:89"
+  },
+  {
+   "speaker": "greta",
+   "text": "The Elder talks to the lake. Always has. Says it answers.",
+   "where": "94b_economy.js:90"
+  },
+  {
+   "speaker": "greta",
+   "text": "Nothing new, love. Same faces, same ale.",
+   "where": "94b_economy.js:94"
+  },
+  {
+   "speaker": "rowan",
+   "text": "The bread goes out at dawn. I carry it myself, and I am too old to be told it is a kindness.\n\nThe count stays kept. Sit. It will not hurt you to be counted.",
+   "where": "94d_act2.js:34"
+  },
+  {
+   "speaker": "rowan",
+   "text": "It is quiet. I did not know quiet could be this loud.\n\nThey are asleep. Thank you. I could not have said the names. I tried.",
+   "where": "94d_act2.js:35"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Sit. You will want it from the start, and you will not like where it starts.\n\nFifty years back my father sold the last seam of the Old Mine to a Crown assayer, and the silver was singing, and he would not share it. He sealed the adit with twelve of his own shift still below. They did not die as you or I do. They stayed. They kept digging.",
+   "where": "94d_act2.js:36"
+  },
+  {
+   "speaker": "rowan",
+   "text": "It was never for their bellies. It was so that someone remembered them. Every dawn a loaf and a pail, left on the slab in the cave on the shore, and the count said aloud: one to twelve. As long as the count is kept they stay men. If it is not, the song takes what is left of the men in them, and they come up.\n\nI carried it thirty years.",
+   "where": "94d_act2.js:36"
+  },
+  {
+   "speaker": "rowan",
+   "text": "I stopped it. Three weeks ago. Greta has found a buyer who pays double and wants the silver by the barrow, and I am old, and I thought: let it end with me. Pell walked out by the lake cave to ask why the bread had not come. You saw what the lake does to a man who has been so long under.",
+   "where": "94d_act2.js:36"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Go the way Greta’s people ran the silver out. The Hart’s cellar has a wall that was never the end of the cellar: the fresh brick on the east side. A tunnel runs from there under the town to the lake cave.\n\nThe twelve stand by the slab. You will know what to do when you see them. I never did.",
+   "where": "94d_act2.js:36"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Go on. The Hart. The east cellar wall, newer brick than the rest. Take bread. Take a light. Take your courage in both hands, because it has been a long while since anyone went that way and meant well.",
+   "where": "94d_act2.js:37"
+  },
+  {
+   "speaker": "greta",
+   "text": "I’ll not charge you for the stew this once, love. Don’t make it a habit.",
+   "where": "94d_act2.js:76"
+  },
+  {
+   "speaker": "greta",
+   "text": "The Hart’s never been so full. People want to be near other people, after.",
+   "where": "94d_act2.js:77"
+  },
+  {
+   "speaker": "hale",
+   "text": "The count is kept and the gate is quiet. I’ll sleep tonight with the key out of my hand.",
+   "where": "94d_act2.js:78"
+  },
+  {
+   "speaker": "hale",
+   "text": "I’ve left the old door unbarred. Nothing in it wants out now.",
+   "where": "94d_act2.js:79"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Silver for a blade? Aye, I’ll work it now. It’s only metal again.",
+   "where": "94d_act2.js:80"
+  },
+  {
+   "speaker": "finn",
+   "text": "Nobody’s come out of the lake since. I check every morning.",
+   "where": "94d_act2.js:81"
+  },
+  {
+   "speaker": "ivo",
+   "text": "Good. That’s the end of it. This time.",
+   "where": "82b_interact.js:206"
+  },
+  {
+   "speaker": "ivo",
+   "text": "You haven’t the coin. Then it’s the cell. Come on.",
+   "where": "82b_interact.js:207"
+  },
+  {
+   "speaker": "ivo",
+   "text": "Paid. Keep your hands in your pockets in future.",
+   "where": "82b_interact.js:207"
+  },
+  {
+   "speaker": "ivo",
+   "text": "There’s no cell to hold you. Go on, then.",
+   "where": "82b_interact.js:212"
+  },
+  {
+   "speaker": "marta",
+   "text": "You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.",
+   "where": "94b_economy.js:47"
   }
  ],
  "dynamic": [
   {
    "speaker": "maren",
-   "where": "80_game.js:105",
+   "where": "80_game.js:109",
    "raw": "'You have ' + frostN() + ' of five. Keep looking where it is cold and quiet.'"
   },
   {
    "speaker": "",
-   "where": "80_game.js:119",
+   "where": "80_game.js:123",
    "raw": "'That’s ' + cost + ' gold, dear, and you have ' + S.gold + '. Greta or Brandt might have paying work.'"
   },
   {
    "speaker": "rowan",
-   "where": "80_game.js:127",
+   "where": "80_game.js:131",
    "raw": "'There are troubles enough: ' + left.join(', ') + '. Mend those, and come back to me.'"
   },
   {
@@ -463,9 +843,44 @@
    "raw": "'Bogbean ' + (has('bogbean') ? 'in hand' : 'still wanting') + ', sunwort ' + (has('sunwort') ? 'in hand' : 'still wanting') + ', stonecrop ' + (has('stonecrop')"
   },
   {
+   "speaker": "",
+   "where": "82b_interact.js:209",
+   "raw": "'Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is ' + fine + ' gold, or you hand it back, or you sleep in the cell and th"
+  },
+  {
    "speaker": "brandt",
-   "where": "93_inventory.js:49",
+   "where": "93_inventory.js:61",
    "raw": "'That’s ' + m.cost + ' gold, and you’ve ' + S.gold + '. Hale pays a bounty on outlaws, if you’ve the stomach for it.'"
+  },
+  {
+   "speaker": "",
+   "where": "94b_economy.js:39",
+   "raw": "'That’s ' + pr + ' gold, and you’ve ' + S.gold + '. The board in the square pays for honest work.'"
+  },
+  {
+   "speaker": "brandt",
+   "where": "94b_economy.js:51",
+   "raw": "'Ninety gold, and you’ve ' + S.gold + '.'"
+  },
+  {
+   "speaker": "-",
+   "where": "94b_economy.js:64",
+   "raw": "j.title + ': ' + (j.have ? 'three flasks of lamp oil, you have ' + (S.items.oil || 0) : r.job.n + ' of ' + j.goal) + '.'"
+  },
+  {
+   "speaker": "-",
+   "where": "94b_economy.js:66",
+   "raw": "d.text + '\\n\\nYou take the notice.'"
+  },
+  {
+   "speaker": "greta",
+   "where": "94b_economy.js:94",
+   "raw": "pick[0][1]"
+  },
+  {
+   "speaker": "-",
+   "where": "94d_act2.js:110",
+   "raw": "'Three loaves, and you have ' + bread + '. The Hart has stew and Marta has loaves, and nobody here is going anywhere.'"
   }
  ],
  "unresolved": []

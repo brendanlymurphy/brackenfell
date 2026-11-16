@@ -1,1 +1,42 @@
-{"byText":{}}
+{
+ "_note": "Speakers the walk in extract.mjs cannot work out. byText: start of the line -> speaker id, a list of ids (recorded once for each), or '-' for text that is never spoken. silent: TALK names that are things, not people (their text is read, not heard). tables: a named array of [condition, 'line'] rows -> the one person who says them.",
+ "silent": [
+  "hollow",
+  "board"
+ ],
+ "byText": {
+  "Good. That’s the end of it. This time.": [
+   "hale",
+   "ivo"
+  ],
+  "You haven’t the coin. Then it’s the cell.": [
+   "hale",
+   "ivo"
+  ],
+  "Paid. Keep your hands in your pockets": [
+   "hale",
+   "ivo"
+  ],
+  "There’s no cell to hold you.": [
+   "hale",
+   "ivo"
+  ],
+  "Move along.": "-",
+  "Three gold, love.": "greta",
+  "Eat it while it’s hot.": "greta",
+  "Four gold, love,": "greta",
+  "Up the stairs, the bed by the window.": "greta",
+  "Sound work, that.": "brandt",
+  "Iron from the Greyspine": "brandt",
+  "Let’s have a look, dear.": "marta",
+  "Let’s see it, then.": "brandt",
+  "You’ve nothing I’d give coin for.": [
+   "brandt",
+   "marta"
+  ],
+  "Nothing new, love.": "greta"
+ },
+ "tables": {
+  "RUMOURS": "greta"
+ }
+}

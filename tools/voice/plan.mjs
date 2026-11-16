@@ -10,9 +10,10 @@ const plan = [], seen = new Set(), manifestBarks = {};
 const add = (speaker, text, kind) => { const c = cast[speaker]; if (!c) { console.error('no cast for', speaker); return; } const key = cyrb53(speaker + '\n' + text); if (seen.has(key)) return; seen.add(key);
   const say = clean(text), file = crypto.createHash('sha1').update([speaker, c.voice, c.speed, c.pitch, say].join('|')).digest('hex').slice(0, 14) + '.m4a';
   plan.push({ key, speaker, kind, text, say, voice: c.voice, speed: c.speed, pitch: c.pitch, file }); return key; };
-for (const l of ex.lines) add(l.speaker, l.text, 'line');
+for (const l of ex.lines) { const k = add(l.speaker, l.text, 'line'); if (k) plan[plan.length - 1].src = l.where.split(':')[0]; }
 for (const [sp, cats] of Object.entries(barks)) { if (sp.startsWith('_')) continue; manifestBarks[sp] = {}; for (const [cat, arr] of Object.entries(cats)) manifestBarks[sp][cat] = arr.map(t => add(sp, t, 'bark')); }
-// priority order for generation: the main characters' first lines and the first quest come first
-const first = ['hale', 'greta', 'brandt', 'marta', 'aldous', 'maren', 'rowan']; plan.sort((a, b) => (a.kind === 'line' ? 0 : 1) - (b.kind === 'line' ? 0 : 1) || (first.includes(a.speaker) ? 0 : 1) - (first.includes(b.speaker) ? 0 : 1));
+// order of generation (the daily limit means a run can stop anywhere): dialogue before barks, then in story order, which is the order of the
+// source files (80 the first quests, 82 Act 1, 82b and 82c what the town says and hides, 94b shops and rumours, 94d Acts 2 and 3)
+plan.sort((a, b) => (a.kind === 'line' ? 0 : 1) - (b.kind === 'line' ? 0 : 1) || (a.src || '').localeCompare(b.src || ''));
 fs.writeFileSync(root + 'tools/voice/plan.json', JSON.stringify({ plan, barks: manifestBarks }, null, 1));
 console.log(plan.length + ' files planned (' + plan.filter(p => p.kind === 'line').length + ' dialogue, ' + plan.filter(p => p.kind === 'bark').length + ' barks), ' + plan.reduce((a, p) => a + p.say.length, 0) + ' characters');
