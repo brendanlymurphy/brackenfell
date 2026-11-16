@@ -6785,8 +6785,8 @@ PD.rack = function (P, room, x, z, len, rot, kinds) {
     for (let i = 0; i < n; i++) {
       const px = -len / 2 + 0.2 + i * (len - 0.4) / (n - 1), k = R.pick(kinds), j = R.s() * 0.03;
       m.mat(MAT.METAL, COL.black); m.box(px - 0.006, -0.78, -0.006, px + 0.006, -0.6, 0.006);
-      if (k === 'herb') { m.mat(MAT.CLOTH, R.pick([[0.3, 0.4, 0.18], [0.42, 0.4, 0.2], [0.5, 0.38, 0.2]]), 0.5); m.cyl(px + j, -1.12, 0, 0.1, 0.02, 0.34, 6, 1); }
-      else if (k === 'ham') { m.mat(MAT.PLAIN, [0.5, 0.26, 0.2]); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
+      if (k === 'herb') { m.mat(MAT.CLOTH, R.pick([[0.26, 0.3, 0.19], [0.33, 0.31, 0.2], [0.36, 0.29, 0.2], [0.3, 0.27, 0.18]]), 0.5); m.cyl(px + j, -0.92, 0, 0.055, 0.012, 0.3, 6, 1); m.cyl(px + j + 0.03, -0.9, 0.015, 0.04, 0.01, 0.24, 5, 1); m.mat(MAT.CLOTH, [0.4, 0.33, 0.22], 0.5); m.box(px + j - 0.02, -0.78, -0.02, px + j + 0.02, -0.75, 0.02); }      // [c5] a small dull bundle tied at the neck, not a bright cone
+      else if (k === 'ham') { m.mat(MAT.THATCH, [0.42, 0.24, 0.19], 0.4); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
       else if (k === 'pot') { m.mat(MAT.METAL, COL.black); m.cyl(px, -1.0, 0, 0.13, 0.16, 0.2, 8, 2); }
       else { m.mat(MAT.PLAIN, [0.78, 0.7, 0.5]); m.ball(px, -0.95, 0, 0.06, 0.08, 0.06, 5, 3); m.ball(px + 0.02, -1.08, 0, 0.06, 0.08, 0.06, 5, 3); }
     }
@@ -7277,7 +7277,7 @@ function pCeil(P, room, x, z, draw, rot) {
 }
 
 // ── general wares: varied small goods for shelves and tables (kept a few dozen triangles each) ──
-const GL = [[0.35, 0.55, 0.4], [0.5, 0.3, 0.15], [0.3, 0.4, 0.55], [0.62, 0.58, 0.45], [0.4, 0.2, 0.25]];
+const GL = [[0.3, 0.4, 0.33], [0.4, 0.3, 0.2], [0.3, 0.34, 0.4], [0.5, 0.46, 0.38], [0.34, 0.24, 0.25]];      // [c5] muted glass and clay, not primary colours
 PD.ware = {
   rope: (m, R) => { m.mat(MAT.CLOTH, [0.62, 0.52, 0.34], 0.5); m.lathe([[0.05, 0], [0.12, 0.005], [0.14, 0.04], [0.13, 0.09], [0.06, 0.1], [0.05, 0.05]], 9, 1); },
   lantern: (m, R) => { m.mat(MAT.METAL, COL.black); m.box(-0.055, 0, -0.055, 0.055, 0.015, 0.055); m.box(-0.06, 0.2, -0.06, 0.06, 0.225, 0.06); for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.box(sx * 0.05 - 0.005, 0.015, sz * 0.05 - 0.005, sx * 0.05 + 0.005, 0.2, sz * 0.05 + 0.005); m.box(-0.02, 0.225, -0.005, 0.02, 0.27, 0.005); emit(m, 0.6, () => { m.mat(MAT.PLAIN, [1, 0.7, 0.3]); m.box(-0.035, 0.03, -0.035, 0.035, 0.12, 0.035, 4 | 8); }); },
@@ -7401,8 +7401,8 @@ PLANS.guardhouse = (P, c, info) => {
   const tb = pDining(P, guard, 3.0, 0.95, { near: [-0.5, 3.0], id: 'table', n: 5, items: ['mug', 'plate', 'bowl', 'book', 'candle', 'loaf'], rots: [0] });
   if (tb) { tb.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); pLamp(P, guard, tb.x, tb.z); }
   // the wall opposite the door: weapon stands either side of the cell and armoury doors, spears, a notice board, shields
-  pKitFloor(P, guard, 's', 'WeaponStand', { n: 'a', at: -1.2 }); pKitFloor(P, guard, 's', 'WeaponStand', { n: 'b', at: 1.2 }); pAgainst(P, guard, 's', id + '.spears1', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: -5.0 }); pAgainst(P, guard, 's', id + '.spears2', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 5.0 });
-  pHang(P, guard, 's', 1.1, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 }) || pHang(P, guard, 's', -1.1, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 }); pHang(P, guard, 's', -1.0, 1.3, 1.1, 2.0, PD.bladeWall(R, 1.3), id + '.blades2', { pivot: 2.0 });
+  pKitFloor(P, guard, 's', 'WeaponStand', { n: 'a', at: -1.95 }); pKitFloor(P, guard, 's', 'WeaponStand', { n: 'b', at: 1.95 }); pAgainst(P, guard, 's', id + '.spears1', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: -5.0 }); pAgainst(P, guard, 's', id + '.spears2', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 5.0 });
+  pHang(P, guard, 's', 0, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 });      // [c5] centred between the two doors, the stands moved out (it was refused beside them)
   pHang(P, guard, 'n', -3.2, 1.3, 1.1, 2.0, PD.tapestry(R, 1.3, 0.9), id + '.board', { pivot: 2.0 });
   pKitFloor(P, guard, 'w', 'Dummy', { n: 'd', at: 'mid' }); pKitFloor(P, guard, 'n', 'WeaponStand', { n: 'c', at: 4.2 });
   pWalls(P, guard, ['Banner_1_Cloth', 'kite_shield', 'Torch_Metal', 'kite_shield', 'Shield_Wooden', 'Banner_2_Cloth', 'Torch_Metal', 'Axe_Bronze', 'Sword_Bronze']);
@@ -7499,7 +7499,8 @@ function hCtx(P, c) {
   F.winKinds = R.pick([['Wide_Flat'], ['Wide_Flat', 'Wide_Round'], ['Thin_Round', 'Wide_Flat'], ['Wide_Round']]);
   F.X = x => F.sx * x; F.S = s => F.sx > 0 ? s : ({ w: 'e', e: 'w' }[s] || s);
   F.rm = (k, rid, kind, x0, z0, x1, z1, o) => pRoom(P, k, rid, kind, F.sx > 0 ? x0 : -x1, z0, F.sx > 0 ? x1 : -x0, z1, Object.assign({ winKinds: F.winKinds }, o || {}));
-  F.fin = (k, o) => Object.assign(k === 0 ? { floor: F.stone0 ? 'stone' : 'wood', tint: F.stone0 ? [0.78, 0.74, 0.7] : F.tint } : { floor: 'wood', tint: F.tint2 }, o || {});
+  F.stoneWalls = hHash(id + '|walls') < (F.stone0 ? 0.7 : 0.18);      // [c5] a stone shell inside as well: the first view is not always plaster
+  F.fin = (k, o) => Object.assign(k === 0 ? { floor: F.stone0 ? 'stone' : 'wood', tint: F.stone0 ? [0.78, 0.74, 0.7] : F.tint } : { floor: 'wood', tint: F.tint2 }, k === 0 && F.stoneWalls ? { walls: 'stone', tint: [0.9, 0.88, 0.84] } : {}, o || {});
   F.door = (a, b, x, z, o) => pDoor(P, a, b, F.X(x), z, o);
   return F;
 }
@@ -7510,7 +7511,13 @@ const hPool = (kind, F) => ({
   store: ['shelf', 'hooks', 'sacks', 'cask', 'torch', 'cabinet'], cellar: ['cask', 'shelf', 'sacks', 'stack', 'torch'], corridor: ['hooks', 'paint', 'sconce', 'tapestry'], yard: ['stack', 'sacks', 'cask'],
 }[kind] || ['hooks', 'cabinet', 'paint', 'sconce']);
 // the density pass and the light for every room of a finished layout
+function hEntryTorch(P, F) {          // [c5] one visible warm source in the first view at night: a torch or a sconce on the wall facing the door, beside the focal piece
+  const e = P.doors.find(d => d.b === null); if (!e) return; const room = P.rooms[e.a]; if (!room || P.torchDone) return;
+  for (const u of [F.X(-2.2), F.X(2.2), F.X(-3.2), F.X(3.2), F.X(-1.4), F.X(1.4)]) if (pTorch(P, room, 's', u, 1.65, 6) || pSconce(P, room, 's', u, 1.6)) { P.torchDone = 1; return; }
+  for (const sd of ['w', 'e']) for (const z of [room.z0 + 3, room.z0 + 4, room.z0 + 2]) if (pTorch(P, room, sd, z, 1.65, 6)) { P.torchDone = 1; return; }
+}
 function hFinish(P, c, F) {
+  hEntryTorch(P, F);
   for (const id in P.rooms) {
     const r = P.rooms[id], k = r.kind === 'cellar' ? 'cellar' : r.kind === 'bedroom' ? 'bedroom' : r.kind === 'store' ? 'store' : r.kind === 'corridor' ? 'corridor' : r.kind === 'yard' ? 'yard' : 'hall';
     PD.dense(P, r, { pool: hPool(k, F), corner: k === 'cellar' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack', 'cask'], mid: { kinds: k === 'cellar' || k === 'store' ? ['casks', 'sacks'] : ['rug'], max: k === 'corridor' ? 0 : 1, min: 0.9 }, middle: k !== 'corridor', racks: k === 'cellar' ? 1 : 0, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
@@ -7685,7 +7692,7 @@ TP.oven = (P, room, lit) => m => {
 };
 TP.vat = (col, r, h) => m => {
   r = r || 0.55; h = h || 0.72; m.mat(MAT.PLANKS, COL.woodDark, 0.5); m.lathe([[r * 0.9, 0], [r, h * 0.45], [r * 0.96, h]], 12, 0);
-  m.mat(MAT.PLAIN, col); m.disc(0, h - 0.07, 0, r * 0.92, 12, 1);
+  m.mat(MAT.METAL, col.map(v => v * 0.4)); m.disc(0, h - 0.07, 0, r * 0.92, 12, 1);      // [c5] a dark surface with a sheen
   m.mat(MAT.METAL, COL.iron); for (const t of [0.15, 0.55, 0.93]) { const rr = r * (0.9 + 0.1 * Math.sin(t * PI * 0.9)) + 0.008; m.lathe([[rr, h * t - 0.02], [rr, h * t + 0.02]], 12, 0); }
   m.mat(MAT.TIMBER, COL.wood); m.beam([r * 0.5, h + 0.55, 0.05], [r * 0.1, h - 0.15, 0], 0.035, 0.035);
   addCircleCollider(m, 0, 0, r, 0, h);
@@ -7752,9 +7759,13 @@ TP.dipRack = m => {
   addBoxCollider(m, -0.75, -0.1, 0.75, 0.9, 0, 1.4);
 };
 TP.carcassBar = (len, R) => m => {
-  m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015); for (const sx of [-1, 1]) m.box(sx * len * 0.46 - 0.006, -0.4, -0.006, sx * len * 0.46 + 0.006, 0, 0.006);
-  const n = Math.max(2, Math.round(len / 0.55));
-  for (let i = 0; i < n; i++) { const x = -len / 2 + 0.3 + i * (len - 0.6) / Math.max(1, n - 1); m.mat(MAT.METAL, COL.black); m.box(x - 0.006, -0.55, -0.006, x + 0.006, -0.37, 0.006); m.mat(MAT.PLAIN, R.pick([[0.36, 0.2, 0.17], [0.42, 0.28, 0.22], [0.32, 0.18, 0.15]])); m.ball(x, -0.8, 0, 0.11, 0.3, 0.08, 7, 5); m.mat(MAT.PLAIN, [0.8, 0.74, 0.64]); m.box(x - 0.02, -0.9, -0.085, x + 0.02, -0.5, -0.07); }
+  m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015);
+  const n = Math.max(2, Math.round(len / 0.6));
+  for (let i = 0; i < n; i++) { const x = -len / 2 + 0.3 + i * (len - 0.6) / Math.max(1, n - 1); m.mat(MAT.METAL, COL.black); m.box(x - 0.006, -0.52, -0.006, x + 0.006, -0.37, 0.006); m.mat(MAT.THATCH, R.pick([[0.45, 0.3, 0.24], [0.4, 0.27, 0.21], [0.5, 0.35, 0.27]]), 0.4); m.ball(x, -0.74, 0, 0.09, 0.22, 0.07, 7, 5); }
+};
+TP.hideBar = (len, R) => m => {
+  m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015);
+  for (let i = 0; i < 4; i++) { const x = -len / 2 + 0.25 + i * (len - 0.5) / 3, h = 0.7 + R() * 0.25; m.mat(MAT.CLOTH, R.pick([[0.36, 0.27, 0.18], [0.3, 0.24, 0.17], [0.42, 0.32, 0.22]]), 0.45); m.box(x - 0.2, -0.37 - h, -0.012, x + 0.2, -0.37, 0.012); }
 };
 TP.sausages = (len, R) => m => { m.mat(MAT.METAL, COL.black); m.box(-len / 2, -0.04, -0.012, len / 2, -0.015, 0.012); for (let i = 0; i < Math.round(len / 0.12); i++) { const x = -len / 2 + 0.08 + i * 0.12; m.mat(MAT.PLAIN, R.pick([[0.42, 0.22, 0.17], [0.5, 0.3, 0.22]])); m.ball(x, -0.2, 0, 0.035, 0.18, 0.035, 5, 4); } };
 TP.arrows = R => (m, hh) => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.35, -0.95, -0.03, 0.35, 0.0, 0); for (let i = 0; i < 9; i++) { const x = -0.28 + i * 0.07; m.mat(MAT.TIMBER, COL.wood); m.box(x - 0.007, -0.9, -0.05, x + 0.007, -0.05, -0.036); m.mat(MAT.PLAIN, R.pick([[0.75, 0.74, 0.7], [0.5, 0.2, 0.15], [0.7, 0.66, 0.5]])); m.box(x - 0.02, -0.28, -0.06, x + 0.02, -0.05, -0.04); } };
@@ -7898,12 +7909,12 @@ HT.tanner = (P, c, room, F) => {
   const cols = [[0.34, 0.26, 0.17], [0.28, 0.34, 0.2], [0.45, 0.34, 0.2]];
   hFocalAt(P, room, 'vat', F, { col: cols[0], at: [-F.sx * 1.6] }); hFocalAt(P, room, 'vat', F, { col: cols[1], at: [F.sx * 0.2] }); hFocalAt(P, room, 'vat', F, { col: cols[2], at: [F.sx * 2.0] });
   hPlace(P, room, 'hides', { sides: ['w', 'e'] }); hPlace(P, room, 'hides', { sides: ['e', 'w'] }); hPlace(P, room, 'bench', { sides: ['w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['w', 'e'] }); hPlace(P, room, 'bucket', { sides: ['s', 'e'] });
-  hCeil(P, room, 0, room.z0 + 3.0, TP.carcassBar(2.0, P.R));
+  hCeil(P, room, 0, room.z0 + 3.0, TP.hideBar(2.0, P.R));
 };
 HT.dyer = (P, c, room, F) => {
   const cols = [[0.22, 0.3, 0.46], [0.5, 0.22, 0.18], [0.62, 0.5, 0.2]];
   hFocalAt(P, room, 'vat', F, { col: cols[0], at: [F.sx * 1.8] }); hFocalAt(P, room, 'vat', F, { col: cols[1], at: [-F.sx * 0.1] }); hFocalAt(P, room, 'vat', F, { col: cols[2], at: [-F.sx * 2.1] });
-  for (const [x, z, col] of [[-3.3, 3.6, [0.24, 0.32, 0.5]], [3.0, 4.2, [0.55, 0.26, 0.2]], [-1.0, 5.0, [0.6, 0.5, 0.28]]]) hCeil(P, room, x * F.sx, room.z0 + z, (mm) => { mm.mat(MAT.TIMBER, COL.woodDark); mm.box(-0.5, -0.1, -0.02, 0.5, -0.06, 0.02); mm.mat(MAT.CLOTH, col.map(v => v * 0.8), 0.5); mm.box(-0.45, -1.0, -0.02, 0.45, -0.1, 0.02); });
+  for (const [x, z, col] of [[-3.3, 3.6, [0.22, 0.27, 0.36]], [3.0, 4.2, [0.42, 0.24, 0.2]], [-1.0, 5.0, [0.45, 0.39, 0.25]]]) hCeil(P, room, x * F.sx, room.z0 + z, (mm) => { mm.mat(MAT.TIMBER, COL.woodDark); mm.box(-0.5, -0.1, -0.02, 0.5, -0.06, 0.02); mm.mat(MAT.CLOTH, col.map(v => v * 0.8), 0.5); mm.box(-0.45, -1.0, -0.02, 0.45, -0.1, 0.02); });
   hPlace(P, room, 'barrel', { sides: ['w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['e', 'w'] }); hPlace(P, room, 'sacks', { sides: ['w', 'e'] }); hShelfWalls(P, room, PD.WARES.cloth, { sides: ['w', 'e'], id: 'wdy', lv: 4 });
 };
 HT.carpenter = (P, c, room, F) => {
@@ -8026,7 +8037,7 @@ function buildVillage() {
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);
   }
   putc(11.8, 6.3, 0.4, m => Props.barrel(m)); putc(12.2, 5.2, 0, m => Props.crate(m, 0.6)); putc(4.0, 10.6, 0.2, m => Props.crate(m, 0.55)); putc(-12.9, -4.2, 0, m => Props.barrel(m));
-  putc(-11.2, 9.0, 2.2, m => Props.cart(m, true));
+  putc(-6.4, 11.3, 0.08, m => Props.cart(m, true));      // Build 42: parked against the terrace wall east of the flight (it stood on the steps' first treads)
   // festival fire pit (lit at the end of the story)
   World.bonfirePos = [-2.6, -7.4];
   put(-2.6, -7.4, 0, m => {
@@ -8314,6 +8325,7 @@ function buildVillage() {
   if (typeof buildAlley === 'function') buildAlley();
   if (typeof buildInfill === 'function') buildInfill();
   if (typeof buildDress === 'function') buildDress();
+  if (typeof townFinish === 'function') townFinish();      // Build 42 (73f_levels.js)
 
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {
@@ -9706,6 +9718,14 @@ function buildBoards(bucket, fence, R) {
 //    square, a ramped lane climbs along the south wall from the south road. On top: paving, a fountain, a garden with a tree, three outbuildings, a lookout corner.
 // Everything is boxes and quads merged into the village cells through `bucket`; every walkable surface is a World.floors entry, every wall a box collider.
 const LVL = { n: 0 };
+// Build 42: the stone of the terrace and the Wharf, on the sides that the sun does not reach, read near-black (a vertical face takes only the horizon's ambient). Tilting the normals of
+// vertical stone faces upward by `k` lets them take more of the sky's light; the sun still sees them as before on the lit side. `touch` maps each bucket mesh to its vertex count before the builder began.
+function lvLift(touch, k) {
+  for (const [m, n0] of touch) for (let i = n0; i < m.nv; i++) {
+    const b = i * 32; if (m.u8[b + 28] !== MAT.STONE) continue; const ny = m.i8[b + 13]; if (Math.abs(ny) > 40) continue;
+    let x = m.i8[b + 12], y = ny + k * 127, z = m.i8[b + 14]; const l = 127 / Math.hypot(x, y, z); m.i8[b + 12] = Math.round(x * l); m.i8[b + 13] = Math.round(y * l); m.i8[b + 14] = Math.round(z * l);
+  }
+}
 function lvFloor(x0, z0, x1, z1, y, y2, axis) {
   const f = { x: (x0 + x1) / 2, z: (z0 + z1) / 2, hx: Math.abs(x1 - x0) / 2, hz: Math.abs(z1 - z0) / 2, ax: 1, az: 0, bx: 0, bz: 1, y };
   if (y2 !== undefined) { f.y2 = y2; f.axis = axis; } World.floors.push(f); return f;
@@ -9713,7 +9733,8 @@ function lvFloor(x0, z0, x1, z1, y, y2, axis) {
 function buildLevels(bucket, fence, R) {
   if (TEST && TEST.levels === 0) return;
   const rr = rng(3317), T = LV.up, H = T.h, wt = T.slope, TOP = H + 0.1;
-  const M = (x, z) => { const m = bucket(x, z); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
+  const touch = new Map();
+  const M = (x, z) => { const m = bucket(x, z); if (!touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
   const sc = v => [1.0 * v, 0.97 * v, 0.92 * v];
   const gmin = (x0, z0, x1, z1) => { let g = 1e9; for (let i = 0; i <= 6; i++) g = Math.min(g, Terrain.y(x0 + (x1 - x0) * i / 6, z0 + (z1 - z0) * i / 6)); return g; };
   const col = (x0, z0, x1, z1, y0, y1) => { addBoxCollider(M((x0 + x1) / 2, (z0 + z1) / 2), x0, z0, x1, z1, y0, y1); };
@@ -9726,7 +9747,7 @@ function buildLevels(bucket, fence, R) {
     const P = ax ? (u, v) => [v, u] : (u, v) => [u, v], mm = M(...P(mid, vo));
     const bx = (a, y0, b, c, y1, d, skip) => { if (ax) mm.box(b, y0, a, d, y1, c, sw(skip || 0)); else mm.box(a, y0, b, c, y1, d, skip || 0); };
     let base = 1e9; for (let i = 0; i <= 8; i++) { const u = u0 + (u1 - u0) * i / 8, p = P(u, vo + os * 0.4); base = Math.min(base, Terrain.y(p[0], p[1])); } base -= 0.7;
-    mm.mat(MAT.STONE, sc(0.9 + rr() * 0.08), 0.7); bx(u0, base, v0, u1, TOP, v1, 4 | 8);
+    mm.mat(ax === 0 && os < 0 ? MAT.PLASTER : MAT.STONE, ax === 0 && os < 0 ? [1.0, 0.96, 0.88] : sc(0.9 + rr() * 0.08), 0.7); bx(u0, base, v0, u1, TOP, v1, 4 | 8);      // Build 42: the north face (never in the sun) is limewashed rubble, it was near-black
     mm.mat(MAT.STONE, sc(1), 0.6);
     if (parapet) { bx(u0, TOP, v0 + 0.12, u1, H + 0.95, v1 - 0.12, 4 | 8); bx(u0 - 0.05, H + 0.95, v0 - 0.02, u1 + 0.05, H + 1.07, v1 + 0.02, 4); }
     else bx(u0 - 0.04, TOP, v0 - 0.1, u1 + 0.04, H + 0.2, v1 + 0.1, 4);
@@ -9786,7 +9807,7 @@ function buildLevels(bucket, fence, R) {
     const lb = gmin(-36.8, T.z1, -34, lz1) - 0.6;
     stoneBox(-36.8, lb, T.z1 + wt, -34.0, H, lz1 + 0.3, sc(0.95), 4 | 16, 0.7);
     lvFloor(-36.0, T.z1 - 0.3, -34.0, lz1, H);
-    stoneBox(-36.8, H, T.z1 + wt, -36.3, H + 0.95, lz1 + 0.3, sc(1), 4 | 16, 0.6); stoneBox(-36.8, H, lz1 - 0.1, -34.0, H + 0.95, lz1 + 0.3, sc(1), 4 | 2, 0.6);
+    stoneBox(-36.8, H, T.z1 + wt, -36.3, H + 0.95, lz1 - 0.1, sc(1), 4 | 16 | 32, 0.6); stoneBox(-36.8, H, lz1 - 0.1, -34.0, H + 0.95, lz1 + 0.3, sc(1), 4 | 2, 0.6);
     col(-36.8, T.z1 + wt, -36.3, lz1 + 0.3, lb, H + 1.1); col(-36.8, lz1 - 0.1, -34.0, lz1 + 0.3, lb, H + 1.1);
     const m = M(xE, lz0), y = Terrain.y(xE + 0.6, lz1 + 0.8); m.push().T(xE + 0.6, y, lz1 + 0.8); m.mat(MAT.TIMBER, COL.timberDark); m.cbox(0, 0, 0, 0.14, 2.2, 0.14, 4); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cbox(0, 2.2, 0, 0.3, 0.34, 0.3, 4); m.pop();
     World.emitters.push({ type: 'lantern', p: [xE + 0.6, y + 2.4, lz1 + 0.8], zone: 0, halo: 0.5 });
@@ -9851,9 +9872,17 @@ function buildLevels(bucket, fence, R) {
     m.mat(MAT.CLOTH, [0.5, 0.13, 0.1], 0.5); m.quad2([0.05, 4.1, 0], [0.05, 3.45, 0], [1.1, 3.55, 0.15], [1.1, 4.05, 0.15]); addCircleCollider(m, 0, 0, 0.12, 0, 4); m.pop();
     World.interact.push({ p: [lx, H + 1.3, lz + 0.2], r: 2.4, zone: 0, kind: 'read', id: 'terrace.glass', title: 'A brass spyglass on a tripod', text: 'You put your eye to the glass. The whole market is laid out like a pinned map: the notice board, the well, the baker’s awning, a boy chasing a goose. Someone has scratched a tally of floods on the tripod leg. There are nine marks.' });
   }
+  lvLift(touch, 1.0);
   World.places.push({ id: 'uward', name: 'Rowan’s Terrace', x: -21, z: 21, r: 13 });
   World.spots['terrace.view'] = { p: [-20, H, T.z0 + 1.4], yaw: 0, zone: 0 };
   World.levelsBuilt = (World.levelsBuilt || 0) + 1;
+}
+
+// Build 42: small fixes that need every builder to have run (called at the end of buildVillage)
+function townFinish() {
+  // the chimney of in.04 stands 4 m below the terrace's north edge, where the camera looks straight at its smoke: the full-size puffs (1 m across) stack into a tall white sheet there.
+  // A thin emitter (smaller, fainter, shorter-lived puffs, see 75_particles.js) makes it a wisp like the other infill chimneys.
+  for (const e of World.emitters) if (e.type === 'smoke' && Math.abs(e.p[0] + 19.5) < 0.8 && Math.abs(e.p[2] - 4.1) < 0.8 && e.p[1] > 8) { e.thin = true; e.p[1] += 0.05; }
 }
 
 
@@ -9865,7 +9894,8 @@ function buildLevels(bucket, fence, R) {
 function buildWharf(bucket, fence, R) {
   if (TEST && TEST.levels === 0) return;
   const WD = 0.0, X0 = 9.0, X1 = 20.0, Z0 = 75.0, Z1 = 82.5, LY = LAKE.y, LAND = LY + 0.55, BASE = -3.3;
-  const M = (x, z) => { const m = bucket(x, z); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
+  const touch = new Map();
+  const M = (x, z) => { const m = bucket(x, z); if (!touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
   const sc = v => [1.0 * v, 0.97 * v, 0.92 * v];
   const col = (x0, z0, x1, z1, y0, y1) => addBoxCollider(M((x0 + x1) / 2, (z0 + z1) / 2), x0, z0, x1, z1, y0, y1);
   const flo = (x0, z0, x1, z1, y, y2, axis) => { const f = { x: (x0 + x1) / 2, z: (z0 + z1) / 2, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, ax: 1, az: 0, bx: 0, bz: 1, y }; if (y2 !== undefined) { f.y2 = y2; f.axis = axis; } World.floors.push(f); };
@@ -9916,6 +9946,7 @@ function buildWharf(bucket, fence, R) {
   { const bx = 13.6, bz = Z0 + 0.5, m = M(bx, bz); m.push().T(bx, WD, bz); m.mat(MAT.TIMBER, COL.timberDark, 0.5); for (const s of [-1, 1]) { m.cbox(s * 0.7, 0, 0, 0.12, 1.9, 0.12, 4); addCircleCollider(m, s * 0.7, 0, 0.1, 0, 1.9); }
     m.mat(MAT.PLANKS, [0.62, 0.52, 0.4], 0.5); m.box(-0.8, 1.0, -0.05, 0.8, 1.75, 0.05, 4); m.mat(MAT.PLAIN, [0.72, 0.68, 0.58]); m.quad2([-0.5, 1.2, 0.055], [-0.5, 1.62, 0.055], [0.1, 1.62, 0.055], [0.1, 1.2, 0.055]); m.pop();
     World.interact.push({ p: [bx, WD + 1.4, bz + 0.5], r: 2.4, zone: 0, kind: 'read', id: 'wharf.tally', title: 'The boatwright’s board', text: 'BOATS MENDED, PITCHED AND HIRED BY THE HOUR. The doors under the quay are the boat-houses: knock first, the keys are with Old Wenn. Scratched below: the lake stood this high in the Long Frost, and not a hand higher since.' }); }
+  lvLift(touch, 1.0);
   World.places.push({ id: 'wharf', name: 'The Wharf', x: 14, z: 80, r: 11 });
   World.spots['wharf.view'] = { p: [14, WD, 80], yaw: Math.PI, zone: 0 };
 }
@@ -12194,7 +12225,7 @@ TALK.rowan = function () {
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 41';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 43';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
