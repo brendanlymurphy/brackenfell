@@ -11,7 +11,7 @@ What it does beyond assembling the MakeHuman assets:
 """
 import sys, os, json, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import bpy, bmesh, numpy as np, mh_common as C
+import bpy, bmesh, numpy as np, mh_common as C, morph
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 from PIL import Image, ImageDraw, ImageFilter
@@ -27,6 +27,7 @@ md = Target.get_default_macro_info_dict()
 for k, v in spec['macro'].items(): md[k] = v
 bm_obj = Human.create_human(macro_detail_dict=md, feet_on_ground=True, scale=0.1)
 bm_obj.name = name
+morph.tag_original_index(bm_obj.data)
 skin = Asset.find_asset_absolute_path(spec['skin'] + '.mhmat', asset_subdir='skins')
 if not skin:
     import glob
@@ -51,6 +52,8 @@ except Exception as e:
     for o in [o for o in bpy.data.objects if o.type == 'MESH' and o not in (bm_obj, eyes)]: bpy.data.objects.remove(o, do_unlink=True)
     brows = add('eyebrows', 'eyebrow006', 'Eyebrows')
 hair = add('hair', spec['hair'][0], 'Hair') if spec.get('hair') else None
+TAB = morph.table(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'chars', 'real', 'visemes.json'))
+teeth = add('teeth', 'teeth_base', 'Teeth'); tongue = add('tongue', 'tongue01', 'Tongue')
 clothes = [(add('clothes', c[0], 'Clothes'), c) for c in spec['clothes']]
 
 def base_image_node(obj):
@@ -94,6 +97,12 @@ for k, (o, c) in enumerate(clothes):
 Target.bake_targets(bm_obj)
 Export.bake_modifiers_remove_helpers(bm_obj, bake_masks=True, bake_subdiv=False, remove_helpers=True, also_proxy=True)
 bpy.context.view_layer.update()
+
+# ── face morphs: table columns for the face, brows, teeth and tongue (morph.py) ──
+trim_mat = bpy.data.materials.new('cloth_trim'); trim_mat.use_nodes = True
+morph.assign_body(bm_obj.data, TAB); morph.assign_nearest(brows, bm_obj, TAB)
+for o, sl in ((teeth, 'teeth'), (tongue, 'tongue')):
+    morph.assign_mouth(o, TAB, None, sl); o.data.materials.clear(); o.data.materials.append(trim_mat)
 
 # ── remove body surface covered by clothes ──
 cl_objs = [o for o, _ in clothes]
@@ -157,6 +166,14 @@ for o, c in clothes:
     bmesh.ops.delete(b2, geom=dead, context='FACES'); bmesh.ops.delete(b2, geom=[v for v in b2.verts if not v.link_faces], context='VERTS')
     b2.to_mesh(me2); b2.free(); me2.update(); print('cloth', c[0], n0, '->', len(me2.polygons))
 
+# ── procedural garments (garb.py): wardrobe pieces fitted to this body, and per-vertex ambient occlusion / dirt / trim bands ──
+import garb
+rig_obj = [o for o in bpy.data.objects if o.type == 'ARMATURE'][0]
+fit = garb.Fit(rig_obj, bm_obj, cl_objs, hair, eyes)
+wardrobe = garb.wardrobe(fit, trim_mat, spec) if os.environ.get('WARDROBE', '1') != '0' else []
+garb.bake_colors(fit, [bm_obj] + cl_objs + wardrobe, clean=spec.get('clean'))
+print('wardrobe', [(o.name, len(o.data.polygons)) for o in wardrobe])
+
 info_eye_z = max((eyes.matrix_world @ v.co).z for v in eyes.data.vertices) + 0.02
 # ── skin texture: 1K, with everything no remaining face uses painted flat ──
 node = base_image_node(bm_obj); src = load_rgba(node.image).convert('RGB').resize((1024, 1024), Image.LANCZOS)
@@ -195,5 +212,6 @@ for o in bpy.data.objects:
 head = rig.data.bones['head']; eye_h = max((eyes.matrix_world @ v.co).z for v in eyes.data.vertices) - 0.012
 info = {'name': name, 'rawTris': tot, 'height': round(max((mw @ v.co).z for v in me.vertices), 3), 'eyeHeight': round(eye_h, 3), 'hipHeight': round((rig.matrix_world @ rig.data.bones['pelvis'].head_local).z, 3)}
 json.dump(info, open(os.path.join(outdir, name + '.json'), 'w')); print(info)
+if os.environ.get('GEN_BLEND'): bpy.ops.wm.save_as_mainfile(filepath=os.path.join(outdir, name + '.blend'))
 bpy.ops.object.select_all(action='SELECT')
-bpy.ops.export_scene.gltf(filepath=os.path.join(outdir, name + '_raw.glb'), export_format='GLB', use_selection=True, export_animations=False, export_skins=True, export_yup=True, export_apply=False)
+bpy.ops.export_scene.gltf(filepath=os.path.join(outdir, name + '_raw.glb'), export_format='GLB', use_selection=True, export_animations=False, export_skins=True, export_yup=True, export_apply=False, export_vertex_color='ACTIVE', export_all_vertex_colors=False, export_attributes=True)
