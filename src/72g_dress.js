@@ -3,9 +3,9 @@
 const PD = {};
 // a bookcase's contents: upright spines of varied colour, height and lean, with gaps
 PD.books = (c, len) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.06;
-  while (x < len / 2 - 0.12) { if (R() < 0.12) { x += 0.1 + R() * 0.15; continue; } const w = 0.05 + R() * 0.09, h = 0.18 + R() * 0.1; m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, COL.leather, COL.purple, [0.3, 0.22, 0.14]]), 0.5); m.box(x, y, -0.11, x + w, y + h, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(x + 0.005, y + 0.005, -0.112, x + w - 0.005, y + h - 0.005, -0.1, 0); x += w + 0.004; } };
+  while (x < len / 2 - 0.12) { if (R() < 0.12) { x += 0.1 + R() * 0.15; continue; } const w = 0.05 + R() * 0.09, h = 0.18 + R() * 0.1; m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, COL.leather, DYE.purple, [0.3, 0.22, 0.14]]), 0.5); m.box(x, y, -0.11, x + w, y + h, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(x + 0.005, y + 0.005, -0.112, x + w - 0.005, y + h - 0.005, -0.1, 0); x += w + 0.004; } };
 // shelves filled with rolled bolts of cloth lying end-on, in a few colours
-PD.bolts = (c, len, cols) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.1; cols = cols || [COL.red, COL.blue, COL.green, COL.purple, [0.7, 0.62, 0.45], [0.55, 0.5, 0.42], [0.25, 0.3, 0.4]];
+PD.bolts = (c, len, cols) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.1; cols = cols || [DYE.red, DYE.blue, DYE.green, DYE.yellow, DYE.cream, DYE.grey, DYE.brown];
   while (x < len / 2 - 0.12) { const r = 0.07 + R() * 0.03; m.mat(MAT.CLOTH, R.pick(cols), 0.5); m.push().T(x + r, y + r, -0.02).RX(PI / 2); m.lathe([[r, -0.14], [r, 0.14]], 7, 2); m.pop(); x += r * 2 + 0.01; } };
 // sacks and jars on a shelf: a plain row of grain bags and pots, for a store
 PD.goods = (c, len) => (i, y) => { const m = c.int, R = c.R; let x = -len / 2 + 0.1;
@@ -22,14 +22,14 @@ PD.rack = function (P, room, x, z, len, rot, kinds) {
       m.mat(MAT.METAL, COL.black); m.box(px - 0.006, -0.78, -0.006, px + 0.006, -0.6, 0.006);
       if (k === 'herb') { const hc = R.pick([[0.3, 0.33, 0.2], [0.36, 0.34, 0.22], [0.38, 0.3, 0.2], [0.3, 0.28, 0.19]]); m.mat(MAT.CLOTH, hc, 0.6); for (let q = 0; q < 6; q++) { const a = q / 6 * 6.283, rr = 0.03 + (q % 2) * 0.015; m.cyl(px + j + Math.cos(a) * rr, -1.06 - (q % 3) * 0.03, Math.sin(a) * rr, 0.012, 0.004, 0.26 + (q % 3) * 0.03, 4, 1); } m.mat(MAT.CLOTH, [0.42, 0.34, 0.22], 0.5); m.cyl(px + j, -0.84, 0, 0.026, 0.026, 0.025, 6, 2); }      // [c5] a bundle of stems tied at the neck, 0.3 m, not a cone
       else if (k === 'ham') { m.mat(MAT.THATCH, [0.42, 0.24, 0.19], 0.4); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
-      else if (k === 'pot') { m.mat(MAT.METAL, COL.black); m.cyl(px, -1.0, 0, 0.13, 0.16, 0.2, 8, 2); }
+      else if (k === 'pot') { m.mat(MAT.METAL, R.pick([[0.42, 0.28, 0.17], [0.36, 0.3, 0.24], [0.45, 0.33, 0.2]])); at(m, px, 0, 0, 0, () => m.lathe([[0.005, -1.08], [0.06, -1.07], [0.085, -0.98], [0.07, -0.9], [0.075, -0.88]], 8, 0)); }      // [c5] a small copper pot, not a black tub
       else { m.mat(MAT.PLAIN, [0.78, 0.7, 0.5]); m.ball(px, -0.95, 0, 0.06, 0.08, 0.06, 5, 3); m.ball(px + 0.02, -1.08, 0, 0.06, 0.08, 0.06, 5, 3); }
     }
   });
   P.lightIn[room.id] = P.lightIn[room.id] || 0;
 };
 // a runner rug along a line (flat, any room): w x len, centred
-PD.rug = (P, room, x, z, w, l, col, rot) => pPut(P, room, P.id + '.rug' + (P.items.length), x, z, rot || 0, w, l, 0.02, pdRug(w, l, col || COL.red), { flat: true, noClear: true });
+PD.rug = (P, room, x, z, w, l, col, rot) => pPut(P, room, P.id + '.rug' + (P.items.length), x, z, rot || 0, w, l, 0.02, pdRug(w, l, col || DYE.red), { flat: true, noClear: true });
 // the landing or gallery of a house: a reading table with chairs by a window, a bookcase, a runner rug, banners
 PD.gallery = function (P, room) {
   const c = P.c, R = P.R, a = room.in;
@@ -56,12 +56,12 @@ PD.stack = (R) => m => { Props.woodpile(m, 5, 4, 0.7); };
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { m.mat(MAT.CLOTH, R.pick([COL.red, COL.blue, COL.green, [0.4, 0.33, 0.25], [0.25, 0.22, 0.2], [0.55, 0.45, 0.3]]), 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.14, -l, -0.11, x + 0.14, 0.0, -0.075); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, [0.4, 0.33, 0.25], [0.25, 0.22, 0.2], [0.55, 0.45, 0.3]]), 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.14, -l, -0.11, x + 0.14, 0.0, -0.075); } }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2 - 0.04, h - 0.04, -0.09, w / 2 + 0.04, h + 0.02, -0.03);
-  const c = R.pick([COL.red, COL.blue, COL.green, COL.purple]); m.mat(MAT.CLOTH, [c[0] * 0.8, c[1] * 0.8, c[2] * 0.8], 0.6); m.box(-w / 2, 0, -0.07, w / 2, h, -0.04);
+  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.8, c[1] * 0.8, c[2] * 0.8], 0.6); m.box(-w / 2, 0, -0.07, w / 2, h, -0.04);
   m.mat(MAT.CLOTH, [0.7, 0.6, 0.35], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
   m.box(-0.07, h * 0.3, -0.08, 0.07, h * 0.75, -0.04); m.box(-w * 0.22, h * 0.5, -0.08, w * 0.22, h * 0.56, -0.04);
 };
@@ -163,7 +163,7 @@ PD.middle = function (P, room, o) {
     if (kind === 'table') { const dn = pDining(P, room, 1.8, 0.85, { near: [e.x, e.z], id: 'mt' + i, n: 3 }); if (dn) { dn.seats.forEach((s, j) => pSit(P, 'mt' + i + 's' + j, s[0], s[1], s[2], room.k)); pLamp(P, room, dn.x, dn.z); n++; continue; } }
     if (kind === 'casks') { if (pFree(P, room, P.id + '.mc' + i, 0.9, 0.9, 0.8, 0, PD.cask(0.9, 0.32), { near: [e.x, e.z], lowOk: true })) { n++; continue; } }
     if (kind === 'sacks') { if (pFree(P, room, P.id + '.ms' + i, 0.9, 0.6, 0.6, 0, PD.sacks(P.R), { near: [e.x, e.z], lowOk: true })) { n++; continue; } }
-    if (PD.rug(P, room, e.x, e.z, Math.min(2.4, e.r * 1.6), Math.min(3.2, e.r * 2.2), P.R.pick([COL.red, [0.3, 0.22, 0.18], [0.25, 0.3, 0.2], [0.35, 0.28, 0.14]]), P.R() < 0.5 ? 0 : PI / 2)) n++;
+    if (PD.rug(P, room, e.x, e.z, Math.min(2.4, e.r * 1.6), Math.min(3.2, e.r * 2.2), P.R.pick([DYE.red, [0.3, 0.22, 0.18], [0.25, 0.3, 0.2], [0.35, 0.28, 0.14]]), P.R() < 0.5 ? 0 : PI / 2)) n++;
     else break;
   }
   return n;
