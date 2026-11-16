@@ -173,9 +173,9 @@ const Props = {
   hayLoad(m, hw, hl, y0, hh) {
     const R = rng(Math.round(hw * 977 + hl * 131)), straw = [0.92, 0.76, 0.46];
     m.mat(MAT.THATCH, straw, 0.8);
-    for (let i = 0; i < 7; i++) { const u = (i / 6) * 2 - 1, x = u * 0.2 * hw + R.s() * 0.18, z = u * hl * 0.8 + R.s() * 0.12, rx = hw * (0.55 + R() * 0.25), rz = hl * 0.3 + R() * 0.12, ry = hh * (0.55 + 0.4 * (1 - Math.abs(u))); m.ball(x, y0 + ry * 0.35, z, rx, ry, rz, 8, 4); }
+    for (let i = 0; i < 7; i++) { const u = (i / 6) * 2 - 1, x = u * 0.2 * hw + R.s() * 0.18, z = u * hl * 0.8 + R.s() * 0.12, rx = hw * (0.55 + R() * 0.25), rz = hl * 0.3 + R() * 0.12, ry = hh * (0.55 + 0.4 * (1 - Math.abs(u))); m.ball(x, y0 + ry * 0.35, z, rx, ry, rz, 7, 4); }
     m.mat(MAT.THATCH, [1.0, 0.86, 0.52], 0.6);
-    for (let i = 0; i < 26; i++) { const x = R.s() * hw * 0.9, z = R.s() * hl * 0.95, h0 = y0 + hh * (0.5 + R() * 0.45) * (1 - 0.5 * Math.abs(z) / hl); m.beam([x, h0, z], [x + R.s() * 0.22, h0 + 0.06 + R() * 0.16, z + R.s() * 0.22], 0.012, 0.01); }
+    for (let i = 0; i < 14; i++) { const x = R.s() * hw * 0.9, z = R.s() * hl * 0.95, h0 = y0 + hh * (0.5 + R() * 0.45) * (1 - 0.5 * Math.abs(z) / hl); m.beam([x, h0, z], [x + R.s() * 0.22, h0 + 0.06 + R() * 0.16, z + R.s() * 0.22], 0.012, 0.01); }
   },
   // [fx1] a hanging cloth banner, origin at the top centre, hanging down -y, facing +-z: a rod and two cords, the cloth in strips that wave a little (not one flat slab), a darker hem, a swallow-tail
   banner(m, w, h, col, seed) {

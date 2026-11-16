@@ -4457,9 +4457,9 @@ const Props = {
   hayLoad(m, hw, hl, y0, hh) {
     const R = rng(Math.round(hw * 977 + hl * 131)), straw = [0.92, 0.76, 0.46];
     m.mat(MAT.THATCH, straw, 0.8);
-    for (let i = 0; i < 7; i++) { const u = (i / 6) * 2 - 1, x = u * 0.2 * hw + R.s() * 0.18, z = u * hl * 0.8 + R.s() * 0.12, rx = hw * (0.55 + R() * 0.25), rz = hl * 0.3 + R() * 0.12, ry = hh * (0.55 + 0.4 * (1 - Math.abs(u))); m.ball(x, y0 + ry * 0.35, z, rx, ry, rz, 8, 4); }
+    for (let i = 0; i < 7; i++) { const u = (i / 6) * 2 - 1, x = u * 0.2 * hw + R.s() * 0.18, z = u * hl * 0.8 + R.s() * 0.12, rx = hw * (0.55 + R() * 0.25), rz = hl * 0.3 + R() * 0.12, ry = hh * (0.55 + 0.4 * (1 - Math.abs(u))); m.ball(x, y0 + ry * 0.35, z, rx, ry, rz, 7, 4); }
     m.mat(MAT.THATCH, [1.0, 0.86, 0.52], 0.6);
-    for (let i = 0; i < 26; i++) { const x = R.s() * hw * 0.9, z = R.s() * hl * 0.95, h0 = y0 + hh * (0.5 + R() * 0.45) * (1 - 0.5 * Math.abs(z) / hl); m.beam([x, h0, z], [x + R.s() * 0.22, h0 + 0.06 + R() * 0.16, z + R.s() * 0.22], 0.012, 0.01); }
+    for (let i = 0; i < 14; i++) { const x = R.s() * hw * 0.9, z = R.s() * hl * 0.95, h0 = y0 + hh * (0.5 + R() * 0.45) * (1 - 0.5 * Math.abs(z) / hl); m.beam([x, h0, z], [x + R.s() * 0.22, h0 + 0.06 + R() * 0.16, z + R.s() * 0.22], 0.012, 0.01); }
   },
   // [fx1] a hanging cloth banner, origin at the top centre, hanging down -y, facing +-z: a rod and two cords, the cloth in strips that wave a little (not one flat slab), a darker hem, a swallow-tail
   banner(m, w, h, col, seed) {
@@ -9108,10 +9108,10 @@ function buildVillage() {
   const skin = new MeshPack();
   const leaf = new Mesh(512);
   // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
-  leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.05, 0.04, 0.035]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 0);
-  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [0.8 * k, 0.62 * k, 0.45 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 0); }
+  leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.05, 0.04, 0.035]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
+  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [0.8 * k, 0.62 * k, 0.45 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
   leaf.mat(MAT.PLANKS, [0.56, 0.43, 0.31], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
-  leaf.mat(MAT.METAL, [0.2, 0.19, 0.18]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (let k = 0; k < 4; k++) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, sz > 0 ? 16 : 32); }
+  leaf.mat(MAT.METAL, [0.2, 0.19, 0.18]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   const leafItem = skin.add(leaf);
   for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
