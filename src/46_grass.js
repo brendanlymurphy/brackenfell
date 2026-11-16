@@ -25,8 +25,7 @@ const Grass = { mesh: null, N: 0, range: 0 };
     const m = new THREE.MeshLambertNodeMaterial({ side: THREE.DoubleSide });
     const b = attribute('b', 'vec4');         // side (-1, 0, 1), height along the blade (0..1), blade angle, radial offset
     m.positionNode = Fn(() => {
-      const fi = float(instanceIndex), iz = floor(fi.add(0.5).div(N)), ix = fi.sub(iz.mul(N));
-      const cell = uOrg.add(vec2(ix, iz));
+      const cell = attribute('gc', 'vec2');            // this tuft's cell of the world-wide grid, from the list Grass.update keeps
       const r0 = textureLoad(G.hashTex, ivec2(cell.add(65536.5).mod(256)));
       const root2 = cell.add(r0.xy).mul(cellSz);
       const out = vec3(0, -10000, 0).toVar();
@@ -94,19 +93,46 @@ const Grass = { mesh: null, N: 0, range: 0 };
     const gv = [], pv = []; for (let k = 0; k < blades; k++) { const a = k * 2.2 + 0.4, ro = 0.3 + k * 0.35; gv.push(-1, 0, a, ro, 1, 0, a, ro, 0, 1, a, ro); pv.push(-1, 0, 0, 1, 0, 0, 0, 1, 0); }
     const g = new THREE.InstancedBufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pv, 3)); g.setAttribute('b', new THREE.Float32BufferAttribute(gv, 4));
-    g.instanceCount = N * N;
+    const gc = new Float32Array(N * N * 2), gcA = new THREE.InstancedBufferAttribute(gc, 2); gcA.setUsage(THREE.DynamicDrawUsage); g.setAttribute('gc', gcA);
+    g.instanceCount = 0;
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     const mesh = new THREE.Mesh(g, m);
     mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = 'grass';
     scene.add(mesh);
-    Object.assign(Grass, { mesh, N, range, cellSz, uOrg, scene, blades, tufts: N * N, verts: N * N * blades * 3 });
+    Object.assign(Grass, { mesh, N, range, cellSz, uOrg, scene, blades, tufts: N * N, verts: N * N * blades * 3, gc, gcA, geo: g, last: [1e9, 1e9, 9], has: Grass.has || new Map() });
     return mesh;
+  };
+  // The cells that can hold grass at all, out of the window ahead of the camera: the list is rebuilt when the player has moved a metre
+  // or turned 11 degrees. Cells are taken 8 x 8 at a time; a block is skipped when it lies beyond the grass range, outside the view cone
+  // (cut 20 degrees wider than the screen) or wholly on road, cobbles, bare earth or lake bed (checked once per block and remembered).
+  // On the cobbled square that leaves a few hundred tufts to place instead of fifteen thousand.
+  const BLK = 8;
+  Grass.blockHasGrass = function (bx, bz) {
+    const key = bx + ',' + bz; let v = Grass.has.get(key); if (v !== undefined) return v; v = false;
+    const c = Grass.cellSz, x0 = bx * BLK * c, z0 = bz * BLK * c, n = 9, TH = K.terrainHalf, lake = (World.lakeY || -1e9) + 0.05;
+    for (let j = 0; j < n && !v; j++) for (let i = 0; i < n; i++) { const x = x0 + (i / (n - 1)) * (BLK + 1) * c, z = z0 + (j / (n - 1)) * (BLK + 1) * c;
+      if (Math.abs(x) > TH || Math.abs(z) > TH) continue;
+      if (Math.max(Terrain.splat(x, z, 0), Terrain.splat(x, z, 1), Terrain.splat(x, z, 3)) < 0.5 && Terrain.y(x, z) > lake - 0.3) { v = true; break; } }
+    Grass.has.set(key, v); return v;
   };
   Grass.update = function (camPos, fwdXZ) {
     if (!Grass.mesh) return;
-    const r = Grass.range, c = Grass.cellSz, fl = Math.hypot(fwdXZ[0], fwdXZ[1]) || 1;
-    const cx = camPos[0] + fwdXZ[0] / fl * r * AHEAD, cz = camPos[2] + fwdXZ[1] / fl * r * AHEAD;
-    Grass.uOrg.value.set(Math.floor(cx / c) - (Grass.N >> 1), Math.floor(cz / c) - (Grass.N >> 1));
+    const r = Grass.range, c = Grass.cellSz, fl = Math.hypot(fwdXZ[0], fwdXZ[1]) || 1, fx = fwdXZ[0] / fl, fz = fwdXZ[1] / fl, yaw = Math.atan2(fx, -fz);
+    let dy = yaw - Grass.last[2]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    if (Math.hypot(camPos[0] - Grass.last[0], camPos[2] - Grass.last[1]) < 1 && Math.abs(dy) < 0.19) return; Grass.last = [camPos[0], camPos[2], yaw];
+    const cx = camPos[0] + fx * r * AHEAD, cz = camPos[2] + fz * r * AHEAD, N = Grass.N, ox = Math.floor(cx / c) - (N >> 1), oz = Math.floor(cz / c) - (N >> 1);
+    const half = (typeof R !== 'undefined' && R.camera ? Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) : 0.81) + 0.35, cone = !(TEST && TEST.grasscone === 0) && Math.abs(R.cam.pitch) < 0.9;
+    const gc = Grass.gc, bh = BLK * c * 0.7072, R1 = r + 1.5; let n = 0;                   // tufts stand up to one cell off their cell's corner, and the list is a metre stale at worst
+    for (let bz = Math.floor(oz / BLK); bz <= Math.floor((oz + N - 1) / BLK); bz++) for (let bx = Math.floor(ox / BLK); bx <= Math.floor((ox + N - 1) / BLK); bx++) {
+      const mx = (bx + 0.5) * BLK * c - camPos[0], mz = (bz + 0.5) * BLK * c - camPos[2], d = Math.hypot(mx, mz);
+      if (d - bh > R1) continue;
+      if (cone && d > 5 + bh && Math.acos(Math.max(-1, Math.min(1, (mx * fx + mz * fz) / d))) > half + Math.asin(Math.min(1, bh / d))) continue;
+      if (!(TEST && TEST.grassall) && !Grass.blockHasGrass(bx, bz)) continue;
+      for (let j = 0; j < BLK; j++) { const z = bz * BLK + j; if (z < oz || z >= oz + N) continue; const dz = (z + 0.5) * c - camPos[2];
+        for (let i = 0; i < BLK; i++) { const x = bx * BLK + i; if (x < ox || x >= ox + N) continue; const dx = (x + 0.5) * c - camPos[0]; if (dx * dx + dz * dz > R1 * R1) continue; gc[n * 2] = x; gc[n * 2 + 1] = z; n++; } }
+    }
+    Grass.geo.instanceCount = n; Grass.count = n;
+    if (n) { const at = Grass.gcA; at.clearUpdateRanges(); at.addUpdateRange(0, n * 2); at.needsUpdate = true; }
   };
   Grass.dispose = function () {
     if (!Grass.mesh) return;

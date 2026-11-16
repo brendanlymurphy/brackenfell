@@ -10,7 +10,7 @@ const Kit = (() => {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }, { glb: 'kits/dungeon.glb', catalog: 'kits/DUNGEON_CATALOG.json', optional: true }]  /* q1: dungeon pack */,
     pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
     fill: null, fill2: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
-    lodMeshes: [],
+    lodMeshes: [], SMALL: /kits\/(village|props|nature)\.glb$/,
     ROOF: /^(S_|T_)?(Roof_(RoundTile|Modular|Tower|Wooden|2x4|Log|Dormer)|Overhang_Roof)|^gen_/,       // slope pieces and generated pieces: outside faces are marked by their own normals (down = room side), not by the kit wall convention (outside = +z)
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
@@ -44,9 +44,10 @@ const Kit = (() => {
     const d = K_.defs[name]; K_.pending.push(Promise.all([['map', 'color'], ['normalMap', 'data'], ['orm', 'data'], ['emissiveMap', 'color']].map(async ([k, kind]) => { if (d[k]) d[k] = await gfxTex(d[k], kind); })));
   }
   async function loadPack(pack, progress) {
-    const loader = new T3X.GLTFLoader();
+    const loader = T3X.gltf();
     let gltf;
-    try { gltf = await loader.loadAsync(pack.glb, e => { if (progress && e.total) progress(e.loaded / e.total); }); }
+    const small = GFX_TEX.color <= 512 && K_.SMALL.test(pack.glb), url = small ? pack.glb.replace('kits/', 'kits/s/') : pack.glb;       // phones and the lighter tiers cap textures at 512: they fetch the pack that only holds that much
+    try { gltf = await loader.loadAsync(url, e => { if (progress && e.total) progress(e.loaded / e.total); }); }
     catch (e) { if (pack.optional) return false; throw new Error('kit ' + pack.glb + ': ' + (e && e.message || e)); }
     if (pack.catalog) { const c = await fetchJson(pack.catalog, pack.optional); if (c) Object.assign(K_.cat, c.pieces || c); }
     gltf.scene.updateMatrixWorld(true);
@@ -68,19 +69,20 @@ const Kit = (() => {
     const S = await fetchJson('kits/skin/SKIN.json', true); if (!S) { K_.skin = 'painted'; return; }
     K_.skinDef = S;
     if (S.grade) Object.assign(K_.gradeInit, S.grade);
-    const jobs = [];
+    const jobs = [], skinDir = GFX_TEX.color <= 512 && GFX_TEX.data <= 512 ? 'kits/skin/s/' : 'kits/skin/';       // half-size copies (tools/assets_pack.mjs) where the cap would halve them anyway
     for (const name of Object.keys(S.materials || {})) {
       const s = S.materials[name], d = K_.defs[name]; if (!d) continue;
       if (s.tint) d.color = d.color.map((v, i) => v * s.tint[i]); if (s.moss !== undefined) d.moss = s.moss; if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
-      if (s.a) jobs.push(texLoad('kits/skin/' + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
-      if (s.n) jobs.push(texLoad('kits/skin/' + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
-      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
+      if (s.a) jobs.push(texLoad(skinDir + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
+      if (s.n) jobs.push(texLoad(skinDir + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
+      if (s.orm) jobs.push(texLoad(skinDir + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
     }
     await Promise.all(jobs);
   }
   K_.gradeInit = { sat: 1, gain: 1, tint: [1, 1, 1], weather: 0 };
   // opts: { packs: [{ glb, catalog, optional }], skin: 'realistic' | 'painted' }
   K_.load = async function (progress, opts) {
+    if (GFX_TEX.color <= 512 && typeof Load !== 'undefined' && Load.groups && Load.groups.indexOf('kits') >= 0) Load.use(Load.groups.map(g => g === 'kits' ? 'kitss' : g));       // the loading bar counts the small packs this device fetches
     opts = opts || {};
     const packs = opts.packs || K_.PACKS; K_.skin = opts.skin || (TEST && TEST.skin) || 'realistic';
     for (let i = 0; i < packs.length; i++) await loadPack(packs[i], f => progress && progress((i + f) / (packs.length + 1)));
@@ -225,7 +227,13 @@ const Kit = (() => {
   // ── batches ──
   K_.batch = function (opts) {
     opts = opts || {};
-    const cell = opts.cell || 24, buckets = new Map(), inst = [], B = { count: 0, tally: {} };      // tally: how often each piece was placed (for budgets)
+    // Outdoor batches are "dynamic": every placed piece (a unit) keeps its own range of indices in the merged meshes, and K_.update
+    // rewrites each mesh's index buffer from the units that matter now: full model near the camera, the far copy beyond R.q.houseFar,
+    // nothing when it is too small to see at that distance, outside the view cone or hidden behind nearer houses. So detail is decided
+    // house by house (it used to be per 48 m cell) and a batch is one draw call per material, not one per material and cell.
+    // Interior batches (their own cell, a few rooms) stay static: merged per material and opts.cell, drawn whole.
+    const dyn = !(TEST && TEST.kitdyn === 0) && opts.dynamic !== false && !/^kitint|^kitfine/.test(opts.name || ''), units = [];
+    const cell = dyn ? 1e7 : (opts.cell || 24), buckets = new Map(), inst = [], B = { count: 0, tally: {} };      // tally: how often each piece was placed (for budgets)
     // o: { zone: 0 outdoors | n the interior of building n, skyVis: 1 outdoors .. ~0.3 indoors, tint: [r,g,b] linear, cast: true, glow: HDR self-illumination,
     //      lit: 0..1 for light-source pieces: the wax around each flame position glows (the flame itself is a particle the game adds),
     //      uvs: [sx, sy] the panel's scale, so plaster and brick keep their texel size instead of stretching
@@ -237,18 +245,23 @@ const Kit = (() => {
       if (TEST && TEST.audit) (window.__AUDIT_KIT = window.__AUDIT_KIT || []).push({ name, M: M.clone(), zone: o.zone || 0 });          // test/audit.js: every placed piece (coplanar-face audit)
       _v.set((p.min[0] + p.max[0]) / 2, (p.min[1] + p.max[1]) / 2, (p.min[2] + p.max[2]) / 2).applyMatrix4(M);
       const ck = Math.floor((_v.x + (opts.off || 0)) / cell) + ',' + Math.floor((_v.z + (opts.off || 0)) / cell), cast = o.cast === false ? 0 : 1;
+      // the unit: where the piece stands and how big it is (for distance, view-cone and occlusion tests), and its outline seen from above (as an occluder)
+      const e = M.elements, sc = Math.max(Math.hypot(e[0], e[1], e[2]), Math.hypot(e[4], e[5], e[6]), Math.hypot(e[8], e[9], e[10]));
+      const unit = { x: _v.x, y: _v.y, z: _v.z, r: 0.5 * Math.hypot(p.max[0] - p.min[0], p.max[1] - p.min[1], p.max[2] - p.min[2]) * sc, name, state: 1, hasFar: false, always: !!o.zone, y0: 1e9, y1: -1e9, foot: null, ents: [] };
+      { const foot = []; for (let k = 0; k < 8; k++) { const q = new THREE.Vector3(k & 1 ? p.max[0] : p.min[0], k & 2 ? p.max[1] : p.min[1], k & 4 ? p.max[2] : p.min[2]).applyMatrix4(M); unit.y0 = Math.min(unit.y0, q.y); unit.y1 = Math.max(unit.y1, q.y); if (!(k & 2)) foot.push([q.x, q.z]); } unit.foot = foot; }
+      if (dyn) units.push(unit);
       for (const prim of p.prims) {
         const key = prim.mat + '|' + ck + '|' + cast; let b = buckets.get(key);
         if (!b) buckets.set(key, b = { mat: prim.mat, cast, items: [], nv: 0, ni: 0 });
-        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name) }); b.nv += prim.n; b.ni += prim.idx.length;
+        b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: o.glow || 0, lit: o.lit || 0, lights: o.lit ? ((K_.cat[name] || {}).lights || null) : null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name), unit, farCopy: false }); b.nv += prim.n; b.ni += prim.idx.length;
       }
       // the far copy of this piece: its own light version if the pack has one, nothing for small things (under FAR_KEEP metres across), else the piece itself
       if (opts.far) {
         const fp = K_.far[name] || ((Math.max(p.max[0] - p.min[0], p.max[1] - p.min[1], p.max[2] - p.min[2]) >= K_.FAR_KEEP && !(K_.FAR_DROP.test(name))) ? p.prims : []);
         for (const prim of fp) {
-          const key = prim.mat + '|' + ck + '|far'; let b = buckets.get(key);
-          if (!b) buckets.set(key, b = { mat: prim.mat, cast: 0, far: true, items: [], nv: 0, ni: 0 });
-          b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: 0, lit: 0, lights: null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name) }); b.nv += prim.n; b.ni += prim.idx.length;
+          const key = prim.mat + '|' + ck + (dyn ? '|0' : '|far'); let b = buckets.get(key);      // dynamic: far copies share the material's mesh with the full models
+          if (!b) buckets.set(key, b = { mat: prim.mat, cast: 0, far: !dyn, items: [], nv: 0, ni: 0 }); unit.hasFar = true;
+          b.items.push({ prim, M, zone: o.zone || 0, skyVis: o.skyVis === undefined ? 1 : o.skyVis, tint: o.tint || null, glow: 0, lit: 0, lights: null, inZone: o.inZone, inSky: o.inSkyVis === undefined ? 0.3 : o.inSkyVis, uvs: o.uvs && /Plaster|Brick/.test(prim.mat) ? o.uvs : null, rf: K_.ROOF.test(name), unit, farCopy: true }); b.nv += prim.n; b.ni += prim.idx.length;
         }
       }
       B.count++; B.tally[name] = (B.tally[name] || 0) + 1; return B;
@@ -260,7 +273,7 @@ const Kit = (() => {
     };
     B.build = function () {
       const group = new THREE.Group(); group.name = opts.name || 'kit-batch'; group.matrixAutoUpdate = false;
-      const nm = new THREE.Matrix3(), v = new THREE.Vector3();
+      const nm = new THREE.Matrix3(), v = new THREE.Vector3(), D = dyn ? { name: group.name, group, far: !!opts.far, units, buckets: [], key: '' } : null;
       for (const b of buckets.values()) {
         const pos = new Float32Array(b.nv * 3), nrm = new Int8Array(b.nv * 4), uvs = new Float32Array(b.nv * 2), kc = new Uint8Array(b.nv * 4), kz = new Uint8Array(b.nv * 4), kg = new Uint8Array(b.nv * 4).fill(255);
         const gB = opts.gBase, gT = opts.gTop;
@@ -289,17 +302,25 @@ const Kit = (() => {
           const src = pr.idx;
           if (flip) for (let i = 0; i < src.length; i += 3) { idx[io + i] = src[i] + vo; idx[io + i + 1] = src[i + 2] + vo; idx[io + i + 2] = src[i + 1] + vo; }
           else for (let i = 0; i < src.length; i++) idx[io + i] = src[i] + vo;
+          if (D) { (b.ents || (b.ents = [])).push({ unit: it.unit, far: it.farCopy, start: io, count: src.length }); it.unit.ents.push(b); }
           vo += pr.n; io += src.length;
         }
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nrm, 4, true)); g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
         g.setAttribute('kc', new THREE.BufferAttribute(kc, 4, true)); g.setAttribute('kz', new THREE.BufferAttribute(kz, 4, true)); g.setAttribute('kg', new THREE.BufferAttribute(kg, 4, true)); g.setIndex(new THREE.BufferAttribute(idx, 1));
         g.computeBoundingBox(); g.computeBoundingSphere();
-        const mesh = new THREE.Mesh(g, material(b.mat, 'batch'));
+        if (D) {         // the index buffer on the GPU is a working copy: K_.update fills it from the units' ranges of `all`
+          const cur = new (idx.constructor)(idx.length), at = new THREE.BufferAttribute(cur, 1); at.setUsage(THREE.DynamicDrawUsage); g.setIndex(at);
+          let n = 0; for (const e of b.ents) if (!e.far) { cur.set(idx.subarray(e.start, e.start + e.count), n); n += e.count; } g.setDrawRange(0, n);
+          b.all = idx; b.cur = cur; b.geo = g; b.dirty = false; D.buckets.push(b);
+        }
+        const mesh = new THREE.Mesh(g, material(b.mat, 'batch')); if (D) { b.mesh = mesh; mesh.frustumCulled = false; mesh.userData.kitDyn = true; }
         mesh.castShadow = !!b.cast && !isGlass(K_.defs[b.mat] || { name: b.mat }); mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.name = b.mat;
-        if (opts.far) { mesh.userData.lod = b.far ? 2 : 1; K_.lodMeshes.push(mesh); mesh.visible = !b.far; }       // 1 = the full mesh, 2 = its far copy: K_.update swaps them by distance
+        if (opts.far && !D) { mesh.userData.lod = b.far ? 2 : 1; K_.lodMeshes.push(mesh); mesh.visible = !b.far; }       // 1 = the full mesh, 2 = its far copy: K_.update swaps them by distance
         group.add(mesh);
       }
+      if (D) { D.buckets = D.buckets.map(b => ({ mat: b.mat, ents: b.ents, all: b.all, cur: b.cur, geo: b.geo, mesh: b.mesh })); for (const b of buckets.values()) { b.ents = null; b.all = b.cur = b.geo = b.mesh = null; }       // the batch keeps its own bucket list untouched (pieces added after the build are ignored, as before)
+        for (const u of units) { u.D = D; u.ents = []; } K_.dyn.push(D); K_.dynNew.push(D); group.userData.kitDyn = D; }
       for (const it of inst) {
         const o = it.o, cs = o.cell || 48, cells = new Map();
         it.matrices.forEach((M, i) => { const k = Math.floor(M.elements[12] / cs) + ',' + Math.floor(M.elements[14] / cs); let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(i); });
@@ -340,8 +361,123 @@ const Kit = (() => {
       m.visible = m.userData.lod === 2 ? far : !far;
     }
   }
+  // ── dynamic batches: decide every unit's state, rewrite the index buffers that changed ──
+  // state 0 = not drawn, 1 = full model, 2 = far copy. Runs when the camera has moved 1.5 m or turned 11 degrees (the view cone is cut
+  // 20 degrees wider than the screen, so nothing can turn into view before the next run).
+  // how far each kind of batch is drawn at all (m from the camera; the code that made the batch used to hide its cells at these ranges)
+  K_.RANGE = { 'kit-yard': q => q.yardRange || 58, 'dress-town': q => (q.yardRange || 58) * 1.1 + 4, 'dress-out': q => (q.yardRange || 58) * 1.1 + 4 };
+  K_.dyn = []; K_.dynNew = []; K_.pool = []; K_.dynLast = [1e9, 0, 1e9, 9, '']; K_.DROP = { low: 40, medium: 70, high: 100 };       // DROP: a piece without a far copy is drawn out to this many times its own size (m)
+  // Pooling: batches built since the last run hand their meshes over; meshes with the same material, shadow flags and layers become one
+  // mesh for the whole town (in K_.poolGroup). A batch's own group stays as the handle other code shows and hides: its units follow it.
+  function poolNew() {
+    const by = new Map(), fresh = K_.dynNew; K_.dynNew = [];
+    for (const D of fresh) for (const b of D.buckets) { const m = b.mesh, k = b.mat + '|' + (m.castShadow ? 1 : 0) + (m.receiveShadow ? 1 : 0) + '|' + m.layers.mask + '|' + m.renderOrder; let l = by.get(k); if (!l) by.set(k, l = []); l.push(b); }
+    if (!K_.poolGroup) { K_.poolGroup = new THREE.Group(); K_.poolGroup.name = 'kit-pool'; K_.poolGroup.matrixAutoUpdate = false; SC.scene.add(K_.poolGroup); }
+    for (const list of by.values()) {
+      const m0 = list[0].mesh; let nv = 0, ni = 0; for (const b of list) { nv += b.geo.attributes.position.count; ni += b.all.length; }
+      const g = new THREE.BufferGeometry(), all = new Uint32Array(ni), ents = [];
+      for (const k of Object.keys(m0.geometry.attributes)) { const a0 = m0.geometry.attributes[k], arr = new (a0.array.constructor)(nv * a0.itemSize); let o = 0; for (const b of list) { const a = b.geo.attributes[k].array; arr.set(a, o); o += a.length; } g.setAttribute(k, new THREE.BufferAttribute(arr, a0.itemSize, a0.normalized)); }
+      let vo = 0, io = 0; for (const b of list) { const src = b.all; for (let i = 0; i < src.length; i++) all[io + i] = src[i] + vo; for (const e of b.ents) ents.push({ unit: e.unit, far: e.far, start: e.start + io, count: e.count }); vo += b.geo.attributes.position.count; io += src.length; }
+      const cur = new Uint32Array(ni), at = new THREE.BufferAttribute(cur, 1); at.setUsage(THREE.DynamicDrawUsage); g.setIndex(at); g.setDrawRange(0, 0);
+      g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+      const mesh = new THREE.Mesh(g, m0.material); mesh.castShadow = m0.castShadow; mesh.receiveShadow = m0.receiveShadow; mesh.layers.mask = m0.layers.mask; mesh.renderOrder = m0.renderOrder; mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.name = m0.name; mesh.visible = false; mesh.userData.kitDyn = true;
+      const P = { mat: list[0].mat, ents, all, cur, geo: g, mesh, dirty: true };
+      // a pool that casts sun shadow gets a twin that only the near shadow map draws, holding just the units close enough (and big enough) to throw a shadow that matters
+      if (m0.castShadow) {
+        mesh.castShadow = false; const g2 = new THREE.BufferGeometry(); for (const k of Object.keys(g.attributes)) g2.setAttribute(k, g.attributes[k]);
+        const cur2 = new Uint32Array(ni), at2 = new THREE.BufferAttribute(cur2, 1); at2.setUsage(THREE.DynamicDrawUsage); g2.setIndex(at2); g2.setDrawRange(0, 0); g2.boundingSphere = g.boundingSphere;
+        const tw = new THREE.Mesh(g2, m0.material); tw.castShadow = true; tw.receiveShadow = false; tw.layers.set(typeof SHADOW_ONLY_LAYER !== 'undefined' ? SHADOW_ONLY_LAYER : 3); tw.matrixAutoUpdate = false; tw.frustumCulled = false; tw.visible = false; tw.name = m0.name + ':shadow';
+        K_.poolGroup.add(tw); P.cast = { geo: g2, cur: cur2, mesh: tw, dirty: true };
+      }
+      K_.poolGroup.add(mesh); K_.pool.push(P);
+      for (const b of list) { if (b.mesh.parent) b.mesh.parent.remove(b.mesh); b.geo.dispose(); b.all = b.cur = b.geo = b.mesh = b.ents = null; }
+    }
+    for (const D of fresh) { D.buckets = []; for (const u of D.units) { u.ents = []; u.state = -1; } }
+    for (const P of K_.pool) for (const e of P.ents) if (e.unit.ents.indexOf(P) < 0) e.unit.ents.push(P);
+  }
+  // ── occlusion: what stands wholly behind nearer houses is not drawn ──
+  // Occluders are the plain boxes that already stand in for each house in the shadow map (wall footprint, ground to eaves): solid, no
+  // openings. Around the camera the compass is cut into 720 bins; each occluder writes, into the bins it spans completely, how steeply
+  // one must look up to see over it and how far away its far side is. A unit is hidden when, in every bin it touches, some occluder
+  // nearer than the unit's nearest point rises above the unit's highest point. Every step errs toward drawing: bins at an occluder's
+  // edges are left out, eaves count 0.25 m lower, and the unit is taken as a cylinder round its bounding sphere.
+  const OCC = { N: 720, K: 3, slope: null, far: null, boxes: null, n: 0 };
+  function occBoxes() {
+    const out = [], add = (M, hw, z0, z1, top) => { const c = [[-hw, z0], [hw, z0], [hw, z1], [-hw, z1]].map(q => { const p = m4.tp(M, [q[0], 0, q[1]]); return [p[0], p[2]]; }); out.push({ c, top: m4.tp(M, [0, top, 0])[1] - 0.25 }); };
+    if (typeof World !== 'undefined' && World.kitExt) for (const id in World.kitExt) { const k = World.kitExt[id]; if (k.shared || !k.Ms || !(k.w > 2)) continue; add(k.Ms, k.w / 2 - 0.2, -k.hd + 0.2, k.hd - 0.2, k.top); }
+    if (typeof INFS !== 'undefined' && INFS.proxies) for (const p of INFS.proxies) add(p.Ms, p.w / 2 - 0.2, -p.d / 2 + 0.1, p.d / 2 - 0.2, p.top);
+    return out;
+  }
+  K_.occlude = function (cam) {
+    const n = (typeof World !== 'undefined' && World.kitExt ? Object.keys(World.kitExt).length : 0) + (typeof INFS !== 'undefined' && INFS.proxies ? INFS.proxies.length : 0);
+    if (!OCC.boxes || OCC.n !== n) { OCC.boxes = occBoxes(); OCC.n = n; OCC.slope = new Float32Array(OCC.N * OCC.K); OCC.far = new Float32Array(OCC.N * OCC.K); }
+    const N = OCC.N, K = OCC.K, S = OCC.slope, Fd = OCC.far, TAU_ = Math.PI * 2; S.fill(-1e9); Fd.fill(0);
+    for (const b of OCC.boxes) {
+      let a0 = 0, lo = 1e9, hi = -1e9, dmax = 0, dmin = 1e9;
+      for (let i = 0; i < 4; i++) { const dx = b.c[i][0] - cam[0], dz = b.c[i][1] - cam[2], d = Math.hypot(dx, dz); let a = Math.atan2(dz, dx); if (i === 0) a0 = a; else { a -= a0; a = Math.atan2(Math.sin(a), Math.cos(a)) + a0; } lo = Math.min(lo, a); hi = Math.max(hi, a); dmax = Math.max(dmax, d); dmin = Math.min(dmin, d); }
+      if (dmin < 2.5 || dmax > 170 || hi - lo > 2.6) continue;          // too close (the camera may be beside or inside it), or too far to matter
+      const h = b.top - cam[1], sl = h > 0 ? h / dmax : h / dmin, i0 = Math.ceil(lo / TAU_ * N) + 1, i1 = Math.floor(hi / TAU_ * N) - 1;
+      for (let i = i0; i < i1; i++) {         // bin i covers i..i+1: only bins wholly inside the span, less one at each edge
+        const o = (((i % N) + N) % N) * K;
+        // keep the K most useful per bin: the steepest, and among those the nearest
+        let w = -1, ws = sl; for (let k = 0; k < K; k++) if (S[o + k] < ws) { ws = S[o + k]; w = k; }
+        if (w >= 0) { S[o + w] = sl; Fd[o + w] = dmax; }
+      }
+    }
+    return function (u, dc) {
+      const near = dc - u.r; if (near < 3) return false;
+      const h = u.y1 - cam[1], sl = h > 0 ? h / near : h / (dc + u.r), a = Math.atan2(u.z - cam[2], u.x - cam[0]), w = Math.asin(Math.min(1, u.r / dc));
+      const i0 = Math.floor((a - w) / TAU_ * N), i1 = Math.floor((a + w) / TAU_ * N);
+      for (let i = i0; i <= i1; i++) { const o = (((i % N) + N) % N) * K; let ok = false; for (let k = 0; k < K; k++) if (Fd[o + k] > 0 && Fd[o + k] < near && S[o + k] >= sl) { ok = true; break; } if (!ok) return false; }
+      return true;
+    };
+  };
+  function dynUpdate(camPos) {
+    const fresh = K_.dynNew.length > 0; if (fresh) { if (typeof SC === 'undefined' || !SC.scene) return; poolNew(); }
+    const L = K_.dynLast, cam = (typeof R !== 'undefined' && R.cam) || { yaw: 0, pitch: 0 }, qn = (typeof R !== 'undefined' && R.qName) || 'medium';
+    const F = (typeof R !== 'undefined' && R.q && R.q.houseFar) || K_.farDist; let key = qn + F; for (const D of K_.dyn) key += D.group.visible ? '1' : '0';
+    let dy = cam.yaw - L[3]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    if (!fresh && Math.hypot(camPos[0] - L[0], camPos[2] - L[2]) < 1.5 && Math.abs(camPos[1] - L[1]) < 1 && Math.abs(dy) < 0.19 && key === L[4]) return;
+    L[0] = camPos[0]; L[1] = camPos[1]; L[2] = camPos[2]; L[3] = cam.yaw; L[4] = key;
+    const fx = Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), drop = K_.DROP[qn] || 70;
+    const half = (typeof R !== 'undefined' && R.camera ? Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) : 0.81) + 0.35, cone = Math.abs(cam.pitch) < 0.9 && !(TEST && TEST.kitcone === 0);
+    const occ = K_.occlude && !(TEST && TEST.kitocc === 0) ? K_.occlude(camPos) : null;
+    const q_ = (typeof R !== 'undefined' && R.q) || {}, RS = q_.yardCast === false ? -1 : (q_.shadowNear || 20) * 1.72 + 2;       // reach of the near sun-shadow map from the camera
+    const S_ = K_.dynStat = { units: 0, near: 0, far: 0, cone: 0, dist: 0, hidden: 0, draws: 0 };
+    // batches rebuilt for another tier (dressing, the wilds) take their old group off the scene: drop those units from the pools
+    for (let i = K_.dyn.length - 1; i >= 0; i--) { const D = K_.dyn[i]; if (D.group.parent) D.seen = true; else if (D.seen) { D.dead = true; K_.dyn.splice(i, 1);
+      for (const P of K_.pool) { const n = P.ents.length; P.ents = P.ents.filter(e => !e.unit.D.dead); if (P.ents.length !== n) { P.dirty = true; if (P.cast) P.cast.dirty = true; } } } }
+    for (const D of K_.dyn) {
+      const shown = D.group.visible, range = K_.RANGE[D.name] ? K_.RANGE[D.name](q_) : 1e9;
+      for (const u of D.units) {
+        const dx = u.x - camPos[0], dz = u.z - camPos[2], dc = Math.sqrt(dx * dx + dz * dz), d = Math.max(0, dc - u.r); let st;
+        S_.units++;
+        if (!shown) st = 0;
+        else if (u.always) st = 1;
+        else if (d > range || (!D.far && d > Math.max(26, 2 * u.r * drop))) { st = 0; S_.dist++; }
+        else if (cone && d > 12 && Math.acos(Math.max(-1, Math.min(1, (dx * fx + dz * fz) / dc))) > half + Math.asin(Math.min(1, u.r / dc))) { st = 0; S_.cone++; }
+        else if (occ && d > 6 && occ(u, dc)) { st = 0; S_.hidden++; }
+        else if (D.far) { st = (u.wasFar ? d > F - 3 : d > F + 3) ? (u.hasFar ? 2 : 0) : 1; u.wasFar = st !== 1; }
+        else st = 1;
+        if (st === 1) S_.near++; else if (st === 2) S_.far++;
+        if (st !== u.state) { u.state = st; for (const b of u.ents) b.dirty = true; }
+        const sh = shown && !u.always && dc - u.r < RS && u.r > 0.3 ? 1 : 0; if (sh !== u.sh) { u.sh = sh; for (const b of u.ents) if (b.cast) b.cast.dirty = true; }
+      }
+    }
+    for (const b of K_.pool) {
+      if (b.dirty) {
+        b.dirty = false; let n = 0; const cur = b.cur, all = b.all;
+        for (const e of b.ents) if (e.unit.state === (e.far ? 2 : 1)) { cur.set(all.subarray(e.start, e.start + e.count), n); n += e.count; }
+        b.geo.setDrawRange(0, n); b.mesh.visible = n > 0;
+        if (n) { const at = b.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
+      }
+      if (b.cast && b.cast.dirty) { const c = b.cast; c.dirty = false; let n = 0; for (const e of b.ents) if (!e.far && e.unit.sh) { c.cur.set(b.all.subarray(e.start, e.start + e.count), n); n += e.count; }
+        c.geo.setDrawRange(0, n); c.mesh.visible = n > 0; if (n) { const at = c.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; } }
+      if (b.mesh.visible) S_.draws++;
+    }
+  }
   K_.update = function (camPos) {
-    lodUpdate(camPos);
+    lodUpdate(camPos); dynUpdate(camPos);
     for (const im of K_.instanced) { const s = im.boundingSphere, dx = s.center.x - camPos[0], dz = s.center.z - camPos[2]; im.visible = Math.sqrt(dx * dx + dz * dz) - s.radius < im.userData.maxDist; }
   };
   return K_;
