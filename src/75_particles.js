@@ -24,7 +24,7 @@ function fxUpdate(dt, time, env, cam) {
       if (dist < 45) { e.t += dt; const rate = e.type === 'bonfire' ? 0.035 : 0.16; while (e.t > rate) { e.t -= rate; if (FX.embers.length < 150) FX.embers.push({ p: [e.p[0] + (Math.random() - 0.5) * s * 0.6, e.p[1] + s * 0.4, e.p[2] + (Math.random() - 0.5) * s * 0.6], v: [(Math.random() - 0.5) * 0.5, 0.9 + Math.random() * 1.4 * (s > 1 ? 2 : 1), (Math.random() - 0.5) * 0.5], life: 0, max: 0.7 + Math.random() * 1.1 * (s > 1 ? 2 : 1), ph: Math.random() * 9 }); } }
     } else if (e.type === 'smoke') {
       if (dist > 150) continue;
-      e.t += dt; while (e.t > 0.6) { e.t -= 0.6; if (FX.smoke.length < 230) FX.smoke.push({ p: [e.p[0], e.p[1], e.p[2]], life: 0, max: 5.5 + Math.random() * 2, seed: Math.random(), rot: Math.random() * 6 }); }
+      e.t += dt; while (e.t > 0.6) { e.t -= 0.6; if (FX.smoke.length < 230) FX.smoke.push({ ind: !!e.indoor, p: [e.p[0], e.p[1], e.p[2]], life: 0, max: 5.5 + Math.random() * 2, seed: Math.random(), rot: Math.random() * 6 }); }
     } else if (e.type === 'candle') {
       if ((lit < 0.05 && !e.always) || dist > 40) continue;
       const k = e.always ? 1 : lit;
@@ -42,7 +42,7 @@ function fxUpdate(dt, time, env, cam) {
     }
   }
   // chimney smoke drifts with the wind and thins out
-  if (World.cell) FX.smoke.length = 0;
+  if (World.cell) FX.smoke = FX.smoke.filter(s => s.ind);          // [c4] only forge smoke (emitter.indoor) burns inside
   for (let i = FX.smoke.length - 1; i >= 0; i--) {
     const s = FX.smoke[i]; s.life += dt; if (s.life > s.max) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
     const k = s.life / s.max, wv = Wind.at(s.p[0], s.p[2]), wk = 0.25 + 0.95 * k;          // the gust over this chimney, taking hold as the smoke leaves its shelter

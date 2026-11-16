@@ -17,7 +17,7 @@ const pdShelfTall = (len, h, lv, fill) => m => Props.shelf(m, len, h, lv, 0.34, 
 // a row of tall shelves along a wall from u0 to u1 (floor to ceiling, stocked with `kinds`); returns how many fitted
 function pShelfRun(P, room, side, u0, u1, kinds, o) {
   o = o || {}; const c = P.c, H = Math.min(P.lv[room.k].H - 0.35, 2.7); let n = 0;
-  for (let u = u0; u + 1.8 <= u1 + 1e-6; u += 1.9) if (pAgainst(P, room, side, P.id + '.' + (o.id || 'wall') + side + n, 1.8, 0.34, H, +1, pdShelfTall(1.8, H, o.lv || 5, o.bolts ? PD.bolts(c, 1.8, o.cols) : o.books ? PD.books(c, 1.8) : stockFill(c, kinds)), { at: u + 0.9, lowOk: false })) n++;
+  for (let u = u0; u + 1.8 <= u1 + 1e-6; u += 1.9) if (pAgainst(P, room, side, P.id + '.' + (o.id || 'wall') + side + n, 1.8, 0.34, H, +1, pdShelfTall(1.8, H, o.lv || 5, o.bolts ? PD.bolts(c, 1.8, o.cols) : o.books ? PD.books(c, 1.8) : PD.mixed(c, 1.8, o.mixed || PD.WARES.store)), { at: u + 0.9, lowOk: false })) n++;
   return n;
 }
 // the stair pair every two-storey trade plan needs is declared by hand (the rooms differ); this places loose stock in a room by name
@@ -95,36 +95,58 @@ const pdTrough = m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.7, 0, -0.3, 0.7, 0
 PLANS.smithy = (P, c, info) => {
   const R = P.R, id = P.id; P.dims = { W: 14, D: 12, Dh: 7 };
   pLevel(P, 0, 0, 4.2); pLevel(P, 1, 4.2 + PW.SLAB, 2.5);
-  pRoom(P, 0, 'forge', 'hall', -7, 0, 2, 8, { floor: 'stone' }); pRoom(P, 0, 'living', 'hall', 2, 0, 7, 8); pRoom(P, 0, 'coalstore', 'store', -7, 8, 2, 12, { floor: 'stone' });
+  pRoom(P, 0, 'forge', 'hall', -7, 0, 2, 8, { floor: 'stone', tint: [0.62, 0.56, 0.5] }); pRoom(P, 0, 'living', 'hall', 2, 0, 7, 8); pRoom(P, 0, 'coalstore', 'store', -7, 8, 2, 12, { floor: 'stone' });
   pRoom(P, 1, 'loft', 'bedroom', 2, 0, 7, 8);
-  pDoor(P, 'forge', null, 0, 0); pDoor(P, 'forge', 'living', 2, 6.5); pDoor(P, 'forge', 'coalstore', -3.5, 8);
+  pDoor(P, 'forge', null, 0, 0); pDoor(P, 'forge', 'living', 2, 6.5); pDoor(P, 'forge', 'coalstore', -4.5, 8);
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: 6.0, z: 1.4, width: 1.0, tread: 0.2 });
   pLayout(P);
-  const forge = P.rooms.forge, living = P.rooms.living, cs = P.rooms.coalstore, loft = P.rooms.loft;
-  // the forge on the west wall, big: anvil before it, bellows beside, quench trough, grindstone
-  const hh = pHearth(P, forge, 'w', 2.6, { size: 0.8, at: 3.4, r: 11, c: [4.0, 1.9, 0.6], deco: false }); P.hall = { room: forge, hh };
-  if (hh) { pSpot(P, 'home', hh.front[0] + 0.6, hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
-    const an = pPut(P, forge, id + '.anvil', hh.front[0] + 0.7, hh.front[1], PI / 2, 0.7, 0.45, 0.9, m => Props.anvil(m), {}); if (an) pSpot(P, 'anvil', an.cx + 0.75, an.cz, -PI / 2, { k: 0 });
-    pSpot(P, 'forge', hh.front[0] + 0.2, hh.front[1] - 1.2, Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
-    pPut(P, forge, id + '.bellows', hh.px + 0.45, hh.pz - 1.75, PI / 2, 0.9, 0.6, 0.9, pdBellows, { lowOk: true, back: 'w' });
-    pFree(P, forge, id + '.trough', 1.4, 0.6, 0.6, 0, pdTrough, { near: [hh.front[0] + 0.8, hh.front[1] + 2.2], lowOk: true }); }
+  const forge = P.rooms.forge, living = P.rooms.living, cs = P.rooms.coalstore, loft = P.rooms.loft, m = c.int;
+  // [c4] the forge stands on the far wall straight ahead of the street door: the first thing seen is its glow, the anvil before it and the smith between them
+  const hh = pHearth(P, forge, 's', 2.6, { size: 0.8, at: -0.8, r: 11, c: [4.0, 1.9, 0.6], deco: false }); P.hall = { room: forge, hh };
+  if (hh) {
+    const fx = hh.px, fz = hh.front[1], face = Math.atan2(hh.px - fx, -(hh.pz - fz));
+    pSpot(P, 'home', fx + 1.9, fz - 0.4, face, { k: 0 });
+    const an = pPut(P, forge, id + '.anvil', fx - 0.25, fz - 0.5, 0, 0.7, 0.5, 0.9, mm => Props.anvil(mm), { allow: ['hearth'] });
+    if (an) { pSpot(P, 'anvil', an.cx + 0.15, an.cz + 0.75, 0, { k: 0 }); }
+    pSpot(P, 'forge', fx + 1.0, fz + 0.1, PI / 2 + 0.3, { k: 0 });
+    // the forge itself: a billet glowing in the coals, a stone hood already (the breast), smoke going up, the bellows on the right with its handle out
+    at(m, hh.px, 0.02, hh.pz, PI / 2, () => {
+      emit(m, 1.6, () => { m.mat(MAT.PLAIN, [1, 0.5, 0.12]); m.box(0.2, 0.1, -0.5, 0.6, 0.125, 0.5, 4); m.box(0.25, 0.125, -0.12, 0.55, 0.14, 0.12, 4); });
+      m.mat(MAT.METAL, [0.3, 0.3, 0.33]); m.box(0.28, 0.12, -0.04, 0.44, 0.15, 0.04); m.mat(MAT.PLAIN, [0.08, 0.07, 0.07]); m.ball(0.3, 0.07, -0.35, 0.18, 0.07, 0.14, 6, 3); m.ball(0.32, 0.07, 0.38, 0.16, 0.06, 0.14, 6, 3);
+    });
+    World.emitters.push({ type: 'smoke', p: [...P.w2(hh.px, P.lv[0].H - 0.2, hh.pz - 0.1)], zone: P.zone, indoor: true });
+    pPut(P, forge, id + '.bellows', hh.px + 1.75, hh.pz - 0.5, 0, 0.9, 0.6, 0.9, mm => { at(mm, 0, 0, 0, PI, () => pdBellows(mm)); }, { lowOk: true, allow: ['hearth'], back: 's' });
+    pPut(P, forge, id + '.trough', fx - 2.3, fz - 0.6, 0, 1.4, 0.6, 0.6, pdTrough, { lowOk: true, allow: ['hearth'] });
+    pPut(P, forge, id + '.coalheap', fx - 3.0, 7.3, 0, 1.4, 0.9, 0.6, PD.coalHeap(R), { lowOk: true, allow: ['hearth'] });
+  }
   if (hh) pPier(P, 1, hh);
-  pKitFloor(P, forge, 'n', 'Whetstone', { at: -5 }) || pKitFloor(P, forge, 's', 'Whetstone', { at: 'start' });
-  pKitFloor(P, forge, 'n', 'Workbench', { at: -2.5 }); pKitFloor(P, forge, 's', 'WeaponStand', { n: 'a', at: -5 }); pKitFloor(P, forge, 's', 'WeaponStand', { n: 'b', at: -1 });
-  for (let i = 0; i < 3; i++) pAgainst(P, forge, 'n', id + '.coal' + i, 1.0, 0.8, 0.5, 0, pdCoal, { at: 'end', lowOk: true }); pAgainst(P, forge, 's', id + '.iron', 1.0, 0.4, 0.3, 0, pdIron, { at: 'mid', lowOk: true });
-  pWalls(P, forge, ['Peg_Rack', 'Axe_Bronze', 'Pickaxe_Bronze', 'cross_pein_hammer', 'Peg_Rack', 'Sword_Bronze', 'kite_shield', 'Peg_Rack', 'Axe_Bronze', 'Torch_Metal']);
-  PD.dense(P, forge, { pool: ['hooks', 'rack', 'paint', 'sconce', 'cabinet'], corner: ['stack', 'sacks', 'broom'], mid: { kinds: ['casks'], max: 1 } });
-  PD.rack(P, forge, -3.2, 5.0, 2.4, 0, ['pot', 'pot', 'herb']); pLamp(P, forge, -3.0, 2.5); pLamp(P, forge, -3.0, 6.0);
-  const e = P.doors.find(d => d.b === null); if (e) pPut(P, forge, id + '.mat', e.x, 1.2, 0, 2.4, 1.4, 0.02, pdRug(2.4, 1.4, [0.25, 0.2, 0.17]), { flat: true, noClear: true });
+  // west wall: the tool board, the grindstone, finished blades, the bench; windows leave their gaps
+  pHang(P, forge, 'w', 2.0, 1.8, 1.0, 2.1, PD.toolRack(R, 1.8), id + '.tools1', { pivot: 2.05 }); pHang(P, forge, 'w', 4.1, 1.8, 1.0, 2.1, PD.toolRack(R, 1.8, ['tongs', 'hammer', 'tongs', 'punch', 'sledge', 'tongs']), id + '.tools2', { pivot: 2.05 });
+  pAgainst(P, forge, 'w', id + '.bench', 1.8, 0.7, 0.84, +1, mm => { at(mm, 0, 0, 0, PI, () => PD.smithBench(1.8)(mm)); }, { at: 6.2, lowOk: true });
+  pAgainst(P, forge, 'w', id + '.grind', 0.8, 0.6, 0.7, 0, PD.grindstone, { at: 2.6, lowOk: true });
+  // north wall (the street side): a full board of finished blades, horseshoes, tool boards either side of the door
+  pHang(P, forge, 'n', -3.2, 1.6, 1.0, 2.0, PD.bladeWall(R, 1.6), id + '.blades', { pivot: 2.0 }); pHang(P, forge, 'n', -5.2, 1.5, 1.2, 1.7, PD.horseshoes(R, 1.5), id + '.shoes', { pivot: 1.75 });
+  pHang(P, forge, 'n', 1.2, 1.4, 1.0, 1.9, PD.toolRack(R, 1.4), id + '.tools3', { pivot: 1.95 }) || pHang(P, forge, 'n', 1.3, 1.0, 1.0, 1.9, PD.horseshoes(R, 1.0), id + '.shoes2', { pivot: 1.75 });
+  pAgainst(P, forge, 'n', id + '.iron', 1.1, 0.5, 1.3, 0, PD.ironStand(R), { at: -1.8 }); pAgainst(P, forge, 'n', id + '.iron2', 1.1, 0.5, 1.3, 0, PD.ironStand(R), { at: -6.0 });
+  pKitFloor(P, forge, 'e', 'Whetstone', { at: 'start' }); pKitFloor(P, forge, 'w', 'WeaponStand', { n: 'a', at: 'mid' }); pKitFloor(P, forge, 'e', 'WeaponStand', { n: 'b', at: 'end' });
+  pAgainst(P, forge, 'e', id + '.waterbrl', 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { at: 'end', lowOk: true }); pKitFloor(P, forge, 'e', 'Bucket_Wooden_1', { n: 'q', at: 'end' });
+  for (let i = 0; i < 2; i++) pAgainst(P, forge, 's', id + '.coal' + i, 1.0, 0.8, 0.5, 0, pdCoal, { at: i ? 'end' : 'start', lowOk: true });
+  pWalls(P, forge, ['Peg_Rack', 'Axe_Bronze', 'Pickaxe_Bronze', 'cross_pein_hammer', 'Sword_Bronze', 'kite_shield', 'Torch_Metal', 'rusted_spade_01']);
+  // overhead: chains and a bar of tongs above the work, the rafters black with soot
+  pCeil(P, forge, -0.3, 4.0, PD.chainHang(1.3, R)); pCeil(P, forge, -3.0, 3.2, PD.hookBar(1.8, R)); pCeil(P, forge, -4.5, 5.5, PD.chainHang(0.9, R)); pCeil(P, forge, 1.0, 5.5, PD.hookBar(1.2, R, ['tongs', 'ladle', 'chain']));
+  for (const sd of ['n', 'e', 'w']) pHigh(P, forge, sd, 2.7, 1.5, w => PD.highShelf(R, w), id + '.hi');
+  PD.dense(P, forge, { pool: ['sconce', 'shelf', 'stack', 'sacks'], corner: ['stack', 'sacks', 'broom'], middle: false });
+  pLamp(P, forge, -3.5, 2.2); pLamp(P, forge, 0.6, 3.0);
+  const e = P.doors.find(d => d.b === null); if (e) pPut(P, forge, id + '.mat', e.x, 1.3, 0, 2.4, 1.4, 0.02, pdRug(2.4, 1.4, [0.25, 0.2, 0.17]), { flat: true, noClear: true });
   // the family's room: hearth, table, shelves, bed corner; the loft above
   const lh = pHearth(P, living, 'e', 1.6, { cauldron: true, size: 0.4, at: 4.5 }); if (lh) pPier(P, 1, lh);
   dressKitchen(P, living, { hh: lh }); const lt = pDining(P, living, 1.8, 0.85, { near: [4.0, 1.2], id: 'meal', n: 3 }); if (lt) lt.seats.forEach((st, i) => pSit(P, i ? 'seat' + i : 'sit', st[0], st[1], st[2], 0));
   PD.dense(P, living, { pool: ['cupboard', 'hooks', 'paint', 'tapestry', 'sconce', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
   dressBedroom(P, loft, { beds: ['bed'], loot: [['gold', 8]], bedInteract: true, table: true }); PD.dense(P, loft, { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'sconce'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
   // the store behind the forge: coal, iron, billets, crates, a ladder
-  for (let i = 0; i < 4; i++) pFree(P, cs, id + '.cscoal' + i, 1.0, 0.8, 0.5, R() * 0.3, pdCoal, { near: [-5.5, 9.2], lowOk: true });
+  for (let i = 0; i < 2; i++) pFree(P, cs, id + '.cscoal' + i, 1.4, 0.9, 0.6, 0, PD.coalHeap(R), { near: [-5.5 + i * 2.2, 9.2], lowOk: true });
   for (let i = 0; i < 3; i++) pFree(P, cs, id + '.csiron' + i, 1.0, 0.4, 0.3, 0, pdIron, { near: [-1.5, 11], lowOk: true });
-  pStock(P, cs, { crates: 3, sacks: 2, barrels: 2, near: [-4, 10.8] }); pShelfRun(P, cs, 's', -7, 2, ['pot', 'bottle', 'jug'], { id: 'cs', lv: 3 });
+  pFree(P, cs, id + '.cspile', 1.3, 0.7, 1.1, 0, PD.cratePile(R), { near: [-4, 10.8], lowOk: true }); pStock(P, cs, { crates: 1, sacks: 2, barrels: 2, near: [-2.5, 10.8] }); pShelfRun(P, cs, 's', -7, 2, null, { id: 'cs', lv: 3, mixed: PD.WARES.hard });
   PD.dense(P, cs, { pool: ['hooks', 'rack', 'sacks', 'torch'], corner: ['stack', 'sacks'], mid: { kinds: ['sacks'], max: 1 } }); pLamp(P, cs, -3, 10);
   if (!hh) P.err.push('no forge fits');
 };
@@ -133,7 +155,7 @@ PLANS.smithy = (P, c, info) => {
 PLANS.elder = (P, c, info) => {
   const R = P.R, id = P.id; P.dims = { W: 14, D: 14, Dh: 9 };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, 3.8); pLevel(P, 1, 3.8 + PW.SLAB, H_UP);
-  pRoom(P, 0, 'hall', 'hall', -7, 0, 7, 9); pRoom(P, 0, 'study', 'study', -7, 9, 0, 14); pRoom(P, 0, 'stairhall', 'corridor', 0, 9, 7, 14);
+  pRoom(P, 0, 'hall', 'hall', -7, 0, 7, 9, { floor: 'stone' }); pRoom(P, 0, 'study', 'study', -7, 9, 0, 14); pRoom(P, 0, 'stairhall', 'corridor', 0, 9, 7, 14);
   pRoom(P, 1, 'chamber', 'bedroom', 0, 9, 7, 14, { skipWin: ['x9'] }); pRoom(P, 1, 'solar', 'bedroom', -7, 9, 0, 14, { skipWin: ['x9'] });
   pRoom(P, -1, 'strongroom', 'cellar', 0, 9, 7, 14, { floor: 'stone', win: false });
   pDoor(P, 'hall', null, 0, 0); pDoor(P, 'hall', 'stairhall', 3.5, 9); pDoor(P, 'hall', 'study', -3.5, 9); pDoor(P, 'chamber', 'solar', 0, 11.5);
@@ -176,4 +198,4 @@ PLANS.elder = (P, c, info) => {
 };
 
 // ── ship list: a building is added only when its plan above is designed, dressed, lit and validated ──
-PLAN_SHIP.store = 1; PLAN_SHIP.elder = 1;      // smithy held by the coordinator: from the door the forge hall shows a bare wall (the forge is out of view) and the room is sparse; add PLAN_SHIP.smithy = 1 when the forge faces the entry and the hall is dressed
+PLAN_SHIP.store = 1; PLAN_SHIP.elder = 1; PLAN_SHIP.smithy = 1;      // smithy [c4]: forge faces the entry, hall dressed
