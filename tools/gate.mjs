@@ -1,5 +1,5 @@
 // The gate: everything that must pass before a build is published, as one command.
-//   node tools/gate.mjs [--quick | --full] [--cells a,b,c] [--only id,id] [--skip id,id] [--out dir] [--no-build] [--list] [--accept-budget]
+//   node tools/gate.mjs [--quick | --full] [--cells a,b,c] [--only id,id] [--skip id,id] [--out dir] [--no-build] [--list] [--accept-budget] [--shard k/n]
 // --quick   the five-minute subset (build, silent boot, quest, stairs, interiors, voices, budgets on medium, production boot)
 // --full    (default) the whole publish list; every interior cell in chunks; the culling check; one WebGPU frame
 // --cells   check only these cells (ids as in Cells.list) instead of all of them
@@ -78,6 +78,8 @@ let steps = STEPS.filter(s => (!QUICK || s.quick) && (!only || only.includes(s.i
   steps.splice(i, 1, ...chunks.map((c, k) => ({ id: 'cells-' + (k + 1), why: c.join(' '), run: expect(/cells PASS/, play, 'cells.js', 'window.__cells=' + JSON.stringify(c) + '; window.__noRest=true; ') })));
 } }
 if (has('--no-build')) steps = steps.filter(s => s.id !== 'build');
+// --shard k/n: every n-th step, for running the gate as n jobs side by side on separate machines (GitHub). Each shard builds for itself.
+if (val('--shard')) { const [k, n] = val('--shard').split('/').map(Number); let j = 0; steps = steps.filter(s => s.id === 'build' || (j++ % n) === k - 1); }
 
 const t0 = Date.now(), rows = []; let failed = 0;
 for (const s of steps) {
