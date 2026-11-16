@@ -2620,7 +2620,7 @@ const Chars = (() => {
     const PART = [[/trim/, 'trim'], [/tunic|bodice|dress/, 'tunic'], [/robe/, 'robe'], [/hood|helmet/, 'head'], [/pants/, 'pants'], [/boots/, 'boots'], [/skirt/, 'skirt']];
     const names = Object.values(BODY).concat(FOES.map(f => f.body));
     const bodies = {}; for (const n of new Set(names)) bodies[n] = n + '.glb';
-    const ANIMS = { idle: ['idle-a', 'idle-foldarms', 'idle-a'], walk: ['walk', 'walk-relaxed'], run: 'jog', sit: 'sitting-idle', 'sit+talk': 'sitting-talking', talk: 'idle-talking',
+    const ANIMS = { idle: ['idle-a', 'idle-foldarms', 'idle-subtle', 'idle-a', 'idle-listening', 'idle-subtle', 'idle-foldarms'], walk: ['walk', 'walk-relaxed'], run: 'jog', sit: 'sitting-idle', 'sit+talk': 'sitting-talking', talk: 'idle-talking',
       hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-harvest', sweep: 'shovel-dig', lie: 'sleeping', cheer: 'clapping',
       pickup: 'pick-up', jump: 'jump-air', block: 'sword-block', hit: 'hit-chest', die: 'death-a' };
     C.define('real', {
@@ -3049,6 +3049,14 @@ const Chars = (() => {
 
   // ── spawning ──
   const cloneBones = o => { const c = o.clone(false); for (const ch of o.children) if (ch.isBone) c.add(cloneBones(ch)); return c; };
+  // [ch1] Every person must map to a body that is loaded and has all four weights: returns the problems (a person drawn as the old code-built body, or as another person's body, is a bug)
+  C.audit = function (defs) {
+    const S = C.set, bad = []; if (!S) return ['no character set loaded'];
+    for (const def of defs) { let look; try { look = S.cfg.look ? S.cfg.look(def) : {}; } catch (e) { bad.push(def.id + ': look failed ' + (e && e.message)); continue; }
+      const B = S.bodies[look.body]; if (!B) { if (!(S.cfg.lazy && def.foe)) bad.push(def.id + ': no body ' + look.body); continue; }
+      for (const lv of ['mid', 'lod', 'far']) if (!B.lodParts || !B.lodParts[lv]) bad.push(def.id + ': body ' + look.body + ' has no ' + lv + ' weight'); }
+    return bad;
+  };
   C.spawn = function (def) {
     const S = C.set; if (!S) throw new Error('Chars.load first');
     const cfg = S.cfg, look = cfg.look ? cfg.look(def) : {}, body = S.bodies[look.body] ? look.body : Object.keys(S.bodies)[0], B = S.bodies[body];
@@ -3056,6 +3064,7 @@ const Chars = (() => {
     const skeleton = new THREE.Skeleton(B.skel.bones.map(b => byName[b.name]), B.skel.boneInverses);
     const H = { def, set: S, body, root, pivot: new THREE.Group(), skeleton, uVis: [0, 1, 2, 3, 4].map(() => uniform(new THREE.Vector4())), visK: uniform(1), visW: new Float32Array(20), uZone: uniform(0), uLight: uniform(1), uMouth: uniform(0), uBlink: uniform(0), uPupil: uniform(0.05), uGaze: uniform(new THREE.Vector2()), uHead: uniform(new THREE.Matrix3()), bones: {}, actions: {}, cur: null, curName: '', seed: 0, mats: [], meshes: [] };
     for (let i = 0, id = String(def.id || C.list.length); i < id.length; i++) H.seed = (H.seed * 31 + id.charCodeAt(i)) >>> 0;
+    { const u1 = ((H.seed >>> 3) % 97) / 97, u2 = ((H.seed >>> 9) % 89) / 89, kid = /child|boy|girl/.test(body); H.wide = kid ? 1 : 0.93 + 0.15 * u1; H.tall = kid ? 1 : 0.965 + 0.07 * u2; }      // [ch1]
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p] && (!/^w_/.test(p) || (cfg.wears && cfg.wears(look, p)))).sort(), names = new Set(), hasWear = parts.some(p => /^w_/.test(p));
     for (const p of parts) for (const m of B.parts[p]) names.add(m.material.name);
     H.fit = look.fit || 1;
@@ -3264,13 +3273,13 @@ const Chars = (() => {
     // is measured from how far the villager really moved (callers only pass a nominal figure, and people slow down in turns and at doors).
     { const lp = H.lastP, mv = lp && dt > 1e-4 ? Math.hypot(st.pos[0] - lp[0], st.pos[2] - lp[2]) / dt : -1; H.lastP = [st.pos[0], st.pos[1], st.pos[2]];
       if (mv >= 0 && mv < 12) H.realSpeed = H.realSpeed === undefined ? mv : H.realSpeed + (mv - H.realSpeed) * Math.min(1, dt * 8); }
-    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k, rate = (cfg.rate && cfg.rate[key]) || 1, sp = TEST && TEST.feetnominal ? st.speed : (H.realSpeed !== undefined && dt > 0 ? H.realSpeed : st.speed);
+    if (H.cur && (key === 'walk' || key === 'run')) { const g = gait(H, key) * k * H.tall, rate = (cfg.rate && cfg.rate[key]) || 1, sp = TEST && TEST.feetnominal ? st.speed : (H.realSpeed !== undefined && dt > 0 ? H.realSpeed : st.speed);
       H.cur.setEffectiveTimeScale(sp > 0.05 && g > 0.2 ? Math.min(Math.max(sp / g * ((TEST && TEST.feetk) || 1), 0.25), cfg.maxRate || 1.8) : sp !== undefined && sp <= 0.05 && dt > 0 ? 0.25 : rate); }
     const dcam = hyp(st.pos[0] - R.cam.pos[0], st.pos[1] - R.cam.pos[1], st.pos[2] - R.cam.pos[2]);
     if (dcam > LOD.slowDist && H.seed % LOD.slowEvery !== R.frame % LOD.slowEvery) H.slowDt = (H.slowDt || 0) + dt;      // far away: the pose changes on one frame in a few
     else { H.mixer.update(dt + (H.slowDt || 0)); H.slowDt = 0; }
     const p = st.pos, yaw = st.yaw || 0, face = cfg.faces === -1 ? 0 : Math.PI;
-    H.root.scale.setScalar(k);
+    H.root.scale.set(k * H.wide, k * H.tall, k);      // [ch1] each person's own girth and height on top of the body: 21 bodies become dozens of builds
     if (lying) {
       const m = measure(H, 'lie'), th = Math.PI - yaw - m.ang, c = Math.cos(th), sn = Math.sin(th);      // head toward the spot's heading, body centred on it
       pv.rotation.y = th; pv.position.set(p[0] - (m.cx * c + m.cz * sn) * k, p[1] + 0.02, p[2] - (-m.cx * sn + m.cz * c) * k);
@@ -12480,9 +12489,10 @@ function buildNPCs() {
     const mesh = buildCharacter(def), item = World.skinPack.add(mesh);
     const npc = { def, id: def.id, name: def.name, scale: def.scale || 1, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, wander: 0, dwell: 0, talking: false, look: [0, 0], ang: new Float32Array(33) };
     npc.obj = addSkinned(item, { r: 1.4, zone: 0, npc: true });
-    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; if (typeof npcHandProp === 'function') npcHandProp(npc); /* lute, hammer, spear, mug ... (77d_handprops.js) */ } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; } }
+    if (G.chars) { try { npc.ch = Chars.spawn(def); npc.ch.pivot.traverse(o => { o.layers.set(1); }); npc.obj.hasChar = true; if (typeof npcHandProp === 'function') npcHandProp(npc); /* lute, hammer, spear, mug ... (77d_handprops.js) */ } catch (e) { console.warn('villager ' + def.id + ': ' + (e && e.message || e)); npc.ch = null; npc.obj.hasChar = true; /* [ch1] the old code-built body is never shown beside the realistic set */ } }
     NPCS.push(npc); NPC[def.id] = npc;
   }
+  if (G.chars && typeof Chars !== 'undefined' && Chars.audit) { const bad = Chars.audit(NPC_DEFS); if (bad.length) console.warn('[ch1] villagers without a full body: ' + bad.join('; ')); }      // [ch1] nobody is ever the fallback body
   // chickens
   World.chickens = [];
   const cm = [buildChicken([0.92, 0.9, 0.85]), buildChicken([0.62, 0.36, 0.2]), buildChicken([0.25, 0.22, 0.2])].map(m => World.skinPack.add(m));
@@ -12616,6 +12626,7 @@ function ambSpots() {
 function buildAmbient() {
   if (!G.chars || !Chars.ready || (TEST && TEST.amb === 0)) return;
   AMB.list.length = 0;
+  { const bad = Chars.audit ? Chars.audit(AMB_DEFS) : []; if (bad.length) console.warn('[ch1] passers-by without a full body: ' + bad.join('; ')); }      // [ch1]
   AMB_DEFS.forEach((def, i) => {
     let ch = null; try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('ambient ' + def.id + ': ' + (e && e.message || e)); return; }
     AMB.list.push({ def, i, ch, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, dwell: 0, state: 'away', next: 0, ang: null, look: [0, 0], seat: null, stops: null, talking: false, speed: 1.1 + Math.random() * 0.25 });
