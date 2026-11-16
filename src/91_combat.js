@@ -54,7 +54,7 @@ const Combat = (() => {
   // the blow lands: everything in reach and inside the arc takes it once
   const land = () => {
     const r = RPG.st(), a = C.atk, m = RPG.meta(r.eq.weapon), P = Player;
-    const dmg = (m.dmg || 3) * a.mul * (C.weak ? 0.6 : 1), reach = 2.15 + (m.reach || 0) + (C.heavy ? 0.25 : 0);
+    const dmg = (m.dmg || 3) * a.mul * (C.weak ? 0.6 : 1) * (RPG.perk && RPG.perk('keen') ? 1.12 : 1), reach = 2.15 + (m.reach || 0) + (C.heavy ? 0.25 : 0);
     const res = Foes.sweep(P.pos, P.yaw, reach, a.arc, dmg, C.heavy);
     if (res.n) {
       RPG.hitStop = C.heavy ? 0.11 : 0.07; RPG.kick[0] += a.kick[0]; RPG.kick[1] += a.kick[1]; RPG.shake = Math.max(RPG.shake, C.heavy ? 0.5 : 0.28); RPG.combatT = 0;

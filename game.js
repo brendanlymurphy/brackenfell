@@ -13536,7 +13536,7 @@ function storyBuild() {
   m.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-0.7, 0.7]) { m.beam([sx - 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx - 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); }
   m.mat(MAT.PLANKS, [0.5, 0.42, 0.34], 0.5); m.box(-1.15, 0.6, -0.34, 1.15, 0.66, 0.34, 4);
   // a drowned man under stained sailcloth: head, shoulders, chest, hips and two long legs under the canvas; boots out at the foot, one blue-white hand slipped off the edge, rope ties, wet boards
-  const cv = [0.30, 0.27, 0.21], cv2 = [0.24, 0.21, 0.16];
+  const cv = [0.66, 0.6, 0.48], cv2 = [0.5, 0.45, 0.35];
   m.mat(MAT.CLOTH, cv, 0.6);
   m.ball(0.97, 0.78, 0, 0.15, 0.12, 0.12, 10, 6); m.ball(1.08, 0.79, 0, 0.045, 0.045, 0.035, 6, 4); m.ball(0.78, 0.74, 0, 0.11, 0.07, 0.1, 8, 4);
   m.ball(0.6, 0.79, 0, 0.18, 0.14, 0.34, 12, 6); m.ball(0.33, 0.8, 0, 0.3, 0.13, 0.25, 12, 6); m.ball(0.0, 0.76, 0, 0.28, 0.1, 0.2, 10, 5); m.ball(-0.3, 0.77, 0, 0.2, 0.11, 0.22, 10, 5);
@@ -13550,9 +13550,9 @@ function storyBuild() {
   m.mat(MAT.PLAIN, [0.62, 0.7, 0.74]); m.beam([0.18, 0.7, -0.27], [0.12, 0.5, -0.4], 0.07, 0.06); m.ball(0.1, 0.44, -0.42, 0.045, 0.06, 0.04, 7, 4); for (let f = 0; f < 4; f++) m.beam([0.07 + f * 0.022, 0.42, -0.42], [0.075 + f * 0.022, 0.31 - (f % 2) * 0.02, -0.425], 0.014, 0.014);
   m.mat(MAT.PLAIN, [0.5, 0.55, 0.57]); m.ball(0.0, 0.7, -0.34, 0.03, 0.02, 0.03, 4, 3);
   // wet boards under the bier, a drip line off the cloth, a dropped rope end
-  m.mat(MAT.PLAIN, [0.05, 0.045, 0.04]); m.quad2([-1.3, 0.014, -0.65], [-1.3, 0.014, 0.65], [1.3, 0.014, 0.65], [1.3, 0.014, -0.65]); m.mat(MAT.PLANKS, [0.28, 0.24, 0.2], 0.5); m.box(-1.14, 0.58, -0.335, 1.14, 0.6, 0.335, 4);
+  m.mat(MAT.PLAIN, [0.1, 0.095, 0.085]); m.disc(0, 0.014, 0, 1.25, 18, 1); m.mat(MAT.PLANKS, [0.28, 0.24, 0.2], 0.5); m.box(-1.14, 0.58, -0.335, 1.14, 0.6, 0.335, 4);
   // a wet dark patch of the quay and a bucket
-  m.mat(MAT.PLAIN, [0.07, 0.065, 0.06]); m.quad2([-1.6, 0.012, -0.9], [-1.6, 0.012, 0.9], [1.6, 0.012, 0.9], [1.6, 0.012, -0.9]);
+  m.mat(MAT.PLAIN, [0.15, 0.14, 0.13]); m.disc(0.2, 0.011, 0.1, 1.75, 20, 1);
   m.push().T(1.5, 0.0, 0.7); m.mat(MAT.PLANKS, COL.wood, 0.5); m.cyl(0, 0, 0, 0.17, 0.2, 0.3, 9, 1); m.pop();
   addBoxCollider(m, -1.2, -0.4, 1.2, 0.4, 0, 1.0); m.pop();
   pack.add(m, { kind: 'opaque', maxDist: 80, noShadow: true }); pack.upload('story'); World.packs.push(pack);
@@ -13560,6 +13560,7 @@ function storyBuild() {
   World.interact.push({ p: [x, 0.9, z], r: 2.6, zone: 0, kind: 'read', id: 'wharf.body', title: 'The drowned man', text: 'Sailcloth over him; Finn’s doing. A man of fifty, thin as a rake.\n\nNo water has been in him. His palms are scarred white across, pick-work. There is silver in his back teeth, a bright vein of it, as though he had bitten rock.\n\nRound his neck on a bootlace: a brass tally stamped OM 14. In his fist, folded small in oilcloth:\n\n“TELL ROWAN THE BREAD DID NOT COME.”' });
   if (typeof mineBuild === 'function') { try { mineBuild(); } catch (e) { console.warn('mine: ' + (e && e.stack || e)); } }       // 94_mine.js
   if (typeof ixScan === 'function') { try { ixScan(); } catch (e) { console.warn('interact: ' + (e && e.stack || e)); } }
+  if (typeof secBuild === 'function') { try { secBuild(); } catch (e) { console.warn('secrets: ' + (e && e.stack || e)); } }       // 82c_secrets.js
 }
 // the sailcloth hides nothing from a man who looks: the first reading takes the token and starts the thread (a stranger who never met Hale still gets the quest)
 const _il82 = interactLabel, _iu82 = interactUse;
@@ -13874,13 +13875,145 @@ for (const id of Object.keys(TALK)) { if (typeof TALK[id] !== 'function' || id.s
   TALK[id] = function () { const n = base.apply(this, arguments); const npc = NPC[id]; if (n && npc && game.playing) { const now = Env.hour + (RPG.st().day || 0) * 24; if (!(npc._said > now - 0.5)) { const row = IX.SAY.find(r => (r[0] === '*' || r[0] === id) && r[1]()); if (row) { npc._said = now; n.t = row[2] + '\n\n' + n.t; } } } return n; }; }
 
 
+// ---- 82c_secrets.js ----
+// ───────────────────────── town secrets (q1): nine things worth walking to, all inside the existing town ─────────────────────────
+// Each is found by looking at a prop that does not belong (a loose stone, a hatch, a patch of fresh brick, a box in the bell frame, a plate in the quay wall), each pays out, and each
+// leaves a note that points at the next one. Nothing here is a quest marker: a lockpick opens every lock, so no order is forced and nothing can dead-end.
+//   1 bell      a tin box in the Watch Bell's frame                 -> lockpick, gold; points at 2
+//   2 stone     a loose stone in the terrace wall                   -> cellar key, gold; points at 3
+//   3 cellar    a locked hatch in Washing Lane                      -> silver, the house key; points at 9 and 8
+//   4 attic     a trunk in the loft over the Hart's passage         -> silver, gold; the Hart's ledger points at 5
+//   5 wall      fresh brick in the Hart's cellar                    -> the strongbox key, silver; points at 6 and Act 2
+//   6 strongbox an iron plate in the quay wall, from the landing    -> gold, silver
+//   7 meeting   the Elder and Greta behind the chapel, 23:00-03:30  -> overheard; a dropped purse
+//   8 magpie    a thief you follow from the square to the yard      -> her stash
+//   9 house     the house nobody will talk about                    -> Hale's letters
+Object.assign(ITEMS, {
+  silverbar: ['Bar of grey silver', 'Cast in a sand mould and never stamped. Purer than anything the Crown mints.', { value: 45 }],
+  cellarkey: ['Cellar key', 'Short and dark, with a magpie’s feather knotted through the bow.'],
+  housekey: ['Key with a wren cut in the bow', 'It has been oiled. Somebody has kept faith with a house nobody goes into.'],
+  wharfkey: ['Wharf strongbox key', 'Salt-eaten iron on a length of fishing line. It smells of the lake.'],
+});
+const SEC = { built: false, list: [], mag: { st: 'off' }, meet: { st: 'off' } };
+const secFlag = id => !!(S.flags && S.flags['sec_' + id]);
+const secCount = () => SEC.list.filter(s => secFlag(s.sec)).length;
+// a prop that is a skinned mesh (so it can sit in a cell, move, and hide): the builder draws it at the origin facing +z
+function secProp(fn, p, yaw, o) {
+  o = o || {}; const m = new Mesh(o.cap || 1200); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; fn(m);
+  const mi = World.skinPack.add(m), obj = addSkinned(mi, { c: p.slice(), r: o.r || 1.6, zone: o.zone || 0, kind: 'misc', cell: o.cell, light: o.light === undefined ? 1 : o.light });
+  secPlace(obj, p, yaw); return obj;
+}
+function secPlace(obj, p, yaw) { R.boneData.set(m4.rotY(m4.translate(m4.create(), p[0], p[1], p[2]), yaw || 0), obj.slot * 256); obj.c = p.slice(); }
+const secChest = (m, w, h, d, c1, c2) => { m.mat(MAT.PLANKS, c1 || [0.42, 0.32, 0.22], 0.5); m.box(-w / 2, 0, -d / 2, w / 2, h, d / 2, 4); m.mat(MAT.METAL, c2 || [0.22, 0.2, 0.18]); for (const x of [-w * 0.3, w * 0.3]) m.box(x - 0.025, -0.005, -d / 2 - 0.01, x + 0.025, h + 0.01, d / 2 + 0.01, 0); m.box(-0.03, h * 0.55, d / 2, 0.03, h * 0.8, d / 2 + 0.03, 0); };
+const secCloak = (m, c, tall) => { m.mat(MAT.CLOTH, c, 0.6); m.lathe([[0.34, 0], [0.28, 0.5], [0.22, 1.1 * tall], [0.16, 1.42 * tall], [0.1, 1.5 * tall]], 9, 0); m.mat(MAT.PLAIN, [0.62, 0.5, 0.42]); m.ball(0, 1.58 * tall, 0.03, 0.085, 0.1, 0.09, 8, 5); m.mat(MAT.CLOTH, c.map(v => v * 0.8), 0.6); m.ball(0, 1.6 * tall, -0.02, 0.12, 0.13, 0.12, 8, 5); };
+// ── the places and what is in them ──
+const SECRETS = {
+  bell: { p: [9.0, 10.54, 18.5], r: 2.2, ck: 'chest', verb: 'Open the tin box', label: 'Look at the tin box in the frame', loot: [['gold', 12], ['lockpick', 1]], note: ['Tobin’s box', 'A tin that held tea once. Inside, under a rag: a lockpick, a few coins, and a page torn from a ledger.\n\nTHE BELL WAS NEVER RUNG FOR THE FIRE. IT WAS RUNG FOR THE LIGHTS ON THE LAKE. If you are the sort who climbs, you are the sort who looks. The Magpie keeps a spare key where the Elder looks down on the market and never thinks to look at the wall: the stone with the crooked mortar, west of the plaque.'] },
+  stone: { p: [-19.0, 1.3, 12.68], r: 2.0, ck: 'chest', verb: 'Work the stone loose', label: 'Push the crooked stone', loot: [['cellarkey', 1], ['gold', 6]], note: ['Behind the stone', 'A hollow the size of a loaf, dry and lined with sacking. A key, a few coins, and a scrap of paper.\n\nWASHING LANE. THE HATCH UNDER THE LINES. Take what is in it and leave the rest. I am not the only one who goes down there. — M.'] },
+  cellar: { p: [-39.3, 0, -43.15], r: 1.8, ck: 'chest', verb: 'Open the hatch', label: 'Open the hatch', locked: true, key: 'cellarkey', hard: 0.55, loot: [['silverbar', 2], ['housekey', 1], ['gold', 14]], note: ['The Magpie’s cellar', 'A cold hole under the lane, lined with flour sacks. Two grey bars of silver, a key with a wren on it, and a list in a round hand:\n\nHart, back door, by the bar. 9 gold the bar and no questions.\nThe house on the south lane: do NOT. Not for any money. Not after what I saw in the window.'] },
+  attic: { p: [11.4, 3.7, -21.4], r: 2.2, ck: 'chest', verb: 'Open the trunk', label: 'Open the trunk under the eaves', loot: [['silverbar', 1], ['gold', 30]], note: ['The Hart’s ledger', 'Kept in two inks. The first is wine and malt. The second is silver.\n\nIn by the cellar way after dark. Out by the north door. Greta counts. The Elder takes the third part and the Warden is never told.\n\nSomebody has written beside the last line: THE WALL IN THE CELLAR IS NOT THE END OF THE CELLAR.'] },
+  wall: { cell: 'inn', zone: 1, p: [266.5, -402.2, 4.6], r: 2.2, ck: 'chest', verb: 'Pull out the loose bricks', label: 'Pull at the fresh brick', gate: () => secFlag('attic') || S.flags.hear_hartledger, gateMsg: 'Newer brick than the rest. Just a wall, unless you know what is behind it.', hint: 'Look at the fresh brick', loot: [['wharfkey', 1], ['silverbar', 2], ['gold', 40]], note: ['Behind the bricks', 'A room no wider than a bed, whitewashed once. A shelf with a tally cut into it, a lantern, a crowbar and a key on a fishing line.\n\nOne mark for every barrow that went out by the lake cave. Two hundred and six. The newest is a week old.\n\nSomeone has scratched a door on the back wall, and under it: DOWN.'] },
+  strongbox: { p: [17.6, -0.55, 82.55], r: 2.2, ck: 'chest', verb: 'Open the iron door', label: 'Open the iron door in the quay', locked: true, key: 'wharfkey', hard: 0.45, loot: [['gold', 70], ['silverbar', 3]], note: ['The strongbox', 'Dry. Somebody dug this into the quay when it was built and has paid it a visit every season since. Coin, silver, and a paper in the old Elder’s hand:\n\nFor the hands below. To be spent on bread, if bread is what the Quiet will take.'] },
+  meetpouch: { p: [-6.0, 0, -86.3], r: 2.0, ck: 'chest', verb: 'Take the pouch', label: 'Take the dropped pouch', gate: () => !!S.flags.hear_meeting, gateMsg: 'Dew on the grass and nothing else.', hint: 'Nothing here', loot: [['gold', 25], ['candle', 2]], note: null },
+  magpie: { p: [0, 0, 0], r: 2.0, ck: 'chest', verb: 'Pull the sack from under the well-lip', label: 'Look under the well-lip', gate: () => !!S.flags.magpieYard, gateMsg: 'A well, a bench and a stool. Somebody comes here to be alone.', hint: 'The well', loot: [['gold', 22], ['silverbar', 1], ['lockpick', 1]], note: ['The Magpie’s sack', 'A flour sack with a cord through it, and a card inside, written in charcoal:\n\nIf you followed me here you are better at it than the Warden’s men. Take half. I never took a thing from a poor house. Only silver, only after dark, only from the ones who had too much of it.'] },
+};
+function secMakeCont(id, s) {
+  const o = { kind: 'cont', sec: id, id: 'sec.' + id, ck: s.ck, verb: s.verb, label: s.label, p: s.p.slice(), r: s.r, zone: s.zone || 0, cell: s.cell, locked: !!s.locked, key: s.key, hard: s.hard, loot: s.loot, gate: s.gate, gateMsg: s.gateMsg, hint: s.hint, note: s.note };
+  World.interact.push(o); SEC.list.push(o); return o;
+}
+// the properties: each prop that does not belong
+function secBuild() {
+  if (SEC.built) return; SEC.built = true;
+  const g = (x, z, y) => World.groundAt(x, z, y === undefined ? 8 : y);
+  // 1: a tin box in the bell frame
+  { const s = SECRETS.bell; secProp(m => { m.mat(MAT.METAL, [0.5, 0.5, 0.46]); m.box(-0.2, 0, -0.14, 0.2, 0.16, 0.14, 0); m.mat(MAT.METAL, [0.62, 0.62, 0.58]); m.box(-0.21, 0.16, -0.15, 0.21, 0.2, 0.15, 0); m.mat(MAT.CLOTH, [0.5, 0.4, 0.3], 0.5); m.box(-0.1, 0.2, -0.06, 0.12, 0.23, 0.07, 0); }, [s.p[0], s.p[1], s.p[2]], 0.3, { r: 1.0 }); secMakeCont('bell', s); }
+  // 2: a loose stone in the terrace's north wall, west of the plaque: a block that stands proud with a dark gap round it
+  { const s = SECRETS.stone; secProp(m => { m.mat(MAT.PLAIN, [0.03, 0.028, 0.024]); m.box(-0.27, -0.2, -0.04, 0.27, 0.2, 0.02, 0); m.mat(MAT.STONE, [1.0, 0.96, 0.9], 0.8); m.box(-0.23, -0.16, -0.1, 0.23, 0.16, 0.0, 4); m.mat(MAT.PLAIN, [0.55, 0.52, 0.46]); m.box(-0.23, -0.16, -0.11, -0.2, 0.16, -0.09, 0); }, s.p, 0, { r: 1.0 }); secMakeCont('stone', s); }
+  // 3: a hatch in Washing Lane
+  { const s = SECRETS.cellar, l = (INF.lanes || []).find(l => l.role === 'wash'); if (l) { s.p = [l.x1 - 1.0, 0, l.zc]; } s.p[1] = g(s.p[0], s.p[2], 1) + 0.03;
+    secProp(m => { m.mat(MAT.PLANKS, [0.36, 0.28, 0.2], 0.5); m.box(-0.45, 0, -0.45, 0.45, 0.07, 0.45, 4); m.mat(MAT.METAL, [0.2, 0.19, 0.18]); for (const z of [-0.28, 0.28]) m.box(-0.46, 0.065, z - 0.03, 0.46, 0.085, z + 0.03, 0); m.cyl(0, 0.07, 0, 0.07, 0.07, 0.025, 8, 0); m.mat(MAT.PLAIN, [0.1, 0.06, 0.05]); m.box(-0.05, 0.085, 0.36, 0.05, 0.12, 0.42, 0); }, s.p, 0, { r: 1.0 }); secMakeCont('cellar', s); }
+  // 4: a trunk in the loft
+  { const s = SECRETS.attic; secProp(m => secChest(m, 0.9, 0.46, 0.5, [0.34, 0.26, 0.18]), s.p, 0.4, { r: 1.2 }); secMakeCont('attic', s); }
+  // 5: fresh brick in the Hart's cellar (the east wall, between two casks)
+  { const s = SECRETS.wall; secProp(m => { m.mat(MAT.PLASTER, [0.82, 0.74, 0.62], 0.6); m.box(-0.95, 0, -0.06, 0.95, 2.0, 0.0, 4); m.mat(MAT.PLAIN, [0.45, 0.2, 0.14]); for (let r = 0; r < 12; r++) for (let c = 0; c < 6; c++) if ((r * 7 + c * 3) % 4) m.box(-0.9 + c * 0.3 + (r % 2) * 0.12, 0.08 + r * 0.16, 0.0, -0.64 + c * 0.3 + (r % 2) * 0.12, 0.2 + r * 0.16, 0.025, 0); }, [s.p[0] + 0.45, s.p[1] - 0.5, s.p[2]], -Math.PI / 2, { r: 2.0, zone: 1, cell: 'inn', light: 0.9, cap: 1500 }); secMakeCont('wall', s); }
+  // 6: an iron plate in the quay wall, at the water-level landing
+  { const s = SECRETS.strongbox; s.p[1] = LAKE.y + 0.95; secProp(m => { m.mat(MAT.METAL, [0.2, 0.19, 0.18]); m.box(-0.38, -0.3, 0, 0.38, 0.3, 0.07, 0); m.mat(MAT.METAL, [0.3, 0.27, 0.24]); for (const [x, y] of [[-0.3, -0.22], [0.3, -0.22], [-0.3, 0.22], [0.3, 0.22]]) m.cyl(x, y, 0.07, 0.03, 0.03, 0.03, 6, 0); m.cyl(0, 0, 0.07, 0.06, 0.06, 0.04, 8, 0); m.mat(MAT.PLAIN, [0.04, 0.035, 0.03]); m.box(-0.03, -0.12, 0.07, 0.03, -0.04, 0.1, 0); }, [s.p[0], s.p[1], s.p[2] + 0.02], 0, { r: 1.2 }); secMakeCont('strongbox', s); }
+  // 7: the meeting behind the chapel: two cloaks, a candle between them, only between 23:00 and 03:30
+  { const cx = -6.0, cz = -85.3; SEC.meet = { st: 'off', t: 0, x: cx, z: cz, a: secProp(m => secCloak(m, [0.2, 0.16, 0.14], 1.0), [cx - 0.7, g(cx, cz), cz], 1.4, { r: 1.2 }), b: secProp(m => secCloak(m, [0.26, 0.2, 0.22], 0.9), [cx + 0.7, g(cx, cz), cz], -1.7, { r: 1.2 }) };
+    SEC.meet.a.visible = SEC.meet.b.visible = false; SEC.meet.em = { type: 'candle', p: [cx, g(cx, cz) + 0.5, cz], zone: 0, always: false, seed: 0.3 };
+    const s = SECRETS.meetpouch; s.p = [cx, g(cx, cz) + 0.1, cz - 1.0]; secProp(m => { m.mat(MAT.CLOTH, [0.3, 0.26, 0.2], 0.4); m.ball(0, 0.07, 0, 0.1, 0.08, 0.1, 8, 5); }, s.p, 0, { r: 0.6 }); secMakeCont('meetpouch', s); }
+  // 8: the Magpie: a cloak that walks from the square to the Hidden Yard at dusk; the sack under the well-lip is there after you have seen where she goes
+  { const l = (INF.lanes || []).find(l => l.role === 'dead'); const ex = l ? l.x1 : -26.16, zc = l ? l.zc : 52.15; SEC.yard = { l, ex, zc };
+    const s = SECRETS.magpie; s.p = [ex + 4.5, g(ex + 4.5, zc - 1.6) + 0.15, zc - 1.6];
+    SEC.mag = { st: 'off', t: 0, fig: secProp(m => secCloak(m, [0.1, 0.1, 0.12], 1.0), [0, -50, 0], 0, { r: 1.5 }), sack: secProp(m => { m.mat(MAT.CLOTH, [0.55, 0.5, 0.4], 0.5); m.ball(0, 0.16, 0, 0.18, 0.18, 0.15, 8, 5); m.mat(MAT.PLAIN, [0.2, 0.15, 0.1]); m.box(-0.06, 0.3, -0.02, 0.06, 0.34, 0.02, 0); }, s.p, 0.5, { r: 0.8 }), path: null, i: 0 };
+    SEC.mag.fig.visible = false; SEC.mag.sack.visible = false; secMakeCont('magpie', s); }
+  // 9: the house nobody talks about: Widow Hale's, shut, its chest holds the letters
+  { const id = 'in.23', ch = World.interact.find(i => i.kind === 'cont' && i.id === 'cont.in.23.chest');
+    IX.LOCKS[id] = { key: 'housekey', hard: 0.5, msg: 'Shuttered, locked, and the lock is oiled. The neighbours do not look at this door as they pass.' };
+    if (ch) { ch.sec = 'house'; ch.loot = [['silverring', 1], ['gold', 18]]; ch.note = ['Letters in a hatbox', 'Tied in blue wool. They are all from the same hand and all to Widow Hale, from Corwin, her son:\n\nMother, the Warden has asked me to say nothing, and I will not. But I have seen what they leave on the slab at the mouth of the deep. If I do not come up, ask Hale why he barred the door and why he sleeps with the key under his pillow.\n\nThe last is unopened. It is addressed to Hale.']; ch.label = 'Look at the hatbox'; SEC.list.push(ch); } }
+  if (typeof ixApplyLocks === 'function') ixApplyLocks();
+}
+// ── use, labels, the find ──
+const _il95 = interactLabel, _iu95 = interactUse;
+interactLabel = function (it) {
+  if (it.sec) { if (S.opened[it.id]) return 'Empty'; if (it.gate && !it.gate()) return it.hint || null; if (it.locked && !(S.unlocked && S.unlocked[it.id])) return 'Open the ' + (it.key === 'wharfkey' ? 'iron door' : 'hatch'); return it.label || it.verb; }
+  return _il95(it);
+};
+interactUse = function (it) {
+  if (!it.sec) return _iu95(it);
+  if (S.opened[it.id]) return toast('Empty.');
+  if (it.gate && !it.gate()) return toast(it.gateMsg || 'Nothing.');
+  const was = secCount(); ixOpenCont(it);
+  if (S.opened[it.id]) { S.flags['sec_' + it.sec] = 1; S.notes = S.notes || []; const n = secCount(); if (n > was) toast('<b>A secret of Brackenfell</b>: ' + n + ' of ' + SEC.list.length + ' found'); if (it.note) { S.read = S.read || {}; S.read['sec.' + it.sec] = 1; S.notes.push('sec.' + it.sec); openReader(it.note[0], it.note[1]); } if (it.sec === 'attic') S.flags.hear_hartledger = 1; save(); }
+};
+// loot a locked secret may also be reached with a lockpick: ixLockTry already allows it. Containers that start closed show 'Empty' once taken.
+// ── per frame: the meeting and the Magpie ──
+const SECQ = { gap: 0 };
+function secTick(dt) {
+  if (!SEC.built || !game.playing || (World.cell && World.cell.id)) return;
+  const P = Player.pos, h = Env.hour, d2 = (x, z) => hyp(P[0] - x, P[2] - z);
+  // the meeting
+  { const M = SEC.meet; if (M && M.a) { const night = h >= 23 || h < 3.5, near = d2(M.x, M.z);
+      if (M.st === 'off' && night && near < 40 && !S.flags.hear_meeting) { M.st = 'here'; M.a.visible = M.b.visible = true; M.t = 0; if (SEC.meetEm !== 1) { World.emitters.push(M.em); SEC.meetEm = 1; } M.em.always = true; }
+      if (M.st === 'here') {
+        if (near < 3.2 || (!night)) { M.st = 'gone'; M.a.visible = M.b.visible = false; M.em.always = false; if (near < 3.2) toast('Someone is there. The cloaks are gone before you have a name for them.'); }
+        else if (near < 11) { M.t += dt; const L = [[0, '<b>Rowan</b>: “The bread was late twice this week.”'], [4, '<b>Greta</b>: “The new one has been asking about the mine door.”'], [8.5, '<b>Rowan</b>: “Then Hale is closer than I would like. Say nothing in the Hart.”'], [13, '<b>Greta</b>: “And if they go down?”'], [17, '<b>Rowan</b>: “Then they find what Corwin found. Go. Go before the bell.”']]; for (const l of L) if (M.t >= l[0] && !(M['l' + l[0]])) { M['l' + l[0]] = 1; toast(l[1]); }
+          if (M.t > 21) { M.st = 'gone'; S.flags.hear_meeting = 1; M.a.visible = M.b.visible = false; M.em.always = false; toast('<b>You overheard them</b>: they have dropped a purse in the grass as they went.'); save(); } } }
+      if (M.st === 'gone' && !night) { M.st = 'off'; for (const k in M) if (/^l\d/.test(k)) delete M[k]; } } }
+  // the thief
+  { const G = SEC.mag; if (G && G.fig) { const dusk = h >= 18.5 && h < 23, ex = SEC.yard.ex, zc = SEC.yard.zc;
+      if (G.st === 'off' && dusk && !S.flags.magpieYard && Nav.nodes.length) {
+        const near = (x, z) => { let b = -1, bd = 1e9; for (let i = 0; i < Nav.nodes.length; i++) { const n = Nav.nodes[i]; if (Math.abs(n[1] - World.groundY(x, z)) > 1.6) continue; const dd = hyp(n[0] - x, n[2] - z); if (dd < bd) { bd = dd; b = i; } } return b; };
+        const a = near(3, -4), b = near((SEC.yard.l ? SEC.yard.l.x0 : ex - 5) - 0.6, zc), idx = a >= 0 && b >= 0 ? navPath(a, b) : null;
+        if (idx) { G.path = idx.map(i => [Nav.nodes[i][0], Nav.nodes[i][2]]).concat([[ex - 0.5, zc], [ex + 2.0, zc], [ex + 3.6, zc - 0.5]]); G.i = 0; G.x = G.path[0][0]; G.z = G.path[0][1]; G.st = 'wait'; G.t = 0; G.fig.visible = true; }
+      }
+      if (G.st === 'wait' || G.st === 'walk') {
+        const dist = d2(G.x, G.z);
+        if (!dusk) { G.st = 'off'; G.fig.visible = false; }
+        else if (dist < 3.0) { G.st = 'gone'; G.fig.visible = false; toast('A cloak slides into the dusk before you can reach it. She will be back another evening.'); }
+        else {
+          if (G.st === 'wait' && dist < 16) G.st = 'walk';
+          if (G.st === 'walk' && dist < 21) { const q = G.path[Math.min(G.i + 1, G.path.length - 1)], dx = q[0] - G.x, dz = q[1] - G.z, dl = hyp(dx, dz), st = Math.min(dl, 2.3 * dt); if (dl < 0.2) { if (G.i < G.path.length - 1) G.i++; else { G.st = 'yard'; G.t = 0; } } else { G.x += dx / dl * st; G.z += dz / dl * st; G.yaw = Math.atan2(dx, -dz); } }
+          secPlace(G.fig, [G.x, World.groundY(G.x, G.z) + 0.02, G.z], (G.yaw || 0) + Math.PI);
+        }
+      }
+      if (G.st === 'yard') { G.t += dt; if (G.t > 3.5) { G.st = 'done'; G.fig.visible = false; S.flags.magpieYard = 1; G.sack.visible = true; toast('<b>She went to ground in the Hidden Yard.</b> Something is wedged under the well-lip.'); save(); } }
+      if (G.st === 'gone' && !dusk) G.st = 'off';
+      if (S.flags.magpieYard && G.sack && !G.sack.visible) G.sack.visible = true;
+      if (G.st === 'done' && !dusk) G.st = 'finished'; } }
+}
+// the house nobody talks about: three villagers change the subject
+for (const [id, line] of [['greta', 'The house on the south lane? Nobody’s lived there in years. Pass the salt, love, and don’t ask me twice.'], ['marta', 'Oh, that. I sell nothing to that house and I take nothing from it. Will you be wanting candles?'], ['finn', 'Don’t look at the shutters. My father said never to look at the shutters.'], ['aldous', 'There are houses the Dawn will not name, child. That is one. Leave it to her.']]) addOpt(id, n => ['Whose house is shut up on the south lane?', () => { S.flags.hear_house = 1; return node(line); }]);
+// rumours and the number found are read by the journal; secrets seen are listed in S.notes (the reader)
+
+
 // ---- 85_ui.js ----
 // ───────────────────────── HUD, dialogue, journal, pause, settings ─────────────────────────
 // The interface is parchment and ink and keeps out of the way: bars and quest text rest when nothing changes and return on change; the one thing
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 50';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 52';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -15378,7 +15511,7 @@ RPG.tryDodge = function () {
 RPG.damage = function (n, from, kind) {
   const r = RPG.st();
   if (RPG.dead || !game.playing || n <= 0) return 0;
-  if (kind !== 'fall') { if (RPG.iframes > 0) return 0; n = Combat.defend(n, from); if (n <= 0) return 0; n *= 1 - (RPG.meta(r.eq.armor).armor || 0); }
+  if (kind !== 'fall') { if (RPG.iframes > 0) return 0; n = Combat.defend(n, from); if (n <= 0) return 0; n *= (1 - (RPG.meta(r.eq.armor).armor || 0)) * (RPG.perk && RPG.perk('hide') ? 0.92 : 1); }
   r.hp -= n; RPG.hurtT = 0; RPG.combatT = 0; RPG.flash = Math.min(1, 0.4 + n / 35); RPG.shake = Math.min(1, 0.35 + n / 30);
   Audio2.hurt();
   if (r.hp <= 0) { r.hp = 0; RPG.die(kind === 'fall' ? 'The fall broke you.' : 'You were cut down.'); }
@@ -15394,7 +15527,7 @@ RPG.die = function (why) {
 };
 RPG.respawn = function () {
   const r = RPG.st(), bed = World.interact.find(i => i.id === 'inn.bed'), P = Player;
-  const lost = Math.min(25, Math.floor(S.gold * 0.2)); S.gold -= lost; uiPurse();
+  const lost = Math.min(80, Math.floor(S.gold * 0.25)); S.gold -= lost; uiPurse();       // [q1] a death costs a quarter of the purse (to 80 gold), never the save
   if (S.flags.bed && bed) { P.pos = [bed.p[0] + 0.9, bed.p[1] - 0.5, bed.p[2]]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], bed.p[1] + 0.4); }
   else { P.pos = [-84, 0, -6.5]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], 50); P.yaw = 1.45; }
   P.vel = [0, 0, 0]; P.pitch = 0; r.hp = RPG.MAXHP; r.sta = RPG.MAXST; RPG.dead = false; RPG.hud.deadMsg.style.opacity = 0; RPG.flash = 0; RPG.shake = 0; RPG.iframes = 2;
@@ -15593,6 +15726,7 @@ RPG.tick = function (dt) {
   if (!RPG.inited) { RPG.inited = true; RPG.hudInit(); Combat.init(); Foes.init(); }
   const r = RPG.st(), playing = game.playing, I = RPG.in, k = Input.keys;
   if (playing && typeof ixTick === 'function') ixTick(dt);
+  if (playing && typeof secTick === 'function') secTick(dt);       // [q1] 82c_secrets.js: the meeting, the thief
   if (playing && typeof mineTick === 'function') mineTick(dt);       // [q1] 82b_interact.js: sitting, the watch
   if (playing !== RPG.wasPlaying) { RPG.wasPlaying = playing; RPG.hud.rpg.hidden = !playing; }
   // days pass (outlaws drift back to an emptied camp after a few)
@@ -15609,7 +15743,7 @@ RPG.tick = function (dt) {
     RPG.dodgeCd -= dt; RPG.iframes -= dt; RPG.hurtT += dt; RPG.combatT += dt;
     // stamina returns after a breath; health mends slowly once the fight is well behind you
     RPG.stDelay -= dt;
-    if (RPG.stDelay <= 0 && !RPG.dead) r.sta = Math.min(RPG.MAXST, r.sta + (Combat.blocking() ? 7 : 22) * dt);
+    if (RPG.stDelay <= 0 && !RPG.dead) r.sta = Math.min(RPG.MAXST, r.sta + (Combat.blocking() ? 7 : 22) * (RPG.perk && RPG.perk('breath') ? 1.33 : 1) * dt);
     if (RPG.hurtT > 7 && RPG.combatT > 7 && r.hp > 0 && r.hp < RPG.MAXHP) r.hp = Math.min(RPG.MAXHP, r.hp + 1.4 * dt);
     Combat.update(dt * slow, dt);
   }
@@ -15688,7 +15822,7 @@ const Combat = (() => {
   // the blow lands: everything in reach and inside the arc takes it once
   const land = () => {
     const r = RPG.st(), a = C.atk, m = RPG.meta(r.eq.weapon), P = Player;
-    const dmg = (m.dmg || 3) * a.mul * (C.weak ? 0.6 : 1), reach = 2.15 + (m.reach || 0) + (C.heavy ? 0.25 : 0);
+    const dmg = (m.dmg || 3) * a.mul * (C.weak ? 0.6 : 1) * (RPG.perk && RPG.perk('keen') ? 1.12 : 1), reach = 2.15 + (m.reach || 0) + (C.heavy ? 0.25 : 0);
     const res = Foes.sweep(P.pos, P.yaw, reach, a.arc, dmg, C.heavy);
     if (res.n) {
       RPG.hitStop = C.heavy ? 0.11 : 0.07; RPG.kick[0] += a.kick[0]; RPG.kick[1] += a.kick[1]; RPG.shake = Math.max(RPG.shake, C.heavy ? 0.5 : 0.28); RPG.combatT = 0;
@@ -15948,7 +16082,7 @@ const Foes = (() => {
   function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < (camp.cell ? 12 : 34)) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
   function die(f) {
     const r = RPG.st(); release(f); f.alive = false; f.hp = 0; f.state = 'dead'; f.t = 0; f.anim = Math.random() < 0.5 ? 'c-die' : 'c-die2'; f.h.curName = '';
-    r.kills++; r.dead[f.id] = r.day; Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
+    r.kills++; r.dead[f.id] = r.day; if (typeof econKill === 'function') econKill(f); Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
     const loot = [['gold', Math.round(f.leader ? rnd(22, 34) : rnd(4, 12))]];
     if (Math.random() < 0.45) loot.push([Math.random() < 0.5 ? 'bread' : 'apple', 1]); if (Math.random() < (f.leader ? 1 : 0.18)) loot.push(['potion', 1]);
     if (f.chief) { loot.push(['steelsword', 1]); if (!has('tools') && qAt('tools') !== 99) loot.push(['tools', 1]); } else if (f.leader) loot.push(['ironsword', 1]); else if (Math.random() < 0.1) loot.push(['buckler', 1]);
@@ -16038,7 +16172,7 @@ const Foes = (() => {
     switch (f.state) {
       case 'idle': {
         f.anim = f.spot.kind === 'sit' || f.spot.kind === 'crouch' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
-        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
+        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (RPG.perk && RPG.perk('quiet') ? 0.75 : 1) * (f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5));
         if (f.kind === 'lurker' && live && d < 24 && d >= see) { f.cueT -= dt; if (f.cueT <= 0) { f.cueT = rnd(2.2, 4.6); Snd.event(Math.random() < 0.5 ? 'creak' : 'rustle', [f.pos[0], f.pos[1] + 0.4, f.pos[2]], 1.3); } }       // heard before seen
         if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); if (f.kind !== 'lurker') Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned && !camp.cell) { F.warned = true; toast('Outlaws! They have seen you.'); } }
         break; }
@@ -16157,7 +16291,7 @@ const Inv = {
   use(id) {
     const r = RPG.st(), m = RPG.meta(id); if (!m.heal || !has(id)) return;
     if (r.hp >= RPG.MAXHP - 0.5 && !(m.sta && r.sta < RPG.MAXST - 1)) { toast('You are not hurt.'); return; }
-    give(id, -1); RPG.heal(m.heal); if (m.sta) r.sta = Math.min(RPG.MAXST, r.sta + m.sta);
+    give(id, -1); RPG.heal(m.heal * (RPG.perk && RPG.perk('forager') ? 1.5 : 1)); if (m.sta) r.sta = Math.min(RPG.MAXST, r.sta + m.sta);
     if (id === 'ale' || id === 'potion' || id === 'tonic') Audio2.drink(); else Audio2.eat();
     toast(ITEMS[id][0] + ': +' + m.heal + ' health'); save(); Inv.render();
   },
@@ -16167,18 +16301,19 @@ const Inv = {
     const box = $('tab-pack'), r = RPG.st(); if (!box) return;
     let h = '<div class="vit"><span>Health <b>' + Math.round(r.hp) + ' / ' + RPG.MAXHP + '</b></span><span>Stamina <b>' + Math.round(r.sta) + ' / ' + RPG.MAXST + '</b></span><span><b>' + S.gold + '</b> gold</span></div><div class="gear">';
     for (const [slot, label] of Inv.SLOTS) { const id = r.eq[slot]; h += '<div><small>' + label + '</small><b>' + (id && has(id) ? ITEMS[id][0] : 'None') + '</b><span>' + (id && has(id) ? Inv.facts(id) : slot === 'weapon' ? 'Bare hands will not serve you.' : '') + '</span></div>'; }
-    h += '</div><div class="items">';
+    h += '</div>' + (typeof econPerkHtml === 'function' ? econPerkHtml() : '') + '<div class="items">';
     const ids = Object.keys(S.items).sort((a, b) => (RPG.meta(b).slot ? 1 : 0) - (RPG.meta(a).slot ? 1 : 0) || (RPG.meta(b).heal ? 1 : 0) - (RPG.meta(a).heal ? 1 : 0));
     for (const id of ids) {
       const m = RPG.meta(id), on = m.slot && r.eq[m.slot] === id, f = Inv.facts(id);
       h += '<div' + (on ? ' class="worn"' : '') + '>' + invIcon(id) + '<b>' + ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + '</b><span>' + ITEMS[id][1] + (f ? ' <i>' + f + '</i>' : '') + '</span>';
       if (m.slot) h += '<button type="button" class="btn small" data-equip="' + id + '">' + (on ? (m.slot === 'weapon' ? 'In hand' : 'Take off') : m.slot === 'weapon' ? 'Wield' : 'Wear') + '</button>';
+      else if (id === 'lantern') h += '<button type="button" class="btn small" data-lamp="1">' + (S.flags.lampOff === 1 ? 'Light' : 'Douse') + '</button>';       // [q1] a phone has no L key
       else if (m.heal) h += '<button type="button" class="btn small" data-use="' + id + '">' + (id === 'ale' || id === 'potion' || id === 'tonic' ? 'Drink' : 'Eat') + '</button>';
       h += '</div>';
     }
     if (!ids.length) h += '<p class="empty">Your pack is empty.</p>';
     box.innerHTML = h + '</div>';
-    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
+    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.perk) { if (typeof econChoose === 'function' && econChoose(b.dataset.perk)) Inv.render(); } else if (b.dataset.lamp) { if (typeof mineLamp === 'function') mineLamp(); Inv.render(); } else if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
   },
   // ── trade, as dialogue ──
   shop(who) {
@@ -16250,7 +16385,7 @@ function mineShell(m, O, FY, V) {
   const ceilY = (a, b) => g.hc(a, b) + (cave(a, b) ? mnoise(a, b, 9) * 0.42 : 0);
   const amp = (a, b, k) => k === 0 ? 0 : (cave(a, b) ? 0.3 : 0.07) * (k === 3 ? 0.7 : 1);
   const P = (a, b, k, y) => { const d = mdisp(a, b, k, amp(a, b, k)); return W(a + d[0], y, b + d[1]); };
-  const T = 3.2, rockCol = (i, j, s) => { const v = 0.80 + mhash(i, j, s) * 0.4; return [0.74 * v, 0.70 * v, 0.66 * v]; };
+  const T = 3.2, rockCol = (i, j, s) => { const v = (0.80 + mhash(i, j, s) * 0.4) * 1.9; return [0.74 * v, 0.70 * v, 0.66 * v]; };
   m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
   const edges = { W: [], E: [], S: [], N: [] };
   for (const c of cells) {
@@ -16265,7 +16400,7 @@ function mineShell(m, O, FY, V) {
     // walls where the neighbour is rock: A left, B right as seen from inside
     const wall = (kind, a0, b0, a1, b1, along) => {
       const nrm = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }[kind];
-      m.mat(MAT.ROCK, rockCol(i + a0, j + b0, 1), 0.7);
+      m.mat(MAT.GRAVEL, rockCol(i + a0, j + b0, 1).map(v => v * 0.75), 0.55);      // the rock texture reads near-black under a carried light; the cut face takes the floor's grit
       const lev = (a, b, k) => { const f = fl(a, b) - 0.4, t = ceilY(a, b); return P(a, b, k, f + (t - f) * k / 3); };
       for (let k = 0; k < 3; k++) m.quad(lev(a0, b0, k + 1), lev(a0, b0, k), lev(a1, b1, k), lev(a1, b1, k + 1), (along) / T, k * 1.2 / T, (along + 1) / T, (k + 1) * 1.2 / T);
       edges[kind].push([i, j]);
@@ -16518,7 +16653,8 @@ function mine_trap(wpos) {
 // ── the lantern: carried, lit with L, burning oil while the mine is dark; a dry lantern is no light at all ──
 function mineLampOn() { return !!(World.cell && World.cell.id === 'mine' && has('lantern') && S.flags.lampOff !== 1 && MINE_S().oil > 0); }
 function mineTick(dt) {
-  const c = World.cell; if (!MINE.built || !c || c.id !== 'mine') { MINE.lamp.on = false; return; }
+  const c = World.cell; if (!MINE.built || !c || c.id !== 'mine') { MINE.lamp.on = false; mineGauge(false); return; }
+  mineGauge(has('lantern'));
   const ms = MINE_S();
   if (has('lantern') && S.flags.lampOff !== 1 && ms.oil <= 0) {
     if (has('oil')) { give('oil', -1); ms.oil = 600; toast('You trim the wick and fill the lantern from a flask.'); } else if (!MINE.lamp.warnedDry) { MINE.lamp.warnedDry = true; toast('The lantern is dry. Without oil the dark is complete.'); }
@@ -16538,9 +16674,13 @@ function mineTrapCheck() {
   }
 }
 // the lantern key; the cell's dark; the first time through either door the mine counts as open
-document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && game.playing && !Player.locked && World.cell && World.cell.id === 'mine' && has('lantern')) { S.flags.lampOff = S.flags.lampOff === 1 ? 0 : 1; toast(S.flags.lampOff === 1 ? 'You douse the lantern.' : (MINE_S().oil > 0 ? 'You light the lantern.' : 'The lantern is dry.')); } });
+function mineLamp() { if (!(World.cell && World.cell.id === 'mine' && has('lantern'))) return toast('There is no use for a lantern here.'); S.flags.lampOff = S.flags.lampOff === 1 ? 0 : 1; toast(S.flags.lampOff === 1 ? 'You douse the lantern.' : (MINE_S().oil > 0 ? 'You light the lantern.' : 'The lantern is dry.')); if (typeof Inv !== 'undefined' && Inv.render && UI.inv) Inv.render(); }
+document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && game.playing && !Player.locked && World.cell && World.cell.id === 'mine' && has('lantern')) mineLamp(); });
+// the oil gauge: a thin amber bar under the objective while the lantern is carried in the mine (a phone has no L key: the inventory's Light/Douse button does the same)
+function mineGauge(show) { let g = document.getElementById('oilgauge'); if (!g) { if (!show) return; g = document.createElement('div'); g.id = 'oilgauge'; g.style.cssText = 'position:fixed;left:calc(var(--pl,0px) + 14px);top:62px;width:70px;height:5px;background:rgba(0,0,0,.45);border:1px solid rgba(214,180,110,.35);z-index:5;pointer-events:none'; g.innerHTML = '<i style="display:block;height:100%;background:#d9a441;width:100%"></i>'; document.body.appendChild(g); } g.style.display = show ? '' : 'none'; if (show) { const o = MINE_S().oil, f = g.firstChild; f.style.width = Math.max(0, Math.min(100, o / 6)) + '%'; f.style.background = S.flags.lampOff === 1 ? '#6b5a3a' : (o < 90 ? '#c8502a' : '#d9a441'); } }
+
 const _ce94 = Cells.env;
-Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.21, 0.155, 0.095]; e.ambGnd = [0.125, 0.09, 0.055]; e.fogDensity = 0.062; } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
+Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.34, 0.25, 0.15]; e.ambGnd = [0.2, 0.145, 0.088]; e.fogDensity = 0.062; } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
 const _cc94 = Cells.change;
 Cells.change = function (c) { _cc94(c); if (c && c.id === 'mine') { if (!S.flags.mineOpen) { S.flags.mineOpen = 1; if (typeof uiObjective === 'function') uiObjective(); } if (has('lantern') && !MINE_S().oil) MINE_S().oil = 600; } };
 const _wa94 = World.waterAt;
@@ -16589,6 +16729,103 @@ const _wa94b = wildsAttach;
 wildsAttach = function () { _wa94b(); try { mineKit(); } catch (e) { console.warn('mine kit: ' + (e && e.stack || e)); } };
 // the objective marker: outside, the door; inside, Corwin's station
 MINE.target = function () { const P = WILDS.P.mine; if (!(World.cell && World.cell.id === 'mine')) return [P.x, 0, P.z]; const w = MINE.wpos(-9.4, 0.8, 66.2); return [w[0], w[1], w[2]]; };
+
+
+// ---- 94b_economy.js ----
+// ───────────────────────── reasons to care (q1): gold, tiers, levels with a perk each, the board, rumours, a death that costs ─────────────────────────
+// Brandt and Marta buy and sell (dialogue nodes, no boxes). Three tiers of weapon and armour with their numbers shown. XP from kills, secrets and finished quests; a level every so often and
+// one perk to choose per level (in the pack). The notice board gives three repeatable jobs. Greta tells rumours that point at what you have not found. Dying costs a quarter of the purse (to 80).
+Object.assign(ITEMS, {
+  longsword: ['Brandt’s longsword', 'Fullered, a hand longer than the arming sword and balanced to match. His second-best work, he says.', { slot: 'weapon', dmg: 19, blade: [0.76, 1.2, 0.028], value: 60, cost: 150, tier: 2 }],
+  silvered: ['Silver-edged blade', 'Brandt folded the mine silver into the edge himself. It sings when it clears the scabbard.', { slot: 'weapon', dmg: 25, blade: [0.80, 1.35, 0.028], value: 120, tier: 3 }],
+  brigandine: ['Brigandine', 'Plates riveted inside canvas. Heavier than leather, and it shows in the bruises you do not get.', { slot: 'armor', armor: 0.38, value: 60, cost: 160, tier: 2 }],
+  hauberk: ['Mail hauberk', 'Ring on ring, a winter of Brandt’s evenings. Turns half of what lands.', { slot: 'armor', armor: 0.5, value: 120, cost: 320, tier: 3 }],
+});
+ITEMS.ironsword[2].tier = 1; ITEMS.leather[2].tier = 1;
+Inv.stock.brandt = ['ironsword', 'leather', 'buckler', 'longsword', 'brigandine', 'hauberk'];
+const _facts81 = Inv.facts; Inv.facts = id => { const f = _facts81.call(Inv, id), t = RPG.meta(id).tier; return t ? 'tier ' + ['', 'I', 'II', 'III'][t] + (f ? ' · ' + f : '') : f; };
+// ── levels and perks ──
+const ECON = { XPL: [0, 60, 150, 270, 420, 600, 810, 1050], PERKS: [['hardy', 'Hardy', '+15 health'], ['breath', 'Long wind', '+10 stamina, you get your wind back a third quicker'], ['keen', 'Keen edge', 'your blows hit 12% harder'], ['hide', 'Thick hide', 'what lands on you lands 8% lighter'], ['quiet', 'Quiet feet', 'outlaws and the dead notice you from three-quarters the distance'], ['haggle', 'Hard bargainer', 'buy 15% cheaper, sell 15% dearer'], ['forager', 'Forager', 'food and drink restore half as much again']] };
+RPG.perk = id => !!(S.rpg && S.rpg.perks && S.rpg.perks[id]);
+const econR = () => { const r = RPG.st(); r.xp = r.xp || 0; r.perks = r.perks || {}; r.perkPts = r.perkPts || 0; r.lv = r.lv || 1; return r; };
+function econLevel(xp) { let l = 1; for (let i = 1; i < ECON.XPL.length; i++) if (xp >= ECON.XPL[i]) l = i + 1; return l; }
+function econApply() { RPG.MAXHP = 100 + (RPG.perk('hardy') ? 15 : 0); RPG.MAXST = 100 + (RPG.perk('breath') ? 10 : 0); }
+RPG.xp = function (n) {
+  const r = econR(); r.xp += n; const lv = econLevel(r.xp);
+  while (r.lv < lv) { r.lv++; r.perkPts = (r.perkPts || 0) + 1; toast('<b>Level ' + r.lv + '</b>: choose a perk in your pack.'); Audio2.ui(); }
+};
+const _as82d = applySave; applySave = function () { const x = _as82d.apply(this, arguments); try { econApply(); } catch (e) { } return x; };
+function econPerkHtml() {
+  const r = econR(), next = ECON.XPL[r.lv] || null; let h = '<div class="vit"><span>Level <b>' + r.lv + '</b></span><span>' + (next ? '<b>' + r.xp + '</b> / ' + next + ' xp' : '<b>' + r.xp + '</b> xp') + '</span></div>';
+  const mine = ECON.PERKS.filter(p => r.perks[p[0]]), open = ECON.PERKS.filter(p => !r.perks[p[0]]);
+  if (mine.length) h += '<div class="gear">' + mine.map(p => '<div><small>Perk</small><b>' + p[1] + '</b><span>' + p[2] + '</span></div>').join('') + '</div>';
+  if (r.perkPts > 0) h += '<div class="items">' + open.map(p => '<div><b>' + p[1] + '</b><span>' + p[2] + '</span><button type="button" class="btn small" data-perk="' + p[0] + '">Choose</button></div>').join('') + '</div>';
+  return h;
+}
+function econChoose(id) { const r = econR(); if (r.perkPts < 1 || r.perks[id] || !ECON.PERKS.some(p => p[0] === id)) return false; r.perks[id] = 1; r.perkPts--; econApply(); if (id === 'hardy') RPG.heal(15); toast('<b>' + ECON.PERKS.find(p => p[0] === id)[1] + '</b>: ' + ECON.PERKS.find(p => p[0] === id)[2]); save(); return true; }
+// ── what pays XP ──
+function econKill(f) { RPG.xp(f.boss ? 150 : f.kind === 'lurker' ? 18 : f.kind === 'delver' ? 14 : f.leader ? 25 : 10); const r = econR(), d = econJob(); if (d && r.job && !r.job.done && d.match(f)) { r.job.n++; if (r.job.n >= d.goal) { r.job.done = true; toast('<b>Notice board</b>: that is the job done. Report to the board in the square.'); } else toast('<b>' + d.title + '</b> ' + r.job.n + ' of ' + d.goal); } }
+const _qd82d = qDone; qDone = function (id) { const r = _qd82d.apply(this, arguments); try { RPG.xp(30); } catch (e) { } return r; };
+// ── prices ──
+Inv.price = id => Math.max(1, Math.round((RPG.meta(id).cost || 0) * (RPG.perk('haggle') ? 0.85 : 1)));
+Inv.shop = function (who) {
+  const opts = Inv.stock[who].map(id => { const m = RPG.meta(id), pr = Inv.price(id); return [ITEMS[id][0] + ' (' + pr + ' gold): ' + Inv.facts(id), () => {
+    if (S.gold < pr) return node('That’s ' + pr + ' gold, and you’ve ' + S.gold + '. The board in the square pays for honest work.', [['Something else.', () => Inv.shop(who)], bye]);
+    gold(-pr); give(id); toast('Bought: ' + ITEMS[id][0]); const r = RPG.st(); if (m.slot && (m.slot !== 'weapon' || (RPG.meta(r.eq.weapon).dmg || 0) < m.dmg) && (m.slot !== 'armor' || (RPG.meta(r.eq.armor).armor || 0) < m.armor)) { r.eq[m.slot] = id; Combat.refresh(); } save();
+    return node('Sound work, that. Look after it and it will look after you.', [['Something else.', () => Inv.shop(who)], bye]); }]; });
+  return node('Iron from the Greyspine, every piece. I don’t haggle.', opts.concat([bye]));
+};
+Inv.sell = function (who) {
+  const r = RPG.st(), opts = [];
+  for (const id in S.items) { const m = RPG.meta(id); if (!m.value || (m.slot && r.eq[m.slot] === id && S.items[id] < 2)) continue; const v = Math.round(m.value * (RPG.perk('haggle') ? 1.15 : 1)); opts.push([ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + ' (' + v + ' gold)', () => { give(id, -1); gold(v); save(); return Inv.sell(who); }]); }
+  return node(opts.length ? (who === 'marta' ? 'Let’s have a look, dear.' : 'Let’s see it, then.') : 'You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.', opts.slice(0, 8).concat([bye]));
+};
+// Marta buys what she can sell on, and sells lamp oil; Brandt folds silver into a blade
+const _marta82d = TALK.marta; TALK.marta = function () { const n = _marta82d.call(this); if (n && n.o) { const i = n.o.indexOf(bye), at = i < 0 ? n.o.length : i; n.o.splice(at, 0, ['Lamp oil. (7 gold)', () => TALK.buy('oil', 7, 'Whale oil. It stinks and it burns. Don’t spill it near the candles.')], ['I have things to sell.', () => Inv.sell('marta')]); } return n; };
+addOpt('brandt', n => has('silverbar') && S.items.silverbar >= 3 ? ['Can you do anything with this silver?', () => node('Grey silver, never stamped. Aye, I can. Three bars and ninety gold, and the edge will outlast the blade. Mind, I’ll want to know where you had it.', [['Forge it. (90 gold, 3 silver bars)', () => { if (S.gold < 90) return node('Ninety gold, and you’ve ' + S.gold + '.'); gold(-90); give('silverbar', -3); give('silvered'); const r = RPG.st(); r.eq.weapon = 'silvered'; Combat.refresh(); toast('Forged: ' + ITEMS.silvered[0]); save(); return node('Done. Don’t draw it in the Hart.'); }], bye])] : null);
+// ── the notice board: three jobs, any number of times ──
+const ECONJOBS = [
+  { id: 'outlaws', title: 'Outlaws on the passes', goal: 4, pay: 35, text: 'WANTED: four outlaws put down on the passes. Thirty-five gold, paid at the board.', match: f => !f.kind },
+  { id: 'vermin', title: 'The Old Mine', goal: 3, pay: 50, text: 'WANTED: three of the things that live in the Old Mine put down, delver or lurker. Fifty gold, and the Warden does not ask how.', match: f => f.kind === 'delver' || f.kind === 'lurker' },
+  { id: 'oil', title: 'Lamp oil for the watch', goal: 3, pay: 30, text: 'WANTED: three flasks of lamp oil for the gate. Thirty gold. Marta has it.', match: () => false, have: () => has('oil') && S.items.oil >= 3 },
+];
+const econJob = () => { const r = econR(); return r.job ? ECONJOBS.find(j => j.id === r.job.id) || null : null; };
+TALK.board = function () {
+  const r = econR(), j = econJob(), opts = [];
+  if (j) {
+    const ready = r.job.done || (j.have && j.have());
+    if (ready) opts.push(['Collect the pay. (' + j.pay + ' gold)', () => { if (j.have) give('oil', -3); gold(j.pay); RPG.xp(20); r.jobsDone = (r.jobsDone || 0) + 1; r.job = null; save(); return node('Paid. The board has fresh ink every few days: come back.'); }, 1]);
+    else opts.push(['Where was I up to?', () => node(j.title + ': ' + (j.have ? 'three flasks of lamp oil, you have ' + (S.items.oil || 0) : r.job.n + ' of ' + j.goal) + '.')]);
+    opts.push(['Tear the notice down.', () => { r.job = null; save(); return node('The nail is still there.'); }]);
+  } else for (const d of ECONJOBS) opts.push([d.title + ' (' + d.pay + ' gold)', () => { r.job = { id: d.id, n: 0, done: false }; save(); return node(d.text + '\n\nYou take the notice.'); }]);
+  if (qAt('bounty') < 0 && qAt('welcome') >= 0) { qStart('bounty'); bountyText(); }
+  return node(j ? 'Your notice is still on you.' : 'Notices, pinned over notices. Three of them are in a clean hand and have not yellowed.', opts.concat([bye]));
+};
+const _iu82d = interactUse; interactUse = function (it) {
+  if (it.id === 'board' && it.kind === 'read') { const nm = { id: 'board', name: 'Notice board', pos: it.p.slice(), yaw: 0, anim: 'idle', path: null }; return startTalk(nm); }
+  return _iu82d(it);
+};
+const _il82d = interactLabel; interactLabel = function (it) { if (it.id === 'board' && it.kind === 'read') return 'Read the notice board'; return _il82d(it); };
+// ── rumours at the inn ──
+const RUMOURS = [
+  [() => !secFlag('bell'), 'They say Tobin’s been up the Watch Bell more than the Watch has. A tin box, a lockpick, and a boy who will not say what he saw from the top.'],
+  [() => !secFlag('stone'), 'There’s a stone in the terrace wall below the Elder’s plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.'],
+  [() => !secFlag('cellar'), 'The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.'],
+  [() => !secFlag('attic'), 'Up on the Hart’s roof walk there’s a trunk under the eaves that nobody here owns. Greta says it came with the building.'],
+  [() => !secFlag('wall'), 'The cellar wall in this very house, the east one: newer brick than the rest. Ask me no more, love.'],
+  [() => !secFlag('strongbox'), 'The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.'],
+  [() => !secFlag('meetpouch'), 'Lights behind the chapel after midnight, and two folk talking low who’d not thank you for listening. Stand off, if you’re bold. Don’t get close.'],
+  [() => !secFlag('magpie'), 'The Magpie walks at dusk from the square to somewhere west of the weavers, same road each time. Nobody follows her. You’d have to be patient.'],
+  [() => !secFlag('house'), 'The shut house on the south lane. Don’t ask Marta. Don’t ask Finn. Ask nobody. Take a key, if you’ve one with a wren on it.'],
+  [() => !S.flags.mineOpen, 'The mine door has been barred for fifty years. The Sexton kept the key, and old Sextons keep everything.'],
+  [() => S.flags.mineOpen && !has('silverthread') && !S.opened['mine.chest'], 'They say the Foreman had a strongbox down there and the only key hangs round his neck. Hung.'],
+  [() => !S.flags.act1, 'A drowned man on the wharf, dry as bone. The wise folk are keeping their windows shut.'],
+  [() => true, 'Hale cries on the last day of the month. Pip told me. Pip tells everybody.', 1],
+  [() => true, 'The Elder talks to the lake. Always has. Says it answers.', 1],
+];
+addOpt('greta', n => ['What’s the talk in the Hart tonight?', () => {
+  const r = econR(); r.rum = r.rum || {}; const day = r.day || 0, el = RUMOURS.map((x, i) => [x, i]).filter(([x, i]) => x[0]() && !r.rum[i]); const pick = el.find(([x]) => !x[2]) || el[0];
+  if (!pick) return node('Nothing new, love. Same faces, same ale.'); r.rum[pick[1]] = 1; save(); return node(pick[0][1]); }]);
 
 
 // ---- 99_main.js ----

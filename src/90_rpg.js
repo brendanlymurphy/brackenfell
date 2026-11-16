@@ -54,7 +54,7 @@ RPG.tryDodge = function () {
 RPG.damage = function (n, from, kind) {
   const r = RPG.st();
   if (RPG.dead || !game.playing || n <= 0) return 0;
-  if (kind !== 'fall') { if (RPG.iframes > 0) return 0; n = Combat.defend(n, from); if (n <= 0) return 0; n *= 1 - (RPG.meta(r.eq.armor).armor || 0); }
+  if (kind !== 'fall') { if (RPG.iframes > 0) return 0; n = Combat.defend(n, from); if (n <= 0) return 0; n *= (1 - (RPG.meta(r.eq.armor).armor || 0)) * (RPG.perk && RPG.perk('hide') ? 0.92 : 1); }
   r.hp -= n; RPG.hurtT = 0; RPG.combatT = 0; RPG.flash = Math.min(1, 0.4 + n / 35); RPG.shake = Math.min(1, 0.35 + n / 30);
   Audio2.hurt();
   if (r.hp <= 0) { r.hp = 0; RPG.die(kind === 'fall' ? 'The fall broke you.' : 'You were cut down.'); }
@@ -70,7 +70,7 @@ RPG.die = function (why) {
 };
 RPG.respawn = function () {
   const r = RPG.st(), bed = World.interact.find(i => i.id === 'inn.bed'), P = Player;
-  const lost = Math.min(25, Math.floor(S.gold * 0.2)); S.gold -= lost; uiPurse();
+  const lost = Math.min(80, Math.floor(S.gold * 0.25)); S.gold -= lost; uiPurse();       // [q1] a death costs a quarter of the purse (to 80 gold), never the save
   if (S.flags.bed && bed) { P.pos = [bed.p[0] + 0.9, bed.p[1] - 0.5, bed.p[2]]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], bed.p[1] + 0.4); }
   else { P.pos = [-84, 0, -6.5]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], 50); P.yaw = 1.45; }
   P.vel = [0, 0, 0]; P.pitch = 0; r.hp = RPG.MAXHP; r.sta = RPG.MAXST; RPG.dead = false; RPG.hud.deadMsg.style.opacity = 0; RPG.flash = 0; RPG.shake = 0; RPG.iframes = 2;
@@ -269,6 +269,7 @@ RPG.tick = function (dt) {
   if (!RPG.inited) { RPG.inited = true; RPG.hudInit(); Combat.init(); Foes.init(); }
   const r = RPG.st(), playing = game.playing, I = RPG.in, k = Input.keys;
   if (playing && typeof ixTick === 'function') ixTick(dt);
+  if (playing && typeof secTick === 'function') secTick(dt);       // [q1] 82c_secrets.js: the meeting, the thief
   if (playing && typeof mineTick === 'function') mineTick(dt);       // [q1] 82b_interact.js: sitting, the watch
   if (playing !== RPG.wasPlaying) { RPG.wasPlaying = playing; RPG.hud.rpg.hidden = !playing; }
   // days pass (outlaws drift back to an emptied camp after a few)
@@ -285,7 +286,7 @@ RPG.tick = function (dt) {
     RPG.dodgeCd -= dt; RPG.iframes -= dt; RPG.hurtT += dt; RPG.combatT += dt;
     // stamina returns after a breath; health mends slowly once the fight is well behind you
     RPG.stDelay -= dt;
-    if (RPG.stDelay <= 0 && !RPG.dead) r.sta = Math.min(RPG.MAXST, r.sta + (Combat.blocking() ? 7 : 22) * dt);
+    if (RPG.stDelay <= 0 && !RPG.dead) r.sta = Math.min(RPG.MAXST, r.sta + (Combat.blocking() ? 7 : 22) * (RPG.perk && RPG.perk('breath') ? 1.33 : 1) * dt);
     if (RPG.hurtT > 7 && RPG.combatT > 7 && r.hp > 0 && r.hp < RPG.MAXHP) r.hp = Math.min(RPG.MAXHP, r.hp + 1.4 * dt);
     Combat.update(dt * slow, dt);
   }
