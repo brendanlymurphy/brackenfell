@@ -7985,6 +7985,8 @@ function hEntryTorch(P, F) {          // [c5] one visible warm source in the fir
 }
 function hFinish(P, c, F) {
   hMemo(P, F); hVariety(P, F); hEntryTorch(P, F);
+  if (!P.spots.work && P.focal) { const e0 = P.doors.find(d => d.b === null), rm0 = e0 && P.rooms[e0.a], fx = P.focal.x, fz = P.focal.z;          // [c5] where the worker stands: in the first room, in front of the trade's focal piece
+    if (rm0) for (const [x, z] of pCands(rm0, [fx, fz - 1.1])) { if (Math.hypot(x - fx, z - fz) > 3.2) break; if (pFit(P, rm0, rectOf(x, z, 0.7, 0.7), { h: 1.8, lowOk: true })) { pSpot(P, 'work', x, z, Math.atan2(fx - x, -(fz - z)), { k: rm0.k }); break; } } }
   for (const id in P.rooms) {
     const r = P.rooms[id], k = r.kind === 'cellar' ? 'cellar' : r.kind === 'bedroom' ? 'bedroom' : r.kind === 'store' ? 'store' : r.kind === 'corridor' ? 'corridor' : r.kind === 'yard' ? 'yard' : 'hall';
     PD.dense(P, r, { pool: hPool(k, F), corner: k === 'cellar' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack', 'cask'], mid: { kinds: k === 'cellar' || k === 'store' ? ['casks', 'sacks'] : ['rug'], max: k === 'corridor' ? 0 : 1, min: 0.9 }, middle: k !== 'corridor', racks: k === 'cellar' ? 1 : 0, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
@@ -8090,7 +8092,8 @@ HFAM.shopfront = (P, c, F) => {
   pLayout(P);
   const hh = pHearth(P, back, 's', 1.8, { cauldron: true, at: F.X(-0.2), size: 0.45 }); if (hh) { pPier(P, 1, hh); if (cellar) pPier(P, -1, hh); }
   P.hall = { room: back, hh }; if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
-  hTrade(P, c, shop, F); const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, P.id + '.mat', e.x, 1.4, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, F.rug), { flat: true, noClear: true });
+  hTrade(P, c, shop, F); if (!P.counter) for (const ln of [2.6, 2.0, 1.6]) if (cnt(P, shop, F, ln, ['bottle', 'jar', 'bowl', 'candle'], 'k')) break;          // [c5] every shop has a counter for its keeper to stand behind
+  const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, P.id + '.mat', e.x, 1.4, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, F.rug), { flat: true, noClear: true });
   pLamp(P, shop, F.X(-2.4), 2.0); pLamp(P, shop, F.X(2.4), 2.0);
   dressHall(P, back, { hh, rug: F.rug, items: ['mug', 'plate', 'bowl', 'loaf'], len: 1.8 });
   dressBedroom(P, upb, { beds: ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, table: true, fur: F.wealth > 0 });
@@ -11965,6 +11968,7 @@ function buildNPCs() {
   s('square.bard', 2.6, -5.2, PI); s('square.well', 4.2, -6.4, 0.9); s('bridge.west', 48.5, 2, PI / 2);
   // a few more indoor seats derived from each cottage's table
   for (const id of ['herbalist', 'weaver', 'farm', 'hunter', 'elder']) { const sp = World.spots[id + '.sit']; if (!sp) console.warn('no seat', id); }
+  if (typeof householdDefs === 'function') householdDefs();          // [c5] the people of the ordinary houses (77e_households.js)
   for (const def of NPC_DEFS) {
     const mesh = buildCharacter(def), item = World.skinPack.add(mesh);
     const npc = { def, id: def.id, name: def.name, scale: def.scale || 1, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, wander: 0, dwell: 0, talking: false, look: [0, 0], ang: new Float32Array(33) };
@@ -12260,6 +12264,41 @@ function npcHandProp(npc) {
     if (kind === 'lute') { const L = HP.LUTE; mesh.rotation.set(L[0], L[1], L[2]); mesh.position.set(L[3], L[4], L[5]); mesh.scale.setScalar(sc); Chars.attach(ch, 'handL', mesh); }
     else { mesh.rotation.set(grip[0], grip[1], grip[2]); mesh.position.set(grip[3], grip[4], grip[5]); mesh.scale.setScalar(kind === 'mug' || kind === 'flute' ? sc * 1.0 : sc); Chars.attach(ch, 'handR', mesh); }
     npc.props = (npc.props || []).concat([mesh]);
+  }
+}
+
+
+// ---- 77e_households.js ----
+// ───────────────────────── the people who live and work in the ordinary houses and shops [c5] ─────────────────────────
+// Called from buildNPCs() once every plan exists. Each family house gets its keeper and, where it has a second free bed and a hearth, a partner: shopkeepers stand behind their
+// counter from 8 to 18, everyone else works or minds the house, the household sits at its table from half past seven, and each sleeper has a bed of their own (a spot that lies).
+// Ids are 'r_<house>' and 'r2_<house>' (house ids with the dot taken out); the spots are the plan's own ('<house>.counter', '.work', '.home', '.sit', '.seat1', '.bed', '.bed2' ...).
+const HH_MALE = ['m_farmer', 'm_fisher', 'm_youth', 'm_elder', 'm_hunter'], HH_FEMALE = ['f_farmer', 'f_weaver', 'f_maid', 'f_elder', 'f_herbalist'];
+const HH_MF = ['Hob', 'Wat', 'Piers', 'Jory', 'Alder', 'Cuthbert', 'Gilbert', 'Osmund', 'Tam', 'Ned', 'Rafe', 'Dunstan', 'Aldous', 'Leofric', 'Ivo', 'Sewell'];
+const HH_FF = ['Agnes', 'Tilda', 'Maud', 'Nell', 'Edith', 'Joan', 'Mabel', 'Cecily', 'Isolde', 'Hawise', 'Bess', 'Alys', 'Wynne', 'Rosamund', 'Petronel', 'Gunnora'];
+const HH_SUR = ['Marsh', 'Fenn', 'Thatcher', 'Holloway', 'Brook', 'Ashby', 'Lowe', 'Peverell', 'Dunmore', 'Gale', 'Sorrel', 'Wick', 'Hollin', 'Ketch', 'Bray', 'Corbin'];
+const HH_TINT = [[1.7, 0.85, 0.7], [0.85, 1.05, 1.7], [1.6, 1.25, 0.6], [0.85, 1.4, 0.85], [1.7, 1.55, 1.3], [1.35, 0.9, 1.4], [1.2, 1.2, 1.7], [1.5, 1.0, 0.65]];
+const HH_SKIN = ['tan', 'rosy', 'brown', 'fair', 'fair', 'tan'], HH_HAIR = ['brown', 'black', 'blond', 'auburn', 'grey', 'red', 'brown'];
+function householdDefs() {
+  const used = new Set(), claimed = new Set();
+  for (const d of NPC_DEFS) for (const r of d.sched) for (const sp of [].concat(r[1])) if (typeof sp === 'string') { used.add(sp.split('.').slice(0, -1).join('.')); if (r[2] === 'lie') claimed.add(sp); }
+  const ids = Object.keys(World.houses).filter(id => { const h = World.houses[id]; return h.plan && h.plan.fam; }).sort();
+  for (const id of ids) {
+    const P = World.houses[id].plan, F = P.fam, key = id.replace(/\./g, ''), H = s => hHash(id + '|' + s);
+    if (used.has(id) && !/^in\.|^high\./.test(id)) continue;                     // the six buildings with their own named people already have them
+    const beds = Object.keys(P.spots).filter(k => /^bed\d*$/.test(k) && World.spots[id + '.' + k] && World.spots[id + '.' + k].lie && !claimed.has(id + '.' + k));
+    if (!beds.length) continue;
+    const has = n => !!(World.spots[id + '.' + n] && P.spots[n]), shop = F.fam === 'shopfront' && has('counter');
+    const seats = ['sit', 'seat1', 'seat2', 'seat3'].filter(has), n = Math.min(beds.length, seats.length ? 2 : 1, H('n') < 0.55 && beds.length > 1 ? 2 : 1);
+    for (let i = 0; i < n; i++) {
+      const fem = i === 0 ? H('g') < 0.45 : true === (H('g') >= 0.45), body = (fem ? HH_FEMALE : HH_MALE)[(H('b' + i) * 5) | 0], first = (fem ? HH_FF : HH_MF)[(H('f' + i) * 16) | 0];
+      const sur = i === 0 ? (F.trade === 'household' ? HH_SUR[(H('s') * 16) | 0] : F.trade[0].toUpperCase() + F.trade.slice(1)) : HH_SUR[(H('s') * 16) | 0];
+      const tn = HH_TINT[(H('t' + i) * 8) | 0], bed = beds[i], seat = seats[Math.min(i, seats.length - 1)] || 'home', up = 21.5 + H('u' + i) * 1.3, wake = 6.3 + H('w' + i) * 1.0;
+      const day = i === 0 ? (shop ? [[8, id + '.counter', 'idle'], [18, id + '.home', 'idle']] : has('work') ? [[wake + 0.7, id + '.work', 'work'], [12.2, id + '.home', 'idle'], [13.2, id + '.work', 'work'], [18, id + '.home', 'idle']] : [[wake + 0.7, id + '.home', 'idle'], [18, id + '.home', 'idle']]) : [[wake + 0.8, id + '.home', 'idle'], [18, id + '.home', 'idle']];
+      const sched = [[wake, id + '.home', 'idle']].concat(day, [[19.5 + i * 0.3, id + '.' + seat, 'sit'], [up, id + '.' + bed, 'lie']]).sort((a, b) => a[0] - b[0]);
+      NPC_DEFS.push({ id: (i ? 'r2_' : 'r_') + key, name: first + ' ' + sur, body, tint: { tunic: tn, robe: tn, skirt: HH_TINT[(H('q' + i) * 8) | 0], pants: [1.1, 1.0, 0.9] }, skin: HH_SKIN[(H('k' + i) * 6) | 0], hair: HH_HAIR[(H('h' + i) * 7) | 0], top: [0.4, 0.36, 0.3], legs: [0.3, 0.26, 0.22], female: fem, dress: fem, sched, house: id });
+      claimed.add(id + '.' + bed);
+    }
   }
 }
 

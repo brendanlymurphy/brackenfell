@@ -99,6 +99,7 @@ function buildNPCs() {
   s('square.bard', 2.6, -5.2, PI); s('square.well', 4.2, -6.4, 0.9); s('bridge.west', 48.5, 2, PI / 2);
   // a few more indoor seats derived from each cottage's table
   for (const id of ['herbalist', 'weaver', 'farm', 'hunter', 'elder']) { const sp = World.spots[id + '.sit']; if (!sp) console.warn('no seat', id); }
+  if (typeof householdDefs === 'function') householdDefs();          // [c5] the people of the ordinary houses (77e_households.js)
   for (const def of NPC_DEFS) {
     const mesh = buildCharacter(def), item = World.skinPack.add(mesh);
     const npc = { def, id: def.id, name: def.name, scale: def.scale || 1, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, wander: 0, dwell: 0, talking: false, look: [0, 0], ang: new Float32Array(33) };

@@ -61,6 +61,8 @@ function hEntryTorch(P, F) {          // [c5] one visible warm source in the fir
 }
 function hFinish(P, c, F) {
   hMemo(P, F); hVariety(P, F); hEntryTorch(P, F);
+  if (!P.spots.work && P.focal) { const e0 = P.doors.find(d => d.b === null), rm0 = e0 && P.rooms[e0.a], fx = P.focal.x, fz = P.focal.z;          // [c5] where the worker stands: in the first room, in front of the trade's focal piece
+    if (rm0) for (const [x, z] of pCands(rm0, [fx, fz - 1.1])) { if (Math.hypot(x - fx, z - fz) > 3.2) break; if (pFit(P, rm0, rectOf(x, z, 0.7, 0.7), { h: 1.8, lowOk: true })) { pSpot(P, 'work', x, z, Math.atan2(fx - x, -(fz - z)), { k: rm0.k }); break; } } }
   for (const id in P.rooms) {
     const r = P.rooms[id], k = r.kind === 'cellar' ? 'cellar' : r.kind === 'bedroom' ? 'bedroom' : r.kind === 'store' ? 'store' : r.kind === 'corridor' ? 'corridor' : r.kind === 'yard' ? 'yard' : 'hall';
     PD.dense(P, r, { pool: hPool(k, F), corner: k === 'cellar' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack', 'cask'], mid: { kinds: k === 'cellar' || k === 'store' ? ['casks', 'sacks'] : ['rug'], max: k === 'corridor' ? 0 : 1, min: 0.9 }, middle: k !== 'corridor', racks: k === 'cellar' ? 1 : 0, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
@@ -166,7 +168,8 @@ HFAM.shopfront = (P, c, F) => {
   pLayout(P);
   const hh = pHearth(P, back, 's', 1.8, { cauldron: true, at: F.X(-0.2), size: 0.45 }); if (hh) { pPier(P, 1, hh); if (cellar) pPier(P, -1, hh); }
   P.hall = { room: back, hh }; if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
-  hTrade(P, c, shop, F); const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, P.id + '.mat', e.x, 1.4, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, F.rug), { flat: true, noClear: true });
+  hTrade(P, c, shop, F); if (!P.counter) for (const ln of [2.6, 2.0, 1.6]) if (cnt(P, shop, F, ln, ['bottle', 'jar', 'bowl', 'candle'], 'k')) break;          // [c5] every shop has a counter for its keeper to stand behind
+  const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, P.id + '.mat', e.x, 1.4, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, F.rug), { flat: true, noClear: true });
   pLamp(P, shop, F.X(-2.4), 2.0); pLamp(P, shop, F.X(2.4), 2.0);
   dressHall(P, back, { hh, rug: F.rug, items: ['mug', 'plate', 'bowl', 'loaf'], len: 1.8 });
   dressBedroom(P, upb, { beds: ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, table: true, fur: F.wealth > 0 });
