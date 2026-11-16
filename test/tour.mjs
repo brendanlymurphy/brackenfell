@@ -2,6 +2,7 @@
 //   node test/tour.mjs --run r1 --set streets|places|doors [--hours 13,21] [--quality medium] [--budget 420] [--size 640x300]
 //   node test/tour.mjs --run r1 --cells inn,smithy,...        interiors (chunks of about 8: a software-rendered tab dies after a dozen cells)
 //   node test/tour.mjs --run r1 --sheets                       contact sheets of 12 (3 x 4, labelled) from what has been shot
+//   node test/tour.mjs --run r1 --views v.json [--force] [--size 960x440]   shoot views from a json file
 //   node test/tour.mjs --run r1 --only name1,name2             re-shoot named views (any set, searched in all)
 // Pictures: /home/claude/shots/fx1/tour/<run>/<name>_<hour>.jpg ; metrics in meta.json (mean luminance per shot).
 import fs from 'node:fs'; import { spawnSync } from 'node:child_process';
@@ -11,12 +12,10 @@ const run = arg('run', 'r1'), OUT = '/home/claude/shots/fx1/tour/' + run; fs.mkd
 const metaF = OUT + '/meta.json', meta = fs.existsSync(metaF) ? JSON.parse(fs.readFileSync(metaF, 'utf8')) : {};
 const safe = s => s.replace(/[^A-Za-z0-9.,@_-]+/g, '_');
 if (has('sheets')) {
-  const files = fs.readdirSync(OUT).filter(f => f.endsWith('.jpg') && !f.startsWith('sheet')).sort(), dir = OUT + '/sheets'; fs.mkdirSync(dir, { recursive: true });
+  const files = fs.readdirSync(OUT).filter(f => f.endsWith('.jpg') && !f.startsWith('sheet') && f.startsWith(arg('prefix', ''))).sort(), dir = OUT + '/sheets' + (arg('prefix', '') ? '_' + arg('prefix', '').replace(/\W/g, '') : ''); fs.mkdirSync(dir, { recursive: true });
   const from = +arg('from', 0); let n = 0;
   for (let i = from * 12; i < files.length; i += 12, n++) {
     const part = files.slice(i, i + 12), name = dir + '/sheet' + String(i / 12 + 1).padStart(3, '0') + '.jpg';
-    const a = ['-background', 'black', '-fill', 'white', '-pointsize', '15']; for (const f of part) a.push('(', OUT + '/' + f, '-gravity', 'NorthWest', '-undercolor', '#000a', '-annotate', '+3+3', ' ' + f.replace('.jpg', '') + ' ', ')');
-    a.push('-tile', '3x', '-geometry', '+2+2', '-quality', '84', 'MIFF:-'); // montage needs 'montage'
     const r = spawnSync('montage', [...part.flatMap(f => ['-label', f.replace('.jpg', ''), OUT + '/' + f]), '-tile', '3x', '-geometry', '+2+2', '-pointsize', '14', '-background', '#111', '-fill', 'white', '-quality', '84', name]); if (r.status) console.log('montage failed', String(r.stderr).slice(0, 200));
   }
   console.log('sheets written to', dir, 'from', files.length, 'shots'); process.exit(0);
@@ -27,10 +26,11 @@ await s.run(fs.readFileSync(root + 'test/tour_views.js', 'utf8'));
 const only = arg('only', null) ? arg('only', '').split(',') : null;
 let views = [];
 if (arg('set', null)) views = JSON.parse(await s.run(`return JSON.stringify(TOUR.set(${JSON.stringify(arg('set'))}))`));
+if (arg('views', null)) views = JSON.parse(fs.readFileSync(arg('views'), 'utf8'));          // [{n,x,y,z,yaw,pitch,h:[13],cell?}] ; --force re-shoots
 let done = 0, left = 0;
 const shoot = async v => {
   for (const h of (hoursOpt || v.h)) {
-    const key = safe(v.n) + '_' + h, f = OUT + '/' + key + '.jpg'; if (fs.existsSync(f) && !only) continue;
+    const key = safe(v.n) + '_' + h, f = OUT + '/' + key + '.jpg'; if (fs.existsSync(f) && !only && !has('force')) continue;
     if (Date.now() - t0 > budget) { left++; continue; }
     try {
       const r = JSON.parse(await s.run(`const v = ${JSON.stringify(v)}; if (v.cell) { if (!World.cell || World.cell.id !== v.cell) game.enter(v.cell); } else if (World.cell) game.leave();

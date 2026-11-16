@@ -101,7 +101,7 @@ function wBridge(m, a, b, o) {
   m.pop(); return { L, ang };
 }
 // a tiny pickup mesh (one per kind): fn draws it around the origin on the ground
-function wPickMesh(fn) { const m = new Mesh(256); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); return World.skinPack.add(m); }
+function wPickMesh(fn) { const m = new Mesh(256); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; const nc = World.colliders.length, nl = World.lights.length, ne = World.emitters.length; fn(m); World.colliders.length = nc; World.lights.length = nl; World.emitters.length = ne; return World.skinPack.add(m); }          // [fx1] origin-built: nothing it registers is where it ends up
 const PICKMESH = {
   tuft(m, c1, c2, n) { m.mat(MAT.PLAIN, c1); m.tube([[0, 0, 0], [0.02, 0.13, 0.01], [0, 0.24, 0]], 0.012, 5); for (let i = 0; i < (n || 5); i++) { const a = i * TAU / (n || 5); m.quad2([Math.cos(a) * 0.17, 0.07, Math.sin(a) * 0.17], [Math.cos(a + 0.5) * 0.05, 0.02, Math.sin(a + 0.5) * 0.05], [0, 0.03, 0], [Math.cos(a - 0.5) * 0.05, 0.02, Math.sin(a - 0.5) * 0.05]); } m.mat(MAT.PLAIN, c2); m.ball(0, 0.27, 0, 0.055, 0.05, 0.055, 7, 4); for (let i = 0; i < 3; i++) { const a = i * 2.1; m.ball(Math.cos(a) * 0.09, 0.22 + i * 0.01, Math.sin(a) * 0.09, 0.035, 0.03, 0.035, 6, 4); } },
   mushrooms(m) { for (const [x, z, s] of [[0, 0, 1], [0.12, 0.07, 0.7], [-0.1, 0.09, 0.8]]) { m.mat(MAT.PLAIN, [0.84, 0.78, 0.6]); m.cyl(x, 0, z, 0.025 * s, 0.032 * s, 0.09 * s, 6, 0); m.mat(MAT.PLAIN, [0.9, 0.62, 0.18]); m.ball(x, 0.1 * s, z, 0.07 * s, 0.035 * s, 0.07 * s, 8, 4); } },

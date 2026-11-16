@@ -233,6 +233,7 @@ async function warmShaders() {
     if (loadSave()) $('contBtn').hidden = false;
     $('startBtn').addEventListener('click', () => startGame(false)); $('contBtn').addEventListener('click', () => startGame(true));
     if (typeof Load !== 'undefined') { Load.update = () => UI.updateAvailable(); if (Load.updateReady) UI.updateAvailable(); setTimeout(() => { Load.register(); setTimeout(() => Load.warm().then(() => UI.storageNote()), 4000); }, 1500); }
+    { const bad = World.colliders.filter(c => Math.hypot(c.x, c.z) < 3 && !(c.bonfire)); if (bad.length) console.warn('[fx1] ' + bad.length + ' colliders within 3 m of the world origin (a prop built at the origin and moved registered them):', JSON.stringify(bad.slice(0, 4))); }          // boot assertion
     game.ready = true;
     // ── test hooks ──
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
