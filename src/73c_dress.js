@@ -549,7 +549,7 @@ function buildDress() {
     for (let i = 0, nv = kind === 'inn' ? 4 : 2 + R.i(0, 2); i < nv; i++) {
       const f = pick(['front', 'back', 'left', 'right']), u = (R() - 0.5) * (wallLen(s, f) - 1.6); if (f === face && Math.abs(u - du) < 1.9) continue;
       const w = wallAt(s, f, u, 0.06), y = s.y + 2.5 + R() * 0.4; if (kind === 'shop') continue;
-      add(pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine4', 'Prop_Vine1']), w.x, y, w.z, [1.15, 1.0 + R() * 0.3, 1], w.ry, i % 2 === 0, { tint: [tint[0] * (0.9 + R() * 0.2), tint[1], tint[2]] });
+      add(pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine4', 'Prop_Vine1']), w.x, y, w.z, [0.62, 0.6 + R() * 0.2, 0.6], w.ry, i % 2 === 0, { tint: [tint[0] * (0.9 + R() * 0.2), tint[1], tint[2]] });
     }
     if (kind === 'chapel' || kind === 'farm' && s.id === 'barn') continue;
     // bracket lantern and sign beside the door

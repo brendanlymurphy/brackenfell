@@ -9191,7 +9191,7 @@ function buildDress() {
     for (let i = 0, nv = kind === 'inn' ? 4 : 2 + R.i(0, 2); i < nv; i++) {
       const f = pick(['front', 'back', 'left', 'right']), u = (R() - 0.5) * (wallLen(s, f) - 1.6); if (f === face && Math.abs(u - du) < 1.9) continue;
       const w = wallAt(s, f, u, 0.06), y = s.y + 2.5 + R() * 0.4; if (kind === 'shop') continue;
-      add(pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine4', 'Prop_Vine1']), w.x, y, w.z, [1.15, 1.0 + R() * 0.3, 1], w.ry, i % 2 === 0, { tint: [tint[0] * (0.9 + R() * 0.2), tint[1], tint[2]] });
+      add(pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine4', 'Prop_Vine1']), w.x, y, w.z, [0.62, 0.6 + R() * 0.2, 0.6], w.ry, i % 2 === 0, { tint: [tint[0] * (0.9 + R() * 0.2), tint[1], tint[2]] });
     }
     if (kind === 'chapel' || kind === 'farm' && s.id === 'barn') continue;
     // bracket lantern and sign beside the door
@@ -9274,7 +9274,7 @@ async function infillMaterials() {
     Kit.defs[name] = Object.assign({}, Kit.defs[base], { name, map: a, normalMap: n || Kit.defs[base].normalMap, orm: o || Kit.defs[base].orm, aoInOrm: true, color: [1, 1, 1], uvScale: [1, 1], gain: 1, sat: 1 }, over || {});
     return true;
   };
-  const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0 });
+  const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0, uvScale: [2.2, 2.2] });      // Build 42: grain was a metre wide on a 2 m panel
   const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 1.2, nScale: 1.0, moss: 0.6 });
   if (Kit.defs.MI_UnevenBrick) Kit.defs[INF_B] = Object.assign({}, Kit.defs.MI_UnevenBrick, { name: INF_B, doubleSided: true });
   if (Kit.defs[INF_T]) Kit.defs[INF_T].doubleSided = true;
