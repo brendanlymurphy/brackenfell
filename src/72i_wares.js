@@ -126,6 +126,8 @@ PD.WARES = {
   drugs: ['flask', 'tall', 'jar', 'jar', 'flask', 'demijohn', 'tall', 'candles', 'box'],
   hard: ['tools', 'rope', 'lantern', 'box', 'jar', 'candles', 'rope', 'sack'],
 };
+for (const k of ['loaf', 'bowl', 'jug']) if (!PD.ware[k]) PD.ware[k] = m => Props[k](m);          // [fx2] the trade pools name these three too
+PD.ware.pot = PD.ware.pot || (m => Props.pot(m, 0.1));
 const WARE_W = { rope: 0.28, lantern: 0.14, flask: 0.2, tall: 0.11, jar: 0.2, demijohn: 0.28, bolt: 0.17, folded: 0.3, sack: 0.3, box: 0.27, candles: 0.2, spools: 0.34, tools: 0.45, cheese: 0.26, loaf: 0.3, bowl: 0.2, pot: 0.25, ham: 0.24 };
 // a shelf fill: a varied row of wares from a pool; 2 or 3 of a kind together now and then, never the same kind three shelves in a row
 PD.mixed = (c, len, pool) => { pool = pool || PD.WARES.store; let last = -1; return (i, y) => {

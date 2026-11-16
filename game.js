@@ -7178,7 +7178,7 @@ function pHearth(P, room, side, wid, o) {
   pRecEnd(rc, m, t0);
   // [fx2] the firewood beside the hearth is a real thing on the floor: it needs its own place (inside the room, off every other item) and is recorded so nothing is put through it
   let wp_ok = false; { const cs = Math.cos(rot), sn = Math.sin(rot), lx = 0.4, lz = wid / 2 + 0.55, wx = px + lx * cs + lz * sn, wz = pz - lx * sn + lz * cs, wr = pFoot(wx, wz, 0.5, 0.72, rot), a_ = room.in;
-    if (o.deco !== false && wr.x0 >= a_.x0 - 0.01 && wr.x1 <= a_.x1 + 0.01 && wr.z0 >= a_.z0 - 0.01 && wr.z1 <= a_.z1 + 0.01 && pFit(P, room, wr, { h: 0.7, lowOk: true, noClear: true })) { wp_ok = true; P.occ(room.k, wr, 'floor', P.id + '.hlogs' + P.items.length, { h: 0.7, hh: 0.7, room: room.id, back: side }); } }
+    if (o.deco !== false && wr.x0 >= a_.x0 - 0.01 && wr.x1 <= a_.x1 + 0.01 && wr.z0 >= a_.z0 - 0.01 && wr.z1 <= a_.z1 + 0.01 && pFit(P, room, wr, { h: 0.7, lowOk: true })) { wp_ok = true; P.occ(room.k, wr, 'floor', P.id + '.hlogs' + P.items.length, { h: 0.7, hh: 0.7, room: room.id, back: side }); } }
   if (o.deco !== false) {          // mantel objects, antlers over the breast, a rug and firewood by the fire
     at(m, px, L.y + 0.02, pz, rot, () => {
       if (typeof kitLit === 'function' && Kit.pieces.CandleStick_Triple) for (const sg of [-1, 1]) kitLit(m, 'CandleStick_Triple', 0.42, 1.6 - 0.02, sg * (wid / 2 - 0.32), 0.8, sg, { cap: 0, kind: 'candle', flame: 'candle' });
@@ -8236,6 +8236,8 @@ PD.WARES = {
   drugs: ['flask', 'tall', 'jar', 'jar', 'flask', 'demijohn', 'tall', 'candles', 'box'],
   hard: ['tools', 'rope', 'lantern', 'box', 'jar', 'candles', 'rope', 'sack'],
 };
+for (const k of ['loaf', 'bowl', 'jug']) if (!PD.ware[k]) PD.ware[k] = m => Props[k](m);          // [fx2] the trade pools name these three too
+PD.ware.pot = PD.ware.pot || (m => Props.pot(m, 0.1));
 const WARE_W = { rope: 0.28, lantern: 0.14, flask: 0.2, tall: 0.11, jar: 0.2, demijohn: 0.28, bolt: 0.17, folded: 0.3, sack: 0.3, box: 0.27, candles: 0.2, spools: 0.34, tools: 0.45, cheese: 0.26, loaf: 0.3, bowl: 0.2, pot: 0.25, ham: 0.24 };
 // a shelf fill: a varied row of wares from a pool; 2 or 3 of a kind together now and then, never the same kind three shelves in a row
 PD.mixed = (c, len, pool) => { pool = pool || PD.WARES.store; let last = -1; return (i, y) => {
