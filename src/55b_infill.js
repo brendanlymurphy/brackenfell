@@ -210,3 +210,38 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
   INF.enterIds = INF.houses.filter(h => h.enter).map(h => h.id);
   INF.count = INF.houses.length;
 })();
+
+// ───────────────────────── keep-clear rule (Build 33) ─────────────────────────
+// No prop, stall, pile or collider may stand in a door's approach strip (1.2 m wide, 2.5 m long, from the wall) or within 1 m of a road's centre line. Builders ask
+// KEEP.hit(x, z, r) before placing (r: the radius the thing occupies) or KEEP.slide(x, z, r) for a nearby clear spot. The strips are built on first use, when every site exists.
+const KEEP = {
+  strips: null, W: 0.6, LEN: 2.5, ROAD: 1.0,
+  build() {
+    this.strips = [];
+    for (const s of SITES) {
+      if (!s.w) continue; const wall = s.doorWall || 'front', dl = siteDoorLocal(s, 0), u = (wall === 'front' || wall === 'back') ? dl[0] : dl[1];
+      this.strips.push({ s, wall, u, len: this.LEN + (s.porch || 0) });
+    }
+  },
+  inStrip(x, z, r) {
+    if (!this.strips) this.build();
+    for (const t of this.strips) {
+      const s = t.s; if (Math.abs(x - s.x) > 14 || Math.abs(z - s.z) > 14) continue;
+      const l = worldToSite(s, x, z); let lat, out;
+      if (t.wall === 'front') { lat = l[0] - t.u; out = -l[1] - s.d / 2; } else if (t.wall === 'back') { lat = l[0] - t.u; out = l[1] - s.d / 2; } else if (t.wall === 'left') { lat = l[1] - t.u; out = -l[0] - s.w / 2; } else { lat = l[1] - t.u; out = l[0] - s.w / 2; }
+      if (Math.abs(lat) < this.W + r && out > -0.2 - r * 0.5 && out < t.len + r) return s.id;
+    }
+    return null;
+  },
+  onRoad(x, z, r) {
+    if (typeof INF === 'undefined' || !INF.LN) return null;
+    for (const id in INF.LN) { const L = INF.LN[id]; if (id === 'crag' || id === 'hunter' || id === 'fisher') { if (INF.dist(L, x, z)[0] < this.ROAD * 0.5 + r * 0.5) return id; continue; } if (INF.dist(L, x, z)[0] < this.ROAD + r * 0.6) return id; }
+    return null;
+  },
+  hit(x, z, r) { r = r || 0.3; return this.inStrip(x, z, r) || this.onRoad(x, z, r) || null; },
+  slide(x, z, r) {        // the nearest clear spot to (x, z) within 3 m (sideways along the strip or the road first), or the point itself when it is already clear or nothing is
+    if (!this.hit(x, z, r)) return [x, z];
+    for (let d = 0.35; d <= 3.2; d += 0.35) for (let k = 0; k < 16; k++) { const a = k / 16 * TAU, px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d; if (!this.hit(px, pz, r)) return [px, pz]; }
+    return [x, z];
+  },
+};

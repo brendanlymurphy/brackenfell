@@ -15,6 +15,8 @@ const DRCOL = {
   clay: [[0.62, 0.38, 0.24], [0.55, 0.34, 0.22], [0.50, 0.40, 0.30], [0.66, 0.46, 0.30]],
 };
 const dscale = (c, k) => c.map(v => Math.min(1, v * k));
+for (const k of ['wood']) DRCOL[k] = DRCOL[k].map(c => c.map(v => Math.min(1, v * 1.7)));      // Build 33: barrels and crates read black beside dark plank walls
+DRCOL.sack = DRCOL.sack.map(c => c.map(v => v * 0.6));      // ...and the sacks white
 
 // ── small solids: every function returns a piece name (cached by key), built around the origin, bottom at y = 0 ──
 function dPrism(g, mat, uv, x, y, z, r0, r1, h, n, col, capCol, a0, sx, sz) {
@@ -330,12 +332,20 @@ function dBoat(R) {
   for (const z of [-0.6, 0.35]) g.box(DRW, -0.5 * W, H * 0.62, z - 0.07, 0.5 * W, H * 0.67, z + 0.07, dscale(c, 1.2), DRU.wood);
   return g.make(key);
 }
-function dNet(R) {
+function dNet(R) {      // Build 33: a diamond-mesh net of thin cords and knots (see-through), hung from a rail between two posts with a catenary sag and a billow
   const key = 'dr_net'; if (Kit.pieces[key]) return key;
-  const g = GP(), c = [0.3, 0.33, 0.26];
-  g.beam(DRW, [-1.0, 1.5, 0], [1.0, 1.5, 0], 0.012, [0.3, 0.25, 0.2]);
-  g.quad(DRC, [-1.0, 1.5, 0], [1.0, 1.5, 0], [0.95, 0.55, 0.08], [-0.95, 0.5, 0.08], c, DRU.cloth, true);
-  for (const x of [-1.0, 1.0]) g.box(DRW, x - 0.04, 0, -0.04, x + 0.04, 1.6, 0.04, [0.3, 0.25, 0.2], DRU.wood);
+  const g = GP(), cord = [0.14, 0.13, 0.1], knot = [0.1, 0.09, 0.07], W = 1.0, Hn = 1.05, mx = 0.1, my = 0.1, top = 1.55;
+  const S = (X, Y) => { const k = Y / Hn, e = 1 - (X / W) * (X / W); return [X * (1 - 0.06 * k), top - Y + 0.12 * e * k * k * 0 - 0.1 * e * k, 0.05 + 0.1 * Math.sin(Math.PI * Math.min(1, k * 0.9)) * e + 0.02 * Math.sin(X * 9 + k * 5)]; };
+  const nodes = new Map(), nodeAt = (i, j) => { const k = i + ',' + j; let n = nodes.get(k); if (!n) nodes.set(k, n = S(i * mx, j * my)); return n; };
+  const ni = Math.round(W / mx), nj = Math.round(Hn / my), seg = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, px = -dy / l * 0.007, py = dx / l * 0.007; g.quad(DRC, [a[0] + px, a[1] + py, a[2]], [a[0] - px, a[1] - py, a[2]], [b[0] - px, b[1] - py, b[2]], [b[0] + px, b[1] + py, b[2]], cord, DRU.cloth, true); };
+  for (let i = -ni; i <= ni; i++) for (let j = 0; j <= nj; j++) {
+    if ((i + j) % 2) continue; const a = nodeAt(i, j);
+    for (const dj of [1, -1]) { const i2 = i + 1, j2 = j + dj; if (i2 > ni || j2 < 0 || j2 > nj) continue; seg(a, nodeAt(i2, j2)); }
+    if (j > 0 && j < nj) { const q = 0.016; g.quad(DRC, [a[0] - q, a[1], a[2] + 0.004], [a[0], a[1] - q, a[2] + 0.004], [a[0] + q, a[1], a[2] + 0.004], [a[0], a[1] + q, a[2] + 0.004], knot, DRU.cloth, true); }
+  }
+  g.beam(DRW, [-W - 0.05, top, 0.05], [W + 0.05, top, 0.05], 0.014, [0.3, 0.25, 0.2]);
+  for (let i = -ni; i <= ni; i += 2) { const p = nodeAt(i + ((i + 0) % 2 ? 1 : 0), 0); g.beam(DRW, [p[0], top, 0.05], [p[0], top - 0.03, p[2]], 0.004, cord); }
+  for (const x of [-W - 0.05, W + 0.05]) g.box(DRW, x - 0.04, 0, 0.01, x + 0.04, top + 0.1, 0.09, [0.3, 0.25, 0.2], DRU.wood);
   return g.make(key);
 }
 
@@ -364,6 +374,7 @@ function buildDress() {
   const ok = (x, z, r, o) => {
     o = o || {};
     if (hyp(x, z) > WORLD_RADIUS + 8) return false;
+    if (KEEP.hit(x, z, r * 1.45)) return false;          // Build 33: never in a door's approach strip or on a road's centre line
     for (const p of DRS.placed) if (hyp(x - p[0], z - p[1]) < r + p[2]) return false;
     const al = inAlley(x, z);
     if (al) { if (Math.abs(z - roadZ(x)) < 1.8 + r * 0.5) return false; }
@@ -533,7 +544,7 @@ function buildDress() {
   for (const s of SITES) {
     const kind = kindOf(s); if (!kind || kind === 'shop' && !s.facade) continue;
     const face = wallOf(s), L = wallLen(s, face), dl = siteDoorLocal(s, 0), du = (face === 'front' || face === 'back') ? dl[0] : dl[1];
-    const tint = [0.62, 0.74, 0.56];
+    const tint = [0.36, 0.44, 0.3];
     // vines: a few strands on random walls, away from the door
     for (let i = 0, nv = kind === 'inn' ? 4 : 2 + R.i(0, 2); i < nv; i++) {
       const f = pick(['front', 'back', 'left', 'right']), u = (R() - 0.5) * (wallLen(s, f) - 1.6); if (f === face && Math.abs(u - du) < 1.9) continue;
@@ -545,7 +556,7 @@ function buildDress() {
     const side = R() < 0.5 ? -1 : 1, w = wallAt(s, face, du + side * 1.15, 0.0), yL = s.y + 2.05 + R() * 0.45;
     const q = new THREE.Vector3(Math.sin(w.ry) * 0.38, 0, Math.cos(w.ry) * 0.38);
     const M = dmat(lf, w.x, yL, w.z, 1, w.ry); ADD(lf, M, OUT, 0); ADD(lg, M, Object.assign({}, OUT, { glow: 2.2 }), 0);
-    const lp = [w.x + q.x, yL - 0.1, w.z + q.z]; World.emitters.push({ type: 'lantern', p: lp, zone: 0 }); if (DRS.lights++ < 5 && World.lights.length < 40) addLight(lp, 9, [3.0, 1.7, 0.7], 0, 'lantern');
+    const lp = [w.x + q.x, yL - 0.1, w.z + q.z]; World.emitters.push({ type: 'lantern', p: lp, zone: 0, halo: s.infill ? 0.4 : 0.7 }); if (DRS.lights++ < 5 && World.lights.length < 40) addLight(lp, 9, [3.0, 1.7, 0.7], 0, 'lantern');
     if (glyphs[s.id] || kind === 'inn') { const w2 = wallAt(s, face, du - side * 1.3, 0.0), sg = genSign(glyphs[s.id] || 'crest', [1.0, 0.8, 0.45]); add(sg, w2.x, s.y + 2.45 + R() * 0.3, w2.z, 1, w2.ry, false); }
   }
   // laundry between upper windows of some alley shops, and a few cottages
