@@ -39,7 +39,7 @@ for (const file of files) {
     if ((x.kind === 'brow' || x.kind === 'lash') && level !== 'mid') continue;                       // 1 to 2 pixels at the distance this is used
     if (x.kind === 'eye' && !EYE_TRIS) continue;
     if (x.kind === 'mouth' && level !== 'mid') continue;
-    if (x.kind === 'wear' && level === 'far') continue;                       // 700-triangle copies are seen beyond 26 m: no garments of their own (the silhouette is the body's)
+    if (x.kind === 'wear' && level === 'far' && !/^w_(kirtle|sleeve)/.test(x.mesh.getName())) continue;                       // 700-triangle copies are seen beyond 26 m: no garments of their own (the silhouette is the body's)
     if (x.kind === 'wear' && level !== 'mid' && /^w_(belt|pouch|cuff|straps)/.test(x.mesh.getName()) && !(level === 'mid' && /^w_(belt|straps)/.test(x.mesh.getName()))) continue;               // belts, pouches, cuffs and straps are a few pixels beyond mid distance
     const target = x.kind === 'eye' ? EYE_TRIS : x.kind === 'wear' ? Math.max(12, x.n * WEAR_RATIO) : x.kind === 'mouth' ? x.n : SHARE[x.kind] === undefined ? x.n : Math.max(level === 'far' ? 30 : 80, rest * SHARE[x.kind] * Math.sqrt(x.n) / sums[x.kind]);
     const prim = x.prim, ia = prim.getIndices(), idx = Uint32Array.from(ia.getArray()), pa = prim.getAttribute('POSITION'), nv = pa.getCount();
