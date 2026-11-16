@@ -42,7 +42,7 @@ body.talking #hud, body.talking #rpg { opacity: 0; }
 #ctrack span.pln { top: 14px; font-family: var(--body); font-style: italic; font-size: 0.66rem; color: var(--parch); text-shadow: 0 1px 3px #000, 0 0 5px #000; }
 #cneedle { position: absolute; left: 50%; bottom: 0; width: 1px; height: 7px; background: var(--gold); }
 #clock { position: absolute; top: calc(var(--pt) + 36px); left: 50%; transform: translateX(-50%); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--dim); text-shadow: 0 1px 3px #000, 0 0 6px #000; font-variant-numeric: tabular-nums; text-transform: uppercase; transition: opacity 1.4s ease; }
-#objective { position: absolute; top: var(--pt); left: var(--pl); max-width: min(250px, 32vw); font-size: 0.85rem; line-height: 1.28; text-shadow: 0 1px 4px #000, 0 0 2px #000; transition: opacity 1.4s ease; }
+#objective { position: absolute; top: var(--pt); left: var(--pl); max-width: min(250px, 32vw, calc(50vw - min(180px, 28vw) - var(--pl) - 10px)); font-size: 0.85rem; line-height: 1.28; text-shadow: 0 1px 4px #000, 0 0 2px #000; transition: opacity 1.4s ease; }
 #objective b { display: block; font-family: var(--display); font-weight: 400; font-size: 0.92rem; color: var(--gold); letter-spacing: 0.03em; }
 #objective div { margin-bottom: 7px; padding-left: 9px; border-left: 2px solid var(--line); }
 #purse { position: absolute; top: calc(var(--pt) + 54px); right: var(--pr); font-size: 0.82rem; color: var(--gold); text-shadow: 0 1px 3px #000, 0 0 6px #000; font-variant-numeric: tabular-nums; transition: opacity 1.4s ease; }
@@ -275,7 +275,7 @@ body.lefty #toasts { left: auto; right: var(--pr); align-items: flex-end; }
   body.touch #act { bottom: calc(var(--pb) + 12px + 80px * var(--bs) + 66px); }
   #tJump { bottom: calc(var(--pb) + 12px + 80px * var(--bs)); } #tDodge { bottom: calc(var(--pb) + 6px + 76px * var(--bs)); }
 }
-@media (max-height: 380px) { #objective { max-width: min(230px, 30vw); } #place { top: 20%; } #compass { height: 32px; } }
+@media (max-height: 380px) { #objective { max-width: min(230px, 30vw, calc(50vw - min(180px, 28vw) - var(--pl) - 10px)); } #place { top: 20%; } #compass { height: 32px; } }
 @media (max-width: 600px) and (min-height: 431px) { #objective { top: calc(var(--pt) + 62px); max-width: 62vw; } #purse { top: calc(var(--pt) + 60px); } }
 
 #portal { position: fixed; inset: 0; z-index: 60; background: #050403; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; display: flex; align-items: center; justify-content: center; }

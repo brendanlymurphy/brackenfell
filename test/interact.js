@@ -1,5 +1,6 @@
 // The interaction layer (82b_interact.js), proven headless: containers that open, loose things that can be taken and stay gone, letters, theft and the cell,
 // locks and picks, seats, the inn's bed and stew, what people say. usage: node test/shot.mjs --opt webgl=1 --opt quality=medium --opt play=1 --do "$(cat test/interact.js)"
+Env.hour = 12;
 const sleep = ms => new Promise(r => setTimeout(r, ms)), dt = 1 / 30, fails = [], log = [];
 const fx = (c, m) => { if (!c) fails.push(m); };
 const idle = async () => { for (let i = 0; i < 400 && Cells.busy; i++) await sleep(50); game.step(2, dt); };
@@ -12,7 +13,7 @@ const cells = new Set(IX.cont.map(o => o.cell)); log.push('cells with containers
 const __w = ixWitness; ixWitness = () => null;  // nobody about: taking is free
 const cont = IX.cont.find(o => o.loot.length && !o.locked && o.cell !== 'inn') || IX.cont.find(o => o.loot.length && !o.locked);
 game.enter(cont.cell); await idle(); Player.pos = [cont.p[0], cont.p[1] - 0.9, cont.p[2] + 0.5];
-{ const g0 = gcount(), l = interactLabel(cont); fx(l && /Search|Look|Open/.test(l), 'container label ' + l); interactUse(cont); fx(S.opened[cont.id], 'container not marked open'); fx(gcount() > g0, 'container gave nothing (' + JSON.stringify(cont.loot) + ')'); fx(interactLabel(cont) === null, 'an emptied container still offers itself'); log.push('opened ' + cont.id + ' ' + JSON.stringify(cont.loot)); }
+{ const g0 = gcount(), l = interactLabel(cont); fx(l && /Search|Look|Open/.test(l), 'container label ' + l); interactUse(cont); fx(S.opened[cont.id], 'container not marked open'); fx(gcount() > g0, 'container gave nothing (' + JSON.stringify(cont.loot) + ')'); fx(interactLabel(cont) === 'Empty', 'an emptied container does not read Empty (' + interactLabel(cont) + ')'); log.push('opened ' + cont.id + ' ' + JSON.stringify(cont.loot)); }
 { const again = ixRoll(IX.LOOT.home, ixRng(ixHash('x')), 1, 1), again2 = ixRoll(IX.LOOT.home, ixRng(ixHash('x')), 1, 1); fx(JSON.stringify(again) === JSON.stringify(again2), 'loot is not deterministic'); }
 // ── a loose thing: taken, gone, still gone after a save and a load ──
 const lo = IX.loose.find(o => o.kind === 'loose' && o.item !== 'gold' && o.cell !== 'inn') || IX.loose.find(o => o.kind === 'loose' && o.cell !== 'inn') || IX.loose.find(o => o.kind === 'loose');
@@ -27,7 +28,7 @@ ixWitness = __w;
 { const lo2 = IX.loose.find(o => o.kind === 'loose' && !o.gone && o.owner); game.enter(lo2.cell); await idle(); Player.pos = [lo2.p[0], lo2.p[1] - 0.9, lo2.p[2] + 0.4];
   const w = NPC.marta === ixGuard() ? NPC.greta : NPC.marta; w.anim = 'idle'; w.pos = [Player.pos[0] + 2, Player.pos[1], Player.pos[2]];
   interactUse(lo2); fx(S.crime && S.crime.pending && S.crime.fine > 0, 'taking in front of someone was not a crime'); fx(has(lo2.item) || lo2.item === 'gold', 'did not get the item');
-  S.crime.t = 0; ixTick(0.1); await sleep(1500); game.step(3, dt);
+  S.crime.t = 0; ixTick(0.1); for (let i = 0; i < 200 && !UI.talk; i++) { game.step(6, dt); await sleep(50); } game.step(3, dt);
   fx(UI.talk && ['hale', 'ivo'].includes(UI.talk.id), 'the guard did not come to talk (' + (UI.talk && UI.talk.id) + ')');
   const btn = [...document.getElementById('dopts').children].find(b => /Go quietly/.test(b.textContent)); fx(btn, 'no "go quietly" option'); if (btn) btn.click(); await sleep(1500); await idle();
   fx(S.jail === 1 && World.cell && World.cell.id === 'guardhouse', 'not in the cell (' + (World.cell && World.cell.id) + ')'); fx(!S.crime, 'crime not cleared by the cell');

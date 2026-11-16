@@ -1,0 +1,449 @@
+{
+ "boulder_01": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "boulder_01",
+  "category": "rock",
+  "min": [
+   -0.634,
+   0,
+   -0.911
+  ],
+  "max": [
+   0.634,
+   0.995,
+   0.911
+  ],
+  "size": [
+   1.269,
+   0.995,
+   1.822
+  ],
+  "tris": 1400,
+  "materials": [
+   "boulder_01"
+  ],
+  "alpha": false
+ },
+ "dead_tree_trunk_02": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "dead_tree_trunk_02",
+  "category": "rock",
+  "min": [
+   -2.024,
+   0,
+   -0.452
+  ],
+  "max": [
+   2.024,
+   1.048,
+   0.452
+  ],
+  "size": [
+   4.048,
+   1.048,
+   0.904
+  ],
+  "tris": 1500,
+  "materials": [
+   "dead_tree_trunk_02"
+  ],
+  "alpha": false
+ },
+ "namaqualand_boulder_02": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "namaqualand_boulder_02",
+  "category": "rock",
+  "min": [
+   -1.256,
+   0,
+   -0.616
+  ],
+  "max": [
+   1.256,
+   0.879,
+   0.616
+  ],
+  "size": [
+   2.512,
+   0.879,
+   1.232
+  ],
+  "tris": 1200,
+  "materials": [
+   "boulder_02"
+  ],
+  "alpha": false
+ },
+ "namaqualand_boulder_03": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "namaqualand_boulder_03",
+  "category": "rock",
+  "min": [
+   -1.198,
+   0,
+   -1.531
+  ],
+  "max": [
+   1.198,
+   1.473,
+   1.531
+  ],
+  "size": [
+   2.395,
+   1.473,
+   3.062
+  ],
+  "tris": 1200,
+  "materials": [
+   "boulder_03"
+  ],
+  "alpha": false
+ },
+ "namaqualand_boulder_04": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "namaqualand_boulder_04",
+  "category": "rock",
+  "min": [
+   -1.258,
+   0,
+   -1.24
+  ],
+  "max": [
+   1.258,
+   1.89,
+   1.24
+  ],
+  "size": [
+   2.516,
+   1.89,
+   2.48
+  ],
+  "tris": 1200,
+  "materials": [
+   "boulder_04"
+  ],
+  "alpha": false
+ },
+ "rock_07": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "rock_07",
+  "category": "rock",
+  "min": [
+   -0.084,
+   0,
+   -0.16
+  ],
+  "max": [
+   0.084,
+   0.143,
+   0.16
+  ],
+  "size": [
+   0.167,
+   0.143,
+   0.319
+  ],
+  "tris": 500,
+  "materials": [
+   "rock_07"
+  ],
+  "alpha": false
+ },
+ "rock_face_01": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "rock_face_01",
+  "category": "rock",
+  "min": [
+   -2.472,
+   0,
+   -1.91
+  ],
+  "max": [
+   2.472,
+   3.563,
+   1.91
+  ],
+  "size": [
+   4.943,
+   3.563,
+   3.821
+  ],
+  "tris": 1599,
+  "materials": [
+   "rock_face_01"
+  ],
+  "alpha": false
+ },
+ "rock_face_02": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "rock_face_02",
+  "category": "rock",
+  "min": [
+   -1.354,
+   0,
+   -1.063
+  ],
+  "max": [
+   1.354,
+   2.471,
+   1.063
+  ],
+  "size": [
+   2.708,
+   2.471,
+   2.127
+  ],
+  "tris": 1599,
+  "materials": [
+   "rock_face_02"
+  ],
+  "alpha": false
+ },
+ "root_cluster_01": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "root_cluster_01",
+  "category": "rock",
+  "min": [
+   -2.042,
+   0,
+   -1.338
+  ],
+  "max": [
+   2.042,
+   1.508,
+   1.338
+  ],
+  "size": [
+   4.084,
+   1.508,
+   2.677
+  ],
+  "tris": 1500,
+  "materials": [
+   "root_cluster_01"
+  ],
+  "alpha": false
+ },
+ "single_root": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "single_root",
+  "category": "rock",
+  "min": [
+   -0.277,
+   0,
+   -0.918
+  ],
+  "max": [
+   0.277,
+   0.175,
+   0.918
+  ],
+  "size": [
+   0.554,
+   0.175,
+   1.836
+  ],
+  "tris": 899,
+  "materials": [
+   "single_root"
+  ],
+  "alpha": false
+ },
+ "large_castle_door": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "large_castle_door",
+  "category": "structure",
+  "min": [
+   -1.006,
+   0,
+   -0.148
+  ],
+  "max": [
+   1.006,
+   2.965,
+   0.148
+  ],
+  "size": [
+   2.012,
+   2.965,
+   0.296
+  ],
+  "tris": 2493,
+  "materials": [
+   "large_castle_door"
+  ],
+  "alpha": false
+ },
+ "modular_wooden_pier_a": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "modular_wooden_pier",
+  "category": "structure",
+  "min": [
+   -1.539,
+   0,
+   -6.19
+  ],
+  "max": [
+   1.539,
+   7.511,
+   6.19
+  ],
+  "size": [
+   3.077,
+   7.511,
+   12.381
+  ],
+  "tris": 2918,
+  "materials": [
+   "modular_wooden_pier_planks",
+   "modular_wooden_pier_poles"
+  ],
+  "alpha": false
+ },
+ "antique_estoc": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "antique_estoc",
+  "category": "weapon",
+  "min": [
+   -0.186,
+   0,
+   -0.075
+  ],
+  "max": [
+   0.186,
+   1.492,
+   0.075
+  ],
+  "size": [
+   0.371,
+   1.492,
+   0.149
+  ],
+  "tris": 1799,
+  "materials": [
+   "antique_estoc"
+  ],
+  "alpha": false,
+  "metal": 0.66
+ },
+ "hatchet": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "hatchet",
+  "category": "weapon",
+  "min": [
+   -0.013,
+   0,
+   -0.052
+  ],
+  "max": [
+   0.013,
+   0.288,
+   0.052
+  ],
+  "size": [
+   0.025,
+   0.288,
+   0.103
+  ],
+  "tris": 999,
+  "materials": [
+   "hatchet"
+  ],
+  "alpha": false,
+  "metal": 0.49
+ },
+ "machete": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "machete",
+  "category": "weapon",
+  "min": [
+   -0.022,
+   0,
+   -0.031
+  ],
+  "max": [
+   0.022,
+   0.755,
+   0.031
+  ],
+  "size": [
+   0.044,
+   0.755,
+   0.061
+  ],
+  "tris": 1500,
+  "materials": [
+   "machete"
+  ],
+  "alpha": false
+ },
+ "ornate_medieval_dagger": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "ornate_medieval_dagger",
+  "category": "weapon",
+  "min": [
+   -0.06,
+   0,
+   -0.012
+  ],
+  "max": [
+   0.06,
+   0.349,
+   0.012
+  ],
+  "size": [
+   0.119,
+   0.349,
+   0.025
+  ],
+  "tris": 1199,
+  "materials": [
+   "ornate_medieval_dagger"
+  ],
+  "alpha": false,
+  "metal": 0.46
+ },
+ "ornate_war_hammer": {
+  "kit": "dungeon",
+  "file": "dungeon.glb",
+  "source": "ornate_war_hammer",
+  "category": "weapon",
+  "min": [
+   -0.072,
+   0,
+   -0.017
+  ],
+  "max": [
+   0.072,
+   0.71,
+   0.017
+  ],
+  "size": [
+   0.144,
+   0.71,
+   0.034
+  ],
+  "tris": 1800,
+  "materials": [
+   "ornate_war_hammer"
+  ],
+  "alpha": false,
+  "metal": 0.57
+ }
+}
