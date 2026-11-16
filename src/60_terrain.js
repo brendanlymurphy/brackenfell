@@ -56,6 +56,7 @@ function terrainBase(x, z) {
   const dc2 = (x - 26) * (x - 26) + (z + 124) * (z + 124);
   if (dc2 < 9000) h += 21 * Math.exp(-dc2 / (2 * 21 * 21)) * (0.86 + 0.3 * fbm(x / 13, z / 13, 3, 99));               // watchtower crag
   h -= 2.6 * Math.exp(-((x - LAKE.x) * (x - LAKE.x) + (z - LAKE.z) * (z - LAKE.z)) / (2 * 62 * 62));                   // the land dips toward the lake
+  { const w = LV.upW(x, z); if (w > 0) h = lerp(h, LV.up.h, w); }          // Build 33: the upper ward terrace (55_layout.js LV, 73f_levels.js)
   return h;
 }
 function terrainH(x, z) {
@@ -71,6 +72,7 @@ function terrainH(x, z) {
       const dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
       if (dd < 6) h = lerp(h, s.y, 1 - smooth(0, 6, dd));
     }
+    { const w = LV.upW(x, z); if (w > 0) h = lerp(h, LV.up.h, w); }          // Build 33: the terrace wins over pads that blend in from houses beside it
     // Build 33: neighbouring pads blend over each other for 6 m and the last one won, leaving a porch hanging over a hollow: every site's own footprint and doorstep margin is levelled again
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 14 || Math.abs(z - s.z) > 14) continue;
@@ -156,6 +158,7 @@ function buildTerrain() {
     if (s.id === 'tower') s.y = terrainBase(s.x, s.z) - 0.6;
     const d = River.dist(s.x, s.z, 14); if (d < 14) s.y = riverY(River.at) + 0.78;
     if (hyp(s.x - SQUARE.x, s.z - SQUARE.z) < 30) s.y = lerp(s.y, 0, 0.7);
+    { const u = LV.up; if (s.x > u.x0 + 1 && s.x < u.x1 - 1 && s.z > u.z0 + 1 && s.z < u.z1 - 1) s.y = u.h; }          // Build 33: houses on the upper ward terrace stand at its level
   }
   // TERRAIN_FINE: the ground is drawn with 1.5 m cells out to this distance from the centre and with 3 m cells (a quarter of the triangles) from there to the
   // edge of the height grid. Terrain.y still reads the 1.5 m grid. 144 puts the whole grid back on 1.5 m cells.
