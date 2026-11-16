@@ -250,7 +250,7 @@ function furnishHouse(c) {
     }
   }
   // ── layered rugs on free floor, away from the walking line between door and hearth ──
-  const palette = [COL.red, COL.blue, COL.green, [0.5, 0.36, 0.2], [0.32, 0.26, 0.2], COL.purple];
+  const palette = [DYE.red, DYE.blue, DYE.green, [0.5, 0.36, 0.2], [0.32, 0.26, 0.2], DYE.purple];
   for (let i = 0, n = cfg.rugs; i < 40 && n > 0; i++) {
     const rw = 1.0 + R() * 0.7, rl = 1.5 + R() * 0.9, x = X0 + 1.0 + R() * (X1 - X0 - 2.0), z = Z0 + 1.0 + R() * (Z1 - Z0 - 2.0);
     if (blocked(x, z, 0.3) || blocked(x + rw * 0.4, z, 0.2) || blocked(x - rw * 0.4, z, 0.2) || blocked(x, z + rl * 0.4, 0.2) || blocked(x, z - rl * 0.4, 0.2)) continue;

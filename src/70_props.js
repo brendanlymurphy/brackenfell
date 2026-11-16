@@ -6,6 +6,8 @@ const COL = {
   purple: [0.42, 0.22, 0.50], clay: [0.74, 0.40, 0.26], wax: [0.95, 0.90, 0.75], hay: [1, 0.95, 0.8], leather: [0.45, 0.28, 0.16], fur: [0.42, 0.32, 0.24],
   bread: [0.62, 0.44, 0.24], cheese: [0.74, 0.62, 0.30], apple: [0.52, 0.13, 0.10], cabbage: [0.34, 0.46, 0.25], glass: [0.35, 0.55, 0.40], parchment: [0.90, 0.82, 0.62],
 };
+// [c5] medieval dyes: madder, woad, weld, walnut, a little dull green; low saturation (cloth, rugs, blankets)
+const DYE = { red: [0.46, 0.23, 0.17], blue: [0.31, 0.38, 0.46], green: [0.34, 0.40, 0.25], purple: [0.38, 0.28, 0.30], yellow: [0.62, 0.52, 0.26], cream: [0.72, 0.67, 0.56], grey: [0.48, 0.46, 0.43], brown: [0.36, 0.27, 0.19] };
 // colliders / lights / emitters are registered in world space using the mesh's current matrix
 function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y0, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
