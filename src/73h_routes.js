@@ -120,7 +120,7 @@ function buildRoutes(bucket) {
     box(MAT.PLASTER, PLASTER, 0.6, PX0, Yb, PZ1, PX1, Yt, PZ1 + ew, 4 | 8, 1); col(PX0, PZ1, PX1, PZ1 + ew, YG, Yt);
     box(MAT.PLASTER, PLASTER, 0.6, PX0, Yb, PZ1 + ew, PX0 + ew, Yt, ZW - ew, 4 | 8, 1); col(PX0, PZ1, PX0 + ew, ZW, YG, Yt);
     box(MAT.PLASTER, PLASTER, 0.6, PX1 - ew, Yb, PZ1 + ew, PX1, Yt, ZW - ew, 4 | 8, 1); col(PX1 - ew, PZ1, PX1, ZW, YG, Yt);
-    lvFloor(PX0 + ew, PZ1 + ew, PX1 - ew, ZW - ew, YG);                                                                  // the room's floor (the gallery deck meets it at the door sill)
+    deck(PX0 + ew, PZ1 + ew, PX1 - ew, ZW - ew + 0.02, YG, [0.5, 0.42, 0.34]);                                           // the room's floor (the gallery deck meets it at the door sill)
     // timber frame on the outside of the front and a door frame; the door itself is open (dark inside), a boarded one at the east end
     for (const x of [PX0 + 0.05, PX0 + 3.0, PX1 - 0.05]) beam([x, Yb, ZW - 0.05], [x, Yt, ZW - 0.05], 0.14, 0.14);
     beam([PX0, YG + 1.5, ZW - 0.05], [PX1, YG + 1.5, ZW - 0.05], 0.12, 0.12); beam([PX0, Yt - 0.05, ZW - 0.05], [PX1, Yt - 0.05, ZW - 0.05], 0.18, 0.18);
