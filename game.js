@@ -664,7 +664,7 @@ SH.init = function () {
   });
   SH.pointLights = pointFn(false); SH.pointLightsGround = pointFn(true);
   // warm light lying on the ground under every street lantern, from the baked lamp map (one sample; lit with the windows at dusk)
-  SH.lampPool = Fn(([wp]) => { if (!G.lampTex) Lamps.init(); const t = texture(G.lampTex, wp.xz.div(2 * K.terrainHalf).add(0.5)).r; return vec3(1.0, 0.56, 0.22).mul(t.mul(t).mul(SH.LAMP_PEAK).mul(U.windowGlow)); });
+  SH.lampPool = Fn(([wp]) => { if (!G.lampTex) Lamps.init(); const t = texture(G.lampTex, wp.xz.div(2 * K.terrainHalf).add(0.5)).r; return vec3(1.0, 0.56, 0.22).mul(t.mul(t).mul(SH.LAMP_PEAK).mul(U.windowGlow).mul(1.9)); });
   // A window pane lit from inside, as seen from the street: small leaded diamonds, each a little different, the room behind unevenly
   // bright. Values are chosen for the night exposure so the glass stays amber instead of clipping to white. h: a random number per window.
   SH.paneLit = Fn(([wp, N, h]) => {
@@ -770,6 +770,9 @@ SH.update = function (env, camPos, time) {
 // the floor and soot above the hearth, and outdoor kit walls gather mud, moss and eave stains from two per-vertex heights (kg).
 // Extends SH from 40_shade.js: SH.init and SH.update are wrapped so nothing there has to change.
 SH.ROOMS = 64;
+const RK = { cw: 1.3, cs: 0.85, fh: 1.0, fs: 0.8, ch: 1.1, cs2: 0.8, up: 0.38, low: 0.3 };      // [l1] room mood: corner width/strength, floor height/strength, ceiling height/strength, upper-wall dim, wall-foot dim
+if (typeof TEST !== 'undefined' && TEST && TEST.room === 0) Object.assign(RK, { cw: 0.9, cs: 0.5, fh: 0.7, fs: 0.7, ch: 0.6, cs2: 0.65, up: 0, low: 0 });
+if (typeof TEST !== 'undefined' && TEST && TEST.roomk) Object.assign(RK, JSON.parse(TEST.roomk));
 (function () {
   const _init = SH.init, _upd = SH.update;
   SH.init = function () {
@@ -789,17 +792,18 @@ SH.ROOMS = 64;
         const dx = wp.x.sub(A.x), dz = wp.z.sub(A.y);
         const lx = dx.mul(A.z).add(dz.mul(A.w)), lz = dz.mul(A.z).sub(dx.mul(A.w));
         const nx = N.x.mul(A.z).add(N.z.mul(A.w)), nzl = N.z.mul(A.z).sub(N.x.mul(A.w));
-        const tx = sat(B.x.sub(0.16).sub(abs(lx)).div(0.9)).oneMinus(), tz = sat(B.y.sub(0.16).sub(abs(lz)).div(0.9)).oneMinus();
-        const wallAo = float(1).sub(tx.mul(0.5).mul(float(1).sub(abs(nx)))).mul(float(1).sub(tz.mul(0.5).mul(float(1).sub(abs(nzl)))));
+        const tx = sat(B.x.sub(0.12).sub(abs(lx)).div(RK.cw)).oneMinus(), tz = sat(B.y.sub(0.12).sub(abs(lz)).div(RK.cw)).oneMinus();      // [l1] RK: room mood knobs
+        const wallAo = float(1).sub(tx.mul(tx).mul(RK.cs).mul(float(1).sub(abs(nx)))).mul(float(1).sub(tz.mul(tz).mul(RK.cs).mul(float(1).sub(abs(nzl)))));
         const onLoft = wp.y.greaterThan(C.y.sub(0.3)).and(lx.greaterThan(C.z.sub(0.1)));
         const underLoft = lx.greaterThan(C.z).and(onLoft.not());
         const fl = select(onLoft, C.y, B.z), h = wp.y.sub(fl);
         const roofTop = B.z.add(B.w).add(max(B.y.sub(abs(lz)), 0).mul(C.x));
         const top = select(onLoft, roofTop, select(underLoft, C.y.sub(0.3), roofTop)), g = top.sub(wp.y);
-        const fa = sat(h.div(0.7)).oneMinus(), ca = sat(g.div(0.6)).oneMinus();
-        const flAo = float(1).sub(fa.mul(fa).mul(0.7).mul(float(1).sub(max(N.y, 0))));
-        const clAo = float(1).sub(ca.mul(ca).mul(0.65).mul(float(1).sub(max(N.y.negate(), 0))));
-        out.x.assign(wallAo.mul(flAo).mul(clAo).mul(1));
+        const fa = sat(h.div(RK.fh)).oneMinus(), ca = sat(g.div(RK.ch)).oneMinus();
+        const flAo = float(1).sub(fa.mul(fa).mul(RK.fs).mul(float(1).sub(max(N.y, 0))));
+        const clAo = float(1).sub(ca.mul(RK.cs2).mul(float(1).sub(max(N.y.negate(), 0))));
+        const upper = float(1).sub(smoothstep(1.7, 2.9, h).mul(RK.up)), wallL = float(1).sub(float(1).sub(smoothstep(0.0, 1.1, h)).mul(RK.low).mul(float(1).sub(abs(N.y))));      // [l1] the upper third and the foot of a wall go dim: the light sits at table height
+        out.x.assign(wallAo.mul(flAo).mul(clAo).mul(upper).mul(wallL));
         const wallness = float(1).sub(abs(N.y));
         const nn = nz1(vec2(lx.add(lz).mul(0.55), wp.y.mul(0.8).add(lz.mul(0.2)))).toVar();
         out.y.assign(sat(h.div(nn.r.mul(1.0).add(0.55))).oneMinus().mul(wallness));
@@ -867,7 +871,8 @@ SH.WINMAX = 6;
           const f = float(1).sub(d2.div(r2)), dn = d.mul(max(d2, 1e-4).inverseSqrt());
           const lobe = smoothstep(-0.9, 0.45, dot(vec3(D.x, 0, D.y), dn));          // only in front of the pane
           const ndl = max(dot(N, dn.negate()).mul(0.7).add(0.3), 0);                 // surfaces that face the glass catch more
-          acc.addAssign(C.rgb.mul(f.mul(f).div(d2.mul(0.18).add(1)).mul(lobe).mul(ndl)));
+          const up = float(1).sub(TSL.clamp(d.y.sub(0.2).div(1.5), 0, 1).mul(0.75));      // above the glass the light thins out: ceilings stay dark
+          acc.addAssign(C.rgb.mul(f.mul(f).div(d2.mul(0.18).add(1)).mul(lobe).mul(ndl).mul(up)));
         });
       });
       return acc;
@@ -901,7 +906,7 @@ SH.WINMAX = 6;
     const P = U.winP.array, D = U.winD.array, C = U.winC.array, col = env.winCol;
     cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); C[i].set(col[0] * w.k, col[1] * w.k, col[2] * w.k, 0); });
     U.winN.value = cand.length;
-    if (Bake.shaftU) Bake.shaftU.value = Math.min(0.5, (col[0] + col[1] + col[2]) / 3 * (TEST && TEST.shaft !== undefined ? +TEST.shaft : 0.028));
+    if (Bake.shaftU) Bake.shaftU.value = Math.min(0.5, (col[0] + col[1] + col[2]) / 3 * (TEST && TEST.shaft !== undefined ? +TEST.shaft : 0.009));
   };
 })();
 
@@ -1494,7 +1499,7 @@ function gradeFor(env) {
   const mixT = (a, b, k) => ({ sat: a.sat + (b.sat - a.sat) * k, con: a.con + (b.con - a.con) * k, sh: mix3_(a.sh, b.sh, k), hi: mix3_(a.hi, b.hi, k), lift: mix3_(a.lift, b.lift, k) });
   t = mixT(t, gold, clamp(g * 1.15, 0, 1)); t = mixT(t, night, n);
   if (cell) {
-    const room0 = { sat: 0.95, con: 0.19, sh: [1.04, 0.99, 0.92], hi: [1.07, 1.0, 0.89], lift: [0.004, 0.003, 0.002] }, room = mixT(room0, { sat: 0.95, con: 0.27, sh: [1.04, 0.99, 0.93], hi: [1.06, 1.0, 0.90], lift: [0, 0, 0] }, n), mine = { sat: 0.88, con: 0.32, sh: [0.88, 0.97, 1.10], hi: [1.09, 0.98, 0.82], lift: [0, 0, 0.002] };
+    const room0 = { sat: 0.95, con: 0.19, sh: [1.04, 0.99, 0.92], hi: [1.07, 1.0, 0.89], lift: [0.004, 0.003, 0.002] }, room = mixT(room0, { sat: 0.95, con: 0.27, sh: [1.04, 0.99, 0.93], hi: [1.06, 1.0, 0.90], lift: [0.0025, 0.002, 0.0012] }, n), mine = { sat: 0.88, con: 0.32, sh: [0.88, 0.97, 1.10], hi: [1.09, 0.98, 0.82], lift: [0, 0, 0.002] };
     t = cell.id === 'mine' || cell.daylight === 0 ? mixT(room, mine, cell.id === 'mine' ? 1 : 0.6) : room;
   }
   if (TEST && TEST.grade === 0) t = { sat: 1, con: 0.22, sh: [0.93, 0.99, 1.07], hi: [1.045, 1.0, 0.93], lift: [0, 0, 0] };
@@ -1792,7 +1797,8 @@ const Kit = (() => {
     m.roughnessNode = orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough);
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
-    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.6).add(0.4)))));      // [l1] window light (40c_light.js)
+    const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back
+    let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(pls.mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.6).add(0.4)))));      // [l1] window light (40c_light.js)
     em = em.add(alb.mul(glow));
     if (batch && /Floor_Wood|Table|Counter|Bar_/.test(name) && !(TEST && TEST.gloss === 0)) em = em.add(SH.pointSpec(wp, N, normalize(U.camPos.sub(wp)), float(0.55), zone).mul(0.3));      // [l1] worn boards and table tops catch the fire
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
@@ -1801,13 +1807,14 @@ const Kit = (() => {
       const dayK = smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(0.97).add(0.03);       // the floor follows the daylight: constant, it left roofs and walls glowing pale at night while the ground went dark
       const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
+      if (!(TEST && TEST.shade === 0)) em = em.mul(mix(vec3(1), vec3(0.74, 0.86, 1.1), outM.mul(wallK).mul(skyVis).mul(float(1).sub(lampK))));      // [l1] shade is sky: upright faces out of the sun go cooler and darker
     }
     // [l1] contact and eave occlusion on outdoor walls (kg.x: metres above the ground, kg.y: metres below the eaves; 8 = none): a wall darkens where it meets the ground and under its eaves, sun included
     let occK = float(1);
     if (batch && !isFoliage(d)) {
       const kgo = attribute('kg', 'vec4'), hg = kgo.x.mul(8), ev = kgo.y.mul(8), wl = float(1).sub(abs(N.y)), outM2 = float(1).sub(step(0.5, zone));
       const occ = mix(float(1), mix(K_.occ.x, float(1), smoothstep(0.0, 1.3, hg)), wl).mul(mix(float(1), mix(K_.occ.y, float(1), smoothstep(0.0, 0.8, ev)), wl));
-      occK = mix(float(1), occ, outM2); em = em.mul(occK);
+      occK = mix(float(1), occ, outM2.mul(float(1).sub(lampK.mul(0.8)))); em = em.mul(occK);
     }
     if (d.emissiveMap) em = em.add(texture(d.emissiveMap, uvn).rgb.mul(vec3(d.emissive[0], d.emissive[1], d.emissive[2])));
     else if (d.emissive[0] + d.emissive[1] + d.emissive[2] > 0) em = em.add(vec3(d.emissive[0], d.emissive[1], d.emissive[2]));
@@ -3894,14 +3901,14 @@ Cells.hear = function (pos, from) {
 };
 // frame environment: no sun, a short dark fog, the day's ambient kept (windows and the hour of day still reach the rooms through emissive panes and daylight lights)
 const CELL_DAYLIGHT = (typeof TEST !== 'undefined' && TEST && TEST.celllight !== undefined) ? +TEST.celllight : 6;
-const WIN_GAIN = (typeof TEST !== 'undefined' && TEST && TEST.wingain !== undefined) ? +TEST.wingain : 6.5, WIN_KEEP = (typeof TEST !== 'undefined' && TEST && TEST.winkeep !== undefined) ? +TEST.winkeep : 0.15;      // [l1]
-const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 1.7;
+const WIN_GAIN = (typeof TEST !== 'undefined' && TEST && TEST.wingain !== undefined) ? +TEST.wingain : 6.5, WIN_KEEP = (typeof TEST !== 'undefined' && TEST && TEST.winkeep !== undefined) ? +TEST.winkeep : 0.24;      // [l1]
+const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 2.1;
 Cells.env = function (e) {
   const c = Cells.cur; if (!c) return e;
   e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
   // daylight: with the sun off, rooms lost the light that used to come in by day (midday was darker than night). Windows let the sky in: lift the day's ambient. c.daylight: 0 for a cellar or crypt, default for a room with windows.
   e.winCol = null;
-  { let dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0 && c.wins && c.wins.length && !(TEST && TEST.winlight === 0)) { /* [l1] daylight from the panes (40c_light.js): a small uniform lift, the rest is window light */ const b = e.ambSky, l = (b[0] + b[1] + b[2]) / 3, g = WIN_GAIN; e.winCol = [(l * 0.55 + b[0] * 0.45) * g * 1.04, (l * 0.55 + b[1] * 0.45) * g, (l * 0.55 + b[2] * 0.45) * g * 0.92]; k *= WIN_KEEP; } if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT * (e.winCol ? 0.55 + 0.45 * (e.night || 0) : 1); e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
+  { let dl = c.daylightFn ? c.daylightFn() : c.daylight, k = dl === undefined ? CELL_DAYLIGHT : dl; if (k > 0 && c.wins && c.wins.length && !(TEST && TEST.winlight === 0)) { /* [l1] daylight from the panes (40c_light.js): a small uniform lift, the rest is window light */ const b = e.ambSky, l = (b[0] + b[1] + b[2]) / 3, g = WIN_GAIN; e.winCol = [(l * 0.55 + b[0] * 0.45) * g * 1.04, (l * 0.55 + b[1] * 0.45) * g, (l * 0.55 + b[2] * 0.45) * g * 0.92]; k *= WIN_KEEP; } if (k > 0) { e.ambSky = e.ambSky.map(v => v * (1 + k)); e.ambGnd = e.ambGnd.map(v => v * (1 + k * 0.8)); const w = CELL_NIGHT * (e.winCol ? 0.8 + 0.2 * (e.night || 0) : 1); e.ambSky = [e.ambSky[0] + 0.050 * w, e.ambSky[1] + 0.036 * w, e.ambSky[2] + 0.022 * w]; e.ambGnd = [e.ambGnd[0] + 0.030 * w, e.ambGnd[1] + 0.021 * w, e.ambGnd[2] + 0.013 * w]; }      /* a warm floor of bounced firelight in lived-in rooms, so no room with windows is ever black at night (only two real lights per room are allowed) */ else { e.ambSky = e.ambSky.map(v => v * 0.25); e.ambGnd = e.ambGnd.map(v => v * 0.25); } }
   e.fogCol = c.fog || [0.030, 0.025, 0.020]; e.fogDensity = c.fogDensity || 0.022; e.cloud = 0; e.stars = 0; e.aurora = 0; e.sunDisc = 0; e.moonBright = 0;
   return e;
 };
@@ -8697,12 +8704,14 @@ HT.household = (P, c, room, F) => { hPlace(P, room, 'spinning', { sides: ['w', '
 //   c.cell.wins   the windows in world space, which SH.winSet (40c_light.js) turns into the cell's daylight.
 // The pool is a ring: 4 inner vertices (alpha A, under the object) and 4 outer vertices (alpha 0, a margin away), so the shade fades out smoothly.
 const Bake = { on: !(typeof TEST !== 'undefined' && TEST && TEST.bake === 0), stats: { pools: 0, wins: 0 } };
+Bake.cap = TEST && TEST.bakecap !== undefined ? +TEST.bakecap : 0.95;
+Bake.dayU = null;
 Bake.mat = function () {
   const { vec4, vec3, attribute, clamp, smoothstep } = TSL;
   const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
   m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide; m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2;
-  const a = attribute('tint', 'vec4').a, t = clamp(a.div(0.7), 0, 1);
-  m.colorNode = vec4(TEST && TEST.bakedebug ? vec3(1.0, 0.0, 0.0) : vec3(0.0), t.mul(t).mul(t.mul(-2).add(3)).mul(TEST && TEST.bakedebug ? 1.0 : 0.7));
+  const a = attribute('tint', 'vec4').a, t = clamp(a.div(0.95), 0, 1); if (!Bake.dayU) Bake.dayU = TSL.uniform(1);
+  m.colorNode = vec4(TEST && TEST.bakedebug ? vec3(1.0, 0.0, 0.0) : vec3(0.0), t.mul(t).mul(t.mul(-2).add(3)).mul(TEST && TEST.bakedebug ? 1.0 : Bake.dayU.mul(Bake.cap)));
   return m;
 };
 // light shafts: a few additive quads from each window into the room, by day only (no volumetric pass). Strength Bake.shaftU is set by SH.winSet.
@@ -8712,8 +8721,9 @@ Bake.shaftMat = function () {
   Bake.shaftU = uniform(0);
   const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide;
-  const q = uv(), across = smoothstep(0.0, 0.5, TSL.float(1).sub(abs(q.x.mul(2).sub(1)))), along = pow(TSL.float(1).sub(q.y), 1.4).mul(smoothstep(0.0, 0.12, q.y));
-  m.colorNode = attribute('tint', 'vec4').rgb.mul(across.mul(across)).mul(along).mul(Bake.shaftU);
+  const q = uv(), across = smoothstep(0.0, 1.0, TSL.float(1).sub(abs(q.x.mul(2).sub(1)))), along = pow(TSL.float(1).sub(q.y), 1.6).mul(smoothstep(0.0, 0.35, q.y));
+  const ta = attribute('tint', 'vec4').a, pk = TSL.mix(TSL.float(9), TSL.float(1), TSL.step(0.75, ta));      // a < 0.75: the floor patch
+  m.colorNode = attribute('tint', 'vec4').rgb.mul(across.mul(across)).mul(along).mul(Bake.shaftU).mul(pk);
   return m;
 };
 // ring pool round a rectangle given by its four world corners in order (a, b, c, d), margin mg (m) along the outward directions
@@ -8735,20 +8745,21 @@ Bake.interior = function (P) {
     if ((it.lift || 0) > 0.35 || !(it.x1 > it.x0)) continue;
     const L = P.lv[it.k]; if (!L) continue;
     const h = it.h || 0.5, y = L.y + 0.034; if (it.kind === 'floor' && h < 0.25 && (it.x1 - it.x0) * (it.z1 - it.z0) < 0.35) continue;
-    const hearth = it.kind === 'hearth', A = hearth ? 0.55 : clamp(0.34 + h * 0.3, 0.38, 0.62), mg = hearth ? 0.5 : clamp(0.14 + h * 0.2, 0.16, 0.42);
+    const hearth = it.kind === 'hearth', A = hearth ? 0.7 : clamp(0.62 + h * 0.3, 0.66, 0.92), mg = hearth ? 0.7 : clamp(0.3 + h * 0.3, 0.34, 0.7);
     const pad = 0.03, c = [[it.x0 + pad, it.z0 + pad], [it.x1 - pad, it.z0 + pad], [it.x1 - pad, it.z1 - pad], [it.x0 + pad, it.z1 - pad]].map(p => w2(p[0], p[1]));
     const y3 = P.w2(0, y, 0)[1]; Bake.pool(m, y3, c, mg, A); Bake.stats.pools++;
   }
   if (m.ni) cell.decal = m;
   // light shafts: two stacked quads from the pane down to the floor in front of it
-  { const sm = new Mesh(256); sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 255; sm.cb = 255; sm.ao = 1;
+  { const sm = new Mesh(256); sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 232; sm.cb = 190; sm.ao = 1;
     for (const w of P.windows) {
       const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
       const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, len = 3.4, fy = L.y + 0.05;
       const at = (a, b, y) => P.w2(cx + dx * a + tx * b, y, cz + dz * a + tz * b);
       const quad = (v) => { const [p0, p1, p2, p3] = v; const a = sm.vert(p0[0], p0[1], p0[2], 0, 1, 0, 0, 0), b = sm.vert(p1[0], p1[1], p1[2], 0, 1, 0, 1, 0), c = sm.vert(p2[0], p2[1], p2[2], 0, 1, 0, 1, 1), d = sm.vert(p3[0], p3[1], p3[2], 0, 1, 0, 0, 1); sm.tri(a, b, c); sm.tri(a, c, d); sm.flip = false; };
-      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, 1.1, fy), at(len, -1.1, fy)]);        // u across (the wall's own direction), v from the pane to the floor
-      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, 0.8, fy + 0.5), at(len * 0.8, -0.8, fy + 0.5)]);        // a second, inner sheet gives the beam some depth
+      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, 1.9, fy), at(len, -1.9, fy)]);        // u across (the wall's own direction), v from the pane to the floor
+      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, 1.4, fy + 0.5), at(len * 0.8, -1.4, fy + 0.5)]);        // a second, inner sheet gives the beam some depth
+      { const fp = L.y + 0.045, ws = (w.w || 1.0) * 0.5 + 0.35; sm.ao = 0.5; quad([at(0.35, -ws, fp), at(0.35, ws, fp), at(3.3, ws * 1.5, fp), at(3.3, -ws * 1.5, fp)]); sm.ao = 1; }      // the pool of window light on the floor
     }
     if (sm.ni) cell.shaft = sm; }
   // windows: a pane centre, its inward direction on the floor plane (world), the reach and a strength by size
@@ -8780,7 +8791,7 @@ Bake.people = function (cam, env) {
     m.colorNode = vec4(vec3(0.0), a.mul(a).mul(B.u));
     const mesh = B.mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = 2; mesh.layers.set(1); mesh.name = 'blobs'; SC.scene.add(mesh); B.pa = pa; B.g = g;
   }
-  const kl = (env.keyCol[0] + env.keyCol[1] + env.keyCol[2]) / 3; B.u.value = (TEST && TEST.blob !== undefined ? +TEST.blob : 0.46) / (1 + kl * 0.8);
+  const kl = (env.keyCol[0] + env.keyCol[1] + env.keyCol[2]) / 3; if (Bake.dayU) Bake.dayU.value = World.cell ? 1 : 0.4 + 0.6 * Math.min(1, kl * 1.6); B.u.value = (TEST && TEST.blob !== undefined ? +TEST.blob : 0.46) / (1 + kl * 0.8);
   const list = [], push = (p, s) => { const dx = p[0] - cam[0], dz = p[2] - cam[2], d2 = dx * dx + dz * dz; if (d2 < 48 * 48 && Math.abs(p[1] - cam[1]) < 6) list.push([d2, p, s]); };
   for (const n of NPCS) { if (n.hid || !n.pos || n.anim === 'lie' || (n.obj && n.obj.visible === false && !n.ch)) continue; push(n.pos, n.scale || 1); }
   if (typeof Foes !== 'undefined' && Foes.list) for (const f of Foes.list) if (f.alive && f.pos && Cells.spaceOf(f.pos) === (Cells.cur ? Cells.cur.id : 0)) push(f.pos, f.scale || 1);
@@ -8803,7 +8814,7 @@ Bake.buildGround = function () {
   for (const c of World.colliders) {
     if (Cells.inRegion(c.x) || Math.abs(c.x) > 190 || Math.abs(c.z) > 190) continue;
     const ty = Terrain.y(c.x, c.z), ht = c.y1 - c.y0; if (c.y0 > ty + 0.7 || ht < 0.35) continue;
-    const h = c.y0 + 0.9, A = ht > 1.2 ? 0.6 : 0.46, m = clamp(0.7 + 0.16 * ht, 0.8, 1.7);
+    const h = c.y0 + 0.9, A = ht > 1.2 ? 0.82 : 0.62, m = clamp(0.8 + 0.18 * ht, 0.9, 1.9);
     if (c.r !== undefined) {
       if (c.r > 4) continue; const R = c.r + m * 0.9, n = 8, ring0 = [], ring1 = [];
       for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); ring0.push(vert(c.x + ca * c.r * 0.85, c.z + sa * c.r * 0.85, h, A)); ring1.push(vert(c.x + ca * R, c.z + sa * R, h, 0)); }
@@ -14268,7 +14279,7 @@ for (const [id, line] of [['greta', 'The house on the south lane? Nobody’s liv
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 56';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 57';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }

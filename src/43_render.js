@@ -149,7 +149,7 @@ function gradeFor(env) {
   const mixT = (a, b, k) => ({ sat: a.sat + (b.sat - a.sat) * k, con: a.con + (b.con - a.con) * k, sh: mix3_(a.sh, b.sh, k), hi: mix3_(a.hi, b.hi, k), lift: mix3_(a.lift, b.lift, k) });
   t = mixT(t, gold, clamp(g * 1.15, 0, 1)); t = mixT(t, night, n);
   if (cell) {
-    const room0 = { sat: 0.95, con: 0.19, sh: [1.04, 0.99, 0.92], hi: [1.07, 1.0, 0.89], lift: [0.004, 0.003, 0.002] }, room = mixT(room0, { sat: 0.95, con: 0.27, sh: [1.04, 0.99, 0.93], hi: [1.06, 1.0, 0.90], lift: [0, 0, 0] }, n), mine = { sat: 0.88, con: 0.32, sh: [0.88, 0.97, 1.10], hi: [1.09, 0.98, 0.82], lift: [0, 0, 0.002] };
+    const room0 = { sat: 0.95, con: 0.19, sh: [1.04, 0.99, 0.92], hi: [1.07, 1.0, 0.89], lift: [0.004, 0.003, 0.002] }, room = mixT(room0, { sat: 0.95, con: 0.27, sh: [1.04, 0.99, 0.93], hi: [1.06, 1.0, 0.90], lift: [0.0025, 0.002, 0.0012] }, n), mine = { sat: 0.88, con: 0.32, sh: [0.88, 0.97, 1.10], hi: [1.09, 0.98, 0.82], lift: [0, 0, 0.002] };
     t = cell.id === 'mine' || cell.daylight === 0 ? mixT(room, mine, cell.id === 'mine' ? 1 : 0.6) : room;
   }
   if (TEST && TEST.grade === 0) t = { sat: 1, con: 0.22, sh: [0.93, 0.99, 1.07], hi: [1.045, 1.0, 0.93], lift: [0, 0, 0] };
