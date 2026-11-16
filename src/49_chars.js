@@ -174,7 +174,7 @@ const Chars = (() => {
     if (cfg.vis) try {      // face morphs: 15 visemes and 4 face units for the head's vertices, one row of an image each (see "face morphs" below)
       const [meta, t] = await Promise.all([fetch(cfg.dir + cfg.vis.json).then(r => r.json()), TL.loadAsync(cfg.dir + cfg.vis.png)]);
       t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true;
-      S.vis = { tex: t, names: meta.names.map(n => n.replace(/^viseme_/, '')), scale: meta.scale, rows: meta.rows, ref: meta.refHead };
+      S.vis = { tex: t, names: meta.names.map(n => n.replace(/^viseme_/, '')), scale: meta.scale, rows: meta.rows, ref: meta.refHead, upper: meta.upper, lower: meta.lower };
       S.vis.index = Object.fromEntries(S.vis.names.map((n, i) => [n, i]));
     } catch (e) { console.warn('face morph table: ' + (e && e.message || e)); }
     for (const c of clipFile.animations) S.clips[c.name] = c;
@@ -362,7 +362,7 @@ const Chars = (() => {
     const { attribute, abs, Discard, If, frontFacing, normalView, clamp } = TSL;
     const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
     const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
-    let albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), skinW = float(0), hairW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false, skinI = -1, clothW = float(0), trimW = float(0), anyTrim = false;
+    let mouthW = float(0), albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), skinW = float(0), hairW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false, skinI = -1, clothW = float(0), trimW = float(0), anyTrim = false;
     const F = S.cfg.face || null, UE = F ? U.add(H.uGaze) : U;          // the eye texture is read a little off-centre: that is how the eyes move
     names.forEach((mn, i) => {
       const src = srcOf && srcOf[mn], md = S.cfg.materials[mn] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
@@ -394,7 +394,7 @@ const Chars = (() => {
         const grain = texture(G.noiseTex, positionWorld.xy.mul(14).add(positionWorld.z.mul(11))).r.mul(0.35).add(0.82);
         albedo = albedo.mul(trimW.oneMinus()).add(col.mul(grain).mul(trimW));
       }
-      const isMouth = TSL.step(9.5, cv.w.mul(12));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening
+      const isMouth = TSL.step(9.5, cv.w.mul(12)); mouthW = mouthW.add(isMouth.mul(trimW));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening
       albedo = albedo.mul(TSL.mix(TSL.mix(float(1), TSL.mix(cv.x, float(1), 0.15), 0.9), float(1), isMouth));
       const dirt = TSL.mix(vec3(0.46, 0.38, 0.29), vec3(1, 1, 1), TSL.smoothstep(0.05, 0.85, cv.y));
       albedo = albedo.mul(TSL.mix(vec3(1, 1, 1), dirt, clothW.mul(isMouth.oneMinus()))).mul(float(1).sub(cv.z.mul(clothW).mul(0.4).mul(isMouth.oneMinus())));
@@ -439,7 +439,7 @@ const Chars = (() => {
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
     let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
     if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
-    let emis = albedo.mul(lit);
+    let emis = albedo.mul(lit).add(albedo.mul(0.32).mul(mouthW));      // [ch1] teeth and tongue are never darker than the lips
     if (F) {
       // skin: where the sun grazes it the light carries on a little way round, reddened (blood under the skin), and the edge facing away from the eye takes a soft sheen
       const day = float(1).sub(TSL.step(0.5, H.uZone)).mul(H.uLight), ndl = N.dot(SH.U.sunDir);
@@ -455,6 +455,9 @@ const Chars = (() => {
     }
     m.emissiveNode = emis;
     const VIS = S.vis && S.bodies[H.body] && S.bodies[H.body].hasVid ? S.vis : null; H.hasVis = !!VIS;
+    // [ch1] teeth sit behind the lips: the upper row up under the upper lip, the lower row down and back, so they show on wide shapes only
+    const teethSet = vid => { const V_ = S.vis; if (!V_) return vec3(0, 0, 0); const up = TSL.step(V_.upper - 0.5, vid).mul(TSL.step(vid, V_.upper + 0.5)), lo = TSL.step(V_.lower - 0.5, vid).mul(TSL.step(vid, V_.lower + 0.5));
+      return vec3(0, 0.0016, -0.0020).mul(up).add(vec3(0, -0.0008, -0.0022).mul(lo)); };
     if (F && skinI >= 0) {
       // Face motion without face joints: skin vertices are moved by where they are in the skin atlas. The jaw (lower lip to chin) drops
       // with H.uMouth, the upper lip lifts a little, the upper eyelids come down with H.uBlink. Directions are turned by the head joint.
@@ -473,7 +476,7 @@ const Chars = (() => {
           // face morphs: the sum of the table's deltas (metres, the adult head), each by its weight, turned by the head joint and scaled to this head
           const K = VIS.names.length, col = vidA.add(0.5).div(VIS.rows); let d = vec3(0, 0, 0);
           for (let k = 0; k < K; k++) { if (!VIS.scale[k]) continue; const t = texture(VIS.tex, vec2(col, (k + 0.5) / K)).level(0), wk = H.uVis[k >> 2]['xyzw'[k & 3]]; d = d.add(t.rgb.sub(0.50196).mul(wk.mul(2.00787 * VIS.scale[k]))); }
-          p.addAssign(H.uHead.mul(d.mul(H.visK)));
+          p.addAssign(H.uHead.mul(d.mul(H.visK).add(teethSet(vidA))));
         });
         return p;
       })();
@@ -482,7 +485,7 @@ const Chars = (() => {
       m.positionNode = Fn(() => { const p = positionLocal.toVar();
         If(vidA.greaterThan(0.5), () => { const K = VIS.names.length, col = vidA.add(0.5).div(VIS.rows); let d = vec3(0, 0, 0);
           for (let k = 0; k < K; k++) { if (!VIS.scale[k]) continue; const t = texture(VIS.tex, vec2(col, (k + 0.5) / K)).level(0), wk = H.uVis[k >> 2]['xyzw'[k & 3]]; d = d.add(t.rgb.sub(0.50196).mul(wk.mul(2.00787 * VIS.scale[k]))); }
-          p.addAssign(H.uHead.mul(d.mul(H.visK))); });
+          p.addAssign(H.uHead.mul(d.mul(H.visK).add(teethSet(vidA)))); });
         return p; })();
     }
     return m;
