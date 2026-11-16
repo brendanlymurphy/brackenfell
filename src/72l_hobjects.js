@@ -89,7 +89,7 @@ TP.dipRack = m => {
 TP.carcassBar = (len, R) => m => {
   m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015); for (const sx of [-1, 1]) m.box(sx * len * 0.46 - 0.006, -0.4, -0.006, sx * len * 0.46 + 0.006, 0, 0.006);
   const n = Math.max(2, Math.round(len / 0.55));
-  for (let i = 0; i < n; i++) { const x = -len / 2 + 0.3 + i * (len - 0.6) / Math.max(1, n - 1); m.mat(MAT.METAL, COL.black); m.box(x - 0.006, -0.55, -0.006, x + 0.006, -0.37, 0.006); m.mat(MAT.PLAIN, R.pick([[0.52, 0.3, 0.26], [0.6, 0.4, 0.34], [0.46, 0.27, 0.22]])); m.ball(x, -0.95, 0, 0.14, 0.4, 0.1, 7, 5); m.mat(MAT.PLAIN, [0.8, 0.74, 0.64]); m.box(x - 0.02, -0.9, -0.085, x + 0.02, -0.5, -0.07); }
+  for (let i = 0; i < n; i++) { const x = -len / 2 + 0.3 + i * (len - 0.6) / Math.max(1, n - 1); m.mat(MAT.METAL, COL.black); m.box(x - 0.006, -0.55, -0.006, x + 0.006, -0.37, 0.006); m.mat(MAT.PLAIN, R.pick([[0.36, 0.2, 0.17], [0.42, 0.28, 0.22], [0.32, 0.18, 0.15]])); m.ball(x, -0.8, 0, 0.11, 0.3, 0.08, 7, 5); m.mat(MAT.PLAIN, [0.8, 0.74, 0.64]); m.box(x - 0.02, -0.9, -0.085, x + 0.02, -0.5, -0.07); }
 };
 TP.sausages = (len, R) => m => { m.mat(MAT.METAL, COL.black); m.box(-len / 2, -0.04, -0.012, len / 2, -0.015, 0.012); for (let i = 0; i < Math.round(len / 0.12); i++) { const x = -len / 2 + 0.08 + i * 0.12; m.mat(MAT.PLAIN, R.pick([[0.42, 0.22, 0.17], [0.5, 0.3, 0.22]])); m.ball(x, -0.2, 0, 0.035, 0.18, 0.035, 5, 4); } };
 TP.arrows = R => (m, hh) => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.35, -0.95, -0.03, 0.35, 0.0, 0); for (let i = 0; i < 9; i++) { const x = -0.28 + i * 0.07; m.mat(MAT.TIMBER, COL.wood); m.box(x - 0.007, -0.9, -0.05, x + 0.007, -0.05, -0.036); m.mat(MAT.PLAIN, R.pick([[0.75, 0.74, 0.7], [0.5, 0.2, 0.15], [0.7, 0.66, 0.5]])); m.box(x - 0.02, -0.28, -0.06, x + 0.02, -0.05, -0.04); } };
@@ -237,8 +237,8 @@ HT.tanner = (P, c, room, F) => {
 };
 HT.dyer = (P, c, room, F) => {
   const cols = [[0.22, 0.3, 0.46], [0.5, 0.22, 0.18], [0.62, 0.5, 0.2]];
-  hFocalAt(P, room, 'vat', F, { col: cols[0], at: [-F.sx * 1.6] }); hFocalAt(P, room, 'vat', F, { col: cols[1], at: [F.sx * 0.2] }); hFocalAt(P, room, 'vat', F, { col: cols[2], at: [F.sx * 2.0] });
-  for (const [x, z, col] of [[-1.8, 3.0, [0.24, 0.32, 0.5]], [1.2, 3.4, [0.55, 0.26, 0.2]], [0.0, 4.6, [0.6, 0.5, 0.28]]]) hCeil(P, room, x * F.sx, room.z0 + z, (mm) => { mm.mat(MAT.TIMBER, COL.woodDark); mm.box(-0.8, -0.1, -0.02, 0.8, -0.06, 0.02); mm.mat(MAT.CLOTH, col, 0.5); mm.box(-0.7, -1.3, -0.02, 0.7, -0.1, 0.02); });
+  hFocalAt(P, room, 'vat', F, { col: cols[0], at: [F.sx * 1.8] }); hFocalAt(P, room, 'vat', F, { col: cols[1], at: [-F.sx * 0.1] }); hFocalAt(P, room, 'vat', F, { col: cols[2], at: [-F.sx * 2.1] });
+  for (const [x, z, col] of [[-3.3, 3.6, [0.24, 0.32, 0.5]], [3.0, 4.2, [0.55, 0.26, 0.2]], [-1.0, 5.0, [0.6, 0.5, 0.28]]]) hCeil(P, room, x * F.sx, room.z0 + z, (mm) => { mm.mat(MAT.TIMBER, COL.woodDark); mm.box(-0.5, -0.1, -0.02, 0.5, -0.06, 0.02); mm.mat(MAT.CLOTH, col.map(v => v * 0.8), 0.5); mm.box(-0.45, -1.0, -0.02, 0.45, -0.1, 0.02); });
   hPlace(P, room, 'barrel', { sides: ['w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['e', 'w'] }); hPlace(P, room, 'sacks', { sides: ['w', 'e'] }); hShelfWalls(P, room, PD.WARES.cloth, { sides: ['w', 'e'], id: 'wdy', lv: 4 });
 };
 HT.carpenter = (P, c, room, F) => {

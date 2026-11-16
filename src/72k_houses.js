@@ -73,7 +73,7 @@ HFAM.cottage = (P, c, F) => {
   F.door('room', null, 0, 0);
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: F.X(W / 2 - 0.95), z: p0, width: 0.9, tread: 0.2 });
   pLayout(P);
-  const back = R() < 0.5, order = back ? [['s', F.X(-1.3)], [F.S('w'), D * 0.45]] : [[F.S('w'), D * 0.45], ['s', F.X(-1.3)]];
+  const back = R() < 0.85, order = back ? [['s', F.X(-1.3)], [F.S('w'), D * 0.45]] : [[F.S('w'), D * 0.45], ['s', F.X(-1.3)]];
   const hh = hHearthTry(P, rm, order, 1.7, { cauldron: true }); if (hh) pPier(P, 1, hh);
   P.hall = { room: rm, hh };
   dressHall(P, rm, { hh, rug: F.rug, items: ['bowl', 'loaf', 'mug', 'cheese'], shelfItems: ['jug', 'bowl', 'pot', 'cheese'], len: 1.8 });
