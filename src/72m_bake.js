@@ -12,7 +12,8 @@ Bake.mat = function () {
   const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
   m.fog = false; m.toneMapped = false; m.side = THREE.DoubleSide; m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2;
   const a = attribute('tint', 'vec4').a, t = clamp(a.div(0.95), 0, 1); if (!Bake.dayU) Bake.dayU = TSL.uniform(1);
-  m.colorNode = vec4(TEST && TEST.bakedebug ? vec3(1.0, 0.0, 0.0) : vec3(0.0), t.mul(t).mul(t.mul(-2).add(3)).mul(TEST && TEST.bakedebug ? 1.0 : Bake.dayU.mul(Bake.cap)));
+  const nz = TSL.texture(G.noiseTex, TSL.positionWorld.xz.mul(0.31)).level(1), brk = nz.r.mul(0.55).add(nz.g.mul(0.45)).mul(0.75).add(0.4);      // the band breaks up: darker where the noise is high, thin where it is low
+  m.colorNode = vec4(TEST && TEST.bakedebug ? vec3(1.0, 0.0, 0.0) : vec3(0.0), t.mul(t).mul(t.mul(0.35).add(0.65)).mul(TEST && TEST.bakedebug ? 1.0 : Bake.dayU.mul(Bake.cap).mul(brk)));
   return m;
 };
 // light shafts: a few additive quads from each window into the room, by day only (no volumetric pass). Strength Bake.shaftU is set by SH.winSet.
@@ -117,7 +118,7 @@ Bake.buildGround = function () {
   for (const c of World.colliders) {
     if (Cells.inRegion(c.x) || Math.abs(c.x) > 190 || Math.abs(c.z) > 190) continue;
     const ty = Terrain.y(c.x, c.z), ht = c.y1 - c.y0; if (c.y0 > ty + 0.7 || ht < 0.35) continue;
-    const h = c.y0 + 0.9, A = ht > 1.2 ? 0.9 : 0.66, m = clamp(0.9 + 0.3 * ht, 1.0, 2.5);
+    const h = c.y0 + 0.9, A = ht > 1.2 ? 0.9 : 0.66, m = clamp(0.55 + 0.18 * ht, 0.7, 1.35);
     if (c.r !== undefined) {
       if (c.r > 4) continue; const R = c.r + m * 0.9, n = 8, ring0 = [], ring1 = [];
       for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); ring0.push(vert(c.x + ca * c.r * 0.85, c.z + sa * c.r * 0.85, h, A)); ring1.push(vert(c.x + ca * R, c.z + sa * R, h, 0)); }
