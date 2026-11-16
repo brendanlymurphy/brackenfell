@@ -6552,7 +6552,15 @@ function pWallEmit(P, wl, B, IN) {
     if (s0 < -0.02 || s1 > len + 0.02) P.err.push('opening at ' + sp.o.pos + ' on wall ' + wl.ax + wl.c + ' sticks out of its wall');
     fill(Math.max(cur, s0));
     const S = [sp.w / 2, sy, 1];
-    if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); }
+    if (sp.o.type === 'door' && sp.o.d.open) {          // [c5] an open back door: no leaf, a bright yard beyond it (door.open = true), the collider still closes it
+      add('DoorFrame_Flat_WoodDark', sp.s, S);
+      const q = sp.o.pos, hw = sp.o.hw, z0 = wl.c + ns * 0.45, z1 = wl.c + ns * 0.5, zl = Math.min(z0, z1), zh = Math.max(z0, z1), y0 = L.y, X = hor ? [q - hw - 0.15, zl, q + hw + 0.15, zh] : [zl, q - hw - 0.15, zh, q + hw + 0.15];
+      m.m1 = P.zone; m.ao = INT_AO;
+      const bx = (ya, yb) => m.box(X[0], ya, X[1], X[2], yb, X[3], 4);
+      emit(m, 1.15, () => { m.mat(MAT.PLAIN, [0.55, 0.66, 0.38]); bx(y0, y0 + 0.9); m.mat(MAT.PLAIN, [0.78, 0.88, 0.96]); bx(y0 + 0.9, y0 + 2.2); });
+      pLight(P, hor ? q : wl.c - ns * 0.9, 1.5 * sy, hor ? wl.c - ns * 0.9 : q, 5.2, [1.7, 1.62, 1.4], 'daylight', wl.k);
+    }
+    else if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); }
     else {
       const tbl = { Wide_Flat: ['_Window_Wide_Flat', 'Window_Wide_Flat1'], Thin_Round: ['_Window_Thin_Round', 'Window_Thin_Round1'], Wide_Round: ['_Window_Wide_Round', 'Window_Wide_Round1'] }[sp.o.kind] || ['_Window_Wide_Flat', 'Window_Wide_Flat1'];
       const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];
@@ -6839,7 +6847,7 @@ function dressHall(P, room, o) {
   if (e) { const side2 = e.wall.ax === 'x' ? (e.wall.c <= room.z0 + 0.01 ? 'n' : 's') : (e.wall.c <= room.x0 + 0.01 ? 'w' : 'e'); pSconce(P, room, side2, e.wall.ax === 'x' ? e.x + 1.3 : e.z + 1.3) || pSconce(P, room, side2, e.wall.ax === 'x' ? e.x - 1.3 : e.z - 1.3); }
   for (const sd of ['w', 'e', 'n', 's']) if (pBarrelCorner(P, room, sd)) break;
   pKitFloor(P, room, 'w', 'Cabinet', { at: 'end' }) || pKitFloor(P, room, 'n', 'Cabinet', { at: 'end' });
-  pWalls(P, room, o.walls || ['Torch_Metal', 'paint', 'Banner_1_Cloth', 'rack', 'paint', 'Peg_Rack']);
+  pWalls(P, room, o.walls || ['Torch_Metal', 'paint', 'paint', 'rack', 'paint', 'Peg_Rack']);
 }
 function pBarrelCorner(P, room, sd) { return pAgainst(P, room, sd, P.id + '.barrel', 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: 'end' }); }
 function dressBedroom(P, room, o) {
@@ -8041,7 +8049,7 @@ HFAM.hallchamber = (P, c, F) => {
   pLayout(P);
   const hz = R.pick([2.8, 3.2, 3.6]), hh = hHearthTry(P, hall, [[F.S(R() < 0.5 ? 'w' : 'e'), hz], [F.S('w'), hz + 0.6], [F.S('e'), hz + 0.6]], 1.8, { cauldron: true, size: 0.5 }); if (hh) pPier(P, 1, hh);
   P.hall = { room: hall, hh };
-  dressHall(P, hall, { hh, rug: F.rug, items: ['mug', 'plate', 'bowl', 'loaf', 'candle'], len: 2.4, walls: F.wealth > 1 ? ['Banner_1_Cloth', 'paint', 'Shield_Wooden', 'paint', 'Torch_Metal'] : undefined });
+  dressHall(P, hall, { hh, rug: F.rug, items: ['mug', 'plate', 'bowl', 'loaf', 'candle'], len: 2.4, walls: F.wealth > 1 ? ['paint', 'paint', 'Shield_Wooden', 'paint', 'Torch_Metal'] : undefined });
   hTrade(P, c, hall, F);
   dressBedroom(P, chamber, { beds: ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth > 0 });
   dressStore(P, pantry, { items: ['jar', 'jug', 'cheese', 'bowl'] }); PD.rack(P, pantry, (pantry.x0 + pantry.x1) / 2, Dh + 1.8, 1.6, 0, ['ham', 'herb', 'garlic', 'ham']);
@@ -8055,7 +8063,7 @@ HFAM.crosspassage = (P, c, F) => {
   const hall = F.rm(0, 'hall', 'hall', -6, 0, -1, Dh, F.fin(0)), service = F.rm(0, 'service', 'store', -6, Dh, -1, D, F.fin(0, { floor: 'stone', tint: [0.8, 0.76, 0.72] })), pass = F.rm(0, 'passage', 'corridor', -1, 0, 1, D, F.fin(0, { win: false }));
   const butt = F.rm(0, 'buttery', 'store', 1, 0, 6, 3.5, { floor: 'stone', tint: [0.8, 0.76, 0.72] }), parlour = F.rm(0, 'parlour', 'hall', 1, 3.5, 6, D, F.fin(0, { floor: 'wood', tint: F.tint2 }));
   const solar = F.rm(1, 'solar', 'bedroom', 1, 3.5, 6, D, F.fin(1)), landing = F.rm(1, 'landing', 'corridor', -1, 0, 1, D, F.fin(1, { win: false })), chamber = F.rm(1, 'chamber', 'bedroom', -6, 0, -1, D, F.fin(1));
-  F.door('passage', null, 0, 0); F.door('passage', null, 0, D); F.door('passage', 'hall', -1, 2.4); F.door('hall', 'service', -3.5, Dh); F.door('passage', 'buttery', 1, 1.7); F.door('passage', 'parlour', 1, D - 3.0);
+  F.door('passage', null, 0, 0); F.door('passage', null, 0, D, { open: true }); F.door('passage', 'hall', -1, 2.4); F.door('hall', 'service', -3.5, Dh); F.door('passage', 'buttery', 1, 1.7); F.door('passage', 'parlour', 1, D - 3.0);
   F.door('solar', 'landing', 1, 7.0); F.door('landing', 'chamber', -1, 7.0);
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: F.X(px - 0.55), z: 3.5 + 1.25, width: 0.9, tread: 0.2 });
   pLayout(P);
@@ -8067,7 +8075,6 @@ HFAM.crosspassage = (P, c, F) => {
   dressBedroom(P, chamber, { beds: ['bed', 'bed2'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth > 0 });
   dressBedroom(P, solar, { beds: ['bed3'], chestId: 'chest2', chest: true, blanket: F.blanket, loot: [['gold', 2 + F.wealth * 3]] });
   pLamp(P, pass, 0, Dh); pLamp(P, landing, 0, 3.0);
-  pLight(P, 0, 1.5, D - 0.5, 6, [1.7, 1.62, 1.4], 'daylight', 0);          // [c5] the barred back door lets daylight down the passage
   hFinish(P, c, F);
 };
 // ── shop front: the shop with its counter across it, the keeper's living room behind (hearth, stair up, a cellar stair when the keeper can afford one), two rooms above ──
@@ -8120,7 +8127,7 @@ HFAM.merchant = (P, c, F) => {
   pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: F.X(3.8), z: Dh + 1.25, width: 0.9, tread: 0.2 });
   pLayout(P);
   const hh = hHearthTry(P, hall, [[F.S('w'), 3.0], [F.S('e'), 3.0], [F.S('w'), 3.6]], 2.2, { cauldron: false, size: 0.7, r: 10.5, c: [3.6, 1.8, 0.65], rug: [0.4, 0.14, 0.12] }); P.hall = { room: hall, hh };
-  dressHall(P, hall, { hh, rug: F.rug, items: ['mug', 'plate', 'bowl', 'candle', 'loaf', 'jug'], len: 2.6, walls: ['Banner_1_Cloth', 'paint', 'Shield_Wooden', 'Banner_2_Cloth', 'Torch_Metal'] });
+  dressHall(P, hall, { hh, rug: F.rug, items: ['mug', 'plate', 'bowl', 'candle', 'loaf', 'jug'], len: 2.6, walls: ['paint', 'paint', 'Shield_Wooden', 'paint', 'Torch_Metal'] });
   hTrade(P, c, count, F);
   dressStore(P, sh, { items: ['jar', 'bottle'] }); dressBedroom(P, chamber, { beds: ['bed'], blanket: F.blanket, loot: [['gold', 8 + R.i(0, 6)]], bedInteract: true, fur: true, table: true }); dressBedroom(P, solar, { beds: ['bed2'], chestId: 'chest2', chest: true, blanket: F.blanket, table: true });
   const cel = P.rooms.cellar; dressCellar(P, cel, { barrels: 4, crates: 2, rows: true }); hCellarChest(P, cel, F);

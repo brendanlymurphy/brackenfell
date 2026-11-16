@@ -144,7 +144,7 @@ function dressHall(P, room, o) {
   if (e) { const side2 = e.wall.ax === 'x' ? (e.wall.c <= room.z0 + 0.01 ? 'n' : 's') : (e.wall.c <= room.x0 + 0.01 ? 'w' : 'e'); pSconce(P, room, side2, e.wall.ax === 'x' ? e.x + 1.3 : e.z + 1.3) || pSconce(P, room, side2, e.wall.ax === 'x' ? e.x - 1.3 : e.z - 1.3); }
   for (const sd of ['w', 'e', 'n', 's']) if (pBarrelCorner(P, room, sd)) break;
   pKitFloor(P, room, 'w', 'Cabinet', { at: 'end' }) || pKitFloor(P, room, 'n', 'Cabinet', { at: 'end' });
-  pWalls(P, room, o.walls || ['Torch_Metal', 'paint', 'Banner_1_Cloth', 'rack', 'paint', 'Peg_Rack']);
+  pWalls(P, room, o.walls || ['Torch_Metal', 'paint', 'paint', 'rack', 'paint', 'Peg_Rack']);
 }
 function pBarrelCorner(P, room, sd) { return pAgainst(P, room, sd, P.id + '.barrel', 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: 'end' }); }
 function dressBedroom(P, room, o) {

@@ -263,7 +263,15 @@ function pWallEmit(P, wl, B, IN) {
     if (s0 < -0.02 || s1 > len + 0.02) P.err.push('opening at ' + sp.o.pos + ' on wall ' + wl.ax + wl.c + ' sticks out of its wall');
     fill(Math.max(cur, s0));
     const S = [sp.w / 2, sy, 1];
-    if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); }
+    if (sp.o.type === 'door' && sp.o.d.open) {          // [c5] an open back door: no leaf, a bright yard beyond it (door.open = true), the collider still closes it
+      add('DoorFrame_Flat_WoodDark', sp.s, S);
+      const q = sp.o.pos, hw = sp.o.hw, z0 = wl.c + ns * 0.45, z1 = wl.c + ns * 0.5, zl = Math.min(z0, z1), zh = Math.max(z0, z1), y0 = L.y, X = hor ? [q - hw - 0.15, zl, q + hw + 0.15, zh] : [zl, q - hw - 0.15, zh, q + hw + 0.15];
+      m.m1 = P.zone; m.ao = INT_AO;
+      const bx = (ya, yb) => m.box(X[0], ya, X[1], X[2], yb, X[3], 4);
+      emit(m, 1.15, () => { m.mat(MAT.PLAIN, [0.55, 0.66, 0.38]); bx(y0, y0 + 0.9); m.mat(MAT.PLAIN, [0.78, 0.88, 0.96]); bx(y0 + 0.9, y0 + 2.2); });
+      pLight(P, hor ? q : wl.c - ns * 0.9, 1.5 * sy, hor ? wl.c - ns * 0.9 : q, 5.2, [1.7, 1.62, 1.4], 'daylight', wl.k);
+    }
+    else if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); }
     else {
       const tbl = { Wide_Flat: ['_Window_Wide_Flat', 'Window_Wide_Flat1'], Thin_Round: ['_Window_Thin_Round', 'Window_Thin_Round1'], Wide_Round: ['_Window_Wide_Round', 'Window_Wide_Round1'] }[sp.o.kind] || ['_Window_Wide_Flat', 'Window_Wide_Flat1'];
       const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];
