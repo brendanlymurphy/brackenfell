@@ -13736,7 +13736,7 @@ function lightHarvestFire() {
 }
 function festivalSpots() {
   const b = World.bonfirePos;
-  NPC_DEFS.forEach((d, i) => { const a = i / NPC_DEFS.length * TAU + 0.2, r = 4.3 + (i % 3) * 0.9, x = b[0] + Math.cos(a) * r, z = b[1] + Math.sin(a) * r; World.spots['fire.' + i] = { p: [x, World.groundY(x, z), z], yaw: headingTo(x, z, b[0], b[1]), zone: 0 }; });
+  NPC_DEFS.forEach((d, i) => { const a = i / NPC_DEFS.length * TAU + 0.2, r = 4.3 + (i % 3) * 0.9, x = b[0] + Math.cos(a) * r, z = b[1] + Math.sin(a) * r; World.spots['fire.' + i] = { p: [x, World.groundY(x, z), z], yaw: headingTo(x, z, b[0], b[1]), zone: 0, ring: [a, r] }; });
   World.interact.push({ p: [b[0], World.groundY(b[0], b[1]) + 0.8, b[1]], r: 3.0, zone: 0, kind: 'bonfire', id: 'bonfire' });
 }
 // ── saving (a convenience only: one browser, may be unavailable) ──
@@ -13751,6 +13751,23 @@ function applySave(j) {
   RPG.st(); bountyText(); if (typeof Combat !== 'undefined') Combat.refresh();
 }
 function clearSave() { try { localStorage.removeItem('brackenfell.v1'); } catch (e) { } }
+
+// [fx1] once every stall, pile and fence is down (dressAttach and friends push colliders late), the ring of feasters steps round whatever stands on its spots
+function festivalClear() {
+  const b = World.bonfirePos, bad = (x, z, y) => World.colliders.some(c => {
+    if (c.y1 < y + 0.1 || c.y0 > y + 1.0) return false;
+    if (c.r !== undefined) return Math.hypot(x - c.x, z - c.z) < c.r + 0.45;
+    const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz;
+    return Math.abs(dx) < c.hx + 0.45 && Math.abs(dz) < c.hz + 0.45;
+  });
+  for (const k in World.spots) {
+    const s = World.spots[k]; if (!s.ring) continue;
+    for (let t = 0; t < 40; t++) {
+      const aa = s.ring[0] + (t % 2 ? 1 : -1) * Math.floor((t + 1) / 2) * 0.1, rr = s.ring[1] + (t > 15 ? 0.8 : 0) + (t > 30 ? 0.8 : 0), x = b[0] + Math.cos(aa) * rr, z = b[1] + Math.sin(aa) * rr, y = World.groundY(x, z);
+      if (!bad(x, z, y)) { if (t) { s.p = [x, y, z]; s.yaw = headingTo(x, z, b[0], b[1]); } break; }
+    }
+  }
+}
 
 
 // ---- 81_wilds_story.js ----
@@ -17538,6 +17555,7 @@ async function warmShaders() {
     if (typeof infillAttach === 'function') infillAttach();
   if (typeof dressAttach === 'function') dressAttach();
     if (typeof wildsAttach === 'function') wildsAttach();
+    festivalClear();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
     npcSnapAll(); uiInit(); inputInit2(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));
