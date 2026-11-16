@@ -165,7 +165,10 @@ function buildLevels(bucket, fence, R) {
 }
 
 // Build 42: small fixes that need every builder to have run (called at the end of buildVillage)
-function townFinish() {
+function townFinish(bucket) {
+  if (typeof buildRoutes === 'function') buildRoutes(bucket);      // Build 42: galleries, passage, bridge (73h_routes.js)
+  if (typeof buildWalls === 'function') buildWalls(bucket);        // Build 42: palisades, gates, bell tower (73i_walls.js)
+  if (typeof buildLanes === 'function') buildLanes(bucket);        // Build 42: lanes worth walking (73j_lanes.js)
   // the chimney of in.04 stands 4 m below the terrace's north edge, where the camera looks straight at its smoke: the full-size puffs (1 m across) stack into a tall white sheet there.
   // A thin emitter (smaller, fainter, shorter-lived puffs, see 75_particles.js) makes it a wisp like the other infill chimneys.
   for (const e of World.emitters) if (e.type === 'smoke' && Math.abs(e.p[0] + 19.5) < 0.8 && Math.abs(e.p[2] - 4.1) < 0.8 && e.p[1] > 8) { e.thin = true; e.p[1] += 0.05; }
