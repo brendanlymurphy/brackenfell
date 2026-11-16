@@ -9662,7 +9662,7 @@ function buildWalls(bucket) {
         if (i % 2 === 0) { const q = P(a, 1.8); K.post(q[0], q[1], gy(q[0], q[1]) - 0.4, ya - 0.1, 0.2, true); K.beam([q[0], ya - 0.3, q[1]], [P(a, 0.4)[0], ya - 0.3, P(a, 0.4)[1]], 0.1, 0.14); } }
       // the palisade: a plank wall from under the ground to 1.85 m over the deck, stepped to the ground, a coping rail and sharpened stakes
       { const top = hi + 1.85, e0 = P(a, 0), e1 = P(b, 0.36), mlo = Math.min(g0, lo - 3) - 0.8;
-        box(MAT.TIMBER, [0.72, 0.66, 0.6], 0.5, e0[0], mlo, e0[1], e1[0], top, e1[1], 4 | 8);
+        box(MAT.PLANKS, [0.78, 0.7, 0.58], 0.5, e0[0], mlo, e0[1], e1[0], top, e1[1], 4 | 8);
         col(Math.min(e0[0], e1[0]), Math.min(e0[1], e1[1]), Math.max(e0[0], e1[0]), Math.max(e0[1], e1[1]), mlo, top);
         for (let u = a + 0.2; u < b - 0.05; u += 0.5) tips.push([u, top]); }
       // the inner rail, sloped
