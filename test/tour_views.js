@@ -67,5 +67,17 @@ T.cellViews = id => {
   }
   return out;
 };
+// the mine: the middle of every region of MINE.REG, along and across it (and the tunnel and the cave when their regions are listed)
+T.mineViews = () => {
+  const out = [], O = MINE.O, FY = MINE.FY;
+  out.push({ n: 'mine.door', x: r1(O[0] + MINE.AT.arrive[0]), y: r1(FY + EYE), z: r1(O[2] + MINE.AT.arrive[1]), yaw: 0, pitch: -3, h: [13], cell: 'mine' });
+  for (const r of MINE.REG) {
+    const cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2, long = (r.z1 - r.z0) > (r.x1 - r.x0), nm = 'mine.' + (r.id || r.kind) + '.' + Math.round(cx) + '.' + Math.round(cz);
+    const stops = []; const L = long ? r.z1 - r.z0 : r.x1 - r.x0; for (let u = 2; u < L - 1; u += 8) stops.push(u);
+    if (!stops.length) stops.push(L / 2);
+    for (const u of stops.slice(0, 4)) for (const a of long ? [0, 180] : [90, 270]) out.push({ n: nm + '.' + Math.round(u) + '.' + a, x: r1(O[0] + (long ? cx : r.x0 + u)), y: r1(FY + (r.fl || 0) + EYE), z: r1(O[2] + (long ? r.z0 + u : cz)), yaw: a, pitch: -3, h: [13], cell: 'mine' });
+  }
+  return out;
+};
 return T;
 })();

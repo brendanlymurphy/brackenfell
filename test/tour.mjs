@@ -41,6 +41,7 @@ const shoot = async v => {
   }
 };
 if (only) { const all = []; for (const st of ['streets', 'places', 'doors']) all.push(...JSON.parse(await s.run(`return JSON.stringify(TOUR.set(${JSON.stringify(st)}))`))); for (const c of (arg('incells', '') || '').split(',').filter(Boolean)) { await s.run(`__game.enter(${JSON.stringify(c)}); return 1`); all.push(...JSON.parse(await s.run(`return JSON.stringify(TOUR.cellViews(${JSON.stringify(c)}))`))); } for (const v of all) if (only.some(o => v.n === o || v.n.startsWith(o))) await shoot(v); }
+else if (has('mine')) { await s.run(`__game.enter('mine'); __game.step(2, 1/30); return 1`); const vs = JSON.parse(await s.run('return JSON.stringify(TOUR.mineViews())')); for (const v of vs) await shoot(v); }
 else if (arg('cells', null)) { for (const id of arg('cells').split(',')) { await s.run(`__game.enter(${JSON.stringify(id)}); __game.step(2, 1/30); return 1`); const vs = JSON.parse(await s.run(`return JSON.stringify(TOUR.cellViews(${JSON.stringify(id)}))`)); for (const v of vs) await shoot(v); } }
 else for (const v of views) await shoot(v);
 fs.writeFileSync(metaF, JSON.stringify(meta));
