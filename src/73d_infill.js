@@ -311,7 +311,7 @@ function infillAttach() {
   const B = INFS.batch, lowQ = (R.qName === 'low');
   for (const h of INFS.shells) { try { infShell(B, h, lowQ && h.tier === 1); } catch (e) { console.warn('infill shell ' + h.id + ': ' + (e && e.message || e)); } }
   if (!lowQ) {       // pennant ropes across the lanes, between houses that face each other
-    const hs = INF.houses, used = new Set(), cols = [[0.62, 0.24, 0.17], [0.72, 0.56, 0.24], [0.24, 0.36, 0.3], [0.58, 0.52, 0.4], [0.5, 0.2, 0.2]], I = new THREE.Matrix4(), rr = rng(606); let nr = 0;
+    const hs = INF.houses, used = new Set(), cols = [[0.46, 0.25, 0.21], [0.56, 0.46, 0.26], [0.27, 0.33, 0.29], [0.5, 0.46, 0.38], [0.42, 0.22, 0.2]], I = new THREE.Matrix4(), rr = rng(606); let nr = 0;
     const front = h => { const p = siteToWorld(h, (rr() - 0.5) * h.w * 0.3, -h.d / 2 - (h.jetty ? 0.58 : 0.14)); return [p[0], site0(h) + (h.floors >= 2 ? 3.75 : 2.9), p[1]]; };
     const site0 = h => SITE[h.id].y;
     for (const a of hs) for (const b of hs) {

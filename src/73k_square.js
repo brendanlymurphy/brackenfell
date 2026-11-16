@@ -21,10 +21,8 @@ function buildSquare(bucket) {
   // ── ground that has been walked on ──
   const flat = (m, x, z, rx, rz, y, c, mat, ry) => { m.mat(mat === undefined ? MAT.MUD : mat, c, 0.5); m.push().T(x, y, z).RY(ry || 0); m.ball(0, 0, 0, rx, 0.012, rz, 12, 3); m.pop(); };
   { const m = M(0, -2);
-    // worn patches in front of the doors and between the stalls and the road mouths
-    for (const [x, z, a, b] of [[0, -12.6, 2.4, 1.1], [-8, -4, 1.6, 2.4], [8.5, -3, 1.6, 1.9], [-5.5, 3.5, 2.2, 1.3], [4, 6.5, 2.4, 1.2], [-13, -9, 1.5, 1.0], [12.5, -10, 1.3, 1.6]]) flat(m, x, z, a * 0.55, b * 0.55, gy(x, z) + 0.016, [0.62, 0.56, 0.5], MAT.MUD, rr() * 3);
-    // puddles
-    for (const [x, z, a, b] of [[-3.4, -9.6, 0.9, 0.6], [2.8, 0.8, 1.2, 0.7], [-7.5, 1.4, 0.7, 0.5], [9.5, -5.8, 0.8, 0.55], [1.2, -12.2, 0.6, 0.4]]) { flat(m, x, z, a, b, gy(x, z) + 0.022, [0.1, 0.12, 0.14], MAT.PLAIN, rr() * 3); flat(m, x + 0.05, z, a * 0.55, b * 0.55, gy(x, z) + 0.026, [0.2, 0.24, 0.28], MAT.PLAIN, rr() * 3); }
+    // puddles: small and dark, with no lighter disc inside (the big ones read as a plate lying on the cobbles)
+    for (const [x, z, a, b] of [[-3.4, -9.6, 0.42, 0.3], [2.8, 0.8, 0.5, 0.3], [-7.5, 1.4, 0.34, 0.26], [9.5, -5.8, 0.4, 0.28], [1.2, -12.2, 0.3, 0.22]]) flat(m, x, z, a, b, gy(x, z) + 0.022, [0.07, 0.09, 0.11], MAT.PLAIN, rr() * 3);
     // straw and dung where the carts stand and the horses were
     for (let i = 0; i < 26; i++) { const x = (rr() - 0.5) * 22 + 2, z = -5 + (rr() - 0.5) * 14; if (Math.hypot(x - sq.x, z - sq.z) > 12 || KEEP.onRoad(x, z)) continue; m.mat(MAT.THATCH, [0.7 + rr() * 0.12, 0.6, 0.3], 0.5); const y = gy(x, z) + 0.02, a = rr() * 6; m.beam([x, y, z], [x + Math.cos(a) * (0.25 + rr() * 0.3), y + 0.01, z + Math.sin(a) * (0.25 + rr() * 0.3)], 0.025, 0.012); }
     for (const [x, z] of [[-6.8, -9.4], [3.6, -11.2], [10.2, 0.6], [-10.5, 2.2]]) { m.mat(MAT.MUD, [0.3, 0.22, 0.14], 0.5); for (let i = 0; i < 3; i++) m.ball(x + (rr() - 0.5) * 0.4, gy(x, z) + 0.03, z + (rr() - 0.5) * 0.4, 0.09, 0.05, 0.09, 6, 4); }
@@ -32,7 +30,7 @@ function buildSquare(bucket) {
     const dx = -1.4, dz = 4.6, dy = gy(dx, dz); m.mat(MAT.METAL, [0.2, 0.2, 0.2], 0.4); m.box(dx - 0.28, dy + 0.005, dz - 0.28, dx + 0.28, dy + 0.03, dz + 0.28); m.mat(MAT.PLAIN, [0.02, 0.02, 0.02]); for (let i = 0; i < 4; i++) m.box(dx - 0.22 + i * 0.15, dy + 0.031, dz - 0.22, dx - 0.18 + i * 0.15, dy + 0.034, dz + 0.22);
     m.mat(MAT.STONE, [0.42, 0.4, 0.38], 0.6); for (let i = 0; i < 6; i++) { const x = dx - 0.2 + i * 0.01, z = dz + 0.3 + i * 0.85; m.box(x - 0.09, gy(x, z) + 0.005, z, x + 0.09, gy(x, z) + 0.028, z + 0.85); }
     // the well's rim, trodden dark and wet
-    flat(m, 6.2, -8.6, 1.75, 1.75, gy(6.2, -8.6) + 0.018, [0.3, 0.26, 0.22], MAT.MUD, 0); m.mat(MAT.PLAIN, [0.1, 0.12, 0.14]); m.push().T(6.2, gy(6.2, -8.6) + 0.024, -7.3); m.ball(0, 0, 0, 0.6, 0.01, 0.35, 10, 3); m.pop(); }
+    m.mat(MAT.PLAIN, [0.1, 0.12, 0.14]); m.push().T(6.2, gy(6.2, -8.6) + 0.024, -7.3); m.ball(0, 0, 0, 0.6, 0.01, 0.35, 10, 3); m.pop(); }
   // ── the inn: a mounting block by the door and a hitching rail ──
   { const s = SITE.inn; if (s) { const dp = s.doorPos || 0;
     const mb = siteToWorld(s, dp + 2.6, -s.d / 2 - 0.55), hr = siteToWorld(s, dp - 3.6, -s.d / 2 - 1.5), hr2 = siteToWorld(s, dp - 5.6, -s.d / 2 - 1.5);

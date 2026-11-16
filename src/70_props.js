@@ -195,8 +195,10 @@ const Props = {
     for (const sx of [-1, 1]) { m.cbox(sx * w / 2, 0, -d / 2, 0.09, 2.05, 0.09, 4); m.cbox(sx * w / 2, 0, d / 2, 0.09, 2.5, 0.09, 4); m.beam([sx * w / 2, 2.02, -d / 2], [sx * w / 2, 2.47, d / 2], 0.06, 0.07); }
     m.beam([-w / 2, 2.02, -d / 2], [w / 2, 2.02, -d / 2], 0.06, 0.07); m.beam([-w / 2, 2.47, d / 2], [w / 2, 2.47, d / 2], 0.06, 0.07);
     m.mat(MAT.PLANKS, COL.wood); m.box(-w / 2, 0.74, -d / 2, w / 2, 0.80, d / 2 - 0.3); m.box(-w / 2, 0.1, -d / 2 + 0.02, w / 2, 0.74, -d / 2 + 0.05);
-    m.mat(MAT.STRIPES, col, 0.9); const e = 0.3;
-    m.quad2([-w / 2 - e, 2.56, d / 2 + 0.12], [-w / 2 - e, 1.98, -d / 2 - e], [w / 2 + e, 1.98, -d / 2 - e], [w / 2 + e, 2.56, d / 2 + 0.12], 0, 0, (w + 2 * e) / 0.9, 2.2);
+    m.mat(col === AWN.woad ? MAT.CLOTH : MAT.STRIPES, col, 0.9); const e = 0.3;      // Build 42: faded canvas, sagging between the poles, with a patch; one stall is plain cloth
+    { const sg = 0.1, xm = 0; m.quad2([-w / 2 - e, 2.56, d / 2 + 0.12], [-w / 2 - e, 1.98, -d / 2 - e], [xm, 1.98 - sg, -d / 2 - e], [xm, 2.56 - sg, d / 2 + 0.12], 0, 0, (w / 2 + e) / 0.9, 2.2);
+      m.quad2([xm, 2.56 - sg, d / 2 + 0.12], [xm, 1.98 - sg, -d / 2 - e], [w / 2 + e, 1.98, -d / 2 - e], [w / 2 + e, 2.56, d / 2 + 0.12], 0, 0, (w / 2 + e) / 0.9, 2.2);
+      m.mat(MAT.CLOTH, [col[0] * 0.8 + 0.12, col[1] * 0.8 + 0.1, col[2] * 0.8 + 0.06], 0.4); m.quad2([0.35, 2.43 - sg, 0.2], [0.35, 2.14 - sg, -0.35], [0.75, 2.14 - sg, -0.35], [0.75, 2.43 - sg, 0.2]); m.mat(col === AWN.woad ? MAT.CLOTH : MAT.STRIPES, col, 0.9); }
     m.quad2([-w / 2 - e, 1.98, -d / 2 - e], [-w / 2 - e, 1.78, -d / 2 - e - 0.02], [w / 2 + e, 1.78, -d / 2 - e - 0.02], [w / 2 + e, 1.98, -d / 2 - e], 0, 0, (w + 2 * e) / 0.9, 0.3);
     if (goods) goods(0.80);
     addBoxCollider(m, -w / 2, -d / 2, w / 2, d / 2 - 0.3, 0, 1);
