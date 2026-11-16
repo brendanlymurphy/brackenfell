@@ -76,4 +76,4 @@ PLANS.store = (P, c, info) => {
 };
 
 // ── ship list: a building is added only when its plan above is designed, dressed, lit and validated ──
-PLAN_SHIP.store = 1;
+// PLAN_SHIP.store = 1;      // held: test/stairs.js fails on store.up (jumping on the stair puts the head in the floor above); re-enable when it passes
