@@ -1,225 +1,121 @@
-# Working state (for whoever picks this up next)
+# How the engine is put together
 
-Read this before touching anything. It replaces having the whole conversation in your head.
+`AGENTS.md` has build, test, publish and the rules. This file is the map of the machinery: read the section for the area you are
+about to touch. Measurements and step-by-step records are in `docs/HISTORY.md`; rejected ideas in `docs/DECISIONS.md`.
 
-## What is live
+## Code layout
 
-See `ROADMAP.md` for the build list and `AGENTS.md` for build, test and publish steps. `main` and `threejs` are kept at the same commit after every publish.
+- No modules. `tools/build.mjs` concatenates `src/*.js` in name order into `game.js`; every file is a classic script and top-level
+  names are shared. Three.js r187 is bundled from `src/lib/three-entry.js` into `three.js` as the globals `THREE`, `TSL` (node
+  materials) and `T3X` (extras: `T3X.gltf()` is the glTF loader with the meshopt decoder attached).
+- Wrap TSL code in a closure: TSL's `clamp`, `mix`, `length` collide with the game's maths helpers.
+- Later files extend earlier ones by wrapping (`const base = TALK.greta; TALK.greta = function () { ... base.call(this) ... }`).
+  Prefer that to editing a file you do not own.
+- Never put a `//` comment inside a long single-line statement: the rest of the line is commented out. It has happened four times.
 
-## How it is put together
+## Rendering
 
-- `node tools/build.mjs` bundles Three (`src/lib/three-entry.js` -> `three.js`, globals `THREE`, `TSL`, `T3X`) and concatenates `src/*.js` in name order into `game.js`. No modules: every file is a classic script, so top-level names are shared. Wrap TSL code in a closure (TSL's `clamp`, `mix`, `length` collide with the game's maths helpers).
-- `10_gfx.js` renderer init, texture pack (25 layers, ASTC or images), `MAT` layer ids. `40_shade.js` frame uniforms `SH.U` and helpers (`SH.hemi`, `SH.pointLights`, `SH.perturb`, fog). The scene has one DirectionalLight (sun or moon); all ambient and the hearth / lantern point lights are added in each material's `emissiveNode`, limited by zone so light does not leak through walls.
-- `41_materials.js`, `42_scene.js`, `43_render.js` world renderer. `44_kit.js` kit loader and batcher (branch `fork-d` / `fork-e`, not yet on `threejs`). `45`-`48` sky, grass, water, particles. `49_chars.js` glTF villagers.
-- `31_mesh.js` procedural mesh builder; `55_layout.js` sites; `60_terrain.js`; `70`-`74` props, houses, village, vegetation; `77_npc.js`; `78_player.js`; `80_game.js` quests and dialogue; `85_ui.js`; `88_audio.js`; `99_main.js` boot and loop.
-- Tests: `node test/shot.mjs [--opt webgl=1] [--opt quality=medium] --do "<js>" --out file.png`. On WebGPU a headless browser cannot present the canvas, so test mode renders to a target and reads it back; never render straight to the canvas in a WebGPU test. `test/quest.js` is the scripted quest (must end with `fire 99 bonfire true`). Run one browser test at a time: the machine has 2 cores.
-- Commits end with the two trailer lines used throughout the log (`Co-Authored-By`, `Claude-Session`).
+- `10_gfx.js`: renderer (WebGPU, WebGL 2 fallback), the material texture pack (25 layers; ASTC where supported, images elsewhere),
+  `MAT` layer ids, `GFX_TEX` caps (`color <= 512` on phones, Low and Medium; `tiny` picks the half-size pack).
+- `40_shade.js`: frame uniforms `SH.U` and helpers (`SH.hemi`, `SH.pointLights`, `SH.perturb`, fog, wind `SH.gust` / `SH.sway`).
+  The scene has ONE real light, a DirectionalLight (sun or moon). Ambient and up to 8 point lights (hearths, lanterns) are added in
+  each material's `emissiveNode`, limited by zone so light does not leak through walls. `40b_depth.js` room depth and grime,
+  `40c_light.js` window light and fire pools, `72m_bake.js` baked contact darkening.
+- `41_materials.js`, `42_scene.js`, `43_render.js`: materials, scene objects, the frame (camera pass + near sun-shadow map + wide
+  sun-shadow map; the wide map is redrawn every third frame on medium, every fourth on low). `QUALITY` in `43_render.js` holds the
+  tiers (low / medium / high): `houseFar`, `shadowRes`, `grassRange`, `lights`, `yardRange` and so on. `99_main.js` adapts the tier.
+- `43b_lamps.js` bakes every outdoor lantern's pool into `G.lampTex`; the terrain adds it (`SH.lampPool`), so street lamps cost
+  no light slots. Window panes are `SH.paneLit`, tuned for the night exposure of 3: keep values under about 0.6.
+- On WebGPU a headless browser cannot present the canvas: test mode renders to a target and reads it back. Never render straight
+  to the canvas in a WebGPU test.
 
-## Unfinished work
+## Kit, culling and the budget views
 
-See the In progress section of `ROADMAP.md`. Worker branches are `fork-<name>`; finished ones are merged and can be deleted.
+- `44_kit.js` loads the GLB packs and batches every placed piece. Each piece is a unit with its own index range; `Kit.update` gives
+  it a state (full model, far copy, not drawn) from distance (`R.q.houseFar`, `Kit.DROP` x size, or `Kit.RANGE[batch name]`), the
+  view cone and occlusion (`Kit.occlude`: a 720-bin horizon from the houses' shadow boxes). All batches share one pooled mesh per
+  material (`Kit.poolGroup`). Index buffers are rewritten when the camera moves 1.5 m or turns 11 degrees.
+- Pieces added to a batch after it was built are ignored (the outlaw camps' props). `test/kitcull.mjs` renders 16 viewpoints with
+  culling off and on and must find them identical.
+- `42_scene.js` pools terrain and water tiles, cuts big static prop meshes into 8 m squares (drawn by view; a twin casts into the
+  near shadow map), and keeps boulders as two instance lists. `46_grass.js` draws tufts from a list of grid cells in view.
+  `74b_trees.js`: scanned trees in three rings (near model, thinned middle model, flat stand-ins).
+- Switches for comparing: `--opt kitdyn=0 kitocc=0 kitcone=0 pool=0 sub=0 rockring=0 treering=0 grassall=1 grasscone=0 trees=0`.
+- The four budget views (square, alley, terrace, lake) are `test/perf_views.js`; `window.__cat = true` before it prints the cost by
+  category. Target: medium 220 draw calls / 380k triangles, low 140 / 200k. Measured at Build 59: medium square 216 / 452k, alley
+  224 / 452k; low square 170 / 246k, alley 181 / 269k. `tools/gate_budget.json` holds the accepted numbers the gate compares with.
+- Asset tools: `tools/kits.mjs`, `kits_budget.mjs` (per-piece triangle budgets), `kits_far.mjs` (`@far` copies), then ALWAYS
+  `node tools/assets_pack.mjs` (meshopt compression, the small packs `kits/s`, `kits/skin/s`); `tools/tex_half.mjs` after the
+  material pack changes (`tex/s`). `tools/build.mjs` prints what a first visit downloads per device.
 
-## Gameplay layer (fork-g)
+## Characters (`49_chars.js`, `76_characters.js`, `77*.js`)
 
-`90_rpg.js` (health, stamina, damage, death, HUD, hit effects), `91_combat.js` (sword and shield in view), `92_foes.js` (two outlaw camps, `Chars` bodies), `93_inventory.js` (pack tab, smith trade). Called from `tick` (`RPG.tick`) and `playerUpdate` (`RPG.move`). Saved in `S.rpg`; old saves get defaults. Tests: `test/combat.js` (set `window.__clear = true` to clear the camp), `test/death.js`, `test/rpgquest.js`. Foes load after the first tick: `game.step(1); await Foes.loading`. In headless shots wait about 1.5 s before a screenshot or the title fade is still showing.
-
-## Character sets (`49_chars.js`)
-
-`Chars.define(name, cfg)`; boot tries `real` then `quaternius` (`?chars=name` or `TEST.chars` forces one, no fallback). `real` bodies carry their own textures (`cfg.matOf`), each villager id has its own body (`BODY` table in the `real` block), outlaws are `lazy` bodies loaded by `Chars.ensure` (`cfg.foeLooks`). `real` clips are the Quaternius clip names retargeted onto the MakeHuman rig, so `cfg.anims` and 92_foes names are unchanged. To rebuild the people: `tools/humans/run_all.sh /tmp/w /tmp/out` (needs Blender-as-module venv and the MPFB2 data, see `chars/real/PROVENANCE.md`), then `retarget.py` and `clips_post.mjs`.
-
-## Art direction
-
-The user wants it as realistic as possible, like Skyrim: simple shapes, photographed textures, muted colours, mist, firelight. Hand-painted kit art is acceptable only with the scanned-texture skin. Chibi or cartoon assets are not.
-
-## Rules of the road
-
-- Never push to `main` anything that has not booted on both backends and passed `test/quest.js`.
-- The user's phone (iPhone, Safari) cannot be tested here. Keep the WebGL 2 fallback and the classic link working.
-- See `ROADMAP.md` for what comes next.
-
-## Publishing checklist (learned the hard way)
-
-- No symlinks may be tracked: the GitHub Pages deployment fails on them (`git ls-tree -r main | grep ^120000` must print nothing).
-- After pushing `main`, confirm the deployment: `gh run list -R brendanlymurphy/brackenfell -L 1` shows success, and the live page's `game.js?v=` hash matches the local `index.html`. Builds 10 and 11 were announced as live while their deployments had failed.
-## Performance (fork-x3)
-- Tiers (QUALITY in 43_render.js): flags maxLong, houseFar, farStatics, nearStatics, rockCast, grassThin, far1, shadowRes. Medium/low trade shadow reach and prop casters for triangles.
-- Character LOD: tools/chars_lod.mjs adds `@lod` skinned copies (about 2200 tris) to chars/real/*.glb; 49_chars.js swaps by distance, low copy also casts shadows (layer 3, near map only).
-- Kit LOD: tools/kits_budget.mjs (per-piece budgets, kit_budget.json) and tools/kits_far.mjs (`@far` hull-roof copies of houses); 44_kit.js swaps per mesh by `houseFar`; far buckets batch by cell.
-- Interiors of other houses cost nothing (interiorShown in 42_scene.js). Terrain flat blocks merge into fans (60_terrain.js); grass thins per tier.
-- Point lights loop is bounded by U.lightN / U.lightNOut. Add `?perf` for the overlay (86_perf.js).
-- Rebuild order after kit edits: kits_budget, kits_far, then tools/build.mjs.
-
-## Interiors as cells (Build 19 on)
-
-- `src/56_cells.js`: every enterable building's interior is built at a remote origin; the village keeps only the shell. `Cells.use`
-  is the door portal (fade, place name). `Cells.env` sets indoor light: the sun is off, `CELL_DAYLIGHT` lifts the day's ambient for
-  rooms with windows, `daylight: 0` / `daylightFn` for cellars. `--opt cells=0` restores the old seamless houses.
-- `src/72d_plan.js` is the plan engine (rooms on a 0.5 m grid, doors, stairs, cellars, placement helpers, `planValidate`).
-  `PLAN_SHIP` in `src/72e_plans.js` lists the buildings whose plan is used in the published game; everything else keeps its old
-  hand-made interior until its plan is designed and dressed. `test/parity.mjs` fails if a plan drops a quest object.
-- `R.boneData` holds one slot per hinged, carried or animated thing (doors, pickups, characters). It grows on demand since Build 25;
-  it overflowed silently at 96 slots once.
-
-## Sound (Build 18 on)
-
-- `Snd` in `src/88_audio.js`: buses amb / world / foot / ui / music into a master chain with a soft ceiling. Reverb spaces room,
-  hall, cave; open air is dry. Sends are deliberately low. Speech bypasses the buses and goes dry to the master (`88d_voice.js`).
-- No discovery jingle. Place banners only for landmarks (`minor: true` places are silent and bannerless).
-
-## Outdoor look (fork-look)
-
-- **View model** (`90_rpg.js`, `91_combat.js`): `RPG.swordGeo` (lofted fullered blade, guard, corded grip, wheel pommel), `RPG.fistGeo`,
-  `RPG.forearmGeo`, material `RPG.gearMat` (per-vertex metal / roughness in attribute `mr`; steel mirrors `SH.skyBase` and glints from point
-  lights, there is no environment map). The forearm is aimed every frame from the wrist at a fixed elbow point (`C.place`). Poses are unchanged.
-- **Night**: window panes are `SH.paneLit` (called from one marked line in `44_kit.js`): values are tuned for the night exposure of 3, so keep
-  them under about 0.6. Glows and sparks have an angular size limit in `48_particles.js`. `43b_lamps.js` bakes every outdoor lantern's pool
-  into `G.lampTex` (640 px over the terrain square, houses block it); the terrain adds it with `SH.lampPool` and skips those lanterns as real
-  lights (stored with a negative radius). Outdoors, indoor lights no longer take light slots.
-- **Trees** (`74b_trees.js`, assets in `kits/trees.glb`, `trees_far.webp`, `TREES.json`; sources in `kits/TREES_PROVENANCE.md`): scanned
-  Poly Haven firs, a pine and a small broadleaf. Three rings: near model, thinned middle model (also the near-shadow caster), flat
-  stand-ins in 400 m cells. The inner rings are instance lists refilled when the player moves 1.2 m. `--opt trees=0` plants the old
-  generated trees (also the fallback if the files fail to load). The big oaks and bushes are still generated.
-- **Wind** (`Wind` in `50_env.js`, `SH.gust` / `SH.sway` / `SH.hangSway` in `40_shade.js`): one gust field carried downwind. Kit pieces
-  named `gen_sign_*`, `gen_bunt_*` and `dr_laundry*` get hang weights in the batch attribute `kg.z / kg.w` (`SH.hangOf`, two marked lines
-  in `44_kit.js`): a new hanging piece only needs a rule there.
-- **Weather** (`50b_weather.js`): `Weather.set('fair' | 'overcast' | 'rain' | 'auto')`, `--opt weather=rain`. Writes `Env.cover`,
-  `Env.mist`, `Env.rain`; `ENV.wet` drives the terrain (dark ground, pools, rings, lamp shine). Rain is particle kind 4. The sequence
-  is a fixed function of game time; the first three minutes are always fair.
-
-## Where the frame goes (fork-perf, measured at Build 41)
-
-`node test/shot.mjs --opt webgl=1 --opt quality=medium --do "window.__cat=true; $(cat test/perf_views.js)"` prints this for the four
-budget views (square, alley, terrace, lake). One frame = camera pass + near sun-shadow map + wide sun-shadow map. A test redraws the
-wide map every frame; the game redraws it every third frame on medium and every fourth on low, so its share is smaller in play.
-Budget: medium 220 draw calls / 380k triangles, low 140 / 200k.
-
-Totals at Build 41 (draw calls / triangles):
-
-| Tier | Square | Alley | Terrace | Lake |
-|---|---|---|---|---|
-| medium | 280 / 566k | 328 / 583k | 244 / 434k | 280 / 440k |
-| low | 215 / 317k | 264 / 347k | 199 / 260k | 231 / 269k |
-
-Medium, by category, draw calls / thousand triangles (camera + near shadow + wide shadow where they differ from zero):
-
-| Category | Square | Alley | Terrace | Lake |
-|---|---|---|---|---|
-| Houses and kit batches, full detail | 73 / 170 | 83 / 192 | 56 / 131 | 22 / 90 |
-| Houses, distant copies | 20 / 3 | 44 / 7 | 16 / 2 | 87 / 19 |
-| Kit instances (plants, tufts, repeated props) | 13 / 29 | 15 / 31 | 4 / 8 | 13 / 20 |
-| Generated props and yard things | 31 / 36 + 10 / 29 near shadow | 30 / 33 + 15 / 38 | 38 / 34 + 19 / 31 | 26 / 36 + 7 / 16 |
-| Terrain | 35 / 59 | 35 / 59 | 32 / 55 | 38 / 65 |
-| Grass | 1 / 45 | 1 / 45 | 1 / 45 | 1 / 45 |
-| Trees | 16 / 33 + 2 / 1 near + 6 / 23 wide | 17 / 36 + 4 / 3 + 7 / 24 | 16 / 31 + 3 / 2 + 8 / 24 | 19 / 42 + 2 / 2 + 8 / 24 |
-| Boulders and bushes | 9 / 21 + 7 / 19 near + 2 / 1 wide | 8 / 22 + 9 / 22 + 3 / 1 | 7 / 12 + 6 / 15 + 3 / 1 | 11 / 24 + 6 / 16 + 3 / 1 |
-| Characters | 19 / 51 + 10 / 23 near | 26 / 36 + 5 / 11 | 1 / 2 + 8 / 19 | 10 / 14 + 1 / 2 |
-| Water | 6 / 15 | 6 / 15 | 6 / 15 | 6 / 15 |
-| Sky, particles, view model, other | 16 / 5 + 4 / 4 shadow | same | same | same |
-
-What stands out: full-detail houses are a third of the triangles and a quarter of the draw calls in town; kit batches cast no sun
-shadow at all (the shadow passes hold only props, boulders, trees and people); terrain is 32 to 38 draw calls whatever the view;
-grass is a flat 45k on medium; the wide shadow map spends 23k triangles on tree stand-ins; props and boulders cost almost as much
-again in the near shadow map as in the camera pass. On low the same views are terrain 59k, trees 28k + 23k, houses 64k to 106k.
-
-### After step 2 (houses, pooling, shadow casters)
-
-| Tier | Square | Alley | Terrace | Lake |
-|---|---|---|---|---|
-| medium | 159 / 381k | 171 / 382k | 146 / 274k | 127 / 288k |
-| low | 118 / 261k | 127 / 258k | 120 / 201k | 94 / 204k |
-
-How it works now:
-- `44_kit.js`: every outdoor batch is "dynamic". Each placed piece is a unit with its own index range; `Kit.update` gives each unit a
-  state (full model, far copy, not drawn) from its distance (`R.q.houseFar`, or `Kit.DROP` x its size for pieces without a far copy,
-  or `Kit.RANGE[batch name]`), the view cone (20 degrees wider than the screen) and occlusion (`Kit.occlude`: a 720-bin horizon built
-  from the houses' shadow stand-in boxes). All batches share one pooled mesh per material (`Kit.poolGroup`); a batch's own group is
-  only the handle other code shows and hides. Index buffers are rewritten when the camera has moved 1.5 m or turned 11 degrees.
-  `--opt kitdyn=0` restores the old per-cell meshes; `--opt kitocc=0` / `kitcone=0` switch off one test. `node test/kitcull.mjs <dir>`
-  renders 16 viewpoints with culling off and on and must report them identical.
-- `42_scene.js`: terrain and water tiles of a pack are one mesh each (`SC.pools`, refilled when a tile comes into view); big static
-  prop meshes cast into the near shadow map through a twin holding only the 8 m squares the map covers (`st.sub`); boulders are two
-  instance lists (`SC.rocks`: worth drawing from here / near and big enough to cast).
-- `74b_trees.js`: the wide shadow map draws tree stand-ins from a list round the map (`Trees.farCastRing`), not every tree in the valley.
-- Pieces added to a batch after it was built are still ignored (as before): the outlaw camps' props go to `kit-yard` on the first tick.
-
-### After step 3 (grass, trees, props and water by what is in view)
-
-| Tier | Square | Alley | Terrace | Lake |
-|---|---|---|---|---|
-| medium | 154 / 314k | 165 / 323k | 140 / 221k | 120 / 233k |
-| low | 113 / 220k | 121 / 224k | 115 / 163k | 87 / 176k |
-
-- `46_grass.js`: tufts come from a list of grid cells (`gc` attribute), rebuilt when the player moves 1 m or turns 11 degrees: 8 x 8
-  blocks inside the grass range and the view cone that can hold grass at all (`Grass.blockHasGrass`, remembered per block).
-- `42_scene.js`: big static prop meshes and long water tiles are cut into squares (`squares()`: 8 m props, 16 m water); the camera
-  draws the squares in or within 10 m of the view (`viewUpdate`), unless the mesh itself still casts shadow (high tier), then all of it.
-- `74b_trees.js`: the camera's flat stand-ins are one instance list of the trees in the view cone (`Trees.farRing`); the middle
-  model keeps a sixth of the cards (`TREE_KEEP=0.17 TREE_GROW=2.05` in `tree_pack.mjs`).
-- Switches for comparing: `--opt pool=0`, `sub=0`, `rockring=0`, `treering=0`, `grassall=1`, `grasscone=0`.
-
-### After step 4 (characters)
-
-| Tier | Square | Alley | Terrace | Lake | Budget |
-|---|---|---|---|---|---|
-| medium | 154 / 282k | 165 / 297k | 140 / 204k | 120 / 223k | 220 / 380k |
-| low | 113 / 193k | 121 / 199k | 115 / 149k | 87 / 166k | 140 / 200k |
-
-Inn hall (`game.enter('inn')`, looking in, 15 people): 95 draw calls / 248k triangles (was 293k; budget 260k).
-
-- Bodies now have four weights: full (about 10 000 triangles), `@mid` (4600, hair and brows kept), `@lod` (2200), `@far` (700).
-  `Chars.LOD.dist[tier]` = `{ hi, mid, lo }` metres (medium 4.5 / 11 / 26, low 3.5 / 7 / 16, high 7 / 18 / 40); the far copy also casts
-  the sun shadow. Regenerate after changing a body: `node tools/chars_lod.mjs --level mid --tris 4600 chars/real/[fmo]_*.glb`, then
-  `--level lod --tris 2200`, then `--level far --tris 700`. The copies add about 170 KB per body file.
-- Low tier: `houseFar` 26 (was 30), `Kit.DROP.low` 40, near trees inside 11 m.
-
-### Step 5: what a first visit downloads
-
-| Device | Build 41 | Now |
-|---|---|---|
-| Phone, or Medium tier (512 texture cap) | 74.9 MB | 56.9 MB |
-| Low tier chosen, or a low-memory device | 74.9 MB | 36.3 MB |
-| Desktop on High | 74.9 MB | 69.0 MB |
-
-(`node tools/build.mjs` prints these and the size of each group.) What changed:
-- `tools/assets_pack.mjs`: geometry of every GLB in `kits/` and `chars/real/` is stored with EXT_meshopt_compression (the loaders use
-  `T3X.gltf()`, which carries the decoder); character normals, UVs and skin weights are small integers. Characters 15.8 > 10.4 MB
-  (after the two extra detail levels of step 4 had added 3.2 MB), kit packs 27.7 MB.
-- Small packs for devices whose texture cap is 512 anyway (`GFX_TEX.color <= 512`: phones, Low, Medium): `kits/s/*.glb` (512
-  textures; the trees' atlases at 1024) and `kits/skin/s/*.webp`. 15.6 MB instead of 27.7 MB. Manifest group `kitss`.
-- `tools/tex_half.mjs`: `tex/s/` is the ASTC material pack without its top mip level (7.3 MB instead of 27.9 MB, a quarter of the
-  texture memory). Used when the Low tier is chosen or the device reports little memory (`GFX_TEX.tiny`); `?texpack=half` / `full`
-  forces one. Group `astcs`. Not used on iPhones by default: Safari does not report memory, and whether the ground still looks sharp
-  enough at 512 on a real phone has to be judged there. If it does, switching phones to it saves another 20 MB.
-- After `tree_pack.mjs`, `chars_lod.mjs` or `kits*.mjs` rewrite a file, run `node tools/assets_pack.mjs` again (and `tex_half.mjs`
-  after the material pack changes).
-- Not done: KTX2 / Basis. No encoder is installed here and the asset hosts are blocked; the WebP textures are still decoded to
-  uncompressed RGBA on the GPU (a 512 map is 1.4 MB, a 1024 map 5.6 MB).
-
-## Characters (fork-perf, Task B)
-
-The MakeHuman rig has no jaw, eye or eyelid joints and the bodies have no morph targets, and no new assets could be fetched (asset
-hosts are blocked here). So everything below is done in `49_chars.js` on the existing bodies:
-
-- **Faces move.** Skin vertices are moved in the vertex shader by where they are in the skin atlas, which every body shares
-  (`cfg.face`: u runs down the face, lips at 0.905; v across). `H.uMouth` drops the jaw (lower lip to chin) and lifts the upper lip;
-  `H.uBlink` brings the upper lids down; the head joint's skinning matrix (`H.uHead`) turns the directions. A dark card behind the
-  lips is part of the merged mesh (texture coordinate u = 2), so an open mouth shows a mouth.
-- **Mouths follow the voice.** `faceUpdate` reads the playing line's loudness envelope (`Snd.vox.cur.env`, one value per 50 ms from
-  `audio/voice/manifest.json`). Barks and silent talking use a mumble pattern. Runs inside 14 m only.
-- **Eyes.** A pupil that widens in the dark and indoors, an iris that deepens to its rim, greyer whites, shadow under the upper lid;
-  the eyes make small jumps every second or so (`H.uGaze` shifts the eye texture) and blink every few seconds; asleep they stay shut.
-- **Skin and hair.** Red light carried round the shadow edge in sun, a soft rim from the sky; hair is matt with a sky-lit outline
-  (the hard blotch on the crown is gone); eyebrows are no longer dotted.
-- **Clothes by person.** `look()` dyes tunic, dress, robe and trousers with the villager's own colours from `NPC_DEFS` (`top`, `legs`),
-  keeping the cloth texture's light and shade (`meanLum`), muted toward grey. People without an entry get wool and linen colours by
-  their id, the better-off (`def.wealth`, or by id) deeper dyes and a pouch.
-- **Headwear and belts** (`accGeometry`): cap, straw hat, kerchief, kettle helmet, feathered cap (from `def.hat`), a belt with a
-  buckle, a pouch. Built to each body's measure, hung on one joint each, and merged into the villager's one mesh (texture coordinate
-  u = 3 + slot picks one of four colours in `H.accCol`): no extra draw calls, about 150 triangles.
-- **Feet.** The walk clip's pace is now measured from its planted foot and the playback rate follows the distance the villager really
-  moved. `test/feet.js` measures planted-foot speed: 0.25 m/s at the ball of the foot for a 1.5 m/s walk, which is the clip's own
-  residue (sweeping the rate shows the minimum is where it now sits). Removing the rest needs foot-planting IK or better walk clips.
+- `Chars.define(name, cfg)`; boot tries the `real` set (MakeHuman bodies in `chars/real`, clips retargeted from the Quaternius
+  names), then `quaternius`. Each villager id has its own body (`BODY` table); outlaws are lazy bodies (`Chars.ensure`).
+- Four weights per body: full (about 10 000 triangles), `@mid` 4600, `@lod` 2200, `@far` 700, swapped by `Chars.LOD.dist[tier]`.
+  Regenerate with `tools/chars_lod.mjs --level mid|lod|far`, then `assets_pack.mjs`.
+- Faces: there are no jaw or eye joints and no morph targets. Skin vertices are moved in the vertex shader by their place in the
+  shared skin atlas (`cfg.face`): `H.uMouth`, `H.uBlink`, `H.uGaze`. `faceUpdate` reads the playing line (`Snd.vox.cur`).
+  Clothes are dyed per person from `NPC_DEFS` (`top`, `legs`); hats, belts and pouches are merged into the body mesh (`accGeometry`).
+- `77_npc.js` who people are and their schedules; `77b_ambient.js` passers-by; `77c_patrons.js` inn regulars; `77d_handprops.js`;
+  `77e_households.js` people at home and at work. `R.boneData` holds one slot per hinged, carried or animated thing.
 - Test hooks on a handle: `ch.mouthTest` (0..1), `ch.blinkTest`, `ch.gazeTest = [u, v]`.
-- Not done: new face shapes, new hair meshes, new garments (all need the Blender / MakeHuman pipeline in `tools/humans`, which is not
-  set up here), lip shapes per sound (the mouth only opens and closes with loudness), cloth that swings.
 
+## World
+
+- `55_layout.js` sites and roads, `55b_infill.js` infill houses, `55c_wilds.js` places outside the village. `60_terrain.js` height
+  field and ground. `70` to `73k`: props, house shells, the village build-out (alley, dressing, boardwalks, levels, wharf, vertical
+  routes, walls, lanes, the square). `74*` vegetation. `79_wilds.js`, `79b_life.js` the wilds and the people in them.
+- `50_env.js` time of day and the single wind (`Wind`); `50b_weather.js` (`Weather.set('fair' | 'overcast' | 'rain' | 'auto')`,
+  `ENV.wet` drives wet ground). Hanging kit pieces (`gen_sign_*`, `gen_bunt_*`, `dr_laundry*`) sway through `SH.hangOf`.
+
+## Interiors as cells (`56_cells.js`, `72d` to `72l`)
+
+- Every enterable building's interior is built at a remote origin; the village keeps only the shell. `Cells.use` is the door
+  (fade, place name). `Cells.env` sets indoor light: sun off, `CELL_DAYLIGHT` lifts ambient for rooms with windows. `Cells.list`
+  has 58 cells at Build 59.
+- `72d_plan.js` is the plan engine: rooms on a 0.5 m grid, doors, stairs, cellars, placement helpers, `planValidate`. Designed plans
+  are in `72e_plans.js`, `72h_trades.js`, `72j_plans2.js`; six layout families for ordinary houses in `72k_houses.js`; dressing in
+  `72g_dress.js`, `72i_wares.js`, `72l_hobjects.js`; the crypt in `72f_underworld.js`; the Old Mine is its own cell (`94_mine.js`).
+- `test/interiors.js` (placement validator, quest objects present), `test/parity.mjs` (a plan must not drop a quest object),
+  `test/cells.js` (enter every cell, walk it, leave).
+
+## Game rules and story
+
+- `80_game.js` state `S`, quests, `TALK` dialogue (`node(text, options)`), save. `81_wilds_story.js` wilds quests. `82_story.js`
+  the main story, Act 1 (`docs/STORY.md`). `82b_interact.js` containers, loose things, letters, theft and the cell, locks, seats,
+  stew and beds, and `IX.SAY` (remarks people make before their own line). `82c_secrets.js` nine town secrets. `94_mine.js`,
+  `94b_economy.js` (shops, perks, notice board, rumours), `94d_act2.js` (Acts 2 and 3, two endings).
+- `90_rpg.js` health, stamina, damage, HUD; `91_combat.js` first-person sword; `92_foes.js` outlaw camps; `93_inventory.js` pack.
+- `78_player.js` collision and walkable surfaces. `85_ui.js` HUD, dialogue, journal, pause (and the `Build N` label); `86_map.js`;
+  `87_feel.js` camera feel; `87b_input.js` controls.
+
+## Sound and voices
+
+- `Snd` in `88_audio.js`: buses amb / world / foot / ui / music into a master chain with a soft ceiling; reverb spaces room, hall,
+  cave; open air is dry. `88b_sfx.js` synthesised effects, `88c_*` ambience, music, world state.
+- `88d_voice.js`: when a dialogue node is shown, `Snd.say(npc, text)` looks up `cyrb53(speaker + '\n' + text)` in
+  `audio/voice/manifest.json` and plays the file DRY (never through a bus or reverb). No entry means a subtitle only. When the whole
+  text has no entry but its paragraphs do (a remark from `IX.SAY` in front of the villager's own line), the paragraphs are played
+  in turn. A notice of the form `<b>Name</b>: “line”` (overheard talk) plays that speaker's recording.
+- Offline pipeline (`tools/voice`): `extract.mjs` walks the source for spoken text (`node()` calls, `addOpt('id', ...)`, `IX.SAY`
+  rows, `[id, line]` pairs, overheard notices; `extra_speakers.json` names the speakers it cannot work out) and writes `lines.json`;
+  `plan.mjs` adds the barks (`barks.json`) and writes `plan.json` in story order; `gen_gemini.py` generates missing files (resumable,
+  stops at the daily limit of 100 requests), `--have` rewrites the manifest from the files that exist; `check.mjs` verifies.
+  `cast_gemini.json` is the casting: one prebuilt voice and a one-line acting direction per character.
+- Text built at run time (prices, counts) cannot be recorded and stays a subtitle; `extract.mjs` lists those as `dynamic`.
+
+## Loading, offline, service worker
+
+- `index.html` and `sw.js` are written by the build with content hashes. The page is fetched network-first, assets cache-first;
+  the manifest groups (`kits`, `kitss`, `astc`, `astcs`, `chars`, ...) decide what a device downloads. `test/sw.mjs`,
+  `test/loadshots.mjs`, `test/real.mjs` (production boot), `test/fallback.mjs` (must end on WebGL 2).
+
+## Test harness
+
+- `test/pw.mjs` finds Playwright and a Chrome on any machine. `test/shot.mjs` serves the repository, opens the page with the
+  `--opt` values as `TEST`, runs each `--do` script in the page and prints what it returns; `--out` saves a screenshot.
+- In the page: `game.shot(x, y|null, z, yawDeg, pitchDeg, hour)` returns `{draws, tris}`; `game.enter(id)`, `game.leave()`,
+  `game.tp(...)`, `game.step(n, dt)`, `game.draw()`, `window.__gpuErrors()`, `G.backend`.
+- `tools/gate.mjs` runs everything in order, one browser at a time; see `AGENTS.md`.
+- Tests cannot see frame rate on a real phone, flicker or z-fighting in motion, or anything audible.

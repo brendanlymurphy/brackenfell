@@ -1,12 +1,12 @@
 // Service worker check on a production-mode page (localhost counts as secure): first load fills the caches, a second load with the network cut still starts,
 // and a changed build is noticed ("Update available"). usage: node test/sw.mjs
-import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+import { chromium, CHROME } from './pw.mjs';
 import http from 'node:http'; import fs from 'node:fs';
 const root = new URL('../', import.meta.url).pathname, port = 8700 + Math.floor(Math.random() * 200);
 const TYPES = { html: 'text/html', js: 'text/javascript', png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', glb: 'model/gltf-binary', json: 'application/json', webmanifest: 'application/manifest+json', woff2: 'font/woff2' };
 let swExtra = '';       // appended to sw.js to simulate a new build
 const srv = http.createServer((q, s) => { try { const u = decodeURIComponent(q.url.split('?')[0]); const f = root + (u.endsWith('/') ? u.slice(1) + 'index.html' : u.slice(1)); let b = fs.readFileSync(f); if (u === '/sw.js') b = Buffer.concat([b, Buffer.from(swExtra)]); s.writeHead(200, { 'content-type': TYPES[f.split('.').pop()] || 'application/octet-stream', 'cache-control': 'no-cache' }); s.end(b); } catch (e) { s.writeHead(404); s.end('nf'); } }).listen(port);
-const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--ignore-gpu-blocklist'] });
+const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--ignore-gpu-blocklist'] });
 const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 const page = await ctx.newPage(); page.setDefaultTimeout(300000);
 const url = `http://localhost:${port}/?webgl`, out = {};

@@ -1,0 +1,58 @@
+# Builds the game on GitHub and publishes it to GitHub Pages, so the built files (game.js, index.html, sw.js, three.js) no longer
+# have to be committed. The live address does not change.
+#
+# It deploys only from main, and only once the repository's Pages source is "GitHub Actions"
+# (Settings > Pages > Build and deployment > Source). Until the owner switches that, the deploy job is skipped
+# (the build job asks GitHub which source is set) and Pages keeps serving the main branch as before.
+# On any other branch, run it by hand (Actions > pages > Run workflow) to build the site folder and boot it without deploying.
+name: pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      source: ${{ steps.source.outputs.type }}
+    steps:
+      - name: Which Pages source is set (legacy = the main branch as it is, workflow = GitHub Actions)
+        id: source
+        run: echo "type=$(gh api repos/${{ github.repository }}/pages --jq .build_type || echo unknown)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Build and assemble the site
+        run: node tools/site.mjs _site
+      - name: The site boots (production mode, from the assembled folder)
+        run: node test/real.mjs --root _site | tee real.txt && grep -q '"playing":true' real.txt
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && needs.build.outputs.source == 'workflow'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

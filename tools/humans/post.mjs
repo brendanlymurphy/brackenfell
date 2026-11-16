@@ -16,17 +16,21 @@ for (const m of root.listMaterials()) {
   else { m.setAlphaMode('OPAQUE').setDoubleSided(k === 'cloth'); }
   m.setMetallicFactor(0).setRoughnessFactor(k === 'eye' ? 0.25 : k === 'body' ? 0.62 : k === 'hair' ? 0.55 : 0.85);
 }
+for (const mesh of root.listMeshes()) for (const p of mesh.listPrimitives()) p.setAttribute('_OIDX', null);      // generator bookkeeping (morph.py)
 await doc.transform(weld());
 const tri = p => (p.getIndices() ? p.getIndices().getCount() : p.getAttribute('POSITION').getCount()) / 3;
 const prims = []; for (const mesh of root.listMeshes()) for (const p of mesh.listPrimitives()) prims.push({ p, k: kind(p.getMaterial().getName()), n: tri(p), name: mesh.getName() });
 // small parts keep their triangles; the rest share what is left of the budget, the head-and-hands mesh getting the biggest share
-const fixed = prims.filter(x => x.k === 'brow' || x.k === 'lash' || x.k === 'eye').reduce((s, x) => s + x.n, 0);
+const isMouth = x => /teeth|tongue/i.test(x.name), MOUTH_TRIS = x => /tongue/i.test(x.name) ? 110 : 340;      // teeth and tongue (morph.py): kept small, they only show when the mouth opens
+for (const x of prims) if (isMouth(x)) { simplifyPrimitive(x.p, { simplifier: MeshoptSimplifier, ratio: Math.min(1, MOUTH_TRIS(x) / x.n), error: 0.2, lockBorder: false }); x.after = tri(x.p); }
+const fixed = prims.filter(x => x.k === 'brow' || x.k === 'lash' || x.k === 'eye').reduce((s, x) => s + x.n, 0) + prims.filter(isMouth).reduce((s, x) => s + x.after, 0);
 // the head-and-hands mesh gets a fixed share so heavy boots or robes cannot starve the face; clothes split theirs by sqrt(size)
 const hasHair = prims.some(x => x.k === 'hair'), share = hasHair ? { body: 0.45, hair: 0.15, cloth: 0.40 } : { body: 0.52, hair: 0, cloth: 0.48 };
-const rest = budget - fixed, sums = {};
-for (const x of prims) if (share[x.k] !== undefined) sums[x.k] = (sums[x.k] || 0) + Math.sqrt(x.n);
+const WEAR_MAX = 700, rest = budget - fixed - (prims.some(x => /^w_/.test(x.name)) ? WEAR_MAX : 0), sums = {};      // wardrobe pieces (w_*) keep their triangles; a villager wears about 700 of them at once
+const isWear = x => /^w_/.test(x.name) || isMouth(x);
+for (const x of prims) if (share[x.k] !== undefined && !isWear(x)) sums[x.k] = (sums[x.k] || 0) + Math.sqrt(x.n);
 for (const x of prims) {
-  if (share[x.k] === undefined) continue;
+  if (share[x.k] === undefined || isWear(x)) continue;
   const target = Math.max(200, rest * share[x.k] * Math.sqrt(x.n) / sums[x.k]), ratio = Math.min(1, target / x.n);
   if (ratio < 0.97) simplifyPrimitive(x.p, { simplifier: MeshoptSimplifier, ratio, error: 0.05, lockBorder: false });
   x.after = tri(x.p);
@@ -43,6 +47,6 @@ for (const m of root.listMaterials()) {
   if (k === 'hair' || k === 'brow') img = img.ensureAlpha(); else img = img.removeAlpha();
   t.setImage(new Uint8Array(await img.webp({ quality: q, alphaQuality: 90 }).toBuffer())).setMimeType('image/webp');
 }
-await doc.transform(dedup(), quantize({ pattern: /^(NORMAL|TEXCOORD_.*)$/, quantizeNormal: 10, quantizeTexcoord: 12 }), prune());
+await doc.transform(dedup(), quantize({ pattern: /^(NORMAL|TEXCOORD_.*|COLOR_0)$/, quantizeNormal: 10, quantizeTexcoord: 12, quantizeColor: 8 }), prune());
 await io.write(dst, doc);
 console.log(JSON.stringify({ out: dst.split('/').pop(), tris: Math.round(prims.reduce((s, x) => s + (x.after || x.n), 0)), parts: prims.map(x => x.name + ':' + x.k + ':' + Math.round(x.n) + '>' + Math.round(x.after || x.n)).join(' ') }));

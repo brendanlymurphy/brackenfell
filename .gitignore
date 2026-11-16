@@ -5,3 +5,7 @@ shots/
 /cand
 /_h
 __pycache__/
+tools/scan/_bake/
+gate-out/
+audio/voice/manifest.partial.json
+_site/

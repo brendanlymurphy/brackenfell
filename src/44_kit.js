@@ -191,11 +191,12 @@ const Kit = (() => {
       const kg = attribute('kg', 'vec4'), gr = SH.grime(wp, N, kg.x.mul(8), kg.y.mul(8), rm.y, rm.z, float(/Brick|Rock/.test(name) ? 1 : 0)).toVar();
       gcol = mix(gcol.mul(gr.rgb), vec3(0.15, 0.22, 0.07).mul(dot(gcol, vec3(1.2)).add(0.35)), gr.w.mul(0.75));
     }
-    const alb = gcol.mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
+    const lampDay = step(0.05, glow).mul(float(1).sub(step(0.5, zone))).mul(smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))));      // [l1] unlit lamp glass by day: smoky and glossy, not a cream box
+    const alb = gcol.mul(metal.mul(0.45).oneMinus()).mul(float(1).sub(lampDay.mul(0.78))).toVar('kitAlbedo');
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
     m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
-    m.roughnessNode = orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough);
+    m.roughnessNode = (orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough)).mul(float(1).sub(lampDay.mul(0.7)));
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
     const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back

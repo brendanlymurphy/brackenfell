@@ -18,13 +18,22 @@ for (const f of fs.readdirSync(root + 'src').filter(f => f.endsWith('.js')).sort
     if (!n || typeof n.type !== 'string') return;
     let push = null;
     if (n.type === 'Property' || n.type === 'MethodDefinition') push = nameOf(n.key); else if (n.type === 'AssignmentExpression') push = nameOf(n.left); else if (n.type === 'VariableDeclarator') push = nameOf(n.id);
-    const st = push ? stack.concat(push) : stack;
+    let st = push ? stack.concat(push) : stack;
+    // addOpt('finn', ...) hangs an option (and the nodes inside it) on that villager
+    if (n.type === 'CallExpression' && n.callee.type === 'Identifier' && n.callee.name === 'addOpt' && n.arguments.length && IDS.includes(fold(n.arguments[0]))) st = st.concat(fold(n.arguments[0]));
+    // Tables of lines outside node(): ['hale', () => condition, 'line'] (IX.SAY: a remark spoken before the villager's own line) and ['greta', 'line'] pairs
+    if (n.type === 'ArrayExpression' && (n.elements.length === 2 || n.elements.length === 3) && n.elements.every(Boolean)) { const id = fold(n.elements[0]), tx = fold(n.elements[n.elements.length - 1]);
+      if (IDS.includes(id) && tx && tx.length > 11 && /\s/.test(tx) && (n.elements.length === 2 || /Function/.test(n.elements[1].type))) lines.push({ speaker: id, text: tx, where: f + ':' + n.loc.start.line }); }
+    // a named table of [() => condition, 'line'] rows all said by one person (extra_speakers.json "tables": RUMOURS -> greta)
+    if (n.type === 'ArrayExpression' && n.elements.length >= 2 && n.elements[0] && /Function/.test(n.elements[0].type) && fold(n.elements[1])) { const tb = st.find(x => (extra.tables || {})[x]); if (tb) lines.push({ speaker: extra.tables[tb], text: fold(n.elements[1]), where: f + ':' + n.loc.start.line }); }
+    // overheard talk shown as a notice: '<b>Rowan</b>: “line”' (88d_voice.js plays the line when such a notice appears)
+    if (n.type === 'Literal' && typeof n.value === 'string') { const m = /^<b>(\w+)<\/b>: “(.+)”$/.exec(n.value); if (m && IDS.includes(m[1].toLowerCase())) lines.push({ speaker: m[1].toLowerCase(), text: m[2], where: f + ':' + n.loc.start.line }); }
     if (n.type === 'CallExpression') {
       const cal = n.callee; let text = null;
       if (cal.type === 'Identifier' && cal.name === 'node' && n.arguments.length) text = n.arguments[0];
       else if (cal.type === 'MemberExpression' && nameOf(cal.property) === 'buy' && nameOf(cal.object) === 'TALK' && n.arguments.length > 2) text = n.arguments[2];
       if (text) {
-        let sp = FILE_SPEAKER[f] || ''; if (!sp) for (let i = st.length - 1; i >= 0 && !sp; i--) sp = idOf(st[i]);
+        let sp = FILE_SPEAKER[f] || ''; if (!sp) for (let i = st.length - 1; i >= 0 && !sp; i--) sp = (extra.silent || []).includes(st[i]) ? '-' : idOf(st[i]);
         // a conditional picks one of several lines: take each literal branch; a bare variable (TALK.buy's line) is covered where the call passes it
         const cands = x => x.type === 'ConditionalExpression' ? cands(x.consequent).concat(cands(x.alternate)) : x.type === 'LogicalExpression' ? cands(x.right) : [x];
         for (const c of cands(text)) {
@@ -39,8 +48,10 @@ for (const f of fs.readdirSync(root + 'src').filter(f => f.endsWith('.js')).sort
   walk(ast, []);
 }
 // manual speakers for lines the walk could not attribute, and extra lines (see extra_speakers.json)
-for (const l of lines) { if (!l.speaker) for (const [pre, sp] of Object.entries(extra.byText || {})) if (l.text.startsWith(pre)) l.speaker = sp; }
-const seen = new Set(), out = []; for (const l of lines) { const k = l.speaker + '\n' + l.text; if (seen.has(k)) continue; seen.add(k); out.push(l); }
+// byText: the start of a line -> its speaker, a list of speakers (a line two people can say is recorded once each), or '-' (never spoken aloud).
+// silent: names (a notice board, a carved slab) whose "dialogue" is reading text.
+{ const more = []; for (const l of lines) { if (l.speaker) continue; for (const [pre, sp] of Object.entries(extra.byText || {})) if (l.text.startsWith(pre)) { const a = [].concat(sp); l.speaker = a[0]; for (const o of a.slice(1)) more.push({ speaker: o, text: l.text, where: l.where }); } } lines.push(...more); }
+const seen = new Set(), out = []; for (const l of lines) { if (l.speaker === '-') continue; const k = l.speaker + '\n' + l.text; if (seen.has(k)) continue; seen.add(k); out.push(l); }
 fs.writeFileSync(root + 'tools/voice/lines.json', JSON.stringify({ lines: out, dynamic, unresolved: out.filter(l => !l.speaker).map(l => ({ where: l.where, text: l.text.slice(0, 70) })) }, null, 1));
 const by = {}; for (const l of out) by[l.speaker || '?'] = (by[l.speaker || '?'] || 0) + 1;
 console.log(out.length + ' spoken lines,', dynamic.length + ' dynamic (text-only),', 'by speaker', JSON.stringify(by));

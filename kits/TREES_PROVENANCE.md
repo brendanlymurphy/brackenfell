@@ -18,7 +18,9 @@ Baked but not shipped yet (in `tools/scan/_bake`): `fir_a`, `pine_b`, `fir_sapli
 1. `tools/scan/trees.sh <download dir> <cache dir>`: for each line of `tools/scan/trees.txt`, `tree_prep.py` groups the scan's foliage
    into clusters and lays one card over each, `tree_bake.mjs` draws the real foliage onto the cards' atlas, `tree_post.py` makes the
    atlas usable with alpha testing, `trees.mjs` simplifies the wood and writes one compact model per tree into the cache.
-   The intermediate results of these steps are kept in `tools/scan/_bake`, so step 2 can be rerun without the original downloads.
+   The intermediate results of these steps go to `tools/scan/_bake` (200 MB: raw atlases and point clouds), so step 2 can be rerun without
+   the original downloads. That folder was tracked until Build 59 and is no longer (it was a third of every checkout and was being
+   deployed to the live site). To get it back: `git fetch origin 65f45a3 && git checkout 65f45a3 -- tools/scan/_bake && git rm -r -q --cached tools/scan/_bake`.
 2. `node tools/scan/trees.mjs tools/scan/_bake <cache dir> <names>` then
    `TREE_ATLAS=2048 TREE_KEEP=0.17 TREE_GROW=2.05 node tools/scan/tree_pack.mjs <cache dir> kits fir_b fir_c pine_c broadleaf_small`
    writes the three shipped files: wood simplified to about 700 triangles (90 for the far model), the far model's foliage made from a

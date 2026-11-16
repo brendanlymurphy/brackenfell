@@ -28,12 +28,12 @@ ixWitness = __w;
 { const lo2 = IX.loose.find(o => o.kind === 'loose' && !o.gone && o.owner); game.enter(lo2.cell); await idle(); Player.pos = [lo2.p[0], lo2.p[1] - 0.9, lo2.p[2] + 0.4];
   const w = NPC.marta === ixGuard() ? NPC.greta : NPC.marta; w.anim = 'idle'; w.pos = [Player.pos[0] + 2, Player.pos[1], Player.pos[2]];
   interactUse(lo2); fx(S.crime && S.crime.pending && S.crime.fine > 0, 'taking in front of someone was not a crime'); fx(has(lo2.item) || lo2.item === 'gold', 'did not get the item');
-  S.crime.t = 0; ixTick(0.1); for (let i = 0; i < 200 && !UI.talk; i++) { game.step(6, dt); await sleep(50); } game.step(3, dt);
+  S.crime.t = 0; ixTick(0.1); for (let i = 0; i < 900 && !UI.talk; i++) { game.step(6, dt); await sleep(50); } game.step(3, dt);       /* [gate] waits for the guard, up to 45 s of real time on a slow machine (was 10 s: the fade is real time) */
   fx(UI.talk && ['hale', 'ivo'].includes(UI.talk.id), 'the guard did not come to talk (' + (UI.talk && UI.talk.id) + ')');
-  const btn = [...document.getElementById('dopts').children].find(b => /Go quietly/.test(b.textContent)); fx(btn, 'no "go quietly" option'); if (btn) btn.click(); await sleep(1500); await idle();
+  const btn = [...document.getElementById('dopts').children].find(b => /Go quietly/.test(b.textContent)); fx(btn, 'no "go quietly" option'); if (btn) btn.click(); for (let i = 0; i < 600 && !(S.jail === 1 && World.cell && World.cell.id === 'guardhouse'); i++) await sleep(50); await sleep(400); await idle();
   fx(S.jail === 1 && World.cell && World.cell.id === 'guardhouse', 'not in the cell (' + (World.cell && World.cell.id) + ')'); fx(!S.crime, 'crime not cleared by the cell');
   const jd = World.interact.find(i => i.id === 'jail.door'); fx(jd && /guard|lock/i.test(interactLabel(jd) || ''), 'no way out of the cell: ' + (jd && interactLabel(jd)));
-  if (jd) { S.items.lockpick = 0; delete S.items.lockpick; interactUse(jd); await sleep(1500); await idle(); fx(!World.cell && S.jail === 0, 'still in the cell after calling the guard'); } log.push('theft -> guard -> cell -> out'); }
+  if (jd) { S.items.lockpick = 0; delete S.items.lockpick; interactUse(jd); for (let i = 0; i < 600 && !(S.jail === 0 && !World.cell); i++) await sleep(50); await sleep(400); await idle(); fx(!World.cell && S.jail === 0, 'still in the cell after calling the guard'); } log.push('theft -> guard -> cell -> out'); }
 // ── a lock on a door ──
 { const c = Cells.list.find(k => k.portalOut && k.id !== 'guardhouse'); IX.LOCKS[c.id] = { msg: 'Barred from inside.' }; ixApplyLocks(); delete S.items.lockpick;
   fx(Cells.lockMsg(c.portalOut) === 'Barred from inside.', 'a locked door opened without a key'); give('lockpick', 12); let opened = false; for (let i = 0; i < 12 && !opened; i++) opened = Cells.lockMsg(c.portalOut) === null; fx(opened, 'a pick never opened the door'); fx(Cells.lockMsg(c.portalOut) === null, 'an opened door shut again'); delete IX.LOCKS[c.id]; delete c.portalOut.lock; delete S.unlocked['door.' + c.id]; log.push('lock ' + c.id); }
