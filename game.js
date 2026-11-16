@@ -673,9 +673,9 @@ SH.init = function () {
     const lead = smoothstep(0.035, 0.10, lat);
     const id = TSL.floor(vec2(a.add(0.5), b.add(0.5))), hv = TSL.fract(TSL.sin(dot(id, vec2(127.1, 311.7))).mul(43758.5453));
     const room = texture(G.noiseTex, vec2(hc.mul(0.11), wp.y.mul(0.13))).r;                     // furniture, curtains and people between the fire and the glass
-    const flick = TSL.sin(U.time.mul(6.0).add(h.mul(40))).mul(0.04).add(0.96);
+    const flick = TSL.sin(U.time.mul(6.0).add(h.mul(40))).mul(0.04).add(0.96).mul(float(1).sub(step(0.82, h).mul(float(0.16).add(TSL.sin(U.time.mul(11.0).add(h.mul(97))).mul(TSL.sin(U.time.mul(4.3).add(h.mul(53))).mul(0.14))))));      // [l1] a few windows have a real candle or fire behind them: they waver
     const on = smoothstep(0.26, 0.34, h);                                                       // a quarter of the windows are dark
-    const warm = mix(vec3(1.0, 0.50, 0.16), vec3(1.0, 0.66, 0.30), hv);
+    const warm = mix(mix(vec3(1.0, 0.42, 0.12), vec3(1.0, 0.70, 0.36), hv), vec3(0.95, 0.80, 0.52), smoothstep(0.55, 0.9, h).mul(0.7));      // [l1] ember orange .. candle .. a pale lantern
     return warm.mul(lead.mul(0.92).add(0.08)).mul(hv.mul(0.35).add(0.65)).mul(smoothstep(0.15, 0.75, room).mul(0.75).add(0.35)).mul(h.mul(0.5).add(0.55)).mul(flick).mul(on).mul(U.windowGlow).mul(0.52);
   });
   // [c3] what a window shows from inside: a sky with soft cloud, a skyline of roofs and gables, dark street below; at night deep blue with a few warm windows. The sky colour itself
@@ -714,8 +714,9 @@ SH.init = function () {
     return float(1).sub(exp(dens.negate().mul(integ)));
   });
   SH.fogColor = Fn(() => {
-    const s = pow(max(dot(normalize(positionWorld.sub(U.camPos)), U.sunDisc), 0), 6);
-    return mix(U.fogCol, U.fogCol.add(U.fogSun.mul(0.6)), s);
+    const vd = normalize(positionWorld.sub(U.camPos)), s = pow(max(dot(vd, U.sunDisc), 0), 6);
+    const moon = pow(max(dot(vd, U.moonDir), 0), 7).mul(U.moonBright).mul(0.09);          // [l1] the moon lights the mist round it
+    return mix(U.fogCol, U.fogCol.add(U.fogSun.mul(0.6)), s).add(vec3(0.55, 0.75, 1.0).mul(moon));
   });
   // ── one wind ──
   // U.wind = direction x, direction z, strength, time. Gusts are a slow noise pattern that travels downwind across the valley; everything
@@ -1468,12 +1469,12 @@ function pickLights(camPos, camZone, env) {
 R.grade = null;
 function gradeFor(env) {
   const cell = World.cell, mix3_ = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), g = env.golden || 0, n = env.night || 0;
-  let t = { sat: 0.92, con: 0.24, sh: [0.94, 0.99, 1.07], hi: [1.045, 1.0, 0.93], lift: [0.004, 0.005, 0.008] };
-  const gold = { sat: 1.02, con: 0.26, sh: [0.97, 0.95, 1.09], hi: [1.12, 1.0, 0.82], lift: [0.008, 0.004, 0.010] }, night = { sat: 0.80, con: 0.30, sh: [0.90, 0.97, 1.12], hi: [1.0, 0.97, 0.92], lift: [0.0, 0.004, 0.014] };
+  let t = { sat: 0.92, con: 0.24, sh: [0.94, 0.99, 1.07], hi: [1.045, 1.0, 0.93], lift: [0.002, 0.003, 0.004] };
+  const gold = { sat: 1.02, con: 0.26, sh: [0.97, 0.95, 1.09], hi: [1.12, 1.0, 0.82], lift: [0.004, 0.002, 0.005] }, night = { sat: 0.84, con: 0.28, sh: [0.94, 0.98, 1.06], hi: [1.0, 0.97, 0.92], lift: [0, 0, 0] };
   const mixT = (a, b, k) => ({ sat: a.sat + (b.sat - a.sat) * k, con: a.con + (b.con - a.con) * k, sh: mix3_(a.sh, b.sh, k), hi: mix3_(a.hi, b.hi, k), lift: mix3_(a.lift, b.lift, k) });
   t = mixT(t, gold, clamp(g * 1.15, 0, 1)); t = mixT(t, night, n);
   if (cell) {
-    const room = { sat: 0.95, con: 0.17, sh: [1.04, 0.99, 0.92], hi: [1.07, 1.0, 0.89], lift: [0.012, 0.008, 0.004] }, mine = { sat: 0.66, con: 0.34, sh: [0.90, 0.98, 1.10], hi: [1.05, 0.98, 0.88], lift: [0, 0, 0.003] };
+    const room0 = { sat: 0.95, con: 0.19, sh: [1.04, 0.99, 0.92], hi: [1.07, 1.0, 0.89], lift: [0.004, 0.003, 0.002] }, room = mixT(room0, { sat: 0.95, con: 0.27, sh: [1.04, 0.99, 0.93], hi: [1.06, 1.0, 0.90], lift: [0, 0, 0] }, n), mine = { sat: 0.88, con: 0.32, sh: [0.88, 0.97, 1.10], hi: [1.09, 0.98, 0.82], lift: [0, 0, 0.002] };
     t = cell.id === 'mine' || cell.daylight === 0 ? mixT(room, mine, cell.id === 'mine' ? 1 : 0.6) : room;
   }
   if (TEST && TEST.grade === 0) t = { sat: 1, con: 0.22, sh: [0.93, 0.99, 1.07], hi: [1.045, 1.0, 0.93], lift: [0, 0, 0] };
@@ -1667,7 +1668,7 @@ const Kit = (() => {
     const g = K_.gradeInit;
     K_.grade = { sat: uniform(g.sat), gain: uniform(g.gain), tint: uniform(new THREE.Vector3(g.tint[0], g.tint[1], g.tint[2])), weather: uniform(g.weather || 0) };
     if (K_.skin !== 'realistic') { K_.grade.sat.value = 1; K_.grade.gain.value = 1; K_.grade.tint.value.set(1, 1, 1); K_.grade.weather.value = 0; }
-    K_.fill = uniform(new THREE.Vector3(0.0, 0.02, 0.012)); K_.occ = uniform(new THREE.Vector3(0.42, 0.62, 0.8));      // [l1] occlusion at the ground, under eaves, share taken from the sun
+    K_.fill = uniform(new THREE.Vector3(0.0, 0.02, 0.012)); K_.occ = uniform(TEST && TEST.occ === 0 ? new THREE.Vector3(1, 1, 0) : new THREE.Vector3(0.42, 0.62, 0.8));      // [l1] occlusion at the ground, under eaves, share taken from the sun
     K_.fill2 = uniform(new THREE.Vector3(0.25, 0.3, 0.02));
     K_.ready = true; if (progress) progress(1);
   };
@@ -16592,7 +16593,7 @@ function mineTick(dt) {
   const on = mineLampOn(); MINE.lamp.on = on;
   if (on) { ms.oil = Math.max(0, ms.oil - dt); if (ms.oil < 45 && !MINE.lamp.warnedLow) { MINE.lamp.warnedLow = true; toast('The lantern gutters. It wants oil.'); } if (ms.oil > 90) MINE.lamp.warnedLow = false; }
   const L = MINE.lamp.light, P = Player.pos, f = [Math.sin(Player.yaw), 0, -Math.cos(Player.yaw)];
-  L.p[0] = P[0] + f[0] * 0.35; L.p[1] = P[1] + 1.35; L.p[2] = P[2] + f[2] * 0.35; L.r = on ? 15 : 2.6; L.c[0] = on ? 10.5 : 0.5; L.c[1] = on ? 6.4 : 0.3; L.c[2] = on ? 2.9 : 0.12;      /* coordinator: at 2.9 the lit lantern showed almost nothing on screen (mean pixel 14 of 255); the carried light must make the tunnel readable for ten metres */
+  L.p[0] = P[0] + f[0] * 0.35; L.p[1] = P[1] + 1.35; L.p[2] = P[2] + f[2] * 0.35; L.r = on ? 19 : 2.6; L.c[0] = on ? 15 : 0.5; L.c[1] = on ? 8.6 : 0.3; L.c[2] = on ? 3.4 : 0.12;      /* coordinator: at 2.9 the lit lantern showed almost nothing on screen (mean pixel 14 of 255); the carried light must make the tunnel readable for ten metres */
   MINE.lamp.dark = !on;
   if (mineTrapCheck) mineTrapCheck();
 }
@@ -16606,7 +16607,7 @@ function mineTrapCheck() {
 // the lantern key; the cell's dark; the first time through either door the mine counts as open
 document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && game.playing && !Player.locked && World.cell && World.cell.id === 'mine' && has('lantern')) { S.flags.lampOff = S.flags.lampOff === 1 ? 0 : 1; toast(S.flags.lampOff === 1 ? 'You douse the lantern.' : (MINE_S().oil > 0 ? 'You light the lantern.' : 'The lantern is dry.')); } });
 const _ce94 = Cells.env;
-Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.21, 0.155, 0.095]; e.ambGnd = [0.125, 0.09, 0.055]; e.fogDensity = 0.062; } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
+Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.095, 0.07, 0.045]; e.ambGnd = [0.055, 0.04, 0.026]; e.fogDensity = 0.062;      /* [l1] the point light was fine (zone 0 reaches everything in here); its steep falloff left the walls 5 m off dark, so the hack ambient was doubled. Now the light carries wider (below) and the ambient is half of what it was: the lantern makes a pool with dark beyond it */ } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
 const _cc94 = Cells.change;
 Cells.change = function (c) { _cc94(c); if (c && c.id === 'mine') { if (!S.flags.mineOpen) { S.flags.mineOpen = 1; if (typeof uiObjective === 'function') uiObjective(); } if (has('lantern') && !MINE_S().oil) MINE_S().oil = 600; } };
 const _wa94 = World.waterAt;

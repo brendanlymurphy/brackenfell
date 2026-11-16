@@ -70,9 +70,9 @@ SH.init = function () {
     const lead = smoothstep(0.035, 0.10, lat);
     const id = TSL.floor(vec2(a.add(0.5), b.add(0.5))), hv = TSL.fract(TSL.sin(dot(id, vec2(127.1, 311.7))).mul(43758.5453));
     const room = texture(G.noiseTex, vec2(hc.mul(0.11), wp.y.mul(0.13))).r;                     // furniture, curtains and people between the fire and the glass
-    const flick = TSL.sin(U.time.mul(6.0).add(h.mul(40))).mul(0.04).add(0.96);
+    const flick = TSL.sin(U.time.mul(6.0).add(h.mul(40))).mul(0.04).add(0.96).mul(float(1).sub(step(0.82, h).mul(float(0.16).add(TSL.sin(U.time.mul(11.0).add(h.mul(97))).mul(TSL.sin(U.time.mul(4.3).add(h.mul(53))).mul(0.14))))));      // [l1] a few windows have a real candle or fire behind them: they waver
     const on = smoothstep(0.26, 0.34, h);                                                       // a quarter of the windows are dark
-    const warm = mix(vec3(1.0, 0.50, 0.16), vec3(1.0, 0.66, 0.30), hv);
+    const warm = mix(mix(vec3(1.0, 0.42, 0.12), vec3(1.0, 0.70, 0.36), hv), vec3(0.95, 0.80, 0.52), smoothstep(0.55, 0.9, h).mul(0.7));      // [l1] ember orange .. candle .. a pale lantern
     return warm.mul(lead.mul(0.92).add(0.08)).mul(hv.mul(0.35).add(0.65)).mul(smoothstep(0.15, 0.75, room).mul(0.75).add(0.35)).mul(h.mul(0.5).add(0.55)).mul(flick).mul(on).mul(U.windowGlow).mul(0.52);
   });
   // [c3] what a window shows from inside: a sky with soft cloud, a skyline of roofs and gables, dark street below; at night deep blue with a few warm windows. The sky colour itself
@@ -111,8 +111,9 @@ SH.init = function () {
     return float(1).sub(exp(dens.negate().mul(integ)));
   });
   SH.fogColor = Fn(() => {
-    const s = pow(max(dot(normalize(positionWorld.sub(U.camPos)), U.sunDisc), 0), 6);
-    return mix(U.fogCol, U.fogCol.add(U.fogSun.mul(0.6)), s);
+    const vd = normalize(positionWorld.sub(U.camPos)), s = pow(max(dot(vd, U.sunDisc), 0), 6);
+    const moon = pow(max(dot(vd, U.moonDir), 0), 7).mul(U.moonBright).mul(0.09);          // [l1] the moon lights the mist round it
+    return mix(U.fogCol, U.fogCol.add(U.fogSun.mul(0.6)), s).add(vec3(0.55, 0.75, 1.0).mul(moon));
   });
   // ── one wind ──
   // U.wind = direction x, direction z, strength, time. Gusts are a slow noise pattern that travels downwind across the valley; everything

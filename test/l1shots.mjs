@@ -12,7 +12,7 @@ const only = val('--only') ? val('--only').split(',') : null;
 const VIEWS = [
   { n: 'sq13', v: [4, null, -14, 200, 0, 13] }, { n: 'sq21', v: [4, null, -14, 200, 0, 21] },
   { n: 'alley1730', v: [30, null, -2, 250, 2, 17.5] }, { n: 'terrace13', v: [-12, null, 4, 200, 6, 13] },
-  { n: 'house13', door: ['elder', 9, 13] }, { n: 'house21', door: ['elder', 9, 21] }, { n: 'cabin21', door: ['hunter', 8, 21] },
+  { n: 'house13', door: ['inn', 11, 13] }, { n: 'house21', door: ['inn', 11, 21] }, { n: 'cabin21', door: ['hunter', 8, 21] },
   { n: 'dawn_lane', v: [30, null, -2, 250, 2, 6.4] }, { n: 'lake17', v: [26, 6, 92, 315, -12, 18.2] },
   // interiors, from just inside the street door looking in (canonical plan frame: 180 = into the house)
   { n: 'inn20', cell: 'inn', hour: 20 }, { n: 'inn13', cell: 'inn', hour: 13 }, { n: 'store13', cell: 'store', hour: 13 }, { n: 'store21', cell: 'store', hour: 21 },
@@ -36,8 +36,8 @@ for (let i = 0; i < argv.length; i++) if (argv[i] === '--opt') args.push('--opt'
 let n = 0;
 for (const e of VIEWS) { if (only && !only.includes(e.n)) continue; args.push('--do', code(e), '--out', `${dir}/${e.n}.png`); n++; }
 if (!flag('--noMine') && (!only || only.includes('mine'))) {
-  args.push('--do', `S.items.lantern = 1; if (typeof MINE_S === 'function') MINE_S().oil = 600; Env.hour = 12; const mc = Cells.by.mine, O = mc.origin, FY = mc.floorY; Cells.teleport({ p: [O[0], FY + 0.1, O[2] + 3], yaw: 0, cell: 'mine' }); for (let i = 0; i < 6; i++) mineTick(1 / 30);
-    const r = await game.shot(O[0], FY + 1.6, O[2] + 3, 0, 0, 12); return 'mine ' + r.draws + ' draws ' + (r.tris / 1000 | 0) + 'k lamp ' + (MINE.lamp && MINE.lamp.on);`, '--out', `${dir}/mine.png`); n++;
+  args.push('--do', `S.items.lantern = 1; if (typeof MINE_S === 'function') MINE_S().oil = 600; Env.hour = 12; const mc = Cells.by.mine, O = mc.origin, FY = mc.floorY; Cells.teleport({ p: [O[0], FY + 0.1, O[2] + 3], yaw: Math.PI, cell: 'mine' }); for (let i = 0; i < 6; i++) mineTick(1 / 30);
+    const r = await game.shot(O[0], FY + 1.6, O[2] + 3, 180, 0, 12); return 'mine ' + r.draws + ' draws ' + (r.tris / 1000 | 0) + 'k lamp ' + (MINE.lamp && MINE.lamp.on);`, '--out', `${dir}/mine.png`); n++;
 }
 console.log('shooting', n, 'views ->', dir);
 let o = ''; try { o = execFileSync('node', args, { encoding: 'utf8', timeout: 590000, maxBuffer: 1 << 26, cwd: new URL('../', import.meta.url).pathname }); } catch (e) { o = (e.stdout || '') + '\n' + (e.stderr || ''); }
