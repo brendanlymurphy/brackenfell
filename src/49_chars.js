@@ -143,7 +143,7 @@ const Chars = (() => {
         const rich = def.wealth !== undefined ? def.wealth : r(0), pal = rich > 0.72 ? RICH : POOR, top = sq(def.top) || (def.tint ? null : pal[Math.floor(r(1) * pal.length)]), legs = sq(def.legs) || [0.10 + r(2) * 0.06, 0.085 + r(2) * 0.05, 0.065 + r(2) * 0.04];
         const isRobe = /monk|elder/.test(body), dye = def.foe ? null : Object.assign({}, top && !isRobe ? { tunic: top, skirt: top } : {}, top && isRobe && def.top ? { robe: top } : {}, { pants: legs });
         const hatT = def.hat === 'hood' ? null : def.hat || (def.foe || def.sched ? null : r(3) < 0.3 ? 'cap' : null), HATC = { straw: [0.42, 0.33, 0.15], helmet: [0.17, 0.175, 0.19], kerchief: [0.62, 0.58, 0.48], cap: pal[Math.floor(r(4) * pal.length)], feather: [0.16, 0.22, 0.14] };
-        const acc = { hat: hatT, belt: !isRobe || !!def.belt, pouch: !!def.belt || rich > 0.6, col: [def.hatCol && def.hat !== 'helmet' ? sq(def.hatCol).map(v => v * 0.85) : HATC[hatT] || HATC.cap, def.belt ? sq(def.belt).map(v => v * 0.8) : [0.14, 0.09, 0.055], def.hat === 'helmet' ? HATC.helmet : [0.30, 0.29, 0.27], [0.19, 0.12, 0.07]] };
+        const acc = { hat: hatT, belt: !isRobe || !!def.belt, pouch: !!def.belt || rich > 0.6, col: [def.hatCol && def.hat !== 'helmet' ? sq(def.hatCol).map(v => v * 0.85 * (Math.max(...sq(def.hatCol)) > 0.5 ? 0.6 : 1)) : HATC[hatT] || HATC.cap, def.belt ? sq(def.belt).map(v => v * 0.8) : [0.14, 0.09, 0.055], def.hat === 'helmet' ? HATC.helmet : [0.30, 0.29, 0.27], [0.19, 0.12, 0.07]] };
         // The wardrobe the body carries (w_* parts, tools/humans/garb.py): what this person wears of it, and in what colours (slots: leather, hat, metal, apron, cloak, tabard, linen, strap, straw, wool)
         const fem = !!(def.female || /^f_/.test(body)), guard = def.prop === 'spear' || def.hat === 'helmet', wear = { belt: acc.belt, pouch: acc.pouch, cuffs: !isRobe };
         { const hd = def.hat === 'hood' ? (fem ? 'kerchief' : null) : def.hat || (def.foe || def.sched && !def.house ? null : r(3) < 0.7 ? (fem ? ['kerchief', 'coif', 'straw'][Math.floor(r(7) * 3)] : ['cap', 'straw', 'cap', 'coif'][Math.floor(r(7) * 4)]) : null);
@@ -273,7 +273,7 @@ const Chars = (() => {
     if (acc.hat && headI >= 0) {
       let top = -1e9; for (const p of pts) if (Math.abs(p[0]) < 0.2) top = Math.max(top, p[1]);
       const sl = pts.filter(p => p[1] > top - 0.13 && p[1] < top - 0.045 && Math.abs(p[0]) < 0.16), cx = sl.reduce((a, p) => a + p[0], 0) / sl.length, cz = sl.reduce((a, p) => a + p[2], 0) / sl.length;
-      const rx = pct(sl.map(p => Math.abs(p[0] - cx)), 0.94) + 0.010, rz = pct(sl.map(p => Math.abs(p[2] - cz)), 0.94) + 0.012, t = acc.hat;
+      const rx = pct(sl.map(p => Math.abs(p[0] - cx)), 0.995) + 0.012, rz = pct(sl.map(p => Math.abs(p[2] - cz)), 0.995) + 0.014, t = acc.hat;      // [ch1] 0.995: the hair no longer pokes through the cloth (Marta's skull face)
       // a dome from a base ring up over the crown; drop(angle) lowers the base (a kerchief hangs lower at the back)
       const dome = (y0, h, kx, kz, slot, drop, segs, rings) => { const rows = [];
         for (let j = 0; j <= rings; j++) { const f = j / rings, ph = f * Math.PI / 2, row = []; for (let i = 0; i < segs; i++) { const th = i / segs * TAU, d = drop ? drop(th) * (1 - f) : 0; row.push(v(cx + Math.cos(th) * rx * kx * Math.cos(ph), y0 - d + (h + d) * Math.sin(ph), cz + Math.sin(th) * rz * kz * Math.cos(ph), slot, headI)); } rows.push(row); }
@@ -283,7 +283,7 @@ const Chars = (() => {
       if (t === 'cap' || t === 'feather') { dome(top - 0.050, 0.068, 1.0, 1.0, 0, th => 0.045 * Math.max(0, -Math.sin(th)) + 0.012 * Math.abs(Math.cos(th)), 10, 3); if (t === 'feather') { const a = v(cx + rx * 0.7, top - 0.02, cz, 2, headI), b = v(cx + rx * 0.9, top - 0.03, cz - 0.02, 2, headI), c = v(cx + rx * 0.75, top + 0.12, cz - 0.07, 2, headI); IX.push(a, b, c); } }
       else if (t === 'straw') { dome(top - 0.048, 0.062, 0.96, 0.96, 0, null, 10, 2); brim(top - 0.046, 0.97, 0.15, 0.03, 0, 12); }
       else if (t === 'helmet') { dome(top - 0.052, 0.074, 1.03, 1.03, 2, th => 0.02 * Math.max(0, -Math.sin(th)), 10, 3); brim(top - 0.050, 1.03, 0.04, 0.018, 2, 12); }
-      else if (t === 'kerchief') { dome(top - 0.052, 0.070, 1.02, 1.03, 0, th => 0.10 * Math.max(0, -Math.sin(th)) + 0.045 * Math.abs(Math.cos(th)), 12, 3); }
+      else if (t === 'kerchief') { dome(top - 0.052, 0.086, 1.07, 1.08, 0, th => 0.10 * Math.max(0, -Math.sin(th)) + 0.045 * Math.abs(Math.cos(th)), 12, 3); }
     }
     if (acc.belt && spineI >= 0) {
       // the waist: lower-spine joint's height at rest; the belt follows the body's outline there, a finger's width outside the clothes
