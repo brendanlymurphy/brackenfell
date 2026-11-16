@@ -4160,6 +4160,7 @@ function terrainH(x, z) {
     // building pads
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 26 || Math.abs(z - s.z) > 26) continue;
+      { const u = LV.up; if (s.x > u.x0 && s.x < u.x1 && s.z > u.z0 && s.z < u.z1 && (x < u.x0 || x > u.x1 || z < u.z0 || z > u.z1)) continue; }          // [fx1] a house on the terrace levels the terrace, not a 6 m heap of ground outside its retaining wall
       const l = worldToSite(s, x, z), m = s.pad || 1.1;
       const dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
       if (dd < 6) h = lerp(h, s.y, 1 - smooth(0, 6, dd));
@@ -4168,6 +4169,7 @@ function terrainH(x, z) {
     // Build 33: neighbouring pads blend over each other for 6 m and the last one won, leaving a porch hanging over a hollow: every site's own footprint and doorstep margin is levelled again
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 14 || Math.abs(z - s.z) > 14) continue;
+      { const u = LV.up; if (s.x > u.x0 && s.x < u.x1 && s.z > u.z0 && s.z < u.z1 && (x < u.x0 || x > u.x1 || z < u.z0 || z > u.z1)) continue; }          // [fx1] as above
       const l = worldToSite(s, x, z), m = (s.pad || 1.1) + 0.2 + (s.porch || 0), dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
       if (dd < 1.5) h = lerp(h, s.y, 1 - smooth(0, 1.5, dd));
     }
@@ -10894,7 +10896,7 @@ function buildLevels(bucket, fence, R) {
     const os = Math.sign(vo - vi), v0 = Math.min(vo, vi), v1 = Math.max(vo, vi), mid = (u0 + u1) / 2;
     const P = ax ? (u, v) => [v, u] : (u, v) => [u, v], mm = M(...P(mid, vo));
     const bx = (a, y0, b, c, y1, d, skip) => { if (ax) mm.box(b, y0, a, d, y1, c, sw(skip || 0)); else mm.box(a, y0, b, c, y1, d, skip || 0); };
-    let base = 1e9; for (let i = 0; i <= 8; i++) { const u = u0 + (u1 - u0) * i / 8, p = P(u, vo + os * 0.4); base = Math.min(base, Terrain.y(p[0], p[1])); } base -= 0.7;
+    let base = 1e9; for (let i = 0; i <= 8; i++) { const u = u0 + (u1 - u0) * i / 8; for (const o of [0.4, 1.0, 1.8]) { const p = P(u, vo + os * o); base = Math.min(base, Terrain.y(p[0], p[1])); } } base -= 0.7;          // [fx1] down to where the ground has settled, not the first 0.4 m of the fall
     mm.mat(ax === 0 && os < 0 ? MAT.PLASTER : MAT.STONE, ax === 0 && os < 0 ? [1.0, 0.96, 0.88] : sc(0.9 + rr() * 0.08), 0.7); bx(u0, base, v0, u1, TOP, v1, 4 | 8);      // Build 42: the north face (never in the sun) is limewashed rubble, it was near-black
     mm.mat(MAT.STONE, sc(1), 0.6);
     if (parapet) { bx(u0, TOP, v0 + 0.12, u1, H + 0.95, v1 - 0.12, 4 | 8); bx(u0 - 0.05, H + 0.95, v0 - 0.02, u1 + 0.05, H + 1.07, v1 + 0.02, 4); }
