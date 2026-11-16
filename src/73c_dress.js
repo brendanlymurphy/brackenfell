@@ -475,7 +475,7 @@ function buildDress() {
   const stallKinds = ['greens', 'bread', 'cloth', 'pots', 'fish', 'meat'], stallCols = [[[0.28, 0.14, 0.12], [0.4, 0.37, 0.3]], [[0.13, 0.17, 0.24], [0.4, 0.37, 0.3]], [[0.18, 0.22, 0.13], [0.39, 0.36, 0.29]], [[0.31, 0.23, 0.12], [0.4, 0.37, 0.29]], [[0.23, 0.16, 0.15], [0.39, 0.36, 0.3]]];      // Build 42: faded madder, woad, moss, ochre on undyed linen (the canopy material brightens these about 1.6x)
   DRS.stalls = [];
   const placeStall = (x, z, face, kind) => {          // face: heading toward which the stall opens
-    const y = gy(x, z), name = dStall(kind, R, (sc => R() < 0.4 ? [sc[0], sc[0]] : sc)(R.pick(stallCols))), ry = face;
+    const y = gy(x, z), name = dStall(kind, R, (sc => (R() < 0.4 ? [sc[0], sc[0]] : sc).map(c => c.map(v => v * 0.34)))(R.pick(stallCols))), ry = face;
     add(name, x, y, z, 1.1, ry, false, DRS.stalls.length < 3 ? { es: true } : null);
     const fx = Math.sin(ry), fz = Math.cos(ry);
     claim(x, z, 1.6);
@@ -555,7 +555,7 @@ function buildDress() {
     // bracket lantern and sign beside the door
     const side = R() < 0.5 ? -1 : 1, w = wallAt(s, face, du + side * 1.15, 0.0), yL = s.y + 2.05 + R() * 0.45;
     const q = new THREE.Vector3(Math.sin(w.ry) * 0.38, 0, Math.cos(w.ry) * 0.38);
-    const M = dmat(lf, w.x, yL, w.z, 1, w.ry); ADD(lf, M, OUT, 0); ADD(lg, M, Object.assign({}, OUT, { glow: 2.2 }), 0);
+    const M = dmat(lf, w.x, yL, w.z, 1, w.ry); ADD(lf, M, OUT, 0); ADD(lg, M, Object.assign({}, OUT, { glow: 4.4 }), 0);
     const lp = [w.x + q.x, yL - 0.1, w.z + q.z]; World.emitters.push({ type: 'lantern', p: lp, zone: 0, halo: s.infill ? 0.4 : 0.7 }); if (DRS.lights++ < 5 && World.lights.length < 40) addLight(lp, 9, [3.0, 1.7, 0.7], 0, 'lantern');
     if (glyphs[s.id] || kind === 'inn') { const w2 = wallAt(s, face, du - side * 1.3, 0.0), sg = genSign(glyphs[s.id] || 'crest', [1.0, 0.8, 0.45]); add(sg, w2.x, s.y + 2.45 + R() * 0.3, w2.z, 1, w2.ry, false); }
   }

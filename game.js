@@ -966,7 +966,8 @@ function surfaceMaterial(mode) {
   const N = SH.perturb(normalize(vN), positionWorld, uv(), nt.xy, float(1));
   // rooms: occlusion near floor, ceiling and corners, soot over the hearth (40b_depth.js); only generated room geometry and people carry a zone
   const rm = (mode === 'static' || mode === 'skin') ? SH.room(positionWorld, N, zone).toVar() : null, aoR = rm ? rm.x : float(1);
-  const amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35))).add(SH.winLight(positionWorld, N, zone).mul(aoR.mul(0.6).add(0.4)));      // [l1] window light (40c_light.js)
+  let amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35))).add(SH.winLight(positionWorld, N, zone).mul(aoR.mul(0.6).add(0.4)));      // [l1] window light (40c_light.js)
+  if (!(TEST && TEST.shade === 0)) amb = amb.add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)).mul(float(1).sub(step(0.5, zone))).mul(tint.a.mul(0.5).add(0.5)));      // [l1] shade keeps a floor of sky and bounce: bark, posts and fences do not go black out of the sun
   const sootK = rm ? mix(vec3(1), vec3(0.22, 0.21, 0.2), rm.z.mul(0.9)) : vec3(1);
   m.colorNode = albedo.mul(sootK).mul(unlit.oneMinus());
   m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit)).add(mode === 'static' && !(TEST && TEST.gloss === 0) ? SH.pointSpec(positionWorld, N, normalize(SH.U.camPos.sub(positionWorld)), step(TSL.abs(mm.x.sub(MAT.PLANKS)), 0.5).mul(0.5), zone).mul(0.16) : vec3(0));      // [l1] worn planks catch the firelight
@@ -1795,11 +1796,12 @@ const Kit = (() => {
       const kg = attribute('kg', 'vec4'), gr = SH.grime(wp, N, kg.x.mul(8), kg.y.mul(8), rm.y, rm.z, float(/Brick|Rock/.test(name) ? 1 : 0)).toVar();
       gcol = mix(gcol.mul(gr.rgb), vec3(0.15, 0.22, 0.07).mul(dot(gcol, vec3(1.2)).add(0.35)), gr.w.mul(0.75));
     }
-    const alb = gcol.mul(metal.mul(0.45).oneMinus()).toVar('kitAlbedo');
+    const lampDay = step(0.05, glow).mul(float(1).sub(step(0.5, zone))).mul(smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))));      // [l1] unlit lamp glass by day: smoky and glossy, not a cream box
+    const alb = gcol.mul(metal.mul(0.45).oneMinus()).mul(float(1).sub(lampDay.mul(0.78))).toVar('kitAlbedo');
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
     m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
-    m.roughnessNode = orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough);
+    m.roughnessNode = (orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough)).mul(float(1).sub(lampDay.mul(0.7)));
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
     const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back
@@ -4470,7 +4472,7 @@ function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y0, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
   World.colliders.push({ x: c[0], z: c[2], hx: Math.abs(x1 - x0) / 2 * sx, hz: Math.abs(z1 - z0) / 2 * sz, ax: M[0] / sx, az: M[2] / sx, bx: M[8] / sz, bz: M[10] / sz, y0: c[1], y1: c[1] + (y1 - y0) });
 }
-function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]), o = { x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }; if (TEST && TEST.colstack && Math.hypot(o.x, o.z) < 1.5) o.stk = new Error().stack.split('\n').slice(2, 6).join(' < '); World.colliders.push(o); }          // [fx1] --opt colstack=1 records where an origin collider came from
+function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]), o = { x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }; if (TEST && TEST.colstack && (TEST.colstack === 2 || Math.hypot(o.x, o.z) < 1.5)) o.stk = new Error().stack.split('\n').slice(2, 6).join(' < '); World.colliders.push(o); }          // [fx1] --opt colstack=1 records where an origin collider came from
 const flick = (t, s) => 0.86 + 0.09 * Math.sin(t * 11.3 + s * 7.1) + 0.07 * Math.sin(t * 23.7 + s * 3.3) + 0.05 * Math.sin(t * 5.1 + s);
 const LIGHT_KINDS = {
   fire: (l, e) => flick(e.time, l.seed),
@@ -4675,7 +4677,7 @@ const Props = {
     m.mat(MAT.CLOTH, col, 0.9); const e = 0.3;      // Build 42: faded canvas, sagging between the poles, with a patch; one stall is plain cloth
     { const sg = 0.1, xm = 0; m.quad2([-w / 2 - e, 2.56, d / 2 + 0.12], [-w / 2 - e, 1.98, -d / 2 - e], [xm, 1.98 - sg, -d / 2 - e], [xm, 2.56 - sg, d / 2 + 0.12], 0, 0, (w / 2 + e) / 0.9, 2.2);
       m.quad2([xm, 2.56 - sg, d / 2 + 0.12], [xm, 1.98 - sg, -d / 2 - e], [w / 2 + e, 1.98, -d / 2 - e], [w / 2 + e, 2.56, d / 2 + 0.12], 0, 0, (w / 2 + e) / 0.9, 2.2);
-      m.mat(MAT.CLOTH, [col[0] * 0.8 + 0.12, col[1] * 0.8 + 0.1, col[2] * 0.8 + 0.06], 0.4); m.quad2([0.35, 2.43 - sg, 0.2], [0.35, 2.14 - sg, -0.35], [0.75, 2.14 - sg, -0.35], [0.75, 2.43 - sg, 0.2]); m.mat(MAT.CLOTH, col, 0.9); }
+      m.mat(MAT.CLOTH, [col[0] * 0.9 + 0.04, col[1] * 0.88 + 0.035, col[2] * 0.85 + 0.025], 0.4); m.quad2([0.35, 2.43 - sg, 0.2], [0.35, 2.14 - sg, -0.35], [0.75, 2.14 - sg, -0.35], [0.75, 2.43 - sg, 0.2]); m.mat(MAT.CLOTH, col, 0.9); }
     m.quad2([-w / 2 - e, 1.98, -d / 2 - e], [-w / 2 - e, 1.78, -d / 2 - e - 0.02], [w / 2 + e, 1.78, -d / 2 - e - 0.02], [w / 2 + e, 1.98, -d / 2 - e], 0, 0, (w + 2 * e) / 0.9, 0.3);
     if (goods) goods(0.80);
     addBoxCollider(m, -w / 2, -d / 2, w / 2, d / 2 - 0.3, 0, 1);
@@ -5149,7 +5151,7 @@ function kitShellPass(c, pass) {
   if (X) for (const l of c.kDoorLamps) {
     if (site.infill && typeof INFS !== 'undefined' && INFS.mats) {          // a small generated bracket lantern instead of the 2800-triangle kit lantern
       const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), q = KH.xf(l.F, l.u, 2.15, 0.1, 1, 0), p0 = new THREE.Vector3(0, -0.1, 0.42).applyMatrix4(q), p = [p0.x, p0.y, p0.z];
-      b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
+      b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 2.2 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
     }
     add(l.F, 'Lantern_Wall', l.u, l.v, 0.03, 0.8, { zone: 0, skyVis: 1, lit: 1 });
     const lp = Kit.lights('Lantern_Wall')[0] || [0, 0.53, 0.76], v = new THREE.Vector3(lp[0] * 0.8, lp[1] * 0.8, lp[2] * 0.8).applyMatrix4(KH.xf(l.F, l.u, l.v, 0.03)), p = [v.x, v.y, v.z];
@@ -5185,7 +5187,7 @@ const SCANR = {
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
   Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
-  Barrel: { n: ['wine_barrel_01', 'wooden_barrels_01_a'], fit: 'xz', one: 1 },
+  Barrel: { n: ['wine_barrel_01', 'wooden_barrels_01_a'], fit: 'xz', one: 1, inOnly: 1 },
   Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' }, Bottle_1: { n: ['ceramic_vase_04'], fit: 'contain' },
   Table_Plate: { n: ['carved_wooden_plate'], fit: 'contain' },
   Candle_1: { n: ['wooden_candlestick'], fit: 'contain', mul: 1.25 }, Candle_2: { n: ['wooden_candlestick'], fit: 'contain' },
@@ -5206,6 +5208,7 @@ function kplace(m, name, x, y, z, s, ry) {
   const base = new THREE.Matrix4().fromArray(m.m), E = scanOn() ? SCANR[name] : null, P = Kit.pieces[name];
   if (!E || !P) { if (scanOn() && SCAN_FLAT[name]) { const q = Kit.pieces[name]; if (q) return { name, M: KH.xf(base, x, y + (q.max[1] - q.min[1]) * 0.5 * (typeof s === 'number' ? s : s[1]), z, s, ry) }; } return { name, M: KH.xf(base, x, y, z, s, ry) }; }
   if (E.skip) return null;
+  if (E.inOnly && !(m.m1 | 0)) return { name, M: KH.xf(base, x, y, z, s, ry) };       // [fx1] a scanned barrel is 1957 triangles: out in the street the painted kit barrel (654) does
   const sv = s === undefined ? [1, 1, 1] : typeof s === 'number' ? [s, s, s] : s, W = [P.max[0] - P.min[0], P.max[1] - P.min[1], P.max[2] - P.min[2]];
   const tw = Math.abs(W[0] * sv[0]) * (E.box ? E.box[0] : 1), th = Math.abs(W[1] * sv[1]) * (E.box ? E.box[1] : 1), td = Math.abs(W[2] * sv[2]) * (E.box ? E.box[2] : 1);
   const tcx = (P.min[0] + P.max[0]) / 2 * sv[0], tcz = (P.min[2] + P.max[2]) / 2 * sv[2], tby = P.min[1] * sv[1];
@@ -8932,8 +8935,13 @@ Bake.interior = function (P) {
     const L = P.lv[it.k]; if (!L) continue;
     const h = it.h || 0.5, y = L.y + 0.034; if (it.kind === 'floor' && h < 0.25 && (it.x1 - it.x0) * (it.z1 - it.z0) < 0.35) continue;
     const hearth = it.kind === 'hearth', A = hearth ? 0.7 : clamp(0.62 + h * 0.3, 0.66, 0.92), mg = hearth ? 0.7 : clamp(0.3 + h * 0.3, 0.34, 0.7);
-    const pad = 0.03, c = [[it.x0 + pad, it.z0 + pad], [it.x1 - pad, it.z0 + pad], [it.x1 - pad, it.z1 - pad], [it.x0 + pad, it.z1 - pad]].map(p => w2(p[0], p[1]));
-    const y3 = P.w2(0, y, 0)[1]; Bake.pool(m, y3, c, mg, A); Bake.stats.pools++;
+    const pad = 0.03, cp = [[it.x0 + pad, it.z0 + pad], [it.x1 - pad, it.z0 + pad], [it.x1 - pad, it.z1 - pad], [it.x0 + pad, it.z1 - pad]], rmm = P.rooms && P.rooms[it.room];
+    const bx0 = rmm ? rmm.x0 + 0.05 : -1e3, bx1 = rmm ? rmm.x1 - 0.05 : 1e3, bz0 = rmm ? rmm.z0 + 0.05 : -1e3, bz1 = rmm ? rmm.z1 - 0.05 : 1e3;      // a pool never crosses its room's wall
+    const y3 = P.w2(0, y, 0)[1], cxp = (it.x0 + it.x1) / 2, czp = (it.z0 + it.z1) / 2;
+    m.ao = A; const inner = cp.map(p => { const w = w2(p[0], p[1]); return m.vert(w[0], y3, w[1], 0, 1, 0, 0, 0); });
+    m.ao = 0; const outer = cp.map(p => { const dx = p[0] - cxp, dz = p[1] - czp, l = Math.hypot(dx, dz) || 1, qx = Math.min(bx1, Math.max(bx0, p[0] + dx / l * mg * 1.3)), qz = Math.min(bz1, Math.max(bz0, p[1] + dz / l * mg * 1.3)), w = w2(qx, qz); return m.vert(w[0], y3, w[1], 0, 1, 0, 0, 0); });
+    for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; m.tri(inner[i], outer[i], outer[j]); m.tri(inner[i], outer[j], inner[j]); }
+    m.tri(inner[0], inner[1], inner[2]); m.tri(inner[0], inner[2], inner[3]); m.flip = false; Bake.stats.pools++;
   }
   if (m.ni) cell.decal = m;
   // light shafts: two stacked quads from the pane down to the floor in front of it
@@ -8941,12 +8949,12 @@ Bake.interior = function (P) {
     for (const w of P.windows) {
       const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
       const og = wl.open.find(o => o.type === 'win' && o.pos === w.pos), gc = og && og.glass; if (gc) { sm.cr = Math.round(Math.min(1, 0.25 + gc[0]) * 255); sm.cg = Math.round(Math.min(1, 0.25 + gc[1]) * 255); sm.cb = Math.round(Math.min(1, 0.25 + gc[2]) * 255); } else { sm.cr = 255; sm.cg = 232; sm.cb = 190; }      // stained glass throws its own colour
-      const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, len = 3.4, fy = L.y + 0.05;
+      const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, fy = L.y + 0.05, rm = w.room, back = rm ? (hor ? (dz > 0 ? rm.z1 - wl.c : wl.c - rm.z0) : (dx > 0 ? rm.x1 - wl.c : wl.c - rm.x0)) : 3.6, len = Math.max(0.8, Math.min(3.4, back - 0.25)), side = rm ? (hor ? Math.min(w.pos - rm.x0, rm.x1 - w.pos) : Math.min(w.pos - rm.z0, rm.z1 - w.pos)) : 2;      // [l1] never longer or wider than its own room
       const at = (a, b, y) => P.w2(cx + dx * a + tx * b, y, cz + dz * a + tz * b);
       const quad = (v) => { const [p0, p1, p2, p3] = v; const a = sm.vert(p0[0], p0[1], p0[2], 0, 1, 0, 0, 0), b = sm.vert(p1[0], p1[1], p1[2], 0, 1, 0, 1, 0), c = sm.vert(p2[0], p2[1], p2[2], 0, 1, 0, 1, 1), d = sm.vert(p3[0], p3[1], p3[2], 0, 1, 0, 0, 1); sm.tri(a, b, c); sm.tri(a, c, d); sm.flip = false; };
-      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, 1.9, fy), at(len, -1.9, fy)]);        // u across (the wall's own direction), v from the pane to the floor
-      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, 1.4, fy + 0.5), at(len * 0.8, -1.4, fy + 0.5)]);        // a second, inner sheet gives the beam some depth
-      { const fp = L.y + 0.045, ws = (w.w || 1.0) * 0.5 + 0.35; sm.ao = 0.5; quad([at(0.35, -ws, fp), at(0.35, ws, fp), at(3.3, ws * 1.5, fp), at(3.3, -ws * 1.5, fp)]); sm.ao = 1; }      // the pool of window light on the floor
+      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, Math.min(1.9, side - 0.15), fy), at(len, -Math.min(1.9, side - 0.15), fy)]);        // u across (the wall's own direction), v from the pane to the floor
+      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, Math.min(1.4, side - 0.15), fy + 0.5), at(len * 0.8, -Math.min(1.4, side - 0.15), fy + 0.5)]);        // a second, inner sheet gives the beam some depth
+      { const fp = L.y + 0.045, ws = (w.w || 1.0) * 0.5 + 0.35; sm.ao = 0.5; quad([at(0.35, -Math.min(ws, side - 0.1), fp), at(0.35, Math.min(ws, side - 0.1), fp), at(Math.min(3.3, len), Math.min(ws * 1.5, side - 0.1), fp), at(Math.min(3.3, len), -Math.min(ws * 1.5, side - 0.1), fp)]); sm.ao = 1; }      // the pool of window light on the floor
     }
     if (sm.ni) cell.shaft = sm; }
   // windows: a pane centre, its inward direction on the floor plane (world), the reach and a strength by size
@@ -8998,13 +9006,15 @@ Bake.buildGround = function () {
   const GR = Bake.GR, S = GR.S, pos = [], al = [], sq = new Map(), t0 = performance.now();
   const gy = (x, z, h) => { let y = Terrain.y(x, z); const g = World.groundAt(x, z, h); if (isFinite(g) && g > y - 0.3 && g < h + 0.2) y = g; return y + 0.05; };
   const vert = (x, z, h, a) => { pos.push(x, gy(x, z, h), z); al.push(a); return al.length - 1; };
-  const tri = (a, b, c) => { const k = Math.floor((pos[a * 3] + pos[b * 3] + pos[c * 3]) / (3 * S)) + ',' + Math.floor((pos[a * 3 + 2] + pos[b * 3 + 2] + pos[c * 3 + 2]) / (3 * S)); let l = sq.get(k); if (!l) sq.set(k, l = { i: [], x: 0, z: 0 }); l.i.push(a, b, c); };
+  const tri = (a, b, c) => { const k = Math.floor((pos[a * 3] + pos[b * 3] + pos[c * 3]) / (3 * S)) + ',' + Math.floor((pos[a * 3 + 2] + pos[b * 3 + 2] + pos[c * 3 + 2]) / (3 * S)); let l = sq.get(k); if (!l) sq.set(k, l = { i: [], m: [], x: 0, z: 0 }); (minor ? l.m : l.i).push(a, b, c); };
+  let minor = false;
   for (const c of World.colliders) {
     if (Cells.inRegion(c.x) || Math.abs(c.x) > 190 || Math.abs(c.z) > 190) continue;
     const ty = Terrain.y(c.x, c.z), ht = c.y1 - c.y0; if (c.y0 > ty + 0.7 || ht < 0.35) continue;
+    minor = ht < 1.2 && !c.shade;      // low things (crates, benches, stones) only get their band near the camera
     const h = c.y0 + 0.9, A = ht > 1.2 ? 0.9 : 0.66, m = clamp(0.55 + 0.18 * ht, 0.7, 1.35);
     if (c.r !== undefined) {
-      if (c.r > 4) continue; const R = c.r + m * 0.9, n = 8, ring0 = [], ring1 = [];
+      if (c.r > 4) continue; const R = c.r + m * 0.9, n = c.r < 0.6 ? 6 : 8, ring0 = [], ring1 = [];
       for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); ring0.push(vert(c.x + ca * c.r * 0.85, c.z + sa * c.r * 0.85, h, A)); ring1.push(vert(c.x + ca * R, c.z + sa * R, h, 0)); }
       for (let i = 0; i < n; i++) { const j = (i + 1) % n; tri(ring0[i], ring1[i], ring1[j]); tri(ring0[i], ring1[j], ring0[j]); }
       continue;
@@ -9014,7 +9024,7 @@ Bake.buildGround = function () {
     const P = (lx, lz) => [cc.x + cc.ax * lx + cc.bx * lz, cc.z + cc.az * lx + cc.bz * lz], e = m * 0.55;
     // four sides, each a strip along its edge (a little longer than the edge so the corners are covered), inner edge dark, outer edge clear
     for (const [ux, uz, ox, oz, half, hl] of [[1, 0, 0, 1, cc.hx, cc.hz], [1, 0, 0, -1, cc.hx, cc.hz], [0, 1, 1, 0, cc.hz, cc.hx], [0, 1, -1, 0, cc.hz, cc.hx]]) {
-      const len = 2 * half + 2 * e, n = Math.max(1, Math.ceil(len / 2.4)); let pi = -1, po = -1;
+      const len = 2 * half + 2 * e, n = Math.max(1, Math.ceil(len / 3.4)); let pi = -1, po = -1;
       for (let k = 0; k <= n; k++) {
         const t = -half - e + len * k / n, endK = (k === 0 || k === n) ? 0.55 : 1, lx = ux ? t : ox * hl, lz = uz ? t : oz * hl;
         const pin = P(lx, lz), pout = P(lx + ox * m, lz + oz * m);
@@ -9025,9 +9035,20 @@ Bake.buildGround = function () {
     }
     if (c.shade) { const q = [P(-cc.hx, -cc.hz), P(cc.hx, -cc.hz), P(cc.hx, cc.hz), P(-cc.hx, cc.hz)].map(p => vert(p[0], p[1], h, A * 0.85)); tri(q[0], q[1], q[2]); tri(q[0], q[2], q[3]); }
   }
+  // roofed ground: whatever lies under a gallery deck, the roofed bridge or the passage goes dark, soft at the edges (a filled rectangle: dark inside, a fade over 0.9 m outside)
+  minor = false;
+  for (const cv of World.covers || []) {
+    const gm = 0.9, X0 = cv.x0, X1 = cv.x1, Z0 = cv.z0, Z1 = cv.z1, A = cv.dark ? 0.8 : 0.7, hh = (Terrain.y((X0 + X1) / 2, (Z0 + Z1) / 2)) + 1.0;
+    const nx = Math.max(1, Math.ceil((X1 - X0) / 3)), nz = Math.max(1, Math.ceil((Z1 - Z0) / 3)), grid = [];
+    for (let j = 0; j <= nz + 2; j++) { grid.push([]); for (let i = 0; i <= nx + 2; i++) {
+      const fx = i === 0 ? -gm : i === nx + 2 ? 1 : 0, fz = j === 0 ? -gm : j === nz + 2 ? 1 : 0, ii = Math.min(Math.max(i - 1, 0), nx), jj = Math.min(Math.max(j - 1, 0), nz);
+      const x = X0 + (X1 - X0) * ii / nx + (i === 0 ? -gm : i === nx + 2 ? gm : 0), z = Z0 + (Z1 - Z0) * jj / nz + (j === 0 ? -gm : j === nz + 2 ? gm : 0), edge = (i === 0 || i === nx + 2 || j === 0 || j === nz + 2);
+      grid[j].push(vert(x, z, hh, edge ? 0 : A)); } }
+    for (let j = 0; j < nz + 2; j++) for (let i = 0; i < nx + 2; i++) { const a = grid[j][i], b = grid[j][i + 1], c = grid[j + 1][i + 1], d = grid[j + 1][i]; tri(a, b, c); tri(a, c, d); }
+  }
   GR.pos = new Float32Array(pos); GR.tint = new Uint8Array(al.length * 4); for (let i = 0; i < al.length; i++) GR.tint[i * 4 + 3] = Math.round(al[i] * 255);
-  GR.sq = [...sq.entries()].map(([k, l]) => { const [a, b] = k.split(',').map(Number); return { x: (a + 0.5) * S, z: (b + 0.5) * S, idx: Uint32Array.from(l.i) }; });
-  GR.tris = GR.sq.reduce((s, q) => s + q.idx.length / 3, 0); GR.built = true; GR.ms = Math.round(performance.now() - t0);
+  GR.sq = [...sq.entries()].map(([k, l]) => { const [a, b] = k.split(',').map(Number); return { x: (a + 0.5) * S, z: (b + 0.5) * S, idx: Uint32Array.from(l.i), idm: Uint32Array.from(l.m) }; });
+  GR.tris = GR.sq.reduce((s, q) => s + (q.idx.length + q.idm.length) / 3, 0); GR.built = true; GR.ms = Math.round(performance.now() - t0);
 };
 Bake.groundUpdate = function (cam) {
   const GR = Bake.GR; if (!GR.built || !SC.scene) return;
@@ -9040,8 +9061,8 @@ Bake.groundUpdate = function (cam) {
   if (World.cell) return;
   if (Math.hypot(cam[0] - GR.last[0], cam[2] - GR.last[1]) < 4 && !GR.stale) return;
   GR.last = [cam[0], cam[2]]; GR.stale = false;
-  const reach = (R.q && R.q.houseFar ? Math.min(R.q.houseFar, 56) : 50) * 0.45 + 6; let n = 0;
-  for (const q of GR.sq) if (Math.hypot(q.x - cam[0], q.z - cam[2]) < reach + GR.S * 0.71 && n + q.idx.length <= GR.cur.length) { GR.cur.set(q.idx, n); n += q.idx.length; }
+  const reach = (R.q && R.q.houseFar ? Math.min(R.q.houseFar, 56) : 50) * 0.3 + 4; let n = 0;
+  for (const q of GR.sq) { const dq = Math.hypot(q.x - cam[0], q.z - cam[2]); if (dq < reach + GR.S * 0.71 && n + q.idx.length <= GR.cur.length) { GR.cur.set(q.idx, n); n += q.idx.length; } if (dq < 16 + GR.S * 0.71 && n + q.idm.length <= GR.cur.length) { GR.cur.set(q.idm, n); n += q.idm.length; } }
   GR.n = n; GR.geo.setDrawRange(0, n); GR.ia.clearUpdateRanges(); if (n) GR.ia.addUpdateRange(0, n); GR.ia.needsUpdate = true; GR.mesh.visible = n > 0;
 };
 
@@ -9484,7 +9505,7 @@ const W_ = 'MI_WoodTrim', C_ = 'MI_Trim_Cloth', DARKW = [0.62, 0.55, 0.5];
 // ── generated pieces (origin where they attach to the wall: x along the wall, y up, z out into the street) ──
 let _gn = 0;
 function genAwning(w, c1, c2, drop) {
-  c1 = c1.map(v => v * 0.74); c2 = c2.map(v => v * 0.7);          // [fx1] cloth that has hung in the weather for years: the stripes read as candy at full dye
+  const dd = (c, k) => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => (l + (v - l) * 0.75) * k); }; c1 = dd(c1, 0.44); c2 = dd(c2, 0.38);          // [fx1] cloth that has hung in the weather for years: the stripes read as candy at full dye
   const g = GP(), n = Math.max(2, Math.round(w / 0.3)), sw = (w - 0.1) / n, out = 1.45, dy = drop || 0.62;
   for (let i = 0; i < n; i++) {
     const x0 = -w / 2 + 0.05 + i * sw, x1 = x0 + sw, c = i % 2 ? c2 : c1;
@@ -9547,7 +9568,7 @@ function genBracketLantern() {          // wall bracket + small lantern, split s
   f.box(W_, -0.02, -0.02, 0, 0.02, 0.02, 0.42, [0.2, 0.19, 0.18]); f.beam(W_, [0, -0.3, 0.0], [0, -0.02, 0.34], 0.015, [0.2, 0.19, 0.18]);
   f.box(W_, -0.1, -0.2, 0.32, 0.1, -0.17, 0.52, [0.2, 0.19, 0.18]); f.box(W_, -0.12, -0.02, 0.3, 0.12, 0.02, 0.54, [0.2, 0.19, 0.18]);
   for (const sx of [-1, 1]) for (const sz of [0.32, 0.52]) f.box(W_, sx * 0.1 - 0.008, -0.2, sz - 0.008, sx * 0.1 + 0.008, 0.0, sz + 0.008, [0.2, 0.19, 0.18]);
-  gl.box(C_, -0.085, -0.17, 0.335, 0.085, -0.01, 0.505, [1.0, 0.68, 0.3], GPU.cloth);
+  gl.box(C_, -0.085, -0.17, 0.335, 0.085, -0.01, 0.505, [0.5, 0.32, 0.13], GPU.cloth);       // [fx1] half the albedo (a cream box in daylight), the glow doubled where it is used
   return [f.make('gen_lanf_' + (_gn++)), gl.make('gen_lang_' + (_gn++))];
 }
 function genStripCloth(w, h, cols) {       // a hanging cloth / banner with vertical stripes: origin at top centre, facing +z
@@ -9635,7 +9656,7 @@ function buildAlley() {
     }
     // wall lanterns beside the door
     const [lf, lg] = AL.lan || (AL.lan = genBracketLantern()), doorI = (a.layout || 'WD').indexOf('D');
-    for (const du of [-1.0, 1.0]) { const uc = doorI * 2 + 1 + du; if (uc < 0.3 || uc > w - 0.3) continue; addP(MS, lf, Ff, uc, 2.15, 0.1); addP(MS, lg, Ff, uc, 2.15, 0.1, 1, 0, { zone: 0, skyVis: 1, cast: false, glow: 2.2 });
+    for (const du of [-1.0, 1.0]) { const uc = doorI * 2 + 1 + du; if (uc < 0.3 || uc > w - 0.3) continue; addP(MS, lf, Ff, uc, 2.15, 0.1); addP(MS, lg, Ff, uc, 2.15, 0.1, 1, 0, { zone: 0, skyVis: 1, cast: false, glow: 4.4 });
       const p = new THREE.Vector3(uc, 2.05, 0.42).applyMatrix4(Ff), q = [p.x, p.y, p.z]; World.emitters.push({ type: 'lantern', p: q, zone: 0 }); if (AL.lanterns++ % 2 === 0) addLight(q, 9.5, [3.4, 1.9, 0.75], 0, 'lantern'); break; }
     AL.shops.push({ a, site, MS, F0, w, d, H, fl, Ytop, rise, zc });
     // collision: the shop's footprint, with a little off the front so the doorstep is a stand-in for the sill
@@ -10237,7 +10258,7 @@ function buildDress() {
   const stallKinds = ['greens', 'bread', 'cloth', 'pots', 'fish', 'meat'], stallCols = [[[0.28, 0.14, 0.12], [0.4, 0.37, 0.3]], [[0.13, 0.17, 0.24], [0.4, 0.37, 0.3]], [[0.18, 0.22, 0.13], [0.39, 0.36, 0.29]], [[0.31, 0.23, 0.12], [0.4, 0.37, 0.29]], [[0.23, 0.16, 0.15], [0.39, 0.36, 0.3]]];      // Build 42: faded madder, woad, moss, ochre on undyed linen (the canopy material brightens these about 1.6x)
   DRS.stalls = [];
   const placeStall = (x, z, face, kind) => {          // face: heading toward which the stall opens
-    const y = gy(x, z), name = dStall(kind, R, (sc => R() < 0.4 ? [sc[0], sc[0]] : sc)(R.pick(stallCols))), ry = face;
+    const y = gy(x, z), name = dStall(kind, R, (sc => (R() < 0.4 ? [sc[0], sc[0]] : sc).map(c => c.map(v => v * 0.34)))(R.pick(stallCols))), ry = face;
     add(name, x, y, z, 1.1, ry, false, DRS.stalls.length < 3 ? { es: true } : null);
     const fx = Math.sin(ry), fz = Math.cos(ry);
     claim(x, z, 1.6);
@@ -10317,7 +10338,7 @@ function buildDress() {
     // bracket lantern and sign beside the door
     const side = R() < 0.5 ? -1 : 1, w = wallAt(s, face, du + side * 1.15, 0.0), yL = s.y + 2.05 + R() * 0.45;
     const q = new THREE.Vector3(Math.sin(w.ry) * 0.38, 0, Math.cos(w.ry) * 0.38);
-    const M = dmat(lf, w.x, yL, w.z, 1, w.ry); ADD(lf, M, OUT, 0); ADD(lg, M, Object.assign({}, OUT, { glow: 2.2 }), 0);
+    const M = dmat(lf, w.x, yL, w.z, 1, w.ry); ADD(lf, M, OUT, 0); ADD(lg, M, Object.assign({}, OUT, { glow: 4.4 }), 0);
     const lp = [w.x + q.x, yL - 0.1, w.z + q.z]; World.emitters.push({ type: 'lantern', p: lp, zone: 0, halo: s.infill ? 0.4 : 0.7 }); if (DRS.lights++ < 5 && World.lights.length < 40) addLight(lp, 9, [3.0, 1.7, 0.7], 0, 'lantern');
     if (glyphs[s.id] || kind === 'inn') { const w2 = wallAt(s, face, du - side * 1.3, 0.0), sg = genSign(glyphs[s.id] || 'crest', [1.0, 0.8, 0.45]); add(sg, w2.x, s.y + 2.45 + R() * 0.3, w2.z, 1, w2.ry, false); }
   }
@@ -10656,7 +10677,7 @@ function infShell(B, h, lo) {
     const Ff = F0.front, nF = Math.max(1, Math.round(w / 2)), mF = w / nF;
     if (fl > 1 && h.boxes) for (let i = 0; i < nF; i++) if ((i + 1) % 2 === (h.par || 0)) B.add(R.pick(INFS.fb || (INFS.fb = [0, 1, 2].map(q => genFlowerBox(1.25, rng(90 + q))))), KH.xf(frames(1).front, (i + 0.5) * mF, 0.93, 0.26, 1, 0), OUT);
     const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), du = (Math.min(doorBay, nF - 1) + 0.5) * mF + (doorBay >= nF / 2 ? -1.0 : 1.0);
-    if (du > 0.3 && du < w - 0.3) { B.add(lf, KH.xf(Ff, du, 2.15, 0.1, 1, 0), OUT); B.add(lg, KH.xf(Ff, du, 2.15, 0.1, 1, 0), { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); }
+    if (du > 0.3 && du < w - 0.3) { B.add(lf, KH.xf(Ff, du, 2.15, 0.1, 1, 0), OUT); B.add(lg, KH.xf(Ff, du, 2.15, 0.1, 1, 0), { zone: 0, skyVis: 1, cast: false, glow: 2.2 }); }
     if (h.stairs && fl >= 2) {
       const sg = h.stairs, g = GP(), col = [0.34, 0.29, 0.25], zf = -d / 2, x0 = -w / 2 + 0.1, x1 = w / 2 - 0.1, dep = 1.0;
       g.box(W_, x0, H - 0.14, zf - dep, x1, H - 0.02, zf, col);                                       // gallery floor
@@ -11111,7 +11132,7 @@ function rtKit(bucket, touch) {
   K.box = (mat, c, tile, x0, y0, z0, x1, y1, z1, skip, ao) => { const m = M((x0 + x1) / 2, (z0 + z1) / 2); m.mat(mat, c, tile); if (ao !== undefined) m.ao = ao; m.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.max(x0, x1), y1, Math.max(z0, z1), skip || 0); m.ao = 1; return m; };
   K.beam = (p, q, w, h, c) => { const m = M((p[0] + q[0]) / 2, (p[2] + q[2]) / 2); m.mat(MAT.TIMBER, c || dark, 0.5); m.beam(p, q, w, h); };
   K.post = (x, z, y0, y1, w, nocol) => { const m = M(x, z); m.mat(MAT.TIMBER, dark, 0.5); m.cbox(x, y0, z, w || 0.18, y1 - y0, w || 0.18, 0); if (!nocol) addCircleCollider(m, x, z, (w || 0.18) * 0.62, y0, y1); };
-  K.deck = (x0, z0, x1, z1, y, c) => { K.box(MAT.PLANKS, c || wood, 0.55, x0, y - 0.16, z0, x1, y, z1, 0); lvFloor(Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y); };
+  K.deck = (x0, z0, x1, z1, y, c) => { (World.covers || (World.covers = [])).push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), y }); K.box(MAT.PLANKS, c || wood, 0.55, x0, y - 0.16, z0, x1, y, z1, 0); lvFloor(Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y); };
   // a rail along x at z (or along z at x when `alongZ`): two beams, a collider, posts every ~1.9 m
   K.rail = (a0, a1, c, y, alongZ, h) => {
     h = h || 1.0; const P = alongZ ? (u, v) => [v, u] : (u, v) => [u, v], n = Math.max(1, Math.round(Math.abs(a1 - a0) / 1.9));
@@ -11201,6 +11222,7 @@ function buildRoutes(bucket) {
     box(MAT.PLANKS, [0.42, 0.36, 0.3], 0.5, PM0, 2.9, PZ1, PM1, Yb, ZW, 0, 0.5);                                           // the slab over the passage (its top is the loft store's floor)
     for (let z = ZW - 0.5; z > PZ1; z -= 1.3) beam([PM0, 2.8, z], [PM1, 2.8, z], 0.2, 0.2, [0.42, 0.38, 0.35]);
     // lintel beams at both mouths
+    World.covers.push({ x0: PM0, z0: PZ1, x1: PM1, z1: ZW, y: 2.9 + g, dark: true });      // [l1] the passage floor is in the dark
     for (const z of [ZW - 0.04, PZ1 + 0.04]) { beam([PM0 - 0.1, 2.95, z], [PM1 + 0.1, 2.95, z], 0.26, 0.3); post(PM0 - 0.1, z, g, 3.0, 0.24, true); post(PM1 + 0.1, z, g, 3.0, 0.24, true); }
     // things in the passage: a barrel and a crate against the west wall, a handcart wheel; the lantern at the middle
     { const m = M(11.4, -19.8); m.push().T(PM0 + 0.45, g, -19.0); Props.barrel(m, 0.3, 0.8); m.pop(); m.push().T(PM1 - 0.45, g, -20.9).RY(0.3); Props.crate(m, 0.6); m.pop(); m.push().T(PM1 - 0.5, g, -18.2); Props.sack(m, 0.3); m.pop(); }
@@ -11915,7 +11937,7 @@ Trees.materials = function (sp) {
   const leaf = lambert({}, leafCol, cut(a.a), skyL);
   const wood = new THREE.MeshStandardNodeMaterial(); wood.positionNode = place({});
   { const N = normalize(varying(rotN())), alb = texture(sp.bark, uv()).rgb.mul(0.8); wood.colorNode = alb; wood.normalNode = transformNormalToView(N); wood.roughnessNode = float(0.95); wood.metalnessNode = float(0);
-    wood.emissiveNode = alb.mul(SH.hemi(N, float(0.75), float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.25)))); }
+    wood.emissiveNode = alb.mul(SH.hemi(N, float(0.75), float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.25))).add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)))); }      // [l1] shaded trunks keep a floor of sky and bounce
   // middle ring: wood and cards in one draw; wood takes the bark's average colour
   const tk = varying(attribute('tk', 'float')), barkC = vec3(sp.m.bark[0], sp.m.bark[1], sp.m.bark[2]).mul(vec3(sp.m.bark[0], sp.m.bark[1], sp.m.bark[2])).mul(0.8);
   const midCol = mix(leafCol, barkC, tk), midA = max(cut(a.a), tk);
@@ -14495,7 +14517,7 @@ for (const [id, line] of [['greta', 'The house on the south lane? Nobody’s liv
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 59';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 62';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -15263,7 +15285,7 @@ const Snd = {
     for (let i = 0; i < 64; i++) d[n - 1 - i] *= i / 64; S.buf.ks[key] = b; return b;
   },
   pluck(out, t, f, v, o) { const c = this.c, s = c.createBufferSource(), g = c.createGain(); o = o || {}; s.buffer = this.ks(f, o.dur || 1.6, o.bright === undefined ? 0.6 : o.bright); g.gain.value = v; s.connect(g); g.connect(out); s.start(t); return g; },
-  now() { return this.fakeNow !== undefined ? this.fakeNow : this.c.currentTime; },
+  now() { return this.fakeNow !== undefined ? this.fakeNow : (this.c ? this.c.currentTime : 0); },      // no audio context yet (before the first tap, or sound unavailable): the clock reads 0 and never throws (the lip-sync update calls this every frame)
   rnd(a, b) { return a + Math.random() * (b - a); },
   pick(a) { return a[Math.floor(Math.random() * a.length)]; },
 };
@@ -15898,12 +15920,17 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
     src.connect(g); src.start(K.now() + 0.02); const h = { src, g, t0: K.now(), dur: buf.duration, speaker }; src.onended = () => { if (V.cur === h) { V.cur = null; V.reveal(); } }; return h; };
   // a dialogue node was shown: returns true if the line is voiced. The speaker is an NPC object or id.
   K.say = function (npc, text) {
-    V.stop(); if (!K.set.voices || !K.ctx || K.off || !npc || !V.man) return false; const id = npc.id || npc, e = V.man.lines[V.keyOf(id, text)]; if (!e) { document.body.classList.remove('voiced'); return false; }
+    V.stop(); if (!K.set.voices || !K.ctx || K.off || !npc || !V.man) return false; const id = npc.id || npc, whole = V.man.lines[V.keyOf(id, text)];
+    // [voice parts] A remark put in front of a villager's own line (IX.SAY in 82b_interact.js joins them with a blank line) is recorded on its
+    // own: when the whole text has no file, the paragraphs that have one are played one after another. Before this, such a remark silenced the line.
+    const seq = whole ? [whole] : String(text).indexOf('\n\n') > 0 ? String(text).split('\n\n').map(t => V.man.lines[V.keyOf(id, t)]).filter(Boolean) : [];
+    if (!seq.length) { document.body.classList.remove('voiced'); return false; }
     const key = V.key = V.keyOf(id, text); V.wait = true; const box = document.getElementById('dopts'); if (box) box.classList.add('vwait'); document.body.classList.add('voiced'); document.body.classList.toggle('nosubs', !K.set.subs); V.waitT = K.now();
     const pos = npc.pos ? [npc.pos[0], npc.pos[1] + 1.55, npc.pos[2]] : null;
-    V.load(e.f).then(buf => { if (V.key !== key) return; if (!buf) { V.reveal(); document.body.classList.remove('voiced'); return; }
-      if (K.ctx.state !== 'running') { V.reveal(); return; }
-      const h = V.play(buf, id, pos, 1, { ref: 3, max: 40, dry: true }); if (!h) { V.reveal(); return; } V.cur = h; h.env = e.e; h.cues = e.c; /* [ch1] mouth-shape track for 49_chars.js */ V.lastPlayed = { speaker: id, file: e.f, text }; });
+    const run = (bufs, i) => { const h = V.play(bufs[i][0], id, pos, 1, { ref: 3, max: 40, dry: true }); if (!h) { V.reveal(); return; } V.cur = h; h.env = bufs[i][1].e; h.cues = bufs[i][1].c; /* [ch1] mouth-shape track for 49_chars.js */ V.lastPlayed = { speaker: id, file: bufs[i][1].f, text };
+      if (i + 1 < bufs.length) h.src.onended = () => { if (V.cur !== h) return; V.cur = null; if (V.key !== key) { V.reveal(); return; } V.wait = true; setTimeout(() => { if (V.key === key) run(bufs, i + 1); }, 260); }; };
+    Promise.all(seq.map(e => V.load(e.f))).then(got => { if (V.key !== key) return; const bufs = got.map((b, i) => [b, seq[i]]).filter(x => x[0]); if (!bufs.length) { V.reveal(); document.body.classList.remove('voiced'); return; }
+      if (K.ctx.state !== 'running') { V.reveal(); return; } run(bufs, 0); });
     // do not hold the choices hostage to a slow download
     setTimeout(() => { if (V.key === key && !V.cur) { V.reveal(); } }, 2500);
     return true; };
@@ -15912,6 +15939,9 @@ Snd.trims = Object.assign(Snd.trims, {"fs.cobble": 0.759, "fs.dirt": 0.794, "fs.
   function wrap() {
     if (V.wrapped || typeof showNode !== 'function' || typeof endTalk !== 'function') return; V.wrapped = true;
     const sn = showNode, et = endTalk;
+    // [voice overheard] talk you overhear is shown as a notice, '<b>Rowan</b>: “line”' (the night meeting in 82c_secrets.js): play its recording if there is one, one after another
+    if (typeof toast === 'function') { const ts = toast; toast = function (h) { const r = ts.apply(this, arguments); try { const m = /^<b>(\w+)<\/b>: “(.+)”$/.exec(String(h)), e = m && V.man && K.set.voices && K.ctx && !K.off && V.man.lines[V.keyOf(m[1].toLowerCase(), m[2])];
+      if (e) V.load(e.f).then(buf => { if (!buf || K.ctx.state !== 'running') return; const at = Math.max(K.now(), V.overT || 0); V.overT = at + buf.duration + 0.3; setTimeout(() => { if (!V.cur && !V.wait) V.play(buf, m[1].toLowerCase(), null, 0.8, { dry: true }); }, (at - K.now()) * 1000); }); } catch (e) { } return r; }; }
     showNode = function (n) { sn(n); try { if (n && UI.talk) { K.say(UI.talk, n.t); V.prefetch(UI.talk.id); } } catch (e) { } };
     endTalk = function () { try { V.stop(); document.body.classList.remove('voiced'); } catch (e) { } return et.apply(this, arguments); };
     const d = document.getElementById('dialog'); if (d) d.addEventListener('click', e => { if (V.wait || V.cur) { V.stop(); e.stopPropagation(); e.preventDefault(); } }, true);

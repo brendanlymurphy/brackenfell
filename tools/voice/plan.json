@@ -9,7 +9,8 @@
    "voice": "bm_george",
    "speed": 0.96,
    "pitch": 0,
-   "file": "cef1dff1f320b4.m4a"
+   "file": "cef1dff1f320b4.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "r3lxejgv0e",
@@ -20,7 +21,8 @@
    "voice": "bm_george",
    "speed": 0.96,
    "pitch": 0,
-   "file": "0d8b3969473812.m4a"
+   "file": "0d8b3969473812.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "g9z4jb498k",
@@ -31,7 +33,8 @@
    "voice": "bm_george",
    "speed": 0.96,
    "pitch": 0,
-   "file": "12960b5ddd378d.m4a"
+   "file": "12960b5ddd378d.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "gyak8wzjm7",
@@ -42,7 +45,8 @@
    "voice": "bm_george",
    "speed": 0.96,
    "pitch": 0,
-   "file": "15ebb3787bd272.m4a"
+   "file": "15ebb3787bd272.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "11sjjko3izi",
@@ -53,7 +57,8 @@
    "voice": "bm_george",
    "speed": 0.96,
    "pitch": 0,
-   "file": "03ee37be81bf93.m4a"
+   "file": "03ee37be81bf93.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "vcgqufshg1",
@@ -64,7 +69,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "e0f71024cc7884.m4a"
+   "file": "e0f71024cc7884.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "k7j3lxoipd",
@@ -75,7 +81,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "b4db948a735945.m4a"
+   "file": "b4db948a735945.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1dab23u4jr9",
@@ -86,7 +93,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "342580f5663041.m4a"
+   "file": "342580f5663041.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "h0yekodw49",
@@ -97,7 +105,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "75502c164fd47d.m4a"
+   "file": "75502c164fd47d.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "216jk9khg9h",
@@ -108,7 +117,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "2cce166f04941e.m4a"
+   "file": "2cce166f04941e.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "9pxt14yrzz",
@@ -119,7 +129,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "52874d5ef9fdfa.m4a"
+   "file": "52874d5ef9fdfa.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "8o9qqb4xoo",
@@ -130,7 +141,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "58aae654f4184f.m4a"
+   "file": "58aae654f4184f.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "2bdwpbpcjpu",
@@ -141,7 +153,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "c380378921cce5.m4a"
+   "file": "c380378921cce5.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "b95l7r8ox4",
@@ -152,7 +165,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "5b55cfbadbcd12.m4a"
+   "file": "5b55cfbadbcd12.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "sgx0y6y66t",
@@ -163,7 +177,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "210406958302bc.m4a"
+   "file": "210406958302bc.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "7vzgpof6ws",
@@ -174,7 +189,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "5976b3656b298e.m4a"
+   "file": "5976b3656b298e.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1ap3ciq51jp",
@@ -185,502 +201,8 @@
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "1f32ece024d348.m4a"
-  },
-  {
-   "key": "fk0x679dzv",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "Unless you’ve come to tell me where my hammer is, I’ve work to do. My best cross-peen, gone from the bench three days back. And that boy Tobin can’t look me in the eye.",
-   "say": "Unless you've come to tell me where my hammer is, I've work to do. My best cross-peen, gone from the bench three days back. And that boy Tobbin can't look me in the eye.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "3351bf60b13beb.m4a"
-  },
-  {
-   "key": "27k7kle5k0b",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "Hm. Start with the boy. He’s always underfoot in the square, when he should be at the bellows.",
-   "say": "Hm. Start with the boy. He's always underfoot in the square, when he should be at the bellows.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "21ccc1a76c17ec.m4a"
-  },
-  {
-   "key": "1hdfhmp40mj",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "That’s her! Where was she? The watchtower? I’ll tan his... no. No, I was a boy once, and that tower was a castle then too. Take this. I made it for no one in particular, and it seems that was you.",
-   "say": "That's her! Where was she? The watchtower? I'll tan his... no. No, I was a boy once, and that tower was a castle then too. Take this. I made it for no one in particular, and it seems that was you.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "3192b8c5f9fafd.m4a"
-  },
-  {
-   "key": "kjs5ipg2sq",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "She rings true again. Hear that? That’s the sound of a village with a working forge.",
-   "say": "She rings true again. Hear that? That's the sound of a village with a working forge.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "1367cb65bd7114.m4a"
-  },
-  {
-   "key": "2dzg5r0kv07",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "Find the boy. Tobin. Fair hair, guilty face.",
-   "say": "Find the boy. Tobbin. Fair hair, guilty face.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "1ede9551ae0057.m4a"
-  },
-  {
-   "key": "jcdrqiweje",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "The watchtower, he said? Up the crag past the chapel. Mind your footing.",
-   "say": "The watchtower, he said? Up the crag past the chapel. Mind your footing.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "c8a738cc5ea7db.m4a"
-  },
-  {
-   "key": "1xke31hngu1",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "Iron from the Greyspine, charcoal from the pine, water from the Stonewater. Everything in this valley was made within sight of it. That’s rarer than you’d think.",
-   "say": "Iron from the Greyspine, charcoal from the pine, water from the Stonewater. Everything in this valley was made within sight of it. That's rarer than you'd think.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "cc0ee8f6eb0143.m4a"
-  },
-  {
-   "key": "29xuul4zv7b",
-   "speaker": "maren",
-   "kind": "line",
-   "text": "Hm. Young eyes. Good. The frost came early and my stores are thin. I need frostcaps: pale blue, and they glow a little at dusk. They grow where it is cold and quiet. By the lake, at the forest’s edge, near old stones. Bring me five.",
-   "say": "Hm. Young eyes. Good. The frost came early and my stores are thin. I need frostcaps: pale blue, and they glow a little at dusk. They grow where it is cold and quiet. By the lake, at the forest's edge, near old stones. Bring me five.",
-   "voice": "bf_isabella",
-   "speed": 0.93,
-   "pitch": 0,
-   "file": "7796edd8003d92.m4a"
-  },
-  {
-   "key": "1crbi2f8qyf",
-   "speaker": "maren",
-   "kind": "line",
-   "text": "Five, and not one bruised! You have gentle hands. Take this tonic. It will keep the mountain chill from your bones.",
-   "say": "Five, and not one bruised! You have gentle hands. Take this tonic. It will keep the mountain chill from your bones.",
-   "voice": "bf_isabella",
-   "speed": 0.93,
-   "pitch": 0,
-   "file": "1d88a1fd4b1fd8.m4a"
-  },
-  {
-   "key": "mutpdkq8ym",
-   "speaker": "maren",
-   "kind": "line",
-   "text": "Sixty winters in this valley. I have buried more secrets in that garden than turnips.",
-   "say": "Sixty winters in this valley. I have buried more secrets in that garden than turnips.",
-   "voice": "bf_isabella",
-   "speed": 0.93,
-   "pitch": 0,
-   "file": "9ccd3d057e579d.m4a"
-  },
-  {
-   "key": "1yyu553ccv5",
-   "speaker": "maren",
-   "kind": "line",
-   "text": "Fevers, mostly. And grief, a little, though I don’t tell them that’s what’s in the tea.",
-   "say": "Fevers, mostly. And grief, a little, though I don't tell them that's what's in the tea.",
-   "voice": "bf_isabella",
-   "speed": 0.93,
-   "pitch": 0,
-   "file": "a91605f300cb6c.m4a"
-  },
-  {
-   "key": "ug2qls9q14",
-   "speaker": "aldous",
-   "kind": "line",
-   "text": "The peace of the Dawn upon you. Forgive the quiet. Our bell rope rotted through at midsummer, and I have neither the coin nor the knees to replace it. A village without its bell is a body without a voice.",
-   "say": "The peace of the Dawn upon you. Forgive the quiet. Our bell rope rotted through at midsummer, and I have neither the coin nor the knees to replace it. A village without its bell is a body without a voice.",
-   "voice": "bm_fable",
-   "speed": 0.94,
-   "pitch": 0,
-   "file": "76cf2181ccd99c.m4a"
-  },
-  {
-   "key": "19rhcz3lsyk",
-   "speaker": "aldous",
-   "kind": "line",
-   "text": "Would you? Marta keeps good hemp at her shop on the square. The Dawn remembers a kindness.",
-   "say": "Would you? Marta keeps good hemp at her shop on the square. The Dawn remembers a kindness.",
-   "voice": "bm_fable",
-   "speed": 0.94,
-   "pitch": 0,
-   "file": "eeee863e94befd.m4a"
-  },
-  {
-   "key": "2ezrfxmr36e",
-   "speaker": "aldous",
-   "kind": "line",
-   "text": "Hemp, and well laid! Give me one moment in the tower... there. It is done. Would you ring it? It ought to be a friend who rings it first.",
-   "say": "Hemp, and well laid! Give me one moment in the tower... there. It is done. Would you ring it? It ought to be a friend who rings it first.",
-   "voice": "bm_fable",
-   "speed": 0.94,
-   "pitch": 0,
-   "file": "fb712ec54ef77e.m4a"
-  },
-  {
-   "key": "10yox4347ib",
-   "speaker": "aldous",
-   "kind": "line",
-   "text": "Marta keeps good hemp rope at her shop on the square, east side.",
-   "say": "Marta keeps good hemp rope at her shop on the square, east side.",
-   "voice": "bm_fable",
-   "speed": 0.94,
-   "pitch": 0,
-   "file": "f4d5196669d449.m4a"
-  },
-  {
-   "key": "mg593sk6wq",
-   "speaker": "aldous",
-   "kind": "line",
-   "text": "The rope hangs under the tower, by the door. Pull, and let the valley hear.",
-   "say": "The rope hangs under the tower, by the door. Pull, and let the valley hear.",
-   "voice": "bm_fable",
-   "speed": 0.94,
-   "pitch": 0,
-   "file": "dccc033d4be1aa.m4a"
-  },
-  {
-   "key": "11bxoz1v3vk",
-   "speaker": "aldous",
-   "kind": "line",
-   "text": "Listen. The valley has its voice again.",
-   "say": "Listen. The valley has its voice again.",
-   "voice": "bm_fable",
-   "speed": 0.94,
-   "pitch": 0,
-   "file": "9e03b3544af977.m4a"
-  },
-  {
-   "key": "1d9jef826h7",
-   "speaker": "aldous",
-   "kind": "line",
-   "text": "Only that the night ends. Every night, without fail. We find that worth a small stone house and a bell.",
-   "say": "Only that the night ends. Every night, without fail. We find that worth a small stone house and a bell.",
-   "voice": "bm_fable",
-   "speed": 0.94,
-   "pitch": 0,
-   "file": "c268ec3cfa107a.m4a"
-  },
-  {
-   "key": "1k0ht5ysmen",
-   "speaker": "marta",
-   "kind": "line",
-   "text": "Quill’s Sundries. If I don’t have it, you don’t need it.",
-   "say": "Quill's Sundries. If I don't have it, you don't need it.",
-   "voice": "bf_alice",
-   "speed": 1,
-   "pitch": 0,
-   "file": "8fea5b26b1d2e4.m4a"
-  },
-  {
-   "key": "nafom1j2c7",
-   "speaker": "marta",
-   "kind": "line",
-   "text": "Thirty feet of the best. Don’t hang anything you can’t lift.",
-   "say": "Thirty feet of the best. Don't hang anything you can't lift.",
-   "voice": "bf_alice",
-   "speed": 1,
-   "pitch": 0,
-   "file": "953ce34651e7ab.m4a"
-  },
-  {
-   "key": "1mpvu61xt5u",
-   "speaker": "marta",
-   "kind": "line",
-   "text": "Baked this morning. Mostly.",
-   "say": "Baked this morning. Mostly.",
-   "voice": "bf_alice",
-   "speed": 1,
-   "pitch": 0,
-   "file": "9f58b71a07f132.m4a"
-  },
-  {
-   "key": "1cwebrn358g",
-   "speaker": "marta",
-   "kind": "line",
-   "text": "From Edda’s trees. Sweetest in the valley.",
-   "say": "From Edda's trees. Sweetest in the valley.",
-   "voice": "bf_alice",
-   "speed": 1,
-   "pitch": 0,
-   "file": "1b61cf46f43403.m4a"
-  },
-  {
-   "key": "24lbq91eepu",
-   "speaker": "marta",
-   "kind": "line",
-   "text": "I trade with the lowland caravans twice a year. The rest of the time I trade in gossip, and the price is always fair.",
-   "say": "I trade with the lowland caravans twice a year. The rest of the time I trade in gossip, and the price is always fair.",
-   "voice": "bf_alice",
-   "speed": 1,
-   "pitch": 0,
-   "file": "03fab578d7b68a.m4a"
-  },
-  {
-   "key": "5dh6d4vsk5",
-   "speaker": "rowan",
-   "kind": "line",
-   "text": "Brackenfell remembers its friends. Stay as long as you like. Stay for good, if the road will let you.",
-   "say": "Brackenfell remembers its friends. Stay as long as you like. Stay for good, if the road will let you.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "fd60c87b9d0fd4.m4a"
-  },
-  {
-   "key": "uogw2nkru2",
-   "speaker": "rowan",
-   "kind": "line",
-   "text": "The inn has its ale, the forge its hammer, Maren her remedies, and the bell its voice. Do you know how long it has been since Brackenfell was whole? We used to light a fire in the square at harvest’s end, and the whole valley would come. Light it tonight. You have earned the tinder.",
-   "say": "The inn has its ale, the forge its hammer, Marren her remedies, and the bell its voice. Do you know how long it has been since Brackenfell was whole? We used to light a fire in the square at harvest's end, and the whole valley would come. Light it tonight. You have earned the tinder.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "843bd170cb5b1c.m4a"
-  },
-  {
-   "key": "1oirh5qgi2g",
-   "speaker": "rowan",
-   "kind": "line",
-   "text": "Sit a while. An old man’s stories are all the entertainment this square can afford.",
-   "say": "Sit a while. An old man's stories are all the entertainment this square can afford.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "1d6ec7d5b7b262.m4a"
-  },
-  {
-   "key": "276ttln62gf",
-   "speaker": "rowan",
-   "kind": "line",
-   "text": "Before the bell there was the beacon on the crag, and before the beacon, only the stars. We have always found some way to say: here we are. Come and find us.",
-   "say": "Before the bell there was the beacon on the crag, and before the beacon, only the stars. We have always found some way to say: here we are. Come and find us.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "2146f42b089df5.m4a"
-  },
-  {
-   "key": "ulvjfjib2c",
-   "speaker": "rowan",
-   "kind": "line",
-   "text": "Begin with Greta at the inn. Everything in Brackenfell begins there.",
-   "say": "Begin with Gretta at the inn. Everything in Brackenfell begins there.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "46466c94adefcc.m4a"
-  },
-  {
-   "key": "w73r1f1h99",
-   "speaker": "rowan",
-   "kind": "line",
-   "text": "Safer than most. But there has been smoke in the pines north-west of the gate these three nights, and it is not Wren’s. Outlaws, come down off the passes before the snow. Hale cannot leave the gate, and I am too old to do more than worry. If you carry a blade and know its use, drive them off. Mind the big one.",
-   "say": "Safer than most. But there has been smoke in the pines north-west of the gate these three nights, and it is not Wren's. Outlaws, come down off the passes before the snow. Hale cannot leave the gate, and I am too old to do more than worry. If you carry a blade and know its use, drive them off. Mind the big one.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "e065cf80e7e2fc.m4a"
-  },
-  {
-   "key": "igpeib58bz",
-   "speaker": "rowan",
-   "kind": "line",
-   "text": "North-west of the gate, among the pines. You will see their rag on a pole before they see you, if you are careful. Eat before you go, and do not be too proud to run.",
-   "say": "North-west of the gate, among the pines. You will see their rag on a pole before they see you, if you are careful. Eat before you go, and do not be too proud to run.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "8d76c691d46fc8.m4a"
-  },
-  {
-   "key": "139aqtvg8xp",
-   "speaker": "rowan",
-   "kind": "line",
-   "text": "Then the children can pick berries at the wood’s edge again. This was my father’s, and it has hung on the wall long enough. Take it, with the village’s thanks.",
-   "say": "Then the children can pick berries at the wood's edge again. This was my father's, and it has hung on the wall long enough. Take it, with the village's thanks.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "0dd21c57316802.m4a"
-  },
-  {
-   "key": "1f1x9ffsnrl",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "Troubled me? They had my second-best tongs and a roll of files off the cart at the ford, a week gone. Their chief wears them on his belt like trophies. One ear, red beard. They camp west of the path up to the old watchtower. Bring my tools back and I’ll put a proper sword in your hand, not that kitchen iron.",
-   "say": "Troubled me? They had my second-best tongs and a roll of files off the cart at the ford, a week gone. Their chief wears them on his belt like trophies. One ear, red beard. They camp west of the path up to the old watchtower. Bring my tools back and I'll put a proper sword in your hand, not that kitchen iron.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "719058daf05649.m4a"
-  },
-  {
-   "key": "lywgfp9v1",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "Hah! Not a scratch on them. As promised: an arming sword, drawn out this spring and waiting for a hand. Keep the point low and your feet moving.",
-   "say": "Hah! Not a scratch on them. As promised: an arming sword, drawn out this spring and waiting for a hand. Keep the point low and your feet moving.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "c8096cb557593d.m4a"
-  },
-  {
-   "key": "6dvfxvjpzs",
-   "speaker": "hale",
-   "kind": "line",
-   "text": "There’s coin on the board for outlaws, and I’ll pay it myself. Five of them put down and the road is a road again. Two camps: one in the pines north-west of here, one under the old watchtower. Don’t take on more than you can see.",
-   "say": "There's coin on the board for outlaws, and I'll pay it myself. Five of them put down and the road is a road again. Two camps: one in the pines north-west of here, one under the old watchtower. Don't take on more than you can see.",
-   "voice": "bm_george",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "8e9bf5c52451eb.m4a"
-  },
-  {
-   "key": "15o62ny9k6u",
-   "speaker": "hale",
-   "kind": "line",
-   "text": "Five, by my count and yours. Paid in full. You’ve done the valley a turn, and I’ll not forget it.",
-   "say": "Five, by my count and yours. Paid in full. You've done the valley a turn, and I'll not forget it.",
-   "voice": "bm_george",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "0ba1e36d65cc2f.m4a"
-  },
-  {
-   "key": "z4j34x6sdy",
-   "speaker": "maren",
-   "kind": "line",
-   "text": "Twenty-four, child. Frostcaps do not pick themselves.",
-   "say": "Twenty-four, child. Frostcaps do not pick themselves.",
-   "voice": "bf_isabella",
-   "speed": 0.93,
-   "pitch": 0,
-   "file": "c8722956beb6c1.m4a"
-  },
-  {
-   "key": "1heeehtx71e",
-   "speaker": "maren",
-   "kind": "line",
-   "text": "Drink it when you bleed, not before. It is no use against foolishness.",
-   "say": "Drink it when you bleed, not before. It is no use against foolishness.",
-   "voice": "bf_isabella",
-   "speed": 0.93,
-   "pitch": 0,
-   "file": "e37545e891b647.m4a"
-  },
-  {
-   "key": "18322ap9kar",
-   "speaker": "maren",
-   "kind": "line",
-   "text": "Since you are the sort who walks: I have a tea I used to make from three herbs and my knees now refuse. Bogbean from the hermit’s pool, sunwort from the bee meadow, stonecrop from the old stones on the eastern hill. It is the only thing that lets Edda’s widow sleep.",
-   "say": "Since you are the sort who walks: I have a tea I used to make from three herbs and my knees now refuse. Bogbean from the hermit's pool, sunwort from the bee meadow, stonecrop from the old stones on the eastern hill. It is the only thing that lets Edda's widow sleep.",
-   "voice": "bf_isabella",
-   "speed": 0.93,
-   "pitch": 0,
-   "file": "016e84cae9c6e3.m4a"
-  },
-  {
-   "key": "11kwhgvpsnh",
-   "speaker": "maren",
-   "kind": "line",
-   "text": "All three. And the stonecrop still wet. Sit, sit. I will brew it now, and you shall have the first cup.",
-   "say": "All three. And the stonecrop still wet. Sit, sit. I will brew it now, and you shall have the first cup.",
-   "voice": "bf_isabella",
-   "speed": 0.93,
-   "pitch": 0,
-   "file": "df8d65700f1a2b.m4a"
-  },
-  {
-   "key": "ylh0nscynn",
-   "speaker": "rowan",
-   "kind": "line",
-   "text": "Where did you… that is Corwin’s cap. Hob’s brother went down the old mine after silver, a good while back. So. It is the end of a long hope. Thank you for bringing it home rather than leaving it to the damp.",
-   "say": "Where did you... that is Corwin's cap. Hob's brother went down the old mine after silver, a good while back. So. It is the end of a long hope. Thank you for bringing it home rather than leaving it to the damp.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "2bd6ed1ccd430a.m4a"
-  },
-  {
-   "key": "vc0whz8hcz",
-   "speaker": "rowan",
-   "kind": "line",
-   "text": "Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
-   "say": "Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "612b4e0aaaeaca.m4a"
-  },
-  {
-   "key": "21bynvkge9a",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "Sound work, that. Look after it and it will look after you.",
-   "say": "Sound work, that. Look after it and it will look after you.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "9b7b518fdb139c.m4a"
-  },
-  {
-   "key": "1gu7i49jxbx",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "Iron from the Greyspine, every piece. I don’t haggle.",
-   "say": "Iron from the Greyspine, every piece. I don't haggle.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "f98fa929821416.m4a"
-  },
-  {
-   "key": "19239pi9cby",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "Let’s see it, then.",
-   "say": "Let's see it, then.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "173d8a8780fa82.m4a"
-  },
-  {
-   "key": "d93x6g9q5w",
-   "speaker": "brandt",
-   "kind": "line",
-   "text": "You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.",
-   "say": "You've nothing I'd give coin for. Outlaws carry better than they deserve, mind.",
-   "voice": "bm_lewis",
-   "speed": 0.96,
-   "pitch": 0,
-   "file": "2412b0042e9fa9.m4a"
+   "file": "1f32ece024d348.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "pobgfr0ai4",
@@ -691,7 +213,8 @@
    "voice": "bm_george:0.5+am_onyx:0.5",
    "speed": 1,
    "pitch": 0,
-   "file": "1d595fc71431bb.m4a"
+   "file": "1d595fc71431bb.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "4btuwf3vm5",
@@ -702,7 +225,8 @@
    "voice": "bm_george:0.5+am_onyx:0.5",
    "speed": 1,
    "pitch": 0,
-   "file": "c209bfcdaa8bd5.m4a"
+   "file": "c209bfcdaa8bd5.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "z4gm0fwppw",
@@ -713,7 +237,92 @@
    "voice": "bm_george:0.5+am_onyx:0.5",
    "speed": 1,
    "pitch": 0,
-   "file": "49a6f6e415b23e.m4a"
+   "file": "49a6f6e415b23e.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "fk0x679dzv",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Unless you’ve come to tell me where my hammer is, I’ve work to do. My best cross-peen, gone from the bench three days back. And that boy Tobin can’t look me in the eye.",
+   "say": "Unless you've come to tell me where my hammer is, I've work to do. My best cross-peen, gone from the bench three days back. And that boy Tobbin can't look me in the eye.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "3351bf60b13beb.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "27k7kle5k0b",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Hm. Start with the boy. He’s always underfoot in the square, when he should be at the bellows.",
+   "say": "Hm. Start with the boy. He's always underfoot in the square, when he should be at the bellows.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "21ccc1a76c17ec.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1hdfhmp40mj",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "That’s her! Where was she? The watchtower? I’ll tan his... no. No, I was a boy once, and that tower was a castle then too. Take this. I made it for no one in particular, and it seems that was you.",
+   "say": "That's her! Where was she? The watchtower? I'll tan his... no. No, I was a boy once, and that tower was a castle then too. Take this. I made it for no one in particular, and it seems that was you.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "3192b8c5f9fafd.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "kjs5ipg2sq",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "She rings true again. Hear that? That’s the sound of a village with a working forge.",
+   "say": "She rings true again. Hear that? That's the sound of a village with a working forge.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "1367cb65bd7114.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "2dzg5r0kv07",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Find the boy. Tobin. Fair hair, guilty face.",
+   "say": "Find the boy. Tobbin. Fair hair, guilty face.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "1ede9551ae0057.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "jcdrqiweje",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "The watchtower, he said? Up the crag past the chapel. Mind your footing.",
+   "say": "The watchtower, he said? Up the crag past the chapel. Mind your footing.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "c8a738cc5ea7db.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1xke31hngu1",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Iron from the Greyspine, charcoal from the pine, water from the Stonewater. Everything in this valley was made within sight of it. That’s rarer than you’d think.",
+   "say": "Iron from the Greyspine, charcoal from the pine, water from the Stonewater. Everything in this valley was made within sight of it. That's rarer than you'd think.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "cc0ee8f6eb0143.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "23tfe1dp3lo",
@@ -724,7 +333,8 @@
    "voice": "am_puck:0.7+bm_daniel:0.3",
    "speed": 1.04,
    "pitch": 0,
-   "file": "8395cc5891e2f5.m4a"
+   "file": "8395cc5891e2f5.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1qi7cpalhnh",
@@ -735,7 +345,8 @@
    "voice": "am_puck:0.7+bm_daniel:0.3",
    "speed": 1.04,
    "pitch": 0,
-   "file": "9dead85a3fafca.m4a"
+   "file": "9dead85a3fafca.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "uwpvp8tckd",
@@ -746,7 +357,8 @@
    "voice": "am_puck:0.7+bm_daniel:0.3",
    "speed": 1.04,
    "pitch": 0,
-   "file": "a5b0f9d9947ef7.m4a"
+   "file": "a5b0f9d9947ef7.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1axiqrh8h6z",
@@ -757,7 +369,260 @@
    "voice": "am_puck:0.7+bm_daniel:0.3",
    "speed": 1.04,
    "pitch": 0,
-   "file": "b357a4b036d3df.m4a"
+   "file": "b357a4b036d3df.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "29xuul4zv7b",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "Hm. Young eyes. Good. The frost came early and my stores are thin. I need frostcaps: pale blue, and they glow a little at dusk. They grow where it is cold and quiet. By the lake, at the forest’s edge, near old stones. Bring me five.",
+   "say": "Hm. Young eyes. Good. The frost came early and my stores are thin. I need frostcaps: pale blue, and they glow a little at dusk. They grow where it is cold and quiet. By the lake, at the forest's edge, near old stones. Bring me five.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "7796edd8003d92.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1crbi2f8qyf",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "Five, and not one bruised! You have gentle hands. Take this tonic. It will keep the mountain chill from your bones.",
+   "say": "Five, and not one bruised! You have gentle hands. Take this tonic. It will keep the mountain chill from your bones.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "1d88a1fd4b1fd8.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "mutpdkq8ym",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "Sixty winters in this valley. I have buried more secrets in that garden than turnips.",
+   "say": "Sixty winters in this valley. I have buried more secrets in that garden than turnips.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "9ccd3d057e579d.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1yyu553ccv5",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "Fevers, mostly. And grief, a little, though I don’t tell them that’s what’s in the tea.",
+   "say": "Fevers, mostly. And grief, a little, though I don't tell them that's what's in the tea.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "a91605f300cb6c.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "ug2qls9q14",
+   "speaker": "aldous",
+   "kind": "line",
+   "text": "The peace of the Dawn upon you. Forgive the quiet. Our bell rope rotted through at midsummer, and I have neither the coin nor the knees to replace it. A village without its bell is a body without a voice.",
+   "say": "The peace of the Dawn upon you. Forgive the quiet. Our bell rope rotted through at midsummer, and I have neither the coin nor the knees to replace it. A village without its bell is a body without a voice.",
+   "voice": "bm_fable",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "76cf2181ccd99c.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "19rhcz3lsyk",
+   "speaker": "aldous",
+   "kind": "line",
+   "text": "Would you? Marta keeps good hemp at her shop on the square. The Dawn remembers a kindness.",
+   "say": "Would you? Marta keeps good hemp at her shop on the square. The Dawn remembers a kindness.",
+   "voice": "bm_fable",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "eeee863e94befd.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "2ezrfxmr36e",
+   "speaker": "aldous",
+   "kind": "line",
+   "text": "Hemp, and well laid! Give me one moment in the tower... there. It is done. Would you ring it? It ought to be a friend who rings it first.",
+   "say": "Hemp, and well laid! Give me one moment in the tower... there. It is done. Would you ring it? It ought to be a friend who rings it first.",
+   "voice": "bm_fable",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "fb712ec54ef77e.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "10yox4347ib",
+   "speaker": "aldous",
+   "kind": "line",
+   "text": "Marta keeps good hemp rope at her shop on the square, east side.",
+   "say": "Marta keeps good hemp rope at her shop on the square, east side.",
+   "voice": "bm_fable",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "f4d5196669d449.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "mg593sk6wq",
+   "speaker": "aldous",
+   "kind": "line",
+   "text": "The rope hangs under the tower, by the door. Pull, and let the valley hear.",
+   "say": "The rope hangs under the tower, by the door. Pull, and let the valley hear.",
+   "voice": "bm_fable",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "dccc033d4be1aa.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "11bxoz1v3vk",
+   "speaker": "aldous",
+   "kind": "line",
+   "text": "Listen. The valley has its voice again.",
+   "say": "Listen. The valley has its voice again.",
+   "voice": "bm_fable",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "9e03b3544af977.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1d9jef826h7",
+   "speaker": "aldous",
+   "kind": "line",
+   "text": "Only that the night ends. Every night, without fail. We find that worth a small stone house and a bell.",
+   "say": "Only that the night ends. Every night, without fail. We find that worth a small stone house and a bell.",
+   "voice": "bm_fable",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "c268ec3cfa107a.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1k0ht5ysmen",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "Quill’s Sundries. If I don’t have it, you don’t need it.",
+   "say": "Quill's Sundries. If I don't have it, you don't need it.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "8fea5b26b1d2e4.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "nafom1j2c7",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "Thirty feet of the best. Don’t hang anything you can’t lift.",
+   "say": "Thirty feet of the best. Don't hang anything you can't lift.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "953ce34651e7ab.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1mpvu61xt5u",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "Baked this morning. Mostly.",
+   "say": "Baked this morning. Mostly.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "9f58b71a07f132.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1cwebrn358g",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "From Edda’s trees. Sweetest in the valley.",
+   "say": "From Edda's trees. Sweetest in the valley.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "1b61cf46f43403.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "24lbq91eepu",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "I trade with the lowland caravans twice a year. The rest of the time I trade in gossip, and the price is always fair.",
+   "say": "I trade with the lowland caravans twice a year. The rest of the time I trade in gossip, and the price is always fair.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "03fab578d7b68a.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "5dh6d4vsk5",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Brackenfell remembers its friends. Stay as long as you like. Stay for good, if the road will let you.",
+   "say": "Brackenfell remembers its friends. Stay as long as you like. Stay for good, if the road will let you.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "fd60c87b9d0fd4.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "uogw2nkru2",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "The inn has its ale, the forge its hammer, Maren her remedies, and the bell its voice. Do you know how long it has been since Brackenfell was whole? We used to light a fire in the square at harvest’s end, and the whole valley would come. Light it tonight. You have earned the tinder.",
+   "say": "The inn has its ale, the forge its hammer, Marren her remedies, and the bell its voice. Do you know how long it has been since Brackenfell was whole? We used to light a fire in the square at harvest's end, and the whole valley would come. Light it tonight. You have earned the tinder.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "843bd170cb5b1c.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1oirh5qgi2g",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Sit a while. An old man’s stories are all the entertainment this square can afford.",
+   "say": "Sit a while. An old man's stories are all the entertainment this square can afford.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "1d6ec7d5b7b262.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "276ttln62gf",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Before the bell there was the beacon on the crag, and before the beacon, only the stars. We have always found some way to say: here we are. Come and find us.",
+   "say": "Before the bell there was the beacon on the crag, and before the beacon, only the stars. We have always found some way to say: here we are. Come and find us.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "2146f42b089df5.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "ulvjfjib2c",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Begin with Greta at the inn. Everything in Brackenfell begins there.",
+   "say": "Begin with Gretta at the inn. Everything in Brackenfell begins there.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "46466c94adefcc.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "16dpq1mkg83",
@@ -768,7 +633,8 @@
    "voice": "bf_emma:0.5+af_sarah:0.5",
    "speed": 0.97,
    "pitch": 0,
-   "file": "0f031bcb3f6201.m4a"
+   "file": "0f031bcb3f6201.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "cafa45uu6k",
@@ -779,7 +645,8 @@
    "voice": "bf_emma:0.5+af_sarah:0.5",
    "speed": 0.97,
    "pitch": 0,
-   "file": "d1b2da8fd7f19d.m4a"
+   "file": "d1b2da8fd7f19d.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1mxxq1zdqfk",
@@ -790,7 +657,8 @@
    "voice": "bm_lewis:0.5+am_fenrir:0.5",
    "speed": 0.94,
    "pitch": 0,
-   "file": "f5370f927137c2.m4a"
+   "file": "f5370f927137c2.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1omkq06smnr",
@@ -801,7 +669,8 @@
    "voice": "bm_lewis:0.5+am_fenrir:0.5",
    "speed": 0.94,
    "pitch": 0,
-   "file": "4bc5a5df39172e.m4a"
+   "file": "4bc5a5df39172e.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1u5vq2lzb4v",
@@ -812,7 +681,8 @@
    "voice": "bf_isabella:0.5+af_heart:0.5",
    "speed": 1.02,
    "pitch": 0,
-   "file": "5b19305b088dba.m4a"
+   "file": "5b19305b088dba.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "2429750s3hf",
@@ -823,7 +693,8 @@
    "voice": "bf_isabella:0.5+af_heart:0.5",
    "speed": 1.02,
    "pitch": 0,
-   "file": "665ba0505d20a0.m4a"
+   "file": "665ba0505d20a0.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "25itkwl5y53",
@@ -834,7 +705,8 @@
    "voice": "bf_isabella:0.5+af_heart:0.5",
    "speed": 1.02,
    "pitch": 0,
-   "file": "44498b26adff07.m4a"
+   "file": "44498b26adff07.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "11b3flq0u2b",
@@ -845,7 +717,8 @@
    "voice": "bf_alice:0.5+af_kore:0.5",
    "speed": 0.97,
    "pitch": 0,
-   "file": "50e19a250f4101.m4a"
+   "file": "50e19a250f4101.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "14a6bzgttnb",
@@ -856,7 +729,8 @@
    "voice": "bf_alice:0.5+af_kore:0.5",
    "speed": 0.97,
    "pitch": 0,
-   "file": "b4862a8e824efa.m4a"
+   "file": "b4862a8e824efa.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "n6x4mizfxs",
@@ -867,7 +741,8 @@
    "voice": "bf_alice:0.5+af_kore:0.5",
    "speed": 0.97,
    "pitch": 0,
-   "file": "39d34f941bd36d.m4a"
+   "file": "39d34f941bd36d.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "frx7gnrejx",
@@ -878,7 +753,8 @@
    "voice": "bf_lily:0.7+af_nicole:0.3",
    "speed": 1.04,
    "pitch": 0,
-   "file": "37723de2a64dcb.m4a"
+   "file": "37723de2a64dcb.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1neh2ksbgn3",
@@ -889,7 +765,8 @@
    "voice": "bf_lily:0.7+af_nicole:0.3",
    "speed": 1.04,
    "pitch": 0,
-   "file": "d675c6b945490a.m4a"
+   "file": "d675c6b945490a.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "cfdl8snqzw",
@@ -900,7 +777,8 @@
    "voice": "bm_daniel",
    "speed": 1,
    "pitch": 0,
-   "file": "cf2f14bb17fd1b.m4a"
+   "file": "cf2f14bb17fd1b.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1nmo6qz2d2z",
@@ -911,7 +789,8 @@
    "voice": "bm_daniel",
    "speed": 1,
    "pitch": 0,
-   "file": "194dd38592ca5b.m4a"
+   "file": "194dd38592ca5b.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1b5xrvv1p6n",
@@ -922,7 +801,8 @@
    "voice": "bf_lily:0.5+bf_emma:0.5",
    "speed": 1,
    "pitch": 0,
-   "file": "807a0edd29fb23.m4a"
+   "file": "807a0edd29fb23.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "11dtkj68kcv",
@@ -933,7 +813,8 @@
    "voice": "bf_lily:0.5+bf_emma:0.5",
    "speed": 1,
    "pitch": 0,
-   "file": "92d421d70fa271.m4a"
+   "file": "92d421d70fa271.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1qqdkfigsqp",
@@ -944,7 +825,8 @@
    "voice": "bm_daniel:0.5+am_michael:0.5",
    "speed": 1.02,
    "pitch": 0,
-   "file": "dcc1258d1f2079.m4a"
+   "file": "dcc1258d1f2079.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1stmbagpn8p",
@@ -955,7 +837,8 @@
    "voice": "bm_daniel:0.5+am_michael:0.5",
    "speed": 1.02,
    "pitch": 0,
-   "file": "ffda058d1ff284.m4a"
+   "file": "ffda058d1ff284.m4a",
+   "src": "80_game.js"
   },
   {
    "key": "1ziw79q6tzr",
@@ -966,7 +849,1124 @@
    "voice": "bm_daniel:0.5+am_michael:0.5",
    "speed": 1.02,
    "pitch": 0,
-   "file": "f2ce3134f7facb.m4a"
+   "file": "f2ce3134f7facb.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "w73r1f1h99",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Safer than most. But there has been smoke in the pines north-west of the gate these three nights, and it is not Wren’s. Outlaws, come down off the passes before the snow. Hale cannot leave the gate, and I am too old to do more than worry. If you carry a blade and know its use, drive them off. Mind the big one.",
+   "say": "Safer than most. But there has been smoke in the pines north-west of the gate these three nights, and it is not Wren's. Outlaws, come down off the passes before the snow. Hale cannot leave the gate, and I am too old to do more than worry. If you carry a blade and know its use, drive them off. Mind the big one.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "e065cf80e7e2fc.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "igpeib58bz",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "North-west of the gate, among the pines. You will see their rag on a pole before they see you, if you are careful. Eat before you go, and do not be too proud to run.",
+   "say": "North-west of the gate, among the pines. You will see their rag on a pole before they see you, if you are careful. Eat before you go, and do not be too proud to run.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "8d76c691d46fc8.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "139aqtvg8xp",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Then the children can pick berries at the wood’s edge again. This was my father’s, and it has hung on the wall long enough. Take it, with the village’s thanks.",
+   "say": "Then the children can pick berries at the wood's edge again. This was my father's, and it has hung on the wall long enough. Take it, with the village's thanks.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "0dd21c57316802.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1f1x9ffsnrl",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Troubled me? They had my second-best tongs and a roll of files off the cart at the ford, a week gone. Their chief wears them on his belt like trophies. One ear, red beard. They camp west of the path up to the old watchtower. Bring my tools back and I’ll put a proper sword in your hand, not that kitchen iron.",
+   "say": "Troubled me? They had my second-best tongs and a roll of files off the cart at the ford, a week gone. Their chief wears them on his belt like trophies. One ear, red beard. They camp west of the path up to the old watchtower. Bring my tools back and I'll put a proper sword in your hand, not that kitchen iron.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "719058daf05649.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "lywgfp9v1",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Hah! Not a scratch on them. As promised: an arming sword, drawn out this spring and waiting for a hand. Keep the point low and your feet moving.",
+   "say": "Hah! Not a scratch on them. As promised: an arming sword, drawn out this spring and waiting for a hand. Keep the point low and your feet moving.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "c8096cb557593d.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "6dvfxvjpzs",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "There’s coin on the board for outlaws, and I’ll pay it myself. Five of them put down and the road is a road again. Two camps: one in the pines north-west of here, one under the old watchtower. Don’t take on more than you can see.",
+   "say": "There's coin on the board for outlaws, and I'll pay it myself. Five of them put down and the road is a road again. Two camps: one in the pines north-west of here, one under the old watchtower. Don't take on more than you can see.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "8e9bf5c52451eb.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "15o62ny9k6u",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "Five, by my count and yours. Paid in full. You’ve done the valley a turn, and I’ll not forget it.",
+   "say": "Five, by my count and yours. Paid in full. You've done the valley a turn, and I'll not forget it.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "0ba1e36d65cc2f.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "z4j34x6sdy",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "Twenty-four, child. Frostcaps do not pick themselves.",
+   "say": "Twenty-four, child. Frostcaps do not pick themselves.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "c8722956beb6c1.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "1heeehtx71e",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "Drink it when you bleed, not before. It is no use against foolishness.",
+   "say": "Drink it when you bleed, not before. It is no use against foolishness.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "e37545e891b647.m4a",
+   "src": "80_game.js"
+  },
+  {
+   "key": "18322ap9kar",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "Since you are the sort who walks: I have a tea I used to make from three herbs and my knees now refuse. Bogbean from the hermit’s pool, sunwort from the bee meadow, stonecrop from the old stones on the eastern hill. It is the only thing that lets Edda’s widow sleep.",
+   "say": "Since you are the sort who walks: I have a tea I used to make from three herbs and my knees now refuse. Bogbean from the hermit's pool, sunwort from the bee meadow, stonecrop from the old stones on the eastern hill. It is the only thing that lets Edda's widow sleep.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "016e84cae9c6e3.m4a",
+   "src": "81_wilds_story.js"
+  },
+  {
+   "key": "11kwhgvpsnh",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "All three. And the stonecrop still wet. Sit, sit. I will brew it now, and you shall have the first cup.",
+   "say": "All three. And the stonecrop still wet. Sit, sit. I will brew it now, and you shall have the first cup.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "df8d65700f1a2b.m4a",
+   "src": "81_wilds_story.js"
+  },
+  {
+   "key": "ylh0nscynn",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Where did you… that is Corwin’s cap. Hob’s brother went down the old mine after silver, a good while back. So. It is the end of a long hope. Thank you for bringing it home rather than leaving it to the damp.",
+   "say": "Where did you... that is Corwin's cap. Hob's brother went down the old mine after silver, a good while back. So. It is the end of a long hope. Thank you for bringing it home rather than leaving it to the damp.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "2bd6ed1ccd430a.m4a",
+   "src": "81_wilds_story.js"
+  },
+  {
+   "key": "vc0whz8hcz",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
+   "say": "Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "612b4e0aaaeaca.m4a",
+   "src": "81_wilds_story.js"
+  },
+  {
+   "key": "2apknmbl3px",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "Finn pulled a man out of the lake at first light. He’s on a bier at the wharf, south end of the town. Go and look, if you’ve the stomach, before the gossips make a story of him.",
+   "say": "Finn pulled a man out of the lake at first light. He's on a bier at the wharf, south end of the town. Go and look, if you've the stomach, before the gossips make a story of him.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "f9eee06f51cd3c.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "1ebnlnl04ep",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "That’s Corwin’s hand. Alive, then, or he was. Let me see.\n\nBread. Fifty years of bread, in a cave on the shore. I barred that door and told myself it was to keep them out.",
+   "say": "That's Corwin's hand. Alive, then, or he was. Let me see. Bread. Fifty years of bread, in a cave on the shore. I barred that door and told myself it was to keep them out.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "1a21598c811f0b.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "1de70tvg2oa",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "That something went wrong below, before I wore this helmet. That Rowan went out to the shore every dawn and never said why. I didn’t ask. A man can keep a gate for thirty years that way.",
+   "say": "That something went wrong below, before I wore this helmet. That Rowan went out to the shore every dawn and never said why. I didn't ask. A man can keep a gate for thirty years that way.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "be1536f77bcc4d.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "29g0cxes29q",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "Not here. Rowan knows the way to the lake cave; he’s walked it with a pail more mornings than I’ve slept. Go and ask him, and don’t let him tell you it’s nothing.",
+   "say": "Not here. Rowan knows the way to the lake cave; he's walked it with a pail more mornings than I've slept. Go and ask him, and don't let him tell you it's nothing.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "40da4e336f0d16.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "181oh4o0bfk",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "Brass, and a number. OM fourteen: the Old Mine, Dunstan Pell. He dug under Corwin, a good while back.",
+   "say": "Brass, and a number. OM fourteen: the Old Mine, Dunstan Pell. He dug under Corwin, a good while back.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "fabc0a35980c63.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "72tzqr33v9",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "No. Dry as a bone inside and thin as a rake: he walked a long way on nothing, in the dark. That’s no lake’s work.",
+   "say": "No. Dry as a bone inside and thin as a rake: he walked a long way on nothing, in the dark. That's no lake's work.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "a6ee467b3972e4.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "z23l80zuho",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
+   "say": "The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "2a338a713008bc.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "2ayb9xm1i4i",
+   "speaker": "aldous",
+   "kind": "line",
+   "text": "There’s a vestment chest in the sacristy that I’ve never had the heart to open. The Sexton’s things are in it. The crypt gate under the nave has a lock to match.",
+   "say": "There's a vestment chest in the sacristy that I've never had the heart to open. The Sexton's things are in it. The crypt gate under the nave has a lock to match.",
+   "voice": "bm_fable",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "1477755dc2ca78.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "1nerq9b2pda",
+   "speaker": "finn",
+   "kind": "line",
+   "text": "First light, face down in the reeds. The lake gives drowned men back swollen. This one was thin as a rake and dry as kindling. Whatever he was, he walked to the water; he didn’t fall in.",
+   "say": "First light, face down in the reeds. The lake gives drowned men back swollen. This one was thin as a rake and dry as kindling. Whatever he was, he walked to the water; he didn't fall in.",
+   "voice": "bm_lewis:0.5+am_fenrir:0.5",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "30f11eaf707d4f.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "1107e3b2rn4",
+   "speaker": "pip",
+   "kind": "line",
+   "text": "A man under a sheet! Hale said not to look. I looked. He’s got silver in his teeth.",
+   "say": "A man under a sheet! Hale said not to look. I looked. He's got silver in his teeth.",
+   "voice": "bf_lily:0.7+af_nicole:0.3",
+   "speed": 1.04,
+   "pitch": 0,
+   "file": "bd077aa4f1de0b.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "1ytua3yx9sn",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "You’ve one already, dear. Don’t be greedy with light.",
+   "say": "You've one already, dear. Don't be greedy with light.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "cddcad30dd0d61.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "1ont219mj9a",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "Fill it before you go and mind the oil. Where you’re going, you’ll want it.",
+   "say": "Fill it before you go and mind the oil. Where you're going, you'll want it.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "ef82e6459c7441.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "iud2v1r1u4",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Sit down, you’re making me tired. ... Hale has read it, then. I thought he might. I thought it would be me they came for one day.\n\nThe cave on the lake shore. The cellar of the Hart. I’ll tell you the rest, but not on my feet, and not today.",
+   "say": "Sit down, you're making me tired. ... Hale has read it, then. I thought he might. I thought it would be me they came for one day. The cave on the lake shore. The cellar of the Hart. I'll tell you the rest, but not on my feet, and not today.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "8a5d95be5f7f6b.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "nmxl8x8g64",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "Good. That’s the end of it. This time.",
+   "say": "Good. That's the end of it. This time.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "d0b6ee3c577b92.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "1gwltfovtf",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "You haven’t the coin. Then it’s the cell. Come on.",
+   "say": "You haven't the coin. Then it's the cell. Come on.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "ec6d93ff3d855e.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "1p2axk6zy2z",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "Paid. Keep your hands in your pockets in future.",
+   "say": "Paid. Keep your hands in your pockets in future.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "29198cb76a8f45.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "1ci4vkqghk7",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "There’s no cell to hold you. Go on, then.",
+   "say": "There's no cell to hold you. Go on, then.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "a68eae1b2a37df.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "1397veq35sg",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "Three gold, love. Your purse says otherwise.",
+   "say": "Three gold, love. Your purse says otherwise.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "f0274f31b8d489.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "1kxoqxhhrjt",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "Eat it while it’s hot. I don’t do cold.",
+   "say": "Eat it while it's hot. I don't do cold.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "9070a023c52e53.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "zu3jl28nj4",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "Four gold, love, and I’ll not haggle with a purse that light.",
+   "say": "Four gold, love, and I'll not haggle with a purse that light.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "5150d1acb0bf7b.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "137g08vnkvw",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "Up the stairs, the bed by the window. Sleep till you’re done.",
+   "say": "Up the stairs, the bed by the window. Sleep till you're done.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "d6ad0a5ce16a4e.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "ad3wq2ep1e",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "That’s a fine blade. Don’t draw it in my square.",
+   "say": "That's a fine blade. Don't draw it in my square.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "2b308068452bc6.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "zw0n4yi8ub",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Good. It sits well in your hand. My work.",
+   "say": "Good. It sits well in your hand. My work.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "545f9c2c58ede3.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "115moyoy58d",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Where did you get that? That’s my dies, fifty years back. Old Mine steel.",
+   "say": "Where did you get that? That's my dies, fifty years back. Old Mine steel.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "d5307dfbe2a26c.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "2goo9kay442",
+   "speaker": "maren",
+   "kind": "line",
+   "text": "You’re bleeding on my floor. Sit.",
+   "say": "You're bleeding on my floor. Sit.",
+   "voice": "bf_isabella",
+   "speed": 0.93,
+   "pitch": 0,
+   "file": "e39ed793da5194.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "1kvksq1yqap",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "Off down a hole, love? I’ll keep the bed made.",
+   "say": "Off down a hole, love? I'll keep the bed made.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "fd9ac9ede97657.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "18rymfrg9ad",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "Odd thing to carry. I’ll not ask.",
+   "say": "Odd thing to carry. I'll not ask.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "823a5df843e05a.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "1j9nvtlp3js",
+   "speaker": "aldous",
+   "kind": "line",
+   "text": "The Dawn keep you. You look as though you have seen the dead.",
+   "say": "The Dawn keep you. You look as though you have seen the dead.",
+   "voice": "bm_fable",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "18d45b22e8d3e7.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "wmjyhppw8l",
+   "speaker": "finn",
+   "kind": "line",
+   "text": "Still thinking about that man, aren’t you. So am I.",
+   "say": "Still thinking about that man, aren't you. So am I.",
+   "voice": "bm_lewis:0.5+am_fenrir:0.5",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "7ecd13796ff95d.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "1t70ir9mvlh",
+   "speaker": "ivo",
+   "kind": "line",
+   "text": "A lantern by day. Either you’re lost, or you’re going somewhere I’d not.",
+   "say": "A lantern by day. Either you're lost, or you're going somewhere I'd not.",
+   "voice": "bm_daniel",
+   "speed": 1,
+   "pitch": 0,
+   "file": "41a2f484c45724.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "26eq232vxuy",
+   "speaker": "ivo",
+   "kind": "line",
+   "text": "Good. That’s the end of it. This time.",
+   "say": "Good. That's the end of it. This time.",
+   "voice": "bm_daniel",
+   "speed": 1,
+   "pitch": 0,
+   "file": "9cf74e04e46e24.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "kmak5fsge6",
+   "speaker": "ivo",
+   "kind": "line",
+   "text": "You haven’t the coin. Then it’s the cell. Come on.",
+   "say": "You haven't the coin. Then it's the cell. Come on.",
+   "voice": "bm_daniel",
+   "speed": 1,
+   "pitch": 0,
+   "file": "5a617215a7a592.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "11anh94gvh5",
+   "speaker": "ivo",
+   "kind": "line",
+   "text": "Paid. Keep your hands in your pockets in future.",
+   "say": "Paid. Keep your hands in your pockets in future.",
+   "voice": "bm_daniel",
+   "speed": 1,
+   "pitch": 0,
+   "file": "8a46683aa6c6f9.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "f6zmztyhyf",
+   "speaker": "ivo",
+   "kind": "line",
+   "text": "There’s no cell to hold you. Go on, then.",
+   "say": "There's no cell to hold you. Go on, then.",
+   "voice": "bm_daniel",
+   "speed": 1,
+   "pitch": 0,
+   "file": "ccfc8ce44e79c0.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "cqm6gra9ly",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "The bread was late twice this week.",
+   "say": "The bread was late twice this week.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "d85696cc291894.m4a",
+   "src": "82c_secrets.js"
+  },
+  {
+   "key": "1r2hq3mm8pl",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The new one has been asking about the mine door.",
+   "say": "The new one has been asking about the mine door.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "9279b33149b0be.m4a",
+   "src": "82c_secrets.js"
+  },
+  {
+   "key": "10kvi9ee0k2",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Then Hale is closer than I would like. Say nothing in the Hart.",
+   "say": "Then Hale is closer than I would like. Say nothing in the Hart.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "f5d0aed164f02a.m4a",
+   "src": "82c_secrets.js"
+  },
+  {
+   "key": "1webheuy3zv",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "And if they go down?",
+   "say": "And if they go down?",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "911d4469c28125.m4a",
+   "src": "82c_secrets.js"
+  },
+  {
+   "key": "1yttd7rxecq",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Then they find what Corwin found. Go. Go before the bell.",
+   "say": "Then they find what Corwin found. Go. Go before the bell.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "9695245356c2e1.m4a",
+   "src": "82c_secrets.js"
+  },
+  {
+   "key": "1awf0rd1u3f",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The house on the south lane? Nobody’s lived there in years. Pass the salt, love, and don’t ask me twice.",
+   "say": "The house on the south lane? Nobody's lived there in years. Pass the salt, love, and don't ask me twice.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "44be495ab59242.m4a",
+   "src": "82c_secrets.js"
+  },
+  {
+   "key": "x1x4kxwht4",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "Oh, that. I sell nothing to that house and I take nothing from it. Will you be wanting candles?",
+   "say": "Oh, that. I sell nothing to that house and I take nothing from it. Will you be wanting candles?",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "c59240f4d836ff.m4a",
+   "src": "82c_secrets.js"
+  },
+  {
+   "key": "pt9e8fh7wj",
+   "speaker": "finn",
+   "kind": "line",
+   "text": "Don’t look at the shutters. My father said never to look at the shutters.",
+   "say": "Don't look at the shutters. My father said never to look at the shutters.",
+   "voice": "bm_lewis:0.5+am_fenrir:0.5",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "fb9cb0ed1a9994.m4a",
+   "src": "82c_secrets.js"
+  },
+  {
+   "key": "e3k9i3fhc7",
+   "speaker": "aldous",
+   "kind": "line",
+   "text": "There are houses the Dawn will not name, child. That is one. Leave it to her.",
+   "say": "There are houses the Dawn will not name, child. That is one. Leave it to her.",
+   "voice": "bm_fable",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "0fc0071c7f5bb7.m4a",
+   "src": "82c_secrets.js"
+  },
+  {
+   "key": "21bynvkge9a",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Sound work, that. Look after it and it will look after you.",
+   "say": "Sound work, that. Look after it and it will look after you.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "9b7b518fdb139c.m4a",
+   "src": "93_inventory.js"
+  },
+  {
+   "key": "1gu7i49jxbx",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Iron from the Greyspine, every piece. I don’t haggle.",
+   "say": "Iron from the Greyspine, every piece. I don't haggle.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "f98fa929821416.m4a",
+   "src": "93_inventory.js"
+  },
+  {
+   "key": "19239pi9cby",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Let’s see it, then.",
+   "say": "Let's see it, then.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "173d8a8780fa82.m4a",
+   "src": "93_inventory.js"
+  },
+  {
+   "key": "d93x6g9q5w",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.",
+   "say": "You've nothing I'd give coin for. Outlaws carry better than they deserve, mind.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "2412b0042e9fa9.m4a",
+   "src": "93_inventory.js"
+  },
+  {
+   "key": "liqjsmrlxm",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "Let’s have a look, dear.",
+   "say": "Let's have a look, dear.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "a898270dc37717.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "220niu2hyx7",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "Whale oil. It stinks and it burns. Don’t spill it near the candles.",
+   "say": "Whale oil. It stinks and it burns. Don't spill it near the candles.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "a6b3cbadd6600a.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "1wdjefpa160",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Grey silver, never stamped. Aye, I can. Three bars and ninety gold, and the edge will outlast the blade. Mind, I’ll want to know where you had it.",
+   "say": "Grey silver, never stamped. Aye, I can. Three bars and ninety gold, and the edge will outlast the blade. Mind, I'll want to know where you had it.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "7fb727a4150ee4.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "2fkv6ic2ntf",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Done. Don’t draw it in the Hart.",
+   "say": "Done. Don't draw it in the Hart.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "c4c0650e7cc20f.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "11g5z7njagg",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "They say Tobin’s been up the Watch Bell more than the Watch has. A tin box, a lockpick, and a boy who will not say what he saw from the top.",
+   "say": "They say Tobbin's been up the Watch Bell more than the Watch has. A tin box, a lockpick, and a boy who will not say what he saw from the top.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "ffa5b26858bbfc.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "cielzsb3re",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "There’s a stone in the terrace wall below the Elder’s plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.",
+   "say": "There's a stone in the terrace wall below the Elder's plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "4b13fabb1575e4.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "1jchcxd9l76",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.",
+   "say": "The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "701bc7878afa9a.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "2gbeajsgyq9",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "Up on the Hart’s roof walk there’s a trunk under the eaves that nobody here owns. Greta says it came with the building.",
+   "say": "Up on the Hart's roof walk there's a trunk under the eaves that nobody here owns. Gretta says it came with the building.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "a7a8569f9770ce.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "56868rsroe",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The cellar wall in this very house, the east one: newer brick than the rest. Ask me no more, love.",
+   "say": "The cellar wall in this very house, the east one: newer brick than the rest. Ask me no more, love.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "4973afaeaee6d3.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "26pxy08a8ua",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.",
+   "say": "The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "0791ac118fed8c.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "wnnk8nmb3l",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "Lights behind the chapel after midnight, and two folk talking low who’d not thank you for listening. Stand off, if you’re bold. Don’t get close.",
+   "say": "Lights behind the chapel after midnight, and two folk talking low who'd not thank you for listening. Stand off, if you're bold. Don't get close.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "880b05659fcc0a.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "s8d3fkbuil",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The Magpie walks at dusk from the square to somewhere west of the weavers, same road each time. Nobody follows her. You’d have to be patient.",
+   "say": "The Magpie walks at dusk from the square to somewhere west of the weavers, same road each time. Nobody follows her. You'd have to be patient.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "c5cfd7b97df7be.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "af2n3o3ay6",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The shut house on the south lane. Don’t ask Marta. Don’t ask Finn. Ask nobody. Take a key, if you’ve one with a wren on it.",
+   "say": "The shut house on the south lane. Don't ask Marta. Don't ask Finn. Ask nobody. Take a key, if you've one with a wren on it.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "41ba368b7a1f28.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "13cfdaga0pf",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The mine door has been barred for fifty years. The Sexton kept the key, and old Sextons keep everything.",
+   "say": "The mine door has been barred for fifty years. The Sexton kept the key, and old Sextons keep everything.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "d3b920ed443cd4.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "2fkki8qyeyh",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "They say the Foreman had a strongbox down there and the only key hangs round his neck. Hung.",
+   "say": "They say the Foreman had a strongbox down there and the only key hangs round his neck. Hung.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "004f1bd7261dfc.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "md3eszsc20",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "A drowned man on the wharf, dry as bone. The wise folk are keeping their windows shut.",
+   "say": "A drowned man on the wharf, dry as bone. The wise folk are keeping their windows shut.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "46dab9dc0dfbb7.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "1biflrt5tbe",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "Hale cries on the last day of the month. Pip told me. Pip tells everybody.",
+   "say": "Hale cries on the last day of the month. Pip told me. Pip tells everybody.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "392158047cc36b.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "2dmg8s5w50g",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The Elder talks to the lake. Always has. Says it answers.",
+   "say": "The Elder talks to the lake. Always has. Says it answers.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "b4fc00c3458abd.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "223qj2sy74a",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "Nothing new, love. Same faces, same ale.",
+   "say": "Nothing new, love. Same faces, same ale.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "28dcb15552e8ed.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "8vt5ro07p6",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.",
+   "say": "You've nothing I'd give coin for. Outlaws carry better than they deserve, mind.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "122a3ad635c623.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "1gqgd3vpln9",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "The bread goes out at dawn. I carry it myself, and I am too old to be told it is a kindness.\n\nThe count stays kept. Sit. It will not hurt you to be counted.",
+   "say": "The bread goes out at dawn. I carry it myself, and I am too old to be told it is a kindness. The count stays kept. Sit. It will not hurt you to be counted.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "00e0df178bf7d9.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "1jvk5djojs6",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "It is quiet. I did not know quiet could be this loud.\n\nThey are asleep. Thank you. I could not have said the names. I tried.",
+   "say": "It is quiet. I did not know quiet could be this loud. They are asleep. Thank you. I could not have said the names. I tried.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "efead3ae64fcd8.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "106w0pqsmv7",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Sit. You will want it from the start, and you will not like where it starts.\n\nFifty years back my father sold the last seam of the Old Mine to a Crown assayer, and the silver was singing, and he would not share it. He sealed the adit with twelve of his own shift still below. They did not die as you or I do. They stayed. They kept digging.",
+   "say": "Sit. You will want it from the start, and you will not like where it starts. Fifty years back my father sold the last seam of the Old Mine to a Crown assayer, and the silver was singing, and he would not share it. He sealed the adit with twelve of his own shift still below. They did not die as you or I do. They stayed. They kept digging.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "31b0cd2328b12f.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "25j1h4yam0s",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "It was never for their bellies. It was so that someone remembered them. Every dawn a loaf and a pail, left on the slab in the cave on the shore, and the count said aloud: one to twelve. As long as the count is kept they stay men. If it is not, the song takes what is left of the men in them, and they come up.\n\nI carried it thirty years.",
+   "say": "It was never for their bellies. It was so that someone remembered them. Every dawn a loaf and a pail, left on the slab in the cave on the shore, and the count said aloud: one to twelve. As long as the count is kept they stay men. If it is not, the song takes what is left of the men in them, and they come up. I carried it thirty years.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "cc3df26cdba9fb.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "2eaz1519jnp",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "I stopped it. Three weeks ago. Greta has found a buyer who pays double and wants the silver by the barrow, and I am old, and I thought: let it end with me. Pell walked out by the lake cave to ask why the bread had not come. You saw what the lake does to a man who has been so long under.",
+   "say": "I stopped it. Three weeks ago. Gretta has found a buyer who pays double and wants the silver by the barrow, and I am old, and I thought: let it end with me. Pell walked out by the lake cave to ask why the bread had not come. You saw what the lake does to a man who has been so long under.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "4769cffaa8a612.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "1l3dkb3f52u",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Go the way Greta’s people ran the silver out. The Hart’s cellar has a wall that was never the end of the cellar: the fresh brick on the east side. A tunnel runs from there under the town to the lake cave.\n\nThe twelve stand by the slab. You will know what to do when you see them. I never did.",
+   "say": "Go the way Gretta's people ran the silver out. The Hart's cellar has a wall that was never the end of the cellar: the fresh brick on the east side. A tunnel runs from there under the town to the lake cave. The twelve stand by the slab. You will know what to do when you see them. I never did.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "99c4bcb51241ff.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "1qkos1j3oa8",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Go on. The Hart. The east cellar wall, newer brick than the rest. Take bread. Take a light. Take your courage in both hands, because it has been a long while since anyone went that way and meant well.",
+   "say": "Go on. The Hart. The east cellar wall, newer brick than the rest. Take bread. Take a light. Take your courage in both hands, because it has been a long while since anyone went that way and meant well.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "c6e4a51f62ac0f.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "ii99xbx3r9",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "I’ll not charge you for the stew this once, love. Don’t make it a habit.",
+   "say": "I'll not charge you for the stew this once, love. Don't make it a habit.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "92c61895a92497.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "an8lz0jzkd",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The Hart’s never been so full. People want to be near other people, after.",
+   "say": "The Hart's never been so full. People want to be near other people, after.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "d76b0e2fc2c465.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "z3x3f6o36s",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "The count is kept and the gate is quiet. I’ll sleep tonight with the key out of my hand.",
+   "say": "The count is kept and the gate is quiet. I'll sleep tonight with the key out of my hand.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "a3557b708c1979.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "a49wxvtd4j",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "I’ve left the old door unbarred. Nothing in it wants out now.",
+   "say": "I've left the old door unbarred. Nothing in it wants out now.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "686a268fccfc3f.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "2gmlr6win0t",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Silver for a blade? Aye, I’ll work it now. It’s only metal again.",
+   "say": "Silver for a blade? Aye, I'll work it now. It's only metal again.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "bf82ef8a84e042.m4a",
+   "src": "94d_act2.js"
+  },
+  {
+   "key": "26hhydvxy55",
+   "speaker": "finn",
+   "kind": "line",
+   "text": "Nobody’s come out of the lake since. I check every morning.",
+   "say": "Nobody's come out of the lake since. I check every morning.",
+   "voice": "bm_lewis:0.5+am_fenrir:0.5",
+   "speed": 0.94,
+   "pitch": 0,
+   "file": "3864b81dde6ada.m4a",
+   "src": "94d_act2.js"
   },
   {
    "key": "29mz2ylemtv",
@@ -1022,6 +2022,61 @@
    "speed": 0.96,
    "pitch": 0,
    "file": "3e584f2d5bc6fb.m4a"
+  },
+  {
+   "key": "1rd97hxdn6p",
+   "speaker": "ivo",
+   "kind": "bark",
+   "text": "Fair morning.",
+   "say": "Fair morning.",
+   "voice": "bm_daniel",
+   "speed": 1,
+   "pitch": 0,
+   "file": "99df0906499b06.m4a"
+  },
+  {
+   "key": "8shbt3viwz",
+   "speaker": "ivo",
+   "kind": "bark",
+   "text": "All quiet, so far.",
+   "say": "All quiet, so far.",
+   "voice": "bm_daniel",
+   "speed": 1,
+   "pitch": 0,
+   "file": "2dc4252c7aefca.m4a"
+  },
+  {
+   "key": "mbe209nnrj",
+   "speaker": "ivo",
+   "kind": "bark",
+   "text": "Evening, friend.",
+   "say": "Evening, friend.",
+   "voice": "bm_daniel",
+   "speed": 1,
+   "pitch": 0,
+   "file": "56bd7c73b33600.m4a"
+  },
+  {
+   "key": "eoa67l6hdt",
+   "speaker": "ivo",
+   "kind": "bark",
+   "text": "Keep to the lamplight.",
+   "say": "Keep to the lamplight.",
+   "voice": "bm_daniel",
+   "speed": 1,
+   "pitch": 0,
+   "file": "7fd92dbae4b640.m4a"
+  },
+  {
+   "key": "1o57dj5gz7u",
+   "speaker": "ivo",
+   "kind": "bark",
+   "text": "Easy now. Sheathe it.",
+   "say": "Easy now. Sheathe it.",
+   "voice": "bm_daniel",
+   "speed": 1,
+   "pitch": 0,
+   "file": "2472abce36569d.m4a"
   },
   {
    "key": "17c2bu1l9c5",
@@ -1132,6 +2187,61 @@
    "speed": 0.96,
    "pitch": 0,
    "file": "213558cf27024c.m4a"
+  },
+  {
+   "key": "21bbq5dqw8b",
+   "speaker": "tobin",
+   "kind": "bark",
+   "text": "Hello!",
+   "say": "Hello!",
+   "voice": "am_puck:0.7+bm_daniel:0.3",
+   "speed": 1.04,
+   "pitch": 0,
+   "file": "5c7442e523cc30.m4a"
+  },
+  {
+   "key": "15n8pa4u1g8",
+   "speaker": "tobin",
+   "kind": "bark",
+   "text": "Race you to the well!",
+   "say": "Race you to the well!",
+   "voice": "am_puck:0.7+bm_daniel:0.3",
+   "speed": 1.04,
+   "pitch": 0,
+   "file": "8ed1fad94fdd95.m4a"
+  },
+  {
+   "key": "1kjcplxv896",
+   "speaker": "tobin",
+   "kind": "bark",
+   "text": "I'm not tired.",
+   "say": "I'm not tired.",
+   "voice": "am_puck:0.7+bm_daniel:0.3",
+   "speed": 1.04,
+   "pitch": 0,
+   "file": "822b4faa377433.m4a"
+  },
+  {
+   "key": "27zwuyzehdh",
+   "speaker": "tobin",
+   "kind": "bark",
+   "text": "Shh! I'm supposed to be in bed.",
+   "say": "Shh! I'm supposed to be in bed.",
+   "voice": "am_puck:0.7+bm_daniel:0.3",
+   "speed": 1.04,
+   "pitch": 0,
+   "file": "61794cac9ccc65.m4a"
+  },
+  {
+   "key": "zykjr8al79",
+   "speaker": "tobin",
+   "kind": "bark",
+   "text": "Whoa! Is that real?",
+   "say": "Whoa! Is that real?",
+   "voice": "am_puck:0.7+bm_daniel:0.3",
+   "speed": 1.04,
+   "pitch": 0,
+   "file": "7a27ec30e26e2c.m4a"
   },
   {
    "key": "25b58s7q0nc",
@@ -1297,171 +2407,6 @@
    "speed": 0.93,
    "pitch": 0,
    "file": "c27f2e9300ecc8.m4a"
-  },
-  {
-   "key": "ldfqmcsxts",
-   "speaker": "rowan",
-   "kind": "bark",
-   "text": "A good morning to you.",
-   "say": "A good morning to you.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "874aaff29d1d07.m4a"
-  },
-  {
-   "key": "x5dgqzwahq",
-   "speaker": "rowan",
-   "kind": "bark",
-   "text": "Sit a while.",
-   "say": "Sit a while.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "a29715dd7a3ea0.m4a"
-  },
-  {
-   "key": "1d87b26hftr",
-   "speaker": "rowan",
-   "kind": "bark",
-   "text": "The light is going.",
-   "say": "The light is going.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "6420d542042b5d.m4a"
-  },
-  {
-   "key": "bmmaz3n9go",
-   "speaker": "rowan",
-   "kind": "bark",
-   "text": "Good night.",
-   "say": "Good night.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "c7ead9938d68a5.m4a"
-  },
-  {
-   "key": "275rdba21cf",
-   "speaker": "rowan",
-   "kind": "bark",
-   "text": "Violence is a poor answer.",
-   "say": "Violence is a poor answer.",
-   "voice": "bm_fable:0.5+bm_george:0.5",
-   "speed": 0.92,
-   "pitch": 0,
-   "file": "7858753fe5cb9e.m4a"
-  },
-  {
-   "key": "1rd97hxdn6p",
-   "speaker": "ivo",
-   "kind": "bark",
-   "text": "Fair morning.",
-   "say": "Fair morning.",
-   "voice": "bm_daniel",
-   "speed": 1,
-   "pitch": 0,
-   "file": "99df0906499b06.m4a"
-  },
-  {
-   "key": "8shbt3viwz",
-   "speaker": "ivo",
-   "kind": "bark",
-   "text": "All quiet, so far.",
-   "say": "All quiet, so far.",
-   "voice": "bm_daniel",
-   "speed": 1,
-   "pitch": 0,
-   "file": "2dc4252c7aefca.m4a"
-  },
-  {
-   "key": "mbe209nnrj",
-   "speaker": "ivo",
-   "kind": "bark",
-   "text": "Evening, friend.",
-   "say": "Evening, friend.",
-   "voice": "bm_daniel",
-   "speed": 1,
-   "pitch": 0,
-   "file": "56bd7c73b33600.m4a"
-  },
-  {
-   "key": "eoa67l6hdt",
-   "speaker": "ivo",
-   "kind": "bark",
-   "text": "Keep to the lamplight.",
-   "say": "Keep to the lamplight.",
-   "voice": "bm_daniel",
-   "speed": 1,
-   "pitch": 0,
-   "file": "7fd92dbae4b640.m4a"
-  },
-  {
-   "key": "1o57dj5gz7u",
-   "speaker": "ivo",
-   "kind": "bark",
-   "text": "Easy now. Sheathe it.",
-   "say": "Easy now. Sheathe it.",
-   "voice": "bm_daniel",
-   "speed": 1,
-   "pitch": 0,
-   "file": "2472abce36569d.m4a"
-  },
-  {
-   "key": "21bbq5dqw8b",
-   "speaker": "tobin",
-   "kind": "bark",
-   "text": "Hello!",
-   "say": "Hello!",
-   "voice": "am_puck:0.7+bm_daniel:0.3",
-   "speed": 1.04,
-   "pitch": 0,
-   "file": "5c7442e523cc30.m4a"
-  },
-  {
-   "key": "15n8pa4u1g8",
-   "speaker": "tobin",
-   "kind": "bark",
-   "text": "Race you to the well!",
-   "say": "Race you to the well!",
-   "voice": "am_puck:0.7+bm_daniel:0.3",
-   "speed": 1.04,
-   "pitch": 0,
-   "file": "8ed1fad94fdd95.m4a"
-  },
-  {
-   "key": "1kjcplxv896",
-   "speaker": "tobin",
-   "kind": "bark",
-   "text": "I'm not tired.",
-   "say": "I'm not tired.",
-   "voice": "am_puck:0.7+bm_daniel:0.3",
-   "speed": 1.04,
-   "pitch": 0,
-   "file": "822b4faa377433.m4a"
-  },
-  {
-   "key": "27zwuyzehdh",
-   "speaker": "tobin",
-   "kind": "bark",
-   "text": "Shh! I'm supposed to be in bed.",
-   "say": "Shh! I'm supposed to be in bed.",
-   "voice": "am_puck:0.7+bm_daniel:0.3",
-   "speed": 1.04,
-   "pitch": 0,
-   "file": "61794cac9ccc65.m4a"
-  },
-  {
-   "key": "zykjr8al79",
-   "speaker": "tobin",
-   "kind": "bark",
-   "text": "Whoa! Is that real?",
-   "say": "Whoa! Is that real?",
-   "voice": "am_puck:0.7+bm_daniel:0.3",
-   "speed": 1.04,
-   "pitch": 0,
-   "file": "7a27ec30e26e2c.m4a"
   },
   {
    "key": "l0429pfuin",
@@ -1726,6 +2671,61 @@
    "speed": 0.97,
    "pitch": 0,
    "file": "341c9570a6d0ad.m4a"
+  },
+  {
+   "key": "ldfqmcsxts",
+   "speaker": "rowan",
+   "kind": "bark",
+   "text": "A good morning to you.",
+   "say": "A good morning to you.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "874aaff29d1d07.m4a"
+  },
+  {
+   "key": "x5dgqzwahq",
+   "speaker": "rowan",
+   "kind": "bark",
+   "text": "Sit a while.",
+   "say": "Sit a while.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "a29715dd7a3ea0.m4a"
+  },
+  {
+   "key": "1d87b26hftr",
+   "speaker": "rowan",
+   "kind": "bark",
+   "text": "The light is going.",
+   "say": "The light is going.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "6420d542042b5d.m4a"
+  },
+  {
+   "key": "bmmaz3n9go",
+   "speaker": "rowan",
+   "kind": "bark",
+   "text": "Good night.",
+   "say": "Good night.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "c7ead9938d68a5.m4a"
+  },
+  {
+   "key": "275rdba21cf",
+   "speaker": "rowan",
+   "kind": "bark",
+   "text": "Violence is a poor answer.",
+   "say": "Violence is a poor answer.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "7858753fe5cb9e.m4a"
   },
   {
    "key": "1vjevos6er9",

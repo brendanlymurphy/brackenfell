@@ -13,7 +13,7 @@ function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y0, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
   World.colliders.push({ x: c[0], z: c[2], hx: Math.abs(x1 - x0) / 2 * sx, hz: Math.abs(z1 - z0) / 2 * sz, ax: M[0] / sx, az: M[2] / sx, bx: M[8] / sz, bz: M[10] / sz, y0: c[1], y1: c[1] + (y1 - y0) });
 }
-function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]), o = { x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }; if (TEST && TEST.colstack && Math.hypot(o.x, o.z) < 1.5) o.stk = new Error().stack.split('\n').slice(2, 6).join(' < '); World.colliders.push(o); }          // [fx1] --opt colstack=1 records where an origin collider came from
+function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]), o = { x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }; if (TEST && TEST.colstack && (TEST.colstack === 2 || Math.hypot(o.x, o.z) < 1.5)) o.stk = new Error().stack.split('\n').slice(2, 6).join(' < '); World.colliders.push(o); }          // [fx1] --opt colstack=1 records where an origin collider came from
 const flick = (t, s) => 0.86 + 0.09 * Math.sin(t * 11.3 + s * 7.1) + 0.07 * Math.sin(t * 23.7 + s * 3.3) + 0.05 * Math.sin(t * 5.1 + s);
 const LIGHT_KINDS = {
   fire: (l, e) => flick(e.time, l.seed),
@@ -218,7 +218,7 @@ const Props = {
     m.mat(MAT.CLOTH, col, 0.9); const e = 0.3;      // Build 42: faded canvas, sagging between the poles, with a patch; one stall is plain cloth
     { const sg = 0.1, xm = 0; m.quad2([-w / 2 - e, 2.56, d / 2 + 0.12], [-w / 2 - e, 1.98, -d / 2 - e], [xm, 1.98 - sg, -d / 2 - e], [xm, 2.56 - sg, d / 2 + 0.12], 0, 0, (w / 2 + e) / 0.9, 2.2);
       m.quad2([xm, 2.56 - sg, d / 2 + 0.12], [xm, 1.98 - sg, -d / 2 - e], [w / 2 + e, 1.98, -d / 2 - e], [w / 2 + e, 2.56, d / 2 + 0.12], 0, 0, (w / 2 + e) / 0.9, 2.2);
-      m.mat(MAT.CLOTH, [col[0] * 0.8 + 0.12, col[1] * 0.8 + 0.1, col[2] * 0.8 + 0.06], 0.4); m.quad2([0.35, 2.43 - sg, 0.2], [0.35, 2.14 - sg, -0.35], [0.75, 2.14 - sg, -0.35], [0.75, 2.43 - sg, 0.2]); m.mat(MAT.CLOTH, col, 0.9); }
+      m.mat(MAT.CLOTH, [col[0] * 0.9 + 0.04, col[1] * 0.88 + 0.035, col[2] * 0.85 + 0.025], 0.4); m.quad2([0.35, 2.43 - sg, 0.2], [0.35, 2.14 - sg, -0.35], [0.75, 2.14 - sg, -0.35], [0.75, 2.43 - sg, 0.2]); m.mat(MAT.CLOTH, col, 0.9); }
     m.quad2([-w / 2 - e, 1.98, -d / 2 - e], [-w / 2 - e, 1.78, -d / 2 - e - 0.02], [w / 2 + e, 1.78, -d / 2 - e - 0.02], [w / 2 + e, 1.98, -d / 2 - e], 0, 0, (w + 2 * e) / 0.9, 0.3);
     if (goods) goods(0.80);
     addBoxCollider(m, -w / 2, -d / 2, w / 2, d / 2 - 0.3, 0, 1);

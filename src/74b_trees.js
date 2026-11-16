@@ -112,7 +112,7 @@ Trees.materials = function (sp) {
   const leaf = lambert({}, leafCol, cut(a.a), skyL);
   const wood = new THREE.MeshStandardNodeMaterial(); wood.positionNode = place({});
   { const N = normalize(varying(rotN())), alb = texture(sp.bark, uv()).rgb.mul(0.8); wood.colorNode = alb; wood.normalNode = transformNormalToView(N); wood.roughnessNode = float(0.95); wood.metalnessNode = float(0);
-    wood.emissiveNode = alb.mul(SH.hemi(N, float(0.75), float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.25)))); }
+    wood.emissiveNode = alb.mul(SH.hemi(N, float(0.75), float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.25))).add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)))); }      // [l1] shaded trunks keep a floor of sky and bounce
   // middle ring: wood and cards in one draw; wood takes the bark's average colour
   const tk = varying(attribute('tk', 'float')), barkC = vec3(sp.m.bark[0], sp.m.bark[1], sp.m.bark[2]).mul(vec3(sp.m.bark[0], sp.m.bark[1], sp.m.bark[2])).mul(0.8);
   const midCol = mix(leafCol, barkC, tk), midA = max(cut(a.a), tk);

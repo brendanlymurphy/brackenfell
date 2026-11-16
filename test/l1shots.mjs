@@ -12,8 +12,8 @@ const only = val('--only') ? val('--only').split(',') : null;
 const VIEWS = [
   { n: 'sq13', v: [4, null, -14, 200, 0, 13] }, { n: 'sq21', v: [4, null, -14, 200, 0, 21] },
   { n: 'alley1730', v: [30, null, -2, 250, 2, 17.5] }, { n: 'terrace13', v: [-12, null, 4, 200, 6, 13] },
-  { n: 'house13', door: ['inn', 11, 13] }, { n: 'house21', door: ['inn', 11, 21] }, { n: 'cabin21', door: ['hunter', 8, 21] },
-  { n: 'alley2130', v: [30, null, -2, 250, 2, 21.5] }, { n: 'dawn_lane', v: [30, null, -2, 250, 2, 6.4] }, { n: 'wharf7', v: [14, null, 62, 180, 4, 7.0] }, { n: 'wharf19', v: [14, null, 62, 180, 4, 19.2] }, { n: 'wharfB', v: [14, null, 62, 0, 4, 17] }, { n: 'wharfC', v: [4, null, 74, 270, 4, 17] }, { n: 'lake17', v: [26, 6, 92, 315, -12, 18.2] },
+  { n: 'house13', door: ['inn', 11, 13] }, { n: 'house21', door: ['inn', 11, 21] }, { n: 'cabin21', door: ['hunter', 8, 21] }, { n: 'cabin13', door: ['hunter', 8, 13] },
+  { n: 'alley2130', v: [30, null, -2, 250, 2, 21.5] }, { n: 'passage13', v: [11.4, null, -12, 20, 2, 13] }, { n: 'bridge13', v: [-12, null, -9, 20, 6, 13] }, { n: 'dawn_lane', v: [30, null, -2, 250, 2, 6.4] }, { n: 'wharf7', v: [14, null, 62, 180, 4, 7.0] }, { n: 'wharf19', v: [14, null, 62, 180, 4, 19.2] }, { n: 'wharfB', v: [14, null, 62, 0, 4, 17] }, { n: 'wharfC', v: [4, null, 74, 270, 4, 17] }, { n: 'lake17', v: [26, 6, 92, 315, -12, 18.2] },
   // interiors, from just inside the street door looking in (canonical plan frame: 180 = into the house)
   { n: 'inn20', cell: 'inn', hour: 20 }, { n: 'inn13', cell: 'inn', hour: 13 }, { n: 'store13', cell: 'store', hour: 13 }, { n: 'store21', cell: 'store', hour: 21 },
   { n: 'chapel13', cell: 'chapel', hour: 13 }, { n: 'chapel21', cell: 'chapel', hour: 21 }, { n: 'house_in13', cell: 'in.21', hour: 13 }, { n: 'house_in21', cell: 'in.21', hour: 21 },
