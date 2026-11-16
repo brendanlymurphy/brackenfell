@@ -7071,7 +7071,7 @@ PLANS.smithy = (P, c, info) => {
   // overhead: chains and a bar of tongs above the work, the rafters black with soot
   pCeil(P, forge, -0.3, 4.0, PD.chainHang(1.3, R)); pCeil(P, forge, -3.0, 3.2, PD.hookBar(1.8, R)); pCeil(P, forge, -4.5, 5.5, PD.chainHang(0.9, R)); pCeil(P, forge, 1.0, 5.5, PD.hookBar(1.2, R, ['tongs', 'ladle', 'chain']));
   for (const sd of ['n', 'e', 'w']) pHigh(P, forge, sd, 2.7, 1.5, w => PD.highShelf(R, w), id + '.hi');
-  PD.dense(P, forge, { pool: ['cabinet', 'sconce', 'stack', 'sacks'], corner: ['stack', 'sacks', 'broom'], middle: false });
+  PD.dense(P, forge, { pool: ['sconce', 'shelf', 'stack', 'sacks'], corner: ['stack', 'sacks', 'broom'], middle: false });
   pLamp(P, forge, -3.5, 2.2); pLamp(P, forge, 0.6, 3.0);
   const e = P.doors.find(d => d.b === null); if (e) pPut(P, forge, id + '.mat', e.x, 1.3, 0, 2.4, 1.4, 0.02, pdRug(2.4, 1.4, [0.25, 0.2, 0.17]), { flat: true, noClear: true });
   // the family's room: hearth, table, shelves, bed corner; the loft above
