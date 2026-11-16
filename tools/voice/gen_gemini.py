@@ -6,7 +6,7 @@
 # Files that exist are skipped (resumable). File names hash the speaker, Gemini voice, direction and text, so a changed casting regenerates.
 # NOT YET RUN AGAINST THE LIVE API (written without a key): check the request shape against https://ai.google.dev/gemini-api/docs/speech-generation
 # on first use. The response carries base64 PCM (16-bit little-endian mono, 24 kHz) in candidates[0].content.parts[0].inlineData.data.
-import sys, os, json, base64, hashlib, subprocess, tempfile, time, urllib.request, urllib.error
+import sys, os, io, json, base64, hashlib, subprocess, tempfile, time, urllib.request, urllib.error
 import numpy as np, soundfile as sf
 planf, castf, out = sys.argv[1:4]; args = sys.argv[4:]
 limit = int(args[args.index('--limit') + 1]) if '--limit' in args else 10**9
@@ -28,8 +28,11 @@ def tts(text, voice, direction):
         try:
             with urllib.request.urlopen(req, timeout=120) as r: j = json.load(r)
             part = next(q['inlineData'] for q in j['candidates'][0]['content']['parts'] if 'inlineData' in q)       # the audio part (mimeType audio/L16;codec=pcm;rate=24000)
+            raw = base64.b64decode(part['data'])
+            if raw[:4] == b'RIFF' or 'wav' in part.get('mimeType', ''):              # newer models (gemini-3.8-flash-tts) send a WAV file, not bare samples
+                x, rate = sf.read(io.BytesIO(raw), dtype='float32'); return (x.mean(axis=1) if x.ndim > 1 else x).astype(np.float32), rate
             rate = int((part.get('mimeType', '').split('rate=') + ['24000'])[1].split(';')[0] or 24000)
-            return np.frombuffer(base64.b64decode(part['data']), dtype='<i2').astype(np.float32) / 32768.0, rate
+            return np.frombuffer(raw, dtype='<i2').astype(np.float32) / 32768.0, rate
         except urllib.error.HTTPError as e:
             msg = e.read().decode('utf8', 'replace')[:900]
             if e.code == 429 and 'per_day' in msg: sys.exit('Daily request limit for this model reached (' + text[:40] + '...). Run again after it resets: finished files are kept. ' + msg[-120:].replace('\n', ' '))
