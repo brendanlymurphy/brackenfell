@@ -48,8 +48,13 @@ Bake.interior = function (P) {
     const L = P.lv[it.k]; if (!L) continue;
     const h = it.h || 0.5, y = L.y + 0.034; if (it.kind === 'floor' && h < 0.25 && (it.x1 - it.x0) * (it.z1 - it.z0) < 0.35) continue;
     const hearth = it.kind === 'hearth', A = hearth ? 0.7 : clamp(0.62 + h * 0.3, 0.66, 0.92), mg = hearth ? 0.7 : clamp(0.3 + h * 0.3, 0.34, 0.7);
-    const pad = 0.03, c = [[it.x0 + pad, it.z0 + pad], [it.x1 - pad, it.z0 + pad], [it.x1 - pad, it.z1 - pad], [it.x0 + pad, it.z1 - pad]].map(p => w2(p[0], p[1]));
-    const y3 = P.w2(0, y, 0)[1]; Bake.pool(m, y3, c, mg, A); Bake.stats.pools++;
+    const pad = 0.03, cp = [[it.x0 + pad, it.z0 + pad], [it.x1 - pad, it.z0 + pad], [it.x1 - pad, it.z1 - pad], [it.x0 + pad, it.z1 - pad]], rmm = P.rooms && P.rooms[it.room];
+    const bx0 = rmm ? rmm.x0 + 0.05 : -1e3, bx1 = rmm ? rmm.x1 - 0.05 : 1e3, bz0 = rmm ? rmm.z0 + 0.05 : -1e3, bz1 = rmm ? rmm.z1 - 0.05 : 1e3;      // a pool never crosses its room's wall
+    const y3 = P.w2(0, y, 0)[1], cxp = (it.x0 + it.x1) / 2, czp = (it.z0 + it.z1) / 2;
+    m.ao = A; const inner = cp.map(p => { const w = w2(p[0], p[1]); return m.vert(w[0], y3, w[1], 0, 1, 0, 0, 0); });
+    m.ao = 0; const outer = cp.map(p => { const dx = p[0] - cxp, dz = p[1] - czp, l = Math.hypot(dx, dz) || 1, qx = Math.min(bx1, Math.max(bx0, p[0] + dx / l * mg * 1.3)), qz = Math.min(bz1, Math.max(bz0, p[1] + dz / l * mg * 1.3)), w = w2(qx, qz); return m.vert(w[0], y3, w[1], 0, 1, 0, 0, 0); });
+    for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; m.tri(inner[i], outer[i], outer[j]); m.tri(inner[i], outer[j], inner[j]); }
+    m.tri(inner[0], inner[1], inner[2]); m.tri(inner[0], inner[2], inner[3]); m.flip = false; Bake.stats.pools++;
   }
   if (m.ni) cell.decal = m;
   // light shafts: two stacked quads from the pane down to the floor in front of it
@@ -57,12 +62,12 @@ Bake.interior = function (P) {
     for (const w of P.windows) {
       const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
       const og = wl.open.find(o => o.type === 'win' && o.pos === w.pos), gc = og && og.glass; if (gc) { sm.cr = Math.round(Math.min(1, 0.25 + gc[0]) * 255); sm.cg = Math.round(Math.min(1, 0.25 + gc[1]) * 255); sm.cb = Math.round(Math.min(1, 0.25 + gc[2]) * 255); } else { sm.cr = 255; sm.cg = 232; sm.cb = 190; }      // stained glass throws its own colour
-      const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, len = 3.4, fy = L.y + 0.05;
+      const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, fy = L.y + 0.05, rm = w.room, back = rm ? (hor ? (dz > 0 ? rm.z1 - wl.c : wl.c - rm.z0) : (dx > 0 ? rm.x1 - wl.c : wl.c - rm.x0)) : 3.6, len = Math.max(0.8, Math.min(3.4, back - 0.25)), side = rm ? (hor ? Math.min(w.pos - rm.x0, rm.x1 - w.pos) : Math.min(w.pos - rm.z0, rm.z1 - w.pos)) : 2;      // [l1] never longer or wider than its own room
       const at = (a, b, y) => P.w2(cx + dx * a + tx * b, y, cz + dz * a + tz * b);
       const quad = (v) => { const [p0, p1, p2, p3] = v; const a = sm.vert(p0[0], p0[1], p0[2], 0, 1, 0, 0, 0), b = sm.vert(p1[0], p1[1], p1[2], 0, 1, 0, 1, 0), c = sm.vert(p2[0], p2[1], p2[2], 0, 1, 0, 1, 1), d = sm.vert(p3[0], p3[1], p3[2], 0, 1, 0, 0, 1); sm.tri(a, b, c); sm.tri(a, c, d); sm.flip = false; };
-      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, 1.9, fy), at(len, -1.9, fy)]);        // u across (the wall's own direction), v from the pane to the floor
-      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, 1.4, fy + 0.5), at(len * 0.8, -1.4, fy + 0.5)]);        // a second, inner sheet gives the beam some depth
-      { const fp = L.y + 0.045, ws = (w.w || 1.0) * 0.5 + 0.35; sm.ao = 0.5; quad([at(0.35, -ws, fp), at(0.35, ws, fp), at(3.3, ws * 1.5, fp), at(3.3, -ws * 1.5, fp)]); sm.ao = 1; }      // the pool of window light on the floor
+      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, Math.min(1.9, side - 0.15), fy), at(len, -Math.min(1.9, side - 0.15), fy)]);        // u across (the wall's own direction), v from the pane to the floor
+      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, Math.min(1.4, side - 0.15), fy + 0.5), at(len * 0.8, -Math.min(1.4, side - 0.15), fy + 0.5)]);        // a second, inner sheet gives the beam some depth
+      { const fp = L.y + 0.045, ws = (w.w || 1.0) * 0.5 + 0.35; sm.ao = 0.5; quad([at(0.35, -Math.min(ws, side - 0.1), fp), at(0.35, Math.min(ws, side - 0.1), fp), at(Math.min(3.3, len), Math.min(ws * 1.5, side - 0.1), fp), at(Math.min(3.3, len), -Math.min(ws * 1.5, side - 0.1), fp)]); sm.ao = 1; }      // the pool of window light on the floor
     }
     if (sm.ni) cell.shaft = sm; }
   // windows: a pane centre, its inward direction on the floor plane (world), the reach and a strength by size
@@ -142,6 +147,17 @@ Bake.buildGround = function () {
       }
     }
     if (c.shade) { const q = [P(-cc.hx, -cc.hz), P(cc.hx, -cc.hz), P(cc.hx, cc.hz), P(-cc.hx, cc.hz)].map(p => vert(p[0], p[1], h, A * 0.85)); tri(q[0], q[1], q[2]); tri(q[0], q[2], q[3]); }
+  }
+  // roofed ground: whatever lies under a gallery deck, the roofed bridge or the passage goes dark, soft at the edges (a filled rectangle: dark inside, a fade over 0.9 m outside)
+  minor = false;
+  for (const cv of World.covers || []) {
+    const gm = 0.9, X0 = cv.x0, X1 = cv.x1, Z0 = cv.z0, Z1 = cv.z1, A = cv.dark ? 0.8 : 0.7, hh = (Terrain.y((X0 + X1) / 2, (Z0 + Z1) / 2)) + 1.0;
+    const nx = Math.max(1, Math.ceil((X1 - X0) / 3)), nz = Math.max(1, Math.ceil((Z1 - Z0) / 3)), grid = [];
+    for (let j = 0; j <= nz + 2; j++) { grid.push([]); for (let i = 0; i <= nx + 2; i++) {
+      const fx = i === 0 ? -gm : i === nx + 2 ? 1 : 0, fz = j === 0 ? -gm : j === nz + 2 ? 1 : 0, ii = Math.min(Math.max(i - 1, 0), nx), jj = Math.min(Math.max(j - 1, 0), nz);
+      const x = X0 + (X1 - X0) * ii / nx + (i === 0 ? -gm : i === nx + 2 ? gm : 0), z = Z0 + (Z1 - Z0) * jj / nz + (j === 0 ? -gm : j === nz + 2 ? gm : 0), edge = (i === 0 || i === nx + 2 || j === 0 || j === nz + 2);
+      grid[j].push(vert(x, z, hh, edge ? 0 : A)); } }
+    for (let j = 0; j < nz + 2; j++) for (let i = 0; i < nx + 2; i++) { const a = grid[j][i], b = grid[j][i + 1], c = grid[j + 1][i + 1], d = grid[j + 1][i]; tri(a, b, c); tri(a, c, d); }
   }
   GR.pos = new Float32Array(pos); GR.tint = new Uint8Array(al.length * 4); for (let i = 0; i < al.length; i++) GR.tint[i * 4 + 3] = Math.round(al[i] * 255);
   GR.sq = [...sq.entries()].map(([k, l]) => { const [a, b] = k.split(',').map(Number); return { x: (a + 0.5) * S, z: (b + 0.5) * S, idx: Uint32Array.from(l.i), idm: Uint32Array.from(l.m) }; });
