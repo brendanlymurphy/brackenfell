@@ -8773,8 +8773,13 @@ Bake.interior = function (P) {
     const L = P.lv[it.k]; if (!L) continue;
     const h = it.h || 0.5, y = L.y + 0.034; if (it.kind === 'floor' && h < 0.25 && (it.x1 - it.x0) * (it.z1 - it.z0) < 0.35) continue;
     const hearth = it.kind === 'hearth', A = hearth ? 0.7 : clamp(0.62 + h * 0.3, 0.66, 0.92), mg = hearth ? 0.7 : clamp(0.3 + h * 0.3, 0.34, 0.7);
-    const pad = 0.03, c = [[it.x0 + pad, it.z0 + pad], [it.x1 - pad, it.z0 + pad], [it.x1 - pad, it.z1 - pad], [it.x0 + pad, it.z1 - pad]].map(p => w2(p[0], p[1]));
-    const y3 = P.w2(0, y, 0)[1]; Bake.pool(m, y3, c, mg, A); Bake.stats.pools++;
+    const pad = 0.03, cp = [[it.x0 + pad, it.z0 + pad], [it.x1 - pad, it.z0 + pad], [it.x1 - pad, it.z1 - pad], [it.x0 + pad, it.z1 - pad]], rmm = P.rooms && P.rooms[it.room];
+    const bx0 = rmm ? rmm.x0 + 0.05 : -1e3, bx1 = rmm ? rmm.x1 - 0.05 : 1e3, bz0 = rmm ? rmm.z0 + 0.05 : -1e3, bz1 = rmm ? rmm.z1 - 0.05 : 1e3;      // a pool never crosses its room's wall
+    const y3 = P.w2(0, y, 0)[1], cxp = (it.x0 + it.x1) / 2, czp = (it.z0 + it.z1) / 2;
+    m.ao = A; const inner = cp.map(p => { const w = w2(p[0], p[1]); return m.vert(w[0], y3, w[1], 0, 1, 0, 0, 0); });
+    m.ao = 0; const outer = cp.map(p => { const dx = p[0] - cxp, dz = p[1] - czp, l = Math.hypot(dx, dz) || 1, qx = Math.min(bx1, Math.max(bx0, p[0] + dx / l * mg * 1.3)), qz = Math.min(bz1, Math.max(bz0, p[1] + dz / l * mg * 1.3)), w = w2(qx, qz); return m.vert(w[0], y3, w[1], 0, 1, 0, 0, 0); });
+    for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; m.tri(inner[i], outer[i], outer[j]); m.tri(inner[i], outer[j], inner[j]); }
+    m.tri(inner[0], inner[1], inner[2]); m.tri(inner[0], inner[2], inner[3]); m.flip = false; Bake.stats.pools++;
   }
   if (m.ni) cell.decal = m;
   // light shafts: two stacked quads from the pane down to the floor in front of it
@@ -8782,12 +8787,12 @@ Bake.interior = function (P) {
     for (const w of P.windows) {
       const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
       const og = wl.open.find(o => o.type === 'win' && o.pos === w.pos), gc = og && og.glass; if (gc) { sm.cr = Math.round(Math.min(1, 0.25 + gc[0]) * 255); sm.cg = Math.round(Math.min(1, 0.25 + gc[1]) * 255); sm.cb = Math.round(Math.min(1, 0.25 + gc[2]) * 255); } else { sm.cr = 255; sm.cg = 232; sm.cb = 190; }      // stained glass throws its own colour
-      const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, len = 3.4, fy = L.y + 0.05;
+      const cx = hor ? w.pos : wl.c, cz = hor ? wl.c : w.pos, dx = hor ? 0 : -wl.ns, dz = hor ? -wl.ns : 0, tx = hor ? 1 : 0, tz = hor ? 0 : 1, y0 = L.y + 1.2, y1 = L.y + 1.95, fy = L.y + 0.05, rm = w.room, back = rm ? (hor ? (dz > 0 ? rm.z1 - wl.c : wl.c - rm.z0) : (dx > 0 ? rm.x1 - wl.c : wl.c - rm.x0)) : 3.6, len = Math.max(0.8, Math.min(3.4, back - 0.25)), side = rm ? (hor ? Math.min(w.pos - rm.x0, rm.x1 - w.pos) : Math.min(w.pos - rm.z0, rm.z1 - w.pos)) : 2;      // [l1] never longer or wider than its own room
       const at = (a, b, y) => P.w2(cx + dx * a + tx * b, y, cz + dz * a + tz * b);
       const quad = (v) => { const [p0, p1, p2, p3] = v; const a = sm.vert(p0[0], p0[1], p0[2], 0, 1, 0, 0, 0), b = sm.vert(p1[0], p1[1], p1[2], 0, 1, 0, 1, 0), c = sm.vert(p2[0], p2[1], p2[2], 0, 1, 0, 1, 1), d = sm.vert(p3[0], p3[1], p3[2], 0, 1, 0, 0, 1); sm.tri(a, b, c); sm.tri(a, c, d); sm.flip = false; };
-      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, 1.9, fy), at(len, -1.9, fy)]);        // u across (the wall's own direction), v from the pane to the floor
-      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, 1.4, fy + 0.5), at(len * 0.8, -1.4, fy + 0.5)]);        // a second, inner sheet gives the beam some depth
-      { const fp = L.y + 0.045, ws = (w.w || 1.0) * 0.5 + 0.35; sm.ao = 0.5; quad([at(0.35, -ws, fp), at(0.35, ws, fp), at(3.3, ws * 1.5, fp), at(3.3, -ws * 1.5, fp)]); sm.ao = 1; }      // the pool of window light on the floor
+      quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, Math.min(1.9, side - 0.15), fy), at(len, -Math.min(1.9, side - 0.15), fy)]);        // u across (the wall's own direction), v from the pane to the floor
+      quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, Math.min(1.4, side - 0.15), fy + 0.5), at(len * 0.8, -Math.min(1.4, side - 0.15), fy + 0.5)]);        // a second, inner sheet gives the beam some depth
+      { const fp = L.y + 0.045, ws = (w.w || 1.0) * 0.5 + 0.35; sm.ao = 0.5; quad([at(0.35, -Math.min(ws, side - 0.1), fp), at(0.35, Math.min(ws, side - 0.1), fp), at(Math.min(3.3, len), Math.min(ws * 1.5, side - 0.1), fp), at(Math.min(3.3, len), -Math.min(ws * 1.5, side - 0.1), fp)]); sm.ao = 1; }      // the pool of window light on the floor
     }
     if (sm.ni) cell.shaft = sm; }
   // windows: a pane centre, its inward direction on the floor plane (world), the reach and a strength by size
@@ -8839,13 +8844,15 @@ Bake.buildGround = function () {
   const GR = Bake.GR, S = GR.S, pos = [], al = [], sq = new Map(), t0 = performance.now();
   const gy = (x, z, h) => { let y = Terrain.y(x, z); const g = World.groundAt(x, z, h); if (isFinite(g) && g > y - 0.3 && g < h + 0.2) y = g; return y + 0.05; };
   const vert = (x, z, h, a) => { pos.push(x, gy(x, z, h), z); al.push(a); return al.length - 1; };
-  const tri = (a, b, c) => { const k = Math.floor((pos[a * 3] + pos[b * 3] + pos[c * 3]) / (3 * S)) + ',' + Math.floor((pos[a * 3 + 2] + pos[b * 3 + 2] + pos[c * 3 + 2]) / (3 * S)); let l = sq.get(k); if (!l) sq.set(k, l = { i: [], x: 0, z: 0 }); l.i.push(a, b, c); };
+  const tri = (a, b, c) => { const k = Math.floor((pos[a * 3] + pos[b * 3] + pos[c * 3]) / (3 * S)) + ',' + Math.floor((pos[a * 3 + 2] + pos[b * 3 + 2] + pos[c * 3 + 2]) / (3 * S)); let l = sq.get(k); if (!l) sq.set(k, l = { i: [], m: [], x: 0, z: 0 }); (minor ? l.m : l.i).push(a, b, c); };
+  let minor = false;
   for (const c of World.colliders) {
     if (Cells.inRegion(c.x) || Math.abs(c.x) > 190 || Math.abs(c.z) > 190) continue;
     const ty = Terrain.y(c.x, c.z), ht = c.y1 - c.y0; if (c.y0 > ty + 0.7 || ht < 0.35) continue;
+    minor = ht < 1.2 && !c.shade;      // low things (crates, benches, stones) only get their band near the camera
     const h = c.y0 + 0.9, A = ht > 1.2 ? 0.9 : 0.66, m = clamp(0.55 + 0.18 * ht, 0.7, 1.35);
     if (c.r !== undefined) {
-      if (c.r > 4) continue; const R = c.r + m * 0.9, n = 8, ring0 = [], ring1 = [];
+      if (c.r > 4) continue; const R = c.r + m * 0.9, n = c.r < 0.6 ? 6 : 8, ring0 = [], ring1 = [];
       for (let i = 0; i < n; i++) { const a = i / n * TAU, ca = Math.cos(a), sa = Math.sin(a); ring0.push(vert(c.x + ca * c.r * 0.85, c.z + sa * c.r * 0.85, h, A)); ring1.push(vert(c.x + ca * R, c.z + sa * R, h, 0)); }
       for (let i = 0; i < n; i++) { const j = (i + 1) % n; tri(ring0[i], ring1[i], ring1[j]); tri(ring0[i], ring1[j], ring0[j]); }
       continue;
@@ -8855,7 +8862,7 @@ Bake.buildGround = function () {
     const P = (lx, lz) => [cc.x + cc.ax * lx + cc.bx * lz, cc.z + cc.az * lx + cc.bz * lz], e = m * 0.55;
     // four sides, each a strip along its edge (a little longer than the edge so the corners are covered), inner edge dark, outer edge clear
     for (const [ux, uz, ox, oz, half, hl] of [[1, 0, 0, 1, cc.hx, cc.hz], [1, 0, 0, -1, cc.hx, cc.hz], [0, 1, 1, 0, cc.hz, cc.hx], [0, 1, -1, 0, cc.hz, cc.hx]]) {
-      const len = 2 * half + 2 * e, n = Math.max(1, Math.ceil(len / 2.4)); let pi = -1, po = -1;
+      const len = 2 * half + 2 * e, n = Math.max(1, Math.ceil(len / 3.4)); let pi = -1, po = -1;
       for (let k = 0; k <= n; k++) {
         const t = -half - e + len * k / n, endK = (k === 0 || k === n) ? 0.55 : 1, lx = ux ? t : ox * hl, lz = uz ? t : oz * hl;
         const pin = P(lx, lz), pout = P(lx + ox * m, lz + oz * m);
@@ -8866,9 +8873,20 @@ Bake.buildGround = function () {
     }
     if (c.shade) { const q = [P(-cc.hx, -cc.hz), P(cc.hx, -cc.hz), P(cc.hx, cc.hz), P(-cc.hx, cc.hz)].map(p => vert(p[0], p[1], h, A * 0.85)); tri(q[0], q[1], q[2]); tri(q[0], q[2], q[3]); }
   }
+  // roofed ground: whatever lies under a gallery deck, the roofed bridge or the passage goes dark, soft at the edges (a filled rectangle: dark inside, a fade over 0.9 m outside)
+  minor = false;
+  for (const cv of World.covers || []) {
+    const gm = 0.9, X0 = cv.x0, X1 = cv.x1, Z0 = cv.z0, Z1 = cv.z1, A = cv.dark ? 0.8 : 0.7, hh = (Terrain.y((X0 + X1) / 2, (Z0 + Z1) / 2)) + 1.0;
+    const nx = Math.max(1, Math.ceil((X1 - X0) / 3)), nz = Math.max(1, Math.ceil((Z1 - Z0) / 3)), grid = [];
+    for (let j = 0; j <= nz + 2; j++) { grid.push([]); for (let i = 0; i <= nx + 2; i++) {
+      const fx = i === 0 ? -gm : i === nx + 2 ? 1 : 0, fz = j === 0 ? -gm : j === nz + 2 ? 1 : 0, ii = Math.min(Math.max(i - 1, 0), nx), jj = Math.min(Math.max(j - 1, 0), nz);
+      const x = X0 + (X1 - X0) * ii / nx + (i === 0 ? -gm : i === nx + 2 ? gm : 0), z = Z0 + (Z1 - Z0) * jj / nz + (j === 0 ? -gm : j === nz + 2 ? gm : 0), edge = (i === 0 || i === nx + 2 || j === 0 || j === nz + 2);
+      grid[j].push(vert(x, z, hh, edge ? 0 : A)); } }
+    for (let j = 0; j < nz + 2; j++) for (let i = 0; i < nx + 2; i++) { const a = grid[j][i], b = grid[j][i + 1], c = grid[j + 1][i + 1], d = grid[j + 1][i]; tri(a, b, c); tri(a, c, d); }
+  }
   GR.pos = new Float32Array(pos); GR.tint = new Uint8Array(al.length * 4); for (let i = 0; i < al.length; i++) GR.tint[i * 4 + 3] = Math.round(al[i] * 255);
-  GR.sq = [...sq.entries()].map(([k, l]) => { const [a, b] = k.split(',').map(Number); return { x: (a + 0.5) * S, z: (b + 0.5) * S, idx: Uint32Array.from(l.i) }; });
-  GR.tris = GR.sq.reduce((s, q) => s + q.idx.length / 3, 0); GR.built = true; GR.ms = Math.round(performance.now() - t0);
+  GR.sq = [...sq.entries()].map(([k, l]) => { const [a, b] = k.split(',').map(Number); return { x: (a + 0.5) * S, z: (b + 0.5) * S, idx: Uint32Array.from(l.i), idm: Uint32Array.from(l.m) }; });
+  GR.tris = GR.sq.reduce((s, q) => s + (q.idx.length + q.idm.length) / 3, 0); GR.built = true; GR.ms = Math.round(performance.now() - t0);
 };
 Bake.groundUpdate = function (cam) {
   const GR = Bake.GR; if (!GR.built || !SC.scene) return;
@@ -8881,8 +8899,8 @@ Bake.groundUpdate = function (cam) {
   if (World.cell) return;
   if (Math.hypot(cam[0] - GR.last[0], cam[2] - GR.last[1]) < 4 && !GR.stale) return;
   GR.last = [cam[0], cam[2]]; GR.stale = false;
-  const reach = (R.q && R.q.houseFar ? Math.min(R.q.houseFar, 56) : 50) * 0.45 + 6; let n = 0;
-  for (const q of GR.sq) if (Math.hypot(q.x - cam[0], q.z - cam[2]) < reach + GR.S * 0.71 && n + q.idx.length <= GR.cur.length) { GR.cur.set(q.idx, n); n += q.idx.length; }
+  const reach = (R.q && R.q.houseFar ? Math.min(R.q.houseFar, 56) : 50) * 0.3 + 4; let n = 0;
+  for (const q of GR.sq) { const dq = Math.hypot(q.x - cam[0], q.z - cam[2]); if (dq < reach + GR.S * 0.71 && n + q.idx.length <= GR.cur.length) { GR.cur.set(q.idx, n); n += q.idx.length; } if (dq < 16 + GR.S * 0.71 && n + q.idm.length <= GR.cur.length) { GR.cur.set(q.idm, n); n += q.idm.length; } }
   GR.n = n; GR.geo.setDrawRange(0, n); GR.ia.clearUpdateRanges(); if (n) GR.ia.addUpdateRange(0, n); GR.ia.needsUpdate = true; GR.mesh.visible = n > 0;
 };
 
@@ -10954,7 +10972,7 @@ function rtKit(bucket, touch) {
   K.box = (mat, c, tile, x0, y0, z0, x1, y1, z1, skip, ao) => { const m = M((x0 + x1) / 2, (z0 + z1) / 2); m.mat(mat, c, tile); if (ao !== undefined) m.ao = ao; m.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.max(x0, x1), y1, Math.max(z0, z1), skip || 0); m.ao = 1; return m; };
   K.beam = (p, q, w, h, c) => { const m = M((p[0] + q[0]) / 2, (p[2] + q[2]) / 2); m.mat(MAT.TIMBER, c || dark, 0.5); m.beam(p, q, w, h); };
   K.post = (x, z, y0, y1, w, nocol) => { const m = M(x, z); m.mat(MAT.TIMBER, dark, 0.5); m.cbox(x, y0, z, w || 0.18, y1 - y0, w || 0.18, 0); if (!nocol) addCircleCollider(m, x, z, (w || 0.18) * 0.62, y0, y1); };
-  K.deck = (x0, z0, x1, z1, y, c) => { K.box(MAT.PLANKS, c || wood, 0.55, x0, y - 0.16, z0, x1, y, z1, 0); lvFloor(Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y); };
+  K.deck = (x0, z0, x1, z1, y, c) => { (World.covers || (World.covers = [])).push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), y }); K.box(MAT.PLANKS, c || wood, 0.55, x0, y - 0.16, z0, x1, y, z1, 0); lvFloor(Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y); };
   // a rail along x at z (or along z at x when `alongZ`): two beams, a collider, posts every ~1.9 m
   K.rail = (a0, a1, c, y, alongZ, h) => {
     h = h || 1.0; const P = alongZ ? (u, v) => [v, u] : (u, v) => [u, v], n = Math.max(1, Math.round(Math.abs(a1 - a0) / 1.9));
@@ -11044,6 +11062,7 @@ function buildRoutes(bucket) {
     box(MAT.PLANKS, [0.42, 0.36, 0.3], 0.5, PM0, 2.9, PZ1, PM1, Yb, ZW, 0, 0.5);                                           // the slab over the passage (its top is the loft store's floor)
     for (let z = ZW - 0.5; z > PZ1; z -= 1.3) beam([PM0, 2.8, z], [PM1, 2.8, z], 0.2, 0.2, [0.42, 0.38, 0.35]);
     // lintel beams at both mouths
+    World.covers.push({ x0: PM0, z0: PZ1, x1: PM1, z1: ZW, y: 2.9 + g, dark: true });      // [l1] the passage floor is in the dark
     for (const z of [ZW - 0.04, PZ1 + 0.04]) { beam([PM0 - 0.1, 2.95, z], [PM1 + 0.1, 2.95, z], 0.26, 0.3); post(PM0 - 0.1, z, g, 3.0, 0.24, true); post(PM1 + 0.1, z, g, 3.0, 0.24, true); }
     // things in the passage: a barrel and a crate against the west wall, a handcart wheel; the lantern at the middle
     { const m = M(11.4, -19.8); m.push().T(PM0 + 0.45, g, -19.0); Props.barrel(m, 0.3, 0.8); m.pop(); m.push().T(PM1 - 0.45, g, -20.9).RY(0.3); Props.crate(m, 0.6); m.pop(); m.push().T(PM1 - 0.5, g, -18.2); Props.sack(m, 0.3); m.pop(); }
@@ -14338,7 +14357,7 @@ for (const [id, line] of [['greta', 'The house on the south lane? Nobody’s liv
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 59';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 60';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }

@@ -19,7 +19,7 @@ function rtKit(bucket, touch) {
   K.box = (mat, c, tile, x0, y0, z0, x1, y1, z1, skip, ao) => { const m = M((x0 + x1) / 2, (z0 + z1) / 2); m.mat(mat, c, tile); if (ao !== undefined) m.ao = ao; m.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.max(x0, x1), y1, Math.max(z0, z1), skip || 0); m.ao = 1; return m; };
   K.beam = (p, q, w, h, c) => { const m = M((p[0] + q[0]) / 2, (p[2] + q[2]) / 2); m.mat(MAT.TIMBER, c || dark, 0.5); m.beam(p, q, w, h); };
   K.post = (x, z, y0, y1, w, nocol) => { const m = M(x, z); m.mat(MAT.TIMBER, dark, 0.5); m.cbox(x, y0, z, w || 0.18, y1 - y0, w || 0.18, 0); if (!nocol) addCircleCollider(m, x, z, (w || 0.18) * 0.62, y0, y1); };
-  K.deck = (x0, z0, x1, z1, y, c) => { K.box(MAT.PLANKS, c || wood, 0.55, x0, y - 0.16, z0, x1, y, z1, 0); lvFloor(Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y); };
+  K.deck = (x0, z0, x1, z1, y, c) => { (World.covers || (World.covers = [])).push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), y }); K.box(MAT.PLANKS, c || wood, 0.55, x0, y - 0.16, z0, x1, y, z1, 0); lvFloor(Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y); };
   // a rail along x at z (or along z at x when `alongZ`): two beams, a collider, posts every ~1.9 m
   K.rail = (a0, a1, c, y, alongZ, h) => {
     h = h || 1.0; const P = alongZ ? (u, v) => [v, u] : (u, v) => [u, v], n = Math.max(1, Math.round(Math.abs(a1 - a0) / 1.9));
@@ -109,6 +109,7 @@ function buildRoutes(bucket) {
     box(MAT.PLANKS, [0.42, 0.36, 0.3], 0.5, PM0, 2.9, PZ1, PM1, Yb, ZW, 0, 0.5);                                           // the slab over the passage (its top is the loft store's floor)
     for (let z = ZW - 0.5; z > PZ1; z -= 1.3) beam([PM0, 2.8, z], [PM1, 2.8, z], 0.2, 0.2, [0.42, 0.38, 0.35]);
     // lintel beams at both mouths
+    World.covers.push({ x0: PM0, z0: PZ1, x1: PM1, z1: ZW, y: 2.9 + g, dark: true });      // [l1] the passage floor is in the dark
     for (const z of [ZW - 0.04, PZ1 + 0.04]) { beam([PM0 - 0.1, 2.95, z], [PM1 + 0.1, 2.95, z], 0.26, 0.3); post(PM0 - 0.1, z, g, 3.0, 0.24, true); post(PM1 + 0.1, z, g, 3.0, 0.24, true); }
     // things in the passage: a barrel and a crate against the west wall, a handcart wheel; the lantern at the middle
     { const m = M(11.4, -19.8); m.push().T(PM0 + 0.45, g, -19.0); Props.barrel(m, 0.3, 0.8); m.pop(); m.push().T(PM1 - 0.45, g, -20.9).RY(0.3); Props.crate(m, 0.6); m.pop(); m.push().T(PM1 - 0.5, g, -18.2); Props.sack(m, 0.3); m.pop(); }
