@@ -33,7 +33,8 @@ function hCtx(P, c) {
   F.winKinds = R.pick([['Wide_Flat'], ['Wide_Flat', 'Wide_Round'], ['Thin_Round', 'Wide_Flat'], ['Wide_Round']]);
   F.X = x => F.sx * x; F.S = s => F.sx > 0 ? s : ({ w: 'e', e: 'w' }[s] || s);
   F.rm = (k, rid, kind, x0, z0, x1, z1, o) => pRoom(P, k, rid, kind, F.sx > 0 ? x0 : -x1, z0, F.sx > 0 ? x1 : -x0, z1, Object.assign({ winKinds: F.winKinds }, o || {}));
-  F.fin = (k, o) => Object.assign(k === 0 ? { floor: F.stone0 ? 'stone' : 'wood', tint: F.stone0 ? [0.78, 0.74, 0.7] : F.tint } : { floor: 'wood', tint: F.tint2 }, o || {});
+  F.stoneWalls = hHash(id + '|walls') < (F.stone0 ? 0.7 : 0.18);      // [c5] a stone shell inside as well: the first view is not always plaster
+  F.fin = (k, o) => Object.assign(k === 0 ? { floor: F.stone0 ? 'stone' : 'wood', tint: F.stone0 ? [0.78, 0.74, 0.7] : F.tint } : { floor: 'wood', tint: F.tint2 }, k === 0 && F.stoneWalls ? { walls: 'stone', tint: [0.9, 0.88, 0.84] } : {}, o || {});
   F.door = (a, b, x, z, o) => pDoor(P, a, b, F.X(x), z, o);
   return F;
 }
@@ -44,7 +45,13 @@ const hPool = (kind, F) => ({
   store: ['shelf', 'hooks', 'sacks', 'cask', 'torch', 'cabinet'], cellar: ['cask', 'shelf', 'sacks', 'stack', 'torch'], corridor: ['hooks', 'paint', 'sconce', 'tapestry'], yard: ['stack', 'sacks', 'cask'],
 }[kind] || ['hooks', 'cabinet', 'paint', 'sconce']);
 // the density pass and the light for every room of a finished layout
+function hEntryTorch(P, F) {          // [c5] one visible warm source in the first view at night: a torch or a sconce on the wall facing the door, beside the focal piece
+  const e = P.doors.find(d => d.b === null); if (!e) return; const room = P.rooms[e.a]; if (!room || P.torchDone) return;
+  for (const u of [F.X(-2.2), F.X(2.2), F.X(-3.2), F.X(3.2), F.X(-1.4), F.X(1.4)]) if (pTorch(P, room, 's', u, 1.65, 6) || pSconce(P, room, 's', u, 1.6)) { P.torchDone = 1; return; }
+  for (const sd of ['w', 'e']) for (const z of [room.z0 + 3, room.z0 + 4, room.z0 + 2]) if (pTorch(P, room, sd, z, 1.65, 6)) { P.torchDone = 1; return; }
+}
 function hFinish(P, c, F) {
+  hEntryTorch(P, F);
   for (const id in P.rooms) {
     const r = P.rooms[id], k = r.kind === 'cellar' ? 'cellar' : r.kind === 'bedroom' ? 'bedroom' : r.kind === 'store' ? 'store' : r.kind === 'corridor' ? 'corridor' : r.kind === 'yard' ? 'yard' : 'hall';
     PD.dense(P, r, { pool: hPool(k, F), corner: k === 'cellar' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack', 'cask'], mid: { kinds: k === 'cellar' || k === 'store' ? ['casks', 'sacks'] : ['rug'], max: k === 'corridor' ? 0 : 1, min: 0.9 }, middle: k !== 'corridor', racks: k === 'cellar' ? 1 : 0, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });

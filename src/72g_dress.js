@@ -20,8 +20,8 @@ PD.rack = function (P, room, x, z, len, rot, kinds) {
     for (let i = 0; i < n; i++) {
       const px = -len / 2 + 0.2 + i * (len - 0.4) / (n - 1), k = R.pick(kinds), j = R.s() * 0.03;
       m.mat(MAT.METAL, COL.black); m.box(px - 0.006, -0.78, -0.006, px + 0.006, -0.6, 0.006);
-      if (k === 'herb') { m.mat(MAT.CLOTH, R.pick([[0.3, 0.4, 0.18], [0.42, 0.4, 0.2], [0.5, 0.38, 0.2]]), 0.5); m.cyl(px + j, -1.12, 0, 0.1, 0.02, 0.34, 6, 1); }
-      else if (k === 'ham') { m.mat(MAT.PLAIN, [0.5, 0.26, 0.2]); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
+      if (k === 'herb') { m.mat(MAT.CLOTH, R.pick([[0.26, 0.3, 0.19], [0.33, 0.31, 0.2], [0.36, 0.29, 0.2], [0.3, 0.27, 0.18]]), 0.5); m.cyl(px + j, -0.92, 0, 0.055, 0.012, 0.3, 6, 1); m.cyl(px + j + 0.03, -0.9, 0.015, 0.04, 0.01, 0.24, 5, 1); m.mat(MAT.CLOTH, [0.4, 0.33, 0.22], 0.5); m.box(px + j - 0.02, -0.78, -0.02, px + j + 0.02, -0.75, 0.02); }      // [c5] a small dull bundle tied at the neck, not a bright cone
+      else if (k === 'ham') { m.mat(MAT.THATCH, [0.42, 0.24, 0.19], 0.4); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
       else if (k === 'pot') { m.mat(MAT.METAL, COL.black); m.cyl(px, -1.0, 0, 0.13, 0.16, 0.2, 8, 2); }
       else { m.mat(MAT.PLAIN, [0.78, 0.7, 0.5]); m.ball(px, -0.95, 0, 0.06, 0.08, 0.06, 5, 3); m.ball(px + 0.02, -1.08, 0, 0.06, 0.08, 0.06, 5, 3); }
     }
