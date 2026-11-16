@@ -50,11 +50,12 @@ const W_ = 'MI_WoodTrim', C_ = 'MI_Trim_Cloth', DARKW = [0.62, 0.55, 0.5];
 // ── generated pieces (origin where they attach to the wall: x along the wall, y up, z out into the street) ──
 let _gn = 0;
 function genAwning(w, c1, c2, drop) {
+  c1 = c1.map(v => v * 0.74); c2 = c2.map(v => v * 0.7);          // [fx1] cloth that has hung in the weather for years: the stripes read as candy at full dye
   const g = GP(), n = Math.max(2, Math.round(w / 0.3)), sw = (w - 0.1) / n, out = 1.45, dy = drop || 0.62;
   for (let i = 0; i < n; i++) {
     const x0 = -w / 2 + 0.05 + i * sw, x1 = x0 + sw, c = i % 2 ? c2 : c1;
     g.quad(C_, [x0, 0, 0], [x1, 0, 0], [x1, -dy, out], [x0, -dy, out], c, GPU.cloth, true);                    // the sloping cloth
-    g.quad(C_, [x0, -dy, out], [x1, -dy, out], [x1, -dy - 0.2, out + 0.03], [x0, -dy - 0.2, out + 0.03], c, GPU.cloth, true);    // valance
+    g.quad(C_, [x0, -dy, out], [x1, -dy, out], [x1, -dy - 0.2, out + 0.03], [x0, -dy - 0.2, out + 0.03], c.map(v => v * 0.86), GPU.cloth, true);    // valance (grimier)
     g.tri(C_, [x0, -dy - 0.2, out + 0.03], [x1, -dy - 0.2, out + 0.03], [(x0 + x1) / 2, -dy - 0.32, out + 0.04], c, GPU.cloth, true);     // scalloped hem
   }
   g.box(W_, -w / 2, -dy - 0.02, out - 0.02, w / 2, -dy + 0.04, out + 0.05, DARKW);

@@ -39,7 +39,9 @@ T.set = name => {
       }
     }
   } else if (name === 'doors') {
+    let ink = 0;
     for (const s of SITES) {
+      if (/^in\./.test(s.id) && (ink++ % 3)) continue;          // the infill houses share one generator: every third door
       const dl = siteDoorLocal(s, 3), d0 = siteDoorLocal(s, 0), w = siteToWorld(s, dl[0], dl[1]), dw = siteToWorld(s, d0[0], d0[1]);
       add('door.' + s.id, w[0], w[1], toward(w[0], w[1], dw[0], dw[1]), 0, [13]);
     }

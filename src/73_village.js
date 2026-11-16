@@ -101,7 +101,7 @@ function buildVillage() {
     m.box(-3.5, 4.35, -0.18, 3.5, 4.7, 0.18); m.box(-3.2, 4.7, -0.12, 3.2, 4.85, 0.12);
     m.mat(MAT.PLANKS, COL.wood); m.box(-1.0, 3.5, -0.035, 1.0, 4.2, 0.035);
     m.mat(MAT.PLAIN, [0.2, 0.42, 0.2]); for (const zf of [-0.04, 0.04]) for (let i = 0; i < 4; i++) { const y = 3.6 + i * 0.13, w2 = 0.3 - i * 0.065; const pts = [[-w2, y, zf], [w2, y, zf], [0, y + 0.22, zf]]; m.poly(zf < 0 ? pts.reverse() : pts); }
-    for (const s of [-1, 1]) { m.mat(MAT.CLOTH, AWN.madder, 0.5); m.quad2([s * 2.35 - 0.35, 4.3, 0.02], [s * 2.35 - 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 4.3, 0.02], 0, 0, 1.2, 2.4); }
+    for (const s of [-1, 1]) { m.push().T(s * 2.35, 4.3, 0.02); Props.banner(m, 0.62, 1.5, AWN.madder, s); m.pop(); }          // [fx1] a hung banner with folds, a hem and a rod, not a flat red slab
   });
   for (const s of [-1, 1]) for (let i = 0; i < 16; i++) {
     const z = -5.2 + s * (3.4 + i * 0.36), x = -62 + Math.sin(i * 0.4) * 0.12 - i * i * 0.012;
@@ -241,9 +241,12 @@ function buildVillage() {
   // ── dynamic objects: door leaves, mill wheel, pickups ──
   const skin = new MeshPack();
   const leaf = new Mesh(512);
-  leaf.mat(MAT.PLANKS, COL.woodDark, 0.6); leaf.ao = 0.8; leaf.box(0, 0.02, -0.03, 1, 1, 0.03);
-  leaf.mat(MAT.METAL, COL.black); for (const y of [0.18, 0.82]) { leaf.box(0, y - 0.03, -0.04, 0.82, y + 0.03, -0.03, 32); leaf.box(0, y - 0.03, 0.03, 0.82, y + 0.03, 0.04, 16); }
-  leaf.box(0.86, 0.48, -0.07, 0.9, 0.54, 0.07);
+  // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
+  leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.05, 0.04, 0.035]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 0);
+  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [0.8 * k, 0.62 * k, 0.45 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 0); }
+  leaf.mat(MAT.PLANKS, [0.56, 0.43, 0.31], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
+  leaf.mat(MAT.METAL, [0.2, 0.19, 0.18]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (let k = 0; k < 4; k++) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, sz > 0 ? 16 : 32); }
+  leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   const leafItem = skin.add(leaf);
   for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane

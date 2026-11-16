@@ -1793,7 +1793,7 @@ const Kit = (() => {
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
     let em = alb.mul(SH.hemi(N, skyVis.mul(ao).mul(aoR), zone).add(SH.pointLights(wp, N, zone, 0.25).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.65).add(0.35)).add(SH.winLight(wp, N, zone).mul(ao.mul(0.4).add(0.6)).mul(aoR.mul(0.6).add(0.4)))));      // [l1] window light (40c_light.js)
-    em = em.add(alb.mul(glow));
+    em = em.add(alb.mul(glow).mul(float(1).sub(smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(float(0.82).mul(float(1).sub(step(0.5, zone)))))));          // [fx1] outdoor lamp glass glows at night only (it read as a cream box by day)
     if (batch && /Floor_Wood|Table|Counter|Bar_/.test(name) && !(TEST && TEST.gloss === 0)) em = em.add(SH.pointSpec(wp, N, normalize(U.camPos.sub(wp)), float(0.55), zone).mul(0.3));      // [l1] worn boards and table tops catch the fire
     if (!isFoliage(d)) {          // outdoors, a surface turned from the sun keeps readable texture: a fill of sun-coloured bounce and sky, and a floor (roofs and walls went black in shade)
       const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
@@ -4449,8 +4449,25 @@ const Props = {
     m.box(-0.75, 0.70, 1.17, 0.75, 1.08, 1.23); m.box(-0.75, 0.70, -1.23, 0.75, 0.95, -1.17);
     m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.9, 0.52, -0.05, 0.9, 0.62, 0.05);
     for (const sx of [-1, 1]) { m.beam([sx * 0.45, 0.6, -1.2], [sx * 0.42, 0.42, -2.9], 0.07, 0.07); at(m, sx * 0.92, 0.57, 0, PI / 2, () => Props.wheel(m, 0.57, 0.09)); }
-    if (hay) { m.mat(MAT.THATCH, COL.hay, 0.8); m.ball(0, 0.95, 0, 0.7, 0.5, 1.1, 10, 6); }
+    if (hay) Props.hayLoad(m, 0.68, 1.12, 0.78, 0.36);
     addBoxCollider(m, -0.95, -1.25, 0.95, 1.25, 0, 1.1);
+  },
+  // [fx1] a load of loose hay: a shallow mound of overlapping lumps (not one ball) with straw stalks sticking out, in dry golden straw, not the thatch tile's green
+  hayLoad(m, hw, hl, y0, hh) {
+    const R = rng(Math.round(hw * 977 + hl * 131)), straw = [0.92, 0.76, 0.46];
+    m.mat(MAT.THATCH, straw, 0.8);
+    for (let i = 0; i < 7; i++) { const u = (i / 6) * 2 - 1, x = u * 0.2 * hw + R.s() * 0.18, z = u * hl * 0.8 + R.s() * 0.12, rx = hw * (0.55 + R() * 0.25), rz = hl * 0.3 + R() * 0.12, ry = hh * (0.55 + 0.4 * (1 - Math.abs(u))); m.ball(x, y0 + ry * 0.35, z, rx, ry, rz, 8, 4); }
+    m.mat(MAT.THATCH, [1.0, 0.86, 0.52], 0.6);
+    for (let i = 0; i < 26; i++) { const x = R.s() * hw * 0.9, z = R.s() * hl * 0.95, h0 = y0 + hh * (0.5 + R() * 0.45) * (1 - 0.5 * Math.abs(z) / hl); m.beam([x, h0, z], [x + R.s() * 0.22, h0 + 0.06 + R() * 0.16, z + R.s() * 0.22], 0.012, 0.01); }
+  },
+  // [fx1] a hanging cloth banner, origin at the top centre, hanging down -y, facing +-z: a rod and two cords, the cloth in strips that wave a little (not one flat slab), a darker hem, a swallow-tail
+  banner(m, w, h, col, seed) {
+    const n = 5, dw = w / n, R = rng(7 + (seed || 0) * 31), f = i => Math.sin(i * 1.7 + (seed || 0)) * 0.03 + R.s() * 0.008;
+    m.mat(MAT.TIMBER, COL.timberDark, 0.6); m.box(-w / 2 - 0.07, 0, -0.025, w / 2 + 0.07, 0.05, 0.025, 0);
+    for (const sx of [-1, 1]) m.box(sx * (w / 2 - 0.05) - 0.006, 0.05, -0.006, sx * (w / 2 - 0.05) + 0.006, 0.16, 0.006, 0);
+    m.mat(MAT.CLOTH, col, 0.5);
+    for (let i = 0; i < n; i++) { const x0 = -w / 2 + i * dw, x1 = x0 + dw, tail = h * (i % 2 ? 0.88 : 0.97) * (0.9 + 0.1 * Math.abs(i - n / 2 + 0.5) / (n / 2)); m.quad2([x0, 0, f(i)], [x0, -tail, f(i + 0.5) * 1.6], [x1, -tail, f(i + 1.5) * 1.6], [x1, 0, f(i + 1)], 0, 0, 0.3, 1); }
+    m.mat(MAT.CLOTH, col.map(v => v * 0.55), 0.5); m.quad2([-w / 2, -0.04, 0.012], [-w / 2, -0.04 - 0.07, 0.016], [w / 2, -0.04 - 0.07, 0.016], [w / 2, -0.04, 0.012], 0, 0, 1, 0.1);
   },
   fencePost(m, h) { m.mat(MAT.TIMBER, COL.timber); m.cbox(0, -0.3, 0, 0.1, h + 0.3, 0.1, 4); },
   gravestone(m, R) {
@@ -8949,7 +8966,7 @@ function buildVillage() {
     m.box(-3.5, 4.35, -0.18, 3.5, 4.7, 0.18); m.box(-3.2, 4.7, -0.12, 3.2, 4.85, 0.12);
     m.mat(MAT.PLANKS, COL.wood); m.box(-1.0, 3.5, -0.035, 1.0, 4.2, 0.035);
     m.mat(MAT.PLAIN, [0.2, 0.42, 0.2]); for (const zf of [-0.04, 0.04]) for (let i = 0; i < 4; i++) { const y = 3.6 + i * 0.13, w2 = 0.3 - i * 0.065; const pts = [[-w2, y, zf], [w2, y, zf], [0, y + 0.22, zf]]; m.poly(zf < 0 ? pts.reverse() : pts); }
-    for (const s of [-1, 1]) { m.mat(MAT.CLOTH, AWN.madder, 0.5); m.quad2([s * 2.35 - 0.35, 4.3, 0.02], [s * 2.35 - 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 2.7, 0.02], [s * 2.35 + 0.35, 4.3, 0.02], 0, 0, 1.2, 2.4); }
+    for (const s of [-1, 1]) { m.push().T(s * 2.35, 4.3, 0.02); Props.banner(m, 0.62, 1.5, AWN.madder, s); m.pop(); }          // [fx1] a hung banner with folds, a hem and a rod, not a flat red slab
   });
   for (const s of [-1, 1]) for (let i = 0; i < 16; i++) {
     const z = -5.2 + s * (3.4 + i * 0.36), x = -62 + Math.sin(i * 0.4) * 0.12 - i * i * 0.012;
@@ -9089,9 +9106,12 @@ function buildVillage() {
   // ── dynamic objects: door leaves, mill wheel, pickups ──
   const skin = new MeshPack();
   const leaf = new Mesh(512);
-  leaf.mat(MAT.PLANKS, COL.woodDark, 0.6); leaf.ao = 0.8; leaf.box(0, 0.02, -0.03, 1, 1, 0.03);
-  leaf.mat(MAT.METAL, COL.black); for (const y of [0.18, 0.82]) { leaf.box(0, y - 0.03, -0.04, 0.82, y + 0.03, -0.03, 32); leaf.box(0, y - 0.03, 0.03, 0.82, y + 0.03, 0.04, 16); }
-  leaf.box(0.86, 0.48, -0.07, 0.9, 0.54, 0.07);
+  // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
+  leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.05, 0.04, 0.035]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 0);
+  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [0.8 * k, 0.62 * k, 0.45 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 0); }
+  leaf.mat(MAT.PLANKS, [0.56, 0.43, 0.31], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
+  leaf.mat(MAT.METAL, [0.2, 0.19, 0.18]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (let k = 0; k < 4; k++) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, sz > 0 ? 16 : 32); }
+  leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   const leafItem = skin.add(leaf);
   for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
@@ -9280,11 +9300,12 @@ const W_ = 'MI_WoodTrim', C_ = 'MI_Trim_Cloth', DARKW = [0.62, 0.55, 0.5];
 // ── generated pieces (origin where they attach to the wall: x along the wall, y up, z out into the street) ──
 let _gn = 0;
 function genAwning(w, c1, c2, drop) {
+  c1 = c1.map(v => v * 0.74); c2 = c2.map(v => v * 0.7);          // [fx1] cloth that has hung in the weather for years: the stripes read as candy at full dye
   const g = GP(), n = Math.max(2, Math.round(w / 0.3)), sw = (w - 0.1) / n, out = 1.45, dy = drop || 0.62;
   for (let i = 0; i < n; i++) {
     const x0 = -w / 2 + 0.05 + i * sw, x1 = x0 + sw, c = i % 2 ? c2 : c1;
     g.quad(C_, [x0, 0, 0], [x1, 0, 0], [x1, -dy, out], [x0, -dy, out], c, GPU.cloth, true);                    // the sloping cloth
-    g.quad(C_, [x0, -dy, out], [x1, -dy, out], [x1, -dy - 0.2, out + 0.03], [x0, -dy - 0.2, out + 0.03], c, GPU.cloth, true);    // valance
+    g.quad(C_, [x0, -dy, out], [x1, -dy, out], [x1, -dy - 0.2, out + 0.03], [x0, -dy - 0.2, out + 0.03], c.map(v => v * 0.86), GPU.cloth, true);    // valance (grimier)
     g.tri(C_, [x0, -dy - 0.2, out + 0.03], [x1, -dy - 0.2, out + 0.03], [(x0 + x1) / 2, -dy - 0.32, out + 0.04], c, GPU.cloth, true);     // scalloped hem
   }
   g.box(W_, -w / 2, -dy - 0.02, out - 0.02, w / 2, -dy + 0.04, out + 0.05, DARKW);
@@ -10636,7 +10657,7 @@ const LVL = { n: 0 };
 // vertical stone faces upward by `k` lets them take more of the sky's light; the sun still sees them as before on the lit side. `touch` maps each bucket mesh to its vertex count before the builder began.
 function lvLift(touch, k) {
   for (const [m, n0] of touch) for (let i = n0; i < m.nv; i++) {
-    const b = i * 32; if (m.u8[b + 28] !== MAT.STONE) continue; const ny = m.i8[b + 13]; if (Math.abs(ny) > 40) continue;
+    const b = i * 32; if (m.u8[b + 28] !== MAT.STONE && m.u8[b + 28] !== MAT.PLANKS && m.u8[b + 28] !== MAT.TIMBER) continue;          // [fx1] boards and beams in shade went black beside the lifted stone (wharf doors) const ny = m.i8[b + 13]; if (Math.abs(ny) > 40) continue;
     let x = m.i8[b + 12], y = ny + k * 127, z = m.i8[b + 14]; const l = 127 / Math.hypot(x, y, z); m.i8[b + 12] = Math.round(x * l); m.i8[b + 13] = Math.round(y * l); m.i8[b + 14] = Math.round(z * l);
   }
 }
@@ -10828,7 +10849,7 @@ function buildWharf(bucket, fence, R) {
     // boat-house doors in the north face (the road side): a stone arch, a dark recess, plank doors with straps
     for (const x of [11.6, 16.4]) { const g = Terrain.y(x, Z0 - 0.2), zf = Z0 - 0.03;
       m.mat(MAT.STONE, sc(1), 0.6); m.box(x - 0.95, g + 1.55, Z0 - 0.12, x + 0.95, g + 1.8, Z0, 4); m.box(x - 0.95, g, Z0 - 0.12, x - 0.7, g + 1.55, Z0, 4); m.box(x + 0.7, g, Z0 - 0.12, x + 0.95, g + 1.55, Z0, 4);
-      m.mat(MAT.PLANKS, [0.62, 0.5, 0.38], 0.5); m.box(x - 0.7, g, zf - 0.02, x + 0.7, g + 1.55, zf, 4 | 8 | 16);
+      m.mat(MAT.PLANKS, [0.62, 0.5, 0.38], 0.5); m.box(x - 0.7, g, zf - 0.02, x + 0.7, g + 1.55, zf, 4 | 8 | 32);          // [fx1] the road-side face is -z: skipping it (16) left the straps floating on bare stone
       m.mat(MAT.PLAIN, [0.09, 0.08, 0.07]); m.box(x - 0.7, g + 0.4, zf - 0.04, x + 0.7, g + 0.5, zf - 0.015, 4 | 8 | 32); m.box(x - 0.7, g + 1.1, zf - 0.04, x + 0.7, g + 1.2, zf - 0.015, 4 | 8 | 32); }
   }
   // flight up from the south road (west face): 2 m wide, cheeks as beams
