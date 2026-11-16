@@ -6805,10 +6805,9 @@ function pWallSlot(P, room, side, w, d, o) {
 const HON_C = {};
 function pAgainst(P, room, side, name, w, d, h, back, draw, o) {
   o = Object.assign({ h, _hon: {} }, o || {});
-  const hk = name.replace(/^[^.]*\./, '').replace(/\d+/g, '') + side + w.toFixed(2) + d.toFixed(2); if (!o._hon.rel && HON_C[hk]) o._hon.rel = Object.assign({}, HON_C[hk]);   // [fx2] what this kind really occupies, learnt once
   for (let n = 0; n < 14; n++) {          // [fx2] the first free slot that the measured thing really fits
     const s = pWallSlot(P, room, side, w, d, Object.assign({}, o, { nth: n })); if (!s) return null;
-    const it = pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side })); if (o._hon.rel) HON_C[hk] = Object.assign({}, o._hon.rel); if (it) return it;
+    const it = pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side })); if (it) return it;
   }
   return null;
 }
@@ -6873,7 +6872,7 @@ function pSpot(P, name, x, z, yaw, o) {
   o = o || {}; const k = o.k === undefined ? 0 : o.k, L = P.lv[k], y = (o.y === undefined ? 0.02 : o.y) + L.y;
   const p = P.w2(x, y, z); World.spots[P.id + '.' + name] = Object.assign({ p, yaw: yaw + P.yaw, zone: P.zone, site: P.id, k, room: (pRoomAt(P, k, x, z) || {}).id }, o.extra || {});
   P.spots[name] = { x, z, k, yaw, p };
-  if (name === 'counter') P.clear.push({ x0: x - 0.3, x1: x + 0.3, z0: z - 0.3, z1: z + 0.3, k, kind: 'path' });   // [fx2] the keeper's standing room stays free
+  if (name === 'counter') { const zc = { x0: x - 0.3, x1: x + 0.3, z0: z - 0.3, z1: z + 0.3, k, kind: 'path' }; if (!P.items.some(i => i.k === k && P_SOLID[i.kind] && rOv(i, zc))) P.clear.push(zc); }   // [fx2] the keeper's standing room stays free
 }
 function pInteract(P, x, y, z, o, k) { const L = P.lv[k || 0]; const it = Object.assign({ p: P.w2(x, y + L.y, z), r: 2.0, zone: P.zone }, o); World.interact.push(it); return it; }
 function pLight(P, x, y, z, r, col, kind, k) { const L = P.lv[k || 0], rm = pRoomAt(P, k || 0, x, z); if (rm) P.lightIn[rm.id] = 1; P.lights++; return addLight(P.w2(x, y + L.y, z), r, col, P.zone, kind); }
@@ -7711,7 +7710,7 @@ PD.try = function (P, room, sd, u, kind, R, fill) {
   switch (kind) {
     case 'shelf': return PD.floorAt(P, room, sd, id + 'sh', 1.5, 0.34, 1.8, pdShelf(1.5, 1.8, 3, fill || PD.goods(c, 1.5)), u, 0.3);
     case 'books': return PD.floorAt(P, room, sd, id + 'bk', 1.8, 0.34, 1.8, pdShelf(1.8, 1.8, 3, PD.books(c, 1.8)), u, 0.3);
-    case 'cabinet': { const q = (P.fixt = P.fixt || {}), key = room.id + 'cabinet'; if ((q[key] || 0) >= 2) return 0; const w = PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true }); if (w) q[key] = (q[key] || 0) + 1; return w; }
+    case 'cabinet': { const q = (P.fixt = P.fixt || {}), key = room.id + 'cabinet'; if ((q[key] || 0) >= 5) return PD.try(P, room, sd, u, 'cupboard', R, fill); const w = PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true }); if (w) q[key] = (q[key] || 0) + 1; return w; }
     case 'cupboard': return PD.floorAt(P, room, sd, id + 'cu', 1.12, 0.6, 1.76, PD.cupboard, u, 0.3);
     case 'cask': return PD.floorAt(P, room, sd, id + 'ck', 1.0, 0.95, 0.8, PD.cask(0.9, 0.32), u, 0.3, { lowOk: true });
     case 'bench': return PD.floorAt(P, room, sd, id + 'bn', 1.6, 0.4, 0.46, m => Props.bench(m, 1.6), u, 0.3, { lowOk: true });

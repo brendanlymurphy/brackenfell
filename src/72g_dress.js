@@ -100,7 +100,7 @@ PD.try = function (P, room, sd, u, kind, R, fill) {
   switch (kind) {
     case 'shelf': return PD.floorAt(P, room, sd, id + 'sh', 1.5, 0.34, 1.8, pdShelf(1.5, 1.8, 3, fill || PD.goods(c, 1.5)), u, 0.3);
     case 'books': return PD.floorAt(P, room, sd, id + 'bk', 1.8, 0.34, 1.8, pdShelf(1.8, 1.8, 3, PD.books(c, 1.8)), u, 0.3);
-    case 'cabinet': { const q = (P.fixt = P.fixt || {}), key = room.id + 'cabinet'; if ((q[key] || 0) >= 2) return 0; const w = PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true }); if (w) q[key] = (q[key] || 0) + 1; return w; }
+    case 'cabinet': { const q = (P.fixt = P.fixt || {}), key = room.id + 'cabinet'; if ((q[key] || 0) >= 5) return PD.try(P, room, sd, u, 'cupboard', R, fill); const w = PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true }); if (w) q[key] = (q[key] || 0) + 1; return w; }
     case 'cupboard': return PD.floorAt(P, room, sd, id + 'cu', 1.12, 0.6, 1.76, PD.cupboard, u, 0.3);
     case 'cask': return PD.floorAt(P, room, sd, id + 'ck', 1.0, 0.95, 0.8, PD.cask(0.9, 0.32), u, 0.3, { lowOk: true });
     case 'bench': return PD.floorAt(P, room, sd, id + 'bn', 1.6, 0.4, 0.46, m => Props.bench(m, 1.6), u, 0.3, { lowOk: true });
