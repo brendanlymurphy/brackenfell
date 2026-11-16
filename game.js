@@ -7508,7 +7508,7 @@ function hCtx(P, c) {
     const w = { stone: { walls: 'stone', tint: [0.92, 0.9, 0.86] }, timber: { tint: [0.5, 0.38, 0.27] }, wattle: { tint: [0.86, 0.74, 0.5] }, plaster: { tint: F.tint } }[F.wallKind], f = { flags: { floor: 'stone' }, earth: { floor: 'stone', ftint: [0.5, 0.4, 0.28] }, slate: { floor: 'stone', ftint: [0.62, 0.68, 0.74] }, boards: { floor: 'wood', ftint: wealth > 1 ? [1.0, 0.9, 0.78] : undefined } }[F.floorKind];
     const r = Object.assign({}, w, f, o || {}); if (o && o.floor && o.floor !== (f && f.floor)) delete r.ftint; return r;
   };
-  F.door = (a, b, x, z, o) => pDoor(P, a, b, F.X(x), z, o);
+  F.door = (a, b, x, z, o) => { const d = pDoor(P, a, b, F.X(x), z, o); if (b === null && P.rooms[a]) P.clear.push({ x0: F.X(x) - 0.8, x1: F.X(x) + 0.8, z0: z, z1: z + 2.6, k: P.rooms[a].k, kind: 'path', room: P.rooms[a] }); return d; };      // [c5] nothing stands in the first 2.6 m inside the street door
   return F;
 }
 const HFAM_SHOP = { shopfront: true };
