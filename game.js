@@ -5178,7 +5178,7 @@ const SCANR = {
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
   Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
-  Barrel: { n: ['wine_barrel_01', 'wooden_barrels_01_a'], fit: 'xz', one: 1, inOnly: 1 },
+  Barrel: { n: ['wine_barrel_01'], fit: 'xz', one: 1, inOnly: 1 },          // [fx2] the second scan has doubled coplanar staves inside it (9000 audit pairs): one model
   Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' }, Bottle_1: { n: ['ceramic_vase_04'], fit: 'contain' },
   Table_Plate: { n: ['carved_wooden_plate'], fit: 'contain' },
   Candle_1: { n: ['wooden_candlestick'], fit: 'contain', mul: 1.25 }, Candle_2: { n: ['wooden_candlestick'], fit: 'contain' },
@@ -9023,7 +9023,7 @@ Bake.pool = function (m, y, q, mg, A) {
 };
 Bake.interior = function (P) {
   if (!Bake.on || !P || !P.c || !P.c.cell) return;
-  const cell = P.c.cell, m = new Mesh(512); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.layer = 0; m.cr = m.cg = m.cb = 0; m.grad = null; m.wind = 0;
+  const cell = P.c.cell, m = new Mesh(512); m.noAudit = 1; /* [fx2] alpha decal: overlapping pools are meant to overlap */ m.m1 = 0; m.m2 = 0; m.m3 = 0; m.layer = 0; m.cr = m.cg = m.cb = 0; m.grad = null; m.wind = 0;
   const T = P.T, ax = [T[0], T[2]], az = [T[8], T[10]];             // canonical x and z axes in world (x, z)
   const w2 = (x, z) => [T[12] + x * ax[0] + z * az[0], T[14] + x * ax[1] + z * az[1]];
   for (const it of P.items) {
@@ -9042,7 +9042,7 @@ Bake.interior = function (P) {
   }
   if (m.ni) cell.decal = m;
   // light shafts: two stacked quads from the pane down to the floor in front of it
-  { const sm = new Mesh(256); sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 232; sm.cb = 190; sm.ao = 1;
+  { const sm = new Mesh(256); sm.noAudit = 1; sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 232; sm.cb = 190; sm.ao = 1;
     for (const w of P.windows) {
       const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
       const og = wl.open.find(o => o.type === 'win' && o.pos === w.pos), gc = og && og.glass; if (gc) { sm.cr = Math.round(Math.min(1, 0.25 + gc[0]) * 255); sm.cg = Math.round(Math.min(1, 0.25 + gc[1]) * 255); sm.cb = Math.round(Math.min(1, 0.25 + gc[2]) * 255); } else { sm.cr = 255; sm.cg = 232; sm.cb = 190; }      // stained glass throws its own colour
