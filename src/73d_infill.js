@@ -195,11 +195,11 @@ function infNeighbour(h, east) {
 
 // ── districts (Build 42): five quarters a player can tell apart at a glance. Per-district parameters only (colour, storeys, pitch, ground floor, jetty, roof tone), so the batch count stays flat. ──
 const INF_DISTRICTS = {
-  merchants: { name: 'Merchants’ Row',   tint: [0.93, 0.9, 0.84],  roof: [0.4, 0.43, 0.5], fl: [2, 3], pitch: [32, 36], stone: true,  jetty: false },
-  fishers:   { name: 'The Net Lofts',    tint: [0.4, 0.38, 0.37],  roof: [0.3, 0.28, 0.26],  fl: [1, 1], pitch: [26, 30], stone: false, jetty: false },
-  cottages:  { name: 'The Thatches',     tint: [1, 0.96, 0.86],    roof: [0.86, 0.68, 0.36],   fl: [1, 1], pitch: [50, 56], stone: false, jetty: false, alt: [[0.98, 0.86, 0.64], [0.95, 0.93, 0.88]] },
-  dyers:     { name: 'The Dyers’ Bank',  tint: [0.66, 0.62, 0.64], roof: [0.66, 0.5, 0.4],   fl: [1, 2], pitch: [36, 42], stone: false, jetty: false, alt: [[0.56, 0.6, 0.7], [0.72, 0.54, 0.48]] },
-  poor:      { name: 'The Warren',       tint: [0.56, 0.5, 0.45],  roof: [0.5, 0.46, 0.42], fl: [2, 3], pitch: [50, 58], stone: false, jetty: true,  patch: true },
+  merchants: { name: 'Merchants’ Row',   tint: [0.93, 0.9, 0.84],  roof: [0.34, 0.4, 0.52], fl: [2, 3], pitch: [32, 36], stone: true,  jetty: false },
+  fishers:   { name: 'The Net Lofts',    tint: [0.4, 0.38, 0.37],  roof: [0.17, 0.16, 0.15],  fl: [1, 1], pitch: [26, 30], stone: false, jetty: false },
+  cottages:  { name: 'The Thatches',     tint: [1, 0.96, 0.86],    roof: [0.98, 0.74, 0.38],   fl: [1, 1], pitch: [50, 56], stone: false, jetty: false, alt: [[0.98, 0.86, 0.64], [0.95, 0.93, 0.88]] },
+  dyers:     { name: 'The Dyers’ Bank',  tint: [0.66, 0.62, 0.64], roof: [0.8, 0.4, 0.28],   fl: [1, 2], pitch: [36, 42], stone: false, jetty: false, alt: [[0.56, 0.6, 0.7], [0.72, 0.54, 0.48]] },
+  poor:      { name: 'The Warren',       tint: [0.56, 0.5, 0.45],  roof: [0.42, 0.56, 0.32], fl: [2, 3], pitch: [50, 58], stone: false, jetty: true,  patch: true },
 };
 function infDistrictOf(h) {
   const dsq = Math.hypot(h.x - SQUARE.x, h.z - SQUARE.z);
