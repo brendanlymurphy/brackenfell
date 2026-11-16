@@ -19,7 +19,7 @@ const HTRADES = {
 };
 const H_TINTS = [[1, 1, 1], [1.0, 0.93, 0.78], [0.88, 0.95, 0.86], [1.0, 0.86, 0.8], [0.84, 0.82, 0.8], [0.95, 0.9, 0.72], [0.9, 0.9, 1.0]];          // whitewash, ochre, sage, rose, grey, straw, lime-blue
 const H_RUGS = [[0.5, 0.2, 0.16], [0.3, 0.22, 0.16], [0.24, 0.32, 0.2], [0.26, 0.28, 0.44], [0.45, 0.32, 0.14], [0.4, 0.2, 0.3]];
-const hHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0) / 4294967296; };
+const hHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d), h = Math.imul(h ^ (h >>> 12), 0x297a2d39), ((h ^ (h >>> 15)) >>> 0) / 4294967296); };
 const stRun = (rise, tread) => Math.ceil(rise / 0.19) * tread;
 const ceil2 = v => Math.ceil(v * 2 - 1e-9) / 2;
 function hCtx(P, c) {
@@ -183,3 +183,14 @@ function hBuild(P, c, info) { const F = hCtx(P, c); P.fam = F; HFAM[F.fam](P, c,
 for (const id of (typeof INF !== 'undefined' && INF.enterIds || [])) { PLANS[id] = hBuild; PLAN_SHIP[id] = 1; }
 for (const id of ['high.a', 'high.c']) if (typeof SITE !== 'undefined' && SITE[id]) { PLANS[id] = hBuild; PLAN_SHIP[id] = 1; }
 HDESC['high.a'] = { trade: 'shepherd', fam: 'cottage', wealth: 0 }; HDESC['high.c'] = { trade: 'woodcutter', fam: 'hallchamber', wealth: 0 };
+
+// ── the market alley's six shop fronts (73b_alley.js draws the facade; its door leaf is the portal of a cell built here) [c5] ──
+if (typeof HOUSES !== 'undefined' && typeof ALLEY_SHOPS !== 'undefined') {
+  const AT = { 'shop.n2': 'apothecary', 'shop.n3': 'cutler', 'shop.n4': 'grocer', 'shop.s0': 'baker', 'shop.s1': 'bookseller', 'shop.s2': 'tinker' };
+  for (const a of ALLEY_SHOPS) if (a.layout && AT[a.id]) {
+    const st = SITE[a.id], t = AT[a.id];
+    HOUSES[a.id] = { H: 2.6, walls: 'timber', roof: 'thatch', doors: [{ wall: 'front', pos: st.doorPos, lamp: false }], windows: [], interior() {} };
+    KIT_STYLE[a.id] = { ground: 'plaster', up: 0, timber: true, shingle: true };
+    HDESC[a.id] = { trade: t, fam: 'shopfront', wealth: 1 }; PLANS[a.id] = hBuild; PLAN_SHIP[a.id] = 1;
+  }
+}
