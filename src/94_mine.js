@@ -328,7 +328,7 @@ function mineTick(dt) {
   const on = mineLampOn(); MINE.lamp.on = on;
   if (on) { ms.oil = Math.max(0, ms.oil - dt); if (ms.oil < 45 && !MINE.lamp.warnedLow) { MINE.lamp.warnedLow = true; toast('The lantern gutters. It wants oil.'); } if (ms.oil > 90) MINE.lamp.warnedLow = false; }
   const L = MINE.lamp.light, P = Player.pos, f = [Math.sin(Player.yaw), 0, -Math.cos(Player.yaw)];
-  L.p[0] = P[0] + f[0] * 0.35; L.p[1] = P[1] + 1.35; L.p[2] = P[2] + f[2] * 0.35; L.r = on ? 15 : 2.6; L.c[0] = on ? 10.5 : 0.5; L.c[1] = on ? 6.4 : 0.3; L.c[2] = on ? 2.9 : 0.12;      /* coordinator: at 2.9 the lit lantern showed almost nothing on screen (mean pixel 14 of 255); the carried light must make the tunnel readable for ten metres */
+  L.p[0] = P[0] + f[0] * 0.35; L.p[1] = P[1] + 1.35; L.p[2] = P[2] + f[2] * 0.35; const LK = TEST && TEST.lantern === 0 ? 0 : 1; L.r = on ? 15 + 4 * LK : 2.6; L.c[0] = on ? 10.5 + 4.5 * LK : 0.5; L.c[1] = on ? 6.4 + 2.2 * LK : 0.3; L.c[2] = on ? 2.9 + 0.5 * LK : 0.12;      /* coordinator: at 2.9 the lit lantern showed almost nothing on screen (mean pixel 14 of 255); the carried light must make the tunnel readable for ten metres */
   MINE.lamp.dark = !on;
   if (mineTrapCheck) mineTrapCheck();
 }
@@ -346,7 +346,7 @@ document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat &
 function mineGauge(show) { let g = document.getElementById('oilgauge'); if (!g) { if (!show) return; g = document.createElement('div'); g.id = 'oilgauge'; g.style.cssText = 'position:fixed;left:calc(var(--pl,0px) + 14px);top:62px;width:70px;height:5px;background:rgba(0,0,0,.45);border:1px solid rgba(214,180,110,.35);z-index:5;pointer-events:none'; g.innerHTML = '<i style="display:block;height:100%;background:#d9a441;width:100%"></i>'; document.body.appendChild(g); } g.style.display = show ? '' : 'none'; if (show) { const o = MINE_S().oil, f = g.firstChild; f.style.width = Math.max(0, Math.min(100, o / 6)) + '%'; f.style.background = S.flags.lampOff === 1 ? '#6b5a3a' : (o < 90 ? '#c8502a' : '#d9a441'); } }
 
 const _ce94 = Cells.env;
-Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.34, 0.25, 0.15]; e.ambGnd = [0.2, 0.145, 0.088]; e.fogDensity = 0.062; } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
+Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.18, 0.13, 0.08]; e.ambGnd = [0.10, 0.075, 0.046]; e.fogDensity = 0.062; } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* the carried lantern is a wide point light (r 19) plus a modest warm ambient that the dark fog swallows with distance: a pool of light with dark beyond it, never a black screen */
 const _cc94 = Cells.change;
 Cells.change = function (c) { _cc94(c); if (c && c.id === 'mine') { if (!S.flags.mineOpen) { S.flags.mineOpen = 1; if (typeof uiObjective === 'function') uiObjective(); } if (has('lantern') && !MINE_S().oil) MINE_S().oil = 600; } };
 const _wa94 = World.waterAt;

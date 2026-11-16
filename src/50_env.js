@@ -46,7 +46,7 @@ function updateEnv(time, indoor) {
   const sy = sun[1];
   const day = smooth(-0.10, 0.14, sy), night = 1 - smooth(-0.22, -0.02, sy);
   const golden = Math.exp(-(sy * sy) / 0.06);                 // peaks at the horizon
-  e.day = day; e.night = night;
+  e.day = day; e.night = night; e.golden = golden;
   const sunI = smooth(-0.015, 0.11, sy), moonI = smooth(0.02, 0.2, moon[1]) * smooth(-0.04, -0.12, sy);
   const sunCol = mix3([1.0, 0.42, 0.14], [1.0, 0.925, 0.79], smooth(0.0, 0.42, sy));
   if (sunI > 0.001 || moonI <= 0) { e.keyDir = sun[1] > 0.02 ? sun : v3.norm([sun[0], 0.02, sun[2]]); e.keyCol = v3.scale(sunCol, 3.7 * sunI); }

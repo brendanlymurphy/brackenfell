@@ -62,16 +62,17 @@ function buildPipeline() {
   let hdr = col.rgb;
   R.bloomNode = null;
   if (q.bloom) { R.bloomNode = T3X.bloom(col, 0.22, 0.55, 1.6); bloomTrim(R.bloomNode, q); hdr = hdr.add(R.bloomNode.rgb); }
-  const P = R.pu = { exposure: uniform(0.6), vignette: uniform(0.55), sat: uniform(1.0), frame: uniform(0) };
+  const P = R.pu = { exposure: uniform(0.6), vignette: uniform(0.55), sat: uniform(1.0), frame: uniform(0), con: uniform(0.22), shadowT: uniform(new THREE.Vector3(0.93, 0.99, 1.07)), hiT: uniform(new THREE.Vector3(1.045, 1.0, 0.93)), lift: uniform(new THREE.Vector3(0, 0, 0)) };
   const lum = vec3(0.2126, 0.7152, 0.0722);
   const fin = Fn(() => {
     const qv = screenUV.sub(0.5);
     const x = max(hdr, vec3(0)).mul(P.exposure).mul(dot(qv, qv).mul(P.vignette).oneMinus()).toVar();
     const c = clamp(x.mul(x.mul(2.51).add(0.03)).div(x.mul(x.mul(2.43).add(0.59)).add(0.14)), 0, 1).toVar();      // ACES (Narkowicz)
-    // grade: a little more contrast and colour, shadows leaning cool and highlights warm
+    // grade [l1]: saturation, an S-curve, cool or violet shadows and warm highlights, lifted blacks (R.gradeFor sets these by hour and place)
     c.assign(mix(vec3(dot(c, lum)), c, P.sat));
-    c.assign(mix(c, c.mul(c).mul(c.mul(-2).add(3)), 0.22));
-    c.mulAssign(mix(vec3(0.93, 0.99, 1.07), vec3(1.045, 1.0, 0.93), smoothstep(0.06, 0.62, dot(c, lum))));
+    c.assign(mix(c, c.mul(c).mul(c.mul(-2).add(3)), P.con));
+    c.mulAssign(mix(P.shadowT, P.hiT, smoothstep(0.06, 0.62, dot(c, lum))));
+    c.addAssign(P.lift.mul(c.oneMinus()));
     c.assign(pow(max(c, vec3(0)), vec3(1 / 2.2)));
     const n = fract(sin(dot(screenCoordinate.xy.add(P.frame), vec2(12.9898, 78.233))).mul(43758.5453));
     return vec4(c.add(n.sub(0.5).div(255)), 1);
@@ -139,6 +140,23 @@ function pickLights(camPos, camZone, env) {
   U.lightN.value = n; U.lightNOut.value = outdoor.length;
   return n;
 }
+// [l1] colour grade by hour and place: day (cool shadow, warm light), golden hour (amber light, violet shade), night (blue blacks), rooms (warm, low contrast in shadow), mine (cold, crushed)
+R.grade = null;
+function gradeFor(env) {
+  const cell = World.cell, mix3_ = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), g = env.golden || 0, n = env.night || 0;
+  let t = { sat: 0.92, con: 0.24, sh: [0.94, 0.99, 1.07], hi: [1.045, 1.0, 0.93], lift: [0.002, 0.003, 0.004] };
+  const gold = { sat: 1.02, con: 0.26, sh: [0.97, 0.95, 1.09], hi: [1.12, 1.0, 0.82], lift: [0.004, 0.002, 0.005] }, night = { sat: 0.84, con: 0.28, sh: [0.94, 0.98, 1.06], hi: [1.0, 0.97, 0.92], lift: [0, 0, 0] };
+  const mixT = (a, b, k) => ({ sat: a.sat + (b.sat - a.sat) * k, con: a.con + (b.con - a.con) * k, sh: mix3_(a.sh, b.sh, k), hi: mix3_(a.hi, b.hi, k), lift: mix3_(a.lift, b.lift, k) });
+  t = mixT(t, gold, clamp(g * 1.15, 0, 1)); t = mixT(t, night, n);
+  if (cell) {
+    const room0 = { sat: 0.95, con: 0.19, sh: [1.04, 0.99, 0.92], hi: [1.07, 1.0, 0.89], lift: [0.004, 0.003, 0.002] }, room = mixT(room0, { sat: 0.95, con: 0.27, sh: [1.04, 0.99, 0.93], hi: [1.06, 1.0, 0.90], lift: [0, 0, 0] }, n), mine = { sat: 0.88, con: 0.32, sh: [0.88, 0.97, 1.10], hi: [1.09, 0.98, 0.82], lift: [0, 0, 0.002] };
+    t = cell.id === 'mine' || cell.daylight === 0 ? mixT(room, mine, cell.id === 'mine' ? 1 : 0.6) : room;
+  }
+  if (TEST && TEST.grade === 0) t = { sat: 1, con: 0.22, sh: [0.93, 0.99, 1.07], hi: [1.045, 1.0, 0.93], lift: [0, 0, 0] };
+  const cur = R.grade || (R.grade = t), k = TEST ? 1 : 0.06;
+  cur.sat += (t.sat - cur.sat) * k; cur.con += (t.con - cur.con) * k; for (const f of ['sh', 'hi', 'lift']) for (let i = 0; i < 3; i++) cur[f][i] += (t[f][i] - cur[f][i]) * k;
+  const P = R.pu; P.sat.value = cur.sat; P.con.value = cur.con; P.shadowT.value.set(...cur.sh); P.hiT.value.set(...cur.hi); P.lift.value.set(...cur.lift);
+}
 function renderFrame(time, env) {
   const q = R.q, cam = R.cam, c3 = R.camera, r = G.renderer, e = cam.pos;
   R.frame++;
@@ -152,7 +170,7 @@ function renderFrame(time, env) {
   const { f } = camBasis(cam);
   // ── light and atmosphere ──
   SH.update(env, e, time); Lamps.sync();
-  pickLights(e, World.camZone | 0, env);
+  pickLights(e, World.camZone | 0, env); SH.winSet(env, e);      // [l1] window light
   const L = env.keyDir, sun = R.sun;
   sun.position.set(L[0] * 100, L[1] * 100, L[2] * 100); sun.target.position.set(0, 0, 0); sun.color.setRGB(env.keyCol[0], env.keyCol[1], env.keyCol[2]);
   // near map every frame, far map every few frames (its centre only moves when it is redrawn)
@@ -164,10 +182,10 @@ function renderFrame(time, env) {
   S.lights[1].shadow.needsUpdate = upd1; S.lights[0].shadow.autoUpdate = !cell; if (cell) S.lights[0].shadow.needsUpdate = false;
   // ── world ──
   sceneUpdate(e, q);
-  Sky.update(e); Grass.update(e, [f[0], f[2]]); Particles.update();
+  Sky.update(e); Grass.update(e, [f[0], f[2]]); Particles.update(); Bake.people(e, env);      // [l1] 72m_bake.js: blob shadows under people
   // ── post ──
   if (R.passScale !== R.scale) { R.scenePass.setResolutionScale(R.scale); R.passScale = R.scale; }
-  R.pu.exposure.value = env.exposure; R.pu.frame.value = (R.frame % 64) * 1.37;
+  gradeFor(env); R.pu.exposure.value = env.exposure; R.pu.frame.value = (R.frame % 64) * 1.37;
   if (R.bloomNode) R.bloomNode.threshold.value = 1.15 / env.exposure;
   R.stats.n = 0; R.stats.t = 0;
   // Three advances its frame counter in its own animation loop; this game drives the loop itself, so step it here or
