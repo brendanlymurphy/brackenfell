@@ -137,8 +137,12 @@ async function packBlob(url) {
 const ASTC_FMT = { '6x6': () => THREE.RGBA_ASTC_6x6_Format, '5x5': () => THREE.RGBA_ASTC_5x5_Format };
 async function loadPackAstc(progress) {
   const L = MAT_NAMES.length; let done = 0;
+  // the Low tier and low-memory devices take the half-resolution pack (tex/s, a quarter of the bytes and of the memory; tools/tex_half.mjs).
+  // ?texpack=half or full (--opt texpack=...) forces one.
+  const want = (TEST && TEST.texpack) || (location.search.match(/[?&]texpack=(\w+)/) || [])[1], half = want ? want === 'half' : GFX_TEX.tiny, dir = half ? 'tex/s/' : 'tex/';
+  if (half && typeof Load !== 'undefined' && Load.groups && Load.groups.indexOf('astc') >= 0) Load.use(Load.groups.map(g => g === 'astc' ? 'astcs' : g));
   const load = async pre => {
-    const blobs = await Promise.all(MAT_NAMES.map(async n => { const d = await packBlob('tex/' + pre + n + '.png'); progress(++done / (L * 2)); return d; }));
+    const blobs = await Promise.all(MAT_NAMES.map(async n => { const d = await packBlob(dir + pre + n + '.png'); progress(++done / (L * 2)); return d; }));
     const dv = new DataView(blobs[0].buffer, blobs[0].byteOffset);
     if (dv.getUint32(0, true) !== 0x58544642) throw new Error('bad pack header');
     const bw = blobs[0][4], bh = blobs[0][5], res = dv.getUint16(6, true), nm = blobs[0][8], mips = [];
