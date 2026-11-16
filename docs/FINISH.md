@@ -35,4 +35,5 @@ Tool: `node test/tour.mjs` (views in `test/tour_views.js`; pictures and contact 
 ## Round 1 status (fx1)
 Fixed: A2 door leaves (new oak leaf), A7 wharf boat-house door planks drawn, B2 hay cart load, B3 gate banners, awnings weathered, outdoor lamp glass glows at night only, 12 muted pictures instead of one landscape, lvLift covers planks/timber, origin colliders (lumber fire pit stray pop, secProp/wPickMesh guards, boot assertion, push/pop warnings).
 Mine tour (r1/mine.*, lantern off): walls are the gravel-heap texture with large flat facets (flood, rampA, niche); not yet faced with scanned rock_face. Open, medium.
+Fixed A8: alley-dress group (crates, barrels with colliders) was hidden on Low (src/71_kithouse.js alley visibility); now shown within 28 m.
 Still open: terrace embankment bare dirt, low-quality alley crates (A8), stall goods, secrets as dark boxes, drowned man, herb racks, plank wall scale, window panes, bell tower coplanar (U112), mill beams, hunter black slab.

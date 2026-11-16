@@ -5355,7 +5355,7 @@ function kitAttach() {
       else if (k.ext && World.deepIn) k.g.visible = hyp(k.site.x - camPos[0], k.site.z - camPos[2]) < DRAW.indoor + Math.max(k.site.w, k.site.d) * 0.5;
       else if (k.scatter) k.g.visible = q.scatter && !World.deepIn;
       else if (k.yard) for (const o of k.g.children) { const bs = o.geometry && o.geometry.boundingSphere; if (bs) { o.visible = !World.deepIn && hyp(bs.center.x - camPos[0], bs.center.z - camPos[2]) < q.yardRange + bs.radius; if (o.userData.cast0 === undefined) o.userData.cast0 = o.castShadow; o.castShadow = q.yardCast && o.userData.cast0; } }
-      else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? 9 : q.yardRange * 1.6 + 8) && (!k.dress || q.scatter); }
+      else if (k.alley) { const cx = camPos[0], cz = camPos[2], d = hyp(Math.max(0, ALLEY.x0 - cx, cx - ALLEY.x1), Math.max(0, Math.abs(cz - 1.5) - 10)); k.g.visible = d < (World.deepIn ? 9 : q.yardRange * 1.6 + 8) && (!k.dress || q.scatter || d < 28); }
       else k.g.visible = true;
     }
     if (Kit.update && !cur) Kit.update(camPos);
