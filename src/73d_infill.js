@@ -193,9 +193,42 @@ function infNeighbour(h, east) {
   return 0;
 }
 
+// ── districts (Build 42): five quarters a player can tell apart at a glance. Per-district parameters only (colour, storeys, pitch, ground floor, jetty, roof tone), so the batch count stays flat. ──
+const INF_DISTRICTS = {
+  merchants: { name: 'Merchants’ Row',   tint: [0.93, 0.9, 0.84],  roof: [0.4, 0.43, 0.5], fl: [2, 3], pitch: [32, 36], stone: true,  jetty: false },
+  fishers:   { name: 'The Net Lofts',    tint: [0.4, 0.38, 0.37],  roof: [0.3, 0.28, 0.26],  fl: [1, 1], pitch: [26, 30], stone: false, jetty: false },
+  cottages:  { name: 'The Thatches',     tint: [1, 0.96, 0.86],    roof: [0.86, 0.68, 0.36],   fl: [1, 1], pitch: [50, 56], stone: false, jetty: false, alt: [[0.98, 0.86, 0.64], [0.95, 0.93, 0.88]] },
+  dyers:     { name: 'The Dyers’ Bank',  tint: [0.66, 0.62, 0.64], roof: [0.66, 0.5, 0.4],   fl: [1, 2], pitch: [36, 42], stone: false, jetty: false, alt: [[0.56, 0.6, 0.7], [0.72, 0.54, 0.48]] },
+  poor:      { name: 'The Warren',       tint: [0.56, 0.5, 0.45],  roof: [0.5, 0.46, 0.42], fl: [2, 3], pitch: [50, 58], stone: false, jetty: true,  patch: true },
+};
+function infDistrictOf(h) {
+  const dsq = Math.hypot(h.x - SQUARE.x, h.z - SQUARE.z);
+  if (h.block === 'north-west') return 'poor';
+  if (h.z > 42 && h.x > -34 && h.x < 38) return 'fishers';
+  if (h.block === 'east-bank' || (h.x > 33 && h.z > 12 && h.z < 46)) return 'dyers';
+  if (h.block === 'west' || h.x < -44 || dsq > 62) return 'cottages';
+  if (dsq < 34) return 'merchants';
+  return null;
+}
+function infDistricts() {
+  const by = {}, R = rng(8800);
+  for (const h of INF.houses) { const k = infDistrictOf(h); if (!k) continue; h.dist = k; (by[k] = by[k] || []).push(h); }
+  for (const k in by) {
+    const D = INF_DISTRICTS[k], hs = by[k].filter(h => !h.enter).sort((a, b) => b.w * b.d - a.w * a.d), land = new Set(hs.slice(0, 2));
+    for (const h of hs) {
+      h.fl0 = h.floors; h.floors = D.fl[0] + (R() * (D.fl[1] - D.fl[0] + 1) | 0); if (h.floors === 3 && h.w < 5.6) h.floors = 2;
+      h.pitch = D.pitch[0] + (R() * (D.pitch[1] - D.pitch[0] + 1) | 0); h.stone = D.stone; h.jetty = D.jetty || (k === 'dyers' && R() < 0.3);
+      if (land.has(h)) { h.landmark = true; h.floors = Math.min(k === 'merchants' ? 4 : 3, h.floors + 1); if (k === 'cottages' || k === 'fishers') h.floors = Math.min(2, h.floors); }
+    }
+    if (by[k].length) { const c = by[k].reduce((a, h) => [a[0] + h.x / by[k].length, a[1] + h.z / by[k].length], [0, 0]); World.places.push({ id: 'dist.' + k, name: D.name, x: c[0], z: c[1], r: 14, minor: true }); }
+  }
+  INFS.districts = Object.fromEntries(Object.entries(by).map(([k, a]) => [k, a.length]));
+}
+
 function buildInfill() {
   if (!kitReady() || !INF.houses.length || (TEST && TEST.infill === 0)) return;
   infBatch();
+  infDistricts();
   for (const h of INF.houses) {
     const site = SITE[h.id]; if (!site) continue;
     const c = Math.cos(h.yaw), sn = Math.sin(h.yaw);
@@ -210,7 +243,8 @@ function buildInfill() {
 function infShell(B, h, lo) {
   const site = SITE[h.id], R = rng(h.x * 37 + h.z * 11 + 5), V = KH.V, up = [0, 1, 0], w = h.w, d = h.d, fl = h.floors, H = 3, tanP = Math.tan(h.pitch * PI / 180);
   const OUT = { zone: 0, skyVis: 1, cast: false }, EXT = OUT, MS = new THREE.Matrix4().fromArray(siteMatrix(site, site.y + 0.02));
-  const tn = 0.8 + R() * 0.28, tint = [tn, tn * (0.96 + R() * 0.08), tn * (0.92 + R() * 0.1)];
+  const tn = 0.8 + R() * 0.28, DD = h.dist ? INF_DISTRICTS[h.dist] : null, dbase = DD ? (DD.alt && R() < 0.5 ? DD.alt[(R() * DD.alt.length) | 0] : DD.tint) : null, dv = 0.92 + R() * 0.14;
+  const tint = DD ? [dbase[0] * dv, dbase[1] * dv, dbase[2] * dv * (0.97 + R() * 0.06)].map(v => Math.min(1, v)) : [tn, tn * (0.96 + R() * 0.08), tn * (0.92 + R() * 0.1)];
   const jetty = !lo && fl >= 2 && h.jetty, sh = jetty ? 0.5 : 0;
   const frames = k => { const o = {}, s2 = k > 0 ? sh : 0; for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); o[wn] = new THREE.Matrix4().makeBasis(V(W.u), V(up), V(W.n)).setPosition(s0[0], k * H, s0[2] - s2).premultiply(MS); } return o; };
   const add = (name, F, x, y, z, s, ry, o) => { s = s === undefined ? 1 : s; o = o || OUT; if (Array.isArray(s) && (Math.abs(s[0] - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] }); B.add(name, KH.xf(F, x, y, z, s, ry || 0), o); };
@@ -241,7 +275,7 @@ function infShell(B, h, lo) {
   }
   // ── roof: generated shingles; ridge parallel to the street (eaves to the street) or gable to the street ──
   const Ytop = fl * H, rx = !gableFront, zc = -sh, rise = (rx ? d : w) / 2 * tanP;
-  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: 0.5, nl: rx && nbW > 0, nr: rx && nbE > 0, tint: [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
+  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: 0.5, nl: rx && nbW > 0, nr: rx && nbE > 0, tint: DD ? DD.roof.map(v => Math.min(1, v * (DD.patch ? 0.8 + R() * 0.3 : 0.94 + R() * 0.1))) : [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
   if (!lo) {
     if (h.chimney) {          // a chimney that rises through the roof (stack, flashing, cap)
       const cx = rx ? (h.chimney > 0 ? 1 : -1) * w * 0.28 : 0, cz = rx ? zc : d * 0.2 * (h.chimney > 0 ? 1 : -1) + zc * 0, top = infChimney(B, MS, { x: cx, z: cz, top: Ytop, tanP, hs: (rx ? d : w) / 2, ridgeX: rx, zc: rx ? zc : 0 });
