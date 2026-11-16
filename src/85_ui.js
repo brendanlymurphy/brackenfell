@@ -3,7 +3,7 @@
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 43';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 46';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -12,7 +12,7 @@ const uiBusy = () => !!(UI.talk || UI.menu || UI.reader || UI.paused);
 function uiPurse() { $('purse').textContent = S.gold + ' gold'; if (S.gold !== UI.lastGold) { if (UI.lastGold >= 0) UI.hudT = Math.max(UI.hudT, 6); UI.lastGold = S.gold; } }
 function questLine(id) { let st = QUESTS[id].stages[S.q[id].stage]; if (id === 'herbs' && S.q[id].stage === 0) st += ' (' + Math.min(frostN(), 5) + ' of 5)'; return st; }
 function uiObjective() {
-  let h = ''; const act = QORDER.filter(id => S.q[id] && !S.q[id].done).sort((a, b) => S.q[b].t - S.q[a].t).slice(0, 3);
+  let h = ''; const act = QORDER.filter(id => S.q[id] && !S.q[id].done).sort((a, b) => (b === 'main') - (a === 'main') || S.q[b].t - S.q[a].t).slice(0, 3);
   for (const id of act) h += '<div><b>' + QUESTS[id].name + '</b>' + questLine(id) + '</div>';
   if (h !== UI.lastObj) { $('objective').innerHTML = h; if (UI.lastObj !== '' || h) UI.hudT = Math.max(UI.hudT, 9); UI.lastObj = h; }
 }
