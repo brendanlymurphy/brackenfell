@@ -63,7 +63,8 @@ T.cellViews = id => {
   } else {
     const sp = Object.values(World.spots).filter(s => s.site === id && hyp(s.p[0] - c.origin[0], s.p[2] - c.origin[2]) < 40);
     const picks = []; for (const s of sp) if (!picks.some(q => hyp(q.p[0] - s.p[0], q.p[2] - s.p[2]) < 3 && Math.abs(q.p[1] - s.p[1]) < 1)) picks.push(s);
-    picks.slice(0, 4).forEach((s, i) => { for (const a of i < 2 ? [0, 90, 180, 270] : [toward(s.p[0], s.p[2], p0[0], p0[2])]) add2('sp' + i + '.' + a, s.p[0], s.p[1] + EYE, s.p[2], a, i === 0 && a === 0 ? [13, 21] : [13]); });
+    picks.slice(0, 4).forEach((s0, i) => { const dd = hyp(p0[0] - s0.p[0], p0[2] - s0.p[2]) || 1, off = Math.min(1.3, dd * 0.4), s = { p: [s0.p[0] + (p0[0] - s0.p[0]) / dd * off, s0.p[1], s0.p[2] + (p0[2] - s0.p[2]) / dd * off] };   // [fx2] stand beside the person's spot, not in them
+      for (const a of i < 2 ? [0, 90, 180, 270] : [toward(s.p[0], s.p[2], p0[0], p0[2])]) add2('sp' + i + '.' + a, s.p[0], s.p[1] + EYE, s.p[2], a, i === 0 && a === 0 ? [13, 21] : [13]); });
   }
   return out;
 };

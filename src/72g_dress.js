@@ -56,13 +56,13 @@ PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 co
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, [0.4, 0.33, 0.25], [0.25, 0.22, 0.2], [0.55, 0.45, 0.3]]), 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.14, -l, -0.11, x + 0.14, 0.0, -0.075); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.36, 0.2, 0.16], [0.22, 0.27, 0.32], [0.5, 0.4, 0.2], [0.55, 0.5, 0.4], [0.3, 0.34, 0.22], [0.4, 0.33, 0.25], [0.25, 0.22, 0.2]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.13, -l * 0.5, -0.115, x + 0.13, 0.0, -0.075); m.box(x - 0.15, -l, -0.125, x + 0.15, -l * 0.5, -0.08); m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2 - 0.04, h - 0.04, -0.09, w / 2 + 0.04, h + 0.02, -0.03);
-  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.8, c[1] * 0.8, c[2] * 0.8], 0.6); m.box(-w / 2, 0, -0.07, w / 2, h, -0.04);
-  m.mat(MAT.CLOTH, [0.7, 0.6, 0.35], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
+  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.62, c[1] * 0.62, c[2] * 0.62], 0.6); m.box(-w / 2, 0.05, -0.07, w / 2, h, -0.04); m.mat(MAT.CLOTH, [c[0] * 0.45, c[1] * 0.45, c[2] * 0.45], 0.6); m.box(-w / 2 + 0.01, 0, -0.068, w / 2 - 0.01, 0.05, -0.042);
+  m.mat(MAT.CLOTH, [0.46, 0.38, 0.24], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
   m.box(-0.07, h * 0.3, -0.08, 0.07, h * 0.75, -0.04); m.box(-w * 0.22, h * 0.5, -0.08, w * 0.22, h * 0.56, -0.04);
 };
 // a niche in a wall (crypt, nave): dark recess with an arch lintel, a candle that glows without a light, a skull or an urn

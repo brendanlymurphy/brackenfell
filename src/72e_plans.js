@@ -71,7 +71,7 @@ function pPier(P, k, hearth) {
 }
 // a wall candle bracket by a door or over a bed; lit like any candle
 function pSconce(P, room, side, u, y) {
-  const rec = pHang(P, room, side, u, 0.3, y || 1.55, (y || 1.55) + 0.3, (m, hh) => { m.mat(MAT.METAL, COL.black); m.box(-0.04, 0, 0.0, 0.04, 0.03, 0.2); m.box(-0.012, -0.12, 0.0, 0.012, 0.03, 0.02); at(m, 0, 0.03, 0.17, 0, () => Props.candle(m, P.c, true)); }, P.id + '.sconce', {}); if (rec) P.lightIn[room.id] = 1; return rec;
+  const rec = pHang(P, room, side, u, 0.3, y || 1.55, (y || 1.55) + 0.3, (m, hh) => { m.mat(MAT.METAL, COL.black); m.box(-0.035, -0.1, 0.0, 0.035, 0.12, 0.012); m.box(-0.01, 0.0, 0.0, 0.01, 0.025, 0.19); m.box(-0.008, -0.07, 0.0, 0.008, 0.0, 0.1); m.cyl(0, 0.025, 0.19, 0.05, 0.04, 0.014, 10, 2); at(m, 0, 0.04, 0.19, 0, () => Props.candle(m, P.c, true)); }, P.id + '.sconce', {}); if (rec) P.lightIn[room.id] = 1; return rec;
 }
 // a lantern hung from the ceiling beam
 function pLamp(P, room, x, z) {

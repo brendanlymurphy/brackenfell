@@ -7156,7 +7156,7 @@ function pPier(P, k, hearth) {
 }
 // a wall candle bracket by a door or over a bed; lit like any candle
 function pSconce(P, room, side, u, y) {
-  const rec = pHang(P, room, side, u, 0.3, y || 1.55, (y || 1.55) + 0.3, (m, hh) => { m.mat(MAT.METAL, COL.black); m.box(-0.04, 0, 0.0, 0.04, 0.03, 0.2); m.box(-0.012, -0.12, 0.0, 0.012, 0.03, 0.02); at(m, 0, 0.03, 0.17, 0, () => Props.candle(m, P.c, true)); }, P.id + '.sconce', {}); if (rec) P.lightIn[room.id] = 1; return rec;
+  const rec = pHang(P, room, side, u, 0.3, y || 1.55, (y || 1.55) + 0.3, (m, hh) => { m.mat(MAT.METAL, COL.black); m.box(-0.035, -0.1, 0.0, 0.035, 0.12, 0.012); m.box(-0.01, 0.0, 0.0, 0.01, 0.025, 0.19); m.box(-0.008, -0.07, 0.0, 0.008, 0.0, 0.1); m.cyl(0, 0.025, 0.19, 0.05, 0.04, 0.014, 10, 2); at(m, 0, 0.04, 0.19, 0, () => Props.candle(m, P.c, true)); }, P.id + '.sconce', {}); if (rec) P.lightIn[room.id] = 1; return rec;
 }
 // a lantern hung from the ceiling beam
 function pLamp(P, room, x, z) {
@@ -7665,13 +7665,13 @@ PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 co
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, [0.4, 0.33, 0.25], [0.25, 0.22, 0.2], [0.55, 0.45, 0.3]]), 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.14, -l, -0.11, x + 0.14, 0.0, -0.075); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.36, 0.2, 0.16], [0.22, 0.27, 0.32], [0.5, 0.4, 0.2], [0.55, 0.5, 0.4], [0.3, 0.34, 0.22], [0.4, 0.33, 0.25], [0.25, 0.22, 0.2]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.13, -l * 0.5, -0.115, x + 0.13, 0.0, -0.075); m.box(x - 0.15, -l, -0.125, x + 0.15, -l * 0.5, -0.08); m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2 - 0.04, h - 0.04, -0.09, w / 2 + 0.04, h + 0.02, -0.03);
-  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.8, c[1] * 0.8, c[2] * 0.8], 0.6); m.box(-w / 2, 0, -0.07, w / 2, h, -0.04);
-  m.mat(MAT.CLOTH, [0.7, 0.6, 0.35], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
+  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.62, c[1] * 0.62, c[2] * 0.62], 0.6); m.box(-w / 2, 0.05, -0.07, w / 2, h, -0.04); m.mat(MAT.CLOTH, [c[0] * 0.45, c[1] * 0.45, c[2] * 0.45], 0.6); m.box(-w / 2 + 0.01, 0, -0.068, w / 2 - 0.01, 0.05, -0.042);
+  m.mat(MAT.CLOTH, [0.46, 0.38, 0.24], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
   m.box(-0.07, h * 0.3, -0.08, 0.07, h * 0.75, -0.04); m.box(-w * 0.22, h * 0.5, -0.08, w * 0.22, h * 0.56, -0.04);
 };
 // a niche in a wall (crypt, nave): dark recess with an arch lintel, a candle that glows without a light, a skull or an urn
@@ -9448,7 +9448,8 @@ function buildVillage() {
   leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
   for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [1.7 * k, 1.35 * k, 0.98 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
   leaf.mat(MAT.PLANKS, [1.2, 0.95, 0.7], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
-  leaf.mat(MAT.METAL, [0.42, 0.4, 0.37]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
+  leaf.mat(MAT.METAL, [0.17, 0.155, 0.14]);   // [fx2] straps read bright blue indoors (sky reflection): dark blackened iron
+   for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   const leafItem = skin.add(leaf);
   for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
