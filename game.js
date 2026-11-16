@@ -6021,7 +6021,9 @@ function pStairEmit(P, s) {
   addFloor(m, lo[0], lo[1], lo[2], lo[3], lowFirst ? yA : yB, lowFirst ? yB : yA, ax);
   for (const sg of [-1, 1]) { const l = s.lat + sg * (hw + 0.09), q = R4(s.p0, s.p1, l - 0.06, l + 0.06); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, b.y + 1.1); }
   { const q = R4(s.p0 - d * 0.0, s.p0 - d * 0.08, s.lat - hw - 0.15, s.lat + hw + 0.15); addBoxCollider(m, q[0], q[1], q[2], q[3], b.y + 0.5, b.y + 1.1); }       // the open end of the stairwell on the upper floor, where a person would walk in
-  { const q = R4(s.p1 - d * 0.02, s.p1 + d * 0.06, s.lat - hw, s.lat + hw); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, b.y - 0.6); }          // the solid end of the steps: no walking in under the landing
+  { const q = R4(s.p1 - d * 0.02, s.p1 + d * 0.06, s.lat - hw, s.lat + hw); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, b.y - 0.6); }
+  // [c3] the space under the steps is solid (nobody walks in from the low end and stands where the treads are at head height): one box per 0.4 m, its top 0.12 m below the tread's low edge
+  for (let i = 1; i * 0.4 < s.run - 0.3; i++) { const s0 = i * 0.4, top = a.y + (b.y - a.y) * (s0 / s.run) - 0.12; if (top < a.y + 0.1) continue; const q = R4(s.p0 + d * s0, s.p0 + d * (s0 + 0.4), s.lat - hw, s.lat + hw); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, top); }          // the solid end of the steps: no walking in under the landing
   // the stairs are a navigation link
   pSpot(P, s.name + '0', s.lowPt[0], s.lowPt[1], 0, { k: s.k0 }); pSpot(P, s.name + '1', s.highPt[0], s.highPt[1], 0, { k: s.k1 });
   World.stairs.push({ id: P.id + '.' + s.name, site: P.id, bottom: P.id + '.' + s.name + '0', top: P.id + '.' + s.name + '1', via: [], width: s.width, slope: s.rise / s.run, plan: true, k0: s.k0, k1: s.k1 });
@@ -6077,6 +6079,9 @@ function planValidate(P) {
     if (rb && !rIn(rectOf(s.highPt[0], s.highPt[1], 0.6, 0.6), rb.in)) out.push('stair ' + s.name + ' arrives against a wall');
     for (const it of P.items) if (it.kind === 'floor' && it.k === s.k1 && rOv(it, rectOf(s.highPt[0], s.highPt[1], 0.8, 0.8))) out.push(it.id + ' blocks the top of ' + s.name);
     if (s.low && s.hole && (s.k1 - s.k0) !== 1) out.push('stair ' + s.name + ' skips a level');
+    // [c3] headroom: the opening in the slab above must cover the whole run (the head of someone jumping on any tread stays clear of the slab) and every tread needs 2.1 m + a jump of clearance below the slab edge it passes under
+    if (s.hole && s.low && !(s.hole.x0 <= s.low.x0 + 1e-6 && s.hole.x1 >= s.low.x1 - 1e-6 && s.hole.z0 <= s.low.z0 + 1e-6 && s.hole.z1 >= s.low.z1 - 1e-6)) out.push('stair ' + s.name + ': the opening above does not cover the run (headroom)');
+    { const Lk = P.lv[s.k1], La = P.lv[s.k0]; if (Lk && La && s.run / s.n < 0.18) out.push('stair ' + s.name + ': tread too short'); if (Lk && Lk.y - La.y - (La.H || 0) > 0.6) out.push('stair ' + s.name + ': slab thicker than expected'); }
   }
   // every room reachable from the street door: doorways and stairs as edges
   const seen = new Set(), todo = [];
