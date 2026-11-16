@@ -99,3 +99,32 @@ Text is exact. `\n\n` marks a paragraph break inside one node.
 Items: Miner’s tally token, Sexton’s mine key, Miner’s lantern, Sexton’s ledger, Corwin’s journal, Lamp oil, The Foreman’s key, Silverthread, Tallow candle, Hard cheese, Flint and steel, Pewter cup, Spool of thread, Handful of nails, Dried herbs, Plain silver ring, Lockpick, Bowl of stew (descriptions in `82_story.js`, `82b_interact.js`, `94_mine.js`).
 
 Notes and letters (`IX` book pickups): the miller’s tally, a letter folded small (T. to Wren), Greta’s ale, a note under a candlestick, a page of gossip, a child’s drawing, the smith’s order book, the gate roster, the burial register, Marta’s invoice, a scrawled note (Tobin), Maren’s margin note, a will unsigned, a merchant’s letter, Finn’s log, a prayer card, Pip’s list, a scrap with a smudge (D. Pell), the bread cave map, the Magpie notice. Also: the drowned man’s inspection text (wharf), the Sexton’s ledger, Corwin’s mine journal.
+
+## Town secrets (82c_secrets.js)
+
+### The night meeting behind the chapel (23:00-03:30, shown as subtitles with the speaker's name)
+- rowan: The bread was late twice this week.
+- greta: The new one has been asking about the mine door.
+- rowan: Then Hale is closer than I would like. Say nothing in the Hart.
+- greta: And if they go down?
+- rowan: Then they find what Corwin found. Go. Go before the bell.
+
+### The house nobody talks about (new option "Whose house is shut up on the south lane?")
+- greta: The house on the south lane? Nobody’s lived there in years. Pass the salt, love, and don’t ask me twice.
+- marta: Oh, that. I sell nothing to that house and I take nothing from it. Will you be wanting candles?
+- finn: Don’t look at the shutters. My father said never to look at the shutters.
+- aldous: There are houses the Dawn will not name, child. That is one. Leave it to her.
+
+### System lines
+- Someone is there. The cloaks are gone before you have a name for them.
+- You overheard them: they have dropped a purse in the grass as they went.
+- A cloak slides into the dusk before you can reach it. She will be back another evening.
+- She went to ground in the Hidden Yard. Something is wedged under the well-lip.
+- A secret of Brackenfell: N of 9 found
+- Newer brick than the rest. Just a wall, unless you know what is behind it.
+- Shuttered, locked, and the lock is oiled. The neighbours do not look at this door as they pass.
+- Dew on the grass and nothing else. / A well, a bench and a stool. Somebody comes here to be alone.
+- There is no use for a lantern here.
+
+### Reading text (notes found in the secrets)
+Tobin’s box; Behind the stone; The Magpie’s cellar; The Hart’s ledger; Behind the bricks; The strongbox; The Magpie’s sack; Letters in a hatbox. Items: Bar of grey silver, Cellar key, Key with a wren cut in the bow, Wharf strongbox key.

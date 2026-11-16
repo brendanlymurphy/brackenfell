@@ -5,6 +5,7 @@
 const sleep = ms => new Promise(r => setTimeout(r, ms)), dt = 1 / 30, fails = [], rows = [];
 const fx = (c, m) => { if (!c) fails.push(m); };
 const fix = () => { const r = RPG.st(); r.sta = 100; r.hp = 100; RPG.dead = false; };
+S.items.housekey = 1; S.unlocked = Object.assign(S.unlocked || {}, { 'door.in.23': 1 });       // [q1] the house nobody talks about is locked to a player without its key
 Env.dayLength = 0; Env.hour = 3; S.flags.fire = 0; npcSnapAll();       // everyone in bed, so nobody stands in a doorway
 const visCells = () => { let n = 0; for (const s of SC.statics) if (s.it.cell && s.mesh.visible) n++; for (const r of SC.rigid) if (r.obj.cell && r.mesh.visible) n++; return n; };
 const idle = async () => { for (let i = 0; i < 400 && Cells.busy; i++) await sleep(50); game.step(2, dt); };
