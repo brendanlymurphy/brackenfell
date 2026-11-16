@@ -1398,7 +1398,7 @@ const Kit = (() => {
   const { Fn, float, vec2, vec3, vec4, uniform, attribute, texture, uv, positionWorld, positionLocal, positionGeometry, normalWorld, normalMap,
     mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs, step } = TSL;
   const K_ = {
-    PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
+    PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }, { glb: 'kits/dungeon.glb', catalog: 'kits/DUNGEON_CATALOG.json', optional: true }]  /* q1: dungeon pack */,
     pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
     fill: null, fill2: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
     lodMeshes: [],
