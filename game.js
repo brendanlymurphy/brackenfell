@@ -3048,6 +3048,17 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
   }
   for (const h of INF.houses.filter(h => +h.id.slice(3) <= 25 && !h.enter)) if (clearDist(SITE[h.id], 2.4, F.len + 0.4)[0] < F.len + 0.3) drop(h);       // whatever could not be nudged goes
   INF.enterIds = INF.houses.filter(h => h.enter).map(h => h.id);
+  // [c5] thirty more enterable houses, spread over the lanes (farthest point first): only the flag and the household name are set here; 72c_infill.js gives each a door and a cell, 72k_houses.js a plan by the name
+  if (!(TEST && TEST.moreEnter === 0)) {
+    const NAMES = ['Wheelwright’s House', 'Carpenter’s House', 'Mason’s House', 'Saddler’s House', 'Ropemaker’s House', 'Basketmaker’s House', 'Shepherd’s House', 'Woodcutter’s House', 'Glover’s House', 'Brewer’s House', 'Scribe’s House', 'Merchant’s House', 'Cobbler’s House', 'Chandler’s House', 'Tailor’s House', 'Butcher’s House', 'Baker’s House', 'Grocer’s House', 'Cutler’s House', 'Tinker’s House', 'Ferrin’s House', 'Marsh House', 'Thorne House', 'Wren Cottage', 'Garrick’s House', 'Pell House', 'Hobb’s Cottage', 'Tamsin’s House', 'Bram’s House', 'Alder House'];
+    const cand = INF.houses.filter(h => !h.enter && hyp(h.x - 29.8, h.z + 60.6) > 7 && h.w >= 4.6 && h.d >= 4.4 && SITE[h.id] && clearDist(SITE[h.id], 1.6, 3.0)[0] >= 3.0), chosen = INF.houses.filter(h => h.enter);
+    const more = []; while (more.length < NAMES.length && cand.length > more.length) {
+      let best = null, bd = -1; for (const h of cand) { if (more.includes(h)) continue; const d = Math.min(...chosen.concat(more).map(c => hyp(c.x - h.x, c.z - h.z)), 99); if (d > bd) { bd = d; best = h; } }
+      more.push(best);
+    }
+    more.forEach((h, i) => { h.enter = true; h.name = NAMES[i]; SITE[h.id].name = h.name; });
+    INF.enterIds = INF.houses.filter(h => h.enter).map(h => h.id);
+  }
   INF.count = INF.houses.length;
 })();
 
@@ -3345,7 +3356,7 @@ Cells.hear = function (pos, from) {
 };
 // frame environment: no sun, a short dark fog, the day's ambient kept (windows and the hour of day still reach the rooms through emissive panes and daylight lights)
 const CELL_DAYLIGHT = (typeof TEST !== 'undefined' && TEST && TEST.celllight !== undefined) ? +TEST.celllight : 6;
-const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 1;
+const CELL_NIGHT = (typeof TEST !== 'undefined' && TEST && TEST.cellnight !== undefined) ? +TEST.cellnight : 1.7;
 Cells.env = function (e) {
   const c = Cells.cur; if (!c) return e;
   e.keyCol = [0, 0, 0]; e.shadowStrength = 0; e.fogSun = [0, 0, 0];
@@ -6050,10 +6061,11 @@ function pBuild(P) {
   for (const k in P.lv) {
     const L = P.lv[k], holes = P.holes.filter(h => h.k === L.k).map(h => h.r), above = P.holes.filter(h => h.k === L.k + 1).map(h => h.r);
     for (const r of L.rooms) {
+      const FLr = r.ftint ? Object.assign({}, FL, { tint: r.ftint }) : FL;      // [c5] room.ftint: rushes on earth, scrubbed boards, dark flags
       const tile = r.floor === 'stone' ? 'Floor_UnevenBrick' : r.floor === 'cobble' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';
       for (const q of rSubAll({ x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1 }, holes)) {
         const nx = Math.max(1, Math.round((q.x1 - q.x0) / 2)), nz = Math.max(1, Math.round((q.z1 - q.z0) / 2)), sx = (q.x1 - q.x0) / (2 * nx), sz = (q.z1 - q.z0) / (2 * nz);
-        for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) B.add(tile, KH.xf(MS, q.x0 + (i + 0.5) * 2 * sx, L.y + 0.012, q.z0 + (j + 0.5) * 2 * sz, [sx, 1, sz]), FL);
+        for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) B.add(tile, KH.xf(MS, q.x0 + (i + 0.5) * 2 * sx, L.y + 0.012, q.z0 + (j + 0.5) * 2 * sz, [sx, 1, sz]), FLr);
         addFloor(m, q.x0, q.z0, q.x1, q.z1, L.y + 0.02);
       }
       // ceiling slab underside + beams (not over a stairwell)
@@ -6775,8 +6787,8 @@ PD.rack = function (P, room, x, z, len, rot, kinds) {
     for (let i = 0; i < n; i++) {
       const px = -len / 2 + 0.2 + i * (len - 0.4) / (n - 1), k = R.pick(kinds), j = R.s() * 0.03;
       m.mat(MAT.METAL, COL.black); m.box(px - 0.006, -0.78, -0.006, px + 0.006, -0.6, 0.006);
-      if (k === 'herb') { m.mat(MAT.CLOTH, R.pick([[0.3, 0.4, 0.18], [0.42, 0.4, 0.2], [0.5, 0.38, 0.2]]), 0.5); m.cyl(px + j, -1.12, 0, 0.1, 0.02, 0.34, 6, 1); }
-      else if (k === 'ham') { m.mat(MAT.PLAIN, [0.5, 0.26, 0.2]); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
+      if (k === 'herb') { const hc = R.pick([[0.3, 0.33, 0.2], [0.36, 0.34, 0.22], [0.38, 0.3, 0.2], [0.3, 0.28, 0.19]]); m.mat(MAT.CLOTH, hc, 0.6); for (let q = 0; q < 6; q++) { const a = q / 6 * 6.283, rr = 0.03 + (q % 2) * 0.015; m.cyl(px + j + Math.cos(a) * rr, -1.06 - (q % 3) * 0.03, Math.sin(a) * rr, 0.012, 0.004, 0.26 + (q % 3) * 0.03, 4, 1); } m.mat(MAT.CLOTH, [0.42, 0.34, 0.22], 0.5); m.cyl(px + j, -0.84, 0, 0.026, 0.026, 0.025, 6, 2); }      // [c5] a bundle of stems tied at the neck, 0.3 m, not a cone
+      else if (k === 'ham') { m.mat(MAT.THATCH, [0.42, 0.24, 0.19], 0.4); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
       else if (k === 'pot') { m.mat(MAT.METAL, COL.black); m.cyl(px, -1.0, 0, 0.13, 0.16, 0.2, 8, 2); }
       else { m.mat(MAT.PLAIN, [0.78, 0.7, 0.5]); m.ball(px, -0.95, 0, 0.06, 0.08, 0.06, 5, 3); m.ball(px + 0.02, -1.08, 0, 0.06, 0.08, 0.06, 5, 3); }
     }
@@ -7267,7 +7279,7 @@ function pCeil(P, room, x, z, draw, rot) {
 }
 
 // ── general wares: varied small goods for shelves and tables (kept a few dozen triangles each) ──
-const GL = [[0.35, 0.55, 0.4], [0.5, 0.3, 0.15], [0.3, 0.4, 0.55], [0.62, 0.58, 0.45], [0.4, 0.2, 0.25]];
+const GL = [[0.3, 0.4, 0.33], [0.4, 0.3, 0.2], [0.3, 0.34, 0.4], [0.5, 0.46, 0.38], [0.34, 0.24, 0.25]];      // [c5] muted glass and clay, not primary colours
 PD.ware = {
   rope: (m, R) => { m.mat(MAT.CLOTH, [0.62, 0.52, 0.34], 0.5); m.lathe([[0.05, 0], [0.12, 0.005], [0.14, 0.04], [0.13, 0.09], [0.06, 0.1], [0.05, 0.05]], 9, 1); },
   lantern: (m, R) => { m.mat(MAT.METAL, COL.black); m.box(-0.055, 0, -0.055, 0.055, 0.015, 0.055); m.box(-0.06, 0.2, -0.06, 0.06, 0.225, 0.06); for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.box(sx * 0.05 - 0.005, 0.015, sz * 0.05 - 0.005, sx * 0.05 + 0.005, 0.2, sz * 0.05 + 0.005); m.box(-0.02, 0.225, -0.005, 0.02, 0.27, 0.005); emit(m, 0.6, () => { m.mat(MAT.PLAIN, [1, 0.7, 0.3]); m.box(-0.035, 0.03, -0.035, 0.035, 0.12, 0.035, 4 | 8); }); },
@@ -7391,8 +7403,8 @@ PLANS.guardhouse = (P, c, info) => {
   const tb = pDining(P, guard, 3.0, 0.95, { near: [-0.5, 3.0], id: 'table', n: 5, items: ['mug', 'plate', 'bowl', 'book', 'candle', 'loaf'], rots: [0] });
   if (tb) { tb.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); pLamp(P, guard, tb.x, tb.z); }
   // the wall opposite the door: weapon stands either side of the cell and armoury doors, spears, a notice board, shields
-  pKitFloor(P, guard, 's', 'WeaponStand', { n: 'a', at: -1.2 }); pKitFloor(P, guard, 's', 'WeaponStand', { n: 'b', at: 1.2 }); pAgainst(P, guard, 's', id + '.spears1', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: -5.0 }); pAgainst(P, guard, 's', id + '.spears2', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 5.0 });
-  pHang(P, guard, 's', 1.1, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 }) || pHang(P, guard, 's', -1.1, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 }); pHang(P, guard, 's', -1.0, 1.3, 1.1, 2.0, PD.bladeWall(R, 1.3), id + '.blades2', { pivot: 2.0 });
+  pKitFloor(P, guard, 's', 'WeaponStand', { n: 'a', at: -1.95 }); pKitFloor(P, guard, 's', 'WeaponStand', { n: 'b', at: 1.95 }); pAgainst(P, guard, 's', id + '.spears1', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: -5.0 }); pAgainst(P, guard, 's', id + '.spears2', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 5.0 });
+  pHang(P, guard, 's', 0, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 });      // [c5] centred between the two doors, the stands moved out (it was refused beside them)
   pHang(P, guard, 'n', -3.2, 1.3, 1.1, 2.0, PD.tapestry(R, 1.3, 0.9), id + '.board', { pivot: 2.0 });
   pKitFloor(P, guard, 'w', 'Dummy', { n: 'd', at: 'mid' }); pKitFloor(P, guard, 'n', 'WeaponStand', { n: 'c', at: 4.2 });
   pWalls(P, guard, ['Banner_1_Cloth', 'kite_shield', 'Torch_Metal', 'kite_shield', 'Shield_Wooden', 'Banner_2_Cloth', 'Torch_Metal', 'Axe_Bronze', 'Sword_Bronze']);
@@ -7489,18 +7501,33 @@ function hCtx(P, c) {
   F.winKinds = R.pick([['Wide_Flat'], ['Wide_Flat', 'Wide_Round'], ['Thin_Round', 'Wide_Flat'], ['Wide_Round']]);
   F.X = x => F.sx * x; F.S = s => F.sx > 0 ? s : ({ w: 'e', e: 'w' }[s] || s);
   F.rm = (k, rid, kind, x0, z0, x1, z1, o) => pRoom(P, k, rid, kind, F.sx > 0 ? x0 : -x1, z0, F.sx > 0 ? x1 : -x0, z1, Object.assign({ winKinds: F.winKinds }, o || {}));
-  F.fin = (k, o) => Object.assign(k === 0 ? { floor: F.stone0 ? 'stone' : 'wood', tint: F.stone0 ? [0.78, 0.74, 0.7] : F.tint } : { floor: 'wood', tint: F.tint2 }, o || {});
-  F.door = (a, b, x, z, o) => pDoor(P, a, b, F.X(x), z, o);
+  F.memo = hMemoIdx(id);
+  // finishes: the wall the door faces and the floor differ house to house (stone, timber boarding, plaster, ochre wattle; flags, boards, earth, slate)
+  F.wallKind = R.pick(F.stone0 ? ['stone', 'stone', 'timber', 'plaster'] : wealth > 1 ? ['plaster', 'timber', 'plaster', 'stone'] : ['plaster', 'timber', 'wattle', 'stone', 'plaster']); F.floorKind = F.stone0 ? R.pick(['flags', 'earth', 'slate', 'flags']) : wealth > 1 ? R.pick(['boards', 'boards', 'slate']) : R.pick(['boards', 'earth', 'boards']);
+  F.fin = (k, o) => {
+    const u = { floor: 'wood', tint: F.tint2 }; if (k !== 0) return Object.assign(u, o || {});
+    const w = { stone: { walls: 'stone', tint: [0.92, 0.9, 0.86] }, timber: { tint: [0.5, 0.38, 0.27] }, wattle: { tint: [0.86, 0.74, 0.5] }, plaster: { tint: F.tint } }[F.wallKind], f = { flags: { floor: 'stone' }, earth: { floor: 'stone', ftint: [0.5, 0.4, 0.28] }, slate: { floor: 'stone', ftint: [0.62, 0.68, 0.74] }, boards: { floor: 'wood', ftint: wealth > 1 ? [1.0, 0.9, 0.78] : undefined } }[F.floorKind];
+    const r = Object.assign({}, w, f, o || {}); if (o && o.floor && o.floor !== (f && f.floor)) delete r.ftint; return r;
+  };
+  F.door = (a, b, x, z, o) => { const d = pDoor(P, a, b, F.X(x), z, o); if (b === null && P.rooms[a]) P.clear.push({ x0: F.X(x) - 0.8, x1: F.X(x) + 0.8, z0: z, z1: z + 2.6, k: P.rooms[a].k, kind: 'path', room: P.rooms[a] }); return d; };      // [c5] nothing stands in the first 2.6 m inside the street door
   return F;
 }
 const HFAM_SHOP = { shopfront: true };
+let HMEMO_IDS = [];          // every enterable house, in a fixed scattered order: its rank picks its one memorable object (72l_hobjects.js)
+const hMemoIdx = id => Math.max(0, HMEMO_IDS.indexOf(id));
 const hRugs = (P, room, F, n) => { for (let i = 0; i < (n || 1); i++) { const e = PD.emptiest(P, room); if (e.r > 1.0) PD.rug(P, room, e.x, e.z, Math.min(2.2, e.r * 1.5), Math.min(3.0, e.r * 2.0), F.rug, P.R() < 0.5 ? 0 : PI / 2); } };
 const hPool = (kind, F) => ({
   hall: F.wealth > 1 ? ['tapestry', 'paint', 'cabinet', 'hooks', 'sconce', 'shelf', 'tapestry'] : ['hooks', 'cabinet', 'paint', 'tapestry', 'sconce', 'shelf', 'cask'], bedroom: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet', 'sconce'],
   store: ['shelf', 'hooks', 'sacks', 'cask', 'torch', 'cabinet'], cellar: ['cask', 'shelf', 'sacks', 'stack', 'torch'], corridor: ['hooks', 'paint', 'sconce', 'tapestry'], yard: ['stack', 'sacks', 'cask'],
 }[kind] || ['hooks', 'cabinet', 'paint', 'sconce']);
 // the density pass and the light for every room of a finished layout
+function hEntryTorch(P, F) {          // [c5] one visible warm source in the first view at night: a torch or a sconce on the wall facing the door, beside the focal piece
+  const e = P.doors.find(d => d.b === null); if (!e) return; const room = P.rooms[e.a]; if (!room || P.torchDone) return;
+  for (const u of [F.X(-2.2), F.X(2.2), F.X(-3.2), F.X(3.2), F.X(-1.4), F.X(1.4)]) if ((F.memo % 2 ? pSconce(P, room, 's', u, 1.6) || pTorch(P, room, 's', u, 1.65, 6) : pTorch(P, room, 's', u, 1.65, 6) || pSconce(P, room, 's', u, 1.6))) { P.torchDone = 1; return; }
+  for (const sd of ['w', 'e']) for (const z of [room.z0 + 3, room.z0 + 4, room.z0 + 2]) if (pTorch(P, room, sd, z, 1.65, 6)) { P.torchDone = 1; return; }
+}
 function hFinish(P, c, F) {
+  hMemo(P, F); hEntryTorch(P, F);
   for (const id in P.rooms) {
     const r = P.rooms[id], k = r.kind === 'cellar' ? 'cellar' : r.kind === 'bedroom' ? 'bedroom' : r.kind === 'store' ? 'store' : r.kind === 'corridor' ? 'corridor' : r.kind === 'yard' ? 'yard' : 'hall';
     PD.dense(P, r, { pool: hPool(k, F), corner: k === 'cellar' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack', 'cask'], mid: { kinds: k === 'cellar' || k === 'store' ? ['casks', 'sacks'] : ['rug'], max: k === 'corridor' ? 0 : 1, min: 0.9 }, middle: k !== 'corridor', racks: k === 'cellar' ? 1 : 0, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
@@ -7603,7 +7630,7 @@ HFAM.workshop = (P, c, F) => {
   P.dims = { W, D, Dh }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
   const work = F.rm(0, 'work', 'hall', -5, 0, 5, Dh, F.fin(0, { floor: F.T.stone || F.wealth === 0 ? 'stone' : 'wood' })), living = F.rm(0, 'living', 'hall', -5, Dh, -0.5, D, F.fin(0, { floor: 'wood', tint: F.tint2 })), yard = F.rm(0, 'yard', 'yard', -0.5, Dh, 5, D, { floor: 'cobble', tint: [0.8, 0.77, 0.72] });
   const loft = F.rm(1, 'loft', 'bedroom', -5, Dh, -0.5, D, F.fin(1));
-  F.door('work', null, 0, 0); F.door('work', 'living', -2.75, Dh); F.door('work', 'yard', 2.25, Dh);
+  F.door('work', null, 0, 0); F.door('work', 'living', -2.75 + R.pick([-0.5, 0.5]), Dh); F.door('work', 'yard', 2.25 + R.pick([-0.5, 0, 0.5, 1]), Dh);      // [c5] the openings in different places
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: F.X(-5 + 0.95), z: Dh + 1.25, width: 0.9, tread: 0.2 });
   pLayout(P);
   hTrade(P, c, work, F); P.hall = { room: work, hh: null }; const e = P.doors.find(d => d.b === null); if (e) pPut(P, work, P.id + '.mat', e.x, 1.4, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, F.rug), { flat: true, noClear: true });
@@ -7651,6 +7678,8 @@ if (typeof HOUSES !== 'undefined' && typeof ALLEY_SHOPS !== 'undefined') {
   }
 }
 
+{ const ids = (typeof INF !== 'undefined' && INF.enterIds || []).concat(['high.a', 'high.c'], typeof ALLEY_SHOPS !== 'undefined' ? ALLEY_SHOPS.filter(a => a.layout).map(a => a.id) : []); const first = ['in.02', 'in.04', 'in.07', 'in.13', 'in.21', 'in.23', 'high.a', 'high.c', 'shop.n2', 'shop.n3', 'shop.n4', 'shop.s0', 'shop.s1', 'shop.s2'], sc = a => hHash(a + '|memo'); HMEMO_IDS = first.filter(a => ids.includes(a)).sort((a, b) => sc(a) - sc(b)).concat(ids.filter(a => !first.includes(a)).sort((a, b) => sc(a) - sc(b))); }
+
 
 // ---- 72l_hobjects.js ----
 // ───────────────────────── trade props and trade recipes for ordinary houses and shops [c5] ─────────────────────────
@@ -7675,7 +7704,7 @@ TP.oven = (P, room, lit) => m => {
 };
 TP.vat = (col, r, h) => m => {
   r = r || 0.55; h = h || 0.72; m.mat(MAT.PLANKS, COL.woodDark, 0.5); m.lathe([[r * 0.9, 0], [r, h * 0.45], [r * 0.96, h]], 12, 0);
-  m.mat(MAT.PLAIN, col); m.disc(0, h - 0.07, 0, r * 0.92, 12, 1);
+  m.mat(MAT.METAL, col.map(v => v * 0.4)); m.disc(0, h - 0.07, 0, r * 0.92, 12, 1);      // [c5] a dark surface with a sheen
   m.mat(MAT.METAL, COL.iron); for (const t of [0.15, 0.55, 0.93]) { const rr = r * (0.9 + 0.1 * Math.sin(t * PI * 0.9)) + 0.008; m.lathe([[rr, h * t - 0.02], [rr, h * t + 0.02]], 12, 0); }
   m.mat(MAT.TIMBER, COL.wood); m.beam([r * 0.5, h + 0.55, 0.05], [r * 0.1, h - 0.15, 0], 0.035, 0.035);
   addCircleCollider(m, 0, 0, r, 0, h);
@@ -7742,9 +7771,13 @@ TP.dipRack = m => {
   addBoxCollider(m, -0.75, -0.1, 0.75, 0.9, 0, 1.4);
 };
 TP.carcassBar = (len, R) => m => {
-  m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015); for (const sx of [-1, 1]) m.box(sx * len * 0.46 - 0.006, -0.4, -0.006, sx * len * 0.46 + 0.006, 0, 0.006);
-  const n = Math.max(2, Math.round(len / 0.55));
-  for (let i = 0; i < n; i++) { const x = -len / 2 + 0.3 + i * (len - 0.6) / Math.max(1, n - 1); m.mat(MAT.METAL, COL.black); m.box(x - 0.006, -0.55, -0.006, x + 0.006, -0.37, 0.006); m.mat(MAT.PLAIN, R.pick([[0.36, 0.2, 0.17], [0.42, 0.28, 0.22], [0.32, 0.18, 0.15]])); m.ball(x, -0.8, 0, 0.11, 0.3, 0.08, 7, 5); m.mat(MAT.PLAIN, [0.8, 0.74, 0.64]); m.box(x - 0.02, -0.9, -0.085, x + 0.02, -0.5, -0.07); }
+  m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015);
+  const n = Math.max(2, Math.round(len / 0.6));
+  for (let i = 0; i < n; i++) { const x = -len / 2 + 0.3 + i * (len - 0.6) / Math.max(1, n - 1); m.mat(MAT.METAL, COL.black); m.box(x - 0.006, -0.52, -0.006, x + 0.006, -0.37, 0.006); m.mat(MAT.THATCH, R.pick([[0.45, 0.3, 0.24], [0.4, 0.27, 0.21], [0.5, 0.35, 0.27]]), 0.4); m.ball(x, -0.74, 0, 0.09, 0.22, 0.07, 7, 5); }
+};
+TP.hideBar = (len, R) => m => {
+  m.mat(MAT.METAL, [0.2, 0.19, 0.19]); m.box(-len / 2, -0.4, -0.015, len / 2, -0.37, 0.015);
+  for (let i = 0; i < 4; i++) { const x = -len / 2 + 0.25 + i * (len - 0.5) / 3, h = 0.7 + R() * 0.25; m.mat(MAT.CLOTH, R.pick([[0.36, 0.27, 0.18], [0.3, 0.24, 0.17], [0.42, 0.32, 0.22]]), 0.45); m.box(x - 0.2, -0.37 - h, -0.012, x + 0.2, -0.37, 0.012); }
 };
 TP.sausages = (len, R) => m => { m.mat(MAT.METAL, COL.black); m.box(-len / 2, -0.04, -0.012, len / 2, -0.015, 0.012); for (let i = 0; i < Math.round(len / 0.12); i++) { const x = -len / 2 + 0.08 + i * 0.12; m.mat(MAT.PLAIN, R.pick([[0.42, 0.22, 0.17], [0.5, 0.3, 0.22]])); m.ball(x, -0.2, 0, 0.035, 0.18, 0.035, 5, 4); } };
 TP.arrows = R => (m, hh) => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.35, -0.95, -0.03, 0.35, 0.0, 0); for (let i = 0; i < 9; i++) { const x = -0.28 + i * 0.07; m.mat(MAT.TIMBER, COL.wood); m.box(x - 0.007, -0.9, -0.05, x + 0.007, -0.05, -0.036); m.mat(MAT.PLAIN, R.pick([[0.75, 0.74, 0.7], [0.5, 0.2, 0.15], [0.7, 0.66, 0.5]])); m.box(x - 0.02, -0.28, -0.06, x + 0.02, -0.05, -0.04); } };
@@ -7792,6 +7825,45 @@ const HPR = {
   barrel: [0.7, 0.7, 0.9, () => pdBarrel(0.33, 0.9)], bucket: [0.5, 0.5, 0.5, () => m => kp(m, 'Bucket_Wooden_1', 0, 0, 0, 1, 0)], cart: [1.8, 2.8, 1.3, () => m => Props.cart(m, false)],
   appleCrate: [0.8, 0.5, 0.5, () => m => kp(m, 'FarmCrate_Apple', 0, 0, 0, 1, 0)], applesBrl: [0.7, 0.7, 0.9, () => m => kp(m, 'Barrel_Apples', 0, 0, 0, 1, 0)],
 };
+// ───────── one memorable object per house [c5]: floor pieces (HPR) and wall pieces (HMEMO.wall) ─────────
+const MWOOD = [0.36, 0.26, 0.17];
+TP.cradle = m => { m.mat(MAT.PLANKS, [0.42, 0.3, 0.2]); m.box(-0.4, 0.1, -0.22, 0.4, 0.14, 0.22); for (const sx of [-1, 1]) { m.box(sx * 0.4 - 0.02, 0.14, -0.22, sx * 0.4 + 0.02, 0.5, 0.22); m.box(sx * 0.4 - 0.03, 0.0, -0.3, sx * 0.4 + 0.03, 0.06, 0.3); } m.box(-0.4, 0.14, -0.24, 0.4, 0.4, -0.2); m.box(-0.4, 0.14, 0.2, 0.4, 0.3, 0.24); m.mat(MAT.CLOTH, [0.72, 0.68, 0.58], 0.5); m.box(-0.36, 0.14, -0.19, 0.36, 0.24, 0.19); m.mat(MAT.CLOTH, [0.45, 0.4, 0.34], 0.5); m.ball(-0.2, 0.26, 0, 0.12, 0.07, 0.1, 6, 4); addBoxCollider(m, -0.45, -0.3, 0.45, 0.3, 0, 0.5); };
+TP.shipModel = m => { m.mat(MAT.PLANKS, COL.woodDark); for (const [x, z] of [[-0.35, -0.2], [0.35, -0.2], [-0.35, 0.2], [0.35, 0.2]]) m.box(x - 0.03, 0, z - 0.03, x + 0.03, 0.78, z + 0.03); m.box(-0.42, 0.78, -0.26, 0.42, 0.82, 0.26);
+  at(m, 0, 0.84, 0, 0, () => { m.mat(MAT.PLANKS, [0.38, 0.26, 0.16]); m.lathe([[0.01, 0], [0.12, 0.03], [0.14, 0.1], [0.1, 0.14]], 8, 0); m.box(-0.34, 0.02, -0.07, 0.34, 0.11, 0.07); m.box(-0.4, 0.09, -0.05, -0.3, 0.16, 0.05); m.mat(MAT.TIMBER, COL.wood); m.cyl(-0.05, 0.1, 0, 0.012, 0.012, 0.55, 5, 1); m.cyl(0.15, 0.1, 0, 0.011, 0.011, 0.45, 5, 1); m.mat(MAT.CLOTH, [0.66, 0.62, 0.5], 0.5); m.box(-0.1, 0.25, -0.004, 0.0, 0.62, 0.004); m.box(0.1, 0.24, -0.004, 0.2, 0.5, 0.004); }); addBoxCollider(m, -0.45, -0.3, 0.45, 0.3, 0, 0.85); };
+TP.paintedChest = m => { m.mat(MAT.PLANKS, [0.3, 0.38, 0.4]); m.box(-0.5, 0.0, -0.27, 0.5, 0.45, 0.27); m.ball(0, 0.45, 0, 0.5, 0.14, 0.27, 8, 3); m.mat(MAT.CLOTH, [0.5, 0.22, 0.17], 0.5); for (const x of [-0.38, 0.38]) m.box(x - 0.04, 0.0, -0.28, x + 0.04, 0.5, 0.28); m.mat(MAT.CLOTH, [0.68, 0.58, 0.32], 0.5); m.box(-0.2, 0.14, 0.268, 0.2, 0.32, 0.275); m.mat(MAT.METAL, COL.iron); m.box(-0.03, 0.3, 0.27, 0.03, 0.38, 0.285); addBoxCollider(m, -0.5, -0.28, 0.5, 0.28, 0, 0.55); };
+TP.harp = m => { m.mat(MAT.PLANKS, [0.4, 0.28, 0.17]); m.box(-0.22, 0, -0.18, 0.22, 0.04, 0.18); m.tube([[-0.1, 0.04, 0], [-0.12, 0.6, 0], [-0.04, 1.1, 0], [0.12, 1.25, 0]], [0.03, 0.025, 0.025, 0.02], 5); m.box(0.12, 0.2, -0.015, 0.16, 1.22, 0.015); m.mat(MAT.CLOTH, [0.78, 0.74, 0.6], 0.3); for (let i = 0; i < 9; i++) { const t = i / 8; m.box(-0.095 + t * 0.2 - 0.002, 0.2 + t * 0.0, -0.002, -0.095 + t * 0.2 + 0.002, 0.62 + t * 0.58, 0.002); } addBoxCollider(m, -0.25, -0.2, 0.25, 0.2, 0, 1.3); };
+TP.birdcage = m => { m.mat(MAT.METAL, COL.iron); m.cyl(0, 0, 0, 0.12, 0.12, 0.04, 8, 2); m.cyl(0, 0, 0, 0.015, 0.015, 1.3, 5, 1); m.box(-0.2, 1.28, -0.012, 0.2, 1.3, 0.012); at(m, 0, 1.34, 0, 0, () => { m.mat(MAT.METAL, [0.3, 0.26, 0.2]); m.cyl(0, 0, 0, 0.2, 0.2, 0.025, 10, 2); m.cyl(0, 0.3, 0, 0.2, 0.2, 0.025, 10, 2); m.lathe([[0.2, 0.3], [0.1, 0.38], [0.01, 0.46]], 10, 0); for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; m.cyl(Math.cos(a) * 0.19, 0.02, Math.sin(a) * 0.19, 0.006, 0.006, 0.29, 4, 1); } m.mat(MAT.CLOTH, [0.6, 0.5, 0.2], 0.4); m.ball(0, 0.1, 0, 0.05, 0.04, 0.035, 6, 4); m.mat(MAT.CLOTH, [0.45, 0.42, 0.3], 0.4); m.ball(0.06, 0.22, 0.02, 0.04, 0.035, 0.03, 6, 4); }); addCircleCollider(m, 0, 0, 0.2, 0, 1.0); };
+TP.longClock = m => { m.mat(MAT.PLANKS, [0.3, 0.2, 0.13]); m.box(-0.22, 0, -0.16, 0.22, 0.28, 0.16); m.box(-0.16, 0.28, -0.12, 0.16, 1.45, 0.12); m.box(-0.22, 1.45, -0.16, 0.22, 1.9, 0.16); m.ball(0, 1.9, 0, 0.22, 0.12, 0.16, 8, 3); m.mat(MAT.PLAIN, [0.8, 0.76, 0.64]); m.disc(0, 1.67, 0.162, 0.15, 12, 2); m.mat(MAT.METAL, COL.black); m.box(-0.006, 1.67, 0.165, 0.006, 1.78, 0.168); m.box(0.0, 1.664, 0.165, 0.08, 1.676, 0.168); m.mat(MAT.METAL, [0.55, 0.45, 0.2]); m.cyl(0, 0.5, 0.1, 0.045, 0.045, 0.02, 8, 2); m.box(-0.004, 0.52, 0.11, 0.004, 1.3, 0.114); addBoxCollider(m, -0.24, -0.18, 0.24, 0.18, 0, 1.95); };
+TP.loomFrame = m => { m.mat(MAT.TIMBER, COL.wood); for (const sx of [-1, 1]) { m.box(sx * 0.6 - 0.04, 0, -0.35, sx * 0.6 + 0.04, 1.6, -0.27); m.box(sx * 0.6 - 0.04, 0, 0.27, sx * 0.6 + 0.04, 1.6, 0.35); m.box(sx * 0.6 - 0.03, 0.5, -0.35, sx * 0.6 + 0.03, 0.56, 0.35); } m.box(-0.62, 1.5, -0.35, 0.62, 1.58, -0.27); m.box(-0.62, 0.3, 0.27, 0.62, 0.36, 0.35); m.mat(MAT.CLOTH, [0.7, 0.66, 0.55], 0.3); for (let i = 0; i < 20; i++) { const x = -0.5 + i * 0.055; m.box(x - 0.002, 0.4, -0.31, x + 0.002, 1.5, -0.3); } m.mat(MAT.CLOTH, [0.36, 0.3, 0.4], 0.5); m.box(-0.52, 0.4, -0.305, 0.52, 0.8, -0.295); addBoxCollider(m, -0.65, -0.37, 0.65, 0.37, 0, 1.6); };
+TP.mirrorStand = m => { m.mat(MAT.PLANKS, [0.34, 0.24, 0.16]); m.box(-0.3, 0, -0.1, 0.3, 0.05, 0.1); m.box(-0.28, 0.05, -0.02, -0.24, 1.6, 0.02); m.box(0.24, 0.05, -0.02, 0.28, 1.6, 0.02); m.box(-0.28, 1.56, -0.02, 0.28, 1.6, 0.02); m.mat(MAT.METAL, [0.5, 0.54, 0.55]); m.box(-0.24, 0.3, -0.004, 0.24, 1.56, 0.004); addBoxCollider(m, -0.32, -0.12, 0.32, 0.12, 0, 1.6); };
+
+TP.anchor = m => { m.mat(MAT.METAL, [0.22, 0.2, 0.19]); m.box(-0.04, 0, -0.04, 0.04, 1.5, 0.04); m.box(-0.3, 1.3, -0.03, 0.3, 1.38, 0.03); m.tube([[-0.5, 0.35, 0], [-0.4, 0.08, 0], [0, 0.02, 0], [0.4, 0.08, 0], [0.5, 0.35, 0]], [0.03, 0.04, 0.04, 0.04, 0.03], 6); m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.45, 0, -0.2, 0.45, 0.06, 0.2); addBoxCollider(m, -0.5, -0.22, 0.5, 0.22, 0, 1.5); };
+TP.skeps = m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.7, 0.55, -0.22, 0.7, 0.6, 0.22); for (const x of [-0.65, 0.65]) m.box(x - 0.03, 0, -0.18, x + 0.03, 0.55, 0.18); for (const x of [-0.42, 0, 0.42]) { m.mat(MAT.THATCH, [0.72, 0.6, 0.36], 0.4); at(m, x, 0, 0, 0, () => m.lathe([[0.2, 0.6], [0.2, 0.7], [0.15, 0.84], [0.07, 0.92], [0.01, 0.95]], 9, 0)); } addBoxCollider(m, -0.72, -0.24, 0.72, 0.24, 0, 0.62); };
+TP.cheesePress = m => { m.mat(MAT.TIMBER, COL.wood); for (const sx of [-1, 1]) m.box(sx * 0.3 - 0.05, 0, -0.1, sx * 0.3 + 0.05, 1.2, 0.1); m.box(-0.35, 1.1, -0.1, 0.35, 1.2, 0.1); m.cyl(0, 0.5, 0, 0.03, 0.03, 0.75, 5, 2); m.box(-0.3, 1.25, -0.03, 0.3, 1.3, 0.03); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(0, 0, 0, 0.25, 0.25, 0.3, 10, 2); m.mat(MAT.CLOTH, [0.78, 0.72, 0.52], 0.4); m.cyl(0, 0.3, 0, 0.21, 0.21, 0.12, 10, 2); addBoxCollider(m, -0.38, -0.25, 0.38, 0.25, 0, 1.3); };
+TP.scales = m => { m.mat(MAT.METAL, [0.3, 0.26, 0.2]); m.box(-0.03, 0, -0.03, 0.03, 1.25, 0.03); m.box(-0.25, 0, -0.25, 0.25, 0.04, 0.25); m.box(-0.5, 1.22, -0.015, 0.5, 1.26, 0.015); for (const sx of [-1, 1]) { m.box(sx * 0.48 - 0.004, 0.72, -0.004, sx * 0.48 + 0.004, 1.22, 0.004); m.disc(sx * 0.48, 0.72, 0, 0.14, 10, 2); } addBoxCollider(m, -0.3, -0.3, 0.3, 0.3, 0, 1.3); };
+Object.assign(HPR, {
+  m_anchor: [1.0, 0.45, 1.5, () => TP.anchor], m_skeps: [1.5, 0.5, 0.95, () => TP.skeps], m_press: [0.8, 0.55, 1.3, () => TP.cheesePress], m_scales: [0.6, 0.6, 1.3, () => TP.scales],
+  m_cradle: [0.9, 0.6, 0.55, () => TP.cradle], m_ship: [0.9, 0.6, 1.3, () => TP.shipModel], m_chest: [1.0, 0.56, 0.6, () => TP.paintedChest], m_harp: [0.5, 0.4, 1.3, () => TP.harp],
+  m_cage: [0.5, 0.5, 1.8, () => TP.birdcage], m_clock: [0.5, 0.36, 1.95, () => TP.longClock], m_loom: [1.3, 0.76, 1.6, () => TP.loomFrame], m_mirror: [0.62, 0.3, 1.6, () => TP.mirrorStand],
+});
+const HMEMO = {
+  floor: ['m_anchor', 'm_skeps', 'm_press', 'm_scales', 'm_cradle', 'm_ship', 'm_chest', 'm_harp', 'm_cage', 'm_clock', 'm_loom', 'm_mirror'],
+  wall: [
+    { id: 'pike', w: 1.5, y0: 1.2, y1: 1.9, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.34, 0.24, 0.16]); m.box(-0.75, -0.7, -0.03, 0.75, 0, 0); m.mat(MAT.THATCH, [0.5, 0.52, 0.5], 0.4); m.ball(0, -0.35, -0.08, 0.62, 0.11, 0.05, 10, 6); m.mat(MAT.THATCH, [0.34, 0.36, 0.34], 0.4); m.ball(0.0, -0.27, -0.1, 0.55, 0.04, 0.03, 8, 4); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.ball(0.55, -0.33, -0.13, 0.025, 0.025, 0.02, 4, 3); m.mat(MAT.THATCH, [0.42, 0.4, 0.34], 0.4); m.box(-0.75, -0.42, -0.1, -0.58, -0.28, -0.07); } },
+    { id: 'clocks', w: 1.8, y0: 0.9, y1: 2.1, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.3, 0.22, 0.15]); m.box(-0.9, -1.2, -0.03, 0.9, 0, 0); for (const [x, y, r] of [[-0.5, -0.35, 0.22], [0.05, -0.28, 0.17], [0.55, -0.4, 0.25], [-0.3, -0.85, 0.16], [0.25, -0.88, 0.2], [0.7, -0.95, 0.12]]) { m.mat(MAT.METAL, [0.5, 0.42, 0.22]); m.disc(x, y, -0.04, r, 12, 2); m.mat(MAT.PLAIN, [0.78, 0.74, 0.62]); m.disc(x, y, -0.045, r * 0.85, 12, 2); m.mat(MAT.METAL, COL.black); m.box(x - 0.004, y, -0.05, x + 0.004, y + r * 0.7, -0.052); m.box(x, y - 0.004, -0.05, x + r * 0.5, y + 0.004, -0.052); } } },
+    { id: 'antlers', w: 1.2, y0: 1.5, y1: 2.1, fn: R => (m, hh) => { m.mat(MAT.PLANKS, [0.34, 0.24, 0.16]); m.box(-0.2, -0.5, -0.03, 0.2, 0, 0); m.mat(MAT.THATCH, [0.7, 0.64, 0.5], 0.4); for (const sx of [-1, 1]) { m.tube([[sx * 0.08, -0.15, -0.06], [sx * 0.3, -0.12, -0.14], [sx * 0.46, -0.02, -0.2], [sx * 0.55, 0.2, -0.24]], [0.03, 0.025, 0.02, 0.01], 5); m.tube([[sx * 0.3, -0.12, -0.14], [sx * 0.36, 0.1, -0.2], [sx * 0.34, 0.3, -0.22]], [0.02, 0.012, 0.006], 4); } } },
+  ],
+};
+const HMEMO_USED = {};
+function hMemo(P, F) {          // one object no other house has, in the first room if it will go there (the next in the list when it will not)
+  const e = P.doors.find(d => d.b === null); if (!e) return; const room = P.rooms[e.a]; if (!room) return;
+  const all = HMEMO.floor.length + HMEMO.wall.length;
+  for (let t = 0; t < all; t++) {
+    const k = (F.memo + t * 3) % all; if (HMEMO_USED[k] && t < all - 1) continue;
+    if (k >= HMEMO.floor.length) { const w = HMEMO.wall[k - HMEMO.floor.length]; for (const sd of ['s', 'w', 'e', 'n']) { const [a, b] = hWallRange(room, sd); for (let u = (a + b) / 2, i = 0; i < 12; i++, u = (a + b) / 2 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.7) if (u > a + w.w / 2 && u < b - w.w / 2 && pHang(P, room, sd, u, w.w, w.y0, w.y1, w.fn(P.R), P.id + '.memo_' + w.id, { pivot: w.y1 })) { P.memo = w.id; HMEMO_USED[k] = 1; return; } }
+    } else if (hPlace(P, room, HMEMO.floor[k], { sides: ['s', 'w', 'e', 'n'], free: true })) { P.memo = HMEMO.floor[k]; HMEMO_USED[k] = 1; return; }
+  }
+}
 // put a floor prop by name against one of the room's walls (sides in order of preference), at a coordinate along the wall, back to the wall; falls back to open floor near `near`
 function hPlace(P, room, name, o) {
   o = o || {}; const e = HPR[name]; if (!e) return null; const R = P.R, draw = e[3](P, room, R, o), h = e[2], id = P.id + '.' + name + (P.items.length);
@@ -7888,12 +7960,12 @@ HT.tanner = (P, c, room, F) => {
   const cols = [[0.34, 0.26, 0.17], [0.28, 0.34, 0.2], [0.45, 0.34, 0.2]];
   hFocalAt(P, room, 'vat', F, { col: cols[0], at: [-F.sx * 1.6] }); hFocalAt(P, room, 'vat', F, { col: cols[1], at: [F.sx * 0.2] }); hFocalAt(P, room, 'vat', F, { col: cols[2], at: [F.sx * 2.0] });
   hPlace(P, room, 'hides', { sides: ['w', 'e'] }); hPlace(P, room, 'hides', { sides: ['e', 'w'] }); hPlace(P, room, 'bench', { sides: ['w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['w', 'e'] }); hPlace(P, room, 'bucket', { sides: ['s', 'e'] });
-  hCeil(P, room, 0, room.z0 + 3.0, TP.carcassBar(2.0, P.R));
+  hCeil(P, room, 0, room.z0 + 3.0, TP.hideBar(2.0, P.R));
 };
 HT.dyer = (P, c, room, F) => {
   const cols = [[0.22, 0.3, 0.46], [0.5, 0.22, 0.18], [0.62, 0.5, 0.2]];
   hFocalAt(P, room, 'vat', F, { col: cols[0], at: [F.sx * 1.8] }); hFocalAt(P, room, 'vat', F, { col: cols[1], at: [-F.sx * 0.1] }); hFocalAt(P, room, 'vat', F, { col: cols[2], at: [-F.sx * 2.1] });
-  for (const [x, z, col] of [[-3.3, 3.6, [0.24, 0.32, 0.5]], [3.0, 4.2, [0.55, 0.26, 0.2]], [-1.0, 5.0, [0.6, 0.5, 0.28]]]) hCeil(P, room, x * F.sx, room.z0 + z, (mm) => { mm.mat(MAT.TIMBER, COL.woodDark); mm.box(-0.5, -0.1, -0.02, 0.5, -0.06, 0.02); mm.mat(MAT.CLOTH, col.map(v => v * 0.8), 0.5); mm.box(-0.45, -1.0, -0.02, 0.45, -0.1, 0.02); });
+  for (const [x, z, col] of [[-3.3, 3.6, [0.22, 0.27, 0.36]], [3.0, 4.2, [0.42, 0.24, 0.2]], [-1.0, 5.0, [0.45, 0.39, 0.25]]]) hCeil(P, room, x * F.sx, room.z0 + z, (mm) => { mm.mat(MAT.TIMBER, COL.woodDark); mm.box(-0.5, -0.1, -0.02, 0.5, -0.06, 0.02); mm.mat(MAT.CLOTH, col.map(v => v * 0.8), 0.5); mm.box(-0.45, -1.0, -0.02, 0.45, -0.1, 0.02); });
   hPlace(P, room, 'barrel', { sides: ['w', 'e'] }); hPlace(P, room, 'barrel', { sides: ['e', 'w'] }); hPlace(P, room, 'sacks', { sides: ['w', 'e'] }); hShelfWalls(P, room, PD.WARES.cloth, { sides: ['w', 'e'], id: 'wdy', lv: 4 });
 };
 HT.carpenter = (P, c, room, F) => {
@@ -13004,7 +13076,7 @@ for (const id of Object.keys(TALK)) { if (typeof TALK[id] !== 'function' || id.s
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 45';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 46';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }

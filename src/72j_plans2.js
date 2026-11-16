@@ -50,8 +50,8 @@ PLANS.guardhouse = (P, c, info) => {
   const tb = pDining(P, guard, 3.0, 0.95, { near: [-0.5, 3.0], id: 'table', n: 5, items: ['mug', 'plate', 'bowl', 'book', 'candle', 'loaf'], rots: [0] });
   if (tb) { tb.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); pLamp(P, guard, tb.x, tb.z); }
   // the wall opposite the door: weapon stands either side of the cell and armoury doors, spears, a notice board, shields
-  pKitFloor(P, guard, 's', 'WeaponStand', { n: 'a', at: -1.2 }); pKitFloor(P, guard, 's', 'WeaponStand', { n: 'b', at: 1.2 }); pAgainst(P, guard, 's', id + '.spears1', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: -5.0 }); pAgainst(P, guard, 's', id + '.spears2', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 5.0 });
-  pHang(P, guard, 's', 1.1, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 }) || pHang(P, guard, 's', -1.1, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 }); pHang(P, guard, 's', -1.0, 1.3, 1.1, 2.0, PD.bladeWall(R, 1.3), id + '.blades2', { pivot: 2.0 });
+  pKitFloor(P, guard, 's', 'WeaponStand', { n: 'a', at: -1.95 }); pKitFloor(P, guard, 's', 'WeaponStand', { n: 'b', at: 1.95 }); pAgainst(P, guard, 's', id + '.spears1', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: -5.0 }); pAgainst(P, guard, 's', id + '.spears2', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 5.0 });
+  pHang(P, guard, 's', 0, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 });      // [c5] centred between the two doors, the stands moved out (it was refused beside them)
   pHang(P, guard, 'n', -3.2, 1.3, 1.1, 2.0, PD.tapestry(R, 1.3, 0.9), id + '.board', { pivot: 2.0 });
   pKitFloor(P, guard, 'w', 'Dummy', { n: 'd', at: 'mid' }); pKitFloor(P, guard, 'n', 'WeaponStand', { n: 'c', at: 4.2 });
   pWalls(P, guard, ['Banner_1_Cloth', 'kite_shield', 'Torch_Metal', 'kite_shield', 'Shield_Wooden', 'Banner_2_Cloth', 'Torch_Metal', 'Axe_Bronze', 'Sword_Bronze']);
