@@ -52,12 +52,22 @@ function storyBuild() {
   // a bier of two trestles and boards, mud still on it
   m.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-0.7, 0.7]) { m.beam([sx - 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx - 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); }
   m.mat(MAT.PLANKS, [0.5, 0.42, 0.34], 0.5); m.box(-1.15, 0.6, -0.34, 1.15, 0.66, 0.34, 4);
-  // the shape under the sailcloth: head, shoulders, long thin legs, the boots left bare
-  m.mat(MAT.CLOTH, [0.7, 0.68, 0.6], 0.6);
-  m.ball(0.9, 0.79, 0, 0.14, 0.11, 0.12, 10, 6); m.ball(0.48, 0.77, 0, 0.36, 0.13, 0.27, 12, 6); m.ball(-0.06, 0.74, 0, 0.3, 0.09, 0.2, 10, 6); m.ball(-0.58, 0.72, 0.0, 0.42, 0.075, 0.17, 10, 5);
-  m.box(-0.25, 0.66, -0.3, 0.95, 0.74, -0.27, 0); m.box(-0.25, 0.66, 0.27, 0.95, 0.74, 0.3, 0);
-  m.mat(MAT.CLOTH, [0.62, 0.6, 0.52], 0.6); m.box(-1.0, 0.66, -0.2, -0.82, 0.69, 0.2, 0);
-  m.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); for (const s of [-1, 1]) { m.push().T(-1.12, 0.72, s * 0.1).RZ(0.18); m.cyl(0, 0, 0, 0.055, 0.07, 0.24, 7, 3); m.pop(); m.box(-1.2, 0.66, s * 0.1 - 0.05, -1.0, 0.76, s * 0.1 + 0.05, 0); }
+  // a drowned man under stained sailcloth: head, shoulders, chest, hips and two long legs under the canvas; boots out at the foot, one blue-white hand slipped off the edge, rope ties, wet boards
+  const cv = [0.30, 0.27, 0.21], cv2 = [0.24, 0.21, 0.16];
+  m.mat(MAT.CLOTH, cv, 0.6);
+  m.ball(0.97, 0.78, 0, 0.15, 0.12, 0.12, 10, 6); m.ball(1.08, 0.79, 0, 0.045, 0.045, 0.035, 6, 4); m.ball(0.78, 0.74, 0, 0.11, 0.07, 0.1, 8, 4);
+  m.ball(0.6, 0.79, 0, 0.18, 0.14, 0.34, 12, 6); m.ball(0.33, 0.8, 0, 0.3, 0.13, 0.25, 12, 6); m.ball(0.0, 0.76, 0, 0.28, 0.1, 0.2, 10, 5); m.ball(-0.3, 0.77, 0, 0.2, 0.11, 0.22, 10, 5);
+  m.ball(-0.72, 0.75, 0.1, 0.45, 0.08, 0.1, 10, 5); m.ball(-0.72, 0.75, -0.1, 0.45, 0.08, 0.1, 10, 5); m.ball(-0.4, 0.8, 0.1, 0.07, 0.07, 0.08, 6, 4); m.ball(-0.4, 0.8, -0.1, 0.07, 0.07, 0.08, 6, 4);
+  m.ball(0.3, 0.73, 0.3, 0.4, 0.06, 0.07, 8, 4);
+  m.mat(MAT.CLOTH, cv2, 0.6); for (const s of [-1, 1]) for (let k = 0; k < 9; k++) { const x = -0.95 + k * 0.22 + (k % 2) * 0.03; m.quad2([x, 0.72, s * 0.29], [x + 0.02, 0.45 + (k % 3) * 0.03, s * 0.43], [x + 0.2, 0.46 + ((k + 1) % 3) * 0.03, s * 0.43], [x + 0.2, 0.72, s * 0.29]); }
+  m.mat(MAT.CLOTH, [0.25, 0.2, 0.15], 0.5); for (const x of [0.52, 0.12, -0.5]) { m.box(x - 0.014, 0.66, -0.3, x + 0.014, 0.9, -0.28, 0); m.box(x - 0.014, 0.66, 0.28, x + 0.014, 0.9, 0.3, 0); m.box(x - 0.014, 0.86, -0.3, x + 0.014, 0.9, 0.3, 0); m.beam([x, 0.7, 0.3], [x + 0.05, 0.4, 0.38], 0.012, 0.012); }
+  // the boots, left bare at the foot of the canvas, toes up
+  m.mat(MAT.PLAIN, [0.1, 0.08, 0.06]); for (const s of [-1, 1]) { m.push().T(-1.17, 0.7, s * 0.1).RZ(0.35); m.box(-0.06, 0, -0.06, 0.2, 0.1, 0.06); m.box(-0.02, 0.1, -0.05, 0.1, 0.34, 0.05); m.pop(); }
+  // the hand slipped from under the canvas and hanging off the edge: blue-white, fingers curled
+  m.mat(MAT.PLAIN, [0.62, 0.7, 0.74]); m.beam([0.18, 0.7, -0.27], [0.12, 0.5, -0.4], 0.07, 0.06); m.ball(0.1, 0.44, -0.42, 0.045, 0.06, 0.04, 7, 4); for (let f = 0; f < 4; f++) m.beam([0.07 + f * 0.022, 0.42, -0.42], [0.075 + f * 0.022, 0.31 - (f % 2) * 0.02, -0.425], 0.014, 0.014);
+  m.mat(MAT.PLAIN, [0.5, 0.55, 0.57]); m.ball(0.0, 0.7, -0.34, 0.03, 0.02, 0.03, 4, 3);
+  // wet boards under the bier, a drip line off the cloth, a dropped rope end
+  m.mat(MAT.PLAIN, [0.05, 0.045, 0.04]); m.quad2([-1.3, 0.014, -0.65], [-1.3, 0.014, 0.65], [1.3, 0.014, 0.65], [1.3, 0.014, -0.65]); m.mat(MAT.PLANKS, [0.28, 0.24, 0.2], 0.5); m.box(-1.14, 0.58, -0.335, 1.14, 0.6, 0.335, 4);
   // a wet dark patch of the quay and a bucket
   m.mat(MAT.PLAIN, [0.07, 0.065, 0.06]); m.quad2([-1.6, 0.012, -0.9], [-1.6, 0.012, 0.9], [1.6, 0.012, 0.9], [1.6, 0.012, -0.9]);
   m.push().T(1.5, 0.0, 0.7); m.mat(MAT.PLANKS, COL.wood, 0.5); m.cyl(0, 0, 0, 0.17, 0.2, 0.3, 9, 1); m.pop();

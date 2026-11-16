@@ -175,7 +175,7 @@ function ixOpenCont(it) {
   if (it.locked && !(S.unlocked && S.unlocked[it.id])) { { const m = ixLockTry({ key: it.key, msg: 'Locked. A small, well-oiled lock: someone cares what is in here.' }); if (m) return toast(m); } S.unlocked = S.unlocked || {}; S.unlocked[it.id] = 1; }
   S.opened[it.id] = 1; Audio2.chest();
   const list = it.loot || []; if (!list.length) { toast(it.ck === 'barrel' ? 'Nothing but damp stave and a smell of apples.' : 'Nothing. Dust, and a moth.'); save(); return; }
-  const stolen = ixOwned(it) && ixTheft(it, ixValue(list)); ixGive(list); if (ixOwned(it)) ixStolen(list); toast('Found: ' + ixGot(list).join(', ')); save();
+  const stolen = ixOwned(it) && ixTheft(it, ixValue(list)); ixGive(list); if (ixOwned(it)) ixStolen(list); toast('Taken: ' + ixGot(list).join(', ')); save();
 }
 function ixRead(it) {
   S.read = S.read || {}; const first = !S.read[it.bookId]; S.read[it.bookId] = 1; openReader(it.title, it.text);
@@ -223,7 +223,7 @@ IX.release = function (how) { const c = Cells.by.guardhouse; if (!c) return; S.j
 // ── wiring into the story layer ──
 const _il2 = interactLabel, _iu2 = interactUse;
 interactLabel = function (it) {
-  if (it.kind === 'cont') return S.opened[it.id] ? null : (it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb);
+  if (it.kind === 'cont') return S.opened[it.id] ? 'Empty' : (it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb);
   if (it.kind === 'loose') return it.gone ? null : 'Take ' + (it.item === 'gold' ? 'the coins' : ITEMS[it.item][0].toLowerCase());
   if (it.kind === 'seat') return IX.sit ? 'Stand up' : 'Sit down';
   if (it.kind === 'jaildoor') return S.jail ? (has('lockpick') ? 'Pick the lock' : 'Call for the guard') : null;

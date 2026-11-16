@@ -12670,12 +12670,22 @@ function storyBuild() {
   // a bier of two trestles and boards, mud still on it
   m.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-0.7, 0.7]) { m.beam([sx - 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx - 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); }
   m.mat(MAT.PLANKS, [0.5, 0.42, 0.34], 0.5); m.box(-1.15, 0.6, -0.34, 1.15, 0.66, 0.34, 4);
-  // the shape under the sailcloth: head, shoulders, long thin legs, the boots left bare
-  m.mat(MAT.CLOTH, [0.7, 0.68, 0.6], 0.6);
-  m.ball(0.9, 0.79, 0, 0.14, 0.11, 0.12, 10, 6); m.ball(0.48, 0.77, 0, 0.36, 0.13, 0.27, 12, 6); m.ball(-0.06, 0.74, 0, 0.3, 0.09, 0.2, 10, 6); m.ball(-0.58, 0.72, 0.0, 0.42, 0.075, 0.17, 10, 5);
-  m.box(-0.25, 0.66, -0.3, 0.95, 0.74, -0.27, 0); m.box(-0.25, 0.66, 0.27, 0.95, 0.74, 0.3, 0);
-  m.mat(MAT.CLOTH, [0.62, 0.6, 0.52], 0.6); m.box(-1.0, 0.66, -0.2, -0.82, 0.69, 0.2, 0);
-  m.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); for (const s of [-1, 1]) { m.push().T(-1.12, 0.72, s * 0.1).RZ(0.18); m.cyl(0, 0, 0, 0.055, 0.07, 0.24, 7, 3); m.pop(); m.box(-1.2, 0.66, s * 0.1 - 0.05, -1.0, 0.76, s * 0.1 + 0.05, 0); }
+  // a drowned man under stained sailcloth: head, shoulders, chest, hips and two long legs under the canvas; boots out at the foot, one blue-white hand slipped off the edge, rope ties, wet boards
+  const cv = [0.30, 0.27, 0.21], cv2 = [0.24, 0.21, 0.16];
+  m.mat(MAT.CLOTH, cv, 0.6);
+  m.ball(0.97, 0.78, 0, 0.15, 0.12, 0.12, 10, 6); m.ball(1.08, 0.79, 0, 0.045, 0.045, 0.035, 6, 4); m.ball(0.78, 0.74, 0, 0.11, 0.07, 0.1, 8, 4);
+  m.ball(0.6, 0.79, 0, 0.18, 0.14, 0.34, 12, 6); m.ball(0.33, 0.8, 0, 0.3, 0.13, 0.25, 12, 6); m.ball(0.0, 0.76, 0, 0.28, 0.1, 0.2, 10, 5); m.ball(-0.3, 0.77, 0, 0.2, 0.11, 0.22, 10, 5);
+  m.ball(-0.72, 0.75, 0.1, 0.45, 0.08, 0.1, 10, 5); m.ball(-0.72, 0.75, -0.1, 0.45, 0.08, 0.1, 10, 5); m.ball(-0.4, 0.8, 0.1, 0.07, 0.07, 0.08, 6, 4); m.ball(-0.4, 0.8, -0.1, 0.07, 0.07, 0.08, 6, 4);
+  m.ball(0.3, 0.73, 0.3, 0.4, 0.06, 0.07, 8, 4);
+  m.mat(MAT.CLOTH, cv2, 0.6); for (const s of [-1, 1]) for (let k = 0; k < 9; k++) { const x = -0.95 + k * 0.22 + (k % 2) * 0.03; m.quad2([x, 0.72, s * 0.29], [x + 0.02, 0.45 + (k % 3) * 0.03, s * 0.43], [x + 0.2, 0.46 + ((k + 1) % 3) * 0.03, s * 0.43], [x + 0.2, 0.72, s * 0.29]); }
+  m.mat(MAT.CLOTH, [0.25, 0.2, 0.15], 0.5); for (const x of [0.52, 0.12, -0.5]) { m.box(x - 0.014, 0.66, -0.3, x + 0.014, 0.9, -0.28, 0); m.box(x - 0.014, 0.66, 0.28, x + 0.014, 0.9, 0.3, 0); m.box(x - 0.014, 0.86, -0.3, x + 0.014, 0.9, 0.3, 0); m.beam([x, 0.7, 0.3], [x + 0.05, 0.4, 0.38], 0.012, 0.012); }
+  // the boots, left bare at the foot of the canvas, toes up
+  m.mat(MAT.PLAIN, [0.1, 0.08, 0.06]); for (const s of [-1, 1]) { m.push().T(-1.17, 0.7, s * 0.1).RZ(0.35); m.box(-0.06, 0, -0.06, 0.2, 0.1, 0.06); m.box(-0.02, 0.1, -0.05, 0.1, 0.34, 0.05); m.pop(); }
+  // the hand slipped from under the canvas and hanging off the edge: blue-white, fingers curled
+  m.mat(MAT.PLAIN, [0.62, 0.7, 0.74]); m.beam([0.18, 0.7, -0.27], [0.12, 0.5, -0.4], 0.07, 0.06); m.ball(0.1, 0.44, -0.42, 0.045, 0.06, 0.04, 7, 4); for (let f = 0; f < 4; f++) m.beam([0.07 + f * 0.022, 0.42, -0.42], [0.075 + f * 0.022, 0.31 - (f % 2) * 0.02, -0.425], 0.014, 0.014);
+  m.mat(MAT.PLAIN, [0.5, 0.55, 0.57]); m.ball(0.0, 0.7, -0.34, 0.03, 0.02, 0.03, 4, 3);
+  // wet boards under the bier, a drip line off the cloth, a dropped rope end
+  m.mat(MAT.PLAIN, [0.05, 0.045, 0.04]); m.quad2([-1.3, 0.014, -0.65], [-1.3, 0.014, 0.65], [1.3, 0.014, 0.65], [1.3, 0.014, -0.65]); m.mat(MAT.PLANKS, [0.28, 0.24, 0.2], 0.5); m.box(-1.14, 0.58, -0.335, 1.14, 0.6, 0.335, 4);
   // a wet dark patch of the quay and a bucket
   m.mat(MAT.PLAIN, [0.07, 0.065, 0.06]); m.quad2([-1.6, 0.012, -0.9], [-1.6, 0.012, 0.9], [1.6, 0.012, 0.9], [1.6, 0.012, -0.9]);
   m.push().T(1.5, 0.0, 0.7); m.mat(MAT.PLANKS, COL.wood, 0.5); m.cyl(0, 0, 0, 0.17, 0.2, 0.3, 9, 1); m.pop();
@@ -12907,7 +12917,7 @@ function ixOpenCont(it) {
   if (it.locked && !(S.unlocked && S.unlocked[it.id])) { { const m = ixLockTry({ key: it.key, msg: 'Locked. A small, well-oiled lock: someone cares what is in here.' }); if (m) return toast(m); } S.unlocked = S.unlocked || {}; S.unlocked[it.id] = 1; }
   S.opened[it.id] = 1; Audio2.chest();
   const list = it.loot || []; if (!list.length) { toast(it.ck === 'barrel' ? 'Nothing but damp stave and a smell of apples.' : 'Nothing. Dust, and a moth.'); save(); return; }
-  const stolen = ixOwned(it) && ixTheft(it, ixValue(list)); ixGive(list); if (ixOwned(it)) ixStolen(list); toast('Found: ' + ixGot(list).join(', ')); save();
+  const stolen = ixOwned(it) && ixTheft(it, ixValue(list)); ixGive(list); if (ixOwned(it)) ixStolen(list); toast('Taken: ' + ixGot(list).join(', ')); save();
 }
 function ixRead(it) {
   S.read = S.read || {}; const first = !S.read[it.bookId]; S.read[it.bookId] = 1; openReader(it.title, it.text);
@@ -12955,7 +12965,7 @@ IX.release = function (how) { const c = Cells.by.guardhouse; if (!c) return; S.j
 // ── wiring into the story layer ──
 const _il2 = interactLabel, _iu2 = interactUse;
 interactLabel = function (it) {
-  if (it.kind === 'cont') return S.opened[it.id] ? null : (it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb);
+  if (it.kind === 'cont') return S.opened[it.id] ? 'Empty' : (it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb);
   if (it.kind === 'loose') return it.gone ? null : 'Take ' + (it.item === 'gold' ? 'the coins' : ITEMS[it.item][0].toLowerCase());
   if (it.kind === 'seat') return IX.sit ? 'Stand up' : 'Sit down';
   if (it.kind === 'jaildoor') return S.jail ? (has('lockpick') ? 'Pick the lock' : 'Call for the guard') : null;
@@ -15434,7 +15444,7 @@ function mineBuild() {
   const pack = new MeshPack(); pack.shadow = false;
   const m = new Mesh(1 << 16); m.seed = 9301;
   const gm = new Mesh(2048); gm.m1 = 0; gm.m2 = 0; gm.m3 = 0; gm.ao = 1; gm.grad = null; gm.wind = 0; gm.mat(MAT.PLAIN, [0.55, 0.75, 1.0]);
-  const grid = mineShell(m, O, FY, { mesh: gm, want: (r, i, j, k) => (r.id === 'deep' && mhash(i, j, 31) < 0.3) || (r.id === 'stope' && mhash(i, j, 32) < 0.16) || (r.id === 'cleft' && mhash(i, j, 33) < 0.1), roof: (r, i, j) => (r.id === 'deep' && mhash(i, j, 34) < 0.07) || (r.id === 'stope' && mhash(i, j, 35) < 0.05) }); MINE.grid = grid;
+  const grid = mineShell(m, O, FY, { mesh: gm, want: (r, i, j, k) => (r.id === 'deep' && mhash(i, j, 31) < 0.6) || (r.id === 'stope' && mhash(i, j, 32) < 0.16) || (r.id === 'cleft' && mhash(i, j, 33) < 0.1), roof: (r, i, j) => (r.id === 'deep' && mhash(i, j, 34) < 0.16) || (r.id === 'stope' && mhash(i, j, 35) < 0.05) }); MINE.grid = grid;
   const wpos = (x, y, z) => [O[0] + x, FY + y, O[2] + z];
   const put = (x, z, rot, fn, y) => { m.push().T(O[0] + x, FY + (y || 0), O[2] + z).RY(rot || 0); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; fn(m); m.pop(); return wpos(x, y || 0, z); };
   const rnd = rng(9301), em = o => { o.cell = 'mine'; o.zone = 0; o.seed = (World.emitters.length * 0.618) % 1; o.t = 0; World.emitters.push(o); return o; };
@@ -15518,6 +15528,7 @@ function mineBuild() {
   const wm = new Mesh(512); wm.mat(MAT.PLAIN, [0.03, 0.045, 0.05]); wm.ao = 1; wm.m1 = 0; wm.m2 = 0; wm.m3 = 0; wm.grad = null; wm.wind = 0;
   const wq = (x0, z0, x1, z1, y) => wm.quad(wpos(x0, y, z0), wpos(x0, y, z1), wpos(x1, y, z1), wpos(x1, y, z0));
   wq(9, 29, 31, 35, -0.06); wq(36, 25, 42, 30, 0.01); wq(-5, 66, 1, 69, 0.01);
+  gm.quad(wpos(-4.6, 0.04, 66.4), wpos(-4.6, 0.04, 68.6), wpos(0.6, 0.04, 68.6), wpos(0.6, 0.04, 66.4), 0, 0, 1, 1);      // the silver pool glows
   pack.add(wm, { kind: 'opaque', cell: 'mine', noShadow: true, nearOnly: true });
   // the veins of silver in the roof and walls of the deep chamber and the stope: emissive, cold
   pack.add(gm, { kind: 'glow', cell: 'mine', noShadow: true, nearOnly: true });
@@ -15592,7 +15603,7 @@ function mine_wire(cell, wpos) {
   const mi = (kind, id, x, y, z, label, item, extra) => {
     const key = 'mp.' + kind; MINE.pm = MINE.pm || {}; const mesh = MINE.pm[key] || (MINE.pm[key] = IX.mesh(kind)); const p3 = wpos(x, y, z);
     const obj = addSkinned(mesh, { c: p3, r: 0.6, zone: 0, kind: 'pickup', cell: 'mine', light: 0.7 }); R.boneData.set(m4.translate(m4.create(), p3[0], p3[1], p3[2]), obj.slot * 256);
-    const it = Object.assign({ kind: 'pickup', id, item, p: [p3[0], p3[1] + 0.2, p3[2]], r: 1.9, zone: 0, obj, label, cell: 'mine', wild: true }, extra || {}); World.interact.push(it); World.pickups.push(it); return it;
+    const it = Object.assign({ kind: 'pickup', id, item, p: [p3[0], p3[1] + 0.2, p3[2]], r: 1.9, zone: 0, obj, label, cell: 'mine' }, extra || {}); World.interact.push(it); World.pickups.push(it); return it;
   };
   MINE.mi = mi;
   mi('candle', 'mine.oil.1', -9.2, 0.0, 28.4, 'Take the oil', 'oil'); mi('candle', 'mine.oil.2', 5.4, 0.0, 25.2, 'Take the oil', 'oil'); mi('candle', 'mine.oil.3', 40.6, 0.0, 33.8, 'Take the oil', 'oil'); mi('candle', 'mine.oil.4', -9.6, 0.0, 64.8, 'Take the oil', 'oil');
@@ -15605,7 +15616,7 @@ function mine_wire(cell, wpos) {
   // the lantern's light
   const L = MINE.lamp.light = addLight([0, -9999, 0], 9.5, [2.9, 1.7, 0.7], 0, 'mine'); L.power = e => (World.cell && World.cell.id === "mine") ? (MINE.lamp.on ? 0.92 + 0.08 * Math.sin(e.time * 9.1) : 0.12) : 0;
   // the cold light of the deep, and of the cleft
-  for (const [x, y, z, r, c] of [[-2, 4.6, 67, 12, [0.5, 0.85, 1.5]], [-12, 3.2, 56, 9, [0.4, 0.7, 1.3]], [44, 3.0, 58, 9, [0.4, 0.7, 1.3]], [-3, 5, 54, 9, [0.4, 0.7, 1.3]], [-32, 6.8, 60, 12, [0.85, 1.15, 1.35]]]) { const l = addLight(wpos(x, y, z), r, c, 0, 'hum'); MINE.lights.push(l); }
+  for (const [x, y, z, r, c] of [[-2, 4.6, 67, 14, [0.9, 1.5, 2.6]], [-12, 3.2, 56, 10, [0.7, 1.2, 2.2]], [44, 3.0, 58, 9, [0.6, 1.0, 1.8]], [-3, 5, 54, 10, [0.7, 1.2, 2.2]], [-32, 6.8, 60, 12, [0.85, 1.15, 1.35]]]) { const l = addLight(wpos(x, y, z), r, c, 0, 'hum'); MINE.lights.push(l); }
 }
 function mine_cleftOutside(cx, cz, cy) {
   // a fissure in the cliff above the fall: two leaning slabs, a black slot between, ferns and a trickle
@@ -15692,7 +15703,7 @@ function mineKit() {
   const NRM = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }, POS = { W: (i, j) => [i, j + 0.5], E: (i, j) => [i + 1, j + 0.5], N: (i, j) => [i + 0.5, j + 1], S: (i, j) => [i + 0.5, j] };
   const pick = h => { let a = 0; for (const r of MINE_ROCKS) { a += r[2]; if (h < a) return r; } return MINE_ROCKS[0]; };
   for (const k of ['W', 'E', 'N', 'S']) for (const [i, j] of G.edges[k]) {
-    const h = mhash(i, j, 50 + k.charCodeAt(0)); if (h > 0.2) continue;
+    const h = mhash(i, j, 50 + k.charCodeAt(0)); if (h > 0.14) continue;
     const r = pick(mhash(i, j, 61)), n = NRM[k], p = POS[k](i, j), s = 0.8 + mhash(i, j, 62) * 0.5, hd = r[1] * s, prot = 0.12 + mhash(i, j, 63) * 0.18;
     add(r[0], p[0] + n[0] * (prot - hd), -0.15, p[1] + n[1] * (prot - hd), Math.atan2(n[0], n[2]) + (mhash(i, j, 64) < 0.5 ? 0 : PI) * 0, s);
   }

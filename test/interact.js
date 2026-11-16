@@ -12,7 +12,7 @@ const cells = new Set(IX.cont.map(o => o.cell)); log.push('cells with containers
 const __w = ixWitness; ixWitness = () => null;  // nobody about: taking is free
 const cont = IX.cont.find(o => o.loot.length && !o.locked && o.cell !== 'inn') || IX.cont.find(o => o.loot.length && !o.locked);
 game.enter(cont.cell); await idle(); Player.pos = [cont.p[0], cont.p[1] - 0.9, cont.p[2] + 0.5];
-{ const g0 = gcount(), l = interactLabel(cont); fx(l && /Search|Look|Open/.test(l), 'container label ' + l); interactUse(cont); fx(S.opened[cont.id], 'container not marked open'); fx(gcount() > g0, 'container gave nothing (' + JSON.stringify(cont.loot) + ')'); fx(interactLabel(cont) === null, 'an emptied container still offers itself'); log.push('opened ' + cont.id + ' ' + JSON.stringify(cont.loot)); }
+{ const g0 = gcount(), l = interactLabel(cont); fx(l && /Search|Look|Open/.test(l), 'container label ' + l); interactUse(cont); fx(S.opened[cont.id], 'container not marked open'); fx(gcount() > g0, 'container gave nothing (' + JSON.stringify(cont.loot) + ')'); fx(interactLabel(cont) === 'Empty', 'an emptied container does not read Empty (' + interactLabel(cont) + ')'); log.push('opened ' + cont.id + ' ' + JSON.stringify(cont.loot)); }
 { const again = ixRoll(IX.LOOT.home, ixRng(ixHash('x')), 1, 1), again2 = ixRoll(IX.LOOT.home, ixRng(ixHash('x')), 1, 1); fx(JSON.stringify(again) === JSON.stringify(again2), 'loot is not deterministic'); }
 // ── a loose thing: taken, gone, still gone after a save and a load ──
 const lo = IX.loose.find(o => o.kind === 'loose' && o.item !== 'gold' && o.cell !== 'inn') || IX.loose.find(o => o.kind === 'loose' && o.cell !== 'inn') || IX.loose.find(o => o.kind === 'loose');

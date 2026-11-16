@@ -110,7 +110,7 @@ function mineBuild() {
   const pack = new MeshPack(); pack.shadow = false;
   const m = new Mesh(1 << 16); m.seed = 9301;
   const gm = new Mesh(2048); gm.m1 = 0; gm.m2 = 0; gm.m3 = 0; gm.ao = 1; gm.grad = null; gm.wind = 0; gm.mat(MAT.PLAIN, [0.55, 0.75, 1.0]);
-  const grid = mineShell(m, O, FY, { mesh: gm, want: (r, i, j, k) => (r.id === 'deep' && mhash(i, j, 31) < 0.3) || (r.id === 'stope' && mhash(i, j, 32) < 0.16) || (r.id === 'cleft' && mhash(i, j, 33) < 0.1), roof: (r, i, j) => (r.id === 'deep' && mhash(i, j, 34) < 0.07) || (r.id === 'stope' && mhash(i, j, 35) < 0.05) }); MINE.grid = grid;
+  const grid = mineShell(m, O, FY, { mesh: gm, want: (r, i, j, k) => (r.id === 'deep' && mhash(i, j, 31) < 0.6) || (r.id === 'stope' && mhash(i, j, 32) < 0.16) || (r.id === 'cleft' && mhash(i, j, 33) < 0.1), roof: (r, i, j) => (r.id === 'deep' && mhash(i, j, 34) < 0.16) || (r.id === 'stope' && mhash(i, j, 35) < 0.05) }); MINE.grid = grid;
   const wpos = (x, y, z) => [O[0] + x, FY + y, O[2] + z];
   const put = (x, z, rot, fn, y) => { m.push().T(O[0] + x, FY + (y || 0), O[2] + z).RY(rot || 0); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; fn(m); m.pop(); return wpos(x, y || 0, z); };
   const rnd = rng(9301), em = o => { o.cell = 'mine'; o.zone = 0; o.seed = (World.emitters.length * 0.618) % 1; o.t = 0; World.emitters.push(o); return o; };
@@ -194,6 +194,7 @@ function mineBuild() {
   const wm = new Mesh(512); wm.mat(MAT.PLAIN, [0.03, 0.045, 0.05]); wm.ao = 1; wm.m1 = 0; wm.m2 = 0; wm.m3 = 0; wm.grad = null; wm.wind = 0;
   const wq = (x0, z0, x1, z1, y) => wm.quad(wpos(x0, y, z0), wpos(x0, y, z1), wpos(x1, y, z1), wpos(x1, y, z0));
   wq(9, 29, 31, 35, -0.06); wq(36, 25, 42, 30, 0.01); wq(-5, 66, 1, 69, 0.01);
+  gm.quad(wpos(-4.6, 0.04, 66.4), wpos(-4.6, 0.04, 68.6), wpos(0.6, 0.04, 68.6), wpos(0.6, 0.04, 66.4), 0, 0, 1, 1);      // the silver pool glows
   pack.add(wm, { kind: 'opaque', cell: 'mine', noShadow: true, nearOnly: true });
   // the veins of silver in the roof and walls of the deep chamber and the stope: emissive, cold
   pack.add(gm, { kind: 'glow', cell: 'mine', noShadow: true, nearOnly: true });
@@ -268,7 +269,7 @@ function mine_wire(cell, wpos) {
   const mi = (kind, id, x, y, z, label, item, extra) => {
     const key = 'mp.' + kind; MINE.pm = MINE.pm || {}; const mesh = MINE.pm[key] || (MINE.pm[key] = IX.mesh(kind)); const p3 = wpos(x, y, z);
     const obj = addSkinned(mesh, { c: p3, r: 0.6, zone: 0, kind: 'pickup', cell: 'mine', light: 0.7 }); R.boneData.set(m4.translate(m4.create(), p3[0], p3[1], p3[2]), obj.slot * 256);
-    const it = Object.assign({ kind: 'pickup', id, item, p: [p3[0], p3[1] + 0.2, p3[2]], r: 1.9, zone: 0, obj, label, cell: 'mine', wild: true }, extra || {}); World.interact.push(it); World.pickups.push(it); return it;
+    const it = Object.assign({ kind: 'pickup', id, item, p: [p3[0], p3[1] + 0.2, p3[2]], r: 1.9, zone: 0, obj, label, cell: 'mine' }, extra || {}); World.interact.push(it); World.pickups.push(it); return it;
   };
   MINE.mi = mi;
   mi('candle', 'mine.oil.1', -9.2, 0.0, 28.4, 'Take the oil', 'oil'); mi('candle', 'mine.oil.2', 5.4, 0.0, 25.2, 'Take the oil', 'oil'); mi('candle', 'mine.oil.3', 40.6, 0.0, 33.8, 'Take the oil', 'oil'); mi('candle', 'mine.oil.4', -9.6, 0.0, 64.8, 'Take the oil', 'oil');
@@ -281,7 +282,7 @@ function mine_wire(cell, wpos) {
   // the lantern's light
   const L = MINE.lamp.light = addLight([0, -9999, 0], 9.5, [2.9, 1.7, 0.7], 0, 'mine'); L.power = e => (World.cell && World.cell.id === "mine") ? (MINE.lamp.on ? 0.92 + 0.08 * Math.sin(e.time * 9.1) : 0.12) : 0;
   // the cold light of the deep, and of the cleft
-  for (const [x, y, z, r, c] of [[-2, 4.6, 67, 12, [0.5, 0.85, 1.5]], [-12, 3.2, 56, 9, [0.4, 0.7, 1.3]], [44, 3.0, 58, 9, [0.4, 0.7, 1.3]], [-3, 5, 54, 9, [0.4, 0.7, 1.3]], [-32, 6.8, 60, 12, [0.85, 1.15, 1.35]]]) { const l = addLight(wpos(x, y, z), r, c, 0, 'hum'); MINE.lights.push(l); }
+  for (const [x, y, z, r, c] of [[-2, 4.6, 67, 14, [0.9, 1.5, 2.6]], [-12, 3.2, 56, 10, [0.7, 1.2, 2.2]], [44, 3.0, 58, 9, [0.6, 1.0, 1.8]], [-3, 5, 54, 10, [0.7, 1.2, 2.2]], [-32, 6.8, 60, 12, [0.85, 1.15, 1.35]]]) { const l = addLight(wpos(x, y, z), r, c, 0, 'hum'); MINE.lights.push(l); }
 }
 function mine_cleftOutside(cx, cz, cy) {
   // a fissure in the cliff above the fall: two leaning slabs, a black slot between, ferns and a trickle
@@ -368,7 +369,7 @@ function mineKit() {
   const NRM = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }, POS = { W: (i, j) => [i, j + 0.5], E: (i, j) => [i + 1, j + 0.5], N: (i, j) => [i + 0.5, j + 1], S: (i, j) => [i + 0.5, j] };
   const pick = h => { let a = 0; for (const r of MINE_ROCKS) { a += r[2]; if (h < a) return r; } return MINE_ROCKS[0]; };
   for (const k of ['W', 'E', 'N', 'S']) for (const [i, j] of G.edges[k]) {
-    const h = mhash(i, j, 50 + k.charCodeAt(0)); if (h > 0.2) continue;
+    const h = mhash(i, j, 50 + k.charCodeAt(0)); if (h > 0.14) continue;
     const r = pick(mhash(i, j, 61)), n = NRM[k], p = POS[k](i, j), s = 0.8 + mhash(i, j, 62) * 0.5, hd = r[1] * s, prot = 0.12 + mhash(i, j, 63) * 0.18;
     add(r[0], p[0] + n[0] * (prot - hd), -0.15, p[1] + n[1] * (prot - hd), Math.atan2(n[0], n[2]) + (mhash(i, j, 64) < 0.5 ? 0 : PI) * 0, s);
   }
