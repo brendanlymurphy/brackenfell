@@ -154,3 +154,10 @@ Tobin’s box; Behind the stone; The Magpie’s cellar; The Hart’s ledger; Beh
 Fourteen rumours, each told once, the ones pointing at secrets you have not found first: Tobin and the Watch Bell; the crooked stone under the plaque; the Magpie’s cellar on Washing Lane; the trunk on the Hart’s roof walk; the east cellar wall; the strongbox in the quay; lights behind the chapel; the Magpie’s dusk road; the shut house on the south lane; the barred mine door; the Foreman’s strongbox; the drowned man; Hale cries on the last day of the month; the Elder talks to the lake. Exact text is in `RUMOURS` in `src/94b_economy.js`.
 
 ### Perk names and descriptions (reading text in the pack): Hardy, Long wind, Keen edge, Thick hide, Quiet feet, Hard bargainer, Forager.
+
+### Acts 2 and 3 (src/94d_act2.js)
+Exact text is in the file; speaker ids below.
+- rowan (Elder): act 2 telling ("Sit. You will want it from the start..."), the Hart-wall send-off ("Go on. The Hart. The east cellar wall..."), and two ending lines (bread: "The bread goes out at dawn..."; rest: "It is quiet...").
+- hollow (the slab in the Bread Cave, speaker id `hollow`): the twelve-in-a-row reading, the option "Leave the bread and say the count. (needs 3 bread)", its short-count reply, and the rest-ending option and replies.
+- Foreman's count reading, epilogue toasts and ending IX.SAY comments (speaker `*`) for the two endings.
+- Quest stage texts for stages 6 to 9 (main quest journal).

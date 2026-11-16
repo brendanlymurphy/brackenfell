@@ -16745,16 +16745,16 @@ addOpt('greta', n => ['What’s the talk in the Hart tonight?', () => {
 // twelve stand in a row and a slab wants bread. The tunnel and cave are more regions of the Old Mine's cell (94_mine.js builds them), joined to the Hart's cellar and to a cleft on the west shore.
 // Two endings change the village (S.flags.ending = 'bread' | 'rest'): candles and a loaf table on the Wharf and a bread-day in the Hart; or the mine door open with lanterns, a cairn of silver and
 // the dead put to bed. Nothing is a dead end: the wall opens with the Elder's word instead of the ledger, and bread can be bought.
+// (the cell is 150 m square and the world finds it by position, so all of it stays within x and z of -75 to 75 in the cell's frame: the tunnel runs west under the north side)
 MINE.REG.push(
-  { id: 'hartstep', x0: 52, z0: 8, x1: 58, z1: 16, h: 3.0, kind: 'timber' },
-  { id: 'tn1', x0: 58, z0: 10, x1: 86, z1: 14, h: 2.9, kind: 'timber' },
-  { id: 'cache', x0: 66, z0: 14, x1: 76, z1: 24, h: 3.2, kind: 'cave' },
-  { id: 'tn2', x0: 86, z0: 10, x1: 100, z1: 14, h: 2.9, kind: 'timber' },
-  { id: 'bread', x0: 100, z0: 0, x1: 124, z1: 24, h: 6.5, kind: 'cave' },
-  { id: 'shore', x0: 124, z0: 9, x1: 132, z1: 15, h: 3.5, kind: 'cave', ramp: { ax: 'x', a: 124, b: 132, y0: 0, y1: 1.2 } },
+  { id: 'hartstep', x0: 60, z0: -34, x1: 70, z1: -26, h: 3.0, kind: 'timber' },
+  { id: 'tn1', x0: -34, z0: -32, x1: 60, z1: -28, h: 2.9, kind: 'timber' },
+  { id: 'cache', x0: 20, z0: -40, x1: 30, z1: -32, h: 3.2, kind: 'cave' },
+  { id: 'bread', x0: -66, z0: -48, x1: -34, z1: -12, h: 6.5, kind: 'cave' },
+  { id: 'shore', x0: -72, z0: -33, x1: -66, z1: -27, h: 3.5, kind: 'cave', ramp: { ax: 'x', a: -66, b: -72, y0: 0, y1: 1.2 } },
 );
-MINE.SPAWN.push({ kind: 'lurker', x: 70, z: 19, yaw: 0 }, { kind: 'delver', x: 80, z: 12, yaw: PI / 2 }, { kind: 'lurker', x: 93, z: 12, yaw: -PI / 2 });
-MINE.AT.hart = [55, 12]; MINE.AT.bread = [104, 12]; MINE.AT.shore = [130, 12];
+MINE.SPAWN.push({ kind: 'lurker', x: 40, z: -30, yaw: PI / 2 }, { kind: 'delver', x: 4, z: -30, yaw: -PI / 2 }, { kind: 'lurker', x: -24, z: -30, yaw: PI / 2 });
+MINE.AT.hart = [64, -30]; MINE.AT.bread = [-50, -30]; MINE.AT.shore = [-69, -30];
 const A2 = { built: false, cave: { x: -48, z: 122 } };
 const a2w = (x, y, z) => [MINE.O[0] + x, MINE.FY + y, MINE.O[2] + z];
 // ── the story: stages, Rowan's telling, the way ──
@@ -16768,7 +16768,7 @@ const _qt94d = questTarget;
 questTarget = function (id) {
   if (id !== 'main') return _qt94d(id);
   const st = qAt('main'); if (st === 7) { const h = World.houses.inn; return h && h.site ? [h.site.x, 0, h.site.z] : [0, 0, -17]; }
-  if (st === 8) return a2w(S.flags.tunnel ? 110 : 55, 1, 12); if (st === 9) return a2w(104, 1, 12);
+  if (st === 8) return a2w(S.flags.tunnel ? -50 : 64, 1, -30); if (st === 9) return a2w(-50, 1, -30);
   return _qt94d(id);
 };
 const _rowan94d = TALK.rowan;
@@ -16788,23 +16788,23 @@ function act2Build() {
   // the doorway in the Hart's cellar (shown once the bricks are out) and its portal; the way back
   { const inn = Cells.by.inn, ip = [266.4, -402.2, 4.6];
     A2.door = secProp(m => { m.mat(MAT.PLAIN, [0.02, 0.018, 0.016]); m.box(-0.5, 0, -0.1, 0.5, 1.9, 0.0, 0); m.mat(MAT.TIMBER, COL.timberDark, 0.6); m.box(-0.62, 0, -0.14, -0.5, 2.0, 0.04, 4); m.box(0.5, 0, -0.14, 0.62, 2.0, 0.04, 4); m.box(-0.62, 1.9, -0.14, 0.62, 2.04, 0.04, 4); }, [266.95, -402.7, 4.6], -Math.PI / 2, { r: 2.0, zone: 1, cell: 'inn', light: 0.9 }); A2.door.visible = false;
-    World.interact.push({ kind: 'portal', id: 'door.tunnel.in', p: ip, r: 2.4, zone: 1, cell: 'inn', label: 'Go down by the smugglers’ door', dest: { p: a2w(57, 0.1, 12), yaw: Math.PI / 2, cell: 'mine', name: 'The Smugglers’ Tunnel' }, side: 'in', lock: () => S.flags.sec_wall ? null : 'Just a wall.' });
-    World.interact.push({ kind: 'portal', id: 'door.tunnel.out', p: a2w(54.6, 1.0, 12), r: 2.4, zone: 0, cell: 'mine', label: 'Go up to the Hart’s cellar', dest: { p: [265.3, -402.6, 4.6], yaw: -Math.PI / 2, cell: 'inn', name: 'The Honeyed Hart' }, side: 'in' }); }
+    World.interact.push({ kind: 'portal', id: 'door.tunnel.in', p: ip, r: 2.4, zone: 1, cell: 'inn', label: 'Go down by the smugglers’ door', dest: { p: a2w(63, 0.1, -30), yaw: -Math.PI / 2, cell: 'mine', name: 'The Smugglers’ Tunnel' }, side: 'in', lock: () => S.flags.sec_wall ? null : 'Just a wall.' });
+    World.interact.push({ kind: 'portal', id: 'door.tunnel.out', p: a2w(68.6, 1.0, -30), r: 2.4, zone: 0, cell: 'mine', label: 'Go up to the Hart’s cellar', dest: { p: [265.3, -402.6, 4.6], yaw: -Math.PI / 2, cell: 'inn', name: 'The Honeyed Hart' }, side: 'in' }); }
   // the way out to the lake, a cleft in the west shore, and the way back in
   { const cx = A2.cave.x, cz = A2.cave.z, cy = Terrain.y(cx, cz);
-    World.interact.push({ kind: 'portal', id: 'door.cave.out', p: a2w(130, 2.2, 12), r: 2.6, zone: 0, cell: 'mine', label: 'Climb out to the shore', dest: { p: [cx + 2.0, Terrain.y(cx + 2.0, cz), cz], yaw: Math.PI / 2, cell: null, name: 'The lake shore' }, side: 'in' });
-    World.interact.push({ kind: 'portal', id: 'door.cave.in', p: [cx + 0.6, cy + 1.0, cz], r: 2.6, zone: 0, label: 'Go into the cave', dest: { p: a2w(128, 1.4, 12), yaw: -Math.PI / 2, cell: 'mine', name: 'The Bread Cave' }, side: 'out' });
+    World.interact.push({ kind: 'portal', id: 'door.cave.out', p: a2w(-71, 2.2, -30), r: 2.6, zone: 0, cell: 'mine', label: 'Climb out to the shore', dest: { p: [cx + 2.0, Terrain.y(cx + 2.0, cz), cz], yaw: Math.PI / 2, cell: null, name: 'The lake shore' }, side: 'in' });
+    World.interact.push({ kind: 'portal', id: 'door.cave.in', p: [cx + 0.6, cy + 1.0, cz], r: 2.6, zone: 0, label: 'Go into the cave', dest: { p: a2w(-68.5, 1.0, -30), yaw: Math.PI / 2, cell: 'mine', name: 'The Bread Cave' }, side: 'out' });
     act2CaveOutside(cx, cz, cy); }
   // the tunnel's furnishing: crates and kegs in the cache, a bench, rope; the lanterns have been put out
-  fm(m => { for (const [x, z, s, r] of [[0, 0, 0.7, 0.2], [1.2, 0.3, 0.6, -0.4], [0.4, 1.1, 0.5, 1.1]]) { m.push().T(x, 0, z).RY(r); Props.crate(m, s); m.pop(); } m.push().T(-1.3, 0, 0.8); Props.barrel(m, 0.34, 0.9); m.pop(); m.push().T(-1.9, 0, 0.1); Props.barrel(m, 0.34, 0.9); m.pop(); }, a2w(72, 0, 21), 0.3, { r: 4 });
-  fm(m => { m.mat(MAT.TIMBER, COL.timberDark, 0.6); m.box(-0.9, 0.4, -0.2, 0.9, 0.46, 0.2, 4); for (const x of [-0.8, 0.8]) m.box(x - 0.05, 0, -0.18, x + 0.05, 0.4, 0.18, 0); m.mat(MAT.CLOTH, [0.5, 0.44, 0.34], 0.5); m.ball(0.1, 0.52, 0, 0.18, 0.08, 0.14, 7, 4); }, a2w(76, 0, 12.7), 0.1, { r: 2 });
+  fm(m => { for (const [x, z, s, r] of [[0, 0, 0.7, 0.2], [1.2, 0.3, 0.6, -0.4], [0.4, 1.1, 0.5, 1.1]]) { m.push().T(x, 0, z).RY(r); Props.crate(m, s); m.pop(); } m.push().T(-1.3, 0, 0.8); Props.barrel(m, 0.34, 0.9); m.pop(); m.push().T(-1.9, 0, 0.1); Props.barrel(m, 0.34, 0.9); m.pop(); }, a2w(25, 0, -37), 0.3, { r: 4 });
+  fm(m => { m.mat(MAT.TIMBER, COL.timberDark, 0.6); m.box(-0.9, 0.4, -0.2, 0.9, 0.46, 0.2, 4); for (const x of [-0.8, 0.8]) m.box(x - 0.05, 0, -0.18, x + 0.05, 0.4, 0.18, 0); m.mat(MAT.CLOTH, [0.5, 0.44, 0.34], 0.5); m.ball(0.1, 0.52, 0, 0.18, 0.08, 0.14, 7, 4); }, a2w(-8, 0, -28.7), 0.1, { r: 2 });
   // the slab, the old loaves on it, the candle ends, and the twelve in a row by the water
-  fm(m => { m.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.7); m.box(-1.5, 0, -0.55, 1.5, 0.9, 0.55, 4); m.mat(MAT.STONE, [0.82, 0.8, 0.76], 0.7); m.box(-1.6, 0.9, -0.62, 1.6, 1.0, 0.62, 4); m.mat(MAT.CLOTH, [0.34, 0.4, 0.28], 0.4); for (const x of [-0.9, -0.3, 0.3, 0.9]) m.ball(x, 1.06, ((x * 7) % 0.3), 0.16, 0.07, 0.11, 7, 4); m.mat(MAT.PLAIN, [0.8, 0.74, 0.6]); for (const x of [-1.3, 1.3]) m.cyl(x, 1.0, 0.2, 0.03, 0.03, 0.13, 6, 0); }, a2w(104, 0, 12), 0, { r: 4 });
-  { const row = []; for (let k = 0; k < 12; k++) { const z = 2.5 + k * 1.7, c = [0.18 + (k % 3) * 0.02, 0.15 + (k % 2) * 0.02, 0.14]; row.push(fm(m => secCloak(m, c, 0.9 + (k % 4) * 0.04), a2w(116.5 + (k % 2) * 0.35, 0, z), -Math.PI / 2 + (k % 3) * 0.06, { r: 1.3 })); } A2.row = row; }
-  for (const [x, y, z, r, c] of [[118, 3.2, 12, 16, [0.6, 1.0, 1.8]], [106, 3.4, 12, 12, [0.5, 0.8, 1.4]], [128, 2.4, 12, 8, [0.6, 0.9, 1.2]], [62, 2.0, 12, 8, [0.5, 0.7, 1.0]]]) MINE.lights.push(addLight(a2w(x, y, z), r, c, 0, 'hum'));
-  for (const [x, z] of [[102.5, 11.2], [105.5, 11.2]]) { const e = { type: 'candle', p: a2w(x, 1.15, z), zone: 0, always: true, seed: x, cell: 'mine' }; World.emitters.push(e); }
+  fm(m => { m.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.7); m.box(-1.5, 0, -0.55, 1.5, 0.9, 0.55, 4); m.mat(MAT.STONE, [0.82, 0.8, 0.76], 0.7); m.box(-1.6, 0.9, -0.62, 1.6, 1.0, 0.62, 4); m.mat(MAT.CLOTH, [0.34, 0.4, 0.28], 0.4); for (const x of [-0.9, -0.3, 0.3, 0.9]) m.ball(x, 1.06, ((x * 7) % 0.3), 0.16, 0.07, 0.11, 7, 4); m.mat(MAT.PLAIN, [0.8, 0.74, 0.6]); for (const x of [-1.3, 1.3]) m.cyl(x, 1.0, 0.2, 0.03, 0.03, 0.13, 6, 0); }, a2w(-50, 0, -30), Math.PI / 2, { r: 4 });
+  { const row = [], zs = [-45.5, -43.3, -41.1, -38.9, -36.7, -34.5, -25.5, -23.3, -21.1, -18.9, -16.7, -14.5]; zs.forEach((z, k) => { const c = [0.18 + (k % 3) * 0.02, 0.15 + (k % 2) * 0.02, 0.14]; row.push(fm(m => secCloak(m, c, 0.9 + (k % 4) * 0.04), a2w(-58 - (k % 2) * 0.35, 0, z), Math.PI / 2 + (k % 3) * 0.06, { r: 1.3 })); }); A2.row = row; }
+  for (const [x, y, z, r, c] of [[-60, 3.2, -30, 16, [0.6, 1.0, 1.8]], [-48, 3.4, -30, 12, [0.5, 0.8, 1.4]], [-69, 2.4, -30, 8, [0.6, 0.9, 1.2]], [62, 2.0, -30, 8, [0.5, 0.7, 1.0]]]) MINE.lights.push(addLight(a2w(x, y, z), r, c, 0, 'hum'));
+  for (const [x, z] of [[-50.5, -31.2], [-47.5, -31.2]]) { const e = { type: 'candle', p: a2w(x, 1.15, z), zone: 0, always: true, seed: x, cell: 'mine' }; World.emitters.push(e); }
   // the slab and the tally book
-  World.interact.push({ p: a2w(104, 1.2, 14.2), r: 2.6, zone: 0, cell: 'mine', kind: 'slab', id: 'mine.slab', label: 'Stand at the slab' });
+  World.interact.push({ p: a2w(-52, 1.2, -30), r: 2.6, zone: 0, cell: 'mine', kind: 'slab', id: 'mine.slab', label: 'Stand at the slab' });
   // what the endings put in the village
   A2.end = { bread: [], rest: [] };
   { const cs = []; for (let k = 0; k < 7; k++) { const e = { type: 'candle', p: [10.6 + k * 1.3, 0.55, 76.1], zone: 0, always: false, seed: 3 + k }; World.emitters.push(e); cs.push(e); } A2.candles = cs;
@@ -16869,12 +16869,12 @@ A2.applyEnding = function () {
 // tunnel and cave progress, once per frame, and the ending's look being kept after a load
 function act2Tick() {
   if (!A2.built) return; const c = World.cell;
-  if (c && c.id === 'mine') { const x = Player.pos[0] - MINE.O[0]; if (x > 52 && !S.flags.tunnel) { S.flags.tunnel = 1; mainSync(); } if (x > 100 && !S.flags.cave) { S.flags.cave = 1; mainSync(); save(); toast('<b>The Bread Cave.</b> Twelve stand in a row, and none of them breathes.'); } }
+  if (c && c.id === 'mine') { const x = Player.pos[0] - MINE.O[0]; const z = Player.pos[2] - MINE.O[2]; if (x > 50 && z < -20 && !S.flags.tunnel) { S.flags.tunnel = 1; mainSync(); } if (x < -35 && z < -10 && !S.flags.cave) { S.flags.cave = 1; mainSync(); save(); toast('<b>The Bread Cave.</b> Twelve stand in a row, and none of them breathes.'); } }
   if (S.flags.ending && typeof Foes !== 'undefined') for (const f of Foes.list) if (f.camp && f.camp.cell === 'mine' && f.state !== 'gone' && f.h) { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; }
   if ((S.flags.ending || '') !== (A2.shown || '')) { A2.shown = S.flags.ending || ''; A2.applyEnding(); }
 }
 const _st94d = secBuild; secBuild = function () { _st94d(); try { act2Build(); } catch (e) { console.warn('act2: ' + (e && e.stack || e)); } try { A2.applyEnding(); } catch (e) { } };
-const _stk94d = secTick; secTick = function (dt) { _stk94d(dt); try { act2Tick(); } catch (e) { } };
+const _stk94d = secTick; secTick = function (dt) { _stk94d(dt); try { act2Tick(); } catch (e) { if (!A2.warned) { A2.warned = 1; console.warn('act2Tick: ' + (e && e.stack || e)); } } };
 // the wall's door appears once the bricks are out
 const _tick94d = secTick; secTick = function (dt) { _tick94d(dt); if (A2.door && SEC.wallObj) { const open = !!S.flags.sec_wall; A2.door.visible = open; SEC.wallObj.visible = !open; } };
 
