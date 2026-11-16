@@ -23,7 +23,8 @@ CS.forEach((a, n) => {
     const p = pen(a, b); if (p < MINPEN) continue;
     const vol = Math.min(a.hx * a.hz, b.hx * b.hz) * 4;
     if (p > Math.min(a.hx, a.hz, b.hx, b.hz) * 1.9 && (Math.min(a.hx * a.hz, b.hx * b.hz) < 0.02)) continue;       // a post inside a wall
-    out.push({ kind: 'solid', score: p * Math.min(oy, 3), at: [(a.x + b.x) / 2, (Math.max(a.y0, b.y0) + Math.min(a.y1, b.y1)) / 2, (a.z + b.z) / 2], d: 'pen ' + p.toFixed(2) + ' h ' + oy.toFixed(2) + ' a ' + a.hx.toFixed(2) + 'x' + a.hz.toFixed(2) + ' b ' + b.hx.toFixed(2) + 'x' + b.hz.toFixed(2) });
+    const small = Math.max(a.hx, a.hz, b.hx, b.hz) < 1.0 && oy < 0.75 && p < 0.6;       // a chair tucked under a table, a stool by a hearth: furniture meets furniture
+    out.push({ kind: small ? 'tucked' : 'solid', score: small ? 0 : p * Math.min(oy, 3), at: [(a.x + b.x) / 2, (Math.max(a.y0, b.y0) + Math.min(a.y1, b.y1)) / 2, (a.z + b.z) / 2], d: 'pen ' + p.toFixed(2) + ' h ' + oy.toFixed(2) + ' a ' + a.hx.toFixed(2) + 'x' + a.hz.toFixed(2) + ' b ' + b.hx.toFixed(2) + 'x' + b.hz.toFixed(2) });
   }
 });
 const inSolid = (x, y, z, pad) => { for (const n of H.get(key(Math.floor(x / cell), Math.floor(z / cell))) || []) { const c = CS[n]; if (y < c.y0 + 0.1 || y > c.y1 - 0.1) continue; const dx = x - c.x, dz = z - c.z, u = dx * c.ax + dz * c.az, v = dx * c.bx + dz * c.bz; if (Math.abs(u) < c.hx + pad && Math.abs(v) < c.hz + pad && (c.y1 - c.y0) > 0.3) return c; } return null; };
@@ -37,5 +38,7 @@ for (const d of World.doors) {
 for (const k in World.spots) { const s = World.spots[k]; if (!s.p) continue; const c = inSolid(s.p[0], s.p[1] + 0.5, s.p[2], -0.35); if (c) out.push({ kind: 'spot', score: 2, at: s.p, d: 'spot ' + k + ' inside a solid' }); }
 for (const st of World.stairs || []) for (const w of ['bottom', 'top']) { const sp = World.spots[st[w]]; if (!sp || !sp.p) continue; const c = inSolid(sp.p[0], sp.p[1] + 0.6, sp.p[2], 0); if (c) out.push({ kind: 'stair', score: 4, at: sp.p, d: 'stair ' + st.id + ' ' + w + ' inside a solid' }); }
 out.sort((a, b) => b.score - a.score);
+// the number that must only fall: solid pairs (not tucked furniture) with penetration >= 0.35 m, plus blocked doors, spots and stairs inside solids
+const severe = out.filter(o => o.kind !== 'tucked' && (o.kind !== 'solid' || +o.d.match(/pen ([0-9.]+)/)[1] >= 0.35)).length;
 const count = {}; out.forEach(o => count[o.kind] = (count[o.kind] || 0) + 1);
-return JSON.stringify({ colliders: CS.length, count, total: out.length, top: out.slice(0, TOP).map(o => o.d + ' | game.shot(' + (o.at[0] - 2.5).toFixed(1) + ',null,' + (o.at[2] - 2.5).toFixed(1) + ',135,-12,13)  at ' + o.at.map(v => v.toFixed(1)).join(',')) }, null, 1);
+return JSON.stringify({ colliders: CS.length, severe, count, total: out.length, top: out.slice(0, TOP).map(o => o.d + ' | game.shot(' + (o.at[0] - 2.5).toFixed(1) + ',null,' + (o.at[2] - 2.5).toFixed(1) + ',135,-12,13)  at ' + o.at.map(v => v.toFixed(1)).join(',')) }, null, 1);
