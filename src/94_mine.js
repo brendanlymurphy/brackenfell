@@ -51,7 +51,7 @@ function mineShell(m, O, FY, V) {
   const ceilY = (a, b) => g.hc(a, b) + (cave(a, b) ? mnoise(a, b, 9) * 0.42 : 0);
   const amp = (a, b, k) => k === 0 ? 0 : (cave(a, b) ? 0.3 : 0.07) * (k === 3 ? 0.7 : 1);
   const P = (a, b, k, y) => { const d = mdisp(a, b, k, amp(a, b, k)); return W(a + d[0], y, b + d[1]); };
-  const T = 3.2, rockCol = (i, j, s) => { const v = 0.80 + mhash(i, j, s) * 0.4; return [0.74 * v, 0.70 * v, 0.66 * v]; };
+  const T = 3.2, rockCol = (i, j, s) => { const v = (0.80 + mhash(i, j, s) * 0.4) * 1.9; return [0.74 * v, 0.70 * v, 0.66 * v]; };
   m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
   const edges = { W: [], E: [], S: [], N: [] };
   for (const c of cells) {
@@ -66,7 +66,7 @@ function mineShell(m, O, FY, V) {
     // walls where the neighbour is rock: A left, B right as seen from inside
     const wall = (kind, a0, b0, a1, b1, along) => {
       const nrm = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }[kind];
-      m.mat(MAT.ROCK, rockCol(i + a0, j + b0, 1), 0.7);
+      m.mat(MAT.GRAVEL, rockCol(i + a0, j + b0, 1).map(v => v * 0.75), 0.55);      // the rock texture reads near-black under a carried light; the cut face takes the floor's grit
       const lev = (a, b, k) => { const f = fl(a, b) - 0.4, t = ceilY(a, b); return P(a, b, k, f + (t - f) * k / 3); };
       for (let k = 0; k < 3; k++) m.quad(lev(a0, b0, k + 1), lev(a0, b0, k), lev(a1, b1, k), lev(a1, b1, k + 1), (along) / T, k * 1.2 / T, (along + 1) / T, (k + 1) * 1.2 / T);
       edges[kind].push([i, j]);
@@ -341,7 +341,7 @@ function mineTrapCheck() {
 // the lantern key; the cell's dark; the first time through either door the mine counts as open
 document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && game.playing && !Player.locked && World.cell && World.cell.id === 'mine' && has('lantern')) { S.flags.lampOff = S.flags.lampOff === 1 ? 0 : 1; toast(S.flags.lampOff === 1 ? 'You douse the lantern.' : (MINE_S().oil > 0 ? 'You light the lantern.' : 'The lantern is dry.')); } });
 const _ce94 = Cells.env;
-Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.21, 0.155, 0.095]; e.ambGnd = [0.125, 0.09, 0.055]; e.fogDensity = 0.062; } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
+Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.34, 0.25, 0.15]; e.ambGnd = [0.2, 0.145, 0.088]; e.fogDensity = 0.062; } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
 const _cc94 = Cells.change;
 Cells.change = function (c) { _cc94(c); if (c && c.id === 'mine') { if (!S.flags.mineOpen) { S.flags.mineOpen = 1; if (typeof uiObjective === 'function') uiObjective(); } if (has('lantern') && !MINE_S().oil) MINE_S().oil = 600; } };
 const _wa94 = World.waterAt;
