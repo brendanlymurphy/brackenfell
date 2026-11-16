@@ -65,6 +65,7 @@ function storyBuild() {
   pack.add(m, { kind: 'opaque', maxDist: 80, noShadow: true }); pack.upload('story'); World.packs.push(pack);
   World.emitters.push({ type: 'candle', p: [x - 1.5, 0.5, z - 0.5], zone: 0, always: true, seed: 0.77 });
   World.interact.push({ p: [x, 0.9, z], r: 2.6, zone: 0, kind: 'read', id: 'wharf.body', title: 'The drowned man', text: 'Sailcloth over him; Finn’s doing. A man of fifty, thin as a rake.\n\nNo water has been in him. His palms are scarred white across, pick-work. There is silver in his back teeth, a bright vein of it, as though he had bitten rock.\n\nRound his neck on a bootlace: a brass tally stamped OM 14. In his fist, folded small in oilcloth:\n\n“TELL ROWAN THE BREAD DID NOT COME.”' });
+  if (typeof mineBuild === 'function') { try { mineBuild(); } catch (e) { console.warn('mine: ' + (e && e.stack || e)); } }       // 94_mine.js
   if (typeof ixScan === 'function') { try { ixScan(); } catch (e) { console.warn('interact: ' + (e && e.stack || e)); } }
 }
 // the sailcloth hides nothing from a man who looks: the first reading takes the token and starts the thread (a stranger who never met Hale still gets the quest)
