@@ -4989,7 +4989,7 @@ function kitShellPass(c, pass) {
   if (X) for (const l of c.kDoorLamps) {
     if (site.infill && typeof INFS !== 'undefined' && INFS.mats) {          // a small generated bracket lantern instead of the 2800-triangle kit lantern
       const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), q = KH.xf(l.F, l.u, 2.15, 0.1, 1, 0), p0 = new THREE.Vector3(0, -0.1, 0.42).applyMatrix4(q), p = [p0.x, p0.y, p0.z];
-      b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
+      b.add(lf, q, EXT); b.add(lg, q, { zone: 0, skyVis: 1, cast: false, glow: 2.2 }); World.emitters.push({ type: 'lantern', p, zone: 0 }); addLight(p, 9, [3.4, 1.9, 0.75], 0, 'lantern'); continue;
     }
     add(l.F, 'Lantern_Wall', l.u, l.v, 0.03, 0.8, { zone: 0, skyVis: 1, lit: 1 });
     const lp = Kit.lights('Lantern_Wall')[0] || [0, 0.53, 0.76], v = new THREE.Vector3(lp[0] * 0.8, lp[1] * 0.8, lp[2] * 0.8).applyMatrix4(KH.xf(l.F, l.u, l.v, 0.03)), p = [v.x, v.y, v.z];
@@ -9325,7 +9325,7 @@ const W_ = 'MI_WoodTrim', C_ = 'MI_Trim_Cloth', DARKW = [0.62, 0.55, 0.5];
 // ── generated pieces (origin where they attach to the wall: x along the wall, y up, z out into the street) ──
 let _gn = 0;
 function genAwning(w, c1, c2, drop) {
-  const dd = (c, k) => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => (l + (v - l) * 0.75) * k); }; c1 = dd(c1, 0.66); c2 = dd(c2, 0.56);          // [fx1] cloth that has hung in the weather for years: the stripes read as candy at full dye
+  const dd = (c, k) => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => (l + (v - l) * 0.75) * k); }; c1 = dd(c1, 0.44); c2 = dd(c2, 0.38);          // [fx1] cloth that has hung in the weather for years: the stripes read as candy at full dye
   const g = GP(), n = Math.max(2, Math.round(w / 0.3)), sw = (w - 0.1) / n, out = 1.45, dy = drop || 0.62;
   for (let i = 0; i < n; i++) {
     const x0 = -w / 2 + 0.05 + i * sw, x1 = x0 + sw, c = i % 2 ? c2 : c1;
@@ -9388,7 +9388,7 @@ function genBracketLantern() {          // wall bracket + small lantern, split s
   f.box(W_, -0.02, -0.02, 0, 0.02, 0.02, 0.42, [0.2, 0.19, 0.18]); f.beam(W_, [0, -0.3, 0.0], [0, -0.02, 0.34], 0.015, [0.2, 0.19, 0.18]);
   f.box(W_, -0.1, -0.2, 0.32, 0.1, -0.17, 0.52, [0.2, 0.19, 0.18]); f.box(W_, -0.12, -0.02, 0.3, 0.12, 0.02, 0.54, [0.2, 0.19, 0.18]);
   for (const sx of [-1, 1]) for (const sz of [0.32, 0.52]) f.box(W_, sx * 0.1 - 0.008, -0.2, sz - 0.008, sx * 0.1 + 0.008, 0.0, sz + 0.008, [0.2, 0.19, 0.18]);
-  gl.box(C_, -0.085, -0.17, 0.335, 0.085, -0.01, 0.505, [1.0, 0.68, 0.3], GPU.cloth);
+  gl.box(C_, -0.085, -0.17, 0.335, 0.085, -0.01, 0.505, [0.5, 0.32, 0.13], GPU.cloth);       // [fx1] half the albedo (a cream box in daylight), the glow doubled where it is used
   return [f.make('gen_lanf_' + (_gn++)), gl.make('gen_lang_' + (_gn++))];
 }
 function genStripCloth(w, h, cols) {       // a hanging cloth / banner with vertical stripes: origin at top centre, facing +z
@@ -9476,7 +9476,7 @@ function buildAlley() {
     }
     // wall lanterns beside the door
     const [lf, lg] = AL.lan || (AL.lan = genBracketLantern()), doorI = (a.layout || 'WD').indexOf('D');
-    for (const du of [-1.0, 1.0]) { const uc = doorI * 2 + 1 + du; if (uc < 0.3 || uc > w - 0.3) continue; addP(MS, lf, Ff, uc, 2.15, 0.1); addP(MS, lg, Ff, uc, 2.15, 0.1, 1, 0, { zone: 0, skyVis: 1, cast: false, glow: 2.2 });
+    for (const du of [-1.0, 1.0]) { const uc = doorI * 2 + 1 + du; if (uc < 0.3 || uc > w - 0.3) continue; addP(MS, lf, Ff, uc, 2.15, 0.1); addP(MS, lg, Ff, uc, 2.15, 0.1, 1, 0, { zone: 0, skyVis: 1, cast: false, glow: 4.4 });
       const p = new THREE.Vector3(uc, 2.05, 0.42).applyMatrix4(Ff), q = [p.x, p.y, p.z]; World.emitters.push({ type: 'lantern', p: q, zone: 0 }); if (AL.lanterns++ % 2 === 0) addLight(q, 9.5, [3.4, 1.9, 0.75], 0, 'lantern'); break; }
     AL.shops.push({ a, site, MS, F0, w, d, H, fl, Ytop, rise, zc });
     // collision: the shop's footprint, with a little off the front so the doorstep is a stand-in for the sill
@@ -10158,7 +10158,7 @@ function buildDress() {
     // bracket lantern and sign beside the door
     const side = R() < 0.5 ? -1 : 1, w = wallAt(s, face, du + side * 1.15, 0.0), yL = s.y + 2.05 + R() * 0.45;
     const q = new THREE.Vector3(Math.sin(w.ry) * 0.38, 0, Math.cos(w.ry) * 0.38);
-    const M = dmat(lf, w.x, yL, w.z, 1, w.ry); ADD(lf, M, OUT, 0); ADD(lg, M, Object.assign({}, OUT, { glow: 2.2 }), 0);
+    const M = dmat(lf, w.x, yL, w.z, 1, w.ry); ADD(lf, M, OUT, 0); ADD(lg, M, Object.assign({}, OUT, { glow: 4.4 }), 0);
     const lp = [w.x + q.x, yL - 0.1, w.z + q.z]; World.emitters.push({ type: 'lantern', p: lp, zone: 0, halo: s.infill ? 0.4 : 0.7 }); if (DRS.lights++ < 5 && World.lights.length < 40) addLight(lp, 9, [3.0, 1.7, 0.7], 0, 'lantern');
     if (glyphs[s.id] || kind === 'inn') { const w2 = wallAt(s, face, du - side * 1.3, 0.0), sg = genSign(glyphs[s.id] || 'crest', [1.0, 0.8, 0.45]); add(sg, w2.x, s.y + 2.45 + R() * 0.3, w2.z, 1, w2.ry, false); }
   }
@@ -10497,7 +10497,7 @@ function infShell(B, h, lo) {
     const Ff = F0.front, nF = Math.max(1, Math.round(w / 2)), mF = w / nF;
     if (fl > 1 && h.boxes) for (let i = 0; i < nF; i++) if ((i + 1) % 2 === (h.par || 0)) B.add(R.pick(INFS.fb || (INFS.fb = [0, 1, 2].map(q => genFlowerBox(1.25, rng(90 + q))))), KH.xf(frames(1).front, (i + 0.5) * mF, 0.93, 0.26, 1, 0), OUT);
     const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), du = (Math.min(doorBay, nF - 1) + 0.5) * mF + (doorBay >= nF / 2 ? -1.0 : 1.0);
-    if (du > 0.3 && du < w - 0.3) { B.add(lf, KH.xf(Ff, du, 2.15, 0.1, 1, 0), OUT); B.add(lg, KH.xf(Ff, du, 2.15, 0.1, 1, 0), { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); }
+    if (du > 0.3 && du < w - 0.3) { B.add(lf, KH.xf(Ff, du, 2.15, 0.1, 1, 0), OUT); B.add(lg, KH.xf(Ff, du, 2.15, 0.1, 1, 0), { zone: 0, skyVis: 1, cast: false, glow: 2.2 }); }
     if (h.stairs && fl >= 2) {
       const sg = h.stairs, g = GP(), col = [0.34, 0.29, 0.25], zf = -d / 2, x0 = -w / 2 + 0.1, x1 = w / 2 - 0.1, dep = 1.0;
       g.box(W_, x0, H - 0.14, zf - dep, x1, H - 0.02, zf, col);                                       // gallery floor

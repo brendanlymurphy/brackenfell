@@ -285,7 +285,7 @@ function infShell(B, h, lo) {
     const Ff = F0.front, nF = Math.max(1, Math.round(w / 2)), mF = w / nF;
     if (fl > 1 && h.boxes) for (let i = 0; i < nF; i++) if ((i + 1) % 2 === (h.par || 0)) B.add(R.pick(INFS.fb || (INFS.fb = [0, 1, 2].map(q => genFlowerBox(1.25, rng(90 + q))))), KH.xf(frames(1).front, (i + 0.5) * mF, 0.93, 0.26, 1, 0), OUT);
     const [lf, lg] = INFS.lan || (INFS.lan = AL.lan || (AL.lan = genBracketLantern())), du = (Math.min(doorBay, nF - 1) + 0.5) * mF + (doorBay >= nF / 2 ? -1.0 : 1.0);
-    if (du > 0.3 && du < w - 0.3) { B.add(lf, KH.xf(Ff, du, 2.15, 0.1, 1, 0), OUT); B.add(lg, KH.xf(Ff, du, 2.15, 0.1, 1, 0), { zone: 0, skyVis: 1, cast: false, glow: 1.1 }); }
+    if (du > 0.3 && du < w - 0.3) { B.add(lf, KH.xf(Ff, du, 2.15, 0.1, 1, 0), OUT); B.add(lg, KH.xf(Ff, du, 2.15, 0.1, 1, 0), { zone: 0, skyVis: 1, cast: false, glow: 2.2 }); }
     if (h.stairs && fl >= 2) {
       const sg = h.stairs, g = GP(), col = [0.34, 0.29, 0.25], zf = -d / 2, x0 = -w / 2 + 0.1, x1 = w / 2 - 0.1, dep = 1.0;
       g.box(W_, x0, H - 0.14, zf - dep, x1, H - 0.02, zf, col);                                       // gallery floor
