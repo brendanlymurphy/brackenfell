@@ -25,7 +25,7 @@ window.LU = (() => {
     const hr = o.hour === undefined ? 13 : o.hour, inn = !!o.inn;
     if (inn !== !!Cells.cur) { if (inn) game.enter('inn'); else game.leave(); }
     let sx, sz, sy, yaw;
-    if (inn) { const sp = World.spots['inn.fire1']; sx = sp.p[0]; sz = sp.p[2]; sy = sp.p[1]; yaw = sp.yaw; sx += 0; }
+    if (inn) { const sp = World.spots['inn.fire1']; sx = sp.p[0]; sz = sp.p[2]; sy = sp.p[1]; yaw = sp.yaw; sx += 0; if (o.turn) yaw += Math.PI; }
     else { sx = 4.2; sz = -2.5; sy = Terrain.y(sx, sz); yaw = 0; }
     const a = yaw + az * Math.PI / 180, cx = sx + Math.sin(a) * dist, cz = sz - Math.cos(a) * dist;
     const st = { pos: [sx, sy, sz], yaw, anim: o.anim || 'idle', scale: LU.cur.scale, zone: inn ? 1 : 0, light: inn ? 0.34 : 1, visible: true, cast: true, look: o.look || [0, 0], talking: false };

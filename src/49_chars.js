@@ -101,7 +101,7 @@ const Chars = (() => {
        ivo: { tunic: [0.8, 0.88, 1.1], pants: [0.8, 0.8, 0.85] }, bram: { tunic: [1.05, 1.0, 0.9] }, hilda: { robe: [0.95, 0.95, 1.1] },
     };
     const FOES = [{ body: 'o_hood_m' }, { body: 'o_brute' }, { body: 'o_hood_f' }, { body: 'o_rogue' }], FOE_LEADER = { body: 'o_brute', tint: { tunic: [1.35, 0.7, 0.6], pants: [0.9, 0.8, 0.8] } };
-    const SKIN_T = { light: [0.88, 0.82, 0.78], m_hunter: [1, 1, 1], f_herbalist: [1, 1, 1], o_rogue: [1, 1, 1] };      // the stock light skins are very bright under a sun-lit sky
+    const SKIN_T = { light: [0.88, 0.82, 0.78], m_hunter: [1, 1, 1], f_herbalist: [1, 1, 1], o_rogue: [1, 1, 1], f_elder: [1.22, 1.12, 1.04], m_elder: [1.08, 1.0, 0.94] };      // [ch1] old people's baked skins read too dark and red      // the stock light skins are very bright under a sun-lit sky
     const PART = [[/trim/, 'trim'], [/tunic|bodice|dress/, 'tunic'], [/robe/, 'robe'], [/hood|helmet/, 'head'], [/pants/, 'pants'], [/boots/, 'boots'], [/skirt/, 'skirt']];
     const names = Object.values(BODY).concat(FOES.map(f => f.body));
     const bodies = {}; for (const n of new Set(names)) bodies[n] = n + '.glb';
@@ -431,7 +431,7 @@ const Chars = (() => {
       spec = g(0.787, vm, 0.022, 0.10, 0.8).add(g(0.874, vm, 0.012, 0.012, 1.0)).add(g(0.855, vm, 0.02, 0.01, 0.6)).add(g(0.905, vm, 0.012, 0.030, 0.9)).add(g(0.955, vm, 0.012, 0.03, 0.5));
       for (const d of [-1, 1]) spec = spec.add(g(0.855, vm.add(d * 0.075), 0.02, 0.025, 0.7));
       const face = TSL.step(0.74, fu).mul(skinW);
-      albedo = albedo.mul(float(1).sub(TSL.clamp(occ, 0, 0.78).mul(face)));
+      albedo = albedo.mul(float(1).sub(TSL.clamp(occ.mul(0.6), 0, 0.42).mul(face)));      // [ch1] softer: no mask across the brow
       rough = rough.sub(TSL.clamp(spec, 0, 1).mul(face).mul(0.38));
     }
     m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
