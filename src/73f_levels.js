@@ -8,7 +8,7 @@ const LVL = { n: 0 };
 // vertical stone faces upward by `k` lets them take more of the sky's light; the sun still sees them as before on the lit side. `touch` maps each bucket mesh to its vertex count before the builder began.
 function lvLift(touch, k) {
   for (const [m, n0] of touch) for (let i = n0; i < m.nv; i++) {
-    const b = i * 32; if (m.u8[b + 28] !== MAT.STONE && m.u8[b + 28] !== MAT.PLANKS && m.u8[b + 28] !== MAT.TIMBER) continue;          // [fx1] boards and beams in shade went black beside the lifted stone (wharf doors) const ny = m.i8[b + 13]; if (Math.abs(ny) > 40) continue;
+    const b = i * 32; if (m.u8[b + 28] !== MAT.STONE && m.u8[b + 28] !== MAT.PLANKS && m.u8[b + 28] !== MAT.TIMBER) continue; /* [fx1] boards and beams in shade went black beside the lifted stone (wharf doors) */ const ny = m.i8[b + 13]; if (Math.abs(ny) > 40) continue;
     let x = m.i8[b + 12], y = ny + k * 127, z = m.i8[b + 14]; const l = 127 / Math.hypot(x, y, z); m.i8[b + 12] = Math.round(x * l); m.i8[b + 13] = Math.round(y * l); m.i8[b + 14] = Math.round(z * l);
   }
 }

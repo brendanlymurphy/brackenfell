@@ -198,7 +198,7 @@ WBUILD.lumber = (p, m, R) => {
     mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; mm.ball(Math.cos(a) * 0.62, 0.07, Math.sin(a) * 0.62, 0.15, 0.11, 0.13, 6, 4); }
     mm.mat(MAT.BARK, [0.3, 0.26, 0.24], 0.5); for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.3; mm.beam([Math.cos(a) * 0.38, 0.02, Math.sin(a) * 0.38], [Math.cos(a + 2.4) * 0.06, 0.3, Math.sin(a + 2.4) * 0.06], 0.08, 0.08); }
     mm.mat(MAT.TIMBER, COL.timberDark); for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; mm.beam([Math.cos(a) * 0.9, 0, Math.sin(a) * 0.9], [0, 1.55, 0], 0.07, 0.07); }
-    mm.mat(MAT.METAL, COL.black); mm.beam([0, 1.5, 0], [0, 0.95, 0], 0.025, 0.025); Props.cauldron(mm, 0.26); mm.pop(); mm.push().T(0, 0.7, 0); Props.cauldron(mm, 0.26);
+    mm.mat(MAT.METAL, COL.black); mm.beam([0, 1.5, 0], [0, 0.95, 0], 0.025, 0.025); mm.push().T(0, 0.62, 0); Props.cauldron(mm, 0.26); mm.pop();          // [fx1] a stray pop() put the second cauldron (and a 0.7 m collider) at the world origin, in the middle of the square
     addCircleCollider(mm, 0, 0, 0.7, 0, 0.5);
   });
   World.emitters.push({ type: 'fire', p: [fp[0], fp[1] + 0.2, fp[2]], size: 0.55, zone: 0, seed: 0.23, t: 0 }); addLight([fp[0], fp[1] + 1.0, fp[2]], 12, [3.4, 1.7, 0.6], 0, 'fire'); World.emitters.push({ type: 'smoke', p: [fp[0], fp[1] + 1.3, fp[2]], zone: 0, seed: 0.5, t: 0 });

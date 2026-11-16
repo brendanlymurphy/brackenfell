@@ -33,15 +33,15 @@ const shoot = async v => {
     const key = safe(v.n) + '_' + h, f = OUT + '/' + key + '.jpg'; if (fs.existsSync(f) && !only && !has('force')) continue;
     if (Date.now() - t0 > budget) { left++; continue; }
     try {
-      const r = JSON.parse(await s.run(`const v = ${JSON.stringify(v)}; if (v.cell) { if (!World.cell || World.cell.id !== v.cell) game.enter(v.cell); } else if (World.cell) game.leave();
+      const r = JSON.parse(await s.run(`const v = ${JSON.stringify(v)}; if (v.cell) { if (!World.cell || World.cell.id !== v.cell) __game.enter(v.cell); } else if (World.cell) __game.leave();
         QA.hour(${h}); QA.cam(v.x, v.y, v.z, v.yaw, v.pitch); QA.settle(); const A = await QA.draw(); const d = A.data; let sum = 0; for (let i = 0; i < d.length; i += 4) sum += d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11;
         return JSON.stringify({ jpg: QA.jpeg(A), lum: +(sum / (d.length / 4)).toFixed(1), st: R.stats && { d: R.stats.draws, t: R.stats.tris } });`));
       fs.writeFileSync(f, Buffer.from(r.jpg, 'base64')); meta[key] = { v, lum: r.lum }; done++;
     } catch (e) { console.log('FAIL', key, String(e.message).slice(0, 160)); left++; }
   }
 };
-if (only) { const all = []; for (const st of ['streets', 'places', 'doors']) all.push(...JSON.parse(await s.run(`return JSON.stringify(TOUR.set(${JSON.stringify(st)}))`))); for (const c of (arg('incells', '') || '').split(',').filter(Boolean)) { await s.run(`game.enter(${JSON.stringify(c)}); return 1`); all.push(...JSON.parse(await s.run(`return JSON.stringify(TOUR.cellViews(${JSON.stringify(c)}))`))); } for (const v of all) if (only.some(o => v.n === o || v.n.startsWith(o))) await shoot(v); }
-else if (arg('cells', null)) { for (const id of arg('cells').split(',')) { await s.run(`game.enter(${JSON.stringify(id)}); game.step(2, 1/30); return 1`); const vs = JSON.parse(await s.run(`return JSON.stringify(TOUR.cellViews(${JSON.stringify(id)}))`)); for (const v of vs) await shoot(v); } }
+if (only) { const all = []; for (const st of ['streets', 'places', 'doors']) all.push(...JSON.parse(await s.run(`return JSON.stringify(TOUR.set(${JSON.stringify(st)}))`))); for (const c of (arg('incells', '') || '').split(',').filter(Boolean)) { await s.run(`__game.enter(${JSON.stringify(c)}); return 1`); all.push(...JSON.parse(await s.run(`return JSON.stringify(TOUR.cellViews(${JSON.stringify(c)}))`))); } for (const v of all) if (only.some(o => v.n === o || v.n.startsWith(o))) await shoot(v); }
+else if (arg('cells', null)) { for (const id of arg('cells').split(',')) { await s.run(`__game.enter(${JSON.stringify(id)}); __game.step(2, 1/30); return 1`); const vs = JSON.parse(await s.run(`return JSON.stringify(TOUR.cellViews(${JSON.stringify(id)}))`)); for (const v of vs) await shoot(v); } }
 else for (const v of views) await shoot(v);
 fs.writeFileSync(metaF, JSON.stringify(meta));
 if (s.msgs.length) console.log('console:', [...new Set(s.msgs)].slice(0, 6).join('\n'));

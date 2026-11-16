@@ -4297,7 +4297,7 @@ function addBoxCollider(m, x0, z0, x1, z1, y0, y1) {
   const M = m.m, c = m4.tp(M, [(x0 + x1) / 2, y0, (z0 + z1) / 2]), sx = hyp(M[0], M[2]) || 1, sz = hyp(M[8], M[10]) || 1;
   World.colliders.push({ x: c[0], z: c[2], hx: Math.abs(x1 - x0) / 2 * sx, hz: Math.abs(z1 - z0) / 2 * sz, ax: M[0] / sx, az: M[2] / sx, bx: M[8] / sz, bz: M[10] / sz, y0: c[1], y1: c[1] + (y1 - y0) });
 }
-function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]); World.colliders.push({ x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }); }
+function addCircleCollider(m, x, z, r, y0, y1) { const c = m4.tp(m.m, [x, y0, z]), o = { x: c[0], z: c[2], r, y0: c[1], y1: c[1] + (y1 - y0) }; if (TEST && TEST.colstack && Math.hypot(o.x, o.z) < 1.5) o.stk = new Error().stack.split('\n').slice(2, 6).join(' < '); World.colliders.push(o); }          // [fx1] --opt colstack=1 records where an origin collider came from
 const flick = (t, s) => 0.86 + 0.09 * Math.sin(t * 11.3 + s * 7.1) + 0.07 * Math.sin(t * 23.7 + s * 3.3) + 0.05 * Math.sin(t * 5.1 + s);
 const LIGHT_KINDS = {
   fire: (l, e) => flick(e.time, l.seed),
@@ -10657,7 +10657,7 @@ const LVL = { n: 0 };
 // vertical stone faces upward by `k` lets them take more of the sky's light; the sun still sees them as before on the lit side. `touch` maps each bucket mesh to its vertex count before the builder began.
 function lvLift(touch, k) {
   for (const [m, n0] of touch) for (let i = n0; i < m.nv; i++) {
-    const b = i * 32; if (m.u8[b + 28] !== MAT.STONE && m.u8[b + 28] !== MAT.PLANKS && m.u8[b + 28] !== MAT.TIMBER) continue;          // [fx1] boards and beams in shade went black beside the lifted stone (wharf doors) const ny = m.i8[b + 13]; if (Math.abs(ny) > 40) continue;
+    const b = i * 32; if (m.u8[b + 28] !== MAT.STONE && m.u8[b + 28] !== MAT.PLANKS && m.u8[b + 28] !== MAT.TIMBER) continue; /* [fx1] boards and beams in shade went black beside the lifted stone (wharf doors) */ const ny = m.i8[b + 13]; if (Math.abs(ny) > 40) continue;
     let x = m.i8[b + 12], y = ny + k * 127, z = m.i8[b + 14]; const l = 127 / Math.hypot(x, y, z); m.i8[b + 12] = Math.round(x * l); m.i8[b + 13] = Math.round(y * l); m.i8[b + 14] = Math.round(z * l);
   }
 }
@@ -12956,7 +12956,7 @@ WBUILD.lumber = (p, m, R) => {
     mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU; mm.ball(Math.cos(a) * 0.62, 0.07, Math.sin(a) * 0.62, 0.15, 0.11, 0.13, 6, 4); }
     mm.mat(MAT.BARK, [0.3, 0.26, 0.24], 0.5); for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.3; mm.beam([Math.cos(a) * 0.38, 0.02, Math.sin(a) * 0.38], [Math.cos(a + 2.4) * 0.06, 0.3, Math.sin(a + 2.4) * 0.06], 0.08, 0.08); }
     mm.mat(MAT.TIMBER, COL.timberDark); for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + 0.5; mm.beam([Math.cos(a) * 0.9, 0, Math.sin(a) * 0.9], [0, 1.55, 0], 0.07, 0.07); }
-    mm.mat(MAT.METAL, COL.black); mm.beam([0, 1.5, 0], [0, 0.95, 0], 0.025, 0.025); Props.cauldron(mm, 0.26); mm.pop(); mm.push().T(0, 0.7, 0); Props.cauldron(mm, 0.26);
+    mm.mat(MAT.METAL, COL.black); mm.beam([0, 1.5, 0], [0, 0.95, 0], 0.025, 0.025); mm.push().T(0, 0.62, 0); Props.cauldron(mm, 0.26); mm.pop();          // [fx1] a stray pop() put the second cauldron (and a 0.7 m collider) at the world origin, in the middle of the square
     addCircleCollider(mm, 0, 0, 0.7, 0, 0.5);
   });
   World.emitters.push({ type: 'fire', p: [fp[0], fp[1] + 0.2, fp[2]], size: 0.55, zone: 0, seed: 0.23, t: 0 }); addLight([fp[0], fp[1] + 1.0, fp[2]], 12, [3.4, 1.7, 0.6], 0, 'fire'); World.emitters.push({ type: 'smoke', p: [fp[0], fp[1] + 1.3, fp[2]], zone: 0, seed: 0.5, t: 0 });
@@ -17481,7 +17481,7 @@ async function warmShaders() {
     if (loadSave()) $('contBtn').hidden = false;
     $('startBtn').addEventListener('click', () => startGame(false)); $('contBtn').addEventListener('click', () => startGame(true));
     if (typeof Load !== 'undefined') { Load.update = () => UI.updateAvailable(); if (Load.updateReady) UI.updateAvailable(); setTimeout(() => { Load.register(); setTimeout(() => Load.warm().then(() => UI.storageNote()), 4000); }, 1500); }
-    { const bad = World.colliders.filter(c => Math.hypot(c.x, c.z) < 3 && !(c.bonfire)); if (bad.length) console.warn('[fx1] ' + bad.length + ' colliders within 3 m of the world origin (a prop built at the origin and moved registered them):', JSON.stringify(bad.slice(0, 4))); }          // boot assertion
+    { const bad = World.colliders.filter(c => Math.hypot(c.x, c.z) < 1.5 && !(c.bonfire)); if (bad.length) console.warn('[fx1] ' + bad.length + ' colliders within 1.5 m of the world origin (a prop built at the origin and moved registered them):', JSON.stringify(bad.slice(0, 4))); }          // boot assertion
     game.ready = true;
     // ── test hooks ──
     game.info = () => ({ tris: World.packs.map(p => p.tris | 0), veg: World.instPack.tris | 0, trees: World.treeCount, lights: World.lights.length, colliders: World.colliders.length, floors: World.floors.length, skinned: World.skinCount, emitters: World.emitters.length, nav: Nav.nodes.length, laps });
