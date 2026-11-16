@@ -1,7 +1,7 @@
 # Generates the voice files listed in plan.json with Google's Gemini 3.1 Flash TTS (hosted), then trims, normalises and encodes each to mono
 # AAC .m4a, exactly like gen.py does for Kokoro. Needs an API key in the environment variable GEMINI_API_KEY (never put the key in the repo
 # or on the command line) and network access to generativelanguage.googleapis.com.
-# usage:  python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json OUTDIR [--limit N] [--only speaker] [--sample]
+# usage:  python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json OUTDIR [--limit N] [--only speaker] [--sample] [--partial]
 #   OUTDIR is audio/voice for the real thing, or a scratch folder with --sample (one mid-length line per speaker, joined into OUTDIR/sample.m4a).
 # Files that exist are skipped (resumable). File names hash the speaker, Gemini voice, direction and text, so a changed casting regenerates.
 # NOT YET RUN AGAINST THE LIVE API (written without a key): check the request shape against https://ai.google.dev/gemini-api/docs/speech-generation
@@ -69,6 +69,20 @@ if sample:
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', w, '-c:a', 'aac', '-b:a', '64k', os.path.join(out, 'sample.m4a')], check=True); print('wrote', os.path.join(out, 'sample.m4a')); sys.exit(0)
 
 mf = os.path.join(out, 'manifest.json'); man = { 'v': 1, 'lines': {}, 'barks': plan['barks'] }; done = 0; keep = set()
+if '--partial' in args:
+    # No API calls. For each character, the conversation lines switch to Gemini once all of them have a file, and likewise the barks
+    # (the short calls in passing); every other line keeps the manifest's current (Kokoro) file. Use while a run is waiting for the
+    # daily limit; a later full run finishes the job. Until then a character can converse in one voice and call out in the other.
+    old = json.load(open(mf)); name_of = {}; by = {}
+    for p in todo:
+        c = cast.get(p['speaker']) or cast['narrator']
+        name_of[p['key']] = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'
+        by.setdefault((p['speaker'], p['kind']), []).append(p)
+    ready = sorted(g for g, ps in by.items() if all(os.path.exists(os.path.join(out, name_of[p['key']])) for p in ps)); n = 0
+    for p in todo:
+        if (p['speaker'], p['kind']) in ready: d, e = analyse(os.path.join(out, name_of[p['key']])); old['lines'][p['key']] = { 'f': name_of[p['key']], 'd': d, 'e': e, 's': p['speaker'] }; n += 1
+    json.dump(old, open(mf + '.tmp', 'w'), separators=(',', ':')); os.replace(mf + '.tmp', mf)
+    print('%d lines now Gemini:' % n, ', '.join('%s %ss' % g for g in ready) or 'none'); print('still Kokoro:', ', '.join('%s %ss' % g for g in sorted(set(by) - set(ready)))); sys.exit(0)
 for p in todo:
     c = cast.get(p['speaker']) or cast['narrator']
     name = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'; dst = os.path.join(out, name); keep.add(name)
