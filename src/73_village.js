@@ -358,7 +358,7 @@ function buildVillage() {
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {
     for (let i = 0; i < m.nv; i++) { if (m.u8[i * 32 + 29] !== 0 || m.u8[i * 32 + 27] < 250) continue; const y = m.f[i * 8 + 1] - Terrain.y(m.f[i * 8], m.f[i * 8 + 2]); if (y < 0.45) m.u8[i * 32 + 27] = Math.round(255 * lerp(0.62, 1, sat(y / 0.45))); }
-    if (m.ni) pack.add(m, { kind: 'opaque' });
+    if (m.ni) pack.add(m, { kind: 'opaque', maxDist: m.maxDist || 0, noShadow: !!m.noShadow });      // maxDist: Build 42 (73h_routes.js fine cells)
   }
   for (const m of houseExt.values()) pack.add(m, { kind: 'opaque' });
   World.villagePack = pack;

@@ -172,6 +172,7 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
     }
   }
   { const h5 = INF.byId['in.05']; if (h5 && !h5.enter) drop(h5); }      // Build 42: the passage house and the Hart's gallery stand where in.05 was (73h_routes.js)
+  for (const id of ['in.01', 'in.09']) { const h = INF.byId[id]; if (h && !h.enter) drop(h); }      // Build 42: fewer, better: two repeats that crowd the square's corners (the square pass)
   // ── 6. forecourts (Build 33): every original building keeps 9 m of open ground in front of its door, every one of the first 25 infill houses faces 9 m of street, and enterable doors stay reachable.
   // Houses that stand in a forecourt are nudged back, moved along their street, or deleted (the six enterable ones are only ever moved). test/layout.mjs checks the result in node.
   INF.fore = { len: 9, wid: 3.2, skip: ['tower', 'barn', 'mill', 'farm', 'hunter', 'fisher'] };

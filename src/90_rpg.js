@@ -268,7 +268,8 @@ RPG.tick = function (dt) {
   if (!SC.scene) return;
   if (!RPG.inited) { RPG.inited = true; RPG.hudInit(); Combat.init(); Foes.init(); }
   const r = RPG.st(), playing = game.playing, I = RPG.in, k = Input.keys;
-  if (playing && typeof ixTick === 'function') ixTick(dt);       // [q1] 82b_interact.js: sitting, the watch
+  if (playing && typeof ixTick === 'function') ixTick(dt);
+  if (playing && typeof mineTick === 'function') mineTick(dt);       // [q1] 82b_interact.js: sitting, the watch
   if (playing !== RPG.wasPlaying) { RPG.wasPlaying = playing; RPG.hud.rpg.hidden = !playing; }
   // days pass (outlaws drift back to an emptied camp after a few)
   if (Env.hour < r.hour - 12) r.day++; r.hour = Env.hour;

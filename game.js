@@ -1398,7 +1398,7 @@ const Kit = (() => {
   const { Fn, float, vec2, vec3, vec4, uniform, attribute, texture, uv, positionWorld, positionLocal, positionGeometry, normalWorld, normalMap,
     mix, dot, sin, floor, fract, smoothstep, max, reflect, normalize, pow, frontFacing, select, abs, step } = TSL;
   const K_ = {
-    PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
+    PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }, { glb: 'kits/dungeon.glb', catalog: 'kits/DUNGEON_CATALOG.json', optional: true }]  /* q1: dungeon pack */,
     pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
     fill: null, fill2: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
     lodMeshes: [],
@@ -3000,6 +3000,7 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
     }
   }
   { const h5 = INF.byId['in.05']; if (h5 && !h5.enter) drop(h5); }      // Build 42: the passage house and the Hart's gallery stand where in.05 was (73h_routes.js)
+  for (const id of ['in.01', 'in.09']) { const h = INF.byId[id]; if (h && !h.enter) drop(h); }      // Build 42: fewer, better: two repeats that crowd the square's corners (the square pass)
   // ── 6. forecourts (Build 33): every original building keeps 9 m of open ground in front of its door, every one of the first 25 infill houses faces 9 m of street, and enterable doors stay reachable.
   // Houses that stand in a forecourt are nudged back, moved along their street, or deleted (the six enterable ones are only ever moved). test/layout.mjs checks the result in node.
   INF.fore = { len: 9, wid: 3.2, skip: ['tower', 'barn', 'mill', 'farm', 'hunter', 'fisher'] };
@@ -4240,7 +4241,7 @@ const kitReady = () => HOUSE_STYLE === 'kit' && typeof Kit !== 'undefined' && !!
 function kitWanted(site, spec) { return kitReady() && !!KIT_STYLE[site.id]; }
 async function kitBoot(progress) {
   if (HOUSE_STYLE !== 'kit' || typeof Kit === 'undefined') return;
-  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan/.test(p.glb)) }); kitFixups(); if (typeof infillMaterials === 'function') await infillMaterials(); }       // scanned rocks photograph dark; lift them a little
+  try { await Kit.load(progress, { packs: Kit.PACKS.filter(p => /village|props|scan|dungeon/.test(p.glb)) }); kitFixups(); if (typeof infillMaterials === 'function') await infillMaterials(); }       // scanned rocks photograph dark; lift them a little /* [q1] dungeon pack */
   catch (e) { console.warn('kits unavailable, building the generated houses instead: ' + (e && e.message || e)); G.kitNote = String(e && e.message || e); }
 }
 // pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong
@@ -8452,7 +8453,7 @@ function buildVillage() {
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {
     for (let i = 0; i < m.nv; i++) { if (m.u8[i * 32 + 29] !== 0 || m.u8[i * 32 + 27] < 250) continue; const y = m.f[i * 8 + 1] - Terrain.y(m.f[i * 8], m.f[i * 8 + 2]); if (y < 0.45) m.u8[i * 32 + 27] = Math.round(255 * lerp(0.62, 1, sat(y / 0.45))); }
-    if (m.ni) pack.add(m, { kind: 'opaque' });
+    if (m.ni) pack.add(m, { kind: 'opaque', maxDist: m.maxDist || 0, noShadow: !!m.noShadow });      // maxDist: Build 42 (73h_routes.js fine cells)
   }
   for (const m of houseExt.values()) pack.add(m, { kind: 'opaque' });
   World.villagePack = pack;
@@ -9334,7 +9335,7 @@ function buildDress() {
     for (let i = 0, nv = kind === 'inn' ? 4 : 2 + R.i(0, 2); i < nv; i++) {
       const f = pick(['front', 'back', 'left', 'right']), u = (R() - 0.5) * (wallLen(s, f) - 1.6); if (f === face && Math.abs(u - du) < 1.9) continue;
       const w = wallAt(s, f, u, 0.06), y = s.y + 2.5 + R() * 0.4; if (kind === 'shop') continue;
-      add(pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine4', 'Prop_Vine1']), w.x, y, w.z, [1.15, 1.0 + R() * 0.3, 1], w.ry, i % 2 === 0, { tint: [tint[0] * (0.9 + R() * 0.2), tint[1], tint[2]] });
+      add(pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine4', 'Prop_Vine1']), w.x, y, w.z, [0.62, 0.6 + R() * 0.2, 0.6], w.ry, i % 2 === 0, { tint: [tint[0] * (0.9 + R() * 0.2), tint[1], tint[2]] });
     }
     if (kind === 'chapel' || kind === 'farm' && s.id === 'barn') continue;
     // bracket lantern and sign beside the door
@@ -9393,7 +9394,7 @@ function splat2Dress(blob, A, B) {
 
 // ---- 73d_infill.js ----
 // Budget: yard props, dressing and the alley are culled nearer on Medium (the town is dense; beyond ~24 m they are small and cost a draw call each)
-QUALITY.medium.yardRange = 24; QUALITY.medium.houseFar = 34; QUALITY.medium.yardCast = false;
+QUALITY.low.houseFar = 18; QUALITY.low.yardRange = 24; QUALITY.medium.yardRange = 24; QUALITY.medium.houseFar = 22; QUALITY.medium.yardCast = false;
 // ───────────────────────── infill houses: dark timber walls, grey shingle roofs, built from the village kit ─────────────────────────
 // Sites come from 55b_infill.js. Six of them are enterable (HOUSES specs in 72c_infill.js, shell by kitShell); the rest are shells only, assembled here
 // in the same way as the market alley (2 m wall panels scaled to the wall, kit window and door modules, jettied upper storeys, kit roof turned to a ridge
@@ -9417,7 +9418,7 @@ async function infillMaterials() {
     Kit.defs[name] = Object.assign({}, Kit.defs[base], { name, map: a, normalMap: n || Kit.defs[base].normalMap, orm: o || Kit.defs[base].orm, aoInOrm: true, color: [1, 1, 1], uvScale: [1, 1], gain: 1, sat: 1 }, over || {});
     return true;
   };
-  const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0 });
+  const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0, uvScale: [2.2, 2.2] });      // Build 42: grain was a metre wide on a 2 m panel
   const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 1.2, nScale: 1.0, moss: 0.6 });
   if (Kit.defs.MI_UnevenBrick) Kit.defs[INF_B] = Object.assign({}, Kit.defs.MI_UnevenBrick, { name: INF_B, doubleSided: true });
   if (Kit.defs[INF_T]) Kit.defs[INF_T].doubleSided = true;
@@ -10005,6 +10006,7 @@ function townFinish(bucket) {
   if (typeof buildRoutes === 'function') buildRoutes(bucket);      // Build 42: galleries, passage, bridge (73h_routes.js)
   if (typeof buildWalls === 'function') buildWalls(bucket);        // Build 42: palisades, gates, bell tower (73i_walls.js)
   if (typeof buildLanes === 'function') buildLanes(bucket);        // Build 42: lanes worth walking (73j_lanes.js)
+  if (typeof buildSquare === 'function') buildSquare(bucket);      // Build 42: the square as a finished place (73k_square.js)
   // the chimney of in.04 stands 4 m below the terrace's north edge, where the camera looks straight at its smoke: the full-size puffs (1 m across) stack into a tall white sheet there.
   // A thin emitter (smaller, fainter, shorter-lived puffs, see 75_particles.js) makes it a wisp like the other infill chimneys.
   for (const e of World.emitters) if (e.type === 'smoke' && Math.abs(e.p[0] + 19.5) < 0.8 && Math.abs(e.p[2] - 4.1) < 0.8 && e.p[1] > 8) { e.thin = true; e.p[1] += 0.05; }
@@ -10092,8 +10094,9 @@ World.routes = [];
 // quarters of the world that the helpers below draw into; `rtKit` gives the builders their shared helpers (also used by 73i_walls.js)
 function rtKit(bucket, touch) {
   const dark = COL.timberDark, wood = [0.62, 0.52, 0.42];
-  const M = (x, z) => { const m = bucket(x, z); if (touch && !touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
-  const K = { M, dark, wood, gy: (x, z) => Terrain.y(x, z) };
+  // Build 42: our geometry goes into 30 m cells of its own (fake bucket keys far outside the map) so the frustum and K.maxDist cull it by itself, not with the whole 80 m cell
+  const M = (x, z) => { const m = K.fine ? bucket((K.noShadow ? 2e6 : 1e6) + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80) : bucket(x, z); m.maxDist = m.maxDist === undefined ? K.maxDist : (m.maxDist && K.maxDist ? Math.max(m.maxDist, K.maxDist) : 0); m.noShadow = m.noShadow === undefined ? !!K.noShadow : m.noShadow && !!K.noShadow; if (touch && !touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
+  const K = { M, fine: false, maxDist: 0, noShadow: false, dark, wood, gy: (x, z) => Terrain.y(x, z) };
   K.col = (x0, z0, x1, z1, y0, y1) => addBoxCollider(M((x0 + x1) / 2, (z0 + z1) / 2), Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y0, y1);
   K.box = (mat, c, tile, x0, y0, z0, x1, y1, z1, skip, ao) => { const m = M((x0 + x1) / 2, (z0 + z1) / 2); m.mat(mat, c, tile); if (ao !== undefined) m.ao = ao; m.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.max(x0, x1), y1, Math.max(z0, z1), skip || 0); m.ao = 1; return m; };
   K.beam = (p, q, w, h, c) => { const m = M((p[0] + q[0]) / 2, (p[2] + q[2]) / 2); m.mat(MAT.TIMBER, c || dark, 0.5); m.beam(p, q, w, h); };
@@ -10141,6 +10144,8 @@ function rtKit(bucket, touch) {
     const mi = wPickMesh(mesh), obj = addSkinned(mi, { c: p, r: 0.6, zone: 0, kind: 'pickup' }); R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256);
     const it = { kind: 'pickup', id, item, p: [p[0], p[1] + 0.2, p[2]], r: 1.9, zone: 0, obj, label }; World.interact.push(it); World.pickups.push(it); return it;
   };
+  const ns = fn => (...a) => { const o = K.noShadow; K.noShadow = true; try { return fn(...a); } finally { K.noShadow = o; } };      // rails and stairs are thin: they do not cast into the sun-shadow maps (they would be drawn again there)
+  K.rail = ns(K.rail); K.stair = ns(K.stair);
   return K;
 }
 function buildRoutes(bucket) {
@@ -10272,6 +10277,7 @@ function buildRoutes(bucket) {
 function buildWalls(bucket) {
   if (TEST && TEST.levels === 0) return;
   const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, stair, dark, wood, gy } = K;
+  K.fine = true; K.maxDist = 85; K.noShadow = true;       // the palisades and gate towers are hidden beyond 150 m (their 30 m cells)
   const roadAt = (id, axis, v) => { const L = INF.LN[id].p; for (let i = 0; i < L.length - 1; i++) { const a = L[i], b = L[i + 1], k = axis === 'z' ? 1 : 0, o = axis === 'z' ? 0 : 1; if ((a[k] - v) * (b[k] - v) <= 0 && a[k] !== b[k]) return a[o] + (b[o] - a[o]) * (v - a[k]) / (b[k] - a[k]); } return null; };
   // a wall run. P maps (u along, v across: 0 outside, + inside) to the world; axis 'x' or 'z' is the world axis that u runs along
   const wallRun = (id, axis, c, sgn, u0, u1, ug, o) => {
@@ -10364,7 +10370,7 @@ function buildWalls(bucket) {
     const pt = P(W.ug + 3.4, 2.4); pts.push([pt[0], W.Y, pt[1]]); const pg = P(W.ug, 1.2); pts.push([pg[0], W.Y, pg[1]]); const pw = P(W.ug - 6.5, 1.1); pts.push([pw[0], W.yAt(W.ug - 6.5), pw[1]]); void top; void ax;
     K.route(nm, pts);
   }
-  buildBell(K, touch);
+  K.fine = false; K.maxDist = 0; K.noShadow = false; buildBell(K, touch);
   lvLift(touch, 0.4);
 }
 // ── the watch bell tower at (8, 19): four flights of 2.7 m in two lanes, landings alternate east and west ──
@@ -10383,6 +10389,20 @@ function buildBell(K, touch) {
   post(X0, ZN0 - 0.1, gy(X0, ZN0) - 0.3, L[4] + 1.2, 0.2); post(X1, ZS1 + 0.1, gy(X1, ZS1) - 0.3, L[4] + 1.2, 0.2);
   for (let k = 0; k < 5; k++) for (const z of cz) beam([WX0, L[k] - 0.3, z], [EX1, L[k] - 0.3, z], 0.16, 0.22);
   for (const k of [0, 1, 2, 3]) for (const z of cz) { const x0 = k % 2 ? WX0 : EX1 - 3, x1 = k % 2 ? WX0 + 3 : EX1; beam([x0, L[k] - 0.2, z], [x1, L[k + 1] - 0.2, z], 0.12, 0.14); beam([x0, L[k + 1] - 0.2, z], [x1, L[k] - 0.2, z], 0.1, 0.12); }
+  // the cladding (Build 42): a stone foot and weatherboard between the posts, slit windows at each landing, a door on the west: the frame reads as a tower from the square, not as scaffolding
+  for (let k = 0; k < 4; k++) {
+    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.3, st = k === 0, mat = st ? MAT.STONE : MAT.PLANKS, c = st ? [0.86, 0.83, 0.78] : [0.8 + 0.02 * k, 0.7 + 0.02 * k, 0.56], ys = [[y0, L[k] + 1.25], [L[k] + 1.75, y1]];
+    for (const [ya, yb] of ys) {
+      if (yb - ya < 0.1) continue;
+      box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.2, EX1 - 0.02, yb, ZN0 - 0.12, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZS1 + 0.12, EX1 - 0.02, yb, ZS1 + 0.2, 0);
+      box(mat, c, 0.5, EX1 - 0.1, ya, ZN0 - 0.12, EX1 - 0.02, yb, ZS1 + 0.12, 0);
+      if (k === 0) { box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZN0 + 0.0, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 + 1.25, WX0 + 0.1, yb, ZS1 + 0.12, 0); }
+      else box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZS1 + 0.12, 0);
+    }
+  }
+  box(MAT.STONE, [0.86, 0.83, 0.78], 0.5, WX0 + 0.02, g + 1.95, ZN0 + 0.0, WX0 + 0.1, g + 2.4, ZN0 + 1.25, 0);
+  box(MAT.TIMBER, dark, 0.5, WX0 - 0.1, g + 2.3, ZN0 - 0.28, WX0 + 0.12, g + 2.42, ZS1 + 0.28, 0);     // the lintel course under the first storey
+  box(MAT.TIMBER, dark, 0.5, WX0 - 0.35, L[4] + 0.0, ZN0 - 0.5, EX1 + 0.35, L[4] + 0.14, ZS1 + 0.5, 0);   // the bell-chamber floor jetty
   // railings round the top and the landings
   const rl = (a0, a1, c, y, alongZ) => K.rail(a0, a1, c, y, alongZ);
   rl(WX0, EX1, ZN0 - 0.1, L[4]); rl(X1, EX1, ZS1 + 0.1, L[4]); rl(WX0, X0, ZS1 + 0.1, L[4]); rl(ZN0, ZS1, WX0 + 0.1, L[4], true); rl(ZN0, ZS1, EX1 - 0.1, L[4], true);
@@ -10412,7 +10432,7 @@ function buildBell(K, touch) {
 // a barrow). Everything asks KEEP.hit first (nothing in a door's approach strip or on a road's centre line) and is merged into the village cells through `bucket`.
 function buildLanes(bucket) {
   if (TEST && TEST.levels === 0) return;
-  const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, dark, wood, gy } = K, rr = rng(5151);
+  const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, dark, wood, gy } = K, rr = rng(5151); K.fine = true; K.maxDist = 40; K.noShadow = true;
   const hs = INF.houses.filter(h => h.block && Math.abs(Math.sin(h.yaw)) < 0.1), ext = s => ({ x0: s.x - s.w / 2, x1: s.x + s.w / 2, z0: s.z - s.d / 2, z1: s.z + s.d / 2 });
   const lanes = [];
   for (const a of hs) for (const b of hs) {
@@ -10487,6 +10507,61 @@ function buildLanes(bucket) {
   }
   lvLift(touch, 0.4);
   INF.laneStats = { lanes: lanes.length, roles: lanes.filter(l => l.role).map(l => l.role + '@' + l.x0.toFixed(0) + ',' + l.zc.toFixed(0)), items: lanes.reduce((a, l) => a + l.n, 0) };
+}
+
+
+// ---- 73k_square.js ----
+// ───────────────────────── the square as a finished place (Build 42) ─────────────────────────
+// Additive: a stone plinth under every wall that faces the square, ground that has been lived on (worn patches, puddles, straw, dung, a drain and its channel, a worn rim
+// round the well), and a few things tied to a person: the smith's quench trough, the baker's cooling rack, a mounting block and a hitching rail at the inn.
+// It all goes through the KEEP rule and into the village cell buckets (a few hundred triangles in all).
+function buildSquare(bucket) {
+  if (TEST && TEST.levels === 0) return;
+  const touch = new Map(), K = rtKit(bucket, touch), { M, box, beam, col, dark, wood, gy } = K, rr = rng(9091), sq = SQUARE;
+  const okAt = (x, z, r) => !KEEP.hit(x, z, r) && !World.blockedAt(x, z, r * 0.6);
+  // ── plinths: the face of each building toward the square gets a stone course 0.3 m high that stands 6 cm proud ──
+  for (const id of ['inn', 'smithy', 'store', 'elder', 'herbalist', 'draper']) {
+    const s = SITE[id]; if (!s) continue; let best = null;
+    for (const f of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+      const lx = f[0] * (s.w / 2), lz = f[1] * (s.d / 2), p = siteToWorld(s, lx, lz), q = siteToWorld(s, lx * 1.1 + f[0], lz * 1.1 + f[1]), toC = (sq.x - p[0]) * (q[0] - p[0]) + (sq.z - p[1]) * (q[1] - p[1]);
+      if (!best || toC > best.t) best = { t: toC, f };
+    }
+    const f = best.f, a = f[0] ? s.d : s.w, pts = [-1, 1].map(k => siteToWorld(s, f[0] ? f[0] * (s.w / 2 + 0.04) : k * (a / 2 + 0.05), f[0] ? k * (a / 2 + 0.05) : f[1] * (s.d / 2 + 0.04)));
+    const y0 = Math.min(gy(pts[0][0], pts[0][1]), gy(pts[1][0], pts[1][1])) - 0.15, m = M((pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2);
+    m.mat(MAT.STONE, [0.78, 0.75, 0.7], 0.7); m.beam([pts[0][0], y0 + 0.24, pts[0][1]], [pts[1][0], y0 + 0.24, pts[1][1]], 0.16, 0.54);
+    m.mat(MAT.STONE, [0.86, 0.83, 0.78], 0.7); m.beam([pts[0][0], y0 + 0.5, pts[0][1]], [pts[1][0], y0 + 0.5, pts[1][1]], 0.2, 0.05);       // the drip course on top
+  }
+  // ── ground that has been walked on ──
+  const flat = (m, x, z, rx, rz, y, c, mat, ry) => { m.mat(mat === undefined ? MAT.MUD : mat, c, 0.5); m.push().T(x, y, z).RY(ry || 0); m.ball(0, 0, 0, rx, 0.012, rz, 12, 3); m.pop(); };
+  { const m = M(0, -2);
+    // worn patches in front of the doors and between the stalls and the road mouths
+    for (const [x, z, a, b] of [[0, -12.6, 2.4, 1.1], [-8, -4, 1.6, 2.4], [8.5, -3, 1.6, 1.9], [-5.5, 3.5, 2.2, 1.3], [4, 6.5, 2.4, 1.2], [-13, -9, 1.5, 1.0], [12.5, -10, 1.3, 1.6]]) flat(m, x, z, a * 0.55, b * 0.55, gy(x, z) + 0.016, [0.62, 0.56, 0.5], MAT.MUD, rr() * 3);
+    // puddles
+    for (const [x, z, a, b] of [[-3.4, -9.6, 0.9, 0.6], [2.8, 0.8, 1.2, 0.7], [-7.5, 1.4, 0.7, 0.5], [9.5, -5.8, 0.8, 0.55], [1.2, -12.2, 0.6, 0.4]]) { flat(m, x, z, a, b, gy(x, z) + 0.022, [0.1, 0.12, 0.14], MAT.PLAIN, rr() * 3); flat(m, x + 0.05, z, a * 0.55, b * 0.55, gy(x, z) + 0.026, [0.2, 0.24, 0.28], MAT.PLAIN, rr() * 3); }
+    // straw and dung where the carts stand and the horses were
+    for (let i = 0; i < 26; i++) { const x = (rr() - 0.5) * 22 + 2, z = -5 + (rr() - 0.5) * 14; if (Math.hypot(x - sq.x, z - sq.z) > 12 || KEEP.onRoad(x, z)) continue; m.mat(MAT.THATCH, [0.7 + rr() * 0.12, 0.6, 0.3], 0.5); const y = gy(x, z) + 0.02, a = rr() * 6; m.beam([x, y, z], [x + Math.cos(a) * (0.25 + rr() * 0.3), y + 0.01, z + Math.sin(a) * (0.25 + rr() * 0.3)], 0.025, 0.012); }
+    for (const [x, z] of [[-6.8, -9.4], [3.6, -11.2], [10.2, 0.6], [-10.5, 2.2]]) { m.mat(MAT.MUD, [0.3, 0.22, 0.14], 0.5); for (let i = 0; i < 3; i++) m.ball(x + (rr() - 0.5) * 0.4, gy(x, z) + 0.03, z + (rr() - 0.5) * 0.4, 0.09, 0.05, 0.09, 6, 4); }
+    // a drain with a channel to the south lane
+    const dx = -1.4, dz = 4.6, dy = gy(dx, dz); m.mat(MAT.METAL, [0.2, 0.2, 0.2], 0.4); m.box(dx - 0.28, dy + 0.005, dz - 0.28, dx + 0.28, dy + 0.03, dz + 0.28); m.mat(MAT.PLAIN, [0.02, 0.02, 0.02]); for (let i = 0; i < 4; i++) m.box(dx - 0.22 + i * 0.15, dy + 0.031, dz - 0.22, dx - 0.18 + i * 0.15, dy + 0.034, dz + 0.22);
+    m.mat(MAT.STONE, [0.42, 0.4, 0.38], 0.6); for (let i = 0; i < 6; i++) { const x = dx - 0.2 + i * 0.01, z = dz + 0.3 + i * 0.85; m.box(x - 0.09, gy(x, z) + 0.005, z, x + 0.09, gy(x, z) + 0.028, z + 0.85); }
+    // the well's rim, trodden dark and wet
+    flat(m, 6.2, -8.6, 1.75, 1.75, gy(6.2, -8.6) + 0.018, [0.3, 0.26, 0.22], MAT.MUD, 0); m.mat(MAT.PLAIN, [0.1, 0.12, 0.14]); m.push().T(6.2, gy(6.2, -8.6) + 0.024, -7.3); m.ball(0, 0, 0, 0.6, 0.01, 0.35, 10, 3); m.pop(); }
+  // ── the inn: a mounting block by the door and a hitching rail ──
+  { const s = SITE.inn; if (s) { const dp = s.doorPos || 0;
+    const mb = siteToWorld(s, dp + 2.6, -s.d / 2 - 0.55), hr = siteToWorld(s, dp - 3.6, -s.d / 2 - 1.5), hr2 = siteToWorld(s, dp - 5.6, -s.d / 2 - 1.5);
+    if (okAt(mb[0], mb[1], 0.7)) { const g = gy(mb[0], mb[1]), m = M(mb[0], mb[1]); m.mat(MAT.STONE, [0.84, 0.8, 0.74], 0.7); m.push().T(mb[0], g, mb[1]).RY(-s.yaw); m.box(-0.45, -0.1, -0.3, 0.45, 0.22, 0.3); m.box(-0.45, 0.22, -0.3, 0.0, 0.44, 0.3); m.pop(); addBoxCollider(m, mb[0] - 0.5, mb[1] - 0.5, mb[0] + 0.5, mb[1] + 0.5, g - 0.1, g + 0.44); }
+    if (okAt(hr[0], hr[1], 0.8) && okAt(hr2[0], hr2[1], 0.8)) { const g = gy(hr[0], hr[1]); for (const [p, k] of [[hr, 0], [hr2, 1]]) K.post(p[0], p[1], g - 0.2, g + 1.1, 0.14); beam([hr[0], g + 0.95, hr[1]], [hr2[0], g + 0.95, hr2[1]], 0.1, 0.1); beam([hr[0], g + 0.55, hr[1]], [hr2[0], g + 0.55, hr2[1]], 0.08, 0.08); } } }
+  // ── the smith's quench trough, in the lee of the forge mouth ──
+  { const s = SITE.smithy; if (s) { const p = siteToWorld(s, -2.2, -s.d / 2 - 1.15);
+    if (okAt(p[0], p[1], 0.9)) { const g = gy(p[0], p[1]), m = M(p[0], p[1]); m.push().T(p[0], g, p[1]).RY(-s.yaw); m.mat(MAT.PLANKS, [0.42, 0.34, 0.27], 0.5); m.box(-0.75, 0, -0.3, 0.75, 0.62, 0.3); m.mat(MAT.PLAIN, [0.04, 0.06, 0.08]); m.box(-0.66, 0.56, -0.22, 0.66, 0.605, 0.22); m.mat(MAT.METAL, [0.2, 0.2, 0.2], 0.4); for (const x of [-0.5, 0.5]) m.box(x - 0.025, 0, -0.31, x + 0.025, 0.62, 0.31); m.pop(); addBoxCollider(m, p[0] - 0.8, p[1] - 0.8, p[0] + 0.8, p[1] + 0.8, g, g + 0.62);
+      World.emitters.push({ type: 'smoke', p: [p[0], g + 0.7, p[1]], zone: 0, thin: true }); K.place('quench', 'The Quench Trough', p[0], p[1], 2); } } }
+  // ── the baker's cooling rack, on the pavement outside the oven door ──
+  { const s = SITE['shop.s0']; if (s) { const p = siteToWorld(s, 1.4, -s.d / 2 - 0.85);
+    if (okAt(p[0], p[1], 0.8)) { const g = gy(p[0], p[1]), m = M(p[0], p[1]); m.push().T(p[0], g, p[1]).RY(-s.yaw); m.mat(MAT.TIMBER, dark, 0.5); for (const x of [-0.55, 0.55]) for (const z of [-0.22, 0.22]) m.cbox(x, 0, z, 0.06, 1.35, 0.06, 0);
+      m.mat(MAT.PLANKS, wood, 0.5); for (const y of [0.45, 0.85, 1.25]) m.box(-0.58, y, -0.25, 0.58, y + 0.03, 0.25);
+      m.mat(MAT.THATCH, [0.78, 0.55, 0.28], 0.5); for (const y of [0.48, 0.88]) for (let i = 0; i < 5; i++) m.ball(-0.42 + i * 0.21, y + 0.06, (i % 2 ? 0.08 : -0.08), 0.085, 0.055, 0.085, 8, 4);
+      m.mat(MAT.CLOTH, [0.8, 0.77, 0.68], 0.5); m.box(-0.5, 1.28, -0.2, 0.5, 1.292, 0.2); m.pop(); addBoxCollider(m, p[0] - 0.6, p[1] - 0.35, p[0] + 0.6, p[1] + 0.35, g, g + 1.35); K.place('bakerrack', 'The Baker’s Rack', p[0], p[1], 2); } } }
+  lvLift(touch, 0.3);
 }
 
 
@@ -12049,10 +12124,10 @@ WBUILD.mine = (p, m, R) => {
     mm.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1.35, 1.35]) { mm.cbox(sx, -0.3, Z, 0.34, 3.0, 0.34, 4); addBoxCollider(mm, sx - 0.2, Z - 0.2, sx + 0.2, Z + 0.2, 0, 3); }
     mm.box(-1.75, 2.65, Z - 0.18, 1.75, 3.0, Z + 0.2); for (const s of [-1, 1]) mm.beam([s * 1.35, 2.2, Z - 0.18], [s * 0.7, 2.7, Z - 0.18], 0.16, 0.16);
     mm.mat(MAT.TIMBER, COL.timber); mm.cbox(0, 3.0, Z + 0.35, 3.0, 0.22, 0.3, 4);
-    // boards nailed across the opening, some askew
-    mm.mat(MAT.PLANKS, [0.75, 0.68, 0.6], 0.6); for (let i = 0; i < 6; i++) { const y = 0.3 + i * 0.38, sl = (i % 3 - 1) * 0.05; mm.beam([-1.2, y - sl, Z - 0.2], [1.2, y + sl, Z - 0.2], 0.2, 0.05); }
-    mm.beam([-1.15, 0.35, Z - 0.26], [1.1, 2.4, Z - 0.26], 0.18, 0.04); mm.beam([1.1, 0.4, Z - 0.26], [-1.1, 2.3, Z - 0.26], 0.18, 0.04);
-    mm.mat(MAT.METAL, COL.black); for (const [x, y] of [[-0.9, 0.75], [0.9, 1.1], [0.1, 1.6], [-0.5, 2.0]]) mm.cbox(x, y, Z - 0.3, 0.07, 0.07, 0.03, 4);
+    // [q1] an oak door hung in the frame, iron-strapped, a bar across it (the Sexton's key lifts it; 94_mine.js makes it a portal)
+    mm.mat(MAT.PLANKS, [0.42, 0.36, 0.3], 0.6); mm.box(-1.12, 0, Z - 0.28, 1.12, 2.36, Z - 0.12); mm.mat(MAT.METAL, COL.black);
+    for (const y of [0.4, 1.2, 2.0]) mm.box(-1.12, y, Z - 0.31, 1.12, y + 0.1, Z - 0.28); mm.box(-0.05, 0.1, Z - 0.31, 0.05, 2.3, Z - 0.28); mm.cyl(0.55, 1.1, Z - 0.34, 0.07, 0.07, 0.03, 8, 3);
+    mm.mat(MAT.TIMBER, COL.timberDark); mm.box(-1.3, 1.05, Z - 0.42, 1.3, 1.25, Z - 0.3); for (const sx of [-1.2, 1.2]) mm.box(sx - 0.07, 0.9, Z - 0.46, sx + 0.07, 1.4, Z - 0.28);
     addBoxCollider(mm, -1.4, Z - 0.3, 1.4, Z - 0.1, 0, 2.8);
     // rails running out, a cart half loaded with stone, sleepers
     mm.mat(MAT.TIMBER, COL.timberDark); for (let z = Z - 0.2; z > -8; z -= 0.8) mm.box(-0.7, 0, z - 0.06, 0.7, 0.06, z + 0.06);
@@ -12813,12 +12888,22 @@ function storyBuild() {
   // a bier of two trestles and boards, mud still on it
   m.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-0.7, 0.7]) { m.beam([sx - 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, -0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx - 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); m.beam([sx + 0.3, 0, 0.34], [sx, 0.6, 0], 0.08, 0.08); }
   m.mat(MAT.PLANKS, [0.5, 0.42, 0.34], 0.5); m.box(-1.15, 0.6, -0.34, 1.15, 0.66, 0.34, 4);
-  // the shape under the sailcloth: head, shoulders, long thin legs, the boots left bare
-  m.mat(MAT.CLOTH, [0.7, 0.68, 0.6], 0.6);
-  m.ball(0.9, 0.79, 0, 0.14, 0.11, 0.12, 10, 6); m.ball(0.48, 0.77, 0, 0.36, 0.13, 0.27, 12, 6); m.ball(-0.06, 0.74, 0, 0.3, 0.09, 0.2, 10, 6); m.ball(-0.58, 0.72, 0.0, 0.42, 0.075, 0.17, 10, 5);
-  m.box(-0.25, 0.66, -0.3, 0.95, 0.74, -0.27, 0); m.box(-0.25, 0.66, 0.27, 0.95, 0.74, 0.3, 0);
-  m.mat(MAT.CLOTH, [0.62, 0.6, 0.52], 0.6); m.box(-1.0, 0.66, -0.2, -0.82, 0.69, 0.2, 0);
-  m.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); for (const s of [-1, 1]) { m.push().T(-1.12, 0.72, s * 0.1).RZ(0.18); m.cyl(0, 0, 0, 0.055, 0.07, 0.24, 7, 3); m.pop(); m.box(-1.2, 0.66, s * 0.1 - 0.05, -1.0, 0.76, s * 0.1 + 0.05, 0); }
+  // a drowned man under stained sailcloth: head, shoulders, chest, hips and two long legs under the canvas; boots out at the foot, one blue-white hand slipped off the edge, rope ties, wet boards
+  const cv = [0.30, 0.27, 0.21], cv2 = [0.24, 0.21, 0.16];
+  m.mat(MAT.CLOTH, cv, 0.6);
+  m.ball(0.97, 0.78, 0, 0.15, 0.12, 0.12, 10, 6); m.ball(1.08, 0.79, 0, 0.045, 0.045, 0.035, 6, 4); m.ball(0.78, 0.74, 0, 0.11, 0.07, 0.1, 8, 4);
+  m.ball(0.6, 0.79, 0, 0.18, 0.14, 0.34, 12, 6); m.ball(0.33, 0.8, 0, 0.3, 0.13, 0.25, 12, 6); m.ball(0.0, 0.76, 0, 0.28, 0.1, 0.2, 10, 5); m.ball(-0.3, 0.77, 0, 0.2, 0.11, 0.22, 10, 5);
+  m.ball(-0.72, 0.75, 0.1, 0.45, 0.08, 0.1, 10, 5); m.ball(-0.72, 0.75, -0.1, 0.45, 0.08, 0.1, 10, 5); m.ball(-0.4, 0.8, 0.1, 0.07, 0.07, 0.08, 6, 4); m.ball(-0.4, 0.8, -0.1, 0.07, 0.07, 0.08, 6, 4);
+  m.ball(0.3, 0.73, 0.3, 0.4, 0.06, 0.07, 8, 4);
+  m.mat(MAT.CLOTH, cv2, 0.6); for (const s of [-1, 1]) for (let k = 0; k < 9; k++) { const x = -0.95 + k * 0.22 + (k % 2) * 0.03; m.quad2([x, 0.72, s * 0.29], [x + 0.02, 0.45 + (k % 3) * 0.03, s * 0.43], [x + 0.2, 0.46 + ((k + 1) % 3) * 0.03, s * 0.43], [x + 0.2, 0.72, s * 0.29]); }
+  m.mat(MAT.CLOTH, [0.25, 0.2, 0.15], 0.5); for (const x of [0.52, 0.12, -0.5]) { m.box(x - 0.014, 0.66, -0.3, x + 0.014, 0.9, -0.28, 0); m.box(x - 0.014, 0.66, 0.28, x + 0.014, 0.9, 0.3, 0); m.box(x - 0.014, 0.86, -0.3, x + 0.014, 0.9, 0.3, 0); m.beam([x, 0.7, 0.3], [x + 0.05, 0.4, 0.38], 0.012, 0.012); }
+  // the boots, left bare at the foot of the canvas, toes up
+  m.mat(MAT.PLAIN, [0.1, 0.08, 0.06]); for (const s of [-1, 1]) { m.push().T(-1.17, 0.7, s * 0.1).RZ(0.35); m.box(-0.06, 0, -0.06, 0.2, 0.1, 0.06); m.box(-0.02, 0.1, -0.05, 0.1, 0.34, 0.05); m.pop(); }
+  // the hand slipped from under the canvas and hanging off the edge: blue-white, fingers curled
+  m.mat(MAT.PLAIN, [0.62, 0.7, 0.74]); m.beam([0.18, 0.7, -0.27], [0.12, 0.5, -0.4], 0.07, 0.06); m.ball(0.1, 0.44, -0.42, 0.045, 0.06, 0.04, 7, 4); for (let f = 0; f < 4; f++) m.beam([0.07 + f * 0.022, 0.42, -0.42], [0.075 + f * 0.022, 0.31 - (f % 2) * 0.02, -0.425], 0.014, 0.014);
+  m.mat(MAT.PLAIN, [0.5, 0.55, 0.57]); m.ball(0.0, 0.7, -0.34, 0.03, 0.02, 0.03, 4, 3);
+  // wet boards under the bier, a drip line off the cloth, a dropped rope end
+  m.mat(MAT.PLAIN, [0.05, 0.045, 0.04]); m.quad2([-1.3, 0.014, -0.65], [-1.3, 0.014, 0.65], [1.3, 0.014, 0.65], [1.3, 0.014, -0.65]); m.mat(MAT.PLANKS, [0.28, 0.24, 0.2], 0.5); m.box(-1.14, 0.58, -0.335, 1.14, 0.6, 0.335, 4);
   // a wet dark patch of the quay and a bucket
   m.mat(MAT.PLAIN, [0.07, 0.065, 0.06]); m.quad2([-1.6, 0.012, -0.9], [-1.6, 0.012, 0.9], [1.6, 0.012, 0.9], [1.6, 0.012, -0.9]);
   m.push().T(1.5, 0.0, 0.7); m.mat(MAT.PLANKS, COL.wood, 0.5); m.cyl(0, 0, 0, 0.17, 0.2, 0.3, 9, 1); m.pop();
@@ -12826,6 +12911,7 @@ function storyBuild() {
   pack.add(m, { kind: 'opaque', maxDist: 80, noShadow: true }); pack.upload('story'); World.packs.push(pack);
   World.emitters.push({ type: 'candle', p: [x - 1.5, 0.5, z - 0.5], zone: 0, always: true, seed: 0.77 });
   World.interact.push({ p: [x, 0.9, z], r: 2.6, zone: 0, kind: 'read', id: 'wharf.body', title: 'The drowned man', text: 'Sailcloth over him; Finn’s doing. A man of fifty, thin as a rake.\n\nNo water has been in him. His palms are scarred white across, pick-work. There is silver in his back teeth, a bright vein of it, as though he had bitten rock.\n\nRound his neck on a bootlace: a brass tally stamped OM 14. In his fist, folded small in oilcloth:\n\n“TELL ROWAN THE BREAD DID NOT COME.”' });
+  if (typeof mineBuild === 'function') { try { mineBuild(); } catch (e) { console.warn('mine: ' + (e && e.stack || e)); } }       // 94_mine.js
   if (typeof ixScan === 'function') { try { ixScan(); } catch (e) { console.warn('interact: ' + (e && e.stack || e)); } }
 }
 // the sailcloth hides nothing from a man who looks: the first reading takes the token and starts the thread (a stranger who never met Hale still gets the quest)
@@ -13049,7 +13135,7 @@ function ixOpenCont(it) {
   if (it.locked && !(S.unlocked && S.unlocked[it.id])) { { const m = ixLockTry({ key: it.key, msg: 'Locked. A small, well-oiled lock: someone cares what is in here.' }); if (m) return toast(m); } S.unlocked = S.unlocked || {}; S.unlocked[it.id] = 1; }
   S.opened[it.id] = 1; Audio2.chest();
   const list = it.loot || []; if (!list.length) { toast(it.ck === 'barrel' ? 'Nothing but damp stave and a smell of apples.' : 'Nothing. Dust, and a moth.'); save(); return; }
-  const stolen = ixOwned(it) && ixTheft(it, ixValue(list)); ixGive(list); if (ixOwned(it)) ixStolen(list); toast('Found: ' + ixGot(list).join(', ')); save();
+  const stolen = ixOwned(it) && ixTheft(it, ixValue(list)); ixGive(list); if (ixOwned(it)) ixStolen(list); toast('Taken: ' + ixGot(list).join(', ')); save();
 }
 function ixRead(it) {
   S.read = S.read || {}; const first = !S.read[it.bookId]; S.read[it.bookId] = 1; openReader(it.title, it.text);
@@ -13097,7 +13183,7 @@ IX.release = function (how) { const c = Cells.by.guardhouse; if (!c) return; S.j
 // ── wiring into the story layer ──
 const _il2 = interactLabel, _iu2 = interactUse;
 interactLabel = function (it) {
-  if (it.kind === 'cont') return S.opened[it.id] ? null : (it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb);
+  if (it.kind === 'cont') return S.opened[it.id] ? 'Empty' : (it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb);
   if (it.kind === 'loose') return it.gone ? null : 'Take ' + (it.item === 'gold' ? 'the coins' : ITEMS[it.item][0].toLowerCase());
   if (it.kind === 'seat') return IX.sit ? 'Stand up' : 'Sit down';
   if (it.kind === 'jaildoor') return S.jail ? (has('lockpick') ? 'Pick the lock' : 'Call for the guard') : null;
@@ -13147,7 +13233,7 @@ for (const id of Object.keys(TALK)) { if (typeof TALK[id] !== 'function' || id.s
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 46';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 48';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -14859,7 +14945,8 @@ RPG.tick = function (dt) {
   if (!SC.scene) return;
   if (!RPG.inited) { RPG.inited = true; RPG.hudInit(); Combat.init(); Foes.init(); }
   const r = RPG.st(), playing = game.playing, I = RPG.in, k = Input.keys;
-  if (playing && typeof ixTick === 'function') ixTick(dt);       // [q1] 82b_interact.js: sitting, the watch
+  if (playing && typeof ixTick === 'function') ixTick(dt);
+  if (playing && typeof mineTick === 'function') mineTick(dt);       // [q1] 82b_interact.js: sitting, the watch
   if (playing !== RPG.wasPlaying) { RPG.wasPlaying = playing; RPG.hud.rpg.hidden = !playing; }
   // days pass (outlaws drift back to an emptied camp after a few)
   if (Env.hour < r.hour - 12) r.day++; r.hour = Env.hour;
@@ -15059,6 +15146,7 @@ const Foes = (() => {
   const CAMPS = [
     { id: 'pines', label: 'the camp in the pines', x: -96, z: -44, yaw: 0.6, n: 3, leader: { name: 'Outlaw Brute', hp: 84, dmg: 14, scale: 1.09 } },
     { id: 'crag', label: 'the camp below the watchtower', x: -6, z: -100, yaw: 2.5, n: 3, leader: { name: 'Garrick One-Ear', hp: 112, dmg: 17, scale: 1.07, chief: true } },
+    { id: 'mine', cell: 'mine', label: 'the Old Mine', x: 0, z: 0, yaw: 0, n: 0, leash: 140, spawns: [] },       // [q1] the Old Mine (94_mine.js): its people are placed when the mine is built
   ];
   const R4 = ['Ranger_Body', 'Ranger_Arms', 'Ranger_Legs', 'Ranger_Feet'];
   const LOOKS = [
@@ -15078,6 +15166,7 @@ const Foes = (() => {
   function buildCamps() {
     const pack = new MeshPack(); pack.shadow = true;
     for (const c of CAMPS) {
+      if (c.cell) continue;
       const m = new Mesh(4096), ca = Math.cos(c.yaw), sa = Math.sin(c.yaw);
       const W = (lx, lz) => { const x = c.x + lx * ca - lz * sa, z = c.z + lx * sa + lz * ca; return [x, Terrain.y(x, z), z]; };
       const put = (lx, lz, rot, fn) => { const p = W(lx, lz); m.push().T(p[0], p[1], p[2]).RY(-(c.yaw + (rot || 0))); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; fn(m); m.pop(); return p; };
@@ -15149,6 +15238,7 @@ const Foes = (() => {
     prepareChars();
     const r = RPG.st();
     for (const c of CAMPS) {
+      if (c.cell) { spawnMine(c, r); continue; }
       for (let i = 0; i <= c.n; i++) {
         const lead = i === c.n ? c.leader : null, id = c.id + '.' + i, look = Chars.cfg.foeLooks ? (lead ? Chars.cfg.foeLooks.leader : Chars.cfg.foeLooks.list[(i + (c.id === 'crag' ? 2 : 0)) % Chars.cfg.foeLooks.list.length]) : lead ? LEADER : LOOKS[(i + (c.id === 'crag' ? 2 : 0)) % LOOKS.length];
         const sp = i === 0 ? c.watch : c.spots[(i - 1) % c.spots.length];
@@ -15165,6 +15255,28 @@ const Foes = (() => {
     if (!Chars.group.parent) SC.scene.add(Chars.group);
     F.ready = true; campState();
   }
+  // [q1] the people of the Old Mine: delvers rush, lurkers wait in the dark and are heard before they are seen, the Foreman keeps the deep chamber
+  const MKIND = {
+    delver: { name: 'Delver', hp: 36, dmg: 10, scale: 0.99, sp: 5.6, see: 13, look: { body: 'o_rogue', tint: { tunic: [0.62, 0.68, 0.78], pants: [0.55, 0.58, 0.64] } }, sw: [0.5, 0.6] },
+    lurker: { name: 'Lurker', hp: 30, dmg: 15, scale: 0.94, sp: 6.4, see: 3.4, look: { body: 'o_hood_f', tint: { tunic: [0.3, 0.32, 0.4], pants: [0.35, 0.36, 0.42], head: [0.34, 0.36, 0.44] } }, sw: [0.42, 0.55] },
+    foreman: { name: 'The Foreman', hp: 380, dmg: 24, scale: 1.26, sp: 3.0, see: 15, look: { body: 'o_brute', tint: { tunic: [0.5, 0.55, 0.68], pants: [0.4, 0.42, 0.5] } }, sw: [0.78, 1.1] },
+  };
+  F.MKIND = MKIND;
+  function spawnMine(c, r) {
+    if (typeof MINE === 'undefined' || !MINE.built) return; const O = MINE.O, FY = MINE.FY; c.x = O[0] + 20; c.z = O[2] + 40;
+    MINE.SPAWN.forEach((sp, i) => {
+      const k = MKIND[sp.kind], id = 'mine.' + sp.kind + i, p = [O[0] + sp.x, World.groundAt(O[0] + sp.x, O[2] + sp.z, FY + 4), O[2] + sp.z];
+      const spot = { p, kind: sp.kind === 'lurker' ? 'crouch' : sp.kind === 'foreman' ? 'guard' : 'stand', yaw: sp.yaw || 0 };
+      const f = { id, camp: c, kind: sp.kind, name: k.name, leader: sp.kind === 'foreman', chief: sp.kind === 'foreman', boss: sp.kind === 'foreman', maxHp: k.hp, dmg: k.dmg, scale: k.scale, sp: k.sp, see: k.see,
+        spot, pos: p.slice(), yaw: spot.yaw, hp: 0, state: 'idle', t: 0, cd: rnd(0.4, 1.4), strafe: i % 2 ? 1 : -1, strafeT: 0, anim: 'c-idle', alive: true, token: false, kv: [0, 0], acc: 0, looted: false, fleeDone: false, hits: 0, atk: null, vis: true, alert: 0, cueT: rnd(1, 3), bp: 0 };
+      f.hp = f.maxHp; f.stagger = d => stagger(f, d, true);
+      const base = Chars.cfg.foeLooks ? k.look : LOOKS[i % LOOKS.length]; f.h = Chars.spawn({ id: 'foe.' + id, foe: base });
+      const sw = new THREE.Mesh(RPG.swordGeo(k.sw[0], k.sw[1]), RPG.gearMat(f.h.uZone, f.h.uLight)); sw.castShadow = false; sw.layers.set(1);
+      const grip = Chars.cfg.grip || F.grip; sw.rotation.set(grip[0], grip[1], grip[2]); sw.position.set(grip[3], grip[4], grip[5]); sw.scale.setScalar(1 / ((Chars.cfg.scale || 1) * f.scale)); Chars.attach(f.h, 'handR', sw); f.sword = sw; f.h.pivot.traverse(o => { o.layers.set(1); });
+      if (r.dead[id] !== undefined) { if (!f.chief && r.day - r.dead[id] >= 3) delete r.dead[id]; else { f.alive = false; f.state = 'gone'; f.hp = 0; f.h.pivot.visible = false; } }
+      F.list.push(f);
+    });
+  }
   const FOE_DRAW = 110;        // outlaws farther than this are not drawn at all (and stop posing)
   F.grip = [PI / 2, 0, 0, 0, 0.02, 0.03];       // how a sword sits in the rig's right hand: rotation xyz, offset xyz (hand space)
   F.init = function () {
@@ -15177,7 +15289,7 @@ const Foes = (() => {
   F.breakOff = function () { F.calm(false); F.target = null; F.attackers = 0; if (typeof RPG !== 'undefined') RPG.combatT = 99; for (const f of F.list) if (f.h && f.h.pivot.visible && f.alive) f.h.pivot.visible = false; };
   function campState() {
     const r = RPG.st(); r.cleared = r.cleared || {};
-    for (const c of CAMPS) { const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
+    for (const c of CAMPS) { if (c.cell) continue; const left = F.list.filter(f => f.camp === c && f.alive).length; c.left = left; if (!left && F.ready) { if (r.cleared[c.id] === undefined) { r.cleared[c.id] = r.day; if (typeof onCampCleared === 'function') onCampCleared(c.id); } } else delete r.cleared[c.id]; }
   }
   F.alive = id => F.list.filter(f => f.alive && (!id || f.camp.id === id));
   F.nearest = function (pos, id) { let best = null, bd = 1e9; for (const f of F.list) { if (!f.alive || (id && f.camp.id !== id)) continue; const d = hyp(f.pos[0] - pos[0], f.pos[2] - pos[2]); if (d < bd) { bd = d; best = f; } } return best; };
@@ -15186,19 +15298,25 @@ const Foes = (() => {
   const release = f => { if (f.token) { f.token = false; F.attackers = Math.max(0, F.attackers - 1); } };
   function stagger(f, dur, hard) { if (!f.alive) return; release(f); f.state = 'stagger'; f.t = 0; f.stagT = dur; f.anim = hard || Math.random() < 0.5 ? 'c-hit2' : 'c-hit'; f.h.curName = ''; }
   function rouse(f, delay) { if (f.alive && (f.state === 'idle' || f.state === 'return')) { f.state = 'notice'; f.t = -(delay || 0); } f.alert = 12; }
-  function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < 34) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
+  function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < (camp.cell ? 12 : 34)) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
   function die(f) {
     const r = RPG.st(); release(f); f.alive = false; f.hp = 0; f.state = 'dead'; f.t = 0; f.anim = Math.random() < 0.5 ? 'c-die' : 'c-die2'; f.h.curName = '';
     r.kills++; r.dead[f.id] = r.day; Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
     const loot = [['gold', Math.round(f.leader ? rnd(22, 34) : rnd(4, 12))]];
     if (Math.random() < 0.45) loot.push([Math.random() < 0.5 ? 'bread' : 'apple', 1]); if (Math.random() < (f.leader ? 1 : 0.18)) loot.push(['potion', 1]);
     if (f.chief) { loot.push(['steelsword', 1]); if (!has('tools') && qAt('tools') !== 99) loot.push(['tools', 1]); } else if (f.leader) loot.push(['ironsword', 1]); else if (Math.random() < 0.1) loot.push(['buckler', 1]);
+    if (f.camp.cell) { loot.length = 0; loot.push(['gold', Math.round(f.boss ? rnd(40, 60) : rnd(3, 9))]); if (f.boss) loot.push(['foremankey', 1]); else if (Math.random() < 0.4) loot.push(['oil', 1]); }
     f.lootIt = { kind: 'loot', id: 'loot.' + f.id, p: [f.pos[0], f.pos[1] + 0.35, f.pos[2]], r: 2.1, zone: 0, name: f.name, loot, foe: f }; World.interact.push(f.lootIt);
     campState(); if (typeof onFoeKilled === 'function') onFoeKilled(f); save();
   }
   function hurt(f, dmg, heavy, from) {
     const dx = f.pos[0] - from[0], dz = f.pos[2] - from[2], l = hyp(dx, dz) || 1;
     alarm(f.camp, f.pos); f.alert = 14;
+    if (f.boss) {       // [q1] the Foreman does not flinch from a blade; he is open to one thing, a charge that ends against stone
+      const stun = f.state === 'b_stun'; f.hp -= dmg * (stun ? 2 : 1); f.hits++; f.kv[0] = dx / l * 0.6; f.kv[1] = dz / l * 0.6;
+      if (f.hp <= 0) { die(f); return false; } if (f.state === 'idle') { f.state = 'b_roar'; f.t = 0; }
+      if (heavy && f.state === 'circle') stagger(f, 0.45, true); return false;
+    }
     // a leader who sees it coming gets steel in the way
     if (f.leader && !heavy && (f.state === 'circle' || f.state === 'chase') && Math.random() < 0.38) { f.state = 'guard'; f.t = 0; f.anim = 'c-block'; f.hp -= dmg * 0.15; f.kv[0] = dx / l * 1.2; f.kv[1] = dz / l * 1.2; if (f.hp <= 0) die(f); return true; }
     f.hp -= dmg; f.hits++; f.kv[0] = dx / l * (heavy ? 4.6 : 2.2); f.kv[1] = dz / l * (heavy ? 4.6 : 2.2);
@@ -15229,24 +15347,58 @@ const Foes = (() => {
     const p = f.pos, ox = p[0], oz = p[2];
     p[0] += (vx + f.kv[0]) * dt; p[2] += (vz + f.kv[1]) * dt; f.kv[0] *= Math.max(0, 1 - dt * 7); f.kv[1] *= Math.max(0, 1 - dt * 7);
     colResolve(p, 0.3, p[1], p[1] + 1.7);
-    if (World.waterAt(p[0], p[2]) - Terrain.y(p[0], p[2]) > 0.5 || hyp(p[0], p[2]) > WORLD_RADIUS + 6) { p[0] = ox; p[2] = oz; }
+    if (!f.camp.cell && (World.waterAt(p[0], p[2]) - Terrain.y(p[0], p[2]) > 0.5 || hyp(p[0], p[2]) > WORLD_RADIUS + 6)) { p[0] = ox; p[2] = oz; }
     for (const g of F.list) { if (g === f || !g.alive) continue; const dx = p[0] - g.pos[0], dz = p[2] - g.pos[2], d2 = dx * dx + dz * dz; if (d2 < 0.49 && d2 > 1e-6) { const d = Math.sqrt(d2), k = (0.7 - d) / d * 0.5; p[0] += dx * k; p[2] += dz * k; } }
-    p[1] = Terrain.y(p[0], p[2]);
+    if (f.camp.cell) { const gy = World.groundAt(p[0], p[2], p[1] + 0.7); if (gy > -1e8) p[1] = gy; else { p[0] = ox; p[2] = oz; } } else p[1] = Terrain.y(p[0], p[2]);
+  }
+  // [q1] the Foreman: walk in, then slam (a long raised pick, the ground blow lands at 1.1 s: step back), two blows, then a charge (he backs off, roars, runs the line he was facing:
+  // stand behind a column and he crashes into it and is open for three seconds, every hit counting double), two blows, again
+  function bossThink(f, dt, P, d, live, toP, lost) {
+    const fx = Math.sin(f.yaw), fz = -Math.cos(f.yaw), at = [f.pos[0], f.pos[1] + 1.2, f.pos[2]];
+    switch (f.state) {
+      case 'idle': f.anim = 'c-idle'; turn(f, f.spot.yaw, 2, dt); if (live && d < f.see && Math.abs(P[1] - f.pos[1]) < 4) { f.state = 'b_roar'; f.t = 0; Snd.event('foe.shout.deep', at, 1.4); } return true;
+      case 'notice': f.state = 'b_roar'; f.t = 0; return true;
+      case 'b_roar': f.anim = 'c-block'; turn(f, toP, 4, dt); step(f, 0, 0, dt); if (f.t > 1.3) { f.state = 'b_walk'; f.t = 0; f.bp = 0; } return true;
+      case 'b_walk': {
+        if (lost) { f.state = 'return'; f.t = 0; return true; }
+        turn(f, toP, 2.8, dt); const sp = d > 3.2 ? f.sp : 0; f.anim = sp ? 'c-walk' : 'c-idle'; step(f, fx * sp, fz * sp, dt);
+        if ((f.t > 1.4 && d < 5) || f.t > 5) {
+          const nx = ['b_slam', 'melee', 'b_charge', 'melee'][f.bp++ % 4]; f.t = 0; f.hitDone = false; f.h.curName = '';
+          if (nx === 'melee') { f.state = 'circle'; f.cd = 0.2; f.meleeN = 2; } else { f.state = nx; Snd.event('foe.shout.deep', at, 1.4); if (nx === 'b_slam') f.anim = 'c-atk3'; }
+        }
+        return true; }
+      case 'b_slam': {
+        turn(f, toP, f.t < 0.7 ? 2 : 0, dt); step(f, 0, 0, dt);
+        if (!f.hitDone && f.t >= 1.1) { f.hitDone = true; Snd.event('hit.wood', at, 1.6); Audio2.swing(true); if (live && d < 3.7) RPG.damage(f.dmg * 1.4, f); if (d < 12) RPG.shake = Math.max(RPG.shake || 0, 0.55); }
+        if (f.t > 2.5) { f.state = 'b_walk'; f.t = 0; f.anim = 'c-idle'; } return true; }
+      case 'b_charge': {
+        if (f.t < 1.5) { turn(f, toP, 3.2, dt); f.anim = 'c-back'; step(f, -fx * 1.2, -fz * 1.2, dt); f.cdir = f.yaw; return true; }
+        if (f.t < 1.5 + dt * 1.5) { Snd.event('foe.shout.deep', at, 1.6); }
+        const bx = f.pos[0], bz = f.pos[2]; f.anim = 'c-sprint'; step(f, Math.sin(f.cdir) * 9.5, -Math.cos(f.cdir) * 9.5, dt);
+        const mv = hyp(f.pos[0] - bx, f.pos[2] - bz);
+        if (!f.hitDone && live && d < 1.5 && Math.abs(P[1] - f.pos[1]) < 1.6) { f.hitDone = true; RPG.damage(f.dmg * 1.5, f); Player.vel[0] += Math.sin(f.cdir) * 6; Player.vel[2] += -Math.cos(f.cdir) * 6; }
+        if (mv < 9.5 * dt * 0.5 || f.t > 4.2) { f.state = 'b_stun'; f.t = 0; f.h.curName = ''; f.anim = 'c-hit2'; Snd.event('hit.wood', at, 1.8); Snd.event('foe.hurt', at, 1.2); if (d < 14) RPG.shake = Math.max(RPG.shake || 0, 0.7); }
+        return true; }
+      case 'b_stun': step(f, 0, 0, dt); if (f.t > 3.2) { f.state = 'b_walk'; f.t = 0; f.anim = 'c-idle'; f.h.curName = ''; } return true;
+    }
+    return false;
   }
   function think(f, dt, P, d, live) {
     const toP = Math.atan2(P[0] - f.pos[0], -(P[2] - f.pos[2])), home = f.spot.p, dHome = hyp(f.pos[0] - home[0], f.pos[2] - home[2]), camp = f.camp;
-    const lost = !live || inVillage(P[0], P[2]) || hyp(f.pos[0] - camp.x, f.pos[2] - camp.z) > LEASH;
+    const lost = !live || inVillage(P[0], P[2]) || hyp(f.pos[0] - camp.x, f.pos[2] - camp.z) > (camp.leash || LEASH);
     f.t += dt; f.cd -= dt; f.alert -= dt;
+    if (f.boss && bossThink(f, dt, P, d, live, toP, lost)) return;
     switch (f.state) {
       case 'idle': {
-        f.anim = f.spot.kind === 'sit' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
-        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
-        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned) { F.warned = true; toast('Outlaws! They have seen you.'); } }
+        f.anim = f.spot.kind === 'sit' || f.spot.kind === 'crouch' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
+        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
+        if (f.kind === 'lurker' && live && d < 24 && d >= see) { f.cueT -= dt; if (f.cueT <= 0) { f.cueT = rnd(2.2, 4.6); Snd.event(Math.random() < 0.5 ? 'creak' : 'rustle', [f.pos[0], f.pos[1] + 0.4, f.pos[2]], 1.3); } }       // heard before seen
+        if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); if (f.kind !== 'lurker') Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned && !camp.cell) { F.warned = true; toast('Outlaws! They have seen you.'); } }
         break; }
-      case 'notice': f.anim = 'c-idle'; if (f.t > 0) turn(f, toP, 6, dt); if (f.t > 0.45) { f.state = 'chase'; f.t = 0; } break;
+      case 'notice': f.anim = 'c-idle'; if (f.t > 0) turn(f, toP, 6, dt); if (f.t > (f.kind === 'lurker' ? 0.12 : f.kind === 'delver' ? 0.3 : 0.45)) { f.state = 'chase'; f.t = 0; } break;
       case 'chase': {
         if (lost) { f.state = 'return'; f.t = 0; break; }
-        turn(f, toP, 7, dt); const sp = f.leader ? 3.9 : 4.5; f.anim = 'c-run'; step(f, Math.sin(f.yaw) * sp, -Math.cos(f.yaw) * sp, dt);
+        turn(f, toP, 7, dt); const sp = f.sp || (f.leader ? 3.9 : 4.5); f.anim = 'c-run'; step(f, Math.sin(f.yaw) * sp, -Math.cos(f.yaw) * sp, dt);
         if (d < 3.0) { f.state = 'circle'; f.t = 0; f.strafeT = rnd(0.8, 2); }
         break; }
       case 'circle': {
@@ -15267,7 +15419,7 @@ const Foes = (() => {
       case 'attack': {
         const a = f.atk; if (!a.done) { turn(f, toP, 2.6, dt); if (d > 1.5) step(f, Math.sin(f.yaw) * 1.5, -Math.cos(f.yaw) * 1.5, dt); else step(f, 0, 0, dt); } else step(f, 0, 0, dt);
         if (!a.done && f.t >= a.hitT) { a.done = true; if (live && d < 2.4 && Math.abs(angDiff(toP, f.yaw)) < 0.95 && Math.abs(P[1] - f.pos[1]) < 1.6) { RPG.damage(f.dmg * (a.heavy ? 1.35 : 1), f); } else Audio2.swing(false); }
-        if (f.t >= a.end) { release(f); f.state = 'circle'; f.t = 0; f.cd = f.leader ? rnd(0.7, 1.5) : rnd(1.4, 2.8); }
+        if (f.t >= a.end) { release(f); f.state = f.boss && --f.meleeN <= 0 ? 'b_walk' : 'circle'; f.t = 0; f.cd = f.leader ? rnd(0.7, 1.5) : rnd(1.4, 2.8); }
         break; }
       case 'guard': f.anim = 'c-block'; turn(f, toP, 6, dt); step(f, 0, 0, dt); if (f.t > 0.5) { f.state = 'circle'; f.t = 0; f.cd = Math.min(f.cd, 0.25); } break;
       case 'stagger': step(f, 0, 0, dt); if (f.t > f.stagT) { f.state = 'circle'; f.t = 0; f.cd = Math.max(f.cd, 0.35); } break;
@@ -15285,11 +15437,13 @@ const Foes = (() => {
   }
   F.update = function (dt, rdt) {
     if (!F.ready) return;
-    if (World.cell) { F.target = null; return; }          // outlaws live outdoors: in a cell none is drawn, thought about or posed
+    const here = World.cell ? World.cell.id : null;          // outlaws live outdoors, and the Old Mine's people in the mine (94_mine.js): in any other cell none is drawn, thought about or posed
+    if (here && !F.list.some(g => g.camp.cell === here)) { F.target = null; return; }
     const P = game.playing ? Player.pos : R.cam.pos, live = game.playing && !RPG.dead, st = F.st, r = RPG.st();
     let target = null, tb = 0.55, fight = null;
     for (const f of F.list) {
       if (f.state === 'gone') continue;
+      if ((f.camp.cell || null) !== here) { f.vis = false; if (f.h.pivot.visible) f.h.pivot.visible = false; continue; }
       const d = hyp(f.pos[0] - P[0], f.pos[2] - P[2]);
       f.vis = d < FOE_DRAW;
       if (!f.vis) { if (f.h.pivot.visible) f.h.pivot.visible = false; if (f.alive && f.state !== 'idle') { f.acc += dt; if (f.acc > 0.25) { think(f, f.acc, P, d, live); f.acc = 0; } } continue; }
@@ -15305,7 +15459,7 @@ const Foes = (() => {
         f.t += fdt;
         if (f.state === 'dead' && (f.t > (f.looted ? 40 : 300)) && d > 30) { f.state = 'gone'; f.h.pivot.visible = false; if (f.lootIt) { const i = World.interact.indexOf(f.lootIt); if (i >= 0) World.interact.splice(i, 1); } continue; }
       }
-      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = 1; st.visible = true; st.cast = d < 32; f.sword.castShadow = st.cast;
+      st.pos = f.pos; st.yaw = f.yaw; st.anim = f.anim; st.scale = f.scale; st.zone = 0; st.light = f.camp.cell ? 0.55 : 1; st.visible = true; st.cast = d < 32; f.sword.castShadow = st.cast;
       st.look[0] = 0; st.look[1] = 0;
       Chars.update(f.h, st, fdt * (f.state === 'attack' && f.atk ? f.atk.rate : 1));
     }
@@ -15393,6 +15547,401 @@ const Inv = {
     return node(opts.length ? 'Let’s see it, then.' : 'You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.', opts.slice(0, 7).concat([bye]));
   },
 };
+
+
+// ---- 94_mine.js ----
+// ───────────────────────── the Old Mine: a dungeon of its own, reached through the barred door in the south-west cliffs ─────────────────────────
+// A cell (56_cells.js) with no house in it: rock, timber, water, rails, carts and bones. It is built from rectangles of floor (REG) rasterised on a 1 m grid; the walls,
+// floor and roof are made from that grid (walls and roof pushed about by a lattice noise so no wall is straight), the colliders from the rectangles. Scanned rock, roots,
+// the castle door and the unique weapon come from kits/dungeon.glb once the kit is ready. Light: none but what is carried (the lantern, key L) and what burns on the walls.
+// Everything is zone 0 (no room AO), lit by fire lights placed here; the cell's env is overridden to near black (Cells.env wrapper below).
+const MINE = { built: false, cell: null, O: null, FY: 0, lamp: { on: false, oil: 0 }, kit: [], lights: [], torches: [], foes: [], pieces: {} };
+// ── the plan: rectangles in the cell's frame (x east, z deeper in). fl: floor height above the cell floor; ramp: floor runs y0 -> y1 along an axis from a to b ──
+MINE.REG = [
+  { id: 'adit',  x0: -2, z0: 0,  x1: 2,  z1: 24, h: 3.1, kind: 'timber' },
+  { id: 'tally', x0: -8, z0: 24, x1: 8,  z1: 36, h: 4.4, kind: 'cave' },
+  { id: 'niche', x0: -13, z0: 27, x1: -8, z1: 33, h: 3.0, kind: 'cave' },
+  { id: 'rampA', x0: 8,  z0: 29, x1: 10, z1: 35, h: 3.4, kind: 'cave', ramp: { ax: 'x', a: 8, b: 10, y0: 0, y1: -0.8 } },
+  { id: 'flood', x0: 10, z0: 29, x1: 30, z1: 35, h: 3.4, kind: 'cave', fl: -0.8 },
+  { id: 'rampB', x0: 30, z0: 29, x1: 32, z1: 35, h: 3.4, kind: 'cave', ramp: { ax: 'x', a: 30, b: 32, y0: -0.8, y1: 0 } },
+  { id: 'sump',  x0: 32, z0: 24, x1: 44, z1: 40, h: 4.2, kind: 'cave' },
+  { id: 'north', x0: 36, z0: 40, x1: 40, z1: 48, h: 3.1, kind: 'timber' },
+  { id: 'stope', x0: 28, z0: 48, x1: 48, z1: 62, h: 5.6, kind: 'cave' },
+  { id: 'duct',  x0: 10, z0: 58, x1: 28, z1: 62, h: 3.2, kind: 'timber' },
+  { id: 'deep',  x0: -14, z0: 48, x1: 10, z1: 70, h: 8.0, kind: 'cave' },
+  { id: 'exitr', x0: -26, z0: 58, x1: -14, z1: 62, h: 3.4, kind: 'cave', ramp: { ax: 'x', a: -14, b: -26, y0: 0, y1: 3.4 } },
+  { id: 'cleft', x0: -38, z0: 54, x1: -26, z1: 66, h: 7.0, kind: 'cave', fl: 3.4 },
+];
+// where things are (cell frame)
+MINE.AT = {
+  arrive: [0, 2.6], trap: [0, 14.5], tally: [0, 30], niche: [-10.5, 30], gallery: [20, 32], sump: [38, 32], stope: [38, 55], rubble: [[31.5, 53], [48, 56]], way: [28, 31.5, 53, 56],
+  deep: [-2, 60], boss: [-2, 58], station: [-11.5, 66], chest: [-12, 52.5], exitDoor: [-35, 60], cave: { x: 20, z: -172.5 },
+};
+MINE.SPAWN = [
+  { kind: 'delver', x: 3.5, z: 31, yaw: PI }, { kind: 'delver', x: 37, z: 35, yaw: -PI / 2 }, { kind: 'delver', x: 31, z: 59, yaw: PI },
+  { kind: 'lurker', x: 26.5, z: 31.5, yaw: PI }, { kind: 'lurker', x: 29.8, z: 54.5, yaw: 0 }, { kind: 'lurker', x: -12.5, z: 60, yaw: PI / 2 },
+  { kind: 'foreman', x: -2, z: 60.5, yaw: PI / 2 },
+];
+const mhash = (a, b, c) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(c | 0, 1274126177)) | 0; h = Math.imul(h ^ (h >>> 13), 1103515245); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+const mnoise = (a, b, c) => mhash(a, b, c) * 2 - 1;
+// the grid: occupied 1 m cells -> { reg, fl (floor, cell frame), h }
+function mineGrid() {
+  const G = new Map(), key = (i, j) => (i + 200) * 1000 + (j + 200);
+  const flat = (r, x, z) => { if (!r.ramp) return r.fl || 0; const q = r.ramp, c = q.ax === 'x' ? x : z; return q.y0 + (q.y1 - q.y0) * clamp((c - q.a) / (q.b - q.a), 0, 1); };
+  for (const r of MINE.REG) for (let i = r.x0; i < r.x1; i++) for (let j = r.z0; j < r.z1; j++) G.set(key(i, j), { i, j, reg: r });
+  const get = (i, j) => G.get(key(i, j)) || null;
+  // ceiling at a lattice point: the highest roof of the (up to four) cells that meet there; floor at a point: from the cell's own region
+  const hc = (i, j) => { let h = 0; for (const [a, b] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) { const c = get(i + a, j + b); if (c) h = Math.max(h, c.reg.h + flat(c.reg, i, j)); } return h; };
+  return { G, get, flat, hc, key };
+}
+// push a point about: the same displacement wherever the lattice point is used, so the surfaces stay closed
+function mdisp(i, j, k, amp) { return [mnoise(i, j, k * 7 + 1) * amp, mnoise(i, j, k * 7 + 2) * amp]; }
+// ── the shell: floor, roof, walls, colliders ──
+function mineShell(m, O, FY, V) {
+  const g = mineGrid(), W = (x, y, z) => [O[0] + x, FY + y, O[2] + z], cells = [...g.G.values()];
+  const cave = (a, b) => [[0, 0], [-1, 0], [0, -1], [-1, -1]].some(([p, q]) => { const c = g.get(a + p, b + q); return c && c.reg.kind === 'cave'; });
+  const ceilY = (a, b) => g.hc(a, b) + (cave(a, b) ? mnoise(a, b, 9) * 0.42 : 0);
+  const amp = (a, b, k) => k === 0 ? 0 : (cave(a, b) ? 0.3 : 0.07) * (k === 3 ? 0.7 : 1);
+  const P = (a, b, k, y) => { const d = mdisp(a, b, k, amp(a, b, k)); return W(a + d[0], y, b + d[1]); };
+  const T = 3.2, rockCol = (i, j, s) => { const v = 0.80 + mhash(i, j, s) * 0.4; return [0.74 * v, 0.70 * v, 0.66 * v]; };
+  m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
+  const edges = { W: [], E: [], S: [], N: [] };
+  for (const c of cells) {
+    const { i, j, reg } = c, fl = (a, b) => g.flat(reg, a, b);
+    // floor
+    m.mat(reg.id === 'flood' || reg.id.startsWith('ramp') ? MAT.MUD : MAT.GRAVEL, reg.id === 'flood' || reg.id.startsWith('ramp') ? [0.44, 0.41, 0.38] : [0.72 + mhash(i, j, 3) * 0.12, 0.66, 0.6], 0.8);
+    m.quad(W(i, fl(i, j), j), W(i, fl(i, j + 1), j + 1), W(i + 1, fl(i + 1, j + 1), j + 1), W(i + 1, fl(i + 1, j), j), i / T, j / T, (i + 1) / T, (j + 1) / T);
+    // roof
+    m.mat(MAT.ROCK, rockCol(i, j, 5).map(v => v * 0.8), 0.7);
+    m.quad(P(i, j + 1, 3, ceilY(i, j + 1)), P(i, j, 3, ceilY(i, j)), P(i + 1, j, 3, ceilY(i + 1, j)), P(i + 1, j + 1, 3, ceilY(i + 1, j + 1)), i / T, j / T, (i + 1) / T, (j + 1) / T);
+    if (V && V.roof(reg, i, j)) { const q = [P(i, j + 1, 3, ceilY(i, j + 1)), P(i, j, 3, ceilY(i, j)), P(i + 1, j, 3, ceilY(i + 1, j)), P(i + 1, j + 1, 3, ceilY(i + 1, j + 1))], c = [0, 1, 2].map(d => (q[0][d] + q[1][d] + q[2][d] + q[3][d]) / 4), sh = (p, s2) => [c[0] + (p[0] - c[0]) * s2, c[1] + (p[1] - c[1]) * s2 - 0.05, c[2] + (p[2] - c[2]) * s2]; V.mesh.quad(sh(q[0], 0.7), sh(q[1], 0.35), sh(q[2], 0.6), sh(q[3], 0.3), 0, 0, 1, 1); }
+    // walls where the neighbour is rock: A left, B right as seen from inside
+    const wall = (kind, a0, b0, a1, b1, along) => {
+      const nrm = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }[kind];
+      m.mat(MAT.ROCK, rockCol(i + a0, j + b0, 1), 0.7);
+      const lev = (a, b, k) => { const f = fl(a, b) - 0.4, t = ceilY(a, b); return P(a, b, k, f + (t - f) * k / 3); };
+      for (let k = 0; k < 3; k++) m.quad(lev(a0, b0, k + 1), lev(a0, b0, k), lev(a1, b1, k), lev(a1, b1, k + 1), (along) / T, k * 1.2 / T, (along + 1) / T, (k + 1) * 1.2 / T);
+      edges[kind].push([i, j]);
+      if (V && V.want(reg, i, j, kind)) {      // a vein of silver laid on the wall: a ragged patch, a hand's breadth off the rock
+        const k = 1 + ((i * 7 + j * 3 + a0) & 1), q = [lev(a0, b0, k + 1), lev(a0, b0, k), lev(a1, b1, k), lev(a1, b1, k + 1)], c = [0, 1, 2].map(d => (q[0][d] + q[1][d] + q[2][d] + q[3][d]) / 4);
+        const sh = (p, s2) => [c[0] + (p[0] - c[0]) * s2 + nrm[0] * 0.05, c[1] + (p[1] - c[1]) * s2, c[2] + (p[2] - c[2]) * s2 + nrm[2] * 0.05];
+        V.mesh.quad(sh(q[0], 0.55 + mhash(i, j, 21) * 0.3), sh(q[1], 0.3 + mhash(i, j, 22) * 0.4), sh(q[2], 0.5 + mhash(i, j, 23) * 0.3), sh(q[3], 0.3 + mhash(i, j, 24) * 0.4), 0, 0, 1, 1);
+      }
+    };
+    if (!g.get(i - 1, j)) wall('W', i, j + 1, i, j, j);
+    if (!g.get(i + 1, j)) wall('E', i + 1, j, i + 1, j + 1, j);
+    if (!g.get(i, j + 1)) wall('N', i + 1, j + 1, i, j + 1, i);
+    if (!g.get(i, j - 1)) wall('S', i, j, i + 1, j, i);
+  }
+  // colliders: runs of wall edges merged into boxes, a metre thick outside the plane and 0.35 into the space
+  const run = (list, fixed, mover, mk) => {
+    const by = new Map(); for (const e of list) { const f = fixed(e), v = mover(e); (by.get(f) || by.set(f, []).get(f)).push(v); }
+    for (const [f, vs] of by) { vs.sort((a, b) => a - b); let s = vs[0], p = vs[0]; for (let q = 1; q <= vs.length; q++) { if (q === vs.length || vs[q] !== p + 1) { mk(f, s, p + 1); s = vs[q]; } p = vs[q]; } }
+  };
+  const y0 = -3, y1 = 12; m.push();
+  const box = (x0, z0, x1, z1) => addBoxCollider(m, O[0] + x0, O[2] + z0, O[0] + x1, O[2] + z1, FY + y0, FY + y1);
+  run(edges.W, e => e[0], e => e[1], (f, a, b) => box(f - 1, a, f + 0.35, b));
+  run(edges.E, e => e[0] + 1, e => e[1], (f, a, b) => box(f - 0.35, a, f + 1, b));
+  run(edges.S, e => e[1], e => e[0], (f, a, b) => box(a, f - 1, b, f + 0.35));
+  run(edges.N, e => e[1] + 1, e => e[0], (f, a, b) => box(a, f - 0.35, b, f + 1));
+  m.pop();
+  // floors you can stand on: one per rectangle (flat or ramp), same height as the drawn floor
+  for (const r of MINE.REG) {
+    if (r.ramp) addFloor(m, O[0] + r.x0, O[2] + r.z0, O[0] + r.x1, O[2] + r.z1, FY + (r.ramp.ax === 'x' ? (r.ramp.a < r.ramp.b ? r.ramp.y0 : r.ramp.y1) : 0), FY + (r.ramp.ax === 'x' ? (r.ramp.a < r.ramp.b ? r.ramp.y1 : r.ramp.y0) : 0), 'x');
+    else addFloor(m, O[0] + r.x0, O[2] + r.z0, O[0] + r.x1, O[2] + r.z1, FY + (r.fl || 0));
+  }
+  g.edges = edges; return g;
+}
+// ── the fittings ──
+LIGHT_KINDS.mine = (l, e) => 1;
+LIGHT_KINDS.hum = (l, e) => 0.82 + 0.18 * Math.sin(e.time * 1.7 + l.seed);
+function mineBuild() {
+  if (MINE.built || !CELLS_ON) return;
+  const cell = Cells.make('mine', 'The Old Mine', { kind: 'dungeon', daylight: 0, fog: [0.010, 0.011, 0.014], fogDensity: 0.055, exit: 'the hillside' });
+  const O = cell.origin, FY = cell.floorY; MINE.cell = cell; MINE.O = O; MINE.FY = FY;
+  const pack = new MeshPack(); pack.shadow = false;
+  const m = new Mesh(1 << 16); m.seed = 9301;
+  const gm = new Mesh(2048); gm.m1 = 0; gm.m2 = 0; gm.m3 = 0; gm.ao = 1; gm.grad = null; gm.wind = 0; gm.mat(MAT.PLAIN, [0.55, 0.75, 1.0]);
+  const grid = mineShell(m, O, FY, { mesh: gm, want: (r, i, j, k) => (r.id === 'deep' && mhash(i, j, 31) < 0.6) || (r.id === 'stope' && mhash(i, j, 32) < 0.16) || (r.id === 'cleft' && mhash(i, j, 33) < 0.1), roof: (r, i, j) => (r.id === 'deep' && mhash(i, j, 34) < 0.16) || (r.id === 'stope' && mhash(i, j, 35) < 0.05) }); MINE.grid = grid;
+  const wpos = (x, y, z) => [O[0] + x, FY + y, O[2] + z];
+  const put = (x, z, rot, fn, y) => { m.push().T(O[0] + x, FY + (y || 0), O[2] + z).RY(rot || 0); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; fn(m); m.pop(); return wpos(x, y || 0, z); };
+  const rnd = rng(9301), em = o => { o.cell = 'mine'; o.zone = 0; o.seed = (World.emitters.length * 0.618) % 1; o.t = 0; World.emitters.push(o); return o; };
+  // light: a fire on the wall
+  const torch = (x, z, rot) => put(x, z, rot, mm => {
+    mm.mat(MAT.METAL, COL.black); mm.box(-0.04, 1.62, -0.02, 0.04, 1.7, 0.2); mm.box(-0.03, 1.6, 0.16, 0.03, 1.8, 0.2);
+    mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([0, 1.7, 0.1], [0, 2.18, 0.26], 0.07, 0.07); mm.mat(MAT.PLAIN, [0.09, 0.05, 0.03]); mm.cyl(0, 2.16, 0.25, 0.055, 0.04, 0.12, 6, 1);
+    const p = wp(mm, 0, 2.3, 0.26); em({ type: 'fire', p, size: 0.3 }); MINE.torches.push(addLight(p, 10, [3.3, 1.75, 0.62], 0, 'fire'));
+  });
+  // an iron brazier on three legs, for the deep chamber
+  const brazier = (x, z) => put(x, z, 0, mm => {
+    mm.mat(MAT.METAL, COL.black); for (let i = 0; i < 3; i++) { const a = i * TAU / 3; mm.beam([Math.cos(a) * 0.4, 0, Math.sin(a) * 0.4], [Math.cos(a) * 0.12, 0.85, Math.sin(a) * 0.12], 0.06, 0.06); }
+    mm.lathe([[0.12, 0.8], [0.4, 0.98], [0.44, 1.1], [0.38, 1.1]], 9, 0); mm.mat(MAT.PLAIN, [0.1, 0.06, 0.04]); mm.cyl(0, 0.9, 0, 0.36, 0.34, 0.12, 9, 1);
+    const p = wp(mm, 0, 1.2, 0); em({ type: 'fire', p, size: 0.55 }); MINE.torches.push(addLight(p, 13, [3.4, 1.8, 0.7], 0, 'fire')); addCircleCollider(mm, 0, 0, 0.42, 0, 1.2);
+  });
+  // timber sets in the timbered drifts: two posts, a cap, lagging above; rails and sleepers down the middle of the adit and the tally room
+  for (const r of MINE.REG.filter(r => r.kind === 'timber')) {
+    for (let z = r.z0 + 1.5; z < r.z1 - 0.5; z += 3) put(0, z, 0, mm => {
+      const hx = (r.x1 - r.x0) / 2, cx = (r.x0 + r.x1) / 2; mm.mat(MAT.TIMBER, COL.timberDark, 0.8);
+      for (const s of [-1, 1]) { mm.cbox(cx + s * (hx - 0.28), -0.3, 0, 0.3, r.h + 0.1, 0.3, 4); if (rnd() < 0.5) mm.beam([cx + s * (hx - 0.28), 0.6, 0.15], [cx + s * (hx - 0.8), 0.1, 0.55], 0.1, 0.1); }
+      mm.mat(MAT.TIMBER, COL.timber, 0.8); mm.box(cx - hx + 0.1, r.h - 0.42, -0.17, cx + hx - 0.1, r.h - 0.12, 0.17);
+      for (const s of [-1, 1]) mm.beam([cx + s * (hx - 0.28), r.h - 0.5, 0], [cx + s * (hx - 1.1), r.h - 0.12, 0], 0.14, 0.14);
+      mm.mat(MAT.PLANKS, [0.5, 0.44, 0.38], 0.7); for (let k = 0; k < 3; k++) mm.box(cx - hx + 0.15, r.h - 0.1, -1.2 + k * 1.0, cx + hx - 0.15, r.h - 0.04, -0.4 + k * 1.0);
+    });
+  }
+  const rails = (z0, z1) => { put(0, 0, 0, mm => {
+    mm.mat(MAT.TIMBER, COL.timberDark); for (let z = z0; z < z1; z += 0.85) mm.box(-0.8, 0, z - 0.07, 0.8, 0.07, z + 0.07);
+    mm.mat(MAT.METAL, [0.34, 0.27, 0.22]); for (const sx of [-0.5, 0.5]) mm.box(sx - 0.035, 0.07, z0, sx + 0.035, 0.12, z1); }, 0.0); };
+  rails(1.5, 34);
+  // a cart: planks, iron bands, wheels; load = rock | none | tipped
+  const cart = (x, z, rot, load, tip) => put(x, z, rot, mm => {
+    if (tip) mm.RZ(tip).T(0, 0.35, 0);
+    mm.mat(MAT.PLANKS, [0.5, 0.4, 0.3], 0.6); mm.box(-0.55, 0.28, -0.85, 0.55, 0.34, 0.85); for (const sx of [-1, 1]) mm.box(sx * 0.55 - 0.03, 0.3, -0.85, sx * 0.55 + 0.03, 0.98, 0.85); for (const sz of [-1, 1]) mm.box(-0.55, 0.3, sz * 0.85 - 0.03, 0.55, 0.92, sz * 0.85 + 0.03);
+    mm.mat(MAT.METAL, [0.3, 0.26, 0.23]); mm.box(-0.58, 0.88, -0.88, 0.58, 0.94, 0.88, 0); for (const sx of [-0.5, 0.5]) for (const sz of [-0.5, 0.5]) { mm.push().T(sx, 0.2, sz).RZ(PI / 2); mm.cyl(0, -0.03, 0, 0.18, 0.18, 0.06, 10, 3); mm.pop(); }
+    if (load === 'rock') { mm.mat(MAT.ROCK, [0.45, 0.43, 0.42], 0.5); for (let i = 0; i < 9; i++) mm.ball((rnd() - 0.5) * 0.7, 0.95 + rnd() * 0.12, (rnd() - 0.5) * 1.2, 0.18 + rnd() * 0.12, 0.14, 0.18, 6, 3); mm.mat(MAT.METAL, [0.62, 0.7, 0.8]); for (let i = 0; i < 3; i++) mm.ball((rnd() - 0.5) * 0.6, 1.02, (rnd() - 0.5) * 1.0, 0.07, 0.05, 0.07, 5, 3); }
+    if (!tip) addBoxCollider(mm, -0.6, -0.9, 0.6, 0.9, 0, 1.0);
+  });
+  cart(0, 9, 0.02, 'rock'); cart(-3.2, 27.5, 1.1, null, 0.8); cart(3.5, 33.2, -0.3, 'rock');
+  // bones: a skull, a ribcage, a few long bones
+  const bones = (x, z, rot, n) => put(x, z, rot, mm => {
+    mm.mat(MAT.PLAIN, [0.72, 0.68, 0.58]); mm.ball(0, 0.07, 0, 0.09, 0.075, 0.1, 8, 5); mm.box(-0.045, 0.0, 0.06, 0.045, 0.045, 0.13, 0);
+    for (let i = 0; i < (n || 5); i++) { const a = (i + 1) * 0.45 - 1.2; mm.beam([0.3 + i * 0.08, 0.02, 0.05 + Math.sin(a) * 0.12], [0.3 + i * 0.08 + 0.03, 0.06, 0.05 + Math.sin(a) * 0.3], 0.025, 0.025); mm.beam([0.3 + i * 0.08, 0.02, 0.05 - Math.sin(a) * 0.12], [0.3 + i * 0.08 + 0.03, 0.06, 0.05 - Math.sin(a) * 0.3], 0.025, 0.025); }
+    mm.beam([0.1, 0.02, -0.3], [1.0, 0.03, -0.45], 0.04, 0.04); mm.beam([0.0, 0.02, 0.4], [0.7, 0.03, 0.6], 0.035, 0.035);
+    mm.mat(MAT.CLOTH, [0.22, 0.18, 0.14], 0.5); mm.ball(0.5, 0.025, 0.05, 0.4, 0.03, 0.22, 8, 3);
+  });
+  MINE.bones = bones; MINE.put = put; MINE.wpos = wpos; MINE.em = em;
+  // ── torches: pools of light with dark between ──
+  torch(-1.85, 5, PI / 2); torch(1.85, 18.5, -PI / 2); torch(7.85, 33, -PI / 2); torch(-7.85, 25.4, PI / 2); torch(14, 29.15, 0); torch(27.5, 34.85, PI);
+  torch(43.85, 28, -PI / 2); torch(28.15, 50.5, PI / 2); torch(19, 58.15, 0); torch(-2, 47.9, 0, 0);
+  brazier(-8, 54); brazier(4, 54); brazier(-8, 66); brazier(4, 66);
+  // ── the tally room: a table of tally boards, racks of tools, barrels, a tipped cart; Dunstan's crew drew their pay here ──
+  put(-5.2, 34, 0, mm => { mm.mat(MAT.PLANKS, COL.woodDark, 0.6); mm.box(-1.1, 0.7, -0.4, 1.1, 0.78, 0.4); for (const sx of [-1, 1]) for (const sz of [-1, 1]) mm.box(sx * 0.95 - 0.05, 0, sz * 0.3 - 0.05, sx * 0.95 + 0.05, 0.7, sz * 0.3 + 0.05); addBoxCollider(mm, -1.15, -0.45, 1.15, 0.45, 0, 0.8);
+    mm.mat(MAT.PLAIN, COL.parchment); mm.box(-0.8, 0.78, -0.2, -0.3, 0.8, 0.2); mm.mat(MAT.PLANKS, [0.45, 0.36, 0.26], 0.4); for (let i = 0; i < 7; i++) mm.box(0.0 + i * 0.1, 0.78, -0.2, 0.04 + i * 0.1, 0.84, 0.15); });
+  put(-6.6, 29, PI / 2, mm => { Props.barrel(mm); }); put(-6.7, 30.3, PI / 2 + 0.4, mm => { Props.barrel(mm); }); put(6.8, 26.5, 0, mm => Props.crate(mm, 0.8)); put(6.2, 26.7, 0.4, mm => { mm.T(0, 0.8, 0); Props.crate(mm, 0.55); });
+  put(-7.6, 30, PI / 2, mm => { mm.mat(MAT.TIMBER, COL.timberDark); mm.box(-1.0, 0.9, -0.03, 1.0, 1.0, 0.03); mm.box(-1.0, 1.5, -0.03, 1.0, 1.6, 0.03); mm.mat(MAT.METAL, [0.5, 0.5, 0.54]); for (let i = 0; i < 5; i++) { mm.beam([-0.8 + i * 0.4, 0.95, 0.05], [-0.75 + i * 0.4, 1.9, 0.12], 0.03, 0.045); mm.box(-0.85 + i * 0.4, 1.9, 0.06, -0.65 + i * 0.4, 2.0, 0.16); } });
+  bones(2.4, 29.5, 0.7, 6); bones(-3.6, 25.5, 2.2, 4);
+  // the niche: a bedroll, a cold hearth, an oil flask on the ledge
+  put(-10.5, 30, 0, mm => { mm.mat(MAT.CLOTH, [0.32, 0.27, 0.2], 0.5); mm.box(-0.45, 0.02, -0.9, 0.45, 0.12, 0.9); mm.mat(MAT.CLOTH, [0.4, 0.36, 0.28], 0.5); mm.box(-0.35, 0.12, 0.45, 0.35, 0.2, 0.85); mm.mat(MAT.ROCK, [0.3, 0.3, 0.3], 0.5); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; mm.ball(Math.cos(a) * 0.5 + 1.2, 0.05, Math.sin(a) * 0.5 + 0.6, 0.12, 0.08, 0.1, 6, 3); } mm.mat(MAT.PLAIN, [0.06, 0.05, 0.04]); mm.cyl(1.2, 0.0, 0.6, 0.36, 0.36, 0.02, 9, 1); });
+  // ── the flooded gallery: a boarded walk along the north wall with a gap, posts, a tilted ladder, a sunk cart ──
+  put(0, 0, 0, mm => {
+    mm.mat(MAT.PLANKS, [0.45, 0.38, 0.3], 0.5);
+    for (const [a, b] of [[10.5, 18], [22, 29.5]]) { for (let x = a; x < b; x += 0.34) { const w = 0.3 + (mhash(x * 10, 3, 4) * 0.04); mm.box(x, -0.07, 33.45 + mnoise(x * 7, 1, 1) * 0.03, x + w, 0.0, 34.9); }
+      for (const x of [a + 0.3, (a + b) / 2, b - 0.3]) { mm.mat(MAT.TIMBER, COL.timberDark); mm.cbox(x, -0.9, 33.6, 0.14, 0.9, 0.14, 0); mm.cbox(x, -0.9, 34.8, 0.14, 0.9, 0.14, 0); } mm.mat(MAT.PLANKS, [0.45, 0.38, 0.3], 0.5); mm.box(a, -0.2, 33.4, b, -0.12, 33.5); mm.box(a, -0.2, 34.85, b, -0.12, 34.95); }
+    mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([18, 0.0, 33.8], [17.3, -0.9, 33.0], 0.1, 0.06); mm.beam([22, 0.0, 34.2], [22.5, -0.7, 33.4], 0.1, 0.06);     // the broken ends
+  });
+  for (const [a, b] of [[10.5, 18], [22, 29.5]]) { m.push(); addBoxCollider(m, O[0] + a, O[2] + 33.4, O[0] + b, O[2] + 34.95, FY - 3, FY + 0.9); m.pop(); }
+  // the walk is a floor of its own, at the cell floor
+  addFloor(m, O[0] + 10.5, O[2] + 33.4, O[0] + 18, O[2] + 34.95, FY); addFloor(m, O[0] + 22, O[2] + 33.4, O[0] + 29.5, O[2] + 34.95, FY);
+  // (the rail, the tilted cart under the water)
+  put(24, 31, 0.5, mm => { mm.mat(MAT.PLANKS, [0.3, 0.27, 0.22], 0.6); mm.box(-0.55, -0.7, -0.85, 0.55, -0.62, 0.85); for (const sx of [-1, 1]) mm.box(sx * 0.55 - 0.03, -0.65, -0.85, sx * 0.55 + 0.03, -0.1, 0.85); });
+  bones(14.5, 30.5, 1.2, 5); bones(26.2, 29.8, 0.2, 3);
+  // ── the sump: spoil, a pump, tools left in a heap ──
+  put(38, 36, 0.3, mm => { mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([-0.9, 0, 0], [-0.1, 1.9, 0], 0.12, 0.12); mm.beam([0.9, 0, 0], [0.1, 1.9, 0], 0.12, 0.12); mm.box(-0.15, 1.8, -0.15, 0.15, 1.95, 0.15); mm.mat(MAT.METAL, [0.3, 0.27, 0.24]); mm.beam([0, 1.9, 0], [0.6, 1.2, 0.2], 0.04, 0.04); mm.cyl(0.7, 0.0, 0.2, 0.12, 0.12, 1.2, 8, 1); addCircleCollider(mm, 0, 0, 0.9, 0, 2); });
+  put(41.2, 30.5, 0, mm => Props.chest(mm)); bones(41.5, 36.5, 2.8, 5);
+  // ── the collapsed stope: the roof came down across the route; rubble with a way round on the west side ──
+  mine_rubble(m, put, rnd, O, FY);
+  // ── the deep chamber: the Foreman's ground ──
+  mine_deep(m, put, rnd, O, FY, wpos, em);
+  pack.add(m, { kind: 'opaque', cell: 'mine', nearOnly: true, noShadow: true });
+  // water: the flooded gallery, a puddle in the sump, the silver pool
+  const wm = new Mesh(512); wm.mat(MAT.PLAIN, [0.03, 0.045, 0.05]); wm.ao = 1; wm.m1 = 0; wm.m2 = 0; wm.m3 = 0; wm.grad = null; wm.wind = 0;
+  const wq = (x0, z0, x1, z1, y) => wm.quad(wpos(x0, y, z0), wpos(x0, y, z1), wpos(x1, y, z1), wpos(x1, y, z0));
+  wq(9, 29, 31, 35, -0.06); wq(36, 25, 42, 30, 0.01); wq(-5, 66, 1, 69, 0.01);
+  gm.quad(wpos(-4.6, 0.04, 66.4), wpos(-4.6, 0.04, 68.6), wpos(0.6, 0.04, 68.6), wpos(0.6, 0.04, 66.4), 0, 0, 1, 1);      // the silver pool glows
+  pack.add(wm, { kind: 'opaque', cell: 'mine', noShadow: true, nearOnly: true });
+  // the veins of silver in the roof and walls of the deep chamber and the stope: emissive, cold
+  pack.add(gm, { kind: 'glow', cell: 'mine', noShadow: true, nearOnly: true });
+  pack.upload('mine'); World.packs.push(pack); MINE.pack = pack;
+  MINE.built = true;
+  mine_wire(cell, wpos);
+}
+function mine_rubble(m, put, rnd, O, FY) {
+  // the fall: a wall of broken rock from the east wall to the crawl on the west side, two layers of boulders and a slope of scree, timbers jutting out
+  const A = MINE.AT.rubble;
+  put(0, 0, 0, mm => {
+    mm.mat(MAT.ROCK, [0.62, 0.6, 0.57], 0.5);
+    for (let layer = 0; layer < 3; layer++) for (let x = A[0][0] + 0.3 + layer * 0.5; x < A[1][0] + 0.8; x += 1.1) for (let z = A[0][1] + 0.2; z < A[1][1]; z += 1.0) {
+      const r = (0.55 + rnd() * 0.55) * (1 - layer * 0.18); if (rnd() < 0.18 + layer * 0.22) continue;
+      mm.ball(x + (rnd() - 0.5) * 0.5, 0.35 + layer * 0.7 + rnd() * 0.3, z + (rnd() - 0.5) * 0.5, r, r * (0.7 + rnd() * 0.3), r * (0.8 + rnd() * 0.3), 7, 4);
+    }
+    mm.mat(MAT.GRAVEL, [0.4, 0.38, 0.36], 0.8); for (let i = 0; i < 40; i++) mm.ball(A[0][0] + rnd() * 16.5, 0.08, A[0][1] - 1.2 - rnd() * 2.6 * (0.4 + rnd()), 0.25 + rnd() * 0.5, 0.12, 0.25 + rnd() * 0.4, 6, 3);
+    mm.mat(MAT.TIMBER, COL.timberDark); for (const [x, y, z, x2, y2, z2] of [[36, 2.4, 53.4, 38.2, 3.9, 56.4], [42, 2.9, 53.1, 40.8, 1.5, 51.0], [34, 2.0, 55.6, 33.2, 3.6, 52.6]]) mm.beam([x, y, z], [x2, y2, z2], 0.3, 0.3);
+    // the crawl: a leaning beam and a shed of stone at the west wall, so the way round is plainly a way
+    mm.beam([28.3, 0, 57.2], [30.8, 2.5, 55.2], 0.28, 0.28); mm.beam([31.3, 0.0, 52.8], [29.2, 2.7, 54.1], 0.24, 0.24);
+  });
+  m.push(); addBoxCollider(m, O[0] + A[0][0], O[2] + 53.1, O[0] + A[1][0], O[2] + 55.9, FY - 2, FY + 8); m.pop();
+}
+function mine_deep(m, put, rnd, O, FY, wpos, em) {
+  // three stone columns left standing in the Foreman's ground: cover when he charges
+  for (const [x, z] of [[-7.5, 58], [3.5, 58], [-2, 63]]) put(x, z, 0, mm => {
+    mm.mat(MAT.ROCK, [0.48, 0.45, 0.43], 0.6); mm.lathe([[1.5, -0.4], [1.0, 0.5], [0.85, 2.0], [0.95, 4.0], [0.8, 6.0], [1.3, 8.2]], 10, 0);
+    mm.mat(MAT.ROCK, [0.36, 0.34, 0.33], 0.6); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; mm.ball(Math.cos(a) * 1.25, 0.15, Math.sin(a) * 1.25, 0.5, 0.3, 0.5, 6, 3); }
+    addCircleCollider(mm, 0, 0, 1.02, -1, 9);
+  });
+  // the miners' boots, in a row facing the silver pool, with the hats beside them: nobody has moved them in fifty years
+  put(0, 65.2, 0, mm => { for (let i = 0; i < 12; i++) { const x = -5.5 + i * 0.62; mm.push().T(x, 0, 0).RY(PI + (mhash(i, 4, 4) - 0.5) * 0.15); mm.mat(MAT.PLAIN, [0.13, 0.095, 0.07]); for (const s of [-1, 1]) { mm.box(s * 0.1 - 0.05, 0, -0.1, s * 0.1 + 0.05, 0.12, 0.12); mm.box(s * 0.1 - 0.045, 0.12, -0.08, s * 0.1 + 0.045, 0.3, 0.05); } mm.pop(); mm.mat(MAT.CLOTH, [0.3, 0.25, 0.19], 0.4); mm.ball(x, 0.05, 0.55, 0.14, 0.06, 0.14, 7, 3); } });
+  // bread laid on a slab at the mouth of the chamber: the offering the village stopped sending
+  put(8.6, 51.5, 0.2, mm => { mm.mat(MAT.STONE, [0.4, 0.38, 0.36], 0.6); mm.box(-0.9, 0, -0.45, 0.9, 0.7, 0.45); mm.mat(MAT.CLOTH, [0.55, 0.5, 0.42], 0.5); mm.box(-0.7, 0.7, -0.35, 0.7, 0.72, 0.35); mm.mat(MAT.PLAIN, [0.36, 0.27, 0.16]); for (let i = 0; i < 5; i++) mm.ball(-0.5 + i * 0.25, 0.8, (i % 2 - 0.5) * 0.2, 0.11, 0.07, 0.07, 6, 4); mm.mat(MAT.PLAIN, [0.5, 0.52, 0.4]); mm.ball(0.5, 0.78, 0.15, 0.05, 0.04, 0.04, 5, 3); addBoxCollider(mm, -0.95, -0.5, 0.95, 0.5, 0, 0.9); });
+  // Corwin's station in the alcove: a bedroll, a lamp gone cold, a table and a chest; a pick leaning on the wall
+  put(-11.2, 66.2, 0.3, mm => { mm.mat(MAT.CLOTH, [0.3, 0.26, 0.2], 0.5); mm.box(-0.5, 0.02, -1.0, 0.5, 0.12, 0.9); mm.mat(MAT.PLANKS, COL.woodDark, 0.6); mm.box(1.0, 0.7, -0.5, 2.0, 0.78, 0.5); for (const sx of [1.05, 1.9]) for (const sz of [-0.45, 0.45]) mm.box(sx - 0.04, 0, sz - 0.04, sx + 0.04, 0.7, sz + 0.04); addBoxCollider(mm, 0.98, -0.52, 2.02, 0.52, 0, 0.8);
+    mm.mat(MAT.METAL, COL.black); mm.lathe([[0.06, 0.78], [0.08, 0.9], [0.05, 0.98]], 6, 1); mm.mat(MAT.PLAIN, COL.parchment); mm.box(1.5, 0.78, -0.3, 1.8, 0.79, 0.1); });
+  put(-12.2, 52.5, PI / 2, mm => Props.chest(mm, 1.1));
+  bones(-5, 51, 1, 4); MINE.bones(5.5, 62.5, 2.1, 6); MINE.bones(-11, 58.4, 0.3, 5); MINE.bones(7.5, 67.5, 1.2, 4); MINE.bones(9.5, 60, 0.6, 5);
+  // ── the foot of the second way out: a sagging rope ladder of roots and a trickle on the stone ──
+  put(-30, 60, 0, mm => { mm.mat(MAT.ROCK, [0.4, 0.4, 0.38], 0.6); for (let i = 0; i < 9; i++) mm.ball(-4 + rnd() * 8, 3.4 + 0.1, -5 + rnd() * 10, 0.3 + rnd() * 0.3, 0.2, 0.3 + rnd() * 0.3, 6, 3); });
+}
+function bones(x, z, rot, n) { return MINE.bones(x, z, rot, n); }
+// ───────────────────────── items ─────────────────────────
+Object.assign(ITEMS, {
+  oil: ['Lamp oil', 'A stoppered clay flask of whale oil, enough to keep a miner’s lantern burning for ten minutes.', { value: 4, cost: 7 }],
+  foremankey: ['The Foreman’s key', 'A short brass key worn bright, on a loop of leather that still smells of tallow smoke. Every shift’s count is scratched on the bow.'],
+  silverthread: ['Silverthread', 'A long estoc of grey silver steel drawn from the deep seam. Plain, balanced and a little too light. It hums in the hand when the Hollow are near.', { slot: 'weapon', dmg: 27, blade: [0.92, 1.7, 0.026], value: 160 }],
+});
+// ───────────────────────── wiring: doors, the lantern, the trap, what you can pick up ─────────────────────────
+const MINE_S = () => (S.mine = S.mine || { oil: 0, trap: 0 });
+function mine_wire(cell, wpos) {
+  const O = MINE.O, FY = MINE.FY, P = WILDS.P.mine;
+  // the door on the hill becomes a portal pair (the barred door of 79_wilds.js)
+  const di = World.interact.findIndex(i => i.id === 'mine.door'), door = di >= 0 ? World.interact[di] : null; if (di >= 0) World.interact.splice(di, 1);
+  const A = siteToWorld(P, 0, -0.5), Dn = siteToWorld(P, 0, 3.0), ay = Terrain.y(A[0], A[1]), yawOut = Math.atan2(Dn[0] - A[0], -(Dn[1] - A[1]));
+  const dp = door ? door.p : [A[0], ay + 1.2, A[1]];
+  cell.enter = { p: wpos(0, 0.05, 2.6), yaw: PI, cell: 'mine', name: 'The Old Mine' };
+  cell.leave = { p: [A[0], ay, A[1]], yaw: yawOut, cell: null, name: 'the hillside' };
+  const open = () => { if (S.flags.mineOpen) return true; if (has('minekey')) { S.flags.mineOpen = 1; toast('The Sexton’s key turns with a groan. The bar lifts out of its brackets.'); if (typeof uiObjective === 'function') uiObjective(); save(); return true; } return false; };
+  cell.portalOut = { kind: 'portal', id: 'door.mine.in', p: dp, r: 3.0, zone: 0, cell: 'mine', label: 'Enter the Old Mine', dest: cell.enter, side: 'out', lock: () => open() ? null : 'Barred from the far side. Iron and oak: you will not shift it. Somebody, once, kept a key for it.' };
+  cell.portalIn = { kind: 'portal', id: 'door.mine.out', p: wpos(0, 1.1, 0.7), r: 2.4, zone: 0, cell: 'mine', label: 'Leave to the hillside', dest: cell.leave, side: 'in' };
+  World.interact.push(cell.portalOut, cell.portalIn);
+  // the second way out: a cleft in the rock above the Hermit's Pool, found from inside
+  const cx = 27.5, cz = -182.6, cy = Terrain.y(cx, cz);       // the rock face beside the fall, above the pool (the valley ends at radius 184: nothing can stand beyond it)
+  cell.cleft = { p: [cx, Terrain.y(cx, cz + 1.8), cz + 1.8], yaw: PI, cell: null, name: 'The cliffs above the Hermit’s Pool' };
+  const cin = { p: wpos(-33.5, 3.45, 60), yaw: -PI / 2, cell: 'mine', name: 'The Old Mine' };
+  World.interact.push({ kind: 'portal', id: 'door.mine.cleft', p: wpos(-36, 4.5, 60), r: 2.6, zone: 0, cell: 'mine', label: 'Climb out by the cleft', dest: cell.cleft, side: 'in' });
+  World.interact.push({ kind: 'portal', id: 'door.mine.cleft.in', p: [cx, cy + 0.9, cz + 0.9], r: 2.6, zone: 0, label: 'Squeeze into the cleft', dest: cin, side: 'out' });
+  mine_cleftOutside(cx, cz, cy);
+  // oil and a few other things on the floor
+  const mi = (kind, id, x, y, z, label, item, extra) => {
+    const key = 'mp.' + kind; MINE.pm = MINE.pm || {}; const mesh = MINE.pm[key] || (MINE.pm[key] = IX.mesh(kind)); const p3 = wpos(x, y, z);
+    const obj = addSkinned(mesh, { c: p3, r: 0.6, zone: 0, kind: 'pickup', cell: 'mine', light: 0.7 }); R.boneData.set(m4.translate(m4.create(), p3[0], p3[1], p3[2]), obj.slot * 256);
+    const it = Object.assign({ kind: 'pickup', id, item, p: [p3[0], p3[1] + 0.2, p3[2]], r: 1.9, zone: 0, obj, label, cell: 'mine' }, extra || {}); World.interact.push(it); World.pickups.push(it); return it;
+  };
+  MINE.mi = mi;
+  mi('candle', 'mine.oil.1', -9.2, 0.0, 28.4, 'Take the oil', 'oil'); mi('candle', 'mine.oil.2', 5.4, 0.0, 25.2, 'Take the oil', 'oil'); mi('candle', 'mine.oil.3', 40.6, 0.0, 33.8, 'Take the oil', 'oil'); mi('candle', 'mine.oil.4', -9.6, 0.0, 64.8, 'Take the oil', 'oil');
+  mi('loaf', 'mine.bread', 8.4, 0.82, 51.4, 'Take the bread', 'bread');
+  MINE.journal = mi('book', 'mine.journal', -9.4, 0.79, 66.2, 'Take Corwin’s journal', 'journal', { journal: true });
+  // the Foreman's strongbox
+  World.interact.push({ p: wpos(-12.2, 0.5, 52.5), r: 2.2, zone: 0, kind: 'chest', id: 'mine.chest', cell: 'mine', loot: [['silverthread', 1], ['gold', 55], ['oil', 2], ['potion', 1]], foremanLock: true });
+  // the trap: cord, slab, three states
+  mine_trap(wpos);
+  // the lantern's light
+  const L = MINE.lamp.light = addLight([0, -9999, 0], 9.5, [2.9, 1.7, 0.7], 0, 'mine'); L.power = e => (World.cell && World.cell.id === "mine") ? (MINE.lamp.on ? 0.92 + 0.08 * Math.sin(e.time * 9.1) : 0.12) : 0;
+  // the cold light of the deep, and of the cleft
+  for (const [x, y, z, r, c] of [[-2, 4.6, 67, 14, [0.9, 1.5, 2.6]], [-12, 3.2, 56, 10, [0.7, 1.2, 2.2]], [44, 3.0, 58, 9, [0.6, 1.0, 1.8]], [-3, 5, 54, 10, [0.7, 1.2, 2.2]], [-32, 6.8, 60, 12, [0.85, 1.15, 1.35]]]) { const l = addLight(wpos(x, y, z), r, c, 0, 'hum'); MINE.lights.push(l); }
+}
+function mine_cleftOutside(cx, cz, cy) {
+  // a fissure in the cliff above the fall: two leaning slabs, a black slot between, ferns and a trickle
+  const pack = new MeshPack(); pack.shadow = false; const m = new Mesh(1024); m.seed = 77; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
+  m.push().T(cx, cy, cz);
+  m.mat(MAT.PLAIN, [0.015, 0.015, 0.018]); m.box(-0.55, -0.1, -2.2, 0.55, 2.7, -0.2);
+  m.mat(MAT.ROCK, [0.52, 0.5, 0.47], 0.6); for (const s of [-1, 1]) { m.push().T(s * 0.95, 0, 0).RZ(-s * 0.1); m.lathe([[1.0, -0.6], [0.8, 0.8], [0.55, 2.2], [0.3, 3.2], [0.04, 3.6]], 7, 0); m.pop(); }
+  m.mat(MAT.ROCK, [0.4, 0.38, 0.36], 0.6); m.box(-1.2, 2.55, -0.9, 1.2, 3.1, 0.5); for (let i = 0; i < 10; i++) { const a = (i - 4.5) * 0.45; m.ball(Math.sin(a) * 2.1, 0.2, 0.3 + Math.cos(a) * 0.8, 0.35 + (i % 3) * 0.12, 0.3, 0.35, 6, 3); }
+  m.pop();
+  addBoxCollider(m, cx - 1.8, cz - 0.4, cx + 1.8, cz + 0.4, cy - 1, cy + 3);      // (the slabs; the slot between them is open)
+  pack.add(m, { kind: 'opaque', maxDist: 100, noShadow: true }); pack.upload('mine-cleft'); World.packs.push(pack);
+  WB.kit.hermit = WB.kit.hermit || []; for (const [dx, dz, n, s] of [[-1.5, 1.0, 'Fern_1', 1.4], [1.6, 1.2, 'Fern_1', 1.2], [0.2, 1.9, 'weed_plant_02_a', 2.2]]) WB.kit.hermit.push({ name: n, x: cx + dx, y: cy, z: cz + dz, s, ry: dx, rx: 0, rz: 0 });
+}
+// ── the trap: a cord across the adit at ankle height, a slab on a rope above it. Step over it (jump), cut it, or take the slab on the head ──
+function mine_trap(wpos) {
+  const [tx, tz] = MINE.AT.trap, O = MINE.O, FY = MINE.FY, pack = new MeshPack(); pack.shadow = false;
+  const mk = fn => { const m = new Mesh(512); m.seed = 5; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; m.push().T(O[0] + tx, FY, O[2] + tz); fn(m); m.pop(); return m; };
+  const posts = mm => { mm.mat(MAT.METAL, COL.black); for (const s of [-1, 1]) { mm.cbox(s * 1.72, 0.12, 0, 0.1, 0.34, 0.1, 4); mm.cbox(s * 1.72, 0.5, 0, 0.16, 0.05, 0.16, 4); } };
+  const slab = (mm, y) => { mm.mat(MAT.ROCK, [0.46, 0.44, 0.42], 0.6); mm.box(-1.05, y, -1.0, 1.05, y + 0.45, 1.0); mm.ball(0, y + 0.45, 0, 0.8, 0.2, 0.7, 7, 3); };
+  const cordTaut = mm => { mm.mat(MAT.CLOTH, [0.8, 0.74, 0.58], 0.3); mm.beam([-1.72, 0.3, 0], [1.72, 0.3, 0], 0.025, 0.025); mm.beam([1.72, 0.3, 0], [1.72, 1.2, 0.1], 0.02, 0.02); mm.beam([1.72, 1.2, 0.1], [1.1, 2.66, 0.9], 0.02, 0.02); };
+  const ropes = mm => { mm.mat(MAT.CLOTH, [0.55, 0.46, 0.33], 0.3); for (const [x, z] of [[-0.9, -0.9], [0.9, -0.9], [0.9, 0.9], [-0.9, 0.9]]) mm.beam([x, 2.9, z], [x * 0.3, 3.1, z * 0.3], 0.03, 0.03); mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([-1.9, 3.08, 0], [1.9, 3.08, 0], 0.2, 0.2); };
+  const set = mk(mm => { posts(mm); cordTaut(mm); ropes(mm); slab(mm, 2.45); });
+  const sprung = mk(mm => { posts(mm); mm.mat(MAT.CLOTH, [0.8, 0.74, 0.58], 0.3); mm.beam([-1.72, 0.3, 0], [-1.0, 0.04, 0.3], 0.025, 0.025); mm.beam([1.72, 0.3, 0], [0.9, 0.04, -0.2], 0.025, 0.025); ropes(mm); slab(mm, 0.0); mm.mat(MAT.ROCK, [0.4, 0.38, 0.36], 0.5); for (let i = 0; i < 7; i++) mm.ball(-1.0 + i * 0.35, 0.1, (i % 2 ? 1 : -1) * 1.15, 0.2, 0.14, 0.2, 5, 3); });
+  const cut = mk(mm => { posts(mm); mm.mat(MAT.CLOTH, [0.8, 0.74, 0.58], 0.3); mm.beam([-1.72, 0.3, 0], [-1.3, 0.05, 0.2], 0.025, 0.025); mm.beam([1.72, 0.3, 0], [1.4, 0.06, -0.2], 0.025, 0.025); mm.beam([1.72, 0.3, 0], [1.72, 1.2, 0.1], 0.02, 0.02); ropes(mm); slab(mm, 2.45); });
+  MINE.trapItems = [pack.add(set, { kind: 'opaque', cell: 'mine', nearOnly: true, noShadow: true }), pack.add(sprung, { kind: 'opaque', cell: 'mine', nearOnly: true, noShadow: true }), pack.add(cut, { kind: 'opaque', cell: 'mine', nearOnly: true, noShadow: true })];
+  pack.upload('mine-trap'); World.packs.push(pack);
+  World.interact.push({ kind: 'cord', id: 'mine.cord', p: wpos(tx + 1.6, 0.5, tz), r: 2.0, zone: 0, cell: 'mine' });
+  const inner = sceneUpdate; sceneUpdate = function (camPos, q) {
+    inner(camPos, q);
+    if (!MINE.trapMeshes) { MINE.trapMeshes = MINE.trapItems.map(it => (SC.statics.find(s => s.it === it) || {}).mesh); }
+    const st = MINE_S().trap | 0; MINE.trapMeshes.forEach((me, i) => { if (me) me.visible = me.visible && i === st; });
+  };
+}
+// ── the lantern: carried, lit with L, burning oil while the mine is dark; a dry lantern is no light at all ──
+function mineLampOn() { return !!(World.cell && World.cell.id === 'mine' && has('lantern') && S.flags.lampOff !== 1 && MINE_S().oil > 0); }
+function mineTick(dt) {
+  const c = World.cell; if (!MINE.built || !c || c.id !== 'mine') { MINE.lamp.on = false; return; }
+  const ms = MINE_S();
+  if (has('lantern') && S.flags.lampOff !== 1 && ms.oil <= 0) {
+    if (has('oil')) { give('oil', -1); ms.oil = 600; toast('You trim the wick and fill the lantern from a flask.'); } else if (!MINE.lamp.warnedDry) { MINE.lamp.warnedDry = true; toast('The lantern is dry. Without oil the dark is complete.'); }
+  } else if (ms.oil > 0) MINE.lamp.warnedDry = false;
+  const on = mineLampOn(); MINE.lamp.on = on;
+  if (on) { ms.oil = Math.max(0, ms.oil - dt); if (ms.oil < 45 && !MINE.lamp.warnedLow) { MINE.lamp.warnedLow = true; toast('The lantern gutters. It wants oil.'); } if (ms.oil > 90) MINE.lamp.warnedLow = false; }
+  const L = MINE.lamp.light, P = Player.pos, f = [Math.sin(Player.yaw), 0, -Math.cos(Player.yaw)];
+  L.p[0] = P[0] + f[0] * 0.35; L.p[1] = P[1] + 1.35; L.p[2] = P[2] + f[2] * 0.35; L.r = on ? 15 : 2.6; L.c[0] = on ? 10.5 : 0.5; L.c[1] = on ? 6.4 : 0.3; L.c[2] = on ? 2.9 : 0.12;      /* coordinator: at 2.9 the lit lantern showed almost nothing on screen (mean pixel 14 of 255); the carried light must make the tunnel readable for ten metres */
+  MINE.lamp.dark = !on;
+  if (mineTrapCheck) mineTrapCheck();
+}
+function mineTrapCheck() {
+  const ms = MINE_S(); if (ms.trap) return; const O = MINE.O, FY = MINE.FY, P = Player.pos, [tx, tz] = MINE.AT.trap;
+  if (Math.abs(P[0] - (O[0] + tx)) < 1.9 && Math.abs(P[2] - (O[2] + tz)) < 0.3 && P[1] < FY + 0.42) {
+    ms.trap = 1; Snd.event('hit.wood', [P[0], P[1] + 1, P[2]]); setTimeout(() => Snd.event('hit.metal', [P[0], P[1], P[2]]), 120);
+    toast('The cord snaps. A slab of rock comes down on you.'); RPG.damage(24, null, 'fall'); RPG.shake = 1; save();
+  }
+}
+// the lantern key; the cell's dark; the first time through either door the mine counts as open
+document.addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && game.playing && !Player.locked && World.cell && World.cell.id === 'mine' && has('lantern')) { S.flags.lampOff = S.flags.lampOff === 1 ? 0 : 1; toast(S.flags.lampOff === 1 ? 'You douse the lantern.' : (MINE_S().oil > 0 ? 'You light the lantern.' : 'The lantern is dry.')); } });
+const _ce94 = Cells.env;
+Cells.env = function (e) { e = _ce94(e); const c = Cells.cur; if (c && c.id === 'mine') { const k = MINE.dbg || 1.6; if (MINE.lamp.on && !MINE.dbg) { e.ambSky = [0.21, 0.155, 0.095]; e.ambGnd = [0.125, 0.09, 0.055]; e.fogDensity = 0.062; } else { e.ambSky = [0.018 * k, 0.020 * k, 0.026 * k]; e.ambGnd = [0.010 * k, 0.011 * k, 0.013 * k]; e.fogDensity = 0.07; } } return e; };      /* coordinator: the carried lantern is also a warm ambient that the dark fog swallows with distance, so it always shows the ground and walls around you even where the point light does not reach (deep chamber and gallery were black with the lamp lit) */
+const _cc94 = Cells.change;
+Cells.change = function (c) { _cc94(c); if (c && c.id === 'mine') { if (!S.flags.mineOpen) { S.flags.mineOpen = 1; if (typeof uiObjective === 'function') uiObjective(); } if (has('lantern') && !MINE_S().oil) MINE_S().oil = 600; } };
+const _wa94 = World.waterAt;
+World.waterAt = (x, z) => { if (MINE.built && x > MINE.O[0] + 9 && x < MINE.O[0] + 31 && z > MINE.O[2] + 29 && z < MINE.O[2] + 35) return MINE.FY - 0.06; return _wa94(x, z); };
+// ── use: cut the cord; the Foreman's chest wants his key; Corwin's journal ──
+const _il94 = interactLabel, _iu94 = interactUse;
+interactLabel = function (it) {
+  if (it.kind === 'cord') return (MINE_S().trap | 0) === 0 ? 'Cut the cord' : null;
+  if (it.id === 'mine.chest' && !S.opened[it.id]) return has('foremankey') ? 'Open the Foreman’s strongbox' : 'Strongbox';
+  return _il94(it);
+};
+interactUse = function (it) {
+  if (it.kind === 'cord') { MINE_S().trap = 2; Snd.event('hit.metal', it.p); toast('You cut the cord. The slab stays up on its rope.'); save(); return; }
+  if (it.foremanLock && !S.opened[it.id] && !has('foremankey')) { Audio2.door(0.4); return toast('Locked. A brass lock, worn bright. The man who counted heads will have the key.'); }
+  if (it.journal && !it.gone) { const r = _iu94(it); S.flags.corwin = 1; setTimeout(() => openReader('Corwin’s journal', MINE_JOURNAL), 350); if (typeof mainSync === 'function') mainSync(); save(); return r; }
+  return _iu94(it);
+};
+const MINE_JOURNAL = 'Corwin, miner. Third week of the dry.\n\nI came down for the silver and I have found it, and it is singing.\n\nThe seal at the bottom of the adit was never a seal: the sexton’s key turns it from this side. They put bread out on the slab at the mouth of the deep each dawn. Somebody is eating it. Somebody is counting heads in the dark: one, two, three, all the way to eleven. I make it twelve. Twelve boots stood in a row by the water, and the Foreman standing in front of them, patient.\n\nThe bread stopped coming. I heard the rope stop. I have not been hungry. That frightens me more than the dark does.\n\nIf you read this, go back up. Go to the Hart. The cellar has a way down to the lake shore, and the bread went out by that road. Tell Hale. Tell him the bell.\n\nI will go and ask the Foreman for my shift.';
+// ── scanned rock, roots and timber (kits/dungeon.glb), placed once the kit is ready ──
+const MINE_ROCKS = [['rock_face_02', 1.06, 0.4], ['boulder_01', 0.91, 0.25], ['namaqualand_boulder_03', 1.53, 0.2], ['rock_face_01', 1.91, 0.15]];
+function mineKit() {
+  if (!MINE.built || MINE.kitDone || typeof kitReady !== 'function' || !kitReady() || !Kit.pieces.rock_face_01) return; MINE.kitDone = true;
+  const O = MINE.O, FY = MINE.FY, G = MINE.grid, B = Kit.batch({ name: 'mine', cell: 14 });
+  const add = (n, x, y, z, ry, s, rx) => { if (!Kit.pieces[n]) return; B.add(n, Kit.matrix({ p: [O[0] + x, FY + y, O[2] + z], r: [rx || 0, ry || 0, 0], s: s || 1 }), { zone: 0, skyVis: 0.3, cast: false }); };
+  const NRM = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }, POS = { W: (i, j) => [i, j + 0.5], E: (i, j) => [i + 1, j + 0.5], N: (i, j) => [i + 0.5, j + 1], S: (i, j) => [i + 0.5, j] };
+  const pick = h => { let a = 0; for (const r of MINE_ROCKS) { a += r[2]; if (h < a) return r; } return MINE_ROCKS[0]; };
+  for (const k of ['W', 'E', 'N', 'S']) for (const [i, j] of G.edges[k]) {
+    const h = mhash(i, j, 50 + k.charCodeAt(0)); if (h > 0.14) continue;
+    const r = pick(mhash(i, j, 61)), n = NRM[k], p = POS[k](i, j), s = 0.8 + mhash(i, j, 62) * 0.5, hd = r[1] * s, prot = 0.12 + mhash(i, j, 63) * 0.18;
+    add(r[0], p[0] + n[0] * (prot - hd), -0.15, p[1] + n[1] * (prot - hd), Math.atan2(n[0], n[2]) + (mhash(i, j, 64) < 0.5 ? 0 : PI) * 0, s);
+  }
+  // roots hanging from the roof where the ground above is thin
+  // (roots hung from the roof read as slabs: left out)
+  // the fall across the stope: scanned boulders heaped over the procedural ones
+  { const A = MINE.AT.rubble, nm = ['namaqualand_boulder_04', 'namaqualand_boulder_02', 'boulder_01', 'namaqualand_boulder_03'];
+    for (let layer = 0; layer < 2; layer++) for (let x = A[0][0] + 0.2; x < A[1][0] - 0.4; x += 2.3 - layer * 0.5) for (let z = A[0][1] + 0.4 + layer * 0.5; z < A[1][1] - 0.3; z += 1.5) add(nm[(Math.round(x * 3 + z) & 3)], x + (mhash(x * 9, z * 9, 80) - 0.5) * 0.6, layer * 0.9 - 0.15, z + (mhash(x * 9, z * 9, 81) - 0.5) * 0.5, mhash(x * 9, z * 9, 82) * TAU, 0.95 + mhash(x * 9, z * 9, 83) * 0.5); }
+  // roots along the floor and fallen timber
+  for (const [x, z, r] of [[-11, 31.5, 0.4], [42, 36, 1.2], [12, 59.4, 2], [36.5, 44, 0.3]]) add('single_root', x, 0, z, r, 1.0);
+  add('dead_tree_trunk_02', 33.4, 0, 51.2, 0.5, 1.0); add('dead_tree_trunk_02', 44.5, 1.1, 54.6, 2.3, 0.9); add('dead_tree_trunk_02', 7.5, 0, 35.2, 1.3, 0.7);
+  // the doors: the hillside door's twin standing open at the foot of the adit; a bulkhead leaf folded back at the mouth of the deep
+  add('large_castle_door', 1.15, 0, 1.4, -PI / 2 - 0.35, 1.0); add('large_castle_door', 9.7, 0, 58.2, PI / 2, 1.0);
+  const g = B.build(); g.traverse(o => { if (o.isMesh) { o.layers.set(1); o.castShadow = false; } }); SC.scene.add(g);
+  World.kitGroups = World.kitGroups || []; World.kitGroups.push({ g, interior: true, cell: 'mine' }); MINE.kitCount = B.count;
+}
+const _wa94b = wildsAttach;
+wildsAttach = function () { _wa94b(); try { mineKit(); } catch (e) { console.warn('mine kit: ' + (e && e.stack || e)); } };
+// the objective marker: outside, the door; inside, Corwin's station
+MINE.target = function () { const P = WILDS.P.mine; if (!(World.cell && World.cell.id === 'mine')) return [P.x, 0, P.z]; const w = MINE.wpos(-9.4, 0.8, 66.2); return [w[0], w[1], w[2]]; };
 
 
 // ---- 99_main.js ----

@@ -12,8 +12,9 @@ World.routes = [];
 // quarters of the world that the helpers below draw into; `rtKit` gives the builders their shared helpers (also used by 73i_walls.js)
 function rtKit(bucket, touch) {
   const dark = COL.timberDark, wood = [0.62, 0.52, 0.42];
-  const M = (x, z) => { const m = bucket(x, z); if (touch && !touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
-  const K = { M, dark, wood, gy: (x, z) => Terrain.y(x, z) };
+  // Build 42: our geometry goes into 30 m cells of its own (fake bucket keys far outside the map) so the frustum and K.maxDist cull it by itself, not with the whole 80 m cell
+  const M = (x, z) => { const m = K.fine ? bucket((K.noShadow ? 2e6 : 1e6) + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80) : bucket(x, z); m.maxDist = m.maxDist === undefined ? K.maxDist : (m.maxDist && K.maxDist ? Math.max(m.maxDist, K.maxDist) : 0); m.noShadow = m.noShadow === undefined ? !!K.noShadow : m.noShadow && !!K.noShadow; if (touch && !touch.has(m)) touch.set(m, m.nv); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };
+  const K = { M, fine: false, maxDist: 0, noShadow: false, dark, wood, gy: (x, z) => Terrain.y(x, z) };
   K.col = (x0, z0, x1, z1, y0, y1) => addBoxCollider(M((x0 + x1) / 2, (z0 + z1) / 2), Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y0, y1);
   K.box = (mat, c, tile, x0, y0, z0, x1, y1, z1, skip, ao) => { const m = M((x0 + x1) / 2, (z0 + z1) / 2); m.mat(mat, c, tile); if (ao !== undefined) m.ao = ao; m.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.max(x0, x1), y1, Math.max(z0, z1), skip || 0); m.ao = 1; return m; };
   K.beam = (p, q, w, h, c) => { const m = M((p[0] + q[0]) / 2, (p[2] + q[2]) / 2); m.mat(MAT.TIMBER, c || dark, 0.5); m.beam(p, q, w, h); };
@@ -61,6 +62,8 @@ function rtKit(bucket, touch) {
     const mi = wPickMesh(mesh), obj = addSkinned(mi, { c: p, r: 0.6, zone: 0, kind: 'pickup' }); R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256);
     const it = { kind: 'pickup', id, item, p: [p[0], p[1] + 0.2, p[2]], r: 1.9, zone: 0, obj, label }; World.interact.push(it); World.pickups.push(it); return it;
   };
+  const ns = fn => (...a) => { const o = K.noShadow; K.noShadow = true; try { return fn(...a); } finally { K.noShadow = o; } };      // rails and stairs are thin: they do not cast into the sun-shadow maps (they would be drawn again there)
+  K.rail = ns(K.rail); K.stair = ns(K.stair);
   return K;
 }
 function buildRoutes(bucket) {
