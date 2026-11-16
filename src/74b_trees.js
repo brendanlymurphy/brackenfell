@@ -18,7 +18,7 @@ Trees.load = async function () {
   if (TEST && TEST.trees === 0) return;
   try {
     const meta = await (await fetch('kits/TREES.json')).json();
-    const [gltf, farTex] = await Promise.all([new T3X.GLTFLoader().loadAsync('kits/trees.glb'), new THREE.TextureLoader().loadAsync('kits/trees_far.webp')]);
+    const [gltf, farTex] = await Promise.all([T3X.gltf().loadAsync(((TEST && TEST.treeAtlas) || Math.min(2048, GFX_TEX.color * 2)) <= 1024 ? 'kits/s/trees.glb' : 'kits/trees.glb'), new THREE.TextureLoader().loadAsync('kits/trees_far.webp')]);
     farTex.colorSpace = THREE.SRGBColorSpace; farTex.wrapS = farTex.wrapT = THREE.ClampToEdgeWrapping; farTex.anisotropy = 2; farTex.premultiplyAlpha = false;
     Trees.farTex = farTex; Trees.meta = meta;
     const BA = THREE.BufferAttribute;

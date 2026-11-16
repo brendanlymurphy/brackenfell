@@ -298,8 +298,12 @@ async function packBlob(url) {
 const ASTC_FMT = { '6x6': () => THREE.RGBA_ASTC_6x6_Format, '5x5': () => THREE.RGBA_ASTC_5x5_Format };
 async function loadPackAstc(progress) {
   const L = MAT_NAMES.length; let done = 0;
+  // the Low tier and low-memory devices take the half-resolution pack (tex/s, a quarter of the bytes and of the memory; tools/tex_half.mjs).
+  // ?texpack=half or full (--opt texpack=...) forces one.
+  const want = (TEST && TEST.texpack) || (location.search.match(/[?&]texpack=(\w+)/) || [])[1], half = want ? want === 'half' : GFX_TEX.tiny, dir = half ? 'tex/s/' : 'tex/';
+  if (half && typeof Load !== 'undefined' && Load.groups && Load.groups.indexOf('astc') >= 0) Load.use(Load.groups.map(g => g === 'astc' ? 'astcs' : g));
   const load = async pre => {
-    const blobs = await Promise.all(MAT_NAMES.map(async n => { const d = await packBlob('tex/' + pre + n + '.png'); progress(++done / (L * 2)); return d; }));
+    const blobs = await Promise.all(MAT_NAMES.map(async n => { const d = await packBlob(dir + pre + n + '.png'); progress(++done / (L * 2)); return d; }));
     const dv = new DataView(blobs[0].buffer, blobs[0].byteOffset);
     if (dv.getUint32(0, true) !== 0x58544642) throw new Error('bad pack header');
     const bw = blobs[0][4], bh = blobs[0][5], res = dv.getUint16(6, true), nm = blobs[0][8], mips = [];
@@ -1518,7 +1522,7 @@ const Kit = (() => {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
     pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
     fill: null, fill2: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
-    lodMeshes: [],
+    lodMeshes: [], SMALL: /kits\/(village|props|nature)\.glb$/,
     ROOF: /^(S_|T_)?(Roof_(RoundTile|Modular|Tower|Wooden|2x4|Log|Dormer)|Overhang_Roof)|^gen_/,       // slope pieces and generated pieces: outside faces are marked by their own normals (down = room side), not by the kit wall convention (outside = +z)
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
@@ -1552,9 +1556,10 @@ const Kit = (() => {
     const d = K_.defs[name]; K_.pending.push(Promise.all([['map', 'color'], ['normalMap', 'data'], ['orm', 'data'], ['emissiveMap', 'color']].map(async ([k, kind]) => { if (d[k]) d[k] = await gfxTex(d[k], kind); })));
   }
   async function loadPack(pack, progress) {
-    const loader = new T3X.GLTFLoader();
+    const loader = T3X.gltf();
     let gltf;
-    try { gltf = await loader.loadAsync(pack.glb, e => { if (progress && e.total) progress(e.loaded / e.total); }); }
+    const small = GFX_TEX.color <= 512 && K_.SMALL.test(pack.glb), url = small ? pack.glb.replace('kits/', 'kits/s/') : pack.glb;       // phones and the lighter tiers cap textures at 512: they fetch the pack that only holds that much
+    try { gltf = await loader.loadAsync(url, e => { if (progress && e.total) progress(e.loaded / e.total); }); }
     catch (e) { if (pack.optional) return false; throw new Error('kit ' + pack.glb + ': ' + (e && e.message || e)); }
     if (pack.catalog) { const c = await fetchJson(pack.catalog, pack.optional); if (c) Object.assign(K_.cat, c.pieces || c); }
     gltf.scene.updateMatrixWorld(true);
@@ -1576,19 +1581,20 @@ const Kit = (() => {
     const S = await fetchJson('kits/skin/SKIN.json', true); if (!S) { K_.skin = 'painted'; return; }
     K_.skinDef = S;
     if (S.grade) Object.assign(K_.gradeInit, S.grade);
-    const jobs = [];
+    const jobs = [], skinDir = GFX_TEX.color <= 512 && GFX_TEX.data <= 512 ? 'kits/skin/s/' : 'kits/skin/';       // half-size copies (tools/assets_pack.mjs) where the cap would halve them anyway
     for (const name of Object.keys(S.materials || {})) {
       const s = S.materials[name], d = K_.defs[name]; if (!d) continue;
       if (s.tint) d.color = d.color.map((v, i) => v * s.tint[i]); if (s.moss !== undefined) d.moss = s.moss; if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
-      if (s.a) jobs.push(texLoad('kits/skin/' + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
-      if (s.n) jobs.push(texLoad('kits/skin/' + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
-      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
+      if (s.a) jobs.push(texLoad(skinDir + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
+      if (s.n) jobs.push(texLoad(skinDir + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
+      if (s.orm) jobs.push(texLoad(skinDir + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
     }
     await Promise.all(jobs);
   }
   K_.gradeInit = { sat: 1, gain: 1, tint: [1, 1, 1], weather: 0 };
   // opts: { packs: [{ glb, catalog, optional }], skin: 'realistic' | 'painted' }
   K_.load = async function (progress, opts) {
+    if (GFX_TEX.color <= 512 && typeof Load !== 'undefined' && Load.groups && Load.groups.indexOf('kits') >= 0) Load.use(Load.groups.map(g => g === 'kits' ? 'kitss' : g));       // the loading bar counts the small packs this device fetches
     opts = opts || {};
     const packs = opts.packs || K_.PACKS; K_.skin = opts.skin || (TEST && TEST.skin) || 'realistic';
     for (let i = 0; i < packs.length; i++) await loadPack(packs[i], f => progress && progress((i + f) / (packs.length + 1)));
@@ -2553,7 +2559,7 @@ const Chars = (() => {
     C.set = S; C.cfg = cfg; C.ready = true; C.name = setName;
     return S;
   };
-  const GL = () => GL.l || (GL.l = new T3X.GLTFLoader());
+  const GL = () => GL.l || (GL.l = T3X.gltf());
   C.ensure = async function (names) {
     const S = C.set; if (!S) throw new Error('Chars.load first');
     const need = [...new Set(names)].filter(n => !S.bodies[n] && S.cfg.bodies[n]);
@@ -9901,7 +9907,7 @@ Trees.load = async function () {
   if (TEST && TEST.trees === 0) return;
   try {
     const meta = await (await fetch('kits/TREES.json')).json();
-    const [gltf, farTex] = await Promise.all([new T3X.GLTFLoader().loadAsync('kits/trees.glb'), new THREE.TextureLoader().loadAsync('kits/trees_far.webp')]);
+    const [gltf, farTex] = await Promise.all([T3X.gltf().loadAsync(((TEST && TEST.treeAtlas) || Math.min(2048, GFX_TEX.color * 2)) <= 1024 ? 'kits/s/trees.glb' : 'kits/trees.glb'), new THREE.TextureLoader().loadAsync('kits/trees_far.webp')]);
     farTex.colorSpace = THREE.SRGBColorSpace; farTex.wrapS = farTex.wrapT = THREE.ClampToEdgeWrapping; farTex.anisotropy = 2; farTex.premultiplyAlpha = false;
     Trees.farTex = farTex; Trees.meta = meta;
     const BA = THREE.BufferAttribute;

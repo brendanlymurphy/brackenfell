@@ -10,7 +10,7 @@ const Kit = (() => {
     PACKS: [{ glb: 'kits/village.glb', catalog: 'kits/CATALOG.json' }, { glb: 'kits/props.glb' }, { glb: 'kits/nature.glb' }, { glb: 'kits/scan.glb', catalog: 'kits/SCAN_CATALOG.json', optional: true }],
     pieces: {}, far: {}, cat: {}, defs: {}, mats: new Map(), skin: 'realistic', skinDef: {}, ready: false, instanced: [], pending: [],
     fill: null, fill2: null, grade: null, FAR_KEEP: 2.5, FAR_DROP: /Shutter|Balcony|Lantern|Prop_|Flower|Vine|Torch|Sign|Banner|Barrel|Crate|Bag|Pot_/,
-    lodMeshes: [],
+    lodMeshes: [], SMALL: /kits\/(village|props|nature)\.glb$/,
     ROOF: /^(S_|T_)?(Roof_(RoundTile|Modular|Tower|Wooden|2x4|Log|Dormer)|Overhang_Roof)|^gen_/,       // slope pieces and generated pieces: outside faces are marked by their own normals (down = room side), not by the kit wall convention (outside = +z)
   };
   const _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3();
@@ -44,9 +44,10 @@ const Kit = (() => {
     const d = K_.defs[name]; K_.pending.push(Promise.all([['map', 'color'], ['normalMap', 'data'], ['orm', 'data'], ['emissiveMap', 'color']].map(async ([k, kind]) => { if (d[k]) d[k] = await gfxTex(d[k], kind); })));
   }
   async function loadPack(pack, progress) {
-    const loader = new T3X.GLTFLoader();
+    const loader = T3X.gltf();
     let gltf;
-    try { gltf = await loader.loadAsync(pack.glb, e => { if (progress && e.total) progress(e.loaded / e.total); }); }
+    const small = GFX_TEX.color <= 512 && K_.SMALL.test(pack.glb), url = small ? pack.glb.replace('kits/', 'kits/s/') : pack.glb;       // phones and the lighter tiers cap textures at 512: they fetch the pack that only holds that much
+    try { gltf = await loader.loadAsync(url, e => { if (progress && e.total) progress(e.loaded / e.total); }); }
     catch (e) { if (pack.optional) return false; throw new Error('kit ' + pack.glb + ': ' + (e && e.message || e)); }
     if (pack.catalog) { const c = await fetchJson(pack.catalog, pack.optional); if (c) Object.assign(K_.cat, c.pieces || c); }
     gltf.scene.updateMatrixWorld(true);
@@ -68,19 +69,20 @@ const Kit = (() => {
     const S = await fetchJson('kits/skin/SKIN.json', true); if (!S) { K_.skin = 'painted'; return; }
     K_.skinDef = S;
     if (S.grade) Object.assign(K_.gradeInit, S.grade);
-    const jobs = [];
+    const jobs = [], skinDir = GFX_TEX.color <= 512 && GFX_TEX.data <= 512 ? 'kits/skin/s/' : 'kits/skin/';       // half-size copies (tools/assets_pack.mjs) where the cap would halve them anyway
     for (const name of Object.keys(S.materials || {})) {
       const s = S.materials[name], d = K_.defs[name]; if (!d) continue;
       if (s.tint) d.color = d.color.map((v, i) => v * s.tint[i]); if (s.moss !== undefined) d.moss = s.moss; if (s.gain !== undefined) d.gain = s.gain; if (s.sat !== undefined) d.sat = s.sat; if (s.uvScale) d.uvScale = s.uvScale; if (s.nScale !== undefined) d.nScale = s.nScale; if (s.rough !== undefined) d.roughMul = s.rough;
-      if (s.a) jobs.push(texLoad('kits/skin/' + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
-      if (s.n) jobs.push(texLoad('kits/skin/' + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
-      if (s.orm) jobs.push(texLoad('kits/skin/' + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
+      if (s.a) jobs.push(texLoad(skinDir + s.a, 'color').then(t => { dropPainted(d.map, t); d.map = t; }));
+      if (s.n) jobs.push(texLoad(skinDir + s.n, 'data').then(t => { dropPainted(d.normalMap, t); d.normalMap = t; }));
+      if (s.orm) jobs.push(texLoad(skinDir + s.orm, 'data').then(t => { dropPainted(d.orm, t); d.orm = t; d.aoInOrm = s.ao !== false; }));
     }
     await Promise.all(jobs);
   }
   K_.gradeInit = { sat: 1, gain: 1, tint: [1, 1, 1], weather: 0 };
   // opts: { packs: [{ glb, catalog, optional }], skin: 'realistic' | 'painted' }
   K_.load = async function (progress, opts) {
+    if (GFX_TEX.color <= 512 && typeof Load !== 'undefined' && Load.groups && Load.groups.indexOf('kits') >= 0) Load.use(Load.groups.map(g => g === 'kits' ? 'kitss' : g));       // the loading bar counts the small packs this device fetches
     opts = opts || {};
     const packs = opts.packs || K_.PACKS; K_.skin = opts.skin || (TEST && TEST.skin) || 'realistic';
     for (let i = 0; i < packs.length; i++) await loadPack(packs[i], f => progress && progress((i + f) / (packs.length + 1)));

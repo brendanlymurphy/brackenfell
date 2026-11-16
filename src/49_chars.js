@@ -152,7 +152,7 @@ const Chars = (() => {
     C.set = S; C.cfg = cfg; C.ready = true; C.name = setName;
     return S;
   };
-  const GL = () => GL.l || (GL.l = new T3X.GLTFLoader());
+  const GL = () => GL.l || (GL.l = T3X.gltf());
   C.ensure = async function (names) {
     const S = C.set; if (!S) throw new Error('Chars.load first');
     const need = [...new Set(names)].filter(n => !S.bodies[n] && S.cfg.bodies[n]);

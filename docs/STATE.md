@@ -172,3 +172,26 @@ Inn hall (`game.enter('inn')`, looking in, 15 people): 95 draw calls / 248k tria
   `--level lod --tris 2200`, then `--level far --tris 700`. The copies add about 170 KB per body file.
 - Low tier: `houseFar` 26 (was 30), `Kit.DROP.low` 40, near trees inside 11 m.
 
+### Step 5: what a first visit downloads
+
+| Device | Build 41 | Now |
+|---|---|---|
+| Phone, or Medium tier (512 texture cap) | 74.9 MB | 56.9 MB |
+| Low tier chosen, or a low-memory device | 74.9 MB | 36.3 MB |
+| Desktop on High | 74.9 MB | 69.0 MB |
+
+(`node tools/build.mjs` prints these and the size of each group.) What changed:
+- `tools/assets_pack.mjs`: geometry of every GLB in `kits/` and `chars/real/` is stored with EXT_meshopt_compression (the loaders use
+  `T3X.gltf()`, which carries the decoder); character normals, UVs and skin weights are small integers. Characters 15.8 > 10.4 MB
+  (after the two extra detail levels of step 4 had added 3.2 MB), kit packs 27.7 MB.
+- Small packs for devices whose texture cap is 512 anyway (`GFX_TEX.color <= 512`: phones, Low, Medium): `kits/s/*.glb` (512
+  textures; the trees' atlases at 1024) and `kits/skin/s/*.webp`. 15.6 MB instead of 27.7 MB. Manifest group `kitss`.
+- `tools/tex_half.mjs`: `tex/s/` is the ASTC material pack without its top mip level (7.3 MB instead of 27.9 MB, a quarter of the
+  texture memory). Used when the Low tier is chosen or the device reports little memory (`GFX_TEX.tiny`); `?texpack=half` / `full`
+  forces one. Group `astcs`. Not used on iPhones by default: Safari does not report memory, and whether the ground still looks sharp
+  enough at 512 on a real phone has to be judged there. If it does, switching phones to it saves another 20 MB.
+- After `tree_pack.mjs`, `chars_lod.mjs` or `kits*.mjs` rewrite a file, run `node tools/assets_pack.mjs` again (and `tex_half.mjs`
+  after the material pack changes).
+- Not done: KTX2 / Basis. No encoder is installed here and the asset hosts are blocked; the WebP textures are still decoded to
+  uncompressed RGBA on the GPU (a 512 map is 1.4 MB, a 1024 map 5.6 MB).
+
