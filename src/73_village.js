@@ -353,7 +353,7 @@ function buildVillage() {
   if (typeof buildAlley === 'function') buildAlley();
   if (typeof buildInfill === 'function') buildInfill();
   if (typeof buildDress === 'function') buildDress();
-  if (typeof townFinish === 'function') townFinish();      // Build 42 (73f_levels.js)
+  if (typeof townFinish === 'function') townFinish(bucket);      // Build 42 (73f_levels.js)
 
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {
