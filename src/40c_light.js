@@ -57,7 +57,7 @@ SH.WINMAX = 6;
     if (!W || !W.length || !env.winCol) { U.winN.value = 0; if (Bake.shaftU) Bake.shaftU.value = 0; return; }
     const cand = W.filter(w => Math.abs(w.p[1] - cam[1]) < 2.6).map(w => [(w.p[0] - cam[0]) ** 2 + (w.p[2] - cam[2]) ** 2, w]).sort((a, b) => a[0] - b[0]).slice(0, SH.WINMAX);
     const P = U.winP.array, D = U.winD.array, C = U.winC.array, col = env.winCol;
-    cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); C[i].set(col[0] * w.k, col[1] * w.k, col[2] * w.k, 0); });
+    cand.forEach(([, w], i) => { P[i].set(w.p[0], w.p[1], w.p[2], w.r); D[i].set(w.d[0], w.d[1], 0, 0); const tc = w.c || [1, 1, 1]; C[i].set(col[0] * w.k * tc[0], col[1] * w.k * tc[1], col[2] * w.k * tc[2], 0); });
     U.winN.value = cand.length;
     if (Bake.shaftU) Bake.shaftU.value = Math.min(0.5, (col[0] + col[1] + col[2]) / 3 * (TEST && TEST.shaft !== undefined ? +TEST.shaft : 0.009));
   };

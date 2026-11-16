@@ -10,7 +10,7 @@ SH.init = function () {
     time: uniform(0), camPos: uniform(V3()),                 // camPos is always the player's eye, also inside shadow passes
     sunDir: uniform(new THREE.Vector3(0, 1, 0)), sunCol: uniform(V3()),      // active key light (sun or moon)
     ambSky: uniform(V3()), ambGnd: uniform(V3()),
-    fogCol: uniform(V3()), fogDens: uniform(0.001), fogSun: uniform(V3()), fogFall: uniform(0.011),
+    fogCol: uniform(V3()), mistK: uniform(0), fogDens: uniform(0.001), fogSun: uniform(V3()), fogFall: uniform(0.011),
     zenith: uniform(V3()), horizon: uniform(V3()), stars: uniform(0), aurora: uniform(0),
     moonDir: uniform(new THREE.Vector3(0, 1, 0)), moonBright: uniform(0), sunDisc: uniform(new THREE.Vector3(0, 1, 0)), sunDiscI: uniform(0),
     wind: uniform(V4()), windOff: uniform(new THREE.Vector2()),     // wind: dir.x, dir.z, strength, time. windOff: how far (m) the air has travelled, which carries the gust pattern
@@ -52,7 +52,7 @@ SH.init = function () {
       const d = lp.xyz.sub(wp), d2 = dot(d, d), r2 = lp.w.mul(lp.w);
       let ok = abs(lc.w.sub(zone)).lessThan(0.5).or(lc.w.greaterThan(254.5)).and(d2.lessThan(r2)); if (ground) ok = ok.and(lp.w.greaterThan(0));
       If(ok, () => {
-        const f = float(1).sub(d2.div(r2)), att = f.mul(f).div(d2.mul(0.55).add(1));
+        const f = float(1).sub(d2.div(r2)), att = f.mul(f).div(d2.mul(step(0.5, zone).mul(0.7).add(0.55)).add(1)).mul(step(0.5, zone).mul(0.45).add(1));      // [l1] in a room the fire's pool is tighter and brighter: a pool, then dark
         const ndl = dot(N, d).mul(max(d2, 1e-4).inverseSqrt()).add(wrap).div(float(1).add(wrap));
         acc.addAssign(lc.rgb.mul(att.mul(max(ndl, 0))));
       });
@@ -108,7 +108,9 @@ SH.init = function () {
     const d = positionWorld.sub(U.camPos), dist = length(d), k = U.fogFall.mul(d.y);
     const ks = mix(k, float(0.002), step(abs(k), 0.002)), integ = dist.mul(float(1).sub(exp(ks.negate()))).div(ks);
     const dens = U.fogDens.mul(exp(U.fogFall.negate().mul(max(U.camPos.y.sub(K.fogBase), 0))));
-    return float(1).sub(exp(dens.negate().mul(integ)));
+    // [l1] a low mist: thick near the ground (3.5 m deep, measured from the camera's feet), thinning upward; dawn, dusk and wet weather
+    const lay = U.mistK.mul(dist).mul(exp(max(positionWorld.y.sub(U.camPos.y.sub(1.7)), 0).div(-3.5)));
+    return float(1).sub(exp(dens.negate().mul(integ).sub(lay)));
   });
   SH.fogColor = Fn(() => {
     const vd = normalize(positionWorld.sub(U.camPos)), s = pow(max(dot(vd, U.sunDisc), 0), 6);
@@ -151,7 +153,7 @@ SH.update = function (env, camPos, time) {
   const U = SH.U, s3 = (u, a) => u.value.set(a[0], a[1], a[2]);
   U.time.value = time; s3(U.camPos, camPos);
   s3(U.sunDir, env.keyDir); s3(U.sunCol, env.keyCol); s3(U.ambSky, env.ambSky); s3(U.ambGnd, env.ambGnd);
-  s3(U.fogCol, env.fogCol); U.fogDens.value = env.fogDensity; s3(U.fogSun, env.fogSun);
+  s3(U.fogCol, env.fogCol); U.fogDens.value = env.fogDensity; U.mistK.value = env.mistK || 0; s3(U.fogSun, env.fogSun);
   s3(U.zenith, env.zenith); s3(U.horizon, env.horizon); U.stars.value = env.stars; U.aurora.value = env.aurora;
   s3(U.moonDir, env.moonDir); U.moonBright.value = env.moonBright; s3(U.sunDisc, env.sunDir); U.sunDiscI.value = env.sunDisc;
   U.wind.value.set(env.windDir[0], env.windDir[1], env.windStrength, time); U.windOff.value.set(Wind.off[0], Wind.off[1]);
