@@ -2909,15 +2909,15 @@ const Chars = (() => {
     // every garment gets its folds and creases darkened, mud up the hem, a few stains, and darker worn bands at cuffs, hems and necklines.
     { const cv = attribute('color', 'vec4'), WCOL = H.wearCol;
       if (anyTrim && WCOL) {
-        const slot = cv.w.mul(12).add(0.5); let col = vec3(...WCOL[WCOL.length - 1]);
-        for (let k = WCOL.length - 2; k >= 0; k--) col = TSL.mix(col, vec3(...WCOL[k]), TSL.step(slot, k + 0.5));
+        const slot = TSL.floor(cv.w.mul(12).add(0.5)); let col = vec3(...WCOL[WCOL.length - 1]);
+        for (let k = WCOL.length - 2; k >= 0; k--) col = TSL.mix(col, vec3(...WCOL[k]), TSL.step(slot, float(k)));
         const grain = texture(G.noiseTex, TSL.positionLocal.xy.mul(14).add(TSL.positionLocal.z.mul(11))).r.mul(0.35).add(0.82);      // [ch1] in the body's own space: the grain no longer crawls as people walk
         albedo = albedo.mul(trimW.oneMinus()).add(col.mul(grain).mul(trimW));
         // woven cloth: a fine thread pattern (two crossed sine ridges in the body's own space) bends the shading normal a little, so the wool and linen have a weave and not a plastic sheen
         { const pl = TSL.positionLocal, th = TSL.sin(pl.x.add(pl.z.mul(0.7)).mul(520)).mul(0.5).add(TSL.sin(pl.y.mul(470).add(pl.z.mul(180))).mul(0.5)), wv = TSL.vec3(TSL.cos(pl.x.add(pl.z.mul(0.7)).mul(520)).mul(0.5), TSL.cos(pl.y.mul(470).add(pl.z.mul(180))).mul(0.5), 0).mul(0.10);
           weaveN = wv.mul(trimW).mul(TSL.smoothstep(2.2, 0.8, SH.U.camPos.sub(positionWorld).length())); void th; }
       }
-      const isMouth = TSL.step(9.5, cv.w.mul(12)); mouthW = mouthW.add(isMouth.mul(trimW));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening
+      const isMouth = TSL.step(9.5, cv.w.mul(12));      // (slot values arrive as bytes: 2 is 2.02) mouthW = mouthW.add(isMouth.mul(trimW));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening
       albedo = albedo.mul(TSL.mix(TSL.mix(float(1), TSL.mix(cv.x, float(1), 0.15), 0.9), float(1), isMouth));
       const dirt = TSL.mix(vec3(0.46, 0.38, 0.29), vec3(1, 1, 1), TSL.smoothstep(0.05, 0.85, cv.y));
       albedo = albedo.mul(TSL.mix(vec3(1, 1, 1), dirt, clothW.mul(isMouth.oneMinus()))).mul(float(1).sub(cv.z.mul(clothW).mul(0.4).mul(isMouth.oneMinus())));
@@ -2960,7 +2960,7 @@ const Chars = (() => {
     m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
-    else if (weaveN) m.normalNode = normalView.add(TSL.transformNormalToView(weaveN)).normalize();      // [ch1]
+    else if (weaveN) m.normalNode = normalView.add(weaveN).normalize();      // [ch1]
     let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
     if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
     let emis = albedo.mul(lit).add(albedo.mul(0.32).mul(mouthW));      // [ch1] teeth and tongue are never darker than the lips
