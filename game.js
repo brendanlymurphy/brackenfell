@@ -15401,7 +15401,7 @@ RPG.tryDodge = function () {
 RPG.damage = function (n, from, kind) {
   const r = RPG.st();
   if (RPG.dead || !game.playing || n <= 0) return 0;
-  if (kind !== 'fall') { if (RPG.iframes > 0) return 0; n = Combat.defend(n, from); if (n <= 0) return 0; n *= 1 - (RPG.meta(r.eq.armor).armor || 0); }
+  if (kind !== 'fall') { if (RPG.iframes > 0) return 0; n = Combat.defend(n, from); if (n <= 0) return 0; n *= (1 - (RPG.meta(r.eq.armor).armor || 0)) * (RPG.perk && RPG.perk('hide') ? 0.92 : 1); }
   r.hp -= n; RPG.hurtT = 0; RPG.combatT = 0; RPG.flash = Math.min(1, 0.4 + n / 35); RPG.shake = Math.min(1, 0.35 + n / 30);
   Audio2.hurt();
   if (r.hp <= 0) { r.hp = 0; RPG.die(kind === 'fall' ? 'The fall broke you.' : 'You were cut down.'); }
@@ -15417,7 +15417,7 @@ RPG.die = function (why) {
 };
 RPG.respawn = function () {
   const r = RPG.st(), bed = World.interact.find(i => i.id === 'inn.bed'), P = Player;
-  const lost = Math.min(25, Math.floor(S.gold * 0.2)); S.gold -= lost; uiPurse();
+  const lost = Math.min(80, Math.floor(S.gold * 0.25)); S.gold -= lost; uiPurse();       // [q1] a death costs a quarter of the purse (to 80 gold), never the save
   if (S.flags.bed && bed) { P.pos = [bed.p[0] + 0.9, bed.p[1] - 0.5, bed.p[2]]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], bed.p[1] + 0.4); }
   else { P.pos = [-84, 0, -6.5]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], 50); P.yaw = 1.45; }
   P.vel = [0, 0, 0]; P.pitch = 0; r.hp = RPG.MAXHP; r.sta = RPG.MAXST; RPG.dead = false; RPG.hud.deadMsg.style.opacity = 0; RPG.flash = 0; RPG.shake = 0; RPG.iframes = 2;
@@ -15633,7 +15633,7 @@ RPG.tick = function (dt) {
     RPG.dodgeCd -= dt; RPG.iframes -= dt; RPG.hurtT += dt; RPG.combatT += dt;
     // stamina returns after a breath; health mends slowly once the fight is well behind you
     RPG.stDelay -= dt;
-    if (RPG.stDelay <= 0 && !RPG.dead) r.sta = Math.min(RPG.MAXST, r.sta + (Combat.blocking() ? 7 : 22) * dt);
+    if (RPG.stDelay <= 0 && !RPG.dead) r.sta = Math.min(RPG.MAXST, r.sta + (Combat.blocking() ? 7 : 22) * (RPG.perk && RPG.perk('breath') ? 1.33 : 1) * dt);
     if (RPG.hurtT > 7 && RPG.combatT > 7 && r.hp > 0 && r.hp < RPG.MAXHP) r.hp = Math.min(RPG.MAXHP, r.hp + 1.4 * dt);
     Combat.update(dt * slow, dt);
   }
@@ -15712,7 +15712,7 @@ const Combat = (() => {
   // the blow lands: everything in reach and inside the arc takes it once
   const land = () => {
     const r = RPG.st(), a = C.atk, m = RPG.meta(r.eq.weapon), P = Player;
-    const dmg = (m.dmg || 3) * a.mul * (C.weak ? 0.6 : 1), reach = 2.15 + (m.reach || 0) + (C.heavy ? 0.25 : 0);
+    const dmg = (m.dmg || 3) * a.mul * (C.weak ? 0.6 : 1) * (RPG.perk && RPG.perk('keen') ? 1.12 : 1), reach = 2.15 + (m.reach || 0) + (C.heavy ? 0.25 : 0);
     const res = Foes.sweep(P.pos, P.yaw, reach, a.arc, dmg, C.heavy);
     if (res.n) {
       RPG.hitStop = C.heavy ? 0.11 : 0.07; RPG.kick[0] += a.kick[0]; RPG.kick[1] += a.kick[1]; RPG.shake = Math.max(RPG.shake, C.heavy ? 0.5 : 0.28); RPG.combatT = 0;
@@ -15972,7 +15972,7 @@ const Foes = (() => {
   function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < (camp.cell ? 12 : 34)) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
   function die(f) {
     const r = RPG.st(); release(f); f.alive = false; f.hp = 0; f.state = 'dead'; f.t = 0; f.anim = Math.random() < 0.5 ? 'c-die' : 'c-die2'; f.h.curName = '';
-    r.kills++; r.dead[f.id] = r.day; Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
+    r.kills++; r.dead[f.id] = r.day; if (typeof econKill === 'function') econKill(f); Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
     const loot = [['gold', Math.round(f.leader ? rnd(22, 34) : rnd(4, 12))]];
     if (Math.random() < 0.45) loot.push([Math.random() < 0.5 ? 'bread' : 'apple', 1]); if (Math.random() < (f.leader ? 1 : 0.18)) loot.push(['potion', 1]);
     if (f.chief) { loot.push(['steelsword', 1]); if (!has('tools') && qAt('tools') !== 99) loot.push(['tools', 1]); } else if (f.leader) loot.push(['ironsword', 1]); else if (Math.random() < 0.1) loot.push(['buckler', 1]);
@@ -16062,7 +16062,7 @@ const Foes = (() => {
     switch (f.state) {
       case 'idle': {
         f.anim = f.spot.kind === 'sit' || f.spot.kind === 'crouch' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
-        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
+        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (RPG.perk && RPG.perk('quiet') ? 0.75 : 1) * (f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5));
         if (f.kind === 'lurker' && live && d < 24 && d >= see) { f.cueT -= dt; if (f.cueT <= 0) { f.cueT = rnd(2.2, 4.6); Snd.event(Math.random() < 0.5 ? 'creak' : 'rustle', [f.pos[0], f.pos[1] + 0.4, f.pos[2]], 1.3); } }       // heard before seen
         if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); if (f.kind !== 'lurker') Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned && !camp.cell) { F.warned = true; toast('Outlaws! They have seen you.'); } }
         break; }
@@ -16181,7 +16181,7 @@ const Inv = {
   use(id) {
     const r = RPG.st(), m = RPG.meta(id); if (!m.heal || !has(id)) return;
     if (r.hp >= RPG.MAXHP - 0.5 && !(m.sta && r.sta < RPG.MAXST - 1)) { toast('You are not hurt.'); return; }
-    give(id, -1); RPG.heal(m.heal); if (m.sta) r.sta = Math.min(RPG.MAXST, r.sta + m.sta);
+    give(id, -1); RPG.heal(m.heal * (RPG.perk && RPG.perk('forager') ? 1.5 : 1)); if (m.sta) r.sta = Math.min(RPG.MAXST, r.sta + m.sta);
     if (id === 'ale' || id === 'potion' || id === 'tonic') Audio2.drink(); else Audio2.eat();
     toast(ITEMS[id][0] + ': +' + m.heal + ' health'); save(); Inv.render();
   },
@@ -16191,7 +16191,7 @@ const Inv = {
     const box = $('tab-pack'), r = RPG.st(); if (!box) return;
     let h = '<div class="vit"><span>Health <b>' + Math.round(r.hp) + ' / ' + RPG.MAXHP + '</b></span><span>Stamina <b>' + Math.round(r.sta) + ' / ' + RPG.MAXST + '</b></span><span><b>' + S.gold + '</b> gold</span></div><div class="gear">';
     for (const [slot, label] of Inv.SLOTS) { const id = r.eq[slot]; h += '<div><small>' + label + '</small><b>' + (id && has(id) ? ITEMS[id][0] : 'None') + '</b><span>' + (id && has(id) ? Inv.facts(id) : slot === 'weapon' ? 'Bare hands will not serve you.' : '') + '</span></div>'; }
-    h += '</div><div class="items">';
+    h += '</div>' + (typeof econPerkHtml === 'function' ? econPerkHtml() : '') + '<div class="items">';
     const ids = Object.keys(S.items).sort((a, b) => (RPG.meta(b).slot ? 1 : 0) - (RPG.meta(a).slot ? 1 : 0) || (RPG.meta(b).heal ? 1 : 0) - (RPG.meta(a).heal ? 1 : 0));
     for (const id of ids) {
       const m = RPG.meta(id), on = m.slot && r.eq[m.slot] === id, f = Inv.facts(id);
@@ -16203,7 +16203,7 @@ const Inv = {
     }
     if (!ids.length) h += '<p class="empty">Your pack is empty.</p>';
     box.innerHTML = h + '</div>';
-    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.lamp) { if (typeof mineLamp === 'function') mineLamp(); Inv.render(); } else if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
+    if (!Inv.bound) { Inv.bound = true; box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.perk) { if (typeof econChoose === 'function' && econChoose(b.dataset.perk)) Inv.render(); } else if (b.dataset.lamp) { if (typeof mineLamp === 'function') mineLamp(); Inv.render(); } else if (b.dataset.equip) Inv.equip(b.dataset.equip); else if (b.dataset.use) Inv.use(b.dataset.use); }); }
   },
   // ── trade, as dialogue ──
   shop(who) {
@@ -16619,6 +16619,103 @@ const _wa94b = wildsAttach;
 wildsAttach = function () { _wa94b(); try { mineKit(); } catch (e) { console.warn('mine kit: ' + (e && e.stack || e)); } };
 // the objective marker: outside, the door; inside, Corwin's station
 MINE.target = function () { const P = WILDS.P.mine; if (!(World.cell && World.cell.id === 'mine')) return [P.x, 0, P.z]; const w = MINE.wpos(-9.4, 0.8, 66.2); return [w[0], w[1], w[2]]; };
+
+
+// ---- 94b_economy.js ----
+// ───────────────────────── reasons to care (q1): gold, tiers, levels with a perk each, the board, rumours, a death that costs ─────────────────────────
+// Brandt and Marta buy and sell (dialogue nodes, no boxes). Three tiers of weapon and armour with their numbers shown. XP from kills, secrets and finished quests; a level every so often and
+// one perk to choose per level (in the pack). The notice board gives three repeatable jobs. Greta tells rumours that point at what you have not found. Dying costs a quarter of the purse (to 80).
+Object.assign(ITEMS, {
+  longsword: ['Brandt’s longsword', 'Fullered, a hand longer than the arming sword and balanced to match. His second-best work, he says.', { slot: 'weapon', dmg: 19, blade: [0.76, 1.2, 0.028], value: 60, cost: 150, tier: 2 }],
+  silvered: ['Silver-edged blade', 'Brandt folded the mine silver into the edge himself. It sings when it clears the scabbard.', { slot: 'weapon', dmg: 25, blade: [0.80, 1.35, 0.028], value: 120, tier: 3 }],
+  brigandine: ['Brigandine', 'Plates riveted inside canvas. Heavier than leather, and it shows in the bruises you do not get.', { slot: 'armor', armor: 0.38, value: 60, cost: 160, tier: 2 }],
+  hauberk: ['Mail hauberk', 'Ring on ring, a winter of Brandt’s evenings. Turns half of what lands.', { slot: 'armor', armor: 0.5, value: 120, cost: 320, tier: 3 }],
+});
+ITEMS.ironsword[2].tier = 1; ITEMS.leather[2].tier = 1;
+Inv.stock.brandt = ['ironsword', 'leather', 'buckler', 'longsword', 'brigandine', 'hauberk'];
+const _facts81 = Inv.facts; Inv.facts = id => { const f = _facts81.call(Inv, id), t = RPG.meta(id).tier; return t ? 'tier ' + ['', 'I', 'II', 'III'][t] + (f ? ' · ' + f : '') : f; };
+// ── levels and perks ──
+const ECON = { XPL: [0, 60, 150, 270, 420, 600, 810, 1050], PERKS: [['hardy', 'Hardy', '+15 health'], ['breath', 'Long wind', '+10 stamina, you get your wind back a third quicker'], ['keen', 'Keen edge', 'your blows hit 12% harder'], ['hide', 'Thick hide', 'what lands on you lands 8% lighter'], ['quiet', 'Quiet feet', 'outlaws and the dead notice you from three-quarters the distance'], ['haggle', 'Hard bargainer', 'buy 15% cheaper, sell 15% dearer'], ['forager', 'Forager', 'food and drink restore half as much again']] };
+RPG.perk = id => !!(S.rpg && S.rpg.perks && S.rpg.perks[id]);
+const econR = () => { const r = RPG.st(); r.xp = r.xp || 0; r.perks = r.perks || {}; r.perkPts = r.perkPts || 0; r.lv = r.lv || 1; return r; };
+function econLevel(xp) { let l = 1; for (let i = 1; i < ECON.XPL.length; i++) if (xp >= ECON.XPL[i]) l = i + 1; return l; }
+function econApply() { RPG.MAXHP = 100 + (RPG.perk('hardy') ? 15 : 0); RPG.MAXST = 100 + (RPG.perk('breath') ? 10 : 0); }
+RPG.xp = function (n) {
+  const r = econR(); r.xp += n; const lv = econLevel(r.xp);
+  while (r.lv < lv) { r.lv++; r.perkPts = (r.perkPts || 0) + 1; toast('<b>Level ' + r.lv + '</b>: choose a perk in your pack.'); Audio2.ui(); }
+};
+const _as82d = applySave; applySave = function () { const x = _as82d.apply(this, arguments); try { econApply(); } catch (e) { } return x; };
+function econPerkHtml() {
+  const r = econR(), next = ECON.XPL[r.lv] || null; let h = '<div class="vit"><span>Level <b>' + r.lv + '</b></span><span>' + (next ? '<b>' + r.xp + '</b> / ' + next + ' xp' : '<b>' + r.xp + '</b> xp') + '</span></div>';
+  const mine = ECON.PERKS.filter(p => r.perks[p[0]]), open = ECON.PERKS.filter(p => !r.perks[p[0]]);
+  if (mine.length) h += '<div class="gear">' + mine.map(p => '<div><small>Perk</small><b>' + p[1] + '</b><span>' + p[2] + '</span></div>').join('') + '</div>';
+  if (r.perkPts > 0) h += '<div class="items">' + open.map(p => '<div><b>' + p[1] + '</b><span>' + p[2] + '</span><button type="button" class="btn small" data-perk="' + p[0] + '">Choose</button></div>').join('') + '</div>';
+  return h;
+}
+function econChoose(id) { const r = econR(); if (r.perkPts < 1 || r.perks[id] || !ECON.PERKS.some(p => p[0] === id)) return false; r.perks[id] = 1; r.perkPts--; econApply(); if (id === 'hardy') RPG.heal(15); toast('<b>' + ECON.PERKS.find(p => p[0] === id)[1] + '</b>: ' + ECON.PERKS.find(p => p[0] === id)[2]); save(); return true; }
+// ── what pays XP ──
+function econKill(f) { RPG.xp(f.boss ? 150 : f.kind === 'lurker' ? 18 : f.kind === 'delver' ? 14 : f.leader ? 25 : 10); const r = econR(), d = econJob(); if (d && r.job && !r.job.done && d.match(f)) { r.job.n++; if (r.job.n >= d.goal) { r.job.done = true; toast('<b>Notice board</b>: that is the job done. Report to the board in the square.'); } else toast('<b>' + d.title + '</b> ' + r.job.n + ' of ' + d.goal); } }
+const _qd82d = qDone; qDone = function (id) { const r = _qd82d.apply(this, arguments); try { RPG.xp(30); } catch (e) { } return r; };
+// ── prices ──
+Inv.price = id => Math.max(1, Math.round((RPG.meta(id).cost || 0) * (RPG.perk('haggle') ? 0.85 : 1)));
+Inv.shop = function (who) {
+  const opts = Inv.stock[who].map(id => { const m = RPG.meta(id), pr = Inv.price(id); return [ITEMS[id][0] + ' (' + pr + ' gold): ' + Inv.facts(id), () => {
+    if (S.gold < pr) return node('That’s ' + pr + ' gold, and you’ve ' + S.gold + '. The board in the square pays for honest work.', [['Something else.', () => Inv.shop(who)], bye]);
+    gold(-pr); give(id); toast('Bought: ' + ITEMS[id][0]); const r = RPG.st(); if (m.slot && (m.slot !== 'weapon' || (RPG.meta(r.eq.weapon).dmg || 0) < m.dmg) && (m.slot !== 'armor' || (RPG.meta(r.eq.armor).armor || 0) < m.armor)) { r.eq[m.slot] = id; Combat.refresh(); } save();
+    return node('Sound work, that. Look after it and it will look after you.', [['Something else.', () => Inv.shop(who)], bye]); }]; });
+  return node('Iron from the Greyspine, every piece. I don’t haggle.', opts.concat([bye]));
+};
+Inv.sell = function (who) {
+  const r = RPG.st(), opts = [];
+  for (const id in S.items) { const m = RPG.meta(id); if (!m.value || (m.slot && r.eq[m.slot] === id && S.items[id] < 2)) continue; const v = Math.round(m.value * (RPG.perk('haggle') ? 1.15 : 1)); opts.push([ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + ' (' + v + ' gold)', () => { give(id, -1); gold(v); save(); return Inv.sell(who); }]); }
+  return node(opts.length ? (who === 'marta' ? 'Let’s have a look, dear.' : 'Let’s see it, then.') : 'You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.', opts.slice(0, 8).concat([bye]));
+};
+// Marta buys what she can sell on, and sells lamp oil; Brandt folds silver into a blade
+const _marta82d = TALK.marta; TALK.marta = function () { const n = _marta82d.call(this); if (n && n.o) { const i = n.o.indexOf(bye), at = i < 0 ? n.o.length : i; n.o.splice(at, 0, ['Lamp oil. (7 gold)', () => TALK.buy('oil', 7, 'Whale oil. It stinks and it burns. Don’t spill it near the candles.')], ['I have things to sell.', () => Inv.sell('marta')]); } return n; };
+addOpt('brandt', n => has('silverbar') && S.items.silverbar >= 3 ? ['Can you do anything with this silver?', () => node('Grey silver, never stamped. Aye, I can. Three bars and ninety gold, and the edge will outlast the blade. Mind, I’ll want to know where you had it.', [['Forge it. (90 gold, 3 silver bars)', () => { if (S.gold < 90) return node('Ninety gold, and you’ve ' + S.gold + '.'); gold(-90); give('silverbar', -3); give('silvered'); const r = RPG.st(); r.eq.weapon = 'silvered'; Combat.refresh(); toast('Forged: ' + ITEMS.silvered[0]); save(); return node('Done. Don’t draw it in the Hart.'); }], bye])] : null);
+// ── the notice board: three jobs, any number of times ──
+const ECONJOBS = [
+  { id: 'outlaws', title: 'Outlaws on the passes', goal: 4, pay: 35, text: 'WANTED: four outlaws put down on the passes. Thirty-five gold, paid at the board.', match: f => !f.kind },
+  { id: 'vermin', title: 'The Old Mine', goal: 3, pay: 50, text: 'WANTED: three of the things that live in the Old Mine put down, delver or lurker. Fifty gold, and the Warden does not ask how.', match: f => f.kind === 'delver' || f.kind === 'lurker' },
+  { id: 'oil', title: 'Lamp oil for the watch', goal: 3, pay: 30, text: 'WANTED: three flasks of lamp oil for the gate. Thirty gold. Marta has it.', match: () => false, have: () => has('oil') && S.items.oil >= 3 },
+];
+const econJob = () => { const r = econR(); return r.job ? ECONJOBS.find(j => j.id === r.job.id) || null : null; };
+TALK.board = function () {
+  const r = econR(), j = econJob(), opts = [];
+  if (j) {
+    const ready = r.job.done || (j.have && j.have());
+    if (ready) opts.push(['Collect the pay. (' + j.pay + ' gold)', () => { if (j.have) give('oil', -3); gold(j.pay); RPG.xp(20); r.jobsDone = (r.jobsDone || 0) + 1; r.job = null; save(); return node('Paid. The board has fresh ink every few days: come back.'); }, 1]);
+    else opts.push(['Where was I up to?', () => node(j.title + ': ' + (j.have ? 'three flasks of lamp oil, you have ' + (S.items.oil || 0) : r.job.n + ' of ' + j.goal) + '.')]);
+    opts.push(['Tear the notice down.', () => { r.job = null; save(); return node('The nail is still there.'); }]);
+  } else for (const d of ECONJOBS) opts.push([d.title + ' (' + d.pay + ' gold)', () => { r.job = { id: d.id, n: 0, done: false }; save(); return node(d.text + '\n\nYou take the notice.'); }]);
+  if (qAt('bounty') < 0 && qAt('welcome') >= 0) { qStart('bounty'); bountyText(); }
+  return node(j ? 'Your notice is still on you.' : 'Notices, pinned over notices. Three of them are in a clean hand and have not yellowed.', opts.concat([bye]));
+};
+const _iu82d = interactUse; interactUse = function (it) {
+  if (it.id === 'board' && it.kind === 'read') { const nm = { id: 'board', name: 'Notice board', pos: it.p.slice(), yaw: 0, anim: 'idle', path: null }; return startTalk(nm); }
+  return _iu82d(it);
+};
+const _il82d = interactLabel; interactLabel = function (it) { if (it.id === 'board' && it.kind === 'read') return 'Read the notice board'; return _il82d(it); };
+// ── rumours at the inn ──
+const RUMOURS = [
+  [() => !secFlag('bell'), 'They say Tobin’s been up the Watch Bell more than the Watch has. A tin box, a lockpick, and a boy who will not say what he saw from the top.'],
+  [() => !secFlag('stone'), 'There’s a stone in the terrace wall below the Elder’s plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.'],
+  [() => !secFlag('cellar'), 'The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.'],
+  [() => !secFlag('attic'), 'Up on the Hart’s roof walk there’s a trunk under the eaves that nobody here owns. Greta says it came with the building.'],
+  [() => !secFlag('wall'), 'The cellar wall in this very house, the east one: newer brick than the rest. Ask me no more, love.'],
+  [() => !secFlag('strongbox'), 'The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.'],
+  [() => !secFlag('meetpouch'), 'Lights behind the chapel after midnight, and two folk talking low who’d not thank you for listening. Stand off, if you’re bold. Don’t get close.'],
+  [() => !secFlag('magpie'), 'The Magpie walks at dusk from the square to somewhere west of the weavers, same road each time. Nobody follows her. You’d have to be patient.'],
+  [() => !secFlag('house'), 'The shut house on the south lane. Don’t ask Marta. Don’t ask Finn. Ask nobody. Take a key, if you’ve one with a wren on it.'],
+  [() => !S.flags.mineOpen, 'The mine door has been barred for fifty years. The Sexton kept the key, and old Sextons keep everything.'],
+  [() => S.flags.mineOpen && !has('silverthread') && !S.opened['mine.chest'], 'They say the Foreman had a strongbox down there and the only key hangs round his neck. Hung.'],
+  [() => !S.flags.act1, 'A drowned man on the wharf, dry as bone. The wise folk are keeping their windows shut.'],
+  [() => true, 'Hale cries on the last day of the month. Pip told me. Pip tells everybody.', 1],
+  [() => true, 'The Elder talks to the lake. Always has. Says it answers.', 1],
+];
+addOpt('greta', n => ['What’s the talk in the Hart tonight?', () => {
+  const r = econR(); r.rum = r.rum || {}; const day = r.day || 0, el = RUMOURS.map((x, i) => [x, i]).filter(([x, i]) => x[0]() && !r.rum[i]); const pick = el.find(([x]) => !x[2]) || el[0];
+  if (!pick) return node('Nothing new, love. Same faces, same ale.'); r.rum[pick[1]] = 1; save(); return node(pick[0][1]); }]);
 
 
 // ---- 99_main.js ----

@@ -161,7 +161,7 @@ const Foes = (() => {
   function alarm(camp, from) { let first = true; for (const f of F.list) if (f.camp === camp && f.alive && (f.state === 'idle' || f.state === 'return') && hyp(f.pos[0] - from[0], f.pos[2] - from[2]) < (camp.cell ? 12 : 34)) { rouse(f, first ? 0 : rnd(0.15, 0.8)); first = false; } }
   function die(f) {
     const r = RPG.st(); release(f); f.alive = false; f.hp = 0; f.state = 'dead'; f.t = 0; f.anim = Math.random() < 0.5 ? 'c-die' : 'c-die2'; f.h.curName = '';
-    r.kills++; r.dead[f.id] = r.day; Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
+    r.kills++; r.dead[f.id] = r.day; if (typeof econKill === 'function') econKill(f); Snd.event('foe.death', [f.pos[0], f.pos[1] + 1.2, f.pos[2]]);
     const loot = [['gold', Math.round(f.leader ? rnd(22, 34) : rnd(4, 12))]];
     if (Math.random() < 0.45) loot.push([Math.random() < 0.5 ? 'bread' : 'apple', 1]); if (Math.random() < (f.leader ? 1 : 0.18)) loot.push(['potion', 1]);
     if (f.chief) { loot.push(['steelsword', 1]); if (!has('tools') && qAt('tools') !== 99) loot.push(['tools', 1]); } else if (f.leader) loot.push(['ironsword', 1]); else if (Math.random() < 0.1) loot.push(['buckler', 1]);
@@ -251,7 +251,7 @@ const Foes = (() => {
     switch (f.state) {
       case 'idle': {
         f.anim = f.spot.kind === 'sit' || f.spot.kind === 'crouch' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
-        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5);
+        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (RPG.perk && RPG.perk('quiet') ? 0.75 : 1) * (f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5));
         if (f.kind === 'lurker' && live && d < 24 && d >= see) { f.cueT -= dt; if (f.cueT <= 0) { f.cueT = rnd(2.2, 4.6); Snd.event(Math.random() < 0.5 ? 'creak' : 'rustle', [f.pos[0], f.pos[1] + 0.4, f.pos[2]], 1.3); } }       // heard before seen
         if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); if (f.kind !== 'lurker') Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned && !camp.cell) { F.warned = true; toast('Outlaws! They have seen you.'); } }
         break; }
