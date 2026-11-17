@@ -429,10 +429,16 @@ const Kit = (() => {
     if (typeof INFS !== 'undefined' && INFS.proxies) for (const p of INFS.proxies) add(p.Ms, p.w / 2 - 0.2, -p.d / 2 + 0.1, p.d / 2 - 0.2, p.top);
     return out;
   }
-  K_.occlude = function (cam) {
+  // [cull] Every roofline owns its numbers. They used to share one pair of arrays, and the answer function kept the caller's own position array: the scene's
+  // roofline (kept for 0.35 m of walking) was silently overwritten whenever the house batcher took its own from another point (every 1.5 m or 11 degrees of
+  // turning), so what the scene hid depended on which of the two had asked last. That is why the same walk lost different squares on different machines.
+  // own: an object a caller keeps to have its arrays reused from one call to its next (the previous answer function of that caller is then dead).
+  K_.occlude = function (cam0, own) {
+    const cam = [cam0[0], cam0[1], cam0[2]];
     const n = (typeof World !== 'undefined' && World.kitExt ? Object.keys(World.kitExt).length : 0) + (typeof INFS !== 'undefined' && INFS.proxies ? INFS.proxies.length : 0);
-    if (!OCC.boxes || OCC.n !== n) { OCC.boxes = occBoxes(); OCC.n = n; OCC.slope = new Float32Array(OCC.N * OCC.K); OCC.far = new Float32Array(OCC.N * OCC.K); }
-    const N = OCC.N, K = OCC.K, S = OCC.slope, Fd = OCC.far, TAU_ = Math.PI * 2; S.fill(-1e9); Fd.fill(0);
+    if (!OCC.boxes || OCC.n !== n) { OCC.boxes = occBoxes(); OCC.n = n; }
+    const N = OCC.N, K = OCC.K, st = own || {}; if (!st.S) { st.S = new Float32Array(N * K); st.F = new Float32Array(N * K); }
+    const S = st.S, Fd = st.F, TAU_ = Math.PI * 2; S.fill(-1e9); Fd.fill(0);
     for (const b of OCC.boxes) {
       let a0 = 0, lo = 1e9, hi = -1e9, dmax = 0, dmin = 1e9;
       for (let i = 0; i < 4; i++) { const dx = b.c[i][0] - cam[0], dz = b.c[i][1] - cam[2], d = Math.hypot(dx, dz); let a = Math.atan2(dz, dx); if (i === 0) a0 = a; else { a -= a0; a = Math.atan2(Math.sin(a), Math.cos(a)) + a0; } lo = Math.min(lo, a); hi = Math.max(hi, a); dmax = Math.max(dmax, d); dmin = Math.min(dmin, d); }
@@ -462,7 +468,7 @@ const Kit = (() => {
     L[0] = camPos[0]; L[1] = camPos[1]; L[2] = camPos[2]; L[3] = cam.yaw; L[4] = key;
     const fx = Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), drop = K_.DROP[qn] || 70;
     const half = (typeof R !== 'undefined' && R.camera ? Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) : 0.81) + 0.35, cone = Math.abs(cam.pitch) < 0.9 && !(TEST && TEST.kitcone === 0);
-    const occ = K_.occlude && !(TEST && TEST.kitocc === 0) ? K_.occlude(camPos) : null; K_.occNow = occ; K_.occN = (K_.occN || 0) + 1;       // [perf] the scene asks the same horizon about terrain tiles and prop squares (42_scene.js)
+    const occ = K_.occlude && !(TEST && TEST.kitocc === 0) ? K_.occlude(camPos, K_.occOwn || (K_.occOwn = {})) : null; K_.occNow = occ; K_.occN = (K_.occN || 0) + 1;       // [perf] the scene asks the same horizon about terrain tiles and prop squares (42_scene.js)
     const q_ = (typeof R !== 'undefined' && R.q) || {}, RS = q_.yardCast === false ? -1 : (q_.shadowNear || 20) * 1.72 + 2;       // reach of the near sun-shadow map from the camera
     const S_ = K_.dynStat = { units: 0, near: 0, far: 0, cone: 0, dist: 0, hidden: 0, draws: 0 };
     // batches rebuilt for another tier (dressing, the wilds) take their old group off the scene: drop those units from the pools
