@@ -185,6 +185,15 @@ function infRoofGen(B, MS, o) {
   for (const s of [-1, 1]) for (const [u, nb] of [[a0, o.nl], [a1, o.nr]]) if (!nb) { const A = P(u, 0.0, yR + 0.02), Bp = P(u, s * VE(s), YE(s)), A2 = P(u, 0.0, yR - 0.12), B2 = P(u, s * VE(s), YE(s) - 0.14); g2.quad(W_, A, Bp, B2, A2, [0.2, 0.17, 0.14], GPU.wood, OUTV(u < 0 ? -1 : 1, 0, 0)); }      // [fx2] a barge board along each exposed rake
   const nrid = Math.min(nseg, 4); for (let i = 0; i < nrid; i++) { const ua = a0 + (a1 - a0) * i / nrid, ub = a0 + (a1 - a0) * (i + 1) / nrid, hw = RM === INF_TH ? 0.2 : 0.1, cc = RM === INF_TH ? col.map(v => v * 0.5) : [0.26, 0.22, 0.19], ya = yR + 0.07 - sgy(ua), yb = yR + 0.07 - sgy(ub); for (const s of [-1, 1]) g2.quad(W_, P(ua, 0, ya), P(ub, 0, yb), P(ub, s * hw, yb - 0.1), P(ua, s * hw, ya - 0.1), cc, GPU.wood, [0, 1, 0]); }      // [fx2] ridge cap follows the sag
   { const pr = o.patch === undefined ? 0 : o.patch, np = pr < 0.45 ? 0 : pr < 0.8 ? 1 : 2; for (let k = 0; k < np; k++) { const q = ((pr * 977 + k * 313) % 1), s = (k + Math.floor(pr * 10)) % 2 ? 1 : -1, fresh = (q * 7) % 1 < 0.5, ua = a0 + 0.4 + q * Math.max(0.1, (a1 - a0) - 2.4), ub = ua + 1.1 + (q * 13 % 1) * 0.8, t0 = 0.25 + (q * 5 % 1) * 0.3, t1 = t0 + 0.28, pc = fresh ? col.map(v => Math.min(2, v * 1.28)) : col.map(v => v * 0.74), L2 = (t, u) => P(u, s * VE(s) * (1 - t) , YE(s) + (yR - YE(s)) * t + 0.012); g2.quad(RM, L2(t0 - 0.0, ua), L2(t0, ub), L2(t1, ub), L2(t1, ua), pc, [0, 0, 1.1, 0.4], [0, 1, 0]); } }      // [fx3] a patched area: a repair in fresher stuff or a stained, mossed one
+  // [fx3] J1: where the roof runs into a neighbour's wall (a gable end against it) a lead upstand stands 12 cm up the wall line and a lead apron laps the slope, so the junction is flashed, never a bare edge
+  for (const [u, sg, nb] of [[a0, -1, o.nl], [a1, 1, o.nr]]) if (nb) for (const s of [-1, 1]) {
+    const lead = [0.3, 0.3, 0.32], A = P(u, 0, yR), Bp = P(u, s * VE(s), YE(s)), A2 = P(u + sg * 0.0, 0, yR + 0.12), B2 = P(u, s * VE(s), YE(s) + 0.12), A3 = P(u - sg * 0.2, 0, yR + 0.02), B3 = P(u - sg * 0.2, s * VE(s), YE(s) + 0.02);
+    g2.quad(W_, A, Bp, B2, A2, lead, GPU.wood, OUTV(sg, 0, 0)); g2.quad(W_, A2, B2, B3, A3, lead, GPU.wood, [0, 1, 0]); g2.quad(W_, A3, B3, Bp, A, lead, GPU.wood, [0, 1, 0]);
+  }
+  // J2: an exposed rake carries a verge: a board along the top edge, 5 cm oversail, so the end of the roof is a thing with thickness
+  for (const s of [-1, 1]) for (const [u, sg, nb] of [[a0, -1, o.nl], [a1, 1, o.nr]]) if (!nb) { const A = P(u, 0, yR + 0.03), Bp = P(u, s * VE(s), YE(s) + 0.03), A2 = P(u + sg * 0.05, 0, yR + 0.03), B2 = P(u + sg * 0.05, s * VE(s), YE(s) + 0.03); g2.quad(W_, A, Bp, B2, A2, [0.2, 0.17, 0.14], GPU.wood, [0, 1, 0]); }
+  // J3: a fascia board under each eave edge, 14 cm deep
+  for (const s of [-1, 1]) if (!nsd(s)) { const y0 = YE(s) - T, A = P(a0, s * VE(s), y0), Bp = P(a1, s * VE(s), y0), A2 = P(a0, s * VE(s), y0 - 0.14), B2 = P(a1, s * VE(s), y0 - 0.14); g2.quad(W_, A, Bp, B2, A2, [0.22, 0.18, 0.15], GPU.wood, OUTV(0, s, 0)); }
   ROOFS.push({ M: Array.from(MS.elements || MS), w, d, top, tanP, ridgeX, zc, ov, lift, T, a0, a1, hs, ve, yR, yE: yE0 });
   const name = g.make('gen_roof_' + (_gn++)), name2 = g2.make('gen_roofe_' + (_gn++)), fn = gf.make('gen_roofF_' + (_gn++));
   Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn]; Kit.far[name2] = [];
@@ -300,6 +309,7 @@ function infShell(B, h, lo) {
   if (jetty) for (let k = 1; k < fl; k++) {       // the overhanging storey rests on a deep joist beam along the front, with brackets under it
     const g = GP(); g.box(INF_T, -w / 2, -0.3, -d / 2 - 0.62, w / 2, 0.02, -d / 2 + 0.1, [0.68, 0.6, 0.52]); g.box(INF_T, -w / 2 - 0.05, -0.34, -d / 2 - 0.58, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.5, 0.44, 0.38]);
     for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * mF; g.beam(INF_T, [x, -0.7, -d / 2 - 0.5], [x, -0.3, -d / 2 + 0.02], 0.1, [0.52, 0.46, 0.4]); }
+    for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * mF; g.box(INF_T, x - 0.06, -0.27, -d / 2 - 0.66, x + 0.06, -0.06, -d / 2 - 0.62, [0.4, 0.34, 0.28]); }      // [fx3] J3: the joist ends show on the bressumer's face
     B.add(g.make('gen_joist_' + (_gn++)), KH.xf(MS, 0, k * H, 0, 1, 0), OUT);
   }
   // ── roof: generated shingles; ridge parallel to the street (eaves to the street) or gable to the street ──
