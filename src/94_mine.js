@@ -304,7 +304,7 @@ function mine_wire(cell, wpos) {
 // on a hillock of its own (WILDS.bumps in 55c_wilds.js). (bx, bz) is the unit direction into the rock; key is a wilds place whose kit list is drawn.
 function cleftCrag(key, cx, cz, bx, bz) {
   const sx = -bz, sz = bx, L = (WB.kit[key] = WB.kit[key] || []), big = 'rock_moss_set_01_e', T1 = [0.62, 0.62, 0.6], T2 = [0.78, 0.68, 0.56];       // one kind of rock: the large masses are one scan, the small grey ones are tinted to its brown
-  const put = (name, b, sd, s, ry, dy, col) => { const x = cx + bx * b + sx * sd, z = cz + bz * b + sz * sd, y = Terrain.y(x, z) + dy; L.push({ name, x, y, z, s, ry, rx: 0, rz: 0, tint: name === big ? T1 : T2 }); if (col) World.colliders.push({ x, z, r: col, y0: y - 1, y1: y + 4 }); };
+  const put = (name, b, sd, s, ry, dy, col) => { const x = cx + bx * b + sx * sd, z = cz + bz * b + sz * sd, rr = 0.9 * s, y = Math.min(Terrain.y(x, z), Terrain.y(x - bx * rr, z - bz * rr), Terrain.y(x + sx * rr, z + sz * rr), Terrain.y(x - sx * rr, z - sz * rr)) + dy;       /* on the lowest ground under it: on the cliff above the Hermit's Pool a rock set at its centre's height hung over the mouth */ L.push({ name, x, y, z, s, ry, rx: 0, rz: 0, tint: name === big ? T1 : T2 }); if (col) World.colliders.push({ x, z, r: col, y0: y - 1, y1: y + 4 }); };
   // the flanks of the slot (taller than the dark), the mass behind it standing over it, the shoulders, then a skirt of small stones that breaks the outline; nothing floats
   put(big, 1.2, 2.35, 1.85, 0.4, -0.5, 1.6); put(big, 1.2, -2.35, 1.9, 2.9, -0.55, 1.6);
   put(big, 3.6, 0.1, 2.7, 1.3, -0.8, 2.5); put(big, 3.2, 3.3, 2.0, 4.1, -0.6, 1.8); put(big, 3.3, -3.2, 2.1, 0.9, -0.6, 1.8);
