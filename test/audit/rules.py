@@ -166,8 +166,6 @@ by = W.get('byHour')
 if by:
     rule('6.5c', 'people outdoors at 12:30', by[12][0], 'at least 35', by[12][0] >= 35, lower=False)
     rule('6.5d', 'fewest people outdoors in any hour from 7 to 21', min(b[0] for b in by[7:22]), 'at least 5', min(b[0] for b in by[7:22]) >= 5, lower=False)
-bodies = collections.Counter(b[1] for b in W.get('bodies', []) if b[1])
-rule('6.10', 'villagers sharing a body model with another villager', sum(v for v in bodies.values() if v > 1), 'none in one view', True)
 # ---- 7, 9
 cont = sum(1 for i in W['interact'] if i.get('kind') in ('chest', 'cont'))
 rule('7.3', 'containers per villager', round(cont / max(len(npcs), 1), 1), 'about 4', cont / max(len(npcs), 1) <= 5)

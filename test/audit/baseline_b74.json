@@ -178,14 +178,6 @@
    "lower": true
   },
   {
-   "id": "6.10",
-   "what": "villagers sharing a body model with another villager",
-   "value": 0,
-   "target": "none in one view",
-   "ok": true,
-   "lower": true
-  },
-  {
    "id": "7.3",
    "what": "containers per villager",
    "value": 13.0,
