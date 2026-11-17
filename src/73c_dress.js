@@ -385,6 +385,7 @@ function buildDress() {
     o = o || {};
     if (hyp(x, z) > WORLD_RADIUS + 8) return false;
     if (KEEP.hit(x, z, r * 1.45)) return false;          // Build 33
+    if (z > 10.9 - r * 0.5 && z < 13.4 + r * 0.5 && x > -37.5 - r && x < 25) return false;      /* [fx3] the terrace's south wall and its lean-to stand here: nothing is dressed into the wall */
     if (routeNear(x, z, r + 0.7)) return false;          // [fx3] a walk the route tests make (galleries, lanes, the dead yard) stays clear: never in a door's approach strip or on a road's centre line
     for (const p of DRS.placed) if (hyp(x - p[0], z - p[1]) < r + p[2]) return false;
     const al = inAlley(x, z);
