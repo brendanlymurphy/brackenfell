@@ -35,7 +35,7 @@ const SHELL_TONES = {      // narrow bands: variety comes from pitch, height, ri
 function shellDistrict(x, z) {
   if (z < -42) return 'chapelgate'; if (z > 34) return 'wharfside'; if (x > 56) return 'riverside'; if (x < -50) return 'westgate'; return 'market';
 }
-const LIME = { cream: [0.57, 0.54, 0.46], grey: [0.52, 0.52, 0.49], ochre: [0.56, 0.47, 0.33], pink: [0.54, 0.46, 0.41], sage: [0.48, 0.51, 0.45], bone: [0.57, 0.55, 0.49], dun: [0.49, 0.45, 0.38] };      // limewash is never white: dirty, at most about 0.8
+const LIME = { cream: [0.57, 0.54, 0.46], grey: [0.52, 0.52, 0.49], ochre: [0.56, 0.47, 0.33], pink: [0.54, 0.46, 0.41], sage: [0.48, 0.51, 0.45], bone: [0.57, 0.55, 0.49], dun: [0.36, 0.33, 0.27] };      // limewash is never white: dirty, at most about 0.8
 const SHELL_WALL = {      // [chance of limewash over the planks, chance of a stone ground floor, limewash tones, plank tone]
   market: [0.6, 0.75, ['cream', 'grey', 'ochre', 'pink', 'bone', 'sage'], [1, 1, 1]],
   chapelgate: [0.5, 0.95, ['grey', 'dun', 'bone', 'grey'], [0.8, 0.78, 0.76]],
@@ -60,7 +60,7 @@ const SHELL = {         // per-building overrides (kind, pitch, tone index, sag,
   'in.04': { face: true }, 'in.10': { face: true }, 'in.40': { face: true }, 'in.41': { face: true }, 'in.42': { face: true },
   herbalist: { lime: 'pink', ground: 'plaster', pitch: 53, face: true },
   weaver: { wall: [0.85, 0.82, 0.78], ground: 'plaster', pitch: 58 },
-  draper: { lime: 'bone', ground: 'plaster', pitch: 56 },
+  draper: { lime: 'dun', ground: 'plaster', pitch: 56 },
   'shop.n2': { wall: [1, 1, 1], pitch: 61 }, 'shop.s0': { lime: 'dun', pitch: 57 }, 'shop.s1': { wall: [0.78, 0.76, 0.74], ground: 'stone', pitch: 53 },
 };
 const _shellMemo = {};
@@ -154,5 +154,5 @@ function shellJetty(site, st) { const S = shellStyle(site, null); return site.in
 // [fx2] the alley's six shops, each a different build (73b_alley.js reads this): all stone with an arch front, tarred board, pale limewash over a stone ground floor; awnings of three kinds
 const ALLEY_LOOK = {
   'shop.n2': { tar: true, awning: 'pentice' }, 'shop.n3': { allstone: true, ground: 'stone', awning: 'counter' }, 'shop.n4': { lime: 'bone', ground: 'stone' },
-  'shop.s0': { awning: 'counter' }, 'shop.s1': {}, 'shop.s2': { lime: 'grey', ground: 'stone', awning: 'pentice' },
+  'shop.s0': { awning: 'counter' }, 'shop.s1': {}, 'shop.s2': { lime: 'grey', ground: 'stone', awning: 'pentice' }, draper: { tone: 'dun' },
 };

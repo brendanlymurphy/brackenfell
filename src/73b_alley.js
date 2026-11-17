@@ -145,7 +145,7 @@ function buildAlley() {
     const frames = (k) => { const o = {}, sh = k > 0 ? 0.5 : 0; for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); o[wn] = new THREE.Matrix4().makeBasis(V(W.u), V(up), V(W.n)).setPosition(s0[0], k * H, s0[2] - sh).premultiply(MS); } return o; };
     const F0 = frames(0);
     // ── storeys ──
-    const stone = a.kind === 'cutler' || a.kind === 'tinker' || LK.ground === 'stone', allStone = !!LK.allstone, WT = LK.lime ? LIME[LK.lime] : LK.tar ? [0.5, 0.48, 0.46] : null;
+    const stone = a.kind === 'cutler' || a.kind === 'tinker' || LK.ground === 'stone', allStone = !!LK.allstone, WT = LK.lime || LK.tone ? LIME[LK.lime || LK.tone] : LK.tar ? [0.5, 0.48, 0.46] : null;
     for (let k = 0; k < fl; k++) {
       const F = frames(k);
       for (const wn of ['front', 'back', 'left', 'right']) {
