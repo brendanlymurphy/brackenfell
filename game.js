@@ -2981,7 +2981,7 @@ const Chars = (() => {
       const day = float(1).sub(H.uZone).mul(H.uLight).add(H.uZone.mul(0.45)), Hs3 = V.add(V.add(vec3(0.0, 1.0, 0.0)).normalize()).normalize(), glint = TSL.pow(TSL.max(N.dot(Hs), 0), float(160)).mul(0.9).mul(TSL.min(SH.U.sunCol.x.mul(1.4), 1)).add(TSL.pow(TSL.max(N.dot(Hs2), 0), float(24)).mul(0.5)).add(TSL.pow(TSL.max(N.dot(Hs3), 0), float(200)).mul(1.1)).mul(day).mul(eyeW);      // wet: a sharp window of light as well as the soft one
       emis = emis.add(vec3(1, 0.97, 0.9).mul(glint));
     }
-    if (!(TEST && TEST.shade === 0)) { const oM = float(1).sub(TSL.step(0.5, H.uZone)), fl_ = SH.U.ambSky.dot(vec3(0.3333)).mul(0.3).add(SH.U.sunCol.dot(vec3(0.3333)).mul(0.035)).mul(oM).mul(H.uLight); emis = TSL.max(emis, albedo.mul(fl_.mul(0.9)).add(vec3(1.0, 0.8, 0.66).mul(fl_.mul(0.16)))); }      // [l1] people out of the sun keep a floor of sky and bounce that keeps their own tone (dark skin lost its features)
+    if (!(TEST && TEST.shade === 0)) { const oM = float(1).sub(TSL.step(0.5, H.uZone)), fl_ = SH.U.ambSky.dot(vec3(0.3333)).mul(0.3).add(SH.U.sunCol.dot(vec3(0.3333)).mul(0.035)).mul(oM).mul(H.uLight), shd = TSL.smoothstep(0.3, -0.35, N.dot(SH.U.sunDir)); emis = emis.add(albedo.mul(fl_.mul(0.8)).add(vec3(1.0, 0.8, 0.66).mul(fl_.mul(0.12))).mul(shd)); }      // [l1] people turned from the sun keep a floor of sky and bounce that keeps their own tone (dark skin lost its features); added, so the light and shade on the face stay
     m.emissiveNode = emis;
     const VIS = S.vis && S.bodies[H.body] && S.bodies[H.body].hasVid ? S.vis : null; H.hasVis = !!VIS;
     // [ch1] teeth sit behind the lips: the upper row up under the upper lip, the lower row down and back, so they show on wide shapes only
