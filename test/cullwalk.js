@@ -9,19 +9,19 @@ for (const [x, z, yaw, n, turn] of legs) {
   game.tp(x, z, yaw);
   for (let i = 0; i < n; i++) {
     Input.keys = { KeyW: true, ShiftLeft: i % 20 > 12 }; Input.lookX = turn * (i % 30 < 20 ? 1 : -2); game.step(1, dt); const r = RPG.st(); r.hp = RPG.MAXHP; await game.draw(); frames++;
-    if (World.cell) continue;
+    if (World.cell || World.deepIn) continue;       // deep indoors the outside is drawn short on purpose
     const e = R.cam.pos; fr.setFromProjectionMatrix(pm.multiplyMatrices(R.camera.projectionMatrix, R.camera.matrixWorldInverse));
     // candidates: in the view, not in the buffer
-    const cand = []; const take = (list, what) => { for (const t of list) { if (!fr.intersectsSphere(t.sph) || t.on || t.ok === false) continue; checked++; cand.push([what, { x: t.sph.center.x, z: t.sph.center.z, r: t.sph.radius, y1: t.sph.center.y + t.sph.radius }]); } };
+    let ctx0; const cand = []; const take = (list, what) => { for (const t of list) { if (!fr.intersectsSphere(t.sph) || t.on || t.ok === false) continue; checked++; cand.push([what, { x: t.sph.center.x, z: t.sph.center.z, r: t.sph.radius, y1: t.sph.center.y + t.sph.radius }, t, ctx]); } }; let ctx = '';
     for (const P of SC.pools) take(P.tiles, P.kind);
-    for (const s of SC.statics) if (s.view && s.sub && !s.view.full && !s.it.cell) { const d = Math.hypot(s.it.c[0] - e[0], s.it.c[1] - e[1], s.it.c[2] - e[2]); if (s.it.maxDist && d > s.it.maxDist + s.it.r) continue; take(s.sub.cells, 'prop'); }
-    // A candidate is a hole only if it is in sight from here and from half a metre to every side: the roofline leaves out any house nearer than 2.5 m,
-    // so standing 2.49 m from a wall it calls visible what the wall hides. Seen from all five places, it is really in sight.
-    let open = cand.map(() => true);
-    for (const [ox, oz] of [[0, 0], [0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]]) { const q = [e[0] + ox, e[1], e[2] + oz], occ = Kit.occlude(q); cand.forEach((c, k) => { if (open[k] && occ(c[1], Math.hypot(c[1].x - q[0], c[1].z - q[2]))) open[k] = false; }); }
+    for (const s of SC.statics) if (s.view && s.sub && !s.view.full && !s.it.cell) { const d = Math.hypot(s.it.c[0] - e[0], s.it.c[1] - e[1], s.it.c[2] - e[2]); if (s.it.maxDist && d > s.it.maxDist + s.it.r) continue; ctx = 'mesh visible ' + s.mesh.visible + ' casts ' + s.mesh.castShadow + ' n ' + s.view.n + ' age ' + Math.round(SC.now - (s.view.t || 0)) + ' occN ' + s.view.occN + '/' + s.view.hidN + '/' + SC.occN + ' camStep ' + SC.camStep; take(s.sub.cells, 'prop'); }
+    // A square that is in the view and not in its buffer must be one the game holds to be under the roofline (t.hid), and that must be true of the
+    // roofline as it is from where the game last asked (SC.occAt, never more than 0.35 m away). The roofline itself is proven by test/kitcull.mjs.
+    // (Asking it from here instead gives false alarms: it leaves out any house nearer than 2.5 m, so a step changes the answer beside a wall.)
+    let open = cand.map(c => !c[2].hid); { const q = SC.occAt, occ = Kit.occlude(q); cand.forEach((c, k) => { if (!open[k] && !occ(c[1], Math.hypot(c[1].x - q[0], c[1].z - q[2]), 0.85)) open[k] = true; }); }
     // one frame late at the edge of the view while turning is not seen; a hole is: the same square missing three frames running, or anything big or near
     const now = new Set(); cand.forEach((c, k) => { if (!open[k]) return; const id = c[0] + c[1].x.toFixed(1) + ',' + c[1].z.toFixed(1), d = Math.hypot(c[1].x - e[0], c[1].z - e[2]); now.add(id); const run = (streak.get(id) || 0) + 1; streak.set(id, run); late++; if (run < 3 && !(c[1].r > 6 && d < 150) && d > 40) open[k] = false; }); for (const id of [...streak.keys()]) if (!now.has(id)) streak.delete(id);
-    cand.forEach((c, k) => { if (open[k]) bad.push(c[0] + ' square at ' + [c[1].x, c[1].z].map(v => v.toFixed(0)) + ' (r ' + c[1].r.toFixed(0) + ') missing at frame ' + frames + ', camera ' + e.map(v => v.toFixed(1)) + ', ' + Math.hypot(c[1].x - e[0], c[1].z - e[2]).toFixed(0) + ' m away'); });
+    cand.forEach((c, k) => { if (open[k]) bad.push(c[0] + ' square at ' + [c[1].x, c[1].z].map(v => v.toFixed(0)) + ' (r ' + c[1].r.toFixed(0) + ') missing at frame ' + frames + ', camera ' + e.map(v => v.toFixed(1)) + ', ' + Math.hypot(c[1].x - e[0], c[1].z - e[2]).toFixed(0) + ' m away; in ' + c[2].in + ' on ' + c[2].on + ' hid ' + c[2].hid + ' ' + c[3]); });
   }
 }
 Input.keys = {};

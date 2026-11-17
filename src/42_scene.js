@@ -224,6 +224,7 @@ function sceneUpdate(camPos, q) {
   const bd = R.boneData, e = camPos, cur = World.cell;       // cur: the cell the player is in. Then only that cell is drawn (its generated meshes, kit groups, door leaf); outdoors, no cell is
   if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
   World.deepIn = cur ? true : deepIndoors(e); const inside = !cur && World.deepIn, ind = DRAW.indoor;
+  R.camera.updateMatrixWorld(); R.camera.matrixWorldInverse.copy(R.camera.matrixWorld).invert();       // [perf] the view tests below must use this frame's camera: the renderer brings the inverse up to date only when it draws, so they ran one frame behind (a square at the edge of a fast turn came a frame late)
   _fr.setFromProjectionMatrix(_pm.multiplyMatrices(R.camera.projectionMatrix, R.camera.matrixWorldInverse));
   // [perf] which squares of terrain, water and props are in view is asked again only when the camera has moved 0.4 m or turned 2 degrees
   // (the squares carry a margin of 10 m): standing still or walking straight, these loops over a few hundred squares are skipped
