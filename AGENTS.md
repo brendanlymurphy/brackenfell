@@ -6,7 +6,7 @@ https://brendanlymurphy.github.io/brackenfell/. Development happens on `threejs`
 This file is the whole onboarding: a worker brief only needs to say "read AGENTS.md" and then name the task. Read more only for
 the area you touch: `docs/DESIGN.md` (art, sound and feel), `docs/STATE.md` (how the engine works, by area), `ROADMAP.md` (done, in
 progress, next, known problems), `docs/DECISIONS.md` (what was tried and rejected: read before proposing something "new"),
-`docs/STORY.md` (the main story), `docs/DEFECTS.md` (open visual defects), `docs/HISTORY.md` (old measurements).
+`docs/TOWNPLAN.md` (how the town is laid out and why: the authority for anything outdoors), `docs/STORY.md` (the main story), `docs/DEFECTS.md` (open visual defects), `docs/HISTORY.md` (old measurements).
 
 ## Build and run
 
@@ -160,3 +160,6 @@ node tools/voice/check.mjs --allow-missing
 - Build 69: add nothing new until what exists is right and filled out. "The ground is flat, every house looks the same on the
   outside, the terraces and platform are all fucked up, not to mention the walls; none of it really flows, it all feels like
   copy paste." Also to be made coherent: general logic, the storylines, what characters do, and their mechanics.
+- "Everything is blocky, blocked off, clunky and lazy. Think like an artist and a city planner: every touch intentional, not just
+  filling space, but all the space filled at the same time, and full of life." The answer is `docs/TOWNPLAN.md`: read it before
+  touching anything outdoors. It outranks any brief.
