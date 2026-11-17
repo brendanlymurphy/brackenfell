@@ -9,3 +9,8 @@ tools/scan/_bake/
 gate-out/
 audio/voice/manifest.partial.json
 _site/
+# built by tools/build.mjs; GitHub builds and publishes them (.github/workflows/pages.yml)
+/game.js
+/index.html
+/sw.js
+/three.js
