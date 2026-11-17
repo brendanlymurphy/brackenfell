@@ -347,6 +347,7 @@ function infillAttach() {
       if (fa[0] * fb[0] + fa[1] * fb[1] > -0.9 || dist < 6.5 || dist > 12.5) continue;
       if (Math.abs(dx * fa[0] + dz * fa[1]) < dist * 0.9) continue;
       const pa = front(a), pb = front(b); if (Math.abs(pa[1] - pb[1]) > 1.2) continue;
+      { let hit = false; for (let k = 1; k < 12 && !hit; k++) { const t = k / 12, x = pa[0] + (pb[0] - pa[0]) * t, z = pa[2] + (pb[2] - pa[2]) * t, y = pa[1] + (pb[1] - pa[1]) * t - 0.12; for (const o of SITES) { if (!o.w || o.id === a.id || o.id === b.id) continue; const l = worldToSite(o, x, z); if (Math.abs(l[0]) < o.w / 2 + 0.7 && Math.abs(l[1]) < o.d / 2 + 0.7 && y < o.y + ((o.floors || 2) >= 2 ? 7.2 : 5.0) + 0.3) { hit = true; break; } } } if (hit) continue; }      // [fx3] a rope is tied to a hook on each wall and clears every other roof by 0.3 m
       B.add(genBunting(pa, pb, rr, cols, 11), I, { zone: 0, skyVis: 1, cast: false }); used.add(a.id); used.add(b.id); nr++;
     }
   }
