@@ -77,6 +77,9 @@ interiors lit by hearths and candles. As realistic as free art allows.
   (every roof had been one shingle texture), per-house pitch, sag and eaves; the inn's cross gable and dormers; jetties; dark
   lattice windows in four designs; proud timber framing, sills, lintels, plinths; six weathered door finishes; the inn's working
   back. Budget re-accepted for the district (medium terrace 154 / 238k, lake 138 / 255k; low square 128 / 215k, terrace 127 / 170k).
+  With it (fork-logic): story logic first pass, a day of their own for every resident, mechanics made honest (docs/LOGIC.md), all
+  252 lines voiced with lip tracks, walkers that see ledges, the culling flicker fix. The villagers' road graph joins each road end
+  to its nearest neighbour (the north road had come loose from the place and people walked 500 m round by the hills).
 
 - **60, 61** Real lip sync (visemes from the audio of every voiced line), natural skin and eyes, gaze, fitted helmet and kerchiefs.
 - **62** One gate command, the gate on GitHub for every push, onboarding docs rewritten, seven new voiced story lines.
@@ -107,7 +110,8 @@ interiors lit by hearths and candles. As realistic as free art allows.
   - `fork-hx` house exteriors: `test/houses_survey.js` (13 visible types across 58 at Build 69); roofs by district (every roof was
     one shingle texture), then fronts designed one by one. The mine's remaining rooms (`fork-fx2`) wait behind it.
   - `fork-ch1` characters: paused until a town worker frees up (apron glitch, aprons varied, men's tunics, posture, hair).
-  - Logic, storylines, what people do, mechanics: asked of the second Claude Code session (`fork-logic`, docs/LOGIC.md).
+  - Logic, storylines, what people do, mechanics: asked of the second Claude Code session (`fork-logic`, docs/LOGIC.md). First pass done on `fork-logic`: 13 story faults, 8 routine faults and 9 rule faults fixed, each with a check (bot `logic`, gate step `people`); what is open and why is listed per part in docs/LOGIC.md (beds for Tobin and Aldous need the interiors worker).
+  - Voices: all 252 planned lines (168 of conversation, 84 barks) have a recording and a lip track as of `fork-logic` (29 minutes, 12.9 MB, fetched a line at a time). No daily batch is scheduled any more; new lines need one run of the commands in AGENTS.md.
 
 ## Next
 

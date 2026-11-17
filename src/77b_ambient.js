@@ -46,7 +46,7 @@ function ambGo(a, spot) {
 }
 function ambArrive(a, spot) { const sp = World.spots[spot]; a.path = null; a.at = spot; if (sp) { a.pos = sp.p.slice(); a.yaw = sp.yaw; } a.anim = 'idle'; a.dwell = 6 + Math.random() * 14; a.state = 'stand'; }
 function ambDecide(a, hr) {
-  if (hr >= 18.5 || hr < 7.5) { if (a.state !== 'home' && a.state !== 'away') { if (a.state !== 'going-home') { a.state = 'going-home'; if (!ambGo(a, a.def.home)) a.state = 'away'; } } return; }
+  if (hr >= 18.5 || hr < 7.5 || (typeof npcRaining === 'function' && npcRaining())) {       /* [logic] rain sends the passers-by home as dusk does; they come out again when it stops */ if (a.state !== 'home' && a.state !== 'away') { if (a.state !== 'going-home') { a.state = 'going-home'; if (!ambGo(a, a.def.home)) a.state = 'away'; } } return; }
   if (a.state === 'away' || a.state === 'home') {         // morning: come out of the door
     const hs = World.spots[a.def.home]; if (!hs) return; a.pos = hs.p.slice(); a.at = a.def.home; a.state = 'stand'; a.dwell = 1 + a.i * 2.3; a.anim = 'idle';
   }

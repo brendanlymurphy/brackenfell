@@ -428,156 +428,176 @@
   {
    "speaker": "hale",
    "text": "That’s Corwin’s hand. Alive, then, or he was. Let me see.\n\nBread. Fifty years of bread, in a cave on the shore. I barred that door and told myself it was to keep them out.",
-   "where": "82_story.js:108"
+   "where": "82_story.js:109"
   },
   {
    "speaker": "hale",
    "text": "That something went wrong below, before I wore this helmet. That Rowan went out to the shore every dawn and never said why. I didn’t ask. A man can keep a gate for thirty years that way.",
-   "where": "82_story.js:108"
+   "where": "82_story.js:109"
   },
   {
    "speaker": "hale",
    "text": "Not here. Rowan knows the way to the lake cave; he’s walked it with a pail more mornings than I’ve slept. Go and ask him, and don’t let him tell you it’s nothing.",
-   "where": "82_story.js:108"
-  },
-  {
-   "speaker": "maren",
-   "text": "Brass, and a number. OM fourteen: the Old Mine, Dunstan Pell. He dug under Corwin, a good while back.",
    "where": "82_story.js:109"
   },
   {
    "speaker": "maren",
-   "text": "No. Dry as a bone inside and thin as a rake: he walked a long way on nothing, in the dark. That’s no lake’s work.",
+   "text": "Brass, and a number. OM fourteen: the Old Mine, Dunstan Pell. He dug under Corwin, a good while back.",
    "where": "82_story.js:110"
   },
   {
    "speaker": "maren",
-   "text": "The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
+   "text": "No. Dry as a bone inside and thin as a rake: he walked a long way on nothing, in the dark. That’s no lake’s work.",
    "where": "82_story.js:111"
+  },
+  {
+   "speaker": "maren",
+   "text": "The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
+   "where": "82_story.js:112"
   },
   {
    "speaker": "aldous",
    "text": "There’s a vestment chest in the sacristy that I’ve never had the heart to open. The Sexton’s things are in it. The crypt gate under the nave has a lock to match.",
-   "where": "82_story.js:113"
+   "where": "82_story.js:114"
   },
   {
    "speaker": "finn",
    "text": "First light, face down in the reeds. The lake gives drowned men back swollen. This one was thin as a rake and dry as kindling. Whatever he was, he walked to the water; he didn’t fall in.",
-   "where": "82_story.js:114"
+   "where": "82_story.js:115"
   },
   {
    "speaker": "pip",
    "text": "A man under a sheet! Hale said not to look. I looked. He’s got silver in his teeth.",
-   "where": "82_story.js:115"
+   "where": "82_story.js:116"
+  },
+  {
+   "speaker": "pip",
+   "text": "There’s a trunk up on the Hart’s roof walk. I climbed up. It’s locked, and Greta says it isn’t hers, but she looked cross.",
+   "where": "82_story.js:118"
+  },
+  {
+   "speaker": "pip",
+   "text": "There’s lights behind the chapel after midnight. Two people. I’m not allowed out, so I didn’t see them.",
+   "where": "82_story.js:118"
+  },
+  {
+   "speaker": "pip",
+   "text": "Nothing. I’m being good today.",
+   "where": "82_story.js:119"
   },
   {
    "speaker": "marta",
    "text": "You’ve one already, dear. Don’t be greedy with light.",
-   "where": "82_story.js:117"
+   "where": "82_story.js:121"
   },
   {
    "speaker": "marta",
    "text": "Fill it before you go and mind the oil. Where you’re going, you’ll want it.",
-   "where": "82_story.js:117"
+   "where": "82_story.js:121"
   },
   {
    "speaker": "rowan",
    "text": "Sit down, you’re making me tired. ... Hale has read it, then. I thought he might. I thought it would be me they came for one day.\n\nThe cave on the lake shore. The cellar of the Hart. I’ll tell you the rest, but not on my feet, and not today.",
-   "where": "82_story.js:120"
+   "where": "82_story.js:124"
+  },
+  {
+   "speaker": "rowan",
+   "text": "Tomorrow, I said. An old man needs a night to find the words. Sleep, and come back.",
+   "where": "82_story.js:126"
   },
   {
    "speaker": "hale",
    "text": "Good. That’s the end of it. This time.",
-   "where": "82b_interact.js:206"
+   "where": "82b_interact.js:211"
   },
   {
    "speaker": "hale",
    "text": "You haven’t the coin. Then it’s the cell. Come on.",
-   "where": "82b_interact.js:207"
+   "where": "82b_interact.js:212"
   },
   {
    "speaker": "hale",
    "text": "Paid. Keep your hands in your pockets in future.",
-   "where": "82b_interact.js:207"
+   "where": "82b_interact.js:212"
   },
   {
    "speaker": "hale",
    "text": "There’s no cell to hold you. Go on, then.",
-   "where": "82b_interact.js:212"
-  },
-  {
-   "speaker": "greta",
-   "text": "Three gold, love. Your purse says otherwise.",
-   "where": "82b_interact.js:246"
+   "where": "82b_interact.js:220"
   },
   {
    "speaker": "greta",
    "text": "Eat it while it’s hot. I don’t do cold.",
-   "where": "82b_interact.js:246"
+   "where": "82b_interact.js:254"
+  },
+  {
+   "speaker": "greta",
+   "text": "Three gold, love. Your purse says otherwise.",
+   "where": "82b_interact.js:254"
   },
   {
    "speaker": "greta",
    "text": "Four gold, love, and I’ll not haggle with a purse that light.",
-   "where": "82b_interact.js:247"
+   "where": "82b_interact.js:255"
   },
   {
    "speaker": "greta",
    "text": "Up the stairs, the bed by the window. Sleep till you’re done.",
-   "where": "82b_interact.js:247"
+   "where": "82b_interact.js:255"
   },
   {
    "speaker": "hale",
    "text": "That’s a fine blade. Don’t draw it in my square.",
-   "where": "82b_interact.js:256"
+   "where": "82b_interact.js:265"
   },
   {
    "speaker": "brandt",
    "text": "Good. It sits well in your hand. My work.",
-   "where": "82b_interact.js:257"
+   "where": "82b_interact.js:266"
   },
   {
    "speaker": "brandt",
-   "text": "Where did you get that? That’s my dies, fifty years back. Old Mine steel.",
-   "where": "82b_interact.js:258"
+   "text": "Where did you get that? Those are my grandfather’s dies, fifty years back. Old Mine steel.",
+   "where": "82b_interact.js:267"
   },
   {
    "speaker": "maren",
    "text": "You’re bleeding on my floor. Sit.",
-   "where": "82b_interact.js:259"
+   "where": "82b_interact.js:268"
   },
   {
    "speaker": "greta",
    "text": "Off down a hole, love? I’ll keep the bed made.",
-   "where": "82b_interact.js:260"
+   "where": "82b_interact.js:269"
   },
   {
    "speaker": "marta",
    "text": "Odd thing to carry. I’ll not ask.",
-   "where": "82b_interact.js:261"
+   "where": "82b_interact.js:270"
   },
   {
    "speaker": "aldous",
    "text": "The Dawn keep you. You look as though you have seen the dead.",
-   "where": "82b_interact.js:262"
+   "where": "82b_interact.js:271"
   },
   {
    "speaker": "finn",
    "text": "Still thinking about that man, aren’t you. So am I.",
-   "where": "82b_interact.js:263"
+   "where": "82b_interact.js:272"
   },
   {
    "speaker": "ivo",
    "text": "A lantern by day. Either you’re lost, or you’re going somewhere I’d not.",
-   "where": "82b_interact.js:264"
+   "where": "82b_interact.js:273"
   },
   {
    "speaker": "rowan",
-   "text": "The bread was late twice this week.",
+   "text": "Three weeks now without the bread. They will be counting.",
    "where": "82c_secrets.js:110"
   },
   {
    "speaker": "greta",
-   "text": "The new one has been asking about the mine door.",
+   "text": "There is a stranger in town. Strangers ask about barred doors.",
    "where": "82c_secrets.js:110"
   },
   {
@@ -592,7 +612,7 @@
   },
   {
    "speaker": "rowan",
-   "text": "Then they find what Corwin found. Go. Go before the bell.",
+   "text": "Then they find what Corwin found. Go, before the watch comes round.",
    "where": "82c_secrets.js:110"
   },
   {
@@ -636,58 +656,58 @@
    "where": "93_inventory.js:69"
   },
   {
+   "speaker": "brandt",
+   "text": "Not while the watch is asking after you. Square it with the Warden, then we’ll talk iron.",
+   "where": "94b_economy.js:38"
+  },
+  {
+   "speaker": "marta",
+   "text": "Not today, dear. Hale has been asking after you, and I’ll not buy from a name he is asking after.",
+   "where": "94b_economy.js:46"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Not while the watch is asking after you. I’ve a name to keep.",
+   "where": "94b_economy.js:46"
+  },
+  {
    "speaker": "marta",
    "text": "Let’s have a look, dear.",
-   "where": "94b_economy.js:47"
+   "where": "94b_economy.js:49"
   },
   {
    "speaker": "marta",
    "text": "Whale oil. It stinks and it burns. Don’t spill it near the candles.",
-   "where": "94b_economy.js:50"
+   "where": "94b_economy.js:52"
   },
   {
    "speaker": "brandt",
    "text": "Grey silver, never stamped. Aye, I can. Three bars and ninety gold, and the edge will outlast the blade. Mind, I’ll want to know where you had it.",
-   "where": "94b_economy.js:51"
+   "where": "94b_economy.js:53"
   },
   {
    "speaker": "brandt",
    "text": "Done. Don’t draw it in the Hart.",
-   "where": "94b_economy.js:51"
+   "where": "94b_economy.js:53"
   },
   {
    "speaker": "greta",
    "text": "They say Tobin’s been up the Watch Bell more than the Watch has. A tin box, a lockpick, and a boy who will not say what he saw from the top.",
-   "where": "94b_economy.js:77"
-  },
-  {
-   "speaker": "greta",
-   "text": "There’s a stone in the terrace wall below the Elder’s plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.",
-   "where": "94b_economy.js:78"
-  },
-  {
-   "speaker": "greta",
-   "text": "The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.",
-   "where": "94b_economy.js:79"
-  },
-  {
-   "speaker": "greta",
-   "text": "Up on the Hart’s roof walk there’s a trunk under the eaves that nobody here owns. Greta says it came with the building.",
    "where": "94b_economy.js:80"
   },
   {
    "speaker": "greta",
-   "text": "The cellar wall in this very house, the east one: newer brick than the rest. Ask me no more, love.",
+   "text": "There’s a stone in the terrace wall below the Elder’s plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.",
    "where": "94b_economy.js:81"
   },
   {
    "speaker": "greta",
-   "text": "The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.",
+   "text": "The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.",
    "where": "94b_economy.js:82"
   },
   {
    "speaker": "greta",
-   "text": "Lights behind the chapel after midnight, and two folk talking low who’d not thank you for listening. Stand off, if you’re bold. Don’t get close.",
+   "text": "The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.",
    "where": "94b_economy.js:83"
   },
   {
@@ -707,7 +727,7 @@
   },
   {
    "speaker": "greta",
-   "text": "They say the Foreman had a strongbox down there and the only key hangs round his neck. Hung.",
+   "text": "My grandmother said the Old Mine’s foreman kept a strongbox below and wore the key round his neck. Nobody has been down to ask him.",
    "where": "94b_economy.js:87"
   },
   {
@@ -733,92 +753,92 @@
   {
    "speaker": "rowan",
    "text": "The bread goes out at dawn. I carry it myself, and I am too old to be told it is a kindness.\n\nThe count stays kept. Sit. It will not hurt you to be counted.",
-   "where": "94d_act2.js:34"
+   "where": "94d_act2.js:36"
   },
   {
    "speaker": "rowan",
    "text": "It is quiet. I did not know quiet could be this loud.\n\nThey are asleep. Thank you. I could not have said the names. I tried.",
-   "where": "94d_act2.js:35"
+   "where": "94d_act2.js:37"
   },
   {
    "speaker": "rowan",
    "text": "Sit. You will want it from the start, and you will not like where it starts.\n\nFifty years back my father sold the last seam of the Old Mine to a Crown assayer, and the silver was singing, and he would not share it. He sealed the adit with twelve of his own shift still below. They did not die as you or I do. They stayed. They kept digging.",
-   "where": "94d_act2.js:36"
+   "where": "94d_act2.js:38"
   },
   {
    "speaker": "rowan",
    "text": "It was never for their bellies. It was so that someone remembered them. Every dawn a loaf and a pail, left on the slab in the cave on the shore, and the count said aloud: one to twelve. As long as the count is kept they stay men. If it is not, the song takes what is left of the men in them, and they come up.\n\nI carried it thirty years.",
-   "where": "94d_act2.js:36"
+   "where": "94d_act2.js:38"
   },
   {
    "speaker": "rowan",
-   "text": "I stopped it. Three weeks ago. Greta has found a buyer who pays double and wants the silver by the barrow, and I am old, and I thought: let it end with me. Pell walked out by the lake cave to ask why the bread had not come. You saw what the lake does to a man who has been so long under.",
-   "where": "94d_act2.js:36"
+   "text": "I stopped it. Three weeks ago. Greta has found a buyer who pays double and wants the silver by the barrow, and I am old, and I thought: let it end with me. Pell walked out by the lake cave to ask why the bread had not come. You saw how far a man gets in daylight who has been so long under.",
+   "where": "94d_act2.js:38"
   },
   {
    "speaker": "rowan",
    "text": "Go the way Greta’s people ran the silver out. The Hart’s cellar has a wall that was never the end of the cellar: the fresh brick on the east side. A tunnel runs from there under the town to the lake cave.\n\nThe twelve stand by the slab. You will know what to do when you see them. I never did.",
-   "where": "94d_act2.js:36"
+   "where": "94d_act2.js:38"
   },
   {
    "speaker": "rowan",
    "text": "Go on. The Hart. The east cellar wall, newer brick than the rest. Take bread. Take a light. Take your courage in both hands, because it has been a long while since anyone went that way and meant well.",
-   "where": "94d_act2.js:37"
+   "where": "94d_act2.js:39"
   },
   {
    "speaker": "greta",
    "text": "I’ll not charge you for the stew this once, love. Don’t make it a habit.",
-   "where": "94d_act2.js:76"
+   "where": "94d_act2.js:78"
   },
   {
    "speaker": "greta",
    "text": "The Hart’s never been so full. People want to be near other people, after.",
-   "where": "94d_act2.js:77"
+   "where": "94d_act2.js:79"
   },
   {
    "speaker": "hale",
    "text": "The count is kept and the gate is quiet. I’ll sleep tonight with the key out of my hand.",
-   "where": "94d_act2.js:78"
+   "where": "94d_act2.js:80"
   },
   {
    "speaker": "hale",
    "text": "I’ve left the old door unbarred. Nothing in it wants out now.",
-   "where": "94d_act2.js:79"
+   "where": "94d_act2.js:81"
   },
   {
    "speaker": "brandt",
    "text": "Silver for a blade? Aye, I’ll work it now. It’s only metal again.",
-   "where": "94d_act2.js:80"
+   "where": "94d_act2.js:82"
   },
   {
    "speaker": "finn",
    "text": "Nobody’s come out of the lake since. I check every morning.",
-   "where": "94d_act2.js:81"
+   "where": "94d_act2.js:83"
   },
   {
    "speaker": "ivo",
    "text": "Good. That’s the end of it. This time.",
-   "where": "82b_interact.js:206"
+   "where": "82b_interact.js:211"
   },
   {
    "speaker": "ivo",
    "text": "You haven’t the coin. Then it’s the cell. Come on.",
-   "where": "82b_interact.js:207"
+   "where": "82b_interact.js:212"
   },
   {
    "speaker": "ivo",
    "text": "Paid. Keep your hands in your pockets in future.",
-   "where": "82b_interact.js:207"
+   "where": "82b_interact.js:212"
   },
   {
    "speaker": "ivo",
    "text": "There’s no cell to hold you. Go on, then.",
-   "where": "82b_interact.js:212"
+   "where": "82b_interact.js:220"
   },
   {
    "speaker": "marta",
    "text": "You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.",
-   "where": "94b_economy.js:47"
+   "where": "94b_economy.js:49"
   }
  ],
  "dynamic": [
@@ -843,8 +863,13 @@
    "raw": "'Bogbean ' + (has('bogbean') ? 'in hand' : 'still wanting') + ', sunwort ' + (has('sunwort') ? 'in hand' : 'still wanting') + ', stonecrop ' + (has('stonecrop')"
   },
   {
+   "speaker": "pip",
+   "where": "82_story.js:119",
+   "raw": "PIP_SEEN[i][1]"
+  },
+  {
    "speaker": "",
-   "where": "82b_interact.js:209",
+   "where": "82b_interact.js:214",
    "raw": "'Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is ' + fine + ' gold, or you hand it back, or you sleep in the cell and th"
   },
   {
@@ -854,23 +879,28 @@
   },
   {
    "speaker": "",
-   "where": "94b_economy.js:39",
+   "where": "94b_economy.js:40",
    "raw": "'That’s ' + pr + ' gold, and you’ve ' + S.gold + '. The board in the square pays for honest work.'"
   },
   {
    "speaker": "brandt",
-   "where": "94b_economy.js:51",
+   "where": "94b_economy.js:53",
    "raw": "'Ninety gold, and you’ve ' + S.gold + '.'"
   },
   {
    "speaker": "-",
-   "where": "94b_economy.js:64",
+   "where": "94b_economy.js:67",
    "raw": "j.title + ': ' + (j.have ? 'three flasks of lamp oil, you have ' + (S.items.oil || 0) : r.job.n + ' of ' + j.goal) + '.'"
   },
   {
    "speaker": "-",
-   "where": "94b_economy.js:66",
+   "where": "94b_economy.js:69",
    "raw": "d.text + '\\n\\nYou take the notice.'"
+  },
+  {
+   "speaker": "-",
+   "where": "94b_economy.js:71",
+   "raw": "(S.flags.mineOpen ? 'Notices, pinned over notices. Three of them are in a clean hand and have not yellowed.' : 'Notices, pinned over notices. Two of them are in"
   },
   {
    "speaker": "greta",
@@ -879,8 +909,13 @@
   },
   {
    "speaker": "-",
-   "where": "94d_act2.js:110",
+   "where": "94d_act2.js:112",
    "raw": "'Three loaves, and you have ' + bread + '. The Hart has stew and Marta has loaves, and nobody here is going anywhere.'"
+  },
+  {
+   "speaker": "-",
+   "where": "94d_act2.js:114",
+   "raw": "'Twelve stand in a row at the water’s edge, and not one of them breathes. The slab before them is bare. The old loaves on it are green and the candle ends are c"
   }
  ],
  "unresolved": []

@@ -148,7 +148,7 @@ function poolUpdate(e, cur, inside) {
     let miss = false, need = 0, have = 0;
     const occ0 = !inside && SC.occ ? SC.occ : null, fresh = (occ0 ? SC.occN : -1) !== P.hidN; P.hidN = occ0 ? SC.occN : -1;       // a square counted as hidden is asked again as soon as the roofline is new: nothing in view may wait for the refill timer
     for (const t of P.tiles) {
-      const it = t.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]); if (t.hid && fresh) { const du = Math.hypot(t.u.x - e[0], t.u.z - e[2]); t.hid = !!occ0 && du < 600 && occ0(t.u, du, 0.85); }
+      const it = t.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]); if (t.hid && fresh) { const du = Math.hypot(t.u.x - SC.occAt[0], t.u.z - SC.occAt[2]); t.hid = !!occ0 && du < 600 && occ0(t.u, du, 0.85); }
       t.ok = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && d - it.r > DRAW.indoor);
       t.in = t.ok && _fr.intersectsSphere(t.sph); if (t.in) { need++; if (!t.on && !t.hid) miss = true; } if (t.on) { have++; if (!t.ok) miss = true; }       /* t.hid: under the roofline when last asked; not a reason to refill */
     }
@@ -160,7 +160,7 @@ function poolUpdate(e, cur, inside) {
       let n = 0, same = !P.first ? false : true; const src = P.pk.index.array; P.stale = false; P.first = true;
       // decide first, copy only if the set of squares changed: the roofline is rebuilt every 1.5 m or 11 degrees of turning, and refilling 60k
       // triangles of index buffer each time was a hitch while turning (26 ms at worst in the square)
-      for (const t of P.tiles) { let on = t.ok && (t.in || _frWide.intersectsSphere(t.sph)); if (on && occ) { const u = t.u || (t.u = { x: t.sph.center.x, z: t.sph.center.z, r: t.sph.radius, y1: t.sph.center.y + t.sph.radius }); const du = Math.hypot(u.x - e[0], u.z - e[2]); t.hid = du < 600 && occ(u, du, 0.85); /* the far hills are the skyline: never hidden */ if (t.hid) on = false; } else t.hid = false; if (on !== t.on) same = false; t.on2 = on; }
+      for (const t of P.tiles) { let on = t.ok && (t.in || _frWide.intersectsSphere(t.sph)); if (on && occ) { const u = t.u || (t.u = { x: t.sph.center.x, z: t.sph.center.z, r: t.sph.radius, y1: t.sph.center.y + t.sph.radius }); const du = Math.hypot(u.x - SC.occAt[0], u.z - SC.occAt[2]); t.hid = du < 600 && occ(u, du, 0.85); /* the far hills are the skyline: never hidden */ if (t.hid) on = false; } else t.hid = false; if (on !== t.on) same = false; t.on2 = on; }
       P.t = SC.now; if (same) { P.mesh.visible = P.count > 0; continue; }
       for (const t of P.tiles) { t.on = t.on2; if (t.on) { if (t.idx) { P.cur.set(t.idx, n); n += t.idx.length; } else { P.cur.set(src.subarray(t.it.first, t.it.first + t.it.count), n); n += t.it.count; } } }
       P.geo.setDrawRange(0, n); P.count = n;
@@ -182,7 +182,7 @@ function squares(pk, first, count, size) {
 function viewUpdate(s, subset) {
   const v = s.view, cells = s.sub.cells;
   if (!subset) { if (!v.full) { v.cur.set(v.pk.index.array.subarray(v.it.first, v.it.first + v.it.count)); v.geo.setDrawRange(0, v.total); const at = v.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, v.total); at.needsUpdate = true; v.full = true; for (const c of cells) c.on = true; } return; }
-  const occ = SC.occ && !World.cell ? SC.occ : null, occN = occ ? SC.occN : -1, ex = R.cam.pos[0], ez = R.cam.pos[2];
+  const occ = SC.occ && !World.cell ? SC.occ : null, occN = occ ? SC.occN : -1, ex = occ ? SC.occAt[0] : R.cam.pos[0], ez = occ ? SC.occAt[2] : R.cam.pos[2];       /* [logic] distances for the roofline test are taken from where the roofline was taken, not from the eye: the eye moves every frame and the roofline every 0.35 m, and a square on the line was hidden and shown on alternate frames */
   const due = occN !== v.occN && SC.now - (v.t || 0) > 600, fresh = occN !== v.hidN; v.hidN = occN; if (!SC.camStep && !v.full && !due && !fresh) return;
   let miss = v.full, need = 0, have = 0;
   for (const c of cells) { if (c.hid && fresh) c.hid = !!occ && occ(c.u, Math.hypot(c.u.x - ex, c.u.z - ez), 0.85); c.in = _fr.intersectsSphere(c.sph); if (c.in) { need++; if (!c.on && !c.hid) miss = true; } if (c.on) have++; }
@@ -231,7 +231,7 @@ function sceneUpdate(camPos, q) {
   SC.now = performance.now();
   // the roofline for terrain and prop squares is asked afresh every 0.35 m of movement (the kit's own, for its pieces, every 1.5 m): a square that has just
   // come out from behind a house must not stay hidden while the player walks on
-  { const H = SC.occAt || (SC.occAt = [1e9, 1e9, 1e9]); if (!cur && typeof Kit !== 'undefined' && Kit.occlude && !(TEST && (TEST.sceneocc === 0 || TEST.kitocc === 0)) && Math.abs(e[0] - H[0]) + Math.abs(e[1] - H[1]) + Math.abs(e[2] - H[2]) > 0.35) { H[0] = e[0]; H[1] = e[1]; H[2] = e[2]; SC.occ = Kit.occlude(e); SC.occN = (SC.occN || 0) + 1; } if (cur || (TEST && (TEST.sceneocc === 0 || TEST.kitocc === 0))) SC.occ = null; }
+  { const H = SC.occAt || (SC.occAt = [1e9, 1e9, 1e9]); if (!cur && typeof Kit !== 'undefined' && Kit.occlude && !(TEST && (TEST.sceneocc === 0 || TEST.kitocc === 0)) && Math.abs(e[0] - H[0]) + Math.abs(e[1] - H[1]) + Math.abs(e[2] - H[2]) > 0.35) { H[0] = e[0]; H[1] = e[1]; H[2] = e[2]; SC.occ = Kit.occlude([e[0], e[1], e[2]]) /* [logic] a copy: the function keeps the point it was given, and given the camera's own array its origin moved with the eye on every frame while its roofline stayed where it was taken */; SC.occN = (SC.occN || 0) + 1; } if (cur || (TEST && (TEST.sceneocc === 0 || TEST.kitocc === 0))) SC.occ = null; }
   { const c = R.camera; if (!_wideCam) _wideCam = new THREE.PerspectiveCamera(); _wideCam.fov = Math.min(150, c.fov * 1.3); _wideCam.aspect = c.aspect * 1.15; _wideCam.near = c.near; _wideCam.far = c.far; _wideCam.updateProjectionMatrix(); _frWide.setFromProjectionMatrix(_pm.multiplyMatrices(_wideCam.projectionMatrix, c.matrixWorldInverse)); }
   { const L = SC.camLast || (SC.camLast = [1e9, 0, 0, 9, 9]), c = R.cam; SC.camStep = Math.abs(e[0] - L[0]) + Math.abs(e[1] - L[1]) + Math.abs(e[2] - L[2]) > 0.4 || Math.abs(c.yaw - L[3]) > 0.035 || Math.abs(c.pitch - L[4]) > 0.035 || !!(TEST && TEST.camstep === 0); if (SC.camStep) { L[0] = e[0]; L[1] = e[1]; L[2] = e[2]; L[3] = c.yaw; L[4] = c.pitch; } }
   for (const s of SC.statics) {

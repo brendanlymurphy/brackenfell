@@ -33,11 +33,15 @@ function buildWalls(bucket) {
         m.quad2([A0[0], ya - t, A0[1]], [A0[0], ya, A0[1]], [B0[0], yb, B0[1]], [B0[0], yb - t, B0[1]]); m.quad2([A1[0], ya - t, A1[1]], [A1[0], ya, A1[1]], [B1[0], yb, B1[1]], [B1[0], yb - t, B1[1]]); void c; void L; void p0; void p1; }
       // joist and bearer beams under the deck, a stilt at the inner edge every second piece
       { const s = P(a, 0.4), t = P(b, 0.4), s2 = P(a, 1.8), t2 = P(b, 1.8); K.beam([s[0], ya - 0.28, s[1]], [t[0], yb - 0.28, t[1]], 0.14, 0.18); K.beam([s2[0], ya - 0.28, s2[1]], [t2[0], yb - 0.28, t2[1]], 0.14, 0.18);
-        if (i % 2 === 0) { const q = P(a, 1.8); K.post(q[0], q[1], gy(q[0], q[1]) - 0.4, ya - 0.1, 0.2, true); K.beam([q[0], ya - 0.3, q[1]], [P(a, 0.4)[0], ya - 0.3, P(a, 0.4)[1]], 0.1, 0.14); } }
+        if (i % 2 === 0 && !(a > ug - 2 && a < ug + 2)) { const q = P(a, 1.8);       /* [coord] no stilt in the middle of a gate arch */ K.post(q[0], q[1], gy(q[0], q[1]) - 0.4, ya - 0.1, 0.2, true); K.beam([q[0], ya - 0.3, q[1]], [P(a, 0.4)[0], ya - 0.3, P(a, 0.4)[1]], 0.1, 0.14); } }
       // the palisade: a plank wall from under the ground to 1.85 m over the deck, stepped to the ground, a coping rail and sharpened stakes
       { const top = hi + 1.85, e0 = P(a, 0), e1 = P(b, 0.36), mlo = Math.min(g0, lo - 3) - 0.8;
-        box(MAT.PLANKS, [0.78, 0.7, 0.58], 0.5, e0[0], mlo, e0[1], e1[0], top, e1[1], 4 | 8);
-        col(Math.min(e0[0], e1[0]), Math.min(e0[1], e1[1]), Math.max(e0[0], e1[0]), Math.max(e0[1], e1[1]), mlo, top);
+        /* [coord] Build 72: the plank wall and its collider ran straight through both gate arches (nobody could walk the Bridge Gate or the Chapel Gate);
+           each 2 m piece is now cut to what lies outside the arch (ug - 1.9 .. ug + 1.9), and over the arch only the part above the lintel is kept */
+        const g0a = ug - 1.9, g1a = ug + 1.9, parts = b <= g0a || a >= g1a ? [[a, b, mlo]] : [[a, Math.min(b, g0a), mlo], [Math.max(a, g0a), Math.min(b, g1a), yT - 0.16], [Math.max(a, g1a), b, mlo]].filter(q => q[1] - q[0] > 0.02);
+        for (const [pa, pb, pl] of parts) { const f0 = P(pa, 0), f1 = P(pb, 0.36); box(MAT.PLANKS, [0.78, 0.7, 0.58], 0.5, f0[0], pl, f0[1], f1[0], top, f1[1], 4 | 8);
+          col(Math.min(f0[0], f1[0]), Math.min(f0[1], f1[1]), Math.max(f0[0], f1[0]), Math.max(f0[1], f1[1]), pl, top); }
+        void e0; void e1;
         for (let u = a + 0.2; u < b - 0.05; u += 0.5) tips.push([u, top]); }
       // the inner rail, sloped
       { const s = P(a, 1.85), t = P(b, 1.85);
