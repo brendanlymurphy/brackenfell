@@ -70,6 +70,12 @@ function mineShell(m, O, FY, V) {
       const lev = (a, b, k) => { const f = fl(a, b) - 0.4, t = ceilY(a, b); return P(a, b, k, f + (t - f) * k / 3); };
       for (let k = 0; k < 3; k++) m.quad(lev(a0, b0, k + 1), lev(a0, b0, k), lev(a1, b1, k), lev(a1, b1, k + 1), (along) / T, k * 1.2 / T, (along + 1) / T, (k + 1) * 1.2 / T);
       edges[kind].push([i, j]);
+      {          // [fx2] a straight cut is not a mine: stones heaped at the wall foot and, in the caves, the rock bulging out of the face; nothing reaches past the 0.35 m the colliders already hold back
+        const hs = q => mhash(i * 3 + a0, j * 3 + b0, q + kind.charCodeAt(0) * 17), t = 0.15 + hs(1) * 0.7, bp = { W: [i, j + t], E: [i + 1, j + t], S: [i + t, j], N: [i + t, j + 1] }[kind], f0 = fl(i + 0.5, j + 0.5), cv = reg.kind === 'cave';
+        const col = k => rockCol(i, j, 40 + k).map(v => v * 0.5);
+        if (hs(2) < 0.75) { const n = 1 + (hs(3) * 4 | 0); for (let q = 0; q < n; q++) { const r = 0.1 + hs(4 + q) * 0.26, d = r * (0.4 + hs(8 + q) * 0.8), al = (hs(12 + q) - 0.5) * 0.9; m.mat(MAT.ROCK, col(q), 0.6); m.ball(O[0] + bp[0] + nrm[0] * d + (nrm[0] ? 0 : al), FY + f0 + r * 0.25, O[2] + bp[1] + nrm[2] * d + (nrm[2] ? 0 : al), r * 1.3, r * 0.7, r, 5, 3); } }
+        if (cv && hs(20) < 0.5) { const r = 0.45 + hs(21) * 0.35, pr = 0.15 + hs(22) * 0.2; m.mat(MAT.ROCK, col(9), 0.6); m.ball(O[0] + bp[0] + nrm[0] * (pr - r), FY + f0 + 0.6 + hs(23) * 1.8, O[2] + bp[1] + nrm[2] * (pr - r), r, r * 0.8, r, 7, 4); }
+      }
       if (V && V.want(reg, i, j, kind)) {      // a vein of silver laid on the wall: a ragged patch, a hand's breadth off the rock
         const k = 1 + ((i * 7 + j * 3 + a0) & 1), q = [lev(a0, b0, k + 1), lev(a0, b0, k), lev(a1, b1, k), lev(a1, b1, k + 1)], c = [0, 1, 2].map(d => (q[0][d] + q[1][d] + q[2][d] + q[3][d]) / 4);
         const sh = (p, s2) => [c[0] + (p[0] - c[0]) * s2 + nrm[0] * 0.05, c[1] + (p[1] - c[1]) * s2, c[2] + (p[2] - c[2]) * s2 + nrm[2] * 0.05];
@@ -118,13 +124,13 @@ function mineBuild() {
   const torch = (x, z, rot) => put(x, z, rot, mm => {
     mm.mat(MAT.METAL, COL.black); mm.box(-0.04, 1.62, -0.02, 0.04, 1.7, 0.2); mm.box(-0.03, 1.6, 0.16, 0.03, 1.8, 0.2);
     mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([0, 1.7, 0.1], [0, 2.18, 0.26], 0.07, 0.07); mm.mat(MAT.PLAIN, [0.09, 0.05, 0.03]); mm.cyl(0, 2.16, 0.25, 0.055, 0.04, 0.12, 6, 1);
-    const p = wp(mm, 0, 2.3, 0.26); em({ type: 'fire', p, size: 0.3 }); MINE.torches.push(addLight(p, 10, [3.3, 1.75, 0.62], 0, 'fire'));
+    const p = wp(mm, 0, 2.3, 0.26); em({ type: 'fire', p, size: 0.3 }); MINE.torches.push(addLight(p, 12, [4.7, 2.5, 0.9], 0, 'fire'));
   });
   // an iron brazier on three legs, for the deep chamber
   const brazier = (x, z) => put(x, z, 0, mm => {
     mm.mat(MAT.METAL, COL.black); for (let i = 0; i < 3; i++) { const a = i * TAU / 3; mm.beam([Math.cos(a) * 0.4, 0, Math.sin(a) * 0.4], [Math.cos(a) * 0.12, 0.85, Math.sin(a) * 0.12], 0.06, 0.06); }
     mm.lathe([[0.12, 0.8], [0.4, 0.98], [0.44, 1.1], [0.38, 1.1]], 9, 0); mm.mat(MAT.PLAIN, [0.1, 0.06, 0.04]); mm.cyl(0, 0.9, 0, 0.36, 0.34, 0.12, 9, 1);
-    const p = wp(mm, 0, 1.2, 0); em({ type: 'fire', p, size: 0.55 }); MINE.torches.push(addLight(p, 13, [3.4, 1.8, 0.7], 0, 'fire')); addCircleCollider(mm, 0, 0, 0.42, 0, 1.2);
+    const p = wp(mm, 0, 1.2, 0); em({ type: 'fire', p, size: 0.55 }); MINE.torches.push(addLight(p, 15, [5.0, 2.6, 1.0], 0, 'fire')); addCircleCollider(mm, 0, 0, 0.42, 0, 1.2);
   });
   // timber sets in the timbered drifts: two posts, a cap, lagging above; rails and sleepers down the middle of the adit and the tally room
   for (const r of MINE.REG.filter(r => r.kind === 'timber')) {
@@ -160,6 +166,7 @@ function mineBuild() {
   // ── torches: pools of light with dark between ──
   torch(-1.85, 5, PI / 2); torch(1.85, 18.5, -PI / 2); torch(7.85, 33, -PI / 2); torch(-7.85, 25.4, PI / 2); torch(14, 29.15, 0); torch(27.5, 34.85, PI);
   torch(43.85, 28, -PI / 2); torch(28.15, 50.5, PI / 2); torch(19, 58.15, 0); torch(-2, 47.9, 0, 0);
+  for (const [x, z, r] of [[-1.85, 11.5, PI / 2], [20.5, 29.15, 0], [47.85, 55, -PI / 2], [36, 61.85, PI], [12.5, 58.15, 0], [-20, 61.85, PI], [-30, 65.85, PI]]) torch(x, z, r);      // [fx2] a pool of light every 6-7 m along the way, so the unlit walk goes from fire to fire
   brazier(-8, 54); brazier(4, 54); brazier(-8, 66); brazier(4, 66);
   // ── the tally room: a table of tally boards, racks of tools, barrels, a tipped cart; Dunstan's crew drew their pay here ──
   put(-5.2, 34, 0, mm => { mm.mat(MAT.PLANKS, COL.woodDark, 0.6); mm.box(-1.1, 0.7, -0.4, 1.1, 0.78, 0.4); for (const sx of [-1, 1]) for (const sz of [-1, 1]) mm.box(sx * 0.95 - 0.05, 0, sz * 0.3 - 0.05, sx * 0.95 + 0.05, 0.7, sz * 0.3 + 0.05); addBoxCollider(mm, -1.15, -0.45, 1.15, 0.45, 0, 0.8);
@@ -171,9 +178,9 @@ function mineBuild() {
   put(-10.5, 30, 0, mm => { mm.mat(MAT.CLOTH, [0.32, 0.27, 0.2], 0.5); mm.box(-0.45, 0.02, -0.9, 0.45, 0.12, 0.9); mm.mat(MAT.CLOTH, [0.4, 0.36, 0.28], 0.5); mm.box(-0.35, 0.12, 0.45, 0.35, 0.2, 0.85); mm.mat(MAT.ROCK, [0.3, 0.3, 0.3], 0.5); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; mm.ball(Math.cos(a) * 0.5 + 1.2, 0.05, Math.sin(a) * 0.5 + 0.6, 0.12, 0.08, 0.1, 6, 3); } mm.mat(MAT.PLAIN, [0.06, 0.05, 0.04]); mm.cyl(1.2, 0.0, 0.6, 0.36, 0.36, 0.02, 9, 1); });
   // ── the flooded gallery: a boarded walk along the north wall with a gap, posts, a tilted ladder, a sunk cart ──
   put(0, 0, 0, mm => {
-    mm.mat(MAT.PLANKS, [0.45, 0.38, 0.3], 0.5);
+    mm.mat(MAT.PLANKS, [0.72, 0.68, 0.62], 0.5);
     for (const [a, b] of [[10.5, 18], [22, 29.5]]) { for (let x = a; x < b; x += 0.34) { const w = 0.3 + (mhash(x * 10, 3, 4) * 0.04); mm.box(x, -0.07, 33.45 + mnoise(x * 7, 1, 1) * 0.03, x + w, 0.0, 34.9); }
-      for (const x of [a + 0.3, (a + b) / 2, b - 0.3]) { mm.mat(MAT.TIMBER, COL.timberDark); mm.cbox(x, -0.9, 33.6, 0.14, 0.9, 0.14, 0); mm.cbox(x, -0.9, 34.8, 0.14, 0.9, 0.14, 0); } mm.mat(MAT.PLANKS, [0.45, 0.38, 0.3], 0.5); mm.box(a, -0.2, 33.4, b, -0.12, 33.5); mm.box(a, -0.2, 34.85, b, -0.12, 34.95); }
+      for (const x of [a + 0.3, (a + b) / 2, b - 0.3]) { mm.mat(MAT.TIMBER, COL.timberDark); mm.cbox(x, -0.9, 33.6, 0.14, 0.9, 0.14, 0); mm.cbox(x, -0.9, 34.8, 0.14, 0.9, 0.14, 0); } mm.mat(MAT.PLANKS, [0.62, 0.55, 0.45], 0.5); mm.box(a, -0.2, 33.4, b, -0.12, 33.5); mm.box(a, -0.2, 34.85, b, -0.12, 34.95); }
     mm.mat(MAT.TIMBER, COL.timberDark); mm.beam([18, 0.0, 33.8], [17.3, -0.9, 33.0], 0.1, 0.06); mm.beam([22, 0.0, 34.2], [22.5, -0.7, 33.4], 0.1, 0.06);     // the broken ends
   });
   for (const [a, b] of [[10.5, 18], [22, 29.5]]) { m.push(); addBoxCollider(m, O[0] + a, O[2] + 33.4, O[0] + b, O[2] + 34.95, FY - 3, FY + 0.9); m.pop(); }
@@ -191,9 +198,17 @@ function mineBuild() {
   mine_deep(m, put, rnd, O, FY, wpos, em);
   pack.add(m, { kind: 'opaque', cell: 'mine', nearOnly: true, noShadow: true });
   // water: the flooded gallery, a puddle in the sump, the silver pool
-  const wm = new Mesh(512); wm.mat(MAT.PLAIN, [0.03, 0.045, 0.05]); wm.ao = 1; wm.m1 = 0; wm.m2 = 0; wm.m3 = 0; wm.grad = null; wm.wind = 0;
+  const wm = new Mesh(512); wm.mat(MAT.PLAIN, [0.17, 0.21, 0.235]); wm.ao = 1; wm.m1 = 0; wm.m2 = 0; wm.m3 = 0; wm.grad = null; wm.wind = 0;
   const wq = (x0, z0, x1, z1, y) => wm.quad(wpos(x0, y, z0), wpos(x0, y, z1), wpos(x1, y, z1), wpos(x1, y, z0));
   wq(9, 29, 31, 35, -0.06); wq(36, 25, 42, 30, 0.01); wq(-5, 66, 1, 69, 0.01);
+  {          // [fx2] the flooded gallery: a kerb of wet stones along both banks, and the torches laid on the water
+    const km = new Mesh(1024); km.m1 = 0; km.m2 = 0; km.m3 = 0; km.ao = 1; km.grad = null; km.wind = 0; km.mat(MAT.ROCK, [0.55, 0.56, 0.58], 0.6);
+    for (let x = 10.3; x < 30; x += 0.55) for (const zz of [29.3, 34.75]) { if (zz > 34 && ((x > 10.4 && x < 18.1) || (x > 21.9 && x < 29.6))) continue; const h = mhash(x * 9, zz * 9, 7), r = 0.14 + h * 0.12; km.ball(...wpos(x + h * 0.2, -0.06, zz + (zz < 32 ? 1 : -1) * (h - 0.4) * 0.3), r * 1.3, r * 0.55, r, 6, 3); }
+    pack.add(km, { kind: 'opaque', cell: 'mine', noShadow: true, nearOnly: true });
+    gm.mat(MAT.PLAIN, [1.1, 0.55, 0.2]);
+    for (const [tx, tz] of [[14, 29.4], [20.5, 29.4], [27.5, 34.6]]) { const dz = tz < 32 ? 1 : -1; for (let q = 0; q < 4; q++) { const w = 0.5 - q * 0.1, z0 = tz + dz * (0.7 + q * 0.75); gm.quad(wpos(tx - w / 2, -0.04, z0), wpos(tx - w / 2, -0.04, z0 + dz * 0.3), wpos(tx + w / 2, -0.04, z0 + dz * 0.3), wpos(tx + w / 2, -0.04, z0), 0, 0, 1, 1); } }
+    gm.mat(MAT.PLAIN, [0.55, 0.75, 1.0]);
+  }
   gm.quad(wpos(-4.6, 0.04, 66.4), wpos(-4.6, 0.04, 68.6), wpos(0.6, 0.04, 68.6), wpos(0.6, 0.04, 66.4), 0, 0, 1, 1);      // the silver pool glows
   pack.add(wm, { kind: 'opaque', cell: 'mine', noShadow: true, nearOnly: true });
   // the veins of silver in the roof and walls of the deep chamber and the stope: emissive, cold
@@ -370,7 +385,7 @@ const MINE_ROCKS = [['rock_face_02', 1.06, 0.4], ['boulder_01', 0.91, 0.25], ['n
 function mineKit() {
   if (!MINE.built || MINE.kitDone || typeof kitReady !== 'function' || !kitReady() || !Kit.pieces.rock_face_01) return; MINE.kitDone = true;
   const O = MINE.O, FY = MINE.FY, G = MINE.grid, B = Kit.batch({ name: 'mine', cell: 14 });
-  const add = (n, x, y, z, ry, s, rx) => { if (!Kit.pieces[n]) return; B.add(n, Kit.matrix({ p: [O[0] + x, FY + y, O[2] + z], r: [rx || 0, ry || 0, 0], s: s || 1 }), { zone: 0, skyVis: 0.3, cast: false, tint: [0.5, 0.48, 0.46] }); };      // [fx2] the scanned boulders came out orange: cooler, duller rock
+  const add = (n, x, y, z, ry, s, rx) => { if (!Kit.pieces[n]) return; B.add(n, Kit.matrix({ p: [O[0] + x, FY + y, O[2] + z], r: [rx || 0, ry || 0, 0], s: s || 1 }), { zone: 0, skyVis: 0.3, cast: false, tint: /^namaqualand/.test(n) ? [0.36, 0.5, 0.62] : /^rock_face/.test(n) ? [0.4, 0.5, 0.58] : [0.5, 0.48, 0.46] }); };      // [fx2] the scanned boulders came out orange: cooler, duller rock
   const NRM = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }, POS = { W: (i, j) => [i, j + 0.5], E: (i, j) => [i + 1, j + 0.5], N: (i, j) => [i + 0.5, j + 1], S: (i, j) => [i + 0.5, j] };
   const pick = h => { let a = 0; for (const r of MINE_ROCKS) { a += r[2]; if (h < a) return r; } return MINE_ROCKS[0]; };
   for (const k of ['W', 'E', 'N', 'S']) for (const [i, j] of G.edges[k]) {
