@@ -1,3 +1,4 @@
+import os
 """Procedural medieval garments fitted to a MakeHuman body inside Blender (called by gen.py after the body and its clothes are baked).
 
 Everything is generated from the body's own surface, so it sits on the skull / waist / shoulders of THAT body:
@@ -31,6 +32,10 @@ class Fit:
         B = rig.data.bones; mw = rig.matrix_world
         self.bone = lambda n, tail=False: mw @ (B[n].tail_local if tail else B[n].head_local)
         self.head_c = self.bone('head') + Vector((0, 0, 0.075))             # centre of the skull, a little above the head joint
+        self._build()
+
+    def _build(self):
+        rig, body, clothes, hair = self.rig, self.body, self.clothes, self.hair
         self.bvh_head = bvh_of([o for o in (body, hair) if o])
         self.bvh_all = bvh_of([body] + list(clothes) + ([hair] if hair else []))
         self.bvh_cloth = bvh_of(list(clothes)) if clothes else self.bvh_all; self.bvh_body = bvh_of([body])
@@ -52,6 +57,10 @@ class Fit:
                 self.src.append({gi[g.group]: g.weight for g in v.groups if g.group in gi})
                 kd.insert(o.matrix_world @ v.co, len(self.src) - 1)
         kd.balance(); self.kd = kd
+
+    def add_clothes(self, objs):
+        """Garments built so far count as clothing for the ones built after (an apron lies outside a kirtle, not inside it)."""
+        self.clothes = list(self.clothes) + list(objs); self._build()
 
     def outer(self, origin, d, bvh=None, far=0.6):
         """Distance from origin along unit direction d to the OUTERMOST surface (casting inward from far away)."""
@@ -402,7 +411,7 @@ def bake_colors(fit, objs, ao_dist=0.09, rays=10, trim=0.035, clean=None):
             kd = kdtree.KDTree(len(bnd))
             for i, vi in enumerate(sorted(bnd)): kd.insert(mw @ me.vertices[vi].co, i)
             kd.balance()
-        is_cloth = o.name.split('.')[-1] not in ('', ) and ('rehman' in o.name or 'toigo' in o.name or 'donitz' in o.name or 'wdg' in o.name or 'culturalibre' in o.name) and 'hood' not in o.name
+        is_cloth = o.name.split('.')[-1] not in ('', ) and (o.name.startswith(('w_kirtle', 'w_sleeve')) or 'rehman' in o.name or 'toigo' in o.name or 'donitz' in o.name or 'wdg' in o.name or 'culturalibre' in o.name) and 'hood' not in o.name
         ca = me.color_attributes.get('Col') or me.color_attributes.new('Col', 'BYTE_COLOR', 'POINT')
         for v in me.vertices:
             co = mw @ v.co; n = (nm @ v.normal).normalized()
@@ -424,6 +433,43 @@ def bake_colors(fit, objs, ao_dist=0.09, rays=10, trim=0.035, clean=None):
             ca.data[v.index].color = (ao, g, tr, ca.data[v.index].color[3] if o.name.startswith('w_') else 0.0)
     return True
 
+
+# ───────────────────────── kirtle / tunic: a shell grown from the body ─────────────────────────
+def kirtle_pieces(fit, mat, hem='ankle', sleeve='long', slot='wool', flare=0.17, folds=0.012, name='w_kirtle'):
+    """Neck-to-hem garment from rays cast at the torso and legs: fitted over chest and waist, widening over the hips into a skirt with folds that
+    ends at the ankle (kirtle, smock) or the knee (tunic); with sleeves to the wrist as tubes along the arms. Returns [body piece, left sleeve, right sleeve]."""
+    neck = fit.bone('neck_01'); pel = fit.bone('pelvis'); foot = fit.bone('foot_l'); knee = fit.bone('calf_l')
+    z_top = neck.z - 0.012
+    z_hem = (foot.z + 0.13) if hem == 'ankle' else (knee.z + 0.04 if hem == 'knee' else knee.z + 0.20)
+    z_hip = pel.z - 0.02
+    N = 28; zs = [z_top, z_top - 0.035, z_top - 0.075, z_top - 0.12]
+    k = 0.19
+    while zs[-1] > z_hip: zs.append(zs[-1] - 0.06)
+    nsk = 9
+    for j in range(1, nsk + 1): zs.append(zs[-1] - (zs[-1] - z_hem) / (nsk + 1 - j) if j < nsk else z_hem)
+    V, Fc = [], []; rprev = [0.0] * N; z_w = fit.bone('spine_01').z
+    for jr, z in enumerate(zs):
+        t = max(0.0, (z_hip - z) / max(1e-3, z_hip - z_hem))                     # 0 at the hips, 1 at the hem
+        yc, hw = torso_centre(fit, max(z, 0.8))
+        for i in range(N):
+            th = i / N * 2 * math.pi; d = Vector((math.sin(th), -math.cos(th), 0))
+            r0 = fit.outer(Vector((0, yc, z)), d, fit.bvh_torso, 0.7)
+            if r0 is None: r0 = rprev[i] if rprev[i] > 0 else 0.14
+            rb = r0 + 0.012 + (0.010 if z < z_w else 0.0)
+            if z < z_hip: rb = max(rb, rprev[i])                            # the body radius never shrinks below the hips (a skirt does not tuck in at the knees)
+            rprev[i] = rb; r = rb
+            if z < z_hip:
+                r = rb + flare * (t ** 1.25) * (0.7 + 0.3 * abs(math.cos(th)))
+                r += folds * math.sin(th * 7.0 + z * 4.0) * min(1.0, t * 3.0)
+            V.append(Vector((d.x * r, yc + d.y * r, z - (0.02 * abs(math.sin(th * 2)) * t if z < z_hip else 0.0))))
+    Fc += grid_faces(N, len(zs), True, flip=False)
+    body = new_mesh(name, V, Fc, fit, 0, mat, [(1.0, 1.0, 1.0, SLOT[slot] / 12.0)] * len(V))
+    out = [body]
+    for sd in ('l', 'r'):
+        if sleeve == 'none': break
+        out.append(tube_piece(fit, mat, 'w_sleeve' + sd.upper(), 'upperarm_' + sd, -0.22, 1.0 if sleeve == 'long' else 0.45, 0.008, rings=7, N=12, slot=slot, bone2='lowerarm_' + sd, flare=0.012))
+    return out
+
 # ───────────────────────── a wardrobe ─────────────────────────
 DEFAULT_WEAR = dict(
     m=['belt', 'pouch', 'hat:cap', 'hat:straw', 'hat:coif', 'apron', 'straps', 'cloak', 'cuffs'],
@@ -431,6 +477,7 @@ DEFAULT_WEAR = dict(
 
 def wardrobe(fit, mat, spec):
     wear = spec.get('wear') or DEFAULT_WEAR['m' if spec['macro']['gender'] > 0.5 else 'f']
+    wear = sorted(wear, key=lambda w: 0 if w.startswith('kirtle') else 1)      # the shell first: everything else is fitted over it
     out = []
     for w in wear:
         o = None
@@ -441,6 +488,8 @@ def wardrobe(fit, mat, spec):
         elif w == 'straps': o = strap_piece(fit, mat)
         elif w == 'cloak': o = cloak_piece(fit, mat, flare=0.09)
         elif w == 'tabard': out += tabard_pieces(fit, mat); continue
+        elif w.startswith('kirtle'):                     # 'kirtle:ankle:long' | 'kirtle:knee:long'
+            q = w.split(':'); out += kirtle_pieces(fit, mat, hem=q[1] if len(q) > 1 else 'ankle', sleeve=q[2] if len(q) > 2 else 'long', flare=0.09 if spec['macro']['age'] < 0.3 else 0.17); fit.add_clothes(out); continue
         elif w == 'cuffs':
             for s in ('l', 'r'): out.append(tube_piece(fit, mat, 'w_cuff' + s.upper(), 'lowerarm_' + s, 0.0, 1.0, 0.005, auto=True))
             continue

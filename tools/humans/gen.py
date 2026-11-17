@@ -171,6 +171,22 @@ import garb
 rig_obj = [o for o in bpy.data.objects if o.type == 'ARMATURE'][0]
 fit = garb.Fit(rig_obj, bm_obj, cl_objs, hair, eyes)
 wardrobe = garb.wardrobe(fit, trim_mat, spec) if os.environ.get('WARDROBE', '1') != '0' else []
+# a body dressed in a kirtle shell: the skin under it (trunk, legs, arms) is never seen, take it away like the cloth removal above
+shells = [o for o in wardrobe if o.name in ('w_kirtle', 'w_sleeveL', 'w_sleeveR')]
+if shells:
+    from mathutils.bvhtree import BVHTree as _B
+    sv, sp = [], []
+    for o in shells:
+        base = len(sv); sv += [o.matrix_world @ v.co for v in o.data.vertices]; sp += [tuple(base + i for i in p.vertices) for p in o.data.polygons]
+    sb = _B.FromPolygons(sv, sp); bme = bm_obj.data; bmw = bm_obj.matrix_world; bnm = bmw.to_3x3().inverted().transposed()
+    nz = bm_obj.data.vertices; hid = []
+    zc = fit.bone('neck_01').z - 0.03
+    bb = bmesh.new(); bb.from_mesh(bme); bb.faces.ensure_lookup_table()
+    for f in bb.faces:
+        c = bmw @ f.calc_center_median(); n = (bnm @ f.normal).normalized()
+        if c.z < zc and (sb.ray_cast(c + n * 0.002, n, 0.12)[0] is not None): hid.append(f)
+    n0 = len(bb.faces); bmesh.ops.delete(bb, geom=hid, context='FACES'); bmesh.ops.delete(bb, geom=[v for v in bb.verts if not v.link_faces], context='VERTS')
+    bb.to_mesh(bme); bb.free(); bme.update(); print('body under the shell', n0, '->', len(bme.polygons))
 garb.bake_colors(fit, [bm_obj] + cl_objs + wardrobe, clean=spec.get('clean'))
 print('wardrobe', [(o.name, len(o.data.polygons)) for o in wardrobe])
 
