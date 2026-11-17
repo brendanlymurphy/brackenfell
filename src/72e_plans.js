@@ -172,6 +172,7 @@ function dressBedroom(P, room, o) {
   for (const nm of beds) {
     let it = null;
     for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { it = pAgainst(P, room, sd, P.id + '.' + nm, 1.06, 2.1, o.bedH || 0.95, -1, pdBed(0.9, col, !!o.fur), { at: o.bedAt }); const s = it ? { cx: it.cx, cz: it.cz } : null; if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
+    if (!it && typeof castSleepers === 'function' && castSleepers(P.id) > Object.keys(P.spots).filter(q => /^bed\d*$/.test(q) && P.spots[q].lie).length) { const a = room.in; for (const rot of [0, PI / 2, PI, -PI / 2]) { it = pFree(P, room, P.id + '.' + nm, 1.06, 2.1, o.bedH || 0.95, rot, pdBed(0.9, col, !!o.fur), { near: [a.x1, a.z1] }); if (it) { pBedSpot(P, nm, it.cx, it.cz, rot, k); placed++; break; } } }       /* [cast] a sleeper of this house still has no bed and no wall has room: the bed stands free in the room */
     if (!it && nm === 'bed') P.err.push('no room for ' + nm + ' in ' + room.id);
   }
   // a chest at the foot of the first bed (or against any free wall)

@@ -8,11 +8,11 @@ const NPC_DEFS = [
   { id: 'brandt', name: 'Brandt Ironhand', skin: 'tan', hair: 'black', hairStyle: 'bald', beard: 1, top: [0.36, 0.30, 0.27], apron: [0.36, 0.22, 0.13], legs: [0.28, 0.24, 0.2], build: 1.18, shortSleeves: true, prop: 'hammer',
     sched: [[6.5, 'smithy.anvil', 'hammer'], [12, 'smithy.forge', 'work'], [13, 'smithy.anvil', 'hammer'], [19, 'inn.s1', 'sit'], [22, 'smithy.bed', 'lie']] },
   { id: 'tobin', name: 'Tobin', scale: 0.74, skin: 'fair', hair: 'blond', top: [0.55, 0.45, 0.25], legs: [0.3, 0.25, 0.2], run: true,
-    sched: [[7, ['square.bench2', 'stallfront0', 'alley.stall1', 'smithy.forge', 'alley.n', 'stallfront1', 'gate.post2', 'alley.s', 'square.bench2'], 'idle'], [19.5, 'smithy.sit', 'sit'], [21.5, 'smithy.home', 'idle']] },
+    sched: [[7, ['square.bench2', 'stallfront0', 'alley.stall1', 'smithy.forge', 'alley.n', 'stallfront1', 'gate.post2', 'alley.s', 'square.bench2'], 'idle'], [19.5, 'smithy.sit', 'sit'], [21.5, 'smithy.bed2', 'lie']] },       // [cast] his own bed in the forge loft (he stood by the door all night)
   { id: 'marta', name: 'Marta Quill', skin: 'brown', hair: 'black', hairStyle: 'braid', dress: true, top: [0.52, 0.20, 0.30], hat: 'kerchief', hatCol: [0.9, 0.82, 0.6], belt: [0.7, 0.55, 0.2],
     sched: [[6.4, 'store.cellar0', 'work'], [7.5, 'store.counter', 'idle'], [20, 'inn.s3', 'sit'], [22, 'store.bed', 'lie']] },       // [logic] stock from the cellar before opening
   { id: 'aldous', name: 'Brother Aldous', skin: 'fair', hair: 'grey', hairStyle: 'bald', dress: true, top: [0.80, 0.76, 0.64], belt: [0.45, 0.3, 0.2], cloakBack: true, cloak: [0.42, 0.30, 0.22], hat: 'hood',
-    sched: [[5, 'chapel.altar', 'pray'], [9, 'chapel.nave', 'idle'], [12, 'chapel.altar', 'pray'], [14, 'chapel.nave', 'idle'], [18, 'chapel.altar', 'pray']] },
+    sched: [[5, 'chapel.altar', 'pray'], [9, 'chapel.nave', 'idle'], [12, 'chapel.altar', 'pray'], [14, 'chapel.nave', 'idle'], [18, 'chapel.altar', 'pray'], [21, 'chapel.bed', 'lie']] },       // [cast] a cot in the sacristy: he prayed round the clock
   { id: 'maren', name: 'Old Maren', skin: 'fair', hair: 'white', dress: true, top: [0.36, 0.30, 0.42], hat: 'hood', cloak: [0.28, 0.38, 0.28], cloakBack: true, scale: 0.93,
     sched: [[7, 'herbalist.garden', 'work'], [12, 'herbalist.sit', 'sit'], [14, 'herbalist.garden', 'work'], [18.5, 'herbalist.sit', 'sit'], [21, 'herbalist.bed', 'lie']] },
   { id: 'osric', name: 'Osric Dunn', skin: 'fair', hair: 'brown', beard: 1, hat: 'cap', hatCol: [0.9, 0.88, 0.8], top: [0.84, 0.81, 0.74], apron: [0.92, 0.9, 0.84], legs: [0.5, 0.45, 0.38], build: 1.15,
@@ -32,9 +32,9 @@ const NPC_DEFS = [
   { id: 'ivo', name: 'Guardsman Ivo', skin: 'deep', hair: 'black', hat: 'helmet', top: [0.42, 0.40, 0.38], apron: [0.2, 0.3, 0.5], legs: [0.25, 0.22, 0.2], prop: 'spear', sword: true,
     sched: [[6.3, 'guardhouse.bed2', 'lie'], [13.5, ['gate.post2', 'square.well', 'bridge.west', 'square.well'], 'guard'], [19.3, 'gate.post', 'guard']] },       // [logic] the night watch: he takes the gate when Hale goes to the Hart, keeps it till Hale is back at six, and sleeps the morning (he never slept, and the gate stood empty from half past seven)
   { id: 'hilda', name: 'Hilda Weaver', skin: 'rosy', hair: 'brown', hairStyle: 'bun', dress: true, top: [0.26, 0.38, 0.60], apron: [0.9, 0.86, 0.76],
-    sched: [[8, 'draper.counter', 'idle'], [12.5, 'alley.stall0', 'idle'], [14, 'draper.counter', 'idle'], [18.5, 'weaver.home', 'idle'], [20, 'weaver.sit', 'sit'], [21.5, 'weaver.bed', 'lie']] },
+    sched: [[8, 'weaver.work', 'work'], [12.5, 'alley.stall0', 'idle'], [14, 'weaver.work', 'work'], [18.5, 'weaver.home', 'idle'],       /* [cast] at her own loom: Sabina Lindqvist keeps the draper's counter */ [20, 'weaver.sit', 'sit'], [21.5, 'weaver.bed', 'lie']] },
   { id: 'bram', name: 'Bram', skin: 'tan', hair: 'auburn', hat: 'straw', top: [0.5, 0.52, 0.34], legs: [0.36, 0.3, 0.22], shortSleeves: true,
-    sched: [[7.5, 'stall0', 'idle'], [18, 'barn.work', 'work'], [19.5, 'inn.stand1', 'idle'], [22, 'farm.bed2', 'lie']] },
+    sched: [[6.2, 'farm.field', 'work'], [7.5, 'stall0', 'idle'], [18, 'barn.work', 'work'], [19.5, 'inn.stand1', 'idle'], [22, 'in.67.bed', 'lie']] },       // [cast] he sleeps in Bram's House and walks out to the farm at dawn
 ];
 const NPCS = [], NPC = {};
 const Nav = { nodes: [], adj: [], spot: {}, portal: {} };        // portal[a] = b: stepping from node a to b crosses a door between two spaces (an instant move)
@@ -186,6 +186,23 @@ function npcArrive(n, spotName, anim) {
   n.pos = sp.p.slice(); n.yaw = sp.yaw; n.at = spotName; n.path = null; n.spot = sp;
   n.anim = sp.lie ? 'lie' : sp.sit ? 'sit' : (anim === 'sit' || anim === 'lie') ? 'idle' : anim;
 }
+// [apart] Nobody walks through anybody. After everyone has moved: any walker within 0.6 m of another body in the same space is moved off it, sideways for
+// choice, at walking pace; two walkers share the move, a person standing, sitting or lying is never moved. Bodies that are exactly together (two people stepping
+// through one door at once) part along a direction fixed by their order. Named villagers, the Hart's regulars, residents and passers-by alike.
+const NPC_APART = 0.6;
+function npcKeepApart(dt) {
+  const L = NPCS.slice(); if (typeof AMB !== 'undefined' && AMB.list) for (const a of AMB.list) if (a.state !== 'home' && a.state !== 'away') L.push(a);
+  const n = L.length, mv = Math.min(0.2, 1.6 * dt);
+  for (let i = 0; i < n; i++) { const a = L[i]; if (a.pushed > 0) a.pushed -= dt; }
+  for (let i = 0; i < n; i++) { const a = L[i], ax = a.pos[0], az = a.pos[2], aw = !!a.path;
+    for (let j = i + 1; j < n; j++) { const b = L[j], bw = !!b.path; if (!aw && !bw) continue; let dx = b.pos[0] - ax; if (dx > NPC_APART || dx < -NPC_APART) continue; let dz = b.pos[2] - az; if (dz > NPC_APART || dz < -NPC_APART || Math.abs(b.pos[1] - a.pos[1]) > 1.2) continue;
+      let d = Math.hypot(dx, dz); if (d >= NPC_APART) continue; if (d < 0.02) { const g = (i * 2.399 + j) % 6.283; dx = Math.cos(g); dz = Math.sin(g); d = 1; } else { dx /= d; dz /= d; }
+      // sideways to the walker's own way where that also parts them, so two in a lane pass and do not push each other back along it
+      const side = w => { const fx = Math.sin(w.yaw), fz = -Math.cos(w.yaw), s = (-fz) * dx + fx * dz >= 0 ? 1 : -1; return [(-fz * s) * 0.7 + dx * 0.3, (fx * s) * 0.7 + dz * 0.3]; };
+      if (aw && bw) { const pa = side(a), pb = side(b); a.pos[0] -= pa[0] * mv * 0.5; a.pos[2] -= pa[1] * mv * 0.5; b.pos[0] += pb[0] * mv * 0.5; b.pos[2] += pb[1] * mv * 0.5; a.pushed = b.pushed = 0.5; }
+      else if (aw) { const pa = side(a); a.pos[0] -= pa[0] * mv; a.pos[2] -= pa[1] * mv; a.pushed = 0.5; }
+      else { const pb = side(b); b.pos[0] += pb[0] * mv; b.pos[2] += pb[1] * mv; b.pushed = 0.5; } } }
+}
 function npcBehindRoofs(n) { if (typeof SC === 'undefined' || !SC.occ || !SC.occAt || World.cell || (TEST && (TEST.sceneocc === 0 || TEST.kitocc === 0))) return false; const q = SC.occAt, d = hyp(n.pos[0] - q[0], n.pos[2] - q[2]); if (d < ((typeof R !== 'undefined' && R.q && R.q.villagerCast) || 32) + 3) return false; const u = n._occU || (n._occU = { x: 0, z: 0, r: 1.1, y1: 0 }); u.x = n.pos[0]; u.z = n.pos[2]; u.y1 = n.pos[1] + 2.3; return SC.occ(u, d, 0.85); }
 function npcUpdate(dt, playerPos) {
   const pc = Cells.spaceOf(playerPos);
@@ -213,7 +230,7 @@ function npcUpdate(dt, playerPos) {
         const run = n.def.run, sp = (run ? 2.7 : 1.35) * (0.9 + n.scale * 0.1), N2 = Nav.nodes[n.path[n.pi]];
         const dx = N2[0] - n.pos[0], dz = N2[2] - n.pos[2], d = hyp(dx, dz);
         const blocked = dPlayer < 0.75 && (playerPos[0] - n.pos[0]) * dx + (playerPos[2] - n.pos[2]) * dz > 0;
-        if (d < 0.18) { const k = n.path[n.pi], k2 = n.path[n.pi + 1]; if (k2 !== undefined && Nav.portal[k] === k2) { n.pos = Nav.nodes[k2].slice(); n.pi++; n.portalT = 0.4; } n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
+        if (d < 0.18 || (n.pushed > 0 && d < 0.75 && n.pi < n.path.length - 1)) { const k = n.path[n.pi], k2 = n.path[n.pi + 1];       /* someone stands on the way point: near enough counts, or the walker would circle them for ever */ if (k2 !== undefined && Nav.portal[k] === k2) { n.pos = Nav.nodes[k2].slice(); n.pi++; n.portalT = 0.4; } n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
         else if (!blocked) {
           const st = Math.min(d, sp * dt); n.pos[0] += dx / d * st; n.pos[2] += dz / d * st;
           const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 1.0); n.pos[1] += clamp(gy - n.pos[1], -3 * dt, 3 * dt);       /* [logic] looks 1.0 m up, not 0.6: a ledge 0.7 to 0.9 m high (the terrace edge by the herb garden, the dock's lip) was not seen, and people waded through it for a second */ if (gy - n.pos[1] > 0.45 || n.pos[1] - gy > 1.2) n.pos[1] = gy;       /* [logic] a rise higher than any stair (the 0.9 m terrace edge by the herb garden) is stepped onto at once: climbing it at 3 m/s left the walker inside it for a third of a second */
@@ -227,6 +244,9 @@ function npcUpdate(dt, playerPos) {
        the same roofline that hides houses and ground (42_scene.js), asked with the same margin. Four of twenty in the Market Place view. */
     if (pc !== Cells.spaceOf(n.pos) || (pc === 0 && npcBehindRoofs(n))) { n.obj.visible = false; if (n.ch && !n.hid) { n.hid = true; n.ch.pivot.visible = false; } continue; }
     n.hid = false;
+    /* [cull] what a villager holds is drawn only as far as it can be made out: a mug or a flute to 20 m, a spear, staff or lute to 55 m. Each is a draw call,
+       and the alley view on Low had nine of them between 25 and 91 m away (a mug at 37 m is two pixels) */
+    if (n.props) for (const m of n.props) m.visible = dPlayer < (/mug|flute/.test(m.name) ? 20 : 55);
     // head follows the player when close
     let lx = 0, ly = 0;
     if (dPlayer < 5.5 && n.anim !== 'lie' && n.anim !== 'hammer' && n.anim !== 'work') { const a = angDiff(Math.atan2(playerPos[0] - n.pos[0], -(playerPos[2] - n.pos[2])), n.yaw); if (Math.abs(a) < 1.9) { lx = clamp(-a, -1.1, 1.1); ly = clamp((n.pos[1] + 1.6 * n.scale - playerPos[1] - 1.6) * 0.25, -0.3, 0.3); } }
@@ -244,6 +264,7 @@ function npcUpdate(dt, playerPos) {
     if (n.ch) Chars.update(n.ch, { pos: n.pos, yaw: n.yaw, anim: n.anim, scale: s, zone: zn, light: zn ? 0.34 : 1, visible: dPlayer < 95, cast: dPlayer < R.q.villagerCast, look: n.look, talking: n.talking, seatHeight: n.spot && n.spot.sit, speed: n.anim === 'run' ? 2.7 * (0.9 + s * 0.1) : n.anim === 'walk' ? 1.35 * (0.9 + s * 0.1) : 0 }, dt);
   }
   if (typeof ambUpdate === 'function') ambUpdate(dt, playerPos);
+  npcKeepApart(dt);
   // chickens potter about and scatter when approached
   for (const c of World.chickens) {
     c.t += dt; const dp = hyp(c.pos[0] - playerPos[0], c.pos[2] - playerPos[2]);

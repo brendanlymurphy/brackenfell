@@ -468,11 +468,11 @@ const Kit = (() => {
     const L = K_.dynLast, cam = (typeof R !== 'undefined' && R.cam) || { yaw: 0, pitch: 0 }, qn = (typeof R !== 'undefined' && R.qName) || 'medium';
     const F = (typeof R !== 'undefined' && R.q && R.q.houseFar) || K_.farDist; let key = qn + F; for (const D of K_.dyn) key += D.group.visible ? '1' : '0';
     let dy = cam.yaw - L[3]; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-    if (!fresh && Math.hypot(camPos[0] - L[0], camPos[2] - L[2]) < 1.5 && Math.abs(camPos[1] - L[1]) < 1 && Math.abs(dy) < 0.19 && key === L[4]) return;
+    if (!fresh && !K_.all && Math.hypot(camPos[0] - L[0], camPos[2] - L[2]) < 1.5 && Math.abs(camPos[1] - L[1]) < 1 && Math.abs(dy) < 0.19 && key === L[4]) return;
     L[0] = camPos[0]; L[1] = camPos[1]; L[2] = camPos[2]; L[3] = cam.yaw; L[4] = key;
     const fx = Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), drop = K_.DROP[qn] || 70;
-    const half = (typeof R !== 'undefined' && R.camera ? Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) : 0.81) + 0.35, cone = Math.abs(cam.pitch) < 0.9 && !(TEST && TEST.kitcone === 0);
-    const occ = K_.occlude && !(TEST && TEST.kitocc === 0) ? K_.occlude(camPos, K_.occOwn || (K_.occOwn = {})) : null; K_.occNow = occ; K_.occN = (K_.occN || 0) + 1;       // [perf] the scene asks the same horizon about terrain tiles and prop squares (42_scene.js)
+    const half = (typeof R !== 'undefined' && R.camera ? Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) : 0.81) + 0.35, cone = Math.abs(cam.pitch) < 0.9 && !(TEST && TEST.kitcone === 0) && !K_.all;
+    const occ = K_.occlude && !(TEST && TEST.kitocc === 0) && !K_.all ? K_.occlude(camPos, K_.occOwn || (K_.occOwn = {})) : null; K_.occNow = occ; K_.occN = (K_.occN || 0) + 1;       // [perf] the scene asks the same horizon about terrain tiles and prop squares (42_scene.js)
     const q_ = (typeof R !== 'undefined' && R.q) || {}, RS = q_.yardCast === false ? -1 : (q_.shadowNear || 20) * 1.72 + 2;       // reach of the near sun-shadow map from the camera
     const S_ = K_.dynStat = { units: 0, near: 0, far: 0, cone: 0, dist: 0, hidden: 0, draws: 0 };
     // batches rebuilt for another tier (dressing, the wilds) take their old group off the scene: drop those units from the pools
@@ -484,6 +484,7 @@ const Kit = (() => {
         const dx = u.x - camPos[0], dz = u.z - camPos[2], dc = Math.sqrt(dx * dx + dz * dz), d = Math.max(0, dc - u.r); let st;
         S_.units++;
         if (!shown) st = 0;
+        else if (K_.all && K_.skip && K_.skip(u)) st = 0;       /* [view] the house whose windows' picture is being taken is left out of it: the picture is taken from inside its walls */
         else if (u.always) st = 1;
         else if (d > range || (!D.far && d > Math.max(26, 2 * u.r * drop))) { st = 0; S_.dist++; }
         else if (cone && d > 12 && Math.acos(Math.max(-1, Math.min(1, (dx * fx + dz * fz) / dc))) > half + Math.asin(Math.min(1, u.r / dc))) { st = 0; S_.cone++; }

@@ -466,7 +466,7 @@ WBUILD.toll = (p, m, R) => {
   wPut(m, p, 9.0, -1.4, PI / 2, mm => { Props.chest(mm); });
 };
 // the brook's surface at a point (or the ground when there is none)
-function wBrookSurface(x, z) { for (const k of WILDS.brooks) { const b = k.line; if (!b || x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue; b.dist(x, z, 6); if (b.at >= 0) return wildsBrookY(b.at, k); } return wy(x, z); }
+function wBrookSurface(x, z) { for (const k of WILDS.brooks) { const b = k.line; if (!b || x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue; const d = b.dist(x, z, k.bank + 0.9); if (b.at >= 0 && d < k.bank + 0.9) return wildsBrookY(b.at, k); } return wy(x, z); }       /* [cull] no further out than the bank: the sheet was drawn to 6 m from the brook's line, over ground that only happened to lie lower than the brook, and the game held that ground dry (to 5 m) */
 
 // ───────────────────────── Highfold: the hamlet's yard dressing (the houses are kit shells, in wildsAttach) ─────────────────────────
 WBUILD.hamlet = (p, m, R) => {
@@ -531,7 +531,7 @@ function buildWilds() {
   const WG = new Map(), WD = new Set();      // [fx3] one world-anchored grid for every patch: where patches overlap the cell is made once (two translucent sheets showed as a darker rectangle) and the vertices are shared
   const patch = (cx, cz, hx, hz, cs, yAt, flow) => { const i0 = Math.floor((cx - hx) / cs), i1 = Math.ceil((cx + hx) / cs), j0 = Math.floor((cz - hz) / cs), j1 = Math.ceil((cz + hz) / cs), gk = (i, j) => (i + 5000) * 20000 + (j + 5000) + ':' + cs; const v = (i, j) => { const k = gk(i, j); let q = WG.get(k); if (q !== undefined) return q; const x = i * cs, z = j * cs, y = yAt(x, z); wm.ao = sat((y - Terrain.y(x, z)) / 0.9); q = wm.vert(x, y, z, 0, 1, 0, flow[0], flow[1]); WG.set(k, q); return q; };
     for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) { const x = i * cs, z = j * cs, ck = gk(i, j); if (WD.has(ck)) continue; if (Math.min(wy(x, z), wy(x + cs, z), wy(x, z + cs), wy(x + cs, z + cs)) > yAt(x, z) + 0.05) continue; { const y1 = yAt(x, z), y2 = yAt(x + cs, z), y3 = yAt(x, z + cs), y4 = yAt(x + cs, z + cs); if (Math.max(y1, y2, y3, y4) - Math.min(y1, y2, y3, y4) > 0.45) continue; }  /* QA: no near-vertical water panes where the brook surface steps */ WD.add(ck); const a = v(i, j), b = v(i, j + 1), c = v(i + 1, j + 1), d = v(i + 1, j); wm.tri(a, b, c); wm.tri(a, c, d); } };
-  if (WILDS.pool) { const q = WILDS.pool, yw = wildsBase('pool', q.x, q.z) - 0.35; q.y = yw; patch(q.x, q.z, q.r + 5, q.r + 5, 1.0, () => yw, [0.2, 0.1]); }
+  if (WILDS.pool) { const q = WILDS.pool, yw = wildsBase('pool', q.x, q.z) - 0.35; q.y = yw; patch(q.x, q.z, q.r + 5, q.r + 5, 1.0, (x, z) => hyp(x - q.x, z - q.z) < q.r + 3 ? yw : yw - 0.6 /* [cull] the sheet dips under the ground where the pool ends: beyond it, it lay in white shards on any grass lower than the pool */, [0.2, 0.1]); }
   for (const k of WILDS.brooks) { const b = k.line || (k.line = new Poly(catmull(k.pts, 2))); for (let s = 0; s < b.len; s += 6) { const q = b.point(s); patch(q[0], q[1], 5.5, 5.5, 1.0, (x, z) => wBrookSurface(x, z), [-q[3] * 0.6, q[2] * 0.6]); } }
   WB.waterTris = 0;
   if (wm.ni) { wp2.add(wm, { kind: 'water', noShadow: true, maxDist: 130 }); WB.waterTris += wm.ni / 3; }
@@ -544,11 +544,18 @@ function buildWilds() {
     for (let k = 0; k < pts.length; k++) { const q = pts[k], off = 0.22, x = q[0] - ux * 0.0 - ux * 0, y = q[2] + off * (1 - k / pts.length * 0.5); const l = fm.vert(q[0] - sx * hw, y, q[1] - sz * hw, -ux, 0.4, -uz, 0, k * 0.3, 0), r = fm.vert(q[0] + sx * hw, y, q[1] + sz * hw, -ux, 0.4, -uz, 0, k * 0.3, 0); fm.ao = 0.85; if (prev) { fm.tri(prev[0], prev[1], r); fm.tri(prev[0], r, l); } prev = [l, r]; }
   }
   // (the fall itself is drawn by particles, 79b_life.js: a solid sheet read as a white board)
+  /* [cull] the hermit's path ran 0.7 to 0.8 m under the pool at the foot of the fall with nothing to cross on (gate step `water`): stepping stones wherever
+     that path is under the pool, a stride apart, their tops a hand above the water */
+  { const sm = new Mesh(512), q = WILDS.pool, hp = ((typeof ROADS !== 'undefined' && ROADS.find(r => r.id === 'p.hermit')) || {}).pts || []; let since = 9, n = 0;
+    if (q && q.y !== undefined) for (let i = 1; i < hp.length; i++) { const a = hp[i - 1], b = hp[i], L = hyp(b[0] - a[0], b[1] - a[1]), st = Math.ceil(L / 0.3); for (let k = 0; k < st; k++) { const x = a[0] + (b[0] - a[0]) * k / st, z = a[1] + (b[1] - a[1]) * k / st; since += L / st;
+        if (hyp(x - q.x, z - q.z) > q.r + 3 || wy(x, z) > q.y - 0.12 || since < 0.85) continue; since = 0; const sx = x + (n % 2 ? 0.12 : -0.12), y = q.y + 0.1, g = wy(sx, z); n++;
+        sm.m1 = 0; sm.ao = 1; sm.grad = null; sm.mat(MAT.ROCK, [0.85, 0.85, 0.82], 0.5); sm.push().T(sx, 0, z); sm.cyl(0, g - 0.2, 0, 0.42, 0.36, y - g + 0.2, 8, 2); addFloor(sm, -0.4, -0.4, 0.4, 0.4, y); sm.pop(); } }
+    if (sm.ni) pack.add(sm, { kind: 'opaque', maxDist: 110, noShadow: true }); WB.hermitStones = n; }
   pack.upload('wilds'); World.packs.push(pack);
   wp2.upload('wilds-water'); World.packs.push(wp2);
   const wrap = World.waterAt; World.waterAt = (x, z) => {
     if (WILDS.pool && Math.abs(x - WILDS.pool.x) < 12 && Math.abs(z - WILDS.pool.z) < 12 && hyp(x - WILDS.pool.x, z - WILDS.pool.z) < WILDS.pool.r + 3 && Terrain.y(x, z) < WILDS.pool.y) return WILDS.pool.y;
-    for (const k of WILDS.brooks) { if (x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue; const b = k.line, d = b.dist(x, z, 5); if (d < 5) { const y = wildsBrookY(b.at, k); if (Terrain.y(x, z) < y) return y; } }
+    for (const k of WILDS.brooks) { if (x < k.x0 || x > k.x1 || z < k.z0 || z > k.z1) continue; const b = k.line, d = b.dist(x, z, k.bank + 0.9); if (d < k.bank + 0.9) { const y = wildsBrookY(b.at, k); if (Terrain.y(x, z) < y) return y; } }
     return wrap(x, z);
   };
   if (typeof wildsLifeBuild === 'function') wildsLifeBuild();
