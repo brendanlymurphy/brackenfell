@@ -83,13 +83,14 @@ Feel.hintFrame = dt => {
   if (!Feel.last) Feel.last = [P.pos[0], P.pos[2], P.yaw];
   const mv = hyp(P.pos[0] - Feel.last[0], P.pos[2] - Feel.last[1]); if (mv < 3) Feel.moved += mv; Feel.turned += Math.abs(angDiff(P.yaw, Feel.last[2])); Feel.last = [P.pos[0], P.pos[2], P.yaw];
   if (!P.locked) Feel.playT += dt;
+  if (!H.fight && typeof Combat !== 'undefined' && typeof RPG !== 'undefined' && (Combat.blocking() || RPG.dodgeT > 0)) Feel.did('fight');
   if (Feel.moved > 5) Feel.did('move'); if (Feel.turned > 1.4 && Feel.moved > 0.5) Feel.did('look');
   if (uiBusy()) { if (Feel.tipKey) Feel.tipHide(); return; }
   if (Feel.tipKey) { Feel.tipT -= dt; if (Feel.tipT <= 0) { const was = Feel.tipKey; Feel.tipHide(); Feel.shownAt = Feel.t; } return; }
   if (Feel.t - (Feel.shownAt || 0) < 3.2) return;
   // in order: walk, look, use what you are facing, open the journal. Each is offered at most a few times.
   const tryTip = k => { if (H[k]) return false; Feel.counts = Feel.counts || {}; if ((Feel.counts[k] = (Feel.counts[k] || 0)) >= 3) return false; Feel.counts[k]++; Feel.tip(k); return true; };
-  if (!H.fight && typeof Foes !== 'undefined' && typeof Combat !== 'undefined') { if (Combat.blocking() || RPG.dodgeT > 0) Feel.did('fight'); else if (Foes.list.some(f => f.alive && (f.state === 'notice' || f.state === 'chase' || f.state === 'attack')) && tryTip('fight')) return; }
+  if (!H.fight && typeof Foes !== 'undefined' && typeof Combat !== 'undefined') { if (Foes.list.some(f => f.alive && (f.state === 'notice' || f.state === 'chase' || f.state === 'attack')) && tryTip('fight')) return; }
   if (!H.move) { if (Feel.playT > 1.2 && Feel.playT < 40 && tryTip('move')) return; }
   else if (!H.look) { if (tryTip('look')) return; }
   else if (!H.use && UI.prompt) { if (tryTip('use')) return; }

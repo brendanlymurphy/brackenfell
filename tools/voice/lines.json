@@ -548,47 +548,47 @@
   {
    "speaker": "hale",
    "text": "That’s a fine blade. Don’t draw it in my square.",
-   "where": "82b_interact.js:264"
-  },
-  {
-   "speaker": "brandt",
-   "text": "Good. It sits well in your hand. My work.",
    "where": "82b_interact.js:265"
   },
   {
    "speaker": "brandt",
-   "text": "Where did you get that? Those are my grandfather’s dies, fifty years back. Old Mine steel.",
+   "text": "Good. It sits well in your hand. My work.",
    "where": "82b_interact.js:266"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Where did you get that? Those are my grandfather’s dies, fifty years back. Old Mine steel.",
+   "where": "82b_interact.js:267"
   },
   {
    "speaker": "maren",
    "text": "You’re bleeding on my floor. Sit.",
-   "where": "82b_interact.js:267"
+   "where": "82b_interact.js:268"
   },
   {
    "speaker": "greta",
    "text": "Off down a hole, love? I’ll keep the bed made.",
-   "where": "82b_interact.js:268"
+   "where": "82b_interact.js:269"
   },
   {
    "speaker": "marta",
    "text": "Odd thing to carry. I’ll not ask.",
-   "where": "82b_interact.js:269"
+   "where": "82b_interact.js:270"
   },
   {
    "speaker": "aldous",
    "text": "The Dawn keep you. You look as though you have seen the dead.",
-   "where": "82b_interact.js:270"
+   "where": "82b_interact.js:271"
   },
   {
    "speaker": "finn",
    "text": "Still thinking about that man, aren’t you. So am I.",
-   "where": "82b_interact.js:271"
+   "where": "82b_interact.js:272"
   },
   {
    "speaker": "ivo",
    "text": "A lantern by day. Either you’re lost, or you’re going somewhere I’d not.",
-   "where": "82b_interact.js:272"
+   "where": "82b_interact.js:273"
   },
   {
    "speaker": "rowan",
