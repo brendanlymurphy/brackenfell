@@ -142,7 +142,7 @@ function terrainMaterial() {
       c.n.assign(mix(c.n, vec2(0.5), wear.mul(0.55))); c.r.assign(mix(c.r, float(0.72), wear));
       /* [fx3] ground value: the darkest large surface in a street, warm and dirty; setts read to 10 m; blotches of dirt and straw, damp in the shade, a worn lane a shade lighter and smoother */
       c.c.assign(mix(c.c, vec3(0.50, 0.46, 0.40).mul(lum.mul(0.6).add(0.55)), 0.28)); c.ao.assign(mix(c.ao, float(1), 0.35)); c.n.assign(mix(c.n, vec2(0.5), 0.2));
-      c.c.mulAssign(vec3(0.66, 0.60, 0.52));
+      c.c.mulAssign(vec3(0.58, 0.53, 0.45));
       const foot = sat(s2.b.mul(2.2)).toVar(), jt = smoothstep(0.62, 0.40, c.h).toVar(), blot = smoothstep(0.56, 0.66, mn2.b.add(mn3.g.sub(0.5).mul(0.35))), strw = smoothstep(0.60, 0.72, mn2.r.add(mn3.b.sub(0.5).mul(0.4)));
       const dirtK = max(foot.mul(0.75), blot.mul(0.5)).mul(float(1).sub(wear.mul(0.7)));
       c.c.assign(mix(c.c, vec3(0.20, 0.15, 0.10).mul(lum.mul(0.5).add(0.75)), dirtK));
