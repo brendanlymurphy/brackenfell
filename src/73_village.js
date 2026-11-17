@@ -241,7 +241,7 @@ function buildVillage() {
   // ── dynamic objects: door leaves, mill wheel, pickups ──
   const skin = new MeshPack();
   // [fx2] six hinged leaves (weathered oak, dark oak, silvered, and three faded paints) so a street's doors are not one door; a door takes one by its house, so both sides of a portal agree
-  const LEAF_COL = [[0.95, 0.82, 0.66], [0.62, 0.54, 0.44], [0.85, 0.8, 0.72], [0.5, 0.68, 0.58], [0.85, 0.42, 0.36], [0.5, 0.62, 0.72]];
+  const LEAF_COL = [[0.95, 0.82, 0.66], [0.62, 0.54, 0.44], [0.85, 0.8, 0.72], [0.4, 0.5, 0.44], [0.52, 0.4, 0.37], [0.42, 0.48, 0.54]];
   const mkLeaf = (bc) => { const leaf = new Mesh(512);
   // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
   leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);

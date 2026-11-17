@@ -164,8 +164,8 @@ function shellDress(c, b, frames, MS, o) {
     // 3: a big stone stack outside a gable end
     if (RF() < FM.stack) for (const wn of ['left', 'right']) {
       const Lw = L(wn); if (used.stair === wn || used.outshut === wn || (infNeighbour && infNeighbour(site, wn === 'right') > 0) || !free(wn, Lw * 0.5 - 0.6, Lw * 0.5 + 0.6, 0.9)) continue;
-      const g7 = GP(), cu = Lw * (0.4 + RF() * 0.2), top = yRidge + 0.55, sc = (SSt.stoneTint || [0.8, 0.8, 0.8]).map(v => v * 0.9);
-      g7.box(INF_B, cu - 0.5, -0.3, -0.02, cu + 0.5, Ytop + 0.2, 0.75, sc); g7.box(INF_B, cu - 0.38, Ytop + 0.2, -0.02, cu + 0.38, top, 0.55, sc); g7.box(INF_B, cu - 0.47, top, -0.05, cu + 0.47, top + 0.12, 0.62, sc.map(v => v * 0.85));
+      const g7 = GP(), cu = Lw * (0.4 + RF() * 0.2), top = yRidge + 0.55, sc = (SSt.stoneTint || [0.8, 0.8, 0.8]).map(v => v * 0.55);
+      g7.box(INF_B, cu - 0.5, -0.3, -0.02, cu + 0.5, Ytop + 0.2, 0.75, sc); g7.box(INF_B, cu - 0.38, Ytop + 0.2, -0.02, cu + 0.38, top - 0.5, 0.55, sc); g7.box(INF_B, cu - 0.38, top - 0.5, -0.02, cu + 0.38, top, 0.55, sc.map(v => v * 0.5)); g7.box(INF_B, cu - 0.47, top, -0.05, cu + 0.47, top + 0.12, 0.62, sc.map(v => v * 0.4));      // sooted at the top
       put(wn, g7); used.stack = wn; break; }
     // 4: a drying rack for nets in the front yard, away from the door
     if (RF() < FM.rack) { const Lf2 = L(front), uc = dc > Lf2 / 2 ? 0.5 : Lf2 - 2.9, ok = free(front, uc, uc + 2.4, 1.9); if (ok) { const g8 = GP(); for (const u of [uc, uc + 2.4]) g8.beam(W_, [u, 0, 1.6], [u, 2.0, 1.6], 0.07, [0.3, 0.24, 0.18]); g8.beam(W_, [uc - 0.1, 1.95, 1.6], [uc + 2.5, 1.95, 1.6], 0.05, [0.3, 0.24, 0.18]); g8.beam(W_, [uc - 0.1, 1.25, 1.6], [uc + 2.5, 1.25, 1.6], 0.04, [0.3, 0.24, 0.18]);

@@ -21,7 +21,8 @@ if (has('sheets')) {
   console.log('sheets written to', dir, 'from', files.length, 'shots'); process.exit(0);
 }
 const hoursOpt = arg('hours', null) ? arg('hours', '').split(',').map(Number) : null, sz = arg('size', '640x300').split('x').map(Number), budget = +arg('budget', 420) * 1000, t0 = Date.now();
-const s = await open({ webgl: 1, quality: arg('quality', 'medium') }, sz);
+const OPTS = { webgl: 1, quality: arg('quality', 'medium') }; if (arg('topt', null)) for (const kv of arg('topt', '').split(',')) { const [k, v] = kv.split('='); OPTS[k] = isNaN(+v) ? v : +v; }      // [fx2] --topt wharf=0 : page options (TEST flags)
+const s = await open(OPTS, sz);
 await s.run(fs.readFileSync(root + 'test/tour_views.js', 'utf8'));
 const only = arg('only', null) ? arg('only', '').split(',') : null;
 let views = [];
