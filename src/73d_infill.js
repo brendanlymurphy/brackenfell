@@ -88,13 +88,21 @@ function infWalls(B, MS, o) {
         if (!p.door) g.quad(mat, P(p.u0, y0, 0), P(p.u1, y0, 0), P(p.u1, y0, dep), P(p.u0, y0, dep), col, [0, 0, 1, 0.2], true);
         if (p.door) {
           // Build 33: a plank door of real boards (solid boxes: the old single quad faced the wrong way for the single-sided wood material and showed the dark inside), iron straps, a ring handle, a threshold
-          { const nb = Math.max(4, Math.round((p.u1 - p.u0) / 0.2)), bw = (p.u1 - p.u0) / nb, dc = [[0.95, 0.68, 0.44], [0.84, 0.62, 0.4], [1, 0.75, 0.5], [0.9, 0.66, 0.43]], IR = [0.2, 0.19, 0.18];
-            for (let i = 0; i < nb; i++) bx(p.u0 + i * bw + 0.005, p.u0 + (i + 1) * bw - 0.005, y0 + 0.02, y1 - 0.02, 0.08, 0.13, dc[(i * 7 + (R() * 4 | 0)) % 4]);
-            if (!lo) { for (const yy of [0.42, 1.58]) { bx(p.u0 + 0.02, p.u1 - 0.02, y0 + yy, y0 + yy + 0.1, 0.045, 0.08, IR); bx(p.u0 + 0.02, p.u0 + 0.2, y0 + yy - 0.02, y0 + yy + 0.12, 0.03, 0.045, IR); }
-              bx(p.u1 - 0.24, p.u1 - 0.17, y0 + 0.98, y0 + 1.12, 0.02, 0.045, IR); bx(p.u1 - 0.2, p.u1 - 0.1, y0 + 0.95, y0 + 0.98, 0.02, 0.045, IR);
-              bx(p.u0 - 0.12, p.u1 + 0.12, y0, y0 + 0.07, 0.0, 0.2, [0.4, 0.38, 0.35]); }       // the sill
+          { const dt = (((Math.floor(p.u0 * 7) + k * 3 + wn.length * 5 + Math.floor((o.w || 5) * 3) + Math.floor(Math.abs(o.sd || 0) * 11)) % 5) + 5) % 5;      // [fx2] ledged plank / studded / half door / faded paint / plain, 14-18 cm back in the opening
+            const nb = Math.max(4, Math.round((p.u1 - p.u0) / (dt === 3 ? 0.3 : 0.2))), bw = (p.u1 - p.u0) / nb, IR = [0.2, 0.19, 0.18];
+            const PAL = [[[0.95, 0.68, 0.44], [0.84, 0.62, 0.4], [1, 0.75, 0.5], [0.9, 0.66, 0.43]], [[0.7, 0.52, 0.36], [0.62, 0.48, 0.33], [0.74, 0.56, 0.4], [0.66, 0.5, 0.35]], [[1.15, 0.9, 0.62], [1.05, 0.84, 0.58], [1.2, 0.96, 0.68], [1.1, 0.88, 0.6]], [[0.55, 0.78, 0.7], [0.5, 0.72, 0.66], [0.6, 0.82, 0.72], [0.52, 0.74, 0.62]], [[1.05, 0.5, 0.42], [0.95, 0.46, 0.38], [1.1, 0.54, 0.45], [1.0, 0.48, 0.4]]];
+            const dc = PAL[dt].map(c3 => c3.map(v => v * (dt < 3 ? 0.66 : 0.8)));
+            const ya = y0 + 0.02, yz = y1 - 0.02, ym2 = y0 + 1.08;
+            for (let i = 0; i < nb; i++) { const bu0 = p.u0 + i * bw + 0.005, bu1 = p.u0 + (i + 1) * bw - 0.005, cc = dc[(i * 7 + (R() * 4 | 0)) % 4];
+              if (dt === 2) { bx(bu0, bu1, ya, ym2 - 0.02, 0.14, 0.18, cc); bx(bu0, bu1, ym2 + 0.02, yz, 0.12, 0.16, cc); } else bx(bu0, bu1, ya, yz, 0.14, 0.18, cc); }
+            if (!lo) {
+              if (dt === 2) { bx(p.u0 + 0.02, p.u1 - 0.02, ym2 - 0.02, ym2 + 0.02, 0.07, 0.17, IR); }      // the half door: two leaves and a ledge
+              else for (const yy of [0.42, 1.58]) { bx(p.u0 + 0.02, p.u1 - 0.02, y0 + yy, y0 + yy + 0.1, 0.1, 0.13, IR); bx(p.u0 + 0.02, p.u0 + 0.2, y0 + yy - 0.02, y0 + yy + 0.12, 0.09, 0.1, IR); }
+              if (dt === 1) for (let a2 = 0.2; a2 < (p.u1 - p.u0) - 0.1; a2 += 0.2) for (let b2 = 0.25; b2 < 2.0; b2 += 0.25) bx(p.u0 + a2, p.u0 + a2 + 0.03, y0 + b2, y0 + b2 + 0.03, 0.08, 0.1, IR);      // studs
+              bx(p.u1 - 0.24, p.u1 - 0.17, y0 + 0.98, y0 + 1.12, 0.07, 0.09, IR); bx(p.u1 - 0.2, p.u1 - 0.1, y0 + 0.95, y0 + 0.98, 0.07, 0.09, IR);
+              bx(p.u0 - 0.12, p.u1 + 0.12, y0, y0 + 0.07, 0.0, 0.2, [0.4, 0.38, 0.35]); }       // the sill / threshold
           }
-          bx(p.u0 - 0.1, p.u0, y0, y1 + 0.1, -0.06, 0.0, [0.3, 0.23, 0.17]); bx(p.u1, p.u1 + 0.1, y0, y1 + 0.1, -0.06, 0.0, [0.3, 0.23, 0.17]); bx(p.u0 - 0.1, p.u1 + 0.1, y1, y1 + 0.12, -0.08, 0.0, [0.3, 0.23, 0.17]);
+          bx(p.u0 - 0.12, p.u0, y0, y1 + 0.12, -0.09, 0.0, [0.3, 0.23, 0.17]); bx(p.u1, p.u1 + 0.12, y0, y1 + 0.12, -0.09, 0.0, [0.3, 0.23, 0.17]); bx(p.u0 - 0.12, p.u1 + 0.12, y1, y1 + 0.14, -0.12, 0.0, [0.3, 0.23, 0.17]);
           if (k === 0) bx(p.u0 - 0.15, p.u1 + 0.15, -0.35, 0.1, -0.35, 0.0, [0.5, 0.48, 0.45]);          // a stone step
         } else if (lo) {
           g.quad('MI_WindowGlass', P(p.u0, y0, 0.05), P(p.u1, y0, 0.05), P(p.u1, y1, 0.05), P(p.u0, y1, 0.05), [1, 1, 1], [0, 0, 1, 1], false);
@@ -106,21 +114,31 @@ function infWalls(B, MS, o) {
           else if (kd === 2) { bar(uc - 0.012, uc + 0.012, y0, y1); bar(p.u0, p.u1, ym - 0.012, ym + 0.012); }
           else { q(W_, uc - 0.02, uc + 0.02, y0, y1, 0.1, MW, GPU.wood, true); q(W_, p.u0, p.u1, ym - 0.02, ym + 0.02, 0.1, MW, GPU.wood, true); }
           bx(p.u0 - 0.07, p.u0, y0 - 0.05, y1 + 0.05, -0.04, 0.0, DK); bx(p.u1, p.u1 + 0.07, y0 - 0.05, y1 + 0.05, -0.04, 0.0, DK);
-          bx(p.u0 - 0.1, p.u1 + 0.1, y0 - 0.08, y0 + 0.02, -0.11, 0.0, [0.28, 0.24, 0.21]); bx(p.u0 - 0.08, p.u1 + 0.08, y1, y1 + 0.1, -0.06, 0.0, DK);
+          bx(p.u0 - 0.12, p.u1 + 0.12, y0 - 0.09, y0 + 0.02, -0.16, 0.0, [0.28, 0.24, 0.21]); bx(p.u0 - 0.1, p.u1 + 0.1, y1, y1 + 0.13, -0.09, 0.0, DK);      // [fx2] sill 16 cm proud, lintel 9
+          if (((Math.floor(p.u0 * 10) + k + wn.length) % 3) === 0) { bx(p.u0 - 0.16, p.u1 + 0.16, y1 + 0.13, y1 + 0.2, -0.2, -0.02, DK); }      // and a hood over some
           if (p.shutter) { const sc = SC[(R() * SC.length) | 0]; bx(p.u0 - 0.56, p.u0 - 0.07, y0, y1, -0.05, -0.01, sc); bx(p.u1 + 0.07, p.u1 + 0.56, y0, y1, -0.05, -0.01, sc); }
         }
       }
       if (!lo) {
         if (wn === 'front' || wn === 'back') { const n = Math.max(1, Math.round(L / 2)); for (let i = 1; i < n; i++) { const u = i * L / n; if (!ops.some(p => u > p.u0 - 0.15 && u < p.u1 + 0.15)) bx(u - 0.07, u + 0.07, yb, yt, -0.05, 0.0, DK); } }
-        if (k < fl - 1) bx(0, L, yt - 0.07, yt + 0.07, -0.06, 0.0, DK);
+        if (k < fl - 1) { bx(0, L, yt - 0.12, yt + 0.1, -0.1, 0.0, DK); if (wn === 'front' || wn === 'back') bx(0, L, yt - 0.19, yt - 0.12, -0.13, 0.0, DK); }      // [fx2] a bressummer with a moulding under it
+        if (k === fl - 1 && (wn === 'front' || wn === 'back')) bx(0, L, yt - 0.15, yt + 0.0, -0.15, 0.0, DK);      // [fx2] a boxed cornice: the eaves cast a line on the wall
+        if (mat === INF_T && (wn === 'front' || wn === 'back' || L > 3)) { const RR = rng(Math.floor(L * 131 + k * 17 + w * 29 + wn.length)), fr2 = u => !ops.some(p => u > p.u0 - 0.2 && u < p.u1 + 0.2); for (let i = 0; i < 5; i++) { const u = 0.3 + RR() * (L - 1.0), ww = 0.18 + RR() * 0.3, y = yb + 0.5 + RR() * (H - 1.3), hh = 0.6 + RR() * 1.2, lt = RR() < 0.6; if (fr2(u) && fr2(u + ww) && y + hh < yt - 0.1) q(mat, u, u + ww, y, y + hh, -0.012, col.map(v => v * (lt ? 1.9 : 0.5)), [u * 3.1, y / ts, u * 3.1 + ww / ts, (y + hh) / ts], true); } }      // [fx2] replaced boards, lighter, and burnt-dark ones, so the cladding is not one repeating pattern
         if (k === 0 && stone) { q(mat, 0, L, yb, 0.32, -0.012, [0.55, 0.55, 0.54]); if (fl > 1 && (wn === 'front' || wn === 'back')) bx(0, L, yt - 0.04, yt + 0.16, -0.09, 0.0, [0.3, 0.23, 0.17]); }      // [fx2] a damp plinth, and a timber sill beam where the stone meets the frame
         if (k > 0 && mat === 'MI_Plaster' && L > 1.2) {      // [fx2] the timber frame of a limewashed storey: close studding, square panels or big braces
-          const fr = o.frame || 0, fre = u => !ops.some(p => u > p.u0 - 0.12 && u < p.u1 + 0.12), st3 = (ua, ub) => q(W_, ua, ub, yb, yt, -0.03, DK, GPU.wood, true), rail = (y) => { let a2 = 0; for (const p of ops.concat([{ u0: L + 1, u1: L + 2 }])) { if (p.u0 - 0.1 > a2) q(W_, a2, Math.min(L, p.u0 - 0.1), y - 0.04, y + 0.04, -0.03, DK, GPU.wood, true); a2 = Math.max(a2, p.u1 + 0.1); } };
+          const fr = o.frame || 0, fre = u => !ops.some(p => u > p.u0 - 0.12 && u < p.u1 + 0.12), st3 = (ua, ub) => bx(ua, ub, yb, yt, -0.045, 0.0, DK), rail = (y) => { let a2 = 0; for (const p of ops.concat([{ u0: L + 1, u1: L + 2 }])) { if (p.u0 - 0.1 > a2) bx(a2, Math.min(L, p.u0 - 0.1), y - 0.05, y + 0.05, -0.045, 0.0, DK); a2 = Math.max(a2, p.u1 + 0.1); } };
           if (fr === 0) { for (let u = 0.3; u < L - 0.2; u += 0.5) if (fre(u)) st3(u - 0.035, u + 0.035); rail(yb + 1.45); }
           else if (fr === 1) { const nn = Math.max(2, Math.round(L / 1.1)); for (let i = 1; i < nn; i++) { const u = i * L / nn; if (fre(u)) st3(u - 0.05, u + 0.05); } rail(yb + 1.5); }
-          else { const nn = Math.max(2, Math.round(L / 2)); for (let i = 0; i <= nn; i++) { const u = i * L / nn, sg2 = i % 2 ? -1 : 1, u2 = u + sg2 * 0.8; if (i > 0 && i < nn && fre(u) && fre(u2) && u2 > 0 && u2 < L) { g.quad(W_, P(u, yb + 0.05, -0.03), P(u + 0.08, yb + 0.05, -0.03), P(u2 + 0.08, yb + 1.1, -0.03), P(u2, yb + 1.1, -0.03), DK, GPU.wood); } } rail(yb + 1.1); }
+          else { const nn = Math.max(2, Math.round(L / 2)); for (let i = 0; i <= nn; i++) { const u = i * L / nn, sg2 = i % 2 ? -1 : 1, u2 = u + sg2 * 0.8; if (i > 0 && i < nn && fre(u) && fre(u2) && u2 > 0 && u2 < L) { g.beam(W_, P(u, yb + 0.05, -0.045), P(u2, yb + 1.1, -0.045), 0.08, DK); } } rail(yb + 1.1); }
+          if (wn === 'front' || wn === 'back') {
+            bx(0, L, yb, yb + 0.14, -0.05, 0.0, DK);      // the sill beam
+            for (const p of ops) { const cu = (p.u0 + p.u1) / 2, y0 = fy + p.v0, y1 = fy + p.v1; if (!p.door) { bx(cu - 0.035, cu + 0.035, yb + 0.14, y0 - 0.08, -0.045, 0.0, DK); bx(cu - 0.035, cu + 0.035, y1 + 0.13, yt - 0.07, -0.045, 0.0, DK); } }      // studs under and over each window
+            if (L > 2.4) for (const [u, sg] of [[0.07, 1], [L - 0.07, -1]]) if (fre(u + sg * 0.5) && fre(u + sg * 0.9)) g.beam(W_, P(u, yt - 0.9, -0.05), P(u + sg * 0.95, yt - 0.1, -0.05), 0.07, DK);      // corner braces
+          }
+          if (wn === 'front' || wn === 'back') { const RR = rng(Math.floor(L * 97 + k * 13 + w * 31)); for (const p of ops) if (!p.door) { const cu = (p.u0 + p.u1) / 2, ww = 0.1 + RR() * 0.14, ln = 0.8 + RR() * 1.0; q(mat, cu - ww / 2, cu + ww / 2, Math.max(yb + 0.2, fy + p.v0 - ln), fy + p.v0 - 0.1, -0.008, col.map(v => v * 0.6), undefined, true); } for (let i = 0; i < 3; i++) { const u = 0.3 + RR() * (L - 0.9), ww = 0.12 + RR() * 0.2; if (fre(u) && fre(u + ww)) q(mat, u, u + ww, yt - 0.3 - RR() * 1.2, yt - 0.1, -0.008, col.map(v => v * 0.62), undefined, true); }
+            for (let i = 0; i < 3; i++) { const u = 0.4 + RR() * (L - 1.4), ww = 0.3 + RR() * 0.35, y = yb + 0.3 + RR() * (H - 1.2), hh = 0.3 + RR() * 0.45; if (fre(u) && fre(u + ww)) { q(mat, u, u + ww, y, y + hh, -0.008, col.map((v, j) => v * [0.78, 0.62, 0.48][j]), undefined, true); q(mat, u + ww * 0.15, u + ww * 0.8, y + hh, y + hh * 1.5, -0.008, col.map((v, j) => v * [0.84, 0.72, 0.6][j]), undefined, true); } } }      // streaks, and patches where the limewash has flaked off the daub: under each sill and down from the eaves
         }
-        if (k === 0 && !stone) bx(0, L, -0.35, 0.12, -0.04, 0.0, [0.3, 0.28, 0.26]);                // a stone plinth under the planks
+        if (k === 0) { let a3 = 0; for (const p of ops.filter(q2 => q2.door).concat([{ u0: L + 1, u1: L + 2 }])) { if (p.u0 - 0.1 > a3) bx(a3, Math.min(L, p.u0 - 0.1), -0.35, 0.3, -0.08, 0.0, stone ? [0.5, 0.48, 0.45] : [0.3, 0.28, 0.26]); a3 = Math.max(a3, p.u1 + 0.1); } }      // [fx2] a plinth course 8 cm proud, broken at the doors                // a stone plinth under the planks
       }
     }
     // corner posts
@@ -387,7 +405,7 @@ function infKitWalls(c, b, MS, frames, zone, sy, R, pass) {      // pass: 'ext' 
   }
   const tn = 0.85 + R() * 0.25, SW = typeof shellStyle === 'function' ? shellStyle(site, spec) : {}, wtint = SW.wallTint || [tn, tn * 0.98, tn * 0.95];
   const JT = pass === 'ext' && typeof shellJetty === 'function' ? shellJetty(site, st) : 0;      // [fx2] the shell's upper storey projects over the street; the room (the cell) does not move
-  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: wtint, lime: SW.lime, jetty: JT, stoneTint: SW.stoneTint, stoneMat: SW.stoneMat, frame: SW.frame, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
+  infWalls(b, MS, { sd: site.x * 7.3 + site.z * 3.1, w, d, fl, H: 3, stone: st.ground === 'stone', tint: wtint, lime: SW.lime, jetty: JT, stoneTint: SW.stoneTint, stoneMat: SW.stoneMat, frame: SW.frame, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
   if (JT) { const g = GP(), sh = JT; g.box(W_, -w / 2, -0.3, -d / 2 - sh - 0.12, w / 2, 0.02, -d / 2 + 0.1, [0.4, 0.35, 0.31]); g.box(W_, -w / 2 - 0.05, -0.34, -d / 2 - sh - 0.08, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.34, 0.3, 0.27]);
     const nF = Math.max(2, Math.round(w / 2)); for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * (w / nF); g.beam(W_, [x, -0.62, -d / 2 - sh + 0.02], [x, -0.28, -d / 2 + 0.02], 0.09, [0.32, 0.28, 0.25]); }
     b.add(g.make('gen_joist_' + (_gn++)), KH.xf(MS, 0, 3, 0, 1, 0), { zone: 0, skyVis: 1, cast: false }); }
