@@ -6,7 +6,7 @@ https://brendanlymurphy.github.io/brackenfell/. Development happens on `threejs`
 This file is the whole onboarding: a worker brief only needs to say "read AGENTS.md" and then name the task. Read more only for
 the area you touch: `docs/DESIGN.md` (art, sound and feel), `docs/STATE.md` (how the engine works, by area), `ROADMAP.md` (done, in
 progress, next, known problems), `docs/DECISIONS.md` (what was tried and rejected: read before proposing something "new"),
-`docs/TOWNPLAN.md` (how the town is laid out and why: the authority for anything outdoors), `docs/STORY.md` (the main story), `docs/LOGIC.md` (where story, routines and rules did not make sense, what was done, what is open), `docs/DEFECTS.md` (open visual defects), `docs/HISTORY.md` (old measurements).
+`docs/TOWNPLAN.md` (how the town is laid out and why: the authority for anything outdoors), `docs/BLUEPRINT.md` (the rules any village must pass) and `docs/AUDIT.md` (what Brackenfell fails, with counts and pictures), `docs/STORY.md` (the main story), `docs/LOGIC.md` (where story, routines and rules did not make sense, what was done, what is open), `docs/DEFECTS.md` (open visual defects), `docs/HISTORY.md` (old measurements).
 
 ## Build and run
 
@@ -170,3 +170,9 @@ node tools/voice/check.mjs --allow-missing
 - "Everything is blocky, blocked off, clunky and lazy. Think like an artist and a city planner: every touch intentional, not just
   filling space, but all the space filled at the same time, and full of life." The answer is `docs/TOWNPLAN.md`: read it before
   touching anything outdoors. It outranks any brief.
+- Build 74: "buildings that really are just filling space and don't tell a story ... 80% of the characters don't even have lines
+  ... it's all fake life ... we add things without fully thinking about them and then it just becomes a jumbled mess." The goal:
+  a village good enough to be the blueprint for every later one. A critic session counted it (`docs/AUDIT.md`: 75 of 132
+  buildings are boxes with a door drawn on; 63 of 80 villagers answer "..."; interiors 2 to 6 times their shells) and wrote
+  `docs/BLUEPRINT.md`, the acceptance test for this and every village. Its order of work is binding: the cast table and the
+  building table come before anything is placed. No fake buildings; subtraction before addition.

@@ -126,13 +126,20 @@ interiors lit by hearths and candles. As realistic as free art allows.
 
 ## Next
 
-- Rain and wet ground as weather everywhere (the wharf has wet cobbles); eye adaptation at doors.
-- A world that reacts: lamps lit at dusk, people in from rain, villagers talking to each other, reactions to a drawn weapon.
-- Cooking, potions, sharpening; skills that grow with use; property.
-- KTX2 / ASTC textures for kits, props and characters: shorter first load (60 MB on a phone today) and less GPU memory.
-- New faces, hair and garments (needs the Blender / MakeHuman pipeline in `tools/humans`, not set up on any build machine).
-- Animals with bodies (deer, sheep, dogs) from a CC0 pack that sits beside realistic villagers.
-- Save slots.
+The audit's sixteen recommendations (docs/AUDIT.md Part C), all accepted at Build 75, with owners:
+
+| # | What | Owner |
+|---|---|---|
+| 1, 2 | Delete the 28 shells whose doors face a wall; every remaining dead door answers or goes; Wharfside keeps at most 10 shells as honest working buildings | town workers, by district |
+| 4 | One table of buildings and households written by hand (about 60 people in households of 2 to 4, 57 buildings, names, trades, relations): `docs/PEOPLE.md` | logic session, reviewed by the coordinator |
+| 3, 5, 6, 7 | Lines for every person (hide the talk prompt until they have them), real days, ten exchanges between villagers, houses owned and barred at night | logic session, after the table |
+| 8 | Interiors fitted to shells: one list of openings, ground floor within 1.25 of the footprint, storeys equal; the six alley shops first | houses worker, after Wharfside |
+| 9 | An edge from the river round to the lake with the west and north gates | planner |
+| 10, 13 | Roofs by district that read as different from above; signs and trade gear on every shop | houses worker |
+| 11 | About 40 trees with reasons; two thirds of the flower pots and half the vines removed | town workers and the inspector |
+| 12, 14 | The story lands (mine's direction, the dead man carried to the chapel, a visible change per main step); containers cut to a third | logic session |
+| 15 | Plots for every kept building | town workers |
+| 16 | The blueprint's [auto] rules as gate steps | logic session |
 
 ## Known problems
 
