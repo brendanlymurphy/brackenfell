@@ -28,15 +28,21 @@ node tools/gate.mjs --only story,mine      named steps      --skip cells      --
 
 It runs one browser at a time, retries a failed step once (a pass on the second try is printed as flaky), prints one PASS/FAIL
 table with timings, writes `shots/gate/gate.md`, a log per step and screenshots, and exits non-zero on failure. Every push to
-`threejs` or a `fork-*` branch runs `--full` on GitHub (workflow `gate`, three jobs side by side, about 25 minutes; a push during a
-run waits for it, it does not cancel it): the result is the check mark on the commit, and the tables and screenshots are the run's `gate-1..3` artifacts. So: run `--quick` (or `--only` your area) before a push, read the GitHub result
+`threejs` or a `fork-*` branch runs `--full` on GitHub (workflow `gate`, four jobs side by side, about 25 minutes; a push during a
+run waits for it, it does not cancel it): the result is the check mark on the commit, and the tables and screenshots are the run's `gate-1..4` artifacts. So: run `--quick` (or `--only` your area) before a push, read the GitHub result
 after it, and do not run `--full` on a small shared machine.
 
 What `--full` runs: build; silent boot (no `warn` or `error` line: a builder that throws only logs a warning, and a build shipped
 that way once); `quest` (ends `fire 99 bonfire true`); `stairs`, `npcstairs`, `npcsep`, `routes`, `combat`, `wilds`, `story`, `mine`,
 `secrets`, `interact`, `econ`; `interiors`, `parity`; `voice_game`, `voice_parts`, `audio_game`, `voices` (`tools/voice/check.mjs`); the budget
 views on medium and low; every cell in chunks of 8 (a software-rendered tab dies after about a dozen); `kitcull`; one WebGPU
-shot in the square and in the inn with no GPU errors; `test/real.mjs` (production boot).
+shot in the square and in the inn with no GPU errors; the offline start; `test/real.mjs` (production boot); and the play bot.
+
+The play bot (`test/playbot.mjs`, steps `bot-story`, `bot-play`, `bot-phone`, `bot-sweep`, `bot-soak`) plays by real keys, clicks and
+taps: the story to both endings, a reload at seven points of it, every conversation, side quests, shop, perks, board, theft and
+jail, death, other orders, saves from old builds, the mine, the secrets, a phone screen with a notch, 30 minutes in one page.
+`node test/playbot.mjs --run story,side` runs scenarios by hand (`story` first: the others start from its checkpoints).
+`docs/BUGS.md` lists what it found; a behaviour bug you fix gets a line there and a check in the bot.
 
 Budgets (draw calls / triangles in the four views of `test/perf_views.js`): target medium 220 / 380k, low 140 / 200k. The gate
 fails a view that is more than 3% worse than `tools/gate_budget.json` and reports "over target" otherwise. After a deliberate
