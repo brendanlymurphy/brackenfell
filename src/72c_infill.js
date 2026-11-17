@@ -27,10 +27,11 @@ for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].s
 // [fx2] ── roof of every shell: covering, pitch, tone, sag and eaves, by district and by building (docs/TOWNPLAN.md section 3) ──
 // The generated roof used one texture (weathered wood shingle) at one pitch whatever the spec said ('thatch' was never drawn). Now: stone slate in the Market Place and Chapelgate,
 // thatch in Westgate and Wharfside, wood shingle at the river; each building takes its own pitch, tone, ridge sag and overhang out of its district's range, by a hash of its id.
-const SHELL_TONES = {      // narrow bands: variety comes from pitch, height, ridge line and form first, colour last
-  slate: [[0.74, 0.74, 0.75], [0.66, 0.66, 0.67], [0.78, 0.75, 0.7], [0.62, 0.62, 0.64]],
-  thatch: [[1, 1, 1], [0.8, 0.78, 0.74], [0.9, 0.88, 0.82]],
-  shingle: [[0.62, 0.58, 0.54], [0.5, 0.47, 0.44], [0.68, 0.65, 0.62]],
+const SHELL_TONES = {      // [fx2] roofs must read as different coverings from above: cut slate (cool dark blue-grey), stone slate (pale, lichened), thatch (warm grey-brown), shingle (silvered wood); tints above 1 lift the dark scanned albedos
+  slate: [[0.56, 0.62, 0.76], [0.46, 0.5, 0.62], [0.62, 0.64, 0.72], [0.5, 0.54, 0.66]],
+  stoneslate: [[1.5, 1.5, 1.36], [1.3, 1.32, 1.2], [1.62, 1.55, 1.38], [1.4, 1.42, 1.3]],
+  thatch: [[1.7, 1.42, 0.98], [1.5, 1.26, 0.88], [1.85, 1.58, 1.08]],
+  shingle: [[1.3, 1.27, 1.2], [1.12, 1.1, 1.04], [1.42, 1.38, 1.3]],
 };
 const SHELL_FORMS = {      // chance per house of each added form; the districts that read as crowded and working get the most
   wharfside: { outshut: 0.5, stair: 0.4, stack: 0.35, rack: 0.5, vent: 0.14 },
@@ -71,11 +72,11 @@ const _shellMemo = {};
 function shellStyle(site, spec) {
   if (_shellMemo[site.id]) return _shellMemo[site.id];
   const dn = shellDistrict(site.x, site.z), D = SHELL_DIST[dn], R = rng((Math.round(site.x * 13) * 7919 + Math.round(site.z * 17) * 104729 + 1) | 0), O = SHELL[site.id] || {};
-  const kind = O.kind || (D.alt && R() < 0.4 ? D.alt : D.kind), tones = SHELL_TONES[kind], r = (a, b) => a + (b - a) * R();
+  const kind = O.kind || (D.alt && R() < 0.4 ? D.alt : D.kind), tones = SHELL_TONES[kind === 'slate' && dn === 'chapelgate' ? 'stoneslate' : kind], r = (a, b) => a + (b - a) * R();
   const out = { dist: dn, kind, pitch: O.pitch || D.pitch[(R() * D.pitch.length) | 0], tint: tones[(O.tone !== undefined ? O.tone : (R() * tones.length) | 0) % tones.length], sag: O.sag !== undefined ? O.sag : r(D.sag[0], D.sag[1]), ov: O.ov || r(D.ov[0], D.ov[1]) };
-  const slab = false;      // draw budget: the Market Place shows one slate material; the slabs (roof_slates_02) are Chapelgate's      // roof_slates_02: small irregular weathered slabs; roof_slates_03: grey cut slate
+  const slab = dn === 'chapelgate' && kind === 'slate';      // draw budget: the Market Place shows one slate material; the slabs (roof_slates_02) are Chapelgate's      // roof_slates_02: small irregular weathered slabs; roof_slates_03: grey cut slate
   out.mat = kind === 'slate' ? (slab ? INF_SS : INF_SL) : kind === 'thatch' ? INF_TH : INF_S; out.ts = kind === 'slate' ? (slab ? 4.0 : 3.6) : kind === 'thatch' ? 1.6 : 1.25;      // a course of slates shows about 18-20 cm out.thick = kind === 'thatch' ? 0.36 : kind === 'slate' ? 0.14 : 0.1; out.thatch = kind === 'thatch';
-  out.tint = out.tint.map(v => Math.min(1, v * (0.94 + R() * 0.1)));
+  out.tint = out.tint.map(v => Math.min(2, v * (0.94 + R() * 0.1)));
   const W = SHELL_WALL[dn], jit = v => Math.min(1, v * (0.96 + R() * 0.08));
   const limeName = O.lime !== undefined ? O.lime : O.wall ? false : (W[2].length && R() < W[0] ? W[2][(R() * W[2].length) | 0] : false), plank = O.wall || W[3];
   out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.forms = O.forms; out.face = O.face || (typeof WHARF !== 'undefined' && WHARF.houses.some(h => h[0] === site.id));      // [fx2] houses of the re-sited lower town show a real face on their free side walls

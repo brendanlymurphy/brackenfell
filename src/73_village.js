@@ -252,7 +252,7 @@ function buildVillage() {
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   return leaf; };
   const leafItems = LEAF_COL.map(bc => skin.add(mkLeaf(bc))), leafItem = leafItems[0], leafPick = d => { const key = String(d.cell || (d.site && d.site.id) || ''); let h = 0; for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0; return leafItems[[0, 0, 1, 1, 2, 3, 4, 5][Math.abs(h) % 8]]; };
-  for (const d of World.doors) { d.obj = addSkinned(leafPick(d), { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafPick(d), { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, light: d.cell && d.side === 'in' ? 1.25 : 1.75, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;

@@ -486,8 +486,8 @@ function kitDress(c) {
     }
   }
   // ── outside: vines up the walls, a banner by the door ──
-  for (let i = 0; i < (st.vines || 0); i++) {
-    const wn = R.pick(['back', 'left', 'right', 'front', 'back']), L = WALLS[wn].len(w, d), u = 0.9 + R() * (L - 1.8), up = !!st.up && R() < 0.6;
+  for (let i = 0; i < Math.ceil((st.vines || 0) / 2); i++) {      // [fx2] half as many wall vines (FINISH I-vines), on the shaded back and side walls only
+    const wn = R.pick(['back', 'left', 'back', 'right']), L = WALLS[wn].len(w, d), u = 0.9 + R() * (L - 1.8), up = !!st.up && R() < 0.6;
     if (!up && c.openings[wn].some(o => Math.abs((o.u0 + o.u1) / 2 - u) < 1.5)) continue;
     if (up && st.balcony === wn && Math.abs(u - L / 2) < 2.6) continue;
     c.kb.add(R.pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine1', 'Prop_Vine4']), KH.xf(c.kFrames[wn], u, up ? H + 2.45 : H * 0.84, 0.1, [1.2, up ? 1.2 : Math.min(1.2, H * 0.84 / 2.2), 1]), EXT);

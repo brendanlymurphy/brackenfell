@@ -88,14 +88,14 @@ function infWalls(B, MS, o) {
         if (!p.door) g.quad(mat, P(p.u0, y0, 0), P(p.u1, y0, 0), P(p.u1, y0, dep), P(p.u0, y0, dep), col, [0, 0, 1, 0.2], true);
         if (p.door) {
           // Build 33: a plank door of real boards (solid boxes: the old single quad faced the wrong way for the single-sided wood material and showed the dark inside), iron straps, a ring handle, a threshold
-          { g.quad(W_, P(p.u0, y0 + 0.02, 0.15), P(p.u1, y0 + 0.02, 0.15), P(p.u1, y1 - 0.02, 0.15), P(p.u0, y1 - 0.02, 0.15), [0.1, 0.08, 0.06], GPU.wood, true);      // [fx2] the hinged leaf (73_village.js, six finishes) hangs in the opening; behind it the dark of the passage, a threshold in front
+          { g.quad(INF_T, P(p.u0, y0 + 0.02, 0.15), P(p.u1, y0 + 0.02, 0.15), P(p.u1, y1 - 0.02, 0.15), P(p.u0, y1 - 0.02, 0.15), [0.34, 0.26, 0.18], GPU.wood, true);      // [fx2] the hinged leaf (73_village.js, six finishes) hangs in the opening; behind it the dark of the passage, a threshold in front
             if (!lo) bx(p.u0 - 0.12, p.u1 + 0.12, y0, y0 + 0.07, 0.0, 0.2, [0.4, 0.38, 0.35]); }
           bx(p.u0 - 0.12, p.u0, y0, y1 + 0.12, -0.09, 0.0, [0.3, 0.23, 0.17]); bx(p.u1, p.u1 + 0.12, y0, y1 + 0.12, -0.09, 0.0, [0.3, 0.23, 0.17]); bx(p.u0 - 0.12, p.u1 + 0.12, y1, y1 + 0.14, -0.12, 0.0, [0.3, 0.23, 0.17]);
           if (k === 0) bx(p.u0 - 0.15, p.u1 + 0.15, -0.35, 0.1, -0.35, 0.0, [0.5, 0.48, 0.45]);          // a stone step
         } else if (lo) {
           g.quad('MI_WindowGlass', P(p.u0, y0, 0.05), P(p.u1, y0, 0.05), P(p.u1, y1, 0.05), P(p.u0, y1, 0.05), [1, 1, 1], [0, 0, 1, 1], false);
         } else {
-          g.quad(W_, P(p.u0, y0, 0.16), P(p.u1, y0, 0.16), P(p.u1, y1, 0.16), P(p.u0, y1, 0.16), [0.06, 0.068, 0.078], GPU.wood, true);      // [fx2] glass is dark by day (the night glow is its own mesh)
+          g.quad(INF_T, P(p.u0, y0, 0.16), P(p.u1, y0, 0.16), P(p.u1, y1, 0.16), P(p.u0, y1, 0.16), [0.2, 0.26, 0.32], GPU.wood, true);      // [fx2] glass is dark by day (the night glow is its own mesh)
           const uc = (p.u0 + p.u1) / 2, ym = (y0 + y1) / 2, LD = [0.9, 0.9, 0.92], MW = [0.95, 0.76, 0.58], bar = (ua, ub, ya, yb2) => q(W_, ua, ub, ya, yb2, 0.12, LD, GPU.wood, true), kd = p.kind === undefined ? 1 : p.kind;
           if (kd === 0) { const nu = Math.max(2, Math.round((p.u1 - p.u0) / 0.2)), nv = Math.max(3, Math.round((y1 - y0) / 0.2)); for (let i = 1; i < nu; i++) { const u = p.u0 + (p.u1 - p.u0) * i / nu; bar(u - 0.012, u + 0.012, y0, y1); } for (let j = 1; j < nv; j++) { const y = y0 + (y1 - y0) * j / nv; bar(p.u0, p.u1, y - 0.012, y + 0.012); } q(W_, uc - 0.025, uc + 0.025, y0, y1, 0.1, MW, GPU.wood, true); }
           else if (kd === 3) { for (const f of [1 / 3, 2 / 3]) { const u = p.u0 + (p.u1 - p.u0) * f; q(W_, u - 0.03, u + 0.03, y0, y1, 0.1, MW, GPU.wood, true); } q(W_, p.u0, p.u1, y1 - 0.3, y1 - 0.26, 0.1, MW, GPU.wood, true); }
