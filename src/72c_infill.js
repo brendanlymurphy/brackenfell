@@ -54,7 +54,7 @@ const SHELL = {         // per-building overrides (kind, pitch, tone index, sag,
   chapel: { kind: 'slate', pitch: 56, tone: 0, sag: 0.05, ov: 0.45, ground: 'stone', wall: [1, 1, 1] },
   // Market Place: each front its own (shop alley kept as the floor of detail; they differ in tone and structure)
   inn: { kind: 'slate', pitch: 57, tone: 2, sag: 0.1, ov: 0.65, lime: 'cream', ground: 'stone', dormers: 2, dormerU: [-5.6, 5.4], cross: [{ u: -0.3, w: 5.4 }] },
-  smithy: { kind: 'slate', pitch: 50, tone: 5, sag: 0.06, ov: 0.5, wall: [0.66, 0.64, 0.62], ground: 'stone' },
+  smithy: { kind: 'slate', pitch: 50, tone: 5, sag: 0.06, ov: 0.5, wall: [0.66, 0.64, 0.62], ground: 'stone', soot: true, cart: true },
   store: { kind: 'slate', pitch: 60, tone: 3, sag: 0.09, ov: 0.55, lime: 'ochre', ground: 'stone', dormers: 1 },
   elder: { lime: 'grey', ground: 'stone', pitch: 55, face: true },
   'in.04': { face: true }, 'in.10': { face: true }, 'in.40': { face: true }, 'in.41': { face: true }, 'in.42': { face: true },
@@ -74,7 +74,7 @@ function shellStyle(site, spec) {
   out.tint = out.tint.map(v => Math.min(1, v * (0.94 + R() * 0.1)));
   const W = SHELL_WALL[dn], jit = v => Math.min(1, v * (0.96 + R() * 0.08));
   const limeName = O.lime !== undefined ? O.lime : O.wall ? false : (W[2].length && R() < W[0] ? W[2][(R() * W[2].length) | 0] : false), plank = O.wall || W[3];
-  out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.face = O.face; out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.frame = (R() * 3) | 0;
+  out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.face = O.face; out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.frame = (R() * 3) | 0; out.chimSize = 0.38 + R() * 0.24; out.chimUp = R() * 0.9; out.soot = O.soot; out.cart = O.cart;
   const SK = dn === 'market' ? ['grey', 'warm', 'dark', 'warm'] : ['grey', 'warm', 'dark', 'rubble', 'rubble'], sk = SK[(R() * SK.length) | 0]; out.stoneTint = { grey: [0.82, 0.84, 0.86], warm: [1, 0.86, 0.68], dark: [0.6, 0.6, 0.58], rubble: [1, 0.96, 0.9] }[sk].map(v => v * (0.95 + R() * 0.1)); out.stoneMat = sk === 'rubble' ? 'MI_Rubble_Wall' : undefined;
   out.lime = !!limeName; out.wallTint = (limeName ? LIME[limeName] : plank).map(jit); out.ground = O.ground || (R() < W[1] ? 'stone' : 'plaster');
   return _shellMemo[site.id] = out;
@@ -104,6 +104,12 @@ function shellDress(c, b, frames, MS, o) {
     if (gLimed) for (const lp of (c.kDoorLamps || [])) if (lp.wn === 'front') g.quad(Lm, [lp.u - 0.2, lp.v + 0.15, 0.015], [lp.u + 0.2, lp.v + 0.15, 0.015], [lp.u + 0.1, lp.v + 0.9, 0.015], [lp.u - 0.1, lp.v + 0.9, 0.015], dk(0.4), [0, 0, 0.1, 0.1], [0, 0, 1]);      // soot above the lamp
     any = true; }
   if (any) put(front, g);
+  // a smith's wall: soot over the forge side and under the eaves; a cart shed against a side wall
+  if (SSt.soot) { const gs = GP(); for (const wn of ['front', 'left', 'right']) { const Lw = L(wn), gsw = GP(); for (let i = 0; i < 4; i++) { const u = 0.5 + R() * (Lw - 1.6), wd = 0.9 + R() * 1.3, h0 = Ytop - 0.15 - R() * 1.8; gsw.quad(Lm, [u, h0, 0.016], [u + wd, h0 + R() * 0.2, 0.016], [u + wd * 0.8, Ytop - 0.02, 0.016], [u + 0.1, Ytop - 0.02, 0.016], [0.16, 0.15, 0.14], [0, 0, 0.1, 0.1], [0, 0, 1]); } put(wn, gsw); } }
+  if (SSt.cart) { const wn = 'right', Lw = L(wn), g4 = GP(), a = 0.3, e = Lw - 0.3, dd = 2.8, h0 = 2.6, h1 = 2.0; g4.quad(W_, [a, h0, 0], [e, h0, 0], [e, h1, dd], [a, h1, dd], [0.26, 0.21, 0.17], GPU.wood, [0, 1, 0.5]); g4.quad(W_, [a, h0 - 0.05, 0], [e, h0 - 0.05, 0], [e, h1 - 0.05, dd], [a, h1 - 0.05, dd], [0.14, 0.11, 0.09], GPU.wood, [0, -1, -0.5]);
+    for (const u of [a + 0.05, (a + e) / 2, e - 0.05]) g4.beam(W_, [u, 0, dd - 0.08], [u, h1, dd - 0.08], 0.08, WOOD);
+    const cx = (a + e) / 2; g4.box(W_, cx - 0.9, 0.55, 1.0, cx + 0.9, 0.7, 2.2, [0.9, 0.7, 0.5]); for (const sx of [-1, 1]) octa(g4, cx + sx * 0.95, 0.0, 1.6, 0.5, 0.06, [0.8, 0.6, 0.45]); g4.beam(W_, [cx - 0.9, 0.62, 1.6], [cx - 2.0, 0.3, 1.6], 0.05, WOOD);      // a cart under it, shafts to the ground
+    put(wn, g4); }
   // a lean-to against a side wall that has no neighbour
   for (const wn of ['left', 'right']) if (R() < 0.22 && !(typeof infNeighbour === 'function' && infNeighbour(site, wn === 'right') > 0) && L(wn) > 4) {
     const g2 = GP(), a = 0.4, e = L(wn) - 0.4, dd = 1.9, h0 = 2.35, h1 = 1.85;
@@ -112,8 +118,8 @@ function shellDress(c, b, frames, MS, o) {
     g2.box(W_, a, 0, 0.05, e, 0.5, 0.4, [0.3, 0.24, 0.17]);      // a woodpile under it
     put(wn, g2); }
   // a real face for a blank end that stands on a street or a lane: window with sill and shutters, an upper window, a hood, a bracket sign
-  if (SSt.face) for (const wn of ['left', 'right']) {
-    if (typeof infNeighbour === 'function' && infNeighbour(site, wn === 'right') > 0) continue;
+  if (SSt.face) for (const wn of ['left', 'right', 'back']) {
+    if (wn !== 'back' && typeof infNeighbour === 'function' && infNeighbour(site, wn === 'right') > 0) continue;
     const g3 = GP(), Lw = L(wn), SC = [[0.3, 0.38, 0.28], [0.42, 0.2, 0.16], [0.22, 0.3, 0.4], [0.36, 0.31, 0.22]], sc = SC[(R() * 4) | 0], win = (cu, y0, hw, hh) => {
       g3.quad('MI_WindowGlass', [cu - hw, y0, 0.012], [cu + hw, y0, 0.012], [cu + hw, y0 + hh, 0.012], [cu - hw, y0 + hh, 0.012], [0.45, 0.5, 0.55], [0, 0, 1, 1], [0, 0, 1]);
       g3.box(W_, cu - hw - 0.07, y0 - 0.08, 0.0, cu + hw + 0.07, y0, 0.16, [0.46, 0.44, 0.4]); g3.box(W_, cu - hw - 0.06, y0 + hh, 0.0, cu + hw + 0.06, y0 + hh + 0.1, 0.07, WOOD);
