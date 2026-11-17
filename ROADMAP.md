@@ -70,6 +70,13 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - **71** A reload in the cell no longer locks the player in; broken saves are mended or refused. Phone interface pass at 844 x 390
   (map shows you and quest marks indoors, one button style, smaller quest banner). Phones take the half-resolution ground pack by
   default (first visit 61.0 to 40.4 MB). Culling: squares refilled only when one in sight is missing; `test/cullwalk.js`.
+- **72** The Market Place rebuilt to `docs/TOWNPLAN.md`: an enclosed four-sided place with cobbles wall to wall, a drain, worn and
+  dirty ground; the west main street, the Wharf Street mouth and the alley as streets with rows on the line and party walls; the
+  terrace held by a battered rubble wall with buttresses and a flight; the market's stalls in two rows; 15 walled or fenced yards
+  dressed by trade with back lanes; three houses turned gable to the street. Houses: roofs from Poly Haven CC0 scans by district
+  (every roof had been one shingle texture), per-house pitch, sag and eaves; the inn's cross gable and dormers; jetties; dark
+  lattice windows in four designs; proud timber framing, sills, lintels, plinths; six weathered door finishes; the inn's working
+  back. Budget re-accepted for the district (medium terrace 154 / 238k, lake 138 / 255k; low square 128 / 215k, terrace 127 / 170k).
 
 - **60, 61** Real lip sync (visemes from the audio of every voiced line), natural skin and eyes, gaze, fitted helmet and kerchiefs.
 - **62** One gate command, the gate on GitHub for every push, onboarding docs rewritten, seven new voiced story lines.
