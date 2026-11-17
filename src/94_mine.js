@@ -57,7 +57,7 @@ function mineShell(m, O, FY, V) {
   for (const c of cells) {
     const { i, j, reg } = c, fl = (a, b) => g.flat(reg, a, b);
     // floor
-    m.mat(reg.id === 'flood' || reg.id.startsWith('ramp') ? MAT.MUD : MAT.GRAVEL, reg.id === 'flood' || reg.id.startsWith('ramp') ? [0.44, 0.41, 0.38] : [0.72 + mhash(i, j, 3) * 0.12, 0.66, 0.6], 0.8);
+    m.mat(reg.id === 'flood' || reg.id.startsWith('ramp') ? MAT.MUD : MAT.SOIL, reg.id === 'flood' || reg.id.startsWith('ramp') ? [0.44, 0.41, 0.38] : [0.40 + mhash(i, j, 3) * 0.1, 0.48 + mhash(i, j, 4) * 0.05, 0.50], 0.8);      // [fx2] trodden earth underfoot, rock on the walls
     m.quad(W(i, fl(i, j), j), W(i, fl(i, j + 1), j + 1), W(i + 1, fl(i + 1, j + 1), j + 1), W(i + 1, fl(i + 1, j), j), i / T, j / T, (i + 1) / T, (j + 1) / T);
     // roof
     m.mat(MAT.ROCK, rockCol(i, j, 5).map(v => v * 0.8), 0.7);
@@ -66,7 +66,7 @@ function mineShell(m, O, FY, V) {
     // walls where the neighbour is rock: A left, B right as seen from inside
     const wall = (kind, a0, b0, a1, b1, along) => {
       const nrm = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }[kind];
-      m.mat(MAT.GRAVEL, rockCol(i + a0, j + b0, 1).map(v => v * 0.75), 0.55);      // the rock texture reads near-black under a carried light; the cut face takes the floor's grit
+      m.mat(MAT.ROCK, rockCol(i + a0, j + b0, 1).map((v, d) => v * [0.58, 0.58, 0.58][d]), 0.6);      // [fx2] cut rock at a believable scale, grey-brown
       const lev = (a, b, k) => { const f = fl(a, b) - 0.4, t = ceilY(a, b); return P(a, b, k, f + (t - f) * k / 3); };
       for (let k = 0; k < 3; k++) m.quad(lev(a0, b0, k + 1), lev(a0, b0, k), lev(a1, b1, k), lev(a1, b1, k + 1), (along) / T, k * 1.2 / T, (along + 1) / T, (k + 1) * 1.2 / T);
       edges[kind].push([i, j]);
