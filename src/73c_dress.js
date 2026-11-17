@@ -8,7 +8,7 @@ const DRU = { wood: [0.02, 0.07, 0.62, 0.27], cloth: [0.3, 0.27, 0.55, 0.45] };
 // muted palettes (linear-ish tints: the kit materials are already warm and fairly bright)
 const DRCOL = {
   wood: [[0.44, 0.34, 0.24], [0.38, 0.30, 0.23], [0.48, 0.38, 0.27], [0.32, 0.26, 0.2], [0.42, 0.36, 0.29]],
-  cloth: [[0.46, 0.27, 0.2], [0.5, 0.4, 0.22], [0.24, 0.28, 0.36], [0.5, 0.44, 0.34], [0.28, 0.32, 0.22], [0.36, 0.28, 0.2], [0.34, 0.2, 0.24], [0.44, 0.4, 0.32]].map(c => c.map(v => v * 0.1)),       // [fin] madder, weld, woad, undyed linen, dull green, walnut, a plum, a grey wool; the cloth material still brightens these about 2x
+  cloth: [[0.46, 0.27, 0.2], [0.5, 0.4, 0.22], [0.24, 0.28, 0.36], [0.5, 0.44, 0.34], [0.28, 0.32, 0.22], [0.36, 0.28, 0.2], [0.34, 0.2, 0.24], [0.44, 0.4, 0.32]].map(c => c.map(v => v * 0.2)),       // [fin] madder, weld, woad, undyed linen, dull green, walnut, a plum, a grey wool; the cloth material still brightens these about 2x
   sack: [[0.26, 0.22, 0.16], [0.22, 0.19, 0.14], [0.28, 0.24, 0.18], [0.19, 0.16, 0.12]],
   straw: [[0.46, 0.36, 0.16], [0.42, 0.34, 0.16], [0.5, 0.4, 0.18]],
   iron: [0.24, 0.22, 0.21],
