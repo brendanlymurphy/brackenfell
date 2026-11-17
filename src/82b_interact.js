@@ -208,12 +208,15 @@ IX.crimeNode = function (g) {
   opts.push(['Go quietly.', () => IX.jail(g), 1]);
   return node('Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is ' + fine + ' gold, or you hand it back, or you sleep in the cell and think about it.', opts);
 };
+// the cell door is a thing to use only while you are held. It was made when you were put in, so a reload inside the cell (a phone dropping the tab)
+// left you locked in with no door to call the guard from: it is also made when a save is loaded (IX.restore).
+IX.jailDoorMake = function () { const c = Cells.by.guardhouse, P = c && c.ctx && (c.ctx.planDone || c.ctx.plan); if (!P || IX.jailDoor) return IX.jailDoor; const w = P.w2(-3.0, 1.1, 8.1); IX.jailDoor = { kind: 'jaildoor', id: 'jail.door', p: w, r: 3.0, zone: P.zone }; World.interact.push(IX.jailDoor); return IX.jailDoor; };
 IX.jail = function (g) {
   const c = Cells.by.guardhouse, P = c && c.ctx && (c.ctx.planDone || c.ctx.plan); if (!P) { gold(-Math.min(S.gold, S.crime ? S.crime.fine : 0)); S.crime = null; return node('There’s no cell to hold you. Go on, then.'); }
   setTimeout(() => endTalk && UI.talk && endTalk(), 0);
   fadeDo(() => {
     for (const id in S.stolen || {}) if (has(id)) give(id, -Math.min(S.items[id], S.stolen[id])); S.crime = null; S.stolen = {}; S.jail = 1; Env.hour = 6.5; const r = RPG.st(); r.hp = RPG.MAXHP;
-    const q = P.w2(-3.0, 0.02, 9.6); Cells.teleport({ p: q, yaw: PI }); IX.jailDoor = IX.jailDoor || (() => { const w = P.w2(-3.0, 1.1, 8.1), it = { kind: 'jaildoor', id: 'jail.door', p: w, r: 3.0, zone: P.zone }; World.interact.push(it); return it; })();
+    const q = P.w2(-3.0, 0.02, 9.6); Cells.teleport({ p: q, yaw: PI }); IX.jailDoorMake();
     toast('You wake on straw. The door is locked.'); save();
   });
   return null;
@@ -240,7 +243,7 @@ interactUse = function (it) {
 };
 for (const id of ['hale', 'ivo']) { const base = TALK[id] || (() => node('Move along.')); TALK[id] = function () { if (S.crime && S.crime.pending === false && S.crime.fine > 0 && !S.jail) { const n = IX.crimeNode(NPC[id]); return n; } return base.call(this); }; }
 const _as2 = applySave; applySave = function (j) { _as2(j); IX.restore(); };
-IX.restore = function () { for (const o of IX.loose) if (S.taken && S.taken[o.lid]) { o.gone = true; o.obj.visible = false; } IX.sit = null; };
+IX.restore = function () { for (const o of IX.loose) if (S.taken && S.taken[o.lid]) { o.gone = true; o.obj.visible = false; } IX.sit = null; if (S.jail) IX.jailDoorMake(); };
 // ── the inn: a bed for the night and a bowl of stew (eating restores; sleeping restores) ──
 { const base = TALK.greta;
   const stew = () => { if (S.gold < 3) return node('Three gold, love. Your purse says otherwise.'); gold(-3); RPG.heal(40); Audio2.eat(); toast('The stew is hot and thick: +40 health'); return node('Eat it while it’s hot. I don’t do cold.'); };
