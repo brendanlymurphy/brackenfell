@@ -192,6 +192,10 @@ function buildChurchyard(bucket) {
     m0.mat(MAT.PLANKS, [0.34, 0.27, 0.2], 0.6); for (const sz of [-1.0, 1.0]) m0.box(-0.55, 0.42, sz - 0.2, 0.55, 0.5, sz + 0.2, 4);
     m0.mat(MAT.STONE, [0.55, 0.52, 0.47], 1.0); m0.box(-0.8, 0, -0.7, 0.8, 0.12, 0.7, 4); m0.pop();
     for (const sz of [-1.15, 1.15]) { const q = siteToWorld(C, -7.5, -10 + sz); addCircleCollider(m0, q[0], q[1], 0.15, g, g + 2.5); } }
+  /* [fx3] yews: dark, dense, rounded masses (two overlapping lobes on a short trunk) at the corners and by the path */
+  for (const [lx, lz, sc] of [[-5.5, -5.8, 1.0], [-5.8, -15.5, 1.15], [6.8, -15.8, 0.95], [6.5, -5.8, 1.05], [2.5, -12.5, 0.85]]) { const q = W(lx, lz), g = gy(q[0], q[1]), mm = bucket(q[0], q[1]);
+    mm.push().T(q[0], g - 0.1, q[1]).RY(R() * 6.28); mm.mat(MAT.BARK, [0.3, 0.22, 0.17], 1); mm.cyl(0, 0, 0, 0.3 * sc, 0.2 * sc, 1.4 * sc, 6, 0);
+    mm.mat(MAT.MOSS, [0.1, 0.16, 0.09], 2.5); mm.ball(0, 1.5 * sc, 0, 1.35 * sc, 1.05 * sc, 1.25 * sc, 9, 6); mm.ball(0.25 * sc, 2.5 * sc, -0.1, 1.0 * sc, 1.1 * sc, 0.95 * sc, 8, 6); mm.ball(-0.4 * sc, 1.1 * sc, 0.5, 0.8 * sc, 0.7 * sc, 0.8 * sc, 7, 5); mm.pop(); addCircleCollider(mm, q[0], q[1], 0.35 * sc, g, g + 2); }
   /* a path of flags from the gate to the chapel door, and one to the west wall's second gap if any */
   { const pts = [[-7.2, -10], [-4.5, -8.6], [-2, -6.8], [0, -5]]; for (let i = 0; i + 1 < pts.length; i++) { const a = pts[i], b = pts[i + 1], n = 3; for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, lx = a[0] + (b[0] - a[0]) * t + (R() - 0.5) * 0.15, lz = a[1] + (b[1] - a[1]) * t + (R() - 0.5) * 0.15, w = W(lx, lz), mm = bucket(w[0], w[1]), g = gy(w[0], w[1]); mm.push().T(w[0], g, w[1]).RY(-C.yaw + Math.atan2(b[1] - a[1], b[0] - a[0]) + (R() - 0.5) * 0.1); mm.mat(MAT.STONE, [0.52 + R() * 0.08, 0.5, 0.45], 1.2); mm.box(-0.55, -0.03, -0.45, 0.55, 0.03, 0.45, 4); mm.pop(); } } }
 }
@@ -223,10 +227,10 @@ function buildEastLane(bucket) {
 // [fx3] the way from the north gate to the lych gate: a walled side (rubble, 1.1 m) and a hedged side (a dense hedge on a low bank), 3 m apart, the path between worn to earth with a flagged middle
 function buildChapelWay(bucket) {
   if (TEST && TEST.plots === 0) return;
-  const R = rng(6161), gy = (x, z) => Terrain.y(x, z), P = [[-6.3, -62.6], [-9.4, -64.1], [-12.6, -65.6]];
+  const R = rng(6161), gy = (x, z) => Terrain.y(x, z), P = [[-6.3, -62.6], [-10.0, -63.4], [-13.6, -64.0], [-16.0, -64.7], [-16.0, -66.5]];
   for (let i = 0; i + 1 < P.length; i++) {
     const a = P[i], b = P[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), nx = -dz / L, nz = dx / L, ang = Math.atan2(dz, dx);
-    for (const sd of [-1, 1]) { const ax = a[0] + nx * sd * 1.5, az = a[1] + nz * sd * 1.5, cx = ax + dx / 2, cz = az + dz / 2, g = gy(cx, cz) - 0.15, m = bucket(cx, cz);
+    for (const sd of i === 3 ? [] : [-1, 1]) { const ax = a[0] + nx * sd * 1.5, az = a[1] + nz * sd * 1.5, cx = ax + dx / 2, cz = az + dz / 2, g = gy(cx, cz) - 0.15, m = bucket(cx, cz);
       m.push().T(cx, g, cz).RY(-ang);
       if (sd < 0) { m.mat(MAT.STONE, [0.4, 0.38, 0.35], 1.4); m.box(-L / 2, 0, -0.25, L / 2, 1.15, 0.25, 4); }
       else { m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-L / 2, 0, -0.5, L / 2, 0.32, 0.5, 4);
