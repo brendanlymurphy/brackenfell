@@ -60,6 +60,7 @@ const SHELL = {         // per-building overrides (kind, pitch, tone index, sag,
   smithy: { kind: 'slate', pitch: 50, tone: 5, sag: 0.06, ov: 0.5, wall: [0.66, 0.64, 0.62], ground: 'stone', soot: true, cart: true },
   store: { kind: 'slate', pitch: 60, tone: 3, sag: 0.09, ov: 0.55, lime: 'ochre', ground: 'stone', dormers: 1 },
   elder: { lime: 'grey', ground: 'stone', pitch: 55, face: true },
+  'in.114': { forms: { stair: 1, outshut: 0, stack: 0, rack: 0.7, vent: 0 }, kind: 'thatch', tone: 1 }, 'in.127': { forms: { vent: 1, stack: 1, outshut: 0, stair: 0, rack: 0 }, kind: 'shingle', tone: 1, wall: [0.5, 0.48, 0.46] },
   'in.04': { face: true }, 'in.10': { face: true }, 'in.40': { face: true }, 'in.41': { face: true }, 'in.42': { face: true },
   herbalist: { lime: 'pink', ground: 'plaster', pitch: 53, face: true },
   weaver: { wall: [0.85, 0.82, 0.78], ground: 'plaster', pitch: 58 },
@@ -77,7 +78,8 @@ function shellStyle(site, spec) {
   out.tint = out.tint.map(v => Math.min(1, v * (0.94 + R() * 0.1)));
   const W = SHELL_WALL[dn], jit = v => Math.min(1, v * (0.96 + R() * 0.08));
   const limeName = O.lime !== undefined ? O.lime : O.wall ? false : (W[2].length && R() < W[0] ? W[2][(R() * W[2].length) | 0] : false), plank = O.wall || W[3];
-  out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.face = O.face; out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.frame = (R() * 3) | 0; out.chimSize = 0.38 + R() * 0.24; out.chimUp = R() * 0.9; out.soot = O.soot; out.cart = O.cart;
+  out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.forms = O.forms; out.face = O.face || (typeof WHARF !== 'undefined' && WHARF.houses.some(h => h[0] === site.id));      // [fx2] houses of the re-sited lower town show a real face on their free side walls
+   out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.frame = (R() * 3) | 0; out.chimSize = 0.38 + R() * 0.24; out.chimUp = R() * 0.9; out.soot = O.soot; out.cart = O.cart;
   const SK = dn === 'market' ? ['grey', 'warm', 'dark', 'warm'] : ['grey', 'warm', 'dark', 'rubble', 'rubble'], sk = SK[(R() * SK.length) | 0]; out.stoneTint = { grey: [0.82, 0.84, 0.86], warm: [1, 0.86, 0.68], dark: [0.6, 0.6, 0.58], rubble: [1, 0.96, 0.9] }[sk].map(v => v * (0.95 + R() * 0.1)); out.stoneMat = sk === 'rubble' ? 'MI_Rubble_Wall' : undefined;
   out.lime = !!limeName; out.wallTint = (limeName ? LIME[limeName] : plank).map(jit); out.ground = O.ground || (R() < W[1] ? 'stone' : 'plaster');
   return _shellMemo[site.id] = out;
@@ -134,7 +136,7 @@ function shellDress(c, b, frames, MS, o) {
     put(wn, g3); }
   // [fx2] silhouette: a house is not one box. Per district, a catslide outshut, an outside stair to a loft door with a hoist, a gable chimney stack, a drying rack, a smoke louvre (all outside the footprint; near weight, small parts)
   if (SHELL_FORMS[SSt.dist] && site.id !== 'inn') {
-    const FM = SHELL_FORMS[SSt.dist], RF = rng(Math.round(site.x * 53 + site.z * 29) + 77), others = SITES.filter(s5 => s5 !== site && s5.w && s5.id !== 'tower');
+    const FM = Object.assign({}, SHELL_FORMS[SSt.dist], SSt.forms || {}), RF = rng(Math.round(site.x * 53 + site.z * 29) + 77), others = SITES.filter(s5 => s5 !== site && s5.w && s5.id !== 'tower');
     const free = (wn, u0, u1, zd) => { const Wd = WALLS[wn], s0 = Wd.start(w, d); for (let i = 0; i <= 4; i++) for (let j = 0; j <= 3; j++) { const u = u0 + (u1 - u0) * i / 4, z = 0.3 + (zd - 0.3) * j / 3, lx = s0[0] + Wd.u[0] * u + Wd.n[0] * z, lz = s0[2] + Wd.u[2] * u + Wd.n[2] * z, wp = siteToWorld(site, lx, lz); for (const s5 of others) { const dx = wp[0] - s5.x, dz = wp[1] - s5.z, cc = Math.cos(s5.yaw), sn = Math.sin(s5.yaw), uu = dx * cc + dz * sn, vv = -dx * sn + dz * cc; if (Math.abs(uu) < s5.w / 2 + 0.3 && Math.abs(vv) < s5.d / 2 + 0.3) return false; } } return true; };
     const wallCol = SSt.wallTint || [0.62, 0.6, 0.58], yRidge = Ytop + d / 2 * tanP, used = {};
     const tri2 = (g5, m5, A, B, C, col) => { g5.tri(m5, A, B, C, col, [0, 0, 1.6, 1.6], [0, 0, 0]); };

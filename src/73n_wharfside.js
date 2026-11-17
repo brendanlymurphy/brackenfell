@@ -16,7 +16,7 @@ function wharfPlots() {
   };
   const R = rng(5521); let k = 0;
   for (const [id] of WHARF.houses) {
-    const s = SITE[id]; if (!s) continue;
+    const s = SITE[id]; if (!s || WHARF.gables.includes(id) || (WHARF.yard || []).includes(id)) continue;
     const nx = Math.sin(s.yaw), nz = -Math.cos(s.yaw), ux = Math.cos(s.yaw), uz = Math.sin(s.yaw), bx = -nx, bz = -nz;      // front normal; along the front; the back
     const hw = s.w / 2 + 0.25; let depth = 0;
     for (let d = 5.6; d >= 2.0; d -= 0.4) { let ok = true; for (let a = -hw + 0.3; a <= hw - 0.3 && ok; a += 0.8) for (let b = 0.4; b <= d + 0.8 && ok; b += 0.6) { const x = s.x + bx * (s.d / 2 + b) + ux * a, z = s.z + bz * (s.d / 2 + b) + uz * a; if (blocked(x, z, s, 0.5)) ok = false; } if (ok) { depth = d; break; } }
@@ -67,7 +67,7 @@ function buildWharfPlots(bucket) {
         for (const sg of [-1, 1]) { const q = at(sg * 0.9, dp * 0.5 - 0.0); m.beam([q[0], g, q[1] - 0.3], [q[0], g + 0.5, q[1] - 0.3], 0.06, 0.06); m.beam([q[0], g, q[1] + 0.3], [q[0], g + 0.5, q[1] + 0.3], 0.06, 0.06); }
         addBoxCollider(m, x - 1.5, z - 0.7, x + 1.5, z + 0.7, g, g + 1.0); });
     } else if (p.trade === 'barrels') {
-      for (let i = 0; i < 4; i++) put(-1.2 + (i % 2) * 0.8, dp * 0.35 + ((i / 2) | 0) * 0.8, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.3, 0.23, 0.15], 0.5); m.cyl(x, g, z, 0.32, 0.36, 0.8, 6, 2); m.mat(MAT.METAL, [0.18, 0.18, 0.18], 0.5); m.cyl(x, g + 0.15, z, 0.365, 0.365, 0.04, 6, 0); m.cyl(x, g + 0.6, z, 0.355, 0.355, 0.04, 6, 0); addCircleCollider(m, x, z, 0.36, g, g + 0.8); });
+      for (let i = 0; i < 4; i++) put(-1.2 + (i % 2) * 0.8, dp * 0.35 + ((i / 2) | 0) * 0.8, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.3, 0.23, 0.15], 0.5); m.cyl(x, g, z, 0.32, 0.36, 0.8, 6, 2); m.mat(MAT.METAL, [0.18, 0.18, 0.18], 0.5); m.cyl(x, g + 0.15, z, 0.365, 0.365, 0.04, 6, 0); m.cyl(x, g + 0.6, z, 0.355, 0.355, 0.04, 6, 0); addCircleCollider(m, x, z, 0.28, g, g + 0.8); });
       { const { p0, p1 } = along(0.6, 2.0, dp * 0.7), g0 = gy(p0[0], p0[1]); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const q of [p0, p1]) m.beam([q[0], g0, q[1]], [q[0], g0 + 1.6, q[1]], 0.05, 0.05); m.beam([p0[0], g0 + 1.55, p0[1]], [p1[0], g0 + 1.55, p1[1]], 0.04, 0.04);
         m.mat(MAT.PLAIN, [0.5, 0.52, 0.5]); for (let i = 0; i < 6; i++) { const t = (i + 0.5) / 6, x = p0[0] + (p1[0] - p0[0]) * t, z = p0[1] + (p1[1] - p0[1]) * t; m.box(x - 0.03, g0 + 1.0, z - 0.02, x + 0.03, g0 + 1.52, z + 0.02); } }
     } else if (p.trade === 'woodpile') {
