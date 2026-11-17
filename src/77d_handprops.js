@@ -31,7 +31,7 @@ function hpGeo(kind) {
   else if (kind === 'hammer') P = [hpWood(0.36, 0.0135, 0.0165, -0.14, WD), [new T.BoxGeometry(0.07, 0.040, 0.034), X(0, 0.225, 0), IR, MI], [new T.BoxGeometry(0.030, 0.048, 0.044), X(0.048, 0.225, 0), IR, MI], [new T.BoxGeometry(0.045, 0.026, 0.026), X(-0.052, 0.225, 0), IR, MI]];
   else if (kind === 'spear') P = [hpWood(1.9, 0.0145, 0.012, -0.95, WD, 6), [new T.ConeGeometry(0.028, 0.24, 6), X(0, 1.07, 0, 0, 0, 0, 1, 1, 0.45), IR, MI], [new T.CylinderGeometry(0.019, 0.019, 0.05, 6), X(0, 0.96, 0), IR, MI]];
   else if (kind === 'staff') P = [hpWood(1.65, 0.021, 0.017, -0.8, WD, 7), [new T.SphereGeometry(0.036, 8, 6), X(0, 0.87, 0), WL, MW]];
-  else if (kind === 'rod') P = [hpWood(2.0, 0.015, 0.004, -0.5, WL, 5)];
+  else if (kind === 'rod') P = [hpWood(2.0, 0.015, 0.004, -0.1, WL, 5)];
   else if (kind === 'mug') P = [[new T.CylinderGeometry(0.040, 0.034, 0.095, 12), X(0, 0.02, 0), CL, MW], [new T.TorusGeometry(0.03, 0.006, 5, 8, Math.PI), X(0.04, 0.02, 0, 0, 0, -Math.PI / 2), CL, MW], [new T.CylinderGeometry(0.036, 0.036, 0.006, 12), X(0, 0.066, 0), [0.40, 0.20, 0.07], MW]];
   else if (kind === 'flute') P = [[new T.CylinderGeometry(0.0095, 0.0095, 0.42, 8), X(0, 0.1, 0), WL, MW], [new T.CylinderGeometry(0.0105, 0.0105, 0.02, 8), X(0, 0.30, 0), DK, MW]];
   else return null;
@@ -80,11 +80,11 @@ function hpHammer(mesh) { return (H) => {
   }
   mesh.userData.grip = [0, 0.02, 0]; mesh.userData.hand = 'R';
 }; }
-function hpSpear(mesh) { return (H) => {
-  const held = H.animNow === 'guard' && !H.talkNow, f = hpFrame(H); mesh.userData.holding = held; Chars.grip(H, 'R', held ? HP.GRIP.curl : 0);
-  if (held) { mesh.parent !== H.bones.handR && H.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); mesh.scale.setScalar(1 / Math.max(1e-3, H.root.scale.y)); }
-  else { mesh.parent !== H.pivot && H.pivot.add(mesh); const o = f.pel.clone().addScaledVector(f.R, 0.3).addScaledVector(f.F, 0.06); o.y = 0.95; hpPlace(mesh, o, new THREE.Vector3(0, 1, 0), f.F.clone()); mesh.scale.setScalar(1); }      // grounded beside the body
-  mesh.userData.grip = [0, 0.02, 0]; mesh.userData.hand = 'R';
+function hpPole(mesh, tilt, always) { return (H) => {      // a spear, staff or rod: stands in the fist, shaft up (rod: leaning forward), the hand slides along it; a spear is grounded beside the body when its holder is talking
+  const f = hpFrame(H), held = always || (H.animNow === 'guard' && !H.talkNow); mesh.userData.holding = held; Chars.grip(H, 'R', held ? HP.GRIP.curl : 0);
+  mesh.parent !== H.pivot && H.pivot.add(mesh); const y = new THREE.Vector3(0, 1, 0).addScaledVector(f.F, tilt).normalize(), o = new THREE.Vector3();
+  if (held) o.copy(f.pR).addScaledVector(f.F, 0.01); else { o.copy(f.pel).addScaledVector(f.R, 0.3).addScaledVector(f.F, 0.06); o.y = 0.95; y.set(0, 1, 0); }      // grounded beside the body
+  hpPlace(mesh, o, y, f.F.clone()); mesh.scale.setScalar(1); mesh.userData.grip = [0, 0, 0]; mesh.userData.hand = 'R';
 }; }
 function npcHandProp(npc) {
   const ch = npc.ch; if (!ch || typeof RPG === 'undefined' || !RPG.merge) return;
@@ -95,7 +95,9 @@ function npcHandProp(npc) {
     ch.pivot.add(mesh); (ch.post = ch.post || []);
     if (kind === 'lute') ch.post.push(hpLute(mesh));
     else if (kind === 'hammer') ch.post.push(hpHammer(mesh));
-    else if (kind === 'spear') ch.post.push(hpSpear(mesh));
+    else if (kind === 'spear') ch.post.push(hpPole(mesh, 0, false));
+    else if (kind === 'staff') ch.post.push(hpPole(mesh, 0.05, true));
+    else if (kind === 'rod') ch.post.push(hpPole(mesh, 0.7, true));
     else { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos);
       ch.post.push(H => { mesh.scale.setScalar(1 / Math.max(1e-3, H.root.scale.y)); Chars.grip(H, 'R', HP.GRIP.curl); }); }
     npc.props = (npc.props || []).concat([mesh]);
