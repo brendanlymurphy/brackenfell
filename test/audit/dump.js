@@ -22,4 +22,10 @@ out.zones = World.zones.map(z => ({ id: z.id, cell: z.cell, y0: r2(z.y0), y1: r2
 out.routes = safe(World.routes, 4); out.stairs = World.stairs.map(s => safe(s, 2)); out.spots = Object.keys(World.spots || {});
 out.groundGrid = (() => { const g = []; for (let z = -130; z <= 130; z += 2) { const row = []; for (let x = -130; x <= 130; x += 2) row.push(r2(World.groundAt(x, z, 50))); g.push(row); } return g; })();
 out.talkKeys = Object.keys(TALK); out.lakeY = World.lakeY;
+out.shells = (typeof INFS !== 'undefined' ? INFS.shells : []).map(h => ({ id: h.id, x: r2(h.x), z: r2(h.z), yaw: r2(h.yaw), w: h.w, d: h.d, floors: h.floors, name: (SITE[h.id] || {}).name }));
+out.wildShut = (typeof WILDS !== 'undefined' ? WILDS.houses : []).filter(h => !h.enter).map(h => h.id);
+out.gateSpots = Object.keys(World.spots || {}).filter(k => /^gate\./.test(k)).map(k => [k, safe(World.spots[k], 3)]);
+out.build = typeof BUILD_NAME !== 'undefined' ? BUILD_NAME : null;
+out.bodies = NPCS.map(n => [n.id, n.def.body || null]);
+{ const keepLen = Env.dayLength; Env.dayLength = 0; const by = []; for (let h = 0; h < 24; h++) { Env.hour = h + 0.5; npcSnapAll(); game.step(3, 1 / 30); let o = 0, sq = 0, inn = 0; for (const n of NPCS) { const c = Cells.at(n.pos[0], n.pos[1], n.pos[2]); if (c) { if (c.id === 'inn') inn++; } else { o++; if (Math.hypot(n.pos[0], n.pos[2] + 2) < 22) sq++; } } by.push([o, sq, inn]); } out.byHour = by; Env.dayLength = keepLen; }
 return out;
