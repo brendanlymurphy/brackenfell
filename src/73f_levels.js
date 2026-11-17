@@ -228,7 +228,11 @@ function buildLevels(bucket, fence, R) {
     m.mat(MAT.METAL, [0.62, 0.46, 0.2], 0.4); m.beam([-0.45, 1.18, 0.35], [0.5, 1.42, -0.3], 0.1, 0.1); m.beam([0.5, 1.42, -0.3], [0.62, 1.46, -0.38], 0.14, 0.14);
     addCircleCollider(m, 0, 0, 0.5, 0, 1.4); m.pop();
     m.push().T(T.x1 - 0.6, H, T.z0 + 0.7); m.mat(MAT.TIMBER, COL.timberDark, 0.5); m.cbox(0, 0, 0, 0.11, 4.2, 0.11, 4); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.ball(0, 4.25, 0, 0.09, 0.09, 0.09, 6, 4);
-    m.mat(MAT.CLOTH, [0.5, 0.13, 0.1], 0.5); m.quad2([0.05, 4.1, 0], [0.05, 3.45, 0], [1.1, 3.55, 0.15], [1.1, 4.05, 0.15]); addCircleCollider(m, 0, 0, 0.12, 0, 4); m.pop();
+    /* [fx3] a faded madder flag, sagging between the pole and its tip, a darker hem and a frayed swallow-tail end */
+    { const N = 4, fl = (t, y) => [0.05 + t * 1.1, y - Math.sin(t * Math.PI) * 0.1 - t * 0.12, t * 0.17 + Math.sin(t * 5) * 0.03]; for (let i = 0; i < N; i++) { const t0 = i / N, t1 = (i + 1) / N, a0 = fl(t0, 4.1), a1 = fl(t1, 4.1), b0 = fl(t0, 3.62), b1 = fl(t1, 3.62), h0 = fl(t0, 3.46), h1 = fl(t1, 3.46); const tail = i === N - 1 ? 0.18 : 0;
+        m.mat(MAT.CLOTH, [0.4 - i * 0.015, 0.21 - i * 0.008, 0.17], 0.5); m.quad2(a0, b0, [b1[0] - tail, b1[1], b1[2]], [a1[0] - tail * 0.5, a1[1], a1[2]]); m.mat(MAT.CLOTH, [0.27, 0.14, 0.11], 0.5); m.quad2(b0, h0, [h1[0] - tail * 1.4, h1[1] + tail * 0.4, h1[2]], [b1[0] - tail, b1[1], b1[2]]); }
+      m.mat(MAT.TIMBER, [0.22, 0.18, 0.14], 0.5); m.beam([0.05, 4.1, 0], [0.05, 3.46, 0], 0.03, 0.03); }
+    addCircleCollider(m, 0, 0, 0.12, 0, 4); m.pop();
     World.interact.push({ p: [lx, H + 1.3, lz + 0.2], r: 2.4, zone: 0, kind: 'read', id: 'terrace.glass', title: 'A brass spyglass on a tripod', text: 'You put your eye to the glass. The whole market is laid out like a pinned map: the notice board, the well, the baker’s awning, a boy chasing a goose. Someone has scratched a tally of floods on the tripod leg. There are nine marks.' });
   }
   lvLift(touch, 1.0);
@@ -243,7 +247,7 @@ function townFinish(bucket) {
   if (typeof buildWalls === 'function') buildWalls(bucket);        // Build 42: palisades, gates, bell tower (73i_walls.js)
   if (typeof buildLanes === 'function') buildLanes(bucket);        // Build 42: lanes worth walking (73j_lanes.js)
   if (typeof buildSquare === 'function') buildSquare(bucket);      // Build 42: the square as a finished place (73k_square.js)
-  if (typeof buildPlaceFlags === 'function') buildPlaceFlags(bucket); if (typeof buildPlaceWear === 'function') buildPlaceWear(bucket); if (typeof buildPlots === 'function') buildPlots(bucket); if (typeof buildStrips === 'function') buildStrips(bucket); if (typeof buildChurchyard === 'function') buildChurchyard(bucket); if (typeof buildChapelRise === 'function') buildChapelRise(bucket); if (typeof buildEastLane === 'function') buildEastLane(bucket); if (typeof buildChapelWay === 'function') buildChapelWay(bucket); if (typeof buildWestgate === 'function') buildWestgate(bucket); if (typeof buildWestEdge === 'function') buildWestEdge(bucket);      // [fx3] flagstones at the doors on the place (73l_place.js)
+  if (typeof buildPlaceFlags === 'function') buildPlaceFlags(bucket); if (typeof buildPlaceWear === 'function') buildPlaceWear(bucket); if (typeof buildPlots === 'function') buildPlots(bucket); if (typeof buildStrips === 'function') buildStrips(bucket); if (typeof buildChurchyard === 'function') buildChurchyard(bucket); if (typeof buildChapelRise === 'function') buildChapelRise(bucket); if (typeof buildEastLane === 'function') buildEastLane(bucket); if (typeof buildChapelWay === 'function') buildChapelWay(bucket); if (typeof buildWestgate === 'function') buildWestgate(bucket); if (typeof buildWestEdge === 'function') buildWestEdge(bucket); if (typeof buildYards === 'function') buildYards(bucket);      // [fx3] flagstones at the doors on the place (73l_place.js)
   // the chimney of in.04 stands 4 m below the terrace's north edge, where the camera looks straight at its smoke: the full-size puffs (1 m across) stack into a tall white sheet there.
   // A thin emitter (smaller, fainter, shorter-lived puffs, see 75_particles.js) makes it a wisp like the other infill chimneys.
   for (const e of World.emitters) if (e.type === 'smoke' && Math.abs(e.p[0] + 19.5) < 0.8 && Math.abs(e.p[2] - 4.1) < 0.8 && e.p[1] > 8) { e.thin = true; e.p[1] += 0.05; }

@@ -2,8 +2,8 @@
 // Each house on a row owns a burgage: a walled or fenced yard from its back wall to a back lane, sides on the party lines (half way across the gap to the neighbour), a gate in the back wall to the lane.
 // plotsCompute() is data only (run by the terrain painter and by the builder, memoised); buildPlots(bucket) makes walls, gates and the trade each household keeps in its yard.
 const PLOT_ROWS = [
-  { name: 'placeS', ids: ['in.18', 'in.48', 'in.02'], trades: ['garden', 'hives', 'washing'] },
-  { name: 'placeN', ids: ['in.11', 'in.76', 'inn', 'in.47'], trades: ['woodyard', 'pigs', 'stable', 'hens'] },
+  { name: 'placeS', ids: ['in.02'], trades: ['washing'] },
+  { name: 'placeN', ids: ['inn'], trades: ['stable'] },
   { name: 'westN', ids: ['in.10', 'guardhouse', 'in.41', 'in.40'], trades: ['forge', 'garden', 'cooper', 'pigs'] },
   { name: 'alleyN', ids: ['draper', 'shop.n2', 'shop.n3', 'shop.n4'], trades: ['cooper', 'hens', 'garden', 'woodyard'] },
   { name: 'alleyS', ids: ['shop.s0', 'shop.s1', 'shop.s2'], trades: ['forge', 'washing', 'pigs'] },
@@ -305,4 +305,20 @@ function buildWestEdge(bucket) {
         else { m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-l / 2, 0, -0.55, l / 2, 0.42, 0.55, 4); addBoxCollider(m, -l / 2 + 0.1, -0.4, l / 2 - 0.1, 0.4, 0, 1.6);
           const nC = Math.round(l / 0.6); for (let c = 0; c < nC; c++) { if (R() < 0.1) continue; const u = -l / 2 + (c + 0.5) * l / nC + (R() - 0.5) * 0.3, v = (R() - 0.5) * 0.5, wx = cx + Math.cos(an) * u - Math.sin(an) * v, wz = cz + Math.sin(an) * u + Math.cos(an) * v; World.hedgeClumps.push([wx, gy(wx, wz) + 0.25, wz, 1.0 + R() * 0.8 + (R() < 0.1 ? 0.5 : 0), R() * 6.28, 0.1 + R() * 0.2, R()]); } }
         m.pop(); } } }
+}
+
+/* [fx3] where the audit's deleted shells stood, each footprint is the neighbour's yard: a low stone wall on four sides with a gate on the old front, the trade of the yard inside (garden, wood, hens, hives, washing), and a fruit tree in the orchards. Decisions per id are in YARDS. */
+const YARDS = { 'in.42': ['washing'], 'in.43': ['garden'], 'in.46': ['woodyard'], 'in.64': ['hens'], 'in.71': ['garden', 'oak'], 'in.73': ['hives'], 'in.88': ['garden'], 'in.97': ['hens', 'oak'], 'in.103': ['hens'], 'in.117': ['woodyard'], 'in.118': ['garden'], 'in.119': ['hens'], 'in.128': ['hives', 'oak'], 'in.130': ['garden', 'oak'], 'in.18': ['garden'], 'in.48': ['hens'], 'in.11': ['woodyard'], 'in.76': ['hens', 'oak'], 'in.47': ['garden', 'oak'] };
+function buildYards(bucket) {
+  if (TEST && TEST.plots === 0) return; if (!PLACE.deletedSites) return;
+  const R = rng(3030), gy = (x, z) => Terrain.y(x, z), flat = (m, x, z, rx, rz, c, mat, ry, lift) => { m.mat(mat, c, 0.5); m.push().T(x, gy(x, z) + (lift || 0.02), z).RY(ry || 0); m.quad2([-rx, 0, -rz * 0.6], [-rx * 0.6, 0, rz], [rx, 0, rz * 0.7], [rx * 0.7, 0, -rz]); m.pop(); };
+  World.yardTrees = World.yardTrees || [];
+  for (const d of PLACE.deletedSites) { const Y = YARDS[d.id]; if (!Y) continue; const s = { x: d.x, z: d.z, yaw: d.yaw, w: d.w, d: 0.6 }, hw = d.w / 2 + 1.5, hd = d.d / 2 + 1.5, W = (lx, lz) => siteToWorld({ x: d.x, z: d.z, yaw: d.yaw, w: d.w, d: d.d }, lx, lz), c0 = W(0, 0), m = bucket(c0[0], c0[1]);
+    const nearRoad = (x, z) => Roads.some(q => q.line.dist(x, z, 3) < 2.6);
+    const seg = (ax, az, bx, bz) => { const A = W(ax, az), B = W(bx, bz), L = Math.hypot(B[0] - A[0], B[1] - A[1]); if (L < 0.2) return; for (let k = 0; k <= 4; k++) if (nearRoad(A[0] + (B[0] - A[0]) * k / 4, A[1] + (B[1] - A[1]) * k / 4)) return; const cx = (A[0] + B[0]) / 2, cz = (A[1] + B[1]) / 2, ang = Math.atan2(B[1] - A[1], B[0] - A[0]), g = Math.min(gy(A[0], A[1]), gy(B[0], B[1]), gy(cx, cz)) - 0.12, t = 0.26 + R() * 0.04, tone = 0.46 + R() * 0.06;
+      m.push().T(cx, g, cz).RY(-ang); m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.4); m.box(-L / 2, 0, -t, L / 2, 1.0 + R() * 0.12, t, 4); m.mat(MAT.STONE, [tone * 1.1, tone * 1.06, tone], 1.4); m.box(-L / 2 - 0.02, 1.0, -t - 0.04, L / 2 + 0.02, 1.12, t + 0.04, 4); addBoxCollider(m, -L / 2 + 0.05, -t, L / 2 - 0.05, t, 0, 1.1); m.pop(); };
+    const gw = 0.85; seg(-hw, -hd, -gw, -hd); seg(gw, -hd, hw, -hd); seg(hw, -hd, hw, hd); seg(hw, hd, -hw, hd); seg(-hw, hd, -hw, -hd);
+    for (const sx of [-gw, gw]) { const q = W(sx, -hd); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); m.cbox(q[0], gy(q[0], q[1]) - 0.1, q[1], 0.2, 1.5, 0.2, 0); }
+    const p = { house: s, axis: 'z', trade: Y[0], bz: 1, x0: 0, x1: 0 }; try { localTrade(m, p, gy, R, flat); } catch (e) { }
+    if (Y[1]) { const q = W(hw - 1.2, hd - 1.1); World.yardTrees.push([q[0], q[1], Y[1], 0.55]); } }
 }

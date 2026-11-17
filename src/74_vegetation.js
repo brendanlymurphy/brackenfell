@@ -175,6 +175,7 @@ function buildVegetation() {
   mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
   /* [fx3] Chapelgate approach: old trees along the hedged way from the north gate to the lych gate, and yews in the churchyard (dark conifers kept small) */
   for (const [x, z, k, sc] of [[-11.5, -62.6, 'oak', 0.8], [-3.4, -66.2, 'oak', 0.75], [-12.3, -70.4, 'birch', 1.0]]) if (!blocked(x, z, 0.5)) addTree(k, x, z, sc);
+  for (const [x, z, k, sc] of World.yardTrees || []) addTree(k, x, z, sc);      /* [fx3] fruit trees in the yards where deleted shells stood */
   /* [fx3] the hedge along the way to the lych gate: overlapping clumps of uneven size on a low bank, with a few saplings grown out of it */
   for (const h of World.hedgeClumps || []) inst.bush.push([h[0], h[1], h[2], h[3], h[4], h[5], h[6], 0]);
   for (const [x, z] of World.hedgeSaplings || []) addTree('birch', x, z, 0.32);
