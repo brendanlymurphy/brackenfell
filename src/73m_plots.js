@@ -209,3 +209,11 @@ function buildChapelRise(bucket) {
   /* a handrail on the west cheek, a lantern bracket at the top */
   m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5); m.beam([x0 - 0.1, hS + 0.95, zS], [x0 - 0.1, hN + 0.95, zN], 0.05, 0.05); for (const t of [0, 1]) m.box(x0 - 0.15, (t ? hN : hS) - 0.1, (t ? zN : zS) - 0.05, x0 - 0.05, (t ? hN : hS) + 1.0, (t ? zN : zS) + 0.05);
 }
+
+// [fx3] the east cluster's lane: a cobbled way between the two rows that wanders and ends at a well; the well stands where the lane's drain would meet the bank
+function buildEastLane(bucket) {
+  if (TEST && TEST.plots === 0) return;
+  const gy = (x, z) => Terrain.y(x, z), wx = 36.2, wz = -44.9, m = bucket(wx, wz), g = gy(wx, wz);
+  m.push().T(wx, g, wz).RY(0.3); Props.well(m); m.pop();
+  addCircleCollider(m, wx, wz, 1.0, g, g + 1.2);
+}
