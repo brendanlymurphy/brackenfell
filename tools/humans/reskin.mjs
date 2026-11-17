@@ -61,23 +61,24 @@ for (const file of process.argv.slice(2)) {
       for (let t = 0; t < ix.length; t += 3) { const a = ix[t], b = ix[t + 1], c = ix[t + 2]; if (arm[a] > 0.35 || arm[b] > 0.35 || arm[c] > 0.35) continue; T.push({ a: P[a], b: P[b], c: P[c], w: [W[a], W[b], W[c]] }); } }
     const outer = (o, d) => { let best = -1; for (const t of T) { const k = rayTri(o, d, t.a, t.b, t.c); if (k > best && k < 0.6) best = k; } return best; };
     const yTop = bone.neck_01[1] - 0.03, yHem = bone.calf_l[1] - 0.02, yHip = bone.pelvis[1], ySh = (bone.upperarm_l || bone.clavicle_l || bone.spine_03)[1], zc = bone.spine_03 ? (bone.spine_03[2] + bone.pelvis[2]) / 2 : bone.pelvis[2];
+    const SKIRT = prims.some(x => x.name === 'w_kirtle') && prims.find(x => x.name === 'w_kirtle').p.getAttribute('POSITION').getMin([])[1] < bone.calf_l[1] - 0.1;      // an ankle-length kirtle
     const PEL = J.indexOf('pelvis'), col = (() => { const c = cloaks[0].p.getAttribute('COLOR_0'); return c ? c.getElement(0, []) : [1, 1, 1, 4 / 12]; })();
     const build = (N, K) => { const V = [], R = [], A = [], F = [];
       for (let j = 0; j <= K; j++) { const f = j / K, y = lerp(yTop, yHem, f), span = lerp(2.05, 1.22, sm(0.04, 0.24, f)); R.push([]); A.push([]);
-        for (let i = 0; i < N; i++) { const a = (i / (N - 1) * 2 - 1) * span, d = [Math.sin(a), 0, -Math.cos(a)], yr = Math.max(y, yHip - 0.08); let r = outer([0, yr, zc], d);
+        for (let i = 0; i < N; i++) { const a = (i / (N - 1) * 2 - 1) * span, d = [Math.sin(a), 0, -Math.cos(a)], yr = SKIRT ? y : Math.max(y, yHip - 0.08); let r = outer([0, yr, zc], d);
           if (r < 0) r = j ? R[j - 1][i] : 0.12; R[j].push(r); A[j].push(a); } }
       // the cloth cannot follow every hollow: smooth the radii, and never come back in under what hangs above (cloth falls from the shoulder blades and the seat)
       for (let pass = 0; pass < 2; pass++) for (let j = 0; j <= K; j++) { const row = R[j].slice(); for (let i = 0; i < N; i++) R[j][i] = Math.max(row[i], (row[Math.max(0, i - 1)] + row[i] * 2 + row[Math.min(N - 1, i + 1)]) / 4); }
       for (let j = 1; j <= K; j++) for (let i = 0; i < N; i++) { const f = j / K; if (f > 0.22) R[j][i] = Math.max(R[j][i], R[j - 1][i] - 0.012); }
       for (let j = 0; j <= K; j++) { const f = j / K, y = lerp(yTop, yHem, f);
         for (let i = 0; i < N; i++) { const a = A[j][i], d = [Math.sin(a), 0, -Math.cos(a)], side = Math.sin(a) ** 2;
-          const hang = Math.pow(f, 1.15) * 0.10 * (0.6 + 0.4 * Math.cos(a)), fold = 0.016 * Math.sin(a * 6.0 + f * 2.2 + 0.4) * Math.min(1, f * 3), arm = 0.045 * side * sm(0.12, 0.3, f);      // stands off the upper arms
+          const hang = Math.pow(f, 1.15) * (SKIRT ? 0.035 : 0.10) * (0.6 + 0.4 * Math.cos(a)), fold = 0.016 * Math.sin(a * 6.0 + f * 2.2 + 0.4) * Math.min(1, f * 3), arm = 0.045 * side * sm(0.12, 0.3, f);      // stands off the upper arms
           const r = R[j][i] + 0.02 + 0.012 * (1 - sm(0.1, 0.3, f)) + hang + fold + arm; V.push([d[0] * r, y - 0.025 * Math.abs(Math.sin(a * 2)) * f, zc + d[2] * r]); } }
       for (let j = 0; j < K; j++) for (let i = 0; i < N - 1; i++) { const a = j * N + i, b = a + 1, c = a + N + 1, e = a + N; F.push(a, b, c, a, c, e); }
       // weights: the surface underneath above the hips, the hips alone below; arms and legs never
       const W = V.map(v => { const mp = new Map(); let bd = 1e9, bt = null, bb = null; for (const t of T) { const [q, bc] = closest(v, t.a, t.b, t.c), dd = len(sub(v, q)); if (dd < bd) { bd = dd; bt = t; bb = bc; } }
-        for (let k = 0; k < 3; k++) for (const [jn, w] of bt.w[k]) { if (ARM.test(J[jn]) || LEG.test(J[jn]) || J[jn] === 'neutral_bone') continue; mp.set(jn, (mp.get(jn) || 0) + w * bb[k]); }
-        let tot = 0; for (const w of mp.values()) tot += w; const low = 1 - sm(yHip - 0.12, yHip + 0.1, v[1]); if (tot < 1e-4) { mp.clear(); mp.set(PEL, 1); return mp; }
+        for (let k = 0; k < 3; k++) for (const [jn, w] of bt.w[k]) { if (ARM.test(J[jn]) || (!SKIRT && LEG.test(J[jn])) || J[jn] === 'neutral_bone') continue; mp.set(jn, (mp.get(jn) || 0) + w * bb[k]); }
+        let tot = 0; for (const w of mp.values()) tot += w; const low = SKIRT ? 0 : 1 - sm(yHip - 0.12, yHip + 0.1, v[1]);      // over a skirt the cloak lies on the skirt and goes where it goes; over hose it hangs from the hips if (tot < 1e-4) { mp.clear(); mp.set(PEL, 1); return mp; }
         for (const [k, w] of mp) mp.set(k, w / tot * (1 - low)); mp.set(PEL, (mp.get(PEL) || 0) + low); return mp; });
       // normals, outward
       const Nn = V.map(() => [0, 0, 0]); for (let t = 0; t < F.length; t += 3) { const n = cross(sub(V[F[t + 1]], V[F[t]]), sub(V[F[t + 2]], V[F[t]])); for (const k of [F[t], F[t + 1], F[t + 2]]) { Nn[k][0] += n[0]; Nn[k][1] += n[1]; Nn[k][2] += n[2]; } }
@@ -128,7 +129,17 @@ for (const file of process.argv.slice(2)) {
     if (K.length) for (const x of prims) { if (!/^w_(apron|straps|belt|pouch)/.test(x.name)) continue; const pos = x.p.getAttribute('POSITION'), list = [];
       for (let i = 0; i < pos.getCount(); i++) { const v = pos.getElement(i, []), mp = new Map(); let bd = 1e9, bt = null, bb = null; for (const t of K) { const [q, bc] = closest(v, t.a, t.b, t.c), d = len(sub(v, q)); if (d < bd) { bd = d; bt = t; bb = bc; } }
         for (let k = 0; k < 3; k++) for (const [jn, w] of bt.w[k]) mp.set(jn, (mp.get(jn) || 0) + w * bb[k]); list.push(mp); }
-      setW(x, list); log.push(x.name + ' on the kirtle'); } }
+      setW(x, list);
+      // and lies outside it: corners, edge middles and face centres at least 14 mm clear of the kirtle (a coarse apron cut through the folds of the skirt and showed as holes)
+      if (/^w_(apron|straps)/.test(x.name)) { const ix = x.p.getIndices().getArray(), n = pos.getCount(), P = []; for (let i = 0; i < n; i++) P.push(pos.getElement(i, []));
+        const KN = K.map(t => { const nn = cross(sub(t.b, t.a), sub(t.c, t.a)), l = len(nn) || 1; return [nn[0] / l, nn[1] / l, nn[2] / l]; }); let o = 0; K.forEach((t, k) => { if (Math.abs(t.a[0]) < 0.15) o += KN[k][0] * t.a[0] + KN[k][2] * (t.a[2] - bone.pelvis[2]); }); const sg = o < 0 ? -1 : 1;
+        const clear = v => { let bd = 1e9, bi = 0, bq = null; K.forEach((t, k) => { const q = closest(v, t.a, t.b, t.c)[0], d = len(sub(v, q)); if (d < bd) { bd = d; bi = k; bq = q; } }); const nn = KN[bi].map(c => c * sg); return [dot(sub(v, bq), nn), nn, bd]; };
+        let moved = 0; for (let pass = 0; pass < 5; pass++) { const push = P.map(() => [0, 0, 0, 0]);
+          const sample = (vs) => { const v = [0, 1, 2].map(c => vs.reduce((s2, i) => s2 + P[i][c], 0) / vs.length), [d, nn, bd] = clear(v); if (bd < 0.06 && d < 0.014) for (const i of vs) { const k = 0.014 - d; if (k > push[i][3]) push[i] = [nn[0] * k, nn[1] * k, nn[2] * k, k]; } };
+          for (let i = 0; i < n; i++) sample([i]); for (let t = 0; t < ix.length; t += 3) { const A = ix[t], B = ix[t + 1], C = ix[t + 2]; sample([A, B]); sample([B, C]); sample([C, A]); sample([A, B, C]); }
+          let any = 0; push.forEach((q, i) => { if (q[3] > 1e-4) { P[i][0] += q[0]; P[i][1] += q[1]; P[i][2] += q[2]; any++; } }); moved += any; if (!any) break; }
+        if (moved) x.p.setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(P.flat())).setBuffer(pos.getBuffer())); }
+      log.push(x.name + ' on the kirtle'); } }
   for (const a of root.listAccessors()) if (a.listParents().every(p => p.propertyType === 'Root')) a.dispose();
   const before = fs.statSync(file).size; await io.write(file, doc);
   console.log(file.split('/').pop(), (before / 1024 | 0) + 'KB >', (fs.statSync(file).size / 1024 | 0) + 'KB', log.join(', '));

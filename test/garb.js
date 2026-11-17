@@ -24,7 +24,7 @@ for (const def of NPC_DEFS) { const L = cfg.look(def); if (def.house) out.housed
 // 3. pictures
 const ids = String((window.__TEST__ || {}).pics || '').split(',').filter(Boolean);
 for (const id of ids) { const n = NPCS.find(p => p.id === id); if (!n) { out.fail.push(id + ': no such villager'); continue; } const H = Chars.spawn(n.def); H.pivot.traverse(o => { o.layers.set(1); });
-  for (const k in POSES) { if (k === 'walk') continue; let i = 0; for (const az of [0, 90, 180]) { pose(H, k, n.scale); if (!az) check(H, id + ' ' + k); const a = az * Math.PI / 180, hd = H.bones.head.getWorldPosition(new V3()), low = hd.y - sy - 0.3; H.pivot.traverse(o => { o.layers.set(1); });
+  for (const k in POSES) { if (k === 'walk') continue; let i = 0; for (const az of [0, 90, 180]) { pose(H, k, n.scale); if (!az) check(H, id + ' ' + k); const a = az * Math.PI / 180, hd = H.bones.head.getWorldPosition(new V3()), low = hd.y - sy + 0.02; H.pivot.traverse(o => { o.layers.set(1); });
       game.shot(sx + Math.sin(a) * 1.25, sy + low, sz - Math.cos(a) * 1.25, (a + Math.PI) * 180 / Math.PI, -14, 13); await __snap('garb/' + id + '_' + k + '_' + ['front', 'side', 'back'][i++]); } }
   Chars.remove(H); }
 st0.remove(); return out;
