@@ -14,6 +14,10 @@ whenever the owner rejects something or a measurement kills an idea; one paragra
 - **`gemini-3.8-flash-tts` for the last lines when the 3.1 daily limit ran out. Rejected.** It has its own daily limit, but with our
   prompt it reads the acting direction aloud: Bram's "Hey! I only sell apples!" came back 24 seconds long, and was pushed before
   anyone measured it. Now: 3.1 only, and `tools/voice/check.mjs` fails any file over 0.45 s per character or over 30 s.
+- **A flat 30-second limit on a recording. Relaxed for long lines.** It was there to catch the model reading its direction aloud, and it
+  also kept Rowan's two 340-character lines silent for ever (read slowly they run 35 to 40 s). Now over 30 s is a fault only if it is also
+  over 0.13 s per character; the 0.45 s per character rule still catches a short line that runs long. The size budget is 14 MB (252
+  lines are 12.9 MB); a line is fetched when first spoken, never at start-up.
 - **Processing speech (reverb, pitch shift, speed changes). Rejected.** The owner wants voices dry and exactly as the model made
   them. Speech bypasses every bus and reverb (`88d_voice.js`); generation only trims silence and sets the level.
 - **Editing the text of a line that already has a recording. Never.** Files are keyed by speaker + exact on-screen text, so a changed

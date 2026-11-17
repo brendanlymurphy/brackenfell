@@ -4,17 +4,17 @@ const NPC_DEFS = [
   { id: 'hale', name: 'Warden Hale', skin: 'tan', hair: 'brown', beard: 1, hat: 'helmet', top: [0.42, 0.40, 0.38], apron: [0.55, 0.15, 0.13], legs: [0.25, 0.22, 0.2], prop: 'spear', sword: true, build: 1.08,
     sched: [[6, 'gate.post', 'guard'], [19.5, 'inn.s5', 'sit'], [22.5, 'guardhouse.bed', 'lie']] },
   { id: 'greta', name: 'Greta Barleybrook', skin: 'rosy', hair: 'auburn', hairStyle: 'bun', dress: true, top: [0.34, 0.46, 0.30], apron: COL.linen, build: 1.1, shortSleeves: true,
-    sched: [[5.5, 'inn.bar', 'idle'], [23.5, 'inn.bed2', 'lie']] },
+    sched: [[5.5, 'inn.work', 'work'], [7.5, 'inn.bar', 'idle'], [14.2, 'inn.cellar0', 'work'], [15, 'inn.bar', 'idle'], [23.5, 'inn.bed2', 'lie']] },       // [logic] the kitchen before opening, the cellar in the slack of the afternoon, the bar the rest of the day
   { id: 'brandt', name: 'Brandt Ironhand', skin: 'tan', hair: 'black', hairStyle: 'bald', beard: 1, top: [0.36, 0.30, 0.27], apron: [0.36, 0.22, 0.13], legs: [0.28, 0.24, 0.2], build: 1.18, shortSleeves: true, prop: 'hammer',
     sched: [[6.5, 'smithy.anvil', 'hammer'], [12, 'smithy.forge', 'work'], [13, 'smithy.anvil', 'hammer'], [19, 'inn.s1', 'sit'], [22, 'smithy.bed', 'lie']] },
   { id: 'tobin', name: 'Tobin', scale: 0.74, skin: 'fair', hair: 'blond', top: [0.55, 0.45, 0.25], legs: [0.3, 0.25, 0.2], run: true,
     sched: [[7, ['square.bench2', 'stallfront0', 'alley.stall1', 'smithy.forge', 'alley.n', 'stallfront1', 'gate.post2', 'alley.s', 'square.bench2'], 'idle'], [19.5, 'smithy.sit', 'sit'], [21.5, 'smithy.home', 'idle']] },
   { id: 'marta', name: 'Marta Quill', skin: 'brown', hair: 'black', hairStyle: 'braid', dress: true, top: [0.52, 0.20, 0.30], hat: 'kerchief', hatCol: [0.9, 0.82, 0.6], belt: [0.7, 0.55, 0.2],
-    sched: [[7, 'store.counter', 'idle'], [20, 'inn.s3', 'sit'], [22, 'store.bed', 'lie']] },
+    sched: [[6.4, 'store.cellar0', 'work'], [7.5, 'store.counter', 'idle'], [20, 'inn.s3', 'sit'], [22, 'store.bed', 'lie']] },       // [logic] stock from the cellar before opening
   { id: 'aldous', name: 'Brother Aldous', skin: 'fair', hair: 'grey', hairStyle: 'bald', dress: true, top: [0.80, 0.76, 0.64], belt: [0.45, 0.3, 0.2], cloakBack: true, cloak: [0.42, 0.30, 0.22], hat: 'hood',
     sched: [[5, 'chapel.altar', 'pray'], [9, 'chapel.nave', 'idle'], [12, 'chapel.altar', 'pray'], [14, 'chapel.nave', 'idle'], [18, 'chapel.altar', 'pray']] },
   { id: 'maren', name: 'Old Maren', skin: 'fair', hair: 'white', dress: true, top: [0.36, 0.30, 0.42], hat: 'hood', cloak: [0.28, 0.38, 0.28], cloakBack: true, scale: 0.93,
-    sched: [[7, 'herbalist.garden', 'work'], [12, 'herbalist.home', 'idle'], [14, 'herbalist.garden', 'work'], [18.5, 'herbalist.sit', 'sit'], [21, 'herbalist.bed', 'lie']] },
+    sched: [[7, 'herbalist.garden', 'work'], [12, 'herbalist.sit', 'sit'], [14, 'herbalist.garden', 'work'], [18.5, 'herbalist.sit', 'sit'], [21, 'herbalist.bed', 'lie']] },
   { id: 'osric', name: 'Osric Dunn', skin: 'fair', hair: 'brown', beard: 1, hat: 'cap', hatCol: [0.9, 0.88, 0.8], top: [0.84, 0.81, 0.74], apron: [0.92, 0.9, 0.84], legs: [0.5, 0.45, 0.38], build: 1.15,
     sched: [[6, 'mill.work', 'work'], [10, 'mill.door', 'idle'], [13, 'mill.work', 'work'], [19, 'inn.s2', 'sit'], [22, 'mill.bed', 'lie']] },
   { id: 'edda', name: 'Edda Fairweather', skin: 'tan', hair: 'blond', hairStyle: 'braid', hat: 'straw', dress: true, top: [0.56, 0.44, 0.24], apron: [0.36, 0.46, 0.58], shortSleeves: true,
@@ -22,15 +22,15 @@ const NPC_DEFS = [
   { id: 'finn', name: 'Finn Reedwater', skin: 'tan', hair: 'grey', beard: 1, hat: 'cap', hatCol: [0.24, 0.36, 0.5], top: [0.30, 0.42, 0.50], legs: [0.3, 0.28, 0.24], prop: 'rod',
     sched: [[5.5, 'dock.end', 'fish'], [19, 'inn.s4', 'sit'], [22, 'fisher.bed', 'lie']] },
   { id: 'lark', name: 'Lark', skin: 'fair', hair: 'red', hairStyle: 'long', hat: 'feather', hatCol: [0.2, 0.45, 0.3], top: [0.22, 0.48, 0.44], skirt: [0.22, 0.48, 0.44], legs: [0.52, 0.2, 0.2], prop: 'lute', belt: [0.75, 0.6, 0.2],
-    sched: [[9, 'square.bard', 'lute'], [13, 'inn.bard', 'lute'], [15, 'square.bard', 'lute'], [18.5, 'inn.bard', 'lute'], [24.5, 'inn.fire2', 'sit']] },
+    sched: [[9, 'square.bard', 'lute'], [13, 'inn.bard', 'lute'], [15, 'square.bard', 'lute'], [18.5, 'inn.bard', 'lute'], [23.4, 'inn.fire2', 'sit'], [24.6, 'inn.bed3', 'lie']] },       // [logic] a bard sleeps too: a guest bed at the Hart (he stood by the fire all night)
   { id: 'wren', name: 'Wren', skin: 'brown', hair: 'black', hairStyle: 'braid', hat: 'hood', cloak: [0.24, 0.32, 0.2], cloakBack: true, top: [0.34, 0.38, 0.24], legs: [0.32, 0.25, 0.18],
-    sched: [[6, 'hunter.yard', 'work'], [11, 'hunter.home', 'idle'], [13, 'hunter.yard', 'idle'], [20, 'hunter.sit', 'sit'], [22, 'hunter.bed', 'lie']] },
+    sched: [[6, 'hunter.yard', 'work'], [11, 'hunter.sit', 'sit'], [13, 'hunter.yard', 'work'], [20, 'hunter.sit', 'sit'], [22, 'hunter.bed', 'lie']] },
   { id: 'rowan', name: 'Elder Rowan', skin: 'fair', hair: 'white', hairStyle: 'long', beard: 2, dress: true, top: [0.40, 0.34, 0.52], belt: [0.7, 0.6, 0.3], prop: 'staff', scale: 0.97,
     sched: [[8, 'square.bench', 'sit'], [14, 'elder.porch', 'sit'], [19.5, 'elder.sit', 'sit'], [21.5, 'elder.bed', 'lie']] },
   { id: 'pip', name: 'Pip', scale: 0.66, skin: 'rosy', hair: 'brown', hairStyle: 'braid', dress: true, top: [0.72, 0.36, 0.30], run: true,
     sched: [[7.5, ['stallfront2', 'square.well', 'alley.stall0', 'stallfront1', 'alley.n', 'square.bench2', 'stallfront0', 'alley.s', 'square.well'], 'idle'], [19, 'weaver.home', 'idle'], [20.5, 'weaver.bed2', 'lie']] },
   { id: 'ivo', name: 'Guardsman Ivo', skin: 'deep', hair: 'black', hat: 'helmet', top: [0.42, 0.40, 0.38], apron: [0.2, 0.3, 0.5], legs: [0.25, 0.22, 0.2], prop: 'spear', sword: true,
-    sched: [[6, ['gate.post2', 'square.well', 'bridge.west', 'square.well'], 'guard'], [21, 'gate.post2', 'guard']] },
+    sched: [[6.3, 'guardhouse.bed2', 'lie'], [13.5, ['gate.post2', 'square.well', 'bridge.west', 'square.well'], 'guard'], [19.3, 'gate.post', 'guard']] },       // [logic] the night watch: he takes the gate when Hale goes to the Hart, keeps it till Hale is back at six, and sleeps the morning (he never slept, and the gate stood empty from half past seven)
   { id: 'hilda', name: 'Hilda Weaver', skin: 'rosy', hair: 'brown', hairStyle: 'bun', dress: true, top: [0.26, 0.38, 0.60], apron: [0.9, 0.86, 0.76],
     sched: [[8, 'draper.counter', 'idle'], [12.5, 'alley.stall0', 'idle'], [14, 'draper.counter', 'idle'], [18.5, 'weaver.home', 'idle'], [20, 'weaver.sit', 'sit'], [21.5, 'weaver.bed', 'lie']] },
   { id: 'bram', name: 'Bram', skin: 'tan', hair: 'auburn', hat: 'straw', top: [0.5, 0.52, 0.34], legs: [0.36, 0.3, 0.22], shortSleeves: true,
@@ -131,7 +131,19 @@ function npcSnapAll() { if (typeof npcClaimReset === 'function') npcClaimReset()
 function npcRow(n) {
   const sc = n.override || n.def.sched; let h = Env.hour; if (h < sc[0][0]) h += 24;
   let row = sc[sc.length - 1]; for (const r of sc) if (r[0] <= h) row = r;
+  if (!n.override && npcRaining() && NPC_IDLE[row[2]] && npcOutdoors(row[1])) { const sh = npcShelter(n); if (sh) return sh; }
   return row;
+}
+// [logic] rain: whoever is out of doors with nothing that must be done there (a bench, a chat at the well, a walk, the lute at the cross) goes under their
+// own roof until it stops; people at work (the field, the forge, the watch, the nets) stay. On above 0.4 of rain, off below 0.1, so a shower's edge does not send people in and out.
+const NPC_IDLE = { idle: 1, sit: 1, lute: 1, sweep: 1 };
+let _npcRain = false;
+function npcRaining() { const r = typeof Env !== 'undefined' ? (Env.rain || 0) : 0; if (r > 0.4) _npcRain = true; else if (r < 0.1) _npcRain = false; return _npcRain; }
+function npcOutdoors(spot) { const nm = Array.isArray(spot) ? spot[0] : spot, sp = World.spots[nm]; return !!sp && typeof Cells !== 'undefined' && Cells.spaceOf(sp.p) === 0; }
+function npcShelter(n) {
+  if (n._shelter !== undefined) return n._shelter;
+  let best = null; for (const r of n.def.sched) { if (Array.isArray(r[1]) || r[2] === 'lie' || npcOutdoors(r[1]) || !World.spots[r[1]] || World.spots[r[1]].lie) continue; if (!best || (r[2] === 'sit' && best[2] !== 'sit')) best = r; }
+  return (n._shelter = best ? [0, best[1], best[2] === 'lute' ? 'lute' : best[2] === 'sit' ? 'sit' : 'idle'] : null);
 }
 function npcArrive(n, spotName, anim) {
   const sp = World.spots[spotName]; if (!sp) { console.warn('missing spot', spotName); return; }
@@ -167,7 +179,7 @@ function npcUpdate(dt, playerPos) {
         if (d < 0.18) { const k = n.path[n.pi], k2 = n.path[n.pi + 1]; if (k2 !== undefined && Nav.portal[k] === k2) { n.pos = Nav.nodes[k2].slice(); n.pi++; n.portalT = 0.4; } n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
         else if (!blocked) {
           const st = Math.min(d, sp * dt); n.pos[0] += dx / d * st; n.pos[2] += dz / d * st;
-          const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 0.6); n.pos[1] += clamp(gy - n.pos[1], -3 * dt, 3 * dt); if (Math.abs(gy - n.pos[1]) > 1.2) n.pos[1] = gy;
+          const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 1.0); n.pos[1] += clamp(gy - n.pos[1], -3 * dt, 3 * dt);       /* [logic] looks 1.0 m up, not 0.6: a ledge 0.7 to 0.9 m high (the terrace edge by the herb garden, the dock's lip) was not seen, and people waded through it for a second */ if (gy - n.pos[1] > 0.45 || n.pos[1] - gy > 1.2) n.pos[1] = gy;       /* [logic] a rise higher than any stair (the 0.9 m terrace edge by the herb garden) is stepped onto at once: climbing it at 3 m/s left the walker inside it for a third of a second */
           n.yaw += angDiff(Math.atan2(dx, -dz), n.yaw) * Math.min(1, dt * 8);
           n.anim = run ? 'run' : 'walk'; n.t += dt * (run ? 7.5 : 5.2) * (1 / n.scale) - dt;
         } else n.anim = 'idle';
