@@ -252,8 +252,6 @@ def belt_piece(fit, mat, width=0.038, buckle=True):
     nleather = len(V); R0 = ring_radii(fit, (0, yc), z, N); metal = []
     if buckle:
         r = R0[0] + 0.010; b0 = _box(V, Fc, 0, yc - r, z, 0.017, 0.004, width * 0.5 + 0.004); metal = range(b0, b0 + 8)
-        b1 = len(V); V += [Vector((0.006, yc - R0[0] - 0.008, z - 0.01)), Vector((0.026, yc - R0[0] - 0.008, z - 0.01)), Vector((0.03, yc - R0[0] - 0.014, z - 0.24)), Vector((0.012, yc - R0[0] - 0.014, z - 0.25))]
-        Fc += [(b1, b1 + 1, b1 + 2), (b1, b1 + 2, b1 + 3)]
     cols = [(1.0, 1.0, 0.0, SLOT['metal' if i in metal else 'leather'] / 12.0) for i in range(len(V))]
     return new_mesh('w_belt', V, Fc, fit, 0, mat, cols)
 
@@ -304,7 +302,7 @@ def surface_y(fit, x, z, front=True, bvh=None):
     o = Vector((x, -0.7 if front else 0.7, z)); h = bvh.ray_cast(o, Vector((0, 1 if front else -1, 0)), 1.4)
     return h[0].y if h[0] is not None else None
 
-def apron_piece(fit, mat, z_top=None, z_hem=None, hw_top=0.13, slot='apron', name='w_apron', straps=True, back=False, hw_hem=None, stand=0.035):
+def apron_piece(fit, mat, z_top=None, z_hem=None, hw_top=0.13, slot='apron', name='w_apron', straps=True, back=False, hw_hem=None, stand=0.035, wscale=0.98):
     sp = fit.bone('spine_03'); neck = fit.bone('neck_01')
     z_top = z_top if z_top is not None else sp.z + (neck.z - sp.z) * 0.15 + 0.06
     knee = fit.bone('calf_l')
@@ -312,7 +310,7 @@ def apron_piece(fit, mat, z_top=None, z_hem=None, hw_top=0.13, slot='apron', nam
     pel = fit.bone('pelvis'); zw = pel.z + 0.1
     yc, hwb = torso_centre(fit, zw)
     nx, nz = 9, 14; V, Fc, C = [], [], []
-    hw_w = hwb * 0.98
+    hw_w = hwb * wscale
     hw_hem = hw_hem or (hw_w + 0.05)
     for j in range(nz):
         f = j / (nz - 1); z = z_top + (z_hem - z_top) * f
@@ -488,6 +486,8 @@ def wardrobe(fit, mat, spec):
             out.append(head_piece(fit, 'hood', mat)); o = cloak_piece(fit, mat, slot='hat', z_top=fit.bone('neck_01').z - 0.01, z_hem=fit.bone('neck_01').z - 0.27, flare=0.05, folds=0.012, name='w_hat_hood_cape')
         elif w.startswith('hat:'): o = head_piece(fit, w[4:], mat)
         elif w == 'apron': o = apron_piece(fit, mat)
+        elif w == 'apron_half': o = apron_piece(fit, mat, z_top=waist(fit)[0] + 0.02, z_hem=fit.bone('calf_l').z + 0.02, hw_top=torso_centre(fit, waist(fit)[0])[1] * 0.98, name='w_apron_half', stand=0.03)
+        elif w == 'apron_long': o = apron_piece(fit, mat, z_hem=fit.bone('foot_l').z + 0.2, hw_top=0.085, hw_hem=None, name='w_apron_long', wscale=0.72, stand=0.03)
         elif w == 'straps': o = strap_piece(fit, mat)
         elif w == 'cloak': o = cloak_piece(fit, mat, flare=0.09)
         elif w == 'tabard': out += tabard_pieces(fit, mat); continue

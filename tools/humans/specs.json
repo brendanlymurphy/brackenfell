@@ -46,6 +46,8 @@
    "hat:hood",
    "hat:straw",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
@@ -214,6 +216,8 @@
    "hat:hood",
    "hat:straw",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
@@ -268,6 +272,8 @@
    "hat:hood",
    "hat:straw",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
@@ -326,6 +332,8 @@
    "hat:hood",
    "hat:straw",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
@@ -376,6 +384,8 @@
    "hat:hood",
    "hat:straw",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
@@ -424,6 +434,8 @@
    "belt",
    "pouch",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
@@ -472,6 +484,8 @@
    "belt",
    "pouch",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
@@ -577,6 +591,8 @@
    "belt",
    "pouch",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
@@ -625,6 +641,8 @@
    "belt",
    "pouch",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
@@ -757,6 +775,8 @@
    "hat:hood",
    "hat:straw",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
@@ -805,6 +825,8 @@
    "belt",
    "pouch",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak",
    "hat:straw"
@@ -864,6 +886,8 @@
    "hat:hood",
    "hat:straw",
    "apron",
+   "apron_half",
+   "apron_long",
    "straps",
    "cloak"
   ]
