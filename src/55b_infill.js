@@ -237,11 +237,13 @@ const PLACE = { poly: [[-19.6, -17.3], [-7.6, -17.3], [14.7, -17.3], [20.3, -16.
   // [fx3] the Market Place (docs/TOWNPLAN.md section 4): the houses round it are brought onto its lines, front walls on the room's edge, ginnels between. Same houses, moved and turned: ids, cells and households go with them.
   // Each entry: id, x, z of the centre and the yaw of the front (PI faces south, 0 north, PI/2 east, -PI/2 west).
   PLACE.houses = [
-    ['in.11', -17.0, -19.75, PI], ['in.76', -10.1, -19.55, PI],             // north-west row: front on z -17.25, a 1.6 m ginnel between, the inn's west wall to the right
+    ['in.11', -17.7, -19.75, PI], ['in.76', -10.1, -19.55, PI],             // north-west row: front on z -17.25, a 1.6 m ginnel between, the inn's west wall to the right
     ['in.47', 18.0, -19.45, PI],                                              // north-east: east of the passage house, beside the gallery stair
     ['in.04', -22.4, 4.0, PI / 2],                                            // west side, south of the main street's mouth: front on x -19.5, as the smithy's is
     ['in.02', 16.5, 10.8, 0], ['in.48', 9.6, 10.8, 0], ['in.18', 4.6, 10.8, 0],   // south row, front on z 8.2, east of Wharf Street's mouth: a cart gate to the shop row    // main street west of the place: a 6 m street, fronts on z about -6.2 (north) and -0.4 (south), party walls
     ['in.10', -29.3, -8.6, PI], ['guardhouse', -36.0, -9.6, PI], ['in.41', -43.0, -10.3, PI], ['in.40', -48.9, -10.0, PI],
+    ['in.86', 11.7, -40.5, 0], ['in.87', 17.8, -40.9, 0], ['in.88', 24.2, -40.4, 0], ['in.89', 33.8, -40.8, 0],       /* the east cluster: the lane between the two rows widened to 3 m and made to wander (rows nudged +-0.4 m), ending at the well at its east end */
+    ['in.81', 2.2, -49.3, PI], ['in.82', 8.0, -48.8, PI], ['in.83', 15.7, -49.2, PI], ['in.84', 23.0, -48.9, PI], ['in.85', 29.7, -49.1, PI],
     ['in.08', -28.3, 3.2, 0], ['in.07', -34.0, 2.2, 0], ['in.06', -39.1, 1.7, 0], ['in.42', -44.6, 1.9, 0],
   ];
   for (const [id, x, z, yaw] of PLACE.houses) {
