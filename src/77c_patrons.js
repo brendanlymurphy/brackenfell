@@ -1,15 +1,15 @@
 // ───────────────────────── regulars of the Honeyed Hart: evening guests who fill the common room (inn.s6..s12) ─────────────────────────
-// By day they idle in the square or at a porch; from the evening bell they are at their table; they sleep in the infill cottages.
+// [logic] By day the four of working age have a morning's work (the field, the barn, the mill's carting, the yard) and the afternoon in town; the youth and the two old ones idle, as they would; from the evening bell they are at their table; they sleep in the infill cottages.
 (function () {
   // id, name, body (49_chars.js 'real' set), skin, hair, tint (multipliers on the colours baked into the body), evening seat, bed, day: [[hour, spot(s), anim] ...]
   const L = [
-    ['pat1', 'Wat Cooper', 'm_farmer', 'tan', 'brown', { tunic: [1.55, 0.95, 0.6] }, 'inn.s6', 'in.02.bed', [[7.5, 'square.well', 'idle'], [11.5, 'stallfront0', 'idle'], [15, 'square.bench', 'sit']]],
-    ['pat2', 'Tilda Fenn', 'f_farmer', 'rosy', 'auburn', { tunic: [0.7, 0.85, 1.25], skirt: [1.2, 0.9, 0.8] }, 'inn.s7', 'in.04.bed', [[7.5, 'stallfront1', 'idle'], [13, 'square.bench2', 'sit'], [16, 'elder.porch', 'idle']]],
-    ['pat3', 'Hob the Carter', 'm_fisher', 'brown', 'black', { tunic: [1.1, 0.85, 0.7], pants: [0.8, 0.8, 0.8] }, 'inn.s8', 'in.07.bed', [[7.5, 'alley.stall0', 'idle'], [14, 'square.well', 'idle']]],
+    ['pat1', 'Wat Cooper', 'm_farmer', 'tan', 'brown', { tunic: [1.55, 0.95, 0.6] }, 'inn.s6', 'in.02.bed', [[7.5, 'farm.field2', 'work'], [11.5, 'stallfront0', 'idle'], [13, 'square.well', 'idle'], [15, 'square.bench', 'sit']]],
+    ['pat2', 'Tilda Fenn', 'f_farmer', 'rosy', 'auburn', { tunic: [0.7, 0.85, 1.25], skirt: [1.2, 0.9, 0.8] }, 'inn.s7', 'in.04.bed', [[7.5, 'barn.front', 'work'], [12.5, 'stallfront1', 'idle'], [14.5, 'square.bench2', 'sit'], [16.5, 'elder.porch', 'idle']]],
+    ['pat3', 'Hob the Carter', 'm_fisher', 'brown', 'black', { tunic: [1.1, 0.85, 0.7], pants: [0.8, 0.8, 0.8] }, 'inn.s8', 'in.07.bed', [[7.5, 'mill.door', 'work'], [10, 'alley.stall0', 'idle'], [12.5, 'wharf.view', 'idle'], [15.5, 'square.well', 'idle']]],
     ['pat4', 'Sorrel Vane', 'm_youth', 'fair', 'blond', { tunic: [1.35, 0.75, 1.2] }, 'inn.s9', 'in.13.bed', [[7.5, 'elder.porch', 'idle'], [12, 'dstall0', 'idle'], [16, 'square.bench', 'sit']]],
-    ['pat5', 'Piers Lowe', 'm_elder', 'tan', 'grey', { tunic: [0.95, 1.0, 1.1] }, 'inn.s10', 'in.21.bed', [[7.5, 'in.21.bed', 'lie'], [10, 'stallfront2', 'idle'], [14.5, 'square.bench2', 'sit']]],
+    ['pat5', 'Piers Ashby', 'm_elder', 'tan', 'grey', { tunic: [0.95, 1.0, 1.1] }, 'inn.s10', 'in.21.bed', [[7.5, 'in.21.bed', 'lie'], [10, 'stallfront2', 'idle'], [14.5, 'square.bench2', 'sit']]],
     ['pat6', 'Nell Marsh', 'f_weaver', 'rosy', 'brown', { robe: [0.55, 1.0, 1.3], tunic: [0.6, 1.0, 1.3] }, 'inn.s11', 'in.23.bed', [[7.5, 'square.bench2', 'sit'], [12, 'alley.stall1', 'idle'], [16, 'square.well', 'idle']]],
-    ['pat7', 'Jory Thatcher', 'm_hunter', 'brown', 'brown', { tunic: [1.25, 1.15, 0.65] }, 'inn.s12', 'in.04.bed2', [[8, 'dstall1', 'idle'], [13, 'stallfront0', 'idle'], [16.5, 'square.bench', 'sit']]],
+    ['pat7', 'Jory Thatcher', 'm_hunter', 'brown', 'brown', { tunic: [1.25, 1.15, 0.65] }, 'inn.s12', 'in.04.bed2', [[8, 'farm.yard', 'work'], [10, 'dstall1', 'idle'], [13.5, 'stallfront0', 'idle'], [16.5, 'square.bench', 'sit']]],
   ];
   for (const [id, name, body, skin, hair, tint, seat, bed, day] of L) NPC_DEFS.push({ id, name, body, tint, skin, hair, top: [0.4, 0.36, 0.3], legs: [0.3, 0.26, 0.22], female: /^f_/.test(body), dress: /^f_/.test(body), sched: day.concat([[18.5, seat, 'sit'], [23.5, bed, 'lie']]) });
 })();
