@@ -22,7 +22,7 @@ const NPC_DEFS = [
   { id: 'finn', name: 'Finn Reedwater', skin: 'tan', hair: 'grey', beard: 1, hat: 'cap', hatCol: [0.24, 0.36, 0.5], top: [0.30, 0.42, 0.50], legs: [0.3, 0.28, 0.24], prop: 'rod',
     sched: [[5.5, 'dock.end', 'fish'], [19, 'inn.s4', 'sit'], [22, 'fisher.bed', 'lie']] },
   { id: 'lark', name: 'Lark', skin: 'fair', hair: 'red', hairStyle: 'long', hat: 'feather', hatCol: [0.2, 0.45, 0.3], top: [0.22, 0.48, 0.44], skirt: [0.22, 0.48, 0.44], legs: [0.52, 0.2, 0.2], prop: 'lute', belt: [0.75, 0.6, 0.2],
-    sched: [[9, 'square.bard', 'lute'], [13, 'inn.bard', 'lute'], [15, 'square.bard', 'lute'], [18.5, 'inn.bard', 'lute'], [24.3, 'inn.bed3', 'lie']] },       // [logic] a bard sleeps too: a guest bed at the Hart (he stood by the fire all night)
+    sched: [[9, 'square.bard', 'lute'], [13, 'inn.bard', 'lute'], [15, 'square.bard', 'lute'], [18.5, 'inn.bard', 'lute'], [23.4, 'inn.fire2', 'sit'], [24.6, 'inn.bed3', 'lie']] },       // [logic] a bard sleeps too: a guest bed at the Hart (he stood by the fire all night)
   { id: 'wren', name: 'Wren', skin: 'brown', hair: 'black', hairStyle: 'braid', hat: 'hood', cloak: [0.24, 0.32, 0.2], cloakBack: true, top: [0.34, 0.38, 0.24], legs: [0.32, 0.25, 0.18],
     sched: [[6, 'hunter.yard', 'work'], [11, 'hunter.sit', 'sit'], [13, 'hunter.yard', 'work'], [20, 'hunter.sit', 'sit'], [22, 'hunter.bed', 'lie']] },
   { id: 'rowan', name: 'Elder Rowan', skin: 'fair', hair: 'white', hairStyle: 'long', beard: 2, dress: true, top: [0.40, 0.34, 0.52], belt: [0.7, 0.6, 0.3], prop: 'staff', scale: 0.97,
