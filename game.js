@@ -14140,12 +14140,20 @@ function festivalSpots() {
 }
 // ── saving (a convenience only: one browser, may be unavailable) ──
 // v 2 adds S.rpg (health, gear, outlaws). Saves without it still load: RPG.st() fills in what is missing.
-function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
+// b: the build that wrote the save (from Build 67). A save with b was made in today's world, so its position is never "migrated".
+function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, b: parseInt(BUILD_NAME.replace(/\D+/, ''), 10) || 0, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
 function loadSave() { try { const j = JSON.parse(localStorage.getItem('brackenfell.v1') || 'null'); return j && j.S ? j : null; } catch (e) { return null; } }
 function applySave(j) {
-  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; const m = Cells.migrate(j.pos, j.yaw || 0); if (m) { Player.pos = m.pos; Player.yaw = m.yaw; } }
+  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0;
+    // Only a save from before interiors became cells (Build 19) is moved into a cell. Such a save has neither a build stamp nor the list of
+    // discovered places. Before this check every save made outdoors inside a building's old footprint (Hale's post at the gate is one) was
+    // loaded inside that building, a kilometre away.
+    const m = !j.b && !(j.S && j.S.disc) && Cells.migrate(j.pos, j.yaw || 0); if (m) { Player.pos = m.pos; Player.yaw = m.yaw; } }
   for (const p of World.pickups) if (S.picked[p.id]) { p.gone = true; p.obj.visible = false; if (p.em) p.em.gone = true; }
   if (S.flags.fire) World.bonfire = true;
+  // the world was built before the save was read: a gate unlocked in an earlier session still had its collider and offered no way to open it again
+  // (the crypt gate shut the reliquary, and the mine key in it, away for good)
+  for (const it of World.interact) if (it.kind === 'gate' && S.opened[it.id]) { const i = World.colliders.indexOf(it.col); if (i >= 0) World.colliders.splice(i, 1); if (it.mesh) it.mesh.gone = true; if (it.hide) it.hide(); }
   if (S.rpg && S.rpg.v !== 2) S.rpg = null;
   RPG.st(); bountyText(); if (typeof Combat !== 'undefined') Combat.refresh();
 }
@@ -14327,7 +14335,7 @@ interactUse = function (it) {
   if (it.id === 'wharf.body') { S.flags.sawBody = 1; if (!has('tally') && !S.flags.tallyGiven) { S.flags.tallyGiven = 1; give('tally'); toast('Taken: ' + ITEMS.tally[0]); } mainStart(); save(); }
   if (relicFirst && S.opened[it.id]) {
     give('minekey'); if (!has('lantern')) give('lantern'); give('ledger'); toast('Found: ' + ITEMS.minekey[0] + ', ' + ITEMS.lantern[0] + ', ' + ITEMS.ledger[0]);
-    setTimeout(() => openReader('The Sexton’s ledger', LEDGER_TEXT), 350); mainSync(); save();
+    setTimeout(() => { if (!uiBusy() && !Cells.busy && !RPG.dead) openReader('The Sexton’s ledger', LEDGER_TEXT); }, 350);       /* [bugs] not over a conversation or a door begun in that third of a second: the ledger is in the pack */ mainSync(); save();
   }
 };
 const LEDGER_TEXT = 'Each dawn: the bell, then one loaf and one pail of water to the cave on the shore, by the cellar way. Four loaves if the frost is hard.\n\nThe Quiet takes what is left on the table. It has not yet taken what is given.\n\nR. says the Warden is never to be told.\n\n— in a different, later hand —\n\nThe Warden knows. He has always known. He bars the door and does not ask what he is barring.\n\nThe key goes in the reliquary with the Sexton, so that no one who loves him can ever be asked for it.';
@@ -14774,7 +14782,7 @@ for (const [id, line] of [['greta', 'The house on the south lane? Nobody’s liv
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 67';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 68';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -14933,7 +14941,7 @@ UI.resume = () => {
   if (!Input.touch && !coarse() && !TEST && !UI.talk) { try { const p = G.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
 };
 UI.lifecycle = () => {
-  document.addEventListener('visibilitychange', () => { lastT = performance.now(); if (document.hidden) { if (!TEST) UI.pause('hidden'); else if (Audio2.ctx) Audio2.ctx.suspend(); } else if (Audio2.ctx && game.playing && !UI.paused) Audio2.ctx.resume(); });
+  document.addEventListener('visibilitychange', () => { lastT = performance.now(); if (document.hidden) { try { if (game.playing && !(typeof RPG !== 'undefined' && RPG.dead)) save(); } catch (e) { } if (!TEST) UI.pause('hidden'); else if (Audio2.ctx) Audio2.ctx.suspend(); } else if (Audio2.ctx && game.playing && !UI.paused) Audio2.ctx.resume(); });
   addEventListener('pagehide', () => { try { if (game.playing) { save(); saveSettings(); } } catch (e) { } });
   const mq = window.matchMedia ? matchMedia('(orientation: portrait) and (pointer: coarse) and (max-width: 760px)') : null;
   const turn = () => { UI.portrait = !!(mq && mq.matches); if (UI.portrait) { if (game.playing && !UI.paused) { UI.pause('turn'); UI.turnPaused = true; } } else if (UI.turnPaused) { UI.turnPaused = false; if (UI.paused && UI.pauseWhy === 'turn') UI.resume(); } };
@@ -14974,6 +14982,10 @@ function uiFrame(dt) {
   }
   // quiet HUD: the quest text, clock and purse rest a few seconds after the last change
   UI.hudT -= dt; const q = UI.hudT <= 0 && !uiBusy(); if (q !== UI.quiet) { UI.quiet = q; $('hud').classList.toggle('quiet', q); }
+  // The game saved only at certain moments (a chest, a quest step), so experience, a level, coin spent at the bar or a flag set in talk could be lost
+  // to a crash or to the phone dropping the tab. Now also every 10 s of play, and whenever the page is hidden (visibilitychange below: on iOS a
+  // tab in the background is often discarded without a pagehide).
+  UI.saveT = (UI.saveT || 0) + dt; if (UI.saveT > 10 && game.playing && !uiBusy() && !Cells.busy && !(typeof RPG !== 'undefined' && RPG.dead)) { UI.saveT = 0; save(); }
   // "click to look" for a mouse that has not captured the pointer
   const cue = !Input.touch && !Input.plock && !UI.talk && !uiBusy() && !coarse() && !TEST; if (cue !== UI.cue) { UI.cue = cue; $('lookcue').hidden = !cue; }
   if (typeof Feel !== 'undefined') Feel.hintFrame(dt);
@@ -16941,7 +16953,8 @@ const Foes = (() => {
     switch (f.state) {
       case 'idle': {
         f.anim = f.spot.kind === 'sit' || f.spot.kind === 'crouch' ? 'c-sit' : f.spot.kind === 'guard' ? 'c-idle' : 'c-stand'; turn(f, f.spot.yaw, 3, dt);
-        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = (RPG.perk && RPG.perk('quiet') ? 0.75 : 1) * (f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5));
+        const dark = !f.camp.cell && (Env.hour >= 21.5 || Env.hour < 4.5) ? 0.6 : 1;       /* [bugs] outdoors at night they see 0.6 as far: the meeting behind the chapel is 15 m from Garrick's camp, and its lookout (19 m by day) killed whoever stopped to listen */
+        const facing = Math.abs(angDiff(toP, f.yaw)) < 1.2, see = dark * (RPG.perk && RPG.perk('quiet') ? 0.75 : 1) * (f.kind === 'lurker' ? ((typeof MINE !== 'undefined' && MINE.lamp.on ? 5.6 : 3.0) + (Player.speed > 4 ? 2.5 : 0)) : f.kind ? f.see + (Player.speed > 4 ? 3 : 0) : (f.spot.kind === 'guard' ? 19 : 14) + (Player.speed > 4 ? 6 : 0) - (facing ? 0 : 5));
         if (f.kind === 'lurker' && live && d < 24 && d >= see) { f.cueT -= dt; if (f.cueT <= 0) { f.cueT = rnd(2.2, 4.6); Snd.event(Math.random() < 0.5 ? 'creak' : 'rustle', [f.pos[0], f.pos[1] + 0.4, f.pos[2]], 1.3); } }       // heard before seen
         if (live && d < see && !inVillage(P[0], P[2]) && Math.abs(P[1] - f.pos[1]) < 6) { alarm(camp, f.pos); if (f.kind !== 'lurker') Snd.event(f.leader ? 'foe.shout.deep' : 'foe.shout', [f.pos[0], f.pos[1] + 1.5, f.pos[2]]); if (!F.warned && !camp.cell) { F.warned = true; toast('Outlaws! They have seen you.'); } }
         break; }
@@ -17464,7 +17477,7 @@ interactLabel = function (it) {
 interactUse = function (it) {
   if (it.kind === 'cord') { MINE_S().trap = 2; Snd.event('hit.metal', it.p); toast('You cut the cord. The slab stays up on its rope.'); save(); return; }
   if (it.foremanLock && !S.opened[it.id] && !has('foremankey')) { Audio2.door(0.4); return toast('Locked. A brass lock, worn bright. The man who counted heads will have the key.'); }
-  if (it.journal && !it.gone) { const r = _iu94(it); S.flags.corwin = 1; setTimeout(() => openReader('Corwin’s journal', MINE_JOURNAL), 350); if (typeof mainSync === 'function') mainSync(); save(); return r; }
+  if (it.journal && !it.gone) { const r = _iu94(it); S.flags.corwin = 1; setTimeout(() => { if (!uiBusy() && !Cells.busy && !RPG.dead) openReader('Corwin’s journal', MINE_JOURNAL); }, 350); if (typeof mainSync === 'function') mainSync(); save(); return r; }
   return _iu94(it);
 };
 const MINE_JOURNAL = 'Corwin, miner. Third week of the dry.\n\nI came down for the silver and I have found it, and it is singing.\n\nThe seal at the bottom of the adit was never a seal: the sexton’s key turns it from this side. They put bread out on the slab at the mouth of the deep each dawn. Somebody is eating it. Somebody is counting heads in the dark: one, two, three, all the way to eleven. I make it twelve. Twelve boots stood in a row by the water, and the Foreman standing in front of them, patient.\n\nThe bread stopped coming. I heard the rope stop. I have not been hungry. That frightens me more than the dark does.\n\nIf you read this, go back up. Go to the Hart. The cellar has a way down to the lake shore, and the bread went out by that road. Tell Hale. Tell him the bell.\n\nI will go and ask the Foreman for my shift.';
