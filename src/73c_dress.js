@@ -514,7 +514,7 @@ function buildDress() {
     if (R() < 0.8) { const sx = x - Math.cos(ry) * 1.8, sz = z + Math.sin(ry) * 1.8; if (ok(sx, sz, 0.6, { square: true })) { add(pick(R() < 0.5 ? barrels : crates), sx, gy(sx, sz), sz, 1, R() * TAU, false); solid(sx, sz, 0.4, 0.9); claim(sx, sz, 0.5); } }
   };
   { let placedS = 0;      // [fx3] the place's stalls stand in two rows facing the cart way, in front of the north and south fronts, not scattered at random; each has fallback spots in its row
-    for (const [cands, ry] of [[[[-14.2, -12.4], [-13.0, -11.2], [-15.5, -10.6]], 0], [[[-6.4, -12.0], [-7.6, -11.0], [-5.0, -11.6]], 0], [[[2.4, -12.6], [1.0, -11.8], [4.0, -12.2]], 0], [[[14.0, -12.0], [12.2, -12.4], [15.4, -10.8]], 0], [[[-3.4, 5.4], [-2.0, 4.8], [-4.8, 5.0]], PI], [[[12.6, 5.0], [10.4, 5.6], [14.2, 4.6]], PI]]) {
+    for (const [cands, ry] of [[[[-14.2, -12.4], [-13.0, -11.2], [-15.5, -10.6]], 0], [[[-6.4, -12.0], [-7.6, -11.0], [-5.0, -11.6]], 0], [[[6.6, -12.4], [7.8, -11.6], [5.6, -12.0]], 0], [[[14.0, -12.0], [12.2, -12.4], [15.4, -10.8]], 0], [[[-6.0, 5.2], [-7.2, 4.8], [-4.9, 5.4]], PI], [[[12.6, 5.0], [10.4, 5.6], [14.2, 4.6]], PI]]) {
       for (const [x, z] of cands) { if (!ok(x, z, 1.1, { square: true })) continue; placeStall(x, z, ry, stallKinds[(placedS + 1) % stallKinds.length]); placedS++; break; } } }
   // alley: stalls and carts set into the middle band, nearer the shop fronts, leaving the walking line free
   for (const [x, rowS, kind] of [[26.5, -1, 'greens'], [33.5, -1, 'fish'], [38.2, 1, 'meat'], [45.0, -1, 'pots']]) {
