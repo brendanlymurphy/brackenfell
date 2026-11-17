@@ -68,13 +68,13 @@ const Grass = { mesh: null, N: 0, range: 0 };
             p0.y.add(t.mul(height).mul(s).mul(sqrt(float(1).sub(bl.mul(bl).mul(t))))),
             p0.z.add(bend.y.mul(tt).mul(height)).add(dirv.x.mul(b.x).mul(wide).mul(s))));
           // colour matches the terrain tint below it
-          const base = vec3(0.062, 0.090, 0.026).mul(SH.groundTint(mn, mn2)).mul(mix(1.0, 0.72, s2.r)).toVar();
-          base.mulAssign(mix(vec3(0.90, 1.05, 0.84), vec3(1.14, 0.98, 0.78), r1.z));                           // fresh green to yellowing, tuft by tuft
+          const base = vec3(0.062, 0.082, 0.032).mul(SH.groundTint(mn, mn2)).mul(mix(1.0, 0.72, s2.r)).toVar();
+          base.mulAssign(mix(vec3(0.92, 1.02, 0.86), vec3(1.08, 0.98, 0.82), r1.z));                           // fresh green to yellowing, tuft by tuft
           base.assign(mix(base, vec3(0.16, 0.145, 0.045), smoothstep(0.75, 1.0, r1.w).mul(0.6)));
           const sheen = sat(wv.mul(2.4)).mul(U.wind.z).mul(0.30).add(1);                                      // a passing gust shows as a paler band
-          const tip = base.mul(vec3(1.32, 1.30, 1.05)).mul(sheen).toVar();
+          const tip = base.mul(vec3(1.24, 1.22, 1.02)).mul(sheen).toVar();
           tip.assign(mix(tip, vec3(0.40, 0.33, 0.15).mul(mn2.r.mul(0.5).add(0.75)), seedy));
-          base.assign(mix(base, vec3(0.30, 0.21, 0.06), field)); tip.assign(mix(tip, vec3(0.72, 0.52, 0.17), field));
+          base.assign(mix(base, vec3(0.21, 0.165, 0.085), field)); tip.assign(mix(tip, vec3(0.50, 0.40, 0.21), field));      // [l1] ripe wheat is a dull gold-buff, not lemon
           const flower = step(float(1 - 0.006).sub(smoothstep(0.55, 0.80, mn2.b).mul(0.05)), r0.w).mul(field.oneMinus()).mul(step(0.5, t)).mul(0.85);
           const fc = mix(mix(vec3(0.95, 0.9, 0.85), vec3(0.95, 0.75, 0.15), step(0.5, r1.x)), vec3(0.55, 0.35, 0.85), step(0.75, r1.y));
           const c = mix(mix(base.mul(0.55), tip, t), fc, flower).toVar();
