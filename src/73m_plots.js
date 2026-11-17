@@ -272,14 +272,37 @@ function buildWestgate(bucket) {
       m.mat(MAT.TIMBER, [0.32, 0.26, 0.19], 0.5);
       for (let k = 0; k <= n; k++) { const x = a[0] + (b[0] - a[0]) * k / n, z = a[1] + (b[1] - a[1]) * k / n; m.cbox(x, gy(x, z) - 0.1, z, 0.1, 1.15, 0.1, 0); }
       for (const y of [0.45, 0.9]) for (let k = 0; k < n; k++) { const x0 = a[0] + (b[0] - a[0]) * k / n, z0 = a[1] + (b[1] - a[1]) * k / n, x1 = a[0] + (b[0] - a[0]) * (k + 1) / n, z1 = a[1] + (b[1] - a[1]) * (k + 1) / n; m.beam([x0, gy(x0, z0) + y, z0], [x1, gy(x1, z1) + y, z1], 0.05, 0.08); }
-      const cx = (a[0] + b[0]) / 2, cz = (a[1] + b[1]) / 2; addBoxCollider(m, Math.min(a[0], b[0]) - 0.08, Math.min(a[1], b[1]) - 0.08, Math.max(a[0], b[0]) + 0.08, Math.max(a[1], b[1]) + 0.08, gy(cx, cz), gy(cx, cz) + 1.0); } };
+      const cx = (a[0] + b[0]) / 2, cz = (a[1] + b[1]) / 2; m.push().T(cx, 0, cz).RY(-Math.atan2(b[1] - a[1], b[0] - a[0])); addBoxCollider(m, -L / 2 + 0.2, -0.1, L / 2 - 0.2, 0.1, gy(cx, cz), gy(cx, cz) + 1.0); m.pop(); } };
   const sheep = (x, z, ry) => { const m = bucket(x, z), g = gy(x, z); m.push().T(x, g, z).RY(ry); m.mat(MAT.PLAIN, [0.8, 0.76, 0.68], 0.6); m.ball(0, 0.58, 0, 0.55, 0.36, 0.34, 8, 5); m.mat(MAT.PLAIN, [0.2, 0.17, 0.14], 0.6); m.box(0.5, 0.52, -0.1, 0.78, 0.82, 0.1, 4); for (const lx of [-0.3, 0.3]) for (const lz of [-0.15, 0.15]) m.box(lx - 0.04, 0, lz - 0.04, lx + 0.04, 0.3, lz + 0.04, 4); m.pop(); };
   const pig = (x, z, ry) => { const m = bucket(x, z), g = gy(x, z); m.push().T(x, g, z).RY(ry); m.mat(MAT.PLAIN, [0.78, 0.55, 0.5], 0.6); m.ball(0, 0.42, 0, 0.5, 0.3, 0.28, 8, 5); m.ball(0.5, 0.4, 0, 0.17, 0.17, 0.16, 6, 4); for (const lx of [-0.28, 0.28]) for (const lz of [-0.13, 0.13]) m.box(lx - 0.045, 0, lz - 0.045, lx + 0.045, 0.2, lz + 0.045, 4); m.pop(); };
   const zN = x => rz(x) - 3.5, zS = x => rz(x) + 3.5;
+  /* the closes follow the lane and the ground: the road side is the hedge, the ends run square off it, the far side wanders with a slow swing (no ruler rectangles) */
+  const closePts = (sd, xa, xb, depth, sw) => { const pts = [[xa, rz(xa) + sd * 4.0]]; for (let x = xa; x >= xb - 0.01; x -= 3) pts.push([x - (x === xa ? 0.8 : 0), rz(x) + sd * (4.0 + depth + sw * Math.sin(x * 0.19 + sd))]); pts.push([xb, rz(xb) + sd * 4.0]); return pts; };
   /* north close: sheep; south close: pigs in the mud */
-  fence([[-82, zN(-82) - 0.5], [-82, -19], [-104, -19], [-104, zN(-104) - 0.5]]);
-  for (let i = 0; i < 6; i++) sheep(-84 - R() * 18, -17 + R() * 6.5, R() * 6.28);
-  fence([[-82, zS(-82) + 0.5], [-82, 9], [-104, 9], [-104, zS(-104) + 0.5]]);
-  { const m = bucket(-92, 4); m.mat(MAT.MUD, [0.15, 0.11, 0.08], 0.5); m.quad2([-95, gy(-95, 4) + 0.03, 2.5], [-95, gy(-95, 4) + 0.03, 6], [-88, gy(-88, 4) + 0.03, 6], [-88, gy(-88, 4) + 0.03, 2.5]); }
-  for (let i = 0; i < 4; i++) pig(-86 - R() * 16, 2.5 + R() * 5.5, R() * 6.28);
+  fence(closePts(-1, -82, -104, 12, 1.6));
+  for (let i = 0; i < 6; i++) { const x = -84 - R() * 18; sheep(x, rz(x) - 5.5 - R() * 5, R() * 6.28); }
+  fence(closePts(1, -82, -104, 9, 1.3));
+  { const m = bucket(-92, 4); m.mat(MAT.MUD, [0.15, 0.11, 0.08], 0.5); const gz = x => rz(x) + 5.8, y0 = x => gy(x, gz(x)) + 0.03; m.quad2([-95, y0(-95), gz(-95)], [-95, y0(-95), gz(-95) + 3.4], [-88, y0(-88), gz(-88) + 3.4], [-88, y0(-88), gz(-88)]); }
+  for (let i = 0; i < 4; i++) { const x = -86 - R() * 16; pig(x, rz(x) + 5.8 + R() * 5, R() * 6.28); }
+}
+
+/* [fx3] the west edge of the town: the gate is the only way in. Palisade for the stretch beside the gate, then a bank with a hedge on it and a ditch outside, following the ground north to the north wall and south down the town's flank.
+   A road that crosses the line leaves a gap with two gate posts. The ditch is painted by the terrain (WEST_EDGE). */
+const WEST_EDGE = { n: [[-64.7, -17.5], [-65, -26], [-63, -38], [-58, -49], [-47, -56], [-33, -58.5]], s: [[-64.7, 7], [-65, 16], [-63, 30], [-59, 44], [-52, 56], [-44, 66]], pal: 2 };
+function buildWestEdge(bucket) {
+  if (TEST && TEST.plots === 0) return;
+  const R = rng(9191), gy = (x, z) => Terrain.y(x, z); World.hedgeClumps = World.hedgeClumps || [];
+  const roadNear = (x, z) => SITES.some(q => q.w && Math.hypot(q.x - x, q.z - z) < Math.max(q.w, q.d) / 2 + 3.2) || Roads.some(q => q.id !== 'main' && q.line.dist(x, z, 3) < 2.3) || (Roads.find(q => q.id === 'main') && Math.abs(x + 62) < 5 && Math.abs(z + 5.2) < 6);
+  for (const side of ['n', 's']) { const P = WEST_EDGE[side];
+    for (let i = 0; i + 1 < P.length; i++) { const a = P[i], b = P[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), ang = Math.atan2(dz, dx), pal = i < WEST_EDGE.pal, n = Math.max(1, Math.round(L / 4)), nx = -dz / L, nz = dx / L;
+      for (let k = 0; k < n; k++) { const t0 = k / n, t1 = (k + 1) / n, ax = a[0] + dx * t0, az = a[1] + dz * t0, bx = a[0] + dx * t1, bz = a[1] + dz * t1, cx = (ax + bx) / 2, cz = (az + bz) / 2, l = Math.hypot(bx - ax, bz - az);
+        if (roadNear(cx, cz) || roadNear(ax, az) || roadNear(bx, bz)) { for (const e of [[ax, az], [bx, bz]]) { const m = bucket(e[0], e[1]); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); m.cbox(e[0], gy(e[0], e[1]) - 0.1, e[1], 0.16, 1.5, 0.16, 0); } continue; }
+        const g = Math.min(gy(ax, az), gy(bx, bz), gy(cx, cz)), m = bucket(cx, cz), an = Math.atan2(bz - az, bx - ax);
+        m.push().T(cx, g - 0.2, cz).RY(-an);
+        if (pal) { m.mat(MAT.PLANKS, [0.66, 0.6, 0.52], 0.5); m.box(-l / 2, 0, -0.14, l / 2, 2.7, 0.14, 4); m.mat(MAT.TIMBER, [0.27, 0.24, 0.21], 0.5); for (let u = -l / 2 + 0.2; u < l / 2 - 0.1; u += 0.42) m.box(u - 0.02, 0, -0.16, u + 0.02, 2.66, -0.14, 4 | 8);
+          m.mat(MAT.TIMBER, [0.5, 0.44, 0.36], 0.5); for (let u = -l / 2 + 0.15; u < l / 2 - 0.05; u += 0.3) { const hh = 2.7 + 0.18 + R() * 0.1; m.quad2([u, 2.7, -0.14], [u + 0.28, 2.7, -0.14], [u + 0.14, hh, 0], [u, 2.7, 0.14]); }
+          addBoxCollider(m, -l / 2 + 0.05, -0.2, l / 2 - 0.05, 0.2, 0, 2.7); }
+        else { m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-l / 2, 0, -0.55, l / 2, 0.42, 0.55, 4); addBoxCollider(m, -l / 2 + 0.1, -0.4, l / 2 - 0.1, 0.4, 0, 1.6);
+          const nC = Math.round(l / 0.6); for (let c = 0; c < nC; c++) { if (R() < 0.1) continue; const u = -l / 2 + (c + 0.5) * l / nC + (R() - 0.5) * 0.3, v = (R() - 0.5) * 0.5, wx = cx + Math.cos(an) * u - Math.sin(an) * v, wz = cz + Math.sin(an) * u + Math.cos(an) * v; World.hedgeClumps.push([wx, gy(wx, wz) + 0.25, wz, 1.0 + R() * 0.8 + (R() < 0.1 ? 0.5 : 0), R() * 6.28, 0.1 + R() * 0.2, R()]); } }
+        m.pop(); } } }
 }

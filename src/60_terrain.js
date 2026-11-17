@@ -344,6 +344,8 @@ function buildSplat2() {
     blob(A, 1, p[0] - p[3] * o, p[1] + p[2] * o, 0.7 + R() * 1.2, 0.9, 0.3);
   }
   line(A, 1, [[ALLEY.x0 - 2, roadZ(ALLEY.x0 - 2)], [36, 1], [ALLEY.x1 + 1, roadZ(ALLEY.x1 + 1)]], 8, 0.5);      /* [fx3] the alley is the wetter, darker street */
+  /* [fx3] the ditch outside the west edge: bare wet earth just outside the bank */
+  if (typeof WEST_EDGE !== 'undefined') for (const k of ['n', 's']) { const pts = WEST_EDGE[k].slice(WEST_EDGE.pal).map(p => [p[0] - 1.5, p[1]]); if (pts.length > 1) { line(A, 1, pts, 1.6, 0.7); line(B, 2, pts, 2.2, 0.4); } }
   /* [fx3] Westgate: wheel ruts in the earth road outside the gate, two wet tracks 1.7 m apart and a worn middle */
   { const r = Roads.find(q => q.id === 'main'); if (r) { const pts = r.line.p.filter(p => p[0] < -57 && p[0] > -112); if (pts.length > 1) { for (const o of [-0.85, 0.85]) line(A, 1, pts.map(p => [p[0], p[1] + o]), 0.32, 0.45); line(B, 0, pts, 1.0, 0.5); } } }
   /* [fx3] the Market Place's drain: a wet channel down the middle of the place (the fall runs to z+), a branch down Wharf Street's mouth, and puddle hollows in the low cobbles */
