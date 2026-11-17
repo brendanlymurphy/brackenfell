@@ -386,14 +386,14 @@ function buildWater() {
   const m = new Mesh(4096);
   m.mat(MAT.PLAIN, [1, 1, 1]);
   // river ribbon: 5 vertices across, flow direction stored in uv
-  const step = 2.5, offs = [-6, -3, 0, 3, 6], rows = Math.floor((River.len - 6) / step);
+  const step = 2.5, offs = [-6, -4.5, -3, -1.5, 0, 1.5, 3, 4.5, 6], rows = Math.floor((River.len - 6) / step);
   let start = 0; for (let k = 0; k <= rows; k++) { const p = River.point(k * step); if (hyp(p[0], p[1]) < 520) { start = k; break; } }
   const ring = [];
   for (let k = start; k <= rows; k++) {
     const s = k * step, p = River.point(s), wy = riverY(s), wide = 1 + 1.3 * smooth(125, 230, hyp(p[0], p[1])), nx = -p[3] * wide, nz = p[2] * wide, row = [];
     const endFade = sat((River.len - 6 - s) / 10);
     for (const o of offs) {
-      const x = p[0] + nx * o, z = p[1] + nz * o, depth = sat((wy - Terrain.y(x, z)) / 0.9) * endFade;
+      const x = p[0] + nx * o, z = p[1] + nz * o, depth = sat((wy - Terrain.y(x, z)) / 0.9) * endFade * (Math.abs(o) > 5.9 ? 0 : 1);      // [fx3] the ribbon's own outline always fades to nothing
       m.ao = depth; row.push(m.vert(x, wy, z, 0, 1, 0, p[2] * 1.0, p[3] * 1.0));
     }
     ring.push(row);
@@ -406,9 +406,12 @@ function buildWater() {
   const lm = new Mesh(4096); lm.mat(MAT.PLAIN, [1, 1, 1]);
   const cs = 2.5, ext = LAKE.r + 12, n = Math.ceil(2 * ext / cs), ids = new Map();
   const lv = (i, j) => { const key = j * 4096 + i; let v = ids.get(key); if (v !== undefined) return v; const x = LAKE.x - ext + i * cs, z = LAKE.z - ext + j * cs; lm.ao = sat((LAKE.y - Terrain.y(x, z)) / 0.9); v = lm.vert(x, LAKE.y, z, 0, 1, 0, 0.25, 0.1); ids.set(key, v); return v; };
+  // [fx3] the lake sheet: whole cells where it is deep, 0.5 m cells wherever the shore crosses, each vertex carrying its true depth, so the waterline is the ground's own contour and the sheet's outline fades to nothing
+  const sub = 5, sv = (x, z) => { lm.ao = sat((LAKE.y - Terrain.y(x, z)) / 0.9); return lm.vert(x, LAKE.y, z, 0, 1, 0, 0.25, 0.1); };
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-    const x = LAKE.x - ext + i * cs, z = LAKE.z - ext + j * cs;
-    if (Math.min(terrainH(x, z), terrainH(x + cs, z), terrainH(x, z + cs), terrainH(x + cs, z + cs)) > LAKE.y + 0.05) continue;
+    const x = LAKE.x - ext + i * cs, z = LAKE.z - ext + j * cs, hh = [terrainH(x, z), terrainH(x + cs, z), terrainH(x, z + cs), terrainH(x + cs, z + cs)], mn = Math.min(...hh), mx = Math.max(...hh);
+    if (mn > LAKE.y + 0.05) continue;
+    if (mx > LAKE.y - 0.4) { const q = cs / sub; for (let b = 0; b < sub; b++) for (let a = 0; a < sub; a++) { const x0 = x + a * q, z0 = z + b * q, c4 = [terrainH(x0, z0), terrainH(x0 + q, z0), terrainH(x0, z0 + q), terrainH(x0 + q, z0 + q)]; if (Math.min(...c4) > LAKE.y + 0.02) continue; const A = sv(x0, z0), B = sv(x0, z0 + q), C = sv(x0 + q, z0 + q), D = sv(x0 + q, z0); lm.tri(A, B, C); lm.tri(A, C, D); } continue; }
     const a = lv(i, j), b = lv(i, j + 1), c = lv(i + 1, j + 1), d = lv(i + 1, j); lm.tri(a, b, c); lm.tri(a, c, d);
   }
   pack.add(lm, { kind: 'water', noShadow: true });

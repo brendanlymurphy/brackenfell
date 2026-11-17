@@ -107,6 +107,7 @@ function buildVegetation() {
   };
   const gy = (x, z) => Terrain.y(x, z);
   const addTree = (kind, x, z, scale) => {
+    for (const c of World.colliders) if (c.r > 0.6 && c.y1 - c.y0 < 3 && Math.hypot(x - c.x, z - c.z) < c.r + (kind === 'oak' ? 0.7 : 0.3) * scale) return;      // [fx3] never a trunk through a boulder
     const y = gy(x, z);
     inst[kind].push([x, y - 0.05, z, scale, R() * TAU, R(), R(), 0]);
     if (hyp(x, z) < WORLD_RADIUS + 8) World.colliders.push({ x, z, r: (kind === 'oak' ? 0.7 : kind === 'pine' ? 0.27 : 0.2) * scale, y0: y - 1, y1: y + 6 });
