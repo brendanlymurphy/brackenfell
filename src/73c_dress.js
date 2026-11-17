@@ -373,11 +373,19 @@ function buildDress() {
   const spotsOut = Object.values(World.spots).filter(s => !s.zone);
   const stones = [[0, -2], [-6, -4], [6, -3], [0, -10], [0, 6], [-9, 2], [9, 3], [0, -15.5]];
   const inAlley = (x, z) => x > ALLEY.x0 - 3 && x < ALLEY.x1 + 3 && Math.abs(z - roadZ(x)) < 8;
+  const routeNear = (x, z, r) => {
+    for (const rt of World.routes || []) for (let i = 0; i < rt.pts.length - 1; i++) {
+      const a = rt.pts[i], b = rt.pts[i + 1], bx = b[0] - a[0], bz = b[2] - a[2], l2 = bx * bx + bz * bz, t = l2 ? Math.max(0, Math.min(1, ((x - a[0]) * bx + (z - a[2]) * bz) / l2)) : 0;
+      if (hyp(x - a[0] - bx * t, z - a[2] - bz * t) < r) return true;
+    }
+    return false;
+  };
   // may a prop of radius r stand here?
   const ok = (x, z, r, o) => {
     o = o || {};
     if (hyp(x, z) > WORLD_RADIUS + 8) return false;
-    if (KEEP.hit(x, z, r * 1.45)) return false;          // Build 33: never in a door's approach strip or on a road's centre line
+    if (KEEP.hit(x, z, r * 1.45)) return false;          // Build 33
+    if (routeNear(x, z, r + 0.7)) return false;          // [fx3] a walk the route tests make (galleries, lanes, the dead yard) stays clear: never in a door's approach strip or on a road's centre line
     for (const p of DRS.placed) if (hyp(x - p[0], z - p[1]) < r + p[2]) return false;
     const al = inAlley(x, z);
     if (al) { if (Math.abs(z - roadZ(x)) < 1.8 + r * 0.5) return false; }
@@ -410,6 +418,7 @@ function buildDress() {
   // [fx3] a pile's footprint must not push into anything already solid (the overlap finder: crates through counters, barrels through crates)
   const rowClear = (x, z, dx, dz, half, hw, h) => {
     const y = gy(x, z), A = { x, z, hx: half, hz: hw, ax: dx, az: dz, bx: -dz, bz: dx };
+    for (const t of [-1, -0.5, 0, 0.5, 1]) if (routeNear(x + dx * half * t, z + dz * half * t, hw + 0.7)) return false;
     for (const c of World.colliders) {
       if (!isFinite(c.x) || Math.abs(c.x - x) > 6 || Math.abs(c.z - z) > 6 || c.y1 < y - 0.1 || c.y0 > y + h) continue;
       const B = c.r !== undefined ? { x: c.x, z: c.z, hx: c.r, hz: c.r, ax: 1, az: 0, bx: 0, bz: 1 } : c; let m = 1e9;

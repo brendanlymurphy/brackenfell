@@ -266,9 +266,11 @@ function buildVillage() {
   // ── dressing: the stuff that piles up against the walls of a lived-in house ──
   {
     const Rd = rng(4242);
+    let curSite = null;
     const free = (x, z, rad) => {
       for (const rd of Roads) if (rd.line.dist(x, z, 4) < rd.w / 2 + 1.0) return false;
       if (hyp(x - SQUARE.x, z - SQUARE.z) < Math.max(SQUARE.rx, SQUARE.rz) + 1) return false;
+      for (const o of INF.houses) { if (o.id === curSite || hyp(o.x - x, o.z - z) > 9) continue; const l = worldToSite(o, x, z); if (Math.abs(l[0]) < o.w / 2 + rad + 0.5 && Math.abs(l[1]) < o.d / 2 + rad + 0.5) return false; }      // [fx3] the infill houses are built later: a pile must not narrow a lane between them below a person's width
       for (const c of World.colliders) {
         if (c.r !== undefined) { if (hyp(x - c.x, z - c.z) < c.r + rad) return false; continue; }
         const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz;
@@ -289,7 +291,7 @@ function buildVillage() {
       stump: (m) => { kp(m, 'tree_stump_01', 0, -0.03, 0, 0.55, Rd() * 6); addCircleCollider(m, 0, 0, 0.35, 0, 0.3); },
     };
     for (const s of SITES) {
-      if (!HOUSES[s.id]) continue;
+      if (!HOUSES[s.id]) continue; curSite = s.id;
       const kinds = (s.id === 'farm' || s.id === 'barn' || s.id === 'mill') ? ['hay', 'wood', 'barrels', 'sacks', 'crates'] : s.id === 'chapel' ? ['pots'] : ['wood', 'barrels', 'crates', 'sacks', 'pots', 'wood'];
       if (typeof scanOn === 'function' && scanOn() && s.id !== 'chapel') kinds.push('buckets', 'stump');
       const dl = siteDoorLocal(s, 0), n = s.id === 'chapel' ? 1 : 3 + Rd.i(0, 1);

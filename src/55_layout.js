@@ -64,7 +64,8 @@ function siteDoorLocal(s, dist) {
 // A flat terrace LV.up.h above the market square. Retaining walls stand just outside its edge (0.8 m thick: the ground rises inside them), flights and a ramped lane reach it.
 const LV = { up: { x0: -36, z0: 13.5, x1: -5, z1: 31, h: 3.4, slope: 0.8 } };
 LV.trees = [['birch', -27, 25.6, 1.15]];          // Build 33: placed by 74_vegetation.js after everything else, so no random draw shifts
-LV.upW = (x, z) => {       // 1 on the terrace, 0 beyond `slope` metres outside it
-  const u = LV.up, dx = Math.max(u.x0 - x, 0, x - u.x1), dz = Math.max(u.z0 - z, 0, z - u.z1), d = Math.hypot(dx, dz);
-  return d >= u.slope ? 0 : 1 - Math.min(1, Math.max(0, d / u.slope));
+LV.upW = (x, z) => {       // 1 on the terrace, 0 beyond 0.3 m outside its effective edge
+  // [fx3] the ground mesh has 1.5 m cells, so a cliff is one cell wide. The terrace's plateau stops 0.6 m inside its walls' inner faces, which puts the next cell's nodes at the foot, and the walls (73f_levels.js) are built as solid masses from node line to node line: the ramp is inside them and the wall stands on level ground.
+  const u = LV.up, dx = Math.max(u.x0 - x, 0, x - (u.x1 - 0.6)), dz = Math.max(u.z0 - z, 0, z - (u.z1 - 0.6)), d = Math.hypot(dx, dz);
+  return d >= 0.3 ? 0 : 1 - Math.min(1, Math.max(0, d / 0.3));
 };
