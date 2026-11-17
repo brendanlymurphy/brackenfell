@@ -28,9 +28,9 @@ let WaterMat, GlowMat;
       const spec = U.sunCol.mul(pow(max(dot(R, U.sunDir), 0), 260).mul(7.0));
       const body = vec3(0.03, 0.085, 0.075).mul(U.ambSky.mul(1.2).add(U.sunCol.mul(0.35)));
       const foam = smoothstep(0.0, 0.16, depth).oneMinus().mul(smoothstep(0.35, 0.75, n3.x.add(n1.y.mul(0.6))));
-      const col = mix(mix(body, refl, fres).add(spec), U.ambSky.add(U.sunCol.mul(0.6)).mul(0.75), foam.mul(0.6));
+      const col = mix(mix(body, refl, fres).add(spec), U.ambSky.add(U.sunCol.mul(0.6)).mul(0.75), foam.mul(0.25));
       const alpha = max(mix(0.30, 0.94, smoothstep(0.0, 0.7, depth)), fres).mul(smoothstep(0.0, 0.39, depth));
-      return vec4(col, max(alpha, foam.mul(0.5)));
+      return vec4(col, max(alpha, foam.mul(0.12)).mul(smoothstep(0.0, 0.1, depth)));      // [fx3] foam too goes to nothing at the waterline: the sheet's outline is never drawn
     })();
     m.colorNode = res.rgb; m.opacityNode = res.a;
     m.toneMapped = false;
