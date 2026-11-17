@@ -246,7 +246,7 @@ function hPlace(P, room, name, o) {
     const ats = o.at !== undefined ? [].concat(o.at) : [undefined];
     for (const at_ of ats) { const r = pAgainst(P, room, sd, id, e[0], e[1], h, -1, draw, Object.assign({}, opt, at_ === undefined ? {} : { at: at_ })); if (r) return r; }
   }
-  if (o.free !== false) return pFree(P, room, id, e[0], e[1], h, o.rot || 0, draw, Object.assign({ near: o.near }, opt));
+  if (o.free !== false && !(h >= 1.5 && /^v_/.test(name))) return pFree(P, room, id, e[0], e[1], h, o.rot || 0, draw, Object.assign({ near: o.near }, opt));      /* [fin] a tall cabinet or bookcase never stands alone in the middle of a room with its back to the hearth */
   return null;
 }
 // a hanging bar of drying things over the room's open floor (not over the hearth or a stairwell)
