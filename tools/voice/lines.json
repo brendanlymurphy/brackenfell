@@ -507,6 +507,16 @@
   },
   {
    "speaker": "hale",
+   "text": "Hold there, traveller. No, sit, I am off the gate till morning. Brackenfell is a quiet place and I mean to keep it so. But you have the look of the road on you: tired, and honest enough. Greta keeps a bed for folk like you. That is her, behind the bar.",
+   "where": "82a_memory.js:17"
+  },
+  {
+   "speaker": "hale",
+   "text": "Hold there, traveller. Brackenfell is a quiet place and I mean to keep it so. But you have the look of the road on you: tired, and honest enough. Greta at the Honeyed Hart keeps a bed for folk like you. It is the tall house with the lantern, on the square.",
+   "where": "82a_memory.js:18"
+  },
+  {
+   "speaker": "hale",
    "text": "Good. That’s the end of it. This time.",
    "where": "82b_interact.js:211"
   },
@@ -874,18 +884,13 @@
   },
   {
    "speaker": "",
-   "where": "82d_cast.js:9",
+   "where": "82d_cast.js:17",
    "raw": "L[k]"
   },
   {
    "speaker": "",
-   "where": "82d_cast.js:10",
-   "raw": "L.g2"
-  },
-  {
-   "speaker": "",
-   "where": "82d_cast.js:10",
-   "raw": "L.g"
+   "where": "82d_cast.js:18",
+   "raw": "castGreeting(p)"
   },
   {
    "speaker": "brandt",

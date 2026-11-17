@@ -1213,6 +1213,30 @@
    "src": "82_story.js"
   },
   {
+   "key": "9brzb4umr1",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "Hold there, traveller. No, sit, I am off the gate till morning. Brackenfell is a quiet place and I mean to keep it so. But you have the look of the road on you: tired, and honest enough. Greta keeps a bed for folk like you. That is her, behind the bar.",
+   "say": "Hold there, traveller. No, sit, I am off the gate till morning. Brackenfell is a quiet place and I mean to keep it so. But you have the look of the road on you: tired, and honest enough. Gretta keeps a bed for folk like you. That is her, behind the bar.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "ea7524fed4eb9c.m4a",
+   "src": "82a_memory.js"
+  },
+  {
+   "key": "rvilut9ksg",
+   "speaker": "hale",
+   "kind": "line",
+   "text": "Hold there, traveller. Brackenfell is a quiet place and I mean to keep it so. But you have the look of the road on you: tired, and honest enough. Greta at the Honeyed Hart keeps a bed for folk like you. It is the tall house with the lantern, on the square.",
+   "say": "Hold there, traveller. Brackenfell is a quiet place and I mean to keep it so. But you have the look of the road on you: tired, and honest enough. Gretta at the Honeyed Hart keeps a bed for folk like you. It is the tall house with the lantern, on the square.",
+   "voice": "bm_george",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "963176b2995945.m4a",
+   "src": "82a_memory.js"
+  },
+  {
    "key": "nmxl8x8g64",
    "speaker": "hale",
    "kind": "line",

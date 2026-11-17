@@ -12,7 +12,7 @@ const fold = n => { if (!n) return null; if (n.type === 'Literal' && typeof n.va
 const nameOf = (n) => { if (!n) return ''; if (n.type === 'Identifier') return n.name; if (n.type === 'Literal') return String(n.value); if (n.type === 'MemberExpression') return nameOf(n.property); return ''; };
 const idOf = (nm) => { let best = ''; for (const id of IDS) if (nm.toLowerCase().startsWith(id) && id.length > best.length) best = id; return best; };
 for (const f of fs.readdirSync(root + 'src').filter(f => f.endsWith('.js')).sort()) {
-  const src = fs.readFileSync(root + 'src/' + f, 'utf8'); if (!/\bnode\(|TALK\.buy\(/.test(src)) continue;
+  const src = fs.readFileSync(root + 'src/' + f, 'utf8'); if (!/\bnode\(|TALK\.buy\(/.test(src) && !IDS.some(id => src.includes("['" + id + "', '"))) continue;       /* a file may hold only a table of ['speaker', 'line'] pairs (82a_memory.js) */
   let ast; try { ast = acorn.parse(src, { ecmaVersion: 2022, locations: true }); } catch (e) { console.error('parse', f, e.message); continue; }
   const walk = (n, stack) => {
     if (!n || typeof n.type !== 'string') return;
