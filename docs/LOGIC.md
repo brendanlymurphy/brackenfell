@@ -56,7 +56,7 @@ What was wrong and is fixed:
 | P2 | People were sent to the same well, bench or stall at the same hour and stood inside each other. | Public places are booked: a place has one person at a time, the next goes elsewhere. `npcsep` is clean. |
 | P3 | Greta stood behind the bar for 18 hours and never went to the kitchen or the cellar. | Kitchen before opening, the cellar in the slack of the afternoon, the bar the rest of the day, bed at 23:30. |
 | P4 | Marta stood at the counter from 06:00 with the shop shut until 07:30. | She fetches stock from the cellar first. |
-| P5 | Lark played the lute by the Hart's fire all night, every night. | He has a guest bed at the Hart from just after midnight. |
+| P5 | Lark played the lute by the Hart's fire all night, every night. | He sits by the fire when the room empties and has a guest bed at the Hart from half past midnight. |
 | P6 | The gate was unguarded from 19:30 to 06:00 while Hale drank and slept, and Ivo did nothing different from Hale. | Ivo sleeps in the morning, patrols in the afternoon and holds the gate at night. |
 | P7 | Maren and Wren worked outdoors for fourteen hours without a pause. | Each sits down indoors at midday. |
 | P8 | Rain changed nothing: people sat on benches and played the lute in it. | Anyone out of doors with nothing that must be done there goes under their own roof while it rains; people at work stay (the field, the forge, the watch, the nets). Villagers remark on the weather if spoken to outdoors in rain. The six unnamed passers-by go home in rain as they do at dusk. Check: bot `logic`. |

@@ -101,6 +101,7 @@ interiors lit by hearths and candles. As realistic as free art allows.
     one shingle texture), then fronts designed one by one. The mine's remaining rooms (`fork-fx2`) wait behind it.
   - `fork-ch1` characters: paused until a town worker frees up (apron glitch, aprons varied, men's tunics, posture, hair).
   - Logic, storylines, what people do, mechanics: asked of the second Claude Code session (`fork-logic`, docs/LOGIC.md). First pass done on `fork-logic`: 13 story faults, 8 routine faults and 9 rule faults fixed, each with a check (bot `logic`, gate step `people`); what is open and why is listed per part in docs/LOGIC.md (beds for Tobin and Aldous need the interiors worker).
+  - Voices: all 252 planned lines (168 of conversation, 84 barks) have a recording and a lip track as of `fork-logic` (29 minutes, 12.9 MB, fetched a line at a time). No daily batch is scheduled any more; new lines need one run of the commands in AGENTS.md.
 
 ## Next
 

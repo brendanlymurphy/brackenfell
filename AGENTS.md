@@ -145,11 +145,12 @@ node tools/voice/check.mjs --allow-missing
 
 - The API key is a network secret on the infrastructure session's cloud environment (host generativelanguage.googleapis.com, header
   `x-goog-api-key`); it is never in the repository, the environment or a chat. Only that environment can generate.
-- 100 requests a day. The script stops cleanly at the limit and resumes; a scheduled run generates each day until nothing is
-  missing. A line without a file is a subtitle. `audio/voice/manifest.json` lists only lines that have audio.
+- 100 requests a day. The script stops cleanly at the limit and resumes. Every planned line has audio now (252); nothing is
+  scheduled, so after adding lines run the commands above. A line without a file is a subtitle. `audio/voice/manifest.json` lists only lines that have audio.
 - Speech is played dry: never route it through reverb or process it. `cast_gemini.json` holds one voice and one acting direction
   per character; `--sample` makes one clip per character for the owner to approve before a new voice is used.
-- `check.mjs` fails a file over 0.45 s per character or over 30 s (a model once read its direction aloud for 24 s).
+- `check.mjs` fails a file over 0.45 s per character, or over 30 s unless the line is long enough to need it (a model once read
+  its direction aloud for 24 s).
 
 ## What the owner wants (direct feedback, most recent last)
 
