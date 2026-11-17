@@ -12,6 +12,8 @@ const PLOT_ROWS = [
   { name: 'chapelE', ids: ['in.46', 'in.15', 'in.16', 'in.33'], trades: ['woodyard', 'hens', 'garden', 'hives'], axis: 'x' },
   { name: 'eastS', ids: ['in.86', 'in.87', 'in.88', 'in.89'], trades: ['garden', 'hens', 'woodyard', 'hives'] },
   { name: 'eastN', ids: ['in.81', 'in.82', 'in.83', 'in.84', 'in.85'], trades: ['garden', 'hens', 'woodyard', 'pigs', 'hives'] },
+  { name: 'gateN', ids: ['in.65'], trades: ['garden'] },
+  { name: 'gateS', ids: ['in.75'], trades: ['hens'] },
   { name: 'westS', ids: ['in.08', 'in.07', 'in.06', 'in.42'], trades: ['dyer', 'hens', 'woodyard', 'washing'] }
 ];
 let _PLOTS = null;
@@ -243,3 +245,35 @@ function buildChapelWay(bucket) {
 }
 
 function plotLowTier() { return R.qName === 'low'; }
+
+/* [fx3] Westgate: outside the gate the earth road runs out between hedge rows (a low bank and overlapping shrub clumps, with gaps and field gates) past two closes, a sheep close to the north and a pig close to the south, fenced on their other three sides.
+   The shrubs are pushed to World.hedgeClumps and drawn as instanced bushes by buildVegetation; the banks, fences and animals are meshes here. */
+function buildWestgate(bucket) {
+  if (TEST && TEST.plots === 0) return;
+  const R = rng(7077), gy = (x, z) => Terrain.y(x, z), road = Roads.find(q => q.id === 'main'); if (!road) return;
+  const rz = x => { const p = road.line.p; for (let i = 0; i + 1 < p.length; i++) { const a = p[i], b = p[i + 1]; if ((a[0] - x) * (b[0] - x) <= 0 && a[0] !== b[0]) return a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]); } return p[p.length - 1][1]; };
+  World.hedgeClumps = World.hedgeClumps || [];
+  const X0 = -79, X1 = -106, gaps = { '-1': [[-92, -90], [-100, -98.5]], '1': [[-86, -84.4]] };
+  for (const sd of [-1, 1]) {
+    const inGap = x => (gaps[sd] || []).some(g => x <= g[0] + 0.3 && x >= g[1] - 0.3);
+    for (let x = X0; x > X1; x -= 0.6) { if ((gaps[sd] || []).some(g => x <= g[0] && x >= g[1])) continue; const z = rz(x) + sd * (3.5 + Math.sin(x * 0.21) * 0.25 + (R() - 0.5) * 0.3), g = gy(x, z); World.hedgeClumps.push([x + (R() - 0.5) * 0.3, g + 0.2, z, 0.9 + R() * 0.7 + (R() < 0.12 ? 0.5 : 0), R() * 6.28, 0.1 + R() * 0.2, R()]); }
+    let x = X0; for (const g of (gaps[sd] || []).slice().sort((a, b) => b[0] - a[0]).concat([[X1, X1]])) { const xa = x, xb = g[0]; if (xa - xb > 0.5) { const za = rz(xa) + sd * 3.5, zb = rz(xb) + sd * 3.5, cx = (xa + xb) / 2, cz = (za + zb) / 2, m = bucket(cx, cz), ang = Math.atan2(zb - za, xb - xa), L = Math.hypot(xb - xa, zb - za), gg = gy(cx, cz);
+        m.push().T(cx, gg - 0.12, cz).RY(-ang); m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-L / 2, 0, -0.5, L / 2, 0.36, 0.5, 4); addBoxCollider(m, -L / 2, -0.4, L / 2, 0.4, 0, 1.3); m.pop(); }
+      x = g[1]; if (g[0] !== g[1]) { const gx = (g[0] + g[1]) / 2, gz = rz(gx) + sd * 3.5, m = bucket(gx, gz); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); for (const px of [g[0] + 0.15, g[1] - 0.15]) { const pz = rz(px) + sd * 3.5; m.cbox(px, gy(px, pz) - 0.1, pz, 0.16, 1.5, 0.16, 0); } } }
+  }
+  /* a wattle-and-rail fence round a close: posts and two rails on the three far sides */
+  const fence = (pts) => { for (let i = 0; i + 1 < pts.length; i++) { const a = pts[i], b = pts[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 2.2)), m = bucket((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+      m.mat(MAT.TIMBER, [0.32, 0.26, 0.19], 0.5);
+      for (let k = 0; k <= n; k++) { const x = a[0] + (b[0] - a[0]) * k / n, z = a[1] + (b[1] - a[1]) * k / n; m.cbox(x, gy(x, z) - 0.1, z, 0.1, 1.15, 0.1, 0); }
+      for (const y of [0.45, 0.9]) for (let k = 0; k < n; k++) { const x0 = a[0] + (b[0] - a[0]) * k / n, z0 = a[1] + (b[1] - a[1]) * k / n, x1 = a[0] + (b[0] - a[0]) * (k + 1) / n, z1 = a[1] + (b[1] - a[1]) * (k + 1) / n; m.beam([x0, gy(x0, z0) + y, z0], [x1, gy(x1, z1) + y, z1], 0.05, 0.08); }
+      const cx = (a[0] + b[0]) / 2, cz = (a[1] + b[1]) / 2; addBoxCollider(m, Math.min(a[0], b[0]) - 0.08, Math.min(a[1], b[1]) - 0.08, Math.max(a[0], b[0]) + 0.08, Math.max(a[1], b[1]) + 0.08, gy(cx, cz), gy(cx, cz) + 1.0); } };
+  const sheep = (x, z, ry) => { const m = bucket(x, z), g = gy(x, z); m.push().T(x, g, z).RY(ry); m.mat(MAT.PLAIN, [0.8, 0.76, 0.68], 0.6); m.ball(0, 0.58, 0, 0.55, 0.36, 0.34, 8, 5); m.mat(MAT.PLAIN, [0.2, 0.17, 0.14], 0.6); m.box(0.5, 0.52, -0.1, 0.78, 0.82, 0.1, 4); for (const lx of [-0.3, 0.3]) for (const lz of [-0.15, 0.15]) m.box(lx - 0.04, 0, lz - 0.04, lx + 0.04, 0.3, lz + 0.04, 4); m.pop(); };
+  const pig = (x, z, ry) => { const m = bucket(x, z), g = gy(x, z); m.push().T(x, g, z).RY(ry); m.mat(MAT.PLAIN, [0.78, 0.55, 0.5], 0.6); m.ball(0, 0.42, 0, 0.5, 0.3, 0.28, 8, 5); m.ball(0.5, 0.4, 0, 0.17, 0.17, 0.16, 6, 4); for (const lx of [-0.28, 0.28]) for (const lz of [-0.13, 0.13]) m.box(lx - 0.045, 0, lz - 0.045, lx + 0.045, 0.2, lz + 0.045, 4); m.pop(); };
+  const zN = x => rz(x) - 3.5, zS = x => rz(x) + 3.5;
+  /* north close: sheep; south close: pigs in the mud */
+  fence([[-82, zN(-82) - 0.5], [-82, -19], [-104, -19], [-104, zN(-104) - 0.5]]);
+  for (let i = 0; i < 6; i++) sheep(-84 - R() * 18, -17 + R() * 6.5, R() * 6.28);
+  fence([[-82, zS(-82) + 0.5], [-82, 9], [-104, 9], [-104, zS(-104) + 0.5]]);
+  { const m = bucket(-92, 4); m.mat(MAT.MUD, [0.15, 0.11, 0.08], 0.5); m.quad2([-95, gy(-95, 4) + 0.03, 2.5], [-95, gy(-95, 4) + 0.03, 6], [-88, gy(-88, 4) + 0.03, 6], [-88, gy(-88, 4) + 0.03, 2.5]); }
+  for (let i = 0; i < 4; i++) pig(-86 - R() * 16, 2.5 + R() * 5.5, R() * 6.28);
+}
