@@ -35,7 +35,7 @@ const SHELL_TONES = {      // narrow bands: variety comes from pitch, height, ri
 function shellDistrict(x, z) {
   if (z < -42) return 'chapelgate'; if (z > 34) return 'wharfside'; if (x > 56) return 'riverside'; if (x < -50) return 'westgate'; return 'market';
 }
-const LIME = { cream: [0.57, 0.54, 0.46], grey: [0.52, 0.52, 0.49], ochre: [0.56, 0.47, 0.33], pink: [0.54, 0.46, 0.41], sage: [0.48, 0.51, 0.45], bone: [0.57, 0.55, 0.49], dun: [0.36, 0.33, 0.27] };      // limewash is never white: dirty, at most about 0.8
+const LIME = { cream: [0.513, 0.486, 0.414], grey: [0.468, 0.468, 0.441], ochre: [0.504, 0.423, 0.297], pink: [0.486, 0.414, 0.369], sage: [0.432, 0.459, 0.405], bone: [0.513, 0.495, 0.441], dun: [0.29, 0.262, 0.205] };      // limewash is never white: dirty, at most about 0.8
 const SHELL_WALL = {      // [chance of limewash over the planks, chance of a stone ground floor, limewash tones, plank tone]
   market: [0.6, 0.75, ['cream', 'grey', 'ochre', 'pink', 'bone', 'sage'], [1, 1, 1]],
   chapelgate: [0.5, 0.95, ['grey', 'dun', 'bone', 'grey'], [0.8, 0.78, 0.76]],

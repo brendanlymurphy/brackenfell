@@ -279,7 +279,7 @@ function infShell(B, h, lo) {
       const c = (i + 0.5) * mF;
       if (k === 0) { if (i === Math.min(doorBay, nF - 1)) pl.front.push({ u0: c - 0.52, u1: c + 0.52, v0: 0, v1: 2.12, door: true }); else if (!lo && (nF < 3 || i % 2 === 0 || R() < 0.4)) pl.front.push(win(c, 0.5)); }
       else if (h.stairs && k === 1 && i === (h.stairs > 0 ? nF - 1 : 0)) pl.front.push({ u0: c - 0.52, u1: c + 0.52, v0: 0, v1: 2.12, door: true });
-      else if (!lo && (i + k) % 2 === (h.par || 0)) pl.front.push(win(c, 0.5));
+      else if (!lo && ((i + k) % 2 === (h.par || 0) || nF <= 3)) pl.front.push(win(c, 0.5));
       if (!lo && k > 0 && i % 2 === 1 && R() < 0.35) pl.back.push(win(c, 0.5));
       if (!lo && k === 0 && R() < 0.2) pl.back.push(win(c, 0.5));
     }
@@ -379,7 +379,7 @@ function infKitWalls(c, b, MS, frames, zone, sy, R, pass) {      // pass: 'ext' 
       if (o.door && o.def.kLamp && pass !== 'int') { const side = cu + hw + 1.0 < L ? 1 : -1; c.kDoorLamps.push({ F: frames[wn], wn, u: cu + side * (hw + 0.42), v: 1.5 * sy }); }
     }
   }
-  if (fl > 1) { plan[1] = { front: [], back: [], left: [], right: [] }; const nF = Math.max(2, Math.round(w / 2)), mF = w / nF; for (let i = 0; i < nF; i++) { const cu = (i + 0.5) * mF; if (i % 2 === 0) plan[1].front.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1, shutter: R() < 0.4 }); if (i % 2 === 1) plan[1].back.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1 }); } plan[1].left.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); plan[1].right.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); }
+  if (fl > 1) { plan[1] = { front: [], back: [], left: [], right: [] }; const nF = Math.max(2, Math.round(w / 2)), mF = w / nF; for (let i = 0; i < nF; i++) { const cu = (i + 0.5) * mF; if (i % 2 === 0 || nF <= 3) plan[1].front.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.8, v1: 1.95, shutter: R() < 0.4 }); if (i % 2 === 1) plan[1].back.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1 }); } plan[1].left.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); plan[1].right.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); }
   for (let k = 0; k < plan.length; k++) for (const wn in plan[k]) for (const p of plan[k][wn]) if (!p.door) {      // [fx2] four window designs: lattice casement, two-light with a mullion, small shuttered, wide shop window
     const cu = (p.u0 + p.u1) / 2, h = (((Math.floor(cu * 10) + Math.floor(site.x * 3) + Math.floor(site.z * 5) + k * 3 + wn.length) % 7) + 7) % 7; p.kind = h < 2 ? 0 : h < 4 ? 1 : h === 4 ? 2 : h === 5 ? 3 : 0;
     if (p.kind === 2) { p.u0 = cu - 0.3; p.u1 = cu + 0.3; p.v0 = k ? 1.2 : 1.15; p.v1 = p.v0 + 0.65; p.shutter = true; }
