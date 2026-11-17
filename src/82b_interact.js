@@ -138,9 +138,11 @@ IX.PUT = [['loaf', 'bread'], ['apple', 'apple'], ['candle', 'candle', 2], ['chee
 // ── what happens ──
 function ixOwned(it) { return !!it.owner; }
 // someone awake, near, in the same space as the player
+// [logic] a witness is on your floor and has a clear line to you: before, anyone awake within 9 m counted, through walls and floors
+function ixSees(n) { const P = Player.pos; if (Math.abs(n.pos[1] - P[1]) > 2.2) return false; try { return !World.sightBlocked(n.pos[0], n.pos[1] + 1.55, n.pos[2], P[0], P[1] + 1.2, P[2], 0.5); } catch (e) { return true; } }
 function ixWitness(extra) {
   const sp = ixSpace(Player.pos); let best = null, bd = 1e9;
-  for (const n of NPCS) { if (n.anim === 'lie' || n.anim === 'sleep' || ixSpace(n.pos) !== sp) continue; const d = hyp(n.pos[0] - Player.pos[0], n.pos[2] - Player.pos[2]); if (d < (extra || (sp ? 9 : 16)) && d < bd) { bd = d; best = n; } }
+  for (const n of NPCS) { if (n.anim === 'lie' || n.anim === 'sleep' || ixSpace(n.pos) !== sp) continue; const d = hyp(n.pos[0] - Player.pos[0], n.pos[2] - Player.pos[2]); if (d < (extra || (sp ? 9 : 16)) && d < bd && ixSees(n)) { bd = d; best = n; } }
   return best;
 }
 function ixTheft(it, value) {
@@ -150,7 +152,10 @@ function ixTheft(it, value) {
   return true;
 }
 const ixValue = list => list.reduce((a, [id, n]) => a + (id === 'gold' ? n : ((RPG.meta(id).value || 1) * n)), 0);
-function ixStolen(list) { S.stolen = S.stolen || {}; for (const [id, n] of list) if (id !== 'gold') S.stolen[id] = (S.stolen[id] || 0) + n; }
+function ixStolen(list) { S.stolen = S.stolen || {}; for (const [id, n] of list) S.stolen[id] = (S.stolen[id] || 0) + n; }
+// [logic] what was stolen and is still on you; coin counts (it was left out, so handing back an apple kept the stolen purse)
+const ixHeld = id => id === 'gold' ? S.gold : (S.items[id] || 0);
+function ixGiveBack(charge) { let owed = 0; for (const id in S.stolen || {}) { const n = S.stolen[id], h = Math.min(ixHeld(id), n); if (h > 0) { if (id === 'gold') gold(-h); else give(id, -h); } if (n > h) owed += (n - h) * (id === 'gold' ? 1 : (RPG.meta(id).value || 1)); } if (charge && owed > 0) { owed = Math.min(S.gold, owed); if (owed > 0) gold(-owed); } S.stolen = {}; return owed; }
 // the pick: a lock wants a key (S.items[key]) or a lockpick, which may snap
 function ixLockTry(lk) {          // null when it opens, else the message
   if (lk.key && has(lk.key)) return null;
@@ -200,10 +205,10 @@ function ixGuardComes() {
   fadeDo(() => { const a = Player.yaw, x = Player.pos[0] + Math.sin(a) * 1.4, z = Player.pos[2] - Math.cos(a) * 1.4; g.pos = [x, Player.pos[1], z]; g.path = null; g.yaw = headingTo(x, z, Player.pos[0], Player.pos[2]); g.anim = 'idle'; setTimeout(() => startTalk(g), 400); });
 }
 IX.crimeNode = function (g) {
-  const c = S.crime, fine = c.fine, held = Object.keys(S.stolen || {}).filter(id => has(id));
+  const c = S.crime, fine = c.fine, held = Object.keys(S.stolen || {}), all = held.length > 0 && held.every(id => ixHeld(id) >= S.stolen[id]);
   const done = () => { S.crime = null; S.stolen = {}; Audio2.ui(); };
   const opts = [];
-  if (held.length) opts.push(['Hand it back.', () => { for (const id of held) give(id, -Math.min(S.items[id], S.stolen[id] || 1)); S.crime = null; S.stolen = {}; save(); return node('Good. That’s the end of it. This time.'); }]);
+  if (all) opts.push(['Hand it back.', () => { ixGiveBack(false); S.crime = null; save(); return node('Good. That’s the end of it. This time.'); }]);
   opts.push(['Pay the fine. (' + fine + ' gold)', () => { if (S.gold < fine) return node('You haven’t the coin. Then it’s the cell. Come on.', [['Lead on.', () => IX.jail(g), 1]]); gold(-fine); done(); save(); return node('Paid. Keep your hands in your pockets in future.'); }]);
   opts.push(['Go quietly.', () => IX.jail(g), 1]);
   return node('Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is ' + fine + ' gold, or you hand it back, or you sleep in the cell and think about it.', opts);
@@ -215,9 +220,9 @@ IX.jail = function (g) {
   const c = Cells.by.guardhouse, P = c && c.ctx && (c.ctx.planDone || c.ctx.plan); if (!P) { gold(-Math.min(S.gold, S.crime ? S.crime.fine : 0)); S.crime = null; return node('There’s no cell to hold you. Go on, then.'); }
   setTimeout(() => endTalk && UI.talk && endTalk(), 0);
   fadeDo(() => {
-    for (const id in S.stolen || {}) if (has(id)) give(id, -Math.min(S.items[id], S.stolen[id])); S.crime = null; S.stolen = {}; S.jail = 1; Env.hour = 6.5; const r = RPG.st(); r.hp = RPG.MAXHP;
+    const owed = ixGiveBack(true); S.crime = null; S.jail = 1; const r = RPG.st(); if (Env.hour >= 6.5) r.day = (r.day || 0) + 1; r.hour = 6.5; Env.hour = 6.5; r.hp = RPG.MAXHP;       /* [logic] the cell is a night: the day turns, what was stolen is taken back, coin included, and what is already sold or eaten is taken in coin */
     const q = P.w2(-3.0, 0.02, 9.6); Cells.teleport({ p: q, yaw: PI }); IX.jailDoorMake();
-    toast('You wake on straw. The door is locked.'); save();
+    toast('You wake on straw. The door is locked.' + (owed > 0 ? ' Your purse is ' + owed + ' gold lighter: the price of what you no longer had to give back.' : '')); save();
   });
   return null;
 };
@@ -226,8 +231,8 @@ IX.release = function (how) { const c = Cells.by.guardhouse; if (!c) return; S.j
 // ── wiring into the story layer ──
 const _il2 = interactLabel, _iu2 = interactUse;
 interactLabel = function (it) {
-  if (it.kind === 'cont') return S.opened[it.id] ? 'Empty' : (it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb);
-  if (it.kind === 'loose') return it.gone ? null : 'Take ' + (it.item === 'gold' ? 'the coins' : ITEMS[it.item][0].toLowerCase());
+  if (it.kind === 'cont') return S.opened[it.id] ? 'Empty' : ((it.locked && !(S.unlocked && S.unlocked[it.id]) ? 'Open the locked ' + (it.ck === 'chest' ? 'chest' : 'cupboard') : it.verb) + (it.owner ? ' (not yours)' : ''));
+  if (it.kind === 'loose') return it.gone ? null : (it.owner ? 'Steal ' : 'Take ') + (it.item === 'gold' ? 'the coins' : ITEMS[it.item][0].toLowerCase());
   if (it.kind === 'seat') return IX.sit ? 'Stand up' : 'Sit down';
   if (it.kind === 'jaildoor') return S.jail ? (has('lockpick') ? 'Pick the lock' : 'Call for the guard') : null;
   if (it.bookId) return 'Read the ' + it.title.replace(/^A /, '').toLowerCase();
@@ -254,6 +259,7 @@ IX.restore = function () { for (const o of IX.loose) if (S.taken && S.taken[o.li
 IX.SAY = [
   ['*', () => S.crime && S.crime.fine > 0, 'I heard about the business with the shop. Keep your hands to yourself.'],
   ['*', () => Env.hour >= 22 || Env.hour < 4.5, 'You’re about late. Mind the dark.'],
+  ['*', () => !World.cell && Env.rain > 0.4, 'Foul day to be standing about in. Get under a roof.'],
   ['*', () => S.gold >= 120, 'You’re jingling, friend. Mind the lanes after dusk.'],
   ['*', () => S.flags.mineOpen && !S.flags.corwin, 'They say the old mine door is open. Folk are talking.'],
   ['hale', () => RPG.meta(RPG.st().eq.weapon).dmg >= 21, 'That’s a fine blade. Don’t draw it in my square.'],

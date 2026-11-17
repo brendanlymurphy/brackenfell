@@ -94,7 +94,7 @@ interiors lit by hearths and candles. As realistic as free art allows.
   - `fork-hx` house exteriors: `test/houses_survey.js` (13 visible types across 58 at Build 69); roofs by district (every roof was
     one shingle texture), then fronts designed one by one. The mine's remaining rooms (`fork-fx2`) wait behind it.
   - `fork-ch1` characters: paused until a town worker frees up (apron glitch, aprons varied, men's tunics, posture, hair).
-  - Logic, storylines, what people do, mechanics: asked of the second Claude Code session (`fork-logic`, docs/LOGIC.md).
+  - Logic, storylines, what people do, mechanics: asked of the second Claude Code session (`fork-logic`, docs/LOGIC.md). First pass done on `fork-logic`: 13 story faults, 8 routine faults and 9 rule faults fixed, each with a check (bot `logic`, gate step `people`); what is open and why is listed per part in docs/LOGIC.md (beds for Tobin and Aldous need the interiors worker).
 - From `fork-play` after Build 70: phones take the half-resolution ground pack by default (first visit 40.4 MB instead of 61.0,
   numbers in docs/DECISIONS.md); a reload in the cell no longer locks the player in; broken saves are mended or refused; the map
   shows you and the quest marks when you are indoors; one pill style for buttons; the quest banner is smaller and shorter;

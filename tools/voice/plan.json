@@ -1165,18 +1165,6 @@
    "src": "82_story.js"
   },
   {
-   "key": "3tayyo4wgi",
-   "speaker": "marta",
-   "kind": "line",
-   "text": "Yesterday’s, so it’s cheap. It will keep a week if you let it.",
-   "say": "Yesterday's, so it's cheap. It will keep a week if you let it.",
-   "voice": "bf_alice",
-   "speed": 1,
-   "pitch": 0,
-   "file": "aff15f09d93573.m4a",
-   "src": "82_story.js"
-  },
-  {
    "key": "1ytua3yx9sn",
    "speaker": "marta",
    "kind": "line",
@@ -1631,6 +1619,42 @@
    "pitch": 0,
    "file": "2412b0042e9fa9.m4a",
    "src": "93_inventory.js"
+  },
+  {
+   "key": "2fam7ga9dxu",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Not while the watch is asking after you. Square it with the Warden, then we’ll talk iron.",
+   "say": "Not while the watch is asking after you. Square it with the Warden, then we'll talk iron.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "f892e1b0d0524d.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "8r5ho5dkfa",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "Not today, dear. Hale has been asking after you, and I’ll not buy from a name he is asking after.",
+   "say": "Not today, dear. Hale has been asking after you, and I'll not buy from a name he is asking after.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "0cf24ee2c8c0fa.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "mzwlg9yw2t",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Not while the watch is asking after you. I’ve a name to keep.",
+   "say": "Not while the watch is asking after you. I've a name to keep.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "80df5bc6a64e73.m4a",
+   "src": "94b_economy.js"
   },
   {
    "key": "liqjsmrlxm",

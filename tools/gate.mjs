@@ -65,7 +65,7 @@ const STEPS = [
     return { out, fail: evalFail(out) || (!m ? 'no result' : m[1] !== 'WebGPU' ? 'ran on ' + m[1] : +m[4] ? m[4] + ' GPU errors' : null), note: m ? m[1] + ' ' + m[2] + ' / ' + m[3] + ' draws' : '' }; } },
   // the play bot (test/playbot.mjs): real keys, clicks and taps. Every bug in docs/BUGS.md that was fixed is held by one of these.
   { id: 'bot-story', quick: 1, why: 'the story to both endings by input, a reload at every checkpoint', run: bot(['--run', 'story,reload']) },
-  { id: 'bot-play', why: 'every conversation at seven points of the story, side quests, shop, perks, board, theft and jail, death, other orders, saves of Builds 45, 52, 60, the mine fought through, the nine secrets', run: bot(['--run', 'story,talks,side,crime,death,orders,saves,mine,secrets,moments']) },
+  { id: 'bot-play', why: 'every conversation at seven points of the story, side quests, shop, perks, board, theft and jail, death, other orders, saves of Builds 45, 52, 60, the mine fought through, the nine secrets', run: bot(['--run', 'story,talks,side,crime,death,orders,saves,mine,secrets,moments,logic']) },
   { id: 'bot-phone', why: '844 x 390 with touch, a notch and a home bar: the story by taps, every window fits and can be reached, turning the phone', run: bot(['--run', 'story,phone,life', '--touch', '--size', '844x390']) },
   { id: 'bot-sweep', why: 'E on every seventh thing in the world', run: bot(['--run', 'story,sweep', '--every', '7']) },
   { id: 'bot-soak', why: '30 minutes of play in one page: memory, tick time, people stuck or under the floor', run: bot(['--run', 'story,soak', '--minutes', '30']) },

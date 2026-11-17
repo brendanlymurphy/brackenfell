@@ -487,11 +487,6 @@
   },
   {
    "speaker": "marta",
-   "text": "Yesterday’s, so it’s cheap. It will keep a week if you let it.",
-   "where": "82_story.js:121"
-  },
-  {
-   "speaker": "marta",
    "text": "You’ve one already, dear. Don’t be greedy with light.",
    "where": "82_story.js:121"
   },
@@ -513,87 +508,87 @@
   {
    "speaker": "hale",
    "text": "Good. That’s the end of it. This time.",
-   "where": "82b_interact.js:206"
+   "where": "82b_interact.js:211"
   },
   {
    "speaker": "hale",
    "text": "You haven’t the coin. Then it’s the cell. Come on.",
-   "where": "82b_interact.js:207"
+   "where": "82b_interact.js:212"
   },
   {
    "speaker": "hale",
    "text": "Paid. Keep your hands in your pockets in future.",
-   "where": "82b_interact.js:207"
+   "where": "82b_interact.js:212"
   },
   {
    "speaker": "hale",
    "text": "There’s no cell to hold you. Go on, then.",
-   "where": "82b_interact.js:215"
+   "where": "82b_interact.js:220"
   },
   {
    "speaker": "greta",
    "text": "Eat it while it’s hot. I don’t do cold.",
-   "where": "82b_interact.js:249"
+   "where": "82b_interact.js:254"
   },
   {
    "speaker": "greta",
    "text": "Three gold, love. Your purse says otherwise.",
-   "where": "82b_interact.js:249"
+   "where": "82b_interact.js:254"
   },
   {
    "speaker": "greta",
    "text": "Four gold, love, and I’ll not haggle with a purse that light.",
-   "where": "82b_interact.js:250"
+   "where": "82b_interact.js:255"
   },
   {
    "speaker": "greta",
    "text": "Up the stairs, the bed by the window. Sleep till you’re done.",
-   "where": "82b_interact.js:250"
+   "where": "82b_interact.js:255"
   },
   {
    "speaker": "hale",
    "text": "That’s a fine blade. Don’t draw it in my square.",
-   "where": "82b_interact.js:259"
+   "where": "82b_interact.js:264"
   },
   {
    "speaker": "brandt",
    "text": "Good. It sits well in your hand. My work.",
-   "where": "82b_interact.js:260"
+   "where": "82b_interact.js:265"
   },
   {
    "speaker": "brandt",
    "text": "Where did you get that? Those are my grandfather’s dies, fifty years back. Old Mine steel.",
-   "where": "82b_interact.js:261"
+   "where": "82b_interact.js:266"
   },
   {
    "speaker": "maren",
    "text": "You’re bleeding on my floor. Sit.",
-   "where": "82b_interact.js:262"
+   "where": "82b_interact.js:267"
   },
   {
    "speaker": "greta",
    "text": "Off down a hole, love? I’ll keep the bed made.",
-   "where": "82b_interact.js:263"
+   "where": "82b_interact.js:268"
   },
   {
    "speaker": "marta",
    "text": "Odd thing to carry. I’ll not ask.",
-   "where": "82b_interact.js:264"
+   "where": "82b_interact.js:269"
   },
   {
    "speaker": "aldous",
    "text": "The Dawn keep you. You look as though you have seen the dead.",
-   "where": "82b_interact.js:265"
+   "where": "82b_interact.js:270"
   },
   {
    "speaker": "finn",
    "text": "Still thinking about that man, aren’t you. So am I.",
-   "where": "82b_interact.js:266"
+   "where": "82b_interact.js:271"
   },
   {
    "speaker": "ivo",
    "text": "A lantern by day. Either you’re lost, or you’re going somewhere I’d not.",
-   "where": "82b_interact.js:267"
+   "where": "82b_interact.js:272"
   },
   {
    "speaker": "rowan",
@@ -661,84 +656,99 @@
    "where": "93_inventory.js:69"
   },
   {
+   "speaker": "brandt",
+   "text": "Not while the watch is asking after you. Square it with the Warden, then we’ll talk iron.",
+   "where": "94b_economy.js:38"
+  },
+  {
+   "speaker": "marta",
+   "text": "Not today, dear. Hale has been asking after you, and I’ll not buy from a name he is asking after.",
+   "where": "94b_economy.js:46"
+  },
+  {
+   "speaker": "brandt",
+   "text": "Not while the watch is asking after you. I’ve a name to keep.",
+   "where": "94b_economy.js:46"
+  },
+  {
    "speaker": "marta",
    "text": "Let’s have a look, dear.",
-   "where": "94b_economy.js:47"
+   "where": "94b_economy.js:49"
   },
   {
    "speaker": "marta",
    "text": "Whale oil. It stinks and it burns. Don’t spill it near the candles.",
-   "where": "94b_economy.js:50"
+   "where": "94b_economy.js:52"
   },
   {
    "speaker": "brandt",
    "text": "Grey silver, never stamped. Aye, I can. Three bars and ninety gold, and the edge will outlast the blade. Mind, I’ll want to know where you had it.",
-   "where": "94b_economy.js:51"
+   "where": "94b_economy.js:53"
   },
   {
    "speaker": "brandt",
    "text": "Done. Don’t draw it in the Hart.",
-   "where": "94b_economy.js:51"
+   "where": "94b_economy.js:53"
   },
   {
    "speaker": "greta",
    "text": "They say Tobin’s been up the Watch Bell more than the Watch has. A tin box, a lockpick, and a boy who will not say what he saw from the top.",
-   "where": "94b_economy.js:77"
-  },
-  {
-   "speaker": "greta",
-   "text": "There’s a stone in the terrace wall below the Elder’s plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.",
-   "where": "94b_economy.js:78"
-  },
-  {
-   "speaker": "greta",
-   "text": "The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.",
-   "where": "94b_economy.js:79"
-  },
-  {
-   "speaker": "greta",
-   "text": "The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.",
    "where": "94b_economy.js:80"
   },
   {
    "speaker": "greta",
-   "text": "The Magpie walks at dusk from the square to somewhere west of the weavers, same road each time. Nobody follows her. You’d have to be patient.",
+   "text": "There’s a stone in the terrace wall below the Elder’s plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.",
    "where": "94b_economy.js:81"
   },
   {
    "speaker": "greta",
-   "text": "The shut house on the south lane. Don’t ask Marta. Don’t ask Finn. Ask nobody. Take a key, if you’ve one with a wren on it.",
+   "text": "The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.",
    "where": "94b_economy.js:82"
   },
   {
    "speaker": "greta",
-   "text": "The mine door has been barred for fifty years. The Sexton kept the key, and old Sextons keep everything.",
+   "text": "The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.",
    "where": "94b_economy.js:83"
   },
   {
    "speaker": "greta",
-   "text": "My grandmother said the Old Mine’s foreman kept a strongbox below and wore the key round his neck. Nobody has been down to ask him.",
+   "text": "The Magpie walks at dusk from the square to somewhere west of the weavers, same road each time. Nobody follows her. You’d have to be patient.",
    "where": "94b_economy.js:84"
   },
   {
    "speaker": "greta",
-   "text": "A drowned man on the wharf, dry as bone. The wise folk are keeping their windows shut.",
+   "text": "The shut house on the south lane. Don’t ask Marta. Don’t ask Finn. Ask nobody. Take a key, if you’ve one with a wren on it.",
    "where": "94b_economy.js:85"
   },
   {
    "speaker": "greta",
-   "text": "Hale cries on the last day of the month. Pip told me. Pip tells everybody.",
+   "text": "The mine door has been barred for fifty years. The Sexton kept the key, and old Sextons keep everything.",
    "where": "94b_economy.js:86"
   },
   {
    "speaker": "greta",
-   "text": "The Elder talks to the lake. Always has. Says it answers.",
+   "text": "My grandmother said the Old Mine’s foreman kept a strongbox below and wore the key round his neck. Nobody has been down to ask him.",
    "where": "94b_economy.js:87"
   },
   {
    "speaker": "greta",
+   "text": "A drowned man on the wharf, dry as bone. The wise folk are keeping their windows shut.",
+   "where": "94b_economy.js:88"
+  },
+  {
+   "speaker": "greta",
+   "text": "Hale cries on the last day of the month. Pip told me. Pip tells everybody.",
+   "where": "94b_economy.js:89"
+  },
+  {
+   "speaker": "greta",
+   "text": "The Elder talks to the lake. Always has. Says it answers.",
+   "where": "94b_economy.js:90"
+  },
+  {
+   "speaker": "greta",
    "text": "Nothing new, love. Same faces, same ale.",
-   "where": "94b_economy.js:91"
+   "where": "94b_economy.js:94"
   },
   {
    "speaker": "rowan",
@@ -808,27 +818,27 @@
   {
    "speaker": "ivo",
    "text": "Good. That’s the end of it. This time.",
-   "where": "82b_interact.js:206"
+   "where": "82b_interact.js:211"
   },
   {
    "speaker": "ivo",
    "text": "You haven’t the coin. Then it’s the cell. Come on.",
-   "where": "82b_interact.js:207"
+   "where": "82b_interact.js:212"
   },
   {
    "speaker": "ivo",
    "text": "Paid. Keep your hands in your pockets in future.",
-   "where": "82b_interact.js:207"
+   "where": "82b_interact.js:212"
   },
   {
    "speaker": "ivo",
    "text": "There’s no cell to hold you. Go on, then.",
-   "where": "82b_interact.js:215"
+   "where": "82b_interact.js:220"
   },
   {
    "speaker": "marta",
    "text": "You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.",
-   "where": "94b_economy.js:47"
+   "where": "94b_economy.js:49"
   }
  ],
  "dynamic": [
@@ -859,7 +869,7 @@
   },
   {
    "speaker": "",
-   "where": "82b_interact.js:209",
+   "where": "82b_interact.js:214",
    "raw": "'Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is ' + fine + ' gold, or you hand it back, or you sleep in the cell and th"
   },
   {
@@ -869,27 +879,32 @@
   },
   {
    "speaker": "",
-   "where": "94b_economy.js:39",
+   "where": "94b_economy.js:40",
    "raw": "'That’s ' + pr + ' gold, and you’ve ' + S.gold + '. The board in the square pays for honest work.'"
   },
   {
    "speaker": "brandt",
-   "where": "94b_economy.js:51",
+   "where": "94b_economy.js:53",
    "raw": "'Ninety gold, and you’ve ' + S.gold + '.'"
   },
   {
    "speaker": "-",
-   "where": "94b_economy.js:64",
+   "where": "94b_economy.js:67",
    "raw": "j.title + ': ' + (j.have ? 'three flasks of lamp oil, you have ' + (S.items.oil || 0) : r.job.n + ' of ' + j.goal) + '.'"
   },
   {
    "speaker": "-",
-   "where": "94b_economy.js:66",
+   "where": "94b_economy.js:69",
    "raw": "d.text + '\\n\\nYou take the notice.'"
   },
   {
+   "speaker": "-",
+   "where": "94b_economy.js:71",
+   "raw": "(S.flags.mineOpen ? 'Notices, pinned over notices. Three of them are in a clean hand and have not yellowed.' : 'Notices, pinned over notices. Two of them are in"
+  },
+  {
    "speaker": "greta",
-   "where": "94b_economy.js:91",
+   "where": "94b_economy.js:94",
    "raw": "pick[0][1]"
   },
   {

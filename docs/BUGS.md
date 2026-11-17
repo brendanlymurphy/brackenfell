@@ -25,6 +25,9 @@ What the bot cannot see: frame rate on a real phone, flicker, anything audible, 
 | 14 | S1 | Reloading while held in the cell left the player locked in for good: the cell door (the thing you use to call the guard or pick the lock) was only made at the moment of being jailed. | Steal in front of a witness, go quietly, close the tab in the cell, reopen, Continue. | The door is made again when a save with `S.jail` is loaded (82b_interact.js). | bot `moments` (leave in the cell, come back, get out by the door) |
 | 15 | S1 | A save whose parts were the wrong kind of thing (storage cut short, a hand edit: gold as text, items null) made Continue throw; the title screen stayed up and the game could not be started without clearing site data. | Put `{"v":2,"S":{"gold":"many","items":null,"q":[],"flags":7}}` in `brackenfell.v1`, reload, Continue. | `saneSave` (80_game.js) mends what it can and drops the rest; a save that is not a save at all offers a new game. | bot `moments` (three broken saves) |
 
+Faults of sense rather than of function (the story contradicting itself, routines nobody would keep, rules that can be milked) are in
+`docs/LOGIC.md`, with their checks in the bot's `logic` scenario.
+
 ## Open
 
 | # | Sev | What | How to reproduce | Why it is open |

@@ -131,7 +131,19 @@ function npcSnapAll() { if (typeof npcClaimReset === 'function') npcClaimReset()
 function npcRow(n) {
   const sc = n.override || n.def.sched; let h = Env.hour; if (h < sc[0][0]) h += 24;
   let row = sc[sc.length - 1]; for (const r of sc) if (r[0] <= h) row = r;
+  if (!n.override && npcRaining() && NPC_IDLE[row[2]] && npcOutdoors(row[1])) { const sh = npcShelter(n); if (sh) return sh; }
   return row;
+}
+// [logic] rain: whoever is out of doors with nothing that must be done there (a bench, a chat at the well, a walk, the lute at the cross) goes under their
+// own roof until it stops; people at work (the field, the forge, the watch, the nets) stay. On above 0.4 of rain, off below 0.1, so a shower's edge does not send people in and out.
+const NPC_IDLE = { idle: 1, sit: 1, lute: 1, sweep: 1 };
+let _npcRain = false;
+function npcRaining() { const r = typeof Env !== 'undefined' ? (Env.rain || 0) : 0; if (r > 0.4) _npcRain = true; else if (r < 0.1) _npcRain = false; return _npcRain; }
+function npcOutdoors(spot) { const nm = Array.isArray(spot) ? spot[0] : spot, sp = World.spots[nm]; return !!sp && typeof Cells !== 'undefined' && Cells.spaceOf(sp.p) === 0; }
+function npcShelter(n) {
+  if (n._shelter !== undefined) return n._shelter;
+  let best = null; for (const r of n.def.sched) { if (Array.isArray(r[1]) || r[2] === 'lie' || npcOutdoors(r[1]) || !World.spots[r[1]] || World.spots[r[1]].lie) continue; if (!best || (r[2] === 'sit' && best[2] !== 'sit')) best = r; }
+  return (n._shelter = best ? [0, best[1], best[2] === 'lute' ? 'lute' : best[2] === 'sit' ? 'sit' : 'idle'] : null);
 }
 function npcArrive(n, spotName, anim) {
   const sp = World.spots[spotName]; if (!sp) { console.warn('missing spot', spotName); return; }

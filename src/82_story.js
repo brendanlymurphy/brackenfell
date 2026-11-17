@@ -4,7 +4,7 @@
 Object.assign(ITEMS, {
   tally: ['Miner’s tally token', 'Brass, stamped OM 14. It was round a drowned man’s neck on a bootlace.'],
   minekey: ['Sexton’s mine key', 'Long, black and heavier than it looks. The bow is cut with a pick and a bell.'],
-  lantern: ['Miner’s lantern', 'Horn panes, a stub of wick and a tin of oil. Down there it is the difference between a path and a wall.', { value: 8, cost: 12 }],
+  lantern: ['Miner’s lantern', 'Horn panes, a stub of wick and a tin of oil. Down there it is the difference between a path and a wall. A light is seen from further off than it shows you: douse it to pass something unnoticed.', { value: 8, cost: 12 }],
   ledger: ['Sexton’s ledger', 'A thin book bound in sealskin. The last pages are in two hands.'],
   journal: ['Corwin’s journal', 'Water-stained, pages stuck together at the corners. The writing gets smaller towards the end.'],
 });
@@ -118,7 +118,7 @@ addOpt('pip', n => !S.flags.act1 ? ['What’s happening at the wharf?', () => { 
 const PIP_SEEN = [[() => !secFlag('attic'), 'There’s a trunk up on the Hart’s roof walk. I climbed up. It’s locked, and Greta says it isn’t hers, but she looked cross.'], [() => !secFlag('meetpouch'), 'There’s lights behind the chapel after midnight. Two people. I’m not allowed out, so I didn’t see them.']];
 addOpt('pip', n => ['Seen anything odd, Pip?', () => { S.pipSeen = S.pipSeen || {}; const i = PIP_SEEN.findIndex((x, k) => x[0]() && !S.pipSeen[k]); if (i < 0) return node('Nothing. I’m being good today.'); S.pipSeen[i] = 1; save(); return node(PIP_SEEN[i][1]); }]);
 const _marta82 = TALK.marta;
-TALK.marta = function () { const n = _marta82(); if (n && n.o) { const i = n.o.indexOf(bye); n.o.splice(i < 0 ? n.o.length : i, 0, ['A rye loaf. (2 gold)', () => TALK.buy('bread', 2, 'Yesterday’s, so it’s cheap. It will keep a week if you let it.')]); if (S.flags.pell || S.flags.mineOpen || has('minekey')) n.o.splice(n.o.indexOf(bye) < 0 ? n.o.length : n.o.indexOf(bye), 0, ['A miner’s lantern. (12 gold)', () => { if (has('lantern')) return node('You’ve one already, dear. Don’t be greedy with light.'); return TALK.buy('lantern', 12, 'Fill it before you go and mind the oil. Where you’re going, you’ll want it.'); }]); } return n; };
+TALK.marta = function () { const n = _marta82(); if (n && n.o) { const i = n.o.indexOf(bye); if (S.flags.pell || S.flags.mineOpen || has('minekey')) n.o.splice(n.o.indexOf(bye) < 0 ? n.o.length : n.o.indexOf(bye), 0, ['A miner’s lantern. (12 gold)', () => { if (has('lantern')) return node('You’ve one already, dear. Don’t be greedy with light.'); return TALK.buy('lantern', 12, 'Fill it before you go and mind the oil. Where you’re going, you’ll want it.'); }]); } return n; };
 const _rowan82 = TALK.rowan;
 TALK.rowan = function () {
   if (S.flags.act1 && !S.flags.rowanAsked) return node('Sit down, you’re making me tired. ... Hale has read it, then. I thought he might. I thought it would be me they came for one day.\n\nThe cave on the lake shore. The cellar of the Hart. I’ll tell you the rest, but not on my feet, and not today.', [['I’ll be back.', () => { S.flags.rowanAsked = 1; S.flags.rowanDay = RPG.st().day || 0; save(); return null; }, 1]]);
