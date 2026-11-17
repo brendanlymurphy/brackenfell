@@ -245,7 +245,8 @@ function buildVillage() {
   leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
   for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [1.7 * k, 1.35 * k, 0.98 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
   leaf.mat(MAT.PLANKS, [1.2, 0.95, 0.7], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
-  leaf.mat(MAT.METAL, [0.42, 0.4, 0.37]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
+  leaf.mat(MAT.METAL, [0.17, 0.155, 0.14]);   // [fx2] straps read bright blue indoors (sky reflection): dark blackened iron
+   for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   const leafItem = skin.add(leaf);
   for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
@@ -270,8 +271,8 @@ function buildVillage() {
       if (hyp(x - SQUARE.x, z - SQUARE.z) < Math.max(SQUARE.rx, SQUARE.rz) + 1) return false;
       for (const c of World.colliders) {
         if (c.r !== undefined) { if (hyp(x - c.x, z - c.z) < c.r + rad) return false; continue; }
-        if (Math.max(c.hx, c.hz) > 1.6) continue;                               // walls: the pile is meant to lean on those
         const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz;
+        if (Math.max(c.hx, c.hz) > 1.6) { if (c.y1 - c.y0 > 6 && Math.abs(dx) < c.hx + 0.1 && Math.abs(dz) < c.hz + 0.1) return false; continue; }   // walls: the pile is meant to lean on those, but never from inside a building body ([fx1])
         if (hyp(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < rad) return false;
       }
       return true;
@@ -300,6 +301,7 @@ function buildVillage() {
         if ((s.bare || []).some(b => lx > b[0] - 0.6 && lx < b[2] + 0.6 && lz > b[1] - 0.6 && lz < b[3] + 0.6)) continue;
         const p = siteToWorld(s, lx, lz);
         if (!free(p[0], p[1], 1.0) || Math.abs(Terrain.y(p[0], p[1]) - s.y) > 0.45) continue;
+        if (SITES.some(o => { if (o === s) return false; const q = (p[0] - o.x) * Math.cos(o.yaw) + (p[1] - o.z) * Math.sin(o.yaw), r = -(p[0] - o.x) * Math.sin(o.yaw) + (p[1] - o.z) * Math.cos(o.yaw); return Math.abs(q) < o.w / 2 + 0.5 && Math.abs(r) < o.d / 2 + 0.5; })) continue;   // [fx1] terraced shops stand 0.3 m apart: a pile in that gap was inside the neighbour
         const kind = Rd.pick(kinds);
         put(p[0], p[1], s.yaw + out + PI / 2, piles[kind]); k++;
       }

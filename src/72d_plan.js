@@ -143,37 +143,101 @@ function pWinZone(w) {
   return wl.ax === 'x' ? { x0: w.pos - hw, x1: w.pos + hw, z0: ns < 0 ? wl.c - 0.2 : wl.c - 0.2 - depth, z1: ns < 0 ? wl.c + 0.2 + depth : wl.c + 0.2 } : { x0: ns < 0 ? wl.c - 0.2 : wl.c - 0.2 - depth, x1: ns < 0 ? wl.c + 0.2 + depth : wl.c + 0.2, z0: w.pos - hw, z1: w.pos + hw };
 }
 // the footprint of a w x d item (w along x, d along z before turning) turned by rot (a multiple of PI/2)
-function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2))) & 1; return q ? rectOf(cx, cz, d, w) : rectOf(cx, cz, w, d); }
-// put an item: it is drawn with draw(m) at (cx, cz) turned by rot, on the level's floor (or at y = lift above it), and recorded. Returns the record or null when it does not fit.
+function pFoot(cx, cz, w, d, rot) { const c = Math.abs(Math.cos(rot)), s = Math.abs(Math.sin(rot)); return rectOf(cx, cz, w * c + d * s, w * s + d * c); }          // [fx2] honest for any turn: a crate turned 0.4 rad is wider than its square
+// [fx2] MEASURED PLACEMENT. An item is drawn first and measured (every vertex it made and every kit piece's box, in the plan's frame); only then is it kept.
+// Its recorded footprint is what it really occupies (not the w x d its caller guessed). When the measured thing pokes through its room's walls, through a solid
+// that is already there, into a doorway or stair clearance, or (when tall) across a window, it is undone (mesh, kit pieces, colliders, lights, emitters) and the
+// caller tries the next place. So no generator can put a footprint lie into the world: a flaw of this kind disappears from all interiors at once.
+let P_REC = null;
+const pRecBegin = defer => (P_REC = { parts: [], defer: !!defer, pend: [] });
+const pRecEnd = (rc, m, t0) => { if (!rc) return; rc.t0 = t0; rc.t1 = m.ni; P_REC = null; };
+const P_ROUND = /^(Barrel|wine_barrel|wooden_barrels|Vase|ceramic|Cauldron|Stool|painted_wooden_stool|Candle|CandleStick|brass_candle|wooden_candlestick|Bucket|wooden_bucket|Mug|Anvil)/;
+function pToLocal(P) { if (P._tl) return P._tl; const T = P.T, ax = [T[0], T[1], T[2]], ay = [T[4], T[5], T[6]], az = [T[8], T[9], T[10]], o = [T[12], T[13], T[14]]; return P._tl = (x, y, z) => { const dx = x - o[0], dy = y - o[1], dz = z - o[2]; return [dx * ax[0] + dy * ax[1] + dz * ax[2], dx * ay[0] + dy * ay[1] + dz * ay[2], dx * az[0] + dy * az[1] + dz * az[2]]; }; }
+// the box (plan frame) of what was drawn since rec began: { min, max } or null
+function pMeasure(P, m, rc) {
+  const to = pToLocal(P), min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9], g = p => { for (let k = 0; k < 3; k++) { if (p[k] < min[k]) min[k] = p[k]; if (p[k] > max[k]) max[k] = p[k]; } }; let any = false;
+  const f = m.f, idx = m.idx, seen = new Set();
+  for (let i = rc.t0; i < rc.t1; i++) { const v = idx[i]; if (seen.has(v)) continue; seen.add(v); g(to(f[v * 8], f[v * 8 + 1], f[v * 8 + 2])); any = true; }
+  for (const pt of rc.parts) {
+    const pc = Kit.pieces[pt.name]; if (!pc) continue; const M = pt.M;
+    if (P_ROUND.test(pt.name)) { const e = M.elements, ex = Math.hypot(e[0], e[1], e[2]) * (pc.max[0] - pc.min[0]), ez = Math.hypot(e[8], e[9], e[10]) * (pc.max[2] - pc.min[2]), r = Math.max(ex, ez) / 2, h = Math.hypot(e[4], e[5], e[6]) * (pc.max[1] - pc.min[1]) / 2, v = new THREE.Vector3((pc.min[0] + pc.max[0]) / 2, (pc.min[1] + pc.max[1]) / 2, (pc.min[2] + pc.max[2]) / 2).applyMatrix4(M), w = to(v.x, v.y, v.z); g([w[0] - r, w[1] - h, w[2] - r]); g([w[0] + r, w[1] + h, w[2] + r]); any = true; continue; }
+    const q = Kit.box(pt.name, M); if (!q) continue; for (let i = 0; i < 8; i++) g(to(i & 1 ? q.max[0] : q.min[0], i & 2 ? q.max[1] : q.min[1], i & 4 ? q.max[2] : q.min[2])); any = true;
+  }
+  return any ? { min, max } : null;
+}
+// everything an undone draw must give back
+function pSnap(P, m) { const W = World; return { nv: m.nv, ni: m.ni, own: (m.own || []).length, col: W.colliders.length, flr: W.floors.length, lit: W.lights.length, emi: W.emitters.length, ixn: W.interact.length, lc: Object.assign({}, KITP.lc), seed: m.seed }; }
+function pUndo(P, m, sn) { const W = World; m.nv = sn.nv; m.ni = sn.ni; if (m.own) m.own.length = sn.own; W.colliders.length = sn.col; W.floors.length = sn.flr; W.lights.length = sn.lit; W.emitters.length = sn.emi; W.interact.length = sn.ixn; KITP.lc = sn.lc; }
+function pCommitKit(m, rc) { const z = m.m1; for (const [mm, pp, ex] of rc.pend) kaddNow(mm, pp, ex); m.m1 = z; rc.pend.length = 0; }
+// does the measured box b (plan frame, level k) sit on the floor of room without going through anything? returns '' or why not
+function pBoxOK(P, room, b, o, flat) {
+  const k = room.k, a = room.in, L = P.lv[k], tol = 0.02;
+  if (b.min[0] < a.x0 - tol || b.max[0] > a.x1 + tol || b.min[2] < a.z0 - tol || b.max[2] > a.z1 + tol) return 'wall';
+  if (b.max[1] > L.y + L.H + 0.02 && !o.tall) return 'ceiling';
+  if (flat) return '';
+  const r = { x0: b.min[0], x1: b.max[0], z0: b.min[2], z1: b.max[2] }, lifted = (o.lift || 0) > 0.1;
+  if (!lifted) for (const it of P.items) {
+    if (it.k !== k || !P_SOLID[it.kind]) continue; const ib = it.bx;
+    if (ib && it.kind !== 'stair' && it.kind !== 'hole') { const ox = Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]), oz = Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]), oy = Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]); if (ox > 0.02 && oz > 0.02 && !(o.allow && o.allow.includes(it.kind))) return 'item ' + it.id; }
+    else if (rOv(r, it, 0.02) && !(it.kind === 'hearth' && o.allow && o.allow.includes('hearth'))) return 'item ' + it.id;
+  }
+  for (const q of P.wallItems) if (q.k === k && q.bx) { const ib = q.bx; if (Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]) > 0.03 && Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]) > 0.03 && Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]) > 0.03) return 'hung ' + q.id; }
+  if (!o.noClear) for (const z of P.clear) if (z.k === k && rOv(r, z, 0.01) && !(o.allow && o.allow.includes(z.kind))) return 'clear ' + z.kind;
+  if (b.max[1] - L.y > 1.0 && !o.lowOk && (o.h || 1) > 0.85) for (const w of P.windows) if (w.k === k && w.room === room && rOv(r, pWinZone(w), 0.01)) return 'window';
+  return '';
+}
+// put an item: it is drawn with draw(m) at (cx, cz) turned by rot, on the level's floor (or at y = lift above it), measured, and recorded. Returns the record or null when it does not fit.
+// o._hon: shared by the candidates of one search (pFree, pWallSlot): the first measurement gives the others their real footprint before anything is drawn.
 function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
-  o = o || {}; const r = pFoot(cx, cz, w, d, rot);
+  o = o || {}; let r = pFoot(cx, cz, w, d, rot); if (TEST && TEST.nomeasure) o = Object.assign({}, o, { nomeasure: true, _hon: null });
+  const hon = o._hon; if (hon && hon.rel) r = { x0: Math.min(r.x0, cx + hon.rel.x0), x1: Math.max(r.x1, cx + hon.rel.x1), z0: Math.min(r.z0, cz + hon.rel.z0), z1: Math.max(r.z1, cz + hon.rel.z1) };
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
-  const L = P.lv[room.k], m = P.c.int, t0 = m.ni; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]);          // owner ranges: test/audit.js names the thing a face belongs to
-  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
+  if (hon && hon.rel && pBoxOK(P, room, { min: [r.x0, P.lv[room.k].y + 0.1, r.z0], max: [r.x1, P.lv[room.k].y + h, r.z1] }, o, o.flat)) return null;
+  const L = P.lv[room.k], m = P.c.int, sn = pSnap(P, m), t0 = m.ni, rc = pRecBegin(true), flat = !!o.flat;
+  at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); pRecEnd(rc, m, t0);
+  const b = pMeasure(P, m, rc);
+  if (b) {
+    const why = o.nomeasure ? '' : pBoxOK(P, room, b, o, flat);
+    if (hon) hon.rel = { x0: Math.min(hon.rel ? hon.rel.x0 : 0, b.min[0] - cx), x1: Math.max(hon.rel ? hon.rel.x1 : 0, b.max[0] - cx), z0: Math.min(hon.rel ? hon.rel.z0 : 0, b.min[2] - cz), z1: Math.max(hon.rel ? hon.rel.z1 : 0, b.max[2] - cz) };
+    if (why) { pUndo(P, m, sn); P.refused = (P.refused || 0) + 1; (P.refusedWhy = P.refusedWhy || []).push(name + ' @' + cx.toFixed(2) + ',' + cz.toFixed(2) + ' box ' + b.min.map(v => v.toFixed(2)) + ' / ' + b.max.map(v => v.toFixed(2)) + ' ' + why.split(' ')[0] + (why.indexOf(' ') > 0 ? ' ' + why.slice(why.indexOf(' ') + 1) : '')); return null; }
+    r = { x0: Math.max(b.min[0], room.in.x0), x1: Math.min(b.max[0], room.in.x1), z0: Math.max(b.min[2], room.in.z0), z1: Math.min(b.max[2], room.in.z1) };          // the recorded footprint is what it really occupies
+  }
+  pCommitKit(m, rc); (m.own = m.own || []).push([t0, m.ni, name]);
+  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, hh: b ? Math.max(h, b.max[1] - L.y) : h, bx: b || null, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back }); it.rec = rc; rc.t1 = m.ni;
   if (o.flat) it.kind = 'rug'; return it;
 }
 // along a wall of the room, w wide (along the wall) and d deep; o.at: 'start' | 'end' | 'mid' | a coordinate along the wall to be near. Tries every 0.25 m.
 function pWallSlot(P, room, side, w, d, o) {
-  o = o || {}; const a = room.in, hor = side === 'n' || side === 's', lo = (hor ? a.x0 : a.z0) + w / 2, hi = (hor ? a.x1 : a.z1) - w / 2, pts = [];
+  o = o || {}; const a = room.in, hor = side === 'n' || side === 's', rel = o._hon && o._hon.rel, pts = [];
+  // [fx2] once one candidate has been drawn and measured, the slots are flush for what it really occupies: its depth against the wall, its extent along it inside the room
+  let lo = (hor ? a.x0 : a.z0) + w / 2, hi = (hor ? a.x1 : a.z1) - w / 2;
+  if (rel) { lo = hor ? a.x0 - rel.x0 : a.z0 - rel.z0; hi = hor ? a.x1 - rel.x1 : a.z1 - rel.z1; }
   for (let t = lo; t <= hi + 1e-6; t += 0.25) pts.push(t);
   const want = o.at === 'end' ? hi : o.at === 'mid' || o.at === undefined ? (lo + hi) / 2 : o.at === 'start' ? lo : o.at;
   pts.sort((p, q) => Math.abs(p - want) - Math.abs(q - want));
+  let nth = o.nth || 0;
   for (const t of pts) {
-    const cz = side === 'n' ? a.z0 + d / 2 : side === 's' ? a.z1 - d / 2 : t, cx = side === 'w' ? a.x0 + d / 2 : side === 'e' ? a.x1 - d / 2 : t;
-    const px = hor ? t : cx, pz = hor ? cz : t, r = hor ? rectOf(px, pz, w, d) : rectOf(px, pz, d, w);
-    if (pFit(P, room, r, o)) return { cx: px, cz: pz, rect: r };
+    let cz = side === 'n' ? a.z0 + d / 2 : side === 's' ? a.z1 - d / 2 : t, cx = side === 'w' ? a.x0 + d / 2 : side === 'e' ? a.x1 - d / 2 : t;
+    if (rel) { if (side === 'n') cz = a.z0 - rel.z0 + 0.003; else if (side === 's') cz = a.z1 - rel.z1 - 0.003; else if (side === 'w') cx = a.x0 - rel.x0 + 0.003; else cx = a.x1 - rel.x1 - 0.003; }
+    const px = hor ? t : cx, pz = hor ? cz : t, r = rel ? { x0: px + rel.x0, x1: px + rel.x1, z0: pz + rel.z0, z1: pz + rel.z1 } : hor ? rectOf(px, pz, w, d) : rectOf(px, pz, d, w);
+    if (pFit(P, room, r, o) && nth-- <= 0) return { cx: px, cz: pz, rect: r };
   }
   return null;
 }
 // an item with its back to a wall (back = -1: its local -z is the back, as a bed's head; +1: its +z, as a shelf's)
+const HON_C = {};
 function pAgainst(P, room, side, name, w, d, h, back, draw, o) {
-  o = Object.assign({ h }, o || {}); const s = pWallSlot(P, room, side, w, d, o); if (!s) return null;
-  return pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side }));
+  o = Object.assign({ h, _hon: {} }, o || {});
+  for (let n = 0; n < 14; n++) {          // [fx2] the first free slot that the measured thing really fits
+    const s = pWallSlot(P, room, side, w, d, Object.assign({}, o, { nth: n })); if (!s) return null;
+    const it = pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side })); if (it) return it;
+  }
+  return null;
 }
 // anywhere free in the room: tries the centre, then rings round it (o.near = [x, z] to start from), o.step 0.25
 function pFree(P, room, name, w, d, h, rot, draw, o) {
-  o = o || {}; const a = room.in, c0 = o.near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = [];
-  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3; z += 0.25) pts.push([x, z]);
+  o = Object.assign({ _hon: {} }, o || {}); const a = room.in, c0 = o.near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = [];
+  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3 - (o.keeper ? o.keeper + 0.35 - 0.3 : 0); z += 0.25) pts.push([x, z]);   // [fx2] o.keeper: room behind a counter for the keeper
   pts.sort((p, q) => Math.hypot(p[0] - c0[0], p[1] - c0[1]) - Math.hypot(q[0] - c0[0], q[1] - c0[1]));
   for (const p of pts) { const it = pPut(P, room, name, p[0], p[1], rot, w, d, h, draw, o); if (it) return it; }
   return null;
@@ -187,20 +251,51 @@ function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
   if (rec.u0 < (hor ? a.x0 : a.z0) - 1e-6 || rec.u1 > (hor ? a.x1 : a.z1) + 1e-6) return null;
   for (const op of wl.open) { const hw = op.type === 'door' ? op.hw + 0.1 : 0.9; if (rec.u0 < op.pos + hw && rec.u1 > op.pos - hw && (op.type === 'door' || (y1 > 0.85 && y0 < 2.4))) return null; }
   for (const q of P.wallItems) if (q.k === rec.k && q.wall === wl && q.side === side && rec.u0 < q.u1 + 0.05 && rec.u1 > q.u0 - 0.05 && rec.y0 < q.y1 + 0.05 && rec.y1 > q.y0 - 0.05) return null;
-  for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
+  for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.hh || it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
   const m = P.c.int, p = hor ? [u, side === 'n' ? a.z0 : a.z1] : [side === 'w' ? a.x0 : a.x1, u];
   const rot = rotBack(side, +1);
-  at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0));
+  const sn = pSnap(P, m), rc = pRecBegin(true), t0 = m.ni; at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0)); pRecEnd(rc, m, t0);
+  const b = pMeasure(P, m, rc);
+  if (b) {          // [fx2] measured: through a door or window, another hung thing, furniture, the ceiling or down to the floor undoes it
+    const iu = hor ? 0 : 2, u0 = b.min[iu], u1 = b.max[iu], by0 = b.min[1] - L.y, by1 = b.max[1] - L.y; let why = '';
+    if (u0 < (hor ? a.x0 : a.z0) - 0.02 || u1 > (hor ? a.x1 : a.z1) + 0.02) why = 'room';
+    if (!why) for (const op of wl.open) { const hw = op.type === 'door' ? op.hw + 0.05 : 0.85; if (u0 < op.pos + hw && u1 > op.pos - hw && (op.type === 'door' ? by0 < 2.15 : by1 > 0.85 && by0 < 2.4)) { why = op.type; break; } }
+    if (!why) for (const q of P.wallItems) if (q.wall === wl && q.side !== side && q.bx && [0, 1, 2].every(ax => Math.min(b.max[ax], q.bx.max[ax]) - Math.max(b.min[ax], q.bx.min[ax]) > 0.01)) { why = 'back to back ' + q.id; break; }   // [fx2] two things hung on both faces of one wall do not meet inside it
+    if (!why && by1 > L.H + 0.01) why = 'ceiling';
+    if (!why && by0 < 0.3 && y0 > 0.5 && !o.toFloor) why = 'floor';
+    if (!why) for (const q of P.wallItems) if (q.k === rec.k && q.wall === wl && q.side === side) { const qu0 = q.bu0 === undefined ? q.u0 : q.bu0, qu1 = q.bu1 === undefined ? q.u1 : q.bu1, qy0 = q.by0 === undefined ? q.y0 : q.by0, qy1 = q.by1 === undefined ? q.y1 : q.by1; if (u0 < qu1 - 0.03 && u1 > qu0 + 0.03 && by0 < qy1 - 0.03 && by1 > qy0 + 0.03) { why = 'hung ' + q.id; break; } }
+    if (!why) for (const it of P.items) { if (it.k !== room.k || !(it.kind === 'floor' || it.kind === 'hearth') || !it.bx) { if (it.k === room.k && it.kind === 'hearth' && !it.bx && it.back === side && rec.u0 < (hor ? it.x1 : it.z1) && rec.u1 > (hor ? it.x0 : it.z0) && by0 < L.H) { why = 'hearth'; break; } continue; } const ib = it.bx; if (Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]) > 0.03 && Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]) > 0.03 && Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]) > 0.03) { why = 'item ' + it.id; break; } }
+    if (why) { pUndo(P, m, sn); P.refused = (P.refused || 0) + 1; return null; }
+    rec.bu0 = u0; rec.bu1 = u1; rec.by0 = by0; rec.by1 = by1; rec.bx = b;
+  }
+  pCommitKit(m, rc); rec.rec = rc; rc.t1 = m.ni;
   P.wallItems.push(rec); return rec;
 }
 const pCentre = r => [(r.in.x0 + r.in.x1) / 2, (r.in.z0 + r.in.z1) / 2];
 const pRoomAt = (P, k, x, z) => { for (const id in P.rooms) { const r = P.rooms[id]; if (r.k === k && x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) return r; } return null; };
 
+// [fx2] a person's standing spot must not lie inside a solid: counters, chairs, cabinets and wall shelves are found by their real footprints. A spot that does is moved to the nearest free floor
+// (searched outward in 0.1 m rings, at most 1.1 m, the same room, off stairwells and doorways); sleeping and sitting spots are left to their furniture.
+function pSpotsClear(P) {
+  const R_ = 0.3, solid = P.items.filter(i => (i.kind === 'floor' || i.kind === 'hearth' || i.kind === 'stair') && (i.h === undefined || i.h > 0.3 || i.kind !== 'floor'));
+  const busy = (k, x, z) => { for (const it of solid) if (it.k === k && x > it.x0 - R_ && x < it.x1 + R_ && z > it.z0 - R_ && z < it.z1 + R_) return it; for (const h of P.holes) if (h.k === k && x > h.r.x0 - 0.2 && x < h.r.x1 + 0.2 && z > h.r.z0 - 0.2 && z < h.r.z1 + 0.2) return h; return null; };
+  P.spotMoves = [];
+  for (const nm in P.spots) {
+    const sp = P.spots[nm], W = World.spots[P.id + '.' + nm]; if (!W || W.sit || W.lie) continue;
+    let room = pRoomAt(P, sp.k, sp.x, sp.z); if (!room) for (const id in P.rooms) { const q = P.rooms[id], a = q.in; if (q.k === sp.k && sp.x > a.x0 - 0.45 && sp.x < a.x1 + 0.45 && sp.z > a.z0 - 0.45 && sp.z < a.z1 + 0.45) { room = q; break; } }
+    if (!room || !busy(sp.k, sp.x, sp.z)) continue;
+    const a = room.in; let best = null;
+    for (const wi of [0.3, 0.22]) for (let r = 0.1; r <= 1.1 && !best; r += 0.1) { let bd = 1e9; for (let q = 0; q < 24; q++) { const ang = q / 24 * TAU, x = sp.x + Math.cos(ang) * r, z = sp.z + Math.sin(ang) * r; if (x < a.x0 + wi || x > a.x1 - wi || z < a.z0 + wi || z > a.z1 - wi || busy(sp.k, x, z)) continue; const d = r + (W.face ? 0 : 0); if (d < bd) { bd = d; best = [x, z]; } } }
+    if (!best) continue; P.spotMoves.push(nm + ' ' + sp.x.toFixed(2) + ',' + sp.z.toFixed(2) + ' -> ' + best[0].toFixed(2) + ',' + best[1].toFixed(2));
+    const p = P.w2(best[0], 0, best[1]); sp.x = best[0]; sp.z = best[1]; sp.p = [p[0], W.p[1], p[2]]; W.p = sp.p.slice();
+  }
+}
 // ── registration of the things the village looks for: spots, interact points, lights ──
 function pSpot(P, name, x, z, yaw, o) {
   o = o || {}; const k = o.k === undefined ? 0 : o.k, L = P.lv[k], y = (o.y === undefined ? 0.02 : o.y) + L.y;
   const p = P.w2(x, y, z); World.spots[P.id + '.' + name] = Object.assign({ p, yaw: yaw + P.yaw, zone: P.zone, site: P.id, k, room: (pRoomAt(P, k, x, z) || {}).id }, o.extra || {});
   P.spots[name] = { x, z, k, yaw, p };
+  if (name === 'counter') { const zc = { x0: x - 0.3, x1: x + 0.3, z0: z - 0.3, z1: z + 0.3, k, kind: 'path' }; if (!P.items.some(i => i.k === k && P_SOLID[i.kind] && rOv(i, zc))) P.clear.push(zc); }   // [fx2] the keeper's standing room stays free
 }
 function pInteract(P, x, y, z, o, k) { const L = P.lv[k || 0]; const it = Object.assign({ p: P.w2(x, y + L.y, z), r: 2.0, zone: P.zone }, o); World.interact.push(it); return it; }
 function pLight(P, x, y, z, r, col, kind, k) { const L = P.lv[k || 0], rm = pRoomAt(P, k || 0, x, z); if (rm) P.lightIn[rm.id] = 1; P.lights++; return addLight(P.w2(x, y + L.y, z), r, col, P.zone, kind); }

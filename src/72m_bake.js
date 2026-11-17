@@ -39,7 +39,7 @@ Bake.pool = function (m, y, q, mg, A) {
 };
 Bake.interior = function (P) {
   if (!Bake.on || !P || !P.c || !P.c.cell) return;
-  const cell = P.c.cell, m = new Mesh(512); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.layer = 0; m.cr = m.cg = m.cb = 0; m.grad = null; m.wind = 0;
+  const cell = P.c.cell, m = new Mesh(512); m.noAudit = 1; /* [fx2] alpha decal: overlapping pools are meant to overlap */ m.m1 = 0; m.m2 = 0; m.m3 = 0; m.layer = 0; m.cr = m.cg = m.cb = 0; m.grad = null; m.wind = 0;
   const T = P.T, ax = [T[0], T[2]], az = [T[8], T[10]];             // canonical x and z axes in world (x, z)
   const w2 = (x, z) => [T[12] + x * ax[0] + z * az[0], T[14] + x * ax[1] + z * az[1]];
   for (const it of P.items) {
@@ -58,7 +58,7 @@ Bake.interior = function (P) {
   }
   if (m.ni) cell.decal = m;
   // light shafts: two stacked quads from the pane down to the floor in front of it
-  { const sm = new Mesh(256); sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 232; sm.cb = 190; sm.ao = 1;
+  { const sm = new Mesh(256); sm.noAudit = 1; sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 232; sm.cb = 190; sm.ao = 1;
     for (const w of P.windows) {
       const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
       const og = wl.open.find(o => o.type === 'win' && o.pos === w.pos), gc = og && og.glass; if (gc) { sm.cr = Math.round(Math.min(1, 0.25 + gc[0]) * 255); sm.cg = Math.round(Math.min(1, 0.25 + gc[1]) * 255); sm.cb = Math.round(Math.min(1, 0.25 + gc[2]) * 255); } else { sm.cr = 255; sm.cg = 232; sm.cb = 190; }      // stained glass throws its own colour

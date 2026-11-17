@@ -234,13 +234,13 @@ const SCANR = {
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
   Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
-  Barrel: { n: ['wine_barrel_01', 'wooden_barrels_01_a'], fit: 'xz', one: 1, inOnly: 1 },
-  Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' }, Bottle_1: { n: ['ceramic_vase_04'], fit: 'contain' },
+  Barrel: { n: ['wine_barrel_01'], fit: 'xz', one: 1, inOnly: 1 },          // [fx2] the second scan has doubled coplanar staves inside it (9000 audit pairs): one model
+  Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' },
   Table_Plate: { n: ['carved_wooden_plate'], fit: 'contain' },
   Candle_1: { n: ['wooden_candlestick'], fit: 'contain', mul: 1.25 }, Candle_2: { n: ['wooden_candlestick'], fit: 'contain' },
   CandleStick_Triple: { n: ['brass_candleholders_c'], fit: 'contain', mul: 0.75 },
   Bucket_Wooden_1: { n: ['wooden_bucket_01', 'wooden_bucket_02'], fit: 'contain', mul: 1.1, one: 1 },
-  Bookcase_2: { n: ['wooden_bookshelf_worn'], fit: 'box', lo: 0.7, hi: 1.3 }, Cabinet: { n: ['painted_wooden_cabinet'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.7, 0.6, 0.5] },
+  Bookcase_2: { n: ['wooden_bookshelf_worn'], fit: 'box', lo: 0.7, hi: 1.3 }, Cabinet: { n: ['painted_wooden_cabinet'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.46, 0.4, 0.32] },
   Nightstand_Shelf: { n: ['painted_wooden_shelves'], fit: 'box', lo: 0.7, hi: 1.4, tint: [0.8, 0.75, 0.7] },
   Workbench: { n: ['painted_wooden_table'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.6, 0.5, 0.42] },
   Pickaxe_Bronze: { n: ['picke_dirty_01'], fit: 'contain' }, Axe_Bronze: { n: ['wooden_axe_03'], fit: 'contain', ry: PI / 2 },
@@ -283,7 +283,13 @@ const YARD_CELL = 40;        // m: yard props are merged into one mesh per mater
 const YARD_CAST_MIN = 0.6;        // m: the largest side a yard prop needs to cast. 0 = every prop casts
 function yardCasts(P) { if (!(YARD_CAST_MIN > 0)) return true; const b = Kit.box(P.name, P.M); return !b || Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) >= YARD_CAST_MIN; }
 function kadd(m, P, extra) {
+  if (typeof P_REC !== 'undefined' && P_REC) { P_REC.parts.push({ name: P.name, M: P.M.clone() }); if (P_REC.defer) { P_REC.pend.push([m, P, extra]); return; } }          // [fx2] 72d_plan.js pPut: pieces are measured before they are committed
+  kaddNow(m, P, extra);
+}
+const KIT_CAP = { ceramic_vase_04: 12, ceramic_vase_02: 8, ceramic_pot: 6, wooden_bowl_01: 8, wooden_candlestick: 8 };
+function kaddNow(m, P, extra) {
   const zone = m.m1 | 0;
+  if (zone) { const ck = zone + '|' + P.name, cap = KIT_CAP[P.name]; KITP.sc = KITP.sc || {}; if (cap && (KITP.sc[ck] = (KITP.sc[ck] || 0) + 1) > cap) return; }          // [fx2] a few hundred tiny, 600-triangle pots on shelves nobody reads: a room keeps at most a handful of each
   let B; if (zone) B = extra && extra.fine ? furnFineBatch(zone) : kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: YARD_CELL }); B = World.kitYard; }
   const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone && yardCasts(P) }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
   B.add(P.name, P.M, o); if (zone && !o.noBlob) furnBlob(zone, P);
@@ -360,11 +366,11 @@ const KIT_ITEM = {
 };
 const KIT_WALL = {            // width, height of the pivot above the floor, stand-off from the wall
   Torch_Metal: [0.5, 1.85, 0.01], Shelf_Simple: [1.2, 1.55, 0.01], Shelf_Arch: [1.25, 1.8, 0.01], Shelf_Small_Bottles: [1.15, 1.5, 0.01], Peg_Rack: [1.2, 1.75, 0.01],
-  Shield_Wooden: [0.7, 1.9, 0.01], kite_shield: [0.6, 1.75, 0.04, 0.7], rusted_spade_01: [0.3, 1.6, 0.03, 1], cross_pein_hammer: [0.3, 1.6, 0.03, 1.2], Banner_1_Cloth: [0.85, 2.7, 0.05], Banner_2_Cloth: [0.85, 2.6, 0.05], Axe_Bronze: [0.4, 1.75, 0.04], Pickaxe_Bronze: [0.85, 1.8, 0.08], Sword_Bronze: [0.35, 1.5, 0.04],
+  Shield_Wooden: [0.7, 1.9, 0.01], kite_shield: [0.6, 1.75, 0.04, 0.7], rusted_spade_01: [0.3, 0.95, 0.03, 1], cross_pein_hammer: [0.3, 1.6, 0.03, 1.2], Banner_1_Cloth: [0.85, 2.7, 0.05], Banner_2_Cloth: [0.85, 2.6, 0.05], Axe_Bronze: [0.4, 1.75, 0.04], Pickaxe_Bronze: [0.85, 1.8, 0.08], Sword_Bronze: [0.35, 1.5, 0.04],
 };
 const KIT_DRESS = {
   inn: { floor: ['CandleStick_Stand', 'Barrel_Holder', 'Cabinet', 'Barrel', 'Crate_Wooden', 'Bag', 'Barrel'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Shield_Wooden', 'Torch_Metal', 'Banner_1_Cloth', 'Peg_Rack', 'Shelf_Simple', 'Torch_Metal'] },
-  smithy: { floor: ['Workbench', 'WeaponStand', 'Barrel', 'Whetstone', 'Crate_Wooden', 'Bucket_Wooden_1'], wall: ['Torch_Metal', 'Peg_Rack', 'Pickaxe_Bronze', 'Axe_Bronze', 'cross_pein_hammer', 'kite_shield', 'Torch_Metal'] },
+  smithy: { floor: ['Workbench', 'WeaponStand', 'Barrel', 'Whetstone', 'Crate_Wooden', 'Bucket_Wooden_1'], wall: ['Torch_Metal', 'Peg_Rack', 'Pickaxe_Bronze', 'Axe_Bronze', 'kite_shield', 'Torch_Metal'] },
   store: { floor: ['Cabinet', 'Bookcase_2', 'Crate_Wooden', 'FarmCrate_Apple', 'Barrel', 'FarmCrate_Carrot', 'Bag', 'Vase_2', 'Nightstand_Shelf', 'Barrel_Apples'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch', 'Torch_Metal', 'Peg_Rack'] },
   elder: { floor: ['Bookcase_2', 'BookStand', 'Bookcase_2', 'CandleStick_Stand', 'treasure_chest', 'Cabinet', 'Nightstand_Shelf'], wall: ['Shelf_Arch', 'Torch_Metal', 'Banner_1_Cloth', 'Shelf_Simple'] },
   herbalist: { floor: ['Cabinet', 'Nightstand_Shelf', 'Vase_2', 'Bucket_Wooden_1', 'Bag', 'Crate_Wooden'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch'] },

@@ -68,6 +68,7 @@ function terrainH(x, z) {
     // building pads
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 26 || Math.abs(z - s.z) > 26) continue;
+      { const u = LV.up; if (s.x > u.x0 && s.x < u.x1 && s.z > u.z0 && s.z < u.z1 && (x < u.x0 || x > u.x1 || z < u.z0 || z > u.z1)) continue; }          // [fx1] a house on the terrace levels the terrace, not a 6 m heap of ground outside its retaining wall
       const l = worldToSite(s, x, z), m = s.pad || 1.1;
       const dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
       if (dd < 6) h = lerp(h, s.y, 1 - smooth(0, 6, dd));
@@ -76,6 +77,7 @@ function terrainH(x, z) {
     // Build 33: neighbouring pads blend over each other for 6 m and the last one won, leaving a porch hanging over a hollow: every site's own footprint and doorstep margin is levelled again
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 14 || Math.abs(z - s.z) > 14) continue;
+      { const u = LV.up; if (s.x > u.x0 && s.x < u.x1 && s.z > u.z0 && s.z < u.z1 && (x < u.x0 || x > u.x1 || z < u.z0 || z > u.z1)) continue; }          // [fx1] as above
       const l = worldToSite(s, x, z), m = (s.pad || 1.1) + 0.2 + (s.porch || 0), dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
       if (dd < 1.5) h = lerp(h, s.y, 1 - smooth(0, 1.5, dd));
     }

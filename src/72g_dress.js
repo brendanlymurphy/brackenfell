@@ -52,17 +52,17 @@ PD.cask = (len, r) => m => {
 };
 PD.broom = m => { m.mat(MAT.TIMBER, COL.wood); m.push().RZ(0.09); m.box(-0.012, 0, -0.012, 0.012, 1.45, 0.012); m.mat(MAT.THATCH, COL.hay, 0.5); m.cyl(0, 0, 0, 0.08, 0.035, 0.3, 6, 1); m.pop(); addBoxCollider(m, -0.12, -0.12, 0.12, 0.12, 0, 1.4); };
 PD.sacks = (R) => m => { const cols = [[0.7, 0.62, 0.45], [0.6, 0.55, 0.42], [0.55, 0.5, 0.36]]; for (const [x, z, s, y] of [[-0.18, 0, 0.24, 0], [0.2, 0.02, 0.22, 0], [0.0, -0.04, 0.2, 0.3]]) { m.mat(MAT.CLOTH, R.pick(cols), 0.5); m.ball(x, y + s * 0.9, z, s * 0.85, s, s * 0.8, 6, 4); } addBoxCollider(m, -0.4, -0.3, 0.4, 0.3, 0, 0.6); };
-PD.stack = (R) => m => { Props.woodpile(m, 5, 4, 0.7); };
+PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 columns = 0.55 m deep (5 drew 0.91 m into a 0.5 m slot)
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, [0.4, 0.33, 0.25], [0.25, 0.22, 0.2], [0.55, 0.45, 0.3]]), 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.14, -l, -0.11, x + 0.14, 0.0, -0.075); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.36, 0.2, 0.16], [0.22, 0.27, 0.32], [0.5, 0.4, 0.2], [0.55, 0.5, 0.4], [0.3, 0.34, 0.22], [0.4, 0.33, 0.25], [0.25, 0.22, 0.2]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.13, -l * 0.5, -0.115, x + 0.13, 0.0, -0.075); m.box(x - 0.15, -l, -0.125, x + 0.15, -l * 0.5, -0.08); m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2 - 0.04, h - 0.04, -0.09, w / 2 + 0.04, h + 0.02, -0.03);
-  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.8, c[1] * 0.8, c[2] * 0.8], 0.6); m.box(-w / 2, 0, -0.07, w / 2, h, -0.04);
-  m.mat(MAT.CLOTH, [0.7, 0.6, 0.35], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
+  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.62, c[1] * 0.62, c[2] * 0.62], 0.6); m.box(-w / 2, 0.05, -0.07, w / 2, h, -0.04); m.mat(MAT.CLOTH, [c[0] * 0.45, c[1] * 0.45, c[2] * 0.45], 0.6); m.box(-w / 2 + 0.01, 0, -0.068, w / 2 - 0.01, 0.05, -0.042);
+  m.mat(MAT.CLOTH, [0.46, 0.38, 0.24], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
   m.box(-0.07, h * 0.3, -0.08, 0.07, h * 0.75, -0.04); m.box(-w * 0.22, h * 0.5, -0.08, w * 0.22, h * 0.56, -0.04);
 };
 // a niche in a wall (crypt, nave): dark recess with an arch lintel, a candle that glows without a light, a skull or an urn
@@ -89,22 +89,24 @@ const PD_DEF = {      // [width, depth] of what a pool entry occupies along / ou
 };
 // something against a wall near u (not further than tol): returns its width or 0
 PD.floorAt = function (P, room, sd, id, w, d, h, draw, u, tol, o) {
-  const s = pWallSlot(P, room, sd, w, d, Object.assign({ at: u + w / 2, h }, o || {})); if (!s) return 0;
+  const hk = id.replace(/^[^.]*\./, '').replace(/\d+/g, '') + sd + w.toFixed(2) + d.toFixed(2), hon = {}; if (HON_C[hk]) hon.rel = Object.assign({}, HON_C[hk]);   // [fx2] flush for what this kind really occupies
+  const s = pWallSlot(P, room, sd, w, d, Object.assign({ at: u + w / 2, h, _hon: hon }, o || {})); if (!s) return 0;
   const along = (sd === 'n' || sd === 's') ? s.cx : s.cz; if (Math.abs(along - u - w / 2) > tol) return 0;
-  return pPut(P, room, id, s.cx, s.cz, rotBack(sd, +1), w, d, h, draw, Object.assign({ back: sd }, o || {})) ? w : 0;
+  const it = pPut(P, room, id, s.cx, s.cz, rotBack(sd, +1), w, d, h, draw, Object.assign({ back: sd, _hon: hon }, o || {})); if (hon.rel) HON_C[hk] = Object.assign({}, hon.rel);
+  return it ? w : 0;
 };
 PD.try = function (P, room, sd, u, kind, R, fill) {
   const c = P.c, n = P.items.length, id = P.id + '.d' + n;
   switch (kind) {
     case 'shelf': return PD.floorAt(P, room, sd, id + 'sh', 1.5, 0.34, 1.8, pdShelf(1.5, 1.8, 3, fill || PD.goods(c, 1.5)), u, 0.3);
     case 'books': return PD.floorAt(P, room, sd, id + 'bk', 1.8, 0.34, 1.8, pdShelf(1.8, 1.8, 3, PD.books(c, 1.8)), u, 0.3);
-    case 'cabinet': return PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true });
+    case 'cabinet': { const q = (P.fixt = P.fixt || {}), key = room.id + 'cabinet'; if ((q[key] || 0) >= 5) return PD.try(P, room, sd, u, 'cupboard', R, fill); const w = PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true }); if (w) q[key] = (q[key] || 0) + 1; return w; }
     case 'cupboard': return PD.floorAt(P, room, sd, id + 'cu', 1.12, 0.6, 1.76, PD.cupboard, u, 0.3);
     case 'cask': return PD.floorAt(P, room, sd, id + 'ck', 1.0, 0.95, 0.8, PD.cask(0.9, 0.32), u, 0.3, { lowOk: true });
     case 'bench': return PD.floorAt(P, room, sd, id + 'bn', 1.6, 0.4, 0.46, m => Props.bench(m, 1.6), u, 0.3, { lowOk: true });
     case 'sacks': return PD.floorAt(P, room, sd, id + 'sk', 0.9, 0.6, 0.6, PD.sacks(R), u, 0.3, { lowOk: true });
     case 'broom': return PD.floorAt(P, room, sd, id + 'br', 0.3, 0.3, 1.45, PD.broom, u, 0.3);
-    case 'stack': return PD.floorAt(P, room, sd, id + 'ws', 0.8, 0.5, 0.7, PD.stack(R), u, 0.3, { lowOk: true });
+    case 'stack': return PD.floorAt(P, room, sd, id + 'ws', 0.8, 0.58, 0.7, PD.stack(R), u, 0.3, { lowOk: true });
     case 'shrine': return PD.floorAt(P, room, sd, id + 'sr', 1.32, 0.6, 1.3, PD.shrine, u, 0.3);
     case 'hooks': { const w = 0.9 + R() * 0.6; return pHang(P, room, sd, u + w / 2, w, 1.0, 1.9, PD.hooks(R, w), id + 'hk', { pivot: 1.75 }) ? w : 0; }
     case 'tapestry': { const w = 1.4 + R() * 0.4; return pHang(P, room, sd, u + w / 2, w, 1.1, 2.4, PD.tapestry(R, w, 1.2), id + 'tp', { pivot: 1.15 }) ? w : 0; }
@@ -200,4 +202,32 @@ PD.stats = function (P) {
     const e = PD.emptiest(P, r); rows[id] = { wall: +(cov / Math.max(free, 1)).toFixed(2), empty: +(2 * e.r).toFixed(1) };
   }
   return rows;
+};
+
+// [fx2] top-up: measured placement refuses what really does not fit, so a room can come out thinner than its rule meant. Any room whose walls are less than 58% covered gets a second fill pass
+// from a pool that suits it; corners that are still bare get their kind of thing. Nothing here is a new kind of object: every pool entry is one PD.try already knows.
+PD.POOLS = {
+  cellar: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], store: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], bedroom: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet', 'cask'],
+  hall: ['shelf', 'cabinet', 'hooks', 'paint', 'tapestry', 'sacks', 'stack', 'cupboard'], shop: ['shelf', 'cabinet', 'hooks', 'paint', 'tapestry', 'sacks', 'stack'], keeper: ['cupboard', 'hooks', 'paint', 'shelf', 'cabinet'],
+  common: ['shelf', 'cabinet', 'hooks', 'paint', 'cask', 'stack'], kitchen: ['shelf', 'cabinet', 'hooks', 'cask', 'sacks', 'stack'], study: ['books', 'paint', 'hooks', 'cabinet'], sacristy: ['cupboard', 'hooks', 'paint', 'shelf'], gallery: ['paint', 'hooks', 'tapestry']
+};
+PD.cover = function (P, r) {
+  const a = r.in; let free = 0, cov = 0;
+  for (const sd of ['n', 's', 'w', 'e']) {
+    const hor = sd === 'n' || sd === 's', lo = hor ? a.x0 : a.z0, hi = hor ? a.x1 : a.z1; free += hi - lo;
+    const door = r.doors.filter(d => d.wall && (hor ? d.wall.ax === 'x' : d.wall.ax === 'z') && Math.abs(d.wall.c - (sd === 'n' ? r.z0 : sd === 's' ? r.z1 : sd === 'w' ? r.x0 : r.x1)) < 0.01);
+    for (const d of door) free -= d.w; const iv = [];
+    for (const it of P.items) if (it.k === r.k && it.room === r.id && it.back === sd) iv.push(hor ? [it.x0, it.x1] : [it.z0, it.z1]);
+    for (const w of P.wallItems) if (w.k === r.k && w.room === r.id && w.side === sd) iv.push([w.u0, w.u1]);
+    iv.sort((x, y) => x[0] - y[0]); let end = -1e9; for (const [s, e] of iv) { const s2 = Math.max(s, lo, end), e2 = Math.min(e, hi); if (e2 > s2) cov += e2 - s2; end = Math.max(end, e2); }
+  }
+  return cov / Math.max(free, 1);
+};
+PD.topup = function (P) {
+  P.topped = 0;
+  for (const id in P.rooms) {
+    const r = P.rooms[id], pool = PD.POOLS[r.kind]; if (!pool) continue;
+    for (let pass = 0; pass < 5 && PD.cover(P, r) < 0.64; pass++) { const n = PD.fill(P, r, pool, { max: 6 }); P.topped += n; if (!n) break; }
+    if (PD.cover(P, r) < 0.64) P.topped += PD.corners(P, r, r.kind === 'cellar' || r.kind === 'store' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack']);
+  }
 };

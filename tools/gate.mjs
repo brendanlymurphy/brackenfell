@@ -42,6 +42,8 @@ const STEPS = [
   { id: 'interact', run: expect(/interact PASS/, ['webgl=1', 'quality=medium', 'play=1'], 'interact.js') },
   { id: 'econ', run: expect(/econ PASS/, ['webgl=1', 'quality=low', 'play=1'], 'econ.js') },
   { id: 'interiors', quick: 1, run: expect(/interiors ok/, play, 'interiors.js') },
+  // [fx1] overlap finder: the counts may only fall (ceilings: severe 8, solid 175; lower them when they fall)
+  { id: 'overlap', quick: 1, why: 'solids through solids, blocked doors, spots inside solids', run: () => { const out = shot(['webgl=1', 'quality=low'], js('overlap.js')), sv = +((out.match(/"severe\\?": (\d+)/) || [])[1] ?? 999), so = +((out.match(/"solid\\?": (\d+)/) || [])[1] ?? 0); return { out, fail: sv <= 8 && so <= 175 ? null : 'severe ' + sv + ' (ceiling 8), solid ' + so + ' (ceiling 175)', note: 'severe ' + sv + ' solid ' + so }; } },
   { id: 'parity', run: () => { const out = node(['test/parity.mjs']); return { out, fail: /parity ok/.test(out) ? null : (out.trim().split('\n').pop() || 'failed').slice(0, 200) }; } },
   { id: 'voice_game', quick: 1, run: expect(/PASSED/, play, 'voice_game.js') },
   { id: 'voice_parts', why: 'a remark before a line, and overheard talk, play their recordings in turn', run: expect(/voice parts PASSED/, play, 'voice_parts.js') },

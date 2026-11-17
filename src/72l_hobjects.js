@@ -127,6 +127,15 @@ Object.assign(PD.WARES, {
 });
 
 // floor props by name: [w, d, h, factory(P, room, R) -> draw(m)]
+// [fx2] a hand cart for a yard: the body 1.5 x 2.4 m on two wheels, the shafts lowered to the ground 1.1 m beyond (the street cart's shafts reach 1.7 m and drew 1.5 m through the yard wall)
+TP.cart = m => {
+  m.push().T(0, 0, 0.525); m.mat(MAT.PLANKS, COL.wood); m.box(-0.75, 0.62, -1.2, 0.75, 0.70, 1.2);
+  for (const sx of [-1, 1]) m.box(sx * 0.75 - 0.03, 0.70, -1.2, sx * 0.75 + 0.03, 1.08, 1.2);
+  m.box(-0.75, 0.70, 1.17, 0.75, 1.08, 1.23); m.box(-0.75, 0.70, -1.23, 0.75, 0.95, -1.17);
+  m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.9, 0.52, -0.05, 0.9, 0.62, 0.05);
+  for (const sx of [-1, 1]) { m.beam([sx * 0.45, 0.6, -1.2], [sx * 0.42, 0.05, -2.3], 0.07, 0.07); at(m, sx * 0.92, 0.57, 0, PI / 2, () => Props.wheel(m, 0.57, 0.09)); }
+  addBoxCollider(m, -1.0, -2.4, 1.0, 1.25, 0, 1.1); m.pop();
+};
 const HPR = {
   oven: [2.0, 1.5, 2.2, (P, rm) => TP.oven(P, rm, true)], kiln: [2.0, 1.5, 2.2, (P, rm) => TP.oven(P, rm, false)],
   vat: [1.3, 1.3, 0.75, (P, rm, R, o) => TP.vat((o && o.col) || [0.3, 0.38, 0.5])], tun: [1.8, 1.8, 1.1, () => TP.tun],
@@ -138,7 +147,7 @@ const HPR = {
   strongbox: [1.0, 0.6, 0.65, () => TP.strongbox], anvil: [0.8, 0.5, 0.9, () => TP.anvilSmall], still: [1.5, 0.9, 1.4, () => PD.still],
   bench: [2.1, 1.1, 1.0, () => m => kp(m, 'Workbench', 0, 0, 0, 0.95, 0)], spinning: [0.6, 1.1, 1.05, () => m => kp(m, 'spinning_wheel_01', 0, 0, 0, 1, 0)], dummy: [0.8, 0.7, 1.9, () => m => kp(m, 'Dummy', 0, 0, 0, 0.95, 0)],
   cask: [1.0, 0.95, 0.95, () => PD.cask(0.9, 0.34)], sacks: [0.9, 0.6, 0.6, (P, rm, R) => PD.sacks(R)], stack: [0.9, 0.5, 0.75, (P, rm, R) => PD.stack(R)], crates: [1.5, 0.8, 1.15, (P, rm, R) => PD.cratePile(R)],
-  barrel: [0.7, 0.7, 0.9, () => pdBarrel(0.33, 0.9)], bucket: [0.5, 0.5, 0.5, () => m => kp(m, 'Bucket_Wooden_1', 0, 0, 0, 1, 0)], cart: [1.8, 2.8, 1.3, () => m => Props.cart(m, false)],
+  barrel: [0.7, 0.7, 0.9, () => pdBarrel(0.33, 0.9)], bucket: [0.5, 0.5, 0.5, () => m => kp(m, 'Bucket_Wooden_1', 0, 0, 0, 1, 0)], cart: [2.05, 3.7, 1.15, () => TP.cart],
   appleCrate: [0.8, 0.5, 0.5, () => m => kp(m, 'FarmCrate_Apple', 0, 0, 0, 1, 0)], applesBrl: [0.7, 0.7, 0.9, () => m => kp(m, 'Barrel_Apples', 0, 0, 0, 1, 0)],
 };
 // ───────── one memorable object per house [c5]: floor pieces (HPR) and wall pieces (HMEMO.wall) ─────────
@@ -258,7 +267,7 @@ const pAnyHang = (P, room, kinds, o) => { let n = 0; for (const sd of ['n', 'w',
 const HT = {};
 const cnt = (P, room, F, len, kinds, nm) => {
   const R = P.R, c = P.c, near = F.counterAt || [-0.6 * F.sx, room.z0 + (room.z1 - room.z0) * 0.62];
-  const t = pFree(P, room, P.id + '.counter', len, 0.8, 1.0, 0, pdCounter(len, c, kinds, 8), { near, surface: true, noClear: false, lowOk: false });
+  const t = pFree(P, room, P.id + '.counter', len, 0.8, 1.0, 0, pdCounter(len, c, kinds, 8), { near, surface: true, noClear: false, lowOk: false, keeper: 0.85 });
   if (t) { pSpot(P, 'counter', t.cx + 0.4, t.cz + 0.85, PI, { k: room.k }); pSpot(P, 'front', t.cx + 0.4, t.cz - 0.85, 0, { k: room.k }); P.counter = t; } return t;
 };
 const hFocalAt = (P, room, name, F, o) => { const r = hPlace(P, room, name, Object.assign({ sides: ['s'], at: [F.fx === undefined ? 0 : F.fx, -F.sx * 2.2, F.sx * 2.2, -F.sx * 3.2] }, o || {})); if (r && !P.focal) P.focal = { name, x: r.cx, z: r.cz }; return r; };

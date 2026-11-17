@@ -187,7 +187,7 @@ WBUILD.lumber = (p, m, R) => {
     mm.mat(MAT.PLANKS, COL.woodDark, 0.9); mm.box(-1.8, 0, 1.2, 1.8, 2.2, 1.3); mm.box(-1.85, 0, -1.2, -1.75, 1.85, 1.3); mm.box(1.75, 0, -1.2, 1.85, 1.85, 1.3);
     mm.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1.8, 1.8]) mm.cbox(sx, -0.3, -1.25, 0.14, 2.6, 0.14, 4); mm.cbox(-1.8, -0.3, 1.25, 0.14, 2.7, 0.14, 4); mm.cbox(1.8, -0.3, 1.25, 0.14, 2.7, 0.14, 4);
     mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.8); mm.quad2([-2.1, 2.3, 1.45], [-2.1, 1.75, -1.55], [2.1, 1.75, -1.55], [2.1, 2.3, 1.45]);
-    mm.mat(MAT.CLOTH, COL.fur, 0.6); mm.box(-1.2, 0.3, 0.2, 0.2, 0.42, 1.15); mm.mat(MAT.CLOTH, COL.wool, 0.6); mm.box(-1.15, 0.42, 0.7, -0.35, 0.52, 1.1);
+    mm.mat(MAT.CLOTH, COL.fur.map(v => v * 0.45), 0.6); mm.box(-1.2, 0.3, 0.2, 0.2, 0.42, 1.15); mm.mat(MAT.CLOTH, COL.wool.map(v => v * 0.55), 0.6); mm.box(-1.15, 0.42, 0.7, -0.35, 0.52, 1.1);
     mm.mat(MAT.TIMBER, COL.timber); mm.box(-1.25, 0, 0.15, -1.15, 0.3, 0.25); mm.box(0.15, 0, 0.15, 0.25, 0.3, 0.25); mm.box(-1.25, 0, 1.05, -1.15, 0.3, 1.15); mm.box(0.15, 0, 1.05, 0.25, 0.3, 1.15);
     Props.barrel(mm);
     addBoxCollider(mm, -1.9, -1.3, 1.9, 1.35, 0, 2.2);
@@ -243,7 +243,7 @@ WBUILD.blind = (p, m, R) => {
   wPut(m, p, -7, -12, 0.4, mm => { mm.mat(MAT.ROCK, [0.95, 0.95, 0.92], 0.5); mm.ball(0, 0.15, 0, 0.55, 0.28, 0.4, 8, 4); mm.mat(MAT.PLAIN, [0.88, 0.85, 0.78]); mm.ball(0, 0.36, 0, 0.3, 0.05, 0.22, 7, 3); addCircleCollider(mm, 0, 0, 0.5, 0, 0.5); });
   // a cold fire ring and a skinning rack
   wPut(m, p, -4.5, 3.5, 0, mm => { mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; mm.ball(Math.cos(a) * 0.5, 0.06, Math.sin(a) * 0.5, 0.13, 0.1, 0.12, 6, 4); } mm.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); mm.disc(0, 0.03, 0, 0.42, 9, 1); });
-  wPut(m, p, 3.2, 4.8, 0.5, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.beam([s * 0.9, 0, -0.3], [s * 0.7, 1.7, 0], 0.07, 0.07), mm.beam([s * 0.9, 0, 0.3], [s * 0.7, 1.7, 0], 0.07, 0.07); mm.beam([-0.75, 1.65, 0], [0.75, 1.65, 0], 0.06, 0.06); mm.mat(MAT.CLOTH, COL.fur, 0.6); mm.quad2([-0.5, 1.62, 0], [-0.55, 0.75, 0.02], [-0.1, 0.7, 0.02], [-0.1, 1.62, 0]); mm.quad2([0.1, 1.62, 0], [0.05, 0.8, 0.02], [0.55, 0.78, 0.02], [0.5, 1.62, 0]); addBoxCollider(mm, -0.9, -0.3, 0.9, 0.3, 0, 1.7); });
+  wPut(m, p, 3.2, 4.8, 0.5, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.beam([s * 0.9, 0, -0.3], [s * 0.7, 1.7, 0], 0.07, 0.07), mm.beam([s * 0.9, 0, 0.3], [s * 0.7, 1.7, 0], 0.07, 0.07); mm.beam([-0.75, 1.65, 0], [0.75, 1.65, 0], 0.06, 0.06); mm.mat(MAT.CLOTH, COL.fur.map(v => v * 0.45), 0.6); mm.quad2([-0.5, 1.62, 0], [-0.55, 0.75, 0.02], [-0.1, 0.7, 0.02], [-0.1, 1.62, 0]); mm.quad2([0.1, 1.62, 0], [0.05, 0.8, 0.02], [0.55, 0.78, 0.02], [0.5, 1.62, 0]); addBoxCollider(mm, -0.9, -0.3, 0.9, 0.3, 0, 1.7); });
   for (const [x, z, r] of [[2, 6.5, 0], [-2.4, 7.6, 1.4], [6, 8.5, 2.2], [-6.5, 8.0, 0.6]]) wKit(p, 'Mushroom_Common', x, z, { s: 1.4 + R() * 0.8, ry: R() * 6 });
   for (let i = 0; i < 18; i++) { const a = R() * TAU, r = 4 + R() * 12; wKit(p, 'Fern_1', Math.cos(a) * r, Math.sin(a) * r, { s: 0.9 + R() * 0.7, ry: R() * TAU, inst: true, maxDist: 70 }); }
   for (const [x, z] of [[1.6, 7.0], [-3, 9.2]]) { const c = wGround(p, x, z); wPick('bl.m' + (x > 0 ? 1 : 2), c, 'Pick chanterelles', 'chanterelle', 'mushrooms'); }
@@ -474,7 +474,7 @@ WBUILD.hamlet = (p, m, R) => {
   wWall(m, [[96, 94], [108, 92], [112, 88]], { h: 0.85 }); wWall(m, [[112, 108], [121, 104]], { h: 0.8, gaps: [[116, 106]] });
   for (const [x, z, r] of [[133, 118, 1.3], [137, 120, 1.1]]) wPut(m, p, x - p.x, z - p.z, 0, mm => Props.haystack(mm, r));
   wPut(m, p, -5.6, 10.2, 1.0, mm => { Props.cart(mm, true); });
-  wPut(m, p, 1.4, 1.5, 0, mm => { // a well with a pitched roof
+  wPut(m, p, 1.4, -1.3, 0, mm => { // a well with a pitched roof ([fx1] it stood in the dry-stone wall, 1.5 m further out)
     mm.mat(MAT.STONE, [0.85, 0.85, 0.8], 0.7); mm.lathe([[0.95, -0.3], [0.95, 0.85], [0.82, 0.92], [0.6, 0.92], [0.6, -0.3]], 12, 0);
     mm.mat(MAT.PLAIN, [0.04, 0.07, 0.08]); mm.disc(0, 0.2, 0, 0.6, 10, 1); mm.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) mm.cbox(s * 0.85, 0.8, 0, 0.12, 1.3, 0.12, 4); mm.beam([-0.9, 2.05, 0], [0.9, 2.05, 0], 0.11, 0.11);
     mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.6); mm.quad2([-1.1, 2.3, 0], [-1.1, 1.95, -0.8], [1.1, 1.95, -0.8], [1.1, 2.3, 0]); mm.quad2([1.1, 2.3, 0], [1.1, 1.95, 0.8], [-1.1, 1.95, 0.8], [-1.1, 2.3, 0]); addCircleCollider(mm, 0, 0, 1.0, 0, 1.2);

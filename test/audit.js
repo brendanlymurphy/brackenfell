@@ -1,7 +1,7 @@
 // Audit: coplanar and near-coplanar overlapping faces inside the cells (z-fighting candidates) and gaps. Needs --opt audit=1 (hooks in 44_kit.js and 31_mesh.js record every placed piece).
 // usage: node test/shot.mjs --opt webgl=1 --opt audit=1 --do "window.__cells=['inn']; $(cat test/audit.js)"
 // A pair is reported when two triangles lie in one plane within 8 mm (any facing) and overlap by more than 4 cm^2.
-const only = window.__cells, TOL = 0.008, MINA = 0.0004, rep = {}, tot = {};
+const only = window.__cells, TOL = window.__tol || 0.008, MINA = window.__mina || 0.0004, rep = {}, tot = {};
 const cellOf = (x, y, z) => Cells.at(x, y, z);
 const tris = {};            // cell id -> [{ p: [9 floats], n, d, src }]
 const push = (c, a, b, c2, src) => {
@@ -20,7 +20,7 @@ for (const it of window.__AUDIT_KIT || []) {
 }
 let mi = 0;
 for (const m of window.__AUDIT_MESH || []) {
-  mi++; const f = m.f, ix = m.indices, W = i => [f[i * 8], f[i * 8 + 1], f[i * 8 + 2]]; if (!m.nv) continue;
+  mi++; if (m.noAudit) continue; const f = m.f, ix = m.indices, W = i => [f[i * 8], f[i * 8 + 1], f[i * 8 + 2]]; if (!m.nv) continue;
   const c = cellOf(f[0], f[1], f[2]); if (!c) continue;
   for (let k = 0; k < ix.length; k += 3) { pushIx = k / 3 | 0; push(c, W(ix[k]), W(ix[k + 1]), W(ix[k + 2]), 'mesh' + mi + ':l' + (m.u8[ix[k] * 32 + 28]) + ':' + ((m.own || []).find(o => k >= o[0] && k < o[1]) || [0, 0, '?'])[2]); }
 }
@@ -64,10 +64,11 @@ for (const c of Cells.list) {
       if (Math.abs(a.q[0] - b.q[0]) + Math.abs(a.q[1] - b.q[1]) + Math.abs(a.q[2] - b.q[2]) > 0.03) continue;
       const A = bb[i], B = bb[j]; if (A[0] > B[1] || B[0] > A[1] || A[2] > B[3] || B[2] > A[3] || A[4] > B[5] || B[4] > A[5]) continue;
       const same = (a.n[0] * b.n[0] + a.n[1] * b.n[1] + a.n[2] * b.n[2]) > 0, isKit = !a.src.startsWith('mesh') || !b.src.startsWith('mesh'); if (!same && !isKit) continue; const ov = overlap(a, b);
-      if (ov > MINA) { pairs++; area += ov; const kk = [a.src, b.src].sort().join(' x '); samples[c.id + ' ' + kk] = (samples[c.id + ' ' + kk] || 0) + ov; if (!ex[c.id + ' ' + kk]) ex[c.id + ' ' + kk] = [a.q.map(v => +v.toFixed(2)), +a.dd.toFixed(3), +b.dd.toFixed(3), a.p.map(v => +v.toFixed(2)), b.p.map(v => +v.toFixed(2)), a.ix, b.ix]; }
+      if (ov > MINA) { pairs++; area += ov; { const gk = [a.src.replace(/^mesh\d+/, 'mesh'), b.src.replace(/^mesh\d+/, 'mesh')].sort().join(' x ') + ' n' + a.q.map(v => Math.round(v)).join(',') , G = (window.__AG = window.__AG || {})[gk] || ((window.__AG)[gk] = { pairs: 0, area: 0, cells: new Set() }); G.pairs++; G.area += ov; G.cells.add(c.id); if (!G.ex) G.ex = [c.id, a.p.map(v => +v.toFixed(2)), b.p.map(v => +v.toFixed(2)), a.dd.toFixed(3), b.dd.toFixed(3)]; } const kk = [a.src, b.src].sort().join(' x '); samples[c.id + ' ' + kk] = (samples[c.id + ' ' + kk] || 0) + ov; if (!ex[c.id + ' ' + kk]) ex[c.id + ' ' + kk] = [a.q.map(v => +v.toFixed(2)), +a.dd.toFixed(3), +b.dd.toFixed(3), a.p.map(v => +v.toFixed(2)), b.p.map(v => +v.toFixed(2)), a.ix, b.ix]; }
     }
   }
   out[c.id] = { tris: T.length, pairs, area: +area.toFixed(2) };
 }
 const worst = Object.entries(samples).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([k, v]) => k + ' ' + v.toFixed(2) + 'm2 ' + JSON.stringify(ex[k]));
-return JSON.stringify({ out, worst }, null, 0);
+const groups = Object.entries(window.__AG || {}).sort((a, b) => b[1].pairs - a[1].pairs).slice(0, 40).map(([k, v]) => k + ' | pairs ' + v.pairs + ' area ' + v.area.toFixed(1) + ' cells ' + v.cells.size + ' ex ' + JSON.stringify(v.ex));
+return JSON.stringify({ out, worst, groups }, null, 0);

@@ -4179,6 +4179,7 @@ function terrainH(x, z) {
     // building pads
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 26 || Math.abs(z - s.z) > 26) continue;
+      { const u = LV.up; if (s.x > u.x0 && s.x < u.x1 && s.z > u.z0 && s.z < u.z1 && (x < u.x0 || x > u.x1 || z < u.z0 || z > u.z1)) continue; }          // [fx1] a house on the terrace levels the terrace, not a 6 m heap of ground outside its retaining wall
       const l = worldToSite(s, x, z), m = s.pad || 1.1;
       const dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
       if (dd < 6) h = lerp(h, s.y, 1 - smooth(0, 6, dd));
@@ -4187,6 +4188,7 @@ function terrainH(x, z) {
     // Build 33: neighbouring pads blend over each other for 6 m and the last one won, leaving a porch hanging over a hollow: every site's own footprint and doorstep margin is levelled again
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 14 || Math.abs(z - s.z) > 14) continue;
+      { const u = LV.up; if (s.x > u.x0 && s.x < u.x1 && s.z > u.z0 && s.z < u.z1 && (x < u.x0 || x > u.x1 || z < u.z0 || z > u.z1)) continue; }          // [fx1] as above
       const l = worldToSite(s, x, z), m = (s.pad || 1.1) + 0.2 + (s.porch || 0), dx = Math.max(Math.abs(l[0]) - s.w / 2 - m, 0), dz = Math.max(Math.abs(l[1]) - s.d / 2 - m, 0), dd = hyp(dx, dz);
       if (dd < 1.5) h = lerp(h, s.y, 1 - smooth(0, 1.5, dd));
     }
@@ -5197,13 +5199,13 @@ const SCANR = {
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
   Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
-  Barrel: { n: ['wine_barrel_01', 'wooden_barrels_01_a'], fit: 'xz', one: 1, inOnly: 1 },
-  Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' }, Bottle_1: { n: ['ceramic_vase_04'], fit: 'contain' },
+  Barrel: { n: ['wine_barrel_01'], fit: 'xz', one: 1, inOnly: 1 },          // [fx2] the second scan has doubled coplanar staves inside it (9000 audit pairs): one model
+  Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' },
   Table_Plate: { n: ['carved_wooden_plate'], fit: 'contain' },
   Candle_1: { n: ['wooden_candlestick'], fit: 'contain', mul: 1.25 }, Candle_2: { n: ['wooden_candlestick'], fit: 'contain' },
   CandleStick_Triple: { n: ['brass_candleholders_c'], fit: 'contain', mul: 0.75 },
   Bucket_Wooden_1: { n: ['wooden_bucket_01', 'wooden_bucket_02'], fit: 'contain', mul: 1.1, one: 1 },
-  Bookcase_2: { n: ['wooden_bookshelf_worn'], fit: 'box', lo: 0.7, hi: 1.3 }, Cabinet: { n: ['painted_wooden_cabinet'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.7, 0.6, 0.5] },
+  Bookcase_2: { n: ['wooden_bookshelf_worn'], fit: 'box', lo: 0.7, hi: 1.3 }, Cabinet: { n: ['painted_wooden_cabinet'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.46, 0.4, 0.32] },
   Nightstand_Shelf: { n: ['painted_wooden_shelves'], fit: 'box', lo: 0.7, hi: 1.4, tint: [0.8, 0.75, 0.7] },
   Workbench: { n: ['painted_wooden_table'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.6, 0.5, 0.42] },
   Pickaxe_Bronze: { n: ['picke_dirty_01'], fit: 'contain' }, Axe_Bronze: { n: ['wooden_axe_03'], fit: 'contain', ry: PI / 2 },
@@ -5246,7 +5248,13 @@ const YARD_CELL = 40;        // m: yard props are merged into one mesh per mater
 const YARD_CAST_MIN = 0.6;        // m: the largest side a yard prop needs to cast. 0 = every prop casts
 function yardCasts(P) { if (!(YARD_CAST_MIN > 0)) return true; const b = Kit.box(P.name, P.M); return !b || Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) >= YARD_CAST_MIN; }
 function kadd(m, P, extra) {
+  if (typeof P_REC !== 'undefined' && P_REC) { P_REC.parts.push({ name: P.name, M: P.M.clone() }); if (P_REC.defer) { P_REC.pend.push([m, P, extra]); return; } }          // [fx2] 72d_plan.js pPut: pieces are measured before they are committed
+  kaddNow(m, P, extra);
+}
+const KIT_CAP = { ceramic_vase_04: 12, ceramic_vase_02: 8, ceramic_pot: 6, wooden_bowl_01: 8, wooden_candlestick: 8 };
+function kaddNow(m, P, extra) {
   const zone = m.m1 | 0;
+  if (zone) { const ck = zone + '|' + P.name, cap = KIT_CAP[P.name]; KITP.sc = KITP.sc || {}; if (cap && (KITP.sc[ck] = (KITP.sc[ck] || 0) + 1) > cap) return; }          // [fx2] a few hundred tiny, 600-triangle pots on shelves nobody reads: a room keeps at most a handful of each
   let B; if (zone) B = extra && extra.fine ? furnFineBatch(zone) : kitIntBatch(zone); else { if (!World.kitYard) World.kitYard = Kit.batch({ name: 'kit-yard', cell: YARD_CELL }); B = World.kitYard; }
   const o = Object.assign({ zone, skyVis: zone ? INT_AO : 1, cast: !zone && yardCasts(P) }, extra || {}); if (P.tint && !o.tint) o.tint = P.tint;
   B.add(P.name, P.M, o); if (zone && !o.noBlob) furnBlob(zone, P);
@@ -5323,11 +5331,11 @@ const KIT_ITEM = {
 };
 const KIT_WALL = {            // width, height of the pivot above the floor, stand-off from the wall
   Torch_Metal: [0.5, 1.85, 0.01], Shelf_Simple: [1.2, 1.55, 0.01], Shelf_Arch: [1.25, 1.8, 0.01], Shelf_Small_Bottles: [1.15, 1.5, 0.01], Peg_Rack: [1.2, 1.75, 0.01],
-  Shield_Wooden: [0.7, 1.9, 0.01], kite_shield: [0.6, 1.75, 0.04, 0.7], rusted_spade_01: [0.3, 1.6, 0.03, 1], cross_pein_hammer: [0.3, 1.6, 0.03, 1.2], Banner_1_Cloth: [0.85, 2.7, 0.05], Banner_2_Cloth: [0.85, 2.6, 0.05], Axe_Bronze: [0.4, 1.75, 0.04], Pickaxe_Bronze: [0.85, 1.8, 0.08], Sword_Bronze: [0.35, 1.5, 0.04],
+  Shield_Wooden: [0.7, 1.9, 0.01], kite_shield: [0.6, 1.75, 0.04, 0.7], rusted_spade_01: [0.3, 0.95, 0.03, 1], cross_pein_hammer: [0.3, 1.6, 0.03, 1.2], Banner_1_Cloth: [0.85, 2.7, 0.05], Banner_2_Cloth: [0.85, 2.6, 0.05], Axe_Bronze: [0.4, 1.75, 0.04], Pickaxe_Bronze: [0.85, 1.8, 0.08], Sword_Bronze: [0.35, 1.5, 0.04],
 };
 const KIT_DRESS = {
   inn: { floor: ['CandleStick_Stand', 'Barrel_Holder', 'Cabinet', 'Barrel', 'Crate_Wooden', 'Bag', 'Barrel'], wall: ['Torch_Metal', 'Banner_1_Cloth', 'Shield_Wooden', 'Torch_Metal', 'Banner_1_Cloth', 'Peg_Rack', 'Shelf_Simple', 'Torch_Metal'] },
-  smithy: { floor: ['Workbench', 'WeaponStand', 'Barrel', 'Whetstone', 'Crate_Wooden', 'Bucket_Wooden_1'], wall: ['Torch_Metal', 'Peg_Rack', 'Pickaxe_Bronze', 'Axe_Bronze', 'cross_pein_hammer', 'kite_shield', 'Torch_Metal'] },
+  smithy: { floor: ['Workbench', 'WeaponStand', 'Barrel', 'Whetstone', 'Crate_Wooden', 'Bucket_Wooden_1'], wall: ['Torch_Metal', 'Peg_Rack', 'Pickaxe_Bronze', 'Axe_Bronze', 'kite_shield', 'Torch_Metal'] },
   store: { floor: ['Cabinet', 'Bookcase_2', 'Crate_Wooden', 'FarmCrate_Apple', 'Barrel', 'FarmCrate_Carrot', 'Bag', 'Vase_2', 'Nightstand_Shelf', 'Barrel_Apples'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch', 'Torch_Metal', 'Peg_Rack'] },
   elder: { floor: ['Bookcase_2', 'BookStand', 'Bookcase_2', 'CandleStick_Stand', 'treasure_chest', 'Cabinet', 'Nightstand_Shelf'], wall: ['Shelf_Arch', 'Torch_Metal', 'Banner_1_Cloth', 'Shelf_Simple'] },
   herbalist: { floor: ['Cabinet', 'Nightstand_Shelf', 'Vase_2', 'Bucket_Wooden_1', 'Bag', 'Crate_Wooden'], wall: ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Simple', 'Shelf_Arch'] },
@@ -6733,37 +6741,101 @@ function pWinZone(w) {
   return wl.ax === 'x' ? { x0: w.pos - hw, x1: w.pos + hw, z0: ns < 0 ? wl.c - 0.2 : wl.c - 0.2 - depth, z1: ns < 0 ? wl.c + 0.2 + depth : wl.c + 0.2 } : { x0: ns < 0 ? wl.c - 0.2 : wl.c - 0.2 - depth, x1: ns < 0 ? wl.c + 0.2 + depth : wl.c + 0.2, z0: w.pos - hw, z1: w.pos + hw };
 }
 // the footprint of a w x d item (w along x, d along z before turning) turned by rot (a multiple of PI/2)
-function pFoot(cx, cz, w, d, rot) { const q = Math.abs(Math.round(rot / (PI / 2))) & 1; return q ? rectOf(cx, cz, d, w) : rectOf(cx, cz, w, d); }
-// put an item: it is drawn with draw(m) at (cx, cz) turned by rot, on the level's floor (or at y = lift above it), and recorded. Returns the record or null when it does not fit.
+function pFoot(cx, cz, w, d, rot) { const c = Math.abs(Math.cos(rot)), s = Math.abs(Math.sin(rot)); return rectOf(cx, cz, w * c + d * s, w * s + d * c); }          // [fx2] honest for any turn: a crate turned 0.4 rad is wider than its square
+// [fx2] MEASURED PLACEMENT. An item is drawn first and measured (every vertex it made and every kit piece's box, in the plan's frame); only then is it kept.
+// Its recorded footprint is what it really occupies (not the w x d its caller guessed). When the measured thing pokes through its room's walls, through a solid
+// that is already there, into a doorway or stair clearance, or (when tall) across a window, it is undone (mesh, kit pieces, colliders, lights, emitters) and the
+// caller tries the next place. So no generator can put a footprint lie into the world: a flaw of this kind disappears from all interiors at once.
+let P_REC = null;
+const pRecBegin = defer => (P_REC = { parts: [], defer: !!defer, pend: [] });
+const pRecEnd = (rc, m, t0) => { if (!rc) return; rc.t0 = t0; rc.t1 = m.ni; P_REC = null; };
+const P_ROUND = /^(Barrel|wine_barrel|wooden_barrels|Vase|ceramic|Cauldron|Stool|painted_wooden_stool|Candle|CandleStick|brass_candle|wooden_candlestick|Bucket|wooden_bucket|Mug|Anvil)/;
+function pToLocal(P) { if (P._tl) return P._tl; const T = P.T, ax = [T[0], T[1], T[2]], ay = [T[4], T[5], T[6]], az = [T[8], T[9], T[10]], o = [T[12], T[13], T[14]]; return P._tl = (x, y, z) => { const dx = x - o[0], dy = y - o[1], dz = z - o[2]; return [dx * ax[0] + dy * ax[1] + dz * ax[2], dx * ay[0] + dy * ay[1] + dz * ay[2], dx * az[0] + dy * az[1] + dz * az[2]]; }; }
+// the box (plan frame) of what was drawn since rec began: { min, max } or null
+function pMeasure(P, m, rc) {
+  const to = pToLocal(P), min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9], g = p => { for (let k = 0; k < 3; k++) { if (p[k] < min[k]) min[k] = p[k]; if (p[k] > max[k]) max[k] = p[k]; } }; let any = false;
+  const f = m.f, idx = m.idx, seen = new Set();
+  for (let i = rc.t0; i < rc.t1; i++) { const v = idx[i]; if (seen.has(v)) continue; seen.add(v); g(to(f[v * 8], f[v * 8 + 1], f[v * 8 + 2])); any = true; }
+  for (const pt of rc.parts) {
+    const pc = Kit.pieces[pt.name]; if (!pc) continue; const M = pt.M;
+    if (P_ROUND.test(pt.name)) { const e = M.elements, ex = Math.hypot(e[0], e[1], e[2]) * (pc.max[0] - pc.min[0]), ez = Math.hypot(e[8], e[9], e[10]) * (pc.max[2] - pc.min[2]), r = Math.max(ex, ez) / 2, h = Math.hypot(e[4], e[5], e[6]) * (pc.max[1] - pc.min[1]) / 2, v = new THREE.Vector3((pc.min[0] + pc.max[0]) / 2, (pc.min[1] + pc.max[1]) / 2, (pc.min[2] + pc.max[2]) / 2).applyMatrix4(M), w = to(v.x, v.y, v.z); g([w[0] - r, w[1] - h, w[2] - r]); g([w[0] + r, w[1] + h, w[2] + r]); any = true; continue; }
+    const q = Kit.box(pt.name, M); if (!q) continue; for (let i = 0; i < 8; i++) g(to(i & 1 ? q.max[0] : q.min[0], i & 2 ? q.max[1] : q.min[1], i & 4 ? q.max[2] : q.min[2])); any = true;
+  }
+  return any ? { min, max } : null;
+}
+// everything an undone draw must give back
+function pSnap(P, m) { const W = World; return { nv: m.nv, ni: m.ni, own: (m.own || []).length, col: W.colliders.length, flr: W.floors.length, lit: W.lights.length, emi: W.emitters.length, ixn: W.interact.length, lc: Object.assign({}, KITP.lc), seed: m.seed }; }
+function pUndo(P, m, sn) { const W = World; m.nv = sn.nv; m.ni = sn.ni; if (m.own) m.own.length = sn.own; W.colliders.length = sn.col; W.floors.length = sn.flr; W.lights.length = sn.lit; W.emitters.length = sn.emi; W.interact.length = sn.ixn; KITP.lc = sn.lc; }
+function pCommitKit(m, rc) { const z = m.m1; for (const [mm, pp, ex] of rc.pend) kaddNow(mm, pp, ex); m.m1 = z; rc.pend.length = 0; }
+// does the measured box b (plan frame, level k) sit on the floor of room without going through anything? returns '' or why not
+function pBoxOK(P, room, b, o, flat) {
+  const k = room.k, a = room.in, L = P.lv[k], tol = 0.02;
+  if (b.min[0] < a.x0 - tol || b.max[0] > a.x1 + tol || b.min[2] < a.z0 - tol || b.max[2] > a.z1 + tol) return 'wall';
+  if (b.max[1] > L.y + L.H + 0.02 && !o.tall) return 'ceiling';
+  if (flat) return '';
+  const r = { x0: b.min[0], x1: b.max[0], z0: b.min[2], z1: b.max[2] }, lifted = (o.lift || 0) > 0.1;
+  if (!lifted) for (const it of P.items) {
+    if (it.k !== k || !P_SOLID[it.kind]) continue; const ib = it.bx;
+    if (ib && it.kind !== 'stair' && it.kind !== 'hole') { const ox = Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]), oz = Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]), oy = Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]); if (ox > 0.02 && oz > 0.02 && !(o.allow && o.allow.includes(it.kind))) return 'item ' + it.id; }
+    else if (rOv(r, it, 0.02) && !(it.kind === 'hearth' && o.allow && o.allow.includes('hearth'))) return 'item ' + it.id;
+  }
+  for (const q of P.wallItems) if (q.k === k && q.bx) { const ib = q.bx; if (Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]) > 0.03 && Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]) > 0.03 && Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]) > 0.03) return 'hung ' + q.id; }
+  if (!o.noClear) for (const z of P.clear) if (z.k === k && rOv(r, z, 0.01) && !(o.allow && o.allow.includes(z.kind))) return 'clear ' + z.kind;
+  if (b.max[1] - L.y > 1.0 && !o.lowOk && (o.h || 1) > 0.85) for (const w of P.windows) if (w.k === k && w.room === room && rOv(r, pWinZone(w), 0.01)) return 'window';
+  return '';
+}
+// put an item: it is drawn with draw(m) at (cx, cz) turned by rot, on the level's floor (or at y = lift above it), measured, and recorded. Returns the record or null when it does not fit.
+// o._hon: shared by the candidates of one search (pFree, pWallSlot): the first measurement gives the others their real footprint before anything is drawn.
 function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
-  o = o || {}; const r = pFoot(cx, cz, w, d, rot);
+  o = o || {}; let r = pFoot(cx, cz, w, d, rot); if (TEST && TEST.nomeasure) o = Object.assign({}, o, { nomeasure: true, _hon: null });
+  const hon = o._hon; if (hon && hon.rel) r = { x0: Math.min(r.x0, cx + hon.rel.x0), x1: Math.max(r.x1, cx + hon.rel.x1), z0: Math.min(r.z0, cz + hon.rel.z0), z1: Math.max(r.z1, cz + hon.rel.z1) };
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
-  const L = P.lv[room.k], m = P.c.int, t0 = m.ni; at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); (m.own = m.own || []).push([t0, m.ni, name]);          // owner ranges: test/audit.js names the thing a face belongs to
-  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back });
+  if (hon && hon.rel && pBoxOK(P, room, { min: [r.x0, P.lv[room.k].y + 0.1, r.z0], max: [r.x1, P.lv[room.k].y + h, r.z1] }, o, o.flat)) return null;
+  const L = P.lv[room.k], m = P.c.int, sn = pSnap(P, m), t0 = m.ni, rc = pRecBegin(true), flat = !!o.flat;
+  at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); pRecEnd(rc, m, t0);
+  const b = pMeasure(P, m, rc);
+  if (b) {
+    const why = o.nomeasure ? '' : pBoxOK(P, room, b, o, flat);
+    if (hon) hon.rel = { x0: Math.min(hon.rel ? hon.rel.x0 : 0, b.min[0] - cx), x1: Math.max(hon.rel ? hon.rel.x1 : 0, b.max[0] - cx), z0: Math.min(hon.rel ? hon.rel.z0 : 0, b.min[2] - cz), z1: Math.max(hon.rel ? hon.rel.z1 : 0, b.max[2] - cz) };
+    if (why) { pUndo(P, m, sn); P.refused = (P.refused || 0) + 1; (P.refusedWhy = P.refusedWhy || []).push(name + ' @' + cx.toFixed(2) + ',' + cz.toFixed(2) + ' box ' + b.min.map(v => v.toFixed(2)) + ' / ' + b.max.map(v => v.toFixed(2)) + ' ' + why.split(' ')[0] + (why.indexOf(' ') > 0 ? ' ' + why.slice(why.indexOf(' ') + 1) : '')); return null; }
+    r = { x0: Math.max(b.min[0], room.in.x0), x1: Math.min(b.max[0], room.in.x1), z0: Math.max(b.min[2], room.in.z0), z1: Math.min(b.max[2], room.in.z1) };          // the recorded footprint is what it really occupies
+  }
+  pCommitKit(m, rc); (m.own = m.own || []).push([t0, m.ni, name]);
+  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, hh: b ? Math.max(h, b.max[1] - L.y) : h, bx: b || null, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back }); it.rec = rc; rc.t1 = m.ni;
   if (o.flat) it.kind = 'rug'; return it;
 }
 // along a wall of the room, w wide (along the wall) and d deep; o.at: 'start' | 'end' | 'mid' | a coordinate along the wall to be near. Tries every 0.25 m.
 function pWallSlot(P, room, side, w, d, o) {
-  o = o || {}; const a = room.in, hor = side === 'n' || side === 's', lo = (hor ? a.x0 : a.z0) + w / 2, hi = (hor ? a.x1 : a.z1) - w / 2, pts = [];
+  o = o || {}; const a = room.in, hor = side === 'n' || side === 's', rel = o._hon && o._hon.rel, pts = [];
+  // [fx2] once one candidate has been drawn and measured, the slots are flush for what it really occupies: its depth against the wall, its extent along it inside the room
+  let lo = (hor ? a.x0 : a.z0) + w / 2, hi = (hor ? a.x1 : a.z1) - w / 2;
+  if (rel) { lo = hor ? a.x0 - rel.x0 : a.z0 - rel.z0; hi = hor ? a.x1 - rel.x1 : a.z1 - rel.z1; }
   for (let t = lo; t <= hi + 1e-6; t += 0.25) pts.push(t);
   const want = o.at === 'end' ? hi : o.at === 'mid' || o.at === undefined ? (lo + hi) / 2 : o.at === 'start' ? lo : o.at;
   pts.sort((p, q) => Math.abs(p - want) - Math.abs(q - want));
+  let nth = o.nth || 0;
   for (const t of pts) {
-    const cz = side === 'n' ? a.z0 + d / 2 : side === 's' ? a.z1 - d / 2 : t, cx = side === 'w' ? a.x0 + d / 2 : side === 'e' ? a.x1 - d / 2 : t;
-    const px = hor ? t : cx, pz = hor ? cz : t, r = hor ? rectOf(px, pz, w, d) : rectOf(px, pz, d, w);
-    if (pFit(P, room, r, o)) return { cx: px, cz: pz, rect: r };
+    let cz = side === 'n' ? a.z0 + d / 2 : side === 's' ? a.z1 - d / 2 : t, cx = side === 'w' ? a.x0 + d / 2 : side === 'e' ? a.x1 - d / 2 : t;
+    if (rel) { if (side === 'n') cz = a.z0 - rel.z0 + 0.003; else if (side === 's') cz = a.z1 - rel.z1 - 0.003; else if (side === 'w') cx = a.x0 - rel.x0 + 0.003; else cx = a.x1 - rel.x1 - 0.003; }
+    const px = hor ? t : cx, pz = hor ? cz : t, r = rel ? { x0: px + rel.x0, x1: px + rel.x1, z0: pz + rel.z0, z1: pz + rel.z1 } : hor ? rectOf(px, pz, w, d) : rectOf(px, pz, d, w);
+    if (pFit(P, room, r, o) && nth-- <= 0) return { cx: px, cz: pz, rect: r };
   }
   return null;
 }
 // an item with its back to a wall (back = -1: its local -z is the back, as a bed's head; +1: its +z, as a shelf's)
+const HON_C = {};
 function pAgainst(P, room, side, name, w, d, h, back, draw, o) {
-  o = Object.assign({ h }, o || {}); const s = pWallSlot(P, room, side, w, d, o); if (!s) return null;
-  return pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side }));
+  o = Object.assign({ h, _hon: {} }, o || {});
+  for (let n = 0; n < 14; n++) {          // [fx2] the first free slot that the measured thing really fits
+    const s = pWallSlot(P, room, side, w, d, Object.assign({}, o, { nth: n })); if (!s) return null;
+    const it = pPut(P, room, name, s.cx, s.cz, rotBack(side, back), w, d, h, draw, Object.assign({}, o, { back: side })); if (it) return it;
+  }
+  return null;
 }
 // anywhere free in the room: tries the centre, then rings round it (o.near = [x, z] to start from), o.step 0.25
 function pFree(P, room, name, w, d, h, rot, draw, o) {
-  o = o || {}; const a = room.in, c0 = o.near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = [];
-  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3; z += 0.25) pts.push([x, z]);
+  o = Object.assign({ _hon: {} }, o || {}); const a = room.in, c0 = o.near || [(a.x0 + a.x1) / 2, (a.z0 + a.z1) / 2], pts = [];
+  for (let x = a.x0 + 0.3; x <= a.x1 - 0.3; x += 0.25) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3 - (o.keeper ? o.keeper + 0.35 - 0.3 : 0); z += 0.25) pts.push([x, z]);   // [fx2] o.keeper: room behind a counter for the keeper
   pts.sort((p, q) => Math.hypot(p[0] - c0[0], p[1] - c0[1]) - Math.hypot(q[0] - c0[0], q[1] - c0[1]));
   for (const p of pts) { const it = pPut(P, room, name, p[0], p[1], rot, w, d, h, draw, o); if (it) return it; }
   return null;
@@ -6777,20 +6849,51 @@ function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
   if (rec.u0 < (hor ? a.x0 : a.z0) - 1e-6 || rec.u1 > (hor ? a.x1 : a.z1) + 1e-6) return null;
   for (const op of wl.open) { const hw = op.type === 'door' ? op.hw + 0.1 : 0.9; if (rec.u0 < op.pos + hw && rec.u1 > op.pos - hw && (op.type === 'door' || (y1 > 0.85 && y0 < 2.4))) return null; }
   for (const q of P.wallItems) if (q.k === rec.k && q.wall === wl && q.side === side && rec.u0 < q.u1 + 0.05 && rec.u1 > q.u0 - 0.05 && rec.y0 < q.y1 + 0.05 && rec.y1 > q.y0 - 0.05) return null;
-  for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
+  for (const it of P.items) if (it.k === room.k && (it.kind === 'floor' || it.kind === 'hearth') && it.back === side && (it.hh || it.h || 1) > y0 - L.y + 0.02) { const s = hor ? [it.x0, it.x1] : [it.z0, it.z1]; if (rec.u0 < s[1] && rec.u1 > s[0]) return null; }
   const m = P.c.int, p = hor ? [u, side === 'n' ? a.z0 : a.z1] : [side === 'w' ? a.x0 : a.x1, u];
   const rot = rotBack(side, +1);
-  at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0));
+  const sn = pSnap(P, m), rc = pRecBegin(true), t0 = m.ni; at(m, p[0], L.y + (o.pivot !== undefined ? o.pivot : y0), p[1], rot, () => draw(m, y1 - y0)); pRecEnd(rc, m, t0);
+  const b = pMeasure(P, m, rc);
+  if (b) {          // [fx2] measured: through a door or window, another hung thing, furniture, the ceiling or down to the floor undoes it
+    const iu = hor ? 0 : 2, u0 = b.min[iu], u1 = b.max[iu], by0 = b.min[1] - L.y, by1 = b.max[1] - L.y; let why = '';
+    if (u0 < (hor ? a.x0 : a.z0) - 0.02 || u1 > (hor ? a.x1 : a.z1) + 0.02) why = 'room';
+    if (!why) for (const op of wl.open) { const hw = op.type === 'door' ? op.hw + 0.05 : 0.85; if (u0 < op.pos + hw && u1 > op.pos - hw && (op.type === 'door' ? by0 < 2.15 : by1 > 0.85 && by0 < 2.4)) { why = op.type; break; } }
+    if (!why) for (const q of P.wallItems) if (q.wall === wl && q.side !== side && q.bx && [0, 1, 2].every(ax => Math.min(b.max[ax], q.bx.max[ax]) - Math.max(b.min[ax], q.bx.min[ax]) > 0.01)) { why = 'back to back ' + q.id; break; }   // [fx2] two things hung on both faces of one wall do not meet inside it
+    if (!why && by1 > L.H + 0.01) why = 'ceiling';
+    if (!why && by0 < 0.3 && y0 > 0.5 && !o.toFloor) why = 'floor';
+    if (!why) for (const q of P.wallItems) if (q.k === rec.k && q.wall === wl && q.side === side) { const qu0 = q.bu0 === undefined ? q.u0 : q.bu0, qu1 = q.bu1 === undefined ? q.u1 : q.bu1, qy0 = q.by0 === undefined ? q.y0 : q.by0, qy1 = q.by1 === undefined ? q.y1 : q.by1; if (u0 < qu1 - 0.03 && u1 > qu0 + 0.03 && by0 < qy1 - 0.03 && by1 > qy0 + 0.03) { why = 'hung ' + q.id; break; } }
+    if (!why) for (const it of P.items) { if (it.k !== room.k || !(it.kind === 'floor' || it.kind === 'hearth') || !it.bx) { if (it.k === room.k && it.kind === 'hearth' && !it.bx && it.back === side && rec.u0 < (hor ? it.x1 : it.z1) && rec.u1 > (hor ? it.x0 : it.z0) && by0 < L.H) { why = 'hearth'; break; } continue; } const ib = it.bx; if (Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]) > 0.03 && Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]) > 0.03 && Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]) > 0.03) { why = 'item ' + it.id; break; } }
+    if (why) { pUndo(P, m, sn); P.refused = (P.refused || 0) + 1; return null; }
+    rec.bu0 = u0; rec.bu1 = u1; rec.by0 = by0; rec.by1 = by1; rec.bx = b;
+  }
+  pCommitKit(m, rc); rec.rec = rc; rc.t1 = m.ni;
   P.wallItems.push(rec); return rec;
 }
 const pCentre = r => [(r.in.x0 + r.in.x1) / 2, (r.in.z0 + r.in.z1) / 2];
 const pRoomAt = (P, k, x, z) => { for (const id in P.rooms) { const r = P.rooms[id]; if (r.k === k && x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) return r; } return null; };
 
+// [fx2] a person's standing spot must not lie inside a solid: counters, chairs, cabinets and wall shelves are found by their real footprints. A spot that does is moved to the nearest free floor
+// (searched outward in 0.1 m rings, at most 1.1 m, the same room, off stairwells and doorways); sleeping and sitting spots are left to their furniture.
+function pSpotsClear(P) {
+  const R_ = 0.3, solid = P.items.filter(i => (i.kind === 'floor' || i.kind === 'hearth' || i.kind === 'stair') && (i.h === undefined || i.h > 0.3 || i.kind !== 'floor'));
+  const busy = (k, x, z) => { for (const it of solid) if (it.k === k && x > it.x0 - R_ && x < it.x1 + R_ && z > it.z0 - R_ && z < it.z1 + R_) return it; for (const h of P.holes) if (h.k === k && x > h.r.x0 - 0.2 && x < h.r.x1 + 0.2 && z > h.r.z0 - 0.2 && z < h.r.z1 + 0.2) return h; return null; };
+  P.spotMoves = [];
+  for (const nm in P.spots) {
+    const sp = P.spots[nm], W = World.spots[P.id + '.' + nm]; if (!W || W.sit || W.lie) continue;
+    let room = pRoomAt(P, sp.k, sp.x, sp.z); if (!room) for (const id in P.rooms) { const q = P.rooms[id], a = q.in; if (q.k === sp.k && sp.x > a.x0 - 0.45 && sp.x < a.x1 + 0.45 && sp.z > a.z0 - 0.45 && sp.z < a.z1 + 0.45) { room = q; break; } }
+    if (!room || !busy(sp.k, sp.x, sp.z)) continue;
+    const a = room.in; let best = null;
+    for (const wi of [0.3, 0.22]) for (let r = 0.1; r <= 1.1 && !best; r += 0.1) { let bd = 1e9; for (let q = 0; q < 24; q++) { const ang = q / 24 * TAU, x = sp.x + Math.cos(ang) * r, z = sp.z + Math.sin(ang) * r; if (x < a.x0 + wi || x > a.x1 - wi || z < a.z0 + wi || z > a.z1 - wi || busy(sp.k, x, z)) continue; const d = r + (W.face ? 0 : 0); if (d < bd) { bd = d; best = [x, z]; } } }
+    if (!best) continue; P.spotMoves.push(nm + ' ' + sp.x.toFixed(2) + ',' + sp.z.toFixed(2) + ' -> ' + best[0].toFixed(2) + ',' + best[1].toFixed(2));
+    const p = P.w2(best[0], 0, best[1]); sp.x = best[0]; sp.z = best[1]; sp.p = [p[0], W.p[1], p[2]]; W.p = sp.p.slice();
+  }
+}
 // ── registration of the things the village looks for: spots, interact points, lights ──
 function pSpot(P, name, x, z, yaw, o) {
   o = o || {}; const k = o.k === undefined ? 0 : o.k, L = P.lv[k], y = (o.y === undefined ? 0.02 : o.y) + L.y;
   const p = P.w2(x, y, z); World.spots[P.id + '.' + name] = Object.assign({ p, yaw: yaw + P.yaw, zone: P.zone, site: P.id, k, room: (pRoomAt(P, k, x, z) || {}).id }, o.extra || {});
   P.spots[name] = { x, z, k, yaw, p };
+  if (name === 'counter') { const zc = { x0: x - 0.3, x1: x + 0.3, z0: z - 0.3, z1: z + 0.3, k, kind: 'path' }; if (!P.items.some(i => i.k === k && P_SOLID[i.kind] && rOv(i, zc))) P.clear.push(zc); }   // [fx2] the keeper's standing room stays free
 }
 function pInteract(P, x, y, z, o, k) { const L = P.lv[k || 0]; const it = Object.assign({ p: P.w2(x, y + L.y, z), r: 2.0, zone: P.zone }, o); World.interact.push(it); return it; }
 function pLight(P, x, y, z, r, col, kind, k) { const L = P.lv[k || 0], rm = pRoomAt(P, k || 0, x, z); if (rm) P.lightIn[rm.id] = 1; P.lights++; return addLight(P.w2(x, y + L.y, z), r, col, P.zone, kind); }
@@ -7036,7 +7139,7 @@ function pHearth(P, room, side, wid, o) {
   o = o || {}; const L = P.lv[room.k], H = L.H, dep = 0.8, m = P.c.int, hor = side === 'n' || side === 's';
   const s = pWallSlot(P, room, side, wid + 0.3, dep + 0.1, Object.assign({ lowOk: false, at: o.at, noClear: false }, o)); if (!s) return null;
   const rot = { w: 0, e: PI, n: -PI / 2, s: PI / 2 }[side], px = hor ? s.cx : (side === 'w' ? room.in.x0 : room.in.x1), pz = hor ? (side === 'n' ? room.in.z0 : room.in.z1) : s.cz;
-  m.m1 = P.zone; m.ao = INT_AO;
+  m.m1 = P.zone; m.ao = INT_AO; const rc = pRecBegin(false), t0 = m.ni;
   at(m, px, L.y + 0.02, pz, rot, () => {
     m.mat(MAT.STONE, [0.95, 0.93, 0.9], 0.8);
     m.box(0, 0, -wid / 2, dep, 1.15, -wid / 2 + 0.38); m.box(0, 0, wid / 2 - 0.38, dep, 1.15, wid / 2); m.box(0, 1.15, -wid / 2, dep, H - 0.02, wid / 2);
@@ -7050,6 +7153,7 @@ function pHearth(P, room, side, wid, o) {
     addLight(wp(m, dep + 0.7, 0.85, 0), o.r || 9.5, o.c || [3.4, 1.75, 0.62], P.zone, 'fire');
     addBoxCollider(m, 0, -wid / 2 - 0.1, dep + 0.25, wid / 2 + 0.1, 0, 2);
   });
+  pRecEnd(rc, m, t0);
   if (o.deco !== false) {          // mantel objects, antlers over the breast, a rug and firewood by the fire
     at(m, px, L.y + 0.02, pz, rot, () => {
       if (typeof kitLit === 'function' && Kit.pieces.CandleStick_Triple) for (const sg of [-1, 1]) kitLit(m, 'CandleStick_Triple', 0.42, 1.6 - 0.02, sg * (wid / 2 - 0.32), 0.8, sg, { cap: 0, kind: 'candle', flame: 'candle' });
@@ -7061,7 +7165,7 @@ function pHearth(P, room, side, wid, o) {
     });
   }
   const fp = s.rect;
-  P.occ(room.k, fp, 'hearth', P.id + '.hearth', { h: H, back: side, room: room.id, wid });
+  P.occ(room.k, fp, 'hearth', P.id + '.hearth', { h: H, back: side, room: room.id, wid, rec: rc });
   P.clear.push(Object.assign(side === 'n' ? { x0: fp.x0, x1: fp.x1, z0: fp.z1, z1: fp.z1 + 1.0 } : side === 's' ? { x0: fp.x0, x1: fp.x1, z0: fp.z0 - 1.0, z1: fp.z0 } : side === 'w' ? { x0: fp.x1, x1: fp.x1 + 1.0, z0: fp.z0, z1: fp.z1 } : { x0: fp.x0 - 1.0, x1: fp.x0, z0: fp.z0, z1: fp.z1 }, { k: room.k, kind: 'hearth' }));
   P.lightIn[room.id] = 1; P.hearths = (P.hearths || []).concat([{ k: room.k, x: px, z: pz, side, wid, rect: fp }]);
   return { px, pz, side, fp, wid, front: hor ? [px, pz + (side === 'n' ? 1 : -1) * (dep + 0.6)] : [px + (side === 'w' ? 1 : -1) * (dep + 0.6), pz] };
@@ -7074,7 +7178,7 @@ function pPier(P, k, hearth) {
 }
 // a wall candle bracket by a door or over a bed; lit like any candle
 function pSconce(P, room, side, u, y) {
-  const rec = pHang(P, room, side, u, 0.3, y || 1.55, (y || 1.55) + 0.3, (m, hh) => { m.mat(MAT.METAL, COL.black); m.box(-0.04, 0, 0.0, 0.04, 0.03, 0.2); m.box(-0.012, -0.12, 0.0, 0.012, 0.03, 0.02); at(m, 0, 0.03, 0.17, 0, () => Props.candle(m, P.c, true)); }, P.id + '.sconce', {}); if (rec) P.lightIn[room.id] = 1; return rec;
+  const rec = pHang(P, room, side, u, 0.3, y || 1.55, (y || 1.55) + 0.3, (m, hh) => { m.mat(MAT.METAL, COL.black); m.box(-0.035, -0.1, 0.0, 0.035, 0.12, 0.012); m.box(-0.01, 0.0, 0.0, 0.01, 0.025, 0.19); m.box(-0.008, -0.07, 0.0, 0.008, 0.0, 0.1); m.cyl(0, 0.025, 0.19, 0.05, 0.04, 0.014, 10, 2); at(m, 0, 0.04, 0.19, 0, () => Props.candle(m, P.c, true)); }, P.id + '.sconce', {}); if (rec) P.lightIn[room.id] = 1; return rec;
 }
 // a lantern hung from the ceiling beam
 function pLamp(P, room, x, z) {
@@ -7115,12 +7219,12 @@ function pDining(P, room, len, wid, opt) {
       const [tx, tz] = p, tr = rectOf(tx, tz, tw, td);
       if (!pFit(P, room, tr, { h: 0.78 })) continue;
       const bs = [-1, 1].map(sg => rot ? [tx + sg * (wid / 2 + 0.34), tz] : [tx, tz + sg * (wid / 2 + 0.34)]);
-      const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.34, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.34));
+      const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.46, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.46));
       if (!brs.every(r => pFit(P, room, r, { h: 0.46 })) || (opt.sideRoom && !brs.every(r => true))) continue;
       const t = pPut(P, room, P.id + '.' + (opt.id || 'table'), tx, tz, 0, tw, td, 0.78, m => { m.push(); if (rot) m.RY(rot); pdTable(len, wid, items, opt.n || 3, c)(m); m.pop(); }, { surface: true });
       if (!t) continue;
       const seats = [];
-      bs.forEach((b, i) => { const sg = i ? 1 : -1; pPut(P, room, P.id + '.' + (opt.id || 'table') + 'bench' + i, b[0], b[1], rot ? PI / 2 : 0, len * 0.9, 0.34, 0.46, pdBench(len * 0.9), {}); for (const q of [-0.5, 0.5]) seats.push([rot ? b[0] : tx + q * len * 0.5, rot ? tz + q * len * 0.5 : b[1], rot ? (sg < 0 ? PI / 2 : -PI / 2) : (sg < 0 ? PI : 0)]); });
+      bs.forEach((b, i) => { const sg = i ? 1 : -1; pPut(P, room, P.id + '.' + (opt.id || 'table') + 'bench' + i, b[0], b[1], rot ? PI / 2 : 0, len * 0.9, 0.46, 0.46, pdBench(len * 0.9), {}); for (const q of [-0.5, 0.5]) seats.push([rot ? b[0] : tx + q * len * 0.5, rot ? tz + q * len * 0.5 : b[1], rot ? (sg < 0 ? PI / 2 : -PI / 2) : (sg < 0 ? PI : 0)]); });
       return { x: tx, z: tz, rot, seats, t };
     }
   }
@@ -7156,7 +7260,7 @@ function dressBedroom(P, room, o) {
   let placed = 0;
   for (const nm of beds) {
     let it = null;
-    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { const s = pWallSlot(P, room, sd, 1.1, 2.1, { h: o.bedH || 0.95, at: o.bedAt }); if (!s) continue; it = pPut(P, room, P.id + '.' + nm, s.cx, s.cz, rotBack(sd, -1), 1.1, 2.1, o.bedH || 0.95, pdBed(1.0, col, !!o.fur), { back: sd }); if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
+    for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { it = pAgainst(P, room, sd, P.id + '.' + nm, 1.06, 2.1, o.bedH || 0.95, -1, pdBed(0.9, col, !!o.fur), { at: o.bedAt }); const s = it ? { cx: it.cx, cz: it.cz } : null; if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
     if (!it && nm === 'bed') P.err.push('no room for ' + nm + ' in ' + room.id);
   }
   // a chest at the foot of the first bed (or against any free wall)
@@ -7175,7 +7279,7 @@ function dressStore(P, room, o) {
   let n = 0; for (const sd of pSidesLong(room)) { if (pAgainst(P, room, sd, P.id + '.shelf' + n, 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, o.items || ['pot', 'jug', 'bowl', 'bottle', 'cheese'])), { at: n ? 'end' : 'start' })) n++; if (n >= 2) break; }
   for (let i = 0; i < 3; i++) for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.barrel' + i, 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: i ? 'end' : 'start' })) break;
   for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.crate' + i, 0.6, 0.6, 0.6, R() * 0.4, pdCrate(0.6), { near: [room.in.x1 - 1, room.in.z1 - 1] });
-  for (let i = 0; i < 2; i++) pFree(P, room, P.id + '.sack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x0 + 1, room.in.z1 - 1], noClear: false });
+  for (let i = 0; i < 2; i++) pFree(P, room, P.id + '.sack' + i, 0.62, 0.62, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x0 + 1, room.in.z1 - 1], noClear: false });
   pWalls(P, room, ['Shelf_Small_Bottles', 'Peg_Rack', 'Torch_Metal', 'Shelf_Simple']);
   pLamp(P, room, ...pCentre(room));
 }
@@ -7196,7 +7300,7 @@ function dressCellar(P, room, o) {
   else for (const sd of pSidesLong(room)) for (let i = 0; i < (o.barrels || 2); i++) if (pAgainst(P, room, sd, P.id + '.cbarrel' + n++, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: i ? 'end' : 'start', lowOk: true })) { }
   for (const sd of pSidesLong(room)) if (pAgainst(P, room, sd, P.id + '.cshelf', 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(P.c, ['jug', 'bottle', 'pot', 'bowl'])), { at: 'mid' })) break;
   for (let i = 0; i < (o.crates === undefined ? 3 : o.crates); i++) pFree(P, room, P.id + '.ccrate' + i, 0.6, 0.6, 0.6, R() * 0.5, pdCrate(0.6), { near: [room.in.x0 + 1, room.in.z1 - 1] });
-  for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.csack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x1 - 1, room.in.z0 + 1] });
+  for (let i = 0; i < 3; i++) pFree(P, room, P.id + '.csack' + i, 0.62, 0.62, 0.5, R() * 6, pdSack(0.3), { near: [room.in.x1 - 1, room.in.z0 + 1] });
   let t = 0; for (const sd of ['n', 's', 'w', 'e']) { const s = (room.x1 - room.x0 > 3 ? 0.25 : 0.5); if (pTorch(P, room, sd, (sd === 'n' || sd === 's' ? (room.in.x0 + room.in.x1) / 2 : (room.in.z0 + room.in.z1) / 2) + (t++ % 2 ? 1.2 : -1.2), 1.7, 6.5)) break; }
   if (!P.lightIn[room.id]) pTorch(P, room, 'n', (room.in.x0 + room.in.x1) / 2, 1.7, 6.5) || pTorch(P, room, 's', (room.in.x0 + room.in.x1) / 2, 1.7, 6.5);
 }
@@ -7267,7 +7371,7 @@ function planHouse(P, c, info) {
   const hall0 = hall, hh = pHearth(P, hall, 's', info.inn ? 2.4 : 1.7, { cauldron: true, at: 0 });
   P.hall = { room: hall, hh };
   if (need.has('counter')) {
-    const t = pFree(P, hall, P.id + '.counter', 2.0, 0.7, 1.0, 0, m => { Props.table(m, 2.0, 0.7); Props.clutter(m, c.R, -0.8, 0.8, 0.76, 0, ['jug', 'bowl', 'cheese', 'loaf'], 3, c); }, { near: [x0 / 2 + 0.2, 2.2], surface: true });
+    const t = pFree(P, hall, P.id + '.counter', 2.0, 0.7, 1.0, 0, m => { Props.table(m, 2.0, 0.7); Props.clutter(m, c.R, -0.8, 0.8, 0.76, 0, ['jug', 'bowl', 'cheese', 'loaf'], 3, c); }, { near: [x0 / 2 + 0.2, 2.2], surface: true, keeper: 0.75 });
     if (t) pSpot(P, 'counter', t.cx, t.cz + 0.75, PI, { k: 0 });
   }
   if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
@@ -7348,6 +7452,8 @@ function planBuild(c) {
   const W = P.dims ? P.dims.W : 9, D = P.dims ? P.dims.D : 10, zi = c.zoneInfo, ctr = P.w2(0, 0, D / 2);
   zi.site = Object.assign({}, c.site, { x: ctr[0], z: ctr[2], yaw: P.yaw }); zi.hw = W / 2; zi.hd = D / 2; zi.y0 = dd.sill[1] - 3.6; zi.y1 = dd.sill[1] + 7; zi.slope = 0; zi.H = H_GROUND;
   if (P.hearths && P.hearths[0]) { const h = P.hearths[0], hp = P.w2(h.x, 0, h.z); zi.hearth = [hp[0], hp[2], h.wid]; }
+  PD.topup(P);             // [fx2] rooms that measured placement left thin get a second fill
+  pSpotsClear(P);          // [fx2] nobody stands inside a counter, chair or cabinet
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
   const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
   for (const n of new Set([...P.need, 'fire1', 'stand2', 'guestbed', 'barfront', 'front', 'pew1', 'pew2', 'sit', 'bed2', 'home'])) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });
@@ -7394,7 +7500,7 @@ function dressKind(P, c, room, hh, info) {
   const id = P.id, D = KIT_DRESS[id] || {}, R = P.R, a = room.in, kind = info.kind; P.hall = { room, hh };
   if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
   if (kind === 'shop') {          // a counter across the room with the keeper behind it, wares on every wall
-    const t = pFree(P, room, id + '.counter', 2.6, 0.8, 1.0, 0, m => { Props.table(m, 2.6, 0.8, 1.0); Props.clutter(m, R, -1.1, 1.1, 1.0, 0, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple'], 5, c); }, { near: [-1.6, 2.4], surface: true });
+    const t = pFree(P, room, id + '.counter', 2.6, 0.8, 1.0, 0, m => { Props.table(m, 2.6, 0.8, 1.0); Props.clutter(m, R, -1.1, 1.1, 1.0, 0, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple'], 5, c); }, { near: [-1.6, 2.4], surface: true, keeper: 0.8 });
     if (t) { pSpot(P, 'counter', t.cx, t.cz + 0.8, PI, { k: 0 }); pSpot(P, 'front', t.cx, t.cz - 0.8, 0, { k: 0 }); }
     for (const sd of ['w', 'e']) for (let i = 0; i < 2; i++) pAgainst(P, room, sd, id + '.ware' + sd + i, 1.8, 0.34, 1.8, +1, pdShelf(1.8, 1.8, 3, stockFill(c, ['pot', 'jug', 'bowl', 'cheese', 'bottle', 'loaf'])), { at: 'mid' === 0 ? 0 : 2.0 + i * 2.2 });
   } else if (kind === 'smith') {          // the forge is the hearth; the anvil in front of it, a quench trough, a bench and weapons
@@ -7577,17 +7683,17 @@ PD.cask = (len, r) => m => {
 };
 PD.broom = m => { m.mat(MAT.TIMBER, COL.wood); m.push().RZ(0.09); m.box(-0.012, 0, -0.012, 0.012, 1.45, 0.012); m.mat(MAT.THATCH, COL.hay, 0.5); m.cyl(0, 0, 0, 0.08, 0.035, 0.3, 6, 1); m.pop(); addBoxCollider(m, -0.12, -0.12, 0.12, 0.12, 0, 1.4); };
 PD.sacks = (R) => m => { const cols = [[0.7, 0.62, 0.45], [0.6, 0.55, 0.42], [0.55, 0.5, 0.36]]; for (const [x, z, s, y] of [[-0.18, 0, 0.24, 0], [0.2, 0.02, 0.22, 0], [0.0, -0.04, 0.2, 0.3]]) { m.mat(MAT.CLOTH, R.pick(cols), 0.5); m.ball(x, y + s * 0.9, z, s * 0.85, s, s * 0.8, 6, 4); } addBoxCollider(m, -0.4, -0.3, 0.4, 0.3, 0, 0.6); };
-PD.stack = (R) => m => { Props.woodpile(m, 5, 4, 0.7); };
+PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 columns = 0.55 m deep (5 drew 0.91 m into a 0.5 m slot)
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, [0.4, 0.33, 0.25], [0.25, 0.22, 0.2], [0.55, 0.45, 0.3]]), 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.14, -l, -0.11, x + 0.14, 0.0, -0.075); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.36, 0.2, 0.16], [0.22, 0.27, 0.32], [0.5, 0.4, 0.2], [0.55, 0.5, 0.4], [0.3, 0.34, 0.22], [0.4, 0.33, 0.25], [0.25, 0.22, 0.2]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.13, -l * 0.5, -0.115, x + 0.13, 0.0, -0.075); m.box(x - 0.15, -l, -0.125, x + 0.15, -l * 0.5, -0.08); m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2 - 0.04, h - 0.04, -0.09, w / 2 + 0.04, h + 0.02, -0.03);
-  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.8, c[1] * 0.8, c[2] * 0.8], 0.6); m.box(-w / 2, 0, -0.07, w / 2, h, -0.04);
-  m.mat(MAT.CLOTH, [0.7, 0.6, 0.35], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
+  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.62, c[1] * 0.62, c[2] * 0.62], 0.6); m.box(-w / 2, 0.05, -0.07, w / 2, h, -0.04); m.mat(MAT.CLOTH, [c[0] * 0.45, c[1] * 0.45, c[2] * 0.45], 0.6); m.box(-w / 2 + 0.01, 0, -0.068, w / 2 - 0.01, 0.05, -0.042);
+  m.mat(MAT.CLOTH, [0.46, 0.38, 0.24], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
   m.box(-0.07, h * 0.3, -0.08, 0.07, h * 0.75, -0.04); m.box(-w * 0.22, h * 0.5, -0.08, w * 0.22, h * 0.56, -0.04);
 };
 // a niche in a wall (crypt, nave): dark recess with an arch lintel, a candle that glows without a light, a skull or an urn
@@ -7614,22 +7720,24 @@ const PD_DEF = {      // [width, depth] of what a pool entry occupies along / ou
 };
 // something against a wall near u (not further than tol): returns its width or 0
 PD.floorAt = function (P, room, sd, id, w, d, h, draw, u, tol, o) {
-  const s = pWallSlot(P, room, sd, w, d, Object.assign({ at: u + w / 2, h }, o || {})); if (!s) return 0;
+  const hk = id.replace(/^[^.]*\./, '').replace(/\d+/g, '') + sd + w.toFixed(2) + d.toFixed(2), hon = {}; if (HON_C[hk]) hon.rel = Object.assign({}, HON_C[hk]);   // [fx2] flush for what this kind really occupies
+  const s = pWallSlot(P, room, sd, w, d, Object.assign({ at: u + w / 2, h, _hon: hon }, o || {})); if (!s) return 0;
   const along = (sd === 'n' || sd === 's') ? s.cx : s.cz; if (Math.abs(along - u - w / 2) > tol) return 0;
-  return pPut(P, room, id, s.cx, s.cz, rotBack(sd, +1), w, d, h, draw, Object.assign({ back: sd }, o || {})) ? w : 0;
+  const it = pPut(P, room, id, s.cx, s.cz, rotBack(sd, +1), w, d, h, draw, Object.assign({ back: sd, _hon: hon }, o || {})); if (hon.rel) HON_C[hk] = Object.assign({}, hon.rel);
+  return it ? w : 0;
 };
 PD.try = function (P, room, sd, u, kind, R, fill) {
   const c = P.c, n = P.items.length, id = P.id + '.d' + n;
   switch (kind) {
     case 'shelf': return PD.floorAt(P, room, sd, id + 'sh', 1.5, 0.34, 1.8, pdShelf(1.5, 1.8, 3, fill || PD.goods(c, 1.5)), u, 0.3);
     case 'books': return PD.floorAt(P, room, sd, id + 'bk', 1.8, 0.34, 1.8, pdShelf(1.8, 1.8, 3, PD.books(c, 1.8)), u, 0.3);
-    case 'cabinet': return PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true });
+    case 'cabinet': { const q = (P.fixt = P.fixt || {}), key = room.id + 'cabinet'; if ((q[key] || 0) >= 5) return PD.try(P, room, sd, u, 'cupboard', R, fill); const w = PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, 0), u, 0.3, { lowOk: true }); if (w) q[key] = (q[key] || 0) + 1; return w; }
     case 'cupboard': return PD.floorAt(P, room, sd, id + 'cu', 1.12, 0.6, 1.76, PD.cupboard, u, 0.3);
     case 'cask': return PD.floorAt(P, room, sd, id + 'ck', 1.0, 0.95, 0.8, PD.cask(0.9, 0.32), u, 0.3, { lowOk: true });
     case 'bench': return PD.floorAt(P, room, sd, id + 'bn', 1.6, 0.4, 0.46, m => Props.bench(m, 1.6), u, 0.3, { lowOk: true });
     case 'sacks': return PD.floorAt(P, room, sd, id + 'sk', 0.9, 0.6, 0.6, PD.sacks(R), u, 0.3, { lowOk: true });
     case 'broom': return PD.floorAt(P, room, sd, id + 'br', 0.3, 0.3, 1.45, PD.broom, u, 0.3);
-    case 'stack': return PD.floorAt(P, room, sd, id + 'ws', 0.8, 0.5, 0.7, PD.stack(R), u, 0.3, { lowOk: true });
+    case 'stack': return PD.floorAt(P, room, sd, id + 'ws', 0.8, 0.58, 0.7, PD.stack(R), u, 0.3, { lowOk: true });
     case 'shrine': return PD.floorAt(P, room, sd, id + 'sr', 1.32, 0.6, 1.3, PD.shrine, u, 0.3);
     case 'hooks': { const w = 0.9 + R() * 0.6; return pHang(P, room, sd, u + w / 2, w, 1.0, 1.9, PD.hooks(R, w), id + 'hk', { pivot: 1.75 }) ? w : 0; }
     case 'tapestry': { const w = 1.4 + R() * 0.4; return pHang(P, room, sd, u + w / 2, w, 1.1, 2.4, PD.tapestry(R, w, 1.2), id + 'tp', { pivot: 1.15 }) ? w : 0; }
@@ -7727,6 +7835,34 @@ PD.stats = function (P) {
   return rows;
 };
 
+// [fx2] top-up: measured placement refuses what really does not fit, so a room can come out thinner than its rule meant. Any room whose walls are less than 58% covered gets a second fill pass
+// from a pool that suits it; corners that are still bare get their kind of thing. Nothing here is a new kind of object: every pool entry is one PD.try already knows.
+PD.POOLS = {
+  cellar: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], store: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], bedroom: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet', 'cask'],
+  hall: ['shelf', 'cabinet', 'hooks', 'paint', 'tapestry', 'sacks', 'stack', 'cupboard'], shop: ['shelf', 'cabinet', 'hooks', 'paint', 'tapestry', 'sacks', 'stack'], keeper: ['cupboard', 'hooks', 'paint', 'shelf', 'cabinet'],
+  common: ['shelf', 'cabinet', 'hooks', 'paint', 'cask', 'stack'], kitchen: ['shelf', 'cabinet', 'hooks', 'cask', 'sacks', 'stack'], study: ['books', 'paint', 'hooks', 'cabinet'], sacristy: ['cupboard', 'hooks', 'paint', 'shelf'], gallery: ['paint', 'hooks', 'tapestry']
+};
+PD.cover = function (P, r) {
+  const a = r.in; let free = 0, cov = 0;
+  for (const sd of ['n', 's', 'w', 'e']) {
+    const hor = sd === 'n' || sd === 's', lo = hor ? a.x0 : a.z0, hi = hor ? a.x1 : a.z1; free += hi - lo;
+    const door = r.doors.filter(d => d.wall && (hor ? d.wall.ax === 'x' : d.wall.ax === 'z') && Math.abs(d.wall.c - (sd === 'n' ? r.z0 : sd === 's' ? r.z1 : sd === 'w' ? r.x0 : r.x1)) < 0.01);
+    for (const d of door) free -= d.w; const iv = [];
+    for (const it of P.items) if (it.k === r.k && it.room === r.id && it.back === sd) iv.push(hor ? [it.x0, it.x1] : [it.z0, it.z1]);
+    for (const w of P.wallItems) if (w.k === r.k && w.room === r.id && w.side === sd) iv.push([w.u0, w.u1]);
+    iv.sort((x, y) => x[0] - y[0]); let end = -1e9; for (const [s, e] of iv) { const s2 = Math.max(s, lo, end), e2 = Math.min(e, hi); if (e2 > s2) cov += e2 - s2; end = Math.max(end, e2); }
+  }
+  return cov / Math.max(free, 1);
+};
+PD.topup = function (P) {
+  P.topped = 0;
+  for (const id in P.rooms) {
+    const r = P.rooms[id], pool = PD.POOLS[r.kind]; if (!pool) continue;
+    for (let pass = 0; pass < 5 && PD.cover(P, r) < 0.64; pass++) { const n = PD.fill(P, r, pool, { max: 6 }); P.topped += n; if (!n) break; }
+    if (PD.cover(P, r) < 0.64) P.topped += PD.corners(P, r, r.kind === 'cellar' || r.kind === 'store' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack']);
+  }
+};
+
 
 // ---- 72h_trades.js ----
 // ───────────────────────── designed plans by trade [c3] ─────────────────────────
@@ -7740,8 +7876,8 @@ const pdCounter = (len, c, kinds, n) => m => {          // a closed shop counter
   m.mat(MAT.PLANKS, COL.wood); m.box(x1 - 0.82, h, -0.42, x1 - 0.02, h + 0.03, 0.4);          // the flap, lifted for the keeper
   m.mat(MAT.METAL, COL.bronze); for (const z of [-0.2, 0.2]) m.box(x1 - 0.84, h + 0.01, z - 0.02, x1 - 0.78, h + 0.035, z + 0.02);
   at(m, x0 + 0.9, h, 0.0, 0.3, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.015, 0, -0.015, 0.015, 0.34, 0.015); m.box(-0.2, 0.33, -0.01, 0.2, 0.345, 0.01); for (const sx of [-0.19, 0.19]) { m.box(sx - 0.003, 0.2, -0.003, sx + 0.003, 0.33, 0.003); m.lathe([[0.0, 0.2], [0.07, 0.205], [0.075, 0.215]], 8, 1); } m.cyl(0, 0, 0, 0.06, 0.05, 0.02, 8, 1); });
-  at(m, x0 + 2.2, h, 0.05, -0.2, () => { m.mat(MAT.CLOTH, COL.leather, 0.5); m.box(-0.17, 0, -0.12, 0.17, 0.045, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(-0.16, 0.01, -0.11, 0.16, 0.04, 0.115, 4 | 8 | 1); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cyl(0.26, 0, 0.0, 0.03, 0.03, 0.07, 6, 1); });
-  m.push().T(0, h, 0.0); Props.clutter(m, R, x0 + 3.0, x1 - 1.2, 0, 0.0, kinds, Math.max(4, n - 3), c); m.pop();
+  at(m, Math.min(x0 + 2.2, x1 - 1.15), h, 0.05, -0.2, () => { m.mat(MAT.CLOTH, COL.leather, 0.5); m.box(-0.17, 0, -0.12, 0.17, 0.045, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(-0.16, 0.01, -0.11, 0.16, 0.04, 0.115, 4 | 8 | 1); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cyl(0.26, 0, 0.0, 0.03, 0.03, 0.07, 6, 1); });
+  m.push().T(0, h, 0.0); { const ca = len > 4 ? x0 + 3.0 : x0 + 0.5, cb = Math.max(ca + 0.3, x1 - (len > 4 ? 1.2 : 1.0)); Props.clutter(m, R, ca, Math.min(cb, x1 - 0.35), 0, 0.0, kinds, len > 4 ? Math.max(4, n - 3) : Math.max(2, Math.round(len)), c); } m.pop();          // [fx2] a short counter's wares stay on the counter
   addBoxCollider(m, x0, -0.45, x1, 0.42, 0, h);
 };
 const pdShelfTall = (len, h, lv, fill) => m => Props.shelf(m, len, h, lv, 0.34, fill);
@@ -7755,7 +7891,7 @@ function pShelfRun(P, room, side, u0, u1, kinds, o) {
 function pStock(P, room, o) {
   o = o || {}; const R = P.R;
   for (let i = 0; i < (o.crates || 0); i++) pFree(P, room, P.id + '.' + room.id + 'crate' + i, 0.6, 0.6, 0.6, R() * 0.5, pdCrate(0.6), { near: o.near || pCentre(room) });
-  for (let i = 0; i < (o.sacks || 0); i++) pFree(P, room, P.id + '.' + room.id + 'sack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: o.nearS || o.near || pCentre(room) });
+  for (let i = 0; i < (o.sacks || 0); i++) pFree(P, room, P.id + '.' + room.id + 'sack' + i, 0.62, 0.62, 0.5, R() * 6, pdSack(0.3), { near: o.nearS || o.near || pCentre(room) });
   for (let i = 0; i < (o.barrels || 0); i++) pFree(P, room, P.id + '.' + room.id + 'brl' + i, 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { near: o.nearB || o.near || pCentre(room), lowOk: true });
 }
 
@@ -7839,7 +7975,7 @@ PLANS.smithy = (P, c, info) => {
     pSpot(P, 'home', fx + 1.9, fz - 0.4, face, { k: 0 });
     const an = pPut(P, forge, id + '.anvil', fx - 0.25, fz - 0.5, 0, 0.7, 0.5, 0.9, mm => Props.anvil(mm), { allow: ['hearth'] });
     if (an) { pSpot(P, 'anvil', an.cx + 0.15, an.cz + 0.75, 0, { k: 0 }); }
-    pSpot(P, 'forge', fx + 1.0, fz + 0.1, PI / 2 + 0.3, { k: 0 });
+    pSpot(P, 'forge', fx + 1.0, fz - 0.2, PI / 2 + 0.3, { k: 0 });
     // the forge itself: a billet glowing in the coals, a stone hood already (the breast), smoke going up, the bellows on the right with its handle out
     at(m, hh.px, 0.02, hh.pz, PI / 2, () => {
       emit(m, 1.6, () => { m.mat(MAT.PLAIN, [1, 0.5, 0.12]); m.box(0.2, 0.1, -0.5, 0.6, 0.125, 0.5, 4); m.box(0.25, 0.125, -0.12, 0.55, 0.14, 0.12, 4); });
@@ -7862,7 +7998,7 @@ PLANS.smithy = (P, c, info) => {
   pKitFloor(P, forge, 'e', 'Whetstone', { at: 'start' }); pKitFloor(P, forge, 'w', 'WeaponStand', { n: 'a', at: 'mid' }); pKitFloor(P, forge, 'e', 'WeaponStand', { n: 'b', at: 'end' });
   pAgainst(P, forge, 'e', id + '.waterbrl', 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { at: 'end', lowOk: true }); pKitFloor(P, forge, 'e', 'Bucket_Wooden_1', { n: 'q', at: 'end' });
   for (let i = 0; i < 2; i++) pAgainst(P, forge, 's', id + '.coal' + i, 1.0, 0.8, 0.5, 0, pdCoal, { at: i ? 'end' : 'start', lowOk: true });
-  pWalls(P, forge, ['Peg_Rack', 'Axe_Bronze', 'Pickaxe_Bronze', 'cross_pein_hammer', 'Sword_Bronze', 'kite_shield', 'Torch_Metal', 'rusted_spade_01']);
+  pWalls(P, forge, ['Peg_Rack', 'Axe_Bronze', 'Pickaxe_Bronze', 'Sword_Bronze', 'kite_shield', 'Torch_Metal', 'rusted_spade_01']);
   // overhead: chains and a bar of tongs above the work, the rafters black with soot
   pCeil(P, forge, -0.3, 4.0, PD.chainHang(1.3, R)); pCeil(P, forge, -3.0, 3.2, PD.hookBar(1.8, R)); pCeil(P, forge, -4.5, 5.5, PD.chainHang(0.9, R)); pCeil(P, forge, 1.0, 5.5, PD.hookBar(1.2, R, ['tongs', 'ladle', 'chain']));
   for (const sd of ['n', 'e', 'w']) pHigh(P, forge, sd, 2.7, 1.5, w => PD.highShelf(R, w), id + '.hi');
@@ -7991,7 +8127,7 @@ PD.ironStand = R => m => {
 };
 // a heap of coal against a wall, with a few lumps spilled
 PD.coalHeap = R => m => {
-  m.mat(MAT.PLAIN, WS.coal); m.ball(0, 0.18, 0, 0.62, 0.3, 0.42, 8, 5); m.ball(-0.28, 0.12, 0.1, 0.32, 0.2, 0.3, 7, 4); m.ball(0.3, 0.1, -0.05, 0.3, 0.18, 0.26, 7, 4);
+  m.mat(MAT.PLAIN, WS.coal); m.ball(0, 0.28, 0, 0.62, 0.3, 0.42, 8, 5); m.ball(-0.28, 0.2, 0.1, 0.32, 0.2, 0.3, 7, 4); m.ball(0.3, 0.18, -0.05, 0.3, 0.18, 0.26, 7, 4);
   for (let i = 0; i < 6; i++) { m.mat(MAT.PLAIN, [0.07, 0.07, 0.08]); m.ball(R.s() * 0.7, 0.03, 0.3 + R() * 0.2, 0.05, 0.03, 0.05, 4, 3); }
   addBoxCollider(m, -0.7, -0.45, 0.7, 0.45, 0, 0.5);
 };
@@ -8600,6 +8736,15 @@ Object.assign(PD.WARES, {
 });
 
 // floor props by name: [w, d, h, factory(P, room, R) -> draw(m)]
+// [fx2] a hand cart for a yard: the body 1.5 x 2.4 m on two wheels, the shafts lowered to the ground 1.1 m beyond (the street cart's shafts reach 1.7 m and drew 1.5 m through the yard wall)
+TP.cart = m => {
+  m.push().T(0, 0, 0.525); m.mat(MAT.PLANKS, COL.wood); m.box(-0.75, 0.62, -1.2, 0.75, 0.70, 1.2);
+  for (const sx of [-1, 1]) m.box(sx * 0.75 - 0.03, 0.70, -1.2, sx * 0.75 + 0.03, 1.08, 1.2);
+  m.box(-0.75, 0.70, 1.17, 0.75, 1.08, 1.23); m.box(-0.75, 0.70, -1.23, 0.75, 0.95, -1.17);
+  m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.9, 0.52, -0.05, 0.9, 0.62, 0.05);
+  for (const sx of [-1, 1]) { m.beam([sx * 0.45, 0.6, -1.2], [sx * 0.42, 0.05, -2.3], 0.07, 0.07); at(m, sx * 0.92, 0.57, 0, PI / 2, () => Props.wheel(m, 0.57, 0.09)); }
+  addBoxCollider(m, -1.0, -2.4, 1.0, 1.25, 0, 1.1); m.pop();
+};
 const HPR = {
   oven: [2.0, 1.5, 2.2, (P, rm) => TP.oven(P, rm, true)], kiln: [2.0, 1.5, 2.2, (P, rm) => TP.oven(P, rm, false)],
   vat: [1.3, 1.3, 0.75, (P, rm, R, o) => TP.vat((o && o.col) || [0.3, 0.38, 0.5])], tun: [1.8, 1.8, 1.1, () => TP.tun],
@@ -8611,7 +8756,7 @@ const HPR = {
   strongbox: [1.0, 0.6, 0.65, () => TP.strongbox], anvil: [0.8, 0.5, 0.9, () => TP.anvilSmall], still: [1.5, 0.9, 1.4, () => PD.still],
   bench: [2.1, 1.1, 1.0, () => m => kp(m, 'Workbench', 0, 0, 0, 0.95, 0)], spinning: [0.6, 1.1, 1.05, () => m => kp(m, 'spinning_wheel_01', 0, 0, 0, 1, 0)], dummy: [0.8, 0.7, 1.9, () => m => kp(m, 'Dummy', 0, 0, 0, 0.95, 0)],
   cask: [1.0, 0.95, 0.95, () => PD.cask(0.9, 0.34)], sacks: [0.9, 0.6, 0.6, (P, rm, R) => PD.sacks(R)], stack: [0.9, 0.5, 0.75, (P, rm, R) => PD.stack(R)], crates: [1.5, 0.8, 1.15, (P, rm, R) => PD.cratePile(R)],
-  barrel: [0.7, 0.7, 0.9, () => pdBarrel(0.33, 0.9)], bucket: [0.5, 0.5, 0.5, () => m => kp(m, 'Bucket_Wooden_1', 0, 0, 0, 1, 0)], cart: [1.8, 2.8, 1.3, () => m => Props.cart(m, false)],
+  barrel: [0.7, 0.7, 0.9, () => pdBarrel(0.33, 0.9)], bucket: [0.5, 0.5, 0.5, () => m => kp(m, 'Bucket_Wooden_1', 0, 0, 0, 1, 0)], cart: [2.05, 3.7, 1.15, () => TP.cart],
   appleCrate: [0.8, 0.5, 0.5, () => m => kp(m, 'FarmCrate_Apple', 0, 0, 0, 1, 0)], applesBrl: [0.7, 0.7, 0.9, () => m => kp(m, 'Barrel_Apples', 0, 0, 0, 1, 0)],
 };
 // ───────── one memorable object per house [c5]: floor pieces (HPR) and wall pieces (HMEMO.wall) ─────────
@@ -8731,7 +8876,7 @@ const pAnyHang = (P, room, kinds, o) => { let n = 0; for (const sd of ['n', 'w',
 const HT = {};
 const cnt = (P, room, F, len, kinds, nm) => {
   const R = P.R, c = P.c, near = F.counterAt || [-0.6 * F.sx, room.z0 + (room.z1 - room.z0) * 0.62];
-  const t = pFree(P, room, P.id + '.counter', len, 0.8, 1.0, 0, pdCounter(len, c, kinds, 8), { near, surface: true, noClear: false, lowOk: false });
+  const t = pFree(P, room, P.id + '.counter', len, 0.8, 1.0, 0, pdCounter(len, c, kinds, 8), { near, surface: true, noClear: false, lowOk: false, keeper: 0.85 });
   if (t) { pSpot(P, 'counter', t.cx + 0.4, t.cz + 0.85, PI, { k: room.k }); pSpot(P, 'front', t.cx + 0.4, t.cz - 0.85, 0, { k: room.k }); P.counter = t; } return t;
 };
 const hFocalAt = (P, room, name, F, o) => { const r = hPlace(P, room, name, Object.assign({ sides: ['s'], at: [F.fx === undefined ? 0 : F.fx, -F.sx * 2.2, F.sx * 2.2, -F.sx * 3.2] }, o || {})); if (r && !P.focal) P.focal = { name, x: r.cx, z: r.cz }; return r; };
@@ -8936,7 +9081,7 @@ Bake.pool = function (m, y, q, mg, A) {
 };
 Bake.interior = function (P) {
   if (!Bake.on || !P || !P.c || !P.c.cell) return;
-  const cell = P.c.cell, m = new Mesh(512); m.m1 = 0; m.m2 = 0; m.m3 = 0; m.layer = 0; m.cr = m.cg = m.cb = 0; m.grad = null; m.wind = 0;
+  const cell = P.c.cell, m = new Mesh(512); m.noAudit = 1; /* [fx2] alpha decal: overlapping pools are meant to overlap */ m.m1 = 0; m.m2 = 0; m.m3 = 0; m.layer = 0; m.cr = m.cg = m.cb = 0; m.grad = null; m.wind = 0;
   const T = P.T, ax = [T[0], T[2]], az = [T[8], T[10]];             // canonical x and z axes in world (x, z)
   const w2 = (x, z) => [T[12] + x * ax[0] + z * az[0], T[14] + x * ax[1] + z * az[1]];
   for (const it of P.items) {
@@ -8955,7 +9100,7 @@ Bake.interior = function (P) {
   }
   if (m.ni) cell.decal = m;
   // light shafts: two stacked quads from the pane down to the floor in front of it
-  { const sm = new Mesh(256); sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 232; sm.cb = 190; sm.ao = 1;
+  { const sm = new Mesh(256); sm.noAudit = 1; sm.m1 = 0; sm.m2 = 0; sm.m3 = 0; sm.layer = 0; sm.grad = null; sm.wind = 0; sm.cr = 255; sm.cg = 232; sm.cb = 190; sm.ao = 1;
     for (const w of P.windows) {
       const wl = w.wall, hor = wl.ax === 'x', L = P.lv[w.k]; if (!L || !wl.ext || w.k !== 0 && !P.lv[0]) continue;
       const og = wl.open.find(o => o.type === 'win' && o.pos === w.pos), gc = og && og.glass; if (gc) { sm.cr = Math.round(Math.min(1, 0.25 + gc[0]) * 255); sm.cg = Math.round(Math.min(1, 0.25 + gc[1]) * 255); sm.cb = Math.round(Math.min(1, 0.25 + gc[2]) * 255); } else { sm.cr = 255; sm.cg = 232; sm.cb = 190; }      // stained glass throws its own colour
@@ -9325,7 +9470,8 @@ function buildVillage() {
   leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
   for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [1.7 * k, 1.35 * k, 0.98 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
   leaf.mat(MAT.PLANKS, [1.2, 0.95, 0.7], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
-  leaf.mat(MAT.METAL, [0.42, 0.4, 0.37]); for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
+  leaf.mat(MAT.METAL, [0.17, 0.155, 0.14]);   // [fx2] straps read bright blue indoors (sky reflection): dark blackened iron
+   for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   const leafItem = skin.add(leaf);
   for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
@@ -9350,8 +9496,8 @@ function buildVillage() {
       if (hyp(x - SQUARE.x, z - SQUARE.z) < Math.max(SQUARE.rx, SQUARE.rz) + 1) return false;
       for (const c of World.colliders) {
         if (c.r !== undefined) { if (hyp(x - c.x, z - c.z) < c.r + rad) return false; continue; }
-        if (Math.max(c.hx, c.hz) > 1.6) continue;                               // walls: the pile is meant to lean on those
         const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz;
+        if (Math.max(c.hx, c.hz) > 1.6) { if (c.y1 - c.y0 > 6 && Math.abs(dx) < c.hx + 0.1 && Math.abs(dz) < c.hz + 0.1) return false; continue; }   // walls: the pile is meant to lean on those, but never from inside a building body ([fx1])
         if (hyp(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < rad) return false;
       }
       return true;
@@ -9380,6 +9526,7 @@ function buildVillage() {
         if ((s.bare || []).some(b => lx > b[0] - 0.6 && lx < b[2] + 0.6 && lz > b[1] - 0.6 && lz < b[3] + 0.6)) continue;
         const p = siteToWorld(s, lx, lz);
         if (!free(p[0], p[1], 1.0) || Math.abs(Terrain.y(p[0], p[1]) - s.y) > 0.45) continue;
+        if (SITES.some(o => { if (o === s) return false; const q = (p[0] - o.x) * Math.cos(o.yaw) + (p[1] - o.z) * Math.sin(o.yaw), r = -(p[0] - o.x) * Math.sin(o.yaw) + (p[1] - o.z) * Math.cos(o.yaw); return Math.abs(q) < o.w / 2 + 0.5 && Math.abs(r) < o.d / 2 + 0.5; })) continue;   // [fx1] terraced shops stand 0.3 m apart: a pile in that gap was inside the neighbour
         const kind = Rd.pick(kinds);
         put(p[0], p[1], s.yaw + out + PI / 2, piles[kind]); k++;
       }
@@ -9745,7 +9892,7 @@ function alleyDress(B, B2, R) {
   // ── bunting across the street ──
   const shopAt = id => AL.shops.find(s => s.a.id === id);
   const pt = (id, wx, y) => { const s = shopAt(id); if (!s) return null; if (s.house) { const si = SITE[id], z = si.z + (si.yaw === PI ? 1 : -1) * (si.d / 2 + 0.12); return [wx, si.y + y, z]; } const sgn = s.site.yaw === PI ? -1 : 1; return wpos(s.MS, (wx - s.site.x) * sgn, y, -s.d / 2 - 0.55); };
-  const flags = [[0.5, 0.27, 0.23], [0.64, 0.58, 0.44], [0.3, 0.36, 0.46], [0.58, 0.44, 0.24], [0.34, 0.4, 0.3]];      // Build 42: faded
+  const flags = [[0.5, 0.27, 0.23], [0.64, 0.58, 0.44], [0.3, 0.36, 0.46], [0.58, 0.44, 0.24], [0.34, 0.4, 0.3]].map(c => c.map(v => v * 0.2));      // Build 42: faded; [fx1] and the cloth material brightens: they read as white flags
   for (const [i1, x1, y1, i2, x2, y2] of [['shop.n3', 42.2, 5.2, 'shop.s2', 45.2, 5.4], ['shop.n4', 48.0, 6.4, 'shop.s2', 47.4, 5.0], ['draper', 31.6, 5.4, 'shop.s1', 30.8, 6.2], ['shop.n2', 38.0, 6.6, 'shop.s1', 33.0, 6.4]]) {
     const A_ = pt(i1, x1, y1), B_ = pt(i2, x2, y2); if (!A_ || !B_) continue;
     B.add(genBunting(A_, B_, R, flags, 12), I, OUT);
@@ -9763,11 +9910,14 @@ function kitGen(kind, R) {
   if (kind === 'paint') {
     const t = +key.slice(5), W = [0.8, 0.55, 0.62, 0.86, 0.6, 0.5, 0.7, 0.88, 0.62, 0.5, 0.9, 0.56][t], H = [0.5, 0.7, 0.55, 0.5, 0.5, 0.62, 0.5, 0.52, 0.5, 0.7, 0.5, 0.72][t], w = W, h = H;
     const frame = [[0.5, 0.42, 0.34], [0.3, 0.23, 0.17], [0.46, 0.38, 0.22], [0.26, 0.2, 0.15]][t % 4];
-    g.box(W_, -w / 2 - 0.05, -h / 2 - 0.05, 0, w / 2 + 0.05, h / 2 + 0.05, 0.04, frame);
+    const vv = c => c.map((v, i) => (v * 0.5 + [0.17, 0.115, 0.06][i]) * 0.6);          // [fx1] old brown varnish over the paint: low contrast, dark, warm (it read as a flat cartoon hill under a flat sky)
+    g.box(W_, -w / 2 - 0.07, -h / 2 - 0.07, 0, w / 2 + 0.07, h / 2 + 0.07, 0.04, frame);
+    const ring = (o, z0, z1, k) => { const f = frame.map(v => v * k), x0 = -w / 2 - o, x1 = w / 2 + o, y0 = -h / 2 - o, y1 = h / 2 + o, e = 0.03; g.box(W_, x0, y0, z0, x1, y0 + e, z1, f); g.box(W_, x0, y1 - e, z0, x1, y1, z1, f); g.box(W_, x0, y0 + e, z0, x0 + e, y1 - e, z1, f); g.box(W_, x1 - e, y0 + e, z0, x1, y1 - e, z1, f); };
+    ring(0.04, 0.04, 0.052, 0.78); ring(0.012, 0.052, 0.06, 1.12);          // stepped moulding: the frame has depth
     g.box(W_, -w / 2 - 0.02, -h / 2 - 0.02, 0.0405, w / 2 + 0.02, -h / 2, 0.0415, frame.map(v => v * 0.7));
-    let zq = 0; const z = 0.042, Q = (x0, y0, x1, y1, col) => { const zz = z + (zq++) * 0.0012; g.quad(C_, [x0, y0, zz], [x1, y0, zz], [x1, y1, zz], [x0, y1, zz], col, GPU.cloth); };          // [c3] each layer of the picture a hair in front of the last: overlapping layers at one depth flickered
-    const T3 = (a, b, c, col) => { const zz = z + (zq++) * 0.0012; g.tri(C_, [a[0], a[1], zz], [b[0], b[1], zz], [c[0], c[1], zz], col, GPU.cloth); };
-    const disc = (cx, cy, rx, ry, col, n) => { n = n || 8; for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU, zz = z + (zq) * 0.0012; g.tri(C_, [cx, cy, zz], [cx + Math.cos(a0) * rx, cy + Math.sin(a0) * ry, zz], [cx + Math.cos(a1) * rx, cy + Math.sin(a1) * ry, zz], col, GPU.cloth); } zq++; };
+    let zq = 0; const z = 0.042, Q = (x0, y0, x1, y1, col) => { const zz = z + (zq++) * 0.0012; g.quad(C_, [x0, y0, zz], [x1, y0, zz], [x1, y1, zz], [x0, y1, zz], vv(col), GPU.cloth); };          // [c3] each layer of the picture a hair in front of the last: overlapping layers at one depth flickered
+    const T3 = (a, b, c, col) => { const zz = z + (zq++) * 0.0012; g.tri(C_, [a[0], a[1], zz], [b[0], b[1], zz], [c[0], c[1], zz], vv(col), GPU.cloth); };
+    const disc = (cx, cy, rx, ry, col, n) => { n = n || 8; for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU, zz = z + (zq) * 0.0012; g.tri(C_, [cx, cy, zz], [cx + Math.cos(a0) * rx, cy + Math.sin(a0) * ry, zz], [cx + Math.cos(a1) * rx, cy + Math.sin(a1) * ry, zz], vv(col), GPU.cloth); } zq++; };
     const L = h * 0.5;
     if (t === 0) { Q(-w / 2, 0, w / 2, L, [0.45, 0.52, 0.58]); Q(-w / 2, -L, w / 2, 0, [0.3, 0.36, 0.2]); Q(-w / 2, -L, w / 2, -h * 0.15, [0.2, 0.24, 0.14]); T3([-w * 0.4, 0.0], [w * 0.1, 0.0], [-w * 0.15, h * 0.28], [0.3, 0.32, 0.34]); }
     else if (t === 1) { Q(-w / 2, -L, w / 2, L, [0.12, 0.1, 0.08]); disc(0, h * 0.14, w * 0.17, h * 0.15, [0.55, 0.42, 0.34], 8); Q(-w * 0.3, -L, w * 0.3, -h * 0.05, [0.22, 0.17, 0.14]); Q(-w * 0.12, -h * 0.08, w * 0.12, 0, [0.5, 0.4, 0.32]); }
@@ -9781,10 +9931,11 @@ function kitGen(kind, R) {
     else if (t === 9) { Q(-w / 2, -L, w / 2, L, [0.5, 0.38, 0.16]); disc(0, h * 0.2, w * 0.28, w * 0.28, [0.62, 0.5, 0.24], 10); disc(0, h * 0.2, w * 0.17, w * 0.17, [0.5, 0.4, 0.3], 8); T3([-w * 0.4, -L], [w * 0.4, -L], [0, h * 0.05], [0.22, 0.18, 0.22]); }
     else if (t === 10) { Q(-w / 2, 0.06 * h, w / 2, L, [0.55, 0.57, 0.52]); Q(-w / 2, -L, w / 2, 0.06 * h, [0.5, 0.42, 0.2]); for (let i = 0; i < 4; i++) T3([-w * 0.35 + i * w * 0.2, -h * 0.05], [-w * 0.27 + i * w * 0.2, -h * 0.05], [-w * 0.31 + i * w * 0.2, h * 0.08], [0.42, 0.33, 0.14]); }
     else { Q(-w / 2, 0.0, w / 2, L, [0.48, 0.52, 0.56]); Q(-w / 2, -L, w / 2, 0.0, [0.3, 0.32, 0.2]); T3([-w / 2, -h * 0.1], [w / 2, -h * 0.1], [w * 0.1, h * 0.12], [0.26, 0.28, 0.18]); Q(-w * 0.04, h * 0.02, w * 0.08, h * 0.3, [0.4, 0.36, 0.3]); T3([-w * 0.06, h * 0.3], [w * 0.1, h * 0.3], [w * 0.02, h * 0.42], [0.3, 0.2, 0.16]); }
+    for (let i = 0; i < 7; i++) { const x = (((i * 37 + t * 11) % 17) / 17 - 0.5) * w * 0.9, y = (((i * 53 + t * 7) % 13) / 13 - 0.5) * h * 0.8, l = 0.05 + ((i * 7 + t) % 5) * 0.025, zz = z + (zq++) * 0.0012; g.quad(C_, [x, y, zz], [x + 0.004, y, zz], [x + 0.004 + l * 0.5, y - l, zz], [x + l * 0.5, y - l, zz], [0.05, 0.035, 0.02], GPU.cloth); }          // craquelure
   } else {       // a bar with bundles of herbs, onions and dried flowers
     g.box(W_, -0.55, -0.02, 0, 0.55, 0.03, 0.06, DARKW);
-    const cols = [[0.3, 0.45, 0.22], [0.5, 0.38, 0.2], [0.55, 0.3, 0.45], [0.7, 0.62, 0.3], [0.3, 0.42, 0.2], [0.6, 0.45, 0.2]];
-    for (let i = 0; i < 6; i++) { const x = -0.45 + i * 0.18, len = 0.28 + R() * 0.2, c = cols[i]; g.quad(C_, [x - 0.04, -0.02, 0.06], [x + 0.04, -0.02, 0.06], [x + 0.08, -0.02 - len, 0.08], [x - 0.08, -0.02 - len, 0.08], c, GPU.cloth, true); g.quad(C_, [x, -0.02, 0.02], [x, -0.02, 0.1], [x + 0.02, -0.02 - len, 0.14], [x - 0.02, -0.02 - len, 0.02], c.map(v => v * 0.8), GPU.cloth, true); }
+    const cols = [[0.3, 0.45, 0.22], [0.5, 0.38, 0.2], [0.55, 0.3, 0.45], [0.7, 0.62, 0.3], [0.3, 0.42, 0.2], [0.6, 0.45, 0.2]].map(c => c.map(v => v * 0.52));       // [fx1] cloth material brightens: dried herbs are dull green and brown, not mint and lilac
+    for (let i = 0; i < 6; i++) { const x = -0.45 + i * 0.18, len = 0.28 + R() * 0.2, c = cols[i]; g.quad(C_, [x - 0.04, -0.02, 0.06], [x + 0.04, -0.02, 0.06], [x + 0.08, -0.02 - len, 0.08], [x - 0.08, -0.02 - len, 0.08], c, GPU.cloth, true); g.quad(C_, [x, -0.02, 0.02], [x, -0.02, 0.1], [x + 0.02, -0.02 - len, 0.14], [x - 0.02, -0.02 - len, 0.02], c.map(v => v * 0.8), GPU.cloth, true); g.quad(C_, [x - 0.03, -0.03, 0.02], [x + 0.03, -0.03, 0.1], [x + 0.05, -0.03 - len * 0.9, 0.12], [x - 0.05, -0.03 - len * 0.9, 0.04], c.map(v => v * 0.9), GPU.cloth, true); }
   }
   return KGEN[key] = g.make('gen_' + key + '_' + (_gn++));
 }
@@ -9801,7 +9952,7 @@ const DRU = { wood: [0.02, 0.07, 0.62, 0.27], cloth: [0.3, 0.27, 0.55, 0.45] };
 // muted palettes (linear-ish tints: the kit materials are already warm and fairly bright)
 const DRCOL = {
   wood: [[0.44, 0.34, 0.24], [0.38, 0.30, 0.23], [0.48, 0.38, 0.27], [0.32, 0.26, 0.2], [0.42, 0.36, 0.29]],
-  cloth: [[0.55, 0.30, 0.22], [0.62, 0.50, 0.30], [0.30, 0.34, 0.46], [0.72, 0.66, 0.54], [0.34, 0.40, 0.26], [0.50, 0.42, 0.34], [0.45, 0.24, 0.30], [0.64, 0.58, 0.46]],
+  cloth: [[0.55, 0.30, 0.22], [0.62, 0.50, 0.30], [0.30, 0.34, 0.46], [0.72, 0.66, 0.54], [0.34, 0.40, 0.26], [0.50, 0.42, 0.34], [0.45, 0.24, 0.30], [0.64, 0.58, 0.46]].map(c => c.map(v => v * 0.24)),       // [fx1] the kit cloth material brightens about 2x: this is what reads as pastel pink, mint and pale blue on the market stalls
   sack: [[0.26, 0.22, 0.16], [0.22, 0.19, 0.14], [0.28, 0.24, 0.18], [0.19, 0.16, 0.12]],
   straw: [[0.46, 0.36, 0.16], [0.42, 0.34, 0.16], [0.5, 0.4, 0.18]],
   iron: [0.24, 0.22, 0.21],
@@ -10117,11 +10268,12 @@ function dMilestone(R, k) {
 }
 function dBoat(R) {
   const key = 'dr_boat'; if (Kit.pieces[key]) return key;
-  const g = GP(), c = [0.33, 0.27, 0.21], L = 1.7, W = 0.62, H = 0.42;
+  const g = GP(), c = [0.5, 0.43, 0.35], L = 1.7, W = 0.62, H = 0.42;          // [fx1] weathered grey-brown with strakes and a gunwale (it was one black plank-less hull)
   const P = (u, v, y) => [v * W * (1 - 0.65 * Math.pow(Math.abs(u), 2.2)), y, u * L];
   const N = 8; for (let i = 0; i < N; i++) { const u0 = i / N * 2 - 1, u1 = (i + 1) / N * 2 - 1;
     for (const s of [-1, 1]) { const a = P(u0, s, H * (0.45 + 0.55 * u0 * u0)), b = P(u1, s, H * (0.45 + 0.55 * u1 * u1)), c0 = P(u0, s * 0.45, 0.04), c1 = P(u1, s * 0.45, 0.04); if (s > 0) g.quad(DRW, c0, c1, b, a, c, DRU.wood, true); else g.quad(DRW, c1, c0, a, b, c, DRU.wood, true); }
     g.quad(DRW, P(u0, 0.45, 0.04), P(u1, 0.45, 0.04), P(u1, -0.45, 0.04), P(u0, -0.45, 0.04), dscale(c, 0.8), DRU.wood, true); }
+  for (const s of [-1, 1]) for (const f of [0.34, 0.67, 1.0]) for (let i = 0; i < N; i++) { const u0 = i / N * 2 - 1, u1 = (i + 1) / N * 2 - 1, q = u => P(u, s * (0.45 + 0.55 * f) * 1.012, 0.04 + (H * (0.45 + 0.55 * u * u) - 0.04) * f); g.beam(DRW, q(u0), q(u1), f === 1 ? 0.022 : 0.012, f === 1 ? dscale(c, 0.8) : dscale(c, 0.55)); }
   for (const z of [-0.6, 0.35]) g.box(DRW, -0.5 * W, H * 0.62, z - 0.07, 0.5 * W, H * 0.67, z + 0.07, dscale(c, 1.2), DRU.wood);
   return g.make(key);
 }
@@ -10160,6 +10312,8 @@ function buildDress() {
     carts = V(dHandcart, 2), troughs = V(dTrough, 2), ladders = V(dLadder, 3), brooms = V(dBroom, 2), tools = V(dToolRack, 2), fences = V(dFence, 3);
   const pick = a => a[Math.floor(R() * a.length)];
   const solid = (x, z, r, h) => World.colliders.push({ x, z, r, y0: gy(x, z) - 0.5, y1: gy(x, z) + (h || 0.9) });
+  // [fx1] a row of barrels or crates is a long thin box, not a circle as wide as its length (the circles reached into the house walls beside them)
+  const solidRow = (x, z, dx, dz, half, hw, h) => World.colliders.push({ x, z, hx: half, hz: hw, ax: dx, az: dz, bx: -dz, bz: dx, y0: gy(x, z) - 0.5, y1: gy(x, z) + h });
   const spotsOut = Object.values(World.spots).filter(s => !s.zone);
   const stones = [[0, -2], [-6, -4], [6, -3], [0, -10], [0, 6], [-9, 2], [9, 3], [0, -15.5]];
   const inAlley = (x, z) => x > ALLEY.x0 - 3 && x < ALLEY.x1 + 3 && Math.abs(z - roadZ(x)) < 8;
@@ -10184,7 +10338,7 @@ function buildDress() {
     for (const c of World.colliders) {
       if (c.r !== undefined) { if (hyp(x - c.x, z - c.z) < c.r + r) return false; continue; }
       const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz, big = Math.max(c.hx, c.hz) > 1.6;
-      if (hyp(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < (big ? 0.12 : r)) return false;
+      if (hyp(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < (big ? 0.55 : r)) return false;       // [fx1] 0.12 let a 2.9 m row of barrels sit half inside a house wall
     }
     if (o.flat !== undefined && Math.abs(gy(x, z) - o.flat) > 0.5) return false;
     return true;
@@ -10203,7 +10357,7 @@ function buildDress() {
     for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * 0.66; add(pick(barrels), x + dx * o + R.s() * 0.03, y, z + dz * o + R.s() * 0.03, 0.95 + R() * 0.15, R() * TAU, ex); top = i; }
     if (n >= 2 && R() < 0.7) add(pick(barrels), x + R.s() * 0.05, y + 0.78, z + R.s() * 0.05, 0.9, R() * TAU, ex);
     if (R() < 0.5) add(pick(buckets), x + dx * 0.95 + 0.1, y, z + dz * 0.95, 1, R() * TAU, ex);
-    solid(x, z, 0.38 + n * 0.3, 1.5); claim(x, z, 0.4 + n * 0.3);
+    solidRow(x, z, dx, dz, n * 0.33 + 0.12, 0.46, 1.5); claim(x, z, 0.4 + n * 0.3);
   };
   const crateTop = (n, y) => y + dpH(n);
   const cratePile = (x, z, ry, ex) => {
@@ -10212,7 +10366,7 @@ function buildDress() {
     for (let i = 0; i < k + 1; i++) { const n = pick(crates), o = (i - k / 2) * 0.62; add(n, x + dx * o, y, z + dz * o, 1, ry + R.s() * 0.2, ex); cs.push([n, o]); }
     if (R() < 0.8) { const n = pick(crates), o = cs[0][1] + 0.3; add(n, x + dx * o, crateTop(cs[0][0], y) - 0.02, z + dz * o, 0.92, ry + R.s() * 0.4, ex); if (R() < 0.45) add(pick(crates), x + dx * (o + 0.05), crateTop(n, crateTop(cs[0][0], y)) - 0.03, z + dz * (o + 0.05), 0.75, ry + R.s() * 0.6, ex); }
     if (R() < 0.5) add(pick(sacks), x + dx * (k / 2 * 0.62 + 0.5), y, z + dz * (k / 2 * 0.62 + 0.5), 1, R() * TAU, ex);
-    solid(x, z, 0.5 + k * 0.28, 1.3); claim(x, z, 0.5 + k * 0.3);
+    solidRow(x, z, dx, dz, (k + 1) * 0.31 + 0.15, 0.5, 1.3); claim(x, z, 0.5 + k * 0.3);
   };
   const sackPile = (x, z, ry, ex) => {
     const y = gy(x, z), n = R.i(2, 4);
@@ -10246,8 +10400,8 @@ function buildDress() {
       if (!ok(w2.x, w2.z, r * (wm ? 0.9 : alley ? 0.7 : 1), { flat: s.y })) continue;
       const y = gy(w.x, w.z), ex = placed > 2 && R() < 0.5, along = w.ry + PI / 2;        // direction along the wall as a heading
       // a heading `ry` (piece +z toward it) -> the along-wall axis for piles
-      if (t === 'barrels') barrelPile(w.x, w.z, w.ry + PI / 2, ex);
-      else if (t === 'crates') cratePile(w.x, w.z, w.ry + PI / 2, ex);
+      if (t === 'barrels') barrelPile(w.x, w.z, w.ry, ex);
+      else if (t === 'crates') cratePile(w.x, w.z, w.ry, ex);
       else if (t === 'sacks') sackPile(w.x, w.z, w.ry, ex);
       else if (t === 'logs') { add(pick(logs), w.x, y, w.z, 1, w.ry + PI, ex); claim(w.x, w.z, 0.55); if (R() < 0.7) add(dChips(R, R.i(0, 2)), w.x + Math.sin(w.ry) * 0.7, y, w.z + Math.cos(w.ry) * 0.7, 1, R() * TAU, true); }
       else if (t === 'bucket') { add(pick(buckets), w.x, y, w.z, 1, R() * TAU, ex); if (R() < 0.5) add(pick(buckets), w.x + 0.34, y, w.z + 0.1, 0.9, R() * TAU, ex); claim(w.x, w.z, 0.4); }
@@ -10713,7 +10867,7 @@ function infillAttach() {
   const B = INFS.batch, lowQ = (R.qName === 'low');
   for (const h of INFS.shells) { try { infShell(B, h, lowQ && h.tier === 1); } catch (e) { console.warn('infill shell ' + h.id + ': ' + (e && e.message || e)); } }
   if (!lowQ) {       // pennant ropes across the lanes, between houses that face each other
-    const hs = INF.houses, used = new Set(), cols = [[0.46, 0.25, 0.21], [0.56, 0.46, 0.26], [0.27, 0.33, 0.29], [0.5, 0.46, 0.38], [0.42, 0.22, 0.2]], I = new THREE.Matrix4(), rr = rng(606); let nr = 0;
+    const hs = INF.houses, used = new Set(), cols = [[0.46, 0.25, 0.21], [0.56, 0.46, 0.26], [0.27, 0.33, 0.29], [0.5, 0.46, 0.38], [0.42, 0.22, 0.2]].map(c => c.map(v => v * 0.25)), I = new THREE.Matrix4(), rr = rng(606); let nr = 0;
     const front = h => { const p = siteToWorld(h, (rr() - 0.5) * h.w * 0.3, -h.d / 2 - (h.jetty ? 0.58 : 0.14)); return [p[0], site0(h) + (h.floors >= 2 ? 3.75 : 2.9), p[1]]; };
     const site0 = h => SITE[h.id].y;
     for (const a of hs) for (const b of hs) {
@@ -10910,7 +11064,7 @@ function buildLevels(bucket, fence, R) {
     const os = Math.sign(vo - vi), v0 = Math.min(vo, vi), v1 = Math.max(vo, vi), mid = (u0 + u1) / 2;
     const P = ax ? (u, v) => [v, u] : (u, v) => [u, v], mm = M(...P(mid, vo));
     const bx = (a, y0, b, c, y1, d, skip) => { if (ax) mm.box(b, y0, a, d, y1, c, sw(skip || 0)); else mm.box(a, y0, b, c, y1, d, skip || 0); };
-    let base = 1e9; for (let i = 0; i <= 8; i++) { const u = u0 + (u1 - u0) * i / 8, p = P(u, vo + os * 0.4); base = Math.min(base, Terrain.y(p[0], p[1])); } base -= 0.7;
+    let base = 1e9; for (let i = 0; i <= 8; i++) { const u = u0 + (u1 - u0) * i / 8; for (const o of [0.4, 1.0, 1.8]) { const p = P(u, vo + os * o); base = Math.min(base, Terrain.y(p[0], p[1])); } } base -= 0.7;          // [fx1] down to where the ground has settled, not the first 0.4 m of the fall
     mm.mat(ax === 0 && os < 0 ? MAT.PLASTER : MAT.STONE, ax === 0 && os < 0 ? [1.0, 0.96, 0.88] : sc(0.9 + rr() * 0.08), 0.7); bx(u0, base, v0, u1, TOP, v1, 4 | 8);      // Build 42: the north face (never in the sun) is limewashed rubble, it was near-black
     mm.mat(MAT.STONE, sc(1), 0.6);
     if (parapet) { bx(u0, TOP, v0 + 0.12, u1, H + 0.95, v1 - 0.12, 4 | 8); bx(u0 - 0.05, H + 0.95, v0 - 0.02, u1 + 0.05, H + 1.07, v1 + 0.02, 4); }
@@ -11433,14 +11587,19 @@ function buildBell(K, touch) {
   for (const k of [0, 1, 2, 3]) for (const z of cz) { const x0 = k % 2 ? WX0 : EX1 - 3, x1 = k % 2 ? WX0 + 3 : EX1; beam([x0, L[k] - 0.2, z], [x1, L[k + 1] - 0.2, z], 0.12, 0.14); beam([x0, L[k + 1] - 0.2, z], [x1, L[k] - 0.2, z], 0.1, 0.12); }
   // the cladding (Build 42): a stone foot and weatherboard between the posts, slit windows at each landing, a door on the west: the frame reads as a tower from the square, not as scaffolding
   for (let k = 0; k < 4; k++) {
-    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.3, st = k === 0, mat = st ? MAT.STONE : MAT.PLASTER, c = st ? [0.86, 0.83, 0.78] : [0.95, 0.9 - 0.02 * k, 0.8 - 0.02 * k], ys = [[y0, L[k] + 1.25], [L[k] + 1.75, y1]];
-    for (const [ya, yb] of ys) {
-      if (yb - ya < 0.1) continue;
-      box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.2, EX1 - 0.02, yb, ZN0 - 0.12, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZS1 + 0.12, EX1 - 0.02, yb, ZS1 + 0.2, 0);
-      box(mat, c, 0.5, EX1 - 0.1, ya, ZN0 - 0.12, EX1 - 0.02, yb, ZS1 + 0.12, 0);
-      if (k === 0) { box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZN0 + 0.0, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 + 1.25, WX0 + 0.1, yb, ZS1 + 0.12, 0); }
-      else box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZS1 + 0.12, 0);
+    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.12, st = k === 0, mat = st ? MAT.STONE : MAT.PLANKS, c = st ? [0.86, 0.83, 0.78] : [0.8 - 0.02 * k, 0.75 - 0.02 * k, 0.69 - 0.02 * k];          // [fx1] weatherboard like the rest of the village, whole storeys with slit windows (the pale plaster slabs with open bands read as signboards on a scaffold)
+    const ya = y0, yb = y1;
+    box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.2, EX1 - 0.02, yb, ZN0 - 0.12, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZS1 + 0.12, EX1 - 0.02, yb, ZS1 + 0.2, 0);
+    box(mat, c, 0.5, EX1 - 0.1, ya, ZN0 - 0.12, EX1 - 0.02, yb, ZS1 + 0.12, 0);
+    if (k === 0) { box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZN0 + 0.0, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 + 1.25, WX0 + 0.1, yb, ZS1 + 0.12, 0); }
+    else box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZS1 + 0.12, 0);
+    // slit windows: a dark opening with a timber head and sill, three along the long faces, one on the east
+    const sa = L[k] + 1.3, sb = L[k] + 1.9, dk = [0.05, 0.045, 0.04], xs = [WX0 + (EX1 - WX0) * 0.2, (WX0 + EX1) / 2, WX0 + (EX1 - WX0) * 0.8], zc = (ZN0 + ZS1) / 2;
+    for (const x of xs) for (const [zf, o] of [[ZN0 - 0.2, -1], [ZS1 + 0.2, 1]]) {
+      box(MAT.PLAIN, dk, 0.5, x - 0.16, sa, o < 0 ? zf - 0.03 : zf, x + 0.16, sb, o < 0 ? zf : zf + 0.03, 0);
+      box(MAT.TIMBER, dark, 0.5, x - 0.24, sb, o < 0 ? zf - 0.06 : zf, x + 0.24, sb + 0.07, o < 0 ? zf : zf + 0.06, 0); box(MAT.TIMBER, dark, 0.5, x - 0.24, sa - 0.07, o < 0 ? zf - 0.06 : zf, x + 0.24, sa, o < 0 ? zf : zf + 0.06, 0);
     }
+    box(MAT.PLAIN, dk, 0.5, EX1, sa, zc - 0.16, EX1 + 0.03 - 0.02, sb, zc + 0.16, 0);
   }
   box(MAT.STONE, [0.86, 0.83, 0.78], 0.5, WX0 + 0.02, g + 1.95, ZN0 + 0.0, WX0 + 0.1, g + 2.4, ZN0 + 1.25, 0);
   box(MAT.TIMBER, dark, 0.5, WX0 - 0.1, g + 2.3, ZN0 - 0.28, WX0 + 0.12, g + 2.42, ZS1 + 0.28, 0);     // the lintel course under the first storey
@@ -11502,19 +11661,24 @@ function buildLanes(bucket) {
         m.mat(MAT.CLOTH, cc, 0.5); m.quad2([px - w, py, pz], [px - w * 0.9, py - h, pz + 0.04], [px + w * 0.9, py - h, pz + 0.04], [px + w, py, pz]); } }
     K.place('washlane', 'Washing Lane', xm, l.zc, 4); l.role = 'wash'; }
   // ── 2. the dead end with a hidden yard: a lane in the north-east or south-east block that is open to grass at one end ──
-  const dead = lanes.filter(l => !used.has(l) && l.len >= 3.6 && strip(l, l.x0, l.x1) && (l.block === 'north-east' || l.block === 'south-east' || l.block === 'south-west')).sort((p, q) => q.len - p.len)[0];
+  const yardGap = l => { let a = l.zc - 3.0, b = l.zc + 3.0; const ex = l.x1; for (const o of SITES) { const cy = Math.abs(Math.cos(o.yaw)), hw = (cy * o.w + (1 - cy) * o.d) / 2, hd = (cy * o.d + (1 - cy) * o.w) / 2; if (o.x + hw < ex + 0.1 - 0.3 || o.x - hw > ex + 5.2 + 0.3) continue; if (o.z < l.zc && o.z + hd > a - 0.2 && o.z + hd < l.zc) a = o.z + hd + 0.35; if (o.z > l.zc && o.z - hd < b + 0.2 && o.z - hd > l.zc) b = o.z - hd - 0.35; } return b - a; };          // [fx1] the yard needs room for its well and bench beside the walking line
+  const dead = lanes.filter(l => !used.has(l) && l.len >= 3.6 && strip(l, l.x0, l.x1) && (l.block === 'north-east' || l.block === 'south-east' || l.block === 'south-west')).sort((p, q) => (yardGap(q) >= 4.6) - (yardGap(p) >= 4.6) || q.len - p.len)[0];
   if (dead) { used.add(dead); const l = dead, g = gy(l.x1 + 2, l.zc), ex = l.x1;
     // the end is shut by a board fence with a gate that stands ajar; beyond it a small yard: fence, well, bench, a hen coop box, something to take
     for (const [za, zb] of [[l.A.z1, l.zc - 0.55], [l.zc + 0.55, l.B.z0]]) { box(MAT.PLANKS, [0.58, 0.48, 0.36], 0.5, ex - 0.1, gy(ex, l.zc) - 0.2, za, ex + 0.08, gy(ex, l.zc) + 2.1, zb, 4 | 8, 1); col(ex - 0.1, za, ex + 0.08, zb, gy(ex, l.zc) - 0.3, gy(ex, l.zc) + 2.2); }
     box(MAT.PLANKS, [0.5, 0.4, 0.3], 0.5, ex + 0.08, gy(ex + 0.5, l.zc) + 0.05, l.zc + 0.55, ex + 0.95, gy(ex + 0.5, l.zc) + 1.95, l.zc + 0.61, 4 | 8, 1);    // the gate leaf, swung open into the yard
-    const yx0 = ex + 0.1, yx1 = ex + 5.2, yz0 = l.zc - 3.0, yz1 = l.zc + 3.0, yg = gy(ex + 2.5, l.zc);
+    // [fx1] the yard is only as wide as the gap the houses on either side leave it (a house stood in the north fence and swallowed the barrel)
+    let yz0 = l.zc - 3.0, yz1 = l.zc + 3.0; const yx0 = ex + 0.1, yx1 = ex + 5.2;
+    for (const o of SITES) { const cy = Math.abs(Math.cos(o.yaw)), hw = (cy * o.w + (1 - cy) * o.d) / 2, hd = (cy * o.d + (1 - cy) * o.w) / 2; if (o.x + hw < yx0 - 0.3 || o.x - hw > yx1 + 0.3) continue; if (o.z < l.zc && o.z + hd > yz0 - 0.2 && o.z + hd < l.zc) yz0 = o.z + hd + 0.35; if (o.z > l.zc && o.z - hd < yz1 + 0.2 && o.z - hd > l.zc) yz1 = o.z - hd - 0.35; }
+    const yg = gy(ex + 2.5, l.zc), cz = (z, r) => Math.max(yz0 + r, Math.min(yz1 - r, z));
     for (const z of [yz0, yz1]) { beam([yx0, yg + 0.55, z], [yx1, yg + 0.55, z], 0.06, 0.1); beam([yx0, yg + 1.05, z], [yx1, yg + 1.05, z], 0.06, 0.1); col(yx0, z - 0.05, yx1, z + 0.05, yg - 0.2, yg + 1.15); for (let x = yx0; x <= yx1; x += 1.7) post(x, z, gy(x, z) - 0.2, gy(x, z) + 1.15, 0.1, true); }
     beam([yx1, yg + 0.55, yz0], [yx1, yg + 0.55, yz1], 0.06, 0.1); beam([yx1, yg + 1.05, yz0], [yx1, yg + 1.05, yz1], 0.06, 0.1); col(yx1 - 0.05, yz0, yx1 + 0.05, yz1, yg - 0.2, yg + 1.15);
-    { const m = M(ex + 3, l.zc); m.push().T(ex + 3.6, gy(ex + 3.6, l.zc - 2.2), l.zc - 2.2); Props.barrel(m, 0.34, 0.9); m.pop(); m.push().T(ex + 3.9, gy(ex + 3.9, l.zc + 1.6), l.zc + 1.6).RY(0.6); Props.crate(m, 0.6); m.pop();
-      m.push().T(ex + 2.2, gy(ex + 2.2, l.zc + 2.2), l.zc + 2.2).RY(PI / 2); Props.bench(m, 1.6); m.pop(); m.push().T(ex + 2.0, gy(ex + 2.0, l.zc - 2.0), l.zc - 2.0); m.mat(MAT.STONE, [0.9, 0.87, 0.82], 0.7); m.lathe([[0.6, 0], [0.6, 0.62], [0.5, 0.7], [0.36, 0.7], [0.36, 0.3]], 12, 0); m.mat(MAT.PLAIN, [0.1, 0.16, 0.2]); m.disc(0, 0.5, 0, 0.38, 12, 1); addCircleCollider(m, 0, 0, 0.62, 0, 0.7); m.pop(); }
+    { const m = M(ex + 3, l.zc), nar = yz1 - yz0 < 4.6; if (!nar) { m.push().T(ex + 3.6, gy(ex + 3.6, l.zc - 2.2), cz(l.zc - 2.2, 0.5)); Props.barrel(m, 0.34, 0.9); m.pop(); m.push().T(ex + 3.9, gy(ex + 3.9, cz(l.zc + 1.6, 0.6)), cz(l.zc + 1.6, 0.6)).RY(0.6); Props.crate(m, 0.6); m.pop(); }
+      if (!nar) { m.push().T(ex + 2.2, gy(ex + 2.2, cz(l.zc + 2.2, 0.5)), cz(l.zc + 2.2, 0.5)).RY(PI / 2); Props.bench(m, 1.6); m.pop(); } m.push().T(nar ? ex + 4.15 : ex + 2.0, gy(nar ? ex + 4.15 : ex + 2.0, nar ? l.zc : cz(l.zc - 2.0, 0.8)), nar ? l.zc : cz(l.zc - 2.0, 0.8));          // [fx1] in a corridor-wide yard the well closes the end and the bench is left out, so the way in stays clear
+       m.mat(MAT.STONE, [0.9, 0.87, 0.82], 0.7); m.lathe([[0.6, 0], [0.6, 0.62], [0.5, 0.7], [0.36, 0.7], [0.36, 0.3]], 12, 0); m.mat(MAT.PLAIN, [0.1, 0.16, 0.2]); m.disc(0, 0.5, 0, 0.38, 12, 1); addCircleCollider(m, 0, 0, 0.62, 0, 0.7); m.pop(); }
     K.pick('purse2', 'purse', [ex + 4.1, gy(ex + 4.1, l.zc - 0.4) + 0.46, l.zc - 0.4], 'Take the pouch', 'purse', mm => { mm.mat(MAT.CLOTH, [0.3, 0.34, 0.3], 0.4); mm.ball(0, 0.06, 0, 0.08, 0.07, 0.08, 8, 5); });
     K.read(ex + 2.6, yg + 0.9, l.zc + 1.0, 3.0, 'yard.note', 'A hidden yard', 'A yard no wider than a cart, shut in by the backs of four houses and a gate that does not close. Somebody keeps it: the bench is oiled, the well is clear, and there is a stool for a person who comes here to be on their own. Scratched into the well-lip: “NOBODY FINDS THIS ONE. SAY NOTHING.”');
-    K.place('hiddenyard', 'The Hidden Yard', ex + 2.5, l.zc, 4); K.route('deadyard', [[l.x0 - 0.6, gy(l.x0, l.zc), l.zc], [ex - 0.5, gy(ex, l.zc), l.zc], [ex + 2.0, yg, l.zc], [ex + 3.6, yg, l.zc - 0.4]]); l.role = 'dead'; }
+    K.place('hiddenyard', 'The Hidden Yard', ex + 2.5, l.zc, 4); K.route('deadyard', [[l.x0 - 0.6, gy(l.x0, l.zc), l.zc], [ex - 0.5, gy(ex, l.zc), l.zc], [ex + 2.0, yg, l.zc], [ex + (yz1 - yz0 < 4.6 ? 2.8 : 3.6), yg, l.zc - 0.4]]); l.role = 'dead'; }
   // ── 3. the stepped lane: a short flight up, a landing, a flight down, on a lane with no door on it ──
   const step = lanes.filter(l => !used.has(l) && l.len >= 3.6 && strip(l, l.x0, l.x1)).sort((p, q) => (q.block === 'north-west') - (p.block === 'north-west') || q.len - p.len)[0];
   if (step) { used.add(step); const l = step, n = 3, run = 0.5, up = n * 0.19, x0 = l.x0 + 0.1, x1 = l.x1 - 0.1, xa = x0 + n * run, xb = x1 - n * run, z0 = l.A.z1 + 0.1, z1 = l.B.z0 - 0.1, base = Math.max(gy(x0, l.zc), gy(x1, l.zc));
@@ -11791,7 +11955,8 @@ function buildVegetation() {
   }
   for (const s of SITES) { if (!HOUSES[s.id] || s.id === 'barn') continue; for (let k = 0; k < 5; k++) { const side = R() < 0.5 ? -1 : 1, lx = R.s() * s.w * 0.45, p = siteToWorld(s, lx, side * (s.d / 2 + 0.8)); const dl = siteDoorLocal(s, 0); if (hyp(lx - dl[0], side * (s.d / 2) - dl[1]) < 1.8 || s.id === 'smithy' && side < 0) continue; inst.bush.push([p[0], Terrain.y(p[0], p[1]) - 0.05, p[1], 0.45 + R() * 0.4, R() * TAU, R(), R(), 0]); } }
   for (const g of World.gardenPlants || []) inst.bush.push([g[0], Terrain.y(g[0], g[1]) - 0.02, g[1], 0.42 + R() * 0.15, R() * TAU, g[2] * 0.45, R(), 0]);
-  const addRock = (x, z, s) => { const y = gy(x, z); inst.rock.push([x, y - 0.22 * s, z, s, R() * TAU, R(), R(), 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
+  const colHit = (x, z, r) => { for (const c of World.colliders) { if (c.r !== undefined) { if (Math.hypot(x - c.x, z - c.z) < c.r + r * 0.7) return true; continue; } const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz; if (Math.hypot(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < r * 0.7) return true; } return false; };   // [fx1] a boulder never settles on a wall, a post or a building laid down before it
+  const addRock = (x, z, s) => { if (s > 0.6 && colHit(x, z, 0.78 * s)) return; const y = gy(x, z); inst.rock.push([x, y - 0.22 * s, z, s, R() * TAU, R(), R(), 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
   for (let i = 0; i < 420; i++) {
     const a = R() * TAU, r = 30 + R() * 210, x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (r < 200 && blocked(x, z, 1.0)) continue;
@@ -13177,7 +13342,7 @@ WBUILD.lumber = (p, m, R) => {
     mm.mat(MAT.PLANKS, COL.woodDark, 0.9); mm.box(-1.8, 0, 1.2, 1.8, 2.2, 1.3); mm.box(-1.85, 0, -1.2, -1.75, 1.85, 1.3); mm.box(1.75, 0, -1.2, 1.85, 1.85, 1.3);
     mm.mat(MAT.TIMBER, COL.timberDark); for (const sx of [-1.8, 1.8]) mm.cbox(sx, -0.3, -1.25, 0.14, 2.6, 0.14, 4); mm.cbox(-1.8, -0.3, 1.25, 0.14, 2.7, 0.14, 4); mm.cbox(1.8, -0.3, 1.25, 0.14, 2.7, 0.14, 4);
     mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.8); mm.quad2([-2.1, 2.3, 1.45], [-2.1, 1.75, -1.55], [2.1, 1.75, -1.55], [2.1, 2.3, 1.45]);
-    mm.mat(MAT.CLOTH, COL.fur, 0.6); mm.box(-1.2, 0.3, 0.2, 0.2, 0.42, 1.15); mm.mat(MAT.CLOTH, COL.wool, 0.6); mm.box(-1.15, 0.42, 0.7, -0.35, 0.52, 1.1);
+    mm.mat(MAT.CLOTH, COL.fur.map(v => v * 0.45), 0.6); mm.box(-1.2, 0.3, 0.2, 0.2, 0.42, 1.15); mm.mat(MAT.CLOTH, COL.wool.map(v => v * 0.55), 0.6); mm.box(-1.15, 0.42, 0.7, -0.35, 0.52, 1.1);
     mm.mat(MAT.TIMBER, COL.timber); mm.box(-1.25, 0, 0.15, -1.15, 0.3, 0.25); mm.box(0.15, 0, 0.15, 0.25, 0.3, 0.25); mm.box(-1.25, 0, 1.05, -1.15, 0.3, 1.15); mm.box(0.15, 0, 1.05, 0.25, 0.3, 1.15);
     Props.barrel(mm);
     addBoxCollider(mm, -1.9, -1.3, 1.9, 1.35, 0, 2.2);
@@ -13233,7 +13398,7 @@ WBUILD.blind = (p, m, R) => {
   wPut(m, p, -7, -12, 0.4, mm => { mm.mat(MAT.ROCK, [0.95, 0.95, 0.92], 0.5); mm.ball(0, 0.15, 0, 0.55, 0.28, 0.4, 8, 4); mm.mat(MAT.PLAIN, [0.88, 0.85, 0.78]); mm.ball(0, 0.36, 0, 0.3, 0.05, 0.22, 7, 3); addCircleCollider(mm, 0, 0, 0.5, 0, 0.5); });
   // a cold fire ring and a skinning rack
   wPut(m, p, -4.5, 3.5, 0, mm => { mm.mat(MAT.ROCK, [0.8, 0.8, 0.82], 0.5); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; mm.ball(Math.cos(a) * 0.5, 0.06, Math.sin(a) * 0.5, 0.13, 0.1, 0.12, 6, 4); } mm.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); mm.disc(0, 0.03, 0, 0.42, 9, 1); });
-  wPut(m, p, 3.2, 4.8, 0.5, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.beam([s * 0.9, 0, -0.3], [s * 0.7, 1.7, 0], 0.07, 0.07), mm.beam([s * 0.9, 0, 0.3], [s * 0.7, 1.7, 0], 0.07, 0.07); mm.beam([-0.75, 1.65, 0], [0.75, 1.65, 0], 0.06, 0.06); mm.mat(MAT.CLOTH, COL.fur, 0.6); mm.quad2([-0.5, 1.62, 0], [-0.55, 0.75, 0.02], [-0.1, 0.7, 0.02], [-0.1, 1.62, 0]); mm.quad2([0.1, 1.62, 0], [0.05, 0.8, 0.02], [0.55, 0.78, 0.02], [0.5, 1.62, 0]); addBoxCollider(mm, -0.9, -0.3, 0.9, 0.3, 0, 1.7); });
+  wPut(m, p, 3.2, 4.8, 0.5, mm => { mm.mat(MAT.TIMBER, COL.timberDark); for (const s of [-1, 1]) mm.beam([s * 0.9, 0, -0.3], [s * 0.7, 1.7, 0], 0.07, 0.07), mm.beam([s * 0.9, 0, 0.3], [s * 0.7, 1.7, 0], 0.07, 0.07); mm.beam([-0.75, 1.65, 0], [0.75, 1.65, 0], 0.06, 0.06); mm.mat(MAT.CLOTH, COL.fur.map(v => v * 0.45), 0.6); mm.quad2([-0.5, 1.62, 0], [-0.55, 0.75, 0.02], [-0.1, 0.7, 0.02], [-0.1, 1.62, 0]); mm.quad2([0.1, 1.62, 0], [0.05, 0.8, 0.02], [0.55, 0.78, 0.02], [0.5, 1.62, 0]); addBoxCollider(mm, -0.9, -0.3, 0.9, 0.3, 0, 1.7); });
   for (const [x, z, r] of [[2, 6.5, 0], [-2.4, 7.6, 1.4], [6, 8.5, 2.2], [-6.5, 8.0, 0.6]]) wKit(p, 'Mushroom_Common', x, z, { s: 1.4 + R() * 0.8, ry: R() * 6 });
   for (let i = 0; i < 18; i++) { const a = R() * TAU, r = 4 + R() * 12; wKit(p, 'Fern_1', Math.cos(a) * r, Math.sin(a) * r, { s: 0.9 + R() * 0.7, ry: R() * TAU, inst: true, maxDist: 70 }); }
   for (const [x, z] of [[1.6, 7.0], [-3, 9.2]]) { const c = wGround(p, x, z); wPick('bl.m' + (x > 0 ? 1 : 2), c, 'Pick chanterelles', 'chanterelle', 'mushrooms'); }
@@ -13464,7 +13629,7 @@ WBUILD.hamlet = (p, m, R) => {
   wWall(m, [[96, 94], [108, 92], [112, 88]], { h: 0.85 }); wWall(m, [[112, 108], [121, 104]], { h: 0.8, gaps: [[116, 106]] });
   for (const [x, z, r] of [[133, 118, 1.3], [137, 120, 1.1]]) wPut(m, p, x - p.x, z - p.z, 0, mm => Props.haystack(mm, r));
   wPut(m, p, -5.6, 10.2, 1.0, mm => { Props.cart(mm, true); });
-  wPut(m, p, 1.4, 1.5, 0, mm => { // a well with a pitched roof
+  wPut(m, p, 1.4, -1.3, 0, mm => { // a well with a pitched roof ([fx1] it stood in the dry-stone wall, 1.5 m further out)
     mm.mat(MAT.STONE, [0.85, 0.85, 0.8], 0.7); mm.lathe([[0.95, -0.3], [0.95, 0.85], [0.82, 0.92], [0.6, 0.92], [0.6, -0.3]], 12, 0);
     mm.mat(MAT.PLAIN, [0.04, 0.07, 0.08]); mm.disc(0, 0.2, 0, 0.6, 10, 1); mm.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) mm.cbox(s * 0.85, 0.8, 0, 0.12, 1.3, 0.12, 4); mm.beam([-0.9, 2.05, 0], [0.9, 2.05, 0], 0.11, 0.11);
     mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.6); mm.quad2([-1.1, 2.3, 0], [-1.1, 1.95, -0.8], [1.1, 1.95, -0.8], [1.1, 2.3, 0]); mm.quad2([1.1, 2.3, 0], [1.1, 1.95, 0.8], [-1.1, 1.95, 0.8], [-1.1, 2.3, 0]); addCircleCollider(mm, 0, 0, 1.0, 0, 1.2);
@@ -13907,7 +14072,7 @@ function lightHarvestFire() {
 }
 function festivalSpots() {
   const b = World.bonfirePos;
-  NPC_DEFS.forEach((d, i) => { const a = i / NPC_DEFS.length * TAU + 0.2, r = 4.3 + (i % 3) * 0.9, x = b[0] + Math.cos(a) * r, z = b[1] + Math.sin(a) * r; World.spots['fire.' + i] = { p: [x, World.groundY(x, z), z], yaw: headingTo(x, z, b[0], b[1]), zone: 0 }; });
+  NPC_DEFS.forEach((d, i) => { const a = i / NPC_DEFS.length * TAU + 0.2, r = 4.3 + (i % 3) * 0.9, x = b[0] + Math.cos(a) * r, z = b[1] + Math.sin(a) * r; World.spots['fire.' + i] = { p: [x, World.groundY(x, z), z], yaw: headingTo(x, z, b[0], b[1]), zone: 0, ring: [a, r] }; });
   World.interact.push({ p: [b[0], World.groundY(b[0], b[1]) + 0.8, b[1]], r: 3.0, zone: 0, kind: 'bonfire', id: 'bonfire' });
 }
 // ── saving (a convenience only: one browser, may be unavailable) ──
@@ -13922,6 +14087,23 @@ function applySave(j) {
   RPG.st(); bountyText(); if (typeof Combat !== 'undefined') Combat.refresh();
 }
 function clearSave() { try { localStorage.removeItem('brackenfell.v1'); } catch (e) { } }
+
+// [fx1] once every stall, pile and fence is down (dressAttach and friends push colliders late), the ring of feasters steps round whatever stands on its spots
+function festivalClear() {
+  const b = World.bonfirePos, bad = (x, z, y) => World.colliders.some(c => {
+    if (c.y1 < y + 0.1 || c.y0 > y + 1.0) return false;
+    if (c.r !== undefined) return Math.hypot(x - c.x, z - c.z) < c.r + 0.45;
+    const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz;
+    return Math.abs(dx) < c.hx + 0.45 && Math.abs(dz) < c.hz + 0.45;
+  });
+  for (const k in World.spots) {
+    const s = World.spots[k]; if (!s.ring) continue;
+    for (let t = 0; t < 40; t++) {
+      const aa = s.ring[0] + (t % 2 ? 1 : -1) * Math.floor((t + 1) / 2) * 0.1, rr = s.ring[1] + (t > 15 ? 0.8 : 0) + (t > 30 ? 0.8 : 0), x = b[0] + Math.cos(aa) * rr, z = b[1] + Math.sin(aa) * rr, y = World.groundY(x, z);
+      if (!bad(x, z, y)) { if (t) { s.p = [x, y, z]; s.yaw = headingTo(x, z, b[0], b[1]); } break; }
+    }
+  }
+}
 
 
 // ---- 81_wilds_story.js ----
@@ -14529,7 +14711,7 @@ for (const [id, line] of [['greta', 'The house on the south lane? Nobody’s liv
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 62';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 66';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -17717,6 +17899,7 @@ async function warmShaders() {
     if (typeof infillAttach === 'function') infillAttach();
   if (typeof dressAttach === 'function') dressAttach();
     if (typeof wildsAttach === 'function') wildsAttach();
+    festivalClear();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
     npcSnapAll(); uiInit(); inputInit2(G.canvas, $('touch'));
     addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 250));

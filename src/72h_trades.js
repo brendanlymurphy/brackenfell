@@ -9,8 +9,8 @@ const pdCounter = (len, c, kinds, n) => m => {          // a closed shop counter
   m.mat(MAT.PLANKS, COL.wood); m.box(x1 - 0.82, h, -0.42, x1 - 0.02, h + 0.03, 0.4);          // the flap, lifted for the keeper
   m.mat(MAT.METAL, COL.bronze); for (const z of [-0.2, 0.2]) m.box(x1 - 0.84, h + 0.01, z - 0.02, x1 - 0.78, h + 0.035, z + 0.02);
   at(m, x0 + 0.9, h, 0.0, 0.3, () => { m.mat(MAT.METAL, COL.bronze); m.box(-0.015, 0, -0.015, 0.015, 0.34, 0.015); m.box(-0.2, 0.33, -0.01, 0.2, 0.345, 0.01); for (const sx of [-0.19, 0.19]) { m.box(sx - 0.003, 0.2, -0.003, sx + 0.003, 0.33, 0.003); m.lathe([[0.0, 0.2], [0.07, 0.205], [0.075, 0.215]], 8, 1); } m.cyl(0, 0, 0, 0.06, 0.05, 0.02, 8, 1); });
-  at(m, x0 + 2.2, h, 0.05, -0.2, () => { m.mat(MAT.CLOTH, COL.leather, 0.5); m.box(-0.17, 0, -0.12, 0.17, 0.045, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(-0.16, 0.01, -0.11, 0.16, 0.04, 0.115, 4 | 8 | 1); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cyl(0.26, 0, 0.0, 0.03, 0.03, 0.07, 6, 1); });
-  m.push().T(0, h, 0.0); Props.clutter(m, R, x0 + 3.0, x1 - 1.2, 0, 0.0, kinds, Math.max(4, n - 3), c); m.pop();
+  at(m, Math.min(x0 + 2.2, x1 - 1.15), h, 0.05, -0.2, () => { m.mat(MAT.CLOTH, COL.leather, 0.5); m.box(-0.17, 0, -0.12, 0.17, 0.045, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(-0.16, 0.01, -0.11, 0.16, 0.04, 0.115, 4 | 8 | 1); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cyl(0.26, 0, 0.0, 0.03, 0.03, 0.07, 6, 1); });
+  m.push().T(0, h, 0.0); { const ca = len > 4 ? x0 + 3.0 : x0 + 0.5, cb = Math.max(ca + 0.3, x1 - (len > 4 ? 1.2 : 1.0)); Props.clutter(m, R, ca, Math.min(cb, x1 - 0.35), 0, 0.0, kinds, len > 4 ? Math.max(4, n - 3) : Math.max(2, Math.round(len)), c); } m.pop();          // [fx2] a short counter's wares stay on the counter
   addBoxCollider(m, x0, -0.45, x1, 0.42, 0, h);
 };
 const pdShelfTall = (len, h, lv, fill) => m => Props.shelf(m, len, h, lv, 0.34, fill);
@@ -24,7 +24,7 @@ function pShelfRun(P, room, side, u0, u1, kinds, o) {
 function pStock(P, room, o) {
   o = o || {}; const R = P.R;
   for (let i = 0; i < (o.crates || 0); i++) pFree(P, room, P.id + '.' + room.id + 'crate' + i, 0.6, 0.6, 0.6, R() * 0.5, pdCrate(0.6), { near: o.near || pCentre(room) });
-  for (let i = 0; i < (o.sacks || 0); i++) pFree(P, room, P.id + '.' + room.id + 'sack' + i, 0.5, 0.5, 0.5, R() * 6, pdSack(0.3), { near: o.nearS || o.near || pCentre(room) });
+  for (let i = 0; i < (o.sacks || 0); i++) pFree(P, room, P.id + '.' + room.id + 'sack' + i, 0.62, 0.62, 0.5, R() * 6, pdSack(0.3), { near: o.nearS || o.near || pCentre(room) });
   for (let i = 0; i < (o.barrels || 0); i++) pFree(P, room, P.id + '.' + room.id + 'brl' + i, 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { near: o.nearB || o.near || pCentre(room), lowOk: true });
 }
 
@@ -108,7 +108,7 @@ PLANS.smithy = (P, c, info) => {
     pSpot(P, 'home', fx + 1.9, fz - 0.4, face, { k: 0 });
     const an = pPut(P, forge, id + '.anvil', fx - 0.25, fz - 0.5, 0, 0.7, 0.5, 0.9, mm => Props.anvil(mm), { allow: ['hearth'] });
     if (an) { pSpot(P, 'anvil', an.cx + 0.15, an.cz + 0.75, 0, { k: 0 }); }
-    pSpot(P, 'forge', fx + 1.0, fz + 0.1, PI / 2 + 0.3, { k: 0 });
+    pSpot(P, 'forge', fx + 1.0, fz - 0.2, PI / 2 + 0.3, { k: 0 });
     // the forge itself: a billet glowing in the coals, a stone hood already (the breast), smoke going up, the bellows on the right with its handle out
     at(m, hh.px, 0.02, hh.pz, PI / 2, () => {
       emit(m, 1.6, () => { m.mat(MAT.PLAIN, [1, 0.5, 0.12]); m.box(0.2, 0.1, -0.5, 0.6, 0.125, 0.5, 4); m.box(0.25, 0.125, -0.12, 0.55, 0.14, 0.12, 4); });
@@ -131,7 +131,7 @@ PLANS.smithy = (P, c, info) => {
   pKitFloor(P, forge, 'e', 'Whetstone', { at: 'start' }); pKitFloor(P, forge, 'w', 'WeaponStand', { n: 'a', at: 'mid' }); pKitFloor(P, forge, 'e', 'WeaponStand', { n: 'b', at: 'end' });
   pAgainst(P, forge, 'e', id + '.waterbrl', 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { at: 'end', lowOk: true }); pKitFloor(P, forge, 'e', 'Bucket_Wooden_1', { n: 'q', at: 'end' });
   for (let i = 0; i < 2; i++) pAgainst(P, forge, 's', id + '.coal' + i, 1.0, 0.8, 0.5, 0, pdCoal, { at: i ? 'end' : 'start', lowOk: true });
-  pWalls(P, forge, ['Peg_Rack', 'Axe_Bronze', 'Pickaxe_Bronze', 'cross_pein_hammer', 'Sword_Bronze', 'kite_shield', 'Torch_Metal', 'rusted_spade_01']);
+  pWalls(P, forge, ['Peg_Rack', 'Axe_Bronze', 'Pickaxe_Bronze', 'Sword_Bronze', 'kite_shield', 'Torch_Metal', 'rusted_spade_01']);
   // overhead: chains and a bar of tongs above the work, the rafters black with soot
   pCeil(P, forge, -0.3, 4.0, PD.chainHang(1.3, R)); pCeil(P, forge, -3.0, 3.2, PD.hookBar(1.8, R)); pCeil(P, forge, -4.5, 5.5, PD.chainHang(0.9, R)); pCeil(P, forge, 1.0, 5.5, PD.hookBar(1.2, R, ['tongs', 'ladle', 'chain']));
   for (const sd of ['n', 'e', 'w']) pHigh(P, forge, sd, 2.7, 1.5, w => PD.highShelf(R, w), id + '.hi');
