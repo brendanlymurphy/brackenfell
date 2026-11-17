@@ -7,7 +7,7 @@ QUALITY.low.houseFar = 30; QUALITY.low.yardRange = 24; QUALITY.medium.yardRange 
 // cast into the sun-shadow maps: one prism stand-in per house does that.
 const ROOFS = [];       // every generated roof (for test/town.js: slope sample points against the neighbours' volumes)
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
-const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof', INF_SL = 'MI_Slate_Roof', INF_TH = 'MI_Thatch_Roof';      // [fx2] the three roof coverings: wood shingle, stone slate, thatch (shellStyle in 72c_infill picks one per building)
+const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof', INF_SL = 'MI_Slate_Roof', INF_TH = 'MI_Thatch_Roof', INF_SS = 'MI_StoneSlate_Roof';      // [fx2] the three roof coverings: wood shingle, stone slate, thatch (shellStyle in 72c_infill picks one per building)
 function infBatch() {
   if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 48, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 48 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
   return INFS.batch;
@@ -25,7 +25,7 @@ async function infillMaterials() {
   };
   const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0, uvScale: [2.2, 2.2] });      // Build 42: grain was a metre wide on a 2 m panel
   const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 1.2, nScale: 1.0, moss: 0.6 });
-  await mk(INF_SL, 'MI_RoundTiles', 'MI_Slate', { gain: 1.1, nScale: 1.0, moss: 0.5 }); await mk(INF_TH, 'MI_RoundTiles', 'MI_Thatch', { gain: 1.0, nScale: 1.0, moss: 0.3 });      // [fx2]
+  await mk(INF_SL, 'MI_RoundTiles', 'MI_Slate', { gain: 1.0, nScale: 1.0, moss: 0.4 }); await mk(INF_TH, 'MI_RoundTiles', 'MI_Thatch', { gain: 1.0, nScale: 1.0, moss: 0.3 }); await mk(INF_SS, 'MI_RoundTiles', 'MI_StoneSlate', { gain: 1.1, nScale: 1.0, moss: 0.4 });      // [fx2]
   if (Kit.defs.MI_UnevenBrick) Kit.defs[INF_B] = Object.assign({}, Kit.defs.MI_UnevenBrick, { name: INF_B, doubleSided: true });
   if (Kit.defs[INF_T]) Kit.defs[INF_T].doubleSided = true;
   INFS.mats = ok1 && ok2 && !!Kit.defs[INF_B];
@@ -159,7 +159,9 @@ function infRoofGen(B, MS, o) {
     // soffit under the rake overhang
     for (const [u, un, ex] of [[-len / 2, a0, !o.nl], [len / 2, a1, !o.nr]]) if (ex) { const A = P(u, 0, yR - T), Bp = P(un, 0, yR - T), C = P(un, s * ve, yE - T), D = P(u, s * hs, top + lift - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
   }
-  for (let i = 0; i < nseg; i++) { const ua = a0 + (a1 - a0) * i / nseg, ub = a0 + (a1 - a0) * (i + 1) / nseg; g2.beam(W_, P(ua, 0, yR + 0.05 - sgy(ua)), P(ub, 0, yR + 0.05 - sgy(ub)), RM === INF_TH ? 0.2 : 0.13, RM === INF_TH ? col.map(v => v * 0.55) : [0.26, 0.22, 0.19]); }      // [fx2] ridge follows the sag
+  if (o.thatch) for (const s of [-1, 1]) for (const f of [0.16, 0.55, 0.9]) { const yy = yR - (yR - yE) * f, vv = ve * f; g2.beam(W_, P(a0 + 0.1, s * vv, yy - sgy(0) * 0), P(a1 - 0.1, s * vv, yy), 0.035, col.map(v => v * 0.4)); }      // [fx2] ligger lines
+  for (const s of [-1, 1]) for (const [u, nb] of [[a0, o.nl], [a1, o.nr]]) if (!nb) g2.beam(W_, P(u, s * 0.02, yR), P(u, s * ve, yE), 0.1, [0.2, 0.17, 0.14]);      // [fx2] a barge board along each exposed rake
+  for (let i = 0; i < nseg; i++) { const ua = a0 + (a1 - a0) * i / nseg, ub = a0 + (a1 - a0) * (i + 1) / nseg; g2.beam(W_, P(ua, 0, yR + 0.05 - sgy(ua)), P(ub, 0, yR + 0.05 - sgy(ub)), RM === INF_TH ? 0.34 : 0.13, RM === INF_TH ? col.map(v => v * 0.5) : [0.26, 0.22, 0.19]); }      // [fx2] ridge follows the sag
   ROOFS.push({ M: Array.from(MS.elements || MS), w, d, top, tanP, ridgeX, zc, ov, lift, T, a0, a1, hs, ve, yR, yE });
   const name = g.make('gen_roof_' + (_gn++)), name2 = g2.make('gen_roofe_' + (_gn++)), fn = gf.make('gen_roofF_' + (_gn++));
   Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn]; Kit.far[name2] = [];
