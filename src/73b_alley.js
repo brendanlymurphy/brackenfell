@@ -139,12 +139,13 @@ function buildAlley() {
   let a_ = {};
   for (const a of ALLEY_SHOPS) {
     const site = SITE[a.id]; if (!a.layout) { AL.shops.push({ a, site, house: true }); continue; }
-    a_ = a;
+    const LK = (typeof ALLEY_LOOK !== 'undefined' && ALLEY_LOOK[a.id]) || {};      // [fx2] per-shop structure and tone (72c_infill.js)
+    a_ = LK.lime || LK.allstone || LK.tar ? Object.assign({}, a, { timber: LK.tar ? true : false }) : a;
     const MS = new THREE.Matrix4().fromArray(siteMatrix(site, site.y + 0.02)), w = a.w, d = a.d, fl = a.floors, H = 3, tanP = Math.tan(a.pitch * PI / 180);
     const frames = (k) => { const o = {}, sh = k > 0 ? 0.5 : 0; for (const wn in WALLS) { const W = WALLS[wn], s0 = W.start(w, d); o[wn] = new THREE.Matrix4().makeBasis(V(W.u), V(up), V(W.n)).setPosition(s0[0], k * H, s0[2] - sh).premultiply(MS); } return o; };
     const F0 = frames(0);
     // ── storeys ──
-    const stone = a.kind === 'cutler' || a.kind === 'tinker';
+    const stone = a.kind === 'cutler' || a.kind === 'tinker' || LK.ground === 'stone', allStone = !!LK.allstone, WT = LK.lime ? LIME[LK.lime] : LK.tar ? [0.5, 0.48, 0.46] : null;
     for (let k = 0; k < fl; k++) {
       const F = frames(k);
       for (const wn of ['front', 'back', 'left', 'right']) {
@@ -163,9 +164,11 @@ function buildAlley() {
           } else if (wn === 'back') name = k === 0 ? (stone ? 'Wall_UnevenBrick_Straight' : 'Wall_Plaster_Straight_Base') : 'Wall_Plaster_Straight';
           else name = k === 0 ? (stone ? 'Wall_UnevenBrick_Straight' : 'Wall_Plaster_Straight_Base') : 'Wall_Plaster_Straight';
           if (k === 0 && !stone && wn === 'front' && !door && !glass) name = 'Wall_Plaster_Straight_Base';
-          addP(MS, name, F[wn], uc, 0, 0, 1, 0);
+          if (allStone && k > 0) name = glass ? 'Wall_UnevenBrick_Window_Wide_Flat' : door ? name : 'Wall_UnevenBrick_Straight';
+          const oo = WT && /^Wall_Plaster|^Corner/.test(name) ? Object.assign({}, OUT, { tint: WT }) : OUT;
+          addP(MS, name, F[wn], uc, 0, 0, 1, 0, oo);
           if (glass) { addP(MS, 'Window_Wide_Flat1', F[wn], uc, 0, 0, 1, 0); if (shutter && uc > 0.9 && uc < L - 0.9 && !(k === 0)) addP(MS, shutter, F[wn], uc, 0, 0, 1, 0); }
-          if (door) { addP(MS, 'DoorFrame_Flat_WoodDark', F[wn], uc, 0, 0, 1, 0); if (!(k === 0 && HOUSES[a.id])) addP(MS, 'Door_1_Flat', F[wn], uc - 0.54, 0, -0.05, 1, 0); }      // [c5] an enterable shop's door leaf is the portal leaf of its cell (72k_houses.js)
+          if (door) { addP(MS, allStone && k === 0 ? 'DoorFrame_Round_Brick' : 'DoorFrame_Flat_WoodDark', F[wn], uc, 0, 0, 1, 0); if (!(k === 0 && HOUSES[a.id])) addP(MS, 'Door_1_Flat', F[wn], uc - 0.54, 0, -0.05, 1, 0); }      // [c5] an enterable shop's door leaf is the portal leaf of its cell (72k_houses.js)
         }
         addP(MS, 'Corner_Exterior_Wood', F[wn], 0, 0, 0, [1.25, 1, 1.25]);
       }
@@ -180,7 +183,8 @@ function buildAlley() {
     //    no side overhang, so neighbours meet at party walls. The jetty of the upper storeys sits under the front eave. ──
     const Ytop = fl * H, hd = d / 2, rise = hd * tanP, zc = -0.5;
     // the generated shingle roof (73d_infill.js: slab thickness, soffits, ridge cap, one outward face per surface), the same on every house of the town
-    infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc, ov: 0.5, nl: neighbourFloors(a, site.yaw === PI) > 0, nr: neighbourFloors(a, site.yaw !== PI) > 0, tint: [0.97, 0.97, 0.97] });
+    const SS = typeof shellStyle === 'function' ? shellStyle(site, null) : {};      // [fx2] the district's covering (the pitch stays the shop's own: its room's roof lining follows it)
+    infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc, ov: 0.5, mat: SS.mat, ts: SS.ts, sag: SS.sag, thick: SS.thick, thatch: SS.thatch, nl: neighbourFloors(a, site.yaw === PI) > 0, nr: neighbourFloors(a, site.yaw !== PI) > 0, tint: SS.tint || [0.97, 0.97, 0.97] });
     if (a.kind === 'books' || a.kind === 'grocer') {          // a chimney standing on the ridge
       const cx = (a.kind === 'books' ? -1 : 1) * w * 0.25, ct = infChimney(B, MS, { x: cx, z: zc, top: Ytop, tanP, hs: hd, ridgeX: true, zc });
       World.emitters.push({ type: 'smoke', p: new THREE.Vector3(cx, ct + 0.2, zc).applyMatrix4(MS).toArray(), zone: 0 });
@@ -189,7 +193,12 @@ function buildAlley() {
     const Ff = F0.front, Fu = frames(1).front, nF = Math.round(w / 2);
     const cols1 = a.awn[0], cols2 = a.awn[1];
     // awning over the whole shop front, hanging signs, lanterns
-    const awn = genAwning(w - 0.2, cols1, cols2, 0.5); addP(MS, awn, Ff, w / 2, 2.72, 0.12);
+    if (LK.awning === 'pentice' || LK.awning === 'counter') { const g = GP(), ww = w - 0.3, c1 = [0.27, 0.21, 0.16], c2 = [0.16, 0.13, 0.1];      // [fx2] a pentice roof of boards on two brackets
+      g.quad(W_, [-ww / 2, 2.75, 0.05], [ww / 2, 2.75, 0.05], [ww / 2, 2.4, 1.0], [-ww / 2, 2.4, 1.0], c1, GPU.wood, [0, 1, 0.4]); g.quad(W_, [-ww / 2, 2.73, 0.05], [ww / 2, 2.73, 0.05], [ww / 2, 2.38, 1.0], [-ww / 2, 2.38, 1.0], c2, GPU.wood, [0, -1, -0.4]);
+      for (const sg2 of [-1, 1]) g.beam(W_, [sg2 * (ww / 2 - 0.1), 2.0, 0.04], [sg2 * (ww / 2 - 0.1), 2.45, 0.95], 0.04, c2);
+      if (LK.awning === 'counter') { const cw = Math.min(1.8, ww * 0.55), cu = (a.layout || 'WD').indexOf('D') === 0 ? ww * 0.22 : -ww * 0.22; g.box(W_, cu - cw / 2, 0.93, 0.03, cu + cw / 2, 0.99, 0.62, [0.34, 0.27, 0.2]); for (const sg3 of [-1, 1]) g.beam(W_, [cu + sg3 * (cw / 2 - 0.05), 1.7, 0.05], [cu + sg3 * (cw / 2 - 0.05), 0.97, 0.58], 0.015, [0.14, 0.13, 0.13]); }      // the shutter let down as a counter, held by two chains
+      addP(MS, g.make('gen_pent_' + (_gn++)), Ff, w / 2, 0, 0); }
+    else { const awn = genAwning(w - 0.2, cols1, cols2, 0.5); addP(MS, awn, Ff, w / 2, 2.72, 0.12); }
     const sg = genSign(a.glyph, [1.1, 0.85, 0.45]); addP(MS, sg, Fu, 1.0, 2.35, 0.1, 1, 0);           // projecting from a solid bay of the upper wall, over the street
     // flower boxes under the upper windows
     for (let k = 1; k < fl; k++) for (let i = 0; i < nF; i++) { if ((i + k) % 2 === 0 && !(a.balcony && k === 1 && i === (nF >> 1))) B2.add(genFlowerBox(1.3, R), KH.xf(frames(k).front, i * 2 + 1, 0.93, 0.26, 1, 0), OUT); }

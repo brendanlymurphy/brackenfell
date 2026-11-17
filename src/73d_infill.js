@@ -49,7 +49,7 @@ const infTimber = name => /^(Wall_Plaster|Roof_Front_Brick)/.test(name) ? infT(n
 // skip[wall] = storeys of a neighbour against that side wall (those storeys get no wall); optsOf(k) = batch options for storey k
 const INF_B = 'MI_Stone_DS';
 function infWalls(B, MS, o) {
-  const w = o.w, d = o.d, fl = o.fl, H = o.H || 3, sh = o.jetty ? 0.5 : 0, lo = !!o.lo, DK = [0.17, 0.14, 0.11], SC = [[0.3, 0.38, 0.28], [0.42, 0.2, 0.16], [0.22, 0.3, 0.4], [0.36, 0.31, 0.22]];
+  const w = o.w, d = o.d, fl = o.fl, H = o.H || 3, sh = o.jetty ? (typeof o.jetty === 'number' ? o.jetty : 0.5) : 0, lo = !!o.lo, DK = [0.17, 0.14, 0.11], SC = [[0.3, 0.38, 0.28], [0.42, 0.2, 0.16], [0.22, 0.3, 0.4], [0.36, 0.31, 0.22]];
   const R = o.R || rng(3);
   for (let k = 0; k < fl; k++) {
     const g = GP(), yb = k === 0 ? -0.35 : k * H, yt = (k + 1) * H, off = k > 0 ? sh : 0, stone = k === 0 && o.stone, mat = stone ? INF_B : (k > 0 && o.lime && Kit.defs.MI_Plaster ? 'MI_Plaster' : INF_T), ts = stone ? 2.2 : 1.25, col = stone ? [0.95, 0.95, 0.95] : (o.tint || [1, 1, 1]);
@@ -370,5 +370,9 @@ function infKitWalls(c, b, MS, frames, zone, sy, R, pass) {      // pass: 'ext' 
   }
   if (fl > 1) { plan[1] = { front: [], back: [], left: [], right: [] }; const nF = Math.max(2, Math.round(w / 2)), mF = w / nF; for (let i = 0; i < nF; i++) { const cu = (i + 0.5) * mF; if (i % 2 === 0) plan[1].front.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1, shutter: R() < 0.4 }); if (i % 2 === 1) plan[1].back.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1 }); } plan[1].left.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); plan[1].right.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); }
   const tn = 0.85 + R() * 0.25, SW = typeof shellStyle === 'function' ? shellStyle(site, spec) : {}, wtint = SW.wallTint || [tn, tn * 0.98, tn * 0.95];
-  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: wtint, lime: SW.lime, jetty: false, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
+  const JT = pass === 'ext' && typeof shellJetty === 'function' ? shellJetty(site, st) : 0;      // [fx2] the shell's upper storey projects over the street; the room (the cell) does not move
+  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: wtint, lime: SW.lime, jetty: JT, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
+  if (JT) { const g = GP(), sh = JT; g.box(W_, -w / 2, -0.3, -d / 2 - sh - 0.12, w / 2, 0.02, -d / 2 + 0.1, [0.4, 0.35, 0.31]); g.box(W_, -w / 2 - 0.05, -0.34, -d / 2 - sh - 0.08, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.34, 0.3, 0.27]);
+    const nF = Math.max(2, Math.round(w / 2)); for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * (w / nF); g.beam(W_, [x, -0.62, -d / 2 - sh + 0.02], [x, -0.28, -d / 2 + 0.02], 0.09, [0.32, 0.28, 0.25]); }
+    b.add(g.make('gen_joist_' + (_gn++)), KH.xf(MS, 0, 3, 0, 1, 0), { zone: 0, skyVis: 1, cast: false }); }
 }
