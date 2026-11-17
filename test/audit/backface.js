@@ -1,6 +1,6 @@
 // [audit] Blueprint 5.1, seeing inside: from places a walker can stand, draw the back faces of walls, roofs and other structure red and count the red.
 // A red pixel is the inside of something solid seen from outside it (an open end, a missing face, a sheet with no thickness, a view into a shell).
-// usage: node test/audit/run.mjs --size 480x270 --dir shots/audit --json shots/audit/backface.json test/audit/backface.js   (materials are not put back: run it in a page of its own)      (window.__BF = { step: 10, top: 16 } to change)
+// usage: node test/audit/run.mjs --size 480x270 --dir shots/audit --json shots/audit/backface.json test/audit/backface.js   (materials are not put back: run it in a page of its own)      (window.__BF = { step: 10, top: 16 } to change; { routes: true, out: 'bfr' } for the raised ways; { views: [[x, z, yaw, y, cell, tag], ...], out: 'bfi' } for rooms)
 const O = Object.assign({ step: 9, top: 24, x0: -62, x1: 62, z0: -84, z1: 90 }, window.__BF || {});
 const sc = R.scenePass.scene, T = TSL, keep = new Map();
 const STRUCT = /^MI_(WoodTrim|Plaster|UnevenBrick|Brick|Plaster_Planks|RockTrim|Slate_Roof|Shingle_Roof|Thatch_Roof|Stone_DS)\b/, ROOF = /Roof/;
@@ -19,10 +19,13 @@ const free = (x, z) => { const g = World.groundAt(x, z, 50); return g > World.la
 const seen = new Set(), q = [[0, -6]]; seen.add('0,-6'); while (q.length) { const [x, z] = q.pop(); for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = x + dx, b2 = z + dz, k = a + ',' + b2; if (a < O.x0 || a > O.x1 || b2 < O.z0 || b2 > O.z1 || seen.has(k) || !free(a, b2)) continue; if (Math.abs(World.groundAt(a, b2, 50) - World.groundAt(x, z, 50)) > 0.6) continue; seen.add(k); q.push([a, b2]); } }
 let pts = []; for (let z = O.z0; z <= O.z1; z += O.step) for (let x = O.x0; x <= O.x1; x += O.step) if (seen.has(x + ',' + z) && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(d => seen.has((x + d[0]) + ',' + (z + d[1])))) pts.push([x, z]);
 let views = []; { let k = 0; for (const [x, z] of pts) for (const yaw of (k++ % 2 ? [45, 225] : [135, 315])) views.push([x, z, yaw]); } if (O.views) views = O.views;
+// O.routes: the galleries, wall walks and other raised ways (World.routes), every way point, looking both ways along and across
+if (O.routes) { views = []; for (const r of World.routes) for (let i = 0; i < r.pts.length; i++) { const p = r.pts[i], q = r.pts[Math.min(i + 1, r.pts.length - 1)], o = r.pts[Math.max(i - 1, 0)], a = Math.atan2(q[0] - o[0], -(q[2] - o[2])) * 180 / Math.PI; for (const d of [0, 90, 180, 270]) views.push([p[0], p[2], a + d, p[1] + 1.55, null, r.id + '#' + i]); } }
+let curCell = null; const goCell = id => { if (curCell === id) return; if (curCell) { game.leave(); game.step(2, 1 / 30); } if (id) { game.enter(id); game.step(4, 1 / 30); } curCell = id; };
 document.body.classList.add('audit-nohud'); const st = document.createElement('style'); st.textContent = 'body > *:not(canvas) { visibility: hidden !important; }'; document.head.appendChild(st);
 const rows = []; swap(true);
-for (const [x, z, yaw] of views) { game.shot(x, null, z, yaw, 6, 13); const [red, blue] = await count(); rows.push({ x, z, yaw, wall: +(red * 100).toFixed(2), roof: +(blue * 100).toFixed(2) }); }
+for (const [x, z, yaw, y, cellId, tag] of views) { goCell(cellId || null); game.shot(x, y === undefined ? null : y, z, yaw, cellId ? -4 : 6, 13); const [red, blue] = await count(); rows.push({ x, z, yaw, y: y === undefined ? null : y, cell: cellId || null, tag: tag || null, wall: +(red * 100).toFixed(2), roof: +(blue * 100).toFixed(2) }); }
 const top = rows.filter(r => r.wall > 0.3).sort((a, b) => b.wall - a.wall).slice(0, O.top);
-let i = 0; for (const r of top) { i++; game.shot(r.x, null, r.z, r.yaw, 6, 13); await __snap('bf/' + String(i).padStart(2, '0') + '_red'); }
+let i = 0; for (const r of top) { i++; goCell(r.cell); game.shot(r.x, r.y, r.z, r.yaw, r.cell ? -4 : 6, 13); await __snap((O.out || 'bf') + '/' + String(i).padStart(2, '0') + '_red'); }
 st.remove();
 return { points: pts.length, views: rows.length, wallViews: rows.filter(r => r.wall > 0.3).length, wallViews2: rows.filter(r => r.wall > 2).length, roofViews: rows.filter(r => r.roof > 0.3).length, meanWall: +(rows.reduce((a, r) => a + r.wall, 0) / rows.length).toFixed(3), meanRoof: +(rows.reduce((a, r) => a + r.roof, 0) / rows.length).toFixed(3), top, rows };

@@ -28,8 +28,8 @@ node tools/gate.mjs --only story,mine      named steps      --skip cells      --
 
 It runs one browser at a time, retries a failed step once (a pass on the second try is printed as flaky), prints one PASS/FAIL
 table with timings, writes `shots/gate/gate.md`, a log per step and screenshots, and exits non-zero on failure. Every push to
-`threejs` or a `fork-*` branch runs `--full` on GitHub (workflow `gate`, four jobs side by side, about 25 minutes; a push during a
-run waits for it, it does not cancel it): the result is the check mark on the commit, and the tables and screenshots are the run's `gate-1..4` artifacts. So: run `--quick` (or `--only` your area) before a push, read the GitHub result
+`threejs` or a `fork-*` branch runs `--full` on GitHub (workflow `gate`, six jobs side by side with the steps dealt out by how long they take, about 18 minutes; a push during a
+run waits for it, it does not cancel it; a push that changes only `docs/`, `*.md` or `test/audit/` runs no gate): the result is the check mark on the commit, and the tables and screenshots are the run's `gate-1..6` artifacts. So: run `--quick` (or `--only` your area) before a push, read the GitHub result
 after it, and do not run `--full` on a small shared machine.
 
 What `--full` runs: build; silent boot (no `warn` or `error` line: a builder that throws only logs a warning, and a build shipped
@@ -176,3 +176,9 @@ node tools/voice/check.mjs --allow-missing
   buildings are boxes with a door drawn on; 63 of 80 villagers answer "..."; interiors 2 to 6 times their shells) and wrote
   `docs/BLUEPRINT.md`, the acceptance test for this and every village. Its order of work is binding: the cast table and the
   building table come before anything is placed. No fake buildings; subtraction before addition.
+- Build 73 to 76, about twenty screenshots in one afternoon (`docs/owner/`): furniture facing the wall, a pig made of two lumps,
+  a lute that is a disc on a plank, a wall through a passage arch, a door on an upper storey with nothing behind it, stair wells
+  that are holes, windows that show a fake night, lines that replay. "Looks so cheap. Lazy." Rules that came of it: nothing
+  living or recognisable is built from primitives; a thing that cannot pass at arm's length is left out; inside and outside are
+  the same building; look at your own work from the end, from behind and from below before you report. Briefs for the
+  sessions on their own machines are in `docs/briefs/`.
