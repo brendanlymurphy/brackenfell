@@ -524,6 +524,7 @@ const Chars = (() => {
     if (any) (H.lods = H.lods || []).push(e);
   }
   function lodUpdate(H, d, cast) {
+    if (H.seatedNow) d *= 1.6;      // [ch1] seated patrons (the inn hall): the lighter weights start sooner, they are not walking up to anyone
     if (!H.lods) { for (const m of H.meshes) m.castShadow = cast; return; }
     const D = LOD.dist[R.qName] || LOD.dist.medium, h = LOD.hyst, was = H.lodLevel === undefined ? 0 : H.lodLevel, up = k => d > D[k] + (was > ['hi', 'mid', 'lo'].indexOf(k) ? -h : h);
     const level = LOD.force === 1 ? 2 : LOD.force === 0 ? 0 : up('lo') ? 3 : up('mid') ? 2 : up('hi') ? 1 : 0;
@@ -758,6 +759,7 @@ const Chars = (() => {
     const cfg = H.set.cfg, pv = H.pivot;
     pv.visible = st.visible !== false; if (!pv.visible) return;
     const base = st.anim || 'idle', seated = base === 'sit', lying = base === 'lie';
+    H.seatedNow = seated;      // [ch1]
     const key = st.talking ? (lying ? 'lie' : seated ? (cfg.anims['sit+talk'] ? 'sit+talk' : 'sit') : 'talk') : base;
     play(H, key);
     const s = st.scale || 1, k = (cfg.scale || 1) * s * H.fit;
