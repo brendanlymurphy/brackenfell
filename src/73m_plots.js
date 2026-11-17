@@ -9,12 +9,12 @@ const PLOT_ROWS = [
   { name: 'alleyS', ids: ['shop.s0', 'shop.s1', 'shop.s2'], trades: ['forge', 'washing', 'pigs'] },
   { name: 'placeE', ids: ['store'], trades: ['stable'], axis: 'x' },
   { name: 'chapelW', ids: ['in.12', 'in.13', 'in.45', 'in.32'], trades: ['garden', 'woodyard', 'hens', 'hives'], axis: 'x' },
-  { name: 'chapelE', ids: ['in.46', 'in.15', 'in.16', 'in.33'], trades: ['woodyard', 'hens', 'garden', 'hives'], axis: 'x' },
-  { name: 'eastS', ids: ['in.86', 'in.87', 'in.88', 'in.89'], trades: ['garden', 'hens', 'woodyard', 'hives'] },
+  { name: 'chapelE', ids: ['in.15', 'in.16', 'in.33'], trades: ['hens', 'garden', 'hives'], axis: 'x' },
+  { name: 'eastS', ids: ['in.86', 'in.87', 'in.89'], trades: ['garden', 'hens', 'hives'] },
   { name: 'eastN', ids: ['in.81', 'in.82', 'in.83', 'in.84', 'in.85'], trades: ['garden', 'hens', 'woodyard', 'pigs', 'hives'] },
   { name: 'gateN', ids: ['in.65'], trades: ['garden'] },
   { name: 'gateS', ids: ['in.75'], trades: ['hens'] },
-  { name: 'westS', ids: ['in.08', 'in.07', 'in.06', 'in.42'], trades: ['dyer', 'hens', 'woodyard', 'washing'] }
+  { name: 'westS', ids: ['in.08', 'in.07', 'in.06'], trades: ['dyer', 'hens', 'woodyard'] }
 ];
 let _PLOTS = null;
 function plotsCompute() {
