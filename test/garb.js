@@ -4,7 +4,7 @@
 // the front, the side and behind in each pose, saved as garb/<id>_<pose>_<view>.jpg.
 // usage: node test/audit/run.mjs --size 640x400 --dir shots [--opt pics=r2_in12,r_in20,r_in51,r_in94,marta] test/garb.js
 const st0 = document.createElement('style'); st0.textContent = 'body > *:not(canvas) { visibility: hidden !important; }'; document.head.appendChild(st0);
-Env.dayLength = 0; if (Cells.cur) game.leave();
+Env.dayLength = 0; if (Cells.cur) game.leave(); let LOD0;
 const V3 = THREE.Vector3, out = { fail: [], checked: 0, cloaked: 0, housed: 0 }, POSES = { stand: ['idle', 0.2], sit: ['sit', 0.3], bend: ['work', 0.45], sweep: ['sweep', 0.4], reach: ['reach', 0.5], walk: ['walk', 0.25] };
 const cfg = Chars.set.cfg; cfg.anims.reach = 'interact';
 const sx = 4.2, sz = -2.5, sy = Terrain.y(sx, sz);
@@ -24,7 +24,7 @@ for (const def of NPC_DEFS) { const L = cfg.look(def); if (def.house) out.housed
 // 3. pictures
 const ids = String((window.__TEST__ || {}).pics || '').split(',').filter(Boolean);
 for (const id of ids) { const n = NPCS.find(p => p.id === id); if (!n) { out.fail.push(id + ': no such villager'); continue; } const H = Chars.spawn(n.def); H.pivot.traverse(o => { o.layers.set(1); });
-  for (const k in POSES) { if (k === 'walk') continue; let i = 0; for (const az of [0, 90, 180]) { pose(H, k, n.scale); if (!az) check(H, id + ' ' + k); const a = az * Math.PI / 180, hd = H.bones.head.getWorldPosition(new V3()), low = hd.y - sy + 0.02; H.pivot.traverse(o => { o.layers.set(1); });
-      game.shot(sx + Math.sin(a) * 1.25, sy + low, sz - Math.cos(a) * 1.25, (a + Math.PI) * 180 / Math.PI, -14, 13); await __snap('garb/' + id + '_' + k + '_' + ['front', 'side', 'back'][i++]); } }
+  for (const k in POSES) { if (k === 'walk') continue; let i = 0; for (const az of [0, 90, 180]) { pose(H, k, n.scale); if (!az) check(H, id + ' ' + k); const a = az * Math.PI / 180, hd = H.bones.head.getWorldPosition(new V3()), low = hd.y - sy + 0.02; H.pivot.traverse(o => { o.layers.set(1); }); const cam = [sx + Math.sin(a) * 1.25, sy + low, sz - Math.cos(a) * 1.25, (a + Math.PI) * 180 / Math.PI, -14, 13];
+      game.shot(...cam); LOD0 = Chars.LOD && (Chars.LOD.force = 0); pose(H, k, n.scale); game.shot(sx + Math.sin(a) * 1.25, sy + low, sz - Math.cos(a) * 1.25, (a + Math.PI) * 180 / Math.PI, -14, 13); await __snap('garb/' + id + '_' + k + '_' + ['front', 'side', 'back'][i++]); } }
   Chars.remove(H); }
-st0.remove(); return out;
+if (Chars.LOD) Chars.LOD.force = -1; st0.remove(); return out;
