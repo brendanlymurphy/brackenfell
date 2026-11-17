@@ -1,5 +1,6 @@
 // Repairs the wardrobe of finished character GLBs without Blender [ch4]. Safe to run again; rewrites the files in place.
-//   node tools/humans/reskin.mjs chars/real/[fmo]_*.glb        then: node tools/assets_pack.mjs
+//   node tools/humans/reskin.mjs chars/real/[fmo]_*.glb        then: node tools/assets_pack.mjs --only chars
+// Step 3 deletes triangles: to change its rule, start again from the files as post.mjs and chars_lod.mjs wrote them (commit e1c351a has them).
 // 1. Unweighted vertices. garb.py takes a garment vertex's weights from the four nearest body vertices; where those have none the
 //    exporter binds the vertex to "neutral_bone", which never moves: the vertex stays at standing height while the body sits and its
 //    triangles become metre-long shards. Such a vertex gets the weights of the nearest weighted vertex of its own mesh.
@@ -99,6 +100,7 @@ for (const file of process.argv.slice(2)) {
   // gen.py removes the body a stock garment covers; under the kirtle shell and its sleeves most of it was left, and it shows through
   // as patches of skin on the chest, the shoulders and a bent elbow. A body triangle goes when all three corners lie under the
   // shell (within 8 cm of it, not more than 5 cm outside, and not beyond one of its openings: neck, cuffs, hem). Legs stay.
+  // The neck stays down to its base (anything a quarter or more on the neck joint): the collar stands off it and a hole showed.
   { const shell = prims.filter(x => /^w_(kirtle|sleeve[LR])$/.test(x.name)), S = [];
     if (shell.length) {
       const key = v => Math.round(v[0] * 5000) + ',' + Math.round(v[1] * 5000) + ',' + Math.round(v[2] * 5000);
@@ -114,7 +116,7 @@ for (const file of process.argv.slice(2)) {
         if (bd > 0.08) return false; for (let k = 0; k < 3; k++) if (bb[k] < 1e-6 && bt.open[k]) return false;
         return dot(sub(v, bq), bt.n) < 0.05; };
       for (const x of prims) { if (!/^base(@|$)/.test(x.name)) continue; const pos = x.p.getAttribute('POSITION'), ia = x.p.getIndices(), ix = ia.getArray(), n = pos.getCount(), cov = new Uint8Array(n);
-        for (let i = 0; i < n; i++) { const [e, g] = wOf(x, i); let leg = 0, keep = 0; for (let k = 0; k < 4; k++) { if (LEG.test(J[e[k]])) leg += g[k]; if (/^(head|hand|thumb|index|middle|ring|pinky)/.test(J[e[k]])) keep += g[k]; } cov[i] = leg < 0.5 && keep < 0.5 && covered(pos.getElement(i, [])) ? 1 : 0; }
+        for (let i = 0; i < n; i++) { const [e, g] = wOf(x, i); let leg = 0, keep = 0; for (let k = 0; k < 4; k++) { if (LEG.test(J[e[k]])) leg += g[k]; if (/^(head|hand|thumb|index|middle|ring|pinky)/.test(J[e[k]])) keep += g[k]; if (J[e[k]] === 'neck_01') keep += g[k] * 2; } const v = pos.getElement(i, []); cov[i] = leg < 0.5 && keep < 0.5 && covered(pos.getElement(i, [])) ? 1 : 0; }
         const out = []; for (let t = 0; t < ix.length; t += 3) if (!(cov[ix[t]] && cov[ix[t + 1]] && cov[ix[t + 2]])) out.push(ix[t], ix[t + 1], ix[t + 2]);
         if (out.length < ix.length) { x.p.setIndices(doc.createAccessor().setType('SCALAR').setArray(new ix.constructor(out)).setBuffer(ia.getBuffer())); log.push(x.name + ' under the kirtle -' + (ix.length - out.length) / 3); } } } }
 
