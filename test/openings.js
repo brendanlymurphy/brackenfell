@@ -29,4 +29,5 @@ for (const c of World.colliders) { if (!isFinite(c.x) || c.y1 - c.y0 < 0.3) cont
 const byName = {}; for (const e of hits.values()) for (const w of e.what) { const k = w.split('@')[0]; byName[k] = (byName[k] || 0) + 1; }
 const list = [...hits.values()].filter(e => !window.__opKind || e.o.kind.indexOf(window.__opKind) === 0).map(e => ({ at: e.o.kind + ' (' + e.o.x.toFixed(1) + ',' + e.o.z.toFixed(1) + ') ' + [...e.what].slice(0, window.__opWhat || 4).join(' '), n: e.what.size }));
 list.sort((a, b) => b.n - a.n);
-return JSON.stringify({ byName, openings: ops.length, blocked: list.length, triangles: nTri, top: list.slice(0, TOP).map(e => e.at + '  | game.shot(' + 0 + ')') });
+const verdict = list.length ? 'openings FAIL ' + list.length : 'openings PASS'; const byKind = {}; for (const e of list) { const k = e.at.split(' ')[0]; byKind[k] = (byKind[k] || 0) + 1; }
+return verdict + ' ' + JSON.stringify({ byKind, byName, openings: ops.length, blocked: list.length, triangles: nTri, top: list.slice(0, TOP).map(e => e.at + '  | game.shot(' + 0 + ')') });
