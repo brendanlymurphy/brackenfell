@@ -442,9 +442,10 @@ function pStairEmit(P, s) {
     const l = s.lat + sg * (hw + 0.035), top = b.y + 0.02;
     for (let i = 0; i < s.n; i += 1) { const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, l - 0.03, l + 0.03); m.box(q[0], y0, q[1], q[2], y0 + (i + 1) * r + 0.05, q[3], 4); }
     // handrail: a sloping beam on posts
-    const pa = ax === 'x' ? [s.p0, 0.95 + y0 + 0.4 * r, l] : [l, 0.95 + y0 + 0.4 * r, s.p0], pb = ax === 'x' ? [s.p1, 0.95 + top - 0.4 * r, l] : [l, 0.95 + top - 0.4 * r, s.p1];
+    const tE = Math.max(0.05, 1 - 1.07 / Math.max(s.rise, 1.2)), yA = 0.95 + y0 + 0.4 * r, yB = 0.95 + top - 0.4 * r, pE = s.p0 + d * s.run * tE;      // [fin] the climber's rail stops 1.07 m of rise short of the floor above: there the opening's own balustrade (below) takes over, so two guard systems never stand in one well
+    const pa = ax === 'x' ? [s.p0, yA, l] : [l, yA, s.p0], pb = ax === 'x' ? [pE, yA + (yB - yA) * tE, l] : [l, yA + (yB - yA) * tE, pE];
     m.beam(pa, pb, 0.05, 0.06);
-    for (let i = 0; i <= s.n; i += 3) { const t = Math.min(i, s.n) / s.n, p = s.p0 + d * s.run * t, y = lerp(y0, top, t) + 0.1, q = ax === 'x' ? [p, l] : [l, p]; m.box(q[0] - 0.03, y, q[1] - 0.03, q[0] + 0.03, y + 0.95 + 0.4 * r * (1 - 2 * t) + 0.02, q[1] + 0.03); }
+    for (let i = 0; i <= s.n; i += 3) { if (i / s.n > tE) break; const t = Math.min(i, s.n) / s.n, p = s.p0 + d * s.run * t, y = lerp(y0, top, t) + 0.1, q = ax === 'x' ? [p, l] : [l, p]; m.box(q[0] - 0.03, y, q[1] - 0.03, q[0] + 0.03, y + 0.95 + 0.4 * r * (1 - 2 * t) + 0.02, q[1] + 0.03); }
   }
   // [fin] the opening in the upper floor, done properly: the floor shows its thickness (a trimmer 0.1 x 0.22 m on all four sides, boards ending on it), and the open sides are guarded:
   // a balustrade (newels 0.1 m square with caps, a handrail at 0.9 m, balusters at 0.12 m) for an upper stairwell, a coaming and a propped plank hatch for a poor cellar. The arrival end stays open.
