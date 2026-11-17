@@ -44,7 +44,12 @@ jail, death, other orders, saves from old builds, the mine, the secrets, a phone
 `node test/playbot.mjs --run story,side` runs scenarios by hand (`story` first: the others start from its checkpoints).
 `docs/BUGS.md` lists what it found; a behaviour bug you fix gets a line there and a check in the bot.
 
-Budgets (draw calls / triangles in the four views of `test/perf_views.js`): target medium 220 / 380k, low 140 / 200k. The gate
+The walk bot (`node test/walkbot.mjs`, about 7 minutes) walks by input along every street, through every interior, route, path and the
+mine, and writes `docs/WALK.md`: falls, snags, places it could not walk, camera and prompt faults, each with a `game.shot` call. Run
+it after moving colliders, floors, stairs or doors. `--part town|cells|routes|wilds|mine`, `--cells inn,chapel`, `--from-json`.
+
+Budgets (draw calls / triangles in the four views of `test/perf_views.js`): target medium 220 / 380k, low 140 / 200k (Build 69: medium
+square 157 / 292k, low square 125 / 195k; only the alley on Low is over, at 148 / 218k). The gate
 fails a view that is more than 3% worse than `tools/gate_budget.json` and reports "over target" otherwise. After a deliberate
 change: `node tools/gate.mjs --only budget-medium,budget-low --accept-budget`, commit the file and say why.
 

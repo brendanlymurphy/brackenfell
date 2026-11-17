@@ -55,20 +55,27 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - **59** Lighting pass 3 (coloured light from stained glass, contact bands, low mist at dawn and dusk, wet cobbles at the wharf);
   stall goods; secrets' props; scanned rock in the mine.
 
+- **60, 61** Real lip sync (visemes from the audio of every voiced line), natural skin and eyes, gaze, fitted helmet and kerchiefs.
+- **62** One gate command, the gate on GitHub for every push, onboarding docs rewritten, seven new voiced story lines.
+- **63 to 66** Wardrobe pass (layered clothes, fitted hats, hair off the eyes); interiors batches; pictures as varnished panels.
+- **67** A real child in a smock, kirtles for five women; interiors batches 3 and 4.
+- **68** Bugs found by playing (`test/playbot.mjs`, `docs/BUGS.md`): the crypt gate after a reload, saves loaded where they were
+  made, autosave, long dialogue and touch targets on a phone, the night meeting. Built files are no longer in the repository:
+  GitHub builds and publishes main and checks the live page.
+
 ## In progress (branch, owner)
 
-- **Bugs by playing** (`fork-bugs`, the second Claude Code session): `test/playbot.mjs` plays by input and `docs/BUGS.md` lists what
-  breaks. Notes, newest last:
-  - Item 0: the four built files are no longer tracked; GitHub builds and publishes main (`pages` workflow) and then checks the
-    live page serves that build. A push during a gate run now waits instead of cancelling it.
-  - Item 1: seven bugs fixed (a gate shut again after a reload blocked the story; saves loaded a kilometre away; unsaved progress;
-    long dialogue off a phone screen; small touch targets; the ledger opening over other windows; the night meeting in sight of
-    Garrick's camp). The bot's scenarios are steps of the gate.
-  - Items 2 and 3: phone fit, rotation, hide and resume, sound after the first tap, offline start, and a 30-minute soak are bot
-    scenarios; nothing leaks and nobody gets stuck in the soak as measured.
-  - Item 4: 178 of 248 lines have audio and lip tracks; the rest come from the daily batch (08:20 UTC).
-- Other worker branches (`fork-fx1` outdoors overlap, `fork-fx2` interiors, `fork-ch1` characters) are named in the coordinator's
-  briefs; when one merges, its line goes to Done.
+- **Walking, speed, loose ends** (`fork-play`, the second Claude Code session). Notes, newest last:
+  - The play bot's soak no longer fails on sounds (an artifact of stepping time); long fights and looting are robust.
+  - Walk bot (`test/walkbot.mjs`): 19 km by input through every street, all 57 interiors (115 door uses), the routes, the wilds
+    paths, the mine. `docs/WALK.md` is its report. Fixed from it: prompts through walls (88 places), prompts for things beside or
+    behind the player (867), the bed-and-chest prompt (bug 8).
+  - Speed: Settings has "Copy performance report" (30 s of frame times, draw calls, device, build). Medium went from 216 draws /
+    433k triangles in the square to 157 / 292k and Low from 170 / 225k to 125 / 195k with the pictures unchanged (ferns and stones
+    given a draw distance; doors and signs outside the view skipped; terrain cut into squares; terrain and props under the
+    roofline skipped).
+- Other worker branches (`fork-fx1` outdoors overlap, `fork-fx2` interiors, `fork-ch1` characters, `fork-l1` lighting) are named in
+  the coordinator's briefs; when one merges, its line goes to Done.
 
 ## Next
 
