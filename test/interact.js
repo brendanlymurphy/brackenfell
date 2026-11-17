@@ -43,6 +43,7 @@ ixWitness = __w;
 { game.leave && game.leave(); await idle(); S.flags.bed = 0; S.q.ale = { stage: 0, done: false }; S.gold = 40; RPG.st().hp = 30; const n = TALK.greta(), labels = n.o.map(o => o[0]); fx(labels.some(l => /stew/.test(l)) && labels.some(l => /bed for the night/.test(l)), 'no stew or bed on offer: ' + labels.join(' | '));
   n.o.find(o => /stew/.test(o[0]))[1](); fx(RPG.st().hp >= 69, 'stew did not heal'); n.o.find(o => /bed for the night/.test(o[0]))[1](); fx(S.flags.rent === RPG.st().day && S.gold === 33, 'bed not rented (' + S.gold + ')'); S.flags.bed = 1; }
 // ── what people say ──
-{ Env.hour = 23; delete NPC.brandt._said; const n = TALK.brandt(); fx(/late/.test(n.t), 'no comment at night: ' + n.t.slice(0, 60)); Env.hour = 12; S.gold = 200; delete NPC.maren._said; const m = TALK.maren(); fx(/jingling/.test(m.t), 'no comment on a full purse'); }
+// a remark comes only before a line he has already said to you, never before one you have not heard, and as a paragraph of its own
+{ Env.hour = 23; delete NPC.brandt._said; delete NPC.brandt._heard; const n0 = TALK.brandt(); fx(!/about late/.test(n0.t), 'a remark in front of a line not yet heard: ' + n0.t.slice(0, 60)); const n = TALK.brandt(); fx(/^You’re about late\. Mind the dark\.\n\n/.test(n.t), 'no comment at night: ' + n.t.slice(0, 60)); Env.hour = 12; S.gold = 200; delete NPC.maren._said; delete NPC.maren._heard; TALK.maren(); const m = TALK.maren(); fx(/jingling/.test(m.t), 'no comment on a full purse'); }
 if (fails.length) throw new Error('INTERACT FAIL ' + JSON.stringify(fails));
 return 'interact PASS ' + JSON.stringify(log);
