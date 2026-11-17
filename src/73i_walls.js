@@ -19,11 +19,13 @@ function buildWalls(bucket) {
     for (let it = 0; it < 4; it++) for (let i = 1; i < N; i++) { if (FLAT(Us[i])) continue; Ys[i] = Math.max(gnd(Us[i]) + 2.7, (Ys[i - 1] + Ys[i] * 2 + Ys[i + 1]) / 4); }
     for (let i = 0; i <= N; i++) if (FLAT(Us[i])) Ys[i] = yT;
     const yAt = u => { for (let i = 0; i < N; i++) if (u <= Us[i + 1] || i === N - 1) return Ys[i] + (Ys[i + 1] - Ys[i]) * clamp((u - Us[i]) / (Us[i + 1] - Us[i]), 0, 1); };
+    const dk = u => clamp(1 - Math.max(0, u < ug ? ug - 8 - u : u - (ug + 10)) / 6, 0, 1), tTop = u => { const base = gnd(u) + 2.5, deck = yAt(u) + 1.85; return base + (Math.max(deck, base) - base) * dk(u); };
     // segments
-    const tips = [];
     for (let i = 0; i < N; i++) {
       const a = Us[i], b = Us[i + 1], ya = Ys[i], yb = Ys[i + 1], lo = Math.min(ya, yb), hi = Math.max(ya, yb), g0 = Math.min(gy(...P(a, 0)), gy(...P(b, 0)), gy(...P(a, 1.5)), gy(...P(b, 1.5)));
       const p0 = P(a, 0.35), p1 = P(b, 1.85), mm = M((P(a, 0)[0] + P(b, 0)[0]) / 2, (P(a, 0)[1] + P(b, 0)[1]) / 2);
+      const DK = b > ug - 8 && a < ug + 10;      // [fx3] the wall walk only beside the gate tower: a few metres either side
+      if (DK) {
       // walk deck: a ramp, planks; the floor entry follows it
       { const q0 = P(a, 0.35), q1 = P(b, 1.85); lvFloor(Math.min(q0[0], q1[0]), Math.min(q0[1], q1[1]), Math.max(q0[0], q1[0]), Math.max(q0[1], q1[1]), ya, yb, axis);
         const m = M(q0[0], q0[1]), c = P((a + b) / 2, 1.1); m.mat(MAT.PLANKS, wood, 0.55); const L = hyp(b - a, yb - ya);
@@ -34,36 +36,34 @@ function buildWalls(bucket) {
       // joist and bearer beams under the deck, a stilt at the inner edge every second piece
       { const s = P(a, 0.4), t = P(b, 0.4), s2 = P(a, 1.8), t2 = P(b, 1.8); K.beam([s[0], ya - 0.28, s[1]], [t[0], yb - 0.28, t[1]], 0.14, 0.18); K.beam([s2[0], ya - 0.28, s2[1]], [t2[0], yb - 0.28, t2[1]], 0.14, 0.18);
         if (i % 2 === 0 && !(a > ug - 2 && a < ug + 2)) { const q = P(a, 1.8);       /* [coord] no stilt in the middle of a gate arch */ K.post(q[0], q[1], gy(q[0], q[1]) - 0.4, ya - 0.1, 0.2, true); K.beam([q[0], ya - 0.3, q[1]], [P(a, 0.4)[0], ya - 0.3, P(a, 0.4)[1]], 0.1, 0.14); } }
-      // the palisade: a plank wall from under the ground to 1.85 m over the deck, stepped to the ground, a coping rail and sharpened stakes
-      { const top = hi + 1.85, e0 = P(a, 0), e1 = P(b, 0.36), mlo = Math.min(g0, lo - 3) - 0.8;
-        /* [coord] Build 72: the plank wall and its collider ran straight through both gate arches (nobody could walk the Bridge Gate or the Chapel Gate);
-           each 2 m piece is now cut to what lies outside the arch (ug - 1.9 .. ug + 1.9), and over the arch only the part above the lintel is kept */
+      }
+      /* [fx3] the palisade is a row of individual logs (20-28 cm, bark on, grey-brown, a darker mossy foot), each its own height and lean, tops cut to a point with the axe, a few pale replaced ones and a few gaps patched with wattle; the top line follows the ground smoothly (no steps) and rises over the wall walk only beside a gate tower */
+      { const mlo = Math.min(g0, lo - 3) - 0.8, topC = tTop((a + b) / 2) + 0.25;
         const g0a = ug - 1.9, g1a = ug + 1.9, parts = b <= g0a || a >= g1a ? [[a, b, mlo]] : [[a, Math.min(b, g0a), mlo], [Math.max(a, g0a), Math.min(b, g1a), yT - 0.16], [Math.max(a, g1a), b, mlo]].filter(q => q[1] - q[0] > 0.02);
-        for (const [pa, pb, pl] of parts) { const f0 = P(pa, 0), f1 = P(pb, 0.36); box(MAT.PLANKS, [0.74, 0.68, 0.6], 0.5, f0[0], pl, f0[1], f1[0], top, f1[1], 4 | 8);
-          /* [fx3] the outer face: plank joints as dark battens, a replaced board now and then, and the earth banked against the foot */
-          { const gM = gy(...P((pa + pb) / 2, -0.3)), hsh = Math.floor(Math.abs(pa) * 7.3) % 5;
-            for (let u = pa + 0.25; u < pb - 0.1; u += 0.42) { const gU = gy(...P(u, -0.03)); bx(MAT.TIMBER, [0.27, 0.24, 0.21], 0.5, u - 0.02, Math.max(pl, gU - 0.1), -0.03, u + 0.02, top - 0.04, 0, 4 | 8); }
-            if (hsh === 0 || hsh === 3 || hsh === 1) { const u = pa + 0.5 + (hsh === 3 ? 0.7 : 0), gU = gy(...P(u, -0.03)); bx(MAT.PLANKS, [0.78, 0.64, 0.46], 0.5, u, Math.max(pl, gU - 0.1), -0.04, u + 0.3, top - (hsh === 3 ? 0.9 : 0.2), 0, 4 | 8); }
-            void gM; }
-          col(Math.min(f0[0], f1[0]), Math.min(f0[1], f1[1]), Math.max(f0[0], f1[0]), Math.max(f0[1], f1[1]), pl, top); }
-        void e0; void e1;
-        for (let u = a + 0.2; u < b - 0.05; u += 0.5) tips.push([u, top]); }
+        for (const [pa, pb, pl] of parts) { const f0 = P(pa, 0), f1 = P(pb, 0.36);
+          if (pl > mlo + 1) box(MAT.PLANKS, [0.42, 0.36, 0.3], 0.5, f0[0], pl, f0[1], f1[0], yT + 1.85, f1[1], 4 | 8);      // over the arch: boards above the lintel
+          else { const cm = P((pa + pb) / 2, 0.15), mL = M(cm[0], cm[1]);
+            for (let u = pa + 0.13; u < pb - 0.08; u += 0.26 + 0.02 * Math.sin(u * 9)) { const h1 = Math.abs(Math.sin(u * 127.1 + id.length * 31.7) * 43758.5453) % 1, h2 = Math.abs(Math.sin(u * 311.7 + 17.3) * 12345.678) % 1, h3 = Math.abs(Math.sin(u * 74.7 + 5.1) * 98765.43) % 1;
+              const bp = P(u, 0.15 + (h2 - 0.5) * 0.06), gL = gy(bp[0], bp[1]), r = 0.1 + h1 * 0.04;
+              if (h3 < 0.022) { const w0 = P(u - 0.12, 0.12), w1 = P(u + 0.12, 0.12); mL.mat(MAT.TIMBER, [0.3, 0.25, 0.18], 0.5); for (const k of [0.5, 1.0, 1.5]) mL.tube([[w0[0], gL + k, w0[1]], [w1[0], gL + k + 0.03, w1[1]]], [0.025, 0.025], 5, true); continue; }
+              const top = tTop(u) + (h1 - 0.5) * 0.55 - (h3 > 0.93 ? 0.25 : 0), lx = (h2 - 0.5) * 0.14, lz = (h1 - 0.5) * 0.08, sh = [bp[0] + lx * 0.9, top - 0.34, bp[1] + lz * 0.9], tip = [bp[0] + lx, top, bp[1] + lz];
+              const pale = h3 > 0.93 && h3 < 0.985; mL.mat(MAT.BARK, pale ? [0.62, 0.5, 0.36] : [0.32 + h1 * 0.08, 0.28 + h1 * 0.06, 0.23 + h1 * 0.05], 0.7);
+              mL.tube([[bp[0], gL - 0.35, bp[1]], sh, tip], [r * 1.03, r * 0.95, 0.012], 6, true);
+              if (!pale) { mL.mat(MAT.MOSS, [0.2, 0.23, 0.15], 0.8); mL.tube([[bp[0], gL - 0.3, bp[1]], [bp[0] + lx * 0.15, gL + 0.4 + h2 * 0.2, bp[1] + lz * 0.15]], [r * 1.06, r * 1.0], 6, false); } } }
+          col(Math.min(f0[0], f1[0]), Math.min(f0[1], f1[1]), Math.max(f0[0], f1[0]), Math.max(f0[1], f1[1]), pl, pl > mlo + 1 ? yT + 1.85 : topC); } }
       // the inner rail, sloped
-      { const s = P(a, 1.85), t = P(b, 1.85);
+      if (DK) { const s = P(a, 1.85), t = P(b, 1.85);
         for (const k of [0.5, 1.0]) K.beam([s[0], ya + k, s[1]], [t[0], yb + k, t[1]], 0.05, 0.06);
         const post0 = P(a, 1.85); K.post(post0[0], post0[1], ya - 0.1, ya + 1.08, 0.1, true);
         if (!(FLAT(a) && FLAT(b)) && !(o.noRail && o.noRail(a, b))) { const c0 = P(a, 1.9), c1 = P(b, 1.95); col(Math.min(c0[0], c1[0]), Math.min(c0[1], c1[1]), Math.max(c0[0], c1[0]), Math.max(c0[1], c1[1]), lo - 0.05, hi + 1.15); } }
     }
     /* [fx3] the earth thrown up against the palisade's foot: a low turf-covered ridge on the outside that follows the ground and meets it along a ragged line, one closed form per stretch; it stops 0.3 m short of each gate tower, so the passage and the road are clear */
     for (const [ba, bb] of [[u0 + 0.3, ug - TW - 0.3], [ug + TW + 0.3, u1 - 0.3]]) if (bb - ba > 1.5) { const A = P(ba, -0.75), B = P(bb, -0.75), mb = M((A[0] + B[0]) / 2, (A[1] + B[1]) / 2); earthBank(mb, A, B, 0.6, 0.42, [0.5, 0.5, 0.38]); }
-    // stakes (one mesh, tiny gable prisms)
-    { for (const [u, top] of tips) { const p = P(u, 0.0), m = M(p[0], p[1]); m.mat(MAT.TIMBER, [0.7, 0.64, 0.58], 0.5); const q0 = 0, q = P(u, 0.36), r = P(u + 0.22, 0.0), s = P(u + 0.22, 0.36), mid0 = [(p[0] + r[0]) / 2, (p[1] + r[1]) / 2], mid1 = [(q[0] + s[0]) / 2, (q[1] + s[1]) / 2], ty = top + 0.3;
-        m.quad2([p[0], top, p[1]], [q[0], top, q[1]], [mid1[0], ty, mid1[1]], [mid0[0], ty, mid0[1]]); m.quad2([mid0[0], ty, mid0[1]], [mid1[0], ty, mid1[1]], [s[0], top, s[1]], [r[0], top, r[1]]); } }
     { const o0 = P(ug, 0.5), o1 = P(ug, 1.5); (World.openings = World.openings || []).push({ kind: 'towngate ' + id, x: o0[0], z: o0[1], dx: o1[0] - o0[0], dz: o1[1] - o0[1], w: 3.8 }); }
     // ── the gate tower ──
     const Y = yT, a0 = ug - TW, a1 = ug - 1.9, b0 = ug + 1.9, b1 = ug + TW, V0 = -0.55, V1 = 3.4, gA = Math.min(gy(...P(ug, -0.2)), gy(...P(ug, 3.2)));
-    for (const [s, e] of [[a0, a1], [b0, b1]]) { bx(MAT.STONE, [0.9, 0.87, 0.82], 0.7, s, gA - 1.0, V0, e, Y - 0.16, V1, 4 | 8); { const p = P(s, V0), q = P(e, V1); col(Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1]), gA - 1.0, Y); }
-      bx(MAT.STONE, [0.84, 0.82, 0.78], 0.6, s - 0.08, Y - 0.34, V0 - 0.08, e + 0.08, Y - 0.16, V1 + 0.08, 4); }
+    for (const [s, e] of [[a0, a1], [b0, b1]]) { bx(MAT.STONE, [0.6, 0.58, 0.54], 1.2, s, gA - 1.0, V0, e, Y - 0.16, V1, 4 | 8); { const p = P(s, V0), q = P(e, V1); col(Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1]), gA - 1.0, Y); }
+      bx(MAT.STONE, [0.56, 0.54, 0.5], 1.2, s - 0.08, Y - 0.34, V0 - 0.08, e + 0.08, Y - 0.16, V1 + 0.08, 4); }
     bx(MAT.TIMBER, dark, 0.5, a1 - 0.05, Y - 0.62, V0 + 0.15, b0 + 0.05, Y - 0.16, V1 - 0.15, 4);          // the lintel under the deck: the arch is 3.8 m wide and 2.7 m high, the road's width plus a cart's
     { const p = P(a1, V0), q = P(b0, V1); (World.covers || (World.covers = [])).push({ x0: Math.min(p[0], q[0]), z0: Math.min(p[1], q[1]), x1: Math.max(p[0], q[0]), z1: Math.max(p[1], q[1]), y: Y, dark: true }); }      // [l1] the ground under a gate arch is in shade
     for (const v of [V0 + 0.1, V1 - 0.1]) { const p = P(a1 - 0.2, v), q = P(b0 + 0.2, v); K.beam([p[0], Y - 0.4, p[1]], [q[0], Y - 0.4, q[1]], 0.3, 0.46); }
