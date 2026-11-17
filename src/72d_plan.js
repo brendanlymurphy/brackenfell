@@ -446,6 +446,33 @@ function pStairEmit(P, s) {
     m.beam(pa, pb, 0.05, 0.06);
     for (let i = 0; i <= s.n; i += 3) { const t = Math.min(i, s.n) / s.n, p = s.p0 + d * s.run * t, y = lerp(y0, top, t) + 0.1, q = ax === 'x' ? [p, l] : [l, p]; m.box(q[0] - 0.03, y, q[1] - 0.03, q[0] + 0.03, y + 0.95 + 0.4 * r * (1 - 2 * t) + 0.02, q[1] + 0.03); }
   }
+  // [fin] the opening in the upper floor, done properly: the floor shows its thickness (a trimmer 0.1 x 0.22 m on all four sides, boards ending on it), and the open sides are guarded:
+  // a balustrade (newels 0.1 m square with caps, a handrail at 0.9 m, balusters at 0.12 m) for an upper stairwell, a coaming and a propped plank hatch for a poor cellar. The arrival end stays open.
+  { const yf = b.y, hh = s.hole, tw = 0.1, B = (p0_, p1_, l0_, l1_, ya, yb) => { const q = R4(p0_, p1_, l0_, l1_); m.box(q[0], ya, q[1], q[2], yb, q[3]); };
+    const F = s.p0 - d * 0.8, E = s.p1, pl = Math.min(F, E), ph = Math.max(F, E), lw = s.hw + 0.1, cellar = a.y < P.lv[0].y - 0.5, hatch = cellar && /^in\./.test(P.id);
+    m.m1 = P.zone; m.ao = INT_AO; m.mat(MAT.TIMBER, COL.timber);
+    for (const sg of [-1, 1]) B(pl - tw, ph + tw, s.lat + sg * lw, s.lat + sg * (lw + tw), yf - 0.22, yf + 0.028);
+    B(F - d * tw, F, s.lat - lw, s.lat + lw, yf - 0.22, yf + 0.028);
+    B(E, E + d * tw, s.lat - lw, s.lat + lw, yf - 0.22, yf + 0.028);
+    const post = (p_, l_) => { B(p_ - 0.05, p_ + 0.05, l_ - 0.05, l_ + 0.05, yf + 0.028, yf + 1.0); B(p_ - 0.07, p_ + 0.07, l_ - 0.07, l_ + 0.07, yf + 1.0, yf + 1.04); };
+    const rail = (pa, la, pb, lb) => {
+      const n = Math.max(1, Math.round(Math.hypot(pb - pa, lb - la) / 0.12));
+      post(pa, la); post(pb, lb);
+      B(Math.min(pa, pb) - 0.03, Math.max(pa, pb) + 0.03, Math.min(la, lb) - 0.03, Math.max(la, lb) + 0.03, yf + 0.88, yf + 0.94);
+      B(Math.min(pa, pb) - 0.02, Math.max(pa, pb) + 0.02, Math.min(la, lb) - 0.02, Math.max(la, lb) + 0.02, yf + 0.1, yf + 0.15);
+      for (let i = 1; i < n; i++) { const t = i / n, p_ = pa + (pb - pa) * t, l_ = la + (lb - la) * t; B(p_ - 0.018, p_ + 0.018, l_ - 0.018, l_ + 0.018, yf + 0.15, yf + 0.88); }
+    };
+    if (!hatch) { const fe = F - d * (tw + 0.04); for (const sg of [-1, 1]) rail(fe, s.lat + sg * (lw + tw + 0.04), E, s.lat + sg * (lw + tw + 0.04)); rail(fe, s.lat - (lw + tw + 0.04), fe, s.lat + (lw + tw + 0.04)); }
+    else {
+      for (const sg of [-1, 1]) B(F, E, s.lat + sg * lw - (sg < 0 ? 0 : 0.06), s.lat + sg * lw + (sg < 0 ? 0.06 : 0), yf + 0.028, yf + 0.11);
+      B(F - d * 0.06, F, s.lat - lw, s.lat + lw, yf + 0.028, yf + 0.11);
+      const pf = F - d * 0.1;
+      m.mat(MAT.PLANKS, COL.wood, 0.5); B(pf - 0.025, pf + 0.025, s.lat - 0.46, s.lat + 0.46, yf + 0.11, yf + 0.97);
+      m.mat(MAT.TIMBER, COL.timberDark); for (const yb of [0.3, 0.75]) B(pf - 0.025 - d * 0.03, pf + 0.025 - d * 0.03, s.lat - 0.46, s.lat + 0.46, yf + yb, yf + yb + 0.09);
+      m.mat(MAT.METAL, [0.17, 0.155, 0.14]); for (const sg of [-1, 1]) B(pf - 0.03, pf + 0.03, s.lat + sg * 0.3 - 0.03, s.lat + sg * 0.3 + 0.03, yf + 0.14, yf + 0.3); B(pf + d * 0.03, pf + d * 0.045, s.lat - 0.04, s.lat + 0.04, yf + 0.82, yf + 0.9);
+    }
+    m.mat(MAT.TIMBER, COL.timberDark);
+  }
   // the walkable ramp and the sides that keep a player on it (and out from under it)
   const lo = ax === 'x' ? [Math.min(s.p0, s.p1), s.lat - hw - 0.05, Math.max(s.p0, s.p1), s.lat + hw + 0.05] : [s.lat - hw - 0.05, Math.min(s.p0, s.p1), s.lat + hw + 0.05, Math.max(s.p0, s.p1)];
   const yA = a.y + 0.02 + 0.5 * r, yB = b.y + 0.02 - 0.5 * r, lowFirst = d > 0;
