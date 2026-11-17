@@ -269,6 +269,15 @@ function buildSplat() {
     for (const [e, al] of [[1.6, 0.22], [0.8, 0.33], [0, 0.45]]) { A.fillStyle = A.strokeStyle = grn(al); A.lineJoin = 'round'; A.lineWidth = 2 * e * sc + 1; A.beginPath(); pl.forEach((q, i) => { const c = P(q[0], q[1]); if (i) A.lineTo(c[0], c[1]); else A.moveTo(c[0], c[1]); }); A.closePath(); A.fill(); if (e) A.stroke(); } }
   for (const [id, w, keep] of [['main', 6.4, p => p[0] > -50 && p[0] < -19], ['south', 7.0, p => p[1] > 8 && p[1] < 31], ['north', 3.4, p => p[1] < -16 && p[1] > -44]]) {      // [fx3] the last stretch of each street into the place is a street: cobbled from front to front
     const r = Roads.find(q => q.id === id); if (r) { const pts = r.line.p.filter(keep); if (pts.length > 1) stroke(A, pts, w, grn, 0.9); } }
+  /* [fx3] the district: between the fronts, yards and lanes of the Market Place quarter the ground is trodden earth, not lawn; it fades to turf at the edges */
+  { const Rd = rng(9955); for (let i = 0; i < 520; i++) { const x = -60 + Rd() * 92, z = -35 + Rd() * 60, rad = 3 + Rd() * 4, q = P(x, z), g = A.createRadialGradient(q[0], q[1], rad * sc * 0.2, q[0], q[1], rad * sc); g.addColorStop(0, 'rgba(255,0,0,0.30)'); g.addColorStop(1, 'rgba(255,0,0,0)'); A.fillStyle = g; A.beginPath(); A.arc(q[0], q[1], rad * sc, 0, TAU); A.fill(); } }
+  /* [fx3] plots: each yard's floor is packed earth (trodden dirt, bare in places), the back lane behind the plots' back walls is a trodden strip with a cobble spine; no lawn inside a burgage */
+  if (typeof plotsCompute === 'function') for (const p of plotsCompute()) {
+    const lane = p.bz > 0 ? [p.z1 + 0.15, p.z1 + 2.6] : [p.z0 - 2.6, p.z0 - 0.15];
+    for (const [al, e] of [[0.55, 0.5], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - e, p.z0 - e), a1 = P(p.x1 + e, p.z1 + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
+    for (const [al, e] of [[0.5, 0.4], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - 0.3 - e, lane[0] - e), a1 = P(p.x1 + 0.3 + e, lane[1] + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
+    A.fillStyle = grn(0.5); { const a0 = P(p.x0 - 0.3, (lane[0] + lane[1]) / 2 - 0.5), a1 = P(p.x1 + 0.3, (lane[0] + lane[1]) / 2 + 0.5); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
+  }
   /* [fx3] a street runs front to front: every house that stands on the last stretch of Wharf Street, the main street's west run or the market alley is paved round its feet (a 1.3 m apron, 2 m in front), so no lawn strip is left against a front */
   { const zone = [['south', p => p[1] > 7 && p[1] < 34], ['main', p => p[0] > -52 && p[0] < -17]];
     for (const s of SITES) {
