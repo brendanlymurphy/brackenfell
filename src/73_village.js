@@ -378,6 +378,8 @@ function buildVillage() {
   }
   for (const m of houseExt.values()) pack.add(m, { kind: 'opaque' });
   World.villagePack = pack;
+  /* [fx3] a loose prop (barrel, post, pot: a small circle) that was stood inside a house wall by a generator that only knew the unrotated frame is left drawn but not solid, so two solids never share space */
+  { const walls = World.colliders.filter(b => b.hx !== undefined && b.y1 - b.y0 > 2.5); let cut = 0; for (let i = World.colliders.length - 1; i >= 0; i--) { const c = World.colliders[i]; if (c.r === undefined || c.r > 0.5) continue; for (const b of walls) { if (c.y1 < b.y0 || c.y0 > b.y1) continue; const dx = c.x - b.x, dz = c.z - b.z; if (Math.abs(dx) > b.hx + 1 && Math.abs(dz) > b.hx + 1) continue; const u = dx * b.ax + dz * b.az, v = dx * b.bx + dz * b.bz; if (Math.abs(u) < b.hx + c.r && Math.abs(v) < b.hz + c.r) { World.colliders.splice(i, 1); cut++; break; } } } World.propsCut = cut; }
   World.packs.push(pack);
 }
 // register a skinned / hinged object; returns the object (bone matrices live in R.boneData at slot*256)
