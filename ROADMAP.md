@@ -67,6 +67,9 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - **70** Speed: medium 216 draws / 433k triangles in the square to 157 / 292k, low 170 / 225k to 125 / 195k, same pictures. Prompts
   are not offered through walls or for things behind the player; the walk bot. Interiors: garlic strings, dressed cellars, muted
   chapel cloth, rugs and hooks apart. The mine: cut rock walls, earth floor, torches that light their surroundings, visible water.
+- **71** A reload in the cell no longer locks the player in; broken saves are mended or refused. Phone interface pass at 844 x 390
+  (map shows you and quest marks indoors, one button style, smaller quest banner). Phones take the half-resolution ground pack by
+  default (first visit 61.0 to 40.4 MB). Culling: squares refilled only when one in sight is missing; `test/cullwalk.js`.
 
 - **60, 61** Real lip sync (visemes from the audio of every voiced line), natural skin and eyes, gaze, fitted helmet and kerchiefs.
 - **62** One gate command, the gate on GitHub for every push, onboarding docs rewritten, seven new voiced story lines.
@@ -87,6 +90,9 @@ interiors lit by hearths and candles. As realistic as free art allows.
     433k triangles in the square to 157 / 292k and Low from 170 / 225k to 125 / 195k with the pictures unchanged (ferns and stones
     given a draw distance; doors and signs outside the view skipped; terrain cut into squares; terrain and props under the
     roofline skipped).
+  - Phones take the half-resolution ground pack by default: first visit 40.4 MB instead of 61.0 (docs/DECISIONS.md has the numbers).
+  - Loose ends: a reload in the cell no longer locks the player in; broken saves are mended or refused; the map shows you and the
+    quest marks when you are indoors; one pill style for buttons; the quest banner is smaller, shorter and clear of the clock.
 - FREEZE (owner, Build 69): nothing new; make what exists right, to `docs/TOWNPLAN.md` (the authority outdoors). One district
   finished at a time, Market Place first. Two workers on the town (the machine restarts under three):
   - `fork-fx3` the planner: the Market Place as an enclosed four-sided room, buildings re-sited onto street lines, the terrace
@@ -95,10 +101,6 @@ interiors lit by hearths and candles. As realistic as free art allows.
     one shingle texture), then fronts designed one by one. The mine's remaining rooms (`fork-fx2`) wait behind it.
   - `fork-ch1` characters: paused until a town worker frees up (apron glitch, aprons varied, men's tunics, posture, hair).
   - Logic, storylines, what people do, mechanics: asked of the second Claude Code session (`fork-logic`, docs/LOGIC.md). First pass done on `fork-logic`: 13 story faults, 8 routine faults and 9 rule faults fixed, each with a check (bot `logic`, gate step `people`); what is open and why is listed per part in docs/LOGIC.md (beds for Tobin and Aldous need the interiors worker).
-- From `fork-play` after Build 70: phones take the half-resolution ground pack by default (first visit 40.4 MB instead of 61.0,
-  numbers in docs/DECISIONS.md); a reload in the cell no longer locks the player in; broken saves are mended or refused; the map
-  shows you and the quest marks when you are indoors; one pill style for buttons; the quest banner is smaller and shorter;
-  `test/cullwalk.js` proves nothing in sight goes missing while walking and turning.
 
 ## Next
 
