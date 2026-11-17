@@ -237,7 +237,7 @@ const PLACE = { poly: [[-19.6, -17.3], [-7.6, -17.3], [14.7, -17.3], [20.3, -16.
   // [fx3] the Market Place (docs/TOWNPLAN.md section 4): the houses round it are brought onto its lines, front walls on the room's edge, ginnels between. Same houses, moved and turned: ids, cells and households go with them.
   // Each entry: id, x, z of the centre and the yaw of the front (PI faces south, 0 north, PI/2 east, -PI/2 west).
   PLACE.houses = [
-    ['in.11', -16.6, -19.75, PI], ['in.76', -10.3, -19.55, PI],             // north-west row: front on z -17.25, a 1.6 m ginnel between, the inn's west wall to the right
+    ['in.11', -17.0, -19.75, PI], ['in.76', -10.1, -19.55, PI],             // north-west row: front on z -17.25, a 1.6 m ginnel between, the inn's west wall to the right
     ['in.47', 18.0, -19.45, PI],                                              // north-east: east of the passage house, beside the gallery stair
     ['in.04', -22.4, 4.0, PI / 2],                                            // west side, south of the main street's mouth: front on x -19.5, as the smithy's is
     ['in.02', 16.5, 10.8, 0], ['in.48', 9.6, 10.8, 0], ['in.18', 4.6, 10.8, 0],   // south row, front on z 8.2, east of Wharf Street's mouth: a cart gate to the shop row

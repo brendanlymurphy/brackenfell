@@ -57,7 +57,7 @@ function buildVillage() {
   for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.3; put(OAK[0] + Math.cos(a) * 1.75, OAK[1] + Math.sin(a) * 1.75, a + PI / 2, m => Props.bench(m, 1.75, true)); }
   { const m = bucket(OAK[0], OAK[1]); m.push().T(OAK[0], Terrain.y(OAK[0], OAK[1]), OAK[1]); addCircleCollider(m, 0, 0, 2.0, 0, 0.24); m.pop(); }      // [fx3] 0.24 high: the root bank is stepped over and no longer counts as a solid through the trunk
   spot('square.bench', OAK[0] + 1.75, OAK[1] + 0.55, PI / 2 + 0.2, { sit: 0.46 }); spot('square.bench2', OAK[0] - 0.1, OAK[1] - 1.8, 0.1, { sit: 0.46 });
-  const stalls = [[10.2, 4.6, AWN.madder, 0], [5.6, 9.4, AWN.woad, 1], [-11.6, -5.8, AWN.ochre, 2]];
+  const stalls = [[11.4, -4.2, AWN.madder, 0], [5.4, 5.0, AWN.woad, 1], [-12.4, -5.2, AWN.ochre, 2]];      // [fx3] two rows facing a cart way along the main street's axis (z -3 to 2)
   for (const [x, z, col, kind] of stalls) {
     const yaw = headingTo(x, z, 0, -1.5);
     put(x, z, yaw, m => Props.stall(m, col, y => {
@@ -68,7 +68,7 @@ function buildVillage() {
     const b = [x - Math.sin(yaw) * 1.05, z + Math.cos(yaw) * 1.05];
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);
   }
-  putc(11.8, 6.3, 0.4, m => Props.barrel(m)); putc(12.2, 5.2, 0, m => Props.crate(m, 0.6)); putc(4.0, 10.6, 0.2, m => Props.crate(m, 0.55)); putc(-12.9, -4.2, 0, m => Props.barrel(m));
+  putc(11.8, 6.3, 0.4, m => Props.barrel(m)); putc(12.2, 5.2, 0, m => Props.crate(m, 0.6)); putc(6.9, 7.3, 0.2, m => Props.crate(m, 0.55)); putc(-12.9, -4.2, 0, m => Props.barrel(m));
   putc(-6.4, 11.3, 0.08, m => Props.cart(m, true));      // Build 42: parked against the terrace wall east of the flight (it stood on the steps' first treads)
   // festival fire pit (lit at the end of the story)
   World.bonfirePos = [-2.6, -7.4];
@@ -91,7 +91,7 @@ function buildVillage() {
   putc(-6.8, -16.4, 0, m => Props.barrel(m)); putc(-6.2, -15.9, 0.6, m => Props.barrel(m, 0.3, 0.75)); putc(6.9, -16.3, 0.3, m => Props.crate(m, 0.7));
   putc(19.2, -5.2, 0, m => Props.barrel(m)); putc(18.7, -6.5, 0.4, m => Props.crate(m, 0.55)); putc(19.1, -11.4, 0, m => Props.sack(m, 0.32));
   // lamps and signposts
-  for (const [x, z, a] of [[-13.2, -8.3, 0.8], [13.6, -10.2, -0.8], [-14.2, 5.2, 2.2], [13.2, 8.4, -2.4], [-31, -6.6, 0], [-50, -8.2, 0], [34, 3.4, PI], [47.5, -0.4, 0], [-12.2, -33, 1.6], [-8.6, -58.5, 1.2], [1.2, 30, -1.5], [4.4, 56, -1.5], [69, 0.2, 0], [86, -2.2, 0.2], [-63.5, 2, 1.5], [3.3, 78, -1.4], [70.2, 16, -1.6], [-9.5, 3.5, 0.3], [9.2, 4.2, -0.3], [-6.5, -12.2, 0.2]]) putc(x, z, a, m => Props.lampPost(m, OUT));
+  for (const [x, z, a] of [[-13.2, -8.3, 0.8], [13.6, -10.2, -0.8], [-14.2, 5.2, 2.2], [12.4, 7.3, -2.4], [-31, -6.6, 0], [-50, -8.2, 0], [34, 3.4, PI], [47.5, -0.4, 0], [-12.2, -33, 1.6], [-8.6, -58.5, 1.2], [1.2, 30, -1.5], [4.4, 56, -1.5], [69, 0.2, 0], [86, -2.2, 0.2], [-63.5, 2, 1.5], [3.3, 78, -1.4], [70.2, 16, -1.6], [-9.5, 3.5, 0.3], [9.2, 4.2, -0.3], [-6.5, -12.2, 0.2]]) putc(x, z, a, m => Props.lampPost(m, OUT));
   putc(14.6, 2.4, 0.4, m => Props.signPost(m, 3)); putc(-58.5, -8.4, -0.3, m => Props.signPost(m, 2)); putc(-8.9, -61.5, 0, m => Props.signPost(m, 2));
 
   // ── west gate ──

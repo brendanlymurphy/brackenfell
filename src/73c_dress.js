@@ -503,11 +503,8 @@ function buildDress() {
     World.spots['dstall' + k] = { p: [x + fx * 1.5, gy(x + fx * 1.5, z + fz * 1.5), z + fz * 1.5], yaw: ry + PI, zone: 0 };
     if (R() < 0.8) { const sx = x - Math.cos(ry) * 1.8, sz = z + Math.sin(ry) * 1.8; if (ok(sx, sz, 0.6, { square: true })) { add(pick(R() < 0.5 ? barrels : crates), sx, gy(sx, sz), sz, 1, R() * TAU, false); solid(sx, sz, 0.4, 0.9); claim(sx, sz, 0.5); } }
   };
-  for (let tr = 0, placedS = 0; tr < 500 && placedS < 5; tr++) {
-    const a = R() * TAU, rr = 0.6 + R() * 0.3, x = SQUARE.x + Math.cos(a) * SQUARE.rx * rr, z = SQUARE.z + Math.sin(a) * SQUARE.rz * rr;
-    if (z < -9 || !ok(x, z, 2.0, { square: true })) continue;
-    placeStall(x, z, Math.atan2(SQUARE.x - x, SQUARE.z - z) + R.s() * 0.5, stallKinds[(placedS + 1) % stallKinds.length]); placedS++;
-  }
+  { let placedS = 0;      // [fx3] the place's stalls stand in two rows facing the cart way, in front of the north and south fronts, not scattered at random
+    for (const [x, z, ry] of [[-6.4, -12.0, 0], [2.4, -12.6, 0], [14.0, -12.0, 0], [-3.4, 5.4, PI], [12.6, 5.0, PI]]) { if (!ok(x, z, 1.1, { square: true })) { continue; } placeStall(x, z, ry, stallKinds[(placedS + 1) % stallKinds.length]); placedS++; } }
   // alley: stalls and carts set into the middle band, nearer the shop fronts, leaving the walking line free
   for (const [x, rowS, kind] of [[26.5, -1, 'greens'], [33.5, -1, 'fish'], [38.2, 1, 'meat'], [45.0, -1, 'pots']]) {
     const z = roadZ(x) + rowS * 3.6, ry = rowS < 0 ? 0 : PI;
