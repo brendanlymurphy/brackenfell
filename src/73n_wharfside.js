@@ -9,7 +9,7 @@ function wharfPlots() {
   const TR = ['nets', 'boat', 'barrels', 'woodpile', 'pig', 'washing', 'smoke', 'nets', 'barrels', 'boat'];
   const blocked = (x, z, self, pad) => {
     for (const s of SITES) { if (s === self || !s.w || s.id === 'tower') continue; const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + pad && Math.abs(l[1]) < s.d / 2 + pad) return true; }
-    for (const r of Roads) if (r.line.dist(x, z, r.w / 2 + 1) < r.w / 2 + 1.0) return true;
+    for (const r of Roads) if (r.line.dist(x, z, r.w / 2 + 1) < r.w / 2 + 0.5) return true;
     if (hyp(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.5) return true;
     if (typeof River !== 'undefined' && Math.abs(River.dist(x, z, 12)) < 7) return true;
     return false;
@@ -19,7 +19,7 @@ function wharfPlots() {
     const s = SITE[id]; if (!s) continue;
     const nx = Math.sin(s.yaw), nz = -Math.cos(s.yaw), ux = Math.cos(s.yaw), uz = Math.sin(s.yaw), bx = -nx, bz = -nz;      // front normal; along the front; the back
     const hw = s.w / 2 + 0.25; let depth = 0;
-    for (let d = 5.6; d >= 2.0; d -= 0.4) { let ok = true; for (let a = -hw + 0.3; a <= hw - 0.3 && ok; a += 0.8) for (let b = 0.4; b <= d + 1.3 && ok; b += 0.6) { const x = s.x + bx * (s.d / 2 + b) + ux * a, z = s.z + bz * (s.d / 2 + b) + uz * a; if (blocked(x, z, s, 0.9)) ok = false; } if (ok) { depth = d; break; } }
+    for (let d = 5.6; d >= 2.0; d -= 0.4) { let ok = true; for (let a = -hw + 0.3; a <= hw - 0.3 && ok; a += 0.8) for (let b = 0.4; b <= d + 0.8 && ok; b += 0.6) { const x = s.x + bx * (s.d / 2 + b) + ux * a, z = s.z + bz * (s.d / 2 + b) + uz * a; if (blocked(x, z, s, 0.5)) ok = false; } if (ok) { depth = d; break; } }
     if (depth < 2.0) continue;
     _WPLOTS.push({ id, s, ux, uz, bx, bz, hw, depth, ox: s.x + bx * (s.d / 2 + 0.1), oz: s.z + bz * (s.d / 2 + 0.1), trade: TR[(k++ + (R() * 3 | 0)) % TR.length] });
   }
