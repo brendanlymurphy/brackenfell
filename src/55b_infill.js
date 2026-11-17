@@ -2,6 +2,8 @@
 // Nothing that already exists moves: every candidate is tested against the existing sites, the roads, the door-to-road paths, the square, the river, the lake and the fields.
 // Each accepted house becomes a SITES entry (terrain pad, bare ground under it, a painted path from its door). `enter` houses also get a HOUSES spec (72c_infill.js).
 const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
+// [fx3] the Market Place: an irregular room whose walls are the fronts round it (inn and passage house north, smithy and the west row, store and shop alley east, the south row, the terrace's retaining wall to the south-west)
+const PLACE = { poly: [[-19.6, -17.3], [-7.6, -17.3], [14.7, -17.3], [20.3, -16.4], [20.3, -3.8], [24.0, -3.8], [24.0, 5.6], [20.3, 5.6], [20.3, 8.2], [2.5, 8.2], [2.5, 12.6], [-1.6, 12.6], [-1.6, 12.7], [-19.6, 12.7]] };
 (function infillLayout() {
   if (typeof TEST !== 'undefined' && TEST && TEST.infill === 0) return;
   const R = rng(4242);
@@ -231,6 +233,22 @@ const INF = { houses: [], byId: {}, enterIds: [], N: 0 };
     }
     more.forEach((h, i) => { h.enter = true; h.name = NAMES[i]; SITE[h.id].name = h.name; });
     INF.enterIds = INF.houses.filter(h => h.enter).map(h => h.id);
+  }
+  // [fx3] the Market Place (docs/TOWNPLAN.md section 4): the houses round it are brought onto its lines, front walls on the room's edge, ginnels between. Same houses, moved and turned: ids, cells and households go with them.
+  // Each entry: id, x, z of the centre and the yaw of the front (PI faces south, 0 north, PI/2 east, -PI/2 west).
+  PLACE.houses = [
+    ['in.11', -16.6, -19.75, PI], ['in.76', -10.3, -19.55, PI],             // north-west row: front on z -17.25, a 1.6 m ginnel between, the inn's west wall to the right
+    ['in.47', 18.0, -19.45, PI],                                              // north-east: east of the passage house, beside the gallery stair
+    ['in.04', -22.4, 4.0, PI / 2],                                            // west side, south of the main street's mouth: front on x -19.5, as the smithy's is
+    ['in.02', 16.5, 10.8, 0], ['in.48', 9.6, 10.8, 0], ['in.18', 4.6, 10.8, 0],   // south row, front on z 8.2, east of Wharf Street's mouth: a cart gate to the shop row
+  ];
+  for (const [id, x, z, yaw] of PLACE.houses) {
+    const h = INF.byId[id], st = SITE[id]; if (!h || !st) continue;
+    h.x = st.x = x; h.z = st.z = z; h.yaw = st.yaw = yaw; h.placed = true;
+  }
+  for (const h of INF.houses.slice()) {      // whatever the moved houses now stand on (and is not itself placed or enterable) goes
+    if (h.placed || h.enter) continue;
+    for (const q of PLACE.houses) { const o = INF.byId[q[0]]; if (!o) continue; if (hyp(o.x - h.x, o.z - h.z) > 14) continue; const hit = rectPts(h.x, h.z, h.yaw, h.w, h.d, 1.5).some(([px, pz]) => inRect(o, px, pz, 0.3)) || rectPts(o.x, o.z, o.yaw, o.w, o.d, 1.5).some(([px, pz]) => inRect(h, px, pz, 0.3)); if (hit) { drop(h); break; } }
   }
   INF.count = INF.houses.length;
 })();

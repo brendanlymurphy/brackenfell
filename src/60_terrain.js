@@ -249,7 +249,8 @@ function buildSplat() {
   }
   // cobbled square (+ inn forecourt, bridge approaches)
   const ell = (ctx, x, z, rx, rz, col) => { for (const [e, a] of [[1.6, 0.22], [0.8, 0.33], [0, 0.45]]) { ctx.fillStyle = col(a); const q = P(x, z); ctx.beginPath(); ctx.ellipse(q[0], q[1], (rx + e) * sc, (rz + e) * sc, 0, 0, TAU); ctx.fill(); } };
-  ell(A, SQUARE.x, SQUARE.z, SQUARE.rx, SQUARE.rz, grn);
+  { const pl = PLACE.poly;      // [fx3] the Market Place is cobbled wall to wall to its own outline; a short soft shoulder where it meets a road
+    for (const [e, al] of [[1.6, 0.22], [0.8, 0.33], [0, 0.45]]) { A.fillStyle = A.strokeStyle = grn(al); A.lineJoin = 'round'; A.lineWidth = 2 * e * sc + 1; A.beginPath(); pl.forEach((q, i) => { const c = P(q[0], q[1]); if (i) A.lineTo(c[0], c[1]); else A.moveTo(c[0], c[1]); }); A.closePath(); A.fill(); if (e) A.stroke(); } }
   stroke(A, [[BRIDGE.x - BRIDGE.len / 2 - 5, BRIDGE.z], [BRIDGE.x + BRIDGE.len / 2 + 5, BRIDGE.z]], BRIDGE.w, grn, 0.6);
   stroke(A, [[-6, -63.6], [-6, -68]], 3.6, grn, 0.6);
   stroke(A, [[ALLEY.x0 - 2, roadZ(ALLEY.x0 - 2)], [36, 1], [ALLEY.x1 + 1, roadZ(ALLEY.x1 + 1)]], 9.6, grn, 0.75);       // the market alley is cobbled from shop front to shop front
