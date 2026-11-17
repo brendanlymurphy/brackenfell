@@ -88,20 +88,8 @@ function infWalls(B, MS, o) {
         if (!p.door) g.quad(mat, P(p.u0, y0, 0), P(p.u1, y0, 0), P(p.u1, y0, dep), P(p.u0, y0, dep), col, [0, 0, 1, 0.2], true);
         if (p.door) {
           // Build 33: a plank door of real boards (solid boxes: the old single quad faced the wrong way for the single-sided wood material and showed the dark inside), iron straps, a ring handle, a threshold
-          { const dt = (((Math.floor(p.u0 * 7) + k * 3 + wn.length * 5 + Math.floor((o.w || 5) * 3) + Math.floor(Math.abs(o.sd || 0) * 11)) % 5) + 5) % 5;      // [fx2] ledged plank / studded / half door / faded paint / plain, 14-18 cm back in the opening
-            const nb = Math.max(4, Math.round((p.u1 - p.u0) / (dt === 3 ? 0.3 : 0.2))), bw = (p.u1 - p.u0) / nb, IR = [0.2, 0.19, 0.18];
-            const PAL = [[[0.95, 0.68, 0.44], [0.84, 0.62, 0.4], [1, 0.75, 0.5], [0.9, 0.66, 0.43]], [[0.7, 0.52, 0.36], [0.62, 0.48, 0.33], [0.74, 0.56, 0.4], [0.66, 0.5, 0.35]], [[1.15, 0.9, 0.62], [1.05, 0.84, 0.58], [1.2, 0.96, 0.68], [1.1, 0.88, 0.6]], [[0.55, 0.78, 0.7], [0.5, 0.72, 0.66], [0.6, 0.82, 0.72], [0.52, 0.74, 0.62]], [[1.05, 0.5, 0.42], [0.95, 0.46, 0.38], [1.1, 0.54, 0.45], [1.0, 0.48, 0.4]]];
-            const dc = PAL[dt].map(c3 => c3.map(v => v * (dt < 3 ? 0.66 : 0.8)));
-            const ya = y0 + 0.02, yz = y1 - 0.02, ym2 = y0 + 1.08;
-            for (let i = 0; i < nb; i++) { const bu0 = p.u0 + i * bw + 0.005, bu1 = p.u0 + (i + 1) * bw - 0.005, cc = dc[(i * 7 + (R() * 4 | 0)) % 4];
-              if (dt === 2) { bx(bu0, bu1, ya, ym2 - 0.02, 0.14, 0.18, cc); bx(bu0, bu1, ym2 + 0.02, yz, 0.12, 0.16, cc); } else bx(bu0, bu1, ya, yz, 0.14, 0.18, cc); }
-            if (!lo) {
-              if (dt === 2) { bx(p.u0 + 0.02, p.u1 - 0.02, ym2 - 0.02, ym2 + 0.02, 0.07, 0.17, IR); }      // the half door: two leaves and a ledge
-              else for (const yy of [0.42, 1.58]) { bx(p.u0 + 0.02, p.u1 - 0.02, y0 + yy, y0 + yy + 0.1, 0.1, 0.13, IR); bx(p.u0 + 0.02, p.u0 + 0.2, y0 + yy - 0.02, y0 + yy + 0.12, 0.09, 0.1, IR); }
-              if (dt === 1) for (let a2 = 0.2; a2 < (p.u1 - p.u0) - 0.1; a2 += 0.4) for (let b2 = 0.3; b2 < 2.0; b2 += 0.5) bx(p.u0 + a2, p.u0 + a2 + 0.03, y0 + b2, y0 + b2 + 0.03, 0.08, 0.1, IR);      // studs
-              bx(p.u1 - 0.24, p.u1 - 0.17, y0 + 0.98, y0 + 1.12, 0.07, 0.09, IR); bx(p.u1 - 0.2, p.u1 - 0.1, y0 + 0.95, y0 + 0.98, 0.07, 0.09, IR);
-              bx(p.u0 - 0.12, p.u1 + 0.12, y0, y0 + 0.07, 0.0, 0.2, [0.4, 0.38, 0.35]); }       // the sill / threshold
-          }
+          { g.quad(W_, P(p.u0, y0 + 0.02, 0.15), P(p.u1, y0 + 0.02, 0.15), P(p.u1, y1 - 0.02, 0.15), P(p.u0, y1 - 0.02, 0.15), [0.1, 0.08, 0.06], GPU.wood, true);      // [fx2] the hinged leaf (73_village.js, six finishes) hangs in the opening; behind it the dark of the passage, a threshold in front
+            if (!lo) bx(p.u0 - 0.12, p.u1 + 0.12, y0, y0 + 0.07, 0.0, 0.2, [0.4, 0.38, 0.35]); }
           bx(p.u0 - 0.12, p.u0, y0, y1 + 0.12, -0.09, 0.0, [0.3, 0.23, 0.17]); bx(p.u1, p.u1 + 0.12, y0, y1 + 0.12, -0.09, 0.0, [0.3, 0.23, 0.17]); bx(p.u0 - 0.12, p.u1 + 0.12, y1, y1 + 0.14, -0.12, 0.0, [0.3, 0.23, 0.17]);
           if (k === 0) bx(p.u0 - 0.15, p.u1 + 0.15, -0.35, 0.1, -0.35, 0.0, [0.5, 0.48, 0.45]);          // a stone step
         } else if (lo) {

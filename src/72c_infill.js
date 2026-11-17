@@ -30,7 +30,10 @@ for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].s
 const SHELL_TONES = {      // narrow bands: variety comes from pitch, height, ridge line and form first, colour last
   slate: [[0.74, 0.74, 0.75], [0.66, 0.66, 0.67], [0.78, 0.75, 0.7], [0.62, 0.62, 0.64]],
   thatch: [[1, 1, 1], [0.8, 0.78, 0.74], [0.9, 0.88, 0.82]],
-  shingle: [[1, 1, 1], [0.72, 0.68, 0.64], [0.86, 0.86, 0.86]],
+  shingle: [[0.62, 0.58, 0.54], [0.5, 0.47, 0.44], [0.68, 0.65, 0.62]],
+};
+const SHELL_FORMS = {      // chance per house of each added form; the districts that read as crowded and working get the most
+  wharfside: { outshut: 0.5, stair: 0.4, stack: 0.35, rack: 0.5, vent: 0.14 },
 };
 function shellDistrict(x, z) {
   if (z < -42) return 'chapelgate'; if (z > 34) return 'wharfside'; if (x > 56) return 'riverside'; if (x < -50) return 'westgate'; return 'market';
@@ -129,6 +132,48 @@ function shellDress(c, b, frames, MS, o) {
     const cu = Lw * (0.35 + R() * 0.3); win(cu, 1.0, 0.45, 1.15); if (fl > 1) win(Lw * 0.5, H + 0.95, 0.42, 1.1);
     if (R() < 0.6) { const bx0 = cu < Lw / 2 ? cu + 1.4 : cu - 1.4; g3.beam(W_, [bx0, 2.45, 0.02], [bx0, 2.45, 0.9], 0.04, WOOD); g3.quad(W_, [bx0 - 0.28, 1.65, 0.8], [bx0 + 0.28, 1.65, 0.8], [bx0 + 0.28, 2.3, 0.8], [bx0 - 0.28, 2.3, 0.8], [0.34, 0.24, 0.14], GPU.wood, [1, 0, 0]); }      // a trade board on a bracket
     put(wn, g3); }
+  // [fx2] silhouette: a house is not one box. Per district, a catslide outshut, an outside stair to a loft door with a hoist, a gable chimney stack, a drying rack, a smoke louvre (all outside the footprint; near weight, small parts)
+  if (SHELL_FORMS[SSt.dist] && site.id !== 'inn') {
+    const FM = SHELL_FORMS[SSt.dist], RF = rng(Math.round(site.x * 53 + site.z * 29) + 77), others = SITES.filter(s5 => s5 !== site && s5.w && s5.id !== 'tower');
+    const free = (wn, u0, u1, zd) => { const Wd = WALLS[wn], s0 = Wd.start(w, d); for (let i = 0; i <= 4; i++) for (let j = 0; j <= 3; j++) { const u = u0 + (u1 - u0) * i / 4, z = 0.3 + (zd - 0.3) * j / 3, lx = s0[0] + Wd.u[0] * u + Wd.n[0] * z, lz = s0[2] + Wd.u[2] * u + Wd.n[2] * z, wp = siteToWorld(site, lx, lz); for (const s5 of others) { const dx = wp[0] - s5.x, dz = wp[1] - s5.z, cc = Math.cos(s5.yaw), sn = Math.sin(s5.yaw), uu = dx * cc + dz * sn, vv = -dx * sn + dz * cc; if (Math.abs(uu) < s5.w / 2 + 0.3 && Math.abs(vv) < s5.d / 2 + 0.3) return false; } } return true; };
+    const wallCol = SSt.wallTint || [0.62, 0.6, 0.58], yRidge = Ytop + d / 2 * tanP, used = {};
+    const tri2 = (g5, m5, A, B, C, col) => { g5.tri(m5, A, B, C, col, [0, 0, 1.6, 1.6], [0, 0, 0]); };
+    // 1: catslide outshut on the back (or a side) under a low roof of the same covering
+    if (RF() < FM.outshut) for (const wn of ['back', RF() < 0.5 ? 'left' : 'right']) {
+      const Lw = L(wn), len = Math.min(Lw - 0.8, Lw * (0.55 + RF() * 0.25)), a = wn === 'back' ? 0.2 + RF() * (Lw - len - 0.4) : Lw * 0.15, zd = 1.5 + RF() * 0.5, yA = Math.min(H - 0.15, 2.3), yB = 1.35 + RF() * 0.2;
+      if (len < 2 || (wn !== 'back' && infNeighbour && infNeighbour(site, wn === 'right') > 0) || !free(wn, a, a + len, zd + 0.5)) continue;
+      const go = GP(), RM = SSt.mat, th = SSt.thatch ? 0.3 : 0.1, wc = wallCol.map(v => v * 0.9);
+      go.quad(INF_T, [a, 0, zd], [a + len, 0, zd], [a + len, yB, zd], [a, yB, zd], wc, [0, 0, len / 1.4, yB / 1.4], [0, 0, 1]);      // the outer wall
+      for (const [u, nm] of [[a, -1], [a + len, 1]]) { go.tri(INF_T, [u, 0, 0], [u, 0, zd], [u, yB, zd], wc, [0, 0, 1, 1], [nm, 0, 0]); go.tri(INF_T, [u, 0, 0], [u, yB, zd], [u, yA, 0], wc, [0, 0, 1, 1], [nm, 0, 0]); }
+      const rz = zd + 0.4, ry = yB - 0.12, ra = a - 0.25, rb = a + len + 0.25, nrm = [0, 0.75, 0.66];
+      go.quad(RM, [ra, yA + 0.05, -0.0], [rb, yA + 0.05, -0.0], [rb, ry, rz], [ra, ry, rz], SSt.tint, [0, 0, (rb - ra) / SSt.ts, Math.hypot(rz, yA - ry) / SSt.ts], nrm);
+      go.quad(RM, [rb, ry, rz], [ra, ry, rz], [ra, ry - th, rz], [rb, ry - th, rz], SSt.tint.map(v => v * 0.7), [0, 0, (rb - ra) / SSt.ts, 0.1], [0, -0.3, 1]);
+      go.quad(W_, [ra, ry - th, rz], [rb, ry - th, rz], [rb, yA - 0.02, 0.0], [ra, yA - 0.02, 0.0], [0.17, 0.14, 0.11], GPU.wood, [0, -1, 0]);      // the soffit
+      const du = a + len * (0.25 + RF() * 0.4); go.box(W_, du - 0.45, 0, zd - 0.01, du + 0.45, 1.15, zd + 0.1, [0.2, 0.17, 0.14]); go.box(W_, du - 0.5, 1.15, zd - 0.01, du + 0.5, 1.25, zd + 0.14, [0.28, 0.23, 0.19]);      // a plank door in the outer wall
+      put(wn, go); used.outshut = wn; break; }
+    // 2: an outside stair to a loft door in a gable end, a hoist beam over it
+    if (RF() < FM.stair) for (const wn of ['left', 'right']) {
+      const Lw = L(wn); if (Lw < 4.6 || used.outshut === wn || (infNeighbour && infNeighbour(site, wn === 'right') > 0) || !free(wn, 0.1, Lw - 0.1, 1.2)) continue;
+      const g6 = GP(), n = 8, run = 0.23, rise = 2.3 / n, cu = Lw / 2, dirS = RF() < 0.5 ? -1 : 1, u0 = cu - dirS * (n * run + 0.3);
+      for (let i = 0; i < n; i++) { const ua = u0 + dirS * i * run, ub = ua + dirS * run; g6.box(W_, Math.min(ua, ub), 0, 0.02, Math.max(ua, ub), rise * (i + 1), 0.85, [0.42, 0.37, 0.32]); }
+      g6.box(W_, cu - 0.55, 2.2, 0.02, cu + 0.55, 2.3, 0.9, [0.4, 0.34, 0.28]);      // landing
+      g6.beam(W_, [u0, 0.9, 0.84], [cu - dirS * 0.5, 3.2, 0.84], 0.05, WOOD); for (const u of [u0, cu - dirS * 0.5]) g6.beam(W_, [u, 0, 0.84], [u, u === u0 ? 0.95 : 3.2, 0.84], 0.06, WOOD);
+      g6.box(W_, cu - 0.42, 2.3, 0.0, cu + 0.42, 3.55, 0.06, [0.16, 0.13, 0.11]); g6.box(W_, cu - 0.5, 3.55, 0.0, cu + 0.5, 3.65, 0.12, [0.26, 0.21, 0.17]);      // the loft door
+      if (RF() < 0.7) { const hy = Math.min(yRidge - 0.5, 4.6); g6.beam(W_, [cu, hy, 0.0], [cu, hy, 1.25], 0.09, [0.24, 0.2, 0.16]); g6.beam(W_, [cu, hy, 0.15], [cu, hy - 0.5, 0.9], 0.05, [0.22, 0.18, 0.14]); g6.beam(W_, [cu, hy - 0.05, 1.18], [cu, hy - 1.7, 1.18], 0.015, [0.5, 0.45, 0.35]); g6.box(W_, cu - 0.05, hy - 1.9, 1.13, cu + 0.05, hy - 1.7, 1.23, [0.3, 0.3, 0.3]); }      // the hoist: a beam, a brace, a rope and a hook
+      put(wn, g6); used.stair = wn; break; }
+    // 3: a big stone stack outside a gable end
+    if (RF() < FM.stack) for (const wn of ['left', 'right']) {
+      const Lw = L(wn); if (used.stair === wn || used.outshut === wn || (infNeighbour && infNeighbour(site, wn === 'right') > 0) || !free(wn, Lw * 0.5 - 0.6, Lw * 0.5 + 0.6, 0.9)) continue;
+      const g7 = GP(), cu = Lw * (0.4 + RF() * 0.2), top = yRidge + 0.55, sc = (SSt.stoneTint || [0.8, 0.8, 0.8]).map(v => v * 0.9);
+      g7.box(INF_B, cu - 0.5, -0.3, -0.02, cu + 0.5, Ytop + 0.2, 0.75, sc); g7.box(INF_B, cu - 0.38, Ytop + 0.2, -0.02, cu + 0.38, top, 0.55, sc); g7.box(INF_B, cu - 0.47, top, -0.05, cu + 0.47, top + 0.12, 0.62, sc.map(v => v * 0.85));
+      put(wn, g7); used.stack = wn; break; }
+    // 4: a drying rack for nets in the front yard, away from the door
+    if (RF() < FM.rack) { const Lf2 = L(front), uc = dc > Lf2 / 2 ? 0.5 : Lf2 - 2.9, ok = free(front, uc, uc + 2.4, 1.9); if (ok) { const g8 = GP(); for (const u of [uc, uc + 2.4]) g8.beam(W_, [u, 0, 1.6], [u, 2.0, 1.6], 0.07, [0.3, 0.24, 0.18]); g8.beam(W_, [uc - 0.1, 1.95, 1.6], [uc + 2.5, 1.95, 1.6], 0.05, [0.3, 0.24, 0.18]); g8.beam(W_, [uc - 0.1, 1.25, 1.6], [uc + 2.5, 1.25, 1.6], 0.04, [0.3, 0.24, 0.18]);
+      g8.quad(W_, [uc + 0.1, 1.9, 1.6], [uc + 2.3, 1.9, 1.6], [uc + 2.2, 0.95, 1.63], [uc + 0.2, 0.95, 1.63], [0.34, 0.31, 0.26], [0, 0, 6, 3], true); g8.quad(W_, [uc + 0.2, 0.95, 1.63], [uc + 2.2, 0.95, 1.63], [uc + 2.0, 0.55, 1.58], [uc + 0.4, 0.55, 1.58], [0.3, 0.27, 0.23], [0, 0, 5, 1], true);      // a net hung over the pole
+      put(front, g8); } }
+    // 5: a smoke louvre on the ridge
+    if (RF() < FM.vent) { const gv = GP(), uu = Lf * (0.35 + RF() * 0.3); gv.box(W_, uu - 0.4, yRidge - 0.05, -d / 2 - 0.22, uu + 0.4, yRidge + 0.5, -d / 2 + 0.22, [0.22, 0.18, 0.14]); for (let k2 = 0; k2 < 3; k2++) gv.box(W_, uu - 0.45, yRidge + 0.05 + k2 * 0.15, -d / 2 - 0.27, uu + 0.45, yRidge + 0.09 + k2 * 0.15, -d / 2 + 0.27, [0.3, 0.25, 0.2]); gv.box(W_, uu - 0.5, yRidge + 0.5, -d / 2 - 0.3, uu + 0.5, yRidge + 0.58, -d / 2 + 0.3, [0.26, 0.21, 0.17]); put(front, gv); }
+  }
   // [fx2] the back of a working inn: kitchen door under a pentice, a cellar hatch, a privy lean-to, stacked casks, small barred windows high up; the ends get high windows, a down pipe and a wood stack
   if (site.id === 'inn') {
     const CK = [0.34, 0.26, 0.18], BD = [0.62, 0.45, 0.3], hiWin = (g5, cu, y0) => { g5.quad(W_, [cu - 0.22, y0, 0.03], [cu + 0.22, y0, 0.03], [cu + 0.22, y0 + 0.36, 0.03], [cu - 0.22, y0 + 0.36, 0.03], [0.06, 0.068, 0.078], GPU.wood, [0, 0, 1]); g5.box(W_, cu - 0.3, y0 - 0.07, 0, cu + 0.3, y0, 0.14, [0.46, 0.44, 0.4]); g5.box(W_, cu - 0.28, y0 + 0.36, 0, cu + 0.28, y0 + 0.43, 0.09, WOOD); for (const f of [-0.12, 0, 0.12]) g5.box(W_, cu + f - 0.012, y0, 0.03, cu + f + 0.012, y0 + 0.36, 0.05, [0.2, 0.19, 0.18]); };
