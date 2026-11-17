@@ -76,7 +76,7 @@ function shellStyle(site, spec) {
   // [fx3] a dominant covering and one or two minority ones per district, picked by the house's own hash (wealth and age show in which)
   let kind = O.kind; if (!kind) { const q = R(); kind = D.kind; if (D.mix) { let a = 0; for (const [k, pr] of D.mix) { a += pr; if (q < a) { kind = k; break; } } } else if (D.alt && q < 0.4) kind = D.alt; }
   if (kind === 'slate' && dn === 'chapelgate') kind = 'stoneslate';
-  const RK = { slate: [INF_SL, 3.6, 0.14], stoneslate: [INF_SS, 4.0, 0.14], thatch: [INF_TH, 1.6, 0.36], shingle: [INF_S, 1.25, 0.1], tile: [Kit.defs[INF_CT] ? INF_CT : INF_S, 2.0, 0.12] }[kind] || [INF_S, 1.25, 0.1], tones = SHELL_TONES[kind], r = (a, b) => a + (b - a) * R();
+  const RK = { slate: [INF_SL, 3.6, 0.14], stoneslate: [INF_SS, 4.0, 0.14], thatch: [INF_TH, 1.6, 0.36], shingle: [INF_S, 1.25, 0.1], tile: [Kit.defs[INF_CT] && !LOWQ() ? INF_CT : INF_S, 2.0, 0.12] }[kind] || [INF_S, 1.25, 0.1], tones = SHELL_TONES[kind], r = (a, b) => a + (b - a) * R();
   const out = { dist: dn, kind, pitch: O.pitch || D.pitch[(R() * D.pitch.length) | 0], tint: tones[(O.tone !== undefined ? O.tone : (R() * tones.length) | 0) % tones.length], sag: O.sag !== undefined ? O.sag : r(D.sag[0], D.sag[1]), ov: O.ov || r(D.ov[0], D.ov[1]) };
   out.mat = RK[0]; out.ts = RK[1]; out.thick = RK[2]; out.thatch = kind === 'thatch'; out.patch = R();
   out.tint = out.tint.map(v => Math.min(2, v * (0.94 + R() * 0.1)));
