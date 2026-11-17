@@ -7,7 +7,7 @@ QUALITY.low.houseFar = 30; QUALITY.low.yardRange = 24; QUALITY.medium.yardRange 
 // cast into the sun-shadow maps: one prism stand-in per house does that.
 const ROOFS = [];       // every generated roof (for test/town.js: slope sample points against the neighbours' volumes)
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
-const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof', INF_SL = 'MI_Slate_Roof', INF_TH = 'MI_Thatch_Roof', INF_SS = 'MI_StoneSlate_Roof';      // [fx2] the three roof coverings: wood shingle, stone slate, thatch (shellStyle in 72c_infill picks one per building)
+const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof', INF_SL = 'MI_Slate_Roof', INF_TH = 'MI_Thatch_Roof', INF_SS = 'MI_StoneSlate_Roof', INF_L = 'MI_Plaster_Lime', INF_R = 'MI_Rubble_Wall';      // [fx2] the three roof coverings: wood shingle, stone slate, thatch (shellStyle in 72c_infill picks one per building)
 function infBatch() {
   if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 48, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 48 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
   return INFS.batch;
@@ -28,6 +28,8 @@ async function infillMaterials() {
   await mk(INF_SL, 'MI_RoundTiles', 'MI_Slate', { gain: 1.0, nScale: 1.0, moss: 0.4 }); await mk(INF_TH, 'MI_RoundTiles', 'MI_Thatch', { gain: 1.0, nScale: 1.0, moss: 0.3 }); await mk(INF_SS, 'MI_RoundTiles', 'MI_StoneSlate', { gain: 1.1, nScale: 1.0, moss: 0.4 });      // [fx2]
   if (Kit.defs.MI_UnevenBrick) Kit.defs[INF_B] = Object.assign({}, Kit.defs.MI_UnevenBrick, { name: INF_B, doubleSided: true });
   if (Kit.defs[INF_T]) Kit.defs[INF_T].doubleSided = true;
+  await mk(INF_R, 'MI_UnevenBrick', 'MI_Rubble', { gain: 1.0, nScale: 1.0, moss: 0.3, doubleSided: true });      // [fx2] rubble / dry-stone wall for retaining and yard walls
+  if (Kit.defs.MI_Plaster) Kit.defs[INF_L] = Object.assign({}, Kit.defs.MI_Plaster, { name: INF_L, doubleSided: true, uvScale: [1.6, 1.6] });      // [fx2] limewash over the upper storeys
   INFS.mats = ok1 && ok2 && !!Kit.defs[INF_B];
 }
 // a copy of a kit piece with its plaster / tiles replaced by the plank / shingle variants
@@ -50,7 +52,7 @@ function infWalls(B, MS, o) {
   const w = o.w, d = o.d, fl = o.fl, H = o.H || 3, sh = o.jetty ? 0.5 : 0, lo = !!o.lo, DK = [0.17, 0.14, 0.11], SC = [[0.3, 0.38, 0.28], [0.42, 0.2, 0.16], [0.22, 0.3, 0.4], [0.36, 0.31, 0.22]];
   const R = o.R || rng(3);
   for (let k = 0; k < fl; k++) {
-    const g = GP(), yb = k === 0 ? -0.35 : k * H, yt = (k + 1) * H, off = k > 0 ? sh : 0, stone = k === 0 && o.stone, mat = stone ? INF_B : INF_T, ts = stone ? 2.2 : 1.25, col = stone ? [0.95, 0.95, 0.95] : (o.tint || [1, 1, 1]);
+    const g = GP(), yb = k === 0 ? -0.35 : k * H, yt = (k + 1) * H, off = k > 0 ? sh : 0, stone = k === 0 && o.stone, mat = stone ? INF_B : (k > 0 && o.lime && Kit.defs[INF_L] ? INF_L : INF_T), ts = stone ? 2.2 : 1.25, col = stone ? [0.95, 0.95, 0.95] : (o.tint || [1, 1, 1]);
     for (const wn of ['front', 'back', 'left', 'right']) {
       const W = WALLS[wn], L = W.len(w, d), s0 = W.start(w, d);
       if ((wn === 'left' || wn === 'right') && k < ((o.skip && o.skip[wn]) || 0)) continue;
@@ -59,7 +61,7 @@ function infWalls(B, MS, o) {
       const BAND = [[-1, 0.62], [0.35, 0.74], [0.75, 0.86], [1.15, 0.95], [1.9, 1.0]];
       const q = (m2, ua, ub, ya, yb, dep, c2, uv, both) => {
         if (ub - ua < 0.015 || yb - ya < 0.015) return;
-        if (m2 === INF_T && !uv && dep === 0) {
+        if ((m2 === INF_T || m2 === INF_L) && !uv && dep === 0) {
           for (let ci = Math.max(0, Math.floor(ua / cw + 1e-6)); ci < nCell && ci * cw < ub - 1e-6; ci++) {
             const u0 = Math.max(ua, ci * cw), u1 = Math.min(ub, (ci + 1) * cw); if (u1 - u0 < 0.015) continue;
             const hh = ((ci * 7919 + wn.length * 31 + (k + 1) * 977 + Math.floor(wOff * 100)) % 101) / 101, ou = hh * 5.3 + wOff, ov = hh * 3.1, cm = 0.92 + 0.16 * ((hh * 13) % 1);
@@ -367,6 +369,6 @@ function infKitWalls(c, b, MS, frames, zone, sy, R, pass) {      // pass: 'ext' 
     }
   }
   if (fl > 1) { plan[1] = { front: [], back: [], left: [], right: [] }; const nF = Math.max(2, Math.round(w / 2)), mF = w / nF; for (let i = 0; i < nF; i++) { const cu = (i + 0.5) * mF; if (i % 2 === 0) plan[1].front.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1, shutter: R() < 0.4 }); if (i % 2 === 1) plan[1].back.push({ u0: cu - 0.5, u1: cu + 0.5, v0: 0.95, v1: 2.1 }); } plan[1].left.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); plan[1].right.push({ u0: d / 2 - 0.45, u1: d / 2 + 0.45, v0: 0.95, v1: 2.1 }); }
-  const tn = 0.85 + R() * 0.25;
-  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: [tn, tn * 0.98, tn * 0.95], jetty: false, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
+  const tn = 0.85 + R() * 0.25, SW = typeof shellStyle === 'function' ? shellStyle(site, spec) : {}, wtint = SW.wallTint || [tn, tn * 0.98, tn * 0.95];
+  infWalls(b, MS, { w, d, fl, H: 3, stone: st.ground === 'stone', tint: wtint, lime: SW.lime, jetty: false, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
 }
