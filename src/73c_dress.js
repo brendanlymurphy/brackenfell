@@ -398,6 +398,7 @@ function buildDress() {
     if (sq) for (const p of stones) if (hyp(x - p[0], z - p[1]) < 1.6 + r) return false;
     for (const s of spotsOut) if (hyp(x - s.p[0], z - s.p[2]) < r + 0.9) return false;
     for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + 0.12 && Math.abs(l[1]) < s.d / 2 + 0.12) return false; }
+    for (const s of SITES) if (/^high\./.test(s.id) && hyp(x - s.x, z - s.z) < 9) return false;      // [fx3] the hamlet's own yard props are built later (79_wilds.js): dress leaves that yard alone
     { let nb = 0; for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + 0.85 && Math.abs(l[1]) < s.d / 2 + 0.85 && ++nb > 1) return false; } }      // [fx3] nothing is stood in a gap under 1.6 m between two houses
     for (const h in World.houses) { const d = World.houses[h].door; if (d && hyp(x - d.out[0], z - d.out[2]) < r + 1.5) return false; }
     for (const f of FIELDS) if (x > f.x0 - 1 && x < f.x1 + 1 && z > f.z0 - 1 && z < f.z1 + 1) return false;
