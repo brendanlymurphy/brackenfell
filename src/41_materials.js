@@ -94,7 +94,7 @@ function terrainMaterial() {
     const dn = texture(G.noiseTex, wp.xz.mul(0.0013)).zw.sub(0.5);
     const Nv = normalize(vN.add(vec3(dn.x, 0, dn.y).mul(smoothstep(260, 700, r).mul(1.1)))).toVar();
     const slope = Nv.y.oneMinus();
-    const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(2.5).toVar(), uvR = vec2(wp.x, wp.y.mul(1.3)).mul(0.16).toVar(), uvR2 = vec2(wp.z.add(7.3), wp.y.mul(1.3)).mul(0.16).toVar();       // rock is mapped on two vertical planes (x-y and z-y) and blended by the facing, so no cliff smears
+    const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(1.9).toVar(), uvR = vec2(wp.x, wp.y.mul(1.3)).mul(0.16).toVar(), uvR2 = vec2(wp.z.add(7.3), wp.y.mul(1.3)).mul(0.16).toVar();       // rock is mapped on two vertical planes (x-y and z-y) and blended by the facing, so no cliff smears
     const dGx = dFdx(uvG).toVar(), dGy = dFdy(uvG).toVar(), dFx = dFdx(uvF).toVar(), dFy = dFdy(uvF).toVar(), dCx = dFdx(uvC).toVar(), dCy = dFdy(uvC).toVar(), dRx = dFdx(uvR).toVar(), dRy = dFdy(uvR).toVar(), dR2x = dFdx(uvR2).toVar(), dR2y = dFdy(uvR2).toVar();
     const det = dist.lessThan(56);                              // normal maps only matter near the camera (one sample less per layer beyond that)
     const farK = smoothstep(16, 55, dist).toVar();
@@ -134,7 +134,14 @@ function terrainMaterial() {
     If(wPath.greaterThan(0.004), () => { over(samp(MAT.DIRT, uvG, dGx, dGy), wPath); });
     const wGrav = sp.a.mul(smoothstep(0.25, 0.65, s2.g)).toVar();
     If(wGrav.greaterThan(0.004), () => { over(samp(MAT.GRAVEL, uvG.mul(1.4), dGx.mul(1.4), dGy.mul(1.4)), wGrav); });
-    If(sp.g.greaterThan(0.004), () => { const c = samp(MAT.COBBLE, uvC, dCx, dCy); c.h.assign(c.h.mul(0.2).add(0.72)); over(c, sat(sp.g.mul(1.15)).toVar()); });
+    If(sp.g.greaterThan(0.004), () => {
+      const c = samp(MAT.COBBLE, uvC, dCx, dCy); c.h.assign(c.h.mul(0.2).add(0.72));
+      // [fx3] the market's cobbles: joints and stones closer in value, a smoother worn lane where carts and feet go (the road line under the cobbles), patches laid at another time, a darker damp at the edges
+      const wear = smoothstep(0.30, 0.80, road).mul(0.8).toVar(), lum = dot(c.c, vec3(0.3333)), patch = smoothstep(0.52, 0.62, mn2.g.add(mn3.r.sub(0.5).mul(0.25)));
+      c.c.assign(mix(vec3(lum), c.c, 0.80)); c.c.mulAssign(float(1).add(wear.mul(0.2)).add(patch.mul(0.16)).mul(vec3(1, 1, 1).sub(vec3(0.04, 0.0, 0.08).mul(patch))));
+      c.n.assign(mix(c.n, vec2(0.5), wear.mul(0.55))); c.r.assign(mix(c.r, float(0.72), wear));
+      over(c, sat(sp.g.mul(1.15)).toVar());
+    });
     // puddles collect in the low spots of roads and wet banks
     // rain: water stands on every road, between the cobbles and on bare earth, the ground darkens and takes a sheen
     const wet = (TEST && TEST.shore === 0) ? U.wet : max(U.wet, smoothstep(17, 3, TSL.length(wp.xz.sub(vec2(14, 80)))).mul(0.8)), hard = max(max(road, sp.g), sp.a);      // [l1] the wharf's cobbles are always wet
