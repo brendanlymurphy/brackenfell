@@ -1,0 +1,328 @@
+{
+ "build": "Build 74",
+ "rules": [
+  {
+   "id": "1.1",
+   "what": "house-shaped buildings (enterable + shells + shut)",
+   "value": 131,
+   "target": "20 to 30, all real",
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "1.2",
+   "what": "named people per enterable building",
+   "value": 1.4,
+   "target": "2.5 to 3 (or fewer buildings)",
+   "ok": true,
+   "lower": false
+  },
+  {
+   "id": "2.1",
+   "what": "doors drawn on buildings that cannot be entered",
+   "value": 74,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "2.2",
+   "what": "share of buildings that are shut (%)",
+   "value": 56,
+   "target": "at most 20",
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "2.3",
+   "what": "doors with under half of the 3 m in front of them free to stand on, or not reachable (real doors + shell doors)",
+   "value": 21,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "2.4",
+   "what": "buildings named for someone who does not live there",
+   "value": 12,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "2.5",
+   "what": "trades held by two buildings",
+   "value": 6,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "2.6",
+   "what": "trade buildings with no kit sign or banner at the walls",
+   "value": 32,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "3.1",
+   "what": "interiors with a ground floor over 1.25 times the footprint",
+   "value": 57,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "3.1b",
+   "what": "worst area ratio inside / outside",
+   "value": 6.0,
+   "target": "at most 1.25",
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "3.2",
+   "what": "kit houses whose storey count differs inside",
+   "value": 21,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "3.2b",
+   "what": "cellars (none shows outside today)",
+   "value": 21,
+   "target": "each shown outside",
+   "ok": true,
+   "lower": true
+  },
+  {
+   "id": "3.3",
+   "what": "buildings whose window count differs outside and inside",
+   "value": 57,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "4.2",
+   "what": "the square can be reached from outside the west gate with the gates shut (1 = yes)",
+   "value": 1,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "4.3",
+   "what": "free-standing fence and wall runs (stepped round within their own length + 3.5 m)",
+   "value": 55,
+   "target": "each belongs to a plot",
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "6.1",
+   "what": "named people with no lines",
+   "value": 63,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "6.2",
+   "what": "people with no bed in their day",
+   "value": 2,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "6.3",
+   "what": "households of one",
+   "value": 33,
+   "target": "under 8",
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "6.3b",
+   "what": "first names used more than once",
+   "value": 20,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "6.5",
+   "what": "people who never leave their own building or plot",
+   "value": 40,
+   "target": "under 5",
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "6.5b",
+   "what": "people who sweep more than once a day",
+   "value": 56,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "6.6",
+   "what": "people whose day is the same as someone else's",
+   "value": 23,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "7.3",
+   "what": "containers per villager",
+   "value": 13.0,
+   "target": "about 4",
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "9.1",
+   "what": "trees inside the town",
+   "value": 28,
+   "target": "about 70",
+   "ok": false,
+   "lower": false
+  },
+  {
+   "id": "9.2",
+   "what": "flower pots inside the town",
+   "value": 322,
+   "target": "under 120",
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "8.4",
+   "what": "planned lines without a recording",
+   "value": 0,
+   "target": 0,
+   "ok": true,
+   "lower": true
+  },
+  {
+   "id": "5.2",
+   "what": "stretched texture places (geomaudit)",
+   "value": 38,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "5.2b",
+   "what": "open edges (geomaudit)",
+   "value": 249,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "5.2c",
+   "what": "single flat pieces (geomaudit)",
+   "value": 6,
+   "target": 0,
+   "ok": false,
+   "lower": true
+  },
+  {
+   "id": "5.4",
+   "what": "walk bot: falls / cannot be walked / graph through a wall (as last written to docs/WALK.md)",
+   "value": "66 / 164 / 41",
+   "target": "0 / 0 / 0",
+   "ok": false,
+   "lower": true
+  }
+ ],
+ "detail": {
+  "mute": 63,
+  "badDoors": [],
+  "shellDoorsAtWall": [
+   "in.11",
+   "in.50",
+   "in.53",
+   "in.56",
+   "in.68",
+   "in.71",
+   "in.72",
+   "in.73",
+   "in.97",
+   "in.103",
+   "in.106",
+   "in.108",
+   "in.109",
+   "in.112",
+   "in.117",
+   "in.119",
+   "in.120",
+   "in.121",
+   "in.122",
+   "in.128",
+   "in.129"
+  ],
+  "wrongNames": [
+   "draper",
+   "in.12",
+   "in.60",
+   "in.67",
+   "in.75",
+   "in.82",
+   "high.a",
+   "in.08",
+   "in.34",
+   "in.38",
+   "in.74",
+   "in.94"
+  ],
+  "dupTrades": [
+   "cutler",
+   "grocer",
+   "baker",
+   "tinker",
+   "woodcutter",
+   "shepherd"
+  ],
+  "unsigned": [
+   "mill",
+   "farm",
+   "hunter",
+   "fisher",
+   "draper",
+   "in.02",
+   "in.04",
+   "in.07",
+   "in.10",
+   "in.13",
+   "in.15",
+   "in.20",
+   "in.21",
+   "in.33",
+   "in.36",
+   "in.37",
+   "in.40",
+   "in.44",
+   "in.45",
+   "in.51",
+   "in.65",
+   "in.66",
+   "in.70",
+   "in.77",
+   "in.90",
+   "in.93",
+   "in.111",
+   "in.113",
+   "in.115",
+   "in.116",
+   "high.a",
+   "high.c"
+  ]
+ }
+}

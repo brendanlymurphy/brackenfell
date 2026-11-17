@@ -72,7 +72,7 @@ function updateDynamics(dt, chars) {
     // [fin] one rule for every leaf: open when someone on the same level comes within reach (2.3 m); stay open at least 2.5 s; close only after nobody has been within 3.6 m for 1.2 s; fixed speed; never reverse within 0.5 s
     let reach = false, wide = false;
     for (const c of chars) if (CELLS_ON && c === chars[0]) continue; else if (Math.abs(c[0] - d.c[0]) < 3.6 && Math.abs(c[2] - d.c[2]) < 3.6 && Math.abs(c[1] - d.c[1] + 1) < 2.2) { const h = hyp(c[0] - d.c[0], c[2] - d.c[2]); if (h < 3.6) wide = true; if (h < 2.3) { reach = true; break; } }
-    if (d.gate && !S.opened[d.gate]) { reach = false; wide = false; }          // a locked gate stays shut until the key has turned
+    if (d.gate) reach = wide = !!S.opened[d.gate];          // a locked gate stays shut until the key has turned, and then stands open for good. [owner, Build 73] it used to wait for someone to come near, and since interiors became cells the player is left out of that test (line above), so the crypt gate unlocked, lost its collider and stayed drawn shut
     d.hold = d.hold === undefined ? 0 : d.hold; d.away = d.away === undefined ? 9 : d.away; d.dirT = d.dirT === undefined ? 9 : d.dirT; d.dir = d.dir || -1;
     d.dirT += dt; d.hold = Math.max(0, d.hold - dt); d.away = wide ? 0 : d.away + dt;
     let want = d.dir;
