@@ -117,6 +117,14 @@ function buildLevels(bucket, fence, R) {
       KQ.quad(INF_R, [x0, lb, z1], [x1, lb, z1], [x1, H, z1], [x0, H, z1], c, uvx, [0, 0, 1]); KQ.quad(INF_R, [x1, lb, z0], [x0, lb, z0], [x0, H, z0], [x1, H, z0], c.map(v => v * 0.9), uvx, [0, 0, -1]);
       KQ.quad(INF_R, [x1, lb, z1], [x1, lb, z0], [x1, H, z0], [x1, H, z1], c.map(v => v * 0.95), uvz, [1, 0, 0]); KQ.quad(INF_R, [x0, lb, z0], [x0, lb, z1], [x0, H, z1], [x0, H, z0], c.map(v => v * 0.85), uvz, [-1, 0, 0]);
       KQ.quad(INF_R, [x0, H, z1], [x1, H, z1], [x1, H, z0], [x0, H, z0], c.map(v => v * 1.1), [x0 / 1.2, z0 / 1.2, x1 / 1.2, z1 / 1.2], [0, 1, 0]); }
+  /* [fx3] the lane's wall (the terrace's south-west lane, x -34 to -3.2) in the same rubble as the terrace: outer face, inner face, top and both ends, one solid per 1.2 m tile */
+  if (KQ) { const lz0 = T.z1 + wt, lz1 = 34.4, xE = -3.2, xW = -34.0, yE = Terrain.y(xE, (lz0 + lz1) / 2), n = 22, zo = lz1 + 0.3, zi = lz1 - 0.1, TC = 1.2;
+    for (let i = 0; i < n; i++) { const xa = xW + (xE - xW) * i / n, xb = xW + (xE - xW) * (i + 1) / n, ya = H + (yE - H) * i / n, yb = H + (yE - H) * (i + 1) / n, base = gmin(xa, lz1 + 0.3, xb, lz1 + 0.3) - 0.5, ta = ya + 0.95, tb = yb + 0.95, c = (i % 2 ? [0.7, 0.68, 0.64] : [0.74, 0.72, 0.68]), ua = xa / TC, ub = xb / TC;
+      KQ.quad(INF_R, [xa, base, zo], [xb, base, zo], [xb, tb, zo], [xa, ta, zo], c, [ua, base / TC, ub, tb / TC], [0, 0, 1]);
+      KQ.quad(INF_R, [xb, ya, zi], [xa, ya, zi], [xa, ta, zi], [xb, tb, zi], c.map(v => v * 0.9), [ua, ya / TC, ub, tb / TC], [0, 0, -1]);
+      KQ.quad(INF_R, [xa, ta, zo], [xb, tb, zo], [xb, tb, zi], [xa, ta, zi], c.map(v => v * 1.12), [ua, 0, ub, 0.4 / TC], [0, 1, 0]);
+      if (i === 0) KQ.quad(INF_R, [xa, base, zi], [xa, base, zo], [xa, ta, zo], [xa, ta, zi], c.map(v => v * 0.85), [0, base / TC, 0.4 / TC, ta / TC], [-1, 0, 0]);
+      if (i === n - 1) KQ.quad(INF_R, [xb, base, zo], [xb, base, zi], [xb, tb, zi], [xb, tb, zo], c.map(v => v * 0.85), [0, base / TC, 0.4 / TC, tb / TC], [1, 0, 0]); } }
   if (KQ) { const nm = KQ.make('gen_terrace_walls'); infBatch().add(nm, new THREE.Matrix4(), { zone: 0, skyVis: 1, cast: false }); }
 
   // ── the flight from the market square: 2.8 m wide, steps are a top and a riser, cheeks are two beams, an arch with a roof where it arrives ──
@@ -145,8 +153,8 @@ function buildLevels(bucket, fence, R) {
     for (let i = 0; i < n; i++) {
       const xa = xW + (xE - xW) * i / n, xb = xW + (xE - xW) * (i + 1) / n, ya = H + (yE - H) * i / n, yb = H + (yE - H) * (i + 1) / n, base = gmin(xa, lz1 + 0.3, xb, lz1 + 0.3) - 0.5;
       mm.mat(MAT.COBBLE, [0.85, 0.82, 0.78], 0.5); mm.quad2([xa, ya, lz0], [xa, ya, lz1], [xb, yb, lz1], [xb, yb, lz0]);
-      mm.mat(MAT.STONE, i % 2 ? sc(0.9) : sc(0.97), 0.7); { const ym = Math.min(ya, yb) - 0.02; mm.quad2([xa, base, lz1 + 0.3], [xa, ym, lz1 + 0.3], [xb, ym, lz1 + 0.3], [xb, base, lz1 + 0.3]); }
-      mm.mat(MAT.STONE, sc(1), 0.6); mm.box(xa, Math.min(ya, yb) - 0.02, lz1 - 0.1, xb, Math.max(ya, yb) + 0.95, lz1 + 0.3, 4 | (i === 0 ? 0 : 1) | (i === n - 1 ? 0 : 2));
+      if (!KQ) { mm.mat(MAT.STONE, i % 2 ? sc(0.9) : sc(0.97), 0.7); { const ym = Math.min(ya, yb) - 0.02; mm.quad2([xa, base, lz1 + 0.3], [xa, ym, lz1 + 0.3], [xb, ym, lz1 + 0.3], [xb, base, lz1 + 0.3]); }
+      mm.mat(MAT.STONE, sc(1), 0.6); mm.box(xa, Math.min(ya, yb) - 0.02, lz1 - 0.1, xb, Math.max(ya, yb) + 0.95, lz1 + 0.3, 4 | (i === 0 ? 0 : 1) | (i === n - 1 ? 0 : 2)); }
     }
     col(xW, lz1 - 0.1, xE, lz1 + 0.3, Math.min(yE, H) - 1.2, H + 1.0);
     const lb = gmin(-36.8, T.z1, -34, lz1) - 0.6;
