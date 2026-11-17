@@ -27,5 +27,12 @@
   // what widening cannot close: the one that is not enterable goes (a gap house with nobody in it), otherwise the pair is reported
   for (const sl of INF.slots.slice()) { const hs = [INF.byId[sl[0]], INF.byId[sl[1]]]; if (!hs[0] || !hs[1]) continue; const gone = hs.find(h => !h.enter && !h.cell); if (!gone) continue;
     for (const arr of [INF.houses, SITES]) { const k = arr.findIndex(o => o.id === gone.id); if (k >= 0) arr.splice(k, 1); } delete INF.byId[gone.id]; delete SITE[gone.id]; INF.slots.splice(INF.slots.indexOf(sl), 1); INF.removedSlot = (INF.removedSlot || []).concat(gone.id); }
+  // a lane's mouth is never inside a house: an empty house on a Wharfside lane point goes, an enterable one shortens the lane by whole points until it ends 1 m clear of it
+  for (const rd of ROADS.filter(r => /^wharf\./.test(r.id))) {
+    const inside = (x, z, pad) => SITES.find(o => { if (!o.w || o.id === 'tower') return false; const l = worldToSite(o, x, z); return Math.abs(l[0]) < o.w / 2 + pad && Math.abs(l[1]) < o.d / 2 + pad; });
+    for (let k = 0; k < rd.pts.length; k++) for (const t of [0, 0.5]) { const a = rd.pts[k], b = rd.pts[k + 1] || a, o = inside(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, 0.9); if (!o) continue; const h = INF.byId[o.id]; if (h && !h.enter && !h.cell) { for (const arr of [INF.houses, SITES]) { const i = arr.findIndex(q => q.id === o.id); if (i >= 0) arr.splice(i, 1); } delete INF.byId[o.id]; delete SITE[o.id]; INF.removedSlot = (INF.removedSlot || []).concat(o.id); } }
+    while (rd.pts.length > 2 && inside(rd.pts[rd.pts.length - 1][0], rd.pts[rd.pts.length - 1][1], 1.0)) rd.pts.pop();
+    while (rd.pts.length > 2 && inside(rd.pts[0][0], rd.pts[0][1], 1.0)) rd.pts.shift();
+  }
   INF.count = INF.houses.length;
 })();
