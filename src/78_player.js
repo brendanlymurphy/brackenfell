@@ -40,6 +40,23 @@ function colResolve(p, r, feet, head) {
   return hit;
 }
 World.blockedAt = (x, z, r) => { const l = Col.grid.get(Math.floor(x / Col.cell) * 4096 + Math.floor(z / Col.cell)); if (!l) return false; const p = [x, 0, z]; for (const c of l) if (colPush(p, r, c)) return true; return false; };
+// Is there something solid between the eye and a thing? (the prompt asks: a chest in the next room was offered through the wall)
+// Walks the line in 0.12 m steps from 0.3 m in front of the eye to 1.3 m short of the thing (a thing set into or just behind a wall, like the loose bricks in the Hart cellar, is still offered). A collider the thing itself stands in or against
+// (the wall a door is set in, the cupboard a jar lies in) does not count, nor does anything lower or higher than the line where it passes.
+World.sightBlocked = (ex, ey, ez, tx, ty, tz) => {
+  const dx = tx - ex, dy = ty - ey, dz = tz - ez, L = Math.hypot(dx, dy, dz); if (L < 1.7) return false; const cs = Col.cell;
+  for (let t = 0.3; t < L - 1.3; t += 0.12) {
+    const x = ex + dx / L * t, y = ey + dy / L * t, z = ez + dz / L * t, l = Col.grid.get(Math.floor(x / cs) * 4096 + Math.floor(z / cs)); if (!l) continue;
+    for (const c of l) {
+      if (c.off || y < c.y0 || y > c.y1) continue; const qx = x - c.x, qz = z - c.z, m = 0.05;
+      if (c.r !== undefined) { if (qx * qx + qz * qz >= (c.r - m) * (c.r - m)) continue; if (Math.hypot(tx - c.x, tz - c.z) < c.r + 0.55) continue; return true; }
+      const lx = qx * c.ax + qz * c.az, lz = qx * c.bx + qz * c.bz; if (Math.abs(lx) >= c.hx - m || Math.abs(lz) >= c.hz - m) continue;
+      const ux = (tx - c.x) * c.ax + (tz - c.z) * c.az, uz = (tx - c.x) * c.bx + (tz - c.z) * c.bz; if (Math.abs(ux) < c.hx + 0.55 && Math.abs(uz) < c.hz + 0.55) continue;
+      return true;
+    }
+  }
+  return false;
+};
 // the height of floor f at (x,z), or null when (x,z) is not over it
 function floorHeight(f, x, z) {
   const dx = x - f.x, dz = z - f.z; if (Math.abs(dx) > f.hx + f.hz || Math.abs(dz) > f.hx + f.hz) return null;

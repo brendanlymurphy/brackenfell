@@ -46,7 +46,7 @@ function act2Build() {
   // the doorway in the Hart's cellar (shown once the bricks are out) and its portal; the way back
   { const inn = Cells.by.inn, ip = [266.4, -402.2, 4.6];
     A2.door = secProp(m => { m.mat(MAT.PLAIN, [0.02, 0.018, 0.016]); m.box(-0.5, 0, -0.1, 0.5, 1.9, 0.0, 0); m.mat(MAT.TIMBER, COL.timberDark, 0.6); m.box(-0.62, 0, -0.14, -0.5, 2.0, 0.04, 4); m.box(0.5, 0, -0.14, 0.62, 2.0, 0.04, 4); m.box(-0.62, 1.9, -0.14, 0.62, 2.04, 0.04, 4); }, [266.95, -402.7, 4.6], -Math.PI / 2, { r: 2.0, zone: 1, cell: 'inn', light: 0.9 }); A2.door.visible = false;
-    World.interact.push({ kind: 'portal', id: 'door.tunnel.in', p: ip, r: 2.4, zone: 1, cell: 'inn', label: 'Go down by the smugglers’ door', dest: { p: a2w(63, 0.1, -30), yaw: -Math.PI / 2, cell: 'mine', name: 'The Smugglers’ Tunnel' }, side: 'in', lock: () => S.flags.sec_wall ? null : 'Just a wall.' });
+    World.interact.push({ kind: 'portal', thru: true, id: 'door.tunnel.in', p: ip, r: 2.4, zone: 1, cell: 'inn', label: 'Go down by the smugglers’ door', dest: { p: a2w(63, 0.1, -30), yaw: -Math.PI / 2, cell: 'mine', name: 'The Smugglers’ Tunnel' }, side: 'in', lock: () => S.flags.sec_wall ? null : 'Just a wall.' });
     World.interact.push({ kind: 'portal', id: 'door.tunnel.out', p: a2w(68.6, 1.0, -30), r: 2.4, zone: 0, cell: 'mine', label: 'Go up to the Hart’s cellar', dest: { p: [265.3, -402.6, 4.6], yaw: -Math.PI / 2, cell: 'inn', name: 'The Honeyed Hart' }, side: 'in' }); }
   // the way out to the lake, a cleft in the west shore, and the way back in
   { const cx = A2.cave.x, cz = A2.cave.z, cy = Terrain.y(cx, cz);
