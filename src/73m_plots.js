@@ -31,7 +31,7 @@ function plotsCompute() {
     if (row.axis === 'x') {      /* houses whose back faces east or west (their front looks along x): one plot each, no neighbours on the row */
       for (const [hi, s] of hs.entries()) {
         const bx = Math.sin(s.yaw || 0) > 0 ? -1 : 1, xb0 = s.x + bx * (s.d / 2 + 0.12), za = s.z - s.w / 2 - 0.15, zb2 = s.z + s.w / 2 + 0.15; let depth = 0;
-        for (let d = 7.0; d >= 2.2 && !depth; d -= 0.4) { let ok = true; for (let z = za + 0.3; z <= zb2 - 0.3 && ok; z += 0.7) for (let k = 0.5; k <= d + 0.3 && ok; k += 0.6) if (blocked(xb0 + bx * (k + 0.2), z, 0.35, s)) ok = false; if (ok) depth = d; }
+        for (let d = 7.0; d >= 2.2 && !depth; d -= 0.4) { let ok = true; for (let z = za + 0.3; z <= zb2 - 0.3 && ok; z += 0.7) for (let k = 0.5; k <= d + 0.3 && ok; k += 0.6) if (blocked(xb0 + bx * (k + 0.2), z, 0.35, s) || _PLOTS.some(q => q.x0 - 0.6 < xb0 + bx * (k + 0.2) && xb0 + bx * (k + 0.2) < q.x1 + 0.6 && q.z0 - 0.6 < z && z < q.z1 + 0.6)) ok = false; if (ok) depth = d; }
         if (depth) _PLOTS.push({ id: s.id, row: row.name, trade: row.trades[hi % row.trades.length], axis: 'x', bx, x0: Math.min(xb0, xb0 + bx * depth), x1: Math.max(xb0, xb0 + bx * depth), z0: za, z1: zb2, wall: xb0 + bx * depth, bz: 1, house: s });
       }
       continue;
@@ -61,10 +61,14 @@ function buildPlots(bucket) {
   if (TEST && TEST.plots === 0) return;
   const P = plotsCompute(), R = rng(8831), gy = (x, z) => Terrain.y(x, z);
   const W = 0.3, H = 1.1;
+  const wcol = (m, x0, z0, x1, z1, y0, y1) => {      /* a wall's collider is left out where a prop already stands in its line (the prop is solid itself): two solids never overlap */
+    const c0 = m4.tp(m.m, [x0, y0, z0]), c1 = m4.tp(m.m, [x1, y0, z1]);
+    for (const c of World.colliders) { if (c.y0 > y1 || c.y1 < y0) continue; const r = c.r !== undefined ? c.r : Math.max(c.hx, c.hz); if (r > 1.2) continue; const dx = Math.max(Math.min(c0[0], c1[0]) - c.x, 0, c.x - Math.max(c0[0], c1[0])), dz = Math.max(Math.min(c0[2], c1[2]) - c.z, 0, c.z - Math.max(c0[2], c1[2])); if (Math.hypot(dx, dz) < r + 0.05) return; }
+    addBoxCollider(m, x0, z0, x1, z1, y0, y1); };
   const stone = (m, ax, az, bx, bz, h, tone) => {      // a low rubble wall segment with a rounded coping
     const L = Math.hypot(bx - ax, bz - az); if (L < 0.2) return; const cx = (ax + bx) / 2, cz = (az + bz) / 2, ang = Math.atan2(bz - az, bx - ax), g = Math.min(gy(ax, az), gy(bx, bz), gy(cx, cz)) - 0.15;
     m.push().T(cx, g, cz).RY(-ang); m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.4); m.box(-L / 2, 0, -W / 2, L / 2, h + 0.15 - 0.06 * R(), W / 2); m.mat(MAT.STONE, [tone * 1.1, tone * 1.06, tone], 1.4); m.box(-L / 2 - 0.02, h + 0.05, -W / 2 - 0.04, L / 2 + 0.02, h + 0.17, W / 2 + 0.04); m.pop();
-    { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.15, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.15; addBoxCollider(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + h); }
+    { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.15, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.15; wcol(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + h); }
   };
   const fence = (m, ax, az, bx, bz) => {      // posts and two rails
     const L = Math.hypot(bx - ax, bz - az); if (L < 0.2) return; const n = Math.max(1, Math.round(L / 2.4));
@@ -72,12 +76,12 @@ function buildPlots(bucket) {
     for (let i = 0; i <= n; i++) { const x = ax + (bx - ax) * i / n, z = az + (bz - az) * i / n, g = gy(x, z); m.cbox(x, g - 0.1, z, 0.1, 1.2, 0.1, 0); }
     for (const y of [0.4, 0.85]) for (let i = 0; i < n; i++) { const x0 = ax + (bx - ax) * i / n, z0 = az + (bz - az) * i / n, x1 = ax + (bx - ax) * (i + 1) / n, z1 = az + (bz - az) * (i + 1) / n; m.beam([x0, gy(x0, z0) + y, z0], [x1, gy(x1, z1) + y, z1], 0.05, 0.08); }
     const cx = (ax + bx) / 2, cz = (az + bz) / 2, ang = Math.atan2(bz - az, bx - ax);
-    { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.05, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.05; addBoxCollider(m, cx - ex, cz - ez, cx + ex, cz + ez, gy(cx, cz), gy(cx, cz) + 1.0); }
+    { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.05, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.05; wcol(m, cx - ex, cz - ez, cx + ex, cz + ez, gy(cx, cz), gy(cx, cz) + 1.0); }
   };
   const slab = (m, ax, az, bx, bz, h, mat, col, th) => {      /* a board fence or a woven hurdle: one solid leaf on the line, posts at the ends */
     const L = Math.hypot(bx - ax, bz - az); if (L < 0.2) return; const cx = (ax + bx) / 2, cz = (az + bz) / 2, ang = Math.atan2(bz - az, bx - ax), g = Math.min(gy(ax, az), gy(bx, bz), gy(cx, cz)) - 0.05;
     m.push().T(cx, g, cz).RY(-ang); m.mat(mat, col, 1.0); m.box(-L / 2, 0, -th / 2, L / 2, h, th / 2); m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5); for (let k = 0; k <= Math.max(1, Math.round(L / 3.0)); k++) { const px = -L / 2 + L * k / Math.max(1, Math.round(L / 3.0)); m.box(px - 0.06, -0.1, -th / 2 - 0.03, px + 0.06, h + 0.15, th / 2 + 0.03); } m.pop();
-    { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.08, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.08; addBoxCollider(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + h); }
+    { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.08, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.08; wcol(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + h); }
   };
   const STYLES = ['stone', 'fence', 'board', 'hurdle'];
   const flat = (m, x, z, rx, rz, c, mat, ry, lift) => { m.mat(mat, c, 0.5); m.push().T(x, gy(x, z) + (lift || 0.02), z).RY(ry || 0); m.quad2([-rx, 0, -rz * 0.6], [-rx * 0.6, 0, rz], [rx, 0, rz * 0.7], [rx * 0.7, 0, -rz]); m.pop(); };
@@ -162,11 +166,11 @@ function localTrade(m, p, gy, R, flat) {
   const at = (lx, lz, f) => { const w = siteToWorld(s, lx, lz), g = gy(w[0], w[1]); m.push().T(w[0], g, w[1]).RY(-s.yaw); f(g, w); m.pop(); };
   const kind = p.trade;
   if (kind === 'garden') { for (let i = -2; i <= 2; i++) at(i * 0.9, z0 + depth * 0.45, () => { const len = Math.min(depth * 0.6, 2.4); m.mat(MAT.MUD, [0.17, 0.12, 0.08], 0.5); m.box(-0.25, 0, -len / 2, 0.25, 0.18, len / 2); m.mat(MAT.LEAVES, [0.24 + R() * 0.16, 0.4, 0.13], 0.5); if (i % 2) { for (let k = 0; k < 3; k++) m.ball(0, 0.3, -len / 2 + 0.3 + k * (len - 0.6) / 2, 0.2, 0.12, 0.18, 4, 3); } else { m.mat(MAT.TIMBER, [0.32, 0.25, 0.17], 0.5); for (let k = 0; k < 3; k++) m.beam([-0.1, 0, -len / 2 + 0.3 + k * 0.7], [0.05, 1.5, -len / 2 + 0.3 + k * 0.7], 0.03, 0.03); } });
-    at(hw - 0.6, z0 + 0.5, (g, w) => { m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.cyl(0, 0, 0, 0.32, 0.28, 0.55, 6, 2); addCircleCollider(m, w[0], w[1], 0.32, g, g + 0.55); }); }
-  else if (kind === 'woodyard') { at(-hw * 0.4, z0 + depth * 0.4, (g, w) => { for (let r = 0; r < 4; r++) for (let k = 0; k < 6 - r; k++) { m.mat(MAT.TIMBER, [0.42 + R() * 0.12, 0.32, 0.22], 0.5); m.beam([-1.0 + r * 0.2 + k * 0.4, 0.17 + r * 0.28, -0.45], [-1.0 + r * 0.2 + k * 0.4, 0.17 + r * 0.28, 0.45], 0.28, 0.28); } addBoxCollider(m, w[0] - 1.3, w[1] - 0.6, w[0] + 1.3, w[1] + 0.6, g, g + 1.2); });
+    at(hw - 0.6, z0 + 0.5, (g, w) => { m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.cyl(0, 0, 0, 0.32, 0.28, 0.55, 6, 2); addCircleCollider(m, 0, 0, 0.32, 0, 0.55); }); }
+  else if (kind === 'woodyard') { at(-hw * 0.4, z0 + depth * 0.4, (g, w) => { for (let r = 0; r < 4; r++) for (let k = 0; k < 6 - r; k++) { m.mat(MAT.TIMBER, [0.42 + R() * 0.12, 0.32, 0.22], 0.5); m.beam([-1.0 + r * 0.2 + k * 0.4, 0.17 + r * 0.28, -0.45], [-1.0 + r * 0.2 + k * 0.4, 0.17 + r * 0.28, 0.45], 0.28, 0.28); } addBoxCollider(m, -1.3, -0.6, 1.3, 0.6, 0, 1.2); });
     at(hw * 0.4, z0 + depth * 0.3, () => { m.mat(MAT.TIMBER, [0.4, 0.31, 0.22], 0.5); m.cyl(0, 0, 0, 0.26, 0.26, 0.5, 5, 2); for (let k = 0; k < 6; k++) { m.mat(MAT.TIMBER, [0.55, 0.44, 0.3], 0.5); m.beam([-0.15 + (R() - 0.5) * 1.6, 0.06, 0.5 + R() * 1.0], [0.15 + (R() - 0.5) * 1.6, 0.08, 0.6 + R() * 1.0], 0.1, 0.12); } }); }
-  else if (kind === 'hens') { at(-hw * 0.3, z0 + depth * 0.4, (g, w) => { m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.box(-0.7, 0.5, -0.5, 0.7, 1.15, 0.5); for (const sx of [-0.6, 0.6]) for (const sz of [-0.4, 0.4]) m.box(sx - 0.04, 0, sz - 0.04, sx + 0.04, 0.5, sz + 0.04); m.mat(MAT.THATCH, [0.55, 0.45, 0.25], 0.5); m.box(-0.8, 1.15, -0.6, 0.8, 1.25, 0.6); addBoxCollider(m, w[0] - 0.8, w[1] - 0.6, w[0] + 0.8, w[1] + 0.6, g, g + 1.2); for (let k = 0; k < 4; k++) { m.mat(MAT.PLAIN, k % 2 ? [0.6, 0.3, 0.14] : [0.85, 0.82, 0.74]); m.ball((R() - 0.5) * 3, 0.2, 1.0 + R() * 1.2, 0.12, 0.14, 0.18, 5, 4); } }); }
-  else { for (let i = -1; i <= 1; i++) at(i * 1.2, z0 + depth * 0.4, (g, w) => { m.mat(MAT.STONE, [0.5, 0.47, 0.42], 0.5); m.box(-0.3, 0, -0.3, 0.3, 0.35, 0.3); m.mat(MAT.THATCH, [0.72, 0.58, 0.28], 0.5); m.ball(0, 0.6, 0, 0.3, 0.26, 0.3, 6, 4); addCircleCollider(m, w[0], w[1], 0.3, g, g + 0.8); }); }
+  else if (kind === 'hens') { at(-hw * 0.3, z0 + depth * 0.4, (g, w) => { m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.box(-0.7, 0.5, -0.5, 0.7, 1.15, 0.5); for (const sx of [-0.6, 0.6]) for (const sz of [-0.4, 0.4]) m.box(sx - 0.04, 0, sz - 0.04, sx + 0.04, 0.5, sz + 0.04); m.mat(MAT.THATCH, [0.55, 0.45, 0.25], 0.5); m.box(-0.8, 1.15, -0.6, 0.8, 1.25, 0.6); addBoxCollider(m, -0.8, -0.6, 0.8, 0.6, 0, 1.2); for (let k = 0; k < 4; k++) { m.mat(MAT.PLAIN, k % 2 ? [0.6, 0.3, 0.14] : [0.85, 0.82, 0.74]); m.ball((R() - 0.5) * 3, 0.2, 1.0 + R() * 1.2, 0.12, 0.14, 0.18, 5, 4); } }); }
+  else { for (let i = -1; i <= 1; i++) at(i * 1.2, z0 + depth * 0.4, (g, w) => { m.mat(MAT.STONE, [0.5, 0.47, 0.42], 0.5); m.box(-0.3, 0, -0.3, 0.3, 0.35, 0.3); m.mat(MAT.THATCH, [0.72, 0.58, 0.28], 0.5); m.ball(0, 0.6, 0, 0.3, 0.26, 0.3, 6, 4); addCircleCollider(m, 0, 0, 0.3, 0, 0.8); }); }
 }
 
 // [fx3] Chapelgate: the churchyard is walled in rubble (1.5 m, coped) with a roofed lych gate on the side the path comes from, a flagged path from the gate to the chapel door, and yews; the grave stones stand in long grass (churchyards keep their grass, docs/TOWNPLAN.md)
@@ -177,7 +181,7 @@ function buildChurchyard(bucket) {
     m.push().T(cx, g, cz).RY(-ang); m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.4); m.box(-L / 2, 0, -0.27, L / 2, 1.55, 0.27); m.mat(MAT.STONE, [tone * 1.12, tone * 1.08, tone * 1.0], 1.4); m.box(-L / 2 - 0.02, 1.5, -0.33, L / 2 + 0.02, 1.7, 0.33); m.pop();
     const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.27, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.27; addBoxCollider(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + 1.5); };
   const m0 = bucket(W(0, -10)[0], W(0, -10)[1]);
-  wall(m0, [-7.5, -4.4], [-7.5, -8.9]); wall(m0, [-7.5, -11.1], [-7.5, -17]); wall(m0, [-7.5, -17], [8, -17]); wall(m0, [8, -17], [8, -4.4]);
+  wall(m0, [-7.5, -4.4], [-7.5, -8.9]); wall(m0, [-7.5, -11.1], [-7.5, -16.73]); wall(m0, [-7.5, -17], [7.73, -17]); wall(m0, [8, -16.73], [8, -4.4]);
   /* the lych gate: four posts, a gabled roof along the way in, a bench each side, a stone threshold */
   { const o = W(-7.5, -10), g = gy(o[0], o[1]); m0.push().T(o[0], g - 0.05, o[1]).RY(-C.yaw);
     m0.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.6); for (const sx of [-0.9, 0.9]) for (const sz of [-1.15, 1.15]) m0.box(sx - 0.1, 0, sz - 0.1, sx + 0.1, 2.5, sz + 0.1);
