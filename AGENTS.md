@@ -6,7 +6,7 @@ https://brendanlymurphy.github.io/brackenfell/. Development happens on `threejs`
 This file is the whole onboarding: a worker brief only needs to say "read AGENTS.md" and then name the task. Read more only for
 the area you touch: `docs/DESIGN.md` (art, sound and feel), `docs/STATE.md` (how the engine works, by area), `ROADMAP.md` (done, in
 progress, next, known problems), `docs/DECISIONS.md` (what was tried and rejected: read before proposing something "new"),
-`docs/TOWNPLAN.md` (how the town is laid out and why: the authority for anything outdoors), `docs/STORY.md` (the main story), `docs/LOGIC.md` (where story, routines and rules did not make sense, what was done, what is open), `docs/DEFECTS.md` (open visual defects), `docs/HISTORY.md` (old measurements).
+`docs/TOWNPLAN.md` (how the town is laid out and why: the authority for anything outdoors), `docs/STORY.md` (the main story), `docs/LOGIC.md` (where story, routines and rules did not make sense, what was done, what is open), `docs/DEFECTS.md` (open visual defects), `docs/GEOMETRY.md` (stretched textures, open edges and single-quad walls with positions: `node tools/geomaudit.mjs` rewrites it), `docs/HISTORY.md` (old measurements).
 
 ## Build and run
 
