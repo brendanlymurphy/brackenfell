@@ -45,6 +45,10 @@ function wharfPaint(A, B, H) {
     if (WHARF.street) { const L = WHARF.street.L, pts = L.p.filter(q => q[1] > 32); for (let i = 0; i < pts.length; i += 2) for (const sg of [-1, 1]) if (RR() < 0.85) { const a = pts[Math.min(i + 1, pts.length - 1)], b = pts[i], dx = a[0] - b[0], dz = a[1] - b[1], l = hyp(dx, dz) || 1, o = sg * (2.6 + RR() * 1.1); blob(b[0] - dz / l * o, b[1] + dx / l * o); } }
     const E = WHARF.edge; if (E) stroke(B, E.map(q => [q[0] + 0.7, q[1]]), 1.4, grn, 0.9);      // the ditch: wet ground along the hedge
   }
+  {   // shingle: the yard's lower half and the shore strip are pale pebbles, thinning into turf (the cobble channel at low strength)
+    const RS = rng(5151), sp = wharfShore(1.5);
+    for (let i = 0; i < sp.length; i++) { const [x, z] = sp[i]; for (let k = 0; k < 2; k++) if (RS() < 0.7) { const ox = (RS() - 0.5) * 3.2, oz = (RS() - 0.5) * 2.4, r = 1.4 + RS() * 1.6; ell(A, x + ox, z + oz - 1.2, r, r * 0.7, grn); } }
+  }
   if (WHARF.street) { const L = WHARF.street.L, pts = L.p.filter(q => q[1] > 32); stroke(A, pts, 4.4, red, 1.4); stroke(B, pts, 5.2, red, 1.2); }
 }
 // the yard behind each house: low fence on the back and the party lines; one trade of the poor
@@ -184,3 +188,31 @@ function buildWharfCloses(bucket) {
 }
 
 function wharfLow() { return R.qName === 'low'; }
+
+// points along the shore of the lake (inland by `inl` metres) between the west end of the yard and the quay, and a bank strip east
+function wharfShore(inl) {
+  const o = []; inl = inl || 0;
+  for (let x = -16; x <= 5; x += 1.5) { let z = 62; while (z < 96 && Terrain.y(x, z) > -1.64) z += 0.4; o.push([x, z - inl]); }
+  return o;
+}
+// the second ground mask: mud (wet ground) in Wharf Street, trodden lanes a little drier, a wet bank behind Bank Lane's river-side houses, a muddy yard
+function wharfSplat2(blob, line, A, B, R) {
+  if (typeof WHARF === 'undefined' || !WHARF.houses.length || (TEST && TEST.wharf === 0)) return;
+  const S = WHARF.street; if (S) { const pts = S.L.p.filter(q => q[1] > 36); line(A, 1, pts, 3.4, 0.5); line(A, 1, pts, 2.0, 0.35); for (let i = 0; i < pts.length; i += 2) blob(A, 1, pts[i][0] + (R() - 0.5) * 3, pts[i][1] + (R() - 0.5) * 2, 1 + R() * 1.4, 0.8, 0.3); }
+  for (const id in WHARF.lanes) { const ln = WHARF.lanes[id]; line(A, 1, ln.p, 1.4, 0.3); for (let d = 2; d < ln.len; d += 3 + R() * 4) { const p = INF.pt(ln, d); blob(A, 1, p[0] + (R() - 0.5), p[1] + (R() - 0.5), 0.7 + R(), 0.6, 0.3); } }
+  const bk = WHARF.lanes.bank; if (bk) for (let d = 2; d < bk.len; d += 2.2) { const P = INF.pt(bk, d), Q = INF.pt(bk, d + 1), dx = Q[0] - P[0], dz = Q[1] - P[1], l = hyp(dx, dz) || 1; blob(A, 1, P[0] + dz / l * 9 + (R() - 0.5), P[1] + -dx / l * 9 + (R() - 0.5), 1.4 + R(), 0.7, 0.3); }
+  for (const [x, z] of wharfShore(3)) blob(A, 1, x, z, 2.4, 0.7, 0.3);
+}
+
+// a boardwalk where it is wet: along the shore of the wharf yard (planks laid across, on low piles), stepping down to the shingle at its ends
+function buildWharfBoards(bucket) {
+  if (TEST && (TEST.wharf === 0 || TEST.plots === 0) || typeof WHARF === 'undefined' || !WHARF.houses.length) return;
+  const gy = (x, z) => Terrain.y(x, z), R = rng(6262), pts = wharfShore(1.2).map((q, i, a) => [q[0], [-2, -1, 0, 1, 2].reduce((t, d) => t + a[Math.max(0, Math.min(a.length - 1, i + d))][1], 0) / 5]), m = bucket(pts[4][0], pts[4][1]);
+  const w = 0.65;
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const [ax, az] = pts[i], [bx, bz] = pts[i + 1], dx = bx - ax, dz = bz - az, L = hyp(dx, dz), ux = dx / L, uz = dz / L, nx = -uz, nz = ux, n = Math.max(1, Math.round(L / 0.26));
+    for (let k = 0; k < n; k++) { if (R() < 0.04) continue; const t = (k + 0.5) / n, x = ax + dx * t, z = az + dz * t, y = -1.46 + (R() - 0.5) * 0.015, hl = 0.11 + R() * 0.02, wj = w + (R() - 0.5) * 0.12;
+      m.mat(MAT.PLANKS, [0.42 + R() * 0.08, 0.37 + R() * 0.06, 0.3], 0.5); m.box(x - ux * hl - nx * wj, y, z - uz * hl - nz * wj, x + ux * hl + nx * wj, y + 0.05, z + uz * hl + nz * wj); }
+    m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5); for (const sg of [-1, 1]) { const x = ax + nx * w * 0.8 * sg, z = az + nz * w * 0.8 * sg; m.beam([x, gy(x, z) - 0.1, z], [x, -1.42, z], 0.05, 0.05); }
+  }
+}
