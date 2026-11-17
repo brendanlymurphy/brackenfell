@@ -104,7 +104,9 @@ function buildWharfYard(bucket) {
   m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5);
   for (const [a, b, hh] of [[-W2, -D2, 2.8], [W2, -D2, 2.8], [-W2, D2, 2.1], [W2, D2, 2.1]]) { m.beam([cx + a, g - 0.1, cz + b], [cx + a, g + hh, cz + b], 0.12, 0.12); addCircleCollider(m, cx + a, cz + b, 0.14, g, g + hh); }
   m.beam([cx - W2, g + 2.8, cz - D2], [cx + W2, g + 2.8, cz - D2], 0.1, 0.1); m.beam([cx - W2, g + 2.1, cz + D2], [cx + W2, g + 2.1, cz + D2], 0.1, 0.1);
-  m.mat(MAT.THATCH, [0.42, 0.36, 0.22], 0.5); m.quad2([cx - W2 - 0.4, g + 2.95, cz - D2 - 0.4], [cx + W2 + 0.4, g + 2.95, cz - D2 - 0.4], [cx + W2 + 0.4, g + 2.2, cz + D2 + 0.5], [cx - W2 - 0.4, g + 2.2, cz + D2 + 0.5]);
+  { const T = [[cx - W2 - 0.4, g + 2.95, cz - D2 - 0.4], [cx + W2 + 0.4, g + 2.95, cz - D2 - 0.4], [cx + W2 + 0.4, g + 2.2, cz + D2 + 0.5], [cx - W2 - 0.4, g + 2.2, cz + D2 + 0.5]], Bm = T.map(q => [q[0], q[1] - 0.17, q[2]]);      // a thatched roof with thickness: top, underside of boards, four closed edges
+    m.mat(MAT.THATCH, [0.42, 0.36, 0.22], 0.5); m.quad2(T[0], T[1], T[2], T[3]); for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; m.quad2(T[i], T[j], Bm[j], Bm[i]); }
+    m.mat(MAT.PLANKS, [0.3, 0.24, 0.17], 0.5); m.quad2(Bm[3], Bm[2], Bm[1], Bm[0]); }
   m.mat(MAT.PLANKS, [0.12, 0.1, 0.08], 0.5); m.push().T(cx, g + 0.8, cz + 0.1); m.ball(0, 0, 0, 2.1, 0.62, 0.8, 8, 5); m.pop();
   m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5); for (const a of [-1.2, 1.2]) { m.beam([cx + a, g, cz - 0.4], [cx + a, g + 0.5, cz - 0.4], 0.07, 0.07); m.beam([cx + a, g, cz + 0.6], [cx + a, g + 0.5, cz + 0.6], 0.07, 0.07); }
   addBoxCollider(m, cx - 2.2, cz - 0.8, cx + 2.2, cz + 1.0, g, g + 1.5);
@@ -153,6 +155,21 @@ function wharfCloses() {
   // the wharf yard's open ground: a boat drawn up, one upturned on trestles, two drying racks, a winch, barrels and pots, rope
   C.racks.push([-9.2, 70.4, -5.4, 70.1], [-12.8, 72.4, -9.6, 72.9]); C.boats.push([-3.6, 73.7, 0.18, 'up0'], [-1.6, 70.4, -0.1, 'trestle']);
   C.winch = [1.9, 74.4]; C.barrels = [[3.1, 72.0], [3.7, 72.6], [3.2, 73.0], [-7.0, 76.4], [-6.4, 77.0]]; C.coil = [[0.4, 75.6], [-6.5, 74.0]];
+  // trees, each by hand with its reason (a few, not a scatter); positions come from named anchors and are dropped if a house, a road or a prop stands there
+  C.wtrees = []; {
+    const free = (x, z, r) => !SITES.some(st => { if (!st.w || st.id === 'tower') return false; const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + r && Math.abs(l[1]) < st.d / 2 + r; }) && !ROADS.some(rd => { const ln = INF.LN[rd.id] || null; return ln && INF.dist(ln, x, z)[0] < rd.w / 2 + r; });
+    const add = (x, z, kind, sc, why) => { if (free(x, z, 2.2)) C.wtrees.push([x, z, kind, sc, why]); };
+    // the one old tree the drying green was left round, an oak not yet full grown
+    if (C.green) add(C.green.x + 0.3, C.green.z - 0.4, 'oak', 0.5, 'old oak the drying green was left round');
+    // alders leaning over the river bank behind the Bank Lane houses, spaced between the landing steps
+    if (typeof River !== 'undefined' && River.p) { const want = [[56, 47], [53, 66]]; for (const [wx, wz] of want) { let best = null, bd = 1e9; for (const q of River.p) { const d = hyp(q[0] - wx, q[1] - wz); if (d < bd) { bd = d; best = q; } } if (best) add(best[0] - 5.2, best[1] + 0.5, 'birch', 0.78, 'alder on the river bank'); } }
+    // willows on the lake shore west of the wharf yard, where the shingle ends
+    for (const x of [-15.5, -12.0]) { const sp = wharfShore(2.2).find(q => Math.abs(q[0] - x) < 1); if (sp) add(sp[0], sp[1], 'birch', 0.85, 'willow leaning over the lake shore'); }
+    // an elder grown out of a yard corner of the west lane, and one by the ditch
+    C.elders = [[-27.5, 52.8, 'elder grown from a yard corner by the ditch'], [-30.2, 64.4, 'elder in the hedge line']].filter(e => free(e[0], e[1], 1.2));
+    // saplings and ivy at fence feet: small bushes every so often along the closes' fences
+    C.saplings = []; for (const pl of C.fences) for (let i = 0; i + 1 < pl.length; i += 2) if (((pl[i][0] * 7 + pl[i][1] * 3) | 0) % 3 === 0) C.saplings.push([pl[i][0] + 0.25, pl[i][1] + 0.2, 0.45]);
+  }
   // the edge: a hedge and a fence line that bends, west and north; the last yards of the west lane's houses run out to it between cross fences
   { const E = WHARF.edge; if (E) {
       const cat = catmull(E, 1.2);
@@ -174,6 +191,7 @@ function buildWharfCloses(bucket) {
   World.hedgeBushes = World.hedgeBushes || []; World.orchardTrees = World.orchardTrees || [];
   for (const pl of C.hedges) for (let i = 0; i + 1 < pl.length; i++) { const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / (pl.dense ? 2.4 : 3.6))); for (let k = 0; k < n; k++) World.hedgeBushes.push([ax + (bx - ax) * k / n + (R() - 0.5) * 0.2, az + (bz - az) * k / n + (R() - 0.5) * 0.2, 1.45 + R() * 0.3]); }
   for (const t of C.trees) World.orchardTrees.push(t);
+  World.wharfTrees = (C.wtrees || []).slice(); for (const e of C.elders || []) World.hedgeBushes.push([e[0], e[1], 1.7], [e[0] + 0.7, e[1] + 0.4, 1.4]); for (const q of C.saplings || []) World.hedgeBushes.push(q);
   for (const pl of C.fences) {
     const [mx, mz] = pl[(pl.length / 2) | 0], m = bucket(mx, mz);
     for (let i = 0; i + 1 < pl.length; i++) {
@@ -207,7 +225,7 @@ function wharfLow() { return R.qName === 'low'; }
 // points along the shore of the lake (inland by `inl` metres) between the west end of the yard and the quay, and a bank strip east
 function wharfShore(inl) {
   const o = []; inl = inl || 0;
-  for (let x = -16; x <= 5; x += 1.5) { let z = 62; while (z < 96 && Terrain.y(x, z) > -1.64) z += 0.4; o.push([x, z - inl]); }
+  for (let x = -16; x <= 5; x += 1.5) { let z = 62; while (z < 96 && Terrain.y(x, z) > -1.42) z += 0.4; o.push([x, z - inl]); }
   return o;
 }
 // the second ground mask: mud (wet ground) in Wharf Street, trodden lanes a little drier, a wet bank behind Bank Lane's river-side houses, a muddy yard
@@ -227,9 +245,9 @@ function buildWharfBoards(bucket) {
   const w = 0.65;
   for (let i = 0; i + 1 < pts.length; i++) {
     const [ax, az] = pts[i], [bx, bz] = pts[i + 1], dx = bx - ax, dz = bz - az, L = hyp(dx, dz), ux = dx / L, uz = dz / L, nx = -uz, nz = ux, n = Math.max(1, Math.round(L / 0.26));
-    for (let k = 0; k < n; k++) { if (R() < 0.04) continue; const t = (k + 0.5) / n, x = ax + dx * t, z = az + dz * t, y = -1.46 + (R() - 0.5) * 0.015, hl = 0.11 + R() * 0.02, wj = w + (R() - 0.5) * 0.12;
+    for (let k = 0; k < n; k++) { if (R() < 0.04) continue; const t = (k + 0.5) / n, x = ax + dx * t, z = az + dz * t, y = gy(x, z) + 0.13 + (R() - 0.5) * 0.015, hl = 0.11 + R() * 0.02, wj = w + (R() - 0.5) * 0.12;
       m.mat(MAT.PLANKS, [0.42 + R() * 0.08, 0.37 + R() * 0.06, 0.3], 0.5); m.box(x - ux * hl - nx * wj, y, z - uz * hl - nz * wj, x + ux * hl + nx * wj, y + 0.05, z + uz * hl + nz * wj); }
-    m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5); for (const sg of [-1, 1]) { const x = ax + nx * w * 0.8 * sg, z = az + nz * w * 0.8 * sg; m.beam([x, gy(x, z) - 0.1, z], [x, -1.42, z], 0.05, 0.05); }
+    m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5); for (const sg of [-1, 1]) { const x = ax + nx * w * 0.8 * sg, z = az + nz * w * 0.8 * sg; m.beam([x, gy(x, z) - 0.1, z], [x, gy(x, z) + 0.12, z], 0.05, 0.05); }
   }
 }
 
