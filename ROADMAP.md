@@ -102,6 +102,12 @@ interiors lit by hearths and candles. As realistic as free art allows.
 
 ## In progress (branch, owner)
 
+- `fork-cull` (second Claude Code session): culling made the same on every machine (in Build 73); gate steps `town` (streets, gates, detours, standing
+  points, swimming out of the lake) and `water`; every yard has someone working in it; Low tier under 200k triangles in all four views (ground cut
+  into 32 m squares measured by their real tops, light copies of the stall props, the middle ring of hills at half detail: pictures in docs/low/);
+  `docs/GEOMETRY.md` lists stretched textures, open edges and single-quad walls by position for the town workers. Open: the alley on Low is 148
+  draw calls against 140; the western stream in the wilds is drawn but is dry ground to the game; a fence rail down the back lane behind the passage.
+
 - **Walking, speed, loose ends** (`fork-play`, the second Claude Code session). Notes, newest last:
   - The play bot's soak no longer fails on sounds (an artifact of stepping time); long fights and looting are robust.
   - Walk bot (`test/walkbot.mjs`): 19 km by input through every street, all 57 interiors (115 door uses), the routes, the wilds

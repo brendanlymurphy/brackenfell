@@ -6,7 +6,7 @@ https://brendanlymurphy.github.io/brackenfell/. Development happens on `threejs`
 This file is the whole onboarding: a worker brief only needs to say "read AGENTS.md" and then name the task. Read more only for
 the area you touch: `docs/DESIGN.md` (art, sound and feel), `docs/STATE.md` (how the engine works, by area), `ROADMAP.md` (done, in
 progress, next, known problems), `docs/DECISIONS.md` (what was tried and rejected: read before proposing something "new"),
-`docs/TOWNPLAN.md` (how the town is laid out and why: the authority for anything outdoors), `docs/BLUEPRINT.md` (the rules any village must pass) and `docs/AUDIT.md` (what Brackenfell fails, with counts and pictures), `docs/STORY.md` (the main story), `docs/LOGIC.md` (where story, routines and rules did not make sense, what was done, what is open), `docs/DEFECTS.md` (open visual defects), `docs/HISTORY.md` (old measurements).
+`docs/TOWNPLAN.md` (how the town is laid out and why: the authority for anything outdoors), `docs/BLUEPRINT.md` (the rules any village must pass) and `docs/AUDIT.md` (what Brackenfell fails, with counts and pictures), `docs/STORY.md` (the main story), `docs/LOGIC.md` (where story, routines and rules did not make sense, what was done, what is open), `docs/DEFECTS.md` (open visual defects), `docs/GEOMETRY.md` (stretched textures, open edges and single-quad walls with positions: `node tools/geomaudit.mjs` rewrites it), `docs/HISTORY.md` (old measurements).
 
 ## Build and run
 
@@ -36,7 +36,7 @@ What `--full` runs: build; silent boot (no `warn` or `error` line: a builder tha
 that way once); `quest` (ends `fire 99 bonfire true`); `stairs`, `npcstairs`, `npcsep`, `routes`, `combat`, `wilds`, `story`, `mine`,
 `secrets`, `interact`, `econ`; `interiors`, `parity`; `voice_game`, `voice_parts`, `audio_game`, `voices` (`tools/voice/check.mjs`); the budget
 views on medium and low; every cell in chunks of 8 (a software-rendered tab dies after about a dozen); `kitcull`; one WebGPU
-shot in the square and in the inn with no GPU errors; `cullwalk` (nothing in sight missing while walking and turning); the offline start; `test/real.mjs` (production boot); and the play bot.
+shot in the square and in the inn with no GPU errors; `cullwalk` (nothing in sight missing while walking and turning); `town` (every street and gate walked both ways by input, no long way round between two places for a villager, no spawn or door step inside a prop, off the wharf and the dock into deep water and out again on foot: `node test/walkbot.mjs --part streets`); `water` (nothing built or walked under a water surface, no water drawn over dry ground); the offline start; `test/real.mjs` (production boot); and the play bot.
 
 The play bot (`test/playbot.mjs`, steps `bot-story`, `bot-play`, `bot-phone`, `bot-sweep`, `bot-soak`) plays by real keys, clicks and
 taps: the story to both endings, a reload at seven points of it, every conversation, side quests, shop, perks, board, theft and
