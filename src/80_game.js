@@ -232,18 +232,43 @@ function lightHarvestFire() {
 }
 function festivalSpots() {
   const b = World.bonfirePos;
-  NPC_DEFS.forEach((d, i) => { const a = i / NPC_DEFS.length * TAU + 0.2, r = 4.3 + (i % 3) * 0.9, x = b[0] + Math.cos(a) * r, z = b[1] + Math.sin(a) * r; World.spots['fire.' + i] = { p: [x, World.groundY(x, z), z], yaw: headingTo(x, z, b[0], b[1]), zone: 0 }; });
+  NPC_DEFS.forEach((d, i) => { const a = i / NPC_DEFS.length * TAU + 0.2, r = 4.3 + (i % 3) * 0.9, x = b[0] + Math.cos(a) * r, z = b[1] + Math.sin(a) * r; World.spots['fire.' + i] = { p: [x, World.groundY(x, z), z], yaw: headingTo(x, z, b[0], b[1]), zone: 0, ring: [a, r] }; });
   World.interact.push({ p: [b[0], World.groundY(b[0], b[1]) + 0.8, b[1]], r: 3.0, zone: 0, kind: 'bonfire', id: 'bonfire' });
 }
 // ── saving (a convenience only: one browser, may be unavailable) ──
 // v 2 adds S.rpg (health, gear, outlaws). Saves without it still load: RPG.st() fills in what is missing.
-function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
+// b: the build that wrote the save (from Build 67). A save with b was made in today's world, so its position is never "migrated".
+function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, b: parseInt(BUILD_NAME.replace(/\D+/, ''), 10) || 0, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
 function loadSave() { try { const j = JSON.parse(localStorage.getItem('brackenfell.v1') || 'null'); return j && j.S ? j : null; } catch (e) { return null; } }
 function applySave(j) {
-  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0; const m = Cells.migrate(j.pos, j.yaw || 0); if (m) { Player.pos = m.pos; Player.yaw = m.yaw; } }
+  delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0;
+    // Only a save from before interiors became cells (Build 19) is moved into a cell. Such a save has neither a build stamp nor the list of
+    // discovered places. Before this check every save made outdoors inside a building's old footprint (Hale's post at the gate is one) was
+    // loaded inside that building, a kilometre away.
+    const m = !j.b && !(j.S && j.S.disc) && Cells.migrate(j.pos, j.yaw || 0); if (m) { Player.pos = m.pos; Player.yaw = m.yaw; } }
   for (const p of World.pickups) if (S.picked[p.id]) { p.gone = true; p.obj.visible = false; if (p.em) p.em.gone = true; }
   if (S.flags.fire) World.bonfire = true;
+  // the world was built before the save was read: a gate unlocked in an earlier session still had its collider and offered no way to open it again
+  // (the crypt gate shut the reliquary, and the mine key in it, away for good)
+  for (const it of World.interact) if (it.kind === 'gate' && S.opened[it.id]) { const i = World.colliders.indexOf(it.col); if (i >= 0) World.colliders.splice(i, 1); if (it.mesh) it.mesh.gone = true; if (it.hide) it.hide(); }
   if (S.rpg && S.rpg.v !== 2) S.rpg = null;
   RPG.st(); bountyText(); if (typeof Combat !== 'undefined') Combat.refresh();
 }
 function clearSave() { try { localStorage.removeItem('brackenfell.v1'); } catch (e) { } }
+
+// [fx1] once every stall, pile and fence is down (dressAttach and friends push colliders late), the ring of feasters steps round whatever stands on its spots
+function festivalClear() {
+  const b = World.bonfirePos, bad = (x, z, y) => World.colliders.some(c => {
+    if (c.y1 < y + 0.1 || c.y0 > y + 1.0) return false;
+    if (c.r !== undefined) return Math.hypot(x - c.x, z - c.z) < c.r + 0.45;
+    const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz;
+    return Math.abs(dx) < c.hx + 0.45 && Math.abs(dz) < c.hz + 0.45;
+  });
+  for (const k in World.spots) {
+    const s = World.spots[k]; if (!s.ring) continue;
+    for (let t = 0; t < 40; t++) {
+      const aa = s.ring[0] + (t % 2 ? 1 : -1) * Math.floor((t + 1) / 2) * 0.1, rr = s.ring[1] + (t > 15 ? 0.8 : 0) + (t > 30 ? 0.8 : 0), x = b[0] + Math.cos(aa) * rr, z = b[1] + Math.sin(aa) * rr, y = World.groundY(x, z);
+      if (!bad(x, z, y)) { if (t) { s.p = [x, y, z]; s.yaw = headingTo(x, z, b[0], b[1]); } break; }
+    }
+  }
+}

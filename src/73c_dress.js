@@ -8,7 +8,7 @@ const DRU = { wood: [0.02, 0.07, 0.62, 0.27], cloth: [0.3, 0.27, 0.55, 0.45] };
 // muted palettes (linear-ish tints: the kit materials are already warm and fairly bright)
 const DRCOL = {
   wood: [[0.44, 0.34, 0.24], [0.38, 0.30, 0.23], [0.48, 0.38, 0.27], [0.32, 0.26, 0.2], [0.42, 0.36, 0.29]],
-  cloth: [[0.55, 0.30, 0.22], [0.62, 0.50, 0.30], [0.30, 0.34, 0.46], [0.72, 0.66, 0.54], [0.34, 0.40, 0.26], [0.50, 0.42, 0.34], [0.45, 0.24, 0.30], [0.64, 0.58, 0.46]],
+  cloth: [[0.55, 0.30, 0.22], [0.62, 0.50, 0.30], [0.30, 0.34, 0.46], [0.72, 0.66, 0.54], [0.34, 0.40, 0.26], [0.50, 0.42, 0.34], [0.45, 0.24, 0.30], [0.64, 0.58, 0.46]].map(c => c.map(v => v * 0.24)),       // [fx1] the kit cloth material brightens about 2x: this is what reads as pastel pink, mint and pale blue on the market stalls
   sack: [[0.26, 0.22, 0.16], [0.22, 0.19, 0.14], [0.28, 0.24, 0.18], [0.19, 0.16, 0.12]],
   straw: [[0.46, 0.36, 0.16], [0.42, 0.34, 0.16], [0.5, 0.4, 0.18]],
   iron: [0.24, 0.22, 0.21],
@@ -324,11 +324,12 @@ function dMilestone(R, k) {
 }
 function dBoat(R) {
   const key = 'dr_boat'; if (Kit.pieces[key]) return key;
-  const g = GP(), c = [0.33, 0.27, 0.21], L = 1.7, W = 0.62, H = 0.42;
+  const g = GP(), c = [0.5, 0.43, 0.35], L = 1.7, W = 0.62, H = 0.42;          // [fx1] weathered grey-brown with strakes and a gunwale (it was one black plank-less hull)
   const P = (u, v, y) => [v * W * (1 - 0.65 * Math.pow(Math.abs(u), 2.2)), y, u * L];
   const N = 8; for (let i = 0; i < N; i++) { const u0 = i / N * 2 - 1, u1 = (i + 1) / N * 2 - 1;
     for (const s of [-1, 1]) { const a = P(u0, s, H * (0.45 + 0.55 * u0 * u0)), b = P(u1, s, H * (0.45 + 0.55 * u1 * u1)), c0 = P(u0, s * 0.45, 0.04), c1 = P(u1, s * 0.45, 0.04); if (s > 0) g.quad(DRW, c0, c1, b, a, c, DRU.wood, true); else g.quad(DRW, c1, c0, a, b, c, DRU.wood, true); }
     g.quad(DRW, P(u0, 0.45, 0.04), P(u1, 0.45, 0.04), P(u1, -0.45, 0.04), P(u0, -0.45, 0.04), dscale(c, 0.8), DRU.wood, true); }
+  for (const s of [-1, 1]) for (const f of [0.34, 0.67, 1.0]) for (let i = 0; i < N; i++) { const u0 = i / N * 2 - 1, u1 = (i + 1) / N * 2 - 1, q = u => P(u, s * (0.45 + 0.55 * f) * 1.012, 0.04 + (H * (0.45 + 0.55 * u * u) - 0.04) * f); g.beam(DRW, q(u0), q(u1), f === 1 ? 0.022 : 0.012, f === 1 ? dscale(c, 0.8) : dscale(c, 0.55)); }
   for (const z of [-0.6, 0.35]) g.box(DRW, -0.5 * W, H * 0.62, z - 0.07, 0.5 * W, H * 0.67, z + 0.07, dscale(c, 1.2), DRU.wood);
   return g.make(key);
 }
@@ -367,6 +368,8 @@ function buildDress() {
     carts = V(dHandcart, 2), troughs = V(dTrough, 2), ladders = V(dLadder, 3), brooms = V(dBroom, 2), tools = V(dToolRack, 2), fences = V(dFence, 3);
   const pick = a => a[Math.floor(R() * a.length)];
   const solid = (x, z, r, h) => World.colliders.push({ x, z, r, y0: gy(x, z) - 0.5, y1: gy(x, z) + (h || 0.9) });
+  // [fx1] a row of barrels or crates is a long thin box, not a circle as wide as its length (the circles reached into the house walls beside them)
+  const solidRow = (x, z, dx, dz, half, hw, h) => World.colliders.push({ x, z, hx: half, hz: hw, ax: dx, az: dz, bx: -dz, bz: dx, y0: gy(x, z) - 0.5, y1: gy(x, z) + h });
   const spotsOut = Object.values(World.spots).filter(s => !s.zone);
   const stones = [[0, -2], [-6, -4], [6, -3], [0, -10], [0, 6], [-9, 2], [9, 3], [0, -15.5]];
   const inAlley = (x, z) => x > ALLEY.x0 - 3 && x < ALLEY.x1 + 3 && Math.abs(z - roadZ(x)) < 8;
@@ -391,7 +394,7 @@ function buildDress() {
     for (const c of World.colliders) {
       if (c.r !== undefined) { if (hyp(x - c.x, z - c.z) < c.r + r) return false; continue; }
       const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz, big = Math.max(c.hx, c.hz) > 1.6;
-      if (hyp(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < (big ? 0.12 : r)) return false;
+      if (hyp(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < (big ? 0.55 : r)) return false;       // [fx1] 0.12 let a 2.9 m row of barrels sit half inside a house wall
     }
     if (o.flat !== undefined && Math.abs(gy(x, z) - o.flat) > 0.5) return false;
     return true;
@@ -410,7 +413,7 @@ function buildDress() {
     for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * 0.66; add(pick(barrels), x + dx * o + R.s() * 0.03, y, z + dz * o + R.s() * 0.03, 0.95 + R() * 0.15, R() * TAU, ex); top = i; }
     if (n >= 2 && R() < 0.7) add(pick(barrels), x + R.s() * 0.05, y + 0.78, z + R.s() * 0.05, 0.9, R() * TAU, ex);
     if (R() < 0.5) add(pick(buckets), x + dx * 0.95 + 0.1, y, z + dz * 0.95, 1, R() * TAU, ex);
-    solid(x, z, 0.38 + n * 0.3, 1.5); claim(x, z, 0.4 + n * 0.3);
+    solidRow(x, z, dx, dz, n * 0.33 + 0.12, 0.46, 1.5); claim(x, z, 0.4 + n * 0.3);
   };
   const crateTop = (n, y) => y + dpH(n);
   const cratePile = (x, z, ry, ex) => {
@@ -419,7 +422,7 @@ function buildDress() {
     for (let i = 0; i < k + 1; i++) { const n = pick(crates), o = (i - k / 2) * 0.62; add(n, x + dx * o, y, z + dz * o, 1, ry + R.s() * 0.2, ex); cs.push([n, o]); }
     if (R() < 0.8) { const n = pick(crates), o = cs[0][1] + 0.3; add(n, x + dx * o, crateTop(cs[0][0], y) - 0.02, z + dz * o, 0.92, ry + R.s() * 0.4, ex); if (R() < 0.45) add(pick(crates), x + dx * (o + 0.05), crateTop(n, crateTop(cs[0][0], y)) - 0.03, z + dz * (o + 0.05), 0.75, ry + R.s() * 0.6, ex); }
     if (R() < 0.5) add(pick(sacks), x + dx * (k / 2 * 0.62 + 0.5), y, z + dz * (k / 2 * 0.62 + 0.5), 1, R() * TAU, ex);
-    solid(x, z, 0.5 + k * 0.28, 1.3); claim(x, z, 0.5 + k * 0.3);
+    solidRow(x, z, dx, dz, (k + 1) * 0.31 + 0.15, 0.5, 1.3); claim(x, z, 0.5 + k * 0.3);
   };
   const sackPile = (x, z, ry, ex) => {
     const y = gy(x, z), n = R.i(2, 4);
@@ -453,8 +456,8 @@ function buildDress() {
       if (!ok(w2.x, w2.z, r * (wm ? 0.9 : alley ? 0.7 : 1), { flat: s.y })) continue;
       const y = gy(w.x, w.z), ex = placed > 2 && R() < 0.5, along = w.ry + PI / 2;        // direction along the wall as a heading
       // a heading `ry` (piece +z toward it) -> the along-wall axis for piles
-      if (t === 'barrels') barrelPile(w.x, w.z, w.ry + PI / 2, ex);
-      else if (t === 'crates') cratePile(w.x, w.z, w.ry + PI / 2, ex);
+      if (t === 'barrels') barrelPile(w.x, w.z, w.ry, ex);
+      else if (t === 'crates') cratePile(w.x, w.z, w.ry, ex);
       else if (t === 'sacks') sackPile(w.x, w.z, w.ry, ex);
       else if (t === 'logs') { add(pick(logs), w.x, y, w.z, 1, w.ry + PI, ex); claim(w.x, w.z, 0.55); if (R() < 0.7) add(dChips(R, R.i(0, 2)), w.x + Math.sin(w.ry) * 0.7, y, w.z + Math.cos(w.ry) * 0.7, 1, R() * TAU, true); }
       else if (t === 'bucket') { add(pick(buckets), w.x, y, w.z, 1, R() * TAU, ex); if (R() < 0.5) add(pick(buckets), w.x + 0.34, y, w.z + 0.1, 0.9, R() * TAU, ex); claim(w.x, w.z, 0.4); }

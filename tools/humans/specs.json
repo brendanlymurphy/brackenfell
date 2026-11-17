@@ -228,7 +228,7 @@
   "eyes": "brown",
   "brows": "eyebrow006",
   "hair": [
-   "short03",
+   "short01",
    [
     0.6,
     0.5,
@@ -394,15 +394,6 @@
   ],
   "clothes": [
    [
-    "wdg_mycenaean_tunic",
-    [
-     0.62,
-     0.42,
-     0.37
-    ],
-    0.0
-   ],
-   [
     "rehmanpolanski_viking_boots",
     [
      0.6,
@@ -411,6 +402,16 @@
     ],
     0.8
    ]
+  ],
+  "wear": [
+   "kirtle:ankle:long",
+   "hat:kerchief",
+   "hat:coif",
+   "belt",
+   "pouch",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "f_weaver": {
@@ -441,15 +442,6 @@
   ],
   "clothes": [
    [
-    "donitz_monk_robe",
-    [
-     0.95,
-     1.15,
-     1.5
-    ],
-    0.5
-   ],
-   [
     "rehmanpolanski_viking_boots",
     [
      0.6,
@@ -458,6 +450,16 @@
     ],
     0.8
    ]
+  ],
+  "wear": [
+   "kirtle:ankle:long",
+   "hat:kerchief",
+   "hat:coif",
+   "belt",
+   "pouch",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "f_elder": {
@@ -549,19 +551,20 @@
   ],
   "clothes": [
    [
-    "wdg_mycenaean_tunic",
-    [
-     0.52,
-     0.45,
-     0.32
-    ],
-    0.0
-   ],
-   [
     "rehmanpolanski_viking_boots",
     null,
     0.9
    ]
+  ],
+  "wear": [
+   "kirtle:ankle:long",
+   "hat:kerchief",
+   "hat:coif",
+   "belt",
+   "pouch",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "f_girl": {
@@ -592,15 +595,6 @@
   ],
   "clothes": [
    [
-    "wdg_mycenaean_tunic",
-    [
-     0.4,
-     0.46,
-     0.5
-    ],
-    0.7
-   ],
-   [
     "rehmanpolanski_viking_boots",
     [
      0.7,
@@ -609,6 +603,16 @@
     ],
     0.8
    ]
+  ],
+  "wear": [
+   "kirtle:ankle:long",
+   "hat:kerchief",
+   "hat:coif",
+   "belt",
+   "pouch",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "m_guard": {
@@ -665,6 +669,19 @@
     ],
     0.8
    ]
+  ],
+  "wear": [
+   "belt",
+   "pouch",
+   "hat:kettle",
+   "hat:cap",
+   "hat:coif",
+   "hat:straw",
+   "apron",
+   "straps",
+   "cloak",
+   "cuffs",
+   "tabard"
   ]
  },
  "m_fisher": {
@@ -690,7 +707,7 @@
    1.5
   ],
   "hair": [
-   "short03",
+   "short02",
    [
     1.5,
     1.5,
@@ -756,15 +773,6 @@
   ],
   "clothes": [
    [
-    "wdg_mycenaean_tunic",
-    [
-     0.56,
-     0.53,
-     0.4
-    ],
-    0.0
-   ],
-   [
     "toigo_ankle_boots_female",
     [
      0.5,
@@ -773,6 +781,17 @@
     ],
     0.6
    ]
+  ],
+  "wear": [
+   "kirtle:ankle:long",
+   "hat:kerchief",
+   "hat:coif",
+   "belt",
+   "pouch",
+   "apron",
+   "straps",
+   "cloak",
+   "hat:straw"
   ]
  },
  "m_boy": {
@@ -849,7 +868,7 @@
   "eyes": "brown",
   "brows": "eyebrow001",
   "hair": [
-   "ponytail01",
+   "braid01",
    [
     0.7,
     0.5,
@@ -857,25 +876,12 @@
    ],
    0.7
   ],
-  "clothes": [
-   [
-    "toigo_bodice_dress_with_lace_ruffle_skirt",
-    [
-     0.95,
-     0.6,
-     0.55
-    ],
-    0.6
-   ],
-   [
-    "rehmanpolanski_viking_boots",
-    [
-     0.7,
-     0.65,
-     0.6
-    ],
-    0.8
-   ]
+  "clothes": [],
+  "wear": [
+   "kirtle:ankle:long",
+   "hat:coif",
+   "hat:kerchief",
+   "belt"
   ]
  },
  "o_hood_m": {

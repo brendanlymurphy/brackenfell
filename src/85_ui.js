@@ -3,7 +3,7 @@
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 62';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 68';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -162,7 +162,7 @@ UI.resume = () => {
   if (!Input.touch && !coarse() && !TEST && !UI.talk) { try { const p = G.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
 };
 UI.lifecycle = () => {
-  document.addEventListener('visibilitychange', () => { lastT = performance.now(); if (document.hidden) { if (!TEST) UI.pause('hidden'); else if (Audio2.ctx) Audio2.ctx.suspend(); } else if (Audio2.ctx && game.playing && !UI.paused) Audio2.ctx.resume(); });
+  document.addEventListener('visibilitychange', () => { lastT = performance.now(); if (document.hidden) { try { if (game.playing && !(typeof RPG !== 'undefined' && RPG.dead)) save(); } catch (e) { } if (!TEST) UI.pause('hidden'); else if (Audio2.ctx) Audio2.ctx.suspend(); } else if (Audio2.ctx && game.playing && !UI.paused) Audio2.ctx.resume(); });
   addEventListener('pagehide', () => { try { if (game.playing) { save(); saveSettings(); } } catch (e) { } });
   const mq = window.matchMedia ? matchMedia('(orientation: portrait) and (pointer: coarse) and (max-width: 760px)') : null;
   const turn = () => { UI.portrait = !!(mq && mq.matches); if (UI.portrait) { if (game.playing && !UI.paused) { UI.pause('turn'); UI.turnPaused = true; } } else if (UI.turnPaused) { UI.turnPaused = false; if (UI.paused && UI.pauseWhy === 'turn') UI.resume(); } };
@@ -203,6 +203,10 @@ function uiFrame(dt) {
   }
   // quiet HUD: the quest text, clock and purse rest a few seconds after the last change
   UI.hudT -= dt; const q = UI.hudT <= 0 && !uiBusy(); if (q !== UI.quiet) { UI.quiet = q; $('hud').classList.toggle('quiet', q); }
+  // The game saved only at certain moments (a chest, a quest step), so experience, a level, coin spent at the bar or a flag set in talk could be lost
+  // to a crash or to the phone dropping the tab. Now also every 10 s of play, and whenever the page is hidden (visibilitychange below: on iOS a
+  // tab in the background is often discarded without a pagehide).
+  UI.saveT = (UI.saveT || 0) + dt; if (UI.saveT > 10 && game.playing && !uiBusy() && !Cells.busy && !(typeof RPG !== 'undefined' && RPG.dead)) { UI.saveT = 0; save(); }
   // "click to look" for a mouse that has not captured the pointer
   const cue = !Input.touch && !Input.plock && !UI.talk && !uiBusy() && !coarse() && !TEST; if (cue !== UI.cue) { UI.cue = cue; $('lookcue').hidden = !cue; }
   if (typeof Feel !== 'undefined') Feel.hintFrame(dt);

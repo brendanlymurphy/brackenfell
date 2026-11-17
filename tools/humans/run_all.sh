@@ -5,6 +5,6 @@ PY=${BLENDER_PY:-/home/claude/ext/humans/venv/bin/python}
 names=${@:-$(python3 -c "import json;print(' '.join(json.load(open('$here/specs.json'))))")}
 mkdir -p "$work" "$out"
 for n in $names; do
-  nice -n 10 $PY "$here/gen.py" "$here/specs.json" $n "$work" 2>&1 | grep "^body faces\|^{'name\|Error\|rror:\|fallback\|missing asset"
+  nice -n 10 $PY "$here/gen.py" "$here/specs.json" $n "$work" 2>&1 | grep "^body under\|^body faces\|^{'name\|Error\|rror:\|fallback\|missing asset"
   [ -f "$work/${n}_raw.glb" ] && nice -n 10 node "$here/post.mjs" "$work/${n}_raw.glb" "$out/$n.glb" 10000 2>&1 | grep "^{\|rror"
 done

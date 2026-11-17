@@ -21,16 +21,22 @@ await doc.transform(weld());
 const tri = p => (p.getIndices() ? p.getIndices().getCount() : p.getAttribute('POSITION').getCount()) / 3;
 const prims = []; for (const mesh of root.listMeshes()) for (const p of mesh.listPrimitives()) prims.push({ p, k: kind(p.getMaterial().getName()), n: tri(p), name: mesh.getName() });
 // small parts keep their triangles; the rest share what is left of the budget, the head-and-hands mesh getting the biggest share
-const isMouth = x => /teeth|tongue/i.test(x.name), MOUTH_TRIS = x => /tongue/i.test(x.name) ? 110 : 340;      // teeth and tongue (morph.py): kept small, they only show when the mouth opens
+const isMouth = x => /teeth|tongue/i.test(x.name), MOUTH_TRIS = x => /tongue/i.test(x.name) ? 64 : 220;      // teeth and tongue (morph.py): kept small, they only show when the mouth opens
 for (const x of prims) if (isMouth(x)) { simplifyPrimitive(x.p, { simplifier: MeshoptSimplifier, ratio: Math.min(1, MOUTH_TRIS(x) / x.n), error: 0.2, lockBorder: false }); x.after = tri(x.p); }
+// wardrobe pieces are thin shells: a modest cap each keeps a fully dressed guard under the old figures (a hat or tabard ring has more rings than it needs)
+const WEAR_CAP = n => /^w_hat_/.test(n) ? 300 : /^w_tabard/.test(n) ? 110 : /^w_cloak/.test(n) ? 360 : /^w_kirtle/.test(n) ? 640 : /^w_sleeve/.test(n) ? 110 : /^w_apron/.test(n) ? 150 : /^w_belt/.test(n) ? 150 : 1e9;
+for (const x of prims) if (/^w_/.test(x.name) && x.n > WEAR_CAP(x.name)) { simplifyPrimitive(x.p, { simplifier: MeshoptSimplifier, ratio: WEAR_CAP(x.name) / x.n, error: 0.05, lockBorder: false }); x.after = tri(x.p); }
 const fixed = prims.filter(x => x.k === 'brow' || x.k === 'lash' || x.k === 'eye').reduce((s, x) => s + x.n, 0) + prims.filter(isMouth).reduce((s, x) => s + x.after, 0);
 // the head-and-hands mesh gets a fixed share so heavy boots or robes cannot starve the face; clothes split theirs by sqrt(size)
 const hasHair = prims.some(x => x.k === 'hair'), share = hasHair ? { body: 0.45, hair: 0.15, cloth: 0.40 } : { body: 0.52, hair: 0, cloth: 0.48 };
-const WEAR_MAX = 700, rest = budget - fixed - (prims.some(x => /^w_/.test(x.name)) ? WEAR_MAX : 0), sums = {};      // wardrobe pieces (w_*) keep their triangles; a villager wears about 700 of them at once
+if (prims.some(x => /^w_kirtle/.test(x.name))) Object.assign(share, hasHair ? { body: 0.62, hair: 0.22, cloth: 0.16 } : { body: 0.8, hair: 0, cloth: 0.2 });   // boots hide under the kirtle: the share goes to the face and hair
+const KIRT = prims.filter(x => /^w_(kirtle|sleeve)/.test(x.name)).reduce((s, x) => s + (x.after || x.n), 0)
+for (const x of prims) if (KIRT && x.k === 'cloth' && /boot|shoe/i.test(x.name) && x.n > 900) { simplifyPrimitive(x.p, { simplifier: MeshoptSimplifier, ratio: 900 / x.n, error: 0.05, lockBorder: false }); x.after = tri(x.p); }   // under a long kirtle only the toes show
+const WEAR_MAX = 700 + KIRT, rest = budget - fixed - (prims.some(x => /^w_/.test(x.name)) ? WEAR_MAX : 0), sums = {};      // wardrobe pieces (w_*) keep their triangles; a villager wears about 700 of them at once
 const isWear = x => /^w_/.test(x.name) || isMouth(x);
-for (const x of prims) if (share[x.k] !== undefined && !isWear(x)) sums[x.k] = (sums[x.k] || 0) + Math.sqrt(x.n);
+for (const x of prims) if (share[x.k] !== undefined && !isWear(x) && !(x.after && KIRT && /boot|shoe/i.test(x.name))) sums[x.k] = (sums[x.k] || 0) + Math.sqrt(x.n);
 for (const x of prims) {
-  if (share[x.k] === undefined || isWear(x)) continue;
+  if (share[x.k] === undefined || isWear(x) || (x.after && KIRT && /boot|shoe/i.test(x.name))) continue;
   const target = Math.max(200, rest * share[x.k] * Math.sqrt(x.n) / sums[x.k]), ratio = Math.min(1, target / x.n);
   if (ratio < 0.97) simplifyPrimitive(x.p, { simplifier: MeshoptSimplifier, ratio, error: 0.05, lockBorder: false });
   x.after = tri(x.p);
