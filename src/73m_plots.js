@@ -193,3 +193,19 @@ function buildChurchyard(bucket) {
   /* a path of flags from the gate to the chapel door, and one to the west wall's second gap if any */
   { const pts = [[-7.2, -10], [-4.5, -8.6], [-2, -6.8], [0, -5]]; for (let i = 0; i + 1 < pts.length; i++) { const a = pts[i], b = pts[i + 1], n = 3; for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, lx = a[0] + (b[0] - a[0]) * t + (R() - 0.5) * 0.15, lz = a[1] + (b[1] - a[1]) * t + (R() - 0.5) * 0.15, w = W(lx, lz), mm = bucket(w[0], w[1]), g = gy(w[0], w[1]); mm.push().T(w[0], g, w[1]).RY(-C.yaw + Math.atan2(b[1] - a[1], b[0] - a[0]) + (R() - 0.5) * 0.1); mm.mat(MAT.STONE, [0.52 + R() * 0.08, 0.5, 0.45], 1.2); mm.box(-0.55, -0.03, -0.45, 0.55, 0.03, 0.45); mm.pop(); } } }
 }
+
+// [fx3] Chapel Street's rise: where the road is steepest below the gate, a flight of five broad stone steps on the west half and a cart ramp (the road's own slope, setts) on the east half. The walkable surface under the steps is a ramp floor along the tread line (as the house stairs do, 71b_storeys.js); the treads and their cheek walls are the picture.
+function buildChapelRise(bucket) {
+  if (TEST && TEST.plots === 0) return;
+  const R = rng(3318), x0 = -11.2, x1 = -9.0, zS = -52.0, zN = -56.0, n = 5, gy = (x, z) => Terrain.y(x, z), xm = (x0 + x1) / 2;
+  const hS = gy(xm, zS), hN = gy(xm, zN), rise = (hN - hS) / n, m = bucket(xm, (zS + zN) / 2), dz = (zS - zN) / n;
+  for (let k = 0; k < n; k++) {
+    const za = zS - dz * k, zb = zS - dz * (k + 1), top = hS + (k + 1) * rise - 0.02, tone = 0.46 + R() * 0.06;
+    m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.2); m.box(x0, Math.min(gy(x0, zb), gy(x1, zb)) - 0.45, zb, x1, top, za);
+    m.mat(MAT.STONE, [tone * 1.1, tone * 1.07, tone * 1.0], 1.2); m.box(x0 - 0.03, top - 0.08, zb - 0.03, x1 + 0.03, top, za);       /* the worn tread */
+    for (const cx of [x0 - 0.2, x1 + 0.0]) { m.mat(MAT.STONE, [tone * 0.9, tone * 0.88, tone * 0.84], 1.4); m.box(cx, Math.min(gy(cx, zb), top) - 0.3, zb, cx + 0.2, top + 0.45, za); }       /* cheek walls that step with it */
+  }
+  addFloor(m, x0, zN, x1, zS, hN + 0.5 * rise, hS + 0.5 * rise, 'z');
+  /* a handrail on the west cheek, a lantern bracket at the top */
+  m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5); m.beam([x0 - 0.1, hS + 0.95, zS], [x0 - 0.1, hN + 0.95, zN], 0.05, 0.05); for (const t of [0, 1]) m.box(x0 - 0.15, (t ? hN : hS) - 0.1, (t ? zN : zS) - 0.05, x0 - 0.05, (t ? hN : hS) + 1.0, (t ? zN : zS) + 0.05);
+}
