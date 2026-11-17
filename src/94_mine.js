@@ -299,16 +299,30 @@ function mine_wire(cell, wpos) {
   // the cold light of the deep, and of the cleft
   for (const [x, y, z, r, c] of [[-2, 4.6, 67, 14, [0.9, 1.5, 2.6]], [-12, 3.2, 56, 10, [0.7, 1.2, 2.2]], [44, 3.0, 58, 9, [0.6, 1.0, 1.8]], [-3, 5, 54, 10, [0.7, 1.2, 2.2]], [-32, 6.8, 60, 12, [0.85, 1.15, 1.35]]]) { const l = addLight(wpos(x, y, z), r, c, 0, 'hum'); MINE.lights.push(l); }
 }
+// [owner, Build 77] A cleft was two stones, a lintel and a black box for the dark, standing free on a lawn: from the side and from behind
+// the box showed. A cleft is a slot in an outcrop: scanned boulders packed round, over and behind the dark so that only the slot shows it,
+// on a hillock of its own (WILDS.bumps in 55c_wilds.js). (bx, bz) is the unit direction into the rock; key is a wilds place whose kit list is drawn.
+function cleftCrag(key, cx, cz, bx, bz) {
+  const sx = -bz, sz = bx, L = (WB.kit[key] = WB.kit[key] || []), big = 'rock_moss_set_01_e', T1 = [0.62, 0.62, 0.6], T2 = [0.78, 0.68, 0.56];       // one kind of rock: the large masses are one scan, the small grey ones are tinted to its brown
+  const put = (name, b, sd, s, ry, dy, col) => { const x = cx + bx * b + sx * sd, z = cz + bz * b + sz * sd, y = Terrain.y(x, z) + dy; L.push({ name, x, y, z, s, ry, rx: 0, rz: 0, tint: name === big ? T1 : T2 }); if (col) World.colliders.push({ x, z, r: col, y0: y - 1, y1: y + 4 }); };
+  // the flanks of the slot (taller than the dark), the mass behind it standing over it, the shoulders, then a skirt of small stones that breaks the outline; nothing floats
+  put(big, 1.2, 2.35, 1.85, 0.4, -0.5, 1.6); put(big, 1.2, -2.35, 1.9, 2.9, -0.55, 1.6);
+  put(big, 3.6, 0.1, 2.7, 1.3, -0.8, 2.5); put(big, 3.2, 3.3, 2.0, 4.1, -0.6, 1.8); put(big, 3.3, -3.2, 2.1, 0.9, -0.6, 1.8);
+  put('rock_moss_set_02_g', 0.1, 4.2, 1.6, 2.2, -0.2, 0.8); put('rock_moss_set_02_g', -0.7, 3.2, 1.2, 0.7, -0.12, 0); put('rock_moss_set_02_g', 0.0, -4.3, 1.7, 5.0, -0.22, 0.8); put('rock_moss_set_02_g', -0.8, -3.1, 1.1, 3.3, -0.1, 0);
+  for (const [b, sd, sc, ry] of [[-0.9, 1.5, 0.5, 0.3], [-1.2, 2.3, 0.38, 2.1], [-0.8, -1.6, 0.46, 4.0], [-1.3, -2.5, 0.34, 5.5], [-1.5, 0.9, 0.3, 1.2]]) put('rock_moss_set_02_g', b, sd, sc, ry, -0.05, 0);       // loose stones at the foot of the slot
+  put(big, 5.9, 1.4, 1.3, 2.6, -0.45, 1.2); put('rock_moss_set_02_g', 5.6, -2.2, 1.9, 1.1, -0.25, 0.9); put('rock_moss_set_02_g', 4.6, 5.0, 1.4, 4.4, -0.15, 0); put('rock_moss_set_02_g', 4.5, -5.1, 1.3, 0.2, -0.15, 0);
+}
 function mine_cleftOutside(cx, cz, cy) {
   // a fissure in the cliff above the fall: two leaning slabs, a black slot between, ferns and a trickle
   const pack = new MeshPack(); pack.shadow = false; const m = new Mesh(1024); m.seed = 77; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0;
   m.push().T(cx, cy, cz);
-  m.mat(MAT.PLAIN, [0.015, 0.015, 0.018]); m.box(-0.55, -0.1, -2.2, 0.55, 2.7, -0.2);
+  m.mat(MAT.PLAIN, [0.015, 0.015, 0.018]); m.box(-0.55, -0.1, -1.4, 0.55, 2.7, -0.2);       /* 1.2 m of dark, not 2: the rock behind stands over it (cleftCrag) */
   m.mat(MAT.ROCK, [0.52, 0.5, 0.47], 0.6); for (const s of [-1, 1]) { m.push().T(s * 0.95, 0, 0).RZ(-s * 0.1); m.lathe([[1.0, -0.6], [0.8, 0.8], [0.55, 2.2], [0.3, 3.2], [0.04, 3.6]], 7, 0); m.pop(); }
-  m.mat(MAT.ROCK, [0.4, 0.38, 0.36], 0.6); m.box(-1.2, 2.55, -0.9, 1.2, 3.1, 0.5); for (let i = 0; i < 10; i++) { const a = (i - 4.5) * 0.45; m.ball(Math.sin(a) * 2.1, 0.2, 0.3 + Math.cos(a) * 0.8, 0.35 + (i % 3) * 0.12, 0.3, 0.35, 6, 3); }
+  m.mat(MAT.ROCK, [0.4, 0.38, 0.36], 0.6); m.box(-1.2, 2.55, -0.9, 1.2, 3.1, 0.5);       /* the ring of six-sided lumps at the foot is gone: scanned stones in cleftCrag */
   m.pop();
   addBoxCollider(m, cx - 1.8, cz - 0.4, cx + 1.8, cz + 0.4, cy - 1, cy + 3);      // (the slabs; the slot between them is open)
   pack.add(m, { kind: 'opaque', maxDist: 100, noShadow: true }); pack.upload('mine-cleft'); World.packs.push(pack);
+  cleftCrag('hermit', cx, cz, 0, -1);
   WB.kit.hermit = WB.kit.hermit || []; for (const [dx, dz, n, s] of [[-1.5, 1.0, 'Fern_1', 1.4], [1.6, 1.2, 'Fern_1', 1.2], [0.2, 1.9, 'weed_plant_02_a', 2.2]]) WB.kit.hermit.push({ name: n, x: cx + dx, y: cy, z: cz + dz, s, ry: dx, rx: 0, rz: 0 });
 }
 // ── the trap: a cord across the adit at ankle height, a slab on a rope above it. Step over it (jump), cut it, or take the slab on the head ──
