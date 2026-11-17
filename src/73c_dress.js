@@ -362,8 +362,8 @@ function buildDress() {
   const R = rng(8801), OUT = { zone: 0, skyVis: 1, cast: false };
   DRS.items = []; DRS.placed = []; DRS.wet = []; DRS.worn = []; DRS.n = 0; DRS.lights = 0;
   const ADD = (name, M, o, tier) => DRS.items.push({ name, M, o: o || OUT, tier, x: M.elements[12], z: M.elements[14] });
-  const DCNT = World.dressCount = { fpot: 0, vine: 0 };
-  const add = (name, x, y, z, s, ry, ex, o, rx, rz) => (/fpot/.test(name) && DCNT.fpot++, /Vine/.test(name) && DCNT.vine++, ADD(name, dmat(name, x, y, z, s, ry, rx, rz), o ? Object.assign({}, OUT, o) : OUT, o && o.es ? 0 : 1));
+  const DCNT = World.dressCount = { fpot: 0, vine: 0, gap: 0, placed: 0 };
+  const add = (name, x, y, z, s, ry, ex, o, rx, rz) => (DCNT.placed++, /fpot/.test(name) && DCNT.fpot++, /Vine/.test(name) && DCNT.vine++, ADD(name, dmat(name, x, y, z, s, ry, rx, rz), o ? Object.assign({}, OUT, o) : OUT, o && o.es ? 0 : 1));
   const gy = (x, z) => Terrain.y(x, z);
   const V = (fn, n) => Array.from({ length: n }, (_, i) => fn(R, i));
   const barrels = V(dBarrel, 4), crates = V(dCrate, 5), sacks = V(dSack, 4), baskets = V(dBasket, 3), buckets = V(dBucket, 3), pots = V(dPot, 4), bales = V(dBale, 2), logs = V(dLogPile, 4), fpots = V(dFlowerPot, 4), benches = V(dBench, 2),
@@ -382,6 +382,13 @@ function buildDress() {
     }
     return false;
   };
+  // [fin] building footprints: nothing in a slot narrower than 1.6 m (plus the prop) between two buildings, which is also a ginnel's walking width
+  const FP = [...new Set(SITES.concat(typeof INF !== "undefined" && INF.houses ? INF.houses : []))].filter((h, i, a) => h && h.w && h.d && a.findIndex(q => q && q.id === h.id) === i);
+  const gapTight = (x, z, r) => {
+    let d1 = 1e9, d2 = 1e9, i1 = null;
+    for (const h of FP) { const l = worldToSite(h, x, z), d = hyp(Math.max(Math.abs(l[0]) - h.w / 2, 0), Math.max(Math.abs(l[1]) - h.d / 2, 0)); if (d > 3) continue; if (d < d1) { d2 = d1; d1 = d; i1 = h; } else if (d < d2) d2 = d; }
+    return d2 < 1.5 && d1 + d2 < 1.6 + r;
+  };
   // may a prop of radius r stand here?
   const ok = (x, z, r, o) => {
     o = o || {};
@@ -398,7 +405,8 @@ function buildDress() {
     if (sq) for (const p of stones) if (hyp(x - p[0], z - p[1]) < 1.6 + r) return false;
     for (const s of spotsOut) if (hyp(x - s.p[0], z - s.p[2]) < r + 0.9) return false;
     for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + 0.12 && Math.abs(l[1]) < s.d / 2 + 0.12) return false; }
-    for (const h in World.houses) { const d = World.houses[h].door; if (d && hyp(x - d.out[0], z - d.out[2]) < r + 1.5) return false; }
+    for (const h in World.houses) { const d = World.houses[h].door; if (d && hyp(x - d.out[0], z - d.out[2]) < (TEST && TEST.nogap ? r + 1.5 : Math.max(r + 1.5, 2.6))) return false; }
+    if (!(TEST && TEST.nogap) && gapTight(x, z, r)) { DCNT.gap++; return false; }
     for (const f of FIELDS) if (x > f.x0 - 1 && x < f.x1 + 1 && z > f.z0 - 1 && z < f.z1 + 1) return false;
     if (River.dist(x, z, 7 + r) < 4.5 + r) return false;
     if (hyp(x - LAKE.x, z - LAKE.z) < LAKE.r + 2) return false;
