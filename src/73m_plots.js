@@ -67,7 +67,7 @@ function buildPlots(bucket) {
     addBoxCollider(m, x0, z0, x1, z1, y0, y1); };
   const stone = (m, ax, az, bx, bz, h, tone) => {      // a low rubble wall segment with a rounded coping
     const L = Math.hypot(bx - ax, bz - az); if (L < 0.2) return; const cx = (ax + bx) / 2, cz = (az + bz) / 2, ang = Math.atan2(bz - az, bx - ax), g = Math.min(gy(ax, az), gy(bx, bz), gy(cx, cz)) - 0.15;
-    m.push().T(cx, g, cz).RY(-ang); m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.4); m.box(-L / 2, 0, -W / 2, L / 2, h + 0.15 - 0.06 * R(), W / 2); m.mat(MAT.STONE, [tone * 1.1, tone * 1.06, tone], 1.4); m.box(-L / 2 - 0.02, h + 0.05, -W / 2 - 0.04, L / 2 + 0.02, h + 0.17, W / 2 + 0.04); m.pop();
+    m.push().T(cx, g, cz).RY(-ang); m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.4); m.box(-L / 2, 0, -W / 2, L / 2, h + 0.15 - 0.06 * R(), W / 2); m.pop();
     { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.15, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.15; wcol(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + h); }
   };
   const fence = (m, ax, az, bx, bz) => {      // posts and two rails

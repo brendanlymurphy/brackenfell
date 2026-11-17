@@ -40,7 +40,7 @@ function buildPlaceWear(bucket) {
     }
   }
   const spots = []; for (const c of World.colliders) { if (c.y0 > gy(c.x, c.z) + 0.7 || c.y1 - c.y0 > 3.2 || placeW(c.x, c.z, 0.01) < 1) continue; const rad = c.r !== undefined ? c.r : Math.max(c.hx, c.hz); if (rad > 2.2 || rad < 0.12) continue; spots.push([c.x, c.z, rad]); }
-  let n = 0; for (const [x, z, rad] of spots) { if (n++ > 24) break; const m = bucket(x, z);
+  let n = 0; for (const [x, z, rad] of spots) { if (n++ > 14) break; const m = bucket(x, z);
     for (let i = 0; i < 1; i++) { const a = R() * TAU, d = rad + 0.25 + R() * 0.5; flat(m, x + Math.cos(a) * d, z + Math.sin(a) * d, 0.45 + R() * 0.5, 0.3 + R() * 0.3, [0.2 + R() * 0.05, 0.15, 0.1], MAT.MUD, R() * 3); }
     for (let i = 0; i < 2; i++) { const a = R() * TAU, d = rad + 0.1 + R() * 0.8; flat(m, x + Math.cos(a) * d, z + Math.sin(a) * d, 0.25 + R() * 0.25, 0.08 + R() * 0.08, [0.66 + R() * 0.1, 0.52, 0.25], MAT.THATCH, R() * 3, 0.022); }
   }
