@@ -7,6 +7,7 @@ const PLOT_ROWS = [
   { name: 'westN', ids: ['in.10', 'guardhouse', 'in.41', 'in.40'], trades: ['forge', 'garden', 'cooper', 'pigs'] },
   { name: 'alleyN', ids: ['draper', 'shop.n2', 'shop.n3', 'shop.n4'], trades: ['cooper', 'hens', 'garden', 'woodyard'] },
   { name: 'alleyS', ids: ['shop.s0', 'shop.s1', 'shop.s2'], trades: ['forge', 'washing', 'pigs'] },
+  { name: 'placeE', ids: ['store'], trades: ['stable'], axis: 'x' },
   { name: 'westS', ids: ['in.08', 'in.07', 'in.06', 'in.42'], trades: ['dyer', 'hens', 'woodyard', 'washing'] }
 ];
 let _PLOTS = null;
@@ -25,6 +26,14 @@ function plotsCompute() {
   };
   for (const row of PLOT_ROWS) {
     const hs = row.ids.map(byId).filter(Boolean); if (!hs.length) continue;
+    if (row.axis === 'x') {      /* houses whose back faces east or west (their front looks along x): one plot each, no neighbours on the row */
+      for (const s of hs) {
+        const bx = Math.sin(s.yaw || 0) > 0 ? -1 : 1, xb0 = s.x + bx * (s.d / 2 + 0.12), za = s.z - s.w / 2 - 0.15, zb2 = s.z + s.w / 2 + 0.15; let depth = 0;
+        for (let d = 7.0; d >= 2.2 && !depth; d -= 0.4) { let ok = true; for (let z = za + 0.3; z <= zb2 - 0.3 && ok; z += 0.7) for (let k = 0.5; k <= d + 0.3 && ok; k += 0.6) if (blocked(xb0 + bx * (k + 0.2), z, 0.35, s)) ok = false; if (ok) depth = d; }
+        if (depth) _PLOTS.push({ id: s.id, row: row.name, trade: row.trades[0], axis: 'x', bx, x0: Math.min(xb0, xb0 + bx * depth), x1: Math.max(xb0, xb0 + bx * depth), z0: za, z1: zb2, wall: xb0 + bx * depth, bz: 1, house: s });
+      }
+      continue;
+    }
     hs.sort((a, b) => a.x - b.x);
     hs.forEach((s, i) => {
       const back = Math.cos(s.yaw || 0) > 0 ? -1 : 1 * -1 * -1;      // yaw 0 faces north (-z): the back is +z; yaw PI faces south: the back is -z
@@ -56,23 +65,29 @@ function buildPlots(bucket) {
     { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.15, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.15; addBoxCollider(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + h); }
   };
   const fence = (m, ax, az, bx, bz) => {      // posts and two rails
-    const L = Math.hypot(bx - ax, bz - az); if (L < 0.2) return; const n = Math.max(1, Math.round(L / 1.6));
+    const L = Math.hypot(bx - ax, bz - az); if (L < 0.2) return; const n = Math.max(1, Math.round(L / 2.4));
     m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5);
     for (let i = 0; i <= n; i++) { const x = ax + (bx - ax) * i / n, z = az + (bz - az) * i / n, g = gy(x, z); m.cbox(x, g - 0.1, z, 0.1, 1.2, 0.1, 0); }
-    for (const y of [0.45, 0.9]) for (let i = 0; i < n; i++) { const x0 = ax + (bx - ax) * i / n, z0 = az + (bz - az) * i / n, x1 = ax + (bx - ax) * (i + 1) / n, z1 = az + (bz - az) * (i + 1) / n; m.beam([x0, gy(x0, z0) + y, z0], [x1, gy(x1, z1) + y, z1], 0.05, 0.08); }
+    for (const y of [0.4, 0.85]) for (let i = 0; i < n; i++) { const x0 = ax + (bx - ax) * i / n, z0 = az + (bz - az) * i / n, x1 = ax + (bx - ax) * (i + 1) / n, z1 = az + (bz - az) * (i + 1) / n; m.beam([x0, gy(x0, z0) + y, z0], [x1, gy(x1, z1) + y, z1], 0.05, 0.08); }
     const cx = (ax + bx) / 2, cz = (az + bz) / 2, ang = Math.atan2(bz - az, bx - ax);
     { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.05, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.05; addBoxCollider(m, cx - ex, cz - ez, cx + ex, cz + ez, gy(cx, cz), gy(cx, cz) + 1.0); }
   };
+  const slab = (m, ax, az, bx, bz, h, mat, col, th) => {      /* a board fence or a woven hurdle: one solid leaf on the line, posts at the ends */
+    const L = Math.hypot(bx - ax, bz - az); if (L < 0.2) return; const cx = (ax + bx) / 2, cz = (az + bz) / 2, ang = Math.atan2(bz - az, bx - ax), g = Math.min(gy(ax, az), gy(bx, bz), gy(cx, cz)) - 0.05;
+    m.push().T(cx, g, cz).RY(-ang); m.mat(mat, col, 1.0); m.box(-L / 2, 0, -th / 2, L / 2, h, th / 2); m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5); for (let k = 0; k <= Math.max(1, Math.round(L / 3.0)); k++) { const px = -L / 2 + L * k / Math.max(1, Math.round(L / 3.0)); m.box(px - 0.06, -0.1, -th / 2 - 0.03, px + 0.06, h + 0.15, th / 2 + 0.03); } m.pop();
+    { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.08, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.08; addBoxCollider(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + h); }
+  };
+  const STYLES = ['stone', 'fence', 'board', 'hurdle'];
   const flat = (m, x, z, rx, rz, c, mat, ry, lift) => { m.mat(mat, c, 0.5); m.push().T(x, gy(x, z) + (lift || 0.02), z).RY(ry || 0); m.quad2([-rx, 0, -rz * 0.6], [-rx * 0.6, 0, rz], [rx, 0, rz * 0.7], [rx * 0.7, 0, -rz]); m.pop(); };
   const crate = (m, x, z, w, h, d, col, mat, solidCol) => { const g = gy(x, z); m.mat(mat || MAT.PLANKS, col, 0.5); m.box(x - w / 2, g, z - d / 2, x + w / 2, g + h, z + d / 2); if (solidCol !== false) addBoxCollider(m, x - w / 2, z - d / 2, x + w / 2, z + d / 2, g, g + h); };
   const trade = (p, m, cx, cz, ux, uz, wd, dp) => {      /* ux,uz: along the row (world x or z axis unit); local frame: a = along row from the plot centre, b = away from the house toward the back wall */
     const at = (a, b) => [cx + a * ux + b * 0, cz + b * p.bz];
     const put = (a, b, f) => { const q = at(a, b); f(q[0], q[1]); };
     const kind = p.trade;
-    if (kind === 'garden') { for (let i = -1; i <= 1; i++) put(i * 1.5, dp * 0.35, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.36, 0.29, 0.2], 0.5); m.box(x - 0.6, g, z - 0.9, x + 0.6, g + 0.22, z + 0.9); m.mat(MAT.MUD, [0.16, 0.11, 0.07], 0.5); m.box(x - 0.54, g + 0.1, z - 0.84, x + 0.54, g + 0.24, z + 0.84); m.mat(MAT.LEAVES, [0.26 + R() * 0.15, 0.4 + R() * 0.12, 0.14], 0.5); for (let k = 0; k < 3; k++) m.ball(x, g + 0.35, z + (k - 1) * 0.55, 0.3, 0.14, 0.2, 4, 3); });
-      put(-wd / 2 + 0.7, dp * 0.8, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.3, 0.25, 0.18], 0.5); for (let k = -1; k <= 1; k++) m.beam([x + k * 0.35, g, z], [x + k * 0.1, g + 1.6, z], 0.03, 0.03); }); }
+    if (kind === 'garden') { for (let i = -2; i <= 2; i++) put(i * 0.95, dp * 0.4, (x, z) => { const g = gy(x, z), len = Math.min(dp * 0.6, 2.6); m.mat(MAT.MUD, [0.17, 0.12, 0.08], 0.5); m.box(x - 0.25, g, z - len / 2, x + 0.25, g + 0.18, z + len / 2); m.mat(MAT.LEAVES, [0.24 + R() * 0.16, 0.38 + R() * 0.12, 0.13], 0.5); if (i % 2) { for (let k = 0; k < 4; k++) m.ball(x, g + 0.3, z - len / 2 + 0.3 + k * (len - 0.6) / 3, 0.2, 0.12, 0.18, 4, 3); } else { m.mat(MAT.TIMBER, [0.32, 0.25, 0.17], 0.5); for (let k = 0; k < 3; k++) m.beam([x - 0.15, g, z - len / 2 + 0.25 + k * 0.7], [x + 0.05, g + 1.5, z - len / 2 + 0.25 + k * 0.55], 0.03, 0.03); m.mat(MAT.LEAVES, [0.28, 0.42, 0.14], 0.5); for (let k = 0; k < 3; k++) m.ball(x - 0.05, g + 0.8, z - len / 2 + 0.25 + k * 0.7, 0.09, 0.5, 0.09, 4, 3); } });
+      put(-wd / 2 + 0.6, dp * 0.85, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.cyl(x, g, z, 0.32, 0.28, 0.55, 6, 2); m.mat(MAT.PLAIN, [0.16, 0.2, 0.22]); m.cyl(x, g + 0.5, z, 0.27, 0.27, 0.02, 6, 2); addCircleCollider(m, x, z, 0.32, g, g + 0.55); flat(m, x + 0.6, z + 0.2, 0.5, 0.3, [0.14, 0.11, 0.08], MAT.MUD, 0.4, 0.03); }); }
     else if (kind === 'woodyard') { put(-wd / 4, dp * 0.55, (x, z) => { const g = gy(x, z); m.mat(MAT.TIMBER, [0.34, 0.26, 0.18], 0.5); for (let r = 0; r < 4; r++) for (let k = 0; k < 6 - r; k++) { const lx = x - 1.0 + r * 0.2 + k * 0.4, ly = g + 0.17 + r * 0.3, lz = z - 0.5 + (R() - 0.5) * 0.06, ln = 0.9 + R() * 0.3; m.mat(MAT.TIMBER, [0.42 + R() * 0.12, 0.32 + R() * 0.06, 0.22], 0.5); m.beam([lx, ly, lz - ln / 2], [lx, ly, lz + ln / 2], 0.3, 0.3); } addBoxCollider(m, x - 1.3, z - 0.55, x + 1.3, z + 0.65, g, g + 1.2); });
-      put(wd / 4, dp * 0.4, (x, z) => { const g = gy(x, z); m.mat(MAT.TIMBER, [0.4, 0.31, 0.22], 0.5); m.cyl(x, g, z, 0.26, 0.26, 0.5, 5, 2); m.mat(MAT.PLAIN, [0.1, 0.1, 0.1]); m.beam([x + 0.1, g + 0.5, z], [x + 0.4, g + 0.1, z + 0.2], 0.03, 0.05); for (let k = 0; k < 3; k++) flat(m, x + (R() - 0.5) * 1.6, z + (R() - 0.5) * 1.6, 0.14, 0.04, [0.45, 0.34, 0.2], MAT.TIMBER, R() * 3, 0.03); }); }
+      put(wd / 4, dp * 0.4, (x, z) => { const g = gy(x, z); for (let k = 0; k < 7; k++) { const sx = x + (R() - 0.5) * 2.2, sz = z + 0.5 + R() * 1.3; m.mat(MAT.TIMBER, [0.55 + R() * 0.1, 0.44, 0.3], 0.5); m.beam([sx - 0.15, gy(sx, sz) + 0.06, sz], [sx + 0.15, gy(sx, sz) + 0.08, sz + (R() - 0.5) * 0.2], 0.1, 0.12); } m.mat(MAT.TIMBER, [0.4, 0.31, 0.22], 0.5); m.cyl(x, g, z, 0.26, 0.26, 0.5, 5, 2); m.mat(MAT.PLAIN, [0.1, 0.1, 0.1]); m.beam([x + 0.1, g + 0.5, z], [x + 0.4, g + 0.1, z + 0.2], 0.03, 0.05); for (let k = 0; k < 3; k++) flat(m, x + (R() - 0.5) * 1.6, z + (R() - 0.5) * 1.6, 0.14, 0.04, [0.45, 0.34, 0.2], MAT.TIMBER, R() * 3, 0.03); }); }
     else if (kind === 'hives') { for (let i = -1; i <= 1; i++) put(i * 1.3, dp * 0.4, (x, z) => { const g = gy(x, z); m.mat(MAT.STONE, [0.5, 0.47, 0.42], 0.5); m.box(x - 0.3, g, z - 0.3, x + 0.3, g + 0.35, z + 0.3); m.mat(MAT.THATCH, [0.72, 0.58, 0.28], 0.5); m.ball(x, g + 0.6, z, 0.3, 0.26, 0.3, 6, 4); addCircleCollider(m, x, z, 0.3, g, g + 0.8); });
       put(wd / 4, dp * 0.8, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.4, 0.33, 0.24], 0.5); m.box(x - 0.8, g + 0.38, z - 0.2, x + 0.8, g + 0.44, z + 0.2); m.box(x - 0.7, g, z - 0.15, x - 0.6, g + 0.38, z + 0.15); m.box(x + 0.6, g, z - 0.15, x + 0.7, g + 0.38, z + 0.15); m.mat(MAT.LEAVES, [0.4, 0.5, 0.2], 0.5); for (let k = 0; k < 5; k++) m.ball(x - 1.2 + k * 0.28, g + 0.18, z + 0.8, 0.14, 0.18, 0.14, 4, 3); }); }
     else if (kind === 'pigs') { put(0, dp * 0.55, (x, z) => { const g = gy(x, z); flat(m, x, z, 1.4, 1.0, [0.14, 0.1, 0.07], MAT.MUD, 0, 0.03); for (const [a, b] of [[-1.5, -1.1], [1.5, -1.1], [1.5, 1.1], [-1.5, 1.1], [-1.5, -1.1]].slice(0, 4)) { } fence(m, x - 1.6, z - 1.2, x + 1.6, z - 1.2); fence(m, x + 1.6, z - 1.2, x + 1.6, z + 1.2); fence(m, x + 1.6, z + 1.2, x - 1.6, z + 1.2); crate(m, x - 1.0, z + 0.75, 0.9, 0.5, 0.35, [0.32, 0.25, 0.18], MAT.PLANKS, false); m.mat(MAT.PLANKS, [0.38, 0.3, 0.22], 0.5); m.box(x - 1.55, g, z - 1.15, x - 0.6, g + 1.4, z - 1.05); m.box(x - 1.6, g + 1.4, z - 1.2, x - 0.5, g + 1.5, z - 0.2);
@@ -92,17 +107,28 @@ function buildPlots(bucket) {
       put(wd / 4, dp * 0.7, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.box(x - 1.0, g + 0.45, z - 0.5, x + 1.0, g + 0.7, z + 0.5); for (const sx of [-0.8, 0.8]) m.cyl(x + sx, g, z + 0.6, 0.38, 0.38, 0.1, 6, 2); addBoxCollider(m, x - 1.0, z - 0.55, x + 1.0, z + 0.55, g, g + 0.75); }); }
   };
   for (const p of P) {
-    const wd = p.x1 - p.x0, dp = Math.abs(p.wall - (p.bz > 0 ? p.z0 : p.z1)), cx = (p.x0 + p.x1) / 2, zFront = p.bz > 0 ? p.z0 : p.z1, tone = 0.42 + R() * 0.1, useStone = (p.house.x * 7 | 0) % 3 !== 0;
-    const m = bucket(cx, (p.z0 + p.z1) / 2), seg = useStone ? stone : fence, h = H - 0.15 * R();
+    if (p.axis === 'x') {      /* walls on the party lines, a back wall with a gate, the work kept in a lean-to against the house's back (frame of the house) */
+      const m = bucket((p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2), tone = 0.44 + R() * 0.06, xw = p.wall, xh = p.bx > 0 ? p.x0 : p.x1, zc = (p.z0 + p.z1) / 2, gz = zc + (R() - 0.5) * 2, gw = 1.3;
+      stone(m, xw, p.z0 + 0.15, xw, gz - gw / 2, H - 0.1, tone); stone(m, xw, gz + gw / 2, xw, p.z1 - 0.15, H - 0.1, tone);
+      for (const zs of [gz - gw / 2, gz + gw / 2]) { m.mat(MAT.STONE, [tone * 1.1, tone * 1.05, tone], 1.4); m.cbox(xw, gy(xw, zs) - 0.1, zs, 0.4, 1.6, 0.4, 0); }
+      for (const zs of [p.z0, p.z1]) stone(m, xh, zs, xw - p.bx * 0.15, zs, H * 0.92, tone);
+      const s = p.house, c = siteToWorld(s, 0, s.d / 2 + 0.2), g = gy(c[0], c[1]); m.push().T(c[0], g, c[1]).RY(-s.yaw);
+      m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.box(-1.4, 0.45, 1.2, 1.4, 0.7, 2.0); for (const sx of [-1.2, 1.2]) m.cyl(sx, 0, 1.6, 0.36, 0.4, 0.45, 6, 2); m.mat(MAT.THATCH, [0.7, 0.58, 0.3], 0.5); m.ball(0, 0.7, 3.2, 1.3, 0.8, 1.0, 6, 4); m.pop();
+      continue;
+    }
+    const wd = p.x1 - p.x0, dp = Math.abs(p.wall - (p.bz > 0 ? p.z0 : p.z1)), cx = (p.x0 + p.x1) / 2, zFront = p.bz > 0 ? p.z0 : p.z1, tone = 0.42 + R() * 0.1, styleI = ((Math.abs(p.house.x * 3.1 + p.house.z) | 0) + P.indexOf(p)) % 4;
+    const m = bucket(cx, (p.z0 + p.z1) / 2), h = H - 0.15 * R(), style = STYLES[styleI], seg = (m2, ax, az, bx, bz, hh) => style === 'stone' ? stone(m2, ax, az, bx, bz, hh, tone) : style === 'fence' ? fence(m2, ax, az, bx, bz) : style === 'board' ? slab(m2, ax, az, bx, bz, 1.55, MAT.PLANKS, [0.52 + R() * 0.06, 0.42, 0.31], 0.1) : slab(m2, ax, az, bx, bz, 1.15, MAT.THATCH, [0.46, 0.37, 0.2], 0.14);
     const gate = (a, b, gx, gw) => { /* a wall along x from a to b with a gap [gx-gw/2, gx+gw/2] */ };
     const zw = p.wall, gx = cx + (R() - 0.5) * (wd - 2.4), gw = 1.2;
-    seg === stone ? (stone(m, p.x0 + 0.15, zw, gx - gw / 2, zw, h, tone), stone(m, gx + gw / 2, zw, p.x1 - 0.15, zw, h, tone)) : (fence(m, p.x0 + 0.06, zw, gx - gw / 2, zw), fence(m, gx + gw / 2, zw, p.x1 - 0.06, zw));
+    seg(m, p.x0 + 0.15, zw, gx - gw / 2, zw, h), seg(m, gx + gw / 2, zw, p.x1 - 0.15, zw, h);
     for (const sx of [gx - gw / 2, gx + gw / 2]) { m.mat(MAT.STONE, [tone * 1.1, tone * 1.05, tone], 1.4); m.cbox(sx, gy(sx, zw) - 0.1, zw, 0.4, 1.6, 0.4, 0); }
+    { const gz = zw, g0 = gy(gx, gz); m.mat(MAT.STONE, [0.5, 0.47, 0.42], 1.2); m.box(gx - 0.6, g0 - 0.02, gz - 0.28, gx + 0.6, g0 + 0.1, gz + 0.28);      /* a doorstep worn in the gap */
+      m.push().T(gx + gw / 2 - 0.05, g0, gz).RY(p.bz > 0 ? 1.0 : -1.0); m.mat(MAT.PLANKS, [0.33, 0.26, 0.19], 0.8); m.box(-0.95, 0.08, -0.04, 0, 1.2, 0.04); m.mat(MAT.METAL, [0.14, 0.14, 0.14], 0.4); m.box(-0.2, 0.55, -0.06, -0.12, 0.65, 0.06); m.box(-0.95, 0.35, -0.06, -0.3, 0.4, 0.06); m.box(-0.95, 0.9, -0.06, -0.3, 0.95, 0.06); m.pop(); }
     /* the side party walls, with the house's own side left open where the neighbour is a gap: they run from the house's back wall to the back wall of the plot */
     const zh = zFront;
     for (const sx of [p.x0, p.x1]) {
       if (sx === p.x0 && P.some(q => q !== p && q.row === p.row && Math.abs(q.x1 - p.x0) < 0.06 && Math.abs(q.bz - p.bz) < 1e-6)) continue;      /* a party wall is built once */
-      seg === stone ? stone(m, sx, zh, sx, zw - p.bz * 0.15, h * 0.92, tone) : fence(m, sx, zh, sx, zw - p.bz * 0.06);
+      seg(m, sx, zh, sx, zw - p.bz * 0.15, h * 0.92);
     }
     if (!(TEST && TEST.plots === 2)) trade(p, m, cx, zFront + p.bz * 0.01, 1, 0, wd, dp);
     p.gate = [gx, zw];

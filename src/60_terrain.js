@@ -273,6 +273,7 @@ function buildSplat() {
   { const Rd = rng(9955); for (let i = 0; i < 640; i++) { const x = -60 + Rd() * 94, z = -35 + Rd() * 72, rad = 3 + Rd() * 4, q = P(x, z), g = A.createRadialGradient(q[0], q[1], rad * sc * 0.2, q[0], q[1], rad * sc); g.addColorStop(0, 'rgba(255,0,0,0.30)'); g.addColorStop(1, 'rgba(255,0,0,0)'); A.fillStyle = g; A.beginPath(); A.arc(q[0], q[1], rad * sc, 0, TAU); A.fill(); } }
   /* [fx3] plots: each yard's floor is packed earth (trodden dirt, bare in places), the back lane behind the plots' back walls is a trodden strip with a cobble spine; no lawn inside a burgage */
   if (typeof plotsCompute === 'function') for (const p of plotsCompute()) {
+    if (p.axis === 'x') { for (const [al, e] of [[0.55, 0.5], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - e, p.z0 - e), a1 = P(p.x1 + e, p.z1 + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); } continue; }
     const lane = p.bz > 0 ? [p.z1 + 0.15, p.z1 + 2.6] : [p.z0 - 2.6, p.z0 - 0.15];
     for (const [al, e] of [[0.55, 0.5], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - e, p.z0 - e), a1 = P(p.x1 + e, p.z1 + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
     for (const [al, e] of [[0.5, 0.4], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - 0.3 - e, lane[0] - e), a1 = P(p.x1 + 0.3 + e, lane[1] + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
