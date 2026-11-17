@@ -59,12 +59,28 @@ function terrainBase(x, z) {
   { const w = LV.upW(x, z); if (w > 0) h = lerp(h, LV.up.h, w); }          // Build 33: the upper ward terrace (55_layout.js LV, 73f_levels.js)
   return h;
 }
+// [fx3] the Market Place's ground: 1 inside its outline, fading to 0 over `fade` metres outside it (distance to the outline polygon)
+function placeW(x, z, fade) {
+  const pl = PLACE.poly; let ins = false, best = 1e9;
+  for (let i = 0, j = pl.length - 1; i < pl.length; j = i++) {
+    const a = pl[i], b = pl[j];
+    if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) ins = !ins;
+    const bx = b[0] - a[0], bz = b[1] - a[1], l2 = bx * bx + bz * bz, t = l2 ? Math.max(0, Math.min(1, ((x - a[0]) * bx + (z - a[1]) * bz) / l2)) : 0, d = Math.hypot(x - a[0] - bx * t, z - a[1] - bz * t); if (d < best) best = d;
+  }
+  return ins ? 1 : Math.max(0, 1 - best / fade);
+}
+// the place falls about 0.32 m from the inn to Wharf Street, is crowned along the cart way, and has a drain 6 cm below it
+function placeLift(x, z, w) {
+  const fall = -0.32 * smooth(-16, 14, z), crown = 0.07 * Math.max(0, 1 - Math.abs(z - (0.8 + 0.12 * x)) / 7), drain = -0.05 * Math.max(0, 1 - Math.abs(z - (1.4 + 0.1 * x)) / 0.45);
+  return w * (fall + crown + drain);
+}
 function terrainH(x, z) {
   let h = terrainBase(x, z);
   if (Math.abs(x) < 210 && Math.abs(z) < 210) {
     // village square
     const sq = hyp((x - SQUARE.x) / (SQUARE.rx + 3), (z - SQUARE.z) / (SQUARE.rz + 3));
     if (sq < 2) h = lerp(h, 0, 1 - smooth(1, 1.9, sq));
+    { const pw = placeW(x, z, 7); if (pw > 0) h = lerp(h, 0, pw) + placeLift(x, z, pw); }      // [fx3] the whole place, not an ellipse, is levelled to the datum and then given its fall
     // building pads
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 26 || Math.abs(z - s.z) > 26) continue;
