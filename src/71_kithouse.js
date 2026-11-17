@@ -165,6 +165,7 @@ function kitShellPass(c, pass) {
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
     b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), pass === 'int' ? { zone, skyVis: INT_AO, inZone: zone, inSkyVis: 0.2 } : { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : 0.2 });
   }
+  if (X && typeof shellDress === 'function') shellDress(c, b, frames, MS, { w, d, H, Ytop, tanP, st, site, SSt, openings, lift: 0.14 });      // [fx2]
   // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance; in a cell they are the cell's) ──
   if (I) {
     const nx = Math.max(1, Math.round(w / 2)), nz = Math.max(1, Math.round(d / 2)), sx = (w - 0.3) / (2 * nx), sz = (d - 0.3) / (2 * nz), tile = spec.floor === 'stone' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';

@@ -52,7 +52,7 @@ function infWalls(B, MS, o) {
   const w = o.w, d = o.d, fl = o.fl, H = o.H || 3, sh = o.jetty ? 0.5 : 0, lo = !!o.lo, DK = [0.17, 0.14, 0.11], SC = [[0.3, 0.38, 0.28], [0.42, 0.2, 0.16], [0.22, 0.3, 0.4], [0.36, 0.31, 0.22]];
   const R = o.R || rng(3);
   for (let k = 0; k < fl; k++) {
-    const g = GP(), yb = k === 0 ? -0.35 : k * H, yt = (k + 1) * H, off = k > 0 ? sh : 0, stone = k === 0 && o.stone, mat = stone ? INF_B : (k > 0 && o.lime && Kit.defs[INF_L] ? INF_L : INF_T), ts = stone ? 2.2 : 1.25, col = stone ? [0.95, 0.95, 0.95] : (o.tint || [1, 1, 1]);
+    const g = GP(), yb = k === 0 ? -0.35 : k * H, yt = (k + 1) * H, off = k > 0 ? sh : 0, stone = k === 0 && o.stone, mat = stone ? INF_B : (k > 0 && o.lime && Kit.defs.MI_Plaster ? 'MI_Plaster' : INF_T), ts = stone ? 2.2 : 1.25, col = stone ? [0.95, 0.95, 0.95] : (o.tint || [1, 1, 1]);
     for (const wn of ['front', 'back', 'left', 'right']) {
       const W = WALLS[wn], L = W.len(w, d), s0 = W.start(w, d);
       if ((wn === 'left' || wn === 'right') && k < ((o.skip && o.skip[wn]) || 0)) continue;
@@ -61,7 +61,7 @@ function infWalls(B, MS, o) {
       const BAND = [[-1, 0.62], [0.35, 0.74], [0.75, 0.86], [1.15, 0.95], [1.9, 1.0]];
       const q = (m2, ua, ub, ya, yb, dep, c2, uv, both) => {
         if (ub - ua < 0.015 || yb - ya < 0.015) return;
-        if ((m2 === INF_T || m2 === INF_L) && !uv && dep === 0) {
+        if ((m2 === INF_T || m2 === 'MI_Plaster') && !uv && dep === 0) {
           for (let ci = Math.max(0, Math.floor(ua / cw + 1e-6)); ci < nCell && ci * cw < ub - 1e-6; ci++) {
             const u0 = Math.max(ua, ci * cw), u1 = Math.min(ub, (ci + 1) * cw); if (u1 - u0 < 0.015) continue;
             const hh = ((ci * 7919 + wn.length * 31 + (k + 1) * 977 + Math.floor(wOff * 100)) % 101) / 101, ou = hh * 5.3 + wOff, ov = hh * 3.1, cm = 0.92 + 0.16 * ((hh * 13) % 1);
@@ -132,7 +132,7 @@ function infRoofGen(B, MS, o) {
   const g = GP(), g2 = GP(), gf = GP(), w = o.w, d = o.d, tanP = o.tanP, ridgeX = o.ridgeX !== false, len = ridgeX ? w : d, span = ridgeX ? d : w, ov = o.ov === undefined ? 0.5 : o.ov, zc = o.zc || 0, top = o.top, T = o.thick || 0.1;
   const lift = o.lift || 0, gov = o.gov === undefined ? 0.2 : o.gov, hs = span / 2, yR = top + lift + hs * tanP, yE = top + lift - ov * tanP, a0 = -len / 2 - (o.nl ? 0.04 : gov), a1 = len / 2 + (o.nr ? 0.04 : gov), ve = hs + ov;
   const P = (u, v, y) => ridgeX ? [u, y, zc + v] : [v, y, zc + u];
-  const RM = o.mat && Kit.defs[o.mat] ? o.mat : INF_S, ts = o.ts || 1.25, sag = o.sag || 0, nseg = sag ? Math.max(2, Math.ceil((a1 - a0) / 1.2)) : 1, sgy = u => sag * Math.max(0, 1 - Math.pow(2 * u / len, 2));      // [fx2] covering, texel size, ridge sag (zero at the gables)
+  const RM = o.mat && Kit.defs[o.mat] ? o.mat : INF_S, ts = o.ts || 1.25, sag = o.sag || 0, nseg = sag ? Math.max(2, Math.ceil((a1 - a0) / 2.6)) : 1, sgy = u => sag * Math.max(0, 1 - Math.pow(2 * u / len, 2));      // [fx2] covering, texel size, ridge sag (zero at the gables)
   const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE), dark = col.map(v => v * 0.7), wood = [0.24, 0.2, 0.17];
   const OUTV = (u, v, y) => ridgeX ? [u, y, v] : [v, y, u];            // a direction in the roof's own frame -> the house frame
   const planes = G => {
@@ -161,9 +161,9 @@ function infRoofGen(B, MS, o) {
     // soffit under the rake overhang
     for (const [u, un, ex] of [[-len / 2, a0, !o.nl], [len / 2, a1, !o.nr]]) if (ex) { const A = P(u, 0, yR - T), Bp = P(un, 0, yR - T), C = P(un, s * ve, yE - T), D = P(u, s * hs, top + lift - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
   }
-  if (o.thatch) for (const s of [-1, 1]) for (const f of [0.16, 0.55, 0.9]) { const yy = yR - (yR - yE) * f, vv = ve * f; g2.beam(W_, P(a0 + 0.1, s * vv, yy - sgy(0) * 0), P(a1 - 0.1, s * vv, yy), 0.035, col.map(v => v * 0.4)); }      // [fx2] ligger lines
-  for (const s of [-1, 1]) for (const [u, nb] of [[a0, o.nl], [a1, o.nr]]) if (!nb) g2.beam(W_, P(u, s * 0.02, yR), P(u, s * ve, yE), 0.1, [0.2, 0.17, 0.14]);      // [fx2] a barge board along each exposed rake
-  for (let i = 0; i < nseg; i++) { const ua = a0 + (a1 - a0) * i / nseg, ub = a0 + (a1 - a0) * (i + 1) / nseg; g2.beam(W_, P(ua, 0, yR + 0.05 - sgy(ua)), P(ub, 0, yR + 0.05 - sgy(ub)), RM === INF_TH ? 0.34 : 0.13, RM === INF_TH ? col.map(v => v * 0.5) : [0.26, 0.22, 0.19]); }      // [fx2] ridge follows the sag
+  if (o.thatch) for (const s of [-1, 1]) for (const f of [0.2, 0.6]) { const yy = yR - (yR - yE) * f, vv = ve * f; g2.quad(W_, P(a0 + 0.1, s * vv, yy + 0.03), P(a1 - 0.1, s * vv, yy + 0.03), P(a1 - 0.1, s * vv, yy - 0.03), P(a0 + 0.1, s * vv, yy - 0.03), col.map(v => v * 0.4), GPU.wood, [0, 1, 0.5 * s]); }      // [fx2] ligger lines (flat strips: triangle budget)
+  for (const s of [-1, 1]) for (const [u, nb] of [[a0, o.nl], [a1, o.nr]]) if (!nb) { const A = P(u, 0.0, yR + 0.02), Bp = P(u, s * ve, yE), A2 = P(u, 0.0, yR - 0.12), B2 = P(u, s * ve, yE - 0.14); g2.quad(W_, A, Bp, B2, A2, [0.2, 0.17, 0.14], GPU.wood, OUTV(u < 0 ? -1 : 1, 0, 0)); }      // [fx2] a barge board along each exposed rake
+  const nrid = Math.min(nseg, 4); for (let i = 0; i < nrid; i++) { const ua = a0 + (a1 - a0) * i / nrid, ub = a0 + (a1 - a0) * (i + 1) / nrid, hw = RM === INF_TH ? 0.2 : 0.1, cc = RM === INF_TH ? col.map(v => v * 0.5) : [0.26, 0.22, 0.19], ya = yR + 0.07 - sgy(ua), yb = yR + 0.07 - sgy(ub); for (const s of [-1, 1]) g2.quad(W_, P(ua, 0, ya), P(ub, 0, yb), P(ub, s * hw, yb - 0.1), P(ua, s * hw, ya - 0.1), cc, GPU.wood, [0, 1, 0]); }      // [fx2] ridge cap follows the sag
   ROOFS.push({ M: Array.from(MS.elements || MS), w, d, top, tanP, ridgeX, zc, ov, lift, T, a0, a1, hs, ve, yR, yE });
   const name = g.make('gen_roof_' + (_gn++)), name2 = g2.make('gen_roofe_' + (_gn++)), fn = gf.make('gen_roofF_' + (_gn++));
   Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn]; Kit.far[name2] = [];
