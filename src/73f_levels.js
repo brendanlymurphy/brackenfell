@@ -125,6 +125,12 @@ function buildLevels(bucket, fence, R) {
       KQ.quad(INF_R, [xa, ta, zo], [xb, tb, zo], [xb, tb, zi], [xa, ta, zi], c.map(v => v * 1.12), [ua, 0, ub, 0.4 / TC], [0, 1, 0]);
       if (i === 0) KQ.quad(INF_R, [xa, base, zi], [xa, base, zo], [xa, ta, zo], [xa, ta, zi], c.map(v => v * 0.85), [0, base / TC, 0.4 / TC, ta / TC], [-1, 0, 0]);
       if (i === n - 1) KQ.quad(INF_R, [xb, base, zo], [xb, base, zi], [xb, tb, zi], [xb, tb, zo], c.map(v => v * 0.85), [0, base / TC, 0.4 / TC, tb / TC], [1, 0, 0]); } }
+  /* [fx3] the landing's two parapet pieces in the same rubble, closed solids with a lighter coping face on top */
+  if (KQ) { const kb = (x0, y0, z0, x1, y1, z1, skip) => { const c = [0.72, 0.7, 0.66], U = (a, b) => [a / 1.2, y0 / 1.2, b / 1.2, y1 / 1.2];
+      if (!(skip & 32)) KQ.quad(INF_R, [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], c, U(x0, x1), [0, 0, 1]); if (!(skip & 16)) KQ.quad(INF_R, [x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], c.map(v => v * 0.9), U(x0, x1), [0, 0, -1]);
+      if (!(skip & 2)) KQ.quad(INF_R, [x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], c.map(v => v * 0.95), U(z0 + 3, z1 + 3), [1, 0, 0]); if (!(skip & 1)) KQ.quad(INF_R, [x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], c.map(v => v * 0.85), U(z0 + 3, z1 + 3), [-1, 0, 0]);
+      KQ.quad(INF_R, [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], c.map(v => v * 1.15), [x0 / 1.2, z0 / 1.2, x1 / 1.2, z1 / 1.2], [0, 1, 0]); };
+    kb(-36.8, H, T.z1 + wt, -36.3, H + 0.95, 34.3, 0); kb(-36.3, H, 34.3, -34.0, H + 0.95, 34.7, 2); }
   if (KQ) { const nm = KQ.make('gen_terrace_walls'); infBatch().add(nm, new THREE.Matrix4(), { zone: 0, skyVis: 1, cast: false }); }
 
   // ── the flight from the market square: 2.8 m wide, steps are a top and a riser, cheeks are two beams, an arch with a roof where it arrives ──
@@ -160,7 +166,7 @@ function buildLevels(bucket, fence, R) {
     const lb = gmin(-36.8, T.z1, -34, lz1) - 0.6;
     if (!KQ) stoneBox(-36.8, lb, T.z1 + wt, -34.0, H, lz1 + 0.3, sc(0.95), 4 | 16, 0.7);
     lvFloor(-36.0, T.z1 - 0.3, -34.0, lz1, H);
-    stoneBox(-36.8, H, T.z1 + wt, -36.3, H + 0.95, lz1 - 0.1, sc(1), 4 | 16 | 32, 0.6); stoneBox(-36.8, H, lz1 - 0.1, -34.0, H + 0.95, lz1 + 0.3, sc(1), 4 | 2, 0.6);
+    if (!KQ) { stoneBox(-36.8, H, T.z1 + wt, -36.3, H + 0.95, lz1 - 0.1, sc(1), 4 | 16 | 32, 0.6); stoneBox(-36.8, H, lz1 - 0.1, -34.0, H + 0.95, lz1 + 0.3, sc(1), 4 | 2, 0.6); }
     col(-36.8, T.z1 + wt, -36.3, lz1 + 0.3, lb, H + 1.1); col(-36.8, lz1 - 0.1, -34.0, lz1 + 0.3, lb, H + 1.1);
     const m = M(xE, lz0), y = Terrain.y(xE + 0.6, lz1 + 0.8); m.push().T(xE + 0.6, y, lz1 + 0.8); m.mat(MAT.TIMBER, COL.timberDark); m.cbox(0, 0, 0, 0.14, 2.2, 0.14, 4); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cbox(0, 2.2, 0, 0.3, 0.34, 0.3, 4); m.pop();
     World.emitters.push({ type: 'lantern', p: [xE + 0.6, y + 2.4, lz1 + 0.8], zone: 0, halo: 0.5 });
