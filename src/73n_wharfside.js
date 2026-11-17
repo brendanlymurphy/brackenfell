@@ -130,11 +130,11 @@ function wharfCloses() {
   const cuts = [a0, a0 + (aG - 2 - a0) / 2, aG - 2, aG + 2, aG + 10.5, a1];
   const edge = (A0, B0, A1, B1, kind) => { (kind === 'h' ? C.hedges : C.fences).push(line(A0, B0, A1, B1, Math.max(2, Math.round(Math.abs(A1 - A0 + B1 - B0) / 2.6)), kind === 'h' ? 0.5 : 0.25)); };
   for (let i = 0; i < 5; i++) {
-    const A0 = cuts[i], A1 = cuts[i + 1]; if (i === 2) continue; const bW = i === 4 ? 4.8 : BW;
+    const A0 = cuts[i], A1 = cuts[i + 1]; if (i === 2) continue; const bW = 4.8;
     const orch = i === 4, kind = orch ? 'h' : 'f';
     edge(A0, bE, A1, bE + (R() - 0.5) * 0.6, 'h');
     edge(A0, bW, A0, bE, kind); if (i === 4 || i === 1 || i === 3 || i === 0) edge(A1, bW, A1, bE, kind);
-    edge(A0, i === 4 ? 4.8 : bW, A1, i === 4 ? 4.8 : bW, 'f');
+    edge(A0, bW, A1, bW, 'f');
     if (!orch) C.soil.push([LP(A0, bW), LP(A1, bW), LP(A1, bE), LP(A0, bE)]);
     if (!orch) { const nb = Math.floor((bE - bW - 1.6) / 1.5); for (let r = 0; r < nb; r++) { const b = bW + 1.2 + r * 1.5; C.beds.push([LP(A0 + 0.7, b), LP(A1 - 0.7, b + 0.7)]); } }
     else for (let a = A0 + 2.2; a < A1 - 1; a += 6.0) for (let b = bW + 2.4; b < bE - 1.0; b += 5.2) C.trees.push([...LP(a + (R() - 0.5) * 0.8, b + (R() - 0.5) * 0.8), 0.75 + R() * 0.2]);
@@ -152,6 +152,21 @@ function wharfCloses() {
   { const cx = 31.6, cz = 80.4, c = Math.cos(0.5), sn = Math.sin(0.5), W = (a, b) => [cx + a * c - b * sn, cz + a * sn + b * c]; C.wedge = { x: cx, z: cz };
     C.soil.push([W(-4.4, -3.6), W(4.4, -3.6), W(4.4, 3.6), W(-4.4, 3.6)]); C.hedges.push([W(-5.4, 4.6), W(0, 4.8), W(5.4, 4.4)], [W(5.4, -4), W(5.6, 0), W(5.4, 4.4)]); C.fences.push([W(-5.4, -4.4), W(-5.4, 0), W(-5.2, 4.6)]);
     C.racks.push([...W(-3.5, 2.4), ...W(0.5, 2.6)], [...W(-3.5, -3), ...W(0, -3.1)]); C.boats.push([...W(2.2, -0.4), 0.45]); }
+  // the street's east side, where the removed shells stood: garden closes and a small orchard behind a hedge, each a plot of a household that stays, with a path to the street
+  if (WHARF.street) { const SL = WHARF.street.L, enter = WHARF.houses.map(h => h[0]).filter(id => INF.byId[id] && INF.byId[id].enter).map(id => SITE[id]).filter(Boolean);
+    const LS = (a, b) => { const P = pt(SL, a), Q = pt(SL, a + 1), dx = Q[0] - P[0], dz = Q[1] - P[1], l = hyp(dx, dz) || 1, t = [dx / l, dz / l]; return [P[0] + t[1] * b, P[1] - t[0] * b]; };      // b > 0 out to the east of Wharf Street
+    const sA = WHARF.street.s0 + 12, sB = WHARF.street.sEnd - 4; let kk = 0;
+    for (let a = sA; a + 8 <= sB; a += 9.5, kk++) {
+      const b0 = 3.9, b1 = b0 + 6.6 + (kk % 2) * 1.6, A0 = a, A1 = a + 8.2, cen = LS((A0 + A1) / 2, (b0 + b1) / 2);
+      if (enter.some(st => hyp(st.x - cen[0], st.z - cen[1]) < (st.w + st.d) / 4 + 6.2)) continue;
+      const ln = (a0, c0, a1, c1, n) => { const o = []; for (let i = 0; i <= n; i++) { const t = i / n; o.push(LS(a0 + (a1 - a0) * t, c0 + (c1 - c0) * t)); } return o; };
+      const orch = kk % 3 === 2;
+      C.hedges.push(ln(A0, b1, A1, b1, 3)); C.fences.push(ln(A0, b0, A1, b0, 3), ln(A0, b0, A0, b1, 2), ln(A1, b0, A1, b1, 2));
+      C.soil.push([LS(A0, b0), LS(A1, b0), LS(A1, b1), LS(A0, b1)]);
+      if (orch) { for (const [ta, tb] of [[2.2, 2.4], [5.8, 2.4], [4.0, 5.2]]) C.trees.push([...LS(A0 + ta, b0 + tb), 0.75]); }
+      else for (let r = 0; r < 4; r++) { const bb = b0 + 1.0 + r * 1.35; C.beds.push([LS(A0 + 0.7, bb), LS(A1 - 0.7, bb + 0.7)]); }
+      C.paths.push([LS(A0 + 4.1, 0.6), LS(A0 + 4.1, b0 + 0.4)]);
+    } }
   // the wharf yard's open ground: a boat drawn up, one upturned on trestles, two drying racks, a winch, barrels and pots, rope
   C.racks.push([-9.2, 70.4, -5.4, 70.1], [-17.4, 71.0, -13.8, 71.3]); C.boats.push([-3.6, 73.7, 0.18, 'up0'], [-1.6, 70.4, -0.1, 'trestle']);
   C.winch = [1.9, 74.4]; C.barrels = [[3.1, 72.0], [3.7, 72.6], [3.2, 73.0], [-7.0, 76.4], [-6.4, 77.0]]; C.coil = [[0.4, 75.6], [-6.5, 74.0]];
