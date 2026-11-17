@@ -133,11 +133,11 @@ function buildVegetation() {
   // bushes and boulders
   for (let i = 0; i < 700; i++) {
     const a = R() * TAU, r = 26 + Math.pow(R(), 0.7) * 160, x = Math.cos(a) * r, z = Math.sin(a) * r;
-    if (blocked(x, z, 0.3)) continue;
+    if (blocked(x, z, 0.3) || placeW(x, z, 2.5) > 0) continue;
     inst.bush.push([x, Terrain.y(x, z) - 0.05, z, 0.5 + R() * 0.65, R() * TAU, R(), R(), 0]);
   }
-  for (const s of SITES) { if (!HOUSES[s.id] || s.id === 'barn') continue; for (let k = 0; k < 5; k++) { const side = R() < 0.5 ? -1 : 1, lx = R.s() * s.w * 0.45, p = siteToWorld(s, lx, side * (s.d / 2 + 0.8)); const dl = siteDoorLocal(s, 0); if (hyp(lx - dl[0], side * (s.d / 2) - dl[1]) < 1.8 || s.id === 'smithy' && side < 0) continue; inst.bush.push([p[0], Terrain.y(p[0], p[1]) - 0.05, p[1], 0.45 + R() * 0.4, R() * TAU, R(), R(), 0]); } }
-  for (const g of World.gardenPlants || []) inst.bush.push([g[0], Terrain.y(g[0], g[1]) - 0.02, g[1], 0.42 + R() * 0.15, R() * TAU, g[2] * 0.45, R(), 0]);
+  for (const s of SITES) { if (!HOUSES[s.id] || s.id === 'barn') continue; for (let k = 0; k < 5; k++) { const side = R() < 0.5 ? -1 : 1, lx = R.s() * s.w * 0.45, p = siteToWorld(s, lx, side * (s.d / 2 + 0.8)); const dl = siteDoorLocal(s, 0); if (placeW(p[0], p[1], 2.5) > 0 || hyp(lx - dl[0], side * (s.d / 2) - dl[1]) < 1.8 || s.id === 'smithy' && side < 0) continue; inst.bush.push([p[0], Terrain.y(p[0], p[1]) - 0.05, p[1], 0.45 + R() * 0.4, R() * TAU, R(), R(), 0]); } }
+  for (const g of World.gardenPlants || []) if (placeW(g[0], g[1], 2.5) <= 0) inst.bush.push([g[0], Terrain.y(g[0], g[1]) - 0.02, g[1], 0.42 + R() * 0.15, R() * TAU, g[2] * 0.45, R(), 0]);
   const colHit = (x, z, r) => { for (const c of World.colliders) { if (c.r !== undefined) { if (Math.hypot(x - c.x, z - c.z) < c.r + r * 0.7) return true; continue; } const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz; if (Math.hypot(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < r * 0.7) return true; } return false; };   // [fx1] a boulder never settles on a wall, a post or a building laid down before it
   const addRock = (x, z, s) => { if (s > 0.6 && colHit(x, z, 0.78 * s)) return; const y = gy(x, z); inst.rock.push([x, y - 0.22 * s, z, s, R() * TAU, R(), R(), 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
   for (let i = 0; i < 420; i++) {
@@ -173,6 +173,11 @@ function buildVegetation() {
     mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
   }
   mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
+  /* [fx3] Chapelgate approach: old trees along the hedged way from the north gate to the lych gate, and yews in the churchyard (dark conifers kept small) */
+  for (const [x, z, k, sc] of [[-11.5, -62.6, 'oak', 0.8], [-3.4, -66.2, 'oak', 0.75], [-12.3, -70.4, 'birch', 1.0]]) if (!blocked(x, z, 0.5)) addTree(k, x, z, sc);
+  /* [fx3] the hedge along the way to the lych gate: overlapping clumps of uneven size on a low bank, with a few saplings grown out of it */
+  for (const h of World.hedgeClumps || []) inst.bush.push([h[0], h[1], h[2], h[3], h[4], h[5], h[6], 0]);
+  for (const [x, z] of World.hedgeSaplings || []) addTree('birch', x, z, 0.32);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;

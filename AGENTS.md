@@ -6,7 +6,7 @@ https://brendanlymurphy.github.io/brackenfell/. Development happens on `threejs`
 This file is the whole onboarding: a worker brief only needs to say "read AGENTS.md" and then name the task. Read more only for
 the area you touch: `docs/DESIGN.md` (art, sound and feel), `docs/STATE.md` (how the engine works, by area), `ROADMAP.md` (done, in
 progress, next, known problems), `docs/DECISIONS.md` (what was tried and rejected: read before proposing something "new"),
-`docs/STORY.md` (the main story), `docs/DEFECTS.md` (open visual defects), `docs/HISTORY.md` (old measurements).
+`docs/TOWNPLAN.md` (how the town is laid out and why: the authority for anything outdoors), `docs/BLUEPRINT.md` (the rules any village must pass) and `docs/AUDIT.md` (what Brackenfell fails, with counts and pictures), `docs/STORY.md` (the main story), `docs/LOGIC.md` (where story, routines and rules did not make sense, what was done, what is open), `docs/DEFECTS.md` (open visual defects), `docs/GEOMETRY.md` (stretched textures, open edges and single-quad walls with positions: `node tools/geomaudit.mjs` rewrites it), `docs/HISTORY.md` (old measurements).
 
 ## Build and run
 
@@ -36,7 +36,7 @@ What `--full` runs: build; silent boot (no `warn` or `error` line: a builder tha
 that way once); `quest` (ends `fire 99 bonfire true`); `stairs`, `npcstairs`, `npcsep`, `routes`, `combat`, `wilds`, `story`, `mine`,
 `secrets`, `interact`, `econ`; `interiors`, `parity`; `voice_game`, `voice_parts`, `audio_game`, `voices` (`tools/voice/check.mjs`); the budget
 views on medium and low; every cell in chunks of 8 (a software-rendered tab dies after about a dozen); `kitcull`; one WebGPU
-shot in the square and in the inn with no GPU errors; the offline start; `test/real.mjs` (production boot); and the play bot.
+shot in the square and in the inn with no GPU errors; `cullwalk` (nothing in sight missing while walking and turning); `town` (every street and gate walked both ways by input, no long way round between two places for a villager, no spawn or door step inside a prop, off the wharf and the dock into deep water and out again on foot: `node test/walkbot.mjs --part streets`); `water` (nothing built or walked under a water surface, no water drawn over dry ground); the offline start; `test/real.mjs` (production boot); and the play bot.
 
 The play bot (`test/playbot.mjs`, steps `bot-story`, `bot-play`, `bot-phone`, `bot-sweep`, `bot-soak`) plays by real keys, clicks and
 taps: the story to both endings, a reload at seven points of it, every conversation, side quests, shop, perks, board, theft and
@@ -44,7 +44,12 @@ jail, death, other orders, saves from old builds, the mine, the secrets, a phone
 `node test/playbot.mjs --run story,side` runs scenarios by hand (`story` first: the others start from its checkpoints).
 `docs/BUGS.md` lists what it found; a behaviour bug you fix gets a line there and a check in the bot.
 
-Budgets (draw calls / triangles in the four views of `test/perf_views.js`): target medium 220 / 380k, low 140 / 200k. The gate
+The walk bot (`node test/walkbot.mjs`, about 7 minutes) walks by input along every street, through every interior, route, path and the
+mine, and writes `docs/WALK.md`: falls, snags, places it could not walk, camera and prompt faults, each with a `game.shot` call. Run
+it after moving colliders, floors, stairs or doors. `--part town|cells|routes|wilds|mine`, `--cells inn,chapel`, `--from-json`.
+
+Budgets (draw calls / triangles in the four views of `test/perf_views.js`): target medium 220 / 380k, low 140 / 200k (Build 69: medium
+square 157 / 292k, low square 125 / 195k; only the alley on Low is over, at 148 / 218k). The gate
 fails a view that is more than 3% worse than `tools/gate_budget.json` and reports "over target" otherwise. After a deliberate
 change: `node tools/gate.mjs --only budget-medium,budget-low --accept-budget`, commit the file and say why.
 
@@ -140,11 +145,12 @@ node tools/voice/check.mjs --allow-missing
 
 - The API key is a network secret on the infrastructure session's cloud environment (host generativelanguage.googleapis.com, header
   `x-goog-api-key`); it is never in the repository, the environment or a chat. Only that environment can generate.
-- 100 requests a day. The script stops cleanly at the limit and resumes; a scheduled run generates each day until nothing is
-  missing. A line without a file is a subtitle. `audio/voice/manifest.json` lists only lines that have audio.
+- 100 requests a day. The script stops cleanly at the limit and resumes. Every planned line has audio now (252); nothing is
+  scheduled, so after adding lines run the commands above. A line without a file is a subtitle. `audio/voice/manifest.json` lists only lines that have audio.
 - Speech is played dry: never route it through reverb or process it. `cast_gemini.json` holds one voice and one acting direction
   per character; `--sample` makes one clip per character for the owner to approve before a new voice is used.
-- `check.mjs` fails a file over 0.45 s per character or over 30 s (a model once read its direction aloud for 24 s).
+- `check.mjs` fails a file over 0.45 s per character, or over 30 s unless the line is long enough to need it (a model once read
+  its direction aloud for 24 s).
 
 ## What the owner wants (direct feedback, most recent last)
 
@@ -152,8 +158,21 @@ node tools/voice/check.mjs --allow-missing
 - Dense and complex: a compact town with levels, alleys, layers and places to explore; no open empty space, nothing bare.
 - Every building enterable as its own larger interior with floors, cellars, dungeons; taverns full of people.
 - Interiors must make physical sense (floor plans, nothing overlapping) AND be richly filled; bare planned rooms were rejected.
-- Runs well on an iPhone in Safari.
+- Runs well on an iPhone in Safari. Nobody has measured it: Settings > Graphics > "Copy performance report" copies 30 s of frame
+  times, draw calls, device and build as text for the owner to paste to us.
 - Sound: restrained and dry. No echo on everything, no jingles, voices straight from the model without processing.
 - Dialogue as plain white subtitles, no text box.
 - Glitches (flicker, interpenetrating roofs, duplicated characters, floating boardwalks) matter more to them than new features.
 - Plain step-by-step instructions when they have to click something themselves.
+- Build 69: add nothing new until what exists is right and filled out. "The ground is flat, every house looks the same on the
+  outside, the terraces and platform are all fucked up, not to mention the walls; none of it really flows, it all feels like
+  copy paste." Also to be made coherent: general logic, the storylines, what characters do, and their mechanics.
+- "Everything is blocky, blocked off, clunky and lazy. Think like an artist and a city planner: every touch intentional, not just
+  filling space, but all the space filled at the same time, and full of life." The answer is `docs/TOWNPLAN.md`: read it before
+  touching anything outdoors. It outranks any brief.
+- Build 74: "buildings that really are just filling space and don't tell a story ... 80% of the characters don't even have lines
+  ... it's all fake life ... we add things without fully thinking about them and then it just becomes a jumbled mess." The goal:
+  a village good enough to be the blueprint for every later one. A critic session counted it (`docs/AUDIT.md`: 75 of 132
+  buildings are boxes with a door drawn on; 63 of 80 villagers answer "..."; interiors 2 to 6 times their shells) and wrote
+  `docs/BLUEPRINT.md`, the acceptance test for this and every village. Its order of work is binding: the cast table and the
+  building table come before anything is placed. No fake buildings; subtraction before addition.

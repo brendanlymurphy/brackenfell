@@ -1129,6 +1129,42 @@
    "src": "82_story.js"
   },
   {
+   "key": "6674jlof4n",
+   "speaker": "pip",
+   "kind": "line",
+   "text": "There’s a trunk up on the Hart’s roof walk. I climbed up. It’s locked, and Greta says it isn’t hers, but she looked cross.",
+   "say": "There's a trunk up on the Hart's roof walk. I climbed up. It's locked, and Gretta says it isn't hers, but she looked cross.",
+   "voice": "bf_lily:0.7+af_nicole:0.3",
+   "speed": 1.04,
+   "pitch": 0,
+   "file": "62d659be7c39fa.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "2f1fpp69d19",
+   "speaker": "pip",
+   "kind": "line",
+   "text": "There’s lights behind the chapel after midnight. Two people. I’m not allowed out, so I didn’t see them.",
+   "say": "There's lights behind the chapel after midnight. Two people. I'm not allowed out, so I didn't see them.",
+   "voice": "bf_lily:0.7+af_nicole:0.3",
+   "speed": 1.04,
+   "pitch": 0,
+   "file": "58c908c274723e.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "fi7o5to4g8",
+   "speaker": "pip",
+   "kind": "line",
+   "text": "Nothing. I’m being good today.",
+   "say": "Nothing. I'm being good today.",
+   "voice": "bf_lily:0.7+af_nicole:0.3",
+   "speed": 1.04,
+   "pitch": 0,
+   "file": "4790032ddd72be.m4a",
+   "src": "82_story.js"
+  },
+  {
    "key": "1ytua3yx9sn",
    "speaker": "marta",
    "kind": "line",
@@ -1162,6 +1198,18 @@
    "speed": 0.92,
    "pitch": 0,
    "file": "8a5d95be5f7f6b.m4a",
+   "src": "82_story.js"
+  },
+  {
+   "key": "6am133l3ym",
+   "speaker": "rowan",
+   "kind": "line",
+   "text": "Tomorrow, I said. An old man needs a night to find the words. Sleep, and come back.",
+   "say": "Tomorrow, I said. An old man needs a night to find the words. Sleep, and come back.",
+   "voice": "bm_fable:0.5+bm_george:0.5",
+   "speed": 0.92,
+   "pitch": 0,
+   "file": "1dfe6a57e57ebf.m4a",
    "src": "82_story.js"
   },
   {
@@ -1213,18 +1261,6 @@
    "src": "82b_interact.js"
   },
   {
-   "key": "1397veq35sg",
-   "speaker": "greta",
-   "kind": "line",
-   "text": "Three gold, love. Your purse says otherwise.",
-   "say": "Three gold, love. Your purse says otherwise.",
-   "voice": "bf_emma",
-   "speed": 1,
-   "pitch": 0,
-   "file": "f0274f31b8d489.m4a",
-   "src": "82b_interact.js"
-  },
-  {
    "key": "1kxoqxhhrjt",
    "speaker": "greta",
    "kind": "line",
@@ -1234,6 +1270,18 @@
    "speed": 1,
    "pitch": 0,
    "file": "9070a023c52e53.m4a",
+   "src": "82b_interact.js"
+  },
+  {
+   "key": "1397veq35sg",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "Three gold, love. Your purse says otherwise.",
+   "say": "Three gold, love. Your purse says otherwise.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "f0274f31b8d489.m4a",
    "src": "82b_interact.js"
   },
   {
@@ -1285,15 +1333,15 @@
    "src": "82b_interact.js"
   },
   {
-   "key": "115moyoy58d",
+   "key": "7yle6zmy8k",
    "speaker": "brandt",
    "kind": "line",
-   "text": "Where did you get that? That’s my dies, fifty years back. Old Mine steel.",
-   "say": "Where did you get that? That's my dies, fifty years back. Old Mine steel.",
+   "text": "Where did you get that? Those are my grandfather’s dies, fifty years back. Old Mine steel.",
+   "say": "Where did you get that? Those are my grandfather's dies, fifty years back. Old Mine steel.",
    "voice": "bm_lewis",
    "speed": 0.96,
    "pitch": 0,
-   "file": "d5307dfbe2a26c.m4a",
+   "file": "c9f7ac1efd0b77.m4a",
    "src": "82b_interact.js"
   },
   {
@@ -1417,27 +1465,27 @@
    "src": "82b_interact.js"
   },
   {
-   "key": "cqm6gra9ly",
+   "key": "djl62sdtrs",
    "speaker": "rowan",
    "kind": "line",
-   "text": "The bread was late twice this week.",
-   "say": "The bread was late twice this week.",
+   "text": "Three weeks now without the bread. They will be counting.",
+   "say": "Three weeks now without the bread. They will be counting.",
    "voice": "bm_fable:0.5+bm_george:0.5",
    "speed": 0.92,
    "pitch": 0,
-   "file": "d85696cc291894.m4a",
+   "file": "cb745e2996e240.m4a",
    "src": "82c_secrets.js"
   },
   {
-   "key": "1r2hq3mm8pl",
+   "key": "1ocorka6ajz",
    "speaker": "greta",
    "kind": "line",
-   "text": "The new one has been asking about the mine door.",
-   "say": "The new one has been asking about the mine door.",
+   "text": "There is a stranger in town. Strangers ask about barred doors.",
+   "say": "There is a stranger in town. Strangers ask about barred doors.",
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "9279b33149b0be.m4a",
+   "file": "2f625654c18849.m4a",
    "src": "82c_secrets.js"
   },
   {
@@ -1465,15 +1513,15 @@
    "src": "82c_secrets.js"
   },
   {
-   "key": "1yttd7rxecq",
+   "key": "2dwa5ter5a3",
    "speaker": "rowan",
    "kind": "line",
-   "text": "Then they find what Corwin found. Go. Go before the bell.",
-   "say": "Then they find what Corwin found. Go. Go before the bell.",
+   "text": "Then they find what Corwin found. Go, before the watch comes round.",
+   "say": "Then they find what Corwin found. Go, before the watch comes round.",
    "voice": "bm_fable:0.5+bm_george:0.5",
    "speed": 0.92,
    "pitch": 0,
-   "file": "9695245356c2e1.m4a",
+   "file": "2e9bef0e1d7f1f.m4a",
    "src": "82c_secrets.js"
   },
   {
@@ -1573,6 +1621,42 @@
    "src": "93_inventory.js"
   },
   {
+   "key": "2fam7ga9dxu",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Not while the watch is asking after you. Square it with the Warden, then we’ll talk iron.",
+   "say": "Not while the watch is asking after you. Square it with the Warden, then we'll talk iron.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "f892e1b0d0524d.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "8r5ho5dkfa",
+   "speaker": "marta",
+   "kind": "line",
+   "text": "Not today, dear. Hale has been asking after you, and I’ll not buy from a name he is asking after.",
+   "say": "Not today, dear. Hale has been asking after you, and I'll not buy from a name he is asking after.",
+   "voice": "bf_alice",
+   "speed": 1,
+   "pitch": 0,
+   "file": "0cf24ee2c8c0fa.m4a",
+   "src": "94b_economy.js"
+  },
+  {
+   "key": "mzwlg9yw2t",
+   "speaker": "brandt",
+   "kind": "line",
+   "text": "Not while the watch is asking after you. I’ve a name to keep.",
+   "say": "Not while the watch is asking after you. I've a name to keep.",
+   "voice": "bm_lewis",
+   "speed": 0.96,
+   "pitch": 0,
+   "file": "80df5bc6a64e73.m4a",
+   "src": "94b_economy.js"
+  },
+  {
    "key": "liqjsmrlxm",
    "speaker": "marta",
    "kind": "line",
@@ -1657,30 +1741,6 @@
    "src": "94b_economy.js"
   },
   {
-   "key": "2gbeajsgyq9",
-   "speaker": "greta",
-   "kind": "line",
-   "text": "Up on the Hart’s roof walk there’s a trunk under the eaves that nobody here owns. Greta says it came with the building.",
-   "say": "Up on the Hart's roof walk there's a trunk under the eaves that nobody here owns. Gretta says it came with the building.",
-   "voice": "bf_emma",
-   "speed": 1,
-   "pitch": 0,
-   "file": "a7a8569f9770ce.m4a",
-   "src": "94b_economy.js"
-  },
-  {
-   "key": "56868rsroe",
-   "speaker": "greta",
-   "kind": "line",
-   "text": "The cellar wall in this very house, the east one: newer brick than the rest. Ask me no more, love.",
-   "say": "The cellar wall in this very house, the east one: newer brick than the rest. Ask me no more, love.",
-   "voice": "bf_emma",
-   "speed": 1,
-   "pitch": 0,
-   "file": "4973afaeaee6d3.m4a",
-   "src": "94b_economy.js"
-  },
-  {
    "key": "26pxy08a8ua",
    "speaker": "greta",
    "kind": "line",
@@ -1690,18 +1750,6 @@
    "speed": 1,
    "pitch": 0,
    "file": "0791ac118fed8c.m4a",
-   "src": "94b_economy.js"
-  },
-  {
-   "key": "wnnk8nmb3l",
-   "speaker": "greta",
-   "kind": "line",
-   "text": "Lights behind the chapel after midnight, and two folk talking low who’d not thank you for listening. Stand off, if you’re bold. Don’t get close.",
-   "say": "Lights behind the chapel after midnight, and two folk talking low who'd not thank you for listening. Stand off, if you're bold. Don't get close.",
-   "voice": "bf_emma",
-   "speed": 1,
-   "pitch": 0,
-   "file": "880b05659fcc0a.m4a",
    "src": "94b_economy.js"
   },
   {
@@ -1741,15 +1789,15 @@
    "src": "94b_economy.js"
   },
   {
-   "key": "2fkki8qyeyh",
+   "key": "10vu366a500",
    "speaker": "greta",
    "kind": "line",
-   "text": "They say the Foreman had a strongbox down there and the only key hangs round his neck. Hung.",
-   "say": "They say the Foreman had a strongbox down there and the only key hangs round his neck. Hung.",
+   "text": "My grandmother said the Old Mine’s foreman kept a strongbox below and wore the key round his neck. Nobody has been down to ask him.",
+   "say": "My grandmother said the Old Mine's foreman kept a strongbox below and wore the key round his neck. Nobody has been down to ask him.",
    "voice": "bf_emma",
    "speed": 1,
    "pitch": 0,
-   "file": "004f1bd7261dfc.m4a",
+   "file": "9d202ab6e397b6.m4a",
    "src": "94b_economy.js"
   },
   {
@@ -1861,15 +1909,15 @@
    "src": "94d_act2.js"
   },
   {
-   "key": "2eaz1519jnp",
+   "key": "213ytrdsoqy",
    "speaker": "rowan",
    "kind": "line",
-   "text": "I stopped it. Three weeks ago. Greta has found a buyer who pays double and wants the silver by the barrow, and I am old, and I thought: let it end with me. Pell walked out by the lake cave to ask why the bread had not come. You saw what the lake does to a man who has been so long under.",
-   "say": "I stopped it. Three weeks ago. Gretta has found a buyer who pays double and wants the silver by the barrow, and I am old, and I thought: let it end with me. Pell walked out by the lake cave to ask why the bread had not come. You saw what the lake does to a man who has been so long under.",
+   "text": "I stopped it. Three weeks ago. Greta has found a buyer who pays double and wants the silver by the barrow, and I am old, and I thought: let it end with me. Pell walked out by the lake cave to ask why the bread had not come. You saw how far a man gets in daylight who has been so long under.",
+   "say": "I stopped it. Three weeks ago. Gretta has found a buyer who pays double and wants the silver by the barrow, and I am old, and I thought: let it end with me. Pell walked out by the lake cave to ask why the bread had not come. You saw how far a man gets in daylight who has been so long under.",
    "voice": "bm_fable:0.5+bm_george:0.5",
    "speed": 0.92,
    "pitch": 0,
-   "file": "4769cffaa8a612.m4a",
+   "file": "37f4c516317060.m4a",
    "src": "94d_act2.js"
   },
   {

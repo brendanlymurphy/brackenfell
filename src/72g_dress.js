@@ -23,7 +23,7 @@ PD.rack = function (P, room, x, z, len, rot, kinds) {
       if (k === 'herb') { const hc = R.pick([[0.3, 0.33, 0.2], [0.36, 0.34, 0.22], [0.38, 0.3, 0.2], [0.3, 0.28, 0.19]]); m.mat(MAT.CLOTH, hc, 0.6); for (let q = 0; q < 6; q++) { const a = q / 6 * 6.283, rr = 0.03 + (q % 2) * 0.015; m.cyl(px + j + Math.cos(a) * rr, -1.06 - (q % 3) * 0.03, Math.sin(a) * rr, 0.012, 0.004, 0.26 + (q % 3) * 0.03, 4, 1); } m.mat(MAT.CLOTH, [0.42, 0.34, 0.22], 0.5); m.cyl(px + j, -0.84, 0, 0.026, 0.026, 0.025, 6, 2); }      // [c5] a bundle of stems tied at the neck, 0.3 m, not a cone
       else if (k === 'ham') { m.mat(MAT.THATCH, [0.42, 0.24, 0.19], 0.4); m.ball(px, -1.0, 0, 0.1, 0.17, 0.1, 6, 4); }
       else if (k === 'pot') { m.mat(MAT.METAL, R.pick([[0.42, 0.28, 0.17], [0.36, 0.3, 0.24], [0.45, 0.33, 0.2]])); at(m, px, 0, 0, 0, () => m.lathe([[0.005, -1.08], [0.06, -1.07], [0.085, -0.98], [0.07, -0.9], [0.075, -0.88]], 8, 0)); }      // [c5] a small copper pot, not a black tub
-      else { m.mat(MAT.PLAIN, [0.78, 0.7, 0.5]); m.ball(px, -0.95, 0, 0.06, 0.08, 0.06, 5, 3); m.ball(px + 0.02, -1.08, 0, 0.06, 0.08, 0.06, 5, 3); }
+      else { m.mat(MAT.CLOTH, [0.2, 0.17, 0.12], 0.5); m.cyl(px, -0.5, 0, 0.006, 0.006, 0.5, 4, 1); m.mat(MAT.CLOTH, [0.36, 0.32, 0.24], 0.5); for (let q = 0; q < 5; q++) m.ball(px + (q % 2 ? 0.035 : -0.035), -0.62 - q * 0.075, (q % 3 - 1) * 0.02, 0.04, 0.045, 0.04, 8, 4); }      // [fx2] a string of garlic heads, dull cream, not two bright faceted lumps
     }
   });
   P.lightIn[room.id] = P.lightIn[room.id] || 0;
@@ -56,7 +56,7 @@ PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 co
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.36, 0.2, 0.16], [0.22, 0.27, 0.32], [0.5, 0.4, 0.2], [0.55, 0.5, 0.4], [0.3, 0.34, 0.22], [0.4, 0.33, 0.25], [0.25, 0.22, 0.2]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; for (let q = 0; q < 4; q++) { const x0 = x - 0.15 + q * 0.075, d = 0.075 + (q % 2) * 0.03, v = 0.9 + (q % 3) * 0.06; m.mat(MAT.CLOTH, [cl[0] * v, cl[1] * v, cl[2] * v], 0.5); m.box(x0, -l * 0.5, -0.04 - d, x0 + 0.075, 0.0, -0.075); m.box(x0 - 0.005 * q, -l, -0.045 - d - 0.01, x0 + 0.075 + 0.005 * q, -l * 0.5, -0.08); } m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.2, 0.11, 0.09], [0.12, 0.14, 0.17], [0.27, 0.21, 0.11], [0.3, 0.27, 0.22], [0.15, 0.18, 0.11], [0.22, 0.18, 0.13], [0.14, 0.12, 0.11]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; for (let q = 0; q < 4; q++) { const x0 = x - 0.15 + q * 0.075, d = 0.075 + (q % 2) * 0.03, v = 0.9 + (q % 3) * 0.06; m.mat(MAT.CLOTH, [cl[0] * v, cl[1] * v, cl[2] * v], 0.5); m.box(x0, -l * 0.5, -0.04 - d, x0 + 0.075, 0.0, -0.075); m.box(x0 - 0.005 * q, -l, -0.045 - d - 0.01, x0 + 0.075 + 0.005 * q, -l * 0.5, -0.08); } m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
@@ -216,9 +216,9 @@ PD.TRADE = {
   chapel: ['Torch_Metal', 'stack', 'cupboard', 'hooks', 'broom'], store: ['shelf', 'cabinet', 'sacks', 'Barrel', 'Crate_Wooden', 'hooks', 'Shelf_Simple'], draper: ['shelf', 'hooks', 'cupboard', 'sacks', 'Shelf_Simple']
 };
 PD.POOLS = {
-  cellar: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], store: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], bedroom: ['cupboard', 'hooks', 'tapestry', 'bench', 'hooks', 'cabinet', 'cask'],
+  cellar: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'torch', 'shelf', 'bench', 'broom', 'cask'], store: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'shelf', 'bench', 'broom', 'torch', 'cask'], bedroom: ['cupboard', 'hooks', 'tapestry', 'bench', 'hooks', 'cabinet', 'cask'],
   hall: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'tapestry', 'sacks', 'stack', 'cupboard'], shop: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'tapestry', 'sacks', 'stack'], keeper: ['cupboard', 'hooks', 'bench', 'hooks', 'shelf', 'cabinet'],
-  common: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'cask', 'stack'], kitchen: ['shelf', 'cabinet', 'hooks', 'cask', 'sacks', 'stack'], study: ['books', 'bench', 'hooks', 'hooks', 'cabinet'], sacristy: ['cupboard', 'hooks', 'bench', 'hooks', 'shelf'], gallery: ['bench', 'hooks', 'hooks', 'tapestry']
+  common: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'cask', 'stack'], kitchen: ['shelf', 'cabinet', 'hooks', 'cask', 'sacks', 'stack'], study: ['books', 'bench', 'hooks', 'hooks', 'cabinet'], sacristy: ['cupboard', 'hooks', 'bench', 'hooks', 'shelf'], gallery: ['bench', 'hooks', 'hooks', 'tapestry'], corridor: ['bench', 'shelf', 'hooks', 'torch', 'cask'], loft: ['cupboard', 'shelf', 'sacks', 'bench', 'hooks', 'stack', 'cask']      // [fx2] passages and upper rooms had no pool at all
 };
 PD.cover = function (P, r) {
   const a = r.in; let free = 0, cov = 0;
@@ -236,7 +236,7 @@ PD.topup = function (P) {
   P.topped = 0;
   for (const id in P.rooms) {
     const r = P.rooms[id], pools = [];
-    if (r.k === 0 && PD.TRADE[P.id] && r.kind !== 'bedroom' && r.kind !== 'cellar') pools.push(PD.TRADE[P.id]); if (PD.POOLS[r.kind]) pools.push(PD.POOLS[r.kind]);
+    if (r.k === 0 && PD.TRADE[P.id] && r.kind !== 'bedroom' && r.kind !== 'cellar') pools.push(PD.TRADE[P.id]); if (PD.POOLS[r.kind]) pools.push(PD.POOLS[r.kind]); if (r.k === 1 && r.kind !== 'gallery') pools.push(PD.POOLS.loft);
     for (const pool of pools) for (let pass = 0; pass < 4 && PD.cover(P, r) < 0.64; pass++) { const n = PD.fill(P, r, pool, { max: 6 }); P.topped += n; if (!n) break; }
     if (pools.length && PD.cover(P, r) < 0.64) P.topped += PD.corners(P, r, r.kind === 'cellar' || r.kind === 'store' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack']);
   }

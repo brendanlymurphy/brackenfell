@@ -216,8 +216,9 @@ function pBoxOK(P, room, b, o, flat) {
   if (b.min[0] < a.x0 - tol || b.max[0] > a.x1 + tol || b.min[2] < a.z0 - tol || b.max[2] > a.z1 + tol) return 'wall';
   if (b.cb && (b.cb.min[0] < a.x0 - 0.04 || b.cb.max[0] > a.x1 + 0.04 || b.cb.min[1] < a.z0 - 0.04 || b.cb.max[1] > a.z1 + 0.04)) return 'wall collider';
   if (b.max[1] > L.y + L.H + 0.02 && !o.tall) return 'ceiling';
-  if (flat) { for (const it of P.items) if (it.k === k && it.kind === 'rug' && Math.min(b.max[0], it.x1) - Math.max(b.min[0], it.x0) > 0.05 && Math.min(b.max[2], it.z1) - Math.max(b.min[2], it.z0) > 0.05) return 'rug ' + it.id; return ''; }          // [fx2] two rugs do not lie on each other
+  if (flat) { for (const it of P.items) if (it.k === k && it.kind === 'rug') { const ib = it.bx ? { x0: it.bx.min[0], x1: it.bx.max[0], z0: it.bx.min[2], z1: it.bx.max[2] } : it; if (Math.min(b.max[0], ib.x1) - Math.max(b.min[0], ib.x0) > -0.4 && Math.min(b.max[2], ib.z1) - Math.max(b.min[2], ib.z0) > -0.4) return 'rug ' + it.id; } return ''; }          // [fx2] two rugs do not lie on each other
   const r = { x0: b.min[0], x1: b.max[0], z0: b.min[2], z1: b.max[2] }, lifted = (o.lift || 0) > 0.1;
+  for (const nm in P.spots) { const sp = P.spots[nm]; if (sp.k === k && /^counter/.test(nm) && sp.x > r.x0 - 0.05 && sp.x < r.x1 + 0.05 && sp.z > r.z0 - 0.05 && sp.z < r.z1 + 0.05) return 'stands on spot ' + nm; }          // [fx2] a keeper's place is not given to a bench
   if (!lifted) for (const it of P.items) {
     if (it.k !== k || !P_SOLID[it.kind]) continue; const ib = it.bx;
     if (ib && it.kind !== 'stair' && it.kind !== 'hole') { const ox = Math.min(b.max[0], ib.max[0]) - Math.max(b.min[0], ib.min[0]), oz = Math.min(b.max[2], ib.max[2]) - Math.max(b.min[2], ib.min[2]), oy = Math.min(b.max[1], ib.max[1]) - Math.max(b.min[1], ib.min[1]); if (ox > 0.02 && oz > 0.02 && !(o.allow && o.allow.includes(it.kind))) return 'item ' + it.id; }
@@ -304,6 +305,7 @@ function pHang(P, room, side, u, w, y0, y1, draw, name, o) {
     if (u0 < (hor ? a.x0 : a.z0) - 0.02 || u1 > (hor ? a.x1 : a.z1) + 0.02) why = 'room';
     if (!why) for (const op of wl.open) { const hw = op.type === 'door' ? op.hw + 0.05 : 0.85; if (u0 < op.pos + hw && u1 > op.pos - hw && (op.type === 'door' ? by0 < 2.15 : by1 > 0.85 && by0 < 2.4)) { why = op.type; break; } }
     if (!why) for (const q of P.wallItems) if (q.wall === wl && q.side !== side && q.bx && [0, 1, 2].every(ax => Math.min(b.max[ax], q.bx.max[ax]) - Math.max(b.min[ax], q.bx.min[ax]) > 0.01)) { why = 'back to back ' + q.id; break; }   // [fx2] two things hung on both faces of one wall do not meet inside it
+    if (!why) for (const q of P.wallItems) if (q.k === room.k && q.bx && q.wall !== wl && [0, 1, 2].every(ax => Math.min(b.max[ax], q.bx.max[ax]) - Math.max(b.min[ax], q.bx.min[ax]) > 0.01)) { why = 'hangs through ' + q.id; break; }   // [fx2] two hung things at a corner
     if (!why && by1 > L.H + 0.01) why = 'ceiling';
     if (!why && by0 < 0.3 && y0 > 0.5 && !o.toFloor) why = 'floor';
     if (!why) for (const q of P.wallItems) if (q.k === rec.k && q.wall === wl && q.side === side) { const qu0 = q.bu0 === undefined ? q.u0 : q.bu0, qu1 = q.bu1 === undefined ? q.u1 : q.bu1, qy0 = q.by0 === undefined ? q.y0 : q.by0, qy1 = q.by1 === undefined ? q.y1 : q.by1; if (u0 < qu1 - 0.03 && u1 > qu0 + 0.03 && by0 < qy1 - 0.03 && by1 > qy0 + 0.03) { why = 'hung ' + q.id; break; } }
@@ -328,7 +330,7 @@ function pSpotsClear(P) {
     let room = pRoomAt(P, sp.k, sp.x, sp.z); if (!room) for (const id in P.rooms) { const q = P.rooms[id], a = q.in; if (q.k === sp.k && sp.x > a.x0 - 0.45 && sp.x < a.x1 + 0.45 && sp.z > a.z0 - 0.45 && sp.z < a.z1 + 0.45) { room = q; break; } }
     if (!room || !busy(sp.k, sp.x, sp.z)) continue;
     const a = room.in; let best = null;
-    for (const wi of [0.3, 0.22]) for (let r = 0.1; r <= 1.1 && !best; r += 0.1) { let bd = 1e9; for (let q = 0; q < 24; q++) { const ang = q / 24 * TAU, x = sp.x + Math.cos(ang) * r, z = sp.z + Math.sin(ang) * r; if (x < a.x0 + wi || x > a.x1 - wi || z < a.z0 + wi || z > a.z1 - wi || busy(sp.k, x, z)) continue; const d = r + (W.face ? 0 : 0); if (d < bd) { bd = d; best = [x, z]; } } }
+        for (const wi of [0.3, 0.22]) for (let r = 0.1; r <= 1.1 && !best; r += 0.1) { let bd = 1e9; for (let q = 0; q < 24; q++) { const ang = q / 24 * TAU, x = sp.x + Math.cos(ang) * r, z = sp.z + Math.sin(ang) * r; if (x < a.x0 + wi || x > a.x1 - wi || z < a.z0 + wi || z > a.z1 - wi || busy(sp.k, x, z)) continue; const d = r + (W.face ? 0 : 0); if (d < bd) { bd = d; best = [x, z]; } } }
     if (!best) continue; P.spotMoves.push(nm + ' ' + sp.x.toFixed(2) + ',' + sp.z.toFixed(2) + ' -> ' + best[0].toFixed(2) + ',' + best[1].toFixed(2));
     const p = P.w2(best[0], 0, best[1]); sp.x = best[0]; sp.z = best[1]; sp.p = [p[0], W.p[1], p[2]]; W.p = sp.p.slice();
   }

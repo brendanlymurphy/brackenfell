@@ -32,7 +32,7 @@ function bwWalk(bucket, pts, o) {
       for (const s of [-1, 1]) {
         if (!(rails[s > 0 ? 1 : 0]) && !(o.railSide && o.railSide(i, s, P))) continue; if (o.railOff && o.railOff(i)) continue;
         const z = s * (hw - 0.05); m.beam([-l, ya + 0.5, z], [l, yb + 0.5, z], 0.05, 0.1); m.beam([-l, ya + 0.95, z], [l, yb + 0.95, z], 0.06, 0.1);
-        addBoxCollider(m, -l, z - 0.07, l, z + 0.07, Math.min(ya, yb) - 0.05, Math.max(ya, yb) + 1.15);
+        addBoxCollider(m, -l, z - 0.05, l, z + 0.05, Math.min(ya, yb) - 0.05, Math.max(ya, yb) + 1.15);
       }
     }
     m.pop();

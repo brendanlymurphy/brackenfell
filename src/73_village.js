@@ -37,14 +37,14 @@ function buildVillage() {
         if (o.stone) {
           m.push().T((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2).RY(-Math.atan2(z1 - z0, x1 - x0)); const l = hyp(x1 - x0, z1 - z0) / 2 + 0.05;
           m.mat(MAT.STONE, [0.95, 0.95, 0.95], 0.8); m.grad = [1, 0.65]; m.box(-l, -0.7, -0.24, l, 0.85, 0.24, 4); m.grad = null; m.mat(MAT.STONE, [0.8, 0.8, 0.8], 0.6); m.box(-l, 0.85, -0.29, l, 0.95, 0.29);
-          addBoxCollider(m, -l, -0.25, l, 0.25, -0.3, 1.2); m.pop();
+          addBoxCollider(m, -l, -0.25, k === n - 1 && i < pts.length - 2 ? l - 0.3 : l, 0.25, -0.3, 1.2); m.pop();      /* [fx3] a corner's collider stops at the next wall's face */
         } else {
           m.mat(MAT.TIMBER, COL.timber);
           m.push().T(x0, y0, z0); m.cbox(0, -0.4, 0, 0.11, hgt + 0.4, 0.11, 4); m.pop();
           if (k === n - 1 && i === pts.length - 2) { m.push().T(x1, y1, z1); m.cbox(0, -0.4, 0, 0.11, hgt + 0.4, 0.11, 4); m.pop(); }
           for (const hh of [0.42, 0.86]) m.beam([x0, y0 + hh * hgt / 1.05, z0], [x1, y1 + hh * hgt / 1.05, z1], 0.045, 0.1);
           m.push().T((x0 + x1) / 2, Math.min(y0, y1), (z0 + z1) / 2).RY(-Math.atan2(z1 - z0, x1 - x0)); const l = hyp(x1 - x0, z1 - z0) / 2;
-          addBoxCollider(m, -l, -0.07, l, 0.07, -0.2, 1.2); m.pop();
+          addBoxCollider(m, -l, -0.05, l, 0.05, -0.2, 1.2); m.pop();
         }
       }
     }
@@ -55,9 +55,9 @@ function buildVillage() {
   put(6.2, -8.6, 0.3, m => typeof wellRound === 'function' ? wellRound(m) : Props.well(m));
   const OAK = World.oakPos = [-7.6, 6.4];
   for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.3; put(OAK[0] + Math.cos(a) * 1.75, OAK[1] + Math.sin(a) * 1.75, a + PI / 2, m => Props.bench(m, 1.75, true)); }
-  { const m = bucket(OAK[0], OAK[1]); m.push().T(OAK[0], Terrain.y(OAK[0], OAK[1]), OAK[1]); addCircleCollider(m, 0, 0, 2.0, 0, 0.5); m.pop(); }
+  { const m = bucket(OAK[0], OAK[1]); m.push().T(OAK[0], Terrain.y(OAK[0], OAK[1]), OAK[1]); addCircleCollider(m, 0, 0, 2.0, 0, 0.24); m.pop(); }      // [fx3] 0.24 high: the root bank is stepped over and no longer counts as a solid through the trunk
   spot('square.bench', OAK[0] + 1.75, OAK[1] + 0.55, PI / 2 + 0.2, { sit: 0.46 }); spot('square.bench2', OAK[0] - 0.1, OAK[1] - 1.8, 0.1, { sit: 0.46 });
-  const stalls = [[10.2, 4.6, AWN.madder, 0], [5.6, 9.4, AWN.woad, 1], [-11.6, -5.8, AWN.ochre, 2]];
+  const stalls = [[11.4, -4.2, AWN.madder, 0], [5.4, 5.0, AWN.woad, 1], [-12.4, -5.2, AWN.ochre, 2]];      // [fx3] two rows facing a cart way along the main street's axis (z -3 to 2)
   for (const [x, z, col, kind] of stalls) {
     const yaw = headingTo(x, z, 0, -1.5);
     put(x, z, yaw, m => Props.stall(m, col, y => {
@@ -68,8 +68,8 @@ function buildVillage() {
     const b = [x - Math.sin(yaw) * 1.05, z + Math.cos(yaw) * 1.05];
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);
   }
-  putc(11.8, 6.3, 0.4, m => Props.barrel(m)); putc(12.2, 5.2, 0, m => Props.crate(m, 0.6)); putc(4.0, 10.6, 0.2, m => Props.crate(m, 0.55)); putc(-12.9, -4.2, 0, m => Props.barrel(m));
-  putc(-6.4, 11.3, 0.08, m => Props.cart(m, true));      // Build 42: parked against the terrace wall east of the flight (it stood on the steps' first treads)
+  putc(11.8, 6.3, 0.4, m => Props.barrel(m)); putc(12.2, 5.2, 0, m => Props.crate(m, 0.6)); putc(6.9, 7.3, 0.2, m => Props.crate(m, 0.55)); putc(-12.9, -4.2, 0, m => Props.barrel(m));
+  putc(-6.4, 9.7, 0.08, m => Props.cart(m, true));      // Build 42: parked against the terrace wall east of the flight (it stood on the steps' first treads)
   // festival fire pit (lit at the end of the story)
   World.bonfirePos = [-2.6, -7.4];
   put(-2.6, -7.4, 0, m => {
@@ -89,9 +89,9 @@ function buildVillage() {
   });
   for (const [x, z] of [[-3.6, -16.3], [3.2, -16.5]]) putc(x, z, PI, m => Props.bench(m, 1.8));
   putc(-6.8, -16.4, 0, m => Props.barrel(m)); putc(-6.2, -15.9, 0.6, m => Props.barrel(m, 0.3, 0.75)); putc(6.9, -16.3, 0.3, m => Props.crate(m, 0.7));
-  putc(19.2, -5.2, 0, m => Props.barrel(m)); putc(19.0, -6.1, 0.4, m => Props.crate(m, 0.55)); putc(19.1, -11.4, 0, m => Props.sack(m, 0.32));
+  putc(19.2, -5.2, 0, m => Props.barrel(m)); putc(18.7, -6.5, 0.4, m => Props.crate(m, 0.55)); putc(19.1, -11.4, 0, m => Props.sack(m, 0.32));
   // lamps and signposts
-  for (const [x, z, a] of [[-13.2, -8.3, 0.8], [13.6, -10.2, -0.8], [-14.2, 5.2, 2.2], [13.2, 8.4, -2.4], [-31, -6.6, 0], [-50, -8.2, 0], [34, 3.4, PI], [47.5, -0.4, 0], [-12.2, -33, 1.6], [-8.6, -58.5, 1.2], [1.2, 30, -1.5], [4.4, 56, -1.5], [69, 0.2, 0], [86, -2.2, 0.2], [-63.5, 2, 1.5], [3.3, 78, -1.4], [70.2, 16, -1.6], [-9.5, 3.5, 0.3], [9.2, 4.2, -0.3], [-6.5, -12.2, 0.2]]) putc(x, z, a, m => Props.lampPost(m, OUT));
+  for (const [x, z, a] of [[-13.2, -8.3, 0.8], [13.6, -10.2, -0.8], [-14.2, 5.2, 2.2], [12.4, 7.3, -2.4], [-31, -6.6, 0], [-50, -8.2, 0], [34, 3.4, PI], [47.5, -0.4, 0], [-12.2, -33, 1.6], [-8.6, -58.5, 1.2], [1.2, 30, -1.5], [4.4, 56, -1.5], [69, 0.2, 0], [86, -2.2, 0.2], [-63.5, 2, 1.5], [3.3, 78, -1.4], [70.2, 16, -1.6], [-9.5, 3.5, 0.3], [9.2, 4.2, -0.3], [-6.5, -12.2, 0.2]]) putc(x, z, a, m => Props.lampPost(m, OUT));
   putc(14.6, 2.4, 0.4, m => Props.signPost(m, 3)); putc(-58.5, -8.4, -0.3, m => Props.signPost(m, 2)); putc(-8.9, -61.5, 0, m => Props.signPost(m, 2));
 
   // ── west gate ──
@@ -225,14 +225,14 @@ function buildVillage() {
     for (const p of [a, b]) put(p[0], p[1], 0, m => { m.mat(MAT.TIMBER, COL.timber); m.cbox(0, -0.3, 0, 0.09, 2.2, 0.09, 4); });
     const ya = Terrain.y(a[0], a[1]) + 1.85, yb = Terrain.y(b[0], b[1]) + 1.85, m = bucket(a[0], a[1]); m.m1 = 0; m.ao = 1;
     m.mat(MAT.CLOTH, [0.7, 0.6, 0.4], 0.3); m.beam([a[0], ya, a[1]], [b[0], yb, b[1]], 0.02, 0.02);
-    for (let i = 0; i < 5; i++) { const k0 = 0.1 + i * 0.17, k1 = k0 + 0.11, c = [COL.linen, COL.red, COL.blue, COL.linen, COL.gold][i], hgt = 0.6 + (i % 2) * 0.35; m.mat(MAT.CLOTH, c, 0.6); const p0 = [lerp(a[0], b[0], k0), lerp(ya, yb, k0), lerp(a[1], b[1], k0)], p1 = [lerp(a[0], b[0], k1), lerp(ya, yb, k1), lerp(a[1], b[1], k1)]; m.quad2(p0, [p0[0], p0[1] - hgt, p0[2]], [p1[0], p1[1] - hgt, p1[2]], p1); } }
+    for (let i = 0; i < 5; i++) { const k0 = 0.1 + i * 0.17, k1 = k0 + 0.11, c = [COL.linen, [0.46, 0.27, 0.22], [0.42, 0.41, 0.39], COL.linen, [0.56, 0.5, 0.38]][i], hgt = 0.6 + (i % 2) * 0.35; m.mat(MAT.CLOTH, c, 0.6); const p0 = [lerp(a[0], b[0], k0), lerp(ya, yb, k0), lerp(a[1], b[1], k0)], p1 = [lerp(a[0], b[0], k1), lerp(ya, yb, k1), lerp(a[1], b[1], k1)]; m.quad2(p0, [p0[0], p0[1] - hgt, p0[2]], [p1[0], p1[1] - hgt, p1[2]], p1); } }
   { const G = SITE.guardhouse, p = siteToWorld(G, -G.w / 2 - 1.0, 0.5); put(p[0], p[1], 0.3, m => { m.push().T(0, 1.15, 0).RX(PI / 2).T(0, -0.07, 0); m.mat(MAT.THATCH, COL.hay, 0.5); m.cyl(0, 0, 0, 0.45, 0.45, 0.14, 14, 3); m.mat(MAT.PLAIN, COL.red); m.disc(0, 0.145, 0, 0.3, 12, 1); m.mat(MAT.PLAIN, COL.linen); m.disc(0, 0.15, 0, 0.2, 12, 1); m.mat(MAT.PLAIN, COL.red); m.disc(0, 0.155, 0, 0.09, 10, 1); m.pop(); m.mat(MAT.TIMBER, COL.timber); for (const [bx, bz] of [[-0.4, -0.05], [0.4, -0.05], [0, 0.7]]) m.beam([bx, -0.1, bz], [0, 1.15, -0.02], 0.06, 0.06); }); }
   { const Hn = SITE.hunter, p = siteToWorld(Hn, Hn.w / 2 + 1.6, -1.0); put(p[0], p[1], Hn.yaw, m => { m.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) m.cbox(s * 0.9, -0.3, 0, 0.08, 2.0, 0.08, 4); m.beam([-0.9, 1.65, 0], [0.9, 1.65, 0], 0.06, 0.06); at(m, -0.4, 0.6, 0, 0, () => { pelt(m, 0.8, 1.0); m.push().RY(PI); pelt(m, 0.8, 1.0); m.pop(); }); at(m, 0.45, 0.75, 0, 0, () => { pelt(m, 0.6, 0.85); m.push().RY(PI); pelt(m, 0.6, 0.85); m.pop(); }); });
     const q = siteToWorld(Hn, -1.4, -Hn.d / 2 - 2.4); put(q[0], q[1], 0, m => { m.mat(MAT.BARK, [1, 1, 1], 0.6); m.cyl(0, 0, 0, 0.32, 0.3, 0.5, 9, 2); m.mat(MAT.TIMBER, COL.wood); m.beam([0.05, 0.5, 0], [0.4, 1.05, 0.1], 0.03, 0.03); m.mat(MAT.METAL, COL.iron); m.box(-0.02, 0.45, -0.08, 0.12, 0.62, 0.1); });
     const w3 = siteToWorld(Hn, -Hn.w / 2 - 0.8, 0); put(w3[0], w3[1], Hn.yaw + PI / 2, m => Props.woodpile(m, 6, 5, 0.6)); spot('hunter.yard', q[0] + 1.2, q[1] + 0.3, Hn.yaw + 2.2); }
   // chapel yard
-  { const C = SITE.chapel, yd = pts => pts.map(p => siteToWorld(C, p[0], p[1])); fence(yd([[-7.5, -4.4], [-7.5, -9]]), { stone: true }); fence(yd([[-7.5, -11], [-7.5, -17], [8, -17], [8, -4.4]]), { stone: true });
-    for (let i = 0; i < 13; i++) { const p = siteToWorld(C, -6.5 + (i % 5) * 3.1 + R.s() * 0.5, -7.6 - Math.floor(i / 5) * 3.3 + R.s() * 0.4); put(p[0], p[1], C.yaw + PI / 2 + R.s() * 0.2, m => Props.gravestone(m, R)); }
+  { const C = SITE.chapel, yd = pts => pts.map(p => siteToWorld(C, p[0], p[1])); /* [fx3] the churchyard wall, lych gate and flagged path are built in 73m_plots.js (buildChurchyard) */
+    for (let i = 0; i < 13; i++) { const p = siteToWorld(C, -6.5 + (i % 5) * 3.1 + R.s() * 0.5, -7.6 - Math.floor(i / 5) * 3.3 + R.s() * 0.4); put(p[0], p[1], C.yaw + PI / 2 + R.s() * 0.2, m => { m.RZ(R.s() * 0.16); m.RX(R.s() * 0.08); Props.gravestone(m, R); }); }
     World.places.push({ id: 'graves', name: 'The Quiet Yard', x: siteToWorld(C, 0, -11)[0], z: siteToWorld(C, 0, -11)[1], r: 7 }); }
   // mill surroundings
   { const M = SITE.mill; for (const [lx, lz, s] of [[-M.w / 2 - 1.2, -2.2, 0.34], [-M.w / 2 - 1.9, -1.6, 0.3], [-M.w / 2 - 1.3, -1.4, 0.28]]) { const p = siteToWorld(M, lx, lz); put(p[0], p[1], R() * 3, m => Props.sack(m, s, [0.9, 0.88, 0.8])); }
@@ -240,16 +240,19 @@ function buildVillage() {
 
   // ── dynamic objects: door leaves, mill wheel, pickups ──
   const skin = new MeshPack();
-  const leaf = new Mesh(512);
+  // [fx2] six hinged leaves (weathered oak, dark oak, silvered, and three faded paints) so a street's doors are not one door; a door takes one by its house, so both sides of a portal agree
+  const LEAF_COL = [[0.95, 0.82, 0.66], [0.62, 0.54, 0.44], [0.85, 0.8, 0.72], [0.5, 0.68, 0.58], [0.85, 0.42, 0.36], [0.5, 0.62, 0.72]];
+  const mkLeaf = (bc) => { const leaf = new Mesh(512);
   // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
   leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
-  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [1.7 * k, 1.35 * k, 0.98 * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
-  leaf.mat(MAT.PLANKS, [1.2, 0.95, 0.7], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
+  for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [bc[0] * k, bc[1] * k, bc[2] * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
+  leaf.mat(MAT.PLANKS, [bc[0] * 0.72, bc[1] * 0.72, bc[2] * 0.72], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
   leaf.mat(MAT.METAL, [0.17, 0.155, 0.14]);   // [fx2] straps read bright blue indoors (sky reflection): dark blackened iron
    for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
-  const leafItem = skin.add(leaf);
-  for (const d of World.doors) { d.obj = addSkinned(leafItem, { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  return leaf; };
+  const leafItems = LEAF_COL.map(bc => skin.add(mkLeaf(bc))), leafItem = leafItems[0], leafPick = d => { const key = String(d.cell || (d.site && d.site.id) || ''); let h = 0; for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0; return leafItems[[0, 0, 1, 1, 2, 3, 4, 5][Math.abs(h) % 8]]; };
+  for (const d of World.doors) { d.obj = addSkinned(leafPick(d), { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;
@@ -266,9 +269,11 @@ function buildVillage() {
   // ── dressing: the stuff that piles up against the walls of a lived-in house ──
   {
     const Rd = rng(4242);
+    let curSite = null;
     const free = (x, z, rad) => {
       for (const rd of Roads) if (rd.line.dist(x, z, 4) < rd.w / 2 + 1.0) return false;
       if (hyp(x - SQUARE.x, z - SQUARE.z) < Math.max(SQUARE.rx, SQUARE.rz) + 1) return false;
+      for (const o of INF.houses) { if (o.id === curSite || hyp(o.x - x, o.z - z) > 9) continue; const l = worldToSite(o, x, z); if (Math.abs(l[0]) < o.w / 2 + rad + 0.5 && Math.abs(l[1]) < o.d / 2 + rad + 0.5) return false; }      // [fx3] the infill houses are built later: a pile must not narrow a lane between them below a person's width
       for (const c of World.colliders) {
         if (c.r !== undefined) { if (hyp(x - c.x, z - c.z) < c.r + rad) return false; continue; }
         const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz;
@@ -289,7 +294,7 @@ function buildVillage() {
       stump: (m) => { kp(m, 'tree_stump_01', 0, -0.03, 0, 0.55, Rd() * 6); addCircleCollider(m, 0, 0, 0.35, 0, 0.3); },
     };
     for (const s of SITES) {
-      if (!HOUSES[s.id]) continue;
+      if (!HOUSES[s.id]) continue; curSite = s.id;
       const kinds = (s.id === 'farm' || s.id === 'barn' || s.id === 'mill') ? ['hay', 'wood', 'barrels', 'sacks', 'crates'] : s.id === 'chapel' ? ['pots'] : ['wood', 'barrels', 'crates', 'sacks', 'pots', 'wood'];
       if (typeof scanOn === 'function' && scanOn() && s.id !== 'chapel') kinds.push('buckets', 'stump');
       const dl = siteDoorLocal(s, 0), n = s.id === 'chapel' ? 1 : 3 + Rd.i(0, 1);
@@ -301,6 +306,7 @@ function buildVillage() {
         if ((s.bare || []).some(b => lx > b[0] - 0.6 && lx < b[2] + 0.6 && lz > b[1] - 0.6 && lz < b[3] + 0.6)) continue;
         const p = siteToWorld(s, lx, lz);
         if (!free(p[0], p[1], 1.0) || Math.abs(Terrain.y(p[0], p[1]) - s.y) > 0.45) continue;
+        { const p2 = siteToWorld(s, lx + (side < 2 ? 0.9 : 0), lz + (side < 2 ? 0 : 0.9)), p3 = siteToWorld(s, lx - (side < 2 ? 0.9 : 0), lz - (side < 2 ? 0 : 0.9)); if (!free(p2[0], p2[1], 0.5) || !free(p3[0], p3[1], 0.5)) continue; }      // [fx3] a pile's second crate or barrel reaches 0.9 m sideways: not into the neighbour's body
         if (SITES.some(o => { if (o === s) return false; const q = (p[0] - o.x) * Math.cos(o.yaw) + (p[1] - o.z) * Math.sin(o.yaw), r = -(p[0] - o.x) * Math.sin(o.yaw) + (p[1] - o.z) * Math.cos(o.yaw); return Math.abs(q) < o.w / 2 + 0.5 && Math.abs(r) < o.d / 2 + 0.5; })) continue;   // [fx1] terraced shops stand 0.3 m apart: a pile in that gap was inside the neighbour
         const kind = Rd.pick(kinds);
         put(p[0], p[1], s.yaw + out + PI / 2, piles[kind]); k++;
@@ -313,6 +319,7 @@ function buildVillage() {
     const Rv = rng(5151), okSpot = (x, z, rad, s) => {
       if (Math.abs(Terrain.y(x, z) - s.y) > 0.5) return false;
       for (const rd of Roads) if (rd.line.dist(x, z, 4) < rd.w / 2 + 1.2) return false;
+      for (const o of INF.houses) { const l = worldToSite(o, x, z); if (Math.abs(l[0]) < o.w / 2 + rad * 0.6 && Math.abs(l[1]) < o.d / 2 + rad * 0.6) return false; }      // [fx3] the infill houses are not built yet: their footprints are planned, and a bed must not lie under one
       for (const c of World.colliders) { const r = c.r !== undefined ? c.r : Math.max(c.hx, c.hz); if (r > 1.6 && c.r === undefined) continue; if (hyp(x - c.x, z - c.z) < r + rad) return false; }
       return true;
     };
@@ -344,7 +351,7 @@ function buildVillage() {
       const ya = Terrain.y(a[0], a[1]) + 1.85, yb = Terrain.y(b[0], b[1]) + 1.85, m = bucket(a[0], a[1]); m.m1 = 0; m.ao = 1;
       m.mat(MAT.CLOTH, [0.7, 0.6, 0.4], 0.3); m.beam([a[0], ya, a[1]], [b[0], yb, b[1]], 0.02, 0.02);
       for (let i = 0; i < 4; i++) {
-        const k0 = 0.12 + i * 0.22, k1 = k0 + 0.14, c = [COL.linen, COL.wool, COL.linen, COL.blue][i], hgt = 0.55 + (i % 2) * 0.3; m.mat(MAT.CLOTH, c.map(v => v * 0.8), 0.6);
+        const k0 = 0.12 + i * 0.22, k1 = k0 + 0.14, c = [COL.linen, COL.wool, COL.linen, DYE.blue][i], hgt = 0.55 + (i % 2) * 0.3; m.mat(MAT.CLOTH, c.map(v => v * 0.8), 0.6);
         const p0 = [lerp(a[0], b[0], k0), lerp(ya, yb, k0), lerp(a[1], b[1], k0)], p1 = [lerp(a[0], b[0], k1), lerp(ya, yb, k1), lerp(a[1], b[1], k1)];
         m.quad2(p0, [p0[0], p0[1] - hgt, p0[2]], [p1[0], p1[1] - hgt, p1[2]], p1);
       }
@@ -361,8 +368,8 @@ function buildVillage() {
 
   if (typeof buildAlley === 'function') buildAlley();
   if (typeof buildInfill === 'function') buildInfill();
-  if (typeof buildDress === 'function') buildDress();
   if (typeof townFinish === 'function') townFinish(bucket);      // Build 42 (73f_levels.js)
+  if (typeof buildDress === 'function') buildDress();      // [fx3] after the routes, walls, lanes and square, so loose piles are placed around what is solid and never through it
 
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {

@@ -70,3 +70,7 @@ phone-sized pack by `tools/scan/slim.mjs` (list and budgets in `tools/scan/slim.
 | round_wooden_table_01 | https://polyhaven.com/a/round_wooden_table_01 | Ulan Cabanilla | prop-furniture | round_wooden_table_01 |
 | folding_wooden_stool | https://polyhaven.com/a/folding_wooden_stool | Ulan Cabanilla | prop-furniture | folding_wooden_stool |
 | brass_pan_01 | https://polyhaven.com/a/brass_pan_01 | Rico Cilliers | prop-small | brass_pan_01 |
+
+Light copies for the Low tier: `node tools/scan_low.mjs 0.28` adds a node `<name>@low` beside 15 of these models (the ones that stand out of
+doors in numbers: the stall table, vases, pot, apple, pears, loaf, buckets, bowl, plate, barrels, basket, chest), each the same CC0 model with about a third
+of its triangles (meshoptimizer). Nothing else in the file changes; run `node tools/assets_pack.mjs --only kits` afterwards.

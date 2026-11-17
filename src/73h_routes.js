@@ -25,7 +25,7 @@ function rtKit(bucket, touch) {
     h = h || 1.0; const P = alongZ ? (u, v) => [v, u] : (u, v) => [u, v], n = Math.max(1, Math.round(Math.abs(a1 - a0) / 1.9));
     for (const k of [0.5, h]) { const p = P(a0, c), q = P(a1, c), m = M(p[0], p[1]); m.mat(MAT.TIMBER, dark, 0.5); m.beam([p[0], y + k, p[1]], [q[0], y + k, q[1]], alongZ ? 0.06 : 0.05, alongZ ? 0.05 : 0.07); if (alongZ) { /* flat beam seen from the side */ } }
     for (let i = 0; i <= n; i++) { const u = a0 + (a1 - a0) * i / n, p = P(u, c); K.post(p[0], p[1], y - 0.1, y + h + 0.08, 0.1, true); }
-    const p = P(a0, c - 0.07), q = P(a1, c + 0.07); K.col(p[0], p[1], q[0], q[1], y - 0.05, y + h + 0.15);
+    const p = P(a0, c - 0.05), q = P(a1, c + 0.05); K.col(p[0], p[1], q[0], q[1], y - 0.05, y + h + 0.15);
   };
   // steps along `axis` ('x' or 'z') from a (height ya) to b (height yb), `c0`..`c1` across. Open treads on two stringers, a handrail each side, side colliders. returns the floor entry
   K.stair = (axis, a, ya, b, yb, c0, c1, o) => {
@@ -153,7 +153,7 @@ function buildRoutes(bucket) {
     K.spot('passage.lane', lx, gy(lx, -24.5), -24.5, PI);
   }
   // ── c: the roofed bridge over the north road to the hoist loft ──
-  { const BX0 = -14.3, BX1 = GX0, BZ0 = -17.1, BZ1 = -15.6, mz = (BZ0 + BZ1) / 2, LX0 = -17.7, LX1 = BX0, LZ0 = -18.5, LZ1 = -14.2;
+  { const BX0 = -14.3, BX1 = GX0, BZ0 = -17.1, BZ1 = -15.6, mz = (BZ0 + BZ1) / 2, LX0 = -17.7, LX1 = BX0, LZ0 = -17.2, LZ1 = -14.2;
     deck(BX0, BZ0, BX1, BZ1, YG); beam([BX0, YG - 0.34, BZ0 + 0.1], [BX1, YG - 0.34, BZ0 + 0.1], 0.14, 0.3); beam([BX0, YG - 0.34, BZ1 - 0.1], [BX1, YG - 0.34, BZ1 - 0.1], 0.14, 0.3);
     for (let x = BX0 + 0.4; x < BX1; x += 1.2) beam([x, YG - 0.2, BZ0], [x, YG - 0.2, BZ1], 0.1, 0.2);
     for (const x of [-9.9, -14.15]) for (const z of [BZ0 + 0.05, BZ1 - 0.05]) post(x, z, gy(x, z) - 0.3, YG, 0.22);                      // legs on the banks, none on the road (it runs at about x -12.2 here)
@@ -168,8 +168,8 @@ function buildRoutes(bucket) {
     deck(LX0, LZ0, LX1, LZ1, YG); for (const [x, z] of [[LX0 + 0.1, LZ0 + 0.1], [LX0 + 0.1, LZ1 - 0.1], [LX1 - 0.12, LZ0 + 0.1], [LX1 - 0.12, LZ1 - 0.1]]) post(x, z, gy(x, z) - 0.3, YG + 2.6, 0.2);
     beam([LX0, YG - 0.34, LZ0 + 0.1], [LX1, YG - 0.34, LZ0 + 0.1], 0.14, 0.3); beam([LX0, YG - 0.34, LZ1 - 0.1], [LX1, YG - 0.34, LZ1 - 0.1], 0.14, 0.3); beam([LX0 + 0.1, YG - 0.34, LZ0], [LX0 + 0.1, YG - 0.34, LZ1], 0.14, 0.3);
     rail(LX0, LX1 - 0.1, LZ0 + 0.1, YG); rail(LX0, LX1 - 0.1, LZ1 - 0.1, YG); rail(LZ0 + 0.1, LZ1 - 0.1, LX0 + 0.1, YG, true);
-    K.roofX(LX0 - 0.3, LX1 + 0.2, LZ0 - 0.3, YG + 3.0, LZ1 + 0.3, YG + 2.55, [0.5, 0.45, 0.4]);
-    beam([-16.6, YG + 2.7, LZ0 - 0.2], [-16.6, YG + 2.8, LZ0 - 1.5], 0.12, 0.14); beam([-16.6, YG + 2.72, LZ0 - 1.5], [-16.6, YG + 1.6, LZ0 - 1.5], 0.025, 0.025);           // the hoist beam out over the back, with its rope
+    K.roofX(LX0 - 0.3, LX1 + 0.2, LZ0 - 0.05, YG + 3.0, LZ1 + 0.3, YG + 2.55, [0.5, 0.45, 0.4]);
+    beam([-16.6, YG + 2.7, LZ0 + 0.05], [-16.6, YG + 2.8, LZ0 + 0.7], 0.12, 0.14); beam([-16.6, YG + 2.72, LZ0 + 0.7], [-16.6, YG + 1.6, LZ0 + 0.7], 0.025, 0.025);           // the hoist beam out over the back, with its rope
     { const m = M(-16, -16.3); m.push().T(-16.9, YG, LZ0 + 0.7); Props.barrel(m, 0.3, 0.8); m.pop(); m.push().T(-16.1, YG, LZ1 - 0.6).RY(0.4); Props.crate(m, 0.5); m.pop();
       m.push().T(-16.2, YG, -16.7); m.mat(MAT.THATCH, [0.72, 0.62, 0.38], 0.5); m.box(-0.4, 0, -0.25, 0.4, 0.4, 0.25); addBoxCollider(m, -0.4, -0.25, 0.4, 0.25, 0, 0.4); m.pop();
       m.push().T(-15.2, YG + 1.0, LZ1 - 0.1); K.cat(m, PI * 0.9); m.pop(); }

@@ -39,7 +39,8 @@ function kitFixups() {
 const kitOpen = n => (Kit.pieces[n + '_Open'] ? n + '_Open' : n);
 // the building's spec adjusted to what the kit panels can do: 3 m storeys, kit door and window sizes, no slit windows
 function kitSpec(site, spec) {
-  const st = KIT_STYLE[site.id], s = Object.assign({}, spec, { kitStyle: st });
+  const SS = shellStyle(site, spec), st = Object.assign({}, KIT_STYLE[site.id]), s = Object.assign({}, spec, { kitStyle: st });      // [fx2] a copy: the shell style may change the ground floor and the cladding
+  if (SS.ground) st.ground = SS.ground; if (st.timber && SS.lime) st.timber = false;
   s.H = Math.max(spec.H || 2.6, 3.0); s.pitch = st.pitch || 52;
   const sy = s.H / 3;
   s.doors = (spec.doors || []).map(o => { const sx = clamp((o.w || 1.05) / 1.08, 1.0, 1.4); return Object.assign({}, o, { w: 1.1 * sx, h: 2.12 * sy, ksx: sx, lamp: false, kLamp: o.lamp !== false }); });
@@ -65,6 +66,7 @@ function kitShellPass(c, pass) {
   if (X) { for (const m of [c.xext, c.ext, glow]) { m.nv = 0; m.ni = 0; m.min = [1e9, 1e9, 1e9]; m.max = [-1e9, -1e9, -1e9]; } }
   const b = X ? (site.facade ? (() => { const nb = Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true }); nb.add = () => {}; return nb; })() : site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.xFloorY + H + (st.up ? 3 : 0) })) : kitIntBatch(zone);
   if (X) World.kitExt[site.id] = { batch: b, site, Ms: c.Mx, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
+  const SSt = (typeof shellStyle === 'function' && shellStyle(site, spec)) || {};      // [fx2] covering, pitch, tone, sag, eaves, wall tone of this shell
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
   const cellExt = pass === 'ext';          // in a cell the village shell knows nothing of the room: its inside faces are plain dark
   const OUT = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : st.up ? zone : 0, inSkyVis: st.up && !cellExt ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
@@ -76,6 +78,7 @@ function kitShellPass(c, pass) {
     if (pass === 'int') { if (o === EXT) { if (!/^DoorFrame|^Door_1/.test(name)) return; o = IN; } else o = o.tint ? Object.assign({}, IN, { tint: o.tint }) : IN; }
     else if (cellExt && o.inZone !== undefined && o !== OUT && o !== UP) o = Object.assign({}, o, { inZone: 0, inSkyVis: 0.12 });
     if (st.timber && typeof infTimber === 'function') name = infTimber(name);
+    if (SSt.wallTint && pass !== 'int' && /^(Wall_(?!UnevenBrick)|Corner_Exterior)/.test(name)) o = Object.assign({}, o, { tint: SSt.wallTint });
     if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] });
     b.add(name, KH.xf(F, x, y, z, s, ry), o);
   };
@@ -154,7 +157,7 @@ function kitShellPass(c, pass) {
       if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT), pass, ext); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: [1, 1, 1] }); }
+  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: pass === 'ext' && typeof shellJetty === 'function' ? -shellJetty(site, st) : 0, ov: SSt.ov || 0.5, lift: 0.14, mat: SSt.mat, ts: SSt.ts, sag: SSt.sag, thick: SSt.thick, thatch: SSt.thatch, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: SSt.tint || [1, 1, 1] }); }
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
@@ -162,6 +165,7 @@ function kitShellPass(c, pass) {
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
     b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), pass === 'int' ? { zone, skyVis: INT_AO, inZone: zone, inSkyVis: 0.2 } : { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : 0.2 });
   }
+  if (X && typeof shellDress === 'function') shellDress(c, b, frames, MS, { w, d, H, Ytop, tanP, st, site, SSt, openings, lift: 0.14 });      // [fx2]
   // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance; in a cell they are the cell's) ──
   if (I) {
     const nx = Math.max(1, Math.round(w / 2)), nz = Math.max(1, Math.round(d / 2)), sx = (w - 0.3) / (2 * nx), sz = (d - 0.3) / (2 * nz), tile = spec.floor === 'stone' ? 'Floor_UnevenBrick' : 'Floor_WoodDark';
@@ -209,7 +213,8 @@ function kitShellPass(c, pass) {
 // a kit chimney above a hearth at house-local (lx, lz), rising clear of the ridge
 function kitChimney(c, lx, lz) {
   lx = clamp(lx, -c.w / 2 + 0.6, c.w / 2 - 0.6); lz = clamp(lz, -c.hd * 0.3, c.hd * 0.3);          // inside the footprint, near the ridge
-  const top = infChimney(c.kb, c.kMX, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0, lift: 0.14 });
+  const SSc = (typeof shellStyle === 'function' && shellStyle(c.xsite, null)) || {};      // [fx2] each stack its own size and height
+  const top = infChimney(c.kb, c.kMX, { x: lx, z: lz, top: c.kYtop, tanP: c.tanP, hs: c.hd, ridgeX: true, zc: 0, lift: 0.14, size: SSc.chimSize, up: SSc.chimUp });
   World.emitters.push({ type: 'smoke', p: m4.tp(c.Mx, [lx, top + 0.2, lz]), zone: 0 });
 }
 
@@ -228,8 +233,8 @@ function kitIntBatch(zone) {
 // fit = 'box' (stretch to the box, within lo..hi), 'contain' (uniform, as big as fits), 'xz' (uniform on the footprint, height within 25%),
 // one = outdoors only the first model is used (fewer materials, fewer draw calls), k = extra per-axis factor, mul = extra scale, y = lift in metres, ry = turn in radians (a quarter turn swaps the footprint), tint = colour factor, skip = draw nothing.
 const SCANR = {
-  Table_Large: { n: ['wooden_table_02'], fit: 'row', tint: [1, 0.58, 0.32] },
-  Bench: { n: ['woodentable_01'], fit: 'row', tint: [0.8, 0.5, 0.3] },
+  Table_Large: { n: ['wooden_table_02'], fit: 'row', tint: [0.34, 0.42, 0.42] },
+  Bench: { n: ['woodentable_01'], fit: 'row', tint: [0.6, 0.43, 0.31] },
   Stool: { n: ['painted_wooden_stool'], fit: 'contain', tint: [0.3, 0.23, 0.17] },
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
@@ -501,7 +506,7 @@ function kitScatter() {
     for (const r of Roads) if (r.line.dist(x, z, r.w / 2 + pad) < r.w / 2 + pad) return false;
     for (const f of FIELDS) if (x > f.x0 - pad && x < f.x1 + pad && z > f.z0 - pad && z < f.z1 + pad) return false;
     if (River.dist(x, z, 7 + pad) < 6.5 + pad) return false;
-    if (hyp((x - SQUARE.x) / (SQUARE.rx + 1), (z - SQUARE.z) / (SQUARE.rz + 1)) < 1) return false;
+    if (hyp((x - SQUARE.x) / (SQUARE.rx + 1), (z - SQUARE.z) / (SQUARE.rz + 1)) < 1 || placeW(x, z, 2.5) > 0) return false;      /* [fx3] no fern or weed clumps on the cobbled place or at its edge */
     const dk = World.spots['dock.end']; if (dk && hyp(x - dk.p[0], z - dk.p[2]) < 7) return false;
     for (const c of World.colliders) { if (c.r !== undefined ? hyp(x - c.x, z - c.z) < c.r + pad : (Math.abs(x - c.x) < c.hx + pad + 0.3 && Math.abs(z - c.z) < c.hz + pad + 0.3)) return false; }
     return true;

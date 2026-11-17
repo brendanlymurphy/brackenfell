@@ -59,12 +59,28 @@ function terrainBase(x, z) {
   { const w = LV.upW(x, z); if (w > 0) h = lerp(h, LV.up.h, w); }          // Build 33: the upper ward terrace (55_layout.js LV, 73f_levels.js)
   return h;
 }
+// [fx3] the Market Place's ground: 1 inside its outline, fading to 0 over `fade` metres outside it (distance to the outline polygon)
+function placeW(x, z, fade) {
+  const pl = PLACE.poly; let ins = false, best = 1e9;
+  for (let i = 0, j = pl.length - 1; i < pl.length; j = i++) {
+    const a = pl[i], b = pl[j];
+    if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) ins = !ins;
+    const bx = b[0] - a[0], bz = b[1] - a[1], l2 = bx * bx + bz * bz, t = l2 ? Math.max(0, Math.min(1, ((x - a[0]) * bx + (z - a[1]) * bz) / l2)) : 0, d = Math.hypot(x - a[0] - bx * t, z - a[1] - bz * t); if (d < best) best = d;
+  }
+  return ins ? 1 : Math.max(0, 1 - best / fade);
+}
+// the place falls about 0.32 m from the inn to Wharf Street, is crowned along the cart way, and has a drain 6 cm below it
+function placeLift(x, z, w) {
+  const fall = -0.32 * smooth(-16, 14, z), crown = 0.07 * Math.max(0, 1 - Math.abs(z - (0.8 + 0.12 * x)) / 7), drain = -0.05 * Math.max(0, 1 - Math.abs(z - (1.4 + 0.1 * x)) / 0.45);
+  return w * (fall + crown + drain);
+}
 function terrainH(x, z) {
   let h = terrainBase(x, z);
   if (Math.abs(x) < 210 && Math.abs(z) < 210) {
     // village square
     const sq = hyp((x - SQUARE.x) / (SQUARE.rx + 3), (z - SQUARE.z) / (SQUARE.rz + 3));
     if (sq < 2) h = lerp(h, 0, 1 - smooth(1, 1.9, sq));
+    { const pw = placeW(x, z, 7); if (pw > 0) h = lerp(h, 0, pw) + placeLift(x, z, pw); }      // [fx3] the whole place, not an ellipse, is levelled to the datum and then given its fall
     // building pads
     for (const s of SITES) {
       if (Math.abs(x - s.x) > 26 || Math.abs(z - s.z) > 26) continue;
@@ -97,6 +113,10 @@ function terrainH(x, z) {
     const rl = lakeR(x, z);
     const hb = dl < rl ? LAKE.y - 3.2 * (1 - (dl / rl) * (dl / rl)) : LAKE.y + (dl - rl) * 0.2;
     h = Math.min(h, lerp(hb, h, smooth(0, 15, dl - rl)));
+    /* [coord] Build 74: the shore is dry land. West of the wharf the ground lay 10 cm under the lake's level for 12 m beyond the shoreline, so the lake's
+       sheet covered the fisher's hut and its path. Outside the shoreline the ground is at least 0.25 m over the water, rising to 0.6 m within 6 m
+       (not in the river's channel, which must still reach the lake). */
+    if (dl > rl && d > 6.5 + ext) h = Math.max(h, LAKE.y + 0.25 + 0.35 * Math.min(1, (dl - rl) / 6));
   }
   return h;
 }
@@ -165,7 +185,11 @@ function buildTerrain() {
   // TERRAIN_FINE: the ground is drawn with 1.5 m cells out to this distance from the centre and with 3 m cells (a quarter of the triangles) from there to the
   // edge of the height grid. Terrain.y still reads the 1.5 m grid. 144 puts the whole grid back on 1.5 m cells.
   const FINE = TERRAIN_FINE, ring = FINE < K.terrainHalf;
-  const TH = K.terrainHalf, levels = [{ cell: 1.5, half: TH, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: TH, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: TH, tile: TERRAIN_TILE[0] }, { cell: 24, half: 1440, hole: 432, tile: TERRAIN_TILE[1] }, { cell: 96, half: 4800, hole: 1440, tile: TERRAIN_TILE[2] }]);
+  /* [cull] Low tier (or a device with 3 GB or less): the hills from 432 m to 1440 m are built at half the detail (48 m cells): a quarter of that ring's 26k triangles.
+     The mountains beyond keep theirs: at half detail the peaks on the skyline lost their points.
+     Decided once, when the ground is built; --opt farhills=1 keeps the full hills for a comparison. */
+  const FARK = typeof GFX_TEX !== 'undefined' && GFX_TEX.tiny && !(TEST && TEST.farhills === 1) ? 2 : 1;
+  const TH = K.terrainHalf, levels = [{ cell: 1.5, half: TH, hole: 0, tile: 64, mesh: FINE }].concat(ring ? [{ cell: 3, half: TH, hole: FINE, tile: 32 }] : [], [{ cell: 6, half: 432, hole: TH, tile: TERRAIN_TILE[0] }, { cell: 24 * FARK, half: 1440, hole: 432, tile: TERRAIN_TILE[1] / FARK }, { cell: 96, half: 4800, hole: 1440, tile: TERRAIN_TILE[2] }]);
   const pack = new MeshPack(); pack.shadow = true;
   let prev = null;
   for (let li = levels.length - 1; li >= 0; li--) {            // coarse first so fine borders can be stitched to them
@@ -249,7 +273,33 @@ function buildSplat() {
   }
   // cobbled square (+ inn forecourt, bridge approaches)
   const ell = (ctx, x, z, rx, rz, col) => { for (const [e, a] of [[1.6, 0.22], [0.8, 0.33], [0, 0.45]]) { ctx.fillStyle = col(a); const q = P(x, z); ctx.beginPath(); ctx.ellipse(q[0], q[1], (rx + e) * sc, (rz + e) * sc, 0, 0, TAU); ctx.fill(); } };
-  ell(A, SQUARE.x, SQUARE.z, SQUARE.rx, SQUARE.rz, grn);
+  { const pl = PLACE.poly;      // [fx3] the Market Place is cobbled wall to wall to its own outline; a short soft shoulder where it meets a road
+    for (const [e, al] of [[1.6, 0.22], [0.8, 0.33], [0, 0.45]]) { A.fillStyle = A.strokeStyle = grn(al); A.lineJoin = 'round'; A.lineWidth = 2 * e * sc + 1; A.beginPath(); pl.forEach((q, i) => { const c = P(q[0], q[1]); if (i) A.lineTo(c[0], c[1]); else A.moveTo(c[0], c[1]); }); A.closePath(); A.fill(); if (e) A.stroke(); } }
+  for (const [id, w, keep] of [['main', 6.4, p => p[0] > -50 && p[0] < -19], ['south', 7.0, p => p[1] > 8 && p[1] < 31], ['north', 4.4, p => p[1] < -16 && p[1] > -66]]) {      // [fx3] the last stretch of each street into the place is a street: cobbled from front to front
+    const r = Roads.find(q => q.id === id); if (r) { const pts = r.line.p.filter(keep); if (pts.length > 1) stroke(A, pts, w, grn, 0.9); } }
+  /* [fx3] the district: between the fronts, yards and lanes of the Market Place quarter the ground is trodden earth, not lawn; it fades to turf at the edges */
+  { const Rd = rng(9955); for (let i = 0; i < 640; i++) { const x = -60 + Rd() * 94, z = -35 + Rd() * 72, rad = 3 + Rd() * 4, q = P(x, z), g = A.createRadialGradient(q[0], q[1], rad * sc * 0.2, q[0], q[1], rad * sc); g.addColorStop(0, 'rgba(255,0,0,0.30)'); g.addColorStop(1, 'rgba(255,0,0,0)'); A.fillStyle = g; A.beginPath(); A.arc(q[0], q[1], rad * sc, 0, TAU); A.fill(); } }
+  { const Rd = rng(9957); for (let i = 0; i < 200; i++) { const x = -46 + Rd() * 84, z = -62 + Rd() * 34, rad = 3 + Rd() * 4, q = P(x, z), g = A.createRadialGradient(q[0], q[1], rad * sc * 0.2, q[0], q[1], rad * sc); g.addColorStop(0, 'rgba(255,0,0,0.26)'); g.addColorStop(1, 'rgba(255,0,0,0)'); A.fillStyle = g; A.beginPath(); A.arc(q[0], q[1], rad * sc, 0, TAU); A.fill(); } }      /* Chapelgate: earth lanes between the cottages, not lawn */
+  stroke(A, [[-1.5, -45.2], [6, -45.4], [14, -44.6], [22, -45.0], [30, -44.7], [36.5, -44.9]], 3.4, grn, 0.9);      /* the east cluster's lane, cobbled, wandering to the well */
+  stroke(A, [[-6.3, -62.6], [-10.0, -63.4], [-13.6, -64.0], [-16.0, -64.7], [-16.0, -66.8]], 2.6, red, 0.85);      /* the worn way to the lych gate */
+  /* [fx3] plots: each yard's floor is packed earth (trodden dirt, bare in places), the back lane behind the plots' back walls is a trodden strip with a cobble spine; no lawn inside a burgage */
+  if (typeof plotsCompute === 'function') for (const p of plotsCompute()) {
+    if (p.axis === 'x') { for (const [al, e] of [[0.55, 0.5], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - e, p.z0 - e), a1 = P(p.x1 + e, p.z1 + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); } continue; }
+    const lane = p.bz > 0 ? [p.z1 + 0.15, p.z1 + 2.6] : [p.z0 - 2.6, p.z0 - 0.15];
+    for (const [al, e] of [[0.55, 0.5], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - e, p.z0 - e), a1 = P(p.x1 + e, p.z1 + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
+    for (const [al, e] of [[0.5, 0.4], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - 0.3 - e, lane[0] - e), a1 = P(p.x1 + 0.3 + e, lane[1] + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
+    A.fillStyle = grn(0.5); { const a0 = P(p.x0 - 0.3, (lane[0] + lane[1]) / 2 - 0.5), a1 = P(p.x1 + 0.3, (lane[0] + lane[1]) / 2 + 0.5); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
+  }
+  /* [fx3] a street runs front to front: every house that stands on the last stretch of Wharf Street, the main street's west run or the market alley is paved round its feet (a 1.3 m apron, 2 m in front), so no lawn strip is left against a front */
+  { const zone = [['south', p => p[1] > 7 && p[1] < 34], ['main', p => p[0] > -52 && p[0] < -17], ['north', p => p[1] < -18 && p[1] > -64]];
+    for (const s of SITES) {
+      if (!s.w || s.id === 'tower' || s.id === 'barn') continue;
+      let near = false; for (const [id, keep] of zone) { const r = Roads.find(q => q.id === id); if (r && r.line.dist(s.x, s.z, 14) < 9 && keep([s.x, s.z])) near = true; }
+      if (!near && !(s.id.startsWith('shop.') && s.x > ALLEY.x0 - 4)) continue;
+      const dl = siteDoorLocal(s, 0), fr = Math.abs(dl[1]) > Math.abs(dl[0]) ? Math.sign(dl[1]) : 0;
+      const e = 1.3, x0 = -s.w / 2 - e, x1 = s.w / 2 + e, z0 = -s.d / 2 - e - (fr < 0 ? 0.7 : 0), z1 = s.d / 2 + e + (fr > 0 ? 0.7 : 0);
+      A.fillStyle = grn(0.9); A.beginPath(); [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].forEach((c, i) => { const w = siteToWorld(s, c[0], c[1]), q = P(w[0], w[1]); if (i) A.lineTo(q[0], q[1]); else A.moveTo(q[0], q[1]); }); A.closePath(); A.fill();
+    } }
   stroke(A, [[BRIDGE.x - BRIDGE.len / 2 - 5, BRIDGE.z], [BRIDGE.x + BRIDGE.len / 2 + 5, BRIDGE.z]], BRIDGE.w, grn, 0.6);
   stroke(A, [[-6, -63.6], [-6, -68]], 3.6, grn, 0.6);
   stroke(A, [[ALLEY.x0 - 2, roadZ(ALLEY.x0 - 2)], [36, 1], [ALLEY.x1 + 1, roadZ(ALLEY.x1 + 1)]], 9.6, grn, 0.75);       // the market alley is cobbled from shop front to shop front
@@ -297,6 +347,13 @@ function buildSplat2() {
     const p = rd.line.point(d), o = R.s() * rd.w * 0.42; if (hyp(p[0] - SQUARE.x, p[1] - SQUARE.z) < 14) continue;
     blob(A, 1, p[0] - p[3] * o, p[1] + p[2] * o, 0.7 + R() * 1.2, 0.9, 0.3);
   }
+  line(A, 1, [[ALLEY.x0 - 2, roadZ(ALLEY.x0 - 2)], [36, 1], [ALLEY.x1 + 1, roadZ(ALLEY.x1 + 1)]], 8, 0.5);      /* [fx3] the alley is the wetter, darker street */
+  /* [fx3] Westgate: wheel ruts in the earth road outside the gate, two wet tracks 1.7 m apart and a worn middle */
+  { const r = Roads.find(q => q.id === 'main'); if (r) { const pts = r.line.p.filter(p => p[0] < -57 && p[0] > -112); if (pts.length > 1) { for (const o of [-0.85, 0.85]) line(A, 1, pts.map(p => [p[0], p[1] + o]), 0.32, 0.45); line(B, 0, pts, 1.0, 0.5); } } }
+  /* [fx3] the Market Place's drain: a wet channel down the middle of the place (the fall runs to z+), a branch down Wharf Street's mouth, and puddle hollows in the low cobbles */
+  { const dr = [[-19.4, -0.5], [-10, 0.4], [-3, 1.1], [3, 1.7], [10, 2.3], [20.2, 3.4]], br = [[2.8, 1.6], [0.9, 5.5], [0.3, 9], [0.2, 14], [0.2, 22]];
+    for (const pl of [dr, br]) for (const [w, a2] of [[1.8, 0.16], [0.9, 0.30], [0.4, 0.55]]) line(A, 1, pl, w, a2);
+    const Rp = rng(5521); for (let i = 0; i < 14; i++) { const x = -17 + Rp() * 36, z = -12 + Rp() * 22; if (placeW(x, z, 0.01) < 1) continue; blob(A, 1, x, z, 0.6 + Rp() * 0.9, 0.42, 0.2); } }
   // contact shade and trampled earth around anything solid that stands on the ground
   for (const c of World.colliders) {
     if (Math.abs(c.x) > half || Math.abs(c.z) > half) continue;

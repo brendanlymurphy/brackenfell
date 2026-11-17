@@ -46,17 +46,19 @@ function surfaceMaterial(mode) {
     zone = zoneU; light = lightU; m.userData = { bones: bones.array, zoneU, lightU };
   }
   const layer = int(mm.x), a = texture(G.albedoArr, uv()).depth(layer), nt = texture(G.narArr, uv()).depth(layer);
-  const albedo = a.rgb.mul(mix(vec3(1), tintLin, a.a));
+  const isCloth = (mode === 'static' && !(TEST && TEST.cloth === 0)) ? step(TSL.abs(float(layer).sub(MAT.CLOTH)), 0.5) : float(0);      // [l1] thin cloth keeps its dye with light through it: richer and a little darker, never blown white
+  const albedo0 = a.rgb.mul(mix(vec3(1), tintLin, a.a)), albedo = mix(albedo0, mix(vec3(albedo0.dot(vec3(0.3333))), albedo0, 1.35).mul(0.72), isCloth);
   const N = SH.perturb(normalize(vN), positionWorld, uv(), nt.xy, float(1));
   // rooms: occlusion near floor, ceiling and corners, soot over the hearth (40b_depth.js); only generated room geometry and people carry a zone
   const rm = (mode === 'static' || mode === 'skin') ? SH.room(positionWorld, N, zone).toVar() : null, aoR = rm ? rm.x : float(1);
   let amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35))).add(SH.winLight(positionWorld, N, zone).mul(aoR.mul(0.6).add(0.4)));      // [l1] window light (40c_light.js)
-  if (!(TEST && TEST.shade === 0)) amb = amb.add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)).mul(float(1).sub(step(0.5, zone))).mul(tint.a.mul(0.5).add(0.5)));      // [l1] shade keeps a floor of sky and bounce: bark, posts and fences do not go black out of the sun
+  if (!(TEST && TEST.shade === 0)) amb = amb.add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)).mul(float(1).sub(step(0.5, zone))).mul(tint.a.mul(0.5).add(0.5))).add(vec3(0.95, 0.82, 0.68).mul(SH.U.ambSky.dot(vec3(0.3333)).mul(0.3).add(SH.U.sunCol.dot(vec3(0.3333)).mul(0.035))).mul(0.12).mul(float(1).sub(step(0.5, zone))));      // [l1] shade keeps a floor of sky and bounce: bark, posts and fences do not go black out of the sun
   const sootK = rm ? mix(vec3(1), vec3(0.22, 0.21, 0.2), rm.z.mul(0.9)) : vec3(1);
   m.colorNode = albedo.mul(sootK).mul(unlit.oneMinus());
-  m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit)).add(mode === 'static' && !(TEST && TEST.gloss === 0) ? SH.pointSpec(positionWorld, N, normalize(SH.U.camPos.sub(positionWorld)), step(TSL.abs(mm.x.sub(MAT.PLANKS)), 0.5).mul(0.5), zone).mul(0.16) : vec3(0));      // [l1] worn planks catch the firelight
+  m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit)).add((TEST && TEST.shade === 0) || mode === 'skin' ? vec3(0) : vec3(0.95, 0.82, 0.68).mul(SH.U.ambSky.dot(vec3(0.3333)).mul(0.3).add(SH.U.sunCol.dot(vec3(0.3333)).mul(0.035))).mul(0.1).mul(float(1).sub(step(0.5, zone))).mul(unlit.oneMinus())).add(mode === 'static' && !(TEST && TEST.gloss === 0) ? SH.pointSpec(positionWorld, N, normalize(SH.U.camPos.sub(positionWorld)), step(TSL.abs(mm.x.sub(MAT.PLANKS)), 0.5).mul(0.5), zone).mul(0.16) : vec3(0));      // [l1] worn planks catch the firelight
   m.normalNode = transformNormalToView(N);
-  m.roughnessNode = nt.w; m.metalnessNode = float(0);
+  m.roughnessNode = (TEST && TEST.rough === 0) ? nt.w : TSL.max(nt.w, float(0.8).mul(float(1).sub(step(0.5, zone))));      // [l1] nothing dry out of doors sparkles: a rough floor on every static and rigid surface
+  m.metalnessNode = float(0);
   return m;
 }
 // leaf cards: cut-out, lit from both sides, a little sun shining through
@@ -92,7 +94,7 @@ function terrainMaterial() {
     const dn = texture(G.noiseTex, wp.xz.mul(0.0013)).zw.sub(0.5);
     const Nv = normalize(vN.add(vec3(dn.x, 0, dn.y).mul(smoothstep(260, 700, r).mul(1.1)))).toVar();
     const slope = Nv.y.oneMinus();
-    const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(2.5).toVar(), uvR = vec2(wp.x, wp.y.mul(1.3)).mul(0.16).toVar(), uvR2 = vec2(wp.z.add(7.3), wp.y.mul(1.3)).mul(0.16).toVar();       // rock is mapped on two vertical planes (x-y and z-y) and blended by the facing, so no cliff smears
+    const uvG = wp.xz.div(3).toVar(), uvF = wp.xz.div(14).add(vec2(0.37, 0.11)).toVar(), uvC = wp.xz.div(1.9).toVar(), uvR = vec2(wp.x, wp.y.mul(1.3)).mul(0.16).toVar(), uvR2 = vec2(wp.z.add(7.3), wp.y.mul(1.3)).mul(0.16).toVar();       // rock is mapped on two vertical planes (x-y and z-y) and blended by the facing, so no cliff smears
     const dGx = dFdx(uvG).toVar(), dGy = dFdy(uvG).toVar(), dFx = dFdx(uvF).toVar(), dFy = dFdy(uvF).toVar(), dCx = dFdx(uvC).toVar(), dCy = dFdy(uvC).toVar(), dRx = dFdx(uvR).toVar(), dRy = dFdy(uvR).toVar(), dR2x = dFdx(uvR2).toVar(), dR2y = dFdy(uvR2).toVar();
     const det = dist.lessThan(56);                              // normal maps only matter near the camera (one sample less per layer beyond that)
     const farK = smoothstep(16, 55, dist).toVar();
@@ -132,7 +134,23 @@ function terrainMaterial() {
     If(wPath.greaterThan(0.004), () => { over(samp(MAT.DIRT, uvG, dGx, dGy), wPath); });
     const wGrav = sp.a.mul(smoothstep(0.25, 0.65, s2.g)).toVar();
     If(wGrav.greaterThan(0.004), () => { over(samp(MAT.GRAVEL, uvG.mul(1.4), dGx.mul(1.4), dGy.mul(1.4)), wGrav); });
-    If(sp.g.greaterThan(0.004), () => { const c = samp(MAT.COBBLE, uvC, dCx, dCy); c.h.assign(c.h.mul(0.2).add(0.72)); over(c, sat(sp.g.mul(1.15)).toVar()); });
+    If(sp.g.greaterThan(0.004), () => {
+      const c = samp(MAT.COBBLE, uvC, dCx, dCy); c.h.assign(c.h.mul(0.2).add(0.72));
+      // [fx3] the market's cobbles: joints and stones closer in value, a smoother worn lane where carts and feet go (the road line under the cobbles), patches laid at another time, a darker damp at the edges
+      const wear = smoothstep(0.30, 0.80, road).mul(0.9).toVar(), lum = dot(c.c, vec3(0.3333)), patch = smoothstep(0.52, 0.62, mn2.g.add(mn3.r.sub(0.5).mul(0.25)));
+      c.c.assign(mix(vec3(lum), c.c, 0.80)); c.c.mulAssign(float(1).add(wear.mul(0.42)).add(patch.mul(0.16)).mul(vec3(1, 1, 1).sub(vec3(0.04, 0.0, 0.08).mul(patch))));
+      c.n.assign(mix(c.n, vec2(0.5), wear.mul(0.55))); c.r.assign(mix(c.r, float(0.72), wear));
+      /* [fx3] ground value: the darkest large surface in a street, warm and dirty; setts read to 10 m; blotches of dirt and straw, damp in the shade, a worn lane a shade lighter and smoother */
+      c.c.assign(mix(c.c, vec3(0.50, 0.46, 0.40).mul(lum.mul(0.6).add(0.55)), 0.28)); c.ao.assign(mix(c.ao, float(1), 0.35)); c.n.assign(mix(c.n, vec2(0.5), 0.2));
+      c.c.mulAssign(vec3(0.58, 0.53, 0.45));
+      const foot = sat(s2.b.mul(2.2)).toVar(), jt = smoothstep(0.62, 0.40, c.h).toVar(), blot = smoothstep(0.56, 0.66, mn2.b.add(mn3.g.sub(0.5).mul(0.35))), strw = smoothstep(0.60, 0.72, mn2.r.add(mn3.b.sub(0.5).mul(0.4)));
+      const dirtK = max(foot.mul(0.75), blot.mul(0.5)).mul(float(1).sub(wear.mul(0.7)));
+      c.c.assign(mix(c.c, vec3(0.20, 0.15, 0.10).mul(lum.mul(0.5).add(0.75)), dirtK));
+      c.c.assign(mix(c.c, vec3(0.50, 0.40, 0.20), max(foot.mul(0.7), blot.mul(0.4)).mul(strw).mul(0.8)));
+      c.c.assign(mix(c.c, vec3(0.16, 0.22, 0.08), foot.mul(jt).mul(smoothstep(0.45, 0.7, mn2.g)).mul(0.9)));
+      c.c.mulAssign(float(1).sub(s2.r.mul(0.40)).sub(s2.g.mul(0.15)));
+      over(c, sat(sp.g.mul(1.15)).toVar());
+    });
     // puddles collect in the low spots of roads and wet banks
     // rain: water stands on every road, between the cobbles and on bare earth, the ground darkens and takes a sheen
     const wet = (TEST && TEST.shore === 0) ? U.wet : max(U.wet, smoothstep(17, 3, TSL.length(wp.xz.sub(vec2(14, 80)))).mul(0.8)), hard = max(max(road, sp.g), sp.a);      // [l1] the wharf's cobbles are always wet
@@ -141,6 +159,7 @@ function terrainMaterial() {
     // in rain, broad shallow pools also lie over cobbles and packed road whatever the stones' height
     pud.assign(max(pud, smoothstep(0.50, 0.60, mn2.a.mul(0.55).add(mn3.b.mul(0.15)).add(mn.r.mul(0.30))).mul(wet).mul(hard).mul(smoothstep(0.02, 0.07, slope).oneMinus()).mul(farK.mul(0.5).oneMinus())));
     const damp = sat(s2.g.mul(0.7).add(pud).add(wet.mul(0.7))).toVar();
+    if (!(TEST && TEST.rough === 0)) G0.r.assign(max(G0.r, 0.86));      // [l1] dry ground never glints; water and wet cobbles below still shine
     G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, mix(float(0.45), 0.24, wet), damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
     If(wRock.greaterThan(0.004), () => {
       const q = samp(MAT.ROCK, uvR, dRx, dRy), q2 = samp(MAT.ROCK, uvR2, dR2x, dR2y), kx = Nv.z.mul(Nv.z).div(Nv.x.mul(Nv.x).add(Nv.z.mul(Nv.z)).add(0.0001)).toVar();       // kx: weight of the x-y plane (faces looking along z)

@@ -40,6 +40,23 @@ function colResolve(p, r, feet, head) {
   return hit;
 }
 World.blockedAt = (x, z, r) => { const l = Col.grid.get(Math.floor(x / Col.cell) * 4096 + Math.floor(z / Col.cell)); if (!l) return false; const p = [x, 0, z]; for (const c of l) if (colPush(p, r, c)) return true; return false; };
+// Is there something solid between the eye and a thing? (the prompt asks: a chest in the next room was offered through the wall)
+// Walks the line in 0.12 m steps from 0.3 m in front of the eye to 1.3 m short of the thing (a thing set into or just behind a wall, like the loose bricks in the Hart cellar, is still offered). A collider the thing itself stands in or against
+// (the wall a door is set in, the cupboard a jar lies in) does not count, nor does anything lower or higher than the line where it passes.
+World.sightBlocked = (ex, ey, ez, tx, ty, tz, short) => {       // short: how far before the thing the line stops being tested (1.3 m; 0.5 for a person, who never stands inside a wall)
+  short = short || 1.3; const dx = tx - ex, dy = ty - ey, dz = tz - ez, L = Math.hypot(dx, dy, dz); if (L < short + 0.4) return false; const cs = Col.cell;
+  for (let t = 0.3; t < L - short; t += 0.12) {
+    const x = ex + dx / L * t, y = ey + dy / L * t, z = ez + dz / L * t, l = Col.grid.get(Math.floor(x / cs) * 4096 + Math.floor(z / cs)); if (!l) continue;
+    for (const c of l) {
+      if (c.off || y < c.y0 || y > c.y1) continue; const qx = x - c.x, qz = z - c.z, m = 0.05;
+      if (c.r !== undefined) { if (qx * qx + qz * qz >= (c.r - m) * (c.r - m)) continue; if (Math.hypot(tx - c.x, tz - c.z) < c.r + 0.55) continue; return true; }
+      const lx = qx * c.ax + qz * c.az, lz = qx * c.bx + qz * c.bz; if (Math.abs(lx) >= c.hx - m || Math.abs(lz) >= c.hz - m) continue;
+      const ux = (tx - c.x) * c.ax + (tz - c.z) * c.az, uz = (tx - c.x) * c.bx + (tz - c.z) * c.bz; if (Math.abs(ux) < c.hx + 0.55 && Math.abs(uz) < c.hz + 0.55) continue;
+      return true;
+    }
+  }
+  return false;
+};
 // the height of floor f at (x,z), or null when (x,z) is not over it
 function floorHeight(f, x, z) {
   const dx = x - f.x, dz = z - f.z; if (Math.abs(dx) > f.hx + f.hz || Math.abs(dz) > f.hx + f.hz) return null;
@@ -105,7 +122,7 @@ function playerUpdate(dt) {
     const rr = hyp(np[0], np[2]);
     if (rr > WORLD_RADIUS && !(CELLS_ON && Cells.inRegion(np[0]))) { np[0] *= WORLD_RADIUS / rr; np[2] *= WORLD_RADIUS / rr; if (P.warned <= 0) { P.warned = 8; if (typeof toast === 'function') toast('The wilds beyond Brackenfell are no place to wander alone.'); } }
     const w2 = World.waterAt(np[0], np[2]);
-    if (w2 > -900 && w2 - World.groundAt(np[0], np[2], P.pos[1] + 0.6) > 1.12 && w2 - P.pos[1] > 0.9) { np[0] = P.pos[0]; np[2] = P.pos[2]; P.vel[0] *= 0.3; P.vel[2] *= 0.3; }
+    void w2;       /* [coord] Build 74: deep water no longer refuses the step. It used to hold the player where they stood, so anyone who jumped or fell in off the wharf could not move at all; now they swim (below) */
     P.pos[0] = np[0]; P.pos[2] = np[2];
   }
   // a wall, rail or piece of furniture takes the part of the velocity that pushes into it, so the player keeps sliding along it and the footsteps stop when it is stuck
@@ -113,7 +130,11 @@ function playerUpdate(dt) {
   P.warned -= dt;
   // ground / gravity. On the ground the feet follow the surface exactly (ramps, stairs and drops of up to STEP_DOWN are walked, not fallen); the camera smooths the steps.
   const wasGround = P.onGround, STEP_DOWN = 0.62;
-  const gy = World.groundAt(P.pos[0], P.pos[2], P.pos[1] + 0.6);
+  const gy0 = World.groundAt(P.pos[0], P.pos[2], P.pos[1] + 0.6);
+  // [coord] swimming: where the water is deeper than a person can stand in, the "ground" is 1.25 m under the surface, so the head stays out and the feet
+  // follow the water, slowly (the wading speed above), until the bottom comes up to meet them again at a shore. No diving, no drowning.
+  const SWIM = 1.25, wNow = World.cell ? -999 : World.waterAt(P.pos[0], P.pos[2]), gy = wNow > -900 && wNow - gy0 > SWIM ? Math.max(gy0, wNow - SWIM) : gy0;
+  P.swim = gy > gy0;
   // a jump is allowed for a moment after walking off an edge (coyote time)
   if (rp && rp.jump && (P.onGround || P.coyote > 0) && depth < 0.9) { P.vel[1] = 6.4 * (depth > 0.45 ? 0.7 : 1); P.onGround = false; P.coyote = 0; RPG.jumped(); }
   if (P.vel[1] > 0 || P.pos[1] > gy + (wasGround && P.vel[1] <= 0 ? STEP_DOWN : 0.05)) {

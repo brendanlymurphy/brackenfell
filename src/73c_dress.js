@@ -361,23 +361,33 @@ function buildDress() {
   const R = rng(8801), OUT = { zone: 0, skyVis: 1, cast: false };
   DRS.items = []; DRS.placed = []; DRS.wet = []; DRS.worn = []; DRS.n = 0; DRS.lights = 0;
   const ADD = (name, M, o, tier) => DRS.items.push({ name, M, o: o || OUT, tier, x: M.elements[12], z: M.elements[14] });
-  const add = (name, x, y, z, s, ry, ex, o, rx, rz) => ADD(name, dmat(name, x, y, z, s, ry, rx, rz), o ? Object.assign({}, OUT, o) : OUT, o && o.es ? 0 : 1);
+  const DCNT = World.dressCount = { fpot: 0, vine: 0 };
+  const add = (name, x, y, z, s, ry, ex, o, rx, rz) => (/fpot/.test(name) && DCNT.fpot++, /Vine/.test(name) && DCNT.vine++, ADD(name, dmat(name, x, y, z, s, ry, rx, rz), o ? Object.assign({}, OUT, o) : OUT, o && o.es ? 0 : 1));
   const gy = (x, z) => Terrain.y(x, z);
   const V = (fn, n) => Array.from({ length: n }, (_, i) => fn(R, i));
   const barrels = V(dBarrel, 4), crates = V(dCrate, 5), sacks = V(dSack, 4), baskets = V(dBasket, 3), buckets = V(dBucket, 3), pots = V(dPot, 4), bales = V(dBale, 2), logs = V(dLogPile, 4), fpots = V(dFlowerPot, 4), benches = V(dBench, 2),
     carts = V(dHandcart, 2), troughs = V(dTrough, 2), ladders = V(dLadder, 3), brooms = V(dBroom, 2), tools = V(dToolRack, 2), fences = V(dFence, 3);
   const pick = a => a[Math.floor(R() * a.length)];
-  const solid = (x, z, r, h) => World.colliders.push({ x, z, r, y0: gy(x, z) - 0.5, y1: gy(x, z) + (h || 0.9) });
+  const solid = (x, z, r, h) => World.colliders.push({ x, z, r, y0: gy(x, z) - 0.5, y1: gy(x, z) + (h || 0.9), stk: TEST && TEST.colstack === 2 ? 'solid ' + new Error().stack.split('\n').slice(2, 4).join(' < ') : undefined });
   // [fx1] a row of barrels or crates is a long thin box, not a circle as wide as its length (the circles reached into the house walls beside them)
-  const solidRow = (x, z, dx, dz, half, hw, h) => World.colliders.push({ x, z, hx: half, hz: hw, ax: dx, az: dz, bx: -dz, bz: dx, y0: gy(x, z) - 0.5, y1: gy(x, z) + h });
+  const solidRow = (x, z, dx, dz, half, hw, h) => World.colliders.push({ x, z, hx: half, hz: hw, ax: dx, az: dz, bx: -dz, bz: dx, y0: gy(x, z) - 0.5, y1: gy(x, z) + h, stk: TEST && TEST.colstack === 2 ? 'solidRow ' + new Error().stack.split('\n').slice(2, 4).join(' < ') : undefined });
   const spotsOut = Object.values(World.spots).filter(s => !s.zone);
   const stones = [[0, -2], [-6, -4], [6, -3], [0, -10], [0, 6], [-9, 2], [9, 3], [0, -15.5]];
   const inAlley = (x, z) => x > ALLEY.x0 - 3 && x < ALLEY.x1 + 3 && Math.abs(z - roadZ(x)) < 8;
+  const routeNear = (x, z, r) => {
+    for (const rt of World.routes || []) for (let i = 0; i < rt.pts.length - 1; i++) {
+      const a = rt.pts[i], b = rt.pts[i + 1], bx = b[0] - a[0], bz = b[2] - a[2], l2 = bx * bx + bz * bz, t = l2 ? Math.max(0, Math.min(1, ((x - a[0]) * bx + (z - a[2]) * bz) / l2)) : 0;
+      if (hyp(x - a[0] - bx * t, z - a[2] - bz * t) < r) return true;
+    }
+    return false;
+  };
   // may a prop of radius r stand here?
   const ok = (x, z, r, o) => {
     o = o || {};
     if (hyp(x, z) > WORLD_RADIUS + 8) return false;
-    if (KEEP.hit(x, z, r * 1.45)) return false;          // Build 33: never in a door's approach strip or on a road's centre line
+    if (KEEP.hit(x, z, r * 1.45)) return false;          // Build 33
+    if (z > 10.9 - r * 0.5 && z < 13.4 + r * 0.5 && x > -37.5 - r && x < 25) return false;      /* [fx3] the terrace's south wall and its lean-to stand here: nothing is dressed into the wall */
+    if (routeNear(x, z, r + 0.7)) return false;          // [fx3] a walk the route tests make (galleries, lanes, the dead yard) stays clear: never in a door's approach strip or on a road's centre line
     for (const p of DRS.placed) if (hyp(x - p[0], z - p[1]) < r + p[2]) return false;
     const al = inAlley(x, z);
     if (al) { if (Math.abs(z - roadZ(x)) < 1.8 + r * 0.5) return false; }
@@ -407,9 +417,25 @@ function buildDress() {
     const p = siteToWorld(s, lx, lz); return { x: p[0], z: p[1], ry: rl - s.yaw, lx, lz };
   };
   const wallLen = (s, face) => face === 'front' || face === 'back' ? s.w : s.d;
+  // [fx3] a pile's footprint must not push into anything already solid (the overlap finder: crates through counters, barrels through crates)
+  const rowClear = (x, z, dx, dz, half, hw, h) => {
+    const y = gy(x, z), A = { x, z, hx: half, hz: hw, ax: dx, az: dz, bx: -dz, bz: dx };
+    for (const t of [-1, -0.5, 0, 0.5, 1]) if (routeNear(x + dx * half * t, z + dz * half * t, hw + 0.7)) return false;
+    for (const c of World.colliders) {
+      if (!isFinite(c.x) || Math.abs(c.x - x) > 6 || Math.abs(c.z - z) > 6 || c.y1 < y - 0.1 || c.y0 > y + h) continue;
+      const B = c.r !== undefined ? { x: c.x, z: c.z, hx: c.r, hz: c.r, ax: 1, az: 0, bx: 0, bz: 1 } : c; let m = 1e9;
+      for (const d of [[A.ax, A.az], [A.bx, A.bz], [B.ax, B.az], [B.bx, B.bz]]) {
+        const pr = (o) => { const cx = o.x * d[0] + o.z * d[1], r = o.hx * Math.abs(o.ax * d[0] + o.az * d[1]) + o.hz * Math.abs(o.bx * d[0] + o.bz * d[1]); return [cx - r, cx + r]; };
+        const u = pr(A), v = pr(B), ov = Math.min(u[1], v[1]) - Math.max(u[0], v[0]); if (ov < m) m = ov;
+      }
+      if (m > 0.05 && !(c.y1 - c.y0 > 2.4 && m < 0.1)) return false;
+    }
+    return true;
+  };
   // ── piles ──
   const barrelPile = (x, z, ry, ex) => {
     const n = R.i(2, 4), dx = Math.cos(ry), dz = -Math.sin(ry), y = gy(x, z); let top = 0;
+    if (!rowClear(x, z, dx, dz, n * 0.33 + 0.12, 0.46, 1.5)) return;
     for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * 0.66; add(pick(barrels), x + dx * o + R.s() * 0.03, y, z + dz * o + R.s() * 0.03, 0.95 + R() * 0.15, R() * TAU, ex); top = i; }
     if (n >= 2 && R() < 0.7) add(pick(barrels), x + R.s() * 0.05, y + 0.78, z + R.s() * 0.05, 0.9, R() * TAU, ex);
     if (R() < 0.5) add(pick(buckets), x + dx * 0.95 + 0.1, y, z + dz * 0.95, 1, R() * TAU, ex);
@@ -418,6 +444,7 @@ function buildDress() {
   const crateTop = (n, y) => y + dpH(n);
   const cratePile = (x, z, ry, ex) => {
     const y = gy(x, z), dx = Math.cos(ry), dz = -Math.sin(ry), k = R.i(1, 3);
+    if (!rowClear(x, z, dx, dz, (k + 1) * 0.31 + 0.15, 0.5, 1.3)) return;
     const cs = [];
     for (let i = 0; i < k + 1; i++) { const n = pick(crates), o = (i - k / 2) * 0.62; add(n, x + dx * o, y, z + dz * o, 1, ry + R.s() * 0.2, ex); cs.push([n, o]); }
     if (R() < 0.8) { const n = pick(crates), o = cs[0][1] + 0.3; add(n, x + dx * o, crateTop(cs[0][0], y) - 0.02, z + dz * o, 0.92, ry + R.s() * 0.4, ex); if (R() < 0.45) add(pick(crates), x + dx * (o + 0.05), crateTop(n, crateTop(cs[0][0], y)) - 0.03, z + dz * (o + 0.05), 0.75, ry + R.s() * 0.6, ex); }
@@ -462,7 +489,7 @@ function buildDress() {
       else if (t === 'logs') { add(pick(logs), w.x, y, w.z, 1, w.ry + PI, ex); claim(w.x, w.z, 0.55); if (R() < 0.7) add(dChips(R, R.i(0, 2)), w.x + Math.sin(w.ry) * 0.7, y, w.z + Math.cos(w.ry) * 0.7, 1, R() * TAU, true); }
       else if (t === 'bucket') { add(pick(buckets), w.x, y, w.z, 1, R() * TAU, ex); if (R() < 0.5) add(pick(buckets), w.x + 0.34, y, w.z + 0.1, 0.9, R() * TAU, ex); claim(w.x, w.z, 0.4); }
       else if (t === 'basket') { add(pick(baskets), w.x, y, w.z, 1.1, R() * TAU, ex); claim(w.x, w.z, 0.3); }
-      else if (t === 'fpot') { for (let i = 0; i < R.i(1, 3); i++) add(pick(fpots), w.x + Math.cos(w.ry) * i * 0.34, y, w.z - Math.sin(w.ry) * i * 0.34, 1, R() * TAU, ex); claim(w.x, w.z, 0.5); }
+      else if (t === 'fpot') { const keepPot = R() < 0.34; if (keepPot) for (let i = 0; i < R.i(1, 3); i++) add(pick(fpots), w.x + Math.cos(w.ry) * i * 0.34, y, w.z - Math.sin(w.ry) * i * 0.34, 1, R() * TAU, ex); if (keepPot) claim(w.x, w.z, 0.5); }
       else if (t === 'hay') { DRS.worn.push([w.x, w.z, 2.2, 0.7]); add(pick(bales), w.x, y, w.z, 1, w.ry + PI / 2 + R.s() * 0.15, ex); if (R() < 0.6) add(pick(bales), w.x + R.s() * 0.1, y + 0.43, w.z, 0.95, w.ry + PI / 2 + R.s() * 0.4, ex); add(dStrawPiece(R, R.i(0, 2)), w.x + Math.sin(w.ry) * 0.8, y, w.z + Math.cos(w.ry) * 0.8, 1.3, R() * TAU, true); solid(w.x, w.z, 0.55, 0.9); claim(w.x, w.z, 0.7); }
       else if (t === 'bench') { DRS.worn.push([w.x, w.z, 1.5, 0.6]); add(pick(benches), w.x, y, w.z, 1, w.ry + PI / 2, ex); claim(w.x, w.z, 0.9); }
       else if (t === 'cart') { DRS.worn.push([w.x, w.z, 1.8, 0.6]); add(pick(carts), w.x, y, w.z, 1, w.ry + PI / 2 + R.s() * 0.5, ex); solid(w.x, w.z, 0.7, 0.8); claim(w.x, w.z, 1.0); if (R() < 0.6) add(pick(sacks), w.x, y + 0.45, w.z, 0.9, R() * TAU, ex); }
@@ -487,11 +514,9 @@ function buildDress() {
     World.spots['dstall' + k] = { p: [x + fx * 1.5, gy(x + fx * 1.5, z + fz * 1.5), z + fz * 1.5], yaw: ry + PI, zone: 0 };
     if (R() < 0.8) { const sx = x - Math.cos(ry) * 1.8, sz = z + Math.sin(ry) * 1.8; if (ok(sx, sz, 0.6, { square: true })) { add(pick(R() < 0.5 ? barrels : crates), sx, gy(sx, sz), sz, 1, R() * TAU, false); solid(sx, sz, 0.4, 0.9); claim(sx, sz, 0.5); } }
   };
-  for (let tr = 0, placedS = 0; tr < 500 && placedS < 5; tr++) {
-    const a = R() * TAU, rr = 0.6 + R() * 0.3, x = SQUARE.x + Math.cos(a) * SQUARE.rx * rr, z = SQUARE.z + Math.sin(a) * SQUARE.rz * rr;
-    if (z < -9 || !ok(x, z, 2.0, { square: true })) continue;
-    placeStall(x, z, Math.atan2(SQUARE.x - x, SQUARE.z - z) + R.s() * 0.5, stallKinds[(placedS + 1) % stallKinds.length]); placedS++;
-  }
+  { let placedS = 0;      // [fx3] the place's stalls stand in two rows facing the cart way, in front of the north and south fronts, not scattered at random; each has fallback spots in its row
+    for (const [cands, ry] of [[[[-14.2, -12.4], [-13.0, -11.2], [-15.5, -10.6]], 0], [[[-6.4, -12.0], [-7.6, -11.0], [-5.0, -11.6]], 0], [[[6.6, -12.4], [7.8, -11.6], [5.6, -12.0]], 0], [[[14.0, -12.0], [12.2, -12.4], [15.4, -10.8]], 0], [[[-6.0, 5.2], [-7.2, 4.8], [-4.9, 5.4]], PI], [[[12.6, 5.0], [10.4, 5.6], [14.2, 4.6]], PI]]) {
+      for (const [x, z] of cands) { if (!ok(x, z, 1.1, { square: true })) continue; placeStall(x, z, ry, stallKinds[(placedS + 1) % stallKinds.length]); placedS++; break; } } }
   // alley: stalls and carts set into the middle band, nearer the shop fronts, leaving the walking line free
   for (const [x, rowS, kind] of [[26.5, -1, 'greens'], [33.5, -1, 'fish'], [38.2, 1, 'meat'], [45.0, -1, 'pots']]) {
     const z = roadZ(x) + rowS * 3.6, ry = rowS < 0 ? 0 : PI;
@@ -551,7 +576,7 @@ function buildDress() {
     // vines: a few strands on random walls, away from the door
     for (let i = 0, nv = kind === 'inn' ? 4 : 2 + R.i(0, 2); i < nv; i++) {
       const f = pick(['front', 'back', 'left', 'right']), u = (R() - 0.5) * (wallLen(s, f) - 1.6); if (f === face && Math.abs(u - du) < 1.9) continue;
-      const w = wallAt(s, f, u, 0.06), y = s.y + 2.5 + R() * 0.4; if (kind === 'shop') continue;
+      const w = wallAt(s, f, u, 0.06), y = s.y + 2.5 + R() * 0.4; if (kind === 'shop' || i % 2) continue;
       add(pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine4', 'Prop_Vine1']), w.x, y, w.z, [0.62, 0.6 + R() * 0.2, 0.6], w.ry, i % 2 === 0, { tint: [tint[0] * (0.9 + R() * 0.2), tint[1], tint[2]] });
     }
     if (kind === 'chapel' || kind === 'farm' && s.id === 'barn') continue;

@@ -63,7 +63,7 @@ function wWall(m, pts, o) {
       if (o.gaps && o.gaps.some(g => hyp((x0 + x1) / 2 - g[0], (z0 + z1) / 2 - g[1]) < 1.3)) continue;
       m.m1 = 0; m.ao = 1; m.grad = null; m.push().T((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2).RY(-Math.atan2(z1 - z0, x1 - x0)); const l = hyp(x1 - x0, z1 - z0) / 2 + 0.04, hh = hgt * (0.85 + 0.3 * ((mid * 7.3) % 1));
       m.mat(MAT.STONE, [0.9, 0.9, 0.88], 0.8); m.box(-l, -0.5, -0.22, l, hh, 0.22, 4); m.mat(MAT.MOSS, [0.8, 0.85, 0.75], 0.8); m.box(-l * 0.9, hh, -0.2, l * 0.9, hh + 0.06, 0.2);
-      addBoxCollider(m, -l, -0.23, l, 0.23, -0.5, hh + 0.1); m.pop();
+      addBoxCollider(m, -l, -0.23, k === n - 1 && i < pts.length - 2 ? l - 0.28 : l, 0.23, -0.5, hh + 0.1); m.pop();      /* [fx3] a corner's collider stops at the next wall's face */
     }
   }
 }
@@ -269,7 +269,7 @@ WBUILD.burnt = (p, m, R) => {
     mm.mat(MAT.PLAIN, [0.12, 0.11, 0.1]); for (let i = 0; i < 9; i++) mm.ball((R() - 0.5) * 4.6, 0.12, (R() - 0.5) * 3.2, 0.4 + R() * 0.7, 0.12, 0.35 + R() * 0.5, 7, 3);
     mm.mat(MAT.STONE, [0.5, 0.48, 0.45], 0.6); for (let i = 0; i < 7; i++) mm.ball((R() - 0.5) * 5.2, 0.15, (R() - 0.5) * 4, 0.16 + R() * 0.12, 0.11, 0.14 + R() * 0.1, 6, 3);
     addBoxCollider(mm, -w / 2, d / 2 - 0.2, w / 2, d / 2 + 0.05, 0, 1.4); addBoxCollider(mm, -w / 2 - 0.1, -d / 2, -w / 2 + 0.15, d / 2, 0, 1.1); addBoxCollider(mm, w / 2 - 0.9, d / 2 - 1.1, w / 2 + 0.3, d / 2 + 0.3, 0, 3.4);
-    for (const [x, z] of [[-w / 2, -d / 2], [-w / 2, d / 2], [w / 2, -d / 2], [w / 2, d / 2]]) addCircleCollider(mm, x, z, 0.2, 0, 2);
+    for (const [x, z] of [[w / 2, -d / 2]]) addCircleCollider(mm, x, z, 0.2, 0, 2);      /* [fx3] the other three corner posts stand inside the walls' colliders */
   });
   // a charred barrel and crate by the back wall, a blackened wagon wheel
   wPut(m, p, 3.6, 3.6, 0, mm => { mm.mat(MAT.BARK, [0.2, 0.17, 0.15], 0.6); mm.cyl(0, 0, 0, 0.32, 0.34, 0.86, 10, 2); mm.mat(MAT.METAL, [0.12, 0.1, 0.09]); for (const y of [0.15, 0.7]) mm.lathe([[0.345, y], [0.345, y + 0.04]], 10, 0); addCircleCollider(mm, 0, 0, 0.35, 0, 0.9); });
@@ -354,7 +354,7 @@ WBUILD.stones = (p, m, R) => {
   // a ring of nine standing stones and two fallen ones on a bare hilltop, an altar slab with a carving, a cairn, and a hawthorn bent by the wind
   const N = 9, rr = 6.0;
   for (let i = 0; i < N; i++) { const a = i / N * TAU + 0.2, h = 2.9 + 1.7 * ((i * 37 + 11) % 10) / 10; wPut(m, p, Math.cos(a) * rr, Math.sin(a) * rr, a, mm => { wStone(mm, 0.95 + 0.25 * ((i * 13) % 5) / 5, h, (R() - 0.5) * 0.12); addCircleCollider(mm, 0, 0, 0.55, 0, 3); }); }
-  for (const [a, r] of [[0.5 + PI, rr + 0.6], [2.5, rr + 0.2]]) wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, a + 1.2, mm => { mm.push().T(0, 0.45, 0).RZ(PI / 2).T(0, -1.3, 0); mm.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.55); mm.lathe([[0.5, 0], [0.45, 1.4], [0.3, 2.6], [0.05, 2.8]], 6, 0); mm.pop(); addBoxCollider(mm, -1.4, -0.5, 1.4, 0.5, 0, 0.9); });
+  for (const [a, r] of [[0.2 + 4.5 * TAU / 9, rr + 1.4], [0.2 + 7.5 * TAU / 9, rr + 1.4]]) wPut(m, p, Math.cos(a) * r, Math.sin(a) * r, a + 1.2, mm => { mm.push().T(0, 0.45, 0).RZ(PI / 2).T(0, -1.3, 0); mm.mat(MAT.ROCK, [0.9, 0.9, 0.88], 0.55); mm.lathe([[0.5, 0], [0.45, 1.4], [0.3, 2.6], [0.05, 2.8]], 6, 0); mm.pop(); addBoxCollider(mm, -1.4, -0.5, 1.4, 0.5, 0, 0.9); });
   const alt = wPut(m, p, 0, 0, 0.2, mm => {
     mm.mat(MAT.ROCK, [0.85, 0.85, 0.82], 0.6); mm.box(-0.9, 0, -0.45, -0.55, 0.55, 0.45); mm.box(0.55, 0, -0.45, 0.9, 0.55, 0.45); mm.box(-1.25, 0.55, -0.7, 1.25, 0.82, 0.7);
     mm.mat(MAT.PLAIN, [0.1, 0.1, 0.09]); for (let i = 0; i < 5; i++) { const x = -0.9 + i * 0.45; mm.box(x, 0.822, -0.5, x + 0.05, 0.828, 0.5); } mm.box(-1.0, 0.822, 0.0, 1.0, 0.828, 0.05); mm.cyl(0, 0.822, 0, 0.3, 0.3, 0.006, 12, 2);
@@ -479,7 +479,7 @@ WBUILD.hamlet = (p, m, R) => {
     mm.mat(MAT.PLAIN, [0.04, 0.07, 0.08]); mm.disc(0, 0.2, 0, 0.6, 10, 1); mm.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) mm.cbox(s * 0.85, 0.8, 0, 0.12, 1.3, 0.12, 4); mm.beam([-0.9, 2.05, 0], [0.9, 2.05, 0], 0.11, 0.11);
     mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.6); mm.quad2([-1.1, 2.3, 0], [-1.1, 1.95, -0.8], [1.1, 1.95, -0.8], [1.1, 2.3, 0]); mm.quad2([1.1, 2.3, 0], [1.1, 1.95, 0.8], [-1.1, 1.95, 0.8], [-1.1, 2.3, 0]); addCircleCollider(mm, 0, 0, 1.0, 0, 1.2);
   });
-  for (const h of WILDS.houses) { const q = siteToWorld(h, h.w / 2 + 0.9, -h.d / 2 + 1.2); m.push().T(q[0], wy(q[0], q[1]), q[1]).RY(-h.yaw); m.m1 = 0; m.ao = 1; m.grad = null; Props.woodpile(m, 3, 3, 1.1); m.pop(); }
+  for (const h of WILDS.houses) { const q = siteToWorld(h, h.w / 2 + 0.9, h.d / 2 - 1.2); m.push().T(q[0], wy(q[0], q[1]), q[1]).RY(-h.yaw); m.m1 = 0; m.ao = 1; m.grad = null; Props.woodpile(m, 3, 3, 1.1); m.pop(); }
   for (const [id, msg] of [['high.b', 'Bolted. Nobody is home: they are all at the wedding.'], ['high.barn', 'The barn door is chained. Sheep bleat behind it.']]) { const h = SITE[id]; if (!h) continue; const q = siteToWorld(h, h.doorPos === undefined ? 0 : h.doorPos, -h.d / 2 - 0.9); World.interact.push({ p: [q[0], wy(q[0], q[1]) + 1.2, q[1]], r: 2.2, zone: 0, kind: 'door', id: id + '.door', shut: true, msg }); }
   // the apple pickups hang under the orchard birches
   for (const [x, z] of [[129, 123], [125, 126]]) { const c = [x, wy(x, z), z]; wPick("hf.apple" + (x > 127 ? 2 : 1), c, 'Gather apples', 'apple', 'apple'); }

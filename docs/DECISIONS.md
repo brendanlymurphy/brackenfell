@@ -14,6 +14,10 @@ whenever the owner rejects something or a measurement kills an idea; one paragra
 - **`gemini-3.8-flash-tts` for the last lines when the 3.1 daily limit ran out. Rejected.** It has its own daily limit, but with our
   prompt it reads the acting direction aloud: Bram's "Hey! I only sell apples!" came back 24 seconds long, and was pushed before
   anyone measured it. Now: 3.1 only, and `tools/voice/check.mjs` fails any file over 0.45 s per character or over 30 s.
+- **A flat 30-second limit on a recording. Relaxed for long lines.** It was there to catch the model reading its direction aloud, and it
+  also kept Rowan's two 340-character lines silent for ever (read slowly they run 35 to 40 s). Now over 30 s is a fault only if it is also
+  over 0.13 s per character; the 0.45 s per character rule still catches a short line that runs long. The size budget is 14 MB (252
+  lines are 12.9 MB); a line is fetched when first spoken, never at start-up.
 - **Processing speech (reverb, pitch shift, speed changes). Rejected.** The owner wants voices dry and exactly as the model made
   them. Speech bypasses every bus and reverb (`88d_voice.js`); generation only trims silence and sets the level.
 - **Editing the text of a line that already has a recording. Never.** Files are keyed by speaker + exact on-screen text, so a changed
@@ -42,8 +46,15 @@ whenever the owner rejects something or a measurement kills an idea; one paragra
   (`tools/gate_budget.json`) and prints "over target" otherwise.
 - **KTX2 / Basis textures. Not done.** No encoder could be installed on the build machines and the asset hosts are blocked. The
   first-load saving came from meshopt geometry and half-size packs instead.
-- **Half-size material pack on iPhones by default. Not done.** Safari does not report memory, and whether the ground is sharp
-  enough at 512 has to be judged on a real phone. `?texpack=half` tries it.
+- **Half-size ground pack on phones: now the default (Build 69), reversing "not done".** The earlier objection was that sharpness had to
+  be judged on a real phone. Measured instead at the 1266 x 585 a phone draws on Medium: the picture differs from the full pack by 0.4 of
+  255 on average at eye level and 2.7 looking straight down at grass at one's feet (slightly softer there). Against that: 20.6 MB less to
+  download (61.0 to 40.4 MB) and about 21 MB less texture memory, the thing that gets a Safari tab killed. Tablets and laptops keep the
+  full pack. `?texpack=full` on the phone shows the other one; if the owner sees the softness and minds it, flip `handheld` in 10_gfx.js.
+- **Culling by squares with a lazy refill (Build 69). Kept, with a guard.** Terrain and prop squares outside the view or under the
+  roofline are not drawn (Medium square 433k to 304k triangles). The first version refilled index buffers on every roofline change and
+  hid squares for up to 0.6 s after they came into sight; `test/cullwalk.js` now proves no square in sight is missing while walking
+  and turning, and the far hills are never hidden.
 
 ## Look and world
 

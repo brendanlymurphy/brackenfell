@@ -33,11 +33,20 @@ function buildWalls(bucket) {
         m.quad2([A0[0], ya - t, A0[1]], [A0[0], ya, A0[1]], [B0[0], yb, B0[1]], [B0[0], yb - t, B0[1]]); m.quad2([A1[0], ya - t, A1[1]], [A1[0], ya, A1[1]], [B1[0], yb, B1[1]], [B1[0], yb - t, B1[1]]); void c; void L; void p0; void p1; }
       // joist and bearer beams under the deck, a stilt at the inner edge every second piece
       { const s = P(a, 0.4), t = P(b, 0.4), s2 = P(a, 1.8), t2 = P(b, 1.8); K.beam([s[0], ya - 0.28, s[1]], [t[0], yb - 0.28, t[1]], 0.14, 0.18); K.beam([s2[0], ya - 0.28, s2[1]], [t2[0], yb - 0.28, t2[1]], 0.14, 0.18);
-        if (i % 2 === 0) { const q = P(a, 1.8); K.post(q[0], q[1], gy(q[0], q[1]) - 0.4, ya - 0.1, 0.2, true); K.beam([q[0], ya - 0.3, q[1]], [P(a, 0.4)[0], ya - 0.3, P(a, 0.4)[1]], 0.1, 0.14); } }
+        if (i % 2 === 0 && !(a > ug - 2 && a < ug + 2)) { const q = P(a, 1.8);       /* [coord] no stilt in the middle of a gate arch */ K.post(q[0], q[1], gy(q[0], q[1]) - 0.4, ya - 0.1, 0.2, true); K.beam([q[0], ya - 0.3, q[1]], [P(a, 0.4)[0], ya - 0.3, P(a, 0.4)[1]], 0.1, 0.14); } }
       // the palisade: a plank wall from under the ground to 1.85 m over the deck, stepped to the ground, a coping rail and sharpened stakes
       { const top = hi + 1.85, e0 = P(a, 0), e1 = P(b, 0.36), mlo = Math.min(g0, lo - 3) - 0.8;
-        box(MAT.PLANKS, [0.78, 0.7, 0.58], 0.5, e0[0], mlo, e0[1], e1[0], top, e1[1], 4 | 8);
-        col(Math.min(e0[0], e1[0]), Math.min(e0[1], e1[1]), Math.max(e0[0], e1[0]), Math.max(e0[1], e1[1]), mlo, top);
+        /* [coord] Build 72: the plank wall and its collider ran straight through both gate arches (nobody could walk the Bridge Gate or the Chapel Gate);
+           each 2 m piece is now cut to what lies outside the arch (ug - 1.9 .. ug + 1.9), and over the arch only the part above the lintel is kept */
+        const g0a = ug - 1.9, g1a = ug + 1.9, parts = b <= g0a || a >= g1a ? [[a, b, mlo]] : [[a, Math.min(b, g0a), mlo], [Math.max(a, g0a), Math.min(b, g1a), yT - 0.16], [Math.max(a, g1a), b, mlo]].filter(q => q[1] - q[0] > 0.02);
+        for (const [pa, pb, pl] of parts) { const f0 = P(pa, 0), f1 = P(pb, 0.36); box(MAT.PLANKS, [0.74, 0.68, 0.6], 0.5, f0[0], pl, f0[1], f1[0], top, f1[1], 4 | 8);
+          /* [fx3] the outer face: plank joints as dark battens, a replaced board now and then, and the earth banked against the foot */
+          { const gM = gy(...P((pa + pb) / 2, -0.3)), hsh = Math.floor(Math.abs(pa) * 7.3) % 5;
+            for (let u = pa + 0.25; u < pb - 0.1; u += 0.42) { const gU = gy(...P(u, -0.03)); bx(MAT.TIMBER, [0.27, 0.24, 0.21], 0.5, u - 0.02, Math.max(pl, gU - 0.1), -0.03, u + 0.02, top - 0.04, 0, 4 | 8); }
+            if (hsh === 0 || hsh === 3 || hsh === 1) { const u = pa + 0.5 + (hsh === 3 ? 0.7 : 0), gU = gy(...P(u, -0.03)); bx(MAT.PLANKS, [0.78, 0.64, 0.46], 0.5, u, Math.max(pl, gU - 0.1), -0.04, u + 0.3, top - (hsh === 3 ? 0.9 : 0.2), 0, 4 | 8); }
+            if (pb - pa > 1.0) { bx(MAT.DIRT, [0.34, 0.29, 0.21], 1.5, pa, gM - 0.3, -0.95, pb, gM + 0.5, -0.02, 4 | 1 | 2); bx(MAT.DIRT, [0.36, 0.3, 0.22], 1.5, pa, gM - 0.3, -1.6, pb, gM + 0.18, -0.9, 4 | 1 | 2); } }
+          col(Math.min(f0[0], f1[0]), Math.min(f0[1], f1[1]), Math.max(f0[0], f1[0]), Math.max(f0[1], f1[1]), pl, top); }
+        void e0; void e1;
         for (let u = a + 0.2; u < b - 0.05; u += 0.5) tips.push([u, top]); }
       // the inner rail, sloped
       { const s = P(a, 1.85), t = P(b, 1.85);
@@ -53,6 +62,7 @@ function buildWalls(bucket) {
     for (const [s, e] of [[a0, a1], [b0, b1]]) { bx(MAT.STONE, [0.9, 0.87, 0.82], 0.7, s, gA - 1.0, V0, e, Y - 0.16, V1, 4 | 8); { const p = P(s, V0), q = P(e, V1); col(Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1]), gA - 1.0, Y); }
       bx(MAT.STONE, [0.84, 0.82, 0.78], 0.6, s - 0.08, Y - 0.34, V0 - 0.08, e + 0.08, Y - 0.16, V1 + 0.08, 4); }
     bx(MAT.TIMBER, dark, 0.5, a1 - 0.05, Y - 0.62, V0 + 0.15, b0 + 0.05, Y - 0.16, V1 - 0.15, 4);          // the lintel under the deck: the arch is 3.8 m wide and 2.7 m high, the road's width plus a cart's
+    { const p = P(a1, V0), q = P(b0, V1); (World.covers || (World.covers = [])).push({ x0: Math.min(p[0], q[0]), z0: Math.min(p[1], q[1]), x1: Math.max(p[0], q[0]), z1: Math.max(p[1], q[1]), y: Y, dark: true }); }      // [l1] the ground under a gate arch is in shade
     for (const v of [V0 + 0.1, V1 - 0.1]) { const p = P(a1 - 0.2, v), q = P(b0 + 0.2, v); K.beam([p[0], Y - 0.4, p[1]], [q[0], Y - 0.4, q[1]], 0.3, 0.46); }
     // deck over the whole tower (v from -0.5 to 3.4), the open gate leaves (hinged back flat on the faces), a plaque
     { const q0 = P(a0, V0), q1 = P(b1, V1); K.deck(Math.min(q0[0], q1[0]), Math.min(q0[1], q1[1]), Math.max(q0[0], q1[0]), Math.max(q0[1], q1[1]), Y); }
@@ -67,7 +77,7 @@ function buildWalls(bucket) {
       for (const u of [ug - TW + 0.15, ug + TW - 0.15]) for (const v of [V0 + 0.2, V1 - 0.2]) { const p = P(u, v); void p; }
       for (const v of [V0 + 0.2, V1 - 0.2]) { const p = P(ug - TW + 0.15, v), q = P(ug + TW - 0.15, v); K.beam([p[0], ye, p[1]], [q[0], ye, q[1]], 0.18, 0.2); }
       for (const u of [ug - TW + 0.15, ug + TW - 0.15]) { const p = P(u, V0 + 0.2), q = P(u, V1 - 0.2); K.beam([p[0], ye, p[1]], [q[0], ye, q[1]], 0.18, 0.2); } }
-    { const rl = (u0_, u1_, v) => { const p = P(u0_, v), q = P(u1_, v); for (const k of [0.5, 1.0]) K.beam([p[0], Y + k, p[1]], [q[0], Y + k, q[1]], 0.05, 0.06); const c0 = P(u0_, v - 0.07), c1 = P(u1_, v + 0.07); col(Math.min(c0[0], c1[0]), Math.min(c0[1], c1[1]), Math.max(c0[0], c1[0]), Math.max(c0[1], c1[1]), Y - 0.05, Y + 1.15); };
+    { const rl = (u0_, u1_, v) => { const p = P(u0_, v), q = P(u1_, v); for (const k of [0.5, 1.0]) K.beam([p[0], Y + k, p[1]], [q[0], Y + k, q[1]], 0.05, 0.06); const c0 = P(u0_, v - 0.05), c1 = P(u1_, v + 0.05); col(Math.min(c0[0], c1[0]), Math.min(c0[1], c1[1]), Math.max(c0[0], c1[0]), Math.max(c0[1], c1[1]), Y - 0.05, Y + 1.15); };
       rl(a0 + 0.3, b1 - 0.3, V0 + 0.2);                                  // the outer rail (the palisade's own line continues on both sides)
       rl(a0 + 0.3, a0 + 2.2, V1 - 0.2);                                  // inner rail on the side away from the stair
       rl(a0 + 0.3, ug - 0.5, V1 - 0.2); }

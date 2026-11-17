@@ -52,6 +52,7 @@ const Kit = (() => {
     if (pack.catalog) { const c = await fetchJson(pack.catalog, pack.optional); if (c) Object.assign(K_.cat, c.pieces || c); }
     gltf.scene.updateMatrixWorld(true);
     for (const node of gltf.scene.children) {
+      if (/@low$/.test(node.name)) { const lp = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); lp.push(extract(o)); } }); (K_.low = K_.low || {})[node.name.slice(0, -4)] = lp; continue; }      // [cull] the light copy of a scanned prop for the Low tier (tools/scan_low.mjs)
       if (/@far$/.test(node.name)) { const fp = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); fp.push(extract(o)); } }); K_.far[node.name.slice(0, -4)] = fp; continue; }      // the light copy of a piece (tools/kits_far.mjs)
       const prims = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); prims.push(extract(o)); } });
       if (!prims.length) continue;
@@ -59,6 +60,9 @@ const Kit = (() => {
       for (const p of prims) for (let i = 0; i < p.pos.length; i++) { const k = i % 3, v = p.pos[i]; if (v < min[k]) min[k] = v; if (v > max[k]) max[k] = v; }
       K_.pieces[node.name] = { name: node.name, prims, min, max, pack: pack.glb };
     }
+    /* [cull] Low tier (or a device with 3 GB or less): the stall props that stand out of doors in numbers are drawn from their light copies, about a third of
+       the triangles. Decided once, when the pack is read; ?lowmesh=0 or --opt lowmesh=0 keeps the full models for a comparison. */
+    if (K_.low && typeof GFX_TEX !== 'undefined' && GFX_TEX.tiny && !(TEST && TEST.lowmesh === 0) && !/[?&]lowmesh=0/.test(location.search)) for (const nm in K_.low) if (K_.pieces[nm] && !K_.pieces[nm].full) { K_.pieces[nm].full = K_.pieces[nm].prims; K_.pieces[nm].prims = K_.low[nm]; }
     return true;
   }
   const texLoad = (url, kind) => new Promise((res, rej) => new THREE.TextureLoader().load(url, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = 4; t.colorSpace = kind === 'data' ? THREE.NoColorSpace : THREE.SRGBColorSpace; gfxTex(t, kind).then(res, () => res(t)); }, undefined, () => rej(new Error('texture ' + url))));
@@ -196,7 +200,7 @@ const Kit = (() => {
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
     m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
-    m.roughnessNode = (orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough)).mul(float(1).sub(lampDay.mul(0.7)));
+    m.roughnessNode = max((orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough)).mul(float(1).sub(lampDay.mul(0.7))), (TEST && TEST.rough === 0) || isGlass(d) ? float(0) : float(0.74).mul(float(1).sub(step(0.5, zone))).mul(float(1).sub(metal)).mul(float(1).sub(lampDay)));      // [l1] dry outdoor kit surfaces never go glossy
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
     const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back
@@ -209,6 +213,7 @@ const Kit = (() => {
       const dayK = smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(0.97).add(0.03);       // the floor follows the daylight: constant, it left roofs and walls glowing pale at night while the ground went dark
       const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
+      if (!(TEST && TEST.shade === 0)) em = em.add(alb.mul(U.ambSky.mul(0.3).add(U.sunCol.mul(0.035))).mul(vec3(0.85, 0.95, 1.1)).mul(outM).mul(wallK).mul(skyVis)).add(vec3(0.95, 0.82, 0.68).mul(U.ambSky.dot(vec3(0.3333)).mul(0.3).add(U.sunCol.dot(vec3(0.3333)).mul(0.035))).mul(0.2).mul(outM).mul(wallK).mul(skyVis));      // [l1] shaded upright faces keep a floor of sky and bounce, plus a little absolute light so near-black planks still read
       if (!(TEST && TEST.shade === 0)) em = em.mul(mix(vec3(1), vec3(0.74, 0.86, 1.1), outM.mul(wallK).mul(skyVis).mul(float(1).sub(lampK))));      // [l1] shade is sky: upright faces out of the sun go cooler and darker
     }
     // [l1] contact and eave occlusion on outdoor walls (kg.x: metres above the ground, kg.y: metres below the eaves; 8 = none): a wall darkens where it meets the ground and under its eaves, sun included
@@ -284,7 +289,12 @@ const Kit = (() => {
     // many copies of one piece (trees, rocks, tufts). matrices: array of Matrix4 / shorthand. o: { tints: [[r,g,b]...], wind, cast, cell, maxDist, zone, skyVis }
     B.addInstanced = function (name, matrices, o) {
       const p = K_.pieces[name]; if (!p) { console.warn('Kit: unknown piece ' + name); return B; }
-      inst.push({ p, matrices: matrices.map(x => toMatrix(x)), o: o || {} }); return B;
+      o = o || {};
+      // [perf] Small ground dressing drawn far beyond where it can be seen: the scanned ferns (1000 triangles each), weeds and mossy stones were
+      // in 60 to 80 m cells shown out to 70 to 80 m from the cell's edge, 113k triangles in the square on Medium. They now sit in 16 m cells with
+      // a reach by what they are (K_.INST_REACH, metres; scaled by the tier in K_.update): a fern is a few pixels at 30 m.
+      if (o.maxDist && !(typeof TEST !== 'undefined' && TEST && TEST.instreach === 0)) for (const [re, reach, cell] of K_.INST_REACH) if (re.test(name)) { o = Object.assign({}, o, { maxDist: Math.min(o.maxDist, reach), cell: Math.min(o.cell || 48, cell) }); break; }
+      inst.push({ p, matrices: matrices.map(x => toMatrix(x)), o }); return B;
     };
     B.build = function () {
       const group = new THREE.Group(); group.name = opts.name || 'kit-batch'; group.matrixAutoUpdate = false;
@@ -423,10 +433,16 @@ const Kit = (() => {
     if (typeof INFS !== 'undefined' && INFS.proxies) for (const p of INFS.proxies) add(p.Ms, p.w / 2 - 0.2, -p.d / 2 + 0.1, p.d / 2 - 0.2, p.top);
     return out;
   }
-  K_.occlude = function (cam) {
+  // [cull] Every roofline owns its numbers. They used to share one pair of arrays, and the answer function kept the caller's own position array: the scene's
+  // roofline (kept for 0.35 m of walking) was silently overwritten whenever the house batcher took its own from another point (every 1.5 m or 11 degrees of
+  // turning), so what the scene hid depended on which of the two had asked last. That is why the same walk lost different squares on different machines.
+  // own: an object a caller keeps to have its arrays reused from one call to its next (the previous answer function of that caller is then dead).
+  K_.occlude = function (cam0, own) {
+    const cam = [cam0[0], cam0[1], cam0[2]];
     const n = (typeof World !== 'undefined' && World.kitExt ? Object.keys(World.kitExt).length : 0) + (typeof INFS !== 'undefined' && INFS.proxies ? INFS.proxies.length : 0);
-    if (!OCC.boxes || OCC.n !== n) { OCC.boxes = occBoxes(); OCC.n = n; OCC.slope = new Float32Array(OCC.N * OCC.K); OCC.far = new Float32Array(OCC.N * OCC.K); }
-    const N = OCC.N, K = OCC.K, S = OCC.slope, Fd = OCC.far, TAU_ = Math.PI * 2; S.fill(-1e9); Fd.fill(0);
+    if (!OCC.boxes || OCC.n !== n) { OCC.boxes = occBoxes(); OCC.n = n; }
+    const N = OCC.N, K = OCC.K, st = own || {}; if (!st.S) { st.S = new Float32Array(N * K); st.F = new Float32Array(N * K); }
+    const S = st.S, Fd = st.F, TAU_ = Math.PI * 2; S.fill(-1e9); Fd.fill(0);
     for (const b of OCC.boxes) {
       let a0 = 0, lo = 1e9, hi = -1e9, dmax = 0, dmin = 1e9;
       for (let i = 0; i < 4; i++) { const dx = b.c[i][0] - cam[0], dz = b.c[i][1] - cam[2], d = Math.hypot(dx, dz); let a = Math.atan2(dz, dx); if (i === 0) a0 = a; else { a -= a0; a = Math.atan2(Math.sin(a), Math.cos(a)) + a0; } lo = Math.min(lo, a); hi = Math.max(hi, a); dmax = Math.max(dmax, d); dmin = Math.min(dmin, d); }
@@ -439,11 +455,11 @@ const Kit = (() => {
         if (w >= 0) { S[o + w] = sl; Fd[o + w] = dmax; }
       }
     }
-    return function (u, dc) {
-      const near = dc - u.r; if (near < 3) return false;
+    return function (u, dc, m) {       // m (optional, under 1): the thing must be that far under the roofline to count as hidden (42_scene.js asks with 0.85)
+      const near = dc - u.r; if (near < 3) return false; m = m || 1;
       const h = u.y1 - cam[1], sl = h > 0 ? h / near : h / (dc + u.r), a = Math.atan2(u.z - cam[2], u.x - cam[0]), w = Math.asin(Math.min(1, u.r / dc));
       const i0 = Math.floor((a - w) / TAU_ * N), i1 = Math.floor((a + w) / TAU_ * N);
-      for (let i = i0; i <= i1; i++) { const o = (((i % N) + N) % N) * K; let ok = false; for (let k = 0; k < K; k++) if (Fd[o + k] > 0 && Fd[o + k] < near && S[o + k] >= sl) { ok = true; break; } if (!ok) return false; }
+      for (let i = i0; i <= i1; i++) { const o = (((i % N) + N) % N) * K; let ok = false; for (let k = 0; k < K; k++) if (Fd[o + k] > 0 && Fd[o + k] < near && (S[o + k] > 0 ? S[o + k] * m : S[o + k] / m) - (m < 1 ? 0.02 : 0) >= sl) { ok = true; break; } if (!ok) return false; }
       return true;
     };
   };
@@ -456,7 +472,7 @@ const Kit = (() => {
     L[0] = camPos[0]; L[1] = camPos[1]; L[2] = camPos[2]; L[3] = cam.yaw; L[4] = key;
     const fx = Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), drop = K_.DROP[qn] || 70;
     const half = (typeof R !== 'undefined' && R.camera ? Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) : 0.81) + 0.35, cone = Math.abs(cam.pitch) < 0.9 && !(TEST && TEST.kitcone === 0);
-    const occ = K_.occlude && !(TEST && TEST.kitocc === 0) ? K_.occlude(camPos) : null;
+    const occ = K_.occlude && !(TEST && TEST.kitocc === 0) ? K_.occlude(camPos, K_.occOwn || (K_.occOwn = {})) : null; K_.occNow = occ; K_.occN = (K_.occN || 0) + 1;       // [perf] the scene asks the same horizon about terrain tiles and prop squares (42_scene.js)
     const q_ = (typeof R !== 'undefined' && R.q) || {}, RS = q_.yardCast === false ? -1 : (q_.shadowNear || 20) * 1.72 + 2;       // reach of the near sun-shadow map from the camera
     const S_ = K_.dynStat = { units: 0, near: 0, far: 0, cone: 0, dist: 0, hidden: 0, draws: 0 };
     // batches rebuilt for another tier (dressing, the wilds) take their old group off the scene: drop those units from the pools
@@ -491,9 +507,10 @@ const Kit = (() => {
       if (b.mesh.visible) S_.draws++;
     }
   }
+  K_.INST_REACH = [[/fern|weed|plant|flower|clover|grass/i, 24, 16], [/rock|stone|stump|trunk|log/i, 40, 16]];
   K_.update = function (camPos) {
     lodUpdate(camPos); dynUpdate(camPos);
-    for (const im of K_.instanced) { const s = im.boundingSphere, dx = s.center.x - camPos[0], dz = s.center.z - camPos[2]; im.visible = Math.sqrt(dx * dx + dz * dz) - s.radius < im.userData.maxDist; }
+    const rk = R.q && R.q.name === 'High' ? 1.5 : 1; for (const im of K_.instanced) { const s = im.boundingSphere, dx = s.center.x - camPos[0], dz = s.center.z - camPos[2]; im.visible = Math.sqrt(dx * dx + dz * dz) - s.radius < im.userData.maxDist * rk; }
   };
   return K_;
 })();

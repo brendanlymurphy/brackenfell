@@ -74,6 +74,7 @@ RPG.respawn = function () {
   if (S.flags.bed && bed) { P.pos = [bed.p[0] + 0.9, bed.p[1] - 0.5, bed.p[2]]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], bed.p[1] + 0.4); }
   else { P.pos = [-84, 0, -6.5]; P.pos[1] = World.groundAt(P.pos[0], P.pos[2], 50); P.yaw = 1.45; }
   P.vel = [0, 0, 0]; P.pitch = 0; r.hp = RPG.MAXHP; r.sta = RPG.MAXST; RPG.dead = false; RPG.hud.deadMsg.style.opacity = 0; RPG.flash = 0; RPG.shake = 0; RPG.iframes = 2;
+  if (Env.hour >= 7) r.day = (r.day || 0) + 1; r.hour = 7;       /* [logic] you come to the next morning, as after a night in bed */
   Env.hour = 7; World.festival = false; for (const n of NPCS) n.override = null; npcSnapAll();
   if (typeof Foes !== 'undefined') Foes.calm(true);
   $('deadMsg').hidden = true;
