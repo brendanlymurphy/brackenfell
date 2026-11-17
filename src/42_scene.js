@@ -53,7 +53,7 @@ function sceneBuild() {
       let P = SC.pools.find(q => q.pk === pk && q.kind === it.kind);
       if (!P) { P = { pk, kind: it.kind, tiles: [], mat, n: 0 }; SC.pools.push(P); }
       if (it.kind === 'water' && it.r > 30) { for (const c of squares(pk, it.first, it.count, 16)) P.tiles.push({ it, idx: c.idx, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 14), on: false }); }       // a river or lake tile is hundreds of metres long: cut it into 16 m squares
-      else if (it.kind === 'terrain' && it.r > 60 && it.count > 600 && !(TEST && TEST.terrsq === 0)) { for (const c of squares(pk, it.first, it.count, it.r > 300 ? 160 : 48)) P.tiles.push({ it, idx: c.idx, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 10), on: false }); }       // [perf] a terrain tile is 200 to 1700 m across and was drawn whole when any of it was in view: cut into squares, each is tested against the view and the roofline
+      else if (it.kind === 'terrain' && it.r > 60 && it.count > 600 && !(TEST && TEST.terrsq === 0)) { for (const c of squares(pk, it.first, it.count, it.r > 300 ? 260 : 96)) P.tiles.push({ it, idx: c.idx, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 10), on: false }); }       // [perf] a terrain tile is 200 to 1700 m across and was drawn whole when any of it was in view: cut into squares, each is tested against the view and the roofline
       else P.tiles.push({ it, sph: sphere(it.c, it.r), big: sphere(it.c, it.r + 6), on: false });
       P.n += it.count; continue;
     }
@@ -137,24 +137,32 @@ function sceneBuild() {
 }
 // Pooled terrain and water: every frame each tile is tested against the camera's view; the index buffer is only rewritten when a tile
 // comes into view that is not in it yet, and then it takes every tile within 14 m of the view, so turning the head rarely costs an upload.
+const _frWide = new THREE.Frustum(); let _wideCam = null;       // the view widened by about a third: what is kept ready beside the view, so that turning does not refill an index buffer every frame
 const _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _rfr = new THREE.Frustum(), _rs = new THREE.Sphere(new THREE.Vector3(), 3.2);
 function poolUpdate(e, cur, inside) {
   if (!SC.pools.length) return;
   _fr.setFromProjectionMatrix(_pm.multiplyMatrices(R.camera.projectionMatrix, R.camera.matrixWorldInverse));
   for (const P of SC.pools) {
-    if (cur) { P.mesh.visible = false; continue; }
+    if (cur) { P.mesh.visible = false; P.stale = true; continue; }
+    { const oN = !inside && SC.occ ? SC.occN : -1; if (!SC.camStep && !P.stale && P.first && oN === P.hidN && inside === P.inside) { P.mesh.visible = P.count > 0; continue; } P.inside = inside; }
     let miss = false, need = 0, have = 0;
+    const occ0 = !inside && SC.occ ? SC.occ : null, fresh = (occ0 ? SC.occN : -1) !== P.hidN; P.hidN = occ0 ? SC.occN : -1;       // a square counted as hidden is asked again as soon as the roofline is new: nothing in view may wait for the refill timer
     for (const t of P.tiles) {
-      const it = t.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]);
+      const it = t.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]); if (t.hid && fresh) { const du = Math.hypot(t.u.x - e[0], t.u.z - e[2]); t.hid = !!occ0 && du < 600 && occ0(t.u, du, 0.85); }
       t.ok = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && d - it.r > DRAW.indoor);
-      t.in = t.ok && _fr.intersectsSphere(t.sph); if (t.in) { need++; if (!t.on) miss = true; } if (t.on) { have++; if (!t.ok) miss = true; }
+      t.in = t.ok && _fr.intersectsSphere(t.sph); if (t.in) { need++; if (!t.on && !t.hid) miss = true; } if (t.on) { have++; if (!t.ok) miss = true; }       /* t.hid: under the roofline when last asked; not a reason to refill */
     }
     // [perf] ground and water wholly under the roofline as seen from here (the kit's horizon, 44_kit.js) are not drawn: from a lane, most of the
     // valley's 59k terrain triangles lie behind houses. Asked again whenever the horizon is rebuilt (the camera moved 1.5 m or turned).
-    const occ = !inside && typeof Kit !== 'undefined' && Kit.occNow && !(TEST && TEST.sceneocc === 0) ? Kit.occNow : null, occN = occ ? Kit.occN : -1; if (occN !== P.occN) { P.occN = occN; P.stale = true; }
-    if (miss || have > need * 2 + 6 || P.stale) {
-      let n = 0; const src = P.pk.index.array; P.stale = false;
-      for (const t of P.tiles) { t.on = t.ok && (t.in || _fr.intersectsSphere(t.big)); if (t.on && occ) { const u = t.u || (t.u = { x: t.sph.center.x, z: t.sph.center.z, r: t.sph.radius, y1: t.sph.center.y + t.sph.radius }); if (occ(u, Math.hypot(u.x - e[0], u.z - e[2]))) t.on = false; } if (t.on) { if (t.idx) { P.cur.set(t.idx, n); n += t.idx.length; } else { P.cur.set(src.subarray(t.it.first, t.it.first + t.it.count), n); n += t.it.count; } } }
+    const occ = !inside && SC.occ ? SC.occ : null, occN = occ ? SC.occN : -1; if (occN !== P.occN && SC.now - (P.t || 0) > 600) { P.occN = occN; P.stale = true; }       /* a new roofline alone refills at most every 0.6 s: each refill uploads the index buffer */
+    if (miss || have > need * 3 + 24 || P.stale) {
+      if (miss) P.nMiss = (P.nMiss || 0) + 1; else if (P.stale) P.nStale = (P.nStale || 0) + 1;       /* counters for test/perf: why the buffer was refilled */
+      let n = 0, same = !P.first ? false : true; const src = P.pk.index.array; P.stale = false; P.first = true;
+      // decide first, copy only if the set of squares changed: the roofline is rebuilt every 1.5 m or 11 degrees of turning, and refilling 60k
+      // triangles of index buffer each time was a hitch while turning (26 ms at worst in the square)
+      for (const t of P.tiles) { let on = t.ok && (t.in || _frWide.intersectsSphere(t.sph)); if (on && occ) { const u = t.u || (t.u = { x: t.sph.center.x, z: t.sph.center.z, r: t.sph.radius, y1: t.sph.center.y + t.sph.radius }); const du = Math.hypot(u.x - e[0], u.z - e[2]); t.hid = du < 600 && occ(u, du, 0.85); /* the far hills are the skyline: never hidden */ if (t.hid) on = false; } else t.hid = false; if (on !== t.on) same = false; t.on2 = on; }
+      P.t = SC.now; if (same) { P.mesh.visible = P.count > 0; continue; }
+      for (const t of P.tiles) { t.on = t.on2; if (t.on) { if (t.idx) { P.cur.set(t.idx, n); n += t.idx.length; } else { P.cur.set(src.subarray(t.it.first, t.it.first + t.it.count), n); n += t.it.count; } } }
       P.geo.setDrawRange(0, n); P.count = n;
       if (n) { const at = P.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
     }
@@ -174,12 +182,14 @@ function squares(pk, first, count, size) {
 function viewUpdate(s, subset) {
   const v = s.view, cells = s.sub.cells;
   if (!subset) { if (!v.full) { v.cur.set(v.pk.index.array.subarray(v.it.first, v.it.first + v.it.count)); v.geo.setDrawRange(0, v.total); const at = v.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, v.total); at.needsUpdate = true; v.full = true; for (const c of cells) c.on = true; } return; }
+  const occ = SC.occ && !World.cell ? SC.occ : null, occN = occ ? SC.occN : -1, ex = R.cam.pos[0], ez = R.cam.pos[2];
+  const due = occN !== v.occN && SC.now - (v.t || 0) > 600, fresh = occN !== v.hidN; v.hidN = occN; if (!SC.camStep && !v.full && !due && !fresh) return;
   let miss = v.full, need = 0, have = 0;
-  for (const c of cells) { c.in = _fr.intersectsSphere(c.sph); if (c.in) { need++; if (!c.on) miss = true; } if (c.on) have++; }
-  const occ = typeof Kit !== 'undefined' && Kit.occNow && !World.cell && !(TEST && TEST.sceneocc === 0) ? Kit.occNow : null, occN = occ ? Kit.occN : -1, ex = R.cam.pos[0], ez = R.cam.pos[2]; if (occN !== v.occN) { v.occN = occN; miss = true; }       // [perf] squares of props under the roofline are skipped too
-  if (!miss && have <= need * 2 + 8) return;
-  let n = 0; v.full = false;
-  for (const c of cells) { c.on = c.in || _fr.intersectsSphere(c.big); if (c.on && occ) { const u = c.u || (c.u = { x: c.sph.center.x, z: c.sph.center.z, r: c.sph.radius, y1: c.sph.center.y + c.sph.radius }); if (occ(u, Math.hypot(u.x - ex, u.z - ez))) c.on = false; } if (c.on) { v.cur.set(c.idx, n); n += c.idx.length; } }
+  for (const c of cells) { if (c.hid && fresh) c.hid = !!occ && occ(c.u, Math.hypot(c.u.x - ex, c.u.z - ez), 0.85); c.in = _fr.intersectsSphere(c.sph); if (c.in) { need++; if (!c.on && !c.hid) miss = true; } if (c.on) have++; }
+  if (due) { v.occN = occN; miss = true; }       // [perf] squares of props under the roofline are skipped too
+  if (!miss && have <= need * 3 + 16) return;
+  let n = 0; v.full = false; v.t = SC.now;
+  for (const c of cells) { c.on = c.in || _frWide.intersectsSphere(c.sph); if (c.on && occ) { const u = c.u || (c.u = { x: c.sph.center.x, z: c.sph.center.z, r: c.sph.radius, y1: c.sph.center.y + c.sph.radius }); c.hid = occ(u, Math.hypot(u.x - ex, u.z - ez), 0.85); if (c.hid) c.on = false; } else c.hid = false; if (c.on) { v.cur.set(c.idx, n); n += c.idx.length; } }
   v.n = n; v.geo.setDrawRange(0, n); if (n) { const at = v.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
 }
 const sb_casts = s => s.sub.casts;
@@ -215,6 +225,14 @@ function sceneUpdate(camPos, q) {
   if (!SC.nearLayerOn && R.shadows) { R.shadows.lights[0].shadow.camera.layers.enable(SHADOW_ONLY_LAYER); SC.nearLayerOn = true; }
   World.deepIn = cur ? true : deepIndoors(e); const inside = !cur && World.deepIn, ind = DRAW.indoor;
   _fr.setFromProjectionMatrix(_pm.multiplyMatrices(R.camera.projectionMatrix, R.camera.matrixWorldInverse));
+  // [perf] which squares of terrain, water and props are in view is asked again only when the camera has moved 0.4 m or turned 2 degrees
+  // (the squares carry a margin of 10 m): standing still or walking straight, these loops over a few hundred squares are skipped
+  SC.now = performance.now();
+  // the roofline for terrain and prop squares is asked afresh every 0.35 m of movement (the kit's own, for its pieces, every 1.5 m): a square that has just
+  // come out from behind a house must not stay hidden while the player walks on
+  { const H = SC.occAt || (SC.occAt = [1e9, 1e9, 1e9]); if (!cur && typeof Kit !== 'undefined' && Kit.occlude && !(TEST && (TEST.sceneocc === 0 || TEST.kitocc === 0)) && Math.abs(e[0] - H[0]) + Math.abs(e[1] - H[1]) + Math.abs(e[2] - H[2]) > 0.35) { H[0] = e[0]; H[1] = e[1]; H[2] = e[2]; SC.occ = Kit.occlude(e); SC.occN = (SC.occN || 0) + 1; } if (cur || (TEST && (TEST.sceneocc === 0 || TEST.kitocc === 0))) SC.occ = null; }
+  { const c = R.camera; if (!_wideCam) _wideCam = new THREE.PerspectiveCamera(); _wideCam.fov = Math.min(150, c.fov * 1.3); _wideCam.aspect = c.aspect * 1.15; _wideCam.near = c.near; _wideCam.far = c.far; _wideCam.updateProjectionMatrix(); _frWide.setFromProjectionMatrix(_pm.multiplyMatrices(_wideCam.projectionMatrix, c.matrixWorldInverse)); }
+  { const L = SC.camLast || (SC.camLast = [1e9, 0, 0, 9, 9]), c = R.cam; SC.camStep = Math.abs(e[0] - L[0]) + Math.abs(e[1] - L[1]) + Math.abs(e[2] - L[2]) > 0.4 || Math.abs(c.yaw - L[3]) > 0.035 || Math.abs(c.pitch - L[4]) > 0.035 || !!(TEST && TEST.camstep === 0); if (SC.camStep) { L[0] = e[0]; L[1] = e[1]; L[2] = e[2]; L[3] = c.yaw; L[4] = c.pitch; } }
   for (const s of SC.statics) {
     const it = s.it;
     if (cur || it.cell) { s.mesh.visible = !!cur && it.cell === cur.id; if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow; continue; }
