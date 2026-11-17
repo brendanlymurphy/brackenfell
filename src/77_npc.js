@@ -54,11 +54,12 @@ function navBuild() {
   // a few stepping stones across the open square
   const sq = [[0, -2], [-6, -4], [6, -3], [0, -10], [0, 6], [-9, 2], [9, 3], [0, -15.5]].map(p => add(p[0], World.groundY(p[0], p[1]), p[1]));
   for (const a of sq) { for (const b of sq) if (a < b && hyp(N[a][0] - N[b][0], N[a][2] - N[b][2]) < 11) link(a, b); link(a, nearest(N[a][0], N[a][2], roadNodes, 9)); }
-  const outside = roadNodes.concat(sq);
+  const outside = roadNodes.concat(sq); const streetNodes = outside.slice();
   /* [coord] Build 72: a road that stops short of the place (the north road now ends in a ginnel 6 m from the nearest stepping stone) was joined to nothing,
      so everyone bound for it walked 500 m round by the hills. Each road end joins the nearest node that is not its own road, within 12 m. */
   const blocked = (a, b) => { const n = Math.ceil(hyp(N[a][0] - N[b][0], N[a][2] - N[b][2]) / 0.3); for (let i = 1; i < n; i++) { const t = i / n, x = N[a][0] + (N[b][0] - N[a][0]) * t, z = N[a][2] + (N[b][2] - N[a][2]) * t, y = World.groundY(x, z);
     for (const c of World.colliders) { if (c.y0 > y + 1.2 || c.y1 < y + 0.4) continue; const dx = x - c.x, dz = z - c.z; if (c.r !== undefined) { if (dx * dx + dz * dz < c.r * c.r) return true; } else if (Math.abs(dx * c.ax + dz * c.az) < c.hx && Math.abs(dx * c.bx + dz * c.bz) < c.hz) return true; } } return false; };       /* a wall or a house between two nodes */
+  const steep = (a, b) => { const L = hyp(N[a][0] - N[b][0], N[a][2] - N[b][2]), n = Math.ceil(L / 0.5); let py = N[a][1]; for (let i = 1; i <= n; i++) { const t = i / n, y = World.groundAt(N[a][0] + (N[b][0] - N[a][0]) * t, N[a][2] + (N[b][2] - N[a][2]) * t, py + 1.0); if (Math.abs(y - py) > 0.45) return true; py = y; } return false; };       /* a rise of more than 0.45 m in half a metre: a bank or a wall foot, not a way */
   for (const [k0, k1] of roadEnds) for (const e of [k0, k1]) { const cand = outside.filter(k => (k < k0 || k > k1) && hyp(N[k][0] - N[e][0], N[k][2] - N[e][2]) < 12 && !blocked(e, k)), j = nearest(N[e][0], N[e][2], cand, 12); if (j >= 0) link(e, j); }
   const doorNode = {};
   for (const id in World.houses) {
@@ -68,7 +69,9 @@ function navBuild() {
       const ot = add(x.c[0], World.groundAt(x.c[0], x.c[2], x.c[1] + 1), x.c[2]), it = add(d.c[0], h.floorY + 0.02, d.c[2]);
       link(o, ot); link(it, i); A[ot].push([it, 1.2]); A[it].push([ot, 1.2]); Nav.portal[ot] = it; Nav.portal[it] = ot; doorNode[id] = { o, i, ot, it };
     } else { link(o, i); doorNode[id] = { o, i }; }
-    link(o, nearest(x.out[0], x.out[2], outside, 40)); outside.push(o);
+    /* [cull] a door step joins the nearest node it can walk to, not the nearest through whatever stands between (a cottage outside the north wall was
+       joined to a lane inside it, through the gap at the wall's end where the bank is too steep to climb); the nearest of all only if none is open */
+    { const cand = outside.filter(k => hyp(N[k][0] - x.out[0], N[k][2] - x.out[2]) < 40).sort((p, q) => hyp(N[p][0] - x.out[0], N[p][2] - x.out[2]) - hyp(N[q][0] - x.out[0], N[q][2] - x.out[2])); let j = -1; for (const k of cand.slice(0, 6)) if (!blocked(o, k) && !steep(o, k)) { j = k; break; } if (j >= 0) link(o, j); else { const f = nearest(x.out[0], x.out[2], outside, 40); if (f >= 0 && !A[o].some(e => e[0] === f)) { const d = hyp(N[o][0] - N[f][0], N[o][2] - N[f][2]) * 8; A[o].push([f, d]); A[f].push([o, d]); } }       /* no open way found: still joined, so the house can be reached, but at eight times the length, so nobody passing through takes it */ outside.push(o); }
   }
   const openSpots = [];
   for (const name in World.spots) {
@@ -82,14 +85,23 @@ function navBuild() {
   /* [cull] A place out of doors was joined to the one nearest node only, whichever side of a house row that lay: the Hawker's Passage (6 m from the Market Place)
      hung off the north road, and 350 pairs of places were more than 2.5 times the straight line apart on foot (130 m to cross 13). Each such place also joins
      up to three more nodes within 14 m that it can walk to in a straight line: nothing solid between, and no step in the ground higher than a kerb. */
-  { const clearWay = (a, b) => { const A0 = N[a], B0 = N[b], L = hyp(A0[0] - B0[0], A0[2] - B0[2]), n = Math.ceil(L / 0.3); if (Math.abs(A0[1] - B0[1]) > 1.6) return false; let py = A0[1];
+  { const clearWay = (a, b, mg) => { mg = mg || 0.33;       /* 0.33: room for a person (the player is 0.32 wide); a lane's own chain is tested at 0.22, since it is a lane whatever stands along it */ const A0 = N[a], B0 = N[b], L = hyp(A0[0] - B0[0], A0[2] - B0[2]), n = Math.ceil(L / 0.3); if (Math.abs(A0[1] - B0[1]) > 1.6) return false; let py = A0[1];
       for (let i = 1; i < n; i++) { const t = i / n, x = A0[0] + (B0[0] - A0[0]) * t, z = A0[2] + (B0[2] - A0[2]) * t, y = World.groundAt(x, z, py + 1.0); if (Math.abs(y - py) > 0.12 ||       /* as a walker finds the ground (1 m up), and no steeper than a ramp: 0.3 let a link climb the terrace's edge */ (World.waterAt && World.waterAt(x, z) > y + 0.2)) return false; py = y;
-        const l = Col.grid.get(Math.floor(x / Col.cell) * 4096 + Math.floor(z / Col.cell)); if (l) for (const c of l) { if (c.off || c.y0 > y + 1.5 || c.y1 < y + 0.3) continue; const dx = x - c.x, dz = z - c.z; if (c.r !== undefined) { if (dx * dx + dz * dz < (c.r + 0.22) * (c.r + 0.22)) return false; } else if (Math.abs(dx * c.ax + dz * c.az) < c.hx + 0.22 && Math.abs(dx * c.bx + dz * c.bz) < c.hz + 0.22) return false; } }
+        const l = Col.grid.get(Math.floor(x / Col.cell) * 4096 + Math.floor(z / Col.cell)); if (l) for (const c of l) { if (c.off || c.y0 > y + 1.5 || c.y1 < y + 0.3) continue; const dx = x - c.x, dz = z - c.z; if (c.r !== undefined) { if (dx * dx + dz * dz < (c.r + mg) * (c.r + mg)) return false; } else if (Math.abs(dx * c.ax + dz * c.az) < c.hx + mg && Math.abs(dx * c.bx + dz * c.bz) < c.hz + mg) return false; } }
       return Math.abs(B0[1] - py) < 0.4; };
     // lanes that are routes on the ground (the Hawker's Passage) are ways for villagers too: their points become nodes in a chain, joined to what they can reach
-    for (const rt of World.routes || []) { if (!rt.pts || rt.pts.some(q => Math.abs(q[1] - World.groundY(q[0], q[2])) > 0.5)) continue; let prev = -1; for (const q of rt.pts) { const k = add(q[0], World.groundY(q[0], q[2]), q[2]); if (prev >= 0 && clearWay(prev, k)) link(prev, k); prev = k; openSpots.push(k); } }
-    const pool = outside.concat(openSpots);
-    for (const k of openSpots) { const near = []; for (const j of pool) { if (j === k || A[k].some(e => e[0] === j)) continue; const d = hyp(N[j][0] - N[k][0], N[j][2] - N[k][2]); if (d < 14 && d > 0.05) near.push([d, j]); } near.sort((a, b) => a[0] - b[0]); let got = 0; for (const [, j] of near) { if (got >= 3) break; if (clearWay(k, j)) { link(k, j); got++; } } } }
+    const nSpot0 = openSpots.length;
+    for (const rt of World.routes || []) { if (!rt.pts || rt.pts.some(q => Math.abs(q[1] - World.groundY(q[0], q[2])) > 0.5)) continue; let prev = -1; for (const q of rt.pts) { const k = add(q[0], World.groundY(q[0], q[2]), q[2]); if (prev >= 0 && clearWay(prev, k, 0.22)) link(prev, k); prev = k; openSpots.push(k); } }
+    const lane = openSpots.slice(nSpot0), pool = streetNodes.concat(lane, openSpots.slice(0, nSpot0));       /* streets, the square, lanes and other places: never a house's door step (a way from a lane to a door step ran through the gap at the end of the north wall) */
+    // a wall walk, a gallery or a tower stair keeps the one way up it was given: joined to the street below, it sent walkers along the top of the north wall
+    // (the wall stands on a bank, so its walk is 'on the ground' by height alone: anything within 1.5 m of a raised route's points is left out too)
+    const raised = []; for (const rt of World.routes || []) if (rt.pts) for (const q of rt.pts) if (Math.abs(q[1] - World.groundY(q[0], q[2])) > 0.5) raised.push(q);       /* the raised points themselves: a gallery's foot is in the street */
+    const onGround = k => Math.abs(N[k][1] - World.groundY(N[k][0], N[k][2])) < 0.5 && !raised.some(q => Math.abs(q[0] - N[k][0]) < 1.5 && Math.abs(q[2] - N[k][2]) < 1.5 && Math.abs(q[1] - N[k][1]) < 1.5);
+    for (const k of openSpots) { if (!onGround(k)) continue; const near = []; for (const j of pool) { if (j === k || A[k].some(e => e[0] === j) || !onGround(j)) continue; const d = hyp(N[j][0] - N[k][0], N[j][2] - N[k][2]); if (d < 14) near.push([d, j]); } near.sort((a, b) => a[0] - b[0]); let got = 0; for (const [, j] of near) { if (got >= 5) break; if (clearWay(k, j)) { link(k, j); got++; } } }
+    // nothing is left cut off: whatever cannot be reached from the first road node after all this (a lane's points joined only to each other) joins the
+    // nearest node outside, as every place always did
+    { const seen = new Uint8Array(N.length), st = [outside[0]]; seen[outside[0]] = 1; const flood = () => { while (st.length) { const a = st.pop(); for (const e of A[a]) if (!seen[e[0]]) { seen[e[0]] = 1; st.push(e[0]); } } }; flood();
+      for (const k of openSpots) if (!seen[k]) { const j = nearest(N[k][0], N[k][2], streetNodes, 60); if (j >= 0) { link(k, j); seen[k] = 1; st.push(k); flood(); } } } }
   for (const id in World.houses) { const h = World.houses[id]; if (h.plan) planNav(h.plan, add, link, doorNode); }
   // upper floors are reached by their stairs only: bottom -> top -> (round the stairwell) -> the rooms above; nothing upstairs links straight to the door
   const unlink = k => { A[k].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k) a.splice(i, 1); };
@@ -171,6 +183,7 @@ function npcArrive(n, spotName, anim) {
   n.pos = sp.p.slice(); n.yaw = sp.yaw; n.at = spotName; n.path = null; n.spot = sp;
   n.anim = sp.lie ? 'lie' : sp.sit ? 'sit' : (anim === 'sit' || anim === 'lie') ? 'idle' : anim;
 }
+function npcBehindRoofs(n) { if (typeof SC === 'undefined' || !SC.occ || !SC.occAt || World.cell || (TEST && (TEST.sceneocc === 0 || TEST.kitocc === 0))) return false; const q = SC.occAt, d = hyp(n.pos[0] - q[0], n.pos[2] - q[2]); if (d < ((typeof R !== 'undefined' && R.q && R.q.villagerCast) || 32) + 3) return false; const u = n._occU || (n._occU = { x: 0, z: 0, r: 1.1, y1: 0 }); u.x = n.pos[0]; u.z = n.pos[2]; u.y1 = n.pos[1] + 2.3; return SC.occ(u, d, 0.85); }
 function npcUpdate(dt, playerPos) {
   const pc = Cells.spaceOf(playerPos);
   for (const n of NPCS) {
@@ -207,7 +220,9 @@ function npcUpdate(dt, playerPos) {
       }
     }
     // not in the player's space (another cell, or the village while the player is in one): position only, no pose, no drawing
-    if (pc !== Cells.spaceOf(n.pos)) { n.obj.visible = false; if (n.ch && !n.hid) { n.hid = true; n.ch.pivot.visible = false; } continue; }
+    /* [cull] ... or out of doors and wholly behind the roofs, further off than a villager's shadow is drawn (so no shadow of theirs can be in sight either):
+       the same roofline that hides houses and ground (42_scene.js), asked with the same margin. Four of twenty in the Market Place view. */
+    if (pc !== Cells.spaceOf(n.pos) || (pc === 0 && npcBehindRoofs(n))) { n.obj.visible = false; if (n.ch && !n.hid) { n.hid = true; n.ch.pivot.visible = false; } continue; }
     n.hid = false;
     // head follows the player when close
     let lx = 0, ly = 0;
