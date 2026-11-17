@@ -84,14 +84,15 @@ function act2Build() {
 }
 function act2CaveOutside(cx, cz, cy) {
   // a cleft in the west shore, mouth to the lake: two leaning slabs, a dark slot between, reeds, a fallen sack of old loaves
-  const m = new Mesh(1200); m.seed = 88; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; m.push().T(cx, cy, cz).RY(-PI / 2);
-  m.mat(MAT.PLAIN, [0.015, 0.015, 0.018]); m.box(-0.6, -0.1, -2.2, 0.6, 2.4, -0.2);
+  const m = new Mesh(1200); m.seed = 88; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.wind = 0; m.push().T(cx, cy, cz).RY(PI / 2);       /* [owner, Build 77] was -PI / 2: the dark box stood out in front of the stones, on the side the player comes out */
+  m.mat(MAT.PLAIN, [0.015, 0.015, 0.018]); m.box(-0.6, -0.1, -1.4, 0.6, 2.4, -0.2);
   m.mat(MAT.ROCK, [0.64, 0.62, 0.58], 0.6); for (const s of [-1, 1]) { m.push().T(s * 1.05, 0, -0.2).RZ(-s * 0.12); m.lathe([[1.1, -0.6], [0.9, 0.8], [0.62, 2.2], [0.34, 3.2], [0.04, 3.7]], 7, 0); m.pop(); }
-  m.mat(MAT.ROCK, [0.5, 0.48, 0.44], 0.6); m.box(-1.3, 2.4, -0.9, 1.3, 3.0, 0.4); for (let i = 0; i < 9; i++) { const a = (i - 4) * 0.5; m.ball(Math.sin(a) * 2.2, 0.2, 0.3 + Math.cos(a) * 0.8, 0.36 + (i % 3) * 0.12, 0.3, 0.36, 6, 3); }
+  m.mat(MAT.ROCK, [0.5, 0.48, 0.44], 0.6); m.box(-1.3, 2.4, -0.9, 1.3, 3.0, 0.4);
   m.mat(MAT.CLOTH, [0.5, 0.42, 0.3], 0.5); m.ball(1.5, 0.12, 1.5, 0.22, 0.12, 0.17, 7, 3);
   m.pop();
   const pack = new MeshPack(); pack.shadow = false; pack.add(m, { kind: 'opaque', maxDist: 110, noShadow: true }); pack.upload('act2-cave'); World.packs.push(pack);
   addBoxCollider(m, cx - 0.4, cz - 1.8, cx + 0.4, cz + 1.8, cy - 1, cy + 3);
+  cleftCrag('blind', cx, cz, -1, 0);
 }
 // ── the slab: the twist and the choice ──
 const _il94d = interactLabel, _iu94d = interactUse;
