@@ -46,7 +46,8 @@ function surfaceMaterial(mode) {
     zone = zoneU; light = lightU; m.userData = { bones: bones.array, zoneU, lightU };
   }
   const layer = int(mm.x), a = texture(G.albedoArr, uv()).depth(layer), nt = texture(G.narArr, uv()).depth(layer);
-  const albedo = a.rgb.mul(mix(vec3(1), tintLin, a.a));
+  const isCloth = (mode === 'static' && !(TEST && TEST.cloth === 0)) ? step(TSL.abs(float(layer).sub(MAT.CLOTH)), 0.5) : float(0);      // [l1] thin cloth keeps its dye with light through it: richer and a little darker, never blown white
+  const albedo0 = a.rgb.mul(mix(vec3(1), tintLin, a.a)), albedo = mix(albedo0, mix(vec3(albedo0.dot(vec3(0.3333))), albedo0, 1.35).mul(0.72), isCloth);
   const N = SH.perturb(normalize(vN), positionWorld, uv(), nt.xy, float(1));
   // rooms: occlusion near floor, ceiling and corners, soot over the hearth (40b_depth.js); only generated room geometry and people carry a zone
   const rm = (mode === 'static' || mode === 'skin') ? SH.room(positionWorld, N, zone).toVar() : null, aoR = rm ? rm.x : float(1);
