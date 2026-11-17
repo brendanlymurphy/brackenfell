@@ -186,6 +186,23 @@ function npcArrive(n, spotName, anim) {
   n.pos = sp.p.slice(); n.yaw = sp.yaw; n.at = spotName; n.path = null; n.spot = sp;
   n.anim = sp.lie ? 'lie' : sp.sit ? 'sit' : (anim === 'sit' || anim === 'lie') ? 'idle' : anim;
 }
+// [apart] Nobody walks through anybody. After everyone has moved: any walker within 0.6 m of another body in the same space is moved off it, sideways for
+// choice, at walking pace; two walkers share the move, a person standing, sitting or lying is never moved. Bodies that are exactly together (two people stepping
+// through one door at once) part along a direction fixed by their order. Named villagers, the Hart's regulars, residents and passers-by alike.
+const NPC_APART = 0.6;
+function npcKeepApart(dt) {
+  const L = NPCS.slice(); if (typeof AMB !== 'undefined' && AMB.list) for (const a of AMB.list) if (a.state !== 'home' && a.state !== 'away') L.push(a);
+  const n = L.length, mv = Math.min(0.2, 1.6 * dt);
+  for (let i = 0; i < n; i++) { const a = L[i]; if (a.pushed > 0) a.pushed -= dt; }
+  for (let i = 0; i < n; i++) { const a = L[i], ax = a.pos[0], az = a.pos[2], aw = !!a.path;
+    for (let j = i + 1; j < n; j++) { const b = L[j], bw = !!b.path; if (!aw && !bw) continue; let dx = b.pos[0] - ax; if (dx > NPC_APART || dx < -NPC_APART) continue; let dz = b.pos[2] - az; if (dz > NPC_APART || dz < -NPC_APART || Math.abs(b.pos[1] - a.pos[1]) > 1.2) continue;
+      let d = Math.hypot(dx, dz); if (d >= NPC_APART) continue; if (d < 0.02) { const g = (i * 2.399 + j) % 6.283; dx = Math.cos(g); dz = Math.sin(g); d = 1; } else { dx /= d; dz /= d; }
+      // sideways to the walker's own way where that also parts them, so two in a lane pass and do not push each other back along it
+      const side = w => { const fx = Math.sin(w.yaw), fz = -Math.cos(w.yaw), s = (-fz) * dx + fx * dz >= 0 ? 1 : -1; return [(-fz * s) * 0.7 + dx * 0.3, (fx * s) * 0.7 + dz * 0.3]; };
+      if (aw && bw) { const pa = side(a), pb = side(b); a.pos[0] -= pa[0] * mv * 0.5; a.pos[2] -= pa[1] * mv * 0.5; b.pos[0] += pb[0] * mv * 0.5; b.pos[2] += pb[1] * mv * 0.5; a.pushed = b.pushed = 0.5; }
+      else if (aw) { const pa = side(a); a.pos[0] -= pa[0] * mv; a.pos[2] -= pa[1] * mv; a.pushed = 0.5; }
+      else { const pb = side(b); b.pos[0] += pb[0] * mv; b.pos[2] += pb[1] * mv; b.pushed = 0.5; } } }
+}
 function npcBehindRoofs(n) { if (typeof SC === 'undefined' || !SC.occ || !SC.occAt || World.cell || (TEST && (TEST.sceneocc === 0 || TEST.kitocc === 0))) return false; const q = SC.occAt, d = hyp(n.pos[0] - q[0], n.pos[2] - q[2]); if (d < ((typeof R !== 'undefined' && R.q && R.q.villagerCast) || 32) + 3) return false; const u = n._occU || (n._occU = { x: 0, z: 0, r: 1.1, y1: 0 }); u.x = n.pos[0]; u.z = n.pos[2]; u.y1 = n.pos[1] + 2.3; return SC.occ(u, d, 0.85); }
 function npcUpdate(dt, playerPos) {
   const pc = Cells.spaceOf(playerPos);
@@ -213,7 +230,7 @@ function npcUpdate(dt, playerPos) {
         const run = n.def.run, sp = (run ? 2.7 : 1.35) * (0.9 + n.scale * 0.1), N2 = Nav.nodes[n.path[n.pi]];
         const dx = N2[0] - n.pos[0], dz = N2[2] - n.pos[2], d = hyp(dx, dz);
         const blocked = dPlayer < 0.75 && (playerPos[0] - n.pos[0]) * dx + (playerPos[2] - n.pos[2]) * dz > 0;
-        if (d < 0.18) { const k = n.path[n.pi], k2 = n.path[n.pi + 1]; if (k2 !== undefined && Nav.portal[k] === k2) { n.pos = Nav.nodes[k2].slice(); n.pi++; n.portalT = 0.4; } n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
+        if (d < 0.18 || (n.pushed > 0 && d < 0.75 && n.pi < n.path.length - 1)) { const k = n.path[n.pi], k2 = n.path[n.pi + 1];       /* someone stands on the way point: near enough counts, or the walker would circle them for ever */ if (k2 !== undefined && Nav.portal[k] === k2) { n.pos = Nav.nodes[k2].slice(); n.pi++; n.portalT = 0.4; } n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
         else if (!blocked) {
           const st = Math.min(d, sp * dt); n.pos[0] += dx / d * st; n.pos[2] += dz / d * st;
           const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 1.0); n.pos[1] += clamp(gy - n.pos[1], -3 * dt, 3 * dt);       /* [logic] looks 1.0 m up, not 0.6: a ledge 0.7 to 0.9 m high (the terrace edge by the herb garden, the dock's lip) was not seen, and people waded through it for a second */ if (gy - n.pos[1] > 0.45 || n.pos[1] - gy > 1.2) n.pos[1] = gy;       /* [logic] a rise higher than any stair (the 0.9 m terrace edge by the herb garden) is stepped onto at once: climbing it at 3 m/s left the walker inside it for a third of a second */
@@ -247,6 +264,7 @@ function npcUpdate(dt, playerPos) {
     if (n.ch) Chars.update(n.ch, { pos: n.pos, yaw: n.yaw, anim: n.anim, scale: s, zone: zn, light: zn ? 0.34 : 1, visible: dPlayer < 95, cast: dPlayer < R.q.villagerCast, look: n.look, talking: n.talking, seatHeight: n.spot && n.spot.sit, speed: n.anim === 'run' ? 2.7 * (0.9 + s * 0.1) : n.anim === 'walk' ? 1.35 * (0.9 + s * 0.1) : 0 }, dt);
   }
   if (typeof ambUpdate === 'function') ambUpdate(dt, playerPos);
+  npcKeepApart(dt);
   // chickens potter about and scatter when approached
   for (const c of World.chickens) {
     c.t += dt; const dp = hyp(c.pos[0] - playerPos[0], c.pos[2] - playerPos[2]);
