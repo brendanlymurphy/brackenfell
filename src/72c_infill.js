@@ -74,7 +74,9 @@ function shellStyle(site, spec) {
   out.tint = out.tint.map(v => Math.min(1, v * (0.94 + R() * 0.1)));
   const W = SHELL_WALL[dn], jit = v => Math.min(1, v * (0.96 + R() * 0.08));
   const limeName = O.lime !== undefined ? O.lime : O.wall ? false : (W[2].length && R() < W[0] ? W[2][(R() * W[2].length) | 0] : false), plank = O.wall || W[3];
-  out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.face = O.face; out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.lime = !!limeName; out.wallTint = (limeName ? LIME[limeName] : plank).map(jit); out.ground = O.ground || (R() < W[1] ? 'stone' : 'plaster');
+  out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.face = O.face; out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.frame = (R() * 3) | 0;
+  const SK = dn === 'market' ? ['grey', 'warm', 'dark', 'warm'] : ['grey', 'warm', 'dark', 'rubble', 'rubble'], sk = SK[(R() * SK.length) | 0]; out.stoneTint = { grey: [0.82, 0.84, 0.86], warm: [1, 0.86, 0.68], dark: [0.6, 0.6, 0.58], rubble: [1, 0.96, 0.9] }[sk].map(v => v * (0.95 + R() * 0.1)); out.stoneMat = sk === 'rubble' ? 'MI_Rubble_Wall' : undefined;
+  out.lime = !!limeName; out.wallTint = (limeName ? LIME[limeName] : plank).map(jit); out.ground = O.ground || (R() < W[1] ? 'stone' : 'plaster');
   return _shellMemo[site.id] = out;
 }
 
