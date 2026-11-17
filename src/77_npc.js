@@ -79,6 +79,9 @@ function navBuild() {
     if (s.zone && s.site && World.houses[s.site] && World.houses[s.site].plan) continue;         // planned interiors join their rooms (planNav)
     /* [cull] a yard is walled and is reached through its own house: its place is joined to the room inside the front door by a step that is not walked
        (the interior is elsewhere), so a resident goes in at the door and is next seen in the yard, and nobody cuts through a yard wall to reach it */
+    /* [cull] ... and behind a house that is only a shell (no interior to walk through) the yard is joined to a point at the house's front door in the same
+       way: whoever works there goes to that door and is next seen in the yard */
+    if (s.yardOf && !(doorNode[s.yardOf] && Nav.portal[doorNode[s.yardOf].it] !== undefined) && s.front) { const f = add(s.front[0], World.groundY(s.front[0], s.front[1]), s.front[1]), cand = streetNodes.filter(q => hyp(N[q][0] - N[f][0], N[q][2] - N[f][2]) < 40).sort((a, b) => hyp(N[a][0] - N[f][0], N[a][2] - N[f][2]) - hyp(N[b][0] - N[f][0], N[b][2] - N[f][2])); let j = -1; for (const q of cand.slice(0, 6)) if (!blocked(f, q)) { j = q; break; } link(f, j >= 0 ? j : nearest(N[f][0], N[f][2], streetNodes, 60)); const fb = add(N[f][0], N[f][1], N[f][2]); link(f, fb); A[fb].push([k, 1.2]); A[k].push([fb, 1.2]); Nav.portal[fb] = k; Nav.portal[k] = fb; continue; }
     if (s.yardOf && doorNode[s.yardOf] && Nav.portal[doorNode[s.yardOf].it] !== undefined) { const d = doorNode[s.yardOf], ib = add(N[d.i][0], N[d.i][1], N[d.i][2]); link(d.i, ib); A[ib].push([k, 1.2]); A[k].push([ib, 1.2]); Nav.portal[ib] = k; Nav.portal[k] = ib; continue; }
     if (s.zone && s.site && doorNode[s.site]) link(k, doorNode[s.site].i); else { link(k, nearest(s.p[0], s.p[2], outside, 60)); if (!s.zone) openSpots.push(k); }
   }

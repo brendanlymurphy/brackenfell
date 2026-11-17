@@ -16,7 +16,19 @@ function yardSpots() {
   const free = (x, z) => { const y = gy(x, z); for (const c of World.colliders) { if (c.y0 > y + 1.5 || c.y1 < y + 0.2) continue; const ex = x - c.x, ez = z - c.z; if (c.r !== undefined) { if (ex * ex + ez * ez < (c.r + 0.45) * (c.r + 0.45)) return false; } else if (Math.abs(ex * c.ax + ez * c.az) < c.hx + 0.45 && Math.abs(ex * c.bx + ez * c.bz) < c.hz + 0.45) return false; } return true; };
   for (const p of plotsCompute()) { const cx = (p.x0 + p.x1) / 2, wd = p.x1 - p.x0, dp = p.z1 - p.z0, zFront = p.bz > 0 ? p.z0 : p.z1;
     for (const [a, b] of [[wd * 0.28, 0.9], [-wd * 0.28, 0.9], [0, 0.9], [wd * 0.3, dp * 0.75], [-wd * 0.3, dp * 0.75], [0, dp * 0.8], [wd * 0.3, dp * 0.5], [-wd * 0.3, dp * 0.5]]) { const x = cx + a, z = zFront + p.bz * b; if (x < p.x0 + 0.5 || x > p.x1 - 0.5 || z < p.z0 + 0.4 || z > p.z1 - 0.4 || !free(x, z)) continue;
-      World.spots[p.id + '.yard'] = { p: [x, gy(x, z), z], yaw: Math.atan2(cx - x, -(zFront + p.bz * dp * 0.45 - z)), zone: 0, yardOf: p.id, trade: p.trade }; break; } }
+      const fl = typeof siteDoorLocal === 'function' && p.house && p.house.w ? siteDoorLocal(p.house, 1.0) : null, fw = fl ? siteToWorld(p.house, fl[0], fl[1]) : null;
+      World.spots[p.id + '.yard'] = { p: [x, gy(x, z), z], yaw: Math.atan2(cx - x, -(zFront + p.bz * dp * 0.45 - z)), zone: 0, yardOf: p.id, trade: p.trade, front: fw }; break; } }
+}
+// [cull] The yards nobody used (Build 74 has 26 plots; 15 had no household of their own, most behind houses that are only shells). No new people: the Hart's
+// regulars get the yard their name or body fits in place of an hour they spent standing about, and
+// what is left goes to the nearest neighbour who keeps house, for one of the hours they swept their own floor.
+const YARD_HANDS = [['pat1', 'farm.field2', 'draper.yard'], ['pat2', 'barn.front', 'in.47.yard'], ['pat3', 'alley.stall0', 'in.46.yard'], ['pat4', 'elder.porch', 'in.13.yard'], ['pat5', 'stallfront2', 'in.18.yard'], ['pat6', 'alley.stall1', 'in.42.yard'], ['pat7', 'farm.yard', 'in.11.yard']];
+function yardHands() {
+  const used = new Set(); for (const d of NPC_DEFS) for (const r of d.sched) for (const sp of [].concat(r[1])) if (/\.yard$/.test(sp)) used.add(sp);
+  for (const [id, from, yard, hour] of YARD_HANDS) { const d = NPC_DEFS.find(q => q.id === id); if (!d || !World.spots[yard] || used.has(yard)) continue; const r = d.sched.find(q => q[1] === from && (hour === undefined || q[0] === hour)); if (r) { r[1] = yard; r[2] = 'work'; used.add(yard); } }
+  for (const k of Object.keys(World.spots)) { const sp = World.spots[k]; if (!sp.yardOf || used.has(k)) continue; let best = null, bd = 60;
+    for (const d of NPC_DEFS) { if (!d.house || !/^r2?_/.test(d.id) || d.sched.some(q => /\.yard$/.test(String(q[1])))) continue; const h = World.spots[d.house + '.home'], hs = SITES.find(q => q.id === d.house); if (!hs) continue; const r = d.sched.find(q => q[0] > 13 && q[0] < 18 && q[1] === d.house + '.home' && q[2] === 'sweep'); if (!r) continue; const dd = hyp(hs.x - sp.p[0], hs.z - sp.p[2]); if (dd < bd) { bd = dd; best = r; } void h; }
+    if (best) { best[1] = k; best[2] = 'work'; used.add(k); } }
 }
 function householdDefs() {
   yardSpots();
@@ -69,4 +81,5 @@ function householdDefs() {
       claimed.add(id + '.' + bed);
     }
   }
+  yardHands();
 }
