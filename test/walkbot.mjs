@@ -24,7 +24,7 @@ const srv = http.createServer((q, s) => { try { const u = decodeURIComponent(q.u
 const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1 }); page.setDefaultTimeout(60 * 60e3);
 const errs = []; page.on('console', m => { const t = m.text(); if (t.startsWith('[walk]')) console.log('   ' + t.slice(7)); else if ((m.type() === 'error') && !/Failed to load resource|GL Driver/.test(t)) errs.push(t.slice(0, 200)); }); page.on('pageerror', e => errs.push('exception: ' + (e.stack || e.message).slice(0, 300)));
-const REDO = has('--from-json'), t0 = Date.now();
+const REDO = has('--from-json'), t0 = Date.now(); let ev = null;
 if (!REDO) {
 await page.addInitScript(o => { window.__TEST__ = o; }, { webgl: 1, quality: 'low', play: 1 });
 await page.addInitScript(() => { let a = 11; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; });
@@ -136,7 +136,7 @@ const IN_PAGE = () => {
   { W.put([-70, World.groundY(-70, -6.5), -6.5], Math.PI / 2); let d0 = P.pos.slice(); for (let i = 0; i < 80; i++) { Input.keys = { KeyW: true }; game.step(1, dt); if (i === 39) d0 = P.pos.slice(); } W.vWalk = Math.hypot(P.pos[0] - d0[0], P.pos[2] - d0[2]) / (40 * dt); Input.keys = {}; }
 };
 if (!REDO) await page.evaluate(IN_PAGE);
-const ev = (fn, a) => page.evaluate(fn, a);
+ev = (fn, a) => page.evaluate(fn, a);
 if (!REDO) console.log('walking speed ' + (await ev(() => WALK.vWalk)).toFixed(2) + ' m/s');
 const keys = REDO ? 0 : await ev(() => ({ give: (() => { for (const k of ['minekey', 'lantern', 'cryptkey', 'housekey', 'cellarkey', 'wharfkey', 'lockpick']) give(k, k === 'lockpick' ? 30 : 1); S.flags.mineOpen = 1; S.flags.act1 = 1; S.flags.act2 = 1; S.flags.rowanAsked = 1; S.opened['sec.wall'] = 1; S.flags.sec_wall = 1; S.opened['chapel.gate'] = 1; applySave({ S, hour: 13, pos: Player.pos, yaw: 0, b: 99 }); return 1; })() }));
 if (PARTS.includes('town') && !REDO) { console.log('── town: every street and lane ──'); const r = await ev(async (lim) => { const out = i => !Cells.inRegion(Nav.nodes[i][0]); const start = WALK.nearest(0, 0); WALK.put(Nav.nodes[start]); const all = new Set(); let comps = 0; for (let s = start; s >= 0;) { const r = await WALK.tour(s, (a, b) => out(a) && out(b), 'street', lim); for (const k of r.seen) all.add(k); comps++; s = -1; for (let i = 0; i < Nav.nodes.length; i++) if (out(i) && Nav.adj[i].some(e => out(e[0])) && !all.has(i)) { s = i; WALK.put(Nav.nodes[i]); break; } if (lim) break; } return { comps, nodes: all.size, edges: WALK.edges, m: Math.round(WALK.dist) }; }, LIMIT); console.log('   ' + JSON.stringify(r)); }

@@ -67,6 +67,9 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - **70** Speed: medium 216 draws / 433k triangles in the square to 157 / 292k, low 170 / 225k to 125 / 195k, same pictures. Prompts
   are not offered through walls or for things behind the player; the walk bot. Interiors: garlic strings, dressed cellars, muted
   chapel cloth, rugs and hooks apart. The mine: cut rock walls, earth floor, torches that light their surroundings, visible water.
+- **71** A reload in the cell no longer locks the player in; broken saves are mended or refused. Phone interface pass at 844 x 390
+  (map shows you and quest marks indoors, one button style, smaller quest banner). Phones take the half-resolution ground pack by
+  default (first visit 61.0 to 40.4 MB). Culling: squares refilled only when one in sight is missing; `test/cullwalk.js`.
 
 - **60, 61** Real lip sync (visemes from the audio of every voiced line), natural skin and eyes, gaze, fitted helmet and kerchiefs.
 - **62** One gate command, the gate on GitHub for every push, onboarding docs rewritten, seven new voiced story lines.
@@ -87,6 +90,9 @@ interiors lit by hearths and candles. As realistic as free art allows.
     433k triangles in the square to 157 / 292k and Low from 170 / 225k to 125 / 195k with the pictures unchanged (ferns and stones
     given a draw distance; doors and signs outside the view skipped; terrain cut into squares; terrain and props under the
     roofline skipped).
+  - Phones take the half-resolution ground pack by default: first visit 40.4 MB instead of 61.0 (docs/DECISIONS.md has the numbers).
+  - Loose ends: a reload in the cell no longer locks the player in; broken saves are mended or refused; the map shows you and the
+    quest marks when you are indoors; one pill style for buttons; the quest banner is smaller, shorter and clear of the clock.
 - FREEZE (owner, Build 69): nothing new; make what exists right, to `docs/TOWNPLAN.md` (the authority outdoors). One district
   finished at a time, Market Place first. Two workers on the town (the machine restarts under three):
   - `fork-fx3` the planner: the Market Place as an enclosed four-sided room, buildings re-sited onto street lines, the terrace
@@ -111,7 +117,7 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - Frame rate on the iPhone has never been measured; the owner said "not fast enough" at Build 13. No test can see it.
 - Over the performance target since Build 52: medium square 216 draw calls / 452k triangles and alley 224 / 452k (target 220 /
   380k); low square 170 / 246k, alley 181 / 269k (target 140 / 200k).
-- First load: 60 MB on a phone (Medium), 39 MB on Low, 72 MB on a desktop on High.
+- First load: 40 MB on a phone, 61 MB on a tablet or laptop on Medium, 73 MB on a desktop on High.
 - 70 spoken lines have no audio yet (subtitles only) until the daily batches finish; remarks anyone may say (`*`), the notice board
   and the slab are subtitles by design. Text with prices or counts in it cannot be recorded.
 - Feet still slide 0.25 m/s in the walk clip. Mouths open by loudness only until `fork-ch1` merges.

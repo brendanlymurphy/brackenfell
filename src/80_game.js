@@ -239,7 +239,18 @@ function festivalSpots() {
 // v 2 adds S.rpg (health, gear, outlaws). Saves without it still load: RPG.st() fills in what is missing.
 // b: the build that wrote the save (from Build 67). A save with b was made in today's world, so its position is never "migrated".
 function save() { try { localStorage.setItem('brackenfell.v1', JSON.stringify({ v: 2, b: parseInt(BUILD_NAME.replace(/\D+/, ''), 10) || 0, S, hour: Env.hour, pos: Player.pos, yaw: Player.yaw })); } catch (e) { } }
-function loadSave() { try { const j = JSON.parse(localStorage.getItem('brackenfell.v1') || 'null'); return j && j.S ? j : null; } catch (e) { return null; } }
+// A save that cannot be read, or whose parts are the wrong kind of thing (storage cut short, a hand edit), is no save: the title offers a new game
+// instead of a Continue that throws. What can be kept is kept: saneSave mends the parts and drops what it cannot use.
+function saneSave(j) {
+  if (!j || typeof j !== 'object' || !j.S || typeof j.S !== 'object' || Array.isArray(j.S)) return null; const s = j.S, obj = v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+  if (!Number.isFinite(s.gold) || s.gold < 0) s.gold = 0; s.gold = Math.floor(s.gold);
+  s.items = obj(s.items); for (const k in s.items) if (!Number.isInteger(s.items[k]) || s.items[k] <= 0) delete s.items[k];
+  s.q = obj(s.q); for (const k in s.q) { const q = s.q[k]; if (!q || typeof q !== 'object' || !Number.isInteger(q.stage) || q.stage < 0) delete s.q[k]; }
+  s.flags = obj(s.flags); s.opened = obj(s.opened); s.picked = obj(s.picked); if (s.rpg !== undefined && (typeof s.rpg !== 'object' || !s.rpg)) delete s.rpg;
+  if (!Array.isArray(j.pos) || j.pos.length !== 3 || !j.pos.every(Number.isFinite)) delete j.pos; if (!Number.isFinite(j.hour)) delete j.hour; if (!Number.isFinite(j.yaw)) delete j.yaw;
+  return j;
+}
+function loadSave() { try { return saneSave(JSON.parse(localStorage.getItem('brackenfell.v1') || 'null')); } catch (e) { return null; } }
 function applySave(j) {
   delete S.rpg; Object.assign(S, j.S); Env.hour = j.hour || 9.5; if (j.pos) { Player.pos = j.pos; Player.yaw = j.yaw || 0;
     // Only a save from before interiors became cells (Build 19) is moved into a cell. Such a save has neither a build stamp nor the list of
