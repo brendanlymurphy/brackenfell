@@ -43,6 +43,10 @@ ixWitness = __w;
 { game.leave && game.leave(); await idle(); S.flags.bed = 0; S.q.ale = { stage: 0, done: false }; S.gold = 40; RPG.st().hp = 30; const n = TALK.greta(), labels = n.o.map(o => o[0]); fx(labels.some(l => /stew/.test(l)) && labels.some(l => /bed for the night/.test(l)), 'no stew or bed on offer: ' + labels.join(' | '));
   n.o.find(o => /stew/.test(o[0]))[1](); fx(RPG.st().hp >= 69, 'stew did not heal'); n.o.find(o => /bed for the night/.test(o[0]))[1](); fx(S.flags.rent === RPG.st().day && S.gold === 33, 'bed not rented (' + S.gold + ')'); S.flags.bed = 1; }
 // ── what people say ──
-{ Env.hour = 23; delete NPC.brandt._said; const n = TALK.brandt(); fx(/late/.test(n.t), 'no comment at night: ' + n.t.slice(0, 60)); Env.hour = 12; S.gold = 200; delete NPC.maren._said; const m = TALK.maren(); fx(/jingling/.test(m.t), 'no comment on a full purse'); }
+// a remark comes only before a line he has already said to you, never before one you have not heard, and as a paragraph of its own
+{ Env.hour = 23; delete NPC.brandt._said; delete NPC.brandt._heard; const n0 = TALK.brandt(); fx(!/about late/.test(n0.t), 'a remark in front of a line not yet heard: ' + n0.t.slice(0, 60)); const n = TALK.brandt(); fx(/^You’re about late\. Mind the dark\.\n\n/.test(n.t), 'no comment at night: ' + n.t.slice(0, 60)); Env.hour = 12; S.gold = 200; delete NPC.maren._said; delete NPC.maren._heard; TALK.maren(); const m = TALK.maren(); fx(/jingling/.test(m.t), 'no comment on a full purse'); }
+// the crypt gate: shut while locked, and once the key has turned the leaf swings open and stays open (it stayed drawn shut: the player is not counted in the leaves' who-is-near test)
+{ const d = World.doors.find(d => d.gate), it = d && World.interact.find(i => i.kind === 'gate' && i.id === d.gate), run = n => { for (let i = 0; i < n; i++) updateDynamics(1 / 30, [[0, -99, 0]]); return d.open; };
+  if (!d || !it) fx(false, 'no gate leaf under the chapel'); else { delete S.opened[d.gate]; fx(run(90) === 0, 'a locked gate opens'); give('cryptkey'); interactUse(it); fx(run(90) === 1, 'the gate stays shut after the key has turned: ' + d.open); fx(World.colliders.indexOf(it.col) < 0, 'the unlocked gate still blocks'); } }
 if (fails.length) throw new Error('INTERACT FAIL ' + JSON.stringify(fails));
 return 'interact PASS ' + JSON.stringify(log);

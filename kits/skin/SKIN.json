@@ -116,6 +116,7 @@
    "source": "restyled:T_Trim_Props_BaseColor.png + polyhaven:wood_table_worn"
   },
   "MI_Trim_Cloth": {
+   "gain": 0.6,
    "a": "MI_Trim_Cloth_a.webp",
    "n": "MI_Trim_Cloth_n.webp",
    "orm": "MI_Trim_Cloth_orm.webp",

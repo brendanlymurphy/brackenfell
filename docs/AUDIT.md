@@ -147,17 +147,33 @@ Per building: `docs/audit/buildings.md` section B.
 - The churchyard wall (`bar_churchyard.jpg`) encloses the graves on three sides; the fourth is open grass.
 - Not measurable yet: whether each fence belongs to a plot. Plots are not data in the game; the blueprint asks for a plot table.
 
-## Item 3. Seeing inside (not finished)
+## Item 3. Seeing inside (done on Build 76)
 
-Not done to the standard of the rest. What was tried: 126 pictures of the backs and sides of the shells (`shots/audit/sb`, not committed).
-The automatic camera too often stood inside a neighbouring shell to count anything from them. What they do show: shells are hollow
-boxes whose inside faces are drawn (a camera inside one sees a room of outside walls), so any place a player's eye can get past a
-wall will show it. The walk bot found "the eye or the near plane inside something solid" 10 times and "the eye within 10 cm of the
-underside of a floor" twice (`docs/WALK.md`). No view into a shell from a place the player can stand was found, and none was ruled out.
-The test this needs is in `docs/BLUEPRINT.md` 5.1: render from the walk bot's own eye positions with back faces painted a signal
-colour and count the pixels. One measured thing: at 12 of 136 buildings the ground at a corner is more than 0.6 m above the floor
-level (`floor_vs_ground.json`: `in.77`, the inn's back, three shells north of the square, `in.67`, `in.66`, the fisher's hut, `in.36`,
-three more shells); on a 2 m height grid this is a list of places to look at, not a verdict.
+Test: `test/audit/backface.js`. From 121 places a walker can reach (a 9 m lattice over the town, flooded from the square, at eye
+height), two views each, every wall, roof and other piece of structure is drawn black from its front and red from its back. Red
+in the picture is the inside of something seen from outside it. 242 views.
+
+| | |
+|---|---|
+| Views with any red over 0.3% of the picture | 180 of 242 |
+| Views with red over 2% | 44 |
+| Mean red per view | 1.4% |
+| Views into the hollow of a building shell | **0 found** in the 16 worst, compared by eye with the normal picture (`backface_pairs.jpg`) |
+
+What the red is, from the 16 worst (`backface_worst.jpg`, `backface_pairs.jpg`):
+
+| Kind | Example | Is it a fault |
+|---|---|---|
+| The underside of a roof or canopy that is one sheet: the lych gate, the well roof, every market stall, eaves | views 2, 7, 11, 17 | yes, cheap: no rafters, no thickness; seen every time a player looks up |
+| A wall that is one sheet seen from behind: the cream gable over the inn passage | view 5; `geo_sheet_passage.jpg` | yes |
+| A blank pale slab standing by the bell tower at about (19, 15) | view 6 | yes: an untextured panel |
+| Door and window reveals, door leaves, stair treads and paving whose faces are wound the wrong way | views 1, 8, 13, 16 | no visible fault: every kit material is drawn two-sided, so they render; it is why the count is high |
+| Open things: the boat, the cart | views 3, 8 | no |
+
+So: no place was found where a walker sees into a shell or under the ground. Not covered: the galleries, wall walks and roofs a
+player can climb to (the lattice is at ground level), interiors, and anything closer than the 9 m spacing. Every kit wall is drawn
+two-sided, so a shell's inside is always there to be seen; the only thing preventing it is the collider. As a gate rule the red
+count is noisy (reversed faces); it is in `rules.py` as 5.1 for the ratchet, with the mean at 1.4%.
 
 ## Item 4. Outside against inside
 
@@ -215,20 +231,31 @@ son Corwin's letters, which are already written and point at the main story, whi
 
 ## Item 11. Cheap graphics and bugs
 
-By picture; no claim about motion.
+By picture and by the geometry audit that is now on threejs (`tools/geomaudit.mjs`, `docs/GEOMETRY.md`; it reads the 66 static
+meshes out of doors, not the kit pieces or the generated shells). No claim about motion.
+
+| Count (`docs/GEOMETRY.md`, as last written) | |
+|---|---|
+| Places with a stretched texture | 38 (the barn's timber at 3.2 times the usual scale; a bell-tower roof face with one texel smeared over 11 to 14 m2; four stall canopies at 3 times) |
+| Open edges: the end or top of a surface with no thickness, 0.8 m or longer, at a height a person sees | 249 |
+| Single flat pieces over 2 m2 | 6 (two 16 m2 plaster gables over the inn passage, two on the terrace, two at the watchtower) |
+| Views where a one-sheet roof or wall is seen from behind (item 3) | 44 of 242 over 2% of the picture |
 
 | # | What | Where | Picture |
 |---|---|---|---|
 | G1 | Shell doors and window panes are flat near-black rectangles in shade | most shells | `shell_in.117.jpg`, `shell_in.119.jpg` |
-| G2 | A flat pale striped panel (an awning or shutter drawn as an unshaded sheet) on a shell front | shell near (-5, 85) | `close_shell_door.jpg` |
-| G3 | A lean-to roof plane coming down to the ground against a wall, reading as a loose sheet | Wharfside near (14, 74) | `close_wharf_house.jpg` |
-| G4 | Shaded timber walls go to one flat dark brown: no ambient detail, the box shows | all districts | `sheet_shells_1.jpg` (in.103, in.118, in.120 to in.123) |
-| G5 | Roofs: one colour and material from above | all | `top_town.jpg` |
-| G6 | Far copies of the southern houses read as grey boxes from 150 m | south | `top_town.jpg` (bottom edge) |
-| G7 | 452 listed defects (floating, sunk, overlapping), not re-verified | | `docs/DEFECTS.md` |
+| G2 | Stall canopies are one flat colour, stretched 3 times, and one sheet thick | the square, four stalls | `geo_stretch_awning.jpg`, `backface_worst.jpg` 7, 17 |
+| G3 | The gables over the inn passage are single 16 m2 sheets of blank plaster | (11.4, -17.3) and (11.4, -22.4), 4 to 8 m up | `geo_sheet_passage.jpg` |
+| G4 | A bell-tower roof face is one colour: a single texel over the whole face | about (8 to 11, 17 to 21), 14.5 m up | `geo_stretch_shingle.jpg` |
+| G5 | Roof and canopy undersides have no structure: the lych gate, the well, eaves | town-wide | `backface_pairs.jpg` 2, 11 |
+| G6 | A flat pale striped panel on a shell front; a lean-to roof plane down to the ground | (-5, 85); (14, 74) | `close_shell_door.jpg`, `close_wharf_house.jpg` |
+| G7 | Shaded timber walls go to one flat dark brown; the box shows | all districts | `sheet_shells_1.jpg` |
+| G8 | Roofs: one colour and material from above | all | `top_town.jpg` |
+| G9 | 452 listed defects (floating, sunk, overlapping), not re-verified | | `docs/DEFECTS.md` |
 
-Not found by this audit and still to do: a count of stretched textures and of thin sheets. Both need the piece-by-piece test in the
-blueprint (5.2), not screenshots.
+The geometry audit does not yet read the generated shells or the kit pieces, which is where most of what a player sees is;
+its counts are a floor. I looked at 8 of its worst entries: 5 are as it says, 1 put the camera inside thatch, and the churchyard
+wall it lists first for open edges looks solid from where a player stands.
 
 # Part B. How Skyrim, The Witcher 3 and Kingdom Come make a place believable
 
@@ -308,4 +335,4 @@ Effort: S = days for one worker, M = a week, L = several weeks. Each has a numbe
 ## Could not be verified headless
 
 Frame rate, flicker and z-fighting in motion, anything audible, whether lines read well, whether routines look natural. Part B
-is from search results only. Items 3 and the stretched-texture and thin-sheet counts of item 11 are not finished.
+is from search results only. Item 3 covers ground level only.
