@@ -104,11 +104,7 @@ function buildVillage() {
     m.mat(MAT.PLAIN, [0.2, 0.42, 0.2]); for (const zf of [-0.04, 0.04]) for (let i = 0; i < 4; i++) { const y = 3.6 + i * 0.13, w2 = 0.3 - i * 0.065; const pts = [[-w2, y, zf], [w2, y, zf], [0, y + 0.22, zf]]; m.poly(zf < 0 ? pts.reverse() : pts); }
     for (const s of [-1, 1]) { m.push().T(s * 2.35, 4.3, 0.02); Props.banner(m, 0.62, 1.5, AWN.madder, s); m.pop(); }          // [fx1] a hung banner with folds, a hem and a rod, not a flat red slab
   });
-  for (const s of [-1, 1]) for (let i = 0; i < 16; i++) {
-    const z = -5.2 + s * (3.4 + i * 0.36), x = -62 + Math.sin(i * 0.4) * 0.12 - i * i * 0.012;
-    put(x, z, R() * 3, m => { const h = 2.7 + R() * 0.5 - i * 0.05; m.mat(MAT.BARK, [0.9, 0.85, 0.8], 0.6); m.grad = [1, 0.6]; m.lathe([[0.17, -0.5], [0.16, h - 0.3], [0.02, h]], 7, 0); m.grad = null; });
-    if (i % 4 === 0) { const m = bucket(x, z); m.push().T(x, Terrain.y(x, z), z); addBoxCollider(m, -0.2, -0.2, 0.2, 1.3, 0, 2.5); m.pop(); }
-  }
+  /* [fx3] the 16-stake stubs beside the gate are gone: the edge (WEST_EDGE, 73m_plots.js) runs on from the gate posts in the same log palisade as the walls (73i_walls.js logRow) */
   spot('gate.post', -60.4, -7.6, -PI / 2 + 0.3); spot('gate.post2', -60.2, -2.9, -PI / 2 - 0.2);
   World.places.push({ id: 'gate', name: 'Brackenfell Gate', x: -62, z: -5.2, r: 7, minor: true });
   World.places.push({ id: 'square', name: 'Market Square', x: 0, z: -2, r: 9, minor: true });

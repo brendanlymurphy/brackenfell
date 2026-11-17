@@ -269,7 +269,7 @@ function trimPlotColliders(c0) {
   const C = World.colliders, ext = d => d.r !== undefined ? d.r : Math.hypot(d.hx, d.hz);
   const inside = (d, x, z, mg) => { if (d.r !== undefined) return Math.hypot(x - d.x, z - d.z) < d.r + mg; const u = (x - d.x) * d.ax + (z - d.z) * d.az, v = (x - d.x) * d.bx + (z - d.z) * d.bz; return Math.abs(u) < d.hx + mg && Math.abs(v) < d.hz + mg; };
   const extra = [];
-  for (let i = c0; i < C.length; i++) { const c = C[i]; if (c.r !== undefined || c.hx < 0.2) continue; const rc = Math.hypot(c.hx, c.hz) + 0.3, cand = [];
+  for (let i = c0; i < C.length; i++) { const c = C[i]; if (c.keep || c.r !== undefined || c.hx < 0.2) continue; const rc = Math.hypot(c.hx, c.hz) + 0.3, cand = [];
     for (let q = 0; q < i; q++) { const d = C[q]; if (d.y0 > c.y1 - 0.05 || d.y1 < c.y0 + 0.05 || Math.abs(d.x - c.x) > rc + ext(d) || Math.abs(d.z - c.z) > rc + ext(d)) continue; cand.push(d); }
     if (!cand.length) continue; const mg = c.hz * 0.8, runs = []; let st = null;
     for (let t = -c.hx; t <= c.hx + 0.001; t += 0.1) { const x = c.x + c.ax * t, z = c.z + c.az * t, hit = cand.some(d => inside(d, x, z, mg)); if (!hit && st === null) st = t; if ((hit || t > c.hx - 0.001) && st !== null) { const e = hit ? t - 0.1 : t; if (e - st > 0.3) runs.push([st, e]); st = null; } }
@@ -334,23 +334,23 @@ function buildWestgate(bucket) {
 
 /* [fx3] the west edge of the town: the gate is the only way in. Palisade for the stretch beside the gate, then a bank with a hedge on it and a ditch outside, following the ground north to the north wall and south down the town's flank.
    A road that crosses the line leaves a gap with two gate posts. The ditch is painted by the terrain (WEST_EDGE). */
-const WEST_EDGE = { n: [[-64.7, -17.5], [-65, -26], [-63, -38], [-58, -49], [-47, -56], [-33, -58.5]], s: [[-64.7, 7], [-65, 16], [-63, 30], [-59, 44], [-52, 56], [-44, 66]], pal: 2 };
+const WEST_EDGE = { n: [[-62, -8.15], [-62, -15], [-64, -19.5], [-65, -26], [-63, -38], [-58, -49], [-47, -56], [-33, -58.5], [-30, -58.7]], s: [[-62, -2.25], [-62, 5], [-63.5, 9.5], [-65, 16], [-63, 30], [-59, 44], [-52, 56], [-44, 66], [-37, 72.5], [-32, 76.5]], ne: [[8, -58.7], [30, -60.5], [52, -60], [72.7, -57], [72.7, -46.5]], pal: 2 };
 function buildWestEdge(bucket) {
   if (TEST && TEST.plots === 0) return;
-  const R = rng(9191), gy = (x, z) => Terrain.y(x, z); World.hedgeClumps = World.hedgeClumps || [];
-  const roadNear = (x, z) => SITES.some(q => q.w && Math.hypot(q.x - x, q.z - z) < Math.max(q.w, q.d) / 2 + 3.2) || Roads.some(q => q.id !== 'main' && q.line.dist(x, z, 3) < 2.3) || (Roads.find(q => q.id === 'main') && Math.abs(x + 62) < 5 && Math.abs(z + 5.2) < 6);
-  for (const side of ['n', 's']) { const P = WEST_EDGE[side];
-    for (let i = 0; i + 1 < P.length; i++) { const a = P[i], b = P[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), ang = Math.atan2(dz, dx), pal = i < WEST_EDGE.pal, n = Math.max(1, Math.round(L / 4)), nx = -dz / L, nz = dx / L;
-      for (let k = 0; k < n; k++) { const t0 = k / n, t1 = (k + 1) / n, ax = a[0] + dx * t0, az = a[1] + dz * t0, bx = a[0] + dx * t1, bz = a[1] + dz * t1, cx = (ax + bx) / 2, cz = (az + bz) / 2, l = Math.hypot(bx - ax, bz - az);
-        if (roadNear(cx, cz) || roadNear(ax, az) || roadNear(bx, bz)) { for (const e of [[ax, az], [bx, bz]]) { const m = bucket(e[0], e[1]); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); m.cbox(e[0], gy(e[0], e[1]) - 0.1, e[1], 0.16, 1.5, 0.16, 0); } continue; }
-        const g = Math.min(gy(ax, az), gy(bx, bz), gy(cx, cz)), m = bucket(cx, cz), an = Math.atan2(bz - az, bx - ax);
-        m.push().T(cx, g - 0.2, cz).RY(-an);
-        if (pal) { m.mat(MAT.PLANKS, [0.66, 0.6, 0.52], 0.5); m.box(-l / 2, 0, -0.14, l / 2, 2.7, 0.14, 4); m.mat(MAT.TIMBER, [0.27, 0.24, 0.21], 0.5); for (let u = -l / 2 + 0.2; u < l / 2 - 0.1; u += 0.42) m.box(u - 0.02, 0, -0.16, u + 0.02, 2.66, -0.14, 4 | 8);
-          m.mat(MAT.TIMBER, [0.5, 0.44, 0.36], 0.5); for (let u = -l / 2 + 0.15; u < l / 2 - 0.05; u += 0.3) { const hh = 2.7 + 0.18 + R() * 0.1; m.quad2([u, 2.7, -0.14], [u + 0.28, 2.7, -0.14], [u + 0.14, hh, 0], [u, 2.7, 0.14]); }
-          addBoxCollider(m, -l / 2 + 0.05, -0.2, l / 2 - 0.05, 0.2, 0, 2.7); }
-        else { m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-l / 2, 0, -0.55, l / 2, 0.42, 0.55, 4); addBoxCollider(m, -l / 2 + 0.1, -0.4, l / 2 - 0.1, 0.4, 0, 1.6);
-          const nC = Math.round(l / 0.6); for (let c = 0; c < nC; c++) { if (R() < 0.1) continue; const u = -l / 2 + (c + 0.5) * l / nC + (R() - 0.5) * 0.3, v = (R() - 0.5) * 0.5, wx = cx + Math.cos(an) * u - Math.sin(an) * v, wz = cz + Math.sin(an) * u + Math.cos(an) * v; World.hedgeClumps.push([wx, gy(wx, wz) + 0.25, wz, 1.0 + R() * 0.8 + (R() < 0.1 ? 0.5 : 0), R() * 6.28, 0.1 + R() * 0.2, R()]); } }
-        m.pop(); } } }
+  const gy = (x, z) => Terrain.y(x, z);
+  const segX = (p1, p2, p3, p4) => { const d = (p2[0] - p1[0]) * (p4[1] - p3[1]) - (p2[1] - p1[1]) * (p4[0] - p3[0]); if (Math.abs(d) < 1e-9) return false; const t = ((p3[0] - p1[0]) * (p4[1] - p3[1]) - (p3[1] - p1[1]) * (p4[0] - p3[0])) / d, u = ((p3[0] - p1[0]) * (p2[1] - p1[1]) - (p3[1] - p1[1]) * (p2[0] - p1[0])) / d; return t > -0.1 && t < 1.1 && u > -0.05 && u < 1.05; };
+  const crossRoad = (A, B) => Roads.some(q => q.id !== 'main' && q.line.p.some((pt, i) => i && segX(A, B, q.line.p[i - 1], pt)));
+  const roadNear = (A, B) => crossRoad(A, B) || (Math.abs((A[0] + B[0]) / 2 + 62) < 3 && Math.abs((A[1] + B[1]) / 2 + 5.2) < 2.6);
+  for (const side of ['n', 's', 'ne']) { const P = WEST_EDGE[side];
+    for (let i = 0; i + 1 < P.length; i++) { const a = P[i], b = P[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), n = Math.max(1, Math.round(L / 4)); let nx = -dz / L, nz = dx / L; if (nx * (0 - a[0]) + nz * (-6 - a[1]) < 0) { nx = -nx; nz = -nz; }
+      /* [fx3] the edge is the same log palisade as the town walls, with the earth thrown up outside it and the ditch beyond (painted by the terrain); a road leaves a gap with two tall gate posts */
+      let run = null; const flush = () => { if (run && Math.hypot(run[1][0] - run[0][0], run[1][1] - run[0][1]) > 1.5) { const A = [run[0][0] - nx * 0.8, run[0][1] - nz * 0.8], B = [run[1][0] - nx * 0.8, run[1][1] - nz * 0.8], m = bucket((A[0] + B[0]) / 2, (A[1] + B[1]) / 2); earthBank(m, A, B, 0.6, 0.4, [0.5, 0.5, 0.38]); } run = null; };
+      for (let k = 0; k < n; k++) { const t0 = k / n, t1 = (k + 1) / n, A = [a[0] + dx * t0, a[1] + dz * t0], B = [a[0] + dx * t1, a[1] + dz * t1], cx = (A[0] + B[0]) / 2, cz = (A[1] + B[1]) / 2, m = bucket(cx, cz);
+        if (roadNear(A, B)) { flush(); (World.edgeGaps = World.edgeGaps || []).push([+cx.toFixed(1), +cz.toFixed(1)]); for (const e of [A, B]) { const g = gy(e[0], e[1]); m.mat(MAT.BARK, [0.45, 0.39, 0.31], 1.0); m.tube([[e[0], g - 0.3, e[1]], [e[0], g + 2.9, e[1]], [e[0], g + 3.3, e[1]]], [0.22, 0.2, 0.03], 8, true); } continue; }
+        const gA = gy(A[0], A[1]), gB = gy(B[0], B[1]); logRow(m, A, B, t => gA + (gB - gA) * t + 2.5, [nx, nz], i * 7 + k);
+        const l = Math.hypot(B[0] - A[0], B[1] - A[1]), an = Math.atan2(B[1] - A[1], B[0] - A[0]), g = Math.min(gA, gB, gy(cx, cz)); m.push().T(cx, g - 0.2, cz).RY(-an); addBoxCollider(m, -l / 2, -0.2, l / 2, 0.2, 0, 2.6); World.colliders[World.colliders.length - 1].keep = 1; m.pop();
+        if (!run) run = [A, B]; else run[1] = B; }
+      flush(); } }
 }
 
 /* [fx3] where the audit's deleted shells stood, each footprint is the neighbour's yard: a low stone wall on four sides with a gate on the old front, the trade of the yard inside (garden, wood, hens, hives, washing), and a fruit tree in the orchards. Decisions per id are in YARDS. */

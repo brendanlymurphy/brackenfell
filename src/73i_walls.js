@@ -3,6 +3,23 @@
 //    each road (a walk-through arch 3.8 m wide, the gate open, torches, a stair up on the town side, a roofed watch platform)
 // e  the watch bell tower: an open timber frame with four switchback flights to a roofed platform 10.8 m up, the widest view in the valley
 // Built on the helpers of 73h_routes.js (rtKit). Walk deck, palisade and rails follow the ground in 2 m pieces; every deck is a ramped World.floors entry.
+// [fx3] a palisade log row from A to B (world points): tight individual logs (20-28 cm, overlapping by 1-2 cm), 8 sides, bark running up the log, a mossy foot, each its own height and lean, the point cut with an axe, 0.3 m into the ground along the ground's own line, a riband pegged along the inside at 1.6 m; a few pale replaced logs, a few gaps patched with wattle.
+// topFn(t) gives the top height (t 0..1 along the row); inside is the unit normal toward the town. Returns nothing; the caller adds the collider.
+function logRow(mL, A, B, topFn, inside, seed) {
+  const gy = (x, z) => Terrain.y(x, z), dx = B[0] - A[0], dz = B[1] - A[1], L = Math.hypot(dx, dz); if (L < 0.2) return; const ux = dx / L, uz = dz / L;
+  const hs = (k, a) => Math.abs(Math.sin(k * a + seed * 1.37) * 43758.5453) % 1; let u = 0.02, n = 0;
+  while (u < L - 0.05) { const h1 = hs(u, 127.1), h2 = hs(u, 311.7), h3 = hs(u, 74.7), r = 0.1 + h1 * 0.04, c = u + r;
+    const bx = A[0] + ux * c + inside[0] * (h2 - 0.5) * 0.03, bz = A[1] + uz * c + inside[1] * (h2 - 0.5) * 0.03, gL = gy(bx, bz);
+    if (h3 < 0.02 && n > 2) { const w0 = [bx - ux * 0.2, bz - uz * 0.2], w1 = [bx + ux * 0.2, bz + uz * 0.2]; mL.mat(MAT.TIMBER, [0.34, 0.28, 0.2], 0.5); for (const k of [0.4, 0.9, 1.4]) mL.tube([[w0[0], gL + k, w0[1]], [w1[0], gL + k + 0.03, w1[1]]], [0.028, 0.028], 5, true);
+      for (const t2 of [-0.15, 0, 0.15]) mL.tube([[bx + ux * t2, gL - 0.3, bz + uz * t2], [bx + ux * t2, gL + 1.7, bz + uz * t2]], [0.03, 0.03], 5, true); u = c + 0.2; n++; continue; }
+    const t = c / L, top = topFn(t) + (h1 - 0.5) * 0.45 - (h3 > 0.93 ? 0.2 : 0), lx = (h2 - 0.5) * 0.12, lz = (h1 - 0.5) * 0.07, sh = [bx + lx * 0.9, top - 0.34, bz + lz * 0.9], tip = [bx + lx, top, bz + lz], pale = h3 > 0.93 && h3 < 0.985;
+    mL.mat(MAT.BARK, pale ? [0.7, 0.58, 0.42] : [0.5 + h1 * 0.1, 0.43 + h1 * 0.08, 0.35 + h1 * 0.06], 1.0);
+    mL.tube([[bx, gL - 0.3, bz], sh, tip], [r * 1.04, r * 0.97, 0.012], 8, true);
+    if (!pale) { mL.mat(MAT.MOSS, [0.26, 0.3, 0.19], 1.0); mL.tube([[bx, gL - 0.25, bz], [bx + lx * 0.15, gL + 0.35 + h2 * 0.2, bz + lz * 0.15]], [r * 1.07, r * 1.02], 8, false); }
+    u = c + r - 0.02; n++; }
+  // the riband: a squared pole pegged along the inside at 1.6 m, following the ground at its two ends
+  { const o = 0.3, a0 = [A[0] + inside[0] * o, A[1] + inside[1] * o], b0 = [B[0] + inside[0] * o, B[1] + inside[1] * o]; mL.mat(MAT.TIMBER, [0.3, 0.25, 0.19], 0.6); mL.beam([a0[0], gy(A[0], A[1]) + 1.6, a0[1]], [b0[0], gy(B[0], B[1]) + 1.6, b0[1]], 0.07, 0.12); }
+}
 function buildWalls(bucket) {
   if (TEST && TEST.levels === 0) return;
   const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, stair, dark, wood, gy } = K;
@@ -42,14 +59,7 @@ function buildWalls(bucket) {
         const g0a = ug - 1.9, g1a = ug + 1.9, parts = b <= g0a || a >= g1a ? [[a, b, mlo]] : [[a, Math.min(b, g0a), mlo], [Math.max(a, g0a), Math.min(b, g1a), yT - 0.16], [Math.max(a, g1a), b, mlo]].filter(q => q[1] - q[0] > 0.02);
         for (const [pa, pb, pl] of parts) { const f0 = P(pa, 0), f1 = P(pb, 0.36);
           if (pl > mlo + 1) box(MAT.PLANKS, [0.42, 0.36, 0.3], 0.5, f0[0], pl, f0[1], f1[0], yT + 1.85, f1[1], 4 | 8);      // over the arch: boards above the lintel
-          else { const cm = P((pa + pb) / 2, 0.15), mL = M(cm[0], cm[1]);
-            for (let u = pa + 0.13; u < pb - 0.08; u += 0.26 + 0.02 * Math.sin(u * 9)) { const h1 = Math.abs(Math.sin(u * 127.1 + id.length * 31.7) * 43758.5453) % 1, h2 = Math.abs(Math.sin(u * 311.7 + 17.3) * 12345.678) % 1, h3 = Math.abs(Math.sin(u * 74.7 + 5.1) * 98765.43) % 1;
-              const bp = P(u, 0.15 + (h2 - 0.5) * 0.06), gL = gy(bp[0], bp[1]), r = 0.1 + h1 * 0.04;
-              if (h3 < 0.022) { const w0 = P(u - 0.12, 0.12), w1 = P(u + 0.12, 0.12); mL.mat(MAT.TIMBER, [0.3, 0.25, 0.18], 0.5); for (const k of [0.5, 1.0, 1.5]) mL.tube([[w0[0], gL + k, w0[1]], [w1[0], gL + k + 0.03, w1[1]]], [0.025, 0.025], 5, true); continue; }
-              const top = tTop(u) + (h1 - 0.5) * 0.55 - (h3 > 0.93 ? 0.25 : 0), lx = (h2 - 0.5) * 0.14, lz = (h1 - 0.5) * 0.08, sh = [bp[0] + lx * 0.9, top - 0.34, bp[1] + lz * 0.9], tip = [bp[0] + lx, top, bp[1] + lz];
-              const pale = h3 > 0.93 && h3 < 0.985; mL.mat(MAT.BARK, pale ? [0.62, 0.5, 0.36] : [0.32 + h1 * 0.08, 0.28 + h1 * 0.06, 0.23 + h1 * 0.05], 0.7);
-              mL.tube([[bp[0], gL - 0.35, bp[1]], sh, tip], [r * 1.03, r * 0.95, 0.012], 6, true);
-              if (!pale) { mL.mat(MAT.MOSS, [0.2, 0.23, 0.15], 0.8); mL.tube([[bp[0], gL - 0.3, bp[1]], [bp[0] + lx * 0.15, gL + 0.4 + h2 * 0.2, bp[1] + lz * 0.15]], [r * 1.06, r * 1.0], 6, false); } } }
+          else { const cm = P((pa + pb) / 2, 0.15), mL = M(cm[0], cm[1]), i0 = P(0, 0), i1 = P(0, 1); logRow(mL, P(pa, 0.15), P(pb, 0.15), t => tTop(pa + (pb - pa) * t), [i1[0] - i0[0], i1[1] - i0[1]], Math.abs(pa) * 0.13 + id.length); }
           col(Math.min(f0[0], f1[0]), Math.min(f0[1], f1[1]), Math.max(f0[0], f1[0]), Math.max(f0[1], f1[1]), pl, pl > mlo + 1 ? yT + 1.85 : topC); } }
       // the inner rail, sloped
       if (DK) { const s = P(a, 1.85), t = P(b, 1.85);
