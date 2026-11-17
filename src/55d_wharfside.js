@@ -38,7 +38,7 @@ const WHARF = { houses: [], rows: {}, gables: [], poly: null, street: null, lane
   // lanes: the west lane leaves the street at 20 degrees and bends toward the shore (like a fish bone); the Bank Lane follows the river a plot's depth back from the water
   const lanes = { w1: mkL([[-2.2, 40.5], [-6.3, 51.5], [-11.6, 61.5], [-18.5, 69.5], [-24.5, 78]]) };
   { const RP = [[59, 34], [58, 42], [56.5, 48], [54.5, 54], [52, 60], [49, 66], [45, 72], [41, 78], [36.5, 84]], off = 16.5; lanes.bank = mkL(RP.map(([x, z], i) => [x - off + (i > 5 ? i - 5 : 0) * 0.8, z - (i > 5 ? 0 : 0)])); }
-  for (const id in lanes) { const ln = lanes[id]; ln.w = id === 'bank' ? 3.0 : 2.4; WHARF.lanes[id] = ln; INF.LN['wharf.' + id] = ln; ROADS.push({ id: 'wharf.' + id, w: ln.w, pts: ln.p.filter((q, i) => i % 4 === 0 || i === ln.p.length - 1) }); }
+  for (const id in lanes) { const ln = lanes[id]; ln.w = id === 'bank' ? 3.0 : 2.4; WHARF.lanes[id] = ln; INF.LN['wharf.' + id] = ln; if (!(TEST && TEST.nolane)) ROADS.push({ id: 'wharf.' + id, w: ln.w, pts: ln.p.filter((q, i) => i % 4 === 0 || i === ln.p.length - 1) }); }
   const lw = () => 2.4, bw = () => 3.0;
   // street, west side: before the closer, and the lower stretch
   row('swN', -1, ['in.23', 'in.24', 'in.58'], s0 + 1.5, s0 + 17.5, { 'in.24': 1.5 });

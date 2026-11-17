@@ -17,7 +17,7 @@ function buildLanes(bucket) {
   const strip = (l, u0, u1) => { for (let u = u0; u <= u1; u += 0.5) for (const dz of [-0.6, 0, 0.6]) if (KEEP.hit(u, l.zc + dz, 0.4)) return false; return true; };
   const used = new Set(); let role = 0;
   // ── 1. the washing lane with the jettied upper floor: a 2-floor pair at least 4 m long in the densest block (north-east) ──
-  const wash = lanes.filter(l => l.floors >= 2 && l.len >= 3.8 && strip(l, l.x0, l.x1)).sort((p, q) => (q.block === 'north-east') - (p.block === 'north-east') || q.len - p.len)[0];
+  const wash = lanes.filter(l => l.floors >= 2 && l.len >= 3.8 && !(l.zc < -40 && l.x0 > 24 && l.x1 < 42) && strip(l, l.x0, l.x1)).sort((p, q) => (q.block === 'north-east') - (p.block === 'north-east') || q.len - p.len)[0];
   if (wash) { used.add(wash); const l = wash, g = gy((l.x0 + l.x1) / 2, l.zc), yb = g + 3.4, ys = g + 5.6, xm = (l.x0 + l.x1) / 2;
     // the bridging room: a plastered box across the lane at the upper floor, on two corbels, with a window; the lane under it is a dark covered stretch
     const rx0 = xm - 1.1, rx1 = xm + 1.1, z0 = l.A.z1 - 0.05, z1 = l.B.z0 + 0.05;
@@ -33,7 +33,7 @@ function buildLanes(bucket) {
     K.place('washlane', 'Washing Lane', xm, l.zc, 4); l.role = 'wash'; }
   // ── 2. the dead end with a hidden yard: a lane in the north-east or south-east block that is open to grass at one end ──
   const yardGap = l => { let a = l.zc - 3.0, b = l.zc + 3.0; const ex = l.x1; for (const o of SITES) { const cy = Math.abs(Math.cos(o.yaw)), hw = (cy * o.w + (1 - cy) * o.d) / 2, hd = (cy * o.d + (1 - cy) * o.w) / 2; if (o.x + hw < ex + 0.1 - 0.3 || o.x - hw > ex + 5.2 + 0.3) continue; if (o.z < l.zc && o.z + hd > a - 0.2 && o.z + hd < l.zc) a = o.z + hd + 0.35; if (o.z > l.zc && o.z - hd < b + 0.2 && o.z - hd > l.zc) b = o.z - hd - 0.35; } return b - a; };          // [fx1] the yard needs room for its well and bench beside the walking line
-  const dead = lanes.filter(l => !used.has(l) && l.len >= 3.6 && strip(l, l.x0, l.x1) && (l.block === 'north-east' || l.block === 'south-east' || l.block === 'south-west')).sort((p, q) => (yardGap(q) >= 4.6) - (yardGap(p) >= 4.6) || q.len - p.len)[0];
+  const dead = lanes.filter(l => !used.has(l) && !(l.zc < -40 && l.x0 > 24 && l.x1 < 42) && l.len >= 3.6 && strip(l, l.x0, l.x1) && (l.block === 'north-east' || l.block === 'south-east' || l.block === 'south-west')).sort((p, q) => (yardGap(q) >= 4.6) - (yardGap(p) >= 4.6) || q.len - p.len)[0];
   if (dead) { used.add(dead); const l = dead, g = gy(l.x1 + 2, l.zc), ex = l.x1;
     // the end is shut by a board fence with a gate that stands ajar; beyond it a small yard: fence, well, bench, a hen coop box, something to take
     for (const [za, zb] of [[l.A.z1, l.zc - 0.55], [l.zc + 0.55, l.B.z0]]) { box(MAT.PLANKS, [0.58, 0.48, 0.36], 0.5, ex - 0.1, gy(ex, l.zc) - 0.2, za, ex + 0.08, gy(ex, l.zc) + 2.1, zb, 4 | 8, 1); col(ex - 0.1, za, ex + 0.08, zb, gy(ex, l.zc) - 0.3, gy(ex, l.zc) + 2.2); }

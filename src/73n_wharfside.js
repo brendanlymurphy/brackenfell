@@ -54,6 +54,7 @@ function wharfPaint(A, B, H) {
 // the yard behind each house: low fence on the back and the party lines; one trade of the poor
 function buildWharfPlots(bucket) {
   if (TEST && TEST.plots === 0) return;
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = wharfLow() ? 26 : 46; return m; }; }      // small dressing lives in cells of its own with a draw distance
   const PL = wharfPlots(), R = rng(7733), gy = (x, z) => Terrain.y(x, z);
   const fence = (m, ax, az, bx, bz, h) => {
     const L = Math.hypot(bx - ax, bz - az); if (L < 0.3) return; const n = Math.max(1, Math.round(L / 1.5)); m.mat(MAT.TIMBER, [0.26, 0.21, 0.16], 0.5);
@@ -98,6 +99,7 @@ function buildWharfPlots(bucket) {
 // the open boat shed on the wharf yard: four posts, a lean thatch roof, a hull on trestles under it, ropes and an oar rack; it faces the yard
 function buildWharfYard(bucket) {
   if (TEST && (TEST.wharf === 0 || TEST.plots === 0) || typeof WHARF === 'undefined' || !WHARF.houses.length) return;
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = wharfLow() ? 26 : 46; return m; }; }      // small dressing lives in cells of its own with a draw distance
   const gy = (x, z) => Terrain.y(x, z), cx = -2.6, cz = 77.2, m = bucket(cx, cz), R = rng(3131), g = gy(cx, cz), W2 = 2.4, D2 = 1.9;
   m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5);
   for (const [a, b, hh] of [[-W2, -D2, 2.8], [W2, -D2, 2.8], [-W2, D2, 2.1], [W2, D2, 2.1]]) { m.beam([cx + a, g - 0.1, cz + b], [cx + a, g + hh, cz + b], 0.12, 0.12); addCircleCollider(m, cx + a, cz + b, 0.14, g, g + hh); }
@@ -148,6 +150,9 @@ function wharfCloses() {
   { const cx = 31.6, cz = 80.4, c = Math.cos(0.5), sn = Math.sin(0.5), W = (a, b) => [cx + a * c - b * sn, cz + a * sn + b * c]; C.wedge = { x: cx, z: cz };
     C.soil.push([W(-4.4, -3.6), W(4.4, -3.6), W(4.4, 3.6), W(-4.4, 3.6)]); C.hedges.push([W(-5.4, 4.6), W(0, 4.8), W(5.4, 4.4)], [W(5.4, -4), W(5.6, 0), W(5.4, 4.4)]); C.fences.push([W(-5.4, -4.4), W(-5.4, 0), W(-5.2, 4.6)]);
     C.racks.push([...W(-3.5, 2.4), ...W(0.5, 2.6)], [...W(-3.5, -3), ...W(0, -3.1)]); C.boats.push([...W(2.2, -0.4), 0.45]); }
+  // the wharf yard's open ground: a boat drawn up, one upturned on trestles, two drying racks, a winch, barrels and pots, rope
+  C.racks.push([-9.2, 70.4, -5.4, 70.1], [-12.8, 72.4, -9.6, 72.9]); C.boats.push([-3.6, 73.7, 0.18, 'up0'], [2.0, 70.0, -0.3, 'trestle']);
+  C.winch = [1.9, 74.4]; C.barrels = [[3.1, 72.0], [3.7, 72.6], [3.2, 73.0], [-7.0, 76.4], [-6.4, 77.0]]; C.coil = [[0.4, 75.6], [-6.5, 74.0]];
   // the edge: a hedge and a fence line that bends, west and north; the last yards of the west lane's houses run out to it between cross fences
   { const E = WHARF.edge; if (E) {
       const cat = catmull(E, 1.2);
@@ -163,10 +168,11 @@ function wharfCloses() {
 function wharfBlocked(x, z, pad) { return !!(typeof WHARF !== 'undefined' && WHARF.houses.length && x > 12 - pad && x < 46 + pad && z > 34 - pad && z < 92 + pad); }
 function buildWharfCloses(bucket) {
   const C = wharfCloses(); if (!C.fences.length) return;
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = wharfLow() ? 26 : 46; return m; }; }      // small dressing lives in cells of its own with a draw distance
   const gy = (x, z) => Terrain.y(x, z), R = rng(4141), h = 1.0;
   const nearHouse = (x, z) => SITES.some(st => { if (!st.w || st.id === 'tower') return false; const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 1.3 && Math.abs(l[1]) < st.d / 2 + 1.3; });
   World.hedgeBushes = World.hedgeBushes || []; World.orchardTrees = World.orchardTrees || [];
-  for (const pl of C.hedges) for (let i = 0; i + 1 < pl.length; i++) { const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / (pl.dense ? 1.3 : 3.0))); for (let k = 0; k < n; k++) World.hedgeBushes.push([ax + (bx - ax) * k / n + (R() - 0.5) * 0.2, az + (bz - az) * k / n + (R() - 0.5) * 0.2, 1.1 + R() * 0.3]); }
+  for (const pl of C.hedges) for (let i = 0; i + 1 < pl.length; i++) { const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / (pl.dense ? 2.4 : 3.6))); for (let k = 0; k < n; k++) World.hedgeBushes.push([ax + (bx - ax) * k / n + (R() - 0.5) * 0.2, az + (bz - az) * k / n + (R() - 0.5) * 0.2, 1.45 + R() * 0.3]); }
   for (const t of C.trees) World.orchardTrees.push(t);
   for (const pl of C.fences) {
     const [mx, mz] = pl[(pl.length / 2) | 0], m = bucket(mx, mz);
@@ -177,14 +183,23 @@ function buildWharfCloses(bucket) {
       for (let k = 0; k <= Math.ceil(L / 0.5); k++) { const t = k / Math.ceil(L / 0.5), x = ax + (bx - ax) * t, z = az + (bz - az) * t; if (!nearHouse(x, z) && !World.colliders.some(o => o.r && Math.abs(o.x - x) < 0.32 && Math.abs(o.z - z) < 0.32)) addCircleCollider(m, x, z, 0.14, gy(x, z), gy(x, z) + h); }
     }
   }
-  for (const [p, q] of C.beds) { const cx = (p[0] + q[0]) / 2, cz = (p[1] + q[1]) / 2, m = bucket(cx, cz), ang = Math.atan2(q[1] - p[1], q[0] - p[0]), w = hyp(q[0] - p[0], q[1] - p[1]) / 2; m.mat(MAT.SOIL, [0.34, 0.27, 0.2], 0.5); m.push().T(cx, gy(cx, cz) + 0.04, cz).RY(-ang); m.quad2([-w, 0, -0.32], [w, 0, -0.32], [w, 0, 0.32], [-w, 0, 0.32]); m.pop(); for (let a = -w + 0.3; a < w - 0.2; a += 2.0) (World.gardenPlants = World.gardenPlants || []).push([cx + Math.cos(ang) * a, cz + Math.sin(ang) * a, (a * 7 | 0) & 1]); }
+  for (const [p, q] of C.beds) { const cx = (p[0] + q[0]) / 2, cz = (p[1] + q[1]) / 2, m = bucket(cx, cz), ang = Math.atan2(q[1] - p[1], q[0] - p[0]), w = hyp(q[0] - p[0], q[1] - p[1]) / 2; m.mat(MAT.SOIL, [0.34, 0.27, 0.2], 0.5); m.push().T(cx, gy(cx, cz) + 0.04, cz).RY(-ang); m.quad2([-w, 0, -0.32], [w, 0, -0.32], [w, 0, 0.32], [-w, 0, 0.32]); m.pop(); for (let a = -w + 0.3; a < w - 0.2; a += 2.0) (World.wharfPlants = World.wharfPlants || []).push([cx + Math.cos(ang) * a, cz + Math.sin(ang) * a, (a * 7 | 0) & 1]); }
   const post = (m, x, z, hh) => { const g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x, g - 0.1, z], [x, g + hh, z], 0.07, 0.07); };
   for (const [x0, z0, x1, z1] of C.poles) { const m = bucket(x0, z0); post(m, x0, z0, 2.3); post(m, x1, z1, 2.3); const g0 = gy(x0, z0); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x0, g0 + 2.2, z0], [x1, g0 + 2.2, z1], 0.045, 0.045);
     m.mat(MAT.CLOTH, [0.24, 0.22, 0.17], 0.5); const nx = -(z1 - z0), nz = x1 - x0, nl = hyp(nx, nz) || 1; m.quad2([x0, g0 + 2.15, z0], [x1, g0 + 2.15, z1], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12]); m.quad2([x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x1, g0 + 2.15, z1], [x0, g0 + 2.15, z0]);
     addCircleCollider(m, x0, z0, 0.12, g0, g0 + 2.2); addCircleCollider(m, x1, z1, 0.12, gy(x1, z1), gy(x1, z1) + 2.2); }
   for (const [x0, z0, x1, z1] of C.racks) { const m = bucket(x0, z0); post(m, x0, z0, 1.5); post(m, x1, z1, 1.5); const g0 = gy(x0, z0); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const y of [1.45, 0.95]) m.beam([x0, g0 + y, z0], [x1, g0 + y, z1], 0.04, 0.04);
     m.mat(MAT.PLAIN, [0.46, 0.45, 0.4]); for (let k = 0; k < 7; k++) { const t = (k + 0.5) / 7, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; m.box(x - 0.03, g0 + 0.5, z - 0.02, x + 0.03, g0 + 1.4, z + 0.02); } addCircleCollider(m, x0, z0, 0.12, g0, g0 + 1.5); addCircleCollider(m, x1, z1, 0.12, gy(x1, z1), gy(x1, z1) + 1.5); }
-  for (const [x, z, ang] of C.boats) { const m = bucket(x, z), g = gy(x, z); m.mat(MAT.PLANKS, [0.15, 0.12, 0.09], 0.5); m.push().T(x, g + 0.5, z).RY(-ang); m.ball(0, 0, 0, 1.6, 0.5, 0.7, 8, 5); m.pop(); addBoxCollider(m, x - 1.0, z - 0.7, x + 1.0, z + 0.7, g, g + 0.9); }
+  for (const [x, z, ang, kind] of C.boats) { const m = bucket(x, z), g = gy(x, z), c = Math.cos(ang), sn = Math.sin(ang), L = kind === 'up0' ? 2.2 : 1.6, up = kind === 'trestle';
+    const at = (a, b) => [x + a * c - b * sn, z + a * sn + b * c];
+    m.mat(MAT.PLANKS, [0.15, 0.12, 0.09], 0.5); m.push().T(x, g + (up ? 1.0 : 0.5), z).RY(-ang); if (up) m.RX(Math.PI); m.ball(0, 0, 0, L, 0.5, 0.7, 8, 5); m.pop();
+    m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5);
+    if (up) for (const a of [-0.9, 0.9]) for (const sg of [-1, 1]) { const q = at(a, 0.45 * sg), r = at(a, 0); m.beam([q[0], gy(q[0], q[1]), q[1]], [r[0], g + 0.7, r[1]], 0.05, 0.05); }
+    else for (const a of [-0.8, 0.9]) { const q = at(a, -0.9), r = at(a, 0.9); m.beam([q[0], g + 0.06, q[1]], [r[0], g + 0.06, r[1]], 0.07, 0.07); }
+    for (const a of [-1, 0, 1]) addCircleCollider(m, ...at(a * 0.9, 0), 0.6, g, g + 0.9); }
+  if (C.winch) { const [x, z] = C.winch, m = bucket(x, z), g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.cyl(x, g, z, 0.2, 0.17, 1.0, 8, 2); for (const a of [0, Math.PI / 2]) m.beam([x - Math.cos(a) * 0.9, g + 0.85, z - Math.sin(a) * 0.9], [x + Math.cos(a) * 0.9, g + 0.85, z + Math.sin(a) * 0.9], 0.04, 0.04); m.mat(MAT.CLOTH, [0.33, 0.28, 0.2], 0.5); m.cyl(x, g + 0.25, z, 0.26, 0.26, 0.35, 8, 1); addCircleCollider(m, x, z, 0.35, g, g + 1.0); }
+  for (const [x, z] of C.barrels || []) { const m = bucket(x, z), g = gy(x, z); m.mat(MAT.PLANKS, [0.3, 0.23, 0.15], 0.5); m.cyl(x, g, z, 0.3, 0.34, 0.8, 6, 2); m.mat(MAT.METAL, [0.18, 0.18, 0.18], 0.5); m.cyl(x, g + 0.2, z, 0.35, 0.35, 0.05, 6, 1); if (!nearHouse(x, z)) addCircleCollider(m, x, z, 0.3, g, g + 0.8); }
+  for (const [x, z] of C.coil || []) { const m = bucket(x, z), g = gy(x, z); m.mat(MAT.CLOTH, [0.34, 0.29, 0.2], 0.5); m.cyl(x, g, z, 0.4, 0.4, 0.14, 8, 1); m.cyl(x, g + 0.14, z, 0.3, 0.3, 0.1, 8, 1); }
 }
 
 function wharfLow() { return R.qName === 'low'; }
@@ -207,7 +222,8 @@ function wharfSplat2(blob, line, A, B, R) {
 // a boardwalk where it is wet: along the shore of the wharf yard (planks laid across, on low piles), stepping down to the shingle at its ends
 function buildWharfBoards(bucket) {
   if (TEST && (TEST.wharf === 0 || TEST.plots === 0) || typeof WHARF === 'undefined' || !WHARF.houses.length) return;
-  const gy = (x, z) => Terrain.y(x, z), R = rng(6262), pts = wharfShore(1.2).map((q, i, a) => [q[0], [-2, -1, 0, 1, 2].reduce((t, d) => t + a[Math.max(0, Math.min(a.length - 1, i + d))][1], 0) / 5]), m = bucket(pts[4][0], pts[4][1]);
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = wharfLow() ? 26 : 46; return m; }; }      // small dressing lives in cells of its own with a draw distance
+  const gy = (x, z) => Terrain.y(x, z), R = rng(6262), pts = wharfShore(1.2).filter(q => q[0] < -7).map((q, i, a) => [q[0], [-2, -1, 0, 1, 2].reduce((t, d) => t + a[Math.max(0, Math.min(a.length - 1, i + d))][1], 0) / 5]), m = bucket(pts[4][0], pts[4][1]);
   const w = 0.65;
   for (let i = 0; i + 1 < pts.length; i++) {
     const [ax, az] = pts[i], [bx, bz] = pts[i + 1], dx = bx - ax, dz = bz - az, L = hyp(dx, dz), ux = dx / L, uz = dz / L, nx = -uz, nz = ux, n = Math.max(1, Math.round(L / 0.26));
