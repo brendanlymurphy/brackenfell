@@ -196,7 +196,7 @@ const Kit = (() => {
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
     m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
-    m.roughnessNode = (orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough)).mul(float(1).sub(lampDay.mul(0.7)));
+    m.roughnessNode = max((orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough)).mul(float(1).sub(lampDay.mul(0.7))), (TEST && TEST.rough === 0) || isGlass(d) ? float(0) : float(0.74).mul(float(1).sub(step(0.5, zone))).mul(float(1).sub(metal)).mul(float(1).sub(lampDay)));      // [l1] dry outdoor kit surfaces never go glossy
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
     const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back
@@ -209,6 +209,7 @@ const Kit = (() => {
       const dayK = smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(0.97).add(0.03);       // the floor follows the daylight: constant, it left roofs and walls glowing pale at night while the ground went dark
       const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
+      if (!(TEST && TEST.shade === 0)) em = em.add(alb.mul(U.ambSky.mul(0.3).add(U.sunCol.mul(0.035))).mul(vec3(0.85, 0.95, 1.1)).mul(outM).mul(wallK).mul(skyVis));      // [l1] shaded upright faces keep a floor of sky and bounce (black plank walls)
       if (!(TEST && TEST.shade === 0)) em = em.mul(mix(vec3(1), vec3(0.74, 0.86, 1.1), outM.mul(wallK).mul(skyVis).mul(float(1).sub(lampK))));      // [l1] shade is sky: upright faces out of the sun go cooler and darker
     }
     // [l1] contact and eave occlusion on outdoor walls (kg.x: metres above the ground, kg.y: metres below the eaves; 8 = none): a wall darkens where it meets the ground and under its eaves, sun included

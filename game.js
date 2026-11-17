@@ -972,7 +972,8 @@ function surfaceMaterial(mode) {
   m.colorNode = albedo.mul(sootK).mul(unlit.oneMinus());
   m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit)).add(mode === 'static' && !(TEST && TEST.gloss === 0) ? SH.pointSpec(positionWorld, N, normalize(SH.U.camPos.sub(positionWorld)), step(TSL.abs(mm.x.sub(MAT.PLANKS)), 0.5).mul(0.5), zone).mul(0.16) : vec3(0));      // [l1] worn planks catch the firelight
   m.normalNode = transformNormalToView(N);
-  m.roughnessNode = nt.w; m.metalnessNode = float(0);
+  m.roughnessNode = (TEST && TEST.rough === 0) ? nt.w : TSL.max(nt.w, float(0.8).mul(float(1).sub(step(0.5, zone))));      // [l1] nothing dry out of doors sparkles: a rough floor on every static and rigid surface
+  m.metalnessNode = float(0);
   return m;
 }
 // leaf cards: cut-out, lit from both sides, a little sun shining through
@@ -1057,6 +1058,7 @@ function terrainMaterial() {
     // in rain, broad shallow pools also lie over cobbles and packed road whatever the stones' height
     pud.assign(max(pud, smoothstep(0.50, 0.60, mn2.a.mul(0.55).add(mn3.b.mul(0.15)).add(mn.r.mul(0.30))).mul(wet).mul(hard).mul(smoothstep(0.02, 0.07, slope).oneMinus()).mul(farK.mul(0.5).oneMinus())));
     const damp = sat(s2.g.mul(0.7).add(pud).add(wet.mul(0.7))).toVar();
+    if (!(TEST && TEST.rough === 0)) G0.r.assign(max(G0.r, 0.86));      // [l1] dry ground never glints; water and wet cobbles below still shine
     G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, mix(float(0.45), 0.24, wet), damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
     If(wRock.greaterThan(0.004), () => {
       const q = samp(MAT.ROCK, uvR, dRx, dRy), q2 = samp(MAT.ROCK, uvR2, dR2x, dR2y), kx = Nv.z.mul(Nv.z).div(Nv.x.mul(Nv.x).add(Nv.z.mul(Nv.z)).add(0.0001)).toVar();       // kx: weight of the x-y plane (faces looking along z)
@@ -1801,7 +1803,7 @@ const Kit = (() => {
     const ao = (orm && d.aoInOrm) ? orm.r : float(1);
     m.colorNode = vec4(alb, d.opacity < 1 ? base.a.mul(d.opacity) : base.a);
     if (d.normalMap) m.normalNode = normalMap(texture(d.normalMap, uvn), vec2(d.nScale, d.nScale));
-    m.roughnessNode = (orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough)).mul(float(1).sub(lampDay.mul(0.7)));
+    m.roughnessNode = max((orm ? orm.g.mul(d.roughMul === undefined ? 1 : d.roughMul).clamp(0.08, 1) : float(d.rough)).mul(float(1).sub(lampDay.mul(0.7))), (TEST && TEST.rough === 0) || isGlass(d) ? float(0) : float(0.74).mul(float(1).sub(step(0.5, zone))).mul(float(1).sub(metal)).mul(float(1).sub(lampDay)));      // [l1] dry outdoor kit surfaces never go glossy
     m.metalnessNode = float(0);
     const aoR = rm ? rm.x : float(1);
     const pls = SH.pointLights(wp, N, zone, 0.25).toVar(), lampK = SH.sat(dot(pls, vec3(0.3333)).mul(3));      // [l1] lampK: where a lantern lights the wall, shade tint and contact occlusion step back
@@ -1814,6 +1816,7 @@ const Kit = (() => {
       const dayK = smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(0.97).add(0.03);       // the floor follows the daylight: constant, it left roofs and walls glowing pale at night while the ground went dark
       const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
+      if (!(TEST && TEST.shade === 0)) em = em.add(alb.mul(U.ambSky.mul(0.3).add(U.sunCol.mul(0.035))).mul(vec3(0.85, 0.95, 1.1)).mul(outM).mul(wallK).mul(skyVis));      // [l1] shaded upright faces keep a floor of sky and bounce (black plank walls)
       if (!(TEST && TEST.shade === 0)) em = em.mul(mix(vec3(1), vec3(0.74, 0.86, 1.1), outM.mul(wallK).mul(skyVis).mul(float(1).sub(lampK))));      // [l1] shade is sky: upright faces out of the sun go cooler and darker
     }
     // [l1] contact and eave occlusion on outdoor walls (kg.x: metres above the ground, kg.y: metres below the eaves; 8 = none): a wall darkens where it meets the ground and under its eaves, sun included
@@ -2287,13 +2290,13 @@ const Grass = { mesh: null, N: 0, range: 0 };
             p0.y.add(t.mul(height).mul(s).mul(sqrt(float(1).sub(bl.mul(bl).mul(t))))),
             p0.z.add(bend.y.mul(tt).mul(height)).add(dirv.x.mul(b.x).mul(wide).mul(s))));
           // colour matches the terrain tint below it
-          const base = vec3(0.062, 0.090, 0.026).mul(SH.groundTint(mn, mn2)).mul(mix(1.0, 0.72, s2.r)).toVar();
-          base.mulAssign(mix(vec3(0.90, 1.05, 0.84), vec3(1.14, 0.98, 0.78), r1.z));                           // fresh green to yellowing, tuft by tuft
+          const base = vec3(0.062, 0.082, 0.032).mul(SH.groundTint(mn, mn2)).mul(mix(1.0, 0.72, s2.r)).toVar();
+          base.mulAssign(mix(vec3(0.92, 1.02, 0.86), vec3(1.08, 0.98, 0.82), r1.z));                           // fresh green to yellowing, tuft by tuft
           base.assign(mix(base, vec3(0.16, 0.145, 0.045), smoothstep(0.75, 1.0, r1.w).mul(0.6)));
           const sheen = sat(wv.mul(2.4)).mul(U.wind.z).mul(0.30).add(1);                                      // a passing gust shows as a paler band
-          const tip = base.mul(vec3(1.32, 1.30, 1.05)).mul(sheen).toVar();
+          const tip = base.mul(vec3(1.24, 1.22, 1.02)).mul(sheen).toVar();
           tip.assign(mix(tip, vec3(0.40, 0.33, 0.15).mul(mn2.r.mul(0.5).add(0.75)), seedy));
-          base.assign(mix(base, vec3(0.30, 0.21, 0.06), field)); tip.assign(mix(tip, vec3(0.72, 0.52, 0.17), field));
+          base.assign(mix(base, vec3(0.21, 0.165, 0.085), field)); tip.assign(mix(tip, vec3(0.50, 0.40, 0.21), field));      // [l1] ripe wheat is a dull gold-buff, not lemon
           const flower = step(float(1 - 0.006).sub(smoothstep(0.55, 0.80, mn2.b).mul(0.05)), r0.w).mul(field.oneMinus()).mul(step(0.5, t)).mul(0.85);
           const fc = mix(mix(vec3(0.95, 0.9, 0.85), vec3(0.95, 0.75, 0.15), step(0.5, r1.x)), vec3(0.55, 0.35, 0.85), step(0.75, r1.y));
           const c = mix(mix(base.mul(0.55), tip, t), fc, flower).toVar();
@@ -2977,6 +2980,7 @@ const Chars = (() => {
       const day = float(1).sub(H.uZone).mul(H.uLight).add(H.uZone.mul(0.45)), Hs3 = V.add(V.add(vec3(0.0, 1.0, 0.0)).normalize()).normalize(), glint = TSL.pow(TSL.max(N.dot(Hs), 0), float(160)).mul(0.9).mul(TSL.min(SH.U.sunCol.x.mul(1.4), 1)).add(TSL.pow(TSL.max(N.dot(Hs2), 0), float(24)).mul(0.5)).add(TSL.pow(TSL.max(N.dot(Hs3), 0), float(200)).mul(1.1)).mul(day).mul(eyeW);      // wet: a sharp window of light as well as the soft one
       emis = emis.add(vec3(1, 0.97, 0.9).mul(glint));
     }
+    if (!(TEST && TEST.shade === 0)) { const oM = float(1).sub(TSL.step(0.5, H.uZone)), fl_ = SH.U.ambSky.dot(vec3(0.3333)).mul(0.3).add(SH.U.sunCol.dot(vec3(0.3333)).mul(0.035)).mul(oM).mul(H.uLight); emis = TSL.max(emis, albedo.mul(fl_.mul(0.9)).add(vec3(1.0, 0.8, 0.66).mul(fl_.mul(0.16)))); }      // [l1] people out of the sun keep a floor of sky and bounce that keeps their own tone (dark skin lost its features)
     m.emissiveNode = emis;
     const VIS = S.vis && S.bodies[H.body] && S.bodies[H.body].hasVid ? S.vis : null; H.hasVis = !!VIS;
     // [ch1] teeth sit behind the lips: the upper row up under the upper lip, the lower row down and back, so they show on wide shapes only
@@ -11519,6 +11523,7 @@ function buildWalls(bucket) {
     for (const [s, e] of [[a0, a1], [b0, b1]]) { bx(MAT.STONE, [0.9, 0.87, 0.82], 0.7, s, gA - 1.0, V0, e, Y - 0.16, V1, 4 | 8); { const p = P(s, V0), q = P(e, V1); col(Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1]), gA - 1.0, Y); }
       bx(MAT.STONE, [0.84, 0.82, 0.78], 0.6, s - 0.08, Y - 0.34, V0 - 0.08, e + 0.08, Y - 0.16, V1 + 0.08, 4); }
     bx(MAT.TIMBER, dark, 0.5, a1 - 0.05, Y - 0.62, V0 + 0.15, b0 + 0.05, Y - 0.16, V1 - 0.15, 4);          // the lintel under the deck: the arch is 3.8 m wide and 2.7 m high, the road's width plus a cart's
+    { const p = P(a1, V0), q = P(b0, V1); (World.covers || (World.covers = [])).push({ x0: Math.min(p[0], q[0]), z0: Math.min(p[1], q[1]), x1: Math.max(p[0], q[0]), z1: Math.max(p[1], q[1]), y: Y, dark: true }); }      // [l1] the ground under a gate arch is in shade
     for (const v of [V0 + 0.1, V1 - 0.1]) { const p = P(a1 - 0.2, v), q = P(b0 + 0.2, v); K.beam([p[0], Y - 0.4, p[1]], [q[0], Y - 0.4, q[1]], 0.3, 0.46); }
     // deck over the whole tower (v from -0.5 to 3.4), the open gate leaves (hinged back flat on the faces), a plaque
     { const q0 = P(a0, V0), q1 = P(b1, V1); K.deck(Math.min(q0[0], q1[0]), Math.min(q0[1], q1[1]), Math.max(q0[0], q1[0]), Math.max(q0[1], q1[1]), Y); }

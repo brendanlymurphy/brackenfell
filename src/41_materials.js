@@ -56,7 +56,8 @@ function surfaceMaterial(mode) {
   m.colorNode = albedo.mul(sootK).mul(unlit.oneMinus());
   m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit)).add(mode === 'static' && !(TEST && TEST.gloss === 0) ? SH.pointSpec(positionWorld, N, normalize(SH.U.camPos.sub(positionWorld)), step(TSL.abs(mm.x.sub(MAT.PLANKS)), 0.5).mul(0.5), zone).mul(0.16) : vec3(0));      // [l1] worn planks catch the firelight
   m.normalNode = transformNormalToView(N);
-  m.roughnessNode = nt.w; m.metalnessNode = float(0);
+  m.roughnessNode = (TEST && TEST.rough === 0) ? nt.w : TSL.max(nt.w, float(0.8).mul(float(1).sub(step(0.5, zone))));      // [l1] nothing dry out of doors sparkles: a rough floor on every static and rigid surface
+  m.metalnessNode = float(0);
   return m;
 }
 // leaf cards: cut-out, lit from both sides, a little sun shining through
@@ -141,6 +142,7 @@ function terrainMaterial() {
     // in rain, broad shallow pools also lie over cobbles and packed road whatever the stones' height
     pud.assign(max(pud, smoothstep(0.50, 0.60, mn2.a.mul(0.55).add(mn3.b.mul(0.15)).add(mn.r.mul(0.30))).mul(wet).mul(hard).mul(smoothstep(0.02, 0.07, slope).oneMinus()).mul(farK.mul(0.5).oneMinus())));
     const damp = sat(s2.g.mul(0.7).add(pud).add(wet.mul(0.7))).toVar();
+    if (!(TEST && TEST.rough === 0)) G0.r.assign(max(G0.r, 0.86));      // [l1] dry ground never glints; water and wet cobbles below still shine
     G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, mix(float(0.45), 0.24, wet), damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
     If(wRock.greaterThan(0.004), () => {
       const q = samp(MAT.ROCK, uvR, dRx, dRy), q2 = samp(MAT.ROCK, uvR2, dR2x, dR2y), kx = Nv.z.mul(Nv.z).div(Nv.x.mul(Nv.x).add(Nv.z.mul(Nv.z)).add(0.0001)).toVar();       // kx: weight of the x-y plane (faces looking along z)
