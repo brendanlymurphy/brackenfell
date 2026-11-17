@@ -10,6 +10,8 @@ const PLOT_ROWS = [
   { name: 'placeE', ids: ['store'], trades: ['stable'], axis: 'x' },
   { name: 'chapelW', ids: ['in.12', 'in.13', 'in.45', 'in.32'], trades: ['garden', 'woodyard', 'hens', 'hives'], axis: 'x' },
   { name: 'chapelE', ids: ['in.46', 'in.15', 'in.16', 'in.33'], trades: ['woodyard', 'hens', 'garden', 'hives'], axis: 'x' },
+  { name: 'eastS', ids: ['in.86', 'in.87', 'in.88', 'in.89'], trades: ['garden', 'hens', 'woodyard', 'hives'] },
+  { name: 'eastN', ids: ['in.81', 'in.82', 'in.83', 'in.84', 'in.85'], trades: ['pigs', 'woodyard', 'garden', 'hens', 'washing'] },
   { name: 'westS', ids: ['in.08', 'in.07', 'in.06', 'in.42'], trades: ['dyer', 'hens', 'woodyard', 'washing'] }
 ];
 let _PLOTS = null;
