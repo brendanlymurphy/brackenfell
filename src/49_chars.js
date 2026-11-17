@@ -157,7 +157,8 @@ const Chars = (() => {
         if (body === 'f_child') wear.hat = 'coif';      // [ch1] Pip: a linen cap over the plaits
         if (/^(f_(child|girl|maid|weaver|herbalist|farmer)|m_(farmer|youth|fisher|innkeeper|hunter|boy|smith))$/.test(body)) { wear.kirtle = true; wear.cuffs = false; }      // [ch1] these bodies are dressed in a kirtle shell (garb.py kirtle_pieces), not a stock tunic
         if (def.apron) { if (guard) wear.tabard = true; else if (!(fem && wear.kirtle) || (body !== 'f_farmer' && body !== 'f_girl')) { wear.apron = true; wear.straps = true; wear.apronCut = ['', '_half', '_long'][Math.floor(r(12) * 3)]; } } else if (body === 'f_herbalist') { wear.apron = true; wear.straps = true; wear.apronCut = ['', '_half', '_long'][Math.floor(r(12) * 3)]; }      // [ch1] aprons for trades only, three cuts
-        if (def.cloakBack || (!def.sched && r(6) < 0.12) || (def.house && r(6) < 0.1)) wear.cloak = true;
+        { const rc = ((Math.imul(h ^ 0x9e3779b9, 0x85ebca6b) >>> 9) % 97) / 97;      // [ch4] r(6) reads bits 30 and up of a 32-bit number: it was never above 0.03, so every housed resident wore the cloak. A draw of its own.
+          if (def.cloakBack || (!def.sched && rc < 0.12) || (def.house && rc < 0.1)) wear.cloak = true; }
         const WC = { leather: acc.col[1], hat: acc.col[0], metal: acc.col[2], apron: def.apron ? sq(def.apron) : pal[Math.floor(r(8) * pal.length)], cloak: def.cloak ? sq(def.cloak) : pal[Math.floor(r(9) * pal.length)], tabard: def.apron ? sq(def.apron) : [0.3, 0.1, 0.1],
           linen: [0.47, 0.44, 0.36].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: /child/.test(body) ? [0.30, 0.27, 0.21] : top ? top.map(v => v * 0.9) : pal[Math.floor(r(11) * pal.length)], teeth: [0.52, 0.46, 0.34], tongue: [0.2, 0.07, 0.07] };
         if (wear.kirtle) {      // [ch1] dyes: woad grey-blue and madder, never bright; aprons undyed grey-cream linen

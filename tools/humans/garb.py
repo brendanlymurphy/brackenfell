@@ -82,6 +82,10 @@ def new_mesh(name, verts, faces, fit, slot, mat, colors=None, group_override=Non
         for (co, idx, dist) in fit.kd.find_n(Vector(v.co), 4):
             k = 1.0 / (dist + 0.01)
             for bn, bw in fit.src[idx].items(): w[bn] = w.get(bn, 0) + bw * k
+        if not w:                                          # [ch4] the four nearest had no weights at all: the exporter would bind the vertex to "neutral_bone", which never moves (metre-long shards when the body sits). Look further.
+            for (co, idx, dist) in fit.kd.find_n(Vector(v.co), 48):
+                if fit.src[idx]:
+                    w = dict(fit.src[idx]); break
         if group_override: w = {group_override: 1.0}
         top = sorted(w.items(), key=lambda t: -t[1])[:4]; tot = sum(x[1] for x in top) or 1
         for bn, bw in top:
