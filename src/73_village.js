@@ -37,14 +37,14 @@ function buildVillage() {
         if (o.stone) {
           m.push().T((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2).RY(-Math.atan2(z1 - z0, x1 - x0)); const l = hyp(x1 - x0, z1 - z0) / 2 + 0.05;
           m.mat(MAT.STONE, [0.95, 0.95, 0.95], 0.8); m.grad = [1, 0.65]; m.box(-l, -0.7, -0.24, l, 0.85, 0.24, 4); m.grad = null; m.mat(MAT.STONE, [0.8, 0.8, 0.8], 0.6); m.box(-l, 0.85, -0.29, l, 0.95, 0.29);
-          addBoxCollider(m, -l, -0.25, l, 0.25, -0.3, 1.2); m.pop();
+          addBoxCollider(m, -l, -0.25, k === n - 1 && i < pts.length - 2 ? l - 0.3 : l, 0.25, -0.3, 1.2); m.pop();      /* [fx3] a corner's collider stops at the next wall's face */
         } else {
           m.mat(MAT.TIMBER, COL.timber);
           m.push().T(x0, y0, z0); m.cbox(0, -0.4, 0, 0.11, hgt + 0.4, 0.11, 4); m.pop();
           if (k === n - 1 && i === pts.length - 2) { m.push().T(x1, y1, z1); m.cbox(0, -0.4, 0, 0.11, hgt + 0.4, 0.11, 4); m.pop(); }
           for (const hh of [0.42, 0.86]) m.beam([x0, y0 + hh * hgt / 1.05, z0], [x1, y1 + hh * hgt / 1.05, z1], 0.045, 0.1);
           m.push().T((x0 + x1) / 2, Math.min(y0, y1), (z0 + z1) / 2).RY(-Math.atan2(z1 - z0, x1 - x0)); const l = hyp(x1 - x0, z1 - z0) / 2;
-          addBoxCollider(m, -l, -0.07, l, 0.07, -0.2, 1.2); m.pop();
+          addBoxCollider(m, -l, -0.05, l, 0.05, -0.2, 1.2); m.pop();
         }
       }
     }

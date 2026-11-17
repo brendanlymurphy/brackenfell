@@ -63,7 +63,7 @@ function wWall(m, pts, o) {
       if (o.gaps && o.gaps.some(g => hyp((x0 + x1) / 2 - g[0], (z0 + z1) / 2 - g[1]) < 1.3)) continue;
       m.m1 = 0; m.ao = 1; m.grad = null; m.push().T((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2).RY(-Math.atan2(z1 - z0, x1 - x0)); const l = hyp(x1 - x0, z1 - z0) / 2 + 0.04, hh = hgt * (0.85 + 0.3 * ((mid * 7.3) % 1));
       m.mat(MAT.STONE, [0.9, 0.9, 0.88], 0.8); m.box(-l, -0.5, -0.22, l, hh, 0.22, 4); m.mat(MAT.MOSS, [0.8, 0.85, 0.75], 0.8); m.box(-l * 0.9, hh, -0.2, l * 0.9, hh + 0.06, 0.2);
-      addBoxCollider(m, -l, -0.23, l, 0.23, -0.5, hh + 0.1); m.pop();
+      addBoxCollider(m, -l, -0.23, k === n - 1 && i < pts.length - 2 ? l - 0.28 : l, 0.23, -0.5, hh + 0.1); m.pop();      /* [fx3] a corner's collider stops at the next wall's face */
     }
   }
 }
@@ -269,7 +269,7 @@ WBUILD.burnt = (p, m, R) => {
     mm.mat(MAT.PLAIN, [0.12, 0.11, 0.1]); for (let i = 0; i < 9; i++) mm.ball((R() - 0.5) * 4.6, 0.12, (R() - 0.5) * 3.2, 0.4 + R() * 0.7, 0.12, 0.35 + R() * 0.5, 7, 3);
     mm.mat(MAT.STONE, [0.5, 0.48, 0.45], 0.6); for (let i = 0; i < 7; i++) mm.ball((R() - 0.5) * 5.2, 0.15, (R() - 0.5) * 4, 0.16 + R() * 0.12, 0.11, 0.14 + R() * 0.1, 6, 3);
     addBoxCollider(mm, -w / 2, d / 2 - 0.2, w / 2, d / 2 + 0.05, 0, 1.4); addBoxCollider(mm, -w / 2 - 0.1, -d / 2, -w / 2 + 0.15, d / 2, 0, 1.1); addBoxCollider(mm, w / 2 - 0.9, d / 2 - 1.1, w / 2 + 0.3, d / 2 + 0.3, 0, 3.4);
-    for (const [x, z] of [[-w / 2, -d / 2], [-w / 2, d / 2], [w / 2, -d / 2], [w / 2, d / 2]]) addCircleCollider(mm, x, z, 0.2, 0, 2);
+    for (const [x, z] of [[w / 2, -d / 2]]) addCircleCollider(mm, x, z, 0.2, 0, 2);      /* [fx3] the other three corner posts stand inside the walls' colliders */
   });
   // a charred barrel and crate by the back wall, a blackened wagon wheel
   wPut(m, p, 3.6, 3.6, 0, mm => { mm.mat(MAT.BARK, [0.2, 0.17, 0.15], 0.6); mm.cyl(0, 0, 0, 0.32, 0.34, 0.86, 10, 2); mm.mat(MAT.METAL, [0.12, 0.1, 0.09]); for (const y of [0.15, 0.7]) mm.lathe([[0.345, y], [0.345, y + 0.04]], 10, 0); addCircleCollider(mm, 0, 0, 0.35, 0, 0.9); });

@@ -69,6 +69,7 @@ function buildLanes(bucket) {
       const g = gy(u, wz - out * 0.5);
       if (KEEP.hit(u, wz + out * 0.45, 0.3) || KEEP.hit(u, wz + out * 0.9, 0.2)) continue;
       if (kind === 'barrow' && (KEEP.hit(u, wz + out * 0.5, 1.0) || World.colliders.some(c => c.hx !== undefined && c.y1 - c.y0 > 6 && Math.abs((u - c.x) * c.ax + (wz + out * 0.5 - c.z) * c.az) < c.hx + 0.9 && Math.abs((u - c.x) * c.bx + (wz + out * 0.5 - c.z) * c.bz) < c.hz + 0.9))) continue;      // [fx3] a barrow's collider must not reach into a house body
+      if (kind === 'bench' && World.colliders.some(c => c.r !== undefined && c.r > 1.2 && Math.hypot(u - c.x, wz + out * 0.3 - c.z) < c.r + 0.7)) continue;      // [fx3] no bench inside a big tree's root bank
       const m = M(u, wz);
       if (kind === 'butt') { m.push().T(u, g, wz + out * 0.42).RY(rr() * 6); Props.barrel(m, 0.31, 0.88); m.pop(); m.mat(MAT.TIMBER, dark, 0.5); m.beam([u, g + 1.7, wz + out * 0.1], [u, g + 1.0, wz + out * 0.42], 0.05, 0.05);          // a down-pipe from the eaves into it
         m.push().T(u + 0.55, g, wz + out * 0.4); m.mat(MAT.PLANKS, wood, 0.5); m.cbox(0, 0, 0, 0.28, 0.3, 0.28, 0); addCircleCollider(m, 0, 0, 0.2, 0, 0.3); m.pop(); }

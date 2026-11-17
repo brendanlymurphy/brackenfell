@@ -25,7 +25,7 @@ function rtKit(bucket, touch) {
     h = h || 1.0; const P = alongZ ? (u, v) => [v, u] : (u, v) => [u, v], n = Math.max(1, Math.round(Math.abs(a1 - a0) / 1.9));
     for (const k of [0.5, h]) { const p = P(a0, c), q = P(a1, c), m = M(p[0], p[1]); m.mat(MAT.TIMBER, dark, 0.5); m.beam([p[0], y + k, p[1]], [q[0], y + k, q[1]], alongZ ? 0.06 : 0.05, alongZ ? 0.05 : 0.07); if (alongZ) { /* flat beam seen from the side */ } }
     for (let i = 0; i <= n; i++) { const u = a0 + (a1 - a0) * i / n, p = P(u, c); K.post(p[0], p[1], y - 0.1, y + h + 0.08, 0.1, true); }
-    const p = P(a0, c - 0.07), q = P(a1, c + 0.07); K.col(p[0], p[1], q[0], q[1], y - 0.05, y + h + 0.15);
+    const p = P(a0, c - 0.05), q = P(a1, c + 0.05); K.col(p[0], p[1], q[0], q[1], y - 0.05, y + h + 0.15);
   };
   // steps along `axis` ('x' or 'z') from a (height ya) to b (height yb), `c0`..`c1` across. Open treads on two stringers, a handrail each side, side colliders. returns the floor entry
   K.stair = (axis, a, ya, b, yb, c0, c1, o) => {
