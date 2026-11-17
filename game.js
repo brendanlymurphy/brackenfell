@@ -967,7 +967,7 @@ function surfaceMaterial(mode) {
   // rooms: occlusion near floor, ceiling and corners, soot over the hearth (40b_depth.js); only generated room geometry and people carry a zone
   const rm = (mode === 'static' || mode === 'skin') ? SH.room(positionWorld, N, zone).toVar() : null, aoR = rm ? rm.x : float(1);
   let amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35))).add(SH.winLight(positionWorld, N, zone).mul(aoR.mul(0.6).add(0.4)));      // [l1] window light (40c_light.js)
-  if (!(TEST && TEST.shade === 0)) amb = amb.add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)).mul(float(1).sub(step(0.5, zone))).mul(tint.a.mul(0.5).add(0.5)));      // [l1] shade keeps a floor of sky and bounce: bark, posts and fences do not go black out of the sun
+  if (!(TEST && TEST.shade === 0)) amb = amb.add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)).mul(float(1).sub(step(0.5, zone))).mul(tint.a.mul(0.5).add(0.5))).add(vec3(0.95, 0.82, 0.68).mul(SH.U.ambSky.dot(vec3(0.3333)).mul(0.3).add(SH.U.sunCol.dot(vec3(0.3333)).mul(0.035))).mul(0.12).mul(float(1).sub(step(0.5, zone))));      // [l1] shade keeps a floor of sky and bounce: bark, posts and fences do not go black out of the sun
   const sootK = rm ? mix(vec3(1), vec3(0.22, 0.21, 0.2), rm.z.mul(0.9)) : vec3(1);
   m.colorNode = albedo.mul(sootK).mul(unlit.oneMinus());
   m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit)).add(mode === 'static' && !(TEST && TEST.gloss === 0) ? SH.pointSpec(positionWorld, N, normalize(SH.U.camPos.sub(positionWorld)), step(TSL.abs(mm.x.sub(MAT.PLANKS)), 0.5).mul(0.5), zone).mul(0.16) : vec3(0));      // [l1] worn planks catch the firelight
@@ -1816,7 +1816,7 @@ const Kit = (() => {
       const dayK = smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(0.97).add(0.03);       // the floor follows the daylight: constant, it left roofs and walls glowing pale at night while the ground went dark
       const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
-      if (!(TEST && TEST.shade === 0)) em = em.add(alb.mul(U.ambSky.mul(0.3).add(U.sunCol.mul(0.035))).mul(vec3(0.85, 0.95, 1.1)).mul(outM).mul(wallK).mul(skyVis));      // [l1] shaded upright faces keep a floor of sky and bounce (black plank walls)
+      if (!(TEST && TEST.shade === 0)) em = em.add(alb.mul(U.ambSky.mul(0.3).add(U.sunCol.mul(0.035))).mul(vec3(0.85, 0.95, 1.1)).mul(outM).mul(wallK).mul(skyVis)).add(vec3(0.95, 0.82, 0.68).mul(U.ambSky.dot(vec3(0.3333)).mul(0.3).add(U.sunCol.dot(vec3(0.3333)).mul(0.035))).mul(0.2).mul(outM).mul(wallK).mul(skyVis));      // [l1] shaded upright faces keep a floor of sky and bounce, plus a little absolute light so near-black planks still read
       if (!(TEST && TEST.shade === 0)) em = em.mul(mix(vec3(1), vec3(0.74, 0.86, 1.1), outM.mul(wallK).mul(skyVis).mul(float(1).sub(lampK))));      // [l1] shade is sky: upright faces out of the sun go cooler and darker
     }
     // [l1] contact and eave occlusion on outdoor walls (kg.x: metres above the ground, kg.y: metres below the eaves; 8 = none): a wall darkens where it meets the ground and under its eaves, sun included
