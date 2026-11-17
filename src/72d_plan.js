@@ -216,7 +216,7 @@ function pBoxOK(P, room, b, o, flat) {
   if (b.min[0] < a.x0 - tol || b.max[0] > a.x1 + tol || b.min[2] < a.z0 - tol || b.max[2] > a.z1 + tol) return 'wall';
   if (b.cb && (b.cb.min[0] < a.x0 - 0.04 || b.cb.max[0] > a.x1 + 0.04 || b.cb.min[1] < a.z0 - 0.04 || b.cb.max[1] > a.z1 + 0.04)) return 'wall collider';
   if (b.max[1] > L.y + L.H + 0.02 && !o.tall) return 'ceiling';
-  if (flat) return '';
+  if (flat) { for (const it of P.items) if (it.k === k && it.kind === 'rug' && Math.min(b.max[0], it.x1) - Math.max(b.min[0], it.x0) > 0.05 && Math.min(b.max[2], it.z1) - Math.max(b.min[2], it.z0) > 0.05) return 'rug ' + it.id; return ''; }          // [fx2] two rugs do not lie on each other
   const r = { x0: b.min[0], x1: b.max[0], z0: b.min[2], z1: b.max[2] }, lifted = (o.lift || 0) > 0.1;
   if (!lifted) for (const it of P.items) {
     if (it.k !== k || !P_SOLID[it.kind]) continue; const ib = it.bx;

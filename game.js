@@ -6793,7 +6793,7 @@ function pBoxOK(P, room, b, o, flat) {
   if (b.min[0] < a.x0 - tol || b.max[0] > a.x1 + tol || b.min[2] < a.z0 - tol || b.max[2] > a.z1 + tol) return 'wall';
   if (b.cb && (b.cb.min[0] < a.x0 - 0.04 || b.cb.max[0] > a.x1 + 0.04 || b.cb.min[1] < a.z0 - 0.04 || b.cb.max[1] > a.z1 + 0.04)) return 'wall collider';
   if (b.max[1] > L.y + L.H + 0.02 && !o.tall) return 'ceiling';
-  if (flat) return '';
+  if (flat) { for (const it of P.items) if (it.k === k && it.kind === 'rug' && Math.min(b.max[0], it.x1) - Math.max(b.min[0], it.x0) > 0.05 && Math.min(b.max[2], it.z1) - Math.max(b.min[2], it.z0) > 0.05) return 'rug ' + it.id; return ''; }          // [fx2] two rugs do not lie on each other
   const r = { x0: b.min[0], x1: b.max[0], z0: b.min[2], z1: b.max[2] }, lifted = (o.lift || 0) > 0.1;
   if (!lifted) for (const it of P.items) {
     if (it.k !== k || !P_SOLID[it.kind]) continue; const ib = it.bx;
@@ -7716,14 +7716,14 @@ PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 co
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.36, 0.2, 0.16], [0.22, 0.27, 0.32], [0.5, 0.4, 0.2], [0.55, 0.5, 0.4], [0.3, 0.34, 0.22], [0.4, 0.33, 0.25], [0.25, 0.22, 0.2]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.13, -l * 0.5, -0.115, x + 0.13, 0.0, -0.075); m.box(x - 0.15, -l, -0.125, x + 0.15, -l * 0.5, -0.08); m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.36, 0.2, 0.16], [0.22, 0.27, 0.32], [0.5, 0.4, 0.2], [0.55, 0.5, 0.4], [0.3, 0.34, 0.22], [0.4, 0.33, 0.25], [0.25, 0.22, 0.2]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; for (let q = 0; q < 4; q++) { const x0 = x - 0.15 + q * 0.075, d = 0.075 + (q % 2) * 0.03, v = 0.9 + (q % 3) * 0.06; m.mat(MAT.CLOTH, [cl[0] * v, cl[1] * v, cl[2] * v], 0.5); m.box(x0, -l * 0.5, -0.04 - d, x0 + 0.075, 0.0, -0.075); m.box(x0 - 0.005 * q, -l, -0.045 - d - 0.01, x0 + 0.075 + 0.005 * q, -l * 0.5, -0.08); } m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2 - 0.04, h - 0.04, -0.09, w / 2 + 0.04, h + 0.02, -0.03);
   const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.62, c[1] * 0.62, c[2] * 0.62], 0.6); m.box(-w / 2, 0.05, -0.07, w / 2, h, -0.04); m.mat(MAT.CLOTH, [c[0] * 0.45, c[1] * 0.45, c[2] * 0.45], 0.6); m.box(-w / 2 + 0.01, 0, -0.068, w / 2 - 0.01, 0.05, -0.042);
-  m.mat(MAT.CLOTH, [0.46, 0.38, 0.24], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
-  m.box(-0.07, h * 0.3, -0.08, 0.07, h * 0.75, -0.04); m.box(-w * 0.22, h * 0.5, -0.08, w * 0.22, h * 0.56, -0.04);
+  m.mat(MAT.CLOTH, [0.46, 0.38, 0.24], 0.6); m.box(-w / 2 + 0.06, 0.1, -0.075, w / 2 - 0.06, 0.13, -0.04); m.box(-w / 2 + 0.06, h - 0.14, -0.075, w / 2 - 0.06, h - 0.11, -0.04);
+  m.mat(MAT.CLOTH, [c[0] * 0.5, c[1] * 0.5, c[2] * 0.5], 0.6); for (let i = 1; i < 6; i++) m.box(-w / 2 + 0.06, h * i / 6, -0.072, w / 2 - 0.06, h * i / 6 + 0.025, -0.043);          // [fx2] woven bands, not a cross
 };
 // a niche in a wall (crypt, nave): dark recess with an arch lintel, a candle that glows without a light, a skull or an urn
 PD.niche = (R, urn) => (m, hh) => {
@@ -8218,7 +8218,7 @@ PD.ware = {
   lantern: (m, R) => { m.mat(MAT.METAL, COL.black); m.box(-0.055, 0, -0.055, 0.055, 0.015, 0.055); m.box(-0.06, 0.2, -0.06, 0.06, 0.225, 0.06); for (const sx of [-1, 1]) for (const sz of [-1, 1]) m.box(sx * 0.05 - 0.005, 0.015, sz * 0.05 - 0.005, sx * 0.05 + 0.005, 0.2, sz * 0.05 + 0.005); m.box(-0.02, 0.225, -0.005, 0.02, 0.27, 0.005); emit(m, 0.6, () => { m.mat(MAT.PLAIN, [1, 0.7, 0.3]); m.box(-0.035, 0.03, -0.035, 0.035, 0.12, 0.035, 4 | 8); }); },
   flask: (m, R) => { m.mat(MAT.PLAIN, R.pick(GL)); m.lathe([[0.01, 0], [0.07, 0.02], [0.085, 0.08], [0.05, 0.14], [0.022, 0.2], [0.024, 0.24]], 8, 1); m.mat(MAT.PLANKS, COL.wood); m.cyl(0, 0.235, 0, 0.022, 0.022, 0.03, 6, 2); },
   tall: (m, R) => { m.mat(MAT.PLAIN, R.pick(GL)); m.lathe([[0.01, 0], [0.04, 0.01], [0.042, 0.2], [0.02, 0.27], [0.02, 0.32]], 8, 1); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(0, 0.315, 0, 0.02, 0.02, 0.035, 6, 2); },
-  jar: (m, R) => { m.mat(MAT.PLAIN, R.pick([COL.clay, [0.5, 0.42, 0.3], [0.3, 0.3, 0.32], [0.62, 0.55, 0.4]])); m.lathe([[0.01, 0], [0.075, 0.01], [0.09, 0.08], [0.07, 0.15], [0.05, 0.17]], 8, 1); m.mat(MAT.CLOTH, [0.6, 0.55, 0.42], 0.5); m.cyl(0, 0.17, 0, 0.055, 0.055, 0.025, 7, 2); },
+  jar: (m, R) => { m.mat(MAT.PLAIN, R.pick([[0.5, 0.37, 0.26], [0.5, 0.42, 0.3], [0.3, 0.3, 0.32], [0.62, 0.55, 0.4]])); m.lathe([[0.01, 0], [0.075, 0.01], [0.09, 0.08], [0.07, 0.15], [0.05, 0.17]], 8, 1); m.mat(MAT.CLOTH, [0.6, 0.55, 0.42], 0.5); m.cyl(0, 0.17, 0, 0.055, 0.055, 0.025, 7, 2); },
   demijohn: (m, R) => { m.mat(MAT.THATCH, [0.75, 0.62, 0.4], 0.5); m.lathe([[0.01, 0], [0.1, 0.02], [0.13, 0.12], [0.1, 0.24], [0.04, 0.3], [0.035, 0.36]], 9, 1); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(0, 0.35, 0, 0.035, 0.035, 0.04, 6, 2); },
   bolt: (m, R) => { { const q = R.pick([DYE.red, DYE.blue, DYE.green, DYE.yellow, DYE.cream, DYE.grey, DYE.brown]), v = 0.88 + R.s() * 0.24; m.mat(MAT.CLOTH, [q[0] * v, q[1] * v, q[2] * v], 0.5); }; m.push().T(0, 0.075, 0).RX(PI / 2); m.lathe([[0.075, -0.15], [0.075, 0.15]], 8, 2); m.pop(); },
   folded: (m, R) => { let y = 0; for (let i = 0; i < 4; i++) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple, [0.7, 0.62, 0.45], [0.55, 0.5, 0.42]]), 0.5); m.box(-0.14, y, -0.1, 0.14 - R() * 0.02, y + 0.035, 0.1); y += 0.035; } },
@@ -8227,8 +8227,8 @@ PD.ware = {
   candles: (m, R) => { m.mat(MAT.PLAIN, COL.wax); for (let i = 0; i < 5; i++) m.cyl(-0.06 + i * 0.03, 0, R.s() * 0.02, 0.011, 0.011, 0.2 + R() * 0.05, 5, 2); m.mat(MAT.CLOTH, COL.leather, 0.5); m.box(-0.08, 0.06, -0.025, 0.08, 0.075, 0.03); },
   spools: (m, R) => { for (let i = 0; i < 3; i++) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, [0.7, 0.62, 0.45]]), 0.5); m.cyl(-0.1 + i * 0.1, 0, R.s() * 0.03, 0.04, 0.04, 0.1, 7, 2); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(-0.1 + i * 0.1, -0.005, R.s() * 0.03, 0.05, 0.05, 0.01, 7, 2); m.cyl(-0.1 + i * 0.1, 0.1, R.s() * 0.03, 0.05, 0.05, 0.01, 7, 2); } },
   tools: (m, R) => { m.mat(MAT.TIMBER, COL.wood); m.box(-0.2, 0.01, -0.02, 0.1, 0.03, 0.02); m.mat(MAT.METAL, WS.steel); m.box(0.1, 0.005, -0.04, 0.2, 0.035, 0.04); m.box(-0.18, 0.04, 0.05, 0.12, 0.06, 0.07); m.mat(MAT.TIMBER, COL.wood); m.box(-0.18, 0.06, 0.05, -0.08, 0.075, 0.07); },
-  cheese: (m, R) => Props.cheese(m), loaf: (m, R) => Props.loaf(m), bowl: (m, R) => Props.bowl(m), pot: (m, R) => Props.pot(m, 0.08 + R() * 0.04, R.pick([COL.clay, [0.55, 0.5, 0.42], [0.3, 0.4, 0.5]])),
-  ham: (m, R) => { m.mat(MAT.PLAIN, [0.5, 0.26, 0.2]); m.ball(0, 0.08, 0, 0.1, 0.08, 0.1, 6, 4); m.mat(MAT.CLOTH, [0.6, 0.55, 0.42], 0.5); m.box(-0.012, 0.15, -0.012, 0.012, 0.2, 0.012); },
+  cheese: (m, R) => Props.cheese(m), loaf: (m, R) => Props.loaf(m), bowl: (m, R) => Props.bowl(m), pot: (m, R) => Props.pot(m, 0.08 + R() * 0.04, R.pick([[0.5, 0.38, 0.27], [0.45, 0.42, 0.36], [0.3, 0.34, 0.38]])),
+  ham: (m, R) => { m.mat(MAT.PLAIN, [0.36, 0.2, 0.16]); m.ball(0, 0.08, 0, 0.1, 0.08, 0.1, 6, 4); m.mat(MAT.CLOTH, [0.6, 0.55, 0.42], 0.5); m.box(-0.012, 0.15, -0.012, 0.012, 0.2, 0.012); },
 };
 PD.WARES = {
   store: ['rope', 'lantern', 'flask', 'tall', 'jar', 'demijohn', 'folded', 'sack', 'box', 'candles', 'tools', 'cheese', 'loaf', 'pot', 'bowl', 'ham', 'bolt'],
