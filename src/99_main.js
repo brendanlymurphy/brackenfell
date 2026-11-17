@@ -69,11 +69,16 @@ function perfUpdate(dtMs, dt) {
 function updateDynamics(dt, chars) {
   const bd = R.boneData, tmp = POSE.S, pp = Player.pos;
   for (const d of World.doors) {
-    let near = false;
-    for (const c of chars) if (CELLS_ON && c === chars[0]) continue; else if (Math.abs(c[0] - d.c[0]) < 2.5 && Math.abs(c[2] - d.c[2]) < 2.5 && Math.abs(c[1] - d.c[1] + 1) < 2.2 && hyp(c[0] - d.c[0], c[2] - d.c[2]) < 2.3) { near = true; break; }
-    if (near && d.open === 0 && game.playing) { const dd = hyp(pp[0] - d.c[0], pp[2] - d.c[2]); if (dd < 14) Audio2.door(clamp(1.2 - dd / 12, 0.1, 1)); }
-    if (d.gate && !S.opened[d.gate]) near = false;          // a locked gate stays shut until the key has turned
-    d.open = clamp(d.open + (near ? dt : -dt) * 2.4, 0, 1);
+    // [fin] one rule for every leaf: open when someone on the same level comes within reach (2.3 m); stay open at least 2.5 s; close only after nobody has been within 3.6 m for 1.2 s; fixed speed; never reverse within 0.5 s
+    let reach = false, wide = false;
+    for (const c of chars) if (CELLS_ON && c === chars[0]) continue; else if (Math.abs(c[0] - d.c[0]) < 3.6 && Math.abs(c[2] - d.c[2]) < 3.6 && Math.abs(c[1] - d.c[1] + 1) < 2.2) { const h = hyp(c[0] - d.c[0], c[2] - d.c[2]); if (h < 3.6) wide = true; if (h < 2.3) { reach = true; break; } }
+    if (d.gate && !S.opened[d.gate]) { reach = false; wide = false; }          // a locked gate stays shut until the key has turned
+    d.hold = d.hold === undefined ? 0 : d.hold; d.away = d.away === undefined ? 9 : d.away; d.dirT = d.dirT === undefined ? 9 : d.dirT; d.dir = d.dir || -1;
+    d.dirT += dt; d.hold = Math.max(0, d.hold - dt); d.away = wide ? 0 : d.away + dt;
+    let want = d.dir;
+    if (reach) { want = 1; d.hold = 2.5; } else if (d.hold <= 0 && d.away > 1.2) want = -1;
+    if (want !== d.dir && d.dirT >= 0.5) { d.dir = want; d.dirT = 0; if (want === 1 && d.open === 0 && game.playing) { const dd = hyp(pp[0] - d.c[0], pp[2] - d.c[2]); if (dd < 14) Audio2.door(clamp(1.2 - dd / 12, 0.1, 1)); } }
+    d.open = clamp(d.open + d.dir * dt * 2.4, 0, 1);
     if (d.open === d.last) continue; d.last = d.open;
     m4.copy(tmp, d.baseM); m4.rotY(tmp, smooth(0, 1, d.open) * 1.85); m4.mul(tmp, tmp, d.S); bd.set(tmp, d.obj.slot * 256);
   }
