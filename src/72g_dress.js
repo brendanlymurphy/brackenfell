@@ -218,7 +218,7 @@ PD.TRADE = {
 PD.POOLS = {
   cellar: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'torch', 'shelf', 'bench', 'broom', 'cask'], store: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'shelf', 'bench', 'broom', 'torch', 'cask'], bedroom: ['cupboard', 'hooks', 'tapestry', 'bench', 'hooks', 'cabinet', 'cask'],
   hall: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'tapestry', 'sacks', 'stack', 'cupboard'], shop: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'tapestry', 'sacks', 'stack'], keeper: ['cupboard', 'hooks', 'bench', 'hooks', 'shelf', 'cabinet'],
-  common: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'cask', 'stack'], kitchen: ['shelf', 'cabinet', 'hooks', 'cask', 'sacks', 'stack'], study: ['books', 'bench', 'hooks', 'hooks', 'cabinet'], sacristy: ['cupboard', 'hooks', 'bench', 'hooks', 'shelf'], gallery: ['bench', 'hooks', 'hooks', 'tapestry']
+  common: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'cask', 'stack'], kitchen: ['shelf', 'cabinet', 'hooks', 'cask', 'sacks', 'stack'], study: ['books', 'bench', 'hooks', 'hooks', 'cabinet'], sacristy: ['cupboard', 'hooks', 'bench', 'hooks', 'shelf'], gallery: ['bench', 'hooks', 'hooks', 'tapestry'], corridor: ['bench', 'shelf', 'hooks', 'torch', 'cask'], loft: ['cupboard', 'shelf', 'sacks', 'bench', 'hooks', 'stack', 'cask']      // [fx2] passages and upper rooms had no pool at all
 };
 PD.cover = function (P, r) {
   const a = r.in; let free = 0, cov = 0;
@@ -236,7 +236,7 @@ PD.topup = function (P) {
   P.topped = 0;
   for (const id in P.rooms) {
     const r = P.rooms[id], pools = [];
-    if (r.k === 0 && PD.TRADE[P.id] && r.kind !== 'bedroom' && r.kind !== 'cellar') pools.push(PD.TRADE[P.id]); if (PD.POOLS[r.kind]) pools.push(PD.POOLS[r.kind]);
+    if (r.k === 0 && PD.TRADE[P.id] && r.kind !== 'bedroom' && r.kind !== 'cellar') pools.push(PD.TRADE[P.id]); if (PD.POOLS[r.kind]) pools.push(PD.POOLS[r.kind]); if (r.k === 1 && r.kind !== 'gallery') pools.push(PD.POOLS.loft);
     for (const pool of pools) for (let pass = 0; pass < 4 && PD.cover(P, r) < 0.64; pass++) { const n = PD.fill(P, r, pool, { max: 6 }); P.topped += n; if (!n) break; }
     if (pools.length && PD.cover(P, r) < 0.64) P.topped += PD.corners(P, r, r.kind === 'cellar' || r.kind === 'store' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack']);
   }
