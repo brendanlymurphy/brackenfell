@@ -6,7 +6,7 @@ import { open } from './qa/harness.mjs';
 const OUT = process.argv[2] || '/home/claude/shots/fin/facing', only = process.argv[3] && process.argv[3].split(',');
 fs.mkdirSync(OUT, { recursive: true });
 const s = await open({ webgl: 1, quality: 'medium' }, [640, 360]);
-const names = JSON.parse(await s.run(`return JSON.stringify(Object.keys(SCANR).filter(k => !SCANR[k].skip))`)).filter(n => !only || only.includes(n));
+const names = only || JSON.parse(await s.run(`return JSON.stringify(Object.keys(SCANR).filter(k => !SCANR[k].skip))`));
 for (const [i, name] of names.entries()) {
   const r = await s.run(`
     const x0 = 62, z0 = -150, gy = Terrain.y(x0, z0), name = ${JSON.stringify(name)};
