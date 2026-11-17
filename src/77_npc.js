@@ -227,6 +227,9 @@ function npcUpdate(dt, playerPos) {
        the same roofline that hides houses and ground (42_scene.js), asked with the same margin. Four of twenty in the Market Place view. */
     if (pc !== Cells.spaceOf(n.pos) || (pc === 0 && npcBehindRoofs(n))) { n.obj.visible = false; if (n.ch && !n.hid) { n.hid = true; n.ch.pivot.visible = false; } continue; }
     n.hid = false;
+    /* [cull] what a villager holds is drawn only as far as it can be made out: a mug or a flute to 20 m, a spear, staff or lute to 55 m. Each is a draw call,
+       and the alley view on Low had nine of them between 25 and 91 m away (a mug at 37 m is two pixels) */
+    if (n.props) for (const m of n.props) m.visible = dPlayer < (/mug|flute/.test(m.name) ? 20 : 55);
     // head follows the player when close
     let lx = 0, ly = 0;
     if (dPlayer < 5.5 && n.anim !== 'lie' && n.anim !== 'hammer' && n.anim !== 'work') { const a = angDiff(Math.atan2(playerPos[0] - n.pos[0], -(playerPos[2] - n.pos[2])), n.yaw); if (Math.abs(a) < 1.9) { lx = clamp(-a, -1.1, 1.1); ly = clamp((n.pos[1] + 1.6 * n.scale - playerPos[1] - 1.6) * 0.25, -0.3, 0.3); } }
