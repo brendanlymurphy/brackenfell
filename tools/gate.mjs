@@ -21,7 +21,7 @@ const BASE = fs.existsSync(BFILE) ? JSON.parse(fs.readFileSync(BFILE, 'utf8')) :
 const js = f => fs.readFileSync(ROOT + 'test/' + f, 'utf8');
 const node = (args, o) => { const r = spawnSync('node', args, Object.assign({ cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28, timeout: 30 * 60e3 }, o || {})); return (r.stdout || '') + (r.stderr || '') + (r.error ? '\n[gate] ' + r.error.message : '') + (r.status ? '\n[gate] exit ' + r.status : ''); };
 const shot = (opts, script, extra) => node(['test/shot.mjs', ...opts.flatMap(o => ['--opt', o]), '--do', script, ...(extra || [])]);
-const evalFail = out => /EVAL FAIL|\[pageerror\]|\[gate\] (exit|spawn)/.test(out) ? (out.match(/EVAL FAIL.*|\[pageerror\].*|\[gate\].*/) || [''])[0].slice(0, 300) : null;
+const evalFail = out => /EVAL FAIL|\[pageerror\]|\[gate\] (exit|spawn)/.test(out) ? (m => m.length > 620 ? m.slice(0, 160) + ' ... ' + m.slice(-440) : m)((out.match(/EVAL FAIL.*|\[pageerror\].*|\[gate\].*/) || [''])[0]) : null;       /* the start says which test, the end says what failed (the mine test's reason was cut off after its log of what went well) */
 // a step returns null (pass) or a short reason (fail); `note` is shown in the table either way
 const expect = (re, opts, file, pre) => () => { const out = shot(opts, (pre || '') + js(file)); return { out, fail: evalFail(out) || (re.test(out) ? null : 'did not print ' + re) }; };
 const play = ['webgl=1', 'play=1'];
