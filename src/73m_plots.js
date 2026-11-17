@@ -105,6 +105,11 @@ function buildPlots(bucket) {
       seg === stone ? stone(m, sx, zh, sx, zw - p.bz * 0.15, h * 0.92, tone) : fence(m, sx, zh, sx, zw - p.bz * 0.06);
     }
     if (!(TEST && TEST.plots === 2)) trade(p, m, cx, zFront + p.bz * 0.01, 1, 0, wd, dp);
+    /* [cull] where the household stands to work in its yard: the first of a few places behind the house that is clear of what the yard holds, facing the trade.
+       (77e_households.js sends the residents here; 77_npc.js joins it to the house, since a yard is reached through its own house.) */
+    { const free = (x, z) => { const y = gy(x, z); for (const c of World.colliders) { if (c.y0 > y + 1.5 || c.y1 < y + 0.2) continue; const ex = x - c.x, ez = z - c.z; if (c.r !== undefined) { if (ex * ex + ez * ez < (c.r + 0.45) * (c.r + 0.45)) return false; } else if (Math.abs(ex * c.ax + ez * c.az) < c.hx + 0.45 && Math.abs(ex * c.bx + ez * c.bz) < c.hz + 0.45) return false; } return true; };
+      for (const [a, b] of [[wd * 0.28, 0.9], [-wd * 0.28, 0.9], [0, 0.9], [wd * 0.3, dp * 0.75], [-wd * 0.3, dp * 0.75], [0, dp * 0.8], [wd * 0.3, dp * 0.5], [-wd * 0.3, dp * 0.5]]) { const x = cx + a, z = zFront + p.bz * b; if (x < p.x0 + 0.5 || x > p.x1 - 0.5 || z < p.z0 + 0.4 || z > p.z1 - 0.4 || !free(x, z)) continue;
+        World.spots[p.id + '.yard'] = { p: [x, gy(x, z), z], yaw: Math.atan2(cx - x, -(zFront + p.bz * dp * 0.45 - z)), zone: 0, yardOf: p.id, trade: p.trade }; break; } }
     p.gate = [gx, zw];
   }
 }

@@ -160,7 +160,7 @@ if (PARTS.includes('streets') && !REDO) { console.log('── town: every street
       const line = []; for (let u = -9; u <= 9.01; u += 1.5) line.push([best.px + best.ux * u, best.pz + best.uz * u]); walk('gate ' + g.name + ' through', line, 0.7); walk('gate ' + g.name + ' back', line.slice().reverse(), 0.7); }
     const walked = Math.round(WALK.dist - m0);
     // villagers: between any two outdoor places the way on foot is at most 2.5 times the straight line
-    const names = Object.keys(World.spots).filter(k => Nav.spot[k] !== undefined && !World.spots[k].site && Cells.spaceOf(World.spots[k].p) === 0 && !/#/.test(k)); let pairs = 0, levels = 0, worst = null; const long = [];
+    const names = Object.keys(World.spots).filter(k => Nav.spot[k] !== undefined && !World.spots[k].site && !World.spots[k].yardOf /* a yard is reached through its house */ && Cells.spaceOf(World.spots[k].p) === 0 && !/#/.test(k)); let pairs = 0, levels = 0, worst = null; const long = [];
     // known and open, for the town workers (docs/WALK.md says where): a fence rail runs down the back lane behind the Hawker's Passage 0.3 m from its middle;
     // the two farm fields are fenced from each other; the herb garden's terrace has one way down. A new long way round fails; these are printed as notes.
     const KNOWN = [/gallery\.top/ /* the Hart's gallery is up its own stair */, /passage\.lane/, /^farm\.field2? to farm\.field2?/, /herbalist\.garden to belltower\.bottom|belltower\.bottom to herbalist\.garden/];
