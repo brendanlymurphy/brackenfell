@@ -4116,6 +4116,341 @@
    "note": "Aged 25; from Brackenfell."
   },
   {
+   "speaker": "avice",
+   "text": "Your Humphrey seen my Tilly’s face when the Varrow boy goes by?",
+   "where": "54_cast.js:scene1",
+   "as": "v.W2",
+   "note": "Aged 43; bakehouse."
+  },
+  {
+   "speaker": "hester",
+   "text": "Seen it? I have smelled why.",
+   "where": "54_cast.js:scene1",
+   "as": "v.W2",
+   "note": "Aged 44; the block and the till."
+  },
+  {
+   "speaker": "avice",
+   "text": "He is a good lad under it.",
+   "where": "54_cast.js:scene1",
+   "as": "v.W2",
+   "note": "Aged 43; bakehouse."
+  },
+  {
+   "speaker": "hester",
+   "text": "A long way under it.",
+   "where": "54_cast.js:scene1",
+   "as": "v.W2",
+   "note": "Aged 44; the block and the till."
+  },
+  {
+   "speaker": "kat",
+   "text": "Another letter went off with the carter. Sealed.",
+   "where": "54_cast.js:scene2",
+   "as": "v.W2",
+   "note": "Aged 40; keeps the yard and the accounts."
+  },
+  {
+   "speaker": "winifred",
+   "text": "To a man?",
+   "where": "54_cast.js:scene2",
+   "as": "v.W2",
+   "note": "Aged 35; stitches harness."
+  },
+  {
+   "speaker": "kat",
+   "text": "She will not say. Which with Tamsin means it is worth knowing.",
+   "where": "54_cast.js:scene2",
+   "as": "v.W2",
+   "note": "Aged 40; keeps the yard and the accounts."
+  },
+  {
+   "speaker": "winifred",
+   "text": "Give it till the heather is over.",
+   "where": "54_cast.js:scene2",
+   "as": "v.W2",
+   "note": "Aged 35; stitches harness."
+  },
+  {
+   "speaker": "giles",
+   "text": "A loaf.",
+   "where": "54_cast.js:scene3",
+   "as": "v.YM",
+   "note": "Aged 19; tanner’s son."
+  },
+  {
+   "speaker": "tilly",
+   "text": "You had a loaf yesterday.",
+   "where": "54_cast.js:scene3",
+   "as": "v.YW",
+   "note": "Aged 17; the Bread Stall."
+  },
+  {
+   "speaker": "giles",
+   "text": "Father eats a great deal.",
+   "where": "54_cast.js:scene3",
+   "as": "v.YM",
+   "note": "Aged 19; tanner’s son."
+  },
+  {
+   "speaker": "tilly",
+   "text": "Fulk Varrow has not finished a loaf in his life. Take the honey cake and say what you came to say.",
+   "where": "54_cast.js:scene3",
+   "as": "v.YW",
+   "note": "Aged 17; the Bread Stall."
+  },
+  {
+   "speaker": "diggory",
+   "text": "The Warden has doubled the night watch. One man instead of half a one.",
+   "where": "54_cast.js:scene4",
+   "as": "v.M2",
+   "note": "Aged 36; tinker."
+  },
+  {
+   "speaker": "elinor",
+   "text": "Gilbert says Hale would bar the road for a fox.",
+   "where": "54_cast.js:scene4",
+   "as": "v.W1",
+   "note": "Aged 45; Salt and Spice stall."
+  },
+  {
+   "speaker": "diggory",
+   "text": "And what do you say?",
+   "where": "54_cast.js:scene4",
+   "as": "v.M2",
+   "note": "Aged 36; tinker."
+  },
+  {
+   "speaker": "elinor",
+   "text": "That I should like to know what kind of fox.",
+   "where": "54_cast.js:scene4",
+   "as": "v.W1",
+   "note": "Aged 45; Salt and Spice stall."
+  },
+  {
+   "speaker": "miles",
+   "text": "The boy lost your hammer again?",
+   "where": "54_cast.js:scene5",
+   "as": "v.M2",
+   "note": "Aged 42; wheelwright."
+  },
+  {
+   "speaker": "brandt",
+   "text": "Borrowed it. He was a knight, I am told.",
+   "where": "54_cast.js:scene5",
+   "scene": 1
+  },
+  {
+   "speaker": "miles",
+   "text": "You were worse at his age. You dropped an anvil in the lake.",
+   "where": "54_cast.js:scene5",
+   "as": "v.M2",
+   "note": "Aged 42; wheelwright."
+  },
+  {
+   "speaker": "brandt",
+   "text": "That was never proved.",
+   "where": "54_cast.js:scene5",
+   "scene": 1
+  },
+  {
+   "speaker": "petronel",
+   "text": "What is in the green one?",
+   "where": "54_cast.js:scene6",
+   "as": "v.OW",
+   "note": "Aged 57; glover."
+  },
+  {
+   "speaker": "alaric",
+   "text": "A sovereign decoction for the vapours.",
+   "where": "54_cast.js:scene6",
+   "as": "v.M2",
+   "note": "Aged 38; apothecary."
+  },
+  {
+   "speaker": "petronel",
+   "text": "Mint. It is mint. Maren gives that away.",
+   "where": "54_cast.js:scene6",
+   "as": "v.OW",
+   "note": "Aged 57; glover."
+  },
+  {
+   "speaker": "alaric",
+   "text": "Hers is not in glass.",
+   "where": "54_cast.js:scene6",
+   "as": "v.M2",
+   "note": "Aged 38; apothecary."
+  },
+  {
+   "speaker": "hugh",
+   "text": "You are pulling left.",
+   "where": "54_cast.js:scene7",
+   "as": "v.M1",
+   "note": "Aged 53; fletcher."
+  },
+  {
+   "speaker": "hale",
+   "text": "The wind is pulling left.",
+   "where": "54_cast.js:scene7",
+   "scene": 1
+  },
+  {
+   "speaker": "hugh",
+   "text": "How is young Ivo shaping?",
+   "where": "54_cast.js:scene7",
+   "as": "v.M1",
+   "note": "Aged 53; fletcher."
+  },
+  {
+   "speaker": "hale",
+   "text": "He can stand at a gate. Ask me again when something comes to it.",
+   "where": "54_cast.js:scene7",
+   "scene": 1
+  },
+  {
+   "speaker": "goda",
+   "text": "Has the miller sent your malt?",
+   "where": "54_cast.js:scene8",
+   "as": "v.W1",
+   "note": "Aged 51; alewife."
+  },
+  {
+   "speaker": "greta",
+   "text": "Has he sent yours?",
+   "where": "54_cast.js:scene8",
+   "scene": 1
+  },
+  {
+   "speaker": "goda",
+   "text": "He has not.",
+   "where": "54_cast.js:scene8",
+   "as": "v.W1",
+   "note": "Aged 51; alewife."
+  },
+  {
+   "speaker": "greta",
+   "text": "Then for once, Goda Malkin, we are on the same side of something. Sit down, I will stand you a cup.",
+   "where": "54_cast.js:scene8",
+   "scene": 1
+  },
+  {
+   "speaker": "stephen",
+   "text": "Young Pell asked me the price of a guard’s boot.",
+   "where": "54_cast.js:scene9",
+   "as": "v.YM",
+   "note": "Aged 26; cobbler."
+  },
+  {
+   "speaker": "ivo",
+   "text": "Davy? He is fifteen.",
+   "where": "54_cast.js:scene9",
+   "scene": 1
+  },
+  {
+   "speaker": "stephen",
+   "text": "Fifteen and three quarters, he says.",
+   "where": "54_cast.js:scene9",
+   "as": "v.YM",
+   "note": "Aged 26; cobbler."
+  },
+  {
+   "speaker": "ivo",
+   "text": "Tell him the boots are the easy part. It is the standing.",
+   "where": "54_cast.js:scene9",
+   "scene": 1
+  },
+  {
+   "speaker": "jocelyn",
+   "text": "Your mother looked at me today.",
+   "where": "54_cast.js:scene10",
+   "as": "v.M2",
+   "note": "Aged 30; tailor."
+  },
+  {
+   "speaker": "bridget",
+   "text": "She looks at everyone. She is deciding whether they drink at the Hart.",
+   "where": "54_cast.js:scene10",
+   "as": "v.YW",
+   "note": "Aged 23; brews with her mother."
+  },
+  {
+   "speaker": "jocelyn",
+   "text": "I am at the Hart now.",
+   "where": "54_cast.js:scene10",
+   "as": "v.M2",
+   "note": "Aged 30; tailor."
+  },
+  {
+   "speaker": "bridget",
+   "text": "So am I. So we will both keep quiet about it.",
+   "where": "54_cast.js:scene10",
+   "as": "v.YW",
+   "note": "Aged 23; brews with her mother."
+  },
+  {
+   "speaker": "ysolt",
+   "text": "Come in, Father. It is getting cold.",
+   "where": "54_cast.js:scene11",
+   "as": "v.W2",
+   "note": "Aged 39; laundress."
+  },
+  {
+   "speaker": "lambert",
+   "text": "Fifty years I have sat here, and Rowan has walked past this door every one of them.",
+   "where": "54_cast.js:scene11",
+   "as": "v.OM",
+   "note": "Aged 73; was a mine boy."
+  },
+  {
+   "speaker": "ysolt",
+   "text": "He is an old man too.",
+   "where": "54_cast.js:scene11",
+   "as": "v.W2",
+   "note": "Aged 39; laundress."
+  },
+  {
+   "speaker": "lambert",
+   "text": "Then he has not long to say it.",
+   "where": "54_cast.js:scene11",
+   "as": "v.OM",
+   "note": "Aged 73; was a mine boy."
+  },
+  {
+   "speaker": "wenn",
+   "text": "Is that Reedwater still out on the dock end?",
+   "where": "54_cast.js:scene12",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
+   "speaker": "randal",
+   "text": "Since first light.",
+   "where": "54_cast.js:scene12",
+   "as": "v.M2",
+   "note": "Aged 43; boatwright and carpenter."
+  },
+  {
+   "speaker": "wenn",
+   "text": "A man who fishes that long is not after fish.",
+   "where": "54_cast.js:scene12",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
+   "speaker": "randal",
+   "text": "What then?",
+   "where": "54_cast.js:scene12",
+   "as": "v.M2",
+   "note": "Aged 43; boatwright and carpenter."
+  },
+  {
+   "speaker": "wenn",
+   "text": "Quiet. I built his father’s boat for the same reason.",
+   "where": "54_cast.js:scene12",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
    "speaker": "ivo",
    "text": "Good. That’s the end of it. This time.",
    "where": "82b_interact.js:211"

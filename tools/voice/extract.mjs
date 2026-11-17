@@ -49,10 +49,12 @@ for (const f of fs.readdirSync(root + 'src').filter(f => f.endsWith('.js')).sort
 }
 // [cast] the sixty of docs/PEOPLE.md (src/54_cast.js, generated): every line of each, said by that person in one of ten shared voices (`as`: old man, older and
 // younger man, young man, boy, and the same for women; cast_gemini.json holds the ten). Order: the households of the Market first, then district by district.
-{ const src = fs.readFileSync(root + 'src/54_cast.js', 'utf8'), C = new Function(src + '; return { CAST, CAST_PLACES };')();
+{ const src = fs.readFileSync(root + 'src/54_cast.js', 'utf8'), C = new Function(src + '; return { CAST, CAST_PLACES, CAST_SCENES };')();
   const cls = p => p.voice === 'M' ? (p.age >= 45 ? 'v.M1' : 'v.M2') : p.voice === 'W' ? (p.age >= 45 ? 'v.W1' : 'v.W2') : 'v.' + p.voice, DIST = ['Market', 'Riverside', 'Chapelgate', 'Westgate', 'Wharfside', 'Upper Ward', 'Highfold'];
   const ord = p => { const d = DIST.indexOf((C.CAST_PLACES[p.home] || {}).district); return d < 0 ? 9 : d; };
-  for (const p of C.CAST.slice().sort((a, b) => ord(a) - ord(b))) for (const k of ['g', 'me', 'nb', 'pt', 'b1', 'b2', 'g2', 'nt']) if (p.lines[k]) lines.push({ speaker: p.id, text: p.lines[k], where: '54_cast.js:' + p.id + '.' + k, as: cls(p), note: 'Aged ' + p.age + '; ' + p.trade.split(/[;:,(]/)[0].trim() + '.' }); }
+  for (const p of C.CAST.slice().sort((a, b) => ord(a) - ord(b))) for (const k of ['g', 'me', 'nb', 'pt', 'b1', 'b2', 'g2', 'nt']) if (p.lines[k]) lines.push({ speaker: p.id, text: p.lines[k], where: '54_cast.js:' + p.id + '.' + k, as: cls(p), note: 'Aged ' + p.age + '; ' + p.trade.split(/[;:,(]/)[0].trim() + '.' });
+  // the passing scenes (82e_scenes.js): each line by its speaker, a story person in their own voice, one of the sixty in their shared one
+  for (const sc of C.CAST_SCENES) for (const [nm, tx] of sc.lines) { const id = nm.toLowerCase(), p = C.CAST.find(q => q.id === id); if (!p && !IDS.includes(id)) throw new Error('scene ' + sc.n + ': who is ' + nm + '?'); lines.push(Object.assign({ speaker: id, text: tx, where: '54_cast.js:scene' + sc.n }, p ? { as: cls(p), note: 'Aged ' + p.age + '; ' + p.trade.split(/[;:,(]/)[0].trim() + '.' } : { scene: 1 })); } }
 // manual speakers for lines the walk could not attribute, and extra lines (see extra_speakers.json)
 // byText: the start of a line -> its speaker, a list of speakers (a line two people can say is recorded once each), or '-' (never spoken aloud).
 // silent: names (a notice board, a carved slab) whose "dialogue" is reading text.
