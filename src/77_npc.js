@@ -8,11 +8,11 @@ const NPC_DEFS = [
   { id: 'brandt', name: 'Brandt Ironhand', skin: 'tan', hair: 'black', hairStyle: 'bald', beard: 1, top: [0.36, 0.30, 0.27], apron: [0.36, 0.22, 0.13], legs: [0.28, 0.24, 0.2], build: 1.18, shortSleeves: true, prop: 'hammer',
     sched: [[6.5, 'smithy.anvil', 'hammer'], [12, 'smithy.forge', 'work'], [13, 'smithy.anvil', 'hammer'], [19, 'inn.s1', 'sit'], [22, 'smithy.bed', 'lie']] },
   { id: 'tobin', name: 'Tobin', scale: 0.74, skin: 'fair', hair: 'blond', top: [0.55, 0.45, 0.25], legs: [0.3, 0.25, 0.2], run: true,
-    sched: [[7, ['square.bench2', 'stallfront0', 'alley.stall1', 'smithy.forge', 'alley.n', 'stallfront1', 'gate.post2', 'alley.s', 'square.bench2'], 'idle'], [19.5, 'smithy.sit', 'sit'], [21.5, 'smithy.home', 'idle']] },
+    sched: [[7, ['square.bench2', 'stallfront0', 'alley.stall1', 'smithy.forge', 'alley.n', 'stallfront1', 'gate.post2', 'alley.s', 'square.bench2'], 'idle'], [19.5, 'smithy.sit', 'sit'], [21.5, 'smithy.bed2', 'lie']] },       // [cast] his own bed in the forge loft (he stood by the door all night)
   { id: 'marta', name: 'Marta Quill', skin: 'brown', hair: 'black', hairStyle: 'braid', dress: true, top: [0.52, 0.20, 0.30], hat: 'kerchief', hatCol: [0.9, 0.82, 0.6], belt: [0.7, 0.55, 0.2],
     sched: [[6.4, 'store.cellar0', 'work'], [7.5, 'store.counter', 'idle'], [20, 'inn.s3', 'sit'], [22, 'store.bed', 'lie']] },       // [logic] stock from the cellar before opening
   { id: 'aldous', name: 'Brother Aldous', skin: 'fair', hair: 'grey', hairStyle: 'bald', dress: true, top: [0.80, 0.76, 0.64], belt: [0.45, 0.3, 0.2], cloakBack: true, cloak: [0.42, 0.30, 0.22], hat: 'hood',
-    sched: [[5, 'chapel.altar', 'pray'], [9, 'chapel.nave', 'idle'], [12, 'chapel.altar', 'pray'], [14, 'chapel.nave', 'idle'], [18, 'chapel.altar', 'pray']] },
+    sched: [[5, 'chapel.altar', 'pray'], [9, 'chapel.nave', 'idle'], [12, 'chapel.altar', 'pray'], [14, 'chapel.nave', 'idle'], [18, 'chapel.altar', 'pray'], [21, 'chapel.bed', 'lie']] },       // [cast] a cot in the sacristy: he prayed round the clock
   { id: 'maren', name: 'Old Maren', skin: 'fair', hair: 'white', dress: true, top: [0.36, 0.30, 0.42], hat: 'hood', cloak: [0.28, 0.38, 0.28], cloakBack: true, scale: 0.93,
     sched: [[7, 'herbalist.garden', 'work'], [12, 'herbalist.sit', 'sit'], [14, 'herbalist.garden', 'work'], [18.5, 'herbalist.sit', 'sit'], [21, 'herbalist.bed', 'lie']] },
   { id: 'osric', name: 'Osric Dunn', skin: 'fair', hair: 'brown', beard: 1, hat: 'cap', hatCol: [0.9, 0.88, 0.8], top: [0.84, 0.81, 0.74], apron: [0.92, 0.9, 0.84], legs: [0.5, 0.45, 0.38], build: 1.15,
@@ -32,9 +32,9 @@ const NPC_DEFS = [
   { id: 'ivo', name: 'Guardsman Ivo', skin: 'deep', hair: 'black', hat: 'helmet', top: [0.42, 0.40, 0.38], apron: [0.2, 0.3, 0.5], legs: [0.25, 0.22, 0.2], prop: 'spear', sword: true,
     sched: [[6.3, 'guardhouse.bed2', 'lie'], [13.5, ['gate.post2', 'square.well', 'bridge.west', 'square.well'], 'guard'], [19.3, 'gate.post', 'guard']] },       // [logic] the night watch: he takes the gate when Hale goes to the Hart, keeps it till Hale is back at six, and sleeps the morning (he never slept, and the gate stood empty from half past seven)
   { id: 'hilda', name: 'Hilda Weaver', skin: 'rosy', hair: 'brown', hairStyle: 'bun', dress: true, top: [0.26, 0.38, 0.60], apron: [0.9, 0.86, 0.76],
-    sched: [[8, 'draper.counter', 'idle'], [12.5, 'alley.stall0', 'idle'], [14, 'draper.counter', 'idle'], [18.5, 'weaver.home', 'idle'], [20, 'weaver.sit', 'sit'], [21.5, 'weaver.bed', 'lie']] },
+    sched: [[8, 'weaver.work', 'work'], [12.5, 'alley.stall0', 'idle'], [14, 'weaver.work', 'work'], [18.5, 'weaver.home', 'idle'],       /* [cast] at her own loom: Sabina Lindqvist keeps the draper's counter */ [20, 'weaver.sit', 'sit'], [21.5, 'weaver.bed', 'lie']] },
   { id: 'bram', name: 'Bram', skin: 'tan', hair: 'auburn', hat: 'straw', top: [0.5, 0.52, 0.34], legs: [0.36, 0.3, 0.22], shortSleeves: true,
-    sched: [[7.5, 'stall0', 'idle'], [18, 'barn.work', 'work'], [19.5, 'inn.stand1', 'idle'], [22, 'farm.bed2', 'lie']] },
+    sched: [[6.2, 'farm.field', 'work'], [7.5, 'stall0', 'idle'], [18, 'barn.work', 'work'], [19.5, 'inn.stand1', 'idle'], [22, 'in.67.bed', 'lie']] },       // [cast] he sleeps in Bram's House and walks out to the farm at dawn
 ];
 const NPCS = [], NPC = {};
 const Nav = { nodes: [], adj: [], spot: {}, portal: {} };        // portal[a] = b: stepping from node a to b crosses a door between two spaces (an instant move)

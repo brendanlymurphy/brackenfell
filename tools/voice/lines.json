@@ -873,6 +873,21 @@
    "raw": "'Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is ' + fine + ' gold, or you hand it back, or you sleep in the cell and th"
   },
   {
+   "speaker": "",
+   "where": "82d_cast.js:9",
+   "raw": "L[k]"
+  },
+  {
+   "speaker": "",
+   "where": "82d_cast.js:10",
+   "raw": "L.g2"
+  },
+  {
+   "speaker": "",
+   "where": "82d_cast.js:10",
+   "raw": "L.g"
+  },
+  {
    "speaker": "brandt",
    "where": "93_inventory.js:61",
    "raw": "'That’s ' + m.cost + ' gold, and you’ve ' + S.gold + '. Hale pays a bounty on outlaws, if you’ve the stomach for it.'"

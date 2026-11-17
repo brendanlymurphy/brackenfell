@@ -1,4 +1,4 @@
-# The people of Brackenfell (proposal: nothing here is built or recorded)
+# The people of Brackenfell (accepted; the people and their lines are in the game as text from `tools/cast.mjs`, nothing is recorded yet)
 
 The hand-written table the blueprint requires (rules 0, 2.4, 2.5, 6.1 to 6.9): every enterable building, who lives and works
 there, and what each person says. For the coordinator to review before any line, routine or recording is made. The 17 story
@@ -185,6 +185,8 @@ known; **bell** = the bell rings again; **end** = after either ending); `me` who
 place or a quest that exists; `nt` what I say if you are in my house between 22 and 6; `b1`, `b2` barks in passing. Children have `g`, `me`, `nb`, `pt` and two barks.
 Lines are short on purpose: each is one request and well under the 30 s check. The mine is never called south-west.
 
+Pointers checked against the game (the build session, before the cast went in): 29 of the 60 `pt` lines were reworded because the game did not bear them out: 14 pointed at something that does not exist or is elsewhere (the cat is on the hoist loft rail, not the well; the cave is on the west shore; the bee meadow is east of the chapel; the toll ford is west of the town; Lark has no drowned-bell song; there is no rowing, no boatyard loft, no cart on the mill road, no buyer but Marta and Brandt), 15 promised something nobody can do or pay (a message with no receiver, a delivery, "tell him"). Still only colour, with nothing to do at the end of them: Tybalt's harness and Rosalind's message.
+
 **Anselm Lindqvist** (draper)
 - g: Feel that. No, with the back of your hand. That is Hilda's weaving, and there is none better this side of the passes.
 - g2 [body]: You will have heard. I sold the sailcloth they laid over him. I would rather not have known what for.
@@ -250,7 +252,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [bell]: Father is himself again now the bell rings. Three weeks of burnt crusts, we had.
 - me: Tilly Hobb. I sell what my father bakes and I count better than he does.
 - nb: Giles Varrow walks the long way round to pass this stall. You can smell him coming. I do not mind it as much as I ought.
-- pt: The tinker beside me hears everything. If something is going on in this town, Diggory knew yesterday.
+- pt: The tinker down the row hears everything. If something is going on in this town, Diggory knew yesterday.
 - nt: I am calling my father, and he is holding something hot.
 - b1: Honey cake! Last ones!
 - b2: Warm bread, warm bread.
@@ -299,7 +301,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g: I am not allowed to talk to strangers. Are you a stranger? You look like one.
 - me: Ned Thorne. I can carry a whole sack of oats. A small sack.
 - nb: Pip says she can climb the bell tower. She cannot. I cannot either, but I never said I could.
-- pt: There is a grey cat that sleeps on the well. If you are quiet it lets you.
+- pt: There is a grey cat that sits on the rail of the hoist loft, behind the forge. If you are quiet it lets you.
 - b1: Race you! No? Fine.
 - b2: I was not running.
 
@@ -318,7 +320,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: Grandfather has not said a word since they brought the man up. He sits and he looks north.
 - me: Davy Pell. I mind sheep for Warin Shaw. Ivo says the watch takes lads at sixteen. I am fifteen and three quarters.
 - nb: My brother Tobin is at the forge. He borrows things. He does not mean it as stealing, he means it as knights.
-- pt: Something is taking lambs up by the old tower, north of the chapel. Warin says outlaws. I do not think outlaws eat them raw.
+- pt: There are outlaws camped up by the old tower, north of the chapel. Warin says they take lambs. I should like to see them try it with me there.
 - nt: Mother! ... I am nearly in the watch. Stand where you are.
 - b1: Torn ear. Left one.
 - b2: Morning. Seen Warin?
@@ -328,7 +330,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: I went down to the wharf. They would not lift the cloth for me. I did not need them to. I know my brother's hands.
 - me: Lambert Pell. I carried candles in the Old Mine when I was eleven. I came up one evening and Dunstan did not.
 - nb: Rowan stood beside me the day they barred the door. Fifty years. He has never once said my brother's name to me.
-- pt: The mine is north, past the chapel and up under the cliffs. The Sexton kept the key. Ask the Brother what became of it.
+- pt: The mine is north-west, past the chapel and up under the cliffs. The Sexton kept the key. Ask the Brother what became of it.
 - nt: Fifty years I have slept by this door waiting for a knock. You are not the one I was waiting for. Get out.
 - b1: North. Always look north.
 - b2: Hm. A stranger.
@@ -348,7 +350,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [bell]: So the bell rings, on shop-bought hemp. Thirty feet. I would have laid forty and tarred the eye.
 - me: Ulric Ferrin. Every rope in this town came off my walk. The well, the boats, the last bell rope, and the one before.
 - nb: Brother Aldous sent to Marta Quill for his rope. Marta. A woman who sells buttons.
-- pt: The well rope is new this spring, mine, and sound. If you want to see what a rope should be, draw a bucket.
+- pt: The well rope is new this spring, mine, and sound. If you want to see what a rope should be, go and look at it.
 - nt: I have a hundred fathoms of cord in this house and I can tie anything. Do not make me show you.
 - b1: Mind the walk!
 - b2: Keep it taut, keep it taut.
@@ -367,7 +369,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g: Father says I talk too much to turn the wheel evenly. Hello.
 - me: Amice Ferrin. I turn the rope wheel and I am learning my letters from Master Sele.
 - nb: Lettice has read every book on the stall. Twice. She told me how one ends and I have not forgiven her.
-- pt: If you stand on the terrace by the Elder's, there is a glass you can look through. You can see the whole lake.
+- pt: If you stand on the terrace by the Elder's, there is a glass you can look through. You can see the whole market.
 - b1: One, two, turn. One, two, turn.
 - b2: I was not listening!
 
@@ -386,7 +388,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [end]: Hugh says it is all finished now, one way or the other. Men say that. I have left the lamp trimmed.
 - me: Gillian Alder. I keep the house, I bind the fletchings, and I keep Hugh from giving arrows away to friends.
 - nb: Our Stephen has the cobbler's shop and sleeps over it, alone, eating who knows what. It is forty paces. I count them.
-- pt: Edda at Fairweather Farm saves me her goose feathers. If you go out that way, she always has work for a strong back.
+- pt: Edda at Fairweather Farm saves me her goose feathers. It is east over the bridge, past the mill. Mind her geese.
 - nt: Hugh. Hugh! Wake up, there is someone, and you have a bow on the wall.
 - b1: Wipe your feet.
 - b2: Is that Stephen? No.
@@ -406,7 +408,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: A brass tally with OM on it. I have the mine's pay roll in a chest. Nobody has asked me for it. Nobody ever asks.
 - me: Emmet Sele. I teach the children, write the letters, and keep the levy roll. I am the town's memory and it treats me like its attic.
 - nb: Brother Aldous has the Sexton's ledger and cannot read the Sexton's hand. I can. He has only to cross the square.
-- pt: The chapel has a crypt and the crypt has older books than mine. If the Brother opens it for you, look at what the Sexton kept.
+- pt: The chapel has a crypt and the crypt has older books than mine. If you find the key, look at what the Sexton kept.
 - nt: If you have come for the levy silver, it is not kept here. If you have come for a book, I am almost flattered. Leave.
 - b1: A b! A b!
 - b2: Good day. Mind the ink.
@@ -424,7 +426,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: I know what water does to skin. I have a yard full of proof. That man had not been in the lake a day.
 - me: Fulk Varrow. I turn hides into leather with bark, time and things you do not want named. Every boot in town began here.
 - nb: Humphrey Slate sells the meat and I get the hide. He gets the customers and I get the smell. We are still friends.
-- pt: Follow the stream below my pits and you come to the old washing place. People lose things there. People hide things there too.
+- pt: Go along the lane where the washing hangs. People lose things there. People hide things there too.
 - nt: Nobody comes here by day. So you are either lost or desperate. Which?
 - b1: Upwind, upwind.
 - b2: Giles! The bark!
@@ -464,7 +466,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: A tally, silver in his teeth and a note for the Elder. I had all three before Hale had his helmet on.
 - me: Diggory Pike. I mend what the smith is too proud to mend. A kettle is a small thing until it leaks.
 - nb: Goda Malkin says Greta waters the ale. Greta says Goda brews in a boot. I sell to both and agree with whoever is nearer.
-- pt: Somebody called the Magpie leaves marks about the town. I know three of them. I will not say where. Look up, more often.
+- pt: Somebody called the Magpie hides things about the town and leaves a note with each. I know three of the places. I will not say where. Look up, more often.
 - nt: Alison, it is the one from the market! ... She says to tell you we have nothing but pans, and she has the heaviest.
 - b1: Any pots to mend?
 - b2: You did not hear it from me.
@@ -474,7 +476,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: Diggory has told that tale forty times and the man gets taller each time.
 - me: Alison Pike. He takes the stall and the talk. I do the mending that wants patience, here, in peace.
 - nb: Goda's small beer would strip tin. I buy a jug every evening. Do not look at me like that.
-- pt: Greta at the Hart is always after someone to run an errand. She pays in coin and supper.
+- pt: Greta at the Hart is always after someone to run an errand. She pays in coin and a bed.
 - nt: I have a skillet in each hand. Diggory, light the lamp so I can see which one to use.
 - b1: Halve it.
 - b2: Evening. Jug's empty.
@@ -494,7 +496,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [bell]: There. Hear it? I count my days by that bell. Three weeks I did not know if I was dead.
 - me: Odo Hask. Seventy-nine. I was a grown man when Rowan was a boy, and you may tell him I said so.
 - nb: Idony Hobb and I are the last two who heard the hill when it sang. She will not talk of it. I will, if you ask me.
-- pt: Put your ear to the Hart's cellar wall on a still night. I did, once, as a young man. I never drank there after.
+- pt: Look at the east wall of the Hart's cellar. There is brick in it younger than I am. I never drank there after.
 - nt: I am blind, not deaf. Third board from the door. You are standing on it.
 - b1: Who is that?
 - b2: Good steel sings. Listen.
@@ -504,7 +506,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: I built the handcart they brought him up on. Made it for turnips.
 - me: Miles Ashdown. Wheels, carts, barrows. If it rolls in Brackenfell I made it or I mended it.
 - nb: Brandt and I tyre the wheels together, him with the iron red and me with the water. Twenty years, and we have never cracked one.
-- pt: The old mill road is rutted to the axle past the bridge. If you see a cart down, come and tell me, there is a coin in it.
+- pt: The mill is east over the bridge and down the river. Osric owes me for a cart wheel; mention it and watch him go deaf.
 - nt: I have a mallet that seats an oak spoke in one blow. Think it through.
 - b1: Stand clear of the wheel.
 - b2: True as a die, that one.
@@ -514,7 +516,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [end]: Well. Nobody will call this a dull year. I had been hoping for a dull year.
 - me: Kat Ashdown. He makes the wheels. I make them pay.
 - nb: Tamsin, Miles's sister, lives two doors up with her bees. Twenty-seven, and writing letters to somebody. She will not say who.
-- pt: Tamsin's honey goes to the Hart. If you want to know why it is called the Honeyed Hart, taste the mead.
+- pt: Tamsin's honey goes to the Hart. If you want to know why it is called the Honeyed Hart, taste the ale.
 - nt: Miles, there is a thief. A poor one. He has come to a house full of wheels.
 - b1: Winifred! Noon!
 - b2: That will be two silver. Each.
@@ -524,7 +526,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: The bees were told. You have to tell them when someone dies or they leave. I did not know his name, so I said "a stranger".
 - me: Tamsin Ashdown. Eleven hives, and wax for the chandler. I prefer the bees to most company.
 - nb: The hunter, Wren. She brings me heather from the high slope for the hives. I write to thank her. Often.
-- pt: There is a meadow up the valley, past the standing stones, where the wild swarms go. I would pay for news of it.
+- pt: There is a bee meadow east of the chapel, off the crag path. Go quietly and they will not mind you.
 - nt: I keep bees, so I am not afraid of much. You have until I count to three, and I have already started.
 - b1: Slowly. Slowly.
 - b2: Heather's out on the tops.
@@ -534,7 +536,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: I cut on every side of this town but one. North, under the cliffs, I leave standing. Now you know why.
 - me: Jasper Holt. I keep the Hart, the forge and the bakehouse in fire. Without me this town is cold soup.
 - nb: Wren knows the woods better than I do and never lets me forget it. She is usually right, which is the worst of it.
-- pt: There is a lumber camp out on the forest road. A man called Hob works it. He had a brother. Ask him, not me.
+- pt: There is a lumber camp out on the forest road. A man called Hob worked it. He had a brother. Read the board at the old mine; do not ask me.
 - nt: I split logs for a living. You are standing in my house. Work it out.
 - b1: Ash or oak?
 - b2: Dry wood! Seasoned!
@@ -554,7 +556,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [bell]: I cried when I heard it. Silly. You do not know a thing holds your day together until it stops.
 - me: Felice Byrd. I shave hoops and keep the peace between a cooper and his daughter, which is the harder craft.
 - nb: Maren cured my hands when I could not hold a knife. People call her sour. I call her the reason I can work.
-- pt: Old Maren has more than tonics in that cottage. She reads the dead, they say. If you have a question for one, there is your door.
+- pt: Old Maren has more than tonics in that cottage. She read the dead man's tally when nobody else could. If you find a thing you cannot read, there is your door.
 - nt: Laurence! ... You have picked a house where everyone owns a blade with a handle at each end.
 - b1: Mind the shavings.
 - b2: Lovely morning for it.
@@ -564,7 +566,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [end]: Everything in this town has changed but the sign over our door. I am working on that too.
 - me: Joyce Byrd. I have done seven years at the block the same as any apprentice. I want "and Daughter" on the board.
 - nb: Old Wenn at the boatyard says a woman built the best boat that was ever on Mirrormere. He will not say who. I think it was his wife.
-- pt: The boatyard has a locked loft and Old Wenn has the keys. He will lend them to anyone who listens to a whole story first.
+- pt: The doors under the quay are the boat-houses, and Old Wenn has the keys. He will tell you a whole story before he tells you no.
 - nt: I can swing a cooper's adze all day. I can certainly swing it once.
 - b1: And Daughter. You will see.
 - b2: Tight first time.
@@ -584,7 +586,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: I have seen what Mirrormere gives back. It gives back the drowned. That one, it did not want.
 - me: Wenn. Just Wenn. I built boats for sixty years and now I hold the keys and the opinions.
 - nb: Randal is the best pupil I ever had and I will tell him so on my deathbed and not one hour before.
-- pt: The keys to the loft are with me. Everything a boat yard forgets is up there. Hear me out and you may borrow them.
+- pt: The keys to the boat-houses are with me, and there they stay. Read the board on the wharf if you want to know how high the lake once stood.
 - nt: Eh? Is it morning? No. Then you are a thief, and I am too old to chase you. Shut the door on your way out.
 - b1: Twenty boats!
 - b2: Planks like a farmer.
@@ -634,7 +636,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: I saw them bring him up the lane. I have told Avice and nobody else, and Avice has told the town.
 - me: Hester Slate. I keep the block clean and the till closed.
 - nb: Avice Hobb and I were girls together. She married bread and I married meat, and we meet in the middle every market day.
-- pt: Ellen Marsh smokes fish down by the water and sells it off my stall. If you want lake trout, hers is the best.
+- pt: Ellen Marsh smokes fish down by the water. If you want lake trout, hers is the best.
 - nt: Humphrey has the cleaver. I have the other cleaver. There are always two.
 - b1: Honest weight, every time.
 - b2: Avice! A word!
@@ -654,7 +656,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [end]: People want beer when things change and beer when they do not. It is a steady trade, at least.
 - me: Bridget Malkin. I do the brewing now, mostly. Mother does the selling and the feud.
 - nb: The tailor, Jocelyn. He measures me with his eyes every time I pass. I could do worse. I am checking whether I could do better.
-- pt: Lark plays at the Hart every evening. If you have not heard the one about the drowned bell, ask for it.
+- pt: Lark plays at the Hart every evening. He says he knows nine songs and seven of them are sad. Ask him for one.
 - nt: Mother, do not get up, I have it. You. Out, before she finds the paddle.
 - b1: Small beer, fresh.
 - b2: Friday. Do not tell her.
@@ -664,7 +666,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: A man comes out of the dark alone and they cover him with a sail. My brother went into the hills alone. I think of it.
 - me: Adda. They call me the Rushworker. I cut my own reeds on the north shore and I have the hands to prove it.
 - nb: My brother lives up by the fall, by himself. People say hermit and mean mad. He is neither. He is tired of people, which is sense.
-- pt: Follow the stream up past the old tower and you come to a pool under a fall. If a man is there, tell him Adda keeps his key.
+- pt: Follow the stream up past the old tower and you come to a pool under a fall. If a man is there, let him be. He is my brother, and he is not mad.
 - nt: I weave by touch, so I do not need the lamp to find you. Out you go.
 - b1: Rushes, fresh cut.
 - b2: Not on the willow!
@@ -674,7 +676,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: Finn found him. Everyone says so. Finn found him. That is right.
 - me: Peter Marsh. I row what needs rowing. My father did, his father did. Marsh House has always had oars by the door.
 - nb: Finn Reedwater is on that dock before I am up and after I am in. I do not know when the man sleeps.
-- pt: North shore, past the reeds, there is a cave mouth at the waterline. I have seen a light in it before dawn. I rowed the other way.
+- pt: West shore, past the reeds, there is a cleft in the rock by the water. I have seen a light in it before dawn. I rowed the other way.
 - nt: Ellen, take Will upstairs. ... I have an oar. I know it is a foolish thing to hold indoors. I am holding it.
 - b1: Penny across.
 - b2: Not the north shore.
@@ -684,7 +686,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: Peter came home grey that morning, before anyone had cried the news. He says he saw nothing. I have been married eleven years.
 - me: Ellen Marsh. He catches the fares, I catch the supper.
 - nb: Mercy Garrick mends our nets and will not take full price. Her brother is on the passes with the outlaws; she pays for him in knots.
-- pt: If you want to cross the lake, Peter will row you. If you want the north shore, you will have to shame him into it.
+- pt: Peter knows every yard of the lake shore. Ask him about the west side and watch him find something to do with his hands.
 - nt: Peter. Wake up. Take the oar. Yes, the oar.
 - b1: Smoked trout!
 - b2: Will! Off the dock!
@@ -712,7 +714,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: Dry lungs, they tell me, and the herb-woman is "reading" him. Reading. I offered a proper examination. I was not answered.
 - me: Alaric Mossop, apothecary, late of the lowland towns. Two years here. They still call me the new man.
 - nb: Old Maren sells weeds in a twist of rag and half the town swears by her. I have glass jars. I have labels.
-- pt: If you find anything growing on the high slopes, bring it to me before you take it to her. I pay in coin, not tonic.
+- pt: The woman Maren sends people up the slopes for frostcaps and pays them in tonic. I call that hedge-craft. You may call it what you like.
 - nt: I am a lodger here, I own nothing but books and bottles. Take a bottle. I will not tell you which ones are poison.
 - b1: Choleric. Decidedly.
 - b2: I have a tincture for that.
@@ -722,7 +724,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [body]: Hilda came up that night and we sat by the vats till it was light. Neither of us wanted to be the one to say it.
 - me: Wilmot Arden. Madder, weld and woad. Red, yellow and blue, and every colour you have seen in this town on a back.
 - nb: Hilda weaves it and I colour it and Lindqvist sells it for three times what he gives the pair of us.
-- pt: Hilda is at her loom by the river. She and the smith have a quarrel over cloth that someone with a level head might settle.
+- pt: Hilda is at her loom by the river. She and the smith have a quarrel over cloth that neither of them will let lie.
 - nt: That vat has stood a week. It stains for life. Take one more step and I will tip you in.
 - b1: Mind the blue!
 - b2: Tom! Stir, do not splash!
@@ -740,7 +742,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [end]: We heard it up here a day late, as we hear everything. Brackenfell does its deciding and Highfold is told.
 - me: I answer for Highfold to the Elder: the flock, the tally and the toll. Six houses and more sheep than Brackenfell has people.
 - nb: Rowan has not climbed this hill in four years. I go down to him. That tells you how it stands between the two places.
-- pt: The ford below us takes a toll, when the guard is at his post. He has been at my son's wedding for three weeks, in spirit.
+- pt: There is a toll ford on the west road, the far side of Brackenfell, when the guard is at his post. He has been at my son's wedding for three weeks, in spirit.
 - nt: The Reeve's door is never barred, by custom. It has never been needed. Do not be the reason I change it.
 - b1: Shut the gate behind you.
 - b2: Count them twice.
@@ -750,7 +752,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [end]: Down there they have their troubles. Up here I have forty borrowed trenchers to return and nobody will say whose are whose.
 - me: Basilia Wold. I fed the whole hill for three days when Kester married, and I am still finding guests in the hay.
 - nb: Rosalind is a town girl and thinks I do not see her looking down the valley of an evening. I looked the same way once.
-- pt: If you are going down to Brackenfell, take this cheese to the market cross. The stall with the blue cloth. I will know if you eat it.
+- pt: If you are going down to Brackenfell, look for the stall with the blue cloth by the market cross. My cheese goes there, and it is not to be cut thin.
 - nt: Another one sleeping it off? The hay is in the barn, the door is that way, and the wedding is over.
 - b1: Have you eaten?
 - b2: Whose trencher is this?
@@ -760,7 +762,7 @@ Lines are short on purpose: each is one request and well under the 30 s check. T
 - g2 [end]: Whatever they dug up or let out down there, it is a long way from my flock, and I have a wife to come home to.
 - me: Kester Wold. The high flock is mine. So is the house, and so, God help her, is Rosalind.
 - nb: Her uncle Warin keeps the low pasture. He looked me over like a ram at market before he would give her away.
-- pt: Something has been at the sheep by the standing stones. If you are armed and going that way, I would take it kindly.
+- pt: The standing stones are north of us, a long walk up the valley. The flock will not graze near them. I do not ask the flock why.
 - nt: Ros, stay there. Friend, I have had three weeks of people walking into this house with gifts. You have no gift.
 - b1: Three weeks!
 - b2: Come by, come by. Good dog.

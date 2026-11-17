@@ -19,67 +19,66 @@ function yardSpots() {
       const fl = typeof siteDoorLocal === 'function' && p.house && p.house.w ? siteDoorLocal(p.house, 1.0) : null, fw = fl ? siteToWorld(p.house, fl[0], fl[1]) : null;
       World.spots[p.id + '.yard'] = { p: [x, gy(x, z), z], yaw: Math.atan2(cx - x, -(zFront + p.bz * dp * 0.45 - z)), zone: 0, yardOf: p.id, trade: p.trade, front: fw }; break; } }
 }
-// [cull] The yards nobody used (Build 74 has 26 plots; 15 had no household of their own, most behind houses that are only shells). No new people: the Hart's
-// regulars get the yard their name or body fits in place of an hour they spent standing about, and
-// what is left goes to the nearest neighbour who keeps house, for one of the hours they swept their own floor.
-const YARD_HANDS = [['pat1', 'farm.field2', 'draper.yard'], ['pat2', 'barn.front', 'in.47.yard'], ['pat3', 'alley.stall0', 'in.46.yard'], ['pat4', 'elder.porch', 'in.13.yard'], ['pat5', 'stallfront2', 'in.18.yard'], ['pat6', 'alley.stall1', 'in.42.yard'], ['pat7', 'farm.yard', 'in.11.yard']];
-function yardHands() {
-  const used = new Set(); for (const d of NPC_DEFS) for (const r of d.sched) for (const sp of [].concat(r[1])) if (/\.yard$/.test(sp)) used.add(sp);
-  for (const [id, from, yard, hour] of YARD_HANDS) { const d = NPC_DEFS.find(q => q.id === id); if (!d || !World.spots[yard] || used.has(yard)) continue; const r = d.sched.find(q => q[1] === from && (hour === undefined || q[0] === hour)); if (r) { r[1] = yard; r[2] = 'work'; used.add(yard); } }
-  for (const k of Object.keys(World.spots)) { const sp = World.spots[k]; if (!sp.yardOf || used.has(k)) continue; let best = null, bd = 60;
-    for (const d of NPC_DEFS) { if (!d.house || !/^r2?_/.test(d.id) || d.sched.some(q => /\.yard$/.test(String(q[1])))) continue; const h = World.spots[d.house + '.home'], hs = SITES.find(q => q.id === d.house); if (!hs) continue; const r = d.sched.find(q => q[0] > 13 && q[0] < 18 && q[1] === d.house + '.home' && q[2] === 'sweep'); if (!r) continue; const dd = hyp(hs.x - sp.p[0], hs.z - sp.p[2]); if (dd < bd) { bd = dd; best = r; } void h; }
-    if (best) { best[1] = k; best[2] = 'work'; used.add(k); } }
-}
+// ── The cast (docs/PEOPLE.md, as data in 54_cast.js) ──
+// [cast] Until Build 77 the ordinary houses were filled by a generator: a first name and a surname drawn by hash, one of four days, no lines ("..."). The owner
+// called it fake life. Now every person in a house is one of the sixty in the accepted table: a name, an age, a household, a bed of their own, a trade and a
+// place to do it, and what they say (82d_cast.js). Nothing here is drawn by chance except the cut of a tunic. The seven Hart regulars and the yard hands are
+// gone with the generator: their seats and yards belong to people of the table.
+const CAST_BODY = { OM: ['m_elder'], M: ['m_farmer', 'm_fisher', 'm_hunter'], YM: ['m_youth'], B: ['m_boy'], OW: ['f_elder'], W: ['f_farmer', 'f_weaver', 'f_herbalist'], YW: ['f_maid'], G: ['f_child'] };
+// who is where at the hours the table fixes (section 7): the well at dawn, school, the Hart in the evening
+const CAST_WELL = ['avice', 'hester', 'kat', 'winifred', 'ysolt', 'gillian', 'ellen', 'felice', 'amice', 'ned'], CAST_SCHOOL = ['ned', 'amice', 'will', 'tom', 'lettice'];
+const CAST_HART = ['stephen', 'silas', 'miles', 'jasper', 'diggory', 'jocelyn', 'peter', 'humphrey', 'laurence', 'bridget'];
+// the few who sweep (the audit counted 57 of 80 with a broom in their day): the widow's step, the Reeve's house after the wedding, a shop floor at closing
+const CAST_FIRST = { draper: 'sabina' };          // who has the counter where the table says so against the order of the rows (Anselm is in the back room)
+const CAST_SWEEP = { mercy: 1, basilia: 1, ursel: 1, hester: 1 };
+// work that is done out of doors, by trade: [morning place, afternoon place] (places of the town that exist; '' = at home)
+const CAST_OUT = { warin: ['gate.post2', 'hunter.yard'], davy: ['hunter.yard', 'gate.post2'], jasper: ['in.11.yard', 'in.46.yard'], peter: ['dock.end', 'wharf.view'], tamsin: ['in.32.yard', 'in.89.yard', 'in.48.yard'], silas: ['', 'belltower.bottom'], gilbert: ['', 'passage.lane'], ysolt: ['', 'gallery.bottom'],
+  idony: ['in.12.yard', 'in.47.yard'], giles: ['', 'in.88.yard'], felice: ['', 'in.18.yard'], gillian: ['', 'in.41.yard'], kat: ['', 'in.81.yard'], wilmot: ['', 'in.42.yard'] };
+// [cast] the yards of Build 72 behind houses that are only shells (73m_plots.js) are worked by the person of the table whose trade is that yard's: the beekeeper has
+// the hives, the woodcutter the woodyards, the dyer and her boy the dye yard, the old woman who keeps hens the hen run. A child's task after school:
+const CAST_TASK = { ned: 'in.06.yard', tom: 'in.42.yard', amice: 'in.75.yard', will: 'dock.end' };
 function householdDefs() {
   yardSpots();
-  const HH_STALLS = ['stall1', 'stall2'].filter(k => World.spots[k]);       /* [cull] the two market stalls that had no keeper (Bram keeps stall0) */
-  const used = new Set(), claimed = new Set();
-  for (const d of NPC_DEFS) for (const r of d.sched) for (const sp of [].concat(r[1])) if (typeof sp === 'string') { used.add(sp.split('.').slice(0, -1).join('.')); if (r[2] === 'lie') claimed.add(sp); }
-  // Nobody shares a place: who stands where in the town, and when. Pre-filled from the people who already have a day; a visit is given only if the spot is free then.
-  const OCC = {}, busy = (sp, a, b) => (OCC[sp] || []).some(o => a < o[1] + 0.25 && b > o[0] - 0.25), take = (sp, a, b) => { (OCC[sp] = OCC[sp] || []).push([a, b]); };
-  for (const d of NPC_DEFS) d.sched.forEach((r, k) => { const end = k + 1 < d.sched.length ? d.sched[k + 1][0] : d.sched[0][0] + 24; for (const sp of [].concat(r[1])) if (typeof sp === 'string') { take(sp, r[0], end); if (end > 24) take(sp, r[0] - 24, end - 24); } });
-  const visit = (list, a, b, k) => { for (let n = 0; n < list.length; n++) { const sp = list[(k + n) % list.length]; if (World.spots[sp] && !busy(sp, a, b)) { take(sp, a, b); return sp; } } return null; };
-  const ids = Object.keys(World.houses).filter(id => { const h = World.houses[id]; return h.plan && h.plan.fam; }).sort();
-  for (const id of ids) {
-    const P = World.houses[id].plan, F = P.fam, key = id.replace(/\./g, ''), H = s => hHash(id + '|' + s);
-    if (used.has(id) && !/^in\.|^high\./.test(id)) continue;                     // the six buildings with their own named people already have them
-    const beds = Object.keys(P.spots).filter(k => /^bed\d*$/.test(k) && World.spots[id + '.' + k] && World.spots[id + '.' + k].lie && !claimed.has(id + '.' + k));
-    if (!beds.length) continue;
-    const has = n => !!(World.spots[id + '.' + n] && P.spots[n]), shop = F.fam === 'shopfront' && has('counter');
-    const seats = ['sit', 'seat1', 'seat2', 'seat3'].filter(has), n = Math.min(beds.length, seats.length ? 2 : 1, H('n') < 0.55 && beds.length > 1 ? 2 : 1);
-    for (let i = 0; i < n; i++) {
-      const fem = i === 0 ? H('g') < 0.45 : true === (H('g') >= 0.45), body = (fem ? HH_FEMALE : HH_MALE)[(H('b' + i) * 5) | 0], first = (fem ? HH_FF : HH_MF)[(H('f' + i) * 16) | 0];
-      const sur = i === 0 ? (F.trade === 'household' ? HH_SUR[(H('s') * 16) | 0] : F.trade[0].toUpperCase() + F.trade.slice(1)) : HH_SUR[(H('s') * 16) | 0];
-      const tn = HH_TINT[(H('t' + i) * 8) | 0], bed = beds[i], seat = seats[Math.min(i, seats.length - 1)] || 'home', up = 21.5 + H('u' + i) * 1.3, wake = 6.3 + H('w' + i) * 1.0;
-      // [logic] A day that is somebody's day. Before, everyone without a counter or a bench stood at the '.home' spot from seven to six, facing the wall,
-      // and thirteen households had the same day hour for hour. Now: a shopkeeper minds the counter and eats at noon; a tradesman works, eats, works
-      // and goes to market before supper; those who keep house have one of four days (sweeping, water from the well, the market, chapel in the
-      // morning, a walk to the wharf or the terrace, the hearth before supper), with the hours shifted a little per person; one in five goes to the Hart.
-      // (the plan's 'fire1', 'stand2', 'front', 'pew1' ... are only other names for '.home' in an ordinary house, so a day is made of the places a house
-      // really has: the floor by the door ('.home'), its seats, its bench or counter, and the town's well, stalls, benches and views)
-      const J = (k, a) => (H(k + i) - 0.5) * 2 * a, pick = (k, l) => l[(H(k + i) * l.length) | 0], here = n => id + '.' + n, meal = here(seat), rest = here(seats[(i + 1) % Math.max(1, seats.length)] || seat);
-      const MARKET = ['stallfront0', 'stallfront1', 'stallfront2', 'dstall0', 'dstall1', 'dstall2', 'dstall3', 'dstall4', 'alley.stall0', 'alley.stall1', 'alley.n', 'alley.s'], WALKS = ['wharf.view', 'terrace.view', 'bridge.west', 'dock.end', 'square.bench', 'square.bench2', 'passage.lane', 'gallery.top', 'north.top', 'east.top', 'belltower.bottom', 'passage.mid', 'gallery.bottom', 'north.bottom', 'east.bottom'], WELL = ['square.well', 'square.drain', 'square.well#1', 'square.well#2'];
-      const sitAnim = seats.length ? 'sit' : 'idle', hk = (H('pk' + i) * 12) | 0;
-      // an outing from a to b at one of the places in the list if one is free then; otherwise that time is spent at home (sweeping in the morning, sitting after noon)
-      const out = (list, a, b) => { const sp = visit(list, a, b, hk); return sp ? [a, sp, World.spots[sp].sit ? 'sit' : 'idle'] : (H('fb' + i + a.toFixed(1)) < 0.5 ? [a, here('home'), 'sweep'] : [a, rest, sitAnim]); };
-      let day;
-      if (i === 0 && shop) day = [[8, here('counter'), 'idle'], [12.3 + J('n', 0.3), meal, sitAnim], [13.1 + J('a', 0.2), here('counter'), 'idle'], [18, here('home'), 'sweep']];
-      else if (i === 0 && has('work')) { const e = 16.4 + J('e', 0.5); day = [[wake + 0.7, here('work'), 'work'], [12.2 + J('n', 0.3), meal, sitAnim], [13.1 + J('a', 0.2), here('work'), 'work'], out(MARKET, e, e + 1.2), [e + 1.2, here('home'), 'sweep']]; }
-      else { const t = (H('day' + i) * 4) | 0, w = 9.2 + J('w', 0.9), m = w + 1.0 + H('m' + i) * 0.8, n = 12.5 + J('n', 0.5), a = 14.4 + J('a', 1.1);
-        if (t === 0) day = [[wake + 0.6, here('home'), 'sweep'], out(WELL, w, m), out(MARKET, m, n), [n, meal, sitAnim], [n + 1.1, rest, sitAnim], [15.2 + J('s', 0.5), here('home'), 'sweep'], [17.2 + J('h', 0.3), rest, sitAnim]];
-        else if (t === 1) day = [out(WELL, wake + 0.5, 8.6), [8.6, here('home'), 'sweep'], [10.4 + J('r', 0.4), rest, sitAnim], [n, meal, sitAnim], out(MARKET, a, a + 1.6), [a + 1.6, here('home'), 'sweep'], [17.4 + J('h', 0.3), rest, sitAnim]];
-        else if (t === 2) day = [[wake + 0.6, rest, sitAnim], out(MARKET, 8.8 + J('m', 0.4), 10.6), [10.6, here('home'), 'sweep'], [n, meal, sitAnim], out(WALKS, a, a + 1.8), [a + 1.8, here('home'), 'sweep'], [17.8 + J('h', 0.3), rest, sitAnim]];
-        else day = [[wake + 0.6, here('home'), 'sweep'], [9.8 + J('s', 0.5), rest, sitAnim], out(MARKET, 11.1 + J('m', 0.3), n), [n, meal, sitAnim], out(WALKS, a, a + 1.5), [a + 1.5, here('home'), 'sweep'], [17.5 + J('h', 0.3), rest, sitAnim]]; }
-      // [cull] Build 72 gave these houses yards with a trade in each (73m_plots.js) and nobody used them. Whoever keeps the house does its chores in the yard
-      // (the first resident always; the second for the first hour if it is washing, a garden or hens), and a household whose yard yields something to
-      // sell has one of its people at an empty market stall for the morning. Nothing new: the same people, in the places the plan built for them.
-      const yard = World.spots[here('yard')] ? here('yard') : null, yt = yard && World.spots[yard].trade;
-      if (yard) { if (i === 0) day = day.map(r => r[1] === here('home') && r[2] === 'sweep' ? [r[0], yard, 'work'] : r); else if (/washing|garden|hens/.test(yt) && day.length && day[0][1] === here('home')) day[0] = [day[0][0], yard, 'work'];
-        if (!shop && /hives|garden|hens|pigs|dyer|cooper|woodyard|forge/.test(yt) && HH_STALLS.length) { const st = HH_STALLS.shift(), noon = 12.4 + J('n', 0.3); day = [[7.6 + J('k', 0.2), st, 'idle'], [noon, meal, sitAnim], [noon + 1.0, i === 0 && has('work') ? here('work') : yard, 'work'], [16.2 + J('h', 0.4), yard, 'work'], [17.6 + J('h', 0.3), rest, sitAnim]]; }       /* the morning at the stall with what the yard or the bench makes, the afternoon making it */ }
-      const sched = [[wake, here('home'), 'sweep']].concat(day, [[19.5 + i * 0.3 + J('v', 0.2), meal, sitAnim], [up, id + '.' + bed, 'lie']]).sort((a, b) => a[0] - b[0]);
-      NPC_DEFS.push({ id: (i ? 'r2_' : 'r_') + key, name: first + ' ' + sur, body, tint: { tunic: tn, robe: tn, skirt: HH_TINT[(H('q' + i) * 8) | 0], pants: [1.1, 1.0, 0.9] }, skin: HH_SKIN[(H('k' + i) * 6) | 0], hair: HH_HAIR[(H('h' + i) * 7) | 0], top: [0.4, 0.36, 0.3], legs: [0.3, 0.26, 0.22], female: fem, dress: fem, sched, house: id });
-      claimed.add(id + '.' + bed);
-    }
+  const S_ = World.spots, has = sp => !!S_[sp], H = (id, k) => hHash(id + '|' + k), J = (id, k, a) => (H(id, k) - 0.5) * 2 * a;
+  const beds = {}, nth = {};          // beds handed out per house; a person's place in the household (0 = the first named)
+  const bedOf = (home, id) => { const all = ['bed', 'bed2', 'bed3', 'bed4'].map(b => home + '.' + b).filter(b => has(b) && S_[b].lie && !CAST_TAKEN.has(b)); const k = beds[home] = (beds[home] || 0); beds[home]++; return all[k] || null; };
+  // beds the story people sleep in are theirs
+  const CAST_TAKEN = new Set(); for (const d of NPC_DEFS) for (const r of d.sched) if (r[2] === 'lie' && typeof r[1] === 'string') CAST_TAKEN.add(r[1]);
+  const seatsOf = b => ['sit', 'seat1', 'seat2', 'seat3'].map(n => b + '.' + n).filter(sp => has(sp) && S_[sp].sit);
+  let hart = 0, maker = 0; const HART_SEATS = ['inn.s6', 'inn.s7', 'inn.s8', 'inn.s9', 'inn.s10', 'inn.s11', 'inn.s12', 'inn.barfront', 'inn.fire2', 'inn.stand2'].filter(has);
+  const SCHOOL = ['in.40.seat1', 'in.40.seat2', 'in.40.seat3', 'in.40.sit', 'in.40.fire1'].filter(has), WELL = ['square.well', 'square.well', 'square.well', 'square.drain'];          // one place asked for by several: each is given the next free standing place round it (npcClaim)
+  const MARKET = ['stallfront0', 'stallfront1', 'stallfront2', 'dstall0', 'dstall1', 'dstall2', 'dstall3', 'dstall4', 'alley.stall0', 'alley.stall1', 'alley.n', 'alley.s'].filter(has);
+  const PLAY = ['square.bench2', 'alley.s', 'gallery.top', 'terrace.view', 'north.top', 'east.top', 'alley.n', 'passage.mid'].filter(has);
+  // every yard of a house of the table is somebody's for an hour of the day: one of the people of that house or shop, before it opens (after it shuts for those at the well at dawn)
+  const yardBy = {}; for (const sp in S_) { const b = S_[sp].yardOf; if (!b || !sp.endsWith('.yard') || Object.values(CAST_TASK).includes(sp)) continue; const c = CAST.filter(q => (q.home === b || q.work === b) && q.age >= 15 && q.id !== 'godwin' && !CAST_OUT[q.id]); const free = c.filter(q => !yardBy[q.id]); if (free.length) yardBy[(free.find(q => q.work === b && q.home !== b) || free[free.length - 1]).id] = sp; }
+  for (const p of CAST) {
+    const home = p.home, work = p.work || home; if (!World.houses[home] || !World.houses[home].plan) { console.warn('cast: ' + p.name + ' has no house ' + home); continue; }
+    const k = nth[home] = (nth[home] === undefined ? 0 : nth[home] + 1), bed = bedOf(home, p.id); if (!bed) console.warn('cast: no bed for ' + p.name + ' in ' + home);
+    const fem = /W|G/.test(p.voice), child = p.age < 15, old = p.age >= 70, id = p.id;
+    const at = (b, n) => has(b + '.' + n) ? b + '.' + n : b + '.home', seats = seatsOf(home), seat = seats.length ? seats[k % seats.length] : null, meal = seat || at(home, k === 0 ? 'sit' : 'fire1'), sitA = seat ? 'sit' : 'idle';          /* a shop or a workshop has no seat of its own yet (its plan gives none): the meal is taken standing by the table or the hearth */
+    // the place of one's work: the counter for whoever keeps one, the bench ('work') for the maker, the yard for the second pair of hands, else the floor of the house
+    const keeps = /counter|stall|shop|grocer|draper$|chandler|apothecary|cutler|butcher|block|bookstall/i.test(p.trade) && has(work + '.counter');
+    const yard = has(home + '.yard') ? home + '.yard' : null, bench = has(work + '.work') ? work + '.work' : null;
+    const first = (CAST_FIRST[work] ? CAST_FIRST[work] === id : CAST.find(q => (q.work || q.home) === work) === p);          // the first named at a workplace has its counter or bench; the next works beside (the yard, the floor)
+    const spot = keeps && first ? work + '.counter' : first && bench ? bench : keeps ? at(work, 'sit') : (work === home && yard && !first ? yard : (bench && !first ? at(work, 'home') : bench || (first && has(work + '.counter') ? work + '.counter' : at(work, 'home'))));
+    const wAnim = spot.endsWith('.counter') ? 'idle' : keeps && !first ? 'work' : CAST_SWEEP[id] ? 'sweep' : 'work';
+    const wake = (old ? 6.9 : 6.1) + H(id, 'w') * 0.6, up = (child ? 20.3 : old ? 20.9 : 21.6) + H(id, 'u') * 0.8, noon = 12.1 + J(id, 'n', 0.25), out = CAST_OUT[id];
+    let day;
+    if (id === 'godwin') day = [[2.5, at(home, 'work'), 'work'], [9.2, meal, sitA], [10, bed, 'lie'], [14, at(home, 'counter'), 'idle'], [17.5, yard || meal, yard ? 'work' : sitA]];          // the baker bakes at night and sleeps from ten to two
+    else if (child) { const sc = CAST_SCHOOL.indexOf(id), pl = PLAY[(H(id, 'p') * PLAY.length) | 0], pl2 = PLAY[((H(id, 'p') * PLAY.length | 0) + 3) % PLAY.length];
+      day = [[wake + 0.5, meal, sitA]].concat(CAST_WELL.includes(id) ? [[7.0, WELL[k % WELL.length], 'idle']] : [], sc >= 0 && SCHOOL.length ? [[8.9, SCHOOL[sc % SCHOOL.length], S_[SCHOOL[sc % SCHOOL.length]].sit ? 'sit' : 'idle']] : [], [[noon, meal, sitA], [13.2, id === 'lettice' ? at('shop.s1', 'counter') : (has(CAST_TASK[id]) ? CAST_TASK[id] : yard || at(work === home ? home : work, 'work')), id === 'lettice' ? 'idle' : 'work'], [15.6 + J(id, 'a', 0.3), [pl, pl2, pl], 'idle'], [18.3, meal, sitA]]); }
+    else if (old && !out && !keeps && !(first && bench)) day = [[wake + 0.8, meal, sitA], [9.5 + J(id, 'm', 0.4), spot === at(home, 'home') ? meal : spot, spot === at(home, 'home') ? sitA : 'work'], [noon, meal, sitA], [13.4, (H(id, 'o') < 0.5 ? 'square.bench' : 'square.bench2'), 'sit'], [16 + J(id, 'e', 0.4), meal, sitA]];
+    else { const a0 = wake + 0.7, well = CAST_WELL.includes(id) ? [[6.6 + (CAST_WELL.indexOf(id) % 4) * 0.33, WELL[CAST_WELL.indexOf(id) % WELL.length], 'idle']] : [];
+      const am = out && out[0] ? [a0 + (well.length ? 1.6 : 0), out[0], 'work'] : [well.length ? 8.3 : a0, spot, wAnim], pm = out && out[1] ? [13.2 + J(id, 'a', 0.2), out[1], /bench|view|lane/.test(out[1]) ? 'idle' : 'work'] : [13.1 + J(id, 'a', 0.2), spot, wAnim];
+      const town = !home.startsWith('high.'), shape = !keeps && k === 0 && !out ? (maker++ % 3) : -1, mk = q => MARKET[(H(id, q) * MARKET.length) | 0];          /* Highfold is an hour's walk from the market: its people keep to their own yard. Three shapes of a craftsman's day, dealt in turn, so no four have the same one */
+      const shop = town && ((!keeps && !out && k > 0) || shape === 1) ? [[9.8 + J(id, 'm', 0.15), mk('mk'), 'idle']] : [], late = !town ? (k === 0 ? [[15.2, meal, sitA], [16.6, spot, wAnim]] : [[16.3, at(home, 'fire1'), 'idle']]) : shape === 0 ? [[16.8 + J(id, 'e', 0.15), mk('ev'), 'idle']] : shape === 2 ? [[15.6, (maker % 2 ? 'square.bench' : 'square.bench2'), 'sit'], [16.9, spot, wAnim]] : [];
+      if (out && out[2] && has(out[2])) late.push([16.6, out[2], 'work']);
+      day = well.concat([am], shop, shop.length ? [[11.3 + J(id, 'b', 0.2), spot, wAnim]] : [], [[noon, meal, sitA], pm], late, [[18.1 + J(id, 'h', 0.2), meal, sitA]]); }
+    if (yardBy[id] && !day.some(r => r[1] === yardBy[id])) day.push(CAST_WELL.includes(id) ? [16.9, yardBy[id], 'work'] : [6.9, yardBy[id], 'work'], CAST_WELL.includes(id) ? [18.1, meal, sitA] : [8.05, spot, wAnim]);
+    const eve = CAST_HART.includes(id) && HART_SEATS[hart] ? [[19.1 + (hart % 5) * 0.12, HART_SEATS[hart], S_[HART_SEATS[hart++]].sit ? 'sit' : 'idle']] : [[19.2 + J(id, 'v', 0.2), meal, sitA]];
+    const sched = (id === 'godwin' ? [] : [[wake, meal, sitA]]).concat(day, id === 'godwin' ? [[19, meal, sitA], [20, bed || meal, bed ? 'lie' : sitA]] : eve.concat([[eve[0][1].startsWith('inn.') ? 22 + H(id, 'l') * 0.4 : up, bed || meal, bed ? 'lie' : sitA]])).filter(r => r && r[1]).sort((a, b) => a[0] - b[0]);
+    const tn = HH_TINT[(H(id, 't') * 8) | 0], bodies = CAST_BODY[p.voice] || CAST_BODY.M, body = bodies[(H(id, 'b') * bodies.length) | 0];
+    NPC_DEFS.push({ id, name: p.name, body, cast: p, tint: { tunic: tn, robe: tn, skirt: HH_TINT[(H(id, 'q') * 8) | 0], pants: [1.1, 1.0, 0.9] }, skin: HH_SKIN[(H(id, 'k') * 6) | 0], hair: p.age >= 55 ? (p.age >= 68 ? 'white' : 'grey') : HH_HAIR[(H(id, 'h') * 7) | 0],
+      top: [0.4, 0.36, 0.3], legs: [0.3, 0.26, 0.22], female: fem, dress: fem, scale: child ? Math.min(0.8, 0.53 + p.age * 0.018) : p.voice === 'YM' && p.age < 17 ? 0.9 : undefined, run: child || undefined, sched, house: home, bed });
   }
-  yardHands();
 }
