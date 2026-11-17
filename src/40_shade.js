@@ -15,7 +15,7 @@ SH.init = function () {
     moonDir: uniform(new THREE.Vector3(0, 1, 0)), moonBright: uniform(0), sunDisc: uniform(new THREE.Vector3(0, 1, 0)), sunDiscI: uniform(0),
     wind: uniform(V4()), windOff: uniform(new THREE.Vector2()),     // wind: dir.x, dir.z, strength, time. windOff: how far (m) the air has travelled, which carries the gust pattern
     rain: uniform(0), wet: uniform(0),                        // falling now (0..1), and how wet the ground is (lags behind)
-    cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0),
+    cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0), viewX: uniform(new THREE.Vector2(1, 0)), viewZ: uniform(new THREE.Vector2(0, 1)), viewOn: uniform(0),      /* [view] what the panes show from inside (56b_viewcube.js) */
     lightPos: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // xyz, radius
     lightCol: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // rgb, zone (255 = everywhere)
     terrLayers: uniform(1), lightN: uniform(8, 'int'), lightNOut: uniform(8, 'int'),         // lights in use, and how many of them (listed first) reach surfaces outdoors: the loop below stops there
@@ -89,6 +89,9 @@ SH.init = function () {
     const street = wall.mul(smoothstep(0.02, -0.25, el).mul(0.6).oneMinus());
     let col = mix(sky.mul(cloud), street, mask);
     col = col.mul(float(1).sub(spec.mul(float(1).sub(U.windowGlow)).mul(0.4))).add(vec3(1.0, 0.55, 0.2).mul(spec).mul(U.windowGlow).mul(0.5));
+    /* [view] the town itself, drawn once from the house's own place when the player came in (56b_viewcube.js): the line of sight turned from the room's frame
+       into the house's; the painted skyline above remains for a room with no house out of doors (the mine, the crypt) and when the map is switched off */
+    if (typeof ViewCube !== 'undefined' && !ViewCube.off && TSL.cubeTexture) { const dw = vec3(V.x.mul(U.viewX.x).add(V.z.mul(U.viewZ.x)), V.y, V.x.mul(U.viewX.y).add(V.z.mul(U.viewZ.y))); const ct = ViewCube.base().sample(dw); col = mix(col, ct.rgb.mul(0.5), U.viewOn); }
     const hc = wp.x.mul(abs(N.z)).add(wp.z.mul(abs(N.x))), q = vec2(hc, wp.y).mul(4.2), a = q.x.add(q.y), b = q.x.sub(q.y);
     const lat = TSL.min(abs(TSL.fract(a).sub(0.5)), abs(TSL.fract(b).sub(0.5))), lead = smoothstep(0.03, 0.075, lat);
     return col.mul(lead.mul(0.88).add(0.12)).mul(float(1).sub(U.windowGlow).mul(TEST && TEST.pane === 0 ? 0 : 1.9).add(1));      // [l1] by day the sky in a pane is the brightest thing in a room

@@ -117,7 +117,10 @@ function buildVillage() {
     const bx = BRIDGE.x, bz = BRIDGE.z, hl = BRIDGE.len / 2, hw = BRIDGE.w / 2, n = 12, m = bucket(bx, bz);
     const y0 = Terrain.y(bx - hl, bz), y1 = Terrain.y(bx + hl, bz), wy = riverY(River.dist(bx, bz, 20) < 20 ? River.at : 0);
     const deckY = x => lerp(y0, y1, (x - bx + hl) / BRIDGE.len) + 1.05 * (1 - Math.pow((x - bx) / hl, 2));
-    const archY = x => { const k = (x - bx) / 5.4; return Math.abs(k) < 1 ? wy - 0.1 + 2.25 * Math.sqrt(1 - k * k) : -9; };
+    /* [cull] the arch's underside never comes nearer the roadway than 0.4 m. It was sized from the river's level and the roadway from the banks, and at the
+       crown it stood 0.3 m ABOVE the cobbles: a dark face looking down, in the middle of the bridge, hiding its far half from anyone walking up to it
+       (the owner's "shadow from day one": no light or shadow map was involved) */
+    const archY = x => { const k = (x - bx) / 5.4; return Math.abs(k) < 1 ? Math.min(wy - 0.1 + 2.25 * Math.sqrt(1 - k * k), deckY(x) - 0.4) : -9; };
     m.m1 = 0; m.ao = 1; m.grad = null;
     for (let i = 0; i < n; i++) {
       const xa = bx - hl + BRIDGE.len * i / n, xb = bx - hl + BRIDGE.len * (i + 1) / n, ya = deckY(xa), yb = deckY(xb);
