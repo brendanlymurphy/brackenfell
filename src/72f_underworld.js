@@ -16,7 +16,7 @@ function pGate(P, d, id, key, label) {
 const pdTomb = (len) => m => { m.mat(MAT.STONE, [0.78, 0.76, 0.72], 0.8); m.box(-len / 2, 0, -0.42, len / 2, 0.5, 0.42); m.box(-len / 2 - 0.05, 0.5, -0.47, len / 2 + 0.05, 0.66, 0.47); m.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.8); m.box(-len / 2 + 0.2, 0.66, -0.12, len / 2 - 0.2, 0.74, 0.12); };
 const pdAltar = c => m => {
   m.mat(MAT.STONE, [0.82, 0.8, 0.76], 0.8); m.box(-1.45, 0, -0.5, 1.45, 0.95, 0.5); m.mat(MAT.STONE, [0.7, 0.68, 0.64], 0.8); m.box(-1.6, 0.95, -0.56, 1.6, 1.07, 0.56);
-  m.mat(MAT.CLOTH, [0.42, 0.07, 0.08], 0.5); m.box(-1.25, 0.28, -0.585, 1.25, 1.065, -0.55); m.box(-1.2, 1.07, -0.4, 1.2, 1.085, 0.4);          // the frontal hanging from the slab, a runner on top
+  m.mat(MAT.CLOTH, [0.24, 0.06, 0.06], 0.5); m.box(-1.25, 0.28, -0.585, 1.25, 1.065, -0.55); m.box(-1.2, 1.07, -0.4, 1.2, 1.085, 0.4);          // the frontal hanging from the slab, a runner on top
   m.mat(MAT.METAL, COL.bronze); m.box(-1.25, 0.28, -0.59, 1.25, 0.31, -0.55); m.box(-1.25, 0.92, -0.59, 1.25, 0.95, -0.55);
   for (const sx of [-1.25, 1.25]) at(m, sx, 1.085, 0, 0, () => { m.mat(MAT.METAL, COL.bronze); m.cyl(0, 0, 0, 0.09, 0.05, 0.05, 8, 2); m.cyl(0, 0.05, 0, 0.03, 0.03, 0.45, 6, 2); Props.candle(m, c, true); });
   for (const sx of [-0.55, 0.55]) at(m, sx, 1.085, 0.05, 0, () => Props.candle(m, { zone: c.zone, candleLight: false }, false));
@@ -56,7 +56,7 @@ PLANS.chapel = (P, c, info) => {
   pAgainst(P, nave, 'w', P.id + '.statuebase', 0.8, 0.8, 1.2, 0, m => { m.mat(MAT.STONE, [0.8, 0.78, 0.74], 0.8); m.box(-0.4, 0, -0.4, 0.4, 0.5, 0.4); m.mat(MAT.STONE, [0.72, 0.7, 0.66], 0.8); m.box(-0.14, 0.5, -0.1, 0.14, 1.5, 0.1); m.ball(0, 1.62, 0, 0.14); }, { at: 9.5, noClear: false });
   pSpot(P, 'nave', 0, 3.4, PI, { k: 0 });
   for (const sx of [-1, 1]) pAgainst(P, nave, sx < 0 ? 'w' : 'e', P.id + '.shelfn' + sx, 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, PD.books(c, 1.6)), { at: 9 });
-  const bk = pFree(P, nave, P.id + '.lectern', 0.5, 0.5, 1.1, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.2, 0, -0.2, 0.2, 1.0, 0.2); m.mat(MAT.CLOTH, COL.red, 0.5); m.box(-0.28, 1.0, -0.22, 0.28, 1.05, 0.22); }, { near: [-3.2, 10.4] });
+  const bk = pFree(P, nave, P.id + '.lectern', 0.5, 0.5, 1.1, 0, m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.2, 0, -0.2, 0.2, 1.0, 0.2); m.mat(MAT.CLOTH, [0.24, 0.07, 0.06], 0.5); m.box(-0.28, 1.0, -0.22, 0.28, 1.05, 0.22); }, { near: [-3.2, 10.4] });
   if (bk) pInteract(P, bk.cx, 1.1, bk.cz, Object.assign({ kind: 'read', id: 'chapel.book', r: 1.7 }, READS['chapel.book']), 0);
   pLamp(P, nave, 0, 3.0); pLamp(P, nave, 0, 8.0);
   if (Kit.pieces.Chandelier) for (const z of [3.0, 8.0]) { const L0 = P.lv[0]; at(P.c.int, 0, 0, z, 0, () => kitLit(P.c.int, 'Chandelier', 0, L0.H - 0.1, 0, 0.55, 0, { r: 10, c: [3.0, 1.9, 0.85], kind: 'candle', always: true })); }
