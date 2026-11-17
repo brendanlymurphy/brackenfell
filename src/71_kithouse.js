@@ -228,8 +228,8 @@ function kitIntBatch(zone) {
 // fit = 'box' (stretch to the box, within lo..hi), 'contain' (uniform, as big as fits), 'xz' (uniform on the footprint, height within 25%),
 // one = outdoors only the first model is used (fewer materials, fewer draw calls), k = extra per-axis factor, mul = extra scale, y = lift in metres, ry = turn in radians (a quarter turn swaps the footprint), tint = colour factor, skip = draw nothing.
 const SCANR = {
-  Table_Large: { n: ['wooden_table_02'], fit: 'row', tint: [0.5, 0.4, 0.31] },
-  Bench: { n: ['woodentable_01'], fit: 'row', tint: [0.5, 0.41, 0.33] },
+  Table_Large: { n: ['wooden_table_02'], fit: 'row', tint: [1, 0.58, 0.32] },
+  Bench: { n: ['woodentable_01'], fit: 'row', tint: [0.8, 0.5, 0.3] },
   Stool: { n: ['painted_wooden_stool'], fit: 'contain', tint: [0.3, 0.23, 0.17] },
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
   Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
@@ -240,9 +240,9 @@ const SCANR = {
   Candle_1: { n: ['wooden_candlestick'], fit: 'contain', mul: 1.25 }, Candle_2: { n: ['wooden_candlestick'], fit: 'contain' },
   CandleStick_Triple: { n: ['brass_candleholders_c'], fit: 'contain', mul: 0.75 },
   Bucket_Wooden_1: { n: ['wooden_bucket_01', 'wooden_bucket_02'], fit: 'contain', mul: 1.1, one: 1 },
-  Bookcase_2: { n: ['wooden_bookshelf_worn'], fit: 'box', lo: 0.7, hi: 1.3 }, Cabinet: { n: ['painted_wooden_cabinet'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.46, 0.4, 0.32] },
-  Nightstand_Shelf: { n: ['painted_wooden_shelves'], fit: 'box', lo: 0.7, hi: 1.4, tint: [0.8, 0.75, 0.7] },
-  Workbench: { n: ['painted_wooden_table'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.6, 0.5, 0.42] },
+  Bookcase_2: { n: ['wooden_bookshelf_worn'], fit: 'box', lo: 0.7, hi: 1.3 }, Cabinet: { n: ['painted_wooden_cabinet'], fit: 'box', lo: 0.7, hi: 1.3, tint: [0.5, 0.4, 0.31] },
+  Nightstand_Shelf: { n: ['painted_wooden_shelves'], fit: 'box', lo: 0.7, hi: 1.4, tint: [0.58, 0.48, 0.38] },
+  Workbench: { n: ['painted_wooden_table'], fit: 'box', lo: 0.7, hi: 1.3, tint: [1, 0.52, 0.3] },
   Pickaxe_Bronze: { n: ['picke_dirty_01'], fit: 'contain' }, Axe_Bronze: { n: ['wooden_axe_03'], fit: 'contain', ry: PI / 2 },
 };
 const SCAN_FLAT = { wooden_axe_03: 1, rusted_spade_01: 1, kite_shield: 1, cross_pein_hammer: 1, picke_dirty_01: 1 };
@@ -295,7 +295,8 @@ function kaddNow(m, P, extra) {
   B.add(P.name, P.M, o); if (zone && !o.noBlob) furnBlob(zone, P);
 }
 // place a kit piece relative to the mesh's current transform (the same frame the generated prop would be drawn in)
-function kp(m, name, x, y, z, s, ry, extra) { const P = kplace(m, name, x, y, z, s, ry); if (P) { kadd(m, P, extra); if (P.more) for (const Q of P.more) kadd(m, Q, extra); } }
+const SCAN_TINT = { painted_wooden_table: [1, 0.52, 0.3], painted_wooden_cabinet: [0.5, 0.4, 0.31], painted_wooden_shelves: [0.58, 0.48, 0.38], painted_wooden_stool: [0.3, 0.23, 0.17], painted_wooden_chair_01: [0.27, 0.2, 0.14] };          // [fx2] the painted scans come out blue and white: weathered oak and dull plaster tones
+function kp(m, name, x, y, z, s, ry, extra) { const P = kplace(m, name, x, y, z, s, ry); if (P && !P.tint && SCAN_TINT[P.name]) P.tint = SCAN_TINT[P.name]; if (P) { kadd(m, P, extra); if (P.more) for (const Q of P.more) kadd(m, Q, extra); } }
 // a light-source piece: the piece itself with glowing wax, one flame per candle tip, one point light for the whole piece
 function kitLit(m, name, x, y, z, s, ry, o) {
   const zone = m.m1 | 0, P = kplace(m, name, x, y, z, s, ry), M = P.M, pts = Kit.lights(P.name), v = new THREE.Vector3(), c = [0, 0, 0];

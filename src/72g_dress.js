@@ -51,19 +51,19 @@ PD.cask = (len, r) => m => {
   addBoxCollider(m, -len / 2, -r, len / 2, r, 0, r * 2 + 0.1);
 };
 PD.broom = m => { m.mat(MAT.TIMBER, COL.wood); m.push().RZ(0.09); m.box(-0.012, 0, -0.012, 0.012, 1.45, 0.012); m.mat(MAT.THATCH, COL.hay, 0.5); m.cyl(0, 0, 0, 0.08, 0.035, 0.3, 6, 1); m.pop(); addBoxCollider(m, -0.12, -0.12, 0.12, 0.12, 0, 1.4); };
-PD.sacks = (R) => m => { const cols = [[0.7, 0.62, 0.45], [0.6, 0.55, 0.42], [0.55, 0.5, 0.36]]; for (const [x, z, s, y] of [[-0.18, 0, 0.24, 0], [0.2, 0.02, 0.22, 0], [0.0, -0.04, 0.2, 0.3]]) { m.mat(MAT.CLOTH, R.pick(cols), 0.5); m.ball(x, y + s * 0.9, z, s * 0.85, s, s * 0.8, 6, 4); } addBoxCollider(m, -0.4, -0.3, 0.4, 0.3, 0, 0.6); };
+PD.sacks = (R) => m => { const cols = [[0.46, 0.39, 0.27], [0.4, 0.35, 0.26], [0.5, 0.43, 0.3]]; for (const [x, z, s, y] of [[-0.18, 0, 0.24, 0], [0.2, 0.02, 0.22, 0], [0.0, -0.04, 0.2, 0.3]]) { m.mat(MAT.CLOTH, R.pick(cols), 0.5); m.ball(x, y + s * 0.9, z, s * 0.85, s, s * 0.8, 6, 4); } addBoxCollider(m, -0.4, -0.3, 0.4, 0.3, 0, 0.6); };
 PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 columns = 0.55 m deep (5 drew 0.91 m into a 0.5 m slot)
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.36, 0.2, 0.16], [0.22, 0.27, 0.32], [0.5, 0.4, 0.2], [0.55, 0.5, 0.4], [0.3, 0.34, 0.22], [0.4, 0.33, 0.25], [0.25, 0.22, 0.2]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; m.box(x - 0.13, -l * 0.5, -0.115, x + 0.13, 0.0, -0.075); m.box(x - 0.15, -l, -0.125, x + 0.15, -l * 0.5, -0.08); m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.36, 0.2, 0.16], [0.22, 0.27, 0.32], [0.5, 0.4, 0.2], [0.55, 0.5, 0.4], [0.3, 0.34, 0.22], [0.4, 0.33, 0.25], [0.25, 0.22, 0.2]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; for (let q = 0; q < 4; q++) { const x0 = x - 0.15 + q * 0.075, d = 0.075 + (q % 2) * 0.03, v = 0.9 + (q % 3) * 0.06; m.mat(MAT.CLOTH, [cl[0] * v, cl[1] * v, cl[2] * v], 0.5); m.box(x0, -l * 0.5, -0.04 - d, x0 + 0.075, 0.0, -0.075); m.box(x0 - 0.005 * q, -l, -0.045 - d - 0.01, x0 + 0.075 + 0.005 * q, -l * 0.5, -0.08); } m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2 - 0.04, h - 0.04, -0.09, w / 2 + 0.04, h + 0.02, -0.03);
   const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.62, c[1] * 0.62, c[2] * 0.62], 0.6); m.box(-w / 2, 0.05, -0.07, w / 2, h, -0.04); m.mat(MAT.CLOTH, [c[0] * 0.45, c[1] * 0.45, c[2] * 0.45], 0.6); m.box(-w / 2 + 0.01, 0, -0.068, w / 2 - 0.01, 0.05, -0.042);
-  m.mat(MAT.CLOTH, [0.46, 0.38, 0.24], 0.6); m.box(-w / 2 + 0.06, 0.06, -0.075, w / 2 - 0.06, 0.1, -0.04); m.box(-w / 2 + 0.06, h - 0.1, -0.075, w / 2 - 0.06, h - 0.06, -0.04);
-  m.box(-0.07, h * 0.3, -0.08, 0.07, h * 0.75, -0.04); m.box(-w * 0.22, h * 0.5, -0.08, w * 0.22, h * 0.56, -0.04);
+  m.mat(MAT.CLOTH, [0.46, 0.38, 0.24], 0.6); m.box(-w / 2 + 0.06, 0.1, -0.075, w / 2 - 0.06, 0.13, -0.04); m.box(-w / 2 + 0.06, h - 0.14, -0.075, w / 2 - 0.06, h - 0.11, -0.04);
+  m.mat(MAT.CLOTH, [c[0] * 0.5, c[1] * 0.5, c[2] * 0.5], 0.6); for (let i = 1; i < 6; i++) m.box(-w / 2 + 0.06, h * i / 6, -0.072, w / 2 - 0.06, h * i / 6 + 0.025, -0.043);          // [fx2] woven bands, not a cross
 };
 // a niche in a wall (crypt, nave): dark recess with an arch lintel, a candle that glows without a light, a skull or an urn
 PD.niche = (R, urn) => (m, hh) => {
@@ -206,10 +206,19 @@ PD.stats = function (P) {
 
 // [fx2] top-up: measured placement refuses what really does not fit, so a room can come out thinner than its rule meant. Any room whose walls are less than 58% covered gets a second fill pass
 // from a pool that suits it; corners that are still bare get their kind of thing. Nothing here is a new kind of object: every pool entry is one PD.try already knows.
+// pictures hang only where someone owns pictures: the elder's hall, the inn, the merchants (store, draper) and now and then a better house; never in a forge, a stable, a barracks or a cellar
+PD.paintOK = P => /^(elder|inn|store|draper)$/.test(P.id) || (/^in\.\d+$/.test(P.id) && (+P.id.slice(3)) % 4 === 0) ? P.wallItems.filter(w => /\.paint$/.test(w.id)).length < 3 : false;
+// by trade: what a working room of that kind keeps on its walls and floor (names PD.try knows: its own kinds, KIT_ITEM and KIT_WALL pieces)
+PD.TRADE = {
+  smithy: ['Peg_Rack', 'Axe_Bronze', 'Pickaxe_Bronze', 'Sword_Bronze', 'stack', 'sacks', 'Bucket_Wooden_1', 'Barrel', 'shelf'], guardhouse: ['Shield_Wooden', 'kite_shield', 'Sword_Bronze', 'Torch_Metal', 'WeaponStand', 'Barrel', 'Crate_Wooden', 'Peg_Rack'],
+  farm: ['Shelf_Simple', 'Peg_Rack', 'Bag', 'Barrel', 'sacks', 'stack', 'rusted_spade_01', 'wicker_basket_02'], mill: ['Peg_Rack', 'Bag', 'sacks', 'Barrel', 'Crate_Wooden', 'stack'], hunter: ['Peg_Rack', 'Axe_Bronze', 'kite_shield', 'Bag', 'WeaponStand', 'Barrel', 'stack'],
+  fisher: ['Peg_Rack', 'Bucket_Wooden_1', 'wicker_basket_02', 'Barrel', 'sacks', 'stack', 'Bag'], weaver: ['shelf', 'hooks', 'Bag', 'stack', 'sacks', 'Shelf_Simple'], herbalist: ['Shelf_Small_Bottles', 'hooks', 'Shelf_Simple', 'wicker_basket_02', 'sacks'],
+  chapel: ['Torch_Metal', 'stack', 'cupboard', 'hooks', 'broom'], store: ['shelf', 'cabinet', 'sacks', 'Barrel', 'Crate_Wooden', 'hooks', 'Shelf_Simple'], draper: ['shelf', 'hooks', 'cupboard', 'sacks', 'Shelf_Simple']
+};
 PD.POOLS = {
-  cellar: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], store: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], bedroom: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet', 'cask'],
-  hall: ['shelf', 'cabinet', 'hooks', 'paint', 'tapestry', 'sacks', 'stack', 'cupboard'], shop: ['shelf', 'cabinet', 'hooks', 'paint', 'tapestry', 'sacks', 'stack'], keeper: ['cupboard', 'hooks', 'paint', 'shelf', 'cabinet'],
-  common: ['shelf', 'cabinet', 'hooks', 'paint', 'cask', 'stack'], kitchen: ['shelf', 'cabinet', 'hooks', 'cask', 'sacks', 'stack'], study: ['books', 'paint', 'hooks', 'cabinet'], sacristy: ['cupboard', 'hooks', 'paint', 'shelf'], gallery: ['paint', 'hooks', 'tapestry']
+  cellar: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], store: ['shelf', 'sacks', 'cask', 'stack', 'cabinet', 'hooks'], bedroom: ['cupboard', 'hooks', 'tapestry', 'bench', 'hooks', 'cabinet', 'cask'],
+  hall: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'tapestry', 'sacks', 'stack', 'cupboard'], shop: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'tapestry', 'sacks', 'stack'], keeper: ['cupboard', 'hooks', 'bench', 'hooks', 'shelf', 'cabinet'],
+  common: ['shelf', 'cabinet', 'hooks', 'bench', 'hooks', 'cask', 'stack'], kitchen: ['shelf', 'cabinet', 'hooks', 'cask', 'sacks', 'stack'], study: ['books', 'bench', 'hooks', 'hooks', 'cabinet'], sacristy: ['cupboard', 'hooks', 'bench', 'hooks', 'shelf'], gallery: ['bench', 'hooks', 'hooks', 'tapestry']
 };
 PD.cover = function (P, r) {
   const a = r.in; let free = 0, cov = 0;
@@ -226,8 +235,9 @@ PD.cover = function (P, r) {
 PD.topup = function (P) {
   P.topped = 0;
   for (const id in P.rooms) {
-    const r = P.rooms[id], pool = PD.POOLS[r.kind]; if (!pool) continue;
-    for (let pass = 0; pass < 5 && PD.cover(P, r) < 0.64; pass++) { const n = PD.fill(P, r, pool, { max: 6 }); P.topped += n; if (!n) break; }
-    if (PD.cover(P, r) < 0.64) P.topped += PD.corners(P, r, r.kind === 'cellar' || r.kind === 'store' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack']);
+    const r = P.rooms[id], pools = [];
+    if (r.k === 0 && PD.TRADE[P.id] && r.kind !== 'bedroom' && r.kind !== 'cellar') pools.push(PD.TRADE[P.id]); if (PD.POOLS[r.kind]) pools.push(PD.POOLS[r.kind]);
+    for (const pool of pools) for (let pass = 0; pass < 4 && PD.cover(P, r) < 0.64; pass++) { const n = PD.fill(P, r, pool, { max: 6 }); P.topped += n; if (!n) break; }
+    if (pools.length && PD.cover(P, r) < 0.64) P.topped += PD.corners(P, r, r.kind === 'cellar' || r.kind === 'store' ? ['cask', 'sacks', 'stack'] : ['broom', 'sacks', 'stack']);
   }
 };
