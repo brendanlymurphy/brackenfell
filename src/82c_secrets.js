@@ -113,7 +113,7 @@ function secTick(dt) {
   // the thief
   { const G = SEC.mag; if (G && G.fig) { const dusk = h >= 18.5 && h < 23, ex = SEC.yard.ex, zc = SEC.yard.zc;
       if (G.st === 'off' && dusk && !S.flags.magpieYard && Nav.nodes.length) {
-        const near = (x, z) => { let b = -1, bd = 1e9; for (let i = 0; i < Nav.nodes.length; i++) { const n = Nav.nodes[i]; if (Math.abs(n[1] - World.groundY(x, z)) > 1.6) continue; const dd = hyp(n[0] - x, n[2] - z); if (dd < bd) { bd = dd; b = i; } } return b; };
+        const near = (x, z) => { let b = -1, bd = 1e9; for (let i = 0; i < Nav.nodes.length; i++) { const n = Nav.nodes[i]; if (Math.abs(n[1] - World.groundY(x, z)) > 1.6 || !Nav.adj[i].length || Nav.portal[i] !== undefined) continue;       /* [cull] not a node joined to nothing, nor a doorway or a yard's own node (those lead indoors) */ const dd = hyp(n[0] - x, n[2] - z); if (dd < bd) { bd = dd; b = i; } } return b; };
         const a = near(3, -4), b = near((SEC.yard.l ? SEC.yard.l.x0 : ex - 5) - 0.6, zc), idx = a >= 0 && b >= 0 ? navPath(a, b) : null;
         if (idx) { G.path = idx.map(i => [Nav.nodes[i][0], Nav.nodes[i][2]]).concat([[ex - 0.5, zc], [ex + 2.0, zc], [ex + 3.6, zc - 0.5]]); G.i = 0; G.x = G.path[0][0]; G.z = G.path[0][1]; G.st = 'wait'; G.t = 0; G.fig.visible = true; }
       }

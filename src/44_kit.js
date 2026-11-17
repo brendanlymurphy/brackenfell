@@ -52,6 +52,7 @@ const Kit = (() => {
     if (pack.catalog) { const c = await fetchJson(pack.catalog, pack.optional); if (c) Object.assign(K_.cat, c.pieces || c); }
     gltf.scene.updateMatrixWorld(true);
     for (const node of gltf.scene.children) {
+      if (/@low$/.test(node.name)) { const lp = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); lp.push(extract(o)); } }); (K_.low = K_.low || {})[node.name.slice(0, -4)] = lp; continue; }      // [cull] the light copy of a scanned prop for the Low tier (tools/scan_low.mjs)
       if (/@far$/.test(node.name)) { const fp = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); fp.push(extract(o)); } }); K_.far[node.name.slice(0, -4)] = fp; continue; }      // the light copy of a piece (tools/kits_far.mjs)
       const prims = []; node.traverse(o => { if (o.isMesh) { registerMaterial(o.material); prims.push(extract(o)); } });
       if (!prims.length) continue;
@@ -59,6 +60,9 @@ const Kit = (() => {
       for (const p of prims) for (let i = 0; i < p.pos.length; i++) { const k = i % 3, v = p.pos[i]; if (v < min[k]) min[k] = v; if (v > max[k]) max[k] = v; }
       K_.pieces[node.name] = { name: node.name, prims, min, max, pack: pack.glb };
     }
+    /* [cull] Low tier (or a device with 3 GB or less): the stall props that stand out of doors in numbers are drawn from their light copies, about a third of
+       the triangles. Decided once, when the pack is read; ?lowmesh=0 or --opt lowmesh=0 keeps the full models for a comparison. */
+    if (K_.low && typeof GFX_TEX !== 'undefined' && GFX_TEX.tiny && !(TEST && TEST.lowmesh === 0) && !/[?&]lowmesh=0/.test(location.search)) for (const nm in K_.low) if (K_.pieces[nm] && !K_.pieces[nm].full) { K_.pieces[nm].full = K_.pieces[nm].prims; K_.pieces[nm].prims = K_.low[nm]; }
     return true;
   }
   const texLoad = (url, kind) => new Promise((res, rej) => new THREE.TextureLoader().load(url, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = 4; t.colorSpace = kind === 'data' ? THREE.NoColorSpace : THREE.SRGBColorSpace; gfxTex(t, kind).then(res, () => res(t)); }, undefined, () => rej(new Error('texture ' + url))));

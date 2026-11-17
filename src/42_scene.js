@@ -3,6 +3,7 @@
 // villagers, small props); 2 = the wide shadow map only (flat tree stand-ins that cast for every tree out there).
 // Layer 3 = the near sun-shadow map only: casters the camera never draws (the low copy of a villager, the plain pine used for shadows). The near map's camera enables it.
 const SHADOW_ONLY_LAYER = 3;
+const FARHIDE = (typeof TEST !== "undefined" && TEST && TEST.farhide !== undefined) ? +TEST.farhide : 1e9;       // [cull] how far away ground may still be hidden under the roofline (was 600 m)
 const SC = { scene: null, statics: [], cells: [], rigid: [], bodies: [], mats: {}, pools: [] };
 // Draw distances (m) for small things. vis: drawn by the camera up to here; cast: drawn into the near sun-shadow map up to here; near: a chicken
 // is drawn as separate parts up to this distance and as one rigid body beyond it. indoor: while the camera is inside a building, outdoor
@@ -51,10 +52,11 @@ function sceneBuild() {
     // terrain and water tiles of one pack are drawn together: one mesh whose index buffer is refilled from the tiles in view (see poolUpdate)
     if ((it.kind === 'terrain' || it.kind === 'water') && !it.cell && !it.nearOnly && !(TEST && TEST.pool === 0)) {
       let P = SC.pools.find(q => q.pk === pk && q.kind === it.kind);
-      if (!P) { P = { pk, kind: it.kind, tiles: [], mat, n: 0 }; SC.pools.push(P); }
-      if (it.kind === 'water' && it.r > 30) { for (const c of squares(pk, it.first, it.count, 16)) P.tiles.push({ it, idx: c.idx, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 14), on: false }); }       // a river or lake tile is hundreds of metres long: cut it into 16 m squares
-      else if (it.kind === 'terrain' && it.r > 60 && it.count > 600 && !(TEST && TEST.terrsq === 0)) { for (const c of squares(pk, it.first, it.count, it.r > 300 ? 260 : 96)) P.tiles.push({ it, idx: c.idx, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 10), on: false }); }       // [perf] a terrain tile is 200 to 1700 m across and was drawn whole when any of it was in view: cut into squares, each is tested against the view and the roofline
+      if (!P) { P = { pk, kind: it.kind, tiles: [], groups: [], mat, n: 0 }; SC.pools.push(P); } const g0 = P.tiles.length;
+      if (it.kind === 'water' && it.r > 30) { for (const c of squares(pk, it.first, it.count, 16)) P.tiles.push({ it, idx: c.idx, top: c.top, rh: c.rh, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 14), on: false }); }       // a river or lake tile is hundreds of metres long: cut it into 16 m squares
+      else if (it.kind === 'terrain' && it.r > 60 && it.count > 600 && !(TEST && TEST.terrsq === 0)) { for (const c of squares(pk, it.first, it.count, it.r > 300 ? 130 : 32 /* [cull] was 260 : 96. A square is hidden only when all of it is under the roofline, and a 96 m square of town ground always showed down some street */)) P.tiles.push({ it, idx: c.idx, top: c.top, rh: c.rh, sph: c.sph, big: new THREE.Sphere(c.sph.center, c.sph.radius + 10), on: false }); }       // [perf] a terrain tile is 200 to 1700 m across and was drawn whole when any of it was in view: cut into squares, each is tested against the view and the roofline
       else P.tiles.push({ it, sph: sphere(it.c, it.r), big: sphere(it.c, it.r + 6), on: false });
+      { let gr = it.r; for (let i = g0; i < P.tiles.length; i++) { const q = P.tiles[i].sph; gr = Math.max(gr, hyp(q.center.x - it.c[0], q.center.y - it.c[1], q.center.z - it.c[2]) + q.radius); } P.groups.push({ it, a: g0, b: P.tiles.length, sph: sphere(it.c, gr + 0.5) }); }       /* holds every square's own sphere, so a square is never skipped that would have been tested */       /* [cull] the squares of one tile are tested together first: with squares a third the size there are four times as many, and most tiles are nowhere near the view */
       P.n += it.count; continue;
     }
     const g = geo(pk, it.first, it.count); g.boundingSphere = sphere(it.c, it.r);
@@ -67,7 +69,7 @@ function sceneBuild() {
     // A big merged piece of the village (fences, wells, stalls over 100 m) used to go into the near sun-shadow map whole. Its triangles are
     // sorted into 8 m squares here; a twin that only that shadow map draws holds just the squares the map covers (subUpdate).
     if (it.kind === 'opaque' && !it.cell && it.r > 18 && !(TEST && TEST.sub === 0)) {
-      const cellList = squares(pk, it.first, it.count, 8);
+      const cellList = squares(pk, it.first, it.count, 4);       /* [cull] was 8 m: finer squares let more of a yard hide behind its house */
       const g2 = new THREE.BufferGeometry(); for (const k in pk.attr) if (k !== 'wind') g2.setAttribute(k, pk.attr[k]);
       const cur = new Uint32Array(it.count), at = new THREE.BufferAttribute(cur, 1); at.setUsage(THREE.DynamicDrawUsage); g2.setIndex(at); g2.setDrawRange(0, 0); g2.boundingSphere = g.boundingSphere;
       const tw = new THREE.Mesh(g2, mat); tw.matrixAutoUpdate = false; tw.frustumCulled = false; tw.castShadow = true; tw.receiveShadow = false; tw.layers.set(SHADOW_ONLY_LAYER); tw.visible = false; tw.name = 'static-shadow'; scene.add(tw);
@@ -147,10 +149,11 @@ function poolUpdate(e, cur, inside) {
     { const oN = !inside && SC.occ ? SC.occN : -1; if (!SC.camStep && !P.stale && P.first && oN === P.hidN && inside === P.inside) { P.mesh.visible = P.count > 0; continue; } P.inside = inside; }
     let miss = false, need = 0, have = 0;
     const occ0 = !inside && SC.occ ? SC.occ : null, fresh = (occ0 ? SC.occN : -1) !== P.hidN; P.hidN = occ0 ? SC.occN : -1;       // a square counted as hidden is asked again as soon as the roofline is new: nothing in view may wait for the refill timer
-    for (const t of P.tiles) {
-      const it = t.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]); if (t.hid && fresh) { const du = Math.hypot(t.u.x - SC.occAt[0], t.u.z - SC.occAt[2]); t.hid = !!occ0 && du < 600 && occ0(t.u, du, 0.85); }
-      t.ok = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && d - it.r > DRAW.indoor);
-      t.in = t.ok && _fr.intersectsSphere(t.sph); if (t.in) { need++; if (!t.on && !t.hid) miss = true; } if (t.on) { have++; if (!t.ok) miss = true; }       /* t.hid: under the roofline when last asked; not a reason to refill */
+    for (const g of P.groups) {
+      const it = g.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), ok = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && d - it.r > DRAW.indoor), T = P.tiles;
+      if (!ok || !_fr.intersectsSphere(g.sph)) { for (let i = g.a; i < g.b; i++) { const t = T[i]; t.ok = ok; t.in = false; t.hid = false; if (t.on) { have++; if (!ok) miss = true; } } continue; }       /* out of view: nothing to ask; a square that comes back is asked afresh (hid cleared) */
+      for (let i = g.a; i < g.b; i++) { const t = T[i]; if (t.hid && fresh) { const du = Math.hypot(t.u.x - SC.occAt[0], t.u.z - SC.occAt[2]); t.hid = !!occ0 && du < FARHIDE && occ0(t.u, du, 0.85); }
+        t.ok = ok; t.in = _fr.intersectsSphere(t.sph); if (t.in) { need++; if (!t.on && !t.hid) miss = true; } if (t.on) have++; }       /* t.hid: under the roofline when last asked; not a reason to refill */
     }
     // [perf] ground and water wholly under the roofline as seen from here (the kit's horizon, 44_kit.js) are not drawn: from a lane, most of the
     // valley's 59k terrain triangles lie behind houses. Asked again whenever the horizon is rebuilt (the camera moved 1.5 m or turned).
@@ -160,7 +163,7 @@ function poolUpdate(e, cur, inside) {
       let n = 0, same = !P.first ? false : true; const src = P.pk.index.array; P.stale = false; P.first = true;
       // decide first, copy only if the set of squares changed: the roofline is rebuilt every 1.5 m or 11 degrees of turning, and refilling 60k
       // triangles of index buffer each time was a hitch while turning (26 ms at worst in the square)
-      for (const t of P.tiles) { let on = t.ok && (t.in || _frWide.intersectsSphere(t.sph)); if (on && occ) { const u = t.u || (t.u = { x: t.sph.center.x, z: t.sph.center.z, r: t.sph.radius, y1: t.sph.center.y + t.sph.radius }); const du = Math.hypot(u.x - SC.occAt[0], u.z - SC.occAt[2]); t.hid = du < 600 && occ(u, du, 0.85); /* the far hills are the skyline: never hidden */ if (t.hid) on = false; } else t.hid = false; if (on !== t.on) same = false; t.on2 = on; }
+      for (const g of P.groups) { const wide = _frWide.intersectsSphere(g.sph); for (let i = g.a; i < g.b; i++) { const t = P.tiles[i]; let on = t.ok && (t.in || (wide && _frWide.intersectsSphere(t.sph)));       /* a square found in view above is on whatever the band says: the band is the view as it was at the last step */ if (on && occ) { const u = t.u || (t.u = t.top !== undefined ? { x: t.sph.center.x, z: t.sph.center.z, r: t.rh, y1: t.top + 0.3 } : { x: t.sph.center.x, z: t.sph.center.z, r: t.sph.radius, y1: t.sph.center.y + t.sph.radius });       /* [cull] a square of ground is as high as its highest point and as wide as its footprint: the top of its bounding sphere is tens of metres above a flat square 100 m across, so ground behind the roofs was almost never counted as hidden */ const du = Math.hypot(u.x - SC.occAt[0], u.z - SC.occAt[2]); t.hid = du < FARHIDE && occ(u, du, 0.85); /* the far hills are the skyline: never hidden */ if (t.hid) on = false; } else t.hid = false; if (on !== t.on) same = false; t.on2 = on; } }
       P.t = SC.now; if (same) { P.mesh.visible = P.count > 0; continue; }
       for (const t of P.tiles) { t.on = t.on2; if (t.on) { if (t.idx) { P.cur.set(t.idx, n); n += t.idx.length; } else { P.cur.set(src.subarray(t.it.first, t.it.first + t.it.count), n); n += t.it.count; } } }
       P.geo.setDrawRange(0, n); P.count = n;
@@ -176,7 +179,7 @@ function squares(pk, first, count, size) {
     let l = cells.get(key); if (!l) cells.set(key, l = { idx: [], lo: [1e9, 1e9, 1e9], hi: [-1e9, -1e9, -1e9] }); l.idx.push(ix[k], ix[k + 1], ix[k + 2]);
     for (const v of [a, b, c]) for (let d = 0; d < 3; d++) { const p = P_[v + d]; if (p < l.lo[d]) l.lo[d] = p; if (p > l.hi[d]) l.hi[d] = p; } }
   return [...cells.values()].map(l => { const c = [(l.lo[0] + l.hi[0]) / 2, (l.lo[1] + l.hi[1]) / 2, (l.lo[2] + l.hi[2]) / 2], r = 0.5 * hyp(l.hi[0] - l.lo[0], l.hi[1] - l.lo[1], l.hi[2] - l.lo[2]);
-    return { x: c[0], z: c[2], idx: Uint32Array.from(l.idx), sph: new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r), big: new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r + 10), on: true }; });
+    return { x: c[0], z: c[2], top: l.hi[1], rh: 0.5 * hyp(l.hi[0] - l.lo[0], l.hi[2] - l.lo[2]), idx: Uint32Array.from(l.idx), sph: new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r), big: new THREE.Sphere(new THREE.Vector3(c[0], c[1], c[2]), r + 10), on: true }; });
 }
 // camera side of a big static mesh: all of it while it casts shadow itself, else the squares in (or within 10 m of) the view, refilled when one comes into view that is missing
 function viewUpdate(s, subset) {
@@ -189,7 +192,7 @@ function viewUpdate(s, subset) {
   if (due) { v.occN = occN; miss = true; }       // [perf] squares of props under the roofline are skipped too
   if (!miss && have <= need * 3 + 16) return;
   let n = 0; v.full = false; v.t = SC.now;
-  for (const c of cells) { c.on = c.in || _frWide.intersectsSphere(c.sph); if (c.on && occ) { const u = c.u || (c.u = { x: c.sph.center.x, z: c.sph.center.z, r: c.sph.radius, y1: c.sph.center.y + c.sph.radius }); c.hid = occ(u, Math.hypot(u.x - ex, u.z - ez), 0.85); if (c.hid) c.on = false; } else c.hid = false; if (c.on) { v.cur.set(c.idx, n); n += c.idx.length; } }
+  for (const c of cells) { c.on = c.in || _frWide.intersectsSphere(c.sph); if (c.on && occ) { const u = c.u || (c.u = c.top !== undefined ? { x: c.sph.center.x, z: c.sph.center.z, r: c.rh, y1: c.top + 0.3 } : { x: c.sph.center.x, z: c.sph.center.z, r: c.sph.radius, y1: c.sph.center.y + c.sph.radius }); c.hid = occ(u, Math.hypot(u.x - ex, u.z - ez), 0.85); if (c.hid) c.on = false; } else c.hid = false; if (c.on) { v.cur.set(c.idx, n); n += c.idx.length; } }
   v.n = n; v.geo.setDrawRange(0, n); if (n) { const at = v.geo.index; at.clearUpdateRanges(); at.addUpdateRange(0, n); at.needsUpdate = true; }
 }
 const sb_casts = s => s.sub.casts;
