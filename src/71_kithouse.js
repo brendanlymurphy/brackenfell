@@ -163,7 +163,8 @@ function kitShellPass(c, pass) {
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
     let name = 'Roof_RoundTiles_' + span + 'x' + len; const ridge = Kit.info(name).max[1]; if (st.shingle && typeof infR === 'function') name = infR(name);
     const RF = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(0, Ytop, 0).premultiply(MS);
-    b.add(name, KH.xf(RF, 0, 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : w / len]), pass === 'int' ? { zone, skyVis: INT_AO, inZone: zone, inSkyVis: 0.2 } : { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : 0.2 });
+    const nbL = !site.alleyRow && infNeighbour(site, false) > 0, nbR = !site.alleyRow && infNeighbour(site, true) > 0, rk = (nbL ? 0.04 : 0.2) + (nbR ? 0.04 : 0.2);      // [fx3] a neighbour against the gable end: the roof stops 4 cm out, not 0.85 m over it
+    b.add(name, KH.xf(RF, ((nbR ? 0.04 : 0.2) - (nbL ? 0.04 : 0.2)) / 2 * (nbL || nbR ? 1 : 0), 0, 0, [d / span, hd * tanP / ridge, site.alleyRow ? (w + 0.14) / Kit.info(name).size[2] : (nbL || nbR) ? (w + rk) / Kit.info(name).size[2] : w / len]), pass === 'int' ? { zone, skyVis: INT_AO, inZone: zone, inSkyVis: 0.2 } : { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : 0.2 });
   }
   if (X && typeof shellDress === 'function') shellDress(c, b, frames, MS, { w, d, H, Ytop, tanP, st, site, SSt, openings, lift: 0.14 });      // [fx2]
   // ── floor tiles (in the outdoor batch, so the room is not a hole when its furniture is hidden by distance; in a cell they are the cell's) ──
