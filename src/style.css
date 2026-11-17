@@ -315,3 +315,13 @@ body.cine::before { top: 0; } body.cine::after { bottom: 0; }
   #tabs [data-tab], #mclose, #rclose, .btn.small, #pause button { min-height: 44px; }
   #menu input[type=range], #menu select { min-height: 44px; }
 }
+
+/* ── one look for things you press (interface pass at 844 x 390) ──
+   Dialogue options, the pack's buttons, pause and settings buttons are all the same pill: dark, a thin light edge, gold when it is the main choice.
+   Only the title screen keeps a filled gold button. The quest banner is smaller and higher on a short screen so it does not sit on the view. */
+.btn.small, #pause .btn, #tab-settings .btn, #reader .btn, #toasts div button { background: rgba(0, 0, 0, 0.42); color: var(--parch); border: 1px solid rgba(255, 255, 255, 0.24); border-radius: 22px; font-family: var(--body); font-size: 15px; letter-spacing: 0.02em; }
+.btn.small:active, .btn.small:hover, #pause .btn:active, #pause .btn:hover, #tab-settings .btn:active, #tab-settings .btn:hover { background: rgba(255, 255, 255, 0.2); border-color: #fff; }
+#tab-pack button[data-perk], #pause #pResume { border-color: var(--gold); color: var(--gold); }
+@media (pointer: coarse) { #toasts div button { min-height: 44px; padding: 6px 14px; } }
+#place { transition: opacity 0.7s ease; }
+@media (max-height: 430px) { #place { top: 21%; font-size: clamp(1.15rem, 3.4vw, 1.8rem); } #place small { font-size: 0.7rem; margin-bottom: 2px; } }
