@@ -135,7 +135,7 @@ const Chars = (() => {
         if (def.foe) { // [ch1] scavenged kit: a belt, a pouch, one cuff or two, a cloak or straps and a bit of headwear, each picked by the foe's id and in dull, mismatched colours
           let fh = 0; for (const ch of String(def.id || def.foe.body)) fh = (fh * 31 + ch.charCodeAt(0)) >>> 0; const fr = k => ((fh >>> (k * 4)) % 89) / 89, hoodie = /hood/.test(def.foe.body), DULL = [[0.17, 0.14, 0.10], [0.22, 0.17, 0.11], [0.15, 0.16, 0.13], [0.26, 0.20, 0.14], [0.20, 0.12, 0.09], [0.14, 0.13, 0.14]], pk = k => DULL[Math.floor(fr(k) * DULL.length)];
           const wear = { belt: true, pouch: fr(1) < 0.65, cuffs: fr(2) < 0.5, cloak: !hoodie && fr(3) < 0.4, straps: !hoodie && fr(4) < 0.45, hat: hoodie ? null : fr(5) < 0.45 ? 'cap' : fr(5) < 0.6 ? 'coif' : null };
-          const WC = { leather: [0.13, 0.085, 0.05].map(v => v * (0.8 + 0.5 * fr(6))), hat: pk(7), metal: [0.22, 0.21, 0.19], apron: pk(8), cloak: pk(9), tabard: pk(10), linen: [0.32, 0.30, 0.25], strap: [0.17, 0.12, 0.08], straw: [0.40, 0.32, 0.16], wool: pk(11), teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
+          const WC = { leather: [0.13, 0.085, 0.05].map(v => v * (0.8 + 0.5 * fr(6))), hat: pk(7), metal: [0.22, 0.21, 0.19], apron: pk(8), cloak: pk(9), tabard: pk(10), linen: [0.32, 0.30, 0.25], strap: [0.17, 0.12, 0.08], straw: [0.40, 0.32, 0.16], wool: pk(11), teeth: [0.52, 0.46, 0.34], tongue: [0.2, 0.07, 0.07] };
           wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
           return { body: def.foe.body, wear, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) }; }
         const body = BODY[def.id] || def.body || (def.female ? 'f_farmer' : 'm_farmer');          // def.body / def.tint: the inn's regulars (77c_patrons.js) wear other people's bodies in other colours
@@ -159,7 +159,7 @@ const Chars = (() => {
         if (def.apron) { if (guard) wear.tabard = true; else if (!(fem && wear.kirtle) || (body !== 'f_farmer' && body !== 'f_girl')) { wear.apron = true; wear.straps = true; wear.apronCut = ['', '_half', '_long'][Math.floor(r(12) * 3)]; } } else if (body === 'f_herbalist') { wear.apron = true; wear.straps = true; wear.apronCut = ['', '_half', '_long'][Math.floor(r(12) * 3)]; }      // [ch1] aprons for trades only, three cuts
         if (def.cloakBack || (!def.sched && r(6) < 0.12) || (def.house && r(6) < 0.1)) wear.cloak = true;
         const WC = { leather: acc.col[1], hat: acc.col[0], metal: acc.col[2], apron: def.apron ? sq(def.apron) : pal[Math.floor(r(8) * pal.length)], cloak: def.cloak ? sq(def.cloak) : pal[Math.floor(r(9) * pal.length)], tabard: def.apron ? sq(def.apron) : [0.3, 0.1, 0.1],
-          linen: [0.47, 0.44, 0.36].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: /child/.test(body) ? [0.30, 0.27, 0.21] : top ? top.map(v => v * 0.9) : pal[Math.floor(r(11) * pal.length)], teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
+          linen: [0.47, 0.44, 0.36].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: /child/.test(body) ? [0.30, 0.27, 0.21] : top ? top.map(v => v * 0.9) : pal[Math.floor(r(11) * pal.length)], teeth: [0.52, 0.46, 0.34], tongue: [0.2, 0.07, 0.07] };
         if (wear.kirtle) {      // [ch1] dyes: woad grey-blue and madder, never bright; aprons undyed grey-cream linen
           const mute = c => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => l + (v - l) * 0.28).map(v => Math.min(0.62, v)); };
           WC.wool = mute(WC.wool); WC.cloak = mute(WC.cloak); if (wear.hat === 'hood' || wear.hat === 'cap') WC.hat = mute(WC.hat);
@@ -381,7 +381,7 @@ const Chars = (() => {
       const src = srcOf && srcOf[mn], md = S.cfg.materials[mn] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
       let key = (look.maps && look.maps[mn]) || md.map; if (key && typeof key === 'object') key = key[H.body];
       const map = key ? S.tex[key] : (md.gltf && src && src.map) || null, tint = look.tint && (look.tint[mn] || (md.part && look.tint[md.part]) || (md.kind && look.tint[md.kind])) || [1, 1, 1];
-      const tx = map ? texture(map, md.kind === 'eye' ? UE : U) : null;
+      const tx = map ? (md.kind === 'brow' ? texture(map, U).bias(2.5) : texture(map, md.kind === 'eye' ? UE : U)) : null;      // [ch1] brows: a soft mip, not the dotted strand pattern
       if (md.kind === 'skin') { skinW = skinW.add(w); skinI = i; } if (md.kind === 'hair') hairW = hairW.add(w);
       if (md.kind === 'cloth' || md.part === 'trim') clothW = clothW.add(w); if (md.part === 'trim') { trimW = trimW.add(w); anyTrim = true; }
       // dyed cloth: the garment keeps its weave and folds (the texture's light and dark) but takes the villager's own colour
@@ -393,7 +393,7 @@ const Chars = (() => {
       rough = rough.add(w.mul(md.rough === undefined ? 0.85 : md.rough));
       if (md.oneSided) one = one.add(w);
       if (md.kind === 'eye') { eyeW = eyeW.add(w); anyEye = true; }
-      if (md.alpha && tx) { anyAlpha = true; alpha = alpha.add(w.mul(tx.a.sub(1))); cut = cut.add(w.mul(md.alpha)); }      // cut-out hair and brows: this fragment's alpha and threshold
+      if (md.alpha && tx) { anyAlpha = true; alpha = alpha.add(w.mul((md.kind === 'brow' ? TSL.clamp(tx.a.mul(2.4), 0, 1) : tx.a).sub(1))); cut = cut.add(w.mul(md.alpha)); }      // cut-out hair and brows: this fragment's alpha and threshold
       const wm = md.warm || [1, 1, 1]; if (md.warm) anyWarm = true; warm = warm.add(vec3(wm[0], wm[1], wm[2]).mul(w));
       if (C.normalMaps && md.normal && S.tex[md.normal]) { const nm = normalMap(texture(S.tex[md.normal], U)); nrm = nrm ? nrm.add(nm.mul(w)) : nm.mul(w); nw = nw.add(w); }
     });
@@ -410,7 +410,7 @@ const Chars = (() => {
         { const pl = TSL.positionLocal, th = TSL.sin(pl.x.add(pl.z.mul(0.7)).mul(520)).mul(0.5).add(TSL.sin(pl.y.mul(470).add(pl.z.mul(180))).mul(0.5)), wv = TSL.vec3(TSL.cos(pl.x.add(pl.z.mul(0.7)).mul(520)).mul(0.5), TSL.cos(pl.y.mul(470).add(pl.z.mul(180))).mul(0.5), 0).mul(0.10);
           weaveN = wv.mul(trimW).mul(TSL.smoothstep(2.2, 0.8, SH.U.camPos.sub(positionWorld).length())); void th; }
       }
-      const isMouth = TSL.step(9.5, cv.w.mul(12));      // (slot values arrive as bytes: 2 is 2.02) mouthW = mouthW.add(isMouth.mul(trimW));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening
+      const isMouth = TSL.step(9.5, cv.w.mul(12)); mouthW = mouthW.add(isMouth.mul(trimW));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening (slot values arrive as bytes: 2 is 2.02)
       albedo = albedo.mul(TSL.mix(TSL.mix(float(1), TSL.mix(cv.x, float(1), 0.15), 0.9), float(1), isMouth));
       const dirt = TSL.mix(vec3(0.46, 0.38, 0.29), vec3(1, 1, 1), TSL.smoothstep(0.05, 0.85, cv.y));
       albedo = albedo.mul(TSL.mix(vec3(1, 1, 1), dirt, clothW.mul(isMouth.oneMinus()))).mul(float(1).sub(cv.z.mul(clothW).mul(0.4).mul(isMouth.oneMinus())));
@@ -456,7 +456,7 @@ const Chars = (() => {
     else if (weaveN) m.normalNode = normalView.add(weaveN).normalize();      // [ch1]
     let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
     if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
-    let emis = albedo.mul(lit).add(albedo.mul(0.32).mul(mouthW));      // [ch1] teeth and tongue are never darker than the lips
+    let emis = albedo.mul(lit).add(albedo.mul(0.10).mul(mouthW));      // [ch1] teeth and tongue are never darker than the lips
     if (F) {
       // skin: where the sun grazes it the light carries on a little way round, reddened (blood under the skin), and the edge facing away from the eye takes a soft sheen
       const day = float(1).sub(TSL.step(0.5, H.uZone)).mul(H.uLight), ndl = N.dot(SH.U.sunDir);
@@ -757,6 +757,21 @@ const Chars = (() => {
     if (!H.visKSet && H.bones.head) { const hb = H.bones.head, c = hb.children.find(o => o.isBone || o.isObject3D && o.position.lengthSq() > 1e-6); H.visKSet = 1; H.visK.value = (c ? Math.max(0.5, Math.min(1.3, c.position.length() / V.ref)) : 1) * VIS_GAIN; }
   }
   // ── per frame ──
+  // [ch1] Fingers close round a held thing: C.grip(H, 'R', 0..1) while that hand holds something. Applied after the mixer each frame (the mixer only rewrites a joint
+  // when its animated value changed, so the previous frame's curl is taken out first, as the head look does).
+  const FING = ['index', 'middle', 'ring', 'pinky'], CURL = [0.95, 1.15, 0.85], GRIP_SIGN = { R: -1, L: -1 };
+  C.grip = function (H, side, amt) { (H.gripAmt = H.gripAmt || { R: 0, L: 0 })[side] = amt; };
+  function gripUpdate(H) {
+    const G = H.gripS || (H.gripS = { R: null, L: null }), q = new THREE.Quaternion(), e = new THREE.Euler();
+    for (const side of ['R', 'L']) {
+      const amt = H.gripAmt[side], sfx = side === 'R' ? '_r' : '_l';
+      if (!G[side]) { G[side] = []; for (const f of FING) for (let j = 1; j <= 3; j++) { const b = H.root.getObjectByName(f + '_0' + j + sfx); if (b) G[side].push({ b, j, base: new THREE.Quaternion(), mine: new THREE.Quaternion(), on: false }); } }
+      for (const g of G[side]) {
+        if (g.on && g.b.quaternion.equals(g.mine)) g.b.quaternion.copy(g.base); else g.base.copy(g.b.quaternion); g.on = false;
+        if (amt > 0.001) { e.set(GRIP_SIGN[side] * CURL[g.j - 1] * amt * (g.j === 1 ? 0.8 : 1), 0, 0); q.setFromEuler(e); g.b.quaternion.multiply(q); g.mine.copy(g.b.quaternion); g.on = true; }
+      }
+    }
+  }
   C.update = function (H, st, dt) {
     const cfg = H.set.cfg, pv = H.pivot;
     pv.visible = st.visible !== false; if (!pv.visible) return;
@@ -787,6 +802,7 @@ const Chars = (() => {
       }
       pv.rotation.y = th; pv.position.set(x, y, z);
     }
+    H.animNow = base; H.talkNow = !!st.talking;      // [ch1]
     lodUpdate(H, dcam, st.cast === undefined ? !!H.cast : st.cast); H.cast = st.cast === undefined ? H.cast : st.cast;
     H.uZone.value = st.zone || 0; H.uLight.value = st.light === undefined ? 1 : st.light;
     if (cfg.face && dcam < 14) faceUpdate(H, st, dt, dcam);
@@ -800,6 +816,8 @@ const Chars = (() => {
       turnBone(H, nb, lk[0] * 0.35, lk[1] * 0.35 * sg); turnBone(H, hb, lk[0] * 0.65, lk[1] * 0.65 * sg);
       [nb, hb].forEach((b, i) => { if (b) { L[i].mine.copy(b.quaternion); L[i].on = true; } });
     }
+    if (H.gripAmt) gripUpdate(H);      // [ch1]
+    if (H.post && pv.visible) for (const f of H.post) f(H, st);      // [ch1] held things that follow the hands (src/77d_handprops.js)
   };
   return C;
 })();
