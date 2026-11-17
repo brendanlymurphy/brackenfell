@@ -826,6 +826,3296 @@
    "where": "94d_act2.js:83"
   },
   {
+   "speaker": "godwin",
+   "text": "If I look half asleep it is because I am. The bread is made while you are dreaming.",
+   "where": "54_cast.js:godwin.g",
+   "as": "v.M1",
+   "note": "Aged 46; baker."
+  },
+  {
+   "speaker": "godwin",
+   "text": "Godwin Hobb. My mother baked at that oven and her mother before. Osric grinds it, I bake it, you eat it. That is a town.",
+   "where": "54_cast.js:godwin.me",
+   "as": "v.M1",
+   "note": "Aged 46; baker."
+  },
+  {
+   "speaker": "godwin",
+   "text": "The Elder had six loaves off me every morning, paid by the month. Three weeks back he stopped. Never said why.",
+   "where": "54_cast.js:godwin.nb",
+   "as": "v.M1",
+   "note": "Aged 46; baker."
+  },
+  {
+   "speaker": "godwin",
+   "text": "You want it warm, find my Tilly at the stall by the bridge road. You want it warmer, be here before the light.",
+   "where": "54_cast.js:godwin.pt",
+   "as": "v.M1",
+   "note": "Aged 46; baker."
+  },
+  {
+   "speaker": "godwin",
+   "text": "Mind the rack.",
+   "where": "54_cast.js:godwin.b1",
+   "as": "v.M1",
+   "note": "Aged 46; baker."
+  },
+  {
+   "speaker": "godwin",
+   "text": "Fresh at first light. Not before, not after.",
+   "where": "54_cast.js:godwin.b2",
+   "as": "v.M1",
+   "note": "Aged 46; baker."
+  },
+  {
+   "speaker": "godwin",
+   "text": "The bell is back. Thirty years I have drawn the first batch on its stroke. These weeks I burned more than I sold.",
+   "where": "54_cast.js:godwin.g2",
+   "as": "v.M1",
+   "note": "Aged 46; baker."
+  },
+  {
+   "speaker": "godwin",
+   "text": "I am awake all night, friend. That is the trade. You picked the one house in Brackenfell to creep into.",
+   "where": "54_cast.js:godwin.nt",
+   "as": "v.M1",
+   "note": "Aged 46; baker."
+  },
+  {
+   "speaker": "avice",
+   "text": "Come in out of the flour, or into it, there is no difference in this house.",
+   "where": "54_cast.js:avice.g",
+   "as": "v.W2",
+   "note": "Aged 43; bakehouse."
+  },
+  {
+   "speaker": "avice",
+   "text": "I am Avice. I married the baker for the warm kitchen and stayed for the same reason.",
+   "where": "54_cast.js:avice.me",
+   "as": "v.W2",
+   "note": "Aged 43; bakehouse."
+  },
+  {
+   "speaker": "avice",
+   "text": "Greta takes two dozen rounds a day for the Hart and pays on the nail. If the whole town paid like Greta I would be a lady.",
+   "where": "54_cast.js:avice.nb",
+   "as": "v.W2",
+   "note": "Aged 43; bakehouse."
+  },
+  {
+   "speaker": "avice",
+   "text": "Osric was fretting about malt he owes the Hart. If you are walking to the mill you would do him a kindness to ask.",
+   "where": "54_cast.js:avice.pt",
+   "as": "v.W2",
+   "note": "Aged 43; bakehouse."
+  },
+  {
+   "speaker": "avice",
+   "text": "Mind the step, it is slick with flour.",
+   "where": "54_cast.js:avice.b1",
+   "as": "v.W2",
+   "note": "Aged 43; bakehouse."
+  },
+  {
+   "speaker": "avice",
+   "text": "Tilly! The stall!",
+   "where": "54_cast.js:avice.b2",
+   "as": "v.W2",
+   "note": "Aged 43; bakehouse."
+  },
+  {
+   "speaker": "avice",
+   "text": "Hester Slate saw them carry him up. She said he weighed nothing. She has lifted enough to know.",
+   "where": "54_cast.js:avice.g2",
+   "as": "v.W2",
+   "note": "Aged 43; bakehouse."
+  },
+  {
+   "speaker": "avice",
+   "text": "Godwin! There is someone in the house! ... He is at the oven with a peel in his hand. I would go.",
+   "where": "54_cast.js:avice.nt",
+   "as": "v.W2",
+   "note": "Aged 43; bakehouse."
+  },
+  {
+   "speaker": "tilly",
+   "text": "Rounds, long loaves, and honey cake if Tamsin brought the honey. She did. So, honey cake.",
+   "where": "54_cast.js:tilly.g",
+   "as": "v.YW",
+   "note": "Aged 17; the Bread Stall."
+  },
+  {
+   "speaker": "tilly",
+   "text": "Tilly Hobb. I sell what my father bakes and I count better than he does.",
+   "where": "54_cast.js:tilly.me",
+   "as": "v.YW",
+   "note": "Aged 17; the Bread Stall."
+  },
+  {
+   "speaker": "tilly",
+   "text": "Giles Varrow walks the long way round to pass this stall. You can smell him coming. I do not mind it as much as I ought.",
+   "where": "54_cast.js:tilly.nb",
+   "as": "v.YW",
+   "note": "Aged 17; the Bread Stall."
+  },
+  {
+   "speaker": "tilly",
+   "text": "The tinker down the row hears everything. If something is going on in this town, Diggory knew yesterday.",
+   "where": "54_cast.js:tilly.pt",
+   "as": "v.YW",
+   "note": "Aged 17; the Bread Stall."
+  },
+  {
+   "speaker": "tilly",
+   "text": "Honey cake! Last ones!",
+   "where": "54_cast.js:tilly.b1",
+   "as": "v.YW",
+   "note": "Aged 17; the Bread Stall."
+  },
+  {
+   "speaker": "tilly",
+   "text": "Warm bread, warm bread.",
+   "where": "54_cast.js:tilly.b2",
+   "as": "v.YW",
+   "note": "Aged 17; the Bread Stall."
+  },
+  {
+   "speaker": "tilly",
+   "text": "Father is himself again now the bell rings. Three weeks of burnt crusts, we had.",
+   "where": "54_cast.js:tilly.g2",
+   "as": "v.YW",
+   "note": "Aged 17; the Bread Stall."
+  },
+  {
+   "speaker": "tilly",
+   "text": "I am calling my father, and he is holding something hot.",
+   "where": "54_cast.js:tilly.nt",
+   "as": "v.YW",
+   "note": "Aged 17; the Bread Stall."
+  },
+  {
+   "speaker": "idony",
+   "text": "Sit, if you are stopping. I am too old to look up at people.",
+   "where": "54_cast.js:idony.g",
+   "as": "v.OW",
+   "note": "Aged 72; keeps hens."
+  },
+  {
+   "speaker": "idony",
+   "text": "Idony Hobb. I have buried a husband, two hens I was fond of, and most of the people who knew me as a girl.",
+   "where": "54_cast.js:idony.me",
+   "as": "v.OW",
+   "note": "Aged 72; keeps hens."
+  },
+  {
+   "speaker": "idony",
+   "text": "Rowan was a boy with scabbed knees when they shut that hill. He has been an old man about it ever since.",
+   "where": "54_cast.js:idony.nb",
+   "as": "v.OW",
+   "note": "Aged 72; keeps hens."
+  },
+  {
+   "speaker": "idony",
+   "text": "If you want to know what this town keeps under its tongue, ask who the bread was for. Not me. Ask Rowan.",
+   "where": "54_cast.js:idony.pt",
+   "as": "v.OW",
+   "note": "Aged 72; keeps hens."
+  },
+  {
+   "speaker": "idony",
+   "text": "Mind my hens.",
+   "where": "54_cast.js:idony.b1",
+   "as": "v.OW",
+   "note": "Aged 72; keeps hens."
+  },
+  {
+   "speaker": "idony",
+   "text": "Bell’s late. No. Bell’s not.",
+   "where": "54_cast.js:idony.b2",
+   "as": "v.OW",
+   "note": "Aged 72; keeps hens."
+  },
+  {
+   "speaker": "idony",
+   "text": "So one of them walked out. I wondered who would live to see it. I did not want it to be me.",
+   "where": "54_cast.js:idony.g2",
+   "as": "v.OW",
+   "note": "Aged 72; keeps hens."
+  },
+  {
+   "speaker": "idony",
+   "text": "At my age you are not frightening. You are only rude. Go home.",
+   "where": "54_cast.js:idony.nt",
+   "as": "v.OW",
+   "note": "Aged 72; keeps hens."
+  },
+  {
+   "speaker": "hugh",
+   "text": "Draw arm. Show me. Hm. You pull with your shoulder. Everyone does until someone tells them.",
+   "where": "54_cast.js:hugh.g",
+   "as": "v.M1",
+   "note": "Aged 53; fletcher."
+  },
+  {
+   "speaker": "hugh",
+   "text": "Hugh Alder, fletcher. Shaft, feather and head, and I can tell you which goose the feather came from.",
+   "where": "54_cast.js:hugh.me",
+   "as": "v.M1",
+   "note": "Aged 53; fletcher."
+  },
+  {
+   "speaker": "hugh",
+   "text": "Hale and I have shot at the butts every seventh day since we were lads. He is still the better shot and still pretends otherwise.",
+   "where": "54_cast.js:hugh.nb",
+   "as": "v.M1",
+   "note": "Aged 53; fletcher."
+  },
+  {
+   "speaker": "hugh",
+   "text": "Wren takes my broadheads by the dozen. Her cabin is west of the town; if you hunt, she is the one to ask.",
+   "where": "54_cast.js:hugh.pt",
+   "as": "v.M1",
+   "note": "Aged 53; fletcher."
+  },
+  {
+   "speaker": "hugh",
+   "text": "Straight grain. Always straight grain.",
+   "where": "54_cast.js:hugh.b1",
+   "as": "v.M1",
+   "note": "Aged 53; fletcher."
+  },
+  {
+   "speaker": "hugh",
+   "text": "Morning. How is the wind?",
+   "where": "54_cast.js:hugh.b2",
+   "as": "v.M1",
+   "note": "Aged 53; fletcher."
+  },
+  {
+   "speaker": "hugh",
+   "text": "Hale asked me for two sheaves of arrows the day they found him. He has not ordered two in ten years.",
+   "where": "54_cast.js:hugh.g2",
+   "as": "v.M1",
+   "note": "Aged 53; fletcher."
+  },
+  {
+   "speaker": "hugh",
+   "text": "There are four hundred arrows in this house and I made every one. Leave by the door you came in.",
+   "where": "54_cast.js:hugh.nt",
+   "as": "v.M1",
+   "note": "Aged 53; fletcher."
+  },
+  {
+   "speaker": "gillian",
+   "text": "Take a seat and a feather. If you are talking to me you can strip quills while you do it.",
+   "where": "54_cast.js:gillian.g",
+   "as": "v.W1",
+   "note": "Aged 51; keeps the house."
+  },
+  {
+   "speaker": "gillian",
+   "text": "Gillian Alder. I keep the house, I bind the fletchings, and I keep Hugh from giving arrows away to friends.",
+   "where": "54_cast.js:gillian.me",
+   "as": "v.W1",
+   "note": "Aged 51; keeps the house."
+  },
+  {
+   "speaker": "gillian",
+   "text": "Our Stephen has the cobbler’s shop and sleeps over it, alone, eating who knows what. It is forty paces. I count them.",
+   "where": "54_cast.js:gillian.nb",
+   "as": "v.W1",
+   "note": "Aged 51; keeps the house."
+  },
+  {
+   "speaker": "gillian",
+   "text": "Edda at Fairweather Farm saves me her goose feathers. It is east over the bridge, past the mill. Mind her geese.",
+   "where": "54_cast.js:gillian.pt",
+   "as": "v.W1",
+   "note": "Aged 51; keeps the house."
+  },
+  {
+   "speaker": "gillian",
+   "text": "Wipe your feet.",
+   "where": "54_cast.js:gillian.b1",
+   "as": "v.W1",
+   "note": "Aged 51; keeps the house."
+  },
+  {
+   "speaker": "gillian",
+   "text": "Is that Stephen? No.",
+   "where": "54_cast.js:gillian.b2",
+   "as": "v.W1",
+   "note": "Aged 51; keeps the house."
+  },
+  {
+   "speaker": "gillian",
+   "text": "Hugh says it is all finished now, one way or the other. Men say that. I have left the lamp trimmed.",
+   "where": "54_cast.js:gillian.g2",
+   "as": "v.W1",
+   "note": "Aged 51; keeps the house."
+  },
+  {
+   "speaker": "gillian",
+   "text": "Hugh. Hugh! Wake up, there is someone, and you have a bow on the wall.",
+   "where": "54_cast.js:gillian.nt",
+   "as": "v.W1",
+   "note": "Aged 51; keeps the house."
+  },
+  {
+   "speaker": "laurence",
+   "text": "A cask is thirty staves that hate each other, held by two hoops. That is all there is to know. It takes seven years to learn.",
+   "where": "54_cast.js:laurence.g",
+   "as": "v.M1",
+   "note": "Aged 48; cooper."
+  },
+  {
+   "speaker": "laurence",
+   "text": "Laurence Byrd, cooper. The Hart’s ale, Goda’s beer, the salt fish: all in my oak.",
+   "where": "54_cast.js:laurence.me",
+   "as": "v.M1",
+   "note": "Aged 48; cooper."
+  },
+  {
+   "speaker": "laurence",
+   "text": "My brother Randal builds boats on a lake with four boats on it. He had the hands to be a cooper.",
+   "where": "54_cast.js:laurence.nb",
+   "as": "v.M1",
+   "note": "Aged 48; cooper."
+  },
+  {
+   "speaker": "laurence",
+   "text": "Greta is waiting on malt from the mill before she can fill what I made her. Osric forgets. Somebody should jog him.",
+   "where": "54_cast.js:laurence.pt",
+   "as": "v.M1",
+   "note": "Aged 48; cooper."
+  },
+  {
+   "speaker": "laurence",
+   "text": "Tight as a drum.",
+   "where": "54_cast.js:laurence.b1",
+   "as": "v.M1",
+   "note": "Aged 48; cooper."
+  },
+  {
+   "speaker": "laurence",
+   "text": "Joyce! Hoops!",
+   "where": "54_cast.js:laurence.b2",
+   "as": "v.M1",
+   "note": "Aged 48; cooper."
+  },
+  {
+   "speaker": "laurence",
+   "text": "Greta wanted a cask moved in her cellar the week before they found him. Then she did not. I thought it odd then.",
+   "where": "54_cast.js:laurence.g2",
+   "as": "v.M1",
+   "note": "Aged 48; cooper."
+  },
+  {
+   "speaker": "laurence",
+   "text": "Joyce, the adze. No, the big one. Now, friend, which way is out? Show me.",
+   "where": "54_cast.js:laurence.nt",
+   "as": "v.M1",
+   "note": "Aged 48; cooper."
+  },
+  {
+   "speaker": "felice",
+   "text": "Come in. Mind the shavings. I would say I sweep them but nobody has ever caught up with a cooper.",
+   "where": "54_cast.js:felice.g",
+   "as": "v.W1",
+   "note": "Aged 46; keeps the house."
+  },
+  {
+   "speaker": "felice",
+   "text": "Felice Byrd. I shave hoops and keep the peace between a cooper and his daughter, which is the harder craft.",
+   "where": "54_cast.js:felice.me",
+   "as": "v.W1",
+   "note": "Aged 46; keeps the house."
+  },
+  {
+   "speaker": "felice",
+   "text": "Maren cured my hands when I could not hold a knife. People call her sour. I call her the reason I can work.",
+   "where": "54_cast.js:felice.nb",
+   "as": "v.W1",
+   "note": "Aged 46; keeps the house."
+  },
+  {
+   "speaker": "felice",
+   "text": "Old Maren has more than tonics in that cottage. She read the dead man’s tally when nobody else could. If you find a thing you cannot read, there is your door.",
+   "where": "54_cast.js:felice.pt",
+   "as": "v.W1",
+   "note": "Aged 46; keeps the house."
+  },
+  {
+   "speaker": "felice",
+   "text": "Mind the shavings.",
+   "where": "54_cast.js:felice.b1",
+   "as": "v.W1",
+   "note": "Aged 46; keeps the house."
+  },
+  {
+   "speaker": "felice",
+   "text": "Lovely morning for it.",
+   "where": "54_cast.js:felice.b2",
+   "as": "v.W1",
+   "note": "Aged 46; keeps the house."
+  },
+  {
+   "speaker": "felice",
+   "text": "I cried when I heard it. Silly. You do not know a thing holds your day together until it stops.",
+   "where": "54_cast.js:felice.g2",
+   "as": "v.W1",
+   "note": "Aged 46; keeps the house."
+  },
+  {
+   "speaker": "felice",
+   "text": "Laurence! ... You have picked a house where everyone owns a blade with a handle at each end.",
+   "where": "54_cast.js:felice.nt",
+   "as": "v.W1",
+   "note": "Aged 46; keeps the house."
+  },
+  {
+   "speaker": "joyce",
+   "text": "That one is mine. Raised it, hooped it, tight first time. Father will tell you he helped.",
+   "where": "54_cast.js:joyce.g",
+   "as": "v.YW",
+   "note": "Aged 20; cooper’s daughter."
+  },
+  {
+   "speaker": "joyce",
+   "text": "Joyce Byrd. I have done seven years at the block the same as any apprentice. I want \"and Daughter\" on the board.",
+   "where": "54_cast.js:joyce.me",
+   "as": "v.YW",
+   "note": "Aged 20; cooper’s daughter."
+  },
+  {
+   "speaker": "joyce",
+   "text": "Old Wenn at the boatyard says a woman built the best boat that was ever on Mirrormere. He will not say who. I think it was his wife.",
+   "where": "54_cast.js:joyce.nb",
+   "as": "v.YW",
+   "note": "Aged 20; cooper’s daughter."
+  },
+  {
+   "speaker": "joyce",
+   "text": "The doors under the quay are the boat-houses, and Old Wenn has the keys. He will tell you a whole story before he tells you no.",
+   "where": "54_cast.js:joyce.pt",
+   "as": "v.YW",
+   "note": "Aged 20; cooper’s daughter."
+  },
+  {
+   "speaker": "joyce",
+   "text": "And Daughter. You will see.",
+   "where": "54_cast.js:joyce.b1",
+   "as": "v.YW",
+   "note": "Aged 20; cooper’s daughter."
+  },
+  {
+   "speaker": "joyce",
+   "text": "Tight first time.",
+   "where": "54_cast.js:joyce.b2",
+   "as": "v.YW",
+   "note": "Aged 20; cooper’s daughter."
+  },
+  {
+   "speaker": "joyce",
+   "text": "Everything in this town has changed but the sign over our door. I am working on that too.",
+   "where": "54_cast.js:joyce.g2",
+   "as": "v.YW",
+   "note": "Aged 20; cooper’s daughter."
+  },
+  {
+   "speaker": "joyce",
+   "text": "I can swing a cooper’s adze all day. I can certainly swing it once.",
+   "where": "54_cast.js:joyce.nt",
+   "as": "v.YW",
+   "note": "Aged 20; cooper’s daughter."
+  },
+  {
+   "speaker": "anselm",
+   "text": "Feel that. No, with the back of your hand. That is Hilda’s weaving, and there is none better this side of the passes.",
+   "where": "54_cast.js:anselm.g",
+   "as": "v.OM",
+   "note": "Aged 61; draper."
+  },
+  {
+   "speaker": "anselm",
+   "text": "Lindqvist. My grandfather carried cloth over the Greyspine on his back. I carry it across a counter and call it progress.",
+   "where": "54_cast.js:anselm.me",
+   "as": "v.OM",
+   "note": "Aged 61; draper."
+  },
+  {
+   "speaker": "anselm",
+   "text": "Brandt Ironhand wears a shirt of my cloth that he has not paid Hilda for. I notice it every time he lifts his arm.",
+   "where": "54_cast.js:anselm.nb",
+   "as": "v.OM",
+   "note": "Aged 61; draper."
+  },
+  {
+   "speaker": "anselm",
+   "text": "If you want honest work, read the board at the Hart. If you want a good coat, come back with silver.",
+   "where": "54_cast.js:anselm.pt",
+   "as": "v.OM",
+   "note": "Aged 61; draper."
+  },
+  {
+   "speaker": "anselm",
+   "text": "Mind the bolts, they are not for leaning on.",
+   "where": "54_cast.js:anselm.b1",
+   "as": "v.OM",
+   "note": "Aged 61; draper."
+  },
+  {
+   "speaker": "anselm",
+   "text": "Good wool day. Dry.",
+   "where": "54_cast.js:anselm.b2",
+   "as": "v.OM",
+   "note": "Aged 61; draper."
+  },
+  {
+   "speaker": "anselm",
+   "text": "You will have heard. I sold the sailcloth they laid over him. I would rather not have known what for.",
+   "where": "54_cast.js:anselm.g2",
+   "as": "v.OM",
+   "note": "Aged 61; draper."
+  },
+  {
+   "speaker": "anselm",
+   "text": "The shop is shut. Whatever you want will still be on the shelf in the morning, and so, I trust, will everything else.",
+   "where": "54_cast.js:anselm.nt",
+   "as": "v.OM",
+   "note": "Aged 61; draper."
+  },
+  {
+   "speaker": "sabina",
+   "text": "Good day. Father will tell you the price is firm. It is not, but let him say it first.",
+   "where": "54_cast.js:sabina.g",
+   "as": "v.YW",
+   "note": "Aged 24; keeps the draper’s counter."
+  },
+  {
+   "speaker": "sabina",
+   "text": "I keep the counter and the book. Father keeps the opinions.",
+   "where": "54_cast.js:sabina.me",
+   "as": "v.YW",
+   "note": "Aged 24; keeps the draper’s counter."
+  },
+  {
+   "speaker": "sabina",
+   "text": "Lark has owed me a song for two winters. I have decided it will be about me and it will be flattering.",
+   "where": "54_cast.js:sabina.nb",
+   "as": "v.YW",
+   "note": "Aged 24; keeps the draper’s counter."
+  },
+  {
+   "speaker": "sabina",
+   "text": "Brother Aldous was asking after rope for the bell. Marta Quill had hemp; the ropemaker is sore about it.",
+   "where": "54_cast.js:sabina.pt",
+   "as": "v.YW",
+   "note": "Aged 24; keeps the draper’s counter."
+  },
+  {
+   "speaker": "sabina",
+   "text": "That blue is Wilmot’s. Look at it.",
+   "where": "54_cast.js:sabina.b1",
+   "as": "v.YW",
+   "note": "Aged 24; keeps the draper’s counter."
+  },
+  {
+   "speaker": "sabina",
+   "text": "Lark! Two winters!",
+   "where": "54_cast.js:sabina.b2",
+   "as": "v.YW",
+   "note": "Aged 24; keeps the draper’s counter."
+  },
+  {
+   "speaker": "sabina",
+   "text": "You are the one who got the bell ringing. I slept through the first one out of habit.",
+   "where": "54_cast.js:sabina.g2",
+   "as": "v.YW",
+   "note": "Aged 24; keeps the draper’s counter."
+  },
+  {
+   "speaker": "sabina",
+   "text": "We are closed, and I am in my nightgown, and you are leaving.",
+   "where": "54_cast.js:sabina.nt",
+   "as": "v.YW",
+   "note": "Aged 24; keeps the draper’s counter."
+  },
+  {
+   "speaker": "petronel",
+   "text": "Hands. Let me see them. Hm. You work. Good, I do not sell to people who do not.",
+   "where": "54_cast.js:petronel.g",
+   "as": "v.OW",
+   "note": "Aged 57; glover."
+  },
+  {
+   "speaker": "petronel",
+   "text": "Petronel Vey. I was a Lindqvist until I had the sense to marry out of drapery.",
+   "where": "54_cast.js:petronel.me",
+   "as": "v.OW",
+   "note": "Aged 57; glover."
+  },
+  {
+   "speaker": "petronel",
+   "text": "That apothecary, Mossop. Jars of coloured water and a long word for each. Maren has forgotten more than he has read.",
+   "where": "54_cast.js:petronel.nb",
+   "as": "v.OW",
+   "note": "Aged 57; glover."
+  },
+  {
+   "speaker": "petronel",
+   "text": "Old Maren wants herbs gathered and her knees will not do it. Go and ask her. Say I sent you, she will be rude about it.",
+   "where": "54_cast.js:petronel.pt",
+   "as": "v.OW",
+   "note": "Aged 57; glover."
+  },
+  {
+   "speaker": "petronel",
+   "text": "Gloves would hide those.",
+   "where": "54_cast.js:petronel.b1",
+   "as": "v.OW",
+   "note": "Aged 57; glover."
+  },
+  {
+   "speaker": "petronel",
+   "text": "Fulk’s skins are late again.",
+   "where": "54_cast.js:petronel.b2",
+   "as": "v.OW",
+   "note": "Aged 57; glover."
+  },
+  {
+   "speaker": "petronel",
+   "text": "A drowned man with dry lungs. I have skinned enough beasts to know that is not drowning.",
+   "where": "54_cast.js:petronel.g2",
+   "as": "v.OW",
+   "note": "Aged 57; glover."
+  },
+  {
+   "speaker": "petronel",
+   "text": "I sleep with my shears. Think about that, and then think about the door.",
+   "where": "54_cast.js:petronel.nt",
+   "as": "v.OW",
+   "note": "Aged 57; glover."
+  },
+  {
+   "speaker": "jocelyn",
+   "text": "Stand straight a moment. No, I am not selling you anything, I only cannot help measuring.",
+   "where": "54_cast.js:jocelyn.g",
+   "as": "v.M2",
+   "note": "Aged 30; tailor."
+  },
+  {
+   "speaker": "jocelyn",
+   "text": "Jocelyn Lindqvist, tailor. My father sells the cloth and I cut it, and we argue about which is the harder.",
+   "where": "54_cast.js:jocelyn.me",
+   "as": "v.M2",
+   "note": "Aged 30; tailor."
+  },
+  {
+   "speaker": "jocelyn",
+   "text": "Bridget Malkin laughed at something I said on Tuesday. I have been trying to remember what it was ever since.",
+   "where": "54_cast.js:jocelyn.nb",
+   "as": "v.M2",
+   "note": "Aged 30; tailor."
+  },
+  {
+   "speaker": "jocelyn",
+   "text": "I cut the coats for the Highfold wedding. If you go up that way, see whether Kester Wold has split the seams yet.",
+   "where": "54_cast.js:jocelyn.pt",
+   "as": "v.M2",
+   "note": "Aged 30; tailor."
+  },
+  {
+   "speaker": "jocelyn",
+   "text": "That hem is a crime.",
+   "where": "54_cast.js:jocelyn.b1",
+   "as": "v.M2",
+   "note": "Aged 30; tailor."
+  },
+  {
+   "speaker": "jocelyn",
+   "text": "Morning. Shoulders back.",
+   "where": "54_cast.js:jocelyn.b2",
+   "as": "v.M2",
+   "note": "Aged 30; tailor."
+  },
+  {
+   "speaker": "jocelyn",
+   "text": "They asked me to stitch the shroud. I have made wedding coats this month. I did not like the change.",
+   "where": "54_cast.js:jocelyn.g2",
+   "as": "v.M2",
+   "note": "Aged 30; tailor."
+  },
+  {
+   "speaker": "jocelyn",
+   "text": "Out. I will not be robbed in a house full of pins by someone who cannot see them.",
+   "where": "54_cast.js:jocelyn.nt",
+   "as": "v.M2",
+   "note": "Aged 30; tailor."
+  },
+  {
+   "speaker": "gilbert",
+   "text": "Thorne. If it comes over the passes or goes out by them, a little of it stays with me.",
+   "where": "54_cast.js:gilbert.g",
+   "as": "v.M1",
+   "note": "Aged 52; merchant."
+  },
+  {
+   "speaker": "gilbert",
+   "text": "I buy what Brackenfell makes and sell it where they have never smelled a tannery. Somebody must.",
+   "where": "54_cast.js:gilbert.me",
+   "as": "v.M1",
+   "note": "Aged 52; merchant."
+  },
+  {
+   "speaker": "gilbert",
+   "text": "Hale would close the road for a fox. A warden who keeps everything out keeps trade out with it.",
+   "where": "54_cast.js:gilbert.nb",
+   "as": "v.M1",
+   "note": "Aged 52; merchant."
+  },
+  {
+   "speaker": "gilbert",
+   "text": "There is silver paid at the board for outlaws put down on the passes. I put some of that silver there myself.",
+   "where": "54_cast.js:gilbert.pt",
+   "as": "v.M1",
+   "note": "Aged 52; merchant."
+  },
+  {
+   "speaker": "gilbert",
+   "text": "Time is money. Mostly mine.",
+   "where": "54_cast.js:gilbert.b1",
+   "as": "v.M1",
+   "note": "Aged 52; merchant."
+  },
+  {
+   "speaker": "gilbert",
+   "text": "The passes, Hale! Think of the passes!",
+   "where": "54_cast.js:gilbert.b2",
+   "as": "v.M1",
+   "note": "Aged 52; merchant."
+  },
+  {
+   "speaker": "gilbert",
+   "text": "A dead stranger frightens caravans more than outlaws do. I want it explained, and I want it explained quietly.",
+   "where": "54_cast.js:gilbert.g2",
+   "as": "v.M1",
+   "note": "Aged 52; merchant."
+  },
+  {
+   "speaker": "gilbert",
+   "text": "You are in a house with three locks and I heard every one. Sit down where I can see you while the watch is fetched.",
+   "where": "54_cast.js:gilbert.nt",
+   "as": "v.M1",
+   "note": "Aged 52; merchant."
+  },
+  {
+   "speaker": "elinor",
+   "text": "Salt by the block, pepper by the pinch, and no, the pepper is not cheaper for asking twice.",
+   "where": "54_cast.js:elinor.g",
+   "as": "v.W1",
+   "note": "Aged 45; Salt and Spice stall."
+  },
+  {
+   "speaker": "elinor",
+   "text": "Elinor Thorne. Gilbert has the warehouse and the temper. I have the stall and the customers.",
+   "where": "54_cast.js:elinor.me",
+   "as": "v.W1",
+   "note": "Aged 45; Salt and Spice stall."
+  },
+  {
+   "speaker": "elinor",
+   "text": "Master Sele lends me books and I return them unread with a remark. He has never caught me. Lettice has.",
+   "where": "54_cast.js:elinor.nb",
+   "as": "v.W1",
+   "note": "Aged 45; Salt and Spice stall."
+  },
+  {
+   "speaker": "elinor",
+   "text": "The scribe keeps school in the mornings and every old paper in the town. If it was written down, Emmet Sele has it.",
+   "where": "54_cast.js:elinor.pt",
+   "as": "v.W1",
+   "note": "Aged 45; Salt and Spice stall."
+  },
+  {
+   "speaker": "elinor",
+   "text": "Do not sneeze on the pepper.",
+   "where": "54_cast.js:elinor.b1",
+   "as": "v.W1",
+   "note": "Aged 45; Salt and Spice stall."
+  },
+  {
+   "speaker": "elinor",
+   "text": "Fine salt, lake-dried.",
+   "where": "54_cast.js:elinor.b2",
+   "as": "v.W1",
+   "note": "Aged 45; Salt and Spice stall."
+  },
+  {
+   "speaker": "elinor",
+   "text": "The town talks of nothing else. I sell salt. People will still want salt.",
+   "where": "54_cast.js:elinor.g2",
+   "as": "v.W1",
+   "note": "Aged 45; Salt and Spice stall."
+  },
+  {
+   "speaker": "elinor",
+   "text": "Gilbert. Gilbert! There is a person. No, do not fetch the ledger, fetch the poker.",
+   "where": "54_cast.js:elinor.nt",
+   "as": "v.W1",
+   "note": "Aged 45; Salt and Spice stall."
+  },
+  {
+   "speaker": "simon",
+   "text": "Onions, oats, lamp oil, lard. Edda’s cabbages when Bram remembers to bring them.",
+   "where": "54_cast.js:simon.g",
+   "as": "v.M1",
+   "note": "Aged 47; grocer."
+  },
+  {
+   "speaker": "simon",
+   "text": "Simon Thorne. The other Thorne. The one with the shop and the debts, not the house and the opinions.",
+   "where": "54_cast.js:simon.me",
+   "as": "v.M1",
+   "note": "Aged 47; grocer."
+  },
+  {
+   "speaker": "simon",
+   "text": "My brother Gilbert owns the roof over this store, and reminds me on the first of every month.",
+   "where": "54_cast.js:simon.nb",
+   "as": "v.M1",
+   "note": "Aged 47; grocer."
+  },
+  {
+   "speaker": "simon",
+   "text": "Hale wants lamp oil for the gate. There is a notice for it on the board, and the oil is at Marta’s, not mine, more’s the pity.",
+   "where": "54_cast.js:simon.pt",
+   "as": "v.M1",
+   "note": "Aged 47; grocer."
+  },
+  {
+   "speaker": "simon",
+   "text": "Ned! Sacks!",
+   "where": "54_cast.js:simon.b1",
+   "as": "v.M1",
+   "note": "Aged 47; grocer."
+  },
+  {
+   "speaker": "simon",
+   "text": "Mind the lard.",
+   "where": "54_cast.js:simon.b2",
+   "as": "v.M1",
+   "note": "Aged 47; grocer."
+  },
+  {
+   "speaker": "simon",
+   "text": "I had a customer ask for something to keep the dead out. I sold him garlic. It does no harm.",
+   "where": "54_cast.js:simon.g2",
+   "as": "v.M1",
+   "note": "Aged 47; grocer."
+  },
+  {
+   "speaker": "simon",
+   "text": "There is nothing here worth a hanging. Oats. You would hang for oats?",
+   "where": "54_cast.js:simon.nt",
+   "as": "v.M1",
+   "note": "Aged 47; grocer."
+  },
+  {
+   "speaker": "ned",
+   "text": "I am not allowed to talk to strangers. Are you a stranger? You look like one.",
+   "where": "54_cast.js:ned.g",
+   "as": "v.B",
+   "note": "Aged 10; school."
+  },
+  {
+   "speaker": "ned",
+   "text": "Ned Thorne. I can carry a whole sack of oats. A small sack.",
+   "where": "54_cast.js:ned.me",
+   "as": "v.B",
+   "note": "Aged 10; school."
+  },
+  {
+   "speaker": "ned",
+   "text": "Pip says she can climb the bell tower. She cannot. I cannot either, but I never said I could.",
+   "where": "54_cast.js:ned.nb",
+   "as": "v.B",
+   "note": "Aged 10; school."
+  },
+  {
+   "speaker": "ned",
+   "text": "There is a grey cat that sits on the rail of the hoist loft, behind the forge. If you are quiet it lets you.",
+   "where": "54_cast.js:ned.pt",
+   "as": "v.B",
+   "note": "Aged 10; school."
+  },
+  {
+   "speaker": "ned",
+   "text": "Race you! No? Fine.",
+   "where": "54_cast.js:ned.b1",
+   "as": "v.B",
+   "note": "Aged 10; school."
+  },
+  {
+   "speaker": "ned",
+   "text": "I was not running.",
+   "where": "54_cast.js:ned.b2",
+   "as": "v.B",
+   "note": "Aged 10; school."
+  },
+  {
+   "speaker": "fulk",
+   "text": "You get used to it. I did. Stand upwind, there, by the post.",
+   "where": "54_cast.js:fulk.g",
+   "as": "v.M1",
+   "note": "Aged 45; tanner."
+  },
+  {
+   "speaker": "fulk",
+   "text": "Fulk Varrow. I turn hides into leather with bark, time and things you do not want named. Every boot in town began here.",
+   "where": "54_cast.js:fulk.me",
+   "as": "v.M1",
+   "note": "Aged 45; tanner."
+  },
+  {
+   "speaker": "fulk",
+   "text": "Humphrey Slate sells the meat and I get the hide. He gets the customers and I get the smell. We are still friends.",
+   "where": "54_cast.js:fulk.nb",
+   "as": "v.M1",
+   "note": "Aged 45; tanner."
+  },
+  {
+   "speaker": "fulk",
+   "text": "Go along the lane where the washing hangs. People lose things there. People hide things there too.",
+   "where": "54_cast.js:fulk.pt",
+   "as": "v.M1",
+   "note": "Aged 45; tanner."
+  },
+  {
+   "speaker": "fulk",
+   "text": "Upwind, upwind.",
+   "where": "54_cast.js:fulk.b1",
+   "as": "v.M1",
+   "note": "Aged 45; tanner."
+  },
+  {
+   "speaker": "fulk",
+   "text": "Giles! The bark!",
+   "where": "54_cast.js:fulk.b2",
+   "as": "v.M1",
+   "note": "Aged 45; tanner."
+  },
+  {
+   "speaker": "fulk",
+   "text": "I know what water does to skin. I have a yard full of proof. That man had not been in the lake a day.",
+   "where": "54_cast.js:fulk.g2",
+   "as": "v.M1",
+   "note": "Aged 45; tanner."
+  },
+  {
+   "speaker": "fulk",
+   "text": "Nobody comes here by day. So you are either lost or desperate. Which?",
+   "where": "54_cast.js:fulk.nt",
+   "as": "v.M1",
+   "note": "Aged 45; tanner."
+  },
+  {
+   "speaker": "giles",
+   "text": "I have washed. Twice. It does not come off, it only goes down a little.",
+   "where": "54_cast.js:giles.g",
+   "as": "v.YM",
+   "note": "Aged 19; tanner’s son."
+  },
+  {
+   "speaker": "giles",
+   "text": "Giles Varrow. One day I will be the tanner. I am trying to think of anything else I might be instead.",
+   "where": "54_cast.js:giles.me",
+   "as": "v.YM",
+   "note": "Aged 19; tanner’s son."
+  },
+  {
+   "speaker": "giles",
+   "text": "Tilly Hobb sells bread by the bridge road. I buy a loaf a day. We do not need a loaf a day.",
+   "where": "54_cast.js:giles.nb",
+   "as": "v.YM",
+   "note": "Aged 19; tanner’s son."
+  },
+  {
+   "speaker": "giles",
+   "text": "Brandt is always short a pair of arms at the forge. If I were not bound here I would be asking him myself.",
+   "where": "54_cast.js:giles.pt",
+   "as": "v.YM",
+   "note": "Aged 19; tanner’s son."
+  },
+  {
+   "speaker": "giles",
+   "text": "Does it show? The smell?",
+   "where": "54_cast.js:giles.b1",
+   "as": "v.YM",
+   "note": "Aged 19; tanner’s son."
+  },
+  {
+   "speaker": "giles",
+   "text": "A loaf. Just the one.",
+   "where": "54_cast.js:giles.b2",
+   "as": "v.YM",
+   "note": "Aged 19; tanner’s son."
+  },
+  {
+   "speaker": "giles",
+   "text": "When the bell rang again I was at the pits. First thing in three weeks to sound better than this yard smells.",
+   "where": "54_cast.js:giles.g2",
+   "as": "v.YM",
+   "note": "Aged 19; tanner’s son."
+  },
+  {
+   "speaker": "giles",
+   "text": "Father! ... He sleeps like the dead. Lucky for you. Go on, go.",
+   "where": "54_cast.js:giles.nt",
+   "as": "v.YM",
+   "note": "Aged 19; tanner’s son."
+  },
+  {
+   "speaker": "tybalt",
+   "text": "Smell that. Leather and beeswax. That is what my brother’s stink becomes once somebody with skill gets hold of it.",
+   "where": "54_cast.js:tybalt.g",
+   "as": "v.M2",
+   "note": "Aged 39; saddler."
+  },
+  {
+   "speaker": "tybalt",
+   "text": "Tybalt Varrow, saddler. Harness, girths, the Elder’s chair. Winifred stitches finer than I do and I say so.",
+   "where": "54_cast.js:tybalt.me",
+   "as": "v.M2",
+   "note": "Aged 39; saddler."
+  },
+  {
+   "speaker": "tybalt",
+   "text": "The wheelwright across the lane makes the cart and I make what pulls it. Miles Ashdown and I have never had a bad word, which is rare between neighbours.",
+   "where": "54_cast.js:tybalt.nb",
+   "as": "v.M2",
+   "note": "Aged 39; saddler."
+  },
+  {
+   "speaker": "tybalt",
+   "text": "Edda’s plough harness is due for mending. If you are going to Fairweather Farm, tell her it is ready.",
+   "where": "54_cast.js:tybalt.pt",
+   "as": "v.M2",
+   "note": "Aged 39; saddler."
+  },
+  {
+   "speaker": "tybalt",
+   "text": "Saddle soap. That is all it wants.",
+   "where": "54_cast.js:tybalt.b1",
+   "as": "v.M2",
+   "note": "Aged 39; saddler."
+  },
+  {
+   "speaker": "tybalt",
+   "text": "Good hide, that. Fulk’s.",
+   "where": "54_cast.js:tybalt.b2",
+   "as": "v.M2",
+   "note": "Aged 39; saddler."
+  },
+  {
+   "speaker": "tybalt",
+   "text": "I made the straps for the bier. Hale wanted it done quiet. Nothing is quiet in a town of sixty.",
+   "where": "54_cast.js:tybalt.g2",
+   "as": "v.M2",
+   "note": "Aged 39; saddler."
+  },
+  {
+   "speaker": "tybalt",
+   "text": "There is a child coming to this house in a month. I will not be gentle about who else comes into it.",
+   "where": "54_cast.js:tybalt.nt",
+   "as": "v.M2",
+   "note": "Aged 39; saddler."
+  },
+  {
+   "speaker": "winifred",
+   "text": "Forgive me if I do not get up. I am stitching for two and sitting for two.",
+   "where": "54_cast.js:winifred.g",
+   "as": "v.W2",
+   "note": "Aged 35; stitches harness."
+  },
+  {
+   "speaker": "winifred",
+   "text": "Winifred Varrow. I stitch the harness Tybalt cuts. Smaller hands, tighter seams.",
+   "where": "54_cast.js:winifred.me",
+   "as": "v.W2",
+   "note": "Aged 35; stitches harness."
+  },
+  {
+   "speaker": "winifred",
+   "text": "Kat Ashdown leans on her gate at noon and I lean on mine, and between us nothing in Chapelgate goes unremarked.",
+   "where": "54_cast.js:winifred.nb",
+   "as": "v.W2",
+   "note": "Aged 35; stitches harness."
+  },
+  {
+   "speaker": "winifred",
+   "text": "Maren has a tea she makes me. She is always short of what goes in it. She would be glad of someone who can climb.",
+   "where": "54_cast.js:winifred.pt",
+   "as": "v.W2",
+   "note": "Aged 35; stitches harness."
+  },
+  {
+   "speaker": "winifred",
+   "text": "Kat! Have you heard?",
+   "where": "54_cast.js:winifred.b1",
+   "as": "v.W2",
+   "note": "Aged 35; stitches harness."
+  },
+  {
+   "speaker": "winifred",
+   "text": "Not long now.",
+   "where": "54_cast.js:winifred.b2",
+   "as": "v.W2",
+   "note": "Aged 35; stitches harness."
+  },
+  {
+   "speaker": "winifred",
+   "text": "I would like it all settled before the child comes. Tell me it is settled. Lie if you must.",
+   "where": "54_cast.js:winifred.g2",
+   "as": "v.W2",
+   "note": "Aged 35; stitches harness."
+  },
+  {
+   "speaker": "winifred",
+   "text": "Tybalt. Do not get up angry. Get up slowly, and angry.",
+   "where": "54_cast.js:winifred.nt",
+   "as": "v.W2",
+   "note": "Aged 35; stitches harness."
+  },
+  {
+   "speaker": "diggory",
+   "text": "Pots, pans, kettles, and whatever you have heard, I heard it first. What will it be?",
+   "where": "54_cast.js:diggory.g",
+   "as": "v.M2",
+   "note": "Aged 36; tinker."
+  },
+  {
+   "speaker": "diggory",
+   "text": "Diggory Pike. I mend what the smith is too proud to mend. A kettle is a small thing until it leaks.",
+   "where": "54_cast.js:diggory.me",
+   "as": "v.M2",
+   "note": "Aged 36; tinker."
+  },
+  {
+   "speaker": "diggory",
+   "text": "Goda Malkin says Greta waters the ale. Greta says Goda brews in a boot. I sell to both and agree with whoever is nearer.",
+   "where": "54_cast.js:diggory.nb",
+   "as": "v.M2",
+   "note": "Aged 36; tinker."
+  },
+  {
+   "speaker": "diggory",
+   "text": "Somebody called the Magpie hides things about the town and leaves a note with each. I know three of the places. I will not say where. Look up, more often.",
+   "where": "54_cast.js:diggory.pt",
+   "as": "v.M2",
+   "note": "Aged 36; tinker."
+  },
+  {
+   "speaker": "diggory",
+   "text": "Any pots to mend?",
+   "where": "54_cast.js:diggory.b1",
+   "as": "v.M2",
+   "note": "Aged 36; tinker."
+  },
+  {
+   "speaker": "diggory",
+   "text": "You did not hear it from me.",
+   "where": "54_cast.js:diggory.b2",
+   "as": "v.M2",
+   "note": "Aged 36; tinker."
+  },
+  {
+   "speaker": "diggory",
+   "text": "A tally, silver in his teeth and a note for the Elder. I had all three before Hale had his helmet on.",
+   "where": "54_cast.js:diggory.g2",
+   "as": "v.M2",
+   "note": "Aged 36; tinker."
+  },
+  {
+   "speaker": "diggory",
+   "text": "Alison, it is the one from the market! ... She says to tell you we have nothing but pans, and she has the heaviest.",
+   "where": "54_cast.js:diggory.nt",
+   "as": "v.M2",
+   "note": "Aged 36; tinker."
+  },
+  {
+   "speaker": "alison",
+   "text": "If he told you something, halve it. If he swore to it, halve it again.",
+   "where": "54_cast.js:alison.g",
+   "as": "v.W2",
+   "note": "Aged 34; mends pans at home."
+  },
+  {
+   "speaker": "alison",
+   "text": "Alison Pike. He takes the stall and the talk. I do the mending that wants patience, here, in peace.",
+   "where": "54_cast.js:alison.me",
+   "as": "v.W2",
+   "note": "Aged 34; mends pans at home."
+  },
+  {
+   "speaker": "alison",
+   "text": "Goda’s small beer would strip tin. I buy a jug every evening. Do not look at me like that.",
+   "where": "54_cast.js:alison.nb",
+   "as": "v.W2",
+   "note": "Aged 34; mends pans at home."
+  },
+  {
+   "speaker": "alison",
+   "text": "Greta at the Hart is always after someone to run an errand. She pays in coin and a bed.",
+   "where": "54_cast.js:alison.pt",
+   "as": "v.W2",
+   "note": "Aged 34; mends pans at home."
+  },
+  {
+   "speaker": "alison",
+   "text": "Halve it.",
+   "where": "54_cast.js:alison.b1",
+   "as": "v.W2",
+   "note": "Aged 34; mends pans at home."
+  },
+  {
+   "speaker": "alison",
+   "text": "Evening. Jug’s empty.",
+   "where": "54_cast.js:alison.b2",
+   "as": "v.W2",
+   "note": "Aged 34; mends pans at home."
+  },
+  {
+   "speaker": "alison",
+   "text": "Diggory has told that tale forty times and the man gets taller each time.",
+   "where": "54_cast.js:alison.g2",
+   "as": "v.W2",
+   "note": "Aged 34; mends pans at home."
+  },
+  {
+   "speaker": "alison",
+   "text": "I have a skillet in each hand. Diggory, light the lamp so I can see which one to use.",
+   "where": "54_cast.js:alison.nt",
+   "as": "v.W2",
+   "note": "Aged 34; mends pans at home."
+  },
+  {
+   "speaker": "miles",
+   "text": "Mind the spokes, they are only wedged. Give me a moment, I have a felloe half on.",
+   "where": "54_cast.js:miles.g",
+   "as": "v.M2",
+   "note": "Aged 42; wheelwright."
+  },
+  {
+   "speaker": "miles",
+   "text": "Miles Ashdown. Wheels, carts, barrows. If it rolls in Brackenfell I made it or I mended it.",
+   "where": "54_cast.js:miles.me",
+   "as": "v.M2",
+   "note": "Aged 42; wheelwright."
+  },
+  {
+   "speaker": "miles",
+   "text": "Brandt and I tyre the wheels together, him with the iron red and me with the water. Twenty years, and we have never cracked one.",
+   "where": "54_cast.js:miles.nb",
+   "as": "v.M2",
+   "note": "Aged 42; wheelwright."
+  },
+  {
+   "speaker": "miles",
+   "text": "The mill is east over the bridge and down the river. Osric owes me for a cart wheel; mention it and watch him go deaf.",
+   "where": "54_cast.js:miles.pt",
+   "as": "v.M2",
+   "note": "Aged 42; wheelwright."
+  },
+  {
+   "speaker": "miles",
+   "text": "Stand clear of the wheel.",
+   "where": "54_cast.js:miles.b1",
+   "as": "v.M2",
+   "note": "Aged 42; wheelwright."
+  },
+  {
+   "speaker": "miles",
+   "text": "True as a die, that one.",
+   "where": "54_cast.js:miles.b2",
+   "as": "v.M2",
+   "note": "Aged 42; wheelwright."
+  },
+  {
+   "speaker": "miles",
+   "text": "I built the handcart they brought him up on. Made it for turnips.",
+   "where": "54_cast.js:miles.g2",
+   "as": "v.M2",
+   "note": "Aged 42; wheelwright."
+  },
+  {
+   "speaker": "miles",
+   "text": "I have a mallet that seats an oak spoke in one blow. Think it through.",
+   "where": "54_cast.js:miles.nt",
+   "as": "v.M2",
+   "note": "Aged 42; wheelwright."
+  },
+  {
+   "speaker": "kat",
+   "text": "He is working. Talk to me, I know what it costs and when it will be done, which he does not.",
+   "where": "54_cast.js:kat.g",
+   "as": "v.W2",
+   "note": "Aged 40; keeps the yard and the accounts."
+  },
+  {
+   "speaker": "kat",
+   "text": "Kat Ashdown. He makes the wheels. I make them pay.",
+   "where": "54_cast.js:kat.me",
+   "as": "v.W2",
+   "note": "Aged 40; keeps the yard and the accounts."
+  },
+  {
+   "speaker": "kat",
+   "text": "Tamsin, Miles’s sister, lives two doors up with her bees. Twenty-seven, and writing letters to somebody. She will not say who.",
+   "where": "54_cast.js:kat.nb",
+   "as": "v.W2",
+   "note": "Aged 40; keeps the yard and the accounts."
+  },
+  {
+   "speaker": "kat",
+   "text": "Tamsin’s honey goes to the Hart. If you want to know why it is called the Honeyed Hart, taste the ale.",
+   "where": "54_cast.js:kat.pt",
+   "as": "v.W2",
+   "note": "Aged 40; keeps the yard and the accounts."
+  },
+  {
+   "speaker": "kat",
+   "text": "Winifred! Noon!",
+   "where": "54_cast.js:kat.b1",
+   "as": "v.W2",
+   "note": "Aged 40; keeps the yard and the accounts."
+  },
+  {
+   "speaker": "kat",
+   "text": "That will be two silver. Each.",
+   "where": "54_cast.js:kat.b2",
+   "as": "v.W2",
+   "note": "Aged 40; keeps the yard and the accounts."
+  },
+  {
+   "speaker": "kat",
+   "text": "Well. Nobody will call this a dull year. I had been hoping for a dull year.",
+   "where": "54_cast.js:kat.g2",
+   "as": "v.W2",
+   "note": "Aged 40; keeps the yard and the accounts."
+  },
+  {
+   "speaker": "kat",
+   "text": "Miles, there is a thief. A poor one. He has come to a house full of wheels.",
+   "where": "54_cast.js:kat.nt",
+   "as": "v.W2",
+   "note": "Aged 40; keeps the yard and the accounts."
+  },
+  {
+   "speaker": "tamsin",
+   "text": "Walk slowly and do not wave. They are in a good temper today and I would like it to last.",
+   "where": "54_cast.js:tamsin.g",
+   "as": "v.YW",
+   "note": "Aged 27; beekeeper."
+  },
+  {
+   "speaker": "tamsin",
+   "text": "Tamsin Ashdown. Eleven hives, and wax for the chandler. I prefer the bees to most company.",
+   "where": "54_cast.js:tamsin.me",
+   "as": "v.YW",
+   "note": "Aged 27; beekeeper."
+  },
+  {
+   "speaker": "tamsin",
+   "text": "The hunter, Wren. She brings me heather from the high slope for the hives. I write to thank her. Often.",
+   "where": "54_cast.js:tamsin.nb",
+   "as": "v.YW",
+   "note": "Aged 27; beekeeper."
+  },
+  {
+   "speaker": "tamsin",
+   "text": "There is a bee meadow east of the chapel, off the crag path. Go quietly and they will not mind you.",
+   "where": "54_cast.js:tamsin.pt",
+   "as": "v.YW",
+   "note": "Aged 27; beekeeper."
+  },
+  {
+   "speaker": "tamsin",
+   "text": "Slowly. Slowly.",
+   "where": "54_cast.js:tamsin.b1",
+   "as": "v.YW",
+   "note": "Aged 27; beekeeper."
+  },
+  {
+   "speaker": "tamsin",
+   "text": "Heather’s out on the tops.",
+   "where": "54_cast.js:tamsin.b2",
+   "as": "v.YW",
+   "note": "Aged 27; beekeeper."
+  },
+  {
+   "speaker": "tamsin",
+   "text": "The bees were told. You have to tell them when someone dies or they leave. I did not know his name, so I said \"a stranger\".",
+   "where": "54_cast.js:tamsin.g2",
+   "as": "v.YW",
+   "note": "Aged 27; beekeeper."
+  },
+  {
+   "speaker": "tamsin",
+   "text": "I keep bees, so I am not afraid of much. You have until I count to three, and I have already started.",
+   "where": "54_cast.js:tamsin.nt",
+   "as": "v.YW",
+   "note": "Aged 27; beekeeper."
+  },
+  {
+   "speaker": "jasper",
+   "text": "Cord of ash, cord of oak. Ash for the forge, oak for the oven. What do you burn?",
+   "where": "54_cast.js:jasper.g",
+   "as": "v.M2",
+   "note": "Aged 33; woodcutter."
+  },
+  {
+   "speaker": "jasper",
+   "text": "Jasper Holt. I keep the Hart, the forge and the bakehouse in fire. Without me this town is cold soup.",
+   "where": "54_cast.js:jasper.me",
+   "as": "v.M2",
+   "note": "Aged 33; woodcutter."
+  },
+  {
+   "speaker": "jasper",
+   "text": "Wren knows the woods better than I do and never lets me forget it. She is usually right, which is the worst of it.",
+   "where": "54_cast.js:jasper.nb",
+   "as": "v.M2",
+   "note": "Aged 33; woodcutter."
+  },
+  {
+   "speaker": "jasper",
+   "text": "There is a lumber camp out on the forest road. A man called Hob worked it. He had a brother. Read the board at the old mine; do not ask me.",
+   "where": "54_cast.js:jasper.pt",
+   "as": "v.M2",
+   "note": "Aged 33; woodcutter."
+  },
+  {
+   "speaker": "jasper",
+   "text": "Ash or oak?",
+   "where": "54_cast.js:jasper.b1",
+   "as": "v.M2",
+   "note": "Aged 33; woodcutter."
+  },
+  {
+   "speaker": "jasper",
+   "text": "Dry wood! Seasoned!",
+   "where": "54_cast.js:jasper.b2",
+   "as": "v.M2",
+   "note": "Aged 33; woodcutter."
+  },
+  {
+   "speaker": "jasper",
+   "text": "I cut on every side of this town but one. North, under the cliffs, I leave standing. Now you know why.",
+   "where": "54_cast.js:jasper.g2",
+   "as": "v.M2",
+   "note": "Aged 33; woodcutter."
+  },
+  {
+   "speaker": "jasper",
+   "text": "I split logs for a living. You are standing in my house. Work it out.",
+   "where": "54_cast.js:jasper.nt",
+   "as": "v.M2",
+   "note": "Aged 33; woodcutter."
+  },
+  {
+   "speaker": "ysolt",
+   "text": "Mind the lines. If that sheet touches the ground I do it again, and I will know whose boot it was.",
+   "where": "54_cast.js:ysolt.g",
+   "as": "v.W2",
+   "note": "Aged 39; laundress."
+  },
+  {
+   "speaker": "ysolt",
+   "text": "Ysolt Pell. I married into the name. It came with a house, a father-in-law at the door, and a hill nobody mentions.",
+   "where": "54_cast.js:ysolt.me",
+   "as": "v.W2",
+   "note": "Aged 39; laundress."
+  },
+  {
+   "speaker": "ysolt",
+   "text": "Brandt took my Tobin at the forge when no one else would have a Pell. The boy loses his hammer and Brandt roars, but he feeds him.",
+   "where": "54_cast.js:ysolt.nb",
+   "as": "v.W2",
+   "note": "Aged 39; laundress."
+  },
+  {
+   "speaker": "ysolt",
+   "text": "I wash for the Hart. Greta always knows who wants a pair of hands, ask her.",
+   "where": "54_cast.js:ysolt.pt",
+   "as": "v.W2",
+   "note": "Aged 39; laundress."
+  },
+  {
+   "speaker": "ysolt",
+   "text": "Off the lines!",
+   "where": "54_cast.js:ysolt.b1",
+   "as": "v.W2",
+   "note": "Aged 39; laundress."
+  },
+  {
+   "speaker": "ysolt",
+   "text": "Dry by noon if the wind holds.",
+   "where": "54_cast.js:ysolt.b2",
+   "as": "v.W2",
+   "note": "Aged 39; laundress."
+  },
+  {
+   "speaker": "ysolt",
+   "text": "They say he wore a brass tally. Do not tell Lambert what number was on it. Let me be the one.",
+   "where": "54_cast.js:ysolt.g2",
+   "as": "v.W2",
+   "note": "Aged 39; laundress."
+  },
+  {
+   "speaker": "ysolt",
+   "text": "I have two boys and an old man asleep. Whatever you are after, it is not here, and I will scream the lane awake.",
+   "where": "54_cast.js:ysolt.nt",
+   "as": "v.W2",
+   "note": "Aged 39; laundress."
+  },
+  {
+   "speaker": "davy",
+   "text": "Have you seen a ewe with a torn ear? No. Nobody has. Warin will have my hide.",
+   "where": "54_cast.js:davy.g",
+   "as": "v.YM",
+   "note": "Aged 15; shepherd’s lad."
+  },
+  {
+   "speaker": "davy",
+   "text": "Davy Pell. I mind sheep for Warin Shaw. Ivo says the watch takes lads at sixteen. I am fifteen and three quarters.",
+   "where": "54_cast.js:davy.me",
+   "as": "v.YM",
+   "note": "Aged 15; shepherd’s lad."
+  },
+  {
+   "speaker": "davy",
+   "text": "My brother Tobin is at the forge. He borrows things. He does not mean it as stealing, he means it as knights.",
+   "where": "54_cast.js:davy.nb",
+   "as": "v.YM",
+   "note": "Aged 15; shepherd’s lad."
+  },
+  {
+   "speaker": "davy",
+   "text": "There are outlaws camped up by the old tower, north of the chapel. Warin says they take lambs. I should like to see them try it with me there.",
+   "where": "54_cast.js:davy.pt",
+   "as": "v.YM",
+   "note": "Aged 15; shepherd’s lad."
+  },
+  {
+   "speaker": "davy",
+   "text": "Torn ear. Left one.",
+   "where": "54_cast.js:davy.b1",
+   "as": "v.YM",
+   "note": "Aged 15; shepherd’s lad."
+  },
+  {
+   "speaker": "davy",
+   "text": "Morning. Seen Warin?",
+   "where": "54_cast.js:davy.b2",
+   "as": "v.YM",
+   "note": "Aged 15; shepherd’s lad."
+  },
+  {
+   "speaker": "davy",
+   "text": "Grandfather has not said a word since they brought the man up. He sits and he looks north.",
+   "where": "54_cast.js:davy.g2",
+   "as": "v.YM",
+   "note": "Aged 15; shepherd’s lad."
+  },
+  {
+   "speaker": "davy",
+   "text": "Mother! ... I am nearly in the watch. Stand where you are.",
+   "where": "54_cast.js:davy.nt",
+   "as": "v.YM",
+   "note": "Aged 15; shepherd’s lad."
+  },
+  {
+   "speaker": "lambert",
+   "text": "You will be wanting something. People only talk to a Pell when they want something.",
+   "where": "54_cast.js:lambert.g",
+   "as": "v.OM",
+   "note": "Aged 73; was a mine boy."
+  },
+  {
+   "speaker": "lambert",
+   "text": "Lambert Pell. I carried candles in the Old Mine when I was eleven. I came up one evening and Dunstan did not.",
+   "where": "54_cast.js:lambert.me",
+   "as": "v.OM",
+   "note": "Aged 73; was a mine boy."
+  },
+  {
+   "speaker": "lambert",
+   "text": "Rowan stood beside me the day they barred the door. Fifty years. He has never once said my brother’s name to me.",
+   "where": "54_cast.js:lambert.nb",
+   "as": "v.OM",
+   "note": "Aged 73; was a mine boy."
+  },
+  {
+   "speaker": "lambert",
+   "text": "The mine is north-west, past the chapel and up under the cliffs. The Sexton kept the key. Ask the Brother what became of it.",
+   "where": "54_cast.js:lambert.pt",
+   "as": "v.OM",
+   "note": "Aged 73; was a mine boy."
+  },
+  {
+   "speaker": "lambert",
+   "text": "North. Always look north.",
+   "where": "54_cast.js:lambert.b1",
+   "as": "v.OM",
+   "note": "Aged 73; was a mine boy."
+  },
+  {
+   "speaker": "lambert",
+   "text": "Hm. A stranger.",
+   "where": "54_cast.js:lambert.b2",
+   "as": "v.OM",
+   "note": "Aged 73; was a mine boy."
+  },
+  {
+   "speaker": "lambert",
+   "text": "I went down to the wharf. They would not lift the cloth for me. I did not need them to. I know my brother’s hands.",
+   "where": "54_cast.js:lambert.g2",
+   "as": "v.OM",
+   "note": "Aged 73; was a mine boy."
+  },
+  {
+   "speaker": "lambert",
+   "text": "Fifty years I have slept by this door waiting for a knock. You are not the one I was waiting for. Get out.",
+   "where": "54_cast.js:lambert.nt",
+   "as": "v.OM",
+   "note": "Aged 73; was a mine boy."
+  },
+  {
+   "speaker": "warin",
+   "text": "You have caught me in the town, which is rare. The flock is on the west pasture with the lad.",
+   "where": "54_cast.js:warin.g",
+   "as": "v.M2",
+   "note": "Aged 41; shepherd."
+  },
+  {
+   "speaker": "warin",
+   "text": "Warin Shaw. Sheep, and a dog, and a house I use for sleeping. My niece married up to Highfold last month.",
+   "where": "54_cast.js:warin.me",
+   "as": "v.M2",
+   "note": "Aged 41; shepherd."
+  },
+  {
+   "speaker": "warin",
+   "text": "Wren and I split the west slope between us. She takes what runs, I keep what grazes. We have never had a cross word.",
+   "where": "54_cast.js:warin.nb",
+   "as": "v.M2",
+   "note": "Aged 41; shepherd."
+  },
+  {
+   "speaker": "warin",
+   "text": "There are outlaws camped on the passes and a notice on the board that pays for them. I would do it myself for a ewe apiece.",
+   "where": "54_cast.js:warin.pt",
+   "as": "v.M2",
+   "note": "Aged 41; shepherd."
+  },
+  {
+   "speaker": "warin",
+   "text": "Away to me. No, not you.",
+   "where": "54_cast.js:warin.b1",
+   "as": "v.M2",
+   "note": "Aged 41; shepherd."
+  },
+  {
+   "speaker": "warin",
+   "text": "Rain by evening.",
+   "where": "54_cast.js:warin.b2",
+   "as": "v.M2",
+   "note": "Aged 41; shepherd."
+  },
+  {
+   "speaker": "warin",
+   "text": "I have pulled drowned sheep out of that lake. They are heavy. They say this one was light as a lamb.",
+   "where": "54_cast.js:warin.g2",
+   "as": "v.M2",
+   "note": "Aged 41; shepherd."
+  },
+  {
+   "speaker": "warin",
+   "text": "The dog heard you at the gate. I let you get this far to see what you would do. Now go.",
+   "where": "54_cast.js:warin.nt",
+   "as": "v.M2",
+   "note": "Aged 41; shepherd."
+  },
+  {
+   "speaker": "ulric",
+   "text": "Walk beside me if you want to talk. The rope does not stop for conversation.",
+   "where": "54_cast.js:ulric.g",
+   "as": "v.M1",
+   "note": "Aged 48; ropemaker."
+  },
+  {
+   "speaker": "ulric",
+   "text": "Ulric Ferrin. Every rope in this town came off my walk. The well, the boats, the last bell rope, and the one before.",
+   "where": "54_cast.js:ulric.me",
+   "as": "v.M1",
+   "note": "Aged 48; ropemaker."
+  },
+  {
+   "speaker": "ulric",
+   "text": "Brother Aldous sent to Marta Quill for his rope. Marta. A woman who sells buttons.",
+   "where": "54_cast.js:ulric.nb",
+   "as": "v.M1",
+   "note": "Aged 48; ropemaker."
+  },
+  {
+   "speaker": "ulric",
+   "text": "The well rope is new this spring, mine, and sound. If you want to see what a rope should be, go and look at it.",
+   "where": "54_cast.js:ulric.pt",
+   "as": "v.M1",
+   "note": "Aged 48; ropemaker."
+  },
+  {
+   "speaker": "ulric",
+   "text": "Mind the walk!",
+   "where": "54_cast.js:ulric.b1",
+   "as": "v.M1",
+   "note": "Aged 48; ropemaker."
+  },
+  {
+   "speaker": "ulric",
+   "text": "Keep it taut, keep it taut.",
+   "where": "54_cast.js:ulric.b2",
+   "as": "v.M1",
+   "note": "Aged 48; ropemaker."
+  },
+  {
+   "speaker": "ulric",
+   "text": "So the bell rings, on shop-bought hemp. Thirty feet. I would have laid forty and tarred the eye.",
+   "where": "54_cast.js:ulric.g2",
+   "as": "v.M1",
+   "note": "Aged 48; ropemaker."
+  },
+  {
+   "speaker": "ulric",
+   "text": "I have a hundred fathoms of cord in this house and I can tie anything. Do not make me show you.",
+   "where": "54_cast.js:ulric.nt",
+   "as": "v.M1",
+   "note": "Aged 48; ropemaker."
+  },
+  {
+   "speaker": "beatrix",
+   "text": "Do not touch the green ones, they are not fired. Everything else you may pick up, if you buy what you drop.",
+   "where": "54_cast.js:beatrix.g",
+   "as": "v.W2",
+   "note": "Aged 44; potter."
+  },
+  {
+   "speaker": "beatrix",
+   "text": "Beatrix Ferrin. Ulric twists and I turn. Between us we make everything a house needs to hold and to hang.",
+   "where": "54_cast.js:beatrix.me",
+   "as": "v.W2",
+   "note": "Aged 44; potter."
+  },
+  {
+   "speaker": "beatrix",
+   "text": "Old Maren and I have traded jars for salves since before Amice was born. Her tonic is why I can still close my hands.",
+   "where": "54_cast.js:beatrix.nb",
+   "as": "v.W2",
+   "note": "Aged 44; potter."
+  },
+  {
+   "speaker": "beatrix",
+   "text": "Maren’s stores are thin and her knees are bad. If you are a walker, she will send you for herbs and pay in tonic.",
+   "where": "54_cast.js:beatrix.pt",
+   "as": "v.W2",
+   "note": "Aged 44; potter."
+  },
+  {
+   "speaker": "beatrix",
+   "text": "Careful. Careful!",
+   "where": "54_cast.js:beatrix.b1",
+   "as": "v.W2",
+   "note": "Aged 44; potter."
+  },
+  {
+   "speaker": "beatrix",
+   "text": "Kiln’s hot today.",
+   "where": "54_cast.js:beatrix.b2",
+   "as": "v.W2",
+   "note": "Aged 44; potter."
+  },
+  {
+   "speaker": "beatrix",
+   "text": "Maren looked at him. She came here after and sat an hour by the kiln and did not say one word.",
+   "where": "54_cast.js:beatrix.g2",
+   "as": "v.W2",
+   "note": "Aged 44; potter."
+  },
+  {
+   "speaker": "beatrix",
+   "text": "Those shelves took me a month to fill. If one pot moves I will know it was you. Out.",
+   "where": "54_cast.js:beatrix.nt",
+   "as": "v.W2",
+   "note": "Aged 44; potter."
+  },
+  {
+   "speaker": "amice",
+   "text": "Father says I talk too much to turn the wheel evenly. Hello.",
+   "where": "54_cast.js:amice.g",
+   "as": "v.G",
+   "note": "Aged 12; school."
+  },
+  {
+   "speaker": "amice",
+   "text": "Amice Ferrin. I turn the rope wheel and I am learning my letters from Master Sele.",
+   "where": "54_cast.js:amice.me",
+   "as": "v.G",
+   "note": "Aged 12; school."
+  },
+  {
+   "speaker": "amice",
+   "text": "Lettice has read every book on the stall. Twice. She told me how one ends and I have not forgiven her.",
+   "where": "54_cast.js:amice.nb",
+   "as": "v.G",
+   "note": "Aged 12; school."
+  },
+  {
+   "speaker": "amice",
+   "text": "If you stand on the terrace by the Elder’s, there is a glass you can look through. You can see the whole market.",
+   "where": "54_cast.js:amice.pt",
+   "as": "v.G",
+   "note": "Aged 12; school."
+  },
+  {
+   "speaker": "amice",
+   "text": "One, two, turn. One, two, turn.",
+   "where": "54_cast.js:amice.b1",
+   "as": "v.G",
+   "note": "Aged 12; school."
+  },
+  {
+   "speaker": "amice",
+   "text": "I was not listening!",
+   "where": "54_cast.js:amice.b2",
+   "as": "v.G",
+   "note": "Aged 12; school."
+  },
+  {
+   "speaker": "stephen",
+   "text": "Those have a week left in them. I can tell by how you stand. Sit down, let me look.",
+   "where": "54_cast.js:stephen.g",
+   "as": "v.YM",
+   "note": "Aged 26; cobbler."
+  },
+  {
+   "speaker": "stephen",
+   "text": "Stephen Alder. My father makes arrows; I wanted a trade where the customer comes back.",
+   "where": "54_cast.js:stephen.me",
+   "as": "v.YM",
+   "note": "Aged 26; cobbler."
+  },
+  {
+   "speaker": "stephen",
+   "text": "Guardsman Ivo and I take a cup at the Hart most nights. He walks the wall and I mend what the wall does to his boots.",
+   "where": "54_cast.js:stephen.nb",
+   "as": "v.YM",
+   "note": "Aged 26; cobbler."
+  },
+  {
+   "speaker": "stephen",
+   "text": "The wall walk is open if you want to see the town from above. Stair by the north houses. Mind the gap by the tower.",
+   "where": "54_cast.js:stephen.pt",
+   "as": "v.YM",
+   "note": "Aged 26; cobbler."
+  },
+  {
+   "speaker": "stephen",
+   "text": "Heels, friend. Look to your heels.",
+   "where": "54_cast.js:stephen.b1",
+   "as": "v.YM",
+   "note": "Aged 26; cobbler."
+  },
+  {
+   "speaker": "stephen",
+   "text": "Evening, Ivo. Usual?",
+   "where": "54_cast.js:stephen.b2",
+   "as": "v.YM",
+   "note": "Aged 26; cobbler."
+  },
+  {
+   "speaker": "stephen",
+   "text": "He had miner’s boots. Old pattern, pegged, not sewn. Nobody has made that boot here since my grandfather.",
+   "where": "54_cast.js:stephen.g2",
+   "as": "v.YM",
+   "note": "Aged 26; cobbler."
+  },
+  {
+   "speaker": "stephen",
+   "text": "I sleep over the shop for exactly this. That is an awl. It goes through ox hide.",
+   "where": "54_cast.js:stephen.nt",
+   "as": "v.YM",
+   "note": "Aged 26; cobbler."
+  },
+  {
+   "speaker": "emmet",
+   "text": "One moment. Amice, that is a b, not a d. Now. How may a man of letters disappoint you?",
+   "where": "54_cast.js:emmet.g",
+   "as": "v.OM",
+   "note": "Aged 62; scribe."
+  },
+  {
+   "speaker": "emmet",
+   "text": "Emmet Sele. I teach the children, write the letters, and keep the levy roll. I am the town’s memory and it treats me like its attic.",
+   "where": "54_cast.js:emmet.me",
+   "as": "v.OM",
+   "note": "Aged 62; scribe."
+  },
+  {
+   "speaker": "emmet",
+   "text": "Brother Aldous has the Sexton’s ledger and cannot read the Sexton’s hand. I can. He has only to cross the square.",
+   "where": "54_cast.js:emmet.nb",
+   "as": "v.OM",
+   "note": "Aged 62; scribe."
+  },
+  {
+   "speaker": "emmet",
+   "text": "The chapel has a crypt and the crypt has older books than mine. If you find the key, look at what the Sexton kept.",
+   "where": "54_cast.js:emmet.pt",
+   "as": "v.OM",
+   "note": "Aged 62; scribe."
+  },
+  {
+   "speaker": "emmet",
+   "text": "A b! A b!",
+   "where": "54_cast.js:emmet.b1",
+   "as": "v.OM",
+   "note": "Aged 62; scribe."
+  },
+  {
+   "speaker": "emmet",
+   "text": "Good day. Mind the ink.",
+   "where": "54_cast.js:emmet.b2",
+   "as": "v.OM",
+   "note": "Aged 62; scribe."
+  },
+  {
+   "speaker": "emmet",
+   "text": "A brass tally with OM on it. I have the mine’s pay roll in a chest. Nobody has asked me for it. Nobody ever asks.",
+   "where": "54_cast.js:emmet.g2",
+   "as": "v.OM",
+   "note": "Aged 62; scribe."
+  },
+  {
+   "speaker": "emmet",
+   "text": "If you have come for the levy silver, it is not kept here. If you have come for a book, I am almost flattered. Leave.",
+   "where": "54_cast.js:emmet.nt",
+   "as": "v.OM",
+   "note": "Aged 62; scribe."
+  },
+  {
+   "speaker": "lettice",
+   "text": "You may read standing up for as long as you like. If you sit down, you have to buy it.",
+   "where": "54_cast.js:lettice.g",
+   "as": "v.G",
+   "note": "Aged 14; the Bookstall."
+  },
+  {
+   "speaker": "lettice",
+   "text": "Lettice. Master Sele took me in when the carts lost my father on the pass. I keep his stall and correct his sums.",
+   "where": "54_cast.js:lettice.me",
+   "as": "v.G",
+   "note": "Aged 14; the Bookstall."
+  },
+  {
+   "speaker": "lettice",
+   "text": "Mistress Thorne brings her books back unread. She puts a ribbon at a different page each time. It is always a page with a picture.",
+   "where": "54_cast.js:lettice.nb",
+   "as": "v.G",
+   "note": "Aged 14; the Bookstall."
+  },
+  {
+   "speaker": "lettice",
+   "text": "There are notes and letters all over this town if you look. People here write down what they will not say.",
+   "where": "54_cast.js:lettice.pt",
+   "as": "v.G",
+   "note": "Aged 14; the Bookstall."
+  },
+  {
+   "speaker": "lettice",
+   "text": "That one ends sadly.",
+   "where": "54_cast.js:lettice.b1",
+   "as": "v.G",
+   "note": "Aged 14; the Bookstall."
+  },
+  {
+   "speaker": "lettice",
+   "text": "Do not bend it back!",
+   "where": "54_cast.js:lettice.b2",
+   "as": "v.G",
+   "note": "Aged 14; the Bookstall."
+  },
+  {
+   "speaker": "roger",
+   "text": "Look, do not thumb the edge. The last man who tested my work that way is still learning to write with his left.",
+   "where": "54_cast.js:roger.g",
+   "as": "v.M1",
+   "note": "Aged 50; cutler."
+  },
+  {
+   "speaker": "roger",
+   "text": "Roger Hask, cutler. Brandt makes the steel; I make it worth owning.",
+   "where": "54_cast.js:roger.me",
+   "as": "v.M1",
+   "note": "Aged 50; cutler."
+  },
+  {
+   "speaker": "roger",
+   "text": "Brandt Ironhand is the best smith on this side of the Greyspine and his knives are doorstops. I say it to his face.",
+   "where": "54_cast.js:roger.nb",
+   "as": "v.M1",
+   "note": "Aged 50; cutler."
+  },
+  {
+   "speaker": "roger",
+   "text": "Brandt has lost his best hammer and half his temper. Find the one and you mend the other.",
+   "where": "54_cast.js:roger.pt",
+   "as": "v.M1",
+   "note": "Aged 50; cutler."
+  },
+  {
+   "speaker": "roger",
+   "text": "Edge like a razor. Mind it.",
+   "where": "54_cast.js:roger.b1",
+   "as": "v.M1",
+   "note": "Aged 50; cutler."
+  },
+  {
+   "speaker": "roger",
+   "text": "Father! Slower on the wheel!",
+   "where": "54_cast.js:roger.b2",
+   "as": "v.M1",
+   "note": "Aged 50; cutler."
+  },
+  {
+   "speaker": "roger",
+   "text": "Hale brought me the dead man’s knife to name the maker. No mark I know. Old iron, ground thin as a leaf.",
+   "where": "54_cast.js:roger.g2",
+   "as": "v.M1",
+   "note": "Aged 50; cutler."
+  },
+  {
+   "speaker": "roger",
+   "text": "You walked into a cutler’s in the dark. Count your fingers on the way out.",
+   "where": "54_cast.js:roger.nt",
+   "as": "v.M1",
+   "note": "Aged 50; cutler."
+  },
+  {
+   "speaker": "odo",
+   "text": "Who is that? Come where the light is. No use, is it. Speak, then, I know a voice.",
+   "where": "54_cast.js:odo.g",
+   "as": "v.OM",
+   "note": "Aged 79; grinder."
+  },
+  {
+   "speaker": "odo",
+   "text": "Odo Hask. Seventy-nine. I was a grown man when Rowan was a boy, and you may tell him I said so.",
+   "where": "54_cast.js:odo.me",
+   "as": "v.OM",
+   "note": "Aged 79; grinder."
+  },
+  {
+   "speaker": "odo",
+   "text": "Idony Hobb and I are the last two who heard the hill when it sang. She will not talk of it. I will, if you ask me.",
+   "where": "54_cast.js:odo.nb",
+   "as": "v.OM",
+   "note": "Aged 79; grinder."
+  },
+  {
+   "speaker": "odo",
+   "text": "Look at the east wall of the Hart’s cellar. There is brick in it younger than I am. I never drank there after.",
+   "where": "54_cast.js:odo.pt",
+   "as": "v.OM",
+   "note": "Aged 79; grinder."
+  },
+  {
+   "speaker": "odo",
+   "text": "Who is that?",
+   "where": "54_cast.js:odo.b1",
+   "as": "v.OM",
+   "note": "Aged 79; grinder."
+  },
+  {
+   "speaker": "odo",
+   "text": "Good steel sings. Listen.",
+   "where": "54_cast.js:odo.b2",
+   "as": "v.OM",
+   "note": "Aged 79; grinder."
+  },
+  {
+   "speaker": "odo",
+   "text": "There. Hear it? I count my days by that bell. Three weeks I did not know if I was dead.",
+   "where": "54_cast.js:odo.g2",
+   "as": "v.OM",
+   "note": "Aged 79; grinder."
+  },
+  {
+   "speaker": "odo",
+   "text": "I am blind, not deaf. Third board from the door. You are standing on it.",
+   "where": "54_cast.js:odo.nt",
+   "as": "v.OM",
+   "note": "Aged 79; grinder."
+  },
+  {
+   "speaker": "randal",
+   "text": "Do not lean on her. She is green wood and steam and she is still deciding what shape to be.",
+   "where": "54_cast.js:randal.g",
+   "as": "v.M2",
+   "note": "Aged 43; boatwright and carpenter."
+  },
+  {
+   "speaker": "randal",
+   "text": "Randal Byrd. I build boats. My brother makes barrels, which are boats that gave up.",
+   "where": "54_cast.js:randal.me",
+   "as": "v.M2",
+   "note": "Aged 43; boatwright and carpenter."
+  },
+  {
+   "speaker": "randal",
+   "text": "Old Wenn taught me everything and still tells me I plank like a farmer. I would not trade him for a new shed.",
+   "where": "54_cast.js:randal.nb",
+   "as": "v.M2",
+   "note": "Aged 43; boatwright and carpenter."
+  },
+  {
+   "speaker": "randal",
+   "text": "Finn Reedwater is at the end of the dock from first light. He found the man. He will tell it, if you ask kindly.",
+   "where": "54_cast.js:randal.pt",
+   "as": "v.M2",
+   "note": "Aged 43; boatwright and carpenter."
+  },
+  {
+   "speaker": "randal",
+   "text": "Mind the strakes.",
+   "where": "54_cast.js:randal.b1",
+   "as": "v.M2",
+   "note": "Aged 43; boatwright and carpenter."
+  },
+  {
+   "speaker": "randal",
+   "text": "Fair wind on the lake.",
+   "where": "54_cast.js:randal.b2",
+   "as": "v.M2",
+   "note": "Aged 43; boatwright and carpenter."
+  },
+  {
+   "speaker": "randal",
+   "text": "They sent for me to look at the wharf. No boat brought that man. No keel mark, no oar. He walked out of the water.",
+   "where": "54_cast.js:randal.g2",
+   "as": "v.M2",
+   "note": "Aged 43; boatwright and carpenter."
+  },
+  {
+   "speaker": "randal",
+   "text": "The tar pot is still warm. I would rather not waste it on you.",
+   "where": "54_cast.js:randal.nt",
+   "as": "v.M2",
+   "note": "Aged 43; boatwright and carpenter."
+  },
+  {
+   "speaker": "wenn",
+   "text": "Twenty boats. There were twenty on this water when I had my hair. Now sit down, I am going to tell you about each one.",
+   "where": "54_cast.js:wenn.g",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
+   "speaker": "wenn",
+   "text": "Wenn. Just Wenn. I built boats for sixty years and now I hold the keys and the opinions.",
+   "where": "54_cast.js:wenn.me",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
+   "speaker": "wenn",
+   "text": "Randal is the best pupil I ever had and I will tell him so on my deathbed and not one hour before.",
+   "where": "54_cast.js:wenn.nb",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
+   "speaker": "wenn",
+   "text": "The keys to the boat-houses are with me, and there they stay. Read the board on the wharf if you want to know how high the lake once stood.",
+   "where": "54_cast.js:wenn.pt",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
+   "speaker": "wenn",
+   "text": "Twenty boats!",
+   "where": "54_cast.js:wenn.b1",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
+   "speaker": "wenn",
+   "text": "Planks like a farmer.",
+   "where": "54_cast.js:wenn.b2",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
+   "speaker": "wenn",
+   "text": "I have seen what Mirrormere gives back. It gives back the drowned. That one, it did not want.",
+   "where": "54_cast.js:wenn.g2",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
+   "speaker": "wenn",
+   "text": "Eh? Is it morning? No. Then you are a thief, and I am too old to chase you. Shut the door on your way out.",
+   "where": "54_cast.js:wenn.nt",
+   "as": "v.OM",
+   "note": "Aged 76; master boatwright."
+  },
+  {
+   "speaker": "barnaby",
+   "text": "Candles, cord, tar, tallow and lamp oil. Light and rope: there is nothing else a person truly needs.",
+   "where": "54_cast.js:barnaby.g",
+   "as": "v.M1",
+   "note": "Aged 56; chandler."
+  },
+  {
+   "speaker": "barnaby",
+   "text": "Barnaby Crane, chandler. Tamsin’s wax, Ulric’s cord, my wicks.",
+   "where": "54_cast.js:barnaby.me",
+   "as": "v.M1",
+   "note": "Aged 56; chandler."
+  },
+  {
+   "speaker": "barnaby",
+   "text": "Ursel says I should have asked the Elder which cave. Ursel says a good many things after the event.",
+   "where": "54_cast.js:barnaby.nb",
+   "as": "v.M1",
+   "note": "Aged 56; chandler."
+  },
+  {
+   "speaker": "barnaby",
+   "text": "The gate is short of lamp oil and there is a notice for it. Marta Quill has the flasks.",
+   "where": "54_cast.js:barnaby.pt",
+   "as": "v.M1",
+   "note": "Aged 56; chandler."
+  },
+  {
+   "speaker": "barnaby",
+   "text": "Tallow or wax?",
+   "where": "54_cast.js:barnaby.b1",
+   "as": "v.M1",
+   "note": "Aged 56; chandler."
+  },
+  {
+   "speaker": "barnaby",
+   "text": "Long evenings coming. Stock up.",
+   "where": "54_cast.js:barnaby.b2",
+   "as": "v.M1",
+   "note": "Aged 56; chandler."
+  },
+  {
+   "speaker": "barnaby",
+   "text": "The Elder bought a dozen candles off me every month, \"for the cave\". I took it for a manner of speaking.",
+   "where": "54_cast.js:barnaby.g2",
+   "as": "v.M1",
+   "note": "Aged 56; chandler."
+  },
+  {
+   "speaker": "barnaby",
+   "text": "I can lay my hand on a candle in the dark faster than you can find the door. Shall we see?",
+   "where": "54_cast.js:barnaby.nt",
+   "as": "v.M1",
+   "note": "Aged 56; chandler."
+  },
+  {
+   "speaker": "ursel",
+   "text": "He will tell you light and rope are all a person needs. Ask him who cooks.",
+   "where": "54_cast.js:ursel.g",
+   "as": "v.W1",
+   "note": "Aged 54; the counter."
+  },
+  {
+   "speaker": "ursel",
+   "text": "Ursel Crane. I keep the counter. I also ask the questions, since somebody must.",
+   "where": "54_cast.js:ursel.me",
+   "as": "v.W1",
+   "note": "Aged 54; the counter."
+  },
+  {
+   "speaker": "ursel",
+   "text": "Mercy Garrick sweeps the widow’s step across the way, every week, a house nobody has lived in for years. Ask yourself why.",
+   "where": "54_cast.js:ursel.nb",
+   "as": "v.W1",
+   "note": "Aged 54; the counter."
+  },
+  {
+   "speaker": "ursel",
+   "text": "Widow Hale’s house is locked and has been since she died. Somebody has the key. It is not the Warden; I asked.",
+   "where": "54_cast.js:ursel.pt",
+   "as": "v.W1",
+   "note": "Aged 54; the counter."
+  },
+  {
+   "speaker": "ursel",
+   "text": "Which cave, though?",
+   "where": "54_cast.js:ursel.b1",
+   "as": "v.W1",
+   "note": "Aged 54; the counter."
+  },
+  {
+   "speaker": "ursel",
+   "text": "Mind the tar.",
+   "where": "54_cast.js:ursel.b2",
+   "as": "v.W1",
+   "note": "Aged 54; the counter."
+  },
+  {
+   "speaker": "ursel",
+   "text": "A dozen candles a month for a cave, and my husband never once said \"which cave, Elder?\" Thirty years I have been married to that.",
+   "where": "54_cast.js:ursel.g2",
+   "as": "v.W1",
+   "note": "Aged 54; the counter."
+  },
+  {
+   "speaker": "ursel",
+   "text": "Barnaby. Light a candle. We have enough of them. I want to see this person’s face.",
+   "where": "54_cast.js:ursel.nt",
+   "as": "v.W1",
+   "note": "Aged 54; the counter."
+  },
+  {
+   "speaker": "silas",
+   "text": "Hm. ... Stone does not talk either. It is why I like it.",
+   "where": "54_cast.js:silas.g",
+   "as": "v.M1",
+   "note": "Aged 49; mason."
+  },
+  {
+   "speaker": "silas",
+   "text": "Garrow. Mason. Walls, hearths, and every stone in the churchyard since my father’s.",
+   "where": "54_cast.js:silas.me",
+   "as": "v.M1",
+   "note": "Aged 49; mason."
+  },
+  {
+   "speaker": "silas",
+   "text": "Finn and I drink at the same table at the Hart and say nothing. It suits us both.",
+   "where": "54_cast.js:silas.nb",
+   "as": "v.M1",
+   "note": "Aged 49; mason."
+  },
+  {
+   "speaker": "silas",
+   "text": "The north wall has a stair and a walk. I built the steps. From the top you can see the old tower on its crag.",
+   "where": "54_cast.js:silas.pt",
+   "as": "v.M1",
+   "note": "Aged 49; mason."
+  },
+  {
+   "speaker": "silas",
+   "text": "Hm.",
+   "where": "54_cast.js:silas.b1",
+   "as": "v.M1",
+   "note": "Aged 49; mason."
+  },
+  {
+   "speaker": "silas",
+   "text": "Good stone, that.",
+   "where": "54_cast.js:silas.b2",
+   "as": "v.M1",
+   "note": "Aged 49; mason."
+  },
+  {
+   "speaker": "silas",
+   "text": "The Brother has asked me for a headstone and given me no name to cut. I have left it blank. It will not be the first.",
+   "where": "54_cast.js:silas.g2",
+   "as": "v.M1",
+   "note": "Aged 49; mason."
+  },
+  {
+   "speaker": "silas",
+   "text": "I lift stone for a living. Go.",
+   "where": "54_cast.js:silas.nt",
+   "as": "v.M1",
+   "note": "Aged 49; mason."
+  },
+  {
+   "speaker": "humphrey",
+   "text": "Mutton, pork when there is pork, and sausage you should not ask about. What will you have?",
+   "where": "54_cast.js:humphrey.g",
+   "as": "v.M1",
+   "note": "Aged 47; butcher."
+  },
+  {
+   "speaker": "humphrey",
+   "text": "Humphrey Slate, butcher. Edda’s beasts, Warin’s sheep, my knife. Hester keeps the till so there is some left.",
+   "where": "54_cast.js:humphrey.me",
+   "as": "v.M1",
+   "note": "Aged 47; butcher."
+  },
+  {
+   "speaker": "humphrey",
+   "text": "Hale has had three words with me about blood in the lane. Where does he think meat comes from? A tree?",
+   "where": "54_cast.js:humphrey.nb",
+   "as": "v.M1",
+   "note": "Aged 47; butcher."
+  },
+  {
+   "speaker": "humphrey",
+   "text": "The watch pays for outlaws put down on the passes. I would go myself, but who would cut the chops?",
+   "where": "54_cast.js:humphrey.pt",
+   "as": "v.M1",
+   "note": "Aged 47; butcher."
+  },
+  {
+   "speaker": "humphrey",
+   "text": "Fresh today! Mostly!",
+   "where": "54_cast.js:humphrey.b1",
+   "as": "v.M1",
+   "note": "Aged 47; butcher."
+  },
+  {
+   "speaker": "humphrey",
+   "text": "Do not ask about the sausage.",
+   "where": "54_cast.js:humphrey.b2",
+   "as": "v.M1",
+   "note": "Aged 47; butcher."
+  },
+  {
+   "speaker": "humphrey",
+   "text": "I helped carry him. I have carried sides of beef that were more alive. Dry, he was. Dry as jerky.",
+   "where": "54_cast.js:humphrey.g2",
+   "as": "v.M1",
+   "note": "Aged 47; butcher."
+  },
+  {
+   "speaker": "humphrey",
+   "text": "Hester! Cleaver! ... No, I have it. Friend, I joint a hog in the time it takes you to reach that door.",
+   "where": "54_cast.js:humphrey.nt",
+   "as": "v.M1",
+   "note": "Aged 47; butcher."
+  },
+  {
+   "speaker": "hester",
+   "text": "He shouts. He always shouts. The meat is good and the weights are honest, that is what matters.",
+   "where": "54_cast.js:hester.g",
+   "as": "v.W2",
+   "note": "Aged 44; the block and the till."
+  },
+  {
+   "speaker": "hester",
+   "text": "Hester Slate. I keep the block clean and the till closed.",
+   "where": "54_cast.js:hester.me",
+   "as": "v.W2",
+   "note": "Aged 44; the block and the till."
+  },
+  {
+   "speaker": "hester",
+   "text": "Avice Hobb and I were girls together. She married bread and I married meat, and we meet in the middle every market day.",
+   "where": "54_cast.js:hester.nb",
+   "as": "v.W2",
+   "note": "Aged 44; the block and the till."
+  },
+  {
+   "speaker": "hester",
+   "text": "Ellen Marsh smokes fish down by the water. If you want lake trout, hers is the best.",
+   "where": "54_cast.js:hester.pt",
+   "as": "v.W2",
+   "note": "Aged 44; the block and the till."
+  },
+  {
+   "speaker": "hester",
+   "text": "Honest weight, every time.",
+   "where": "54_cast.js:hester.b1",
+   "as": "v.W2",
+   "note": "Aged 44; the block and the till."
+  },
+  {
+   "speaker": "hester",
+   "text": "Avice! A word!",
+   "where": "54_cast.js:hester.b2",
+   "as": "v.W2",
+   "note": "Aged 44; the block and the till."
+  },
+  {
+   "speaker": "hester",
+   "text": "I saw them bring him up the lane. I have told Avice and nobody else, and Avice has told the town.",
+   "where": "54_cast.js:hester.g2",
+   "as": "v.W2",
+   "note": "Aged 44; the block and the till."
+  },
+  {
+   "speaker": "hester",
+   "text": "Humphrey has the cleaver. I have the other cleaver. There are always two.",
+   "where": "54_cast.js:hester.nt",
+   "as": "v.W2",
+   "note": "Aged 44; the block and the till."
+  },
+  {
+   "speaker": "goda",
+   "text": "The bush is out, so the beer is ready. A farthing a jug and it will not put honey on your tongue or airs in your head.",
+   "where": "54_cast.js:goda.g",
+   "as": "v.W1",
+   "note": "Aged 51; alewife."
+  },
+  {
+   "speaker": "goda",
+   "text": "Goda Malkin. I brew for people who work. Greta brews for people who sit.",
+   "where": "54_cast.js:goda.me",
+   "as": "v.W1",
+   "note": "Aged 51; alewife."
+  },
+  {
+   "speaker": "goda",
+   "text": "Greta Barleybrook and I have not had a civil word in ten years and I would trust her with my last penny.",
+   "where": "54_cast.js:goda.nb",
+   "as": "v.W1",
+   "note": "Aged 51; alewife."
+  },
+  {
+   "speaker": "goda",
+   "text": "Osric at the mill owes half the town malt. If you are passing, tell him Goda remembers, and Greta is first in the line.",
+   "where": "54_cast.js:goda.pt",
+   "as": "v.W1",
+   "note": "Aged 51; alewife."
+  },
+  {
+   "speaker": "goda",
+   "text": "Bush is out!",
+   "where": "54_cast.js:goda.b1",
+   "as": "v.W1",
+   "note": "Aged 51; alewife."
+  },
+  {
+   "speaker": "goda",
+   "text": "Farthing a jug.",
+   "where": "54_cast.js:goda.b2",
+   "as": "v.W1",
+   "note": "Aged 51; alewife."
+  },
+  {
+   "speaker": "goda",
+   "text": "Rings like it never stopped. I will say this for the Hart: Greta sent a cask round the night it came back, for everyone.",
+   "where": "54_cast.js:goda.g2",
+   "as": "v.W1",
+   "note": "Aged 51; alewife."
+  },
+  {
+   "speaker": "goda",
+   "text": "Bridget! The mash paddle! ... It is six feet of oak, stranger. I stir with it daily.",
+   "where": "54_cast.js:goda.nt",
+   "as": "v.W1",
+   "note": "Aged 51; alewife."
+  },
+  {
+   "speaker": "bridget",
+   "text": "Mother will tell you Greta’s ale is honey and airs. I drink at the Hart on Fridays. Do not tell her.",
+   "where": "54_cast.js:bridget.g",
+   "as": "v.YW",
+   "note": "Aged 23; brews with her mother."
+  },
+  {
+   "speaker": "bridget",
+   "text": "Bridget Malkin. I do the brewing now, mostly. Mother does the selling and the feud.",
+   "where": "54_cast.js:bridget.me",
+   "as": "v.YW",
+   "note": "Aged 23; brews with her mother."
+  },
+  {
+   "speaker": "bridget",
+   "text": "The tailor, Jocelyn. He measures me with his eyes every time I pass. I could do worse. I am checking whether I could do better.",
+   "where": "54_cast.js:bridget.nb",
+   "as": "v.YW",
+   "note": "Aged 23; brews with her mother."
+  },
+  {
+   "speaker": "bridget",
+   "text": "Lark plays at the Hart every evening. He says he knows nine songs and seven of them are sad. Ask him for one.",
+   "where": "54_cast.js:bridget.pt",
+   "as": "v.YW",
+   "note": "Aged 23; brews with her mother."
+  },
+  {
+   "speaker": "bridget",
+   "text": "Small beer, fresh.",
+   "where": "54_cast.js:bridget.b1",
+   "as": "v.YW",
+   "note": "Aged 23; brews with her mother."
+  },
+  {
+   "speaker": "bridget",
+   "text": "Friday. Do not tell her.",
+   "where": "54_cast.js:bridget.b2",
+   "as": "v.YW",
+   "note": "Aged 23; brews with her mother."
+  },
+  {
+   "speaker": "bridget",
+   "text": "People want beer when things change and beer when they do not. It is a steady trade, at least.",
+   "where": "54_cast.js:bridget.g2",
+   "as": "v.YW",
+   "note": "Aged 23; brews with her mother."
+  },
+  {
+   "speaker": "bridget",
+   "text": "Mother, do not get up, I have it. You. Out, before she finds the paddle.",
+   "where": "54_cast.js:bridget.nt",
+   "as": "v.YW",
+   "note": "Aged 23; brews with her mother."
+  },
+  {
+   "speaker": "adda",
+   "text": "Rush for seats, willow for carrying. Do not sit on the willow.",
+   "where": "54_cast.js:adda.g",
+   "as": "v.OW",
+   "note": "Aged 58; basketmaker."
+  },
+  {
+   "speaker": "adda",
+   "text": "Adda. They call me the Rushworker. I cut my own reeds on the north shore and I have the hands to prove it.",
+   "where": "54_cast.js:adda.me",
+   "as": "v.OW",
+   "note": "Aged 58; basketmaker."
+  },
+  {
+   "speaker": "adda",
+   "text": "My brother lives up by the fall, by himself. People say hermit and mean mad. He is neither. He is tired of people, which is sense.",
+   "where": "54_cast.js:adda.nb",
+   "as": "v.OW",
+   "note": "Aged 58; basketmaker."
+  },
+  {
+   "speaker": "adda",
+   "text": "Follow the stream up past the old tower and you come to a pool under a fall. If a man is there, let him be. He is my brother, and he is not mad.",
+   "where": "54_cast.js:adda.pt",
+   "as": "v.OW",
+   "note": "Aged 58; basketmaker."
+  },
+  {
+   "speaker": "adda",
+   "text": "Rushes, fresh cut.",
+   "where": "54_cast.js:adda.b1",
+   "as": "v.OW",
+   "note": "Aged 58; basketmaker."
+  },
+  {
+   "speaker": "adda",
+   "text": "Not on the willow!",
+   "where": "54_cast.js:adda.b2",
+   "as": "v.OW",
+   "note": "Aged 58; basketmaker."
+  },
+  {
+   "speaker": "adda",
+   "text": "A man comes out of the dark alone and they cover him with a sail. My brother went into the hills alone. I think of it.",
+   "where": "54_cast.js:adda.g2",
+   "as": "v.OW",
+   "note": "Aged 58; basketmaker."
+  },
+  {
+   "speaker": "adda",
+   "text": "I weave by touch, so I do not need the lamp to find you. Out you go.",
+   "where": "54_cast.js:adda.nt",
+   "as": "v.OW",
+   "note": "Aged 58; basketmaker."
+  },
+  {
+   "speaker": "peter",
+   "text": "Across the lake, or along it? A penny either way. I do not go to the north shore.",
+   "where": "54_cast.js:peter.g",
+   "as": "v.M2",
+   "note": "Aged 37; boatman."
+  },
+  {
+   "speaker": "peter",
+   "text": "Peter Marsh. I row what needs rowing. My father did, his father did. Marsh House has always had oars by the door.",
+   "where": "54_cast.js:peter.me",
+   "as": "v.M2",
+   "note": "Aged 37; boatman."
+  },
+  {
+   "speaker": "peter",
+   "text": "Finn Reedwater is on that dock before I am up and after I am in. I do not know when the man sleeps.",
+   "where": "54_cast.js:peter.nb",
+   "as": "v.M2",
+   "note": "Aged 37; boatman."
+  },
+  {
+   "speaker": "peter",
+   "text": "West shore, past the reeds, there is a cleft in the rock by the water. I have seen a light in it before dawn. I rowed the other way.",
+   "where": "54_cast.js:peter.pt",
+   "as": "v.M2",
+   "note": "Aged 37; boatman."
+  },
+  {
+   "speaker": "peter",
+   "text": "Penny across.",
+   "where": "54_cast.js:peter.b1",
+   "as": "v.M2",
+   "note": "Aged 37; boatman."
+  },
+  {
+   "speaker": "peter",
+   "text": "Not the north shore.",
+   "where": "54_cast.js:peter.b2",
+   "as": "v.M2",
+   "note": "Aged 37; boatman."
+  },
+  {
+   "speaker": "peter",
+   "text": "Finn found him. Everyone says so. Finn found him. That is right.",
+   "where": "54_cast.js:peter.g2",
+   "as": "v.M2",
+   "note": "Aged 37; boatman."
+  },
+  {
+   "speaker": "peter",
+   "text": "Ellen, take Will upstairs. ... I have an oar. I know it is a foolish thing to hold indoors. I am holding it.",
+   "where": "54_cast.js:peter.nt",
+   "as": "v.M2",
+   "note": "Aged 37; boatman."
+  },
+  {
+   "speaker": "ellen",
+   "text": "Mind the rack, it is hot. Trout and eel, done over alder. Humphrey’s stall, or here if you ask nicely.",
+   "where": "54_cast.js:ellen.g",
+   "as": "v.W2",
+   "note": "Aged 35; nets."
+  },
+  {
+   "speaker": "ellen",
+   "text": "Ellen Marsh. He catches the fares, I catch the supper.",
+   "where": "54_cast.js:ellen.me",
+   "as": "v.W2",
+   "note": "Aged 35; nets."
+  },
+  {
+   "speaker": "ellen",
+   "text": "Mercy Garrick mends our nets and will not take full price. Her brother is on the passes with the outlaws; she pays for him in knots.",
+   "where": "54_cast.js:ellen.nb",
+   "as": "v.W2",
+   "note": "Aged 35; nets."
+  },
+  {
+   "speaker": "ellen",
+   "text": "Peter knows every yard of the lake shore. Ask him about the west side and watch him find something to do with his hands.",
+   "where": "54_cast.js:ellen.pt",
+   "as": "v.W2",
+   "note": "Aged 35; nets."
+  },
+  {
+   "speaker": "ellen",
+   "text": "Smoked trout!",
+   "where": "54_cast.js:ellen.b1",
+   "as": "v.W2",
+   "note": "Aged 35; nets."
+  },
+  {
+   "speaker": "ellen",
+   "text": "Will! Off the dock!",
+   "where": "54_cast.js:ellen.b2",
+   "as": "v.W2",
+   "note": "Aged 35; nets."
+  },
+  {
+   "speaker": "ellen",
+   "text": "Peter came home grey that morning, before anyone had cried the news. He says he saw nothing. I have been married eleven years.",
+   "where": "54_cast.js:ellen.g2",
+   "as": "v.W2",
+   "note": "Aged 35; nets."
+  },
+  {
+   "speaker": "ellen",
+   "text": "Peter. Wake up. Take the oar. Yes, the oar.",
+   "where": "54_cast.js:ellen.nt",
+   "as": "v.W2",
+   "note": "Aged 35; nets."
+  },
+  {
+   "speaker": "will",
+   "text": "Finn says I am not to talk when the float is moving. Is the float moving? I am not allowed to look.",
+   "where": "54_cast.js:will.g",
+   "as": "v.B",
+   "note": "Aged 8; school."
+  },
+  {
+   "speaker": "will",
+   "text": "I am Will. I am eight. I can row if someone else holds one of the oars.",
+   "where": "54_cast.js:will.me",
+   "as": "v.B",
+   "note": "Aged 8; school."
+  },
+  {
+   "speaker": "will",
+   "text": "Finn caught a pike as long as me. He let me carry the tail end.",
+   "where": "54_cast.js:will.nb",
+   "as": "v.B",
+   "note": "Aged 8; school."
+  },
+  {
+   "speaker": "will",
+   "text": "There is a dead man under a sail on the wharf. I am not allowed to look at that either.",
+   "where": "54_cast.js:will.pt",
+   "as": "v.B",
+   "note": "Aged 8; school."
+  },
+  {
+   "speaker": "will",
+   "text": "Is it moving?",
+   "where": "54_cast.js:will.b1",
+   "as": "v.B",
+   "note": "Aged 8; school."
+  },
+  {
+   "speaker": "will",
+   "text": "I did not touch it!",
+   "where": "54_cast.js:will.b2",
+   "as": "v.B",
+   "note": "Aged 8; school."
+  },
+  {
+   "speaker": "mercy",
+   "text": "Talk if you like. I can mend and listen. I cannot mend and be looked at.",
+   "where": "54_cast.js:mercy.g",
+   "as": "v.W2",
+   "note": "Aged 42; net mender."
+  },
+  {
+   "speaker": "mercy",
+   "text": "Mercy Garrick. Yes. That Garrick. He was a good boy and a bad man, and I knew him as both.",
+   "where": "54_cast.js:mercy.me",
+   "as": "v.W2",
+   "note": "Aged 42; net mender."
+  },
+  {
+   "speaker": "mercy",
+   "text": "The widow Hale was kind to me when this whole lane was not. So I sweep her step. I do not need a better reason.",
+   "where": "54_cast.js:mercy.nb",
+   "as": "v.W2",
+   "note": "Aged 42; net mender."
+  },
+  {
+   "speaker": "mercy",
+   "text": "There is a notice at the Hart that pays for outlaws. I will not ask you not to. I will ask you to tell me, after, if one of them had one ear.",
+   "where": "54_cast.js:mercy.pt",
+   "as": "v.W2",
+   "note": "Aged 42; net mender."
+  },
+  {
+   "speaker": "mercy",
+   "text": "Mind the nets.",
+   "where": "54_cast.js:mercy.b1",
+   "as": "v.W2",
+   "note": "Aged 42; net mender."
+  },
+  {
+   "speaker": "mercy",
+   "text": "Knots hold. People do not.",
+   "where": "54_cast.js:mercy.b2",
+   "as": "v.W2",
+   "note": "Aged 42; net mender."
+  },
+  {
+   "speaker": "mercy",
+   "text": "The roads will be safer or they will not. Either way there is a man out there with one ear who is still my brother.",
+   "where": "54_cast.js:mercy.g2",
+   "as": "v.W2",
+   "note": "Aged 42; net mender."
+  },
+  {
+   "speaker": "mercy",
+   "text": "I leave a light in that window for someone and it is not you. Out.",
+   "where": "54_cast.js:mercy.nt",
+   "as": "v.W2",
+   "note": "Aged 42; net mender."
+  },
+  {
+   "speaker": "alaric",
+   "text": "Good day. Humours out of balance, I can see it from here. A touch choleric. I have a tincture.",
+   "where": "54_cast.js:alaric.g",
+   "as": "v.M2",
+   "note": "Aged 38; apothecary."
+  },
+  {
+   "speaker": "alaric",
+   "text": "Alaric Mossop, apothecary, late of the lowland towns. Two years here. They still call me the new man.",
+   "where": "54_cast.js:alaric.me",
+   "as": "v.M2",
+   "note": "Aged 38; apothecary."
+  },
+  {
+   "speaker": "alaric",
+   "text": "Old Maren sells weeds in a twist of rag and half the town swears by her. I have glass jars. I have labels.",
+   "where": "54_cast.js:alaric.nb",
+   "as": "v.M2",
+   "note": "Aged 38; apothecary."
+  },
+  {
+   "speaker": "alaric",
+   "text": "The woman Maren sends people up the slopes for frostcaps and pays them in tonic. I call that hedge-craft. You may call it what you like.",
+   "where": "54_cast.js:alaric.pt",
+   "as": "v.M2",
+   "note": "Aged 38; apothecary."
+  },
+  {
+   "speaker": "alaric",
+   "text": "Choleric. Decidedly.",
+   "where": "54_cast.js:alaric.b1",
+   "as": "v.M2",
+   "note": "Aged 38; apothecary."
+  },
+  {
+   "speaker": "alaric",
+   "text": "I have a tincture for that.",
+   "where": "54_cast.js:alaric.b2",
+   "as": "v.M2",
+   "note": "Aged 38; apothecary."
+  },
+  {
+   "speaker": "alaric",
+   "text": "Dry lungs, they tell me, and the herb-woman is \"reading\" him. Reading. I offered a proper examination. I was not answered.",
+   "where": "54_cast.js:alaric.g2",
+   "as": "v.M2",
+   "note": "Aged 38; apothecary."
+  },
+  {
+   "speaker": "alaric",
+   "text": "I am a lodger here, I own nothing but books and bottles. Take a bottle. I will not tell you which ones are poison.",
+   "where": "54_cast.js:alaric.nt",
+   "as": "v.M2",
+   "note": "Aged 38; apothecary."
+  },
+  {
+   "speaker": "wilmot",
+   "text": "Do not shake my hand unless you want to be blue till Candlemas.",
+   "where": "54_cast.js:wilmot.g",
+   "as": "v.W1",
+   "note": "Aged 45; dyer."
+  },
+  {
+   "speaker": "wilmot",
+   "text": "Wilmot Arden. Madder, weld and woad. Red, yellow and blue, and every colour you have seen in this town on a back.",
+   "where": "54_cast.js:wilmot.me",
+   "as": "v.W1",
+   "note": "Aged 45; dyer."
+  },
+  {
+   "speaker": "wilmot",
+   "text": "Hilda weaves it and I colour it and Lindqvist sells it for three times what he gives the pair of us.",
+   "where": "54_cast.js:wilmot.nb",
+   "as": "v.W1",
+   "note": "Aged 45; dyer."
+  },
+  {
+   "speaker": "wilmot",
+   "text": "Hilda is at her loom by the river. She and the smith have a quarrel over cloth that neither of them will let lie.",
+   "where": "54_cast.js:wilmot.pt",
+   "as": "v.W1",
+   "note": "Aged 45; dyer."
+  },
+  {
+   "speaker": "wilmot",
+   "text": "Mind the blue!",
+   "where": "54_cast.js:wilmot.b1",
+   "as": "v.W1",
+   "note": "Aged 45; dyer."
+  },
+  {
+   "speaker": "wilmot",
+   "text": "Tom! Stir, do not splash!",
+   "where": "54_cast.js:wilmot.b2",
+   "as": "v.W1",
+   "note": "Aged 45; dyer."
+  },
+  {
+   "speaker": "wilmot",
+   "text": "Hilda came up that night and we sat by the vats till it was light. Neither of us wanted to be the one to say it.",
+   "where": "54_cast.js:wilmot.g2",
+   "as": "v.W1",
+   "note": "Aged 45; dyer."
+  },
+  {
+   "speaker": "wilmot",
+   "text": "That vat has stood a week. It stains for life. Take one more step and I will tip you in.",
+   "where": "54_cast.js:wilmot.nt",
+   "as": "v.W1",
+   "note": "Aged 45; dyer."
+  },
+  {
+   "speaker": "tom",
+   "text": "It does not wash off. I have tried. I have tried sand.",
+   "where": "54_cast.js:tom.g",
+   "as": "v.B",
+   "note": "Aged 13; stirs the vats."
+  },
+  {
+   "speaker": "tom",
+   "text": "Tom Arden. I stir. Red on the first day of the week, blue for the rest of it.",
+   "where": "54_cast.js:tom.me",
+   "as": "v.B",
+   "note": "Aged 13; stirs the vats."
+  },
+  {
+   "speaker": "tom",
+   "text": "Tobin from the forge showed me the old tower. We were knights. He left something up there and now he is in trouble.",
+   "where": "54_cast.js:tom.nb",
+   "as": "v.B",
+   "note": "Aged 13; stirs the vats."
+  },
+  {
+   "speaker": "tom",
+   "text": "You can get up on the Hart’s gallery by the outside stair. Nobody stops you. You can see who is at the well.",
+   "where": "54_cast.js:tom.pt",
+   "as": "v.B",
+   "note": "Aged 13; stirs the vats."
+  },
+  {
+   "speaker": "tom",
+   "text": "It does not wash off!",
+   "where": "54_cast.js:tom.b1",
+   "as": "v.B",
+   "note": "Aged 13; stirs the vats."
+  },
+  {
+   "speaker": "tom",
+   "text": "I am stirring, I am stirring.",
+   "where": "54_cast.js:tom.b2",
+   "as": "v.B",
+   "note": "Aged 13; stirs the vats."
+  },
+  {
+   "speaker": "jordan",
+   "text": "Reeve Wold. You are on Highfold ground now, and welcome, so long as the gates are shut behind you.",
+   "where": "54_cast.js:jordan.g",
+   "as": "v.OM",
+   "note": "Aged 58; Reeve of Highfold."
+  },
+  {
+   "speaker": "jordan",
+   "text": "I answer for Highfold to the Elder: the flock, the tally and the toll. Six houses and more sheep than Brackenfell has people.",
+   "where": "54_cast.js:jordan.me",
+   "as": "v.OM",
+   "note": "Aged 58; Reeve of Highfold."
+  },
+  {
+   "speaker": "jordan",
+   "text": "Rowan has not climbed this hill in four years. I go down to him. That tells you how it stands between the two places.",
+   "where": "54_cast.js:jordan.nb",
+   "as": "v.OM",
+   "note": "Aged 58; Reeve of Highfold."
+  },
+  {
+   "speaker": "jordan",
+   "text": "There is a toll ford on the west road, the far side of Brackenfell, when the guard is at his post. He has been at my son’s wedding for three weeks, in spirit.",
+   "where": "54_cast.js:jordan.pt",
+   "as": "v.OM",
+   "note": "Aged 58; Reeve of Highfold."
+  },
+  {
+   "speaker": "jordan",
+   "text": "Shut the gate behind you.",
+   "where": "54_cast.js:jordan.b1",
+   "as": "v.OM",
+   "note": "Aged 58; Reeve of Highfold."
+  },
+  {
+   "speaker": "jordan",
+   "text": "Count them twice.",
+   "where": "54_cast.js:jordan.b2",
+   "as": "v.OM",
+   "note": "Aged 58; Reeve of Highfold."
+  },
+  {
+   "speaker": "jordan",
+   "text": "We heard it up here a day late, as we hear everything. Brackenfell does its deciding and Highfold is told.",
+   "where": "54_cast.js:jordan.g2",
+   "as": "v.OM",
+   "note": "Aged 58; Reeve of Highfold."
+  },
+  {
+   "speaker": "jordan",
+   "text": "The Reeve’s door is never barred, by custom. It has never been needed. Do not be the reason I change it.",
+   "where": "54_cast.js:jordan.nt",
+   "as": "v.OM",
+   "note": "Aged 58; Reeve of Highfold."
+  },
+  {
+   "speaker": "basilia",
+   "text": "Come in and eat something. There is still wedding cake. There will be wedding cake at Candlemas.",
+   "where": "54_cast.js:basilia.g",
+   "as": "v.OW",
+   "note": "Aged 55; keeps the Reeve’s house."
+  },
+  {
+   "speaker": "basilia",
+   "text": "Basilia Wold. I fed the whole hill for three days when Kester married, and I am still finding guests in the hay.",
+   "where": "54_cast.js:basilia.me",
+   "as": "v.OW",
+   "note": "Aged 55; keeps the Reeve’s house."
+  },
+  {
+   "speaker": "basilia",
+   "text": "Rosalind is a town girl and thinks I do not see her looking down the valley of an evening. I looked the same way once.",
+   "where": "54_cast.js:basilia.nb",
+   "as": "v.OW",
+   "note": "Aged 55; keeps the Reeve’s house."
+  },
+  {
+   "speaker": "basilia",
+   "text": "If you are going down to Brackenfell, look for the stall with the blue cloth by the market cross. My cheese goes there, and it is not to be cut thin.",
+   "where": "54_cast.js:basilia.pt",
+   "as": "v.OW",
+   "note": "Aged 55; keeps the Reeve’s house."
+  },
+  {
+   "speaker": "basilia",
+   "text": "Have you eaten?",
+   "where": "54_cast.js:basilia.b1",
+   "as": "v.OW",
+   "note": "Aged 55; keeps the Reeve’s house."
+  },
+  {
+   "speaker": "basilia",
+   "text": "Whose trencher is this?",
+   "where": "54_cast.js:basilia.b2",
+   "as": "v.OW",
+   "note": "Aged 55; keeps the Reeve’s house."
+  },
+  {
+   "speaker": "basilia",
+   "text": "Down there they have their troubles. Up here I have forty borrowed trenchers to return and nobody will say whose are whose.",
+   "where": "54_cast.js:basilia.g2",
+   "as": "v.OW",
+   "note": "Aged 55; keeps the Reeve’s house."
+  },
+  {
+   "speaker": "basilia",
+   "text": "Another one sleeping it off? The hay is in the barn, the door is that way, and the wedding is over.",
+   "where": "54_cast.js:basilia.nt",
+   "as": "v.OW",
+   "note": "Aged 55; keeps the Reeve’s house."
+  },
+  {
+   "speaker": "kester",
+   "text": "Married three weeks! Did you know? Everyone knows. I keep telling them anyway.",
+   "where": "54_cast.js:kester.g",
+   "as": "v.YM",
+   "note": "Aged 29; shepherd."
+  },
+  {
+   "speaker": "kester",
+   "text": "Kester Wold. The high flock is mine. So is the house, and so, God help her, is Rosalind.",
+   "where": "54_cast.js:kester.me",
+   "as": "v.YM",
+   "note": "Aged 29; shepherd."
+  },
+  {
+   "speaker": "kester",
+   "text": "Her uncle Warin keeps the low pasture. He looked me over like a ram at market before he would give her away.",
+   "where": "54_cast.js:kester.nb",
+   "as": "v.YM",
+   "note": "Aged 29; shepherd."
+  },
+  {
+   "speaker": "kester",
+   "text": "The standing stones are north of us, a long walk up the valley. The flock will not graze near them. I do not ask the flock why.",
+   "where": "54_cast.js:kester.pt",
+   "as": "v.YM",
+   "note": "Aged 29; shepherd."
+  },
+  {
+   "speaker": "kester",
+   "text": "Three weeks!",
+   "where": "54_cast.js:kester.b1",
+   "as": "v.YM",
+   "note": "Aged 29; shepherd."
+  },
+  {
+   "speaker": "kester",
+   "text": "Come by, come by. Good dog.",
+   "where": "54_cast.js:kester.b2",
+   "as": "v.YM",
+   "note": "Aged 29; shepherd."
+  },
+  {
+   "speaker": "kester",
+   "text": "Whatever they dug up or let out down there, it is a long way from my flock, and I have a wife to come home to.",
+   "where": "54_cast.js:kester.g2",
+   "as": "v.YM",
+   "note": "Aged 29; shepherd."
+  },
+  {
+   "speaker": "kester",
+   "text": "Ros, stay there. Friend, I have had three weeks of people walking into this house with gifts. You have no gift.",
+   "where": "54_cast.js:kester.nt",
+   "as": "v.YM",
+   "note": "Aged 29; shepherd."
+  },
+  {
+   "speaker": "rosalind",
+   "text": "You have come up from the town? Is the market on? Was Tilly at the stall? Tell me anything.",
+   "where": "54_cast.js:rosalind.g",
+   "as": "v.YW",
+   "note": "Aged 25; from Brackenfell."
+  },
+  {
+   "speaker": "rosalind",
+   "text": "Rosalind Wold. Shaw, that was, a month ago. I can see the Hart’s roof from the top field if the air is clear.",
+   "where": "54_cast.js:rosalind.me",
+   "as": "v.YW",
+   "note": "Aged 25; from Brackenfell."
+  },
+  {
+   "speaker": "rosalind",
+   "text": "My uncle Warin will not come up to visit. Says the hill is all sheep. He keeps sheep. I do not understand men.",
+   "where": "54_cast.js:rosalind.nb",
+   "as": "v.YW",
+   "note": "Aged 25; from Brackenfell."
+  },
+  {
+   "speaker": "rosalind",
+   "text": "If you go back down, tell Sabina at the draper’s the blue held in the wash. She will know what it means.",
+   "where": "54_cast.js:rosalind.pt",
+   "as": "v.YW",
+   "note": "Aged 25; from Brackenfell."
+  },
+  {
+   "speaker": "rosalind",
+   "text": "Is that the Hart’s smoke?",
+   "where": "54_cast.js:rosalind.b1",
+   "as": "v.YW",
+   "note": "Aged 25; from Brackenfell."
+  },
+  {
+   "speaker": "rosalind",
+   "text": "Morning! Any news from below?",
+   "where": "54_cast.js:rosalind.b2",
+   "as": "v.YW",
+   "note": "Aged 25; from Brackenfell."
+  },
+  {
+   "speaker": "rosalind",
+   "text": "I heard it. All the way up here, on the wind. I stood in the yard till it stopped.",
+   "where": "54_cast.js:rosalind.g2",
+   "as": "v.YW",
+   "note": "Aged 25; from Brackenfell."
+  },
+  {
+   "speaker": "rosalind",
+   "text": "Kester. Kester! ... He will be a moment, he sleeps like a ewe. You should use the moment.",
+   "where": "54_cast.js:rosalind.nt",
+   "as": "v.YW",
+   "note": "Aged 25; from Brackenfell."
+  },
+  {
    "speaker": "ivo",
    "text": "Good. That’s the end of it. This time.",
    "where": "82b_interact.js:211"

@@ -7,10 +7,10 @@ const cast = J('cast.json'), pron = J('pronounce.json'), barks = J('barks.json')
 export const clean = (t) => { let s = t.replace(/\[[^\]]*\]/g, '').replace(/\*[^*]*\*/g, '').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/\s*[—–]\s*/g, ', ').replace(/…/g, '...').replace(/\.\.\.\s*/g, '... ').replace(/\s+/g, ' ').trim();
   for (const [w, r] of Object.entries(pron)) { if (w.startsWith('_')) continue; s = s.replace(new RegExp("(?<![\\w'])" + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "(?![\\w])", 'gi'), r); } return s; };
 const plan = [], seen = new Set(), manifestBarks = {};
-const add = (speaker, text, kind) => { const c = cast[speaker]; if (!c) { console.error('no cast for', speaker); return; } const key = cyrb53(speaker + '\n' + text); if (seen.has(key)) return; seen.add(key);
+const add = (speaker, text, kind, as) => { const c = cast[speaker] || (as ? { voice: as, speed: 1, pitch: 0 } : null); if (!c) { console.error('no cast for', speaker); return; } const key = cyrb53(speaker + '\n' + text); if (seen.has(key)) return; seen.add(key);
   const say = clean(text), file = crypto.createHash('sha1').update([speaker, c.voice, c.speed, c.pitch, say].join('|')).digest('hex').slice(0, 14) + '.m4a';
   plan.push({ key, speaker, kind, text, say, voice: c.voice, speed: c.speed, pitch: c.pitch, file }); return key; };
-for (const l of ex.lines) { const k = add(l.speaker, l.text, 'line'); if (k) plan[plan.length - 1].src = l.where.split(':')[0]; }
+for (const l of ex.lines) { const k = add(l.speaker, l.text, 'line', l.as); if (k) { const e = plan[plan.length - 1]; e.src = l.where.split(':')[0]; if (l.as) { e.as = l.as; e.note = l.note; e.src = '99_cast'; } } }       /* [cast] the sixty: a shared voice (`as`) and a word on who is speaking; generated after the story's lines, in the order extract.mjs gives */
 for (const [sp, cats] of Object.entries(barks)) { if (sp.startsWith('_')) continue; manifestBarks[sp] = {}; for (const [cat, arr] of Object.entries(cats)) manifestBarks[sp][cat] = arr.map(t => add(sp, t, 'bark')); }
 // order of generation (the daily limit means a run can stop anywhere): dialogue before barks, then in story order, which is the order of the
 // source files (80 the first quests, 82 Act 1, 82b and 82c what the town says and hides, 94b shops and rumours, 94d Acts 2 and 3)
