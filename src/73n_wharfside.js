@@ -121,9 +121,9 @@ function wharfCloses() {
     edge(A0, i === 4 ? 4.8 : bW, A1, i === 4 ? 4.8 : bW, 'f');
     if (!orch) C.soil.push([LP(A0, bW), LP(A1, bW), LP(A1, bE), LP(A0, bE)]);
     if (!orch) { const nb = Math.floor((bE - bW - 1.6) / 1.5); for (let r = 0; r < nb; r++) { const b = bW + 1.2 + r * 1.5; C.beds.push([LP(A0 + 0.7, b), LP(A1 - 0.7, b + 0.7)]); } }
-    else for (let a = A0 + 2.2; a < A1 - 1; a += 5.0) for (let b = bW + 2.2; b < bE - 1.0; b += 5.0) C.trees.push([...LP(a + (R() - 0.5) * 0.8, b + (R() - 0.5) * 0.8), 0.75 + R() * 0.2]);
+    else for (let a = A0 + 2.2; a < A1 - 1; a += 6.0) for (let b = bW + 2.4; b < bE - 1.0; b += 5.2) C.trees.push([...LP(a + (R() - 0.5) * 0.8, b + (R() - 0.5) * 0.8), 0.75 + R() * 0.2]);
   }
-  for (let a = a0 + 1; a < a1; a += 8.5) if (Math.abs(a - aG) > 3) C.trees.push([...LP(a + (R() - 0.5), bE + 5.6 + (R() - 0.5) * 1.2), 0.7 + R() * 0.2]);
+  for (let a = a0 + 1; a < a1; a += 11) if (Math.abs(a - aG) > 3) C.trees.push([...LP(a + (R() - 0.5), bE + 5.6 + (R() - 0.5) * 1.2), 0.7 + R() * 0.2]);
   // the paths: along the back of the closes, and across to the street's east row by the ginnel
   C.paths.push(line(a0 - 2, bE + 2.4, a1 + 2, bE + 2.4, 8, 0.6));
   const g0 = LP(aG, 5.0), g1 = LP(aG, bE + 2.4), st = [9.6, 49.8];
@@ -145,7 +145,7 @@ function buildWharfCloses(bucket) {
   const gy = (x, z) => Terrain.y(x, z), R = rng(4141), h = 1.0;
   const nearHouse = (x, z) => SITES.some(st => { if (!st.w || st.id === 'tower') return false; const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 1.3 && Math.abs(l[1]) < st.d / 2 + 1.3; });
   World.hedgeBushes = World.hedgeBushes || []; World.orchardTrees = World.orchardTrees || [];
-  for (const pl of C.hedges) for (let i = 0; i + 1 < pl.length; i++) { const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / 1.5)); for (let k = 0; k < n; k++) World.hedgeBushes.push([ax + (bx - ax) * k / n + (R() - 0.5) * 0.2, az + (bz - az) * k / n + (R() - 0.5) * 0.2, 0.95 + R() * 0.3]); }
+  for (const pl of C.hedges) for (let i = 0; i + 1 < pl.length; i++) { const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / 3.0)); for (let k = 0; k < n; k++) World.hedgeBushes.push([ax + (bx - ax) * k / n + (R() - 0.5) * 0.2, az + (bz - az) * k / n + (R() - 0.5) * 0.2, 1.1 + R() * 0.3]); }
   for (const t of C.trees) World.orchardTrees.push(t);
   for (const pl of C.fences) {
     const [mx, mz] = pl[(pl.length / 2) | 0], m = bucket(mx, mz);
@@ -156,7 +156,7 @@ function buildWharfCloses(bucket) {
       for (let k = 0; k <= Math.ceil(L / 0.5); k++) { const t = k / Math.ceil(L / 0.5), x = ax + (bx - ax) * t, z = az + (bz - az) * t; if (!nearHouse(x, z)) addCircleCollider(m, x, z, 0.14, gy(x, z), gy(x, z) + h); }
     }
   }
-  for (const [p, q] of C.beds) { const cx = (p[0] + q[0]) / 2, cz = (p[1] + q[1]) / 2, m = bucket(cx, cz), ang = Math.atan2(q[1] - p[1], q[0] - p[0]), w = hyp(q[0] - p[0], q[1] - p[1]) / 2; m.mat(MAT.SOIL, [0.34, 0.27, 0.2], 0.5); m.push().T(cx, gy(cx, cz) + 0.04, cz).RY(-ang); m.quad2([-w, 0, -0.32], [w, 0, -0.32], [w, 0, 0.32], [-w, 0, 0.32]); m.pop(); for (let a = -w + 0.3; a < w - 0.2; a += 0.9) (World.gardenPlants = World.gardenPlants || []).push([cx + Math.cos(ang) * a, cz + Math.sin(ang) * a, (a * 7 | 0) & 1]); }
+  for (const [p, q] of C.beds) { const cx = (p[0] + q[0]) / 2, cz = (p[1] + q[1]) / 2, m = bucket(cx, cz), ang = Math.atan2(q[1] - p[1], q[0] - p[0]), w = hyp(q[0] - p[0], q[1] - p[1]) / 2; m.mat(MAT.SOIL, [0.34, 0.27, 0.2], 0.5); m.push().T(cx, gy(cx, cz) + 0.04, cz).RY(-ang); m.quad2([-w, 0, -0.32], [w, 0, -0.32], [w, 0, 0.32], [-w, 0, 0.32]); m.pop(); for (let a = -w + 0.3; a < w - 0.2; a += 2.0) (World.gardenPlants = World.gardenPlants || []).push([cx + Math.cos(ang) * a, cz + Math.sin(ang) * a, (a * 7 | 0) & 1]); }
   const post = (m, x, z, hh) => { const g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x, g - 0.1, z], [x, g + hh, z], 0.07, 0.07); };
   for (const [x0, z0, x1, z1] of C.poles) { const m = bucket(x0, z0); post(m, x0, z0, 2.3); post(m, x1, z1, 2.3); const g0 = gy(x0, z0); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x0, g0 + 2.2, z0], [x1, g0 + 2.2, z1], 0.045, 0.045);
     m.mat(MAT.CLOTH, [0.24, 0.22, 0.17], 0.5); const nx = -(z1 - z0), nz = x1 - x0, nl = hyp(nx, nz) || 1; m.quad2([x0, g0 + 2.15, z0], [x1, g0 + 2.15, z1], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12]); m.quad2([x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x1, g0 + 2.15, z1], [x0, g0 + 2.15, z0]);
@@ -165,3 +165,5 @@ function buildWharfCloses(bucket) {
     m.mat(MAT.PLAIN, [0.46, 0.45, 0.4]); for (let k = 0; k < 7; k++) { const t = (k + 0.5) / 7, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; m.box(x - 0.03, g0 + 0.5, z - 0.02, x + 0.03, g0 + 1.4, z + 0.02); } addCircleCollider(m, x0, z0, 0.12, g0, g0 + 1.5); addCircleCollider(m, x1, z1, 0.12, gy(x1, z1), gy(x1, z1) + 1.5); }
   for (const [x, z, ang] of C.boats) { const m = bucket(x, z), g = gy(x, z); m.mat(MAT.PLANKS, [0.15, 0.12, 0.09], 0.5); m.push().T(x, g + 0.5, z).RY(-ang); m.ball(0, 0, 0, 1.6, 0.5, 0.7, 8, 5); m.pop(); addBoxCollider(m, x - 1.0, z - 0.7, x + 1.0, z + 0.7, g, g + 0.9); }
 }
+
+function wharfLow() { return R.qName === 'low'; }
