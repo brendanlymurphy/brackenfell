@@ -479,7 +479,7 @@ WBUILD.hamlet = (p, m, R) => {
     mm.mat(MAT.PLAIN, [0.04, 0.07, 0.08]); mm.disc(0, 0.2, 0, 0.6, 10, 1); mm.mat(MAT.TIMBER, COL.timber); for (const s of [-1, 1]) mm.cbox(s * 0.85, 0.8, 0, 0.12, 1.3, 0.12, 4); mm.beam([-0.9, 2.05, 0], [0.9, 2.05, 0], 0.11, 0.11);
     mm.mat(MAT.SHINGLE, [0.58, 0.52, 0.46], 0.6); mm.quad2([-1.1, 2.3, 0], [-1.1, 1.95, -0.8], [1.1, 1.95, -0.8], [1.1, 2.3, 0]); mm.quad2([1.1, 2.3, 0], [1.1, 1.95, 0.8], [-1.1, 1.95, 0.8], [-1.1, 2.3, 0]); addCircleCollider(mm, 0, 0, 1.0, 0, 1.2);
   });
-  for (const h of WILDS.houses) { const q = siteToWorld(h, h.w / 2 + 0.9, -h.d / 2 + 1.2); m.push().T(q[0], wy(q[0], q[1]), q[1]).RY(-h.yaw); m.m1 = 0; m.ao = 1; m.grad = null; Props.woodpile(m, 3, 3, 1.1); m.pop(); }
+  for (const h of WILDS.houses) { const q = siteToWorld(h, h.w / 2 + 0.9, h.d / 2 - 1.2); m.push().T(q[0], wy(q[0], q[1]), q[1]).RY(-h.yaw); m.m1 = 0; m.ao = 1; m.grad = null; Props.woodpile(m, 3, 3, 1.1); m.pop(); }
   for (const [id, msg] of [['high.b', 'Bolted. Nobody is home: they are all at the wedding.'], ['high.barn', 'The barn door is chained. Sheep bleat behind it.']]) { const h = SITE[id]; if (!h) continue; const q = siteToWorld(h, h.doorPos === undefined ? 0 : h.doorPos, -h.d / 2 - 0.9); World.interact.push({ p: [q[0], wy(q[0], q[1]) + 1.2, q[1]], r: 2.2, zone: 0, kind: 'door', id: id + '.door', shut: true, msg }); }
   // the apple pickups hang under the orchard birches
   for (const [x, z] of [[129, 123], [125, 126]]) { const c = [x, wy(x, z), z]; wPick("hf.apple" + (x > 127 ? 2 : 1), c, 'Gather apples', 'apple', 'apple'); }
