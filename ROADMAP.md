@@ -79,9 +79,13 @@ interiors lit by hearths and candles. As realistic as free art allows.
   - Item 4: 178 of 248 lines have audio and lip tracks; the rest come from the daily batch (08:20 UTC).
 - `fork-play` (the second Claude Code session): walk bot (`docs/WALK.md`), performance round 2, prompts not offered through walls,
   daily voice batches.
-- `fork-ch1` characters (men's tunics and hose, aprons varied, posture, hair and beards): held out of 69 for an apron glitch and
-  sameness; `fork-fx2` interiors (cellars dressed, chapel cloth, mine at game light); `fork-fx3` outdoor clean-up batch 2
-  (finder severe 5 / solid 36 to 0 / under 15, a 24-viewpoint tour by eye, backs of buildings). `fork-l1` lighting: closed, merged.
+- FREEZE (owner, Build 69): nothing new; make what exists right. Three workers:
+  - `fork-fx3` ground and levels: real ground (fall, crowned streets, earth, mud, grass, wear paths), every terrace, platform,
+    deck and wall walk rebuilt into the terrain or removed, the town wall given age and variety; then the outdoor overlap list.
+  - `fork-hx` house exteriors: sameness measured by script, then structure, roofs, add-ons, placement and wear varied by district
+    and wealth (no two neighbours alike). The mine's look (`fork-fx2`: rock walls, torch pools, flood water) waits behind it.
+  - `fork-ch1` characters: apron glitch, aprons varied, men's tunics shown, posture, hair and beards; no two people alike.
+  - Logic, storylines, what people do, mechanics: asked of the second Claude Code session (`fork-logic`, docs/LOGIC.md).
 
 ## Next
 

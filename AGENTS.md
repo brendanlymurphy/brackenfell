@@ -157,3 +157,6 @@ node tools/voice/check.mjs --allow-missing
 - Dialogue as plain white subtitles, no text box.
 - Glitches (flicker, interpenetrating roofs, duplicated characters, floating boardwalks) matter more to them than new features.
 - Plain step-by-step instructions when they have to click something themselves.
+- Build 69: add nothing new until what exists is right and filled out. "The ground is flat, every house looks the same on the
+  outside, the terraces and platform are all fucked up, not to mention the walls; none of it really flows, it all feels like
+  copy paste." Also to be made coherent: general logic, the storylines, what characters do, and their mechanics.
