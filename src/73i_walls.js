@@ -130,20 +130,25 @@ function buildBell(K, touch) {
   for (const k of [0, 1, 2, 3]) for (const z of cz) { const x0 = k % 2 ? WX0 : EX1 - 3, x1 = k % 2 ? WX0 + 3 : EX1; beam([x0, L[k] - 0.2, z], [x1, L[k + 1] - 0.2, z], 0.12, 0.14); beam([x0, L[k + 1] - 0.2, z], [x1, L[k] - 0.2, z], 0.1, 0.12); }
   // the cladding (Build 42): a stone foot and weatherboard between the posts, slit windows at each landing, a door on the west: the frame reads as a tower from the square, not as scaffolding
   for (let k = 0; k < 4; k++) {
-    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.12, st = k === 0, mat = st ? MAT.STONE : MAT.PLANKS, c = st ? [0.86, 0.83, 0.78] : [0.8 - 0.02 * k, 0.75 - 0.02 * k, 0.69 - 0.02 * k];          // [fx1] weatherboard like the rest of the village, whole storeys with slit windows (the pale plaster slabs with open bands read as signboards on a scaffold)
+    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.12, st = k === 0, mat = st ? MAT.STONE : MAT.PLANKS, c = st ? [0.52, 0.5, 0.46] : [0.56 - 0.015 * k, 0.52 - 0.015 * k, 0.46 - 0.015 * k];          // [fx1] weatherboard like the rest of the village, whole storeys with slit windows (the pale plaster slabs with open bands read as signboards on a scaffold)
     const ya = y0, yb = y1;
     box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.2, EX1 - 0.02, yb, ZN0 - 0.12, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZS1 + 0.12, EX1 - 0.02, yb, ZS1 + 0.2, 0);
     box(mat, c, 0.5, EX1 - 0.1, ya, ZN0 - 0.12, EX1 - 0.02, yb, ZS1 + 0.12, 0);
     if (k === 0) { box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZN0 + 0.0, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 + 1.25, WX0 + 0.1, yb, ZS1 + 0.12, 0); }
     else box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZS1 + 0.12, 0);
-    // slit windows: a dark opening with a timber head and sill, three along the long faces, one on the east
-    const sa = L[k] + 1.3, sb = L[k] + 1.9, dk = [0.05, 0.045, 0.04], xs = [WX0 + (EX1 - WX0) * 0.2, (WX0 + EX1) / 2, WX0 + (EX1 - WX0) * 0.8], zc = (ZN0 + ZS1) / 2;
+    /* [fx3] weathered boards: dark joints every 0.45 m and a few replaced planks; the windows are shuttered openings (plank shutters on the lower storeys, louvres in the bell chamber), not black holes */
+    { const ZP = [ZN0 - 0.2, ZS1 + 0.2]; if (!st) for (const [zf, o] of [[ZP[0], -1], [ZP[1], 1]]) { for (let x = WX0 + 0.3; x < EX1 - 0.2; x += 0.45) box(MAT.TIMBER, [0.24, 0.21, 0.18], 0.5, x - 0.015, ya + 0.05, o < 0 ? zf - 0.03 : zf, x + 0.015, yb - 0.05, o < 0 ? zf : zf + 0.03, 0);
+        for (let r = 0; r < 3; r++) { const x = WX0 + 0.5 + ((k * 7 + r * 13 + (o > 0 ? 5 : 0)) % 17) * 0.3; if (x < EX1 - 0.5) box(MAT.PLANKS, [0.72, 0.6, 0.44], 0.5, x, ya + 0.1, o < 0 ? zf - 0.04 : zf, x + 0.26, yb - 0.1 - (r % 2) * 0.5, o < 0 ? zf : zf + 0.04, 0); } } }
+    const sa = L[k] + 1.1, sb = L[k] + 1.9, dk = [0.05, 0.045, 0.04], xs = [WX0 + (EX1 - WX0) * 0.2, (WX0 + EX1) / 2, WX0 + (EX1 - WX0) * 0.8], zc = (ZN0 + ZS1) / 2;
     for (const x of xs) for (const [zf, o] of [[ZN0 - 0.2, -1], [ZS1 + 0.2, 1]]) {
-      box(MAT.PLAIN, dk, 0.5, x - 0.16, sa, o < 0 ? zf - 0.03 : zf, x + 0.16, sb, o < 0 ? zf : zf + 0.03, 0);
-      box(MAT.TIMBER, dark, 0.5, x - 0.24, sb, o < 0 ? zf - 0.06 : zf, x + 0.24, sb + 0.07, o < 0 ? zf : zf + 0.06, 0); box(MAT.TIMBER, dark, 0.5, x - 0.24, sa - 0.07, o < 0 ? zf - 0.06 : zf, x + 0.24, sa, o < 0 ? zf : zf + 0.06, 0);
+      const z0 = o < 0 ? zf - 0.05 : zf, z1 = o < 0 ? zf : zf + 0.05;
+      if (k === 3) { box(MAT.PLAIN, dk, 0.5, x - 0.3, sa - 0.1, z0, x + 0.3, sb + 0.5, z1, 0); for (let q = 0; q < 6; q++) { const y = sa - 0.05 + q * 0.14, zo = o < 0 ? zf - 0.1 : zf + 0.1; beam([x - 0.3, y, zo], [x + 0.3, y + 0.0, zo + (o < 0 ? -0.0 : 0.0)], 0.02, 0.1); } }
+      else { box(MAT.PLANKS, [0.3, 0.24, 0.18], 0.5, x - 0.24, sa, z0, x + 0.24, sb, z1, 0); box(MAT.TIMBER, [0.2, 0.17, 0.14], 0.5, x - 0.26, sa + 0.3, o < 0 ? z0 - 0.015 : z0, x + 0.26, sa + 0.37, o < 0 ? z1 : z1 + 0.015, 0); }
+      box(MAT.TIMBER, dark, 0.5, x - 0.3, (k === 3 ? sb + 0.5 : sb), o < 0 ? zf - 0.07 : zf, x + 0.3, (k === 3 ? sb + 0.57 : sb + 0.07), o < 0 ? zf : zf + 0.07, 0); box(MAT.TIMBER, dark, 0.5, x - 0.3, sa - (k === 3 ? 0.17 : 0.07), o < 0 ? zf - 0.07 : zf, x + 0.3, sa - (k === 3 ? 0.1 : 0), o < 0 ? zf : zf + 0.07, 0);
     }
-    box(MAT.PLAIN, dk, 0.5, EX1, sa, zc - 0.16, EX1 + 0.03 - 0.02, sb, zc + 0.16, 0);
+    box(MAT.PLANKS, [0.3, 0.24, 0.18], 0.5, EX1, sa, zc - 0.24, EX1 + 0.04, sb, zc + 0.24, 0);
   }
+  box(MAT.STONE, [0.46, 0.44, 0.4], 0.5, WX0 - 0.12, g - 0.5, ZN0 - 0.32, EX1 + 0.12, g + 0.28, ZS1 + 0.32, 4);      /* [fx3] a stone plinth round the foot */
   box(MAT.STONE, [0.86, 0.83, 0.78], 0.5, WX0 + 0.02, g + 1.95, ZN0 + 0.0, WX0 + 0.1, g + 2.4, ZN0 + 1.25, 0);
   box(MAT.TIMBER, dark, 0.5, WX0 - 0.1, g + 2.3, ZN0 - 0.28, WX0 + 0.12, g + 2.42, ZS1 + 0.28, 0);     // the lintel course under the first storey
   box(MAT.TIMBER, dark, 0.5, WX0 - 0.35, L[4] + 0.0, ZN0 - 0.5, EX1 + 0.35, L[4] + 0.14, ZS1 + 0.5, 0);   // the bell-chamber floor jetty
