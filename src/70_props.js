@@ -4,7 +4,7 @@ const COL = {
   iron: [0.72, 0.72, 0.76], steel: [1, 1, 1.02], bronze: [1.0, 0.80, 0.45], black: [0.22, 0.21, 0.2],
   linen: [0.92, 0.89, 0.80], wool: [0.78, 0.72, 0.62], red: [0.70, 0.17, 0.13], blue: [0.20, 0.32, 0.60], green: [0.24, 0.46, 0.22], gold: [0.92, 0.72, 0.22],
   purple: [0.42, 0.22, 0.50], clay: [0.74, 0.40, 0.26], wax: [0.95, 0.90, 0.75], hay: [1, 0.95, 0.8], leather: [0.45, 0.28, 0.16], fur: [0.42, 0.32, 0.24],
-  bread: [0.62, 0.44, 0.24], cheese: [0.74, 0.62, 0.30], apple: [0.52, 0.13, 0.10], cabbage: [0.34, 0.46, 0.25], glass: [0.35, 0.55, 0.40], parchment: [0.90, 0.82, 0.62],
+  bread: [0.62, 0.44, 0.24], cheese: [0.6, 0.48, 0.26], apple: [0.46, 0.22, 0.11], cabbage: [0.24, 0.32, 0.18], glass: [0.35, 0.55, 0.40], parchment: [0.90, 0.82, 0.62],
 };
 // [c5] medieval dyes: madder, woad, weld, walnut, a little dull green; low saturation (cloth, rugs, blankets)
 const DYE = { red: [0.46, 0.23, 0.17], blue: [0.31, 0.38, 0.46], green: [0.34, 0.40, 0.25], purple: [0.38, 0.28, 0.30], yellow: [0.62, 0.52, 0.26], cream: [0.72, 0.67, 0.56], grey: [0.48, 0.46, 0.43], brown: [0.36, 0.27, 0.19] };
@@ -98,9 +98,9 @@ const Props = {
   plate(m, col) { m.mat(MAT.PLAIN, col || [0.72, 0.60, 0.42]); m.lathe([[0.07, 0], [0.12, 0.018]], 10, 1); m.disc(0, 0.004, 0, 0.07, 10, 1); },
   bowl(m, col) { m.mat(MAT.PLAIN, col || [0.60, 0.42, 0.26]); m.lathe([[0.04, 0], [0.09, 0.05], [0.10, 0.07]], 9, 1); m.disc(0, 0.045, 0, 0.085, 9, 1); },
   loaf(m) { m.mat(MAT.PLAIN, [0.52, 0.36, 0.19]); m.ball(0, 0.045, 0, 0.13, 0.055, 0.08, 9, 5); m.mat(MAT.PLAIN, [0.72, 0.58, 0.36]); for (const x of [-0.06, 0, 0.06]) m.beam([x - 0.02, 0.098, -0.04], [x + 0.02, 0.098, 0.04], 0.01, 0.008); },
-  cheese(m) { m.mat(MAT.PLAIN, [0.58, 0.46, 0.24]); m.cyl(0, 0, 0, 0.12, 0.12, 0.07, 10, 2); m.mat(MAT.PLAIN, [0.82, 0.70, 0.40]); m.box(0.0, 0.0, -0.12, 0.12, 0.07, 0.0, 1 | 4 | 8 | 16); },
+  cheese(m) { m.mat(MAT.PLAIN, [0.58, 0.46, 0.24]); m.cyl(0, 0, 0, 0.12, 0.12, 0.07, 10, 2); m.mat(MAT.PLAIN, [0.66, 0.54, 0.32]); m.box(0.0, 0.0, -0.12, 0.12, 0.07, 0.0, 1 | 4 | 8 | 16); },
   apple(m, col) { const c = col || COL.apple; m.mat(MAT.PLAIN, [c[0] * 0.85, c[1] * 0.85, c[2] * 0.85]); m.ball(0, 0.04, 0, 0.042, 0.037, 0.042, 7, 4); m.mat(MAT.PLAIN, [0.22, 0.14, 0.07]); m.beam([0, 0.072, 0], [0.004, 0.092, 0], 0.003, 0.003); },
-  cabbage(m) { m.mat(MAT.PLAIN, [0.30, 0.40, 0.22]); m.ball(0, 0.085, 0, 0.1, 0.085, 0.1, 8, 5); m.mat(MAT.PLAIN, [0.40, 0.50, 0.28]); for (let i = 0; i < 4; i++) { const a = i * PI / 2 + 0.4; m.ball(Math.cos(a) * 0.075, 0.06, Math.sin(a) * 0.075, 0.055, 0.05, 0.035, 5, 3); } },
+  cabbage(m) { m.mat(MAT.PLAIN, [0.11, 0.17, 0.08]); m.ball(0, 0.085, 0, 0.1, 0.085, 0.1, 8, 5); m.mat(MAT.PLAIN, [0.15, 0.22, 0.1]); for (let i = 0; i < 4; i++) { const a = i * PI / 2 + 0.4; m.ball(Math.cos(a) * 0.075, 0.06, Math.sin(a) * 0.075, 0.055, 0.05, 0.035, 5, 3); } },
   book(m, col, w) { m.mat(MAT.CLOTH, col || COL.red, 0.5); m.box(-0.09, 0, -0.12, 0.09, w || 0.04, 0.12); m.mat(MAT.PLAIN, COL.parchment); m.box(-0.082, 0.004, -0.115, 0.088, (w || 0.04) - 0.004, 0.118, 4 | 8 | 1); },
   // candle with flame + light. returns nothing; registers emitter
   candle(m, ctx, tall) {

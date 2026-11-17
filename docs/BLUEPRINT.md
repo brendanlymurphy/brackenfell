@@ -8,6 +8,9 @@ Marks: **[auto]** a script can decide it from the running game (the dump in `tes
 **[auto+eye]** a script finds candidates, a person confirms from the picture; **[eye]** only a person looking; **[ear]** only the owner listening.
 "Brackenfell now" is the Build 74 measurement, so the distance to go is visible.
 
+Measured after each build in `docs/SCORE.md` (`node test/audit/score.mjs`); the rules a script can decide are in `test/audit/rules.py`
+(`--ratchet`: exit 1 if a count got worse than `test/audit/ratchet.json`; `--strict`: exit 1 if any rule misses its target).
+
 ## 0. Order of work (the rule that prevents the rest)
 
 Nothing is placed before the table exists. In this order, each step signed off before the next:
@@ -65,7 +68,7 @@ Brackenfell did 4 and 5 first and generated 1 and 2 afterwards. That is the whol
 
 | # | Rule | Test | Brackenfell now |
 |---|---|---|---|
-| 5.1 | From any place the player can stand or climb to, no view into a shell, under the ground, through a wall or into an open end. | [auto+eye] the walk bot's eye positions, a render with back faces painted red, any red pixel is a finding | not yet tested this way |
+| 5.1 | From any place the player can stand or climb to, no view into a shell, under the ground, through a wall or into an open end. | [auto+eye] the walk bot's eye positions, a render with back faces painted red, any red pixel is a finding | `test/audit/backface.js`: 0 views into a shell found; 44 of 242 views show the back of a one-sheet roof or wall |
 | 5.2 | Nothing thinner than 3 cm seen edge on; no single quad for a board, a wall or a roof edge. | [auto] kit pieces by bounding box; [eye] | open |
 | 5.3 | Nothing floats or sinks: every prop's base is within 3 cm of the surface under it. | [auto] `test/qa` sweep | 452 defects listed in `docs/DEFECTS.md` |
 | 5.4 | The walk bot walks every street, lane, interior and stair with 0 falls, 0 "could not be walked", 0 graph lines through walls. | [auto] `test/walkbot.mjs` | 66 falls, 164, 41 |

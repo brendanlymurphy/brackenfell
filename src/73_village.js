@@ -61,9 +61,9 @@ function buildVillage() {
   for (const [x, z, col, kind] of stalls) {
     const yaw = headingTo(x, z, 0, -1.5);
     put(x, z, yaw, m => Props.stall(m, col, y => {
-      if (kind === 0) { for (const [cx, kindG] of [[-0.85, 'apple'], [0, 'cabbage'], [0.85, 'apple']]) at(m, cx, y, -0.3, 0, () => { m.mat(MAT.PLANKS, COL.wood, 0.5); m.box(-0.36, 0, -0.26, 0.36, 0.14, 0.26, 8); for (let i = 0; i < 12; i++) at(m, (i % 4) * 0.17 - 0.26, 0.12, Math.floor(i / 4) * 0.16 - 0.16, 0, () => kindG === 'apple' ? Props.apple(m, cx < 0 ? COL.apple : [0.62, 0.72, 0.22]) : Props.cabbage(m)); }); }
+      if (kind === 0) { for (const [cx, kindG] of [[-0.85, 'apple'], [0, 'cabbage'], [0.85, 'apple']]) at(m, cx, y, -0.3, 0, () => { m.mat(MAT.PLANKS, COL.wood, 0.5); m.box(-0.36, 0, -0.26, 0.36, 0.14, 0.26, 8); for (let i = 0; i < 12; i++) at(m, (i % 4) * 0.17 - 0.26, 0.12, Math.floor(i / 4) * 0.16 - 0.16, 0, () => kindG === 'apple' ? Props.apple(m, cx < 0 ? [0.5, 0.3, 0.14] : [0.5, 0.55, 0.2]) : Props.cabbage(m)); }); }
       else if (kind === 1) Props.clutter(m, R, -1.1, 1.1, y, -0.25, ['loaf', 'cheese', 'loaf', 'cheese', 'jug', 'loaf'], 7);
-      else { Props.clutter(m, R, -1.1, 0.2, y, -0.25, ['pot', 'pot', 'jug', 'bowl', 'pot'], 5); for (let k = 0; k < 3; k++) at(m, 0.55 + k * 0.22, y, -0.3, PI / 2, () => clothBolt(m, [DYE.red, DYE.yellow, DYE.blue][k])); }
+      else { Props.clutter(m, R, -1.1, 0.2, y, -0.25, ['pot', 'pot', 'jug', 'bowl', 'pot'], 5); for (let k = 0; k < 3; k++) at(m, 0.55 + k * 0.22, y, -0.3, PI / 2, () => { const bc = [[0.3, 0.17, 0.13], [0.4, 0.33, 0.17], [0.2, 0.24, 0.31]][k]; m.mat(MAT.CLOTH, bc, 0.5); m.push().RZ(PI / 2).T(0.07, -0.3, 0); m.cyl(0, 0, 0, 0.07, 0.07, 0.6, 8, 3); m.pop(); m.mat(MAT.CLOTH, bc.map(v => v * 0.7), 0.5); m.box(-0.08, 0.0, -0.31, 0.08, 0.12, -0.28, 0); }); }
     }));
     const b = [x - Math.sin(yaw) * 1.05, z + Math.cos(yaw) * 1.05];
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);

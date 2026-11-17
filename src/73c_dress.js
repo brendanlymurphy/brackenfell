@@ -8,7 +8,7 @@ const DRU = { wood: [0.02, 0.07, 0.62, 0.27], cloth: [0.3, 0.27, 0.55, 0.45] };
 // muted palettes (linear-ish tints: the kit materials are already warm and fairly bright)
 const DRCOL = {
   wood: [[0.44, 0.34, 0.24], [0.38, 0.30, 0.23], [0.48, 0.38, 0.27], [0.32, 0.26, 0.2], [0.42, 0.36, 0.29]],
-  cloth: [[0.55, 0.30, 0.22], [0.62, 0.50, 0.30], [0.30, 0.34, 0.46], [0.72, 0.66, 0.54], [0.34, 0.40, 0.26], [0.50, 0.42, 0.34], [0.45, 0.24, 0.30], [0.64, 0.58, 0.46]].map(c => c.map(v => v * 0.24)),       // [fx1] the kit cloth material brightens about 2x: this is what reads as pastel pink, mint and pale blue on the market stalls
+  cloth: [[0.46, 0.27, 0.2], [0.5, 0.4, 0.22], [0.24, 0.28, 0.36], [0.5, 0.44, 0.34], [0.28, 0.32, 0.22], [0.36, 0.28, 0.2], [0.34, 0.2, 0.24], [0.44, 0.4, 0.32]].map(c => c.map(v => v * 0.2)),       // [fin] madder, weld, woad, undyed linen, dull green, walnut, a plum, a grey wool; the cloth material still brightens these about 2x
   sack: [[0.26, 0.22, 0.16], [0.22, 0.19, 0.14], [0.28, 0.24, 0.18], [0.19, 0.16, 0.12]],
   straw: [[0.46, 0.36, 0.16], [0.42, 0.34, 0.16], [0.5, 0.4, 0.18]],
   iron: [0.24, 0.22, 0.21],
@@ -151,19 +151,20 @@ function dBolts(R, k) {      // rolls of cloth lying in a stack on a counter
   const g = GP(), r = 0.075;
   const row = (n, y, x0) => { for (let i = 0; i < n; i++) { const c = R.pick(DRCOL.cloth); dLogCloth(g, x0 + i * r * 2.05, y, 0, 0.5, r, c); } };
   row(3, r, -r * 2.05); row(2, r * 2.7, -r * 1.0); row(1, r * 4.4, 0);
+  { const c = R.pick(DRCOL.cloth); g.quad(DRC, [-r * 2.2, r * 1.8, 0.24], [r * 2.4, r * 1.8, 0.24], [r * 2.5, 0.0, 0.46], [-r * 2.1, 0.0, 0.48], dscale(c, 0.95), DRU.cloth, true); }       // a length unrolled and let fall over the counter edge
   return g.make(key);
 }
 function dLogCloth(g, x, y, z, len, r, col) {
   const n = 7, q = (a, zz) => [x + Math.cos(a) * r, y + Math.sin(a) * r, z + zz];
-  for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU; g.quad(DRC, q(a1, -len / 2), q(a1, len / 2), q(a0, len / 2), q(a0, -len / 2), col, DRU.cloth); }
-  for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU; g.tri(DRC, [x, y, z + len / 2], q(a1, len / 2), q(a0, len / 2), dscale(col, 1.18), DRU.cloth); g.tri(DRC, [x, y, z - len / 2], q(a0, -len / 2), q(a1, -len / 2), dscale(col, 1.18), DRU.cloth); }
+  for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU, wv = 0.88 + 0.16 * ((i * 7 + Math.round(x * 50)) % 3) / 2; g.quad(DRC, q(a1, -len / 2), q(a1, len / 2), q(a0, len / 2), q(a0, -len / 2), dscale(col, wv), DRU.cloth); }
+  for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU; g.tri(DRC, [x, y, z + len / 2], q(a1, len / 2), q(a0, len / 2), dscale(col, 0.78), DRU.cloth); g.tri(DRC, [x, y, z - len / 2], q(a0, -len / 2), q(a1, -len / 2), dscale(col, 0.78), DRU.cloth); }
 }
 function dLoaves(R, k) {      // a board of bread: loaves, rolls and a cheese wheel
   const key = 'dr_loaves' + k; if (Kit.pieces[key]) return key;
   const g = GP();
   g.box(DRW, -0.38, 0, -0.2, 0.38, 0.025, 0.2, [0.5, 0.4, 0.3], DRU.wood);
   for (let i = 0; i < 5; i++) { const x = -0.32 + (i % 3) * 0.24 + R.s() * 0.02, z = -0.09 + Math.floor(i / 3) * 0.19, L = 0.1 + R() * 0.03, c = [0.66 + R() * 0.08, 0.46 + R() * 0.06, 0.24]; g.box(DRC, x - L, 0.025, z - 0.045, x + L, 0.075, z + 0.045, c, DRU.cloth); g.box(DRC, x - L + 0.02, 0.075, z - 0.035, x + L - 0.02, 0.098, z + 0.035, dscale(c, 1.06), DRU.cloth); }
-  if (k % 2) dPrism(g, DRC, DRU.cloth, 0.28, 0.025, 0.12, 0.09, 0.09, 0.06, 8, [0.72, 0.6, 0.28], [0.74, 0.62, 0.32]);
+  if (k % 2) dPrism(g, DRC, DRU.cloth, 0.28, 0.025, 0.12, 0.09, 0.09, 0.06, 8, [0.56, 0.46, 0.26], [0.6, 0.5, 0.3]);
   return g.make(key);
 }
 function dHangMeat(R, k) {      // a pole of hams and sausage ropes (origin at the pole's centre, hanging down)
@@ -286,7 +287,7 @@ function dStall(kind, R, cols) {      // a market stall: four posts, a counter, 
   const n = 8, sw = (w + 0.5) / n, y0 = 2.14, y1 = 1.78, z0 = -d / 2 - 0.15, z1 = d / 2 + 0.3;       // canopy slopes down toward the front (+z)
   for (let i = 0; i < n; i++) { const x0 = -w / 2 - 0.25 + i * sw, x1 = x0 + sw, c1 = i % 2 ? cols[1] : cols[0]; g.quad(DRC, [x0, y0 + 0.2, z0], [x1, y0 + 0.2, z0], [x1, y1, z1], [x0, y1, z1], c1, DRU.cloth, true); g.quad(DRC, [x0, y1, z1], [x1, y1, z1], [x1, y1 - 0.16, z1 + 0.02], [x0, y1 - 0.16, z1 + 0.02], c1, DRU.cloth, true); }
   const goods = {
-    greens: () => { const ks = [[[0.68, 0.18, 0.12], [0.72, 0.58, 0.16]], [[0.84, 0.46, 0.12], [0.78, 0.52, 0.16]], [[0.38, 0.52, 0.2], [0.5, 0.58, 0.26]]]; for (let i = 0; i < 3; i++) putPart(g, genProduce(ks[i], R), -0.78 + i * 0.78, 0.87, -0.1, 1.0, R.s() * 0.2); putPart(g, dBasket(R, 'g' + DRS.n), 0.95, 0, 0.45, 1.1, 0); putPart(g, dSack(R, 'a' + DRS.n), -1.0, 0, 0.55, 1.0, 0); putPart(g, dSack(R, 'b' + DRS.n), -0.72, 0, 0.62, 0.9, 1); },
+    greens: () => { const ks = [[[0.5, 0.3, 0.14], [0.5, 0.48, 0.2], [0.44, 0.26, 0.12]], [[0.56, 0.36, 0.14], [0.48, 0.34, 0.16]], [[0.3, 0.4, 0.2], [0.36, 0.44, 0.22], [0.26, 0.34, 0.18]]]; for (let i = 0; i < 3; i++) putPart(g, genProduce(ks[i], R), -0.78 + i * 0.78, 0.87, -0.1, 1.0, R.s() * 0.2); putPart(g, dBasket(R, 'g' + DRS.n), 0.95, 0, 0.45, 1.1, 0); putPart(g, dSack(R, 'a' + DRS.n), -1.0, 0, 0.55, 1.0, 0); putPart(g, dSack(R, 'b' + DRS.n), -0.72, 0, 0.62, 0.9, 1); },
     bread: () => { for (let i = 0; i < 3; i++) putPart(g, dLoaves(R, i), -0.75 + i * 0.75, 0.87, -0.1, 1.0, R.s() * 0.15); putPart(g, dBasket(R, 'p' + DRS.n), 0.9, 0.87, 0.3, 1.0, 0); putPart(g, dPot(R, 'j' + DRS.n), -1.05, 0.87, 0.35, 0.9, 0); putPart(g, dSack(R, 'c' + DRS.n), 1.05, 0, 0.55, 1.1, 0.4); },
     cloth: () => { for (let i = 0; i < 3; i++) putPart(g, dBolts(R, i), -0.75 + i * 0.75, 0.87, -0.12, 1.0, R.s() * 0.1 + PI / 2 * 0); for (let i = 0; i < 4; i++) { const c = R.pick(DRCOL.cloth), x = -0.9 + i * 0.6, L = 0.6 + R() * 0.4; g.quad(DRC, [x, 2.05, -d / 2 + 0.12], [x + 0.4, 2.05, -d / 2 + 0.12], [x + 0.42, 2.05 - L, -d / 2 + 0.13], [x + 0.02, 2.05 - L * (0.9 + R() * 0.1), -d / 2 + 0.13], c, DRU.cloth, true); } },
     pots: () => { for (let i = 0; i < 6; i++) putPart(g, dPot(R, 's' + DRS.n + i), -0.9 + i * 0.36, 0.87, -0.15 + (i % 2) * 0.28, 0.8 + R() * 0.4, 0); for (let i = 0; i < 3; i++) putPart(g, dPot(R, 'f' + DRS.n + i), -1.0 + i * 0.5, 0, 0.62 + R() * 0.1, 1.5 + R() * 0.5, 0); putPart(g, dBucket(R, 'q' + DRS.n), 1.05, 0, 0.6, 1.0, 0); },
