@@ -277,7 +277,7 @@ function buildSplat() {
   { const Rd = rng(9955); for (let i = 0; i < 640; i++) { const x = -60 + Rd() * 94, z = -35 + Rd() * 72, rad = 3 + Rd() * 4, q = P(x, z), g = A.createRadialGradient(q[0], q[1], rad * sc * 0.2, q[0], q[1], rad * sc); g.addColorStop(0, 'rgba(255,0,0,0.30)'); g.addColorStop(1, 'rgba(255,0,0,0)'); A.fillStyle = g; A.beginPath(); A.arc(q[0], q[1], rad * sc, 0, TAU); A.fill(); } }
   { const Rd = rng(9957); for (let i = 0; i < 200; i++) { const x = -46 + Rd() * 84, z = -62 + Rd() * 34, rad = 3 + Rd() * 4, q = P(x, z), g = A.createRadialGradient(q[0], q[1], rad * sc * 0.2, q[0], q[1], rad * sc); g.addColorStop(0, 'rgba(255,0,0,0.26)'); g.addColorStop(1, 'rgba(255,0,0,0)'); A.fillStyle = g; A.beginPath(); A.arc(q[0], q[1], rad * sc, 0, TAU); A.fill(); } }      /* Chapelgate: earth lanes between the cottages, not lawn */
   stroke(A, [[-1.5, -45.2], [6, -45.4], [14, -44.6], [22, -45.0], [30, -44.7], [36.5, -44.9]], 3.4, grn, 0.9);      /* the east cluster's lane, cobbled, wandering to the well */
-  stroke(A, [[-6.3, -62.6], [-9.4, -64.1], [-12.6, -65.6], [-15.4, -66.9]], 2.6, red, 0.85);      /* the worn way to the lych gate */
+  stroke(A, [[-6.3, -62.6], [-10.0, -63.4], [-13.6, -64.0], [-16.0, -64.7], [-16.0, -66.8]], 2.6, red, 0.85);      /* the worn way to the lych gate */
   /* [fx3] plots: each yard's floor is packed earth (trodden dirt, bare in places), the back lane behind the plots' back walls is a trodden strip with a cobble spine; no lawn inside a burgage */
   if (typeof plotsCompute === 'function') for (const p of plotsCompute()) {
     if (p.axis === 'x') { for (const [al, e] of [[0.55, 0.5], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - e, p.z0 - e), a1 = P(p.x1 + e, p.z1 + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); } continue; }
@@ -344,8 +344,10 @@ function buildSplat2() {
     const p = rd.line.point(d), o = R.s() * rd.w * 0.42; if (hyp(p[0] - SQUARE.x, p[1] - SQUARE.z) < 14) continue;
     blob(A, 1, p[0] - p[3] * o, p[1] + p[2] * o, 0.7 + R() * 1.2, 0.9, 0.3);
   }
-  line(A, 1, [[ALLEY.x0 - 2, roadZ(ALLEY.x0 - 2)], [36, 1], [ALLEY.x1 + 1, roadZ(ALLEY.x1 + 1)]], 8, 0.5);
-  if (typeof wharfSplat2 === 'function') wharfSplat2(blob, line, A, B, R);      // [fx2] mud in Wharf Street and the lanes, wet ground at the bank and the yard      /* [fx3] the alley is the wetter, darker street */
+  line(A, 1, [[ALLEY.x0 - 2, roadZ(ALLEY.x0 - 2)], [36, 1], [ALLEY.x1 + 1, roadZ(ALLEY.x1 + 1)]], 8, 0.5);      /* [fx3] the alley is the wetter, darker street */
+  if (typeof wharfSplat2 === 'function') wharfSplat2(blob, line, A, B, R);      // [fx2] mud in Wharf Street and the lanes, wet ground at the bank and the yard
+  /* [fx3] Westgate: wheel ruts in the earth road outside the gate, two wet tracks 1.7 m apart and a worn middle */
+  { const r = Roads.find(q => q.id === 'main'); if (r) { const pts = r.line.p.filter(p => p[0] < -57 && p[0] > -112); if (pts.length > 1) { for (const o of [-0.85, 0.85]) line(A, 1, pts.map(p => [p[0], p[1] + o]), 0.32, 0.45); line(B, 0, pts, 1.0, 0.5); } } }
   /* [fx3] the Market Place's drain: a wet channel down the middle of the place (the fall runs to z+), a branch down Wharf Street's mouth, and puddle hollows in the low cobbles */
   { const dr = [[-19.4, -0.5], [-10, 0.4], [-3, 1.1], [3, 1.7], [10, 2.3], [20.2, 3.4]], br = [[2.8, 1.6], [0.9, 5.5], [0.3, 9], [0.2, 14], [0.2, 22]];
     for (const pl of [dr, br]) for (const [w, a2] of [[1.8, 0.16], [0.9, 0.30], [0.4, 0.55]]) line(A, 1, pl, w, a2);

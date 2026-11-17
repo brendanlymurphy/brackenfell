@@ -104,8 +104,18 @@ function genBunting(a, b, R, cols, flags) {      // world-space rope with pennan
   return g.make('gen_bunt_' + (_gn++));
 }
 function genProduce(cols, R) {            // a shallow crate heaped with fruit or vegetables (about 100 triangles)
-  const g = GP(); g.box(W_, -0.3, 0, -0.2, 0.3, 0.1, 0.2, [0.6, 0.5, 0.4]);
-  for (let i = 0; i < 9; i++) { const x = -0.22 + (i % 3) * 0.22 + R.s() * 0.03, z = -0.12 + Math.floor(i / 3) * 0.12, h = 0.12 + R() * 0.06, c = cols[i % cols.length]; g.box(C_, x - 0.07, 0.08, z - 0.06, x + 0.07, 0.08 + h, z + 0.06, c, GPU.cloth); }
+  const g = GP(); g.box(W_, -0.3, 0, -0.2, 0.3, 0.1, 0.2, [0.45, 0.36, 0.28]);
+  // [fin] heads, apples and carrots are small rounded bodies of unequal size and tone (they were identical bright boxes that fused into one slab); two layers form a heap
+  const ell = (cx, cy, cz, rx, ry, rz, col) => {
+    const lat = [-1.2, -0.45, 0.45, 1.2], S = 8, pt = (la, k) => { const cl = Math.cos(Math.max(-1.5, Math.min(1.5, la))), a = k / S * TAU; return [cx + Math.cos(a) * rx * cl, cy + Math.sin(Math.max(-1.5, Math.min(1.5, la))) * ry, cz + Math.sin(a) * rz * cl]; };
+    for (let j = 0; j < 3; j++) for (let k = 0; k < S; k++) g.quad(C_, pt(lat[j], k), pt(lat[j], k + 1), pt(lat[j + 1], k + 1), pt(lat[j + 1], k), col.map(v => v * (0.8 + 0.2 * j / 2)), GPU.cloth, true);
+    for (let k = 0; k < S; k++) { g.tri(C_, pt(lat[3], k), pt(lat[3], k + 1), [cx, cy + ry * 1.0, cz], col, GPU.cloth, true); }
+  };
+  for (let i = 0; i < 14; i++) {
+    const layer = i < 9 ? 0 : 1, k = layer ? i - 9 : i, x = layer ? -0.16 + (k % 3) * 0.16 + R.s() * 0.03 : -0.22 + (k % 3) * 0.22 + R.s() * 0.03, z = layer ? -0.07 + Math.floor(k / 3) * 0.14 : -0.12 + Math.floor(k / 3) * 0.12;
+    const rr = 0.055 + R() * 0.03, tone = 0.5 + R() * 0.12, c = cols[i % cols.length].map(v => v * tone * 1.1);
+    ell(x, 0.1 + rr * (layer ? 1.55 : 0.8), z, rr, rr * 0.92, rr, c);
+  }
   return g.make('gen_prod_' + (_gn++));
 }
 function genBracketLantern() {          // wall bracket + small lantern, split so only the glass glows

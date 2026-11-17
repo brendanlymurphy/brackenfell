@@ -361,7 +361,8 @@ function buildDress() {
   const R = rng(8801), OUT = { zone: 0, skyVis: 1, cast: false };
   DRS.items = []; DRS.placed = []; DRS.wet = []; DRS.worn = []; DRS.n = 0; DRS.lights = 0;
   const ADD = (name, M, o, tier) => DRS.items.push({ name, M, o: o || OUT, tier, x: M.elements[12], z: M.elements[14] });
-  const add = (name, x, y, z, s, ry, ex, o, rx, rz) => ADD(name, dmat(name, x, y, z, s, ry, rx, rz), o ? Object.assign({}, OUT, o) : OUT, o && o.es ? 0 : 1);
+  const DCNT = World.dressCount = { fpot: 0, vine: 0 };
+  const add = (name, x, y, z, s, ry, ex, o, rx, rz) => (/fpot/.test(name) && DCNT.fpot++, /Vine/.test(name) && DCNT.vine++, ADD(name, dmat(name, x, y, z, s, ry, rx, rz), o ? Object.assign({}, OUT, o) : OUT, o && o.es ? 0 : 1));
   const gy = (x, z) => Terrain.y(x, z);
   const V = (fn, n) => Array.from({ length: n }, (_, i) => fn(R, i));
   const barrels = V(dBarrel, 4), crates = V(dCrate, 5), sacks = V(dSack, 4), baskets = V(dBasket, 3), buckets = V(dBucket, 3), pots = V(dPot, 4), bales = V(dBale, 2), logs = V(dLogPile, 4), fpots = V(dFlowerPot, 4), benches = V(dBench, 2),
@@ -488,7 +489,7 @@ function buildDress() {
       else if (t === 'logs') { add(pick(logs), w.x, y, w.z, 1, w.ry + PI, ex); claim(w.x, w.z, 0.55); if (R() < 0.7) add(dChips(R, R.i(0, 2)), w.x + Math.sin(w.ry) * 0.7, y, w.z + Math.cos(w.ry) * 0.7, 1, R() * TAU, true); }
       else if (t === 'bucket') { add(pick(buckets), w.x, y, w.z, 1, R() * TAU, ex); if (R() < 0.5) add(pick(buckets), w.x + 0.34, y, w.z + 0.1, 0.9, R() * TAU, ex); claim(w.x, w.z, 0.4); }
       else if (t === 'basket') { add(pick(baskets), w.x, y, w.z, 1.1, R() * TAU, ex); claim(w.x, w.z, 0.3); }
-      else if (t === 'fpot') { for (let i = 0; i < R.i(1, 3); i++) add(pick(fpots), w.x + Math.cos(w.ry) * i * 0.34, y, w.z - Math.sin(w.ry) * i * 0.34, 1, R() * TAU, ex); claim(w.x, w.z, 0.5); }
+      else if (t === 'fpot') { const keepPot = R() < 0.34; if (keepPot) for (let i = 0; i < R.i(1, 3); i++) add(pick(fpots), w.x + Math.cos(w.ry) * i * 0.34, y, w.z - Math.sin(w.ry) * i * 0.34, 1, R() * TAU, ex); if (keepPot) claim(w.x, w.z, 0.5); }
       else if (t === 'hay') { DRS.worn.push([w.x, w.z, 2.2, 0.7]); add(pick(bales), w.x, y, w.z, 1, w.ry + PI / 2 + R.s() * 0.15, ex); if (R() < 0.6) add(pick(bales), w.x + R.s() * 0.1, y + 0.43, w.z, 0.95, w.ry + PI / 2 + R.s() * 0.4, ex); add(dStrawPiece(R, R.i(0, 2)), w.x + Math.sin(w.ry) * 0.8, y, w.z + Math.cos(w.ry) * 0.8, 1.3, R() * TAU, true); solid(w.x, w.z, 0.55, 0.9); claim(w.x, w.z, 0.7); }
       else if (t === 'bench') { DRS.worn.push([w.x, w.z, 1.5, 0.6]); add(pick(benches), w.x, y, w.z, 1, w.ry + PI / 2, ex); claim(w.x, w.z, 0.9); }
       else if (t === 'cart') { DRS.worn.push([w.x, w.z, 1.8, 0.6]); add(pick(carts), w.x, y, w.z, 1, w.ry + PI / 2 + R.s() * 0.5, ex); solid(w.x, w.z, 0.7, 0.8); claim(w.x, w.z, 1.0); if (R() < 0.6) add(pick(sacks), w.x, y + 0.45, w.z, 0.9, R() * TAU, ex); }
@@ -575,7 +576,7 @@ function buildDress() {
     // vines: a few strands on random walls, away from the door
     for (let i = 0, nv = kind === 'inn' ? 4 : 2 + R.i(0, 2); i < nv; i++) {
       const f = pick(['front', 'back', 'left', 'right']), u = (R() - 0.5) * (wallLen(s, f) - 1.6); if (f === face && Math.abs(u - du) < 1.9) continue;
-      const w = wallAt(s, f, u, 0.06), y = s.y + 2.5 + R() * 0.4; if (kind === 'shop') continue;
+      const w = wallAt(s, f, u, 0.06), y = s.y + 2.5 + R() * 0.4; if (kind === 'shop' || i % 2) continue;
       add(pick(['Prop_Vine1', 'Prop_Vine2', 'Prop_Vine4', 'Prop_Vine1']), w.x, y, w.z, [0.62, 0.6 + R() * 0.2, 0.6], w.ry, i % 2 === 0, { tint: [tint[0] * (0.9 + R() * 0.2), tint[1], tint[2]] });
     }
     if (kind === 'chapel' || kind === 'farm' && s.id === 'barn') continue;
