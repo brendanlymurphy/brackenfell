@@ -18,7 +18,8 @@ page.on('pageerror', e => console.log('[pageerror]', String(e.stack || e.message
 await page.addInitScript(o => { window.__TEST__ = o; }, opts);
 fs.mkdirSync(root + dir, { recursive: true });
 await page.exposeFunction('__snap', async (name) => { const f = path.join(root, dir, name + '.jpg'); fs.mkdirSync(path.dirname(f), { recursive: true }); await page.screenshot({ path: f, type: 'jpeg', quality: q }); return f; });
+await page.exposeFunction('__png', async () => (await page.screenshot({ type: 'png' })).toString('base64'));
 await page.exposeFunction('__write', async (name, text) => { fs.writeFileSync(path.join(root, name), text); });
 const t0 = Date.now(); await page.goto(`http://localhost:${port}/`); await page.waitForFunction(() => window.__ready === true, null, { timeout: 600000 }); console.log('ready', Date.now() - t0, 'ms');
-for (const f of files) { const t = Date.now(); try { const r = await page.evaluate(`(async()=>{ ${fs.readFileSync(f, 'utf8')} })()`); const s = typeof r === 'string' ? r : JSON.stringify(r, null, 1); if (json) fs.writeFileSync(json, s); else console.log(s === undefined ? '' : s.slice(0, 20000)); console.log('ran', f, Date.now() - t, 'ms'); } catch (e) { console.log('FAIL', f, String(e.message).slice(0, 1500)); } }
+for (const f of files) { const t = Date.now(); try { const r = await page.evaluate(`(async()=>{ ${fs.readFileSync(f, 'utf8')} })()`); const s = typeof r === 'string' ? r : JSON.stringify(r, null, 1); if (json && s !== undefined) fs.writeFileSync(json, s); else if (s !== undefined) console.log(s.slice(0, 20000)); console.log('ran', f, Date.now() - t, 'ms'); } catch (e) { console.log('FAIL', f, String(e.message).slice(0, 1500)); } }
 await browser.close(); srv.close(); process.exit(0);
