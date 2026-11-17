@@ -231,7 +231,7 @@ function buildVillage() {
     const q = siteToWorld(Hn, -1.4, -Hn.d / 2 - 2.4); put(q[0], q[1], 0, m => { m.mat(MAT.BARK, [1, 1, 1], 0.6); m.cyl(0, 0, 0, 0.32, 0.3, 0.5, 9, 2); m.mat(MAT.TIMBER, COL.wood); m.beam([0.05, 0.5, 0], [0.4, 1.05, 0.1], 0.03, 0.03); m.mat(MAT.METAL, COL.iron); m.box(-0.02, 0.45, -0.08, 0.12, 0.62, 0.1); });
     const w3 = siteToWorld(Hn, -Hn.w / 2 - 0.8, 0); put(w3[0], w3[1], Hn.yaw + PI / 2, m => Props.woodpile(m, 6, 5, 0.6)); spot('hunter.yard', q[0] + 1.2, q[1] + 0.3, Hn.yaw + 2.2); }
   // chapel yard
-  { const C = SITE.chapel, yd = pts => pts.map(p => siteToWorld(C, p[0], p[1])); fence(yd([[-7.5, -4.4], [-7.5, -9]]), { stone: true }); fence(yd([[-7.5, -11], [-7.5, -17], [8, -17], [8, -4.4]]), { stone: true });
+  { const C = SITE.chapel, yd = pts => pts.map(p => siteToWorld(C, p[0], p[1])); /* [fx3] the churchyard wall, lych gate and flagged path are built in 73m_plots.js (buildChurchyard) */
     for (let i = 0; i < 13; i++) { const p = siteToWorld(C, -6.5 + (i % 5) * 3.1 + R.s() * 0.5, -7.6 - Math.floor(i / 5) * 3.3 + R.s() * 0.4); put(p[0], p[1], C.yaw + PI / 2 + R.s() * 0.2, m => Props.gravestone(m, R)); }
     World.places.push({ id: 'graves', name: 'The Quiet Yard', x: siteToWorld(C, 0, -11)[0], z: siteToWorld(C, 0, -11)[1], r: 7 }); }
   // mill surroundings

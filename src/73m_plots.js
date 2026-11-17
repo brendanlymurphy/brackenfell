@@ -8,6 +8,8 @@ const PLOT_ROWS = [
   { name: 'alleyN', ids: ['draper', 'shop.n2', 'shop.n3', 'shop.n4'], trades: ['cooper', 'hens', 'garden', 'woodyard'] },
   { name: 'alleyS', ids: ['shop.s0', 'shop.s1', 'shop.s2'], trades: ['forge', 'washing', 'pigs'] },
   { name: 'placeE', ids: ['store'], trades: ['stable'], axis: 'x' },
+  { name: 'chapelW', ids: ['in.12', 'in.13', 'in.45', 'in.32'], trades: ['garden', 'woodyard', 'hens', 'hives'], axis: 'x' },
+  { name: 'chapelE', ids: ['in.46', 'in.15', 'in.16', 'in.33'], trades: ['woodyard', 'hens', 'garden', 'hives'], axis: 'x' },
   { name: 'westS', ids: ['in.08', 'in.07', 'in.06', 'in.42'], trades: ['dyer', 'hens', 'woodyard', 'washing'] }
 ];
 let _PLOTS = null;
@@ -27,10 +29,10 @@ function plotsCompute() {
   for (const row of PLOT_ROWS) {
     const hs = row.ids.map(byId).filter(Boolean); if (!hs.length) continue;
     if (row.axis === 'x') {      /* houses whose back faces east or west (their front looks along x): one plot each, no neighbours on the row */
-      for (const s of hs) {
+      for (const [hi, s] of hs.entries()) {
         const bx = Math.sin(s.yaw || 0) > 0 ? -1 : 1, xb0 = s.x + bx * (s.d / 2 + 0.12), za = s.z - s.w / 2 - 0.15, zb2 = s.z + s.w / 2 + 0.15; let depth = 0;
         for (let d = 7.0; d >= 2.2 && !depth; d -= 0.4) { let ok = true; for (let z = za + 0.3; z <= zb2 - 0.3 && ok; z += 0.7) for (let k = 0.5; k <= d + 0.3 && ok; k += 0.6) if (blocked(xb0 + bx * (k + 0.2), z, 0.35, s)) ok = false; if (ok) depth = d; }
-        if (depth) _PLOTS.push({ id: s.id, row: row.name, trade: row.trades[0], axis: 'x', bx, x0: Math.min(xb0, xb0 + bx * depth), x1: Math.max(xb0, xb0 + bx * depth), z0: za, z1: zb2, wall: xb0 + bx * depth, bz: 1, house: s });
+        if (depth) _PLOTS.push({ id: s.id, row: row.name, trade: row.trades[hi % row.trades.length], axis: 'x', bx, x0: Math.min(xb0, xb0 + bx * depth), x1: Math.max(xb0, xb0 + bx * depth), z0: za, z1: zb2, wall: xb0 + bx * depth, bz: 1, house: s });
       }
       continue;
     }
@@ -112,8 +114,7 @@ function buildPlots(bucket) {
       stone(m, xw, p.z0 + 0.15, xw, gz - gw / 2, H - 0.1, tone); stone(m, xw, gz + gw / 2, xw, p.z1 - 0.15, H - 0.1, tone);
       for (const zs of [gz - gw / 2, gz + gw / 2]) { m.mat(MAT.STONE, [tone * 1.1, tone * 1.05, tone], 1.4); m.cbox(xw, gy(xw, zs) - 0.1, zs, 0.4, 1.6, 0.4, 0); }
       for (const zs of [p.z0, p.z1]) stone(m, xh, zs, xw - p.bx * 0.15, zs, H * 0.92, tone);
-      const s = p.house, c = siteToWorld(s, 0, s.d / 2 + 0.2), g = gy(c[0], c[1]); m.push().T(c[0], g, c[1]).RY(-s.yaw);
-      m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.box(-1.4, 0.45, 1.2, 1.4, 0.7, 2.0); for (const sx of [-1.2, 1.2]) m.cyl(sx, 0, 1.6, 0.36, 0.4, 0.45, 6, 2); m.mat(MAT.THATCH, [0.7, 0.58, 0.3], 0.5); m.ball(0, 0.7, 3.2, 1.3, 0.8, 1.0, 6, 4); m.pop();
+      localTrade(m, p, gy, R, flat, addBoxCollider, addCircleCollider);
       continue;
     }
     const wd = p.x1 - p.x0, dp = Math.abs(p.wall - (p.bz > 0 ? p.z0 : p.z1)), cx = (p.x0 + p.x1) / 2, zFront = p.bz > 0 ? p.z0 : p.z1, tone = 0.42 + R() * 0.1, styleI = ((Math.abs(p.house.x * 3.1 + p.house.z) | 0) + P.indexOf(p)) % 4;
@@ -153,4 +154,38 @@ function buildStrips(bucket) {
     m.pop();
     for (const [lx, lz] of [[-hw, 0.65], [hw, 0.65]]) { const p = siteToWorld(s, lx, s.d / 2 + 0.7 + (lz - 0.7) + 0.0); addCircleCollider(m, p[0], p[1], 0.1, g, g + 2.0); }
   }
+}
+
+/* [fx3] trades in a house's own frame (local +z is its back): used by plots whose back faces east or west. Each piece is anchored at a local point, so any facing works. */
+function localTrade(m, p, gy, R, flat) {
+  const s = p.house, depth = p.axis === 'x' ? p.x1 - p.x0 : 3, hw = s.w / 2, z0 = s.d / 2 + 0.2;
+  const at = (lx, lz, f) => { const w = siteToWorld(s, lx, lz), g = gy(w[0], w[1]); m.push().T(w[0], g, w[1]).RY(-s.yaw); f(g, w); m.pop(); };
+  const kind = p.trade;
+  if (kind === 'garden') { for (let i = -2; i <= 2; i++) at(i * 0.9, z0 + depth * 0.45, () => { const len = Math.min(depth * 0.6, 2.4); m.mat(MAT.MUD, [0.17, 0.12, 0.08], 0.5); m.box(-0.25, 0, -len / 2, 0.25, 0.18, len / 2); m.mat(MAT.LEAVES, [0.24 + R() * 0.16, 0.4, 0.13], 0.5); if (i % 2) { for (let k = 0; k < 3; k++) m.ball(0, 0.3, -len / 2 + 0.3 + k * (len - 0.6) / 2, 0.2, 0.12, 0.18, 4, 3); } else { m.mat(MAT.TIMBER, [0.32, 0.25, 0.17], 0.5); for (let k = 0; k < 3; k++) m.beam([-0.1, 0, -len / 2 + 0.3 + k * 0.7], [0.05, 1.5, -len / 2 + 0.3 + k * 0.7], 0.03, 0.03); } });
+    at(hw - 0.6, z0 + 0.5, (g, w) => { m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.cyl(0, 0, 0, 0.32, 0.28, 0.55, 6, 2); addCircleCollider(m, w[0], w[1], 0.32, g, g + 0.55); }); }
+  else if (kind === 'woodyard') { at(-hw * 0.4, z0 + depth * 0.4, (g, w) => { for (let r = 0; r < 4; r++) for (let k = 0; k < 6 - r; k++) { m.mat(MAT.TIMBER, [0.42 + R() * 0.12, 0.32, 0.22], 0.5); m.beam([-1.0 + r * 0.2 + k * 0.4, 0.17 + r * 0.28, -0.45], [-1.0 + r * 0.2 + k * 0.4, 0.17 + r * 0.28, 0.45], 0.28, 0.28); } addBoxCollider(m, w[0] - 1.3, w[1] - 0.6, w[0] + 1.3, w[1] + 0.6, g, g + 1.2); });
+    at(hw * 0.4, z0 + depth * 0.3, () => { m.mat(MAT.TIMBER, [0.4, 0.31, 0.22], 0.5); m.cyl(0, 0, 0, 0.26, 0.26, 0.5, 5, 2); for (let k = 0; k < 6; k++) { m.mat(MAT.TIMBER, [0.55, 0.44, 0.3], 0.5); m.beam([-0.15 + (R() - 0.5) * 1.6, 0.06, 0.5 + R() * 1.0], [0.15 + (R() - 0.5) * 1.6, 0.08, 0.6 + R() * 1.0], 0.1, 0.12); } }); }
+  else if (kind === 'hens') { at(-hw * 0.3, z0 + depth * 0.4, (g, w) => { m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.box(-0.7, 0.5, -0.5, 0.7, 1.15, 0.5); for (const sx of [-0.6, 0.6]) for (const sz of [-0.4, 0.4]) m.box(sx - 0.04, 0, sz - 0.04, sx + 0.04, 0.5, sz + 0.04); m.mat(MAT.THATCH, [0.55, 0.45, 0.25], 0.5); m.box(-0.8, 1.15, -0.6, 0.8, 1.25, 0.6); addBoxCollider(m, w[0] - 0.8, w[1] - 0.6, w[0] + 0.8, w[1] + 0.6, g, g + 1.2); for (let k = 0; k < 4; k++) { m.mat(MAT.PLAIN, k % 2 ? [0.6, 0.3, 0.14] : [0.85, 0.82, 0.74]); m.ball((R() - 0.5) * 3, 0.2, 1.0 + R() * 1.2, 0.12, 0.14, 0.18, 5, 4); } }); }
+  else { for (let i = -1; i <= 1; i++) at(i * 1.2, z0 + depth * 0.4, (g, w) => { m.mat(MAT.STONE, [0.5, 0.47, 0.42], 0.5); m.box(-0.3, 0, -0.3, 0.3, 0.35, 0.3); m.mat(MAT.THATCH, [0.72, 0.58, 0.28], 0.5); m.ball(0, 0.6, 0, 0.3, 0.26, 0.3, 6, 4); addCircleCollider(m, w[0], w[1], 0.3, g, g + 0.8); }); }
+}
+
+// [fx3] Chapelgate: the churchyard is walled in rubble (1.5 m, coped) with a roofed lych gate on the side the path comes from, a flagged path from the gate to the chapel door, and yews; the grave stones stand in long grass (churchyards keep their grass, docs/TOWNPLAN.md)
+function buildChurchyard(bucket) {
+  if (TEST && TEST.plots === 0) return;
+  const C = SITE.chapel; if (!C) return; const R = rng(5090), gy = (x, z) => Terrain.y(x, z), W = (lx, lz) => siteToWorld(C, lx, lz);
+  const wall = (m, a, b) => { const A = W(a[0], a[1]), B = W(b[0], b[1]), L = Math.hypot(B[0] - A[0], B[1] - A[1]); if (L < 0.3) return; const cx = (A[0] + B[0]) / 2, cz = (A[1] + B[1]) / 2, ang = Math.atan2(B[1] - A[1], B[0] - A[0]), g = Math.min(gy(A[0], A[1]), gy(B[0], B[1]), gy(cx, cz)) - 0.2, tone = 0.4 + R() * 0.05;
+    m.push().T(cx, g, cz).RY(-ang); m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.4); m.box(-L / 2, 0, -0.27, L / 2, 1.55, 0.27); m.mat(MAT.STONE, [tone * 1.12, tone * 1.08, tone * 1.0], 1.4); m.box(-L / 2 - 0.02, 1.5, -0.33, L / 2 + 0.02, 1.7, 0.33); m.pop();
+    const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.27, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.27; addBoxCollider(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + 1.5); };
+  const m0 = bucket(W(0, -10)[0], W(0, -10)[1]);
+  wall(m0, [-7.5, -4.4], [-7.5, -8.9]); wall(m0, [-7.5, -11.1], [-7.5, -17]); wall(m0, [-7.5, -17], [8, -17]); wall(m0, [8, -17], [8, -4.4]);
+  /* the lych gate: four posts, a gabled roof along the way in, a bench each side, a stone threshold */
+  { const o = W(-7.5, -10), g = gy(o[0], o[1]); m0.push().T(o[0], g - 0.05, o[1]).RY(-C.yaw);
+    m0.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.6); for (const sx of [-0.9, 0.9]) for (const sz of [-1.15, 1.15]) m0.box(sx - 0.1, 0, sz - 0.1, sx + 0.1, 2.5, sz + 0.1);
+    for (const sz of [-1.15, 1.15]) m0.box(-1.0, 2.3, sz - 0.07, 1.0, 2.5, sz + 0.07); for (const sx of [-0.9, 0.9]) m0.box(sx - 0.07, 2.3, -1.2, sx + 0.07, 2.5, 1.2);
+    m0.mat(MAT.SHINGLE, [0.4, 0.37, 0.32], 0.6); m0.quad2([-1.15, 2.4, -1.45], [-1.15, 2.4, 1.45], [0, 3.25, 1.45], [0, 3.25, -1.45]); m0.quad2([1.15, 2.4, -1.45], [1.15, 2.4, 1.45], [0, 3.25, 1.45], [0, 3.25, -1.45]);
+    m0.mat(MAT.PLANKS, [0.34, 0.27, 0.2], 0.6); for (const sz of [-1.0, 1.0]) m0.box(-0.55, 0.42, sz - 0.2, 0.55, 0.5, sz + 0.2);
+    m0.mat(MAT.STONE, [0.55, 0.52, 0.47], 1.0); m0.box(-0.8, 0, -0.7, 0.8, 0.12, 0.7); m0.pop();
+    for (const sz of [-1.15, 1.15]) { const q = siteToWorld(C, -7.5, -10 + sz); addCircleCollider(m0, q[0], q[1], 0.15, g, g + 2.5); } }
+  /* a path of flags from the gate to the chapel door, and one to the west wall's second gap if any */
+  { const pts = [[-7.2, -10], [-4.5, -8.6], [-2, -6.8], [0, -5]]; for (let i = 0; i + 1 < pts.length; i++) { const a = pts[i], b = pts[i + 1], n = 3; for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, lx = a[0] + (b[0] - a[0]) * t + (R() - 0.5) * 0.15, lz = a[1] + (b[1] - a[1]) * t + (R() - 0.5) * 0.15, w = W(lx, lz), mm = bucket(w[0], w[1]), g = gy(w[0], w[1]); mm.push().T(w[0], g, w[1]).RY(-C.yaw + Math.atan2(b[1] - a[1], b[0] - a[0]) + (R() - 0.5) * 0.1); mm.mat(MAT.STONE, [0.52 + R() * 0.08, 0.5, 0.45], 1.2); mm.box(-0.55, -0.03, -0.45, 0.55, 0.03, 0.45); mm.pop(); } } }
 }
