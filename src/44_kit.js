@@ -284,7 +284,12 @@ const Kit = (() => {
     // many copies of one piece (trees, rocks, tufts). matrices: array of Matrix4 / shorthand. o: { tints: [[r,g,b]...], wind, cast, cell, maxDist, zone, skyVis }
     B.addInstanced = function (name, matrices, o) {
       const p = K_.pieces[name]; if (!p) { console.warn('Kit: unknown piece ' + name); return B; }
-      inst.push({ p, matrices: matrices.map(x => toMatrix(x)), o: o || {} }); return B;
+      o = o || {};
+      // [perf] Small ground dressing drawn far beyond where it can be seen: the scanned ferns (1000 triangles each), weeds and mossy stones were
+      // in 60 to 80 m cells shown out to 70 to 80 m from the cell's edge, 113k triangles in the square on Medium. They now sit in 16 m cells with
+      // a reach by what they are (K_.INST_REACH, metres; scaled by the tier in K_.update): a fern is a few pixels at 30 m.
+      if (o.maxDist && !(typeof TEST !== 'undefined' && TEST && TEST.instreach === 0)) for (const [re, reach, cell] of K_.INST_REACH) if (re.test(name)) { o = Object.assign({}, o, { maxDist: Math.min(o.maxDist, reach), cell: Math.min(o.cell || 48, cell) }); break; }
+      inst.push({ p, matrices: matrices.map(x => toMatrix(x)), o }); return B;
     };
     B.build = function () {
       const group = new THREE.Group(); group.name = opts.name || 'kit-batch'; group.matrixAutoUpdate = false;
@@ -456,7 +461,7 @@ const Kit = (() => {
     L[0] = camPos[0]; L[1] = camPos[1]; L[2] = camPos[2]; L[3] = cam.yaw; L[4] = key;
     const fx = Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), drop = K_.DROP[qn] || 70;
     const half = (typeof R !== 'undefined' && R.camera ? Math.atan(Math.tan(R.camera.fov * Math.PI / 360) * R.camera.aspect) : 0.81) + 0.35, cone = Math.abs(cam.pitch) < 0.9 && !(TEST && TEST.kitcone === 0);
-    const occ = K_.occlude && !(TEST && TEST.kitocc === 0) ? K_.occlude(camPos) : null;
+    const occ = K_.occlude && !(TEST && TEST.kitocc === 0) ? K_.occlude(camPos) : null; K_.occNow = occ; K_.occN = (K_.occN || 0) + 1;       // [perf] the scene asks the same horizon about terrain tiles and prop squares (42_scene.js)
     const q_ = (typeof R !== 'undefined' && R.q) || {}, RS = q_.yardCast === false ? -1 : (q_.shadowNear || 20) * 1.72 + 2;       // reach of the near sun-shadow map from the camera
     const S_ = K_.dynStat = { units: 0, near: 0, far: 0, cone: 0, dist: 0, hidden: 0, draws: 0 };
     // batches rebuilt for another tier (dressing, the wilds) take their old group off the scene: drop those units from the pools
@@ -491,9 +496,10 @@ const Kit = (() => {
       if (b.mesh.visible) S_.draws++;
     }
   }
+  K_.INST_REACH = [[/fern|weed|plant|flower|clover|grass/i, 24, 16], [/rock|stone|stump|trunk|log/i, 40, 16]];
   K_.update = function (camPos) {
     lodUpdate(camPos); dynUpdate(camPos);
-    for (const im of K_.instanced) { const s = im.boundingSphere, dx = s.center.x - camPos[0], dz = s.center.z - camPos[2]; im.visible = Math.sqrt(dx * dx + dz * dz) - s.radius < im.userData.maxDist; }
+    const rk = R.q && R.q.name === 'High' ? 1.5 : 1; for (const im of K_.instanced) { const s = im.boundingSphere, dx = s.center.x - camPos[0], dz = s.center.z - camPos[2]; im.visible = Math.sqrt(dx * dx + dz * dz) - s.radius < im.userData.maxDist * rk; }
   };
   return K_;
 })();
