@@ -77,8 +77,9 @@ function buildRoutes(bucket) {
 
   // ── a: the gallery ──
   deck(GX0, ZW - 0.2, GX1, ZF, YG);
-  for (let x = GX0 + 0.35; x < GX1; x += 1.1) beam([x, YG - 0.2, ZW], [x, YG - 0.2, ZF + 0.1], 0.12, 0.2);                 // joists under the deck
-  beam([GX0, YG - 0.36, ZF + 0.02], [GX1, YG - 0.36, ZF + 0.02], 0.16, 0.34);                                            // the fascia beam along the front
+  K.box(MAT.PLANKS, [0.95, 0.82, 0.66], 0.55, GX0, YG - 0.2, ZW - 0.2, GX1, YG - 0.16, ZF, 0);       // the board ceiling between the joists, in a tone the shade does not turn black
+  for (let x = GX0 + 0.35; x < GX1; x += 1.1) beam([x, YG - 0.2, ZW], [x, YG - 0.2, ZF + 0.1], 0.12, 0.2, [0.85, 0.68, 0.5]);                 // joists under the deck
+  beam([GX0, YG - 0.36, ZF + 0.02], [GX1, YG - 0.36, ZF + 0.02], 0.16, 0.34, [0.46, 0.37, 0.28]);                                            // the fascia beam along the front
   { const posts = [-7.3, -4.6, -2.1, 2.1, 4.7, 7.3, 9.4, 13.5];                                                        // none in the inn door's strip (x 0) or the mouth of the passage (x 10.4..12.4)
     for (const x of posts) post(x, ZF - 0.1, gy(x, ZF) - 0.3, YG + 2.55, 0.2);
     for (const x of posts) beam([x - 0.3, YG + 2.05, ZF - 0.1], [x, YG + 2.55, ZF - 0.1], 0.07, 0.1);                       // knee braces

@@ -27,10 +27,11 @@ for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].s
 // [fx2] ── roof of every shell: covering, pitch, tone, sag and eaves, by district and by building (docs/TOWNPLAN.md section 3) ──
 // The generated roof used one texture (weathered wood shingle) at one pitch whatever the spec said ('thatch' was never drawn). Now: stone slate in the Market Place and Chapelgate,
 // thatch in Westgate and Wharfside, wood shingle at the river; each building takes its own pitch, tone, ridge sag and overhang out of its district's range, by a hash of its id.
-const SHELL_TONES = {      // narrow bands: variety comes from pitch, height, ridge line and form first, colour last
-  slate: [[0.74, 0.74, 0.75], [0.66, 0.66, 0.67], [0.78, 0.75, 0.7], [0.62, 0.62, 0.64]],
-  thatch: [[1, 1, 1], [0.8, 0.78, 0.74], [0.9, 0.88, 0.82]],
-  shingle: [[0.62, 0.58, 0.54], [0.5, 0.47, 0.44], [0.68, 0.65, 0.62]],
+const SHELL_TONES = {      // [fx2] roofs must read as different coverings from above: cut slate (cool dark blue-grey), stone slate (pale, lichened), thatch (warm grey-brown), shingle (silvered wood); tints above 1 lift the dark scanned albedos
+  slate: [[0.56, 0.62, 0.76], [0.46, 0.5, 0.62], [0.62, 0.64, 0.72], [0.5, 0.54, 0.66]],
+  stoneslate: [[1.5, 1.5, 1.36], [1.3, 1.32, 1.2], [1.62, 1.55, 1.38], [1.4, 1.42, 1.3]],
+  thatch: [[1.7, 1.42, 0.98], [1.5, 1.26, 0.88], [1.85, 1.58, 1.08]],
+  shingle: [[1.3, 1.27, 1.2], [1.12, 1.1, 1.04], [1.42, 1.38, 1.3]],
 };
 const SHELL_FORMS = {      // chance per house of each added form; the districts that read as crowded and working get the most
   wharfside: { outshut: 0.5, stair: 0.4, stack: 0.35, rack: 0.5, vent: 0.14 },
@@ -60,6 +61,7 @@ const SHELL = {         // per-building overrides (kind, pitch, tone index, sag,
   smithy: { kind: 'slate', pitch: 50, tone: 5, sag: 0.06, ov: 0.5, wall: [0.66, 0.64, 0.62], ground: 'stone', soot: true, cart: true },
   store: { kind: 'slate', pitch: 60, tone: 3, sag: 0.09, ov: 0.55, lime: 'ochre', ground: 'stone', dormers: 1 },
   elder: { lime: 'grey', ground: 'stone', pitch: 55, face: true },
+  'in.114': { forms: { stair: 1, outshut: 0, stack: 0, rack: 0.7, vent: 0 }, kind: 'thatch', tone: 1 }, 'in.127': { forms: { vent: 1, stack: 1, outshut: 0, stair: 0, rack: 0 }, kind: 'shingle', tone: 1, wall: [0.5, 0.48, 0.46] },
   'in.04': { face: true }, 'in.10': { face: true }, 'in.40': { face: true }, 'in.41': { face: true }, 'in.42': { face: true },
   herbalist: { lime: 'pink', ground: 'plaster', pitch: 53, face: true },
   weaver: { wall: [0.85, 0.82, 0.78], ground: 'plaster', pitch: 58 },
@@ -70,14 +72,15 @@ const _shellMemo = {};
 function shellStyle(site, spec) {
   if (_shellMemo[site.id]) return _shellMemo[site.id];
   const dn = shellDistrict(site.x, site.z), D = SHELL_DIST[dn], R = rng((Math.round(site.x * 13) * 7919 + Math.round(site.z * 17) * 104729 + 1) | 0), O = SHELL[site.id] || {};
-  const kind = O.kind || (D.alt && R() < 0.4 ? D.alt : D.kind), tones = SHELL_TONES[kind], r = (a, b) => a + (b - a) * R();
+  const kind = O.kind || (D.alt && R() < 0.4 ? D.alt : D.kind), tones = SHELL_TONES[kind === 'slate' && dn === 'chapelgate' ? 'stoneslate' : kind], r = (a, b) => a + (b - a) * R();
   const out = { dist: dn, kind, pitch: O.pitch || D.pitch[(R() * D.pitch.length) | 0], tint: tones[(O.tone !== undefined ? O.tone : (R() * tones.length) | 0) % tones.length], sag: O.sag !== undefined ? O.sag : r(D.sag[0], D.sag[1]), ov: O.ov || r(D.ov[0], D.ov[1]) };
-  const slab = false;      // draw budget: the Market Place shows one slate material; the slabs (roof_slates_02) are Chapelgate's      // roof_slates_02: small irregular weathered slabs; roof_slates_03: grey cut slate
+  const slab = dn === 'chapelgate' && kind === 'slate';      // draw budget: the Market Place shows one slate material; the slabs (roof_slates_02) are Chapelgate's      // roof_slates_02: small irregular weathered slabs; roof_slates_03: grey cut slate
   out.mat = kind === 'slate' ? (slab ? INF_SS : INF_SL) : kind === 'thatch' ? INF_TH : INF_S; out.ts = kind === 'slate' ? (slab ? 4.0 : 3.6) : kind === 'thatch' ? 1.6 : 1.25;      // a course of slates shows about 18-20 cm out.thick = kind === 'thatch' ? 0.36 : kind === 'slate' ? 0.14 : 0.1; out.thatch = kind === 'thatch';
-  out.tint = out.tint.map(v => Math.min(1, v * (0.94 + R() * 0.1)));
+  out.tint = out.tint.map(v => Math.min(2, v * (0.94 + R() * 0.1)));
   const W = SHELL_WALL[dn], jit = v => Math.min(1, v * (0.96 + R() * 0.08));
   const limeName = O.lime !== undefined ? O.lime : O.wall ? false : (W[2].length && R() < W[0] ? W[2][(R() * W[2].length) | 0] : false), plank = O.wall || W[3];
-  out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.face = O.face; out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.frame = (R() * 3) | 0; out.chimSize = 0.38 + R() * 0.24; out.chimUp = R() * 0.9; out.soot = O.soot; out.cart = O.cart;
+  out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.forms = O.forms; out.face = O.face || (typeof WHARF !== 'undefined' && WHARF.houses.some(h => h[0] === site.id));      // [fx2] houses of the re-sited lower town show a real face on their free side walls
+   out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.frame = (R() * 3) | 0; out.chimSize = 0.38 + R() * 0.24; out.chimUp = R() * 0.9; out.soot = O.soot; out.cart = O.cart;
   const SK = dn === 'market' ? ['grey', 'warm', 'dark', 'warm'] : ['grey', 'warm', 'dark', 'rubble', 'rubble'], sk = SK[(R() * SK.length) | 0]; out.stoneTint = { grey: [0.82, 0.84, 0.86], warm: [1, 0.86, 0.68], dark: [0.6, 0.6, 0.58], rubble: [1, 0.96, 0.9] }[sk].map(v => v * (0.95 + R() * 0.1)); out.stoneMat = sk === 'rubble' ? 'MI_Rubble_Wall' : undefined;
   out.lime = !!limeName; out.wallTint = (limeName ? LIME[limeName] : plank).map(jit); out.ground = O.ground || (R() < W[1] ? 'stone' : 'plaster');
   return _shellMemo[site.id] = out;
@@ -101,9 +104,8 @@ function shellDress(c, b, frames, MS, o) {
   if (R() < 0.4) { const cu = (R() < 0.5 ? 0.35 : Lf - 0.35); g.beam(W_, [cu, 0.55, 0.1], [cu, Ytop - 0.05, 0.1], 0.04, [0.16, 0.15, 0.15]); octa(g, cu, 0, 0.42, 0.32, 0.75, [0.3, 0.23, 0.17]); any = true; }
   // rain streaks under the eaves and a damp foot on limewashed walls; flaked patches where the wash has come off the daub
   if (limed) {
-    const nS = 3 + (R() * 3 | 0); if (!(site.infill && fl < 2)) for (let i = 0; i < nS; i++) { const u = 0.4 + R() * (Lf - 0.8), len = 0.7 + R() * 1.4, wd = 0.05 + R() * 0.12; g.quad(Lm, [u, Ytop - len, 0.014], [u + wd, Ytop - len * 0.9, 0.014], [u + wd * 1.4, Ytop - 0.02, 0.014], [u - wd * 0.2, Ytop - 0.02, 0.014], dk(0.55), [0, 0, 0.1, 0.1], [0, 0, 1]); }
-    if (fl > 1) for (const q of wins(front)) { const cu = (q.u0 + q.u1) / 2; g.quad(Lm, [cu - 0.3, H + 0.2, 0.014], [cu + 0.3, H + 0.2, 0.014], [cu + 0.2, H + 0.9, 0.014], [cu - 0.2, H + 0.9, 0.014], dk(0.82), [0, 0, 0.1, 0.1], [0, 0, 1]); }       // wet below the upper sills
-    for (let i = 0; i < (site.infill && fl < 2 ? 0 : 1 + (R() * 2 | 0)); i++) { let u = R() * (Lf - 1), tries = 0; while (tries++ < 8 && (openings[front] || []).some(q => u + 0.9 > q.u0 - 0.3 && u < q.u1 + 0.3)) u = R() * (Lf - 1); if (tries > 8) continue; const y = site.infill ? H + 0.2 + R() * 1.6 : R() < 0.6 ? 0.1 + R() * 0.6 : 0.8 + R() * 1.8, pw = 0.3 + R() * 0.7, ph = 0.2 + R() * 0.45; g.quad(Lm, [u, y, 0.016], [u + pw, y + R() * 0.08, 0.016], [u + pw * 0.8, y + ph, 0.016], [u + 0.1, y + ph * 0.9, 0.016], [0.22, 0.17, 0.12], [0, 0, 0.1, 0.1], [0, 0, 1]); }       // bare daub
+    const nS = 3 + (R() * 3 | 0); if (!(site.infill && fl < 2)) for (let i = 0; i < nS; i++) { const u = 0.4 + R() * (Lf - 0.8), len = 0.7 + R() * 1.4, wd = 0.05 + R() * 0.12; if ((openings[front] || []).some(q => u + wd > q.u0 - 0.2 && u < q.u1 + 0.2)) continue; g.quad(Lm, [u, Ytop - len, 0.014], [u + wd, Ytop - len, 0.014], [u + wd, Ytop - 0.02, 0.014], [u, Ytop - 0.02, 0.014], dk(0.72), [0, 0, 0.1, 0.1], [0, 0, 1]); }
+    /* [fx3] the flat grey wet-below-the-sill patch and the bare-daub patches are gone: they floated as untextured shapes over stone and beams, with no fixing to the wall */
     if (gLimed) g.quad(Lm, [0, -0.2, 0.014], [Lf, -0.2, 0.014], [Lf, 0.42, 0.014], [0, 0.42, 0.014], dk(0.55), [0, 0, 0.1, 0.1], [0, 0, 1]);      // damp at the foot
     if (gLimed) for (const lp of (c.kDoorLamps || [])) if (lp.wn === 'front') g.quad(Lm, [lp.u - 0.2, lp.v + 0.15, 0.015], [lp.u + 0.2, lp.v + 0.15, 0.015], [lp.u + 0.1, lp.v + 0.9, 0.015], [lp.u - 0.1, lp.v + 0.9, 0.015], dk(0.4), [0, 0, 0.1, 0.1], [0, 0, 1]);      // soot above the lamp
     any = true; }
@@ -134,7 +136,7 @@ function shellDress(c, b, frames, MS, o) {
     put(wn, g3); }
   // [fx2] silhouette: a house is not one box. Per district, a catslide outshut, an outside stair to a loft door with a hoist, a gable chimney stack, a drying rack, a smoke louvre (all outside the footprint; near weight, small parts)
   if (SHELL_FORMS[SSt.dist] && site.id !== 'inn') {
-    const FM = SHELL_FORMS[SSt.dist], RF = rng(Math.round(site.x * 53 + site.z * 29) + 77), others = SITES.filter(s5 => s5 !== site && s5.w && s5.id !== 'tower');
+    const FM = Object.assign({}, SHELL_FORMS[SSt.dist], SSt.forms || {}), RF = rng(Math.round(site.x * 53 + site.z * 29) + 77), others = SITES.filter(s5 => s5 !== site && s5.w && s5.id !== 'tower');
     const free = (wn, u0, u1, zd) => { const Wd = WALLS[wn], s0 = Wd.start(w, d); for (let i = 0; i <= 4; i++) for (let j = 0; j <= 3; j++) { const u = u0 + (u1 - u0) * i / 4, z = 0.3 + (zd - 0.3) * j / 3, lx = s0[0] + Wd.u[0] * u + Wd.n[0] * z, lz = s0[2] + Wd.u[2] * u + Wd.n[2] * z, wp = siteToWorld(site, lx, lz); for (const s5 of others) { const dx = wp[0] - s5.x, dz = wp[1] - s5.z, cc = Math.cos(s5.yaw), sn = Math.sin(s5.yaw), uu = dx * cc + dz * sn, vv = -dx * sn + dz * cc; if (Math.abs(uu) < s5.w / 2 + 0.3 && Math.abs(vv) < s5.d / 2 + 0.3) return false; } } return true; };
     const wallCol = SSt.wallTint || [0.62, 0.6, 0.58], yRidge = Ytop + d / 2 * tanP, used = {};
     const tri2 = (g5, m5, A, B, C, col) => { g5.tri(m5, A, B, C, col, [0, 0, 1.6, 1.6], [0, 0, 0]); };
@@ -164,8 +166,8 @@ function shellDress(c, b, frames, MS, o) {
     // 3: a big stone stack outside a gable end
     if (RF() < FM.stack) for (const wn of ['left', 'right']) {
       const Lw = L(wn); if (used.stair === wn || used.outshut === wn || (infNeighbour && infNeighbour(site, wn === 'right') > 0) || !free(wn, Lw * 0.5 - 0.6, Lw * 0.5 + 0.6, 0.9)) continue;
-      const g7 = GP(), cu = Lw * (0.4 + RF() * 0.2), top = yRidge + 0.55, sc = (SSt.stoneTint || [0.8, 0.8, 0.8]).map(v => v * 0.9);
-      g7.box(INF_B, cu - 0.5, -0.3, -0.02, cu + 0.5, Ytop + 0.2, 0.75, sc); g7.box(INF_B, cu - 0.38, Ytop + 0.2, -0.02, cu + 0.38, top, 0.55, sc); g7.box(INF_B, cu - 0.47, top, -0.05, cu + 0.47, top + 0.12, 0.62, sc.map(v => v * 0.85));
+      const g7 = GP(), cu = Lw * (0.4 + RF() * 0.2), top = yRidge + 0.55, sc = (SSt.stoneTint || [0.8, 0.8, 0.8]).map(v => v * 0.55);
+      g7.box(INF_B, cu - 0.5, -0.3, -0.02, cu + 0.5, Ytop + 0.2, 0.75, sc); g7.box(INF_B, cu - 0.38, Ytop + 0.2, -0.02, cu + 0.38, top - 0.5, 0.55, sc); g7.box(INF_B, cu - 0.38, top - 0.5, -0.02, cu + 0.38, top, 0.55, sc.map(v => v * 0.5)); g7.box(INF_B, cu - 0.47, top, -0.05, cu + 0.47, top + 0.12, 0.62, sc.map(v => v * 0.4));      // sooted at the top
       put(wn, g7); used.stack = wn; break; }
     // 4: a drying rack for nets in the front yard, away from the door
     if (RF() < FM.rack) { const Lf2 = L(front), uc = dc > Lf2 / 2 ? 0.5 : Lf2 - 2.9, ok = free(front, uc, uc + 2.4, 1.9); if (ok) { const g8 = GP(); for (const u of [uc, uc + 2.4]) g8.beam(W_, [u, 0, 1.6], [u, 2.0, 1.6], 0.07, [0.3, 0.24, 0.18]); g8.beam(W_, [uc - 0.1, 1.95, 1.6], [uc + 2.5, 1.95, 1.6], 0.05, [0.3, 0.24, 0.18]); g8.beam(W_, [uc - 0.1, 1.25, 1.6], [uc + 2.5, 1.25, 1.6], 0.04, [0.3, 0.24, 0.18]);

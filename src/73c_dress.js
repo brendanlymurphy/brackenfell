@@ -8,7 +8,7 @@ const DRU = { wood: [0.02, 0.07, 0.62, 0.27], cloth: [0.3, 0.27, 0.55, 0.45] };
 // muted palettes (linear-ish tints: the kit materials are already warm and fairly bright)
 const DRCOL = {
   wood: [[0.44, 0.34, 0.24], [0.38, 0.30, 0.23], [0.48, 0.38, 0.27], [0.32, 0.26, 0.2], [0.42, 0.36, 0.29]],
-  cloth: [[0.55, 0.30, 0.22], [0.62, 0.50, 0.30], [0.30, 0.34, 0.46], [0.72, 0.66, 0.54], [0.34, 0.40, 0.26], [0.50, 0.42, 0.34], [0.45, 0.24, 0.30], [0.64, 0.58, 0.46]].map(c => c.map(v => v * 0.24)),       // [fx1] the kit cloth material brightens about 2x: this is what reads as pastel pink, mint and pale blue on the market stalls
+  cloth: [[0.46, 0.27, 0.2], [0.5, 0.4, 0.22], [0.24, 0.28, 0.36], [0.5, 0.44, 0.34], [0.28, 0.32, 0.22], [0.36, 0.28, 0.2], [0.34, 0.2, 0.24], [0.44, 0.4, 0.32]].map(c => c.map(v => v * 0.2)),       // [fin] madder, weld, woad, undyed linen, dull green, walnut, a plum, a grey wool; the cloth material still brightens these about 2x
   sack: [[0.26, 0.22, 0.16], [0.22, 0.19, 0.14], [0.28, 0.24, 0.18], [0.19, 0.16, 0.12]],
   straw: [[0.46, 0.36, 0.16], [0.42, 0.34, 0.16], [0.5, 0.4, 0.18]],
   iron: [0.24, 0.22, 0.21],
@@ -151,19 +151,20 @@ function dBolts(R, k) {      // rolls of cloth lying in a stack on a counter
   const g = GP(), r = 0.075;
   const row = (n, y, x0) => { for (let i = 0; i < n; i++) { const c = R.pick(DRCOL.cloth); dLogCloth(g, x0 + i * r * 2.05, y, 0, 0.5, r, c); } };
   row(3, r, -r * 2.05); row(2, r * 2.7, -r * 1.0); row(1, r * 4.4, 0);
+  { const c = R.pick(DRCOL.cloth); g.quad(DRC, [-r * 2.2, r * 1.8, 0.24], [r * 2.4, r * 1.8, 0.24], [r * 2.5, 0.0, 0.46], [-r * 2.1, 0.0, 0.48], dscale(c, 0.95), DRU.cloth, true); }       // a length unrolled and let fall over the counter edge
   return g.make(key);
 }
 function dLogCloth(g, x, y, z, len, r, col) {
   const n = 7, q = (a, zz) => [x + Math.cos(a) * r, y + Math.sin(a) * r, z + zz];
-  for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU; g.quad(DRC, q(a1, -len / 2), q(a1, len / 2), q(a0, len / 2), q(a0, -len / 2), col, DRU.cloth); }
-  for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU; g.tri(DRC, [x, y, z + len / 2], q(a1, len / 2), q(a0, len / 2), dscale(col, 1.18), DRU.cloth); g.tri(DRC, [x, y, z - len / 2], q(a0, -len / 2), q(a1, -len / 2), dscale(col, 1.18), DRU.cloth); }
+  for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU, wv = 0.88 + 0.16 * ((i * 7 + Math.round(x * 50)) % 3) / 2; g.quad(DRC, q(a1, -len / 2), q(a1, len / 2), q(a0, len / 2), q(a0, -len / 2), dscale(col, wv), DRU.cloth); }
+  for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU; g.tri(DRC, [x, y, z + len / 2], q(a1, len / 2), q(a0, len / 2), dscale(col, 0.78), DRU.cloth); g.tri(DRC, [x, y, z - len / 2], q(a0, -len / 2), q(a1, -len / 2), dscale(col, 0.78), DRU.cloth); }
 }
 function dLoaves(R, k) {      // a board of bread: loaves, rolls and a cheese wheel
   const key = 'dr_loaves' + k; if (Kit.pieces[key]) return key;
   const g = GP();
   g.box(DRW, -0.38, 0, -0.2, 0.38, 0.025, 0.2, [0.5, 0.4, 0.3], DRU.wood);
   for (let i = 0; i < 5; i++) { const x = -0.32 + (i % 3) * 0.24 + R.s() * 0.02, z = -0.09 + Math.floor(i / 3) * 0.19, L = 0.1 + R() * 0.03, c = [0.66 + R() * 0.08, 0.46 + R() * 0.06, 0.24]; g.box(DRC, x - L, 0.025, z - 0.045, x + L, 0.075, z + 0.045, c, DRU.cloth); g.box(DRC, x - L + 0.02, 0.075, z - 0.035, x + L - 0.02, 0.098, z + 0.035, dscale(c, 1.06), DRU.cloth); }
-  if (k % 2) dPrism(g, DRC, DRU.cloth, 0.28, 0.025, 0.12, 0.09, 0.09, 0.06, 8, [0.72, 0.6, 0.28], [0.74, 0.62, 0.32]);
+  if (k % 2) dPrism(g, DRC, DRU.cloth, 0.28, 0.025, 0.12, 0.09, 0.09, 0.06, 8, [0.56, 0.46, 0.26], [0.6, 0.5, 0.3]);
   return g.make(key);
 }
 function dHangMeat(R, k) {      // a pole of hams and sausage ropes (origin at the pole's centre, hanging down)
@@ -286,7 +287,7 @@ function dStall(kind, R, cols) {      // a market stall: four posts, a counter, 
   const n = 8, sw = (w + 0.5) / n, y0 = 2.14, y1 = 1.78, z0 = -d / 2 - 0.15, z1 = d / 2 + 0.3;       // canopy slopes down toward the front (+z)
   for (let i = 0; i < n; i++) { const x0 = -w / 2 - 0.25 + i * sw, x1 = x0 + sw, c1 = i % 2 ? cols[1] : cols[0]; g.quad(DRC, [x0, y0 + 0.2, z0], [x1, y0 + 0.2, z0], [x1, y1, z1], [x0, y1, z1], c1, DRU.cloth, true); g.quad(DRC, [x0, y1, z1], [x1, y1, z1], [x1, y1 - 0.16, z1 + 0.02], [x0, y1 - 0.16, z1 + 0.02], c1, DRU.cloth, true); }
   const goods = {
-    greens: () => { const ks = [[[0.68, 0.18, 0.12], [0.72, 0.58, 0.16]], [[0.84, 0.46, 0.12], [0.78, 0.52, 0.16]], [[0.38, 0.52, 0.2], [0.5, 0.58, 0.26]]]; for (let i = 0; i < 3; i++) putPart(g, genProduce(ks[i], R), -0.78 + i * 0.78, 0.87, -0.1, 1.0, R.s() * 0.2); putPart(g, dBasket(R, 'g' + DRS.n), 0.95, 0, 0.45, 1.1, 0); putPart(g, dSack(R, 'a' + DRS.n), -1.0, 0, 0.55, 1.0, 0); putPart(g, dSack(R, 'b' + DRS.n), -0.72, 0, 0.62, 0.9, 1); },
+    greens: () => { const ks = [[[0.5, 0.3, 0.14], [0.5, 0.48, 0.2], [0.44, 0.26, 0.12]], [[0.56, 0.36, 0.14], [0.48, 0.34, 0.16]], [[0.3, 0.4, 0.2], [0.36, 0.44, 0.22], [0.26, 0.34, 0.18]]]; for (let i = 0; i < 3; i++) putPart(g, genProduce(ks[i], R), -0.78 + i * 0.78, 0.87, -0.1, 1.0, R.s() * 0.2); putPart(g, dBasket(R, 'g' + DRS.n), 0.95, 0, 0.45, 1.1, 0); putPart(g, dSack(R, 'a' + DRS.n), -1.0, 0, 0.55, 1.0, 0); putPart(g, dSack(R, 'b' + DRS.n), -0.72, 0, 0.62, 0.9, 1); },
     bread: () => { for (let i = 0; i < 3; i++) putPart(g, dLoaves(R, i), -0.75 + i * 0.75, 0.87, -0.1, 1.0, R.s() * 0.15); putPart(g, dBasket(R, 'p' + DRS.n), 0.9, 0.87, 0.3, 1.0, 0); putPart(g, dPot(R, 'j' + DRS.n), -1.05, 0.87, 0.35, 0.9, 0); putPart(g, dSack(R, 'c' + DRS.n), 1.05, 0, 0.55, 1.1, 0.4); },
     cloth: () => { for (let i = 0; i < 3; i++) putPart(g, dBolts(R, i), -0.75 + i * 0.75, 0.87, -0.12, 1.0, R.s() * 0.1 + PI / 2 * 0); for (let i = 0; i < 4; i++) { const c = R.pick(DRCOL.cloth), x = -0.9 + i * 0.6, L = 0.6 + R() * 0.4; g.quad(DRC, [x, 2.05, -d / 2 + 0.12], [x + 0.4, 2.05, -d / 2 + 0.12], [x + 0.42, 2.05 - L, -d / 2 + 0.13], [x + 0.02, 2.05 - L * (0.9 + R() * 0.1), -d / 2 + 0.13], c, DRU.cloth, true); } },
     pots: () => { for (let i = 0; i < 6; i++) putPart(g, dPot(R, 's' + DRS.n + i), -0.9 + i * 0.36, 0.87, -0.15 + (i % 2) * 0.28, 0.8 + R() * 0.4, 0); for (let i = 0; i < 3; i++) putPart(g, dPot(R, 'f' + DRS.n + i), -1.0 + i * 0.5, 0, 0.62 + R() * 0.1, 1.5 + R() * 0.5, 0); putPart(g, dBucket(R, 'q' + DRS.n), 1.05, 0, 0.6, 1.0, 0); },
@@ -397,6 +398,8 @@ function buildDress() {
     if (sq) for (const p of stones) if (hyp(x - p[0], z - p[1]) < 1.6 + r) return false;
     for (const s of spotsOut) if (hyp(x - s.p[0], z - s.p[2]) < r + 0.9) return false;
     for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + 0.12 && Math.abs(l[1]) < s.d / 2 + 0.12) return false; }
+    for (const s of SITES) if (/^high\./.test(s.id) && hyp(x - s.x, z - s.z) < 9) return false;      // [fx3] the hamlet's own yard props are built later (79_wilds.js): dress leaves that yard alone
+    { let nb = 0; for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + 0.85 && Math.abs(l[1]) < s.d / 2 + 0.85 && ++nb > 1) return false; } }      // [fx3] nothing is stood in a gap under 1.6 m between two houses
     for (const h in World.houses) { const d = World.houses[h].door; if (d && hyp(x - d.out[0], z - d.out[2]) < r + 1.5) return false; }
     for (const f of FIELDS) if (x > f.x0 - 1 && x < f.x1 + 1 && z > f.z0 - 1 && z < f.z1 + 1) return false;
     if (River.dist(x, z, 7 + r) < 4.5 + r) return false;
@@ -470,7 +473,7 @@ function buildDress() {
   };
   const kindOf = s => s.id === 'inn' ? 'inn' : s.id === 'smithy' ? 'smithy' : s.id === 'store' ? 'store' : /^(farm|barn|mill)$/.test(s.id) ? 'farm' : s.id === 'chapel' ? 'chapel' : s.id === 'tower' ? null : /^(shop\.|draper)/.test(s.id) ? 'shop' : 'house';
   for (const s of SITES) {
-    const kind = kindOf(s); if (!kind) continue;
+    R.seed(idSeed('dress' + s.id)); const kind = kindOf(s); if (!kind) continue;
     const alley = kind === 'shop', n = alley ? 7 : kind === 'chapel' ? 3 : s.infill ? 3 + R.i(0, 1) : 5 + R.i(0, 2), list = kinds[kind];
     let placed = 0;
     for (let tries = 0; tries < 220 && placed < n; tries++) {
@@ -501,6 +504,7 @@ function buildDress() {
     }
     (DRS.cnt = DRS.cnt || {})[s.id] = placed;
   }
+  R.seed(8801);
   // ── market stalls: the square's rim and the alley's middle band, each stocked ──
   const stallKinds = ['greens', 'bread', 'cloth', 'pots', 'fish', 'meat'], stallCols = [[[0.28, 0.14, 0.12], [0.4, 0.37, 0.3]], [[0.13, 0.17, 0.24], [0.4, 0.37, 0.3]], [[0.18, 0.22, 0.13], [0.39, 0.36, 0.29]], [[0.31, 0.23, 0.12], [0.4, 0.37, 0.29]], [[0.23, 0.16, 0.15], [0.39, 0.36, 0.3]]];      // Build 42: faded madder, woad, moss, ochre on undyed linen (the canopy material brightens these about 1.6x)
   DRS.stalls = [];
@@ -570,7 +574,7 @@ function buildDress() {
   const [lf, lg] = AL.lan || (AL.lan = genBracketLantern());
   const wallOf = s => s.doorWall || 'front';
   for (const s of SITES) {
-    const kind = kindOf(s); if (!kind || kind === 'shop' && !s.facade) continue;
+    R.seed(idSeed('dressB' + s.id)); const kind = kindOf(s); if (!kind || kind === 'shop' && !s.facade) continue;
     const face = wallOf(s), L = wallLen(s, face), dl = siteDoorLocal(s, 0), du = (face === 'front' || face === 'back') ? dl[0] : dl[1];
     const tint = [0.36, 0.44, 0.3];
     // vines: a few strands on random walls, away from the door
@@ -587,6 +591,7 @@ function buildDress() {
     const lp = [w.x + q.x, yL - 0.1, w.z + q.z]; World.emitters.push({ type: 'lantern', p: lp, zone: 0, halo: s.infill ? 0.4 : 0.7 }); if (DRS.lights++ < 5 && World.lights.length < 40) addLight(lp, 9, [3.0, 1.7, 0.7], 0, 'lantern');
     if (glyphs[s.id] || kind === 'inn') { const w2 = wallAt(s, face, du - side * 1.3, 0.0), sg = genSign(glyphs[s.id] || 'crest', [1.0, 0.8, 0.45]); add(sg, w2.x, s.y + 2.45 + R() * 0.3, w2.z, 1, w2.ry, false); }
   }
+  R.seed(8802);
   // laundry between upper windows of some alley shops, and a few cottages
   for (const sh of AL.shops) {
     if (sh.house || !sh.a || sh.fl < 2 || R() < 0.45) continue;

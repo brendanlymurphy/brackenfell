@@ -93,7 +93,12 @@ let steps = STEPS.filter(s => (!QUICK || s.quick) && (!only || only.includes(s.i
 } }
 if (has('--no-build')) steps = steps.filter(s => s.id !== 'build');
 // --shard k/n: every n-th step, for running the gate as n jobs side by side on separate machines (GitHub). Each shard builds for itself.
-if (val('--shard')) { const [k, n] = val('--shard').split('/').map(Number); let j = 0; steps = steps.filter(s => s.id === 'build' || (j++ % n) === k - 1); }
+// The steps are dealt out by how long each took on GitHub (seconds, Build 76), longest first into the shard with the least so far: dealt
+// in turn, one shard got bot-play (15 min, 30 when its first try fails) on top of a full share and ran 46 min while the others took 20.
+const SECS = { 'bot-play': 915, kitcull: 554, offline: 346, cullwalk: 249, 'bot-soak': 222, 'bot-phone': 199, 'bot-sweep': 160, 'bot-story': 122, real: 76, webgpu: 60, 'budget-medium': 57, 'budget-low': 45, story: 41, stairs: 36, voice_game: 35, voice_parts: 34, town: 32, wilds: 32 };
+if (val('--shard')) { const [k, n] = val('--shard').split('/').map(Number), w = s => SECS[s.id] || (/^cells-/.test(s.id) ? 290 : 20), load = new Array(n).fill(0), mine = new Set();
+  for (const s of steps.filter(s => s.id !== 'build').sort((a, b) => w(b) - w(a) || (a.id < b.id ? -1 : 1))) { let b = 0; for (let i = 1; i < n; i++) if (load[i] < load[b]) b = i; load[b] += w(s); if (b === k - 1) mine.add(s.id); }
+  steps = steps.filter(s => s.id === 'build' || mine.has(s.id)); }
 
 const t0 = Date.now(), rows = []; let failed = 0;
 for (const s of steps) {

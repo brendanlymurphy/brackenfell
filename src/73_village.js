@@ -61,9 +61,9 @@ function buildVillage() {
   for (const [x, z, col, kind] of stalls) {
     const yaw = headingTo(x, z, 0, -1.5);
     put(x, z, yaw, m => Props.stall(m, col, y => {
-      if (kind === 0) { for (const [cx, kindG] of [[-0.85, 'apple'], [0, 'cabbage'], [0.85, 'apple']]) at(m, cx, y, -0.3, 0, () => { m.mat(MAT.PLANKS, COL.wood, 0.5); m.box(-0.36, 0, -0.26, 0.36, 0.14, 0.26, 8); for (let i = 0; i < 12; i++) at(m, (i % 4) * 0.17 - 0.26, 0.12, Math.floor(i / 4) * 0.16 - 0.16, 0, () => kindG === 'apple' ? Props.apple(m, cx < 0 ? COL.apple : [0.62, 0.72, 0.22]) : Props.cabbage(m)); }); }
+      if (kind === 0) { for (const [cx, kindG] of [[-0.85, 'apple'], [0, 'cabbage'], [0.85, 'apple']]) at(m, cx, y, -0.3, 0, () => { m.mat(MAT.PLANKS, COL.wood, 0.5); m.box(-0.36, 0, -0.26, 0.36, 0.14, 0.26, 8); for (let i = 0; i < 12; i++) at(m, (i % 4) * 0.17 - 0.26, 0.12, Math.floor(i / 4) * 0.16 - 0.16, 0, () => kindG === 'apple' ? Props.apple(m, cx < 0 ? [0.5, 0.3, 0.14] : [0.5, 0.55, 0.2]) : Props.cabbage(m)); }); }
       else if (kind === 1) Props.clutter(m, R, -1.1, 1.1, y, -0.25, ['loaf', 'cheese', 'loaf', 'cheese', 'jug', 'loaf'], 7);
-      else { Props.clutter(m, R, -1.1, 0.2, y, -0.25, ['pot', 'pot', 'jug', 'bowl', 'pot'], 5); for (let k = 0; k < 3; k++) at(m, 0.55 + k * 0.22, y, -0.3, PI / 2, () => clothBolt(m, [DYE.red, DYE.yellow, DYE.blue][k])); }
+      else { Props.clutter(m, R, -1.1, 0.2, y, -0.25, ['pot', 'pot', 'jug', 'bowl', 'pot'], 5); for (let k = 0; k < 3; k++) at(m, 0.55 + k * 0.22, y, -0.3, PI / 2, () => { const bc = [[0.3, 0.17, 0.13], [0.4, 0.33, 0.17], [0.2, 0.24, 0.31]][k]; m.mat(MAT.CLOTH, bc, 0.5); m.push().RZ(PI / 2).T(0.07, -0.3, 0); m.cyl(0, 0, 0, 0.07, 0.07, 0.6, 8, 3); m.pop(); m.mat(MAT.CLOTH, bc.map(v => v * 0.7), 0.5); m.box(-0.08, 0.0, -0.31, 0.08, 0.12, -0.28, 0); }); }
     }));
     const b = [x - Math.sin(yaw) * 1.05, z + Math.cos(yaw) * 1.05];
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);
@@ -242,7 +242,7 @@ function buildVillage() {
   // ── dynamic objects: door leaves, mill wheel, pickups ──
   const skin = new MeshPack();
   // [fx2] six hinged leaves (weathered oak, dark oak, silvered, and three faded paints) so a street's doors are not one door; a door takes one by its house, so both sides of a portal agree
-  const LEAF_COL = [[0.95, 0.82, 0.66], [0.62, 0.54, 0.44], [0.85, 0.8, 0.72], [0.5, 0.68, 0.58], [0.85, 0.42, 0.36], [0.5, 0.62, 0.72]];
+  const LEAF_COL = [[0.95, 0.82, 0.66], [0.62, 0.54, 0.44], [0.85, 0.8, 0.72], [0.4, 0.5, 0.44], [0.52, 0.4, 0.37], [0.42, 0.48, 0.54]];
   const mkLeaf = (bc) => { const leaf = new Mesh(512);
   // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
   leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
@@ -253,7 +253,7 @@ function buildVillage() {
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   return leaf; };
   const leafItems = LEAF_COL.map(bc => skin.add(mkLeaf(bc))), leafItem = leafItems[0], leafPick = d => { const key = String(d.cell || (d.site && d.site.id) || ''); let h = 0; for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0; return leafItems[[0, 0, 1, 1, 2, 3, 4, 5][Math.abs(h) % 8]]; };
-  for (const d of World.doors) { d.obj = addSkinned(leafPick(d), { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafPick(d), { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, light: d.cell && d.side === 'in' ? 1.25 : 1.75, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;
@@ -379,6 +379,8 @@ function buildVillage() {
   }
   for (const m of houseExt.values()) pack.add(m, { kind: 'opaque' });
   World.villagePack = pack;
+  /* [fx3] a loose prop (barrel, post, pot: a small circle) that was stood inside a house wall by a generator that only knew the unrotated frame is left drawn but not solid, so two solids never share space */
+  { const walls = World.colliders.filter(b => b.hx !== undefined && b.y1 - b.y0 > 2.5); let cut = 0; for (let i = World.colliders.length - 1; i >= 0; i--) { const c = World.colliders[i]; if (c.r === undefined || c.r > 0.5) continue; for (const b of walls) { if (c.y1 < b.y0 || c.y0 > b.y1) continue; const dx = c.x - b.x, dz = c.z - b.z; if (Math.abs(dx) > b.hx + 1 && Math.abs(dz) > b.hx + 1) continue; const u = dx * b.ax + dz * b.az, v = dx * b.bx + dz * b.bz; if (Math.abs(u) < b.hx + c.r && Math.abs(v) < b.hz + c.r) { World.colliders.splice(i, 1); cut++; break; } } } World.propsCut = cut; }
   World.packs.push(pack);
 }
 // register a skinned / hinged object; returns the object (bone matrices live in R.boneData at slot*256)

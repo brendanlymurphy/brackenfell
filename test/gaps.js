@@ -1,0 +1,7 @@
+// footprint gaps between neighbouring houses: <0.6 party wall, 0.6-1.6 not allowed (the planner moves one), >=1.6 ginnel. Run: node test/ev.mjs "$(cat test/gaps.js)"
+const rect = s => { const c = Math.cos(s.yaw || 0), n = Math.sin(s.yaw || 0), hw = s.w / 2, hd = s.d / 2; return [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(([x, z]) => [s.x + x * c - z * n, s.z + x * n + z * c]); };
+const segD = (p, a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / (dx * dx + dz * dz || 1))); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dz); };
+const dist = (A, B) => { let m = 1e9; for (const P of [A, B]) { const Q = P === A ? B : A; for (const p of P) for (let i = 0; i < 4; i++) m = Math.min(m, segD(p, Q[i], Q[(i + 1) % 4])); } return m; };
+const list = []; const all = SITES.filter(s => s.w && s.d && s.x !== undefined); const R = all.map(rect);
+for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) { if (Math.abs(all[i].x - all[j].x) > 30 || Math.abs(all[i].z - all[j].z) > 30) continue; const d = dist(R[i], R[j]); if (d < 1.6) list.push({ a: all[i].id || all[i].name, b: all[j].id || all[j].name, gap: +d.toFixed(2), band: d < 0.6 ? 'party' : 'BAD', x: +((all[i].x + all[j].x) / 2).toFixed(1), z: +((all[i].z + all[j].z) / 2).toFixed(1) }); }
+return { party: list.filter(p => p.band === 'party').length, bad: list.filter(p => p.band === 'BAD'), }

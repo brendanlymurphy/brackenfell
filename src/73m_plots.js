@@ -122,7 +122,7 @@ function buildPlots(bucket) {
     else if (kind === 'stable') { put(-wd / 4, dp * 0.35, (x, z) => { const g = gy(x, z); m.mat(MAT.THATCH, [0.72, 0.6, 0.3], 0.5); m.ball(x, g + 0.7, z, 1.3, 0.8, 1.0, 6, 4); addBoxCollider(m, x - 1.1, z - 0.8, x + 1.1, z + 0.8, g, g + 1.4); m.mat(MAT.PLANKS, [0.34, 0.27, 0.2], 0.5); m.box(x + 2.0, g, z - 0.3, x + 3.2, g + 0.5, z + 0.3, 4); m.mat(MAT.PLAIN, [0.15, 0.2, 0.24]); m.box(x + 2.1, g + 0.42, z - 0.2, x + 3.1, g + 0.5, z + 0.2, 4); addBoxCollider(m, x + 2.0, z - 0.3, x + 3.2, z + 0.3, g, g + 0.5); flat(m, x + 2.6, z + 1.0, 1.0, 0.6, [0.18, 0.13, 0.08], MAT.MUD, 0.3, 0.03); });
       put(wd / 4, dp * 0.7, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.4, 0.31, 0.22], 0.5); m.box(x - 1.0, g + 0.45, z - 0.5, x + 1.0, g + 0.7, z + 0.5, 4); for (const sx of [-0.8, 0.8]) m.cyl(x + sx, g, z + 0.6, 0.38, 0.38, 0.1, 6, 2); addBoxCollider(m, x - 1.0, z - 0.55, x + 1.0, z + 0.55, g, g + 0.75); }); }
   };
-  for (const p of P) {
+  for (const p of P) { R.seed(idSeed("plot" + p.id));      // [fx3] seeded from the house: removing another house leaves this plot as it was
     if (p.axis === 'x') {      /* walls on the party lines, a back wall with a gate, the work kept in a lean-to against the house's back (frame of the house) */
       const m = bucket((p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2), tone = 0.44 + R() * 0.06, xw = p.wall, xh = p.bx > 0 ? p.x0 : p.x1, zc = (p.z0 + p.z1) / 2, gz = zc + (R() - 0.5) * 2, gw = 1.3;
       stone(m, xw, p.z0 + 0.15, xw, gz - gw / 2, H - 0.1, tone); stone(m, xw, gz + gw / 2, xw, p.z1 - 0.15, H - 0.1, tone);
