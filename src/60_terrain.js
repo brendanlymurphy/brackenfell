@@ -316,6 +316,10 @@ function buildSplat2() {
     const p = rd.line.point(d), o = R.s() * rd.w * 0.42; if (hyp(p[0] - SQUARE.x, p[1] - SQUARE.z) < 14) continue;
     blob(A, 1, p[0] - p[3] * o, p[1] + p[2] * o, 0.7 + R() * 1.2, 0.9, 0.3);
   }
+  /* [fx3] the Market Place's drain: a wet channel down the middle of the place (the fall runs to z+), a branch down Wharf Street's mouth, and puddle hollows in the low cobbles */
+  { const dr = [[-19.4, -0.5], [-10, 0.4], [-3, 1.1], [3, 1.7], [10, 2.3], [20.2, 3.4]], br = [[2.8, 1.6], [0.9, 5.5], [0.3, 9], [0.2, 14], [0.2, 22]];
+    for (const pl of [dr, br]) for (const [w, a2] of [[1.8, 0.16], [0.9, 0.30], [0.4, 0.55]]) line(A, 1, pl, w, a2);
+    const Rp = rng(5521); for (let i = 0; i < 14; i++) { const x = -17 + Rp() * 36, z = -12 + Rp() * 22; if (placeW(x, z, 0.01) < 1) continue; blob(A, 1, x, z, 0.6 + Rp() * 0.9, 0.42, 0.2); } }
   // contact shade and trampled earth around anything solid that stands on the ground
   for (const c of World.colliders) {
     if (Math.abs(c.x) > half || Math.abs(c.z) > half) continue;

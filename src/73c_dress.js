@@ -385,6 +385,7 @@ function buildDress() {
     o = o || {};
     if (hyp(x, z) > WORLD_RADIUS + 8) return false;
     if (KEEP.hit(x, z, r * 1.45)) return false;          // Build 33
+    if (z > 10.9 - r * 0.5 && z < 13.4 + r * 0.5 && x > -37.5 - r && x < 25) return false;      /* [fx3] the terrace's south wall and its lean-to stand here: nothing is dressed into the wall */
     if (routeNear(x, z, r + 0.7)) return false;          // [fx3] a walk the route tests make (galleries, lanes, the dead yard) stays clear: never in a door's approach strip or on a road's centre line
     for (const p of DRS.placed) if (hyp(x - p[0], z - p[1]) < r + p[2]) return false;
     const al = inAlley(x, z);
@@ -512,8 +513,9 @@ function buildDress() {
     World.spots['dstall' + k] = { p: [x + fx * 1.5, gy(x + fx * 1.5, z + fz * 1.5), z + fz * 1.5], yaw: ry + PI, zone: 0 };
     if (R() < 0.8) { const sx = x - Math.cos(ry) * 1.8, sz = z + Math.sin(ry) * 1.8; if (ok(sx, sz, 0.6, { square: true })) { add(pick(R() < 0.5 ? barrels : crates), sx, gy(sx, sz), sz, 1, R() * TAU, false); solid(sx, sz, 0.4, 0.9); claim(sx, sz, 0.5); } }
   };
-  { let placedS = 0;      // [fx3] the place's stalls stand in two rows facing the cart way, in front of the north and south fronts, not scattered at random
-    for (const [x, z, ry] of [[-6.4, -12.0, 0], [2.4, -12.6, 0], [14.0, -12.0, 0], [-3.4, 5.4, PI], [12.6, 5.0, PI]]) { if (!ok(x, z, 1.1, { square: true })) { continue; } placeStall(x, z, ry, stallKinds[(placedS + 1) % stallKinds.length]); placedS++; } }
+  { let placedS = 0;      // [fx3] the place's stalls stand in two rows facing the cart way, in front of the north and south fronts, not scattered at random; each has fallback spots in its row
+    for (const [cands, ry] of [[[[-14.2, -12.4], [-13.0, -11.2], [-15.5, -10.6]], 0], [[[-6.4, -12.0], [-7.6, -11.0], [-5.0, -11.6]], 0], [[[2.4, -12.6], [1.0, -11.8], [4.0, -12.2]], 0], [[[14.0, -12.0], [12.2, -12.4], [15.4, -10.8]], 0], [[[-3.4, 5.4], [-2.0, 4.8], [-4.8, 5.0]], PI], [[[12.6, 5.0], [10.4, 5.6], [14.2, 4.6]], PI]]) {
+      for (const [x, z] of cands) { if (!ok(x, z, 1.1, { square: true })) continue; placeStall(x, z, ry, stallKinds[(placedS + 1) % stallKinds.length]); placedS++; break; } } }
   // alley: stalls and carts set into the middle band, nearer the shop fronts, leaving the walking line free
   for (const [x, rowS, kind] of [[26.5, -1, 'greens'], [33.5, -1, 'fish'], [38.2, 1, 'meat'], [45.0, -1, 'pots']]) {
     const z = roadZ(x) + rowS * 3.6, ry = rowS < 0 ? 0 : PI;

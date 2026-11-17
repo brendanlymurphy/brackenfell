@@ -69,7 +69,7 @@ function buildVillage() {
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);
   }
   putc(11.8, 6.3, 0.4, m => Props.barrel(m)); putc(12.2, 5.2, 0, m => Props.crate(m, 0.6)); putc(6.9, 7.3, 0.2, m => Props.crate(m, 0.55)); putc(-12.9, -4.2, 0, m => Props.barrel(m));
-  putc(-6.4, 11.3, 0.08, m => Props.cart(m, true));      // Build 42: parked against the terrace wall east of the flight (it stood on the steps' first treads)
+  putc(-6.4, 9.7, 0.08, m => Props.cart(m, true));      // Build 42: parked against the terrace wall east of the flight (it stood on the steps' first treads)
   // festival fire pit (lit at the end of the story)
   World.bonfirePos = [-2.6, -7.4];
   put(-2.6, -7.4, 0, m => {

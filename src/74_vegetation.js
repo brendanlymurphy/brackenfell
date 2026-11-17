@@ -133,11 +133,11 @@ function buildVegetation() {
   // bushes and boulders
   for (let i = 0; i < 700; i++) {
     const a = R() * TAU, r = 26 + Math.pow(R(), 0.7) * 160, x = Math.cos(a) * r, z = Math.sin(a) * r;
-    if (blocked(x, z, 0.3)) continue;
+    if (blocked(x, z, 0.3) || placeW(x, z, 2.5) > 0) continue;
     inst.bush.push([x, Terrain.y(x, z) - 0.05, z, 0.5 + R() * 0.65, R() * TAU, R(), R(), 0]);
   }
-  for (const s of SITES) { if (!HOUSES[s.id] || s.id === 'barn') continue; for (let k = 0; k < 5; k++) { const side = R() < 0.5 ? -1 : 1, lx = R.s() * s.w * 0.45, p = siteToWorld(s, lx, side * (s.d / 2 + 0.8)); const dl = siteDoorLocal(s, 0); if (hyp(lx - dl[0], side * (s.d / 2) - dl[1]) < 1.8 || s.id === 'smithy' && side < 0) continue; inst.bush.push([p[0], Terrain.y(p[0], p[1]) - 0.05, p[1], 0.45 + R() * 0.4, R() * TAU, R(), R(), 0]); } }
-  for (const g of World.gardenPlants || []) inst.bush.push([g[0], Terrain.y(g[0], g[1]) - 0.02, g[1], 0.42 + R() * 0.15, R() * TAU, g[2] * 0.45, R(), 0]);
+  for (const s of SITES) { if (!HOUSES[s.id] || s.id === 'barn') continue; for (let k = 0; k < 5; k++) { const side = R() < 0.5 ? -1 : 1, lx = R.s() * s.w * 0.45, p = siteToWorld(s, lx, side * (s.d / 2 + 0.8)); const dl = siteDoorLocal(s, 0); if (placeW(p[0], p[1], 2.5) > 0 || hyp(lx - dl[0], side * (s.d / 2) - dl[1]) < 1.8 || s.id === 'smithy' && side < 0) continue; inst.bush.push([p[0], Terrain.y(p[0], p[1]) - 0.05, p[1], 0.45 + R() * 0.4, R() * TAU, R(), R(), 0]); } }
+  for (const g of World.gardenPlants || []) if (placeW(g[0], g[1], 2.5) <= 0) inst.bush.push([g[0], Terrain.y(g[0], g[1]) - 0.02, g[1], 0.42 + R() * 0.15, R() * TAU, g[2] * 0.45, R(), 0]);
   const colHit = (x, z, r) => { for (const c of World.colliders) { if (c.r !== undefined) { if (Math.hypot(x - c.x, z - c.z) < c.r + r * 0.7) return true; continue; } const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz; if (Math.hypot(Math.max(Math.abs(dx) - c.hx, 0), Math.max(Math.abs(dz) - c.hz, 0)) < r * 0.7) return true; } return false; };   // [fx1] a boulder never settles on a wall, a post or a building laid down before it
   const addRock = (x, z, s) => { if (s > 0.6 && colHit(x, z, 0.78 * s)) return; const y = gy(x, z); inst.rock.push([x, y - 0.22 * s, z, s, R() * TAU, R(), R(), 0]); if (s > 0.8 && hyp(x, z) < WORLD_RADIUS + 5) World.colliders.push({ x, z, r: 0.78 * s, y0: y - 1, y1: y + 0.9 * s }); };
   for (let i = 0; i < 420; i++) {

@@ -506,7 +506,7 @@ function kitScatter() {
     for (const r of Roads) if (r.line.dist(x, z, r.w / 2 + pad) < r.w / 2 + pad) return false;
     for (const f of FIELDS) if (x > f.x0 - pad && x < f.x1 + pad && z > f.z0 - pad && z < f.z1 + pad) return false;
     if (River.dist(x, z, 7 + pad) < 6.5 + pad) return false;
-    if (hyp((x - SQUARE.x) / (SQUARE.rx + 1), (z - SQUARE.z) / (SQUARE.rz + 1)) < 1) return false;
+    if (hyp((x - SQUARE.x) / (SQUARE.rx + 1), (z - SQUARE.z) / (SQUARE.rz + 1)) < 1 || placeW(x, z, 2.5) > 0) return false;      /* [fx3] no fern or weed clumps on the cobbled place or at its edge */
     const dk = World.spots['dock.end']; if (dk && hyp(x - dk.p[0], z - dk.p[2]) < 7) return false;
     for (const c of World.colliders) { if (c.r !== undefined ? hyp(x - c.x, z - c.z) < c.r + pad : (Math.abs(x - c.x) < c.hx + pad + 0.3 && Math.abs(z - c.z) < c.hz + pad + 0.3)) return false; }
     return true;

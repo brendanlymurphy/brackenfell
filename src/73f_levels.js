@@ -28,6 +28,7 @@ function buildLevels(bucket, fence, R) {
 
   // ── a retaining wall run. ax 0: runs along x, outer face at z = vo, inner face at vi; ax 1: runs along z, faces at x = vo and vi ──
   const sw = s => (s & 12) | (s & 1 ? 16 : 0) | (s & 2 ? 32 : 0) | (s & 16 ? 1 : 0) | (s & 32 ? 2 : 0);
+  const KQ = (!(TEST && TEST.kq === 0) && typeof kitReady === 'function' && kitReady() && typeof infBatch === 'function' && Kit.defs && Kit.defs[INF_R]) ? GP() : null;      // [fx3] the rubble scan on quads (a few hundred triangles for the whole terrace) when the kit materials are loaded; boxes otherwise
   const wallRun = (ax, u0, u1, vo, vi, parapet, buttress) => {
     // [fx3] a battered retaining wall of irregular courses: a proud base course below the ground, courses of 0.28 to 0.5 m that step back, lengths of 1.1 to 2 m that
     // differ a little in depth and tone, a buttress every 4 to 5 m, weep holes, moss at the foot, a coping of separate slabs and a parapet over it. The ground mesh has 1.5 m
@@ -43,18 +44,33 @@ function buildLevels(bucket, fence, R) {
     for (const [ua, ub] of secs) {
       const um = (ua + ub) / 2, gf = Math.min(gAt(ua, vo + os * 0.3), gAt(um, vo + os * 0.3), gAt(ub, vo + os * 0.3)), base = gf - 0.6; minBase = Math.min(minBase, base);
       const patch = RR() < 0.14, sh = tint * (patch ? 1.0 + RR() * 0.12 : 0.84 + RR() * 0.2), jit = (RR() - 0.5) * 0.05, warm = patch ? [1.08, 0.97, 0.84] : [1.0, 0.97, 0.92];       // a patched length is a different stone
+      if (KQ) {
+        const nrm = ax ? [os, 0, 0] : [0, 0, os], wp = (uu, vv, yy) => { const q = P(uu, vv); return [q[0], yy, q[1]]; }, yl = gf + 0.45, il = insetAt(yl, gf), toff = RR() * 7, c0 = (patch ? 0.9 : 0.72 + RR() * 0.14) * (north ? 1.1 : 1), cc = warm.map(c => c * c0 * (0.97 + RR() * 0.06));
+        const TS = 3.6, U0 = ua / TS + toff, U1 = ub / TS + toff;
+        KQ.quad(INF_R, wp(ua, vo + os * 0.1, base), wp(ub, vo + os * 0.1, base), wp(ub, vo + os * 0.1, yl), wp(ua, vo + os * 0.1, yl), cc.map(c => c * 0.78), [U0, base / TS, U1, yl / TS], nrm);                  // the base course, proud of the face, its foot under the ground
+        KQ.quad(INF_R, wp(ua, vo + os * 0.1, yl), wp(ub, vo + os * 0.1, yl), wp(ub, vo - os * il, yl), wp(ua, vo - os * il, yl), cc.map(c => c * 0.9), [U0, 0, U1, 0.05], [0, 1, 0]);               // its weathered top
+        KQ.quad(INF_R, wp(ua, vo - os * il, yl), wp(ub, vo - os * il, yl), wp(ub, vo - os * BAT, TOP), wp(ua, vo - os * BAT, TOP), cc.map((c, ci2) => c * (0.96 + 0.04 * ci2)), [U0 + 0.3, yl / TS, U1 + 0.3, TOP / TS], nrm);   // the battered face
+      } else {
       mm.mat(MAT.STONE, warm.map(c => c * sh * 0.72), 1.0); bx(ua, base, vi, ub, gf + 0.38, vo + os * 0.1, 4 | inner);                                    // the base course: proud of the face, and its foot is under the ground
-      let y = gf + 0.38, ci = 0;
-      while (y < TOP - 0.02) {
-        const h = Math.min((patch ? 0.2 + RR() * 0.18 : 0.28 + RR() * 0.22), TOP - y), y1 = y + h, o = insetAt(y1, gf) + jit * (ci % 2 ? 1 : -1) * 0.6, damp = 0.78 + 0.22 * Math.min(1, (y - gf) / 1.6);
-        { const cv = sh * damp * (0.93 + RR() * 0.12); mm.mat(MAT.STONE, warm.map(c => c * cv), 1.0); }
-        bx(ua, y, vi, ub, y1, vo - os * o, 4 | inner); y = y1; ci++;
+        let y = gf + 0.38, ci = 0;
+        while (y < TOP - 0.02) {
+          const h = Math.min((patch ? 0.2 + RR() * 0.18 : 0.28 + RR() * 0.22), TOP - y), y1 = y + h, o = insetAt(y1, gf) + jit * (ci % 2 ? 1 : -1) * 0.6, damp = 0.78 + 0.22 * Math.min(1, (y - gf) / 1.6);
+          { const cv = sh * damp * (0.93 + RR() * 0.12); mm.mat(MAT.STONE, warm.map(c => c * cv), 1.0); }
+          bx(ua, y, vi, ub, y1, vo - os * o, 4 | inner); y = y1; ci++;
+        }
       }
       const tf = insetAt(TOP, gf) + 0.02;                                                              // top of the face
+      if (parapet && KQ) {      // a low parapet, 0.75 m: a person can be seen over it, and the tree
+        const nrm = ax ? [os, 0, 0] : [0, 0, os], wp = (uu, vv, yy) => { const q = P(uu, vv); return [q[0], yy, q[1]]; }, vf = vo - os * tf, vb2 = vo - os * (tf + 0.5), yp = TOP + 0.75, cp = [0.78 * sh, 0.76 * sh, 0.73 * sh], t0 = ua / 3.6 + 2.3;
+        KQ.quad(INF_R, wp(ua, vf, TOP), wp(ub, vf, TOP), wp(ub, vf, yp), wp(ua, vf, yp), cp, [t0, TOP / 3.6, t0 + (ub - ua) / 3.6, yp / 3.6], nrm);
+        KQ.quad(INF_R, wp(ua, vb2, TOP), wp(ub, vb2, TOP), wp(ub, vb2, yp), wp(ua, vb2, yp), cp.map(c => c * 0.9), [t0, TOP / 3.6, t0 + (ub - ua) / 3.6, yp / 3.6], [-nrm[0], 0, -nrm[2]]);
+        KQ.quad(INF_R, wp(ua, vf + os * 0.06, yp), wp(ub, vf + os * 0.06, yp), wp(ub, vb2 - os * 0.06, yp), wp(ua, vb2 - os * 0.06, yp), cp.map(c => c * 1.1), [t0, 0, t0 + (ub - ua) / 3.6, 0.15], [0, 1, 0]);
+      } else {
       if (parapet) { mm.mat(MAT.STONE, sc(sh * 0.96), 0.6); bx(ua, TOP, vo - os * (tf + 0.5), ub, H + 0.95, vo - os * tf, 4 | inner); }
-      mm.mat(MAT.STONE, sc(sh * 1.04), 0.6);
-      if (parapet) bx(ua - 0.04 + (RR() - 0.5) * 0.04, H + 0.95, vo - os * (tf + 0.55), ub - 0.01, H + 1.09, vo - os * (tf - 0.06), 4);                // coping: slabs that overhang the parapet a little
-      else bx(ua - 0.03, TOP, vi, ub - 0.01, H + 0.2, vo + os * 0.08 - os * tf * 0.5, 4);
+        mm.mat(MAT.STONE, sc(sh * 1.04), 0.6);
+        if (parapet) bx(ua - 0.04 + (RR() - 0.5) * 0.04, H + 0.95, vo - os * (tf + 0.55), ub - 0.01, H + 1.09, vo - os * (tf - 0.06), 4);                // coping: slabs that overhang the parapet a little
+        else bx(ua - 0.03, TOP, vi, ub - 0.01, H + 0.2, vo + os * 0.08 - os * tf * 0.5, 4);
+      }
       // weep hole and moss at the foot
       const pp = P(um, vo - os * (insetAt(gf + 0.75, gf) - 0.012));
       if (RR() < 0.7) { mm.mat(MAT.PLAIN, [0.05, 0.05, 0.05]); const q = [[um - 0.08, gf + 0.7], [um + 0.08, gf + 0.7], [um + 0.08, gf + 0.86], [um - 0.08, gf + 0.86]].map(([a, yy]) => { const pq = P(a, vo - os * (insetAt(yy, gf) - 0.012)); return [pq[0], yy, pq[1]]; }); mm.quad2(q[0], q[1], q[2], q[3]); }
@@ -62,9 +78,21 @@ function buildLevels(bucket, fence, R) {
     { const a = P(u0, vi), b = P(u1, vo); col(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), minBase, H + (parapet ? 1.1 : 0.2)); }
     for (const bu of buttU) {                                                                          // buttresses: three tiers that step back and a sloping cap
       const gf = Math.min(gAt(bu, vo + os * 0.9), gAt(bu - 0.3, vo + os * 0.9), gAt(bu + 0.3, vo + os * 0.9)); mm.mat(MAT.STONE, sc(0.94 * tint), 0.6);
+      if (KQ) {
+        const nrm = ax ? [os, 0, 0] : [0, 0, os], wp = (uu, vv, yy) => { const q = P(uu, vv); return [q[0], yy, q[1]]; }, w = 0.45, pb = 0.95, pt = 0.6, y0 = gf - 0.6, y1 = TOP - 1.0, cc = [0.76, 0.74, 0.71], toff = bu * 0.37, fb = vo - os * insetAt(gf, gf), ft = vo - os * insetAt(y1, gf), fc = vo - os * insetAt(TOP, gf);
+        KQ.quad(INF_R, wp(bu - w, vo + os * pb, y0), wp(bu + w, vo + os * pb, y0), wp(bu + w, vo + os * pt, y1), wp(bu - w, vo + os * pt, y1), cc, [toff, y0 / 3.6, toff + 2 * w / 3.6, y1 / 3.6], nrm);         // the front, leaning back
+        for (const sd of [-1, 1]) KQ.quad(INF_R, wp(bu + sd * w, fb, y0), wp(bu + sd * w, vo + os * pb, y0), wp(bu + sd * w, vo + os * pt, y1), wp(bu + sd * w, ft, y1), cc.map(c => c * 0.9), [toff, y0 / 3.6, toff + pb / 3.6, y1 / 3.6], ax ? [0, 0, sd] : [sd, 0, 0]);       // the cheeks
+        KQ.quad(INF_R, wp(bu - w, vo + os * pt, y1), wp(bu + w, vo + os * pt, y1), wp(bu + w, fc, TOP - 0.1), wp(bu - w, fc, TOP - 0.1), cc.map(c => c * 1.25), [toff, 0, toff + 2 * w / 3.6, 0.3], [nrm[0] * 0.4, 0.9, nrm[2] * 0.4]);       // a sloped cap, shedding water
+      } else {
       const tiers = [[gf - 0.6, gf + 1.5, 0.62], [gf + 1.5, gf + 2.7, 0.42], [gf + 2.7, TOP - 0.2, 0.26]];
-      for (const [y0, y1, pr] of tiers) bx(bu - 0.36 + (pr < 0.5 ? 0.04 : 0), y0, vo - os * 0.2, bu + 0.36 - (pr < 0.5 ? 0.04 : 0), y1, vo + os * pr, 4 | inner);
-      { const a = P(bu - 0.36, vo), b = P(bu + 0.36, vo + os * 0.62); col(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), gf - 0.6, H - 0.3); }
+        for (const [y0, y1, pr] of tiers) bx(bu - 0.36 + (pr < 0.5 ? 0.04 : 0), y0, vo - os * 0.2, bu + 0.36 - (pr < 0.5 ? 0.04 : 0), y1, vo + os * pr, 4 | inner);
+      }
+      { const a = P(bu - (KQ ? 0.45 : 0.36), vo), b = P(bu + (KQ ? 0.45 : 0.36), vo + os * (KQ ? 0.95 : 0.62)); col(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), gf - 0.6, H - 0.3); }
+    }
+    if (parapet && (ax === 1 || u0 > -20)) {       // a drain spout through the parapet and the stain it leaves: where the terrace sheds its water
+      const su = (u0 + u1) / 2 + (ax ? 1.4 : -1.3), gf = gAt(su, vo + os * 0.3), wp = (uu, vv, yy) => { const q = P(uu, vv); return [q[0], yy, q[1]]; }, ys = TOP + 0.12, vF = vo - os * insetAt(ys, gf), vFo = vo - os * insetAt(gf + 0.5, gf);
+      mm.mat(MAT.STONE, [0.5, 0.48, 0.45], 0.8); bx(su - 0.09, ys - 0.1, vF - os * 0.02, su + 0.09, ys + 0.08, vF + os * 0.42, 4);
+      mm.mat(MAT.PLAIN, [0.3, 0.29, 0.27]); mm.quad2(wp(su - 0.07, vF + os * 0.01 - os * 0.0, ys - 0.1), wp(su + 0.07, vF, ys - 0.1), wp(su + 0.22, vFo - os * 0.0, gf + 0.45), wp(su - 0.22, vFo, gf + 0.45));
     }
   };
   const gapA = [-13.5, -10.1];                                                         // the flight from the square
@@ -72,6 +100,14 @@ function buildLevels(bucket, fence, R) {
   wallRun(1, T.z0, T.z1 - 1.0, T.x1 + 0.5, T.x1 - 1.0, true, true);                                                      // east
   wallRun(1, T.z0, T.z1 - 1.0, -37.5, -36.0, true, true);                                                              // west
   wallRun(0, -37.5, T.x1 + 0.5, T.z1 + 0.5, T.z1 - 1.0, false, true);                                                              // south: the lane runs along its foot
+  { const x0 = -19.2, x1 = -14.6, zw = T.z0 - 1.5, zf = zw - 2.1, g0 = Terrain.y((x0 + x1) / 2, zf + 0.5), m = M((x0 + x1) / 2, zf + 1);       // [fx3] a lean-to stall shed built against the terrace wall on the market side: the back of the stall row
+    m.mat(MAT.TIMBER, COL.timberDark, 0.6); for (const x of [x0 + 0.12, (x0 + x1) / 2, x1 - 0.12]) { m.cbox(x, g0 - 0.2, zf + 0.1, 0.1, 2.5 + 0.2, 0.1, 4); col(x - 0.1, zf, x + 0.1, zf + 0.2, g0 - 0.2, g0 + 2.4); }
+    m.beam([x0, g0 + 2.5, zf + 0.1], [x1, g0 + 2.5, zf + 0.1], 0.1, 0.12); m.beam([x0, g0 + 3.0, zw - 0.15], [x1, g0 + 3.0, zw - 0.15], 0.1, 0.12);
+    m.mat(MAT.SHINGLE, [0.5, 0.46, 0.42], 0.5); m.quad2([x0 - 0.25, g0 + 2.45, zf - 0.35], [x1 + 0.25, g0 + 2.45, zf - 0.35], [x1 + 0.25, g0 + 3.05, zw], [x0 - 0.25, g0 + 3.05, zw]);
+    m.mat(MAT.PLANKS, [0.7, 0.6, 0.48], 0.5); m.box(x0 + 0.3, g0, zf + 0.35, x1 - 0.3, g0 + 0.9, zf + 0.75, 4); col(x0 + 0.3, zf + 0.35, x1 - 0.3, zf + 0.75, g0, g0 + 0.9);
+    for (const [bx0, kind] of [[x0 + 0.4, 'barrel'], [x0 + 1.2, 'crate'], [x1 - 1.0, 'barrel'], [x1 - 0.5, 'sack']]) { m.push().T(bx0, Terrain.y(bx0, zw - 0.7), zw - 0.7); if (kind === 'barrel') Props.barrel(m); else if (kind === 'crate') Props.crate(m, 0.6); else Props.sack(m, 0.32); m.pop(); }
+    m.push().T((x0 + x1) / 2, g0 + 0.9, zf + 0.55); m.mat(MAT.PLAIN, [0.35, 0.3, 0.2]); m.box(-0.5, 0, -0.15, 0.5, 0.08, 0.15); m.pop(); }
+  if (KQ) { const nm = KQ.make('gen_terrace_walls'); infBatch().add(nm, new THREE.Matrix4(), { zone: 0, skyVis: 1, cast: false }); }
 
   // ── the flight from the market square: 2.8 m wide, steps are a top and a riser, cheeks are two beams, an arch with a roof where it arrives ──
   { const x0 = gapA[0] + 0.3, x1 = gapA[1] - 0.3, zA = 7.0, zB = T.z0 + 0.5, yA = Terrain.y(-11.8, zA), cw = 0.35, n = Math.max(2, Math.round((H - yA) / 0.19)), m = M(-11.8, 10);
@@ -183,6 +219,7 @@ function townFinish(bucket) {
   if (typeof buildWalls === 'function') buildWalls(bucket);        // Build 42: palisades, gates, bell tower (73i_walls.js)
   if (typeof buildLanes === 'function') buildLanes(bucket);        // Build 42: lanes worth walking (73j_lanes.js)
   if (typeof buildSquare === 'function') buildSquare(bucket);      // Build 42: the square as a finished place (73k_square.js)
+  if (typeof buildPlaceFlags === 'function') buildPlaceFlags(bucket);      // [fx3] flagstones at the doors on the place (73l_place.js)
   // the chimney of in.04 stands 4 m below the terrace's north edge, where the camera looks straight at its smoke: the full-size puffs (1 m across) stack into a tall white sheet there.
   // A thin emitter (smaller, fainter, shorter-lived puffs, see 75_particles.js) makes it a wisp like the other infill chimneys.
   for (const e of World.emitters) if (e.type === 'smoke' && Math.abs(e.p[0] + 19.5) < 0.8 && Math.abs(e.p[2] - 4.1) < 0.8 && e.p[1] > 8) { e.thin = true; e.p[1] += 0.05; }
