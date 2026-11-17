@@ -66,10 +66,25 @@ function pHearth(P, room, side, wid, o) {
   P.lightIn[room.id] = 1; P.hearths = (P.hearths || []).concat([{ k: room.k, x: px, z: pz, side, wid, rect: fp }]);
   return { px, pz, side, fp, wid, front: hor ? [px, pz + (side === 'n' ? 1 : -1) * (dep + 0.6)] : [px + (side === 'w' ? 1 : -1) * (dep + 0.6), pz] };
 }
+// [fx3] a partition wall runs through an upper-floor pier: the pier's collider stops at the wall's faces instead of overlapping its thickness
+function pierTrim(o) {
+  const i = World.colliders.indexOf(o); if (i < 0) return;
+  for (const w of World.colliders) {
+    if (w === o || w.r !== undefined || w.y1 - w.y0 < 2 || w.y0 > o.y1 - 0.5 || w.y1 < o.y0 + 0.5 || Math.hypot(w.x - o.x, w.z - o.z) > 8) continue;
+    const thinA = w.hx < w.hz, thin = thinA ? [w.ax, w.az, w.hx] : [w.bx, w.bz, w.hz], lng = thinA ? [w.bx, w.bz, w.hz] : [w.ax, w.az, w.hx]; if (thin[2] > 0.3) continue;
+    const ax = Math.abs(thin[0] * o.ax + thin[1] * o.az) > 0.99 ? 'a' : Math.abs(thin[0] * o.bx + thin[1] * o.bz) > 0.99 ? 'b' : null; if (!ax) continue;
+    const ux = ax === 'a' ? o.ax : o.bx, uz = ax === 'a' ? o.az : o.bz, h = ax === 'a' ? o.hx : o.hz, pc = o.x * ux + o.z * uz, wc = w.x * ux + w.z * uz, t = thin[2];
+    const vx = ax === 'a' ? o.bx : o.ax, vz = ax === 'a' ? o.bz : o.az, hv = ax === 'a' ? o.hz : o.hx, pv = o.x * vx + o.z * vz, wv = w.x * vx + w.z * vz;
+    if (wc - t > pc + h - 0.02 || wc + t < pc - h + 0.02 || wv - lng[2] > pv + hv - 0.02 || wv + lng[2] < pv - hv + 0.02) continue;
+    const lo = [pc - h, wc - t], hi = [wc + t, pc + h], out = [];
+    for (const r of [lo, hi]) if (r[1] - r[0] > 0.04) { const d = (r[0] + r[1]) / 2 - pc; out.push(Object.assign({}, o, { x: o.x + ux * d, z: o.z + uz * d, [ax === 'a' ? 'hx' : 'hz']: (r[1] - r[0]) / 2 })); }
+    World.colliders.splice(i, 1, ...out); return;
+  }
+}
 // the same stack on another level: a stone pier from floor to ceiling over (or under) the hearth
 function pPier(P, k, hearth) {
   const L = P.lv[k]; if (!L) return; const h = hearth, fp = h.fp, m = P.c.int, room = pRoomAt(P, k, (fp.x0 + fp.x1) / 2, (fp.z0 + fp.z1) / 2); if (!room) return;
-  m.m1 = P.zone; m.ao = INT_AO; m.mat(MAT.STONE, [0.9, 0.88, 0.85], 0.8); at(m, 0, L.y + 0.02, 0, 0, () => { m.box(fp.x0 + 0.1, 0, fp.z0 + 0.1, fp.x1 - 0.1, L.H - 0.02, fp.z1 - 0.1); addBoxCollider(m, fp.x0 + 0.1, fp.z0 + 0.1, fp.x1 - 0.1, fp.z1 - 0.1, 0, L.H); });
+  m.m1 = P.zone; m.ao = INT_AO; m.mat(MAT.STONE, [0.9, 0.88, 0.85], 0.8); at(m, 0, L.y + 0.02, 0, 0, () => { m.box(fp.x0 + 0.1, 0, fp.z0 + 0.1, fp.x1 - 0.1, L.H - 0.02, fp.z1 - 0.1); addBoxCollider(m, fp.x0 + 0.1, fp.z0 + 0.1, fp.x1 - 0.1, fp.z1 - 0.1, 0, L.H); (P.pierCols = P.pierCols || []).push(World.colliders[World.colliders.length - 1]); });
   pOcc(P, k, fp, 'hearth', P.id + '.stack' + k, { h: L.H, back: h.side, room: room.id });
 }
 // a wall candle bracket by a door or over a bed; lit like any candle
@@ -345,7 +360,7 @@ function planBuild(c) {
   const P = planNew(c, T); P.yaw = Math.atan2(-inw[0], inw[2]); P.need = planNeeds(P.id); P.R = c.R; c.plan = P;
   const info = PLANS_INFO[P.id] || {};
   (PLANS[P.id] || planHouse)(P, c, info);
-  pBuild(P);
+  pBuild(P); (P.pierCols || []).forEach(pierTrim);      // [fx3] the walls exist now
   // the zone: round the whole plan, so room AO, sound and light find it
   const W = P.dims ? P.dims.W : 9, D = P.dims ? P.dims.D : 10, zi = c.zoneInfo, ctr = P.w2(0, 0, D / 2);
   zi.site = Object.assign({}, c.site, { x: ctr[0], z: ctr[2], yaw: P.yaw }); zi.hw = W / 2; zi.hd = D / 2; zi.y0 = dd.sill[1] - 3.6; zi.y1 = dd.sill[1] + 7; zi.slope = 0; zi.H = H_GROUND;

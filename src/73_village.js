@@ -37,14 +37,14 @@ function buildVillage() {
         if (o.stone) {
           m.push().T((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2).RY(-Math.atan2(z1 - z0, x1 - x0)); const l = hyp(x1 - x0, z1 - z0) / 2 + 0.05;
           m.mat(MAT.STONE, [0.95, 0.95, 0.95], 0.8); m.grad = [1, 0.65]; m.box(-l, -0.7, -0.24, l, 0.85, 0.24, 4); m.grad = null; m.mat(MAT.STONE, [0.8, 0.8, 0.8], 0.6); m.box(-l, 0.85, -0.29, l, 0.95, 0.29);
-          addBoxCollider(m, -l, -0.25, l, 0.25, -0.3, 1.2); m.pop();
+          addBoxCollider(m, -l, -0.25, k === n - 1 && i < pts.length - 2 ? l - 0.3 : l, 0.25, -0.3, 1.2); m.pop();      /* [fx3] a corner's collider stops at the next wall's face */
         } else {
           m.mat(MAT.TIMBER, COL.timber);
           m.push().T(x0, y0, z0); m.cbox(0, -0.4, 0, 0.11, hgt + 0.4, 0.11, 4); m.pop();
           if (k === n - 1 && i === pts.length - 2) { m.push().T(x1, y1, z1); m.cbox(0, -0.4, 0, 0.11, hgt + 0.4, 0.11, 4); m.pop(); }
           for (const hh of [0.42, 0.86]) m.beam([x0, y0 + hh * hgt / 1.05, z0], [x1, y1 + hh * hgt / 1.05, z1], 0.045, 0.1);
           m.push().T((x0 + x1) / 2, Math.min(y0, y1), (z0 + z1) / 2).RY(-Math.atan2(z1 - z0, x1 - x0)); const l = hyp(x1 - x0, z1 - z0) / 2;
-          addBoxCollider(m, -l, -0.07, l, 0.07, -0.2, 1.2); m.pop();
+          addBoxCollider(m, -l, -0.05, l, 0.05, -0.2, 1.2); m.pop();
         }
       }
     }
@@ -55,9 +55,9 @@ function buildVillage() {
   put(6.2, -8.6, 0.3, m => typeof wellRound === 'function' ? wellRound(m) : Props.well(m));
   const OAK = World.oakPos = [-7.6, 6.4];
   for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.3; put(OAK[0] + Math.cos(a) * 1.75, OAK[1] + Math.sin(a) * 1.75, a + PI / 2, m => Props.bench(m, 1.75, true)); }
-  { const m = bucket(OAK[0], OAK[1]); m.push().T(OAK[0], Terrain.y(OAK[0], OAK[1]), OAK[1]); addCircleCollider(m, 0, 0, 2.0, 0, 0.5); m.pop(); }
+  { const m = bucket(OAK[0], OAK[1]); m.push().T(OAK[0], Terrain.y(OAK[0], OAK[1]), OAK[1]); addCircleCollider(m, 0, 0, 2.0, 0, 0.24); m.pop(); }      // [fx3] 0.24 high: the root bank is stepped over and no longer counts as a solid through the trunk
   spot('square.bench', OAK[0] + 1.75, OAK[1] + 0.55, PI / 2 + 0.2, { sit: 0.46 }); spot('square.bench2', OAK[0] - 0.1, OAK[1] - 1.8, 0.1, { sit: 0.46 });
-  const stalls = [[10.2, 4.6, AWN.madder, 0], [5.6, 9.4, AWN.woad, 1], [-11.6, -5.8, AWN.ochre, 2]];
+  const stalls = [[11.4, -4.2, AWN.madder, 0], [5.4, 5.0, AWN.woad, 1], [-12.4, -5.2, AWN.ochre, 2]];      // [fx3] two rows facing a cart way along the main street's axis (z -3 to 2)
   for (const [x, z, col, kind] of stalls) {
     const yaw = headingTo(x, z, 0, -1.5);
     put(x, z, yaw, m => Props.stall(m, col, y => {
@@ -68,7 +68,7 @@ function buildVillage() {
     const b = [x - Math.sin(yaw) * 1.05, z + Math.cos(yaw) * 1.05];
     spot('stall' + kind, b[0], b[1], yaw); spot('stallfront' + kind, x + Math.sin(yaw) * 1.7, z - Math.cos(yaw) * 1.7, yaw + PI);
   }
-  putc(11.8, 6.3, 0.4, m => Props.barrel(m)); putc(12.2, 5.2, 0, m => Props.crate(m, 0.6)); putc(4.0, 10.6, 0.2, m => Props.crate(m, 0.55)); putc(-12.9, -4.2, 0, m => Props.barrel(m));
+  putc(11.8, 6.3, 0.4, m => Props.barrel(m)); putc(12.2, 5.2, 0, m => Props.crate(m, 0.6)); putc(6.9, 7.3, 0.2, m => Props.crate(m, 0.55)); putc(-12.9, -4.2, 0, m => Props.barrel(m));
   putc(-6.4, 11.3, 0.08, m => Props.cart(m, true));      // Build 42: parked against the terrace wall east of the flight (it stood on the steps' first treads)
   // festival fire pit (lit at the end of the story)
   World.bonfirePos = [-2.6, -7.4];
@@ -89,9 +89,9 @@ function buildVillage() {
   });
   for (const [x, z] of [[-3.6, -16.3], [3.2, -16.5]]) putc(x, z, PI, m => Props.bench(m, 1.8));
   putc(-6.8, -16.4, 0, m => Props.barrel(m)); putc(-6.2, -15.9, 0.6, m => Props.barrel(m, 0.3, 0.75)); putc(6.9, -16.3, 0.3, m => Props.crate(m, 0.7));
-  putc(19.2, -5.2, 0, m => Props.barrel(m)); putc(19.0, -6.1, 0.4, m => Props.crate(m, 0.55)); putc(19.1, -11.4, 0, m => Props.sack(m, 0.32));
+  putc(19.2, -5.2, 0, m => Props.barrel(m)); putc(18.7, -6.5, 0.4, m => Props.crate(m, 0.55)); putc(19.1, -11.4, 0, m => Props.sack(m, 0.32));
   // lamps and signposts
-  for (const [x, z, a] of [[-13.2, -8.3, 0.8], [13.6, -10.2, -0.8], [-14.2, 5.2, 2.2], [13.2, 8.4, -2.4], [-31, -6.6, 0], [-50, -8.2, 0], [34, 3.4, PI], [47.5, -0.4, 0], [-12.2, -33, 1.6], [-8.6, -58.5, 1.2], [1.2, 30, -1.5], [4.4, 56, -1.5], [69, 0.2, 0], [86, -2.2, 0.2], [-63.5, 2, 1.5], [3.3, 78, -1.4], [70.2, 16, -1.6], [-9.5, 3.5, 0.3], [9.2, 4.2, -0.3], [-6.5, -12.2, 0.2]]) putc(x, z, a, m => Props.lampPost(m, OUT));
+  for (const [x, z, a] of [[-13.2, -8.3, 0.8], [13.6, -10.2, -0.8], [-14.2, 5.2, 2.2], [12.4, 7.3, -2.4], [-31, -6.6, 0], [-50, -8.2, 0], [34, 3.4, PI], [47.5, -0.4, 0], [-12.2, -33, 1.6], [-8.6, -58.5, 1.2], [1.2, 30, -1.5], [4.4, 56, -1.5], [69, 0.2, 0], [86, -2.2, 0.2], [-63.5, 2, 1.5], [3.3, 78, -1.4], [70.2, 16, -1.6], [-9.5, 3.5, 0.3], [9.2, 4.2, -0.3], [-6.5, -12.2, 0.2]]) putc(x, z, a, m => Props.lampPost(m, OUT));
   putc(14.6, 2.4, 0.4, m => Props.signPost(m, 3)); putc(-58.5, -8.4, -0.3, m => Props.signPost(m, 2)); putc(-8.9, -61.5, 0, m => Props.signPost(m, 2));
 
   // ── west gate ──
@@ -266,9 +266,11 @@ function buildVillage() {
   // ── dressing: the stuff that piles up against the walls of a lived-in house ──
   {
     const Rd = rng(4242);
+    let curSite = null;
     const free = (x, z, rad) => {
       for (const rd of Roads) if (rd.line.dist(x, z, 4) < rd.w / 2 + 1.0) return false;
       if (hyp(x - SQUARE.x, z - SQUARE.z) < Math.max(SQUARE.rx, SQUARE.rz) + 1) return false;
+      for (const o of INF.houses) { if (o.id === curSite || hyp(o.x - x, o.z - z) > 9) continue; const l = worldToSite(o, x, z); if (Math.abs(l[0]) < o.w / 2 + rad + 0.5 && Math.abs(l[1]) < o.d / 2 + rad + 0.5) return false; }      // [fx3] the infill houses are built later: a pile must not narrow a lane between them below a person's width
       for (const c of World.colliders) {
         if (c.r !== undefined) { if (hyp(x - c.x, z - c.z) < c.r + rad) return false; continue; }
         const dx = (x - c.x) * c.ax + (z - c.z) * c.az, dz = (x - c.x) * c.bx + (z - c.z) * c.bz;
@@ -289,7 +291,7 @@ function buildVillage() {
       stump: (m) => { kp(m, 'tree_stump_01', 0, -0.03, 0, 0.55, Rd() * 6); addCircleCollider(m, 0, 0, 0.35, 0, 0.3); },
     };
     for (const s of SITES) {
-      if (!HOUSES[s.id]) continue;
+      if (!HOUSES[s.id]) continue; curSite = s.id;
       const kinds = (s.id === 'farm' || s.id === 'barn' || s.id === 'mill') ? ['hay', 'wood', 'barrels', 'sacks', 'crates'] : s.id === 'chapel' ? ['pots'] : ['wood', 'barrels', 'crates', 'sacks', 'pots', 'wood'];
       if (typeof scanOn === 'function' && scanOn() && s.id !== 'chapel') kinds.push('buckets', 'stump');
       const dl = siteDoorLocal(s, 0), n = s.id === 'chapel' ? 1 : 3 + Rd.i(0, 1);
@@ -301,6 +303,7 @@ function buildVillage() {
         if ((s.bare || []).some(b => lx > b[0] - 0.6 && lx < b[2] + 0.6 && lz > b[1] - 0.6 && lz < b[3] + 0.6)) continue;
         const p = siteToWorld(s, lx, lz);
         if (!free(p[0], p[1], 1.0) || Math.abs(Terrain.y(p[0], p[1]) - s.y) > 0.45) continue;
+        { const p2 = siteToWorld(s, lx + (side < 2 ? 0.9 : 0), lz + (side < 2 ? 0 : 0.9)), p3 = siteToWorld(s, lx - (side < 2 ? 0.9 : 0), lz - (side < 2 ? 0 : 0.9)); if (!free(p2[0], p2[1], 0.5) || !free(p3[0], p3[1], 0.5)) continue; }      // [fx3] a pile's second crate or barrel reaches 0.9 m sideways: not into the neighbour's body
         if (SITES.some(o => { if (o === s) return false; const q = (p[0] - o.x) * Math.cos(o.yaw) + (p[1] - o.z) * Math.sin(o.yaw), r = -(p[0] - o.x) * Math.sin(o.yaw) + (p[1] - o.z) * Math.cos(o.yaw); return Math.abs(q) < o.w / 2 + 0.5 && Math.abs(r) < o.d / 2 + 0.5; })) continue;   // [fx1] terraced shops stand 0.3 m apart: a pile in that gap was inside the neighbour
         const kind = Rd.pick(kinds);
         put(p[0], p[1], s.yaw + out + PI / 2, piles[kind]); k++;
@@ -313,6 +316,7 @@ function buildVillage() {
     const Rv = rng(5151), okSpot = (x, z, rad, s) => {
       if (Math.abs(Terrain.y(x, z) - s.y) > 0.5) return false;
       for (const rd of Roads) if (rd.line.dist(x, z, 4) < rd.w / 2 + 1.2) return false;
+      for (const o of INF.houses) { const l = worldToSite(o, x, z); if (Math.abs(l[0]) < o.w / 2 + rad * 0.6 && Math.abs(l[1]) < o.d / 2 + rad * 0.6) return false; }      // [fx3] the infill houses are not built yet: their footprints are planned, and a bed must not lie under one
       for (const c of World.colliders) { const r = c.r !== undefined ? c.r : Math.max(c.hx, c.hz); if (r > 1.6 && c.r === undefined) continue; if (hyp(x - c.x, z - c.z) < r + rad) return false; }
       return true;
     };
@@ -361,8 +365,8 @@ function buildVillage() {
 
   if (typeof buildAlley === 'function') buildAlley();
   if (typeof buildInfill === 'function') buildInfill();
-  if (typeof buildDress === 'function') buildDress();
   if (typeof townFinish === 'function') townFinish(bucket);      // Build 42 (73f_levels.js)
+  if (typeof buildDress === 'function') buildDress();      // [fx3] after the routes, walls, lanes and square, so loose piles are placed around what is solid and never through it
 
   // ground-contact shading for loose props, then pack everything
   for (const m of buckets.values()) {

@@ -68,7 +68,7 @@ function buildWalls(bucket) {
       for (const u of [ug - TW + 0.15, ug + TW - 0.15]) for (const v of [V0 + 0.2, V1 - 0.2]) { const p = P(u, v); void p; }
       for (const v of [V0 + 0.2, V1 - 0.2]) { const p = P(ug - TW + 0.15, v), q = P(ug + TW - 0.15, v); K.beam([p[0], ye, p[1]], [q[0], ye, q[1]], 0.18, 0.2); }
       for (const u of [ug - TW + 0.15, ug + TW - 0.15]) { const p = P(u, V0 + 0.2), q = P(u, V1 - 0.2); K.beam([p[0], ye, p[1]], [q[0], ye, q[1]], 0.18, 0.2); } }
-    { const rl = (u0_, u1_, v) => { const p = P(u0_, v), q = P(u1_, v); for (const k of [0.5, 1.0]) K.beam([p[0], Y + k, p[1]], [q[0], Y + k, q[1]], 0.05, 0.06); const c0 = P(u0_, v - 0.07), c1 = P(u1_, v + 0.07); col(Math.min(c0[0], c1[0]), Math.min(c0[1], c1[1]), Math.max(c0[0], c1[0]), Math.max(c0[1], c1[1]), Y - 0.05, Y + 1.15); };
+    { const rl = (u0_, u1_, v) => { const p = P(u0_, v), q = P(u1_, v); for (const k of [0.5, 1.0]) K.beam([p[0], Y + k, p[1]], [q[0], Y + k, q[1]], 0.05, 0.06); const c0 = P(u0_, v - 0.05), c1 = P(u1_, v + 0.05); col(Math.min(c0[0], c1[0]), Math.min(c0[1], c1[1]), Math.max(c0[0], c1[0]), Math.max(c0[1], c1[1]), Y - 0.05, Y + 1.15); };
       rl(a0 + 0.3, b1 - 0.3, V0 + 0.2);                                  // the outer rail (the palisade's own line continues on both sides)
       rl(a0 + 0.3, a0 + 2.2, V1 - 0.2);                                  // inner rail on the side away from the stair
       rl(a0 + 0.3, ug - 0.5, V1 - 0.2); }
