@@ -113,6 +113,10 @@ function terrainH(x, z) {
     const rl = lakeR(x, z);
     const hb = dl < rl ? LAKE.y - 3.2 * (1 - (dl / rl) * (dl / rl)) : LAKE.y + (dl - rl) * 0.2;
     h = Math.min(h, lerp(hb, h, smooth(0, 15, dl - rl)));
+    /* [coord] Build 74: the shore is dry land. West of the wharf the ground lay 10 cm under the lake's level for 12 m beyond the shoreline, so the lake's
+       sheet covered the fisher's hut and its path. Outside the shoreline the ground is at least 0.25 m over the water, rising to 0.6 m within 6 m
+       (not in the river's channel, which must still reach the lake). */
+    if (dl > rl && d > 6.5 + ext) h = Math.max(h, LAKE.y + 0.25 + 0.35 * Math.min(1, (dl - rl) / 6));
   }
   return h;
 }
