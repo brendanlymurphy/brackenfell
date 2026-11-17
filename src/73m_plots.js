@@ -11,7 +11,7 @@ const PLOT_ROWS = [
   { name: 'chapelW', ids: ['in.12', 'in.13', 'in.45', 'in.32'], trades: ['garden', 'woodyard', 'hens', 'hives'], axis: 'x' },
   { name: 'chapelE', ids: ['in.46', 'in.15', 'in.16', 'in.33'], trades: ['woodyard', 'hens', 'garden', 'hives'], axis: 'x' },
   { name: 'eastS', ids: ['in.86', 'in.87', 'in.88', 'in.89'], trades: ['garden', 'hens', 'woodyard', 'hives'] },
-  { name: 'eastN', ids: ['in.81', 'in.82', 'in.83', 'in.84', 'in.85'], trades: ['pigs', 'woodyard', 'garden', 'hens', 'washing'] },
+  { name: 'eastN', ids: ['in.81', 'in.82', 'in.83', 'in.84', 'in.85'], trades: ['garden', 'hens', 'woodyard', 'pigs', 'hives'] },
   { name: 'westS', ids: ['in.08', 'in.07', 'in.06', 'in.42'], trades: ['dyer', 'hens', 'woodyard', 'washing'] }
 ];
 let _PLOTS = null;
@@ -229,7 +229,9 @@ function buildChapelWay(bucket) {
     for (const sd of [-1, 1]) { const ax = a[0] + nx * sd * 1.5, az = a[1] + nz * sd * 1.5, cx = ax + dx / 2, cz = az + dz / 2, g = gy(cx, cz) - 0.15, m = bucket(cx, cz);
       m.push().T(cx, g, cz).RY(-ang);
       if (sd < 0) { m.mat(MAT.STONE, [0.4, 0.38, 0.35], 1.4); m.box(-L / 2, 0, -0.25, L / 2, 1.15, 0.25, 4); }
-      else { m.mat(MAT.MOSS, [0.32 + R() * 0.06, 0.4, 0.2], 1.2); m.box(-L / 2, 0.2, -0.45, L / 2, 1.5, 0.45, 4); m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-L / 2, 0, -0.55, L / 2, 0.3, 0.55, 4); }
+      else { m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-L / 2, 0, -0.5, L / 2, 0.32, 0.5, 4);
+        World.hedgeClumps = World.hedgeClumps || []; const nC = Math.round(L / 0.62); for (let c = 0; c < nC; c++) { if (R() < 0.12) continue; const u = -L / 2 + (c + 0.5) * L / nC + (R() - 0.5) * 0.3, v = (R() - 0.5) * 0.5, w = [cx + Math.cos(ang) * u - Math.sin(ang) * v, cz + Math.sin(ang) * u + Math.cos(ang) * v]; World.hedgeClumps.push([w[0], gy(w[0], w[1]) + 0.2, w[1], 1.0 + R() * 0.8, R() * 6.28, 0.1 + R() * 0.2, R()]); }
+        if (i === 1 && sd > 0) World.hedgeSaplings = [[cx - 0.5, cz - 0.1], [cx + 1.2, cz + 0.3]]; }
       addBoxCollider(m, -L / 2 + 0.45, -0.3, L / 2 - 0.45, 0.3, 0, 1.3);
       m.pop(); }
     for (let k = 0; k < 3; k++) { const t = (k + 0.5) / 3, x = a[0] + dx * t, z = a[1] + dz * t, mm = bucket(x, z), g = gy(x, z); mm.push().T(x, g, z).RY(-ang + (R() - 0.5) * 0.1); mm.mat(MAT.STONE, [0.5 + R() * 0.07, 0.48, 0.43], 1.2); mm.box(-0.5, -0.03, -0.45, 0.5, 0.03, 0.45, 4); mm.pop(); }

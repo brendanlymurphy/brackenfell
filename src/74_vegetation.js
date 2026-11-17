@@ -112,9 +112,6 @@ function buildVegetation() {
   };
   addTree('oak', World.oakPos[0], World.oakPos[1], 1.0);
   { const p = siteToWorld(SITE.chapel, 5.5, -13.5); addTree('oak', p[0], p[1], 0.85); }
-  /* [fx3] Chapelgate approach: old trees along the hedged way from the north gate to the lych gate, and yews in the churchyard (dark conifers kept small) */
-  for (const [x, z, k, sc] of [[-11.5, -62.6, 'oak', 0.8], [-3.4, -66.2, 'oak', 0.75], [-12.3, -70.4, 'birch', 1.0]]) if (!blocked(x, z, 0.5)) addTree(k, x, z, sc);
-  for (const [lx, lz] of [[-5.5, -5.8], [-5.8, -15.5], [6.8, -15.8], [6.5, -5.8], [2.5, -11]]) { const p = siteToWorld(SITE.chapel, lx, lz); addTree('pine', p[0], p[1], 0.42 + R() * 0.12); }
   addTree('oak', 88, -30, 0.9);
   for (const [k, x, z, s] of [['birch', -29, 9, 1], ['birch', 31, -17, 1.1], ['birch', -31, -27, 0.95], ['birch', 13, -33, 1.05], ['birch', 28, 25, 1], ['birch', -9, 35, 0.9], ['birch', 45, -9, 1.1], ['birch', -47, 7, 1], ['pine', -20, -33, 1.1], ['pine', 9, -36, 1.25], ['pine', -34, 31, 1.0], ['birch', 47, 20, 1.0], ['birch', 50, 34, 0.9], ['birch', 66, 40, 1.05], ['birch', 30, 70, 1], ['birch', -22, 60, 1.1], ['pine', 40, -40, 1.2], ['birch', 74, -12, 1], ['birch', -6, -44, 0.95]]) if (!blocked(x, z, 0.5)) addTree(k, x, z, s);
   // autumn birches standing in the courts behind the infill houses
@@ -176,6 +173,12 @@ function buildVegetation() {
     mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
   }
   mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
+  /* [fx3] Chapelgate approach: old trees along the hedged way from the north gate to the lych gate, and yews in the churchyard (dark conifers kept small) */
+  for (const [x, z, k, sc] of [[-11.5, -62.6, 'oak', 0.8], [-3.4, -66.2, 'oak', 0.75], [-12.3, -70.4, 'birch', 1.0]]) if (!blocked(x, z, 0.5)) addTree(k, x, z, sc);
+  for (const [lx, lz] of [[-5.5, -5.8], [-5.8, -15.5], [6.8, -15.8], [6.5, -5.8], [2.5, -11]]) { const p = siteToWorld(SITE.chapel, lx, lz); addTree('pine', p[0], p[1], 0.42 + R() * 0.12); }
+  /* [fx3] the hedge along the way to the lych gate: overlapping clumps of uneven size on a low bank, with a few saplings grown out of it */
+  for (const h of World.hedgeClumps || []) inst.bush.push([h[0], h[1], h[2], h[3], h[4], h[5], h[6], 0]);
+  for (const [x, z] of World.hedgeSaplings || []) addTree('birch', x, z, 0.32);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;
