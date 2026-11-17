@@ -1,10 +1,12 @@
 # Runs the publish gate (tools/gate.mjs) on GitHub's machines for every push to threejs and to any worker branch,
 # so nobody has to run it on the coordinator's two cores. The result shows as a check on the commit; the table and
-# screenshots are attached to the run as the "gate-1..4" artifacts (the gate runs as three jobs side by side) and the table is printed on the run's summary page.
+# screenshots are attached to the run as the "gate-1..6" artifacts (the gate runs as six jobs side by side, steps dealt out by how long they take) and the table is printed on the run's summary page.
 name: gate
 on:
   push:
     branches: [threejs, 'fork-*']
+    # a push that changes only documents or the audit session's own scripts cannot change the game: no gate (each run is 100 machine-minutes)
+    paths-ignore: ['docs/**', '**.md', 'test/audit/**']
   workflow_dispatch:
     inputs:
       mode:
@@ -22,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,7 +38,7 @@ jobs:
       - name: ffmpeg (the voice check measures loudness with it)
         run: which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       - name: Gate
-        run: node tools/gate.mjs --${{ github.event.inputs.mode || 'full' }} --shard ${{ matrix.shard }}/4 --out gate-out
+        run: node tools/gate.mjs --${{ github.event.inputs.mode || 'full' }} --shard ${{ matrix.shard }}/6 --out gate-out
       - name: Table on the summary page
         if: always()
         run: cat gate-out/gate.md >> "$GITHUB_STEP_SUMMARY" || true

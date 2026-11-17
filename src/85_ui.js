@@ -3,7 +3,7 @@
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 76';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 77';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), /^Quest/.test(small) ? 2200 : 3000); }       /* was 3.8 s plus 1.4 s of fade each way, across the middle of the view: a quest line is now up for about 3.5 s in all */
