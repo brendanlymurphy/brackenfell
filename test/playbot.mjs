@@ -195,7 +195,9 @@ SC.story = async () => {
   await talk('hale', /./, /./, /./); expect((await st()).flags.act1, 'Hale did not close Act 1'); expect(await q('main') === 6, 'stage after Hale ' + await q('main'));
   await ck('act1');
   // Acts 2 and 3
-  await talk('rowan', /./); await talk('rowan', /./, /./, /./, /./); expect((await st()).flags.act2, 'Rowan did not tell it (act2)'); expect(await q('main') === 7, 'stage after Rowan ' + await q('main'));
+  await talk('rowan', /./); await talk('rowan', /./); expect(!(await st()).flags.act2, 'Rowan tells the rest on the day he said "not today"'); expect(/tomorrow/i.test(await ev(() => questLine('main'))), 'the journal does not say to come back to Rowan tomorrow');
+  await ev(() => BOT.day(22)); await useAnd('inn.bed', 'sleep on it'); await ev(() => { if (World.cell) game.leave(); BOT.day(10); });
+  await talk('rowan', /./, /./, /./, /./); expect((await st()).flags.act2, 'Rowan did not tell it the next day (act2)'); expect(await q('main') === 7, 'stage after Rowan ' + await q('main'));
   await useAnd('sec.wall'); expect((await st()).opened['sec.wall'], 'the Hart’s cellar wall did not open');
   await useAnd('door.tunnel.in', 'the smugglers’ door'); await ev(() => BOT.step(4)); expect(await q('main') === 8, 'the tunnel did not move the story on (' + await q('main') + ')');
   // walk the tunnel with the W key held (real input), as a person would
@@ -352,7 +354,7 @@ SC.orders = async () => {
     await useAnd('door.mine.in', 'the mine door'); expect((await st()).cell === 'mine', 'the mine door did not open with the key in hand (story stage ' + await q('main') + ')'); await ev(() => Foes.calm(true)); await useAnd('mine.journal'); await useAnd('door.mine.out', 'out');
     await talk('hale', /./, /./, /./); expect((await st()).flags.act1, 'order A: Hale did not close Act 1 when given the journal first (stage ' + await q('main') + ')');
     await useAnd('wharf.body', 'the body afterwards', { may: true }); await talk('maren', /./, /./, /./); const m = await q('main'); expect(m >= 6, 'order A: looking at the body after Act 1 moved the story BACK to stage ' + m);
-    await talk('rowan', /./); await talk('rowan', /./, /./, /./, /./); expect((await st()).flags.act2, 'order A: Rowan did not tell it'); }
+    await talk('rowan', /./); await ev(() => BOT.day(22)); await useAnd('inn.bed', 'sleep on it'); await ev(() => { if (World.cell) game.leave(); BOT.day(10); }); await talk('rowan', /./, /./, /./, /./); expect((await st()).flags.act2, 'order A: Rowan did not tell it'); }
   // B: the wall and the tunnel before Rowan has spoken; the slab before the journal
   { const sv = ckLoad('key'); if (!await resume(sv, 'checkpoint key')) return; await ev(() => BOT.day(10)); where = 'order B';
     await useAnd('sec.wall', 'the wall before Rowan', { may: true }); const o1 = (await st()).opened['sec.wall']; notes.push('order B: the Hart wall ' + (o1 ? 'opens' : 'stays shut') + ' before Rowan tells of it');

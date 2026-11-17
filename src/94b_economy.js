@@ -63,9 +63,9 @@ TALK.board = function () {
     if (ready) opts.push(['Collect the pay. (' + j.pay + ' gold)', () => { if (j.have) give('oil', -3); gold(j.pay); RPG.xp(20); r.jobsDone = (r.jobsDone || 0) + 1; r.job = null; save(); return node('Paid. The board has fresh ink every few days: come back.'); }, 1]);
     else opts.push(['Where was I up to?', () => node(j.title + ': ' + (j.have ? 'three flasks of lamp oil, you have ' + (S.items.oil || 0) : r.job.n + ' of ' + j.goal) + '.')]);
     opts.push(['Tear the notice down.', () => { r.job = null; save(); return node('The nail is still there.'); }]);
-  } else for (const d of ECONJOBS) opts.push([d.title + ' (' + d.pay + ' gold)', () => { r.job = { id: d.id, n: 0, done: false }; save(); return node(d.text + '\n\nYou take the notice.'); }]);
+  } else for (const d of ECONJOBS) if (d.id !== 'vermin' || S.flags.mineOpen) opts.push([d.title + ' (' + d.pay + ' gold)', () => { r.job = { id: d.id, n: 0, done: false }; save(); return node(d.text + '\n\nYou take the notice.'); }]);
   if (qAt('bounty') < 0 && qAt('welcome') >= 0) { qStart('bounty'); bountyText(); }
-  return node(j ? 'Your notice is still on you.' : 'Notices, pinned over notices. Three of them are in a clean hand and have not yellowed.', opts.concat([bye]));
+  return node(j ? 'Your notice is still on you.' : (S.flags.mineOpen ? 'Notices, pinned over notices. Three of them are in a clean hand and have not yellowed.' : 'Notices, pinned over notices. Two of them are in a clean hand and have not yellowed.'), opts.concat([bye]));
 };
 const _iu82d = interactUse; interactUse = function (it) {
   if (it.id === 'board' && it.kind === 'read') { const nm = { id: 'board', name: 'Notice board', pos: it.p.slice(), yaw: 0, anim: 'idle', path: null }; return startTalk(nm); }
@@ -77,14 +77,11 @@ const RUMOURS = [
   [() => !secFlag('bell'), 'They say Tobin’s been up the Watch Bell more than the Watch has. A tin box, a lockpick, and a boy who will not say what he saw from the top.'],
   [() => !secFlag('stone'), 'There’s a stone in the terrace wall below the Elder’s plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.'],
   [() => !secFlag('cellar'), 'The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.'],
-  [() => !secFlag('attic'), 'Up on the Hart’s roof walk there’s a trunk under the eaves that nobody here owns. Greta says it came with the building.'],
-  [() => !secFlag('wall'), 'The cellar wall in this very house, the east one: newer brick than the rest. Ask me no more, love.'],
   [() => !secFlag('strongbox'), 'The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.'],
-  [() => !secFlag('meetpouch'), 'Lights behind the chapel after midnight, and two folk talking low who’d not thank you for listening. Stand off, if you’re bold. Don’t get close.'],
   [() => !secFlag('magpie'), 'The Magpie walks at dusk from the square to somewhere west of the weavers, same road each time. Nobody follows her. You’d have to be patient.'],
   [() => !secFlag('house'), 'The shut house on the south lane. Don’t ask Marta. Don’t ask Finn. Ask nobody. Take a key, if you’ve one with a wren on it.'],
   [() => !S.flags.mineOpen, 'The mine door has been barred for fifty years. The Sexton kept the key, and old Sextons keep everything.'],
-  [() => S.flags.mineOpen && !has('silverthread') && !S.opened['mine.chest'], 'They say the Foreman had a strongbox down there and the only key hangs round his neck. Hung.'],
+  [() => S.flags.mineOpen && !has('silverthread') && !S.opened['mine.chest'], 'My grandmother said the Old Mine’s foreman kept a strongbox below and wore the key round his neck. Nobody has been down to ask him.'],
   [() => !S.flags.act1, 'A drowned man on the wharf, dry as bone. The wise folk are keeping their windows shut.'],
   [() => true, 'Hale cries on the last day of the month. Pip told me. Pip tells everybody.', 1],
   [() => true, 'The Elder talks to the lake. Always has. Says it answers.', 1],

@@ -37,6 +37,7 @@
   "Nothing new, love.": "greta"
  },
  "tables": {
-  "RUMOURS": "greta"
+  "RUMOURS": "greta",
+  "PIP_SEEN": "pip"
  }
 }

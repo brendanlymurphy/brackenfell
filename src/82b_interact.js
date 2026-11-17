@@ -246,7 +246,7 @@ const _as2 = applySave; applySave = function (j) { _as2(j); IX.restore(); };
 IX.restore = function () { for (const o of IX.loose) if (S.taken && S.taken[o.lid]) { o.gone = true; o.obj.visible = false; } IX.sit = null; if (S.jail) IX.jailDoorMake(); };
 // ── the inn: a bed for the night and a bowl of stew (eating restores; sleeping restores) ──
 { const base = TALK.greta;
-  const stew = () => { if (S.gold < 3) return node('Three gold, love. Your purse says otherwise.'); gold(-3); RPG.heal(40); Audio2.eat(); toast('The stew is hot and thick: +40 health'); return node('Eat it while it’s hot. I don’t do cold.'); };
+  const stew = () => { if (S.flags.ending === 'bread' && !S.flags.freeStew) { S.flags.freeStew = 1; RPG.heal(40); Audio2.eat(); toast('The stew is hot and thick: +40 health'); save(); return node('Eat it while it’s hot. I don’t do cold.'); }       /* [logic] she says she will not charge this once: she does not */ if (S.gold < 3) return node('Three gold, love. Your purse says otherwise.'); gold(-3); RPG.heal(40); Audio2.eat(); toast('The stew is hot and thick: +40 health'); return node('Eat it while it’s hot. I don’t do cold.'); };
   const room = () => { if (S.gold < 4) return node('Four gold, love, and I’ll not haggle with a purse that light.'); gold(-4); S.flags.rent = RPG.st().day; save(); return node('Up the stairs, the bed by the window. Sleep till you’re done.'); };
   TALK.greta = function () { const n = base.call(this); if (n && n.o && qAt('ale') >= 0) { const i = n.o.indexOf(bye), add = [['A bowl of stew. (3 gold)', stew]]; if (!S.flags.bed) add.push(['A bed for the night. (4 gold)', room]); n.o.splice(i < 0 ? n.o.length : i, 0, ...add); } return n; }; }
 
