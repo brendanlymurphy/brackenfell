@@ -314,6 +314,7 @@ function buildVillage() {
     const Rv = rng(5151), okSpot = (x, z, rad, s) => {
       if (Math.abs(Terrain.y(x, z) - s.y) > 0.5) return false;
       for (const rd of Roads) if (rd.line.dist(x, z, 4) < rd.w / 2 + 1.2) return false;
+      for (const o of INF.houses) { const l = worldToSite(o, x, z); if (Math.abs(l[0]) < o.w / 2 + rad * 0.6 && Math.abs(l[1]) < o.d / 2 + rad * 0.6) return false; }      // [fx3] the infill houses are not built yet: their footprints are planned, and a bed must not lie under one
       for (const c of World.colliders) { const r = c.r !== undefined ? c.r : Math.max(c.hx, c.hz); if (r > 1.6 && c.r === undefined) continue; if (hyp(x - c.x, z - c.z) < r + rad) return false; }
       return true;
     };
