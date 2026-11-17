@@ -7,7 +7,7 @@ QUALITY.low.houseFar = 30; QUALITY.low.yardRange = 24; QUALITY.medium.yardRange 
 // cast into the sun-shadow maps: one prism stand-in per house does that.
 const ROOFS = [];       // every generated roof (for test/town.js: slope sample points against the neighbours' volumes)
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
-const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof', INF_SL = 'MI_Slate_Roof', INF_TH = 'MI_Thatch_Roof', INF_SS = 'MI_StoneSlate_Roof', INF_L = 'MI_Plaster_Lime', INF_R = 'MI_Rubble_Wall';      // [fx2] the three roof coverings: wood shingle, stone slate, thatch (shellStyle in 72c_infill picks one per building)
+const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof', INF_SL = 'MI_Slate_Roof', INF_TH = 'MI_Thatch_Roof', INF_SS = 'MI_StoneSlate_Roof', INF_CT = 'MI_ClayTile_Roof', INF_L = 'MI_Plaster_Lime', INF_R = 'MI_Rubble_Wall';      // [fx2] the three roof coverings: wood shingle, stone slate, thatch (shellStyle in 72c_infill picks one per building)
 function infBatch() {
   if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 48, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 48 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
   return INFS.batch;
@@ -24,8 +24,8 @@ async function infillMaterials() {
     return true;
   };
   const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0, uvScale: [2.2, 2.2] });      // Build 42: grain was a metre wide on a 2 m panel
-  const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 1.2, nScale: 1.0, moss: 0.6 });
-  await mk(INF_SL, 'MI_RoundTiles', 'MI_Slate', { gain: 1.0, nScale: 1.0, moss: 0.4 }); await mk(INF_TH, 'MI_RoundTiles', 'MI_Thatch', { gain: 1.0, nScale: 1.0, moss: 0.3 }); await mk(INF_SS, 'MI_RoundTiles', 'MI_StoneSlate', { gain: 1.1, nScale: 1.0, moss: 0.4 });      // [fx2]
+  const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 2.3, nScale: 1.0, moss: 0.6 });
+  await mk(INF_CT, 'MI_RoundTiles', 'MI_RoundTiles', { gain: 1.25, nScale: 1.0, moss: 0.5 }); await mk(INF_SL, 'MI_RoundTiles', 'MI_Slate', { gain: 3.2, nScale: 1.0, moss: 0.4 }); await mk(INF_TH, 'MI_RoundTiles', 'MI_Thatch', { gain: 1.0, nScale: 1.0, moss: 0.3 }); await mk(INF_SS, 'MI_RoundTiles', 'MI_StoneSlate', { gain: 1.5, nScale: 1.0, moss: 0.4 });      // [fx2]
   if (Kit.defs.MI_UnevenBrick) Kit.defs[INF_B] = Object.assign({}, Kit.defs.MI_UnevenBrick, { name: INF_B, doubleSided: true });
   if (Kit.defs[INF_T]) Kit.defs[INF_T].doubleSided = true;
   await mk(INF_R, 'MI_UnevenBrick', 'MI_Rubble', { gain: 1.0, nScale: 1.0, moss: 0.3, doubleSided: true });      // [fx2] rubble / dry-stone wall for retaining and yard walls
@@ -152,11 +152,13 @@ function infRoofGen(B, MS, o) {
   const RM = o.mat && Kit.defs[o.mat] ? o.mat : INF_S, ts = o.ts || 1.25, sag = o.sag || 0, nseg = sag ? Math.max(2, Math.ceil((a1 - a0) / 2.6)) : 1, sgy = u => sag * Math.max(0, 1 - Math.pow(2 * u / len, 2));      // [fx2] covering, texel size, ridge sag (zero at the gables)
   const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE0), dark = col.map(v => v * 0.7), wood = [0.24, 0.2, 0.17];
   const OUTV = (u, v, y) => ridgeX ? [u, y, v] : [v, y, u];            // a direction in the roof's own frame -> the house frame
+  const Mw = MS.elements || MS, northS = s => { const nz = ridgeX ? s * Mw[10] : s * Mw[2]; return nz < -0.5; };      // [fx3] a pitch that faces north holds moss and stays damp: greener and darker
+  const sideCol = s => northS(s) ? [col[0] * 0.92, col[1] * 1.04, col[2] * 0.84] : col;
   const planes = G => {
     for (const s of [-1, 1]) {
       for (let i = 0; i < nseg; i++) {
         const ua = a0 + (a1 - a0) * i / nseg, ub = a0 + (a1 - a0) * (i + 1) / nseg, A = P(ua, s * VE(s), YE(s)), Bp = P(ub, s * VE(s), YE(s)), C = P(ub, 0, yR - sgy(ub)), D = P(ua, 0, yR - sgy(ua)), up = [0, 1, 0];
-        G.quad(RM, A, Bp, C, D, col, [(ua - a0) / ts, 0, (ub - a0) / ts, slopeLen / ts], up);
+        G.quad(RM, A, Bp, C, D, sideCol(s), [(ua - a0) / ts, 0, (ub - a0) / ts, slopeLen / ts], up);
       }
     }
     for (const [u, sg] of [[-len / 2, -1], [len / 2, 1]]) {
@@ -182,6 +184,7 @@ function infRoofGen(B, MS, o) {
   if (o.thatch) for (const s of [-1, 1]) for (const f of [0.2, 0.6]) { const yy = yR - (yR - YE(s)) * f, vv = VE(s) * f; g2.quad(W_, P(a0 + 0.1, s * vv, yy + 0.03), P(a1 - 0.1, s * vv, yy + 0.03), P(a1 - 0.1, s * vv, yy - 0.03), P(a0 + 0.1, s * vv, yy - 0.03), col.map(v => v * 0.4), GPU.wood, [0, 1, 0.5 * s]); }      // [fx2] ligger lines (flat strips: triangle budget)
   for (const s of [-1, 1]) for (const [u, nb] of [[a0, o.nl], [a1, o.nr]]) if (!nb) { const A = P(u, 0.0, yR + 0.02), Bp = P(u, s * VE(s), YE(s)), A2 = P(u, 0.0, yR - 0.12), B2 = P(u, s * VE(s), YE(s) - 0.14); g2.quad(W_, A, Bp, B2, A2, [0.2, 0.17, 0.14], GPU.wood, OUTV(u < 0 ? -1 : 1, 0, 0)); }      // [fx2] a barge board along each exposed rake
   const nrid = Math.min(nseg, 4); for (let i = 0; i < nrid; i++) { const ua = a0 + (a1 - a0) * i / nrid, ub = a0 + (a1 - a0) * (i + 1) / nrid, hw = RM === INF_TH ? 0.2 : 0.1, cc = RM === INF_TH ? col.map(v => v * 0.5) : [0.26, 0.22, 0.19], ya = yR + 0.07 - sgy(ua), yb = yR + 0.07 - sgy(ub); for (const s of [-1, 1]) g2.quad(W_, P(ua, 0, ya), P(ub, 0, yb), P(ub, s * hw, yb - 0.1), P(ua, s * hw, ya - 0.1), cc, GPU.wood, [0, 1, 0]); }      // [fx2] ridge cap follows the sag
+  { const pr = o.patch === undefined ? 0 : o.patch, np = pr < 0.45 ? 0 : pr < 0.8 ? 1 : 2; for (let k = 0; k < np; k++) { const q = ((pr * 977 + k * 313) % 1), s = (k + Math.floor(pr * 10)) % 2 ? 1 : -1, fresh = (q * 7) % 1 < 0.5, ua = a0 + 0.4 + q * Math.max(0.1, (a1 - a0) - 2.4), ub = ua + 1.1 + (q * 13 % 1) * 0.8, t0 = 0.25 + (q * 5 % 1) * 0.3, t1 = t0 + 0.28, pc = fresh ? col.map(v => Math.min(2, v * 1.28)) : col.map(v => v * 0.74), L2 = (t, u) => P(u, s * VE(s) * (1 - t) , YE(s) + (yR - YE(s)) * t + 0.012); g2.quad(RM, L2(t0 - 0.0, ua), L2(t0, ub), L2(t1, ub), L2(t1, ua), pc, [0, 0, 1.1, 0.4], [0, 1, 0]); } }      // [fx3] a patched area: a repair in fresher stuff or a stained, mossed one
   ROOFS.push({ M: Array.from(MS.elements || MS), w, d, top, tanP, ridgeX, zc, ov, lift, T, a0, a1, hs, ve, yR, yE: yE0 });
   const name = g.make('gen_roof_' + (_gn++)), name2 = g2.make('gen_roofe_' + (_gn++)), fn = gf.make('gen_roofF_' + (_gn++));
   Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn]; Kit.far[name2] = [];
@@ -302,7 +305,7 @@ function infShell(B, h, lo) {
   // ── roof: generated shingles; ridge parallel to the street (eaves to the street) or gable to the street ──
   const Ytop = fl * H, rx = !gableFront, zc = -sh, rise = (rx ? d : w) / 2 * tanP;
   const SSt = typeof shellStyle === 'function' ? shellStyle({ id: h.id, x: h.x, z: h.z }, null) : {};      // [fx2] the district's covering, not the old pale shingle
-  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: SSt.ov || 0.5, mat: SSt.mat, ts: SSt.ts, sag: SSt.sag, thick: SSt.thick, thatch: SSt.thatch, nl: rx && nbW > 0, nr: rx && nbE > 0, nsW: !rx && nbW > 0, nsE: !rx && nbE > 0, tint: SSt.tint ? SSt.tint : DD ? DD.roof.map(v => Math.min(1, v * (DD.patch ? 0.8 + R() * 0.3 : 0.94 + R() * 0.1))) : [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
+  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: SSt.ov || 0.5, mat: SSt.mat, ts: SSt.ts, sag: SSt.sag, thick: SSt.thick, thatch: SSt.thatch, nl: rx && nbW > 0, nr: rx && nbE > 0, nsW: !rx && nbW > 0, nsE: !rx && nbE > 0, patch: SSt.patch, kindName: SSt.kind, tint: SSt.tint ? SSt.tint : DD ? DD.roof.map(v => Math.min(1, v * (DD.patch ? 0.8 + R() * 0.3 : 0.94 + R() * 0.1))) : [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
   if (!lo) {
     if (h.chimney) {          // a chimney that rises through the roof (stack, flashing, cap)
       const cx = rx ? (h.chimney > 0 ? 1 : -1) * w * 0.28 : 0, cz = rx ? zc : d * 0.2 * (h.chimney > 0 ? 1 : -1) + zc * 0, top = infChimney(B, MS, { x: cx, z: cz, top: Ytop, tanP, hs: (rx ? d : w) / 2, ridgeX: rx, zc: rx ? zc : 0 });
