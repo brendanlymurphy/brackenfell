@@ -241,13 +241,26 @@ function buildChapelWay(bucket) {
     for (const sd of i === 3 ? [] : [-1, 1]) { const ax = a[0] + nx * sd * 1.5, az = a[1] + nz * sd * 1.5, cx = ax + dx / 2, cz = az + dz / 2, g = gy(cx, cz) - 0.15, m = bucket(cx, cz);
       m.push().T(cx, g, cz).RY(-ang);
       if (sd < 0) { m.mat(MAT.STONE, [0.4, 0.38, 0.35], 1.4); m.box(-L / 2, 0, -0.25, L / 2, 1.15, 0.25, 4); }
-      else { m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-L / 2, 0, -0.5, L / 2, 0.32, 0.5, 4);
+      else { earthBank(m, [cx - Math.cos(ang) * L / 2, cz - Math.sin(ang) * L / 2], [cx + Math.cos(ang) * L / 2, cz + Math.sin(ang) * L / 2], 0.5, 0.35, null, { x: cx, z: cz, ang, y: g });
         World.hedgeClumps = World.hedgeClumps || []; const nC = Math.round(L / 0.62); for (let c = 0; c < nC; c++) { if (R() < 0.12) continue; const u = -L / 2 + (c + 0.5) * L / nC + (R() - 0.5) * 0.3, v = (R() - 0.5) * 0.5, w = [cx + Math.cos(ang) * u - Math.sin(ang) * v, cz + Math.sin(ang) * u + Math.cos(ang) * v]; World.hedgeClumps.push([w[0], gy(w[0], w[1]) + 0.2, w[1], 1.0 + R() * 0.8, R() * 6.28, 0.1 + R() * 0.2, R()]); }
         if (i === 1 && sd > 0) World.hedgeSaplings = [[cx - 0.5, cz - 0.1], [cx + 1.2, cz + 0.3]]; }
       addBoxCollider(m, -L / 2 + 0.45, -0.3, L / 2 - 0.45, 0.3, 0, 1.3);
       m.pop(); }
     for (let k = 0; k < 3; k++) { const t = (k + 0.5) / 3, x = a[0] + dx * t, z = a[1] + dz * t, mm = bucket(x, z), g = gy(x, z); mm.push().T(x, g, z).RY(-ang + (R() - 0.5) * 0.1); mm.mat(MAT.STONE, [0.5 + R() * 0.07, 0.48, 0.43], 1.2); mm.box(-0.5, -0.03, -0.45, 0.5, 0.03, 0.45, 4); mm.pop(); }
   }
+}
+
+/* [fx3] a low earth bank as one closed smooth form along a ground line: a rounded ridge (width w each side, height h at the crown) that follows the terrain across and along, its foot buried under the ground on both sides and the ends tapering down into the grass. The terrain's own grass is the skin; no box, no free edge. */
+function earthBank(m, a, b, w, h, tint, fr) {
+  const tl = (x, y, z) => { if (!fr) return [x, y, z]; const X = x - fr.x, Z = z - fr.z, c = Math.cos(fr.ang), sn = Math.sin(fr.ang); return [X * c + Z * sn, y - fr.y, -X * sn + Z * c]; };
+  const gy = (x, z) => Terrain.y(x, z), dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz); if (L < 0.2) return;
+  const nx = -dz / L, nz = dx / L, ux = dx / L, uz = dz / L, tap = Math.min(0.9, L / 3);
+  const offs = [0, tap]; for (let u = tap + 0.8; u < L - tap - 0.3; u += 0.8) offs.push(u); offs.push(L - tap, L);
+  const prof = [[-1.45, -0.35], [-1, 0.02], [-0.5, 0.8], [0, 1], [0.5, 0.8], [1, 0.02], [1.45, -0.35]];
+  const ring = offs.map((u, i) => { const f = i === 0 || i === offs.length - 1 ? 0 : 1, cx = a[0] + ux * u, cz = a[1] + uz * u, gc = gy(cx, cz);
+    return prof.map(([s, hh]) => { const x = cx + nx * s * w, z = cz + nz * s * w, g = gy(x, z); const y = Math.abs(s) >= 1 ? g + hh * (Math.abs(s) > 1 ? 1 : 1) : Math.max(g + 0.02, gc + hh * h * f); return tl(x, Math.abs(s) > 1 ? g - 0.35 : y, z); }); });
+  m.mat(MAT.GRASS, tint || [0.55, 0.55, 0.42], 1.0);
+  for (let i = 0; i + 1 < ring.length; i++) for (let j = 0; j + 1 < prof.length; j++) { const A = ring[i][j], B = ring[i][j + 1], C = ring[i + 1][j + 1], D = ring[i + 1][j]; m.quad2(A, B, C, D); }
 }
 
 function plotLowTier() { return R.qName === 'low'; }
@@ -264,7 +277,7 @@ function buildWestgate(bucket) {
     const inGap = x => (gaps[sd] || []).some(g => x <= g[0] + 0.3 && x >= g[1] - 0.3);
     for (let x = X0; x > X1; x -= 0.6) { if ((gaps[sd] || []).some(g => x <= g[0] && x >= g[1])) continue; const z = rz(x) + sd * (3.5 + Math.sin(x * 0.21) * 0.25 + (R() - 0.5) * 0.3), g = gy(x, z); World.hedgeClumps.push([x + (R() - 0.5) * 0.3, g + 0.2, z, 0.9 + R() * 0.7 + (R() < 0.12 ? 0.5 : 0), R() * 6.28, 0.1 + R() * 0.2, R()]); }
     let x = X0; for (const g of (gaps[sd] || []).slice().sort((a, b) => b[0] - a[0]).concat([[X1, X1]])) { const xa = x, xb = g[0]; if (xa - xb > 0.5) { const za = rz(xa) + sd * 3.5, zb = rz(xb) + sd * 3.5, cx = (xa + xb) / 2, cz = (za + zb) / 2, m = bucket(cx, cz), ang = Math.atan2(zb - za, xb - xa), L = Math.hypot(xb - xa, zb - za), gg = gy(cx, cz);
-        m.push().T(cx, gg - 0.12, cz).RY(-ang); m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-L / 2, 0, -0.5, L / 2, 0.36, 0.5, 4); addBoxCollider(m, -L / 2 + 0.1, -0.35, L / 2 - 0.1, 0.35, 0, 1.3); m.pop(); }
+        m.push().T(cx, 0, cz).RY(-ang); earthBank(m, [cx - Math.cos(ang) * L / 2, cz - Math.sin(ang) * L / 2], [cx + Math.cos(ang) * L / 2, cz + Math.sin(ang) * L / 2], 0.5, 0.4, null, { x: cx, z: cz, ang, y: 0 }); addBoxCollider(m, -L / 2 + 0.1, -0.35, L / 2 - 0.1, 0.35, 0, 1.3); m.pop(); }
       x = g[1]; if (g[0] !== g[1]) { const gx = (g[0] + g[1]) / 2, gz = rz(gx) + sd * 3.5, m = bucket(gx, gz); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); for (const px of [g[0] + 0.15, g[1] - 0.15]) { const pz = rz(px) + sd * 3.5; m.cbox(px, gy(px, pz) - 0.1, pz, 0.16, 1.5, 0.16, 0); } } }
   }
   /* a wattle-and-rail fence round a close: posts and two rails on the three far sides */

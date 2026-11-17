@@ -44,7 +44,7 @@ function buildWalls(bucket) {
           { const gM = gy(...P((pa + pb) / 2, -0.3)), hsh = Math.floor(Math.abs(pa) * 7.3) % 5;
             for (let u = pa + 0.25; u < pb - 0.1; u += 0.42) { const gU = gy(...P(u, -0.03)); bx(MAT.TIMBER, [0.27, 0.24, 0.21], 0.5, u - 0.02, Math.max(pl, gU - 0.1), -0.03, u + 0.02, top - 0.04, 0, 4 | 8); }
             if (hsh === 0 || hsh === 3 || hsh === 1) { const u = pa + 0.5 + (hsh === 3 ? 0.7 : 0), gU = gy(...P(u, -0.03)); bx(MAT.PLANKS, [0.78, 0.64, 0.46], 0.5, u, Math.max(pl, gU - 0.1), -0.04, u + 0.3, top - (hsh === 3 ? 0.9 : 0.2), 0, 4 | 8); }
-            if (pb - pa > 1.0) { bx(MAT.DIRT, [0.34, 0.29, 0.21], 1.5, pa, gM - 0.3, -0.95, pb, gM + 0.5, -0.02, 4 | 1 | 2); bx(MAT.DIRT, [0.36, 0.3, 0.22], 1.5, pa, gM - 0.3, -1.6, pb, gM + 0.18, -0.9, 4 | 1 | 2); } }
+            void gM; }
           col(Math.min(f0[0], f1[0]), Math.min(f0[1], f1[1]), Math.max(f0[0], f1[0]), Math.max(f0[1], f1[1]), pl, top); }
         void e0; void e1;
         for (let u = a + 0.2; u < b - 0.05; u += 0.5) tips.push([u, top]); }
@@ -54,6 +54,8 @@ function buildWalls(bucket) {
         const post0 = P(a, 1.85); K.post(post0[0], post0[1], ya - 0.1, ya + 1.08, 0.1, true);
         if (!(FLAT(a) && FLAT(b)) && !(o.noRail && o.noRail(a, b))) { const c0 = P(a, 1.9), c1 = P(b, 1.95); col(Math.min(c0[0], c1[0]), Math.min(c0[1], c1[1]), Math.max(c0[0], c1[0]), Math.max(c0[1], c1[1]), lo - 0.05, hi + 1.15); } }
     }
+    /* [fx3] the earth thrown up against the palisade's foot: a low turf-covered ridge on the outside that follows the ground and meets it along a ragged line, one closed form per stretch; it stops 0.3 m short of each gate tower, so the passage and the road are clear */
+    for (const [ba, bb] of [[u0 + 0.3, ug - TW - 0.3], [ug + TW + 0.3, u1 - 0.3]]) if (bb - ba > 1.5) { const A = P(ba, -0.75), B = P(bb, -0.75), mb = M((A[0] + B[0]) / 2, (A[1] + B[1]) / 2); earthBank(mb, A, B, 0.6, 0.42, [0.5, 0.5, 0.38]); }
     // stakes (one mesh, tiny gable prisms)
     { for (const [u, top] of tips) { const p = P(u, 0.0), m = M(p[0], p[1]); m.mat(MAT.TIMBER, [0.7, 0.64, 0.58], 0.5); const q0 = 0, q = P(u, 0.36), r = P(u + 0.22, 0.0), s = P(u + 0.22, 0.36), mid0 = [(p[0] + r[0]) / 2, (p[1] + r[1]) / 2], mid1 = [(q[0] + s[0]) / 2, (q[1] + s[1]) / 2], ty = top + 0.3;
         m.quad2([p[0], top, p[1]], [q[0], top, q[1]], [mid1[0], ty, mid1[1]], [mid0[0], ty, mid0[1]]); m.quad2([mid0[0], ty, mid0[1]], [mid1[0], ty, mid1[1]], [s[0], top, s[1]], [r[0], top, r[1]]); } }
@@ -66,7 +68,16 @@ function buildWalls(bucket) {
     for (const v of [V0 + 0.1, V1 - 0.1]) { const p = P(a1 - 0.2, v), q = P(b0 + 0.2, v); K.beam([p[0], Y - 0.4, p[1]], [q[0], Y - 0.4, q[1]], 0.3, 0.46); }
     // deck over the whole tower (v from -0.5 to 3.4), the open gate leaves (hinged back flat on the faces), a plaque
     { const q0 = P(a0, V0), q1 = P(b1, V1); K.deck(Math.min(q0[0], q1[0]), Math.min(q0[1], q1[1]), Math.max(q0[0], q1[0]), Math.max(q0[1], q1[1]), Y); }
-    for (const sd of [-1, 1]) { const u = ug + sd * 1.95; bx(MAT.PLANKS, [0.5, 0.42, 0.34], 0.5, u - 0.05, gA, V0 + 0.2, u + 0.05, gA + 2.55, V0 + 1.6, 0, 1); for (const h of [0.4, 1.2, 2.0]) bx(MAT.PLAIN, [0.1, 0.09, 0.08], 0.5, u - 0.07, gA + h, V0 + 0.2, u + 0.07, gA + h + 0.1, V0 + 1.6, 0, 1); }
+    /* [fx3] the gate leaves: a pair of plank leaves on pintle hinges, standing open about 100 degrees from shut (ten degrees off the passage wall), hung on the outer end of each jamb inside the arch: planks on a ledged back, two iron straps the leaf's own width with hinge eyes, a drop bar slung in two iron brackets. Nothing crosses the pier, the lintel or the road. */
+    for (const sd of [-1, 1]) { const uh = ug + sd * (1.9 - 0.1), vh = V0 + 0.2, len = 1.75, dU = -sd * 0.3, dV = Math.sqrt(len * len - dU * dU), h0 = P(uh, vh), h1 = P(uh + dU, vh + dV), ang = Math.atan2(h1[1] - h0[1], h1[0] - h0[0]), gH = gy(h0[0], h0[1]), hh = 2.45, m = M(h0[0], h0[1]);
+      m.push().T(h0[0], gH, h0[1]).RY(-ang);
+      m.mat(MAT.PLANKS, [0.42, 0.34, 0.26], 0.6); m.box(0, 0.06, -0.035, len, hh, 0.035, 0);
+      m.mat(MAT.TIMBER, [0.26, 0.21, 0.16], 0.5); for (const y of [0.45, 1.25, 2.05]) m.box(0.0, y, 0.035, len, y + 0.16, 0.075, 0);            // ledges on the back
+      m.mat(MAT.METAL, [0.13, 0.12, 0.11]); for (const y of [0.55, 1.95]) { m.box(0.0, y, -0.05, len * 0.62, y + 0.1, -0.035, 0); m.box(0.0, y, -0.06, 0.1, y + 0.1, -0.035, 0); m.cyl(0.04, y - 0.02, -0.075, 0.05, 0.05, 0.14, 6, 0); }   // straps taper from the hinge; eyes round the pintles
+      for (const y of [0.55, 1.95]) m.cyl(0.0, y - 0.1, 0.0, 0.025, 0.025, 0.34, 6, 0);                                                                                      // pintles
+      m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); m.box(0.25, 1.15, -0.13, len - 0.1, 1.27, -0.05, 0);                                                                         // the drop bar
+      m.mat(MAT.METAL, [0.13, 0.12, 0.11]); for (const x of [0.4, len - 0.3]) m.box(x, 1.1, -0.14, x + 0.07, 1.32, -0.035, 0);
+      m.pop(); }
     // posts, roof, rails on the platform (open on the stair side and along the wall walk)
     const cps = [[ug - TW + 0.15, V0 + 0.2], [ug + TW - 0.15, V0 + 0.2], [ug - TW + 0.15, V1 - 0.2], [ug + TW - 0.15, V1 - 0.2]];
     for (const [u, v] of cps) { const p = P(u, v); K.post(p[0], p[1], Y, Y + 2.8, 0.22, true); }
@@ -81,8 +92,12 @@ function buildWalls(bucket) {
       rl(a0 + 0.3, b1 - 0.3, V0 + 0.2);                                  // the outer rail (the palisade's own line continues on both sides)
       rl(a0 + 0.3, a0 + 2.2, V1 - 0.2);                                  // inner rail on the side away from the stair
       rl(a0 + 0.3, ug - 0.5, V1 - 0.2); }
-    // torches on the gate faces and a lantern in the arch
-    for (const sd of [-1, 1]) for (const v of [V0 - 0.04, V1 + 0.04]) { const p = P(ug + sd * 1.82, v); World.emitters.push({ type: 'torch', p: [p[0], gA + 2.2, p[1]], zone: 0, size: 0.2 }); const m = M(p[0], p[1]); m.mat(MAT.METAL, [0.14, 0.12, 0.1]); m.box(p[0] - 0.03, gA + 1.9, p[1] - 0.03, p[0] + 0.03, gA + 2.1, p[1] + 0.03); }
+    // torches: iron brackets fixed to the pier faces at head height (a plate on the stone, an arm, a cup)
+    for (const sd of [-1, 1]) for (const f of [-1, 1]) { const u = ug + sd * 2.6, v = f < 0 ? V0 : V1, pf = P(u, v + f * 0.3), yh = gy(...P(u, v + f * 0.4)) + 1.85;
+      bx(MAT.METAL, [0.14, 0.12, 0.1], 0.5, u - 0.06, yh - 0.1, v + (f < 0 ? -0.03 : 0), u + 0.06, yh + 0.2, v + (f < 0 ? 0 : 0.03), 0);
+      bx(MAT.METAL, [0.14, 0.12, 0.1], 0.5, u - 0.025, yh + 0.0, v + (f < 0 ? -0.3 : 0), u + 0.025, yh + 0.05, v + (f < 0 ? 0 : 0.3), 0);
+      bx(MAT.METAL, [0.14, 0.12, 0.1], 0.5, u - 0.05, yh + 0.0, v + (f < 0 ? -0.4 : 0.26), u + 0.05, yh + 0.2, v + (f < 0 ? -0.26 : 0.4), 0);
+      World.emitters.push({ type: 'torch', p: [pf[0], yh + 0.3, pf[1]], zone: 0, size: 0.2 }); }
     { const p = P(ug, 1.45); K.lantern(p[0], Y - 0.9, p[1], 0.9); K.beam([p[0], Y - 0.62, p[1]], [p[0], Y - 0.9, p[1]], 0.03, 0.03); }
     // the stair up, on the inside beside the wall walk, rising toward the tower
     const sU0 = b1 + 5.2, sU1 = b1, sy0 = Math.min(gy(...P(sU0, 2.7)), gy(...P(sU0 - 0.5, 2.7))), sv0 = 2.0, sv1 = 3.4;
