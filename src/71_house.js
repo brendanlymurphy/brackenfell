@@ -243,6 +243,6 @@ function buildHouse(site, spec) {
     cell.floorY = floorY; cell.zone = zone; cell.door = doorList[0]; cell.xdoor = xdoorList[0]; cell.w = w; cell.d = d; cell.ctx = ctx;
     if (cell.door && cell.xdoor) Cells.portals(cell, site);
   }
-  World.houses[site.id] = { site, isite, zone, ctx, floorY, xFloorY, door: doorList[0], xdoor: xdoorList[0], cell, plan: ctx.plan || null };
+  World.houses[site.id] = { spec, kit: !!kit, site, isite, zone, ctx, floorY, xFloorY, door: doorList[0], xdoor: xdoorList[0], cell, plan: ctx.plan || null }; // [fx2] spec and kit kept for the survey
   return { ext, int, glow, ctx, cell };
 }
