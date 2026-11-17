@@ -113,6 +113,10 @@ function terrainH(x, z) {
     const rl = lakeR(x, z);
     const hb = dl < rl ? LAKE.y - 3.2 * (1 - (dl / rl) * (dl / rl)) : LAKE.y + (dl - rl) * 0.2;
     h = Math.min(h, lerp(hb, h, smooth(0, 15, dl - rl)));
+    /* [coord] Build 74: the shore is dry land. West of the wharf the ground lay 10 cm under the lake's level for 12 m beyond the shoreline, so the lake's
+       sheet covered the fisher's hut and its path. Outside the shoreline the ground is at least 0.25 m over the water, rising to 0.6 m within 6 m
+       (not in the river's channel, which must still reach the lake). */
+    if (dl > rl && d > 6.5 + ext) h = Math.max(h, LAKE.y + 0.25 + 0.35 * Math.min(1, (dl - rl) / 6));
   }
   return h;
 }
@@ -267,19 +271,23 @@ function buildSplat() {
   const ell = (ctx, x, z, rx, rz, col) => { for (const [e, a] of [[1.6, 0.22], [0.8, 0.33], [0, 0.45]]) { ctx.fillStyle = col(a); const q = P(x, z); ctx.beginPath(); ctx.ellipse(q[0], q[1], (rx + e) * sc, (rz + e) * sc, 0, 0, TAU); ctx.fill(); } };
   { const pl = PLACE.poly;      // [fx3] the Market Place is cobbled wall to wall to its own outline; a short soft shoulder where it meets a road
     for (const [e, al] of [[1.6, 0.22], [0.8, 0.33], [0, 0.45]]) { A.fillStyle = A.strokeStyle = grn(al); A.lineJoin = 'round'; A.lineWidth = 2 * e * sc + 1; A.beginPath(); pl.forEach((q, i) => { const c = P(q[0], q[1]); if (i) A.lineTo(c[0], c[1]); else A.moveTo(c[0], c[1]); }); A.closePath(); A.fill(); if (e) A.stroke(); } }
-  for (const [id, w, keep] of [['main', 6.4, p => p[0] > -50 && p[0] < -19], ['south', 7.0, p => p[1] > 8 && p[1] < 31], ['north', 3.4, p => p[1] < -16 && p[1] > -44]]) {      // [fx3] the last stretch of each street into the place is a street: cobbled from front to front
+  for (const [id, w, keep] of [['main', 6.4, p => p[0] > -50 && p[0] < -19], ['south', 7.0, p => p[1] > 8 && p[1] < 31], ['north', 4.4, p => p[1] < -16 && p[1] > -66]]) {      // [fx3] the last stretch of each street into the place is a street: cobbled from front to front
     const r = Roads.find(q => q.id === id); if (r) { const pts = r.line.p.filter(keep); if (pts.length > 1) stroke(A, pts, w, grn, 0.9); } }
   /* [fx3] the district: between the fronts, yards and lanes of the Market Place quarter the ground is trodden earth, not lawn; it fades to turf at the edges */
   { const Rd = rng(9955); for (let i = 0; i < 640; i++) { const x = -60 + Rd() * 94, z = -35 + Rd() * 72, rad = 3 + Rd() * 4, q = P(x, z), g = A.createRadialGradient(q[0], q[1], rad * sc * 0.2, q[0], q[1], rad * sc); g.addColorStop(0, 'rgba(255,0,0,0.30)'); g.addColorStop(1, 'rgba(255,0,0,0)'); A.fillStyle = g; A.beginPath(); A.arc(q[0], q[1], rad * sc, 0, TAU); A.fill(); } }
+  { const Rd = rng(9957); for (let i = 0; i < 200; i++) { const x = -46 + Rd() * 84, z = -62 + Rd() * 34, rad = 3 + Rd() * 4, q = P(x, z), g = A.createRadialGradient(q[0], q[1], rad * sc * 0.2, q[0], q[1], rad * sc); g.addColorStop(0, 'rgba(255,0,0,0.26)'); g.addColorStop(1, 'rgba(255,0,0,0)'); A.fillStyle = g; A.beginPath(); A.arc(q[0], q[1], rad * sc, 0, TAU); A.fill(); } }      /* Chapelgate: earth lanes between the cottages, not lawn */
+  stroke(A, [[-1.5, -45.2], [6, -45.4], [14, -44.6], [22, -45.0], [30, -44.7], [36.5, -44.9]], 3.4, grn, 0.9);      /* the east cluster's lane, cobbled, wandering to the well */
+  stroke(A, [[-6.3, -62.6], [-9.4, -64.1], [-12.6, -65.6], [-15.4, -66.9]], 2.6, red, 0.85);      /* the worn way to the lych gate */
   /* [fx3] plots: each yard's floor is packed earth (trodden dirt, bare in places), the back lane behind the plots' back walls is a trodden strip with a cobble spine; no lawn inside a burgage */
   if (typeof plotsCompute === 'function') for (const p of plotsCompute()) {
+    if (p.axis === 'x') { for (const [al, e] of [[0.55, 0.5], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - e, p.z0 - e), a1 = P(p.x1 + e, p.z1 + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); } continue; }
     const lane = p.bz > 0 ? [p.z1 + 0.15, p.z1 + 2.6] : [p.z0 - 2.6, p.z0 - 0.15];
     for (const [al, e] of [[0.55, 0.5], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - e, p.z0 - e), a1 = P(p.x1 + e, p.z1 + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
     for (const [al, e] of [[0.5, 0.4], [0.9, 0]]) { A.fillStyle = red(al); const a0 = P(p.x0 - 0.3 - e, lane[0] - e), a1 = P(p.x1 + 0.3 + e, lane[1] + e); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
     A.fillStyle = grn(0.5); { const a0 = P(p.x0 - 0.3, (lane[0] + lane[1]) / 2 - 0.5), a1 = P(p.x1 + 0.3, (lane[0] + lane[1]) / 2 + 0.5); A.fillRect(a0[0], a0[1], a1[0] - a0[0], a1[1] - a0[1]); }
   }
   /* [fx3] a street runs front to front: every house that stands on the last stretch of Wharf Street, the main street's west run or the market alley is paved round its feet (a 1.3 m apron, 2 m in front), so no lawn strip is left against a front */
-  { const zone = [['south', p => p[1] > 7 && p[1] < 34], ['main', p => p[0] > -52 && p[0] < -17]];
+  { const zone = [['south', p => p[1] > 7 && p[1] < 34], ['main', p => p[0] > -52 && p[0] < -17], ['north', p => p[1] < -18 && p[1] > -64]];
     for (const s of SITES) {
       if (!s.w || s.id === 'tower' || s.id === 'barn') continue;
       let near = false; for (const [id, keep] of zone) { const r = Roads.find(q => q.id === id); if (r && r.line.dist(s.x, s.z, 14) < 9 && keep([s.x, s.z])) near = true; }

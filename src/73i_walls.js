@@ -39,7 +39,12 @@ function buildWalls(bucket) {
         /* [coord] Build 72: the plank wall and its collider ran straight through both gate arches (nobody could walk the Bridge Gate or the Chapel Gate);
            each 2 m piece is now cut to what lies outside the arch (ug - 1.9 .. ug + 1.9), and over the arch only the part above the lintel is kept */
         const g0a = ug - 1.9, g1a = ug + 1.9, parts = b <= g0a || a >= g1a ? [[a, b, mlo]] : [[a, Math.min(b, g0a), mlo], [Math.max(a, g0a), Math.min(b, g1a), yT - 0.16], [Math.max(a, g1a), b, mlo]].filter(q => q[1] - q[0] > 0.02);
-        for (const [pa, pb, pl] of parts) { const f0 = P(pa, 0), f1 = P(pb, 0.36); box(MAT.PLANKS, [0.78, 0.7, 0.58], 0.5, f0[0], pl, f0[1], f1[0], top, f1[1], 4 | 8);
+        for (const [pa, pb, pl] of parts) { const f0 = P(pa, 0), f1 = P(pb, 0.36); box(MAT.PLANKS, [0.74, 0.68, 0.6], 0.5, f0[0], pl, f0[1], f1[0], top, f1[1], 4 | 8);
+          /* [fx3] the outer face: plank joints as dark battens, a replaced board now and then, and the earth banked against the foot */
+          { const gM = gy(...P((pa + pb) / 2, -0.3)), hsh = Math.floor(Math.abs(pa) * 7.3) % 5;
+            for (let u = pa + 0.25; u < pb - 0.1; u += 0.42) { const gU = gy(...P(u, -0.03)); bx(MAT.TIMBER, [0.27, 0.24, 0.21], 0.5, u - 0.02, Math.max(pl, gU - 0.1), -0.03, u + 0.02, top - 0.04, 0, 4 | 8); }
+            if (hsh === 0 || hsh === 3 || hsh === 1) { const u = pa + 0.5 + (hsh === 3 ? 0.7 : 0), gU = gy(...P(u, -0.03)); bx(MAT.PLANKS, [0.78, 0.64, 0.46], 0.5, u, Math.max(pl, gU - 0.1), -0.04, u + 0.3, top - (hsh === 3 ? 0.9 : 0.2), 0, 4 | 8); }
+            if (pb - pa > 1.0) { bx(MAT.DIRT, [0.34, 0.29, 0.21], 1.5, pa, gM - 0.3, -0.95, pb, gM + 0.5, -0.02, 4 | 1 | 2); bx(MAT.DIRT, [0.36, 0.3, 0.22], 1.5, pa, gM - 0.3, -1.6, pb, gM + 0.18, -0.9, 4 | 1 | 2); } }
           col(Math.min(f0[0], f1[0]), Math.min(f0[1], f1[1]), Math.max(f0[0], f1[0]), Math.max(f0[1], f1[1]), pl, top); }
         void e0; void e1;
         for (let u = a + 0.2; u < b - 0.05; u += 0.5) tips.push([u, top]); }

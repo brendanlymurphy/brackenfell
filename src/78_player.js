@@ -122,7 +122,7 @@ function playerUpdate(dt) {
     const rr = hyp(np[0], np[2]);
     if (rr > WORLD_RADIUS && !(CELLS_ON && Cells.inRegion(np[0]))) { np[0] *= WORLD_RADIUS / rr; np[2] *= WORLD_RADIUS / rr; if (P.warned <= 0) { P.warned = 8; if (typeof toast === 'function') toast('The wilds beyond Brackenfell are no place to wander alone.'); } }
     const w2 = World.waterAt(np[0], np[2]);
-    if (w2 > -900 && w2 - World.groundAt(np[0], np[2], P.pos[1] + 0.6) > 1.12 && w2 - P.pos[1] > 0.9) { np[0] = P.pos[0]; np[2] = P.pos[2]; P.vel[0] *= 0.3; P.vel[2] *= 0.3; }
+    void w2;       /* [coord] Build 74: deep water no longer refuses the step. It used to hold the player where they stood, so anyone who jumped or fell in off the wharf could not move at all; now they swim (below) */
     P.pos[0] = np[0]; P.pos[2] = np[2];
   }
   // a wall, rail or piece of furniture takes the part of the velocity that pushes into it, so the player keeps sliding along it and the footsteps stop when it is stuck
@@ -130,7 +130,11 @@ function playerUpdate(dt) {
   P.warned -= dt;
   // ground / gravity. On the ground the feet follow the surface exactly (ramps, stairs and drops of up to STEP_DOWN are walked, not fallen); the camera smooths the steps.
   const wasGround = P.onGround, STEP_DOWN = 0.62;
-  const gy = World.groundAt(P.pos[0], P.pos[2], P.pos[1] + 0.6);
+  const gy0 = World.groundAt(P.pos[0], P.pos[2], P.pos[1] + 0.6);
+  // [coord] swimming: where the water is deeper than a person can stand in, the "ground" is 1.25 m under the surface, so the head stays out and the feet
+  // follow the water, slowly (the wading speed above), until the bottom comes up to meet them again at a shore. No diving, no drowning.
+  const SWIM = 1.25, wNow = World.cell ? -999 : World.waterAt(P.pos[0], P.pos[2]), gy = wNow > -900 && wNow - gy0 > SWIM ? Math.max(gy0, wNow - SWIM) : gy0;
+  P.swim = gy > gy0;
   // a jump is allowed for a moment after walking off an edge (coyote time)
   if (rp && rp.jump && (P.onGround || P.coyote > 0) && depth < 0.9) { P.vel[1] = 6.4 * (depth > 0.45 ? 0.7 : 1); P.onGround = false; P.coyote = 0; RPG.jumped(); }
   if (P.vel[1] > 0 || P.pos[1] > gy + (wasGround && P.vel[1] <= 0 ? STEP_DOWN : 0.05)) {
