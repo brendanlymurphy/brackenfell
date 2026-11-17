@@ -121,7 +121,7 @@ function infWalls(B, MS, o) {
           if (wn === 'front' || wn === 'back') {
             bx(0, L, yb, yb + 0.14, -0.05, 0.0, DK);      // the sill beam
             for (const p of ops) { const cu = (p.u0 + p.u1) / 2, y0 = fy + p.v0, y1 = fy + p.v1; if (!p.door) { bx(cu - 0.035, cu + 0.035, yb + 0.14, y0 - 0.08, -0.045, 0.0, DK); bx(cu - 0.035, cu + 0.035, y1 + 0.13, yt - 0.07, -0.045, 0.0, DK); } }      // studs under and over each window
-            if (L > 2.4) for (const [u, sg] of [[0.07, 1], [L - 0.07, -1]]) if (fre(u + sg * 0.5) && fre(u + sg * 0.9)) g.beam(W_, P(u, yt - 0.9, -0.05), P(u + sg * 0.95, yt - 0.1, -0.05), 0.07, DK);      // corner braces
+            if (L > 2.4) for (const [u, sg] of [[0.07, 1], [L - 0.07, -1]]) if (fre(u + sg * 0.5) && fre(u + sg * 0.9)) g.beam(INF_T, P(u, yt - 0.9, -0.05), P(u + sg * 0.95, yt - 0.1, -0.05), 0.07, [0.38, 0.33, 0.28]);      // corner braces
           }
           if (wn === 'front' || wn === 'back') { const RR = rng(Math.floor(L * 97 + k * 13 + w * 31)); for (const p of ops) if (!p.door) { const cu = (p.u0 + p.u1) / 2, ww = 0.1 + RR() * 0.14, ln = 0.8 + RR() * 1.0; q(mat, cu - ww / 2, cu + ww / 2, Math.max(yb + 0.2, fy + p.v0 - ln), fy + p.v0 - 0.1, -0.008, col.map(v => v * 0.6), undefined, true); } for (let i = 0; i < 3; i++) { const u = 0.3 + RR() * (L - 0.9), ww = 0.12 + RR() * 0.2; if (fre(u) && fre(u + ww)) q(mat, u, u + ww, yt - 0.3 - RR() * 1.2, yt - 0.1, -0.008, col.map(v => v * 0.62), undefined, true); }
             for (let i = 0; i < 3; i++) { const u = 0.4 + RR() * (L - 1.4), ww = 0.3 + RR() * 0.35, y = yb + 0.3 + RR() * (H - 1.2), hh = 0.3 + RR() * 0.45; if (fre(u) && fre(u + ww)) { q(mat, u, u + ww, y, y + hh, -0.008, col.map((v, j) => v * [0.78, 0.62, 0.48][j]), undefined, true); q(mat, u + ww * 0.15, u + ww * 0.8, y + hh, y + hh * 1.5, -0.008, col.map((v, j) => v * [0.84, 0.72, 0.6][j]), undefined, true); } } }      // streaks, and patches where the limewash has flaked off the daub: under each sill and down from the eaves
@@ -294,8 +294,8 @@ function infShell(B, h, lo) {
   infWalls(B, MS, { w, d, fl, H, stone, tint, jetty, R, lo, plan, skip: { left: nbW, right: nbE } });
   const F0 = frames(0);
   if (jetty) for (let k = 1; k < fl; k++) {       // the overhanging storey rests on a deep joist beam along the front, with brackets under it
-    const g = GP(); g.box(W_, -w / 2, -0.3, -d / 2 - 0.62, w / 2, 0.02, -d / 2 + 0.1, [0.42, 0.37, 0.33]); g.box(W_, -w / 2 - 0.05, -0.34, -d / 2 - 0.58, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.36, 0.32, 0.29]);
-    for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * mF; g.beam(W_, [x, -0.7, -d / 2 - 0.5], [x, -0.3, -d / 2 + 0.02], 0.1, [0.34, 0.3, 0.27]); }
+    const g = GP(); g.box(INF_T, -w / 2, -0.3, -d / 2 - 0.62, w / 2, 0.02, -d / 2 + 0.1, [0.68, 0.6, 0.52]); g.box(INF_T, -w / 2 - 0.05, -0.34, -d / 2 - 0.58, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.5, 0.44, 0.38]);
+    for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * mF; g.beam(INF_T, [x, -0.7, -d / 2 - 0.5], [x, -0.3, -d / 2 + 0.02], 0.1, [0.52, 0.46, 0.4]); }
     B.add(g.make('gen_joist_' + (_gn++)), KH.xf(MS, 0, k * H, 0, 1, 0), OUT);
   }
   // ── roof: generated shingles; ridge parallel to the street (eaves to the street) or gable to the street ──
@@ -394,7 +394,7 @@ function infKitWalls(c, b, MS, frames, zone, sy, R, pass) {      // pass: 'ext' 
   const tn = 0.85 + R() * 0.25, SW = typeof shellStyle === 'function' ? shellStyle(site, spec) : {}, wtint = SW.wallTint || [tn, tn * 0.98, tn * 0.95];
   const JT = pass === 'ext' && typeof shellJetty === 'function' ? shellJetty(site, st) : 0;      // [fx2] the shell's upper storey projects over the street; the room (the cell) does not move
   infWalls(b, MS, { sd: site.x * 7.3 + site.z * 3.1, w, d, fl, H: 3, stone: st.ground === 'stone', tint: wtint, lime: SW.lime, jetty: JT, stoneTint: SW.stoneTint, stoneMat: SW.stoneMat, frame: SW.frame, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
-  if (JT) { const g = GP(), sh = JT; g.box(W_, -w / 2, -0.3, -d / 2 - sh - 0.12, w / 2, 0.02, -d / 2 + 0.1, [0.4, 0.35, 0.31]); g.box(W_, -w / 2 - 0.05, -0.34, -d / 2 - sh - 0.08, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.34, 0.3, 0.27]);
-    const nF = Math.max(2, Math.round(w / 2)); for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * (w / nF); g.beam(W_, [x, -0.62, -d / 2 - sh + 0.02], [x, -0.28, -d / 2 + 0.02], 0.09, [0.32, 0.28, 0.25]); }
+  if (JT) { const g = GP(), sh = JT; g.box(INF_T, -w / 2, -0.3, -d / 2 - sh - 0.12, w / 2, 0.02, -d / 2 + 0.1, [0.68, 0.6, 0.52]); g.box(INF_T, -w / 2 - 0.05, -0.34, -d / 2 - sh - 0.08, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.5, 0.44, 0.38]);
+    const nF = Math.max(2, Math.round(w / 2)); for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * (w / nF); g.beam(INF_T, [x, -0.62, -d / 2 - sh + 0.02], [x, -0.28, -d / 2 + 0.02], 0.09, [0.52, 0.46, 0.4]); }
     b.add(g.make('gen_joist_' + (_gn++)), KH.xf(MS, 0, 3, 0, 1, 0), { zone: 0, skyVis: 1, cast: false }); }
 }
