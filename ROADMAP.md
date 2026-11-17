@@ -86,6 +86,11 @@ interiors lit by hearths and candles. As realistic as free art allows.
   the north entry opened (2.8 m ginnel, lean-to sheds on the blank backs), stalls moved off the fixed cameras, the store's plot,
   yards made rougher and each different. Culling: each roofline owns its numbers (cullwalk was intermittent). Both gate arches
   walkable. Accepted: overlap solid 17 (a hamlet wall), low alley 155 draws, low lake 206k.
+- **74** Swimming: deep water no longer freezes the player (they float with the head out and swim to a shore). The shore west of
+  the wharf is dry land: the lake's sheet had covered the fisher's hut and its path.
+- **75** The terrace retaining walls are closed solids with end caps and the rubble at true scale (it was drawn three times too
+  large; the owner's screenshot), the corner landing in the same stone. Chapelgate: the way carried to the lych gate, yews as
+  dark rounded masses. Westgate, first slice: a hedged earth lane to the gate with sheep and pig closes and ruts.
 
 - **60, 61** Real lip sync (visemes from the audio of every voiced line), natural skin and eyes, gaze, fitted helmet and kerchiefs.
 - **62** One gate command, the gate on GitHub for every push, onboarding docs rewritten, seven new voiced story lines.
