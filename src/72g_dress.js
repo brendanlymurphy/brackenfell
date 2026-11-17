@@ -56,7 +56,27 @@ PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 co
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.2, 0.11, 0.09], [0.12, 0.14, 0.17], [0.27, 0.21, 0.11], [0.3, 0.27, 0.22], [0.15, 0.18, 0.11], [0.22, 0.18, 0.13], [0.14, 0.12, 0.11]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.5 + R() * 0.55, wH = 0.34 + R() * 0.18, nS = 7, ph = R() * 6; for (let q = 0; q < nS; q++) { const f0 = q / nS - 0.5, f1 = (q + 1) / nS - 0.5, v = 0.86 + 0.2 * Math.abs(Math.sin(q * 1.7 + ph)), fz = k_ => 0.035 * Math.sin(k_ * 2.3 + ph) + 0.02, t0 = 0.12; m.mat(MAT.CLOTH, [cl[0] * v, cl[1] * v, cl[2] * v], 0.5); m.quad2([x + f0 * 0.1, -0.03, -0.1], [x + f0 * wH, -l, -0.1 - 0.03 - fz(q)], [x + f1 * wH, -l, -0.1 - 0.03 - fz(q + 1)], [x + f1 * 0.1, -0.03, -0.1], 0, 0, 1, 1); } m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.07, -0.13, -0.135, x + 0.07, -0.01, -0.09); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); let cloaks = 0;
+  const cols = [[0.2, 0.11, 0.09], [0.12, 0.14, 0.17], [0.27, 0.21, 0.11], [0.3, 0.27, 0.22], [0.15, 0.18, 0.11], [0.22, 0.18, 0.13], [0.14, 0.12, 0.11]];
+  for (let i = 0; i < n; i++) {
+    const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0);
+    const kind = cloaks < 2 && R() < 0.55 ? 'cloak' : R.pick(['hat', 'satchel', 'rope', 'none', 'cloakless']);
+    if (kind === 'cloak') {
+      cloaks++; const cl = R.pick(cols), l = 0.9 + R() * 0.4, wH = 0.42 + R() * 0.16, nS = 9, ph = R() * 6.3, fz = k_ => 0.02 + 0.07 * (0.5 + 0.5 * Math.sin(k_ * 1.9 + ph));
+      for (let q = 0; q < nS; q++) {
+        const v = 0.8 + 0.3 * (0.5 + 0.5 * Math.sin((q + 0.5) * 1.9 + ph + 1.2)), l0 = l * (0.94 + 0.06 * Math.sin(q * 2.7 + ph)), l1 = l * (0.94 + 0.06 * Math.sin((q + 1) * 2.7 + ph));
+        m.mat(MAT.CLOTH, [cl[0] * v, cl[1] * v, cl[2] * v], 0.5);
+        m.quad2([x + (q / nS - 0.5) * 0.16, -0.12, -0.1 - fz(q) * 0.5], [x + (q / nS - 0.5) * wH, -l0, -0.1 - fz(q)], [x + ((q + 1) / nS - 0.5) * wH, -l1, -0.1 - fz(q + 1)], [x + ((q + 1) / nS - 0.5) * 0.16, -0.12, -0.1 - fz(q + 1) * 0.5], 0, 0, 1, 1);
+      }
+      m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.08, -0.26, -0.2, x + 0.08, -0.04, -0.09);
+    } else if (kind === 'hat') {
+      { const hc = R.pick(cols); m.mat(MAT.CLOTH, hc, 0.5); m.box(x - 0.16, -0.34, -0.12, x + 0.16, -0.06, -0.1); m.mat(MAT.CLOTH, hc.map(v => v * 0.8), 0.5); m.box(x - 0.08, -0.28, -0.2, x + 0.08, -0.12, -0.12); }
+    } else if (kind === 'satchel') {
+      m.mat(MAT.PLANKS, [0.36, 0.25, 0.15], 0.5); m.box(x - 0.15, -0.5, -0.17, x + 0.15, -0.28, -0.09); m.box(x - 0.15, -0.34, -0.19, x + 0.15, -0.28, -0.17); m.beam([x - 0.1, -0.02, -0.08], [x - 0.12, -0.34, -0.1], 0.025, 0.012); m.beam([x + 0.1, -0.02, -0.08], [x + 0.12, -0.34, -0.1], 0.025, 0.012);
+    } else if (kind === 'rope') {
+      m.mat(MAT.CLOTH, [0.34, 0.28, 0.17], 0.5); m.box(x - 0.13, -0.38, -0.17, x + 0.13, -0.1, -0.09); m.mat(MAT.CLOTH, [0.22, 0.18, 0.11], 0.5); m.box(x - 0.05, -0.3, -0.175, x + 0.05, -0.18, -0.165);
+    }
+  }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
