@@ -279,6 +279,25 @@ function trimPlotColliders(c0) {
   for (const e of extra) C.push(e);
 }
 
+/* [fx3] the class fix for "a pile, stack, bench or stall landed in a wall because the random sequence shifted": after the world is built, every short box or circle that stands in a wall-like solid (a house wall, a long wall or fence) is cut back to the free runs of its line, or dropped if none is left (the earlier, taller solid wins; nothing is moved). Same OBB test as test/overlap.js. */
+function settleSolids() {
+  const C = World.colliders, cell = 4, H = new Map(), key = (i, j) => i * 100003 + j, wallish = d => d.r === undefined && (d.y1 - d.y0 >= 2.4 || d.hx >= 1.5);
+  C.forEach((d, n) => { if (!isFinite(d.x) || !wallish(d)) return; const r = Math.hypot(d.hx, d.hz); for (let i = Math.floor((d.x - r) / cell); i <= Math.floor((d.x + r) / cell); i++) for (let j = Math.floor((d.z - r) / cell); j <= Math.floor((d.z + r) / cell); j++) { const k = key(i, j); (H.get(k) || H.set(k, []).get(k)).push(n); } });
+  const inside = (d, x, z, mg) => { const u = (x - d.x) * d.ax + (z - d.z) * d.az, v = (x - d.x) * d.bx + (z - d.z) * d.bz; return Math.abs(u) < d.hx + mg && Math.abs(v) < d.hz + mg; };
+  const extra = []; let cut = 0, dropped = 0;
+  for (let i = 0; i < C.length; i++) { const c = C[i]; if (!isFinite(c.x) || c.y1 - c.y0 >= 2.4) continue; const circle = c.r !== undefined; if (!circle && (c.hz > 0.8 || c.hx > 3)) continue;
+    const rc = circle ? c.r : Math.hypot(c.hx, c.hz), cand = new Set(); for (let a = Math.floor((c.x - rc) / cell); a <= Math.floor((c.x + rc) / cell); a++) for (let b = Math.floor((c.z - rc) / cell); b <= Math.floor((c.z + rc) / cell); b++) for (const n of H.get(key(a, b)) || []) if (n !== i && (C[n].y1 - C[n].y0 >= 2.4 || n < i)) { const d = C[n]; if (d.y0 < c.y1 - 0.25 && d.y1 > c.y0 + 0.25) cand.add(n); }
+    if (!cand.size) continue; const L = [...cand].map(n => C[n]);
+    if (circle) { if (L.some(d => inside(d, c.x, c.z, c.r - 0.12))) { c.r = 0.01; c.y1 = c.y0; dropped++; } continue; }
+    const mg = Math.max(0, c.hz - 0.12), runs = []; let st = null;
+    for (let t = -c.hx; t <= c.hx + 0.001; t += 0.1) { const x = c.x + c.ax * t, z = c.z + c.az * t, hit = L.some(d => inside(d, x, z, mg)); if (!hit && st === null) st = t; if ((hit || t > c.hx - 0.001) && st !== null) { const e = hit ? t - 0.1 : t; if (e - st > 0.3) runs.push([st, e]); st = null; } }
+    if (runs.length === 1 && runs[0][0] <= -c.hx + 0.05 && runs[0][1] >= c.hx - 0.05) continue;
+    const base = Object.assign({}, c), mk = ([a, b]) => Object.assign({}, base, { x: base.x + base.ax * (a + b) / 2, z: base.z + base.az * (a + b) / 2, hx: (b - a) / 2 });
+    if (!runs.length) { c.hx = 0.01; c.hz = 0.01; c.y1 = c.y0; dropped++; continue; } cut++;
+    Object.assign(c, mk(runs[0])); for (let k = 1; k < runs.length; k++) extra.push(mk(runs[k])); }
+  for (const e of extra) C.push(e); World.settled = { cut, dropped };
+}
+
 function plotLowTier() { return R.qName === 'low'; }
 
 /* [fx3] Westgate: outside the gate the earth road runs out between hedge rows (a low bank and overlapping shrub clumps, with gaps and field gates) past two closes, a sheep close to the north and a pig close to the south, fenced on their other three sides.
