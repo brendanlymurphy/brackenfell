@@ -228,7 +228,7 @@ function kitIntBatch(zone) {
 // fit = 'box' (stretch to the box, within lo..hi), 'contain' (uniform, as big as fits), 'xz' (uniform on the footprint, height within 25%),
 // one = outdoors only the first model is used (fewer materials, fewer draw calls), k = extra per-axis factor, mul = extra scale, y = lift in metres, ry = turn in radians (a quarter turn swaps the footprint), tint = colour factor, skip = draw nothing.
 const SCANR = {
-  Table_Large: { n: ['wooden_table_02'], fit: 'row', tint: [1, 0.58, 0.32] },
+  Table_Large: { n: ['wooden_table_02'], fit: 'row', tint: [0.34, 0.42, 0.42] },
   Bench: { n: ['woodentable_01'], fit: 'row', tint: [0.6, 0.43, 0.31] },
   Stool: { n: ['painted_wooden_stool'], fit: 'contain', tint: [0.3, 0.23, 0.17] },
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
