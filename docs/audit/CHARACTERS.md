@@ -42,3 +42,21 @@ no light) so beds and lying poses were **not assessed**. Nothing was seen in mot
 - The pig and other animals (owner: `pig_blob.png`) are not villagers and are not in this pass.
 - Lying poses and beds: pictures black. To do with a lamp-lit hour or the test light.
 - Hands: fingers and grips need closer than 1 m and a prop to hold; with 6 props in the town there is little to check.
+
+## Second pass: lying, talking, seated side-on, animals, bystanders (`test/audit/poses_props.js`, sheet `chars_poses.jpg`)
+
+41 pictures at 640 x 400. Honest result: this pass answered less than it was meant to.
+
+| Asked | Result |
+|---|---|
+| Lying poses with a test light | **Still not assessed.** The only light a test can change is the hour, and setting the hour to 13 for the picture sends the sleepers back to their day: all six beds are empty in the pictures. It needs a hook in the game: a test flag that lights a cell without moving the clock (for the lighting owner; one line in `Cells.env`). |
+| Talk poses | **Not assessed.** On `startTalk` the person turns to the player, who is not where the camera is, so five of six pictures show a back. Maren, seen from the side, gestures with both hands at chest height and nothing passes through her face. The owner's `leofric_no_lines.png` (hands in front of the face) is not reproduced or ruled out. It needs the camera placed where the player stands. |
+| Seated, side-on | 6 pictures. Maren sits square on her bench at the right height. Osric "sits" bent double over the mill table. **Tobin "sits" on the cobbles in the middle of the street in a running crouch** at 20:30 (his row says sit at home; he has no seat there). Marta's picture shows only her back. |
+| Things in hands at the Hart | Greta holds a pale cylinder (a mug with no handle or rim) in each hand. **Brandt, Marta and Greta each have a small white rectangle and a grey block hanging at the apron front**, which reads as a stray label; it is a wardrobe part (pouch or tag) drawn flat and unshaded. |
+| Hens | 8 in the game; the one photographed is a proper modelled hen. Fine. |
+| Sheep | 6 in the west close. **White rounded boxes on four dark pegs with a grey cube for a head** (`chars_poses.jpg`, sheep_close2). They are built from two ellipsoids and a box in `73m_plots.js`. S2: this is the "pig blob" of the owner's picture, in wool. |
+| Pigs | 4 in the south close, the same construction in pink. My camera stood in the hedge both times; the owner's `pig_blob.png` is the evidence. |
+| Passers-by | 6 exist at the time of the pictures; the camera found none of them (they have a position but the pictures show a door). Not assessed. |
+| People of the wilds | 6 exist; the one photographed (west of the town) is a full body with a face, like a villager. The other five were not reached. |
+
+Fix for the animals: a modelled sheep and pig (CC0 kits have both) or none. A farm close with no animals is better than one with boxes.
