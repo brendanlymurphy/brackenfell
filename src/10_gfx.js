@@ -139,7 +139,11 @@ async function loadPackAstc(progress) {
   const L = MAT_NAMES.length; let done = 0;
   // the Low tier and low-memory devices take the half-resolution pack (tex/s, a quarter of the bytes and of the memory; tools/tex_half.mjs).
   // ?texpack=half or full (--opt texpack=...) forces one.
-  const want = (TEST && TEST.texpack) || (location.search.match(/[?&]texpack=(\w+)/) || [])[1], half = want ? want === 'half' : GFX_TEX.tiny, dir = half ? 'tex/s/' : 'tex/';
+  const want = (TEST && TEST.texpack) || (location.search.match(/[?&]texpack=(\w+)/) || [])[1], handheld = typeof screen !== 'undefined' && Math.min(screen.width, screen.height) < 520 && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches, half = want ? want === 'half' : (GFX_TEX.tiny || handheld), dir = half ? 'tex/s/' : 'tex/';
+  // [perf] A phone (a touch screen under 520 px on its short side) takes the half-resolution ground pack by default: 20.6 MB less to download (61.0 to 40.4 MB,
+  // a third of the first visit) and about 21 MB less texture memory, which is what gets a Safari tab killed. Measured at the 1266 x 585 a phone draws
+  // on Medium: the picture differs by 0.4 of 255 on average at eye level and 2.7 looking straight down at grass at one's feet, where the ground is a
+  // little softer. ?texpack=full brings the full pack back for comparing on the device itself.
   if (half && typeof Load !== 'undefined' && Load.groups && Load.groups.indexOf('astc') >= 0) Load.use(Load.groups.map(g => g === 'astc' ? 'astcs' : g));
   const load = async pre => {
     const blobs = await Promise.all(MAT_NAMES.map(async n => { const d = await packBlob(dir + pre + n + '.png'); progress(++done / (L * 2)); return d; }));

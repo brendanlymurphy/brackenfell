@@ -95,6 +95,10 @@ interiors lit by hearths and candles. As realistic as free art allows.
     one shingle texture), then fronts designed one by one. The mine's remaining rooms (`fork-fx2`) wait behind it.
   - `fork-ch1` characters: paused until a town worker frees up (apron glitch, aprons varied, men's tunics, posture, hair).
   - Logic, storylines, what people do, mechanics: asked of the second Claude Code session (`fork-logic`, docs/LOGIC.md).
+- From `fork-play` after Build 70: phones take the half-resolution ground pack by default (first visit 40.4 MB instead of 61.0,
+  numbers in docs/DECISIONS.md); a reload in the cell no longer locks the player in; broken saves are mended or refused; the map
+  shows you and the quest marks when you are indoors; one pill style for buttons; the quest banner is smaller and shorter;
+  `test/cullwalk.js` proves nothing in sight goes missing while walking and turning.
 
 ## Next
 
@@ -111,7 +115,7 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - Frame rate on the iPhone has never been measured; the owner said "not fast enough" at Build 13. No test can see it.
 - Over the performance target since Build 52: medium square 216 draw calls / 452k triangles and alley 224 / 452k (target 220 /
   380k); low square 170 / 246k, alley 181 / 269k (target 140 / 200k).
-- First load: 60 MB on a phone (Medium), 39 MB on Low, 72 MB on a desktop on High.
+- First load: 40 MB on a phone, 61 MB on a tablet or laptop on Medium, 73 MB on a desktop on High.
 - 70 spoken lines have no audio yet (subtitles only) until the daily batches finish; remarks anyone may say (`*`), the notice board
   and the slab are subtitles by design. Text with prices or counts in it cannot be recorded.
 - Feet still slide 0.25 m/s in the walk clip. Mouths open by loudness only until `fork-ch1` merges.

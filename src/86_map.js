@@ -20,7 +20,11 @@ GameMap.fit = () => Math.min(GameMap.cv.clientWidth, GameMap.cv.clientHeight) / 
 GameMap.zoomBy = f => { const V = GameMap.view, lo = GameMap.fit() * 0.8, s = clamp(V.s * f, lo, GameMap.fit() * 6); V.s = s; GameMap.zoom = s / GameMap.fit(); };
 GameMap.center = onPlayer => { const V = GameMap.view, P = Player; V.s = GameMap.fit() * GameMap.zoom; if (onPlayer || GameMap.zoom > 1.01) { const p = GameMap.pos(); V.cx = p[0]; V.cz = p[1]; } else { V.cx = 0; V.cz = 5; } };
 // where the player is on the village map (inside a cell: at the door it was entered by)
-GameMap.pos = () => { const P = Player; if (typeof World !== 'undefined' && World.cell && Cells.cur && Cells.cur.door) { const d = Cells.cur.door.c; return [d[0], d[2]]; } return [P.pos[0], P.pos[2]]; };
+// Where to draw something that may be inside a building: interiors are built far outside the valley, so on the map a thing indoors stands at its
+// building's street door (the place you come out at). Before this, inside any building the map showed neither you nor a quest mark: both were drawn
+// at the interior's own coordinates, a kilometre off the sheet.
+GameMap.out = (x, y, z) => { if (typeof Cells === 'undefined' || !CELLS_ON) return [x, z]; const c = Cells.at(x, y === undefined ? CELL.y : y, z); return c && c.leave && c.leave.p ? [c.leave.p[0], c.leave.p[2]] : [x, z]; };
+GameMap.pos = () => { const P = Player; if (typeof World !== 'undefined' && World.cell && Cells.cur && Cells.cur.leave && Cells.cur.leave.p) { const d = Cells.cur.leave.p; return [d[0], d[2]]; } return [P.pos[0], P.pos[2]]; };
 GameMap.show = () => {
   const cv = GameMap.cv; if (!cv) return; const d = Math.min(window.devicePixelRatio || 1, 2); cv.width = Math.round(cv.clientWidth * d); cv.height = Math.round(cv.clientHeight * d); GameMap.dpr = d;
   if (!GameMap.base) GameMap.build(); GameMap.zoom = 1; $('mapZoom').textContent = '+'; GameMap.center(false); GameMap.draw();
@@ -84,7 +88,7 @@ GameMap.draw = () => {
     c.lineWidth = 3; c.strokeStyle = 'rgba(228,214,179,0.85)'; c.strokeText(text, bx, y); c.fillStyle = '#2a2016'; c.fillText(text, bx, y); c.beginPath(); c.arc(x, y, 3, 0, TAU); c.fillStyle = '#2a2016'; c.fill(); };
   for (const pl of World.places) { if (!disc[pl.id]) continue; place(sx(pl.x), sz(pl.z), pl.name, V.s > GameMap.fit() * 1.4); }
   // quest targets: a gold diamond with an ink edge
-  for (const id of QORDER) { if (!S.q[id] || S.q[id].done) continue; let t; try { t = questTarget(id); if (t && typeof Cells !== 'undefined' && CELLS_ON) t = Cells.mapTarget(t); } catch (e) { t = null; } if (!t) continue; const x = sx(t[0]), y = sz(t[2]); c.beginPath(); c.moveTo(x, y - 9); c.lineTo(x + 7, y); c.lineTo(x, y + 9); c.lineTo(x - 7, y); c.closePath(); c.fillStyle = '#d8b563'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#2a2016'; c.stroke(); }
+  for (const id of QORDER) { if (!S.q[id] || S.q[id].done) continue; let t; try { t = questTarget(id); } catch (e) { t = null; } if (!t) continue; const o = GameMap.out(t[0], t[1], t[2]), x = sx(o[0]), y = sz(o[1]); c.beginPath(); c.moveTo(x, y - 9); c.lineTo(x + 7, y); c.lineTo(x, y + 9); c.lineTo(x - 7, y); c.closePath(); c.fillStyle = '#d8b563'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#2a2016'; c.stroke(); }
   // you: a red arrow turned the way you face
   const p = GameMap.pos(), x = sx(p[0]), y = sz(p[1]); c.save(); c.translate(x, y); c.rotate(Player.yaw); c.beginPath(); c.moveTo(0, -11); c.lineTo(7.5, 8); c.lineTo(0, 4); c.lineTo(-7.5, 8); c.closePath(); c.fillStyle = '#a8321e'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#2a2016'; c.stroke(); c.restore();
   // title cartouche and, indoors, the room
