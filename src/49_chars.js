@@ -162,7 +162,7 @@ const Chars = (() => {
         if (wear.kirtle) {      // [ch1] dyes: woad grey-blue and madder, never bright; aprons undyed grey-cream linen
           const mute = c => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => l + (v - l) * 0.5).map(v => Math.min(0.62, v)); };
           WC.wool = mute(WC.wool); WC.cloak = mute(WC.cloak); if (wear.hat === 'hood' || wear.hat === 'cap') WC.hat = mute(WC.hat);
-          WC.apron = [0.50, 0.47, 0.39].map(v => v * (0.88 + 0.12 * r(8)));
+          WC.apron = [0.40, 0.37, 0.30].map(v => v * (0.88 + 0.12 * r(8)));
         }
         wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
         return { body, fit: FIT[body] || 1, hairGrey: { f_elder: 0.96, m_elder: 0.92, m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 }[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
