@@ -11,7 +11,11 @@ const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, ha
 const page = await ctx.newPage(); page.setDefaultTimeout(300000);
 const url = `http://localhost:${port}/?webgl`, out = {};
 await page.goto(url); await page.waitForFunction(() => window.__ready === true);
-await page.waitForFunction(async () => navigator.serviceWorker.controller && (await (await caches.open('bf-assets')).keys()).length >= 70, null, { timeout: 600000, polling: 2000 });      // what the first load fetched is cached; the idle top-up (Load.warm) may still be running
+// the worker is registered, has taken the page, and what the first load fetched is cached (the idle top-up, Load.warm, may still be running).
+// Asked in the page with a plain loop: an async test function handed to waitForFunction is a promise, which counts as true at once, so the old wait never waited
+// and on a slow machine "first" was read before the worker had registered (GitHub, Build 68: sw false, then offline and update both fine).
+await page.evaluate(async () => { const t0 = Date.now(); for (;;) { const reg = await navigator.serviceWorker.getRegistration(); const n = (await (await caches.open('bf-assets')).keys()).length;
+  if (reg && navigator.serviceWorker.controller && n >= 70) return; if (Date.now() - t0 > 600000) throw new Error('no service worker in control after 10 minutes (registered ' + !!reg + ', controller ' + !!navigator.serviceWorker.controller + ', cached ' + n + ')'); await new Promise(r => setTimeout(r, 2000)); } });
 out.first = await page.evaluate(async () => ({ sw: !!(await navigator.serviceWorker.getRegistration()), keys: await caches.keys(), cacheMB: Load.cacheBytes / 1048576 | 0, n: (await (await caches.open('bf-assets')).keys()).length, warmed: !!Load.cached }));
 console.log('first', JSON.stringify(out.first));
 await page.waitForFunction(() => navigator.serviceWorker.controller, null, { timeout: 30000 }).catch(() => { });
