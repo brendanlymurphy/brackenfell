@@ -140,6 +140,13 @@ function terrainMaterial() {
       const wear = smoothstep(0.30, 0.80, road).mul(0.8).toVar(), lum = dot(c.c, vec3(0.3333)), patch = smoothstep(0.52, 0.62, mn2.g.add(mn3.r.sub(0.5).mul(0.25)));
       c.c.assign(mix(vec3(lum), c.c, 0.80)); c.c.mulAssign(float(1).add(wear.mul(0.2)).add(patch.mul(0.16)).mul(vec3(1, 1, 1).sub(vec3(0.04, 0.0, 0.08).mul(patch))));
       c.n.assign(mix(c.n, vec2(0.5), wear.mul(0.55))); c.r.assign(mix(c.r, float(0.72), wear));
+      /* [fx3] joints barely darker than the stones, then what makes a floor look used: dirt and straw gathered where walls and stalls shade it (the contact band), damp in the shade, weeds in the joints at the house feet instead of lawn */
+      c.c.assign(mix(c.c, vec3(0.50, 0.47, 0.42).mul(lum.mul(0.6).add(0.55)), 0.62)); c.ao.assign(mix(c.ao, float(1), 0.8)); c.n.assign(mix(c.n, vec2(0.5), 0.45));
+      const foot = sat(s2.b.mul(1.6)).toVar(), jt = smoothstep(0.62, 0.40, c.h).toVar(), spk = smoothstep(0.55, 0.78, mn.b.add(mn2.r.sub(0.5).mul(0.5)));
+      c.c.assign(mix(c.c, vec3(0.30, 0.24, 0.16).mul(lum.mul(0.5).add(0.7)), foot.mul(0.50).mul(spk.mul(0.5).add(0.5))));
+      c.c.assign(mix(c.c, vec3(0.62, 0.50, 0.26), foot.mul(spk).mul(0.55).mul(smoothstep(0.35, 0.65, mn3.g))));
+      c.c.assign(mix(c.c, vec3(0.20, 0.27, 0.10), foot.mul(jt).mul(smoothstep(0.45, 0.7, mn2.b)).mul(0.8)));
+      c.c.mulAssign(float(1).sub(s2.r.mul(0.22)));
       over(c, sat(sp.g.mul(1.15)).toVar());
     });
     // puddles collect in the low spots of roads and wet banks
