@@ -258,7 +258,7 @@ IX.SAY = [
   ['*', () => S.flags.mineOpen && !S.flags.corwin, 'They say the old mine door is open. Folk are talking.'],
   ['hale', () => RPG.meta(RPG.st().eq.weapon).dmg >= 21, 'That’s a fine blade. Don’t draw it in my square.'],
   ['brandt', () => RPG.st().eq.weapon === 'ironsword', 'Good. It sits well in your hand. My work.'],
-  ['brandt', () => RPG.st().eq.weapon === 'silverpick', 'Where did you get that? That’s my dies, fifty years back. Old Mine steel.'],
+  ['brandt', () => RPG.st().eq.weapon === 'silverthread', 'Where did you get that? Those are my grandfather’s dies, fifty years back. Old Mine steel.'],
   ['maren', () => RPG.st().hp < RPG.MAXHP * 0.4, 'You’re bleeding on my floor. Sit.'],
   ['greta', () => has('lantern') && qAt('main') >= 3 && qAt('main') < 5, 'Off down a hole, love? I’ll keep the bed made.'],
   ['marta', () => has('lockpick'), 'Odd thing to carry. I’ll not ask.'],
