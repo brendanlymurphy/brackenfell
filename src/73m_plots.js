@@ -108,3 +108,23 @@ function buildPlots(bucket) {
     p.gate = [gx, zw];
   }
 }
+
+// [fx3] no yard where the back wall meets a road: a lean-to shed against the wall (docs/TOWNPLAN.md: no nobody's land), with the work that is kept in it, so the wall you face from the road has a roof, posts and a door-sized opening in it
+function buildStrips(bucket) {
+  if (TEST && TEST.plots === 0) return;
+  const R = rng(4417), gy = (x, z) => Terrain.y(x, z);
+  for (const [id, what] of [['in.11', 'wood'], ['in.76', 'cask'], ['guardhouse', 'tack']]) {
+    const s = SITES.find(q => q.id === id); if (!s) continue;
+    const c = siteToWorld(s, 0, s.d / 2 + 0.7), g = gy(c[0], c[1]), m = bucket(c[0], c[1]), w = Math.min(s.w - 1.2, 3.4), hw = w / 2;
+    m.push().T(c[0], g, c[1]).RY(-s.yaw);
+    m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); for (const sx of [-hw, hw]) m.beam([sx, -0.1, 0.65], [sx, 2.0, 0.65], 0.1, 0.1);
+    m.beam([-hw, 2.0, 0.65], [hw, 2.0, 0.65], 0.1, 0.1);
+    m.mat(MAT.THATCH, [0.5, 0.42, 0.26], 0.5); m.quad2([-hw - 0.15, 2.45, -0.62], [hw + 0.15, 2.45, -0.62], [hw + 0.15, 1.95, 0.8], [-hw - 0.15, 1.95, 0.8]);
+    m.mat(MAT.PLANKS, [0.34, 0.27, 0.2], 0.5); m.box(-hw + 0.1, 0, 0.2, hw - 0.1, 0.06, 0.62);
+    if (what === 'wood') { m.mat(MAT.TIMBER, [0.42, 0.32, 0.22], 0.5); for (let r = 0; r < 3; r++) for (let k = 0; k < 6 - r; k++) { const lx = -hw + 0.35 + r * 0.15 + k * 0.4; m.beam([lx, 0.2 + r * 0.28, -0.4], [lx, 0.2 + r * 0.28, 0.5], 0.28, 0.28); } }
+    else if (what === 'cask') { for (let k = 0; k < 3; k++) { m.mat(MAT.PLANKS, [0.42, 0.32, 0.2], 0.5); m.cyl(-hw + 0.7 + k * 0.85, 0, 0.1, 0.34, 0.38, 0.8, 6, 2); m.mat(MAT.METAL, [0.2, 0.2, 0.2], 0.5); m.cyl(-hw + 0.7 + k * 0.85, 0.15, 0.1, 0.385, 0.385, 0.04, 6, 0); } }
+    else { m.mat(MAT.TIMBER, [0.36, 0.28, 0.2], 0.5); m.box(-hw + 0.3, 0.45, 0.0, -hw + 1.8, 0.55, 0.45); m.mat(MAT.PLAIN, [0.2, 0.14, 0.1], 0.5); for (let k = 0; k < 3; k++) m.ball(-hw + 0.5 + k * 0.5, 0.6 + 0.2, 0.2, 0.12, 0.22, 0.08, 5, 4); }
+    m.pop();
+    for (const [lx, lz] of [[-hw, 0.65], [hw, 0.65]]) { const p = siteToWorld(s, lx, s.d / 2 + 0.7 + (lz - 0.7) + 0.0); addCircleCollider(m, p[0], p[1], 0.1, g, g + 2.0); }
+  }
+}
