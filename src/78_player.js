@@ -43,9 +43,9 @@ World.blockedAt = (x, z, r) => { const l = Col.grid.get(Math.floor(x / Col.cell)
 // Is there something solid between the eye and a thing? (the prompt asks: a chest in the next room was offered through the wall)
 // Walks the line in 0.12 m steps from 0.3 m in front of the eye to 1.3 m short of the thing (a thing set into or just behind a wall, like the loose bricks in the Hart cellar, is still offered). A collider the thing itself stands in or against
 // (the wall a door is set in, the cupboard a jar lies in) does not count, nor does anything lower or higher than the line where it passes.
-World.sightBlocked = (ex, ey, ez, tx, ty, tz) => {
-  const dx = tx - ex, dy = ty - ey, dz = tz - ez, L = Math.hypot(dx, dy, dz); if (L < 1.7) return false; const cs = Col.cell;
-  for (let t = 0.3; t < L - 1.3; t += 0.12) {
+World.sightBlocked = (ex, ey, ez, tx, ty, tz, short) => {       // short: how far before the thing the line stops being tested (1.3 m; 0.5 for a person, who never stands inside a wall)
+  short = short || 1.3; const dx = tx - ex, dy = ty - ey, dz = tz - ez, L = Math.hypot(dx, dy, dz); if (L < short + 0.4) return false; const cs = Col.cell;
+  for (let t = 0.3; t < L - short; t += 0.12) {
     const x = ex + dx / L * t, y = ey + dy / L * t, z = ez + dz / L * t, l = Col.grid.get(Math.floor(x / cs) * 4096 + Math.floor(z / cs)); if (!l) continue;
     for (const c of l) {
       if (c.off || y < c.y0 || y > c.y1) continue; const qx = x - c.x, qz = z - c.z, m = 0.05;
