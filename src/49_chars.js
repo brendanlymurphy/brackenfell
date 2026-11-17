@@ -153,6 +153,7 @@ const Chars = (() => {
         const fem = !!(def.female || /^f_/.test(body)), guard = def.prop === 'spear' || def.hat === 'helmet', wear = { belt: acc.belt, pouch: acc.pouch, cuffs: !isRobe && !/child/.test(body) };
         { const hd = def.hat === 'hood' ? (fem ? 'kerchief' : null) : def.hat || (def.foe || def.sched && !def.house ? null : r(3) < (fem ? 0.9 : 0.7) ? (fem ? ['kerchief', 'coif', 'kerchief'][Math.floor(r(7) * 3)] : ['cap', 'hood', 'cap', 'straw', 'hood'][Math.floor(r(7) * 5)]) : null);
           wear.hat = hd === 'helmet' ? (body === 'm_guard' ? 'kettle' : 'cap') : hd; }
+        if (/^m_(fisher|innkeeper|boy)$/.test(body) && !def.hat) wear.hat = 'hood';      // [ch1] chaperon: hood with a short cape
         if (body === 'f_child') wear.hat = 'coif';      // [ch1] Pip: a linen cap over the plaits
         if (/^(f_(child|girl|maid|weaver|herbalist|farmer)|m_(farmer|youth|fisher|innkeeper|hunter|boy|smith))$/.test(body)) { wear.kirtle = true; wear.cuffs = false; }      // [ch1] these bodies are dressed in a kirtle shell (garb.py kirtle_pieces), not a stock tunic
         if (def.apron) { if (guard) wear.tabard = true; else if (!(fem && wear.kirtle) || (body !== 'f_farmer' && body !== 'f_girl')) { wear.apron = true; wear.straps = true; wear.apronCut = ['', '_half', '_long'][Math.floor(r(12) * 3)]; } } else if (body === 'f_herbalist') { wear.apron = true; wear.straps = true; wear.apronCut = ['', '_half', '_long'][Math.floor(r(12) * 3)]; }      // [ch1] aprons for trades only, three cuts
@@ -160,7 +161,7 @@ const Chars = (() => {
         const WC = { leather: acc.col[1], hat: acc.col[0], metal: acc.col[2], apron: def.apron ? sq(def.apron) : pal[Math.floor(r(8) * pal.length)], cloak: def.cloak ? sq(def.cloak) : pal[Math.floor(r(9) * pal.length)], tabard: def.apron ? sq(def.apron) : [0.3, 0.1, 0.1],
           linen: [0.47, 0.44, 0.36].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: /child/.test(body) ? [0.30, 0.27, 0.21] : top ? top.map(v => v * 0.9) : pal[Math.floor(r(11) * pal.length)], teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
         if (wear.kirtle) {      // [ch1] dyes: woad grey-blue and madder, never bright; aprons undyed grey-cream linen
-          const mute = c => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => l + (v - l) * 0.38).map(v => Math.min(0.62, v)); };
+          const mute = c => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => l + (v - l) * 0.28).map(v => Math.min(0.62, v)); };
           WC.wool = mute(WC.wool); WC.cloak = mute(WC.cloak); if (wear.hat === 'hood' || wear.hat === 'cap') WC.hat = mute(WC.hat);
           WC.apron = [[0.40, 0.39, 0.36], [0.47, 0.43, 0.33], [0.36, 0.30, 0.22]][Math.floor(r(8) * 3)].map(v => v * (0.92 + 0.08 * r(13)));
         }

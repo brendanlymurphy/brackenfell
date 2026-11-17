@@ -429,6 +429,7 @@ def bake_colors(fit, objs, ao_dist=0.09, rays=10, trim=0.035, clean=None):
             tr = 0.0
             if kd is not None and is_cloth:
                 _, _, dist = kd.find(co); tr = max(0.0, 1.0 - dist / trim)
+            if o.name.startswith('w_sleeve'): ao = max(ao, 0.88)      # the sleeve sits against the kirtle: no dark shoulder patch
             ca.data[v.index].color = (ao, g, tr, ca.data[v.index].color[3] if o.name.startswith('w_') else 0.0)
     return True
 
@@ -492,7 +493,7 @@ def wardrobe(fit, mat, spec):
         elif w == 'cloak': o = cloak_piece(fit, mat, flare=0.09)
         elif w == 'tabard': out += tabard_pieces(fit, mat); continue
         elif w.startswith('kirtle'):                     # 'kirtle:ankle:long' | 'kirtle:knee:long'
-            q = w.split(':'); out += kirtle_pieces(fit, mat, hem=q[1] if len(q) > 1 else 'ankle', sleeve=q[2] if len(q) > 2 else 'long', flare=0.09 if spec['macro']['age'] < 0.3 else 0.17); fit.add_clothes(out); continue
+            q = w.split(':'); out += kirtle_pieces(fit, mat, hem=q[1] if len(q) > 1 else 'ankle', sleeve=q[2] if len(q) > 2 else 'long', flare=0.09 if spec['macro']['age'] < 0.3 else 0.06 if q[1:2] == ['knee'] else 0.17); fit.add_clothes(out); continue
         elif w == 'cuffs':
             for s in ('l', 'r'): out.append(tube_piece(fit, mat, 'w_cuff' + s.upper(), 'lowerarm_' + s, 0.0, 1.0, 0.005, auto=True))
             continue
