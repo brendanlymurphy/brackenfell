@@ -248,6 +248,13 @@ const PLACE = { poly: [[-19.6, -17.3], [-7.6, -17.3], [14.7, -17.3], [20.3, -16.
     const h = INF.byId[id] || { placedOnly: true }, st = SITE[id]; if (!st) continue;
     h.x = st.x = x; h.z = st.z = z; h.yaw = st.yaw = yaw; h.placed = true;
   }
+  /* [fx3] gables to the street: these houses are turned so the short wall is the front and the ridge runs away from the street (w and d swapped; the front line stays where it was, the house grows backwards) */
+  PLACE.gabled = [];
+  for (const id of ['in.08', 'in.116', 'in.15']) {
+    const h = INF.byId[id], st = SITE[id]; if (!h || !st || !(h.w > h.d)) continue;
+    const grow = (h.w - h.d) / 2, bx = -Math.sin(h.yaw + PI) * 0, ux = Math.sin(h.yaw), uz = -Math.cos(h.yaw);      /* heading yaw 0 = north (-z): the front looks along (ux,uz), the back is the opposite */
+    const nw = h.d, nd = h.w; h.x = st.x = h.x - ux * grow; h.z = st.z = h.z - uz * grow; h.w = st.w = nw; h.d = st.d = nd; PLACE.gabled.push(id);
+  }
   for (const h of INF.houses.slice()) {      // whatever the moved houses now stand on (and is not itself placed or enterable) goes
     if (h.placed || h.enter) continue;
     for (const q of PLACE.houses) { const o = INF.byId[q[0]] || SITE[q[0]]; if (!o) continue; if (hyp(o.x - h.x, o.z - h.z) > 14) continue; const hit = rectPts(h.x, h.z, h.yaw, h.w, h.d, 1.5).some(([px, pz]) => inRect(o, px, pz, 0.3)) || rectPts(o.x, o.z, o.yaw, o.w, o.d, 1.5).some(([px, pz]) => inRect(h, px, pz, 0.3)); if (hit) { drop(h); break; } }

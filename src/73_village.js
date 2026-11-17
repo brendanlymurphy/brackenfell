@@ -351,7 +351,7 @@ function buildVillage() {
       const ya = Terrain.y(a[0], a[1]) + 1.85, yb = Terrain.y(b[0], b[1]) + 1.85, m = bucket(a[0], a[1]); m.m1 = 0; m.ao = 1;
       m.mat(MAT.CLOTH, [0.7, 0.6, 0.4], 0.3); m.beam([a[0], ya, a[1]], [b[0], yb, b[1]], 0.02, 0.02);
       for (let i = 0; i < 4; i++) {
-        const k0 = 0.12 + i * 0.22, k1 = k0 + 0.14, c = [COL.linen, COL.wool, COL.linen, COL.blue][i], hgt = 0.55 + (i % 2) * 0.3; m.mat(MAT.CLOTH, c.map(v => v * 0.8), 0.6);
+        const k0 = 0.12 + i * 0.22, k1 = k0 + 0.14, c = [COL.linen, COL.wool, COL.linen, DYE.blue][i], hgt = 0.55 + (i % 2) * 0.3; m.mat(MAT.CLOTH, c.map(v => v * 0.8), 0.6);
         const p0 = [lerp(a[0], b[0], k0), lerp(ya, yb, k0), lerp(a[1], b[1], k0)], p1 = [lerp(a[0], b[0], k1), lerp(ya, yb, k1), lerp(a[1], b[1], k1)];
         m.quad2(p0, [p0[0], p0[1] - hgt, p0[2]], [p1[0], p1[1] - hgt, p1[2]], p1);
       }
