@@ -28,11 +28,6 @@
   ],
   "clothes": [
    [
-    "rehmanpolanski_viking_tunic",
-    null,
-    0.9
-   ],
-   [
     "rehmanpolanski_viking_pants",
     null,
     0.9
@@ -42,6 +37,17 @@
     null,
     0.9
    ]
+  ],
+  "wear": [
+   "kirtle:knee:short",
+   "belt",
+   "pouch",
+   "hat:cap",
+   "hat:hood",
+   "hat:straw",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "m_elder": {
@@ -182,15 +188,6 @@
   ],
   "clothes": [
    [
-    "wdg_mycenaean_tunic",
-    [
-     0.47,
-     0.5,
-     0.34
-    ],
-    0.7
-   ],
-   [
     "toigo_wool_pants",
     [
      0.62,
@@ -208,6 +205,17 @@
     ],
     0.9
    ]
+  ],
+  "wear": [
+   "kirtle:knee:long",
+   "belt",
+   "pouch",
+   "hat:cap",
+   "hat:hood",
+   "hat:straw",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "m_innkeeper": {
@@ -238,15 +246,6 @@
   ],
   "clothes": [
    [
-    "wdg_mycenaean_tunic",
-    [
-     0.6,
-     0.36,
-     0.27
-    ],
-    0.7
-   ],
-   [
     "rehmanpolanski_viking_pants",
     [
      0.7,
@@ -260,6 +259,17 @@
     null,
     0.9
    ]
+  ],
+  "wear": [
+   "kirtle:knee:long",
+   "belt",
+   "pouch",
+   "hat:cap",
+   "hat:hood",
+   "hat:straw",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "m_hunter": {
@@ -290,15 +300,6 @@
   ],
   "clothes": [
    [
-    "rehmanpolanski_viking_tunic",
-    [
-     1.1,
-     1.2,
-     0.95
-    ],
-    0.8
-   ],
-   [
     "toigo_wool_pants",
     [
      0.55,
@@ -316,6 +317,17 @@
     ],
     0.9
    ]
+  ],
+  "wear": [
+   "kirtle:knee:long",
+   "belt",
+   "pouch",
+   "hat:cap",
+   "hat:hood",
+   "hat:straw",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "m_youth": {
@@ -342,15 +354,6 @@
   ],
   "clothes": [
    [
-    "wdg_mycenaean_tunic",
-    [
-     0.4,
-     0.46,
-     0.58
-    ],
-    0.7
-   ],
-   [
     "rehmanpolanski_viking_pants",
     null,
     0.8
@@ -364,6 +367,17 @@
     ],
     0.8
    ]
+  ],
+  "wear": [
+   "kirtle:knee:long",
+   "belt",
+   "pouch",
+   "hat:cap",
+   "hat:hood",
+   "hat:straw",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "f_maid": {
@@ -717,15 +731,6 @@
   ],
   "clothes": [
    [
-    "rehmanpolanski_viking_tunic",
-    [
-     0.55,
-     0.7,
-     0.85
-    ],
-    0.45
-   ],
-   [
     "toigo_wool_pants",
     [
      0.55,
@@ -743,6 +748,17 @@
     ],
     0.8
    ]
+  ],
+  "wear": [
+   "kirtle:knee:long",
+   "belt",
+   "pouch",
+   "hat:cap",
+   "hat:hood",
+   "hat:straw",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "f_farmer": {
@@ -822,15 +838,6 @@
   ],
   "clothes": [
    [
-    "rehmanpolanski_viking_tunic",
-    [
-     0.9,
-     0.8,
-     0.55
-    ],
-    0.4
-   ],
-   [
     "toigo_wool_pants",
     [
      0.6,
@@ -848,6 +855,17 @@
     ],
     0.8
    ]
+  ],
+  "wear": [
+   "kirtle:knee:long",
+   "belt",
+   "pouch",
+   "hat:cap",
+   "hat:hood",
+   "hat:straw",
+   "apron",
+   "straps",
+   "cloak"
   ]
  },
  "f_child": {

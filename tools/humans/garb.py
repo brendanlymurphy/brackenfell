@@ -122,6 +122,7 @@ HEAD = {   # style: (front, side, back elevation of the lower edge in degrees; f
     'kerchief': dict(cut=(14, -4, -48), face=180, t=0.007, slot='linen', roll=0.0, tails=True),
     'straw':    dict(cut=(6, 6, 6), face=180, t=0.016, slot='straw', brim=0.12, droop=0.03),
     'kettle':   dict(cut=(4, 4, 4), face=180, t=0.012, slot='metal', brim=0.055, droop=0.025),
+    'hood':     dict(cut=(8, -52, -58), face=60, t=0.011, slot='hat', roll=0.0),
     'feather':  dict(cut=(14, 2, -18), face=180, t=0.012, slot='hat', roll=0.012, feather=True),
 }
 
@@ -148,7 +149,7 @@ def head_piece(fit, style, mat, name='w_hat'):
             al = math.pi / 2 + (ac - math.pi / 2) * (k / K)
             d = sph(th, al); r = fit.outer(c, d, fit.bvh_head, 0.5)
             R[k, i] = r if r is not None else (R[k - 1, i] if k else 0.1); AL[k, i] = al
-    R = blur(R, True, 2) if style not in ('coif',) else blur(R, True, 1)
+    R = blur(R, True, 2) if style not in ('coif', 'hood') else blur(R, True, 1)
     R = np.maximum(R, 0.0)
     t = P['t']
     V, Fc, COL = [], [], []
@@ -322,7 +323,7 @@ def apron_piece(fit, mat, z_top=None, z_hem=None, hw_top=0.13, slot='apron', nam
             x = hw * (i / (nx - 1) * 2 - 1)
             y = surface_y(fit, max(-0.3, min(0.3, x)) * 0.9, z, not back)
             if y is None: y = yc + (-1 if not back else 1) * 0.1
-            drape = (stand * (max(0, zw - z) / max(zw - z_hem, 1e-3)) ** 1.2 + 0.010) * (1 if back else -1)
+            drape = (stand * (max(0, zw - z) / max(zw - z_hem, 1e-3)) ** 1.2 + 0.016) * (1 if back else -1)
             ripple = 0.006 * math.sin(x * 36 + z * 5) * (1 if z < zw else 0.3) * (1 if back else -1)
             sag = 0.012 * (1 - (2 * i / (nx - 1) - 1) ** 2) * (1 if back else -1) * (max(0, zw - z) / max(zw - z_hem, 1e-3))      # hangs out in the middle
             V.append(Vector((x, y + drape + ripple + sag, z)))
@@ -411,7 +412,7 @@ def bake_colors(fit, objs, ao_dist=0.09, rays=10, trim=0.035, clean=None):
             kd = kdtree.KDTree(len(bnd))
             for i, vi in enumerate(sorted(bnd)): kd.insert(mw @ me.vertices[vi].co, i)
             kd.balance()
-        is_cloth = o.name.split('.')[-1] not in ('', ) and (o.name.startswith(('w_kirtle', 'w_sleeve')) or 'rehman' in o.name or 'toigo' in o.name or 'donitz' in o.name or 'wdg' in o.name or 'culturalibre' in o.name) and 'hood' not in o.name
+        is_cloth = o.name.split('.')[-1] not in ('', ) and (o.name.startswith(('w_kirtle', 'w_sleeve', 'w_apron')) or 'rehman' in o.name or 'toigo' in o.name or 'donitz' in o.name or 'wdg' in o.name or 'culturalibre' in o.name) and 'hood' not in o.name
         ca = me.color_attributes.get('Col') or me.color_attributes.new('Col', 'BYTE_COLOR', 'POINT')
         for v in me.vertices:
             co = mw @ v.co; n = (nm @ v.normal).normalized()
@@ -435,7 +436,7 @@ def bake_colors(fit, objs, ao_dist=0.09, rays=10, trim=0.035, clean=None):
 
 
 # ───────────────────────── kirtle / tunic: a shell grown from the body ─────────────────────────
-def kirtle_pieces(fit, mat, hem='ankle', sleeve='long', slot='wool', flare=0.17, folds=0.012, name='w_kirtle'):
+def kirtle_pieces(fit, mat, hem='ankle', sleeve='long', slot='wool', flare=0.17, folds=0.02, name='w_kirtle'):
     """Neck-to-hem garment from rays cast at the torso and legs: fitted over chest and waist, widening over the hips into a skirt with folds that
     ends at the ankle (kirtle, smock) or the knee (tunic); with sleeves to the wrist as tubes along the arms. Returns [body piece, left sleeve, right sleeve]."""
     neck = fit.bone('neck_01'); pel = fit.bone('pelvis'); foot = fit.bone('foot_l'); knee = fit.bone('calf_l')
@@ -460,8 +461,8 @@ def kirtle_pieces(fit, mat, hem='ankle', sleeve='long', slot='wool', flare=0.17,
             rprev[i] = rb; r = rb
             if z < z_hip:
                 r = rb + flare * (t ** 1.25) * (0.7 + 0.3 * abs(math.cos(th)))
-                r += folds * math.sin(th * 7.0 + z * 4.0) * min(1.0, t * 3.0)
-            V.append(Vector((d.x * r, yc + d.y * r, z - (0.02 * abs(math.sin(th * 2)) * t if z < z_hip else 0.0))))
+                r += folds * (math.sin(th * 7.0 + z * 4.0) + 0.5 * math.sin(th * 11.0 - z * 6.0)) * min(1.0, t * 3.0)
+            V.append(Vector((d.x * r, yc + d.y * r, z - ((0.045 * abs(math.sin(th * 2 + 0.6)) + 0.02 * math.sin(th * 5 + 1.3)) * t ** 1.5 if z < z_hip else 0.0))))
     Fc += grid_faces(N, len(zs), True, flip=False)
     body = new_mesh(name, V, Fc, fit, 0, mat, [(1.0, 1.0, 1.0, SLOT[slot] / 12.0)] * len(V))
     out = [body]
@@ -483,6 +484,8 @@ def wardrobe(fit, mat, spec):
         o = None
         if w == 'belt': o = belt_piece(fit, mat)
         elif w == 'pouch': o = pouch_piece(fit, mat, knife=spec.get('knife', False))
+        elif w == 'hat:hood':                              # hood with a short shoulder cape (chaperon)
+            out.append(head_piece(fit, 'hood', mat)); o = cloak_piece(fit, mat, slot='hat', z_top=fit.bone('neck_01').z - 0.01, z_hem=fit.bone('neck_01').z - 0.27, flare=0.05, folds=0.012, name='w_hat_hood_cape')
         elif w.startswith('hat:'): o = head_piece(fit, w[4:], mat)
         elif w == 'apron': o = apron_piece(fit, mat)
         elif w == 'straps': o = strap_piece(fit, mat)
