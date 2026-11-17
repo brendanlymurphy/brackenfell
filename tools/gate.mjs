@@ -25,6 +25,7 @@ const evalFail = out => /EVAL FAIL|\[pageerror\]|\[gate\] (exit|spawn)/.test(out
 // a step returns null (pass) or a short reason (fail); `note` is shown in the table either way
 const expect = (re, opts, file, pre) => () => { const out = shot(opts, (pre || '') + js(file)); return { out, fail: evalFail(out) || (re.test(out) ? null : 'did not print ' + re) }; };
 const play = ['webgl=1', 'play=1'];
+const bot = args => () => { const out = node(['test/playbot.mjs', '--quiet', '--out', OUT + '/bot', ...args]); const m = /playbot: (\d+) bugs \((\d+) S1, (\d+) S2, (\d+) S3\) in (\d+) steps/.exec(out); return { out, fail: !m ? 'the bot did not finish' : /playbot PASS/.test(out) ? null : (out.match(/BUG S[12].*/) || ['failed'])[0].slice(0, 240), note: m ? m[5] + ' steps' + (+m[4] ? ', ' + m[4] + ' minor: ' + (out.match(/BUG S3.*/) || [''])[0].slice(7, 150) : '') + ((out.match(/note: soak.*/) || [''])[0] ? ' ' + out.match(/note: soak.*/)[0].slice(6) : '') : '' }; };
 let cellIds = null;
 const STEPS = [
   { id: 'build', quick: 1, run: () => { const out = node(['tools/build.mjs']); return { out, fail: /built game\.js/.test(out) ? null : 'build failed', note: (out.match(/phone or Medium tier[^|]*\d+\.\d MB/) || [''])[0] }; } },
@@ -62,6 +63,13 @@ const STEPS = [
   { id: 'webgpu', why: 'one frame in the square and one in the inn without a GPU error', run: () => {
     const out = shot(['quality=medium'], "const a = (await game.shot(4, null, -14, 200, 0, 10)).draws; game.enter('inn'); const p = R.cam.pos; const b = (await game.shot(p[0], p[1], p[2], 180, 0, 20)).draws; return ['gpu', G.backend, a, b, window.__gpuErrors().length];", ['--out', OUT + '/webgpu_inn.png']), m = /\["gpu","(\w+)",(\d+),(\d+),(\d+)\]/.exec(out);
     return { out, fail: evalFail(out) || (!m ? 'no result' : m[1] !== 'WebGPU' ? 'ran on ' + m[1] : +m[4] ? m[4] + ' GPU errors' : null), note: m ? m[1] + ' ' + m[2] + ' / ' + m[3] + ' draws' : '' }; } },
+  // the play bot (test/playbot.mjs): real keys, clicks and taps. Every bug in docs/BUGS.md that was fixed is held by one of these.
+  { id: 'bot-story', quick: 1, why: 'the story to both endings by input, a reload at every checkpoint', run: bot(['--run', 'story,reload']) },
+  { id: 'bot-play', why: 'every conversation at seven points of the story, side quests, shop, perks, board, theft and jail, death, other orders, saves of Builds 45, 52, 60, the mine fought through, the nine secrets', run: bot(['--run', 'story,talks,side,crime,death,orders,saves,mine,secrets']) },
+  { id: 'bot-phone', why: '844 x 390 with touch, a notch and a home bar: the story by taps, every window fits and can be reached, turning the phone', run: bot(['--run', 'story,phone,life', '--touch', '--size', '844x390']) },
+  { id: 'bot-sweep', why: 'E on every seventh thing in the world', run: bot(['--run', 'story,sweep', '--every', '7']) },
+  { id: 'bot-soak', why: '30 minutes of play in one page: memory, tick time, people stuck or under the floor', run: bot(['--run', 'story,soak', '--minutes', '30']) },
+  { id: 'offline', why: 'second start with the network cut (service worker cache); a new build is noticed', run: () => { const out = node(['test/sw.mjs']); return { out, fail: /SW PASS/.test(out) ? null : (out.match(/SW FAIL.*|Error.*/) || ['no SW PASS'])[0].slice(0, 200) }; } },
   { id: 'real', quick: 1, why: 'production boot, no test hooks, from the folder Pages would serve (tools/site.mjs)', run: () => { const site = node(['tools/site.mjs', '_site', '--no-build']); if (!/site: \d+ files/.test(site)) return { out: site, fail: 'the site folder could not be assembled' };
     const out = site + node(['test/real.mjs', OUT + '/real.png', '--root', '_site']); let fail = 'no status line'; const m = out.match(/\{"backend".*\}/g); if (m) { try { const s = JSON.parse(m[m.length - 1]);       /* the last status line: after Start was pressed */ fail = s.crashed ? 'crashed: ' + (s.errors[0] || '').slice(0, 200) : !s.ready ? 'not ready' : !s.playing ? 'not playing' : s.errors.length ? s.errors[0].slice(0, 200) : null; } catch (e) { fail = 'unreadable status'; } } return { out, fail }; } },
 ];

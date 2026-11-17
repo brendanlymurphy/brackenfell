@@ -303,3 +303,15 @@ body.cine::before { top: 0; } body.cine::after { bottom: 0; }
 #dopts button:active, #dopts button:hover { background: rgba(255, 255, 255, 0.2); border-color: #fff; }
 #dopts button.quest { border-color: var(--gold); color: var(--gold); }
 @media (max-height: 430px) { #dialog { padding: 0 10px; } #dtext { font-size: 16px; margin: 2px auto 7px; } #dopts button { min-height: 36px; padding: 5px 13px; font-size: 14px; } }
+
+/* ── fit on a phone held sideways (found by test/playbot.mjs --touch) ──
+   The subtitle-style dialogue grew downward out of a box with a fixed height: a long line pushed the last options under the bottom of the
+   screen where no finger reaches. It now grows upward to the height of the screen and scrolls beyond that. Everything a finger presses is
+   at least 44 px high on a touch screen. */
+#dialog { max-height: calc(100% - var(--sat) - var(--sab) - 14px); overflow-y: auto; overscroll-behavior: contain; padding-top: 6px; scrollbar-width: none; }
+#dialog::-webkit-scrollbar { display: none; }
+@media (pointer: coarse) {
+  #dopts button { min-height: 44px; }
+  #tabs [data-tab], #mclose, #rclose, .btn.small, #pause button { min-height: 44px; }
+  #menu input[type=range], #menu select { min-height: 44px; }
+}
