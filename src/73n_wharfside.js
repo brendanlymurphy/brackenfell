@@ -28,7 +28,7 @@ function wharfPlots() {
 // ground: trodden earth round every house of the district and its yard, the street as mud, a stony margin at the water
 function wharfPaint(A, B, H) {
   if (typeof WHARF === 'undefined' || !WHARF.houses.length) return;
-  const { P, stroke, red, grn } = H, sc = H.sc;
+  const { P, stroke, red, grn, ell } = H, sc = H.sc;
   const poly = (ctx, pts, col) => { ctx.fillStyle = col; ctx.beginPath(); pts.forEach((p, i) => { const q = P(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath(); ctx.fill(); };
   const rect = (x, z, yaw, w, d) => { const c = Math.cos(yaw), sn = Math.sin(yaw); return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [x + a * w / 2 * c - b * d / 2 * sn, z + a * w / 2 * sn + b * d / 2 * c]); };
   for (const s of SITES) if (wharfDistrict(s)) {
@@ -37,6 +37,14 @@ function wharfPaint(A, B, H) {
   }
   for (const p of wharfPlots()) { const yaw = Math.atan2(p.uz, p.ux), cx = p.ox + p.bx * p.depth / 2, cz = p.oz + p.bz * p.depth / 2; poly(A, rect(cx, cz, yaw, p.hw * 2 + 0.6, p.depth + 0.6), red(0.9)); poly(B, rect(cx, cz, yaw, p.hw * 2 + 1.6, p.depth + 1.4), red(1)); }
   { const C = wharfCloses(); for (const pl of C.paths) { stroke(A, pl, 1.7, red, 1.0); stroke(B, pl, 2.4, red, 0.9); } for (const q of C.soil) { poly(A, q, red(0.55)); poly(B, q, red(0.6)); } }
+  {   // the staircase of the pad's outline is broken up: ragged blobs of earth thrown out round every house and yard rectangle, thinning into the grass
+    const RR = rng(3355), blob = (x, z) => { const r = 0.55 + RR() * 0.7; ell(A, x, z, r, r * (0.7 + RR() * 0.5), red); if (RR() < 0.5) ell(B, x, z, r + 0.5, r + 0.3, red); };
+    const edge = (q) => { for (let i = 0; i < q.length; i++) { const a = q[i], b = q[(i + 1) % q.length], L = hyp(b[0] - a[0], b[1] - a[1]), n = Math.ceil(L / 0.8); for (let k = 0; k < n; k++) { const t = k / n, ox = (RR() - 0.5) * 1.6, oz = (RR() - 0.5) * 1.6; if (RR() < 0.8) blob(a[0] + (b[0] - a[0]) * t + ox, a[1] + (b[1] - a[1]) * t + oz); } } };
+    for (const s of SITES) if (wharfDistrict(s)) edge(rect(s.x, s.z, s.yaw, s.w + 3.6, s.d + 3.6));
+    for (const p of wharfPlots()) { const yaw = Math.atan2(p.uz, p.ux), cx = p.ox + p.bx * p.depth / 2, cz = p.oz + p.bz * p.depth / 2; edge(rect(cx, cz, yaw, p.hw * 2 + 0.6, p.depth + 0.6)); }
+    if (WHARF.street) { const L = WHARF.street.L, pts = L.p.filter(q => q[1] > 32); for (let i = 0; i < pts.length; i += 2) for (const sg of [-1, 1]) if (RR() < 0.85) { const a = pts[Math.min(i + 1, pts.length - 1)], b = pts[i], dx = a[0] - b[0], dz = a[1] - b[1], l = hyp(dx, dz) || 1, o = sg * (2.6 + RR() * 1.1); blob(b[0] - dz / l * o, b[1] + dx / l * o); } }
+    const E = WHARF.edge; if (E) stroke(B, E.map(q => [q[0] + 0.7, q[1]]), 1.4, grn, 0.9);      // the ditch: wet ground along the hedge
+  }
   if (WHARF.street) { const L = WHARF.street.L, pts = L.p.filter(q => q[1] > 32); stroke(A, pts, 4.4, red, 1.4); stroke(B, pts, 5.2, red, 1.2); }
 }
 // the yard behind each house: low fence on the back and the party lines; one trade of the poor
@@ -136,6 +144,15 @@ function wharfCloses() {
   { const cx = 31.6, cz = 80.4, c = Math.cos(0.5), sn = Math.sin(0.5), W = (a, b) => [cx + a * c - b * sn, cz + a * sn + b * c]; C.wedge = { x: cx, z: cz };
     C.soil.push([W(-4.4, -3.6), W(4.4, -3.6), W(4.4, 3.6), W(-4.4, 3.6)]); C.hedges.push([W(-5.4, 4.6), W(0, 4.8), W(5.4, 4.4)], [W(5.4, -4), W(5.6, 0), W(5.4, 4.4)]); C.fences.push([W(-5.4, -4.4), W(-5.4, 0), W(-5.2, 4.6)]);
     C.racks.push([...W(-3.5, 2.4), ...W(0.5, 2.6)], [...W(-3.5, -3), ...W(0, -3.1)]); C.boats.push([...W(2.2, -0.4), 0.45]); }
+  // the edge: a hedge and a fence line that bends, west and north; the last yards of the west lane's houses run out to it between cross fences
+  { const E = WHARF.edge; if (E) {
+      const cat = catmull(E, 1.2);
+      for (let i = 0; i + 2 < cat.length; i += 2) { const seg = [cat[i], cat[i + 1], cat[i + 2]]; if (Math.floor(i / 10) % 3 === 1) C.fences.push(seg); else { seg.dense = true; C.hedges.push(seg); } }
+      const hitE = (ox, oz, dx, dz) => { let best = null; for (let i = 0; i + 1 < cat.length; i++) { const [ax, az] = cat[i], [bx, bz] = cat[i + 1], ex = bx - ax, ez = bz - az, den = dx * ez - dz * ex; if (Math.abs(den) < 1e-6) continue; const t = ((ax - ox) * ez - (az - oz) * ex) / den, u = ((ax - ox) * dz - (az - oz) * dx) / den; if (t > 0.5 && u >= 0 && u <= 1 && (best === null || t < best)) best = t; } return best; };
+      for (const id of (WHARF.rows.w1w || [])) { const st = SITE[id], nx = Math.sin(st.yaw), nz = -Math.cos(st.yaw), bx = -nx, bz = -nz, ux = Math.cos(st.yaw), uz = Math.sin(st.yaw), hw = st.w / 2 + 0.25;
+        for (const sg of [-1, 1]) { const ox = st.x + bx * (st.d / 2 + 5.4) + ux * hw * sg, oz = st.z + bz * (st.d / 2 + 5.4) + uz * hw * sg, t = hitE(ox, oz, bx, bz); if (t && t < 22) C.fences.push([[ox, oz], [ox + bx * t, oz + bz * t]]); }
+        const ox = st.x + bx * (st.d / 2 + 5.4), oz = st.z + bz * (st.d / 2 + 5.4), t = hitE(ox, oz, bx, bz); if (t && t < 22) C.soil.push([[ox - ux * hw, oz - uz * hw], [ox + ux * hw, oz + uz * hw], [ox + ux * hw + bx * t, oz + uz * hw + bz * t], [ox - ux * hw + bx * t, oz - uz * hw + bz * t]]); }
+  } }
   return C;
 }
 // vegetation asks: keep random trees out of the closes
@@ -145,7 +162,7 @@ function buildWharfCloses(bucket) {
   const gy = (x, z) => Terrain.y(x, z), R = rng(4141), h = 1.0;
   const nearHouse = (x, z) => SITES.some(st => { if (!st.w || st.id === 'tower') return false; const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 1.3 && Math.abs(l[1]) < st.d / 2 + 1.3; });
   World.hedgeBushes = World.hedgeBushes || []; World.orchardTrees = World.orchardTrees || [];
-  for (const pl of C.hedges) for (let i = 0; i + 1 < pl.length; i++) { const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / 3.0)); for (let k = 0; k < n; k++) World.hedgeBushes.push([ax + (bx - ax) * k / n + (R() - 0.5) * 0.2, az + (bz - az) * k / n + (R() - 0.5) * 0.2, 1.1 + R() * 0.3]); }
+  for (const pl of C.hedges) for (let i = 0; i + 1 < pl.length; i++) { const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / (pl.dense ? 1.3 : 3.0))); for (let k = 0; k < n; k++) World.hedgeBushes.push([ax + (bx - ax) * k / n + (R() - 0.5) * 0.2, az + (bz - az) * k / n + (R() - 0.5) * 0.2, 1.1 + R() * 0.3]); }
   for (const t of C.trees) World.orchardTrees.push(t);
   for (const pl of C.fences) {
     const [mx, mz] = pl[(pl.length / 2) | 0], m = bucket(mx, mz);
@@ -153,7 +170,7 @@ function buildWharfCloses(bucket) {
       const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / 1.6)); m.mat(MAT.TIMBER, [0.27, 0.22, 0.17], 0.5);
       for (let k = 0; k <= n; k++) { const x = ax + (bx - ax) * k / n, z = az + (bz - az) * k / n; m.cbox(x, gy(x, z) - 0.1, z, 0.09, h + 0.1 + (R() - 0.5) * 0.25, 0.09, 0); }
       for (const y of [0.38, h - 0.2]) for (let k = 0; k < n; k++) { const x0 = ax + (bx - ax) * k / n, z0 = az + (bz - az) * k / n, x1 = ax + (bx - ax) * (k + 1) / n, z1 = az + (bz - az) * (k + 1) / n; m.beam([x0, gy(x0, z0) + y, z0], [x1, gy(x1, z1) + y + (R() - 0.5) * 0.08, z1], 0.045, 0.04); }
-      for (let k = 0; k <= Math.ceil(L / 0.5); k++) { const t = k / Math.ceil(L / 0.5), x = ax + (bx - ax) * t, z = az + (bz - az) * t; if (!nearHouse(x, z)) addCircleCollider(m, x, z, 0.14, gy(x, z), gy(x, z) + h); }
+      for (let k = 0; k <= Math.ceil(L / 0.5); k++) { const t = k / Math.ceil(L / 0.5), x = ax + (bx - ax) * t, z = az + (bz - az) * t; if (!nearHouse(x, z) && !World.colliders.some(o => o.r && Math.abs(o.x - x) < 0.32 && Math.abs(o.z - z) < 0.32)) addCircleCollider(m, x, z, 0.14, gy(x, z), gy(x, z) + h); }
     }
   }
   for (const [p, q] of C.beds) { const cx = (p[0] + q[0]) / 2, cz = (p[1] + q[1]) / 2, m = bucket(cx, cz), ang = Math.atan2(q[1] - p[1], q[0] - p[0]), w = hyp(q[0] - p[0], q[1] - p[1]) / 2; m.mat(MAT.SOIL, [0.34, 0.27, 0.2], 0.5); m.push().T(cx, gy(cx, cz) + 0.04, cz).RY(-ang); m.quad2([-w, 0, -0.32], [w, 0, -0.32], [w, 0, 0.32], [-w, 0, 0.32]); m.pop(); for (let a = -w + 0.3; a < w - 0.2; a += 2.0) (World.gardenPlants = World.gardenPlants || []).push([cx + Math.cos(ang) * a, cz + Math.sin(ang) * a, (a * 7 | 0) & 1]); }

@@ -61,6 +61,6 @@ const WHARF = { houses: [], rows: {}, gables: [], poly: null, street: null, lane
   const drop = h => { INF.houses.splice(INF.houses.indexOf(h), 1); delete INF.byId[h.id]; delete SITE[h.id]; const i = SITES.findIndex(q => q.id === h.id); if (i >= 0) SITES.splice(i, 1); };
   for (const h of INF.houses.slice()) { if (h.placed || h.enter) continue; const st = SITE[h.id]; if (st && st.z > 34 && st.z < 80 && st.x > -34 && st.x < 48 && !placed.some(o => o.id === h.id)) drop(h); }
   // the edge: west and north a ditch and fence line that bends, the last yards running out to it; east the river bank, south the shore
-  WHARF.edge = [[-8, 35], [-17, 40], [-29, 47], [-33.5, 58], [-31, 68], [-28, 77], [-26, 85]];
+  WHARF.edge = [[-8, 35], [-17, 40], [-29, 46], [-36, 57], [-37.5, 68], [-35, 77], [-30, 86]];
   INF.count = INF.houses.length; WHARF.street = { s0, sEnd, L };
 })();
