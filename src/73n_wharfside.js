@@ -81,7 +81,7 @@ function buildWharfPlots(bucket) {
         for (const sg of [-1, 1]) { const q = at(sg * 0.9, dp * 0.5 - 0.0); m.beam([q[0], g, q[1] - 0.3], [q[0], g + 0.5, q[1] - 0.3], 0.06, 0.06); m.beam([q[0], g, q[1] + 0.3], [q[0], g + 0.5, q[1] + 0.3], 0.06, 0.06); }
         addBoxCollider(m, x - 1.5, z - 0.7, x + 1.5, z + 0.7, g, g + 1.0); });
     } else if (p.trade === 'barrels') {
-      for (let i = 0; i < 4; i++) put(-1.2 + (i % 2) * 0.8, dp * 0.35 + ((i / 2) | 0) * 0.8, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.3, 0.23, 0.15], 0.5); m.cyl(x, g, z, 0.32, 0.36, 0.8, 6, 2); m.mat(MAT.METAL, [0.18, 0.18, 0.18], 0.5); m.cyl(x, g + 0.15, z, 0.365, 0.365, 0.04, 6, 0); m.cyl(x, g + 0.6, z, 0.355, 0.355, 0.04, 6, 0); addCircleCollider(m, x, z, 0.28, g, g + 0.8); });
+      for (let i = 0; i < 4; i++) put(-1.2 + (i % 2) * 0.8, dp * 0.35 + ((i / 2) | 0) * 0.8, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.3, 0.23, 0.15], 0.5); m.cyl(x, g, z, 0.32, 0.36, 0.8, 6, 2); m.mat(MAT.METAL, [0.18, 0.18, 0.18], 0.5); m.cyl(x, g + 0.15, z, 0.365, 0.365, 0.04, 6, 0); m.cyl(x, g + 0.6, z, 0.355, 0.355, 0.04, 6, 0); ; });
       { const { p0, p1 } = along(0.6, 2.0, dp * 0.7), g0 = gy(p0[0], p0[1]); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const q of [p0, p1]) m.beam([q[0], g0, q[1]], [q[0], g0 + 1.6, q[1]], 0.05, 0.05); m.beam([p0[0], g0 + 1.55, p0[1]], [p1[0], g0 + 1.55, p1[1]], 0.04, 0.04);
         m.mat(MAT.PLAIN, [0.5, 0.52, 0.5]); for (let i = 0; i < 6; i++) { const t = (i + 0.5) / 6, x = p0[0] + (p1[0] - p0[0]) * t, z = p0[1] + (p1[1] - p0[1]) * t; m.box(x - 0.03, g0 + 1.0, z - 0.02, x + 0.03, g0 + 1.52, z + 0.02); } }
     } else if (p.trade === 'woodpile') {
@@ -153,8 +153,14 @@ function wharfCloses() {
     C.soil.push([W(-4.4, -3.6), W(4.4, -3.6), W(4.4, 3.6), W(-4.4, 3.6)]); C.hedges.push([W(-5.4, 4.6), W(0, 4.8), W(5.4, 4.4)], [W(5.4, -4), W(5.6, 0), W(5.4, 4.4)]); C.fences.push([W(-5.4, -4.4), W(-5.4, 0), W(-5.2, 4.6)]);
     C.racks.push([...W(-3.5, 2.4), ...W(0.5, 2.6)], [...W(-3.5, -3), ...W(0, -3.1)]); C.boats.push([...W(2.2, -0.4), 0.45]); }
   // the wharf yard's open ground: a boat drawn up, one upturned on trestles, two drying racks, a winch, barrels and pots, rope
-  C.racks.push([-9.2, 70.4, -5.4, 70.1], [-12.8, 72.4, -9.6, 72.9]); C.boats.push([-3.6, 73.7, 0.18, 'up0'], [-1.6, 70.4, -0.1, 'trestle']);
+  C.racks.push([-9.2, 70.4, -5.4, 70.1], [-17.4, 71.0, -13.8, 71.3]); C.boats.push([-3.6, 73.7, 0.18, 'up0'], [-1.6, 70.4, -0.1, 'trestle']);
   C.winch = [1.9, 74.4]; C.barrels = [[3.1, 72.0], [3.7, 72.6], [3.2, 73.0], [-7.0, 76.4], [-6.4, 77.0]]; C.coil = [[0.4, 75.6], [-6.5, 74.0]];
+  // where the landing steps go down to the river from Bank Lane's east side (the first has the wash place); the river bank behind them is nobody's house, it is the lane's own
+  C.landStarts = [[9.5, -4.5], [27, -4.5], [40, -4.5]].map(([a, b]) => LP(Math.min(a, len - 3), b));
+  // the river side of Bank Lane (no house stands there any more): net poles of the fishing households, boats drawn up, an osier bed for the basketmaker (in.51)
+  C.poles.push([...LP(23, -8.8), ...LP(26.4, -8.9)], [...LP(44, -8.4), ...LP(47, -8.5)]);
+  C.boats.push([...LP(6.5, -7.2), Math.atan2(...(() => { const a = LP(5, -7.2), b = LP(8, -7.2); return [b[1] - a[1], b[0] - a[0]]; })()), 'up0'], [...LP(41, -8.0), 0.4, 'trestle']);
+  C.osier = []; for (let r = 0; r < 4; r++) for (let a = 12; a < 19.5; a += 0.9) C.osier.push([...LP(a + (r % 2) * 0.45, -9.8 - r * 1.15), 0.5 + ((a * 3 + r) % 3) * 0.06]);
   // trees, each by hand with its reason (a few, not a scatter); positions come from named anchors and are dropped if a house, a road or a prop stands there
   C.wtrees = []; {
     const free = (x, z, r) => !SITES.some(st => { if (!st.w || st.id === 'tower') return false; const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + r && Math.abs(l[1]) < st.d / 2 + r; }) && !ROADS.some(rd => { const ln = INF.LN[rd.id] || null; return ln && INF.dist(ln, x, z)[0] < rd.w / 2 + r; });
@@ -191,7 +197,7 @@ function buildWharfCloses(bucket) {
   World.hedgeBushes = World.hedgeBushes || []; World.orchardTrees = World.orchardTrees || [];
   for (const pl of C.hedges) for (let i = 0; i + 1 < pl.length; i++) { const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / (pl.dense ? 2.4 : 3.6))); for (let k = 0; k < n; k++) World.hedgeBushes.push([ax + (bx - ax) * k / n + (R() - 0.5) * 0.2, az + (bz - az) * k / n + (R() - 0.5) * 0.2, 1.45 + R() * 0.3]); }
   for (const t of C.trees) World.orchardTrees.push(t);
-  World.wharfTrees = (C.wtrees || []).slice(); for (const e of C.elders || []) World.hedgeBushes.push([e[0], e[1], 1.7], [e[0] + 0.7, e[1] + 0.4, 1.4]); for (const q of C.saplings || []) World.hedgeBushes.push(q);
+  World.wharfTrees = (C.wtrees || []).slice(); for (const q of C.osier || []) World.hedgeBushes.push(q); for (const e of C.elders || []) World.hedgeBushes.push([e[0], e[1], 1.7], [e[0] + 0.7, e[1] + 0.4, 1.4]); for (const q of C.saplings || []) World.hedgeBushes.push(q);
   for (const pl of C.fences) {
     const [mx, mz] = pl[(pl.length / 2) | 0], m = bucket(mx, mz);
     for (let i = 0; i + 1 < pl.length; i++) {
@@ -276,10 +282,8 @@ function buildWharfLandings(bucket) {
   const gy = (x, z) => Terrain.y(x, z), R = rng(8080);
   const near = (x, z) => { let best = null, bd = 1e9; for (const q of River.p) { const d = hyp(q[0] - x, q[1] - z); if (d < bd) { bd = d; best = q; } } return [best, bd]; };
   let k = 0;
-  for (const id of ['in.53', 'in.52', 'in.56', 'in.126']) {
-    const st = SITE[id]; if (!st || !(WHARF.rows.bankE1 || []).concat(WHARF.rows.bankE2 || []).includes(id)) continue;
-    const nx = Math.sin(st.yaw), nz = -Math.cos(st.yaw), bx = -nx, bz = -nz;       // the back of the house
-    const sx = st.x + bx * (st.d / 2 + 1.6), sz = st.z + bz * (st.d / 2 + 1.6);
+  for (const [sx, sz] of wharfCloses().landStarts || []) {
+    const nx = 0, nz = 0;
     const [rq, rd] = near(sx, sz); if (!rq || rd > 28) continue;
     let dx = rq[0] - sx, dz = rq[1] - sz; const dl = hyp(dx, dz); dx /= dl; dz /= dl;
     // walk toward the river until the ground is at the water (or 9 m)
@@ -300,5 +304,60 @@ function buildWharfLandings(bucket) {
       m.mat(MAT.CLOTH, [0.4, 0.38, 0.32], 0.5); for (let i = 0; i < 3; i++) { const t0 = 0.12 + i * 0.3, q0 = [p0[0] + (p1[0] - p0[0]) * t0, p0[1] + (p1[1] - p0[1]) * t0], q1 = [p0[0] + (p1[0] - p0[0]) * (t0 + 0.2), p0[1] + (p1[1] - p0[1]) * (t0 + 0.2)]; m.quad2([q0[0], gg + 1.82, q0[1]], [q1[0], gg + 1.82, q1[1]], [q1[0], gg + 0.9 + R() * 0.2, q1[1]], [q0[0], gg + 0.9 + R() * 0.2, q0[1]]); }
     }
     k++;
+  }
+}
+
+// ───── the working buildings of the quarter: not houses, nobody sleeps in them; each stands open so what is inside can be seen, and each belongs to a household that stands next to it ─────
+// kind: 'smoke' (walled on three sides, hams on racks over a hearth), 'loft' (open frame, a plank deck above with nets, a hoist), 'fish' (roof on posts, drying rails with fish), 'nets' (roof on posts, nets hung to dry)
+// ang: direction of the shed's width axis; the front (open) side is local +z
+function wharfWorks() {
+  if (typeof WHARF === 'undefined' || !WHARF.houses.length || (TEST && TEST.wharf === 0)) return [];
+  const bk = WHARF.lanes && WHARF.lanes.bank, o = [];
+  o.push({ id: 'smokehouse', kind: 'smoke', x: 12.3, z: 71.6, ang: Math.PI / 2, w: 3.4, d: 3.0, h: 2.5, owner: 'in.111 (the butcher smokes hams and bacon)' });        // front to the west, toward the street
+  o.push({ id: 'netloft', kind: 'loft', x: -9.6, z: 73.8, ang: 0, w: 3.6, d: 3.4, h: 4.1, owner: 'in.38 and in.34 (the fishing households keep their nets up there)' });       // front to the south, onto the yard
+  if (bk) for (const [a, kind, who] of [[17.5, 'fish', 'in.60 (fish dried on the bank)'], [34.5, 'nets', 'in.34 (nets hung to dry)']]) { const P = INF.pt(bk, a), Q = INF.pt(bk, a + 1), dx = Q[0] - P[0], dz = Q[1] - P[1], l = hyp(dx, dz) || 1, tx = dx / l, tz = dz / l; o.push({ id: 'shed.' + kind + a, kind, x: P[0] + tz * 5.6, z: P[1] - tx * 5.6, ang: Math.atan2(tz, tx) * 1 + 0, w: 5.0, d: 2.6, h: 2.3, owner: who, faceLane: true }); }
+  return o;
+}
+function buildWharfWorks(bucket) {
+  if (TEST && (TEST.wharf === 0 || TEST.plots === 0) || typeof WHARF === 'undefined' || !WHARF.houses.length) return;
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = wharfLow() ? 60 : 130; return m; }; }
+  const gy = (x, z) => Terrain.y(x, z), R = rng(1717);
+  for (const S of wharfWorks()) {
+    const { x, z, w, d, h } = S, ang = S.ang, c = Math.cos(ang), sn = Math.sin(ang), g = gy(x, z), m = bucket(x, z), W = (a, b) => [x + a * c - b * sn, z + a * sn + b * c];
+    const hw = w / 2, hd = d / 2, rear = S.kind === 'loft' ? h + 0.3 : h + 0.45, front = h;
+    const post = (a, b, hh) => { m.mat(MAT.TIMBER, [0.3, 0.24, 0.17], 0.5); m.push().T(x, 0, z).RY(-ang); m.box(a - 0.1, g - 0.15, b - 0.1, a + 0.1, g + hh, b + 0.1); m.pop(); const q = W(a, b); addCircleCollider(m, q[0], q[1], 0.16, g, g + hh); };
+    const L = (fn) => { m.push().T(x, 0, z).RY(-ang); fn(); m.pop(); };
+    post(-hw, -hd, rear); post(hw, -hd, rear); post(-hw, hd, front); post(hw, hd, front);
+    if (S.kind === 'loft') { post(0, -hd, rear); post(0, hd, front); }
+    // the roof: a mono-pitch with thickness (top, closed edges, boards under it)
+    { const T = [[-hw - 0.45, rear + 0.1, -hd - 0.4], [hw + 0.45, rear + 0.1, -hd - 0.4], [hw + 0.45, front + 0.1, hd + 0.5], [-hw - 0.45, front + 0.1, hd + 0.5]], Bm = T.map(q => [q[0], q[1] - 0.18, q[2]]);
+      m.mat(S.kind === 'smoke' || S.kind === 'loft' ? MAT.SHINGLE : MAT.THATCH, S.kind === 'smoke' ? [0.4, 0.36, 0.32] : [0.42, 0.36, 0.22], 0.5);
+      L(() => { m.quad2(T[0], T[1], T[2], T[3]); for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; m.quad2(T[i], T[j], Bm[j], Bm[i]); } m.mat(MAT.PLANKS, [0.34, 0.27, 0.19], 0.5); m.quad2(Bm[3], Bm[2], Bm[1], Bm[0]); }); }
+    // rails / ties between the posts
+    m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5);
+    L(() => { for (const [a0, b0, a1, b1, y] of [[-hw, -hd, hw, -hd, rear - 0.3], [-hw, hd, hw, hd, front - 0.3], [-hw, -hd, -hw, hd, (rear + front) / 2 - 0.3], [hw, -hd, hw, hd, (rear + front) / 2 - 0.3]]) m.box(Math.min(a0, a1) - 0.07, g + y - 0.05, Math.min(b0, b1) - 0.07, Math.max(a0, a1) + 0.07, g + y + 0.07, Math.max(b0, b1) + 0.07); });
+    const wall = (a0, b0, a1, b1, y1) => L(() => { m.mat(MAT.PLANKS, [0.36, 0.29, 0.21], 0.5); const t = 0.05; m.box(Math.min(a0, a1) - t, g, Math.min(b0, b1) - t, Math.max(a0, a1) + t, g + y1, Math.max(b0, b1) + t); });
+    if (S.kind === 'smoke') {
+      wall(-hw, -hd, hw, -hd, rear - 0.3); wall(-hw, -hd, -hw, hd, (rear + front) / 2 - 0.3); wall(hw, -hd, hw, hd, (rear + front) / 2 - 0.3);       // three closed walls, thick, finished at the corners
+      L(() => { m.mat(MAT.STONE, [0.3, 0.28, 0.25], 0.5); m.box(-0.7, g, -0.5, 0.7, g + 0.22, 0.5); m.mat(MAT.PLAIN, [0.1, 0.08, 0.07]); m.box(-0.5, g + 0.2, -0.3, 0.5, g + 0.24, 0.3);
+        m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const y of [1.55, 1.95]) m.box(-hw + 0.2, g + y, -0.55, hw - 0.2, g + y + 0.06, -0.49); m.mat(MAT.LEATHER || MAT.CLOTH, [0.3, 0.16, 0.1], 0.5);
+        for (let i = 0; i < 7; i++) { const a = -hw + 0.5 + i * (w - 1.0) / 6; m.push().T(a, g + 1.3 + (i % 2) * 0.4, -0.52); m.ball(0, 0, 0, 0.14, 0.3, 0.12, 6, 4); m.pop(); } });
+      World.emitters.push({ type: 'smoke', p: [x, g + rear + 0.35, z], zone: 0 });
+    } else if (S.kind === 'loft') {
+      L(() => { m.mat(MAT.PLANKS, [0.38, 0.3, 0.21], 0.5); m.box(-hw, g + 2.25, -hd, hw, g + 2.4, hd);                                  // the deck: a real floor with thickness
+        m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (let i = -1; i <= 1; i++) m.box(-hw, g + 2.05, i * hd * 0.8 - 0.05, hw, g + 2.25, i * hd * 0.8 + 0.05);       // joists
+        m.mat(MAT.CLOTH, [0.3, 0.27, 0.2], 0.5); m.push().T(-0.8, g + 2.8, -0.6); m.ball(0, 0, 0, 0.9, 0.5, 0.7, 7, 4); m.pop(); m.push().T(0.9, g + 2.65, -0.2); m.ball(0, 0, 0, 0.7, 0.35, 0.6, 7, 4); m.pop();       // heaped nets up there
+        m.mat(MAT.TIMBER, [0.3, 0.24, 0.17], 0.5); m.box(-0.06, g + 3.6, hd, 0.06, g + 3.7, hd + 1.2); m.box(-0.02, g + 2.3, hd + 1.1, 0.02, g + 3.6, hd + 1.14);        // the hoist beam and its rope
+        for (let i = 0; i < 6; i++) m.box(hw - 0.15 + 0.0, g + 0.3 + i * 0.35, hd - 0.5, hw - 0.05, g + 0.36 + i * 0.35, hd - 0.1);      // ladder rungs against the post
+        m.mat(MAT.CLOTH, [0.28, 0.25, 0.19], 0.5); for (let i = 0; i < 3; i++) m.quad2([-hw + 0.5 + i * 1.1, g + 2.1, -hd + 0.1], [-hw + 1.3 + i * 1.1, g + 2.1, -hd + 0.1], [-hw + 1.3 + i * 1.1, g + 0.8, -hd + 0.14], [-hw + 0.5 + i * 1.1, g + 0.8, -hd + 0.14]); });       // nets hung under the deck
+    } else if (S.kind === 'fish') {
+      L(() => { m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const y of [1.25, 1.65]) m.box(-hw + 0.1, g + y, -0.15, hw - 0.1, g + y + 0.05, -0.1);
+        m.mat(MAT.PLAIN, [0.5, 0.5, 0.46]); for (let i = 0; i < 12; i++) { const a = -hw + 0.4 + i * (w - 0.8) / 11; m.box(a - 0.04, g + 0.7 + (i % 2) * 0.4, -0.16, a + 0.04, g + 1.62 - (i % 2) * 0.0, -0.09); }
+        m.mat(MAT.PLANKS, [0.42, 0.33, 0.22], 0.5); m.cyl(hw - 0.6, g, hd - 0.5, 0.3, 0.27, 0.45, 7, 1); });
+    } else if (S.kind === 'nets') {
+      L(() => { m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.box(-hw + 0.1, g + 1.9, -0.1, hw - 0.1, g + 1.96, -0.04); m.mat(MAT.CLOTH, [0.28, 0.25, 0.19], 0.5);
+        for (let i = 0; i < 3; i++) { const a0 = -hw + 0.3 + i * 1.5, a1 = a0 + 1.3; m.quad2([a0, g + 1.9, -0.07], [a1, g + 1.9, -0.07], [a1 + 0.05, g + 0.55, -0.02], [a0 - 0.05, g + 0.55, -0.12]); m.quad2([a0 - 0.05, g + 0.55, -0.12], [a1 + 0.05, g + 0.55, -0.02], [a1, g + 1.9, -0.07], [a0, g + 1.9, -0.07]); }
+        m.mat(MAT.PLAIN, [0.55, 0.5, 0.38]); for (let i = 0; i < 6; i++) m.cyl(-hw + 0.5 + i * 0.35, g, hd - 0.5, 0.08, 0.08, 0.1, 6, 1); });      // floats in a row
+    }
   }
 }

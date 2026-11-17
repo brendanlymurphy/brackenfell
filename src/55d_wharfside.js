@@ -55,8 +55,10 @@ const WHARF = { houses: [], rows: {}, gables: [], poly: null, street: null, lane
   row('bankW', -1, ['in.120', 'in.122', 'in.124', 'in.121'], 3, lanes.bank.len - 8, { 'in.122': 1.5 }, lanes.bank, bw, true);
   closer('in.36', lanes.bank, lanes.bank.len - 1.0, 0.4);
   // the wharf yard: a net loft west of the open ground and a smokehouse east of it (two houses of the old infill given those parts), the fisher's hut and the boat shed round it
-  const yard = (id, x, z, yaw) => { const st = SITE[id]; if (st && !hits(x, z, yaw, st.w, st.d, 0.2)) { move(id, x, z, yaw); WHARF.yard = (WHARF.yard || []).concat(id); } };
+  const yard = (id, x, z, yaw) => { const st = SITE[id]; if (st && INF.byId[id] && INF.byId[id].enter && !hits(x, z, yaw, st.w, st.d, 0.2)) { move(id, x, z, yaw); WHARF.yard = (WHARF.yard || []).concat(id); } };
   yard('in.114', -9.2, 73.4, Math.PI / 2); yard('in.127', 11.2, 71.2, -Math.PI / 2);
+  // a shell with a door and no household is not a house: it is taken away after the lines are laid (so the enterable houses keep their places) and its ground becomes yards, closes and working sheds
+  for (const [id] of WHARF.houses.slice()) { const h = INF.byId[id]; if (h && !h.enter && !h.cell) { const i = WHARF.houses.findIndex(q => q[0] === id); if (i >= 0) WHARF.houses.splice(i, 1); for (const k in WHARF.rows) WHARF.rows[k] = WHARF.rows[k].filter(q => q !== id); WHARF.gables = WHARF.gables.filter(q => q !== id); const pi = placed.findIndex(o => o.id === id); if (pi >= 0) placed.splice(pi, 1); INF.houses.splice(INF.houses.indexOf(h), 1); delete INF.byId[id]; delete SITE[id]; const si = SITES.findIndex(q => q.id === id); if (si >= 0) SITES.splice(si, 1); } }
   // whatever an infill house now stands on (and is not itself placed or enterable) goes, and what found no place in a line
   const drop = h => { INF.houses.splice(INF.houses.indexOf(h), 1); delete INF.byId[h.id]; delete SITE[h.id]; const i = SITES.findIndex(q => q.id === h.id); if (i >= 0) SITES.splice(i, 1); };
   for (const h of INF.houses.slice()) { if (h.placed || h.enter) continue; const st = SITE[h.id]; if (st && st.z > 34 && st.z < 80 && st.x > -34 && st.x < 48 && !placed.some(o => o.id === h.id)) drop(h); }
