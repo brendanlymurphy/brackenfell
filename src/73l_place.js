@@ -9,7 +9,7 @@ function buildPlaceFlags(bucket) {
     const dl = siteDoorLocal(s, 0), d0 = siteToWorld(s, dl[0], dl[1]), d1 = siteToWorld(s, ...(() => { const w = s.doorWall || 'front'; return w === 'front' ? [dl[0], dl[1] - 1] : w === 'back' ? [dl[0], dl[1] + 1] : w === 'left' ? [dl[0] - 1, dl[1]] : [dl[0] + 1, dl[1]]; })());
     if (placeW(d1[0], d1[1], 0.01) < 1) continue;                     // the door's apron lies inside the place's outline
     const ox = d1[0] - d0[0], oz = d1[1] - d0[1], ang = Math.atan2(oz, ox), m = bucket(d0[0], d0[1]);
-    const w = 2.0 + R() * 0.7, depth = 1.5 + R() * 0.3, nz = 2, nx = 2;
+    const w = 2.0 + R() * 0.7, depth = 1.5 + R() * 0.3, nz = 1, nx = 1;
     m.m1 = 0; m.m2 = 0; m.ao = 1; m.grad = null;
     for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
       const du = 0.05 + (i + 0.5) * depth / nx + (R() - 0.5) * 0.12, dv = (j + 0.5 - nz / 2) * w / nz + (R() - 0.5) * 0.14, cx = d0[0] + ox * du - oz * dv, cz = d0[1] + oz * du + ox * dv;
@@ -40,7 +40,7 @@ function buildPlaceWear(bucket) {
     }
   }
   const spots = []; for (const c of World.colliders) { if (c.y0 > gy(c.x, c.z) + 0.7 || c.y1 - c.y0 > 3.2 || placeW(c.x, c.z, 0.01) < 1) continue; const rad = c.r !== undefined ? c.r : Math.max(c.hx, c.hz); if (rad > 2.2 || rad < 0.12) continue; spots.push([c.x, c.z, rad]); }
-  let n = 0; for (const [x, z, rad] of spots) { if (n++ > 14) break; const m = bucket(x, z);
+  let n = 0; for (const [x, z, rad] of spots) { if (n++ > 4) break; const m = bucket(x, z);
     for (let i = 0; i < 1; i++) { const a = R() * TAU, d = rad + 0.25 + R() * 0.5; flat(m, x + Math.cos(a) * d, z + Math.sin(a) * d, 0.45 + R() * 0.5, 0.3 + R() * 0.3, [0.2 + R() * 0.05, 0.15, 0.1], MAT.MUD, R() * 3); }
     for (let i = 0; i < 2; i++) { const a = R() * TAU, d = rad + 0.1 + R() * 0.8; flat(m, x + Math.cos(a) * d, z + Math.sin(a) * d, 0.25 + R() * 0.25, 0.08 + R() * 0.08, [0.66 + R() * 0.1, 0.52, 0.25], MAT.THATCH, R() * 3, 0.022); }
   }
