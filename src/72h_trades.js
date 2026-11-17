@@ -38,7 +38,7 @@ PLANS.store = (P, c, info) => {
   pRoom(P, 1, 'solar', 'bedroom', 0, 7, 7, 12); pRoom(P, 1, 'attic', 'bedroom', -7, 7, 0, 12);
   pRoom(P, -1, 'cellar', 'cellar', -7, 7, 7, 12, { floor: 'stone', win: false });
   pDoor(P, 'shop', null, 0, 0); pDoor(P, 'stock', 'keeper', 0, 10.8); pDoor(P, 'shop', 'keeper', 3.5, 7); pDoor(P, 'solar', 'attic', 0, 11.0);
-  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: -5.8, z: 8.9, width: 1.0, tread: 0.22 });
+  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: -5.8, z: 11.1, width: 1.0, tread: 0.22 });
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: 1.5, z: 11.0, width: 1.0, tread: 0.22 });
   pLayout(P);
   const shop = P.rooms.shop, stock = P.rooms.stock, keeper = P.rooms.keeper, solar = P.rooms.solar, attic = P.rooms.attic, cellar = P.rooms.cellar;
