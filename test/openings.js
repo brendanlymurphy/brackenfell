@@ -1,0 +1,31 @@
+// Openings finder: every opening a person can walk through, and the 3 m in front of it, must be free of DRAWN geometry (mesh triangles), not only colliders.
+// usage: node test/shot.mjs --opt webgl=1 --opt quality=low --do "$(cat test/openings.js)"      (window.__opTop = 40 lists more)
+// Openings: house doors (village leaves), passage arches and town gates (World.openings), the west gate, the lych gate, yard gates and gaps left in plot walls (World.openings, registered by their builders).
+// Free volume: the opening's width less 0.25 m each side (jambs and an open leaf stand outside it), from 0.25 m to 2.0 m above the ground, from 0.2 m beyond the opening's plane to 3 m beyond it (both sides for arches and gates, the street side only for house doors).
+// A triangle counts when any point on it (sampled every 0.15 m) stands inside the volume; ground-hugging triangles (flat, under 0.35 m above ground), characters and instanced vegetation are not walls. Hedge clumps are tested from World.hedgeClumps.
+const TOP = window.__opTop || 30, ops = [];
+const unit = (x, z) => { const l = Math.hypot(x, z) || 1; return [x / l, z / l]; };
+for (const d of World.doors) { if (!d.c || !d.out) continue; if (d.cell && d.side !== 'out') continue; const n = unit(d.out[0] - d.c[0], d.out[2] - d.c[2]); ops.push({ kind: 'door ' + ((d.site && d.site.id) || '?'), x: d.c[0], z: d.c[2], dx: n[0], dz: n[1], w: Math.min(d.w || 1, 1.4), both: false }); }
+for (const o of World.openings || []) ops.push(Object.assign({ both: true }, o));
+const gyAt = (x, z) => Terrain.y(x, z), hits = new Map(), add = (o, what) => { const k = o.kind + '@' + o.x.toFixed(1) + ',' + o.z.toFixed(1); const e = hits.get(k) || { o, what: new Set() }; e.what.add(what); hits.set(k, e); };
+const prism = ops.map(o => { const hw = Math.max(0.2, o.w / 2 - 0.25), px = -o.dz, pz = o.dx, g = gyAt(o.x, o.z); return Object.assign({}, o, { hw, px, pz, g, d0: 0.2, d1: 3, dm: o.both ? -3 : 0.2, r: 3.6 + hw }); });
+const inside = (p, x, y, z) => { const rx = x - p.x, rz = z - p.z, along = rx * p.dx + rz * p.dz, across = rx * p.px + rz * p.pz; if (Math.abs(across) > p.hw) return false; const ok = (along >= 0.2 && along <= 3) || (p.both && along <= -0.2 && along >= -3); return ok && y > p.g + 0.25 && y < p.g + 2.0; };
+let nTri = 0; const A = [0, 0, 0], B = [0, 0, 0], C = [0, 0, 0];
+SC.scene.traverse(o => {
+  if (!o.isMesh || o.isInstancedMesh || !o.geometry || !o.geometry.attributes.position) return; if (o.userData && (o.userData.character || o.userData.sky)) return;
+  o.updateWorldMatrix(true, false); const g = o.geometry, pos = g.attributes.position, idx = g.index, mw = o.matrixWorld.elements, n = idx ? idx.count : pos.count;
+  const tp = (i, out) => { const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i); out[0] = mw[0] * x + mw[4] * y + mw[8] * z + mw[12]; out[1] = mw[1] * x + mw[5] * y + mw[9] * z + mw[13]; out[2] = mw[2] * x + mw[6] * y + mw[10] * z + mw[14]; };
+  for (let t = 0; t + 2 < n; t += 3) { const i0 = idx ? idx.getX(t) : t, i1 = idx ? idx.getX(t + 1) : t + 1, i2 = idx ? idx.getX(t + 2) : t + 2; tp(i0, A); tp(i1, B); tp(i2, C); nTri++;
+    const x0 = Math.min(A[0], B[0], C[0]), x1 = Math.max(A[0], B[0], C[0]), z0 = Math.min(A[2], B[2], C[2]), z1 = Math.max(A[2], B[2], C[2]);
+    for (const p of prism) { if (x1 < p.x - p.r || x0 > p.x + p.r || z1 < p.z - p.r || z0 > p.z + p.r) continue;
+      const y0 = Math.min(A[1], B[1], C[1]), y1 = Math.max(A[1], B[1], C[1]); if (y1 < p.g + 0.25 || y0 > p.g + 2.0) continue;
+      const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2], nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, nl = Math.hypot(nx, ny, nz) || 1;
+      if (Math.abs(ny / nl) > 0.95 && y1 < p.g + 0.35) continue;
+      const L = Math.max(Math.hypot(ux, uy, uz), Math.hypot(vx, vy, vz), Math.hypot(C[0] - B[0], C[1] - B[1], C[2] - B[2])), N = Math.min(24, Math.max(1, Math.ceil(L / 0.15))); let hit = false;
+      for (let a = 0; a <= N && !hit; a++) for (let b = 0; a + b <= N; b++) { const s = a / N, q = b / N; if (inside(p, A[0] + ux * s + vx * q, A[1] + uy * s + vy * q, A[2] + uz * s + vz * q)) { hit = true; break; } }
+      if (hit) add(p, 'mesh@' + ((x0 + x1) / 2).toFixed(1) + ',' + ((z0 + z1) / 2).toFixed(1)); } } });
+for (const h of World.hedgeClumps || []) for (const p of prism) { const rx = h[0] - p.x, rz = h[2] - p.z; if (Math.abs(rx) > 4 || Math.abs(rz) > 4) continue; const along = rx * p.dx + rz * p.dz, across = rx * p.px + rz * p.pz; if (Math.abs(across) < p.hw + 0.3 && ((along > 0 && along < 3) || (p.both && along < 0 && along > -3))) add(p, 'hedge@' + h[0].toFixed(1) + ',' + h[2].toFixed(1)); }
+for (const c of World.colliders) { if (!isFinite(c.x) || c.y1 - c.y0 < 0.3) continue; for (const p of prism) { if (Math.abs(c.x - p.x) > 5 || Math.abs(c.z - p.z) > 5 || c.y1 < p.g + 0.25 || c.y0 > p.g + 1.5) continue; const rr = c.r !== undefined ? c.r : Math.hypot(c.hx, c.hz); const rx = c.x - p.x, rz = c.z - p.z, along = rx * p.dx + rz * p.dz, across = rx * p.px + rz * p.pz; if (Math.abs(across) < p.hw + rr * (c.r !== undefined ? 1 : 0.5) - 0.05 && ((along - rr > 0.2 && along - rr < 3) || (along + rr > 0.2 && along - rr < 0.2) || (p.both && along + rr < -0.2 && along + rr > -3))) add(p, 'collider@' + c.x.toFixed(1) + ',' + c.z.toFixed(1)); } }
+const list = [...hits.values()].map(e => ({ at: e.o.kind + ' (' + e.o.x.toFixed(1) + ',' + e.o.z.toFixed(1) + ') ' + [...e.what].slice(0, 4).join(' '), n: e.what.size }));
+list.sort((a, b) => b.n - a.n);
+return JSON.stringify({ openings: ops.length, blocked: list.length, triangles: nTri, top: list.slice(0, TOP).map(e => e.at + '  | game.shot(' + 0 + ')') });

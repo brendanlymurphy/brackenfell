@@ -95,6 +95,7 @@ function buildVillage() {
   putc(14.6, 2.4, 0.4, m => Props.signPost(m, 3)); putc(-58.5, -8.4, -0.3, m => Props.signPost(m, 2)); putc(-8.9, -61.5, 0, m => Props.signPost(m, 2));
 
   // ── west gate ──
+  (World.openings = World.openings || []).push({ kind: 'westgate', x: -62, z: -5.2, dx: 1, dz: 0, w: 5.0 });      // [fx3] test/openings.js
   put(-62, -5.2, PI / 2, m => {
     m.mat(MAT.TIMBER, COL.timberDark);
     for (const s of [-1, 1]) { m.cbox(s * 2.9, -0.6, 0, 0.36, 5.3, 0.36, 4); addCircleCollider(m, s * 2.9, 0, 0.24, 0, 4); m.beam([s * 2.9, 3.4, 0], [s * 1.9, 4.35, 0], 0.16, 0.16); at(m, s * 2.6, 2.9, -0.24, 0, () => Props.lantern(m, OUT)); }

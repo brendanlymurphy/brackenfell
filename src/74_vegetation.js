@@ -77,6 +77,12 @@ function buildVegetation() {
   // ── bush ──
   const bushL = new Mesh(512); bushL.mat(MAT.LEAVES, [1, 1, 1]);
   leafBlob(bushL, rng(5), 0, 0.55, 0, 0.75, 0.5, 0.75, 9, 0.62, [0.40, 0.55, 0.22], 0.3);
+  /* [fx3] a hedge clump: an irregular dark inner mass of few larger leaves and bare twigs, then many small cards (4-7 cm after scale) in uneven layers, light at the top only where it is thin, the foot left open so stems show */
+  const hedgeL = new Mesh(1024); hedgeL.mat(MAT.LEAVES, [1, 1, 1]);
+  { const hr = rng(8); leafBlob(hedgeL, hr, 0, 0.55, 0, 0.42, 0.34, 0.4, 9, 0.12, [0.09, 0.15, 0.06], 0.15);
+    leafBlob(hedgeL, hr, 0.05, 0.62, -0.03, 0.55, 0.42, 0.5, 38, 0.05, [0.22, 0.36, 0.12], 0.3);
+    leafBlob(hedgeL, hr, -0.1, 0.9, 0.05, 0.3, 0.2, 0.28, 10, 0.045, [0.30, 0.45, 0.16], 0.35);
+    hedgeL.mat(MAT.BARK, [0.28, 0.22, 0.16]); for (const [a, h2] of [[0.3, 0.55], [2.1, 0.5], [3.9, 0.6], [5.2, 0.45]]) hedgeL.tube([[Math.cos(a) * 0.08, -0.05, Math.sin(a) * 0.08], [Math.cos(a) * 0.2, h2 * 0.5, Math.sin(a) * 0.2], [Math.cos(a) * 0.3, h2, Math.sin(a) * 0.3]], [0.025, 0.018, 0.008], 4); }
   // ── boulders ──
   // one boulder shape (vertex lod 3: the instance shader squashes it differently for every boulder), so boulders are one draw per cell, not three
   const rockAll = new Mesh(256);
@@ -89,11 +95,11 @@ function buildVegetation() {
       return m.vert(p[0], p[1], p[2], n[0], n[1], n[2], i / nu * 3, j / nv * 1.5, lerp(0.55, 1, sat(p[1] * 1.2 + 0.6))); });
     return m;
   });
-  const I = { pineT: pack.add(pineT), pineL: pack.add(pineL), pineF: pack.add(pineF), birchT: pack.add(birchT), birchL: pack.add(birchL), birchF: pack.add(birchF), oakT: pack.add(oakT), oakL: pack.add(oakL), bush: pack.add(bushL), rocks: pack.add(rockAll) };
+  const I = { pineT: pack.add(pineT), pineL: pack.add(pineL), pineF: pack.add(pineF), birchT: pack.add(birchT), birchL: pack.add(birchL), birchF: pack.add(birchF), oakT: pack.add(oakT), oakL: pack.add(oakL), bush: pack.add(bushL), hedge: pack.add(hedgeL), rocks: pack.add(rockAll) };
   pack.upload('veg'); World.instPack = pack;
 
   // ── placement ──
-  const inst = { pine: [], birch: [], oak: [], bush: [], rock: [] };
+  const inst = { pine: [], birch: [], oak: [], bush: [], hedge: [], rock: [] };
   const blocked = (x, z, pad) => {
     for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + pad + (s.porch || 0) + 2 && Math.abs(l[1]) < s.d / 2 + pad + 2) return true; }
     for (const r of Roads) if (r.line.dist(x, z, r.w / 2 + pad) < r.w / 2 + pad) return true;
@@ -177,9 +183,10 @@ function buildVegetation() {
   for (const [x, z, k, sc] of [[-11.5, -62.6, 'oak', 0.8], [-3.4, -66.2, 'oak', 0.75], [-12.3, -70.4, 'birch', 1.0]]) if (!blocked(x, z, 0.5)) addTree(k, x, z, sc);
   for (const [x, z, k, sc] of World.yardTrees || []) addTree(k, x, z, sc);      /* [fx3] fruit trees in the yards where deleted shells stood */
   /* [fx3] the hedge along the way to the lych gate: overlapping clumps of uneven size on a low bank, with a few saplings grown out of it */
-  for (const h of World.hedgeClumps || []) inst.bush.push([h[0], h[1], h[2], h[3], h[4], h[5], h[6], 0]);
+  for (const h of World.hedgeClumps || []) inst.hedge.push([h[0], h[1], h[2], h[3], h[4], h[5], h[6], 0]);
   for (const [x, z] of World.hedgeSaplings || []) addTree('birch', x, z, 0.32);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
+  mkGroups(inst.hedge, [{ item: I.hedge, kind: 'leaf', lod: 0, maxDist: 70, shadow: false }], 70);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;
   World.treePos = { pine: inst.pine, birch: inst.birch, oak: inst.oak };      // [ui] read by the map (86_map.js)

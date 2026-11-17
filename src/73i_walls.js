@@ -59,6 +59,7 @@ function buildWalls(bucket) {
     // stakes (one mesh, tiny gable prisms)
     { for (const [u, top] of tips) { const p = P(u, 0.0), m = M(p[0], p[1]); m.mat(MAT.TIMBER, [0.7, 0.64, 0.58], 0.5); const q0 = 0, q = P(u, 0.36), r = P(u + 0.22, 0.0), s = P(u + 0.22, 0.36), mid0 = [(p[0] + r[0]) / 2, (p[1] + r[1]) / 2], mid1 = [(q[0] + s[0]) / 2, (q[1] + s[1]) / 2], ty = top + 0.3;
         m.quad2([p[0], top, p[1]], [q[0], top, q[1]], [mid1[0], ty, mid1[1]], [mid0[0], ty, mid0[1]]); m.quad2([mid0[0], ty, mid0[1]], [mid1[0], ty, mid1[1]], [s[0], top, s[1]], [r[0], top, r[1]]); } }
+    { const o0 = P(ug, 0.5), o1 = P(ug, 1.5); (World.openings = World.openings || []).push({ kind: 'towngate ' + id, x: o0[0], z: o0[1], dx: o1[0] - o0[0], dz: o1[1] - o0[1], w: 3.8 }); }
     // ── the gate tower ──
     const Y = yT, a0 = ug - TW, a1 = ug - 1.9, b0 = ug + 1.9, b1 = ug + TW, V0 = -0.55, V1 = 3.4, gA = Math.min(gy(...P(ug, -0.2)), gy(...P(ug, 3.2)));
     for (const [s, e] of [[a0, a1], [b0, b1]]) { bx(MAT.STONE, [0.9, 0.87, 0.82], 0.7, s, gA - 1.0, V0, e, Y - 0.16, V1, 4 | 8); { const p = P(s, V0), q = P(e, V1); col(Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1]), gA - 1.0, Y); }
@@ -96,8 +97,12 @@ function buildWalls(bucket) {
     for (const sd of [-1, 1]) for (const f of [-1, 1]) { const u = ug + sd * 2.6, v = f < 0 ? V0 : V1, pf = P(u, v + f * 0.3), yh = gy(...P(u, v + f * 0.4)) + 1.85;
       bx(MAT.METAL, [0.14, 0.12, 0.1], 0.5, u - 0.06, yh - 0.1, v + (f < 0 ? -0.03 : 0), u + 0.06, yh + 0.2, v + (f < 0 ? 0 : 0.03), 0);
       bx(MAT.METAL, [0.14, 0.12, 0.1], 0.5, u - 0.025, yh + 0.0, v + (f < 0 ? -0.3 : 0), u + 0.025, yh + 0.05, v + (f < 0 ? 0 : 0.3), 0);
-      bx(MAT.METAL, [0.14, 0.12, 0.1], 0.5, u - 0.05, yh + 0.0, v + (f < 0 ? -0.4 : 0.26), u + 0.05, yh + 0.2, v + (f < 0 ? -0.26 : 0.4), 0);
-      World.emitters.push({ type: 'torch', p: [pf[0], yh + 0.3, pf[1]], zone: 0, size: 0.2 }); }
+      { const mt = M(pf[0], pf[1]); mt.mat(MAT.METAL, [0.14, 0.12, 0.1]); mt.cyl(pf[0], yh + 0.0, pf[1], 0.05, 0.075, 0.17, 8, 0);          // the cup: a flared iron ring on the arm
+        mt.cyl(pf[0], yh - 0.03, pf[1], 0.05, 0.05, 0.03, 8, 2);
+        mt.mat(MAT.TIMBER, [0.3, 0.22, 0.14], 0.5); mt.cyl(pf[0], yh + 0.0, pf[1], 0.027, 0.022, 0.62, 6, 2);                              // the shaft, standing in the cup
+        mt.mat(MAT.CLOTH, [0.1, 0.075, 0.05], 0.5); mt.cyl(pf[0], yh + 0.5, pf[1], 0.038, 0.05, 0.15, 7, 2);                              // pitch-soaked rag bound on its head
+        mt.mat(MAT.METAL, [0.14, 0.12, 0.1]); mt.cyl(pf[0], yh + 0.18, pf[1], 0.04, 0.04, 0.018, 7, 2); }
+      World.emitters.push({ type: 'torch', p: [pf[0], yh + 0.72, pf[1]], zone: 0, size: 0.2 }); }
     { const p = P(ug, 1.45); K.lantern(p[0], Y - 0.9, p[1], 0.9); K.beam([p[0], Y - 0.62, p[1]], [p[0], Y - 0.9, p[1]], 0.03, 0.03); }
     // the stair up, on the inside beside the wall walk, rising toward the tower
     const sU0 = b1 + 5.2, sU1 = b1, sy0 = Math.min(gy(...P(sU0, 2.7)), gy(...P(sU0 - 0.5, 2.7))), sv0 = 2.0, sv1 = 3.4;
