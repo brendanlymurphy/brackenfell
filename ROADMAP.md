@@ -80,6 +80,12 @@ interiors lit by hearths and candles. As realistic as free art allows.
   With it (fork-logic): story logic first pass, a day of their own for every resident, mechanics made honest (docs/LOGIC.md), all
   252 lines voiced with lip tracks, walkers that see ledges, the culling flicker fix. The villagers' road graph joins each road end
   to its nearest neighbour (the north road had come loose from the place and people walked 500 m round by the hills).
+- **73** Chapelgate to the town plan: Chapel Street paved front to front with five broad steps beside a cart ramp, walled yards on
+  both sides, the east cluster on a wandering cobbled lane to a well with yards behind both rows, the churchyard behind a coped
+  rubble wall with a roofed lych gate, a hedged way from the gate (shrub clumps on a bank), the palisade weathered. Market Place:
+  the north entry opened (2.8 m ginnel, lean-to sheds on the blank backs), stalls moved off the fixed cameras, the store's plot,
+  yards made rougher and each different. Culling: each roofline owns its numbers (cullwalk was intermittent). Both gate arches
+  walkable. Accepted: overlap solid 17 (a hamlet wall), low alley 155 draws, low lake 206k.
 
 - **60, 61** Real lip sync (visemes from the audio of every voiced line), natural skin and eyes, gaze, fitted helmet and kerchiefs.
 - **62** One gate command, the gate on GitHub for every push, onboarding docs rewritten, seven new voiced story lines.
