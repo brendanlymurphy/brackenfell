@@ -33,7 +33,7 @@ function buildLevels(bucket, fence, R) {
     // [fx3] a battered retaining wall of irregular courses: a proud base course below the ground, courses of 0.28 to 0.5 m that step back, lengths of 1.1 to 2 m that
     // differ a little in depth and tone, a buttress every 4 to 5 m, weep holes, moss at the foot, a coping of separate slabs and a parapet over it. The ground mesh has 1.5 m
     // cells, so the wall is a solid mass from the inner to the outer node line (55_layout.js LV.upW): the ramp of ground is inside it and the face stands at the foot.
-    const os = Math.sign(vo - vi), mid = (u0 + u1) / 2, P = ax ? (u, v) => [v, u] : (u, v) => [u, v], mm = M(...P(mid, vo)), inner = os > 0 ? 16 : 32, BAT = 0.5, TH = Math.abs(vo - vi);
+    const TSC = 1.2, os = Math.sign(vo - vi), mid = (u0 + u1) / 2, P = ax ? (u, v) => [v, u] : (u, v) => [u, v], mm = M(...P(mid, vo)), inner = os > 0 ? 16 : 32, BAT = 0.5, TH = Math.abs(vo - vi);
     const bx = (a, y0, b, c, y1, d, skip) => { if (ax) mm.box(b, y0, a, d, y1, c, sw(skip || 0)); else mm.box(a, y0, b, c, y1, d, skip || 0); };
     const north = ax === 0 && os < 0, tint = north ? 1.12 : 1.0, RR = rng(Math.round(u0 * 31 + vo * 17 + 5));
     const gAt = (u, v) => { const p = P(u, v); return Terrain.y(p[0], p[1]); };
@@ -46,10 +46,14 @@ function buildLevels(bucket, fence, R) {
       const patch = RR() < 0.14, sh = tint * (patch ? 1.0 + RR() * 0.12 : 0.84 + RR() * 0.2), jit = (RR() - 0.5) * 0.05, warm = patch ? [1.08, 0.97, 0.84] : [1.0, 0.97, 0.92];       // a patched length is a different stone
       if (KQ) {
         const nrm = ax ? [os, 0, 0] : [0, 0, os], wp = (uu, vv, yy) => { const q = P(uu, vv); return [q[0], yy, q[1]]; }, yl = gf + 0.45, il = insetAt(yl, gf), toff = RR() * 7, c0 = (patch ? 0.9 : 0.72 + RR() * 0.14) * (north ? 1.1 : 1), cc = warm.map(c => c * c0 * (0.97 + RR() * 0.06));
-        const TS = 3.6, U0 = ua / TS + toff, U1 = ub / TS + toff;
+        const TS = 1.2, U0 = ua / TS + toff, U1 = ub / TS + toff;
         KQ.quad(INF_R, wp(ua, vo + os * 0.1, base), wp(ub, vo + os * 0.1, base), wp(ub, vo + os * 0.1, yl), wp(ua, vo + os * 0.1, yl), cc.map(c => c * 0.78), [U0, base / TS, U1, yl / TS], nrm);                  // the base course, proud of the face, its foot under the ground
         KQ.quad(INF_R, wp(ua, vo + os * 0.1, yl), wp(ub, vo + os * 0.1, yl), wp(ub, vo - os * il, yl), wp(ua, vo - os * il, yl), cc.map(c => c * 0.9), [U0, 0, U1, 0.05], [0, 1, 0]);               // its weathered top
         KQ.quad(INF_R, wp(ua, vo - os * il, yl), wp(ub, vo - os * il, yl), wp(ub, vo - os * BAT, TOP), wp(ua, vo - os * BAT, TOP), cc.map((c, ci2) => c * (0.96 + 0.04 * ci2)), [U0 + 0.3, yl / TS, U1 + 0.3, TOP / TS], nrm);   // the battered face
+        /* [fx3] both ends of the run are closed solids: the same stone, a stopped end with the full profile (base course, battered face, inner side), so no face stands free */
+        for (const [uE, dU, on] of [[ua, -1, ua === u0], [ub, 1, ub === u1]]) if (on) { const en = ax ? [0, 0, dU] : [dU, 0, 0], vb = vo + os * 0.1, vt = vo - os * BAT, te = (RR() * 5), W = (a2, b2, c2, d2, uv) => { KQ.quad(INF_R, a2, b2, c2, d2, cc.map(c => c * 0.88), uv, en); };
+          W(wp(uE, vi, base), wp(uE, vb, base), wp(uE, vb, yl), wp(uE, vi, yl), [te, base / TSC, te + TH / TSC, yl / TSC]);
+          W(wp(uE, vi, yl), wp(uE, vo - os * il, yl), wp(uE, vt, TOP), wp(uE, vi, TOP), [te, yl / TSC, te + TH / TSC, TOP / TSC]); }
       } else {
       mm.mat(MAT.STONE, warm.map(c => c * sh * 0.72), 1.0); bx(ua, base, vi, ub, gf + 0.38, vo + os * 0.1, 4 | inner);                                    // the base course: proud of the face, and its foot is under the ground
         let y = gf + 0.38, ci = 0;
@@ -61,10 +65,11 @@ function buildLevels(bucket, fence, R) {
       }
       const tf = insetAt(TOP, gf) + 0.02;                                                              // top of the face
       if (parapet && KQ) {      // a low parapet, 0.75 m: a person can be seen over it, and the tree
-        const nrm = ax ? [os, 0, 0] : [0, 0, os], wp = (uu, vv, yy) => { const q = P(uu, vv); return [q[0], yy, q[1]]; }, vf = vo - os * tf, vb2 = vo - os * (tf + 0.5), yp = TOP + 0.75, cp = [0.78 * sh, 0.76 * sh, 0.73 * sh], t0 = ua / 3.6 + 2.3;
-        KQ.quad(INF_R, wp(ua, vf, TOP), wp(ub, vf, TOP), wp(ub, vf, yp), wp(ua, vf, yp), cp, [t0, TOP / 3.6, t0 + (ub - ua) / 3.6, yp / 3.6], nrm);
-        KQ.quad(INF_R, wp(ua, vb2, TOP), wp(ub, vb2, TOP), wp(ub, vb2, yp), wp(ua, vb2, yp), cp.map(c => c * 0.9), [t0, TOP / 3.6, t0 + (ub - ua) / 3.6, yp / 3.6], [-nrm[0], 0, -nrm[2]]);
-        KQ.quad(INF_R, wp(ua, vf + os * 0.06, yp), wp(ub, vf + os * 0.06, yp), wp(ub, vb2 - os * 0.06, yp), wp(ua, vb2 - os * 0.06, yp), cp.map(c => c * 1.1), [t0, 0, t0 + (ub - ua) / 3.6, 0.15], [0, 1, 0]);
+        const nrm = ax ? [os, 0, 0] : [0, 0, os], wp = (uu, vv, yy) => { const q = P(uu, vv); return [q[0], yy, q[1]]; }, vf = vo - os * tf, vb2 = vo - os * (tf + 0.5), yp = TOP + 0.75, cp = [0.78 * sh, 0.76 * sh, 0.73 * sh], t0 = ua / TSC + 2.3;
+        KQ.quad(INF_R, wp(ua, vf, TOP), wp(ub, vf, TOP), wp(ub, vf, yp), wp(ua, vf, yp), cp, [t0, TOP / TSC, t0 + (ub - ua) / TSC, yp / TSC], nrm);
+        KQ.quad(INF_R, wp(ua, vb2, TOP), wp(ub, vb2, TOP), wp(ub, vb2, yp), wp(ua, vb2, yp), cp.map(c => c * 0.9), [t0, TOP / TSC, t0 + (ub - ua) / TSC, yp / TSC], [-nrm[0], 0, -nrm[2]]);
+        KQ.quad(INF_R, wp(ua, vf + os * 0.06, yp), wp(ub, vf + os * 0.06, yp), wp(ub, vb2 - os * 0.06, yp), wp(ua, vb2 - os * 0.06, yp), cp.map(c => c * 1.1), [t0, 0, t0 + (ub - ua) / TSC, 0.15], [0, 1, 0]);
+        for (const [uE, dU, on] of [[ua, -1, ua === u0], [ub, 1, ub === u1]]) if (on) { const en = ax ? [0, 0, dU] : [dU, 0, 0], uv = [t0, TOP / TSC, t0 + (vb2 - vf) * os / TSC, yp / TSC]; KQ.quad(INF_R, wp(uE, vf, TOP), wp(uE, vb2, TOP), wp(uE, vb2, yp), wp(uE, vf, yp), cp.map(c => c * 0.9), uv, en); }
       } else {
       if (parapet) { mm.mat(MAT.STONE, sc(sh * 0.96), 0.6); bx(ua, TOP, vo - os * (tf + 0.5), ub, H + 0.95, vo - os * tf, 4 | inner); }
         mm.mat(MAT.STONE, sc(sh * 1.04), 0.6);
@@ -80,9 +85,9 @@ function buildLevels(bucket, fence, R) {
       const gf = Math.min(gAt(bu, vo + os * 0.9), gAt(bu - 0.3, vo + os * 0.9), gAt(bu + 0.3, vo + os * 0.9)); mm.mat(MAT.STONE, sc(0.94 * tint), 0.6);
       if (KQ) {
         const nrm = ax ? [os, 0, 0] : [0, 0, os], wp = (uu, vv, yy) => { const q = P(uu, vv); return [q[0], yy, q[1]]; }, w = 0.45, pb = 0.95, pt = 0.6, y0 = gf - 0.6, y1 = TOP - 1.0, cc = [0.76, 0.74, 0.71], toff = bu * 0.37, fb = vo - os * insetAt(gf, gf), ft = vo - os * insetAt(y1, gf), fc = vo - os * insetAt(TOP, gf);
-        KQ.quad(INF_R, wp(bu - w, vo + os * pb, y0), wp(bu + w, vo + os * pb, y0), wp(bu + w, vo + os * pt, y1), wp(bu - w, vo + os * pt, y1), cc, [toff, y0 / 3.6, toff + 2 * w / 3.6, y1 / 3.6], nrm);         // the front, leaning back
-        for (const sd of [-1, 1]) KQ.quad(INF_R, wp(bu + sd * w, fb, y0), wp(bu + sd * w, vo + os * pb, y0), wp(bu + sd * w, vo + os * pt, y1), wp(bu + sd * w, ft, y1), cc.map(c => c * 0.9), [toff, y0 / 3.6, toff + pb / 3.6, y1 / 3.6], ax ? [0, 0, sd] : [sd, 0, 0]);       // the cheeks
-        KQ.quad(INF_R, wp(bu - w, vo + os * pt, y1), wp(bu + w, vo + os * pt, y1), wp(bu + w, fc, TOP - 0.1), wp(bu - w, fc, TOP - 0.1), cc.map(c => c * 1.25), [toff, 0, toff + 2 * w / 3.6, 0.3], [nrm[0] * 0.4, 0.9, nrm[2] * 0.4]);       // a sloped cap, shedding water
+        KQ.quad(INF_R, wp(bu - w, vo + os * pb, y0), wp(bu + w, vo + os * pb, y0), wp(bu + w, vo + os * pt, y1), wp(bu - w, vo + os * pt, y1), cc, [toff, y0 / TSC, toff + 2 * w / TSC, y1 / TSC], nrm);         // the front, leaning back
+        for (const sd of [-1, 1]) KQ.quad(INF_R, wp(bu + sd * w, fb, y0), wp(bu + sd * w, vo + os * pb, y0), wp(bu + sd * w, vo + os * pt, y1), wp(bu + sd * w, ft, y1), cc.map(c => c * 0.9), [toff, y0 / TSC, toff + pb / TSC, y1 / TSC], ax ? [0, 0, sd] : [sd, 0, 0]);       // the cheeks
+        KQ.quad(INF_R, wp(bu - w, vo + os * pt, y1), wp(bu + w, vo + os * pt, y1), wp(bu + w, fc, TOP - 0.1), wp(bu - w, fc, TOP - 0.1), cc.map(c => c * 1.25), [toff, 0, toff + 2 * w / TSC, 0.3], [nrm[0] * 0.4, 0.9, nrm[2] * 0.4]);       // a sloped cap, shedding water
       } else {
       const tiers = [[gf - 0.6, gf + 1.5, 0.62], [gf + 1.5, gf + 2.7, 0.42], [gf + 2.7, TOP - 0.2, 0.26]];
         for (const [y0, y1, pr] of tiers) bx(bu - 0.36 + (pr < 0.5 ? 0.04 : 0), y0, vo - os * 0.2, bu + 0.36 - (pr < 0.5 ? 0.04 : 0), y1, vo + os * pr, 4 | inner);
@@ -107,6 +112,11 @@ function buildLevels(bucket, fence, R) {
     m.mat(MAT.PLANKS, [0.7, 0.6, 0.48], 0.5); m.box(x0 + 0.3, g0, zf + 0.35, x1 - 0.3, g0 + 0.9, zf + 0.75, 4); col(x0 + 0.3, zf + 0.35, x1 - 0.3, zf + 0.75, g0, g0 + 0.9);
     for (const [bx0, kind] of [[x0 + 0.4, 'barrel'], [x0 + 1.2, 'crate'], [x1 - 1.0, 'barrel'], [x1 - 0.5, 'sack']]) { m.push().T(bx0, Terrain.y(bx0, zw - 0.7), zw - 0.7); if (kind === 'barrel') Props.barrel(m); else if (kind === 'crate') Props.crate(m, 0.6); else Props.sack(m, 0.32); m.pop(); }
     m.push().T((x0 + x1) / 2, g0 + 0.9, zf + 0.55); m.mat(MAT.PLAIN, [0.35, 0.3, 0.2]); m.box(-0.5, 0, -0.15, 0.5, 0.08, 0.15); m.pop(); }
+  /* [fx3] the landing's solid is the same rubble as the terrace wall (kit quads at 1.2 m a tile), four sides and the top, not a second beige stone */
+    if (KQ) { const lz1 = 34.4, lb = gmin(-36.8, T.z1, -34, lz1) - 0.6, x0 = -36.8, x1 = -34.0, z0 = T.z1 + wt, z1 = lz1 + 0.3, c = [0.72, 0.7, 0.66], uvx = [x0 / 1.2, lb / 1.2, x1 / 1.2, H / 1.2], uvz = [z0 / 1.2 + 3, lb / 1.2, z1 / 1.2 + 3, H / 1.2];
+      KQ.quad(INF_R, [x0, lb, z1], [x1, lb, z1], [x1, H, z1], [x0, H, z1], c, uvx, [0, 0, 1]); KQ.quad(INF_R, [x1, lb, z0], [x0, lb, z0], [x0, H, z0], [x1, H, z0], c.map(v => v * 0.9), uvx, [0, 0, -1]);
+      KQ.quad(INF_R, [x1, lb, z1], [x1, lb, z0], [x1, H, z0], [x1, H, z1], c.map(v => v * 0.95), uvz, [1, 0, 0]); KQ.quad(INF_R, [x0, lb, z0], [x0, lb, z1], [x0, H, z1], [x0, H, z0], c.map(v => v * 0.85), uvz, [-1, 0, 0]);
+      KQ.quad(INF_R, [x0, H, z1], [x1, H, z1], [x1, H, z0], [x0, H, z0], c.map(v => v * 1.1), [x0 / 1.2, z0 / 1.2, x1 / 1.2, z1 / 1.2], [0, 1, 0]); }
   if (KQ) { const nm = KQ.make('gen_terrace_walls'); infBatch().add(nm, new THREE.Matrix4(), { zone: 0, skyVis: 1, cast: false }); }
 
   // ── the flight from the market square: 2.8 m wide, steps are a top and a riser, cheeks are two beams, an arch with a roof where it arrives ──
@@ -136,11 +146,11 @@ function buildLevels(bucket, fence, R) {
       const xa = xW + (xE - xW) * i / n, xb = xW + (xE - xW) * (i + 1) / n, ya = H + (yE - H) * i / n, yb = H + (yE - H) * (i + 1) / n, base = gmin(xa, lz1 + 0.3, xb, lz1 + 0.3) - 0.5;
       mm.mat(MAT.COBBLE, [0.85, 0.82, 0.78], 0.5); mm.quad2([xa, ya, lz0], [xa, ya, lz1], [xb, yb, lz1], [xb, yb, lz0]);
       mm.mat(MAT.STONE, i % 2 ? sc(0.9) : sc(0.97), 0.7); { const ym = Math.min(ya, yb) - 0.02; mm.quad2([xa, base, lz1 + 0.3], [xa, ym, lz1 + 0.3], [xb, ym, lz1 + 0.3], [xb, base, lz1 + 0.3]); }
-      mm.mat(MAT.STONE, sc(1), 0.6); mm.box(xa, Math.min(ya, yb) - 0.02, lz1 - 0.1, xb, Math.max(ya, yb) + 0.95, lz1 + 0.3, 4 | 1 | 2);
+      mm.mat(MAT.STONE, sc(1), 0.6); mm.box(xa, Math.min(ya, yb) - 0.02, lz1 - 0.1, xb, Math.max(ya, yb) + 0.95, lz1 + 0.3, 4 | (i === 0 ? 0 : 1) | (i === n - 1 ? 0 : 2));
     }
     col(xW, lz1 - 0.1, xE, lz1 + 0.3, Math.min(yE, H) - 1.2, H + 1.0);
     const lb = gmin(-36.8, T.z1, -34, lz1) - 0.6;
-    stoneBox(-36.8, lb, T.z1 + wt, -34.0, H, lz1 + 0.3, sc(0.95), 4 | 16, 0.7);
+    if (!KQ) stoneBox(-36.8, lb, T.z1 + wt, -34.0, H, lz1 + 0.3, sc(0.95), 4 | 16, 0.7);
     lvFloor(-36.0, T.z1 - 0.3, -34.0, lz1, H);
     stoneBox(-36.8, H, T.z1 + wt, -36.3, H + 0.95, lz1 - 0.1, sc(1), 4 | 16 | 32, 0.6); stoneBox(-36.8, H, lz1 - 0.1, -34.0, H + 0.95, lz1 + 0.3, sc(1), 4 | 2, 0.6);
     col(-36.8, T.z1 + wt, -36.3, lz1 + 0.3, lb, H + 1.1); col(-36.8, lz1 - 0.1, -34.0, lz1 + 0.3, lb, H + 1.1);

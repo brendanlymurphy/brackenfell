@@ -253,12 +253,12 @@ function buildWestgate(bucket) {
   const R = rng(7077), gy = (x, z) => Terrain.y(x, z), road = Roads.find(q => q.id === 'main'); if (!road) return;
   const rz = x => { const p = road.line.p; for (let i = 0; i + 1 < p.length; i++) { const a = p[i], b = p[i + 1]; if ((a[0] - x) * (b[0] - x) <= 0 && a[0] !== b[0]) return a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]); } return p[p.length - 1][1]; };
   World.hedgeClumps = World.hedgeClumps || [];
-  const X0 = -79, X1 = -106, gaps = { '-1': [[-92, -90], [-100, -98.5]], '1': [[-86, -84.4]] };
+  const X0 = -79, X1 = -106, gaps = { '-1': [[-90, -92], [-98.5, -100]], '1': [[-84.4, -86]] };
   for (const sd of [-1, 1]) {
     const inGap = x => (gaps[sd] || []).some(g => x <= g[0] + 0.3 && x >= g[1] - 0.3);
     for (let x = X0; x > X1; x -= 0.6) { if ((gaps[sd] || []).some(g => x <= g[0] && x >= g[1])) continue; const z = rz(x) + sd * (3.5 + Math.sin(x * 0.21) * 0.25 + (R() - 0.5) * 0.3), g = gy(x, z); World.hedgeClumps.push([x + (R() - 0.5) * 0.3, g + 0.2, z, 0.9 + R() * 0.7 + (R() < 0.12 ? 0.5 : 0), R() * 6.28, 0.1 + R() * 0.2, R()]); }
     let x = X0; for (const g of (gaps[sd] || []).slice().sort((a, b) => b[0] - a[0]).concat([[X1, X1]])) { const xa = x, xb = g[0]; if (xa - xb > 0.5) { const za = rz(xa) + sd * 3.5, zb = rz(xb) + sd * 3.5, cx = (xa + xb) / 2, cz = (za + zb) / 2, m = bucket(cx, cz), ang = Math.atan2(zb - za, xb - xa), L = Math.hypot(xb - xa, zb - za), gg = gy(cx, cz);
-        m.push().T(cx, gg - 0.12, cz).RY(-ang); m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-L / 2, 0, -0.5, L / 2, 0.36, 0.5, 4); addBoxCollider(m, -L / 2, -0.4, L / 2, 0.4, 0, 1.3); m.pop(); }
+        m.push().T(cx, gg - 0.12, cz).RY(-ang); m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-L / 2, 0, -0.5, L / 2, 0.36, 0.5, 4); addBoxCollider(m, -L / 2 + 0.1, -0.35, L / 2 - 0.1, 0.35, 0, 1.3); m.pop(); }
       x = g[1]; if (g[0] !== g[1]) { const gx = (g[0] + g[1]) / 2, gz = rz(gx) + sd * 3.5, m = bucket(gx, gz); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); for (const px of [g[0] + 0.15, g[1] - 0.15]) { const pz = rz(px) + sd * 3.5; m.cbox(px, gy(px, pz) - 0.1, pz, 0.16, 1.5, 0.16, 0); } } }
   }
   /* a wattle-and-rail fence round a close: posts and two rails on the three far sides */
