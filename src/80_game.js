@@ -197,7 +197,7 @@ function interactUse(it) {
     if (it.id === 'chapel.sacristy' && qAt('crypt') < 0) { qStart('crypt', 0); qStage('crypt', 1); } else if (it.id === 'chapel.relic') qDone('crypt');
   } else if (it.kind === 'gate') {
     if (!has(it.key)) toast('The gate is locked. A heavy iron lock, old and cared for.');
-    else { S.opened[it.id] = 1; Audio2.chest(); toast('The lock turns with a groan.'); const i = World.colliders.indexOf(it.col); if (i >= 0) World.colliders.splice(i, 1); if (it.mesh) it.mesh.gone = true; if (it.hide) it.hide(); if (it.id === 'chapel.gate') qStage('crypt', 2); save(); }
+    else { S.opened[it.id] = 1; Audio2.chest(); toast('The lock turns with a groan.'); const i = World.colliders.indexOf(it.col); if (i >= 0) { World.colliders.splice(i, 1); colBuild(); /* [owner, Build 77] the player collides with the grid colBuild makes of this list, not with the list: without this the unlocked gate stayed solid for good */ } if (it.mesh) it.mesh.gone = true; if (it.hide) it.hide(); if (it.id === 'chapel.gate') qStage('crypt', 2); save(); }
   } else if (it.kind === 'loot') {
     const got = []; Audio2.pickup();
     for (const [id, n] of it.loot) { if (id === 'gold') { S.gold += n; got.push(n + ' gold'); } else { give(id, n); got.push((n > 1 ? n + ' × ' : '') + ITEMS[id][0]); } }
@@ -261,7 +261,7 @@ function applySave(j) {
   if (S.flags.fire) World.bonfire = true;
   // the world was built before the save was read: a gate unlocked in an earlier session still had its collider and offered no way to open it again
   // (the crypt gate shut the reliquary, and the mine key in it, away for good)
-  for (const it of World.interact) if (it.kind === 'gate' && S.opened[it.id]) { const i = World.colliders.indexOf(it.col); if (i >= 0) World.colliders.splice(i, 1); if (it.mesh) it.mesh.gone = true; if (it.hide) it.hide(); }
+  { let cut = 0; for (const it of World.interact) if (it.kind === 'gate' && S.opened[it.id]) { const i = World.colliders.indexOf(it.col); if (i >= 0) { World.colliders.splice(i, 1); cut++; } if (it.mesh) it.mesh.gone = true; if (it.hide) it.hide(); } if (cut) colBuild(); }
   if (S.rpg && S.rpg.v !== 2) S.rpg = null;
   RPG.st(); bountyText(); if (typeof Combat !== 'undefined') Combat.refresh();
 }
