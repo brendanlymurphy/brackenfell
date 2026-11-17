@@ -67,7 +67,7 @@ Pictures are in `docs/audit/`. "Where" is a building id and world x, z (metres; 
 | A19 | S2 | **The Old Mine is in the wrong direction.** | mine door about (-70, -150) | `story_refs.md` (a) | "The door in the south-west cliffs" (Maren, recorded) is south-west. | It is north-north-west of the square. Four texts say south-west, two of them recorded lines. | Recorded lines cannot change, so the world must: move the mine, or add a line that corrects it. |
 | A20 | S2 | **The text refers to 16 people and places that do not exist.** | | `story_refs.md` (a) | A name dropped is a name you can find. | Lindqvist (of "Lindqvist's Draper", which has two beds and no resident), the Reeve, Old Wenn, "T." of the love letter, Tobin's mother, "Edda's widow" (Edda is alive), the Highfold wedding nobody attends. 33 more names carry a contradiction. | Each name gets a person, a grave, or is cut from unrecorded text. |
 | A21 | S2 | **The world does not react to the story.** | | `story_refs.md` (b) | The dead man is carried off; people talk about it; routines change after the ending. | Of 64 steps, 27 change nothing, 19 change only the quest giver's next line, 6 change another person's lines, 12 change the world. No schedule ever changes. The drowned man lies on the wharf for ever. Nine `hear_*` flags are set and never read. | For each main step: one visible change and two people who mention it. |
-| A22 | S2 | **After the ending, Hale and Greta say the same sentence, silently, and their own ending lines may never play.** | after "open it" | `voice.md` | Each person reacts in their own words. | Played by input: both say "There's bread on the Wharf every dawn now. My mother would have cried..." (the same mother), with no recording, before their usual line. Reading the code, the generic row is matched first, so six recorded ending lines look unreachable (not confirmed by play). | Put the personal rows first; give the generic remark only to people without one. Add a bot check. |
+| A22 | S2 | **Different people say the same sentence, silently; after the ending their own ending lines may never play.** | after "open it"; after a theft; when carrying gold | `voice.md` | Each person reacts in their own words. | Played by input: Hale and Greta both say "There's bread on the Wharf every dawn now. My mother would have cried..." (the same mother); Rowan and Hale both say "You're jingling, friend. Mind the lanes after dusk."; Marta, whose shop it is, says "I heard about the business with the shop." None has a recording, so each plays as silence before the person's own voiced line. Reading the code, the generic row is matched first, so six recorded ending lines look unreachable (not confirmed by play). | Put the personal rows first; give the generic remark only to people without one. Add a bot check. |
 | A23 | S2 | **The Hollow have no voice.** | the Bread Cave | `voice.md` | The climax is spoken. | The two "hollow" texts shown in the play-through have no recording and no voice in the cast. Every one of the 252 planned lines has audio; these are not in the plan. | Cast and plan them, or make them explicitly wordless. |
 | A24 | S2 | **Villagers walk through walls and the ground does not hold.** | see `docs/WALK.md` | (its shot calls) | | The walk bot's own report at this build: the villagers' graph passes through a wall in 41 places, 164 stretches cannot be walked, 66 falls of more than 1.6 m, 249 places stuck. Not re-run here. | Already listed; it belongs in the same pass as the re-siting. |
 | A25 | S2 | **Shell doors and windows are black rectangles.** | most shells in shade; `in.117`, `in.119`, `in.06` | `shell_in.117.jpg`, `shell_in.119.jpg` | Timber, glass, a glint, a curtain. | Door and panes render near black with no detail; shaded plank walls go to a flat dark brown. This is what "reads as a box" means. | Fewer shells, and the ones kept get the enterable houses' doors and panes. |
@@ -96,13 +96,216 @@ Summary:
 
 ## Voice (item 9)
 
-`docs/audit/voice.md` lists every line shown. First play-through (main story to the "open it" ending, by input): 37 lines shown, 36
-distinct; 32 had a recording, 2 were part silent (A22), 2 silent (A23). A longer run (side quests, both orders, death) is being added.
-Static check: all 252 planned lines have a file. Shown as speech but in no plan, so never voiced: 7 generic remarks, 7 lines built
-at run time (the arrest speech, the theft shout, Marta's shop notice), 17 bystander lines (`story_refs.md` (c)).
+`docs/audit/voice.md` lists every line. The play bot played, by real keys and clicks: the main story to an ending, the side quests,
+the logic scenario, both orders of the story, and a death. 114 lines of speech were shown, 59 distinct.
 
-## Still to come in this file
+| | Distinct lines |
+|---|---|
+| A recording was found and accepted for playing | 44 |
+| Part silent: an unrecorded remark shown in front of a recorded line | 5 |
+| Silent | 10 |
 
-Items 2 (barriers, with the fence list), 3 (seeing inside), 6 (access, by district), 11 (cheap graphics, by picture) in full; the
-outside-against-inside table for all 57; the per-building "who lives here and how can you tell" list; Part B (research) and Part C
-(recommendations, including the delete list). `docs/BLUEPRINT.md` is drafted separately.
+| Silent or part silent | Speaker | Cause |
+|---|---|---|
+| "There's bread on the Wharf every dawn now. My mother would have cried to see it." | Hale, Greta | generic remark from `IX.SAY`, the same words for whoever is asked; not in the voice plan |
+| "You're jingling, friend. Mind the lanes after dusk." | Rowan, Hale | same |
+| "I heard about the business with the shop. Keep your hands to yourself." | Hale, Marta | same; Marta is the shop |
+| "Hold. That's theft, in front of a witness ... The fine is 20 gold ..." | Hale | built at run time (the fine), so never recorded |
+| "Twelve stand in a row at the water's edge ..." | `hollow` | not in the plan, no voice in the cast; it is narration shown as speech |
+| Six notice-board texts | `board` | narration shown through the dialogue box; nobody is speaking, which is right, but it looks like a silent speaker |
+
+Also, not reached by this play-through but read from the code: 7 lines built at run time and 17 bystander lines are never voiced
+(`story_refs.md` (c)). All 252 lines in the plan have a file. Barks: 6 attempted near the player, 5 played; the sixth was Nell Marsh,
+one of the 63 who have none. "Started" could not be measured reliably because the bot moves on within a second; nobody listened.
+
+## Item 1. Doors
+
+131 door-shaped things on houses. 57 open on an interior (the walk bot used all 115 door leaves, both ways, without a retry: `docs/WALK.md`).
+74 do not (A01). All 57 real doors can be reached on the flat reachability map (`map_town.png`: green dots). Kit door pieces with no
+interaction within 1.8 m: 2 (a second door, `Wall_Plaster_Door_Flat` with its frame, on the guardhouse front at about (-35, -7), 1.8 m from the real one: the magenta square on the map).
+
+| District | Real doors | Dead doors | Dead doors facing a wall |
+|---|---|---|---|
+| Market Place | 9 | 6 | 0 |
+| Chapelgate | 12 | 19 | 4 |
+| Riverside | 9 | 4 | 3 |
+| Westgate | 8 | 11 | 4 |
+| Wharfside | 12 | 32 | 17 |
+| Upper Ward | 2 | 0 | 0 |
+| Outside | 5 | 2 (Highfold) | 0 |
+
+Per building: `docs/audit/buildings.md` section B.
+
+## Item 2. Barriers
+
+- **The town edge** does not exist as a barrier (A06, `edge_west_gate.jpg`, `edge_south_above.jpg`, `edge_east_above.jpg`). The north wall is a 32 m fragment with a wall walk; both ends are open.
+- 303 fence and wall runs stand in the mapped area. For 135 the far side is a walk of 25 m or less. Most of those are yard fences with a
+  proper way in, which is right. 56 are **free-standing fragments**: under 2.2 m high and passable by stepping round the end
+  (detour no longer than the run plus 3.5 m): Chapelgate 13, Market Place 9, Riverside 7, Wharfside 5, Westgate 5, outside 17. List with
+  coordinates: `tables.json` key `walkround`; drawn orange on `map_town.png`. Example: `bar_chapel_east.jpg`, a rail fence that stops in the open with the yard behind it open to the lawn.
+- The plots built in Build 73 (Chapelgate, Market Place north) are the one place fences enclose something: `bar_westgate.jpg` shows beds, a fence and a gate that read as somebody's.
+- The churchyard wall (`bar_churchyard.jpg`) encloses the graves on three sides; the fourth is open grass.
+- Not measurable yet: whether each fence belongs to a plot. Plots are not data in the game; the blueprint asks for a plot table.
+
+## Item 3. Seeing inside (not finished)
+
+Not done to the standard of the rest. What was tried: 126 pictures of the backs and sides of the shells (`shots/audit/sb`, not committed).
+The automatic camera too often stood inside a neighbouring shell to count anything from them. What they do show: shells are hollow
+boxes whose inside faces are drawn (a camera inside one sees a room of outside walls), so any place a player's eye can get past a
+wall will show it. The walk bot found "the eye or the near plane inside something solid" 10 times and "the eye within 10 cm of the
+underside of a floor" twice (`docs/WALK.md`). No view into a shell from a place the player can stand was found, and none was ruled out.
+The test this needs is in `docs/BLUEPRINT.md` 5.1: render from the walk bot's own eye positions with back faces painted a signal
+colour and count the pixels. One measured thing: at 12 of 136 buildings the ground at a corner is more than 0.6 m above the floor
+level (`floor_vs_ground.json`: `in.77`, the inn's back, three shells north of the square, `in.67`, `in.66`, the fisher's hut, `in.36`,
+three more shells); on a 2 m height grid this is a list of places to look at, not a verdict.
+
+## Item 4. Outside against inside
+
+All 57: `docs/audit/buildings.md` section A (footprint, inside size, area ratio, storeys, cellar, windows, balcony).
+
+| Mismatch | Buildings |
+|---|---|
+| Ground floor inside at least 2 times the footprint | 47 of 57 |
+| ... at least 3 times | 35 |
+| Windows: same count outside and inside | 0 of 57 (190 against 1,067) |
+| One storey of wall outside, a full upper floor inside | 20 kit houses (A16), plus `inn`, `smithy`, `farm`, `fisher`, `high.c` by the data, to be checked by eye |
+| Cellar inside, no sign of one outside | 21 |
+| Balcony or gallery outside | 14; none of the plans has a door onto one |
+| Doors: one outside, one inside | 55; two plans (`inn`, `chapel`) have a second outside door inside that has no twin outside |
+| Chimney against hearth | not measured: every plan has 1 or 2 hearths (chapel 0); chimneys are generated geometry with no name to count. Needs a tag. |
+
+## Item 5. Filler
+
+`docs/audit/buildings.md`. The question "who lives there, what do they do, how can you tell from outside" has:
+
+- no answer at all for the 72 shells and the two Highfold props (A05);
+- no resident for `draper`, and Tobin and Aldous have no bed in theirs (A28);
+- no trade for 10 enterable houses ("household");
+- no outward sign for about 45 of the 57: 12 sign or banner pieces exist in the whole town, 6 of them on the seven oldest buildings.
+- Sameness: 72 shells in 28 roof pitches but two materials (dark plank, grey rubble), one door, one window; the commonest size (4.4 m wide) is used 25 times.
+
+## Item 6. Access
+
+- 28 dead doors face a wall (A15), 17 of them in Wharfside.
+- Every real door is reachable. Their approach is not always a street: the flat map cannot tell a lane from a lawn, and in Wharfside
+  and Westgate it is lawn (`wharf_lawn_above.jpg`, `west_lawn_above.jpg`).
+- `docs/WALK.md`: 164 stretches of the villagers' own routes cannot be walked by the player; 41 pass through a wall; 3 join two levels with no way between.
+- Streets by hour: at most 30 of the 80 villagers are outdoors (15:00), 16 of them in the square. From 19:00 to 06:00 there are 1 or 2
+  people outdoors in the whole town; 13 to 15 sit in the Hart, in silence; everyone else is at home.
+
+## Item 7. Trees and green
+
+| District | Trees | Flower pots | Wall vines | A real town would have |
+|---|---|---|---|---|
+| Market Place | 2 | 30 | 29 | the oak (there), a lime by the well, a pear against the inn's yard wall |
+| Chapelgate | 15 (mostly the northern fringe) | 88 | 78 | two yews in the churchyard, an ash at the lych gate, apple trees in the long plots |
+| Riverside | 2 | 40 | 20 | pollard willows and alders along the bank every 8 to 10 m, a walnut at the mill |
+| Westgate | 2 | 53 | 57 | an orchard close, hedgerow elms, a tree in every farm yard |
+| Wharfside | 6 | 99 | 116 | very few: an elder at a privy, willows at the slip; more nets than leaves |
+| Upper Ward | 1 | 12 | 3 | the manor garden: a walled orchard of 8 to 12, a mulberry, a clipped yew at the gate |
+| Outside, within 130 m | 178 | 23 | 21 | hedged closes, then fields, then wood |
+
+Wharfside, the poorest quarter, has the most flower pots (99) and vines (116). Pots and vines were used as a fill brush.
+
+## Item 10. Story and quests
+
+`docs/audit/story_refs.md`. 74 names checked: 25 clean, 33 contradicted, 16 not in the game. 64 steps: 27 change nothing (A19 to A21).
+The strongest single contradiction: the mine's direction (A19). The best unused material: Pell House, Widow Hale's house and her
+son Corwin's letters, which are already written and point at the main story, while the houses themselves hold strangers.
+
+## Item 11. Cheap graphics and bugs
+
+By picture; no claim about motion.
+
+| # | What | Where | Picture |
+|---|---|---|---|
+| G1 | Shell doors and window panes are flat near-black rectangles in shade | most shells | `shell_in.117.jpg`, `shell_in.119.jpg` |
+| G2 | A flat pale striped panel (an awning or shutter drawn as an unshaded sheet) on a shell front | shell near (-5, 85) | `close_shell_door.jpg` |
+| G3 | A lean-to roof plane coming down to the ground against a wall, reading as a loose sheet | Wharfside near (14, 74) | `close_wharf_house.jpg` |
+| G4 | Shaded timber walls go to one flat dark brown: no ambient detail, the box shows | all districts | `sheet_shells_1.jpg` (in.103, in.118, in.120 to in.123) |
+| G5 | Roofs: one colour and material from above | all | `top_town.jpg` |
+| G6 | Far copies of the southern houses read as grey boxes from 150 m | south | `top_town.jpg` (bottom edge) |
+| G7 | 452 listed defects (floating, sunk, overlapping), not re-verified | | `docs/DEFECTS.md` |
+
+Not found by this audit and still to do: a count of stretched textures and of thin sheets. Both need the piece-by-piece test in the
+blueprint (5.2), not screenshots.
+
+# Part B. How Skyrim, The Witcher 3 and Kingdom Come make a place believable
+
+**Status of the sources.** The session's network policy refused every page fetch (UESP, the Creation Kit wiki, Joel Burgess's blog,
+GDC Vault). Only web search worked. So each fact below is marked **[search]** (the text came back in a search result for that
+address; the page itself was not opened and the wording should be checked before it is quoted on), **[inference]** or **[memory]**
+(not verified at all). Nothing below is page-verified. The full notes with all addresses are in `docs/audit/research.md`.
+
+## Numbers
+
+| | Skyrim: Riverwood | Brackenfell now |
+|---|---|---|
+| Named residents | 14 permanent, 16 with Hadvar and Ralof, a dog [search: en.uesp.net/wiki/Skyrim:Riverwood, Skyrim:Riverwood_People; counted from the list] | 80 |
+| Enterable interiors | 6: four houses, the trader, the inn; plus an open sawmill and forge [inference from that list] | 57 |
+| People per interior | 2.7 | 1.4 |
+| Buildings that cannot be entered | 0 [memory] | 75 |
+| People with no lines | 0 [inference: every listed resident has a page with quoted dialogue] | 63 |
+
+- Skyrim as a whole: about 1,100 characters, "more than 70" actors, "more than 60,000 lines" [search: nbcnews.com, pcgamer.com; en.wikipedia.org/wiki/Skywind]. About 16 characters per voice [inference].
+- Kingdom Come: 550 persistent characters in the first game; "nearly 2400" in the second, about half in Kuttenberg; only about 70 can be drawn at once, so the team measured how many are visible from each spot in a white-box city before building it [search: gamesradar.com; schedule.gdconf.com session 915120; daily.dev summary of the Kuttenberg talk].
+- Witcher 3, Novigrad harbour: "For the 50 sailors ... we made 200 possible spots" [search: gamesradar.com]. Four places to be for each person.
+- Whiterun and Riften totals, and per-village counts for Rattay, Sasau, Skalitz and Uzhitz: not found.
+
+## Methods
+
+1. **Ownership.** A Skyrim interior has one owner, a person or a faction; anyone else is trespassing unless the cell is marked public; in a public cell the things are still owned, so a shop is free to enter and theft to take from [search: ck.uesp.net/wiki/Interior_Cells]. Alvor's house is locked; inside after midnight "you are not welcome and may be told to leave"; the family carry the keys [search: en.uesp.net/wiki/Skyrim:Alvor_and_Sigrid's_House]. Beds are owned one by one [search: forum sources]. Kingdom Come marks areas private, shops private at night [search: player reports].
+2. **Schedules.** Alvor "works his forge every day between 8am and 8pm then spends an hour dining with Dorthe and Sigrid inside the house"; his daughter comes to the forge at 4pm to learn [search: en.uesp.net/wiki/Skyrim:Alvor]. Gerdur wakes at 7, works the mill, eats at home at noon [search: Skyrim:Gerdur]. Packages are hour blocks; default sleep starts between 19:00 and 01:00 and lasts 6 to 10 hours [search: ck.uesp.net/wiki/Sandbox_(Procedure)]. Kingdom Come puts the behaviour in the object: a bench teaches sitting, a hearth cooking [search: Warhorse forum repost]. The Witcher 3 gives no personal day: people rotate between activities at action points, and there are never more people than points [search: gamesradar.com; CDPR REDkit wiki].
+3. **Conversations between villagers.** Riverwood's scenes are about another villager, not about the player: Hilde and Sven on the dragon, Hilde and Sigrid on the daughter, the forge lesson; the love triangle is told by both suitors and the innkeeper ("We've got something of a love triangle here in Riverwood") [search: en.uesp.net/wiki/Skyrim:Sven, Skyrim:Hilde]. Four found; more exist [memory].
+4. **Dialogue per person.** Generic lines are recorded once per voice type; a named villager adds a few of their own that name a relation or a grievance, and sometimes one small favour [search: en.uesp.net/wiki/Skyrim:Generic_Dialogue; inference from the Riverwood pages].
+5. **Kits.** Skyrim: "2 Kit Artists, 8 Level Designers, 7 Kits, 400+ Unique Cells, 30 Months" [search: slides of Burgess and Purkeypile, GDC 2013]. The warning in the same talk: if "things are always at 90 degree angles, the player will sense the system and art fatigue can set in"; "Repeated detail elements bother players. Repeated architecture is more forgivable" [search: transcript and secondary notes]. Remedy: combine pieces across kits, and change detail before structure.
+6. **Inside against outside.** Skyrim's interiors are separate cells and are known to be larger than their shells; no developer statement of a rule was found. The Witcher 3 has no load at doors and not every building opens [search: gamespot.com, pcgamesn.com]. [inference] With separate interiors scale can be cheated a little; what a player checks is doors, windows, storeys and roof.
+7. **Clutter.** Smith and Worch, GDC 2010: staging the space so it "can be interpreted as a meaningful whole"; "It has to be possible to miss some things to make finding them meaningful" [search: gdcvault.com/play/1012647; niemanstoryboard.org]. Bethesda's set dressers decide first who lives in a place, then furnish for their habits [search: news.xbox.com, Starfield clutter article].
+8. **Layout.** Whiterun: three tiers by height and class, one landmark alone on top [search: en.uesp.net/wiki/Skyrim:Whiterun]. Riften: a canal splits it and a lower water level holds the poor [search: en.uesp.net/wiki/Lore:Riften]. Novigrad: "none of the houses have been placed procedurally" [search: wccftech.com interview]. Kingdom Come started from real maps and then pulled settlements closer [search: pcgamesn.com].
+9. **Vegetation.** Witcher 3: foliage placed by hand, only a base grass layer generated; large trees hand-edited as landmarks [search: dualshockers.com; store.speedtree.com]. Kingdom Come's garden plots and orchards round each village: [memory], no source found.
+10. **Passes.** Bethesda: a one-page pitch with "one unique thing" per place, then layout and gameplay, then lighting, clutter, effects and sound, then polish [search: Burgess, GDC 2014 slides].
+
+## What it means for Brackenfell [inference]
+
+Riverwood convinces with 6 interiors and 16 people because every one of the 16 has a house, a bed, a job, a relation and something
+to say about a neighbour, and there is no seventh house. Brackenfell has nine times the interiors, five times the people, twelve times
+the buildings, and a quarter of the people a player can talk to. The lesson is subtraction.
+
+# Part C. Recommendations, ranked by effect on the owner's complaints against effort
+
+Effort: S = days for one worker, M = a week, L = several weeks. Each has a number to hit.
+
+| Rank | Do | Hits | Effort | Measure |
+|---|---|---|---|---|
+| 1 | **Delete the 28 shells whose doors face a wall** (list in A15), and with them 17 of Wharfside's 32. Put a yard, a garden, a drying ground or nothing where they stood. | fake buildings, copy paste, blocky | S | dead doors 74 to 46; draw calls go down |
+| 2 | **Make every remaining dead door answer or go.** For each of the 46: remove the door (it becomes the back or side of a neighbour's outbuilding: byre, store, workshop, with a barn door or none), or give it a prompt with a true reason and an owner from the cast. | fake life | S | 0 doors without a response |
+| 3 | **Give the 63 mute people lines.** Four each: who I am and what I do; a neighbour by name; the trouble (the bell, the dead man); a goodnight. 252 lines is about three days of the 100-a-day voice quota. Eight shared voices by age and sex for greetings; the cast file needs those eight. Until a person has lines, hide the name and the talk prompt. | fake life, bland | M (writing) | mute people 63 to 0 |
+| 4 | **One table for buildings and households** (the blueprint's step 1 and 2), written by hand: 57 buildings, their people, surname, trade, relations, the house's name. Fix the 19 wrong house names from it. Pell House to the Pells; Widow Hale's to Hale's mother; one baker. Cut the cast to what the table can hold: about 60, in households of 2 to 4. | not thought through, bland | S to write, M to apply | 0 name clashes; 0 buildings named for a non-resident; households of one from 33 to under 8 |
+| 5 | **Real days.** Replace the generated schedules with ones written from the table: well, work, noon meal at home, market, Hart or bench, chapel on a set day. Fix the three public bookings that always fail. | fake life | M | people who never leave home 41 to under 5; sweeps per person at most 1; outdoors at noon at least 35; nobody shares a day |
+| 6 | **Ten exchanges between villagers** about a third villager, played by the real people at set hours in the square, the Hart and the well (about 40 lines). Send the real Rowan and Greta to the night meeting. | fake life | M | exchanges 1 to 11 |
+| 7 | **Houses are owned.** Owner per cell; a greeting by day; barred 22 to 6; a challenge if inside at night; no sleeping in an owned bed. | fake life, not believable | M | the bot enters every house at 12:00 and 02:00 and gets a reaction in each |
+| 8 | **Fit interiors to shells** for the worst 20 (area ratio 4 or more: the six alley shops first): one list of openings for shell and plan; the plan's ground floor within 1.25 of the footprint; storeys equal. Where a large interior matters (inn, store), enlarge the shell over a deleted neighbour. | not believable | L | ratio at most 1.25 on all 57; windows equal on all 57 |
+| 9 | **An edge or no gate.** A bank, ditch and palisade from the river round to the lake with the west and north gates, houses backing onto it (TOWNPLAN already says so). | not believable, blocked off | M | flood from outside with gates shut does not reach the square |
+| 10 | **Roofs by district** as TOWNPLAN's table: thatch in Westgate and Wharfside, stone slate at the chapel, shingle on the river. | all the same | S | from above, 4 roof materials, each over 15% |
+| 11 | **About 40 trees with reasons** (the list in item 7), and remove two thirds of the 345 pots and half the 324 vines, most of all in Wharfside. | bland, filler | S | trees inside 28 to about 70; pots under 120 |
+| 12 | **The story lands.** Move or correct the mine's direction; the dead man is carried to the chapel after Maren reads the token and a grave appears; each main step gets one visible change and two people who mention it; cut or people the 16 empty names; put the personal ending lines before the generic ones. | storylines coherent | M | steps with no reaction 27 to under 5; names without a referent 0 |
+| 13 | **Signs and trade gear** on every shop and workshop, from the building table. | tells no story | S | every trade building identifiable in its front picture |
+| 14 | **Cut containers to a third**, contents per household; place the 4 unplaced documents. | filler | S | containers 1,043 to about 350 |
+| 15 | **Plots for every kept building** (TOWNPLAN order: Wharfside next). | lawn, copy paste | L | no grass touching a wall inside the edge |
+| 16 | Tests for all of the above in the gate, from `test/audit/` (the dump already holds the data). | so it stays fixed | S | blueprint rules marked [auto] run in `--full` |
+
+## What to delete
+
+- **Now:** the 28 wall-facing shells (A15). They cannot be seen from a street as fronts; they are mass that makes the town feel blocked.
+- **Wharfside:** of 32 shells keep at most 10, as net stores, smokehouse, boat shed and two real cottages, on plots.
+- **Chapelgate, Westgate:** of 30 shells keep those that close a street front (about half) and turn them into outbuildings of the enterable house beside them.
+- **Highfold:** the bolted house with its wedding that does not exist. Either people it or take the message off the door.
+- **People:** the 7 Hart regulars as separate strangers: fold them into households (two already sleep in others' houses). Bystanders that reuse named bodies.
+- **Lines:** the three generic remarks that different people speak in the same words.
+- **Things:** two thirds of the flower pots, half the vines, two thirds of the containers.
+- **Not to delete:** the 57 interiors. They are the best work in the game (`sheet_interiors_1.jpg`); they need shells that fit them and people who own them.
+
+## Could not be verified headless
+
+Frame rate, flicker and z-fighting in motion, anything audible, whether lines read well, whether routines look natural. Part B
+is from search results only. Items 3 and the stretched-texture and thin-sheet counts of item 11 are not finished.

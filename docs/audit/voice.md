@@ -2,8 +2,8 @@
 
 Made by `node test/audit/voicebot.mjs --run ...` then `python3 test/audit/voice_table.py`. A line counts as having a recording when the game found a file for it in `audio/voice/manifest.json` and accepted it for playing with the audio context running. Headless: nobody heard anything; whether it sounds right is not tested.
 
-Lines shown (counting repeats): 37. Distinct lines: 36. With a recording: 32. Part silent: 2. Silent: 2.
-Barks attempted near the player: 2, of which played: 1. Refused (villager has no barks): ['Nell Marsh'].
+Lines shown (counting repeats): 114. Distinct lines: 59. With a recording: 44. Part silent: 5. Silent: 10.
+Barks attempted near the player: 6, of which played: 5. Refused (villager has no barks): ['Nell Marsh'].
 
 ## Silent and part-silent lines
 
@@ -13,6 +13,17 @@ Barks attempted near the player: 2, of which played: 1. Refused (villager has no
 | hale | There’s bread on the Wharf every dawn now. My mother would have cried to see it. /  / Road’s quiet. Just how I like it. | PART SILENT (1 of 2 paragraphs) | a remark from IX.SAY is shown in front of the recorded line; the remark itself has no recording for this speaker |
 | greta | There’s bread on the Wharf every dawn now. My mother would have cried to see it. /  / What can I get you, love? | PART SILENT (1 of 2 paragraphs) | a remark from IX.SAY is shown in front of the recorded line; the remark itself has no recording for this speaker |
 | hollow | Twelve stand in a row at the water’s edge, and not one of them breathes. The slab before them is bare. The old loaves on it are green and the candle ends are cold, and th | SILENT (0 of 2 paragraphs) | speaker has no voice in the cast and no line in the plan |
+| board | Notices, pinned over notices. Two of them are in a clean hand and have not yellowed. | SILENT (0 of 1 paragraphs) | no entry in audio/voice/manifest.json for this speaker and text |
+| board | WANTED: four outlaws put down on the passes. Thirty-five gold, paid at the board. /  / You take the notice. | SILENT (0 of 2 paragraphs) | no entry in audio/voice/manifest.json for this speaker and text |
+| rowan | You’re jingling, friend. Mind the lanes after dusk. /  / Brackenfell remembers its friends. Stay as long as you like. Stay for good, if the road will let you. | PART SILENT (1 of 2 paragraphs) | a remark from IX.SAY is shown in front of the recorded line; the remark itself has no recording for this speaker |
+| board | Your notice is still on you. | SILENT (0 of 1 paragraphs) | no entry in audio/voice/manifest.json for this speaker and text |
+| board | Paid. That notice comes down. There will be another like it tomorrow. | SILENT (0 of 1 paragraphs) | no entry in audio/voice/manifest.json for this speaker and text |
+| hale | You’re jingling, friend. Mind the lanes after dusk. /  / You lit the harvest fire. I never thought to see it burn again. You’re one of us now, whether you like it or not. | PART SILENT (1 of 2 paragraphs) | a remark from IX.SAY is shown in front of the recorded line; the remark itself has no recording for this speaker |
+| board | WANTED: three flasks of lamp oil for the gate. Thirty gold. Marta has it. /  / You take the notice. | SILENT (0 of 2 paragraphs) | no entry in audio/voice/manifest.json for this speaker and text |
+| board | Notices, pinned over notices. Two of them are in a clean hand and have not yellowed. /  / A bare nail where today’s paid work hung. It will be pinned up again tomorrow. | SILENT (0 of 2 paragraphs) | no entry in audio/voice/manifest.json for this speaker and text |
+| hale | I heard about the business with the shop. Keep your hands to yourself. /  / Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is 20 gol | SILENT (0 of 2 paragraphs) | no entry in audio/voice/manifest.json for this speaker and text |
+| marta | I heard about the business with the shop. Keep your hands to yourself. /  / Quill’s Sundries. If I don’t have it, you don’t need it. | PART SILENT (1 of 2 paragraphs) | a remark from IX.SAY is shown in front of the recorded line; the remark itself has no recording for this speaker |
+| hale | Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is 20 gold, or you hand it back, or you sleep in the cell and think about it. | SILENT (0 of 1 paragraphs) | no entry in audio/voice/manifest.json for this speaker and text |
 
 ## All distinct lines
 
@@ -54,5 +65,28 @@ Barks attempted near the player: 2, of which played: 1. Refused (villager has no
 | greta | There’s bread on the Wharf every dawn now. My mother would have cried to see it. /  / What | PART SILENT |
 | greta | Warm, and sweet with heather honey. The room feels friendlier already. | recording |
 | hollow | Twelve stand in a row at the water’s edge, and not one of them breathes. The slab before t | SILENT |
+| greta | You’re a treasure. Over the bridge east of the square, then follow the river downstream. Y | recording |
+| brandt | She rings true again. Hear that? That’s the sound of a village with a working forge. | recording |
+| brandt | Let’s see it, then. | recording |
+| board | Notices, pinned over notices. Two of them are in a clean hand and have not yellowed. | SILENT |
+| board | WANTED: four outlaws put down on the passes. Thirty-five gold, paid at the board. /  / You | SILENT |
+| rowan | You’re jingling, friend. Mind the lanes after dusk. /  / Brackenfell remembers its friends | PART SILENT |
+| rowan | Safer than most. But there has been smoke in the pines north-west of the gate these three  | recording |
+| rowan | Brackenfell remembers its friends. Stay as long as you like. Stay for good, if the road wi | recording |
+| rowan | Then the children can pick berries at the wood’s edge again. This was my father’s, and it  | recording |
+| board | Your notice is still on you. | SILENT |
+| board | Paid. That notice comes down. There will be another like it tomorrow. | SILENT |
+| brandt | Hah! Not a scratch on them. As promised: an arming sword, drawn out this spring and waitin | recording |
+| hale | You’re jingling, friend. Mind the lanes after dusk. /  / You lit the harvest fire. I never | PART SILENT |
+| hale | Five, by my count and yours. Paid in full. You’ve done the valley a turn, and I’ll not for | recording |
+| marta | Whale oil. It stinks and it burns. Don’t spill it near the candles. | recording |
+| board | WANTED: three flasks of lamp oil for the gate. Thirty gold. Marta has it. /  / You take th | SILENT |
+| board | Notices, pinned over notices. Two of them are in a clean hand and have not yellowed. /  /  | SILENT |
+| hale | I heard about the business with the shop. Keep your hands to yourself. /  / Hold. That’s t | SILENT |
+| hale | Good. That’s the end of it. This time. | recording |
+| marta | I heard about the business with the shop. Keep your hands to yourself. /  / Quill’s Sundri | PART SILENT |
+| marta | Not today, dear. Hale has been asking after you, and I’ll not buy from a name he is asking | recording |
+| hale | Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is 20 | SILENT |
+| greta | What can I get you, love? | recording |
 
-Distinct lines per speaker in this play-through: rowan 8, maren 6, hale 5, greta 4, brandt 3, aldous 3, marta 3, hollow 2, osric 1, tobin 1
+Distinct lines per speaker in this play-through: rowan 12, hale 10, greta 6, brandt 6, maren 6, marta 6, board 6, aldous 3, hollow 2, osric 1, tobin 1
