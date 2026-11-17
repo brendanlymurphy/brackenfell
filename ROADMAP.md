@@ -64,27 +64,36 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - **69** Build 68 plus: loot taken wherever it fell, long fights robust, "Copy performance report" in Settings, lighting round two
   (shade floors, cloth keeps its dye, palisade glare gone), interiors (oak tints, muted cloaks). The offline test now waits for
   the service worker in the page (it had failed on GitHub while the game itself was fine).
+- **70** Speed: medium 216 draws / 433k triangles in the square to 157 / 292k, low 170 / 225k to 125 / 195k, same pictures. Prompts
+  are not offered through walls or for things behind the player; the walk bot. Interiors: garlic strings, dressed cellars, muted
+  chapel cloth, rugs and hooks apart. The mine: cut rock walls, earth floor, torches that light their surroundings, visible water.
+
+- **60, 61** Real lip sync (visemes from the audio of every voiced line), natural skin and eyes, gaze, fitted helmet and kerchiefs.
+- **62** One gate command, the gate on GitHub for every push, onboarding docs rewritten, seven new voiced story lines.
+- **63 to 66** Wardrobe pass (layered clothes, fitted hats, hair off the eyes); interiors batches; pictures as varnished panels.
+- **67** A real child in a smock, kirtles for five women; interiors batches 3 and 4.
+- **68** Bugs found by playing (`test/playbot.mjs`, `docs/BUGS.md`): the crypt gate after a reload, saves loaded where they were
+  made, autosave, long dialogue and touch targets on a phone, the night meeting. Built files are no longer in the repository:
+  GitHub builds and publishes main and checks the live page.
 
 ## In progress (branch, owner)
 
-- **Bugs by playing** (`fork-bugs`, the second Claude Code session): `test/playbot.mjs` plays by input and `docs/BUGS.md` lists what
-  breaks. Notes, newest last:
-  - Item 0: the four built files are no longer tracked; GitHub builds and publishes main (`pages` workflow) and then checks the
-    live page serves that build. A push during a gate run now waits instead of cancelling it.
-  - Item 1: seven bugs fixed (a gate shut again after a reload blocked the story; saves loaded a kilometre away; unsaved progress;
-    long dialogue off a phone screen; small touch targets; the ledger opening over other windows; the night meeting in sight of
-    Garrick's camp). The bot's scenarios are steps of the gate.
-  - Items 2 and 3: phone fit, rotation, hide and resume, sound after the first tap, offline start, and a 30-minute soak are bot
-    scenarios; nothing leaks and nobody gets stuck in the soak as measured.
-  - Item 4: 178 of 248 lines have audio and lip tracks; the rest come from the daily batch (08:20 UTC).
-- `fork-play` (the second Claude Code session): walk bot (`docs/WALK.md`), performance round 2, prompts not offered through walls,
-  daily voice batches.
-- FREEZE (owner, Build 69): nothing new; make what exists right. Three workers:
-  - `fork-fx3` ground and levels: real ground (fall, crowned streets, earth, mud, grass, wear paths), every terrace, platform,
-    deck and wall walk rebuilt into the terrain or removed, the town wall given age and variety; then the outdoor overlap list.
-  - `fork-hx` house exteriors: sameness measured by script, then structure, roofs, add-ons, placement and wear varied by district
-    and wealth (no two neighbours alike). The mine's look (`fork-fx2`: rock walls, torch pools, flood water) waits behind it.
-  - `fork-ch1` characters: apron glitch, aprons varied, men's tunics shown, posture, hair and beards; no two people alike.
+- **Walking, speed, loose ends** (`fork-play`, the second Claude Code session). Notes, newest last:
+  - The play bot's soak no longer fails on sounds (an artifact of stepping time); long fights and looting are robust.
+  - Walk bot (`test/walkbot.mjs`): 19 km by input through every street, all 57 interiors (115 door uses), the routes, the wilds
+    paths, the mine. `docs/WALK.md` is its report. Fixed from it: prompts through walls (88 places), prompts for things beside or
+    behind the player (867), the bed-and-chest prompt (bug 8).
+  - Speed: Settings has "Copy performance report" (30 s of frame times, draw calls, device, build). Medium went from 216 draws /
+    433k triangles in the square to 157 / 292k and Low from 170 / 225k to 125 / 195k with the pictures unchanged (ferns and stones
+    given a draw distance; doors and signs outside the view skipped; terrain cut into squares; terrain and props under the
+    roofline skipped).
+- FREEZE (owner, Build 69): nothing new; make what exists right, to `docs/TOWNPLAN.md` (the authority outdoors). One district
+  finished at a time, Market Place first. Two workers on the town (the machine restarts under three):
+  - `fork-fx3` the planner: the Market Place as an enclosed four-sided room, buildings re-sited onto street lines, the terrace
+    wall and the four entries, ground, plots, the market's stalls; then the next district.
+  - `fork-hx` house exteriors: `test/houses_survey.js` (13 visible types across 58 at Build 69); roofs by district (every roof was
+    one shingle texture), then fronts designed one by one. The mine's remaining rooms (`fork-fx2`) wait behind it.
+  - `fork-ch1` characters: paused until a town worker frees up (apron glitch, aprons varied, men's tunics, posture, hair).
   - Logic, storylines, what people do, mechanics: asked of the second Claude Code session (`fork-logic`, docs/LOGIC.md).
 
 ## Next

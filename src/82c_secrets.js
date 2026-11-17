@@ -41,7 +41,7 @@ const SECRETS = {
   magpie: { p: [0, 0, 0], r: 2.0, ck: 'chest', verb: 'Pull the sack from under the well-lip', label: 'Look under the well-lip', gate: () => !!S.flags.magpieYard, gateMsg: 'A well, a bench and a stool. Somebody comes here to be alone.', hint: 'The well', loot: [['gold', 22], ['silverbar', 1], ['lockpick', 1]], note: ['The Magpie’s sack', 'A flour sack with a cord through it, and a card inside, written in charcoal:\n\nIf you followed me here you are better at it than the Warden’s men. Take half. I never took a thing from a poor house. Only silver, only after dark, only from the ones who had too much of it.'] },
 };
 function secMakeCont(id, s) {
-  const o = { kind: 'cont', sec: id, id: 'sec.' + id, ck: s.ck, verb: s.verb, label: s.label, p: s.p.slice(), r: s.r, zone: s.zone || 0, cell: s.cell, locked: !!s.locked, key: s.key, hard: s.hard, loot: s.loot, gate: s.gate, gateMsg: s.gateMsg, hint: s.hint, note: s.note };
+  const o = { kind: 'cont', thru: id === 'wall' /* the loose bricks are reached from the far side of the cellar wall: no line-of-sight test (85_ui.js) */, sec: id, id: 'sec.' + id, ck: s.ck, verb: s.verb, label: s.label, p: s.p.slice(), r: s.r, zone: s.zone || 0, cell: s.cell, locked: !!s.locked, key: s.key, hard: s.hard, loot: s.loot, gate: s.gate, gateMsg: s.gateMsg, hint: s.hint, note: s.note };
   World.interact.push(o); SEC.list.push(o); return o;
 }
 // the properties: each prop that does not belong
