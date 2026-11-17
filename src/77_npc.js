@@ -70,11 +70,23 @@ function navBuild() {
     } else { link(o, i); doorNode[id] = { o, i }; }
     link(o, nearest(x.out[0], x.out[2], outside, 40)); outside.push(o);
   }
+  const openSpots = [];
   for (const name in World.spots) {
     const s = World.spots[name], k = add(s.p[0], s.p[1], s.p[2]); Nav.spot[name] = k;
     if (s.zone && s.site && World.houses[s.site] && World.houses[s.site].plan) continue;         // planned interiors join their rooms (planNav)
-    if (s.zone && s.site && doorNode[s.site]) link(k, doorNode[s.site].i); else link(k, nearest(s.p[0], s.p[2], outside, 60));
+    if (s.zone && s.site && doorNode[s.site]) link(k, doorNode[s.site].i); else { link(k, nearest(s.p[0], s.p[2], outside, 60)); if (!s.zone) openSpots.push(k); }
   }
+  /* [cull] A place out of doors was joined to the one nearest node only, whichever side of a house row that lay: the Hawker's Passage (6 m from the Market Place)
+     hung off the north road, and 350 pairs of places were more than 2.5 times the straight line apart on foot (130 m to cross 13). Each such place also joins
+     up to three more nodes within 14 m that it can walk to in a straight line: nothing solid between, and no step in the ground higher than a kerb. */
+  { const clearWay = (a, b) => { const A0 = N[a], B0 = N[b], L = hyp(A0[0] - B0[0], A0[2] - B0[2]), n = Math.ceil(L / 0.3); if (Math.abs(A0[1] - B0[1]) > 1.6) return false; let py = A0[1];
+      for (let i = 1; i < n; i++) { const t = i / n, x = A0[0] + (B0[0] - A0[0]) * t, z = A0[2] + (B0[2] - A0[2]) * t, y = World.groundAt(x, z, py + 0.5); if (Math.abs(y - py) > 0.3 || (World.waterAt && World.waterAt(x, z) > y + 0.2)) return false; py = y;
+        const l = Col.grid.get(Math.floor(x / Col.cell) * 4096 + Math.floor(z / Col.cell)); if (l) for (const c of l) { if (c.off || c.y0 > y + 1.5 || c.y1 < y + 0.3) continue; const dx = x - c.x, dz = z - c.z; if (c.r !== undefined) { if (dx * dx + dz * dz < (c.r + 0.22) * (c.r + 0.22)) return false; } else if (Math.abs(dx * c.ax + dz * c.az) < c.hx + 0.22 && Math.abs(dx * c.bx + dz * c.bz) < c.hz + 0.22) return false; } }
+      return Math.abs(B0[1] - py) < 0.4; };
+    // lanes that are routes on the ground (the Hawker's Passage) are ways for villagers too: their points become nodes in a chain, joined to what they can reach
+    for (const rt of World.routes || []) { if (!rt.pts || rt.pts.some(q => Math.abs(q[1] - World.groundY(q[0], q[2])) > 0.5)) continue; let prev = -1; for (const q of rt.pts) { const k = add(q[0], World.groundY(q[0], q[2]), q[2]); if (prev >= 0 && clearWay(prev, k)) link(prev, k); prev = k; openSpots.push(k); } }
+    const pool = outside.concat(openSpots);
+    for (const k of openSpots) { const near = []; for (const j of pool) { if (j === k || A[k].some(e => e[0] === j)) continue; const d = hyp(N[j][0] - N[k][0], N[j][2] - N[k][2]); if (d < 14 && d > 0.05) near.push([d, j]); } near.sort((a, b) => a[0] - b[0]); let got = 0; for (const [, j] of near) { if (got >= 3) break; if (clearWay(k, j)) { link(k, j); got++; } } } }
   for (const id in World.houses) { const h = World.houses[id]; if (h.plan) planNav(h.plan, add, link, doorNode); }
   // upper floors are reached by their stairs only: bottom -> top -> (round the stairwell) -> the rooms above; nothing upstairs links straight to the door
   const unlink = k => { A[k].length = 0; for (const a of A) for (let i = a.length - 1; i >= 0; i--) if (a[i][0] === k) a.splice(i, 1); };

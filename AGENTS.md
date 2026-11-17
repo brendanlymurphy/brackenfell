@@ -36,7 +36,7 @@ What `--full` runs: build; silent boot (no `warn` or `error` line: a builder tha
 that way once); `quest` (ends `fire 99 bonfire true`); `stairs`, `npcstairs`, `npcsep`, `routes`, `combat`, `wilds`, `story`, `mine`,
 `secrets`, `interact`, `econ`; `interiors`, `parity`; `voice_game`, `voice_parts`, `audio_game`, `voices` (`tools/voice/check.mjs`); the budget
 views on medium and low; every cell in chunks of 8 (a software-rendered tab dies after about a dozen); `kitcull`; one WebGPU
-shot in the square and in the inn with no GPU errors; `cullwalk` (nothing in sight missing while walking and turning); the offline start; `test/real.mjs` (production boot); and the play bot.
+shot in the square and in the inn with no GPU errors; `cullwalk` (nothing in sight missing while walking and turning); `town` (every street and gate walked both ways by input, no long way round between two places for a villager, no spawn or door step inside a prop: `node test/walkbot.mjs --part streets`); the offline start; `test/real.mjs` (production boot); and the play bot.
 
 The play bot (`test/playbot.mjs`, steps `bot-story`, `bot-play`, `bot-phone`, `bot-sweep`, `bot-soak`) plays by real keys, clicks and
 taps: the story to both endings, a reload at seven points of it, every conversation, side quests, shop, perks, board, theft and
