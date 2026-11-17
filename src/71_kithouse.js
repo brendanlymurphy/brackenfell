@@ -39,7 +39,8 @@ function kitFixups() {
 const kitOpen = n => (Kit.pieces[n + '_Open'] ? n + '_Open' : n);
 // the building's spec adjusted to what the kit panels can do: 3 m storeys, kit door and window sizes, no slit windows
 function kitSpec(site, spec) {
-  const st = KIT_STYLE[site.id], s = Object.assign({}, spec, { kitStyle: st });
+  const SS = shellStyle(site, spec), st = Object.assign({}, KIT_STYLE[site.id]), s = Object.assign({}, spec, { kitStyle: st });      // [fx2] a copy: the shell style may change the ground floor and the cladding
+  if (SS.ground) st.ground = SS.ground; if (st.timber && SS.lime) st.timber = false;
   s.H = Math.max(spec.H || 2.6, 3.0); s.pitch = st.pitch || 52;
   const sy = s.H / 3;
   s.doors = (spec.doors || []).map(o => { const sx = clamp((o.w || 1.05) / 1.08, 1.0, 1.4); return Object.assign({}, o, { w: 1.1 * sx, h: 2.12 * sy, ksx: sx, lamp: false, kLamp: o.lamp !== false }); });
@@ -65,6 +66,7 @@ function kitShellPass(c, pass) {
   if (X) { for (const m of [c.xext, c.ext, glow]) { m.nv = 0; m.ni = 0; m.min = [1e9, 1e9, 1e9]; m.max = [-1e9, -1e9, -1e9]; } }
   const b = X ? (site.facade ? (() => { const nb = Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true }); nb.add = () => {}; return nb; })() : site.infill && typeof infBatch === 'function' ? infBatch() : Kit.batch({ name: 'kit-' + site.id, cell: 4096, far: true, gBase: site.y, gTop: c.xFloorY + H + (st.up ? 3 : 0) })) : kitIntBatch(zone);
   if (X) World.kitExt[site.id] = { batch: b, site, Ms: c.Mx, w, hd, top: H + (st.up ? 3 : 0), rise: hd * tanP, shared: !!site.infill };
+  const SSt = (typeof shellStyle === 'function' && shellStyle(site, spec)) || {};      // [fx2] covering, pitch, tone, sag, eaves, wall tone of this shell
   const MS = new THREE.Matrix4().fromArray(Ms), R = rng(site.x * 71 + site.z * 13 + 3);
   const cellExt = pass === 'ext';          // in a cell the village shell knows nothing of the room: its inside faces are plain dark
   const OUT = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : zone, inSkyVis: cellExt ? 0.12 : INT_AO }, EXT = { zone: 0, skyVis: 1 }, UP = { zone: 0, skyVis: 1, inZone: cellExt ? 0 : st.up ? zone : 0, inSkyVis: st.up && !cellExt ? INT_AO : 0.12 };       // the second storey is a room of the house (71b_storeys.js)
@@ -76,6 +78,7 @@ function kitShellPass(c, pass) {
     if (pass === 'int') { if (o === EXT) { if (!/^DoorFrame|^Door_1/.test(name)) return; o = IN; } else o = o.tint ? Object.assign({}, IN, { tint: o.tint }) : IN; }
     else if (cellExt && o.inZone !== undefined && o !== OUT && o !== UP) o = Object.assign({}, o, { inZone: 0, inSkyVis: 0.12 });
     if (st.timber && typeof infTimber === 'function') name = infTimber(name);
+    if (SSt.wallTint && pass !== 'int' && /^(Wall_(?!UnevenBrick)|Corner_Exterior)/.test(name)) o = Object.assign({}, o, { tint: SSt.wallTint });
     if (Array.isArray(s) && (Math.abs(Math.abs(s[0]) - 1) > 0.02 || Math.abs(s[1] - 1) > 0.02)) o = Object.assign({}, o, { uvs: [Math.abs(s[0]), s[1]] });
     b.add(name, KH.xf(F, x, y, z, s, ry), o);
   };
@@ -154,7 +157,7 @@ function kitShellPass(c, pass) {
       if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT), pass, ext); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: [1, 1, 1] }); }
+  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: SSt.ov || 0.5, lift: 0.14, mat: SSt.mat, ts: SSt.ts, sag: SSt.sag, thick: SSt.thick, thatch: SSt.thatch, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: SSt.tint || [1, 1, 1] }); }
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;

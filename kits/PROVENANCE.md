@@ -36,3 +36,11 @@ Built by `tools/skin.py`. Scanned texture sets are from Poly Haven (https://poly
 
 The other trim sheets (`MI_RockTrim`, `MI_RoundTiles`, `MI_MetalOrnaments`, `MI_Trim_Metal`, `MI_Trim_Cloth`) are the kit's own textures, desaturated and darkened, with grit from ambientCG `Rock020` (https://ambientcg.com/view?id=Rock020, CC0) mixed in.
 Downloaded but not used in the end: `stone_wall`, `clay_roof_tiles_02`, `dark_wooden_planks`, `weathered_brown_planks`, `plastered_wall_04`, `castle_wall_slates`.
+
+### Roof coverings (`MI_Slate`, `MI_StoneSlate`, `MI_Thatch`, used by shellStyle in `src/72c_infill.js`)
+
+Poly Haven (CC0), 1k JPG resized to 512 px, diffuse / normal (GL) / arm used as albedo / normal / orm unchanged: `MI_Slate` = `roof_slates_03`, `MI_StoneSlate` = `roof_slates_02`, `MI_Thatch` = `thatch_roof_angled` (https://api.polyhaven.com/files/<id>).
+
+### Rubble wall (`MI_Rubble`, def `MI_Rubble_Wall` in `src/73d_infill.js`)
+
+Poly Haven (CC0) `rock_wall_09`, 1k resized to 512 px, desaturated by 30% and lightened by 35% (diffuse), roughness raised (arm). Large irregular grey-brown stones in dark mortar, for retaining and yard walls. Use: `GP().quad('MI_Rubble_Wall', a, b, c, d, [1, 1, 1], [u0, v0, u1, v1], normal)` with uv in tile repeats (one tile is about 1.5 m; the def is double sided).
