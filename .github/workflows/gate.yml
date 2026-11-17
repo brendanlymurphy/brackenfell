@@ -10,9 +10,11 @@ on:
       mode:
         description: 'quick or full'
         default: full
+# One run at a time per branch. A new push does NOT cancel the run in progress (workers who push often never saw a green result):
+# it waits. GitHub keeps one waiting run per branch, so of several pushes made during a run only the newest is tested next.
 concurrency:
   group: gate-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   gate:
     runs-on: ubuntu-latest
@@ -35,9 +37,6 @@ jobs:
         run: which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       - name: Gate
         run: node tools/gate.mjs --${{ github.event.inputs.mode || 'full' }} --shard ${{ matrix.shard }}/3 --out gate-out
-      - name: Built files up to date (while they are still committed)
-        if: always()
-        run: git diff --stat --exit-code -- game.js index.html sw.js three.js || echo "::warning::committed built files differ from a fresh build"
       - name: Table on the summary page
         if: always()
         run: cat gate-out/gate.md >> "$GITHUB_STEP_SUMMARY" || true

@@ -15,7 +15,8 @@ progress, next, known problems), `docs/DECISIONS.md` (what was tried and rejecte
 - No modules: every `src/NN_name.js` is a plain script sharing one global scope; the number sets load order. Three.js is the
   global `THREE`, node-material helpers `TSL`, extras `T3X`.
 - Open `index.html` through any static server. `?perf` shows the performance overlay; `?plans=all` previews unfinished interiors.
-- The built files (`game.js`, `index.html`, `sw.js`, `three.js`) are still committed. Never edit or merge them by hand: rebuild.
+- The built files (`game.js`, `index.html`, `sw.js`, `three.js`) are NOT in the repository (git-ignored since Build 67). Build after
+  every checkout, pull or merge and before any test by hand; `tools/gate.mjs` builds first by itself. GitHub builds and publishes them.
 
 ## Test: one command
 
@@ -27,8 +28,8 @@ node tools/gate.mjs --only story,mine      named steps      --skip cells      --
 
 It runs one browser at a time, retries a failed step once (a pass on the second try is printed as flaky), prints one PASS/FAIL
 table with timings, writes `shots/gate/gate.md`, a log per step and screenshots, and exits non-zero on failure. Every push to
-`threejs` or a `fork-*` branch runs `--full` on GitHub (workflow `gate`, three jobs side by side, about 25 minutes): the result is
-the check mark on the commit, and the tables and screenshots are the run's `gate-1..3` artifacts. So: run `--quick` (or `--only` your area) before a push, read the GitHub result
+`threejs` or a `fork-*` branch runs `--full` on GitHub (workflow `gate`, three jobs side by side, about 25 minutes; a push during a
+run waits for it, it does not cancel it): the result is the check mark on the commit, and the tables and screenshots are the run's `gate-1..3` artifacts. So: run `--quick` (or `--only` your area) before a push, read the GitHub result
 after it, and do not run `--full` on a small shared machine.
 
 What `--full` runs: build; silent boot (no `warn` or `error` line: a builder that throws only logs a warning, and a build shipped
@@ -63,11 +64,11 @@ your own screenshots: tests passing has repeatedly not meant it looks right.
 7. Stay in the files you own (the brief says which). In anyone else's file make only small, marked, additive lines
    (`// [yourtag] why`), or wrap the function from your own file.
 8. Do not bump `Build N` (`src/85_ui.js`): the coordinator does at publish.
-9. To take in `threejs`: `git fetch origin threejs && git merge origin/threejs`. Conflicts in `game.js`, `index.html`, `sw.js` or
-   `three.js` are never resolved by hand: resolve the source conflicts, then `node tools/build.mjs && git add game.js index.html
-   sw.js three.js` and commit. A conflict in `audio/voice/manifest.json`: take either side, then
+9. To take in `threejs`: `git fetch origin threejs && git merge origin/threejs`, then `node tools/build.mjs`. The built files are not
+   tracked, so they can no longer conflict. If git says a built file "would be overwritten" or reports a modify/delete conflict on
+   one (a branch from before Build 67): `git rm --cached -q game.js index.html sw.js three.js`, continue, rebuild. A conflict in
+   `audio/voice/manifest.json`: take either side, then
    `python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json audio/voice --have`.
-10. (outdoors) `test/overlap.js` is a gate step (`--only overlap`); its `severe` and `solid` counts have ceilings in tools/gate.mjs that may only fall; run `window.__ovTop=60;` before it to list the worst.
 10. Before a push: `node tools/gate.mjs --quick` plus the steps for your area. After it: read the GitHub `gate` result.
 11. Report to the coordinator with a commit hash as soon as a visible chunk passes, so it ships early. A report says: what changed,
     the gate result, what you looked at yourself, and what could not be verified headless. Do not end your turn after a report:
@@ -79,12 +80,17 @@ your own screenshots: tests passing has repeatedly not meant it looks right.
 
 ## Publish (coordinator only)
 
-1. Merge the worker branch into `threejs` (its `gate` check must be green on GitHub), bump `Build N` in `src/85_ui.js`,
-   `node tools/build.mjs`, commit, push `threejs`, wait for its `gate`.
-2. Look at screenshots in the `gate` artifact (or take your own). Passing is not the same as looking right.
+1. Merge the worker branch into `threejs` (its `gate` check must be green on GitHub), bump `Build N` in `src/85_ui.js`, commit,
+   push `threejs`, wait for its `gate`. Nothing built is committed: there is no `node tools/build.mjs` step and no built file to add.
+2. Look at screenshots in the `gate` artifacts (or take your own). Passing is not the same as looking right.
 3. `git checkout main && git merge threejs && git push origin main`, back to `threejs`.
-4. The Pages run for that push must show success, and the live page's `game.js?v=` hash must equal the local `index.html`'s.
+4. The push to main starts the `pages` workflow: it builds, boots the game from the built folder, deploys, then fetches the live
+   page and fails unless it serves that build. A green `pages` run is the proof the build is live (about 3 minutes); a red one means
+   the old build is still being served, nothing is half-published. Read it with the Actions list for branch `main`.
 5. Add the build's line to `ROADMAP.md`.
+
+If the site ever has to be served the old way again: commit the four built files on `main` (`git add -f`) and set
+Settings > Pages > Source back to "Deploy from a branch".
 
 ## Where things are (`src/`) and who owns them
 

@@ -1,10 +1,8 @@
-# Builds the game on GitHub and publishes it to GitHub Pages, so the built files (game.js, index.html, sw.js, three.js) no longer
-# have to be committed. The live address does not change.
-#
-# It deploys only from main, and only once the repository's Pages source is "GitHub Actions"
-# (Settings > Pages > Build and deployment > Source). Until the owner switches that, the deploy job is skipped
-# (the build job asks GitHub which source is set) and Pages keeps serving the main branch as before.
-# On any other branch, run it by hand (Actions > pages > Run workflow) to build the site folder and boot it without deploying.
+# Builds the game on GitHub and publishes it to GitHub Pages. The built files (game.js, index.html, sw.js, three.js) are not in the
+# repository: this workflow makes them from main. The repository's Pages source is "GitHub Actions" (Settings > Pages).
+# After the deploy it fetches the live page and fails if it does not serve the build it just made, so a green run of this workflow
+# IS the proof that the build is live. On another branch, run it by hand (Actions > pages > Run workflow) to build and boot the site
+# folder without deploying.
 name: pages
 on:
   push:
@@ -22,12 +20,16 @@ jobs:
     timeout-minutes: 30
     outputs:
       source: ${{ steps.source.outputs.type }}
+      v: ${{ steps.site.outputs.v }}
     steps:
       - name: Which Pages source is set (legacy = the main branch as it is, workflow = GitHub Actions)
         id: source
         run: echo "type=$(gh api repos/${{ github.repository }}/pages --jq .build_type || echo unknown)" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Stop if Pages was switched back to "Deploy from a branch" (the built files are not in the branch, so that would serve a broken page)
+        if: github.ref == 'refs/heads/main' && steps.source.outputs.type == 'legacy'
+        run: echo "::error::Settings > Pages > Source must be GitHub Actions" && exit 1
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -37,7 +39,8 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - name: Build and assemble the site
-        run: node tools/site.mjs _site
+        id: site
+        run: node tools/site.mjs _site && echo "v=$(grep -o 'game.js?v=[0-9a-f]*' _site/index.html | head -1)" >> "$GITHUB_OUTPUT"
       - name: The site boots (production mode, from the assembled folder)
         run: node test/real.mjs --root _site | tee real.txt && grep -q '"playing":true' real.txt
       - uses: actions/upload-pages-artifact@v3
@@ -45,7 +48,7 @@ jobs:
           path: _site
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main' && needs.build.outputs.source == 'workflow'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -56,3 +59,12 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: The live page serves this build
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            live=$(curl -fsS "${{ steps.deployment.outputs.page_url }}?t=$RANDOM" | grep -o 'game.js?v=[0-9a-f]*' | head -1 || true)
+            echo "live: $live   built: ${{ needs.build.outputs.v }}"
+            [ -n "$live" ] && [ "$live" = "${{ needs.build.outputs.v }}" ] && exit 0
+            sleep 15
+          done
+          echo "::error::the live page does not serve the build that was just deployed"; exit 1
