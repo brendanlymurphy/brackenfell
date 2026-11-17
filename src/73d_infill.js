@@ -7,7 +7,7 @@ QUALITY.low.houseFar = 30; QUALITY.low.yardRange = 24; QUALITY.medium.yardRange 
 // cast into the sun-shadow maps: one prism stand-in per house does that.
 const ROOFS = [];       // every generated roof (for test/town.js: slope sample points against the neighbours' volumes)
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
-const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof';
+const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof', INF_SL = 'MI_Slate_Roof', INF_TH = 'MI_Thatch_Roof';      // [fx2] the three roof coverings: wood shingle, stone slate, thatch (shellStyle in 72c_infill picks one per building)
 function infBatch() {
   if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 48, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 48 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
   return INFS.batch;
@@ -25,6 +25,7 @@ async function infillMaterials() {
   };
   const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0, uvScale: [2.2, 2.2] });      // Build 42: grain was a metre wide on a 2 m panel
   const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 1.2, nScale: 1.0, moss: 0.6 });
+  await mk(INF_SL, 'MI_RoundTiles', 'MI_Slate', { gain: 1.1, nScale: 1.0, moss: 0.5 }); await mk(INF_TH, 'MI_RoundTiles', 'MI_Thatch', { gain: 1.0, nScale: 1.0, moss: 0.3 });      // [fx2]
   if (Kit.defs.MI_UnevenBrick) Kit.defs[INF_B] = Object.assign({}, Kit.defs.MI_UnevenBrick, { name: INF_B, doubleSided: true });
   if (Kit.defs[INF_T]) Kit.defs[INF_T].doubleSided = true;
   INFS.mats = ok1 && ok2 && !!Kit.defs[INF_B];
@@ -129,12 +130,15 @@ function infRoofGen(B, MS, o) {
   const g = GP(), g2 = GP(), gf = GP(), w = o.w, d = o.d, tanP = o.tanP, ridgeX = o.ridgeX !== false, len = ridgeX ? w : d, span = ridgeX ? d : w, ov = o.ov === undefined ? 0.5 : o.ov, zc = o.zc || 0, top = o.top, T = o.thick || 0.1;
   const lift = o.lift || 0, gov = o.gov === undefined ? 0.2 : o.gov, hs = span / 2, yR = top + lift + hs * tanP, yE = top + lift - ov * tanP, a0 = -len / 2 - (o.nl ? 0.04 : gov), a1 = len / 2 + (o.nr ? 0.04 : gov), ve = hs + ov;
   const P = (u, v, y) => ridgeX ? [u, y, zc + v] : [v, y, zc + u];
+  const RM = o.mat && Kit.defs[o.mat] ? o.mat : INF_S, ts = o.ts || 1.25, sag = o.sag || 0, nseg = sag ? Math.max(2, Math.ceil((a1 - a0) / 1.2)) : 1, sgy = u => sag * Math.max(0, 1 - Math.pow(2 * u / len, 2));      // [fx2] covering, texel size, ridge sag (zero at the gables)
   const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE), dark = col.map(v => v * 0.7), wood = [0.24, 0.2, 0.17];
   const OUTV = (u, v, y) => ridgeX ? [u, y, v] : [v, y, u];            // a direction in the roof's own frame -> the house frame
   const planes = G => {
     for (const s of [-1, 1]) {
-      const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE), C = P(a1, 0, yR), D = P(a0, 0, yR), up = [0, 1, 0];
-      G.quad(INF_S, A, Bp, C, D, col, [0, 0, (a1 - a0) / 1.25, slopeLen / 1.25], up);
+      for (let i = 0; i < nseg; i++) {
+        const ua = a0 + (a1 - a0) * i / nseg, ub = a0 + (a1 - a0) * (i + 1) / nseg, A = P(ua, s * ve, yE), Bp = P(ub, s * ve, yE), C = P(ub, 0, yR - sgy(ub)), D = P(ua, 0, yR - sgy(ua)), up = [0, 1, 0];
+        G.quad(RM, A, Bp, C, D, col, [(ua - a0) / ts, 0, (ub - a0) / ts, slopeLen / ts], up);
+      }
     }
     for (const [u, sg] of [[-len / 2, -1], [len / 2, 1]]) {
       const uo = u + sg * 0.015;          // Build 33: the gable plane stands 1.5 cm proud of the wall below (their top beams were coplanar)
@@ -145,17 +149,17 @@ function infRoofGen(B, MS, o) {
   planes(g); planes(gf);
   // thickness: the shingle edge at each eave and rake, a soffit under the overhang, a ridge cap
   for (const s of [-1, 1]) {
-    { const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE), A2 = P(a0, s * ve, yE - T), B2 = P(a1, s * ve, yE - T); g2.quad(INF_S, A, Bp, B2, A2, dark, [0, 0, (a1 - a0) / 1.25, 0.1], OUTV(0, s, -0.4)); }
+    { const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE), A2 = P(a0, s * ve, yE - T), B2 = P(a1, s * ve, yE - T); g2.quad(RM, A, Bp, B2, A2, dark, [0, 0, (a1 - a0) / ts, 0.1], OUTV(0, s, -0.4)); }
     for (const [u, sg, nb] of [[a0, -1, o.nl], [a1, 1, o.nr]]) {
       const A = P(u, 0, yR), Bp = P(u, s * ve, yE), B2 = P(u, s * ve, yE - T), A2 = P(u, 0, yR - T);
-      g2.quad(INF_S, A, Bp, B2, A2, dark, [0, 0, slopeLen / 1.25, 0.1], OUTV(sg, 0, 0));
+      g2.quad(RM, A, Bp, B2, A2, dark, [0, 0, slopeLen / ts, 0.1], OUTV(sg, 0, 0));
     }
     // soffit under the eave: from the wall line out to the tip
     { const A = P(a0, s * hs, top + lift - T), Bp = P(a1, s * hs, top + lift - T), C = P(a1, s * ve, yE - T), D = P(a0, s * ve, yE - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
     // soffit under the rake overhang
     for (const [u, un, ex] of [[-len / 2, a0, !o.nl], [len / 2, a1, !o.nr]]) if (ex) { const A = P(u, 0, yR - T), Bp = P(un, 0, yR - T), C = P(un, s * ve, yE - T), D = P(u, s * hs, top + lift - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
   }
-  { const A = P(a0, 0, yR + 0.05), Bp = P(a1, 0, yR + 0.05); g2.beam(W_, A, Bp, 0.13, [0.26, 0.22, 0.19]); }
+  for (let i = 0; i < nseg; i++) { const ua = a0 + (a1 - a0) * i / nseg, ub = a0 + (a1 - a0) * (i + 1) / nseg; g2.beam(W_, P(ua, 0, yR + 0.05 - sgy(ua)), P(ub, 0, yR + 0.05 - sgy(ub)), RM === INF_TH ? 0.2 : 0.13, RM === INF_TH ? col.map(v => v * 0.55) : [0.26, 0.22, 0.19]); }      // [fx2] ridge follows the sag
   ROOFS.push({ M: Array.from(MS.elements || MS), w, d, top, tanP, ridgeX, zc, ov, lift, T, a0, a1, hs, ve, yR, yE });
   const name = g.make('gen_roof_' + (_gn++)), name2 = g2.make('gen_roofe_' + (_gn++)), fn = gf.make('gen_roofF_' + (_gn++));
   Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn]; Kit.far[name2] = [];

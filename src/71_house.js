@@ -21,7 +21,7 @@ function buildHouse(site, spec) {
   const col0 = World.colliders.length, fl0 = World.floors.length, lt0 = World.lights.length;
   // Cells (56_cells.js): the interior is built in its own frame far from the village (isite, Ms) and only the shell stays on the site (site, Mx). Without cells both are the same.
   const cell = kit && CELLS_ON ? Cells.make(site.id, site.name, { site }) : null, isite = cell ? cell.cs : site;
-  const w = site.w, d = site.d, H = spec.H || 2.6, t = 0.3, P = (spec.pitch || 48) * PI / 180, tanP = Math.tan(P), hd = d / 2;
+  const w = site.w, d = site.d, H = spec.H || 2.6, t = 0.3, P = ((typeof shellStyle === 'function' && shellStyle(site, spec).pitch) || spec.pitch || 48) * PI / 180, tanP = Math.tan(P), hd = d / 2;
   const floorY = isite.y + 0.32, xFloorY = site.y + 0.32, zone = World.zones.length + 1, R = rng(site.x * 131 + site.z * 17 + 5);
   const Mx = siteMatrix(site, xFloorY), Ms = cell ? siteMatrix(isite, floorY) : Mx;
   const ext = new Mesh(4096), ins = cell ? new Mesh(2048) : ext, int = new Mesh(4096), glow = new Mesh(256);

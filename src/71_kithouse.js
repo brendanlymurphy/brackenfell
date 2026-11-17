@@ -154,7 +154,8 @@ function kitShellPass(c, pass) {
       if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT), pass, ext); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: 0.5, lift: 0.14, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: [1, 1, 1] }); }
+  const SSt = (typeof shellStyle === 'function' && shellStyle(site, spec)) || {};      // [fx2] covering, pitch, tone, sag, eaves of this shell
+  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: 0, ov: SSt.ov || 0.5, lift: 0.14, mat: SSt.mat, ts: SSt.ts, sag: SSt.sag, thick: SSt.thick, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: SSt.tint || [1, 1, 1] }); }
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
