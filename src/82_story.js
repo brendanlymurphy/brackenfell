@@ -91,7 +91,7 @@ interactUse = function (it) {
   if (it.id === 'wharf.body') { S.flags.sawBody = 1; if (!has('tally') && !S.flags.tallyGiven) { S.flags.tallyGiven = 1; give('tally'); toast('Taken: ' + ITEMS.tally[0]); } mainStart(); save(); }
   if (relicFirst && S.opened[it.id]) {
     give('minekey'); if (!has('lantern')) give('lantern'); give('ledger'); toast('Found: ' + ITEMS.minekey[0] + ', ' + ITEMS.lantern[0] + ', ' + ITEMS.ledger[0]);
-    setTimeout(() => openReader('The Sexton’s ledger', LEDGER_TEXT), 350); mainSync(); save();
+    setTimeout(() => { if (!uiBusy() && !Cells.busy && !RPG.dead) openReader('The Sexton’s ledger', LEDGER_TEXT); }, 350);       /* [bugs] not over a conversation or a door begun in that third of a second: the ledger is in the pack */ mainSync(); save();
   }
 };
 const LEDGER_TEXT = 'Each dawn: the bell, then one loaf and one pail of water to the cave on the shore, by the cellar way. Four loaves if the frost is hard.\n\nThe Quiet takes what is left on the table. It has not yet taken what is given.\n\nR. says the Warden is never to be told.\n\n— in a different, later hand —\n\nThe Warden knows. He has always known. He bars the door and does not ask what he is barring.\n\nThe key goes in the reliquary with the Sexton, so that no one who loves him can ever be asked for it.';
