@@ -445,11 +445,11 @@ const Kit = (() => {
         if (w >= 0) { S[o + w] = sl; Fd[o + w] = dmax; }
       }
     }
-    return function (u, dc) {
-      const near = dc - u.r; if (near < 3) return false;
+    return function (u, dc, m) {       // m (optional, under 1): the thing must be that far under the roofline to count as hidden (42_scene.js asks with 0.85)
+      const near = dc - u.r; if (near < 3) return false; m = m || 1;
       const h = u.y1 - cam[1], sl = h > 0 ? h / near : h / (dc + u.r), a = Math.atan2(u.z - cam[2], u.x - cam[0]), w = Math.asin(Math.min(1, u.r / dc));
       const i0 = Math.floor((a - w) / TAU_ * N), i1 = Math.floor((a + w) / TAU_ * N);
-      for (let i = i0; i <= i1; i++) { const o = (((i % N) + N) % N) * K; let ok = false; for (let k = 0; k < K; k++) if (Fd[o + k] > 0 && Fd[o + k] < near && S[o + k] >= sl) { ok = true; break; } if (!ok) return false; }
+      for (let i = i0; i <= i1; i++) { const o = (((i % N) + N) % N) * K; let ok = false; for (let k = 0; k < K; k++) if (Fd[o + k] > 0 && Fd[o + k] < near && (S[o + k] > 0 ? S[o + k] * m : S[o + k] / m) - (m < 1 ? 0.02 : 0) >= sl) { ok = true; break; } if (!ok) return false; }
       return true;
     };
   };
