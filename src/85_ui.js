@@ -3,7 +3,7 @@
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 68';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 69';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), 3800); }
@@ -108,6 +108,7 @@ function uiInit() {
   $('setFlow').addEventListener('change', e => { Env.dayLength = +e.target.value; });
   $('setInvert').addEventListener('change', e => { Input.invertY = e.target.checked; });
   $('setFps').addEventListener('change', e => { game.showFps = e.target.checked; $('fps').hidden = !game.showFps; });
+  { const b = $('perfCopy'); if (b) b.addEventListener('click', () => PerfHud.copy()); }
   $('setLefty').addEventListener('change', e => { P.lefty = e.target.checked; applyPrefs(); sv(); });
   $('setBtn').addEventListener('input', e => { P.btn = +e.target.value; applyPrefs(); });
   $('setText').addEventListener('change', e => { P.ts = +e.target.value; applyPrefs(); sv(); });
@@ -173,7 +174,7 @@ function uiFrame(dt) {
   const P = Player;
   let best = null, bs = -1e9, bp = null; const fx = Math.sin(P.yaw) * Math.cos(P.pitch), fy = Math.sin(P.pitch), fz = -Math.cos(P.yaw) * Math.cos(P.pitch), ex = P.pos[0], ey = P.pos[1] + P.eye, ez = P.pos[2];
   if (!P.locked) {
-    const test = (it, p, r) => { const dx = p[0] - ex, dy = p[1] - ey, dz = p[2] - ez, d = hyp(dx, dy, dz); if (d > r) return; const dot = (dx * fx + dy * fy + dz * fz) / (d || 1); if (dot < 0.35 && d > 0.9) return; const sc = dot * 2 - d * 0.35; if (sc > bs && interactLabel(it)) { bs = sc; best = it; bp = p; } };
+    const test = (it, p, r) => { const dx = p[0] - ex, dy = p[1] - ey, dz = p[2] - ez, d = hyp(dx, dy, dz); if (d > r) return; const dot = (dx * fx + dy * fy + dz * fz) / (d || 1); if (dot < 0.35 && d > 0.9) return; const sc = dot * 6 - d * 0.35 /* what you look at wins over what is merely nearer: a bed with a chest at its foot offered only the chest (bug 8) */; if (sc > bs && interactLabel(it)) { bs = sc; best = it; bp = p; } };
     for (const it of World.interact) { if (it.zone !== undefined && it.zone !== World.camZone && it.zone !== 0 && World.camZone !== 0) continue; test(it, it.p, it.r || 2); }
     for (const n of NPCS) { if (!n.io) n.io = { npc: n }; if (hyp(n.pos[0] - ex, n.pos[2] - ez) < 3.2) test(n.io, [n.pos[0], n.pos[1] + (n.anim === 'lie' ? 0.3 : n.anim === 'sit' ? 1.0 : 1.35 * n.scale), n.pos[2]], 2.9); }
   }

@@ -46,17 +46,19 @@ function surfaceMaterial(mode) {
     zone = zoneU; light = lightU; m.userData = { bones: bones.array, zoneU, lightU };
   }
   const layer = int(mm.x), a = texture(G.albedoArr, uv()).depth(layer), nt = texture(G.narArr, uv()).depth(layer);
-  const albedo = a.rgb.mul(mix(vec3(1), tintLin, a.a));
+  const isCloth = (mode === 'static' && !(TEST && TEST.cloth === 0)) ? step(TSL.abs(float(layer).sub(MAT.CLOTH)), 0.5) : float(0);      // [l1] thin cloth keeps its dye with light through it: richer and a little darker, never blown white
+  const albedo0 = a.rgb.mul(mix(vec3(1), tintLin, a.a)), albedo = mix(albedo0, mix(vec3(albedo0.dot(vec3(0.3333))), albedo0, 1.35).mul(0.72), isCloth);
   const N = SH.perturb(normalize(vN), positionWorld, uv(), nt.xy, float(1));
   // rooms: occlusion near floor, ceiling and corners, soot over the hearth (40b_depth.js); only generated room geometry and people carry a zone
   const rm = (mode === 'static' || mode === 'skin') ? SH.room(positionWorld, N, zone).toVar() : null, aoR = rm ? rm.x : float(1);
   let amb = SH.hemi(N, tint.a.mul(light).mul(nt.z).mul(aoR), zone).add(SH.pointLights(positionWorld, N, zone, float(0.25)).mul(mix(float(0.6), 1.0, nt.z)).mul(aoR.mul(0.65).add(0.35))).add(SH.winLight(positionWorld, N, zone).mul(aoR.mul(0.6).add(0.4)));      // [l1] window light (40c_light.js)
-  if (!(TEST && TEST.shade === 0)) amb = amb.add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)).mul(float(1).sub(step(0.5, zone))).mul(tint.a.mul(0.5).add(0.5)));      // [l1] shade keeps a floor of sky and bounce: bark, posts and fences do not go black out of the sun
+  if (!(TEST && TEST.shade === 0)) amb = amb.add(SH.U.ambSky.mul(0.3).add(SH.U.sunCol.mul(0.035)).mul(vec3(0.85, 0.95, 1.1)).mul(float(1).sub(step(0.5, zone))).mul(tint.a.mul(0.5).add(0.5))).add(vec3(0.95, 0.82, 0.68).mul(SH.U.ambSky.dot(vec3(0.3333)).mul(0.3).add(SH.U.sunCol.dot(vec3(0.3333)).mul(0.035))).mul(0.12).mul(float(1).sub(step(0.5, zone))));      // [l1] shade keeps a floor of sky and bounce: bark, posts and fences do not go black out of the sun
   const sootK = rm ? mix(vec3(1), vec3(0.22, 0.21, 0.2), rm.z.mul(0.9)) : vec3(1);
   m.colorNode = albedo.mul(sootK).mul(unlit.oneMinus());
-  m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit)).add(mode === 'static' && !(TEST && TEST.gloss === 0) ? SH.pointSpec(positionWorld, N, normalize(SH.U.camPos.sub(positionWorld)), step(TSL.abs(mm.x.sub(MAT.PLANKS)), 0.5).mul(0.5), zone).mul(0.16) : vec3(0));      // [l1] worn planks catch the firelight
+  m.emissiveNode = albedo.mul(sootK).mul(mix(amb, vec3(mm.w.div(16)), unlit)).add((TEST && TEST.shade === 0) || mode === 'skin' ? vec3(0) : vec3(0.95, 0.82, 0.68).mul(SH.U.ambSky.dot(vec3(0.3333)).mul(0.3).add(SH.U.sunCol.dot(vec3(0.3333)).mul(0.035))).mul(0.1).mul(float(1).sub(step(0.5, zone))).mul(unlit.oneMinus())).add(mode === 'static' && !(TEST && TEST.gloss === 0) ? SH.pointSpec(positionWorld, N, normalize(SH.U.camPos.sub(positionWorld)), step(TSL.abs(mm.x.sub(MAT.PLANKS)), 0.5).mul(0.5), zone).mul(0.16) : vec3(0));      // [l1] worn planks catch the firelight
   m.normalNode = transformNormalToView(N);
-  m.roughnessNode = nt.w; m.metalnessNode = float(0);
+  m.roughnessNode = (TEST && TEST.rough === 0) ? nt.w : TSL.max(nt.w, float(0.8).mul(float(1).sub(step(0.5, zone))));      // [l1] nothing dry out of doors sparkles: a rough floor on every static and rigid surface
+  m.metalnessNode = float(0);
   return m;
 }
 // leaf cards: cut-out, lit from both sides, a little sun shining through
@@ -141,6 +143,7 @@ function terrainMaterial() {
     // in rain, broad shallow pools also lie over cobbles and packed road whatever the stones' height
     pud.assign(max(pud, smoothstep(0.50, 0.60, mn2.a.mul(0.55).add(mn3.b.mul(0.15)).add(mn.r.mul(0.30))).mul(wet).mul(hard).mul(smoothstep(0.02, 0.07, slope).oneMinus()).mul(farK.mul(0.5).oneMinus())));
     const damp = sat(s2.g.mul(0.7).add(pud).add(wet.mul(0.7))).toVar();
+    if (!(TEST && TEST.rough === 0)) G0.r.assign(max(G0.r, 0.86));      // [l1] dry ground never glints; water and wet cobbles below still shine
     G0.c.mulAssign(mix(float(1), 0.52, damp)); G0.r.assign(mix(G0.r, 0.07, pud)); G0.r.assign(mix(G0.r, mix(float(0.45), 0.24, wet), damp.mul(0.6))); G0.n.assign(mix(G0.n, vec2(0.5), pud)); G0.ao.assign(mix(G0.ao, 1.0, pud));
     If(wRock.greaterThan(0.004), () => {
       const q = samp(MAT.ROCK, uvR, dRx, dRy), q2 = samp(MAT.ROCK, uvR2, dR2x, dR2y), kx = Nv.z.mul(Nv.z).div(Nv.x.mul(Nv.x).add(Nv.z.mul(Nv.z)).add(0.0001)).toVar();       // kx: weight of the x-y plane (faces looking along z)

@@ -54,6 +54,16 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - **58** Clean-up batch 1: real door leaves, wharf doors, muted awnings, lamp glass glows at night only, stray colliders removed.
 - **59** Lighting pass 3 (coloured light from stained glass, contact bands, low mist at dawn and dusk, wet cobbles at the wharf);
   stall goods; secrets' props; scanned rock in the mine.
+- **60-62** Gemini voices live for 171 of 172 original lines; real lip sync (19 face morphs, cue tracks per recording); a crash
+  in `Snd.now()` without an audio context fixed (62).
+- **63-66** Clean-up: outdoor overlaps (severe 37 to 5), measured placement indoors (617 overlaps to 3), pictures as varnished
+  panels, wardrobe parts, per-person girth and height.
+- **67** A real child in a smock, kirtles for five women; interiors batch; first build published by GitHub Actions.
+- **68** (not published by itself) Play-bot bug fixes: crypt gate after a reload, saves load where made, progress kept between
+  save points, dialogue options fit a phone, 44 px touch targets; built files untracked.
+- **69** Build 68 plus: loot taken wherever it fell, long fights robust, "Copy performance report" in Settings, lighting round two
+  (shade floors, cloth keeps its dye, palisade glare gone), interiors (oak tints, muted cloaks). The offline test now waits for
+  the service worker in the page (it had failed on GitHub while the game itself was fine).
 
 ## In progress (branch, owner)
 
@@ -67,8 +77,15 @@ interiors lit by hearths and candles. As realistic as free art allows.
   - Items 2 and 3: phone fit, rotation, hide and resume, sound after the first tap, offline start, and a 30-minute soak are bot
     scenarios; nothing leaks and nobody gets stuck in the soak as measured.
   - Item 4: 178 of 248 lines have audio and lip tracks; the rest come from the daily batch (08:20 UTC).
-- Other worker branches (`fork-fx1` outdoors overlap, `fork-fx2` interiors, `fork-ch1` characters) are named in the coordinator's
-  briefs; when one merges, its line goes to Done.
+- `fork-play` (the second Claude Code session): walk bot (`docs/WALK.md`), performance round 2, prompts not offered through walls,
+  daily voice batches.
+- FREEZE (owner, Build 69): nothing new; make what exists right. Three workers:
+  - `fork-fx3` ground and levels: real ground (fall, crowned streets, earth, mud, grass, wear paths), every terrace, platform,
+    deck and wall walk rebuilt into the terrain or removed, the town wall given age and variety; then the outdoor overlap list.
+  - `fork-hx` house exteriors: sameness measured by script, then structure, roofs, add-ons, placement and wear varied by district
+    and wealth (no two neighbours alike). The mine's look (`fork-fx2`: rock walls, torch pools, flood water) waits behind it.
+  - `fork-ch1` characters: apron glitch, aprons varied, men's tunics shown, posture, hair and beards; no two people alike.
+  - Logic, storylines, what people do, mechanics: asked of the second Claude Code session (`fork-logic`, docs/LOGIC.md).
 
 ## Next
 

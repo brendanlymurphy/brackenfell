@@ -78,7 +78,7 @@ Bake.interior = function (P) {
     const p0 = P.w2(cx + dx * 0.25, L.y + 1.5, cz + dz * 0.25), p1 = P.w2(cx + dx * 1.25, L.y + 1.5, cz + dz * 1.25);
     const dd = Math.hypot(p1[0] - p0[0], p1[2] - p0[2]) || 1;
     const og = wl.open.find(o => o.type === 'win' && o.pos === w.pos), gc = og && og.glass;
-    cell.wins.push({ p: p0, d: [(p1[0] - p0[0]) / dd, (p1[2] - p0[2]) / dd], r: Math.max(9, Math.min(13, Math.max(w.room.x1 - w.room.x0, w.room.z1 - w.room.z0) * 0.9)), k: 1, k0: w.k, c: gc ? [0.45 + gc[0] * 0.9, 0.45 + gc[1] * 0.9, 0.45 + gc[2] * 0.9] : null });
+    cell.wins.push({ p: p0, d: [(p1[0] - p0[0]) / dd, (p1[2] - p0[2]) / dd], r: Math.max(9, Math.min(13, Math.max(w.room.x1 - w.room.x0, w.room.z1 - w.room.z0) * 0.9)), k: Math.min(1.35, Math.max(0.7, Math.pow(4 / Math.max(P.windows.length, 1), 0.4))), k0: w.k, c: gc ? [0.45 + gc[0] * 0.9, 0.45 + gc[1] * 0.9, 0.45 + gc[2] * 0.9] : null });
     Bake.stats.wins++;
   }
 };
