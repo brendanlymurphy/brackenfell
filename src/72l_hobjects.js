@@ -168,7 +168,7 @@ TP.scales = m => { m.mat(MAT.METAL, [0.3, 0.26, 0.2]); m.box(-0.03, 0, -0.03, 0.
 
 TP.bustPlinth = m => { m.mat(MAT.STONE, [0.7, 0.68, 0.64]); m.box(-0.22, 0, -0.22, 0.22, 0.9, 0.22); m.box(-0.27, 0.9, -0.27, 0.27, 0.95, 0.27); kp(m, 'marble_bust_01', 0, 0.95, 0, 1.3, 0); addBoxCollider(m, -0.28, -0.28, 0.28, 0.28, 0, 1.65); };
 TP.chessTable = m => { kp(m, 'round_wooden_table_01', 0, 0, 0, 0.7, 0); kp(m, 'chess_set', 0, 0.7, 0, 1.3, 0); kp(m, 'folding_wooden_stool', 0, 0, 0.62, 0.8, PI); kp(m, 'folding_wooden_stool', 0, 0, -0.62, 0.8, 0); addBoxCollider(m, -0.5, -0.85, 0.5, 0.85, 0, 0.75); };
-TP.rocker = m => { kp(m, 'rockingchair_01', 0, 0, 0, 1.0, PI); addBoxCollider(m, -0.36, -0.42, 0.36, 0.42, 0, 0.9); };
+TP.rocker = m => { kp(m, 'rockingchair_01', 0, 0, 0, 1.0, 0); addBoxCollider(m, -0.36, -0.42, 0.36, 0.42, 0, 0.9); };
 TP.mantelCase = m => { kp(m, 'classicnightstand_01', 0, 0, 0, 1.2, 0); kp(m, 'mantel_clock_01', 0, 0.84, 0, 1.6, 0); addBoxCollider(m, -0.35, -0.27, 0.35, 0.27, 0, 1.0); };
 TP.cabinetBig = m => { kp(m, 'gothiccabinet_01', 0, 0, 0, 0.75, 0); kp(m, 'carved_wooden_elephant', 0.3, 1.77, 0, 3.0, 0.4); addBoxCollider(m, -0.65, -0.43, 0.65, 0.43, 0, 1.8); };
 TP.compassTable = m => { kp(m, 'round_wooden_table_01', 0, 0, 0, 0.5, 0); kp(m, 'seadogs_compass', 0, 0.5, 0, 2.2, 0.6); kp(m, 'brass_pan_01', -0.15, 0.5, 0.1, 0.9, 1.0); addBoxCollider(m, -0.35, -0.35, 0.35, 0.35, 0, 0.75); };
