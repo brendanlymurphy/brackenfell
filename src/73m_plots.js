@@ -217,3 +217,19 @@ function buildEastLane(bucket) {
   m.push().T(wx, g, wz).RY(0.3); Props.well(m); m.pop();
   addCircleCollider(m, wx, wz, 1.0, g, g + 1.2);
 }
+
+// [fx3] the way from the north gate to the lych gate: a walled side (rubble, 1.1 m) and a hedged side (a dense hedge on a low bank), 3 m apart, the path between worn to earth with a flagged middle
+function buildChapelWay(bucket) {
+  if (TEST && TEST.plots === 0) return;
+  const R = rng(6161), gy = (x, z) => Terrain.y(x, z), P = [[-6.3, -62.6], [-9.4, -64.1], [-12.6, -65.6]];
+  for (let i = 0; i + 1 < P.length; i++) {
+    const a = P[i], b = P[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), nx = -dz / L, nz = dx / L, ang = Math.atan2(dz, dx);
+    for (const sd of [-1, 1]) { const ax = a[0] + nx * sd * 1.5, az = a[1] + nz * sd * 1.5, cx = ax + dx / 2, cz = az + dz / 2, g = gy(cx, cz) - 0.15, m = bucket(cx, cz);
+      m.push().T(cx, g, cz).RY(-ang);
+      if (sd < 0) { m.mat(MAT.STONE, [0.4, 0.38, 0.35], 1.4); m.box(-L / 2, 0, -0.25, L / 2, 1.15, 0.25); }
+      else { m.mat(MAT.MOSS, [0.32 + R() * 0.06, 0.4, 0.2], 1.2); m.box(-L / 2, 0.2, -0.45, L / 2, 1.5, 0.45); m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.6); m.box(-L / 2, 0, -0.55, L / 2, 0.3, 0.55); }
+      addBoxCollider(m, -L / 2 + 0.45, -0.3, L / 2 - 0.45, 0.3, 0, 1.3);
+      m.pop(); }
+    for (let k = 0; k < 3; k++) { const t = (k + 0.5) / 3, x = a[0] + dx * t, z = a[1] + dz * t, mm = bucket(x, z), g = gy(x, z); mm.push().T(x, g, z).RY(-ang + (R() - 0.5) * 0.1); mm.mat(MAT.STONE, [0.5 + R() * 0.07, 0.48, 0.43], 1.2); mm.box(-0.5, -0.03, -0.45, 0.5, 0.03, 0.45); mm.pop(); }
+  }
+}
