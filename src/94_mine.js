@@ -370,7 +370,7 @@ const MINE_ROCKS = [['rock_face_02', 1.06, 0.4], ['boulder_01', 0.91, 0.25], ['n
 function mineKit() {
   if (!MINE.built || MINE.kitDone || typeof kitReady !== 'function' || !kitReady() || !Kit.pieces.rock_face_01) return; MINE.kitDone = true;
   const O = MINE.O, FY = MINE.FY, G = MINE.grid, B = Kit.batch({ name: 'mine', cell: 14 });
-  const add = (n, x, y, z, ry, s, rx) => { if (!Kit.pieces[n]) return; B.add(n, Kit.matrix({ p: [O[0] + x, FY + y, O[2] + z], r: [rx || 0, ry || 0, 0], s: s || 1 }), { zone: 0, skyVis: 0.3, cast: false }); };
+  const add = (n, x, y, z, ry, s, rx) => { if (!Kit.pieces[n]) return; B.add(n, Kit.matrix({ p: [O[0] + x, FY + y, O[2] + z], r: [rx || 0, ry || 0, 0], s: s || 1 }), { zone: 0, skyVis: 0.3, cast: false, tint: [0.5, 0.48, 0.46] }); };      // [fx2] the scanned boulders came out orange: cooler, duller rock
   const NRM = { W: [1, 0, 0], E: [-1, 0, 0], N: [0, 0, -1], S: [0, 0, 1] }, POS = { W: (i, j) => [i, j + 0.5], E: (i, j) => [i + 1, j + 0.5], N: (i, j) => [i + 0.5, j + 1], S: (i, j) => [i + 0.5, j] };
   const pick = h => { let a = 0; for (const r of MINE_ROCKS) { a += r[2]; if (h < a) return r; } return MINE_ROCKS[0]; };
   for (const k of ['W', 'E', 'N', 'S']) for (const [i, j] of G.edges[k]) {
