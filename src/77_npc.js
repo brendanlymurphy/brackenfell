@@ -57,7 +57,9 @@ function navBuild() {
   const outside = roadNodes.concat(sq);
   /* [coord] Build 72: a road that stops short of the place (the north road now ends in a ginnel 6 m from the nearest stepping stone) was joined to nothing,
      so everyone bound for it walked 500 m round by the hills. Each road end joins the nearest node that is not its own road, within 12 m. */
-  for (const [k0, k1] of roadEnds) for (const e of [k0, k1]) { const j = nearest(N[e][0], N[e][2], outside.filter(k => k < k0 || k > k1), 12); if (j >= 0) link(e, j); }
+  const blocked = (a, b) => { const n = Math.ceil(hyp(N[a][0] - N[b][0], N[a][2] - N[b][2]) / 0.3); for (let i = 1; i < n; i++) { const t = i / n, x = N[a][0] + (N[b][0] - N[a][0]) * t, z = N[a][2] + (N[b][2] - N[a][2]) * t, y = World.groundY(x, z);
+    for (const c of World.colliders) { if (c.y0 > y + 1.2 || c.y1 < y + 0.4) continue; const dx = x - c.x, dz = z - c.z; if (c.r !== undefined) { if (dx * dx + dz * dz < c.r * c.r) return true; } else if (Math.abs(dx * c.ax + dz * c.az) < c.hx && Math.abs(dx * c.bx + dz * c.bz) < c.hz) return true; } } return false; };       /* a wall or a house between two nodes */
+  for (const [k0, k1] of roadEnds) for (const e of [k0, k1]) { const cand = outside.filter(k => (k < k0 || k > k1) && hyp(N[k][0] - N[e][0], N[k][2] - N[e][2]) < 12 && !blocked(e, k)), j = nearest(N[e][0], N[e][2], cand, 12); if (j >= 0) link(e, j); }
   const doorNode = {};
   for (const id in World.houses) {
     const h = World.houses[id], d = h.door; if (!d) continue;
