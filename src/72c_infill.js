@@ -35,7 +35,7 @@ const SHELL_TONES = {      // narrow bands: variety comes from pitch, height, ri
 function shellDistrict(x, z) {
   if (z < -42) return 'chapelgate'; if (z > 34) return 'wharfside'; if (x > 56) return 'riverside'; if (x < -50) return 'westgate'; return 'market';
 }
-const LIME = { cream: [0.7, 0.66, 0.56], grey: [0.64, 0.63, 0.6], ochre: [0.68, 0.57, 0.4], pink: [0.66, 0.56, 0.5], sage: [0.58, 0.62, 0.55], bone: [0.7, 0.67, 0.6], dun: [0.6, 0.55, 0.46] };      // limewash is never white: dirty, at most about 0.8
+const LIME = { cream: [0.57, 0.54, 0.46], grey: [0.52, 0.52, 0.49], ochre: [0.56, 0.47, 0.33], pink: [0.54, 0.46, 0.41], sage: [0.48, 0.51, 0.45], bone: [0.57, 0.55, 0.49], dun: [0.49, 0.45, 0.38] };      // limewash is never white: dirty, at most about 0.8
 const SHELL_WALL = {      // [chance of limewash over the planks, chance of a stone ground floor, limewash tones, plank tone]
   market: [0.6, 0.75, ['cream', 'grey', 'ochre', 'pink', 'bone', 'sage'], [1, 1, 1]],
   chapelgate: [0.5, 0.95, ['grey', 'dun', 'bone', 'grey'], [0.8, 0.78, 0.76]],
@@ -95,7 +95,7 @@ function shellDress(c, b, frames, MS, o) {
   if (R() < 0.4) { const cu = (R() < 0.5 ? 0.35 : Lf - 0.35); g.beam(W_, [cu, 0.55, 0.1], [cu, Ytop - 0.05, 0.1], 0.04, [0.16, 0.15, 0.15]); octa(g, cu, 0, 0.42, 0.32, 0.75, [0.3, 0.23, 0.17]); any = true; }
   // rain streaks under the eaves and a damp foot on limewashed walls; flaked patches where the wash has come off the daub
   if (limed) {
-    const nS = 3 + (R() * 3 | 0); if (!(site.infill && fl < 2)) for (let i = 0; i < nS; i++) { const u = 0.4 + R() * (Lf - 0.8), len = 0.7 + R() * 1.4, wd = 0.05 + R() * 0.12; g.quad(Lm, [u, Ytop - len, 0.014], [u + wd, Ytop - len * 0.9, 0.014], [u + wd * 1.4, Ytop - 0.02, 0.014], [u - wd * 0.2, Ytop - 0.02, 0.014], dk(0.72), [0, 0, 0.1, 0.1], [0, 0, 1]); }
+    const nS = 3 + (R() * 3 | 0); if (!(site.infill && fl < 2)) for (let i = 0; i < nS; i++) { const u = 0.4 + R() * (Lf - 0.8), len = 0.7 + R() * 1.4, wd = 0.05 + R() * 0.12; g.quad(Lm, [u, Ytop - len, 0.014], [u + wd, Ytop - len * 0.9, 0.014], [u + wd * 1.4, Ytop - 0.02, 0.014], [u - wd * 0.2, Ytop - 0.02, 0.014], dk(0.55), [0, 0, 0.1, 0.1], [0, 0, 1]); }
     if (fl > 1) for (const q of wins(front)) { const cu = (q.u0 + q.u1) / 2; g.quad(Lm, [cu - 0.3, H + 0.2, 0.014], [cu + 0.3, H + 0.2, 0.014], [cu + 0.2, H + 0.9, 0.014], [cu - 0.2, H + 0.9, 0.014], dk(0.82), [0, 0, 0.1, 0.1], [0, 0, 1]); }       // wet below the upper sills
     for (let i = 0; i < (site.infill && fl < 2 ? 0 : 1 + (R() * 2 | 0)); i++) { let u = R() * (Lf - 1), tries = 0; while (tries++ < 8 && (openings[front] || []).some(q => u + 0.9 > q.u0 - 0.3 && u < q.u1 + 0.3)) u = R() * (Lf - 1); if (tries > 8) continue; const y = site.infill ? H + 0.2 + R() * 1.6 : R() < 0.6 ? 0.1 + R() * 0.6 : 0.8 + R() * 1.8, pw = 0.3 + R() * 0.7, ph = 0.2 + R() * 0.45; g.quad(Lm, [u, y, 0.016], [u + pw, y + R() * 0.08, 0.016], [u + pw * 0.8, y + ph, 0.016], [u + 0.1, y + ph * 0.9, 0.016], [0.22, 0.17, 0.12], [0, 0, 0.1, 0.1], [0, 0, 1]); }       // bare daub
     if (gLimed) g.quad(Lm, [0, -0.2, 0.014], [Lf, -0.2, 0.014], [Lf, 0.42, 0.014], [0, 0.42, 0.014], dk(0.55), [0, 0, 0.1, 0.1], [0, 0, 1]);      // damp at the foot
