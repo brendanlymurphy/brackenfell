@@ -4,16 +4,16 @@
 Object.assign(ITEMS, {
   tally: ['Miner’s tally token', 'Brass, stamped OM 14. It was round a drowned man’s neck on a bootlace.'],
   minekey: ['Sexton’s mine key', 'Long, black and heavier than it looks. The bow is cut with a pick and a bell.'],
-  lantern: ['Miner’s lantern', 'Horn panes, a stub of wick and a tin of oil. Down there it is the difference between a path and a wall.', { value: 8, cost: 12 }],
+  lantern: ['Miner’s lantern', 'Horn panes, a stub of wick and a tin of oil. Down there it is the difference between a path and a wall. A light is seen from further off than it shows you: douse it to pass something unnoticed.', { value: 8, cost: 12 }],
   ledger: ['Sexton’s ledger', 'A thin book bound in sealskin. The last pages are in two hands.'],
   journal: ['Corwin’s journal', 'Water-stained, pages stuck together at the corners. The writing gets smaller towards the end.'],
 });
 QUESTS.main = { name: 'The Quiet Under Brackenfell', stages: [
-  'Go to the wharf: a man has been found on the shingle',
+  'Go to the wharf: a dead man lies on a bier there',
   'Show Old Maren the miner’s tally token',
   'Find the Sexton’s mine key in the crypt under the chapel',
   'Unlock the Old Mine in the south-west cliffs and go down',
-  'Find Corwin in the deep workings',
+  'Find what became of Corwin in the deep workings',
   'Take Corwin’s journal to Warden Hale',
   'Ask Elder Rowan what has been left at the lake',
 ] };
@@ -102,7 +102,8 @@ const _hale82 = TALK.hale;
 TALK.hale = function () {
   if (has('journal') && !S.flags.act1) return TALK.haleJournal();
   const n = _hale82();
-  if (n && /^Hold there/.test(n.t)) { const o = n.o.slice(); n.o = [['You look like a man with something on his mind.', () => node('Finn pulled a man out of the lake at first light. He’s on a bier at the wharf, south end of the town. Go and look, if you’ve the stomach, before the gossips make a story of him.', o)]].concat(o); mainStart(); }       // his greeting keeps its recorded words (a changed line would lose its voice); the wharf is a question you can ask, and the journal points there
+  if (n && /^Hold there/.test(n.t)) { const o = n.o.slice(); n.o = [['You look like a man with something on his mind.', () => { mainStart(); return node('Finn pulled a man out of the lake at first light. He’s on a bier at the wharf, south end of the town. Go and look, if you’ve the stomach, before the gossips make a story of him.', o); }]].concat(o); }
+  else if (n && n.o && !S.flags.sawBody && qAt('main') < 0 && !(S.crime && S.crime.fine > 0)) { const o = n.o.slice(); n.o = [['You look like a man with something on his mind.', () => { mainStart(); return node('Finn pulled a man out of the lake at first light. He’s on a bier at the wharf, south end of the town. Go and look, if you’ve the stomach, before the gossips make a story of him.', o); }]].concat(o); }       /* [logic] asked later, he still tells it: before, the question was offered once, in his greeting, and the journal began the story whether or not you asked */       // his greeting keeps its recorded words (a changed line would lose its voice); the wharf is a question you can ask, and the journal points there
   return n;
 };
 TALK.haleJournal = () => node('That’s Corwin’s hand. Alive, then, or he was. Let me see.\n\nBread. Fifty years of bread, in a cave on the shore. I barred that door and told myself it was to keep them out.', [['What did you know?', () => node('That something went wrong below, before I wore this helmet. That Rowan went out to the shore every dawn and never said why. I didn’t ask. A man can keep a gate for thirty years that way.', [['What now?', () => { S.flags.act1 = 1; mainSync(); toast('<b>Act one ends.</b> The way on is under the Honeyed Hart.'); save(); return node('Not here. Rowan knows the way to the lake cave; he’s walked it with a pail more mornings than I’ve slept. Go and ask him, and don’t let him tell you it’s nothing.'); }, 1]])], ['Keep it. I’ll find Rowan.', () => { S.flags.act1 = 1; mainSync(); save(); return null; }, 1]]);
@@ -110,13 +111,18 @@ const marenPell = () => node('Brass, and a number. OM fourteen: the Old Mine, Du
 const marenDry = () => node('No. Dry as a bone inside and thin as a rake: he walked a long way on nothing, in the dark. That’s no lake’s work.', [['Where did he come from?', marenDoor, 1]]);
 const marenDoor = () => { S.flags.pell = 1; S.flags.sawBody = 1; mainStart(); mainSync(); save(); return node('The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.'); };
 addOpt('maren', n => has('tally') && !S.flags.pell ? ['I found this on a dead man at the wharf.', marenPell, 1] : null, true);
-addOpt('aldous', n => qAt('main') >= 1 && !has('minekey') && !S.flags.mineOpen ? ['The Sexton’s key. Where is it kept?', () => node('There’s a vestment chest in the sacristy that I’ve never had the heart to open. The Sexton’s things are in it. The crypt gate under the nave has a lock to match.')] : null);
-addOpt('finn', n => ['The man you found.', () => node('First light, face down in the reeds. The lake gives drowned men back swollen. This one was thin as a rake and dry as kindling. Whatever he was, he walked to the water; he didn’t fall in.')]);
-addOpt('pip', n => ['What’s the crowd at the wharf?', () => node('A man under a sheet! Hale said not to look. I looked. He’s got silver in his teeth.')]);
+addOpt('aldous', n => S.flags.pell && !has('minekey') && !S.flags.mineOpen ? ['The Sexton’s key. Where is it kept?', () => node('There’s a vestment chest in the sacristy that I’ve never had the heart to open. The Sexton’s things are in it. The crypt gate under the nave has a lock to match.')] : null);
+addOpt('finn', n => (qAt('main') >= 0 || S.flags.sawBody) && !S.flags.act1 ? ['The man you found.', () => { return node('First light, face down in the reeds. The lake gives drowned men back swollen. This one was thin as a rake and dry as kindling. Whatever he was, he walked to the water; he didn’t fall in.'); }] : null);
+addOpt('pip', n => !S.flags.act1 ? ['What’s happening at the wharf?', () => { mainStart(); return node('A man under a sheet! Hale said not to look. I looked. He’s got silver in his teeth.'); }] : null);       /* [logic] there is no crowd at the wharf to ask about; and a child who has seen it starts the story as well as Hale does */
+// [logic] what Greta would never tell (the trunk on her own roof, the lights behind the chapel where she is one of the two) a child tells
+const PIP_SEEN = [[() => !secFlag('attic'), 'There’s a trunk up on the Hart’s roof walk. I climbed up. It’s locked, and Greta says it isn’t hers, but she looked cross.'], [() => !secFlag('meetpouch'), 'There’s lights behind the chapel after midnight. Two people. I’m not allowed out, so I didn’t see them.']];
+addOpt('pip', n => ['Seen anything odd, Pip?', () => { S.pipSeen = S.pipSeen || {}; const i = PIP_SEEN.findIndex((x, k) => x[0]() && !S.pipSeen[k]); if (i < 0) return node('Nothing. I’m being good today.'); S.pipSeen[i] = 1; save(); return node(PIP_SEEN[i][1]); }]);
 const _marta82 = TALK.marta;
-TALK.marta = function () { const n = _marta82(); if (n && n.o) { const i = n.o.indexOf(bye); n.o.splice(i < 0 ? n.o.length : i, 0, ['A miner’s lantern. (12 gold)', () => { if (has('lantern')) return node('You’ve one already, dear. Don’t be greedy with light.'); return TALK.buy('lantern', 12, 'Fill it before you go and mind the oil. Where you’re going, you’ll want it.'); }]); } return n; };
+TALK.marta = function () { const n = _marta82(); if (n && n.o) { const i = n.o.indexOf(bye); if (S.flags.pell || S.flags.mineOpen || has('minekey')) n.o.splice(n.o.indexOf(bye) < 0 ? n.o.length : n.o.indexOf(bye), 0, ['A miner’s lantern. (12 gold)', () => { if (has('lantern')) return node('You’ve one already, dear. Don’t be greedy with light.'); return TALK.buy('lantern', 12, 'Fill it before you go and mind the oil. Where you’re going, you’ll want it.'); }]); } return n; };
 const _rowan82 = TALK.rowan;
 TALK.rowan = function () {
-  if (S.flags.act1 && !S.flags.rowanAsked) return node('Sit down, you’re making me tired. ... Hale has read it, then. I thought he might. I thought it would be me they came for one day.\n\nThe cave on the lake shore. The cellar of the Hart. I’ll tell you the rest, but not on my feet, and not today.', [['I’ll be back.', () => { S.flags.rowanAsked = 1; save(); return null; }, 1]]);
+  if (S.flags.act1 && !S.flags.rowanAsked) return node('Sit down, you’re making me tired. ... Hale has read it, then. I thought he might. I thought it would be me they came for one day.\n\nThe cave on the lake shore. The cellar of the Hart. I’ll tell you the rest, but not on my feet, and not today.', [['I’ll be back.', () => { S.flags.rowanAsked = 1; S.flags.rowanDay = RPG.st().day || 0; save(); return null; }, 1]]);
+  // [logic] "not today" means not today: he tells the rest on a later day (sleep, or wait out the night)
+  if (S.flags.rowanAsked && !S.flags.act2 && !S.flags.ending && S.flags.rowanDay !== undefined && (RPG.st().day || 0) <= S.flags.rowanDay) return node('Tomorrow, I said. An old man needs a night to find the words. Sleep, and come back.');
   return _rowan82();
 };

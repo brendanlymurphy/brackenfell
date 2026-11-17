@@ -46,6 +46,7 @@ log.push('act1 up to the mine door ok, stage ' + qAt('main'));
 // ── Acts 2 and 3: Rowan tells it, the Hart's wall, the smugglers' tunnel, the Bread Cave, both endings ──
 { const O2 = Cells.by.mine.origin, FY2 = Cells.by.mine.floorY, at2 = async (x, z, yaw) => { Cells.teleport({ p: [O2[0] + x, FY2 + 0.1, O2[2] + z], yaw: (yaw || 0) * Math.PI / 180, cell: 'mine' }); await sleep(250); await idle(); };
   Foes.calm(true); S.flags.act1 = 1; talk('rowan', 0); fx(S.flags.rowanAsked, 'Rowan: first visit did not set rowanAsked'); fx(!S.flags.act2, 'Rowan told it all on the first visit');
+  { const n = TALK.rowan(); fx(/Tomorrow/.test(n.t) && !S.flags.act2, 'Rowan tells the rest on the same day he said "not today"'); fx(/tomorrow/.test(questLine('main')), 'the journal does not say to come back tomorrow: ' + questLine('main')); RPG.st().day = (RPG.st().day || 0) + 1; }
   talk('rowan', 0, 0, 0); fx(S.flags.act2, 'Rowan did not start Act 2'); fx(qAt('main') === 7, 'stage after Rowan ' + qAt('main')); log.push('act 2: Rowan told it');
   { const t = questTarget('main'); fx(t && hyp(t[0], t[2] + 17) < 8, 'marker at stage 7 not at the Hart ' + t); }
   const wall = World.interact.find(i => i.id === 'sec.wall'); fx(wall, 'no wall secret'); interactUse(wall); if (UI.reader) closeReader(); fx(S.opened['sec.wall'] && S.flags.sec_wall, 'wall did not open once Rowan had spoken');

@@ -118,7 +118,7 @@ if '--have' in args:
         c = cast.get(p['speaker']) or cast['narrator']; name = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'; dst = os.path.join(out, name)
         if not os.path.exists(dst): continue
         d, e = analyse(dst)
-        if d > 30 or d > max(4, len(p['say']) * 0.45): print('TOO LONG, removed: %s %.1fs %s' % (p['speaker'], d, p['say'][:50])); os.remove(dst); continue
+        if (d > 30 and d > len(p['say']) * 0.13) or d > max(4, len(p['say']) * 0.45): print('TOO LONG, removed: %s %.1fs %s' % (p['speaker'], d, p['say'][:50])); os.remove(dst); continue
         man['lines'][p['key']] = { 'f': name, 'd': d, 'e': e, 's': p['speaker'] }; n += 1
     old = json.load(open(mf)) if os.path.exists(mf) else {}
     for k, v in old.get('lines', {}).items():                       # keep what other tools added to an entry (lip-sync tracks) when the file is the same

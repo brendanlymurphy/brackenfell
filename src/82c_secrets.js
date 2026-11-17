@@ -104,10 +104,10 @@ function secTick(dt) {
   const P = Player.pos, h = Env.hour, d2 = (x, z) => hyp(P[0] - x, P[2] - z);
   // the meeting
   { const M = SEC.meet; if (M && M.a) { const night = h >= 23 || h < 3.5, near = d2(M.x, M.z);
-      if (M.st === 'off' && night && near < 40 && !S.flags.hear_meeting) { M.st = 'here'; M.a.visible = M.b.visible = true; M.t = 0; if (SEC.meetEm !== 1) { World.emitters.push(M.em); SEC.meetEm = 1; } M.em.always = true; }
+      if (M.st === 'off' && night && near < 40 && !S.flags.hear_meeting && !S.flags.ending) {       /* [logic] once the matter under the town is settled there is nothing left to whisper about */ M.st = 'here'; M.a.visible = M.b.visible = true; M.t = 0; if (SEC.meetEm !== 1) { World.emitters.push(M.em); SEC.meetEm = 1; } M.em.always = true; }
       if (M.st === 'here') {
         if (near < 3.2 || (!night)) { M.st = 'gone'; M.a.visible = M.b.visible = false; M.em.always = false; if (near < 3.2) toast('Someone is there. The cloaks are gone before you have a name for them.'); }
-        else if (near < 11) { M.t += dt; const L = [[0, '<b>Rowan</b>: “The bread was late twice this week.”'], [4, '<b>Greta</b>: “The new one has been asking about the mine door.”'], [8.5, '<b>Rowan</b>: “Then Hale is closer than I would like. Say nothing in the Hart.”'], [13, '<b>Greta</b>: “And if they go down?”'], [17, '<b>Rowan</b>: “Then they find what Corwin found. Go. Go before the bell.”']]; for (const l of L) if (M.t >= l[0] && !(M['l' + l[0]])) { M['l' + l[0]] = 1; toast(l[1]); }
+        else if (near < 11) { M.t += dt; const L = [[0, '<b>Rowan</b>: “Three weeks now without the bread. They will be counting.”'], [4, '<b>Greta</b>: “There is a stranger in town. Strangers ask about barred doors.”'], [8.5, '<b>Rowan</b>: “Then Hale is closer than I would like. Say nothing in the Hart.”'], [13, '<b>Greta</b>: “And if they go down?”'], [17, '<b>Rowan</b>: “Then they find what Corwin found. Go, before the watch comes round.”']]; for (const l of L) if (M.t >= l[0] && !(M['l' + l[0]])) { M['l' + l[0]] = 1; toast(l[1]); }
           if (M.t > 21) { M.st = 'gone'; S.flags.hear_meeting = 1; M.a.visible = M.b.visible = false; M.em.always = false; toast('<b>You overheard them</b>: they have dropped a purse in the grass as they went.'); save(); } } }
       if (M.st === 'gone' && !night) { M.st = 'off'; for (const k in M) if (/^l\d/.test(k)) delete M[k]; } } }
   // the thief

@@ -34,9 +34,12 @@
    "brandt",
    "marta"
   ],
-  "Nothing new, love.": "greta"
+  "Nothing new, love.": "greta",
+  "Not while the watch is asking after you.": "brandt",
+  "Not today, dear. Hale has been asking": "marta"
  },
  "tables": {
-  "RUMOURS": "greta"
+  "RUMOURS": "greta",
+  "PIP_SEEN": "pip"
  }
 }

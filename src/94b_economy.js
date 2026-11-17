@@ -11,7 +11,7 @@ ITEMS.ironsword[2].tier = 1; ITEMS.leather[2].tier = 1;
 Inv.stock.brandt = ['ironsword', 'leather', 'buckler', 'longsword', 'brigandine', 'hauberk'];
 const _facts81 = Inv.facts; Inv.facts = id => { const f = _facts81.call(Inv, id), t = RPG.meta(id).tier; return t ? 'tier ' + ['', 'I', 'II', 'III'][t] + (f ? ' · ' + f : '') : f; };
 // ── levels and perks ──
-const ECON = { XPL: [0, 60, 150, 270, 420, 600, 810, 1050], PERKS: [['hardy', 'Hardy', '+15 health'], ['breath', 'Long wind', '+10 stamina, you get your wind back a third quicker'], ['keen', 'Keen edge', 'your blows hit 12% harder'], ['hide', 'Thick hide', 'what lands on you lands 8% lighter'], ['quiet', 'Quiet feet', 'outlaws and the dead notice you from three-quarters the distance'], ['haggle', 'Hard bargainer', 'buy 15% cheaper, sell 15% dearer'], ['forager', 'Forager', 'food and drink restore half as much again']] };
+const ECON = { XPL: [0, 60, 150, 270, 420, 600, 810, 1050], PERKS: [['hardy', 'Hardy', '+15 health'], ['breath', 'Long wind', '+10 stamina, you get your wind back a third quicker'], ['keen', 'Keen edge', 'your blows hit 12% harder'], ['hide', 'Thick hide', 'what lands on you lands 8% lighter'], ['quiet', 'Quiet feet', 'outlaws and the dead notice you from three-quarters the distance'], ['haggle', 'Hard bargainer', 'Brandt’s prices are 15% lower, and what you sell fetches 15% more'], ['forager', 'Forager', 'food and drink restore half as much again']] };
 RPG.perk = id => !!(S.rpg && S.rpg.perks && S.rpg.perks[id]);
 const econR = () => { const r = RPG.st(); r.xp = r.xp || 0; r.perks = r.perks || {}; r.perkPts = r.perkPts || 0; r.lv = r.lv || 1; return r; };
 function econLevel(xp) { let l = 1; for (let i = 1; i < ECON.XPL.length; i++) if (xp >= ECON.XPL[i]) l = i + 1; return l; }
@@ -35,6 +35,7 @@ const _qd82d = qDone; qDone = function (id) { const r = _qd82d.apply(this, argum
 // ── prices ──
 Inv.price = id => Math.max(1, Math.round((RPG.meta(id).cost || 0) * (RPG.perk('haggle') ? 0.85 : 1)));
 Inv.shop = function (who) {
+  if (S.crime && S.crime.fine > 0) return node('Not while the watch is asking after you. Square it with the Warden, then we’ll talk iron.');
   const opts = Inv.stock[who].map(id => { const m = RPG.meta(id), pr = Inv.price(id); return [ITEMS[id][0] + ' (' + pr + ' gold): ' + Inv.facts(id), () => {
     if (S.gold < pr) return node('That’s ' + pr + ' gold, and you’ve ' + S.gold + '. The board in the square pays for honest work.', [['Something else.', () => Inv.shop(who)], bye]);
     gold(-pr); give(id); toast('Bought: ' + ITEMS[id][0]); const r = RPG.st(); if (m.slot && (m.slot !== 'weapon' || (RPG.meta(r.eq.weapon).dmg || 0) < m.dmg) && (m.slot !== 'armor' || (RPG.meta(r.eq.armor).armor || 0) < m.armor)) { r.eq[m.slot] = id; Combat.refresh(); } save();
@@ -42,6 +43,7 @@ Inv.shop = function (who) {
   return node('Iron from the Greyspine, every piece. I don’t haggle.', opts.concat([bye]));
 };
 Inv.sell = function (who) {
+  if (S.crime && S.crime.fine > 0) return node(who === 'marta' ? 'Not today, dear. Hale has been asking after you, and I’ll not buy from a name he is asking after.' : 'Not while the watch is asking after you. I’ve a name to keep.');
   const r = RPG.st(), opts = [];
   for (const id in S.items) { const m = RPG.meta(id); if (!m.value || (m.slot && r.eq[m.slot] === id && S.items[id] < 2)) continue; const v = Math.round(m.value * (RPG.perk('haggle') ? 1.15 : 1)); opts.push([ITEMS[id][0] + (S.items[id] > 1 ? ' × ' + S.items[id] : '') + ' (' + v + ' gold)', () => { give(id, -1); gold(v); save(); return Inv.sell(who); }]); }
   return node(opts.length ? (who === 'marta' ? 'Let’s have a look, dear.' : 'Let’s see it, then.') : 'You’ve nothing I’d give coin for. Outlaws carry better than they deserve, mind.', opts.slice(0, 8).concat([bye]));
@@ -55,17 +57,18 @@ const ECONJOBS = [
   { id: 'vermin', title: 'The Old Mine', goal: 3, pay: 50, text: 'WANTED: three of the things that live in the Old Mine put down, delver or lurker. Fifty gold, and the Warden does not ask how.', match: f => f.kind === 'delver' || f.kind === 'lurker' },
   { id: 'oil', title: 'Lamp oil for the watch', goal: 3, pay: 30, text: 'WANTED: three flasks of lamp oil for the gate. Thirty gold. Marta has it.', match: () => false, have: () => has('oil') && S.items.oil >= 3 },
 ];
+const econJobToday = id => { const r = econR(); return !!(r.jobDay && r.jobDay[id] === (r.day || 0)); };       /* [logic] each job is paid once a day: the oil job was 21 gold of Marta's oil for 30 gold and 20 xp, any number of times, standing in the square */
 const econJob = () => { const r = econR(); return r.job ? ECONJOBS.find(j => j.id === r.job.id) || null : null; };
 TALK.board = function () {
   const r = econR(), j = econJob(), opts = [];
   if (j) {
     const ready = r.job.done || (j.have && j.have());
-    if (ready) opts.push(['Collect the pay. (' + j.pay + ' gold)', () => { if (j.have) give('oil', -3); gold(j.pay); RPG.xp(20); r.jobsDone = (r.jobsDone || 0) + 1; r.job = null; save(); return node('Paid. The board has fresh ink every few days: come back.'); }, 1]);
+    if (ready) opts.push(['Collect the pay. (' + j.pay + ' gold)', () => { if (j.have) give('oil', -3); gold(j.pay); RPG.xp(20); r.jobsDone = (r.jobsDone || 0) + 1; (r.jobDay = r.jobDay || {})[j.id] = r.day || 0; r.job = null; save(); return node('Paid. That notice comes down. There will be another like it tomorrow.'); }, 1]);
     else opts.push(['Where was I up to?', () => node(j.title + ': ' + (j.have ? 'three flasks of lamp oil, you have ' + (S.items.oil || 0) : r.job.n + ' of ' + j.goal) + '.')]);
     opts.push(['Tear the notice down.', () => { r.job = null; save(); return node('The nail is still there.'); }]);
-  } else for (const d of ECONJOBS) opts.push([d.title + ' (' + d.pay + ' gold)', () => { r.job = { id: d.id, n: 0, done: false }; save(); return node(d.text + '\n\nYou take the notice.'); }]);
+  } else for (const d of ECONJOBS) if ((d.id !== 'vermin' || S.flags.mineOpen) && !econJobToday(d.id)) opts.push([d.title + ' (' + d.pay + ' gold)', () => { r.job = { id: d.id, n: 0, done: false }; save(); return node(d.text + '\n\nYou take the notice.'); }]);
   if (qAt('bounty') < 0 && qAt('welcome') >= 0) { qStart('bounty'); bountyText(); }
-  return node(j ? 'Your notice is still on you.' : 'Notices, pinned over notices. Three of them are in a clean hand and have not yellowed.', opts.concat([bye]));
+  return node(j ? 'Your notice is still on you.' : (S.flags.mineOpen ? 'Notices, pinned over notices. Three of them are in a clean hand and have not yellowed.' : 'Notices, pinned over notices. Two of them are in a clean hand and have not yellowed.') + (!j && ECONJOBS.some(d => econJobToday(d.id)) ? '\n\nA bare nail where today’s paid work hung. It will be pinned up again tomorrow.' : ''), opts.concat([bye]));
 };
 const _iu82d = interactUse; interactUse = function (it) {
   if (it.id === 'board' && it.kind === 'read') { const nm = { id: 'board', name: 'Notice board', pos: it.p.slice(), yaw: 0, anim: 'idle', path: null }; return startTalk(nm); }
@@ -77,14 +80,11 @@ const RUMOURS = [
   [() => !secFlag('bell'), 'They say Tobin’s been up the Watch Bell more than the Watch has. A tin box, a lockpick, and a boy who will not say what he saw from the top.'],
   [() => !secFlag('stone'), 'There’s a stone in the terrace wall below the Elder’s plaque with crooked mortar. Folk have stopped noticing it. The Magpie never did.'],
   [() => !secFlag('cellar'), 'The Magpie keeps a cellar on Washing Lane, under a hatch no bigger than a cheese-board. Keeps the key somewhere sillier than a pocket.'],
-  [() => !secFlag('attic'), 'Up on the Hart’s roof walk there’s a trunk under the eaves that nobody here owns. Greta says it came with the building.'],
-  [() => !secFlag('wall'), 'The cellar wall in this very house, the east one: newer brick than the rest. Ask me no more, love.'],
   [() => !secFlag('strongbox'), 'The old Elder had a strongbox put in the quay when the Wharf was built. Reached from the water. I never knew a man who had the key.'],
-  [() => !secFlag('meetpouch'), 'Lights behind the chapel after midnight, and two folk talking low who’d not thank you for listening. Stand off, if you’re bold. Don’t get close.'],
   [() => !secFlag('magpie'), 'The Magpie walks at dusk from the square to somewhere west of the weavers, same road each time. Nobody follows her. You’d have to be patient.'],
   [() => !secFlag('house'), 'The shut house on the south lane. Don’t ask Marta. Don’t ask Finn. Ask nobody. Take a key, if you’ve one with a wren on it.'],
   [() => !S.flags.mineOpen, 'The mine door has been barred for fifty years. The Sexton kept the key, and old Sextons keep everything.'],
-  [() => S.flags.mineOpen && !has('silverthread') && !S.opened['mine.chest'], 'They say the Foreman had a strongbox down there and the only key hangs round his neck. Hung.'],
+  [() => S.flags.mineOpen && !has('silverthread') && !S.opened['mine.chest'], 'My grandmother said the Old Mine’s foreman kept a strongbox below and wore the key round his neck. Nobody has been down to ask him.'],
   [() => !S.flags.act1, 'A drowned man on the wharf, dry as bone. The wise folk are keeping their windows shut.'],
   [() => true, 'Hale cries on the last day of the month. Pip told me. Pip tells everybody.', 1],
   [() => true, 'The Elder talks to the lake. Always has. Says it answers.', 1],
