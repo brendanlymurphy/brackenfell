@@ -250,3 +250,37 @@ function wharfHull(m, x, z, y0, ang, len, beam, depth, up) {
   m.beam(P(-len / 2 + 0.1, 0, 0.02), P(len / 2 - 0.1, 0, 0.02), 0.05, 0.05);
   if (!up) for (const t of [-0.4, 0.1, 0.5]) { const q = st[Math.round((t + 1) / 2 * N)]; m.beam(P(q.a, -q.w * 0.95, q.sheer * 0.8), P(q.a, q.w * 0.95, q.sheer * 0.8), 0.07, 0.03); }
 }
+
+// landing steps down to the river behind the Bank Lane houses on its east side, and a wash place (a stone slab, a board, tubs, a pole of washing) behind the first of them
+function buildWharfLandings(bucket) {
+  if (TEST && (TEST.wharf === 0 || TEST.plots === 0) || typeof WHARF === 'undefined' || !WHARF.houses.length || typeof River === 'undefined' || !River.p) return;
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = wharfLow() ? 26 : 46; return m; }; }
+  const gy = (x, z) => Terrain.y(x, z), R = rng(8080);
+  const near = (x, z) => { let best = null, bd = 1e9; for (const q of River.p) { const d = hyp(q[0] - x, q[1] - z); if (d < bd) { bd = d; best = q; } } return [best, bd]; };
+  let k = 0;
+  for (const id of ['in.53', 'in.52', 'in.56', 'in.126']) {
+    const st = SITE[id]; if (!st || !(WHARF.rows.bankE1 || []).concat(WHARF.rows.bankE2 || []).includes(id)) continue;
+    const nx = Math.sin(st.yaw), nz = -Math.cos(st.yaw), bx = -nx, bz = -nz;       // the back of the house
+    const sx = st.x + bx * (st.d / 2 + 1.6), sz = st.z + bz * (st.d / 2 + 1.6);
+    const [rq, rd] = near(sx, sz); if (!rq || rd > 28) continue;
+    let dx = rq[0] - sx, dz = rq[1] - sz; const dl = hyp(dx, dz); dx /= dl; dz /= dl;
+    // walk toward the river until the ground is at the water (or 9 m)
+    let t = 1.2, y0 = gy(sx, sz); while (t < 14 && gy(sx + dx * t, sz + dz * t) > -1.4 && near(sx + dx * t, sz + dz * t)[1] > 3.2) t += 0.4;
+    const ex = sx + dx * t, ez = sz + dz * t, m = bucket(ex, ez), nstep = 4;
+    const ux = -dz, uz = dx;
+    m.mat(MAT.STONE, [0.34, 0.32, 0.29], 0.5);
+    for (let i = 0; i < nstep; i++) { const px = ex - dx * (nstep - i) * 0.42, pz = ez - dz * (nstep - i) * 0.42, top = gy(ex, ez) + 0.12 + (nstep - 1 - i) * 0.16 + (k === 0 ? 0 : 0);
+      m.push().T(px, 0, pz).RY(-Math.atan2(dz, dx)); m.box(-0.2, top - 0.5, -0.7, 0.2, top, 0.7); m.pop(); }
+    m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5); for (const s2 of [-1, 1]) { const px = ex - dx * 0.6 + ux * 0.8 * s2, pz = ez - dz * 0.6 + uz * 0.8 * s2; m.beam([px, gy(px, pz) - 0.1, pz], [px, gy(px, pz) + 0.9, pz], 0.05, 0.05); }
+    if (k === 0) {   // the wash place beside the steps
+      const wx = ex - dx * 2.4 - ux * 2.0, wz = ez - dz * 2.4 - uz * 2.0, g = gy(wx, wz), a = Math.atan2(dz, dx);
+      m.mat(MAT.STONE, [0.38, 0.36, 0.32], 0.5); m.push().T(wx, g + 0.04, wz).RY(-a); m.box(-1.1, 0, -0.8, 1.1, 0.08, 0.8); m.pop();
+      m.mat(MAT.PLANKS, [0.4, 0.33, 0.24], 0.5); m.push().T(wx + dx * 0.5, g + 0.1, wz + dz * 0.5).RY(-a); m.box(-0.05, 0, -0.5, 0.45, 0.3, 0.5); m.pop();
+      for (const [ox, oz] of [[-0.6, 0.4], [-0.5, -0.5]]) { const tx = wx + ux * oz + dx * ox, tz = wz + uz * oz + dz * ox; m.mat(MAT.PLANKS, [0.44, 0.34, 0.22], 0.5); m.cyl(tx, g + 0.05, tz, 0.3, 0.28, 0.4, 7, 1); }
+      const p0 = [wx - dx * 1.5 + ux * 1.3, wz - dz * 1.5 + uz * 1.3], p1 = [p0[0] - ux * 2.6, p0[1] - uz * 2.6];
+      m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const q of [p0, p1]) m.beam([q[0], gy(q[0], q[1]) - 0.1, q[1]], [q[0], gy(q[0], q[1]) + 1.9, q[1]], 0.05, 0.05); const gg = gy(p0[0], p0[1]); m.beam([p0[0], gg + 1.85, p0[1]], [p1[0], gg + 1.85, p1[1]], 0.04, 0.04);
+      m.mat(MAT.CLOTH, [0.4, 0.38, 0.32], 0.5); for (let i = 0; i < 3; i++) { const t0 = 0.12 + i * 0.3, q0 = [p0[0] + (p1[0] - p0[0]) * t0, p0[1] + (p1[1] - p0[1]) * t0], q1 = [p0[0] + (p1[0] - p0[0]) * (t0 + 0.2), p0[1] + (p1[1] - p0[1]) * (t0 + 0.2)]; m.quad2([q0[0], gg + 1.82, q0[1]], [q1[0], gg + 1.82, q1[1]], [q1[0], gg + 0.9 + R() * 0.2, q1[1]], [q0[0], gg + 0.9 + R() * 0.2, q0[1]]); }
+    }
+    k++;
+  }
+}
