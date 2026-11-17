@@ -303,6 +303,7 @@ function buildSplat() {
   ell(B, SITE.tower.x, SITE.tower.z, 4.6, 4.6, red);
   stroke(B, River.p, 9.4, red, 1.2);
   ell(B, LAKE.x, LAKE.z, LAKE.r + 4, LAKE.r + 4, red);
+  if (typeof wharfPaint === 'function') wharfPaint(A, B, { P, stroke, ell, red, grn, blu, sc });      // [fx2] Wharf Street and Wharfside: trodden earth round the houses and yards (73n_wharfside.js)
   if (typeof wildsSplat === 'function') wildsSplat(A, B, { P, stroke, ell, red, grn, blu });       // (79_wilds.js: footpath cobbles, scree, ash)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = da[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
