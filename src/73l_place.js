@@ -9,7 +9,7 @@ function buildPlaceFlags(bucket) {
     const dl = siteDoorLocal(s, 0), d0 = siteToWorld(s, dl[0], dl[1]), d1 = siteToWorld(s, ...(() => { const w = s.doorWall || 'front'; return w === 'front' ? [dl[0], dl[1] - 1] : w === 'back' ? [dl[0], dl[1] + 1] : w === 'left' ? [dl[0] - 1, dl[1]] : [dl[0] + 1, dl[1]]; })());
     if (placeW(d1[0], d1[1], 0.01) < 1) continue;                     // the door's apron lies inside the place's outline
     const ox = d1[0] - d0[0], oz = d1[1] - d0[1], ang = Math.atan2(oz, ox), m = bucket(d0[0], d0[1]);
-    const w = 2.0 + R() * 0.7, depth = 1.5 + R() * 0.3, nz = 3, nx = 2;
+    const w = 2.0 + R() * 0.7, depth = 1.5 + R() * 0.3, nz = 2, nx = 2;
     m.m1 = 0; m.m2 = 0; m.ao = 1; m.grad = null;
     for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
       const du = 0.05 + (i + 0.5) * depth / nx + (R() - 0.5) * 0.12, dv = (j + 0.5 - nz / 2) * w / nz + (R() - 0.5) * 0.14, cx = d0[0] + ox * du - oz * dv, cz = d0[1] + oz * du + ox * dv;
@@ -24,7 +24,7 @@ function buildPlaceFlags(bucket) {
 // [fx3] what makes the place's ground look used, as things you can point at: a drain channel with kerb stones and a few cover slabs, patches of trodden dirt and straw round every stall, cart and the well, and along the wall feet
 function buildPlaceWear(bucket) {
   if (TEST && TEST.wear === 0) return;
-  const R = rng(7712), gy = (x, z) => Terrain.y(x, z), flat = (m, x, z, rx, rz, c, mat, ry, lift) => { m.mat(mat, c, 0.5); m.push().T(x, gy(x, z) + (lift || 0.016), z).RY(ry); m.ball(0, 0, 0, rx, 0.012, rz, 6, 2); m.pop(); };
+  const R = rng(7712), gy = (x, z) => Terrain.y(x, z), flat = (m, x, z, rx, rz, c, mat, ry, lift) => { m.mat(mat, c, 0.5); m.push().T(x, gy(x, z) + (lift || 0.016), z).RY(ry); m.quad2([-rx, 0, -rz * 0.6], [-rx * 0.6, 0, rz], [rx, 0, rz * 0.7], [rx * 0.7, 0, -rz]); m.pop(); };
   const dr = [[-19.4, -0.5], [-10, 0.4], [-3, 1.1], [3, 1.7], [10, 2.3], [20.2, 3.4]], br = [[2.8, 1.6], [0.9, 5.5], [0.3, 9], [0.2, 14], [0.2, 22]];
   for (const pl of [dr, br]) for (let i = 0; i + 1 < pl.length; i++) {
     const a = pl[i], b = pl[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 1.6)), ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
@@ -40,7 +40,7 @@ function buildPlaceWear(bucket) {
     }
   }
   const spots = []; for (const c of World.colliders) { if (c.y0 > gy(c.x, c.z) + 0.7 || c.y1 - c.y0 > 3.2 || placeW(c.x, c.z, 0.01) < 1) continue; const rad = c.r !== undefined ? c.r : Math.max(c.hx, c.hz); if (rad > 2.2 || rad < 0.12) continue; spots.push([c.x, c.z, rad]); }
-  let n = 0; for (const [x, z, rad] of spots) { if (n++ > 60) break; const m = bucket(x, z);
+  let n = 0; for (const [x, z, rad] of spots) { if (n++ > 40) break; const m = bucket(x, z);
     for (let i = 0; i < 1; i++) { const a = R() * TAU, d = rad + 0.25 + R() * 0.5; flat(m, x + Math.cos(a) * d, z + Math.sin(a) * d, 0.45 + R() * 0.5, 0.3 + R() * 0.3, [0.2 + R() * 0.05, 0.15, 0.1], MAT.MUD, R() * 3); }
     for (let i = 0; i < 2; i++) { const a = R() * TAU, d = rad + 0.1 + R() * 0.8; flat(m, x + Math.cos(a) * d, z + Math.sin(a) * d, 0.25 + R() * 0.25, 0.08 + R() * 0.08, [0.66 + R() * 0.1, 0.52, 0.25], MAT.THATCH, R() * 3, 0.022); }
   }

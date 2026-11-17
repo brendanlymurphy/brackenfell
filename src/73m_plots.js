@@ -61,7 +61,7 @@ function buildPlots(bucket) {
     const cx = (ax + bx) / 2, cz = (az + bz) / 2, ang = Math.atan2(bz - az, bx - ax);
     { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.05, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.05; addBoxCollider(m, cx - ex, cz - ez, cx + ex, cz + ez, gy(cx, cz), gy(cx, cz) + 1.0); }
   };
-  const flat = (m, x, z, rx, rz, c, mat, ry, lift) => { m.mat(mat, c, 0.5); m.push().T(x, gy(x, z) + (lift || 0.02), z).RY(ry || 0); m.ball(0, 0, 0, rx, 0.012, rz, 6, 2); m.pop(); };
+  const flat = (m, x, z, rx, rz, c, mat, ry, lift) => { m.mat(mat, c, 0.5); m.push().T(x, gy(x, z) + (lift || 0.02), z).RY(ry || 0); m.quad2([-rx, 0, -rz * 0.6], [-rx * 0.6, 0, rz], [rx, 0, rz * 0.7], [rx * 0.7, 0, -rz]); m.pop(); };
   const crate = (m, x, z, w, h, d, col, mat, solidCol) => { const g = gy(x, z); m.mat(mat || MAT.PLANKS, col, 0.5); m.box(x - w / 2, g, z - d / 2, x + w / 2, g + h, z + d / 2); if (solidCol !== false) addBoxCollider(m, x - w / 2, z - d / 2, x + w / 2, z + d / 2, g, g + h); };
   const trade = (p, m, cx, cz, ux, uz, wd, dp) => {      /* ux,uz: along the row (world x or z axis unit); local frame: a = along row from the plot centre, b = away from the house toward the back wall */
     const at = (a, b) => [cx + a * ux + b * 0, cz + b * p.bz];
