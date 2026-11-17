@@ -74,6 +74,9 @@ interiors lit by hearths and candles. As realistic as free art allows.
     433k triangles in the square to 157 / 292k and Low from 170 / 225k to 125 / 195k with the pictures unchanged (ferns and stones
     given a draw distance; doors and signs outside the view skipped; terrain cut into squares; terrain and props under the
     roofline skipped).
+  - Phones take the half-resolution ground pack by default: first visit 40.4 MB instead of 61.0 (docs/DECISIONS.md has the numbers).
+  - Loose ends: a reload in the cell no longer locks the player in; broken saves are mended or refused; the map shows you and the
+    quest marks when you are indoors; one pill style for buttons; the quest banner is smaller, shorter and clear of the clock.
 - Other worker branches (`fork-fx1` outdoors overlap, `fork-fx2` interiors, `fork-ch1` characters, `fork-l1` lighting) are named in
   the coordinator's briefs; when one merges, its line goes to Done.
 
@@ -92,7 +95,7 @@ interiors lit by hearths and candles. As realistic as free art allows.
 - Frame rate on the iPhone has never been measured; the owner said "not fast enough" at Build 13. No test can see it.
 - Over the performance target since Build 52: medium square 216 draw calls / 452k triangles and alley 224 / 452k (target 220 /
   380k); low square 170 / 246k, alley 181 / 269k (target 140 / 200k).
-- First load: 60 MB on a phone (Medium), 39 MB on Low, 72 MB on a desktop on High.
+- First load: 40 MB on a phone, 61 MB on a tablet or laptop on Medium, 73 MB on a desktop on High.
 - 70 spoken lines have no audio yet (subtitles only) until the daily batches finish; remarks anyone may say (`*`), the notice board
   and the slab are subtitles by design. Text with prices or counts in it cannot be recorded.
 - Feet still slide 0.25 m/s in the walk clip. Mouths open by loudness only until `fork-ch1` merges.

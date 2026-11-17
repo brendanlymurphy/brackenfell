@@ -28,7 +28,7 @@ const play = ['webgl=1', 'play=1'];
 const bot = args => () => { const out = node(['test/playbot.mjs', '--quiet', '--out', OUT + '/bot', ...args]); const m = /playbot: (\d+) bugs \((\d+) S1, (\d+) S2, (\d+) S3\) in (\d+) steps/.exec(out); return { out, fail: !m ? 'the bot did not finish' : /playbot PASS/.test(out) ? null : (out.match(/BUG S[12].*/) || ['failed'])[0].slice(0, 240), note: m ? m[5] + ' steps' + (+m[4] ? ', ' + m[4] + ' minor: ' + (out.match(/BUG S3.*/) || [''])[0].slice(7, 150) : '') + ((out.match(/note: soak.*/) || [''])[0] ? ' ' + out.match(/note: soak.*/)[0].slice(6) : '') : '' }; };
 let cellIds = null;
 const STEPS = [
-  { id: 'build', quick: 1, run: () => { const out = node(['tools/build.mjs']); return { out, fail: /built game\.js/.test(out) ? null : 'build failed', note: (out.match(/phone or Medium tier[^|]*\d+\.\d MB/) || [''])[0] }; } },
+  { id: 'build', quick: 1, run: () => { const out = node(['tools/build.mjs']); return { out, fail: /built game\.js/.test(out) ? null : 'build failed', note: (out.match(/phone, Low tier[^|]*\d+\.\d MB/) || [''])[0] }; } },
   { id: 'boot', quick: 1, why: 'no warning or error while the world builds', run: () => { const out = shot(['webgl=1'], 'return 1', ['--out', OUT + '/boot.png']), bad = out.split('\n').filter(l => /warn|rror/i.test(l) && !/GL Driver Message/.test(l)); return { out, fail: evalFail(out) || (bad.length ? bad[0].slice(0, 200) : /ready in/.test(out) ? null : 'did not boot') }; } },
   { id: 'quest', quick: 1, run: expect(/fire 99 bonfire true/, ['webgl=1', 'quality=low'], 'quest.js') },
   { id: 'stairs', quick: 1, run: expect(/stairs PASS/, play, 'stairs.js') },

@@ -50,5 +50,5 @@ fs.writeFileSync(root + 'sw.js', fs.readFileSync(src + 'sw.tpl', 'utf8').replace
 const sum = names => names.reduce((a, g) => a + G[g].reduce((s, p) => s + F[p][0], 0), 0);
 const mb = n => (n / 1048576).toFixed(1) + ' MB';
 console.log('built game.js', (js.length / 1024).toFixed(1) + ' KB', files.length + ' files; build', BUILD);
-console.log('first visit downloads: Low tier or low-memory device', mb(sum(['app', 'astcs', 'kitss', 'chars'])), '| phone or Medium tier (512 texture cap)', mb(sum(['app', 'astc', 'kitss', 'chars'])), '| desktop High', mb(sum(['app', 'astc', 'kits', 'chars'])), '| without ASTC (images):', mb(sum(['app', 'imgs', 'kits', 'chars'])), '| app shell only:', mb(sum(['app'])));
+console.log('first visit downloads: phone, Low tier or low-memory device', mb(sum(['app', 'astcs', 'kitss', 'chars'])), '| tablet or laptop on Medium (512 texture cap)', mb(sum(['app', 'astc', 'kitss', 'chars'])), '| desktop High', mb(sum(['app', 'astc', 'kits', 'chars'])), '| without ASTC (images):', mb(sum(['app', 'imgs', 'kits', 'chars'])), '| app shell only:', mb(sum(['app'])));
 console.log('  by group:', ['app', 'astc', 'astcs', 'imgs', 'kits', 'kitss', 'chars'].map(g => g + ' ' + mb(sum([g]))).join(', '));
