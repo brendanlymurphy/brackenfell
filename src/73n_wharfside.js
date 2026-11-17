@@ -36,6 +36,7 @@ function wharfPaint(A, B, H) {
     poly(B, rect(s.x, s.z, s.yaw, s.w + 5.2, s.d + 5.2), red(0.85));
   }
   for (const p of wharfPlots()) { const yaw = Math.atan2(p.uz, p.ux), cx = p.ox + p.bx * p.depth / 2, cz = p.oz + p.bz * p.depth / 2; poly(A, rect(cx, cz, yaw, p.hw * 2 + 0.6, p.depth + 0.6), red(0.9)); poly(B, rect(cx, cz, yaw, p.hw * 2 + 1.6, p.depth + 1.4), red(1)); }
+  { const C = wharfCloses(); for (const pl of C.paths) { stroke(A, pl, 1.7, red, 1.0); stroke(B, pl, 2.4, red, 0.9); } for (const q of C.soil) { poly(A, q, red(0.55)); poly(B, q, red(0.6)); } }
   if (WHARF.street) { const L = WHARF.street.L, pts = L.p.filter(q => q[1] > 32); stroke(A, pts, 4.4, red, 1.4); stroke(B, pts, 5.2, red, 1.2); }
 }
 // the yard behind each house: low fence on the back and the party lines; one trade of the poor
@@ -94,4 +95,73 @@ function buildWharfYard(bucket) {
   m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5); for (const a of [-1.2, 1.2]) { m.beam([cx + a, g, cz - 0.4], [cx + a, g + 0.5, cz - 0.4], 0.07, 0.07); m.beam([cx + a, g, cz + 0.6], [cx + a, g + 0.5, cz + 0.6], 0.07, 0.07); }
   addBoxCollider(m, cx - 2.2, cz - 0.8, cx + 2.2, cz + 1.0, g, g + 1.5);
   for (let i = 0; i < 5; i++) m.beam([cx - W2 + 0.2 + i * 0.12, g + 2.6, cz - D2 + 0.1], [cx - W2 + 0.2 + i * 0.12 - 0.1, g + 0.3, cz - D2 + 0.4], 0.03, 0.03);      // oars
+}
+
+// ───── the closes: garden closes, orchard and drying green between the street's east row and Bank Lane, a small yard on the shore wedge ─────
+// coordinates are (a, b): a along Bank Lane from its north end, b out to the west of its centre line
+let _WCLOSES = null;
+function wharfCloses() {
+  if (_WCLOSES) return _WCLOSES;
+  const C = _WCLOSES = { soil: [], fences: [], hedges: [], beds: [], trees: [], paths: [], poles: [], racks: [], green: null, wedge: null, boats: [] };
+  const Ln = typeof WHARF !== 'undefined' && WHARF.lanes && WHARF.lanes.bank; if (!Ln || !INF || !INF.pt) return C;
+  if (TEST && (TEST.wharf === 0 || TEST.plots === 0 || TEST.closes === 0)) return C;
+  const pt = INF.pt, R = rng(9091), len = Ln.len;
+  const LP = (a, b) => { const P = pt(Ln, a), Q = pt(Ln, a + 1), dx = Q[0] - P[0], dz = Q[1] - P[1], l = hyp(dx, dz) || 1, t = [dx / l, dz / l]; return [P[0] - t[1] * b, P[1] + t[0] * b]; };
+  const line = (a0, b0, a1, b1, n, w) => { const o = []; for (let i = 0; i <= n; i++) { const t = i / n; o.push(LP(a0 + (a1 - a0) * t, b0 + (b1 - b0) * t + (i > 0 && i < n ? (R() - 0.5) * (w || 0) : 0))); } return o; };
+  const aG = INF.dist(Ln, 38.5, 49.5)[1];
+  const BW = 12.8, bE = 20.5, a0 = 3.5, a1 = len - 5;
+  // north closes (fenced) and a south close (fenced) and the orchard (hedged)
+  const cuts = [a0, a0 + (aG - 2 - a0) / 2, aG - 2, aG + 2, aG + 10.5, a1];
+  const edge = (A0, B0, A1, B1, kind) => { (kind === 'h' ? C.hedges : C.fences).push(line(A0, B0, A1, B1, Math.max(2, Math.round(Math.abs(A1 - A0 + B1 - B0) / 2.6)), kind === 'h' ? 0.5 : 0.25)); };
+  for (let i = 0; i < 5; i++) {
+    const A0 = cuts[i], A1 = cuts[i + 1]; if (i === 2) continue; const bW = i === 4 ? 4.8 : BW;
+    const orch = i === 4, kind = orch ? 'h' : 'f';
+    edge(A0, bE, A1, bE + (R() - 0.5) * 0.6, 'h');
+    edge(A0, bW, A0, bE, kind); if (i === 4 || i === 1 || i === 3 || i === 0) edge(A1, bW, A1, bE, kind);
+    edge(A0, i === 4 ? 4.8 : bW, A1, i === 4 ? 4.8 : bW, 'f');
+    if (!orch) C.soil.push([LP(A0, bW), LP(A1, bW), LP(A1, bE), LP(A0, bE)]);
+    if (!orch) { const nb = Math.floor((bE - bW - 1.6) / 1.5); for (let r = 0; r < nb; r++) { const b = bW + 1.2 + r * 1.5; C.beds.push([LP(A0 + 0.7, b), LP(A1 - 0.7, b + 0.7)]); } }
+    else for (let a = A0 + 2.2; a < A1 - 1; a += 5.0) for (let b = bW + 2.2; b < bE - 1.0; b += 5.0) C.trees.push([...LP(a + (R() - 0.5) * 0.8, b + (R() - 0.5) * 0.8), 0.75 + R() * 0.2]);
+  }
+  for (let a = a0 + 1; a < a1; a += 8.5) if (Math.abs(a - aG) > 3) C.trees.push([...LP(a + (R() - 0.5), bE + 5.6 + (R() - 0.5) * 1.2), 0.7 + R() * 0.2]);
+  // the paths: along the back of the closes, and across to the street's east row by the ginnel
+  C.paths.push(line(a0 - 2, bE + 2.4, a1 + 2, bE + 2.4, 8, 0.6));
+  const g0 = LP(aG, 5.0), g1 = LP(aG, bE + 2.4), st = [9.6, 49.8];
+  C.paths.push([g0, LP(aG, 9), LP(aG, bE), g1, [(g1[0] + st[0]) / 2 + 0.4, (g1[1] + st[1]) / 2 - 0.5], st]);
+  // the drying green where the two paths meet: net poles in lines, a rack, a pole for the washing
+  { const gx = g1[0] + (st[0] - g1[0]) * 0.45 - 0.5, gz = g1[1] + (st[1] - g1[1]) * 0.45; C.green = { x: gx, z: gz, r: 4.6 };
+    for (const sg of [-1, 1]) C.poles.push([gx + sg * 2.8, gz - 2.2, gx + sg * 2.8 + 0.3, gz + 2.4]);
+    C.racks.push([gx - 1.5, gz + 3.3, gx + 1.8, gz + 3.0]); }
+  // the wedge by the shore, east of the wharf: a net-mending yard with an upturned boat, racks, a hedge on the river side
+  { const cx = 31.6, cz = 80.4, c = Math.cos(0.5), sn = Math.sin(0.5), W = (a, b) => [cx + a * c - b * sn, cz + a * sn + b * c]; C.wedge = { x: cx, z: cz };
+    C.soil.push([W(-4.4, -3.6), W(4.4, -3.6), W(4.4, 3.6), W(-4.4, 3.6)]); C.hedges.push([W(-5.4, 4.6), W(0, 4.8), W(5.4, 4.4)], [W(5.4, -4), W(5.6, 0), W(5.4, 4.4)]); C.fences.push([W(-5.4, -4.4), W(-5.4, 0), W(-5.2, 4.6)]);
+    C.racks.push([...W(-3.5, 2.4), ...W(0.5, 2.6)], [...W(-3.5, -3), ...W(0, -3.1)]); C.boats.push([...W(2.2, -0.4), 0.45]); }
+  return C;
+}
+// vegetation asks: keep random trees out of the closes
+function wharfBlocked(x, z, pad) { return !!(typeof WHARF !== 'undefined' && WHARF.houses.length && x > 12 - pad && x < 46 + pad && z > 34 - pad && z < 92 + pad); }
+function buildWharfCloses(bucket) {
+  const C = wharfCloses(); if (!C.fences.length) return;
+  const gy = (x, z) => Terrain.y(x, z), R = rng(4141), h = 1.0;
+  const nearHouse = (x, z) => SITES.some(st => { if (!st.w || st.id === 'tower') return false; const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 1.3 && Math.abs(l[1]) < st.d / 2 + 1.3; });
+  World.hedgeBushes = World.hedgeBushes || []; World.orchardTrees = World.orchardTrees || [];
+  for (const pl of C.hedges) for (let i = 0; i + 1 < pl.length; i++) { const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / 1.5)); for (let k = 0; k < n; k++) World.hedgeBushes.push([ax + (bx - ax) * k / n + (R() - 0.5) * 0.2, az + (bz - az) * k / n + (R() - 0.5) * 0.2, 0.95 + R() * 0.3]); }
+  for (const t of C.trees) World.orchardTrees.push(t);
+  for (const pl of C.fences) {
+    const [mx, mz] = pl[(pl.length / 2) | 0], m = bucket(mx, mz);
+    for (let i = 0; i + 1 < pl.length; i++) {
+      const [ax, az] = pl[i], [bx, bz] = pl[i + 1], L = hyp(bx - ax, bz - az), n = Math.max(1, Math.round(L / 1.6)); m.mat(MAT.TIMBER, [0.27, 0.22, 0.17], 0.5);
+      for (let k = 0; k <= n; k++) { const x = ax + (bx - ax) * k / n, z = az + (bz - az) * k / n; m.cbox(x, gy(x, z) - 0.1, z, 0.09, h + 0.1 + (R() - 0.5) * 0.25, 0.09, 0); }
+      for (const y of [0.38, h - 0.2]) for (let k = 0; k < n; k++) { const x0 = ax + (bx - ax) * k / n, z0 = az + (bz - az) * k / n, x1 = ax + (bx - ax) * (k + 1) / n, z1 = az + (bz - az) * (k + 1) / n; m.beam([x0, gy(x0, z0) + y, z0], [x1, gy(x1, z1) + y + (R() - 0.5) * 0.08, z1], 0.045, 0.04); }
+      for (let k = 0; k <= Math.ceil(L / 0.5); k++) { const t = k / Math.ceil(L / 0.5), x = ax + (bx - ax) * t, z = az + (bz - az) * t; if (!nearHouse(x, z)) addCircleCollider(m, x, z, 0.14, gy(x, z), gy(x, z) + h); }
+    }
+  }
+  for (const [p, q] of C.beds) { const cx = (p[0] + q[0]) / 2, cz = (p[1] + q[1]) / 2, m = bucket(cx, cz), ang = Math.atan2(q[1] - p[1], q[0] - p[0]), w = hyp(q[0] - p[0], q[1] - p[1]) / 2; m.mat(MAT.SOIL, [0.34, 0.27, 0.2], 0.5); m.push().T(cx, gy(cx, cz) + 0.04, cz).RY(-ang); m.quad2([-w, 0, -0.32], [w, 0, -0.32], [w, 0, 0.32], [-w, 0, 0.32]); m.pop(); for (let a = -w + 0.3; a < w - 0.2; a += 0.9) (World.gardenPlants = World.gardenPlants || []).push([cx + Math.cos(ang) * a, cz + Math.sin(ang) * a, (a * 7 | 0) & 1]); }
+  const post = (m, x, z, hh) => { const g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x, g - 0.1, z], [x, g + hh, z], 0.07, 0.07); };
+  for (const [x0, z0, x1, z1] of C.poles) { const m = bucket(x0, z0); post(m, x0, z0, 2.3); post(m, x1, z1, 2.3); const g0 = gy(x0, z0); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x0, g0 + 2.2, z0], [x1, g0 + 2.2, z1], 0.045, 0.045);
+    m.mat(MAT.CLOTH, [0.24, 0.22, 0.17], 0.5); const nx = -(z1 - z0), nz = x1 - x0, nl = hyp(nx, nz) || 1; m.quad2([x0, g0 + 2.15, z0], [x1, g0 + 2.15, z1], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12]); m.quad2([x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x1, g0 + 2.15, z1], [x0, g0 + 2.15, z0]);
+    addCircleCollider(m, x0, z0, 0.12, g0, g0 + 2.2); addCircleCollider(m, x1, z1, 0.12, gy(x1, z1), gy(x1, z1) + 2.2); }
+  for (const [x0, z0, x1, z1] of C.racks) { const m = bucket(x0, z0); post(m, x0, z0, 1.5); post(m, x1, z1, 1.5); const g0 = gy(x0, z0); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const y of [1.45, 0.95]) m.beam([x0, g0 + y, z0], [x1, g0 + y, z1], 0.04, 0.04);
+    m.mat(MAT.PLAIN, [0.46, 0.45, 0.4]); for (let k = 0; k < 7; k++) { const t = (k + 0.5) / 7, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; m.box(x - 0.03, g0 + 0.5, z - 0.02, x + 0.03, g0 + 1.4, z + 0.02); } addCircleCollider(m, x0, z0, 0.12, g0, g0 + 1.5); addCircleCollider(m, x1, z1, 0.12, gy(x1, z1), gy(x1, z1) + 1.5); }
+  for (const [x, z, ang] of C.boats) { const m = bucket(x, z), g = gy(x, z); m.mat(MAT.PLANKS, [0.15, 0.12, 0.09], 0.5); m.push().T(x, g + 0.5, z).RY(-ang); m.ball(0, 0, 0, 1.6, 0.5, 0.7, 8, 5); m.pop(); addBoxCollider(m, x - 1.0, z - 0.7, x + 1.0, z + 0.7, g, g + 0.9); }
 }
