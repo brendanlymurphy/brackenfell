@@ -14,7 +14,26 @@ What the bot cannot see: frame rate on a real phone, flicker, anything audible, 
 | 1 | S1 | The crypt gate was shut again after a reload, with no prompt to open it: the reliquary behind it (mine key, lantern, ledger) could never be reached, so the main story stopped at "Open the reliquary". | Take the crypt key, unlock the gate, reload the page before opening the reliquary, Continue. | `applySave` (80_game.js) opens every gate the save says is unlocked: the world is built before the save is read. | bot `reload` (world agrees with the save at every checkpoint) |
 | 2 | S2 | Loading a save put the player inside a building a kilometre from where they saved (seen at Hale's post by the gate: loaded 981 m away). The migration for saves older than Build 19 ran on every save made outdoors inside a building's old footprint. | Stand by Hale at the gate, reload, Continue. | Saves carry the build that wrote them (`b`); only a save with no stamp and no list of discovered places is migrated. | bot `reload` (position after loading within 3 m) |
 | 3 | S3 | Progress made between two save points was lost on a crash or when a phone dropped the tab: experience and levels from finishing a quest, the bell flag, coin spent on stew, ale and apples, what you had heard about the shut house. | Finish a quest (level up), kill the tab, reopen: the level is gone. | The game now saves every 10 s of play and whenever the page is hidden (85_ui.js), as well as at the old save points. | bot: after every step, what is saved equals what is held |
+| 4 | S1 (phone) | A long line of dialogue pushed its last options under the bottom of a phone screen where no finger reaches them (the box had a fixed height and its contents spilled out downward). With a nine-line text "Farewell" was at y 420 of 390. | 844 x 390, touch: any line long enough to fill half the screen, with two or more options. | The dialogue box grows upward to the screen's height and scrolls beyond that (style.css). | bot `phone` (a long line with a long option: every option reachable) |
+| 5 | S3 (phone) | Touch targets under 44 px: dialogue options 36 px, menu tabs and Close 42 px, the pack's Wield / Drink / Choose buttons 38 px, the time slider 36 px. | 844 x 390, touch. | 44 px minimum on touch screens (style.css). | bot `phone` (every button measured) |
+| 6 | S3 | The Sexton's ledger and Corwin's journal opened a third of a second after their chest was used, whatever the player had done meanwhile: over a conversation the reader stayed open under it and Escape closed the wrong one. | Open the reliquary and at once talk to someone or use a door. | They open only if nothing else is open then (82_story.js, 94_mine.js); the book is in the pack either way. | bot `story` by touch |
+| 7 | S2 | Stopping to listen to the night meeting behind the chapel got the player killed: Garrick's camp is 15 m from it and its lookout sees 19 m. The bot died there twice, 60 gold lighter each time. | 23:30, stand 8 m east of the two cloaks behind the chapel for the 20 seconds the meeting lasts. | Outdoors at night outlaws see 0.6 as far (92_foes.js). | bot `secrets` (health untouched after listening) |
 
 ## Open
 
-(none yet)
+| # | Sev | What | How to reproduce | Why it is open |
+|---|---|---|---|---|
+| 8 | S3 | A bed with a chest at its foot offers "Open chest" first; the bed can be used once the chest is empty (elder, in.45, in.65, in.90). | Stand by the elder's bed. | By design of the prompt (nearest thing in view); a layout matter for the interiors worker. |
+
+## Looked for and not found
+
+The bot plays these and they hold: the whole story to both endings by keys and by taps; reloading at seven points of it; every
+conversation option at those seven points (405 steps); the first quests, tea for Maren, the camp in the pines, Garrick's tools, the
+bounty, the notice board's outlaw job, buying, selling, a perk, sleeping; theft in front of a witness and each way out of it (hand
+back, pay, the cell and its door); dying at a camp and in the mine; the story out of order (the reliquary and the mine before the
+body, the wall before Rowan has spoken, leaving the slab without choosing); saves written by Builds 45, 52 and 60; the Old Mine
+fought through to the Foreman's key and Silverthread, the lamp doused, lit and run dry, out by the cleft; all nine secrets; E on
+every seventh thing in the world (199 of 206 usable; the rest are beds with a sleeper in them); 30 minutes of play in one page
+(heap steady at about 620 MB after collection, tick 0.4 to 0.9 ms, nobody stuck for 20 s, nobody under a floor); the phone tab's
+life on the published page (sound only after the first tap, pause and save when hidden, sound back after a call, the "turn your
+phone" card pauses the game, closing the tab saves).

@@ -17,13 +17,14 @@ const root = new URL('../', import.meta.url).pathname, port = 8700 + Math.floor(
 fs.mkdirSync(root + OUT, { recursive: true });
 const TYPES = { html: 'text/html', js: 'text/javascript', css: 'text/css', png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', glb: 'model/gltf-binary', bin: 'application/octet-stream', json: 'application/json', m4a: 'audio/mp4', webmanifest: 'application/manifest+json' };
 const srv = http.createServer((q, s) => { try { const u = decodeURIComponent(q.url.split('?')[0]); const f = root + (u.endsWith('/') ? u.slice(1) + 'index.html' : u.slice(1)); const b = fs.readFileSync(f); s.writeHead(200, { 'content-type': TYPES[f.split('.').pop()] || 'application/octet-stream' }); s.end(b); } catch (e) { s.writeHead(404); s.end('nf'); } }).listen(port);
-const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--js-flags=--expose-gc'] });
 
 // ───────────── the part that lives in the page: eyes and legs, never hands ─────────────
 const IN_PAGE = () => {
   const dt = 1 / 30, sleep = ms => new Promise(r => setTimeout(r, ms));
   const B = window.BOT = { errs: [], toasts: [] };
   { const t0 = window.toast; window.toast = function (h) { B.toasts.push(String(h).replace(/<[^>]+>/g, '')); if (B.toasts.length > 60) B.toasts.shift(); return t0.apply(this, arguments); }; }
+  if (window.__TEST__ && window.__TEST__.trap) { let v = Player.locked; B.who = ''; Object.defineProperty(Player, 'locked', { get() { return v; }, set(x) { if (x && !v) B.who = new Error().stack.split('\n').slice(2, 7).map(l => l.trim().slice(0, 90)).join(' < '); v = x; } }); }
   B.find = id => { if (id[0] === '#') return World.interact[+id.slice(1)] || null; if (id.startsWith('npc:')) { const n = NPC[id.slice(4)]; if (!n) return null; if (!n.io) n.io = { npc: n }; return n.io; } return World.interact.find(i => i.id === id) || null; };
   B.posOf = it => it.npc ? [it.npc.pos[0], it.npc.pos[1] + (it.npc.anim === 'lie' ? 0.3 : it.npc.anim === 'sit' ? 1.0 : 1.35 * (it.npc.scale || 1)), it.npc.pos[2]] : it.p;
   // stand somewhere the game offers this thing. Returns { ok } or { ok: false, why, prompt }
@@ -79,6 +80,10 @@ const IN_PAGE = () => {
     if (!best) return false; for (const rad of [4, 3, 5, 2.2]) for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, x = best.pos[0] + Math.sin(a) * rad, z = best.pos[2] - Math.cos(a) * rad, gy = World.groundAt(x, z, best.pos[1] + 1.2); if (Math.abs(gy - best.pos[1]) > 1.2) continue; Cells.teleport({ p: [x, gy, z], yaw: 0 }); game.step(2, dt); if (Math.hypot(Player.pos[0] - x, Player.pos[2] - z) < 0.6) return true; } return 'no place to stand near ' + (best.name || best.kind); };
   B.left = (campId, kind) => Foes.list.filter(f => f.alive && f.hp > 0 && f.state !== 'gone' && (!campId || f.camp && f.camp.id === campId) && (!kind || f.kind === kind)).length;
   B.loots = () => World.interact.map((it, i) => it.kind === 'loot' && Math.hypot(it.p[0] - Player.pos[0], it.p[2] - Player.pos[2]) < 30 ? i : -1).filter(i => i >= 0);
+  B.info = () => { for (const o of [G.renderer, G.r, R.renderer, R.gl, G.three]) if (o && o.info && o.info.memory) return o.info; return null; };
+  // sounds: count every source that has started and not ended (the context's own factory methods are wrapped once)
+  B.live = 0; B.audioHook = () => { const c = typeof Snd !== 'undefined' && Snd.ctx; if (!c || c.__bot) return !!c; c.__bot = 1; for (const m of ['createBufferSource', 'createOscillator', 'createConstantSource']) { const f = c[m]; if (!f) continue; c[m] = function () { const n = f.apply(c, arguments), st = n.start; n.start = function () { B.live++; n.addEventListener('ended', () => { B.live--; }); return st.apply(n, arguments); }; return n; }; } return true; };
+  B.sounds = () => B.live;
   B.day = h => { Env.dayLength = 0; Env.hour = h; npcSnapAll(); game.step(2, dt); };
   B.rng = seed => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
 };
@@ -214,7 +219,7 @@ const CK = {}; const ck = async name => { await ev(() => { save(); }); CK[name] 
 const ckLoad = name => CK[name] || (fs.existsSync(root + 'shots/bot/ck_' + name + '.json') ? fs.readFileSync(root + 'shots/bot/ck_' + name + '.json', 'utf8') : null);
 // load a save the way a person does (the page boots with it in storage, Continue is pressed) and compare what the game then holds with what was saved
 async function resume(sv, label, o) {
-  where = 'load ' + label; await open({ save: sv }); const want = JSON.parse(sv);
+  where = 'load ' + label; await open(Object.assign({ save: sv }, process.env.BOTDEBUG ? { trap: 1 } : {})); const want = JSON.parse(sv);
   const cb = (await ev(() => BOT.buttons('#contBtn')))[0]; if (!cb || !cb.shown) { bug(1, 'a saved game exists but the title screen offers no Continue (' + label + ')'); return false; }
   await start(true); const d = await ev(w => BOT.diff(w.S, JSON.parse(JSON.stringify(S))).filter(d => !/\.(sta|hp|t|iframes|regen|oil|disc|seen|hour)\b/.test(d)), want);
   if (d.length && !(o && o.old)) bug(2, 'loading the save "' + label + '" changes it: ' + d.slice(0, 5).join('; '));
@@ -252,15 +257,18 @@ SC.sweep = async () => {
   await ev(() => { BOT.day(3); S.flags.bed = 1; }); const n = await ev(() => World.interact.length), kinds = await ev(() => World.interact.map(i => [i.kind || '?', i.id || '', i.cell || ''])); const un = {}, rnd = (() => { let a = SEED + 1; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
   const every = +val('--every', 1);
   for (let i = 0; i < n; i += every) {
-    const [kind, id] = kinds[i]; where = 'sweep ' + kind + ' ' + id; const g0 = await ev(() => S.gold);
-    const r = await ev(i => BOT.approach('#' + i), i); if (!r.ok) { if (!r.nolabel) { (un[kind] = un[kind] || []).push(id + (r.why.includes('instead') ? ' ' + r.why.slice(r.why.indexOf('(')) : '')); } continue; }
-    await key('KeyE'); await ev(() => BOT.settle()); let u = await ev(() => BOT.ui());
+    const [kind, id] = kinds[i]; where = 'sweep ' + kind + ' ' + id;
+    // whatever the last thing set going (a guard on his way, a fade, a bed that slept the night away) is let finish first
+    await ev(async () => { if (Math.abs(Env.hour - 3) > 0.5) BOT.day(3); if (S.crime) { S.crime = null; S.stolen = {}; } await BOT.settle(); }); if ((await ev(() => BOT.ui())).talk) await leaveTalk();
+    const r = await ev(i => BOT.approach('#' + i), i); if (!r.ok) { if (!r.nolabel && process.env.BOTDEBUG) console.log('   unreach', id, JSON.stringify(await ev(() => [BOT.ui(), !!IX.sit, S.jail, Player.eye, RPG.dead, Env.hour.toFixed(1), BOT.toasts.slice(-2), BOT.who]))); if (!r.nolabel) { (un[kind] = un[kind] || []).push(id + (r.why.includes('instead') ? ' ' + r.why.slice(r.why.indexOf('(')) : '')); } continue; }
+    await key('KeyE'); await ev(() => BOT.settle()); let u = await ev(() => BOT.ui()); if (process.env.BOTDEBUG) console.log('   did', i, kind, id, r.label, JSON.stringify([u.locked, u.talk, u.reader, await ev(() => [document.getElementById('fade').classList.contains('on'), +Env.hour.toFixed(1), !!IX.sit, BOT.toasts.slice(-1)[0]])]));
     if (u.reader) { const t = await ev(() => document.getElementById('rtext').textContent + '|' + document.getElementById('rtitle').textContent); if (t.length < 12 || /undefined|NaN|\[object/.test(t)) bug(2, `reading ${id}: broken or empty text "${t.slice(0, 80)}"`); const cb = (await ev(() => BOT.buttons('#reader button')))[0]; if (cb && (!cb.inView || !cb.reach)) bug(2, 'the reader’s close button cannot be pressed (' + id + ')'); await key('Escape'); u = await ev(() => BOT.ui()); if (u.reader) bug(1, 'the reader does not close with Escape (' + id + ')'); }
     if (u.talk) { for (let c = 0; c < 3 && (await ev(() => BOT.ui())).talk; c++) { const d = await ev(() => BOT.dialog()); if (!d.opts.length) break; const o = d.opts[Math.floor(rnd() * d.opts.length)]; await skipVoice(); await tap(o.x, o.y); await ev(() => BOT.settle()); } await leaveTalk(); }
     await closeAll(); if (kind === 'seat') { await page.keyboard.down('KeyW'); await ev(() => BOT.step(8)); await page.keyboard.up('KeyW'); }
     await ev(() => { if (S.jail) IX.release('wait'); if (RPG.st().hp < 60) RPG.st().hp = 100; }); await ev(() => BOT.settle()); await check(where, { nosave: i % 25 !== 0 });
     if (i % 200 === 0) say(`   sweep ${i} / ${n}`);
   }
+  if (un.bed) { un.bed = un.bed.filter(x => !/instead/.test(x)); if (!un.bed.length) delete un.bed; }       // a bed with a sleeper in it, or a chest at its foot that is offered first
   for (const k in un) bug(3, `${un[k].length} ${k} thing(s) show a label but no place could be found to stand and use them: ${un[k].slice(0, 12).join(', ')}`);
 };
 // reload after every step of the first quests and of Act 1, and compare
@@ -416,7 +424,7 @@ SC.phone = async () => {
 // half an hour of play in one page
 SC.soak = async () => {
   const sv = ckLoad('act1') || ckLoad('first'); if (!sv) return console.log('   run story first'); if (!await resume(sv, 'checkpoint')) return; const MIN = +val('--minutes', 30); where = 'soak';
-  await ev(() => { Env.dayLength = 24 * 60 / 2; BOT.soak = { stuck: {}, rows: [], bad: [] }; });       // a day every 12 minutes: the half hour sees every hour twice
+  await ev(() => { Env.dayLength = 24 * 60 / 2; BOT.soak = { stuck: {}, rows: [], bad: [] }; BOT.audioHook(); });       // a day every 12 minutes: the half hour sees every hour twice
   const doors = await ev(() => World.interact.map((it, i) => it.kind === 'portal' && !it.cell && interactLabel(it) ? i : -1).filter(i => i >= 0)), rnd = (() => { let a = SEED + 3; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
   for (let m = 0; m < MIN; m++) {
     // a minute: wander with the keys, now and then go through a door and back, talk to someone, swing the sword
@@ -431,15 +439,81 @@ SC.soak = async () => {
           const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 1.0); if (n.pos[1] < gy - 0.6 && !k.under) { k.under = 1; K.bad.push('under the floor: ' + n.id + ' at y ' + n.pos[1].toFixed(2) + ', floor ' + gy.toFixed(2) + ' (' + n.pos.map(v => v.toFixed(1)) + ', ' + n.anim + ')'); }
           if (!n.pos.every(Number.isFinite) && !k.nan) { k.nan = 1; K.bad.push('position is not a number: ' + n.id); } }
         if (Player.pos[1] < (World.cell ? CELL.y : 0) - 60) { K.bad.push('the player fell out of the world at ' + Player.pos.map(v => v.toFixed(1))); if (World.cell) game.leave(); game.tp(0, 0, 0); } }
-      Input.keys = {}; const ms = (performance.now() - t0) / ticks; const st = await game.draw(); const live = typeof Snd !== 'undefined' && Snd.live ? Snd.live() : null;
-      return { m, heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : 0, draws: st.draws, tris: Math.round(st.tris / 1000), tick: +ms.toFixed(2), geo: G.r && G.r.info ? G.r.info.memory.geometries : 0, tex: G.r && G.r.info ? G.r.info.memory.textures : 0, inter: World.interact.length, col: World.colliders.length, em: World.emitters.length, foes: Foes.list.length, toasts: document.getElementById('toasts').children.length, dom: document.getElementsByTagName('*').length, hour: +Env.hour.toFixed(1) }; }, m);
+      Input.keys = {}; const ms = (performance.now() - t0) / ticks; const st = await game.draw(); if (typeof gc === 'function') { gc(); gc(); } const live = typeof Snd !== 'undefined' && Snd.live ? Snd.live() : null;
+      return { m, heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : 0, draws: st.draws, tris: Math.round(st.tris / 1000), tick: +ms.toFixed(2), geo: BOT.info() ? BOT.info().memory.geometries : 0, tex: BOT.info() ? BOT.info().memory.textures : 0, snd: BOT.sounds(), inter: World.interact.length, col: World.colliders.length, em: World.emitters.length, foes: Foes.list.length, toasts: document.getElementById('toasts').children.length, dom: document.getElementsByTagName('*').length, hour: +Env.hour.toFixed(1) }; }, m);
     notes.length < 0; say('   ' + JSON.stringify(row)); (SC.soak.rows = SC.soak.rows || []).push(row); await ev(() => { if (RPG.dead) return; const r = RPG.st(); r.hp = RPG.MAXHP; }); await ev(() => BOT.settle()); await closeAll(); await check('soak minute ' + m, { nosave: true });
   }
+  // sounds: the game was stepped faster than the clock, so let the clock catch up, then nothing but the standing loops may still be sounding
+  const snd0 = await ev(() => BOT.sounds()); await page.waitForTimeout(12000); const snd1 = await ev(() => BOT.sounds()); await page.waitForTimeout(6000); const snd2 = await ev(() => BOT.sounds());
+  notes.push(`sounds still playing: ${snd0} at the end of play, ${snd1} after 12 s of silence, ${snd2} after 18 s`); if (snd2 > 40 || snd2 > snd1 + 2) bug(2, `sounds that never stop: ${snd2} sources still playing 18 s after the game stopped moving (${snd1} at 12 s)`);
   for (const b of await ev(() => BOT.soak.bad)) bug(/stuck/.test(b) ? 3 : 2, b);
   const R = SC.soak.rows, a = R[Math.min(3, R.length - 1)], z = R[R.length - 1]; fs.writeFileSync(root + OUT + '/soak.json', JSON.stringify(R, null, 0));
   for (const k of ['heap', 'geo', 'tex', 'inter', 'col', 'em', 'dom', 'toasts']) if (z[k] > a[k] * 1.25 + (k === 'heap' ? 40 : 8)) bug(2, `${k} grows over ${R.length} minutes of play: ${a[k]} after 4 minutes, ${z[k]} at the end`);
   if (z.tick > a.tick * 1.5 + 0.5) bug(2, `a game tick slows down over time: ${a.tick} ms after 4 minutes, ${z.tick} ms at the end`);
   notes.push(`soak ${R.length} min: heap ${a.heap} to ${z.heap} MB, tick ${a.tick} to ${z.tick} ms, draws ${Math.min(...R.map(r => r.draws))} to ${Math.max(...R.map(r => r.draws))}, geometries ${a.geo} to ${z.geo}, textures ${a.tex} to ${z.tex}`);
+};
+// the Old Mine fought through: delvers, lurkers, the Foreman, his key, the strongbox, out by the cleft; then the lamp running dry
+SC.mine = async () => {
+  const sv = ckLoad('key'); if (!sv) return console.log('   run story first'); if (!await resume(sv, 'checkpoint key')) return; await ev(() => { BOT.day(10); S.gold += 300; give('potion', 3); save(); }); where = 'mine';
+  await useAnd('door.mine.in', 'into the mine'); if (!expect((await st()).cell === 'mine', 'cannot get into the mine with the key')) return;
+  const n0 = await ev(() => BOT.left('mine')); expect(n0 >= 6, 'the mine holds ' + n0 + ' foes, expected seven');
+  for (const kind of ['delver', 'lurker', 'foreman']) { await clear('mine', kind, 10); const left = await ev(k => BOT.left('mine', k), kind); expect(left === 0, left + ' ' + kind + '(s) in the mine could not be reached or killed'); }
+  const s = await st(); expect(s.items.foremankey, 'the Foreman is dead and looted but his key is not in the pack'); await useAnd('mine.chest', 'the strongbox'); expect((await st()).opened['mine.chest'] && (await st()).items.silverthread, 'the strongbox did not give Silverthread with the Foreman’s key');
+  await useAnd('mine.journal'); expect(await q('main') === 5, 'the journal did not move the story on after the fights (' + await q('main') + ')');
+  // the lamp: douse and light it from the pack, let it run dry, fill it
+  if (await menu('KeyI', 'pack')) { const lamp = await press('#tab-pack button[data-lamp]', /./, 'lamp button'); expect(lamp, 'no lamp button in the pack while in the mine'); await ev(() => BOT.step(2)); const t1 = await ev(() => BOT.toasts.slice(-1)[0]); await press('#tab-pack button[data-lamp]', /./, 'lamp button'); await ev(() => BOT.step(2)); const t2 = await ev(() => BOT.toasts.slice(-1)[0]); expect(/douse/i.test(t1) && /light/i.test(t2), 'the lamp button does not douse and light the lantern (' + t1 + ' / ' + t2 + ')'); await key('Escape'); }
+  await ev(() => { S.mine.oil = 2; BOT.step(120); }); const dry = await ev(() => ({ oil: S.mine.oil, toast: BOT.toasts.slice(-3).join(' | ') })); expect(dry.oil <= 0.01 || /dry|gutter/.test(dry.toast), 'the lamp does not run dry (' + JSON.stringify(dry) + ')'); await check('lamp dry', { nosave: true });
+  await useAnd('door.mine.cleft', 'out by the cleft'); const out = await st(); expect(!out.cell, 'the cleft does not lead out of the mine'); await check('mine done'); await talk('hale', /./, /./, /./); expect((await st()).flags.act1, 'Hale did not close Act 1 after the mine was fought through');
+};
+// the nine secrets by the E key, in an order a curious player might find them
+SC.secrets = async () => {
+  const sv = ckLoad('first'); if (!sv) return console.log('   run story first'); if (!await resume(sv, 'checkpoint first')) return; await ev(() => { BOT.day(12); S.flags.bed = 1; save(); }); where = 'secrets';
+  const sid = {}; for (const [k, v] of await ev(() => SEC.list.map(s => [s.sec, s.id]))) sid[k] = v;
+  const open = async (id, why) => { const r = await use(sid[id] || 'sec.' + id, { may: true }); await closeAll(); const o = (await st()).opened[sid[id] || 'sec.' + id]; if (process.env.BOTDEBUG) console.log('   sec', id, r, o, JSON.stringify(await ev(i => { const it = World.interact.find(x => x.id === 'sec.' + i); return [it && interactLabel(it), it && it.cell, it && it.p.map(v => +v.toFixed(1)), World.cell && World.cell.id, Player.pos.map(v => +v.toFixed(1)), BOT.toasts.slice(-1)[0]]; }, id))); return o; };
+  const count = () => ev(() => typeof secCount === 'function' ? secCount() : -1);
+  expect(await open('bell'), 'the bell box did not open'); expect((await st()).items.lockpick, 'the bell box gave no lockpick');
+  expect(await open('stone'), 'the crooked stone did not open'); expect((await st()).items.cellarkey, 'the stone gave no cellar key');
+  expect(await open('cellar'), 'the Magpie’s cellar did not open with its key'); expect(await open('attic'), 'the trunk on the Hart’s roof walk did not open');
+  expect(await open('wall'), 'the fresh brick did not open after the Hart’s ledger was read'); expect(await open('strongbox'), 'the quay strongbox did not open with the wharf key');
+  { const c = await ev(() => { const it = SEC.list.find(s => s.sec === 'house'); return it ? it.cell : null; }); if (expect(c, 'no hatbox anywhere')) { await ev(() => { if (World.cell) game.leave(); }); await useAnd('door.' + c + '.in', 'the shut house'); expect((await st()).cell === c, 'the shut house does not open with the wren key (in ' + (await st()).cell + ')'); } expect(await open('house'), 'the hatbox in the shut house did not open'); }
+  // the night meeting: stand off and listen
+  await ev(async () => { if (World.cell) game.leave(); const M = SEC.meet; Env.dayLength = 0; Env.hour = 23.5; game.tp(M.x + 8, M.z + 2, 270); const gy = World.groundY(M.x + 8, M.z + 2); for (let i = 0; i < 2100 && !S.flags.hear_meeting; i++) { Env.hour = 23.6; Player.pos[0] = M.x + 8; Player.pos[2] = M.z + 2; Player.pos[1] = gy; Player.vel = [0, 0, 0]; BOT.step(1, 1 / 30); } BOT.step(5); }); expect((await st()).flags.hear_meeting, 'the night meeting could not be overheard from 8 m'); expect(!(await ev(() => RPG.dead)) && (await ev(() => RPG.st().hp)) > 99, 'listening to the night meeting from 8 m gets the player attacked (health ' + (await ev(() => Math.round(RPG.st().hp))) + ', dead ' + (await ev(() => RPG.dead)) + '): Garrick’s camp is 15 m away'); expect(await open('meetpouch'), 'the purse left after the meeting did not open');
+  // the Magpie: follow at a distance from the square to the yard
+  const mg = await ev(() => { const G = SEC.mag; Env.hour = 19; if (World.cell) game.leave(); game.tp(2, 0, 0); for (let i = 0; i < 80 && G.st === 'off'; i++) { Env.hour = 19; BOT.step(2); } let n = 0; for (; n < 3500 && G.st !== 'done' && G.path; n++) { Env.hour = 19.5; const pr = G.path[Math.max(0, G.i - 2)], ux = G.x - pr[0], uz = G.z - pr[1], ul = Math.hypot(ux, uz) || 1; const px = n < 30 ? G.x - 8 : G.x - ux / ul * 7, pz = n < 30 ? G.z : G.z - uz / ul * 7; Player.pos = [px, World.groundY(px, pz) + 0.01, pz]; Player.vel = [0, 0, 0]; RPG.st().hp = RPG.MAXHP; BOT.step(2, 0.05); } BOT.step(5); return G.st + (RPG.dead ? ' (died)' : ''); }); expect(mg === 'done', 'the Magpie could not be followed to her yard (' + mg + ')'); expect(await open('magpie'), 'the Magpie’s sack did not open after the chase');
+  expect(await count() === 9, 'found ' + await count() + ' of 9 secrets after opening all nine'); await check('secrets'); await ev(() => { if (World.cell) game.leave(); BOT.day(11); }); await talk('greta', /talk in the Hart/i); await talk('marta', /sell/i); await check('after secrets');
+};
+// the life of a phone tab, on the page as it is published (no test hooks, the game's own frame loop, sound that must be unlocked by a tap)
+SC.life = async () => {
+  where = 'life'; const b2 = await chromium.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--ignore-gpu-blocklist'] }), ctx = await b2.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true }), pg = await ctx.newPage(); pg.setDefaultTimeout(240000);
+  const errs = []; pg.on('console', m => { const t = m.text(); if (/Failed to load resource|GL Driver Message|GPU stall/.test(t)) return; if (m.type() === 'error') errs.push(t.slice(0, 300)); }); pg.on('pageerror', e => errs.push('exception: ' + (e.stack || e.message).slice(0, 400)));
+  try {
+    await pg.goto(`http://localhost:${port}/?webgl`); await pg.waitForFunction(() => window.__ready === true);
+    const a0 = await pg.evaluate(() => ({ ctx: !!Snd.ctx, state: Snd.ctx ? Snd.ctx.state : 'none' })); expect(a0.state !== 'running', 'sound is running before the first tap (' + a0.state + '): a phone would have blocked it and the game may think it is playing');
+    const sb = await pg.evaluate(() => { const r = document.getElementById('startBtn').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }); await pg.touchscreen.tap(sb[0], sb[1]); await pg.waitForTimeout(2500);
+    const a1 = await pg.evaluate(() => ({ state: Snd.ctx ? Snd.ctx.state : 'none', playing: game.playing, frame: R.frame })); expect(a1.playing, 'tapping Enter the village does not start the game'); expect(a1.state === 'running', 'sound has not started after the first tap (' + a1.state + ')');
+    await pg.waitForTimeout(1500); const f1 = await pg.evaluate(() => R.frame); expect(f1 > a1.frame, 'the game draws no frames after starting (' + a1.frame + ' to ' + f1 + ')');
+    // the tab is hidden (home button, another app, the phone locks)
+    const hide = h => pg.evaluate(h => { Object.defineProperty(document, 'hidden', { get: () => h, configurable: true }); Object.defineProperty(document, 'visibilityState', { get: () => h ? 'hidden' : 'visible', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); }, h);
+    await pg.evaluate(() => { S.gold += 7; localStorage.removeItem('brackenfell.v1'); }); await hide(true); await pg.waitForTimeout(900);
+    const h1 = await pg.evaluate(() => ({ paused: !!UI.paused, state: Snd.ctx.state, saved: !!localStorage.getItem('brackenfell.v1'), gold: (JSON.parse(localStorage.getItem('brackenfell.v1') || '{"S":{}}').S.gold), have: S.gold, frame: R.frame })); await pg.waitForTimeout(800); const f2 = await pg.evaluate(() => R.frame);
+    expect(h1.paused, 'hiding the tab does not pause the game'); expect(h1.state !== 'running', 'sound keeps running while the tab is hidden (' + h1.state + ')'); expect(h1.saved && h1.gold === h1.have, 'hiding the tab does not save the game (a phone may drop the tab without warning)'); expect(f2 - h1.frame <= 1, 'the game keeps drawing while hidden (' + (f2 - h1.frame) + ' frames in 0.8 s)');
+    await hide(false); await pg.waitForTimeout(700); const h2 = await pg.evaluate(() => ({ paused: !!UI.paused, shown: !document.getElementById('pause').hidden, btn: (() => { const r = document.getElementById('pResume').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, r.width, r.height]; })() }));
+    expect(h2.paused && h2.shown, 'coming back to the tab: no pause screen is shown (paused ' + h2.paused + ', shown ' + h2.shown + ')'); await pg.touchscreen.tap(h2.btn[0], h2.btn[1]); await pg.waitForTimeout(1200);
+    const h3 = await pg.evaluate(() => ({ paused: !!UI.paused, state: Snd.ctx.state, frame: R.frame, locked: Player.locked })); await pg.waitForTimeout(900); const f3 = await pg.evaluate(() => R.frame);
+    expect(!h3.paused && !h3.locked, 'Resume after coming back does not resume (paused ' + h3.paused + ', locked ' + h3.locked + ')'); expect(h3.state === 'running', 'sound does not come back after the tab was hidden and Resume was tapped (' + h3.state + ')'); expect(f3 > h3.frame, 'the game does not draw again after coming back');
+    // a call or the lock screen stops the sound without hiding the page (iOS: state "interrupted"); the next touch must bring it back
+    await pg.evaluate(() => Snd.ctx.suspend()); await pg.waitForTimeout(300); const c1 = await pg.evaluate(() => Snd.ctx.state); await pg.touchscreen.tap(600, 120); await pg.waitForTimeout(900); const c2 = await pg.evaluate(() => Snd.ctx.state);
+    expect(c2 === 'running', 'after a call or lock stopped the sound (' + c1 + ') a touch does not bring it back (' + c2 + ')');
+    // turn the phone upright in the middle of play, and back
+    await pg.setViewportSize({ width: 390, height: 844 }); await pg.waitForTimeout(900); const r1 = await pg.evaluate(() => ({ card: getComputedStyle(document.getElementById('rotate')).display !== 'none', paused: !!UI.paused, frame: R.frame })); await pg.waitForTimeout(700); const f4 = await pg.evaluate(() => R.frame);
+    if (r1.card) expect(r1.paused || f4 - r1.frame <= 1, 'upright: the "turn your phone" card covers the screen but the game runs on under it (' + (f4 - r1.frame) + ' frames in 0.7 s, paused ' + r1.paused + '): the player can be killed without seeing it');
+    await pg.setViewportSize({ width: 844, height: 390 }); await pg.waitForTimeout(900); const r2 = await pg.evaluate(() => ({ card: getComputedStyle(document.getElementById('rotate')).display !== 'none', paused: !!UI.paused, pshown: !document.getElementById('pause').hidden, cw: G.canvas.clientWidth, ch: G.canvas.clientHeight }));
+    expect(!r2.card, 'back on its side the card stays'); expect(Math.abs(r2.cw - 844) < 2 && Math.abs(r2.ch - 390) < 2, 'after turning back the picture is ' + r2.cw + ' x ' + r2.ch); if (r2.paused) { expect(r2.pshown, 'after turning back the game is paused with no pause screen to leave it'); await pg.evaluate(() => UI.resume()); }
+    await pg.screenshot({ path: root + OUT + '/life_end.png' });
+    // closing the tab saves
+    await pg.evaluate(() => { S.gold += 3; }); await pg.evaluate(() => dispatchEvent(new Event('pagehide'))); const g = await pg.evaluate(() => [JSON.parse(localStorage.getItem('brackenfell.v1')).S.gold, S.gold]); expect(g[0] === g[1], 'closing the tab does not save');
+    for (const e of errs) bug(/exception/.test(e) ? 1 : 3, 'console (published page): ' + e);
+  } finally { await b2.close(); }
 };
 const todo = RUN.filter(r => SC[r]); for (const r of RUN) if (!SC[r]) console.log('no scenario ' + r);
 const t0 = Date.now();
