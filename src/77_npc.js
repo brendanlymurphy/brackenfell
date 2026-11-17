@@ -42,10 +42,11 @@ function navBuild() {
   const N = Nav.nodes, A = Nav.adj;
   const add = (x, y, z) => { N.push([x, y, z]); A.push([]); return N.length - 1; };
   const link = (a, b) => { if (a === b || a < 0 || b < 0) return; const d = hyp(N[a][0] - N[b][0], N[a][2] - N[b][2]); if (!A[a].some(e => e[0] === b)) { A[a].push([b, d]); A[b].push([a, d]); } };
-  const roadNodes = [];
+  const roadNodes = [], roadEnds = [];       /* [coord] roadEnds: first and last node of each road */
   for (const r of Roads) {
-    let prev = -1; const n = Math.max(2, Math.round(r.line.len / 5));
+    let prev = -1; const n = Math.max(2, Math.round(r.line.len / 5)), k0 = N.length;
     for (let i = 0; i <= n; i++) { const p = r.line.point(r.line.len * i / n); if (hyp(p[0], p[1]) > WORLD_RADIUS + 20) { prev = -1; continue; } const k = add(p[0], World.groundY(p[0], p[1]), p[1]); roadNodes.push(k); link(prev, k); prev = k; }
+    if (N.length > k0) roadEnds.push([k0, N.length - 1]);
   }
   const nearest = (x, z, list, max) => { let b = -1, bd = max * max; for (const k of list) { const d = (N[k][0] - x) * (N[k][0] - x) + (N[k][2] - z) * (N[k][2] - z); if (d < bd) { bd = d; b = k; } } return b; };
   // join roads where they meet
@@ -54,6 +55,9 @@ function navBuild() {
   const sq = [[0, -2], [-6, -4], [6, -3], [0, -10], [0, 6], [-9, 2], [9, 3], [0, -15.5]].map(p => add(p[0], World.groundY(p[0], p[1]), p[1]));
   for (const a of sq) { for (const b of sq) if (a < b && hyp(N[a][0] - N[b][0], N[a][2] - N[b][2]) < 11) link(a, b); link(a, nearest(N[a][0], N[a][2], roadNodes, 9)); }
   const outside = roadNodes.concat(sq);
+  /* [coord] Build 72: a road that stops short of the place (the north road now ends in a ginnel 6 m from the nearest stepping stone) was joined to nothing,
+     so everyone bound for it walked 500 m round by the hills. Each road end joins the nearest node that is not its own road, within 12 m. */
+  for (const [k0, k1] of roadEnds) for (const e of [k0, k1]) { const j = nearest(N[e][0], N[e][2], outside.filter(k => k < k0 || k > k1), 12); if (j >= 0) link(e, j); }
   const doorNode = {};
   for (const id in World.houses) {
     const h = World.houses[id], d = h.door; if (!d) continue;

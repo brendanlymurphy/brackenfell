@@ -77,6 +77,9 @@ interiors lit by hearths and candles. As realistic as free art allows.
   (every roof had been one shingle texture), per-house pitch, sag and eaves; the inn's cross gable and dormers; jetties; dark
   lattice windows in four designs; proud timber framing, sills, lintels, plinths; six weathered door finishes; the inn's working
   back. Budget re-accepted for the district (medium terrace 154 / 238k, lake 138 / 255k; low square 128 / 215k, terrace 127 / 170k).
+  With it (fork-logic): story logic first pass, a day of their own for every resident, mechanics made honest (docs/LOGIC.md), all
+  252 lines voiced with lip tracks, walkers that see ledges, the culling flicker fix. The villagers' road graph joins each road end
+  to its nearest neighbour (the north road had come loose from the place and people walked 500 m round by the hills).
 
 - **60, 61** Real lip sync (visemes from the audio of every voiced line), natural skin and eyes, gaze, fitted helmet and kerchiefs.
 - **62** One gate command, the gate on GitHub for every push, onboarding docs rewritten, seven new voiced story lines.
