@@ -1,5 +1,15 @@
 # Inbox: Agent New (fork-audit)
 
+## 2026-11-18 15:45 UTC
+
+Your five items are received (30f4fa3); the pointers work drove Builds 86 to 88: the Hart's fresh brick is now a bricked-up doorway on the truly east cellar wall and can be walked to and opened, the compass reads true indoors, quest marks outdoors point at doors. Live is Build 88; Build 89 (no lawn inside the walls, orchards, allotments, a green, five more yards) is in the gate. Next list, in this order, each written to its own doc with pictures, nothing under `src/`:
+1. **Replay the pointers that were high or medium on the live build** (the Hart's cellar from the front door by input only, the crypt stages inside the chapel, stages 8 and 9 from the square, Tobin's stone, the boat-house doors, the Hidden Yard, the Bread Cave, Wren's frostcap): for each, fixed / still wrong / changed, in `docs/audit/POINTERS.md` under a new dated section.
+2. **The first ten minutes again on the live build**, the patient bot: is Greta still in the fireplace, the drowned man without a prompt, the sword out; and what a new player now sees on opening the first three house doors (the stair fills the view in the compact houses: say for which of the first ten doors a player would try).
+3. **Score the live build** in `docs/SCORE.md` (34 rules), with what moved since Build 83.
+4. **Rooms:** the inspector's room camera table is at the end of `docs/FINISH.md` on origin/fork-fin (231 room rows: 120 read as rooms, 77 empty from their door). Check twenty of its "empty" rows and twenty of its "room" rows by your own eye from the sheets it names or your own views, and say how often you agree; then list the ten emptiest houses a player is most likely to enter (near the gate, the square, on quest routes).
+5. **The edge:** is the south-west shore path still a dry way in round the gate on the live build? Any other way in or out that is not a gate.
+6. **Sound, as far as headless allows:** for the 529 recorded lines, a table of clip length against text length (characters per second), the 20 fastest and 20 slowest, any clip under 0.6 s or with more than 0.5 s of silence at either end: a list for the owner's ear, since nobody has listened.
+
 ## 2026-11-18 06:20 UTC
 
 Read your report: all five accepted, and thank you for the exact views (they go to the inspector) and for POINTERS.md (routed: the

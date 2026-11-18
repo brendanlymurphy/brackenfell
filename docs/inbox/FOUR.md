@@ -1,5 +1,21 @@
 # Inbox: Agent Four (fork-ch1)
 
+## 2026-11-18 15:55 UTC: animals are allowed; the owner has opened the hosts
+
+The owner has given your environment access to `opengameart.org`, `polyhaven.com` and `sketchfab.com`. Animals move to the top of your list, above the items in the entry below.
+**What may come in:** realistic models only (no stylised, low-poly-look or cartoon ones), licence CC0, or CC-BY with the author and link recorded; nothing "non-commercial", "editorial" or unclear; nothing ripped from a game. For each file keep `docs/licences/animals.md`: name, author, source page, licence, date fetched, what you changed. Download through the page's own download, never past a login or paywall; if a site wants an account, stop and say so.
+**Order:** pig (the owner named it), hens and a cock, a dog, a cat, sheep, a goose, then ox and horse. One animal fully done before the next.
+**The bar, each animal:** passes at 0.6 m and at 6 m beside a villager for scale (true size: a sow about 0.75 m at the shoulder, a hen 0.4 m); fur or feather texture that holds at arm's length; a skeleton with at least stand, walk, and one idle (root, peck, graze, sit), or, if the model is not rigged, two or three believable still poses (lying, standing head down) and it does not walk: a still animal that looks alive beats a sliding one. Feet on the ground on slopes, a contact shadow, no sliding, no popping within sight, eyes not black holes.
+**Cost:** under 3k triangles each within 12 m and a low version beyond; all animals together at most 12 draws and 25k triangles in any budget view (Medium square is at 336k of a 380k limit; Low 230k / 150 draws). Tell me the figures.
+**Where:** the pens and yards that already say an animal lives there (the wallows, the sheep close and fold, the hen run, the yards by household in `73m2_crafts.js` and `73n_wharfside.js`: read, the placing goes through a small table of your own, e.g. `src/78_animals.js`, that those files do not need to change for). No animal on a lane a villager's path uses unless it yields.
+**Proof before I merge any:** per animal one sheet: 0.6 m, 3 m, 6 m with a villager, from the side and the front, noon and dusk, and its pen from the gate. I look at every one; an animal that does not pass is left out.
+
+## 2026-11-18 15:45 UTC
+
+Read your report as relayed by the owner. 62d709b is in Build 87 and live (the WebGPU fault never reached `main`: the integration had taken the older commit, the gate caught it, and your fix replaced mine). Roger: he is a grown man in the cast; the child at the stalls was Lettice Sele (14), who now gets a youth body at 0.9 (the logic session). Laurence and Joyce on one seat: fixed in Build 84.
+Animals: the three hosts need the owner's yes for this environment; I have asked him. Until then, none.
+Next, as in the 09:40 entry below, in this order: (1) boot toes at the foot of beds; the bodies tipped on their side by the sleeping clip: lay the spine flat for the frames a player can see; (2) a tool put down should be somewhere: on the bench, the rack or leaning by the door of the place its owner works (the logic session's work spots give the place), not vanish; (3) the arm's-length tour for people: ten villagers at 0.6 m (face, hands, hem, the held thing), listed with pictures, fixing what is yours; (4) faces: the audit still finds pairs it cannot tell apart at 3 m beyond clothes: propose what can vary in the face without new models (brow, jaw, nose from the morph table, skin tone, age lines) and show ten faces side by side.
+
 ## 2026-11-18 09:40 UTC
 
 Read 142117d's report; thank you for the warning on the ninth attribute. The integration had taken 3121395, so Build 86's first run failed `webgpu` exactly as you said; I packed the flag into `mid` as a second component on threejs (284bc3a). When you next merge origin/threejs keep whichever of the two fixes you prefer in `49_chars.js`, one of them only, and run `webgpu`.
