@@ -28,64 +28,64 @@ function pStock(P, room, o) {
   for (let i = 0; i < (o.barrels || 0); i++) pFree(P, room, P.id + '.' + room.id + 'brl' + i, 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { near: o.nearB || o.near || pCentre(room), lowOk: true });
 }
 
-// ── the store: a shop floor with a long counter, wares floor to ceiling and hams overhead; the keeper's rooms behind and above; a stockroom with the cellar stair; a cold cellar ──
-//    ground  shop (14 x 7) | stock (west) + keeper's room with a hearth (east)        up: the keeper's solar over the hearth room, an attic of stock over the stockroom
-//    below   one long cellar under both back rooms, its stair rising in the stockroom
+// ── the store [inout]: the same building as its shell on the Market Place (8.4 x 6.6 m, two storeys, a balcony over the door), one and a half times its floor: 10 x 8 ──
+//    ground  the shop across the front (street door and window where the shell has them), the cellar flight behind the counter; behind it a stockroom and the keeper's kitchen with the stair up
+//    up      Marta's counting room with the door onto the balcony, her chamber beside it, the stock loft over the back range where the stair arrives
+//    below   the cold cellar under the back of the shop and the back range
 PLANS.store = (P, c, info) => {
-  const R = P.R, id = P.id; P.dims = { W: 14, D: 12, Dh: 7 };
-  pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, 3.3); pLevel(P, 1, 3.3 + PW.SLAB, H_UP);
-  pRoom(P, 0, 'shop', 'shop', -7, 0, 7, 7, { floor: 'stone' }); pRoom(P, 0, 'stock', 'store', -7, 7, 0, 12); pRoom(P, 0, 'keeper', 'hall', 0, 7, 7, 12);
-  pRoom(P, 1, 'solar', 'bedroom', 0, 7, 7, 12); pRoom(P, 1, 'attic', 'bedroom', -7, 7, 0, 12);
-  pRoom(P, -1, 'cellar', 'cellar', -7, 7, 7, 12, { floor: 'stone', win: false });
-  pDoor(P, 'shop', null, 0, 0); pDoor(P, 'stock', 'keeper', 0, 10.8); pDoor(P, 'shop', 'keeper', 3.5, 7); pDoor(P, 'solar', 'attic', 0, 11.0);
-  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: -5.8, z: 8.9, width: 1.0, tread: 0.22 });
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: 1.5, z: 11.0, width: 1.0, tread: 0.22 });
-  pLayout(P);
-  const shop = P.rooms.shop, stock = P.rooms.stock, keeper = P.rooms.keeper, solar = P.rooms.solar, attic = P.rooms.attic, cellar = P.rooms.cellar;
-  // the keeper's hearth first: its stack goes up and down
-  const hh = pHearth(P, keeper, 'e', 1.6, { cauldron: true, size: 0.45, at: 8.6 }); P.hall = { room: keeper, hh };
+  const R = P.R, id = P.id, X0 = -2.5, X1 = 7.5, D = 8, Zp = 5; P.dims = { W: X1 - X0, D, Dh: Zp };
+  pLevel(P, -1, -2.8, 2.55); pLevel(P, 0, 0, 2.75); pLevel(P, 1, 3.0, H_UP);
+  pRoom(P, 0, 'shop', 'shop', X0, 0, X1, Zp, { floor: 'stone' }); pRoom(P, 0, 'stock', 'store', X0, Zp, 0.5, D); pRoom(P, 0, 'keeper', 'hall', 0.5, Zp, X1, D);
+  pRoom(P, 1, 'parlour', 'hall', X0, 0, 2.5, Zp); pRoom(P, 1, 'solar', 'bedroom', 2.5, 0, X1, Zp); pRoom(P, 1, 'attic', 'store', X0, Zp, X1, D);
+  pRoom(P, -1, 'cellar', 'cellar', X0, 3, X1, D, { floor: 'stone', win: false });
+  pDoor(P, 'shop', null, 0, 0); pDoor(P, 'shop', 'keeper', 4.5, Zp); pDoor(P, 'stock', 'keeper', 0.5, 6.0); pDoor(P, 'parlour', 'attic', 0, Zp); pDoor(P, 'solar', 'attic', 5.0, Zp);
+  // the shell's own openings: every window where the shell has one, and the door over the street door opens onto the balcony
+  const SHL = pShellWins(P, c, { x0: X0, z0: 0, x1: X1, z1: D });
+  const bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd) pUpperDoor(P, P.rooms.parlour, bd, Math.round(SHL.pos(bd) * 4) / 4);
+  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: -1.2, z: 4.2, width: 1.0, tread: 0.2 });
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: 2.6, z: 7.2, width: 0.9, tread: 0.19 });
+  pLayout(P); pBalconies(P, c);
+  const shop = P.rooms.shop, stock = P.rooms.stock, keeper = P.rooms.keeper, solar = P.rooms.solar, attic = P.rooms.attic, parlour = P.rooms.parlour, cellar = P.rooms.cellar;
+  // the keeper's hearth first: its stack goes up through the loft and down into the cellar
+  const hh = pHearth(P, keeper, 'e', 1.1, { cauldron: true, size: 0.4, at: 5.9 }); P.hall = { room: keeper, hh };
   if (hh) { pPier(P, -1, hh); pPier(P, 1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); }
-  // the shop floor: the counter runs along the back of the customers' half, closed at its west end; the way to the keeper's door stays open at its east end
-  const ct = pPut(P, shop, id + '.counter', -3.8, 4.8, 0, 6.0, 0.8, 0.84, pdCounter(6.0, c, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple', 'bottle', 'candle'], 9), { surface: true, noClear: true, lowOk: true });
-  if (ct) { pSpot(P, 'counter', ct.cx + 0.4, ct.cz + 0.85, PI, { k: 0 }); pSpot(P, 'front', ct.cx + 0.4, ct.cz - 0.85, 0, { k: 0 }); }
-  // behind the counter: a flap of floor, scales and a tall shelf wall; the stockroom door is on this side
-  pShelfRun(P, shop, 's', -7, -0.2, ['cheese', 'loaf', 'pot', 'jug'], { id: 'back' }); pShelfRun(P, shop, 's', 0.2, 2.7, ['bottle', 'jug', 'bowl', 'pot'], { id: 'back' }); pShelfRun(P, shop, 's', 4.3, 7, ['pot', 'cheese', 'bowl', 'loaf'], { id: 'back' });
-  // the side walls: wares from floor to ceiling, barrels and sacks by the door where goods arrive
-  pShelfRun(P, shop, 'w', 0, 4.4, ['bowl', 'jug', 'pot', 'cheese', 'bottle'], { id: 'side' }); pShelfRun(P, shop, 'e', 2.8, 7, ['bottle', 'pot', 'jug', 'loaf'], { id: 'side' });
-  for (let i = 0; i < 3; i++) pAgainst(P, shop, 'e', id + '.sbarrel' + i, 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { at: 0.8 + i * 0.85, lowOk: true });
-  for (let i = 0; i < 2; i++) pAgainst(P, shop, 'n', id + '.ssack' + i, 0.9, 0.6, 0.6, 0, PD.sacks(R), { at: i ? 'end' : 'start', lowOk: true });
-  pAgainst(P, shop, 'n', id + '.sbench', 1.6, 0.4, 0.46, 0, pdBench(1.6), { at: -3.0, lowOk: true });
-  // display tables with goods in the customers' half, a rug where the door opens
-  const dt = pFree(P, shop, id + '.display', 2.0, 0.9, 0.9, 0, m => { Props.table(m, 2.0, 0.9, 0.9); Props.clutter(m, R, -0.8, 0.8, 0.9, 0, ['apple', 'cabbage', 'cheese', 'loaf', 'bowl', 'jug'], 6, c); }, { near: [3.6, 2.6], surface: true });
-  pFree(P, shop, id + '.display2', 1.4, 0.8, 0.9, 0, m => { Props.table(m, 1.4, 0.8, 0.9); Props.clutter(m, R, -0.5, 0.5, 0.9, 0, ['bottle', 'pot', 'jug', 'candle'], 4, c); }, { near: [-3.8, 2.0], surface: true });
-  pStock(P, shop, { crates: 3, sacks: 2, barrels: 1, near: [5.4, 5.8], nearS: [-6, 2], nearB: [6, 1.5] });
-  PD.rack(P, shop, -3.2, 2.6, 2.6, 0, ['ham', 'herb', 'pot', 'garlic', 'pot', 'herb']); PD.rack(P, shop, 3.4, 3.8, 2.2, PI / 2, ['herb', 'garlic', 'ham', 'pot']); PD.rack(P, shop, -3.4, 6.0, 2.4, 0, ['pot', 'pot', 'herb', 'ham']);
-  PD.dense(P, shop, { pool: ['hooks', 'cabinet', 'paint', 'sconce', 'tapestry', 'torch'], corner: ['broom', 'sacks', 'cask'], middle: false });
-  const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, id + '.mat', e.x, 1.4, 0, 2.4, 1.6, 0.02, pdRug(2.4, 1.6, [0.35, 0.3, 0.22]), { flat: true, noClear: true });
-  pLamp(P, shop, -3.0, 2.8); pLamp(P, shop, 3.0, 2.8); pLamp(P, shop, -3.4, 5.8);
-  // the stockroom: floor-to-ceiling shelves, a ladder, crates and sacks, the cellar stair opening under the east end
-  pShelfRun(P, stock, 'w', 7.2, 11.8, ['pot', 'jug', 'bowl', 'bottle', 'cheese'], { id: 'sr' }); pShelfRun(P, stock, 's', -7, -3, ['bottle', 'jug', 'pot', 'bowl'], { id: 'ss' });
-  pStock(P, stock, { crates: 4, sacks: 4, barrels: 3, near: [-1.5, 10.6], nearS: [-5.5, 8.0] });
-  if (Kit.pieces.wooden_ladder) pKitFloor(P, stock, 'w', 'wooden_ladder', { n: 'a', at: 'mid' });
-  PD.rack(P, stock, -3.6, 9.4, 2.2, 0, ['ham', 'herb', 'garlic']);
-  PD.dense(P, stock, { pool: ['hooks', 'cabinet', 'paint', 'sacks', 'torch'], corner: ['sacks', 'broom', 'cask'], mid: { kinds: ['sacks', 'casks'], max: 1 } }); pLamp(P, stock, -3.5, 9.5);
-  // the keeper's room: hearth, worktable, shelves, a settle and a rug; reads (the ledger) stay where the old interior had them
-  dressKitchen(P, keeper, { hh });
-  PD.dense(P, keeper, { pool: ['cupboard', 'hooks', 'paint', 'tapestry', 'sconce', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-  const kt = pDining(P, keeper, 1.8, 0.85, { near: [4.0, 10.8], id: 'meal', n: 3 }); if (kt) { kt.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); }
-  // upstairs: the keeper's bedroom and the attic
+  // the shop: the counter faces the street door, the keeper's aisle and the cellar flight behind it, wares up both side walls
+  const ct = pPut(P, shop, id + '.counter', 5.0, 1.9, 0, 3.6, 0.8, 0.84, pdCounter(3.6, c, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple', 'bottle', 'candle'], 8), { surface: true, noClear: true, lowOk: true });
+  if (ct) { pSpot(P, 'counter', ct.cx + 0.3, ct.cz + 0.8, PI, { k: 0 }); pSpot(P, 'front', ct.cx - 0.3, ct.cz - 0.85, 0, { k: 0 }); }
+  pShelfRun(P, shop, 'w', 0.5, 3.2, ['bowl', 'jug', 'pot', 'cheese', 'bottle'], { id: 'side' });
+  pShelfRun(P, shop, 's', 5.3, 7.4, ['pot', 'cheese', 'bowl', 'loaf'], { id: 'back' }); pShelfRun(P, shop, 's', 2.2, 3.9, ['bottle', 'jug', 'bowl', 'pot'], { id: 'back' });
+  pAgainst(P, shop, 'n', id + '.sbench', 1.6, 0.4, 0.46, 0, pdBench(1.6), { at: 2.0, lowOk: true });
+  for (let i = 0; i < 2; i++) pAgainst(P, shop, 'n', id + '.sbarrel' + i, 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { at: -1.9 + i * 0.8, lowOk: true });
+  pFree(P, shop, id + '.display', 1.6, 0.8, 0.9, 0, m => { Props.table(m, 1.6, 0.8, 0.9); Props.clutter(m, R, -0.6, 0.6, 0.9, 0, ['apple', 'cabbage', 'cheese', 'loaf', 'bowl', 'jug'], 5, c); }, { near: [-1.0, 3.0], surface: true });
+  pStock(P, shop, { crates: 2, sacks: 2, near: [6.6, 4.2], nearS: [-1.9, 4.2] });
+  PD.rack(P, shop, 5.0, 2.9, 2.4, 0, ['ham', 'herb', 'pot', 'garlic', 'pot', 'herb']); PD.rack(P, shop, -1.0, 2.6, 2.0, PI / 2, ['herb', 'garlic', 'ham', 'pot']);
+  PD.dense(P, shop, { pool: ['hooks', 'paint', 'sconce', 'torch'], corner: ['broom', 'sacks', 'cask'], middle: false });
+  const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, id + '.mat', e.x, 1.1, 0, 2.0, 1.4, 0.02, pdRug(2.0, 1.4, [0.35, 0.3, 0.22]), { flat: true, noClear: true });
+  pLamp(P, shop, 0.2, 2.4); pLamp(P, shop, 5.0, 2.8);
+  // the stockroom: shelves to the ceiling, what came off the last cart
+  pShelfRun(P, stock, 'w', 5.3, 7.7, ['pot', 'jug', 'bowl', 'bottle', 'cheese'], { id: 'sr' }); pShelfRun(P, stock, 'n', -2.3, 0.2, ['bottle', 'jug', 'pot', 'bowl'], { id: 'ss' });
+  pStock(P, stock, { crates: 2, sacks: 3, barrels: 2, near: [-1.6, 7.2], nearS: [-0.4, 7.3] });
+  PD.dense(P, stock, { pool: ['hooks', 'sacks', 'torch'], corner: ['sacks', 'cask'], mid: { kinds: ['sacks'], max: 1 } }); pLamp(P, stock, -1.0, 6.5);
+  // the keeper's kitchen: the fire on the end wall, a table between the door and the stair
+  const kt = pDining(P, keeper, 1.5, 0.75, { near: [3.2, 5.9], id: 'meal', n: 2 }); if (kt) { kt.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); }
+  pAgainst(P, keeper, 'n', id + '.kshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, ['pot', 'bowl', 'jug', 'cheese', 'loaf'])), { at: 2.0 });
+  pWalls(P, keeper, ['Peg_Rack', 'Shelf_Simple', 'Torch_Metal']); pLamp(P, keeper, 3.4, 5.9);
+  // upstairs: the counting room over the door (ledgers, the strongbox, the way onto the balcony), Marta's chamber, the stock loft
+  const desk = pFree(P, parlour, id + '.desk', 1.5, 0.75, 0.8, 0, pdTable(1.5, 0.75, ['candle', 'jug', 'plate', 'bowl'], 3, c), { near: [-0.9, 2.8], surface: true });
+  if (desk) pAgainst(P, parlour, 'w', id + '.pbench', 1.4, 0.4, 0.46, 0, pdBench(1.4), { at: 1.4, lowOk: true });
+  pShelfRun(P, parlour, 'e', 1.6, 4.6, [], { id: 'led', books: true });
+  PD.dense(P, parlour, { pool: ['cupboard', 'tapestry', 'paint', 'sconce'], corner: ['broom'], mid: { kinds: ['rug'], max: 1 } }); pLamp(P, parlour, 0, 2.6);
   dressBedroom(P, solar, { beds: ['bed'], loot: LOOT.store, bedInteract: true, table: true });
-  PD.dense(P, solar, { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'cabinet', 'sconce'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-  dressBedroom(P, attic, { beds: ['bed2'], chestId: 'chest2', chest: false }); pStock(P, attic, { sacks: 4, crates: 2, barrels: 1, near: [-3.5, 9.5] });
-  PD.rack(P, attic, -3.5, 9.5, 2.4, PI / 2, ['herb', 'herb', 'garlic']);
-  PD.dense(P, attic, { pool: ['hooks', 'shelf', 'sacks', 'cupboard'], corner: ['sacks', 'broom', 'cask'], mid: { kinds: ['sacks', 'casks'], max: 2 } });
+  PD.dense(P, solar, { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'sconce'], corner: ['broom'], mid: { kinds: ['rug'], max: 1 } });
+  pStock(P, attic, { sacks: 4, crates: 3, barrels: 1, near: [-1.2, 6.4], nearS: [0.6, 5.8] });
+  PD.rack(P, attic, -1.0, 6.4, 2.2, 0, ['herb', 'herb', 'garlic']);
+  PD.dense(P, attic, { pool: ['hooks', 'shelf', 'sacks'], corner: ['sacks', 'cask'], mid: { kinds: ['sacks', 'casks'], max: 1 } }); pLamp(P, attic, 0.4, 6.0);
   // the cellar: casks, hams, jars, cold shelves; it later carries the way to the smugglers' tunnel
-  dressCellar(P, cellar, { barrels: 4, crates: 3, rows: true });
-  PD.dense(P, cellar, { pool: ['cask', 'shelf', 'sacks', 'stack', 'cabinet', 'torch'], corner: ['cask', 'sacks', 'stack'], mid: { kinds: ['casks', 'sacks'], max: 3, min: 0.8 }, racks: 1, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
+  dressCellar(P, cellar, { barrels: 3, crates: 3, rows: true });
+  PD.dense(P, cellar, { pool: ['cask', 'shelf', 'sacks', 'stack', 'torch'], corner: ['cask', 'sacks', 'stack'], mid: { kinds: ['casks', 'sacks'], max: 2, min: 0.8 }, racks: 1, rackKinds: ['ham', 'herb', 'garlic', 'ham'] });
   if (!hh) P.err.push('no hearth fits in the keeper room');
   for (const rid of ['cellar']) if (!P.lightIn[rid]) pTorch(P, P.rooms[rid], 'n', 0.5, 1.7, 6.5) || pTorch(P, P.rooms[rid], 's', 0.5, 1.7, 6.5);
 };
-
 
 // ── the smithy: a tall forge hall that is open to the loft smoke, forge on the west wall with its bellows, anvil, quench trough, grindstone and racks; the family's room beside it with the stair to the sleeping loft; a coal and iron store behind ──
 const pdBellows = m => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.3, 0, -0.2, 0.3, 0.1, 0.2); m.mat(MAT.CLOTH, [0.25, 0.17, 0.11], 0.6); m.box(-0.28, 0.1, -0.18, 0.28, 0.42, 0.18); m.mat(MAT.PLANKS, COL.wood); m.box(-0.3, 0.42, -0.2, 0.3, 0.5, 0.2); m.mat(MAT.METAL, COL.black); m.box(-0.03, 0.2, 0.18, 0.03, 0.26, 0.6); m.box(-0.02, 0.5, -0.02, 0.02, 1.0, 0.02); addBoxCollider(m, -0.3, -0.2, 0.3, 0.6, 0, 0.5); };

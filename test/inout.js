@@ -1,8 +1,10 @@
 // [inout] Is every enterable building the same building inside as outside? One row per building, measured from the running game. Changes nothing.
 //   table:   node test/audit/run.mjs --opt audit=1 test/inout.js          (writes docs/INOUT.md and prints the totals)
 //   gate:    node test/shot.mjs --opt webgl=1 --opt play=1 --opt audit=1 --do "$(cat test/inout.js)"      (prints `inout PASS` or `inout FAIL n`)
-// OUTSIDE is read off what is drawn on the village site (--opt audit=1 keeps the list of placed pieces): kit window, door and balcony pieces by their boxes, and in the
-// generated walls the dark pane behind every window and the dark leaf behind every door (73d_infill.js infWalls), glass quads in dormers and gables. INSIDE is the plan.
+// OUTSIDE is read off what is drawn on the village site (--opt audit=1 keeps the list of placed pieces): kit window, door and balcony pieces by their boxes, the openings
+// every generated wall was built from (72d_plan.js keeps what 73d_infill.js infWalls was given), glass quads in dormers, gables and end walls. INSIDE is the plan.
+// Rules (coordinator, Build 82): a floor is at most 1.5 times the shell's area; a place along a wall is compared after scaling the plan's wall to the shell's;
+// an upper level marked `loft` in the plan (P.lv[k].loft) is the roof space and is not a storey.
 // Frame for both: the house's own, front wall at -z, x to the right seen from inside the front door; `along` is metres from the middle of the house (front, back)
 // or from the front wall (left, right). Levels: 0 ground, 1.. upper, 'roof' = above the eaves (gable or dormer), -1 cellar.
 const r1 = v => Math.round(v * 10) / 10, WN = ['front', 'back', 'left', 'right'];
@@ -15,10 +17,10 @@ function genQuads(name) {
   if (quadCache[name]) return quadCache[name];
   const out = [], p = Kit.pieces[name];
   if (p) for (const q of p.prims) {
-    const glass = /Glass/.test(q.mat && (q.mat.name || q.mat)), pos = q.pos, col = q.col, idx = q.idx; if (!pos || !idx || (!glass && !col)) continue;
+    const glass = /Glass/.test(q.mat && (q.mat.name || q.mat)), pos = q.pos, col = q.col, idx = q.idx; if (!pos || !idx || !glass) continue;
     for (let i = 0; i + 5 < idx.length; i += 6) {
       const vs = [idx[i], idx[i + 1], idx[i + 2], idx[i + 5]];
-      const kind = glass ? 'win' : vs.every(v => near3(col, v * 3, PANE)) ? 'win' : vs.every(v => near3(col, v * 3, LEAF)) ? 'door' : null; if (!kind) continue;
+      const kind = glass ? 'win' : null; if (!kind) continue;
       let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, z0 = 1e9, z1 = -1e9;
       for (const v of vs) { x0 = Math.min(x0, pos[v * 3]); x1 = Math.max(x1, pos[v * 3]); y0 = Math.min(y0, pos[v * 3 + 1]); y1 = Math.max(y1, pos[v * 3 + 1]); z0 = Math.min(z0, pos[v * 3 + 2]); z1 = Math.max(z1, pos[v * 3 + 2]); }
       if (y1 - y0 < 0.3) continue;                                    // a pane stands upright
@@ -62,6 +64,14 @@ for (const h of houses) {
       push(isWin(n) ? 'win' : isDoor(n) ? 'door' : 'balc', cx, (b.mn[1] + b.mx[1]) / 2, cz, b.mn[1], b.mx[1], Math.hypot(b.mx[0] - b.mn[0], b.mx[2] - b.mn[2]) / 2, n);
     }
   }
+  for (const g of (window.__AUDIT_SHELL || [])) {      /* the generated walls of this house: the openings they were built from */
+    if (g.lo) continue; const e = g.M.elements; if (Math.abs(e[13] - fy) > 20 || owner(e[12], e[14]) !== s || Math.hypot(e[12] - s.x, e[14] - s.z) > 1.2) continue;
+    eave = Math.max(eave, g.fl * g.H + (e[13] - fy));
+    for (let k = 0; k < g.plan.length; k++) for (const wn of WN) for (const o of ((g.plan[k] || {})[wn] || [])) {
+      const u = (o.u0 + o.u1) / 2, lx = wn === 'front' ? g.w / 2 - u : wn === 'back' ? -g.w / 2 + u : wn === 'left' ? -g.w / 2 : g.w / 2, lz = wn === 'front' ? -g.d / 2 : wn === 'back' ? g.d / 2 : wn === 'left' ? -g.d / 2 + u : g.d / 2 - u;
+      _v.set(lx, 0, lz).applyMatrix4(g.M); const yb = e[13] + k * g.H; push(o.door ? 'door' : 'win', _v.x, yb + (o.v0 + o.v1) / 2, _v.z, yb + o.v0, yb + o.v1, (o.u1 - o.u0) / 2, 'wall');
+    }
+  }
   if (!eave) eave = H + (st.up ? 3 : 0);
   // one thing drawn with several pieces (frame and leaf, glass both sides, two balcony corners) is one thing
   const merged = [];
@@ -76,21 +86,21 @@ for (const h of houses) {
   const P = c.planDone || c.plan || (h.cell.ctx && (h.cell.ctx.planDone || h.cell.ctx.plan));
   const row = { id: s.id, name: s.name, out: { w: s.w, d: s.d, eave: r1(eave), wallSt, roofWin, shown, jetty: r1(jetty), win: oWin.length, upDoors: oDoor.filter(f => f.lv !== 0), doors0: oDoor.filter(f => f.lv === 0).length, balc: oBalc, signs, list: merged.map(f => [f.kind, f.wall, f.lv, r1(f.along), r1(f.y), f.src, f.n].join(' ')) }, fails: [] };
   if (!P) { row.noPlan = true; row.fails.push('no plan'); rows.push(row); continue; }
-  const lvs = Object.values(P.lv).map(l => l.k).sort((a, b) => a - b), up = lvs.filter(k => k >= 0), rooms = Object.values(P.rooms), isYard = r => /yard|garden|court/.test(r.kind || '') || r.open === true || r.roof === false;
+  const lvs = Object.values(P.lv).map(l => l.k).sort((a, b) => a - b), lofts = lvs.filter(k => k > 0 && P.lv[k].loft), up = lvs.filter(k => k >= 0 && !P.lv[k].loft), rooms = Object.values(P.rooms), isYard = r => /yard|garden|court/.test(r.kind || '') || r.open === true || r.roof === false;
   const bb = k => { const rs = rooms.filter(r => r.k === k && !isYard(r)); if (!rs.length) return null; const x0 = Math.min(...rs.map(r => r.x0)), x1 = Math.max(...rs.map(r => r.x1)), z0 = Math.min(...rs.map(r => r.z0)), z1 = Math.max(...rs.map(r => r.z1)); return { x0, x1, z0, z1, w: x1 - x0, d: z1 - z0, area: rs.reduce((a, r) => a + (r.x1 - r.x0) * (r.z1 - r.z0), 0) }; };
   const B0 = bb(0) || { x0: 0, x1: 0, z0: 0, z1: 0, w: 0, d: 0, area: 0 }, cx0 = (B0.x0 + B0.x1) / 2;
   const facing = wl => wl.ax === 'x' ? (wl.ns < 0 ? 'front' : 'back') : (wl.ns < 0 ? 'left' : 'right');
-  const alongIn = (wl, pos) => wl.ax === 'x' ? pos - cx0 : pos - B0.z0;
+  const kx = B0.w ? s.w / B0.w : 1, kz = B0.d ? s.d / B0.d : 1, alongIn = (wl, pos) => wl.ax === 'x' ? (pos - cx0) * kx : (pos - B0.z0) * kz;      /* the plan's wall scaled to the shell's */
   const iWin = P.windows.map(w => ({ wall: facing(w.wall), lv: w.k, along: alongIn(w.wall, w.pos), room: w.room && w.room.id })).filter(w => { const r = P.rooms[w.room]; return !(r && isYard(r)); });
   const iDoor = P.doors.filter(d => d.b === null && d.wall).map(d => ({ wall: facing(d.wall), lv: d.k, along: alongIn(d.wall, d.pos), room: d.a }));
-  row.in = { levels: lvs, up: up.length, cellar: lvs.some(k => k < 0), w: B0.w, d: B0.d, area: r1(B0.area), yards: rooms.filter(isYard).map(r => r.id), win: iWin.length, doors: iDoor, per: lvs.map(k => { const b = bb(k); return b ? [k, b.w, b.d, r1(b.area)] : [k, 0, 0, 0]; }) };
+  row.in = { levels: lvs, lofts: lofts.length, up: up.length, cellar: lvs.some(k => k < 0), w: B0.w, d: B0.d, area: r1(B0.area), yards: rooms.filter(isYard).map(r => r.id), win: iWin.length, doors: iDoor, per: lvs.map(k => { const b = bb(k); return b ? [k, b.w, b.d, r1(b.area)] : [k, 0, 0, 0]; }) };
   // ── compare ──
   // 1 storeys
   row.storeys = { out: shown, in: up.length, ok: shown === up.length };
   if (!row.storeys.ok) row.fails.push('storeys');
-  // 2 footprint: the plan's rooms on each level fit the shell's walls within 15 percent, both ways
-  const over = row.in.per.filter(p => p[0] >= 0 && (p[1] > s.w * 1.15 + 1e-6 || p[2] > s.d * 1.15 + 1e-6));
-  row.foot = { ratio: r1(B0.area / (s.w * s.d)), ok: over.length === 0 && B0.w <= s.w * 1.15 && B0.d <= s.d * 1.15 };
+  // 2 footprint: no floor (cellar included) is more than 1.5 times the shell's area
+  const A = s.w * s.d, over = row.in.per.filter(p => p[3] > A * 1.5 + 0.01);
+  row.foot = { ratio: Math.round(B0.area / A * 100) / 100, worst: Math.round(Math.max(...row.in.per.map(p => p[3])) / A * 100) / 100, ok: over.length === 0 };
   if (!row.foot.ok) row.fails.push('footprint');
   // 3 upper doors and balconies: a door inside on that level and wall
   const served = f => iDoor.some(d => d.lv === f.lv && d.wall === f.wall);
@@ -123,12 +133,12 @@ const cellsTxt = r => WN.map(wn => { const ks = Object.keys(r.windows.cells).fil
 const doorTxt = fs => fs.map(f => f.wall + ' L' + f.lv).join(', ');
 let md = `# Inside against outside: all ${N} enterable buildings\n\n`;
 md += `Written by \`test/inout.js\` (build ${typeof BUILD_NAME !== 'undefined' ? BUILD_NAME : '?'}): \`node test/audit/run.mjs --opt audit=1 test/inout.js\`. Do not edit by hand.\n`;
-md += `The outside is read off the drawn shell (window, door and balcony pieces; panes and door leaves in the generated walls; glass in gables and dormers); the inside is the plan.\n`;
+md += `The outside is read off the drawn shell (window, door and balcony pieces; the openings the generated walls were built from; glass in gables, dormers and end walls); the inside is the plan.\nA floor may be up to 1.5 times the shell's area; places along a wall are compared after scaling the plan's wall to the shell's; a loft under the rafters is not a storey.\n`;
 md += `Cannot tell: whether a window that matches by count also looks the same size and style, anything a roof or a neighbour hides, cellar signs drawn into a larger mesh (the inn's hatch).\n\n`;
 md += `## Totals\n\n| | |\n|---|---|\n`;
 md += `| Buildings / failing at least one of the five checks | ${T.buildings} / **${T.failing}** |\n`;
 md += `| 1. Storeys shown outside differ from levels above ground inside | **${T.storeys}** (outside shows more: ${T.storeysOutMore}; inside holds more: ${T.storeysInMore}) |\n`;
-md += `| 2. Plan does not fit the shell within 15 percent | **${T.footprint}** (ground floor area over shell area: least ${T.ratioMin}, median ${T.ratioMed}, worst ${T.ratioMax}) |\n`;
+md += `| 2. A floor is more than 1.5 times the shell's area | **${T.footprint}** (ground floor area over shell area: least ${T.ratioMin}, median ${T.ratioMed}, worst ${T.ratioMax}) |\n`;
 md += `| 3. Upper doors outside / with no door inside on that wall and level | ${T.upDoorsOut} / **${T.upDoorsUnserved}** |\n`;
 md += `| ... balconies outside / with no door onto them | ${T.balconies} / **${T.balconiesUnserved}** |\n`;
 md += `| ... upper doors inside that open onto nothing outside | **${T.upDoorsInOnly}** |\n`;
@@ -142,7 +152,7 @@ md += `| id | name | storeys out | levels in | eave m | shell | plan | area x | 
 for (const r of rows) {
   if (r.noPlan) { md += `| \`${r.id}\` | ${r.name} | ${r.out.shown} | no plan | ${r.out.eave} | ${r.out.w} x ${r.out.d} | | | | | | | ${r.out.win} / | | | | | no plan |\n`; continue; }
   const fl = r.fails.map(f => ({ storeys: 's', footprint: 'f', 'upper door': 'd', windows: 'w', cellar: 'c' })[f]).join(' ');
-  md += `| \`${r.id}\` | ${r.name} | ${r.out.wallSt}${r.out.roofWin ? '+r' : ''} | ${r.in.up} | ${r.out.eave} | ${r.out.w} x ${r.out.d} | ${r.in.w} x ${r.in.d} | ${r.foot.ratio} | ${doorTxt(r.out.upDoors)} | ${doorTxt(r.out.balc)} | ${doorTxt(r.in.doors.filter(d => d.lv > 0))} | ${r.updoor.unserved + r.updoor.balcUnserved + r.updoor.inOnly || ''} | ${r.windows.out} / ${r.windows.in} | ${r.windows.same} | ${cellsTxt(r)} | ${r.in.cellar ? 'yes' : ''} | ${r.cellar.sign || ''} | ${fl} |\n`;
+  md += `| \`${r.id}\` | ${r.name} | ${r.out.wallSt}${r.out.roofWin ? '+r' : ''} | ${r.in.up}${r.in.lofts ? '+loft' : ''} | ${r.out.eave} | ${r.out.w} x ${r.out.d} | ${r.in.w} x ${r.in.d} | ${r.foot.ratio} | ${doorTxt(r.out.upDoors)} | ${doorTxt(r.out.balc)} | ${doorTxt(r.in.doors.filter(d => d.lv > 0))} | ${r.updoor.unserved + r.updoor.balcUnserved + r.updoor.inOnly || ''} | ${r.windows.out} / ${r.windows.in} | ${r.windows.same} | ${cellsTxt(r)} | ${r.in.cellar ? 'yes' : ''} | ${r.cellar.sign || ''} | ${fl} |\n`;
 }
 const line = T.failing ? 'inout FAIL ' + T.failing : 'inout PASS';
 if (typeof window.__write === 'function') { await window.__write('docs/INOUT.md', md); await window.__write('shots/inout.json', JSON.stringify({ totals: T, rows }, null, 1)); }
