@@ -225,7 +225,9 @@ function hpBesom(mesh) { const T = THREE, fp = new T.Vector3(), y = new T.Vector
   hpPlace(mesh, o, y, z); mesh.updateMatrixWorld(true);
   const along = P => Math.max(-0.6, Math.min(0.3, P.clone().sub(o).dot(y))), tR = along(shR) - 0.12, tL = Math.min(0.32, Math.max(tR + 0.3, along(shL) + 0.02));
   const lowR = H.pivot.localToWorld(q.copy(o).addScaledVector(y, tR)), hiL = H.pivot.localToWorld(t.copy(o).addScaledVector(y, tL));
-  Chars.reach(H, 'R', lowR.clone()); Chars.reach(H, 'L', hiL.clone()); Chars.grip(H, 'R', HP.GRIP.curl); Chars.grip(H, 'L', HP.GRIP.curl); mesh.userData.grip = [0, tR, 0]; mesh.userData.hand = 'R'; }; }
+  // the reach puts the wrist on its target: aim each wrist so that the palm (7 cm on, along the hand) lands on the handle
+  const palmTo = (side, target) => { Chars.reach(H, side, target.clone()); const hb = H.root.getObjectByName(side === 'R' ? 'hand_r' : 'hand_l'); hb.updateWorldMatrix(true, false); const w = hb.getWorldPosition(new T.Vector3()), p = hb.localToWorld(new T.Vector3(0, 0.07, -0.015)); Chars.reach(H, side, target.clone().sub(p.sub(w))); };
+  palmTo('R', lowR); palmTo('L', hiL); Chars.grip(H, 'R', HP.GRIP.curl); Chars.grip(H, 'L', HP.GRIP.curl); mesh.userData.grip = [0, tR, 0]; mesh.userData.hand = 'R'; }; }
 function npcHandProp(npc) {
   const ch = npc.ch; if (!ch || typeof RPG === 'undefined' || !RPG.merge) return;
   for (const kind of hpKinds(npc.def)) {
