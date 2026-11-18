@@ -373,7 +373,7 @@ const Chars = (() => {
       g.setAttribute(name, new THREE.BufferAttribute(arr, size));
     }
     if (names) { const mid = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; mid.fill(mids[i], o, o + c); o += c; }); g.setAttribute('mid', new THREE.BufferAttribute(mid, 1)); }
-    if (names) { const sh = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; sh.fill(sheds[i] || 0, o, o + c); o += c; }); g.setAttribute('shed', new THREE.BufferAttribute(sh, 1)); }      // [ch4] which garment a vertex belongs to, for taking it off (SHED_OF)
+    if (names) { const vid = g.attributes._vid; let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; if (sheds[i] && vid) for (let v = o; v < o + c; v++) if (vid.array[v] < 0.5) vid.array[v] = -sheds[i]; o += c; }); }      // [ch4] which garment a vertex belongs to, for taking it off (SHED_OF): a negative _vid (garments carry no face-morph column; WebGPU allows 8 vertex buffers, a new attribute was the 9th)
     let io = 0, base = 0; for (const s of src) { const c = s.attributes.position.count; if (s.index) for (let i = 0; i < s.index.count; i++) idx[io++] = s.index.getX(i) + base; else for (let i = 0; i < c; i++) idx[io++] = i + base; base += c; }
     g.setIndex(new THREE.BufferAttribute(idx, 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.6);
     S.geo.set(key, g); return g;
@@ -484,7 +484,7 @@ const Chars = (() => {
       albedo = albedo.mul(float(1).sub(TSL.clamp(occ.mul(0.6), 0, 0.42).mul(face)));      // [ch1] softer: no mask across the brow
       rough = rough.sub(TSL.clamp(spec, 0, 1).mul(face).mul(0.38));
     }
-    const shedA = attribute('shed', 'float');      // [ch4] what is taken off is not drawn
+    const shedA = TSL.max(attribute('_vid', 'float').negate(), 0);      // [ch4] what is taken off is not drawn (the tag is a negative _vid)
     m.colorNode = Fn(() => { If(shedA.greaterThan(0.5).and(shedA.lessThan(H.uShed.add(0.5))), () => { Discard(); }); If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
@@ -812,7 +812,7 @@ const Chars = (() => {
     const toL = new THREE.Matrix4().copy(H.pivot.matrixWorld).invert(), bp = n => { const b = H.root.getObjectByName(n); return b ? b.getWorldPosition(new THREE.Vector3()).applyMatrix4(toL) : null; };
     const head = bp('head'), neck = bp('neck_01'), fl = bp('foot_l'), fr = bp('foot_r'); if (!head || !neck || !fl || !fr) return;
     const feet = fl.clone().add(fr).multiplyScalar(0.5), ax = new THREE.Vector3(neck.x - feet.x, 0, neck.z - feet.z); const L0 = ax.length(); if (L0 < 0.8) return; ax.normalize();
-    const side = new THREE.Vector3(-ax.z, 0, ax.x), g = m.geometry, n = g.attributes.position.count, shed = g.attributes.shed, P = [];
+    const side = new THREE.Vector3(-ax.z, 0, ax.x), g = m.geometry, n = g.attributes.position.count, shed = { getX: i => Math.max(0, -(g.attributes._vid ? g.attributes._vid.getX(i) : 0)) }, P = [];
     // the blanket's form is a sleeper's, not the posed mesh's (a skirt or a cape that stands up in the lying clip would tent it): bed level from the hips, then a profile along the
     // body (shoulders 0.17 m, chest 0.2, hips 0.19, thighs 0.15, knees 0.13, shins 0.1, feet 0.16 for the toes), rounded across and falling over the sides of the bed
     const pel = bp('pelvis'); if (!pel) return; const bed = pel.y - 0.11, N = BLK.N, M = BLK.M, len = L0 + 0.2, top = neck.clone().addScaledVector(ax, -0.1), PROF = [[0, 0.15], [0.12, 0.2], [0.3, 0.19], [0.45, 0.16], [0.62, 0.13], [0.85, 0.1], [0.95, 0.16], [1, 0.13]];
