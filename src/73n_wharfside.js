@@ -308,7 +308,7 @@ function wTuft(m, x, y, z, h, n, col, R) { if (TEST && TEST.nonet) return;
 }
 // a clinker rowing boat built as a boat is: a keel, a stem and a sternpost, lapped strakes lofted over 15 stations, ribs and a gunwale, thwarts and a floor; `up` turns it keel to the sky
 function wharfHull(m, x, z, y0, ang, len, beam, depth, up) { if (TEST && TEST.nohull) return;
-  const c = Math.cos(ang), sn = Math.sin(ang), N = 12, S = 5, sg = up ? -1 : 1, st = [];
+  const c = Math.cos(ang), sn = Math.sin(ang), N = 8, S = 4, sg = up ? -1 : 1, st = [];
   const P = (a, b, h) => [x + a * c - b * sn, y0 + sg * h, z + a * sn + b * c];
   for (let i = 0; i <= N; i++) { const t = i / N * 2 - 1, at = Math.abs(t), w = beam * Math.pow(Math.max(0.0, 1 - Math.pow(at, 2.3)), 0.62) + 0.015, sheer = depth * (0.78 + 0.34 * at * at) + 0.05 * at * at * at * at; st.push({ a: t * len / 2, w, sheer, k: 0.06 * (1 - at * at) }); }
   const f = (q, kk, side) => { const u = kk / S, h = q.k + (q.sheer - q.k) * u, wd = q.w * (0.16 + 0.84 * Math.pow(u, 0.8)); return P(q.a, side * wd, h); };
