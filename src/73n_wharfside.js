@@ -54,7 +54,7 @@ function wharfPaint(A, B, H) {
 // the yard behind each house: low fence on the back and the party lines; one trade of the poor
 function buildWharfPlots(bucket) {
   if (TEST && TEST.plots === 0) return;
-  let lowSkip = true; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 14; return m; }; }      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
+  let lowSkip = true; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
   const PL = wharfPlots(), R = rng(7733), gy = (x, z) => Terrain.y(x, z);
   const fence = (m, ax, az, bx, bz, h) => {
     const L = Math.hypot(bx - ax, bz - az); if (L < 0.3) return; const n = Math.max(1, Math.round(L / 1.5)); m.mat(MAT.TIMBER, [0.26, 0.21, 0.16], 0.5);
@@ -99,7 +99,7 @@ function buildWharfPlots(bucket) {
 // the open boat shed on the wharf yard: four posts, a lean thatch roof, a hull on trestles under it, ropes and an oar rack; it faces the yard
 function buildWharfYard(bucket) {
   if (TEST && (TEST.wharf === 0 || TEST.plots === 0) || typeof WHARF === 'undefined' || !WHARF.houses.length) return;
-  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 14; return m; }; }      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
   const gy = (x, z) => Terrain.y(x, z), cx = -2.6, cz = 77.2, m = bucket(cx, cz), R = rng(3131), g = gy(cx, cz), W2 = 2.4, D2 = 1.9;
   m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5);
   for (const [a, b, hh] of [[-W2, -D2, 2.8], [W2, -D2, 2.8], [-W2, D2, 2.1], [W2, D2, 2.1]]) { m.beam([cx + a, g - 0.1, cz + b], [cx + a, g + hh, cz + b], 0.12, 0.12); addCircleCollider(m, cx + a, cz + b, 0.14, g, g + hh); }
@@ -206,7 +206,7 @@ function wharfCloses() {
 function wharfBlocked(x, z, pad) { return !!(typeof WHARF !== 'undefined' && WHARF.houses.length && x > 12 - pad && x < 46 + pad && z > 34 - pad && z < 92 + pad); }
 function buildWharfCloses(bucket) {
   const C = wharfCloses(); if (!C.fences.length) return;
-  let lowSkip = false; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 14; return m; }; }      // small dressing lives in cells of its own with a draw distance
+  let lowSkip = false; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }      // small dressing lives in cells of its own with a draw distance
   const gy = (x, z) => Terrain.y(x, z), R = rng(4141), h = 1.0;
   const nearHouse = (x, z) => SITES.some(st => { if (!st.w || st.id === 'tower') return false; const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 1.3 && Math.abs(l[1]) < st.d / 2 + 1.3; });
   World.hedgeBushes = World.hedgeBushes || []; World.orchardTrees = World.orchardTrees || [];
@@ -262,7 +262,7 @@ function wharfSplat2(blob, line, A, B, R) {
 // a boardwalk where it is wet: along the shore of the wharf yard (planks laid across, on low piles), stepping down to the shingle at its ends
 function buildWharfBoards(bucket) {
   if (TEST && (TEST.wharf === 0 || TEST.plots === 0) || typeof WHARF === 'undefined' || !WHARF.houses.length) return;
-  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 14; return m; }; }      // small dressing lives in cells of its own with a draw distance
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }      // small dressing lives in cells of its own with a draw distance
   const gy = (x, z) => Terrain.y(x, z), R = rng(6262), pts = wharfShore(1.2).filter(q => q[0] < -7).map((q, i, a) => [q[0], [-2, -1, 0, 1, 2].reduce((t, d) => t + a[Math.max(0, Math.min(a.length - 1, i + d))][1], 0) / 5]), m = bucket(pts[4][0], pts[4][1]);
   const w = 0.65;
   for (let i = 0; i + 1 < pts.length; i++) {
@@ -294,7 +294,7 @@ function wharfHull(m, x, z, y0, ang, len, beam, depth, up) {
 // landing steps down to the river behind the Bank Lane houses on its east side, and a wash place (a stone slab, a board, tubs, a pole of washing) behind the first of them
 function buildWharfLandings(bucket) {
   if (TEST && (TEST.wharf === 0 || TEST.plots === 0) || typeof WHARF === 'undefined' || !WHARF.houses.length || typeof River === 'undefined' || !River.p) return;
-  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 14; return m; }; }
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }
   const gy = (x, z) => Terrain.y(x, z), R = rng(8080);
   const near = (x, z) => { let best = null, bd = 1e9; for (const q of River.p) { const d = hyp(q[0] - x, q[1] - z); if (d < bd) { bd = d; best = q; } } return [best, bd]; };
   let k = 0;
