@@ -2,6 +2,55 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (morning): every district done once; 36 of 57 pass
+
+**Hash:** the commit that adds this entry; a full gate dispatched on it (number in the next entry). All 57 buildings are now refitted.
+
+### What changed since the last entry
+
+- Wharfside, Highfold, Riverside, Westgate: `in.20 in.23 in.34 in.36 in.37 in.38 in.51 in.60 in.111 in.113 in.115 hunter fisher
+  high.a high.c mill farm in.65 in.75 in.93` on the compact plan (the brewer's, the farm's and the mill's keep their trade sets in the
+  front room). Pictures: `docs/proof/inout/<id>/` for each.
+- The compact plan puts its partitions where they clear the shell's windows, so a window never has to slide off its place (it may
+  slide 0.5 m at most now, was 1 m). Every room has a light. The household's place (`home`) is in the front room when the kitchen
+  is small (three Byrds stood in one spot in a 12 m2 kitchen).
+- Ladder lofts also for two-storey houses whose shell shows windows above (none found yet: the dormers are not read; see below).
+
+### Counts (`test/inout.js`)
+
+| | step 1 | now |
+|---|---|---|
+| passing | 0 | **36** |
+| plan over 1.5 times the shell | 57 | **0** (median 1.46, all 1.26 to 1.5) |
+| storeys differ | 25 | 2 (`in.10`, `in.33`) |
+| upper doors and balconies unserved | 10 | 0 |
+| windows outside / inside / same place | 363 / 1,030 / 112 | 355 / 318 / 308 (and 23 outside that open into the next house) |
+| cellars with no sign outside | 21 | 6 (`inn`, `elder`, `chapel`, `draper`, `in.33`, `in.37`) |
+
+The 21 that still fail, and why:
+
+- Cellar sign only (outside): `chapel`, `draper`.
+- Windows that are the outside's to fix: the generated end-wall faces (`shellDress` in `72c_infill.js`, "a real face for a blank
+  end") are drawn after the interiors are laid out, so no plan can follow them, and most sit 1.3 m from the wall's own windows:
+  `in.04 in.20 in.23 in.34 in.36 in.37 in.38 in.40 in.44 in.51 in.60 in.111 in.113 in.115`, `mill`. Ask: drop the face windows on
+  houses that are entered (their windows come from the plan now), or have them read `P.windows`.
+- `in.10`, `in.33`: a dormer the test sees and the plan reader does not (dormer glass is not recorded yet); mine, next.
+- `inn`, `elder`: one window each more than 0.6 m off; mine, next.
+
+### Gate (this machine, after the last fixes)
+
+boot, quest, npcstairs, story, secrets, overlap, parity, bot-story, view, cast, memory, owners, embers, interiors (57), stairs (all),
+apart pass. `people` fails only on "4 people have exactly the same day" (the chance finding in the previous entry).
+
+### Open for you
+
+1. The stair seen from the street door in the compact houses (entry before last): I will move it to the back corner of the kitchen
+   where the house is 7 m deep or more unless you say otherwise.
+2. The `people` same-day check: routines, not plans.
+3. The end-wall face windows: outside.
+4. ROOMS.md line by line for the 48 compact houses: not done. They have the trade set, the table by the fire, a cabinet, shelves,
+   a barrel, beds by the cast, a candle by wealth, one memorable object each.
+
 ## 2026-11-18 (night, later): ladder lofts; merge candidate 156f642
 
 **Merge candidate:** 156f642 (threejs merged in; one conflict in the Hart's bar, both sides kept: the [fin] shorter counter and my
