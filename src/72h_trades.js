@@ -94,7 +94,7 @@ const pdCoal = m => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.5, 0, -0.4, 0.5,
 const pdTrough = m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.7, 0, -0.3, 0.7, 0.6, 0.3); m.mat(MAT.PLAIN, [0.08, 0.14, 0.2]); m.quad([-0.62, 0.52, -0.22], [-0.62, 0.52, 0.22], [0.62, 0.52, 0.22], [0.62, 0.52, -0.22]); addBoxCollider(m, -0.7, -0.3, 0.7, 0.3, 0, 0.6); };
 PLANS.smithy = (P, c, info) => {      /* [inout] the shell on the Market Place: 9.5 x 7 m, one storey; 12 x 8 inside, the sleeping loft under the rafters over the family's end */
   const R = P.R, id = P.id, B = pFitBox(c, { W: 12, D: 8 }), X0 = B.x0, X1 = B.x1, D = B.D, Xp = X0 + 5, Zp = 5.5; P.dims = { W: B.W, D, Dh: Zp };
-  pLevel(P, 0, 0, 3.0); pLevel(P, 1, 3.0 + PW.SLAB, 2.2, { loft: true });
+  pLevel(P, 0, 0, 3.0); pLevel(P, 1, 3.0 + PW.SLAB, 2.4, { loft: true });
   pRoom(P, 0, 'forge', 'hall', Xp, 0, X1, Zp, { floor: 'stone', tint: [0.62, 0.56, 0.5] }); pRoom(P, 0, 'living', 'hall', X0, 0, Xp, D); pRoom(P, 0, 'coalstore', 'store', Xp, Zp, X1, D, { floor: 'stone' });
   pRoom(P, 1, 'loft', 'bedroom', X0, 0, Xp, D);
   pDoor(P, 'forge', null, 0, 0); pDoor(P, 'forge', 'living', Xp, 4.3); pDoor(P, 'forge', 'coalstore', Xp + 1.2, Zp);
@@ -147,7 +147,7 @@ PLANS.smithy = (P, c, info) => {      /* [inout] the shell on the Market Place: 
 // ── the elder's hall: a long, high hall with a great fireplace on the east wall, a high table on a dais at the far end, a long table down the middle, trophies and banners; the study to the west; a stair hall with the way up to the bedchamber and down to the strongroom ──
 PLANS.elder = (P, c, info) => {      /* [inout] the shell: 7.2 x 5.6 m, two storeys over a strongroom; 9 x 6.5 inside. Rowan lives alone in what was his father's manor hall */
   const R = P.R, id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Xs = X0 + 3, H0 = 2.75; P.dims = { W: B.W, D, Dh: D };
-  pLevel(P, -1, -(2.3 + PW.SLAB), 2.3); pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
+  pLevel(P, -1, -(2.4 + PW.SLAB), 2.4); pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
   pRoom(P, 0, 'study', 'study', X0, 0, Xs, D); pRoom(P, 0, 'hall', 'hall', Xs, 0, X1, D, { floor: 'stone' });
   pRoom(P, 1, 'chamber', 'bedroom', X0, 0, Xs, D); pRoom(P, 1, 'solar', 'bedroom', Xs, 0, X1, D);
   pRoom(P, -1, 'strongroom', 'cellar', X0, 0, Xs, D, { floor: 'stone', win: false });
@@ -170,7 +170,7 @@ PLANS.elder = (P, c, info) => {      /* [inout] the shell: 7.2 x 5.6 m, two stor
   if (dk) { pSpot(P, 'desk', dk.cx - 0.8, dk.cz, PI / 2, { k: 0 }); pSpot(P, 'study', dk.cx - 0.8, dk.cz, PI / 2, { k: 0 }); pSpot(P, 'book', dk.cx - 0.8, dk.cz, PI / 2, { k: 0 }); }
   pPiece(P, study, 'wooden_bookshelf_worn', { side: ['n', 's', 'e'], sc: 0.9 }); pPiece(P, study, 'BookStand', { near: [X0 + 2.2, 0.8] }); pPiece(P, study, 'CandleStick_Stand', { near: [X0 + 2.4, 3.6], lit: 6 });
   // upstairs: his chamber (one pillow slept on), the solar nobody uses, the rocker turned to the window that looks at Pell House
-  dressBedroom(P, ch, { beds: ['bed'], loot: [['gold', 10]], bedInteract: true, table: false, fur: true, chest: false });
+  dressBedroom(P, ch, { beds: ['bed'], loot: [['gold', 10]], bedInteract: true, table: false, fur: true, chest: true });
   pPiece(P, ch, 'classicnightstand_01', { side: ['e', 'w'], top: [['wooden_candlestick', 0, 0, 1, 0, true]] }); pPiece(P, ch, 'gothiccabinet_01', { side: ['n', 's', 'w'], sc: 0.75 });
   pPiece(P, solar, 'rockingchair_01', { near: [X1 - 1.2, 1.0], turn: PI }); pPiece(P, solar, 'painted_wooden_table', { near: [Xs + 3.0, 3.6], sc: 0.8, soft: false });
   // the strongroom: the town's silver and the founders' agreement, ledgers, twelve tokens on a nail and one nail empty

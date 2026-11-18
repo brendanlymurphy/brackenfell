@@ -48,7 +48,7 @@ PLANS.guardhouse = (P, c, info) => {      /* [inout] the shell: 7.2 x 5.6 m, two
   pDoor(P, 'guard', null, 0, 0); pDoor(P, 'guard', 'cells', X0 + 0.9, Zp); pDoor(P, 'guard', 'armoury', X1 - 1.6, Zp);
   const SHL = pShellWins(P, c, B);
   const bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd) pUpperDoor(P, P.rooms.barracks, bd, Math.round(SHL.pos(bd) * 4) / 4);
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.9, z: Zp - 0.65, width: 0.9, tread: 0.19 });
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.7, z: Zp - 0.65, width: 0.9, tread: 0.22 });
   pLayout(P); pBalconies(P, c);
   const guard = P.rooms.guard, cells = P.rooms.cells, arm = P.rooms.armoury, bar = P.rooms.barracks;
   // the guard room: the fire on the gable wall, the table with the roster, a weapon stand, two cloaks on the pegs, Hugh Alder's arrows still tied
@@ -100,7 +100,7 @@ PLANS.herbalist = (P, c, info) => {      /* [inout] the shell: 6.6 x 5.6 m, one 
   // her chamber: the bed, the rocker turned to the fire, the chest with the child's shoe
   dressBedroom(P, ch, { beds: castBeds(P.id, ['bed']), loot: [['gold', 5]], bedInteract: true, table: false });
   let lh = null; for (const [sd, a] of [['e', 4.0], ['e', 5.4], ['n', X1 - 1.2]]) if ((lh = pHearth(P, ch, sd, 1.2, { cauldron: false, size: 0.35, at: a }))) break;
-  if (lh) { pPiece(P, ch, 'rockingchair_01', { near: [lh.front[0] - 0.3, lh.front[1]], turn: PI / 2, id: 'rocker' }); pSit(P, 'sit', lh.front[0] - 0.3, lh.front[1], PI / 2, 0); }
+  if (lh) { pPiece(P, ch, 'rockingchair_01', { near: [lh.front[0] - 0.3, lh.front[1]], turn: PI / 2, id: 'rocker', soft: true });      /* she sits in it: no collider */ pSit(P, 'sit', lh.front[0] - 0.3, lh.front[1], PI / 2, 0); }
   if (!hh) P.err.push('no hearth fits in the stillroom');
 };
 

@@ -274,7 +274,7 @@ PLANS.weaver = (P, c, info) => {
 // Lindqvist's Draper: Anselm and Sabina. 6.4 x 5.6 m, two storeys, a cellar, the balcony over the shop door: the shop, the back room; Sabina's room with the balcony door, Anselm's behind
 PLANS.draper = (P, c, info) => {
   const F = hInout(P, c, { trade: 'draper', fam: 'shopfront', wealth: 2 }), id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Zp = 3.5, H0 = 2.75; P.dims = { W: B.W, D, Dh: Zp };
-  pLevel(P, -1, -(2.3 + PW.SLAB), 2.3); pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
+  pLevel(P, -1, -(2.4 + PW.SLAB), 2.4); pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
   pRoom(P, 0, 'shop', 'shop', X0, 0, X1, Zp, F.fin(0, { floor: 'wood' })); pRoom(P, 0, 'back', 'hall', X0, Zp, X1, D, F.fin(0, { floor: 'wood', tint: F.tint2 }));
   pRoom(P, 1, 'upfront', 'bedroom', X0, 0, X1, Zp, F.fin(1)); pRoom(P, 1, 'upback', 'bedroom', X0, Zp, X1, D, F.fin(1));
   pRoom(P, -1, 'cellar', 'cellar', X0, Zp, X1, D, { floor: 'stone', win: false });
@@ -285,7 +285,7 @@ PLANS.draper = (P, c, info) => {
   pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: X0 + 1.2, z: Zp + 0.65, width: 0.9, tread: 0.2 });
   pLayout(P); pBalconies(P, c);
   const shop = P.rooms.shop, back = P.rooms.back, uf = P.rooms.upfront, ub = P.rooms.upback, cel = P.rooms.cellar;
-  hTrade(P, c, shop, F);
+  hTrade(P, c, shop, F); if (!P.spots.counter && P.counter) { const ct = P.counter; pSpot(P, 'counter', ct.cx, ct.cz + 0.8, PI, { k: 0 }); }
   if (!P.spots.ledger) { const ct = P.counter; pInteract(P, ct ? ct.cx : 0, 1.0, ct ? ct.cz : 2.0, { kind: 'read', id: 'draper.ledger', title: 'The draper’s ledger' }, 0); }
   for (const x of [X0 + 1.4, X1 - 1.4]) pPiece(P, shop, 'brass_candleholders_c', { near: [x, Zp - 0.5], lit: 5, soft: true, opt: { lowOk: true } });
   const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, id + '.mat', e.x, 1.1, 0, 1.8, 1.2, 0.02, pdRug(1.8, 1.2, F.rug), { flat: true, noClear: true });

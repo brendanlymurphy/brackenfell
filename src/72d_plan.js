@@ -597,9 +597,13 @@ if (TEST && TEST.audit) { const _iw = infWalls; infWalls = function (B, MS, o) {
 // in the house's own frame (front wall at -z; `u` = metres from the middle of the house on the front and back, from the front wall on the sides).
 const SHELL_REC = {};
 { const _ks = kitShell; kitShell = function (c) {
+  if (typeof infKitWalls === 'function' && !infKitWalls.__inout) { const _iw = infKitWalls; infKitWalls = function (cc, b, MS, frames, zone, sy, R, pass) { const r = _iw.apply(this, arguments); return r; }; infKitWalls.__inout = 1;
+    const _w = infWalls; infWalls = function (B, MS, o) { if (SHELL_CUR && SHELL_CUR.pass !== 'int' && o && o.plan) SHELL_GEN[SHELL_CUR.id] = { w: o.w, d: o.d, fl: o.fl, H: o.H || 3, plan: JSON.parse(JSON.stringify(o.plan)) }; return _w.apply(this, arguments); }; }
+  SHELL_CUR = { id: c.site.id, pass: 'ext' };
   const kb = Kit.batch, rec = SHELL_REC[c.site.id] = [];
   Kit.batch = function (o) { const B = kb.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_|^gen_(dress|dormer|cross|fbox)_/.test(name)) rec.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; };
-  try { return _ks.apply(this, arguments); } finally { Kit.batch = kb; } }; }
+  try { return _ks.apply(this, arguments); } finally { Kit.batch = kb; SHELL_CUR = null; } }; }
+let SHELL_CUR = null; const SHELL_GEN = {};      /* [inout] the openings a generated wall (73d_infill.js infWalls) was built from, by house */
 function shellOpenings(c) {
   const rec = SHELL_REC[c.site.id] || [], inv = new THREE.Matrix4().fromArray(c.Mx).invert(), v = new THREE.Vector3(), w = c.w, d = c.d, H = c.H, raw = [];
   const glass = [];      /* windows drawn in generated pieces (an end wall's face, a dormer, a gable): each upright glass quad, as a box */
@@ -614,6 +618,9 @@ function shellOpenings(c) {
     const kind = /^Window_/.test(r.name) ? 'win' : /^Balcony_/.test(r.name) ? 'balc' : /^Floor_/.test(r.name) ? 'floor' : 'door', fb = wall === 'front' || wall === 'back';
     raw.push({ name: r.name, y1: mx[1], kind, wall, u: fb ? x : z + d / 2, u0: fb ? mn[0] : mn[2] + d / 2, u1: fb ? mx[0] : mx[2] + d / 2, y: (mn[1] + mx[1]) / 2, y0: mn[1], out: fb ? Math.max(Math.abs(mn[2]), Math.abs(mx[2])) - d / 2 : Math.max(Math.abs(mn[0]), Math.abs(mx[0])) - w / 2, win: /Thin_Round/.test(r.name) ? 'Thin_Round' : /Wide_Round/.test(r.name) ? 'Wide_Round' : 'Wide_Flat' });
   }
+  { const g = SHELL_GEN[c.site.id]; if (g) for (let k = 0; k < g.plan.length; k++) for (const wn of ['front', 'back', 'left', 'right']) for (const o of ((g.plan[k] || {})[wn] || [])) {      /* the generated walls' own openings */
+      const uc = (o.u0 + o.u1) / 2, fb = wn === 'front' || wn === 'back', u = wn === 'front' ? g.w / 2 - uc : wn === 'back' ? -g.w / 2 + uc : wn === 'left' ? uc : g.d - uc, y0 = k * g.H + o.v0, y1 = k * g.H + o.v1;
+      raw.push({ name: o.door ? 'DoorFrame_gen' : 'Window_gen', kind: o.door ? 'door' : 'win', wall: wn, u, u0: u - (o.u1 - o.u0) / 2, u1: u + (o.u1 - o.u0) / 2, y: (y0 + y1) / 2, y0, y1, out: 0, win: (o.u1 - o.u0) < 0.8 ? 'Thin_Round' : 'Wide_Flat' }); } }
   const out = [];      // frame and leaf, the two corners of one balcony: one thing
   for (const f of raw) { const m = out.find(g => g.kind === f.kind && g.wall === f.wall && Math.abs(g.u - f.u) < (f.kind === 'balc' || f.kind === 'floor' ? 2.6 : 0.7) && Math.abs(g.y - f.y) < 1.2); if (m) { if (f.kind === 'balc' || f.kind === 'floor') { m.y1 = Math.max(m.y1, f.y1); m.u0 = Math.min(m.u0, f.u0); m.u1 = Math.max(m.u1, f.u1); m.u = (m.u0 + m.u1) / 2; m.out = Math.max(m.out, f.out); } else if (/^DoorFrame/.test(f.name || '')) m.u = f.u; m.y0 = Math.min(m.y0, f.y0); } else out.push(f); }
   { const M = new THREE.Matrix4().fromArray(c.Mx), nrm = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] };      /* a window or door that opens into the house standing against this wall is not one */
