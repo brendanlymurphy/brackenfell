@@ -40,14 +40,14 @@ PLANS.store = (P, c, info) => {
   pRoom(P, -1, 'cellar', 'cellar', X0, 3, X1, D, { floor: 'stone', win: false });
   pDoor(P, 'shop', null, 0, 0); pDoor(P, 'shop', 'keeper', 4.5, Zp); pDoor(P, 'stock', 'keeper', 0.5, 6.0); pDoor(P, 'parlour', 'attic', 0, Zp); pDoor(P, 'solar', 'attic', 5.0, Zp);
   // the shell's own openings: every window where the shell has one, and the door over the street door opens onto the balcony
-  const SHL = pShellWins(P, c, { x0: X0, z0: 0, x1: X1, z1: D });
+  const SHL = pShellWins(P, c, { x0: X0, z0: 0, x1: X1, z1: D }, (f, pos) => f.wall === 'back' && f.lv === 1 ? pos - 0.5 : pos);      /* the loft's back window stands clear of the stair well */
   const bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd) pUpperDoor(P, P.rooms.parlour, bd, Math.round(SHL.pos(bd) * 4) / 4);
   pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: -1.2, z: 4.2, width: 1.0, tread: 0.2 });
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: 2.6, z: 7.2, width: 0.9, tread: 0.19 });
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: 2.2, z: 7.15, width: 1.0, tread: 0.22 });
   pLayout(P); pBalconies(P, c);
   const shop = P.rooms.shop, stock = P.rooms.stock, keeper = P.rooms.keeper, solar = P.rooms.solar, attic = P.rooms.attic, parlour = P.rooms.parlour, cellar = P.rooms.cellar;
   // the keeper's hearth first: its stack goes up through the loft and down into the cellar
-  const hh = pHearth(P, keeper, 'e', 1.1, { cauldron: true, size: 0.4, at: 5.9 }); P.hall = { room: keeper, hh };
+  const hh = pHearth(P, keeper, 'e', 1.0, { cauldron: true, size: 0.4, at: 5.85 }); P.hall = { room: keeper, hh };
   if (hh) { pPier(P, -1, hh); pPier(P, 1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); }
   // the shop: the counter faces the street door, the keeper's aisle and the cellar flight behind it, wares up both side walls
   const ct = pPut(P, shop, id + '.counter', 5.0, 1.9, 0, 3.6, 0.8, 0.84, pdCounter(3.6, c, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple', 'bottle', 'candle'], 8), { surface: true, noClear: true, lowOk: true });
@@ -76,7 +76,7 @@ PLANS.store = (P, c, info) => {
   pShelfRun(P, parlour, 'e', 1.6, 4.6, [], { id: 'led', books: true });
   PD.dense(P, parlour, { pool: ['cupboard', 'tapestry', 'paint', 'sconce'], corner: ['broom'], mid: { kinds: ['rug'], max: 1 } }); pLamp(P, parlour, 0, 2.6);
   dressBedroom(P, solar, { beds: ['bed'], loot: LOOT.store, bedInteract: true, table: true });
-  PD.dense(P, solar, { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'sconce'], corner: ['broom'], mid: { kinds: ['rug'], max: 1 } });
+  PD.dense(P, solar, { pool: ['hooks', 'tapestry', 'sconce'], corner: ['broom'], mid: { kinds: ['rug'], max: 1 } });
   pStock(P, attic, { sacks: 4, crates: 3, barrels: 1, near: [-1.2, 6.4], nearS: [0.6, 5.8] });
   PD.rack(P, attic, -1.0, 6.4, 2.2, 0, ['herb', 'herb', 'garlic']);
   PD.dense(P, attic, { pool: ['hooks', 'shelf', 'sacks'], corner: ['sacks', 'cask'], mid: { kinds: ['sacks', 'casks'], max: 1 } }); pLamp(P, attic, 0.4, 6.0);

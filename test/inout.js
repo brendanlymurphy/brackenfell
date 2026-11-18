@@ -116,6 +116,21 @@ for (const h of houses) {
   // 5 cellar: something outside says there is one
   row.cellar = { in: row.in.cellar, sign: signs.length, ok: !row.in.cellar || signs.length > 0 };
   if (!row.cellar.ok) row.fails.push('cellar');
+  // ── for the outside worker: where a cellar should show, and (plans already fitted to their shell) rooms with an outside wall and no window in the shell ──
+  const sideTxt = (wn, al) => wn + ' wall, ' + (wn === 'front' || wn === 'back' ? (Math.abs(al) < 0.3 ? 'middle' : Math.abs(r1(al)) + ' m from the middle toward the ' + (al > 0 ? 'right' : 'left') + ' wall') : r1(al) + ' m back from the front wall');
+  if (row.in.cellar) {
+    const cs = rooms.filter(r => r.k < 0), st = (P.stairs || []).find(q => q.k0 < 0 || q.k1 < 0), c0 = { x0: Math.min(...cs.map(r => r.x0)), x1: Math.max(...cs.map(r => r.x1)), z0: Math.min(...cs.map(r => r.z0)), z1: Math.max(...cs.map(r => r.z1)) };
+    const touch = { back: Math.abs(c0.z1 - B0.z1) < 0.6, left: Math.abs(c0.x0 - B0.x0) < 0.6, right: Math.abs(c0.x1 - B0.x1) < 0.6, front: Math.abs(c0.z0 - B0.z0) < 0.6 }, wn = ['back', 'left', 'right', 'front'].find(k => touch[k]);
+    const mid = wn === 'back' || wn === 'front' ? ((c0.x0 + c0.x1) / 2 - cx0) * kx : ((c0.z0 + c0.z1) / 2 - B0.z0) * kz;
+    row.cellarWhere = wn ? sideTxt(wn, mid) + (wn === 'front' ? ': a grating at the foot of the wall' : ': a hatch with two leaves against the wall, or three steps down to a low door') : 'the cellar touches no outside wall of the plan: a grating in the yard or none';
+  }
+  if (P.wins) {
+    row.needWin = [];
+    for (const r of rooms) { if (r.k < 0 || isYard(r) || P.windows.some(w => w.room === r)) continue;
+      const wl = P.walls.filter(q => q.ext && q.k === r.k && q.rooms.has(r.id)).map(q => { const lo = Math.max(q.a, q.ax === 'x' ? r.x0 : r.z0), hi = Math.min(q.b, q.ax === 'x' ? r.x1 : r.z1); return { q, lo, hi }; }).filter(o => o.hi - o.lo >= 2.8).sort((a, b) => (facing(a.q) === 'front' ? 1 : 0) - (facing(b.q) === 'front' ? 1 : 0) || (b.hi - b.lo) - (a.hi - a.lo))[0];
+      if (wl) row.needWin.push(r.id + ' (level ' + r.k + '): ' + sideTxt(facing(wl.q), alongIn(wl.q, (wl.lo + wl.hi) / 2)));
+    }
+  }
   rows.push(row);
 }
 // ── totals and the table ──
@@ -154,6 +169,10 @@ for (const r of rows) {
   const fl = r.fails.map(f => ({ storeys: 's', footprint: 'f', 'upper door': 'd', windows: 'w', cellar: 'c' })[f]).join(' ');
   md += `| \`${r.id}\` | ${r.name} | ${r.out.wallSt}${r.out.roofWin ? '+r' : ''} | ${r.in.up}${r.in.lofts ? '+loft' : ''} | ${r.out.eave} | ${r.out.w} x ${r.out.d} | ${r.in.w} x ${r.in.d} | ${r.foot.ratio} | ${doorTxt(r.out.upDoors)} | ${doorTxt(r.out.balc)} | ${doorTxt(r.in.doors.filter(d => d.lv > 0))} | ${r.updoor.unserved + r.updoor.balcUnserved + r.updoor.inOnly || ''} | ${r.windows.out} / ${r.windows.in} | ${r.windows.same} | ${cellsTxt(r)} | ${r.in.cellar ? 'yes' : ''} | ${r.cellar.sign || ''} | ${fl} |\n`;
 }
+md += `\n## For the outside worker\n\nSides as in \`WALLS\` (71_house.js): front is the door wall, left and right as seen from inside looking out of the front door. Distances are on the shell.\n\n### Cellars: where the outside should show one\n\nFrom the plans as they are today; a plan refitted to its shell may move its cellar, and its row here changes with it.\n\n| id | name | where |\n|---|---|---|\n`;
+for (const r of rows) if (r.cellarWhere) md += `| \`${r.id}\` | ${r.name} | ${r.cellarWhere} |\n`;
+md += `\n### Rooms with an outside wall and no window in the shell\n\nOnly buildings whose plan already takes its windows from the shell.\n\n| id | name | room: where a window is wanted |\n|---|---|---|\n`;
+for (const r of rows) if (r.needWin && r.needWin.length) md += `| \`${r.id}\` | ${r.name} | ${r.needWin.join('; ')} |\n`;
 const line = T.failing ? 'inout FAIL ' + T.failing : 'inout PASS';
 if (typeof window.__write === 'function') { await window.__write('docs/INOUT.md', md); await window.__write('shots/inout.json', JSON.stringify({ totals: T, rows }, null, 1)); }
 console.log('[audit] ' + line + ' ' + JSON.stringify(T));

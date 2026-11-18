@@ -84,3 +84,43 @@ Windows by wall (F front, B back, L left, R right seen from inside the front doo
 | `in.116` | Glover’s House | 2 | 2 | 6 | 4.6 x 6.2 | 8 x 12 | 3.37 |  |  |  |  | 8 / 24 | 6 | F 0:0/2 1:2/2; B 0:2/2 1:1/2; L 0:0/4 1:1/4; R 0:1/4 1:1/4 | yes |  | f w c |
 | `high.a` | Highfold: the Reeve’s House | 1 | 1 | 3.1 | 6.4 x 5.2 | 8 x 8 | 1.92 |  |  |  |  | 3 / 8 | 3 | F 0:1/2; B 0:1/2; L 0:0/2; R 0:1/2 |  |  | f w |
 | `high.c` | Highfold: the Shepherd’s House | 1 | 2 | 3.1 | 6 x 5 | 9 x 12 | 3.6 |  |  |  |  | 2 / 22 | 2 | F 0:1/2 1:0/3; B 0:1/2 1:0/3; L 0:0/4 1:0/2; R 0:0/4 1:0/2 |  |  | s f w |
+
+## For the outside worker
+
+Sides as in `WALLS` (71_house.js): front is the door wall, left and right as seen from inside looking out of the front door. Distances are on the shell.
+
+### Cellars: where the outside should show one
+
+From the plans as they are today; a plan refitted to its shell may move its cellar, and its row here changes with it.
+
+| id | name | where |
+|---|---|---|
+| `inn` | The Honeyed Hart | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `store` | Quill’s Sundries | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `elder` | Rowan’s Cottage | back wall, 1.8 m from the middle toward the right wall: a hatch with two leaves against the wall, or three steps down to a low door |
+| `chapel` | Chapel of the Dawn | back wall, 1.6 m from the middle toward the right wall: a hatch with two leaves against the wall, or three steps down to a low door |
+| `draper` | Lindqvist’s Draper | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `shop.n2` | Shop | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `shop.n3` | Shop | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `shop.n4` | Shop | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `shop.s0` | Shop | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `shop.s1` | Shop | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `shop.s2` | Shop | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `in.10` | Baker’s House | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `in.15` | Grocer’s House | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `in.20` | Chandler’s House | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `in.33` | Merchant’s House | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `in.37` | Cutler’s House | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `in.44` | Cobbler’s House | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `in.45` | Tinker’s House | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `in.70` | Tailor’s House | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `in.111` | Butcher’s House | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+| `in.116` | Glover’s House | back wall, middle: a hatch with two leaves against the wall, or three steps down to a low door |
+
+### Rooms with an outside wall and no window in the shell
+
+Only buildings whose plan already takes its windows from the shell.
+
+| id | name | room: where a window is wanted |
+|---|---|---|
+| `store` | Quill’s Sundries | keeper (level 0): back wall, 1.3 m from the middle toward the right wall |
