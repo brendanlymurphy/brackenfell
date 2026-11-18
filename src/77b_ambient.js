@@ -4,12 +4,12 @@
 // disappear at the door). They are skipped on the low tier, fully asleep beyond 50 m (logic at 2 Hz, not drawn) and cost one skinned mesh each.
 const AMB = { list: [], ready: false, acc: 0, greeted: 0 };
 const AMB_DEFS = [
-  { id: 'bram', name: 'a farmhand', home: 'amb.home0' },
-  { id: 'hilda', name: 'a weaver', home: 'amb.home1' },
-  { id: 'finn', name: 'a fisherman', home: 'amb.home2' },
-  { id: 'greta', name: 'a villager', home: 'amb.home0' },
-  { id: 'edda', name: 'a farmer’s wife', home: 'amb.home3' },
-  { id: 'lark', name: 'a youth', home: 'amb.home1' },
+  { id: 'amb_bram', body: 'm_farmer', female: false, dress: false, tint: { tunic: [0.8, 1.15, 1.5], pants: [0.8, 0.8, 0.85] }, skin: 'fair', hair: 'black', name: 'a farmhand', home: 'amb.home0' },
+  { id: 'amb_hilda', body: 'f_farmer', female: true, dress: true, tint: { tunic: [1.5, 1.1, 0.6], skirt: [0.9, 1.2, 0.8] }, skin: 'tan', hair: 'auburn', name: 'a weaver', home: 'amb.home1' },
+  { id: 'amb_finn', body: 'm_hunter', female: false, dress: false, tint: { tunic: [0.75, 1.3, 0.9] }, skin: 'rosy', hair: 'brown', name: 'a fisherman', home: 'amb.home2' },
+  { id: 'amb_greta', body: 'f_weaver', female: true, dress: true, tint: { robe: [1.3, 0.8, 1.3], tunic: [1.3, 0.8, 1.3] }, skin: 'fair', hair: 'blond', name: 'a villager', home: 'amb.home0' },
+  { id: 'amb_edda', body: 'f_herbalist', female: true, dress: true, tint: { tunic: [1.6, 1.3, 0.7], robe: [1.6, 1.3, 0.7] }, skin: 'brown', hair: 'black', name: 'a farmer’s wife', home: 'amb.home3' },
+  { id: 'amb_lark', body: 'm_fisher', female: false, dress: false, tint: { tunic: [1.5, 0.8, 0.7], pants: [1.2, 1.1, 0.9] }, skin: 'tan', hair: 'red', name: 'a youth', home: 'amb.home1' },
 ];
 // places they like: stall fronts, the well, benches, the alley. Pairs stand opposite one another.
 function ambSpots() {
@@ -27,7 +27,7 @@ function buildAmbient() {
   AMB.list.length = 0;
   { const bad = Chars.audit ? Chars.audit(AMB_DEFS) : []; if (bad.length) console.warn('[ch1] passers-by without a full body: ' + bad.join('; ')); }      // [ch1]
   AMB_DEFS.forEach((def, i) => {
-    let ch = null; try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('ambient ' + def.id + ': ' + (e && e.message || e)); return; }
+    let ch = null; try { ch = Chars.spawn(def);       /* [cast] A29: a passer-by has a body, colours and hair of their own; they were spawned with a named villager's id and were that villager's double (a second Greta on the road) */ ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('ambient ' + def.id + ': ' + (e && e.message || e)); return; }
     AMB.list.push({ id: 'amb:' + def.id + i, def, i, ch, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, dwell: 0, state: 'away', next: 0, ang: null, look: [0, 0], seat: null, stops: null, talking: false, speed: 1.1 + Math.random() * 0.25 });
   });
   AMB.ready = AMB.list.length > 0;
