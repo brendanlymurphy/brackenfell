@@ -1,5 +1,9 @@
 // ───────────────────────── billboards: flames, glows, smoke, embers, fireflies ─────────────────────────
 const FX = { smoke: [], embers: [], flies: [], motes: [], acc: 0, glows: [] };
+// [fx] how high a spark or a wisp from this flame may rise: just under the underside of whatever is over it (a floor, a stair, a loft), and indoors never more
+// than 1.8 m above the fire (a room's own ceiling is not always a floor of anything). Embers rose through the ceiling into the room above. Asked once per
+// flame and remembered: a flame does not move.
+function fxTop(e) { if (e._top !== undefined) return e._top; let top = 1e9; if (e.cell || e.indoor || (e.zone && e.zone > 0)) { top = e.p[1] + 1.8; } if (typeof World !== 'undefined' && World.ceilingAt) { const c = World.ceilingAt(e.p[0], e.p[2], e.p[1] + 0.2, e.p[1] + 14); if (c !== null && c - 0.12 < top) top = c - 0.12; } return (e._top = top); }
 function fxInit() {
   const R = rng(55);
   for (let i = 0; i < 46; i++) FX.flies.push({ o: [R.s() * 22, 0.4 + R() * 1.8, R.s() * 22], ph: R() * 100, sp: 0.3 + R() * 0.5 });
@@ -21,10 +25,10 @@ function fxUpdate(dt, time, env, cam) {
       const s = e.size, fl = flick(time, e.seed * 9);
       for (let k = 0; k < (e.type === 'bonfire' ? 5 : 3); k++) { const a = k * 2.4 + e.seed * 6, r = s * (k ? 0.24 : 0); put(e.p[0] + Math.cos(a) * r, e.p[1] + s * (0.5 + (k % 2) * 0.1), e.p[2] + Math.sin(a) * r, s * (k ? 0.62 : 0.85), 1, 1, 1, 0.9 * fl, 0, 2, 1.2, e.seed + k * 0.37); }
       put(e.p[0], e.p[1] + s * 0.5, e.p[2], s * 2.6, 1.0, 0.42, 0.12, 0.13 * fl, 0, 0, 1, e.seed);
-      if (dist < 45) { e.t += dt; const rate = e.type === 'bonfire' ? 0.035 : 0.16; while (e.t > rate) { e.t -= rate; if (FX.embers.length < 150) FX.embers.push({ p: [e.p[0] + (Math.random() - 0.5) * s * 0.6, e.p[1] + s * 0.4, e.p[2] + (Math.random() - 0.5) * s * 0.6], v: [(Math.random() - 0.5) * 0.5, 0.9 + Math.random() * 1.4 * (s > 1 ? 2 : 1), (Math.random() - 0.5) * 0.5], life: 0, max: 0.7 + Math.random() * 1.1 * (s > 1 ? 2 : 1), ph: Math.random() * 9 }); } }
+      if (dist < 45) { e.t += dt; const rate = e.type === 'bonfire' ? 0.035 : 0.16; while (e.t > rate) { e.t -= rate; if (FX.embers.length < 150) FX.embers.push({ p: [e.p[0] + (Math.random() - 0.5) * s * 0.6, e.p[1] + s * 0.4, e.p[2] + (Math.random() - 0.5) * s * 0.6], v: [(Math.random() - 0.5) * 0.5, 0.9 + Math.random() * 1.4 * (s > 1 ? 2 : 1), (Math.random() - 0.5) * 0.5], life: 0, max: 0.7 + Math.random() * 1.1 * (s > 1 ? 2 : 1), ph: Math.random() * 9, top: fxTop(e) }); } }
     } else if (e.type === 'smoke') {
       if (dist > 150) continue;
-      e.t += dt; while (e.t > 0.6) { e.t -= 0.6; if (FX.smoke.length < 230) FX.smoke.push({ ind: !!e.indoor, thin: e.thin ? 1 : 0, p: [e.p[0], e.p[1], e.p[2]], life: 0, max: (5.5 + Math.random() * 2) * (e.thin ? 0.6 : 1), seed: Math.random(), rot: Math.random() * 6 }); }
+      e.t += dt; while (e.t > 0.6) { e.t -= 0.6; if (FX.smoke.length < 230) FX.smoke.push({ ind: !!e.indoor, top: e.indoor ? fxTop(e) : 1e9, thin: e.thin ? 1 : 0, p: [e.p[0], e.p[1], e.p[2]], life: 0, max: (5.5 + Math.random() * 2) * (e.thin ? 0.6 : 1), seed: Math.random(), rot: Math.random() * 6 }); }
     } else if (e.type === 'candle') {
       if ((lit < 0.05 && !e.always) || dist > 40) continue;
       const k = e.always ? 1 : lit;
@@ -44,13 +48,13 @@ function fxUpdate(dt, time, env, cam) {
   // chimney smoke drifts with the wind and thins out
   if (World.cell) FX.smoke = FX.smoke.filter(s => s.ind);          // [c4] only forge smoke (emitter.indoor) burns inside
   for (let i = FX.smoke.length - 1; i >= 0; i--) {
-    const s = FX.smoke[i]; s.life += dt; if (s.life > s.max) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
+    const s = FX.smoke[i]; s.life += dt; if (s.life > s.max || s.p[1] > s.top) { FX.smoke[i] = FX.smoke[FX.smoke.length - 1]; FX.smoke.pop(); continue; }
     const k = s.life / s.max, wv = Wind.at(s.p[0], s.p[2]), wk = 0.25 + 0.95 * k;          // the gust over this chimney, taking hold as the smoke leaves its shelter
     s.p[0] += (wv[0] * wk + Math.sin(s.seed * 20 + s.life) * 0.08) * dt; s.p[1] += (1.15 - k * 0.5) / (1 + 0.35 * Math.hypot(wv[0], wv[1])) * dt; s.p[2] += (wv[1] * wk) * dt;
     put(s.p[0], s.p[1], s.p[2], (0.14 + k * 0.95) * (s.thin ? 0.7 : 1), 0.30, 0.30, 0.31, Math.min(k * 5, 1) * Math.pow(1 - k, 1.3) * 0.42 * (s.thin ? 0.6 : 1),    /* Build 33: thin chimneys (infill) */ s.rot + s.life * 0.2, 1, 1.5 + k, s.seed);       // thin grey wisps that fade out (they were large opaque white blobs from above)
   }
   for (let i = FX.embers.length - 1; i >= 0; i--) {
-    const s = FX.embers[i]; s.life += dt; if (s.life > s.max) { FX.embers[i] = FX.embers[FX.embers.length - 1]; FX.embers.pop(); continue; }
+    const s = FX.embers[i]; s.life += dt; if (s.life > s.max || s.p[1] > s.top) { FX.embers[i] = FX.embers[FX.embers.length - 1]; FX.embers.pop(); continue; }
     const ew = World.cell ? [0, 0] : Wind.at(s.p[0], s.p[2]);
     s.p[0] += (s.v[0] + ew[0] * 0.5 + Math.sin(s.ph + s.life * 7) * 0.4) * dt; s.p[1] += s.v[1] * dt; s.p[2] += (s.v[2] + ew[1] * 0.5 + Math.cos(s.ph + s.life * 6) * 0.4) * dt;
     put(s.p[0], s.p[1], s.p[2], 0.035, 1.0, 0.5, 0.12, 2.6 * (1 - s.life / s.max), 0, 3, 1, 0);

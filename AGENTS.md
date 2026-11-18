@@ -36,7 +36,7 @@ What `--full` runs: build; silent boot (no `warn` or `error` line: a builder tha
 that way once); `quest` (ends `fire 99 bonfire true`); `stairs`, `npcstairs`, `npcsep`, `routes`, `combat`, `wilds`, `story`, `mine`,
 `secrets`, `interact`, `econ`; `interiors`, `parity`; `voice_game`, `voice_parts`, `audio_game`, `voices` (`tools/voice/check.mjs`); the budget
 views on medium and low; every cell in chunks of 8 (a software-rendered tab dies after about a dozen); `kitcull`; one WebGPU
-shot in the square and in the inn with no GPU errors; `cullwalk` (nothing in sight missing while walking and turning); `town` (every street and gate walked both ways by input, no long way round between two places for a villager, no spawn or door step inside a prop, off the wharf and the dock into deep water and out again on foot: `node test/walkbot.mjs --part streets`); `water` (nothing built or walked under a water surface, no water drawn over dry ground); the offline start; `test/real.mjs` (production boot); and the play bot.
+shot in the square and in the inn with no GPU errors; `cullwalk` (nothing in sight missing while walking and turning); `town` (every street and gate walked both ways by input, no long way round between two places for a villager, no spawn or door step inside a prop, off the wharf and the dock into deep water and out again on foot: `node test/walkbot.mjs --part streets`); `water` (nothing built or walked under a water surface, no water drawn over dry ground); `apart` (everyone through a whole day: no two bodies in one place); `cast` (the sixty of `docs/PEOPLE.md` are in the town, each with a bed of their own and their lines); `memory` (a greeting is said once and kept in the save; Hale's first speech is true to where he is); `scenes` (two villagers' passing talk is heard line for line by a player standing by); `view` (the windows show the town from where the house stands, drawn once on entering and once an hour); the offline start; `test/real.mjs` (production boot); and the play bot.
 
 The play bot (`test/playbot.mjs`, steps `bot-story`, `bot-play`, `bot-phone`, `bot-sweep`, `bot-soak`) plays by real keys, clicks and
 taps: the story to both endings, a reload at seven points of it, every conversation, side quests, shop, perks, board, theft and
@@ -119,7 +119,7 @@ Ownership is by area; the worker named in `ROADMAP.md` "In progress" owns an are
 | Interiors: cells, plan engine, designed plans, dressing, crypt | `56_cells` `72d_plan` `72e_plans` `72f_underworld` `72g_dress` `72h_trades` `72i_wares` `72j_plans2` `72k_houses` `72l_hobjects` |
 | Town build-out: alley, dressing, boardwalks, levels, wharf, routes, walls, lanes, square | `73_village` `73b` to `73k` |
 | Vegetation and scanned trees | `74_vegetation` `74b_trees` |
-| Villagers, schedules, passers-by, inn regulars, hand props, households | `77_npc` `77b_ambient` `77c_patrons` `77d_handprops` `77e_households` |
+| Villagers, schedules, passers-by, claims, hand props, the cast | `77_npc` `77b_ambient` `77c_patrons` `77d_handprops` `77e_households` `54_cast` (generated: `node tools/cast.mjs` from `docs/PEOPLE.md`, never edited by hand) `54b_castrules` `82d_cast` |
 | Player and collision; the wilds and their life | `78_player` `79_wilds` `79b_life` |
 | Game rules, quests, dialogue | `80_game` `81_wilds_story` `90_rpg` `91_combat` `92_foes` `93_inventory` |
 | Main story, interaction layer, secrets, mine, economy, Acts 2 and 3 | `82_story` `82b_interact` `82c_secrets` `94_mine` `94b_economy` `94d_act2` |
@@ -145,8 +145,10 @@ node tools/voice/check.mjs --allow-missing
 
 - The API key is a network secret on the infrastructure session's cloud environment (host generativelanguage.googleapis.com, header
   `x-goog-api-key`); it is never in the repository, the environment or a chat. Only that environment can generate.
-- 100 requests a day. The script stops cleanly at the limit and resumes. Every planned line has audio now (252); nothing is
-  scheduled, so after adding lines run the commands above. A line without a file is a subtitle. `audio/voice/manifest.json` lists only lines that have audio.
+- 100 requests a day. The script stops cleanly at the limit and resumes. 254 of 724 planned lines have audio: the 470 lines of the
+  sixty (`docs/PEOPLE.md`) wait for the owner to approve their ten shared voices (`v.OM` ... `v.G` in `cast_gemini.json`;
+  `--sample --new` makes one clip per new voice), then go out Market households first. `--batch N` asks for N lines of one speaker in
+  one request and cuts them apart (tested: two lines, one request). After adding lines run the commands above. A line without a file is a subtitle. `audio/voice/manifest.json` lists only lines that have audio.
 - Speech is played dry: never route it through reverb or process it. `cast_gemini.json` holds one voice and one acting direction
   per character; `--sample` makes one clip per character for the owner to approve before a new voice is used.
 - `check.mjs` fails a file over 0.45 s per character, or over 30 s unless the line is long enough to need it (a model once read

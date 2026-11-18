@@ -1,22 +1,116 @@
 {
  "_note": "Casting for tools/voice/gen_gemini.py (Gemini 3.1 Flash TTS, model gemini-3.1-flash-tts-preview). voice = one of the 30 prebuilt voice names; direction = how the line should be performed, sent ahead of the text. Keep directions short and physical (age, energy, pace), never theatrical. Change a voice or direction and rerun: files are named by a hash of these settings.",
  "_style": "British English, rural northern accent. A villager in a small medieval mountain town talking to a traveller face to face. Natural, conversational, understated; not an announcer, not theatrical. No music or sound effects.",
- "hale":   { "voice": "Algenib",       "direction": "A gate warden in his fifties: gravelly, weary, dry, unhurried authority." },
- "ivo":    { "voice": "Zubenelgenubi", "direction": "A young guardsman, early twenties: casual, a little bored, friendly." },
- "greta":  { "voice": "Sulafat",       "direction": "An innkeeper in her forties: warm, brisk, practical, busy but kind." },
- "brandt": { "voice": "Alnilam",       "direction": "A blacksmith in his forties: gruff, low, slow, few words, speaking over his work." },
- "tobin":  { "voice": "Puck",          "direction": "A boy of about eleven: quick, eager, a bit cheeky." },
- "marta":  { "voice": "Kore",          "direction": "A shopkeeper in her thirties: sharp, brisk, businesslike, dry humour." },
- "aldous": { "voice": "Enceladus",     "direction": "An old chapel brother: soft, breathy, gentle, slow, thoughtful." },
- "maren":  { "voice": "Gacrux",        "direction": "A very old herbalist: slow, creaky, knowing, a little amused." },
- "osric":  { "voice": "Fenrir",        "direction": "A hearty miller in his fifties: loud, cheerful, generous." },
- "edda":   { "voice": "Despina",       "direction": "A farmer in her fifties: plain-spoken, steady, tired at the end of a day." },
- "finn":   { "voice": "Umbriel",       "direction": "An old fisherman: quiet, murmuring, easy-going, long pauses." },
- "lark":   { "voice": "Aoede",         "direction": "A young travelling bard: light, wry, playful." },
- "wren":   { "voice": "Erinome",       "direction": "A hunter in her thirties: laconic, cool, clear, watchful." },
- "rowan":  { "voice": "Charon",        "direction": "The village elder, very old: slow, grave, measured, kindly." },
- "pip":    { "voice": "Leda",          "direction": "A small girl of about seven: bright, curious, talks fast." },
- "hilda":  { "voice": "Achernar",      "direction": "A weaver and mother in her thirties: soft, patient, a little worried." },
- "bram":   { "voice": "Achird",        "direction": "A farmhand of about twenty: friendly, cheerful, simple." },
- "narrator": { "voice": "Schedar",     "direction": "Even, quiet reading of a written note." }
+ "hale": {
+  "voice": "Algenib",
+  "direction": "A gate warden in his fifties: gravelly, weary, dry, unhurried authority."
+ },
+ "ivo": {
+  "voice": "Zubenelgenubi",
+  "direction": "A young guardsman, early twenties: casual, a little bored, friendly."
+ },
+ "greta": {
+  "voice": "Sulafat",
+  "direction": "An innkeeper in her forties: warm, brisk, practical, busy but kind."
+ },
+ "brandt": {
+  "voice": "Alnilam",
+  "direction": "A blacksmith in his forties: gruff, low, slow, few words, speaking over his work."
+ },
+ "tobin": {
+  "voice": "Puck",
+  "direction": "A boy of about eleven: quick, eager, a bit cheeky."
+ },
+ "marta": {
+  "voice": "Kore",
+  "direction": "A shopkeeper in her thirties: sharp, brisk, businesslike, dry humour."
+ },
+ "aldous": {
+  "voice": "Enceladus",
+  "direction": "An old chapel brother: soft, breathy, gentle, slow, thoughtful."
+ },
+ "maren": {
+  "voice": "Gacrux",
+  "direction": "A very old herbalist: slow, creaky, knowing, a little amused."
+ },
+ "osric": {
+  "voice": "Fenrir",
+  "direction": "A hearty miller in his fifties: loud, cheerful, generous."
+ },
+ "edda": {
+  "voice": "Despina",
+  "direction": "A farmer in her fifties: plain-spoken, steady, tired at the end of a day."
+ },
+ "finn": {
+  "voice": "Umbriel",
+  "direction": "An old fisherman: quiet, murmuring, easy-going, long pauses."
+ },
+ "lark": {
+  "voice": "Aoede",
+  "direction": "A young travelling bard: light, wry, playful."
+ },
+ "wren": {
+  "voice": "Erinome",
+  "direction": "A hunter in her thirties: laconic, cool, clear, watchful."
+ },
+ "rowan": {
+  "voice": "Charon",
+  "direction": "The village elder, very old: slow, grave, measured, kindly."
+ },
+ "pip": {
+  "voice": "Leda",
+  "direction": "A small girl of about seven: bright, curious, talks fast."
+ },
+ "hilda": {
+  "voice": "Achernar",
+  "direction": "A weaver and mother in her thirties: soft, patient, a little worried."
+ },
+ "bram": {
+  "voice": "Achird",
+  "direction": "A farmhand of about twenty: friendly, cheerful, simple."
+ },
+ "narrator": {
+  "voice": "Schedar",
+  "direction": "Even, quiet reading of a written note."
+ },
+ "v.OM": {
+  "voice": "Rasalgethi",
+  "direction": "An old man of the town, past sixty: slow, dry, a little hoarse, sure of his opinions."
+ },
+ "v.M1": {
+  "voice": "Algieba",
+  "direction": "A tradesman in his late forties or fifties: steady, plain, a man speaking over his work."
+ },
+ "v.M2": {
+  "voice": "Iapetus",
+  "direction": "A working man in his thirties or early forties: easy, direct, a little guarded with strangers."
+ },
+ "v.YM": {
+  "voice": "Sadachbia",
+  "direction": "A young man of about twenty: quick, unsure of himself, trying to sound older."
+ },
+ "v.B": {
+  "voice": "Zephyr",
+  "direction": "A boy of about ten: bright, blunt, a little out of breath."
+ },
+ "v.OW": {
+  "voice": "Vindemiatrix",
+  "direction": "An old woman of the town, past sixty: unhurried, shrewd, dry, kindly underneath."
+ },
+ "v.W1": {
+  "voice": "Pulcherrima",
+  "direction": "A woman of the town in her late forties or fifties: brisk, capable, has heard it all."
+ },
+ "v.W2": {
+  "voice": "Callirrhoe",
+  "direction": "A woman in her thirties or early forties: warm, practical, quick, busy with her hands."
+ },
+ "v.YW": {
+  "voice": "Autonoe",
+  "direction": "A young woman of about twenty: lively, wry, sure of herself."
+ },
+ "v.G": {
+  "voice": "Laomedeia",
+  "direction": "A girl of about twelve: clear, earnest, a little prim."
+ }
 }

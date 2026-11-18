@@ -181,6 +181,7 @@ function renderFrame(time, env) {
   if (upd1) { shadowPlace(1, [e[0] + fh[0] * r1 * 0.6, e[1], e[2] + fh[2] * r1 * 0.6], r1, L, env); R.shadow1Ready = true; }
   S.lights[1].shadow.needsUpdate = upd1; S.lights[0].shadow.autoUpdate = !cell; if (cell) S.lights[0].shadow.needsUpdate = false;
   // ── world ──
+  if (typeof ViewCube !== 'undefined') ViewCube.tick();       /* [view] the windows' picture is taken again when the hour turns indoors (56b_viewcube.js) */
   sceneUpdate(e, q);
   Sky.update(e); Grass.update(e, [f[0], f[2]]); Particles.update(); Bake.people(e, env);      // [l1] 72m_bake.js: blob shadows under people
   // ── post ──
