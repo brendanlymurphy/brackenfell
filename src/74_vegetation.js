@@ -114,15 +114,18 @@ function buildVegetation() {
   const addTree = (kind, x, z, scale) => {
     for (const c of World.colliders) if (c.r > 0.6 && c.y1 - c.y0 < 3 && Math.hypot(x - c.x, z - c.z) < c.r + (kind === 'oak' ? 0.7 : 0.3) * scale) return;      // [fx3] never a trunk through a boulder
     const y = gy(x, z);
+    (World.treeList = World.treeList || []).push([kind, Math.round(x * 10) / 10, Math.round(z * 10) / 10, scale]);
     inst[kind].push([x, y - 0.05, z, scale, R() * TAU, R(), R(), 0]);
     if (hyp(x, z) < WORLD_RADIUS + 8) World.colliders.push({ x, z, r: (kind === 'oak' ? 0.7 : kind === 'pine' ? 0.27 : 0.2) * scale, y0: y - 1, y1: y + 6 });
   };
+  World._blk = blocked;
+  const inTownBox = (x, z) => x > -62 && x < 72.7 && z > -58 && z < (x > 38 ? 86 : 77.5);      /* [fx3] inside the edge no tree is scattered: each is placed by hand below (TOWN_TREES), with a reason */
   addTree('oak', World.oakPos[0], World.oakPos[1], 1.0);
   { const p = siteToWorld(SITE.chapel, 5.5, -13.5); addTree('oak', p[0], p[1], 0.85); }
   addTree('oak', 88, -30, 0.9);
-  for (const [k, x, z, s] of [['birch', -29, 9, 1], ['birch', 31, -17, 1.1], ['birch', -31, -27, 0.95], ['birch', 13, -33, 1.05], ['birch', 28, 25, 1], ['birch', -9, 35, 0.9], ['birch', 45, -9, 1.1], ['birch', -47, 7, 1], ['pine', -20, -33, 1.1], ['pine', 9, -36, 1.25], ['pine', -34, 31, 1.0], ['birch', 47, 20, 1.0], ['birch', 50, 34, 0.9], ['birch', 66, 40, 1.05], ['birch', 30, 70, 1], ['birch', -22, 60, 1.1], ['pine', 40, -40, 1.2], ['birch', 74, -12, 1], ['birch', -6, -44, 0.95]]) if (!blocked(x, z, 0.5)) addTree(k, x, z, s);
+  for (const [k, x, z, s] of [['birch', -29, 9, 1], ['birch', 31, -17, 1.1], ['birch', -31, -27, 0.95], ['birch', 13, -33, 1.05], ['birch', 28, 25, 1], ['birch', -9, 35, 0.9], ['birch', 45, -9, 1.1], ['birch', -47, 7, 1], ['pine', -20, -33, 1.1], ['pine', 9, -36, 1.25], ['pine', -34, 31, 1.0], ['birch', 47, 20, 1.0], ['birch', 50, 34, 0.9], ['birch', 66, 40, 1.05], ['birch', 30, 70, 1], ['birch', -22, 60, 1.1], ['pine', 40, -40, 1.2], ['birch', 74, -12, 1], ['birch', -6, -44, 0.95]]) if (!blocked(x, z, 0.5) && !inTownBox(x, z)) addTree(k, x, z, s);
   // autumn birches standing in the courts behind the infill houses
-  if (typeof INF !== 'undefined') { let nb = 0; for (const h of INF.houses) { if (nb >= 8 || R() > 0.38) continue; const lx = R.s() * h.w * 0.3, p = siteToWorld(h, lx, h.d / 2 + 2.1 + R() * 0.6); if (hyp(p[0] - SQUARE.x, p[1] - SQUARE.z) < 22 || blocked(p[0], p[1], 1.9)) continue; addTree('birch', p[0], p[1], 0.78 + R() * 0.3); nb++; } }
+  if (typeof INF !== 'undefined') { let nb = 0; for (const h of INF.houses) { if (nb >= 8 || R() > 0.38) continue; const lx = R.s() * h.w * 0.3, p = siteToWorld(h, lx, h.d / 2 + 2.1 + R() * 0.6); if (inTownBox(p[0], p[1]) || blocked(p[0], p[1], 1.9)) continue; addTree('birch', p[0], p[1], 0.78 + R() * 0.3); nb++; } }
   const cell = 7.5, ext = 430;
   for (let gz = -ext; gz < ext; gz += cell) for (let gx = -ext; gx < ext; gx += cell) {
     const x = gx + R() * cell, z = gz + R() * cell, r = hyp(x, z);
@@ -132,6 +135,7 @@ function buildVegetation() {
     if (typeof wildsDens === 'function') dens *= wildsDens(x, z);
     if (R() > dens) continue;
     if (r < 200 && blocked(x, z, 1.5)) continue;
+    if (inTownBox(x, z)) continue;
     const y = gy(x, z); if (y > 205 || y < LAKE.y + 0.3) continue;
     const e = 2.5, sl = Math.max(Math.abs(gy(x + e, z) - y), Math.abs(gy(x, z + e) - y)) / e; if (sl > 0.85) continue;
     const birchP = r < 150 ? 0.34 : 0.07;
@@ -176,6 +180,22 @@ function buildVegetation() {
     for (const g of defs) World.instGroups.push(Object.assign({ ibuf, cells: list, first: g.item.first, count: g.item.count, base: g.item.base, shadow: true }, g));
   };
   // conifers and birches: the scanned trees (74b_trees.js) take the planted positions; the generated ones only stand in if those files failed to load
+  /* [fx3] Chapelgate approach: old trees along the hedged way from the north gate to the lych gate, and yews in the churchyard (dark conifers kept small) */
+  for (const [x, z, k, sc] of [[-11.5, -62.6, 'oak', 0.8], [-3.4, -66.2, 'oak', 0.75], [-12.3, -70.4, 'birch', 1.0]]) if (!blocked(x, z, 0.5) && !(TEST && TEST.noyt)) addTree(k, x, z, sc);
+  /* [fx3] TOWN_TREES: every tree inside the edge, placed by hand. Each has a reason; alternates are tried in order and the first clear one is used.
+     lime      the Market Place (oak model, 0.95): shade over the cross steps' corner; the one tree the square is built round (with the oak by the smithy)
+     yew x2    the churchyard (pine model, 0.55, dark and small): yews by the chapel porch and the lych gate, as every churchyard had
+     willow x2 the wharf (birch model, 1.0-1.1, (52.3,80) (59.2,79.2) in the scatter list above is replaced by this): at the water's edge by the landing
+     alder x3  the river bank at the east bridge and the north-east corner (birch model): bank trees on the water side of the edge
+     oak       the terrace garden (LV.trees): shade for the two benches
+     fruit x7  the yards where shells stood (yardTrees: oak 0.55): one orchard tree in a household's yard
+     chapel oak the chapel's east side; oaks and a birch on the Chapelgate way (above) */
+  for (const [k, x, z, sc] of [['oak', 13.5, -14, 0.95], ['pine', 3, -70, 0.38], ['pine', -14, -71, 0.36], ['birch', 52.3, 79.5, 1.1], ['birch', 59, 78.8, 1.0], ['birch', 68.8, -54.6, 0.85], ['birch', 70.7, -6.6, 1.1]]) if (!blocked(x, z, 0.8)) addTree(k, x, z, sc);
+  for (const [x, z, k, sc] of (TEST && TEST.noyt ? [] : World.yardTrees || [])) addTree(k, x, z, sc);      /* [fx3] fruit trees in the yards where deleted shells stood */
+  /* [fx3] the hedge along the way to the lych gate: overlapping clumps of uneven size on a low bank, with a few saplings grown out of it */
+  for (const [hi, h] of (World.hedgeClumps || []).entries()) if (!(TEST && TEST.noyt) && !(R.qName === 'low' && hi % 3 === 2)) inst.hedge.push([h[0], h[1], h[2], h[3], h[4], h[5], h[6], 0]);
+  for (const [x, z] of (TEST && TEST.noyt ? [] : World.hedgeSaplings || [])) addTree('birch', x, z, 0.32);
+  /* [fx3] the tree groups are built after every tree is added (the chapel way, the yard fruit trees, hedge saplings and the hand-placed town trees came after them and were never drawn) */
   if (typeof Trees !== 'undefined' && Trees.ready) Trees.plant(inst);
   else {
     mkGroups(inst.pine, [{ item: I.pineT, kind: 'opaque', lod: 1 }, { item: I.pineL, kind: 'leaf', lod: 1 }], 48);
@@ -184,12 +204,6 @@ function buildVegetation() {
     mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
   }
   mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
-  /* [fx3] Chapelgate approach: old trees along the hedged way from the north gate to the lych gate, and yews in the churchyard (dark conifers kept small) */
-  for (const [x, z, k, sc] of [[-11.5, -62.6, 'oak', 0.8], [-3.4, -66.2, 'oak', 0.75], [-12.3, -70.4, 'birch', 1.0]]) if (!blocked(x, z, 0.5) && !(TEST && TEST.noyt)) addTree(k, x, z, sc);
-  for (const [x, z, k, sc] of (TEST && TEST.noyt ? [] : World.yardTrees || [])) addTree(k, x, z, sc);      /* [fx3] fruit trees in the yards where deleted shells stood */
-  /* [fx3] the hedge along the way to the lych gate: overlapping clumps of uneven size on a low bank, with a few saplings grown out of it */
-  for (const [hi, h] of (World.hedgeClumps || []).entries()) if (!(TEST && TEST.noyt) && !(R.qName === 'low' && hi % 3 === 2)) inst.hedge.push([h[0], h[1], h[2], h[3], h[4], h[5], h[6], 0]);
-  for (const [x, z] of (TEST && TEST.noyt ? [] : World.hedgeSaplings || [])) addTree('birch', x, z, 0.32);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
   mkGroups(inst.hedge, [{ item: I.hedge, kind: 'leaf', lod: 0, maxDist: 40, lowMax: 22, shadow: false }], 24);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
