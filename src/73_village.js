@@ -241,21 +241,21 @@ function buildVillage() {
   // ── dynamic objects: door leaves, mill wheel, pickups ──
   const skin = new MeshPack();
   // [fx2] six hinged leaves (weathered oak, dark oak, silvered, and three faded paints) so a street's doors are not one door; a door takes one by its house, so both sides of a portal agree
-  const LEAF_COL = [[0.95, 0.82, 0.66], [0.62, 0.54, 0.44], [0.85, 0.8, 0.72], [0.8, 0.64, 0.48], [0.72, 0.58, 0.44], [0.58, 0.5, 0.42]];      // [fin] six wood tones: the painted olive, rose and blue read as flat pale slabs from inside a cell
-  const mkLeaf = (bc) => { const leaf = new Mesh(512);
+  const LEAF_COL = [[0.95, 0.82, 0.66, 0.5], [0.62, 0.54, 0.44, 0.7], [0.85, 0.8, 0.72, 0.4], [0.36, 0.3, 0.24, 0.9], [0.72, 0.58, 0.44, 0.45], [0.97, 0.92, 0.8, 0.65]];      // [fin] oak, dark oak, silvered, tarred, weathered pine, limewashed; the fourth number is how much light the face takes (old doors are darker)      // [fin] six wood tones: the painted olive, rose and blue read as flat pale slabs from inside a cell
+  const mkLeaf = (bc) => { const leaf = new Mesh(2048);
   // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
-  leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
+  leaf.ao = bc[3]; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
   for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [bc[0] * k, bc[1] * k, bc[2] * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
   leaf.mat(MAT.PLANKS, [bc[0] * 0.72, bc[1] * 0.72, bc[2] * 0.72], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
-  leaf.mat(MAT.METAL, [0.17, 0.155, 0.14]);   // [fx2] straps read bright blue indoors (sky reflection): dark blackened iron
+  leaf.mat(MAT.TIMBER, [0.17, 0.155, 0.14]);   // [fx2] straps read bright blue indoors (sky reflection): dark blackened iron
    for (const y of [0.22, 0.78]) for (const sz of [-1, 1]) { const z0 = sz > 0 ? 0.045 : -0.056, z1 = sz > 0 ? 0.056 : -0.045, fc = sz > 0 ? 16 : 32;
-    leaf.mat(MAT.METAL, [0.2, 0.18, 0.16]); leaf.box(0.04, y - 0.014, z0, 0.8, y + 0.014, z1, fc | 1 | 4 | 8 | 2); leaf.box(0.8, y - 0.011, z0, 0.86, y + 0.011, z1, fc | 4 | 8 | 2); leaf.box(0.86, y - 0.007, z0, 0.9, y + 0.007, z1, fc | 4 | 8 | 2);
-    leaf.mat(MAT.METAL, [0.34, 0.31, 0.27]); leaf.box(0.04, y + 0.009, z0, 0.8, y + 0.014, z1, fc | 1 | 4 | 2); leaf.box(0.0, y - 0.02, z0, 0.07, y + 0.02, z1, fc | 4 | 8);
+    leaf.mat(MAT.TIMBER, [0.06, 0.055, 0.05]); leaf.box(0.04, y - 0.014, z0, 0.8, y + 0.014, z1, fc | 1 | 4 | 8 | 2); leaf.box(0.8, y - 0.011, z0, 0.86, y + 0.011, z1, fc | 4 | 8 | 2); leaf.box(0.86, y - 0.007, z0, 0.9, y + 0.007, z1, fc | 4 | 8 | 2);
+    leaf.mat(MAT.TIMBER, [0.13, 0.12, 0.11]); leaf.box(0.04, y + 0.009, z0, 0.8, y + 0.014, z1, fc | 1 | 4 | 2); leaf.box(0.0, y - 0.02, z0, 0.07, y + 0.02, z1, fc | 4 | 8);
     for (let k = 0; k < 6; k++) leaf.box(0.12 + k * 0.13, y - 0.006, z0, 0.145 + k * 0.13, y + 0.006, z1, fc | 1 | 2 | 4 | 8); }
-  leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
+  leaf.mat(MAT.TIMBER, [0.07, 0.065, 0.06]); leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   return leaf; };
   const leafItems = LEAF_COL.map(bc => skin.add(mkLeaf(bc))), leafItem = leafItems[0], leafPick = d => { const key = String(d.cell || (d.site && d.site.id) || ''); let h = 0; for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0; return leafItems[[0, 0, 1, 1, 2, 3, 4, 5][Math.abs(h) % 8]]; };
-  for (const d of World.doors) { d.obj = addSkinned(leafPick(d), { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, light: d.cell && d.side === 'in' ? 1.25 : 1.75, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafPick(d), { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, light: d.cell && d.side === 'in' ? 0.8 : 1.75, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;
