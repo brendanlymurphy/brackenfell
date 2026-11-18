@@ -74,7 +74,7 @@ function buildWharfPlots(bucket) {
     if (p.trade === 'nets') {
       for (const sg of [-1, 1]) put(sg * 1.5, dp * 0.55, (x, z) => { const g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x, g, z], [x, g + 2.1, z], 0.07, 0.07); });
       { const { p0, p1 } = along(-1.5, 1.5, dp * 0.55), g0 = gy(p0[0], p0[1]); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([p0[0], g0 + 2.0, p0[1]], [p1[0], g0 + 2.0, p1[1]], 0.05, 0.05);
-        m.mat(MAT.CLOTH, [0.26, 0.24, 0.19], 0.5); m.quad2([p0[0], g0 + 1.95, p0[1]], [p1[0], g0 + 1.95, p1[1]], [p1[0] - 0.1, g0 + 0.9, p1[1] + 0.12], [p0[0] + 0.1, g0 + 0.9, p0[1] + 0.12]); m.quad2([p0[0] + 0.1, g0 + 0.9, p0[1] + 0.12], [p1[0] - 0.1, g0 + 0.9, p1[1] + 0.12], [p1[0], g0 + 1.95, p1[1]], [p0[0], g0 + 1.95, p0[1]]); }
+        m.mat(MAT.CLOTH, [0.52, 0.48, 0.38], 0.5); m.quad2([p0[0], g0 + 1.95, p0[1]], [p1[0], g0 + 1.95, p1[1]], [p1[0] - 0.1, g0 + 0.9, p1[1] + 0.12], [p0[0] + 0.1, g0 + 0.9, p0[1] + 0.12]); m.quad2([p0[0] + 0.1, g0 + 0.9, p0[1] + 0.12], [p1[0] - 0.1, g0 + 0.9, p1[1] + 0.12], [p1[0], g0 + 1.95, p1[1]], [p0[0], g0 + 1.95, p0[1]]); }
       put(0.2, dp * 0.25, (x, z) => flat(m, x, z, 1.0, 0.6, [0.2, 0.19, 0.15], MAT.CLOTH, R() * 3));
     } else if (p.trade === 'boat') {
       put(0, dp * 0.5, (x, z) => { const g = gy(x, z), ang = Math.atan2(p.uz, p.ux); wharfHull(m, x, z, g + 0.45, ang, 3.5, 0.72, 0.6, false); m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5);
@@ -228,7 +228,7 @@ function buildWharfCloses(bucket) {
   for (const [p, q] of C.beds) { const cx = (p[0] + q[0]) / 2, cz = (p[1] + q[1]) / 2, m = bucket(cx, cz), ang = Math.atan2(q[1] - p[1], q[0] - p[0]), w = hyp(q[0] - p[0], q[1] - p[1]) / 2; m.mat(MAT.SOIL, [0.34, 0.27, 0.2], 0.5); m.push().T(cx, gy(cx, cz) + 0.04, cz).RY(-ang); m.quad2([-w, 0, -0.32], [w, 0, -0.32], [w, 0, 0.32], [-w, 0, 0.32]); m.pop(); for (let a = -w + 0.3; a < w - 0.2; a += 2.0) (World.wharfPlants = World.wharfPlants || []).push([cx + Math.cos(ang) * a, cz + Math.sin(ang) * a, (a * 7 | 0) & 1]); }
   const post = (m, x, z, hh) => { const g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x, g - 0.1, z], [x, g + hh, z], 0.07, 0.07); };
   for (const [x0, z0, x1, z1] of C.poles) { const m = bucket(x0, z0); post(m, x0, z0, 2.3); post(m, x1, z1, 2.3); const g0 = gy(x0, z0); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x0, g0 + 2.2, z0], [x1, g0 + 2.2, z1], 0.045, 0.045);
-    m.mat(MAT.CLOTH, [0.24, 0.22, 0.17], 0.5); const nx = -(z1 - z0), nz = x1 - x0, nl = hyp(nx, nz) || 1; m.quad2([x0, g0 + 2.15, z0], [x1, g0 + 2.15, z1], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12]); m.quad2([x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x1, g0 + 2.15, z1], [x0, g0 + 2.15, z0]);
+    m.mat(MAT.CLOTH, [0.48, 0.44, 0.34], 0.5); const nx = -(z1 - z0), nz = x1 - x0, nl = hyp(nx, nz) || 1; m.quad2([x0, g0 + 2.15, z0], [x1, g0 + 2.15, z1], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12]); m.quad2([x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x1, g0 + 2.15, z1], [x0, g0 + 2.15, z0]);
     addCircleCollider(m, x0, z0, 0.12, g0, g0 + 2.2); addCircleCollider(m, x1, z1, 0.12, gy(x1, z1), gy(x1, z1) + 2.2); }
   for (const [x0, z0, x1, z1] of C.racks) { const m = bucket(x0, z0); post(m, x0, z0, 1.5); post(m, x1, z1, 1.5); const g0 = gy(x0, z0); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const y of [1.45, 0.95]) m.beam([x0, g0 + y, z0], [x1, g0 + y, z1], 0.04, 0.04);
     for (let k = 0; k < 8; k++) { const t = (k + 0.5) / 8, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; wFish(m, x, g0 + 1.42, z, x1 - x0, z1 - z0, 0.36 + (k % 3) * 0.04); } addCircleCollider(m, x0, z0, 0.12, g0, g0 + 1.5); addCircleCollider(m, x1, z1, 0.12, gy(x1, z1), gy(x1, z1) + 1.5); }
@@ -239,9 +239,9 @@ function buildWharfCloses(bucket) {
     if (up) for (const a of [-0.9, 0.9]) for (const sg of [-1, 1]) { const q = at(a, 0.45 * sg), r = at(a, 0); m.beam([q[0], gy(q[0], q[1]), q[1]], [r[0], g + 0.7, r[1]], 0.05, 0.05); }
     else for (const a of [-0.8, 0.9]) { const q = at(a, -0.9), r = at(a, 0.9); m.beam([q[0], g + 0.06, q[1]], [r[0], g + 0.06, r[1]], 0.07, 0.07); }
     for (const a of [-1, 0, 1]) addCircleCollider(m, ...at(a * 0.9, 0), 0.6, g, g + 0.9); }
-  if (C.winch) { const [x, z] = C.winch, m = bucket(x, z), g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.cyl(x, g, z, 0.2, 0.17, 1.0, 8, 2); for (const a of [0, Math.PI / 2]) m.beam([x - Math.cos(a) * 0.9, g + 0.85, z - Math.sin(a) * 0.9], [x + Math.cos(a) * 0.9, g + 0.85, z + Math.sin(a) * 0.9], 0.04, 0.04); m.mat(MAT.CLOTH, [0.33, 0.28, 0.2], 0.5); m.cyl(x, g + 0.25, z, 0.26, 0.26, 0.35, 8, 1); addCircleCollider(m, x, z, 0.35, g, g + 1.0); }
+  if (C.winch) { const [x, z] = C.winch, m = bucket(x, z), g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.cyl(x, g, z, 0.2, 0.17, 1.0, 8, 2); for (const a of [0, Math.PI / 2]) m.beam([x - Math.cos(a) * 0.9, g + 0.85, z - Math.sin(a) * 0.9], [x + Math.cos(a) * 0.9, g + 0.85, z + Math.sin(a) * 0.9], 0.04, 0.04); m.mat(MAT.CLOTH, [0.66, 0.56, 0.40], 0.5); m.cyl(x, g + 0.25, z, 0.26, 0.26, 0.35, 8, 1); addCircleCollider(m, x, z, 0.35, g, g + 1.0); }
   for (const [x, z] of C.barrels || []) { const m = bucket(x, z), g = gy(x, z); m.mat(MAT.PLANKS, [0.44, 0.34, 0.22], 0.5); m.cyl(x, g, z, 0.3, 0.34, 0.8, 6, 2); m.mat(MAT.METAL, [0.18, 0.18, 0.18], 0.5); m.cyl(x, g + 0.2, z, 0.35, 0.35, 0.05, 6, 1); if (!nearHouse(x, z)) addCircleCollider(m, x, z, 0.3, g, g + 0.8); }
-  for (const [x, z] of C.coil || []) { const m = bucket(x, z), g = gy(x, z); m.mat(MAT.CLOTH, [0.34, 0.29, 0.2], 0.5); m.cyl(x, g, z, 0.4, 0.4, 0.14, 8, 1); m.cyl(x, g + 0.14, z, 0.3, 0.3, 0.1, 8, 1); }
+  for (const [x, z] of C.coil || []) { const m = bucket(x, z), g = gy(x, z); m.mat(MAT.CLOTH, [0.68, 0.58, 0.40], 0.5); m.cyl(x, g, z, 0.4, 0.4, 0.14, 8, 1); m.cyl(x, g + 0.14, z, 0.3, 0.3, 0.1, 8, 1); }
 }
 
 function wharfLow() { return R.qName === 'low'; }
@@ -277,17 +277,17 @@ function buildWharfBoards(bucket) {
 
 // a split fish hung by the tail from a rail: a flat body in two quads and a forked tail, silver gone to brown (nothing living is built from balls)
 function wFish(m, x, y, z, ux, uz, len, col) {
-  const ul = Math.hypot(ux, uz) || 1; ux /= ul; uz /= ul; const L = len || 0.38, w = L * 0.17, P = (a, h) => [x + ux * a, y - h, z + uz * a];
-  m.mat(MAT.PLAIN, col || [0.34, 0.31, 0.27], 0.5);
+  const ul = Math.hypot(ux, uz) || 1; ux /= ul; uz /= ul; const L = len || 0.38, w = L * 0.11, P = (a, h) => [x + ux * a, y - h, z + uz * a];
+  m.mat(MAT.PLAIN, col || [0.17, 0.165, 0.15], 0.5);
   m.quad2(P(-w * 0.5, 0), P(-w * 0.2, L * 0.2), P(w * 0.2, L * 0.2), P(w * 0.5, 0));
   m.quad2(P(-w * 0.2, L * 0.2), P(-w, L * 0.45), P(w, L * 0.45), P(w * 0.2, L * 0.2));
   m.quad2(P(-w, L * 0.45), P(-w * 0.15, L), P(w * 0.15, L), P(w, L * 0.45));
-  m.mat(MAT.PLAIN, [0.2, 0.18, 0.15], 0.5); m.quad2(P(-w * 0.6, -0.08), P(-w * 0.3, 0), P(w * 0.3, 0), P(w * 0.6, -0.08));
+  m.mat(MAT.PLAIN, [0.1, 0.09, 0.08], 0.5); m.quad2(P(-w * 0.8, -0.1), P(-w * 0.3, 0), P(w * 0.4, 0), P(w * 0.8, -0.1));
 }
 // a heap of net or a coil of rope: loose folds of cloth lying at different tilts, and a few turns of rope on top
 function wNetHeap(m, x, y, z, r, R) {
   const rr = R || (() => 0.5);
-  m.mat(MAT.CLOTH, [0.3, 0.27, 0.2], 0.5);
+  m.mat(MAT.CLOTH, [0.60, 0.54, 0.40], 0.5);
   for (let k = 0; k < 7; k++) { const a = rr() * 6.28, c = Math.cos(a), sn = Math.sin(a), ox = (rr() - 0.5) * r * 0.9, oz = (rr() - 0.5) * r * 0.9, h = y + 0.05 + k * r * 0.1, t = (rr() - 0.5) * 0.35, q = r * (0.55 + rr() * 0.4);
     m.quad2([x + ox - c * q, h, z + oz - sn * q], [x + ox + c * q, h + t, z + oz + sn * q], [x + ox + c * q - sn * q * 0.7, h + 0.06, z + oz + sn * q + c * q * 0.7], [x + ox - c * q - sn * q * 0.7, h + 0.04 + t, z + oz - sn * q + c * q * 0.7]); }
   m.mat(MAT.TIMBER, [0.38, 0.32, 0.22], 0.5);
@@ -349,7 +349,7 @@ function buildWharfLandings(bucket) {
       for (const [ox, oz] of [[-0.6, 0.4], [-0.5, -0.5]]) { const tx = wx + ux * oz + dx * ox, tz = wz + uz * oz + dz * ox; m.mat(MAT.PLANKS, [0.44, 0.34, 0.22], 0.5); m.cyl(tx, g + 0.05, tz, 0.3, 0.28, 0.4, 7, 1); }
       const p0 = [wx - dx * 1.5 + ux * 1.3, wz - dz * 1.5 + uz * 1.3], p1 = [p0[0] - ux * 2.6, p0[1] - uz * 2.6];
       m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const q of [p0, p1]) m.beam([q[0], gy(q[0], q[1]) - 0.1, q[1]], [q[0], gy(q[0], q[1]) + 1.9, q[1]], 0.05, 0.05); const gg = gy(p0[0], p0[1]); m.beam([p0[0], gg + 1.85, p0[1]], [p1[0], gg + 1.85, p1[1]], 0.04, 0.04);
-      m.mat(MAT.CLOTH, [0.4, 0.38, 0.32], 0.5); for (let i = 0; i < 3; i++) { const t0 = 0.12 + i * 0.3, q0 = [p0[0] + (p1[0] - p0[0]) * t0, p0[1] + (p1[1] - p0[1]) * t0], q1 = [p0[0] + (p1[0] - p0[0]) * (t0 + 0.2), p0[1] + (p1[1] - p0[1]) * (t0 + 0.2)]; m.quad2([q0[0], gg + 1.82, q0[1]], [q1[0], gg + 1.82, q1[1]], [q1[0], gg + 0.9 + R() * 0.2, q1[1]], [q0[0], gg + 0.9 + R() * 0.2, q0[1]]); }
+      m.mat(MAT.CLOTH, [0.80, 0.76, 0.64], 0.5); for (let i = 0; i < 3; i++) { const t0 = 0.12 + i * 0.3, q0 = [p0[0] + (p1[0] - p0[0]) * t0, p0[1] + (p1[1] - p0[1]) * t0], q1 = [p0[0] + (p1[0] - p0[0]) * (t0 + 0.2), p0[1] + (p1[1] - p0[1]) * (t0 + 0.2)]; m.quad2([q0[0], gg + 1.82, q0[1]], [q1[0], gg + 1.82, q1[1]], [q1[0], gg + 0.9 + R() * 0.2, q1[1]], [q0[0], gg + 0.9 + R() * 0.2, q0[1]]); }
     }
     k++;
   }
@@ -388,22 +388,22 @@ function buildWharfWorks(bucket) {
     if (S.kind === 'smoke') {
       wall(-hw, -hd, hw, -hd, rear - 0.3); wall(-hw, -hd, -hw, hd, (rear + front) / 2 - 0.3); wall(hw, -hd, hw, hd, (rear + front) / 2 - 0.3);       // three closed walls, thick, finished at the corners
       L(() => { m.mat(MAT.STONE, [0.3, 0.28, 0.25], 0.5); m.box(-0.7, g, -0.5, 0.7, g + 0.22, 0.5); m.mat(MAT.PLAIN, [0.1, 0.08, 0.07]); m.box(-0.5, g + 0.2, -0.3, 0.5, g + 0.24, 0.3);
-        m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const y of [1.55, 1.95]) m.box(-hw + 0.2, g + y, -0.55, hw - 0.2, g + y + 0.06, -0.49); m.mat(MAT.LEATHER || MAT.CLOTH, [0.3, 0.16, 0.1], 0.5);
+        m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const y of [1.55, 1.95]) m.box(-hw + 0.2, g + y, -0.55, hw - 0.2, g + y + 0.06, -0.49); m.mat(MAT.LEATHER || MAT.CLOTH, [0.60, 0.32, 0.20], 0.5);
         for (let i = 0; i < 7; i++) { const a = -hw + 0.5 + i * (w - 1.0) / 6; const hy = g + 1.5 + (i % 2) * 0.4; m.mat(MAT.TIMBER, [0.3, 0.26, 0.2], 0.5); m.beam([a, hy + 0.5, -0.52], [a, hy + 0.22, -0.52], 0.008, 0.008); m.mat(MAT.LEATHER || MAT.CLOTH, [0.3 + (i % 3) * 0.03, 0.17, 0.1], 0.5); m.cyl(a, hy - 0.2, -0.52, 0.045, 0.13, 0.42, 7, 2); m.cyl(a, hy - 0.3, -0.52, 0.13, 0.04, 0.12, 7, 1); m.cyl(a, hy + 0.2, -0.52, 0.03, 0.045, 0.1, 6, 1); } });
       World.emitters.push({ type: 'smoke', p: [x, g + rear + 0.35, z], zone: 0 });
     } else if (S.kind === 'loft') {
       L(() => { m.mat(MAT.PLANKS, [0.38, 0.3, 0.21], 0.5); m.box(-hw, g + 2.25, -hd, hw, g + 2.4, hd);                                  // the deck: a real floor with thickness
         m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (let i = -1; i <= 1; i++) m.box(-hw, g + 2.05, i * hd * 0.8 - 0.05, hw, g + 2.25, i * hd * 0.8 + 0.05);       // joists
-        m.mat(MAT.CLOTH, [0.3, 0.27, 0.2], 0.5); wNetHeap(m, -0.8, g + 2.4, -0.6, 0.8, R); wNetHeap(m, 0.9, g + 2.4, -0.2, 0.65, R);       // heaped nets up there
+        m.mat(MAT.CLOTH, [0.60, 0.54, 0.40], 0.5); wNetHeap(m, -0.8, g + 2.4, -0.6, 0.8, R); wNetHeap(m, 0.9, g + 2.4, -0.2, 0.65, R);       // heaped nets up there
         m.mat(MAT.TIMBER, [0.3, 0.24, 0.17], 0.5); m.box(-0.06, g + 3.6, hd, 0.06, g + 3.7, hd + 1.2); m.box(-0.02, g + 2.3, hd + 1.1, 0.02, g + 3.6, hd + 1.14);        // the hoist beam and its rope
         for (let i = 0; i < 6; i++) m.box(hw - 0.15 + 0.0, g + 0.3 + i * 0.35, hd - 0.5, hw - 0.05, g + 0.36 + i * 0.35, hd - 0.1);      // ladder rungs against the post
-        m.mat(MAT.CLOTH, [0.28, 0.25, 0.19], 0.5); for (let i = 0; i < 3; i++) m.quad2([-hw + 0.5 + i * 1.1, g + 2.1, -hd + 0.1], [-hw + 1.3 + i * 1.1, g + 2.1, -hd + 0.1], [-hw + 1.3 + i * 1.1, g + 0.8, -hd + 0.14], [-hw + 0.5 + i * 1.1, g + 0.8, -hd + 0.14]); });       // nets hung under the deck
+        m.mat(MAT.CLOTH, [0.56, 0.50, 0.38], 0.5); for (let i = 0; i < 3; i++) m.quad2([-hw + 0.5 + i * 1.1, g + 2.1, -hd + 0.1], [-hw + 1.3 + i * 1.1, g + 2.1, -hd + 0.1], [-hw + 1.3 + i * 1.1, g + 0.8, -hd + 0.14], [-hw + 0.5 + i * 1.1, g + 0.8, -hd + 0.14]); });       // nets hung under the deck
     } else if (S.kind === 'fish') {
       L(() => { m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const y of [1.25, 1.65]) m.box(-hw + 0.1, g + y, -0.15, hw - 0.1, g + y + 0.05, -0.1);
         for (let i = 0; i < 12; i++) { const a = -hw + 0.4 + i * (w - 0.8) / 11; wFish(m, a, g + 1.62 - (i % 2) * 0.4, -0.12, 1, 0, 0.36 + (i % 3) * 0.04); }
         m.mat(MAT.PLANKS, [0.42, 0.33, 0.22], 0.5); m.cyl(hw - 0.6, g, hd - 0.5, 0.3, 0.27, 0.45, 7, 1); });
     } else if (S.kind === 'nets') {
-      L(() => { m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.box(-hw + 0.1, g + 1.9, -0.1, hw - 0.1, g + 1.96, -0.04); m.mat(MAT.CLOTH, [0.28, 0.25, 0.19], 0.5);
+      L(() => { m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.box(-hw + 0.1, g + 1.9, -0.1, hw - 0.1, g + 1.96, -0.04); m.mat(MAT.CLOTH, [0.56, 0.50, 0.38], 0.5);
         for (let i = 0; i < 3; i++) { const a0 = -hw + 0.3 + i * 1.5, a1 = a0 + 1.3; m.quad2([a0, g + 1.9, -0.07], [a1, g + 1.9, -0.07], [a1 + 0.05, g + 0.55, -0.02], [a0 - 0.05, g + 0.55, -0.12]); m.quad2([a0 - 0.05, g + 0.55, -0.12], [a1 + 0.05, g + 0.55, -0.02], [a1, g + 1.9, -0.07], [a0, g + 1.9, -0.07]); }
         m.mat(MAT.PLAIN, [0.55, 0.5, 0.38]); for (let i = 0; i < 6; i++) m.cyl(-hw + 0.5 + i * 0.35, g, hd - 0.5, 0.08, 0.08, 0.1, 6, 1); });      // floats in a row
     }
@@ -460,7 +460,7 @@ function buildWharfHouses(bucket) {
     m.mat(MAT.MUD, [0.2, 0.15, 0.1], 0.5); { const y = wy(dp, fz - 1.5) + 0.03, sw = R() * 0.5 - 0.25; m.quad2([dp - 0.55, y, fz - 0.05], [dp - 0.7 + sw, y, fz - 3.2], [dp + 0.7 + sw, y, fz - 3.2], [dp + 0.55, y, fz - 0.05]); }
     // the trade
     const at = (lx, lz) => wy(lx, lz), T = sp.trade, sx0 = xo, sz0 = fz - 0.6;
-    if (T === 'butcher') { bx(sx0 - 0.5, 0.0, fz - 1.0, sx0 + 0.5, 0.6, fz - 0.4, MAT.TIMBER, [0.3, 0.2, 0.14]); m.mat(MAT.PLANKS, [0.55, 0.45, 0.35], 0.5); m.cyl(sx0 + os * 1.1, at(sx0, sz0), sz0, 0.3, 0.28, 0.6, 7, 2); bx(sx0 - 1.3, 2.25, fz - 0.9, sx0 + 1.3, 2.32, fz, MAT.PLANKS, [0.3, 0.24, 0.17]); for (let k = 0; k < 4; k++) { bx(sx0 - 1.0 + k * 0.6 - 0.02, 1.6, fz - 0.45, sx0 - 1.0 + k * 0.6 + 0.02, 2.25, fz - 0.41, MAT.METAL, [0.1, 0.1, 0.1]); bx(sx0 - 1.1 + k * 0.6, 1.2, fz - 0.5, sx0 - 0.9 + k * 0.6, 1.62, fz - 0.36, MAT.PLAIN, [0.46, 0.14, 0.12]); } col(sx0, fz - 0.7, 0.5, 0.6); }
+    if (T === 'butcher') { bx(sx0 - 0.5, 0.0, fz - 1.0, sx0 + 0.5, 0.6, fz - 0.4, MAT.TIMBER, [0.3, 0.2, 0.14]); m.mat(MAT.PLANKS, [0.55, 0.45, 0.35], 0.5); m.cyl(sx0 + os * 1.1, at(sx0, sz0), sz0, 0.3, 0.28, 0.6, 7, 2); bx(sx0 - 1.3, 2.25, fz - 0.9, sx0 + 1.3, 2.32, fz, MAT.PLANKS, [0.3, 0.24, 0.17]); for (let k = 0; k < 4; k++) { const hx = sx0 - 0.9 + k * 0.6; m.mat(MAT.TIMBER, [0.2, 0.15, 0.1], 0.5); m.beam([hx, 2.25, fz - 0.45], [hx, 1.95, fz - 0.45], 0.01, 0.01); m.mat(MAT.PLAIN, [0.3, 0.12, 0.09], 0.5); m.cyl(hx, 1.45, fz - 0.45, 0.04, 0.12, 0.5, 7, 2); m.cyl(hx, 1.33, fz - 0.45, 0.12, 0.035, 0.14, 7, 1); m.cyl(hx, 1.95, fz - 0.45, 0.03, 0.04, 0.1, 6, 1); } col(sx0, fz - 0.7, 0.5, 0.6); }
     else if (T === 'boatwright') { const y0 = wy(w / 2 + 3, 0); for (const k of [-1, 1]) bx(w / 2 + 2.2, 0, k * 1.1 - 0.12, w / 2 + 2.4, 0.5 + y0 * 0, k * 1.1 + 0.12, MAT.TIMBER, [0.25, 0.19, 0.13]); m.push().T(w / 2 + 2.3, 0.5 + wy(w / 2 + 2.3, 0), 0); wharfHull(m, 0, 0, 0, Math.PI / 2, 3.6, 0.8, 0.5, true); m.pop(); for (let k = 0; k < 4; k++) bx(-w / 2 - 1.5, k * 0.07, -1.0, -w / 2 - 0.3, 0.07 + k * 0.07, -0.5, MAT.PLANKS, [0.45 - k * 0.02, 0.36, 0.26]); col(w / 2 + 2.3, 0, 1.2, 1.0); }
     else if (T === 'brewer') { m.mat(MAT.TIMBER, [0.3, 0.22, 0.14], 0.5); m.beam([dp + os * 1.6, wy(dp, fz), fz - 0.9], [dp + os * 1.6, 3.2, fz - 0.9], 0.07, 0.07); wTuft(m, dp + os * 1.6, 3.0 + wy(dp, fz), fz - 0.9, 0.5, 14, [0.2, 0.3, 0.12], R); for (let k = 0; k < 3; k++) { m.mat(MAT.PLANKS, [0.4, 0.3, 0.2], 0.5); m.cyl(xo + (k % 2) * 0.62 * os - 0.1 * os, at(xo, sz0), fz - 0.55 - (k >> 1) * 0.1, 0.3, 0.28, 0.65, 8, 2); } col(xo, fz - 0.55, 0.65, 0.7); }
     else if (T === 'chandler') { for (let k = 0; k < 3; k++) { m.mat(MAT.PLAIN, [0.34 - k * 0.04, 0.28, 0.2], 0.5); m.cyl(xo + k * 0.5 * os, at(xo, sz0), fz - 0.55, 0.28, 0.26, 0.12 + k * 0.05, 9, 2); } m.mat(MAT.PLANKS, [0.12, 0.1, 0.08], 0.5); m.cyl(xo - 0.8 * os, at(xo, sz0), fz - 0.6, 0.3, 0.28, 0.7, 8, 2); bx(dp + os * 1.7, 2.1, fz - 0.55, dp + os * 2.4, 2.9, fz - 0.5, MAT.PLANKS, [0.36, 0.3, 0.22]); m.mat(MAT.TIMBER, [0.2, 0.15, 0.1], 0.5); m.beam([dp + os * 1.5, 2.9, fz - 0.02], [dp + os * 1.5, 2.9, fz - 0.6], 0.05, 0.05); col(xo - 0.8 * os, fz - 0.6, 0.35, 0.7); }
@@ -470,7 +470,7 @@ function buildWharfHouses(bucket) {
     else if (T === 'cutler') { bx(dp + os * 1.2 - 0.5, 0, fz - 0.7, dp + os * 1.2 + 0.5, 0.06, fz - 0.4, MAT.TIMBER, [0.22, 0.17, 0.12]); for (const k of [-1, 1]) bx(dp + os * 1.2 + k * 0.4 - 0.04, 0, fz - 0.62, dp + os * 1.2 + k * 0.4 + 0.04, 0.95, fz - 0.5, MAT.TIMBER, [0.22, 0.17, 0.12]); m.push().T(dp + os * 1.2, 0.8 + wy(dp, fz), fz - 0.56).RZ(Math.PI / 2); m.mat(MAT.STONE, [0.46, 0.44, 0.4], 0.5); m.cyl(0, -0.05, 0, 0.32, 0.32, 0.1, 12, 2); m.pop(); col(dp + os * 1.2, fz - 0.56, 0.5, 1.0); }
     else if (T === 'boatman') { for (let k = 0; k < 3; k++) { m.mat(MAT.TIMBER, [0.4, 0.32, 0.22], 0.5); m.beam([dp + os * (1.3 + k * 0.22), 0.0 + wy(dp, fz), fz - 0.42 - k * 0.02], [dp + os * (1.5 + k * 0.22), 2.1, fz - 0.06], 0.07, 0.04); } m.mat(MAT.PLANKS, [0.3, 0.26, 0.2], 0.5); for (let k = 0; k < 2; k++) m.cyl(xo + k * 0.5 * os, at(xo, sz0), fz - 0.55, 0.22, 0.18, 0.4, 8, 1); }
     else if (T === 'basket') { for (let k = 0; k < 6; k++) { m.mat(MAT.THATCH, [0.52, 0.46, 0.24], 0.5); m.beam([xo + (k - 3) * 0.14, 0.05 + at(xo, fz), fz - 0.3], [xo + (k - 3) * 0.14 + 0.05, 1.7, fz - 0.06], 0.1, 0.1); } for (let k = 0; k < 3; k++) { m.mat(MAT.THATCH, [0.46, 0.4, 0.2], 0.5); m.cyl(xo + os * (1.2 + (k % 2) * 0.5), at(xo, sz0), fz - 0.55, 0.3, 0.26, 0.28 + (k >> 1) * 0.28, 9, 1); } }
-    else if (T === 'nets') { for (const sx of [-1, 1]) { m.mat(MAT.TIMBER, [0.3, 0.24, 0.17], 0.5); m.beam([xo + sx * 1.1, at(xo, fz), fz - 1.3], [xo + sx * 1.1, 2.4, fz - 1.3], 0.08, 0.08); } m.mat(MAT.CLOTH, [0.3, 0.27, 0.2], 0.5); m.quad2([xo - 1.1, 2.3, fz - 1.3], [xo - 1.1, 1.0, fz - 1.3], [xo + 1.1, 1.0, fz - 1.3], [xo + 1.1, 2.3, fz - 1.3]); for (let k = 0; k < 6; k++) { m.mat(MAT.TIMBER, [0.5, 0.42, 0.3], 0.5); m.cyl(xo - 0.9 + k * 0.36, 2.2, fz - 1.3, 0.045, 0.04, 0.1, 6, 2); } wNetHeap(m, dp + os * 1.5, at(dp, fz), fz - 0.6, 0.6, R); col(xo + 1.1, fz - 1.3, 0.1, 2.4); col(xo - 1.1, fz - 1.3, 0.1, 2.4); }
+    else if (T === 'nets') { for (const sx of [-1, 1]) { m.mat(MAT.TIMBER, [0.3, 0.24, 0.17], 0.5); m.beam([xo + sx * 1.1, at(xo, fz), fz - 1.3], [xo + sx * 1.1, 2.4, fz - 1.3], 0.08, 0.08); } m.mat(MAT.CLOTH, [0.62, 0.55, 0.4], 0.5); for (let k = 0; k < 8; k++) { const a0 = xo - 1.1 + k * 0.275, hm = 1.0 + (k % 3) * 0.14 + R() * 0.12, zz = fz - 1.3 + (k % 2) * 0.05; m.quad2([a0, 2.3, zz], [a0 + 0.01, hm, zz + 0.03], [a0 + 0.27, hm + 0.05, zz + 0.04], [a0 + 0.275, 2.3, zz]); } for (let k = 0; k < 6; k++) { m.mat(MAT.TIMBER, [0.5, 0.42, 0.3], 0.5); m.cyl(xo - 0.9 + k * 0.36, 2.2, fz - 1.3, 0.045, 0.04, 0.1, 6, 2); } wNetHeap(m, dp + os * 1.5, at(dp, fz), fz - 0.6, 0.6, R); col(xo + 1.1, fz - 1.3, 0.1, 2.4); col(xo - 1.1, fz - 1.3, 0.1, 2.4); }
     m.pop();
   }
 }

@@ -80,9 +80,9 @@ const SHELL = {         // per-building overrides (kind, pitch, tone index, sag,
   weaver: { wall: [0.85, 0.82, 0.78], ground: 'plaster', pitch: 58 },
   draper: { lime: 'dun', ground: 'plaster', pitch: 56 },
   // [fx3] Wharfside, one treatment per house (docs/PEOPLE.md: who lives there and what they can afford): tarred boards, wide silvered boards with a patched panel, limewash, a stone ground storey, daub between posts
-  'in.111': { wall: [0.34, 0.32, 0.3], treat: 'tar', ground: 'plaster' }, 'in.113': { wall: [1.0, 0.95, 0.88], treat: 'wide', ground: 'plaster' }, 'in.115': { lime: 'cream', treat: 'lime', ground: 'plaster' },
+  'in.111': { wall: [0.34, 0.32, 0.3], treat: 'tar', ground: 'plaster' }, 'in.113': { wall: [1.3, 1.2, 1.05], treat: 'wide', ground: 'plaster' }, 'in.115': { lime: 'cream', treat: 'lime', ground: 'plaster' },
   'in.20': { wall: [0.74, 0.72, 0.68], ground: 'stone' }, 'in.23': { lime: 'ochre', treat: 'wattle', frame: 1, ground: 'plaster' }, 'in.34': { lime: 'grey', treat: 'lime', ground: 'plaster' },
-  'in.36': { wall: [0.9, 0.86, 0.8], ground: 'stone', stoneMat: 'MI_Rubble_Wall', treat: 'wide' }, 'in.37': { lime: 'dun', treat: 'wattle', frame: 2, ground: 'plaster' }, 'in.38': { wall: [1.1, 1.13, 1.16], treat: 'wide', ground: 'plaster' },
+  'in.36': { wall: [1.2, 1.12, 1.0], ground: 'stone', stoneMat: 'MI_Rubble_Wall', treat: 'wide' }, 'in.37': { lime: 'dun', treat: 'wattle', frame: 2, ground: 'plaster' }, 'in.38': { wall: [1.4, 1.42, 1.44], treat: 'wide', ground: 'plaster' },
   'in.51': { lime: 'bone', ground: 'stone' }, 'in.60': { wall: [0.3, 0.29, 0.28], treat: 'tar', ground: 'plaster' },
   'shop.n2': { wall: [1, 1, 1], pitch: 61 }, 'shop.s0': { lime: 'dun', pitch: 57 }, 'shop.s1': { wall: [0.78, 0.76, 0.74], ground: 'stone', pitch: 53 },
 };
@@ -97,7 +97,7 @@ function shellStyle(site, spec) {
   const out = { dist: dn, kind, pitch: O.pitch || D.pitch[(R() * D.pitch.length) | 0], tint: tones[(O.tone !== undefined ? O.tone : (R() * tones.length) | 0) % tones.length], sag: O.sag !== undefined ? O.sag : r(D.sag[0], D.sag[1]), ov: O.ov || r(D.ov[0], D.ov[1]) };
   out.mat = RK[0]; out.ts = RK[1]; out.thick = RK[2]; out.thatch = kind === 'thatch'; out.patch = R();
   out.tint = out.tint.map(v => Math.min(2, v * (0.94 + R() * 0.1)));
-  const W = SHELL_WALL[dn], jit = v => Math.min(1, v * (0.96 + R() * 0.08));
+  const W = SHELL_WALL[dn], jit = v => Math.min(O.wall ? 1.45 : 1, v * (0.96 + R() * 0.08));
   const limeName = O.lime !== undefined ? O.lime : O.wall ? false : (W[2].length && R() < W[0] ? W[2][(R() * W[2].length) | 0] : false), plank = O.wall || W[3];
   out.treat = O.treat; out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.forms = O.forms; out.face = O.face || (typeof WHARF !== 'undefined' && WHARF.houses.some(h => h[0] === site.id));      // [fx2] houses of the re-sited lower town show a real face on their free side walls
    out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.frame = O.frame !== undefined ? O.frame : (R() * 3) | 0; out.chimSize = 0.38 + R() * 0.24; out.chimUp = R() * 0.9; out.soot = O.soot; out.cart = O.cart;
@@ -130,6 +130,24 @@ function shellDress(c, b, frames, MS, o) {
     if (gLimed) for (const lp of (c.kDoorLamps || [])) if (lp.wn === 'front') g.quad(Lm, [lp.u - 0.2, lp.v + 0.15, 0.015], [lp.u + 0.2, lp.v + 0.15, 0.015], [lp.u + 0.1, lp.v + 0.9, 0.015], [lp.u - 0.1, lp.v + 0.9, 0.015], dk(0.4), [0, 0, 0.1, 0.1], [0, 0, 1]);      // soot above the lamp
     any = true; }
   if (any) put(front, g);
+  // [fx3] a cellar the inside shows must be seen outside: a plank hatch in a timber coaming, or a barred grating let into the ground at the foot of the wall, on a free stretch of a side or the back
+  { const CEL = { inn: 'hatch', elder: 'grate', chapel: 'grate', draper: 'hatch', 'in.33': 'grate', 'in.37': 'hatch' }[site.id];
+    if (CEL) {
+      const others = SITES.filter(s5 => s5 !== site && s5.w), probe = (wn, u, z) => { const Wd = WALLS[wn], s0 = Wd.start(w, d), q = siteToWorld(site, s0[0] + Wd.u[0] * u + Wd.n[0] * z, s0[2] + Wd.u[2] * u + Wd.n[2] * z); return !others.some(o => { const l = worldToSite(o, q[0], q[1]); return Math.abs(l[0]) < o.w / 2 + 0.6 && Math.abs(l[1]) < o.d / 2 + 0.6; }); };
+      let pick = null;
+      for (const wn of ['back', 'right', 'left']) { const Lw = L(wn), exC = (openings[wn] || []).map(q => [q.u0, q.u1]); if (Lw < 3.2) continue;
+        for (let u = Lw * 0.3, t = 0; t < 40 && !pick; t++, u += (t % 2 ? 1 : -1) * t * 0.2) { if (u < 1.0 || u > Lw - 1.0) continue; if (exC.some(q => u + 0.95 > q[0] - 0.3 && u - 0.95 < q[1] + 0.3)) continue; if (probe(wn, u, 1.3) && probe(wn, u - 0.9, 0.9) && probe(wn, u + 0.9, 0.9)) pick = { wn, u }; }
+        if (pick) break; }
+      if (pick) { const gc = GP(), ST = [0.46, 0.43, 0.39], M_ = 'MI_WoodTrim', u = pick.u;
+        if (CEL === 'hatch') { const DK = [0.45, 0.4, 0.34]; gc.box(M_, u - 0.95, 0, 0.02, u + 0.95, 0.2, 0.16, DK); gc.box(M_, u - 0.95, 0, 0.16, u - 0.83, 0.2, 1.05, DK); gc.box(M_, u + 0.83, 0, 0.16, u + 0.95, 0.2, 1.05, DK);
+          for (const sg of [-1, 1]) for (const k of [-0.3, -0.1, 0.1, 0.3]) gc.beam(M_, [u + sg * 0.41 + k, 0.2, 1.0], [u + sg * 0.41 + k, 1.0, 0.17], 0.095, [0.52, 0.47, 0.41]);
+          gc.box(M_, u - 0.06, 0.55, 0.2, u + 0.06, 0.6, 0.3, [0.12, 0.11, 0.1]); }
+        else { const z0 = 0.18, z1 = 0.98, a0 = u - 0.55, a1 = u + 0.55, kb = (x0, z0_, x1, z1_) => gc.box(INF_B, x0, -0.06, z0_, x1, 0.1, z1_, ST, [0, 0, 0.3, 0.2]);
+          kb(a0 - 0.12, z0 - 0.12, a1 + 0.12, z0); kb(a0 - 0.12, z1, a1 + 0.12, z1 + 0.12); kb(a0 - 0.12, z0, a0, z1); kb(a1, z0, a1 + 0.12, z1);
+          gc.quad(W_, [a0, -0.2, z0], [a1, -0.2, z0], [a1, -0.2, z1], [a0, -0.2, z1], [0.02, 0.02, 0.02], GPU.wood, [0, 1, 0]);
+          for (let i = 0; i <= 8; i++) gc.beam(W_, [a0 + 0.02 + i * (a1 - a0 - 0.04) / 8, 0.05, z0], [a0 + 0.02 + i * (a1 - a0 - 0.04) / 8, 0.05, z1], 0.022, [0.12, 0.11, 0.1]);
+          for (const zz of [(z0 + z1) / 2]) gc.beam(W_, [a0, 0.05, zz], [a1, 0.05, zz], 0.022, [0.12, 0.11, 0.1]); }
+        b.add(gc.make('gen_cellar_' + (_gn++)), KH.xf(frames[pick.wn], 0, 0, 0, 1, 0), EXT); } } }
   // a smith's wall: soot over the forge side and under the eaves; a cart shed against a side wall
   if (SSt.soot) { const gs = GP(); for (const wn of ['front', 'left', 'right']) { const Lw = L(wn), gsw = GP(); for (let i = 0; i < 4; i++) { const u = 0.5 + R() * (Lw - 1.6), wd = 0.9 + R() * 1.3, h0 = Ytop - 0.15 - R() * 1.8; gsw.quad(Lm, [u, h0, 0.016], [u + wd, h0 + R() * 0.2, 0.016], [u + wd * 0.8, Ytop - 0.02, 0.016], [u + 0.1, Ytop - 0.02, 0.016], [0.16, 0.15, 0.14], [0, 0, 0.1, 0.1], [0, 0, 1]); } put(wn, gsw); } }
   if (SSt.cart) { const wn = 'right', Lw = L(wn), g4 = GP(), a = 0.3, e = Lw - 0.3, dd = 2.8, h0 = 2.6, h1 = 2.0; g4.quad(W_, [a, h0, 0], [e, h0, 0], [e, h1, dd], [a, h1, dd], [0.26, 0.21, 0.17], GPU.wood, [0, 1, 0.5]); g4.quad(W_, [a, h0 - 0.05, 0], [e, h0 - 0.05, 0], [e, h1 - 0.05, dd], [a, h1 - 0.05, dd], [0.14, 0.11, 0.09], GPU.wood, [0, -1, -0.5]);
@@ -151,7 +169,12 @@ function shellDress(c, b, frames, MS, o) {
       g3.box(W_, cu - hw - 0.07, y0 - 0.08, 0.0, cu + hw + 0.07, y0, 0.16, [0.46, 0.44, 0.4]); g3.box(W_, cu - hw - 0.06, y0 + hh, 0.0, cu + hw + 0.06, y0 + hh + 0.1, 0.07, WOOD);
       g3.box(W_, cu - hw - 0.06, y0, 0.0, cu - hw, y0 + hh, 0.07, WOOD); g3.box(W_, cu + hw, y0, 0.0, cu + hw + 0.06, y0 + hh, 0.07, WOOD); g3.box(W_, cu - 0.025, y0, 0.0, cu + 0.025, y0 + hh, 0.05, WOOD);
       g3.box(W_, cu - hw - 0.52, y0, 0.03, cu - hw - 0.07, y0 + hh, 0.07, sc); g3.box(W_, cu + hw + 0.07, y0, 0.03, cu + hw + 0.52, y0 + hh, 0.07, sc); };
-    const cu = Lw * (0.35 + R() * 0.3); win(cu, 1.0, 0.45, 1.15); if (fl > 1) win(Lw * 0.5, H + 0.95, 0.42, 1.1);
+    const exC = (openings[wn] || []).map(q => (q.u0 + q.u1) / 2), okC = c0 => exC.every(e => Math.abs(e - c0) > 1.9);      // [fx3] the face never stands beside a window the wall already has (a spec window, the M1 one, a planned one): it moves to a clear place or is left out
+    let cu = Lw * (0.35 + R() * 0.3); if (!okC(cu)) { let best = null; for (let t = 0.9; t < Lw - 0.9; t += 0.3) if (okC(t) && (best === null || Math.abs(t - cu) < Math.abs(best - cu))) best = t; cu = best; }
+    if (cu !== null) win(cu, 1.0, 0.45, 1.15);
+    const upC = wn === 'back' ? Array.from({ length: Math.max(2, Math.round(w / 2)) }, (_, i) => (i + 0.5) * w / Math.max(2, Math.round(w / 2))).filter((_, i) => i % 2 === 1) : [Lw * 0.5];
+    if (fl > 1 && upC.every(e => Math.abs(e - Lw * 0.5) > 1.9)) win(Lw * 0.5, H + 0.95, 0.42, 1.1);
+    if (cu === null) cu = Lw * 0.5;
     if (R() < 0.6) { const bx0 = cu < Lw / 2 ? cu + 1.4 : cu - 1.4; g3.beam(W_, [bx0, 2.45, 0.02], [bx0, 2.45, 0.9], 0.04, WOOD); g3.quad(W_, [bx0 - 0.28, 1.65, 0.8], [bx0 + 0.28, 1.65, 0.8], [bx0 + 0.28, 2.3, 0.8], [bx0 - 0.28, 2.3, 0.8], [0.34, 0.24, 0.14], GPU.wood, [1, 0, 0]); }      // a trade board on a bracket
     put(wn, g3); }
   // [fx2] silhouette: a house is not one box. Per district, a catslide outshut, an outside stair to a loft door with a hoist, a gable chimney stack, a drying rack, a smoke louvre (all outside the footprint; near weight, small parts)

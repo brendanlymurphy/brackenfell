@@ -60,7 +60,7 @@ function infWalls(B, MS, o) {
       const W = WALLS[wn], L = W.len(w, d), s0 = W.start(w, d);
       if ((wn === 'left' || wn === 'right') && k < ((o.skip && o.skip[wn]) || 0)) continue;
       const P = (u, y, dep) => [s0[0] + W.u[0] * u - W.n[0] * (dep || 0), y, s0[2] + W.u[2] * u - W.n[2] * (dep || 0) - off];       // dep: metres into the wall
-      const nCell = Math.max(1, Math.round(L / 2)), cw = L / nCell, wOff = R() * 7, hs = (o.treat === 'tar' ? 0.62 : o.treat === 'wide' ? 1.9 : 1) * (0.82 + R() * 0.4), wScale = ts * hs;       // Build 33: panels the width of a bay get their own texture offset and a little colour, and the foot of the wall is darker (weathering)
+      const nCell = Math.max(1, Math.round(L / 2)), cw = L / nCell, wOff = R() * 7, hs = (o.treat === 'tar' ? 0.62 : o.treat === 'wide' ? 3.2 : 1) * (0.82 + R() * 0.4), wScale = ts * hs;       // Build 33: panels the width of a bay get their own texture offset and a little colour, and the foot of the wall is darker (weathering)
       const BAND = [[-1, 0.62], [0.35, 0.74], [0.75, 0.86], [1.15, 0.95], [1.9, 1.0]];
       const q = (m2, ua, ub, ya, yb, dep, c2, uv, both) => {
         if (ub - ua < 0.015 || yb - ya < 0.015) return;
