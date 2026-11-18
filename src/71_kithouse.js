@@ -247,7 +247,7 @@ const SCANR = {
   Bench: { n: ['woodentable_01'], fit: 'row', tint: [0.6, 0.43, 0.31] },
   Stool: { n: ['painted_wooden_stool'], fit: 'contain', tint: [0.3, 0.23, 0.17] },
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
-  Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
+  Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz', tint: [0.74, 0.66, 0.52] }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz', tint: [0.74, 0.66, 0.52] },   // [fin] unbleached linen and ticking, never white
   Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
   Barrel: { n: ['wine_barrel_01'], fit: 'xz', one: 1, inOnly: 1 },          // [fx2] the second scan has doubled coplanar staves inside it (9000 audit pairs): one model
   Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' },
