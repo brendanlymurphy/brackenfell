@@ -95,7 +95,7 @@ function dLogPile(R, k) {      // split firewood stacked against a wall: rows of
 }
 function dLog2(g, x, y, z, len, r, col) {      // log along Z, 6-sided; the end grain is grey-tan (not the bright cream of the bark's texture) and some logs stand out of line
   if (TEST && TEST.nologs) return;
-  const n = 5, zo = (Math.abs(Math.sin(x * 91 + y * 57)) < 0.2 ? 0.07 : 0) * Math.sign(Math.sin(x * 13 + 1)), q = (a, zz) => [x + Math.cos(a) * r, y + Math.sin(a) * r, z + zz + zo];
+  const n = (TEST && TEST.sd) || 5, zo = (Math.abs(Math.sin(x * 91 + y * 57)) < 0.2 ? 0.07 : 0) * Math.sign(Math.sin(x * 13 + 1)), q = (a, zz) => [x + Math.cos(a) * r, y + Math.sin(a) * r, z + zz + zo];
   for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU; g.quad(DRW, q(a1, -len / 2), q(a1, len / 2), q(a0, len / 2), q(a0, -len / 2), col, DRU.wood); }
   for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU; g.tri(DRW, [x, y, z + len / 2 + zo], q(a1, len / 2), q(a0, len / 2), [0.3, 0.25, 0.19], DRU.wood); }
 }

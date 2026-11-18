@@ -54,7 +54,7 @@ function wharfPaint(A, B, H) {
 // the yard behind each house: low fence on the back and the party lines; one trade of the poor
 function buildWharfPlots(bucket) {
   if (TEST && TEST.plots === 0) return;
-  let lowSkip = true; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
+  let lowSkip = true; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; } WH_B = bucket;      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
   const PL = wharfPlots(), R = rng(7733), gy = (x, z) => Terrain.y(x, z);
   const fence = (m, ax, az, bx, bz, h) => {
     const L = Math.hypot(bx - ax, bz - az); if (L < 0.3) return; const n = Math.max(1, Math.round(L / 1.5)); m.mat(MAT.TIMBER, [0.26, 0.21, 0.16], 0.5);
@@ -101,7 +101,7 @@ function buildWharfPlots(bucket) {
 // the open boat shed on the wharf yard: four posts, a lean thatch roof, a hull on trestles under it, ropes and an oar rack; it faces the yard
 function buildWharfYard(bucket) {
   if (TEST && (TEST.wharf === 0 || TEST.plots === 0) || typeof WHARF === 'undefined' || !WHARF.houses.length) return;
-  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; } WH_B = bucket;      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
   const gy = (x, z) => Terrain.y(x, z), cx = -2.6, cz = 77.2, m = bucket(cx, cz), R = rng(3131), g = gy(cx, cz), W2 = 2.4, D2 = 1.9;
   m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5);
   for (const [a, b, hh] of [[-W2, -D2, 2.8], [W2, -D2, 2.8], [-W2, D2, 2.1], [W2, D2, 2.1]]) { m.beam([cx + a, g - 0.1, cz + b], [cx + a, g + hh, cz + b], 0.12, 0.12); addCircleCollider(m, cx + a, cz + b, 0.14, g, g + hh); }
@@ -208,7 +208,7 @@ function wharfCloses() {
 function wharfBlocked(x, z, pad) { return !!(typeof WHARF !== 'undefined' && WHARF.houses.length && x > 12 - pad && x < 46 + pad && z > 34 - pad && z < 92 + pad); }
 function buildWharfCloses(bucket) {
   const C = wharfCloses(); if (!C.fences.length) return;
-  let lowSkip = false; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }      // small dressing lives in cells of its own with a draw distance
+  let lowSkip = false; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; } WH_B = bucket;      // small dressing lives in cells of its own with a draw distance
   const gy = (x, z) => Terrain.y(x, z), R = rng(4141), h = 1.0;
   const nearHouse = (x, z) => SITES.some(st => { if (!st.w || st.id === 'tower') return false; const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 1.3 && Math.abs(l[1]) < st.d / 2 + 1.3; });
   World.hedgeBushes = World.hedgeBushes || []; World.orchardTrees = World.orchardTrees || [];
@@ -307,8 +307,15 @@ function wTuft(m, x, y, z, h, n, col, R) { if (TEST && TEST.nonet) return;
   for (let k = 0; k < n; k++) { const a = k / n * 6.28 + rr(), t = 0.14 + rr() * 0.16; m.beam([x, y, z], [x + Math.cos(a) * t, y + h * (0.8 + rr() * 0.3), z + Math.sin(a) * t], 0.012, 0.006); }
 }
 // a clinker rowing boat built as a boat is: a keel, a stem and a sternpost, lapped strakes lofted over 15 stations, ribs and a gunwale, thwarts and a floor; `up` turns it keel to the sky
+let WH_B = null, WH_N = 0;
 function wharfHull(m, x, z, y0, ang, len, beam, depth, up) { if (TEST && TEST.nohull) return;
-  const c = Math.cos(ang), sn = Math.sin(ang), N = 6, S = 4, sg = up ? -1 : 1, st = [];
+  if (!WH_B || (TEST && TEST.hn)) return wharfHullAt(m, x, z, y0, ang, len, beam, depth, up, (TEST && TEST.hn) || 6, (TEST && TEST.hs) || 4);
+  const mk = (lo) => WH_B((5000 + WH_N + (lo ? 1 : 0)) * 44, 0), hi = mk(false), lo = mk(true); WH_N += 2;
+  hi.maxDist = 14; hi.lowDist = 14; lo.minDist = 17; lo.lowMin = 17; lo.maxDist = 46; lo.lowDist = 110;
+  wharfHullAt(hi, x, z, y0, ang, len, beam, depth, up, 12, 5); wharfHullAt(lo, x, z, y0, ang, len, beam, depth, up, 6, 4);
+}
+function wharfHullAt(m, x, z, y0, ang, len, beam, depth, up, N, S) {
+  const c = Math.cos(ang), sn = Math.sin(ang), sg = up ? -1 : 1, st = [];
   const P = (a, b, h) => [x + a * c - b * sn, y0 + sg * h, z + a * sn + b * c];
   for (let i = 0; i <= N; i++) { const t = i / N * 2 - 1, at = Math.abs(t), w = beam * Math.pow(Math.max(0.0, 1 - Math.pow(at, 2.3)), 0.62) + 0.015, sheer = depth * (0.78 + 0.34 * at * at) + 0.05 * at * at * at * at; st.push({ a: t * len / 2, w, sheer, k: 0.06 * (1 - at * at) }); }
   const f = (q, kk, side) => { const u = kk / S, h = q.k + (q.sheer - q.k) * u, wd = q.w * (0.16 + 0.84 * Math.pow(u, 0.8)); return P(q.a, side * wd, h); };
