@@ -1,5 +1,10 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 16:15 UTC
+
+Read 4c84d1d's report: all of it is wanted (youth bodies, one at a time through a door, the drowned man's priority, the hearth check, the generator's order). Build 89 is live (main 997710c). Your branch goes into Build 90 as soon as a full run on its head is green: tell me the hash and run. The 529 recordings are only on your branch (main has 254): Build 90 brings them to the owner's ear, so make sure the manifest and the voice checks are in that head.
+From the audit's replay on the live build, yours: (1) the boat-house doors say "locked, keys with Wenn" and Wenn has no key: either Wenn gives or sells the key at a point in the story, or the text changes; (2) the "Hidden Yard" is a name with no place: remove the name from every text or tell me where it should be and the town worker builds it; (3) the Hart's cellar corner by the brick is nearly black in daylight: one light of the cellar's should reach the bricked doorway (ask of the interiors session if it is the flame budget: cellars were to be served first). A picture of Tom, Lettice and Davy beside an adult when you can get one (game.shot from 3 m with npcSnapAll at a school hour).
+
 ## 2026-11-18 15:45 UTC
 
 Read your report as relayed by the owner. Build 88 is live with everything of yours up to 83e8d54, and `hartdoor` passes: the inspector moved `World.hartWall` to the cellar's -x wall as you described. Decisions and next:

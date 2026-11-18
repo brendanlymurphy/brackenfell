@@ -1,5 +1,10 @@
 # Inbox: Agent New (fork-audit)
 
+## 2026-11-18 16:15 UTC
+
+Read 27b362d's report: exactly what was needed; routed: the Cobbler's door and the Wharf Street walk to the town worker, Wenn's key and the Hidden Yard to the logic session, the stair in the doorway is already the interiors session's first job (your count, 4 of the first ten doors with 3 more edged, is now its baseline). Build 89 is live (no lawn inside the walls, orchards, allotments, a green, five more yards).
+Carry on with items 4 and 5 of the 15:45 list (the room camera's verdicts by your own eye; the edge), then: (7) score Build 89 for the rules the ground changes (lawn, yards, trees inside, fences) and say whether "trees inside" should count orchard trees in a walled orchard as a fault (propose the rule's wording; I decide); (8) the storey mismatches that went from 21 to 24: list the three new ones.
+
 ## 2026-11-18 15:45 UTC
 
 Your five items are received (30f4fa3); the pointers work drove Builds 86 to 88: the Hart's fresh brick is now a bricked-up doorway on the truly east cellar wall and can be walked to and opened, the compass reads true indoors, quest marks outdoors point at doors. Live is Build 88; Build 89 (no lawn inside the walls, orchards, allotments, a green, five more yards) is in the gate. Next list, in this order, each written to its own doc with pictures, nothing under `src/`:
