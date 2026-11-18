@@ -242,7 +242,7 @@ function sceneUpdate(camPos, q) {
     const it = s.it;
     if (cur || it.cell) { s.mesh.visible = !!cur && it.cell === cur.id; if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow; continue; }
     const d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
-    s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && far > ind);
+    s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && (!it.minDist || d + it.r >= it.minDist) && !(inside && far > ind);
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast) && !(s.farCapable && q.nearStatics === false);
     // generated village props (fences, walls, wells ...) cast into the wide sun-shadow map only on tiers that have q.farStatics; the near map always gets them

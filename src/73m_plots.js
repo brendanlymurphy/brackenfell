@@ -338,7 +338,7 @@ const WEST_EDGE = { n: [[-62, -8.15], [-62, -15], [-64, -19.5], [-65, -26], [-63
 function buildWestEdge(bucket) {
   if (TEST && TEST.plots === 0) return;
   const gy = (x, z) => Terrain.y(x, z), bucket0 = bucket;
-  bucket = (x, z) => { const m = bucket0(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 60; m.noShadow = true; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };      // [fx3] 44 m cells of their own, hidden beyond 60 m and out of the shadow pass, like the town walls
+  bucket = (x, z) => { const m = bucket0(8e6 + Math.floor(x / 132) * 80, Math.floor(z / 132) * 80); m.maxDist = 0; m.noShadow = true; m.edge = 1; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };      // [fx3] 44 m cells of their own, hidden beyond 60 m and out of the shadow pass, like the town walls
   const segX = (p1, p2, p3, p4) => { const d = (p2[0] - p1[0]) * (p4[1] - p3[1]) - (p2[1] - p1[1]) * (p4[0] - p3[0]); if (Math.abs(d) < 1e-9) return false; const t = ((p3[0] - p1[0]) * (p4[1] - p3[1]) - (p3[1] - p1[1]) * (p4[0] - p3[0])) / d, u = ((p3[0] - p1[0]) * (p2[1] - p1[1]) - (p3[1] - p1[1]) * (p2[0] - p1[0])) / d; return t > -0.1 && t < 1.1 && u > -0.05 && u < 1.05; };
   const crossRoad = (A, B) => Roads.some(q => q.id !== 'main' && q.line.p.some((pt, i) => i && segX(A, B, q.line.p[i - 1], pt)));
   const roadNear = (A, B) => crossRoad(A, B) || (Math.abs((A[0] + B[0]) / 2 + 62) < 3 && Math.abs((A[1] + B[1]) / 2 + 5.2) < 2.6);
@@ -348,7 +348,7 @@ function buildWestEdge(bucket) {
       let run = null; const flush = () => { if (run && Math.hypot(run[1][0] - run[0][0], run[1][1] - run[0][1]) > 1.5) { const A = [run[0][0] - nx * 0.8, run[0][1] - nz * 0.8], B = [run[1][0] - nx * 0.8, run[1][1] - nz * 0.8], m = bucket((A[0] + B[0]) / 2, (A[1] + B[1]) / 2); earthBank(m, A, B, 0.6, 0.4, [0.5, 0.5, 0.38]); } run = null; };
       for (let k = 0; k < n; k++) { const t0 = k / n, t1 = (k + 1) / n, A = [a[0] + dx * t0, a[1] + dz * t0], B = [a[0] + dx * t1, a[1] + dz * t1], cx = (A[0] + B[0]) / 2, cz = (A[1] + B[1]) / 2, m = bucket(cx, cz);
         if (roadNear(A, B)) { flush(); (World.edgeGaps = World.edgeGaps || []).push([+cx.toFixed(1), +cz.toFixed(1)]); for (const e of [A, B]) { const g = gy(e[0], e[1]); m.mat(MAT.BARK, [0.45, 0.39, 0.31], 1.0); m.tube([[e[0], g - 0.3, e[1]], [e[0], g + 2.9, e[1]], [e[0], g + 3.3, e[1]]], [0.22, 0.2, 0.03], 8, true); } continue; }
-        const gA = gy(A[0], A[1]), gB = gy(B[0], B[1]); logRow(m, A, B, t => gA + (gB - gA) * t + 2.5, [nx, nz], i * 7 + k);
+        const gA = gy(A[0], A[1]), gB = gy(B[0], B[1]); logRow((lv, x, z) => logCell(bucket0, lv, x, z), A, B, t => gA + (gB - gA) * t + 2.5, [nx, nz], i * 7 + k);
         const l = Math.hypot(B[0] - A[0], B[1] - A[1]), an = Math.atan2(B[1] - A[1], B[0] - A[0]), g = Math.min(gA, gB, gy(cx, cz)); m.push().T(cx, g - 0.2, cz).RY(-an); addBoxCollider(m, -l / 2, -0.2, l / 2, 0.2, 0, 2.6); World.colliders[World.colliders.length - 1].keep = 1; m.pop();
         if (!run) run = [A, B]; else run[1] = B; }
       flush(); } }

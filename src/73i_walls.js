@@ -3,21 +3,31 @@
 //    each road (a walk-through arch 3.8 m wide, the gate open, torches, a stair up on the town side, a roofed watch platform)
 // e  the watch bell tower: an open timber frame with four switchback flights to a roofed platform 10.8 m up, the widest view in the valley
 // Built on the helpers of 73h_routes.js (rtKit). Walk deck, palisade and rails follow the ground in 2 m pieces; every deck is a ramped World.floors entry.
-// [fx3] a palisade log row from A to B (world points): tight individual logs (20-28 cm, overlapping by 1-2 cm), 8 sides, bark running up the log, a mossy foot, each its own height and lean, the point cut with an axe, 0.3 m into the ground along the ground's own line, a riband pegged along the inside at 1.6 m; a few pale replaced logs, a few gaps patched with wattle.
-// topFn(t) gives the top height (t 0..1 along the row); inside is the unit normal toward the town. Returns nothing; the caller adds the collider.
-function logRow(mL, A, B, topFn, inside, seed) {
-  const gy = (x, z) => Terrain.y(x, z), dx = B[0] - A[0], dz = B[1] - A[1], L = Math.hypot(dx, dz); if (L < 0.2) return; const ux = dx / L, uz = dz / L;
-  const hs = (k, a) => Math.abs(Math.sin(k * a + seed * 1.37) * 43758.5453) % 1; let u = 0.02, n = 0;
+// [fx3] detail by distance, merged per stretch so it costs no draw calls and never pops out: logCell(bucket, level, x, z) gives the mesh of the level:
+//   0: 8-sided logs, within 25 m, in the shadow pass (Low: 4-sided)   1: 4-sided logs, 25 to 70 m, out of the shadow pass (Low: none)   2: one ribbon per stretch beyond 70 m (Low: beyond 25 m), same bark and heights
+function logCell(bk, lv, x, z) {
+  const S = [16, 32, 132][lv], m = bk([5e6, 6e6, 7e6][lv] + Math.floor(x / S) * 80, Math.floor(z / S) * 80), low = R.qName === 'low';
+  m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.maxDist = lv === 0 ? 25 : lv === 1 ? 70 : 0; m.minDist = lv === 0 ? 0 : lv === 1 ? 25 : (low ? 25 : 70); m.noShadow = lv !== 0; m.edge = 1; return m;
+}
+// [fx3] a palisade log row from A to B (world points): tight individual logs (24-34 cm, overlapping a little), bark running up the log, each its own height and lean, the point cut with an axe, 0.3 m into the ground along the ground's own line, a riband pegged along the inside at 1.6 m; a few pale replaced logs, a few gaps patched with wattle.
+// topFn(t) gives the top height (t 0..1 along the row); inside is the unit normal toward the town; mk(level, x, z) gives the mesh of a detail level (see logCell).
+function logRow(mk, A, B, topFn, inside, seed) {
+  const gy = (x, z) => Terrain.y(x, z), dx = B[0] - A[0], dz = B[1] - A[1], L = Math.hypot(dx, dz); if (L < 0.2) return; const ux = dx / L, uz = dz / L, low = R.qName === 'low';
+  const hs = (k, a) => Math.abs(Math.sin(k * a + seed * 1.37) * 43758.5453) % 1; let u = 0.02, n = 0, pend = null;
+  const mid = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2], m0 = mk(0, mid[0], mid[1]), m1 = low ? null : mk(1, mid[0], mid[1]), m2 = mk(2, mid[0], mid[1]);
   while (u < L - 0.05) { const h1 = hs(u, 127.1), h2 = hs(u, 311.7), h3 = hs(u, 74.7), r = 0.12 + h1 * 0.05, c = u + r;
     const bx = A[0] + ux * c + inside[0] * (h2 - 0.5) * 0.03, bz = A[1] + uz * c + inside[1] * (h2 - 0.5) * 0.03, gL = gy(bx, bz);
-    if (h3 < 0.02 && n > 2) { const w0 = [bx - ux * 0.2, bz - uz * 0.2], w1 = [bx + ux * 0.2, bz + uz * 0.2]; mL.mat(MAT.TIMBER, [0.34, 0.28, 0.2], 0.5); for (const k of [0.4, 0.9, 1.4]) mL.tube([[w0[0], gL + k, w0[1]], [w1[0], gL + k + 0.03, w1[1]]], [0.028, 0.028], 5, true);
+    if (h3 < 0.02 && n > 2) { const w0 = [bx - ux * 0.2, bz - uz * 0.2], w1 = [bx + ux * 0.2, bz + uz * 0.2], mL = m0; mL.mat(MAT.TIMBER, [0.34, 0.28, 0.2], 0.5); for (const k of [0.4, 0.9, 1.4]) mL.tube([[w0[0], gL + k, w0[1]], [w1[0], gL + k + 0.03, w1[1]]], [0.028, 0.028], 5, true);
       for (const t2 of [-0.15, 0, 0.15]) mL.tube([[bx + ux * t2, gL - 0.3, bz + uz * t2], [bx + ux * t2, gL + 1.7, bz + uz * t2]], [0.03, 0.03], 5, true); u = c + 0.2; n++; continue; }
     const t = c / L, top = topFn(t) + (h1 - 0.5) * 0.45 - (h3 > 0.93 ? 0.2 : 0), lx = (h2 - 0.5) * 0.12, lz = (h1 - 0.5) * 0.07, sh = [bx + lx * 0.9, top - 0.34, bz + lz * 0.9], tip = [bx + lx, top, bz + lz], pale = h3 > 0.93 && h3 < 0.985;
-    mL.mat(MAT.BARK, pale ? [0.7, 0.58, 0.42] : [0.5 + h1 * 0.1, 0.43 + h1 * 0.08, 0.35 + h1 * 0.06], 1.0);
-    mL.grad = [0.62, 1]; mL.tube([[bx, gL - 0.3, bz], sh, tip], [r * 1.04, r * 0.97, 0.012], 8, false); mL.grad = null;
+    const bark = pale ? [0.7, 0.58, 0.42] : [0.5 + h1 * 0.1, 0.43 + h1 * 0.08, 0.35 + h1 * 0.06];
+    m0.mat(MAT.BARK, bark, 1.0); m0.grad = [0.62, 1]; m0.tube([[bx, gL - 0.3, bz], sh, tip], [r * 1.04, r * 0.97, 0.012], low ? 4 : 8, false); m0.grad = null;
+    if (m1) { m1.mat(MAT.BARK, bark, 1.0); m1.grad = [0.62, 1]; m1.tube([[bx, gL - 0.3, bz], sh, tip], [r * 1.04, r * 0.97, 0.012], 4, false); m1.grad = null; }
+    { const q = { x0: bx - ux * r, z0: bz - uz * r, x1: bx + ux * r, z1: bz + uz * r, g: gL, tx: tip[0], tz: tip[2], top, bark };      // the ribbon: two logs to a quad (a log cut flat, as wide as the log), the top running from the one point's height to the next, same bark
+      if (pend) { m2.mat(MAT.BARK, pend.bark, 1.0); m2.grad = [0.62, 1]; m2.quad2([pend.x0, pend.top, pend.z0], [pend.x0, Math.min(pend.g, q.g) - 0.1, pend.z0], [q.x1, Math.min(pend.g, q.g) - 0.1, q.z1], [q.x1, q.top, q.z1]); m2.grad = null; pend = null; } else pend = q; }
     u = c + r - 0.02; n++; }
-  // the riband: a squared pole pegged along the inside at 1.6 m, following the ground at its two ends
-  { const o = 0.3, a0 = [A[0] + inside[0] * o, A[1] + inside[1] * o], b0 = [B[0] + inside[0] * o, B[1] + inside[1] * o]; mL.mat(MAT.TIMBER, [0.3, 0.25, 0.19], 0.6); mL.beam([a0[0], gy(A[0], A[1]) + 1.6, a0[1]], [b0[0], gy(B[0], B[1]) + 1.6, b0[1]], 0.07, 0.12); }
+  // the riband: a squared pole pegged along the inside at 1.6 m, following the ground at its two ends (near levels only)
+  { const o = 0.3, a0 = [A[0] + inside[0] * o, A[1] + inside[1] * o], b0 = [B[0] + inside[0] * o, B[1] + inside[1] * o]; for (const mL of [m0, m1]) if (mL) { mL.mat(MAT.TIMBER, [0.3, 0.25, 0.19], 0.6); mL.beam([a0[0], gy(A[0], A[1]) + 1.6, a0[1]], [b0[0], gy(B[0], B[1]) + 1.6, b0[1]], 0.07, 0.12); } }
 }
 function buildWalls(bucket) {
   if (TEST && TEST.levels === 0) return;
@@ -58,7 +68,7 @@ function buildWalls(bucket) {
         const g0a = ug - 1.9, g1a = ug + 1.9, parts = b <= g0a || a >= g1a ? [[a, b, mlo]] : [[a, Math.min(b, g0a), mlo], [Math.max(a, g0a), Math.min(b, g1a), yT - 0.16], [Math.max(a, g1a), b, mlo]].filter(q => q[1] - q[0] > 0.02);
         for (const [pa, pb, pl] of parts) { const f0 = P(pa, 0), f1 = P(pb, 0.36);
           if (pl > mlo + 1) box(MAT.PLANKS, [0.42, 0.36, 0.3], 0.5, f0[0], pl, f0[1], f1[0], yT + 1.85, f1[1], 4 | 8);      // over the arch: boards above the lintel
-          else { const cm = P((pa + pb) / 2, 0.15), mL = M(cm[0], cm[1]), i0 = P(0, 0), i1 = P(0, 1); logRow(mL, P(pa, 0.15), P(pb, 0.15), t => tTop(pa + (pb - pa) * t), [i1[0] - i0[0], i1[1] - i0[1]], Math.abs(pa) * 0.13 + id.length); }
+          else { const i0 = P(0, 0), i1 = P(0, 1); logRow((lv, x, z) => logCell(bucket, lv, x, z), P(pa, 0.15), P(pb, 0.15), t => tTop(pa + (pb - pa) * t), [i1[0] - i0[0], i1[1] - i0[1]], Math.abs(pa) * 0.13 + id.length); }
           col(Math.min(f0[0], f1[0]), Math.min(f0[1], f1[1]), Math.max(f0[0], f1[0]), Math.max(f0[1], f1[1]), pl, pl > mlo + 1 ? yT + 1.85 : topC); } }
       // the inner rail, sloped
       if (DK) { const s = P(a, 1.85), t = P(b, 1.85);
