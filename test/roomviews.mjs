@@ -4,8 +4,9 @@
 // Never run alongside another browser or a gate.
 import fs from 'node:fs';
 import { open } from './qa/harness.mjs';
-const ids = process.argv[2].split(','), out = process.argv[3] || '/tmp/roomviews';
+const ids0 = process.argv[2], out = process.argv[3] || '/tmp/roomviews', HOURS = (process.env.HOURS || '13,21').split(',').map(Number);
 const s = await open({ webgl: 1, quality: 'low', play: 1, cellnight: 10 }, [640, 360]);
+const ids = ids0 === 'ALL' ? JSON.parse(await s.run('return JSON.stringify(Object.keys(World.houses).filter(k => World.houses[k].plan))')) : ids0.split(',');
 for (const id of ids) {
   fs.mkdirSync(`${out}/${id}`, { recursive: true });
   let views;
@@ -27,12 +28,15 @@ for (const id of ids) {
           for (let dist = 0.6; dist < 6; dist += 0.4) for (let sp = -0.4; sp <= 0.4; sp += 0.4) { const x = x0 + ca * dist - sa * sp * dist, z = z0 + sa * dist + ca * sp * dist; if (free(r[1], st.k1, x, z)) n++; }
           if (n > best) { best = n; bd = [ca, sa]; } }
         V.push({ k: st.k1, room: r[0], what: 'stairhead', p: [x0, z0], v: bd, dir: 'free(' + best + ')' }); }
+      for (const v of V) { const r = P.rooms[v.room]; v.items = P.items.filter(i => i.k === v.k && i.kind === 'floor' && i.h > 0.3 && i.x1 > r.in.x0 && i.x0 < r.in.x1 && i.z1 > r.in.z0 && i.z0 < r.in.z1).length;
+        const dx = v.v[0], dz = v.v[1], sx = v.p[0], sz = v.p[1]; v.stair = P.items.some(i => i.k === v.k && (i.kind === 'stair' || i.kind === 'hole') && [0.6, 1.2, 1.8, 2.4, 3].some(t => { const x = sx + dx * t, z = sz + dz * t; return x > i.x0 - 0.45 && x < i.x1 + 0.45 && z > i.z0 - 0.45 && z < i.z1 + 0.45; }));
+        v.rname = r.name || v.room; }
       return JSON.stringify(V);`));
   } catch (e) { console.log(id, 'views fail', String(e).slice(0, 120)); continue; }
   if (process.env.DRY) { console.log(id, JSON.stringify(views)); continue; }
   let n = 0; const meta = [];
   for (const v of views) {
-    for (const h of [13, 21]) for (let t = 0; t < 2; t++) try {
+    for (const h of HOURS) for (let t = 0; t < 2; t++) try {
       const r = await s.run(`const P = World.houses[${JSON.stringify(id)}].plan, fy = P.lv[${v.k}].y, a = P.w2(${v.p[0]}, fy + 1.6, ${v.p[1]}), b = P.w2(${v.p[0] + v.v[0]}, fy + 1.6, ${v.p[1] + v.v[1]}), yaw = Math.round(Math.atan2(b[0] - a[0], -(b[2] - a[2])) * 180 / Math.PI); Env.hour = ${h}; game.step(2, 1/30); await __game.shot(a[0], a[1], a[2], yaw, 0, ${h}); const A = await QA.draw(); return QA.jpeg(A);`);
       fs.writeFileSync(`${out}/${id}/${n}_${h}.jpg`, Buffer.from(r, 'base64')); break;
     } catch (e) { if (t) console.log(id, n, h, 'fail', String(e).slice(0, 80)); }
