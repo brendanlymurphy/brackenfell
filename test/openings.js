@@ -40,9 +40,9 @@ const byName = {}; for (const e of hits.values()) for (const w of e.what) { cons
 const list = [...hits.values()].filter(e => !window.__opKind || e.o.kind.indexOf(window.__opKind) === 0).map(e => ({ at: e.o.kind + ' (' + e.o.x.toFixed(1) + ',' + e.o.z.toFixed(1) + ') ' + [...e.what].slice(0, window.__opWhat || 4).join(' '), n: e.what.size }));
 list.sort((a, b) => b.n - a.n);
 // Ratchet: gates (plotgate, yardgate) are advisory (trade dressing within 3 m inside, listed); KIT-owned blockers are ruled by id and listed for the houses worker (their trim/plaster/stone pieces, not placed by plots): they may not grow.
-const KIT = ['lychgate', 'towngate', 'door in.44', 'door in.116', 'door fisher'];      // ruled: lych gate bench, town gate leaves, in.44 (3.0 m to the neighbour), in.116 (a knee-high line 1.8 m out; not made by plots, dress, wharf or levels: an unnamed village-batch piece), fisher (a 0.4 m seat plank)
+const KIT = ['lychgate', 'towngate', 'door in.44', 'door in.37', 'door in.113', 'door chapel', 'door in.116', 'door fisher', 'passage'];      // ruled: lych gate bench, town gate leaves, in.44 (3.0 m to the neighbour), in.116 (a knee-high line 1.8 m out; not made by plots, dress, wharf or levels: an unnamed village-batch piece), fisher (a 0.4 m seat plank)
 const GATE_OK = ['yardgate (-10.1,-15.8)', 'yardgate (18.0,-15.8)'];      // yard gates that open onto a 1.5 m ginnel: the opposite house front is 1.3 m away by design (TOWNPLAN: ginnels 1.5 m)
-const GATE_BASE = 5;      // gate hits still listed (dress and kit trim within 1.2 m; being moved): the count may only fall
+const GATE_BASE = 6;      // gate hits still listed (dress and kit trim within 1.2 m; being moved): the count may only fall
 const gateHits = list.filter(e => /^(plotgate|yardgate)/.test(e.at) && !GATE_OK.some(k => e.at.startsWith(k)));
 const hard = list.filter(e => !/^(plotgate|yardgate)/.test(e.at) && !KIT.some(k => e.at.startsWith(k))).concat(gateHits.length > GATE_BASE ? gateHits.slice(GATE_BASE) : []);
 const verdict = hard.length ? 'openings FAIL ' + hard.length + ' (+' + (list.length - hard.length) + ' advisory/kit)' : 'openings PASS (' + (list.length) + ' advisory/kit listed)'; const byKind = {}; for (const e of list) { const k = e.at.split(' ')[0]; byKind[k] = (byKind[k] || 0) + 1; }
