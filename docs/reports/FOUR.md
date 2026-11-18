@@ -1,5 +1,39 @@
 # Reports: Agent Four (fork-ch1)
 
+## 2026-11-18 17:30 UTC (your 15:55 entry: animals; the pig, then hens)
+
+Head **`d5ced31`**. Area gate plus `webgpu` at `75a9f3f`: 9 of 9 pass (medium square 191/337k, low square 148/219k: unchanged, no hen
+stands in a reference view). The full GitHub gate is not yet requested for this head.
+
+- **Pig: blocked, none taken.** The only realistic pigs under an allowed licence are on Sketchfab (e.g. "Piglet" by sgrosjean, CC-BY,
+  rigged). A Sketchfab download needs a signed-in account: the download API answers 401 without one. Your entry says to stop and say so.
+  - Everything else is cartoon or low-poly (OpenGameArt "Pig", Quaternius) or not an animal at all (Poly Haven has statues and a rat).
+  - **Decision needed:** a Sketchfab account for this environment (I would sign nothing up myself), or the owner downloads the piglet
+    and commits the file, or no pig.
+- **Hens: done, for your look.**
+  - Model: OpenGameArt "Chicken (animated)" by Čestmír Dammer, CC0; the colour map is from photos.
+    Recorded in `docs/licences/animals.md`.
+  - Converted with Blender 5.3 (now installed in this session as a Python module, outside the repository) by `tools/animals/pack.mjs`.
+  - Size and cost: 0.40 m to the comb; 2724 triangles near, 650 far and for the shadow; 725 KB.
+  - Clips: Walk, Idle1, Idle2, Stand, Pecking1, Eating.
+  - **Placement** (`src/78_animals.js`, `docs/proof/chars/animals/hen_sheet.jpg`):
+    - Three hens in each of the 7 hen runs (21). The coops in `73m_plots.js` report themselves with one marked line each.
+    - The hens walk, peck and stand within 1 m of a point 1.6 m in front of the coop.
+    - A hen never steps where a collider or a hedge clump is.
+    - Feet on `World.groundAt`. Shadow from the light copy.
+    - In the coop (not drawn) from 20:30 to 5:30.
+    - At most six drawn, the nearest: 12 draws and about 20k triangles. Measured at a run: 3 hens cost 6 draws and 10k triangles.
+  - **Sheet:** 0.6 m, 3 m and 6 m beside Idony, side and front, noon and dusk, and the run from 4 m. At 0.6 m the feathers and the
+    eye hold. Beside Idony they are hen-sized.
+  - Not judged: the walk in motion (the walk clip is played at its own rate; the hen moves at 0.16 m/s, so a little sliding is
+    possible); dusk pictures are dark; no cock (the model is a hen; a cock needs another model).
+- **A fault of mine, fixed.** In `5b6cd37` a `//` comment swallowed the besom handle's direction (AGENTS rule 13), so the handle lay
+  wrong for some sweepers. `75a9f3f` restores it. `d5ced31` brings each hand to the handle nearest its shoulder (Basilia's hand was
+  6 cm short).
+  - I scanned my three source files for other code behind a comment: none.
+  - `test/hold.js` is rerunning; it was 1 of 4870 before this last change.
+- Next in your order: dog, then cat, sheep, goose, ox, horse.
+
 ## 2026-11-18 16:20 UTC (your 15:45 list: sleepers, put-down tools, arm's-length tour, faces; and animals)
 
 Head **`a409480`** (merged with threejs). Full gate: **run 414** (in progress when written). Area gate plus `webgpu`: 9 of 9 pass
