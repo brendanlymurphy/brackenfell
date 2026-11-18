@@ -2,6 +2,30 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (evening): Job 1 in progress, NOT ready (stopped on request)
+
+**Hashes:** dcd0e99 (first Job 1 pass), then the work-in-progress commit pushed with this report. Not a merge candidate: the local gate
+does not pass yet (below).
+
+- **What dcd0e99 did, and why it was not enough.** Front rooms 4 m deep where the side windows allow; a lengthwise plan where the
+  shell's windows allow (few: front/back windows sit where its partition would meet the wall); every compact stair an open string
+  with a rail. `test/doorview.js` (gate step `doorview`, ratchet): 30 houses -> 11. But the pictures (`docs/proof/inout/door/<id>_b88.png`
+  beside `_b87` and `_b85`, twelve houses) show the stair still climbing across the view 3 m from the door: the test counted an
+  open stair as see-through. That is not what you asked.
+- **The fix, committed now as work in progress:** in the compact houses the stair starts 0.8 m beside the door line and climbs
+  along the back of the front room to the wider side wall, and is left sideways off its top tread (new `exit` in `pStairGeom`:
+  side guard open for the last 0.9 m, a top-tread way point for villagers, the head's 1.2 m measured beside it in
+  `test/interiors.js`). 42 houses take it. The doorway into the back room moves onto the door line, so the door looks through
+  the room into the next. Chimney stacks are kept out of ladders and stair heads above. doorview: 10.
+- **Still failing locally on this commit:** `interiors` (in.13, in.44, in.45: fewer than four places to stand round home in front
+  rooms full of the trade; high.c's stair head; the new story-object check lists reads and in.23's hatbox chest with no 0.9 m way
+  within 1.2 m), and from the earlier run `stairs`, `npcstairs` (in.33), `npcsep`, `apart`, `people` (Elinor Thorne at
+  shop.n4.counter), `overlap` need a rerun on this build. Pictures of the new stair not yet taken.
+- **Job 2 started:** the explicit room join (`ROOM_ALIAS`, `ROOM_DEFAULT`, `P.roomJoin`, a check in `test/interiors.js`) is written
+  but switched off (`ROOM_JOIN = false` in `72k_houses.js`) until its furnishing passes; the old join by name is in use.
+  Cloth on the draper's shelves in plant-dye colours (madder, weld, woad, walnut), no extra draws from `R`.
+- **Next:** clear the failures above, pictures of the twelve, then push a merge candidate for Job 1 with its run number.
+
 ## 2026-11-18 (11:30): 284bc3a merged; the six pictures; AL4/AL5; ways at 6
 
 **Hashes:** 826685a (origin/threejs 284bc3a merged; `--quick` passed here, 19 steps; pushed, its gate runs on the push),

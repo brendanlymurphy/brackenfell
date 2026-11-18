@@ -128,8 +128,9 @@ function pStairGeom(P, s) {
   s.hole = rect(p0 - d * (0.8 + (s.holeX || 0)), p1, lat - hw - 0.1, lat + hw + 0.1);      /* [inout] holeX: a longer well over the foot of a steep stair, so a jump down it clears the slab */        // the opening in the slab of the level above: the whole run
   s.lowPt = ax === 'x' ? [p0 - d * 0.7, lat] : [lat, p0 - d * 0.7];       // where one stands to start up
   s.highPt = ax === 'x' ? [p1 + d * 0.8, lat] : [lat, p1 + d * 0.8];      // where one stands when arrived
+  if (s.exit) s.highPt = ax === 'x' ? [p1 - d * 0.45, lat + s.exit * (hw + 0.75)] : [lat + s.exit * (hw + 0.75), p1 - d * 0.45];      /* [inout] Job 1: a stair that ends against a side wall is left sideways, off its top tread */
   P.holes.push({ k: s.k1, r: s.hole, stair: s });
-  P.clear.push(Object.assign(rect(p0 - d * 1.3, p0, lat - hw - 0.1, lat + hw + 0.1), { k: s.k0, kind: 'stair' }), Object.assign(rect(p1, p1 + d * 1.3, lat - hw - 0.1, lat + hw + 0.1), { k: s.k1, kind: 'stair' }));
+  P.clear.push(Object.assign(rect(p0 - d * 1.3, p0, lat - hw - 0.1, lat + hw + 0.1), { k: s.k0, kind: 'stair' }), s.exit ? Object.assign(rect(p1 - d * 1.3, p1, Math.min(lat + s.exit * (hw + 0.1), lat + s.exit * (hw + 1.4)), Math.max(lat + s.exit * (hw + 0.1), lat + s.exit * (hw + 1.4))), { k: s.k1, kind: 'stair' }) : Object.assign(rect(p1, p1 + d * 1.3, lat - hw - 0.1, lat + hw + 0.1), { k: s.k1, kind: 'stair' }));
   P.occ(s.k0, rect(p0, p1, lat - hw - 0.08, lat + hw + 0.08), 'stair', s.id);            // the steps and stringers on the lower level
   P.occ(s.k1, s.hole, 'hole', s.id);            // and the opening above them
 }
@@ -502,7 +503,7 @@ function pStairEmit(P, s) {
       B(Math.min(pa, pb) - 0.02, Math.max(pa, pb) + 0.02, Math.min(la, lb) - 0.02, Math.max(la, lb) + 0.02, yf + 0.1, yf + 0.15);
       for (let i = 1; i < n; i++) { const t = i / n, p_ = pa + (pb - pa) * t, l_ = la + (lb - la) * t; B(p_ - 0.018, p_ + 0.018, l_ - 0.018, l_ + 0.018, yf + 0.15, yf + 0.88); }
     };
-    if (!hatch) { const fe = F - d * (tw + 0.04); for (const sg of [-1, 1]) rail(fe, s.lat + sg * (lw + tw + 0.04), E, s.lat + sg * (lw + tw + 0.04)); rail(fe, s.lat - (lw + tw + 0.04), fe, s.lat + (lw + tw + 0.04)); }
+    if (!hatch) { const fe = F - d * (tw + 0.04); for (const sg of [-1, 1]) rail(fe, s.lat + sg * (lw + tw + 0.04), sg === s.exit ? E - d * 1.0 : E, s.lat + sg * (lw + tw + 0.04)); rail(fe, s.lat - (lw + tw + 0.04), fe, s.lat + (lw + tw + 0.04)); }
     else {
       for (const sg of [-1, 1]) B(F, E, s.lat + sg * lw - (sg < 0 ? 0 : 0.06), s.lat + sg * lw + (sg < 0 ? 0.06 : 0), yf + 0.028, yf + 0.11);
       B(F - d * 0.06, F, s.lat - lw, s.lat + lw, yf + 0.028, yf + 0.11);
@@ -517,7 +518,7 @@ function pStairEmit(P, s) {
   const lo = ax === 'x' ? [Math.min(s.p0, s.p1), s.lat - hw - 0.05, Math.max(s.p0, s.p1), s.lat + hw + 0.05] : [s.lat - hw - 0.05, Math.min(s.p0, s.p1), s.lat + hw + 0.05, Math.max(s.p0, s.p1)];
   const yA = a.y + 0.02 + 0.5 * r, yB = b.y + 0.02 - 0.5 * r, lowFirst = d > 0;
   addFloor(m, lo[0], lo[1], lo[2], lo[3], lowFirst ? yA : yB, lowFirst ? yB : yA, ax);
-  for (const sg of [-1, 1]) { const l = s.lat + sg * (hw + 0.09), q = R4(s.p0, s.p1, l - 0.06, l + 0.06); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, b.y + 1.1); }
+  for (const sg of [-1, 1]) { const l = s.lat + sg * (hw + 0.09), q = R4(s.p0, sg === s.exit ? s.p1 - d * 0.9 : s.p1, l - 0.06, l + 0.06); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, b.y + 1.1); }      /* [inout] the exit side open for its last 0.9 m */
   { const q = R4(s.p0 - d * 0.0, s.p0 - d * 0.08, s.lat - hw - 0.15, s.lat + hw + 0.15); addBoxCollider(m, q[0], q[1], q[2], q[3], b.y + 0.5, b.y + 1.1); }       // the open end of the stairwell on the upper floor, where a person would walk in
   { const q = R4(s.p1 - d * 0.02, s.p1 + d * 0.06, s.lat - hw, s.lat + hw); addBoxCollider(m, q[0], q[1], q[2], q[3], a.y, b.y - 0.6); }
   // [c3] the space under the steps is solid (nobody walks in from the low end and stands where the treads are at head height): one box per 0.4 m, its top 0.12 m below the tread's low edge
@@ -590,7 +591,7 @@ function planNav(P, add, link, doorNode) {
   for (const s of P.stairs) {
     const a = Nav.spot[P.id + '.' + s.name + '0'], b = Nav.spot[P.id + '.' + s.name + '1']; if (a === undefined || b === undefined) continue;
     const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]);
-    link(a, b);
+    if (s.exit) { const L1 = P.lv[s.k1], tq = s.axis === 'x' ? [s.p1 - s.dir * 0.45, s.lat] : [s.lat, s.p1 - s.dir * 0.45], tn = add(...P.w2(tq[0], L1.y + 0.02, tq[1])); link(a, tn); link(tn, b); } else link(a, b);      /* [inout] up to the top tread, then off it sideways */
     // a walker leaves a stair by stepping aside first (never straight across the stairwell)
     const side = (pt, r, k) => { if (!r) return null; const c = pCentre(r), sg = s.axis === 'x' ? (c[1] > s.lat ? 1 : -1) : (c[0] > s.lat ? 1 : -1), off = s.hw + 0.95, L = P.lv[k], q = s.axis === 'x' ? [pt[0], pt[1] + sg * off] : [pt[0] + sg * off, pt[1]]; return { n: add(...P.w2(q[0], L.y + 0.02, q[1])), q }; };
     const wa = side(s.lowPt, ra, s.k0), wb = side(s.highPt, rb, s.k1);

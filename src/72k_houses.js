@@ -76,6 +76,7 @@ function hCellarChest(P, room, F) {
   const L = P.lv[room.k]; let ch = null;
   for (const sd of pSidesLong(room)) if ((ch = pAgainst(P, room, sd, P.id + '.cellarchest', 0.85, 0.5, 0.58, +1, pdChest, { lowOk: true, at: 'end' }))) break;
   if (!ch) ch = pFree(P, room, P.id + '.cellarchest', 0.85, 0.5, 0.58, 0.3, pdChest, { lowOk: true });
+  if (!ch) for (const sd of pSidesLong(room)) if ((ch = pAgainst(P, room, sd, P.id + '.cellarchest', 0.85, 0.5, 0.58, +1, pdChest, { lowOk: true, at: 'end', noGuard: true }))) break;      /* [inout] a narrow cellar: the stair's own clear zones are kept, the way-guard is not asked */
   if (ch) pInteract(P, ch.cx, 0.5, ch.cz, { kind: 'chest', id: P.id + '.cellarchest', loot: [['gold', 3 + F.wealth * 4 + P.R.i(0, 4)]].concat(F.wealth > 0 ? [['apple', 1]] : []), r: 1.8 }, room.k);
   else P.err.push('no room for the cellar chest');
   return ch;
@@ -381,11 +382,16 @@ function hCompact(P, c, F) {
     if (three) { pLevel(P, 2, P.lv[1].y + H_UP + PW.SLAB, 2.4, { loft: true }); pRoom(P, 2, up1.id === 'loft' || (up2 && up2.id === 'loft') ? 'garret' : 'loft', 'store', X0, 0, X1, D, F.fin(1)); }
     if (cellarOK) { const a = rr(X0, Xs); pRoom(P, -1, 'cellar', 'cellar', a[0], Zp, a[1], D, { floor: 'stone', win: false }); }
     pDoor(P, front.id, null, 0, 0); P.clear.push({ x0: -0.8, x1: 0.8, z0: 0, z1: 2.4, k: 0, kind: 'path', room: front });
-    if (!single) { pDoor(P, front.id, left.id, M(X0 + 0.8), Zp); pDoor(P, front.id, right.id, M(X1 - 0.8), Zp); }
-    if (up2) pDoor(P, up1.id, up2.id, M(X1 - 0.8), Zp);
+    const sRun = wide >= 0.8 + nSt * 0.18 + 0.3, xN = sg < 0 ? X1 - 0.8 : X0 + 0.8;      /* [inout] Job 1: the stair starts beside the door line and climbs to the wider side wall: nothing across the view */
+    if (!single && !sRun) { pDoor(P, front.id, left.id, M(X0 + 0.8), Zp); pDoor(P, front.id, right.id, M(X1 - 0.8), Zp); }
+    else if (!single) { const xc = sg * 0.2, inR = (r, x) => x > r.x0 + 0.5 && x < r.x1 - 0.5, done = [];
+      for (const r of [left, right]) { const x = inR(r, xc) ? xc : inR(r, xN) ? xN : null; if (x !== null) { pDoor(P, front.id, r.id, x, Zp); done.push(r); } }
+      if (done.length === 1) pDoor(P, left.id, right.id, Math.abs(left.x1 - right.x0) < 0.01 ? left.x1 : left.x0, Math.round((Zp + D) / 2 * 2) / 2); }      /* a back room behind the stair is reached through the other */
+    if (up2) pDoor(P, up1.id, up2.id, sRun ? xN : M(X1 - 0.8), Zp);
     const SHL = pShellWins(P, c, B), bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd && P.lv[1]) pUpperDoor(P, up1, bd, Math.round(SHL.pos(bd) * 4) / 4);      /* an upper door the shell shows opens from the front room upstairs */
     const lat = single ? D - 0.6 : Zp - 0.6, p0 = X0 + 1.45,      /* 1.2 m clear at the foot */ tread = clamp(Math.floor((X1 - 1.45 - p0) / nSt * 100) / 100, 0.18, 0.23);      /* and at the head */      /* a longer stair where it fits: its well is then long enough to jump down */      /* narrow houses get a steeper stair, as they had */
-    pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: mir ? -1 : 1, x: M(p0), z: lat, width: 0.9, tread, holeX: 0.5 });
+    if (sRun) pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: sg, x: sg * 0.8, z: lat, width: 0.9, tread: clamp(Math.floor((wide - 0.8 - 0.3) / nSt * 100) / 100, 0.18, 0.23), holeX: 0, exit: -1 });
+    else pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: mir ? -1 : 1, x: M(p0), z: lat, width: 0.9, tread, holeX: 0.5 });
     if (cellarOK) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: mir ? -1 : 1, x: M(X0 + 1.45), z: D - 0.6, width: 0.9, tread: 0.2, holeX: 0.5 });      /* [inout] a well long enough to jump down */
     { const q = P.stairs.find(q => q.id === 'stUp'); if (q) q.open = true; }
   }
@@ -398,13 +404,15 @@ function hCompact(P, c, F) {
     for (const rm of rooms) for (const sd of ['e', 'w', 's']) for (const t of [0.5, 0.3, 0.7]) cand.push([rm, sd, sd === 's' ? rm.x0 + (rm.x1 - rm.x0) * t : rm.z0 + (rm.z1 - rm.z0) * t]);
     /* the chimney stack goes up through the floor above: a fire whose stack would leave a pocket of that floor reachable only by a squeeze (under 0.9 m) is not taken (rooms_people: "a way crosses stack1") */
     const stackOK = () => { const hz = P.hearths[P.hearths.length - 1], tmp = [1, 2].filter(k => P.lv[k] && !P.lv[k].loft).map(k => ({ id: P.id + '.stack' + k, kind: 'hearth', k, x0: hz.rect.x0, z0: hz.rect.z0, x1: hz.rect.x1, z1: hz.rect.z1, h: 2.4 })); P.items.push(...tmp); const reach = pReach(P), ok = stackOK1(reach); P.items.length -= tmp.length; return ok; };
-    const stackOK1 = reach => { for (const it of P.items) { if (it.kind !== 'hearth' || !/\.stack[12]$/.test(it.id)) continue; const k = +it.id.slice(-1), cx = (it.x0 + it.x1) / 2, cz = (it.z0 + it.z1) / 2, rm = pRoomAt(P, k, cx, cz); if (!rm || P.lv[k].loft) continue;
+    const stackOK1 = reach => { for (const it of P.items) { if (it.kind !== 'hearth' || !/\.stack[12]$/.test(it.id)) continue; if (P.items.some(o => o !== it && o.k === it.k && (o.kind === 'floor' || o.kind === 'stair' || o.kind === 'post') && rOv(o, it, 0.02)) || P.clear.some(q => q.k === it.k && q.kind === 'stair' && rOv(q, it, 0.02))) return false;      /* [inout] nor through a ladder or a stair above */ const k = +it.id.slice(-1), cx = (it.x0 + it.x1) / 2, cz = (it.z0 + it.z1) / 2, rm = pRoomAt(P, k, cx, cz); if (!rm || P.lv[k].loft) continue;
       for (const [x, z] of [[it.x0 - 0.75, cz], [it.x1 + 0.75, cz], [cx, it.z0 - 0.75], [cx, it.z1 + 0.75]]) { if (x < rm.in.x0 + 0.35 || x > rm.in.x1 - 0.35 || z < rm.in.z0 + 0.35 || z > rm.in.z1 - 0.35) continue; if (P.holes.some(h => h.k === k && x > h.r.x0 - 0.3 && x < h.r.x1 + 0.3 && z > h.r.z0 - 0.3 && z < h.r.z1 + 0.3)) continue; if (!reach(k, x, z, 0.45)) return false; } } return true; };
     for (const [rm, sd, a] of cand) for (const wd of [1.4, 1.1]) { if (hh) break; const sn = pSnap(P, P.c.int), n0 = P.items.length, c0 = P.clear.length, hs = P.hearths, pc = (P.pierCols || []).length, li = Object.assign({}, P.lightIn); hh = pHearth(P, rm, sd, wd, { cauldron: true, size: 0.42, at: a }); if (hh && !stackOK()) { pUndo(P, P.c.int, sn); P.items.length = n0; P.clear.length = c0; P.hearths = hs; if (P.pierCols) P.pierCols.length = pc; P.lightIn = li; hh = null; } }
-    if (!hh) for (const [rm, sd, a] of cand) for (const wd of [1.4, 1.1]) if (!hh && (hh = pHearth(P, rm, sd, wd, { cauldron: true, size: 0.42, at: a }))) break; }      /* else as before */
+    const ovUp = () => { const hz = P.hearths[P.hearths.length - 1]; return [1, 2].some(k => P.lv[k] && (P.items.some(o => o.k === k && (o.kind === 'floor' || o.kind === 'stair' || o.kind === 'post') && rOv(o, hz.rect, 0.02)) || P.clear.some(q => q.k === k && q.kind === 'stair' && rOv(q, hz.rect, 0.02)))); };
+    if (!hh) for (const [rm, sd, a] of cand) for (const wd of [1.4, 1.1]) { if (hh) break; const sn = pSnap(P, P.c.int), n0 = P.items.length, c0 = P.clear.length, hs = P.hearths, pc = (P.pierCols || []).length, li = Object.assign({}, P.lightIn); hh = pHearth(P, rm, sd, wd, { cauldron: true, size: 0.42, at: a }); if (hh && ovUp()) { pUndo(P, P.c.int, sn); P.items.length = n0; P.clear.length = c0; P.hearths = hs; if (P.pierCols) P.pierCols.length = pc; P.lightIn = li; hh = null; } } }      /* else as before, but never with its stack through a ladder or a stair above */
   if (hh) { pPier(P, 1, hh); if (cellarOK) pPier(P, -1, hh); }
   P.hall = { room: hh ? pRoomAt(P, 0, hh.front[0], hh.front[1]) || front : front, hh };
-  if (hh) { const dx = hh.front[0] - hh.px, dz = hh.front[1] - hh.pz, l = Math.hypot(dx, dz) || 1; let hx = hh.front[0] + dx / l * 0.5, hz = hh.front[1] + dz / l * 0.5; { let rm0 = pRoomAt(P, 0, hx, hz) || front; const ar = r => (r.x1 - r.x0) * (r.z1 - r.z0); if (ar(rm0) < 14 && ar(front) > ar(rm0)) { rm0 = front; const cc = pCentre(front); hx = cc[0]; hz = cc[1]; } let ok = false; for (const [x, z] of pCands(rm0, [hx, hz])) if (pFit(P, rm0, rectOf(x, z, 1.7, 1.7), { h: 1.8, lowOk: true })) { hx = x; hz = z; ok = true; break; } }      /* a small kitchen: the household's place is the front room */      /* where the household works and waits: open floor round it, so three of them have a place each (77c_patrons.js claims a ring round a spot) */ const rm = pRoomAt(P, 0, hx, hz) || front, cc = pCentre(rm), far = Math.hypot(cc[0] - hx, cc[1] - hz) > 1.2; pSpot(P, 'home', hx, hz, far ? Math.atan2(cc[0] - hx, -(cc[1] - hz)) : 0, { k: 0 }); }      /* a step back from the fire, turned to the room: not with the face in the chimney breast */
+  if (hh) { const dx = hh.front[0] - hh.px, dz = hh.front[1] - hh.pz, l = Math.hypot(dx, dz) || 1; let hx = hh.front[0] + dx / l * 0.5, hz = hh.front[1] + dz / l * 0.5; { let rm0 = pRoomAt(P, 0, hx, hz) || front; const ar = r => (r.x1 - r.x0) * (r.z1 - r.z0); if (ar(rm0) < 14 && ar(front) > ar(rm0)) { rm0 = front; const cc = pCentre(front); hx = cc[0]; hz = cc[1]; } let ok = false; const places = (x0, z0) => { const pl = []; for (let x = x0 - 2; x <= x0 + 2; x += 0.35) for (let z = z0 - 2; z <= z0 + 2; z += 0.35) { const dd = Math.hypot(x - x0, z - z0); if (dd > 2 || dd < 0.6) continue; const rm = pRoomAt(P, 0, x, z); if (!rm || !pFit(P, rm, rectOf(x, z, 0.6, 0.6), { h: 1.8, lowOk: true, noClear: true })) continue; if (!pl.some(q => Math.hypot(q[0] - x, q[1] - z) < 0.7)) pl.push([x, z]); } return pl.length; };
+        let bestN = -1, tried = 0; for (const rmC of [rm0, front].filter((r, i, a) => r && a.indexOf(r) === i)) for (const [x, z] of pCands(rmC, rmC === rm0 ? [hx, hz] : pCentre(rmC))) { if (tried > 60) break; if (!pFit(P, rmC, rectOf(x, z, 1.7, 1.7), { h: 1.8, lowOk: true })) continue; tried++; const n = Math.min(places(x, z), 5); if (n > bestN) { bestN = n; ok = [x, z]; } if (n >= 5) break; } if (ok) { hx = ok[0]; hz = ok[1]; } }      /* [inout] the household's place: four or more to stand round it (the interiors test), nearest the fire first */      /* a small kitchen: the household's place is the front room */      /* where the household works and waits: open floor round it, so three of them have a place each (77c_patrons.js claims a ring round a spot) */ const rm = pRoomAt(P, 0, hx, hz) || front, cc = pCentre(rm), far = Math.hypot(cc[0] - hx, cc[1] - hz) > 1.2; pSpot(P, 'home', hx, hz, far ? Math.atan2(cc[0] - hx, -(cc[1] - hz)) : 0, { k: 0 }); }      /* a step back from the fire, turned to the room: not with the face in the chimney breast */
   // the trade in the front room, its counter if it sells; where the worker stands
   if (!hall) { hTrade(P, c, front, F); if (shop && !P.counter) for (const ln of [2.4, 2.0, 1.6]) if (cnt(P, front, F, ln, ['bottle', 'jar', 'bowl', 'candle'], 'k')) break; }
   if (!P.spots.work && P.focal) { const fx = P.focal.x, fz = P.focal.z; for (const [x, z] of pCands(front, [fx, fz - 1.1])) { if (Math.hypot(x - fx, z - fz) > 3.2) break; if (pFit(P, front, rectOf(x, z, 0.7, 0.7), { h: 1.8, lowOk: true })) { pSpot(P, 'work', x, z, Math.atan2(fx - x, -(fz - z)), { k: 0 }); break; } } }
@@ -425,10 +433,11 @@ function hCompact(P, c, F) {
   const bedRooms = [up1, up2, hall ? right : null].filter(Boolean), first = up2 || up1;
   dressBedroom(P, first, { beds: castBeds(P.id, ['bed']), bedRooms: bedRooms.filter(r => r !== first), blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth > 0, table: F.wealth > 0, chest: true });
   if (!World.interact.some(i => i.id === P.id + '.chest')) for (const r of [first].concat(bedRooms, [right, left, front])) { if (!r) continue; const ch = pPiece(P, r, 'treasure_chest', { side: ['s', 'n', 'e', 'w'], id: 'chest' }) || pPiece(P, r, 'treasure_chest', { near: pCentre(r), id: 'chest' }); if (ch) { pInteract(P, ch.cx, 0.5, ch.cz, { kind: 'chest', id: P.id + '.chest', loot: hLoot(F), r: 1.8 }, r.k); break; } }      /* the household's chest, wherever the bed corner left no room for it */
+  if (cellarOK && P.rooms.cellar) hCellarChest(P, P.rooms.cellar, F);      /* [inout] the chest first: the cellar's row of the table fills the rest */
   if (spec) hRooms(P, c, F);
   for (const r of bedRooms) if (!spec && r !== first) pPiece(P, r, 'wooden_candlestick', { near: pCentre(r), lit: 3.5, soft: true, opt: { lowOk: true } });
   const lo2 = Object.values(P.rooms).find(r => r.k === 2); if (three && lo2) { const lo = lo2; pStock(P, lo, { sacks: 3, crates: 2, near: [(lo.x0 + lo.x1) / 2 + (mir ? -1 : 1), (lo.z0 + lo.z1) / 2] }); pPiece(P, lo, 'treasure_chest', { side: ['s', 'n'] }); pPiece(P, lo, 'wooden_lantern_01', { near: [(lo.x0 + lo.x1) / 2, lo.z1 - 0.8], lit: 4.5, soft: true, opt: { lowOk: true } }); }      /* what the shop keeps under its roof */
-  if (cellarOK) { const cel = P.rooms.cellar; hCellarChest(P, cel, F); dressCellar(P, cel, { barrels: 1, crates: 1, rows: false }); }      /* the chest first: it is what the cellar is for */
+  if (cellarOK) { const cel = P.rooms.cellar; if (!World.interact.some(i => i.id === P.id + '.cellarchest')) hCellarChest(P, cel, F); dressCellar(P, cel, { barrels: 1, crates: 1, rows: false }); }      /* the chest first: it is what the cellar is for */
   hMemo(P, F);
   for (const r of Object.values(P.rooms)) if (!P.lightIn[r.id]) pLamp(P, r, ...pCentre(r));      /* a room no window or candle lights gets one lantern (the validator asks for a light in every room) */
   if (!hh && !small) P.err.push('no hearth fits');      /* a one-room shop on a 4 m front has no fire of its own (a brazier, the baker's oven next door) */
@@ -458,7 +467,19 @@ function hRoomFor(P, name) {
   const by = (k, kinds) => Object.values(P.rooms).find(r => r.k === k && kinds.includes(r.kind));
   return { leg: P.rooms.work || P.rooms.shop, room: P.rooms.room || P.rooms.hall, living: P.rooms.back || P.rooms.chamber, kitchen: P.rooms.back || P.rooms.living, solar: P.rooms.upfront || P.rooms.loft, upfront: P.rooms.solar || P.rooms.chamber, upback: P.rooms.loft, loft: by(1, ['bedroom']) || by(2, ['store']), chamber: by(1, ['bedroom']), pantry: P.rooms.store, store: P.rooms.pantry || P.rooms.store, back: P.rooms.living || P.rooms.chamber, hall: P.rooms.work || P.rooms.shop || P.rooms.room }[name] || null;
 }
-function hRooms(P, c, F) {
+// [inout] Job 2 (inbox 13:55): the join between the plan's rooms and the table's is explicit. Each plan room takes the table's room of its own name, else one of the
+// same use (ROOM_ALIAS, in order), and the table's rooms the plan has no room for (the lean-to `leg`, the `yard`) go to the room of their use. A room nothing in the
+// table reaches gets the household's ordinary things for its use (ROOM_DEFAULT). P.roomJoin says which, room by room; test/interiors.js fails a room with neither.
+const ROOM_ALIAS = { shop: ['shop', 'work', 'leg', 'hall', 'room'], work: ['work', 'shop', 'leg', 'hall', 'room'], hall: ['hall', 'room', 'living', 'work', 'shop'], room: ['room', 'hall', 'living', 'work', 'shop'],
+  living: ['living', 'back', 'kitchen', 'service', 'parlour', 'chamber', 'hall'], back: ['back', 'living', 'kitchen', 'service', 'parlour', 'hall'], chamber0: ['chamber', 'bedroom', 'living', 'back', 'parlour'],
+  store: ['store', 'pantry', 'buttery', 'stock', 'yard', 'service', 'coalstore'], pantry: ['pantry', 'store', 'buttery', 'stock', 'yard', 'service'], cellar: ['cellar', 'vault'],
+  upfront: ['upfront', 'solar', 'chamber', 'bedroom', 'counting', 'study', 'landing'], solar: ['solar', 'upfront', 'chamber', 'bedroom', 'counting', 'landing'], chamber1: ['chamber', 'solar', 'upfront', 'bedroom', 'upback', 'loft'],
+  upback: ['upback', 'loft', 'chamber', 'attic', 'bedroom'], loft: ['loft', 'upback', 'attic', 'chamber'], garret: ['loft', 'attic', 'upback'] };
+const ROOM_DEFAULT = { store: [['Barrel', 2], ['Bag', 2], ['Shelf_Simple', 1], ['wooden_bucket_01', 1], ['Crate_Wooden', 1]], cellar: [['Barrel', 3], ['Crate_Wooden', 2], ['Bag', 1]],
+  loft: [['treasure_chest', 1], ['wicker_basket_02', 2], ['Bag', 2], ['Crate_Wooden', 1]], bedroom: [['treasure_chest', 1], ['wicker_basket_02', 1], ['Shelf_Simple', 1]],
+  hall: [['Shelf_Simple', 1], ['wooden_bucket_01', 1], ['wicker_basket_02', 1]], shop: [['Crate_Wooden', 1], ['Shelf_Simple', 1], ['Bag', 1]], corridor: [['Peg_Rack', 1]] };
+function hRoomUse(r) { const k = r.id === 'chamber' ? 'chamber' + (r.k > 0 ? 1 : 0) : r.id; return ROOM_ALIAS[k] ? k : r.k < 0 ? 'cellar' : r.kind === 'store' ? 'store' : r.kind === 'shop' ? 'shop' : r.kind === 'hall' ? 'hall' : r.k >= 2 ? 'garret' : r.k === 1 ? 'upback' : 'living'; }
+function hRoomsByName(P, c, F) {      /* the join by name (Build 87): kept until the explicit join passes the gate */
   const S = typeof ROOMS_SPEC !== 'undefined' && ROOMS_SPEC[P.id]; if (!S) return false;
   const placed = [];
   for (const rn in S.rooms) {
@@ -480,6 +501,39 @@ function hRooms(P, c, F) {
       if (nm === 'Torch_Metal') { for (const sd of ['n', 's', 'e', 'w']) if (pTorch(P, room, sd, sd === 'n' || sd === 's' ? (room.in.x0 + room.in.x1) / 2 + i : (room.in.z0 + room.in.z1) / 2 + i, 1.7, 6)) break; continue; }
       if (!Kit.pieces[nm]) continue;
       pPiece(P, room, nm, { side: nm === 'CandleStick_Stand' ? ['n', 's', 'e', 'w'] : undefined, near: pCentre(room), id: 'light' + i, lit: ROOM_LIT[nm] || 4, soft: nm !== 'CandleStick_Stand', opt: { lowOk: nm !== 'CandleStick_Stand' && nm !== 'wooden_lantern_01' } });
+    }
+  }
+  P.roomsSpec = placed.length; return true;
+}
+const ROOM_JOIN = false;      /* [inout] Job 2: the explicit join, switched on when its furnishing passes the gate */
+function hRooms(P, c, F) {
+  if (!ROOM_JOIN) return hRoomsByName(P, c, F);
+  const S = typeof ROOMS_SPEC !== 'undefined' && ROOMS_SPEC[P.id]; if (!S) return false;
+  const placed = [], used = new Set(), join = P.roomJoin = {}, rooms = Object.values(P.rooms).filter(r => r.kind !== 'yard');
+  const take = (r, rn) => { used.add(rn); (join[r.id] = join[r.id] || []).push('spec:' + rn); };
+  for (const r of rooms) if (S.rooms[r.id] && !used.has(r.id)) take(r, r.id);
+  for (const r of rooms) if (!join[r.id]) { const rn = (ROOM_ALIAS[hRoomUse(r)] || []).find(n => S.rooms[n] && !used.has(n)); if (rn) take(r, rn); }
+  for (const rn in S.rooms) if (!used.has(rn)) { const r = rooms.find(q => (ROOM_ALIAS[hRoomUse(q)] || []).includes(rn) && q.k >= 0) || (rn === 'yard' || rn === 'leg' ? rooms.find(q => q.k === 0 && /store|pantry|work|shop/.test(q.id)) : null); if (r) take(r, rn); }
+  for (const r of rooms) if (!join[r.id]) join[r.id] = ['default:' + (r.k < 0 ? 'cellar' : r.kind === 'corridor' ? 'corridor' : r.kind === 'store' ? 'store' : r.k >= 1 ? (/loft|garret|upback/.test(r.id) ? 'loft' : 'bedroom') : r.kind === 'shop' ? 'shop' : 'hall')];
+  for (const room of rooms) for (const src of join[room.id]) {
+    const [how, rn] = src.split(':'), spec = how === 'spec' ? S.rooms[rn] : { furn: ROOM_DEFAULT[rn] || [], light: [] };
+    let tableSkip = !!P.items.find(it => it.k === room.k && /\.(meal|table|long)/.test(it.id || '') && it.x0 >= room.x0 - 0.1 && it.x1 <= room.x1 + 0.1 && it.z0 >= room.z0 - 0.1 && it.z1 <= room.z1 + 0.1);
+    for (const [nm, n0] of spec.furn) {
+      if (ROOM_SKIP[nm]) continue; let n = Math.min(n0, 4);
+      if (ROOM_TABLES[nm] && tableSkip) { tableSkip = false; n--; }
+      if (nm === 'treasure_chest' && World.interact.some(i => i.id === P.id + '.chest')) n--;
+      for (let i = 0; i < n; i++) {
+        if (!Kit.pieces[nm]) { (P.missing = P.missing || []).push(nm); break; }
+        let it = null;
+        if (KIT_WALL[nm]) { const sides = ['n', 's', 'e', 'w']; for (const sd of sides) { const [a, b] = sd === 'n' || sd === 's' ? [room.in.x0, room.in.x1] : [room.in.z0, room.in.z1]; for (let u = a + 0.8; u < b - 0.6 && !it; u += 0.6) it = pKitWall(P, room, sd, u, nm); if (it) break; } }
+        else { const p = Kit.pieces[nm], tall = (p.max[1] - p.min[1]) * (nm === 'painted_wooden_shelves' ? 1.5 : 1) > 0.85; it = pPiece(P, room, nm, { side: ['n', 's', 'e', 'w'], id: nm + room.id + i, sc: nm === 'painted_wooden_shelves' ? 1.5 : 1, opt: tall ? { lowOk: false } : { lowOk: true } }) || (ROOM_TABLES[nm] ? pPiece(P, room, nm, { near: pCentre(room), id: nm + room.id + i }) : null);      /* a table may stand free */ }
+        if (it) placed.push(room.id + ':' + nm); else (P.unplaced = P.unplaced || []).push(room.id + ':' + nm);
+      }
+    }
+    for (const [nm, n] of spec.light) for (let i = 0; i < Math.min(n, 3); i++) {
+      if (nm === 'Torch_Metal') { for (const sd of ['n', 's', 'e', 'w']) if (pTorch(P, room, sd, sd === 'n' || sd === 's' ? (room.in.x0 + room.in.x1) / 2 + i : (room.in.z0 + room.in.z1) / 2 + i, 1.7, 6)) break; continue; }
+      if (!Kit.pieces[nm]) continue;
+      pPiece(P, room, nm, { side: nm === 'CandleStick_Stand' ? ['n', 's', 'e', 'w'] : undefined, near: pCentre(room), id: 'light' + room.id + i, lit: ROOM_LIT[nm] || 4, soft: nm !== 'CandleStick_Stand', opt: { lowOk: nm !== 'CandleStick_Stand' && nm !== 'wooden_lantern_01' } });
     }
   }
   P.roomsSpec = placed.length; return true;

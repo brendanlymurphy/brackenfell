@@ -42,7 +42,8 @@ for (const id in World.houses) {
       if (distinct.length < Math.max(4, sleepers)) bad.push(id + ': ' + distinct.length + ' seats at distinct places, wants ' + Math.max(4, sleepers));
       for (const s2 of distinct) if (!reachable(s2.k, s2.x, s2.z, 0.65))      /* the way reaches a place beside the seat: one sits down sideways onto a bench */ bad.push(id + ': seat at ' + s2.x.toFixed(1) + ',' + s2.z.toFixed(1) + ' (level ' + s2.k + ') has no 0.9 m way from the door'); }
     for (const s2 of P.stairs) { if (!reachable(s2.k0, s2.lowPt[0], s2.lowPt[1]) && !reachable(s2.k1, s2.highPt[0], s2.highPt[1])) bad.push(id + ': stair ' + s2.name + ' has no 0.9 m way from the street door');
-      for (const [k, p0, dir] of [[s2.k0, s2.p0, -s2.dir], [s2.k1, s2.p1, s2.dir]]) { let blk = 0; for (let t = 0.15; t <= 1.2; t += 0.15) for (const o of [-0.3, 0, 0.3]) { const x = s2.axis === 'x' ? p0 + dir * t : s2.lat + o, z = s2.axis === 'x' ? s2.lat + o : p0 + dir * t; if (!free(k, x, z)) blk++; } if (blk > 2) bad.push(id + ': stair ' + s2.name + ' has less than 1.2 m clear at its ' + (k === s2.k0 ? 'foot' : 'head')); } }
+      for (const [k, p0, dir] of [[s2.k0, s2.p0, -s2.dir], [s2.k1, s2.p1, s2.dir]]) { let blk = 0; const side = k === s2.k1 && s2.exit;      /* [inout] a stair left sideways off its top tread: the 1.2 m is beside the last metre of it */
+        for (let t = 0.15; t <= 1.2; t += 0.15) for (const o of [-0.3, 0, 0.3]) { let x = s2.axis === 'x' ? p0 + dir * t : s2.lat + o, z = s2.axis === 'x' ? s2.lat + o : p0 + dir * t; if (side) { const along = p0 - s2.dir * (0.45 + o), lat = s2.lat + s2.exit * (s2.hw + 0.1 + t); x = s2.axis === 'x' ? along : lat; z = s2.axis === 'x' ? lat : along; } if (!free(k, x, z)) blk++; } if (blk > 2) bad.push(id + ': stair ' + s2.name + ' has less than 1.2 m clear at its ' + (k === s2.k0 ? 'foot' : 'head')); } }
     { const h = spotL('home'); if (lived && h) { const places = []; for (let x = h.x - 2; x <= h.x + 2; x += 0.35) for (let z = h.z - 2; z <= h.z + 2; z += 0.35) { if (Math.hypot(x - h.x, z - h.z) > 2 || Math.hypot(x - h.x, z - h.z) < 0.6 || !wide(h.k, x, z, 0.3)) continue; if (!places.some(p2 => Math.hypot(p2[0] - x, p2[1] - z) < 0.7)) places.push([x, z]); } if (places.length < 4) bad.push(id + ': only ' + places.length + ' free places to stand round home'); } }
     if (id === 'inn') for (const nm of ['bar', 'stand1', 'stand2']) if (!World.spots['inn.' + nm]) bad.push('inn: no spot ' + nm);
   } }
@@ -52,5 +53,16 @@ for (const id in World.houses) {
   console.log('seats: ' + (n - sh.length) + ' of ' + n + ' household houses have four distinct seats' + (sh.length ? '; short: ' + sh.join('; ') : '')); if (sh.length) bad.push('houses with fewer than four distinct seats: ' + sh.join('; ')); }
 console.log(rows.join('\n'));
 { const want = Cells.list.filter(c => World.houses[c.id]).length; if (!only && rows.length < want) bad.push('checked ' + rows.length + ' buildings of ' + want + ': the plans were not built, so nothing was checked');       /* [cast] the step passed on GitHub having checked none (the coordinator, Build 83) */ }
+// [inout] story objects (inbox 14:40, the hatbox in in.23): every secret, read and story container inside a house has the 0.9 m way from the street door
+// coming within 1.2 m of it, in every house whether anyone lives there or not
+{ const story = World.interact.filter(it => it.p && it.zone && (it.sec || it.kind === 'read' || /strongbox|hatbox|ledger|letter|quest|story/i.test(it.id || '')));
+  let nStory = 0; for (const it of story) { const H = Object.values(World.houses).find(h => h.plan && h.plan.zone === it.zone); if (!H) continue; const P = H.plan, T = P.T;
+    const d = [it.p[0] - T[12], it.p[1] - T[13], it.p[2] - T[14]], q = [d[0] * T[0] + d[1] * T[1] + d[2] * T[2], d[0] * T[4] + d[1] * T[5] + d[2] * T[6], d[0] * T[8] + d[1] * T[9] + d[2] * T[10]];
+    let k = Math.min(...Object.keys(P.lv).map(Number)); for (const kk in P.lv) if (P.lv[kk].y <= q[1] + 0.35 && P.lv[kk].y >= P.lv[k].y) k = +kk;
+    nStory++; const reach = P._storyReach || (P._storyReach = pReach(P)); if (!reach(k, q[0], q[2], 1.2)) bad.push(P.id + ': story object ' + it.id + ' (' + (it.sec || it.kind) + ') has no 0.9 m way to within 1.2 m of it (plan ' + q[0].toFixed(2) + ', ' + q[2].toFixed(2) + ', level ' + k + ')'); }
+  console.log('story objects in houses: ' + nStory); }
+// [inout] the rooms table's join (inbox 13:55): every room of a house furnished from docs/ROOMS.md took a row of the table or the default for its use
+{ let nSpec = 0, nDef = 0, nNone = 0; for (const id in World.houses) { const P = World.houses[id].plan; if (!P || !P.roomJoin) continue; for (const rid in P.rooms) { if (P.rooms[rid].kind === 'yard') continue; const j = P.roomJoin[rid]; if (!j || !j.length) { nNone++; bad.push(id + ': room ' + rid + ' has neither a row of the rooms table nor a default for its use'); } else if (j.some(x => x.startsWith('spec:'))) nSpec++; else nDef++; } }
+  console.log('rooms from the table ' + nSpec + ', by their use ' + nDef + ', with nothing ' + nNone); }
 if (bad.length) throw new Error(bad.length + ' interior problems:\n' + bad.join('\n'));
 return 'interiors ok: ' + rows.length + ' buildings';
