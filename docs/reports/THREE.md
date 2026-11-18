@@ -2,6 +2,34 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (11:30): 284bc3a merged; the six pictures; AL4/AL5; ways at 6
+
+**Hashes:** 826685a (origin/threejs 284bc3a merged; `--quick` passed here, 19 steps; pushed, its gate runs on the push),
+then a78a3ce (cloth) and e618ce4 (under-stair cupboard, pictures), pushed with this report.
+
+- **Ways across furniture: 6** (limit 10) after the merge, with the stack fix of 2f023fd. Left: the store's upper stack, the
+  draper's dye tub, shop.s2's bench, a bed in in.33, a table in in.40, a chest in in.82.
+- **AL4, the draper's cloth:** a bolt is now cloth wound on a board: a roll that swells a little, its ends showing the wound
+  layers and the board's edge, a loose end hanging down one side (the old tube was open at one end). Folded cloth has a rounded
+  fold at the front and a crease under the next piece. `docs/proof/inout/arm/draper_bolts.png`.
+- **AL5, the chapel:** the hangings (`PD.tapestry`, used in every house) were a flat box; now cloth hung from an iron rod with
+  finials, in pleats that catch the light, with a stitched hem and loops over the rod. The north wall's "flat olive plank wall"
+  is the chapel's street door leaf seen from inside (`docs/proof/inout/arm/chapel_wall_n.png`): pale, olive and flat; the door
+  leaf is not drawn in my files (the cell's door). I did not find an ochre strip on the south wall besides the hangings; if it
+  is something else, a position would help. `geom` ratchet: kitSheets 878 -> 842, accepted.
+- **The six pictures, from the door at eye height, noon, beside Build 85** (`docs/proof/inout/rooms/<id>_now.png` and
+  `<id>_b85.png`; villagers standing within 2.6 m of the camera moved out of the way): poor in.13, in.90; middling in.02, in.12;
+  well-off in.33, shop.s1. **They do not flatter the refit, and you should see that before merging.** Build 85's rooms were 2 to
+  6 times their shells and filled densely; the refitted ones are the shell's size (1.5 times at most), and in the compact plan
+  the stair runs along the partition straight across from the front door, so in in.12, in.13 and in.33 the first thing seen is
+  the side of the stair at 1 to 3 m. I gave that side an under-stair cupboard (ledged door, strap hinges, latch) and, where the
+  stair is high enough, a peg rail (e618ce4); it reads as built, not as a bare board wall, but the view into the room is still
+  short. shop.s1 in Build 85 was a long room of book shelves; now it is a smaller hall with a table, stools, a candle stand and
+  the fire. My recommendation: merge for inside = outside and the furnishing, and let me next (a) turn the stair along the side
+  wall in houses deep enough for it (front room 4.5 m or more), so the door looks into the room, and (b) raise the ROOMS.md
+  furnishing where a room shows less than Build 85 did. Your call.
+- **Not verified headless:** the cloth and hangings in motion and at an angle in firelight; frame rate.
+
 ## 2026-11-18 (09:50): Build 86 merged in, run 333 green, inout 19 -> 12
 
 **Hashes:** 1115c7e (Build 86 merged into fork-inout; full gate **run 333: success**), then b7bc077 (pushed with this report; its gate runs on the push).
