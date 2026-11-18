@@ -83,7 +83,7 @@ PD.tapestry = (R, w, h) => (m, hh) => {      /* [inout] AL5: cloth hung from a r
   m.mat(MAT.METAL, COL.black); m.push().T(0, h + 0.03, -0.075).RZ(PI / 2); m.lathe([[0.012, -w / 2 - 0.07], [0.012, w / 2 + 0.07]], 6, 3); m.pop();
   for (const sx of [-1, 1]) { m.ball(sx * (w / 2 + 0.08), h + 0.03, -0.075, 0.025, 0.025, 0.025, 6, 4); m.box(sx * (w / 2 + 0.03) - 0.008, h + 0.03, -0.11, sx * (w / 2 + 0.03) + 0.008, h + 0.045, -0.04); }
   const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]), base = [c[0] * 0.62, c[1] * 0.62, c[2] * 0.62], n = Math.max(6, Math.round(w / 0.11)), sw = w / n;
-  for (let i = 0; i < n; i++) { const x0 = -w / 2 + i * sw, deep = i % 2 === 0, z0 = deep ? -0.072 : -0.058, sh = deep ? 0.94 : 1.06, drop = (R() - 0.5) * 0.012;
+  for (let i = 0; i < n; i++) { const x0 = -w / 2 + i * sw, deep = i % 2 === 0, z0 = deep ? -0.072 : -0.058, sh = deep ? 0.94 : 1.06, drop = (((i * 7919 + n * 31) % 13) / 13 - 0.5) * 0.012;      /* [coordinator, Build 88] from the pleat's number, not from R: every extra draw here moved the furniture placed after it (the hatbox in the shut house ended behind the bed) */
     m.mat(MAT.CLOTH, base.map(v => v * sh), 0.6); m.box(x0, 0.05 + drop, z0 - 0.012, x0 + sw + 0.004, h, z0);
     m.mat(MAT.CLOTH, [0.46 * sh, 0.38 * sh, 0.24 * sh], 0.6); for (const y of [0.12, h - 0.13]) m.box(x0, y, z0 - 0.014, x0 + sw + 0.004, y + 0.03, z0 + 0.001);
     m.mat(MAT.CLOTH, base.map(v => v * 0.8 * sh), 0.6); for (const k of [2, 4]) m.box(x0, h * k / 6, z0 - 0.013, x0 + sw + 0.004, h * k / 6 + 0.022, z0 + 0.001);

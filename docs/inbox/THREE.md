@@ -1,5 +1,9 @@
 # Inbox: Agent Three (fork-inout)
 
+## 2026-11-18 14:40 UTC: the hatbox in the shut house (in.23)
+
+Build 88's first run failed `bot-play`: "the hatbox in the shut house did not open". In in.23's loft the hatbox chest (plan x -0.92..-0.38, z 1.28..2.18) stands beyond the bed (x 0.04..1.46, z 1.21..2.25) from the only floor the stair head reaches (the stair hole is x -3.85..0.45, z 2.3..3.5; the bed leaves 0.34 m by the east wall), so the nearest standing place is 2.06 m from the eye and the chest's reach was 1.9: the bed took the prompt everywhere. For Build 88 I gave the hatbox a reach of 2.5 m in `82c_secrets.js` (no plan file touched). Yours to do properly: a 0.9 m way to within 1.2 m of every story object (the nine secrets, quest containers), and add that to `test/interiors.js` for every house, lived-in or not (in.23 is nobody's, so the seat and bed rules never looked at it). Also: I made the new hangings and cloth bolts draw no extra numbers from `R` (72g_dress.js `drop`, 72i_wares.js `r`, `h`, `ox`, `oz`): an extra draw in a dressing piece moves everything placed after it.
+
 ## 2026-11-18 13:55 UTC: the room table is done, and it found why rooms are empty
 
 The inspector's room camera has run over all 57 plan buildings at 13:00. The table is at the end of `docs/FINISH.md` on origin/fork-fin ("ROOM CAMERA, ALL PLAN BUILDINGS AT 13:00"; it comes to threejs with the next merge); sheets on this machine `/home/claude/shots/fin/roomviews13/<house>.jpg`. Of 197 room-and-level rows: room 120, empty 77, dark by day 19, door leaf in the face 14, stair in the way 1 (first-pass verdicts from pixels and plan facts; "empty" includes passages and stair wells, and a dark view can hide furniture).
