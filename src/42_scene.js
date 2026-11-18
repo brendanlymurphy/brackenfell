@@ -151,7 +151,7 @@ function poolUpdate(e, cur, inside) {
     let miss = false, need = 0, have = 0;
     const occ0 = !inside && SC.occ ? SC.occ : null, fresh = (occ0 ? SC.occN : -1) !== P.hidN; P.hidN = occ0 ? SC.occN : -1;       // a square counted as hidden is asked again as soon as the roofline is new: nothing in view may wait for the refill timer
     for (const g of P.groups) {
-      const it = g.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), ok = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && d - it.r > DRAW.indoor), T = P.tiles;
+      const it = g.it, d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), ok = (!it.maxDist || d <= (it.lowDist && R.qName === 'low' ? it.lowDist : it.maxDist) + it.r) && !(inside && d - it.r > DRAW.indoor), T = P.tiles;
       if (!ok || !_frHit(g.sph)) { for (let i = g.a; i < g.b; i++) { const t = T[i]; t.ok = ok; t.in = false; t.hid = false; if (t.on) { have++; if (!ok) miss = true; } } continue; }       /* out of view: nothing to ask; a square that comes back is asked afresh (hid cleared) */
       for (let i = g.a; i < g.b; i++) { const t = T[i]; if (t.hid && fresh) { const du = Math.hypot(t.u.x - SC.occAt[0], t.u.z - SC.occAt[2]); t.hid = !!occ0 && du < FARHIDE && occ0(t.u, du, 0.85); }
         t.ok = ok; t.in = _frHit(t.sph); if (t.in) { need++; if (!t.on && !t.hid) miss = true; } if (t.on) have++; }       /* t.hid: under the roofline when last asked; not a reason to refill */
@@ -242,7 +242,7 @@ function sceneUpdate(camPos, q) {
     const it = s.it;
     if (cur || it.cell) { s.mesh.visible = !!cur && it.cell === cur.id; if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow; continue; }
     const d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
-    s.mesh.visible = (!it.maxDist || d <= it.maxDist + it.r) && !(inside && far > ind);
+    s.mesh.visible = (!it.maxDist || d <= (it.lowDist && R.qName === 'low' ? it.lowDist : it.maxDist) + it.r) && !(inside && far > ind);
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast) && !(s.farCapable && q.nearStatics === false);
     // generated village props (fences, walls, wells ...) cast into the wide sun-shadow map only on tiers that have q.farStatics; the near map always gets them
