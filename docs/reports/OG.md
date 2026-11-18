@@ -2,6 +2,52 @@
 
 Newest first. Times UTC.
 
+## 2026-11-18, the 06:20 inbox
+
+Merged `origin/threejs` (Build 84). Conflicts: `tools/gate_budget.json` (took yours, then re-accepted) and the Hart's bar in `72e_plans.js`
+(we both fixed the missing counter; I took the inspector's version).
+
+**1. The Hart door is one mechanism.** `94e_hartdoor.js` places the brick, the doorway, both portals and the landing from `World.hartWall`
+when it exists (its `inW` point gives the inward direction), from the plan otherwise. Checked in the page: source `hartWall`, one
+`sec.wall`, one `door.tunnel.in`, one `door.tunnel.out`. `hartdoor` passes.
+
+**2. Pointers (POINTERS.md), all in `src/94f_pointers.js` plus small marked lines, gate step `pointers` (quick):**
+- In the chapel the crypt quest's mark points at the sacristy chest, the crypt gate and the reliquary in turn (main stage 2 too, by what
+  you hold); it pointed at the chapel door.
+- Stages 8 and 9: out of doors, at the Hart (the way in), or at the cave's cleft once the tunnel has been walked; in the Hart, at the stair
+  head then the brick. They pointed 1.1 km SSE.
+- The Hart's back door ("Go in by the kitchen door", into the kitchen) and cellar hatch ("Go down the cellar hatch", to the cellar, barred
+  22 to 6) work. Back door at (3.0, 0.1, −27.8), hatch at (−1.5, 1.1, −28.4). Both give their prompt to a player who walks up and looks.
+- Boat-house doors: "Knock on the boat-house door"; nobody answers, the keys are with Old Wenn (as the board says, and as Wenn and Joyce now
+  say in the cast). Not a way in: they stay shut.
+- Tobin's note says east of the plaque (it is a written note, not recorded); the stone is 4.5 m east.
+- Wren's frostcap (recorded line "forest edge, north-west of the gate") moved from (−57, −47) to (−70.3, −17.5): outside the west gate,
+  north-west of it.
+- The Hidden Yard: still not built (no lane has that role). Until it is, the Magpie's message reads "She went to ground behind the
+  Cutler's House" and the sack's prompt "Look in the grass by the fence" (there is no well there; I looked). When `hiddenyard` exists the
+  old text comes back.
+- Not done from POINTERS.md (not in your list): the compass inside the Hart being turned 180 degrees, "the weavers' lane", the rusted cellar
+  key, the loft key under the pot, Emmet's ledger and pay roll, the burial stone, the signposts, Maren's directions.
+
+**3. The tour:** who is in each building now (whole-day probe):
+| | 10:30 | 12:18 | 15:18 | 20:12 |
+|---|---|---|---|---|
+| The Hart | Greta | Greta + 5 diners | Greta | 15 |
+| Chapel | Aldous, Felice | Aldous | Aldous, Idony | Aldous |
+| Mill | (Osric at the door) | Osric | Osric | Osric |
+| Guardhouse | Ivo asleep | Ivo at dinner | (both out) | Ivo at supper |
+| Baker's | Godwin asleep | Godwin asleep | Godwin asleep | Godwin, Avice, Tilly |
+| Quill's | Marta | Marta | Marta | Marta |
+Godwin now bakes from 01:00 and sleeps 09:42 to 15:36. Hale keeps the gate till 20:24 while Ivo eats. Scene 9 moved to Ivo's supper in the
+guardhouse at 19:30 (it clashed with scene 10).
+
+**4. `planNav`:** give it to the inspector. Fine by me.
+
+**Found on the way:** after Build 84's plans the cooper's has fewer seats than people and two Byrds sat on one seat (that is your `apart`
+failure on `threejs` 2cc9ae6). Now one seat each, the rest stand by the hearth. `threejs` 2cc9ae6 also fails `interact` (the moved bar
+hides the witness; fixed in my `test/interact.js`), `npcsep` (passes here), `stairs` (one walk of 1,486: the Hart's cellar stair at half
+stick, from (266.2, −399.7, −0.5); geometry, the inspector's; also red here) and the bot's "hatbox in the shut house" (not yet looked at).
+
 ## 2026-11-18, the 05:00 inbox and item 5
 
 Decision taken without an answer (easiest to undo): when `World.hartWall` (fork-fin) arrives, my `94e_hartdoor.js` moves nothing and

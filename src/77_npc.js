@@ -2,7 +2,7 @@
 // schedule rows: [fromHour, spot, animation]   (wander: list of spots visited in turn)
 const NPC_DEFS = [
   { id: 'hale', name: 'Warden Hale', skin: 'tan', hair: 'brown', beard: 1, hat: 'helmet', top: [0.42, 0.40, 0.38], apron: [0.55, 0.15, 0.13], legs: [0.25, 0.22, 0.2], prop: 'spear', sword: true, build: 1.08,
-    sched: [[6, 'gate.post', 'guard'], [19.5, 'inn.s5', 'sit'], [22.5, 'guardhouse.bed', 'lie']] },
+    sched: [[6, 'gate.post', 'guard'], [20.4, 'inn.s5', 'sit'], [22.5, 'guardhouse.bed', 'lie']] },       // [cast] he keeps the gate until Ivo has had his supper (the guardhouse stood empty at eight)
   { id: 'greta', name: 'Greta Barleybrook', skin: 'rosy', hair: 'auburn', hairStyle: 'bun', dress: true, top: [0.34, 0.46, 0.30], apron: COL.linen, build: 1.1, shortSleeves: true,
     sched: [[5.5, 'inn.work', 'work'], [7.5, 'inn.bar', 'idle'], [14.2, 'inn.cellar0', 'work'], [15, 'inn.bar', 'idle'], [23.5, 'inn.bed2', 'lie']] },       // [logic] the kitchen before opening, the cellar in the slack of the afternoon, the bar the rest of the day
   { id: 'brandt', name: 'Brandt Ironhand', skin: 'tan', hair: 'black', hairStyle: 'bald', beard: 1, top: [0.36, 0.30, 0.27], apron: [0.36, 0.22, 0.13], legs: [0.28, 0.24, 0.2], build: 1.18, shortSleeves: true, prop: 'hammer',
@@ -10,13 +10,13 @@ const NPC_DEFS = [
   { id: 'tobin', name: 'Tobin', scale: 0.74, skin: 'fair', hair: 'blond', top: [0.55, 0.45, 0.25], legs: [0.3, 0.25, 0.2], run: true,
     sched: [[7, ['square.bench2', 'stallfront0', 'alley.stall1', 'smithy.forge', 'alley.n', 'stallfront1', 'gate.post2', 'alley.s', 'square.bench2'], 'idle'], [19.5, 'smithy.sit', 'sit'], [21.5, 'smithy.bed2', 'lie']] },       // [cast] his own bed in the forge loft (he stood by the door all night)
   { id: 'marta', name: 'Marta Quill', skin: 'brown', hair: 'black', hairStyle: 'braid', dress: true, top: [0.52, 0.20, 0.30], hat: 'kerchief', hatCol: [0.9, 0.82, 0.6], belt: [0.7, 0.55, 0.2],
-    sched: [[6.4, 'store.cellar0', 'work'], [7.5, 'store.counter', 'idle'], [20, 'inn.s3', 'sit'], [22, 'store.bed', 'lie']] },       // [logic] stock from the cellar before opening
+    sched: [[6.4, 'store.cellar0', 'work'], [7.5, 'store.counter', 'idle'], [18.2, 'store.home', 'idle'], [20.6, 'inn.s3', 'sit'], [22.2, 'store.bed', 'lie']] },       /* [cast] the shop shut, she is at home until her hour at the Hart (the tour found Quill's empty at eight) */       // [logic] stock from the cellar before opening
   { id: 'aldous', name: 'Brother Aldous', skin: 'fair', hair: 'grey', hairStyle: 'bald', dress: true, top: [0.80, 0.76, 0.64], belt: [0.45, 0.3, 0.2], cloakBack: true, cloak: [0.42, 0.30, 0.22], hat: 'hood',
     sched: [[5, 'chapel.altar', 'pray'], [9, 'chapel.nave', 'idle'], [12, 'chapel.altar', 'pray'], [14, 'chapel.nave', 'idle'], [18, 'chapel.altar', 'pray'], [21, 'chapel.bed', 'lie']] },       // [cast] a cot in the sacristy: he prayed round the clock
   { id: 'maren', name: 'Old Maren', skin: 'fair', hair: 'white', dress: true, top: [0.36, 0.30, 0.42], hat: 'hood', cloak: [0.28, 0.38, 0.28], cloakBack: true, scale: 0.93,
     sched: [[7, 'herbalist.garden', 'work'], [12, 'herbalist.sit', 'sit'], [14, 'herbalist.garden', 'work'], [18.5, 'herbalist.sit', 'sit'], [21, 'herbalist.bed', 'lie']] },
   { id: 'osric', name: 'Osric Dunn', skin: 'fair', hair: 'brown', beard: 1, hat: 'cap', hatCol: [0.9, 0.88, 0.8], top: [0.84, 0.81, 0.74], apron: [0.92, 0.9, 0.84], legs: [0.5, 0.45, 0.38], build: 1.15,
-    sched: [[6, 'mill.work', 'work'], [10, 'mill.door', 'idle'], [13, 'mill.work', 'work'], [19, 'inn.s2', 'sit'], [22, 'mill.bed', 'lie']] },
+    sched: [[6, 'mill.work', 'work'], [10, 'mill.door', 'idle'], [12, 'mill.sit', 'sit'], [13, 'mill.work', 'work'], [18.6, 'mill.sit', 'sit'], [20.4, 'inn.s2', 'sit'], [22.3, 'mill.bed', 'lie']] },       // [cast] the tour found the mill empty at noon and at eight: he eats at home, and comes to the Hart after supper
   { id: 'edda', name: 'Edda Fairweather', skin: 'tan', hair: 'blond', hairStyle: 'braid', hat: 'straw', dress: true, top: [0.56, 0.44, 0.24], apron: [0.36, 0.46, 0.58], shortSleeves: true,
     sched: [[6, 'farm.field', 'work'], [10, 'farm.yard', 'idle'], [12, 'farm.field2', 'work'], [17, 'farm.yard', 'sweep'], [19.5, 'farm.sit', 'sit'], [21.5, 'farm.bed', 'lie']], prop: null },
   { id: 'finn', name: 'Finn Reedwater', skin: 'tan', hair: 'grey', beard: 1, hat: 'cap', hatCol: [0.24, 0.36, 0.5], top: [0.30, 0.42, 0.50], legs: [0.3, 0.28, 0.24], prop: 'rod',
@@ -30,7 +30,7 @@ const NPC_DEFS = [
   { id: 'pip', name: 'Pip', scale: 0.66, skin: 'rosy', hair: 'brown', hairStyle: 'braid', dress: true, top: [0.72, 0.36, 0.30], run: true,
     sched: [[7.5, ['stallfront2', 'square.well', 'alley.stall0', 'stallfront1', 'alley.n', 'square.bench2', 'stallfront0', 'alley.s', 'square.well'], 'idle'], [19, 'weaver.home', 'idle'], [20.5, 'weaver.bed2', 'lie']] },
   { id: 'ivo', name: 'Guardsman Ivo', skin: 'deep', hair: 'black', hat: 'helmet', top: [0.42, 0.40, 0.38], apron: [0.2, 0.3, 0.5], legs: [0.25, 0.22, 0.2], prop: 'spear', sword: true,
-    sched: [[6.3, 'guardhouse.bed2', 'lie'], [13.5, ['gate.post2', 'square.well', 'bridge.west', 'square.well'], 'guard'], [19.3, 'gate.post', 'guard']] },       // [logic] the night watch: he takes the gate when Hale goes to the Hart, keeps it till Hale is back at six, and sleeps the morning (he never slept, and the gate stood empty from half past seven)
+    sched: [[6.3, 'guardhouse.bed2', 'lie'], [11.8, 'guardhouse.sit', 'sit'], [13.5, ['gate.post2', 'square.well', 'bridge.west', 'square.well'], 'guard'], [19.0, 'guardhouse.sit', 'sit'], [20.3, 'gate.post', 'guard']] },       // [cast] up for his dinner at noon and his supper in the guardhouse before the night watch (the tour: asleep at noon, the guardhouse empty at eight)       // [logic] the night watch: he takes the gate when Hale goes to the Hart, keeps it till Hale is back at six, and sleeps the morning (he never slept, and the gate stood empty from half past seven)
   { id: 'hilda', name: 'Hilda Weaver', skin: 'rosy', hair: 'brown', hairStyle: 'bun', dress: true, top: [0.26, 0.38, 0.60], apron: [0.9, 0.86, 0.76],
     sched: [[8, 'weaver.work', 'work'], [12.5, 'alley.stall0', 'idle'], [14, 'weaver.work', 'work'], [18.5, 'weaver.home', 'idle'],       /* [cast] at her own loom: Sabina Lindqvist keeps the draper's counter */ [20, 'weaver.sit', 'sit'], [21.5, 'weaver.bed', 'lie']] },
   { id: 'bram', name: 'Bram', skin: 'tan', hair: 'auburn', hat: 'straw', top: [0.5, 0.52, 0.34], legs: [0.36, 0.3, 0.22], shortSleeves: true,

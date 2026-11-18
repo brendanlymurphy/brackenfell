@@ -2,8 +2,8 @@
 // [cast] Two real people of the town, at a fixed place and hour, say a few lines to one another; you hear it if you are near, as notices ('<b>Avice</b>: “...”'),
 // the way the night meeting behind the chapel is heard (88d_voice.js plays a recording when there is one). Nothing is spawned: the two are there because their
 // own days bring them there (77e_households.js: the well at dawn, a call paid at a set hour, supper, the Hart). Each scene once a day. Not played, and why:
-// 7 (Hugh and Hale at the butts) has no place: there are no butts in the town yet. 9 is at the gate, not in the Hart: Ivo has the night watch at that hour.
-const SCENES = { at: { 1: 7.1, 2: 7.75, 3: 9.0, 4: 10.0, 5: 11.0, 6: 12.0, 8: 19.5, 9: 20.0, 10: 20.5, 11: 18.25, 12: 15.0 }, when: { 11: () => !!S.flags.sawBody }, far: { 3: 9, 4: 9, 6: 9, 10: 14, 12: 9 }, cur: null, t: 0, acc: 0 };
+// 7 (Hugh and Hale at the butts) has no place: there are no butts in the town yet. 9 is in the guardhouse at Ivo's supper, before his night watch.
+const SCENES = { at: { 1: 7.1, 2: 7.75, 3: 9.0, 4: 10.0, 5: 11.0, 6: 12.0, 8: 19.5, 9: 19.5, 10: 20.5, 11: 18.25, 12: 15.0 }, when: { 11: () => !!S.flags.sawBody }, far: { 3: 9, 4: 9, 6: 9, 10: 14, 12: 9 }, cur: null, t: 0, acc: 0 };
 SCENES.id = nm => { const w = nm.split(' '); return (w[0] === 'Old' ? w[1] : w[0]).toLowerCase(); };
 SCENES.tick = function (dt) {
   if (!game.playing || UI.talk || typeof NPC === 'undefined') return; const sc = SCENES;
