@@ -4,6 +4,21 @@ Newest first. Times UTC.
 
 ## 2026-11-18, the 07:10 inbox (fork-integ)
 
+**GitHub:** `5e74547` red on `stairs` only (all other steps green); `cd42e2c` and `2f57662` in the gate as I write. The `stairs` failure is
+the single walk "inn.cellar down stick-half from (266.2, −399.7, −0.5)": a start point 3.2 m from the cellar stair's head that falls between
+the Hart's counter (the interiors session's `dressInn`, counter at x 265.1, z −1.75 to 2.05) and the east wall, where the walk snags at
+once. It came with the merge of `threejs`; on this branch before the merge it passed. For the interiors session (or the test: a start
+point behind a counter is not a place a player comes down a stair from).
+
+**Also changed since the last entry:** three cast lines that pointed at nothing (Emmet's ledger and pay roll, Ellen's "Humphrey's stall"),
+none recorded (`2f57662`).
+
+**Not mine, from POINTERS.md, needs a decision:** inside a building the compass uses the building's own frame; the Hart's site is turned
+180 degrees, so inside it the compass reads south as you walk in northwards. Rowan's recorded "the east cellar wall" and Odo's "east wall"
+are east only on that turned compass: the brick (on the plan's +x wall) faces true west. Either the compass stays as it is (my reading,
+easiest to undo, nothing changed), or it is set to true directions and the brick moves to the plan's −x wall (then the inspector's recess
+moves too).
+
 I checked out `fork-integ` (7b637a0) in a scratch worktree and ran the three failing steps there, with my files copied in. Nothing pushed
 to it.
 
