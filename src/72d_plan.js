@@ -70,7 +70,7 @@ function pLayout(P) {
     const face = wl => wl.ax === 'x' ? (wl.ns < 0 ? 'front' : 'back') : (wl.ns < 0 ? 'left' : 'right');
     const wl = P.walls.find(q => q.ext && q.k === w.k && face(q) === w.face && w.pos - 0.8 >= q.a - 1e-6 && w.pos + 0.8 <= q.b + 1e-6);
     if (!wl) { P.err.push('window ' + w.face + ' L' + w.k + ' at ' + w.pos + ' is on no outside wall'); continue; }
-    if (wl.open.some(o => Math.abs(o.pos - w.pos) < o.hw + 0.95)) { (P.winClash = P.winClash || []).push(w); continue; }      /* two openings the shell draws too close to stand at both: one inside, the clash reported (test/inout.js) */
+    if (wl.open.some(o => Math.abs(o.pos - w.pos) < o.hw + 0.95)) { let np = null; for (const dp of [0.25, -0.25, 0.5, -0.5, 0.6, -0.6]) { const q = w.pos + dp; if (q - 0.8 >= wl.a - 1e-6 && q + 0.8 <= wl.b + 1e-6 && !wl.open.some(o => Math.abs(o.pos - q) < o.hw + 0.95)) { np = q; break; } } if (np === null) { (P.winClash = P.winClash || []).push(w); continue; } w.pos = np; }      /* [inout] two windows the shell draws close: the second moves along the wall up to 0.6 m (the outside draws them 1.5 m apart, the plan needs 1.75) */      /* two openings the shell draws too close to stand at both: one inside, the clash reported (test/inout.js) */
     const room = [...wl.rooms].map(id => P.rooms[id]).find(r => wl.ax === 'x' ? w.pos >= r.x0 && w.pos <= r.x1 : w.pos >= r.z0 && w.pos <= r.z1);
     const gl = room && room.glass ? room.glass[P.windows.length % room.glass.length] : null; wl.open.push({ type: 'win', pos: w.pos, hw: 0.8, kind: w.kind || 'Wide_Flat', glass: gl }); P.windows.push({ wall: wl, pos: w.pos, kind: w.kind || 'Wide_Flat', k: wl.k, room });
   }
@@ -666,17 +666,19 @@ const SHELL_REC = {};
 let SHELL_CUR = null; const SHELL_GEN = {};      /* [inout] the openings a generated wall (73d_infill.js infWalls) was built from, by house */
 // every window, door, balcony and floor piece placed out of doors, wherever it is drawn (the alley's facades are drawn by 73b_alley.js, not by kitShell)
 const SHELL_ALL = [];
-if (typeof Kit !== 'undefined' && Kit.batch && !Kit.batch.__inoutAll) { const kb0 = Kit.batch; Kit.batch = function (o) { const B = kb0.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_WoodDark_Half/.test(name)) SHELL_ALL.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; }; Kit.batch.__inoutAll = 1; }
+if (typeof Kit !== 'undefined' && Kit.batch && !Kit.batch.__inoutAll) { const kb0 = Kit.batch; Kit.batch = function (o) { const B = kb0.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_WoodDark_Half|^gen_(dress|dormer|cross|fbox)_/.test(name)) SHELL_ALL.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; }; Kit.batch.__inoutAll = 1; }
 function shellOpenings(c) {
   { const A = typeof ALLEY_SHOPS !== 'undefined' && ALLEY_SHOPS.find(q => q.id === c.site.id && q.layout); if (A) return alleyOpenings(A, c); }
   let rec = SHELL_REC[c.site.id] || [];      /* (a footprint search over every placed piece caught the next house's windows: the alley, which needed it, has its own rule) */
   if (false && !rec.some(r => !/^gen_/.test(r.name))) { const st = c.xsite || c.site, hw = c.w / 2 + 1.3, hd = c.d / 2 + 1.3; rec = rec.concat(SHELL_ALL.filter(r => { const e = r.M.elements, l = worldToSite(st, e[12], e[14]); return Math.abs(l[0]) < hw && Math.abs(l[1]) < hd && Math.abs(e[13] - (c.xFloorY !== undefined ? c.xFloorY : st.y || 0)) < 14; })); }
   const inv = new THREE.Matrix4().fromArray(c.Mx).invert(), v = new THREE.Vector3(), w = c.w, d = c.d, H = c.H, raw = [];
   const glass = [];      /* windows drawn in generated pieces (an end wall's face, a dormer, a gable): each upright glass quad, as a box */
-  for (const r of rec) { if (!/^gen_/.test(r.name)) continue; const p = Kit.pieces[r.name]; if (!p) continue;
+  const Mw = new THREE.Matrix4().fromArray(c.Mx), cw = new THREE.Vector3(0, 0, 0).applyMatrix4(Mw), mine = new Set(rec);
+  const genAll = rec.filter(r => /^gen_/.test(r.name)).concat(SHELL_ALL.filter(r => /^gen_/.test(r.name) && !mine.has(r) && Math.hypot(r.M.elements[12] - cw.x, r.M.elements[14] - cw.z) < 40).map(r => Object.assign({ far: true }, r)));      /* [inout] windows given to blank walls after the shell was laid (Build 86): read off every generated piece, kept when on this house's own walls */
+  for (const r of genAll) { const p = Kit.pieces[r.name]; if (!p) continue;
     for (const q of p.prims) { if (!/Glass/.test(q.mat && (q.mat.name || q.mat))) continue; const ps = q.pos, ix = q.idx; if (!ps || !ix) continue;
       for (let i = 0; i + 5 < ix.length; i += 6) { let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9]; for (const vi of [ix[i], ix[i + 1], ix[i + 2], ix[i + 5]]) { v.set(ps[vi * 3], ps[vi * 3 + 1], ps[vi * 3 + 2]).applyMatrix4(r.M).applyMatrix4(inv); mn = [Math.min(mn[0], v.x), Math.min(mn[1], v.y), Math.min(mn[2], v.z)]; mx = [Math.max(mx[0], v.x), Math.max(mx[1], v.y), Math.max(mx[2], v.z)]; }
-        if (mx[1] - mn[1] > 0.3) glass.push({ name: 'Window_gen', mn, mx }); } } }
+        if (mx[1] - mn[1] > 0.3 && (!r.far || (Math.abs((mn[0] + mx[0]) / 2) < w / 2 + 0.35 && Math.abs((mn[2] + mx[2]) / 2) < d / 2 + 0.35 && Math.min(Math.abs(Math.abs((mn[0] + mx[0]) / 2) - w / 2), Math.abs(Math.abs((mn[2] + mx[2]) / 2) - d / 2)) < 0.35 && (mn[1] + mx[1]) / 2 > -0.5 && (mn[1] + mx[1]) / 2 < H + 9))) glass.push({ name: 'Window_gen', mn, mx }); } } }
   for (const r of rec.filter(q => !/^gen_/.test(q.name)).concat(glass)) {
     const p = r.mn ? { min: [0, 0, 0], max: [0, 0, 0] } : Kit.pieces[r.name]; if (!p) continue; let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
     if (r.mn) { mn = r.mn; mx = r.mx; } else for (let i = 0; i < 8; i++) { v.set(i & 1 ? p.max[0] : p.min[0], i & 2 ? p.max[1] : p.min[1], i & 4 ? p.max[2] : p.min[2]).applyMatrix4(r.M).applyMatrix4(inv); mn = [Math.min(mn[0], v.x), Math.min(mn[1], v.y), Math.min(mn[2], v.z)]; mx = [Math.max(mx[0], v.x), Math.max(mx[1], v.y), Math.max(mx[2], v.z)]; }
@@ -700,7 +702,8 @@ function shellOpenings(c) {
 function pShellWins(P, c, box, keep) {
   const sx = (box.x1 - box.x0) / c.w, sz = (box.z1 - box.z0) / c.d, cx = (box.x0 + box.x1) / 2; P.wins = []; P.shell = { box, sx, sz, cx, list: shellOpenings(c) };
   P.shell.pos = f => f.wall === 'front' || f.wall === 'back' ? cx + f.u * sx : box.z0 + f.u * sz;
-  for (const f of P.shell.list) { if (f.kind !== 'win' || !P.lv[f.lv]) continue; if (f.blocked) { (P.blockedWins = P.blockedWins || []).push(f); continue; } let pos = Math.round(P.shell.pos(f) * 4) / 4; pos = pWinSnap(P, f, pos); if (keep) { const r = keep(f, pos); if (r === false) continue; if (typeof r === 'number') pos = r; } P.wins.push({ k: f.lv, face: f.wall, pos, kind: f.win }); }
+  const turn = pShellTurn(P, c, box);      /* [inout] a plan turned against its shell (the mill: its door on the shell's side wall) */
+  for (const f0 of P.shell.list) { if (f0.kind !== 'win' || !P.lv[f0.lv]) continue; if (f0.blocked) { (P.blockedWins = P.blockedWins || []).push(f0); continue; } const f = turn ? turn(f0) : f0; let pos = Math.round((turn ? f.pos : P.shell.pos(f)) * 4) / 4; pos = pWinSnap(P, f, pos); if (keep) { const r = keep(f, pos); if (r === false) continue; if (typeof r === 'number') pos = r; } P.wins.push({ k: f.lv, face: f.wall, pos, kind: f.win }); }
   return P.shell;
 }
 // An upper door the shell shows (f, from shellOpenings) becomes a door of the room behind it: call before pLayout. pBalconies() after it makes the way through: the
@@ -751,6 +754,17 @@ function pPiece(P, room, name, o) {
   return r;
 }
 // [inout] a window keeps clear of the room's corners and of a partition that meets the outside wall: moved along the wall into the room it falls in, at most 1 m
+// [inout] when the plan's front is not the shell's front: returns f -> { ...f, wall (the plan's face), pos (along the plan's wall, scaled onto box) }, else null
+function pShellTurn(P, c, box) {
+  if (!P.w2 || !c.Ms) return null; const iM = new THREE.Matrix4().fromArray(c.Ms).invert(), g = (x, z) => { const w = P.w2(x, 0, z), v = new THREE.Vector3(w[0], w[1], w[2]).applyMatrix4(iM); return [v.x, v.z]; };
+  const O = g(0, 0), X = g(1, 0).map((v, i) => v - O[i]), Z = g(0, 1).map((v, i) => v - O[i]); if (Math.abs(X[0]) > 0.7) return null;
+  const toP = (sx, sz) => [(sx - O[0]) * X[0] + (sz - O[1]) * X[1], (sx - O[0]) * Z[0] + (sz - O[1]) * Z[1]], w = c.w, d = c.d;
+  const cs = [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2]].map(q => toP(q[0], q[1])), px0 = Math.min(...cs.map(q => q[0])), px1 = Math.max(...cs.map(q => q[0])), pz0 = Math.min(...cs.map(q => q[1])), pz1 = Math.max(...cs.map(q => q[1]));
+  return f => { const fb = f.wall === 'front' || f.wall === 'back', s = fb ? [f.u, (f.wall === 'front' ? -1 : 1) * d / 2] : [(f.wall === 'left' ? -1 : 1) * w / 2, f.u - d / 2], p = toP(s[0], s[1]);
+    const n = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] }[f.wall], nx = n[0] * X[0] + n[1] * X[1], nz = n[0] * Z[0] + n[1] * Z[1], wall = Math.abs(nx) > Math.abs(nz) ? (nx < 0 ? 'left' : 'right') : (nz < 0 ? 'front' : 'back');
+    const pfb = wall === 'front' || wall === 'back', pos = pfb ? box.x0 + (p[0] - px0) / (px1 - px0) * (box.x1 - box.x0) : box.z0 + (p[1] - pz0) / (pz1 - pz0) * (box.z1 - box.z0);
+    return Object.assign({}, f, { wall, pos }); };
+}
 function pWinSnap(P, f, pos) {
   const fb = f.wall === 'front' || f.wall === 'back', rs = Object.values(P.rooms).filter(r => r.k === f.lv && (fb ? (f.wall === 'front' ? Math.abs(r.z0 - P.shell.box.z0) < 0.6 : Math.abs(r.z1 - P.shell.box.z1) < 0.6) : (f.wall === 'left' ? Math.abs(r.x0 - P.shell.box.x0) < 0.6 : Math.abs(r.x1 - P.shell.box.x1) < 0.6)));
   const lo = r => fb ? r.x0 : r.z0, hi = r => fb ? r.x1 : r.z1, r = rs.find(q => pos >= lo(q) && pos <= hi(q)) || rs.sort((a, b) => Math.min(Math.abs(pos - lo(a)), Math.abs(pos - hi(a))) - Math.min(Math.abs(pos - lo(b)), Math.abs(pos - hi(b))))[0]; if (!r) return pos;
