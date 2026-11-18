@@ -17,10 +17,11 @@ const check = (H, tag) => { out.checked++; const m = H.meshes[0], g = m.geometry
   if (neutral || far || long) out.fail.push(tag + ': ' + neutral + ' unweighted, ' + far + ' vertices over 0.6 m from any joint, ' + long + ' triangles with an edge over 0.9 m'); };
 // 1. every body in everything it carries
 const wears0 = cfg.wears; 
-for (const body of Object.keys(Chars.set.bodies)) { if (/^o_/.test(body)) continue; cfg.wears = (look, part) => !/^w_hat_/.test(part) || /cap|kerchief/.test(part);
-  const H = Chars.spawn({ id: 'garb.' + body, body, house: 1, sched: [] }); cfg.wears = wears0; for (const k in POSES) { pose(H, k); check(H, body + ' all pieces ' + k); } Chars.remove(H); }
+for (const body of Object.keys(Chars.set.bodies)) { if (/^o_/.test(body)) continue; const hats = Object.keys(Chars.set.bodies[body].parts).filter(p => /^w_hat_/.test(p) && !/_cape$/.test(p)).map(p => p.slice(6)); if (!hats.length) hats.push('');
+  for (const hat of hats) { cfg.wears = (look, part) => !/^w_hat_/.test(part) || part.replace(/_cape$/, '') === 'w_hat_' + hat;
+    const H = Chars.spawn({ id: 'garb.' + body, body, house: 1, sched: [] }); cfg.wears = wears0; for (const k in POSES) { pose(H, k); check(H, body + ' all pieces, hat ' + hat + ', ' + k); } Chars.remove(H); } }
 // 2. the people as dressed: nobody unweighted, and how many wear the cloak
-for (const def of NPC_DEFS) { const L = cfg.look(def); if (def.house) out.housed++; if (L.wear && L.wear.cloak) { out.cloaked++; (out.cloakIds = out.cloakIds || []).push(def.id + ':' + L.body); } }
+for (const def of NPC_DEFS) { const L = cfg.look(def); if (def.house) out.housed++; if (L.wear && L.wear.hat === 'hood') out.hooded = (out.hooded || 0) + 1; if (L.wear && L.wear.cloak) { out.cloaked++; (out.cloakIds = out.cloakIds || []).push(def.id + ':' + L.body); } }
 // 3. pictures
 const ids = String((window.__TEST__ || {}).pics || '').split(',').filter(Boolean);
 for (const id of ids) { const n = NPCS.find(p => p.id === id); if (!n) { out.fail.push(id + ': no such villager'); continue; } const H = Chars.spawn(n.def);

@@ -53,8 +53,8 @@ for (const file of process.argv.slice(2)) {
     setW(x, W); log.push(x.name + ' unweighted ' + bad.length); }
 
   // ── 2. the cloak ──
-  const cloaks = prims.filter(x => /^w_cloak(@|$)/.test(x.name));
-  if (cloaks.length && bone.neck_01 && bone.pelvis && bone.calf_l) {
+  const cloaks = prims.filter(x => /^w_cloak(@|$)/.test(x.name)), capes = prims.filter(x => /^w_hat_hood_cape(@|$)/.test(x.name));
+  if ((cloaks.length || capes.length) && bone.neck_01 && bone.pelvis && bone.calf_l) {
     // what is worn on the torso, full weight only: triangles that are not arm, head or hat
     const T = []; for (const x of prims) { if (/@/.test(x.name) || /^w_(cloak|hat|pouch)/.test(x.name) || /brow|low-poly|teeth|tongue/i.test(x.name)) continue; const kind = (x.p.getMaterial().getExtras() || {}).kind; if (kind === 'hair' || kind === 'eye' || kind === 'brow') continue;
       const pos = x.p.getAttribute('POSITION'), ix = x.p.getIndices().getArray(), n = pos.getCount(), P = [], W = [], arm = [];
@@ -63,7 +63,7 @@ for (const file of process.argv.slice(2)) {
     const outer = (o, d) => { let best = -1; for (const t of T) { const k = rayTri(o, d, t.a, t.b, t.c); if (k > best && k < 0.6) best = k; } return best; };
     const yTop = bone.neck_01[1] - 0.03, yHem = bone.calf_l[1] - 0.02, yHip = bone.pelvis[1], ySh = (bone.upperarm_l || bone.clavicle_l || bone.spine_03)[1], zc = bone.spine_03 ? (bone.spine_03[2] + bone.pelvis[2]) / 2 : bone.pelvis[2];
     const SKIRT = prims.some(x => x.name === 'w_kirtle') && prims.find(x => x.name === 'w_kirtle').p.getAttribute('POSITION').getMin([])[1] < bone.calf_l[1] - 0.1;      // an ankle-length kirtle
-    const PEL = J.indexOf('pelvis'), col = (() => { const c = cloaks[0].p.getAttribute('COLOR_0'); return c ? c.getElement(0, []) : [1, 1, 1, 4 / 12]; })();
+    const PEL = J.indexOf('pelvis'), col = (() => { const c = cloaks.length && cloaks[0].p.getAttribute('COLOR_0'); return c ? c.getElement(0, []) : [1, 1, 1, 4 / 12]; })();
     const build = (N, K) => { const V = [], R = [], A = [], F = [];
       for (let j = 0; j <= K; j++) { const f = j / K, y = lerp(yTop, yHem, f), span = lerp(2.05, 1.22, sm(0.04, 0.24, f)); R.push([]); A.push([]);
         for (let i = 0; i < N; i++) { const a = (i / (N - 1) * 2 - 1) * span, d = [Math.sin(a), 0, -Math.cos(a)], yr = SKIRT ? y : Math.max(y, yHip - 0.08); let r = outer([0, yr, zc], d);
@@ -90,6 +90,29 @@ for (const file of process.argv.slice(2)) {
     for (const x of cloaks) { const lv = (/@(\w+)$/.exec(x.name) || [])[1], [N, K] = !lv ? [16, 11] : lv === 'mid' ? [9, 7] : [8, 6], g = build(N, K), buf = x.p.getAttribute('POSITION').getBuffer(), n = g.V.length;
       const cA = x.p.getAttribute('COLOR_0'), cb = new Uint8Array(n * 4); for (let i = 0; i < n; i++) { const hem = Math.floor(i / N) === K || i % N === 0 || i % N === N - 1; cb[i * 4] = 235; cb[i * 4 + 1] = Math.round(255 * (1 - 0.35 * sm(0.55, 1, Math.floor(i / N) / K))); cb[i * 4 + 2] = hem ? 255 : 0; cb[i * 4 + 3] = Math.round(col[3] * 255); }      // R occlusion, G cleaner at the top than the hem, B the trim band on the open edges, A the colour slot
       for (const s of x.p.listSemantics()) if (!/^(POSITION|NORMAL|JOINTS_0|WEIGHTS_0|COLOR_0)$/.test(s)) x.p.setAttribute(s, null);
+      x.p.setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(g.V.flat())).setBuffer(buf));
+      x.p.setAttribute('NORMAL', doc.createAccessor().setType('VEC3').setArray(Int8Array.from(g.Nn.flat().map(v => Math.round(v * 127)))).setNormalized(true).setBuffer(buf));
+      if (cA) x.p.setAttribute('COLOR_0', doc.createAccessor().setType('VEC4').setArray(cb).setNormalized(true).setBuffer(buf));
+      x.p.setIndices(doc.createAccessor().setType('SCALAR').setArray(Uint16Array.from(g.F)).setBuffer(buf)); setW(x, g.W); log.push(x.name + ' ' + g.F.length / 3); }
+    // The cape of the hood had the cloak's fault (fitted over the outstretched arms, 0.8 m wide, weights on the forearms: it wrapped the arms as pale rags and threw shards
+    // when they moved). Rebuilt as a short mantle: a ring from the collar over the shoulders, ending above the point of the shoulder, weights from the torso under it.
+    const shX = Math.abs((bone.upperarm_l || bone.clavicle_l)[0]);
+    const buildCape = (N, K) => { const V = [], F = [], yT = bone.neck_01[1] + 0.035, yH = ySh - 0.075, R0 = [], R1 = [];
+      for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2, d = [Math.sin(a), 0, -Math.cos(a)]; let r0 = outer([0, yT, zc], d), r1 = outer([0, yH, zc], d); if (r0 < 0) r0 = 0.07; if (r1 < 0) r1 = 0.14;
+        const ell = 1 / Math.hypot(Math.sin(a) / (shX + 0.045), Math.cos(a) / (Math.max(r1, 0.12) + 0.02)); R0.push(r0 + 0.016); R1.push(Math.max(r1 + 0.022, ell)); }
+      for (let pass = 0; pass < 2; pass++) for (const R of [R0, R1]) { const c = R.slice(); for (let i = 0; i < N; i++) R[i] = Math.max(c[i], (c[(i + N - 1) % N] + 2 * c[i] + c[(i + 1) % N]) / 4); }
+      for (let j = 0; j <= K; j++) { const f = j / K; for (let i = 0; i < N; i++) { const a = i / N * Math.PI * 2, d = [Math.sin(a), 0, -Math.cos(a)], r = lerp(R0[i], R1[i], Math.pow(f, 0.7)) + 0.006 * Math.sin(a * 7 + 1) * f;
+          V.push([d[0] * r, lerp(yT, yH, f) - 0.02 * Math.abs(Math.cos(a)) * f, zc + d[2] * r]); } }
+      for (let j = 0; j < K; j++) for (let i = 0; i < N; i++) { const a = j * N + i, b = j * N + (i + 1) % N, c = b + N, e = a + N; F.push(a, b, c, a, c, e); }
+      const W = V.map(v => { const mp = new Map(); let bd = 1e9, bt = null, bb = null; for (const t of T) { const [q, bc] = closest(v, t.a, t.b, t.c), dd = len(sub(v, q)); if (dd < bd) { bd = dd; bt = t; bb = bc; } }
+        for (let k = 0; k < 3; k++) for (const [jn, w] of bt.w[k]) { if (ARM.test(J[jn]) || LEG.test(J[jn]) || J[jn] === 'head' || J[jn] === 'neutral_bone') continue; mp.set(jn, (mp.get(jn) || 0) + w * bb[k]); }
+        if (!mp.size) mp.set(J.indexOf('spine_03'), 1); return mp; });
+      const Nn = V.map(() => [0, 0, 0]); for (let t = 0; t < F.length; t += 3) { const n = cross(sub(V[F[t + 1]], V[F[t]]), sub(V[F[t + 2]], V[F[t]])); for (const k of [F[t], F[t + 1], F[t + 2]]) { Nn[k][0] += n[0]; Nn[k][1] += n[1]; Nn[k][2] += n[2]; } }
+      let outw = 0; V.forEach((v, i) => { outw += Nn[i][0] * v[0] + Nn[i][2] * (v[2] - zc); }); const flip = outw < 0; if (flip) for (let t = 0; t < F.length; t += 3) { const q = F[t + 1]; F[t + 1] = F[t + 2]; F[t + 2] = q; }
+      Nn.forEach(n => { const l = (len(n) || 1) * (flip ? -1 : 1); n[0] /= l; n[1] /= l; n[2] /= l; }); return { V, F, W, Nn }; };
+    for (const x of capes) { const lv = (/@(\w+)$/.exec(x.name) || [])[1], [N, K] = !lv ? [16, 4] : lv === 'mid' ? [10, 3] : [8, 2], g = buildCape(N, K), buf = x.p.getAttribute('POSITION').getBuffer(), n = g.V.length;
+      const cA = x.p.getAttribute('COLOR_0'), c0 = cA ? cA.getElement(0, []) : [1, 1, 0, 1 / 12], cb = new Uint8Array(n * 4); for (let i = 0; i < n; i++) { cb[i * 4] = 235; cb[i * 4 + 1] = 235; cb[i * 4 + 2] = Math.floor(i / N) === K ? 255 : 0; cb[i * 4 + 3] = Math.round(c0[3] * 255); }
+      for (const sem of x.p.listSemantics()) if (!/^(POSITION|NORMAL|JOINTS_0|WEIGHTS_0|COLOR_0)$/.test(sem)) x.p.setAttribute(sem, null);
       x.p.setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(g.V.flat())).setBuffer(buf));
       x.p.setAttribute('NORMAL', doc.createAccessor().setType('VEC3').setArray(Int8Array.from(g.Nn.flat().map(v => Math.round(v * 127)))).setNormalized(true).setBuffer(buf));
       if (cA) x.p.setAttribute('COLOR_0', doc.createAccessor().setType('VEC4').setArray(cb).setNormalized(true).setBuffer(buf));
