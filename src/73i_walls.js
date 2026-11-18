@@ -32,7 +32,7 @@ function logRow(mk, A, B, topFn, inside, seed) {
 function buildWalls(bucket) {
   if (TEST && TEST.levels === 0) return;
   const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, stair, dark, wood, gy } = K;
-  K.fine = true; K.maxDist = 70; K.noShadow = true;       // the palisades and gate towers are hidden beyond 150 m (their 30 m cells)
+  K.fine = true; K.maxDist = 85; K.lowDist = 60; K.noShadow = true;       // the palisades and gate towers are hidden beyond 150 m (their 30 m cells)
   const roadAt = (id, axis, v) => { const L = INF.LN[id].p; for (let i = 0; i < L.length - 1; i++) { const a = L[i], b = L[i + 1], k = axis === 'z' ? 1 : 0, o = axis === 'z' ? 0 : 1; if ((a[k] - v) * (b[k] - v) <= 0 && a[k] !== b[k]) return a[o] + (b[o] - a[o]) * (v - a[k]) / (b[k] - a[k]); } return null; };
   // a wall run. P maps (u along, v across: 0 outside, + inside) to the world; axis 'x' or 'z' is the world axis that u runs along
   const wallRun = (id, axis, c, sgn, u0, u1, ug, o) => {

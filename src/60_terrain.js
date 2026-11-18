@@ -408,7 +408,7 @@ function buildWater() {
   const lm = new Mesh(4096); lm.mat(MAT.PLAIN, [1, 1, 1]);
   // [fx3] the lake sheet: one even 1.5 m grid (no T-junctions), a cell only where some corner is under the water, every vertex carrying its true depth. The sheet's outline is therefore made of dry vertices only, alpha 0 there,
   // and the water fades in over the first 0.35 m of depth (47_water.js): the shore is the ground's own contour, never the sheet's edge.
-  const cs = 1.5, ext = LAKE.r + 12, n = Math.ceil(2 * ext / cs), ids = new Map();
+  const cs = 2.0, ext = LAKE.r + 12, n = Math.ceil(2 * ext / cs), ids = new Map();
   const lv = (i, j) => { const key = j * 4096 + i; let v = ids.get(key); if (v !== undefined) return v; const x = LAKE.x - ext + i * cs, z = LAKE.z - ext + j * cs; lm.ao = sat((LAKE.y - Terrain.y(x, z)) / 0.9) * (hyp(x - LAKE.x, z - LAKE.z) > LAKE.r + 5.5 ? 0 : 1); v = lm.vert(x, LAKE.y, z, 0, 1, 0, 0.25, 0.1); ids.set(key, v); return v; };      // beyond the basin the sheet fades out under the river ribbon
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const x = LAKE.x - ext + i * cs, z = LAKE.z - ext + j * cs;

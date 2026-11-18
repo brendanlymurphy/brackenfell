@@ -48,6 +48,7 @@ function kitSpec(site, spec) {
   if (st.up) s.ceiling = true;
   return s;
 }
+// [fin] FACING CONVENTION: a piece's front is +z in its own frame (kit and scan alike); a placer turns +z into the room. pAgainst(..., back = -1) uses rotBack(side, -1) and does that; PD.floorAt turns by rotBack(side, +1) (-z into the room) because the built pieces (pdShelf, cupboard) are made facing -z, so a kit piece drawn through it takes ry = PI.
 const KH = (() => {
   const _p = new THREE.Vector3(), _s = new THREE.Vector3(), _q = new THREE.Quaternion(), _l = new THREE.Matrix4(), Y = new THREE.Vector3(0, 1, 0);
   const V = a => new THREE.Vector3(a[0], a[1], a[2]);
@@ -157,7 +158,7 @@ function kitShellPass(c, pass) {
       if (gw) gableFill(c, wbs[wn], L, Ytop, spec.gableWin[wn], (nm, u, v, s) => add(F, nm, u, v, 0, [s, s, 1], OUT), pass, ext); }
   }
   // ── roof: the kit roof nearest in size, turned so its ridge runs along the building and scaled to the footprint and pitch ──
-  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: pass === 'ext' && typeof shellJetty === 'function' ? -shellJetty(site, st) : 0, ov: SSt.ov || 0.5, lift: 0.14, mat: SSt.mat, ts: SSt.ts, sag: SSt.sag, thick: SSt.thick, thatch: SSt.thatch, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: SSt.tint || [1, 1, 1] }); }
+  if (st.shingle && typeof infRoofGen === 'function') { if (X) infRoofGen(b, MS, { w, d, top: Ytop, tanP, ridgeX: true, zc: pass === 'ext' && typeof shellJetty === 'function' ? -shellJetty(site, st) : 0, ov: SSt.ov || 0.5, lift: 0.14, mat: SSt.mat, ts: SSt.ts, sag: SSt.sag, thick: SSt.thick, thatch: SSt.thatch, nl: infNeighbour(site, false) > 0, nr: infNeighbour(site, true) > 0, patch: SSt.patch, inZone: cellExt ? 0 : st.up ? 0 : zone, inSky: cellExt ? 0.12 : st.up ? 0.2 : INT_AO, tint: SSt.tint || [1, 1, 1] }); }
   else {
     const span = d <= 5 ? 4 : d <= 7.2 ? 6 : 8, lens = span === 4 ? [4, 6, 8] : span === 6 ? [4, 6, 8, 10, 12, 14] : [8, 10, 12];
     let len = lens[0]; for (const l of lens) if (Math.abs(Math.log(w / l)) < Math.abs(Math.log(w / len))) len = l;
