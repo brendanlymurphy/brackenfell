@@ -57,18 +57,18 @@ const STAGES = await ev(() => { const r = []; for (const id of QORDER) { const q
 T.push({ pic: '', note: 'stages: ' + STAGES.length });
 for (const [qid, si, text] of STAGES) await step(qid + si, async () => {
   await ev(q => { for (const k in S.q) if (k !== q[0]) delete S.q[k]; S.q[q[0]] = { stage: q[1], done: false, t: Date.now() }; if (UI.talk) endTalk(); if (UI.reader) closeReader(); if (typeof uiObjective === 'function') uiObjective(); }, [qid, si]);
-  const legs = [];
+  const legs = []; let retried = 0;
   for (let leg = 0; leg < 4; leg++) {
-    const m = await ev(q => { let t = null; try { t = questTarget(q); } catch (e) { } if (!t) return null; const mk = Cells.mapTarget(t); const d = World.cell && World.cell.door && mk === World.cell.door.c; return { t: t.slice(), m: mk ? mk.slice() : null, here: World.cell ? World.cell.id : '', isExit: !!d, dist: mk ? Math.hypot(mk[0] - Player.pos[0], mk[2] - Player.pos[2]) : null }; }, qid);
+    const m = await ev(q => { let t = null; try { t = questTarget(q); } catch (e) { } if (!t) return null; const mk = Cells.mapTarget(t); const d = World.cell && World.cell.door && mk === World.cell.door.c; return { t: t.slice(), m: mk ? mk.slice() : null, here: World.cell ? World.cell.id : '', isExit: !!d, isTarget: !!mk && Math.hypot(mk[0] - t[0], mk[1] - t[1], mk[2] - t[2]) < 0.6, dist: mk ? Math.hypot(mk[0] - Player.pos[0], mk[2] - Player.pos[2]) : null }; }, qid);
     if (!m || !m.m) { legs.push('no mark'); break; }
-    if (m.dist < 2.5 && !m.isExit) { legs.push('at the mark'); break; }
-    const log = await ev(q => AUDFT.go(q.m[0], q.m[2], 1.4, q.m[1]), m); legs.push((m.here || 'out') + '->' + log.slice(-1)[0] + (log.length > 1 ? ' (' + log.slice(0, -1).join(', ') + ')' : ''));
+    if (m.dist < 2.5 && m.isTarget) { legs.push('at the mark'); break; }
+    const log = m.dist < 2.5 ? ['end:near the door'] : await ev(q => AUDFT.go(q.m[0], q.m[2], 1.4, q.m[1]), m); legs.push((m.here || 'out') + '->' + log.slice(-1)[0] + (log.length > 1 ? ' (' + log.slice(0, -1).join(', ') + ')' : ''));
     // a door: look at it, step until its prompt, press E
     const door = await ev(q => { const it = World.interact.filter(i => i.kind === 'portal' && Math.hypot(i.p[0] - q.m[0], i.p[2] - q.m[2]) < 2.5 && Math.abs(i.p[1] - q.m[1]) < 3)[0]; return it ? { id: it.id, p: it.p.slice() } : null; }, m);
     if (!door) break;
     const got = await ev(id => { const P = Player, ang = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b)), it = World.interact.find(i => i.id === id); for (let k = 0; k < 120 && UI.prompt !== it; k++) { const want = Math.atan2(it.p[0] - P.pos[0], -(it.p[2] - P.pos[2])), dy = it.p[1] - (P.pos[1] + P.eye), dh = Math.hypot(it.p[0] - P.pos[0], it.p[2] - P.pos[2]); AUDFT.tick({ KeyW: dh > 1.3 }, Math.max(-0.2, Math.min(0.2, ang(want, P.yaw))), Math.max(-0.1, Math.min(0.1, P.pitch - Math.atan2(dy, dh)))); } return UI.prompt === it; }, door.id);
-    if (!got) { legs.push('no prompt at door ' + door.id); break; }
-    await pressE(); await ev(() => AUDFT.idle(2.5)); legs.push('through ' + door.id);
+    if (!got) { const who = await ev(() => UI.prompt ? (UI.promptLab || UI.prompt.label || '') : ''); legs.push('no prompt at door ' + door.id + (who ? ' (prompt instead: ' + who + ')' : '')); if (who && !retried) { retried = 1; await shot('blocked', 'the door prompt is taken: ' + who); await ev(() => AUDFT.idle(10)); leg--; continue; } break; }
+    const c0 = await ev(() => World.cell ? World.cell.id : ''); await pressE(); await ev(c => { for (let i = 0; i < 240 && (World.cell ? World.cell.id : '') === c; i++) AUDFT.tick({}, 0, 0); AUDFT.idle(1); }, c0); legs.push('through ' + door.id);
   }
   const s = await ev(q => { const t = (() => { try { return questTarget(q); } catch (e) { return null; } })(); return { prompt: UI.prompt ? (UI.promptLab || UI.prompt.label || UI.prompt.kind || '') : '', cell: World.cell ? World.cell.id : '', distToTarget: t ? +Math.hypot(t[0] - Player.pos[0], t[2] - Player.pos[2]).toFixed(1) : null, dy: t ? +(t[1] - Player.pos[1]).toFixed(1) : null }; }, qid);
   await shot(qid + si, `${qid} ${si}: ${text} | ${legs.join(' ; ')} | ended ${s.distToTarget} m from the target (height ${s.dy}), prompt "${s.prompt}"`);

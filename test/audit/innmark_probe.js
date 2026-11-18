@@ -1,0 +1,5 @@
+// [audit] inside the Hart, where does the quest mark point for stages whose target is elsewhere? (the walker kept ending at the cellar stair head)
+game.enter('inn'); game.step(20, 1 / 30); const out = { door: World.cell.door ? World.cell.door.c.map(v => +v.toFixed(1)) : null, rows: [] };
+for (const [q, s, h] of [['hammer', 2, 21], ['bell', 0, 22], ['welcome', 0, 12], ['main', 5, 12], ['main', 8, 12], ['main', 9, 12], ['herbs', 1, 22], ['ale', 1, 18]]) { Env.hour = h; npcSnapAll(); game.step(3, 1 / 30); S.q = {}; S.q[q] = { stage: s, done: false }; let t = null; try { t = questTarget(q); } catch (e) { } const m = t ? Cells.mapTarget(t) : null; const tc = t && Cells.at ? Cells.at(t[0], t[1], t[2]) : null; const near = m ? World.interact.filter(i => Math.hypot(i.p[0] - m[0], i.p[2] - m[2]) < 2.5 && Math.abs(i.p[1] - m[1]) < 3).map(i => i.id) : []; out.rows.push(JSON.stringify([q + s, h, t && t.map(v => +v.toFixed(1)), tc ? tc.id : 'outdoors', m && m.map(v => +v.toFixed(1)), near])); }
+game.shot(260, -399.7 + 1.6, -1, 180, -15, 13); await __snap('innmark_stairhead');
+return out;
