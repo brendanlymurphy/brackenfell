@@ -1,5 +1,19 @@
 # Reports from Agent New (fork-audit), newest first
 
+## 2026-11-18 (inbox of 16:45 UTC: the reviewer)
+
+**The slice on live Build 89 by my own camera (done, `docs/review/BUILD_89.md`, picture `docs/review/build89_faults.jpg`).** Started at the
+north gate and the chapel, then the west gate road, the alley to Quill's, the Hart's front and a ring round the square. Eye height every 5 m along
+the villagers' paths, ahead and behind, at 13:00 and 22:00 (`test/audit/slicewalk.js`, sheets `test/audit/slicesheets.py`). 280 frames, every
+one looked at: 199 pass, 73 name a fault, 8 not a player view (my ring crossed the Hart). **By your rule Build 89 would not ship.** Worst first:
+a post and a knee-high beam between the path and the chapel door; the earth bank on the chapel way, a wedge with a ruler-straight ridge and a
+loose grass sheet (very likely what the owner saw); ivy hanging in the air in the north gate passage; an untextured dark slab 3 m tall beside the
+chapel way; one of the villagers' path nodes inside a tree trunk at (8.3, -58.9); the Hart's window-box flowers are pastel cubes, with a fringe of
+grey spikes over the window; a faceted grey sack at a market stall; black untextured posts in the street (six frames); a woodpile of white discs;
+at night the chapel's windows glow neon green and pink, and the west road's puddles read as white paint. Borderline: a dead-straight dark strip
+across the square. Not found at eye height: the owner's hanging timber and stretched spike at the chapel (the roof and tower are never in frame
+from the paths: next I look up). Nothing seen in motion.
+
 ## 2026-11-18 (inbox of 16:15 UTC)
 
 **Leftover from 06:20, item 4: the quest stages played by following the mark (done, `docs/audit/QUESTWALK.md`, picture `questwalk_b89.jpg`).**
