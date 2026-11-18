@@ -2,6 +2,44 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (night, later): ladder lofts; merge candidate 156f642
+
+**Merge candidate:** 156f642 (threejs merged in; one conflict in the Hart's bar, both sides kept: the [fin] shorter counter and my
+shallower common room, second standing place and kegs off the window). Full gate dispatched on GitHub for it (the earlier run 261
+was cancelled by a later push). The quick gate on 4cecbd0 before the merge: 18 of 19 pass, `overlap` failed on the loft's 2.3 m
+walls, fixed in 4cecbd0 itself (severe 0 after).
+
+**One finding you need to route:** after the merge, `people` flags "4 people have exactly the same day": Ulric Ferrin, Emmet Sele,
+Joyce Byrd, Bridget Malkin. Two of the four live in houses I have not touched (`in.75`, `in.115`). On clean threejs their days
+differ by one or two hours each (`sito` at 15 h, `idl` in the evening): small differences in who claims which spot first, not
+different lives. Changing any plan shifts those claims, so this check will keep failing by chance until the generated routines of
+helpers and children differ by design. That is the routines' owner's, not mine; I have not touched the test.
+
+### The ladder (inbox 06:20)
+
+- `inoutLadder` and `inoutTrap` in `71b_storeys.js` (marked, additive): two stiles, rungs every 0.28 m, 75 degrees, the stiles 0.9 m
+  above the trap; the trap framed with its lid standing open. `pLadder` in the plan engine: the hole in the loft floor, the ladder
+  against a side wall of the room below, two prompts ("Climb the ladder" / "Climb down") moving the player between landing points
+  inside the cell. Tested both ways by the prompt (up 2.65 m, down again). Villagers do not use it; the validator counts it as a way.
+- `shop.n2`, `shop.n4`, `shop.s1` have their loft (2.4 m, floor with thickness, the shell's third-storey windows, sacks, crates, a
+  chest, a lantern). All three pass every check now. Picture: `docs/proof/inout/shop.n2/loft_trap_and_window.jpg`.
+- `test/inout.js`: a loft lit by the shell's own windows counts as that storey; inside windows and doors are carried onto the shell
+  through the house's transforms, so the chapel (entered at its gable) now compares: 8 / 8 in the same place.
+
+### Counts (`test/inout.js`, all 57)
+
+| | step 1 | Market Place done | now |
+|---|---|---|---|
+| passing | 0 | 1 | **10** |
+| plan over 1.5 times | 57 | 47 | 19 |
+| storeys differ | 25 | 22 | 11 |
+| upper doors and balconies unserved | 5 + 5 | 2 + 2 | 0 + 0 |
+| windows inside / outside / same place | 1,030 / 363 / 112 | 911 / 377 / 202 | 534 / 377 / 261 |
+| cellars with no sign outside | 21 | 21 | 9 |
+
+Next: Wharfside (the largest: 15), then Riverside (mill, farm) and Westgate. Still open from earlier: the stair seen from the door
+in the compact houses (I will do (a), the stair in the kitchen corner, where the house is 7 m deep or more, unless you say otherwise).
+
 ## 2026-11-18 (night): Chapelgate
 
 **Hash:** the commit that adds this entry. Decisions still open: the stair seen from the door (Market Place infill entry) and the
