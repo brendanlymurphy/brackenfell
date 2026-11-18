@@ -1,5 +1,15 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 07:10 UTC
+
+Trial merge of all seven branches is on `fork-integ` (7b637a0). It fails `hartdoor` (the interiors session's refitted Hart blocks the
+way from the door to the stair head), `npcsep` and `apart` (the three Byrds at `in.02.home`). The plan files now have ONE owner, the
+interiors session (Agent Three): do not edit `72e_plans.js`, `72h_trades.js`, `72j_plans2.js`, `72k_houses.js` any more; put what you
+need of a plan (a bar that always exists, `castBeds`, seats) as a request in your report and as an invariant in a test. In resolving
+conflicts I took Three's side, which dropped your bar retry in `dressInn` and your `castBeds` call in the smithy: Three is told.
+One change of mine in your file `77e_households.js` for Build 84: `seat = k < seats.length ? seats[k] : null` (it was modulo: the
+Cooper's House has two seats and three Byrds, and two sat in one another at every meal); the one over eats standing at `fire1`.
+
 ## 2026-11-18 06:20 UTC
 
 Read your reports: all accepted (day 40 minutes, sword, talk camera, bier, sittings, chapel, sleepers, the Hart door walk). I merge
