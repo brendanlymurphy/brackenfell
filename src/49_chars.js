@@ -820,7 +820,7 @@ const Chars = (() => {
     const side = new THREE.Vector3(-ax.z, 0, ax.x), g = m.geometry, n = g.attributes.position.count, shed = { getX: i => Math.max(0, -(g.attributes._vid ? g.attributes._vid.getX(i) : 0)) }, P = [];
     // the blanket's form is a sleeper's, not the posed mesh's (a skirt or a cape that stands up in the lying clip would tent it): bed level from the hips, then a profile along the
     // body (shoulders 0.17 m, chest 0.2, hips 0.19, thighs 0.15, knees 0.13, shins 0.1, feet 0.16 for the toes), rounded across and falling over the sides of the bed
-    const pel = bp('pelvis'); if (!pel) return; const bed = pel.y - 0.11, N = BLK.N, M = BLK.M, len = L0 + 0.2, top = neck.clone().addScaledVector(ax, -0.1), PROF = [[0, 0.15], [0.12, 0.2], [0.3, 0.19], [0.45, 0.16], [0.62, 0.13], [0.85, 0.1], [0.95, 0.16], [1, 0.13]];
+    const pel = bp('pelvis'); if (!pel) return; const bed = pel.y - 0.11, N = BLK.N, M = BLK.M, len = L0 + 0.34, top = neck.clone().addScaledVector(ax, -0.1), PROF = [[0, 0.15], [0.12, 0.2], [0.3, 0.19], [0.45, 0.16], [0.6, 0.13], [0.72, 0.12], [0.79, 0.2], [0.87, 0.18], [0.94, 0.08], [1, 0.02]];      // past the feet, and high over the toes of the boots
     const prof = u => { for (let k = 1; k < PROF.length; k++) if (u <= PROF[k][0]) { const a = PROF[k - 1], b = PROF[k], t = (u - a[0]) / (b[0] - a[0]); return a[1] + (b[1] - a[1]) * t; } return PROF[PROF.length - 1][1]; };
     const H2 = new Float32Array((N + 1) * (M + 1)); for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { const u = i / N, w = j / M, c = Math.abs(w - 0.5) * 2, hump = Math.max(0, 1 - c * c * 1.15); H2[i * (M + 1) + j] = bed + prof(u) * hump + 0.006 * Math.sin(i * 1.3 + j * 0.7); }
     // and over the body as it lies (trunk, legs and the clothes on them; not the arms, head or anything taken off), at most 0.34 m above the bed: a body on its side or a knee
@@ -842,7 +842,13 @@ const Chars = (() => {
   // [ch4] In bed the arms lie along the body under the blanket, the hands beside the hips (the sleeping clip has one arm up beside the head, and in some bodies straight up).
   const _sa = { p: new THREE.Vector3(), l: new THREE.Vector3(), r: new THREE.Vector3(), f: new THREE.Vector3(), n: new THREE.Vector3(), t: new THREE.Vector3() };
   function sleepArms(H, lying) {
+    const pelB = H.root.getObjectByName('pelvis'), RL = H._roll || (H._roll = { base: new THREE.Quaternion(), mine: new THREE.Quaternion(), on: false });
+    if (pelB) { if (RL.on && pelB.quaternion.equals(RL.mine)) pelB.quaternion.copy(RL.base); else RL.base.copy(pelB.quaternion); RL.on = false; }
     if (!lying) { if (H.sleptArms) { C.reach(H, 'R', null); C.reach(H, 'L', null); C.reach(H, 'FR', null); C.reach(H, 'FL', null); H.sleptArms = false; } return; }
+    // [ch4] lay the body flat on its back: the clip tips some bodies onto a side. Roll the hips (everything hangs from them) about the body's length until the shoulders are level.
+    if (pelB) { H.root.updateWorldMatrix(true, true); const a1 = H.root.getObjectByName('upperarm_l'), a2 = H.root.getObjectByName('upperarm_r'), nk = H.root.getObjectByName('neck_01');
+      if (a1 && a2 && nk) { const L1 = a1.getWorldPosition(new THREE.Vector3()), L2 = a2.getWorldPosition(new THREE.Vector3()), P0 = pelB.getWorldPosition(new THREE.Vector3()), ax = nk.getWorldPosition(new THREE.Vector3()).sub(P0).normalize(), acr = L2.sub(L1).normalize();
+        const roll = Math.asin(Math.max(-1, Math.min(1, acr.y))); if (Math.abs(roll) > 0.02) { const q = new THREE.Quaternion().setFromAxisAngle(ax, roll), pq = pelB.parent.getWorldQuaternion(new THREE.Quaternion()), wq = pelB.getWorldQuaternion(new THREE.Quaternion()); q.multiply(wq); pelB.quaternion.copy(pq.invert().multiply(q)); RL.mine.copy(pelB.quaternion); RL.on = true; H.root.updateWorldMatrix(true, true); } } }
     const g = n => H.root.getObjectByName(n), pel = g('pelvis'), tl = g('thigh_l'), tr = g('thigh_r'), nk = g('neck_01'); if (!pel || !tl || !tr || !nk) return;
     pel.getWorldPosition(_sa.p); tl.getWorldPosition(_sa.l); tr.getWorldPosition(_sa.r); nk.getWorldPosition(_sa.n); _sa.f.subVectors(_sa.p, _sa.n).normalize();      // f: toward the feet
     for (const [side, hip] of [['L', _sa.l], ['R', _sa.r]]) { const ua = g(side === 'L' ? 'upperarm_l' : 'upperarm_r'), la = g(side === 'L' ? 'lowerarm_l' : 'lowerarm_r'), hd = g(side === 'L' ? 'hand_l' : 'hand_r'); if (!ua || !la || !hd) continue;
@@ -906,7 +912,7 @@ const Chars = (() => {
     H.root.scale.set(k * H.wide, k * H.tall, k);      // [ch1] each person's own girth and height on top of the body: 21 bodies become dozens of builds
     if (lying) {
       const m = measure(H, 'lie'), th = Math.PI - yaw - m.ang, c = Math.cos(th), sn = Math.sin(th);      // head toward the spot's heading, body centred on it
-      pv.rotation.y = th; pv.position.set(p[0] - (m.cx * c + m.cz * sn) * k, p[1] + 0.02, p[2] - (-m.cx * sn + m.cz * c) * k);
+      pv.rotation.y = th; pv.position.set(p[0] - (m.cx * c + m.cz * sn) * k - Math.sin(yaw) * 0.25, p[1] + 0.02, p[2] - (-m.cx * sn + m.cz * c) * k + Math.cos(yaw) * 0.25);      // [ch4] 0.25 m toward the foot: the head lay at or past the head of the bed, off the bolster
     } else {
       const th = face - yaw; let x = p[0], y = p[1], z = p[2];
       if (seated) {      // the hips go where the old villagers had theirs: over the spot, just above the seat (sitting clips lean the body back from its origin)
