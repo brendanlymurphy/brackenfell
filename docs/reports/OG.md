@@ -25,6 +25,26 @@ Merged `origin/threejs` (Build 89) first: no conflict.
      Ashdown, Jasper Holt, Ysolt and Davy Pell, Warin Shaw, Ulric, Beatrix and Amice Ferrin, Emmet and Lettice Sele, Roger and Odo Hask,
      Ursel Crane, Silas Garrow, Hester Slate, Goda Malkin, Adda, Ellen Marsh, Kester Wold.
    - 529 of 774 lines; 245 to go.
+3. **One at a time through a door** (`436f994`). Their two ways joined at a way point 2 m inside the Hart, not at the threshold, and they
+   reached it together from two sides; so the rule is for any way point, the door's threshold included. A walker 1.5 m short of the next
+   point of their way stops, idle, while someone nearer is bound for the same point or has only just left it (within 0.7 m), or, at a door,
+   someone who has come through stands on the threshold; at most 3 s, so two can never wait on each other. Marta leaves the Hart at 22.2
+   again. `apart` (83 people, a whole day) and `npcsep` pass; `routes`, `interact`, `cast`, `memory`, `scenes` (12 of 12) and `owners`
+   pass with it (nobody is late anywhere it matters).
+4. **Greta in the fireplace: not so on Build 89.** In the refitted Hart her place at the bar is 5 m from the hall's hearth and 12 m from
+   the kitchen's; from the doorway and from the talk camera on three sides she stands behind the long table with a window behind her
+   (pictures taken; the audit saw it on Build 81's Hart). `test/cast.js` now fails if any place in anyone's day lies inside a hearth.
+   **The drowned man's prompt: found** (`f8aa8f3`). The mourners I gave him (Peter, Hester, Ellen, Mercy, Humphrey; Finn and Ivo) stand
+   at the bier, and looking level from beside it the prompt named the one across the bier: her head is straight ahead, the body 32
+   degrees below. The body now has a small priority (`it.pri`, one marked term in 85_ui's scoring): it wins while it is in view, the
+   mourner when you look at her (Hester is still spoken to from all eight sides). E opens the card, gives the tally and starts the
+   story. `test/pointers.js` checks the prompt from four sides at eleven, with Hester there.
+5. **The `[fx3]` block** (the green's stepping stones): kept as it is. Each stone links only where the way is clear, the green's wider
+   link radius applies to its bench alone, and the hunter's yard detour is a fact of the town.
+6. **`mine`, `bot-soak`:** both passed in every threejs run since Build 86 (aeb13ce, 5ca78ee, 997710c, and the failed b56755e and
+   3b991ca, which failed elsewhere). The re-homed people hold (`cast`: everyone is sent only to places that exist).
+   - b56755e failed `bot-play` once: "the hatbox in the shut house did not open" (`cont.in.23.chest`); the next run passed. Being looked
+     at next (it is in the secrets scenario, after the story's checkpoints).
 
 ## 2026-11-18, the 09:40 inbox
 
