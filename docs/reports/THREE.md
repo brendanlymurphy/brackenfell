@@ -2,6 +2,57 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (later): Market Place, the fifteen infill houses (not a merge candidate yet)
+
+**Decision needed: see "Open" below.** Taken without asking: these houses go through one new compact plan instead of the six families
+(the families are 8 to 12 m whatever the shell and cannot shrink to 7 x 6). Easy to undo: `INOUT_FIT` in `72k_houses.js` lists the
+houses that use it; take an id out and the house goes back to its family.
+
+**Hash:** the commit that adds this entry. Full gate on GitHub for the kit buildings: run 261 on 18bddd8 (queued when written).
+
+### What changed
+
+`in.02 in.04 in.07 in.08 in.10 in.12 in.13 in.15 in.21 in.40 in.44 in.74 in.90 in.94 in.116`: each is 1.37 to 1.5 times its shell
+(was 2.2 to 4.5). Front room across the street front (work room, shop or hall by trade), the stair along its back wall, store or
+pantry and kitchen or chamber behind, the shell's two storeys upstairs or a loft under one storey, the shell's windows only. Mirrored
+house by house (hash of the id) and the back rooms split 45, 50 or 55 percent. Cellars only where the stair fits (`in.15`, `in.44`,
+`in.116` lost theirs; `in.10` had one and lost it): four fewer cellars with nothing outside to show them.
+
+### Counts (`test/inout.js`)
+
+| | before this push | after |
+|---|---|---|
+| buildings passing | 1 | 3 (`smithy`, `in.02`, `in.13`) |
+| plan over 1.5 times the shell | 47 | 32 |
+| storeys differ | 22 | 17 |
+| windows inside, all 57 | 911 | 732 (outside 377; 216 in the same place) |
+| cellars with no sign outside | 21 | 17 |
+
+The other thirteen fail only on windows: mostly a window the corner rule moved more than 0.6 m, and the generated end-wall windows
+counted twice. Not yet looked at house by house.
+
+### Gate (this machine)
+
+interiors (all fifteen), stairs (all), people, npcstairs pass after the fixes in this commit. Before the last two fixes:
+boot, quest, story, secrets, overlap, parity, cells (8 of them), bot-story, cast, apart passed. Not rerun after the mirroring: cells, bot-story.
+
+### Open: the stair is the first thing you see
+
+Pictures `docs/proof/inout/in.*/level0.jpg`: in a 7 x 6 house the straight stair (3.2 m) along the front room's back wall fills the
+view from the street door with its boarded side, in every house. The plan engine has only straight stairs. Choices, my preference
+first: (a) the stair in the back corner of the kitchen against the gable wall, rising along it, the kitchen made deeper and the
+front room shallower (needs D of 7 m or more; about half of these); (b) a winder or ladder stair (new geometry in `71b_storeys.js`,
+not mine); (c) leave it. I go on with the alley shops meanwhile and will do (a) where it fits unless you say otherwise.
+
+### ROOMS.md
+
+The compact houses are dressed generically: trade set, table by the fire, cabinet, shelves, barrel, beds by the cast, candle by
+wealth, one memorable object each (`hMemo`). The room-by-room lines of ROOMS.md for these fifteen are not done yet.
+
+### Outside list, Market Place infill (see `docs/INOUT.md`, section For the outside worker)
+
+Windows that open into a neighbour and rooms with no window are listed there by house; I have not checked them by picture yet.
+
 ## 2026-11-18: Market Place, the eight kit buildings (step 3, first district)
 
 Taken without asking (easiest to undo): the Market Place district is split in two pushes. This one is the eight kit buildings round

@@ -317,23 +317,24 @@ function hCompact(P, c, F) {
   const H0 = W < 6.5 ? 2.6 : clamp(F.H0, 2.6, 2.8), nSt = Math.ceil((H0 + PW.SLAB) / 0.19), single = D < 6;
   const Zp = single ? D : clamp(Math.round(D * 0.55 * 2) / 2, 3.5, D - 2.5);
   const shop = fam === 'shopfront', work = fam === 'workshop', hall = !shop && !work, cellarOK = !single && (shop || fam === 'merchant') && (F.wealth > 0 || F.trade === 'butcher') && W >= 7.5;
-  const Xs = cellarOK ? X0 + 5.5 : X0 + Math.max(3, Math.round(W * 0.5 * 2) / 2);
+  const mir = hHash(id + '|cmir') < 0.5, M = x => mir ? X0 + X1 - x : x, rr = (a, b) => [Math.min(M(a), M(b)), Math.max(M(a), M(b))];      /* house by house the arrangement is mirrored: the stair, the store and the kitchen change sides */
+  const split = [0.45, 0.5, 0.55][(hHash(id + '|csplit') * 3) | 0], Xs = cellarOK ? X0 + 5.5 : X0 + Math.max(3, Math.min(W - 3, Math.round(W * split * 2) / 2));
   P.dims = { W, D, Dh: Zp }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP, two ? {} : { loft: true }); if (cellarOK) pLevel(P, -1, -(2.4 + PW.SLAB), 2.4);
   const nm = shop ? ['shop', 'back', 'store'] : work ? ['work', 'living', 'store'] : single ? ['room'] : ['hall', 'chamber', 'pantry'];
   const front = pRoom(P, 0, nm[0], shop ? 'shop' : 'hall', X0, 0, X1, Zp, F.fin(0, shop && (F.trade === 'butcher' || F.trade === 'baker') ? { floor: 'stone' } : {}));
   let left = null, right = null;
-  if (!single) { left = pRoom(P, 0, nm[2], 'store', X0, Zp, Xs, D, { floor: 'stone', win: true }); right = pRoom(P, 0, nm[1], hall ? 'bedroom' : 'hall', Xs, Zp, X1, D, F.fin(0, { floor: 'wood', tint: F.tint2 })); }
+  if (!single) { const a = rr(X0, Xs), b = rr(Xs, X1); left = pRoom(P, 0, nm[2], 'store', a[0], Zp, a[1], D, { floor: 'stone', win: true }); right = pRoom(P, 0, nm[1], hall ? 'bedroom' : 'hall', b[0], Zp, b[1], D, F.fin(0, { floor: 'wood', tint: F.tint2 })); }
   let up1, up2 = null;
   if (two && !single) { up1 = pRoom(P, 1, shop ? 'upfront' : 'solar', 'bedroom', X0, 0, X1, Zp, F.fin(1)); up2 = pRoom(P, 1, shop ? 'upback' : 'loft', 'bedroom', X0, Zp, X1, D, F.fin(1)); }
   else up1 = pRoom(P, 1, 'loft', 'bedroom', X0, 0, X1, D, F.fin(1));
-  if (cellarOK) pRoom(P, -1, 'cellar', 'cellar', X0, Zp, Xs, D, { floor: 'stone', win: false });
+  if (cellarOK) { const a = rr(X0, Xs); pRoom(P, -1, 'cellar', 'cellar', a[0], Zp, a[1], D, { floor: 'stone', win: false }); }
   pDoor(P, front.id, null, 0, 0); P.clear.push({ x0: -0.8, x1: 0.8, z0: 0, z1: 2.4, k: 0, kind: 'path', room: front });
-  if (!single) { pDoor(P, front.id, left.id, X0 + 0.8, Zp); pDoor(P, front.id, right.id, X1 - 0.8, Zp); }
-  if (up2) pDoor(P, up1.id, up2.id, X1 - 0.8, Zp);
+  if (!single) { pDoor(P, front.id, left.id, M(X0 + 0.8), Zp); pDoor(P, front.id, right.id, M(X1 - 0.8), Zp); }
+  if (up2) pDoor(P, up1.id, up2.id, M(X1 - 0.8), Zp);
   pShellWins(P, c, B);
-  const lat = single ? D - 0.6 : Zp - 0.6, p0 = X0 + (W < 6.5 ? 1.3 : 1.5), tread = clamp(Math.floor((X1 - 0.6 - 0.8 - 0.35 - p0) / nSt * 100) / 100, 0.18, 0.2);      /* narrow houses get a steeper stair, as they had */
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: p0, z: lat, width: 0.9, tread });
-  if (cellarOK) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: X0 + 1.2, z: D - 0.6, width: 0.9, tread: 0.2 });
+  const lat = single ? D - 0.6 : Zp - 0.6, p0 = X0 + (W < 6.5 ? 1.3 : 1.5), tread = clamp(Math.floor((X1 - 0.6 - 0.8 - 0.35 - p0) / nSt * 100) / 100, 0.18, 0.23);      /* a longer stair where it fits: its well is then long enough to jump down */      /* narrow houses get a steeper stair, as they had */
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: mir ? -1 : 1, x: M(p0), z: lat, width: 0.9, tread });
+  if (cellarOK) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: mir ? -1 : 1, x: M(X0 + 1.2), z: D - 0.6, width: 0.9, tread: 0.2 });
   pLayout(P);
   // the fire: in the kitchen or the chamber behind, else in the front room's end wall
   const fireRoom = single ? front : hall ? front : right; let hh = null;
@@ -342,7 +343,7 @@ function hCompact(P, c, F) {
     for (const [rm, sd, a] of cand) for (const wd of [1.4, 1.1]) if (!hh && (hh = pHearth(P, rm, sd, wd, { cauldron: true, size: 0.42, at: a }))) break; }
   if (hh) { pPier(P, 1, hh); if (cellarOK) pPier(P, -1, hh); }
   P.hall = { room: hh ? pRoomAt(P, 0, hh.front[0], hh.front[1]) || front : front, hh };
-  if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
+  if (hh) { const dx = hh.front[0] - hh.px, dz = hh.front[1] - hh.pz, l = Math.hypot(dx, dz) || 1, hx = hh.front[0] + dx / l * 0.5, hz = hh.front[1] + dz / l * 0.5; const rm = pRoomAt(P, 0, hx, hz) || front, cc = pCentre(rm), far = Math.hypot(cc[0] - hx, cc[1] - hz) > 1.2; pSpot(P, 'home', hx, hz, far ? Math.atan2(cc[0] - hx, -(cc[1] - hz)) : 0, { k: 0 }); }      /* a step back from the fire, turned to the room: not with the face in the chimney breast */
   // the trade in the front room, its counter if it sells; where the worker stands
   if (!hall) { hTrade(P, c, front, F); if (shop && !P.counter) for (const ln of [2.4, 2.0, 1.6]) if (cnt(P, front, F, ln, ['bottle', 'jar', 'bowl', 'candle'], 'k')) break; }
   if (!P.spots.work && P.focal) { const fx = P.focal.x, fz = P.focal.z; for (const [x, z] of pCands(front, [fx, fz - 1.1])) { if (Math.hypot(x - fx, z - fz) > 3.2) break; if (pFit(P, front, rectOf(x, z, 0.7, 0.7), { h: 1.8, lowOk: true })) { pSpot(P, 'work', x, z, Math.atan2(fx - x, -(fz - z)), { k: 0 }); break; } } }
