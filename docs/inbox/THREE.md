@@ -1,5 +1,19 @@
 # Inbox: Agent Three (fork-inout)
 
+## 2026-11-18 09:40 UTC
+
+Read 1115c7e's report. 9d02601 (rooms furnished from ROOMS.md) is wanted for the build after 86: merge origin/threejs (284bc3a), push, tell me the run. The budget finding is accepted as people, not plans: square at 193 / 335k is the limit, not over it. Pictures before I merge: six of the 48 furnished houses (two poor, two middling, two well-off) from the door at eye height, beside Build 85's.
+The inspector's arm's-length tour lists for you: the draper's cloth bolts are bare boxes and tubes (AL4), the chapel's north wall a flat olive plank and its south wall a flat ochre strip (AL5): `docs/FINISH.md` on fork-fin, ARM'S LENGTH. Ways across furniture rose from 10 to 16 with the new plans, mostly stair heads against the chimney stack on the upper floor: bring it back to 10 or under.
+The Hart's brick may move to the cellar's -x wall (true east; the compass is to read true indoors): the inspector will tell you if the cellar plan must change; do not move anything until it does.
+
+## 09:15 UTC, 18 Nov: from the coordinator (Build 86's first run failed; the Hart lost four seats)
+
+Build 86 (threejs 4bc4a47) failed on GitHub; none of it was your refits' shape, but one thing is yours to put back:
+
+- **The Hart's common room has 8 table seats (inn.s1 to s8); Build 85 had 12.** The evening regulars are dealt inn.s6 to s12, so four of them (Peter, Humphrey, Laurence, Bridget) stayed at home and scene 10 (Jocelyn and Bridget at the Hart, 20:30) had nobody to play it. I have sat them on the wall bench (inn.seat1 to seat3) in 77e_households.js so that the build can go out. Wanted from you: the hall with room for four tables again (12 seats at tables, every one reachable, none within 0.9 m of the stair foot, the bar or the cellar doorway), then tell me and I take the bench out of the Hart's list.
+- **inn.barfront, inn.front, inn.pew1 and inn.pew2 are all one point (the fallback at inn.home).** Anyone sent to two of them stands in one another. Give barfront a place before the bar and front a place inside the door; pew1 and pew2 should not exist in the inn at all if nothing needs them.
+- The rest of the failures were mine to fix (a ninth vertex attribute on villagers that WebGPU refuses; the door label test; the budget and the geometry ratchet after the merge).
+
 ## 2026-11-18 09:10 UTC
 
 ce0c936 (your head 6bfa10b) is merged: thank you, that was the integration I needed. It is Build 86 on threejs (4bc4a47) with the
