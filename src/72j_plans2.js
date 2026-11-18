@@ -77,7 +77,7 @@ PLANS.guardhouse = (P, c, info) => {      /* [inout] the shell: 7.2 x 5.6 m, two
 // ── the herbalist's: a low shop hung with drying herbs, a counter of jars, the still and the workbench beyond, her bedchamber, the physic garden's door ──
 //    ground  shop (10 x 6)  |  workroom (west) + bedchamber with a hearth (east)
 PLANS.herbalist = (P, c, info) => {      /* [inout] the shell: 6.6 x 5.6 m, one storey; 8.5 x 6.5 inside: the front room where she sells, the stillroom and her chamber behind */
-  const R = P.R, id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Zp = 3, Xs = X0 + 4.5; P.dims = { W: B.W, D, Dh: Zp };
+  const R = P.R, id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Zp = 3, Xs = X0 + 4; P.dims = { W: B.W, D, Dh: Zp };
   pLevel(P, 0, 0, 2.7);
   pRoom(P, 0, 'shop', 'shop', X0, 0, X1, Zp, { floor: 'stone' }); pRoom(P, 0, 'workroom', 'store', X0, Zp, Xs, D, { floor: 'stone' }); pRoom(P, 0, 'chamber', 'hall', Xs, Zp, X1, D);
   pDoor(P, 'shop', null, 0, 0); pDoor(P, 'shop', 'workroom', X0 + 1.4, Zp); pDoor(P, 'workroom', 'chamber', Xs, Zp + 0.9);
@@ -98,9 +98,10 @@ PLANS.herbalist = (P, c, info) => {      /* [inout] the shell: 6.6 x 5.6 m, one 
   pFree(P, wk, id + '.workbench', 1.1, 0.7, 0.8, 0, pdTable(1.1, 0.7, ['bowl', 'jar', 'bottle'], 3, c), { near: [X0 + 2.6, 4.6], surface: true });
   pPiece(P, wk, 'wooden_bucket_02', { near: [Xs - 0.7, 4.2], sc: 0.8 });
   // her chamber: the bed, the rocker turned to the fire, the chest with the child's shoe
+  let lh = null; for (const [sd, a] of [['n', X1 - 1.1], ['e', 4.0], ['e', 5.4]]) if ((lh = pHearth(P, ch, sd, 1.2, { cauldron: false, size: 0.35, at: a }))) break;      /* the fire first: the bed goes where it leaves room */
   dressBedroom(P, ch, { beds: castBeds(P.id, ['bed']), loot: [['gold', 5]], bedInteract: true, table: false });
-  let lh = null; for (const [sd, a] of [['e', 4.0], ['e', 5.4], ['n', X1 - 1.2]]) if ((lh = pHearth(P, ch, sd, 1.2, { cauldron: false, size: 0.35, at: a }))) break;
   if (lh) { const rk = pPiece(P, ch, 'rockingchair_01', { near: [lh.front[0] - 0.3, lh.front[1]], turn: PI / 2, id: 'rocker', soft: true });      /* she sits in it: no collider */ if (rk) pSit(P, 'sit', rk.cx, rk.cz, PI / 2, 0); }
+  if (!lh || !P.spots.sit) { const sk = pPiece(P, wk, 'painted_wooden_stool', { near: hh ? [hh.front[0], hh.front[1]] : pCentre(wk), id: 'firestool', soft: true }); if (sk) pSit(P, 'sit', sk.cx, sk.cz, 0, 0); }
   if (!hh) P.err.push('no hearth fits in the stillroom');
 };
 

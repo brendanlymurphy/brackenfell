@@ -400,10 +400,10 @@ const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: 
 // the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
 function dressInn(P, c, room, hh) {
   const R = P.R, a = room.in; P.hall = { room, hh };
-  const bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, 4.8, PI / 2, 3.8, 0.7, 1.05, m => { Props.table(m, 3.8, 0.7, 1.05); Props.clutter(m, R, -1.7, 1.7, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
-  if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); P.bar = bar;
+  const bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, Math.min(4.8, a.z1 - 2.2), PI / 2, 3.8, 0.7, 1.05, m => { Props.table(m, 3.8, 0.7, 1.05); Props.clutter(m, R, -1.7, 1.7, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
+  if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); pSpot(P, 'stand2', bar.cx - 0.8, bar.cz + 0.6, PI / 2, { k: 0 });      /* [inout] the second drinker at the bar, not at the hearth */ P.bar = bar;
     pHang(P, room, 'e', bar.cz, 3.0, 1.45, 2.7, (m) => Props.shelf(m, 3.0, 1.2, 3, 0.3, (i, y) => Props.clutter(m, R, -1.3, 1.3, y, 0, ['bottle', 'bottle', 'mug', 'jug', 'bottle'], 6, c)), P.id + '.backshelf', {});
-    for (let i = 0; i < 3; i++) pAgainst(P, room, 'e', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: bar.cz - 1.4 + i * 1.4, lowOk: true });
+    for (let i = 0; i < 3; i++) { const wl = P.windows.some(w => w.k === 0 && w.wall.ax === 'z' && Math.abs(w.wall.c - room.x1) < 0.01 && Math.abs(w.pos - (bar.cz - 1.4 + i * 1.4)) < 1.3); if (wl) pAgainst(P, room, 's', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: a.x1 - 0.6 - i * 1.0, lowOk: true }); else pAgainst(P, room, 'e', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: bar.cz - 1.4 + i * 1.4, lowOk: true }); }      /* [inout] not in front of the shell's window: against the passage wall instead */
     pLamp(P, room, bar.cx + 0.2, bar.cz); }
   let n = 0;
   for (const nr of [[-4.2, 5.0], [-0.5, 5.6], [-4.4, 2.8]]) {
