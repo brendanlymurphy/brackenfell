@@ -128,6 +128,6 @@ Pictures: /home/claude/shots/fin/pairs_core/<idA>__<idB>_<x>_<z>_p25|p40.jpg, sh
 
 ## CHAPELGATE DAY TOUR (fin, 10h): 55 points x 5 views, /home/claude/shots/fin/chapel/, sheets /home/claude/shots/fin/sheets_chapel/c0_00..04.jpg (yaw 0 only reviewed)
 - [ ] C1 (sev 2) Tall flat brown plank wall (a yard or churchyard boundary, no posts, no top, no texture variation, one thin sheet that curves with the road) north of the chapel steps: chapel_-0.6_-51.8_y0_10 and chapel_-16_-52_y0_10 (sheet c0_00 tiles 1 and 6). Source: the yard fence builder, probably src/73m_plots.js buildChurchyard or 73_village.js (planner's file for 73m): needs top rail, posts and a lower stone course.
-- [ ] C2 (sev 3) A face of dressed stone filling the whole frame with a blurred, stretched look at the foot of a wall: sheet c0_02 tile 3 (see the file named by sed line 3 of c0_02: stone close-up). Source: wall texture scale in the same plot code.
-- [ ] C3 (sev 3) Raw boulders stacked as a stub wall end against a house front, open end with no cap: sheet c0_02 tile 9. Source: terrace or plot walls (73f_levels.js / 73i_walls.js, planner).
+- [ ] C2 (sev 3) A face of dressed stone filling the whole frame with a blurred, stretched look at the foot of a wall: sheet c0_02 tile 3 (chapel_-7.9_-67.4_y0_10). Source: wall texture scale in the same plot code.
+- [ ] C3 (sev 3) Raw boulders stacked as a stub wall end against a house front, open end with no cap: chapel_0.6_-44_y0_10. Source: terrace or plot walls (73f_levels.js / 73i_walls.js, planner).
 Good in this district: the churchyard (stones, yew-like trees, wall), the chapel side with its stained windows, the grass slopes and the path up the hill read well; no sky gaps seen.
