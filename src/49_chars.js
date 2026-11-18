@@ -10,6 +10,28 @@
 //   Chars.remove(h)
 //
 // Game conventions kept: feet at pos, yaw 0 faces -Z and grows clockwise seen from above, animation names as in 77_npc.js.
+// [ch4] The dress plan (docs/WARDROBE.md): for the cast (CAST, from docs/PEOPLE.md), each person's hat, hair colour and the colour of their main garment, chosen in turn
+// (by id) so that nobody shares any of the three with anyone already dressed in their household (CAST home) or their workplace (CAST work). Hats from what the body can wear
+// (women: kerchief, coif, bare-headed; men: hood, cap, bare-headed, straw for outdoor trades). Hair colours are multipliers on the hair texture; garment colours are plant dyes.
+// A story person's own hat, hair or colour (NPC_DEFS hat / hair / top) is kept and counts as taken.
+const DRESS_HAT = { f: ['kerchief', 'coif', null], m: ['hood', 'cap', null] }, DRESS_HAIR = [[1, 1, 1], [0.55, 0.5, 0.46], [1.25, 0.95, 0.72], [0.75, 0.62, 0.52], [1.35, 1.2, 0.95], [1.15, 0.78, 0.55], [0.4, 0.37, 0.35]];
+const DRESS_WOOL = [[0.30, 0.27, 0.21], [0.24, 0.26, 0.28], [0.33, 0.29, 0.21], [0.26, 0.25, 0.20], [0.30, 0.22, 0.18], [0.22, 0.24, 0.20], [0.35, 0.33, 0.28], [0.20, 0.19, 0.18]];
+let _dressPlan = null;
+function dressPlan() {
+  if (_dressPlan) return _dressPlan; const P = {}; if (typeof CAST === 'undefined' || !CAST.length || typeof NPC_DEFS === 'undefined') return P; _dressPlan = P;
+  const used = {}, take = (g, k, v) => { const key = g + '|' + k; (used[key] = used[key] || new Set()).add(JSON.stringify(v)); }, taken = (gs, k, v) => gs.some(g => used[g + '|' + k] && used[g + '|' + k].has(JSON.stringify(v)));
+  const hs = id => { let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+  for (const c of CAST.slice().sort((a, b) => a.id.localeCompare(b.id))) {
+    const def = NPC_DEFS.find(d => d.id === c.id) || {}, body = def.body || '', fem = /^f_/.test(body) || !!def.female, gs = [c.home, c.work].filter(Boolean), h = hs(c.id), out = P[c.id] = { age: c.age };
+    const pick = (k, opts, own) => { if (own !== undefined) { out[k] = own; gs.forEach(g => take(g, k, own)); return; } for (let i = 0; i < opts.length; i++) { const v = opts[(h + i) % opts.length]; if (!taken(gs, k, v)) { out[k] = v; gs.forEach(g => take(g, k, v)); return; } } out[k] = opts[h % opts.length]; };
+    const hats = fem ? DRESS_HAT.f.slice() : DRESS_HAT.m.concat(/shepherd|woodcut|boat|beekeep|net|rope/.test(c.trade || '') ? ['straw'] : []);
+    pick('hat', /child|girl/.test(body) ? ['coif', null] : hats, def.hat !== undefined ? (def.hat === 'hood' && fem ? 'kerchief' : def.hat) : undefined);
+    const own = !def.cast;      // the cast's hair and top colours are generic (tools/cast.mjs); a story person's are their own
+    pick('hair', DRESS_HAIR, own && def.hair ? def.hair : undefined); pick('wool', DRESS_WOOL, own && def.top ? def.top : undefined);
+    if (own && def.hair) delete out.hair; if (own && def.top) delete out.wool;
+  }
+  return P;
+}
 const Chars = (() => {
   const { vec2, vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap, Fn } = TSL;
   const SETS = {};
@@ -168,8 +190,11 @@ const Chars = (() => {
           WC.wool = mute(WC.wool); WC.cloak = mute(WC.cloak); if (wear.hat === 'hood' || wear.hat === 'cap') WC.hat = mute(WC.hat);
           WC.apron = body === 'm_smith' ? [0.17, 0.105, 0.06] : [[0.29, 0.27, 0.23], [0.33, 0.29, 0.20], [0.26, 0.21, 0.15]][Math.floor(r(8) * 3)].map(v => v * (0.92 + 0.08 * r(13)));      // [ch4] unbleached hemp and tow, not white (in sun the old values read as a flat white sheet); the smith's is leather
         }
+        const DP = dressPlan()[def.id];      // [ch4] people who live or work together differ in hat, hair colour and the colour of the main garment (docs/WARDROBE.md)
+        if (DP && !def.hat && !guard) wear.hat = DP.hat || null; if (DP && DP.wool && (def.cast || !def.top)) WC.wool = DP.wool;
         wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
-        return { body, fit: FIT[body] || 1, hairGrey: { f_elder: 0.96, m_elder: 0.92, m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 }[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
+        const hairT = DP && DP.hair && (def.cast || !def.hair) ? { hair: DP.hair } : null, ageGrey = DP && DP.age ? (DP.age >= 62 ? 0.85 : DP.age >= 52 ? 0.45 : 0) : 0;
+        return { body, fit: FIT[body] || 1, hairGrey: Math.max(ageGrey, ({ f_elder: 0.96, m_elder: 0.92 })[body] || 0) || ({ m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 })[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, hairT, TINT[def.id], def.tint), dye, acc };
       },
     });
   }
