@@ -5,7 +5,12 @@
 // could reach it. Here they are placed from the plan itself: on the inside face of the cellar's east wall, on a stretch with nothing in front of it, at the
 // floor, and the way back up from the tunnel lands just in front of it. Called before the secrets are built and again whenever the Hart is entered.
 const HART = { at: null };
+HART.fromWall = function () {
+  const hw = World.hartWall; if (!hw || !hw.p) return null; const p = hw.p, q = hw.inW || [p[0] - 1, p[1], p[2]], l = Math.hypot(q[0] - p[0], q[2] - p[2]) || 1, ix = (q[0] - p[0]) / l, iz = (q[2] - p[2]) / l, at = (d, h) => [p[0] + ix * d, p[1] + h, p[2] + iz * d];
+  return { k: -1, wallX: null, prop: at(0.01, 0), use: at(0.5, 1.05), land: at(1.2, 0.05), yaw: Math.atan2(ix, -iz), from: 'hartWall' };
+};
 HART.find = function () {
+  const fw = HART.fromWall(); if (fw) return fw;
   const P = World.houses.inn && World.houses.inn.plan; if (!P || !P.rooms || !P.w2) return null;
   const r = P.rooms.cellar || Object.values(P.rooms).find(q => q.k < 0); if (!r) return null;
   const a = r.in || r, k = r.k, y = P.lv[k].y, X = a.x1, W = 1.5;
@@ -18,16 +23,15 @@ HART.find = function () {
   return { k, z: best, wallX: X, prop: w(X - 0.01, 0.0), use: w(X - 0.5, 1.05), land: w(X - 1.2, 0.05), local: [X, y, best] };
 };
 HART.apply = function () {
-  /* [fin] the interiors inspector's dressInn publishes World.hartWall and 82c/94d read it (merging from fork-fin): then the brick and the doorway are theirs and
-     nothing is moved here; this file keeps only the pointers (the compass, the stair head, Greta's word) and reads the places back from what they placed */
-  if (World.hartWall) { const it = World.interact.find(o => o.id === 'sec.wall'), back = World.interact.find(o => o.id === 'door.tunnel.out'); if (it) HART.at = Object.assign(HART.find() || {}, { use: it.p.slice(), land: back && back.dest ? back.dest.p.slice() : it.p.slice() }); HART.stair = HART.stairHead(); return !!it; }
+  /* one mechanism (coordinator, Build 85): the interiors inspector's dressInn publishes World.hartWall (the east wall of the planned cellar, 72e_plans.js) and
+     82c/94d use it when they build; this places everything again from the same source, so there is one patch, one doorway, one pair of portals */
   const f = HART.find(); if (!f) return false; HART.at = f; HART.stair = HART.stairHead();
   if (typeof SECRETS !== 'undefined' && SECRETS.wall) SECRETS.wall.p = f.use.slice();
   const it = World.interact.find(o => o.id === 'sec.wall'); if (it) it.p = f.use.slice();
-  if (typeof SEC !== 'undefined' && SEC.wallObj) secPlace(SEC.wallObj, f.prop, -Math.PI / 2);
-  if (typeof A2 !== 'undefined' && A2.door) secPlace(A2.door, f.prop, -Math.PI / 2);
+  if (typeof SEC !== 'undefined' && SEC.wallObj) secPlace(SEC.wallObj, f.prop, f.yaw !== undefined ? f.yaw : -Math.PI / 2);
+  if (typeof A2 !== 'undefined' && A2.door) secPlace(A2.door, f.prop, f.yaw !== undefined ? f.yaw : -Math.PI / 2);
   const pin = World.interact.find(o => o.id === 'door.tunnel.in'); if (pin) pin.p = f.use.slice();
-  const pout = World.interact.find(o => o.id === 'door.tunnel.out'); if (pout && pout.dest) { pout.dest.p = f.land.slice(); pout.dest.yaw = -Math.PI / 2; }
+  const pout = World.interact.find(o => o.id === 'door.tunnel.out'); if (pout && pout.dest) { pout.dest.p = f.land.slice(); pout.dest.yaw = f.yaw !== undefined ? f.yaw : -Math.PI / 2; }
   return true;
 };
 { const _sb = secBuild; secBuild = function () { HART.apply(); const r = _sb.apply(this, arguments); HART.apply(); return r; }; }
