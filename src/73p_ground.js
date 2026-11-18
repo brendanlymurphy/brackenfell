@@ -39,12 +39,12 @@ function groundFill(da, db, Rz, half) {
   }
 }
 function buildGround(bucket) {
-  if (TEST && TEST.plots === 0) return; const R = rng(7771), gy = (x, z) => Terrain.y(x, z);
+  if (TEST && (TEST.plots === 0 || TEST.ground === 0)) return; const R = rng(7771), gy = (x, z) => Terrain.y(x, z);
   World.places = GROUND.places; World.yardTrees = World.yardTrees || [];
   /* [fx3] allotments: the painted soil gets ridges 8 cm high with a dark trough, board edging, bean poles with vines, rows of greens, a spade, a bucket and a water butt (kit pieces only) */
   if (GROUND.soil && typeof kplace === 'function') {
     const raw = bucket, bk = (x, z) => { const m = raw(4e6 + Math.floor(x / 30) * 80, Math.floor(z / 30) * 80); m.maxDist = 60; m.lowDist = 24; m.noShadow = true; return m; };
-    const K = (m, n, x, y, z, sc, ry, tilt) => { if (typeof scanOn !== 'function' || !kitReady()) return; const P = kplace(m, n, x, y, z, sc, ry); if (!P) return;  if (tilt) P.M.multiply(new THREE.Matrix4().makeRotationX(tilt)); kadd(m, P, /^Prop_Vine/.test(n) ? { cast: false } : undefined); };
+    const K = (m, n, x, y, z, sc, ry, tilt) => { if (typeof scanOn !== 'function' || !kitReady()) return; const P = kplace(m, n, x, y, z, sc, ry); if (!P) return;  if (tilt) P.M.multiply(new THREE.Matrix4().makeRotationX(tilt)); kadd(m, P, { cast: false }); };
     const RIDGE = [0.3, 0.22, 0.15], TOP = [0.38, 0.29, 0.2], TROUGH = [0.13, 0.095, 0.07], BOARD = [0.5, 0.42, 0.31];
     for (const b of GROUND.beds) {
       for (let zs = b[1] + 0.6; zs + 2.4 < b[3] - 0.3; zs += 3.0) {
@@ -75,7 +75,7 @@ function buildGround(bucket) {
         const tx = x + (R() - 0.5) * 2.2, tz = z + (R() - 0.5) * 2.4;
         if (R() < 0.16) { if (!stump && R() < 0.5) stump = [tx, tz]; continue; }
         T.push([tx, tz]); World.yardTrees.push([tx, tz, 'oak', 0.6 + R() * 0.2]); }
-      const m = bucket(p.x0 + 4, p.z0 + 4), K = (n, x, y, z, sc, ry, tilt) => { if (typeof kplace !== 'function' || typeof scanOn !== 'function' || !scanOn()) return; const P = kplace(m, n, x, y, z, sc, ry); if (!P) return; if (tilt) P.M.multiply(new THREE.Matrix4().makeRotationX(tilt)); kadd(m, P); };
+      const m = bucket(p.x0 + 4, p.z0 + 4), K = (n, x, y, z, sc, ry, tilt) => { if (typeof kplace !== 'function' || typeof scanOn !== 'function' || !scanOn()) return; const P = kplace(m, n, x, y, z, sc, ry); if (!P) return; if (tilt) P.M.multiply(new THREE.Matrix4().makeRotationX(tilt)); kadd(m, P, { cast: false }); };
       if (stump) K('tree_stump_01', stump[0], gy(stump[0], stump[1]) - 0.04, stump[1], 0.55, R() * 6);
       const t = T[Math.min(T.length - 1, 4)]; if (t) {
         const lx = t[0] + 0.55, lz = t[1] + 0.35; K('wooden_ladder', lx, gy(lx, lz), lz, 1.7, Math.atan2(-0.55, -0.35) + Math.PI, -0.22);
