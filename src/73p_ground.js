@@ -40,7 +40,18 @@ function groundFill(da, db, Rz, half) {
 }
 function buildGround(bucket) {
   if (TEST && (TEST.plots === 0 || TEST.ground === 0)) return; const R = rng(7771), gy = (x, z) => Terrain.y(x, z);
-  World.places = GROUND.places; World.yardTrees = World.yardTrees || [];
+  const raw0 = bucket; World.places = GROUND.places; World.yardTrees = World.yardTrees || [];
+  /* [fx3] worn lines where people walk: each yard's door to its gate, a smooth darker strip of tamped earth 0.7 m wide with a pale rim, bending a little (a desire line, not a ruler) */
+  if (typeof plotsCompute === 'function') for (const p of plotsCompute()) {
+    if (!p.house || !p.gate) continue; const h = p.house, g = p.gate, cand = [siteToWorld(h, h.doorPos || 0, h.d / 2 + 0.6), siteToWorld(h, h.doorPos || 0, -h.d / 2 - 0.6)];
+    const door = Math.hypot(cand[0][0] - g[0], cand[0][1] - g[1]) < Math.hypot(cand[1][0] - g[0], cand[1][1] - g[1]) ? cand[0] : cand[1], L = Math.hypot(g[0] - door[0], g[1] - door[1]); if (L < 1.5 || L > 30) continue;
+    const m = (() => { const mm = raw0(4e6 + Math.floor(g[0] / 30) * 80 + 40, Math.floor(g[1] / 30) * 80); mm.maxDist = 45; mm.lowDist = 20; mm.noShadow = true; return mm; })(), n = Math.max(3, Math.ceil(L / 1.0)), nx = -(g[1] - door[1]) / L, nz = (g[0] - door[0]) / L, ph = _grGn(Math.round(g[0]), Math.round(g[1])) * 6, pts = [];
+    for (let i = 0; i <= n; i++) { const t = i / n, bend = Math.sin(t * Math.PI) * 0.6 * Math.sin(ph), x = door[0] + (g[0] - door[0]) * t + nx * bend, z = door[1] + (g[1] - door[1]) * t + nz * bend, w = 0.38 + 0.08 * Math.sin(i * 1.7 + ph); pts.push([x, z, w]); }
+    const hit = c => c.r !== undefined ? pts.some(q => Math.hypot(q[0] - c.x, q[1] - c.z) < c.r + 0.5) : pts.some(q => Math.abs(q[0] - c.x) < c.hx + 0.5 && Math.abs(q[1] - c.z) < c.hz + 0.5);
+    if (World.colliders.some(c => c.y1 - c.y0 > 0.3 && c.y0 < gy(door[0], door[1]) + 1 && hit(c) && Math.hypot(c.x - door[0], c.z - door[1]) > 1.3 && Math.hypot(c.x - g[0], c.z - g[1]) > 1.3)) continue;
+    for (const [wd, col, lift] of [[1.3, [0.44, 0.36, 0.27], 0.018], [0.85, [0.31, 0.24, 0.17], 0.026]]) { m.mat(MAT.MUD, col, 0.5); for (let i = 0; i < n; i++) { const a = pts[i], b = pts[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, ox = -dz / l, oz = dx / l, ya = a[2] * wd, yb = b[2] * wd;
+        m.quad2([a[0] + ox * ya, gy(a[0] + ox * ya, a[1] + oz * ya) + lift, a[1] + oz * ya], [a[0] - ox * ya, gy(a[0] - ox * ya, a[1] - oz * ya) + lift, a[1] - oz * ya], [b[0] - ox * yb, gy(b[0] - ox * yb, b[1] - oz * yb) + lift, b[1] - oz * yb], [b[0] + ox * yb, gy(b[0] + ox * yb, b[1] + oz * yb) + lift, b[1] + oz * yb]); } }
+  }
   /* [fx3] allotments: the painted soil gets ridges 8 cm high with a dark trough, board edging, bean poles with vines, rows of greens, a spade, a bucket and a water butt (kit pieces only) */
   if (GROUND.soil && typeof kplace === 'function') {
     const raw = bucket, bk = (x, z) => { const m = raw(4e6 + Math.floor(x / 30) * 80, Math.floor(z / 30) * 80); m.maxDist = 60; m.lowDist = 24; m.noShadow = true; return m; };
