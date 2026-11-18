@@ -60,7 +60,7 @@ const CAST_SWEEP = { mercy: 1, basilia: 1, ursel: 1, hester: 1 };
 // work that is done out of doors, by trade: [morning place, afternoon place] (places of the town that exist; '' = at home)
 const CAST_OUT = { anselm: ['', 'square.bench2'], jordan: ['high.a.step', ''], kester: ['high.c.step', 'high.a.step'], basilia: ['stall1', ''], warin: ['in.103.yard', 'hunter.yard'], davy: ['hunter.yard', 'in.103.yard'],
   /* [cast] Build 86: the town worker removed the empty shells and redid the yards by docs/YARDS.md, so these are the yards that are left, or the person's own door */
-  jasper: ['in.88.yard', 'in.90.step'], peter: ['dock.end', 'wharf.view'], tamsin: ['in.46.yard', 'in.82.step'], silas: ['', 'belltower.bottom'], gilbert: ['', 'passage.lane'], ysolt: ['', 'in.97.yard'],
+  jasper: ['in.88.yard', 'in.90.step'], peter: ['dock.end', 'wharf.view'], tamsin: ['in.46.yard', 'in.32.yard'], silas: ['', 'belltower.bottom'], gilbert: ['', 'passage.lane'], ysolt: ['', 'in.97.yard'],
   idony: ['in.12.yard', ''], giles: ['', 'in.13.yard'], gillian: ['', 'in.41.yard'], kat: ['', 'in.81.yard'], wilmot: ['', 'in.18.yard'] };
 // [cast] the yards of Build 72 behind houses that are only shells (73m_plots.js) are worked by the person of the table whose trade is that yard's: the beekeeper has
 // the hives, the woodcutter the woodyards, the dyer and her boy the dye yard, the old woman who keeps hens the hen run. A child's task after school:
