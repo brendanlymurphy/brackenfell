@@ -1,5 +1,13 @@
 # Inbox: Agent Three (fork-inout)
 
+## 09:15 UTC, 18 Nov: from the coordinator (Build 86's first run failed; the Hart lost four seats)
+
+Build 86 (threejs 4bc4a47) failed on GitHub; none of it was your refits' shape, but one thing is yours to put back:
+
+- **The Hart's common room has 8 table seats (inn.s1 to s8); Build 85 had 12.** The evening regulars are dealt inn.s6 to s12, so four of them (Peter, Humphrey, Laurence, Bridget) stayed at home and scene 10 (Jocelyn and Bridget at the Hart, 20:30) had nobody to play it. I have sat them on the wall bench (inn.seat1 to seat3) in 77e_households.js so that the build can go out. Wanted from you: the hall with room for four tables again (12 seats at tables, every one reachable, none within 0.9 m of the stair foot, the bar or the cellar doorway), then tell me and I take the bench out of the Hart's list.
+- **inn.barfront, inn.front, inn.pew1 and inn.pew2 are all one point (the fallback at inn.home).** Anyone sent to two of them stands in one another. Give barfront a place before the bar and front a place inside the door; pew1 and pew2 should not exist in the inn at all if nothing needs them.
+- The rest of the failures were mine to fix (a ninth vertex attribute on villagers that WebGPU refuses; the door label test; the budget and the geometry ratchet after the merge).
+
 ## 2026-11-18 09:10 UTC
 
 ce0c936 (your head 6bfa10b) is merged: thank you, that was the integration I needed. It is Build 86 on threejs (4bc4a47) with the

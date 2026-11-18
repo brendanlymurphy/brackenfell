@@ -347,8 +347,7 @@ const Chars = (() => {
       for (const s of src) { const a = s.attributes[name], c = s.attributes.position.count; for (let v = 0; v < c; v++) for (let k = 0; k < size; k++) arr[o++] = a ? (a.itemSize > k ? a.getComponent(v, k) : 1) : ATTR_DEF[name] ? ATTR_DEF[name][k] : 0; }
       g.setAttribute(name, new THREE.BufferAttribute(arr, size));
     }
-    if (names) { const mid = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; mid.fill(mids[i], o, o + c); o += c; }); g.setAttribute('mid', new THREE.BufferAttribute(mid, 1)); }
-    if (names) { const sh = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; sh.fill(sheds[i] || 0, o, o + c); o += c; }); g.setAttribute('shed', new THREE.BufferAttribute(sh, 1)); }      // [ch4] which garment a vertex belongs to, for taking it off (SHED_OF)
+    if (names) { const mid = new Float32Array(nv * 2); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; for (let v = 0; v < c; v++) { mid[o++] = mids[i]; mid[o++] = sheds[i] || 0; } }); g.setAttribute('mid', new THREE.BufferAttribute(mid, 2)); }      // x: which of the pack's materials; y [ch4]: which garment a vertex belongs to, for taking it off (SHED_OF). One attribute, not two: with a ninth vertex buffer WebGPU refuses the whole villager (the limit is 8) [coordinator, Build 86]
     let io = 0, base = 0; for (const s of src) { const c = s.attributes.position.count; if (s.index) for (let i = 0; i < s.index.count; i++) idx[io++] = s.index.getX(i) + base; else for (let i = 0; i < c; i++) idx[io++] = i + base; base += c; }
     g.setIndex(new THREE.BufferAttribute(idx, 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.6);
     S.geo.set(key, g); return g;
@@ -383,7 +382,7 @@ const Chars = (() => {
   function makeMergedMaterial(S, H, names, look, srcOf) {
     const { attribute, abs, Discard, If, frontFacing, normalView, clamp } = TSL;
     const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
-    const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
+    const midA = attribute('mid', 'vec2'), mid = midA.x, U = uv(), N = normalWorld.normalize();
     let weaveN = null, mouthW = float(0), albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), skinW = float(0), hairW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false, skinI = -1, clothW = float(0), trimW = float(0), anyTrim = false;
     const F = S.cfg.face || null, UE = F ? U.add(H.uGaze) : U;          // the eye texture is read a little off-centre: that is how the eyes move
     names.forEach((mn, i) => {
@@ -459,7 +458,7 @@ const Chars = (() => {
       albedo = albedo.mul(float(1).sub(TSL.clamp(occ.mul(0.6), 0, 0.42).mul(face)));      // [ch1] softer: no mask across the brow
       rough = rough.sub(TSL.clamp(spec, 0, 1).mul(face).mul(0.38));
     }
-    const shedA = attribute('shed', 'float');      // [ch4] what is taken off is not drawn
+    const shedA = midA.y;      // [ch4] what is taken off is not drawn
     m.colorNode = Fn(() => { If(shedA.greaterThan(0.5).and(shedA.lessThan(H.uShed.add(0.5))), () => { Discard(); }); If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
@@ -787,7 +786,7 @@ const Chars = (() => {
     const toL = new THREE.Matrix4().copy(H.pivot.matrixWorld).invert(), bp = n => { const b = H.root.getObjectByName(n); return b ? b.getWorldPosition(new THREE.Vector3()).applyMatrix4(toL) : null; };
     const head = bp('head'), neck = bp('neck_01'), fl = bp('foot_l'), fr = bp('foot_r'); if (!head || !neck || !fl || !fr) return;
     const feet = fl.clone().add(fr).multiplyScalar(0.5), ax = new THREE.Vector3(neck.x - feet.x, 0, neck.z - feet.z); const L0 = ax.length(); if (L0 < 0.8) return; ax.normalize();
-    const side = new THREE.Vector3(-ax.z, 0, ax.x), g = m.geometry, n = g.attributes.position.count, shed = g.attributes.shed, P = [];
+    const side = new THREE.Vector3(-ax.z, 0, ax.x), g = m.geometry, n = g.attributes.position.count, shed = g.attributes.mid && g.attributes.mid.itemSize > 1 ? g.attributes.mid : null, P = [];
     // the blanket's form is a sleeper's, not the posed mesh's (a skirt or a cape that stands up in the lying clip would tent it): bed level from the hips, then a profile along the
     // body (shoulders 0.17 m, chest 0.2, hips 0.19, thighs 0.15, knees 0.13, shins 0.1, feet 0.16 for the toes), rounded across and falling over the sides of the bed
     const pel = bp('pelvis'); if (!pel) return; const bed = pel.y - 0.11, N = BLK.N, M = BLK.M, len = L0 + 0.2, top = neck.clone().addScaledVector(ax, -0.1), PROF = [[0, 0.15], [0.12, 0.2], [0.3, 0.19], [0.45, 0.16], [0.62, 0.13], [0.85, 0.1], [0.95, 0.16], [1, 0.13]];
@@ -796,7 +795,7 @@ const Chars = (() => {
     // and over the body as it lies (trunk, legs and the clothes on them; not the arms, head or anything taken off), at most 0.34 m above the bed: a body on its side or a knee
     // drawn up raises it, a skirt or cape standing up in the clip cannot tent it
     { const si = g.attributes.skinIndex, sw = g.attributes.skinWeight, bones = H.skeleton.bones, armB = /^(upperarm|lowerarm|hand|thumb|index|middle|ring|pinky)_|^head$|^neck/, cap = bed + 0.34, MH = new Float32Array(H2.length).fill(-1e9);
-      for (let i = 0; i < n; i += 2) { if (shed && shed.getX(i) > 0.5) continue; if (armB.test(bones[si.getX(i)].name) && sw.getX(i) > 0.5) continue; m.getVertexPosition(i, _bv); _bv.applyMatrix4(m.matrixWorld).applyMatrix4(toL);
+      for (let i = 0; i < n; i += 2) { if (shed && shed.getY(i) > 0.5) continue; if (armB.test(bones[si.getX(i)].name) && sw.getX(i) > 0.5) continue; m.getVertexPosition(i, _bv); _bv.applyMatrix4(m.matrixWorld).applyMatrix4(toL);
         const dx = _bv.x - top.x, dz = _bv.z - top.z, u = -(dx * ax.x + dz * ax.z) / len, w = (dx * side.x + dz * side.z) / BLK.wide + 0.5; if (u < -0.04 || u > 1.04 || w < -0.04 || w > 1.04) continue;
         const ii = Math.round(u * N), jj = Math.round(w * M); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const p2 = ii + a, q2 = jj + b; if (p2 < 0 || p2 > N || q2 < 0 || q2 > M) continue; const q = p2 * (M + 1) + q2; MH[q] = Math.max(MH[q], Math.min(cap, _bv.y + 0.035)); } }
       for (let pass = 0; pass < 2; pass++) { const c = MH.slice(); for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { let mx = c[i * (M + 1) + j], s2 = 0, k2 = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const p2 = i + a, q2 = j + b; if (p2 < 0 || p2 > N || q2 < 0 || q2 > M || c[p2 * (M + 1) + q2] < -1e8) continue; s2 += c[p2 * (M + 1) + q2]; k2++; } if (k2) MH[i * (M + 1) + j] = Math.max(mx, s2 / k2); } }
