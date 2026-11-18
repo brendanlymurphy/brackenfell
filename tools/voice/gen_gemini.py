@@ -48,6 +48,7 @@ def tts(text, voice, direction):
             if e.code in (429, 500, 503): time.sleep(8 * (attempt + 1)); continue       # rate limit (the free tier is slow) or a hiccup: wait and retry
             sys.exit('Gemini API error %d: %s' % (e.code, msg))
         except (KeyError, IndexError, StopIteration): time.sleep(4); continue                         # an empty candidate now and then: ask again
+        except (ConnectionError, TimeoutError, urllib.error.URLError) as e: time.sleep(10 * (attempt + 1)); continue      # [cast] a dropped connection (a run of 20 requests died on one): wait and ask again
     sys.exit('gave up on: ' + text[:60])
 
 # --batch N: several lines of one character in one request (the daily limit counts requests, not seconds of speech). The lines are sent
