@@ -139,7 +139,7 @@ function kitShellPass(c, pass) {
         if (st.balcony === wn && n >= 3 && k === mid) {
           add(F, 'Wall_Plaster_Door_Flat', uc, H, -0.015, S, UP); add(F, 'DoorFrame_Flat_WoodDark', uc, H, 0, S, EXT); add(F, 'Door_1_Flat', uc - 0.54 * sx, H, -0.05, S, EXT);
           add(F, 'Balcony_Simple_Corner', uc + sx, H, 0, S, EXT); add(F, 'Balcony_Simple_Corner', uc - sx, H, 0, [-sx, 1, 1], EXT);
-          add(F, 'Floor_WoodDark_Half3', uc - sx, H, 1, S, EXT); add(F, 'Floor_WoodDark_Half3', uc + sx, H, 1, S, EXT);
+          add(F, 'Floor_WoodDark_Half3', uc - sx, H, 1, S, EXT); add(F, 'Floor_WoodDark_Half3', uc + sx, H, 1, S, EXT); add(F, 'Balcony_Simple_Straight', uc - sx, H, 0, S, EXT); add(F, 'Balcony_Simple_Straight', uc + sx, H, 0, S, EXT);
           for (const sg of [-1, 1]) add(F, 'Roof_Support2', uc + sg * 1.7 * sx, H - 0.74, 0.02, 1, EXT);
         } else if (n > 1 && k === 0) add(F, 'Wall_Plaster_Straight_L', uc, H, -0.015, S, UP);
         else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, -0.015, S, UP);
@@ -180,6 +180,14 @@ function kitShellPass(c, pass) {
     ext.push(); m4.mul(ext.m, ext.m, wbs[wn]); ext.dirty = true;
     outer(); ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(o.u0 - 0.35, -0.5, 0, o.u1 + 0.35, -0.02, 0.5); ext.box(o.u0 - 0.2, -0.5, 0.5, o.u1 + 0.2, -0.17, 0.95);
     ext.pop();
+  }
+  const HATCH = { store: { wn: 'back', along: 0 } }[site.id];      // [fx3] a cellar the inside shows is a hatch outside: a piece named gen_hatch_*: a timber coaming and two plank leaves leaning on the wall
+  if (X && HATCH && !site.infill && typeof GP === 'function') {
+    const L = WALLS[HATCH.wn].len(w, d), g = GP(), M_ = 'MI_WoodTrim', DK = [0.55, 0.5, 0.45];
+    g.box(M_, -0.95, 0, 0.02, 0.95, 0.2, 0.16, DK); g.box(M_, -0.95, 0, 0.16, -0.83, 0.2, 1.05, DK); g.box(M_, 0.83, 0, 0.16, 0.95, 0.2, 1.05, DK);
+    for (const sg of [-1, 1]) for (const k of [-0.3, -0.1, 0.1, 0.3]) g.beam(M_, [sg * 0.41 + k, 0.2, 1.0], [sg * 0.41 + k, 1.0, 0.17], 0.095, [0.7, 0.66, 0.62]);
+    const nm = g.make('gen_hatch_' + (_gn++));
+    c.kb.add(nm, KH.xf(frames[HATCH.wn], L / 2, 0, 0, 1, 0), EXT);
   }
   const e = 0.16;          // the kit walls are thinner than the generated ones: reach to their inner face
   if (st.up) c.needUpper = true;           // a second storey: its floor, with the stairwell, is built by the building (upperFloor in 71b_storeys.js)

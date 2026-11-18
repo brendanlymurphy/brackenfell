@@ -6,6 +6,8 @@ QUALITY.low.houseFar = 30; QUALITY.low.yardRange = 24; QUALITY.medium.yardRange 
 // that suits the street). All of it goes into ONE batch (one draw per material) which is hidden when the camera is far away or indoors and does not
 // cast into the sun-shadow maps: one prism stand-in per house does that.
 const ROOFS = [];       // every generated roof (for test/town.js: slope sample points against the neighbours' volumes)
+/* [fx3] shells that show no door: the audit's first house inside the west gate (in.39) opened onto nothing, and it is the first door every new player tries; it is a house front with windows only (a shell is not a house you can enter) */
+const NO_DOOR = new Set(['in.39']);
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
 const LOWQ = () => R.qName === 'low';      // [fx3] (top level: R is the renderer here; inside houses R is a local rng)
 const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof', INF_SL = 'MI_Slate_Roof', INF_TH = 'MI_Thatch_Roof', INF_SS = 'MI_StoneSlate_Roof', INF_CT = 'MI_ClayTile_Roof', INF_L = 'MI_Plaster_Lime', INF_R = 'MI_Rubble_Wall';      // [fx2] the three roof coverings: wood shingle, stone slate, thatch (shellStyle in 72c_infill picks one per building)
@@ -300,7 +302,7 @@ function infShell(B, h, lo) {
     const pl = plan[k] = { front: [], back: [], left: [], right: [] }, win = (c, hwid) => ({ u0: c - hwid, u1: c + hwid, v0: 0.95, v1: 2.1, shutter: R() < 0.3 });
     for (let i = 0; i < nF; i++) {
       const c = (i + 0.5) * mF;
-      if (k === 0) { if (i === Math.min(doorBay, nF - 1)) pl.front.push({ u0: c - 0.52, u1: c + 0.52, v0: 0, v1: 2.12, door: true }); else if (!lo && (nF < 3 || i % 2 === 0 || R() < 0.4)) pl.front.push(win(c, 0.5)); }
+      if (k === 0) { if (i === Math.min(doorBay, nF - 1) && !NO_DOOR.has(h.id)) pl.front.push({ u0: c - 0.52, u1: c + 0.52, v0: 0, v1: 2.12, door: true }); else if (!lo && (nF < 3 || i % 2 === 0 || R() < 0.4)) pl.front.push(win(c, 0.5)); }
       else if (h.stairs && k === 1 && i === (h.stairs > 0 ? nF - 1 : 0)) pl.front.push({ u0: c - 0.52, u1: c + 0.52, v0: 0, v1: 2.12, door: true });
       else if (!lo && ((i + k) % 2 === (h.par || 0) || nF <= 3)) pl.front.push(win(c, 0.5));
       if (!lo && k > 0 && i % 2 === 1 && R() < 0.35) pl.back.push(win(c, 0.5));

@@ -189,3 +189,7 @@ node tools/voice/check.mjs --allow-missing
   living or recognisable is built from primitives; a thing that cannot pass at arm's length is left out; inside and outside are
   the same building; look at your own work from the end, from behind and from below before you report. Briefs for the
   sessions on their own machines are in `docs/briefs/`.
+- Build 82: he plays on a MacBook in Chrome now; the phone is the lesser concern. Medium and High are what he sees: nothing visible
+  on those tiers is traded for the Low budget (Low ceiling 230k triangles / 150 draws until a phone is measured), and nothing may pop
+  in or swap detail within sight on any tier. All ten new voices of the cast were approved by ear ("excellent").
+- Coordinator and sessions talk through the repository: `docs/inbox/<NAME>.md` on `threejs`, `docs/reports/<NAME>.md` on each branch (`docs/inbox/README.md`).
