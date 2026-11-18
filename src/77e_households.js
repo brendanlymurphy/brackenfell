@@ -153,3 +153,19 @@ function householdDefs() {
     if (CAST_CHAPEL.includes(id) && has('chapel.nave')) { const dawn = [[5.5 + CAST_CHAPEL.indexOf(id) * 0.04, 'chapel.nave', 'pray']].concat(sched.filter(r => r[0] >= 6.7 || r[0] < 5.4)).sort((a, b) => a[0] - b[0]), d = NPC_DEFS[NPC_DEFS.length - 1]; if (!dawn.some(r => r[0] > 6.6 && r[0] < 7.3)) dawn.push([6.75, meal, sitA]), dawn.sort((a, b) => a[0] - b[0]); d.schedIf = () => (typeof qAt === 'function' && qAt('bell') === 99 ? dawn : null); }
   }
 }
+
+// ── One at a time through a door (coordinator, 11:30 and 15:45: Marta and Bridget met in the Hart's doorway at closing, both walking to the one portal) ──
+// Their two ways joined at a way point 2 m inside the room and they reached it together from two sides; so the rule is for any way point, a door's threshold
+// included. A walker within 1.5 m of the next point of their way stops there, idle, while someone nearer is bound for the same point or has only just left
+// it (still within 0.7 m), or, at a door, someone who has come through stands on the threshold. Then they go on, one behind the other. Ties go by place in the
+// list; after 3 s a walker goes anyway, so two can never wait on each other.
+function npcDoorWait(n, d, dt) {
+  const k = n.path[n.pi]; if (d > 1.5 || k === undefined) { n.doorWait = 0; return false; }
+  if ((n.doorWait || 0) > 3) { if (d < 0.3) n.doorWait = 0; return false; }
+  const K = Nav.nodes[k], portal = Nav.portal[k] !== undefined, me = NPCS.indexOf(n);
+  for (let i = 0; i < NPCS.length; i++) { const m = NPCS[i]; if (m === n || Math.abs(m.pos[1] - K[1]) > 1.5) continue; const dm = Math.hypot(m.pos[0] - K[0], m.pos[2] - K[2]); if (dm > 1.6) continue;
+    const ahead = m.path && m.path[m.pi] === k && (dm < d - 0.05 || (Math.abs(dm - d) <= 0.05 && i < me)) && (m.doorWait || 0) <= 3;
+    const leaving = m.path && m.pi > 0 && m.path[m.pi - 1] === k && dm < 0.7, onIt = portal && !m.path && dm < 0.6;
+    if (ahead || leaving || onIt) { n.doorWait = (n.doorWait || 0) + dt; n.anim = 'idle'; return true; } }
+  n.doorWait = 0; return false;
+}
