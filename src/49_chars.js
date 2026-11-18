@@ -129,13 +129,13 @@ const Chars = (() => {
       anims: ANIMS, once: SETS.quaternius.once.slice(), rate: { hammer: 0.9 }, maxRate: 2.6,
       grip: [1.384, 0.06, -0.916, 0.023, 0.024, 0.014],       // the Quaternius grip carried over by the hand's finger, across and palm axes (tools/humans/README notes)
       // does this person wear this wardrobe part? (names: w_belt, w_pouch, w_hat_<style>, w_apron, w_straps, w_tabard_f/b, w_cloak, w_cuffL/R)
-      wears(look, part) { const w = look.wear; if (!w) return false; const m = /^w_hat_(.*)$/.exec(part); if (m) return w.hat === m[1];
-        if (/^w_(kirtle|sleeve)/.test(part)) return !!w.kirtle; return part === 'w_belt' ? !!w.belt : part === 'w_pouch' ? !!w.pouch : part === 'w_apron' ? !!w.apron : part === 'w_straps' ? !!w.straps : /^w_tabard/.test(part) ? !!w.tabard : part === 'w_cloak' ? !!w.cloak : /^w_cuff/.test(part) ? !!w.cuffs : false; },
+      wears(look, part) { const w = look.wear; if (!w) return false; const m = /^w_hat_(.*)$/.exec(part); if (m) return w.hat === m[1].replace(/_cape$/, '');
+        if (/^w_(kirtle|sleeve)/.test(part)) return !!w.kirtle; return part === 'w_belt' ? !!w.belt : part === 'w_pouch' ? !!w.pouch : /^w_apron/.test(part) ? w.apron && part === 'w_apron' + (w.apronCut || '') : part === 'w_straps' ? !!w.straps : /^w_tabard/.test(part) ? !!w.tabard : part === 'w_cloak' ? !!w.cloak : /^w_cuff/.test(part) ? !!w.cuffs : false; },
       look(def) {
         if (def.foe) { // [ch1] scavenged kit: a belt, a pouch, one cuff or two, a cloak or straps and a bit of headwear, each picked by the foe's id and in dull, mismatched colours
           let fh = 0; for (const ch of String(def.id || def.foe.body)) fh = (fh * 31 + ch.charCodeAt(0)) >>> 0; const fr = k => ((fh >>> (k * 4)) % 89) / 89, hoodie = /hood/.test(def.foe.body), DULL = [[0.17, 0.14, 0.10], [0.22, 0.17, 0.11], [0.15, 0.16, 0.13], [0.26, 0.20, 0.14], [0.20, 0.12, 0.09], [0.14, 0.13, 0.14]], pk = k => DULL[Math.floor(fr(k) * DULL.length)];
           const wear = { belt: true, pouch: fr(1) < 0.65, cuffs: fr(2) < 0.5, cloak: !hoodie && fr(3) < 0.4, straps: !hoodie && fr(4) < 0.45, hat: hoodie ? null : fr(5) < 0.45 ? 'cap' : fr(5) < 0.6 ? 'coif' : null };
-          const WC = { leather: [0.13, 0.085, 0.05].map(v => v * (0.8 + 0.5 * fr(6))), hat: pk(7), metal: [0.22, 0.21, 0.19], apron: pk(8), cloak: pk(9), tabard: pk(10), linen: [0.32, 0.30, 0.25], strap: [0.17, 0.12, 0.08], straw: [0.40, 0.32, 0.16], wool: pk(11), teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
+          const WC = { leather: [0.13, 0.085, 0.05].map(v => v * (0.8 + 0.5 * fr(6))), hat: pk(7), metal: [0.22, 0.21, 0.19], apron: pk(8), cloak: pk(9), tabard: pk(10), linen: [0.32, 0.30, 0.25], strap: [0.17, 0.12, 0.08], straw: [0.40, 0.32, 0.16], wool: pk(11), teeth: [0.52, 0.46, 0.34], tongue: [0.2, 0.07, 0.07] };
           wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
           return { body: def.foe.body, wear, tint: Object.assign({ skin: SKIN_T[def.foe.body] || SKIN_T.light }, def.foe.tint) }; }
         const body = BODY[def.id] || def.body || (def.female ? 'f_farmer' : 'm_farmer');          // def.body / def.tint: the inn's regulars (77c_patrons.js) wear other people's bodies in other colours
@@ -151,13 +151,21 @@ const Chars = (() => {
         const acc = { hat: hatT, belt: !isRobe || !!def.belt, pouch: !!def.belt || rich > 0.6, col: [def.hatCol && def.hat !== 'helmet' ? sq(def.hatCol).map(v => v * 0.85 * (Math.max(...sq(def.hatCol)) > 0.5 ? 0.6 : 1)) : HATC[hatT] || HATC.cap, def.belt ? sq(def.belt).map(v => v * 0.8) : [0.14, 0.09, 0.055], def.hat === 'helmet' ? HATC.helmet : [0.30, 0.29, 0.27], [0.19, 0.12, 0.07]] };
         // The wardrobe the body carries (w_* parts, tools/humans/garb.py): what this person wears of it, and in what colours (slots: leather, hat, metal, apron, cloak, tabard, linen, strap, straw, wool)
         const fem = !!(def.female || /^f_/.test(body)), guard = def.prop === 'spear' || def.hat === 'helmet', wear = { belt: acc.belt, pouch: acc.pouch, cuffs: !isRobe && !/child/.test(body) };
-        { const hd = def.hat === 'hood' ? (fem ? 'kerchief' : null) : def.hat || (def.foe || def.sched && !def.house ? null : r(3) < 0.7 ? (fem ? ['kerchief', 'coif', 'straw'][Math.floor(r(7) * 3)] : ['cap', 'straw', 'cap', 'coif'][Math.floor(r(7) * 4)]) : null);
+        { const hd = def.hat === 'hood' ? (fem ? 'kerchief' : null) : def.hat || (def.foe || def.sched && !def.house ? null : r(3) < (fem ? 0.9 : 0.7) ? (fem ? ['kerchief', 'coif', 'kerchief'][Math.floor(r(7) * 3)] : ['cap', 'hood', 'cap', 'straw', 'hood'][Math.floor(r(7) * 5)]) : null);
           wear.hat = hd === 'helmet' ? (body === 'm_guard' ? 'kettle' : 'cap') : hd; }
-        if (/^f_(child|girl|maid|weaver|herbalist|farmer)$/.test(body)) { wear.kirtle = true; wear.cuffs = false; }      // [ch1] these bodies are dressed in a kirtle shell (garb.py kirtle_pieces), not a stock tunic
-        if (def.apron) { if (guard) wear.tabard = true; else { wear.apron = true; wear.straps = true; } } else if (fem && !isRobe && r(5) < 0.28) { wear.apron = true; wear.straps = true; }
-        if (def.cloakBack || (!def.sched && r(6) < 0.12) || (def.house && r(6) < 0.1)) wear.cloak = true;
+        if (/^m_(fisher|innkeeper|boy)$/.test(body) && !def.hat) wear.hat = 'hood';      // [ch1] chaperon: hood with a short cape
+        if (body === 'f_child') wear.hat = 'coif';      // [ch1] Pip: a linen cap over the plaits
+        if (/^(f_(child|girl|maid|weaver|herbalist|farmer)|m_(farmer|youth|fisher|innkeeper|hunter|boy|smith))$/.test(body)) { wear.kirtle = true; wear.cuffs = false; }      // [ch1] these bodies are dressed in a kirtle shell (garb.py kirtle_pieces), not a stock tunic
+        if (def.apron) { if (guard) wear.tabard = true; else if (!(fem && wear.kirtle) || (body !== 'f_farmer' && body !== 'f_girl')) { wear.apron = true; wear.straps = true; wear.apronCut = ['', '_half', '_long'][Math.floor(r(12) * 3)]; } } else if (body === 'f_herbalist') { wear.apron = true; wear.straps = true; wear.apronCut = ['', '_half', '_long'][Math.floor(r(12) * 3)]; }      // [ch1] aprons for trades only, three cuts
+        { const rc = ((Math.imul(h ^ 0x9e3779b9, 0x85ebca6b) >>> 9) % 97) / 97;      // [ch4] r(6) reads bits 30 and up of a 32-bit number: it was never above 0.03, so every housed resident wore the cloak. A draw of its own.
+          if (def.cloakBack || (!def.sched && rc < 0.12) || (def.house && rc < 0.1)) wear.cloak = true; }
         const WC = { leather: acc.col[1], hat: acc.col[0], metal: acc.col[2], apron: def.apron ? sq(def.apron) : pal[Math.floor(r(8) * pal.length)], cloak: def.cloak ? sq(def.cloak) : pal[Math.floor(r(9) * pal.length)], tabard: def.apron ? sq(def.apron) : [0.3, 0.1, 0.1],
-          linen: [0.47, 0.44, 0.36].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: /child/.test(body) ? [0.30, 0.27, 0.21] : top ? top.map(v => v * 0.9) : pal[Math.floor(r(11) * pal.length)], teeth: [0.66, 0.6, 0.46], tongue: [0.2, 0.07, 0.07] };
+          linen: [0.47, 0.44, 0.36].map(v => v * (0.85 + 0.15 * r(10))), strap: [0.2, 0.14, 0.09], straw: [0.46, 0.37, 0.18], wool: /child/.test(body) ? [0.30, 0.27, 0.21] : top ? top.map(v => v * 0.9) : pal[Math.floor(r(11) * pal.length)], teeth: [0.52, 0.46, 0.34], tongue: [0.2, 0.07, 0.07] };
+        if (wear.kirtle) {      // [ch1] dyes: woad grey-blue and madder, never bright; aprons undyed grey-cream linen
+          const mute = c => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => l + (v - l) * 0.28).map(v => Math.min(0.62, v)); };
+          WC.wool = mute(WC.wool); WC.cloak = mute(WC.cloak); if (wear.hat === 'hood' || wear.hat === 'cap') WC.hat = mute(WC.hat);
+          WC.apron = body === 'm_smith' ? [0.17, 0.105, 0.06] : [[0.29, 0.27, 0.23], [0.33, 0.29, 0.20], [0.26, 0.21, 0.15]][Math.floor(r(8) * 3)].map(v => v * (0.92 + 0.08 * r(13)));      // [ch4] unbleached hemp and tow, not white (in sun the old values read as a flat white sheet); the smith's is leather
+        }
         wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
         return { body, fit: FIT[body] || 1, hairGrey: { f_elder: 0.96, m_elder: 0.92, m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 }[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
       },
@@ -374,7 +382,7 @@ const Chars = (() => {
       const src = srcOf && srcOf[mn], md = S.cfg.materials[mn] || (S.cfg.matOf && src && S.cfg.matOf(src)) || {}, w = clamp(float(1).sub(abs(mid.sub(i))), 0, 1);
       let key = (look.maps && look.maps[mn]) || md.map; if (key && typeof key === 'object') key = key[H.body];
       const map = key ? S.tex[key] : (md.gltf && src && src.map) || null, tint = look.tint && (look.tint[mn] || (md.part && look.tint[md.part]) || (md.kind && look.tint[md.kind])) || [1, 1, 1];
-      const tx = map ? texture(map, md.kind === 'eye' ? UE : U) : null;
+      const tx = map ? (md.kind === 'brow' ? texture(map, U).bias(2.5) : texture(map, md.kind === 'eye' ? UE : U)) : null;      // [ch1] brows: a soft mip, not the dotted strand pattern
       if (md.kind === 'skin') { skinW = skinW.add(w); skinI = i; } if (md.kind === 'hair') hairW = hairW.add(w);
       if (md.kind === 'cloth' || md.part === 'trim') clothW = clothW.add(w); if (md.part === 'trim') { trimW = trimW.add(w); anyTrim = true; }
       // dyed cloth: the garment keeps its weave and folds (the texture's light and dark) but takes the villager's own colour
@@ -386,7 +394,7 @@ const Chars = (() => {
       rough = rough.add(w.mul(md.rough === undefined ? 0.85 : md.rough));
       if (md.oneSided) one = one.add(w);
       if (md.kind === 'eye') { eyeW = eyeW.add(w); anyEye = true; }
-      if (md.alpha && tx) { anyAlpha = true; alpha = alpha.add(w.mul(tx.a.sub(1))); cut = cut.add(w.mul(md.alpha)); }      // cut-out hair and brows: this fragment's alpha and threshold
+      if (md.alpha && tx) { anyAlpha = true; alpha = alpha.add(w.mul((md.kind === 'brow' ? TSL.clamp(tx.a.mul(2.4), 0, 1) : tx.a).sub(1))); cut = cut.add(w.mul(md.alpha)); }      // cut-out hair and brows: this fragment's alpha and threshold
       const wm = md.warm || [1, 1, 1]; if (md.warm) anyWarm = true; warm = warm.add(vec3(wm[0], wm[1], wm[2]).mul(w));
       if (C.normalMaps && md.normal && S.tex[md.normal]) { const nm = normalMap(texture(S.tex[md.normal], U)); nrm = nrm ? nrm.add(nm.mul(w)) : nm.mul(w); nw = nw.add(w); }
     });
@@ -403,7 +411,7 @@ const Chars = (() => {
         { const pl = TSL.positionLocal, th = TSL.sin(pl.x.add(pl.z.mul(0.7)).mul(520)).mul(0.5).add(TSL.sin(pl.y.mul(470).add(pl.z.mul(180))).mul(0.5)), wv = TSL.vec3(TSL.cos(pl.x.add(pl.z.mul(0.7)).mul(520)).mul(0.5), TSL.cos(pl.y.mul(470).add(pl.z.mul(180))).mul(0.5), 0).mul(0.10);
           weaveN = wv.mul(trimW).mul(TSL.smoothstep(2.2, 0.8, SH.U.camPos.sub(positionWorld).length())); void th; }
       }
-      const isMouth = TSL.step(9.5, cv.w.mul(12));      // (slot values arrive as bytes: 2 is 2.02) mouthW = mouthW.add(isMouth.mul(trimW));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening
+      const isMouth = TSL.step(9.5, cv.w.mul(12)); mouthW = mouthW.add(isMouth.mul(trimW));      // [ch1] teeth and tongue (slots 10, 11): no occlusion, dirt or wear darkening (slot values arrive as bytes: 2 is 2.02)
       albedo = albedo.mul(TSL.mix(TSL.mix(float(1), TSL.mix(cv.x, float(1), 0.15), 0.9), float(1), isMouth));
       const dirt = TSL.mix(vec3(0.46, 0.38, 0.29), vec3(1, 1, 1), TSL.smoothstep(0.05, 0.85, cv.y));
       albedo = albedo.mul(TSL.mix(vec3(1, 1, 1), dirt, clothW.mul(isMouth.oneMinus()))).mul(float(1).sub(cv.z.mul(clothW).mul(0.4).mul(isMouth.oneMinus())));
@@ -449,7 +457,7 @@ const Chars = (() => {
     else if (weaveN) m.normalNode = normalView.add(weaveN).normalize();      // [ch1]
     let lit = SH.hemi(N, H.uLight, H.uZone).add(SH.pointLights(positionWorld, N, H.uZone, float(0.25)));
     if (anyWarm) lit = lit.mul(warm);       // skin keeps a little red in the shade, as light scattered under it does
-    let emis = albedo.mul(lit).add(albedo.mul(0.32).mul(mouthW));      // [ch1] teeth and tongue are never darker than the lips
+    let emis = albedo.mul(lit).add(albedo.mul(0.10).mul(mouthW));      // [ch1] teeth and tongue are never darker than the lips
     if (F) {
       // skin: where the sun grazes it the light carries on a little way round, reddened (blood under the skin), and the edge facing away from the eye takes a soft sheen
       const day = float(1).sub(TSL.step(0.5, H.uZone)).mul(H.uLight), ndl = N.dot(SH.U.sunDir);
@@ -519,6 +527,7 @@ const Chars = (() => {
     if (any) (H.lods = H.lods || []).push(e);
   }
   function lodUpdate(H, d, cast) {
+    if (H.seatedNow) d *= 1.6;      // [ch1] seated patrons (the inn hall): the lighter weights start sooner, they are not walking up to anyone
     if (!H.lods) { for (const m of H.meshes) m.castShadow = cast; return; }
     const D = LOD.dist[R.qName] || LOD.dist.medium, h = LOD.hyst, was = H.lodLevel === undefined ? 0 : H.lodLevel, up = k => d > D[k] + (was > ['hi', 'mid', 'lo'].indexOf(k) ? -h : h);
     const level = LOD.force === 1 ? 2 : LOD.force === 0 ? 0 : up('lo') ? 3 : up('mid') ? 2 : up('hi') ? 1 : 0;
@@ -749,10 +758,49 @@ const Chars = (() => {
     if (!H.visKSet && H.bones.head) { const hb = H.bones.head, c = hb.children.find(o => o.isBone || o.isObject3D && o.position.lengthSq() > 1e-6); H.visKSet = 1; H.visK.value = (c ? Math.max(0.5, Math.min(1.3, c.position.length() / V.ref)) : 1) * VIS_GAIN; }
   }
   // ── per frame ──
+  // [ch1] Fingers close round a held thing: C.grip(H, 'R', 0..1) while that hand holds something. Applied after the mixer each frame (the mixer only rewrites a joint
+  // when its animated value changed, so the previous frame's curl is taken out first, as the head look does).
+  const FING = ['index', 'middle', 'ring', 'pinky'], CURL = [0.95, 1.15, 0.85], GRIP_SIGN = { R: -1, L: -1 };
+  C.grip = function (H, side, amt) { (H.gripAmt = H.gripAmt || { R: 0, L: 0 })[side] = amt; if (H.gripFlip === undefined) H.gripFlip = /^f_/.test(H.body); };      // [ch4] the women's finger joints turn the other way: with one sign for all, a woman's fingers bent back from what she held
+  // [ch4] An arm reaches a point: two-joint solve on upper arm and forearm so the wrist is at `target` (world), the hand turned to `handQ` (world) if given; `w` 0..1 blends from the
+  // animation. Call every frame while reaching, after the mixer (a prop's post function does); C.reach(H, side, null) lets go. The instrument is set against the body and the hands
+  // go to it, not the other way round: an instrument hung between two animated hands went through the player's belly. Same bookkeeping as the finger curl (see above).
+  const IKB = { R: ['upperarm_r', 'lowerarm_r', 'hand_r'], L: ['upperarm_l', 'lowerarm_l', 'hand_l'] }, _ik = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), u: new THREE.Vector3(), v: new THREE.Vector3(), n: new THREE.Vector3(), q: new THREE.Quaternion(), p: new THREE.Quaternion(), r: new THREE.Quaternion() };
+  const ikTurn = (bone, qW) => { bone.parent.getWorldQuaternion(_ik.p); _ik.r.copy(_ik.p).invert().multiply(qW).multiply(_ik.p); bone.quaternion.premultiply(_ik.r); bone.updateWorldMatrix(false, true); };
+  C.reach = function (H, side, target, handQ, w) {
+    const S = H.ikS || (H.ikS = {}), s = S[side] || (S[side] = IKB[side].map(n => ({ b: H.root.getObjectByName(n), base: new THREE.Quaternion(), mine: new THREE.Quaternion(), on: false }))), I = _ik;
+    if (s.some(g => !g.b)) return false;
+    for (const g of s) { if (g.on && g.b.quaternion.equals(g.mine)) g.b.quaternion.copy(g.base); else g.base.copy(g.b.quaternion); g.on = false; }
+    if (!target) return true;
+    const ua = s[0].b, la = s[1].b, hd = s[2].b; ua.updateWorldMatrix(true, true);
+    for (let it = 0; it < 3; it++) {
+      ua.getWorldPosition(I.a); la.getWorldPosition(I.b); hd.getWorldPosition(I.c);
+      const l1 = I.a.distanceTo(I.b), l2 = I.b.distanceTo(I.c), d = Math.max(Math.abs(l1 - l2) + 0.01, Math.min(l1 + l2 - 0.004, I.a.distanceTo(target)));
+      I.u.subVectors(I.c, I.b).normalize(); I.v.subVectors(I.a, I.b).normalize(); const cur = Math.acos(Math.max(-1, Math.min(1, I.u.dot(I.v)))), want = Math.acos(Math.max(-1, Math.min(1, (l1 * l1 + l2 * l2 - d * d) / (2 * l1 * l2))));
+      I.n.crossVectors(I.u, I.v); if (I.n.lengthSq() < 1e-8) I.n.set(0, 0, 1).applyQuaternion(la.getWorldQuaternion(I.q)); I.n.normalize();
+      ikTurn(la, I.q.setFromAxisAngle(I.n, cur - want));
+      hd.getWorldPosition(I.c); I.u.subVectors(I.c, I.a).normalize(); I.v.subVectors(target, I.a).normalize(); ikTurn(ua, I.q.setFromUnitVectors(I.u, I.v));
+    }
+    if (handQ) { hd.parent.getWorldQuaternion(I.p); hd.quaternion.copy(I.p.invert().multiply(handQ)); }
+    for (const g of s) { if (w !== undefined && w < 1) g.b.quaternion.copy(I.q.copy(g.base).slerp(g.b.quaternion, Math.max(0, w))); g.mine.copy(g.b.quaternion); g.on = true; }
+    ua.updateWorldMatrix(false, true); return true;
+  };
+  function gripUpdate(H) {
+    const G = H.gripS || (H.gripS = { R: null, L: null }), q = new THREE.Quaternion(), e = new THREE.Euler();
+    for (const side of ['R', 'L']) {
+      const amt = H.gripAmt[side], sfx = side === 'R' ? '_r' : '_l';
+      if (!G[side]) { G[side] = []; for (const f of FING) for (let j = 1; j <= 3; j++) { const b = H.root.getObjectByName(f + '_0' + j + sfx); if (b) G[side].push({ b, j, base: new THREE.Quaternion(), mine: new THREE.Quaternion(), on: false }); } }
+      for (const g of G[side]) {
+        if (g.on && g.b.quaternion.equals(g.mine)) g.b.quaternion.copy(g.base); else g.base.copy(g.b.quaternion); g.on = false;
+        if (amt > 0.001) { e.set((H.gripFlip ? -1 : 1) * GRIP_SIGN[side] * CURL[g.j - 1] * amt * (g.j === 1 ? 0.8 : 1), 0, 0); q.setFromEuler(e); g.b.quaternion.multiply(q); g.mine.copy(g.b.quaternion); g.on = true; }
+      }
+    }
+  }
   C.update = function (H, st, dt) {
     const cfg = H.set.cfg, pv = H.pivot;
     pv.visible = st.visible !== false; if (!pv.visible) return;
     const base = st.anim || 'idle', seated = base === 'sit', lying = base === 'lie';
+    H.seatedNow = seated;      // [ch1]
     const key = st.talking ? (lying ? 'lie' : seated ? (cfg.anims['sit+talk'] ? 'sit+talk' : 'sit') : 'talk') : base;
     play(H, key);
     const s = st.scale || 1, k = (cfg.scale || 1) * s * H.fit;
@@ -778,6 +826,7 @@ const Chars = (() => {
       }
       pv.rotation.y = th; pv.position.set(x, y, z);
     }
+    H.animNow = base; H.talkNow = !!st.talking;      // [ch1]
     lodUpdate(H, dcam, st.cast === undefined ? !!H.cast : st.cast); H.cast = st.cast === undefined ? H.cast : st.cast;
     H.uZone.value = st.zone || 0; H.uLight.value = st.light === undefined ? 1 : st.light;
     if (cfg.face && dcam < 14) faceUpdate(H, st, dt, dcam);
@@ -791,6 +840,8 @@ const Chars = (() => {
       turnBone(H, nb, lk[0] * 0.35, lk[1] * 0.35 * sg); turnBone(H, hb, lk[0] * 0.65, lk[1] * 0.65 * sg);
       [nb, hb].forEach((b, i) => { if (b) { L[i].mine.copy(b.quaternion); L[i].on = true; } });
     }
+    if (H.gripAmt) gripUpdate(H);      // [ch1]
+    if (H.post && pv.visible) for (const f of H.post) f(H, st);      // [ch1] held things that follow the hands (src/77d_handprops.js)
   };
   return C;
 })();

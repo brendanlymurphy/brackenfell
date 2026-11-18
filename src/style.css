@@ -325,3 +325,6 @@ body.cine::before { top: 0; } body.cine::after { bottom: 0; }
 @media (pointer: coarse) { #toasts div button { min-height: 44px; padding: 6px 14px; } }
 #place { transition: opacity 0.7s ease; }
 @media (max-height: 430px) { #place { top: 21%; font-size: clamp(1.15rem, 3.4vw, 1.8rem); } #place small { font-size: 0.7rem; margin-bottom: 2px; } }
+/* [cast] a notice is read, not spoken: the board in the square and the slab in the cave show their text as a written card, not as a line under a speaker's name (85b_memory.js) */
+body.notice #dname { color: var(--gold); letter-spacing: 0.2em; }
+body.notice #dtext { display: inline-block; text-align: left; white-space: pre-line; font-family: var(--display); color: #2a2118; text-shadow: none; background: rgba(214, 196, 158, 0.94); border: 1px solid #5b4a32; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); padding: 10px 16px; max-width: 46ch; }

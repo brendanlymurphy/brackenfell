@@ -107,6 +107,7 @@ function buildRoutes(bucket) {
     // passage lining: planks, a cobbled floor, a beamed ceiling, all dark (ao) so it reads as a dim tunnel by day
     { const m = M(11.4, -19.8); m.ao = 0.38; m.mat(MAT.PLANKS, [0.5, 0.42, 0.34], 0.5); m.quad2([PM0 + 0.02, g, ZW], [PM0 + 0.02, g, PZ1], [PM0 + 0.02, 2.9, PZ1], [PM0 + 0.02, 2.9, ZW]); m.quad2([PM1 - 0.02, g, ZW], [PM1 - 0.02, g, PZ1], [PM1 - 0.02, 2.9, PZ1], [PM1 - 0.02, 2.9, ZW]);
       m.mat(MAT.PLANKS, [0.4, 0.34, 0.28], 0.5); m.quad2([PM0, 2.9, ZW], [PM0, 2.9, PZ1], [PM1, 2.9, PZ1], [PM1, 2.9, ZW]); m.ao = 0.55; m.mat(MAT.COBBLE, [0.7, 0.68, 0.64], 0.45); m.quad2([PM0, g + 0.03, ZW], [PM0, g + 0.03, PZ1], [PM1, g + 0.03, PZ1], [PM1, g + 0.03, ZW]); m.ao = 1; }
+    for (const [xa, xb] of [[PM0 + 0.02, PM0 + 0.07], [PM1 - 0.07, PM1 - 0.02]]) for (let z = PZ1 + 0.35; z < ZW - 0.2; z += 0.9) box(MAT.TIMBER, [0.2, 0.17, 0.13], 0.5, xa, g, z, xb, 2.9, z + 0.1, 0, 0.5);      // [fx3] the lining is boarded: battens every 0.9 m, so it reads as a wall of boards, not a leaf
     box(MAT.PLANKS, [0.42, 0.36, 0.3], 0.5, PM0, 2.9, PZ1, PM1, Yb, ZW, 0, 0.5);                                           // the slab over the passage (its top is the loft store's floor)
     for (let z = ZW - 0.5; z > PZ1; z -= 1.3) beam([PM0, 2.8, z], [PM1, 2.8, z], 0.2, 0.2, [0.42, 0.38, 0.35]);
     // lintel beams at both mouths
@@ -147,7 +148,7 @@ function buildRoutes(bucket) {
     K.route('gallery', [[x0g(), gy(x0g(), -16.4), -16.4], [GX1 - 0.9, YG, -16.4], [10.2, YG, -16.4], [9.45, YG, -16.4], [9.45, YG, -18.8], [12.0, YG, -19.8]]);
     K.route('passage', [[11.4, g, -14.2], [11.4, g, -19.8], [11.4, g, -24.2]]);
     K.spot('passage.mid', 11.4, g, -19.8, 0); K.spot('loft.in', 11.4, YG, -19.8, 0);
-    K.place('hartgallery', 'The Hart’s Gallery', 3, -16.4, 10); K.place('passage', 'The Hawker’s Passage', 11.4, -19.8, 5);
+    (World.openings = World.openings || []).push({ kind: 'passage', x: 11.4, z: -19.8, dx: 0, dz: -1, w: 2.0 }); K.place('hartgallery', 'The Hart’s Gallery', 3, -16.4, 10); K.place('passage', 'The Hawker’s Passage', 11.4, -19.8, 5);
     // the back lane: dirt, a low wall one side, water butts, a yard at its end
     const lx = 11.4, lz0 = PZ1 - 0.2, lz1 = -31.0; const ml = M(lx, -26); ml.mat(MAT.GRAVEL, [0.74, 0.68, 0.6], 0.5); ml.quad2([lx - 1.2, gy(lx, lz0) + 0.03, lz0], [lx - 1.2, gy(lx, lz1) + 0.03, lz1], [lx + 1.2, gy(lx, lz1) + 0.03, lz1], [lx + 1.2, gy(lx, lz0) + 0.03, lz0]);
     for (const [x, z] of [[lx - 1.3, -24.4], [lx + 1.35, -26.6], [lx - 1.35, -28.5]]) { const m = M(x, z); m.push().T(x, gy(x, z), z); Props.barrel(m, 0.34, 0.9); m.pop(); }

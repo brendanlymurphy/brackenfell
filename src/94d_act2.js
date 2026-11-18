@@ -73,7 +73,7 @@ function act2Build() {
     A2.lant = []; for (const dz of [-1.6, 1.6]) { const P = WILDS.P.mine, q = siteToWorld(P, dz, 3.4); const e = { type: 'lantern', p: [q[0], Terrain.y(q[0], q[1]) + 1.7, q[1]], zone: 0, halo: 0.6, always: false }; World.emitters.push(e); A2.lant.push(e); } }
   // the loaves you leave, and what the village says
   IX.SAY.unshift(
-    ['*', () => S.flags.ending === 'bread', 'There’s bread on the Wharf every dawn now. My mother would have cried to see it.'],
+    ['*', () => S.flags.ending === 'bread', 'There’s bread on the Wharf every dawn now. I never thought to see it.'],
     ['*', () => S.flags.ending === 'rest', 'The quiet’s different. Lighter. I slept the night through for the first time since the frost.'],
     ['greta', () => S.flags.ending === 'bread', 'I’ll not charge you for the stew this once, love. Don’t make it a habit.'],
     ['greta', () => S.flags.ending === 'rest', 'The Hart’s never been so full. People want to be near other people, after.'],

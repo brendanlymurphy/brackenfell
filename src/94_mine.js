@@ -1,4 +1,4 @@
-// ───────────────────────── the Old Mine: a dungeon of its own, reached through the barred door in the south-west cliffs ─────────────────────────
+// ───────────────────────── the Old Mine: a dungeon of its own, reached through the barred door in the north-west cliffs ─────────────────────────
 // A cell (56_cells.js) with no house in it: rock, timber, water, rails, carts and bones. It is built from rectangles of floor (REG) rasterised on a 1 m grid; the walls,
 // floor and roof are made from that grid (walls and roof pushed about by a lattice noise so no wall is straight), the colliders from the rectangles. Scanned rock, roots,
 // the castle door and the unique weapon come from kits/dungeon.glb once the kit is ready. Light: none but what is carried (the lantern, key L) and what burns on the walls.
