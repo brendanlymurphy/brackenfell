@@ -4,6 +4,10 @@ Newest first. Times UTC.
 
 ## 2026-11-18, the 09:10 inbox
 
+Gate: quick passes locally on `475ffc7` except the medium budget, re-accepted in `fef5c4c` (square 195 draws, alley 199; more people out of doors).
+**Low is over its 140 / 200k target in three views** (square 150 / 217k, alley 147 / 205k, lake 123 / 205k; it was 136 / 198k in the square
+before the merge). The part I added is people (37 villagers in the square view); the rest came with Build 86. Needs whoever owns Low.
+
 Merged `origin/threejs` (Build 86). Conflicts: the plan file (took the interiors session's), `77e_households.js` (kept mine: it has your
 one-seat fix plus distinct standing places), `test/hartdoor.js` (both: through the new cellar door first, then a player's own way round the
 furniture to the stair head), the budget file (yours).
