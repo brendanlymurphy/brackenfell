@@ -35,13 +35,32 @@ Feel.post = function (dt) {
   cam.roll = Feel.roll + (rm ? 0 : lat * 0.05);
   // dialogue framing and the held opening shot move the player's own view (so it stays where it settles)
   if (Feel.talkNpc) {
-    const n = Feel.talkNpc, e = [P.pos[0], P.camY + P.eye, P.pos[2]], hy = n.pos[1] + (n.anim === 'lie' ? 0.5 : n.anim === 'sit' ? 1.22 : 1.56 * (n.scale || 1)), d = hyp(n.pos[0] - e[0], n.pos[2] - e[2]) || 1;
-    const yawT = headingTo(e[0], e[2], n.pos[0], n.pos[2]) + 0.06, pitT = Math.atan2(hy - e[1], d) - 0.16 * 0.85, k = Math.min(1, dt * (rm ? 30 : 3.2));
+    /* [cast] FIRSTTEN 14, owner: the speaker's head is in the upper half of the view, clear of the subtitle, and nothing stands between you and it. The head is
+       found from the body's own head bone (a seated villager's head was assumed 1.22 m above a point that is already the seat, and fell to the bottom edge
+       under the subtitle); the view is pitched so the head sits a third of the way down. If a shelf, a beam or a chest is in the way, you step to the nearest
+       place round the speaker where the line is clear (Feel.talkPlace, once per conversation). */
+    const n = Feel.talkNpc, e = [P.pos[0], P.camY + P.eye, P.pos[2]], hb = n.ch && n.ch.bones && n.ch.bones.head;
+    let hy = n.pos[1] + (n.anim === 'lie' ? 0.5 : n.anim === 'sit' ? 1.22 : 1.56 * (n.scale || 1)), hx = n.pos[0], hz = n.pos[2];
+    if (hb && n.ch.pivot && n.ch.pivot.visible !== false) { hb.getWorldPosition(Feel._hv || (Feel._hv = new THREE.Vector3())); if (Math.abs(Feel._hv.y - n.pos[1]) < 2.4) { hy = Feel._hv.y + 0.07; hx = Feel._hv.x; hz = Feel._hv.z; } }
+    if (!Feel.talkPlaced) { Feel.talkPlaced = true; Feel.talkPlace(n, [hx, hy, hz]); }
+    if (Feel.talkMove) { const m = Feel.talkMove, q = Math.min(1, dt * 6); P.pos[0] += (m[0] - P.pos[0]) * q; P.pos[2] += (m[2] - P.pos[2]) * q; if (Math.hypot(m[0] - P.pos[0], m[2] - P.pos[2]) < 0.02) Feel.talkMove = null; }
+    const d = hyp(hx - e[0], hz - e[2]) || 1, fovy = (R.camera && R.camera.fov ? R.camera.fov * Math.PI / 180 : 0.92), up = Math.atan(0.36 * Math.tan(fovy / 2));
+    const yawT = headingTo(e[0], e[2], hx, hz) + 0.04, pitT = clamp(Math.atan2(hy - e[1], d) - up, -1.2, 1.2), k = Math.min(1, dt * (rm ? 30 : 3.2));
     P.yaw += angDiff(yawT, P.yaw) * k; P.pitch += (pitT - P.pitch) * k;
   }
   Feel.introFrame(dt);
 };
-Feel.talk = npc => { Feel.talkNpc = npc; };
+Feel.talk = npc => { Feel.talkNpc = npc; Feel.talkPlaced = false; Feel.talkMove = null; };
+// [cast] where to stand to talk: here if the line from the eye to the speaker's head is clear and nothing hangs over your head; otherwise the nearest clear place
+// on a ring round the speaker (1.1 to 1.9 m, on the same floor, not in anything solid)
+Feel.talkPlace = (n, h) => {
+  const P = Player, eyeAt = (x, y, z) => [x, y + P.eye, z], clear = (x, y, z) => { const e = eyeAt(x, y, z); return !World.sightBlocked(e[0], e[1], e[2], h[0], h[1], h[2], 0.35) && !World.sightBlocked(x, y + 0.5, z, x, e[1] + 0.25, z + 0.001, 0.05) && !World.blockedAt(x, z, 0.28); };
+  if (clear(P.pos[0], P.pos[1], P.pos[2])) return;
+  const a0 = Math.atan2(P.pos[0] - n.pos[0], -(P.pos[2] - n.pos[2])); let best = null, bs = 1e9;
+  for (const r of [1.3, 1.6, 1.1, 1.9]) for (let i = 0; i < 16; i++) { const a = a0 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * Math.PI / 8, x = n.pos[0] + Math.sin(a) * r, z = n.pos[2] - Math.cos(a) * r, g = World.groundAt(x, z, P.pos[1] + 0.6);
+    if (Math.abs(g - P.pos[1]) > 0.35 || !clear(x, g, z)) continue; const sc = Math.hypot(x - P.pos[0], z - P.pos[2]) + Math.abs(r - 1.4); if (sc < bs) { bs = sc; best = [x, g, z]; } }
+  if (best && bs < 4) Feel.talkMove = best;
+};
 Feel.talkEnd = () => { Feel.talkNpc = null; Feel.settleT = Math.max(Feel.settleT, 0.01); };
 Feel.settle = () => { if (!Feel.reduce) Feel.settleT = 1.1; };
 

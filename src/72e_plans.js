@@ -396,10 +396,15 @@ const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: 
 // the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
 function dressInn(P, c, room, hh) {
   const R = P.R, a = room.in; P.hall = { room, hh };
-  const bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, 4.8, PI / 2, 3.8, 0.7, 1.05, m => { Props.table(m, 3.8, 0.7, 1.05); Props.clutter(m, R, -1.7, 1.7, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
+  const barAt = (x, z, L) => pPut(P, room, P.id + '.bar', x, z, PI / 2, L, 0.7, 1.05, m => { Props.table(m, L, 0.7, 1.05); Props.clutter(m, R, -L / 2 + 0.2, L / 2 - 0.2, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
+  let bar = barAt(a.x1 - 1.7, 4.8, 3.8);
+  /* [cast] FIRSTTEN 12: the counter did not fit where it was asked for (Build 83's Hart), so there was no bar, the 'bar' place fell back to the floor in front of the
+     hearth and Greta kept the inn standing in the fireplace with her back to the room. Try along the east wall, then a shorter counter. */
+  for (const L of [3.8, 3.2, 2.6]) for (const dx of [1.7, 1.5, 1.9, 2.1]) for (const z of [4.8, 4.2, 5.4, 3.6, 3.0]) { if (bar) break; bar = barAt(a.x1 - dx, z, L); }
+  if (!bar) P.err.push('no room for the bar in the Hart');
   if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); P.bar = bar;
     pHang(P, room, 'e', bar.cz, 3.0, 1.45, 2.7, (m) => Props.shelf(m, 3.0, 1.2, 3, 0.3, (i, y) => Props.clutter(m, R, -1.3, 1.3, y, 0, ['bottle', 'bottle', 'mug', 'jug', 'bottle'], 6, c)), P.id + '.backshelf', {});
-    for (let i = 0; i < 3; i++) pAgainst(P, room, 'e', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: bar.cz - 1.4 + i * 1.4, lowOk: true });
+    for (let i = 0, n = 0; i < 6 && n < 3; i++) if (pAgainst(P, room, 'e', P.id + '.keg' + n, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: bar.cz + [-1.4, 0, 1.4, -2.1, 2.1, 0.7][i], lowOk: false })) n++;       /* [cast] the bar moved along the wall (its first place did not fit): kegs where a window is not */
     pLamp(P, room, bar.cx + 0.2, bar.cz); }
   let n = 0;
   for (const nr of [[-4.2, 5.0], [-0.5, 5.6], [-4.4, 2.8]]) {

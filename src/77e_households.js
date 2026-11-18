@@ -30,9 +30,17 @@ const CAST_WELL = ['avice', 'hester', 'kat', 'winifred', 'ysolt', 'gillian', 'el
 const CAST_HART = ['stephen', 'silas', 'miles', 'jasper', 'diggory', 'jocelyn', 'peter', 'humphrey', 'laurence', 'bridget'];
 // the few who sweep (the audit counted 57 of 80 with a broom in their day): the widow's step, the Reeve's house after the wedding, a shop floor at closing
 // calls paid at a fixed hour, where the table's passing scenes (section 6; 82e_scenes.js) need two people in one place: [from, place, until]
-const CAST_VISIT = { giles: [8.8, 'shop.s0.fire1', 9.5], elinor: [9.8, 'shop.s2.fire1', 10.5], miles: [10.8, 'smithy.fire1', 11.5], petronel: [11.8, 'shop.n2.fire1', 12.5], goda: [19.3, 'inn.fire1', 20.05], stephen: [19.8, 'gate.post2', 20.5] };
+const CAST_VISIT = { giles: [8.8, 'shop.s0.fire1', 9.5], elinor: [9.8, 'shop.s2.fire1', 10.5], miles: [10.8, 'smithy.fire1', 11.5], petronel: [11.8, 'shop.n2.fire1', 12.5], goda: [19.3, 'inn.stand1', 20.05], stephen: [19.8, 'gate.post2', 20.5] };
 const CAST_MORN = { lambert: 'in.94.step', wenn: 'wharf.view' };          // ... and where each of them takes the morning air (the audit: 16 people never left their building)
 const CAST_EVE = { randal: 'wharf.view', wilmot: 'bridge.west' };          // an hour by the water before supper for two who were otherwise indoors from dawn to dark
+// [coordinator, FIRSTTEN 17] until the dead man's tally has been read (S.flags.pell), people of the wharf come and stand by his bier for an hour or two, and Finn,
+// who pulled him out, keeps by it through the day; Ivo comes down in the afternoon to keep them back. [from, until, place]
+const CAST_BIER = { peter: [9.0, 10.8, 'bier.a'], hester: [10.6, 12.0, 'bier.b'], ellen: [13.4, 15.2, 'bier.a'], mercy: [15.0, 16.8, 'bier.c'], humphrey: [16.6, 17.8, 'bier.b'] }, STORY_BIER = { finn: [9.0, 15.4, 'bier.finn'], ivo: [14.2, 17.2, 'bier.guard'] };
+function bierDay(d, w) {
+  if (!World.spots[w[2]]) return; const sc = d.sched, at = h => { let r = sc[sc.length - 1]; for (const q of sc) if (q[0] <= h) r = q; return r; }, back = at(w[1]);
+  const alt = sc.filter(r => r[0] < w[0] || r[0] >= w[1]).concat([[w[0], w[2], 'idle'], [w[1], back[1], back[2]]]).sort((a, b) => a[0] - b[0]), prev = d.schedIf;
+  d.schedIf = () => (!S.flags.pell && !S.flags.ending ? alt : null) || (prev ? prev() : null);
+}
 const CAST_CHAPEL = ['idony', 'odo', 'gillian', 'felice', 'silas', 'emmet'];          // at the chapel at dawn, once the bell rings again (section 7)
 const CAST_STAY = { wenn: 1, odo: 1, lambert: 1 };          // the very old who keep to their own door: Wenn at the boatyard with the keys, Odo nearly blind, Lambert on his step
 const CAST_HOST = { diggory: 1, randal: 1, alaric: 1 };          // at their own bench when a scene comes to them (the tinker at ten, the boatwright at three)
@@ -68,6 +76,10 @@ function householdDefs() {
     for (const sp in S_) { const b = S_[sp].yardOf; if (!b || !sp.endsWith('.yard') || Object.values(CAST_TASK).includes(sp) || taken.has(sp)) continue; const yp = S_[sp].p; let best = null, bd = 1e9;
       for (const q of CAST) { if (q.age < 15 || q.id === 'godwin' || CAST_OUT[q.id] || yardBy[q.id]) continue; const hp = at(q.home); if (!hp) continue; const d = Math.hypot(hp[0] - yp[0], hp[1] - yp[2]); if (d < bd) { bd = d; best = q; } }
       if (best && bd < 60) { yardBy[best.id] = sp; taken.add(sp); } } }
+  // [coordinator, FIRSTTEN 17] the drowned man lay alone on the wharf: nobody by the bier. Places round it, facing it, a body's length back from the boards
+  if (typeof BODY !== 'undefined') { const B = BODY, ring = [['bier.finn', 1.9, 0.2], ['bier.a', 2.3, 2.1], ['bier.b', 2.4, -2.2], ['bier.c', 2.2, 3.4], ['bier.guard', 2.6, Math.PI]];
+    for (const [nm, r, a] of ring) { const x = B[0] + Math.sin(a) * r, z = B[2] - Math.cos(a) * r, y = World.groundAt(x, z, 4); if (y < -50) continue; S_[nm] = { p: [x, y, z], yaw: Math.atan2(B[0] - x, -(B[2] - z)), zone: 0 }; } }
+  for (const id in STORY_BIER) { const d = NPC_DEFS.find(q => q.id === id); if (d) bierDay(d, STORY_BIER[id]); }
   for (const p of CAST) {
     const home = p.home, work = p.work || home; if (!World.houses[home] || !World.houses[home].plan) { console.warn('cast: ' + p.name + ' has no house ' + home); continue; }
     const k = nth[home] = (nth[home] === undefined ? 0 : nth[home] + 1), bed = bedOf(home, p.id); if (!bed) console.warn('cast: no bed for ' + p.name + ' in ' + home);
@@ -100,6 +112,7 @@ function householdDefs() {
     const tn = HH_TINT[(H(id, 't') * 8) | 0], bodies = CAST_BODY[p.voice] || CAST_BODY.M, body = bodies[(H(id, 'b') * bodies.length) | 0];
     NPC_DEFS.push({ id, name: p.name, body, cast: p, tint: { tunic: tn, robe: tn, skirt: HH_TINT[(H(id, 'q') * 8) | 0], pants: [1.1, 1.0, 0.9] }, skin: HH_SKIN[(H(id, 'k') * 6) | 0], hair: p.age >= 55 ? (p.age >= 68 ? 'white' : 'grey') : HH_HAIR[(H(id, 'h') * 7) | 0],
       top: [0.4, 0.36, 0.3], legs: [0.3, 0.26, 0.22], female: fem, dress: fem, scale: child ? Math.min(0.8, 0.53 + p.age * 0.018) : p.voice === 'YM' && p.age < 17 ? 0.9 : undefined, run: child || undefined, sched, house: home, bed });
+    if (CAST_BIER[id]) bierDay(NPC_DEFS[NPC_DEFS.length - 1], CAST_BIER[id]);
     // [coordinator, Build 83] a day may depend on the story: once the bell rings again these six are at the chapel at dawn (npcRow asks schedIf before the plain day)
     if (CAST_CHAPEL.includes(id) && has('chapel.nave')) { const dawn = [[5.5 + CAST_CHAPEL.indexOf(id) * 0.04, 'chapel.nave', 'pray']].concat(sched.filter(r => r[0] >= 6.7 || r[0] < 5.4)).sort((a, b) => a[0] - b[0]), d = NPC_DEFS[NPC_DEFS.length - 1]; if (!dawn.some(r => r[0] > 6.6 && r[0] < 7.3)) dawn.push([6.75, meal, sitA]), dawn.sort((a, b) => a[0] - b[0]); d.schedIf = () => (typeof qAt === 'function' && qAt('bell') === 99 ? dawn : null); }
   }

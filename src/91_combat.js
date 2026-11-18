@@ -87,7 +87,8 @@ const Combat = (() => {
     let to = REST, k = 1;
     switch (C.phase) {
       case 'idle':
-        if (down && r.eq.weapon) begin(C.chainT < 0.7 ? (C.k + 1) % ATK.length : 0);
+        if (down && r.eq.weapon && !C.drawn) { C.drawn = true; C.idleT = 0; C.pressed = true; if (typeof Audio2 !== 'undefined' && Audio2.swing) Audio2.swing(false); }       /* [cast] the first press draws the blade: it does not swing at whoever is in front of you */
+        else if (down && r.eq.weapon) begin(C.chainT < 0.7 ? (C.k + 1) % ATK.length : 0);
         else if (blk) { C.phase = 'block'; C.t = 0; C.blockT = 0; grab(); }
         else { k = Math.min(1, C.t / 0.22); }
         break;
@@ -123,7 +124,12 @@ const Combat = (() => {
     for (let i = 0; i < 3; i++) { C.sh.p[i] += (shT.p[i] - C.sh.p[i]) * q; C.sh.r[i] += (shT.r[i] - C.sh.r[i]) * q; }
     // the blade rests out of sight when nothing has happened for a while or the hands are busy talking
     const wild = hyp(P.pos[0] - SQUARE.x, P.pos[2] - SQUARE.z) > 66;      // out in the wilds the blade stays in hand
-    const away = (C.idleT > 9 && RPG.combatT > 9 && !wild) || P.locked || !r.eq.weapon ? 1 : 0; C.away += (away - C.away) * Math.min(1, dt * (away ? 3.5 : 14));
+    /* [cast] FIRSTTEN 2: the blade was across the screen from the first second (the player starts more than 66 m from the square, where it always stayed out).
+       It is sheathed until drawn: by a press of attack or block, by being hit, or by a foe that has seen you within 25 m; it goes back after nine quiet seconds,
+       and is never in hand while you talk. */
+    if (blk || RPG.combatT < 1 || (typeof Foes !== 'undefined' && Foes.list.some(f => f.alive && f.state !== 'idle' && f.pos && hyp(f.pos[0] - P.pos[0], f.pos[2] - P.pos[2]) < 25))) { if (!C.drawn) C.idleT = 0; C.drawn = true; }
+    if (C.drawn && C.idleT > 9 && RPG.combatT > 9 && C.phase === 'idle' && !(typeof Foes !== 'undefined' && Foes.list.some(f => f.alive && f.state !== 'idle' && f.pos && hyp(f.pos[0] - P.pos[0], f.pos[2] - P.pos[2]) < 25))) C.drawn = false;
+    const away = !C.drawn || P.locked || !r.eq.weapon ? 1 : 0; void wild; C.away += (away - C.away) * Math.min(1, dt * (away ? 3.5 : 14));
     const dy = angDiff(P.yaw, C.lastYaw); C.lastYaw = P.yaw; C.sway += (clamp(dy / Math.max(dt, 0.001) * 0.012, -0.05, 0.05) - C.sway) * Math.min(1, dt * 9);
   };
   // put the view model where the camera is (called after the camera has had its last nudge for the frame)
