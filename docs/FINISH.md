@@ -468,3 +468,6 @@ counts: room 120, empty 77, dark by day 19, leaf in the face 14, stair in the wa
 | weaver | loft | L1 | room | room/room | 3 |  |
 
 
+
+## CELL DOOR INSIDE FACE (fin)
+The inside of a cell's street door was a pale olive slab (chapel north wall): the leaf colour set (73_village.js LEAF_COL) held three painted tones (olive, rose, blue) that flatten under indoor light. All six are now wood tones; boards, battens and the strap are the same mesh on both faces. Before /home/claude/shots/fin/doors/before.jpg, after /home/claude/shots/fin/doors/after.jpg (chapel left, in.13 right, 2 m inside). in.13's leaf was already a wood tone and is unchanged. Left over: the iron strap reads pale grey under the strong indoor light (a skinned prop is floored at about grey 80), so it is lighter than outside.
