@@ -1,6 +1,6 @@
 # The Quiet Under Brackenfell (main story)
 
-All of it happens inside the map we already have: the town, the wharf, the chapel crypt, the Old Mine in the south-west cliffs, the Old
+All of it happens inside the map we already have: the town, the wharf, the chapel crypt, the Old Mine in the north-west cliffs, the Old
 Watchtower, the lake and the inn's cellar. No new ground.
 
 ## Premise

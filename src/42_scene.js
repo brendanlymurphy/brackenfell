@@ -242,7 +242,7 @@ function sceneUpdate(camPos, q) {
     const it = s.it;
     if (cur || it.cell) { s.mesh.visible = !!cur && it.cell === cur.id; if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow; continue; }
     const d = hyp(it.c[0] - e[0], it.c[1] - e[1], it.c[2] - e[2]), far = d - it.r;
-    s.mesh.visible = (!it.maxDist || d <= (it.lowDist && R.qName === 'low' ? it.lowDist : it.maxDist) + it.r) && !(inside && far > ind);
+    s.mesh.visible = (!it.maxDist || d <= (it.lowDist && R.qName === 'low' ? it.lowDist : it.maxDist) + it.r) && (!it.minDist || d + it.r >= (it.lowMin && R.qName === 'low' ? it.lowMin : it.minDist)) && !(inside && far > ind);
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && far > DRAW.indoorCast) && !(s.farCapable && q.nearStatics === false);
     // generated village props (fences, walls, wells ...) cast into the wide sun-shadow map only on tiers that have q.farStatics; the near map always gets them
@@ -257,7 +257,7 @@ function sceneUpdate(camPos, q) {
   for (const s of SC.cells) {
     if (cur) { s.mesh.visible = false; continue; }
     const c = s.c, grp = s.grp, dc = hyp(c.c[0] - e[0], c.c[2] - e[2]);
-    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > Math.min(grp.maxDist, q.rockDist) + c.r) || (inside && grp.lod === 0 && dc - c.r > ind));
+    s.mesh.visible = !((grp.lod === 1 && dc > q.treeLod + c.r) || (grp.lod === 2 && dc < q.treeLod - c.r) || (grp.maxDist && dc > Math.min(grp.lowMax && R.qName === 'low' ? grp.lowMax : grp.maxDist, q.rockDist) + c.r) || (inside && grp.lod === 0 && dc - c.r > ind));
     if (s.cast0 === undefined) s.cast0 = s.mesh.castShadow;
     s.mesh.castShadow = s.cast0 && !(inside && dc - c.r > DRAW.indoorCast) && !(grp.nearOnly && grp.maxDist && q.rockCast === false);      // boulders: no shadow on tiers with rockCast false
   }

@@ -3,6 +3,32 @@
 //    each road (a walk-through arch 3.8 m wide, the gate open, torches, a stair up on the town side, a roofed watch platform)
 // e  the watch bell tower: an open timber frame with four switchback flights to a roofed platform 10.8 m up, the widest view in the valley
 // Built on the helpers of 73h_routes.js (rtKit). Walk deck, palisade and rails follow the ground in 2 m pieces; every deck is a ramped World.floors entry.
+// [fx3] detail by distance, merged per stretch so it costs no draw calls and never pops out: logCell(bucket, level, x, z) gives the mesh of the level:
+//   0: 8-sided logs, within 25 m, in the shadow pass (Low: 4-sided)   1: 4-sided logs, 25 to 70 m, out of the shadow pass (Low: none)   2: one ribbon per stretch beyond 70 m (Low: beyond 25 m), same bark and heights
+function logCell(bk, lv, x, z) {
+  const S = [24, 48, 132][lv], m = bk([5e6, 6e6, 7e6][lv] + Math.floor(x / S) * 80, Math.floor(z / S) * 80), low = R.qName === 'low';
+  m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.maxDist = lv === 0 ? 25 : lv === 1 ? 70 : 0; m.minDist = lv === 0 ? 0 : lv === 1 ? 25 : 70; m.lowMin = lv === 2 ? 14 : 0; m.lowDist = lv === 1 ? -1e4 : lv === 0 ? 14 : 0; m.noShadow = lv !== 0; m.edge = 1; return m;
+}
+// [fx3] a palisade log row from A to B (world points): tight individual logs (24-34 cm, overlapping a little), bark running up the log, each its own height and lean, the point cut with an axe, 0.3 m into the ground along the ground's own line, a riband pegged along the inside at 1.6 m; a few pale replaced logs, a few gaps patched with wattle.
+// topFn(t) gives the top height (t 0..1 along the row); inside is the unit normal toward the town; mk(level, x, z) gives the mesh of a detail level (see logCell).
+function logRow(mk, A, B, topFn, inside, seed) {
+  const gy = (x, z) => Terrain.y(x, z), dx = B[0] - A[0], dz = B[1] - A[1], L = Math.hypot(dx, dz); if (L < 0.2) return; const ux = dx / L, uz = dz / L, low = R.qName === 'low';
+  const hs = (k, a) => Math.abs(Math.sin(k * a + seed * 1.37) * 43758.5453) % 1; let u = 0.02, n = 0, pend = null, pn = 0;
+  const mid = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2], m0 = mk(0, mid[0], mid[1]), m1 = low ? null : mk(1, mid[0], mid[1]), m2 = mk(2, mid[0], mid[1]);
+  while (u < L - 0.05) { const h1 = hs(u, 127.1), h2 = hs(u, 311.7), h3 = hs(u, 74.7), r = 0.12 + h1 * 0.05, c = u + r;
+    const bx = A[0] + ux * c + inside[0] * (h2 - 0.5) * 0.03, bz = A[1] + uz * c + inside[1] * (h2 - 0.5) * 0.03, gL = gy(bx, bz);
+    if (h3 < 0.02 && n > 2) { const w0 = [bx - ux * 0.2, bz - uz * 0.2], w1 = [bx + ux * 0.2, bz + uz * 0.2], mL = m0; mL.mat(MAT.TIMBER, [0.34, 0.28, 0.2], 0.5); for (const k of [0.4, 0.9, 1.4]) mL.tube([[w0[0], gL + k, w0[1]], [w1[0], gL + k + 0.03, w1[1]]], [0.028, 0.028], 5, true);
+      for (const t2 of [-0.15, 0, 0.15]) mL.tube([[bx + ux * t2, gL - 0.3, bz + uz * t2], [bx + ux * t2, gL + 1.7, bz + uz * t2]], [0.03, 0.03], 5, true); u = c + 0.2; n++; continue; }
+    const t = c / L, top = topFn(t) + (h1 - 0.5) * 0.45 - (h3 > 0.93 ? 0.2 : 0), lx = (h2 - 0.5) * 0.12, lz = (h1 - 0.5) * 0.07, sh = [bx + lx * 0.9, top - 0.34, bz + lz * 0.9], tip = [bx + lx, top, bz + lz], pale = h3 > 0.93 && h3 < 0.985;
+    const bark = pale ? [0.7, 0.58, 0.42] : [0.5 + h1 * 0.1, 0.43 + h1 * 0.08, 0.35 + h1 * 0.06];
+    m0.mat(MAT.BARK, bark, 1.0); m0.grad = [0.62, 1]; m0.tube([[bx, gL - 0.3, bz], sh, tip], [r * 1.04, r * 0.97, 0.012], low ? 4 : 8, false); m0.grad = null;
+    if (m1) { m1.mat(MAT.BARK, bark, 1.0); m1.grad = [0.62, 1]; m1.tube([[bx, gL - 0.3, bz], sh, tip], [r * 1.04, r * 0.97, 0.012], 4, false); m1.grad = null; }
+    { const q = { x0: bx - ux * r, z0: bz - uz * r, x1: bx + ux * r, z1: bz + uz * r, g: gL, tx: tip[0], tz: tip[2], top, bark };      // the ribbon: two logs to a quad (a log cut flat, as wide as the log), the top running from the one point's height to the next, same bark
+      if (pend && ++pn >= 3) { m2.mat(MAT.BARK, pend.bark, 1.0); m2.grad = [0.62, 1]; m2.quad2([pend.x0, pend.top, pend.z0], [pend.x0, Math.min(pend.g, q.g) - 0.1, pend.z0], [q.x1, Math.min(pend.g, q.g) - 0.1, q.z1], [q.x1, q.top, q.z1]); m2.grad = null; pend = null; } else if (!pend) { pend = q; pn = 1; } }
+    u = c + r - 0.02; n++; }
+  // the riband: a squared pole pegged along the inside at 1.6 m, following the ground at its two ends (near levels only)
+  { const o = 0.3, a0 = [A[0] + inside[0] * o, A[1] + inside[1] * o], b0 = [B[0] + inside[0] * o, B[1] + inside[1] * o]; for (const mL of [m0, m1]) if (mL) { mL.mat(MAT.TIMBER, [0.3, 0.25, 0.19], 0.6); mL.beam([a0[0], gy(A[0], A[1]) + 1.6, a0[1]], [b0[0], gy(B[0], B[1]) + 1.6, b0[1]], 0.07, 0.12); } }
+}
 function buildWalls(bucket) {
   if (TEST && TEST.levels === 0) return;
   const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, stair, dark, wood, gy } = K;
@@ -19,11 +45,13 @@ function buildWalls(bucket) {
     for (let it = 0; it < 4; it++) for (let i = 1; i < N; i++) { if (FLAT(Us[i])) continue; Ys[i] = Math.max(gnd(Us[i]) + 2.7, (Ys[i - 1] + Ys[i] * 2 + Ys[i + 1]) / 4); }
     for (let i = 0; i <= N; i++) if (FLAT(Us[i])) Ys[i] = yT;
     const yAt = u => { for (let i = 0; i < N; i++) if (u <= Us[i + 1] || i === N - 1) return Ys[i] + (Ys[i + 1] - Ys[i]) * clamp((u - Us[i]) / (Us[i + 1] - Us[i]), 0, 1); };
+    const dk = u => clamp(1 - Math.max(0, u < ug ? ug - 8 - u : u - (ug + 10)) / 6, 0, 1), tTop = u => { const base = gnd(u) + 2.5, deck = yAt(u) + 1.85; return base + (Math.max(deck, base) - base) * dk(u); };
     // segments
-    const tips = [];
     for (let i = 0; i < N; i++) {
       const a = Us[i], b = Us[i + 1], ya = Ys[i], yb = Ys[i + 1], lo = Math.min(ya, yb), hi = Math.max(ya, yb), g0 = Math.min(gy(...P(a, 0)), gy(...P(b, 0)), gy(...P(a, 1.5)), gy(...P(b, 1.5)));
       const p0 = P(a, 0.35), p1 = P(b, 1.85), mm = M((P(a, 0)[0] + P(b, 0)[0]) / 2, (P(a, 0)[1] + P(b, 0)[1]) / 2);
+      const DK = b > ug - 8 && a < ug + 10;      // [fx3] the wall walk only beside the gate tower: a few metres either side
+      if (DK) {
       // walk deck: a ramp, planks; the floor entry follows it
       { const q0 = P(a, 0.35), q1 = P(b, 1.85); lvFloor(Math.min(q0[0], q1[0]), Math.min(q0[1], q1[1]), Math.max(q0[0], q1[0]), Math.max(q0[1], q1[1]), ya, yb, axis);
         const m = M(q0[0], q0[1]), c = P((a + b) / 2, 1.1); m.mat(MAT.PLANKS, wood, 0.55); const L = hyp(b - a, yb - ya);
@@ -34,45 +62,51 @@ function buildWalls(bucket) {
       // joist and bearer beams under the deck, a stilt at the inner edge every second piece
       { const s = P(a, 0.4), t = P(b, 0.4), s2 = P(a, 1.8), t2 = P(b, 1.8); K.beam([s[0], ya - 0.28, s[1]], [t[0], yb - 0.28, t[1]], 0.14, 0.18); K.beam([s2[0], ya - 0.28, s2[1]], [t2[0], yb - 0.28, t2[1]], 0.14, 0.18);
         if (i % 2 === 0 && !(a > ug - 2 && a < ug + 2)) { const q = P(a, 1.8);       /* [coord] no stilt in the middle of a gate arch */ K.post(q[0], q[1], gy(q[0], q[1]) - 0.4, ya - 0.1, 0.2, true); K.beam([q[0], ya - 0.3, q[1]], [P(a, 0.4)[0], ya - 0.3, P(a, 0.4)[1]], 0.1, 0.14); } }
-      // the palisade: a plank wall from under the ground to 1.85 m over the deck, stepped to the ground, a coping rail and sharpened stakes
-      { const top = hi + 1.85, e0 = P(a, 0), e1 = P(b, 0.36), mlo = Math.min(g0, lo - 3) - 0.8;
-        /* [coord] Build 72: the plank wall and its collider ran straight through both gate arches (nobody could walk the Bridge Gate or the Chapel Gate);
-           each 2 m piece is now cut to what lies outside the arch (ug - 1.9 .. ug + 1.9), and over the arch only the part above the lintel is kept */
+      }
+      /* [fx3] the palisade is a row of individual logs (20-28 cm, bark on, grey-brown, a darker mossy foot), each its own height and lean, tops cut to a point with the axe, a few pale replaced ones and a few gaps patched with wattle; the top line follows the ground smoothly (no steps) and rises over the wall walk only beside a gate tower */
+      { const mlo = Math.min(g0, lo - 3) - 0.8, topC = tTop((a + b) / 2) + 0.25;
         const g0a = ug - 1.9, g1a = ug + 1.9, parts = b <= g0a || a >= g1a ? [[a, b, mlo]] : [[a, Math.min(b, g0a), mlo], [Math.max(a, g0a), Math.min(b, g1a), yT - 0.16], [Math.max(a, g1a), b, mlo]].filter(q => q[1] - q[0] > 0.02);
-        for (const [pa, pb, pl] of parts) { const f0 = P(pa, 0), f1 = P(pb, 0.36); box(MAT.PLANKS, [0.74, 0.68, 0.6], 0.5, f0[0], pl, f0[1], f1[0], top, f1[1], 4 | 8);
-          /* [fx3] the outer face: plank joints as dark battens, a replaced board now and then, and the earth banked against the foot */
-          { const gM = gy(...P((pa + pb) / 2, -0.3)), hsh = Math.floor(Math.abs(pa) * 7.3) % 5;
-            for (let u = pa + 0.25; u < pb - 0.1; u += 0.42) { const gU = gy(...P(u, -0.03)); bx(MAT.TIMBER, [0.27, 0.24, 0.21], 0.5, u - 0.02, Math.max(pl, gU - 0.1), -0.03, u + 0.02, top - 0.04, 0, 4 | 8); }
-            if (hsh === 0 || hsh === 3 || hsh === 1) { const u = pa + 0.5 + (hsh === 3 ? 0.7 : 0), gU = gy(...P(u, -0.03)); bx(MAT.PLANKS, [0.78, 0.64, 0.46], 0.5, u, Math.max(pl, gU - 0.1), -0.04, u + 0.3, top - (hsh === 3 ? 0.9 : 0.2), 0, 4 | 8); }
-            if (pb - pa > 1.0) { bx(MAT.DIRT, [0.34, 0.29, 0.21], 1.5, pa, gM - 0.3, -0.95, pb, gM + 0.5, -0.02, 4 | 1 | 2); bx(MAT.DIRT, [0.36, 0.3, 0.22], 1.5, pa, gM - 0.3, -1.6, pb, gM + 0.18, -0.9, 4 | 1 | 2); } }
-          col(Math.min(f0[0], f1[0]), Math.min(f0[1], f1[1]), Math.max(f0[0], f1[0]), Math.max(f0[1], f1[1]), pl, top); }
-        void e0; void e1;
-        for (let u = a + 0.2; u < b - 0.05; u += 0.5) tips.push([u, top]); }
+        for (const [pa, pb, pl] of parts) { const f0 = P(pa, 0), f1 = P(pb, 0.36);
+          if (pl > mlo + 1) box(MAT.PLANKS, [0.42, 0.36, 0.3], 0.5, f0[0], pl, f0[1], f1[0], yT + 1.85, f1[1], 4 | 8);      // over the arch: boards above the lintel
+          else { const i0 = P(0, 0), i1 = P(0, 1); logRow((lv, x, z) => logCell(bucket, lv, x, z), P(pa, 0.15), P(pb, 0.15), t => tTop(pa + (pb - pa) * t), [i1[0] - i0[0], i1[1] - i0[1]], Math.abs(pa) * 0.13 + id.length); }
+          col(Math.min(f0[0], f1[0]), Math.min(f0[1], f1[1]), Math.max(f0[0], f1[0]), Math.max(f0[1], f1[1]), pl, pl > mlo + 1 ? yT + 1.85 : topC); } }
       // the inner rail, sloped
-      { const s = P(a, 1.85), t = P(b, 1.85);
+      if (DK) { const s = P(a, 1.85), t = P(b, 1.85);
         for (const k of [0.5, 1.0]) K.beam([s[0], ya + k, s[1]], [t[0], yb + k, t[1]], 0.05, 0.06);
         const post0 = P(a, 1.85); K.post(post0[0], post0[1], ya - 0.1, ya + 1.08, 0.1, true);
         if (!(FLAT(a) && FLAT(b)) && !(o.noRail && o.noRail(a, b))) { const c0 = P(a, 1.9), c1 = P(b, 1.95); col(Math.min(c0[0], c1[0]), Math.min(c0[1], c1[1]), Math.max(c0[0], c1[0]), Math.max(c0[1], c1[1]), lo - 0.05, hi + 1.15); } }
     }
-    // stakes (one mesh, tiny gable prisms)
-    { for (const [u, top] of tips) { const p = P(u, 0.0), m = M(p[0], p[1]); m.mat(MAT.TIMBER, [0.7, 0.64, 0.58], 0.5); const q0 = 0, q = P(u, 0.36), r = P(u + 0.22, 0.0), s = P(u + 0.22, 0.36), mid0 = [(p[0] + r[0]) / 2, (p[1] + r[1]) / 2], mid1 = [(q[0] + s[0]) / 2, (q[1] + s[1]) / 2], ty = top + 0.3;
-        m.quad2([p[0], top, p[1]], [q[0], top, q[1]], [mid1[0], ty, mid1[1]], [mid0[0], ty, mid0[1]]); m.quad2([mid0[0], ty, mid0[1]], [mid1[0], ty, mid1[1]], [s[0], top, s[1]], [r[0], top, r[1]]); } }
+    /* [fx3] the earth thrown up against the palisade's foot: a low turf-covered ridge on the outside that follows the ground and meets it along a ragged line, one closed form per stretch; it stops 0.3 m short of each gate tower, so the passage and the road are clear */
+    for (const [ba, bb] of [[u0 + 0.3, ug - TW - 0.3], [ug + TW + 0.3, u1 - 0.3]]) if (bb - ba > 1.5) { const A = P(ba, -0.75), B = P(bb, -0.75), mb = M((A[0] + B[0]) / 2, (A[1] + B[1]) / 2); earthBank(mb, A, B, 0.6, 0.42, [0.5, 0.5, 0.38]); }
+    { const o0 = P(ug, 0.5), o1 = P(ug, 1.5); (World.openings = World.openings || []).push({ kind: 'towngate ' + id, x: o0[0], z: o0[1], dx: o1[0] - o0[0], dz: o1[1] - o0[1], w: 3.8 }); }
     // ── the gate tower ──
     const Y = yT, a0 = ug - TW, a1 = ug - 1.9, b0 = ug + 1.9, b1 = ug + TW, V0 = -0.55, V1 = 3.4, gA = Math.min(gy(...P(ug, -0.2)), gy(...P(ug, 3.2)));
-    for (const [s, e] of [[a0, a1], [b0, b1]]) { bx(MAT.STONE, [0.9, 0.87, 0.82], 0.7, s, gA - 1.0, V0, e, Y - 0.16, V1, 4 | 8); { const p = P(s, V0), q = P(e, V1); col(Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1]), gA - 1.0, Y); }
-      bx(MAT.STONE, [0.84, 0.82, 0.78], 0.6, s - 0.08, Y - 0.34, V0 - 0.08, e + 0.08, Y - 0.16, V1 + 0.08, 4); }
+    for (const [s, e] of [[a0, a1], [b0, b1]]) { bx(MAT.STONE, [0.6, 0.58, 0.54], 1.2, s, gA - 1.0, V0, e, Y - 0.16, V1, 4 | 8); { const p = P(s, V0), q = P(e, V1); col(Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1]), gA - 1.0, Y); }
+      bx(MAT.STONE, [0.56, 0.54, 0.5], 1.2, s - 0.08, Y - 0.34, V0 - 0.08, e + 0.08, Y - 0.16, V1 + 0.08, 4); }
     bx(MAT.TIMBER, dark, 0.5, a1 - 0.05, Y - 0.62, V0 + 0.15, b0 + 0.05, Y - 0.16, V1 - 0.15, 4);          // the lintel under the deck: the arch is 3.8 m wide and 2.7 m high, the road's width plus a cart's
     { const p = P(a1, V0), q = P(b0, V1); (World.covers || (World.covers = [])).push({ x0: Math.min(p[0], q[0]), z0: Math.min(p[1], q[1]), x1: Math.max(p[0], q[0]), z1: Math.max(p[1], q[1]), y: Y, dark: true }); }      // [l1] the ground under a gate arch is in shade
     for (const v of [V0 + 0.1, V1 - 0.1]) { const p = P(a1 - 0.2, v), q = P(b0 + 0.2, v); K.beam([p[0], Y - 0.4, p[1]], [q[0], Y - 0.4, q[1]], 0.3, 0.46); }
     // deck over the whole tower (v from -0.5 to 3.4), the open gate leaves (hinged back flat on the faces), a plaque
     { const q0 = P(a0, V0), q1 = P(b1, V1); K.deck(Math.min(q0[0], q1[0]), Math.min(q0[1], q1[1]), Math.max(q0[0], q1[0]), Math.max(q0[1], q1[1]), Y); }
-    for (const sd of [-1, 1]) { const u = ug + sd * 1.95; bx(MAT.PLANKS, [0.5, 0.42, 0.34], 0.5, u - 0.05, gA, V0 + 0.2, u + 0.05, gA + 2.55, V0 + 1.6, 0, 1); for (const h of [0.4, 1.2, 2.0]) bx(MAT.PLAIN, [0.1, 0.09, 0.08], 0.5, u - 0.07, gA + h, V0 + 0.2, u + 0.07, gA + h + 0.1, V0 + 1.6, 0, 1); }
+    /* [fx3] the gate leaves: a pair of plank leaves on pintle hinges, standing open about 100 degrees from shut (ten degrees off the passage wall), hung on the outer end of each jamb inside the arch: planks on a ledged back, two iron straps the leaf's own width with hinge eyes, a drop bar slung in two iron brackets. Nothing crosses the pier, the lintel or the road. */
+    for (const sd of [-1, 1]) { const uh = ug + sd * (1.9 - 0.1), vh = V0 + 0.2, len = 1.75, dU = -sd * 0.3, dV = Math.sqrt(len * len - dU * dU), h0 = P(uh, vh), h1 = P(uh + dU, vh + dV), ang = Math.atan2(h1[1] - h0[1], h1[0] - h0[0]), gH = gy(h0[0], h0[1]), hh = 2.45, m = M(h0[0], h0[1]);
+      m.push().T(h0[0], gH, h0[1]).RY(-ang);
+      m.mat(MAT.PLANKS, [0.42, 0.34, 0.26], 0.6); m.box(0, 0.06, -0.035, len, hh, 0.035, 0);
+      m.mat(MAT.TIMBER, [0.26, 0.21, 0.16], 0.5); for (const y of [0.45, 1.25, 2.05]) m.box(0.0, y, 0.035, len, y + 0.16, 0.075, 0);            // ledges on the back
+      m.mat(MAT.METAL, [0.13, 0.12, 0.11]); for (const y of [0.55, 1.95]) { m.box(0.0, y, -0.05, len * 0.62, y + 0.1, -0.035, 0); m.box(0.0, y, -0.06, 0.1, y + 0.1, -0.035, 0); m.cyl(0.04, y - 0.02, -0.075, 0.05, 0.05, 0.14, 6, 0); }   // straps taper from the hinge; eyes round the pintles
+      for (const y of [0.55, 1.95]) m.cyl(0.0, y - 0.1, 0.0, 0.025, 0.025, 0.34, 6, 0);                                                                                      // pintles
+      m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); m.box(0.25, 1.15, -0.13, len - 0.1, 1.27, -0.05, 0);                                                                         // the drop bar
+      m.mat(MAT.METAL, [0.13, 0.12, 0.11]); for (const x of [0.4, len - 0.3]) m.box(x, 1.1, -0.14, x + 0.07, 1.32, -0.035, 0);
+      m.pop(); }
     // posts, roof, rails on the platform (open on the stair side and along the wall walk)
     const cps = [[ug - TW + 0.15, V0 + 0.2], [ug + TW - 0.15, V0 + 0.2], [ug - TW + 0.15, V1 - 0.2], [ug + TW - 0.15, V1 - 0.2]];
     for (const [u, v] of cps) { const p = P(u, v); K.post(p[0], p[1], Y, Y + 2.8, 0.22, true); }
     { const ye = Y + 2.8, yr = ye + 1.2, pA = P(ug - TW - 0.5, V0 - 0.6), pB = P(ug + TW + 0.5, V1 + 0.6), m = M((pA[0] + pB[0]) / 2, (pA[1] + pB[1]) / 2);
       const vm = (V0 + V1) / 2, f = (u, v, y) => { const p = P(u, v); return [p[0], y, p[1]]; };
       m.mat(MAT.SHINGLE, [0.5, 0.45, 0.4], 0.5); m.quad2(f(ug - TW - 0.5, V0 - 0.6, ye), f(ug + TW + 0.5, V0 - 0.6, ye), f(ug + TW + 0.5, vm, yr), f(ug - TW - 0.5, vm, yr)); m.quad2(f(ug - TW - 0.5, vm, yr), f(ug + TW + 0.5, vm, yr), f(ug + TW + 0.5, V1 + 0.6, ye), f(ug - TW - 0.5, V1 + 0.6, ye));
+      /* [fx3] the roof's two ends closed: a plank gable under each, the boards hung from a bargeboard (nothing open to the sky under the shingles) */
+      for (const uu of [ug - TW - 0.5, ug + TW + 0.5]) { const a = f(uu, V0 - 0.6, ye), b = f(uu, V1 + 0.6, ye), c = f(uu, vm, yr); m.mat(MAT.PLANKS, [0.38, 0.31, 0.23], 0.6); m.poly([a, b, c]); m.poly([c, b, a]);
+        K.beam([a[0], ye - 0.02, a[2]], [c[0], yr + 0.02, c[2]], 0.08, 0.14); K.beam([b[0], ye - 0.02, b[2]], [c[0], yr + 0.02, c[2]], 0.08, 0.14); }
       const e1 = f(ug - TW - 0.5, vm, yr), e2 = f(ug + TW + 0.5, vm, yr); K.beam([e1[0], yr + 0.02, e1[2]], [e2[0], yr + 0.02, e2[2]], 0.16, 0.14);
       for (const u of [ug - TW + 0.15, ug + TW - 0.15]) for (const v of [V0 + 0.2, V1 - 0.2]) { const p = P(u, v); void p; }
       for (const v of [V0 + 0.2, V1 - 0.2]) { const p = P(ug - TW + 0.15, v), q = P(ug + TW - 0.15, v); K.beam([p[0], ye, p[1]], [q[0], ye, q[1]], 0.18, 0.2); }
@@ -81,8 +115,20 @@ function buildWalls(bucket) {
       rl(a0 + 0.3, b1 - 0.3, V0 + 0.2);                                  // the outer rail (the palisade's own line continues on both sides)
       rl(a0 + 0.3, a0 + 2.2, V1 - 0.2);                                  // inner rail on the side away from the stair
       rl(a0 + 0.3, ug - 0.5, V1 - 0.2); }
-    // torches on the gate faces and a lantern in the arch
-    for (const sd of [-1, 1]) for (const v of [V0 - 0.04, V1 + 0.04]) { const p = P(ug + sd * 1.82, v); World.emitters.push({ type: 'torch', p: [p[0], gA + 2.2, p[1]], zone: 0, size: 0.2 }); const m = M(p[0], p[1]); m.mat(MAT.METAL, [0.14, 0.12, 0.1]); m.box(p[0] - 0.03, gA + 1.9, p[1] - 0.03, p[0] + 0.03, gA + 2.1, p[1] + 0.03); }
+    /* [fx3] a ladder at each end of the wall walk, on the town side, from the ground to a metre above the deck: two rails, rungs every 0.3 m, leaning on the deck's inner edge */
+    for (const uE of [ug - 8, ug + 10]) { if (uE < u0 + 0.8 || uE > u1 - 0.8) continue; const top = yAt(uE) + 0.9, pt = P(uE, 1.8), pb = P(uE, 2.5), gB = gy(pb[0], pb[1]), nU = axis === 'x' ? [1, 0] : [0, 1], wd = 0.26;
+      for (const sd of [-1, 1]) K.beam([pb[0] + nU[0] * wd * sd, gB, pb[1] + nU[1] * wd * sd], [pt[0] + nU[0] * wd * sd, top, pt[1] + nU[1] * wd * sd], 0.06, 0.1);
+      for (let y = 0.3; y < top - gB - 0.1; y += 0.3) { const t = y / (top - gB), q = [pb[0] + (pt[0] - pb[0]) * t, gB + y, pb[1] + (pt[1] - pb[1]) * t]; K.beam([q[0] - nU[0] * wd, q[1], q[2] - nU[1] * wd], [q[0] + nU[0] * wd, q[1], q[2] + nU[1] * wd], 0.04, 0.04); } }
+    // torches: iron brackets fixed to the pier faces at head height (a plate on the stone, an arm, a cup)
+    for (const sd of [-1, 1]) for (const f of [-1, 1]) { const u = ug + sd * 2.6, v = f < 0 ? V0 : V1, pf = P(u, v + f * 0.3), yh = gy(...P(u, v + f * 0.4)) + 1.85;
+      bx(MAT.METAL, [0.14, 0.12, 0.1], 0.5, u - 0.06, yh - 0.1, v + (f < 0 ? -0.03 : 0), u + 0.06, yh + 0.2, v + (f < 0 ? 0 : 0.03), 0);
+      bx(MAT.METAL, [0.14, 0.12, 0.1], 0.5, u - 0.025, yh + 0.0, v + (f < 0 ? -0.3 : 0), u + 0.025, yh + 0.05, v + (f < 0 ? 0 : 0.3), 0);
+      { const mt = M(pf[0], pf[1]); mt.mat(MAT.METAL, [0.14, 0.12, 0.1]); mt.cyl(pf[0], yh + 0.0, pf[1], 0.05, 0.075, 0.17, 8, 0);          // the cup: a flared iron ring on the arm
+        mt.cyl(pf[0], yh - 0.03, pf[1], 0.05, 0.05, 0.03, 8, 2);
+        mt.mat(MAT.TIMBER, [0.3, 0.22, 0.14], 0.5); mt.cyl(pf[0], yh + 0.0, pf[1], 0.027, 0.022, 0.62, 6, 2);                              // the shaft, standing in the cup
+        mt.mat(MAT.CLOTH, [0.1, 0.075, 0.05], 0.5); mt.cyl(pf[0], yh + 0.5, pf[1], 0.038, 0.05, 0.15, 7, 2);                              // pitch-soaked rag bound on its head
+        mt.mat(MAT.METAL, [0.14, 0.12, 0.1]); mt.cyl(pf[0], yh + 0.18, pf[1], 0.04, 0.04, 0.018, 7, 2); }
+      World.emitters.push({ type: 'torch', p: [pf[0], yh + 0.72, pf[1]], zone: 0, size: 0.2 }); }
     { const p = P(ug, 1.45); K.lantern(p[0], Y - 0.9, p[1], 0.9); K.beam([p[0], Y - 0.62, p[1]], [p[0], Y - 0.9, p[1]], 0.03, 0.03); }
     // the stair up, on the inside beside the wall walk, rising toward the tower
     const sU0 = b1 + 5.2, sU1 = b1, sy0 = Math.min(gy(...P(sU0, 2.7)), gy(...P(sU0 - 0.5, 2.7))), sv0 = 2.0, sv1 = 3.4;
@@ -130,20 +176,25 @@ function buildBell(K, touch) {
   for (const k of [0, 1, 2, 3]) for (const z of cz) { const x0 = k % 2 ? WX0 : EX1 - 3, x1 = k % 2 ? WX0 + 3 : EX1; beam([x0, L[k] - 0.2, z], [x1, L[k + 1] - 0.2, z], 0.12, 0.14); beam([x0, L[k + 1] - 0.2, z], [x1, L[k] - 0.2, z], 0.1, 0.12); }
   // the cladding (Build 42): a stone foot and weatherboard between the posts, slit windows at each landing, a door on the west: the frame reads as a tower from the square, not as scaffolding
   for (let k = 0; k < 4; k++) {
-    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.12, st = k === 0, mat = st ? MAT.STONE : MAT.PLANKS, c = st ? [0.86, 0.83, 0.78] : [0.8 - 0.02 * k, 0.75 - 0.02 * k, 0.69 - 0.02 * k];          // [fx1] weatherboard like the rest of the village, whole storeys with slit windows (the pale plaster slabs with open bands read as signboards on a scaffold)
+    const y0 = k === 0 ? g - 0.4 : L[k], y1 = L[k + 1] - 0.12, st = k === 0, mat = st ? MAT.STONE : MAT.PLANKS, c = st ? [0.52, 0.5, 0.46] : [0.56 - 0.015 * k, 0.52 - 0.015 * k, 0.46 - 0.015 * k];          // [fx1] weatherboard like the rest of the village, whole storeys with slit windows (the pale plaster slabs with open bands read as signboards on a scaffold)
     const ya = y0, yb = y1;
     box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.2, EX1 - 0.02, yb, ZN0 - 0.12, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZS1 + 0.12, EX1 - 0.02, yb, ZS1 + 0.2, 0);
     box(mat, c, 0.5, EX1 - 0.1, ya, ZN0 - 0.12, EX1 - 0.02, yb, ZS1 + 0.12, 0);
     if (k === 0) { box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZN0 + 0.0, 0); box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 + 1.25, WX0 + 0.1, yb, ZS1 + 0.12, 0); }
     else box(mat, c, 0.5, WX0 + 0.02, ya, ZN0 - 0.12, WX0 + 0.1, yb, ZS1 + 0.12, 0);
-    // slit windows: a dark opening with a timber head and sill, three along the long faces, one on the east
-    const sa = L[k] + 1.3, sb = L[k] + 1.9, dk = [0.05, 0.045, 0.04], xs = [WX0 + (EX1 - WX0) * 0.2, (WX0 + EX1) / 2, WX0 + (EX1 - WX0) * 0.8], zc = (ZN0 + ZS1) / 2;
+    /* [fx3] weathered boards: dark joints every 0.45 m and a few replaced planks; the windows are shuttered openings (plank shutters on the lower storeys, louvres in the bell chamber), not black holes */
+    { const ZP = [ZN0 - 0.2, ZS1 + 0.2]; if (!st) for (const [zf, o] of [[ZP[0], -1], [ZP[1], 1]]) { for (let x = WX0 + 0.3; x < EX1 - 0.2; x += 0.45) box(MAT.TIMBER, [0.24, 0.21, 0.18], 0.5, x - 0.015, ya + 0.05, o < 0 ? zf - 0.03 : zf, x + 0.015, yb - 0.05, o < 0 ? zf : zf + 0.03, 0);
+        for (let r = 0; r < 3; r++) { const x = WX0 + 0.5 + ((k * 7 + r * 13 + (o > 0 ? 5 : 0)) % 17) * 0.3; if (x < EX1 - 0.5) box(MAT.PLANKS, [0.72, 0.6, 0.44], 0.5, x, ya + 0.1, o < 0 ? zf - 0.04 : zf, x + 0.26, yb - 0.1 - (r % 2) * 0.5, o < 0 ? zf : zf + 0.04, 0); } } }
+    const sa = L[k] + 1.1, sb = L[k] + 1.9, dk = [0.05, 0.045, 0.04], xs = [WX0 + (EX1 - WX0) * 0.2, (WX0 + EX1) / 2, WX0 + (EX1 - WX0) * 0.8], zc = (ZN0 + ZS1) / 2;
     for (const x of xs) for (const [zf, o] of [[ZN0 - 0.2, -1], [ZS1 + 0.2, 1]]) {
-      box(MAT.PLAIN, dk, 0.5, x - 0.16, sa, o < 0 ? zf - 0.03 : zf, x + 0.16, sb, o < 0 ? zf : zf + 0.03, 0);
-      box(MAT.TIMBER, dark, 0.5, x - 0.24, sb, o < 0 ? zf - 0.06 : zf, x + 0.24, sb + 0.07, o < 0 ? zf : zf + 0.06, 0); box(MAT.TIMBER, dark, 0.5, x - 0.24, sa - 0.07, o < 0 ? zf - 0.06 : zf, x + 0.24, sa, o < 0 ? zf : zf + 0.06, 0);
+      const z0 = o < 0 ? zf - 0.05 : zf, z1 = o < 0 ? zf : zf + 0.05;
+      if (k === 3) { box(MAT.PLAIN, dk, 0.5, x - 0.3, sa - 0.1, z0, x + 0.3, sb + 0.5, z1, 0); for (let q = 0; q < 6; q++) { const y = sa - 0.05 + q * 0.14, zo = o < 0 ? zf - 0.1 : zf + 0.1; beam([x - 0.3, y, zo], [x + 0.3, y + 0.0, zo + (o < 0 ? -0.0 : 0.0)], 0.02, 0.1); } }
+      else { box(MAT.PLANKS, [0.3, 0.24, 0.18], 0.5, x - 0.24, sa, z0, x + 0.24, sb, z1, 0); box(MAT.TIMBER, [0.2, 0.17, 0.14], 0.5, x - 0.26, sa + 0.3, o < 0 ? z0 - 0.015 : z0, x + 0.26, sa + 0.37, o < 0 ? z1 : z1 + 0.015, 0); }
+      box(MAT.TIMBER, dark, 0.5, x - 0.3, (k === 3 ? sb + 0.5 : sb), o < 0 ? zf - 0.07 : zf, x + 0.3, (k === 3 ? sb + 0.57 : sb + 0.07), o < 0 ? zf : zf + 0.07, 0); box(MAT.TIMBER, dark, 0.5, x - 0.3, sa - (k === 3 ? 0.17 : 0.07), o < 0 ? zf - 0.07 : zf, x + 0.3, sa - (k === 3 ? 0.1 : 0), o < 0 ? zf : zf + 0.07, 0);
     }
-    box(MAT.PLAIN, dk, 0.5, EX1, sa, zc - 0.16, EX1 + 0.03 - 0.02, sb, zc + 0.16, 0);
+    box(MAT.PLANKS, [0.3, 0.24, 0.18], 0.5, EX1, sa, zc - 0.24, EX1 + 0.04, sb, zc + 0.24, 0);
   }
+  box(MAT.STONE, [0.46, 0.44, 0.4], 0.5, WX0 - 0.12, g - 0.5, ZN0 - 0.32, EX1 + 0.12, g + 0.28, ZS1 + 0.32, 4);      /* [fx3] a stone plinth round the foot */
   box(MAT.STONE, [0.86, 0.83, 0.78], 0.5, WX0 + 0.02, g + 1.95, ZN0 + 0.0, WX0 + 0.1, g + 2.4, ZN0 + 1.25, 0);
   box(MAT.TIMBER, dark, 0.5, WX0 - 0.1, g + 2.3, ZN0 - 0.28, WX0 + 0.12, g + 2.42, ZS1 + 0.28, 0);     // the lintel course under the first storey
   box(MAT.TIMBER, dark, 0.5, WX0 - 0.35, L[4] + 0.0, ZN0 - 0.5, EX1 + 0.35, L[4] + 0.14, ZS1 + 0.5, 0);   // the bell-chamber floor jetty

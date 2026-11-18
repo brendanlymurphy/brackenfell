@@ -117,6 +117,20 @@ function buildLevels(bucket, fence, R) {
       KQ.quad(INF_R, [x0, lb, z1], [x1, lb, z1], [x1, H, z1], [x0, H, z1], c, uvx, [0, 0, 1]); KQ.quad(INF_R, [x1, lb, z0], [x0, lb, z0], [x0, H, z0], [x1, H, z0], c.map(v => v * 0.9), uvx, [0, 0, -1]);
       KQ.quad(INF_R, [x1, lb, z1], [x1, lb, z0], [x1, H, z0], [x1, H, z1], c.map(v => v * 0.95), uvz, [1, 0, 0]); KQ.quad(INF_R, [x0, lb, z0], [x0, lb, z1], [x0, H, z1], [x0, H, z0], c.map(v => v * 0.85), uvz, [-1, 0, 0]);
       KQ.quad(INF_R, [x0, H, z1], [x1, H, z1], [x1, H, z0], [x0, H, z0], c.map(v => v * 1.1), [x0 / 1.2, z0 / 1.2, x1 / 1.2, z1 / 1.2], [0, 1, 0]); }
+  /* [fx3] the lane's wall (the terrace's south-west lane, x -34 to -3.2) in the same rubble as the terrace: outer face, inner face, top and both ends, one solid per 1.2 m tile */
+  if (KQ) { const lz0 = T.z1 + wt, lz1 = 34.4, xE = -3.2, xW = -34.0, yE = Terrain.y(xE, (lz0 + lz1) / 2), n = 22, zo = lz1 + 0.3, zi = lz1 - 0.1, TC = 1.2;
+    for (let i = 0; i < n; i++) { const xa = xW + (xE - xW) * i / n, xb = xW + (xE - xW) * (i + 1) / n, ya = H + (yE - H) * i / n, yb = H + (yE - H) * (i + 1) / n, base = gmin(xa, lz1 + 0.3, xb, lz1 + 0.3) - 0.5, ta = ya + 0.95, tb = yb + 0.95, c = (i % 2 ? [0.7, 0.68, 0.64] : [0.74, 0.72, 0.68]), ua = xa / TC, ub = xb / TC;
+      KQ.quad(INF_R, [xa, base, zo], [xb, base, zo], [xb, tb, zo], [xa, ta, zo], c, [ua, base / TC, ub, tb / TC], [0, 0, 1]);
+      KQ.quad(INF_R, [xb, ya, zi], [xa, ya, zi], [xa, ta, zi], [xb, tb, zi], c.map(v => v * 0.9), [ua, ya / TC, ub, tb / TC], [0, 0, -1]);
+      KQ.quad(INF_R, [xa, ta, zo], [xb, tb, zo], [xb, tb, zi], [xa, ta, zi], c.map(v => v * 1.12), [ua, 0, ub, 0.4 / TC], [0, 1, 0]);
+      if (i === 0) KQ.quad(INF_R, [xa, base, zi], [xa, base, zo], [xa, ta, zo], [xa, ta, zi], c.map(v => v * 0.85), [0, base / TC, 0.4 / TC, ta / TC], [-1, 0, 0]);
+      if (i === n - 1) KQ.quad(INF_R, [xb, base, zo], [xb, base, zi], [xb, tb, zi], [xb, tb, zo], c.map(v => v * 0.85), [0, base / TC, 0.4 / TC, tb / TC], [1, 0, 0]); } }
+  /* [fx3] the landing's two parapet pieces in the same rubble, closed solids with a lighter coping face on top */
+  if (KQ) { const kb = (x0, y0, z0, x1, y1, z1, skip) => { const c = [0.72, 0.7, 0.66], U = (a, b) => [a / 1.2, y0 / 1.2, b / 1.2, y1 / 1.2];
+      if (!(skip & 32)) KQ.quad(INF_R, [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], c, U(x0, x1), [0, 0, 1]); if (!(skip & 16)) KQ.quad(INF_R, [x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], c.map(v => v * 0.9), U(x0, x1), [0, 0, -1]);
+      if (!(skip & 2)) KQ.quad(INF_R, [x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], c.map(v => v * 0.95), U(z0 + 3, z1 + 3), [1, 0, 0]); if (!(skip & 1)) KQ.quad(INF_R, [x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], c.map(v => v * 0.85), U(z0 + 3, z1 + 3), [-1, 0, 0]);
+      KQ.quad(INF_R, [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], c.map(v => v * 1.15), [x0 / 1.2, z0 / 1.2, x1 / 1.2, z1 / 1.2], [0, 1, 0]); };
+    kb(-36.8, H, T.z1 + wt, -36.3, H + 0.95, 34.3, 0); kb(-36.3, H, 34.3, -34.0, H + 0.95, 34.7, 2); }
   if (KQ) { const nm = KQ.make('gen_terrace_walls'); infBatch().add(nm, new THREE.Matrix4(), { zone: 0, skyVis: 1, cast: false }); }
 
   // ── the flight from the market square: 2.8 m wide, steps are a top and a riser, cheeks are two beams, an arch with a roof where it arrives ──
@@ -145,14 +159,14 @@ function buildLevels(bucket, fence, R) {
     for (let i = 0; i < n; i++) {
       const xa = xW + (xE - xW) * i / n, xb = xW + (xE - xW) * (i + 1) / n, ya = H + (yE - H) * i / n, yb = H + (yE - H) * (i + 1) / n, base = gmin(xa, lz1 + 0.3, xb, lz1 + 0.3) - 0.5;
       mm.mat(MAT.COBBLE, [0.85, 0.82, 0.78], 0.5); mm.quad2([xa, ya, lz0], [xa, ya, lz1], [xb, yb, lz1], [xb, yb, lz0]);
-      mm.mat(MAT.STONE, i % 2 ? sc(0.9) : sc(0.97), 0.7); { const ym = Math.min(ya, yb) - 0.02; mm.quad2([xa, base, lz1 + 0.3], [xa, ym, lz1 + 0.3], [xb, ym, lz1 + 0.3], [xb, base, lz1 + 0.3]); }
-      mm.mat(MAT.STONE, sc(1), 0.6); mm.box(xa, Math.min(ya, yb) - 0.02, lz1 - 0.1, xb, Math.max(ya, yb) + 0.95, lz1 + 0.3, 4 | (i === 0 ? 0 : 1) | (i === n - 1 ? 0 : 2));
+      if (!KQ) { mm.mat(MAT.STONE, i % 2 ? sc(0.9) : sc(0.97), 0.7); { const ym = Math.min(ya, yb) - 0.02; mm.quad2([xa, base, lz1 + 0.3], [xa, ym, lz1 + 0.3], [xb, ym, lz1 + 0.3], [xb, base, lz1 + 0.3]); }
+      mm.mat(MAT.STONE, sc(1), 0.6); mm.box(xa, Math.min(ya, yb) - 0.02, lz1 - 0.1, xb, Math.max(ya, yb) + 0.95, lz1 + 0.3, 4 | (i === 0 ? 0 : 1) | (i === n - 1 ? 0 : 2)); }
     }
     col(xW, lz1 - 0.1, xE, lz1 + 0.3, Math.min(yE, H) - 1.2, H + 1.0);
     const lb = gmin(-36.8, T.z1, -34, lz1) - 0.6;
     if (!KQ) stoneBox(-36.8, lb, T.z1 + wt, -34.0, H, lz1 + 0.3, sc(0.95), 4 | 16, 0.7);
     lvFloor(-36.0, T.z1 - 0.3, -34.0, lz1, H);
-    stoneBox(-36.8, H, T.z1 + wt, -36.3, H + 0.95, lz1 - 0.1, sc(1), 4 | 16 | 32, 0.6); stoneBox(-36.8, H, lz1 - 0.1, -34.0, H + 0.95, lz1 + 0.3, sc(1), 4 | 2, 0.6);
+    if (!KQ) { stoneBox(-36.8, H, T.z1 + wt, -36.3, H + 0.95, lz1 - 0.1, sc(1), 4 | 16 | 32, 0.6); stoneBox(-36.8, H, lz1 - 0.1, -34.0, H + 0.95, lz1 + 0.3, sc(1), 4 | 2, 0.6); }
     col(-36.8, T.z1 + wt, -36.3, lz1 + 0.3, lb, H + 1.1); col(-36.8, lz1 - 0.1, -34.0, lz1 + 0.3, lb, H + 1.1);
     const m = M(xE, lz0), y = Terrain.y(xE + 0.6, lz1 + 0.8); m.push().T(xE + 0.6, y, lz1 + 0.8); m.mat(MAT.TIMBER, COL.timberDark); m.cbox(0, 0, 0, 0.14, 2.2, 0.14, 4); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.cbox(0, 2.2, 0, 0.3, 0.34, 0.3, 4); m.pop();
     World.emitters.push({ type: 'lantern', p: [xE + 0.6, y + 2.4, lz1 + 0.8], zone: 0, halo: 0.5 });
@@ -214,7 +228,11 @@ function buildLevels(bucket, fence, R) {
     m.mat(MAT.METAL, [0.62, 0.46, 0.2], 0.4); m.beam([-0.45, 1.18, 0.35], [0.5, 1.42, -0.3], 0.1, 0.1); m.beam([0.5, 1.42, -0.3], [0.62, 1.46, -0.38], 0.14, 0.14);
     addCircleCollider(m, 0, 0, 0.5, 0, 1.4); m.pop();
     m.push().T(T.x1 - 0.6, H, T.z0 + 0.7); m.mat(MAT.TIMBER, COL.timberDark, 0.5); m.cbox(0, 0, 0, 0.11, 4.2, 0.11, 4); m.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); m.ball(0, 4.25, 0, 0.09, 0.09, 0.09, 6, 4);
-    m.mat(MAT.CLOTH, [0.5, 0.13, 0.1], 0.5); m.quad2([0.05, 4.1, 0], [0.05, 3.45, 0], [1.1, 3.55, 0.15], [1.1, 4.05, 0.15]); addCircleCollider(m, 0, 0, 0.12, 0, 4); m.pop();
+    /* [fx3] a faded madder flag, sagging between the pole and its tip, a darker hem and a frayed swallow-tail end */
+    { const N = 4, fl = (t, y) => [0.05 + t * 1.1, y - Math.sin(t * Math.PI) * 0.1 - t * 0.12, t * 0.17 + Math.sin(t * 5) * 0.03]; for (let i = 0; i < N; i++) { const t0 = i / N, t1 = (i + 1) / N, a0 = fl(t0, 4.1), a1 = fl(t1, 4.1), b0 = fl(t0, 3.62), b1 = fl(t1, 3.62), h0 = fl(t0, 3.46), h1 = fl(t1, 3.46); const tail = i === N - 1 ? 0.18 : 0;
+        m.mat(MAT.CLOTH, [0.4 - i * 0.015, 0.21 - i * 0.008, 0.17], 0.5); m.quad2(a0, b0, [b1[0] - tail, b1[1], b1[2]], [a1[0] - tail * 0.5, a1[1], a1[2]]); m.mat(MAT.CLOTH, [0.27, 0.14, 0.11], 0.5); m.quad2(b0, h0, [h1[0] - tail * 1.4, h1[1] + tail * 0.4, h1[2]], [b1[0] - tail, b1[1], b1[2]]); }
+      m.mat(MAT.TIMBER, [0.22, 0.18, 0.14], 0.5); m.beam([0.05, 4.1, 0], [0.05, 3.46, 0], 0.03, 0.03); }
+    addCircleCollider(m, 0, 0, 0.12, 0, 4); m.pop();
     World.interact.push({ p: [lx, H + 1.3, lz + 0.2], r: 2.4, zone: 0, kind: 'read', id: 'terrace.glass', title: 'A brass spyglass on a tripod', text: 'You put your eye to the glass. The whole market is laid out like a pinned map: the notice board, the well, the baker’s awning, a boy chasing a goose. Someone has scratched a tally of floods on the tripod leg. There are nine marks.' });
   }
   lvLift(touch, 1.0);
@@ -229,7 +247,7 @@ function townFinish(bucket) {
   if (typeof buildWalls === 'function') buildWalls(bucket);        // Build 42: palisades, gates, bell tower (73i_walls.js)
   if (typeof buildLanes === 'function') buildLanes(bucket);        // Build 42: lanes worth walking (73j_lanes.js)
   if (typeof buildSquare === 'function') buildSquare(bucket);      // Build 42: the square as a finished place (73k_square.js)
-  if (typeof buildPlaceFlags === 'function') buildPlaceFlags(bucket); if (typeof buildPlaceWear === 'function') buildPlaceWear(bucket); if (typeof buildPlots === 'function') buildPlots(bucket); if (typeof buildStrips === 'function') buildStrips(bucket); if (typeof buildChurchyard === 'function') buildChurchyard(bucket); if (typeof buildChapelRise === 'function') buildChapelRise(bucket); if (typeof buildEastLane === 'function') buildEastLane(bucket); if (typeof buildChapelWay === 'function') buildChapelWay(bucket); if (typeof buildWestgate === 'function') buildWestgate(bucket); if (typeof buildWharfPlots === 'function') buildWharfPlots(bucket); if (typeof buildWharfYard === 'function') buildWharfYard(bucket); if (typeof buildWharfCloses === 'function') buildWharfCloses(bucket); if (typeof buildWharfBoards === 'function') buildWharfBoards(bucket); if (typeof buildWharfLandings === 'function') buildWharfLandings(bucket); if (typeof buildWharfWorks === 'function') buildWharfWorks(bucket);      // [fx3] flagstones at the doors on the place (73l_place.js)      // [fx3] flagstones at the doors on the place (73l_place.js)
+  if (typeof buildPlaceFlags === 'function') buildPlaceFlags(bucket); if (typeof buildPlaceWear === 'function') buildPlaceWear(bucket); if (typeof buildPlots === 'function') buildPlots(bucket); if (typeof buildStrips === 'function') buildStrips(bucket); if (typeof buildChurchyard === 'function') buildChurchyard(bucket); if (typeof buildChapelRise === 'function') buildChapelRise(bucket); if (typeof buildEastLane === 'function') buildEastLane(bucket); if (typeof buildChapelWay === 'function') buildChapelWay(bucket); if (typeof buildWestgate === 'function') buildWestgate(bucket); if (typeof buildWestEdge === 'function') buildWestEdge(bucket); if (typeof buildYards === 'function') buildYards(bucket); if (typeof trimPlotColliders === 'function') trimPlotColliders(World.plotC0 || 0); if (typeof buildWharfPlots === 'function') buildWharfPlots(bucket); if (typeof buildWharfYard === 'function') buildWharfYard(bucket); if (typeof buildWharfCloses === 'function') buildWharfCloses(bucket); if (typeof buildWharfBoards === 'function') buildWharfBoards(bucket); if (typeof buildWharfLandings === 'function') buildWharfLandings(bucket); if (typeof buildWharfWorks === 'function') buildWharfWorks(bucket);      // [fx3] flagstones at the doors on the place (73l_place.js)      // [fx3] flagstones at the doors on the place (73l_place.js)
   // the chimney of in.04 stands 4 m below the terrace's north edge, where the camera looks straight at its smoke: the full-size puffs (1 m across) stack into a tall white sheet there.
   // A thin emitter (smaller, fainter, shorter-lived puffs, see 75_particles.js) makes it a wisp like the other infill chimneys.
   for (const e of World.emitters) if (e.type === 'smoke' && Math.abs(e.p[0] + 19.5) < 0.8 && Math.abs(e.p[2] - 4.1) < 0.8 && e.p[1] > 8) { e.thin = true; e.p[1] += 0.05; }

@@ -417,7 +417,7 @@
   },
   {
    "speaker": "rowan",
-   "text": "Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
+   "text": "Corwin the miner. He went into the old workings north-west of here, up under the cliffs past the chapel, after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
    "where": "81_wilds_story.js:59"
   },
   {
@@ -452,7 +452,7 @@
   },
   {
    "speaker": "maren",
-   "text": "The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
+   "text": "The door in the north-west cliffs, up past the chapel. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
    "where": "82_story.js:112"
   },
   {
@@ -3529,7 +3529,7 @@
   },
   {
    "speaker": "peter",
-   "text": "Across the lake, or along it? A penny either way. I do not go to the north shore.",
+   "text": "The boat is not for hire today, the caulking is wet. And I do not go to the west shore, wet or dry.",
    "where": "54_cast.js:peter.g",
    "as": "v.M2",
    "note": "Aged 37; boatman."
@@ -3564,7 +3564,7 @@
   },
   {
    "speaker": "peter",
-   "text": "Not the north shore.",
+   "text": "Not the west shore.",
    "where": "54_cast.js:peter.b2",
    "as": "v.M2",
    "note": "Aged 37; boatman."
@@ -4554,12 +4554,12 @@
   },
   {
    "speaker": "-",
-   "where": "94d_act2.js:112",
+   "where": "94d_act2.js:113",
    "raw": "'Three loaves, and you have ' + bread + '. The Hart has stew and Marta has loaves, and nobody here is going anywhere.'"
   },
   {
    "speaker": "-",
-   "where": "94d_act2.js:114",
+   "where": "94d_act2.js:115",
    "raw": "'Twelve stand in a row at the water’s edge, and not one of them breathes. The slab before them is bare. The old loaves on it are green and the candle ends are c"
   }
  ],

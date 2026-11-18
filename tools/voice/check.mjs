@@ -1,5 +1,5 @@
 // Checks the generated voice files against the plan: every spoken line has a file, durations fit the text (catches truncated or babbling output),
-// nothing is silent or clipped, the total is within the 14 MB budget. usage: node tools/voice/check.mjs [--allow-missing]
+// nothing is silent or clipped, the total is within the 45 MB budget. usage: node tools/voice/check.mjs [--allow-missing]
 import fs from 'node:fs'; import { execFileSync } from 'node:child_process';
 const root = new URL('../../', import.meta.url).pathname, dir = root + 'audio/voice/', plan = JSON.parse(fs.readFileSync(root + 'tools/voice/plan.json', 'utf8')).plan;
 const man = fs.existsSync(dir + 'manifest.json') ? JSON.parse(fs.readFileSync(dir + 'manifest.json', 'utf8')) : { lines: {} };
@@ -17,5 +17,5 @@ for (const p of plan) {
   if (max < -30 || Math.max(...e.e) < 4) bad('silent ' + file); if (max > -1.0) bad(`clipped (${max} dB) ` + file); if (mean < -32 || mean > -10) bad(`mean ${mean} dB out of range ` + file);
 }
 console.log(`${n}/${plan.length} files, ${(secs / 60).toFixed(1)} minutes, ${(bytes / 1048576).toFixed(2)} MB${missing ? ', ' + missing + ' missing' : ''}`);
-if (bytes > 14 * 1048576) bad('over the 14 MB budget');       /* 10 MB was set when 180 lines were planned; 252 lines are 12.4 MB. A line is fetched when it is first spoken, never at start-up, so this is disk in the offline cache, not load time */
+if (bytes > 45 * 1048576) bad('over the 45 MB budget');       /* [coordinator, Build 81] 45 MB for 773 lines: a voice file is never in the first visit or the offline precache (sw.js fetches it when first spoken and keeps it in its own cache, bf-voice) */       /* 10 MB was set when 180 lines were planned; 252 lines are 12.4 MB. A line is fetched when it is first spoken, never at start-up, so this is disk in the offline cache, not load time */
 console.log(fail ? fail + ' FAILURES' : 'voice files ok'); process.exit(fail ? 1 : 0);
