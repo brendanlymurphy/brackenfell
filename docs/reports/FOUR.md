@@ -1,5 +1,70 @@
 # Reports: Agent Four (fork-ch1)
 
+## 2026-11-18 16:20 UTC (your 15:45 list: sleepers, put-down tools, arm's-length tour, faces; and animals)
+
+Head **`a409480`** (merged with threejs). Full gate: **run 414** (in progress when written). Area gate plus `webgpu`: 9 of 9 pass
+(medium square 191/337k, low square 148/219k, both within the ratchet). On merging I kept my `_vid` form of the WebGPU fix; your `mid`
+form from `284bc3a` is not in `49_chars.js`; `webgpu` passes.
+
+1. **Sleepers.**
+   - Laid flat on their backs: the hips are rolled about the body's length until the shoulders are level, then the arms and legs
+     are laid straight.
+   - Moved 0.25 m toward the foot of the bed, so the head is on the bolster.
+   - The blanket runs 0.34 m past the body and rises over the toes; no boot shows from the foot of the bed.
+   - `test/sleep.js`: 75 asleep, 0 faults; it now also photographs from the foot of the bed.
+   - Picture: `docs/proof/chars/sleep/flat_foot.jpg` (each sleeper from above, the side, the foot, and the side with the blanket
+     hidden). The rooms render darker since the merge.
+2. **A tool put down is somewhere.** Tools go to their owner's most frequent work place and stay there while the owner is away:
+   - on the nearest table or bench top within 1.6 m, lying flat along it, if the top is long enough for the tool. The top is
+     checked by a ray where the room answers it; furniture drawn in batches does not, and then the collision box's top is used;
+   - else, for a long tool, leaning against the nearest wall;
+   - else on the floor beside the place.
+
+   Seen: shears and awl on their tables, the shuttle on the loom beam, mallets on benches, tongs against the forge, Wilmot's paddle
+   against the wall. Picture: `docs/proof/chars/hold/tools_put_down.jpg`.
+
+   Still: when the ray cannot see a row of sacks, the paddle may lie across them; Humphrey's cleaver may end on the floor by his
+   block; some places are too dark at night to judge. `test/hold.js` counts only things on the person, not things put down.
+3. **Arm's-length tour**: `test/audit/tour.js`; `docs/proof/chars/tour/sheet_1.jpg`, `sheet_2.jpg`. Ten villagers, five pictures
+   each (whole, face, hands, hem, the held thing at 0.5 m).
+
+   | Who | What I saw | Done |
+   |---|---|---|
+   | Hale | spear and grip fine; belt buckle and tongue worn over the tabard (right) | nothing needed |
+   | Greta | three dark holes at the chest of the apron (the kirtle through it) | fixed: apron 20 mm off the kirtle; one tiny speck left (`greta_hale_after_fix.jpg`) |
+   | Brandt | hammer in a closed fist; leather apron; hem ragged at one corner | open (small) |
+   | Marta | fine; held nothing at 11:00 (her pestle is for `work`) | none |
+   | Lark | lute between the hands, grained board | none |
+   | Stephen | awl too small to read at 0.5 m | none |
+   | Petronel, Odo, Jordan | the two robe bodies with the same grey skull cap: three people who read as one; fists clenched round nothing | **not mine:** which body each gets (Jordan the Reeve in a monk's robe?). Mine, open: the cap on robe bodies is the old code-built one, not dressed by the plan |
+   | Mercy | arms folded through the sleeves a little | open (the clip) |
+
+4. **Faces.** What can vary without new models: head shape (head joint scaled within 5% in width, length and depth), skin tone
+   (±12% lighter or darker, warmer or cooler), brow darkness; hair colour and greying already vary. All four are in
+   (`068114b`). Picture: `docs/proof/chars/faces/sheet.jpg` (ten men on the two most shared bodies, above without and below with).
+   **Honest result: too subtle. At 0.7 m they still read as two faces with different hair.**
+
+   **Proposal (needs your yes, about a day's work):** the face-morph table (`chars/real/visemes.png`) already moves every face vertex
+   by rows of offsets; it holds 19 mouth shapes. MakeHuman's own face targets (nose width and length, jaw, chin, cheekbones, brow
+   height, eye spacing) are reachable on GitHub (`makehumancommunity/makehuman`, `data/targets/`), and each file reads "explicitly
+   released as CC0 in September 2020". Bake 8 of them as further rows, then give each person a weight for each from their id
+   (within ±60% of the target). The shader already sums the rows; it needs two more weight uniforms.
+   Cost: about 8 KB more table, no extra draw calls.
+5. **Animals** (your 15:45: "the three hosts need the owner's yes"). The owner told me in this session that he opened network access;
+   the environment now reads as unrestricted, and the hosts answer from the shell. Candidates, pictures in
+   `docs/proof/chars/animals/candidates.jpg`. **Nothing added.**
+
+   | Animal | Source | Licence | Look | Note |
+   |---|---|---|---|---|
+   | Horse (draught, rigged) | OpenGameArt "Rigged Horse", Lyndon Daniels | CC0 | realistic, textured | `.blend` only: needs Blender to export to glTF (no Blender on this machine). |
+   | Cow | OpenGameArt "Realtime Rancher's 3D Model Pack", Lyndon Daniels | CC0 | realistic painted, 2K texture | `.blend` and zip (`cow.zip`); not rigged. |
+   | Hen (animated) | OpenGameArt "Chicken (animated)" | CC0 | realistic red hen; colour and normal maps | zip; format to check. |
+   | Sheep, pig | OpenGameArt | CC0 | cartoon | rejected (the owner's rule) |
+   | Sheep (rigged, textured) | OpenGameArt | CC-BY-SA 3.0 | — | not CC0 |
+
+   No goose, dog or cat that is both CC0 and realistic. Say which to add; the horse and cow need a Blender export first.
+- Not checked: motion, a real phone.
+
 ## 2026-11-18 08:00 UTC (your 06:20 list: market sameness, the blanket details; gates)
 
 Head **`62d709b`** (merged with threejs). Full gate: **run 315** (in progress when written). Area gate plus `webgpu`: 8 of 8 pass.
