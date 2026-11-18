@@ -295,6 +295,7 @@ function planHouse(P, c, info) {
   }
   if (info.shellWins && typeof pShellWins === 'function') pShellWins(P, c, { x0, z0: 0, x1, z1: D });      /* [inout] the windows the shell shows, and no others */
   pLayout(P);
+  if (info.inn) P.clear.push({ x0: x1 - 3.0, x1: x1, z0: Dh - 2.4, z1: Dh, k: -1, kind: 'path' });      /* [inout] the corner of the Hart's cellar where the bricked arch opens (94d_act2.js door.tunnel.in): nothing stands in front of it */
   // ground floor
   const hall0 = hall, hh = pHearth(P, hall, 's', info.inn ? 2.4 : 1.7, { cauldron: true, at: 0 });
   P.hall = { room: hall, hh };
