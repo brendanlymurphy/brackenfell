@@ -5,6 +5,7 @@ Newest first. Times UTC.
 ## 2026-11-18, the 15:45 inbox
 
 Merged `origin/threejs` (Build 89) first: no conflict.
+Gate: quick on `4c84d1d` passes, 21 of 21. Merge candidate.
 
 1. **Tom, Lettice and Davy on youth bodies** (`9178b30`). Under 13 keeps a child's body; 13 to 15 has `m_youth` or `f_maid` at
    0.88 + 0.035 a year: Tom (13) `m_youth` 0.88, Lettice (14) `f_maid` 0.915, Davy (15) `m_youth` 0.95, about 1.51, 1.57 and 1.63 m.
