@@ -251,6 +251,7 @@ const PLACE = { poly: [[-19.6, -17.3], [-7.6, -17.3], [14.7, -17.3], [20.3, -16.
     const h = INF.byId[id] || { placedOnly: true }, st = SITE[id]; if (!st) continue;
     h.x = st.x = x; h.z = st.z = z; h.yaw = st.yaw = yaw; h.placed = true;
   }
+  { const h = INF.byId['in.13'], st = SITE['in.13']; if (h && st) { h.z = st.z = h.z - 0.55; } }      /* [fx3] in.12 / in.13: the slot between them was 1.37 m, too narrow to walk and too wide to be a wall; moved 0.55 m so it is a 1.9 m passage (BLUEPRINT 2.3) */
   /* [fx3] gables to the street: these houses are turned so the short wall is the front and the ridge runs away from the street (w and d swapped; the front line stays where it was, the house grows backwards) */
   PLACE.gabled = [];
   for (const id of ['in.08', 'in.116', 'in.15']) {
