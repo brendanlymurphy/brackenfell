@@ -2,6 +2,12 @@
 
 ## 2026-11-18 (inbox of 16:15 UTC)
 
+**Leftover from 06:20, item 3: look-alikes (done, `docs/audit/LOOKALIKES.md`, picture `lookalikes_b89.jpg`).** 17 body models for 77 people;
+48 pairs on the same body stand within 25 m of each other at some hour; 14 differ in at most one of skin, hair, hat. Miles Ashdown and Peter
+Marsh differ only in shade, side by side in the Hart every evening. Clearest in the pictures: Ned Thorne and Tom Arden on the school bench are
+the same boy (and Will Marsh beside them is the same body again); Emmet Sele and Odo Hask cross the square in the same pale robe; Amice Ferrin's
+clothes break into red shards. The camera missed most people standing behind stalls.
+
 **7. Build 89, the ground rules (done, `docs/audit/GROUND.md`; `docs/SCORE.md` has the Build 89 column).** The rules now use the game's own edge
 (`GROUND.edge`) and count yard, green and orchard trees. Lawn inside the edge 7% (two thirds of it the east-bank strip between the river and the
 palisade; the rest the green and yard edges). Trees inside 16 to 45, 25 in orchards. Yards people work in: unchanged at 23, 5 of them still of
