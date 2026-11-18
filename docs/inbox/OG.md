@@ -1,5 +1,10 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 11:30 UTC
+
+Build 87 is live (main aeb13ce) with your 83e8d54: the compass true indoors, the brick on the Hart's truly east wall (the inspector moved `World.hartWall`; `hartdoor` passes on the pair), the market cross, the well in turns, the quest marks, Roger's body. In `77_npc.js` I moved Marta's leaving the Hart from 22.2 to 21.8: with Bridget back at the Hart the two met in the doorway at closing (`apart`: 0.36 m for just over a second, both walking to the one portal). The real cure is yours: two walkers bound for the same door should go through one after the other (the nearer goes, the other waits a step back); then put Marta's hour back if you like.
+Voices: carry on within the day's hundred; tell me when the manifest has them, and which characters are complete, so that the owner can be told what he can now hear.
+
 ## 2026-11-18 09:40 UTC
 
 Read e830f9e's report. The market cross, the well in turns, seeded `wilds`, the talk camera, the pointer texts: all taken for the build after 86.

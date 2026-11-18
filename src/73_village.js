@@ -248,7 +248,10 @@ function buildVillage() {
   for (let i = 0; i < 5; i++) { const k = [0.92, 1.0, 0.86, 0.97, 0.9][i]; leaf.mat(MAT.PLANKS, [bc[0] * k, bc[1] * k, bc[2] * k], 0.6); leaf.box(i * 0.2 + 0.005, 0.02, -0.03, (i + 1) * 0.2 - 0.005, 1, 0.03, 1 | 2 | 4 | 8); }
   leaf.mat(MAT.PLANKS, [bc[0] * 0.72, bc[1] * 0.72, bc[2] * 0.72], 0.6); for (const y of [0.1, 0.9]) { leaf.box(0.0, y - 0.025, 0.03, 1, y + 0.025, 0.045, 1 | 2 | 8); leaf.box(0.0, y - 0.025, -0.045, 1, y + 0.025, -0.03, 1 | 2 | 8); }
   leaf.mat(MAT.METAL, [0.17, 0.155, 0.14]);   // [fx2] straps read bright blue indoors (sky reflection): dark blackened iron
-   for (const y of [0.22, 0.78]) { for (const sz of [-1, 1]) leaf.box(0, y - 0.016, sz > 0 ? 0.045 : -0.05, 0.84, y + 0.016, sz > 0 ? 0.05 : -0.045, sz > 0 ? 16 : 32); for (const k of [0, 2]) for (const sz of [-1, 1]) leaf.box(0.12 + k * 0.2, y - 0.007, sz > 0 ? 0.05 : -0.057, 0.14 + k * 0.2, y + 0.007, sz > 0 ? 0.057 : -0.05, 1 | 2 | 4 | 8 | (sz > 0 ? 16 : 32)); }
+   for (const y of [0.22, 0.78]) for (const sz of [-1, 1]) { const z0 = sz > 0 ? 0.045 : -0.056, z1 = sz > 0 ? 0.056 : -0.045, fc = sz > 0 ? 16 : 32;
+    leaf.mat(MAT.METAL, [0.2, 0.18, 0.16]); leaf.box(0.04, y - 0.014, z0, 0.8, y + 0.014, z1, fc | 1 | 4 | 8 | 2); leaf.box(0.8, y - 0.011, z0, 0.86, y + 0.011, z1, fc | 4 | 8 | 2); leaf.box(0.86, y - 0.007, z0, 0.9, y + 0.007, z1, fc | 4 | 8 | 2);
+    leaf.mat(MAT.METAL, [0.34, 0.31, 0.27]); leaf.box(0.04, y + 0.009, z0, 0.8, y + 0.014, z1, fc | 1 | 4 | 2); leaf.box(0.0, y - 0.02, z0, 0.07, y + 0.02, z1, fc | 4 | 8);
+    for (let k = 0; k < 6; k++) leaf.box(0.12 + k * 0.13, y - 0.006, z0, 0.145 + k * 0.13, y + 0.006, z1, fc | 1 | 2 | 4 | 8); }
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   return leaf; };
   const leafItems = LEAF_COL.map(bc => skin.add(mkLeaf(bc))), leafItem = leafItems[0], leafPick = d => { const key = String(d.cell || (d.site && d.site.id) || ''); let h = 0; for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0; return leafItems[[0, 0, 1, 1, 2, 3, 4, 5][Math.abs(h) % 8]]; };

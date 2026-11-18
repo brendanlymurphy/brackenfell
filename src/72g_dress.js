@@ -55,7 +55,7 @@ PD.sacks = (R) => m => { const cols = [[0.46, 0.39, 0.27], [0.4, 0.35, 0.26], [0
 PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 columns = 0.55 m deep (5 drew 0.91 m into a 0.5 m slot)
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
-  m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
+  m.mat(MAT.PLANKS, COL.wood, 0.5); m.box(-w / 2, 0.0, -0.055, w / 2, 0.09, 0); m.mat(MAT.PLANKS, COL.woodDark, 0.5); m.box(-w / 2 - 0.015, -0.01, -0.065, -w / 2, 0.1, 0.0); m.box(w / 2, -0.01, -0.065, w / 2 + 0.015, 0.1, 0.0); m.box(-w / 2, 0.035, -0.062, w / 2, 0.055, -0.055);
   const n = Math.max(2, Math.floor(w / 0.32)); let cloaks = 0;
   const cols = [[0.2, 0.11, 0.09], [0.12, 0.14, 0.17], [0.27, 0.21, 0.11], [0.3, 0.27, 0.22], [0.15, 0.18, 0.11], [0.22, 0.18, 0.13], [0.14, 0.12, 0.11]];
   for (let i = 0; i < n; i++) {
@@ -79,11 +79,16 @@ PD.hooks = (R, w) => (m, hh) => {
   }
 };
 // a long tapestry on a rod: border, field and a pale device
-PD.tapestry = (R, w, h) => (m, hh) => {
-  m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2 - 0.04, h - 0.04, -0.09, w / 2 + 0.04, h + 0.02, -0.03);
-  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]); m.mat(MAT.CLOTH, [c[0] * 0.62, c[1] * 0.62, c[2] * 0.62], 0.6); m.box(-w / 2, 0.05, -0.07, w / 2, h, -0.04); m.mat(MAT.CLOTH, [c[0] * 0.45, c[1] * 0.45, c[2] * 0.45], 0.6); m.box(-w / 2 + 0.01, 0, -0.068, w / 2 - 0.01, 0.05, -0.042);
-  m.mat(MAT.CLOTH, [0.46, 0.38, 0.24], 0.6); m.box(-w / 2 + 0.06, 0.1, -0.075, w / 2 - 0.06, 0.13, -0.04); m.box(-w / 2 + 0.06, h - 0.14, -0.075, w / 2 - 0.06, h - 0.11, -0.04);
-  m.mat(MAT.CLOTH, [c[0] * 0.5, c[1] * 0.5, c[2] * 0.5], 0.6); for (let i = 1; i < 6; i++) m.box(-w / 2 + 0.06, h * i / 6, -0.072, w / 2 - 0.06, h * i / 6 + 0.025, -0.043);          // [fx2] woven bands, not a cross
+PD.tapestry = (R, w, h) => (m, hh) => {      /* [inout] AL5: cloth hung from a rod, not a board: pleats that catch the light, a hem, loops over the rod, woven bands that follow the folds */
+  m.mat(MAT.METAL, COL.black); m.push().T(0, h + 0.03, -0.075).RZ(PI / 2); m.lathe([[0.012, -w / 2 - 0.07], [0.012, w / 2 + 0.07]], 6, 3); m.pop();
+  for (const sx of [-1, 1]) { m.ball(sx * (w / 2 + 0.08), h + 0.03, -0.075, 0.025, 0.025, 0.025, 6, 4); m.box(sx * (w / 2 + 0.03) - 0.008, h + 0.03, -0.11, sx * (w / 2 + 0.03) + 0.008, h + 0.045, -0.04); }
+  const c = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple]), base = [c[0] * 0.62, c[1] * 0.62, c[2] * 0.62], n = Math.max(6, Math.round(w / 0.11)), sw = w / n;
+  for (let i = 0; i < n; i++) { const x0 = -w / 2 + i * sw, deep = i % 2 === 0, z0 = deep ? -0.072 : -0.058, sh = deep ? 0.94 : 1.06, drop = (R() - 0.5) * 0.012;
+    m.mat(MAT.CLOTH, base.map(v => v * sh), 0.6); m.box(x0, 0.05 + drop, z0 - 0.012, x0 + sw + 0.004, h, z0);
+    m.mat(MAT.CLOTH, [0.46 * sh, 0.38 * sh, 0.24 * sh], 0.6); for (const y of [0.12, h - 0.13]) m.box(x0, y, z0 - 0.014, x0 + sw + 0.004, y + 0.03, z0 + 0.001);
+    m.mat(MAT.CLOTH, base.map(v => v * 0.8 * sh), 0.6); for (const k of [2, 4]) m.box(x0, h * k / 6, z0 - 0.013, x0 + sw + 0.004, h * k / 6 + 0.022, z0 + 0.001);
+    m.mat(MAT.CLOTH, base.map(v => v * 0.68 * sh), 0.6); m.box(x0, drop, z0 - 0.016, x0 + sw + 0.004, 0.05 + drop, z0 + 0.003); }      /* the hem, turned and stitched */
+  m.mat(MAT.CLOTH, base.map(v => v * 0.8), 0.6); for (let i = 0; i <= n; i += 2) { const x = -w / 2 + i * sw; m.box(x - 0.012, h - 0.01, -0.09, x + 0.012, h + 0.05, -0.06); }      /* loops over the rod */
 };
 // a niche in a wall (crypt, nave): dark recess with an arch lintel, a candle that glows without a light, a skull or an urn
 PD.niche = (R, urn) => (m, hh) => {
