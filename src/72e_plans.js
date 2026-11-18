@@ -476,6 +476,15 @@ function dressInn(P, c, room, hh) {
     if (dn) { nTab++; for (const s of dn.seats) pSit(P, 's' + (++n), s[0], s[1], s[2], 0); pLamp(P, room, dn.x, dn.z); n = Math.max(n, 0); }
   }
   if (nTab < 3) for (const nr of [[-2.0, 6.2], [3.0, 6.4], [-4.4, 6.6], [0.5, 6.2]]) { const dn = pDining(P, room, 1.6, 0.8, { near: nr, id: 'table' + n, n: 3, items: ['mug', 'plate', 'bowl', 'candle'], strictOnly: true }); if (dn) { nTab++; for (const s of dn.seats) pSit(P, 's' + (++n), s[0], s[1], s[2], 0); pLamp(P, room, dn.x, dn.z); break; } }
+  for (const sd of ['w', 's', 'n', 'e', 'w', 's', 'n', 'e']) { if (n >= 12) break;      /* [inout] the common room is shallower now the passage runs behind it: settles along the walls until it seats the twelve the evening routines deal out (inn.s1..s12) */
+    const sn = pSnap(P, P.c.int), n0 = P.items.length, bn = pAgainst(P, room, sd, P.id + '.wallbench' + n, 1.4, 0.42, 0.46, +1, pdBench(1.4), {}); if (!bn) continue;
+    const yw = { n: PI, s: 0, w: PI / 2, e: -PI / 2 }[sd], al = sd === 'n' || sd === 's', sp = [-0.35, 0.35].map(q => [bn.cx + (al ? q : 0), bn.cz + (al ? 0 : q), yw]);
+    if (!pConnOk(P, room, [], sp)) { pUndo(P, P.c.int, sn); P.items.length = n0; continue; }
+    for (const q of sp) if (n < 12) pSit(P, 's' + (++n), q[0], q[1], q[2], 0); }
+  if (n < 12 && hh) for (const [x, z] of pCands(room, [hh.front[0], hh.front[1] - 0.6], 0.2)) { if (n >= 12) break;      /* [inout] then stools round the hearth */
+    const sn = pSnap(P, P.c.int), n0 = P.items.length, it = pPut(P, room, P.id + '.hstool' + n, x, z, 0, 0.42, 0.42, 0.46, m => Props.stool(m), {}); if (!it) continue;
+    const sp = [it.cx, it.cz, Math.atan2(hh.px - it.cx, -(hh.pz - it.cz))]; if (!pConnOk(P, room, [], [sp]) || Object.values(P.spots).some(o => (o.k || 0) === 0 && Math.hypot(o.x - it.cx, o.z - it.cz) < 1.0) || Math.hypot(it.cx - hh.front[0], it.cz - hh.front[1]) < 1.0 || Math.hypot(it.cx - hh.front[0] - 1.6, it.cz - hh.front[1] + 0.2) < 0.8 || Math.hypot(it.cx - hh.front[0] + 1.7, it.cz - hh.front[1] + 0.3) < 0.8)      /* clear of the home spot, the fire stool and the bard's place */ { pUndo(P, P.c.int, sn); P.items.length = n0; continue; }
+    pSit(P, 's' + (++n), sp[0], sp[1], sp[2], 0); }
   if (hh) {
     pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
     const st = pPut(P, room, P.id + '.firestool', hh.front[0] + 1.6, hh.front[1] - 0.2, 0, 0.4, 0.4, 0.46, pdStool, {});
