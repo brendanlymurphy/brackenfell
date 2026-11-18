@@ -56,7 +56,27 @@ PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 co
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
   m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
-  const n = Math.max(2, Math.floor(w / 0.32)); for (let i = 0; i < n; i++) { const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0); if (R() < 0.8) { const cl = R.pick([[0.2, 0.11, 0.09], [0.12, 0.14, 0.17], [0.27, 0.21, 0.11], [0.3, 0.27, 0.22], [0.15, 0.18, 0.11], [0.22, 0.18, 0.13], [0.14, 0.12, 0.11]]); m.mat(MAT.CLOTH, cl, 0.5); const l = 0.55 + R() * 0.45; for (let q = 0; q < 4; q++) { const x0 = x - 0.15 + q * 0.075, d = 0.075 + (q % 2) * 0.03, v = 0.9 + (q % 3) * 0.06; m.mat(MAT.CLOTH, [cl[0] * v, cl[1] * v, cl[2] * v], 0.5); m.box(x0, -l * 0.5, -0.04 - d, x0 + 0.075, 0.0, -0.075); m.box(x0 - 0.005 * q, -l, -0.045 - d - 0.01, x0 + 0.075 + 0.005 * q, -l * 0.5, -0.08); } m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.152, -l, -0.126, x + 0.152, -l + 0.04, -0.079); } }
+  const n = Math.max(2, Math.floor(w / 0.32)); let cloaks = 0;
+  const cols = [[0.2, 0.11, 0.09], [0.12, 0.14, 0.17], [0.27, 0.21, 0.11], [0.3, 0.27, 0.22], [0.15, 0.18, 0.11], [0.22, 0.18, 0.13], [0.14, 0.12, 0.11]];
+  for (let i = 0; i < n; i++) {
+    const x = -w / 2 + (i + 0.5) * w / n; m.mat(MAT.METAL, COL.black); m.box(x - 0.012, -0.02, -0.09, x + 0.012, 0.03, 0);
+    const kind = cloaks < 2 && R() < 0.55 ? 'cloak' : R.pick(['hat', 'satchel', 'rope', 'none', 'cloakless']);
+    if (kind === 'cloak') {
+      cloaks++; const cl = R.pick(cols), l = 0.9 + R() * 0.4, wH = 0.42 + R() * 0.16, nS = 9, ph = R() * 6.3, fz = k_ => 0.02 + 0.07 * (0.5 + 0.5 * Math.sin(k_ * 1.9 + ph));
+      for (let q = 0; q < nS; q++) {
+        const v = 0.8 + 0.3 * (0.5 + 0.5 * Math.sin((q + 0.5) * 1.9 + ph + 1.2)), l0 = l * (0.94 + 0.06 * Math.sin(q * 2.7 + ph)), l1 = l * (0.94 + 0.06 * Math.sin((q + 1) * 2.7 + ph));
+        m.mat(MAT.CLOTH, [cl[0] * v, cl[1] * v, cl[2] * v], 0.5);
+        m.quad2([x + (q / nS - 0.5) * 0.16, -0.12, -0.1 - fz(q) * 0.5], [x + (q / nS - 0.5) * wH, -l0, -0.1 - fz(q)], [x + ((q + 1) / nS - 0.5) * wH, -l1, -0.1 - fz(q + 1)], [x + ((q + 1) / nS - 0.5) * 0.16, -0.12, -0.1 - fz(q + 1) * 0.5], 0, 0, 1, 1);
+      }
+      m.mat(MAT.CLOTH, [cl[0] * 0.7, cl[1] * 0.7, cl[2] * 0.7], 0.5); m.box(x - 0.08, -0.26, -0.2, x + 0.08, -0.04, -0.09);
+    } else if (kind === 'hat') {
+      { const hc = R.pick(cols); m.mat(MAT.CLOTH, hc, 0.5); m.box(x - 0.16, -0.34, -0.12, x + 0.16, -0.06, -0.1); m.mat(MAT.CLOTH, hc.map(v => v * 0.8), 0.5); m.box(x - 0.08, -0.28, -0.2, x + 0.08, -0.12, -0.12); }
+    } else if (kind === 'satchel') {
+      m.mat(MAT.PLANKS, [0.36, 0.25, 0.15], 0.5); m.box(x - 0.15, -0.5, -0.17, x + 0.15, -0.28, -0.09); m.box(x - 0.15, -0.34, -0.19, x + 0.15, -0.28, -0.17); m.beam([x - 0.1, -0.02, -0.08], [x - 0.12, -0.34, -0.1], 0.025, 0.012); m.beam([x + 0.1, -0.02, -0.08], [x + 0.12, -0.34, -0.1], 0.025, 0.012);
+    } else if (kind === 'rope') {
+      m.mat(MAT.CLOTH, [0.34, 0.28, 0.17], 0.5); m.box(x - 0.13, -0.38, -0.17, x + 0.13, -0.1, -0.09); m.mat(MAT.CLOTH, [0.22, 0.18, 0.11], 0.5); m.box(x - 0.05, -0.3, -0.175, x + 0.05, -0.18, -0.165);
+    }
+  }
 };
 // a long tapestry on a rod: border, field and a pale device
 PD.tapestry = (R, w, h) => (m, hh) => {
@@ -100,7 +120,8 @@ PD.try = function (P, room, sd, u, kind, R, fill) {
   switch (kind) {
     case 'shelf': return PD.floorAt(P, room, sd, id + 'sh', 1.5, 0.34, 1.8, pdShelf(1.5, 1.8, 3, fill || PD.goods(c, 1.5)), u, 0.3);
     case 'books': return PD.floorAt(P, room, sd, id + 'bk', 1.8, 0.34, 1.8, pdShelf(1.8, 1.8, 3, PD.books(c, 1.8)), u, 0.3);
-    case 'cabinet': { const q = (P.fixt = P.fixt || {}), key = room.id + 'cabinet'; if ((q[key] || 0) >= 5) return PD.try(P, room, sd, u, 'cupboard', R, fill); const w = PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, PI), u, 0.3, { lowOk: true }); if (w) q[key] = (q[key] || 0) + 1; return w; }
+    // [fin] cabinet: at most one filler to a room, none where a cupboard, press or chest already serves; an empty wall is allowed
+    case 'cabinet': { const q = (P.fixt = P.fixt || {}), key = room.id + 'cabinet'; if (TEST && TEST.nocap ? (q[key] || 0) >= 5 : ((q[key] || 0) >= 1 || P.items.some(it => it.k === room.k && it.cx > room.x0 && it.cx < room.x1 && it.cz > room.z0 && it.cz < room.z1 && /cupboard|press|chest|wardrobe|Cabinet/i.test(String(it.id))))) return 0; const w = PD.floorAt(P, room, sd, id + 'cb', 1.36, 0.38, 0.8, m => kp(m, 'Cabinet', 0, 0, 0, 1, PI), u, 0.3, { lowOk: true }); if (w) q[key] = (q[key] || 0) + 1; return w; }
     case 'cupboard': return PD.floorAt(P, room, sd, id + 'cu', 1.12, 0.6, 1.76, PD.cupboard, u, 0.3);
     case 'cask': return PD.floorAt(P, room, sd, id + 'ck', 1.0, 0.95, 0.8, PD.cask(0.9, 0.32), u, 0.3, { lowOk: true });
     case 'bench': return PD.floorAt(P, room, sd, id + 'bn', 1.6, 0.4, 0.46, m => Props.bench(m, 1.6), u, 0.3, { lowOk: true });

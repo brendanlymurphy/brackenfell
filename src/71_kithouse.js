@@ -48,6 +48,7 @@ function kitSpec(site, spec) {
   if (st.up) s.ceiling = true;
   return s;
 }
+// [fin] FACING CONVENTION: a piece's front is +z in its own frame (kit and scan alike); a placer turns +z into the room. pAgainst(..., back = -1) uses rotBack(side, -1) and does that; PD.floorAt turns by rotBack(side, +1) (-z into the room) because the built pieces (pdShelf, cupboard) are made facing -z, so a kit piece drawn through it takes ry = PI.
 const KH = (() => {
   const _p = new THREE.Vector3(), _s = new THREE.Vector3(), _q = new THREE.Quaternion(), _l = new THREE.Matrix4(), Y = new THREE.Vector3(0, 1, 0);
   const V = a => new THREE.Vector3(a[0], a[1], a[2]);
