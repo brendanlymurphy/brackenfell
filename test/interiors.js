@@ -15,5 +15,6 @@ for (const id in World.houses) {
   for (const it of World.interact) if (it.kind === 'chest' && it.id && it.id.startsWith(id + '.') && !(it.loot && it.loot.length)) bad.push(id + ': chest ' + it.id + ' is empty');
 }
 console.log(rows.join('\n'));
+{ const want = Cells.list.filter(c => World.houses[c.id]).length; if (!only && rows.length < want) bad.push('checked ' + rows.length + ' buildings of ' + want + ': the plans were not built, so nothing was checked');       /* [cast] the step passed on GitHub having checked none (the coordinator, Build 83) */ }
 if (bad.length) throw new Error(bad.length + ' interior problems:\n' + bad.join('\n'));
 return 'interiors ok: ' + rows.length + ' buildings';

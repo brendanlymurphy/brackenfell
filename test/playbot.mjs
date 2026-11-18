@@ -478,6 +478,10 @@ SC.soak = async () => {
      280 half way, 365 at the end), not a leak; now any growth is one. */
   for (const sp of WANDER) await ev(sp => { if (World.cell) game.leave(); game.tp(sp[0], sp[1], 0); for (let i = 0; i < 4; i++) { Player.yaw = i * Math.PI / 2; game.step(15, 1 / 30); } return game.draw(); }, sp);
   for (const i of doors) { if (await use('#' + i, { may: true })) { await ev(() => BOT.step(60)); await ev(() => { if (World.cell) game.leave(); }); await ev(() => BOT.settle()); } }
+  /* [cast] what a leak is: a geometry made after the warm-up and never disposed. The renderer's own count also rises when a geometry that already exists is
+     drawn for the first time (a face up close, a nearer level of detail, a lamp at night): ten minutes of this play made no new geometry at all while that
+     count rose from 250 to 295 (Build 83's "280 half way, 365 at the end"). So the soak counts made-and-kept geometries (geoKept) and reports the other. */
+  await ev(() => { const pr = THREE.BufferGeometry.prototype, sa = pr.setAttribute, dp = pr.dispose; BOT.geoKept = new Set(); pr.setAttribute = function (n, a) { if (!this.__bot) { this.__bot = 1; BOT.geoKept.add(this); } return sa.call(this, n, a); }; pr.dispose = function () { BOT.geoKept.delete(this); return dp.call(this); }; });
   for (let m = 0; m < MIN; m++) {
     // a minute: wander with the keys, now and then go through a door and back, talk to someone, swing the sword
     const act = m % 5; if (act === 1 && doors.length) { const i = doors[Math.floor(rnd() * doors.length)]; if (await use('#' + i, { may: true })) { await page.keyboard.down('KeyW'); await ev(() => BOT.step(120)); await page.keyboard.up('KeyW'); await ev(() => { if (World.cell) { const c = Cells.cur; const out = World.interact.find(x => x.kind === 'portal' && x.cell === c.id); } }); const out = await ev(() => World.cell ? World.interact.findIndex(x => x.kind === 'portal' && x.cell === World.cell.id && interactLabel(x)) : -1); if (out >= 0) await use('#' + out, { may: true }); else await ev(() => game.leave()); } }
@@ -492,7 +496,7 @@ SC.soak = async () => {
           if (!n.pos.every(Number.isFinite) && !k.nan) { k.nan = 1; K.bad.push('position is not a number: ' + n.id); } }
         if (Player.pos[1] < (World.cell ? CELL.y : 0) - 60) { K.bad.push('the player fell out of the world at ' + Player.pos.map(v => v.toFixed(1))); if (World.cell) game.leave(); game.tp(0, 0, 0); } }
       Input.keys = {}; const ms = (performance.now() - t0) / ticks; const st = await game.draw(); if (typeof gc === 'function') { gc(); gc(); } const live = typeof Snd !== 'undefined' && Snd.live ? Snd.live() : null;
-      return { m, heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : 0, draws: st.draws, tris: Math.round(st.tris / 1000), tick: +ms.toFixed(2), geo: BOT.info() ? BOT.info().memory.geometries : 0, tex: BOT.info() ? BOT.info().memory.textures : 0, snd: BOT.sounds(), inter: World.interact.length, col: World.colliders.length, em: World.emitters.length, foes: Foes.list.length, toasts: document.getElementById('toasts').children.length, dom: document.getElementsByTagName('*').length, hour: +Env.hour.toFixed(1) }; }, m);
+      return { m, heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : 0, draws: st.draws, tris: Math.round(st.tris / 1000), tick: +ms.toFixed(2), geo: BOT.info() ? BOT.info().memory.geometries : 0, geoKept: BOT.geoKept ? BOT.geoKept.size : 0, tex: BOT.info() ? BOT.info().memory.textures : 0, snd: BOT.sounds(), inter: World.interact.length, col: World.colliders.length, em: World.emitters.length, foes: Foes.list.length, toasts: document.getElementById('toasts').children.length, dom: document.getElementsByTagName('*').length, hour: +Env.hour.toFixed(1) }; }, m);
     notes.length < 0; say('   ' + JSON.stringify(row)); (SC.soak.rows = SC.soak.rows || []).push(row); await ev(() => { if (RPG.dead) return; const r = RPG.st(); r.hp = RPG.MAXHP; }); await ev(() => BOT.settle()); await closeAll(); await check('soak minute ' + m, { nosave: true });
   }
   // sounds: the game was stepped faster than the clock, so let the clock catch up, then nothing but the standing loops may still be sounding
@@ -501,9 +505,9 @@ SC.soak = async () => {
   notes.push(`sounds still playing: ${snd0} at the end of play, ${snd1} after 12 s of silence, ${snd2} after 18 s`); /* not a failure: the bot steps game time faster than the audio clock, so sources pile up here that end normally in real play (measured with the game's own loop: 221 of 227 ended within 6 s of standing still, the rest are the standing loops) */
   for (const b of await ev(() => BOT.soak.bad)) bug(/stuck/.test(b) ? 3 : 2, b);
   const R = SC.soak.rows, a = R[Math.min(Math.floor(R.length / 2), R.length - 1)], z = R[R.length - 1]; fs.writeFileSync(root + OUT + '/soak.json', JSON.stringify(R, null, 0));
-  for (const k of ['heap', 'geo', 'tex', 'inter', 'col', 'em', 'dom', 'toasts']) if (z[k] > a[k] * 1.25 + (k === 'heap' ? 40 : 8)) bug(2, `${k} grows over ${R.length} minutes of play: ${a[k]} half way, ${z[k]} at the end`);
+  for (const k of ['heap', 'geoKept', 'tex', 'inter', 'col', 'em', 'dom', 'toasts']) if (z[k] > a[k] * 1.25 + (k === 'heap' ? 40 : 8)) bug(2, `${k} grows over ${R.length} minutes of play: ${a[k]} half way, ${z[k]} at the end`);
   if (z.tick > a.tick * 1.5 + 0.5) bug(2, `a game tick slows down over time: ${a.tick} ms half way, ${z.tick} ms at the end`);
-  notes.push(`soak ${R.length} min: heap ${a.heap} to ${z.heap} MB, tick ${a.tick} to ${z.tick} ms, draws ${Math.min(...R.map(r => r.draws))} to ${Math.max(...R.map(r => r.draws))}, geometries ${a.geo} to ${z.geo}, textures ${a.tex} to ${z.tex}`);
+  notes.push(`soak ${R.length} min: heap ${a.heap} to ${z.heap} MB, tick ${a.tick} to ${z.tick} ms, draws ${Math.min(...R.map(r => r.draws))} to ${Math.max(...R.map(r => r.draws))}, geometries drawn ${a.geo} to ${z.geo} (made and kept since the warm-up ${a.geoKept} to ${z.geoKept}), textures ${a.tex} to ${z.tex}`);
 };
 // the Old Mine fought through: delvers, lurkers, the Foreman, his key, the strongbox, out by the cleft; then the lamp running dry
 SC.mine = async () => {

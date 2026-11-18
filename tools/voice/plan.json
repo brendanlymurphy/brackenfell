@@ -2137,6 +2137,18 @@
    "src": "94d_act2.js"
   },
   {
+   "key": "22ypsbaw5ba",
+   "speaker": "greta",
+   "kind": "line",
+   "text": "The cellar? Down the stair by the door, love, behind the rail. Take a candle, the steps are steep.",
+   "say": "The cellar? Down the stair by the door, love, behind the rail. Take a candle, the steps are steep.",
+   "voice": "bf_emma",
+   "speed": 1,
+   "pitch": 0,
+   "file": "8ebc5d69aeff3a.m4a",
+   "src": "94e_hartdoor.js"
+  },
+  {
    "key": "wgmh1n5hpi",
    "speaker": "godwin",
    "kind": "line",
