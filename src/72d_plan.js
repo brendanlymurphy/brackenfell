@@ -125,7 +125,7 @@ function pStairGeom(P, s) {
   const rect = (a, b, la, lb) => ax === 'x' ? { x0: Math.min(a, b), x1: Math.max(a, b), z0: la, z1: lb } : { x0: la, x1: lb, z0: Math.min(a, b), z1: Math.max(a, b) };
   s.p0 = p0; s.p1 = p1; s.lat = lat; s.hw = hw;
   s.low = rect(p0, p1, lat - hw, lat + hw); s.high = s.low;
-  s.hole = rect(p0 - d * 0.8, p1, lat - hw - 0.1, lat + hw + 0.1);        // the opening in the slab of the level above: the whole run
+  s.hole = rect(p0 - d * (0.8 + (s.holeX || 0)), p1, lat - hw - 0.1, lat + hw + 0.1);      /* [inout] holeX: a longer well over the foot of a steep stair, so a jump down it clears the slab */        // the opening in the slab of the level above: the whole run
   s.lowPt = ax === 'x' ? [p0 - d * 0.7, lat] : [lat, p0 - d * 0.7];       // where one stands to start up
   s.highPt = ax === 'x' ? [p1 + d * 0.8, lat] : [lat, p1 + d * 0.8];      // where one stands when arrived
   P.holes.push({ k: s.k1, r: s.hole, stair: s });
