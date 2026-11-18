@@ -405,9 +405,9 @@ Pointers checked against the game (the build session, before the cast went in): 
 
 **Emmet Sele** (scribe and schoolmaster)
 - g: One moment. Amice, that is a b, not a d. Now. How may a man of letters disappoint you?
-- g2 [body]: A brass tally with OM on it. I have the mine's pay roll in a chest. Nobody has asked me for it. Nobody ever asks.
+- g2 [body]: A brass tally with OM on it. The mine kept its own roll, and it went under the chapel with the Sexton's things. Nobody has asked me about it. Nobody ever asks.
 - me: Emmet Sele. I teach the children, write the letters, and keep the levy roll. I am the town's memory and it treats me like its attic.
-- nb: Brother Aldous has the Sexton's ledger and cannot read the Sexton's hand. I can. He has only to cross the square.
+- nb: Brother Aldous says the Sexton's papers lie under the chapel in a hand he cannot read. I can. He has only to cross the square.
 - pt: The chapel has a crypt and the crypt has older books than mine. If you find the key, look at what the Sexton kept.
 - nt: If you have come for the levy silver, it is not kept here. If you have come for a book, I am almost flattered. Leave.
 - b1: A b! A b!
@@ -682,7 +682,7 @@ Pointers checked against the game (the build session, before the cast went in): 
 - b2: Not the west shore.
 
 **Ellen Marsh** (nets and smoke)
-- g: Mind the rack, it is hot. Trout and eel, done over alder. Humphrey's stall, or here if you ask nicely.
+- g: Mind the rack, it is hot. Trout and eel, done over alder. Here at the door, if you ask nicely.
 - g2 [body]: Peter came home grey that morning, before anyone had cried the news. He says he saw nothing. I have been married eleven years.
 - me: Ellen Marsh. He catches the fares, I catch the supper.
 - nb: Mercy Garrick mends our nets and will not take full price. Her brother is on the passes with the outlaws; she pays for him in knots.

@@ -117,7 +117,7 @@ function buildRoutes(bucket) {
     { const m = M(11.4, -19.8); m.push().T(PM0 + 0.45, g, -19.0); Props.barrel(m, 0.3, 0.8); m.pop(); m.push().T(PM1 - 0.45, g, -20.9).RY(0.3); Props.crate(m, 0.6); m.pop(); m.push().T(PM1 - 0.5, g, -18.2); Props.sack(m, 0.3); m.pop(); }
     beam([11.4, 2.9, -19.8], [11.4, 2.45, -19.8], 0.04, 0.04); box(MAT.PLAIN, [0.1, 0.09, 0.08], 0.5, 11.28, 2.1, -19.92, 11.52, 2.45, -19.68, 0, 1);
     K.lantern(11.4, 2.28, -19.8, 0.8); addLight([11.4, 2.3, -19.8], 6.5, [3.0, 1.7, 0.6], 0, 'lantern');
-    K.read(PM0 + 0.7, 1.5, -21.3, 2.0, 'passage.note', 'A note nailed in the passage', 'IF YOU ARE CARRYING A LADDER, A CASK OR A BAD MOOD, DO NOT COME THROUGH BETWEEN VESPERS AND SUPPER. THE LANTERN GOES OUT WHEN THE BOY FORGETS IT. NO PISSING. — the Landlord. (Under it, in pencil: “there is a loft over the passage with a door off the gallery, and the key is under the third pot.”)');
+    K.read(PM0 + 0.7, 1.5, -21.3, 2.0, 'passage.note', 'A note nailed in the passage', 'IF YOU ARE CARRYING A LADDER, A CASK OR A BAD MOOD, DO NOT COME THROUGH BETWEEN VESPERS AND SUPPER. THE LANTERN GOES OUT WHEN THE BOY FORGETS IT. NO PISSING. — the Landlord. (Under it, in pencil: “there is a loft over the passage with a door off the gallery, and nobody ever locks it.”)');       /* [cast] POINTERS.md: there is no key and no pot, the loft door is open */
     // the loft store: the upper floor is a room (walls 0.22), the door off the gallery is open, a boarded one beside it, a hoist door in the back
     const ew = 0.22;
     box(MAT.PLASTER, PLASTER, 0.6, PX0, Yb, ZW - ew, PX0 + 0.7, Yt, ZW, 4 | 8, 1);                                         // south wall: the open door gap at x 8.9..10.0

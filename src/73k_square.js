@@ -53,7 +53,8 @@ function buildSquare(bucket) {
       for (let i = 0; i < 3; i++) { const r = 1.5 - i * 0.38; m.box(cx - r, g - 0.1, cz - r, cx + r, g + 0.17 * (i + 1), cz + r); }
       m.mat(MAT.STONE, [0.9, 0.87, 0.81], 0.7); m.cbox(cx, g + 0.5, cz, 0.5, 0.35, 0.5, 0); m.cbox(cx, g + 0.85, cz, 0.34, 2.5, 0.34, 0); m.cbox(cx, g + 3.3, cz, 0.5, 0.18, 0.5, 0);
       m.mat(MAT.STONE, [0.82, 0.79, 0.73], 0.7); m.cbox(cx, g + 3.48, cz, 0.12, 0.62, 0.12, 0); m.box(cx - 0.3, g + 3.78, cz - 0.06, cx + 0.3, g + 3.9, cz + 0.06);
-      addBoxCollider(m, cx - 1.5, cz - 1.5, cx + 1.5, cz + 1.5, g - 0.1, g + 0.5); K.place('marketcross', 'The Market Cross', cx, cz, 4);
+      for (let i = 0; i < 3; i++) { const r = 1.5 - i * 0.38; addFloor(m, cx - r, cz - r, cx + r, cz + r, g + 0.17 * (i + 1)); } addBoxCollider(m, cx - 0.52, cz - 0.52, cx + 0.52, cz + 0.52, g, g + 3.6);       /* [cast] the three steps are steps (floors a person walks up) and only the pillar is solid: one 3 m block 0.6 m high could not be climbed, and the walk tests and the villagers' graph went across it */
+      K.place('marketcross', 'The Market Cross', cx, cz, 4);
       K.read(cx, g + 1.1, cz + 1.9, 2.2, 'cross.note', 'The market cross', 'Worn at the top step by three hundred years of sitting. A tally of weights is cut into the pillar, and under it, newer and shallower, someone has scratched: PRICES FIXED BY THE REEVE, GRUMBLED BY ALL.'); } }
   { const px = -4.9, pz = -2.4, g = gy(px, pz), m = M(px, pz);                   // the pillory: two posts and a bored beam on a plank step
     if (okAt(px, pz, 1.0)) { m.mat(MAT.PLANKS, [0.5, 0.42, 0.34], 0.5); m.box(px - 0.9, g, pz - 0.5, px + 0.9, g + 0.14, pz + 0.5); m.mat(MAT.TIMBER, dark, 0.5); for (const x of [-0.65, 0.65]) m.cbox(px + x, g + 0.14, pz, 0.14, 1.75, 0.14, 0);

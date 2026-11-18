@@ -81,5 +81,6 @@ if (window.__noRest) { if (fails.length) throw new Error('CELLS FAIL ' + JSON.st
 { game.enter('inn'); const t = Cells.mapTarget(NPC.greta.pos); fx(t === Cells.by.inn.door.c || Cells.spaceOf(NPC.greta.pos) === 'inn', 'compass inside'); game.leave(); }
 game.tp(-84, -6.5, 90, 0); game.step(2, dt);
 const summary = { cells: cells.length, rows, fails: fails.slice(0, 30) };
+if (!cells.length) { fails.push('no cells were checked'); summary.fails = fails.slice(0, 30); }       /* [cast] never pass on nothing */
 if (fails.length) throw new Error('CELLS FAIL ' + JSON.stringify(summary));
 return 'cells PASS ' + JSON.stringify(summary);

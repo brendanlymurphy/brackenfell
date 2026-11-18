@@ -22,5 +22,6 @@ function walk(id, pts, sprint) {
 }
 for (const r of World.routes) { if (only && r.id !== only) continue; walk(r.id, r.pts, false); walk(r.id, r.pts.slice().reverse(), false); walk(r.id, r.pts, true); }
 const summary = { routes: World.routes.map(r => r.id), runs: rows.length, ok: rows.filter(r => r.ok).length, fails: fails.slice(0, 8) };
+if (!only && rows.length < 3) fails.push('only ' + rows.length + ' route runs were made');       /* [cast] never pass on nothing */
 if (fails.length) throw new Error('ROUTES FAIL ' + JSON.stringify(summary));
 return 'routes PASS ' + JSON.stringify(summary);

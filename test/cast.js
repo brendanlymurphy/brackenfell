@@ -17,5 +17,11 @@ for (const b in beds) if (beds[b].size > 1) bad.push([...beds[b]].join(' and ') 
 for (const p of CAST) if (!NPCS.some(n => n.id === p.id)) bad.push(p.name + ' is in the table and not in the town');
 // the second greeting comes when the story has moved
 { const p = CAST.find(q => q.when === 'body' && q.lines.g2), was = S.flags.sawBody; S.flags.sawBody = 1; if (TALK[p.id]().t !== p.lines.g2) bad.push(p.name + ' does not change greeting once the drowned man is known'); S.flags.sawBody = was; }
+// [cast] a body for the age (inbox 09:40: "Roger Hask stands on a child's body"; he is drawn as m_hunter, the child at the stalls is Lettice, 14): nobody over 15 on
+// a child's body, nobody under 13 on a grown one; the body checked is the one drawn, as the table's age and the story's two children say
+{ const KID = /^(m_boy|f_child)$/, STORY_AGE = { tobin: 11, pip: 9 }; let nb = 0;
+  for (const n of NPCS) { const p = CAST.find(q => q.id === n.id), age = p ? p.age : STORY_AGE[n.id]; if (age === undefined) continue; const body = (n.ch && n.ch.body) || (Chars.set.cfg.look ? Chars.set.cfg.look(n.def).body : n.def.body); nb++;
+    if (age > 15 && KID.test(body)) bad.push(n.name + ' (' + age + ') is drawn on a child\'s body, ' + body); if (age < 13 && !KID.test(body)) bad.push(n.name + ' (' + age + ') is drawn on a grown body, ' + body); }
+  if (nb < CAST.length) bad.push('bodies checked for ' + nb + ' people only'); }
 if (bad.length) throw new Error('CAST FAIL ' + bad.length + ': ' + bad.slice(0, 12).join('; '));
-return 'cast PASS ' + NPCS.length + ' people (' + CAST.length + ' of the table, 17 of the story), ' + Object.keys(beds).length + ' beds, one sleeper each, in their own houses; nobody answers "..."';
+return 'cast PASS ' + NPCS.length + ' people (' + CAST.length + ' of the table, 17 of the story), ' + Object.keys(beds).length + ' beds, one sleeper each, in their own houses; nobody answers "..."; every body fits the age';
