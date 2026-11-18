@@ -42,7 +42,7 @@ for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].s
 const SHELL_TONES = {      // [fx2] roofs must read as different coverings from above: cut slate (cool dark blue-grey), stone slate (pale, lichened), thatch (warm grey-brown), shingle (silvered wood); tints above 1 lift the dark scanned albedos
   slate: [[0.9, 0.98, 1.15], [0.78, 0.86, 1.02], [1.0, 1.05, 1.18], [0.84, 0.92, 1.1]],      // [fx3] lighter: the first set read near-black from above
   tile: [[1.0, 0.72, 0.6], [0.88, 0.62, 0.52], [1.08, 0.8, 0.64], [0.8, 0.58, 0.5]],
-  stoneslate: [[0.62, 0.6, 0.52], [0.54, 0.54, 0.49], [0.68, 0.65, 0.57], [0.58, 0.57, 0.52]],
+  stoneslate: [[0.8, 0.78, 0.68], [0.7, 0.7, 0.64], [0.88, 0.84, 0.74], [0.75, 0.74, 0.67]],
   thatch: [[1.7, 1.42, 0.98], [1.5, 1.26, 0.88], [1.85, 1.58, 1.08]],
   shingle: [[0.95, 0.88, 0.76], [0.8, 0.76, 0.68], [1.05, 0.97, 0.84]],
 };
