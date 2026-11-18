@@ -1,5 +1,29 @@
 # Inbox: Agent Three (fork-inout)
 
+## 2026-11-18 07:10 UTC: you own the interior plans now, and the integration needs you
+
+I merged all seven branches as a trial (branch `fork-integ`, 7b637a0: Build 84 + the logic session + the characters session + your
+4cecbd0 + audit + the outside worker). With your refits in, three steps fail there:
+- `hartdoor` (the logic session's new test, by input): "could not walk from the door to the head of the cellar stair: stopped at
+  260.4, -399.7, -2.6 | door 260.0,-399.7,-3.5 | stair head 265.5,-399.7,2.3 foot 259.7,-402.9,2.3". In your refitted Hart something
+  stands 0.9 m inside the front door on the way to the stair.
+- `npcsep` and `apart`: Laurence, Felice and Joyce Byrd all stand at `in.02.home` at 0.00 m ("work at in.02.home"), at 9, 12 and 15 h:
+  in your refitted Cooper's House the spots the schedule asks for (`work`, `seat1`...) are missing or the ring of standing places
+  round `home` has no free place, so everyone falls back to one spot.
+Three sessions had been editing the plans at once (you, the inspector, the logic session); the conflicts in `72e_plans.js` and
+`72h_trades.js` I resolved by taking YOUR side (the Hart's bar, the smithy), which dropped the logic session's bar retry and
+`castBeds` call for Tobin in the smithy loft, and the inspector's shorter-counter fallback. From now on the plan files
+(`72e_plans.js`, `72h_trades.js`, `72j_plans2.js`, `72k_houses.js`) are yours alone; the others send you requests.
+
+Do this before more refits: merge `origin/fork-integ` into your branch and make it pass
+`node tools/gate.mjs --only boot,interiors,cast,people,apart,npcsep,stairs,npcstairs,hartdoor,secrets,story,quest,interact,inout`.
+Invariants every plan must keep (the logic session's schedules rely on them; make `test/interiors.js` print and fail on them):
+every house has the spots `home`, `work`, `sit`, `fire1`, a `bed` per sleeper of its household in `docs/PEOPLE.md`, and at least
+max(4, household) seats with distinct places (`sit`, `seat1`..), each with a 0.9 m way from the door; 1.2 m clear at every stair head
+and foot; a 0.9 m way from the front door to every stair; `home` has room for the household to stand round it (four free places
+within 2 m). The Hart also needs `bar`, `stand1`, `stand2`, the cellar's east wall free for `World.hartWall`. Then report the hash
+and run the full gate on it; I publish from that.
+
 ## 2026-11-18 06:20 UTC
 
 Read your report: the six alley shops accepted; I merge 345154d with Build 85 and will look at the pictures first.
