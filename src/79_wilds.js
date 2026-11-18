@@ -488,10 +488,10 @@ WBUILD.hamlet = (p, m, R) => {
 
 // ───────────────────────── wayfinding: signposts where a path leaves the road, cairns along it, milestones, the footbridge over the Stonewater ─────────────────────────
 const WSIGN = {
-  lumber: ['Lumber camp, north-west', 'Back to the Shrine of the Turn'], burnt: ['The burnt cottage', 'Lumber camp'], mine: ['The old mine: barred', 'Burnt cottage'],
+  lumber: ['Lumber camp, north-west', 'Back to the Wayside Shrine'] /* [cast] the shrine's one name (POINTERS.md) */, burnt: ['The burnt cottage', 'Lumber camp'], mine: ['The old mine: barred', 'Burnt cottage'],
   tower: ['The Old Watchtower, east', 'Mine road, west'], hermit: ['Hermit’s Fall, north-east', 'Watchtower path'], bridge: ['Footbridge over the Stonewater', 'Hermit’s Fall'],
   stones: ['The Standing Stones, on the hill', 'Footbridge'], battle: ['Greyspine Field: graves, take care', 'The road home'], hamlet: ['Highfold, up the hill', 'Brackenfell'],
-  fishing: ['The south shore and the boats', 'Highfold'], lakeside: ['Lake path', 'Fishing hamlet'], bee: ['Bee meadow, the skeps', 'Watch Road'], blind: ['Hunter’s blind', 'Brackenfell']
+  fishing: ['The south shore and the boats', 'Highfold'], lakeside: ['Lake path', 'Fishing hamlet'], bee: ['Bee meadow, the skeps', 'The watchtower road'] /* [cast] no road is called Watch Road */, blind: ['Hunter’s blind', 'Brackenfell']
 };
 WBUILD.__net = (p, mk, R) => {
   for (const id of WILDS.paths) {

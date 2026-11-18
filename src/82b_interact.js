@@ -64,7 +64,7 @@ IX.BOOKS = [
   ['pip', 'Pip’s list', 'THINGS I KNOW. 1. Hale cries on the last day of the month. 2. The Elder talks to the lake. 3. There is a door in the Hart’s cellar that is not a cellar door.', ['home', 'inn'], 'cellar'],
   ['debt', 'A scrap with a smudge', 'Greta, I owe you three and six. Will pay when the silver’s in. — D. Pell.', ['inn', 'home'], 'pell'],
   ['cave', 'A map, drawn on a flour sack', 'THE BREAD CAVE. West shore, past the reeds, under the grey rock. Three knocks on the stone and set the pail down. Do not wait.', ['elder', 'home'], 'cave'],
-  ['bounty', 'A notice', 'WANTED: the thief called the Magpie, who takes only silver and only after dark. Last seen on the weavers’ lane. Five gold from the Warden.', ['guard', 'inn', 'store'], 'magpie'],
+  ['bounty', 'A notice', 'WANTED: the thief called the Magpie, who takes only silver and only after dark. Last seen at dusk on the road from the square to the Cutler’s House. Five gold from the Warden.' /* [cast] POINTERS.md: no lane has that name; this is her route */, ['guard', 'inn', 'store'], 'magpie'],
 ];
 IX.READ = {};
 // ── helpers ──

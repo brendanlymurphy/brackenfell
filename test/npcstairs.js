@@ -20,5 +20,6 @@ for (const st of World.stairs) {
     run(st.bottom, name); run(name, st.bottom);
   }
 }
+if (out.length < 3) fails.push('only ' + out.length + ' walks were made');       /* [cast] never pass on nothing */
 if (fails.length) throw new Error('NPCSTAIRS FAIL ' + JSON.stringify(fails));
 return 'npcstairs PASS ' + out.length + ' walks: ' + out.slice(0, 6).join(' | ');

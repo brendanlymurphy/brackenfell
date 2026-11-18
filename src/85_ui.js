@@ -3,7 +3,7 @@
 // on screen that asks for a finger is the use button, and it exists only while something can be used (and says what it will do).
 // Public hooks for other code: UI.discover(name) (banner + map label), UI.extra (an object saved with the settings), toast(), banner(), #sndExtra (Sound page).
 const $ = id => document.getElementById(id);
-const BUILD_NAME = 'Build 86';      // the number people quote; bump on every publish (the hash beside it is the build id)
+const BUILD_NAME = 'Build 87';      // the number people quote; bump on every publish (the hash beside it is the build id)
 const UI = { talk: null, menu: false, reader: false, paused: false, pauseWhy: '', prompt: null, promptPos: null, compass: [], seen: {}, placeT: 0, lastYaw: 9, lastObj: '', hudT: 8, quiet: false, extra: {}, portrait: false, fromPause: false, lastPart: '', lastGold: -1, glintT: 0 };
 function toast(html, act) { const d = document.createElement('div'); d.innerHTML = html; if (act) { const b = document.createElement('button'); b.type = 'button'; b.textContent = act[0]; b.onclick = act[1]; d.appendChild(b); } $('toasts').appendChild(d); UI.hudT = Math.max(UI.hudT, 3); setTimeout(() => d.remove(), act ? 9000 : 5300); while ($('toasts').children.length > 4) $('toasts').firstChild.remove(); }
 function banner(small, big, cls) { const p = $('place'); p.innerHTML = '<small>' + small + '</small>' + big; p.className = (cls || '') + ' on'; clearTimeout(UI.placeT); UI.placeT = setTimeout(() => p.classList.remove('on'), /^Quest/.test(small) ? 2200 : 3000); }       /* was 3.8 s plus 1.4 s of fade each way, across the middle of the view: a quest line is now up for about 3.5 s in all */
@@ -186,14 +186,14 @@ function uiFrame(dt) {
   UI.promptPos = bp;
   // compass: the cardinal points, a gold diamond for each active quest, a small mark and name for places you have found
   if (Math.abs(P.yaw - UI.lastYaw) > 0.002 || (R.frame & 15) === 0) {
-    UI.lastYaw = P.yaw; const span = 1.9;
-    for (const c of UI.compass) { const d = angDiff(c.a, P.yaw); c.el.style.display = Math.abs(d) < span / 2 ? '' : 'none'; c.el.style.left = (50 + d / span * 100) + '%'; }
+    UI.lastYaw = P.yaw; const span = 1.9, tn = typeof Cells !== 'undefined' && Cells.trueYaw ? Cells.trueYaw() : 0, inC = World.cell && Cells.cur && Cells.cur.xdoor;      // [cast] indoors the points read the building's true bearing (a cell is built in its house's own frame)
+    for (const c of UI.compass) { const d = angDiff(c.a, P.yaw + tn); c.el.style.display = Math.abs(d) < span / 2 ? '' : 'none'; c.el.style.left = (50 + d / span * 100) + '%'; }
     let k = 0;
     for (const id of QORDER) { if (!S.q[id] || S.q[id].done || k >= UI.marks.length) continue; const t = CELLS_ON ? Cells.mapTarget(questTarget(id)) : questTarget(id); if (!t) continue; const m = UI.marks[k++], d = clamp(angDiff(headingTo(ex, ez, t[0], t[2]), P.yaw), -span * 0.44, span * 0.44), dist = hyp(t[0] - ex, t[2] - ez); m.el.style.display = ''; m.d.style.display = ''; m.el.style.left = m.d.style.left = (50 + d / span * 100) + '%'; m.d.textContent = dist < 4 ? '' : Math.round(dist) + ' m'; }
     for (; k < UI.marks.length; k++) { UI.marks[k].el.style.display = 'none'; UI.marks[k].d.style.display = 'none'; }
     // discovered places in view (nearest first); the nearest few get a name
     let j = 0; const dsc = UI.disc();
-    if (S.disc) { const seenIn = []; for (const pl of World.places) { if (!dsc[pl.id] || pl.id.startsWith('camp.') && false) continue; const d = angDiff(headingTo(ex, ez, pl.x, pl.z), P.yaw), dist = hyp(pl.x - ex, pl.z - ez); if (Math.abs(d) < span * 0.5 && dist > 6) seenIn.push([dist, d, pl]); }
+    if (S.disc) { const seenIn = [], ox = inC ? Cells.cur.xdoor.c[0] : ex, oz = inC ? Cells.cur.xdoor.c[2] : ez; for (const pl of World.places) { if (!dsc[pl.id] || pl.id.startsWith('camp.') && false) continue; const d = angDiff(headingTo(ox, oz, pl.x, pl.z), P.yaw + tn), dist = hyp(pl.x - ox, pl.z - oz); if (Math.abs(d) < span * 0.5 && dist > 6) seenIn.push([dist, d, pl]); }
       seenIn.sort((a, b) => a[0] - b[0]); for (const [dist, d, pl] of seenIn) { if (j >= UI.pmarks.length) break; const m = UI.pmarks[j++], l = (50 + d / span * 100) + '%'; m.el.style.display = ''; m.el.style.left = l; m.n.style.display = j <= 2 ? '' : 'none'; m.n.style.left = l; m.n.textContent = pl.name.replace(/^(The|Brackenfell) /, ''); } }
     for (; j < UI.pmarks.length; j++) { UI.pmarks[j].el.style.display = 'none'; UI.pmarks[j].n.style.display = 'none'; }
   }

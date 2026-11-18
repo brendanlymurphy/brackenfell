@@ -6041,15 +6041,15 @@
    "note": "Aged 62; scribe."
   },
   {
-   "key": "jba4ipzvgf",
+   "key": "19mtovuplw4",
    "speaker": "emmet",
    "kind": "line",
-   "text": "Brother Aldous has the Sexton’s ledger and cannot read the Sexton’s hand. I can. He has only to cross the square.",
-   "say": "Brother Aldous has the Sexton's ledger and cannot read the Sexton's hand. I can. He has only to cross the square.",
+   "text": "Brother Aldous says the Sexton’s papers lie under the chapel in a hand he cannot read. I can. He has only to cross the square.",
+   "say": "Brother Aldous says the Sexton's papers lie under the chapel in a hand he cannot read. I can. He has only to cross the square.",
    "voice": "v.OM",
    "speed": 1,
    "pitch": 0,
-   "file": "0c14272c8ffa99.m4a",
+   "file": "ef1a19945f41e4.m4a",
    "src": "99_cast",
    "as": "v.OM",
    "note": "Aged 62; scribe."
@@ -6097,15 +6097,15 @@
    "note": "Aged 62; scribe."
   },
   {
-   "key": "wib7n6pi2n",
+   "key": "480bl4xs56",
    "speaker": "emmet",
    "kind": "line",
-   "text": "A brass tally with OM on it. I have the mine’s pay roll in a chest. Nobody has asked me for it. Nobody ever asks.",
-   "say": "A brass tally with OM on it. I have the mine's pay roll in a chest. Nobody has asked me for it. Nobody ever asks.",
+   "text": "A brass tally with OM on it. The mine kept its own roll, and it went under the chapel with the Sexton’s things. Nobody has asked me about it. Nobody ever asks.",
+   "say": "A brass tally with OM on it. The mine kept its own roll, and it went under the chapel with the Sexton's things. Nobody has asked me about it. Nobody ever asks.",
    "voice": "v.OM",
    "speed": 1,
    "pitch": 0,
-   "file": "abb467714a1c96.m4a",
+   "file": "d5544457fccb93.m4a",
    "src": "99_cast",
    "as": "v.OM",
    "note": "Aged 62; scribe."
@@ -7665,15 +7665,15 @@
    "note": "Aged 37; boatman."
   },
   {
-   "key": "1uvszyd0767",
+   "key": "121n45g5195",
    "speaker": "ellen",
    "kind": "line",
-   "text": "Mind the rack, it is hot. Trout and eel, done over alder. Humphrey’s stall, or here if you ask nicely.",
-   "say": "Mind the rack, it is hot. Trout and eel, done over alder. Humphrey's stall, or here if you ask nicely.",
+   "text": "Mind the rack, it is hot. Trout and eel, done over alder. Here at the door, if you ask nicely.",
+   "say": "Mind the rack, it is hot. Trout and eel, done over alder. Here at the door, if you ask nicely.",
    "voice": "v.W2",
    "speed": 1,
    "pitch": 0,
-   "file": "791f54a71996d1.m4a",
+   "file": "9fbb8bbb8eb783.m4a",
    "src": "99_cast",
    "as": "v.W2",
    "note": "Aged 35; nets."
