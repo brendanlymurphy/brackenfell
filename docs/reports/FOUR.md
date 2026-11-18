@@ -1,5 +1,42 @@
 # Reports: Agent Four (fork-ch1)
 
+## 2026-11-18 (items 5 and 6: besom and trade tools; sameness. And a WebGPU fault of mine, fixed)
+
+Head `82f793f` (merged with threejs `bc1cac4`). Full gate requested at this hash (workflow_dispatch; number not yet listed when this
+was written). **Readings taken without a decision from you** (all easy to undo, all in `src/49_chars.js` / `src/77d_handprops.js`):
+(a) the sweep motion is now `farm-watering` (standing), not `shovel-dig` (a crouch that tented every skirt); (b) "differ in one garment"
+is read as the colour of the main garment, not a different piece; (c) tools put down = not drawn (no bench or rack placement).
+
+- **WebGPU, mine, fixed.** Run 268 (full gate for items 2 and 3) failed `webgpu` with 12 GPU errors.
+  - Cause: my garment tag for taking clothes off was a ninth vertex attribute; WebGPU allows eight, so every villager and shadow
+    pipeline was invalid. WebGL did not mind, so my local gates passed.
+  - Fix: the tag now rides in `_vid` as a negative number (garments never carry a face-morph column). `webgpu` step passes locally.
+  - **Do not merge `4f15974` to `2187dd1` without `82f793f`.**
+- **Besom.** For the four sweepers: ash handle and a head of birch twigs bound twice, held in both hands in front of the body. The
+  twig tips sweep side to side on the floor 0.8 m ahead, in a standing stance. Picture: `docs/proof/chars/hold/besom_sweep.jpg`.
+- **Trade tools.** One true-size tool per working person, by `CAST` trade, held only while working: shears, awl, knife, cleaver,
+  mallet, axe, paddle, dough scraper, pestle, tinker's hammer, netting shuttle, sickle, tongs. Story people: Marta pestle, Hilda
+  shuttle, Brandt tongs, Bram and Edda sickle, Wren knife.
+  - People with no tool: counter keepers, the scribe, merchants, shepherds, the potter, the beekeeper, the Reeve.
+  - Tools are not drawn beyond the middle level of detail; they had cost 2 to 4 draw calls in the budget views.
+  - Picture: `docs/proof/chars/hold/trade_tools.jpg`. Hilda's shuttle is too small to see at 1 m; most tools are held across the
+    fist, horizontal, as the work clip's hand hangs.
+- `test/hold.js`: 0 of 4480 (50 people with something in hand). One fault along the way was mine: a besom edit moved Brandt's
+  hammer grip 20 cm off his palm (`d86986e` restores it).
+- **Sameness** (`dressPlan` in `src/49_chars.js`, `docs/WARDROBE.md`). The cast is dressed in id order; each person takes the first
+  hat, hair colour and garment colour that nobody already dressed in their household or workplace has.
+  - `test/dress.js` (new): 32 pairs who live or work together; before 32 shared a hair colour and 25 a garment colour, now 0 share
+    hat, hair or garment colour.
+  - Town spread: 7 hair colours, 8 garment colours; 11 caps, 11 hoods, 11 coifs, 9 kerchiefs, 18 bare-headed. Hair greys by age.
+  - Picture: `docs/proof/chars/dress/households.jpg` (six households and workplaces side by side).
+  - Still: bodies are 12 for 60 people (no Blender here: a new hair style or face needs a new body); two fair hair shades are close;
+    in sun the garment colours all read pale.
+- Area gate at `2187dd1`: boot, quest, story, parity, people, budget-medium (square 179/318k) and budget-low pass.
+- **`npcsep` fails, not mine:** Laurence and Joyce both sit at `in.02.sit` at 7:00 and 18:30. That comes from the household
+  schedules; none of `src/77e_households.js`, `src/77_npc.js` or `src/54b_castrules.js` differs from threejs on my branch.
+- Not checked: motion (sweep, strum, the tools in the work clip), a real phone.
+- Next: item 7, animals (candidates only).
+
 ## 2026-11-18 (item 4: lute strap, tankard)
 
 Commit `09c8b5b`. Push gate: run 271.
@@ -16,7 +53,7 @@ Commit `09c8b5b`. Push gate: run 271.
 
 ## 2026-11-18 (items 2 and 3: sleepers, Hale without his helmet)
 
-Commit `4f15974` (merged with threejs). Full gate requested on GitHub for `fork-ch1` at this hash (run 268, in progress when written; the push gate on the same hash, run 265, passed). Area gate: 8 of 8 pass
+Commit `4f15974` (merged with threejs). Full gate requested on GitHub for `fork-ch1` at this hash (run 268: FAILED webgpu, my fault, fixed in `82f793f`, see above; the push gate on the same hash, run 265, passed). Area gate: 8 of 8 pass
 (medium square 180/318k, low square 132/194k).
 
 - **Sleepers.** In bed: hat and outer garments (cloak, apron, tabard, straps, belt, pouch) off; a coif or kerchief stays on.
