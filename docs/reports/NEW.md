@@ -25,11 +25,16 @@ including `in.39`, the first door inside the gate.
 in the fireplace; Diggory and Roger at the stalls are the same person; the drowned man lies alone with no prompt; the sword is out for ten
 minutes; the first day lasts ten minutes.
 
-**2. Pointers: in progress.** The Hart's cellar first, played by input (commit 19ecc48, pictures `docs/audit/pointer_hart_cellar.jpg`,
-`pointer_hart_play.jpg`): the owner is right. The stair down to the cellar exists. But the "fresh brick" and the smugglers' door are placed at
-(266.5, -402.2, 4.6), which is **1.25 m behind the cellar's back wall, inside the earth**: the cellar room ends at z 3.35. From inside the cellar
-that place is a plain wall with a shelf of sacks in front of it, in the dark. The brick panel exists and is seen only from behind (camera
-inside the rock). The prompt works through the wall only within 2.2 m; the bot, stopped 2.1 m away by a cask and sacks, got none, before or
-after the story flags. Rowan's line says "the east cellar wall"; it is the south wall's east end. Fix (for whoever owns `82c_secrets.js` and
-`94d_act2.js`): move the brick and the door to z 3.35 (the wall's face), clear the cask and sacks in front, and light that corner. The full
-pointer list is being extracted now.
+**2. Pointers (done, `docs/audit/POINTERS.md`).** 301 pointers (135 spoken lines, 38 quest stages, 37 signs, 35 compass/map marks, 25
+notes, 16 journal entries, 10 rumours, 5 board jobs). 249 point at something that exists; 29 findings cover the rest (4 high, 8 medium, 17 low);
+8 are never shown. Ten played by input (pictures `pointer_hart_play.jpg`, `pointer_hart_cellar.jpg`, `pointer_marks.jpg`, `pointer_played.jpg`):
+- The Hart's fresh brick and smugglers' door are 1.25 m behind the cellar's back wall, inside the ground: cannot be seen or used. "East" is
+  the south wall's east end, and inside the Hart the compass is turned 180 degrees.
+- The Hart's back door and cellar hatch are drawn on the north wall and do nothing; two texts point at them.
+- Quest marks: inside a building every mark becomes that building's front door. Stage 7 inside the Hart points at the door you came in by;
+  the crypt quest and main stage 2 inside the chapel point at the chapel door for every stage. Stages 8 and 9 point 1.1 km SSE at nothing.
+- The boat-house doors under the quay are drawn only and Wenn has no key.
+- Tobin's crooked stone is 4.5 m east of the plaque, not west. The Hidden Yard is not built. The Bread Cave works but is 24 m from the water.
+  Wren's frostcap is due north of the gate and now outside the palisade.
+Played with help: for six of the ten, each walk started on the street about 12 m from the target; only the last stretch was by input.
+Not checked: whether the other 290 can be followed in play; where "Go up to the Hart's cellar" lands a player.

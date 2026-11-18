@@ -2,7 +2,7 @@
 // Takes a picture at each thing met and writes shots/audit/firstten.json (the timeline). usage: node test/audit/firstten.mjs [--size 844x390]
 import { chromium, CHROME } from '../pw.mjs'; import http from 'node:http'; import fs from 'node:fs';
 const A = process.argv.slice(2), size = (A.includes('--size') ? A[A.indexOf('--size') + 1] : '844x390').split('x').map(Number);
-const root = new URL('../../', import.meta.url).pathname, OUT = root + 'shots/audit/pp/'; fs.mkdirSync(OUT, { recursive: true });
+const root = new URL('../../', import.meta.url).pathname, OUT = root + 'shots/audit/pp2/'; fs.mkdirSync(OUT, { recursive: true });
 const TYPES = { html: 'text/html', js: 'text/javascript', png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', glb: 'model/gltf-binary', json: 'application/json', css: 'text/css', m4a: 'audio/mp4' };
 const port = 9700 + Math.floor(Math.random() * 200);
 const srv = http.createServer((q, s) => { try { const u = decodeURIComponent(q.url.split('?')[0]); const f = root + (u.endsWith('/') ? u.slice(1) + 'index.html' : u.slice(1)); const b = fs.readFileSync(f); s.writeHead(200, { 'content-type': TYPES[f.split('.').pop()] || 'application/octet-stream' }); s.end(b); } catch (e) { s.writeHead(404); s.end('nf'); } }).listen(port);
@@ -52,8 +52,10 @@ const watch = async (secs, tag, note) => { for (const d of [0, 120, 120]) { awai
 const CASES = JSON.parse(fs.readFileSync(A[A.indexOf('--cases') + 1], 'utf8'));
 for (const c of CASES) await step(c.tag, async () => {
   if (c.flags) await ev(f => { Object.assign(S.flags, f); }, c.flags);
+  if (c.quest) await ev(q => { S.q[q[0]] = { stage: q[1], done: false, t: Date.now() }; if (typeof uiObjective === 'function') uiObjective(); }, c.quest);
   await ev(() => { if (World.cell) { game.leave(); AUDFT.idle(0.5); } if (UI.talk) endTalk(); if (UI.reader) closeReader(); });
   if (c.enter) { const h = await ev(id => AUDFT.house(id), c.enter); if (h) { await ev(q => AUDFT.go(q.out[0], q.out[2], 0.9), h); await ev(q => AUDFT.face(q.c[0], q.c[2], q.c[1]), h); for (let n = 0; n < 20; n++) { const s0 = await ev(() => AUDFT.state()); if (/^Enter/.test(s0.prompt)) break; await ev(q => { AUDFT.tick({ KeyW: true }, 0, 0); AUDFT.face(q.c[0], q.c[2], q.c[1]); }, h); } await pressE(); await ev(() => AUDFT.idle(1.5)); } }
+  if (!c.enter) await ev(q => { let b = null, bd = 1e9; for (let i = 0; i < Nav.nodes.length; i++) { const n = Nav.nodes[i]; if (!Nav.adj[i] || !Nav.adj[i].length || Cells.inRegion(n[0])) continue; const d = Math.hypot(n[0] - q.x, n[2] - q.z), k = Math.abs(d - 12); if (d > 6 && k < bd) { bd = k; b = n; } } if (b) { Cells.teleport({ p: b.slice(), yaw: Math.atan2(q.x - b[0], -(q.z - b[2])) }); AUDFT.idle(0.5); } }, c);      // start each outdoor case about 12 m away on the villagers' paths: only the last stretch is walked by input
   const log = await ev(q => AUDFT.go(q.x, q.z, 1.6, q.y), c); await ev(q => AUDFT.face(q.x, q.z, q.y), c);
   for (let n = 0; n < 12; n++) { const s0 = await ev(() => AUDFT.state()); if (s0.prompt) break; await ev(q => { for (let i = 0; i < 5; i++) AUDFT.tick({ KeyW: Math.hypot(q.x - Player.pos[0], q.z - Player.pos[2]) > 1.2 }, 0, 0); AUDFT.face(q.x, q.z, q.y); }, c); }
   const d = await ev(q => +Math.hypot(q.x - Player.pos[0], q.z - Player.pos[2]).toFixed(1), c);
