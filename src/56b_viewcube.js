@@ -16,12 +16,15 @@ ViewCube.capture = function (c) {
   if (ViewCube.off || ViewCube.busy || !c || typeof SC === 'undefined' || !SC.scene || !G.renderer) return false; const f = ViewCube.frame(c); if (!f) { if (SH.U.viewOn) SH.U.viewOn.value = 0; ViewCube.cell = null; return false; }
   ViewCube.busy = true; ViewCube.target(); ViewCube.cell = c.id; ViewCube.hour = Math.floor(Env.hour);       // set first: a capture that fails is not tried again every frame
   const was = Cells.cur, cam0 = R.cam.pos.slice(), yaw0 = R.cam.yaw, pitch0 = R.cam.pitch, camObj = R.camera, cp = camObj.position.clone(), cq = camObj.quaternion.clone();
+  let _di = null;
   try {
     if (was) Cells.change(null);                                    // the town is what is drawn: its ground, water and sky are switched off while indoors
     R.cam.pos[0] = f.p[0]; R.cam.pos[1] = f.p[1]; R.cam.pos[2] = f.p[2]; camObj.position.set(f.p[0], f.p[1], f.p[2]); camObj.updateMatrixWorld(true);
     { const st = c.site, hw = (st.w || 6) / 2 + 1.3, hd = (st.d || 6) / 2 + 1.3; if (typeof Kit !== 'undefined') Kit.skip = u => { const l = worldToSite(st, u.x, u.z); return Math.abs(l[0]) < hw && Math.abs(l[1]) < hd; }; }       // the house's own shell (its pieces stand within its footprint)
+    if (typeof deepIndoors === 'function') { _di = deepIndoors; deepIndoors = () => false; }       /* [fin] the camera stands inside the house's footprint: the town's indoor culling would hide the neighbours' walls and yards from the picture (only seen when the hour turned indoors) */
     SC.all = true; if (typeof Kit !== 'undefined') Kit.all = true;   // everything round the house, not what the player's own view had kept (42_scene.js, 44_kit.js)
     if (typeof updateEnv === 'function') { try { updateEnv(game.time, 0); } catch (e) { } }
+    if (SC.camLast) SC.camLast[0] = 1e9;       /* [fin] a capture taken while a cell is current (the hour turns indoors) must not reuse the cell-mode culling of the last frame: the neighbours' walls were missing from it */
     if (typeof Kit !== 'undefined' && Kit.update) Kit.update(R.cam.pos); if (typeof sceneUpdate === 'function') sceneUpdate(R.cam.pos, R.q);
     const hide = []; if (typeof Chars !== 'undefined' && Chars.group && Chars.group.visible) { Chars.group.visible = false; hide.push(Chars.group); }      // people move; a still of them in the glass would be a ghost
     ViewCube.base().value = ViewCube.blank.texture;        // panes are in the picture too (seen from the street): they must not read the map while it is being drawn
@@ -37,6 +40,7 @@ ViewCube.capture = function (c) {
     for (const o of hide) o.visible = true;
     SH.U.viewX.value.set(f.ax, f.az); SH.U.viewZ.value.set(f.bx, f.bz); SH.U.viewOn.value = 1; ViewCube.cell = c.id; ViewCube.hour = Math.floor(Env.hour); ViewCube.shots++;
   } catch (e) { console.warn('viewcube: ' + (e && e.message || e)); if (SH.U.viewOn) SH.U.viewOn.value = 0; }
+  if (_di) deepIndoors = _di;
   SC.all = false; if (typeof Kit !== 'undefined') { Kit.all = false; Kit.skip = null; if (Kit.dynLast) Kit.dynLast[4] = ''; }
   R.cam.pos[0] = cam0[0]; R.cam.pos[1] = cam0[1]; R.cam.pos[2] = cam0[2]; R.cam.yaw = yaw0; R.cam.pitch = pitch0; camObj.position.copy(cp); camObj.quaternion.copy(cq); camObj.updateMatrixWorld(true);
   if (was) Cells.change(was); if (SC.camLast) SC.camLast[0] = 1e9;
