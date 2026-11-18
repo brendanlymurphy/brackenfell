@@ -262,6 +262,9 @@ const PLACE = { poly: [[-19.6, -17.3], [-7.6, -17.3], [14.7, -17.3], [20.3, -16.
     if (h.placed || h.enter) continue;
     for (const q of PLACE.houses) { const o = INF.byId[q[0]] || SITE[q[0]]; if (!o) continue; if (hyp(o.x - h.x, o.z - h.z) > 14) continue; const hit = rectPts(h.x, h.z, h.yaw, h.w, h.d, 1.5).some(([px, pz]) => inRect(o, px, pz, 0.3)) || rectPts(o.x, o.z, o.yaw, o.w, o.d, 1.5).some(([px, pz]) => inRect(h, px, pz, 0.3)); if (hit) { drop(h); break; } }
   }
+  /* [fx3] the audit's A15: shells whose door opens onto a wall (docs/AUDIT.md), in the Market Place quarter, Chapelgate, Westgate and the alley's east end. They go; the ground becomes a neighbour's yard, close or nothing. Wharfside's are the houses worker's. */
+  PLACE.deleted = ['in.42', 'in.43', 'in.46', 'in.64', 'in.71', 'in.73', 'in.88', 'in.97', 'in.103', 'in.117', 'in.118', 'in.119', 'in.128', 'in.130', 'in.18', 'in.48', 'in.11', 'in.76', 'in.47'];
+  PLACE.deletedSites = []; for (const id of PLACE.deleted) { const h = INF.byId[id]; if (h && !h.enter) { PLACE.deletedSites.push({ id, x: h.x, z: h.z, yaw: h.yaw, w: h.w, d: h.d }); drop(h); } }
   INF.count = INF.houses.length;
 })();
 

@@ -5,7 +5,7 @@ const VIEWS = { square: [4, null, -14, 200, 0, 10], alley: [30, null, -2, 250, 2
 const cat = new Map(), put = (o, c) => { if (o && !cat.has(o)) cat.set(o, c); };
 const classify = () => {
   cat.clear();
-  for (const s of SC.statics) put(s.mesh, s.it.kind === 'terrain' ? 'terrain' : s.it.kind === 'water' ? 'water' : s.it.kind === 'glow' ? 'props' : s.it.cell ? 'interior' : 'props');
+  for (const s of SC.statics) put(s.mesh, s.it.kind === 'terrain' ? 'terrain' : s.it.kind === 'water' ? 'water' : s.it.kind === 'glow' ? 'props' : s.it.cell ? 'interior' : s.it.edge ? 'edge' : 'props');
   for (const s of SC.cells) put(s.mesh, /leaf/.test(s.grp.kind) || s.grp.lod ? 'trees' : 'rocks+bushes');
   for (const s of SC.rigid) put(s.mesh, 'props'); for (const s of SC.bodies) put(s.mesh, 'characters');
   if (Grass.mesh) put(Grass.mesh, 'grass');

@@ -49,7 +49,7 @@ const ROADS = [
   { id: 'mill', w: 1.7, pts: [[66.5, 2.6], [67.2, 10], [66.8, 20.6]] },
   { id: 'farm', w: 1.9, pts: [[97, -8.6], [99, -14], [100.2, -17.4]] },
   { id: 'barn', w: 1.9, pts: [[101, -10], [106, -5], [107.6, -3]] },
-  { id: 'hunter', w: 1.3, pts: [[-62, -4.5], [-63, 10], [-67, 28], [-68.5, 40], [-67.6, 44]] },
+  { id: 'hunter', w: 1.3, pts: [[-62, -4.5], [-64.5, -6.2], [-64.5, 10], [-67, 28], [-68.5, 40], [-67.6, 44]] }, // [fx3] Wren's path leaves by the west gate and runs outside the palisade (it ran along its line)
   { id: 'fisher', w: 1.3, pts: [[3.5, 70], [-1, 77], [-5.4, 82.2]] },
 ];
 const WORLD_RADIUS = 184;       // how far the player may wander from the square (was 136; the fine terrain, splat maps and grass reach 192)
