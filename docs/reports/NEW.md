@@ -21,6 +21,12 @@ containers per person 13.6 to 3.8, open edges 249 to 169. Worse: trees inside 35
 trees, storeys, noon (still below Build 76's 18), fences and one more unrecorded line; I did not accept them. `docs/WALK.md` on this build is a
 4-minute run, so rule 5.4's zero falls means little.
 
+**4. Rooms (done, `docs/audit/ROOMS_CHECK.md`).** The inspector's sheets are on another machine, so I took its own room camera on Build 88 for
+20 "empty" and 20 "room" rows drawn at random (`rooms_check40_b88.jpg`). I agree with 34 of 40: all 20 "empty", 14 of 20 "room". The six I would
+call empty from the door: `high.c` hall, `elder` solar, `in.08` solar, `in.111` shop, `in.07` work (the Pottery shows no wheel or pots),
+`in.113` work (the boatwright's shows no boat). Ten emptiest houses a player is most likely to enter: Scribe's, Baker's, Fletcher's, the Forge's
+back rooms, the Hart upstairs, the Mill, Ferrin's, the Pottery, the Bookstall, the Draper.
+
 **6. Sound (done, `docs/audit/VOICE_LENGTHS.md`).** The 529 recordings are only on `fork-cull` (main and threejs have 254); measured from
 there with ffmpeg. Median 12.6 characters per second of speech. To listen to first: the 20 fastest (Tobin 19.8, Greta 19.4 and 18.9, Alison,
 Alaric) and the 20 slowest (mostly two-word barks read with long gaps: Finn's "Shh. Fish." 3.2); 3 clips with more than 0.5 s of silence at an
