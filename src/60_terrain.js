@@ -318,6 +318,7 @@ function buildSplat() {
   if (typeof wharfPaint === 'function') wharfPaint(A, B, { P, stroke, ell, red, grn, blu, sc });      // [fx2] Wharf Street and Wharfside: trodden earth round the houses and yards (73n_wharfside.js)
   if (typeof wildsSplat === 'function') wildsSplat(A, B, { P, stroke, ell, red, grn, blu });       // (79_wilds.js: footpath cobbles, scree, ash)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
+  if (typeof groundFill === 'function') groundFill(da, db, Rz, half);      // [fx3] no lawn inside the edge (73p_ground.js)
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = da[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
   Terrain.splatData = out;
   G.splatTex = gfxDataTex(out, Rz, Rz, THREE.RGBAFormat, THREE.UnsignedByteType);
