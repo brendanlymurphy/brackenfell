@@ -167,13 +167,13 @@ const Kit = (() => {
       const cell = floor(wp.mul(0.9)), h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))).mul(43758.5453));
       const V = normalize(wp.sub(U.camPos)), R = reflect(V, N);
       const sky = SH.skyBase(vec3(R.x, max(R.y, 0.02), R.z)).mul(0.22);
-      const lit = SH.paneLit ? SH.paneLit(wp, N, h) : vec3(1.0, 0.60, 0.24).mul(h.mul(0.9).add(0.35)).mul(U.windowGlow).mul(2.4).mul(smoothstep(0.12, 0.3, h));      // fork-look: leaded amber panes that do not clip (40_shade.js)
+      const plainPane = /_Inf$/.test(d.name) ? 1 : 0, lit = SH.paneLit ? SH.paneLit(wp, N, h, float(plainPane)) : vec3(1.0, 0.60, 0.24).mul(h.mul(0.9).add(0.35)).mul(U.windowGlow).mul(2.4).mul(smoothstep(0.12, 0.3, h));      // fork-look: leaded amber panes that do not clip (40_shade.js)
       m.colorNode = vec3(0.012, 0.016, 0.02); m.roughnessNode = float(0.15); m.metalnessNode = float(0);
       // from the room side a pane just shows the dim sky outside
       const outsideView = batch ? frontFacing : frontFacing;
       // [fx1] a reveal and a reflection so the pane is not one flat rectangle: the glass edge sits in the frame's shadow, each pane catches the sky differently (a soft diagonal sheen, a faint grime toward the sill)
       const pu = uv(), edge = smoothstep(0.0, 0.16, pu.x.min(pu.y).min(float(1).sub(pu.x)).min(float(1).sub(pu.y))), sheen = smoothstep(0.35, 0.5, fract(pu.x.mul(0.7).add(pu.y.mul(0.5)).add(h.mul(0.9)))).mul(float(1).sub(smoothstep(0.5, 0.62, fract(pu.x.mul(0.7).add(pu.y.mul(0.5)).add(h.mul(0.9)))))), grime = float(1).sub(float(1).sub(pu.y).mul(0.0)).mul(float(0.7).add(pu.y.mul(0.3)));
-      const dayK = float(0.55).add(edge.mul(0.45)).mul(grime), skyDay = sky.mul(dayK).add(sky.mul(sheen.mul(0.9)).mul(edge));
+      const dayK = float(0.55).add(edge.mul(0.45)).mul(grime), skyDay = sky.mul(dayK).add(sky.mul(sheen.mul(0.9)).mul(edge)).mul(plainPane ? 0.67 : 1);
       m.emissiveNode = select(outsideView, skyDay.add(lit.mul(edge.mul(0.5).add(0.5))), (SH.paneOut ? SH.paneOut(wp, N, V) : SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55))).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
       m.side = THREE.DoubleSide;
       K_.mats.set(key, m); return m;

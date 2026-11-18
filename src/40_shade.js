@@ -64,16 +64,16 @@ SH.init = function () {
   SH.lampPool = Fn(([wp]) => { if (!G.lampTex) Lamps.init(); const t = texture(G.lampTex, wp.xz.div(2 * K.terrainHalf).add(0.5)).r; return vec3(1.0, 0.56, 0.22).mul(t.mul(t).mul(SH.LAMP_PEAK).mul(U.windowGlow).mul(1.9)); });
   // A window pane lit from inside, as seen from the street: small leaded diamonds, each a little different, the room behind unevenly
   // bright. Values are chosen for the night exposure so the glass stays amber instead of clipping to white. h: a random number per window.
-  SH.paneLit = Fn(([wp, N, h]) => {
+  SH.paneLit = Fn(([wp, N, h, pl]) => {
     const hc = wp.x.mul(abs(N.z)).add(wp.z.mul(abs(N.x))), q = vec2(hc, wp.y).mul(5.2);
     const a = q.x.add(q.y), b = q.x.sub(q.y), lat = TSL.min(abs(TSL.fract(a).sub(0.5)), abs(TSL.fract(b).sub(0.5)));
-    const lead = smoothstep(0.035, 0.10, lat);
+    const lead = mix(smoothstep(0.035, 0.10, lat), float(1), pl);
     const id = TSL.floor(vec2(a.add(0.5), b.add(0.5))), hv = TSL.fract(TSL.sin(dot(id, vec2(127.1, 311.7))).mul(43758.5453));
     const room = texture(G.noiseTex, vec2(hc.mul(0.11), wp.y.mul(0.13))).r;                     // furniture, curtains and people between the fire and the glass
     const flick = TSL.sin(U.time.mul(6.0).add(h.mul(40))).mul(0.04).add(0.96).mul(float(1).sub(step(0.82, h).mul(float(0.16).add(TSL.sin(U.time.mul(11.0).add(h.mul(97))).mul(TSL.sin(U.time.mul(4.3).add(h.mul(53))).mul(0.14))))));      // [l1] a few windows have a real candle or fire behind them: they waver
     const on = smoothstep(0.26, 0.34, h);                                                       // a quarter of the windows are dark
     const warm = mix(mix(vec3(1.0, 0.42, 0.12), vec3(1.0, 0.70, 0.36), hv), vec3(0.95, 0.80, 0.52), smoothstep(0.55, 0.9, h).mul(0.7));      // [l1] ember orange .. candle .. a pale lantern
-    return warm.mul(lead.mul(0.92).add(0.08)).mul(hv.mul(0.35).add(0.65)).mul(smoothstep(0.15, 0.75, room).mul(0.75).add(0.35)).mul(h.mul(0.5).add(0.55)).mul(flick).mul(on).mul(U.windowGlow).mul(0.52);
+    return warm.mul(lead.mul(0.92).add(0.08)).mul(hv.mul(0.35).add(0.65)).mul(mix(smoothstep(0.15, 0.75, room).mul(0.75).add(0.35), float(0.85), pl)).mul(h.mul(0.5).add(0.55)).mul(flick).mul(on).mul(U.windowGlow).mul(0.52);
   });
   // [c3] what a window shows from inside: a sky with soft cloud, a skyline of roofs and gables, dark street below; at night deep blue with a few warm windows. The sky colour itself
   // is the engine's (SH.skyBase), so the hour of day stays right; the lattice adds leading and mullions. wp world position, N the pane normal, V the view direction.

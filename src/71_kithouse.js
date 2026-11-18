@@ -34,6 +34,7 @@ function kitFixups() {
   for (const n of ['Window_Wide_Flat1', 'Window_Wide_Round1', 'Window_Thin_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Open'] = Object.assign({}, p, { name: n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_WindowGlass') }); }       // the frame without the pane: upstairs windows you can look out of
   for (const n of [4, 6, 8]) { const p = Kit.pieces['Roof_Front_Brick' + n]; if (p) Kit.pieces['Roof_Front_Brick' + n + '_Open'] = Object.assign({}, p, { name: 'Roof_Front_Brick' + n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_Plaster') }); }       // gable frames without their plaster, where a window is cut in (gableFill, 71c_upper.js)
   if (Kit.defs.MI_WindowGlass) Kit.defs.MI_StainedGlass = Object.assign({}, Kit.defs.MI_WindowGlass, { name: 'MI_StainedGlass' });
+  if (Kit.defs.MI_WindowGlass) Kit.defs.MI_WindowGlass_Inf = Object.assign({}, Kit.defs.MI_WindowGlass, { name: 'MI_WindowGlass_Inf' });      // [fx3] the infill window's pane: its own bars are drawn in 3D, so the lit look keeps them (no diamond lattice) and the day reflection is a third dimmer
   for (const n of ['Window_Thin_Round1', 'Window_Wide_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Stained'] = Object.assign({}, p, { name: n + '_Stained', prims: p.prims.map(q => q.mat === 'MI_WindowGlass' ? Object.assign({}, q, { mat: 'MI_StainedGlass' }) : q) }); }
 }
 const kitOpen = n => (Kit.pieces[n + '_Open'] ? n + '_Open' : n);

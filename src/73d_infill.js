@@ -96,9 +96,9 @@ function infWalls(B, MS, o) {
           bx(p.u0 - 0.12, p.u0, y0, y1 + 0.12, -0.09, 0.0, [0.3, 0.23, 0.17]); bx(p.u1, p.u1 + 0.12, y0, y1 + 0.12, -0.09, 0.0, [0.3, 0.23, 0.17]); bx(p.u0 - 0.12, p.u1 + 0.12, y1, y1 + 0.14, -0.12, 0.0, [0.3, 0.23, 0.17]);
           if (k === 0) bx(p.u0 - 0.15, p.u1 + 0.15, -0.35, 0.1, -0.35, 0.0, [0.5, 0.48, 0.45]);          // a stone step
         } else if (lo) {
-          g.quad('MI_WindowGlass', P(p.u0, y0, 0.05), P(p.u1, y0, 0.05), P(p.u1, y1, 0.05), P(p.u0, y1, 0.05), [1, 1, 1], [0, 0, 1, 1], false);
+          g.quad('MI_WindowGlass_Inf', P(p.u0, y0, 0.05), P(p.u1, y0, 0.05), P(p.u1, y1, 0.05), P(p.u0, y1, 0.05), [1, 1, 1], [0, 0, 1, 1], false);
         } else {
-          g.quad('MI_WindowGlass', P(p.u0, y0, 0.16), P(p.u1, y0, 0.16), P(p.u1, y1, 0.16), P(p.u0, y1, 0.16), [1, 1, 1], [0, 0, 1, 1], false);      // [fx3] the pane is the kit's glass (sky and roofs reflected dimly by day, a lit room at night), no longer a dark plank-textured rectangle
+          g.quad('MI_WindowGlass_Inf', P(p.u0, y0, 0.16), P(p.u1, y0, 0.16), P(p.u1, y1, 0.16), P(p.u0, y1, 0.16), [1, 1, 1], [0, 0, 1, 1], false);      // [fx3] the pane is the kit's glass (sky and roofs reflected dimly by day, a lit room at night), no longer a dark plank-textured rectangle
           const uc = (p.u0 + p.u1) / 2, ym = (y0 + y1) / 2, LD = [0.13, 0.12, 0.12], MW = [0.26, 0.18, 0.13], bar = (ua, ub, ya, yb2) => q(W_, ua, ub, ya, yb2, 0.12, LD, GPU.wood, true), kd = p.kind === undefined ? 1 : p.kind;
           if (kd === 0) { const nu = Math.max(2, Math.round((p.u1 - p.u0) / 0.2)), nv = Math.max(3, Math.round((y1 - y0) / 0.2)); for (let i = 1; i < nu; i++) { const u = p.u0 + (p.u1 - p.u0) * i / nu; bar(u - 0.012, u + 0.012, y0, y1); } for (let j = 1; j < nv; j++) { const y = y0 + (y1 - y0) * j / nv; bar(p.u0, p.u1, y - 0.012, y + 0.012); } q(W_, uc - 0.025, uc + 0.025, y0, y1, 0.1, MW, GPU.wood, true); }
           else if (kd === 3) { for (const f of [1 / 3, 2 / 3]) { const u = p.u0 + (p.u1 - p.u0) * f; q(W_, u - 0.03, u + 0.03, y0, y1, 0.1, MW, GPU.wood, true); } q(W_, p.u0, p.u1, y1 - 0.3, y1 - 0.26, 0.1, MW, GPU.wood, true); }
