@@ -86,13 +86,21 @@ for (const h of houses) {
   const P = c.planDone || c.plan || (h.cell.ctx && (h.cell.ctx.planDone || h.cell.ctx.plan));
   const row = { id: s.id, name: s.name, out: { w: s.w, d: s.d, eave: r1(eave), wallSt, roofWin, shown, jetty: r1(jetty), win: oWin.length, upDoors: oDoor.filter(f => f.lv !== 0), doors0: oDoor.filter(f => f.lv === 0).length, balc: oBalc, signs, list: merged.map(f => [f.kind, f.wall, f.lv, r1(f.along), r1(f.y), f.src, f.n].join(' ')) }, fails: [] };
   if (!P) { row.noPlan = true; row.fails.push('no plan'); rows.push(row); continue; }
-  const lvs = Object.values(P.lv).map(l => l.k).sort((a, b) => a - b), lofts = lvs.filter(k => k > 0 && P.lv[k].loft), up = lvs.filter(k => k >= 0 && !P.lv[k].loft), rooms = Object.values(P.rooms), isYard = r => /yard|garden|court/.test(r.kind || '') || r.open === true || r.roof === false;
+  const lvs = Object.values(P.lv).map(l => l.k).sort((a, b) => a - b), lofts = lvs.filter(k => k > 0 && P.lv[k].loft && !P.windows.some(w => w.k === k)), up = lvs.filter(k => k >= 0 && !lofts.includes(k)),      /* a loft lit by the shell's own windows is that storey */ rooms = Object.values(P.rooms), isYard = r => /yard|garden|court/.test(r.kind || '') || r.open === true || r.roof === false;
   const bb = k => { const rs = rooms.filter(r => r.k === k && !isYard(r)); if (!rs.length) return null; const x0 = Math.min(...rs.map(r => r.x0)), x1 = Math.max(...rs.map(r => r.x1)), z0 = Math.min(...rs.map(r => r.z0)), z1 = Math.max(...rs.map(r => r.z1)); return { x0, x1, z0, z1, w: x1 - x0, d: z1 - z0, area: rs.reduce((a, r) => a + (r.x1 - r.x0) * (r.z1 - r.z0), 0) }; };
   const B0 = bb(0) || { x0: 0, x1: 0, z0: 0, z1: 0, w: 0, d: 0, area: 0 }, cx0 = (B0.x0 + B0.x1) / 2;
   const facing = wl => wl.ax === 'x' ? (wl.ns < 0 ? 'front' : 'back') : (wl.ns < 0 ? 'left' : 'right');
   const kx = B0.w ? s.w / B0.w : 1, kz = B0.d ? s.d / B0.d : 1, alongIn = (wl, pos) => wl.ax === 'x' ? (pos - cx0) * kx : (pos - B0.z0) * kz;      /* the plan's wall scaled to the shell's */
-  const iWin = P.windows.map(w => ({ wall: facing(w.wall), lv: w.k, along: alongIn(w.wall, w.pos), room: w.room && w.room.id })).filter(w => { const r = P.rooms[w.room]; return !(r && isYard(r)); });
-  const iDoor = P.doors.filter(d => d.b === null && d.wall).map(d => ({ wall: facing(d.wall), lv: d.k, along: alongIn(d.wall, d.pos), room: d.a }));
+  // a window inside, carried onto the shell: plan -> the cell -> the house's site (the cell is the house moved away from the town), its offset from the plan's middle scaled to the shell
+  const Mc = c.Mx && c.Ms ? new THREE.Matrix4().fromArray(c.Mx).multiply(new THREE.Matrix4().fromArray(c.Ms).invert()) : null;
+  const toSite = (x, z) => { const q = P.w2(x, 0, z); if (!Mc) return local(s, q[0], q[2]); _v.set(q[0], q[1], q[2]).applyMatrix4(Mc); return local(s, _v.x, _v.z); };
+  const pc = toSite((B0.x0 + B0.x1) / 2, (B0.z0 + B0.z1) / 2), px = toSite((B0.x0 + B0.x1) / 2 + 1, (B0.z0 + B0.z1) / 2), alongU = Math.abs(px[0] - pc[0]) > 0.5;
+  const ku = s.w / (alongU ? B0.w : B0.d), kv = s.d / (alongU ? B0.d : B0.w);
+  const onShell = w => { const x = w.wall.ax === 'x' ? w.pos : w.wall.c, z = w.wall.ax === 'x' ? w.wall.c : w.pos, l = toSite(x, z), u = (l[0] - pc[0]) * ku, v = (l[1] - pc[1]) * kv;
+    const ds = { front: Math.abs(v + s.d / 2), back: Math.abs(v - s.d / 2), left: Math.abs(u + s.w / 2), right: Math.abs(u - s.w / 2) }; let wn = 'front'; for (const k of WN) if (ds[k] < ds[wn]) wn = k;
+    return { wall: wn, along: wn === 'front' || wn === 'back' ? u : v + s.d / 2 }; };
+  const iWin = P.windows.map(w => { const o = onShell(w); return { wall: o.wall, lv: w.k, along: o.along, room: w.room && w.room.id }; }).filter(w => { const r = P.rooms[w.room]; return !(r && isYard(r)); });
+  const iDoor = P.doors.filter(d => d.b === null && d.wall).map(d => { const o = onShell({ wall: d.wall, pos: d.pos }); return { wall: o.wall, lv: d.k, along: o.along, room: d.a }; });
   row.in = { levels: lvs, lofts: lofts.length, up: up.length, cellar: lvs.some(k => k < 0), w: B0.w, d: B0.d, area: r1(B0.area), yards: rooms.filter(isYard).map(r => r.id), win: iWin.length, doors: iDoor, per: lvs.map(k => { const b = bb(k); return b ? [k, b.w, b.d, r1(b.area)] : [k, 0, 0, 0]; }) };
   // ── compare ──
   // 1 storeys
@@ -124,6 +132,8 @@ for (const h of houses) {
     const mid = wn === 'back' || wn === 'front' ? ((c0.x0 + c0.x1) / 2 - cx0) * kx : ((c0.z0 + c0.z1) / 2 - B0.z0) * kz;
     row.cellarWhere = wn ? sideTxt(wn, mid) + (wn === 'front' ? ': a grating at the foot of the wall' : ': a hatch with two leaves against the wall, or three steps down to a low door') : 'the cellar touches no outside wall of the plan: a grating in the yard or none';
   }
+  if (P.winClash && P.winClash.length) row.clash = P.winClash.map(w => w.face + ' wall, level ' + w.k + ': two openings drawn less than 1 m apart; one is kept inside');
+  if (P.blockedWins && P.blockedWins.length) row.blocked = P.blockedWins.map(f => sideTxt(f.wall, f.wall === 'front' || f.wall === 'back' ? f.u : f.u) + ', level ' + f.lv + ': opens into `' + f.blocked + '`');
   if (P.wins) {
     row.needWin = [];
     for (const r of rooms) { if (r.k < 0 || isYard(r) || P.windows.some(w => w.room === r)) continue;
@@ -173,6 +183,10 @@ md += `\n## For the outside worker\n\nSides as in \`WALLS\` (71_house.js): front
 for (const r of rows) if (r.cellarWhere) md += `| \`${r.id}\` | ${r.name} | ${r.cellarWhere} |\n`;
 md += `\n### Rooms with an outside wall and no window in the shell\n\nOnly buildings whose plan already takes its windows from the shell.\n\n| id | name | room: where a window is wanted |\n|---|---|---|\n`;
 for (const r of rows) if (r.needWin && r.needWin.length) md += `| \`${r.id}\` | ${r.name} | ${r.needWin.join('; ')} |\n`;
+md += `\n### Windows on the shell that open into the house next door (left out inside; remove them outside)\n\n| id | name | where |\n|---|---|---|\n`;
+md += `\n### Openings drawn on top of one another\n\n| id | name | where |\n|---|---|---|\n`;
+for (const r of rows) if (r.clash) md += `| \`${r.id}\` | ${r.name} | ${r.clash.join('; ')} |\n`;
+for (const r of rows) if (r.blocked) md += `| \`${r.id}\` | ${r.name} | ${r.blocked.join('; ')} |\n`;
 const line = T.failing ? 'inout FAIL ' + T.failing : 'inout PASS';
 if (typeof window.__write === 'function') { await window.__write('docs/INOUT.md', md); await window.__write('shots/inout.json', JSON.stringify({ totals: T, rows }, null, 1)); }
 console.log('[audit] ' + line + ' ' + JSON.stringify(T));

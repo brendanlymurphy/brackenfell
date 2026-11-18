@@ -314,22 +314,27 @@ function planHouse(P, c, info) {
   const W = info.W || stepTo(c.w * 1.35, 8, 11), D = info.D || stepTo(c.d * 1.6, 10, 12), Dh = info.Dh || 7, H0 = info.H0 || H_GROUND, x0 = -W / 2, x1 = W / 2;
   P.dims = { W, D, Dh };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H0); if (up) pLevel(P, 1, H0 + PW.SLAB, H_UP);
-  const hall = pRoom(P, 0, 'hall', info.inn ? 'common' : 'hall', x0, 0, x1, Dh), store = pRoom(P, 0, 'store', info.inn ? 'kitchen' : 'store', x0, Dh, 0, D), bed0 = pRoom(P, 0, 'bedroom', info.inn ? 'keeper' : 'bedroom', 0, Dh, x1, D);
+  const cw = !!info.cellarway, hall = pRoom(P, 0, 'hall', info.inn ? 'common' : 'hall', x0, 0, x1, cw ? Dh - 2 : Dh), store = pRoom(P, 0, 'store', info.inn ? 'kitchen' : 'store', x0, Dh, 0, D), bed0 = pRoom(P, 0, 'bedroom', info.inn ? 'keeper' : 'bedroom', 0, Dh, x1, D);
   pDoor(P, 'hall', null, 0, 0);
-  pDoor(P, 'hall', 'store', x0 / 2, Dh); pDoor(P, 'hall', 'bedroom', x1 / 2, Dh);
+  if (cw) {      /* [inout] the Hart: the owner found nothing that read as a cellar door. Now a door in the back wall of the common room opens on the passage behind it (the cross passage of an inn), and the cellar stair goes down from there; the kitchen and the keeper's room open off the same passage */
+    pRoom(P, 0, 'passage', 'corridor', x0, Dh - 2, x1, Dh, { win: false, floor: 'stone' });
+    pDoor(P, 'hall', 'passage', x0 / 2, Dh - 2, { cellarDoor: true }); pDoor(P, 'passage', 'store', x0 / 2, Dh); pDoor(P, 'passage', 'bedroom', x1 - 0.9, Dh);
+  } else { pDoor(P, 'hall', 'store', x0 / 2, Dh); pDoor(P, 'hall', 'bedroom', x1 / 2, Dh); }
   // cellar: under the hall (the stair arrives here) and under the store
   const cel = pRoom(P, -1, 'cellar', 'cellar', x0, 0, x1, Dh, { floor: 'stone', win: false }), vault = pRoom(P, -1, 'vault', 'cellar', x0, Dh, 0, D, { floor: 'stone', win: false });
   pDoor(P, 'cellar', 'vault', x0 / 2, Dh);
   // the stairs: cellar -> hall along the west wall (toward +z), hall -> loft along the east wall (toward +z)
   const tr = 0.22;
   const fl = !!info.flank;
-  pStair(P, fl ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: x0 + 0.95, z: 1.3, width: 1.0, tread: tr });
+  pStair(P, cw ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 0.6, z: Dh - 1.0, width: 1.0, tread: tr } : fl ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: x0 + 0.95, z: 1.3, width: 1.0, tread: tr });
   if (up) {
     pStair(P, fl ? { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: -1, x: -1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: x1 - 0.95, z: 1.3, width: 1.0, tread: tr });
     if (fl) { pRoom(P, 1, 'loft', 'gallery', x0, 0, 0, D); pRoom(P, 1, 'chamber1', 'bedroom', 0, 0, x1, Dh); pRoom(P, 1, 'chamber2', 'bedroom', 0, Dh, x1, D); pDoor(P, 'loft', 'chamber1', 0, 3.5); pDoor(P, 'loft', 'chamber2', 0, Dh + 1.5); }
     else { pRoom(P, 1, 'loft', 'bedroom', 0, 0, x1, D); pRoom(P, 1, 'chamber1', 'bedroom', x0, 0, 0, Dh); pRoom(P, 1, 'chamber2', 'bedroom', x0, Dh, 0, D); pDoor(P, 'loft', 'chamber1', 0, 2.5); pDoor(P, 'loft', 'chamber2', 0, Dh + 1.5); }
   }
+  if (info.shellWins && typeof pShellWins === 'function') pShellWins(P, c, { x0, z0: 0, x1, z1: D });      /* [inout] the windows the shell shows, and no others */
   pLayout(P);
+  if (info.inn) P.clear.push({ x0: x1 - 3.0, x1: x1, z0: Dh - 2.4, z1: Dh, k: -1, kind: 'path' });      /* [inout] the corner of the Hart's cellar where the bricked arch opens (94d_act2.js door.tunnel.in): nothing stands in front of it */
   // ground floor
   const hall0 = hall, hh = pHearth(P, hall, 's', info.inn ? 2.4 : 1.7, { cauldron: true, at: 0 });
   P.hall = { room: hall, hh };
@@ -437,19 +442,14 @@ function planBuild(c) {
   if (typeof Bake !== 'undefined') Bake.interior(P);          // [l1] 72m_bake.js: contact pools under furniture, window data for the window light
   c.planDone = P; return P;
 }
-const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: { kind: 'study' }, guardhouse: { kind: 'guard' },  inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true } };
+const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: { kind: 'study' }, guardhouse: { kind: 'guard' },  inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true, shellWins: true, cellarway: true } };
 // the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
 function dressInn(P, c, room, hh) {
   const R = P.R, a = room.in; P.hall = { room, hh };
-  const barAt = (x, z, L) => pPut(P, room, P.id + '.bar', x, z, PI / 2, L, 0.7, 1.05, m => { Props.table(m, L, 0.7, 1.05); Props.clutter(m, R, -L / 2 + 0.2, L / 2 - 0.2, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
-  let bar = barAt(a.x1 - 1.7, 4.8, 3.8);
-  /* [cast] FIRSTTEN 12: the counter did not fit where it was asked for (Build 83's Hart), so there was no bar, the 'bar' place fell back to the floor in front of the
-     hearth and Greta kept the inn standing in the fireplace with her back to the room. Try along the east wall, then a shorter counter. */
-  for (const L of [3.8, 3.2, 2.6]) for (const dx of [1.7, 1.5, 1.9, 2.1]) for (const z of [4.8, 4.2, 5.4, 3.6, 3.0]) { if (bar) break; bar = barAt(a.x1 - dx, z, L); }
-  if (!bar) P.err.push('no room for the bar in the Hart');
-  if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); P.bar = bar;
+  const bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, Math.min(4.8, a.z1 - 2.2), PI / 2, 3.8, 0.7, 1.05, m => { Props.table(m, 3.8, 0.7, 1.05); Props.clutter(m, R, -1.7, 1.7, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
+  if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); pSpot(P, 'stand2', bar.cx - 0.8, bar.cz + 0.6, PI / 2, { k: 0 });      /* [inout] the second drinker at the bar, not at the hearth */ P.bar = bar;
     pHang(P, room, 'e', bar.cz, 3.0, 1.45, 2.7, (m) => Props.shelf(m, 3.0, 1.2, 3, 0.3, (i, y) => Props.clutter(m, R, -1.3, 1.3, y, 0, ['bottle', 'bottle', 'mug', 'jug', 'bottle'], 6, c)), P.id + '.backshelf', {});
-    for (let i = 0, n = 0; i < 6 && n < 3; i++) if (pAgainst(P, room, 'e', P.id + '.keg' + n, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: bar.cz + [-1.4, 0, 1.4, -2.1, 2.1, 0.7][i], lowOk: false })) n++;       /* [cast] the bar moved along the wall (its first place did not fit): kegs where a window is not */
+    for (let i = 0; i < 3; i++) { const wl = P.windows.some(w => w.k === 0 && w.wall.ax === 'z' && Math.abs(w.wall.c - room.x1) < 0.01 && Math.abs(w.pos - (bar.cz - 1.4 + i * 1.4)) < 1.3); if (wl) pAgainst(P, room, 's', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: a.x1 - 0.6 - i * 1.0, lowOk: true }); else pAgainst(P, room, 'e', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: bar.cz - 1.4 + i * 1.4, lowOk: true }); }      /* [inout] not in front of the shell's window: against the passage wall instead */
     pLamp(P, room, bar.cx + 0.2, bar.cz); }
   let n = 0;
   let nTab = 0; for (const nr of [[-4.2, 3.65], [1.6, 3.65], [-4.6, 6.7], [-2.0, 6.2], [2.5, 6.6], [-0.5, 6.0], [3.4, 6.7]]) { if (nTab >= 3) break;          // [fin] two rows clear of the stairs and the cellar hole, the third by the west wall: the old spots left 0.2 m between the benches of two tables and no way to four of the seats
