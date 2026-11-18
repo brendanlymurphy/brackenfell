@@ -29,6 +29,8 @@ async function kitBoot(progress) {
 }
 // pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong
 function kitFixups() {
+  // [fin] the mattress and pillow of the scanned bed (vertices inside the frame, 0.34 to 0.95 m up) read white: their vertices carry an unbleached-linen colour, the frame and posts keep the wood
+  { const q = Kit.pieces.gothicbed_01 && Kit.pieces.gothicbed_01.prims[0]; if (q && !q.col) { q.col = new Float32Array(q.n * 3).fill(1); for (let i = 0; i < q.n; i++) { const x = q.pos[i * 3], y = q.pos[i * 3 + 1], z = q.pos[i * 3 + 2]; if (Math.abs(x) < 0.67 && Math.abs(z) < 0.97 && y > 0.34 && y < 0.95) { q.col[i * 3] = 0.5; q.col[i * 3 + 1] = 0.41; q.col[i * 3 + 2] = 0.27; } } } }
   for (const n of ['ceramic_vase_02', 'ceramic_vase_04', 'ceramic_pot']) if (Kit.defs[n]) { Kit.defs[n].gain = 0.5; Kit.defs[n].color = [0.7, 0.46, 0.31]; }       // [fx1] scanned glazed pots photographed white in the sun: now read as earthenware
   for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) { Kit.defs[n].gain = 2.0; Kit.defs[n].sat = 0.85; }       // scanned rocks photograph dark
   for (const n of ['Window_Wide_Flat1', 'Window_Wide_Round1', 'Window_Thin_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Open'] = Object.assign({}, p, { name: n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_WindowGlass') }); }       // the frame without the pane: upstairs windows you can look out of
@@ -247,7 +249,7 @@ const SCANR = {
   Bench: { n: ['woodentable_01'], fit: 'row', tint: [0.6, 0.43, 0.31] },
   Stool: { n: ['painted_wooden_stool'], fit: 'contain', tint: [0.3, 0.23, 0.17] },
   Chair_1: { n: ['painted_wooden_chair_01'], fit: 'contain', tint: [0.27, 0.2, 0.14] },
-  Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz', tint: [0.74, 0.66, 0.52] }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz', tint: [0.74, 0.66, 0.52] },   // [fin] unbleached linen and ticking, never white
+  Bed_Twin1: { n: ['gothicbed_01'], fit: 'xz' }, Bed_Twin2: { n: ['gothicbed_01'], fit: 'xz' },
   Chest_Wood__Base: { n: ['treasure_chest'], fit: 'box', lo: 0.8, hi: 1.3, box: [1, 1.2, 1] }, Chest_Wood__Lid: { skip: true },
   Barrel: { n: ['wine_barrel_01'], fit: 'xz', one: 1, inOnly: 1 },          // [fx2] the second scan has doubled coplanar staves inside it (9000 audit pairs): one model
   Vase_2: { n: ['ceramic_vase_02', 'ceramic_pot'], fit: 'contain', one: 1 }, Vase_4: { n: ['ceramic_vase_04'], fit: 'contain' },
