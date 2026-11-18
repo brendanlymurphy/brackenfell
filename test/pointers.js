@@ -34,6 +34,10 @@ if (!/east of the plaque/.test(JSON.stringify(SECRETS.bell.note))) bad.push('Tob
 { const q0 = JSON.stringify(S.q), sites = Object.entries(World.houses).filter(([k, h]) => h && h.site && h.cell); if (World.cell) { game.leave(); game.step(2, 1 / 30); }
   for (const id of QORDER) for (let st = 0; st < 12; st++) { S.q[id] = { stage: st }; const t = questTarget(id); if (!t) continue; const on = sites.find(([k, h]) => Math.hypot(h.site.x - t[0], h.site.z - t[2]) < 1.0); if (on) bad.push(id + ' stage ' + st + ' points at the middle of ' + on[0] + ', not its door'); }
   S.q = JSON.parse(q0); }
+// [cast] the drowned man (the audit's first ten minutes: "lies alone with no prompt"): from each side of the bier, a step off and looking level at him, the
+// prompt is his
+{ if (World.cell) { game.leave(); game.step(2, 1 / 30); } const b = World.interact.find(o => o.id === 'wharf.body'); if (!b) bad.push('the drowned man has no prompt at all');
+  else for (const a of [0, 90, 180, 270]) { const r = a * Math.PI / 180, x = b.p[0] + Math.sin(r) * 1.1, z = b.p[2] - Math.cos(r) * 1.1; Player.pos = [x, World.groundAt(x, z, 3), z]; Player.vel = [0, 0, 0]; Player.yaw = Math.atan2(b.p[0] - x, -(b.p[2] - z)); Player.pitch = 0; game.step(4, 1 / 30); if (!UI.prompt || UI.prompt.id !== 'wharf.body') bad.push('beside the drowned man (' + a + ' degrees) the prompt is ' + (UI.prompt ? UI.prompt.id || 'someone' : 'none')); } }
 toast = _t; S.q = JSON.parse(keep); S.flags = JSON.parse(flags);
 if (bad.length) throw new Error('POINTERS FAIL ' + bad.length + ': ' + bad.join('; '));
-return 'pointers PASS the chapel\'s marks point at the chest, the gate and the reliquary; stages 8 and 9 at the Hart and the cleft; the Hart\'s back door and hatch take you in; the boat-houses answer; the frostcap is north-west of the gate outside it; Tobin\'s note says east; the compass reads true indoors';
+return 'pointers PASS the chapel\'s marks point at the chest, the gate and the reliquary; stages 8 and 9 at the Hart and the cleft; the Hart\'s back door and hatch take you in; the boat-houses answer; the frostcap is north-west of the gate outside it; Tobin\'s note says east; the compass reads true indoors; the drowned man can be examined from every side';
