@@ -58,7 +58,7 @@ const Props = {
     m.mat(MAT.PLANKS, COL.woodDark);
     m.box(-w / 2, 0.45, -L / 2 - 0.03, w / 2, 0.95, -L / 2 + 0.03); m.box(-w / 2, 0.3, L / 2 - 0.03, w / 2, 0.56, L / 2 + 0.03);
     for (const sx of [-1, 1]) m.box(sx * w / 2 - 0.025, 0.22, -L / 2, sx * w / 2 + 0.025, 0.42, L / 2);
-    m.mat(MAT.CLOTH, COL.linen); m.box(-w / 2 + 0.03, 0.30, -L / 2 + 0.04, w / 2 - 0.03, 0.50, L / 2 - 0.04, 4);
+    m.mat(MAT.CLOTH, COL.linen.map(v => v * 0.78)); m.box(-w / 2 + 0.03, 0.30, -L / 2 + 0.04, w / 2 - 0.03, 0.50, L / 2 - 0.04, 4);
     m.ball(0, 0.56, -L / 2 + 0.28, w * 0.36, 0.07, 0.16, 8, 4);
     m.mat(MAT.CLOTH, blanket || COL.red); m.box(-w / 2 - 0.01, 0.34, -L / 2 + 0.6, w / 2 + 0.01, 0.53, L / 2 - 0.03, 4);
     if (fur) { m.mat(MAT.CLOTH, COL.fur, 0.6); m.box(-w / 2 + 0.06, 0.53, L / 2 - 0.8, w / 2 - 0.06, 0.56, L / 2 - 0.1, 4); }
