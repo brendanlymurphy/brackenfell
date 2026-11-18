@@ -18,10 +18,18 @@ for (const p of CAST) if (!NPCS.some(n => n.id === p.id)) bad.push(p.name + ' is
 // the second greeting comes when the story has moved
 { const p = CAST.find(q => q.when === 'body' && q.lines.g2), was = S.flags.sawBody; S.flags.sawBody = 1; if (TALK[p.id]().t !== p.lines.g2) bad.push(p.name + ' does not change greeting once the drowned man is known'); S.flags.sawBody = was; }
 // [cast] a body for the age (inbox 09:40: "Roger Hask stands on a child's body"; he is drawn as m_hunter, the child at the stalls is Lettice, 14): nobody over 15 on
-// a child's body, nobody under 13 on a grown one; the body checked is the one drawn, as the table's age and the story's two children say
+// a child's body, nobody under 13 on a grown one, 13 to 15 on a youth body at 0.88 to 0.95 (15:45); the body checked is the one drawn, as the table's age and the story's two children say
 { const KID = /^(m_boy|f_child)$/, STORY_AGE = { tobin: 11, pip: 9 }; let nb = 0;
   for (const n of NPCS) { const p = CAST.find(q => q.id === n.id), age = p ? p.age : STORY_AGE[n.id]; if (age === undefined) continue; const body = (n.ch && n.ch.body) || (Chars.set.cfg.look ? Chars.set.cfg.look(n.def).body : n.def.body); nb++;
-    if (age > 15 && KID.test(body)) bad.push(n.name + ' (' + age + ') is drawn on a child\'s body, ' + body); if (age < 13 && !KID.test(body)) bad.push(n.name + ' (' + age + ') is drawn on a grown body, ' + body); }
+    if (age > 15 && KID.test(body)) bad.push(n.name + ' (' + age + ') is drawn on a child\'s body, ' + body); if (age < 13 && !KID.test(body)) bad.push(n.name + ' (' + age + ') is drawn on a grown body, ' + body);
+    if (age >= 13 && age <= 15) { const sc = n.scale || n.def.scale || 1; if (!/^(m_youth|f_maid)$/.test(body) || sc < 0.88 - 1e-6 || sc > 0.95 + 1e-6) bad.push(n.name + ' (' + age + ') is drawn on ' + body + ' at ' + sc.toFixed(2) + ', not a youth body at 0.88 to 0.95'); } }
   if (nb < CAST.length) bad.push('bodies checked for ' + nb + ' people only'); }
+// [cast] nobody is sent to stand in a fireplace (the audit, Build 81: "Greta stands in the fireplace"): every place in anyone's day that lies in a planned
+// building is outside every hearth of its floor
+{ let nh = 0, ns = 0; const inv = {};
+  for (const n of NPCS) for (const r of n.def.sched) for (const nm of [].concat(r[1])) { const sp = World.spots[nm]; if (!sp || !sp.site || sp.lie) continue; const h = World.houses[sp.site], P = h && h.plan; if (!P || !P.MS) continue;
+    const M = inv[sp.site] || (inv[sp.site] = P.MS.clone().invert()), v = new THREE.Vector3(sp.p[0], sp.p[1], sp.p[2]).applyMatrix4(M); ns++;
+    for (const t of P.items) { if (!/hearth|fireplace/.test(t.kind || t.id || '') || (sp.k !== undefined && t.k !== sp.k)) continue; nh++; if (v.x > t.x0 + 0.05 && v.x < t.x1 - 0.05 && v.z > t.z0 + 0.05 && v.z < t.z1 - 0.05) bad.push(n.name + ' is sent to ' + nm + ', inside the hearth of ' + sp.site); } }
+  if (ns < 100 || nh < 20) bad.push('hearths checked against ' + ns + ' places only (' + nh + ' hearth tests)'); }
 if (bad.length) throw new Error('CAST FAIL ' + bad.length + ': ' + bad.slice(0, 12).join('; '));
-return 'cast PASS ' + NPCS.length + ' people (' + CAST.length + ' of the table, 17 of the story), ' + Object.keys(beds).length + ' beds, one sleeper each, in their own houses; nobody answers "..."; every body fits the age';
+return 'cast PASS ' + NPCS.length + ' people (' + CAST.length + ' of the table, 17 of the story), ' + Object.keys(beds).length + ' beds, one sleeper each, in their own houses; nobody answers "..."; every body fits the age; nobody stands in a hearth';

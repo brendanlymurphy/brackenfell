@@ -144,12 +144,28 @@ function householdDefs() {
     let rows = day.concat(id === 'godwin' ? [] : eve).sort((a, b) => a[0] - b[0]);
     for (const vis of CAST_VISIT[id] ? (Array.isArray(CAST_VISIT[id][0]) ? CAST_VISIT[id] : [CAST_VISIT[id]]) : []) if (has(vis[1])) { const before = rows.filter(r => r[0] <= vis[0]).pop() || [0, meal, sitA]; rows = rows.filter(r => r[0] <= vis[0] || r[0] >= vis[2]).concat([[vis[0], vis[1], vis[3] || 'idle'], [vis[2], before[1], before[2]]]).sort((a, b) => a[0] - b[0]); const ev = rows.filter(r => eve.includes(r) || (r[0] >= 19 && r[0] < 22)); day = rows.filter(r => !ev.includes(r)); eve.length = 0; for (const r of ev.length ? ev : [[19.2, meal, sitA]]) eve.push(r); }
     const sched = (id === 'godwin' ? [] : [[wake, meal, sitA]]).concat(day, id === 'godwin' ? [[20.2, at(home, 'fire1'), 'idle'], [21.4, meal, sitA]] : eve.concat([[eve.slice().sort((a, b) => a[0] - b[0]).pop()[1].startsWith('inn.') ? 22 + H(id, 'l') * 0.4 : up, bed || meal, bed ? 'lie' : sitA]])).filter(r => r && r[1]).sort((a, b) => a[0] - b[0]);
-    const tn = HH_TINT[(H(id, 't') * 8) | 0], bodies = CAST_BODY[p.voice] || CAST_BODY.M, body = bodies[(H(id, 'b') * bodies.length) | 0];
+    const tn = HH_TINT[(H(id, 't') * 8) | 0], bodies = CAST_BODY[p.voice] || CAST_BODY.M, young = p.age >= 13 && p.age <= 15, body = young ? (fem ? 'f_maid' : 'm_youth') : bodies[(H(id, 'b') * bodies.length) | 0];          /* coordinator, 15:45: the child bodies are for under 13; 13 to 15 a youth body at 0.88 to 0.95 (Tom, Lettice, Davy), about 1.5 m */
     NPC_DEFS.push({ id, name: p.name, body, cast: p, tint: { tunic: tn, robe: tn, skirt: HH_TINT[(H(id, 'q') * 8) | 0], pants: [1.1, 1.0, 0.9] }, skin: HH_SKIN[(H(id, 'k') * 6) | 0], hair: p.age >= 55 ? (p.age >= 68 ? 'white' : 'grey') : HH_HAIR[(H(id, 'h') * 7) | 0],
-      top: [0.4, 0.36, 0.3], legs: [0.3, 0.26, 0.22], female: fem, dress: fem, scale: child ? Math.min(0.8, 0.53 + p.age * 0.018) : p.voice === 'YM' && p.age < 17 ? 0.9 : undefined, run: child || undefined, sched, house: home, bed });
+      top: [0.4, 0.36, 0.3], legs: [0.3, 0.26, 0.22], female: fem, dress: fem, scale: young ? 0.88 + (p.age - 13) * 0.035 : child ? Math.min(0.8, 0.53 + p.age * 0.018) : p.voice === 'YM' && p.age < 17 ? 0.9 : undefined, run: (child && !young) || undefined, sched, house: home, bed });
     if (id === 'hugh') buttsDay(NPC_DEFS[NPC_DEFS.length - 1], [15.8, 17.0]);
     if (CAST_BIER[id]) bierDay(NPC_DEFS[NPC_DEFS.length - 1], CAST_BIER[id]);
     // [coordinator, Build 83] a day may depend on the story: once the bell rings again these six are at the chapel at dawn (npcRow asks schedIf before the plain day)
     if (CAST_CHAPEL.includes(id) && has('chapel.nave')) { const dawn = [[5.5 + CAST_CHAPEL.indexOf(id) * 0.04, 'chapel.nave', 'pray']].concat(sched.filter(r => r[0] >= 6.7 || r[0] < 5.4)).sort((a, b) => a[0] - b[0]), d = NPC_DEFS[NPC_DEFS.length - 1]; if (!dawn.some(r => r[0] > 6.6 && r[0] < 7.3)) dawn.push([6.75, meal, sitA]), dawn.sort((a, b) => a[0] - b[0]); d.schedIf = () => (typeof qAt === 'function' && qAt('bell') === 99 ? dawn : null); }
   }
+}
+
+// ── One at a time through a door (coordinator, 11:30 and 15:45: Marta and Bridget met in the Hart's doorway at closing, both walking to the one portal) ──
+// Their two ways joined at a way point 2 m inside the room and they reached it together from two sides; so the rule is for any way point, a door's threshold
+// included. A walker within 1.5 m of the next point of their way stops there, idle, while someone nearer is bound for the same point or has only just left
+// it (still within 0.7 m), or, at a door, someone who has come through stands on the threshold. Then they go on, one behind the other. Ties go by place in the
+// list; after 3 s a walker goes anyway, so two can never wait on each other.
+function npcDoorWait(n, d, dt) {
+  const k = n.path[n.pi]; if (d > 1.5 || k === undefined) { n.doorWait = 0; return false; }
+  if ((n.doorWait || 0) > 3) { if (d < 0.3) n.doorWait = 0; return false; }
+  const K = Nav.nodes[k], portal = Nav.portal[k] !== undefined, me = NPCS.indexOf(n);
+  for (let i = 0; i < NPCS.length; i++) { const m = NPCS[i]; if (m === n || Math.abs(m.pos[1] - K[1]) > 1.5) continue; const dm = Math.hypot(m.pos[0] - K[0], m.pos[2] - K[2]); if (dm > 1.6) continue;
+    const ahead = m.path && m.path[m.pi] === k && (dm < d - 0.05 || (Math.abs(dm - d) <= 0.05 && i < me)) && (m.doorWait || 0) <= 3;
+    const leaving = m.path && m.pi > 0 && m.path[m.pi - 1] === k && dm < 0.7, onIt = portal && !m.path && dm < 0.6;
+    if (ahead || leaving || onIt) { n.doorWait = (n.doorWait || 0) + dt; n.anim = 'idle'; return true; } }
+  n.doorWait = 0; return false;
 }
