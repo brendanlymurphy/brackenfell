@@ -43,3 +43,6 @@ PTR.boathouses = function () {
 // the Magpie's sack when the Hidden Yard is not built (73j_lanes.js gives no lane that role): there is no well there, so it is not 'under the well-lip'
 PTR.magpie = function () { if (World.places.some(p => p.id === 'hiddenyard')) return; const it = World.interact.find(o => o.id === 'sec.magpie'); if (it) { it.label = 'Look in the grass by the fence'; it.verb = 'Pick up the sack'; } };
 { const _sb = secBuild; secBuild = function () { const r = _sb.apply(this, arguments); for (const f of ['hart', 'boathouses', 'magpie']) { try { PTR[f](); } catch (e) { console.warn('pointers ' + f + ': ' + (e && e.message || e)); } } return r; }; }
+// the drowned man lies at knee height and his mourners stand at the bier (77e_households.js): looking level from beside him the prompt named the mourner across
+// the bier, and the audit's bot got no word of the body. A little priority: the body wins while it is in view, the mourner when you look at her
+{ const _st = storyBuild; storyBuild = function () { const r = _st.apply(this, arguments); const it = World.interact.find(o => o.id === 'wharf.body'); if (it) it.pri = 1.0; return r; }; }
