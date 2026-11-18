@@ -6,7 +6,8 @@
 // skyline. Memory: 6 x 256 x 256 half-float texels, 3 MB. There is no parallax (the map is taken from one point, 1.7 m above the house's floor at its middle):
 // right for what is across the street, a little off for a barrel under the sill. ?viewcube=0 or --opt viewcube=0 gives the painted skyline back.
 const ViewCube = { rt: null, cam: null, blank: null, nodes: [], cell: null, hour: -1, busy: false, shots: 0, size: 256, off: (typeof TEST !== 'undefined' && TEST && TEST.viewcube === 0) || (typeof location !== 'undefined' && /[?&]viewcube=0/.test(location.search)) };
-ViewCube.target = function () { if (!ViewCube.rt) { ViewCube.rt = new THREE.CubeRenderTarget(ViewCube.size, { type: THREE.HalfFloatType, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); ViewCube.cam = new THREE.CubeCamera(0.5, 12000, ViewCube.rt);       /* far enough for the sky's dome */ ViewCube.blank = new THREE.CubeRenderTarget(4, { generateMipmaps: false }); } return ViewCube.rt; };
+ViewCube.target = function () { if (!ViewCube.rt) { ViewCube.rt = new THREE.CubeRenderTarget(ViewCube.size, { type: THREE.HalfFloatType, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); ViewCube.cam = new THREE.CubeCamera(0.5, 12000, ViewCube.rt);       /* far enough for the sky's dome */ ViewCube.blank = new THREE.CubeRenderTarget(4, { generateMipmaps: false }); ViewCube.drt = new THREE.CubeRenderTarget(256, { type: THREE.HalfFloatType, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); ViewCube.dcam = new THREE.CubeCamera(0.3, 12000, ViewCube.drt); } return ViewCube.rt; };
+ViewCube.dbase = function () { if (!ViewCube.dnode) ViewCube.dnode = TSL.cubeTexture((ViewCube.target(), ViewCube.drt).texture); return ViewCube.dnode; };
 // the room's frame against the world's: where the house's local x and z point out of doors (cells are laid out unturned, far from the town)
 // one texture node for every pane (each samples it along its own line of sight), so that the map can be swapped for a blank while it is being drawn
 ViewCube.base = function () { if (!ViewCube.node) ViewCube.node = TSL.cubeTexture(ViewCube.target().texture); return ViewCube.node; };
@@ -26,6 +27,12 @@ ViewCube.capture = function (c) {
     ViewCube.base().value = ViewCube.blank.texture;        // panes are in the picture too (seen from the street): they must not read the map while it is being drawn
     ViewCube.cam.position.set(f.p[0], f.p[1], f.p[2]); ViewCube.cam.update(G.renderer, SC.scene);
     ViewCube.base().value = ViewCube.rt.texture;
+    { // [fin] the street door's own map: from 1.2 m outside that door at eye height, so a lane shows its far side and the sky above it; the nearest lane lantern within 12 m becomes a warm lobe (uniform doorLamp: world direction and strength)
+      const dx = World.doors.find(w => w.cell === c.id && w.side === 'out'); let dp = f.p, lamp = [0, 0, 0, 0];
+      if (dx) { const nx = dx.out[0] - dx.c[0], nz = dx.out[2] - dx.c[2], l = Math.hypot(nx, nz) || 1; dp = [dx.c[0] + nx / l * 1.2, dx.c[1] + 0.6, dx.c[2] + nz / l * 1.2]; }
+      let best = 12; for (const e of World.emitters) if (e.type === 'lantern' && !e.zone) { const d = Math.hypot(e.p[0] - dp[0], e.p[1] - dp[1], e.p[2] - dp[2]); if (d < best) { best = d; const k = 1 / (d || 1); lamp = [(e.p[0] - dp[0]) * k, (e.p[1] - dp[1]) * k, (e.p[2] - dp[2]) * k, 1 - d / 12]; } }
+      ViewCube.dbase().value = ViewCube.blank.texture; ViewCube.dcam.position.set(dp[0], dp[1], dp[2]); ViewCube.dcam.update(G.renderer, SC.scene); ViewCube.dbase().value = ViewCube.drt.texture; SH.U.doorLamp.value.set(lamp[0], lamp[1], lamp[2], lamp[3]);
+    }
     for (const o of hide) o.visible = true;
     SH.U.viewX.value.set(f.ax, f.az); SH.U.viewZ.value.set(f.bx, f.bz); SH.U.viewOn.value = 1; ViewCube.cell = c.id; ViewCube.hour = Math.floor(Env.hour); ViewCube.shots++;
   } catch (e) { console.warn('viewcube: ' + (e && e.message || e)); if (SH.U.viewOn) SH.U.viewOn.value = 0; }

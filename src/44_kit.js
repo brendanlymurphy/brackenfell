@@ -163,10 +163,12 @@ const Kit = (() => {
       m.emissiveNode = select(frontFacing, sky.add(jew.mul(U.windowGlow.mul(1.5).add(0.05))), jew.mul(dayF.mul(0.9).add(0.08)));
       m.side = THREE.DoubleSide; K_.mats.set(key, m); return m;
     }
-    if (/DoorView/.test(d.name)) {        // [fin] the street seen through an open street door: the town's cube map along the line of sight, no leading, no lamp glow of its own (72d_plan.js pDoorView)
-      const V = normalize(wp.sub(U.camPos)), sky = SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55);
-      let col = sky; if (typeof ViewCube !== 'undefined' && !ViewCube.off && TSL.cubeTexture) { const dw = vec3(V.x.mul(U.viewX.x).add(V.z.mul(U.viewZ.x)), V.y, V.x.mul(U.viewX.y).add(V.z.mul(U.viewZ.y))); col = mix(sky, ViewCube.base().sample(dw).rgb.mul(0.5), U.viewOn); }
-      m.colorNode = vec3(0.0); m.roughnessNode = float(1); m.metalnessNode = float(0); m.emissiveNode = col.mul(float(1).sub(U.windowGlow).mul(1.9).add(1).add(U.windowGlow.mul(0.8))).add(vec3(0.005, 0.009, 0.02).mul(U.windowGlow)); m.side = THREE.DoubleSide; K_.mats.set(key, m); return m;
+    if (/DoorView/.test(d.name)) {        // [fin] the street seen through an open street door, at outdoor exposure: the door's own cube map (56b_viewcube.js, from 1.2 m outside the door) along the line of sight; a lantern lobe at night (72d_plan.js pDoorView)
+      const V = normalize(wp.sub(U.camPos)), sky = SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55), dw = vec3(V.x.mul(U.viewX.x).add(V.z.mul(U.viewZ.x)), V.y, V.x.mul(U.viewX.y).add(V.z.mul(U.viewZ.y)));
+      let col = sky; if (typeof ViewCube !== 'undefined' && !ViewCube.off && TSL.cubeTexture) { const ct = ViewCube.dbase().sample(dw).rgb, lum = dot(ct, vec3(0.3333)), skyF = SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)); col = mix(sky, mix(skyF.mul(mix(float(1.15), float(0.9), U.windowGlow)), ct.mul(mix(float(2.0), float(0.9), U.windowGlow)), smoothstep(0.004, 0.03, lum)), U.viewOn); }
+      const dayK = float(1).sub(U.windowGlow), lobe = TSL.pow(max(dot(normalize(dw), U.doorLamp.xyz), 0), 24).mul(U.doorLamp.w).mul(U.windowGlow);
+      m.colorNode = vec3(0.0); m.roughnessNode = float(1); m.metalnessNode = float(0);
+      m.emissiveNode = col.add(vec3(0.004, 0.008, 0.02).mul(U.windowGlow)).add(vec3(1.0, 0.62, 0.28).mul(lobe).mul(0.9)); m.side = THREE.DoubleSide; K_.mats.set(key, m); return m;
     }
     if (isGlass(d)) {         // window panes: dark by day with a little sky in them, lit from inside after dusk (each pane a slightly different warmth)
       const cell = floor(wp.mul(0.9)), h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))).mul(43758.5453));

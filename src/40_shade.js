@@ -15,7 +15,7 @@ SH.init = function () {
     moonDir: uniform(new THREE.Vector3(0, 1, 0)), moonBright: uniform(0), sunDisc: uniform(new THREE.Vector3(0, 1, 0)), sunDiscI: uniform(0),
     wind: uniform(V4()), windOff: uniform(new THREE.Vector2()),     // wind: dir.x, dir.z, strength, time. windOff: how far (m) the air has travelled, which carries the gust pattern
     rain: uniform(0), wet: uniform(0),                        // falling now (0..1), and how wet the ground is (lags behind)
-    cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0), viewX: uniform(new THREE.Vector2(1, 0)), viewZ: uniform(new THREE.Vector2(0, 1)), viewOn: uniform(0),      /* [view] what the panes show from inside (56b_viewcube.js) */
+    cloud: uniform(0.45), grassRange: uniform(30), treeLod: uniform(65), windowGlow: uniform(0), lakeY: uniform(0), indoor: uniform(0), viewX: uniform(new THREE.Vector2(1, 0)), doorLamp: uniform(new THREE.Vector4(0, 0, 0, 0)), viewZ: uniform(new THREE.Vector2(0, 1)), viewOn: uniform(0),      /* [view] what the panes show from inside (56b_viewcube.js) */
     lightPos: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // xyz, radius
     lightCol: uniformArray(Array.from({ length: 8 }, V4), 'vec4'),   // rgb, zone (255 = everywhere)
     terrLayers: uniform(1), lightN: uniform(8, 'int'), lightNOut: uniform(8, 'int'),         // lights in use, and how many of them (listed first) reach surfaces outdoors: the loop below stops there
