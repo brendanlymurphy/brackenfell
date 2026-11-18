@@ -80,6 +80,7 @@ function hpKinds(def) {
   if (def.prop && ['lute', 'hammer', 'spear', 'staff', 'rod'].includes(def.prop)) k.push(def.prop);
   if (def.id === 'osric' || def.id === 'greta') k.push('mug');
   if (typeof CAST_HART !== 'undefined' && CAST_HART.includes(def.id)) k.push('mug');
+  if (typeof TEST !== 'undefined' && TEST && TEST.toolsoff) return k;      // [ch4] test switch: without the besom and trade tools (to measure what they cost)
   if ((def.sched || []).some(r => r[2] === 'sweep')) k.push('besom');      // [ch4]
   { const t = (def.sched || []).some(r => r[2] === 'work') ? hpTool(def) : null; if (t && !k.includes(t)) k.push(t); }      // [ch4] the Hart's evening table (the old regulars pat1..7 are gone and their mugs went with them)
   return k;
@@ -174,10 +175,11 @@ const HP_TRADE = [[/tailor|draper|glover/, 'shears'], [/cobbler|saddler|harness/
   [/cooper|boatwright|wheelwright|mason/, 'mallet'], [/woodcutter/, 'axe'], [/dyer|vats|alewife|brews|laundress/, 'paddle'], [/baker|bakehouse/, 'scraper'], [/apothecary/, 'pestle'], [/tinker|mends pans/, 'tinhammer'], [/net|weaver/, 'shuttle']];
 const HP_WHO = { marta: 'pestle', hilda: 'shuttle', brandt: 'tongs', bram: 'sickle', edda: 'sickle', wren: 'knife' };
 function hpTool(def) { if (HP_WHO[def.id]) return HP_WHO[def.id]; const c = typeof CAST !== 'undefined' && CAST.find ? CAST.find(x => x.id === def.id) : null, t = c && c.trade || ''; for (const [re, k] of HP_TRADE) if (re.test(t)) return k; return null; }
-function hpWork(mesh, anim) { return (H) => { const on = H.animNow === anim && !H.talkNow; mesh.visible = on; mesh.userData.holding = on; Chars.grip(H, 'R', on ? HP.GRIP.curl : 0); if (on) hpTrue(mesh); }; }
+function hpWork(mesh, anim) { return (H) => { const on = H.animNow === anim && !H.talkNow && (H.lodLevel || 0) <= 1;      // a hand tool is not drawn beyond the middle weight (a draw call each)
+ mesh.visible = on; mesh.userData.holding = on; Chars.grip(H, 'R', on ? HP.GRIP.curl : 0); if (on) hpTrue(mesh); }; }
 // the besom: twig tips on the floor 0.78 m in front of the feet, a little to the right, swaying side to side; the handle rises to 0.34 m in front of the chest and both hands are brought
 // to it (right at the hip, left 0.37 m above at the chest). The sweeping stance is a standing one (49_chars.js 'sweep'): the old crouching dig tented every skirt.
-function hpBesom(mesh) { const T = THREE, fp = new T.Vector3(), y = new T.Vector3(), z = new T.Vector3(), o = new T.Vector3(), t = new T.Vector3(), q = new T.Vector3(); return (H) => { const on = H.animNow === 'sweep' && !H.talkNow; mesh.visible = on; mesh.userData.holding = on;
+function hpBesom(mesh) { const T = THREE, fp = new T.Vector3(), y = new T.Vector3(), z = new T.Vector3(), o = new T.Vector3(), t = new T.Vector3(), q = new T.Vector3(); return (H) => { const on = H.animNow === 'sweep' && !H.talkNow && (H.lodLevel || 0) <= 2; mesh.visible = on; mesh.userData.holding = on;
   if (!on) { Chars.grip(H, 'R', 0); Chars.grip(H, 'L', 0); Chars.reach(H, 'L', null); Chars.reach(H, 'R', null); return; }
   if (mesh.parent !== H.pivot) H.pivot.add(mesh); mesh.scale.setScalar(1); const f = hpFrame(H), k = H.root.scale.y || 1, tm = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000 + H.seed % 5, sw = Math.sin(tm * 1.9);
   fp.copy(f.pel).addScaledVector(f.F, 0.82 * k).addScaledVector(f.R, 0.12 * k + 0.16 * sw); fp.y = 0.02;
