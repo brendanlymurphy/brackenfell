@@ -14,6 +14,7 @@ for (const id in World.houses) {
   }
   for (const it of World.interact) if (it.kind === 'chest' && it.id && it.id.startsWith(id + '.') && !(it.loot && it.loot.length)) bad.push(id + ': chest ' + it.id + ' is empty');
 }
+{ let nf = 0, nh = 0; const fl = []; for (const id in World.houses) { const P = World.houses[id].plan; if (!P || (only && !only.includes(id))) continue; nh++; const w = (P.fallbacks || []).filter(n => n.endsWith('*')); if (w.length) { nf++; fl.push(id + ' ' + w.join(',')); } } console.log('spot fallbacks of spots a schedule wants: ' + nf + ' of ' + nh + ' houses'); for (let i = 0; i < fl.length; i += 12) console.log(fl.slice(i, i + 12).join('; ')); }
 console.log(rows.join('\n'));
 if (bad.length) throw new Error(bad.length + ' interior problems:\n' + bad.join('\n'));
 return 'interiors ok: ' + rows.length + ' buildings';

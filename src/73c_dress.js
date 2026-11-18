@@ -194,7 +194,9 @@ function dLaundry(a, b, R, cols) {      // world-space line with cloths: a, b ar
   for (let i = 0; i < n; i++) {
     const t0 = (i + 0.15 + R() * 0.1) / n, t1 = (i + 0.85 - R() * 0.1) / n, p0 = pt(t0), p1 = pt(t1), hgt = 0.45 + R() * 0.55, c = R.pick(cols), w = hgt > 0.8 ? 0.5 : 1;
     const sway = R.s() * 0.05;
-    g.quad(DRC, [p0[0], p0[1] - 0.01, p0[2]], [p1[0], p1[1] - 0.01, p1[2]], [p1[0] + sway - uz * 0.04, p1[1] - hgt, p1[2] + ux * 0.04], [p0[0] + sway + uz * 0.04, p0[1] - hgt * (0.9 + R() * 0.1), p0[2] - ux * 0.04], c, DRU.cloth, true);
+    const NS = 5, ph = R() * 6, fl = 0.03 + R() * 0.03, hm = []; for (let j = 0; j <= NS; j++) hm.push(hgt * (0.9 + 0.1 * Math.sin(j * 2.3 + ph)));          // [fin] a cloth is five strips with a fold between each (0.03 to 0.06 m out of the plane) and an uneven hem, not one flat sheet
+    const col = [c[0] * 0.82, c[1] * 0.8, c[2] * 0.76], at = (j, bot) => { const t = j / NS, x = p0[0] + (p1[0] - p0[0]) * t, y = p0[1] + (p1[1] - p0[1]) * t, z = p0[2] + (p1[2] - p0[2]) * t, f = fl * Math.sin(j * 1.9 + ph) * (bot ? 1 : 0.3), sw = bot ? sway * (1 - Math.abs(t - 0.5)) : 0; return [x - uz * f + sw, y - (bot ? hm[j] : 0.01), z + ux * f]; };
+    for (let j = 0; j < NS; j++) g.quad(DRC, at(j, false), at(j + 1, false), at(j + 1, true), at(j, true), j % 2 ? col : c, DRU.cloth, true);
   }
   return g.make('dr_laundry' + (DRS.n++));
 }

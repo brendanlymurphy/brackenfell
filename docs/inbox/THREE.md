@@ -1,5 +1,18 @@
 # Inbox: Agent Three (fork-inout)
 
+## 2026-11-18 06:20 UTC
+
+Read your report: the six alley shops accepted; I merge 345154d with Build 85 and will look at the pictures first.
+
+Decision on the third storey of shop.n2, shop.n4, shop.s1: (c), and you build it yourself. There is no stair worker now: you may add
+to `71b_storeys.js` (marked, additive). A loft under the roof reached by a ladder through a trap door: the ladder is drawn (two
+stiles, rungs at 0.28 m, leaning 75 degrees, a framed trap with its lid propped), and it is used by a prompt ("Climb the ladder" /
+"Climb down") that moves the player between two landing points, like a door inside the cell; villagers do not use lofts. The loft has
+the shell's third-storey windows, a floor with thickness, rafters, and what the household stores there (docs/ROOMS.md). That makes
+all three pass on storeys without touching the outside. The same ladder serves any house whose upper level becomes a loft.
+
+No fire in the 4 m shops and no cellars there: fine. Carry on with the Market Place houses and the rest, district by district.
+
 ## 2026-11-18 04:10 UTC
 
 Quill's Sundries is approved and merged into Build 83 (threejs 431f9fb). I looked at the balcony and counting-room pictures: that is

@@ -1,5 +1,26 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 06:20 UTC
+
+Read your reports: all accepted (day 40 minutes, sword, talk camera, bier, sittings, chapel, sleepers, the Hart door walk). I merge
+e553b8f next, as Build 85, after Build 84 (in the gate now) is out.
+
+1. **Two fixes for the Hart door now exist.** The inspector found the same cause and its fix is in Build 84 on threejs: `dressInn`
+   publishes `World.hartWall` and `82c_secrets.js` / `94d_act2.js` read it ([fin] lines). Yours is `src/94e_hartdoor.js` with the
+   prompts, the compass and `test/hartdoor.js`. Merge `origin/threejs` and make it one mechanism: yours places everything, taking the
+   position from `World.hartWall` when it is there; no second patch, doorway or portal. Keep the `hartdoor` gate step. The look of the
+   brick, the opening and the rubble is the inspector's (it has it as its first item); the recess in the wall's own mesh is theirs too.
+2. From `docs/audit/POINTERS.md` (fork-audit, merging with 85), yours: inside a building every quest mark becomes the front door
+   (stage 7 in the Hart, the crypt quest in the chapel): point at the thing; stages 8 and 9 point 1.1 km SSE at nothing; the Hart's back
+   door and cellar hatch are drawn and do nothing though two texts point at them (make them work or change the texts: new lines, never
+   edit a recorded one); the boat-house doors and Wenn's key; Tobin's crooked stone is 4.5 m east of the plaque, the text says west;
+   Wren's frostcap is now outside the palisade; the Hidden Yard is not built.
+3. From the inspector's tour (docs/FINISH.md TOUR on threejs): the mill is empty at 12 h and 20 h; the guardhouse empty at 20 h and Ivo
+   asleep at noon; Godwin in bed at 20 h; Quill's empty at 20 h; the Hart at noon holds only Greta; the chapel one person.
+4. `planNav` (72d_plan.js) bends links round stairwells only: villagers walk through tables and benches in every interior. I am giving
+   that to the inspector; tell me in your report if you would rather take it.
+5. Then your open list, the leak, the hollow steps.
+
 ## 2026-11-18 05:00 UTC
 
 Build 83 is LIVE (main 431f9fb) with your c0481fc. Four things from its gate runs, yours:
