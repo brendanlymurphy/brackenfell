@@ -99,7 +99,7 @@ HFAM.cottage = (P, c, F) => {
   P.hall = { room: rm, hh };
   dressHall(P, rm, { hh, rug: F.rug, items: ['bowl', 'loaf', 'mug', 'cheese'], shelfItems: ['jug', 'bowl', 'pot', 'cheese'], len: 1.8 });
   hTrade(P, c, rm, F);
-  dressBedroom(P, loft, { bedH: 0.85, beds: F.wealth > 0 ? ['bed', 'bed2'] : ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth === 0 });
+  dressBedroom(P, loft, { bedH: 0.85, beds: castBeds(P.id, F.wealth > 0 ? ['bed', 'bed2'] : ['bed']) /* [cast] a bed for every sleeper */, blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth === 0 });
   hFinish(P, c, F);
 };
 // ── a tall cottage: one room open to the rafters, no loft, the bed in the corner by the hearth [c5] ──
@@ -111,7 +111,7 @@ HFAM.cottageTall = (P, c, F) => {
   pLayout(P);
   const hh = hHearthTry(P, rm, [['s', F.X(-1.3)], [F.S('w'), D * 0.5], [F.S('e'), D * 0.5]], 1.9, { cauldron: true, size: 0.55 });
   P.hall = { room: rm, hh };
-  dressBedroom(P, rm, { beds: ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth === 0 });
+  dressBedroom(P, rm, { beds: castBeds(P.id, ['bed']) /* [cast] a bed for every sleeper */, blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth === 0 });
   dressHall(P, rm, { hh, rug: F.rug, items: ['bowl', 'loaf', 'mug', 'cheese'], shelfItems: ['jug', 'bowl', 'pot', 'cheese'], len: 1.8 });
   hTrade(P, c, rm, F);
   hFinish(P, c, F);
@@ -173,7 +173,7 @@ HFAM.shopfront = (P, c, F) => {
   pLamp(P, shop, F.X(-2.4), 2.0); pLamp(P, shop, F.X(2.4), 2.0);
   dressHall(P, back, { hh, rug: F.rug, items: ['mug', 'plate', 'bowl', 'loaf'], len: 1.8 });
   dressBedroom(P, upb, { beds: ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, table: true, fur: F.wealth > 0 });
-  dressBedroom(P, upf, { beds: F.wealth > 0 ? ['bed2'] : [], chestId: 'chest2', chest: true, blanket: F.blanket, loot: [['gold', 2 + F.wealth * 3]] }); pStock(P, upf, { sacks: 2, crates: 1, near: pCentre(upf) });
+  dressBedroom(P, upf, { beds: castBeds(P.id, F.wealth > 0 ? ['bed2'] : [], 1) /* [cast] a bed for every sleeper */, chestId: 'chest2', chest: true, blanket: F.blanket, loot: [['gold', 2 + F.wealth * 3]] }); pStock(P, upf, { sacks: 2, crates: 1, near: pCentre(upf) });
   if (cellar) { const cel = P.rooms.cellar; dressCellar(P, cel, { barrels: 3, crates: 2, rows: false }); hCellarChest(P, cel, F); }
   hFinish(P, c, F);
 };
@@ -194,7 +194,7 @@ HFAM.workshop = (P, c, F) => {
   if (leg) { dressHall(P, leg, { hh: null, rug: F.rug, items: ['bowl', 'mug', 'candle'], len: 1.8 }); for (const [nm, sd] of [['stack', 'w'], ['sacks', 'n'], ['cask', 'w'], ['bucket', 'n']]) hPlace(P, leg, nm, { sides: [sd, 'n', 'w'] }); pLamp(P, leg, F.X(-2.75), 5.4); }
   const lh = hHearthTry(P, living, [[F.S('e'), D - 2.6], [F.S('e'), D - 3.6]], 1.7, { cauldron: true, size: 0.45 }); if (lh) pPier(P, 1, lh); P.hall = { room: living, hh: lh };
   dressHall(P, living, { hh: lh, rug: F.rug, items: ['bowl', 'loaf', 'mug', 'cheese'], len: 1.8 });
-  dressBedroom(P, loft, { bedH: 0.85, beds: F.wealth > 0 ? ['bed', 'bed2'] : ['bed'], blanket: F.blanket, loot: hLoot(F), bedInteract: true, table: true });
+  dressBedroom(P, loft, { bedH: 0.85, beds: castBeds(P.id, F.wealth > 0 ? ['bed', 'bed2'] : ['bed']) /* [cast] a bed for every sleeper */, blanket: F.blanket, loot: hLoot(F), bedInteract: true, table: true });
   for (const [nm, sd] of [['stack', 'n'], ['cask', 's'], ['bucket', 'n'], ['sacks', 'e'], ['barrel', 'w'], ['cart', 'e']]) hPlace(P, yard, nm, { sides: [sd, 'n', 's', 'e', 'w'] });
   hFinish(P, c, F);
 };

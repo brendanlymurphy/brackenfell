@@ -88,15 +88,15 @@ function infWalls(B, MS, o) {
         if (!p.door) g.quad(mat, P(p.u0, y0, 0), P(p.u1, y0, 0), P(p.u1, y0, dep), P(p.u0, y0, dep), col, [0, 0, 1, 0.2], true);
         if (p.door) {
           // Build 33: a plank door of real boards (solid boxes: the old single quad faced the wrong way for the single-sided wood material and showed the dark inside), iron straps, a ring handle, a threshold
-          { g.quad(W_, P(p.u0, y0 + 0.02, 0.15), P(p.u1, y0 + 0.02, 0.15), P(p.u1, y1 - 0.02, 0.15), P(p.u0, y1 - 0.02, 0.15), [0.1, 0.08, 0.06], GPU.wood, true);      // [fx2] the hinged leaf (73_village.js, six finishes) hangs in the opening; behind it the dark of the passage, a threshold in front
+          { g.quad(INF_T, P(p.u0, y0 + 0.02, 0.15), P(p.u1, y0 + 0.02, 0.15), P(p.u1, y1 - 0.02, 0.15), P(p.u0, y1 - 0.02, 0.15), [0.34, 0.26, 0.18], GPU.wood, true);      // [fx2] the hinged leaf (73_village.js, six finishes) hangs in the opening; behind it the dark of the passage, a threshold in front
             if (!lo) bx(p.u0 - 0.12, p.u1 + 0.12, y0, y0 + 0.07, 0.0, 0.2, [0.4, 0.38, 0.35]); }
           bx(p.u0 - 0.12, p.u0, y0, y1 + 0.12, -0.09, 0.0, [0.3, 0.23, 0.17]); bx(p.u1, p.u1 + 0.12, y0, y1 + 0.12, -0.09, 0.0, [0.3, 0.23, 0.17]); bx(p.u0 - 0.12, p.u1 + 0.12, y1, y1 + 0.14, -0.12, 0.0, [0.3, 0.23, 0.17]);
           if (k === 0) bx(p.u0 - 0.15, p.u1 + 0.15, -0.35, 0.1, -0.35, 0.0, [0.5, 0.48, 0.45]);          // a stone step
         } else if (lo) {
           g.quad('MI_WindowGlass', P(p.u0, y0, 0.05), P(p.u1, y0, 0.05), P(p.u1, y1, 0.05), P(p.u0, y1, 0.05), [1, 1, 1], [0, 0, 1, 1], false);
         } else {
-          g.quad(W_, P(p.u0, y0, 0.16), P(p.u1, y0, 0.16), P(p.u1, y1, 0.16), P(p.u0, y1, 0.16), [0.06, 0.068, 0.078], GPU.wood, true);      // [fx2] glass is dark by day (the night glow is its own mesh)
-          const uc = (p.u0 + p.u1) / 2, ym = (y0 + y1) / 2, LD = [0.9, 0.9, 0.92], MW = [0.95, 0.76, 0.58], bar = (ua, ub, ya, yb2) => q(W_, ua, ub, ya, yb2, 0.12, LD, GPU.wood, true), kd = p.kind === undefined ? 1 : p.kind;
+          g.quad(INF_T, P(p.u0, y0, 0.16), P(p.u1, y0, 0.16), P(p.u1, y1, 0.16), P(p.u0, y1, 0.16), [0.2, 0.26, 0.32], GPU.wood, true);      // [fx2] glass is dark by day (the night glow is its own mesh)
+          const uc = (p.u0 + p.u1) / 2, ym = (y0 + y1) / 2, LD = [0.13, 0.12, 0.12], MW = [0.26, 0.18, 0.13], bar = (ua, ub, ya, yb2) => q(W_, ua, ub, ya, yb2, 0.12, LD, GPU.wood, true), kd = p.kind === undefined ? 1 : p.kind;
           if (kd === 0) { const nu = Math.max(2, Math.round((p.u1 - p.u0) / 0.2)), nv = Math.max(3, Math.round((y1 - y0) / 0.2)); for (let i = 1; i < nu; i++) { const u = p.u0 + (p.u1 - p.u0) * i / nu; bar(u - 0.012, u + 0.012, y0, y1); } for (let j = 1; j < nv; j++) { const y = y0 + (y1 - y0) * j / nv; bar(p.u0, p.u1, y - 0.012, y + 0.012); } q(W_, uc - 0.025, uc + 0.025, y0, y1, 0.1, MW, GPU.wood, true); }
           else if (kd === 3) { for (const f of [1 / 3, 2 / 3]) { const u = p.u0 + (p.u1 - p.u0) * f; q(W_, u - 0.03, u + 0.03, y0, y1, 0.1, MW, GPU.wood, true); } q(W_, p.u0, p.u1, y1 - 0.3, y1 - 0.26, 0.1, MW, GPU.wood, true); }
           else if (kd === 2) { bar(uc - 0.012, uc + 0.012, y0, y1); bar(p.u0, p.u1, ym - 0.012, ym + 0.012); }
@@ -121,7 +121,7 @@ function infWalls(B, MS, o) {
           if (wn === 'front' || wn === 'back') {
             bx(0, L, yb, yb + 0.14, -0.05, 0.0, DK);      // the sill beam
             for (const p of ops) { const cu = (p.u0 + p.u1) / 2, y0 = fy + p.v0, y1 = fy + p.v1; if (!p.door) { bx(cu - 0.035, cu + 0.035, yb + 0.14, y0 - 0.08, -0.045, 0.0, DK); bx(cu - 0.035, cu + 0.035, y1 + 0.13, yt - 0.07, -0.045, 0.0, DK); } }      // studs under and over each window
-            if (L > 2.4) for (const [u, sg] of [[0.07, 1], [L - 0.07, -1]]) if (fre(u + sg * 0.5) && fre(u + sg * 0.9)) g.beam(W_, P(u, yt - 0.9, -0.05), P(u + sg * 0.95, yt - 0.1, -0.05), 0.07, DK);      // corner braces
+            if (L > 2.4) for (const [u, sg] of [[0.07, 1], [L - 0.07, -1]]) if (fre(u + sg * 0.5) && fre(u + sg * 0.9)) g.beam(INF_T, P(u, yt - 0.9, -0.05), P(u + sg * 0.95, yt - 0.1, -0.05), 0.07, [0.38, 0.33, 0.28]);      // corner braces
           }
           if (wn === 'front' || wn === 'back') { const RR = rng(Math.floor(L * 97 + k * 13 + w * 31)); for (const p of ops) if (!p.door) { const cu = (p.u0 + p.u1) / 2, ww = 0.1 + RR() * 0.14, ln = 0.8 + RR() * 1.0; q(mat, cu - ww / 2, cu + ww / 2, Math.max(yb + 0.2, fy + p.v0 - ln), fy + p.v0 - 0.1, -0.008, col.map(v => v * 0.6), undefined, true); } for (let i = 0; i < 3; i++) { const u = 0.3 + RR() * (L - 0.9), ww = 0.12 + RR() * 0.2; if (fre(u) && fre(u + ww)) q(mat, u, u + ww, yt - 0.3 - RR() * 1.2, yt - 0.1, -0.008, col.map(v => v * 0.62), undefined, true); }
             for (let i = 0; i < 3; i++) { const u = 0.4 + RR() * (L - 1.4), ww = 0.3 + RR() * 0.35, y = yb + 0.3 + RR() * (H - 1.2), hh = 0.3 + RR() * 0.45; if (fre(u) && fre(u + ww)) { q(mat, u, u + ww, y, y + hh, -0.008, col.map((v, j) => v * [0.78, 0.62, 0.48][j]), undefined, true); q(mat, u + ww * 0.15, u + ww * 0.8, y + hh, y + hh * 1.5, -0.008, col.map((v, j) => v * [0.84, 0.72, 0.6][j]), undefined, true); } } }      // streaks, and patches where the limewash has flaked off the daub: under each sill and down from the eaves
@@ -147,15 +147,15 @@ function infWalls(B, MS, o) {
 // nl / nr: a neighbour stands against that gable end (rake overhang 4 cm, so the roof never reaches into the next house), tint, thick (slab thickness)
 function infRoofGen(B, MS, o) {
   const g = GP(), g2 = GP(), gf = GP(), w = o.w, d = o.d, tanP = o.tanP, ridgeX = o.ridgeX !== false, len = ridgeX ? w : d, span = ridgeX ? d : w, ov = o.ov === undefined ? 0.5 : o.ov, zc = o.zc || 0, top = o.top, T = o.thick || 0.1;
-  const lift = o.lift || 0, gov = o.gov === undefined ? 0.2 : o.gov, hs = span / 2, yR = top + lift + hs * tanP, yE = top + lift - ov * tanP, a0 = -len / 2 - (o.nl ? 0.04 : gov), a1 = len / 2 + (o.nr ? 0.04 : gov), ve = hs + ov;
+  const lift = o.lift || 0, gov = o.gov === undefined ? 0.2 : o.gov, hs = span / 2, yR = top + lift + hs * tanP, yE0 = top + lift - ov * tanP, a0 = -len / 2 - (o.nl ? 0.04 : gov), a1 = len / 2 + (o.nr ? 0.04 : gov), ve = hs + ov, nsd = s => (s < 0 ? o.nsW : o.nsE), VE = s => nsd(s) ? hs + 0.03 : ve, YE = s => top + lift - (VE(s) - hs) * tanP;      // [fx3] a party side: the eaves stop 3 cm out, flush with the wall, never over the neighbour
   const P = (u, v, y) => ridgeX ? [u, y, zc + v] : [v, y, zc + u];
   const RM = o.mat && Kit.defs[o.mat] ? o.mat : INF_S, ts = o.ts || 1.25, sag = o.sag || 0, nseg = sag ? Math.max(2, Math.ceil((a1 - a0) / 2.6)) : 1, sgy = u => sag * Math.max(0, 1 - Math.pow(2 * u / len, 2));      // [fx2] covering, texel size, ridge sag (zero at the gables)
-  const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE), dark = col.map(v => v * 0.7), wood = [0.24, 0.2, 0.17];
+  const col = o.tint || [1, 1, 1], slopeLen = hypot2(ve, yR - yE0), dark = col.map(v => v * 0.7), wood = [0.24, 0.2, 0.17];
   const OUTV = (u, v, y) => ridgeX ? [u, y, v] : [v, y, u];            // a direction in the roof's own frame -> the house frame
   const planes = G => {
     for (const s of [-1, 1]) {
       for (let i = 0; i < nseg; i++) {
-        const ua = a0 + (a1 - a0) * i / nseg, ub = a0 + (a1 - a0) * (i + 1) / nseg, A = P(ua, s * ve, yE), Bp = P(ub, s * ve, yE), C = P(ub, 0, yR - sgy(ub)), D = P(ua, 0, yR - sgy(ua)), up = [0, 1, 0];
+        const ua = a0 + (a1 - a0) * i / nseg, ub = a0 + (a1 - a0) * (i + 1) / nseg, A = P(ua, s * VE(s), YE(s)), Bp = P(ub, s * VE(s), YE(s)), C = P(ub, 0, yR - sgy(ub)), D = P(ua, 0, yR - sgy(ua)), up = [0, 1, 0];
         G.quad(RM, A, Bp, C, D, col, [(ua - a0) / ts, 0, (ub - a0) / ts, slopeLen / ts], up);
       }
     }
@@ -168,20 +168,21 @@ function infRoofGen(B, MS, o) {
   planes(g); planes(gf);
   // thickness: the shingle edge at each eave and rake, a soffit under the overhang, a ridge cap
   for (const s of [-1, 1]) {
-    { const A = P(a0, s * ve, yE), Bp = P(a1, s * ve, yE), A2 = P(a0, s * ve, yE - T), B2 = P(a1, s * ve, yE - T); g2.quad(RM, A, Bp, B2, A2, dark, [0, 0, (a1 - a0) / ts, 0.1], OUTV(0, s, -0.4)); }
+    { const A = P(a0, s * VE(s), YE(s)), Bp = P(a1, s * VE(s), YE(s)), A2 = P(a0, s * VE(s), YE(s) - T), B2 = P(a1, s * VE(s), YE(s) - T); g2.quad(RM, A, Bp, B2, A2, dark, [0, 0, (a1 - a0) / ts, 0.1], OUTV(0, s, -0.4)); }
     for (const [u, sg, nb] of [[a0, -1, o.nl], [a1, 1, o.nr]]) {
-      const A = P(u, 0, yR), Bp = P(u, s * ve, yE), B2 = P(u, s * ve, yE - T), A2 = P(u, 0, yR - T);
+      const A = P(u, 0, yR), Bp = P(u, s * VE(s), YE(s)), B2 = P(u, s * VE(s), YE(s) - T), A2 = P(u, 0, yR - T);
       g2.quad(RM, A, Bp, B2, A2, dark, [0, 0, slopeLen / ts, 0.1], OUTV(sg, 0, 0));
     }
     // soffit under the eave: from the wall line out to the tip
-    { const A = P(a0, s * hs, top + lift - T), Bp = P(a1, s * hs, top + lift - T), C = P(a1, s * ve, yE - T), D = P(a0, s * ve, yE - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
+    { const A = P(a0, s * hs, top + lift - T), Bp = P(a1, s * hs, top + lift - T), C = P(a1, s * VE(s), YE(s) - T), D = P(a0, s * VE(s), YE(s) - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
     // soffit under the rake overhang
-    for (const [u, un, ex] of [[-len / 2, a0, !o.nl], [len / 2, a1, !o.nr]]) if (ex) { const A = P(u, 0, yR - T), Bp = P(un, 0, yR - T), C = P(un, s * ve, yE - T), D = P(u, s * hs, top + lift - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
+    for (const [u, un, ex] of [[-len / 2, a0, !o.nl], [len / 2, a1, !o.nr]]) if (ex) { const A = P(u, 0, yR - T), Bp = P(un, 0, yR - T), C = P(un, s * VE(s), YE(s) - T), D = P(u, s * hs, top + lift - T); g2.quad(W_, A, Bp, C, D, wood, GPU.wood, [0, -1, 0]); }
   }
-  if (o.thatch) for (const s of [-1, 1]) for (const f of [0.2, 0.6]) { const yy = yR - (yR - yE) * f, vv = ve * f; g2.quad(W_, P(a0 + 0.1, s * vv, yy + 0.03), P(a1 - 0.1, s * vv, yy + 0.03), P(a1 - 0.1, s * vv, yy - 0.03), P(a0 + 0.1, s * vv, yy - 0.03), col.map(v => v * 0.4), GPU.wood, [0, 1, 0.5 * s]); }      // [fx2] ligger lines (flat strips: triangle budget)
-  for (const s of [-1, 1]) for (const [u, nb] of [[a0, o.nl], [a1, o.nr]]) if (!nb) { const A = P(u, 0.0, yR + 0.02), Bp = P(u, s * ve, yE), A2 = P(u, 0.0, yR - 0.12), B2 = P(u, s * ve, yE - 0.14); g2.quad(W_, A, Bp, B2, A2, [0.2, 0.17, 0.14], GPU.wood, OUTV(u < 0 ? -1 : 1, 0, 0)); }      // [fx2] a barge board along each exposed rake
+  for (const s of [-1, 1]) if (nsd(s)) { const y0 = YE(s), h2 = hs + 0.03; for (const [va, vb, yy] of [[h2, h2 - 0.16, y0 + 0.01]]) g2.quad(W_, P(a0, s * va, yy + 0.05), P(a1, s * va, yy + 0.05), P(a1, s * vb, yy), P(a0, s * vb, yy), [0.3, 0.3, 0.32], GPU.wood, [0, 1, 0]); g2.quad(W_, P(a0, s * h2, y0 - T - 0.1), P(a1, s * h2, y0 - T - 0.1), P(a1, s * h2, y0 + 0.05), P(a0, s * h2, y0 + 0.05), [0.3, 0.3, 0.32], GPU.wood, OUTV(0, s, 0)); }      // [fx3] lead flashing and a closed edge on a party side
+  if (o.thatch) for (const s of [-1, 1]) for (const f of [0.2, 0.6]) { const yy = yR - (yR - YE(s)) * f, vv = VE(s) * f; g2.quad(W_, P(a0 + 0.1, s * vv, yy + 0.03), P(a1 - 0.1, s * vv, yy + 0.03), P(a1 - 0.1, s * vv, yy - 0.03), P(a0 + 0.1, s * vv, yy - 0.03), col.map(v => v * 0.4), GPU.wood, [0, 1, 0.5 * s]); }      // [fx2] ligger lines (flat strips: triangle budget)
+  for (const s of [-1, 1]) for (const [u, nb] of [[a0, o.nl], [a1, o.nr]]) if (!nb) { const A = P(u, 0.0, yR + 0.02), Bp = P(u, s * VE(s), YE(s)), A2 = P(u, 0.0, yR - 0.12), B2 = P(u, s * VE(s), YE(s) - 0.14); g2.quad(W_, A, Bp, B2, A2, [0.2, 0.17, 0.14], GPU.wood, OUTV(u < 0 ? -1 : 1, 0, 0)); }      // [fx2] a barge board along each exposed rake
   const nrid = Math.min(nseg, 4); for (let i = 0; i < nrid; i++) { const ua = a0 + (a1 - a0) * i / nrid, ub = a0 + (a1 - a0) * (i + 1) / nrid, hw = RM === INF_TH ? 0.2 : 0.1, cc = RM === INF_TH ? col.map(v => v * 0.5) : [0.26, 0.22, 0.19], ya = yR + 0.07 - sgy(ua), yb = yR + 0.07 - sgy(ub); for (const s of [-1, 1]) g2.quad(W_, P(ua, 0, ya), P(ub, 0, yb), P(ub, s * hw, yb - 0.1), P(ua, s * hw, ya - 0.1), cc, GPU.wood, [0, 1, 0]); }      // [fx2] ridge cap follows the sag
-  ROOFS.push({ M: Array.from(MS.elements || MS), w, d, top, tanP, ridgeX, zc, ov, lift, T, a0, a1, hs, ve, yR, yE });
+  ROOFS.push({ M: Array.from(MS.elements || MS), w, d, top, tanP, ridgeX, zc, ov, lift, T, a0, a1, hs, ve, yR, yE: yE0 });
   const name = g.make('gen_roof_' + (_gn++)), name2 = g2.make('gen_roofe_' + (_gn++)), fn = gf.make('gen_roofF_' + (_gn++));
   Kit.far[name] = Kit.pieces[fn].prims; delete Kit.pieces[fn]; Kit.far[name2] = [];
   B.add(name, MS, { zone: 0, skyVis: 1, cast: false, inZone: o.inZone || 0, inSkyVis: o.inSky === undefined ? 0.2 : o.inSky });
@@ -294,14 +295,14 @@ function infShell(B, h, lo) {
   infWalls(B, MS, { w, d, fl, H, stone, tint, jetty, R, lo, plan, skip: { left: nbW, right: nbE } });
   const F0 = frames(0);
   if (jetty) for (let k = 1; k < fl; k++) {       // the overhanging storey rests on a deep joist beam along the front, with brackets under it
-    const g = GP(); g.box(W_, -w / 2, -0.3, -d / 2 - 0.62, w / 2, 0.02, -d / 2 + 0.1, [0.42, 0.37, 0.33]); g.box(W_, -w / 2 - 0.05, -0.34, -d / 2 - 0.58, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.36, 0.32, 0.29]);
-    for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * mF; g.beam(W_, [x, -0.7, -d / 2 - 0.5], [x, -0.3, -d / 2 + 0.02], 0.1, [0.34, 0.3, 0.27]); }
+    const g = GP(); g.box(INF_T, -w / 2, -0.3, -d / 2 - 0.62, w / 2, 0.02, -d / 2 + 0.1, [0.68, 0.6, 0.52]); g.box(INF_T, -w / 2 - 0.05, -0.34, -d / 2 - 0.58, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.5, 0.44, 0.38]);
+    for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * mF; g.beam(INF_T, [x, -0.7, -d / 2 - 0.5], [x, -0.3, -d / 2 + 0.02], 0.1, [0.52, 0.46, 0.4]); }
     B.add(g.make('gen_joist_' + (_gn++)), KH.xf(MS, 0, k * H, 0, 1, 0), OUT);
   }
   // ── roof: generated shingles; ridge parallel to the street (eaves to the street) or gable to the street ──
   const Ytop = fl * H, rx = !gableFront, zc = -sh, rise = (rx ? d : w) / 2 * tanP;
   const SSt = typeof shellStyle === 'function' ? shellStyle({ id: h.id, x: h.x, z: h.z }, null) : {};      // [fx2] the district's covering, not the old pale shingle
-  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: SSt.ov || 0.5, mat: SSt.mat, ts: SSt.ts, sag: SSt.sag, thick: SSt.thick, thatch: SSt.thatch, nl: rx && nbW > 0, nr: rx && nbE > 0, tint: SSt.tint ? SSt.tint : DD ? DD.roof.map(v => Math.min(1, v * (DD.patch ? 0.8 + R() * 0.3 : 0.94 + R() * 0.1))) : [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
+  infRoofGen(B, MS, { w, d, top: Ytop, tanP, ridgeX: rx, zc, ov: SSt.ov || 0.5, mat: SSt.mat, ts: SSt.ts, sag: SSt.sag, thick: SSt.thick, thatch: SSt.thatch, nl: rx && nbW > 0, nr: rx && nbE > 0, nsW: !rx && nbW > 0, nsE: !rx && nbE > 0, tint: SSt.tint ? SSt.tint : DD ? DD.roof.map(v => Math.min(1, v * (DD.patch ? 0.8 + R() * 0.3 : 0.94 + R() * 0.1))) : [0.95 + R() * 0.1, 0.95 + R() * 0.1, 0.95 + R() * 0.1] });
   if (!lo) {
     if (h.chimney) {          // a chimney that rises through the roof (stack, flashing, cap)
       const cx = rx ? (h.chimney > 0 ? 1 : -1) * w * 0.28 : 0, cz = rx ? zc : d * 0.2 * (h.chimney > 0 ? 1 : -1) + zc * 0, top = infChimney(B, MS, { x: cx, z: cz, top: Ytop, tanP, hs: (rx ? d : w) / 2, ridgeX: rx, zc: rx ? zc : 0 });
@@ -346,6 +347,7 @@ function infillAttach() {
       if (fa[0] * fb[0] + fa[1] * fb[1] > -0.9 || dist < 6.5 || dist > 12.5) continue;
       if (Math.abs(dx * fa[0] + dz * fa[1]) < dist * 0.9) continue;
       const pa = front(a), pb = front(b); if (Math.abs(pa[1] - pb[1]) > 1.2) continue;
+      { let hit = false; for (let k = 1; k < 12 && !hit; k++) { const t = k / 12, x = pa[0] + (pb[0] - pa[0]) * t, z = pa[2] + (pb[2] - pa[2]) * t, y = pa[1] + (pb[1] - pa[1]) * t - 0.12; for (const o of SITES) { if (!o.w || o.id === a.id || o.id === b.id) continue; const l = worldToSite(o, x, z); if (Math.abs(l[0]) < o.w / 2 + 0.7 && Math.abs(l[1]) < o.d / 2 + 0.7 && y < o.y + ((o.floors || 2) >= 2 ? 7.2 : 5.0) + 0.3) { hit = true; break; } } } if (hit) continue; }      // [fx3] a rope is tied to a hook on each wall and clears every other roof by 0.3 m
       B.add(genBunting(pa, pb, rr, cols, 11), I, { zone: 0, skyVis: 1, cast: false }); used.add(a.id); used.add(b.id); nr++;
     }
   }
@@ -394,7 +396,7 @@ function infKitWalls(c, b, MS, frames, zone, sy, R, pass) {      // pass: 'ext' 
   const tn = 0.85 + R() * 0.25, SW = typeof shellStyle === 'function' ? shellStyle(site, spec) : {}, wtint = SW.wallTint || [tn, tn * 0.98, tn * 0.95];
   const JT = pass === 'ext' && typeof shellJetty === 'function' ? shellJetty(site, st) : 0;      // [fx2] the shell's upper storey projects over the street; the room (the cell) does not move
   infWalls(b, MS, { sd: site.x * 7.3 + site.z * 3.1, w, d, fl, H: 3, stone: st.ground === 'stone', tint: wtint, lime: SW.lime, jetty: JT, stoneTint: SW.stoneTint, stoneMat: SW.stoneMat, frame: SW.frame, R, plan, skip: {}, optsOf: pass === 'int' ? (() => ({ zone, skyVis: INT_AO, cast: false, inZone: zone, inSkyVis: INT_AO })) : pass === 'ext' ? (() => ({ zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 })) : (k => k === 0 ? { zone: 0, skyVis: 1, cast: false, inZone: zone, inSkyVis: INT_AO } : { zone: 0, skyVis: 1, cast: false, inZone: 0, inSkyVis: 0.12 }) });
-  if (JT) { const g = GP(), sh = JT; g.box(W_, -w / 2, -0.3, -d / 2 - sh - 0.12, w / 2, 0.02, -d / 2 + 0.1, [0.4, 0.35, 0.31]); g.box(W_, -w / 2 - 0.05, -0.34, -d / 2 - sh - 0.08, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.34, 0.3, 0.27]);
-    const nF = Math.max(2, Math.round(w / 2)); for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * (w / nF); g.beam(W_, [x, -0.62, -d / 2 - sh + 0.02], [x, -0.28, -d / 2 + 0.02], 0.09, [0.32, 0.28, 0.25]); }
+  if (JT) { const g = GP(), sh = JT; g.box(INF_T, -w / 2, -0.3, -d / 2 - sh - 0.12, w / 2, 0.02, -d / 2 + 0.1, [0.68, 0.6, 0.52]); g.box(INF_T, -w / 2 - 0.05, -0.34, -d / 2 - sh - 0.08, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.5, 0.44, 0.38]);
+    const nF = Math.max(2, Math.round(w / 2)); for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * (w / nF); g.beam(INF_T, [x, -0.62, -d / 2 - sh + 0.02], [x, -0.28, -d / 2 + 0.02], 0.09, [0.52, 0.46, 0.4]); }
     b.add(g.make('gen_joist_' + (_gn++)), KH.xf(MS, 0, 3, 0, 1, 0), { zone: 0, skyVis: 1, cast: false }); }
 }

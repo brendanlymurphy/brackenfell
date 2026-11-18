@@ -398,6 +398,8 @@ function buildDress() {
     if (sq) for (const p of stones) if (hyp(x - p[0], z - p[1]) < 1.6 + r) return false;
     for (const s of spotsOut) if (hyp(x - s.p[0], z - s.p[2]) < r + 0.9) return false;
     for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + 0.12 && Math.abs(l[1]) < s.d / 2 + 0.12) return false; }
+    for (const s of SITES) if (/^high\./.test(s.id) && hyp(x - s.x, z - s.z) < 9) return false;      // [fx3] the hamlet's own yard props are built later (79_wilds.js): dress leaves that yard alone
+    { let nb = 0; for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + 0.85 && Math.abs(l[1]) < s.d / 2 + 0.85 && ++nb > 1) return false; } }      // [fx3] nothing is stood in a gap under 1.6 m between two houses
     for (const h in World.houses) { const d = World.houses[h].door; if (d && hyp(x - d.out[0], z - d.out[2]) < r + 1.5) return false; }
     for (const f of FIELDS) if (x > f.x0 - 1 && x < f.x1 + 1 && z > f.z0 - 1 && z < f.z1 + 1) return false;
     if (River.dist(x, z, 7 + r) < 4.5 + r) return false;
@@ -471,7 +473,7 @@ function buildDress() {
   };
   const kindOf = s => s.id === 'inn' ? 'inn' : s.id === 'smithy' ? 'smithy' : s.id === 'store' ? 'store' : /^(farm|barn|mill)$/.test(s.id) ? 'farm' : s.id === 'chapel' ? 'chapel' : s.id === 'tower' ? null : /^(shop\.|draper)/.test(s.id) ? 'shop' : 'house';
   for (const s of SITES) {
-    const kind = kindOf(s); if (!kind) continue;
+    R.seed(idSeed('dress' + s.id)); const kind = kindOf(s); if (!kind) continue;
     const alley = kind === 'shop', n = alley ? 7 : kind === 'chapel' ? 3 : s.infill ? 3 + R.i(0, 1) : 5 + R.i(0, 2), list = kinds[kind];
     let placed = 0;
     for (let tries = 0; tries < 220 && placed < n; tries++) {
@@ -502,6 +504,7 @@ function buildDress() {
     }
     (DRS.cnt = DRS.cnt || {})[s.id] = placed;
   }
+  R.seed(8801);
   // ── market stalls: the square's rim and the alley's middle band, each stocked ──
   const stallKinds = ['greens', 'bread', 'cloth', 'pots', 'fish', 'meat'], stallCols = [[[0.28, 0.14, 0.12], [0.4, 0.37, 0.3]], [[0.13, 0.17, 0.24], [0.4, 0.37, 0.3]], [[0.18, 0.22, 0.13], [0.39, 0.36, 0.29]], [[0.31, 0.23, 0.12], [0.4, 0.37, 0.29]], [[0.23, 0.16, 0.15], [0.39, 0.36, 0.3]]];      // Build 42: faded madder, woad, moss, ochre on undyed linen (the canopy material brightens these about 1.6x)
   DRS.stalls = [];
@@ -571,7 +574,7 @@ function buildDress() {
   const [lf, lg] = AL.lan || (AL.lan = genBracketLantern());
   const wallOf = s => s.doorWall || 'front';
   for (const s of SITES) {
-    const kind = kindOf(s); if (!kind || kind === 'shop' && !s.facade) continue;
+    R.seed(idSeed('dressB' + s.id)); const kind = kindOf(s); if (!kind || kind === 'shop' && !s.facade) continue;
     const face = wallOf(s), L = wallLen(s, face), dl = siteDoorLocal(s, 0), du = (face === 'front' || face === 'back') ? dl[0] : dl[1];
     const tint = [0.36, 0.44, 0.3];
     // vines: a few strands on random walls, away from the door
@@ -588,6 +591,7 @@ function buildDress() {
     const lp = [w.x + q.x, yL - 0.1, w.z + q.z]; World.emitters.push({ type: 'lantern', p: lp, zone: 0, halo: s.infill ? 0.4 : 0.7 }); if (DRS.lights++ < 5 && World.lights.length < 40) addLight(lp, 9, [3.0, 1.7, 0.7], 0, 'lantern');
     if (glyphs[s.id] || kind === 'inn') { const w2 = wallAt(s, face, du - side * 1.3, 0.0), sg = genSign(glyphs[s.id] || 'crest', [1.0, 0.8, 0.45]); add(sg, w2.x, s.y + 2.45 + R() * 0.3, w2.z, 1, w2.ry, false); }
   }
+  R.seed(8802);
   // laundry between upper windows of some alley shops, and a few cottages
   for (const sh of AL.shops) {
     if (sh.house || !sh.a || sh.fl < 2 || R() < 0.45) continue;

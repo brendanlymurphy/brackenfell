@@ -19,6 +19,15 @@ MODEL = os.environ.get('GEMINI_TTS_MODEL', 'gemini-3.1-flash-tts-preview')
 URL = 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent' % MODEL
 plan = json.load(open(planf)); cast = json.load(open(castf)); style = cast.get('_style', ''); os.makedirs(out, exist_ok=True)
 
+# [cast] the sixty share ten voices: a plan entry of theirs names its voice class (`as`, e.g. v.M1) and a word on who is speaking (`note`: age and trade),
+# which is added to the class's direction so that a tanner of forty-five and a merchant of fifty-two are not one man.
+def who(p):
+    c = cast.get(p['speaker'])
+    if c: return c
+    c = cast.get(p.get('as') or '')
+    if c: return { 'voice': c['voice'], 'direction': (c['direction'] + ' ' + p.get('note', '')).strip() }
+    return cast['narrator']
+
 def tts(text, voice, direction):
     prompt = '%s %s Say exactly this line, in character, and nothing else:\n%s' % (style, direction, text)
     body = { 'contents': [{ 'parts': [{ 'text': prompt }] }],
@@ -85,12 +94,14 @@ todo = [p for p in plan['plan'] if (not only or p['speaker'] == only)]
 if sample:
     seen, pick = set(), []
     for p in todo:
-        if p['speaker'] in seen or p['kind'] != 'line' or not (60 < len(p['say']) < 200): continue
-        seen.add(p['speaker']); pick.append(p)
+        sk = p.get('as') or p['speaker']            # one clip per voice: the sixty share ten
+        if sk in seen or p['kind'] != 'line' or not (60 < len(p['say']) < 200): continue
+        if '--new' in args and p['speaker'] in cast: continue            # --new: only voices that have never been heard (the ten classes)
+        seen.add(sk); pick.append(p)
     parts = []
     for p in pick:
-        c = cast.get(p['speaker']) or cast['narrator']; x, sr = tts(p['say'], c['voice'], c['direction']); y, sr = encode(x, sr, os.path.join(out, p['speaker'] + '.m4a'))
-        parts += [y, np.zeros(int(sr * 0.6), dtype=np.float32)]; print(p['speaker'], c['voice'], round(len(y) / sr, 1), 's', flush=True)
+        c = who(p); x, sr = tts(p['say'], c['voice'], c['direction']); y, sr = encode(x, sr, os.path.join(out, (p.get('as') or p['speaker']) + '.m4a'))
+        parts += [y, np.zeros(int(sr * 0.6), dtype=np.float32)]; print(p.get('as') or p['speaker'], '(' + p['speaker'] + ')', c['voice'], round(len(y) / sr, 1), 's', flush=True)
     w = os.path.join(out, 'sample.wav'); sf.write(w, np.concatenate(parts), 24000)
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', w, '-c:a', 'aac', '-b:a', '64k', os.path.join(out, 'sample.m4a')], check=True); print('wrote', os.path.join(out, 'sample.m4a')); sys.exit(0)
 
@@ -101,7 +112,7 @@ if '--partial' in args:
     # daily limit; a later full run finishes the job. Until then a character can converse in one voice and call out in the other.
     old = json.load(open(mf)); name_of = {}; by = {}
     for p in todo:
-        c = cast.get(p['speaker']) or cast['narrator']
+        c = who(p)
         name_of[p['key']] = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'
         by.setdefault((p['speaker'], p['kind']), []).append(p)
     ready = sorted(g for g, ps in by.items() if all(os.path.exists(os.path.join(out, name_of[p['key']])) for p in ps)); n = 0
@@ -115,7 +126,7 @@ if '--have' in args:
     # model reading its direction aloud, see docs/DECISIONS.md) is deleted here and asked for again on the next run.
     n = 0
     for p in todo:
-        c = cast.get(p['speaker']) or cast['narrator']; name = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'; dst = os.path.join(out, name)
+        c = who(p); name = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'; dst = os.path.join(out, name)
         if not os.path.exists(dst): continue
         d, e = analyse(dst)
         if (d > 30 and d > len(p['say']) * 0.13) or d > max(4, len(p['say']) * 0.45): print('TOO LONG, removed: %s %.1fs %s' % (p['speaker'], d, p['say'][:50])); os.remove(dst); continue
@@ -128,12 +139,12 @@ if '--have' in args:
 batch = int(args[args.index('--batch') + 1]) if '--batch' in args else 0
 if batch > 1:            # first pass: missing lines, character by character, several per request; whatever fails is left for the one-by-one pass below
     def fname(p):
-        c = cast.get(p['speaker']) or cast['narrator']; return hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'
+        c = who(p); return hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'
     by = {}
     for p in todo:
         if not os.path.exists(os.path.join(out, fname(p))): by.setdefault(p['speaker'], []).append(p)
     for sp, ps in by.items():
-        c = cast.get(sp) or cast['narrator']
+        c = who(ps[0])
         for k in range(0, len(ps), batch):
             grp = ps[k:k + batch]
             if len(grp) < 2 or done >= limit: continue
@@ -142,7 +153,7 @@ if batch > 1:            # first pass: missing lines, character by character, se
             for p, part in zip(grp, got[0]): dst = os.path.join(out, fname(p)); tmp = dst + '.part.m4a'; encode(part, got[1], tmp); os.replace(tmp, dst)
             print('%s: %d lines in one request' % (sp, len(grp)), flush=True)
 for p in todo:
-    c = cast.get(p['speaker']) or cast['narrator']
+    c = who(p)
     name = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'; dst = os.path.join(out, name); keep.add(name)
     if not os.path.exists(dst):
         if done >= limit: continue

@@ -29,7 +29,7 @@ let WaterMat, GlowMat;
       const body = vec3(0.03, 0.085, 0.075).mul(U.ambSky.mul(1.2).add(U.sunCol.mul(0.35)));
       const foam = smoothstep(0.0, 0.16, depth).oneMinus().mul(smoothstep(0.35, 0.75, n3.x.add(n1.y.mul(0.6))));
       const col = mix(mix(body, refl, fres).add(spec), U.ambSky.add(U.sunCol.mul(0.6)).mul(0.75), foam.mul(0.6));
-      const alpha = max(mix(0.30, 0.94, smoothstep(0.0, 0.7, depth)), fres).mul(smoothstep(0.0, 0.05, depth));
+      const alpha = max(mix(0.30, 0.94, smoothstep(0.0, 0.7, depth)), fres).mul(smoothstep(0.0, 0.39, depth));
       return vec4(col, max(alpha, foam.mul(0.5)));
     })();
     m.colorNode = res.rgb; m.opacityNode = res.a;

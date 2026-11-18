@@ -14,6 +14,7 @@ function rng(seed) {            // mulberry32
   f.i = (a, b) => Math.floor(a + (b - a + 1) * f());
   f.pick = arr => arr[Math.floor(f() * arr.length)];
   f.s = () => f() * 2 - 1;
+  f.seed = v => { a = v >>> 0; };            // [fx3] restart the stream: a placement that belongs to one house seeds from that house's id, so removing another house never moves it
   return f;
 }
 function ihash(x, z, s) {
@@ -154,3 +155,5 @@ function polyDist(pl, x, z) {
 }
 const yawDir = yaw => [Math.sin(yaw), 0, -Math.cos(yaw)];     // yaw 0 = north (-Z), clockwise
 const angDiff = (a, b) => { let d = (a - b) % TAU; if (d > PI) d -= TAU; if (d < -PI) d += TAU; return d; };
+
+const idSeed = id => { let h = 2166136261; for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };

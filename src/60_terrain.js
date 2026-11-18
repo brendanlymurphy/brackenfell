@@ -315,6 +315,7 @@ function buildSplat() {
   ell(B, SITE.tower.x, SITE.tower.z, 4.6, 4.6, red);
   stroke(B, River.p, 9.4, red, 1.2);
   ell(B, LAKE.x, LAKE.z, LAKE.r + 4, LAKE.r + 4, red);
+  if (typeof wharfPaint === 'function') wharfPaint(A, B, { P, stroke, ell, red, grn, blu, sc });      // [fx2] Wharf Street and Wharfside: trodden earth round the houses and yards (73n_wharfside.js)
   if (typeof wildsSplat === 'function') wildsSplat(A, B, { P, stroke, ell, red, grn, blu });       // (79_wilds.js: footpath cobbles, scree, ash)
   const da = A.getImageData(0, 0, Rz, Rz).data, db = B.getImageData(0, 0, Rz, Rz).data, out = new Uint8Array(Rz * Rz * 4);
   for (let i = 0; i < Rz * Rz; i++) { out[i * 4] = da[i * 4]; out[i * 4 + 1] = da[i * 4 + 1]; out[i * 4 + 2] = da[i * 4 + 2]; out[i * 4 + 3] = db[i * 4]; }
@@ -348,6 +349,7 @@ function buildSplat2() {
     blob(A, 1, p[0] - p[3] * o, p[1] + p[2] * o, 0.7 + R() * 1.2, 0.9, 0.3);
   }
   line(A, 1, [[ALLEY.x0 - 2, roadZ(ALLEY.x0 - 2)], [36, 1], [ALLEY.x1 + 1, roadZ(ALLEY.x1 + 1)]], 8, 0.5);      /* [fx3] the alley is the wetter, darker street */
+  if (typeof wharfSplat2 === 'function') wharfSplat2(blob, line, A, B, R);      // [fx2] mud in Wharf Street and the lanes, wet ground at the bank and the yard
   /* [fx3] Westgate: wheel ruts in the earth road outside the gate, two wet tracks 1.7 m apart and a worn middle */
   { const r = Roads.find(q => q.id === 'main'); if (r) { const pts = r.line.p.filter(p => p[0] < -57 && p[0] > -112); if (pts.length > 1) { for (const o of [-0.85, 0.85]) line(A, 1, pts.map(p => [p[0], p[1] + o]), 0.32, 0.45); line(B, 0, pts, 1.0, 0.5); } } }
   /* [fx3] the Market Place's drain: a wet channel down the middle of the place (the fall runs to z+), a branch down Wharf Street's mouth, and puddle hollows in the low cobbles */
@@ -391,7 +393,7 @@ function buildWater() {
     const s = k * step, p = River.point(s), wy = riverY(s), wide = 1 + 1.3 * smooth(125, 230, hyp(p[0], p[1])), nx = -p[3] * wide, nz = p[2] * wide, row = [];
     const endFade = sat((River.len - 6 - s) / 10);
     for (const o of offs) {
-      const x = p[0] + nx * o, z = p[1] + nz * o, depth = sat((wy - Terrain.y(x, z)) / 0.9) * endFade;
+      const x = p[0] + nx * o, z = p[1] + nz * o, depth = sat((wy - Terrain.y(x, z)) / 0.9) * endFade * (Math.abs(o) > 5.9 ? 0 : 1);      // [fx3] the ribbon's own outline always fades to nothing
       m.ao = depth; row.push(m.vert(x, wy, z, 0, 1, 0, p[2] * 1.0, p[3] * 1.0));
     }
     ring.push(row);
@@ -402,11 +404,14 @@ function buildWater() {
   pack.add(m, riverItem);
   // lake sheet
   const lm = new Mesh(4096); lm.mat(MAT.PLAIN, [1, 1, 1]);
-  const cs = 2.5, ext = LAKE.r + 12, n = Math.ceil(2 * ext / cs), ids = new Map();
-  const lv = (i, j) => { const key = j * 4096 + i; let v = ids.get(key); if (v !== undefined) return v; const x = LAKE.x - ext + i * cs, z = LAKE.z - ext + j * cs; lm.ao = sat((LAKE.y - Terrain.y(x, z)) / 0.9); v = lm.vert(x, LAKE.y, z, 0, 1, 0, 0.25, 0.1); ids.set(key, v); return v; };
+  // [fx3] the lake sheet: one even 1.5 m grid (no T-junctions), a cell only where some corner is under the water, every vertex carrying its true depth. The sheet's outline is therefore made of dry vertices only, alpha 0 there,
+  // and the water fades in over the first 0.35 m of depth (47_water.js): the shore is the ground's own contour, never the sheet's edge.
+  const cs = 1.5, ext = LAKE.r + 12, n = Math.ceil(2 * ext / cs), ids = new Map();
+  const lv = (i, j) => { const key = j * 4096 + i; let v = ids.get(key); if (v !== undefined) return v; const x = LAKE.x - ext + i * cs, z = LAKE.z - ext + j * cs; lm.ao = sat((LAKE.y - Terrain.y(x, z)) / 0.9) * (hyp(x - LAKE.x, z - LAKE.z) > LAKE.r + 5.5 ? 0 : 1); v = lm.vert(x, LAKE.y, z, 0, 1, 0, 0.25, 0.1); ids.set(key, v); return v; };      // beyond the basin the sheet fades out under the river ribbon
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const x = LAKE.x - ext + i * cs, z = LAKE.z - ext + j * cs;
-    if (Math.min(terrainH(x, z), terrainH(x + cs, z), terrainH(x, z + cs), terrainH(x + cs, z + cs)) > LAKE.y + 0.05) continue;
+    if (hyp(x + cs / 2 - LAKE.x, z + cs / 2 - LAKE.z) > LAKE.r + 7) continue;      // the river ribbon carries the channel beyond the basin
+    if (Math.min(Terrain.y(x, z), Terrain.y(x + cs, z), Terrain.y(x, z + cs), Terrain.y(x + cs, z + cs)) > LAKE.y + 0.05) continue;
     const a = lv(i, j), b = lv(i, j + 1), c = lv(i + 1, j + 1), d = lv(i + 1, j); lm.tri(a, b, c); lm.tri(a, c, d);
   }
   pack.add(lm, { kind: 'water', noShadow: true });

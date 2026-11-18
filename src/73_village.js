@@ -117,7 +117,10 @@ function buildVillage() {
     const bx = BRIDGE.x, bz = BRIDGE.z, hl = BRIDGE.len / 2, hw = BRIDGE.w / 2, n = 12, m = bucket(bx, bz);
     const y0 = Terrain.y(bx - hl, bz), y1 = Terrain.y(bx + hl, bz), wy = riverY(River.dist(bx, bz, 20) < 20 ? River.at : 0);
     const deckY = x => lerp(y0, y1, (x - bx + hl) / BRIDGE.len) + 1.05 * (1 - Math.pow((x - bx) / hl, 2));
-    const archY = x => { const k = (x - bx) / 5.4; return Math.abs(k) < 1 ? wy - 0.1 + 2.25 * Math.sqrt(1 - k * k) : -9; };
+    /* [cull] the arch's underside never comes nearer the roadway than 0.4 m. It was sized from the river's level and the roadway from the banks, and at the
+       crown it stood 0.3 m ABOVE the cobbles: a dark face looking down, in the middle of the bridge, hiding its far half from anyone walking up to it
+       (the owner's "shadow from day one": no light or shadow map was involved) */
+    const archY = x => { const k = (x - bx) / 5.4; return Math.abs(k) < 1 ? Math.min(wy - 0.1 + 2.25 * Math.sqrt(1 - k * k), deckY(x) - 0.4) : -9; };
     m.m1 = 0; m.ao = 1; m.grad = null;
     for (let i = 0; i < n; i++) {
       const xa = bx - hl + BRIDGE.len * i / n, xb = bx - hl + BRIDGE.len * (i + 1) / n, ya = deckY(xa), yb = deckY(xb);
@@ -241,7 +244,7 @@ function buildVillage() {
   // ── dynamic objects: door leaves, mill wheel, pickups ──
   const skin = new MeshPack();
   // [fx2] six hinged leaves (weathered oak, dark oak, silvered, and three faded paints) so a street's doors are not one door; a door takes one by its house, so both sides of a portal agree
-  const LEAF_COL = [[0.95, 0.82, 0.66], [0.62, 0.54, 0.44], [0.85, 0.8, 0.72], [0.5, 0.68, 0.58], [0.85, 0.42, 0.36], [0.5, 0.62, 0.72]];
+  const LEAF_COL = [[0.95, 0.82, 0.66], [0.62, 0.54, 0.44], [0.85, 0.8, 0.72], [0.4, 0.5, 0.44], [0.52, 0.4, 0.37], [0.42, 0.48, 0.54]];
   const mkLeaf = (bc) => { const leaf = new Mesh(512);
   // [fx1] the one hinged leaf every portal door uses (it read as a black slab in shade): five boards with dark joints, battens, iron straps with studs and a ring, in warm weathered oak
   leaf.ao = 0.92; leaf.mat(MAT.PLAIN, [0.09, 0.07, 0.06]); leaf.box(0, 0.02, -0.02, 1, 1, 0.02, 1 | 2 | 4 | 8);
@@ -252,7 +255,7 @@ function buildVillage() {
   leaf.box(0.86, 0.46, -0.07, 0.9, 0.52, 0.07);
   return leaf; };
   const leafItems = LEAF_COL.map(bc => skin.add(mkLeaf(bc))), leafItem = leafItems[0], leafPick = d => { const key = String(d.cell || (d.site && d.site.id) || ''); let h = 0; for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0; return leafItems[[0, 0, 1, 1, 2, 3, 4, 5][Math.abs(h) % 8]]; };
-  for (const d of World.doors) { d.obj = addSkinned(leafPick(d), { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
+  for (const d of World.doors) { d.obj = addSkinned(leafPick(d), { c: d.c, r: 1.6, zone: d.cell && d.side === 'in' ? d.zone : 0, light: d.cell && d.side === 'in' ? 1.25 : 1.75, kind: 'door', cell: d.cell && d.side === 'in' ? d.cell : null }); d.S = m4.scale(m4.create(), d.w, d.h, 1); }
   // mill wheel (+ the pit gear inside on the same axle). local: axle along +z, wheel in the xy plane
   { const M = SITE.mill, wm = new Mesh(2048), r = 2.2, wz0 = 0.25, wz1 = 1.35;
     wm.mat(MAT.TIMBER, [0.7, 0.66, 0.6]); wm.ao = 0.9;
@@ -378,6 +381,8 @@ function buildVillage() {
   }
   for (const m of houseExt.values()) pack.add(m, { kind: 'opaque' });
   World.villagePack = pack;
+  /* [fx3] a loose prop (barrel, post, pot: a small circle) that was stood inside a house wall by a generator that only knew the unrotated frame is left drawn but not solid, so two solids never share space */
+  { const walls = World.colliders.filter(b => b.hx !== undefined && b.y1 - b.y0 > 2.5); let cut = 0; for (let i = World.colliders.length - 1; i >= 0; i--) { const c = World.colliders[i]; if (c.r === undefined || c.r > 0.5) continue; for (const b of walls) { if (c.y1 < b.y0 || c.y0 > b.y1) continue; const dx = c.x - b.x, dz = c.z - b.z; if (Math.abs(dx) > b.hx + 1 && Math.abs(dz) > b.hx + 1) continue; const u = dx * b.ax + dz * b.az, v = dx * b.bx + dz * b.bz; if (Math.abs(u) < b.hx + c.r && Math.abs(v) < b.hz + c.r) { World.colliders.splice(i, 1); cut++; break; } } } World.propsCut = cut; }
   World.packs.push(pack);
 }
 // register a skinned / hinged object; returns the object (bone matrices live in R.boneData at slot*256)
