@@ -32,6 +32,12 @@ function buildWharf(bucket, fence, R) {
     const lx = 6.0, lz = 77.0, y = Terrain.y(lx, lz); const ml = M(lx, lz); ml.push().T(lx, y, lz); ml.mat(MAT.TIMBER, COL.timberDark); ml.cbox(0, 0, 0, 0.14, 2.2, 0.14, 4); ml.mat(MAT.PLAIN, [0.1, 0.09, 0.08]); ml.cbox(0, 2.2, 0, 0.3, 0.34, 0.3, 4); ml.pop();
     World.emitters.push({ type: 'lantern', p: [lx, y + 2.4, lz], zone: 0, halo: 0.5 });
   }
+  // [fx3] a second flight up from the north (road) side, 2.7 m wide between the two boat-house doors, in line with the bier: a walker coming from the road towards the bier meets the quay's north face, and the only other way up was round at the west end
+  { const x0 = 12.65, x1 = 15.35, gN = Terrain.y(14, Z0 - 2.3), zn = Z0 - 2.3, n = Math.max(2, Math.round((WD - gN) / 0.19)), m = M(14, Z0 - 1.1);
+    for (let i = 0; i < n; i++) { const a = zn + (Z0 - zn) * i / n, b = zn + (Z0 - zn) * (i + 1) / n, top = gN + (WD - gN) * (i + 1) / n; m.mat(MAT.STONE, i % 2 ? sc(0.9) : sc(0.97), 0.5); m.box(x0, top - 0.22, a, x1, top, b, 4 | 8 * 0 | 32); }
+    lvFloor(x0, zn, x1, Z0, gN, WD, 'z');
+    for (const [a, b] of [[x0 - 0.35, x0], [x1, x1 + 0.35]]) { m.mat(MAT.STONE, sc(0.88), 0.7); m.beam([(a + b) / 2, gN + 0.3, zn], [(a + b) / 2, WD + 0.3, Z0], 0.35, 1.1); col(a, zn, b, Z0, gN - 0.8, WD + 0.9); }
+  }
   // steps down to the water landing (south face), then the landing and a boardwalk out over the water
   { const x0 = 12.5, x1 = 15.5, zs = Z1, ze = Z1 + 1.9, n = Math.round((WD - LAND) / 0.19), m = M(14, 83.5);
     for (let i = 0; i < n; i++) { const a = zs + (ze - zs) * i / n, b = zs + (ze - zs) * (i + 1) / n, top = WD + (LAND - WD) * (i + 1) / n; m.mat(MAT.STONE, i % 2 ? sc(0.9) : sc(0.97), 0.5); m.box(x0, BASE, a, x1, top, b, 4 | 16 | (i ? 0 : 0)); }

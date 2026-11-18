@@ -14,7 +14,7 @@ const GROUND = {
     { id: 'drying.sw', kind: 'drying green', earth: 1, x0: -29, z0: 44, x1: -18, z1: 50 }
   ],
   beds: [      // [x0, z0, x1, z1, bed axis]: strips 2.4 m of bed and 0.6 m of path across the short side
-    [-58, 58, -44, 74, 'x'], [-30, 56, -8, 75, 'x'], [14, 58, 38, 76, 'x'], [36, -43, 52, -7, 'x'], [40, 14, 52, 75, 'x']
+    [-58, 58, -44, 74, 'x'], [-30, 56, -8, 75, 'x'], [14, 58, 38, 70, 'x'], [36, -43, 52, -7, 'x'], [40, 14, 52, 75, 'x']
   ]
 };
 const _grSoil = (x, z) => !!(GROUND.soil && GROUND.soil.has((Math.round(x) + 400) * 2000 + Math.round(z) + 400));
