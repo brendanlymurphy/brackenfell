@@ -12,5 +12,6 @@ World.bonfire = true; Env.dayLength = 0; Env.hour = 21;
 const WHICH = (window.__embersCells || 'inn,smithy,store,elder,herbalist,guardhouse,weaver,chapel,mill,farm,hunter,fisher,draper,in.02,in.07,in.40').split(',');       // interiors are built when first entered: the named buildings and three ordinary houses
 for (const id of WHICH) { const c = Cells.by[id]; if (!c) continue; game.enter(c.id); game.step(2, dt); if (!World.emitters.some(e => e.cell === c.id && (e.type === 'fire' || (e.type === 'smoke' && e.indoor)))) { game.leave(); continue; } const f = World.emitters.find(e => e.cell === c.id && e.type === 'fire') || World.emitters.find(e => e.cell === c.id); Cells.teleport({ p: [f.p[0] + 1.5, f.p[1], f.p[2]], yaw: 0 }); game.step(2, dt); cells++; run(c.id); }
 if (World.cell) game.leave(); game.tp(0, null, -6); game.step(2, dt); run('outdoors');
+if (cells < 8) bad.push('only ' + cells + ' interiors with a fire were checked');
 if (bad.length) throw new Error('EMBERS FAIL ' + bad.length + ': ' + JSON.stringify(bad.slice(0, 8)));
 return 'embers PASS ' + cells + ' interiors with a fire, ' + flames + ' flames, ' + seen + ' particle positions looked at: none above its own ceiling';

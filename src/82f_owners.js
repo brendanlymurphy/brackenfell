@@ -18,14 +18,14 @@ OWN.owned = id => !OWN.pub[id] && OWN.keepers(id).length > 0;
 // the doors
 function ownApplyLocks() {
   for (const c of Cells.list || Object.values(Cells.by)) { if (!c || !c.portalOut || c.portalOut.lock || !OWN.owned(c.id)) continue;          // a door with a lock of its own keeps it
-    c.portalOut.lock = () => { if (!OWN.night(c.id) || OWN.friend(c.id)) return null; const who = OWN.keepers(c.id)[0];
+    c.portalOut.lock = () => { if (OWN.off || !OWN.night(c.id) || OWN.friend(c.id)) return null; const who = OWN.keepers(c.id)[0];
       return ixLockTry({ hard: 0.5, msg: OWN.shop(c.id) ? 'Shut. ' + OWN.name(who) + ' opens at eight.' : 'Barred for the night. This is ' + OWN.name(who) + '’s door.' }); }; }
 }
 // a bed in somebody's house
 { const _use = interactUse; interactUse = function (it) { const c = World.cell; if (it && it.kind === 'bed' && c && OWN.owned(c.id)) { const who = (OWN.of[c.id] || OWN.keepers(c.id))[0]; toast('This is ' + OWN.name(who) + '’s bed. Greta at the Hart lets rooms.'); return; } return _use.apply(this, arguments); }; }
 // coming in: a word by day, a challenge at night
 OWN.tick = function (dt) {
-  if (!game.playing) return; const c = World.cell || null, id = c && c.id;
+  if (!game.playing || OWN.off) return; const c = World.cell || null, id = c && c.id;          /* OWN.off: a test of something else that works in houses at night (test/interact.js) */
   if (id !== OWN.cell) { OWN.cell = id; OWN.t = 0; OWN.said = false; }
   if (!id || !OWN.owned(id) || UI.talk || Cells.busy) return; OWN.t += dt; if (OWN.t < 1.2) return;
   if (typeof SCENES !== 'undefined' && SCENES.cur && !OWN.said) { OWN.said = true; return; }          // two of the house are in the middle of saying something to each other: they do not break off to greet you

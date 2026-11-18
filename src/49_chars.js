@@ -75,7 +75,7 @@ const Chars = (() => {
       bones: { hips: 'pelvis', head: 'Head', neck: 'neck_01', handR: 'hand_r', handL: 'hand_l', footR: 'foot_r', footL: 'foot_l' },
       anims: {
         idle: ['idle-a', 'idle-foldarms', 'idle-a'], walk: ['walk', 'walk-relaxed'], run: 'jog', sit: 'sitting-idle', 'sit+talk': 'sitting-talking', talk: 'idle-talking',
-        hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-harvest', sweep: 'shovel-dig', lie: 'sleeping', cheer: 'clapping',
+        hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-watering', sweep: 'farm-watering', lie: 'sleeping', cheer: 'clapping',
       },
       once: ['greeting', 'head-nod', 'interact', 'pick-up', 'open-door', 'kneel', 'sword-attack', 'sword-regular-a', 'sword-regular-b', 'sword-regular-combo', 'weapon-draw', 'hit-chest', 'hit-head', 'death-a', 'death-b', 'jump-start', 'jump-land', 'dodge-back', 'bow-pull', 'bow-release'],
       rate: { hammer: 0.9 },
@@ -106,7 +106,9 @@ const Chars = (() => {
     const names = Object.values(BODY).concat(FOES.map(f => f.body));
     const bodies = {}; for (const n of new Set(names)) bodies[n] = n + '.glb';
     const ANIMS = { idle: ['idle-a', 'idle-foldarms', 'idle-subtle', 'idle-a', 'idle-listening', 'idle-subtle', 'idle-foldarms'], walk: ['walk', 'walk-relaxed'], run: 'jog', sit: 'sitting-idle', 'sit+talk': 'sitting-talking', talk: 'idle-talking',
-      hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-harvest', sweep: 'shovel-dig', lie: 'sleeping', cheer: 'clapping',
+      // [ch4] work: a standing stance over the task. The harvest squat ('farm-harvest') folds the body until no skirt, tabard or apron can follow it (a tent with the boots
+      // showing, the tabard torn open at the back: test/garb.js pictures), and most work rows are indoor trades at a bench, not a field.
+      hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-watering', sweep: 'farm-watering', lie: 'sleeping', cheer: 'clapping',
       pickup: 'pick-up', jump: 'jump-air', block: 'sword-block', hit: 'hit-chest', die: 'death-a' };
     C.define('real', {
       dir: 'chars/real/', clips: 'clips.glb', bodies, lazy: FOES.map(f => f.body), foeLooks: { list: FOES, leader: FOE_LEADER }, textures: {}, materials: {},
@@ -317,9 +319,14 @@ const Chars = (() => {
     g.setAttribute('position', new BA(new Float32Array(P), 3)); g.setAttribute('uv', new BA(new Float32Array(UV), 2)); g.setAttribute('skinIndex', new BA(si, 4)); g.setAttribute('skinWeight', new BA(sw, 4)); g.setIndex(new BA(new Uint16Array(IX), 1)); g.computeVertexNormals();
     return g;
   }
+  // [ch4] Taking things off without a second body: every vertex knows whether it is a hat (1: cap, hood and its cape, straw hat, kettle hat, feathered hat; a coif or a kerchief stays
+  // on, women slept in them) or an outer garment (2: cloak, apron, tabard, straps, belt, pouch). H.uShed is how much is off: 0 nothing, 1 the hat (indoors at table), 2 hat and outer
+  // garments (in bed). The material discards what is off. C.shed(H, level) sets it from outside (a schedule row); left alone, update() sets it from what the person is doing.
+  const SHED_OF = p => /^w_hat_(cap|hood|straw|kettle|feather)/.test(p) ? 1 : /^w_(cloak|apron|tabard|straps|belt|pouch)/.test(p) ? 2 : 0;
+  C.shed = function (H, level) { H.shedOverride = level === null || level === undefined ? undefined : level; };
   function mergedGeometry(S, body, parts, matName, names, lod, acc) {
     const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|' + lod : '') + (acc && names ? '|' + (acc.hat || '') + (acc.belt ? 'b' : '') + (acc.pouch ? 'p' : '') : ''); let g = S.geo.get(key); if (g !== undefined) return g;
-    const src = [], mids = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts[lod] || {} : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
+    const src = [], mids = [], sheds = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts[lod] || {} : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); sheds.push(SHED_OF(p)); }
     if (!src.length) { S.geo.set(key, null); return null; }
     // Behind the lips: a small dark card on the head joint, so an opening mouth shows a mouth and not the street behind the head.
     // Its texture coordinate (2, 2) is what the material reads as "inside of the mouth". Only the two close-up weights carry it.
@@ -341,6 +348,7 @@ const Chars = (() => {
       g.setAttribute(name, new THREE.BufferAttribute(arr, size));
     }
     if (names) { const mid = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; mid.fill(mids[i], o, o + c); o += c; }); g.setAttribute('mid', new THREE.BufferAttribute(mid, 1)); }
+    if (names) { const sh = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; sh.fill(sheds[i] || 0, o, o + c); o += c; }); g.setAttribute('shed', new THREE.BufferAttribute(sh, 1)); }      // [ch4] which garment a vertex belongs to, for taking it off (SHED_OF)
     let io = 0, base = 0; for (const s of src) { const c = s.attributes.position.count; if (s.index) for (let i = 0; i < s.index.count; i++) idx[io++] = s.index.getX(i) + base; else for (let i = 0; i < c; i++) idx[io++] = i + base; base += c; }
     g.setIndex(new THREE.BufferAttribute(idx, 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.6);
     S.geo.set(key, g); return g;
@@ -451,7 +459,8 @@ const Chars = (() => {
       albedo = albedo.mul(float(1).sub(TSL.clamp(occ.mul(0.6), 0, 0.42).mul(face)));      // [ch1] softer: no mask across the brow
       rough = rough.sub(TSL.clamp(spec, 0, 1).mul(face).mul(0.38));
     }
-    m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
+    const shedA = attribute('shed', 'float');      // [ch4] what is taken off is not drawn
+    m.colorNode = Fn(() => { If(shedA.greaterThan(0.5).and(shedA.lessThan(H.uShed.add(0.5))), () => { Discard(); }); If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
     else if (weaveN) m.normalNode = normalView.add(weaveN).normalize();      // [ch1]
@@ -558,7 +567,7 @@ const Chars = (() => {
     const cfg = S.cfg, look = cfg.look ? cfg.look(def) : {}, body = S.bodies[look.body] ? look.body : Object.keys(S.bodies)[0], B = S.bodies[body];
     const root = cloneBones(B.armature), byName = {}; root.traverse(o => { byName[o.name] = o; });
     const skeleton = new THREE.Skeleton(B.skel.bones.map(b => byName[b.name]), B.skel.boneInverses);
-    const H = { def, set: S, body, root, pivot: new THREE.Group(), skeleton, uVis: [0, 1, 2, 3, 4].map(() => uniform(new THREE.Vector4())), visK: uniform(1), visW: new Float32Array(20), uZone: uniform(0), uLight: uniform(1), uMouth: uniform(0), uBlink: uniform(0), uPupil: uniform(0.05), uGaze: uniform(new THREE.Vector2()), uHead: uniform(new THREE.Matrix3()), bones: {}, actions: {}, cur: null, curName: '', seed: 0, mats: [], meshes: [] };
+    const H = { def, set: S, body, root, pivot: new THREE.Group(), skeleton, uVis: [0, 1, 2, 3, 4].map(() => uniform(new THREE.Vector4())), visK: uniform(1), visW: new Float32Array(20), uZone: uniform(0), uLight: uniform(1), uShed: uniform(0), uMouth: uniform(0), uBlink: uniform(0), uPupil: uniform(0.05), uGaze: uniform(new THREE.Vector2()), uHead: uniform(new THREE.Matrix3()), bones: {}, actions: {}, cur: null, curName: '', seed: 0, mats: [], meshes: [] };
     for (let i = 0, id = String(def.id || C.list.length); i < id.length; i++) H.seed = (H.seed * 31 + id.charCodeAt(i)) >>> 0;
     { const u1 = ((H.seed >>> 3) % 97) / 97, u2 = ((H.seed >>> 9) % 89) / 89, kid = /child|boy|girl/.test(body); H.wide = kid ? 1 : 0.93 + 0.15 * u1; H.tall = kid ? 1 : 0.965 + 0.07 * u2; }      // [ch1]
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p] && (!/^w_/.test(p) || (cfg.wears && cfg.wears(look, p)))).sort(), names = new Set(), hasWear = parts.some(p => /^w_/.test(p));
@@ -767,6 +776,52 @@ const Chars = (() => {
   // go to it, not the other way round: an instrument hung between two animated hands went through the player's belly. Same bookkeeping as the finger curl (see above).
   const IKB = { R: ['upperarm_r', 'lowerarm_r', 'hand_r'], L: ['upperarm_l', 'lowerarm_l', 'hand_l'] }, _ik = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), u: new THREE.Vector3(), v: new THREE.Vector3(), n: new THREE.Vector3(), q: new THREE.Quaternion(), p: new THREE.Quaternion(), r: new THREE.Quaternion() };
   const ikTurn = (bone, qW) => { bone.parent.getWorldQuaternion(_ik.p); _ik.r.copy(_ik.p).invert().multiply(qW).multiply(_ik.p); bone.quaternion.premultiply(_ik.r); bone.updateWorldMatrix(false, true); };
+  // [ch4] A blanket over a sleeper: a woollen sheet laid over the body from the shoulders to past the feet, its height taken from the body itself (the highest point of the
+  // posed body under each part of it, 4 cm above), smoothed, and falling over the sides. Built once when the person lies down and is near (within 30 m), kept while they lie,
+  // dropped when they get up. In the pivot's own space, so it follows the person's place and turn. Colour from the house's wools, by the person.
+  const BLK = { N: 22, M: 13, wide: 0.86 }, _bv = new THREE.Vector3();
+  function blanketUpdate(H, lying, dcam) {
+    if (!lying) { H.lieFrames = 0; if (H.blanket) { H.pivot.remove(H.blanket); H.blanket.geometry.dispose(); H.blanket = null; } return; }
+    H.lieFrames = (H.lieFrames || 0) + 1; if (H.blanket || dcam > 30 || H.lieFrames < 2 || typeof RPG === 'undefined' || !RPG.litMat) return;      // a few frames in: the lying pose has settled
+    const m = H.meshes[0]; if (!m) return; H.pivot.updateMatrixWorld(true); H.root.updateMatrixWorld(true); H.skeleton.update();
+    const toL = new THREE.Matrix4().copy(H.pivot.matrixWorld).invert(), bp = n => { const b = H.root.getObjectByName(n); return b ? b.getWorldPosition(new THREE.Vector3()).applyMatrix4(toL) : null; };
+    const head = bp('head'), neck = bp('neck_01'), fl = bp('foot_l'), fr = bp('foot_r'); if (!head || !neck || !fl || !fr) return;
+    const feet = fl.clone().add(fr).multiplyScalar(0.5), ax = new THREE.Vector3(neck.x - feet.x, 0, neck.z - feet.z); const L0 = ax.length(); if (L0 < 0.8) return; ax.normalize();
+    const side = new THREE.Vector3(-ax.z, 0, ax.x), g = m.geometry, n = g.attributes.position.count, shed = g.attributes.shed, P = [];
+    // the blanket's form is a sleeper's, not the posed mesh's (a skirt or a cape that stands up in the lying clip would tent it): bed level from the hips, then a profile along the
+    // body (shoulders 0.17 m, chest 0.2, hips 0.19, thighs 0.15, knees 0.13, shins 0.1, feet 0.16 for the toes), rounded across and falling over the sides of the bed
+    const pel = bp('pelvis'); if (!pel) return; const bed = pel.y - 0.11, N = BLK.N, M = BLK.M, len = L0 + 0.2, top = neck.clone().addScaledVector(ax, -0.1), PROF = [[0, 0.15], [0.12, 0.2], [0.3, 0.19], [0.45, 0.16], [0.62, 0.13], [0.85, 0.1], [0.95, 0.16], [1, 0.13]];
+    const prof = u => { for (let k = 1; k < PROF.length; k++) if (u <= PROF[k][0]) { const a = PROF[k - 1], b = PROF[k], t = (u - a[0]) / (b[0] - a[0]); return a[1] + (b[1] - a[1]) * t; } return PROF[PROF.length - 1][1]; };
+    const H2 = new Float32Array((N + 1) * (M + 1)); for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { const u = i / N, w = j / M, c = Math.abs(w - 0.5) * 2, hump = Math.max(0, 1 - c * c * 1.15); H2[i * (M + 1) + j] = bed + prof(u) * hump + 0.006 * Math.sin(i * 1.3 + j * 0.7); }
+    // and over the body as it lies (trunk, legs and the clothes on them; not the arms, head or anything taken off), at most 0.34 m above the bed: a body on its side or a knee
+    // drawn up raises it, a skirt or cape standing up in the clip cannot tent it
+    { const si = g.attributes.skinIndex, sw = g.attributes.skinWeight, bones = H.skeleton.bones, armB = /^(upperarm|lowerarm|hand|thumb|index|middle|ring|pinky)_|^head$|^neck/, cap = bed + 0.34, MH = new Float32Array(H2.length).fill(-1e9);
+      for (let i = 0; i < n; i += 2) { if (shed && shed.getX(i) > 0.5) continue; if (armB.test(bones[si.getX(i)].name) && sw.getX(i) > 0.5) continue; m.getVertexPosition(i, _bv); _bv.applyMatrix4(m.matrixWorld).applyMatrix4(toL);
+        const dx = _bv.x - top.x, dz = _bv.z - top.z, u = -(dx * ax.x + dz * ax.z) / len, w = (dx * side.x + dz * side.z) / BLK.wide + 0.5; if (u < -0.04 || u > 1.04 || w < -0.04 || w > 1.04) continue;
+        const ii = Math.round(u * N), jj = Math.round(w * M); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const p2 = ii + a, q2 = jj + b; if (p2 < 0 || p2 > N || q2 < 0 || q2 > M) continue; const q = p2 * (M + 1) + q2; MH[q] = Math.max(MH[q], Math.min(cap, _bv.y + 0.035)); } }
+      for (let pass = 0; pass < 2; pass++) { const c = MH.slice(); for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { let mx = c[i * (M + 1) + j], s2 = 0, k2 = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const p2 = i + a, q2 = j + b; if (p2 < 0 || p2 > N || q2 < 0 || q2 > M || c[p2 * (M + 1) + q2] < -1e8) continue; s2 += c[p2 * (M + 1) + q2]; k2++; } if (k2) MH[i * (M + 1) + j] = Math.max(mx, s2 / k2); } }
+      for (let q = 0; q < H2.length; q++) H2[q] = Math.max(H2[q], MH[q]); }
+    const WOOLS = [[0.085, 0.07, 0.055], [0.10, 0.085, 0.065], [0.065, 0.062, 0.058], [0.095, 0.065, 0.045], [0.075, 0.08, 0.07]], pos = [], col = [], idx = [], wool = H.blanketCol || WOOLS[H.seed % WOOLS.length];      // undyed and walnut-dyed wools
+    for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { const u = i / N, w = j / M, edge = Math.min(w, 1 - w), drop = Math.max(0, 0.12 - edge) / 0.12, y = H2[i * (M + 1) + j] + 0.02 - drop * drop * 0.2, x = top.x - ax.x * u * len + side.x * (w - 0.5) * BLK.wide * (1 + drop * 0.08), z = top.z - ax.z * u * len + side.z * (w - 0.5) * BLK.wide * (1 + drop * 0.08);
+      pos.push(x, y, z); const t = 0.88 + 0.12 * Math.sin(i * 1.7 + j * 0.9) * Math.sin(j * 2.3), stripe = (i % 9 === 1 || i % 9 === 2) ? 0.82 : 1; col.push(wool[0] * t * stripe, wool[1] * t * stripe, wool[2] * t * stripe); }
+    for (let i = 0; i < N; i++) for (let j = 0; j < M; j++) { const a = i * (M + 1) + j, b = a + 1, c = a + M + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+    const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); bg.setIndex(idx); bg.computeVertexNormals(); bg.computeBoundingSphere();
+    if (!C.blanketMat) C.blanketMat = new Map(); let mat = C.blanketMat.get(H.uZone); if (!mat) { mat = RPG.litMat(H.uZone, H.uLight, 0.95); mat.side = THREE.DoubleSide; }
+    const bm = new THREE.Mesh(bg, RPG.litMat(H.uZone, H.uLight, 0.95)); bm.material.side = THREE.DoubleSide; bm.name = 'blanket'; bm.layers.mask = H.meshes[0].layers.mask; bm.castShadow = false; bm.receiveShadow = true; H.pivot.add(bm); H.blanket = bm;
+  }
+  // [ch4] In bed the arms lie along the body under the blanket, the hands beside the hips (the sleeping clip has one arm up beside the head, and in some bodies straight up).
+  const _sa = { p: new THREE.Vector3(), l: new THREE.Vector3(), r: new THREE.Vector3(), f: new THREE.Vector3(), n: new THREE.Vector3(), t: new THREE.Vector3() };
+  function sleepArms(H, lying) {
+    if (!lying) { if (H.sleptArms) { C.reach(H, 'R', null); C.reach(H, 'L', null); H.sleptArms = false; } return; }
+    const g = n => H.root.getObjectByName(n), pel = g('pelvis'), tl = g('thigh_l'), tr = g('thigh_r'), nk = g('neck_01'); if (!pel || !tl || !tr || !nk) return;
+    pel.getWorldPosition(_sa.p); tl.getWorldPosition(_sa.l); tr.getWorldPosition(_sa.r); nk.getWorldPosition(_sa.n); _sa.f.subVectors(_sa.p, _sa.n).normalize();      // f: toward the feet
+    for (const [side, hip] of [['L', _sa.l], ['R', _sa.r]]) { const ua = g(side === 'L' ? 'upperarm_l' : 'upperarm_r'), la = g(side === 'L' ? 'lowerarm_l' : 'lowerarm_r'), hd = g(side === 'L' ? 'hand_l' : 'hand_r'); if (!ua || !la || !hd) continue;
+      const S0 = ua.getWorldPosition(new THREE.Vector3()), reachL = S0.distanceTo(la.getWorldPosition(new THREE.Vector3())) + la.getWorldPosition(new THREE.Vector3()).distanceTo(hd.getWorldPosition(new THREE.Vector3()));
+      const out = _sa.t.subVectors(hip, _sa.p); out.addScaledVector(_sa.f, -out.dot(_sa.f)).setY(0).normalize();      // straight out to this side, square to the body's length
+      const aim = _sa.p.clone().addScaledVector(out, 0.2).addScaledVector(_sa.f, 0.1); aim.y = S0.y - 0.03; const dir = aim.sub(S0).normalize();      // the arm lies straight along the side, the hand by the hip
+      C.reach(H, side, S0.clone().addScaledVector(dir, reachL * 0.97)); }
+    H.sleptArms = true;
+  }
   C.reach = function (H, side, target, handQ, w) {
     const S = H.ikS || (H.ikS = {}), s = S[side] || (S[side] = IKB[side].map(n => ({ b: H.root.getObjectByName(n), base: new THREE.Quaternion(), mine: new THREE.Quaternion(), on: false }))), I = _ik;
     if (s.some(g => !g.b)) return false;
@@ -827,6 +882,7 @@ const Chars = (() => {
       pv.rotation.y = th; pv.position.set(x, y, z);
     }
     H.animNow = base; H.talkNow = !!st.talking;      // [ch1]
+    H.uShed.value = H.shedOverride !== undefined ? H.shedOverride : base === 'lie' ? 2 : base === 'sit' && st.zone ? 1 : 0;      // [ch4] in bed: hat and outer garments off; at table indoors: the hat off
     lodUpdate(H, dcam, st.cast === undefined ? !!H.cast : st.cast); H.cast = st.cast === undefined ? H.cast : st.cast;
     H.uZone.value = st.zone || 0; H.uLight.value = st.light === undefined ? 1 : st.light;
     if (cfg.face && dcam < 14) faceUpdate(H, st, dt, dcam);
@@ -841,7 +897,9 @@ const Chars = (() => {
       [nb, hb].forEach((b, i) => { if (b) { L[i].mine.copy(b.quaternion); L[i].on = true; } });
     }
     if (H.gripAmt) gripUpdate(H);      // [ch1]
+    blanketUpdate(H, lying, dcam === undefined ? 0 : dcam);      // [ch4]
     if (H.post && pv.visible) for (const f of H.post) f(H, st);      // [ch1] held things that follow the hands (src/77d_handprops.js)
+    sleepArms(H, lying);      // [ch4] after the held things: a hidden lute lets go of the arms first
   };
   return C;
 })();

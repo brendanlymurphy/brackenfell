@@ -50,9 +50,9 @@
    "x": 15.49,
    "z": 20.76,
    "sillAboveGround": 0.32,
-   "outAboveGround": -0.06,
+   "outAboveGround": -0.04,
    "reach": true,
-   "clearAhead": 6.25,
+   "clearAhead": 8.0,
    "district": "Market Place"
   },
   {
@@ -61,7 +61,7 @@
    "x": -36.9,
    "z": -6.95,
    "sillAboveGround": 0.32,
-   "outAboveGround": 0.05,
+   "outAboveGround": 0.04,
    "reach": true,
    "clearAhead": 6.25,
    "district": "Westgate"
@@ -85,7 +85,7 @@
    "sillAboveGround": 0.03,
    "outAboveGround": -0.04,
    "reach": true,
-   "clearAhead": 3.5,
+   "clearAhead": 8.0,
    "district": "Chapelgate"
   },
   {
@@ -270,7 +270,7 @@
    "x": -18.22,
    "z": -29.49,
    "sillAboveGround": 0.11,
-   "outAboveGround": -0.19,
+   "outAboveGround": -0.2,
    "reach": true,
    "clearAhead": 8.0,
    "district": "Market Place"
@@ -281,7 +281,7 @@
    "x": -18.43,
    "z": -35.07,
    "sillAboveGround": 0.32,
-   "outAboveGround": -0.0,
+   "outAboveGround": 0.04,
    "reach": true,
    "clearAhead": 8.0,
    "district": "Chapelgate"
@@ -291,8 +291,8 @@
    "name": "Grocer\u2019s House",
    "x": -8.55,
    "z": -31.05,
-   "sillAboveGround": 0.32,
-   "outAboveGround": 0.03,
+   "sillAboveGround": 0.33,
+   "outAboveGround": 0.07,
    "reach": true,
    "clearAhead": 8.0,
    "district": "Chapelgate"
@@ -300,12 +300,12 @@
   {
    "id": "in.20",
    "name": "Chandler\u2019s House",
-   "x": 4.79,
-   "z": 45.5,
-   "sillAboveGround": 0.25,
-   "outAboveGround": -0.06,
+   "x": 6.04,
+   "z": 58.92,
+   "sillAboveGround": -0.05,
+   "outAboveGround": -0.41,
    "reach": true,
-   "clearAhead": 8.0,
+   "clearAhead": 4.0,
    "district": "Wharfside"
   },
   {
@@ -322,12 +322,12 @@
   {
    "id": "in.23",
    "name": "Widow Hale\u2019s House",
-   "x": -5.17,
-   "z": 41.13,
-   "sillAboveGround": 0.34,
-   "outAboveGround": 0.06,
+   "x": -1.6,
+   "z": 40.86,
+   "sillAboveGround": 0.33,
+   "outAboveGround": 0.04,
    "reach": true,
-   "clearAhead": 8.0,
+   "clearAhead": 4.0,
    "district": "Wharfside"
   },
   {
@@ -336,29 +336,29 @@
    "x": -9.14,
    "z": -45.53,
    "sillAboveGround": 0.25,
-   "outAboveGround": -0.06,
+   "outAboveGround": -0.08,
    "reach": true,
-   "clearAhead": 6.0,
+   "clearAhead": 7.25,
    "district": "Chapelgate"
   },
   {
    "id": "in.34",
    "name": "Wren Cottage",
-   "x": 5.79,
-   "z": 53.72,
-   "sillAboveGround": 0.32,
-   "outAboveGround": 0.01,
+   "x": 8.8,
+   "z": 65.71,
+   "sillAboveGround": -0.28,
+   "outAboveGround": -0.58,
    "reach": true,
-   "clearAhead": 8.0,
+   "clearAhead": 3.25,
    "district": "Wharfside"
   },
   {
    "id": "in.36",
    "name": "Mason\u2019s House",
-   "x": 7.51,
-   "z": 69.55,
-   "sillAboveGround": -0.38,
-   "outAboveGround": -0.68,
+   "x": 21.88,
+   "z": 83.14,
+   "sillAboveGround": 0.24,
+   "outAboveGround": 0.04,
    "reach": true,
    "clearAhead": 8.0,
    "district": "Wharfside"
@@ -366,23 +366,23 @@
   {
    "id": "in.37",
    "name": "Cutler\u2019s House",
-   "x": -3.8,
-   "z": 53.94,
-   "sillAboveGround": 0.32,
-   "outAboveGround": 0.03,
+   "x": -15.93,
+   "z": 64.6,
+   "sillAboveGround": 0.17,
+   "outAboveGround": -0.17,
    "reach": true,
-   "clearAhead": 8.0,
+   "clearAhead": 2.0,
    "district": "Wharfside"
   },
   {
    "id": "in.38",
    "name": "Marsh House",
-   "x": -1.12,
-   "z": 60.52,
-   "sillAboveGround": 0.02,
-   "outAboveGround": -0.28,
+   "x": -3.3,
+   "z": 58.35,
+   "sillAboveGround": 0.1,
+   "outAboveGround": -0.05,
    "reach": true,
-   "clearAhead": 6.25,
+   "clearAhead": 6.0,
    "district": "Wharfside"
   },
   {
@@ -391,7 +391,7 @@
    "x": -49.8,
    "z": -7.95,
    "sillAboveGround": 0.05,
-   "outAboveGround": 0.04,
+   "outAboveGround": 0.02,
    "reach": true,
    "clearAhead": 8.0,
    "district": "Westgate"
@@ -401,10 +401,10 @@
    "name": "Cobbler\u2019s House",
    "x": -33.38,
    "z": -26.63,
-   "sillAboveGround": 0.26,
-   "outAboveGround": -0.23,
+   "sillAboveGround": 0.25,
+   "outAboveGround": -0.24,
    "reach": true,
-   "clearAhead": 3.5,
+   "clearAhead": 2.25,
    "district": "Westgate"
   },
   {
@@ -421,43 +421,43 @@
   {
    "id": "in.51",
    "name": "Basketmaker\u2019s House",
-   "x": 22.19,
-   "z": 35.26,
-   "sillAboveGround": 0.31,
-   "outAboveGround": -0.11,
+   "x": 2.61,
+   "z": 40.42,
+   "sillAboveGround": 0.15,
+   "outAboveGround": -0.13,
    "reach": true,
-   "clearAhead": 3.5,
+   "clearAhead": 4.0,
    "district": "Wharfside"
   },
   {
    "id": "in.60",
    "name": "Garrick\u2019s House",
-   "x": -20.24,
-   "z": 61.9,
-   "sillAboveGround": 0.31,
-   "outAboveGround": -0.03,
+   "x": 5.54,
+   "z": 67.95,
+   "sillAboveGround": -0.28,
+   "outAboveGround": -0.58,
    "reach": true,
-   "clearAhead": 7.25,
+   "clearAhead": 3.25,
    "district": "Wharfside"
   },
   {
    "id": "in.65",
    "name": "Ropemaker\u2019s House",
-   "x": -52.27,
-   "z": -29,
-   "sillAboveGround": 0.26,
-   "outAboveGround": -0.07,
+   "x": -67.1,
+   "z": -9.35,
+   "sillAboveGround": 0.32,
+   "outAboveGround": 0.03,
    "reach": true,
    "clearAhead": 8.0,
-   "district": "Westgate"
+   "district": "Outside"
   },
   {
    "id": "in.66",
    "name": "Saddler\u2019s House",
-   "x": -40.47,
+   "x": -39.95,
    "z": -62.85,
-   "sillAboveGround": 0.27,
-   "outAboveGround": -0.14,
+   "sillAboveGround": 0.26,
+   "outAboveGround": -0.17,
    "reach": true,
    "clearAhead": 8.0,
    "district": "Chapelgate"
@@ -468,7 +468,7 @@
    "x": -34.87,
    "z": -62.85,
    "sillAboveGround": 0.34,
-   "outAboveGround": 0.08,
+   "outAboveGround": 0.09,
    "reach": true,
    "clearAhead": 8.0,
    "district": "Chapelgate"
@@ -478,8 +478,8 @@
    "name": "Tailor\u2019s House",
    "x": -29.47,
    "z": -51.25,
-   "sillAboveGround": 0.33,
-   "outAboveGround": 0.29,
+   "sillAboveGround": 0.34,
+   "outAboveGround": 0.32,
    "reach": true,
    "clearAhead": 4.0,
    "district": "Chapelgate"
@@ -490,7 +490,7 @@
    "x": -32.7,
    "z": -35.05,
    "sillAboveGround": 0.27,
-   "outAboveGround": -0.08,
+   "outAboveGround": -0.12,
    "reach": true,
    "clearAhead": 8.0,
    "district": "Chapelgate"
@@ -498,20 +498,20 @@
   {
    "id": "in.75",
    "name": "Ferrin\u2019s House",
-   "x": -43.2,
-   "z": -23.45,
+   "x": -69.6,
+   "z": -0.55,
    "sillAboveGround": 0.32,
-   "outAboveGround": 0.04,
+   "outAboveGround": 0.01,
    "reach": true,
-   "clearAhead": 2.75,
-   "district": "Westgate"
+   "clearAhead": 8.0,
+   "district": "Outside"
   },
   {
    "id": "in.77",
    "name": "Wheelwright\u2019s House",
    "x": 8.33,
    "z": -58.85,
-   "sillAboveGround": -1.17,
+   "sillAboveGround": 0.32,
    "outAboveGround": -0.07,
    "reach": true,
    "clearAhead": 8.0,
@@ -522,8 +522,8 @@
    "name": "Tamsin\u2019s House",
    "x": 7.1,
    "z": -46.25,
-   "sillAboveGround": 0.18,
-   "outAboveGround": 0.5,
+   "sillAboveGround": 0.17,
+   "outAboveGround": 0.01,
    "reach": true,
    "clearAhead": 8.0,
    "district": "Chapelgate"
@@ -536,18 +536,18 @@
    "sillAboveGround": 0.32,
    "outAboveGround": 0.05,
    "reach": true,
-   "clearAhead": 2.75,
+   "clearAhead": 8.0,
    "district": "Chapelgate"
   },
   {
    "id": "in.93",
    "name": "Shepherd\u2019s House",
-   "x": -55.59,
+   "x": -55.07,
    "z": 18.95,
-   "sillAboveGround": 0.26,
-   "outAboveGround": -0.05,
+   "sillAboveGround": 0.32,
+   "outAboveGround": 0.02,
    "reach": true,
-   "clearAhead": 4.75,
+   "clearAhead": 8.0,
    "district": "Westgate"
   },
   {
@@ -564,10 +564,10 @@
   {
    "id": "in.111",
    "name": "Butcher\u2019s House",
-   "x": -23.26,
-   "z": 58.15,
-   "sillAboveGround": 0.14,
-   "outAboveGround": -0.02,
+   "x": -9.79,
+   "z": 62.21,
+   "sillAboveGround": -0.03,
+   "outAboveGround": -0.16,
    "reach": true,
    "clearAhead": 8.0,
    "district": "Wharfside"
@@ -575,23 +575,23 @@
   {
    "id": "in.113",
    "name": "Carpenter\u2019s House",
-   "x": -24.84,
-   "z": 71.85,
-   "sillAboveGround": 0.09,
-   "outAboveGround": -0.15,
+   "x": -15.71,
+   "z": 67.67,
+   "sillAboveGround": -0.03,
+   "outAboveGround": -0.33,
    "reach": true,
-   "clearAhead": 8.0,
+   "clearAhead": 2.0,
    "district": "Wharfside"
   },
   {
    "id": "in.115",
    "name": "Brewer\u2019s House",
-   "x": -8.64,
-   "z": 71.85,
-   "sillAboveGround": -0.13,
-   "outAboveGround": -0.43,
+   "x": -23.27,
+   "z": 77.81,
+   "sillAboveGround": -0.23,
+   "outAboveGround": -0.53,
    "reach": true,
-   "clearAhead": 7.25,
+   "clearAhead": 8.0,
    "district": "Wharfside"
   },
   {
@@ -646,7 +646,7 @@
    "district": "Westgate"
   }
  ],
- "barriers": 303,
+ "barriers": 381,
  "walkround": [
   {
    "x": 58,
@@ -676,7 +676,7 @@
    "L": 2.04,
    "T": 0.8,
    "ang": 1.57,
-   "top": 2.99,
+   "top": 3.5,
    "y0": 16.88,
    "detour": 21.0,
    "district": "Outside"
@@ -687,9 +687,20 @@
    "L": 2.04,
    "T": 0.8,
    "ang": 2.02,
-   "top": 2.06,
+   "top": 2.75,
    "y0": 16.88,
    "detour": 16.0,
+   "district": "Outside"
+  },
+  {
+   "x": 28.74,
+   "z": -120.56,
+   "L": 2.04,
+   "T": 0.8,
+   "ang": 2.47,
+   "top": 2.69,
+   "y0": 16.88,
+   "detour": 10.5,
    "district": "Outside"
   },
   {
@@ -720,65 +731,10 @@
    "L": 2.04,
    "T": 0.8,
    "ang": -1.57,
-   "top": 2.18,
+   "top": 2.48,
    "y0": 16.88,
    "detour": 10.5,
    "district": "Outside"
-  },
-  {
-   "x": 63.59,
-   "z": 12.09,
-   "L": 2.08,
-   "T": 0.1,
-   "ang": -0.13,
-   "top": 1.65,
-   "y0": 0.32,
-   "detour": 4.2,
-   "district": "Outside (east of the river)"
-  },
-  {
-   "x": 63.79,
-   "z": 13.58,
-   "L": 2.08,
-   "T": 0.1,
-   "ang": -0.13,
-   "top": 1.98,
-   "y0": 0.32,
-   "detour": 4.2,
-   "district": "Outside (east of the river)"
-  },
-  {
-   "x": 65.57,
-   "z": 11.83,
-   "L": 2.08,
-   "T": 0.1,
-   "ang": -0.13,
-   "top": 1.28,
-   "y0": 0.13,
-   "detour": 4.8,
-   "district": "Outside (east of the river)"
-  },
-  {
-   "x": 49.73,
-   "z": -26.01,
-   "L": 2.84,
-   "T": 0.5,
-   "ang": 1.64,
-   "top": 1.2,
-   "y0": -0.22,
-   "detour": 5.8,
-   "district": "Riverside"
-  },
-  {
-   "x": 49.54,
-   "z": -22.95,
-   "L": 2.88,
-   "T": 0.5,
-   "ang": 1.62,
-   "top": 1.2,
-   "y0": -0.22,
-   "detour": 12.0,
-   "district": "Riverside"
   },
   {
    "x": 49.39,
@@ -788,7 +744,7 @@
    "ang": 1.61,
    "top": 1.19,
    "y0": -0.25,
-   "detour": 18.0,
+   "detour": 5.5,
    "district": "Riverside"
   },
   {
@@ -799,7 +755,7 @@
    "ang": 1.62,
    "top": 1.19,
    "y0": -0.28,
-   "detour": 11.8,
+   "detour": 11.2,
    "district": "Riverside"
   },
   {
@@ -852,7 +808,7 @@
    "L": 4.5,
    "T": 0.34,
    "ang": 0,
-   "top": 0.68,
+   "top": 0.63,
    "y0": -3.3,
    "detour": 7.5,
    "district": "Wharfside"
@@ -1123,13 +1079,24 @@
   },
   {
    "x": 108.5,
+   "z": -19.75,
+   "L": 2.5,
+   "T": 0.1,
+   "ang": 1.57,
+   "top": 1.2,
+   "y0": 0.87,
+   "detour": 5.0,
+   "district": "Outside (east of the river)"
+  },
+  {
+   "x": 108.5,
    "z": -17.25,
    "L": 2.5,
    "T": 0.1,
    "ang": 1.57,
    "top": 1.19,
    "y0": 0.87,
-   "detour": 23.0,
+   "detour": 10.0,
    "district": "Outside (east of the river)"
   },
   {
@@ -1140,7 +1107,7 @@
    "ang": 1.57,
    "top": 1.18,
    "y0": 0.89,
-   "detour": 18.0,
+   "detour": 15.0,
    "district": "Outside (east of the river)"
   },
   {
@@ -1177,6 +1144,160 @@
    "district": "Outside (east of the river)"
   },
   {
+   "x": 23.34,
+   "z": 21.47,
+   "L": 2.5,
+   "T": 0.1,
+   "ang": -0.79,
+   "top": 1.18,
+   "y0": -1.05,
+   "detour": 12.8,
+   "district": "Market Place"
+  },
+  {
+   "x": 25.11,
+   "z": 19.7,
+   "L": 2.5,
+   "T": 0.1,
+   "ang": -0.79,
+   "top": 1.09,
+   "y0": -0.98,
+   "detour": 5.8,
+   "district": "Riverside"
+  },
+  {
+   "x": 35.99,
+   "z": 16,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": 0,
+   "top": 1.17,
+   "y0": -0.66,
+   "detour": 4.8,
+   "district": "Riverside"
+  },
+  {
+   "x": 38.19,
+   "z": 16,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": 0,
+   "top": 1.19,
+   "y0": -0.58,
+   "detour": 4.8,
+   "district": "Riverside"
+  },
+  {
+   "x": 38.19,
+   "z": 19.5,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": 3.14,
+   "top": 1.17,
+   "y0": -0.65,
+   "detour": 4.8,
+   "district": "Riverside"
+  },
+  {
+   "x": 35.99,
+   "z": 19.5,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": 3.14,
+   "top": 1.16,
+   "y0": -0.73,
+   "detour": 4.8,
+   "district": "Riverside"
+  },
+  {
+   "x": -35.76,
+   "z": -14.4,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": 3.14,
+   "top": 1.19,
+   "y0": -0.35,
+   "detour": 5.0,
+   "district": "Westgate"
+  },
+  {
+   "x": -37.96,
+   "z": -14.4,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": 3.14,
+   "top": 1.2,
+   "y0": -0.35,
+   "detour": 4.5,
+   "district": "Westgate"
+  },
+  {
+   "x": -37.96,
+   "z": -17.9,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": 0,
+   "top": 1.15,
+   "y0": -0.24,
+   "detour": 4.5,
+   "district": "Westgate"
+  },
+  {
+   "x": -35.76,
+   "z": -17.9,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": 0,
+   "top": 1.17,
+   "y0": -0.15,
+   "detour": 6.0,
+   "district": "Westgate"
+  },
+  {
+   "x": 95.04,
+   "z": -25.52,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": -2.67,
+   "top": 1.19,
+   "y0": 0.74,
+   "detour": 11.0,
+   "district": "Outside (east of the river)"
+  },
+  {
+   "x": 93.08,
+   "z": -26.52,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": -2.67,
+   "top": 1.18,
+   "y0": 0.69,
+   "detour": 5.0,
+   "district": "Outside (east of the river)"
+  },
+  {
+   "x": 94.67,
+   "z": -29.64,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": 0.47,
+   "top": 1.18,
+   "y0": 0.66,
+   "detour": 5.2,
+   "district": "Outside (east of the river)"
+  },
+  {
+   "x": 96.63,
+   "z": -28.64,
+   "L": 2.2,
+   "T": 0.1,
+   "ang": 0.47,
+   "top": 1.19,
+   "y0": 0.71,
+   "detour": 5.0,
+   "district": "Outside (east of the river)"
+  },
+  {
    "x": 3,
    "z": -15.62,
    "L": 21.2,
@@ -1189,12 +1310,23 @@
   },
   {
    "x": 17.52,
+   "z": -17.25,
+   "L": 5.74,
+   "T": 0.2,
+   "ang": 0,
+   "top": 4.01,
+   "y0": -0.62,
+   "detour": 8.2,
+   "district": "Market Place"
+  },
+  {
+   "x": 17.52,
    "z": -15.5,
    "L": 5.74,
    "T": 0.2,
    "ang": 0,
-   "top": 3.31,
-   "y0": -0.59,
+   "top": 3.33,
+   "y0": -0.62,
    "detour": 8.2,
    "district": "Market Place"
   },
@@ -1204,120 +1336,10 @@
    "L": 6.7,
    "T": 0.1,
    "ang": 0,
-   "top": 1.78,
+   "top": 1.79,
    "y0": 3.6,
    "detour": 9.0,
    "district": "Market Place"
-  },
-  {
-   "x": -29,
-   "z": -58.52,
-   "L": 2,
-   "T": 0.36,
-   "ang": 0,
-   "top": 2.73,
-   "y0": 2.2,
-   "detour": 4.8,
-   "district": "Chapelgate"
-  },
-  {
-   "x": -27,
-   "z": -58.52,
-   "L": 2,
-   "T": 0.36,
-   "ang": 0,
-   "top": 2.73,
-   "y0": 2.3,
-   "detour": 8.8,
-   "district": "Chapelgate"
-  },
-  {
-   "x": -25,
-   "z": -58.52,
-   "L": 2,
-   "T": 0.36,
-   "ang": 0,
-   "top": 2.76,
-   "y0": 2.31,
-   "detour": 12.8,
-   "district": "Chapelgate"
-  },
-  {
-   "x": -23,
-   "z": -58.52,
-   "L": 2,
-   "T": 0.36,
-   "ang": 0,
-   "top": 2.79,
-   "y0": 2.4,
-   "detour": 16.8,
-   "district": "Chapelgate"
-  },
-  {
-   "x": -21,
-   "z": -58.52,
-   "L": 2,
-   "T": 0.36,
-   "ang": 0,
-   "top": 2.76,
-   "y0": 2.9,
-   "detour": 20.8,
-   "district": "Chapelgate"
-  },
-  {
-   "x": -19,
-   "z": -58.52,
-   "L": 2,
-   "T": 0.36,
-   "ang": 0,
-   "top": 2.73,
-   "y0": 3.41,
-   "detour": 24.8,
-   "district": "Chapelgate"
-  },
-  {
-   "x": -13,
-   "z": -56.78,
-   "L": 2,
-   "T": 0.06,
-   "ang": 0,
-   "top": 2.48,
-   "y0": 8.29,
-   "detour": 4.2,
-   "district": "Chapelgate"
-  },
-  {
-   "x": -5,
-   "z": -56.78,
-   "L": 2,
-   "T": 0.06,
-   "ang": 0,
-   "top": 1.3,
-   "y0": 8.35,
-   "detour": 4.8,
-   "district": "Chapelgate"
-  },
-  {
-   "x": -3,
-   "z": -56.78,
-   "L": 2,
-   "T": 0.06,
-   "ang": 0,
-   "top": 1.66,
-   "y0": 8.18,
-   "detour": 8.8,
-   "district": "Chapelgate"
-  },
-  {
-   "x": -1,
-   "z": -56.78,
-   "L": 2,
-   "T": 0.06,
-   "ang": 0,
-   "top": 2.69,
-   "y0": 7.9,
-   "detour": 6.2,
-   "district": "Chapelgate"
   },
   {
    "x": -10.22,
@@ -1336,8 +1358,8 @@
    "L": 5.2,
    "T": 0.2,
    "ang": 0,
-   "top": 2.65,
-   "y0": 3.45,
+   "top": 2.66,
+   "y0": 3.43,
    "detour": 7.8,
    "district": "Chapelgate"
   },
@@ -1347,75 +1369,53 @@
    "L": 5.2,
    "T": 0.2,
    "ang": 0,
-   "top": 4.44,
-   "y0": 3.45,
+   "top": 4.46,
+   "y0": 3.43,
    "detour": 7.8,
    "district": "Chapelgate"
   },
   {
    "x": 72.52,
-   "z": -45,
+   "z": -9,
    "L": 2,
    "T": 0.36,
    "ang": 1.5707963267948966,
-   "top": 2.7,
-   "y0": -0.24,
-   "detour": 4.8,
+   "top": 2.98,
+   "y0": -0.91,
+   "detour": 24.2,
    "district": "Outside (east of the river)"
   },
   {
    "x": 72.52,
-   "z": -43,
+   "z": -7,
    "L": 2,
    "T": 0.36,
    "ang": 1.5707963267948966,
-   "top": 2.7,
-   "y0": -0.27,
-   "detour": 8.8,
+   "top": 2.64,
+   "y0": -1.03,
+   "detour": 20.2,
    "district": "Outside (east of the river)"
   },
   {
    "x": 72.52,
-   "z": -41,
+   "z": -5,
    "L": 2,
    "T": 0.36,
    "ang": 1.5707963267948966,
-   "top": 2.68,
-   "y0": -0.32,
-   "detour": 12.8,
+   "top": 2.92,
+   "y0": -1.14,
+   "detour": 16.2,
    "district": "Outside (east of the river)"
   },
   {
    "x": 72.52,
-   "z": -39,
+   "z": -3,
    "L": 2,
    "T": 0.36,
    "ang": 1.5707963267948966,
-   "top": 2.67,
-   "y0": -0.36,
-   "detour": 16.8,
-   "district": "Outside (east of the river)"
-  },
-  {
-   "x": 72.52,
-   "z": -37,
-   "L": 2,
-   "T": 0.36,
-   "ang": 1.5707963267948966,
-   "top": 2.66,
-   "y0": -0.38,
-   "detour": 20.8,
-   "district": "Outside (east of the river)"
-  },
-  {
-   "x": 72.52,
-   "z": -35,
-   "L": 2,
-   "T": 0.36,
-   "ang": 1.5707963267948966,
-   "top": 2.66,
-   "y0": -0.4,
-   "detour": 24.8,
+   "top": 2.95,
+   "y0": -1.19,
+   "detour": 12.2,
    "district": "Outside (east of the river)"
   },
   {
@@ -1430,6 +1430,28 @@
    "district": "Outside (east of the river)"
   },
   {
+   "x": 72.52,
+   "z": 1,
+   "L": 2,
+   "T": 0.36,
+   "ang": 1.5707963267948966,
+   "top": 2.73,
+   "y0": 2.79,
+   "detour": 4.2,
+   "district": "Outside (east of the river)"
+  },
+  {
+   "x": 72.52,
+   "z": 5,
+   "L": 2,
+   "T": 0.36,
+   "ang": 1.5707963267948966,
+   "top": 2.96,
+   "y0": -1.3,
+   "detour": 5.8,
+   "district": "Outside (east of the river)"
+  },
+  {
    "x": 70.78,
    "z": 5,
    "L": 2,
@@ -1441,6 +1463,17 @@
    "district": "Outside (east of the river)"
   },
   {
+   "x": 72.52,
+   "z": 7,
+   "L": 2,
+   "T": 0.36,
+   "ang": 1.5707963267948966,
+   "top": 2.93,
+   "y0": -1.36,
+   "detour": 9.8,
+   "district": "Outside (east of the river)"
+  },
+  {
    "x": 70.78,
    "z": 7,
    "L": 2,
@@ -1449,6 +1482,17 @@
    "top": 1.56,
    "y0": 2.56,
    "detour": 8.5,
+   "district": "Outside (east of the river)"
+  },
+  {
+   "x": 72.52,
+   "z": 9,
+   "L": 2,
+   "T": 0.36,
+   "ang": 1.5707963267948966,
+   "top": 2.93,
+   "y0": -1.42,
+   "detour": 13.8,
    "district": "Outside (east of the river)"
   },
   {
@@ -1464,68 +1508,24 @@
   },
   {
    "x": 72.52,
+   "z": 11,
+   "L": 2,
+   "T": 0.36,
+   "ang": 1.5707963267948966,
+   "top": 2.94,
+   "y0": -1.42,
+   "detour": 17.8,
+   "district": "Outside (east of the river)"
+  },
+  {
+   "x": 72.52,
    "z": 13,
    "L": 2,
    "T": 0.36,
    "ang": 1.5707963267948966,
-   "top": 2.71,
+   "top": 3.57,
    "y0": -1.42,
-   "detour": 24.2,
-   "district": "Outside (east of the river)"
-  },
-  {
-   "x": 72.52,
-   "z": 15,
-   "L": 2,
-   "T": 0.36,
-   "ang": 1.5707963267948966,
-   "top": 2.73,
-   "y0": -1.39,
-   "detour": 20.2,
-   "district": "Outside (east of the river)"
-  },
-  {
-   "x": 72.52,
-   "z": 17,
-   "L": 2,
-   "T": 0.36,
-   "ang": 1.5707963267948966,
-   "top": 2.73,
-   "y0": -1.34,
-   "detour": 16.2,
-   "district": "Outside (east of the river)"
-  },
-  {
-   "x": 72.52,
-   "z": 19,
-   "L": 2,
-   "T": 0.36,
-   "ang": 1.5707963267948966,
-   "top": 2.71,
-   "y0": -1.22,
-   "detour": 12.2,
-   "district": "Outside (east of the river)"
-  },
-  {
-   "x": 72.52,
-   "z": 21,
-   "L": 2,
-   "T": 0.36,
-   "ang": 1.5707963267948966,
-   "top": 2.69,
-   "y0": -1.1,
-   "detour": 8.2,
-   "district": "Outside (east of the river)"
-  },
-  {
-   "x": 72.52,
-   "z": 23,
-   "L": 2,
-   "T": 0.36,
-   "ang": 1.5707963267948966,
-   "top": 2.69,
-   "y0": -1.07,
-   "detour": 4.2,
+   "detour": 21.8,
    "district": "Outside (east of the river)"
   },
   {
@@ -1567,7 +1567,7 @@
    "L": 3.2,
    "T": 0.2,
    "ang": 0,
-   "top": 0.97,
+   "top": 0.96,
    "y0": 4.53,
    "detour": 6.2,
    "district": "Market Place"
@@ -1595,289 +1595,190 @@
    "district": "Market Place"
   },
   {
-   "x": 3.35,
-   "z": 16.32,
-   "L": 2.6,
-   "T": 0.1,
-   "ang": 0,
-   "top": 1.0,
-   "y0": -0.16,
-   "detour": 5.0,
-   "district": "Market Place"
-  },
-  {
-   "x": 1.9,
-   "z": 14.95,
-   "L": 2.46,
+   "x": 12.8,
+   "z": 15.55,
+   "L": 4.04,
    "T": 0.1,
    "ang": 1.5707963267948966,
    "top": 1.0,
-   "y0": -0.17,
-   "detour": 10.5,
+   "y0": -0.21,
+   "detour": 6.0,
    "district": "Market Place"
   },
   {
-   "x": 7.1,
-   "z": 14.95,
-   "L": 2.46,
-   "T": 0.1,
-   "ang": 1.5707963267948966,
-   "top": 1.0,
-   "y0": -0.16,
-   "detour": 5.0,
-   "district": "Market Place"
-  },
-  {
-   "x": 12.55,
-   "z": 14.75,
-   "L": 2.44,
-   "T": 0.1,
-   "ang": 1.5707963267948966,
-   "top": 1.0,
-   "y0": -0.17,
-   "detour": 8.5,
-   "district": "Market Place"
-  },
-  {
-   "x": 14.57,
-   "z": 17.32,
-   "L": 3.74,
+   "x": -50.06,
+   "z": -19.32,
+   "L": 3.78,
    "T": 0.16,
    "ang": 0,
-   "top": 0.89,
-   "y0": -0.76,
-   "detour": 6.2,
-   "district": "Market Place"
-  },
-  {
-   "x": 16.85,
-   "z": -28.77,
-   "L": 6.7,
-   "T": 0.3,
-   "ang": 0,
-   "top": 0.68,
-   "y0": 0.32,
-   "detour": 9.2,
-   "district": "Market Place"
-  },
-  {
-   "x": 20.35,
-   "z": -25.19,
-   "L": 6.86,
-   "T": 0.3,
-   "ang": 1.5707963267948966,
-   "top": 0.68,
-   "y0": -0.13,
-   "detour": 23.0,
-   "district": "Market Place"
-  },
-  {
-   "x": -43.81,
-   "z": -20.52,
-   "L": 4.48,
-   "T": 0.1,
-   "ang": 0,
-   "top": 1.01,
-   "y0": 0.07,
+   "top": 1.47,
+   "y0": -0.09,
    "detour": 6.8,
    "district": "Westgate"
   },
   {
-   "x": -39.7,
-   "z": -16.95,
+   "x": -52.1,
+   "z": -15.74,
    "L": 6.86,
+   "T": 0.16,
+   "ang": 1.5707963267948966,
+   "top": 1.42,
+   "y0": -0.1,
+   "detour": 17.5,
+   "district": "Westgate"
+  },
+  {
+   "x": -46.2,
+   "z": -15.74,
+   "L": 6.86,
+   "T": 0.16,
+   "ang": 1.5707963267948966,
+   "top": 1.48,
+   "y0": -0.2,
+   "detour": 12.2,
+   "district": "Westgate"
+  },
+  {
+   "x": -32.2,
+   "z": -15.94,
+   "L": 6.86,
+   "T": 0.3,
+   "ang": 1.5707963267948966,
+   "top": 0.74,
+   "y0": -0.3,
+   "detour": 9.8,
+   "district": "Westgate"
+  },
+  {
+   "x": -29.33,
+   "z": -16.28,
+   "L": 3.2,
+   "T": 0.1,
+   "ang": 0,
+   "top": 1.0,
+   "y0": 0.01,
+   "detour": 5.8,
+   "district": "Market Place"
+  },
+  {
+   "x": -27.72,
+   "z": -15.08,
+   "L": 2.4,
    "T": 0.1,
    "ang": 1.5707963267948966,
    "top": 0.99,
-   "y0": -0.07,
-   "detour": 10.5,
-   "district": "Westgate"
-  },
-  {
-   "x": -30.48,
-   "z": -14.22,
-   "L": 3.14,
-   "T": 0.16,
-   "ang": 0,
-   "top": 1.48,
-   "y0": -0.07,
-   "detour": 5.8,
-   "district": "Westgate"
-  },
-  {
-   "x": 30.11,
-   "z": -17.38,
-   "L": 2.52,
-   "T": 0.3,
-   "ang": 0,
-   "top": 0.91,
-   "y0": -0.15,
-   "detour": 5.5,
-   "district": "Riverside"
-  },
-  {
-   "x": 34.08,
-   "z": -17.38,
-   "L": 3.04,
-   "T": 0.3,
-   "ang": 0,
-   "top": 0.9,
-   "y0": -0.13,
-   "detour": 6.0,
-   "district": "Riverside"
+   "y0": -0.01,
+   "detour": 5.2,
+   "district": "Market Place"
   },
   {
    "x": 28.7,
    "z": -13.8,
    "L": 6.86,
-   "T": 0.3,
+   "T": 0.1,
    "ang": 1.5707963267948966,
-   "top": 0.78,
-   "y0": -0.25,
-   "detour": 14.2,
+   "top": 1.0,
+   "y0": -0.06,
+   "detour": 9.2,
    "district": "Riverside"
   },
   {
    "x": 35.75,
    "z": -13.8,
    "L": 6.86,
-   "T": 0.3,
-   "ang": 1.5707963267948966,
-   "top": 0.77,
-   "y0": -0.25,
-   "detour": 19.2,
-   "district": "Riverside"
-  },
-  {
-   "x": 37.07,
-   "z": -15.48,
-   "L": 2.34,
-   "T": 0.3,
-   "ang": 0,
-   "top": 0.87,
-   "y0": -0.14,
-   "detour": 4.8,
-   "district": "Riverside"
-  },
-  {
-   "x": 42.32,
-   "z": -15.11,
-   "L": 4.24,
    "T": 0.1,
-   "ang": 0,
-   "top": 1.01,
-   "y0": 0.03,
-   "detour": 6.5,
+   "ang": 1.5707963267948966,
+   "top": 1.0,
+   "y0": -0.05,
+   "detour": 12.2,
+   "district": "Riverside"
+  },
+  {
+   "x": 40.05,
+   "z": -11.91,
+   "L": 6.86,
+   "T": 0.1,
+   "ang": 1.5707963267948966,
+   "top": 1.0,
+   "y0": -0.1,
+   "detour": 10.5,
    "district": "Riverside"
   },
   {
    "x": 46.35,
    "z": -11.53,
    "L": 6.86,
+   "T": 0.16,
+   "ang": 1.5707963267948966,
+   "top": 1.5,
+   "y0": -0.11,
+   "detour": 9.0,
+   "district": "Riverside"
+  },
+  {
+   "x": 45.95,
+   "z": 14.79,
+   "L": 6.86,
    "T": 0.1,
    "ang": 1.5707963267948966,
-   "top": 1.0,
-   "y0": -0.06,
-   "detour": 10.5,
+   "top": 1.01,
+   "y0": -0.23,
+   "detour": 9.2,
    "district": "Riverside"
   },
   {
    "x": 44.05,
-   "z": 13.14,
+   "z": 14.02,
    "L": 3.2,
    "T": 0.1,
    "ang": 0,
-   "top": 0.99,
-   "y0": -0.24,
-   "detour": 9.5,
+   "top": 1.0,
+   "y0": -0.29,
+   "detour": 5.8,
    "district": "Riverside"
   },
   {
    "x": 45.65,
-   "z": 14.34,
+   "z": 15.22,
    "L": 2.4,
    "T": 0.1,
    "ang": 1.5707963267948966,
-   "top": 1.0,
-   "y0": -0.27,
-   "detour": 4.5,
+   "top": 1.01,
+   "y0": -0.26,
+   "detour": 8.5,
    "district": "Riverside"
   },
   {
    "x": -28.49,
-   "z": -29.92,
-   "L": 2.92,
+   "z": -26.67,
+   "L": 2.58,
    "T": 0.3,
    "ang": 1.5707963267948966,
-   "top": 0.82,
-   "y0": 0.52,
+   "top": 0.73,
+   "y0": 0.16,
    "detour": 5.2,
    "district": "Market Place"
   },
   {
-   "x": -36.23,
-   "z": -42.37,
-   "L": 2.58,
-   "T": 0.3,
-   "ang": 1.5707963267948966,
-   "top": 0.72,
-   "y0": 0.62,
-   "detour": 5.2,
-   "district": "Chapelgate"
-  },
-  {
    "x": -25.42,
-   "z": -50.35,
-   "L": 2.16,
+   "z": -50.17,
+   "L": 2.52,
    "T": 0.3,
    "ang": 1.5707963267948966,
-   "top": 0.76,
-   "y0": 2.84,
-   "detour": 4.8,
-   "district": "Chapelgate"
-  },
-  {
-   "x": 23.86,
-   "z": -30.58,
-   "L": 5.12,
-   "T": 0.1,
-   "ang": 0,
-   "top": 0.99,
-   "y0": 0.19,
-   "detour": 7.5,
-   "district": "Chapelgate"
-  },
-  {
-   "x": 29.15,
-   "z": -34.15,
-   "L": 6.84,
-   "T": 0.1,
-   "ang": 1.5707963267948966,
-   "top": 1.02,
-   "y0": 0.31,
-   "detour": 9.0,
-   "district": "Chapelgate"
-  },
-  {
-   "x": 30.49,
-   "z": -30.98,
-   "L": 2.38,
-   "T": 0.16,
-   "ang": 0,
-   "top": 1.07,
-   "y0": 0.02,
+   "top": 0.63,
+   "y0": 2.7,
    "detour": 5.2,
    "district": "Chapelgate"
   },
   {
-   "x": 34.44,
-   "z": -30.98,
-   "L": 3.12,
+   "x": 31.1,
+   "z": -34.55,
+   "L": 6.84,
    "T": 0.16,
-   "ang": 0,
-   "top": 1.08,
-   "y0": -0.02,
-   "detour": 5.8,
+   "ang": 1.5707963267948966,
+   "top": 1.42,
+   "y0": 0.03,
+   "detour": 13.5,
    "district": "Chapelgate"
   },
   {
@@ -1886,86 +1787,86 @@
    "L": 6.84,
    "T": 0.16,
    "ang": 1.5707963267948966,
-   "top": 1.01,
+   "top": 1.41,
    "y0": -0.02,
-   "detour": 16.0,
+   "detour": 13.0,
    "district": "Chapelgate"
   },
   {
-   "x": -45.87,
-   "z": 11.62,
-   "L": 4.56,
-   "T": 0.16,
-   "ang": 0,
-   "top": 1.45,
-   "y0": -0.4,
-   "detour": 7.0,
-   "district": "Westgate"
-  },
-  {
-   "x": -48.3,
-   "z": 8.05,
+   "x": -71.3,
+   "z": -17.14,
    "L": 6.86,
    "T": 0.16,
    "ang": 1.5707963267948966,
+   "top": 1.05,
+   "y0": 0.4,
+   "detour": 10.2,
+   "district": "Outside"
+  },
+  {
+   "x": -72.1,
+   "z": 11.02,
+   "L": 3.1,
+   "T": 0.16,
+   "ang": 0,
    "top": 1.47,
-   "y0": -0.35,
-   "detour": 18.2,
-   "district": "Westgate"
+   "y0": 0.2,
+   "detour": 5.8,
+   "district": "Outside"
   },
   {
-   "x": -41.35,
-   "z": 8.05,
+   "x": -67.55,
+   "z": 7.44,
    "L": 6.86,
    "T": 0.16,
    "ang": 1.5707963267948966,
-   "top": 1.42,
-   "y0": -0.46,
-   "detour": 15.0,
-   "district": "Westgate"
+   "top": 1.39,
+   "y0": 0.09,
+   "detour": 9.8,
+   "district": "Outside"
   },
   {
-   "x": -40.09,
-   "z": 9.82,
-   "L": 2.22,
-   "T": 0.16,
-   "ang": 0,
-   "top": 1.49,
-   "y0": -0.46,
-   "detour": 4.8,
-   "district": "Westgate"
-  },
-  {
-   "x": -36.8,
+   "x": -41.8,
    "z": 6.85,
    "L": 5.64,
    "T": 0.16,
    "ang": 1.5707963267948966,
-   "top": 1.42,
-   "y0": -0.47,
-   "detour": 15.8,
+   "top": 1.44,
+   "y0": -0.44,
+   "detour": 8.2,
    "district": "Westgate"
   },
   {
-   "x": -35.12,
-   "z": 10.22,
-   "L": 3.06,
+   "x": -31.2,
+   "z": 7.44,
+   "L": 5.24,
    "T": 0.16,
-   "ang": 0,
-   "top": 1.06,
-   "y0": -0.5,
-   "detour": 5.8,
+   "ang": 1.5707963267948966,
+   "top": 0.95,
+   "y0": -0.34,
+   "detour": 11.8,
    "district": "Westgate"
   },
   {
-   "x": -12.65,
+   "x": -25.35,
+   "z": 8.34,
+   "L": 3.64,
+   "T": 0.1,
+   "ang": 1.5707963267948966,
+   "top": 1.01,
+   "y0": -0.1,
+   "detour": 6.0,
+   "district": "Market Place"
+  },
+  {
+   "x": -12.45,
    "z": -67.5,
-   "L": 4.5,
+   "L": 4.1,
    "T": 0.54,
    "ang": 0,
    "top": 1.3,
    "y0": 6.25,
-   "detour": 7.8,
+   "detour": 8.2,
    "district": "Chapelgate"
   },
   {
@@ -1980,48 +1881,323 @@
    "district": "Chapelgate"
   },
   {
-   "x": -23,
-   "z": -75.12,
-   "L": 15.24,
+   "x": -12.05,
+   "z": -62.22,
+   "L": 2.74,
+   "T": 0.6,
+   "ang": -2.98,
+   "top": 1.15,
+   "y0": 6.3,
+   "detour": 6.0,
+   "district": "Chapelgate"
+  },
+  {
+   "x": -86.5,
+   "z": -24.14,
+   "L": 2.6,
+   "T": 0.2,
+   "ang": -3.13,
+   "top": 1.0,
+   "y0": 0.75,
+   "detour": 4.8,
+   "district": "Outside"
+  },
+  {
+   "x": -89.5,
+   "z": -23.92,
+   "L": 2.64,
+   "T": 0.2,
+   "ang": 2.99,
+   "top": 1.0,
+   "y0": 0.86,
+   "detour": 11.0,
+   "district": "Outside"
+  },
+  {
+   "x": -92.5,
+   "z": -23.32,
+   "L": 2.7,
+   "T": 0.2,
+   "ang": 2.9,
+   "top": 1.0,
+   "y0": 0.9,
+   "detour": 18.0,
+   "district": "Outside"
+  },
+  {
+   "x": -95.5,
+   "z": -22.57,
+   "L": 2.7,
+   "T": 0.2,
+   "ang": 2.9,
+   "top": 0.99,
+   "y0": 0.88,
+   "detour": 18.0,
+   "district": "Outside"
+  },
+  {
+   "x": -98.5,
+   "z": -21.98,
+   "L": 2.64,
+   "T": 0.2,
+   "ang": 3,
+   "top": 1.0,
+   "y0": 0.9,
+   "detour": 11.0,
+   "district": "Outside"
+  },
+  {
+   "x": -101.5,
+   "z": -21.79,
+   "L": 2.6,
+   "T": 0.2,
+   "ang": -3.12,
+   "top": 1.0,
+   "y0": 0.89,
+   "detour": 5.0,
+   "district": "Outside"
+  },
+  {
+   "x": -82.4,
+   "z": 1.56,
+   "L": 7.46,
+   "T": 0.2,
+   "ang": 1.67,
+   "top": 1.02,
+   "y0": 0.79,
+   "detour": 10.2,
+   "district": "Outside"
+  },
+  {
+   "x": -89.5,
+   "z": 6.59,
+   "L": 2.66,
+   "T": 0.2,
+   "ang": 2.96,
+   "top": 0.99,
+   "y0": 0.56,
+   "detour": 5.2,
+   "district": "Outside"
+  },
+  {
+   "x": -92.5,
+   "z": 7.04,
+   "L": 2.62,
+   "T": 0.2,
+   "ang": 3.02,
+   "top": 1.0,
+   "y0": 0.61,
+   "detour": 12.0,
+   "district": "Outside"
+  },
+  {
+   "x": -95.5,
+   "z": 7.22,
+   "L": 2.6,
+   "T": 0.2,
+   "ang": -3.14,
+   "top": 0.99,
+   "y0": 0.61,
+   "detour": 18.5,
+   "district": "Outside"
+  },
+  {
+   "x": -98.5,
+   "z": 6.98,
+   "L": 2.64,
+   "T": 0.2,
+   "ang": -2.99,
+   "top": 0.99,
+   "y0": 0.63,
+   "detour": 13.0,
+   "district": "Outside"
+  },
+  {
+   "x": -101.5,
+   "z": 6.36,
+   "L": 2.7,
+   "T": 0.2,
+   "ang": -2.88,
+   "top": 1.0,
+   "y0": 0.67,
+   "detour": 5.8,
+   "district": "Outside"
+  },
+  {
+   "x": -62,
+   "z": -9.86,
+   "L": 3.42,
+   "T": 0.4,
+   "ang": -1.57,
+   "top": 2.4,
+   "y0": 0.14,
+   "detour": 6.2,
+   "district": "Westgate"
+  },
+  {
+   "x": -62,
+   "z": -13.29,
+   "L": 3.42,
+   "T": 0.4,
+   "ang": -1.57,
+   "top": 2.27,
+   "y0": -0.05,
+   "detour": 13.2,
+   "district": "Westgate"
+  },
+  {
+   "x": -33.25,
+   "z": 75.5,
+   "L": 3.2,
+   "T": 0.4,
+   "ang": 0.67,
+   "top": 2.27,
+   "y0": -1.38,
+   "detour": 7.0,
+   "district": "Wharfside"
+  },
+  {
+   "x": -51.02,
+   "z": -24.19,
+   "L": 8.9,
    "T": 0.54,
-   "ang": 1.5707963267948966,
-   "top": 0.98,
-   "y0": 4.86,
-   "detour": 18.2,
+   "ang": 0.05,
+   "top": 0.95,
+   "y0": -0.08,
+   "detour": 14.2,
+   "district": "Westgate"
+  },
+  {
+   "x": -39.5,
+   "z": -28.7,
+   "L": 9.5,
+   "T": 0.54,
+   "ang": 3.14,
+   "top": 0.8,
+   "y0": 0.02,
+   "detour": 12.2,
+   "district": "Westgate"
+  },
+  {
+   "x": 28.2,
+   "z": -40.4,
+   "L": 7.9,
+   "T": 0.58,
+   "ang": 1.57,
+   "top": 0.89,
+   "y0": 0.13,
+   "detour": 11.0,
    "district": "Chapelgate"
   },
   {
-   "x": -7.2,
-   "z": -64.7,
-   "L": 2.54,
-   "T": 0.6,
-   "ang": -2.69,
-   "top": 1.15,
-   "y0": 6.3,
-   "detour": 6.2,
+   "x": 20.2,
+   "z": -40.4,
+   "L": 7.9,
+   "T": 0.58,
+   "ang": -1.57,
+   "top": 0.78,
+   "y0": 0.64,
+   "detour": 11.0,
    "district": "Chapelgate"
   },
   {
-   "x": -11.64,
-   "z": -63.49,
-   "L": 2.64,
-   "T": 0.6,
-   "ang": -2.7,
-   "top": 1.15,
-   "y0": 6.3,
-   "detour": 6.2,
-   "district": "Chapelgate"
+   "x": -51.97,
+   "z": 39,
+   "L": 8.7,
+   "T": 0.54,
+   "ang": 3.14,
+   "top": 0.96,
+   "y0": -0.51,
+   "detour": 11.8,
+   "district": "Wharfside"
   },
   {
-   "x": -10.36,
-   "z": -66.21,
-   "L": 2.64,
+   "x": 26.8,
+   "z": 30.8,
+   "L": 2.94,
    "T": 0.6,
-   "ang": -2.7,
-   "top": 1.15,
-   "y0": 6.3,
-   "detour": 6.2,
-   "district": "Chapelgate"
+   "ang": 3.14,
+   "top": 0.93,
+   "y0": -1.1,
+   "detour": 5.5,
+   "district": "Riverside"
+  },
+  {
+   "x": 25.08,
+   "z": 26.6,
+   "L": 7.9,
+   "T": 0.56,
+   "ang": -1.57,
+   "top": 0.84,
+   "y0": -1.1,
+   "detour": 11.0,
+   "district": "Riverside"
+  },
+  {
+   "x": 28.85,
+   "z": 38,
+   "L": 8.7,
+   "T": 0.54,
+   "ang": 3.14,
+   "top": 0.9,
+   "y0": -1.25,
+   "detour": 11.8,
+   "district": "Wharfside"
+  },
+  {
+   "x": 37.78,
+   "z": 37.5,
+   "L": 2.36,
+   "T": 0.58,
+   "ang": 3.14,
+   "top": 0.93,
+   "y0": -0.97,
+   "detour": 5.2,
+   "district": "Wharfside"
+  },
+  {
+   "x": 2.33,
+   "z": 6.5,
+   "L": 2.36,
+   "T": 0.58,
+   "ang": 0,
+   "top": 0.97,
+   "y0": -0.38,
+   "detour": 5.2,
+   "district": "Market Place"
+  },
+  {
+   "x": 18,
+   "z": -23.15,
+   "L": 6.9,
+   "T": 0.58,
+   "ang": 0,
+   "top": 0.97,
+   "y0": -0.04,
+   "detour": 23.5,
+   "district": "Market Place"
+  },
+  {
+   "x": 21.7,
+   "z": -19.45,
+   "L": 6.9,
+   "T": 0.56,
+   "ang": 1.57,
+   "top": 0.95,
+   "y0": -0.14,
+   "detour": 9.5,
+   "district": "Market Place"
+  },
+  {
+   "x": 13.08,
+   "z": 56.38,
+   "L": 2.8,
+   "T": 0.9,
+   "ang": 0,
+   "top": 0.74,
+   "y0": -1.46,
+   "detour": 6.0,
+   "district": "Wharfside"
   },
   {
    "x": -120,
@@ -2121,61 +2297,51 @@
    "y0": 0,
    "detour": 5.5,
    "district": "Wharfside"
-  },
-  {
-   "x": -48,
-   "z": 122,
-   "L": 3.6,
-   "T": 0.8,
-   "ang": 1.5707963267948966,
-   "top": 3.0,
-   "y0": -1.36,
-   "detour": 6.2,
-   "district": "Outside"
   }
  ],
  "trees": {
   "Westgate|pine": 1,
-  "Chapelgate|pine": 11,
-  "Outside|pine": 80,
-  "Outside (east of the river)|pine": 32,
+  "Chapelgate|pine": 2,
+  "Outside|pine": 91,
+  "Outside (east of the river)|pine": 28,
   "Wharfside|pine": 3,
   "Market Place|birch": 1,
   "Riverside|birch": 2,
-  "Wharfside|birch": 3,
+  "Wharfside|birch": 12,
   "Westgate|birch": 1,
-  "Outside (east of the river)|birch": 28,
-  "Outside|birch": 37,
-  "Chapelgate|birch": 3,
+  "Outside (east of the river)|birch": 25,
+  "Outside|birch": 34,
+  "Chapelgate|birch": 4,
   "Upper Ward|birch": 1,
-  "Market Place|oak": 1,
-  "Chapelgate|oak": 1,
-  "Outside (east of the river)|oak": 1
+  "Chapelgate|oak": 2,
+  "Outside (east of the river)|oak": 1,
+  "Wharfside|oak": 1,
+  "Westgate|oak": 1,
+  "Riverside|oak": 2,
+  "Market Place|oak": 2
  },
  "green": {
-  "Market Place|stump or dead trunk": 2,
-  "Outside (east of the river)|stump or dead trunk": 3,
-  "Riverside|stump or dead trunk": 4,
-  "Chapelgate|stump or dead trunk": 8,
-  "Wharfside|stump or dead trunk": 6,
+  "Market Place|stump or dead trunk": 3,
+  "Outside (east of the river)|stump or dead trunk": 2,
+  "Riverside|stump or dead trunk": 6,
+  "Westgate|stump or dead trunk": 2,
+  "Chapelgate|stump or dead trunk": 3,
   "Upper Ward|stump or dead trunk": 1,
-  "Westgate|stump or dead trunk": 3,
-  "Upper Ward|flower pot": 12,
-  "Market Place|flower pot": 30,
-  "Westgate|flower pot": 53,
-  "Riverside|flower pot": 40,
-  "Chapelgate|flower pot": 88,
-  "Outside|flower pot": 7,
-  "Wharfside|flower pot": 99,
-  "Outside (east of the river)|flower pot": 16,
-  "Market Place|vine on a wall": 29,
-  "Riverside|vine on a wall": 20,
-  "Upper Ward|vine on a wall": 3,
-  "Westgate|vine on a wall": 57,
-  "Chapelgate|vine on a wall": 78,
-  "Outside (east of the river)|vine on a wall": 20,
-  "Outside|vine on a wall": 1,
-  "Wharfside|vine on a wall": 116,
+  "Wharfside|stump or dead trunk": 1,
+  "Westgate|flower pot": 13,
+  "Riverside|flower pot": 5,
+  "Chapelgate|flower pot": 16,
+  "Market Place|flower pot": 6,
+  "Wharfside|flower pot": 10,
+  "Outside|flower pot": 3,
+  "Market Place|vine on a wall": 10,
+  "Riverside|vine on a wall": 4,
+  "Upper Ward|vine on a wall": 1,
+  "Westgate|vine on a wall": 21,
+  "Chapelgate|vine on a wall": 33,
+  "Outside (east of the river)|vine on a wall": 7,
+  "Outside|vine on a wall": 4,
+  "Wharfside|vine on a wall": 17,
   "Outside|stump or dead trunk": 4
  },
  "mismatch": [
@@ -2227,21 +2393,21 @@
    "id": "store",
    "name": "Quill\u2019s Sundries",
    "out": "8.4x6.6",
-   "inn": "14x12",
+   "inn": "10x8",
    "areaOut": 55,
-   "areaIn": 168,
-   "ratio": 3.0,
+   "areaIn": 80,
+   "ratio": 1.4,
    "stOut": 2,
    "stIn": 2,
    "cellar": true,
    "winOut": 4,
-   "winIn": 23,
+   "winIn": 8,
    "balconyOut": true,
    "hearthsIn": 1,
    "chimneysOut": 0,
    "doorsOut": 1,
-   "doorsInExt": 1,
-   "rooms": 6,
+   "doorsInExt": 2,
+   "rooms": 7,
    "trade": null,
    "family": null
   },
@@ -3084,11 +3250,11 @@
   {
    "id": "in.66",
    "name": "Saddler\u2019s House",
-   "out": "7x4.6",
+   "out": "8.04x4.6",
    "inn": "10x12.5",
-   "areaOut": 32,
+   "areaOut": 37,
    "areaIn": 125,
-   "ratio": 3.9,
+   "ratio": 3.4,
    "stOut": 1,
    "stIn": 2,
    "cellar": false,
@@ -3260,11 +3426,11 @@
   {
    "id": "in.93",
    "name": "Shepherd\u2019s House",
-   "out": "7x4.6",
+   "out": "8.04x4.6",
    "inn": "7x7",
-   "areaOut": 32,
+   "areaOut": 37,
    "areaIn": 49,
-   "ratio": 1.5,
+   "ratio": 1.3,
    "stOut": 1,
    "stIn": 1,
    "cellar": false,
@@ -3444,14 +3610,14 @@
    "Lark"
   ],
   "smithy": [
-   "Brandt Ironhand"
-  ],
-  "null": [
-   "Tobin",
-   "Brother Aldous"
+   "Brandt Ironhand",
+   "Tobin"
   ],
   "store": [
    "Marta Quill"
+  ],
+  "chapel": [
+   "Brother Aldous"
   ],
   "herbalist": [
    "Old Maren"
@@ -3460,8 +3626,7 @@
    "Osric Dunn"
   ],
   "farm": [
-   "Edda Fairweather",
-   "Bram"
+   "Edda Fairweather"
   ],
   "fisher": [
    "Finn Reedwater"
@@ -3476,156 +3641,134 @@
    "Pip",
    "Hilda Weaver"
   ],
-  "in.02": [
-   "Wat Cooper",
-   "Piers Cooper"
-  ],
-  "in.04": [
-   "Tilda Fenn",
-   "Jory Thatcher",
-   "Leofric Fletcher"
-  ],
-  "in.07": [
-   "Hob the Carter",
-   "Isolde Potter"
-  ],
-  "in.13": [
-   "Sorrel Vane"
-  ],
-  "in.21": [
-   "Piers Ashby",
-   "Wynne Dyer"
-  ],
-  "in.23": [
-   "Nell Marsh"
-  ],
-  "high.a": [
-   "Agnes Shepherd"
-  ],
-  "high.c": [
-   "Cecily Woodcutter",
-   "Rafe Brook"
-  ],
-  "in.08": [
-   "Rosamund Thatcher"
-  ],
-  "in.10": [
-   "Wat Baker"
-  ],
-  "in.111": [
-   "Alder Butcher",
-   "Wynne Bray"
-  ],
-  "in.113": [
-   "Wat Carpenter"
-  ],
-  "in.115": [
-   "Agnes Brewer",
-   "Ivo Fenn"
-  ],
-  "in.116": [
-   "Alder Glover",
-   "Isolde Fenn"
-  ],
-  "in.12": [
-   "Dunstan Holloway",
-   "Rosamund Holloway"
-  ],
-  "in.15": [
-   "Wat Grocer"
-  ],
-  "in.20": [
-   "Isolde Chandler",
-   "Piers Dunmore"
-  ],
-  "in.33": [
-   "Nell Merchant"
-  ],
-  "in.34": [
-   "Mabel Gale"
-  ],
-  "in.36": [
-   "Maud Mason",
-   "Rafe Ketch"
-  ],
-  "in.37": [
-   "Aldous Cutler"
-  ],
-  "in.38": [
-   "Jory Hollin"
-  ],
-  "in.40": [
-   "Bess Scribe",
-   "Alder Thatcher"
-  ],
-  "in.44": [
-   "Alder Cobbler"
-  ],
-  "in.45": [
-   "Ivo Tinker"
-  ],
-  "in.51": [
-   "Rosamund Basketmaker"
-  ],
-  "in.60": [
-   "Leofric Thatcher"
-  ],
-  "in.65": [
-   "Rafe Ropemaker"
-  ],
-  "in.66": [
-   "Maud Saddler",
-   "Cuthbert Lowe"
-  ],
   "in.67": [
-   "Jory Bray"
+   "Bram"
+  ],
+  "draper": [
+   "Anselm Lindqvist",
+   "Sabina Lindqvist"
   ],
   "in.70": [
-   "Cecily Tailor",
-   "Piers Lowe"
+   "Jocelyn Lindqvist"
+  ],
+  "in.116": [
+   "Petronel Vey"
+  ],
+  "in.10": [
+   "Godwin Hobb",
+   "Avice Hobb",
+   "Tilly Hobb"
+  ],
+  "in.12": [
+   "Idony Hobb"
+  ],
+  "in.33": [
+   "Gilbert Thorne",
+   "Elinor Thorne"
   ],
   "in.74": [
-   "Ivo Marsh",
-   "Tilda Marsh"
-  ],
-  "in.75": [
-   "Leofric Ashby"
-  ],
-  "in.77": [
-   "Alys Wheelwright",
-   "Rafe Gale"
-  ],
-  "in.82": [
-   "Gunnora Bray"
-  ],
-  "in.90": [
-   "Mabel Woodcutter"
-  ],
-  "in.93": [
-   "Gunnora Shepherd"
+   "Simon Thorne",
+   "Ned Thorne"
   ],
   "in.94": [
-   "Agnes Hollin",
-   "Ivo Hollin"
+   "Ysolt Pell",
+   "Davy Pell",
+   "Lambert Pell"
   ],
-  "shop.n2": [
-   "Tam Apothecary"
+  "in.93": [
+   "Warin Shaw"
   ],
-  "shop.n3": [
-   "Hob Cutler"
+  "in.75": [
+   "Ulric Ferrin",
+   "Beatrix Ferrin",
+   "Amice Ferrin"
   ],
-  "shop.n4": [
-   "Dunstan Grocer",
-   "Hawise Fenn"
+  "in.08": [
+   "Hugh Alder",
+   "Gillian Alder"
   ],
-  "shop.s0": [
-   "Mabel Baker"
+  "in.44": [
+   "Stephen Alder"
   ],
-  "shop.s1": [
-   "Aldous Bookseller"
+  "in.40": [
+   "Emmet Sele",
+   "Lettice Sele"
   ],
-  "shop.s2": [
-   "Maud Tinker"
+  "in.13": [
+   "Fulk Varrow",
+   "Giles Varrow"
+  ],
+  "in.66": [
+   "Tybalt Varrow",
+   "Winifred Varrow"
+  ],
+  "in.45": [
+   "Diggory Pike",
+   "Alison Pike"
+  ],
+  "in.37": [
+   "Roger Hask",
+   "Odo Hask"
+  ],
+  "in.77": [
+   "Miles Ashdown",
+   "Kat Ashdown"
+  ],
+  "in.82": [
+   "Tamsin Ashdown"
+  ],
+  "in.90": [
+   "Jasper Holt"
+  ],
+  "in.02": [
+   "Laurence Byrd",
+   "Felice Byrd",
+   "Joyce Byrd"
+  ],
+  "in.113": [
+   "Randal Byrd",
+   "Old Wenn"
+  ],
+  "in.20": [
+   "Barnaby Crane",
+   "Ursel Crane"
+  ],
+  "in.36": [
+   "Silas Garrow"
+  ],
+  "in.111": [
+   "Humphrey Slate",
+   "Hester Slate"
+  ],
+  "in.115": [
+   "Goda Malkin",
+   "Bridget Malkin"
+  ],
+  "in.51": [
+   "Adda the Rushworker"
+  ],
+  "in.38": [
+   "Peter Marsh",
+   "Ellen Marsh",
+   "Will Marsh"
+  ],
+  "in.60": [
+   "Mercy Garrick"
+  ],
+  "in.34": [
+   "Alaric Mossop"
+  ],
+  "in.21": [
+   "Wilmot Arden",
+   "Tom Arden"
+  ],
+  "high.a": [
+   "Jordan Wold",
+   "Basilia Wold"
+  ],
+  "high.c": [
+   "Kester Wold",
+   "Rosalind Wold"
   ]
  }
 }

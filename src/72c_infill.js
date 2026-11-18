@@ -22,6 +22,18 @@ for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].s
     SITE[id].doorPos = dp; HOUSES[id].doors[0].pos = dp;
     KIT_STYLE[id] = { ground: v.ground, up: v.up, timber: true, shingle: true, vines: i % 3, balcony: v.up && ww >= 6 && i % 2 ? 'front' : undefined };
   });
+
+  // [fx3] a wall of more than 12 m2 that faces a street, a lane or a yard has an opening: where the spec gives it none, a window at a hash-chosen place (the room behind follows the shell). A wall with a house within 1.6 m of it is a party wall and is left.
+  const inBox = (o, x, z) => { if (!o.w) return false; const l = worldToSite(o, x, z); return Math.abs(l[0]) < o.w / 2 + 0.05 && Math.abs(l[1]) < o.d / 2 + 0.05; };
+  for (const st of SITES) { const h = HOUSES[st.id]; if (!h || !st.w || st.id === 'tower' || st.id === 'barn' || st.id === 'mill') continue;
+    const up = (KIT_STYLE[st.id] && KIT_STYLE[st.id].up) || (h.up ? 1 : 0), eave = 3 * (up ? 2 : 1); h.windows = h.windows || [];
+    for (const wn of ['back', 'left', 'right']) {
+      const L = wn === 'back' ? st.w : st.d; if (L * eave <= 12 || h.windows.some(o => o.wall === wn) || (h.doors || []).some(o => o.wall === wn)) continue;
+      const nrm = WALLS[wn].n, off = wn === 'back' ? st.d / 2 : st.w / 2, probe = [0, 1].map(k => { const t = (k ? 0.3 : -0.3) * L, lx = wn === 'back' ? t : nrm[0] * (off + 1.6), lz = wn === 'back' ? off + 1.6 : t; return siteToWorld(st, lx, lz); });
+      if (probe.some(q => SITES.some(o => o !== st && inBox(o, q[0], q[1])))) continue;
+      const hh = idSeed(st.id + wn), pos = (((hh % 1000) / 1000) - 0.5) * Math.min(L - 2.4, L * 0.5); h.windows.push({ wall: wn, pos: +pos.toFixed(2), w: 0.9 });
+    }
+  }
 })();
 
 // [fx2] ── roof of every shell: covering, pitch, tone, sag and eaves, by district and by building (docs/TOWNPLAN.md section 3) ──
