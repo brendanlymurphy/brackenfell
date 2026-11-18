@@ -54,7 +54,7 @@ function wharfPaint(A, B, H) {
 // the yard behind each house: low fence on the back and the party lines; one trade of the poor
 function buildWharfPlots(bucket) {
   if (TEST && TEST.plots === 0) return;
-  let lowSkip = true; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; } WH_B = bucket;      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
+  let lowSkip = true; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
   const PL = wharfPlots(), R = rng(7733), gy = (x, z) => Terrain.y(x, z);
   const fence = (m, ax, az, bx, bz, h) => {
     const L = Math.hypot(bx - ax, bz - az); if (L < 0.3) return; const n = Math.max(1, Math.round(L / 1.5)); m.mat(MAT.TIMBER, [0.26, 0.21, 0.16], 0.5);
@@ -77,8 +77,7 @@ function buildWharfPlots(bucket) {
         wStrandNet(m, [p0[0], g0 + 1.97, p0[1]], [p1[0], g0 + 1.97, p1[1]], 1.05, R); }
       put(0.2, dp * 0.25, (x, z) => flat(m, x, z, 1.0, 0.6, [0.2, 0.19, 0.15], MAT.CLOTH, R() * 3));
     } else if (p.trade === 'boat') {
-      put(0, dp * 0.5, (x, z) => { const g = gy(x, z), ang = Math.atan2(p.uz, p.ux); wharfHull(m, x, z, g + 0.45, ang, 3.5, 0.72, 0.6, false); m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5);
-        for (const sg of [-1, 1]) { const q = at(sg * 0.9, dp * 0.5 - 0.0); m.beam([q[0], g, q[1] - 0.3], [q[0], g + 0.5, q[1] - 0.3], 0.06, 0.06); m.beam([q[0], g, q[1] + 0.3], [q[0], g + 0.5, q[1] + 0.3], 0.06, 0.06); }
+      put(0, dp * 0.5, (x, z) => { const g = gy(x, z), ang = Math.atan2(p.uz, p.ux); wharfBoatBegun(m, x, z, g, ang, 3.0);
         addBoxCollider(m, x - 1.5, z - 0.7, x + 1.5, z + 0.7, g, g + 1.0); });
     } else if (p.trade === 'barrels') {
       for (let i = 0; i < 4; i++) put(-1.2 + (i % 2) * 0.8, dp * 0.35 + ((i / 2) | 0) * 0.8, (x, z) => { const g = gy(x, z); m.mat(MAT.PLANKS, [0.3, 0.23, 0.15], 0.5); m.cyl(x, g, z, 0.32, 0.36, 0.8, 6, 2); m.mat(MAT.METAL, [0.18, 0.18, 0.18], 0.5); m.cyl(x, g + 0.15, z, 0.365, 0.365, 0.04, 6, 0); m.cyl(x, g + 0.6, z, 0.355, 0.355, 0.04, 6, 0); ; });
@@ -101,7 +100,7 @@ function buildWharfPlots(bucket) {
 // the open boat shed on the wharf yard: four posts, a lean thatch roof, a hull on trestles under it, ropes and an oar rack; it faces the yard
 function buildWharfYard(bucket) {
   if (TEST && (TEST.wharf === 0 || TEST.plots === 0) || typeof WHARF === 'undefined' || !WHARF.houses.length) return;
-  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; } WH_B = bucket;      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
+  { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }      // [fx3] on Low the small dressing is built into a scratch mesh that is never drawn (colliders stay, so Low and Medium play the same)      // small dressing lives in cells of its own with a draw distance
   const gy = (x, z) => Terrain.y(x, z), cx = -2.6, cz = 77.2, m = bucket(cx, cz), R = rng(3131), g = gy(cx, cz), W2 = 2.4, D2 = 1.9;
   m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5);
   for (const [a, b, hh] of [[-W2, -D2, 2.8], [W2, -D2, 2.8], [-W2, D2, 2.1], [W2, D2, 2.1]]) { m.beam([cx + a, g - 0.1, cz + b], [cx + a, g + hh, cz + b], 0.12, 0.12); addCircleCollider(m, cx + a, cz + b, 0.14, g, g + hh); }
@@ -109,8 +108,7 @@ function buildWharfYard(bucket) {
   { const T = [[cx - W2 - 0.4, g + 2.95, cz - D2 - 0.4], [cx + W2 + 0.4, g + 2.95, cz - D2 - 0.4], [cx + W2 + 0.4, g + 2.2, cz + D2 + 0.5], [cx - W2 - 0.4, g + 2.2, cz + D2 + 0.5]], Bm = T.map(q => [q[0], q[1] - 0.17, q[2]]);      // a thatched roof with thickness: top, underside of boards, four closed edges
     m.mat(MAT.THATCH, [0.42, 0.36, 0.22], 0.5); m.quad2(T[0], T[1], T[2], T[3]); for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; m.quad2(T[i], T[j], Bm[j], Bm[i]); }
     m.mat(MAT.PLANKS, [0.3, 0.24, 0.17], 0.5); m.quad2(Bm[3], Bm[2], Bm[1], Bm[0]); }
-  wharfHull(m, cx, cz + 0.1, g + 0.58, 0, 4.1, 0.82, 0.62, false);
-  m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5); for (const a of [-1.2, 1.2]) { m.beam([cx + a, g, cz - 0.4], [cx + a, g + 0.5, cz - 0.4], 0.07, 0.07); m.beam([cx + a, g, cz + 0.6], [cx + a, g + 0.5, cz + 0.6], 0.07, 0.07); }
+  wharfBoatBegun(m, cx, cz + 0.1, g, 0, 3.4);
   addBoxCollider(m, cx - 2.2, cz - 0.8, cx + 2.2, cz + 1.0, g, g + 1.5);
   for (let i = 0; i < 5; i++) m.beam([cx - W2 + 0.2 + i * 0.12, g + 2.6, cz - D2 + 0.1], [cx - W2 + 0.2 + i * 0.12 - 0.1, g + 0.3, cz - D2 + 0.4], 0.03, 0.03);      // oars
 }
@@ -208,7 +206,7 @@ function wharfCloses() {
 function wharfBlocked(x, z, pad) { return !!(typeof WHARF !== 'undefined' && WHARF.houses.length && x > 12 - pad && x < 46 + pad && z > 34 - pad && z < 92 + pad); }
 function buildWharfCloses(bucket) {
   const C = wharfCloses(); if (!C.fences.length) return;
-  let lowSkip = false; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; } WH_B = bucket;      // small dressing lives in cells of its own with a draw distance
+  let lowSkip = false; { const raw = bucket; bucket = (x, z) => { const m = raw(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 46; m.lowDist = 110; return m; }; }      // small dressing lives in cells of its own with a draw distance
   const gy = (x, z) => Terrain.y(x, z), R = rng(4141), h = 1.0;
   const nearHouse = (x, z) => SITES.some(st => { if (!st.w || st.id === 'tower') return false; const l = worldToSite(st, x, z); return Math.abs(l[0]) < st.w / 2 + 1.3 && Math.abs(l[1]) < st.d / 2 + 1.3; });
   World.hedgeBushes = World.hedgeBushes || []; World.orchardTrees = World.orchardTrees || [];
@@ -234,10 +232,7 @@ function buildWharfCloses(bucket) {
     for (let k = 0; k < 8; k++) { const t = (k + 0.5) / 8, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; wFish(m, x, g0 + 1.42, z, x1 - x0, z1 - z0, 0.36 + (k % 3) * 0.04); } addCircleCollider(m, x0, z0, 0.12, g0, g0 + 1.5); addCircleCollider(m, x1, z1, 0.12, gy(x1, z1), gy(x1, z1) + 1.5); }
   for (const [x, z, ang, kind] of C.boats) { const m = bucket(x, z), g = gy(x, z), c = Math.cos(ang), sn = Math.sin(ang), L = kind === 'up0' ? 2.2 : 1.6, up = kind === 'trestle';
     const at = (a, b) => [x + a * c - b * sn, z + a * sn + b * c];
-    wharfHull(m, x, z, g + (up ? 0.95 : 0.16), ang, L * 2.05, 0.74, 0.62, up);
-    m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5);
-    if (up) for (const a of [-0.9, 0.9]) for (const sg of [-1, 1]) { const q = at(a, 0.45 * sg), r = at(a, 0); m.beam([q[0], gy(q[0], q[1]), q[1]], [r[0], g + 0.7, r[1]], 0.05, 0.05); }
-    else for (const a of [-0.8, 0.9]) { const q = at(a, -0.9), r = at(a, 0.9); m.beam([q[0], g + 0.06, q[1]], [r[0], g + 0.06, r[1]], 0.07, 0.07); }
+    wharfBoatBegun(m, x, z, g, ang, L * 1.8);
     for (const a of [-1, 0, 1]) addCircleCollider(m, ...at(a * 0.9, 0), 0.6, g, g + 0.9); }
   if (C.winch) { const [x, z] = C.winch, m = bucket(x, z), g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.cyl(x, g, z, 0.2, 0.17, 1.0, 8, 2); for (const a of [0, Math.PI / 2]) m.beam([x - Math.cos(a) * 0.9, g + 0.85, z - Math.sin(a) * 0.9], [x + Math.cos(a) * 0.9, g + 0.85, z + Math.sin(a) * 0.9], 0.04, 0.04); m.mat(MAT.CLOTH, [0.66, 0.56, 0.40], 0.5); m.cyl(x, g + 0.25, z, 0.26, 0.26, 0.35, 8, 1); addCircleCollider(m, x, z, 0.35, g, g + 1.0); }
   for (const [x, z] of C.barrels || []) { const m = bucket(x, z), g = gy(x, z); m.mat(MAT.PLANKS, [0.44, 0.34, 0.22], 0.5); m.cyl(x, g, z, 0.3, 0.34, 0.8, 6, 2); m.mat(MAT.METAL, [0.18, 0.18, 0.18], 0.5); m.cyl(x, g + 0.2, z, 0.35, 0.35, 0.05, 6, 1); if (!nearHouse(x, z)) addCircleCollider(m, x, z, 0.3, g, g + 0.8); }
@@ -307,34 +302,23 @@ function wTuft(m, x, y, z, h, n, col, R) { if (TEST && TEST.nonet) return;
   for (let k = 0; k < n; k++) { const a = k / n * 6.28 + rr(), t = 0.14 + rr() * 0.16; m.beam([x, y, z], [x + Math.cos(a) * t, y + h * (0.8 + rr() * 0.3), z + Math.sin(a) * t], 0.012, 0.006); }
 }
 // a clinker rowing boat built as a boat is: a keel, a stem and a sternpost, lapped strakes lofted over 15 stations, ribs and a gunwale, thwarts and a floor; `up` turns it keel to the sky
-let WH_B = null, WH_N = 0;
-function wharfHull(m, x, z, y0, ang, len, beam, depth, up) { if (TEST && TEST.nohull) return;
-  if (!WH_B || (TEST && TEST.hn)) return wharfHullAt(m, x, z, y0, ang, len, beam, depth, up, (TEST && TEST.hn) || 6, (TEST && TEST.hs) || 4);
-  const mk = (lo) => WH_B((5000 + WH_N + (lo ? 1 : 0)) * 44, 0), hi = mk(false), lo = mk(true); WH_N += 2;
-  hi.maxDist = 14; hi.lowDist = 14; lo.minDist = 17; lo.lowMin = 17; lo.maxDist = 46; lo.lowDist = 110;
-  wharfHullAt(hi, x, z, y0, ang, len, beam, depth, up, 12, 5); wharfHullAt(lo, x, z, y0, ang, len, beam, depth, up, 6, 4);
-}
-function wharfHullAt(m, x, z, y0, ang, len, beam, depth, up, N, S) {
-  const c = Math.cos(ang), sn = Math.sin(ang), sg = up ? -1 : 1, st = [];
-  const P = (a, b, h) => [x + a * c - b * sn, y0 + sg * h, z + a * sn + b * c];
-  for (let i = 0; i <= N; i++) { const t = i / N * 2 - 1, at = Math.abs(t), w = beam * Math.pow(Math.max(0.0, 1 - Math.pow(at, 2.3)), 0.62) + 0.015, sheer = depth * (0.78 + 0.34 * at * at) + 0.05 * at * at * at * at; st.push({ a: t * len / 2, w, sheer, k: 0.06 * (1 - at * at) }); }
-  const f = (q, kk, side) => { const u = kk / S, h = q.k + (q.sheer - q.k) * u, wd = q.w * (0.16 + 0.84 * Math.pow(u, 0.8)); return P(q.a, side * wd, h); };
-  for (let k = 0; k < S; k++) {
-    m.mat(MAT.PLANKS, k % 2 ? [0.32, 0.26, 0.19] : [0.27, 0.22, 0.16], 0.5);
-    for (let i = 0; i < N; i++) for (const side of [-1, 1]) {
-      const a0 = f(st[i], k, side), a1 = f(st[i + 1], k, side), b1 = f(st[i + 1], k + 1, side), b0 = f(st[i], k + 1, side), lap = 0.012 * sg;
-      m.quad2(a0, a1, [b1[0], b1[1], b1[2]], b0);
-    }
-  }
-  m.mat(MAT.TIMBER, [0.18, 0.14, 0.1], 0.5);
-  for (let i = 0; i < N; i++) { m.beam(P(st[i].a, 0, 0), P(st[i + 1].a, 0, 0), 0.035, 0.03); for (const side of [-1, 1]) m.beam(P(st[i].a, side * st[i].w, st[i].sheer), P(st[i + 1].a, side * st[i + 1].w, st[i + 1].sheer), 0.025, 0.018); }
-  const e0 = st[0], e1 = st[N];
-  m.beam(P(e0.a, 0, 0.0), P(e0.a - 0.05, 0, e0.sheer + 0.18), 0.03, 0.025); m.beam(P(e1.a, 0, 0.0), P(e1.a + 0.05, 0, e1.sheer + 0.16), 0.03, 0.025);
-  for (let i = 1; i < N; i += 2) { const q = st[i]; for (const side of [-1, 1]) m.beam(P(q.a, side * q.w * 0.18, q.k + 0.02), P(q.a, side * q.w * 0.97, q.sheer * 0.96), 0.014, 0.01); }
-  if (!up) {
-    for (const t of [-0.45, 0.02, 0.48]) { const q = st[Math.round((t + 1) / 2 * N)]; m.beam(P(q.a, -q.w * 0.98, q.sheer * 0.8), P(q.a, q.w * 0.98, q.sheer * 0.8), 0.05, 0.016); }
-    m.mat(MAT.PLANKS, [0.36, 0.3, 0.22], 0.5); for (let i = 3; i < N - 2; i += 2) { const q = st[i], q2 = st[i + 1]; m.quad2(P(q.a, -q.w * 0.12, q.k + 0.03), P(q2.a, -q2.w * 0.12, q2.k + 0.03), P(q2.a, q2.w * 0.12, q2.k + 0.03), P(q.a, q.w * 0.12, q.k + 0.03)); }
-  }
+// a boat begun: the boatwright's yard when nothing is finished. Two X-frame trestles with a top rail, the keel laid on them with the stem and sternpost scarfed on, a few pairs of ribs standing, a small stack of planks, shavings on the ground. All squared or round oak, weathered (not black).
+function wharfBoatBegun(m, x, z, g, ang, len) { if (TEST && TEST.nohull) return;
+  const c = Math.cos(ang), sn = Math.sin(ang), P = (a, b, h) => [x + a * c - b * sn, g + h, z + a * sn + b * c], K = 0.62, OAK = [0.85, 0.68, 0.48], OAK2 = [0.72, 0.58, 0.41], hl = len / 2;
+  m.mat(MAT.TIMBER, OAK2, 0.5);
+  for (const a of [-hl * 0.5, hl * 0.5]) { m.beam(P(a, -0.4, 0.0), P(a, 0.4, K - 0.04), 0.045, 0.045); m.beam(P(a, 0.4, 0.0), P(a, -0.4, K - 0.04), 0.045, 0.045); m.beam(P(a, -0.5, K - 0.03), P(a, 0.5, K - 0.03), 0.05, 0.05); }
+  m.mat(MAT.TIMBER, OAK, 0.5);
+  m.beam(P(-hl, 0, K + 0.05), P(hl, 0, K + 0.05), 0.06, 0.06);
+  m.beam(P(hl, 0, K + 0.04), P(hl + 0.14, 0, K + 0.4), 0.04, 0.036); m.beam(P(hl + 0.14, 0, K + 0.4), P(hl + 0.22, 0, K + 0.82), 0.036, 0.03);
+  m.beam(P(-hl, 0, K + 0.04), P(-hl - 0.08, 0, K + 0.4), 0.04, 0.036); m.beam(P(-hl - 0.08, 0, K + 0.4), P(-hl - 0.1, 0, K + 0.74), 0.036, 0.03);
+  for (const t of [-0.45, -0.15, 0.15, 0.45]) { const a = t * len * 0.9, e = Math.sqrt(Math.max(0.2, 1 - Math.pow(Math.abs(t) * 2.0, 2))), w = 0.42 * e;
+    for (const sg of [-1, 1]) { m.beam(P(a, 0, K + 0.06), P(a, sg * w * 0.62, K + 0.2), 0.04, 0.038); m.beam(P(a, sg * w * 0.62, K + 0.2), P(a, sg * w * 0.98, K + 0.5), 0.038, 0.034); m.beam(P(a, sg * w * 0.98, K + 0.5), P(a, sg * w * 1.1, K + 0.78), 0.034, 0.03); } }
+  m.beam(P(-hl * 0.8, 0.05, K + 0.52), P(hl * 0.8, 0.05, K + 0.52), 0.02, 0.02);
+  m.mat(MAT.PLANKS, [0.46, 0.38, 0.27], 0.5);
+  for (let i = 0; i < 5; i++) { const q0 = P(-0.6, 1.0 + i * 0.0, 0.1 + i * 0.045), q1 = P(0.6, 1.0, 0.1 + i * 0.045); m.box(Math.min(q0[0], q1[0]) - 0.04, q0[1] - 0.02, Math.min(q0[2], q1[2]) - 0.04, Math.max(q0[0], q1[0]) + 0.04, q0[1] + 0.02, Math.max(q0[2], q1[2]) + 0.04); }
+  m.mat(MAT.TIMBER, OAK2, 0.5); for (const a of [-0.5, 0.5]) { const q = P(a, 1.0, 0); m.box(q[0] - 0.05, g, q[2] - 0.05, q[0] + 0.05, g + 0.1, q[2] + 0.05); }
+  m.mat(MAT.PLAIN, [0.3, 0.25, 0.17]);
+  for (let i = 0; i < 9; i++) { const a = (i / 9 * 2 - 1) * hl * 0.9, b = ((i * 37) % 11 - 5) * 0.09, q = P(a, b, 0.012), r = 0.05 + (i % 3) * 0.02; m.quad2([q[0] - r, q[1], q[2] - r * 0.5], [q[0] - r, q[1], q[2] + r * 0.5], [q[0] + r, q[1], q[2] + r * 0.5], [q[0] + r, q[1], q[2] - r * 0.5]); }
 }
 
 // landing steps down to the river behind the Bank Lane houses on its east side, and a wash place (a stone slab, a board, tubs, a pole of washing) behind the first of them
@@ -475,7 +459,7 @@ function buildWharfHouses(bucket) {
     // the trade
     const at = (lx, lz) => wy(lx, lz), T = sp.trade, sx0 = xo, sz0 = fz - 0.6;
     if (T === 'butcher') { bx(sx0 - 0.5, 0.0, fz - 1.0, sx0 + 0.5, 0.6, fz - 0.4, MAT.TIMBER, [0.3, 0.2, 0.14]); m.mat(MAT.PLANKS, [0.55, 0.45, 0.35], 0.5); m.cyl(sx0 + os * 1.1, at(sx0, sz0), sz0, 0.3, 0.28, 0.6, 7, 2); bx(sx0 - 1.3, 2.25, fz - 0.9, sx0 + 1.3, 2.32, fz, MAT.PLANKS, [0.3, 0.24, 0.17]); for (let k = 0; k < 4; k++) { const hx = sx0 - 0.9 + k * 0.6; m.mat(MAT.TIMBER, [0.2, 0.15, 0.1], 0.5); m.beam([hx, 2.25, fz - 0.45], [hx, 1.95, fz - 0.45], 0.01, 0.01); m.mat(MAT.PLAIN, [0.24, 0.12, 0.09], 0.5); m.cyl(hx, 1.45, fz - 0.45, 0.04, 0.12, 0.5, 7, 2); m.cyl(hx, 1.33, fz - 0.45, 0.12, 0.035, 0.14, 7, 1); m.cyl(hx, 1.95, fz - 0.45, 0.03, 0.04, 0.1, 6, 1); } col(sx0, fz - 0.7, 0.5, 0.6); }
-    else if (T === 'boatwright') { const y0 = wy(w / 2 + 3, 0); for (const k of [-1, 1]) bx(w / 2 + 2.2, 0, k * 1.1 - 0.12, w / 2 + 2.4, 0.5 + y0 * 0, k * 1.1 + 0.12, MAT.TIMBER, [0.25, 0.19, 0.13]); m.push().T(w / 2 + 2.3, 0.5 + wy(w / 2 + 2.3, 0), 0); wharfHull(m, 0, 0, 0, Math.PI / 2, 3.6, 0.8, 0.5, true); m.pop(); for (let k = 0; k < 4; k++) bx(-w / 2 - 1.5, k * 0.07, -1.0, -w / 2 - 0.3, 0.07 + k * 0.07, -0.5, MAT.PLANKS, [0.45 - k * 0.02, 0.36, 0.26]); col(w / 2 + 2.3, 0, 1.2, 1.0); }
+    else if (T === 'boatwright') { const y0 = wy(w / 2 + 3, 0); m.push().T(w / 2 + 2.3, wy(w / 2 + 2.3, 0), 0); wharfBoatBegun(m, 0, 0, 0, Math.PI / 2, 3.0); m.pop(); for (let k = 0; k < 4; k++) bx(-w / 2 - 1.5, k * 0.07, -1.0, -w / 2 - 0.3, 0.07 + k * 0.07, -0.5, MAT.PLANKS, [0.45 - k * 0.02, 0.36, 0.26]); col(w / 2 + 2.3, 0, 1.2, 1.0); }
     else if (T === 'brewer') { m.mat(MAT.TIMBER, [0.3, 0.22, 0.14], 0.5); m.beam([dp + os * 1.6, wy(dp, fz), fz - 0.9], [dp + os * 1.6, 3.2, fz - 0.9], 0.07, 0.07); wTuft(m, dp + os * 1.6, 3.0 + wy(dp, fz), fz - 0.9, 0.5, 14, [0.2, 0.3, 0.12], R); for (let k = 0; k < 3; k++) { m.mat(MAT.PLANKS, [0.4, 0.3, 0.2], 0.5); m.cyl(xo + (k % 2) * 0.62 * os - 0.1 * os, at(xo, sz0), fz - 0.55 - (k >> 1) * 0.1, 0.3, 0.28, 0.65, 8, 2); } col(xo, fz - 0.55, 0.65, 0.7); }
     else if (T === 'chandler') { for (let k = 0; k < 3; k++) { m.mat(MAT.PLAIN, [0.34 - k * 0.04, 0.28, 0.2], 0.5); m.cyl(xo + k * 0.5 * os, at(xo, sz0), fz - 0.55, 0.28, 0.26, 0.12 + k * 0.05, 9, 2); } m.mat(MAT.PLANKS, [0.12, 0.1, 0.08], 0.5); m.cyl(xo - 0.8 * os, at(xo, sz0), fz - 0.6, 0.3, 0.28, 0.7, 8, 2); bx(dp + os * 1.7, 2.1, fz - 0.55, dp + os * 2.4, 2.9, fz - 0.5, MAT.PLANKS, [0.36, 0.3, 0.22]); m.mat(MAT.TIMBER, [0.2, 0.15, 0.1], 0.5); m.beam([dp + os * 1.5, 2.9, fz - 0.02], [dp + os * 1.5, 2.9, fz - 0.6], 0.05, 0.05); col(xo - 0.8 * os, fz - 0.6, 0.35, 0.7); }
     else if (T === 'locked') { for (const k of [0, 1]) bx(dp - 0.6, 0.5 + k * 1.0, fz - 0.07, dp + 0.6, 0.62 + k * 1.0, fz - 0.03, MAT.PLANKS, [0.26, 0.2, 0.14]); m.beam([dp - 0.55, 0.4, fz - 0.07], [dp + 0.55, 1.9, fz - 0.07], 0.12, 0.03); m.mat(MAT.PLANKS, [0.32, 0.25, 0.18], 0.5); m.cyl(dp + os * 1.1, at(dp, fz), fz - 0.4, 0.2, 0.18, 0.3, 7, 1); }

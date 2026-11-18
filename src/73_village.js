@@ -13,7 +13,7 @@ function buildVillage() {
   const putc = (x, z, yaw, fn, dy) => { const q = KEEP.slide(x, z, 0.55); return put(q[0], q[1], yaw, fn, dy); };      // Build 33: small props slide off door approaches and road centre lines
   const spot = (name, x, z, yaw, extra) => { World.spots[name] = Object.assign({ p: [x, Terrain.y(x, z), z], yaw: yaw || 0, zone: 0 }, extra || {}); };
 
-  if (TEST && TEST.spec) { const sx = TEST.sx, sz = TEST.sz; put(sx, sz, 0, m => { Props.logs(m, 4, 1.2, 0.09); }); put(sx + 3, sz, 0, m => { Props.woodpile(m, 3, 3, 1.0); }); put(sx + 8, sz, 0, m => { wharfHull(m, 0, 0, 0.5, 0, 3.5, 0.72, 0.6, false); m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5); m.box(-1.4, 0, -0.5, -1.2, 0.5, 0.5); m.box(1.2, 0, -0.5, 1.4, 0.5, 0.5); }); }
+  if (TEST && TEST.spec) { const sx = TEST.sx, sz = TEST.sz; put(sx, sz, 0, m => { Props.logs(m, 4, 1.2, 0.09); }); put(sx + 3, sz, 0, m => { Props.woodpile(m, 3, 3, 1.0); }); put(sx + 8, sz, 0, m => { wharfBoatBegun(m, 0, 0, 0, 0, 3.4); }); }
   const houseExt = new Map();
   for (const site of SITES) {
     const spec = HOUSES[site.id]; if (!spec) continue;
