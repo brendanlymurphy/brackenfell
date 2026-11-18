@@ -2,6 +2,54 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (later still): the six alley shops
+
+**Decision needed: the third storey of `shop.n2`, `shop.n4`, `shop.s1`.** A 24 m2 floor cannot take two straight flights (each 2.7 to
+3.2 m with its landing), and the engine has only straight stairs. A steep corner (winder or ladder) stair is stair geometry
+(`71b_storeys.js`, the stair worker's). Taken meanwhile (easy to undo): shop below, chamber above, one flight; those three still
+show a third storey outside with nothing behind it (`test/inout.js` counts them as failing storeys). Choices: (a) the stair worker
+adds a corner stair 1.2 x 1.2 m that I can place, and I add the loft; (b) the outside loses the third storey on those three; (c) a
+ladder through a trap door (also stair geometry).
+
+**Hash:** the commit that adds this entry.
+
+### What changed
+
+| id | shell | plan, area x | storeys out / in | windows out / in / same place | balcony door |
+|---|---|---|---|---|---|
+| `shop.n2` | 4 x 4 | 5.5 x 4, 1.38 (was 5.3) | 3 / 2 | 3 / 2 / 2 | |
+| `shop.n3` | 6 x 4 | 6.5 x 5.5, 1.49 (was 4.0) | 2 / 2 | 2 / 2 / 2 | yes, walkable onto the gallery over the alley |
+| `shop.n4` | 4 x 4 | 5.5 x 4, 1.38 (was 6.0) | 3 / 2 | 3 / 2 / 2 | |
+| `shop.s0` | 4 x 4 | 5.5 x 4, 1.38 (was 6.0) | 2 / 2 | 2 / 2 / 2 | |
+| `shop.s1` | 6 x 4 | 6.5 x 5.5, 1.49 (was 3.5) | 3 / 2 | 4 / 2 / 2 | yes |
+| `shop.s2` | 6 x 4 | 6.5 x 5.5, 1.49 (was 3.5) | 2 / 2 | 3 / 3 / 3 | |
+
+`shop.n3`, `shop.s0` and `shop.s2` pass every check. The 4 m shops are 5.5 m wide inside (the narrowest a straight stair along the
+back wall fits), which is 1.38 times the shell. The alley's facades are drawn after the plans are built, so their openings are read
+from the facade rule in `ALLEY_SHOPS` (`alleyOpenings`, `72d_plan.js`). All six lost their cellars (no room for a second stair).
+The 4 m shops have no fire (no wall left for one).
+
+### Counts (`test/inout.js`, all 57)
+
+passing 6 (was 3), plan over 1.5 times 26 (was 32), unserved upper doors and balconies 0 (was 2 + 2), windows inside 607 (outside 377,
+224 in the same place), cellars with no sign 11 (was 17).
+
+### Gate (this machine)
+
+interiors (six), stairs (six), people, npcstairs, cast pass; standing on both balconies holds at the floor height. Not run: the full
+gate (the run for the kit buildings is GitHub run 261 on 18bddd8).
+
+### Pictures
+
+`docs/proof/inout/shop.*/front.jpg`, `level0.jpg`, `level1.jpg`, `out_of_the_upper_door.jpg` (n3, s1). Looked at all. The upper
+rooms are too alike (bed, chest, bench under the window): they need the ROOMS.md lines, not yet done for these six.
+
+### Outside list, the alley
+
+1. `shop.n2`, `shop.n4`, `shop.s1`: the third storey, as above.
+2. `shop.n2`, right wall, levels 0 and 1, 3.4 and 3.1 m back from the front: windows into the next shop (from the step 1 table).
+3. No cellar signs needed any more on the six (no cellars).
+
 ## 2026-11-18 (later): Market Place, the fifteen infill houses (not a merge candidate yet)
 
 **Decision needed: see "Open" below.** Taken without asking: these houses go through one new compact plan instead of the six families

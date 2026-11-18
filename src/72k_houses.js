@@ -313,7 +313,8 @@ PLANS.draper = (P, c, info) => {
 // the schedules and docs/ROOMS.md still find them. Dressed with kit pieces by name and the trade's set; no filler.
 const INOUT_FIT = new Set();          // the houses that use it (district by district)
 function hCompact(P, c, F) {
-  const B = pFitBox(c), X0 = B.x0, X1 = B.x1, W = B.W, D = B.D, id = P.id, R = F.R, st = c.spec.kitStyle || {}, two = !!st.up, fam = F.fam;
+  const small = c.w * c.d < 30, sW = Math.max(5.5, Math.ceil(c.w * 1.05 * 2) / 2), B = small ? pFitBox(c, { W: sW, D: Math.max(4, Math.floor(c.w * c.d * 1.5 / sW * 2) / 2) }) : pFitBox(c), X0 = B.x0, X1 = B.x1, W = B.W, D = B.D, id = P.id, R = F.R, st = c.spec.kitStyle || {}, fam = F.fam;      /* a small shell: a floor 5.5 m wide so a straight stair fits along its back wall */
+  const two = !!st.up || shellOpenings(c).some(f => f.lv >= 1 && f.kind !== 'floor');      /* the alley's facades draw their upper storeys themselves: the shell's openings say how many there are */
   const H0 = W < 6.5 ? 2.6 : clamp(F.H0, 2.6, 2.8), nSt = Math.ceil((H0 + PW.SLAB) / 0.19), single = D < 6;
   const Zp = single ? D : clamp(Math.round(D * 0.55 * 2) / 2, 3.5, D - 2.5);
   const shop = fam === 'shopfront', work = fam === 'workshop', hall = !shop && !work, cellarOK = !single && (shop || fam === 'merchant') && (F.wealth > 0 || F.trade === 'butcher') && W >= 7.5;
@@ -326,16 +327,16 @@ function hCompact(P, c, F) {
   if (!single) { const a = rr(X0, Xs), b = rr(Xs, X1); left = pRoom(P, 0, nm[2], 'store', a[0], Zp, a[1], D, { floor: 'stone', win: true }); right = pRoom(P, 0, nm[1], hall ? 'bedroom' : 'hall', b[0], Zp, b[1], D, F.fin(0, { floor: 'wood', tint: F.tint2 })); }
   let up1, up2 = null;
   if (two && !single) { up1 = pRoom(P, 1, shop ? 'upfront' : 'solar', 'bedroom', X0, 0, X1, Zp, F.fin(1)); up2 = pRoom(P, 1, shop ? 'upback' : 'loft', 'bedroom', X0, Zp, X1, D, F.fin(1)); }
-  else up1 = pRoom(P, 1, 'loft', 'bedroom', X0, 0, X1, D, F.fin(1));
+  else up1 = pRoom(P, 1, two ? 'chamber' : 'loft', 'bedroom', X0, 0, X1, D, F.fin(1));
   if (cellarOK) { const a = rr(X0, Xs); pRoom(P, -1, 'cellar', 'cellar', a[0], Zp, a[1], D, { floor: 'stone', win: false }); }
   pDoor(P, front.id, null, 0, 0); P.clear.push({ x0: -0.8, x1: 0.8, z0: 0, z1: 2.4, k: 0, kind: 'path', room: front });
   if (!single) { pDoor(P, front.id, left.id, M(X0 + 0.8), Zp); pDoor(P, front.id, right.id, M(X1 - 0.8), Zp); }
   if (up2) pDoor(P, up1.id, up2.id, M(X1 - 0.8), Zp);
-  pShellWins(P, c, B);
+  const SHL = pShellWins(P, c, B), bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd && P.lv[1]) pUpperDoor(P, up1, bd, Math.round(SHL.pos(bd) * 4) / 4);      /* an upper door the shell shows opens from the front room upstairs */
   const lat = single ? D - 0.6 : Zp - 0.6, p0 = X0 + (W < 6.5 ? 1.3 : 1.5), tread = clamp(Math.floor((X1 - 0.6 - 0.8 - 0.35 - p0) / nSt * 100) / 100, 0.18, 0.23);      /* a longer stair where it fits: its well is then long enough to jump down */      /* narrow houses get a steeper stair, as they had */
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: mir ? -1 : 1, x: M(p0), z: lat, width: 0.9, tread });
   if (cellarOK) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: mir ? -1 : 1, x: M(X0 + 1.2), z: D - 0.6, width: 0.9, tread: 0.2 });
-  pLayout(P);
+  pLayout(P); pBalconies(P, c);
   // the fire: in the kitchen or the chamber behind, else in the front room's end wall
   const fireRoom = single ? front : hall ? front : right; let hh = null;
   { const rooms = [...new Set([fireRoom, right, front, left].filter(Boolean))], cand = [];
@@ -363,8 +364,10 @@ function hCompact(P, c, F) {
   for (const r of bedRooms) if (r !== first) pPiece(P, r, 'wooden_candlestick', { near: pCentre(r), lit: 3.5, soft: true, opt: { lowOk: true } });
   if (cellarOK) { const cel = P.rooms.cellar; dressCellar(P, cel, { barrels: 2, crates: 2, rows: false }); hCellarChest(P, cel, F); }
   hMemo(P, F);
-  if (!hh) P.err.push('no hearth fits');
+  if (!hh && !small) P.err.push('no hearth fits');      /* a one-room shop on a 4 m front has no fire of its own (a brazier, the baker's oven next door) */
 }
 { const _hb = hBuild; hBuild = function (P, c, info) { if (!INOUT_FIT.has(P.id)) return _hb(P, c, info); const F = hCtx(P, c); P.fam = F; hCompact(P, c, F); }; for (const id in PLANS) if (PLANS[id] === _hb) PLANS[id] = hBuild; }
 // the Market Place's infill houses
 for (const id of ['in.02', 'in.04', 'in.07', 'in.08', 'in.10', 'in.12', 'in.13', 'in.15', 'in.21', 'in.40', 'in.44', 'in.74', 'in.90', 'in.94', 'in.116']) INOUT_FIT.add(id);
+// the six alley shops: shop below, chamber above (their third storey waits for a corner stair: docs/reports/THREE.md)
+for (const id of ['shop.n2', 'shop.n3', 'shop.n4', 'shop.s0', 'shop.s1', 'shop.s2']) INOUT_FIT.add(id);

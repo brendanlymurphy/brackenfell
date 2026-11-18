@@ -70,7 +70,7 @@ function pLayout(P) {
     const face = wl => wl.ax === 'x' ? (wl.ns < 0 ? 'front' : 'back') : (wl.ns < 0 ? 'left' : 'right');
     const wl = P.walls.find(q => q.ext && q.k === w.k && face(q) === w.face && w.pos - 0.8 >= q.a - 1e-6 && w.pos + 0.8 <= q.b + 1e-6);
     if (!wl) { P.err.push('window ' + w.face + ' L' + w.k + ' at ' + w.pos + ' is on no outside wall'); continue; }
-    if (wl.open.some(o => Math.abs(o.pos - w.pos) < o.hw + 1.0)) { (P.winClash = P.winClash || []).push(w); continue; }      /* two openings the shell draws too close to stand at both: one inside, the clash reported (test/inout.js) */
+    if (wl.open.some(o => Math.abs(o.pos - w.pos) < o.hw + 0.95)) { (P.winClash = P.winClash || []).push(w); continue; }      /* two openings the shell draws too close to stand at both: one inside, the clash reported (test/inout.js) */
     const room = [...wl.rooms].map(id => P.rooms[id]).find(r => wl.ax === 'x' ? w.pos >= r.x0 && w.pos <= r.x1 : w.pos >= r.z0 && w.pos <= r.z1);
     wl.open.push({ type: 'win', pos: w.pos, hw: 0.8, kind: w.kind || 'Wide_Flat', glass: null }); P.windows.push({ wall: wl, pos: w.pos, kind: w.kind || 'Wide_Flat', k: wl.k, room });
   }
@@ -604,8 +604,14 @@ const SHELL_REC = {};
   Kit.batch = function (o) { const B = kb.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_|^gen_(dress|dormer|cross|fbox)_/.test(name)) rec.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; };
   try { return _ks.apply(this, arguments); } finally { Kit.batch = kb; SHELL_CUR = null; } }; }
 let SHELL_CUR = null; const SHELL_GEN = {};      /* [inout] the openings a generated wall (73d_infill.js infWalls) was built from, by house */
+// every window, door, balcony and floor piece placed out of doors, wherever it is drawn (the alley's facades are drawn by 73b_alley.js, not by kitShell)
+const SHELL_ALL = [];
+if (typeof Kit !== 'undefined' && Kit.batch && !Kit.batch.__inoutAll) { const kb0 = Kit.batch; Kit.batch = function (o) { const B = kb0.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_WoodDark_Half/.test(name)) SHELL_ALL.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; }; Kit.batch.__inoutAll = 1; }
 function shellOpenings(c) {
-  const rec = SHELL_REC[c.site.id] || [], inv = new THREE.Matrix4().fromArray(c.Mx).invert(), v = new THREE.Vector3(), w = c.w, d = c.d, H = c.H, raw = [];
+  { const A = typeof ALLEY_SHOPS !== 'undefined' && ALLEY_SHOPS.find(q => q.id === c.site.id && q.layout); if (A) return alleyOpenings(A, c); }
+  let rec = SHELL_REC[c.site.id] || [];
+  if (!rec.some(r => !/^gen_/.test(r.name))) { const st = c.xsite || c.site, hw = c.w / 2 + 1.3, hd = c.d / 2 + 1.3; rec = rec.concat(SHELL_ALL.filter(r => { const e = r.M.elements, l = worldToSite(st, e[12], e[14]); return Math.abs(l[0]) < hw && Math.abs(l[1]) < hd && Math.abs(e[13] - (c.xFloorY !== undefined ? c.xFloorY : st.y || 0)) < 14; })); }
+  const inv = new THREE.Matrix4().fromArray(c.Mx).invert(), v = new THREE.Vector3(), w = c.w, d = c.d, H = c.H, raw = [];
   const glass = [];      /* windows drawn in generated pieces (an end wall's face, a dormer, a gable): each upright glass quad, as a box */
   for (const r of rec) { if (!/^gen_/.test(r.name)) continue; const p = Kit.pieces[r.name]; if (!p) continue;
     for (const q of p.prims) { if (!/Glass/.test(q.mat && (q.mat.name || q.mat))) continue; const ps = q.pos, ix = q.idx; if (!ps || !ix) continue;
@@ -650,12 +656,12 @@ function pBalconies(P, c) {
     const nrm = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] }[f.wall], fb = f.wall === 'front' || f.wall === 'back', half = fb ? c.d / 2 : c.w / 2;
     const fl = (P.shell ? P.shell.list : shellOpenings(c)).find(g => g.kind === 'floor' && g.wall === f.wall && g.lv === f.lv && f.u > g.u0 - 0.3 && f.u < g.u1 + 0.3) || (P.shell ? P.shell.list : []).find(g => g.kind === 'balc' && g.wall === f.wall);
     if (!fl) { P.err.push('upper door on the ' + f.wall + ' has no balcony outside'); continue; }
-    const yT = fl.kind === 'floor' ? fl.y1 : c.H + 0.06, out = Math.max(0.8, fl.out), loc = (u, o) => fb ? [u, nrm[1] * (half + o)] : [nrm[0] * (half + o), u - c.d / 2];
-    const st = loc(f.u, Math.min(0.6, out * 0.55)), dc = loc(f.u, 0.05), wS = m4.tp(c.Mx, [st[0], yT, st[1]]), wD = m4.tp(c.Mx, [dc[0], yT, dc[1]]);
+    const yT = fl.kind === 'floor' ? fl.y1 : c.H + 0.06, wo = fl.wallOff || 0, out = Math.max(wo + 0.8, fl.out), loc = (u, o) => fb ? [u, nrm[1] * (half + o)] : [nrm[0] * (half + o), u - c.d / 2];      /* wallOff: an upper storey that juts over the street (the alley) */
+    const st = loc(f.u, wo + Math.min(0.6, (out - wo) * 0.55)), dc = loc(f.u, wo + 0.05), wS = m4.tp(c.Mx, [st[0], yT, st[1]]), wD = m4.tp(c.Mx, [dc[0], yT, dc[1]]);
     // the balcony out of doors: a floor and three rails
-    const a = loc(fl.u0, 0), b = loc(fl.u1, out); addFloor(mm, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), yT);
+    const a = loc(fl.u0, wo), b = loc(fl.u1, out); addFloor(mm, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), yT);
     const rail = (p, q) => addBoxCollider(mm, Math.min(p[0], q[0]) - 0.06, Math.min(p[1], q[1]) - 0.06, Math.max(p[0], q[0]) + 0.06, Math.max(p[1], q[1]) + 0.06, yT - 0.1, yT + 1.15);
-    rail(loc(fl.u0, out), loc(fl.u1, out)); rail(loc(fl.u0, 0.1), loc(fl.u0, out)); rail(loc(fl.u1, 0.1), loc(fl.u1, out));
+    rail(loc(fl.u0, out), loc(fl.u1, out)); rail(loc(fl.u0, wo + 0.1), loc(fl.u0, out)); rail(loc(fl.u1, wo + 0.1), loc(fl.u1, out));
     // the two ends of the way through
     const ix = hor ? d.x : d.x + inn * 0.9, iz = hor ? d.z + inn * 0.9 : d.z, pin = P.w2(ix, L.y + 0.03, iz), pdr = P.w2(d.x, L.y + 0.03, d.z);
     const outD = { p: wS, yaw: yawTo(wD, wS), cell: null, name: 'The balcony of ' + c.site.name }, inD = { p: pin, yaw: yawTo(pdr, pin), cell: cid, name: c.site.name };
@@ -689,4 +695,16 @@ function pWinSnap(P, f, pos) {
   const fb = f.wall === 'front' || f.wall === 'back', rs = Object.values(P.rooms).filter(r => r.k === f.lv && (fb ? (f.wall === 'front' ? Math.abs(r.z0 - P.shell.box.z0) < 0.6 : Math.abs(r.z1 - P.shell.box.z1) < 0.6) : (f.wall === 'left' ? Math.abs(r.x0 - P.shell.box.x0) < 0.6 : Math.abs(r.x1 - P.shell.box.x1) < 0.6)));
   const lo = r => fb ? r.x0 : r.z0, hi = r => fb ? r.x1 : r.z1, r = rs.find(q => pos >= lo(q) && pos <= hi(q)) || rs.sort((a, b) => Math.min(Math.abs(pos - lo(a)), Math.abs(pos - hi(a))) - Math.min(Math.abs(pos - lo(b)), Math.abs(pos - hi(b))))[0]; if (!r) return pos;
   const a = lo(r) + 1.15, b = hi(r) - 1.15; if (a > b) return Math.round((lo(r) + hi(r)) * 2) / 4; const q = Math.min(b, Math.max(a, pos)); return Math.abs(q - pos) <= 1.0 ? Math.round(q * 4) / 4 : pos;
+}
+// [inout] an alley shop's front as 73b_alley.js draws it (the facade is drawn after the plans are built, so it is read from the same rule): the ground storey's bays
+// from `layout` (W window, D door), each upper storey a window on every other bay, a balcony door in the middle bay of the first floor where `balcony` is set
+function alleyOpenings(a, c) {
+  const w = a.w, n = Math.round(w / 2), H = 3, out = [];
+  for (let k = 0; k < (a.floors || 2); k++) for (let i = 0; i < n; i++) {
+    const uc = i * 2 + 1, x = w / 2 - uc, ch = a.layout[Math.min(i, a.layout.length - 1)];
+    if (k === 0) out.push(ch === 'D' ? { kind: 'door', wall: 'front', u: x, u0: x - 0.55, u1: x + 0.55, y: 1.1, y0: 0, y1: 2.2, lv: 0, out: 0, name: 'DoorFrame_alley' } : { kind: 'win', wall: 'front', u: x, u0: x - 0.6, u1: x + 0.6, y: 1.7, y0: 1.0, y1: 2.4, lv: 0, out: 0, win: 'Wide_Flat', name: 'Window_alley' });
+    else if (a.balcony && k === 1 && i === (n >> 1)) { out.push({ kind: 'door', wall: 'front', u: x, u0: x - 0.55, u1: x + 0.55, y: k * H + 1.1, y0: k * H, y1: k * H + 2.2, lv: 1, out: 0, name: 'DoorFrame_alley' }); out.push({ kind: 'floor', wall: 'front', u: x, u0: x - 2.1, u1: x + 2.1, y: k * H, y0: k * H - 0.14, y1: k * H + 0.04, lv: 1, out: 1.6, wallOff: 0.5, name: 'gen_balc' }); }
+    else if ((i + k) % 2 === 0) out.push({ kind: 'win', wall: 'front', u: x, u0: x - 0.6, u1: x + 0.6, y: k * H + 1.7, y0: k * H + 1.0, y1: k * H + 2.4, lv: k, out: 0, win: 'Wide_Flat', name: 'Window_alley' });
+  }
+  return out;
 }
