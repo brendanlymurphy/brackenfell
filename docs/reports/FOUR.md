@@ -1,5 +1,21 @@
 # Reports: Agent Four (fork-ch1)
 
+## 2026-11-18 19:00 UTC (the besom grip; gates)
+
+Head: this commit (after `ac94004`). Area gate plus `webgpu`: 9 of 9 pass. `test/hold.js`: **0 of 4870** (51 people).
+
+- Three tries to fix one fault:
+  - Cause, found on the third: `Chars.reach` puts the **wrist** on its target, while the test (and the eye) wants the **palm**,
+    7 cm further along the hand. Every hand landed 7 cm short.
+  - Now each wrist is aimed so that its palm lands on the handle. The besom also slides toward the body when the handle would
+    pass beyond an arm's length.
+  - The two earlier commits (`d5ced31`, `93bc9af`) were steps toward this, not separate fixes.
+- **The pose is not good yet** (`docs/proof/chars/hold/besom_sweep.jpg`, Mercy, Hester and Ursel). The hands are on the handle, but
+  the handle stands nearly upright close beside the head, with the left hand up near the face: more leaning on it than sweeping. A
+  true sweeping stance needs a clip the clip file does not have (the standing work clip is used). Open: a sweep made from the work
+  clip by lowering both hands and tilting the handle 45 degrees across the body.
+- I broke a rule during the animal work: I ran other browser tests while `test/hold.js` was running. Since then one at a time.
+
 ## 2026-11-18 18:10 UTC (animals continued: dog, cat, sheep, goose blocked; horse ready but has nowhere to stand)
 
 Head: this commit. Gate steps boot, npcsep, budget-medium, budget-low and webgpu pass (budgets unchanged).
