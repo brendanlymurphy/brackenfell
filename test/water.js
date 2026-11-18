@@ -16,7 +16,7 @@ for (const P of SC.pools) { if (P.kind !== 'water') continue; const pos = P.geo.
   for (const t of P.tiles) { const ix = t.idx || src.subarray(t.it.first, t.it.first + t.it.count); for (let i = 0; i + 2 < ix.length; i += 3) tri(ix[i], ix[i + 1], ix[i + 2]); } }
 // known and open (for whoever owns the wilds, 79_wilds.js): the stream by the western toll (from -166, -61 to -155, 16) is drawn 0.2 to 0.4 m deep and World.waterAt does not know
 // it, so the player walks through it dry, without wading or a splash. A new patch anywhere else fails.
-const KNOWN_SHEET = c => c.x < -148 && c.z > -80 && c.z < 30;       /* the whole western stream, from -166, -61 down to -155, 16 */
+const KNOWN_SHEET = c => false;       /* none now: the western brook's sheet stops at its bank and the game knows the brook as far as it is drawn */
 const all = [...cells.values()].filter(c => c.n >= 3).sort((a, b) => b.h - a.h), sheets = all.filter(c => !KNOWN_SHEET(c)); if (all.length > sheets.length) notes.push((all.length - sheets.length) + ' patches of water over ground the game holds dry along the western stream (-166, -61 to -155, 16), up to ' + all.filter(KNOWN_SHEET)[0].h.toFixed(2) + ' m deep: known, open');
 for (const c of sheets.slice(0, 15)) fails.push('a water sheet lies ' + c.h.toFixed(2) + ' m above dry ground at ' + [c.x, c.z].map(r1) + ' (' + c.n + ' triangles there; the game holds this ground to be dry)'); if (sheets.length > 15) fails.push((sheets.length - 15) + ' more patches of water over dry ground');
 if (fails.length) throw new Error('WATER FAIL ' + fails.length + ': ' + JSON.stringify(fails.slice(0, 20)));
