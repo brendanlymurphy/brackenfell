@@ -2,6 +2,51 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (morning, later): merge candidate ce0c936, your list passes
+
+**Merge candidate: ce0c936** (`origin/fork-integ` and `origin/threejs` Build 85 merged in). On this machine your list passes, all 17:
+`boot, quest, stairs, npcstairs, npcsep, story, secrets, interact, interiors (57), overlap (severe 0), parity, bot-story, cast,
+hartdoor, inout, apart, people`. The full gate is dispatched on GitHub for ce0c936 (run number in the Actions list for branch
+`fork-inout`, event workflow_dispatch; I will add it here). The `inout` ratchet is accepted at 19 failing (was 57).
+
+### Merges
+
+- `fork-integ`: one conflict in the Hart's bar, both sides kept.
+- `threejs` (Build 85): three conflicts. `72e_plans.js`: my side (no filler top-up; my invariant pass covers the [fin] seats; my
+  bar, whose cellar-stair lane no longer applies since the stair is behind the cellar door). `test/interact.js`: threejs's witness
+  placement. `test/interiors.js`: both blocks kept, mine and the inspector's (ways cut off at 0.9 m: 4 against a limit of 19; four
+  distinct seats: 51 of 51).
+
+### What the plans keep now (your invariants, checked by `test/interiors.js`)
+
+- every lived-in house: `home`, `work`, `sit`, `fire1` (fire1 beside home, never on it), a bed per sleeper, max(4, household) seats
+  at distinct places with a 0.9 m way to beside each (one sits down sideways onto a bench), four free places round `home`;
+- every stair: a 0.9 m way to it from the street door, 1.2 m clear at its foot and head (stair starts moved; no fire stands under a
+  stair head, its stack used to block the top: `pKeepStairHeads`);
+- the Hart: `bar`, `stand1`, `stand2`; the cellar's east wall untouched (`hartdoor` passes by input).
+
+How: `pReach` (the 0.9 m flood) and `pEnsure` in the plan engine; stools only where both floods (mine and the inspector's `pFlood`)
+reach them and nothing else is cut, kept out of the ring of standing places round `home`. A seat no way reaches loses its name to
+such a stool.
+
+### Changes outside my files (marked, additive)
+
+- `test/hartdoor.js`: walks by waypoints through the cellar door before the stair head (the stair is behind the door now, as your
+  item 4 asked); it was a straight line from the street door.
+- `test/parity.mjs`: a chest that became a story container (Widow Hale's letters, `cont.in.23.chest`; the [fin] rule then drops the
+  plain chest prompt at the same place) counts as present.
+- `71b_storeys.js`: the ladder (inbox 06:20).
+
+### The Hart
+
+The passage behind the common room is 2.5 m deep with the cellar stair against its back wall, head by the cellar door; the way
+past it to the keeper's room and the kitchen is 0.9 m; one lantern. Pictures from before this change:
+`docs/proof/inout/inn/cellar_door_from_the_common_room.jpg`, `passage_cellar_stair.jpg`.
+
+### Not verified headless
+
+Flicker, motion, sound, phone frame rate. Furniture by ROOMS.md line by line for the 48 compact houses: still to do.
+
 ## 2026-11-18 (morning): every district done once; 36 of 57 pass
 
 **Hash:** the commit that adds this entry; a full gate dispatched on it (number in the next entry). All 57 buildings are now refitted.
