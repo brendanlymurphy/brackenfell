@@ -7,6 +7,7 @@ const fx = (c, m) => { if (!c) fails.push(m); };
 const fix = () => { const r = RPG.st(); r.sta = 100; r.hp = 100; RPG.dead = false; };
 S.items.housekey = 1; S.unlocked = Object.assign(S.unlocked || {}, { 'door.in.23': 1 });       // [q1] the house nobody talks about is locked to a player without its key
 Env.dayLength = 0; Env.hour = 3; S.flags.fire = 0; npcSnapAll();       // everyone in bed, so nobody stands in a doorway
+if (typeof OWN !== 'undefined') OWN.night = () => false;       // [coordinator, Build 83] houses are barred at night now (82f_owners.js) and a barred door opens to a lockpick only by chance: two cells failed on GitHub by that chance. This test is about the doors and the cells, not about who may come in
 const visCells = () => { let n = 0; for (const s of SC.statics) if (s.it.cell && s.mesh.visible) n++; for (const r of SC.rigid) if (r.obj.cell && r.mesh.visible) n++; return n; };
 const idle = async () => { for (let i = 0; i < 400 && Cells.busy; i++) await sleep(50); game.step(2, dt); };
 const only = window.__cells, cells = Cells.list.filter(c => c.door && (!only || only.includes(c.id)));       // window.__cells = ['inn', ...] runs a few (a software-rendered tab dies after a dozen cells)
