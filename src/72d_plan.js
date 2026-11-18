@@ -65,8 +65,17 @@ function pLayout(P) {
   }
   // windows on outside walls (levels at or above the ground; the cellar gets high slits only)
   const WIN0 = ['Wide_Flat', 'Thin_Round', 'Wide_Round'];
+  /* [inout] P.wins: the windows the shell shows, and no others: [{ k, face: 'front'|'back'|'left'|'right', pos, kind }], pos in the plan's own x (front, back) or z (left, right) */
+  if (P.wins) for (const w of P.wins) {
+    const face = wl => wl.ax === 'x' ? (wl.ns < 0 ? 'front' : 'back') : (wl.ns < 0 ? 'left' : 'right');
+    const wl = P.walls.find(q => q.ext && q.k === w.k && face(q) === w.face && w.pos - 0.8 >= q.a - 1e-6 && w.pos + 0.8 <= q.b + 1e-6);
+    if (!wl) { P.err.push('window ' + w.face + ' L' + w.k + ' at ' + w.pos + ' is on no outside wall'); continue; }
+    if (wl.open.some(o => Math.abs(o.pos - w.pos) < o.hw + 1.0)) { P.err.push('window ' + w.face + ' L' + w.k + ' at ' + w.pos + ' runs into another opening'); continue; }
+    const room = [...wl.rooms].map(id => P.rooms[id]).find(r => wl.ax === 'x' ? w.pos >= r.x0 && w.pos <= r.x1 : w.pos >= r.z0 && w.pos <= r.z1);
+    wl.open.push({ type: 'win', pos: w.pos, hw: 0.8, kind: w.kind || 'Wide_Flat', glass: null }); P.windows.push({ wall: wl, pos: w.pos, kind: w.kind || 'Wide_Flat', k: wl.k, room });
+  }
   for (const wl of P.walls) {
-    if (!wl.ext || wl.k < 0) continue;
+    if (P.wins || !wl.ext || wl.k < 0) continue;
     for (const rid of wl.rooms) {
       const room = P.rooms[rid]; if (!room || room.win === false || (room.skipWin && room.skipWin.includes(wl.ax + wl.c))) continue;       /* [c3] skipWin: ['x9'] leaves that wall without windows (a bed corner) */
       const lo = Math.max(wl.a, wl.ax === 'x' ? room.x0 : room.z0), hi = Math.min(wl.b, wl.ax === 'x' ? room.x1 : room.z1), L = hi - lo;
@@ -411,7 +420,7 @@ function pWallEmit(P, wl, B, IN) {
       emit(m, 1.15, () => { m.mat(MAT.PLAIN, [0.55, 0.66, 0.38]); bx(y0, y0 + 0.9); m.mat(MAT.PLAIN, [0.78, 0.88, 0.96]); bx(y0 + 0.9, y0 + 2.2); });
       pLight(P, hor ? q : wl.c - ns * 0.9, 1.5 * sy, hor ? wl.c - ns * 0.9 : q, 5.2, [1.7, 1.62, 1.4], 'daylight', wl.k);
     }
-    else if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); }
+    else if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); if (sp.o.d.upper && Kit.pieces.Door_1_Flat) B.add('Door_1_Flat', KH.xf(F, sp.s - 0.54 * S[0], 0, -0.05, S), INW);   /* [inout] the leaf of a balcony door: the shell hangs the same one outside (71_kithouse.js) */ }
     else {
       const tbl = { Wide_Flat: ['_Window_Wide_Flat', 'Window_Wide_Flat1'], Thin_Round: ['_Window_Thin_Round', 'Window_Thin_Round1'], Wide_Round: ['_Window_Wide_Round', 'Window_Wide_Round1'] }[sp.o.kind] || ['_Window_Wide_Flat', 'Window_Wide_Flat1'];
       const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];
@@ -512,7 +521,8 @@ function planNav(P, add, link, doorNode) {
   }
   for (const d of P.doors) {
     const L = P.lv[d.k], k = add(...P.w2(d.x, L.y + 0.02, d.z));
-    if (d.b === null) { const dn = doorNode[P.id]; if (dn) { link(dn.i, k); linkSafe(d.k, k, [d.x, d.z], hub[d.a], hubAt[d.a]); } }
+    if (d.b === null && d.upper) { linkSafe(d.k, k, [d.x, d.z], hub[d.a], hubAt[d.a]); }   /* [inout] a balcony door is not a way in from the street */
+    else if (d.b === null) { const dn = doorNode[P.id]; if (dn) { link(dn.i, k); linkSafe(d.k, k, [d.x, d.z], hub[d.a], hubAt[d.a]); } }
     else { linkSafe(d.k, hub[d.a], hubAt[d.a], k, [d.x, d.z]); linkSafe(d.k, k, [d.x, d.z], hub[d.b], hubAt[d.b]); }
   }
   const stairSpot = new Set(); for (const s of P.stairs) { stairSpot.add(s.name + '0'); stairSpot.add(s.name + '1'); }
@@ -561,7 +571,7 @@ function planValidate(P) {
   }
   // every room reachable from the street door: doorways and stairs as edges
   const seen = new Set(), todo = [];
-  for (const d of P.doors) if (d.b === null) { seen.add(d.a); todo.push(d.a); }
+  for (const d of P.doors) if (d.b === null && !d.upper) { seen.add(d.a); todo.push(d.a); }
   while (todo.length) {
     const id = todo.pop();
     for (const d of P.rooms[id].doors) { const o = d.a === id ? d.b : d.a; if (o && !seen.has(o)) { seen.add(o); todo.push(o); } }
@@ -576,4 +586,66 @@ function planValidate(P) {
   // lit: every room has a window, a hearth, a candle or a lamp
   for (const id in P.rooms) { const r = P.rooms[id]; if (!P.lightIn || !P.lightIn[id]) out.push('room ' + id + ' has no visible light source'); }
   return out;
+}
+
+// [inout] test/inout.js compares the drawn shell with the plan: with --opt audit=1 the openings every generated wall was built from are kept (73d_infill.js infWalls is wrapped, not changed)
+if (TEST && TEST.audit) { const _iw = infWalls; infWalls = function (B, MS, o) { try { (window.__AUDIT_SHELL = window.__AUDIT_SHELL || []).push({ M: MS.clone(), w: o.w, d: o.d, fl: o.fl, H: o.H || 3, lo: !!o.lo, jetty: o.jetty || 0, plan: JSON.parse(JSON.stringify(o.plan || [])) }); } catch (e) { } return _iw.apply(this, arguments); }; }
+
+// ───────────────────────── [inout] the shell as the plan sees it ─────────────────────────
+// Inside and outside are the same building: a plan takes its windows, its upper doors and its balcony from what the shell really shows. kitShell (71_kithouse.js) is
+// wrapped, not changed: while it lays a building's village shell every piece it places is noted, and shellOpenings() reads the window, door and balcony pieces back
+// in the house's own frame (front wall at -z; `u` = metres from the middle of the house on the front and back, from the front wall on the sides).
+const SHELL_REC = {};
+{ const _ks = kitShell; kitShell = function (c) {
+  const kb = Kit.batch, rec = SHELL_REC[c.site.id] = [];
+  Kit.batch = function (o) { const B = kb.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_/.test(name)) rec.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; };
+  try { return _ks.apply(this, arguments); } finally { Kit.batch = kb; } }; }
+function shellOpenings(c) {
+  const rec = SHELL_REC[c.site.id] || [], inv = new THREE.Matrix4().fromArray(c.Mx).invert(), v = new THREE.Vector3(), w = c.w, d = c.d, H = c.H, raw = [];
+  for (const r of rec) {
+    const p = Kit.pieces[r.name]; if (!p) continue; let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+    for (let i = 0; i < 8; i++) { v.set(i & 1 ? p.max[0] : p.min[0], i & 2 ? p.max[1] : p.min[1], i & 4 ? p.max[2] : p.min[2]).applyMatrix4(r.M).applyMatrix4(inv); mn = [Math.min(mn[0], v.x), Math.min(mn[1], v.y), Math.min(mn[2], v.z)]; mx = [Math.max(mx[0], v.x), Math.max(mx[1], v.y), Math.max(mx[2], v.z)]; }
+    const x = (mn[0] + mx[0]) / 2, z = (mn[2] + mx[2]) / 2, ds = { front: Math.abs(z + d / 2), back: Math.abs(z - d / 2), left: Math.abs(x + w / 2), right: Math.abs(x - w / 2) }; let wall = 'front'; for (const k in ds) if (ds[k] < ds[wall]) wall = k;
+    const kind = /^Window_/.test(r.name) ? 'win' : /^Balcony_/.test(r.name) ? 'balc' : /^Floor_/.test(r.name) ? 'floor' : 'door', fb = wall === 'front' || wall === 'back';
+    raw.push({ name: r.name, y1: mx[1], kind, wall, u: fb ? x : z + d / 2, u0: fb ? mn[0] : mn[2] + d / 2, u1: fb ? mx[0] : mx[2] + d / 2, y: (mn[1] + mx[1]) / 2, y0: mn[1], out: fb ? Math.max(Math.abs(mn[2]), Math.abs(mx[2])) - d / 2 : Math.max(Math.abs(mn[0]), Math.abs(mx[0])) - w / 2, win: /Thin_Round/.test(r.name) ? 'Thin_Round' : /Wide_Round/.test(r.name) ? 'Wide_Round' : 'Wide_Flat' });
+  }
+  const out = [];      // frame and leaf, the two corners of one balcony: one thing
+  for (const f of raw) { const m = out.find(g => g.kind === f.kind && g.wall === f.wall && Math.abs(g.u - f.u) < (f.kind === 'balc' || f.kind === 'floor' ? 2.6 : 0.7) && Math.abs(g.y - f.y) < 1.2); if (m) { if (f.kind === 'balc' || f.kind === 'floor') { m.y1 = Math.max(m.y1, f.y1); m.u0 = Math.min(m.u0, f.u0); m.u1 = Math.max(m.u1, f.u1); m.u = (m.u0 + m.u1) / 2; m.out = Math.max(m.out, f.out); } else if (/^DoorFrame/.test(f.name || '')) m.u = f.u; m.y0 = Math.min(m.y0, f.y0); } else out.push(f); }
+  for (const f of out) f.lv = f.kind === 'win' ? (f.y < H ? 0 : 1 + Math.floor((f.y - H) / 3)) : (f.y0 < 1.6 ? 0 : Math.max(1, Math.round((f.y0 - H) / 3) + 1));
+  return out;
+}
+// the shell's windows as the plan's own (P.wins), the plan's ground floor being the rectangle box = { x0, z0, x1, z1 } and the shell w x d: places scale with the walls.
+// keep(f, pos) may move or drop one (return a number, or false). Call before pLayout.
+function pShellWins(P, c, box, keep) {
+  const sx = (box.x1 - box.x0) / c.w, sz = (box.z1 - box.z0) / c.d, cx = (box.x0 + box.x1) / 2; P.wins = []; P.shell = { box, sx, sz, cx, list: shellOpenings(c) };
+  P.shell.pos = f => f.wall === 'front' || f.wall === 'back' ? cx + f.u * sx : box.z0 + f.u * sz;
+  for (const f of P.shell.list) { if (f.kind !== 'win' || !P.lv[f.lv]) continue; let pos = Math.round(P.shell.pos(f) * 4) / 4; if (keep) { const r = keep(f, pos); if (r === false) continue; if (typeof r === 'number') pos = r; } P.wins.push({ k: f.lv, face: f.wall, pos, kind: f.win }); }
+  return P.shell;
+}
+// An upper door the shell shows (f, from shellOpenings) becomes a door of the room behind it: call before pLayout. pBalconies() after it makes the way through: the
+// door inside leads out onto the shell's own balcony in the town and back (as the street door does), and the balcony gets a floor to stand on and rails that hold.
+function pUpperDoor(P, room, f, pos) {
+  const fb = f.wall === 'front' || f.wall === 'back', x = fb ? pos : (f.wall === 'left' ? room.x0 : room.x1), z = fb ? (f.wall === 'front' ? room.z0 : room.z1) : pos;
+  const d = pDoor(P, room.id, null, x, z, { upper: true, shell: f }); return d;
+}
+function pBalconies(P, c) {
+  const id = c.site.id, cid = c.cell ? c.cell.id : id, yawTo = (a, b) => Math.atan2(b[0] - a[0], -(b[2] - a[2])), mm = { m: c.Mx };
+  for (const d of P.doors) {
+    if (!d.upper || !d.wall) continue; const f = d.shell, L = P.lv[d.k], wl = d.wall, hor = wl.ax === 'x', inn = -wl.ns;
+    const nrm = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] }[f.wall], fb = f.wall === 'front' || f.wall === 'back', half = fb ? c.d / 2 : c.w / 2;
+    const fl = (P.shell ? P.shell.list : shellOpenings(c)).find(g => g.kind === 'floor' && g.wall === f.wall && g.lv === f.lv && f.u > g.u0 - 0.3 && f.u < g.u1 + 0.3) || (P.shell ? P.shell.list : []).find(g => g.kind === 'balc' && g.wall === f.wall);
+    if (!fl) { P.err.push('upper door on the ' + f.wall + ' has no balcony outside'); continue; }
+    const yT = fl.kind === 'floor' ? fl.y1 : c.H + 0.06, out = Math.max(0.8, fl.out), loc = (u, o) => fb ? [u, nrm[1] * (half + o)] : [nrm[0] * (half + o), u - c.d / 2];
+    const st = loc(f.u, Math.min(0.6, out * 0.55)), dc = loc(f.u, 0.05), wS = m4.tp(c.Mx, [st[0], yT, st[1]]), wD = m4.tp(c.Mx, [dc[0], yT, dc[1]]);
+    // the balcony out of doors: a floor and three rails
+    const a = loc(fl.u0, 0), b = loc(fl.u1, out); addFloor(mm, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), yT);
+    const rail = (p, q) => addBoxCollider(mm, Math.min(p[0], q[0]) - 0.06, Math.min(p[1], q[1]) - 0.06, Math.max(p[0], q[0]) + 0.06, Math.max(p[1], q[1]) + 0.06, yT - 0.1, yT + 1.15);
+    rail(loc(fl.u0, out), loc(fl.u1, out)); rail(loc(fl.u0, 0.1), loc(fl.u0, out)); rail(loc(fl.u1, 0.1), loc(fl.u1, out));
+    // the two ends of the way through
+    const ix = hor ? d.x : d.x + inn * 0.9, iz = hor ? d.z + inn * 0.9 : d.z, pin = P.w2(ix, L.y + 0.03, iz), pdr = P.w2(d.x, L.y + 0.03, d.z);
+    const outD = { p: wS, yaw: yawTo(wD, wS), cell: null, name: 'The balcony of ' + c.site.name }, inD = { p: pin, yaw: yawTo(pdr, pin), cell: cid, name: c.site.name };
+    World.interact.push({ kind: 'portal', id: 'door.' + cid + '.balcony.out', p: [pdr[0], pdr[1] + 1.1, pdr[2]], r: 1.9, zone: P.zone, cell: cid, label: 'Step out onto the balcony', dest: outD, side: 'in' });
+    World.interact.push({ kind: 'portal', id: 'door.' + cid + '.balcony.in', p: [wD[0], wD[1] + 1.1, wD[2]], r: 1.7, zone: 0, cell: cid, label: 'Go in', dest: inD, side: 'out' });
+    d.balcony = { out: outD, in: inD, floor: fl };
+  }
 }
