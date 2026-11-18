@@ -1,0 +1,12 @@
+[
+ { "tag": "p02_mark_stage7_inside", "text": "Main quest stage 7 (Find the way under the Honeyed Hart): the compass mark, standing in the Hart's common room", "x": 0, "y": 0.3, "z": -21, "enter": "inn", "quest": ["main", 7] },
+ { "tag": "p03_mark_stage8_outside", "text": "Main quest stage 8: the compass mark seen from the square", "x": 0, "y": 0.3, "z": -4, "quest": ["main", 8] },
+ { "tag": "p04_hart_back_door", "text": "The Hart's back (north) wall: the drawn kitchen door and cellar hatch the Magpie's list and the Hart's ledger point to", "x": 1.5, "y": 0.8, "z": -26.8 },
+ { "tag": "p05_mark_crypt_in_chapel", "text": "The crypt quest: the compass mark inside the chapel", "x": -6, "y": 0.3, "z": -75, "enter": "chapel", "quest": ["crypt", 1] },
+ { "tag": "p06_boathouse_doors", "text": "The boatwright's board: 'The doors under the quay are the boat-houses: knock first'", "x": 11.6, "y": 0.6, "z": 74.9 },
+ { "tag": "p07_west_of_plaque", "text": "Tobin's box: 'the stone with the crooked mortar, west of the plaque' (standing west of the plaque, as told)", "x": -27.0, "y": 1.3, "z": 15.3 },
+ { "tag": "p07b_the_stone", "text": "The loose stone where it really is, 4.5 m east of the plaque", "x": -19.0, "y": 1.3, "z": 12.7 },
+ { "tag": "p08_hidden_yard_sack", "text": "'She went to ground in the Hidden Yard. Something is wedged under the well-lip.' (the sack's fallback place)", "x": -21.7, "y": 1.0, "z": 50.5 },
+ { "tag": "p09_bread_cave", "text": "'THE BREAD CAVE. West shore, past the reeds, under the grey rock.' and 'a cleft in the rock by the water'", "x": -47.4, "y": 1.0, "z": 122, "flags": { "act2": 1, "sec_wall": 1 } },
+ { "tag": "p10_frostcap_nw_of_gate", "text": "Wren: 'Forest edge, north-west of the gate' (the frostcap is due north of the gate)", "x": -57, "y": 0.5, "z": -47 }
+]

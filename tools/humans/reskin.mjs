@@ -155,8 +155,11 @@ for (const file of process.argv.slice(2)) {
       for (const x of prims) { if (!/^w_kirtle(@|$)/.test(x.name)) continue; const pos = x.p.getAttribute('POSITION'), n = pos.getCount(), list = []; let changed = 0;
         for (let i = 0; i < n; i++) { const v = pos.getElement(i, []), [e, g] = wOf(x, i), old = new Map(); for (let k = 0; k < 4; k++) if (g[k] > 0 && e[k] !== NI) old.set(e[k], (old.get(e[k]) || 0) + g[k]);
           let arm = 0; for (const [jx, w] of old) if (ARM.test(J[jx])) arm += w; const low = sm(hipY + 0.02, hipY - 0.09, v[1]) * (arm > 0.3 ? 0 : 1); if (low <= 0) { list.push(old); continue; }
-          const sL = sm(-0.075, 0.075, v[0] * sideL), cf = sm(kneeY + 0.05, kneeY - 0.07, v[1]), L = Math.max(0.02, hipY - v[1]), st = v[2] - tz;
-          const al = st > 0.09 ? Math.max(0.4, Math.min(1, (0.09 + L) / (st + L))) : 1, th = al * (1 - cf) + 0, ca = cf, pe = (1 - al) * (1 - cf);
+          const cf = sm(kneeY + 0.05, kneeY - 0.07, v[1]), hem = sm(kneeY - 0.12, kneeY - 0.32, v[1]), sL0 = sm(-0.075, 0.075, v[0] * sideL), L = Math.max(0.02, hipY - v[1]), st = v[2] - tz;
+          const al = st > 0.09 ? Math.max(0.4, Math.min(1, (0.09 + L) / (st + L))) : 1, th = al * (1 - cf), ca = cf, pe = (1 - al) * (1 - cf);
+          // the lower hem between the shins hangs from both of them (a wider blend there only): in a stride a hem corner on each shin tore half a metre wide; higher up the
+          // blend stays narrow, or the middle of the lap rides up with both thighs when seated
+          const sL = lerp(sL0, sm(-0.2, 0.2, v[0] * sideL), hem);
           const nw = new Map([[jTL, th * sL], [jTR, th * (1 - sL)], [jCL, ca * sL], [jCR, ca * (1 - sL)], [jP, pe]]), mp = new Map();
           for (const [jx, w] of old) mp.set(jx, w * (1 - low)); for (const [jx, w] of nw) mp.set(jx, (mp.get(jx) || 0) + w * low); list.push(mp); changed++; }
         if (changed) { setW(x, list); log.push(x.name + ' skirt ' + changed); } } } }

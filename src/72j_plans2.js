@@ -40,78 +40,69 @@ PD.dryRow = (R, len) => PD.rack;
 
 // ── the guardhouse: the guard room first (a long table, the weapon wall facing the door, the hearth), the armoury and the cells behind, bunks upstairs ──
 //    ground  guard room (12 x 6)  |  cells (west) + armoury (east) behind        up: barracks over the whole footprint
-PLANS.guardhouse = (P, c, info) => {
-  const R = P.R, id = P.id; P.dims = { W: 12, D: 11, Dh: 6 };
-  pLevel(P, 0, 0, 3.2); pLevel(P, 1, 3.2 + PW.SLAB, H_UP);
-  pRoom(P, 0, 'guard', 'hall', -6, 0, 6, 6, { floor: 'stone' }); pRoom(P, 0, 'cells', 'store', -6, 6, 0, 11, { floor: 'stone', tint: [0.7, 0.66, 0.62] }); pRoom(P, 0, 'armoury', 'store', 0, 6, 6, 11, { floor: 'stone' });
-  pRoom(P, 1, 'barracks', 'bedroom', -6, 0, 6, 11);
-  pDoor(P, 'guard', null, 0, 0); pDoor(P, 'guard', 'cells', -3, 6); pDoor(P, 'guard', 'armoury', 3, 6);
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: -5.0, z: 1.8, width: 1.0, tread: 0.22 });
-  pLayout(P);
-  const guard = P.rooms.guard, cells = P.rooms.cells, arm = P.rooms.armoury, bar = P.rooms.barracks, m = c.int;
-  // the hearth on the east wall, banked with logs; the long roster table in the middle with benches; the sergeant's spot at its head
-  const hh = pHearth(P, guard, 'e', 1.8, { cauldron: true, size: 0.5, at: 3.0 }); P.hall = { room: guard, hh };
-  if (hh) { pPier(P, 1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); }
-  const tb = pDining(P, guard, 3.0, 0.95, { near: [-0.5, 3.0], id: 'table', n: 5, items: ['mug', 'plate', 'bowl', 'book', 'candle', 'loaf'], rots: [0] });
-  if (tb) { tb.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); pLamp(P, guard, tb.x, tb.z); }
-  // the wall opposite the door: weapon stands either side of the cell and armoury doors, spears, a notice board, shields
-  pKitFloor(P, guard, 's', 'WeaponStand', { n: 'a', at: -1.95 }); pKitFloor(P, guard, 's', 'WeaponStand', { n: 'b', at: 1.95 }); pAgainst(P, guard, 's', id + '.spears1', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: -5.0 }); pAgainst(P, guard, 's', id + '.spears2', 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 5.0 });
-  pHang(P, guard, 's', 0, 1.4, 1.0, 2.0, PD.bladeWall(R, 1.4), id + '.blades', { pivot: 2.0 });      // [c5] centred between the two doors, the stands moved out (it was refused beside them)
-  pHang(P, guard, 'n', -3.2, 1.3, 1.1, 2.0, PD.tapestry(R, 1.3, 0.9), id + '.board', { pivot: 2.0 });
-  pKitFloor(P, guard, 'w', 'Dummy', { n: 'd', at: 'mid' }); pKitFloor(P, guard, 'n', 'WeaponStand', { n: 'c', at: 4.2 });
-  pWalls(P, guard, ['Banner_1_Cloth', 'kite_shield', 'Torch_Metal', 'kite_shield', 'Shield_Wooden', 'Banner_2_Cloth', 'Torch_Metal', 'Axe_Bronze', 'Sword_Bronze']);
-  PD.dense(P, guard, { pool: ['sconce', 'cask', 'stack', 'hooks', 'sacks'], corner: ['broom', 'cask', 'stack'], mid: { kinds: ['rug'], max: 1 } });
-  { const e = P.doors.find(d => d.b === null); if (e) pPut(P, guard, id + '.mat', e.x, 1.4, 0, 2.6, 1.6, 0.02, pdRug(2.6, 1.6, [0.28, 0.22, 0.2]), { flat: true, noClear: true }); pLamp(P, guard, 0, 2.2); }
-  // the cells: the west half is the barred cell (a gate gap kept in the bars), a straw pallet, a bucket, chains on the wall; the guards' strongbox outside it
-  pPut(P, cells, id + '.bars', -3.0, 8.4, 0, 5.4, 0.14, 0.84, PD.bars(5.2), { lowOk: true, noClear: true, allow: ['path', 'door'] });
-  pAgainst(P, cells, 'w', id + '.pallet', 1.9, 0.9, 0.3, 0, m2 => { m2.mat(MAT.THATCH, COL.hay, 0.5); m2.box(-0.95, 0, -0.4, 0.95, 0.14, 0.4); m2.mat(MAT.CLOTH, [0.4, 0.34, 0.26], 0.5); m2.box(-0.7, 0.14, -0.3, 0.2, 0.19, 0.3); }, { at: 9.5, lowOk: true });
-  pKitFloor(P, cells, 'w', 'Bucket_Wooden_1', { n: 'q', at: 'end' }); pKitFloor(P, cells, 's', 'Barrel', { n: 'q2', at: 'start' });
-  for (const u of [8.2, 9.8]) pHang(P, cells, 'w', u, 0.5, 0.6, 1.9, PD.chainHang(0.9, R), id + '.cchain' + u, { pivot: 1.9 });
-  pPut(P, cells, id + '.strongbox', -1.2, 6.9, 0, 0.9, 0.5, 0.58, pdChest, { lowOk: true });
-  PD.dense(P, cells, { pool: ['torch', 'sacks', 'cask'], corner: ['sacks', 'cask'], middle: false }); pTorch(P, cells, 'e', 8.5, 1.7, 7) || pTorch(P, cells, 's', -2.5, 1.7, 7);
-  // the armoury: racks of spears and swords, shields on the walls, helmets and crates of arrows
-  pShelfRun(P, arm, 's', 0, 6, null, { id: 'ar', lv: 3, mixed: ['tools', 'box', 'jar', 'rope', 'lantern'] });
-  for (let i = 0; i < 3; i++) pAgainst(P, arm, i % 2 ? 'e' : 'w', id + '.arms' + i, 1.2, 0.4, 2.1, +1, PD.spearRack(R), { at: 7.4 + i * 1.5 });
-  pHang(P, arm, 'e', 8.5, 1.6, 1.0, 2.0, PD.bladeWall(R, 1.6), id + '.ablades', { pivot: 2.0 }); pHang(P, arm, 'w', 8.5, 1.6, 1.0, 2.0, PD.bladeWall(R, 1.6), id + '.ablades2', { pivot: 2.0 });
-  pFree(P, arm, id + '.apile', 1.3, 0.7, 1.1, 0, PD.cratePile(R), { near: [3, 9.5], lowOk: true }); pStock(P, arm, { crates: 1, barrels: 1, near: [4.6, 7.2] });
-  pWalls(P, arm, ['kite_shield', 'Shield_Wooden', 'Torch_Metal', 'Sword_Bronze', 'Axe_Bronze', 'kite_shield']); PD.dense(P, arm, { pool: ['torch', 'sacks', 'cask'], corner: ['cask', 'sacks'], mid: { kinds: ['sacks'], max: 1 } }); pLamp(P, arm, 3, 8.6);
-  // upstairs: the bunks (the night guard's bed is the first), a footlocker each; quarters for the sergeant
-  dressBedroom(P, bar, { beds: ['bed', 'bed2', 'bed3', 'bed4'], loot: [['gold', 6]], bedInteract: true, table: true }); PD.dense(P, bar, { pool: ['hooks', 'cupboard', 'paint', 'sconce', 'rack'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
+PLANS.guardhouse = (P, c, info) => {      /* [inout] the shell: 7.2 x 5.6 m, two storeys, a balcony over the door; 8.5 x 7 inside. Hale and Ivo: the watch was four once */
+  const R = P.R, id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Zp = 4, Xc = X0 + 4, H0 = 2.8; P.dims = { W: B.W, D, Dh: Zp };
+  pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
+  pRoom(P, 0, 'guard', 'hall', X0, 0, X1, Zp, { floor: 'stone' }); pRoom(P, 0, 'cells', 'store', X0, Zp, Xc, D, { floor: 'stone', tint: [0.7, 0.66, 0.62] }); pRoom(P, 0, 'armoury', 'store', Xc, Zp, X1, D, { floor: 'stone' });
+  pRoom(P, 1, 'barracks', 'bedroom', X0, 0, X1, D);
+  pDoor(P, 'guard', null, 0, 0); pDoor(P, 'guard', 'cells', X0 + 0.9, Zp); pDoor(P, 'guard', 'armoury', X1 - 1.6, Zp);
+  const SHL = pShellWins(P, c, B);
+  const bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd) pUpperDoor(P, P.rooms.barracks, bd, Math.round(SHL.pos(bd) * 4) / 4);
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.7, z: Zp - 0.65, width: 0.9, tread: 0.22 });
+  pLayout(P); pKeepStairHeads(P); pBalconies(P, c);
+  const guard = P.rooms.guard, cells = P.rooms.cells, arm = P.rooms.armoury, bar = P.rooms.barracks;
+  // the guard room: the fire on the gable wall, the table with the roster, a weapon stand, two cloaks on the pegs, Hugh Alder's arrows still tied
+  let hh = null; for (const [sd, a] of [['e', 1.9], ['e', 2.4], ['w', 1.6]]) if ((hh = pHearth(P, guard, sd, 1.5, { cauldron: true, size: 0.45, at: a }))) break;
+  P.hall = { room: guard, hh }; if (hh) { pPier(P, 1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); }
+  const tb = pDining(P, guard, 1.8, 0.85, { near: [X0 + 2.3, 1.6], id: 'table', n: 2, items: ['mug', 'book', 'candle'], rots: [0] });
+  if (tb) { tb.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); }
+  pPiece(P, guard, 'WeaponStand', { side: ['n', 'e'], at: X1 - 1.4 }); pKitWall(P, guard, 'n', X0 + 1.2, 'Peg_Rack');
+  pFree(P, guard, id + '.arrows', 0.5, 0.4, 0.9, 0, m2 => { m2.mat(MAT.TIMBER, COL.wood); for (let k = 0; k < 2; k++) { m2.cyl(-0.12 + k * 0.24, 0, 0, 0.07, 0.07, 0.85, 7, 1); m2.mat(MAT.CLOTH, [0.6, 0.55, 0.45], 0.5); m2.cyl(-0.12 + k * 0.24, 0.6, 0, 0.08, 0.08, 0.06, 7, 1); m2.mat(MAT.TIMBER, COL.wood); } }, { near: [X1 - 1.0, 3.2], lowOk: true });
+  pPiece(P, guard, 'wooden_lantern_01', { near: [tb ? tb.x + 0.6 : X0 + 3, tb ? tb.z : 1.6], lit: 6, soft: true, opt: { lowOk: true, surface: false } });
+  { const e = P.doors.find(d => d.b === null); if (e) pPut(P, guard, id + '.mat', e.x, 1.1, 0, 2.0, 1.3, 0.02, pdRug(2.0, 1.3, [0.28, 0.22, 0.2]), { flat: true, noClear: true }); }
+  // the cell: bars across it with the gate, a plank bed, the bucket; old tallies scratched on the wall
+  pPut(P, cells, id + '.bars', (X0 + Xc) / 2, Zp + 1.1, 0, Xc - X0 - 0.4, 0.14, 0.84, PD.bars(Xc - X0 - 0.6), { lowOk: true, noClear: true, allow: ['path', 'door'] });
+  pAgainst(P, cells, 's', id + '.pallet', 1.9, 0.8, 0.45, 0, m2 => { m2.mat(MAT.PLANKS, COL.woodDark); m2.box(-0.95, 0, -0.4, 0.95, 0.4, 0.4); m2.mat(MAT.CLOTH, [0.4, 0.34, 0.26], 0.5); m2.box(-0.6, 0.4, -0.3, 0.3, 0.45, 0.3); }, { at: X0 + 1.4, lowOk: true });
+  pPiece(P, cells, 'wooden_bucket_01', { side: ['e', 's'], at: D - 0.5 }); pTorch(P, cells, 'n', X0 + 2.6, 1.7, 5) || pTorch(P, cells, 'e', Zp + 0.6, 1.7, 5);
+  // the armoury: two stands, shields, a crate of arrows; the first Warden's kettle hat on a shelf
+  pPiece(P, arm, 'WeaponStand', { side: ['s'], at: Xc + 1.0, id: 'stand2' }); pPiece(P, arm, 'Crate_Wooden', { side: ['e', 's'], at: D - 0.6 });
+  for (const [nm, u] of [['Shield_Wooden', Zp + 1.0], ['kite_shield', Zp + 2.0]]) pKitWall(P, arm, 'e', u, nm);
+  pPiece(P, arm, 'Shelf_Small_Bottles', { side: ['w'], at: Zp + 1.6 }) ; pTorch(P, arm, 'n', X1 - 1.0, 1.7, 5) || pLamp(P, arm, Xc + 2, Zp + 1.5);
+  // the barracks over it all: two beds in use, two chests, the straw dummy in the corner, Ivo's letter by his bed
+  dressBedroom(P, bar, { beds: castBeds(P.id, ['bed', 'bed2']), loot: [['gold', 6]], bedInteract: true, table: true });
+  pPiece(P, bar, 'treasure_chest', { side: ['s', 'w'], id: 'chestH' }); pPiece(P, bar, 'Dummy', { side: ['s', 'e', 'w'] }); pPiece(P, bar, 'wooden_candlestick', { near: [X1 - 2.2, D - 1.5], lit: 4, soft: true, opt: { lowOk: true } });
   if (!hh) P.err.push('no hearth fits in the guard room');
 };
 
 // ── the herbalist's: a low shop hung with drying herbs, a counter of jars, the still and the workbench beyond, her bedchamber, the physic garden's door ──
 //    ground  shop (10 x 6)  |  workroom (west) + bedchamber with a hearth (east)
-PLANS.herbalist = (P, c, info) => {
-  const R = P.R, id = P.id; P.dims = { W: 10, D: 11, Dh: 6 };
-  pLevel(P, 0, 0, 2.9);
-  pRoom(P, 0, 'shop', 'shop', -5, 0, 5, 6, { floor: 'stone' }); pRoom(P, 0, 'workroom', 'store', -5, 6, 0, 11, { floor: 'stone' }); pRoom(P, 0, 'chamber', 'hall', 0, 6, 5, 11);
-  pDoor(P, 'shop', null, 0, 0); pDoor(P, 'shop', 'workroom', -2.5, 6); pDoor(P, 'workroom', 'chamber', 0, 8.5);
+PLANS.herbalist = (P, c, info) => {      /* [inout] the shell: 6.6 x 5.6 m, one storey; 8.5 x 6.5 inside: the front room where she sells, the stillroom and her chamber behind */
+  const R = P.R, id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Zp = 3, Xs = X0 + 4; P.dims = { W: B.W, D, Dh: Zp };
+  pLevel(P, 0, 0, 2.7);
+  pRoom(P, 0, 'shop', 'shop', X0, 0, X1, Zp, { floor: 'stone' }); pRoom(P, 0, 'workroom', 'store', X0, Zp, Xs, D, { floor: 'stone' }); pRoom(P, 0, 'chamber', 'hall', Xs, Zp, X1, D);
+  pDoor(P, 'shop', null, 0, 0); pDoor(P, 'shop', 'workroom', X0 + 1.4, Zp); pDoor(P, 'workroom', 'chamber', Xs, Zp + 0.9);
+  pShellWins(P, c, B);
   pLayout(P);
   const shop = P.rooms.shop, wk = P.rooms.workroom, ch = P.rooms.chamber;
-  // the counter across the shop's far side, the keeper behind it; the hearth with a simmering pot on the east wall
-  const ct = pPut(P, shop, id + '.counter', 2.9, 4.8, 0, 3.6, 0.8, 0.84, PD.apothecaryTable(3.6), { surface: true, noClear: true, lowOk: true, h: 0.84 });
-  if (ct) { pSpot(P, 'home', ct.cx + 1.0, ct.cz + 0.75, PI, { k: 0 }); pSpot(P, 'counter', ct.cx, ct.cz + 0.9, PI, { k: 0 }); pSpot(P, 'front', ct.cx, ct.cz - 0.9, 0, { k: 0 }); }
-  const hh = pHearth(P, shop, 'e', 1.5, { cauldron: true, size: 0.4, at: 2.0 }); P.hall = { room: shop, hh };
-  for (const sd of ['w', 'n', 'e']) pShelfRun(P, shop, sd, sd === 'n' ? -4.8 : 0.4, sd === 'n' ? 4.8 : 5.6, null, { id: 'bt', lv: 5, mixed: PD.WARES.drugs });
-  for (const x of [-3.2, -1.2, 1.2, 3.2]) PD.rack(P, shop, x, 2.4 + (x > 0 ? 0.4 : 0), 1.8, 0, ['herb', 'herb', 'herb', 'garlic', 'herb']);
-  PD.rack(P, shop, -3.2, 4.4, 1.8, 0, ['herb', 'herb', 'garlic']);
-  pAgainst(P, shop, 'w', id + '.planter', 1.1, 0.5, 0.6, 0, PD.planter(R), { at: 2.0, lowOk: true }); pAgainst(P, shop, 'n', id + '.planter2', 1.1, 0.5, 0.6, 0, PD.planter(R), { at: 3.4, lowOk: true });
-  pWalls(P, shop, ['Shelf_Small_Bottles', 'Torch_Metal', 'Shelf_Small_Bottles', 'Peg_Rack']); PD.dense(P, shop, { pool: ['sconce', 'hooks', 'tapestry', 'cabinet'], corner: ['sacks', 'broom'], middle: false });
-  { const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, id + '.mat', e.x, 1.3, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, [0.25, 0.3, 0.2]), { flat: true, noClear: true }); }
-  pLamp(P, shop, -2.0, 2.0); pLamp(P, shop, 1.8, 2.0);
-  // the workroom: the still and a long bench, stoppered jars, pots, bundles hanging, sacks of dried leaves
-  pAgainst(P, wk, 'n', id + '.still', 1.5, 0.9, 1.4, 0, PD.still, { at: -2.0, lowOk: true });
-  pFree(P, wk, id + '.workbench', 2.2, 0.8, 0.9, 0, PD.apothecaryTable(2.2), { near: [-2.6, 8.6], surface: true });
-  pShelfRun(P, wk, 'w', 6.2, 10.8, null, { id: 'wk', lv: 4, mixed: PD.WARES.drugs }); pShelfRun(P, wk, 's', -4.8, -0.2, null, { id: 'wks', lv: 4, mixed: PD.WARES.drugs });
-  PD.rack(P, wk, -2.6, 8.0, 2.2, 0, ['herb', 'herb', 'garlic', 'herb']); pStock(P, wk, { sacks: 3, crates: 2, barrels: 1, near: [-1, 10] });
-  pWalls(P, wk, ['Shelf_Small_Bottles', 'Torch_Metal', 'rusted_spade_01']); PD.dense(P, wk, { pool: ['sconce', 'shelf', 'stack'], corner: ['sacks', 'stack'], mid: { kinds: ['sacks'], max: 1 } }); pLamp(P, wk, -2.4, 8.8);
-  // her chamber: a hearth, a table and stools at it, the bed, a chest
-  const lh = pHearth(P, ch, 'e', 1.5, { cauldron: true, size: 0.4, at: 8.5 });
-  dressBedroom(P, ch, { beds: ['bed'], loot: [['gold', 5]], bedInteract: true, table: true });
-  const dn = pDining(P, ch, 1.6, 0.8, { near: [2.0, 9.6], id: 'meal', n: 3 }); if (dn) dn.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0));
-  PD.rack(P, ch, 2.5, 8.2, 1.6, PI / 2, ['herb', 'garlic']); PD.dense(P, ch, { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'sconce'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-  if (!hh) P.err.push('no hearth fits in the shop');
+  // the front room: the long table with pestle and bowls she serves across, bottle shelves, herbs from the beams, two stools for those who wait
+  const ct = pPut(P, shop, id + '.counter', X1 - 2.0, 2.4, 0, 2.6, 0.8, 0.84, PD.apothecaryTable(2.6), { surface: true, noClear: true, lowOk: true, h: 0.84 });
+  if (ct) { pSpot(P, 'home', ct.cx + 0.6, ct.cz + 0.65, PI, { k: 0 }); pSpot(P, 'counter', ct.cx, ct.cz + 0.65, PI, { k: 0 }); pSpot(P, 'front', ct.cx, ct.cz - 0.9, 0, { k: 0 }); }
+  pPiece(P, shop, 'Shelf_Small_Bottles', { side: ['w', 'n'], at: 1.6, id: 'jars1' }); pPiece(P, shop, 'Shelf_Small_Bottles', { side: ['n', 'e'], at: X0 + 1.6, id: 'jars2' });
+  for (let i = 0; i < 2; i++) pPiece(P, shop, 'painted_wooden_stool', { side: ['n'], at: X1 - 0.8 - i * 0.6, id: 'stool' + i });
+  for (const x of [X0 + 1.4, 0.6, X1 - 2.0]) PD.rack(P, shop, x, 1.5, 1.6, 0, ['herb', 'herb', 'garlic', 'herb']);
+  pPiece(P, shop, 'wooden_candlestick', { near: [ct ? ct.cx - 1.0 : X1 - 3, 2.4], opt: { lowOk: true, surface: false }, soft: true, lit: 4 });
+  { const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, id + '.mat', e.x, 1.1, 0, 1.8, 1.2, 0.02, pdRug(1.8, 1.2, [0.25, 0.3, 0.2]), { flat: true, noClear: true }); }
+  // the stillroom: her fire with the pot on it, the still, the work table where she laid out the drowned man's things, the honey crock
+  let hh = null; for (const [sd, a] of [['s', X0 + 1.4], ['w', 5.2], ['s', X0 + 2.4]]) if ((hh = pHearth(P, wk, sd, 1.3, { cauldron: true, size: 0.4, at: a }))) break; P.hall = { room: wk, hh };
+  pAgainst(P, wk, 's', id + '.still', 1.3, 0.8, 1.4, 0, PD.still, { at: Xs - 1.0, lowOk: true }) || pAgainst(P, wk, 'n', id + '.still', 1.3, 0.8, 1.4, 0, PD.still, { at: Xs - 1.0, lowOk: true });
+  pFree(P, wk, id + '.workbench', 1.1, 0.7, 0.8, 0, pdTable(1.1, 0.7, ['bowl', 'jar', 'bottle'], 3, c), { near: [X0 + 2.6, 4.6], surface: true });
+  pPiece(P, wk, 'wooden_bucket_02', { near: [Xs - 0.7, 4.2], sc: 0.8 });
+  // her chamber: the bed, the rocker turned to the fire, the chest with the child's shoe
+  let lh = null; for (const [sd, a] of [['n', X1 - 1.1], ['e', 4.0], ['e', 5.4]]) if ((lh = pHearth(P, ch, sd, 1.2, { cauldron: false, size: 0.35, at: a }))) break;      /* the fire first: the bed goes where it leaves room */
+  dressBedroom(P, ch, { beds: castBeds(P.id, ['bed']), loot: [['gold', 5]], bedInteract: true, table: false });
+  if (lh) { const rk = pPiece(P, ch, 'rockingchair_01', { near: [lh.front[0] - 0.3, lh.front[1]], turn: PI / 2, id: 'rocker', soft: true });      /* she sits in it: no collider */ if (rk) pSit(P, 'sit', rk.cx, rk.cz, PI / 2, 0); }
+  if (!lh || !P.spots.sit) { const sk = pPiece(P, wk, 'painted_wooden_stool', { near: hh ? [hh.front[0], hh.front[1]] : pCentre(wk), id: 'firestool', soft: true }); if (sk) pSit(P, 'sit', sk.cx, sk.cz, 0, 0); }
+  if (!hh) P.err.push('no hearth fits in the stillroom');
 };
 
 PLAN_SHIP.guardhouse = 1; PLAN_SHIP.herbalist = 1;

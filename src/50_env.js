@@ -1,5 +1,5 @@
 // ───────────────────────── time of day, sky colours, light ─────────────────────────
-const Env = { hour: 7.9, dayLength: 1200, paused: false, cover: 0.38, mist: 0.07 };      // dayLength: real seconds per in-game day
+const Env = { hour: 7.9, dayLength: 2400, paused: false, cover: 0.38, mist: 0.07 };      // dayLength: real seconds per in-game day. [audit, Build 81] 40 minutes, was 20: a new player who talked to four people had used the morning, and the Hart filled and emptied in three minutes
 const ENV = {
   keyDir: [0, 1, 0], keyCol: [3, 3, 3], sunDir: [0, 1, 0], moonDir: [0, 1, 0], ambSky: [0, 0, 0], ambGnd: [0, 0, 0],
   fogCol: [0, 0, 0], fogSun: [0, 0, 0], zenith: [0, 0, 0], horizon: [0, 0, 0], windDir: [0.8, 0.6], windStrength: 1,

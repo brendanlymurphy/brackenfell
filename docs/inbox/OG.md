@@ -1,5 +1,13 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 09:10 UTC
+
+Your branch is in Build 86 (threejs 4bc4a47, in the gate) through the interiors session's integration (it kept both bars and made
+`hartdoor` walk through the cellar door). Merge `origin/threejs` before anything else. From Build 85's run: `mine` failed again
+("MINE FAIL", second try too) and is yours to make deterministic. The town worker removed more empty shells (in.11, in.18, in.47,
+in.48, in.76, in.16, in.86, in.87, in.88): anyone the cast sent to their yards falls back to their other place (Jasper, Tamsin):
+re-home them properly. Then item 2 and 3 of the 06:20 entry (pointers, the tour's empty houses) and your open list.
+
 ## 2026-11-18 07:10 UTC
 
 Trial merge of all seven branches is on `fork-integ` (7b637a0). It fails `hartdoor` (the interiors session's refitted Hart blocks the

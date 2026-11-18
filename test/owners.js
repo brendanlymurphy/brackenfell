@@ -19,6 +19,7 @@ at(23.5); heard.length = 0; game.enter('in.02'); run(4); const nt = heard.filter
 for (let i = 0; i < 40 && World.cell; i++) { run(1); await new Promise(r => setTimeout(r, 120)); } if (World.cell) bad.push('still in the Cooper\'s house a long while after being told to go');
 // beds
 at(12); S.flags.bed = 1; game.enter('in.02'); run(1); { const bed = World.interact.find(i => i.kind === 'bed' && i.id === 'in.02.bed'); if (!bed) bad.push('no bed to try in the Cooper\'s'); else { const h0 = Env.hour; heard.length = 0; interactUse(bed); run(2); if (Math.abs(Env.hour - h0) > 0.2) bad.push('slept in the cooper\'s bed'); if (!heard.some(x => /’s bed/.test(x))) bad.push('no word on whose bed it is'); } } game.leave(); run(1);
+if (houses < 40) bad.push('only ' + houses + ' houses with people were found: the cast did not load');
 toast = _t; delete S.flags.bed; S.heard = {}; S.own = {};
 if (bad.length) throw new Error('OWNERS FAIL ' + bad.length + ': ' + bad.join('; '));
 return 'owners PASS ' + houses + ' houses with people: barred at night and shops outside their hours unless you are known there; a word on coming in by day, once; told to go at night and put out; nobody\'s bed is yours; the Hart and the chapel always open';
