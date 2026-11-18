@@ -6,7 +6,7 @@
 //     and slung on the back when he is not playing; the hammer hangs from the belt unless it is being swung; the spear stands grounded beside the body unless it is held.
 // mesh.userData = { kind, holding, grip: [x,y,z] the point of the prop that must be in the hand (test/hold.js), hand: 'R'|'L', len: longest side in metres }.
 const HP = { cache: {}, GRIP: { rot: [0, 0, Math.PI / 2], pos: [0, 0.07, -0.015], curl: 0.75 } };
-const HP_SIZE = { lute: 0.8, hammer: 0.4, spear: 2.3, staff: 1.8, rod: 2.2, mug: 0.14, flute: 0.45, besom: 1.45, shears: 0.26, awl: 0.17, knife: 0.3, cleaver: 0.32, mallet: 0.34, axe: 0.72, paddle: 0.8, scraper: 0.16, pestle: 0.2, tinhammer: 0.3, shuttle: 0.24, sickle: 0.48, tongs: 0.52 };      // longest side allowed, metres (test/hold.js)
+const HP_SIZE = { lute: 0.8, hammer: 0.4, spear: 2.3, staff: 1.8, rod: 2.2, mug: 0.14, flute: 0.45, besom: 1.55, shears: 0.26, awl: 0.17, knife: 0.3, cleaver: 0.32, mallet: 0.34, axe: 0.72, paddle: 0.8, scraper: 0.16, pestle: 0.2, tinhammer: 0.3, shuttle: 0.24, sickle: 0.48, tongs: 0.52 };      // longest side allowed, metres (test/hold.js)
 function hpWood(len, r0, r1, y0, col, seg) {      // a tapered shaft, lathe-turned
   const T = THREE, pts = []; for (let i = 0; i <= 6; i++) { const t = i / 6; pts.push(new T.Vector2(r0 + (r1 - r0) * t + (i === 0 || i === 6 ? -0.0015 : 0), y0 + len * t)); }
   return [new T.LatheGeometry(pts, seg || 8), null, col, [0, 0.78]];
@@ -150,7 +150,7 @@ function hpHammer(mesh) { return (H) => {
     mesh.parent !== H.pivot && H.pivot.add(mesh); const y = new THREE.Vector3(0, -1, 0).addScaledVector(f.R, 0.08).normalize(), z = f.F.clone(), o = f.pel.clone().addScaledVector(f.R, 0.2).addScaledVector(f.U, 0.02).addScaledVector(f.F, 0.02);
     hpPlace(mesh, o, y, z); mesh.scale.setScalar(1);
   }
-  mesh.userData.grip = [0, -0.2, 0]; mesh.userData.hand = 'R';
+  mesh.userData.grip = [0, 0.02, 0]; mesh.userData.hand = 'R';
 }; }
 function hpPole(mesh, tilt, always, only) { return (H, st) => {
   // [ch4] put down when it is not in use: a spear is carried on guard and out of doors, and stays in the rack when its owner is indoors off duty, at table or in bed (it stood upright through
