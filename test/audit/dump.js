@@ -25,6 +25,8 @@ out.talkKeys = Object.keys(TALK); out.lakeY = World.lakeY;
 out.shells = (typeof INFS !== 'undefined' ? INFS.shells : []).map(h => ({ id: h.id, x: r2(h.x), z: r2(h.z), yaw: r2(h.yaw), w: h.w, d: h.d, floors: h.floors, name: (SITE[h.id] || {}).name }));
 out.wildShut = (typeof WILDS !== 'undefined' ? WILDS.houses : []).filter(h => !h.enter).map(h => h.id);
 out.gateSpots = Object.keys(World.spots || {}).filter(k => /^gate\./.test(k)).map(k => [k, safe(World.spots[k], 3)]);
+out.yardTrees = (World.yardTrees || []).map(t => [r2(t[0]), r2(t[1]), t[2] || '']); out.orchardTrees = (World.orchardTrees || []).map(t => Array.isArray(t) ? [r2(t[0]), r2(t[1])] : [r2(t.x), r2(t.z)]);
+out.groundEdge = typeof GROUND !== 'undefined' && GROUND.edge ? GROUND.edge : null; out.groundPlaces = typeof GROUND !== 'undefined' ? safe(GROUND.places, 3) : null;
 out.build = typeof BUILD_NAME !== 'undefined' ? BUILD_NAME : null;
 out.bodies = NPCS.map(n => [n.id, n.def.body || null]);
 { const keepLen = Env.dayLength; Env.dayLength = 0; const by = []; for (let h = 0; h < 24; h++) { Env.hour = h + 0.5; npcSnapAll(); game.step(3, 1 / 30); let o = 0, sq = 0, inn = 0; for (const n of NPCS) { const c = Cells.at(n.pos[0], n.pos[1], n.pos[2]); if (c) { if (c.id === 'inn') inn++; } else { o++; if (Math.hypot(n.pos[0], n.pos[2] + 2) < 22) sq++; } } by.push([o, sq, inn]); } out.byHour = by; Env.dayLength = keepLen; }

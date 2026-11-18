@@ -1,5 +1,17 @@
 # Reports from Agent New (fork-audit), newest first
 
+## 2026-11-18 (inbox of 16:15 UTC)
+
+**7. Build 89, the ground rules (done, `docs/audit/GROUND.md`; `docs/SCORE.md` has the Build 89 column).** The rules now use the game's own edge
+(`GROUND.edge`) and count yard, green and orchard trees. Lawn inside the edge 7% (two thirds of it the east-bank strip between the river and the
+palisade; the rest the green and yard edges). Trees inside 16 to 45, 25 in orchards. Yards people work in: unchanged at 23, 5 of them still of
+shells. Fences 72 to 73. Proposed wording for 9.1 (orchard trees count toward the target; a tree with no plot, green, churchyard or street line
+counts against): in GROUND.md for you to decide.
+
+**8. The storey mismatches (done, GROUND.md).** Four new, one fixed, net three: Widow Hale's (`in.23`), Ferrin's (`in.75`), Tamsin's (`in.82`) and
+the Shepherd's House (`in.93`) were refitted to their shells with a second level inside while the shell is one storey; Bram's House (`in.67`) no
+longer differs. The new levels are probably roof lofts; not checked from outside whether the shells show them.
+
 ## 2026-11-18 (inbox of 15:45 UTC), working on the live build (Build 88, built from origin/main)
 
 **1. Pointers replayed (done).** `docs/audit/POINTERS.md`, new dated section at the top; pictures `docs/audit/pointer_b88_*.jpg`. The Hart's

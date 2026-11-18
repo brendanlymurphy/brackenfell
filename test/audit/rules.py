@@ -18,7 +18,15 @@ LO, HI, RES = -130.0, 130.0, 0.25; N = int((HI - LO) / RES); gg = W['groundGrid'
 def ground(x, z):
     fx = min(max((x + 130) / 2, 0), 129.999); fz = min(max((z + 130) / 2, 0), 129.999); i = int(fx); j = int(fz); a = fx - i; b = fz - j
     return (gg[j][i] * (1 - a) + gg[j][i + 1] * a) * (1 - b) + (gg[j + 1][i] * (1 - a) + gg[j + 1][i + 1] * a) * b
-def in_town(x, z): return abs(x) <= 62 and -84 <= z <= 88 and x <= 52
+EDGE = W.get('groundEdge')
+def _inpoly(x, z, P):
+    c = False; j = len(P) - 1
+    for i in range(len(P)):
+        xi, zi = P[i]; xj, zj = P[j]
+        if (zi > z) != (zj > z) and x < (xj - xi) * (z - zi) / (zj - zi) + xi: c = not c
+        j = i
+    return c
+def in_town(x, z): return _inpoly(x, z, EDGE) if EDGE else (abs(x) <= 62 and -84 <= z <= 88 and x <= 52)      # the game's own edge (GROUND.edge) when the build has one
 blocked = bytearray(N * N); barriers = []
 def fill(x, z, hx, hz, ang, grid):
     ca, sa = math.cos(ang), math.sin(ang); ext = math.hypot(hx, hz)
@@ -169,8 +177,11 @@ if by:
 # ---- 7, 9
 cont = sum(1 for i in W['interact'] if i.get('kind') in ('chest', 'cont'))
 rule('7.3', 'containers per villager', round(cont / max(len(npcs), 1), 1), 'about 4', cont / max(len(npcs), 1) <= 5)
-trees = sum(1 for arr in W['trees'].values() for t in arr if in_town(t[0], t[2]))
-rule('9.1', 'trees inside the town', trees, 'about 70', trees >= 60, lower=False)
+trees = sum(1 for arr in W['trees'].values() for t in arr if in_town(t[0], t[2])); ytrees = sum(1 for t in W.get('yardTrees', []) + W.get('orchardTrees', []) if in_town(t[0], t[1]))
+orch = [p for p in (W.get('groundPlaces') or []) if p.get('kind') == 'orchard']; inorch = lambda x, z: any(p['x0'] <= x <= p['x1'] and p['z0'] <= z <= p['z1'] for p in orch)
+otrees = sum(1 for t in W.get('yardTrees', []) if in_town(t[0], t[1]) and inorch(t[0], t[1])) + sum(1 for t in W.get('orchardTrees', []) if in_town(t[0], t[1]))
+rule('9.1', 'trees inside the town (scanned trees + yard, green and orchard trees)', trees + ytrees, 'about 70', trees + ytrees >= 60, lower=False)
+rule('9.1b', 'of which in orchards', otrees, 'an orchard of 6 or more', otrees >= 6, lower=False)
 pots = sum(1 for k in W['kit'] if k[0].startswith('dr_fpot') and in_town(k[1], k[3]) and k[2] > -100)
 rule('9.2', 'flower pots inside the town', pots, 'under 120', pots < 120)
 # ---- 8.4 voice
