@@ -74,7 +74,7 @@ function buildWharfPlots(bucket) {
     if (p.trade === 'nets') {
       for (const sg of [-1, 1]) put(sg * 1.5, dp * 0.55, (x, z) => { const g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x, g, z], [x, g + 2.1, z], 0.07, 0.07); });
       { const { p0, p1 } = along(-1.5, 1.5, dp * 0.55), g0 = gy(p0[0], p0[1]); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([p0[0], g0 + 2.0, p0[1]], [p1[0], g0 + 2.0, p1[1]], 0.05, 0.05);
-        m.mat(MAT.CLOTH, [0.52, 0.48, 0.38], 0.5); m.quad2([p0[0], g0 + 1.95, p0[1]], [p1[0], g0 + 1.95, p1[1]], [p1[0] - 0.1, g0 + 0.9, p1[1] + 0.12], [p0[0] + 0.1, g0 + 0.9, p0[1] + 0.12]); m.quad2([p0[0] + 0.1, g0 + 0.9, p0[1] + 0.12], [p1[0] - 0.1, g0 + 0.9, p1[1] + 0.12], [p1[0], g0 + 1.95, p1[1]], [p0[0], g0 + 1.95, p0[1]]); }
+        wNet(m, [p0[0], g0 + 1.97, p0[1]], [p1[0], g0 + 1.97, p1[1]], 1.05, R); }
       put(0.2, dp * 0.25, (x, z) => flat(m, x, z, 1.0, 0.6, [0.2, 0.19, 0.15], MAT.CLOTH, R() * 3));
     } else if (p.trade === 'boat') {
       put(0, dp * 0.5, (x, z) => { const g = gy(x, z), ang = Math.atan2(p.uz, p.ux); wharfHull(m, x, z, g + 0.45, ang, 3.5, 0.72, 0.6, false); m.mat(MAT.TIMBER, [0.24, 0.19, 0.14], 0.5);
@@ -228,7 +228,7 @@ function buildWharfCloses(bucket) {
   for (const [p, q] of C.beds) { const cx = (p[0] + q[0]) / 2, cz = (p[1] + q[1]) / 2, m = bucket(cx, cz), ang = Math.atan2(q[1] - p[1], q[0] - p[0]), w = hyp(q[0] - p[0], q[1] - p[1]) / 2; m.mat(MAT.SOIL, [0.34, 0.27, 0.2], 0.5); m.push().T(cx, gy(cx, cz) + 0.04, cz).RY(-ang); m.quad2([-w, 0, -0.32], [w, 0, -0.32], [w, 0, 0.32], [-w, 0, 0.32]); m.pop(); for (let a = -w + 0.3; a < w - 0.2; a += 2.0) (World.wharfPlants = World.wharfPlants || []).push([cx + Math.cos(ang) * a, cz + Math.sin(ang) * a, (a * 7 | 0) & 1]); }
   const post = (m, x, z, hh) => { const g = gy(x, z); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x, g - 0.1, z], [x, g + hh, z], 0.07, 0.07); };
   for (const [x0, z0, x1, z1] of C.poles) { const m = bucket(x0, z0); post(m, x0, z0, 2.3); post(m, x1, z1, 2.3); const g0 = gy(x0, z0); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.beam([x0, g0 + 2.2, z0], [x1, g0 + 2.2, z1], 0.045, 0.045);
-    m.mat(MAT.CLOTH, [0.48, 0.44, 0.34], 0.5); const nx = -(z1 - z0), nz = x1 - x0, nl = hyp(nx, nz) || 1; m.quad2([x0, g0 + 2.15, z0], [x1, g0 + 2.15, z1], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12]); m.quad2([x0 + nx / nl * 0.12, g0 + 1.0, z0 + nz / nl * 0.12], [x1 + nx / nl * 0.12, g0 + 1.0, z1 + nz / nl * 0.12], [x1, g0 + 2.15, z1], [x0, g0 + 2.15, z0]);
+    wNet(m, [x0, g0 + 2.17, z0], [x1, g0 + 2.17, z1], 1.15, R);
     addCircleCollider(m, x0, z0, 0.12, g0, g0 + 2.2); addCircleCollider(m, x1, z1, 0.12, gy(x1, z1), gy(x1, z1) + 2.2); }
   for (const [x0, z0, x1, z1] of C.racks) { const m = bucket(x0, z0); post(m, x0, z0, 1.5); post(m, x1, z1, 1.5); const g0 = gy(x0, z0); m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const y of [1.45, 0.95]) m.beam([x0, g0 + y, z0], [x1, g0 + y, z1], 0.04, 0.04);
     for (let k = 0; k < 8; k++) { const t = (k + 0.5) / 8, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; wFish(m, x, g0 + 1.42, z, x1 - x0, z1 - z0, 0.36 + (k % 3) * 0.04); } addCircleCollider(m, x0, z0, 0.12, g0, g0 + 1.5); addCircleCollider(m, x1, z1, 0.12, gy(x1, z1), gy(x1, z1) + 1.5); }
@@ -278,11 +278,19 @@ function buildWharfBoards(bucket) {
 // a split fish hung by the tail from a rail: a flat body in two quads and a forked tail, silver gone to brown (nothing living is built from balls)
 function wFish(m, x, y, z, ux, uz, len, col) {
   const ul = Math.hypot(ux, uz) || 1; ux /= ul; uz /= ul; const L = len || 0.38, w = L * 0.11, P = (a, h) => [x + ux * a, y - h, z + uz * a];
-  m.mat(MAT.PLAIN, col || [0.17, 0.165, 0.15], 0.5);
+  m.mat(MAT.CLOTH, col || [0.4, 0.4, 0.38], 0.5);
   m.quad2(P(-w * 0.5, 0), P(-w * 0.2, L * 0.2), P(w * 0.2, L * 0.2), P(w * 0.5, 0));
   m.quad2(P(-w * 0.2, L * 0.2), P(-w, L * 0.45), P(w, L * 0.45), P(w * 0.2, L * 0.2));
   m.quad2(P(-w, L * 0.45), P(-w * 0.15, L), P(w * 0.15, L), P(w, L * 0.45));
-  m.mat(MAT.PLAIN, [0.1, 0.09, 0.08], 0.5); m.quad2(P(-w * 0.8, -0.1), P(-w * 0.3, 0), P(w * 0.4, 0), P(w * 0.8, -0.1));
+  m.mat(MAT.CLOTH, [0.22, 0.2, 0.18], 0.5); m.quad2(P(-w * 0.8, -0.1), P(-w * 0.3, 0), P(w * 0.4, 0), P(w * 0.8, -0.1));
+}
+// a fishing net hung from a line: thin strands and cross cords with open meshes between them (a sheet of cloth read as a board), irregular at the hem, sagging
+function wNet(m, A, B, drop, R) {
+  const rr = R || (() => 0.5), L = Math.hypot(B[0] - A[0], B[2] - A[2]), n = Math.max(3, Math.ceil(L / 0.13)), pts = [];
+  m.mat(MAT.CLOTH, [0.55, 0.5, 0.38], 0.5);
+  for (let i = 0; i <= n; i++) { const t = i / n, x = A[0] + (B[0] - A[0]) * t, z = A[2] + (B[2] - A[2]) * t, y0 = A[1] + (B[1] - A[1]) * t, hem = drop * (0.72 + 0.28 * rr()) * (1 - 0.12 * Math.sin(t * Math.PI)), zz = 0.05 * Math.sin(t * 9 + rr());
+    pts.push([x, y0, z, hem]); m.beam([x, y0, z], [x + (B[2] - A[2]) / L * zz, y0 - hem, z - (B[0] - A[0]) / L * zz], 0.007, 0.007); }
+  for (const f of [0.22, 0.45, 0.68, 0.9]) for (let i = 0; i < n; i++) { const a = pts[i], b = pts[i + 1]; if (a[3] * f > Math.min(a[3], b[3]) * 0.96) continue; m.beam([a[0], a[1] - a[3] * f, a[2]], [b[0], b[1] - b[3] * f, b[2]], 0.006, 0.006); }
 }
 // a heap of net or a coil of rope: loose folds of cloth lying at different tilts, and a few turns of rope on top
 function wNetHeap(m, x, y, z, r, R) {
@@ -397,14 +405,14 @@ function buildWharfWorks(bucket) {
         m.mat(MAT.CLOTH, [0.60, 0.54, 0.40], 0.5); wNetHeap(m, -0.8, g + 2.4, -0.6, 0.8, R); wNetHeap(m, 0.9, g + 2.4, -0.2, 0.65, R);       // heaped nets up there
         m.mat(MAT.TIMBER, [0.3, 0.24, 0.17], 0.5); m.box(-0.06, g + 3.6, hd, 0.06, g + 3.7, hd + 1.2); m.box(-0.02, g + 2.3, hd + 1.1, 0.02, g + 3.6, hd + 1.14);        // the hoist beam and its rope
         for (let i = 0; i < 6; i++) m.box(hw - 0.15 + 0.0, g + 0.3 + i * 0.35, hd - 0.5, hw - 0.05, g + 0.36 + i * 0.35, hd - 0.1);      // ladder rungs against the post
-        m.mat(MAT.CLOTH, [0.56, 0.50, 0.38], 0.5); for (let i = 0; i < 3; i++) m.quad2([-hw + 0.5 + i * 1.1, g + 2.1, -hd + 0.1], [-hw + 1.3 + i * 1.1, g + 2.1, -hd + 0.1], [-hw + 1.3 + i * 1.1, g + 0.8, -hd + 0.14], [-hw + 0.5 + i * 1.1, g + 0.8, -hd + 0.14]); });       // nets hung under the deck
+        m.mat(MAT.CLOTH, [0.56, 0.50, 0.38], 0.5); for (let i = 0; i < 3; i++) wNet(m, [-hw + 0.5 + i * 1.1, g + 2.1, -hd + 0.1], [-hw + 1.3 + i * 1.1, g + 2.1, -hd + 0.1], 1.3, R); });       // nets hung under the deck
     } else if (S.kind === 'fish') {
       L(() => { m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); for (const y of [1.25, 1.65]) m.box(-hw + 0.1, g + y, -0.15, hw - 0.1, g + y + 0.05, -0.1);
         for (let i = 0; i < 12; i++) { const a = -hw + 0.4 + i * (w - 0.8) / 11; wFish(m, a, g + 1.62 - (i % 2) * 0.4, -0.12, 1, 0, 0.36 + (i % 3) * 0.04); }
         m.mat(MAT.PLANKS, [0.42, 0.33, 0.22], 0.5); m.cyl(hw - 0.6, g, hd - 0.5, 0.3, 0.27, 0.45, 7, 1); });
     } else if (S.kind === 'nets') {
       L(() => { m.mat(MAT.TIMBER, [0.28, 0.22, 0.16], 0.5); m.box(-hw + 0.1, g + 1.9, -0.1, hw - 0.1, g + 1.96, -0.04); m.mat(MAT.CLOTH, [0.56, 0.50, 0.38], 0.5);
-        for (let i = 0; i < 3; i++) { const a0 = -hw + 0.3 + i * 1.5, a1 = a0 + 1.3; m.quad2([a0, g + 1.9, -0.07], [a1, g + 1.9, -0.07], [a1 + 0.05, g + 0.55, -0.02], [a0 - 0.05, g + 0.55, -0.12]); m.quad2([a0 - 0.05, g + 0.55, -0.12], [a1 + 0.05, g + 0.55, -0.02], [a1, g + 1.9, -0.07], [a0, g + 1.9, -0.07]); }
+        for (let i = 0; i < 3; i++) { const a0 = -hw + 0.3 + i * 1.5, a1 = a0 + 1.3; wNet(m, [a0, g + 1.9, -0.07], [a1, g + 1.9, -0.07], 1.35, R); }
         m.mat(MAT.PLAIN, [0.55, 0.5, 0.38]); for (let i = 0; i < 6; i++) m.cyl(-hw + 0.5 + i * 0.35, g, hd - 0.5, 0.08, 0.08, 0.1, 6, 1); });      // floats in a row
     }
   }
@@ -470,7 +478,7 @@ function buildWharfHouses(bucket) {
     else if (T === 'cutler') { bx(dp + os * 1.2 - 0.5, 0, fz - 0.7, dp + os * 1.2 + 0.5, 0.06, fz - 0.4, MAT.TIMBER, [0.22, 0.17, 0.12]); for (const k of [-1, 1]) bx(dp + os * 1.2 + k * 0.4 - 0.04, 0, fz - 0.62, dp + os * 1.2 + k * 0.4 + 0.04, 0.95, fz - 0.5, MAT.TIMBER, [0.22, 0.17, 0.12]); m.push().T(dp + os * 1.2, 0.8 + wy(dp, fz), fz - 0.56).RZ(Math.PI / 2); m.mat(MAT.STONE, [0.46, 0.44, 0.4], 0.5); m.cyl(0, -0.05, 0, 0.32, 0.32, 0.1, 12, 2); m.pop(); col(dp + os * 1.2, fz - 0.56, 0.5, 1.0); }
     else if (T === 'boatman') { for (let k = 0; k < 3; k++) { m.mat(MAT.TIMBER, [0.4, 0.32, 0.22], 0.5); m.beam([dp + os * (1.3 + k * 0.22), 0.0 + wy(dp, fz), fz - 0.42 - k * 0.02], [dp + os * (1.5 + k * 0.22), 2.1, fz - 0.06], 0.07, 0.04); } m.mat(MAT.PLANKS, [0.3, 0.26, 0.2], 0.5); for (let k = 0; k < 2; k++) m.cyl(xo + k * 0.5 * os, at(xo, sz0), fz - 0.55, 0.22, 0.18, 0.4, 8, 1); }
     else if (T === 'basket') { for (let k = 0; k < 6; k++) { m.mat(MAT.THATCH, [0.52, 0.46, 0.24], 0.5); m.beam([xo + (k - 3) * 0.14, 0.05 + at(xo, fz), fz - 0.3], [xo + (k - 3) * 0.14 + 0.05, 1.7, fz - 0.06], 0.1, 0.1); } for (let k = 0; k < 3; k++) { m.mat(MAT.THATCH, [0.46, 0.4, 0.2], 0.5); m.cyl(xo + os * (1.2 + (k % 2) * 0.5), at(xo, sz0), fz - 0.55, 0.3, 0.26, 0.28 + (k >> 1) * 0.28, 9, 1); } }
-    else if (T === 'nets') { for (const sx of [-1, 1]) { m.mat(MAT.TIMBER, [0.3, 0.24, 0.17], 0.5); m.beam([xo + sx * 1.1, at(xo, fz), fz - 1.3], [xo + sx * 1.1, 2.4, fz - 1.3], 0.08, 0.08); } m.mat(MAT.CLOTH, [0.62, 0.55, 0.4], 0.5); for (let k = 0; k < 8; k++) { const a0 = xo - 1.1 + k * 0.275, hm = 1.0 + (k % 3) * 0.14 + R() * 0.12, zz = fz - 1.3 + (k % 2) * 0.05; m.quad2([a0, 2.3, zz], [a0 + 0.01, hm, zz + 0.03], [a0 + 0.27, hm + 0.05, zz + 0.04], [a0 + 0.275, 2.3, zz]); } for (let k = 0; k < 6; k++) { m.mat(MAT.TIMBER, [0.5, 0.42, 0.3], 0.5); m.cyl(xo - 0.9 + k * 0.36, 2.2, fz - 1.3, 0.045, 0.04, 0.1, 6, 2); } wNetHeap(m, dp + os * 1.5, at(dp, fz), fz - 0.6, 0.6, R); col(xo + 1.1, fz - 1.3, 0.1, 2.4); col(xo - 1.1, fz - 1.3, 0.1, 2.4); }
+    else if (T === 'nets') { for (const sx of [-1, 1]) { m.mat(MAT.TIMBER, [0.3, 0.24, 0.17], 0.5); m.beam([xo + sx * 1.1, at(xo, fz), fz - 1.3], [xo + sx * 1.1, 2.4, fz - 1.3], 0.08, 0.08); } wNet(m, [xo - 1.1, 2.3, fz - 1.3], [xo + 1.1, 2.3, fz - 1.3], 1.3, R); for (let k = 0; k < 6; k++) { m.mat(MAT.TIMBER, [0.5, 0.42, 0.3], 0.5); m.cyl(xo - 0.9 + k * 0.36, 2.2, fz - 1.3, 0.045, 0.04, 0.1, 6, 2); } wNetHeap(m, dp + os * 1.5, at(dp, fz), fz - 0.6, 0.6, R); col(xo + 1.1, fz - 1.3, 0.1, 2.4); col(xo - 1.1, fz - 1.3, 0.1, 2.4); }
     m.pop();
   }
 }
