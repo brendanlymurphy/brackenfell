@@ -166,13 +166,18 @@ function dressHall(P, room, o) {
   pWalls(P, room, o.walls || ['Torch_Metal', 'paint', 'paint', 'rack', 'paint', 'Peg_Rack']);
 }
 function pBarrelCorner(P, room, sd) { return pAgainst(P, room, sd, P.id + '.barrel', 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: 'end' }); }
+// [cast] a bed for a sleeper the plan had no bed for: against a wall of one of the rooms given, a full bed first, then a narrow one, then a cot; never under a window
+function castBedIn(P, rooms, nm, name, col, fur, at) {
+  for (const room of rooms) { if (!room) continue; for (const [w, d] of [[1.06, 2.1], [0.9, 1.9], [0.8, 1.7]]) for (const sd of ['e', 'w', 'n', 's']) { const it = pAgainst(P, room, sd, name, w, d, 0.95, -1, pdBed(w - 0.16, col, fur), at !== undefined ? { at } : {}); if (it) { pBedSpot(P, nm, it.cx, it.cz, rotBack(sd, -1), room.k); return it; } } }
+  return null;
+}
 function dressBedroom(P, room, o) {
   o = o || {}; const k = room.k, R = P.R, beds = o.beds || ['bed'], col = o.blanket || R.pick([DYE.red, DYE.blue, DYE.green, [0.5, 0.42, 0.3], DYE.purple]);
   let placed = 0;
   for (const nm of beds) {
     let it = null;
     for (const sd of o.bedSides || ['e', 'w', 'n', 's']) { it = pAgainst(P, room, sd, P.id + '.' + nm, 1.06, 2.1, o.bedH || 0.95, -1, pdBed(0.9, col, !!o.fur), { at: o.bedAt }); const s = it ? { cx: it.cx, cz: it.cz } : null; if (it) { pBedSpot(P, nm, s.cx, s.cz, rotBack(sd, -1), k); if (o.bedInteract && nm === beds[0]) pInteract(P, s.cx, 0.55, s.cz, { kind: 'bed', id: P.id + '.bed', r: 1.9 }, k); placed++; if (nm === beds[0]) P.firstBed = { room, sd, cx: s.cx, cz: s.cz, nm }; break; } }
-    if (!it && typeof castSleepers === 'function' && castSleepers(P.id) > Object.keys(P.spots).filter(q => /^bed\d*$/.test(q) && P.spots[q].lie).length) { const a = room.in; for (const rot of [0, PI / 2, PI, -PI / 2]) { it = pFree(P, room, P.id + '.' + nm, 1.06, 2.1, o.bedH || 0.95, rot, pdBed(0.9, col, !!o.fur), { near: [a.x1, a.z1] }); if (it) { pBedSpot(P, nm, it.cx, it.cz, rot, k); placed++; break; } } }       /* [cast] a sleeper of this house still has no bed and no wall has room: the bed stands free in the room */
+    if (!it && typeof castSleepers === 'function' && castSleepers(P.id) > Object.keys(P.spots).filter(q => /^bed\d*$/.test(q) && P.spots[q].lie).length) { it = castBedIn(P, [room].concat(o.bedRooms || []), nm, P.id + '.' + nm, col, !!o.fur, o.bed2At); if (it) placed++; else P.err.push('no wall for the bed ' + nm + ' of a sleeper of ' + P.id); }       /* [cast] a sleeper of this house still has no bed: a narrower one, then a cot, against whichever wall has room, in this room or the next the plan names. Never free in the room (coordinator, Build 81) */
     if (!it && nm === 'bed') P.err.push('no room for ' + nm + ' in ' + room.id);
   }
   // a chest at the foot of the first bed (or against any free wall)

@@ -69,7 +69,7 @@ PLANS.chapel = (P, c, info) => {
   pFree(P, sac, P.id + '.sactable', 1.4, 0.7, 0.8, 0, pdTable(1.4, 0.7, ['candle', 'book', 'mug'], 3, c), { near: [6.5, 5.4], surface: true });
   pAgainst(P, sac, 'n', P.id + '.sacshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, ['book', 'candle', 'jug'])), {}) || pAgainst(P, sac, 'w', P.id + '.sacshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, null), {});
   pLamp(P, sac, 7, 3.2);
-  { let it = null; for (const sd of ['e', 'n', 's']) { it = pAgainst(P, sac, sd, P.id + '.cot', 0.9, 1.9, 0.8, -1, pdBed(0.8, [0.42, 0.4, 0.36], false), {}); if (it) { pBedSpot(P, 'bed', it.cx, it.cz, rotBack(sd, -1), sac.k); break; } } if (!it) for (const rot of [0, PI / 2]) { it = pFree(P, sac, P.id + '.cot', 0.9, 1.9, 0.8, rot, pdBed(0.8, [0.42, 0.4, 0.36], false), { near: [sac.in.x1, sac.in.z1] }); if (it) { pBedSpot(P, 'bed', it.cx, it.cz, rot, sac.k); break; } } }       /* [cast] Brother Aldous's cot in the sacristy: he had no bed */
+  if (!castBedIn(P, [sac, P.rooms.tower], 'bed', P.id + '.cot', [0.42, 0.4, 0.36], false)) P.err.push('no wall for Brother Aldous\'s cot');       /* [cast] Brother Aldous's cot against a wall of the sacristy (or the tower room): he had no bed. Never free in the room */
   // the bell tower: a stone chamber west of the nave with the bell high above and the rope hanging down its middle
   { const tw = P.rooms.tower, m = P.c.int, L0 = P.lv[0], cx = -7, cz = 2.5;
     m.m1 = P.zone; m.ao = INT_AO;
