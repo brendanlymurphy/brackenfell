@@ -472,11 +472,17 @@ SC.soak = async () => {
   const sv = ckLoad('act1') || ckLoad('first'); if (!sv) return console.log('   run story first'); if (!await resume(sv, 'checkpoint')) return; const MIN = +val('--minutes', 30); where = 'soak';
   await ev(() => { Env.dayLength = 24 * 60 / 2; BOT.soak = { stuck: {}, rows: [], bad: [] }; BOT.audioHook(); });       // a day every 12 minutes: the half hour sees every hour twice
   const doors = (await ev(() => World.interact.map((it, i) => it.kind === 'portal' && !it.cell && interactLabel(it) ? i : -1).filter(i => i >= 0))).slice(0, 3),       /* the same three doors again and again: growth after the first visits is a leak, not a first sight */ rnd = (() => { let a = SEED + 3; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
+  const WANDER = [[0, 0], [0, -21], [-23, -10], [23, -8], [-60, -8], [14, 79], [38, 8], [8, 40]]; let wn = 0;
+  /* [cast] a warm-up before the first measure: every place the soak will wander to and every door it will use is seen once, so the town's ground, props and
+     interiors are all uploaded before minute 0. Growth after half time was first sight of a place the random walk had not reached yet (Build 83: geometries
+     280 half way, 365 at the end), not a leak; now any growth is one. */
+  for (const sp of WANDER) await ev(sp => { if (World.cell) game.leave(); game.tp(sp[0], sp[1], 0); for (let i = 0; i < 4; i++) { Player.yaw = i * Math.PI / 2; game.step(15, 1 / 30); } return game.draw(); }, sp);
+  for (const i of doors) { if (await use('#' + i, { may: true })) { await ev(() => BOT.step(60)); await ev(() => { if (World.cell) game.leave(); }); await ev(() => BOT.settle()); } }
   for (let m = 0; m < MIN; m++) {
     // a minute: wander with the keys, now and then go through a door and back, talk to someone, swing the sword
     const act = m % 5; if (act === 1 && doors.length) { const i = doors[Math.floor(rnd() * doors.length)]; if (await use('#' + i, { may: true })) { await page.keyboard.down('KeyW'); await ev(() => BOT.step(120)); await page.keyboard.up('KeyW'); await ev(() => { if (World.cell) { const c = Cells.cur; const out = World.interact.find(x => x.kind === 'portal' && x.cell === c.id); } }); const out = await ev(() => World.cell ? World.interact.findIndex(x => x.kind === 'portal' && x.cell === World.cell.id && interactLabel(x)) : -1); if (out >= 0) await use('#' + out, { may: true }); else await ev(() => game.leave()); } }
     else if (act === 3) { const id = MAIN[Math.floor(rnd() * MAIN.length)]; if (await use('npc:' + id, { may: true })) { await leaveTalk(); } }
-    else { await ev(() => { const sp = [[0, 0], [0, -21], [-23, -10], [23, -8], [-60, -8], [14, 79], [38, 8], [8, 40]][Math.floor(Math.random() * 8)]; if (World.cell) game.leave(); game.tp(sp[0], sp[1], Math.random() * 360); }); }
+    else { await ev(W => { const sp = W[0]; if (World.cell) game.leave(); game.tp(sp[0], sp[1], W[1]); }, [WANDER[wn % WANDER.length], (wn++ * 137) % 360]); }       /* the places in turn, not by chance */
     const row = await ev(async (m) => { const dtm = 1 / 30, K = BOT.soak, t0 = performance.now(); let ticks = 0;
       for (let s = 0; s < 60; s++) { Input.keys = { KeyW: s % 7 < 5, ShiftLeft: s % 3 === 0 }; Input.lookX = (Math.random() - 0.5) * 0.9; if (s % 11 === 0) RPG.in.atk = true; for (let i = 0; i < 30; i++) { game.step(1, dtm); ticks++; } RPG.in.atk = false;
         // people: stuck, in a wall, under the floor

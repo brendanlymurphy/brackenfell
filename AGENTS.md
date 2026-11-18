@@ -53,6 +53,11 @@ square 157 / 292k, low square 125 / 195k; only the alley on Low is over, at 148 
 fails a view that is more than 3% worse than `tools/gate_budget.json` and reports "over target" otherwise. After a deliberate
 change: `node tools/gate.mjs --only budget-medium,budget-low --accept-budget`, commit the file and say why.
 
+Ratchets (`tools/gate_ratchet.json`, counts that may only fall): `openings` (drawn geometry in front of a doorway, the town worker's `test/openings.js`),
+`inout` (buildings that differ inside from outside, `test/inout.js`), `geom` (stretched texture, open edges and one-quad parts in the generated meshes
+and the house shells, `test/geom.js`). A step fails when a count rises and says when one falls: then
+`node tools/gate.mjs --only <step> --accept-ratchet`, commit the file and say why.
+
 A single test by hand: `node test/shot.mjs --size 844x390 --opt webgl=1 --opt play=1 --do "$(cat test/story.js)" [--out file.png]`.
 `--opt webgl=1` forces WebGL 2 (fast; without it the page uses WebGPU), `--opt quality=low|medium|high`, `--opt play=1` starts a
 playing game. In the page: `game.shot(x, y|null, z, yawDeg, pitchDeg, hour)` returns `{draws, tris}`, `game.enter(id)`,

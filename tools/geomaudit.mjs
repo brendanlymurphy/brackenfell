@@ -1,14 +1,14 @@
 // Writes docs/GEOMETRY.md: the list of cheap-looking geometry that test/geom.js finds without eyes. usage: node tools/geomaudit.mjs   (after node tools/build.mjs)
 import { execFileSync } from 'node:child_process'; import fs from 'node:fs';
 const root = new URL('../', import.meta.url).pathname, js = fs.readFileSync(root + 'test/geom.js', 'utf8');
-const out = execFileSync('node', ['test/shot.mjs', '--opt', 'webgl=1', '--opt', 'quality=medium', '--do', js], { cwd: root, encoding: 'utf8', maxBuffer: 1 << 28 });
+const out = execFileSync('node', ['test/shot.mjs', '--opt', 'webgl=1', '--opt', 'quality=medium', '--opt', 'audit=1', '--do', js], { cwd: root, encoding: 'utf8', maxBuffer: 1 << 28 });
 const m = out.match(/-> "(.*)" \d+ms/s); if (!m) { console.error(out.slice(-600)); process.exit(1); }
 const R = JSON.parse(JSON.parse('"' + m[1] + '"')), head = '| Where (x, y, z) | Material | What | Look at it |\n|---|---|---|---|\n';
 const md = `# Cheap-looking geometry: a list made without eyes
 
 Made by \`node tools/geomaudit.mjs\` (the reader is \`test/geom.js\`). It reads the ${R.meshes} static meshes of the town and the wilds out of doors
-(${R.tris.toLocaleString('en')} triangles: walls, fences, plots, stalls, steps, the barn, the tower) and lists three kinds of fault. It does not read the modelled kit
-pieces, the generated house shells (they are in the kit's batches), the terrain or interiors, and it fixes nothing: each line is for whoever owns
+(${R.tris.toLocaleString('en')} triangles: walls, fences, plots, stalls, steps, the barn, the tower) and lists three kinds of fault. Since Build 83 it also reads the house shells and every other kit piece placed out of doors (last section).
+It does not read the terrain or interiors, and it fixes nothing: each line is for whoever owns
 that file. Positions are world metres; the last column is a call to paste in the page's console (or \`test/shot.mjs --do\`) that looks at the place.
 
 Counts now: ${R.counts.stretch} places with stretched texture, ${R.counts.open} with open edges, ${R.counts.sheets} single flat pieces. Each table shows the worst first.
@@ -34,5 +34,19 @@ ${head}${R.open.join('\n')}
 ## Single flat pieces (${R.counts.sheets})
 
 ${head}${R.sheets.join('\n')}
+
+## The house shells and other kit pieces out of doors (${R.kitPlaced} placed)
+
+Read from the placements the kit records under \`--opt audit=1\`: each modelled piece's own open edges (0.8 m or longer, 0.2 to 3 m above the ground) and its
+parts of one or two triangles over 2 m2, found once in the piece and put where every copy stands. Leaves, cloth, thatch, shingle, glass, straw and ivy are left
+out. A wall panel that is one quad shows here once per copy, so the worst rows are the pieces to fix in the kit, not the places.
+
+### Open edges (${R.counts.kitOpen} places, worst ${R.kitOpen.length})
+
+| Where (x, y, z) | Piece | What | Look at it |\n|---|---|---|---|\n${R.kitOpen.join('\n')}
+
+### Single flat pieces (${R.counts.kitSheets}, largest ${R.kitSheets.length})
+
+| Where (x, y, z) | Piece | What | Look at it |\n|---|---|---|---|\n${R.kitSheets.join('\n')}
 `;
 fs.writeFileSync(root + 'docs/GEOMETRY.md', md); console.log('docs/GEOMETRY.md: ' + JSON.stringify(R.counts));
