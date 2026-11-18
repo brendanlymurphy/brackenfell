@@ -188,6 +188,10 @@ const Kit = (() => {
       const mn = texture(G.noiseTex, vec2(wp.x.mul(0.37).add(wp.z.mul(0.21)), wp.z.mul(0.33).sub(wp.y.mul(0.25)))), mk = smoothstep(0.62, 0.8, mn.r.mul(0.7).add(mn.g.mul(0.3))).mul(d.moss);
       rawS = mix(rawS, vec3(0.2, 0.27, 0.1).mul(dot(raw, vec3(1.4, 1.4, 1.4)).add(0.5)), mk);
     }
+    if (batch && /Rubble|Stone|Brick|Rock|Plaster/.test(name) && !/Roof|Slate/.test(name)) {         // [fx3] detail layer: a fine world-anchored grain and a pitted second scale that fade in within about 5 m, so a wall at arm's length is not one stretched tile
+      const hcd = wp.x.mul(abs(N.z)).add(wp.z.mul(abs(N.x))), dn = texture(G.noiseTex, vec2(hcd.mul(1.9), wp.y.mul(1.9))), dn2 = texture(G.noiseTex, vec2(hcd.mul(7.1).add(0.31), wp.y.mul(7.1))), near = float(1).sub(smoothstep(1.5, 30, dot(wp.sub(U.camPos), wp.sub(U.camPos)))), wallK2 = float(1).sub(smoothstep(0.35, 0.7, abs(N.y)));
+      rawS = rawS.mul(float(1).add(dn.r.sub(0.5).mul(0.34).add(dn2.g.sub(0.5).mul(0.26)).mul(near).mul(wallK2)));
+    }
     // depth and grime (40b_depth.js): room occlusion for everything indoors; dirt, soot and (outdoors, from the kg heights) mud, moss and eave stains on walls
     const useRoom = batch || !!o.zone, rm = useRoom ? SH.room(wp, N, zone).toVar() : null;
     let gcol = gradeFn(rawS);
