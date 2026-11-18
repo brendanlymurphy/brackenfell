@@ -71,9 +71,13 @@ function hpPlace(mesh, o, y, z) {      // origin o, long axis y, front z (z made
   z.addScaledVector(y, -z.dot(y)).normalize(); const x = _hv.c.crossVectors(y, z).normalize();
   _hv.m.makeBasis(x, y, z); mesh.quaternion.setFromRotationMatrix(_hv.m); mesh.position.copy(o);
 }
+// [ch4] one true size whatever the body: a prop on a hand bone would take the person's girth and height (each body is scaled a few per cent on each axis); divide it out
+const _hps = new THREE.Vector3();
+function hpTrue(mesh) { mesh.scale.set(1, 1, 1); mesh.parent.getWorldScale(_hps); const q = mesh.quaternion, ax = new THREE.Vector3(1, 0, 0).applyQuaternion(q), ay = new THREE.Vector3(0, 1, 0).applyQuaternion(q), az = new THREE.Vector3(0, 0, 1).applyQuaternion(q), k = v => 1 / Math.max(1e-3, Math.hypot(v.x * _hps.x, v.y * _hps.y, v.z * _hps.z)); mesh.scale.set(k(ax), k(ay), k(az)); }
 function hpLute(mesh) { const T = THREE, y = new T.Vector3(), z = new T.Vector3(), o = new T.Vector3(), tR = new T.Vector3(), tL = new T.Vector3(), bx = new T.Vector3(), by = new T.Vector3(), bz = new T.Vector3(), mq = new T.Matrix4(), qL = new T.Quaternion(), qR = new T.Quaternion(); let wPlay = 0;
   // [ch4] The lute is set against the body and the hands go to it (Chars.reach). Hung between the two animated hands it went through the belly: the clip is a guitar's, and a lute's bowl is 0.15 m deep.
   return (H, st) => {
+  if (H.animNow === 'lie') { mesh.visible = false; mesh.userData.holding = false; Chars.reach(H, 'R', null); Chars.reach(H, 'L', null); Chars.grip(H, 'L', 0); Chars.grip(H, 'R', 0); return; }      // by the bed, not on his back in it
   const f = hpFrame(H), play = H.animNow === 'lute' && !H.talkNow, k = H.root.scale.y || 1; wPlay = play ? 1 : 0;
   if (play) {      // the bowl on the belly a little to the player's right, the neck up to the left at 20 degrees and a little forward, the soundboard turned up 12 degrees
     y.copy(f.R).multiplyScalar(-0.93).addScaledVector(f.U, 0.33).addScaledVector(f.F, 0.14).normalize(); z.copy(f.F).multiplyScalar(0.978).addScaledVector(f.U, 0.21);
@@ -94,19 +98,23 @@ function hpLute(mesh) { const T = THREE, y = new T.Vector3(), z = new T.Vector3(
   mesh.userData.grip = [0.0, 0.33, 0.0]; mesh.userData.hand = 'L'; mesh.scale.setScalar(1); mesh.visible = true;
 }; }
 function hpHammer(mesh) { return (H) => {
+  mesh.visible = H.animNow !== 'lie'; if (!mesh.visible) { mesh.userData.holding = false; Chars.grip(H, 'R', 0); return; }
   const swing = H.animNow === 'hammer' && !H.talkNow, f = hpFrame(H);
   mesh.userData.holding = swing; Chars.grip(H, 'R', swing ? HP.GRIP.curl : 0);
-  if (swing) { mesh.parent !== H.bones.handR && H.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); mesh.scale.setScalar(1 / Math.max(1e-3, H.root.scale.y)); }
+  if (swing) { mesh.parent !== H.bones.handR && H.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); hpTrue(mesh); }
   else {      // through the apron loop at the right hip, head down
     mesh.parent !== H.pivot && H.pivot.add(mesh); const y = new THREE.Vector3(0, -1, 0).addScaledVector(f.R, 0.08).normalize(), z = f.F.clone(), o = f.pel.clone().addScaledVector(f.R, 0.2).addScaledVector(f.U, 0.02).addScaledVector(f.F, 0.02);
     hpPlace(mesh, o, y, z); mesh.scale.setScalar(1);
   }
   mesh.userData.grip = [0, 0.02, 0]; mesh.userData.hand = 'R';
 }; }
-function hpPole(mesh, tilt, always) { return (H) => {      // a spear, staff or rod: stands in the fist, shaft up (rod: leaning forward), the hand slides along it; a spear is grounded beside the body when its holder is talking
-  const f = hpFrame(H), held = always || (H.animNow === 'guard' && !H.talkNow); mesh.userData.holding = held; Chars.grip(H, 'R', held ? HP.GRIP.curl : 0);
+function hpPole(mesh, tilt, always, only) { return (H, st) => {
+  // [ch4] put down when it is not in use: a spear is carried on guard and out of doors, and stays in the rack when its owner is indoors off duty, at table or in bed (it stood upright through
+  // the bed and beside the supper table); a staff is laid by when its owner lies down; the rod is in the hand only while fishing.
+  { const a = H.animNow, show = only ? a === only : always ? a !== 'lie' : a === 'guard' || (!(st && st.zone) && a !== 'sit' && a !== 'lie'); mesh.visible = show; if (!show) { mesh.userData.holding = false; Chars.grip(H, 'R', 0); return; } }      // a spear, staff or rod: stands in the fist, shaft up (rod: leaning forward), the hand slides along it; a spear is grounded beside the body when its holder is talking
+  const f = hpFrame(H), held = true; mesh.userData.holding = held; Chars.grip(H, 'R', held ? HP.GRIP.curl : 0);
   mesh.parent !== H.pivot && H.pivot.add(mesh); const y = new THREE.Vector3(0, 1, 0).addScaledVector(f.F, tilt).normalize(), o = new THREE.Vector3();
-  if (held) o.copy(f.pR).addScaledVector(f.F, 0.01); else { o.copy(f.pel).addScaledVector(f.R, 0.3).addScaledVector(f.F, 0.06); o.y = 0.95; y.set(0, 1, 0); }      // grounded beside the body
+  if (held) { H.bones.handR.localToWorld(o.fromArray(HP.GRIP.pos)); H.pivot.worldToLocal(o); } else { o.copy(f.pel).addScaledVector(f.R, 0.3).addScaledVector(f.F, 0.06); o.y = 0.95; y.set(0, 1, 0); }      // grounded beside the body
   hpPlace(mesh, o, y, f.F.clone()); mesh.scale.setScalar(1); mesh.userData.grip = [0, 0, 0]; mesh.userData.hand = 'R';
 }; }
 // [ch4] A mug: upright in the right fist, the arm brought to it (Chars.reach): on the table in front of a seated drinker, at the waist of someone carrying it. The innkeeper and the maid
@@ -116,7 +124,7 @@ function hpMug(mesh, npc, staff) { const T = THREE, t = new T.Vector3(), X0 = ne
     mesh.visible = on; mesh.userData.holding = on; if (!on) { Chars.reach(H, 'R', null); Chars.grip(H, 'R', 0); return; }
     const f = hpFrame(H), k = H.root.scale.y || 1; t.copy(f.pel).addScaledVector(f.F, (seated ? 0.36 : 0.27) * k).addScaledVector(f.U, (seated ? 0.31 : 0.16) * k).addScaledVector(f.R, 0.17 * k); H.pivot.localToWorld(t);
     mq.makeBasis(X0.copy(f.U).negate(), f.F, f.R); q.setFromRotationMatrix(mq); H.pivot.getWorldQuaternion(pq); q.premultiply(pq);      // knuckles upright, fingers forward, palm to the left: the cup stands in the fist
-    Chars.reach(H, 'R', t, q); Chars.grip(H, 'R', 0.95); mesh.scale.setScalar(1 / Math.max(1e-3, H.root.scale.y)); mesh.userData.grip = [0, 0, 0]; mesh.userData.hand = 'R'; }; }
+    Chars.reach(H, 'R', t, q); Chars.grip(H, 'R', 0.95); hpTrue(mesh); mesh.userData.grip = [0, 0, 0]; mesh.userData.hand = 'R'; }; }
 function npcHandProp(npc) {
   const ch = npc.ch; if (!ch || typeof RPG === 'undefined' || !RPG.merge) return;
   for (const kind of hpKinds(npc.def)) {
@@ -128,7 +136,7 @@ function npcHandProp(npc) {
     else if (kind === 'hammer') ch.post.push(hpHammer(mesh));
     else if (kind === 'spear') ch.post.push(hpPole(mesh, 0, false));
     else if (kind === 'staff') ch.post.push(hpPole(mesh, 0.05, true));
-    else if (kind === 'rod') ch.post.push(hpPole(mesh, 0.7, true));
+    else if (kind === 'rod') ch.post.push(hpPole(mesh, 0.7, true, 'fish'));
     else if (kind === 'mug') { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); ch.post.push(hpMug(mesh, npc, npc.def.id === 'osric' || npc.def.id === 'greta')); }
     else { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos);
       ch.post.push(H => { mesh.scale.setScalar(1 / Math.max(1e-3, H.root.scale.y)); Chars.grip(H, 'R', HP.GRIP.curl); }); }
