@@ -24,7 +24,7 @@ function logRow(mk, A, B, topFn, inside, seed) {
     m0.mat(MAT.BARK, bark, 1.0); m0.grad = [0.62, 1]; m0.tube([[bx, gL - 0.3, bz], sh, tip], [r * 1.04, r * 0.97, 0.012], low ? 4 : 8, false); m0.grad = null;
     if (m1) { m1.mat(MAT.BARK, bark, 1.0); m1.grad = [0.62, 1]; m1.tube([[bx, gL - 0.3, bz], sh, tip], [r * 1.04, r * 0.97, 0.012], 4, false); m1.grad = null; }
     { const q = { x0: bx - ux * r, z0: bz - uz * r, x1: bx + ux * r, z1: bz + uz * r, g: gL, tx: tip[0], tz: tip[2], top, bark };      // the ribbon: two logs to a quad (a log cut flat, as wide as the log), the top running from the one point's height to the next, same bark
-      if (pend && ++pn >= (low ? 3 : 2)) { m2.mat(MAT.BARK, pend.bark, 1.0); m2.grad = [0.62, 1]; m2.quad2([pend.x0, pend.top, pend.z0], [pend.x0, Math.min(pend.g, q.g) - 0.1, pend.z0], [q.x1, Math.min(pend.g, q.g) - 0.1, q.z1], [q.x1, q.top, q.z1]); m2.grad = null; pend = null; } else if (!pend) { pend = q; pn = 1; } }
+      if (pend && ++pn >= 3) { m2.mat(MAT.BARK, pend.bark, 1.0); m2.grad = [0.62, 1]; m2.quad2([pend.x0, pend.top, pend.z0], [pend.x0, Math.min(pend.g, q.g) - 0.1, pend.z0], [q.x1, Math.min(pend.g, q.g) - 0.1, q.z1], [q.x1, q.top, q.z1]); m2.grad = null; pend = null; } else if (!pend) { pend = q; pn = 1; } }
     u = c + r - 0.02; n++; }
   // the riband: a squared pole pegged along the inside at 1.6 m, following the ground at its two ends (near levels only)
   { const o = 0.3, a0 = [A[0] + inside[0] * o, A[1] + inside[1] * o], b0 = [B[0] + inside[0] * o, B[1] + inside[1] * o]; for (const mL of [m0, m1]) if (mL) { mL.mat(MAT.TIMBER, [0.3, 0.25, 0.19], 0.6); mL.beam([a0[0], gy(A[0], A[1]) + 1.6, a0[1]], [b0[0], gy(B[0], B[1]) + 1.6, b0[1]], 0.07, 0.12); } }

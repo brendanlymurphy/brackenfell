@@ -191,7 +191,7 @@ function buildVegetation() {
   for (const [hi, h] of (World.hedgeClumps || []).entries()) if (!(TEST && TEST.noyt) && !(R.qName === 'low' && hi % 3 === 2)) inst.hedge.push([h[0], h[1], h[2], h[3], h[4], h[5], h[6], 0]);
   for (const [x, z] of (TEST && TEST.noyt ? [] : World.hedgeSaplings || [])) addTree('birch', x, z, 0.32);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
-  mkGroups(inst.hedge, [{ item: I.hedge, kind: 'leaf', lod: 0, maxDist: 40, shadow: false }], 24);
+  mkGroups(inst.hedge, [{ item: I.hedge, kind: 'leaf', lod: 0, maxDist: 40, lowMax: 22, shadow: false }], 24);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
   World.treeCount = inst.pine.length + inst.birch.length;
   World.treePos = { pine: inst.pine, birch: inst.birch, oak: inst.oak };      // [ui] read by the map (86_map.js)
