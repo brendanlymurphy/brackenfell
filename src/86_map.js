@@ -90,7 +90,8 @@ GameMap.draw = () => {
   // quest targets: a gold diamond with an ink edge
   for (const id of QORDER) { if (!S.q[id] || S.q[id].done) continue; let t; try { t = questTarget(id); } catch (e) { t = null; } if (!t) continue; const o = GameMap.out(t[0], t[1], t[2]), x = sx(o[0]), y = sz(o[1]); c.beginPath(); c.moveTo(x, y - 9); c.lineTo(x + 7, y); c.lineTo(x, y + 9); c.lineTo(x - 7, y); c.closePath(); c.fillStyle = '#d8b563'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#2a2016'; c.stroke(); }
   // you: a red arrow turned the way you face
-  const p = GameMap.pos(), x = sx(p[0]), y = sz(p[1]); c.save(); c.translate(x, y); c.rotate(Player.yaw); c.beginPath(); c.moveTo(0, -11); c.lineTo(7.5, 8); c.lineTo(0, 4); c.lineTo(-7.5, 8); c.closePath(); c.fillStyle = '#a8321e'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#2a2016'; c.stroke(); c.restore();
+  // [cast] indoors the arrow turns by the building's true bearing, as the compass does (Cells.trueYaw, 94f_pointers.js)
+  const p = GameMap.pos(), x = sx(p[0]), y = sz(p[1]); c.save(); c.translate(x, y); c.rotate(Player.yaw + (typeof Cells !== 'undefined' && Cells.trueYaw ? Cells.trueYaw() : 0)); c.beginPath(); c.moveTo(0, -11); c.lineTo(7.5, 8); c.lineTo(0, 4); c.lineTo(-7.5, 8); c.closePath(); c.fillStyle = '#a8321e'; c.fill(); c.lineWidth = 2; c.strokeStyle = '#2a2016'; c.stroke(); c.restore();
   // title cartouche and, indoors, the room
   c.textAlign = 'left'; c.font = '400 ' + Math.round(17 * ts) + 'px "IM Fell English SC", Georgia, serif'; c.fillStyle = 'rgba(42,32,22,0.9)'; c.fillText('Brackenfell and the Greyspine Valley', 18, 22);
   if (World.cell && Cells.cur) { c.font = 'italic 400 ' + Math.round(14 * ts) + 'px Alegreya, Georgia, serif'; c.fillText('You are inside ' + (Cells.cur.name || Cells.cur.id), 18, 42); }

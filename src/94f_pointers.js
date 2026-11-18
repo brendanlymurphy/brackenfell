@@ -4,6 +4,10 @@
 // of the town at nothing; the Hart's back door and cellar hatch were drawn and did nothing though the ledger and the Magpie's list send you to them; the
 // boat-house doors were drawn only; Wren's frostcap "north-west of the gate" was due north and behind the palisade.
 const PTR = {};
+// the compass and the map read true directions indoors as out (inbox 09:40): a cell is built in its house's own frame (the door inside, turned by the site's yaw
+// about the cell's origin, lands exactly on the door outside, in all 57 cells), so a heading inside plus the site's yaw is the heading in the town. The mine has
+// no house: 0.
+Cells.trueYaw = () => { const c = World.cell && Cells.cur; return (c && c.site && c.site.yaw) || 0; };
 // where a quest stage really is, when you are inside the building it is in: [quest, stage, cell, interact id]
 PTR.chapelStep = () => !has('cryptkey') && !S.opened['chapel.gate'] ? 'chapel.sacristy' : !S.opened['chapel.gate'] ? 'chapel.gate' : 'chapel.relic';          // the key in the sacristy chest, the gate in the crypt, the reliquary behind it
 PTR.INSIDE = [['crypt', 0, 'chapel', 'chapel.sacristy'], ['crypt', 1, 'chapel', 'chapel.gate'], ['crypt', 2, 'chapel', 'chapel.relic'], ['main', 2, 'chapel', PTR.chapelStep]];

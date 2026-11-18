@@ -11,16 +11,24 @@ HART.fromWall = function () {
 };
 HART.find = function () {
   const fw = HART.fromWall(); if (fw) return fw;
-  const P = World.houses.inn && World.houses.inn.plan; if (!P || !P.rooms || !P.w2) return null;
+  const h = World.houses.inn, P = h && h.plan; if (!P || !P.rooms || !P.w2) return null;
   const r = P.rooms.cellar || Object.values(P.rooms).find(q => q.k < 0); if (!r) return null;
-  const a = r.in || r, k = r.k, y = P.lv[k].y, X = a.x1, W = 1.5;
-  const busy = z => P.items.some(t => t.k === k && t.x1 > X - 1.0 && t.z1 > z - W / 2 && t.z0 < z + W / 2) || (P.holes || []).some(h => h.k === k && h.r.x1 > X - 1.4 && h.r.z1 > z - W / 2 - 0.3 && h.r.z0 < z + W / 2 + 0.3) || P.doors.some(d => (d.a === r.id || d.b === r.id) && Math.abs(d.x - X) < 0.3 && Math.abs(d.z - z) < W);
-  const mid = (a.z0 + a.z1) / 2; let best = null;
-  for (let i = 0; i <= 40; i++) { const z = mid + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.2; if (z - W / 2 < a.z0 + 0.3 || z + W / 2 > a.z1 - 0.3) continue; if (!busy(z)) { best = z; break; } }
+  const a = r.in || r, k = r.k, y = P.lv[k].y, W = 1.5, yaw0 = (h.site && h.site.yaw) || 0;
+  /* the wall that is truly east (Rowan and Odo, recorded: "the east cellar wall"; inbox 09:40): each wall's outward normal, through the plan's transform and the
+     site's bearing, and the one nearest 90 degrees. at(t, d, hh): t along the wall, d in from it. */
+  const WALLS4 = [['x0', -1, 0], ['x1', 1, 0], ['z0', 0, -1], ['z1', 0, 1]].map(([side, nx, nz]) => {
+    const along = nx ? 'z' : 'x', X = a[side], lo = along === 'z' ? a.z0 : a.x0, hi = along === 'z' ? a.z1 : a.x1;
+    const at = (t, d, hh) => nx ? P.w2(X - nx * d, y + hh, t) : P.w2(t, y + hh, X - nz * d), o0 = at((lo + hi) / 2, 0, 0), o1 = at((lo + hi) / 2, -1, 0);
+    const head = (Math.atan2(o1[0] - o0[0], -(o1[2] - o0[2])) + yaw0) * 180 / PI, off = Math.abs(((head - 90) % 360 + 540) % 360 - 180);
+    return { side, nx, nz, X, lo, hi, at, off }; }).sort((p, q) => p.off - q.off);
+  const w = WALLS4[0], { nx, nz, X } = w;
+  const inR = (t, d0, d1, x0, z0, x1, z1) => nx ? (x1 > Math.min(X, X - nx * d1) && x0 < Math.max(X, X - nx * d1) && z1 > t - d0 && z0 < t + d0) : (z1 > Math.min(X, X - nz * d1) && z0 < Math.max(X, X - nz * d1) && x1 > t - d0 && x0 < t + d0);
+  const busy = t => P.items.some(q => q.k === k && inR(t, W / 2, 1.0, q.x0, q.z0, q.x1, q.z1)) || (P.holes || []).some(q => q.k === k && inR(t, W / 2 + 0.3, 1.4, q.r.x0, q.r.z0, q.r.x1, q.r.z1)) || (P.holes || []).some(q => q.k === k + 1 && inR(t, W / 2 + 0.3, 1.4, q.r.x0, q.r.z0, q.r.x1, q.r.z1)) || P.doors.some(d => (d.a === r.id || d.b === r.id) && Math.abs((nx ? d.x : d.z) - X) < 0.3 && Math.abs((nx ? d.z : d.x) - t) < W);
+  const mid = (w.lo + w.hi) / 2; let best = null;
+  for (let i = 0; i <= 40; i++) { const t = mid + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.2; if (t - W / 2 < w.lo + 0.3 || t + W / 2 > w.hi - 0.3) continue; if (!busy(t)) { best = t; break; } }
   if (best === null) best = mid;
-  const w = (x, h) => P.w2(x, y + h, best);
-  // the prop is drawn facing -x (yaw -PI/2) as the old code drew it; the plan's x runs the same way as the world's, so the east wall faces west in both
-  return { k, z: best, wallX: X, prop: w(X - 0.01, 0.0), use: w(X - 0.5, 1.05), land: w(X - 1.2, 0.05), local: [X, y, best] };
+  const pw = w.at(best, 0.01, 0), lw = w.at(best, 1.2, 0.05), toIn = Math.atan2(lw[0] - pw[0], -(lw[2] - pw[2]));
+  return { k, side: w.side, t: best, trueOff: w.off, prop: pw, use: w.at(best, 0.5, 1.05), land: lw, yaw: toIn, from: 'plan' };
 };
 HART.apply = function () {
   /* one mechanism (coordinator, Build 85): the interiors inspector's dressInn publishes World.hartWall (the east wall of the planned cellar, 72e_plans.js) and

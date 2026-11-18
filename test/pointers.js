@@ -25,6 +25,11 @@ if (World.cell) game.leave(); game.step(2, dt);
 { const f = World.interact.find(o => o.id === 'frostcap1'), g = World.spots['gate.post'].p; if (!f) bad.push('no frostcap1'); else { const b = (Math.atan2(f.p[0] - g[0], -(f.p[2] - g[2])) * 180 / Math.PI + 360) % 360; if (b < 280 || b > 350) bad.push('Wren\'s frostcap is at bearing ' + b.toFixed(0) + ' from the gate, not north-west'); if (f.p[0] > g[0] - 4) bad.push('Wren\'s frostcap is not outside the west gate'); } }
 // 6. Tobin's note
 if (!/east of the plaque/.test(JSON.stringify(SECRETS.bell.note))) bad.push('Tobin\'s note does not say east of the plaque');
+// [cast] the compass reads true indoors (Cells.trueYaw): that holds only while every cell is built in its house's own frame, the door inside turned by the
+// site's yaw about the cell's origin landing on the door outside; and the compass's north inside is the site's bearing
+{ let n = 0; for (const c of Cells.list) { if (!c.site || !c.door || !c.xdoor) continue; n++; const w = siteToWorld(c.site, c.door.c[0] - c.cs.x, c.door.c[2] - c.cs.z); if (Math.hypot(w[0] - c.xdoor.c[0], w[1] - c.xdoor.c[2]) > 0.1) bad.push(c.id + ' is not built in its house\'s frame: the door inside maps ' + Math.hypot(w[0] - c.xdoor.c[0], w[1] - c.xdoor.c[2]).toFixed(2) + ' m from the door outside'); }
+  if (n < 40) bad.push('only ' + n + ' cells with a house to check the compass against');
+  game.enter('inn'); game.step(2, 1 / 30); if (Math.abs(Cells.trueYaw() - World.houses.inn.site.yaw) > 1e-6) bad.push('inside the Hart the compass does not turn by the Hart\'s bearing'); game.leave(); game.step(2, 1 / 30); if (Cells.trueYaw() !== 0) bad.push('outdoors the compass is turned by ' + Cells.trueYaw()); }
 toast = _t; S.q = JSON.parse(keep); S.flags = JSON.parse(flags);
 if (bad.length) throw new Error('POINTERS FAIL ' + bad.length + ': ' + bad.join('; '));
-return 'pointers PASS the chapel\'s marks point at the chest, the gate and the reliquary; stages 8 and 9 at the Hart and the cleft; the Hart\'s back door and hatch take you in; the boat-houses answer; the frostcap is north-west of the gate outside it; Tobin\'s note says east';
+return 'pointers PASS the chapel\'s marks point at the chest, the gate and the reliquary; stages 8 and 9 at the Hart and the cleft; the Hart\'s back door and hatch take you in; the boat-houses answer; the frostcap is north-west of the gate outside it; Tobin\'s note says east; the compass reads true indoors';
