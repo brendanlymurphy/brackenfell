@@ -170,10 +170,28 @@ What the red is, from the 16 worst (`backface_worst.jpg`, `backface_pairs.jpg`):
 | Door and window reveals, door leaves, stair treads and paving whose faces are wound the wrong way | views 1, 8, 13, 16 | no visible fault: every kit material is drawn two-sided, so they render; it is why the count is high |
 | Open things: the boat, the cart | views 3, 8 | no |
 
-So: no place was found where a walker sees into a shell or under the ground. Not covered: the galleries, wall walks and roofs a
-player can climb to (the lattice is at ground level), interiors, and anything closer than the 9 m spacing. Every kit wall is drawn
-two-sided, so a shell's inside is always there to be seen; the only thing preventing it is the collider. As a gate rule the red
-count is noisy (reversed faces); it is in `rules.py` as 5.1 for the ratchet, with the mean at 1.4%.
+So: no place was found where a walker sees into a shell or under the ground, at ground level.
+
+**Raised ways and interiors (added on Build 77).** The same test from every way point of the galleries, the bridge, the wall walks,
+the bell tower and the passage (192 views), and from the middle of every room, two diagonals (470 views).
+
+| | Raised ways | Rooms |
+|---|---|---|
+| Views | 192 | 470 |
+| Views with red over 2% | 63 | 13 |
+| Mean red | 4.1% | 0.9% |
+| Views into a shell or out of a room into nothing | 0 found in the 12 worst | 0 found in the 8 worst |
+
+- Raised ways (`backface_raised.jpg`): the red is the roof over each walk. Every gallery, wall walk and the bell stage is roofed with a
+  single sheet, seen from below the whole time a player is up there; in the normal picture it is a flat dark plane with no rafters.
+  The passage under the inn shows the back of its one-sheet side wall. Nothing else.
+- Rooms (`backface_rooms.jpg`): thin red lines between planks everywhere (harmless), open pots and barrels, and two real things:
+  in the Elder's strongroom most of the view from the middle of the room is the back of a wall-sized sheet; and **in the guardhouse
+  cells the bars are drawn as large pale blue-grey flat panes across the room** (picture 3, normal view: a visible glitch).
+
+Still not covered: roofs a player might reach by jumping, and anything closer than the lattice. Every kit wall is drawn two-sided, so
+a shell's inside is always there to be seen; only the colliders prevent it. As a gate rule the red count is noisy (reversed faces);
+it is in `rules.py` as 5.1 for the ratchet.
 
 ## Item 4. Outside against inside
 
