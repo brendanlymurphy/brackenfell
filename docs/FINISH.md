@@ -131,3 +131,8 @@ Pictures: /home/claude/shots/fin/pairs_core/<idA>__<idB>_<x>_<z>_p25|p40.jpg, sh
 - [ ] C2 (sev 3) A face of dressed stone filling the whole frame with a blurred, stretched look at the foot of a wall: sheet c0_02 tile 3 (chapel_-7.9_-67.4_y0_10). Source: wall texture scale in the same plot code.
 - [ ] C3 (sev 3) Raw boulders stacked as a stub wall end against a house front, open end with no cap: chapel_0.6_-44_y0_10. Source: terrace or plot walls (73f_levels.js / 73i_walls.js, planner).
 Good in this district: the churchyard (stones, yew-like trees, wall), the chapel side with its stained windows, the grass slopes and the path up the hill read well; no sky gaps seen.
+
+## MARKET EAST AT DUSK (fin, 19 h): 90 points x 5 views, /home/claude/shots/fin/market/*_19.jpg, sheets /home/claude/shots/fin/sheets_m19/m19_0..3.jpg (east part x >= 18, yaw 0 only reviewed)
+- [ ] M1 (sev 2) Large dark plank house walls with no window, door, post or trim, one flat texture from eave to plinth, at 4 to 8 m from a lit street: sheet m19_1 tiles 1, 6 and 10 (market_*_y0_19 east of x 18). Source: the back and side wall of the infill houses, src/72c_infill.js / 73d_infill.js (houses worker): needs a door or window, a lean-to or a stack on every blank wall over 4 m.
+- [ ] M2 (sev 3) Stone close-ups at wall feet fill the frame with one stretched texture (m19_0 tiles 2 and 6): same texture-scale fault as C2. Source: wall texture UV scale in the plot or terrace walls (73f_levels.js / 73i_walls.js, planner).
+Good at dusk: lit doors with lanterns, lit leaded windows, the stalls' warm light and the cobbles reading well; no black holes and no sky gaps seen.
