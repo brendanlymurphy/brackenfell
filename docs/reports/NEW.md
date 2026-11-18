@@ -15,6 +15,12 @@ metre below the deck. Of the first ten doors from the gate, the stair fills or d
 `in.04`) and edges into 3 more; a resident stands in the doorway in 2 (`in.10`, `in.40`). The Cobbler's House door (`in.44`) cannot be
 reached closer than 4.2 m and shows no prompt.
 
+**3. Score of Build 88 (done, `docs/SCORE.md`).** 8 of 34 pass (6 on Build 83). Better: worst interior against its shell 6.0 to 1.5,
+window mismatches 57 to 44, hidden cellars 21 to 7, people who never leave home 18 to 7, identical days 4 to 0, people out at noon 10 to 16,
+containers per person 13.6 to 3.8, open edges 249 to 169. Worse: trees inside 35 to 16, storey mismatches 21 to 24. The ratchet fails on
+trees, storeys, noon (still below Build 76's 18), fences and one more unrecorded line; I did not accept them. `docs/WALK.md` on this build is a
+4-minute run, so rule 5.4's zero falls means little.
+
 **6. Sound (done, `docs/audit/VOICE_LENGTHS.md`).** The 529 recordings are only on `fork-cull` (main and threejs have 254); measured from
 there with ffmpeg. Median 12.6 characters per second of speech. To listen to first: the 20 fastest (Tobin 19.8, Greta 19.4 and 18.9, Alison,
 Alaric) and the 20 slowest (mostly two-word barks read with long gaps: Finn's "Shh. Fish." 3.2); 3 clips with more than 0.5 s of silence at an

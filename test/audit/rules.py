@@ -185,6 +185,7 @@ def grab(path, pat):
 g = grab('docs/GEOMETRY.md', r'Counts now: (\d+) places with stretched texture, (\d+) with open edges, (\d+) single flat pieces')
 if g: rule('5.2', 'stretched texture places (geomaudit)', g[0], 0, g[0] == 0); rule('5.2b', 'open edges (geomaudit)', g[1], 0, g[1] == 0); rule('5.2c', 'single flat pieces (geomaudit)', g[2], 0, g[2] == 0)
 w = [grab('docs/WALK.md', p) for p in (r'Falls of more than 1\.6 m \| (\d+)', r'Could not be walked at all[^|]*\| (\d+)', r'passes through a wall[^|]*\| (\d+)')]
+if any(w) and os.path.exists('docs/WALK.md') and '| Kind | Places |' in open('docs/WALK.md').read(): w = [x or [0] for x in w]      # a kind with no row in the walk bot's table has none
 if all(w): rule('5.4', 'walk bot: falls / cannot be walked / graph through a wall (as last written to docs/WALK.md)', f'{w[0][0]} / {w[1][0]} / {w[2][0]}', '0 / 0 / 0', w[0][0] + w[1][0] + w[2][0] == 0)
 try:
     B = json.load(open('shots/audit/backface.json')); rule('5.1', 'views (of %d) where over 2%% of the picture is the back of a wall' % B['views'], B['wallViews2'], 0, B['wallViews2'] == 0); rule('5.1b', 'mean share of the picture that is the back of a wall (%)', B['meanWall'], 0, B['meanWall'] < 0.05)
