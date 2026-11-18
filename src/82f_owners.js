@@ -39,3 +39,16 @@ OWN.tick = function (dt) {
 SCENES.first = nm => { const w = nm.split(' '); return w[0] === 'Old' ? w[1] : w[0]; };
 { const _nu = npcUpdate; npcUpdate = function (dt) { const r = _nu.apply(this, arguments); try { OWN.tick(dt); } catch (e) { } return r; }; }
 { const _a = ixApplyLocks; ixApplyLocks = function () { const r = _a.apply(this, arguments); ownApplyLocks(); return r; }; }
+// ── The night meeting is held by the two who hold it (A14) ──
+// [cast] Behind the chapel at eleven, two cloaked props spoke as Rowan and Greta while the real Rowan lay in his bed and the real Greta stood at her bar. Now the
+// two real people are there for as long as the meeting lasts (82c_secrets.js keeps its own state: off, here, gone) and the props are never shown.
+const MEET = { on: false };
+MEET.tick = function () {
+  const M = typeof SEC !== 'undefined' && SEC.meet; if (!M || !M.a || typeof NPC === 'undefined' || !NPC.rowan || !NPC.greta) return;
+  if (!MEET.hid) { MEET.hid = true; for (const o of [M.a, M.b]) { try { Object.defineProperty(o, 'visible', { get: () => false, set: () => { }, configurable: true }); } catch (e) { o.visible = false; } }
+    const gy = World.groundY(M.x, M.z); World.spots['meet.a'] = { p: [M.x - 0.7, gy, M.z], yaw: Math.PI / 2, zone: 0 }; World.spots['meet.b'] = { p: [M.x + 0.7, gy, M.z], yaw: -Math.PI / 2, zone: 0 }; }
+  const here = M.st === 'here';
+  if (here && !MEET.on) { MEET.on = true; for (const [id, sp] of [['rowan', 'meet.a'], ['greta', 'meet.b']]) { const n = NPC[id]; n.override = [[0, sp, 'idle']]; npcArrive(n, sp, 'idle'); n.goal = sp; } }
+  else if (!here && MEET.on) { MEET.on = false; for (const id of ['rowan', 'greta']) { const n = NPC[id]; n.override = null; const row = npcRow(n), sp = Array.isArray(row[1]) ? row[1][0] : row[1]; npcArrive(n, sp, row[2]); n.goal = sp; } }
+};
+{ const _nu = npcUpdate; npcUpdate = function (dt) { const r = _nu.apply(this, arguments); try { MEET.tick(); } catch (e) { } return r; }; }
