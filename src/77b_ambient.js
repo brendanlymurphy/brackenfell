@@ -28,7 +28,7 @@ function buildAmbient() {
   { const bad = Chars.audit ? Chars.audit(AMB_DEFS) : []; if (bad.length) console.warn('[ch1] passers-by without a full body: ' + bad.join('; ')); }      // [ch1]
   AMB_DEFS.forEach((def, i) => {
     let ch = null; try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('ambient ' + def.id + ': ' + (e && e.message || e)); return; }
-    AMB.list.push({ def, i, ch, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, dwell: 0, state: 'away', next: 0, ang: null, look: [0, 0], seat: null, stops: null, talking: false, speed: 1.1 + Math.random() * 0.25 });
+    AMB.list.push({ id: 'amb:' + def.id + i, def, i, ch, pos: [0, 0, 0], yaw: 0, anim: 'idle', t: Math.random() * 10, path: null, pi: 0, at: null, goal: null, dwell: 0, state: 'away', next: 0, ang: null, look: [0, 0], seat: null, stops: null, talking: false, speed: 1.1 + Math.random() * 0.25 });
   });
   AMB.ready = AMB.list.length > 0;
 }
@@ -38,6 +38,7 @@ const ambStops = () => {
   return list.filter(n => Nav.spot[n] !== undefined);
 };
 function ambGo(a, spot) {
+  if (typeof npcClaim === 'function') spot = npcClaim(a, spot);       /* [apart] passers-by book their standing place in the same book as everyone else: two of them stood in one spot by the stalls for twenty minutes (the owner's picture), and they stood in named villagers at the well */
   const from = a.path ? a.path[Math.min(a.pi, a.path.length - 1)] : Nav.spot[a.at], to = Nav.spot[spot];
   if (to === undefined) return false;
   const path = from !== undefined ? navPath(from, to) : null;
@@ -48,7 +49,7 @@ function ambArrive(a, spot) { const sp = World.spots[spot]; a.path = null; a.at 
 function ambDecide(a, hr) {
   if (hr >= 18.5 || hr < 7.5 || (typeof npcRaining === 'function' && npcRaining())) {       /* [logic] rain sends the passers-by home as dusk does; they come out again when it stops */ if (a.state !== 'home' && a.state !== 'away') { if (a.state !== 'going-home') { a.state = 'going-home'; if (!ambGo(a, a.def.home)) a.state = 'away'; } } return; }
   if (a.state === 'away' || a.state === 'home') {         // morning: come out of the door
-    const hs = World.spots[a.def.home]; if (!hs) return; a.pos = hs.p.slice(); a.at = a.def.home; a.state = 'stand'; a.dwell = 1 + a.i * 2.3; a.anim = 'idle';
+    const hn = typeof npcClaim === 'function' ? npcClaim(a, a.def.home) : a.def.home, hs = World.spots[hn] || World.spots[a.def.home]; if (!hs) return; a.pos = hs.p.slice(); a.at = hn;       /* two passers-by share each door: each gets a place of their own by it */ a.state = 'stand'; a.dwell = 1 + a.i * 2.3; a.anim = 'idle';
   }
   if (a.state === 'stand' && a.dwell <= 0) {
     const r = Math.random();
@@ -67,7 +68,7 @@ function ambUpdate(dt, playerPos) {
     ambDecide(a, hr);
     if (a.path) {
       const N2 = Nav.nodes[a.path[a.pi]], dx = N2[0] - a.pos[0], dz = N2[2] - a.pos[2], dd = hyp(dx, dz), blocked = d < 0.8 && (playerPos[0] - a.pos[0]) * dx + (playerPos[2] - a.pos[2]) * dz > 0;
-      if (dd < 0.2) { a.pi++; if (a.pi >= a.path.length) { if (a.state === 'going-home') { a.path = null; a.state = 'home'; } else { ambArrive(a, a.goal); if (a.talkAfter) { a.dwell = 14 + Math.random() * 20; a.anim = 'talk'; } } } }
+      if (dd < 0.2 || (a.pushed > 0 && dd < 0.75 && a.pi < a.path.length - 1)) { a.pi++; if (a.pi >= a.path.length) { if (a.state === 'going-home') { a.path = null; a.state = 'home'; } else { ambArrive(a, a.goal); if (a.talkAfter) { a.dwell = 14 + Math.random() * 20; a.anim = 'talk'; } } } }
       else if (!blocked) {
         const st = Math.min(dd, a.speed * step); a.pos[0] += dx / dd * st; a.pos[2] += dz / dd * st;
         a.pos[1] += (World.groundAt(a.pos[0], a.pos[2], a.pos[1] + 0.6) - a.pos[1]) * Math.min(1, step * 6);

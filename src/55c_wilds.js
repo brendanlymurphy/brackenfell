@@ -58,6 +58,7 @@ const WILDS = { places: [], P: {}, pads: [], bumps: [], cliffs: [], groves: [], 
 
   // ── terrain of their own: hills, cliffs, flattened yards ──
   WILDS.bumps.push({ x: 112, z: -118, h: 8.5, s: 15, flat: 6.5, flat2: 12 });                      // the hill under the stones
+  WILDS.bumps.push({ x: -48 - 4.2, z: 122, h: 2.3, s: 3.6 });      // the hillock the west-shore cleft is cut into (94d_act2.js; cleftCrag in 94_mine.js)
   WILDS.bumps.push({ x: 150, z: -34, h: 1.6, s: 5.5 }, { x: 160, z: -62, h: 1.4, s: 6 }, { x: 142, z: -70, h: 1.2, s: 5 });      // barrows
   // cliffs: (dx, dz) points into the hill; g height, ramp: starts rising `at` metres in and takes `ramp` to rise, w0 / w1 half width fade, d0 / d1 depth fade
   WILDS.cliffs.push({ id: 'mine', x: -70, z: -150, dx: -0.62, dz: -0.78, g: 13, at: 3, ramp: 5.5, w0: 13, w1: 25, d0: 22, d1: 38, pad: 8 });
