@@ -42,6 +42,19 @@ Headless: nothing in motion (popping, flicker, z-fighting), nothing heard.
 - borderline: the gate stair is a black box at night, no texture reads (`ngate_010_f_n`)
 - borderline **ruler edge**: a dark dead-straight strip (a gutter?) runs across the square (`alley_002_f_d`, `alley_003_f_d`, `alley_004_b_d`, `alley_004_f_d` ...)
 
+## Looking up at the chapel (the owner's hanging timber and stretched spike)
+
+`test/audit/chapel_up.js`: 16 places on a ring 9 to 14 m round the chapel (centre -6, -75; 14 x 8 m, long axis north to south), pitched up 12 and 28
+degrees, 13:00, and four side views. Picture `build89_chapel_up.jpg`. 32 + 4 frames looked at.
+
+- **The hanging timber: found, at both ends.** At the door end (north, z -66) and the far end (south, z -84) a lean-to runs along the wall: two
+  dark posts, a beam, and for a roof a single dark board, with a long bench under it. From any angle it reads as timbers hung on the wall with
+  nothing to carry or cover. The post and beam in front of the door in `chapel_006_f_d` are its front.
+- **The stretched spike: very likely the same frame.** Standing at the door (-6, -66) and looking up, a post of that frame rises in line with the
+  door's middle, its grain stretched into streaks up its whole height (`chup_08_28`). The same at the far end (`chup_00_28`, a flat dark panel).
+- Also: the leaves of the tree west of the chapel draw as black flakes against the sky when looked up at (`chup_13_28`).
+- The roof, the eaves and the stained windows pass (dull by day; neon at night, above).
+
 | Frame | x, z | Looking, hour | Verdict |
 |---|---|---|---|
 | `ngate_000_b_d` | -3.1, -11.7 (ground 0.0) | behind, 13:00 | pass |
