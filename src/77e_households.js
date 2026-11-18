@@ -36,8 +36,8 @@ const CAST_HOST = { diggory: 1, randal: 1 };          // at their own bench when
 const CAST_FIRST = { draper: 'sabina' };          // who has the counter where the table says so against the order of the rows (Anselm is in the back room)
 const CAST_SWEEP = { mercy: 1, basilia: 1, ursel: 1, hester: 1 };
 // work that is done out of doors, by trade: [morning place, afternoon place] (places of the town that exist; '' = at home)
-const CAST_OUT = { warin: ['gate.post2', 'hunter.yard'], davy: ['hunter.yard', 'gate.post2'], jasper: ['in.11.yard', 'in.46.yard'], peter: ['dock.end', 'wharf.view'], tamsin: ['in.32.yard', 'in.89.yard', 'in.48.yard'], silas: ['', 'belltower.bottom'], gilbert: ['', 'passage.lane'], ysolt: ['', 'gallery.bottom'],
-  idony: ['in.12.yard', 'in.47.yard'], giles: ['', 'in.88.yard'], felice: ['', 'in.18.yard'], gillian: ['', 'in.41.yard'], kat: ['', 'in.81.yard'], wilmot: ['', 'in.42.yard'] };
+const CAST_OUT = { warin: ['in.103.yard', 'hunter.yard'], davy: ['hunter.yard', 'in.103.yard'], jasper: ['in.88.yard', 'in.11.yard'], peter: ['dock.end', 'wharf.view'], tamsin: ['in.46.yard', 'in.32.yard', 'in.89.yard'], silas: ['', 'belltower.bottom'], gilbert: ['', 'passage.lane'], ysolt: ['', 'in.97.yard'],
+  idony: ['in.12.yard', 'in.47.yard'], giles: ['', 'in.71.yard'], felice: ['', 'in.43.yard'], gillian: ['', 'in.41.yard'], kat: ['', 'in.81.yard'], wilmot: ['', 'in.18.yard'] };
 // [cast] the yards of Build 72 behind houses that are only shells (73m_plots.js) are worked by the person of the table whose trade is that yard's: the beekeeper has
 // the hives, the woodcutter the woodyards, the dyer and her boy the dye yard, the old woman who keeps hens the hen run. A child's task after school:
 const CAST_TASK = { ned: 'in.06.yard', tom: 'in.42.yard', amice: 'in.75.yard', will: 'dock.end' };
