@@ -341,7 +341,7 @@ const WEST_EDGE = { n: [[-62, -8.15], [-62, -15], [-64, -19.5], [-65, -26], [-63
 function buildWestEdge(bucket) {
   if (TEST && TEST.plots === 0) return;
   const gy = (x, z) => Terrain.y(x, z), bucket0 = bucket;
-  bucket = (x, z) => { const m = bucket0(8e6 + Math.floor(x / 132) * 80, Math.floor(z / 132) * 80); m.maxDist = 0; m.noShadow = true; m.edge = 1; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };      // [fx3] 44 m cells of their own, hidden beyond 60 m and out of the shadow pass, like the town walls
+  bucket = (x, z) => { const m = bucket0(8e6 + Math.floor(x / 132) * 80, Math.floor(z / 132) * 80); m.maxDist = 1e5; m.lowDist = 70; m.noShadow = true; m.edge = 1; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };      // [fx3] 44 m cells of their own, hidden beyond 60 m and out of the shadow pass, like the town walls
   const segX = (p1, p2, p3, p4) => { const d = (p2[0] - p1[0]) * (p4[1] - p3[1]) - (p2[1] - p1[1]) * (p4[0] - p3[0]); if (Math.abs(d) < 1e-9) return false; const t = ((p3[0] - p1[0]) * (p4[1] - p3[1]) - (p3[1] - p1[1]) * (p4[0] - p3[0])) / d, u = ((p3[0] - p1[0]) * (p2[1] - p1[1]) - (p3[1] - p1[1]) * (p2[0] - p1[0])) / d; return t > -0.1 && t < 1.1 && u > -0.05 && u < 1.05; };
   const crossRoad = (A, B) => Roads.some(q => q.id !== 'main' && q.line.p.some((pt, i) => i && segX(A, B, q.line.p[i - 1], pt)));
   const roadNear = (A, B) => crossRoad(A, B) || (Math.abs((A[0] + B[0]) / 2 + 62) < 3 && Math.abs((A[1] + B[1]) / 2 + 5.2) < 2.6);

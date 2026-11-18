@@ -6,8 +6,8 @@
 // [fx3] detail by distance, merged per stretch so it costs no draw calls and never pops out: logCell(bucket, level, x, z) gives the mesh of the level:
 //   0: 8-sided logs, within 25 m, in the shadow pass (Low: 4-sided)   1: 4-sided logs, 25 to 70 m, out of the shadow pass (Low: none)   2: one ribbon per stretch beyond 70 m (Low: beyond 25 m), same bark and heights
 function logCell(bk, lv, x, z) {
-  const S = [16, 32, 132][lv], m = bk([5e6, 6e6, 7e6][lv] + Math.floor(x / S) * 80, Math.floor(z / S) * 80), low = R.qName === 'low';
-  m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.maxDist = lv === 0 ? 25 : lv === 1 ? 70 : 0; m.minDist = lv === 0 ? 0 : lv === 1 ? 25 : 70; m.lowMin = lv === 2 ? 25 : 0; m.lowDist = lv === 1 ? -1e4 : 0; m.noShadow = lv !== 0; m.edge = 1; return m;
+  const S = [24, 48, 132][lv], m = bk([5e6, 6e6, 7e6][lv] + Math.floor(x / S) * 80, Math.floor(z / S) * 80), low = R.qName === 'low';
+  m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; m.maxDist = lv === 0 ? 25 : lv === 1 ? 70 : 0; m.minDist = lv === 0 ? 0 : lv === 1 ? 25 : 70; m.lowMin = lv === 2 ? 14 : 0; m.lowDist = lv === 1 ? -1e4 : lv === 0 ? 14 : 0; m.noShadow = lv !== 0; m.edge = 1; return m;
 }
 // [fx3] a palisade log row from A to B (world points): tight individual logs (24-34 cm, overlapping a little), bark running up the log, each its own height and lean, the point cut with an axe, 0.3 m into the ground along the ground's own line, a riband pegged along the inside at 1.6 m; a few pale replaced logs, a few gaps patched with wattle.
 // topFn(t) gives the top height (t 0..1 along the row); inside is the unit normal toward the town; mk(level, x, z) gives the mesh of a detail level (see logCell).
