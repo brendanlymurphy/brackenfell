@@ -167,13 +167,13 @@ const Kit = (() => {
       const cell = floor(wp.mul(0.9)), h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))).mul(43758.5453));
       const V = normalize(wp.sub(U.camPos)), R = reflect(V, N);
       const sky = SH.skyBase(vec3(R.x, max(R.y, 0.02), R.z)).mul(0.22);
-      const lit = SH.paneLit ? SH.paneLit(wp, N, h) : vec3(1.0, 0.60, 0.24).mul(h.mul(0.9).add(0.35)).mul(U.windowGlow).mul(2.4).mul(smoothstep(0.12, 0.3, h));      // fork-look: leaded amber panes that do not clip (40_shade.js)
+      const plainPane = /_Inf$/.test(d.name) ? 1 : 0, lit = SH.paneLit ? SH.paneLit(wp, N, h, float(plainPane)) : vec3(1.0, 0.60, 0.24).mul(h.mul(0.9).add(0.35)).mul(U.windowGlow).mul(2.4).mul(smoothstep(0.12, 0.3, h));      // fork-look: leaded amber panes that do not clip (40_shade.js)
       m.colorNode = vec3(0.012, 0.016, 0.02); m.roughnessNode = float(0.15); m.metalnessNode = float(0);
       // from the room side a pane just shows the dim sky outside
       const outsideView = batch ? frontFacing : frontFacing;
       // [fx1] a reveal and a reflection so the pane is not one flat rectangle: the glass edge sits in the frame's shadow, each pane catches the sky differently (a soft diagonal sheen, a faint grime toward the sill)
       const pu = uv(), edge = smoothstep(0.0, 0.16, pu.x.min(pu.y).min(float(1).sub(pu.x)).min(float(1).sub(pu.y))), sheen = smoothstep(0.35, 0.5, fract(pu.x.mul(0.7).add(pu.y.mul(0.5)).add(h.mul(0.9)))).mul(float(1).sub(smoothstep(0.5, 0.62, fract(pu.x.mul(0.7).add(pu.y.mul(0.5)).add(h.mul(0.9)))))), grime = float(1).sub(float(1).sub(pu.y).mul(0.0)).mul(float(0.7).add(pu.y.mul(0.3)));
-      const dayK = float(0.55).add(edge.mul(0.45)).mul(grime), skyDay = sky.mul(dayK).add(sky.mul(sheen.mul(0.9)).mul(edge));
+      const dayK = float(0.55).add(edge.mul(0.45)).mul(grime), skyDay = sky.mul(dayK).add(sky.mul(sheen.mul(0.9)).mul(edge)).mul(plainPane ? 0.67 : 1).mul(SH.paneLead(wp, N).mul(0.78).add(0.22));
       m.emissiveNode = select(outsideView, skyDay.add(lit.mul(edge.mul(0.5).add(0.5))), (SH.paneOut ? SH.paneOut(wp, N, V) : SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55))).add(vec3(0.02, 0.025, 0.03).mul(SH.hemi(N, float(1), float(0))));
       m.side = THREE.DoubleSide;
       K_.mats.set(key, m); return m;
@@ -191,6 +191,10 @@ const Kit = (() => {
     if (batch && /Rubble|Stone|Brick|Rock|Plaster/.test(name) && !/Roof|Slate/.test(name)) {         // [fx3] detail layer: a fine world-anchored grain and a pitted second scale that fade in within about 5 m, so a wall at arm's length is not one stretched tile
       const hcd = wp.x.mul(abs(N.z)).add(wp.z.mul(abs(N.x))), dn = texture(G.noiseTex, vec2(hcd.mul(1.9), wp.y.mul(1.9))), dn2 = texture(G.noiseTex, vec2(hcd.mul(7.1).add(0.31), wp.y.mul(7.1))), near = float(1).sub(smoothstep(1.5, 30, dot(wp.sub(U.camPos), wp.sub(U.camPos)))), wallK2 = float(1).sub(smoothstep(0.35, 0.7, abs(N.y)));
       rawS = rawS.mul(float(1).add(dn.r.sub(0.5).mul(0.34).add(dn2.g.sub(0.5).mul(0.26)).mul(near).mul(wallK2)));
+      if (/Plaster/.test(name) && !(TEST && TEST.plast === 0)) {         // [fx3] the plan engine's walls are kit plaster (Wall_Plaster_Straight, MI_Plaster): at arm's length they were one flat fill. Stronger mottle from the two noise scales already sampled, and hairline cracks as contour lines of the same fields
+        const nk = near.mul(wallK2), crack = float(1).sub(smoothstep(0.0, 0.035, abs(dn.b.sub(0.5)))).mul(0.9);
+        rawS = rawS.mul(float(1).add(dn.g.sub(0.5).mul(0.8).add(dn2.r.sub(0.5).mul(0.3)).mul(nk)).sub(crack.mul(0.3).mul(nk)).max(0.45));
+      }
     }
     // depth and grime (40b_depth.js): room occlusion for everything indoors; dirt, soot and (outdoors, from the kg heights) mud, moss and eave stains on walls
     const useRoom = batch || !!o.zone, rm = useRoom ? SH.room(wp, N, zone).toVar() : null;
@@ -215,7 +219,7 @@ const Kit = (() => {
       const outM = float(1).sub(step(0.5, zone)), F = K_.fill, F2 = K_.fill2, wallK = float(1).sub(smoothstep(0.25, 0.55, N.y));       // roofs get F, upright walls F + F2 (dark timber must still read in shade)
       em = em.add(alb.mul(U.sunCol.mul(F.x.add(F2.x.mul(wallK))).add(U.ambSky.mul(F.y.add(F2.y.mul(wallK))))).mul(skyVis).mul(outM));
       const dayK = smoothstep(0.012, 0.2, dot(U.ambSky, vec3(0.3333))).mul(0.97).add(0.03);       // the floor follows the daylight: constant, it left roofs and walls glowing pale at night while the ground went dark
-      const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK);
+      const fl = F.z.add(F2.z.mul(wallK)).mul(skyVis).mul(outM).mul(dayK).mul(1.45);      // [fx3] 1.45: under hoods and eaves a dark board kept almost nothing
       em = max(em, alb.mul(fl.mul(4)).add(vec3(fl.mul(0.4))));       // a floor that keeps the surface's own colour (black albedo still reads a little)
       if (!(TEST && TEST.shade === 0)) em = em.add(alb.mul(U.ambSky.mul(0.3).add(U.sunCol.mul(0.035))).mul(vec3(0.85, 0.95, 1.1)).mul(outM).mul(wallK).mul(skyVis)).add(vec3(0.95, 0.82, 0.68).mul(U.ambSky.dot(vec3(0.3333)).mul(0.3).add(U.sunCol.dot(vec3(0.3333)).mul(0.035))).mul(0.2).mul(outM).mul(wallK).mul(skyVis));      // [l1] shaded upright faces keep a floor of sky and bounce, plus a little absolute light so near-black planks still read
       if (!(TEST && TEST.shade === 0)) em = em.mul(mix(vec3(1), vec3(0.74, 0.86, 1.1), outM.mul(wallK).mul(skyVis).mul(float(1).sub(lampK))));      // [l1] shade is sky: upright faces out of the sun go cooler and darker
