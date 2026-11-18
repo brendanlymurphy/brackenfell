@@ -315,7 +315,7 @@ const INOUT_FIT = new Set();          // the houses that use it (district by dis
 // [inout] the side of a stair that the front door looks at is the first thing seen on coming in: its tall end is an under-stair cupboard (a ledged plank door,
 // strap hinges, a latch), with a peg rail beside it where the stair is high enough to stand under. Drawn on the stair's side, nothing on the floor.
 function hUnderStair(P, q) {
-  if (!q || q.axis !== 'x' || q.k0 !== 0 || !q.run) return; const L = P.lv[0], m = P.c.int, d = q.dir, zf = q.lat - q.hw - 0.005;
+  if (!q || q.open || q.axis !== 'x' || q.k0 !== 0 || !q.run) return; const L = P.lv[0], m = P.c.int, d = q.dir, zf = q.lat - q.hw - 0.005;
   const hAt = x => q.rise * Math.max(0, Math.min(1, (x - q.p0) * d / q.run)), dc = q.p1 - d * 0.55;
   if (hAt(dc - d * 0.4) < 1.95) return;
   pBase(P, m);
@@ -340,7 +340,8 @@ function hCompact(P, c, F) {
   const sideZ = SO.filter(f => f.wall === 'left' || f.wall === 'right').map(f => f.u * sz), backX = SO.filter(f => f.wall === 'back' || f.wall === 'front').map(f => cxB + f.u * sx);
   const clearOf = (v, list) => list.reduce((m, q) => Math.min(m, Math.abs(q - v)), 9);
   let Zp = single ? D : clamp(Math.round(D * 0.55 * 2) / 2, 3.5, D - 2.5);
-  if (!single) { let best = Zp, bs = -1; for (let z = 3.5; z <= D - 2.5 + 1e-6; z += 0.5) { const sc = Math.min(clearOf(z, sideZ), 1.2) * 10 - Math.abs(z - D * 0.55); if (sc > bs) { bs = sc; best = z; } } Zp = best; }
+  const shopC = fam === 'shopfront', cellarC = !single && (shopC || fam === 'merchant') && (F.wealth > 0 || F.trade === 'butcher') && W >= 8.5, zMin = D >= (cellarC ? 6.5 : 6) ? 4.0 : 3.5, zMax = Math.max(zMin, D - (D >= 6.5 || cellarC ? 2.5 : 2.0));      /* a cellar stair needs its back room 2.5 m deep */      /* [inout] Job 1: a front room 4 m deep where the rooms behind keep 2 m: the door sees 3.5 m of floor before the partition */
+  if (!single) { let best = Zp, bs = -1e9; for (let z = 3.5; z <= zMax + 1e-6; z += 0.5) { const cw = clearOf(z, sideZ), sc = (cw >= 0.9 ? 100 + (z >= zMin ? 50 : 0) : cw * 10) - Math.abs(z - D * 0.55); if (sc > bs) { bs = sc; best = z; } } Zp = best; }      /* first clear of the side windows, then 4 m deep for the view from the door */
   const shop = fam === 'shopfront', work = fam === 'workshop' || fam === 'crosspassage', hall = !shop && !work, cellarOK = !single && (shop || fam === 'merchant') && (F.wealth > 0 || F.trade === 'butcher') && W >= 8.5;
   const mir = hHash(id + '|cmir') < 0.5, M = x => mir ? X0 + X1 - x : x, rr = (a, b) => [Math.min(M(a), M(b)), Math.max(M(a), M(b))];      /* house by house the arrangement is mirrored: the stair, the store and the kitchen change sides */
   const split = [0.45, 0.5, 0.55][(hHash(id + '|csplit') * 3) | 0], mirX = x => mir ? X0 + X1 - x : x;
@@ -348,21 +349,46 @@ function hCompact(P, c, F) {
   if (!cellarOK && W >= 6) { let best = Xs, bs = -1; for (let x = X0 + 3; x <= X1 - 3 + 1e-6; x += 0.5) { const sc = Math.min(clearOf(mirX(x), backX), 1.2) * 10 - Math.abs(x - Xs); if (sc > bs) { bs = sc; best = x; } } Xs = best; }
   P.dims = { W, D, Dh: Zp }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP, two ? {} : { loft: true }); if (cellarOK) pLevel(P, -1, -(2.4 + PW.SLAB), 2.4);
   const nm = shop ? ['shop', 'back', 'store'] : work ? ['work', 'living', 'store'] : single ? ['room'] : ['hall', 'chamber', 'pantry'];
-  const front = pRoom(P, 0, nm[0], shop ? 'shop' : 'hall', X0, 0, X1, Zp, F.fin(0, shop && (F.trade === 'butcher' || F.trade === 'baker') ? { floor: 'stone' } : {}));
-  let left = null, right = null;
-  if (!single) { const a = rr(X0, Xs), b = rr(Xs, X1); left = pRoom(P, 0, nm[2], 'store', a[0], Zp, a[1], D, { floor: 'stone', win: true }); right = pRoom(P, 0, nm[1], hall ? 'bedroom' : 'hall', b[0], Zp, b[1], D, F.fin(0, { floor: 'wood', tint: F.tint2 })); }
-  let up1, up2 = null;
-  if (two && !single) { up1 = pRoom(P, 1, shop ? 'upfront' : 'solar', 'bedroom', X0, 0, X1, Zp, F.fin(1)); up2 = pRoom(P, 1, shop ? 'upback' : 'loft', 'bedroom', X0, Zp, X1, D, F.fin(1)); }
-  else up1 = pRoom(P, 1, two ? 'chamber' : 'loft', 'bedroom', X0, 0, X1, D, F.fin(1));
-  if (three) { pLevel(P, 2, P.lv[1].y + H_UP + PW.SLAB, 2.4, { loft: true }); pRoom(P, 2, up1.id === 'loft' || (up2 && up2.id === 'loft') ? 'garret' : 'loft', 'store', X0, 0, X1, D, F.fin(1)); }
-  if (cellarOK) { const a = rr(X0, Xs); pRoom(P, -1, 'cellar', 'cellar', a[0], Zp, a[1], D, { floor: 'stone', win: false }); }
-  pDoor(P, front.id, null, 0, 0); P.clear.push({ x0: -0.8, x1: 0.8, z0: 0, z1: 2.4, k: 0, kind: 'path', room: front });
-  if (!single) { pDoor(P, front.id, left.id, M(X0 + 0.8), Zp); pDoor(P, front.id, right.id, M(X1 - 0.8), Zp); }
-  if (up2) pDoor(P, up1.id, up2.id, M(X1 - 0.8), Zp);
-  const SHL = pShellWins(P, c, B), bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd && P.lv[1]) pUpperDoor(P, up1, bd, Math.round(SHL.pos(bd) * 4) / 4);      /* an upper door the shell shows opens from the front room upstairs */
-  const lat = single ? D - 0.6 : Zp - 0.6, p0 = X0 + 1.45,      /* 1.2 m clear at the foot */ tread = clamp(Math.floor((X1 - 1.45 - p0) / nSt * 100) / 100, 0.18, 0.23);      /* and at the head */      /* a longer stair where it fits: its well is then long enough to jump down */      /* narrow houses get a steeper stair, as they had */
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: mir ? -1 : 1, x: M(p0), z: lat, width: 0.9, tread, holeX: 0.5 });
-  if (cellarOK) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: mir ? -1 : 1, x: M(X0 + 1.45), z: D - 0.6, width: 0.9, tread: 0.2 });
+  /* [inout] Job 1 (inbox 11:30): the street door looks into the room. Where the house is deep enough the plan runs lengthwise: the main room the door opens into
+     goes the whole depth, the small rooms stand beside it on the wider side, and the stair climbs an open string along that partition away from the door, so the
+     view from the door is 5 m or more of floor to the hearth, the table or the counter. Else the old plan, its stair opened up (a string and a rail, no boards below). */
+  const wL = 0 - X0, wR = X1 - 0, sg = wL >= wR ? -1 : 1, wide = Math.max(wL, wR), tL = clamp(Math.floor((D - 3.0 - 0.2) / nSt * 100) / 100, 0.18, 0.23), zLow = 1.5;
+  let XsL = null; if (!cellarOK && !three && D >= zLow + nSt * 0.18 + 1.6) for (const a of [2.0, 2.5, 3.0]) { const x = sg * a; if (wide - a >= 1.9 && clearOf(x, backX) >= 0.9) { XsL = x; break; } }
+  P.lwWhy = XsL !== null ? '' : Zp < 4 && !single ? 'a side window where a 4 m front room would end (' + sideZ.map(v => v.toFixed(1)).join(',') + ')' : cellarOK ? 'cellar' : three ? 'loft ladder' : D < zLow + nSt * 0.18 + 1.6 ? 'depth ' + D : wide < 3.9 ? 'width ' + wide : 'windows ' + backX.map(v => v.toFixed(1)).join(',');
+  const lw = XsL !== null; P.layout = lw ? 'lengthwise' : 'across';
+  let front, left = null, right = null, up1, up2 = null;
+  if (lw) {
+    const a = sg < 0 ? [X0, XsL] : [XsL, X1], mR = sg < 0 ? [XsL, X1] : [X0, XsL], sideOne = D < 4.8;
+    let Zs = Math.round(D / 2 * 2) / 2; if (!sideOne) { let bs = -1; for (let z = 2.5; z <= D - 2.5 + 1e-6; z += 0.5) { const sc = Math.min(clearOf(z, sideZ), 1.2) * 10 - Math.abs(z - D / 2); if (sc > bs) { bs = sc; Zs = z; } } }
+    Zp = D; P.dims = { W, D, Dh: D };
+    front = pRoom(P, 0, nm[0], shop ? 'shop' : 'hall', mR[0], 0, mR[1], D, F.fin(0, shop && (F.trade === 'butcher' || F.trade === 'baker') ? { floor: 'stone' } : {}));
+    if (sideOne) left = pRoom(P, 0, nm[2], 'store', a[0], 0, a[1], D, { floor: 'stone', win: true });
+    else { left = pRoom(P, 0, nm[2], 'store', a[0], 0, a[1], Zs, { floor: 'stone', win: true }); right = pRoom(P, 0, nm[1], hall ? 'bedroom' : 'hall', a[0], Zs, a[1], D, F.fin(0, { floor: 'wood', tint: F.tint2 })); }
+    if (two) { up1 = pRoom(P, 1, shop ? 'upfront' : 'solar', 'bedroom', mR[0], 0, mR[1], D, F.fin(1)); up2 = pRoom(P, 1, shop ? 'upback' : 'loft', 'bedroom', a[0], 0, a[1], D, F.fin(1)); }
+    else up1 = pRoom(P, 1, 'loft', 'bedroom', X0, 0, X1, D, F.fin(1));
+    const zHigh = zLow + nSt * tL;
+    pDoor(P, front.id, null, 0, 0); P.clear.push({ x0: -0.8, x1: 0.8, z0: 0, z1: 2.4, k: 0, kind: 'path', room: front });
+    pDoor(P, front.id, left.id, XsL, 0.8);
+    if (right) { const zb = Math.max(Zs + 0.7, zHigh + 0.7); if (zb <= D - 0.6) pDoor(P, front.id, right.id, XsL, Math.round(zb * 4) / 4); else pDoor(P, left.id, right.id, (a[0] + a[1]) / 2, Zs); }
+    if (up2) pDoor(P, up1.id, up2.id, XsL, Math.round(Math.max(zHigh + 0.9, D - 0.9) * 4) / 4);
+    const SHL = pShellWins(P, c, B), bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd && P.lv[1]) { const pos = Math.round(SHL.pos(bd) * 4) / 4, rU = [up1, up2].find(r => r && pos > r.x0 + 0.6 && pos < r.x1 - 0.6) || up1; pUpperDoor(P, rU, bd, pos); }
+    pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: XsL - sg * 0.56, z: zLow, width: 0.9, tread: tL, holeX: 0.5, open: true });
+  } else {
+    front = pRoom(P, 0, nm[0], shop ? 'shop' : 'hall', X0, 0, X1, Zp, F.fin(0, shop && (F.trade === 'butcher' || F.trade === 'baker') ? { floor: 'stone' } : {}));
+    if (!single) { const a = rr(X0, Xs), b = rr(Xs, X1); left = pRoom(P, 0, nm[2], 'store', a[0], Zp, a[1], D, { floor: 'stone', win: true }); right = pRoom(P, 0, nm[1], hall ? 'bedroom' : 'hall', b[0], Zp, b[1], D, F.fin(0, { floor: 'wood', tint: F.tint2 })); }
+    if (two && !single && D - Zp >= 2.5) { up1 = pRoom(P, 1, shop ? 'upfront' : 'solar', 'bedroom', X0, 0, X1, Zp, F.fin(1)); up2 = pRoom(P, 1, shop ? 'upback' : 'loft', 'bedroom', X0, Zp, X1, D, F.fin(1)); }      /* [inout] one room upstairs where a back room would be under 2.5 m deep */
+    else up1 = pRoom(P, 1, two ? 'chamber' : 'loft', 'bedroom', X0, 0, X1, D, F.fin(1));
+    if (three) { pLevel(P, 2, P.lv[1].y + H_UP + PW.SLAB, 2.4, { loft: true }); pRoom(P, 2, up1.id === 'loft' || (up2 && up2.id === 'loft') ? 'garret' : 'loft', 'store', X0, 0, X1, D, F.fin(1)); }
+    if (cellarOK) { const a = rr(X0, Xs); pRoom(P, -1, 'cellar', 'cellar', a[0], Zp, a[1], D, { floor: 'stone', win: false }); }
+    pDoor(P, front.id, null, 0, 0); P.clear.push({ x0: -0.8, x1: 0.8, z0: 0, z1: 2.4, k: 0, kind: 'path', room: front });
+    if (!single) { pDoor(P, front.id, left.id, M(X0 + 0.8), Zp); pDoor(P, front.id, right.id, M(X1 - 0.8), Zp); }
+    if (up2) pDoor(P, up1.id, up2.id, M(X1 - 0.8), Zp);
+    const SHL = pShellWins(P, c, B), bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd && P.lv[1]) pUpperDoor(P, up1, bd, Math.round(SHL.pos(bd) * 4) / 4);      /* an upper door the shell shows opens from the front room upstairs */
+    const lat = single ? D - 0.6 : Zp - 0.6, p0 = X0 + 1.45,      /* 1.2 m clear at the foot */ tread = clamp(Math.floor((X1 - 1.45 - p0) / nSt * 100) / 100, 0.18, 0.23);      /* and at the head */      /* a longer stair where it fits: its well is then long enough to jump down */      /* narrow houses get a steeper stair, as they had */
+    pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: mir ? -1 : 1, x: M(p0), z: lat, width: 0.9, tread, holeX: 0.5 });
+    if (cellarOK) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: mir ? -1 : 1, x: M(X0 + 1.45), z: D - 0.6, width: 0.9, tread: 0.2, holeX: 0.5 });      /* [inout] a well long enough to jump down */
+    { const q = P.stairs.find(q => q.id === 'stUp'); if (q) q.open = true; }
+  }
   pLayout(P); pBalconies(P, c); hUnderStair(P, P.stairs.find(q => q.id === 'stUp'));
   let lad = null; if (three) { for (const sdL of mir ? ['e', 'w'] : ['w', 'e']) for (const z of [1.2, 1.6, D - 1.6, D / 2]) if (!lad) lad = pLadder(P, 1, sdL, z); if (!lad) P.err.push('no ladder to the loft'); }
   for (const q of P.stairs) { const h = q.high || q.low, x0 = Math.min(q.p1, q.p1 + q.dir * 1.4), x1 = Math.max(q.p1, q.p1 + q.dir * 1.4); P.clear.push(q.axis === 'x' ? { x0, x1, z0: q.lat - 0.6, z1: q.lat + 0.6, k: q.k0, kind: 'stair' } : { x0: q.lat - 0.6, x1: q.lat + 0.6, z0: x0, z1: x1, k: q.k0, kind: 'stair' }); }      /* the floor below a stair head stays clear of a fire: its chimney stack would stand at the top of the stair */

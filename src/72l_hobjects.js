@@ -413,7 +413,7 @@ HT.weaver = (P, c, room, F) => {
   hCeil(P, room, F.X(-1.2), room.z0 + 4.2, TP.fishBar(0.1, P.R)); P.hall = P.hall || null;
 };
 HT.draper = (P, c, room, F) => {
-  cnt(P, room, F, 4.2, ['folded', 'bolt', 'spools', 'folded'], 'draper'); hShelfWalls(P, room, PD.WARES.cloth, { sides: ['w', 'e', 's'], id: 'wd', lv: 6 }); hPlace(P, room, 'cuttable', { sides: ['w', 'e'] }); hPlace(P, room, 'dip', { sides: ['w', 'e'] });
+  cnt(P, room, F, 4.2, ['folded', 'bolt', 'spools', 'folded'], 'draper'); hShelfWalls(P, room, PD.WARES.cloth, { sides: ['w', 'e'], id: 'wd', lv: 6 });      /* [inout] Job 1: the cloth on the side walls, the wall the door faces left to the counter */ hPlace(P, room, 'cuttable', { sides: ['w', 'e'] }); hPlace(P, room, 'dip', { sides: ['w', 'e'] });
   pAnyHang(P, room, [{ id: 'dr', w: 1.4, y0: 0.9, y1: 2.0, pivot: 2.0, fn: PD.tapestry(P.R, 1.4, 1.1) }], { max: 2 }); hPlace(P, room, 'm_mirror', { sides: ['w', 'e', 's'] });
 };
 HT.miller = (P, c, room, F) => {

@@ -472,13 +472,14 @@ function pStairEmit(P, s) {
   m.m1 = P.zone; m.ao = INT_AO;
   for (let i = 0; i < s.n; i++) {
     const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, s.lat - hw, s.lat + hw), top = y0 + (i + 1) * r - 0.02;
-    m.mat(MAT.PLANKS, COL.wood); m.box(q[0], y0, q[1], q[2], top, q[3], 4 | 8); m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0] - 0.012, top - 0.05, q[1] - 0.012, q[2] + 0.012, top + 0.008, q[3] + 0.012, 4);          // the tread plate overhangs the block by 1 cm (nothing coplanar)
+    m.mat(MAT.PLANKS, COL.wood); if (s.open) m.box(q[0], top - 0.06, q[1], q[2], top, q[3]); else m.box(q[0], y0, q[1], q[2], top, q[3], 4 | 8);      /* [inout] an open stair: treads on strings, the room seen through it */ m.mat(MAT.PLANKS, COL.woodDark, 0.8); m.box(q[0] - 0.012, top - 0.05, q[1] - 0.012, q[2] + 0.012, top + 0.008, q[3] + 0.012, 4);          // the tread plate overhangs the block by 1 cm (nothing coplanar)
   }
   // side boards and a handrail up the open side
   m.mat(MAT.TIMBER, COL.timberDark);
   for (const sg of [-1, 1]) {
     const l = s.lat + sg * (hw + 0.035), top = b.y + 0.02;
-    for (let i = 0; i < s.n; i += 1) { const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, l - 0.03, l + 0.03); m.box(q[0], y0, q[1], q[2], y0 + (i + 1) * r + 0.05, q[3], 4); }
+    if (s.open) { const pa_ = ax === 'x' ? [s.p0 - d * 0.05, y0 + 0.12, l] : [l, y0 + 0.12, s.p0 - d * 0.05], pb_ = ax === 'x' ? [s.p1, top - 0.08, l] : [l, top - 0.08, s.p1]; m.beam(pa_, pb_, 0.06, 0.26); }      /* the string: one sloping board each side */
+    else for (let i = 0; i < s.n; i += 1) { const q = R4(s.p0 + d * i * s.tread, s.p0 + d * (i + 1) * s.tread, l - 0.03, l + 0.03); m.box(q[0], y0, q[1], q[2], y0 + (i + 1) * r + 0.05, q[3], 4); }
     // handrail: a sloping beam on posts
     const tE = Math.max(0.05, 1 - 1.07 / Math.max(s.rise, 1.2)), yA = 0.95 + y0 + 0.4 * r, yB = 0.95 + top - 0.4 * r, pE = s.p0 + d * s.run * tE;      // [fin] the climber's rail stops 1.07 m of rise short of the floor above: there the opening's own balustrade (below) takes over, so two guard systems never stand in one well
     const pa = ax === 'x' ? [s.p0, yA, l] : [l, yA, s.p0], pb = ax === 'x' ? [pE, yA + (yB - yA) * tE, l] : [l, yA + (yB - yA) * tE, pE];

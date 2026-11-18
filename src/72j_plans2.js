@@ -48,7 +48,7 @@ PLANS.guardhouse = (P, c, info) => {      /* [inout] the shell: 7.2 x 5.6 m, two
   pDoor(P, 'guard', null, 0, 0); pDoor(P, 'guard', 'cells', X0 + 0.9, Zp); pDoor(P, 'guard', 'armoury', X1 - 1.6, Zp);
   const SHL = pShellWins(P, c, B);
   const bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd) pUpperDoor(P, P.rooms.barracks, bd, Math.round(SHL.pos(bd) * 4) / 4);
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.7, z: Zp - 0.65, width: 0.9, tread: 0.22 });
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.7, z: Zp - 0.65, width: 0.9, tread: 0.22, open: true });      /* [inout] Job 1: an open string, the room seen through it */
   pLayout(P); pKeepStairHeads(P); pBalconies(P, c);
   const guard = P.rooms.guard, cells = P.rooms.cells, arm = P.rooms.armoury, bar = P.rooms.barracks;
   // the guard room: the fire on the gable wall, the table with the roster, a weapon stand, two cloaks on the pegs, Hugh Alder's arrows still tied
