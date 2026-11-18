@@ -67,7 +67,9 @@ Bake.interior = function (P) {
       const quad = (v) => { const [p0, p1, p2, p3] = v; const a = sm.vert(p0[0], p0[1], p0[2], 0, 1, 0, 0, 0), b = sm.vert(p1[0], p1[1], p1[2], 0, 1, 0, 1, 0), c = sm.vert(p2[0], p2[1], p2[2], 0, 1, 0, 1, 1), d = sm.vert(p3[0], p3[1], p3[2], 0, 1, 0, 0, 1); sm.tri(a, b, c); sm.tri(a, c, d); sm.flip = false; };
       quad([at(0.15, -0.5, y1), at(0.15, 0.5, y1), at(len, Math.min(1.9, side - 0.15), fy), at(len, -Math.min(1.9, side - 0.15), fy)]);        // u across (the wall's own direction), v from the pane to the floor
       quad([at(0.35, -0.4, y1 - 0.25), at(0.35, 0.4, y1 - 0.25), at(len * 0.8, Math.min(1.4, side - 0.15), fy + 0.5), at(len * 0.8, -Math.min(1.4, side - 0.15), fy + 0.5)]);        // a second, inner sheet gives the beam some depth
-      { const fp = L.y + 0.045, ws = (w.w || 1.0) * 0.5 + 0.35; sm.ao = 0.5; quad([at(0.35, -Math.min(ws, side - 0.1), fp), at(0.35, Math.min(ws, side - 0.1), fp), at(Math.min(3.3, len), Math.min(ws * 1.5, side - 0.1), fp), at(Math.min(3.3, len), -Math.min(ws * 1.5, side - 0.1), fp)]); sm.ao = 1; }      // the pool of window light on the floor
+      { const fp = L.y + 0.045, ws = (w.w || 1.0) * 0.5 + 0.35, lenP = Math.min(3.3, len), bw = Math.min(ws * 1.5, side - 0.1), pa = [cx + dx * 0.35 - tx * bw, cz + dz * 0.35 - tz * bw], pb = [cx + dx * lenP + tx * bw, cz + dz * lenP + tz * bw], bx0 = Math.min(pa[0], pb[0]), bx1 = Math.max(pa[0], pb[0]), bz0 = Math.min(pa[1], pb[1]), bz1 = Math.max(pa[1], pb[1]);
+        if (P.holes.some(h => h.k === w.k && bx0 < h.r.x1 && bx1 > h.r.x0 && bz0 < h.r.z1 && bz1 > h.r.z0)) continue;
+        sm.ao = 0.5; quad([at(0.35, -Math.min(ws, side - 0.1), fp), at(0.35, Math.min(ws, side - 0.1), fp), at(Math.min(3.3, len), Math.min(ws * 1.5, side - 0.1), fp), at(Math.min(3.3, len), -Math.min(ws * 1.5, side - 0.1), fp)]); sm.ao = 1; }      // the pool of window light on the floor
     }
     if (sm.ni) cell.shaft = sm; }
   // windows: a pane centre, its inward direction on the floor plane (world), the reach and a strength by size

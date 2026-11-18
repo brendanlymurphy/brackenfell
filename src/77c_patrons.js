@@ -23,6 +23,7 @@ function npcClaim(n, name) {
     if (k && !World.spots[cand]) {          // a ring of standing places round the spot, none inside a wall
       const a = k * 2.4 + base.length, rr = 0.85 * (1 + (k > 12 ? 1.6 : k > 4 ? 0.8 : 0)), x = spB.p[0] + Math.cos(a) * rr, z = spB.p[2] + Math.sin(a) * rr;
       if (World.blockedAt && World.blockedAt(x, z, 0.3)) continue;
+      if (World.groundAt && Math.abs(World.groundAt(x, z, spB.p[1] + 1) - spB.p[1]) > 0.5) continue;          // [fin] a standing place needs the floor under it (a ring point past a thin back wall was in the void)
       World.spots[cand] = Object.assign({}, spB, { p: [x, spB.p[1], z] }); delete World.spots[cand].sit; delete World.spots[cand].lie;
       if (Nav.spot[base] !== undefined) Nav.spot[cand] = Nav.spot[base];
     }

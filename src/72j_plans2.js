@@ -6,9 +6,14 @@ PD.spearRack = R => m => {
   for (let i = 0; i < 7; i++) { const x = -0.5 + i * 0.167, z = (i % 2 ? 0.08 : -0.08); m.push().T(x, 0.1, z).RZ(R.s() * 0.04); m.mat(MAT.TIMBER, COL.wood); m.box(-0.013, 0, -0.013, 0.013, 1.9, 0.013); m.mat(MAT.METAL, [0.9, 0.9, 0.95]); m.box(-0.025, 1.9, -0.006, 0.025, 2.1, 0.006); m.pop(); }
   addBoxCollider(m, -0.6, -0.2, 0.6, 0.2, 0, 2.1);
 };
-PD.bars = len => m => {         // a run of iron bars between rails, floor to ceiling, for a cell
-  m.mat(MAT.METAL, [0.45, 0.45, 0.5]); m.box(-len / 2, 0.1, -0.03, len / 2, 0.16, 0.03); m.box(-len / 2, 1.5, -0.03, len / 2, 1.56, 0.03); m.box(-len / 2, 2.4, -0.03, len / 2, 2.46, 0.03);
-  const n = Math.floor(len / 0.13); for (let i = 0; i <= n; i++) { const x = -len / 2 + i * len / n; m.box(x - 0.012, 0, -0.012, x + 0.012, 2.46, 0.012); }
+PD.bars = len => m => {         // [fin] a run of round iron bars, 25 mm across at 0.12 m centres, in a frame of flat iron straps (posts, a rail at the foot, the middle and the head), with a lock plate and a hasp at the gate
+  m.mat(MAT.METAL, [0.2, 0.19, 0.18]);
+  const n = Math.max(1, Math.round(len / 0.12)), st = len / n;
+  for (const y of [0.1, 1.3, 2.4]) m.box(-len / 2, y, -0.025, len / 2, y + 0.07, 0.025);
+  for (const x of [-len / 2, len / 2]) m.box(x - 0.04, 0, -0.04, x + 0.04, 2.47, 0.04);
+  for (let i = 1; i < n; i++) { const x = -len / 2 + i * st; m.cyl(x, 0.0, 0, 0.0125, 0.0125, 2.4, 6, 1); }
+  const gx = -len / 2 + Math.round(n * 0.5) * st;
+  m.box(gx - 0.07, 1.0, -0.045, gx + 0.07, 1.22, 0.045); m.mat(MAT.METAL, [0.1, 0.095, 0.09]); m.box(gx - 0.012, 1.08, 0.04, gx + 0.012, 1.14, 0.065); m.box(gx - 0.05, 1.12, 0.045, gx + 0.05, 1.16, 0.075);
   addBoxCollider(m, -len / 2, -0.06, len / 2, 0.06, 0, 2.5);
 };
 PD.still = m => {         // a copper still on a brick furnace with a worm coil
