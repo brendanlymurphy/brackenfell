@@ -2,6 +2,24 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (morning, latest): furnished from ROOMS.md; one budget finding
+
+**Hash:** 9d02601 (after the merge candidate ce0c936; not pushed until run 322 on ce0c936 is done, since a push cancels it).
+
+- **ROOMS.md, item 2.** `tools/rooms_data.mjs` turns the tables into `src/72n_rooms.js`; the compact plan (48 houses) places each
+  room's named kit pieces in the room its row names (tall ones against a wall, hanging ones hung, tables free if no wall is left),
+  then the row's light (candlestick, branched candles, candle stand, lantern, torch). The generic cabinet, shelves and barrel are
+  gone. 218 pieces placed; 122 found no room (mostly second tables, sacks and chairs in rooms the trade set already fills). Named
+  with no kit piece: as the list at the end of ROOMS.md, plus `gen_paint`. Not done: the "only here" line of each room and
+  container contents, which need pieces or story text; the nine designed plans (inn, smithy, store, elder, herbalist, guardhouse,
+  weaver, draper, chapel) were furnished by hand earlier.
+- **Local gate on 9d02601:** the 17 of your list pass; `budget-medium` fails: square 193 / 335k against an accepted 186 / 329k.
+  Clean threejs here: 179 / 318k. By category the whole difference is **characters** (20 draws in the camera pass and 20 in the near
+  shadow, against 14 and 14): at ten in the morning eight more villagers browse the market stalls on this branch (Barnaby and Ursel
+  Crane, Basilia Wold, Emmet Sele, Mercy Garrick, Roger Hask, Tilly Hobb, Ulric Ferrin). Houses and kit are equal within 2k
+  triangles. Plans do not say where people are at ten; the routines came in with `fork-integ` (the logic session's). Either the
+  budget is accepted with them (`--accept-budget`) or the routines spread people out; not mine to choose.
+
 ## 2026-11-18 (morning, later): merge candidate ce0c936, your list passes
 
 **Merge candidate: ce0c936** (`origin/fork-integ` and `origin/threejs` Build 85 merged in). On this machine your list passes, all 17:
