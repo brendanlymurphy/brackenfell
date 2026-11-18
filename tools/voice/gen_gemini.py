@@ -72,6 +72,7 @@ def tts_batch(says, voice, direction):
     rate = [len(t) / max(0.2, float(np.sum(np.abs(p) > max(np.abs(x).max() * 0.02, 1e-4))) / sr) for t, p in zip(says, parts)]            # characters per second of actual sound
     med = sorted(rate)[len(rate) // 2]
     if any(r < med * 0.45 or r > med * 2.2 for r in rate): return None            # a piece far too long or short for its text: a cut landed inside a line, or lines ran together
+    if any(len(t) >= 14 and not (0.045 <= 1 / r <= 0.2) for t, r in zip(says, rate)): return None      # [cast] and a piece must be speech at a speaking pace: 0.028 s a character (half a line) and 0.35 (a bark of 15 characters over 5 s) got through the band above, in batches of 8 to 10
     return parts, sr
 
 def encode(x, sr, dst):
@@ -153,6 +154,14 @@ if batch > 1:            # first pass: missing lines, character by character, se
             if not got: print('%s: batch of %d could not be cut cleanly, falling back to single lines' % (sp, len(grp)), flush=True); continue
             for p, part in zip(grp, got[0]): dst = os.path.join(out, fname(p)); tmp = dst + '.part.m4a'; encode(part, got[1], tmp); os.replace(tmp, dst)
             print('%s: %d lines in one request' % (sp, len(grp)), flush=True)
+# [cast] coordinator, 15:45: one line per request goes first to the characters with the most lines still missing, the story's speakers (a voice of
+# their own in cast_gemini.json) before the cast, and a character's lines before their barks; so the day's hundred finishes whole characters
+def _fn(p):
+    c = who(p); return hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'
+_left = {}
+for p in todo:
+    if not os.path.exists(os.path.join(out, _fn(p))): _left[p['speaker']] = _left.get(p['speaker'], 0) + 1
+todo = sorted(todo, key=lambda p: (p['speaker'] not in cast, p['kind'] != 'line', -_left.get(p['speaker'], 0), p['speaker']))
 for p in todo:
     c = who(p)
     name = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'; dst = os.path.join(out, name); keep.add(name)

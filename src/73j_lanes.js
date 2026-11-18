@@ -26,9 +26,9 @@ function buildLanes(bucket) {
     box(MAT.PLAIN, [0.12, 0.1, 0.08], 0.5, xm - 0.4, yb + 0.7, z0 - 0.02, xm + 0.4, yb + 1.6, z0 + 0.02, 0, 1); { const m = M(xm, z0); m.mat(MAT.PLAIN, [0.5, 0.64, 0.74]); m.quad2([xm - 0.32, yb + 0.78, z0 - 0.03], [xm - 0.32, yb + 1.52, z0 - 0.03], [xm + 0.32, yb + 1.52, z0 - 0.03], [xm + 0.32, yb + 0.78, z0 - 0.03]); }
     K.lantern(xm, yb - 0.4, l.zc, 0.6); beam([xm, yb - 0.22, l.zc], [xm, yb - 0.45, l.zc], 0.03, 0.03);
     // washing lines: three, one each side of the room, cloths hanging (the wind sway of cloth layers is 40_shade's SH.hangSway by kit name, so these are plain quads)
-    for (const [xa, xb, ya, yc, k] of [[l.x0 + 0.3, rx0 - 0.15, g + 2.9, g + 2.7, 0], [rx1 + 0.15, l.x1 - 0.3, g + 2.8, g + 3.0, 1], [l.x0 + 0.4, rx0 - 0.2, g + 3.15, g + 3.05, 2]]) {
+    for (const [xa, xb, ya, yc, k] of [[l.x0 + 0.3, rx0 - 0.15, g + 3.2, g + 3.0, 0], [rx1 + 0.15, l.x1 - 0.3, g + 3.1, g + 3.3, 1], [l.x0 + 0.4, rx0 - 0.2, g + 3.4, g + 3.3, 2]]) {
       const m = M((xa + xb) / 2, l.zc); beam([xa, ya, l.A.z1 + 0.02], [xb, yc, l.B.z0 - 0.02], 0.02, 0.02, [0.4, 0.36, 0.3]);
-      const n = Math.max(1, Math.floor((xb - xa) / 0.8)); for (let i = 0; i < n; i++) { const u = (i + 0.5) / n, px = xa + (xb - xa) * u, pz = l.A.z1 + (l.B.z0 - l.A.z1) * u, py = ya + (yc - ya) * u, w = 0.28 + rr() * 0.12, h = 0.5 + rr() * 0.35, cc = [[0.78, 0.74, 0.66], [0.5, 0.36, 0.3], [0.36, 0.4, 0.5], [0.82, 0.8, 0.72]][(i + k) % 4];
+      const n = Math.max(1, Math.floor((xb - xa) / 0.8)); for (let i = 0; i < n; i++) { const u = (i + 0.5) / n, px = xa + (xb - xa) * u, pz = l.A.z1 + (l.B.z0 - l.A.z1) * u, py = ya + (yc - ya) * u, w = 0.28 + rr() * 0.12, h = 0.4 + rr() * 0.3, cc = [[0.78, 0.74, 0.66], [0.5, 0.36, 0.3], [0.36, 0.4, 0.5], [0.82, 0.8, 0.72]][(i + k) % 4];
         m.mat(MAT.CLOTH, cc, 0.5); m.quad2([px - w, py, pz], [px - w * 0.9, py - h, pz + 0.04], [px + w * 0.9, py - h, pz + 0.04], [px + w, py, pz]); } }
     K.place('washlane', 'Washing Lane', xm, l.zc, 4); l.role = 'wash'; }
   // ── 2. the dead end with a hidden yard: a lane in the north-east or south-east block that is open to grass at one end ──

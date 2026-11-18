@@ -1,5 +1,30 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 16:45 UTC: SCOPE CUT AND ONE BUILD A DAY (read this before anything older)
+
+**The owner's decision, 16:45 UTC 18 Nov: cut the scope, one reviewed build a day.** He played Build 89 and found, in two minutes, a stretched spike and a hanging timber at the chapel and a ruler-straight earth patch at the north gate: things every test passed and I passed. Five builds went out today; three needed a second run. That stops.
+- **The slice.** Until he says otherwise, only this is worked on: the walk from the west gate along the street to the market square, the square, the alley to Quill's Sundries, the Hart, and up to the chapel; and about sixteen interiors: the Hart, the chapel (with crypt), the Elder's house, Quill's Sundries (store), the smithy, the herbalist, the guardhouse, the mill, the draper, the weaver, the farm, the hunter's, the fisher's, the shut house (in.23), the Bookstall (shop.s1) and the Apothecary (shop.n2), plus any cell a quest stage, secret, note or shop needs (the logic session settles the exact list today). Every other house keeps its people and its lights but its door is locked to the player.
+- **One build a day.** Candidates are cut at 12:00 UTC. A build ships only after the walk camera (every 5 m of every lane in the slice, both ways, eye height, day and night) and the room camera (every kept room from each doorway) have run on it and every frame has been looked at by the audit session and by me. Nothing ships from pictures at angles its author chose.
+- **Assets, not code, for anything a person recognises** (animals, boats, carts, tools, furniture, plants, food): a kit piece or a model made or fitted in Blender (the owner is setting up a Blender session; `docs/briefs/AGENT_BLENDER.md`), or it is left out. Code builds terrain, walls, roofs and layout.
+- **One area each.** Do not touch another session's files; ask in your report.
+
+**Yours:** (1) today: the lock list. Derive from the source every cell that a quest stage, secret, note, board job, trade (a shop that sells) or the main story needs; add the sixteen above; everything else is locked to the player ("Locked", no lockpick, residents come and go as now), in `82f_owners.js`. Tests that enter all cells (`cells`, `interiors`, `inout`, the bot) run on the kept list and assert the others refuse. Write the list to `docs/SLICE.md` with the reason per cell. Hash and run to me; it is tomorrow's build. (2) Voices as planned. (3) Story and people only inside the slice otherwise.
+
+## 2026-11-18 16:15 UTC
+
+Read 4c84d1d's report: all of it is wanted (youth bodies, one at a time through a door, the drowned man's priority, the hearth check, the generator's order). Build 89 is live (main 997710c). Your branch goes into Build 90 as soon as a full run on its head is green: tell me the hash and run. The 529 recordings are only on your branch (main has 254): Build 90 brings them to the owner's ear, so make sure the manifest and the voice checks are in that head.
+From the audit's replay on the live build, yours: (1) the boat-house doors say "locked, keys with Wenn" and Wenn has no key: either Wenn gives or sells the key at a point in the story, or the text changes; (2) the "Hidden Yard" is a name with no place: remove the name from every text or tell me where it should be and the town worker builds it; (3) the Hart's cellar corner by the brick is nearly black in daylight: one light of the cellar's should reach the bricked doorway (ask of the interiors session if it is the flame budget: cellars were to be served first). A picture of Tom, Lettice and Davy beside an adult when you can get one (game.shot from 3 m with npcSnapAll at a school hour).
+
+## 2026-11-18 15:45 UTC
+
+Read your report as relayed by the owner. Build 88 is live with everything of yours up to 83e8d54, and `hartdoor` passes: the inspector moved `World.hartWall` to the cellar's -x wall as you described. Decisions and next:
+1. **Lettice (14) and Tom (13):** youth bodies at 0.9 scale (`f_maid` for Lettice, `m_youth` for Tom), about 1.5 m. The child bodies are for under 12. Add the bound to `test/cast.js` (13 to 15: a youth body at 0.88 to 0.95).
+2. **Voices:** 529 of 774 noted, and thank you for pulling the 36 doubtful takes. Tomorrow's 245: whole-character requests only where the cut can be verified (your new refusal), otherwise one line per request for the characters with the most lines first, the story's speakers before the cast's barks. Put in your report the list of characters who are now complete, so that the owner knows whom to go and listen to.
+3. **Two walkers at one door** (Marta and Bridget in the Hart's doorway at closing; I moved Marta's leaving to 21.8 in `77_npc.js`): the nearer goes through, the other waits a step back; then her hour can go back to 22.2.
+4. **Greta stands in the fireplace** (the audit's first ten minutes) and **the drowned man has no prompt**: both yours.
+5. The town worker added a marked `[fx3]` block in `77_npc.js` joining the new green's bench to the walking graph (note in `docs/FINISH.md`): keep it or do it your way.
+6. `mine` and `bot-soak` deterministic, and the people re-homed from removed shells, as before.
+
 ## 2026-11-18 11:30 UTC
 
 Build 87 is live (main aeb13ce) with your 83e8d54: the compass true indoors, the brick on the Hart's truly east wall (the inspector moved `World.hartWall`; `hartdoor` passes on the pair), the market cross, the well in turns, the quest marks, Roger's body. In `77_npc.js` I moved Marta's leaving the Hart from 22.2 to 21.8: with Bridget back at the Hart the two met in the doorway at closing (`apart`: 0.36 m for just over a second, both walking to the one portal). The real cure is yours: two walkers bound for the same door should go through one after the other (the nearer goes, the other waits a step back); then put Marta's hour back if you like.

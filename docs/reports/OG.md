@@ -2,6 +2,52 @@
 
 Newest first. Times UTC.
 
+## 2026-11-18, the 15:45 inbox
+
+Merged `origin/threejs` (Build 89) first: no conflict.
+Gate: quick on `4c84d1d` passes, 21 of 21. Merge candidate.
+
+1. **Tom, Lettice and Davy on youth bodies** (`9178b30`). Under 13 keeps a child's body; 13 to 15 has `m_youth` or `f_maid` at
+   0.88 + 0.035 a year: Tom (13) `m_youth` 0.88, Lettice (14) `f_maid` 0.915, Davy (15) `m_youth` 0.95, about 1.51, 1.57 and 1.63 m.
+   Their days are unchanged (Tom and Lettice still keep the school and play rows of a child; they no longer run). `test/cast.js`
+   holds the bound (13 to 15 on a youth body at 0.88 to 0.95): 77 pass. **No picture:** four tries in the square had furniture in the
+   way or the five walked off before the frame; the bodies and scales above are read from the running game.
+2. **Voices.** The day's limit was spent this morning; it resets at 08:00 UTC and a reminder for 08:40 is set. The generator now
+   orders single-line requests as you asked (a character's whole set in one request only when every cut passes the refusal; otherwise one
+   line per request, the characters with the most lines missing first, story speakers before the cast, a character's lines before
+   their barks).
+   **Complete now (every line recorded; the owner can listen to these):**
+   - the story's 17: Brandt, Hale, Greta, Ivo, Osric, Tobin, Maren, Aldous, Marta, Rowan, Edda, Finn, Lark, Wren, Pip, Hilda, Bram;
+   - of the cast, 29: Godwin, Avice and Idony Hobb; Hugh and Stephen Alder; Joyce and Randal Byrd; Anselm and Sabina Lindqvist; Petronel
+     Vey; Gilbert, Elinor and Simon Thorne; Fulk Varrow; Alison Pike; Lambert Pell; Old Wenn; Barnaby Crane; Humphrey Slate; Bridget
+     Malkin; Peter and Will Marsh; Mercy Garrick; Alaric Mossop; Wilmot and Tom Arden; Jordan, Basilia and Rosalind Wold.
+   - Partly: Tilly Hobb 9 of 10, Felice 7 of 8, Gillian Alder 1 of 8.
+   - Not yet: Laurence Byrd, Jocelyn Lindqvist, Ned Thorne, Giles, Tybalt and Winifred Varrow, Diggory Pike, Miles, Kat and Tamsin
+     Ashdown, Jasper Holt, Ysolt and Davy Pell, Warin Shaw, Ulric, Beatrix and Amice Ferrin, Emmet and Lettice Sele, Roger and Odo Hask,
+     Ursel Crane, Silas Garrow, Hester Slate, Goda Malkin, Adda, Ellen Marsh, Kester Wold.
+   - 529 of 774 lines; 245 to go.
+3. **One at a time through a door** (`436f994`). Their two ways joined at a way point 2 m inside the Hart, not at the threshold, and they
+   reached it together from two sides; so the rule is for any way point, the door's threshold included. A walker 1.5 m short of the next
+   point of their way stops, idle, while someone nearer is bound for the same point or has only just left it (within 0.7 m), or, at a door,
+   someone who has come through stands on the threshold; at most 3 s, so two can never wait on each other. Marta leaves the Hart at 22.2
+   again. `apart` (83 people, a whole day) and `npcsep` pass; `routes`, `interact`, `cast`, `memory`, `scenes` (12 of 12) and `owners`
+   pass with it (nobody is late anywhere it matters).
+4. **Greta in the fireplace: not so on Build 89.** In the refitted Hart her place at the bar is 5 m from the hall's hearth and 12 m from
+   the kitchen's; from the doorway and from the talk camera on three sides she stands behind the long table with a window behind her
+   (pictures taken; the audit saw it on Build 81's Hart). `test/cast.js` now fails if any place in anyone's day lies inside a hearth.
+   **The drowned man's prompt: found** (`f8aa8f3`). The mourners I gave him (Peter, Hester, Ellen, Mercy, Humphrey; Finn and Ivo) stand
+   at the bier, and looking level from beside it the prompt named the one across the bier: her head is straight ahead, the body 32
+   degrees below. The body now has a small priority (`it.pri`, one marked term in 85_ui's scoring): it wins while it is in view, the
+   mourner when you look at her (Hester is still spoken to from all eight sides). E opens the card, gives the tally and starts the
+   story. `test/pointers.js` checks the prompt from four sides at eleven, with Hester there.
+5. **The `[fx3]` block** (the green's stepping stones): kept as it is. Each stone links only where the way is clear, the green's wider
+   link radius applies to its bench alone, and the hunter's yard detour is a fact of the town.
+6. **`mine`, `bot-soak`:** both passed in every threejs run since Build 86 (aeb13ce, 5ca78ee, 997710c, and the failed b56755e and
+   3b991ca, which failed elsewhere). The re-homed people hold (`cast`: everyone is sent only to places that exist).
+   - b56755e failed `bot-play` once: "the hatbox in the shut house did not open" (`cont.in.23.chest`). Already answered by your Build 88
+     line in `82c_secrets.js` (the hatbox beyond the bed in that loft, reach 1.9 m at 2.06 m; now 2.5 m); the way round the bed is the
+     interiors session's. Nothing of mine.
+
 ## 2026-11-18, the 09:40 inbox
 
 **At the top: `hartdoor` fails on this branch until the inspector's move is in, by design.** It now asserts that the fresh brick faces true
@@ -12,6 +58,7 @@ casks stand along it. With `hartWall` published on the -x wall (plan x -6.8, z 4
 
 Gate: quick on `e8f573b`, 19 of 21 pass. `hartdoor` fails on the bearing only (above). `budget-medium` was over the file taken from threejs
 (alley 199 draws against 193; square 195 against 192; lake 171 against 168: the cast out of doors) and is re-accepted at these figures.
+GitHub `gate` on `83e8d54`: every step passes except `hartdoor`, the bearing only (5 of 6 jobs green).
 
 1. **The compass reads true indoors.** A cell is built in its house's own frame: the door inside, turned by the site's yaw about the cell's
    origin, lands on the door outside with 0.00 m error in all 57 cells. So the heading inside plus the site's yaw is the heading in the
@@ -36,7 +83,17 @@ Gate: quick on `e8f573b`, 19 of 21 pass. `hartdoor` fails on the bearing only (a
      raise the child scale for them. I have changed nothing.
 4. **Voices: under way.** One request now carries all of one character's missing lines (`--batch 12`); a pilot of Tilly's ten in one
    request cut cleanly (0.06 to 0.10 s per character, every piece). 510 lines were missing in 63 speakers: 63 requests if every batch
-   cuts. Running now; the count follows here when it ends.
+   cuts. **529 of 774 lines have audio now (was 254).** The day's limit
+   stopped it. 38 batches cut cleanly; 32 did not and fell back to one line per request, which spent the rest of the day. A connection
+   dropped once mid-run; the generator now retries that.
+   - **Six takes and four characters taken out again (36 files), until tomorrow:** two clipped files (Tilly, Felice) and every new
+     take of Kat, Beatrix, Ned and Hester. Each of those four had a piece whose length cannot be its text (Hester's 95 characters in
+     2.65 s, Ned's 18 in 0.64 s, Kat's "Winifred! Noon!" over 5 s, Beatrix's "Careful. Careful!" nearly 5 s), so a cut probably landed
+     wrong, and a wrong cut shifts its neighbours. The batch check now also refuses any piece of 14 or more characters outside
+     0.045 to 0.2 s a character; all four batches would have been refused. `voices`, `voice_game`, `voice_parts`, `audio_game` pass;
+     `extract.mjs` prints no UNATTRIBUTED.
+   - 245 lines remain (subtitles until made): about 40 requests at the cut rate seen today. Tomorrow's run:
+     `python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json audio/voice --batch 12`, then `--have`.
    - Not heard by anyone: only the owner's ear counts. The cut checks are lengths, not listening.
 
 ## 2026-11-18, the 09:10 inbox
