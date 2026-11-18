@@ -121,6 +121,13 @@ function pCands(room, near, step) {
   for (let x = a.x0 + 0.3; x <= a.x1 - 0.3 + 1e-6; x += step) for (let z = a.z0 + 0.3; z <= a.z1 - 0.3 + 1e-6; z += step) pts.push([x, z]);
   return pts.sort((p, q) => Math.hypot(p[0] - c0[0], p[1] - c0[1]) - Math.hypot(q[0] - c0[0], q[1] - c0[1]));
 }
+// [fin] the seat side of a bench: a 0.9 m wide strip along its outer side, or a 0.9 m deep strip past either end, must stand free of solid items (inside the room)
+function pLaneOk(P, room, b, sg, rot, bl) {
+  const lw = 0.9, bd = 0.23, o = { h: 0.5, noClear: true }, side = rot ? rectOf(b[0] + sg * (bd + lw / 2), b[1], lw, bl) : rectOf(b[0], b[1] + sg * (bd + lw / 2), bl, lw);
+  if (pFit(P, room, side, o)) return true;
+  for (const e of [-1, 1]) { const en = rot ? rectOf(b[0], b[1] + e * (bl / 2 + lw / 2), 0.9, lw) : rectOf(b[0] + e * (bl / 2 + lw / 2), b[1], lw, 0.9); if (pFit(P, room, en, o)) return true; }
+  return false;
+}
 // a dining table with a bench on each long side: returns { x, z, seats: [[x, z, yaw]] } or null
 function pDining(P, room, len, wid, opt) {
   opt = opt || {}; const c = P.c, items = opt.items || ['mug', 'plate', 'bowl', 'candle', 'loaf'], pts = pCands(room, opt.near);
@@ -132,6 +139,7 @@ function pDining(P, room, len, wid, opt) {
       const bs = [-1, 1].map(sg => rot ? [tx + sg * (wid / 2 + 0.34), tz] : [tx, tz + sg * (wid / 2 + 0.34)]);
       const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.46, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.46));
       if (!brs.every(r => pFit(P, room, r, { h: 0.46 })) || (opt.sideRoom && !brs.every(r => true))) continue;
+      if (!bs.every((b, i) => pLaneOk(P, room, b, i ? 1 : -1, rot, len * 0.9))) continue;      /* [fin] a 0.9 m way to every seat: beside the bench or past one end */
       const t = pPut(P, room, P.id + '.' + (opt.id || 'table'), tx, tz, 0, tw, td, 0.78, m => { m.push(); if (rot) m.RY(rot); pdTable(len, wid, items, opt.n || 3, c)(m); m.pop(); }, { surface: true });
       if (!t) continue;
       const seats = [];
@@ -301,6 +309,11 @@ function planHouse(P, c, info) {
   if (hh) { pPier(P, -1, hh); if (up) pPier(P, 1, hh); }
   let kh = null;
   if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); PD.rack(P, store, -3.5, 10.4, 2.4, 0, ['pot', 'herb', 'ham', 'herb', 'garlic']); } else if (KIT_DRESS[P.id] && info.kind) { dressKind(P, c, hall, hh, info); dressStore(P, store); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id], bedSides: info.inn ? ['s', 'e', 'w', 'n'] : undefined, bedAt: info.inn ? 'mid' : undefined });
+  if (info.inn) {      /* [fin] HART CELLAR: the east wall of the cellar keeps a 1.5 m x 1.5 m floor free of casks, crates and shelves in front of the fresh-brick patch (story secret 'wall', 94d doorway); the world position is published for them */
+    const zc = (cel.in.z0 + cel.in.z1) / 2, x1 = cel.in.x1, y0 = P.lv[-1] ? P.lv[-1].y : -2.52;
+    P.clear.push({ x0: x1 - 1.5, x1: x1, z0: zc - 0.75, z1: zc + 0.75, k: -1, kind: 'secret', room: cel });
+    const wp = P.w2(x1, y0, zc); World.hartWall = { p: [wp[0], wp[1], wp[2]], inW: P.w2(x1 - 1.2, y0, zc) };
+  }
   dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
   if (up) {
     if (info.inn) { dressBedroom(P, P.rooms.chamber1, { beds: ['bed2'], chestId: 'chest2', chest: false, table: true, bedInteract: true }); dressBedroom(P, P.rooms.chamber2, { beds: ['bed3', 'bed4'], chestId: 'chest3', chest: false, table: true }); dressLanding(P, P.rooms.loft); PD.gallery(P, P.rooms.loft); pWalls(P, P.rooms.loft, ['Banner_1_Cloth', 'paint', 'Torch_Metal', 'paint', 'rack'], {}); }
@@ -382,7 +395,8 @@ function planBuild(c) {
   pCullHidden(P, P.c.int);   // [fx2] faces against the wall, floor and ceiling that nobody sees
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
   const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
-  for (const n of new Set([...P.need, 'fire1', 'stand2', 'guestbed', 'barfront', 'front', 'pew1', 'pew2', 'sit', 'bed2', 'home'])) if (!P.spots[n] && home) pSpot(P, n, home.x, home.z, home.yaw, { k: home.k });
+  P.fallbacks = [];      /* [fin] spots the plan could not place: the interiors test lists them with the house id */
+  for (const n of new Set([...P.need, 'fire1', 'stand2', 'guestbed', 'barfront', 'front', 'pew1', 'pew2', 'sit', 'bed2', 'home'])) if (!P.spots[n] && home) { pSpot(P, n, home.x, home.z, home.yaw, { k: home.k }); P.fallbacks.push(n + ([...P.need].includes(n) ? '*' : '')); }
   // what the old interior offered to read or buy: a book or note on the nearest table, the rope on the counter
   { const tab = P.items.find(i => i.k === 0 && i.kind === 'floor' && i.top > 0 && /table|counter|bar$|lectern/i.test(i.id)) || P.items.find(i => i.k === 0 && i.kind === 'floor' && i.top > 0), pos = tab ? [tab.cx, tab.top + 0.05, tab.cz] : [home ? home.x : 0, 1.0, home ? home.z : 1];
     for (const id in READS) if (id.startsWith(P.id + '.') && !World.interact.some(i => i.id === id)) pInteract(P, pos[0], pos[1] + 0.2, pos[2], Object.assign({ kind: 'read', id, r: 1.8 }, READS[id]), 0);
