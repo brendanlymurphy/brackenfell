@@ -212,3 +212,19 @@ Pictures /home/claude/shots/fin/arm/sheet_<house>.jpg (tile names are position: 
 - Good: elder hearth and sideboard with candlesticks (brass, warm), mill timber frame and barrels, hunter and fisher cottages' table and stair, in.115 casks, stone floors everywhere.
 
 - [x] HW3 (sev 2) Hart infill at 0.8 m: bricks now have a tone each (0.8-1.2), a red/blue lean, a lighter top edge, a dark frog mark and 4 mm depth relief, joints exactly upright (82c_secrets SEC.wallObj). Pictures /home/claude/shots/fin/hart/hw8_b_08m.jpg and hw8_b_3m.jpg. The kit's UnevenBrick texture is only reachable through kit pieces, so per-brick geometry tone was used.
+
+## ROOM CAMERA (fin): test/roomviews.mjs
+`node test/roomviews.mjs <ids> [outdir]` (one browser, ~10 s a shot) stands 1.3 m inside each room at every doorway (clear of the leaf swing), 1.6 m, level, looking along the long axis away from the door, and at each stair head turning to the free-floor direction (counted on the free grid); 13:00 and 21:00. `python3 test/roomviews_sheet.py <outdir> <id>` makes the labelled sheet (13:00 left, 21:00 right). Ten houses of the first tour: /home/claude/shots/fin/roomviews/<id>.jpg.
+What the eye gets first, per room (R = reads as someone's room; E = empty plaster; S = stair or leaf in the way):
+- mill: work E R (window, barrel; leaf swung in at left); work W S+R (stair, miller, sacks); store E (bare plaster, one wall bracket); living R (hearth); solar L1 E (stair rail only); loft L1 E (chimney, window).
+- inn: hall W R (stair, long table); hall E R (people at table); store R (hearth, barrel); bedroom dark (cupboard fronts, nothing readable at 13:00); passage R (corridor, stair rail); cellar S (leaf); vault R (stone, barrel); loft dark; chamber1 dark (timber frame, stone); chamber2 R (beds, table, candle).
+- smithy: forge W R (bench, tool board); forge E R (smith, chimney); living N E (bare plaster wall, one candle); coalstore dark (sacks only); loft E.
+- store: shop R, stock R (shelves), keeper R (hearth, stair), parlour R (window, table), solar E (a green hanging only), attic R (rail of cloaks).
+- draper: shop E S (leaf, then window and a blue panel); shop W R; back S (stair); upfront R (dummy, cupboard); upback R (bed, chair); back stairhead E (plaster and chimney).
+- in.10: shop W E-ish (table far corner, window); shop E S (stair, leaf); store E (bare wall, a sack at the foot); back E (bare wall, chair edge); loft E.
+- in.13: work R (table, barrel, lamp, window); store E; living R (hearth); loft E (bookcase only).
+- in.40: room R-ish (floor lamp, window); loft R (bed, shelves, dark).
+- chapel: nave R (pews to altar); sacristy R; tower E (planks); vault R (niches, cask); crypt R.
+- guardhouse: guard W E-ish then R from E (hearth, stair); cells R (bars, stone); armoury E; barracks R (window, table).
+- herbalist: shop R (table, bottles, hanging herbs); workroom E-ish (window wall); chamber E (chimney only).
+Empty from the door: mill store, mill solar, in.10 store and back, in.13 store, smithy living, guardhouse armoury, herbalist chamber, draper back stairhead. Leaf in the face at 1.3 m: mill work E, draper shop E, inn cellar, in.10 shop E.
