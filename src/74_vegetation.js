@@ -98,7 +98,8 @@ function buildVegetation() {
   pack.upload('veg'); World.instPack = pack;
 
   // ── placement ──
-  const inst = { pine: [], birch: [], oak: [], bush: [], hedge: [], rock: [] };
+  let late = false;
+  const inst = { pineB: [], birchB: [], oakB: [], pine: [], birch: [], oak: [], bush: [], hedge: [], rock: [] };
   const blocked = (x, z, pad) => {
     for (const s of SITES) { const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + pad + (s.porch || 0) + 2 && Math.abs(l[1]) < s.d / 2 + pad + 2) return true; }
     for (const r of Roads) if (r.line.dist(x, z, r.w / 2 + pad) < r.w / 2 + pad) return true;
@@ -115,7 +116,7 @@ function buildVegetation() {
     for (const c of World.colliders) if (c.r > 0.6 && c.y1 - c.y0 < 3 && Math.hypot(x - c.x, z - c.z) < c.r + (kind === 'oak' ? 0.7 : 0.3) * scale) return;      // [fx3] never a trunk through a boulder
     const y = gy(x, z);
     (World.treeList = World.treeList || []).push([kind, Math.round(x * 10) / 10, Math.round(z * 10) / 10, scale]);
-    inst[kind].push([x, y - 0.05, z, scale, R() * TAU, R(), R(), 0]);
+    inst[late ? kind + 'B' : kind].push([x, y - 0.05, z, scale, R() * TAU, R(), R(), 0]);
     if (hyp(x, z) < WORLD_RADIUS + 8) World.colliders.push({ x, z, r: (kind === 'oak' ? 0.7 : kind === 'pine' ? 0.27 : 0.2) * scale, y0: y - 1, y1: y + 6 });
   };
   World._blk = blocked;
@@ -180,6 +181,15 @@ function buildVegetation() {
     for (const g of defs) World.instGroups.push(Object.assign({ ibuf, cells: list, first: g.item.first, count: g.item.count, base: g.item.base, shadow: true }, g));
   };
   // conifers and birches: the scanned trees (74b_trees.js) take the planted positions; the generated ones only stand in if those files failed to load
+  if (typeof Trees !== 'undefined' && Trees.ready) Trees.plant(inst);
+  else {
+    mkGroups(inst.pine, [{ item: I.pineT, kind: 'opaque', lod: 1 }, { item: I.pineL, kind: 'leaf', lod: 1 }], 48);
+    mkGroups(inst.pine, [{ item: I.pineF, kind: 'leaf', lod: 2, nearOnly: false }], FAR_TREE_CELL);
+    mkGroups(inst.birch, [{ item: I.birchT, kind: 'opaque', lod: 1 }, { item: I.birchL, kind: 'leaf', lod: 1 }], 48);
+    mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
+  }
+  mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
+  late = true;      /* [fx3] trees added from here on (the chapel way, yard fruit trees, saplings, the hand-placed town trees) go in their own groups: small cells, near only (they were never drawn at all before), so Low does not pay for them */
   /* [fx3] Chapelgate approach: old trees along the hedged way from the north gate to the lych gate, and yews in the churchyard (dark conifers kept small) */
   for (const [x, z, k, sc] of [[-11.5, -62.6, 'oak', 0.8], [-3.4, -66.2, 'oak', 0.75], [-12.3, -70.4, 'birch', 1.0]]) if (!blocked(x, z, 0.5) && !(TEST && TEST.noyt)) addTree(k, x, z, sc);
   /* [fx3] TOWN_TREES: every tree inside the edge, placed by hand. Each has a reason; alternates are tried in order and the first clear one is used.
@@ -195,15 +205,9 @@ function buildVegetation() {
   /* [fx3] the hedge along the way to the lych gate: overlapping clumps of uneven size on a low bank, with a few saplings grown out of it */
   for (const [hi, h] of (World.hedgeClumps || []).entries()) if (!(TEST && TEST.noyt) && !(R.qName === 'low' && hi % 3 === 2)) inst.hedge.push([h[0], h[1], h[2], h[3], h[4], h[5], h[6], 0]);
   for (const [x, z] of (TEST && TEST.noyt ? [] : World.hedgeSaplings || [])) addTree('birch', x, z, 0.32);
-  /* [fx3] the tree groups are built after every tree is added (the chapel way, the yard fruit trees, hedge saplings and the hand-placed town trees came after them and were never drawn) */
-  if (typeof Trees !== 'undefined' && Trees.ready) Trees.plant(inst);
-  else {
-    mkGroups(inst.pine, [{ item: I.pineT, kind: 'opaque', lod: 1 }, { item: I.pineL, kind: 'leaf', lod: 1 }], 48);
-    mkGroups(inst.pine, [{ item: I.pineF, kind: 'leaf', lod: 2, nearOnly: false }], FAR_TREE_CELL);
-    mkGroups(inst.birch, [{ item: I.birchT, kind: 'opaque', lod: 1 }, { item: I.birchL, kind: 'leaf', lod: 1 }], 48);
-    mkGroups(inst.birch, [{ item: I.birchF, kind: 'leaf', lod: 2 }], FAR_TREE_CELL);
-  }
-  mkGroups(inst.oak, [{ item: I.oakT, kind: 'opaque', lod: 0 }, { item: I.oakL, kind: 'leaf', lod: 0 }], 400);
+  mkGroups(inst.oakB, [{ item: I.oakT, kind: 'opaque', lod: 0, maxDist: 50, lowMax: 22, shadow: false }, { item: I.oakL, kind: 'leaf', lod: 0, maxDist: 50, lowMax: 22, shadow: false }], 24);
+  mkGroups(inst.birchB, [{ item: I.birchT, kind: 'opaque', lod: 0, maxDist: 50, lowMax: 22, shadow: false }, { item: I.birchL, kind: 'leaf', lod: 0, maxDist: 50, lowMax: 22, shadow: false }], 24);
+  mkGroups(inst.pineB, [{ item: I.pineT, kind: 'opaque', lod: 0, maxDist: 50, lowMax: 22, shadow: false }, { item: I.pineL, kind: 'leaf', lod: 0, maxDist: 50, lowMax: 22, shadow: false }], 24);
   mkGroups(inst.bush, [{ item: I.bush, kind: 'leaf', lod: 0, maxDist: 80, shadow: false }], 80);
   mkGroups(inst.hedge, [{ item: I.hedge, kind: 'leaf', lod: 0, maxDist: 40, lowMax: 22, shadow: false }], 24);
   mkGroups(inst.rock, [{ item: I.rocks, kind: 'opaque', lod: 0, maxDist: 170, nearOnly: true }], ROCK_CELL);
