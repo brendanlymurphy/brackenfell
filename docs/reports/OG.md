@@ -2,6 +2,41 @@
 
 Newest first. Times UTC.
 
+## 2026-11-18, the 05:00 inbox and item 5
+
+Decision taken without an answer (easiest to undo): when `World.hartWall` (fork-fin) arrives, my `94e_hartdoor.js` moves nothing and
+only keeps the pointers; until then it places the brick itself. Either way the gate step `hartdoor` walks it.
+
+**The "leak" is not a leak.** I counted every geometry made after a warm-up, with where it was made, over ten minutes of the soak's own
+play (wander, doors, talk, sword): **0 made**, 0 undisposed, while `renderer.info.memory.geometries` rose 250 to 295. That count rises when
+a geometry that already exists is drawn for the first time (a face up close, a nearer level of detail, a lamp at night), and the soak's
+random walk reached new places after half time. So: the soak now warms up (every place and door it will use, once) and wanders the places in
+turn, and it fails on **geometries made after the warm-up and never disposed** (`geoKept`), reporting the renderer's count beside it. Local
+run before this last change: pass, drawn 306 to 363 over 30 minutes; with the new measure: in the commit's GitHub run.
+
+**Steps that could pass on nothing** now fail instead: `interiors` (checked fewer buildings than there are house cells), `owners` (under
+40 houses with people), `embers` (under 8 interiors with a fire), `apart` and `people` (under 60 villagers). Others I read and that already
+fail on nothing: `cast`, `memory`, `scenes`, `view`, `hartdoor`, `bridge`, `water` (they count what they found and need it).
+Not yet read for this: `stairs`, `npcstairs`, `routes`, `parity`, `overlap`, `cells`.
+
+**Ratchets** (`tools/gate_ratchet.json`, `--accept-ratchet`), today's counts: `openings` 57 blocked doorways, `inout` 57 buildings that differ
+inside from outside, `geom` stretch 38, open 169, sheets 6 in the generated meshes and, new, the house shells and every kit piece out of
+doors (3,137 placed): 692 places with open edges, 878 one-quad parts. `docs/GEOMETRY.md` has the shell section; the worst rows are generated
+roofs whose plank undersides are a single 35.8 m2 quad (`gen_roof_3` over x ±7.5, z −22) and generated walls with open tops
+(`gen_walls_381` at 11.1, 0.6, −34.3). For the town worker.
+
+**The Hart, pointer side** (your 05:00 note): the compass points at the head of the cellar stair while you are on the common-room floor and
+at the brick once you are below; Greta has a new line as a remark ("The cellar? Down the stair by the door, love, behind the rail. Take a
+candle, the steps are steep."), text until recorded. Still for the inspector: no light at the stair head or foot; the rail is the only sign.
+
+**Door leaves the player must open:** one, the crypt gate (`pGate`, used once, chapel). Every other hinged leaf is a house door, and those are
+portals used with E, not walked through. Nothing else to fix.
+
+**`mine`:** already runs with a fixed seed (`seed=7`) and passed every run I looked at. **`bot-soak`:** see above.
+
+**Your test changes:** fine by me (kitcull's 2-pixel allowance; the witness on an open side). I had made the same witness fix in
+`test/interact.js` (a place where she can see, 2 m east was behind the moved bar).
+
 ## 2026-11-18, item 1: the door in the Hart that is not there
 
 Commit: the one that carries this entry (message begins "The door in the Hart's cellar exists again"). Gate step `hartdoor` (quick), bug 30 in `docs/BUGS.md`.
