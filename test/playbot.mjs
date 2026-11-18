@@ -44,7 +44,8 @@ const IN_PAGE = () => {
         if (UI.prompt) seenOther = UI.promptLab;
       }
     }
-    return { ok: false, why: 'no place to stand from which the prompt appears' + (seenOther ? ' (the game offers "' + seenOther + '" instead)' : ''), label: interactLabel(it) };
+    const who = it.npc ? ' [' + it.npc.id + ' ' + it.npc.anim + ' at ' + (it.npc.at || (it.npc.path ? 'walking' : '?')) + ', ' + it.npc.pos.map(v => v.toFixed(1)).join(',') + ', in ' + ((Cells.at(it.npc.pos[0], it.npc.pos[1], it.npc.pos[2]) || {}).id || 'the open') + ', hour ' + Env.hour.toFixed(1) + ']' : '';       /* where the person was, so the report can be acted on */
+    return { ok: false, why: 'no place to stand from which the prompt appears' + (seenOther ? ' (the game offers "' + seenOther + '" instead)' : ''), label: interactLabel(it), who };
   };
   B.step = (n, d) => game.step(n || 1, d || dt);
   // let fades, door travel and timers run out (they are real-time), stepping the world meanwhile
@@ -128,7 +129,7 @@ async function check(label, o) {
 // the E key on a thing
 async function use(id, o) {
   where = 'use ' + id; const r = await ev(i => BOT.approach(i), id);
-  if (!r.ok) { if (!(o && o.may)) bug(r.nolabel ? 2 : 2, `cannot use ${id}: ${r.why}` + (process.env.BOTDEBUG ? ' ' + JSON.stringify(await ev(() => [BOT.ui(), Input.joy, Input.look, Player.pos.map(v => +v.toFixed(1))])) : '')); return false; }
+  if (!r.ok) { if (!(o && o.may)) bug(r.nolabel ? 2 : 2, `cannot use ${id}: ${r.why}${r.who || ""}` + (process.env.BOTDEBUG ? ' ' + JSON.stringify(await ev(() => [BOT.ui(), Input.joy, Input.look, Player.pos.map(v => +v.toFixed(1))])) : '')); return false; }
   await key(TOUCH ? 'KeyE' : 'KeyE'); await ev(() => BOT.settle()); return true;
 }
 // dialogue: pick the option matching each pattern in turn; then leave by the last option until it closes
@@ -331,6 +332,7 @@ SC.crime = async () => {
     if (way === 'Go quietly') { for (let k = 0; k < 200 && !(await ev(() => S.jail === 1 && World.cell && World.cell.id === 'guardhouse')); k++) await page.waitForTimeout(50); await ev(() => BOT.settle(300)); const s = await st(); expect(s.cell === 'guardhouse', 'going quietly did not end in the cell (' + s.cell + ')'); await check('in the cell', { nosave: true });
       const j = await ev(() => World.interact.findIndex(x => x.kind === 'jaildoor' || x.id === 'jail.door')); expect(j >= 0, 'no cell door to use'); if (j >= 0) { await use('#' + j); for (let k = 0; k < 200 && (await ev(() => S.jail)); k++) await page.waitForTimeout(50); await ev(() => BOT.settle(600)); expect(!(await st()).cell && !(await ev(() => S.jail)), 'still in the cell after calling the guard'); } }
     else { await leaveTalk(); await ev(() => BOT.settle(300)); const s = await st(); expect(!(await ev(() => S.crime)), 'the crime stands after "' + way + '"'); if (way === 'Pay the fine') expect(s.gold === 60 - c.fine, 'the fine of ' + c.fine + ' took ' + (60 - s.gold) + ' gold'); }
+    await ev(() => npcSnapAll());       /* the witness was carried to the thing by this test, not by her own feet: put everyone where their day has them, or she sets off for her shop from inside another house (Build 81: through the Hart's wall) */
     await check('theft: ' + way); await talk('hale', /./); await talk('marta', /./);
   }
 };

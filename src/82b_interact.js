@@ -58,11 +58,11 @@ IX.BOOKS = [
   ['herbs', 'Maren’s margin note', 'Frostcap steeped three nights quiets a hungry thing, so the old women say. I have never tried it on a man. I have thought about it.', ['herb'], 'frostcap'],
   ['will', 'A will, unsigned', 'To my sister the loom, to my brother the dog, to the Elder nothing, for he has had enough of everyone’s. If I do not wake, bury me with my face to the lake.', ['home', 'elder'], null],
   ['assay', 'A merchant’s letter', 'To the keeper of the Hart: the silver you sent to be assayed is purer than anything the Crown mints. We will buy as much as you can bring. We would very much like to know where you get it.', ['inn', 'store', 'elder'], 'silver'],
-  ['fisher', 'Finn’s log', 'Third night this week: lights under the water off the north shore. Not boats. They go out when the bell would ring.', ['home', 'inn'], 'cave'],
+  ['fisher', 'Finn’s log', 'Third night this week: lights under the water off the west shore. Not boats. They go out when the bell would ring.', ['home', 'inn'], 'cave'],
   ['prayer', 'A prayer card', 'Dawn, who ends the night: keep the ones below who cannot climb. Keep the ones above who will not look down. Keep the bread.', ['chapel', 'home'], 'bread'],
   ['pip', 'Pip’s list', 'THINGS I KNOW. 1. Hale cries on the last day of the month. 2. The Elder talks to the lake. 3. There is a door in the Hart’s cellar that is not a cellar door.', ['home', 'inn'], 'cellar'],
   ['debt', 'A scrap with a smudge', 'Greta, I owe you three and six. Will pay when the silver’s in. — D. Pell.', ['inn', 'home'], 'pell'],
-  ['cave', 'A map, drawn on a flour sack', 'THE BREAD CAVE. North shore, past the reeds, under the grey rock. Three knocks on the stone and set the pail down. Do not wait.', ['elder', 'home'], 'cave'],
+  ['cave', 'A map, drawn on a flour sack', 'THE BREAD CAVE. West shore, past the reeds, under the grey rock. Three knocks on the stone and set the pail down. Do not wait.', ['elder', 'home'], 'cave'],
   ['bounty', 'A notice', 'WANTED: the thief called the Magpie, who takes only silver and only after dark. Last seen on the weavers’ lane. Five gold from the Warden.', ['guard', 'inn', 'store'], 'magpie'],
 ];
 IX.READ = {};

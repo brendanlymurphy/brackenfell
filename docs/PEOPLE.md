@@ -672,14 +672,14 @@ Pointers checked against the game (the build session, before the cast went in): 
 - b2: Not on the willow!
 
 **Peter Marsh** (boatman)
-- g: Across the lake, or along it? A penny either way. I do not go to the north shore.
+- g: The boat is not for hire today, the caulking is wet. And I do not go to the west shore, wet or dry.
 - g2 [body]: Finn found him. Everyone says so. Finn found him. That is right.
 - me: Peter Marsh. I row what needs rowing. My father did, his father did. Marsh House has always had oars by the door.
 - nb: Finn Reedwater is on that dock before I am up and after I am in. I do not know when the man sleeps.
 - pt: West shore, past the reeds, there is a cleft in the rock by the water. I have seen a light in it before dawn. I rowed the other way.
 - nt: Ellen, take Will upstairs. ... I have an oar. I know it is a foolish thing to hold indoors. I am holding it.
 - b1: Penny across.
-- b2: Not the north shore.
+- b2: Not the west shore.
 
 **Ellen Marsh** (nets and smoke)
 - g: Mind the rack, it is hot. Trout and eel, done over alder. Humphrey's stall, or here if you ask nicely.

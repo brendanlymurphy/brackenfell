@@ -199,9 +199,10 @@ function npcKeepApart(dt) {
       let d = Math.hypot(dx, dz); if (d >= NPC_APART) continue; if (d < 0.02) { const g = (i * 2.399 + j) % 6.283; dx = Math.cos(g); dz = Math.sin(g); d = 1; } else { dx /= d; dz /= d; }
       // sideways to the walker's own way where that also parts them, so two in a lane pass and do not push each other back along it
       const side = w => { const fx = Math.sin(w.yaw), fz = -Math.cos(w.yaw), s = (-fz) * dx + fx * dz >= 0 ? 1 : -1; return [(-fz * s) * 0.7 + dx * 0.3, (fx * s) * 0.7 + dz * 0.3]; };
-      if (aw && bw) { const pa = side(a), pb = side(b); a.pos[0] -= pa[0] * mv * 0.5; a.pos[2] -= pa[1] * mv * 0.5; b.pos[0] += pb[0] * mv * 0.5; b.pos[2] += pb[1] * mv * 0.5; a.pushed = b.pushed = 0.5; }
-      else if (aw) { const pa = side(a); a.pos[0] -= pa[0] * mv; a.pos[2] -= pa[1] * mv; a.pushed = 0.5; }
-      else { const pb = side(b); b.pos[0] += pb[0] * mv; b.pos[2] += pb[1] * mv; b.pushed = 0.5; } } }
+      const go = (w, x, z) => { const nx = w.pos[0] + x, nz = w.pos[2] + z, g = World.groundAt(nx, nz, w.pos[1] + 1.0); if (Math.abs(g - w.pos[1]) > 0.6) return; w.pos[0] = nx; w.pos[2] = nz; w.pushed = 0.5; };          /* only onto floor at the walker's own level: never off a gallery, a stair or the edge of a room */
+      if (aw && bw) { const pa = side(a), pb = side(b); go(a, -pa[0] * mv * 0.5, -pa[1] * mv * 0.5); go(b, pb[0] * mv * 0.5, pb[1] * mv * 0.5); }
+      else if (aw) { const pa = side(a); go(a, -pa[0] * mv, -pa[1] * mv); }
+      else { const pb = side(b); go(b, pb[0] * mv, pb[1] * mv); } } }
 }
 function npcBehindRoofs(n) { if (typeof SC === 'undefined' || !SC.occ || !SC.occAt || World.cell || (TEST && (TEST.sceneocc === 0 || TEST.kitocc === 0))) return false; const q = SC.occAt, d = hyp(n.pos[0] - q[0], n.pos[2] - q[2]); if (d < ((typeof R !== 'undefined' && R.q && R.q.villagerCast) || 32) + 3) return false; const u = n._occU || (n._occU = { x: 0, z: 0, r: 1.1, y1: 0 }); u.x = n.pos[0]; u.z = n.pos[2]; u.y1 = n.pos[1] + 2.3; return SC.occ(u, d, 0.85); }
 function npcUpdate(dt, playerPos) {
@@ -233,7 +234,7 @@ function npcUpdate(dt, playerPos) {
         if (d < 0.18 || (n.pushed > 0 && d < 0.75 && n.pi < n.path.length - 1)) { const k = n.path[n.pi], k2 = n.path[n.pi + 1];       /* someone stands on the way point: near enough counts, or the walker would circle them for ever */ if (k2 !== undefined && Nav.portal[k] === k2) { n.pos = Nav.nodes[k2].slice(); n.pi++; n.portalT = 0.4; } n.pi++; if (n.pi >= n.path.length) { npcArrive(n, n.goal, n.rowAnim); n.dwell = Array.isArray(row[1]) ? 3 + Math.random() * 7 : 0; } }
         else if (!blocked) {
           const st = Math.min(d, sp * dt); n.pos[0] += dx / d * st; n.pos[2] += dz / d * st;
-          const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 1.0); n.pos[1] += clamp(gy - n.pos[1], -3 * dt, 3 * dt);       /* [logic] looks 1.0 m up, not 0.6: a ledge 0.7 to 0.9 m high (the terrace edge by the herb garden, the dock's lip) was not seen, and people waded through it for a second */ if (gy - n.pos[1] > 0.45 || n.pos[1] - gy > 1.2) n.pos[1] = gy;       /* [logic] a rise higher than any stair (the 0.9 m terrace edge by the herb garden) is stepped onto at once: climbing it at 3 m/s left the walker inside it for a third of a second */
+          const gy = World.groundAt(n.pos[0], n.pos[2], n.pos[1] + 1.0); if (gy > -1e8) /* [cast] no floor under this step (a stair well crossed in one long step when the night is skipped, a nudge past a floor's edge): keep the height, the way goes on to a node that has one. Marta fell out of the Hart to minus a billion and could not be spoken to (bug 29) */ n.pos[1] += clamp(gy - n.pos[1], -3 * dt, 3 * dt);       /* [logic] looks 1.0 m up, not 0.6: a ledge 0.7 to 0.9 m high (the terrace edge by the herb garden, the dock's lip) was not seen, and people waded through it for a second */ if (gy > -1e8 && (gy - n.pos[1] > 0.45 || n.pos[1] - gy > 1.2)) n.pos[1] = gy;       /* [logic] a rise higher than any stair (the 0.9 m terrace edge by the herb garden) is stepped onto at once: climbing it at 3 m/s left the walker inside it for a third of a second */
           n.yaw += angDiff(Math.atan2(dx, -dz), n.yaw) * Math.min(1, dt * 8);
           n.anim = run ? 'run' : 'walk'; n.t += dt * (run ? 7.5 : 5.2) * (1 / n.scale) - dt;
         } else n.anim = 'idle';
