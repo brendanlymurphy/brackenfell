@@ -2,6 +2,45 @@
 
 Newest first. Times UTC.
 
+## 2026-11-18, item 1: the door in the Hart that is not there
+
+Commit: the one that carries this entry (message begins "The door in the Hart's cellar exists again"). Gate step `hartdoor` (quick), bug 30 in `docs/BUGS.md`.
+
+**What a player met, step by step** (pictures were taken at each step and looked at; they are in my scratch folder, not the branch):
+
+| Step | What was there | Verdict |
+|---|---|---|
+| Front door of the Hart, turn right | the cellar stair is right of the door along the front wall, a stairwell with a balustrade; from its head it reads clearly as a stair down to a stone floor | fine |
+| Down the stair by the keys | works (the test walks it with W held and steering) | fine |
+| The cellar | dark but lit enough to see the east wall | fine |
+| **The east wall, where Rowan, Pip, the ledger and the compass send you** | **nothing.** The fresh brick, the smugglers' doorway and the way back up from the tunnel were fixed world positions (z = +4.6) written for an older Hart. The plan engine's cellar runs from z 3.35 to −4.65, so all three stood outside the building, beyond its front wall, in the dark. No prompt anywhere in the cellar. | **the owner's bug** |
+| The compass at stage 7, inside the Hart | pointed at the Hart's position in the town, that is, back out of the door | wrong |
+| Why no test saw it | the secrets test and the play bot reach a secret by teleporting next to it; the brick's interaction is `thru` (no line of sight), so it was usable from the void | |
+
+**Fixed** (`src/94e_hartdoor.js`, my file): the brick, the doorway and the landing are placed from the Hart's plan on the inside of the
+cellar's east wall, on a stretch with nothing in front of it (now world 266.79, −402.93, −0.65, local x 6.8, z 4.0), standing on the
+floor (it hung 0.55 m above it). The way back up lands 1.2 m in front of it, facing the room. Inside the Hart at stage 7 the compass points
+at the brick. Re-placed whenever the Hart is entered, so a new plan cannot strand it again.
+
+**Prompts now:** not yet told, "Look at the fresh brick" (using it: "Newer brick than the rest. Just a wall, unless you know what is behind
+it."); told by Rowan, by the ledger or by overhearing, "Pull at the fresh brick"; opened, "Go down by the smugglers' door".
+
+**Check:** `test/hartdoor.js` (gate step `hartdoor`, quick) starts at the Hart's front door and uses the movement keys: to the stair head,
+down the plan's stair, to the brick; checks both prompts, opens it, checks the doorway is drawn, goes through into the tunnel and back up,
+and checks the compass. Passes. `secrets`, `story`, `mine`, `interact` and the Hart's cell pass; the bot's `story,secrets` passed three
+times out of four. On the first run it reported 2 S2 bugs in `secrets` that did not come back in three more runs; I did not catch which
+(the log was overwritten). Flaky: worth a look if it shows on GitHub.
+
+**For the interiors inspector (geometry, not mine):**
+- The brick is a 1.9 × 2.0 m plastered panel with brick boxes on it, set on the wall's face (`secProp` in `82c_secrets.js`). Seen across
+  the dark cellar it reads as a poster, not as a patch of newer brick in an old wall. It needs to be a real recess in the wall's own mesh
+  at local x 6.8, z 3.25 to 4.75 of the Hart's cellar (k −1), and the doorway behind it (`A2.door` in `94d_act2.js`) a real opening.
+- The common room's central node on the villagers' graph (local 0, 4; world 260.0, −399.66, −0.65) sits beside the long dining table,
+  and its links to the stair and the bar run through the table and its benches (local x 0.55 to 2.95, z 3.5 to 5.5). Villagers walk
+  through the furniture; a player walking the same line stops (the walk bot was "lifted" five times here). `planNav` in `72d_plan.js`
+  only bends links round stairwells, not furniture. This is likely in every interior.
+- The cellar stair has no light at its foot; the cellar's east half is dim from the stair.
+
 ## 2026-11-18 (after the 04:10 inbox)
 
 Branch head at the time of writing is in the commit that carries this file; the hashes below are the steps.
