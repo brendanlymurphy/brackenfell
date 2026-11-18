@@ -31,6 +31,7 @@ ViewCube.capture = function (c) {
       const dx = World.doors.find(w => w.cell === c.id && w.side === 'out'); let dp = f.p, lamp = [0, 0, 0, 0];
       if (dx) { const nx = dx.out[0] - dx.c[0], nz = dx.out[2] - dx.c[2], l = Math.hypot(nx, nz) || 1; dp = [dx.c[0] + nx / l * 1.2, dx.c[1] + 0.6, dx.c[2] + nz / l * 1.2]; }
       let best = 12; for (const e of World.emitters) if (e.type === 'lantern' && !e.zone) { const d = Math.hypot(e.p[0] - dp[0], e.p[1] - dp[1], e.p[2] - dp[2]); if (d < best) { best = d; const k = 1 / (d || 1); lamp = [(e.p[0] - dp[0]) * k, (e.p[1] - dp[1]) * k, (e.p[2] - dp[2]) * k, 1 - d / 12]; } }
+      if (typeof Kit !== 'undefined') { Kit.skip = null; if (Kit.dynLast) Kit.dynLast[4] = ''; if (Kit.update) Kit.update([dp[0], dp[1], dp[2]]); }       // the house's own wall stands behind this camera and may be seen: only the window map hides the shell (its porch and steps sat inside the skip box and the door map came out empty)
       ViewCube.dbase().value = ViewCube.blank.texture; ViewCube.dcam.position.set(dp[0], dp[1], dp[2]); ViewCube.dcam.update(G.renderer, SC.scene); ViewCube.dbase().value = ViewCube.drt.texture; SH.U.doorLamp.value.set(lamp[0], lamp[1], lamp[2], lamp[3]);
     }
     for (const o of hide) o.visible = true;

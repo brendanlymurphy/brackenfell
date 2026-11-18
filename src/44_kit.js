@@ -165,7 +165,7 @@ const Kit = (() => {
     }
     if (/DoorView/.test(d.name)) {        // [fin] the street seen through an open street door, at outdoor exposure: the door's own cube map (56b_viewcube.js, from 1.2 m outside the door) along the line of sight; a lantern lobe at night (72d_plan.js pDoorView)
       const V = normalize(wp.sub(U.camPos)), sky = SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)).mul(0.55), dw = vec3(V.x.mul(U.viewX.x).add(V.z.mul(U.viewZ.x)), V.y, V.x.mul(U.viewX.y).add(V.z.mul(U.viewZ.y)));
-      let col = sky; if (typeof ViewCube !== 'undefined' && !ViewCube.off && TSL.cubeTexture) { const ct = ViewCube.dbase().sample(dw).rgb, lum = dot(ct, vec3(0.3333)), skyF = SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)); col = mix(sky, mix(skyF.mul(mix(float(1.15), float(0.9), U.windowGlow)), ct.mul(mix(float(2.0), float(0.9), U.windowGlow)), smoothstep(0.004, 0.03, lum)), U.viewOn); }
+      let col = sky; if (typeof ViewCube !== 'undefined' && !ViewCube.off && TSL.cubeTexture) { const cs = ViewCube.dbase().sample(dw), ct = cs.rgb, lum = cs.a, skyF = SH.skyBase(vec3(V.x, max(V.y, 0.03), V.z)); col = mix(sky, mix(skyF.mul(mix(float(1.15), float(0.28), U.windowGlow)), ct.add(vec3(0.022, 0.02, 0.017)).mul(mix(float(2.0), float(0.3), U.windowGlow)), smoothstep(0.2, 0.8, lum)), U.viewOn); }
       const dayK = float(1).sub(U.windowGlow), lobe = TSL.pow(max(dot(normalize(dw), U.doorLamp.xyz), 0), 24).mul(U.doorLamp.w).mul(U.windowGlow);
       m.colorNode = vec3(0.0); m.roughnessNode = float(1); m.metalnessNode = float(0);
       m.emissiveNode = col.add(vec3(0.004, 0.008, 0.02).mul(U.windowGlow)).add(vec3(1.0, 0.62, 0.28).mul(lobe).mul(0.9)); m.side = THREE.DoubleSide; K_.mats.set(key, m); return m;
