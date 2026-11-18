@@ -134,16 +134,16 @@ function pConnOk(P, room, extra, seats) {
   const seeds = []; for (const d of P.doors) if (d.k === k && (d.a === room.id || d.b === room.id)) seeds.push([Math.min(a.x1 - 0.3, Math.max(a.x0 + 0.3, d.x)), Math.min(a.z1 - 0.3, Math.max(a.z0 + 0.3, d.z))]);
   if (!seeds.length) return true;
   const obs = P.items.filter(i => i.k === k && P_SOLID[i.kind] && (i.kind !== 'floor' || i.h === undefined || i.h > 0.25)).concat(extra);
-  const free = (x, z) => { if (x < a.x0 + 0.3 || x > a.x1 - 0.3 || z < a.z0 + 0.3 || z > a.z1 - 0.3) return false; for (const o of obs) { const dx = Math.max(o.x0 - x, 0, x - o.x1), dz = Math.max(o.z0 - z, 0, z - o.z1); if (dx * dx + dz * dz < HW * HW) return false; } return true; };
+  const free = (x, z) => { if (x < a.x0 + 0.45 || x > a.x1 - 0.45 || z < a.z0 + 0.45 || z > a.z1 - 0.45) return false; for (const o of obs) { const dx = Math.max(o.x0 - x, 0, x - o.x1), dz = Math.max(o.z0 - z, 0, z - o.z1); if (dx * dx + dz * dz < HW * HW) return false; } return true; };
   const seen = new Uint8Array(nx * nz), q = [];
   const put = (i, j) => { if (i < 0 || j < 0 || i >= nx || j >= nz || seen[i * nz + j]) return; if (!free(a.x0 + i * st, a.z0 + j * st)) return; seen[i * nz + j] = 1; q.push(i, j); };
-  for (const [sx, sz] of seeds) { const i0 = Math.round((sx - a.x0) / st), j0 = Math.round((sz - a.z0) / st); for (let r = 0; r <= 5; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) put(i0 + di, j0 + dj); }
+  for (const [sx, sz] of seeds) { const i0 = Math.round((sx - a.x0) / st), j0 = Math.round((sz - a.z0) / st); for (let r = 0; r <= 7; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) put(i0 + di, j0 + dj); }
   if (!q.length) return true;
   for (let h = 0; h < q.length; h += 2) { const i = q[h], j = q[h + 1]; put(i + 1, j); put(i - 1, j); put(i, j + 1); put(i, j - 1); }
   const near = (x, z, r) => { const n = Math.ceil(r / st); const i0 = Math.round((x - a.x0) / st), j0 = Math.round((z - a.z0) / st); for (let di = -n; di <= n; di++) for (let dj = -n; dj <= n; dj++) { const i = i0 + di, j = j0 + dj; if (i >= 0 && j >= 0 && i < nx && j < nz && seen[i * nz + j] && Math.hypot(di, dj) * st <= r) return true; } return false; };
   for (const s of seats) if (!near(s[0], s[1], 0.85)) return false;
   const hh = P.hall && P.hall.room === room && P.hall.hh; if (hh && hh.front && !near(hh.front[0], hh.front[1], 0.5)) return false;
-  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt && !near(pt[0], pt[1], 0.5)) return false; }
+  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt && !near(pt[0], pt[1], 0.95)) return false; }
   return true;
 }
 // a dining table with a bench on each long side: returns { x, z, seats: [[x, z, yaw]] } or null
