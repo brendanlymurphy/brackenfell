@@ -12,7 +12,7 @@ S.q.crypt = { stage: 2 }; if (!near(questTarget('crypt'), relic && relic.p)) bad
 { const m = Cells.mapTarget(questTarget('crypt')); if (!near(m, relic && relic.p)) bad.push('the compass turns the reliquary into the chapel door'); }
 game.leave(); game.step(2, dt);
 // 2. stages 8 and 9 out of doors
-S.q.main = { stage: 8 }; { const t = questTarget('main'), h = World.houses.inn.site, d = Math.hypot(t[0] - h.x, t[2] - h.z); if (d > 3) bad.push('stage 8 out of doors points ' + Math.round(Math.hypot(t[0], t[2])) + ' m from the square, not at the Hart'); }
+S.q.main = { stage: 8 }; { const t = questTarget('main'), h = Cells.by.inn.xdoor.c, d = Math.hypot(t[0] - h[0], t[2] - h[2]); if (d > 1) bad.push('stage 8 out of doors points ' + Math.round(d) + ' m from the Hart\'s door, not at it'); }
 S.flags.tunnel = 1; S.q.main = { stage: 9 }; { const t = questTarget('main'), cave = World.interact.find(o => o.id === 'door.cave.in'); if (!near(t, cave && cave.p, 1)) bad.push('stage 9, the tunnel walked, does not point at the cave\'s cleft'); }
 // 3. the Hart's back door and hatch
 for (const [id, want] of [['door.inn.back', 0], ['door.inn.hatch', -1]]) { const it = World.interact.find(o => o.id === id); if (!it) { bad.push('no ' + id); continue; } if (World.cell) game.leave(); Cells.teleport({ p: [it.p[0], it.p[1] - 1, it.p[2]], yaw: 0 }); game.step(2, dt);
@@ -30,6 +30,10 @@ if (!/east of the plaque/.test(JSON.stringify(SECRETS.bell.note))) bad.push('Tob
 { let n = 0; for (const c of Cells.list) { if (!c.site || !c.door || !c.xdoor) continue; n++; const w = siteToWorld(c.site, c.door.c[0] - c.cs.x, c.door.c[2] - c.cs.z); if (Math.hypot(w[0] - c.xdoor.c[0], w[1] - c.xdoor.c[2]) > 0.1) bad.push(c.id + ' is not built in its house\'s frame: the door inside maps ' + Math.hypot(w[0] - c.xdoor.c[0], w[1] - c.xdoor.c[2]).toFixed(2) + ' m from the door outside'); }
   if (n < 40) bad.push('only ' + n + ' cells with a house to check the compass against');
   game.enter('inn'); game.step(2, 1 / 30); if (Math.abs(Cells.trueYaw() - World.houses.inn.site.yaw) > 1e-6) bad.push('inside the Hart the compass does not turn by the Hart\'s bearing'); game.leave(); game.step(2, 1 / 30); if (Cells.trueYaw() !== 0) bad.push('outdoors the compass is turned by ' + Cells.trueYaw()); }
+// [cast] out of doors no quest mark stands on a building's middle (the roof): it points at the door that leads in
+{ const q0 = JSON.stringify(S.q), sites = Object.entries(World.houses).filter(([k, h]) => h && h.site && h.cell); if (World.cell) { game.leave(); game.step(2, 1 / 30); }
+  for (const id of QORDER) for (let st = 0; st < 12; st++) { S.q[id] = { stage: st }; const t = questTarget(id); if (!t) continue; const on = sites.find(([k, h]) => Math.hypot(h.site.x - t[0], h.site.z - t[2]) < 1.0); if (on) bad.push(id + ' stage ' + st + ' points at the middle of ' + on[0] + ', not its door'); }
+  S.q = JSON.parse(q0); }
 toast = _t; S.q = JSON.parse(keep); S.flags = JSON.parse(flags);
 if (bad.length) throw new Error('POINTERS FAIL ' + bad.length + ': ' + bad.join('; '));
 return 'pointers PASS the chapel\'s marks point at the chest, the gate and the reliquary; stages 8 and 9 at the Hart and the cleft; the Hart\'s back door and hatch take you in; the boat-houses answer; the frostcap is north-west of the gate outside it; Tobin\'s note says east; the compass reads true indoors';

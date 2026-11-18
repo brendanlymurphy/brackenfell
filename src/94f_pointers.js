@@ -20,8 +20,10 @@ PTR.itemAt = id => { const it = World.interact.find(o => o.id === id || o.id ===
     if (id === 'main' && (st === 8 || st === 9) && c !== 'mine') {
       if (c === 'inn' && typeof HART !== 'undefined' && HART.at) return (Player.pos[1] > HART.at.use[1] + 0.45 && HART.stair) ? HART.stair.slice() : HART.at.use.slice();
       const cave = World.interact.find(o => o.id === 'door.cave.in'); if (S.flags.tunnel && cave) return cave.p.slice();
-      const h = World.houses.inn; return h && h.site ? [h.site.x, 0, h.site.z] : _qt(id); }
-    return _qt(id); }; }
+      const h = World.houses.inn; return h && h.site ? PTR.door([h.site.x, 0, h.site.z]) : _qt(id); }
+    return PTR.door(_qt(id)); }; }
+// out of doors, a mark on a building's middle (the chapel for the crypt, the Hart for stages 7 to 9) points at the door that leads in, not at the roof
+PTR.door = t => { if (!t || World.cell) return t; for (const k in World.houses) { const h = World.houses[k], c = h && h.cell && Cells.by[h.cell.id || h.cell]; if (h && h.site && c && c.xdoor && Math.hypot(h.site.x - t[0], h.site.z - t[2]) < 1.0) return c.xdoor.c.slice(); } return t; };
 // the Hart's back door and its cellar hatch (drawn by 72c_infill.js on the back wall): the back door goes into the kitchen, the hatch down into the cellar
 PTR.hart = function () {
   const h = World.houses.inn, c = Cells.by.inn; if (!h || !h.site || !c || typeof WALLS === 'undefined' || World.interact.some(o => o.id === 'door.inn.back')) return;
