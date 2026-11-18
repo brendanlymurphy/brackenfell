@@ -1,5 +1,15 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 16:45 UTC: SCOPE CUT AND ONE BUILD A DAY (read this before anything older)
+
+**The owner's decision, 16:45 UTC 18 Nov: cut the scope, one reviewed build a day.** He played Build 89 and found, in two minutes, a stretched spike and a hanging timber at the chapel and a ruler-straight earth patch at the north gate: things every test passed and I passed. Five builds went out today; three needed a second run. That stops.
+- **The slice.** Until he says otherwise, only this is worked on: the walk from the west gate along the street to the market square, the square, the alley to Quill's Sundries, the Hart, and up to the chapel; and about sixteen interiors: the Hart, the chapel (with crypt), the Elder's house, Quill's Sundries (store), the smithy, the herbalist, the guardhouse, the mill, the draper, the weaver, the farm, the hunter's, the fisher's, the shut house (in.23), the Bookstall (shop.s1) and the Apothecary (shop.n2), plus any cell a quest stage, secret, note or shop needs (the logic session settles the exact list today). Every other house keeps its people and its lights but its door is locked to the player.
+- **One build a day.** Candidates are cut at 12:00 UTC. A build ships only after the walk camera (every 5 m of every lane in the slice, both ways, eye height, day and night) and the room camera (every kept room from each doorway) have run on it and every frame has been looked at by the audit session and by me. Nothing ships from pictures at angles its author chose.
+- **Assets, not code, for anything a person recognises** (animals, boats, carts, tools, furniture, plants, food): a kit piece or a model made or fitted in Blender (the owner is setting up a Blender session; `docs/briefs/AGENT_BLENDER.md`), or it is left out. Code builds terrain, walls, roofs and layout.
+- **One area each.** Do not touch another session's files; ask in your report.
+
+**Yours:** (1) today: the lock list. Derive from the source every cell that a quest stage, secret, note, board job, trade (a shop that sells) or the main story needs; add the sixteen above; everything else is locked to the player ("Locked", no lockpick, residents come and go as now), in `82f_owners.js`. Tests that enter all cells (`cells`, `interiors`, `inout`, the bot) run on the kept list and assert the others refuse. Write the list to `docs/SLICE.md` with the reason per cell. Hash and run to me; it is tomorrow's build. (2) Voices as planned. (3) Story and people only inside the slice otherwise.
+
 ## 2026-11-18 16:15 UTC
 
 Read 4c84d1d's report: all of it is wanted (youth bodies, one at a time through a door, the drowned man's priority, the hearth check, the generator's order). Build 89 is live (main 997710c). Your branch goes into Build 90 as soon as a full run on its head is green: tell me the hash and run. The 529 recordings are only on your branch (main has 254): Build 90 brings them to the owner's ear, so make sure the manifest and the voice checks are in that head.
