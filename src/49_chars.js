@@ -75,7 +75,7 @@ const Chars = (() => {
       bones: { hips: 'pelvis', head: 'Head', neck: 'neck_01', handR: 'hand_r', handL: 'hand_l', footR: 'foot_r', footL: 'foot_l' },
       anims: {
         idle: ['idle-a', 'idle-foldarms', 'idle-a'], walk: ['walk', 'walk-relaxed'], run: 'jog', sit: 'sitting-idle', 'sit+talk': 'sitting-talking', talk: 'idle-talking',
-        hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-harvest', sweep: 'shovel-dig', lie: 'sleeping', cheer: 'clapping',
+        hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-watering', sweep: 'shovel-dig', lie: 'sleeping', cheer: 'clapping',
       },
       once: ['greeting', 'head-nod', 'interact', 'pick-up', 'open-door', 'kneel', 'sword-attack', 'sword-regular-a', 'sword-regular-b', 'sword-regular-combo', 'weapon-draw', 'hit-chest', 'hit-head', 'death-a', 'death-b', 'jump-start', 'jump-land', 'dodge-back', 'bow-pull', 'bow-release'],
       rate: { hammer: 0.9 },
@@ -106,7 +106,9 @@ const Chars = (() => {
     const names = Object.values(BODY).concat(FOES.map(f => f.body));
     const bodies = {}; for (const n of new Set(names)) bodies[n] = n + '.glb';
     const ANIMS = { idle: ['idle-a', 'idle-foldarms', 'idle-subtle', 'idle-a', 'idle-listening', 'idle-subtle', 'idle-foldarms'], walk: ['walk', 'walk-relaxed'], run: 'jog', sit: 'sitting-idle', 'sit+talk': 'sitting-talking', talk: 'idle-talking',
-      hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-harvest', sweep: 'shovel-dig', lie: 'sleeping', cheer: 'clapping',
+      // [ch4] work: a standing stance over the task. The harvest squat ('farm-harvest') folds the body until no skirt, tabard or apron can follow it (a tent with the boots
+      // showing, the tabard torn open at the back: test/garb.js pictures), and most work rows are indoor trades at a bench, not a field.
+      hammer: 'hammering', lute: 'guitar-playing', pray: 'pray', guard: 'polearm-idle', fish: 'idle-lantern', work: 'farm-watering', sweep: 'shovel-dig', lie: 'sleeping', cheer: 'clapping',
       pickup: 'pick-up', jump: 'jump-air', block: 'sword-block', hit: 'hit-chest', die: 'death-a' };
     C.define('real', {
       dir: 'chars/real/', clips: 'clips.glb', bodies, lazy: FOES.map(f => f.body), foeLooks: { list: FOES, leader: FOE_LEADER }, textures: {}, materials: {},
