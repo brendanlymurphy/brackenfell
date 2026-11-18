@@ -76,7 +76,7 @@ function foliageMaterial(noLod) {
   // sharpen the cut-out to about one pixel so multisampling can smooth the leaf edges
   m.colorNode = albedo; m.opacityNode = SH.sat(a.a.sub(0.45).div(max(TSL.fwidth(a.a), 0.001)).add(0.5)); m.alphaTest = 0.5;
   m.normalNode = transformNormalToView(normalize(N.add(U.sunDir.mul(0.6))));      // wrap the sun around the crown
-  m.emissiveNode = albedo.mul(SH.hemi(N, sky, float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.6))).add(vec3(1.3, 1.25, 0.6).mul(U.sunCol).mul(back.mul(sky).mul(0.3))));
+  m.emissiveNode = albedo.mul(SH.hemi(N, TSL.max(sky, float(0.42)), float(0)).add(SH.pointLights(positionWorld, N, float(0), float(0.6))).add(vec3(1.3, 1.25, 0.6).mul(U.sunCol).mul(back.mul(sky).mul(0.3))));
   m.side = THREE.DoubleSide;
   return m;
 }

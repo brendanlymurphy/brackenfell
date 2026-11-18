@@ -79,6 +79,11 @@ const SHELL = {         // per-building overrides (kind, pitch, tone index, sag,
   herbalist: { lime: 'pink', ground: 'plaster', pitch: 53, face: true },
   weaver: { wall: [0.85, 0.82, 0.78], ground: 'plaster', pitch: 58 },
   draper: { lime: 'dun', ground: 'plaster', pitch: 56 },
+  // [fx3] Wharfside, one treatment per house (docs/PEOPLE.md: who lives there and what they can afford): tarred boards, wide silvered boards with a patched panel, limewash, a stone ground storey, daub between posts
+  'in.111': { wall: [0.34, 0.32, 0.3], treat: 'tar', ground: 'plaster' }, 'in.113': { wall: [1.0, 0.95, 0.88], treat: 'wide', ground: 'plaster' }, 'in.115': { lime: 'cream', treat: 'lime', ground: 'plaster' },
+  'in.20': { wall: [0.74, 0.72, 0.68], ground: 'stone' }, 'in.23': { lime: 'ochre', treat: 'wattle', frame: 1, ground: 'plaster' }, 'in.34': { lime: 'grey', treat: 'lime', ground: 'plaster' },
+  'in.36': { wall: [0.9, 0.86, 0.8], ground: 'stone', stoneMat: 'MI_Rubble_Wall', treat: 'wide' }, 'in.37': { lime: 'dun', treat: 'wattle', frame: 2, ground: 'plaster' }, 'in.38': { wall: [1.1, 1.13, 1.16], treat: 'wide', ground: 'plaster' },
+  'in.51': { lime: 'bone', ground: 'stone' }, 'in.60': { wall: [0.3, 0.29, 0.28], treat: 'tar', ground: 'plaster' },
   'shop.n2': { wall: [1, 1, 1], pitch: 61 }, 'shop.s0': { lime: 'dun', pitch: 57 }, 'shop.s1': { wall: [0.78, 0.76, 0.74], ground: 'stone', pitch: 53 },
 };
 const _shellMemo = {};
@@ -94,9 +99,9 @@ function shellStyle(site, spec) {
   out.tint = out.tint.map(v => Math.min(2, v * (0.94 + R() * 0.1)));
   const W = SHELL_WALL[dn], jit = v => Math.min(1, v * (0.96 + R() * 0.08));
   const limeName = O.lime !== undefined ? O.lime : O.wall ? false : (W[2].length && R() < W[0] ? W[2][(R() * W[2].length) | 0] : false), plank = O.wall || W[3];
-  out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.forms = O.forms; out.face = O.face || (typeof WHARF !== 'undefined' && WHARF.houses.some(h => h[0] === site.id));      // [fx2] houses of the re-sited lower town show a real face on their free side walls
-   out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.frame = (R() * 3) | 0; out.chimSize = 0.38 + R() * 0.24; out.chimUp = R() * 0.9; out.soot = O.soot; out.cart = O.cart;
-  const SK = dn === 'market' ? ['grey', 'warm', 'dark', 'warm'] : ['grey', 'warm', 'dark', 'rubble', 'rubble'], sk = SK[(R() * SK.length) | 0]; out.stoneTint = { grey: [0.82, 0.84, 0.86], warm: [1, 0.86, 0.68], dark: [0.6, 0.6, 0.58], rubble: [1, 0.96, 0.9] }[sk].map(v => v * (0.95 + R() * 0.1)); out.stoneMat = sk === 'rubble' ? 'MI_Rubble_Wall' : undefined;
+  out.treat = O.treat; out.dormers = O.dormers; out.dormerU = O.dormerU; out.cross = O.cross; out.forms = O.forms; out.face = O.face || (typeof WHARF !== 'undefined' && WHARF.houses.some(h => h[0] === site.id));      // [fx2] houses of the re-sited lower town show a real face on their free side walls
+   out.jetty = O.jetty !== undefined ? O.jetty : (dn === 'market' || dn === 'chapelgate' || dn === 'riverside') && R() < 0.6 ? 0.34 + R() * 0.2 : 0; out.frame = O.frame !== undefined ? O.frame : (R() * 3) | 0; out.chimSize = 0.38 + R() * 0.24; out.chimUp = R() * 0.9; out.soot = O.soot; out.cart = O.cart;
+  const SK = dn === 'market' ? ['grey', 'warm', 'dark', 'warm'] : ['grey', 'warm', 'dark', 'rubble', 'rubble'], sk = SK[(R() * SK.length) | 0]; out.stoneTint = { grey: [0.82, 0.84, 0.86], warm: [1, 0.86, 0.68], dark: [0.6, 0.6, 0.58], rubble: [1, 0.96, 0.9] }[sk].map(v => v * (0.95 + R() * 0.1)); out.stoneMat = O.stoneMat || (sk === 'rubble' ? 'MI_Rubble_Wall' : undefined);
   out.lime = !!limeName; out.wallTint = (limeName ? LIME[limeName] : plank).map(jit); out.ground = O.ground || (R() < W[1] ? 'stone' : 'plaster');
   return _shellMemo[site.id] = out;
 }
@@ -181,8 +186,9 @@ function shellDress(c, b, frames, MS, o) {
     // 3: a big stone stack outside a gable end
     if (RF() < FM.stack) for (const wn of ['left', 'right']) {
       const Lw = L(wn); if (used.stair === wn || used.outshut === wn || (infNeighbour && infNeighbour(site, wn === 'right') > 0) || !free(wn, Lw * 0.5 - 0.6, Lw * 0.5 + 0.6, 0.9)) continue;
-      const g7 = GP(), cu = Lw * (0.4 + RF() * 0.2), top = yRidge + 0.55, sc = (SSt.stoneTint || [0.8, 0.8, 0.8]).map(v => v * 0.55);
-      g7.box(INF_B, cu - 0.5, -0.3, -0.02, cu + 0.5, Ytop + 0.2, 0.75, sc); g7.box(INF_B, cu - 0.38, Ytop + 0.2, -0.02, cu + 0.38, top - 0.5, 0.55, sc); g7.box(INF_B, cu - 0.38, top - 0.5, -0.02, cu + 0.38, top, 0.55, sc.map(v => v * 0.5)); g7.box(INF_B, cu - 0.47, top, -0.05, cu + 0.47, top + 0.12, 0.62, sc.map(v => v * 0.4));      // sooted at the top
+      const g7 = GP(), cu = Lw * (0.4 + RF() * 0.2), top = yRidge + 0.55, sc = (SSt.stoneTint || [0.8, 0.8, 0.8]).map((v, i) => v * 0.42 * [1, 0.95, 0.88][i]), uvS = [0, 0, 0.5, 1.4];      // [fx2] weathered stone, texture at stone scale (the stretched default read as a pale strip)
+      g7.box(INF_B, cu - 0.5, -0.3, -0.02, cu + 0.5, 1.1, 0.75, sc, uvS); g7.box(INF_B, cu - 0.44, 1.1, -0.02, cu + 0.44, Ytop + 0.2, 0.66, sc, uvS); g7.box(INF_B, cu - 0.34, Ytop + 0.2, -0.02, cu + 0.34, top - 0.5, 0.5, sc, uvS); g7.box(INF_B, cu - 0.34, top - 0.5, -0.02, cu + 0.34, top, 0.5, sc.map(v => v * 0.55), uvS); g7.box(INF_B, cu - 0.44, top, -0.06, cu + 0.44, top + 0.1, 0.56, sc.map(v => v * 0.8), [0, 0, 0.3, 0.3]);      // a stack with set-offs and a sooted flue under a coping slab
+      g7.box(INF_B, cu - 0.2, top + 0.1, 0.06, cu + 0.2, top + 0.34, 0.4, sc.map(v => v * 0.45), [0, 0, 0.2, 0.2]); g7.box(INF_B, cu - 0.12, top + 0.1, 0.14, cu + 0.12, top + 0.34, 0.32, [0.03, 0.03, 0.03], [0, 0, 0.1, 0.1]);      // the pot and its dark mouth
       put(wn, g7); used.stack = wn; break; }
     // 4: a drying rack for nets in the front yard, away from the door
     if (RF() < FM.rack) { const Lf2 = L(front), uc = dc > Lf2 / 2 ? 0.5 : Lf2 - 2.9, ok = free(front, uc, uc + 2.4, 1.9); if (ok) { const g8 = GP(); for (const u of [uc, uc + 2.4]) g8.beam(W_, [u, 0, 1.6], [u, 2.0, 1.6], 0.07, [0.3, 0.24, 0.18]); g8.beam(W_, [uc - 0.1, 1.95, 1.6], [uc + 2.5, 1.95, 1.6], 0.05, [0.3, 0.24, 0.18]); g8.beam(W_, [uc - 0.1, 1.25, 1.6], [uc + 2.5, 1.25, 1.6], 0.04, [0.3, 0.24, 0.18]);
