@@ -281,7 +281,7 @@ PLANS.draper = (P, c, info) => {
   pDoor(P, 'shop', null, 0, 0); pDoor(P, 'shop', 'back', X1 - 1.0, Zp); pDoor(P, 'upfront', 'upback', X1 - 1.0, Zp);
   const SHL = pShellWins(P, c, B);
   const bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd) pUpperDoor(P, P.rooms.upfront, bd, Math.round(SHL.pos(bd) * 4) / 4);
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.45, z: D - 0.6, width: 0.9, tread: 0.18 });
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.45, z: D - 0.6, width: 0.9, tread: 0.18, holeX: 0.5 });
   pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: X0 + 1.45, z: Zp + 0.65, width: 0.9, tread: 0.2 });      /* 1.2 m clear at both ends */
   pLayout(P); pKeepStairHeads(P); pBalconies(P, c);
   const shop = P.rooms.shop, back = P.rooms.back, uf = P.rooms.upfront, ub = P.rooms.upback, cel = P.rooms.cellar;

@@ -154,7 +154,7 @@ PLANS.elder = (P, c, info) => {      /* [inout] the shell: 7.2 x 5.6 m, two stor
   pDoor(P, 'hall', null, 0, 0); pDoor(P, 'hall', 'study', Xs, 1.6); pDoor(P, 'solar', 'chamber', Xs, 1.6);
   pShellWins(P, c, B);
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: -1, x: X1 - 1.5, z: D - 0.75, width: 0.9, tread: 0.18 });      /* 1.2 m clear at its foot */
-  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: -1, x: X0 + 0.75, z: D - 1.45, width: 0.9, tread: 0.2 });
+  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: -1, x: X0 + 0.75, z: D - 1.45, width: 0.9, tread: 0.2, holeX: 0.5 });
   pLayout(P); pKeepStairHeads(P);
   const hall = P.rooms.hall, study = P.rooms.study, ch = P.rooms.chamber, solar = P.rooms.solar, sr = P.rooms.strongroom;
   // the hall: the fire on the gable wall, his father's buckler over it; the long table with the Elder's chair at its head; the empty bread baskets by the door
