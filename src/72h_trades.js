@@ -92,62 +92,55 @@ const pdBellows = m => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.3, 0, -0.2, 0
 const pdIron = m => { m.mat(MAT.METAL, [0.2, 0.2, 0.22]); for (let j = 0; j < 4; j++) for (let i = 0; i < 4 - j; i++) m.box(-0.5 + j * 0.06 + i * 0.12, j * 0.05, -0.2, -0.42 + j * 0.06 + i * 0.12, j * 0.05 + 0.05, 0.2); addBoxCollider(m, -0.5, -0.2, 0.5, 0.2, 0, 0.25); };
 const pdCoal = m => { m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.5, 0, -0.4, 0.5, 0.5, -0.36); m.box(-0.5, 0, 0.36, 0.5, 0.5, 0.4); m.box(-0.5, 0, -0.4, -0.46, 0.5, 0.4); m.box(0.46, 0, -0.4, 0.5, 0.5, 0.4); m.mat(MAT.PLAIN, [0.05, 0.05, 0.05]); m.ball(0, 0.35, 0, 0.44, 0.24, 0.34, 7, 4); addBoxCollider(m, -0.5, -0.4, 0.5, 0.4, 0, 0.5); };
 const pdTrough = m => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.7, 0, -0.3, 0.7, 0.6, 0.3); m.mat(MAT.PLAIN, [0.08, 0.14, 0.2]); m.quad([-0.62, 0.52, -0.22], [-0.62, 0.52, 0.22], [0.62, 0.52, 0.22], [0.62, 0.52, -0.22]); addBoxCollider(m, -0.7, -0.3, 0.7, 0.3, 0, 0.6); };
-PLANS.smithy = (P, c, info) => {
-  const R = P.R, id = P.id; P.dims = { W: 14, D: 12, Dh: 7 };
-  pLevel(P, 0, 0, 4.2); pLevel(P, 1, 4.2 + PW.SLAB, 2.5);
-  pRoom(P, 0, 'forge', 'hall', -7, 0, 2, 8, { floor: 'stone', tint: [0.62, 0.56, 0.5] }); pRoom(P, 0, 'living', 'hall', 2, 0, 7, 8); pRoom(P, 0, 'coalstore', 'store', -7, 8, 2, 12, { floor: 'stone' });
-  pRoom(P, 1, 'loft', 'bedroom', 2, 0, 7, 8);
-  pDoor(P, 'forge', null, 0, 0); pDoor(P, 'forge', 'living', 2, 6.5); pDoor(P, 'forge', 'coalstore', -4.5, 8);
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: 6.0, z: 1.4, width: 1.0, tread: 0.2 });
+PLANS.smithy = (P, c, info) => {      /* [inout] the shell on the Market Place: 9.5 x 7 m, one storey; 12 x 8 inside, the sleeping loft under the rafters over the family's end */
+  const R = P.R, id = P.id, B = pFitBox(c, { W: 12, D: 8 }), X0 = B.x0, X1 = B.x1, D = B.D, Xp = X0 + 5, Zp = 5.5; P.dims = { W: B.W, D, Dh: Zp };
+  pLevel(P, 0, 0, 3.0); pLevel(P, 1, 3.0 + PW.SLAB, 2.2, { loft: true });
+  pRoom(P, 0, 'forge', 'hall', Xp, 0, X1, Zp, { floor: 'stone', tint: [0.62, 0.56, 0.5] }); pRoom(P, 0, 'living', 'hall', X0, 0, Xp, D); pRoom(P, 0, 'coalstore', 'store', Xp, Zp, X1, D, { floor: 'stone' });
+  pRoom(P, 1, 'loft', 'bedroom', X0, 0, Xp, D);
+  pDoor(P, 'forge', null, 0, 0); pDoor(P, 'forge', 'living', Xp, 4.3); pDoor(P, 'forge', 'coalstore', Xp + 1.2, Zp);
+  pShellWins(P, c, B);
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: X0 + 0.85, z: 1.2, width: 0.9, tread: 0.2 });
   pLayout(P);
   const forge = P.rooms.forge, living = P.rooms.living, cs = P.rooms.coalstore, loft = P.rooms.loft, m = c.int;
-  // [c4] the forge stands on the far wall straight ahead of the street door: the first thing seen is its glow, the anvil before it and the smith between them
+  // the forge stands on the far wall straight ahead of the street door: the first thing seen is its glow, the anvil before it and the smith between them
   const hh = pHearth(P, forge, 's', 2.6, { size: 0.8, at: -0.8, r: 11, c: [4.0, 1.9, 0.6], deco: false }); P.hall = { room: forge, hh };
   if (hh) {
     const fx = hh.px, fz = hh.front[1], face = Math.atan2(hh.px - fx, -(hh.pz - fz));
-    pSpot(P, 'home', fx + 1.9, fz - 0.4, face, { k: 0 });
+    pSpot(P, 'home', fx + 1.7, fz - 0.4, face, { k: 0 });
     const an = pPut(P, forge, id + '.anvil', fx - 0.25, fz - 0.5, 0, 0.7, 0.5, 0.9, mm => Props.anvil(mm), { allow: ['hearth'] });
     if (an) { pSpot(P, 'anvil', an.cx + 0.15, an.cz + 0.75, 0, { k: 0 }); }
     pSpot(P, 'forge', fx + 1.0, fz - 0.2, PI / 2 + 0.3, { k: 0 });
-    // the forge itself: a billet glowing in the coals, a stone hood already (the breast), smoke going up, the bellows on the right with its handle out
     at(m, hh.px, 0.02, hh.pz, PI / 2, () => {
       emit(m, 1.6, () => { m.mat(MAT.PLAIN, [1, 0.5, 0.12]); m.box(0.2, 0.1, -0.5, 0.6, 0.125, 0.5, 4); m.box(0.25, 0.125, -0.12, 0.55, 0.14, 0.12, 4); });
       m.mat(MAT.METAL, [0.3, 0.3, 0.33]); m.box(0.28, 0.12, -0.04, 0.44, 0.15, 0.04); m.mat(MAT.PLAIN, [0.08, 0.07, 0.07]); m.ball(0.3, 0.07, -0.35, 0.18, 0.07, 0.14, 6, 3); m.ball(0.32, 0.07, 0.38, 0.16, 0.06, 0.14, 6, 3);
     });
     World.emitters.push({ type: 'smoke', p: [...P.w2(hh.px, P.lv[0].H - 0.2, hh.pz - 0.1)], zone: P.zone, indoor: true });
     pPut(P, forge, id + '.bellows', hh.px + 1.75, hh.pz - 0.5, 0, 0.9, 0.6, 0.9, mm => { at(mm, 0, 0, 0, PI, () => pdBellows(mm)); }, { lowOk: true, allow: ['hearth'], back: 's' });
-    pPut(P, forge, id + '.trough', fx - 2.3, fz - 0.6, 0, 1.4, 0.6, 0.6, pdTrough, { lowOk: true, allow: ['hearth'] });
-    pPut(P, forge, id + '.coalheap', fx - 3.0, 7.3, 0, 1.4, 0.9, 0.6, PD.coalHeap(R), { lowOk: true, allow: ['hearth'] });
+    pPut(P, forge, id + '.trough', fx - 2.0, fz - 0.9, 0, 1.4, 0.6, 0.6, pdTrough, { lowOk: true, allow: ['hearth'] });
   }
-  if (hh) pPier(P, 1, hh);
-  // west wall: the tool board, the grindstone, finished blades, the bench; windows leave their gaps
-  pHang(P, forge, 'w', 2.0, 1.8, 1.0, 2.1, PD.toolRack(R, 1.8), id + '.tools1', { pivot: 2.05 }); pHang(P, forge, 'w', 4.1, 1.8, 1.0, 2.1, PD.toolRack(R, 1.8, ['tongs', 'hammer', 'tongs', 'punch', 'sledge', 'tongs']), id + '.tools2', { pivot: 2.05 });
-  pAgainst(P, forge, 'w', id + '.bench', 1.8, 0.7, 0.84, +1, mm => { at(mm, 0, 0, 0, PI, () => PD.smithBench(1.8)(mm)); }, { at: 6.2, lowOk: true });
-  pAgainst(P, forge, 'w', id + '.grind', 0.8, 0.6, 0.7, 0, PD.grindstone, { at: 2.6, lowOk: true });
-  // north wall (the street side): a full board of finished blades, horseshoes, tool boards either side of the door
-  pHang(P, forge, 'n', -3.2, 1.6, 1.0, 2.0, PD.bladeWall(R, 1.6), id + '.blades', { pivot: 2.0 }); pHang(P, forge, 'n', -5.2, 1.5, 1.2, 1.7, PD.horseshoes(R, 1.5), id + '.shoes', { pivot: 1.75 });
-  pHang(P, forge, 'n', 1.2, 1.4, 1.0, 1.9, PD.toolRack(R, 1.4), id + '.tools3', { pivot: 1.95 }) || pHang(P, forge, 'n', 1.3, 1.0, 1.0, 1.9, PD.horseshoes(R, 1.0), id + '.shoes2', { pivot: 1.75 });
-  pAgainst(P, forge, 'n', id + '.iron', 1.1, 0.5, 1.3, 0, PD.ironStand(R), { at: -1.8 }); pAgainst(P, forge, 'n', id + '.iron2', 1.1, 0.5, 1.3, 0, PD.ironStand(R), { at: -6.0 });
-  pKitFloor(P, forge, 'e', 'Whetstone', { at: 'start' }); pKitFloor(P, forge, 'w', 'WeaponStand', { n: 'a', at: 'mid' }); pKitFloor(P, forge, 'e', 'WeaponStand', { n: 'b', at: 'end' });
-  pAgainst(P, forge, 'e', id + '.waterbrl', 0.7, 0.7, 0.84, 0, pdBarrel(0.33, 0.9), { at: 'end', lowOk: true }); pKitFloor(P, forge, 'e', 'Bucket_Wooden_1', { n: 'q', at: 'end' });
-  for (let i = 0; i < 2; i++) pAgainst(P, forge, 's', id + '.coal' + i, 1.0, 0.8, 0.5, 0, pdCoal, { at: i ? 'end' : 'start', lowOk: true });
-  pWalls(P, forge, ['Peg_Rack', 'Axe_Bronze', 'Pickaxe_Bronze', 'Sword_Bronze', 'kite_shield', 'Torch_Metal', 'rusted_spade_01']);
-  // overhead: chains and a bar of tongs above the work, the rafters black with soot
-  pCeil(P, forge, -0.3, 4.0, PD.chainHang(1.3, R)); pCeil(P, forge, -3.0, 3.2, PD.hookBar(1.8, R)); pCeil(P, forge, -4.5, 5.5, PD.chainHang(0.9, R)); pCeil(P, forge, 1.0, 5.5, PD.hookBar(1.2, R, ['tongs', 'ladle', 'chain']));
-  for (const sd of ['n', 'e', 'w']) pHigh(P, forge, sd, 2.7, 1.5, w => PD.highShelf(R, w), id + '.hi');
-  PD.dense(P, forge, { pool: ['sconce', 'shelf', 'stack', 'sacks'], corner: ['stack', 'sacks', 'broom'], middle: false });
-  pLamp(P, forge, -3.5, 2.2); pLamp(P, forge, 0.6, 3.0);
-  const e = P.doors.find(d => d.b === null); if (e) pPut(P, forge, id + '.mat', e.x, 1.3, 0, 2.4, 1.4, 0.02, pdRug(2.4, 1.4, [0.25, 0.2, 0.17]), { flat: true, noClear: true });
-  // the family's room: hearth, table, shelves, bed corner; the loft above
-  const lh = pHearth(P, living, 'e', 1.6, { cauldron: true, size: 0.4, at: 4.5 }); if (lh) pPier(P, 1, lh);
-  dressKitchen(P, living, { hh: lh }); const lt = pDining(P, living, 1.8, 0.85, { near: [4.0, 1.2], id: 'meal', n: 3 }); if (lt) lt.seats.forEach((st, i) => pSit(P, i ? 'seat' + i : 'sit', st[0], st[1], st[2], 0));
-  PD.dense(P, living, { pool: ['cupboard', 'hooks', 'paint', 'tapestry', 'sconce', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-  dressBedroom(P, loft, { beds: castBeds(P.id, ['bed']) /* [cast] Tobin's bed in the forge loft */, bedRooms: [P.rooms.living, P.rooms.forge, P.rooms.coalstore], loot: [['gold', 8]], bedInteract: true, table: true }); PD.dense(P, loft, { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'sconce'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-  // the store behind the forge: coal, iron, billets, crates, a ladder
-  for (let i = 0; i < 2; i++) pFree(P, cs, id + '.cscoal' + i, 1.4, 0.9, 0.6, 0, PD.coalHeap(R), { near: [-5.5 + i * 2.2, 9.2], lowOk: true });
-  for (let i = 0; i < 3; i++) pFree(P, cs, id + '.csiron' + i, 1.0, 0.4, 0.3, 0, pdIron, { near: [-1.5, 11], lowOk: true });
-  pFree(P, cs, id + '.cspile', 1.3, 0.7, 1.1, 0, PD.cratePile(R), { near: [-4, 10.8], lowOk: true }); pStock(P, cs, { crates: 1, sacks: 2, barrels: 2, near: [-2.5, 10.8] }); pShelfRun(P, cs, 's', -7, 2, null, { id: 'cs', lv: 3, mixed: PD.WARES.hard });
-  PD.dense(P, cs, { pool: ['hooks', 'rack', 'sacks', 'torch'], corner: ['stack', 'sacks'], mid: { kinds: ['sacks'], max: 1 } }); pLamp(P, cs, -3, 10);
+  // the wall to the family's room: the tool board over the bench; the street wall: iron by the door, horseshoes; the end wall: the grindstone and the finished tools under the window
+  pAgainst(P, forge, 'w', id + '.bench', 1.8, 0.7, 0.84, +1, mm => { at(mm, 0, 0, 0, PI, () => PD.smithBench(1.8)(mm)); }, { at: 1.6, lowOk: true });
+  pHang(P, forge, 'w', 1.6, 1.8, 1.2, 2.2, PD.toolRack(R, 1.8), id + '.tools1', { pivot: 2.15 });
+  pAgainst(P, forge, 'n', id + '.iron', 1.1, 0.5, 1.3, 0, PD.ironStand(R), { at: -1.45 });
+  pHang(P, forge, 'n', 1.25, 1.0, 1.2, 1.9, PD.horseshoes(R, 1.0), id + '.shoes', { pivot: 1.85 });
+  pPiece(P, forge, 'Whetstone', { side: 'e', at: 1.0 }); pPiece(P, forge, 'WeaponStand', { side: 'e', at: 2.5 }); pPiece(P, forge, 'wooden_bucket_01', { near: [-1.9, 3.4], sc: 1.2 });
+  pWalls(P, forge, ['Peg_Rack', 'Torch_Metal']);
+  pCeil(P, forge, -0.6, 3.4, PD.chainHang(0.9, R)); pCeil(P, forge, -3.0, 2.4, PD.hookBar(1.6, R));
+  const e = P.doors.find(d => d.b === null); if (e) pPut(P, forge, id + '.mat', e.x, 1.2, 0, 2.0, 1.3, 0.02, pdRug(2.0, 1.3, [0.25, 0.2, 0.17]), { flat: true, noClear: true });
+  // the family's room: the fire backs onto the coal store, the table for two before it, the stair to the loft along the gable wall
+  const lh = pHearth(P, living, 'e', 1.4, { cauldron: true, size: 0.4, at: 6.6 }); if (lh) pPier(P, 1, lh);
+  const lt = pDining(P, living, 1.6, 0.8, { near: [X0 + 2.9, 6.5], id: 'meal', n: 2, items: ['bowl', 'bowl', 'loaf'] }); if (lt) lt.seats.forEach((st, i) => pSit(P, i ? 'seat' + i : 'sit', st[0], st[1], st[2], 0));
+  if (lt) pSpot(P, 'work', lt.x !== undefined ? lt.x : X0 + 2.9, 5.4, PI, { k: 0 });
+  pPiece(P, living, 'painted_wooden_shelves', { side: ['s', 'n'], at: X0 + 3.6, sc: 1.5, top: [['wooden_candlestick', 0, 0, 1, 0, true]] });
+  pPiece(P, living, 'painted_wooden_cabinet', { side: ['n'], at: X0 + 3.4 });
+  pKitWall(P, living, 'n', X0 + 2.0, 'Peg_Rack');
+  // the loft: Brandt's bed, the boy's by the stack, one chest between them
+  dressBedroom(P, loft, { bedH: 0.85, beds: castBeds(P.id, ['bed']), bedRooms: [P.rooms.living, P.rooms.forge, P.rooms.coalstore], loot: [['gold', 8]], bedInteract: true });
+  pPiece(P, loft, 'painted_wooden_stool', { near: [X0 + 3.4, 6.2], top: [['wooden_candlestick', 0, 0, 1, 0, true]] }); pKitWall(P, loft, 's', X0 + 2.6, 'Peg_Rack');
+  // the store behind the forge: charcoal, bar iron, the spade
+  pFree(P, cs, id + '.cscoal', 1.4, 0.9, 0.6, 0, PD.coalHeap(R), { near: [X1 - 1.4, 7.0], lowOk: true });
+  for (let i = 0; i < 3; i++) pPiece(P, cs, 'Bag', { side: 's', at: Xp + 3.2 + i * 0.75, id: 'bag' + i });
+  pPiece(P, cs, 'Crate_Wooden', { side: 's', at: Xp + 1.0 }); for (let i = 0; i < 2; i++) pFree(P, cs, id + '.csiron' + i, 1.0, 0.4, 0.3, 0, pdIron, { near: [Xp + 2.2, 6.2], lowOk: true });
   if (!hh) P.err.push('no forge fits');
 };
 

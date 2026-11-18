@@ -611,6 +611,9 @@ function shellOpenings(c) {
   }
   const out = [];      // frame and leaf, the two corners of one balcony: one thing
   for (const f of raw) { const m = out.find(g => g.kind === f.kind && g.wall === f.wall && Math.abs(g.u - f.u) < (f.kind === 'balc' || f.kind === 'floor' ? 2.6 : 0.7) && Math.abs(g.y - f.y) < 1.2); if (m) { if (f.kind === 'balc' || f.kind === 'floor') { m.y1 = Math.max(m.y1, f.y1); m.u0 = Math.min(m.u0, f.u0); m.u1 = Math.max(m.u1, f.u1); m.u = (m.u0 + m.u1) / 2; m.out = Math.max(m.out, f.out); } else if (/^DoorFrame/.test(f.name || '')) m.u = f.u; m.y0 = Math.min(m.y0, f.y0); } else out.push(f); }
+  { const M = new THREE.Matrix4().fromArray(c.Mx), nrm = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] };      /* a window or door that opens into the house standing against this wall is not one */
+    for (const f of out) { const fb = f.wall === 'front' || f.wall === 'back', n = nrm[f.wall], lx = fb ? f.u : n[0] * (w / 2 + 0.5), lz = fb ? n[1] * (d / 2 + 0.5) : f.u - d / 2; v.set(lx, 1, lz).applyMatrix4(M);
+      for (const st of Object.values(typeof SITE !== 'undefined' ? SITE : {})) { if (!st || st.x === undefined || st.yaw === undefined || st === c.site || st === c.xsite || !st.w || st.id === c.site.id) continue; const l = worldToSite(st, v.x, v.z); if (Math.abs(l[0]) < st.w / 2 - 0.05 && Math.abs(l[1]) < st.d / 2 - 0.05) { f.blocked = st.id; break; } } } }
   for (const f of out) f.lv = f.kind === 'win' ? (f.y < H ? 0 : 1 + Math.floor((f.y - H) / 3)) : (f.y0 < 1.6 ? 0 : Math.max(1, Math.round((f.y0 - H) / 3) + 1));
   return out;
 }
@@ -619,7 +622,7 @@ function shellOpenings(c) {
 function pShellWins(P, c, box, keep) {
   const sx = (box.x1 - box.x0) / c.w, sz = (box.z1 - box.z0) / c.d, cx = (box.x0 + box.x1) / 2; P.wins = []; P.shell = { box, sx, sz, cx, list: shellOpenings(c) };
   P.shell.pos = f => f.wall === 'front' || f.wall === 'back' ? cx + f.u * sx : box.z0 + f.u * sz;
-  for (const f of P.shell.list) { if (f.kind !== 'win' || !P.lv[f.lv]) continue; let pos = Math.round(P.shell.pos(f) * 4) / 4; if (keep) { const r = keep(f, pos); if (r === false) continue; if (typeof r === 'number') pos = r; } P.wins.push({ k: f.lv, face: f.wall, pos, kind: f.win }); }
+  for (const f of P.shell.list) { if (f.kind !== 'win' || !P.lv[f.lv]) continue; if (f.blocked) { (P.blockedWins = P.blockedWins || []).push(f); continue; } let pos = Math.round(P.shell.pos(f) * 4) / 4; if (keep) { const r = keep(f, pos); if (r === false) continue; if (typeof r === 'number') pos = r; } P.wins.push({ k: f.lv, face: f.wall, pos, kind: f.win }); }
   return P.shell;
 }
 // An upper door the shell shows (f, from shellOpenings) becomes a door of the room behind it: call before pLayout. pBalconies() after it makes the way through: the
@@ -648,4 +651,24 @@ function pBalconies(P, c) {
     World.interact.push({ kind: 'portal', id: 'door.' + cid + '.balcony.in', p: [wD[0], wD[1] + 1.1, wD[2]], r: 1.7, zone: 0, cell: cid, label: 'Go in', dest: inD, side: 'out' });
     d.balcony = { out: outD, in: inD, floor: fl };
   }
+}
+// [inout] the plan's ground rectangle for a shell: W x D on the 0.5 m grid, as near 1.5 times the shell's area as the grid allows without passing it, the shell's own
+// proportion, and laid so that the street door (plan x = 0) stands where the shell has it. Returns { x0, z0, x1, z1, W, D, sx, sz }.
+function pFitBox(c, o) {
+  o = o || {}; const cap = (o.cap || 1.5) * c.w * c.d, k = Math.sqrt(o.cap || 1.5); let best = null;
+  for (let W = Math.max(4, Math.floor(c.w * k * 2 + 1) / 2); W >= c.w; W -= 0.5) for (let D = Math.max(4, Math.floor(c.d * k * 2 + 1) / 2); D >= c.d; D -= 0.5) { if (W * D > cap + 1e-6) continue; const sc = W * D - 40 * Math.abs(W / D - c.w / c.d); if (!best || sc > best.sc) best = { W, D, sc }; }
+  const W = o.W || best.W, D = o.D || best.D, door = shellOpenings(c).find(f => f.kind === 'door' && f.lv === 0 && f.wall === 'front'), du = door ? door.u : (c.site.doorPos || 0);
+  const x0 = Math.round((-W / 2 - du * W / c.w) * 2) / 2; return { x0, z0: 0, x1: x0 + W, z1: D, W, D, sx: W / c.w, sz: D / c.d };
+}
+// [inout] a kit piece by name as a piece of furniture (docs/ROOMS.md names them): its footprint is its own box; back to a wall (o.side, sides in order of preference,
+// o.at along it) or free on the floor near o.near; o.turn turns the piece about its own middle (PI where its front is its -z), o.sc scales it, o.top = [[piece, x, z, sc, ry]..] stands things on it
+function pPiece(P, room, name, o) {
+  o = o || {}; const p = Kit.pieces[name]; if (!p) { (P.missing = P.missing || []).push(name); return null; }
+  const sc = o.sc || 1, turn = o.turn || 0, q = Math.abs(Math.sin(turn)) > 0.7, bw = (p.max[0] - p.min[0]) * sc, bd = (p.max[2] - p.min[2]) * sc, w = q ? bd : bw, d = q ? bw : bd, h = (p.max[1] - p.min[1]) * sc, cx = (p.min[0] + p.max[0]) / 2 * sc, cz = (p.min[2] + p.max[2]) / 2 * sc;
+  const draw = m => { at(m, 0, 0, 0, turn, () => { if (o.lit) kitLit(m, name, -cx, -p.min[1] * sc, -cz, sc, 0, { r: o.lit === true ? 5.5 : o.lit, c: [2.2, 1.35, 0.6], kind: 'candle' }); else kp(m, name, -cx, -p.min[1] * sc, -cz, sc, 0); }); for (const t of (o.top || [])) { const tp = Kit.pieces[t[0]]; if (!tp) continue; const ts = t[3] || 1; if (t[5]) kitLit(m, t[0], t[1], h - tp.min[1] * ts, t[2], ts, t[4] || 0, { r: 5.5, c: [2.2, 1.35, 0.6], kind: 'candle' }); else kp(m, t[0], t[1], h - tp.min[1] * ts, t[2], ts, t[4] || 0); } if (h > 0.3 && !o.soft) addBoxCollider(m, -w / 2, -d / 2, w / 2, d / 2, 0, Math.min(h, 2)); };
+  const id = P.id + '.' + (o.id || name) + '_' + P.items.length, opt = Object.assign({ lowOk: h <= 0.95 }, o.opt || {}); if (o.at !== undefined) opt.at = o.at;
+  let r = null; for (const sd of [].concat(o.side || [])) { r = pAgainst(P, room, sd, id, w, d, h, -1, draw, opt); if (r) break; }
+  if (!r && (o.near || !o.side)) r = pFree(P, room, id, w, d, h, o.rot || 0, draw, Object.assign({ near: o.near || pCentre(room) }, opt));
+  if (!r) (P.unplaced = P.unplaced || []).push(room.id + ':' + name); else if (o.lit || (o.top || []).some(t => t[5])) P.lightIn[room.id] = 1;
+  return r;
 }
