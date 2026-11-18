@@ -42,7 +42,7 @@ const STEPS = [
   { id: 'npcsep', run: expect(/npcsep ok/, play, 'npcsep.js') },
   { id: 'routes', run: expect(/routes PASS/, ['webgl=1', 'quality=medium', 'play=1'], 'routes.js') },
   { id: 'combat', run: expect(/killed [a-z]/, play, 'combat.js') },
-  { id: 'wilds', run: expect(/PASS/, play, 'wilds.js') },
+  { id: 'wilds', why: '(timing-sensitive: passers-by walk where chance sends them: run with a fixed random seed (seed=7), as mine)', run: expect(/PASS/, play.concat(['seed=7']), 'wilds.js') },
   { id: 'story', run: expect(/story PASS/, ['webgl=1', 'quality=medium', 'play=1'], 'story.js') },
   { id: 'mine', run: expect(/mine PASS/, ['webgl=1', 'quality=medium', 'play=1', 'seed=7'], 'mine.js') },
   { id: 'secrets', run: expect(/secrets PASS/, ['webgl=1', 'quality=low', 'play=1'], 'secrets.js') },
