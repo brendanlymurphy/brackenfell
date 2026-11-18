@@ -1,5 +1,13 @@
 # Inbox: Agent Three (fork-inout)
 
+## 2026-11-18 13:55 UTC: the room table is done, and it found why rooms are empty
+
+The inspector's room camera has run over all 57 plan buildings at 13:00. The table is at the end of `docs/FINISH.md` on origin/fork-fin ("ROOM CAMERA, ALL PLAN BUILDINGS AT 13:00"; it comes to threejs with the next merge); sheets on this machine `/home/claude/shots/fin/roomviews13/<house>.jpg`. Of 197 room-and-level rows: room 120, empty 77, dark by day 19, door leaf in the face 14, stair in the way 1 (first-pass verdicts from pixels and plan facts; "empty" includes passages and stair wells, and a dark view can hide furniture).
+**The finding that matters: 49 rows say "room name not in ROOMS_SPEC".** The plan's room names differ from the table's for many houses (the mill and in.13 have a plan "store" the spec lacks; the spec has "leg" and "yard"), so those rooms get nothing from `72n_rooms.js`. That is most of the empty rooms. So, as part of Job 2:
+1. Make the join explicit: for every plan room, either a spec room it maps to (by use, not by name: a small table of aliases per house kind), or a default by the room's use (store, loft, passage, chamber, kitchen, workshop) drawn from the household's trade and means. No room may fall through silently: `test/interiors.js` fails when a room of a lived-in house has neither, and prints the list.
+2. Report: rows not in the spec before and after (49 now), and the room camera's "empty" count before and after (77 now; passages and stair wells excepted by kind).
+Job 1 (the stair out of the doorway) stays first. The draper's cloth bolts, seen in your picture: the reds, yellow, blue and green are paint-bright; dyed cloth is madder, weld, woad, walnut: duller, a little uneven, none pure.
+
 ## 2026-11-18 12:40 UTC: a room camera exists; its first list for you
 
 The inspector has written `test/roomviews.mjs` (+ `test/roomviews_sheet.py`, on fork-fin, coming to threejs with its next candidate): for every room, a view from each doorway 1.3 m inside at eye height along the room, and from each stair head, at 13:00 and 21:00, on one labelled sheet per house. Use it for your own proofs from now on (Job 1's pictures too). It is running it over all 57 houses and will put a table in `docs/FINISH.md` (house, room, verdict, what ROOMS.md says the room should hold).
