@@ -54,7 +54,7 @@ Feel.talk = npc => { Feel.talkNpc = npc; Feel.talkPlaced = false; Feel.talkMove 
 // [cast] where to stand to talk: here if the line from the eye to the speaker's head is clear and nothing hangs over your head; otherwise the nearest clear place
 // on a ring round the speaker (1.1 to 1.9 m, on the same floor, not in anything solid)
 Feel.talkPlace = (n, h) => {
-  const P = Player, eyeAt = (x, y, z) => [x, y + P.eye, z], clear = (x, y, z) => { const e = eyeAt(x, y, z); return !World.sightBlocked(e[0], e[1], e[2], h[0], h[1], h[2], 0.35) && !World.sightBlocked(x, y + 0.5, z, x, e[1] + 0.25, z + 0.001, 0.05) && !World.blockedAt(x, z, 0.28); };
+  const P = Player, eyeAt = (x, y, z) => [x, y + P.eye, z], clear = (x, y, z) => { const e = eyeAt(x, y, z); return !World.sightBlocked(e[0], e[1], e[2], h[0], h[1], h[2], 0.35) && !World.sightBlocked(x, y + 0.5, z, x, e[1] + 0.25, z + 0.001, 0.05) && !solid(x, y, z); }, solid = (x, y, z) => { const l = Col.grid.get(Math.floor(x / Col.cell) * 4096 + Math.floor(z / Col.cell)); if (!l) return false; const q = [x, 0, z]; for (const c of l) { if (c.y1 !== undefined && (c.y1 < y + 0.3 || c.y0 > y + 1.7)) continue; q[0] = x; q[2] = z; if (colPush(q, 0.28, c)) return true; } return false; };          /* [cast] World.blockedAt tests at y = 0: indoors it found every place blocked, so the step aside never happened */
   if (clear(P.pos[0], P.pos[1], P.pos[2])) return;
   const a0 = Math.atan2(P.pos[0] - n.pos[0], -(P.pos[2] - n.pos[2])); let best = null, bs = 1e9;
   for (const r of [1.3, 1.6, 1.1, 1.9]) for (let i = 0; i < 16; i++) { const a = a0 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * Math.PI / 8, x = n.pos[0] + Math.sin(a) * r, z = n.pos[2] - Math.cos(a) * r, g = World.groundAt(x, z, P.pos[1] + 0.6);

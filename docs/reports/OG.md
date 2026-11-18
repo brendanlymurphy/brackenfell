@@ -2,6 +2,38 @@
 
 Newest first. Times UTC.
 
+## 2026-11-18, the 07:10 inbox (fork-integ)
+
+I checked out `fork-integ` (7b637a0) in a scratch worktree and ran the three failing steps there, with my files copied in. Nothing pushed
+to it.
+
+**`apart` and `npcsep` (the Byrds).** On fork-integ the cooper's plan has two seats, no bench, and every place it names (`home`, `fire1`,
+`stand2`, `front`, `pew1` ...) at one point, because a plan's missing places are all made at its `home`. Your `k < seats.length` fix was
+not enough: all three Byrds worked and ate at that one point. Now (`77e_households.js`, my file) no two of a household are given standing
+places closer than 0.8 m. When every place the plan names is taken, one is made on the plan with `pSpot` (read-only use of the plan
+functions) at the nearest free point of that floor, 0.8 m off the walls, facing the room. Stair ends, pews, door and `front` places are
+never used for this. With that file on fork-integ, `apart`, `npcsep` and `people` pass; on this branch too.
+
+**`hartdoor`.** On fork-integ there is no way across the Hart's floor from the front door to the cellar stair's head: a floor map with a
+height-aware collision test shows the head (x 264.5 to 266, z 2.0 to 2.5, the stair now at the back wall) boxed in. A solid line runs across
+z 0.5 to 1.5 from x 255.5 to 267, with one gap at x 256 that leads to the stairwell's west end, not its head; beyond z 3.0 a strip at
+x 266 leads nowhere. **For the interiors session:** open the way to the stair head from the bar room (the rail or counter across z 0.5 to 1.5
+near x 264 to 266). The check now finds a player's own way round the furniture on a 0.25 m floor grid, not the villagers' graph, so it
+fails only when a player truly cannot get there.
+
+**Requests for the plan files (now the interiors session's), each held by a test:**
+- A bar in the Hart that always exists (my retry is gone); held by `people` (Greta at her bar, not the hearth) and `hartdoor`.
+- A bed for every sleeper (`castBeds` / `castBedIn`: 10 extra beds, Tobin's in the forge loft); held by `cast` (77 beds, one sleeper each,
+  in their own house).
+- Seats: a household eats at its own table where the room allows; held by `apart`/`people` (now passes without seats, by standing).
+- Distinct standing places in a workshop or back room (a bench, a counter, a hearth) rather than everything at `home`.
+
+**Found:** `World.blockedAt` ignores height (it tests at y = 0), so inside a cell it counts the floors and ceilings as solid and reports
+nearly everything blocked. Anything that uses it indoors is wrong. Callers: `77_npc.js` passers-by, `77c_patrons.js`, `73k_square.js`
+(all outdoors, so fine today). My talk camera's step aside (`87_feel.js`) used it, so indoors it never stepped you clear of a shelf: now height-aware.
+
+Gate: quick 20 of 21 locally on this head; `stairs` is the one inherited from `threejs`.
+
 ## 2026-11-18, the 06:20 inbox
 
 Gate: quick 20 of 21 locally on the head; `stairs` fails, the same single walk as on `threejs` 2cc9ae6 (the Hart's cellar stair at half stick from (266.2, −399.7, −0.5)): not from this branch, it came with the merge.
