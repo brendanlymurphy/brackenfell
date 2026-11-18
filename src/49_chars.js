@@ -195,8 +195,11 @@ const Chars = (() => {
         const DP = dressPlan()[def.id];      // [ch4] people who live or work together differ in hat, hair colour and the colour of the main garment (docs/WARDROBE.md)
         if (DP && !def.hat && !guard) { wear.hat = DP.hat || null; if (DP.hatCol) { if (wear.hat === 'kerchief' || wear.hat === 'coif') WC.linen = DP.hatCol.map(v => v * 1.25); else WC.hat = DP.hatCol; } } if (DP && DP.wool && (def.cast || !def.top)) WC.wool = DP.wool;
         wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
+        // [ch4] a face of one's own without a new model: skin a little lighter or darker, warmer or cooler; brows darker or fairer (the head's shape is varied in update, by the head joint)
+        let fh = 0; for (const ch of String(def.id || '')) fh = (fh * 131 + ch.charCodeAt(0)) >>> 0; const fr = k => ((fh >>> (k * 4)) % 1009) / 1009;
+        const skinK = 0.88 + 0.24 * fr(1), warmK = 0.96 + 0.08 * fr(2), faceT = def.id && !(TEST && TEST.faceoff) ? { skin: (SKIN_T[body] || SKIN_T.light).map((v, i) => v * skinK * (i === 0 ? warmK : i === 2 ? 2 - warmK : 1)), brow: [1, 1, 1].map(() => 0.55 + 0.7 * fr(3)) } : null;
         const hairT = DP && DP.hair && (def.cast || !def.hair) ? { hair: DP.hair } : null, ageGrey = DP && DP.age ? (DP.age >= 62 ? 0.85 : DP.age >= 52 ? 0.45 : 0) : 0;
-        return { body, fit: FIT[body] || 1, hairGrey: Math.max(ageGrey, ({ f_elder: 0.96, m_elder: 0.92 })[body] || 0) || ({ m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 })[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, hairT, TINT[def.id], def.tint), dye, acc };
+        return { body, fit: FIT[body] || 1, hairGrey: Math.max(ageGrey, ({ f_elder: 0.96, m_elder: 0.92 })[body] || 0) || ({ m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 })[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, faceT, hairT, TINT[def.id], def.tint), dye, acc };
       },
     });
   }
@@ -936,6 +939,7 @@ const Chars = (() => {
       turnBone(H, nb, lk[0] * 0.35, lk[1] * 0.35 * sg); turnBone(H, hb, lk[0] * 0.65, lk[1] * 0.65 * sg);
       [nb, hb].forEach((b, i) => { if (b) { L[i].mine.copy(b.quaternion); L[i].on = true; } });
     }
+    { const hb = H.bones.head; if (hb && !(H.def && H.def.foe) && !(TEST && TEST.faceoff)) { if (!H.headK) { const u = k => ((H.seed >>> (k * 5)) % 101) / 101; H.headK = [0.95 + 0.1 * u(1), 0.965 + 0.07 * u(2), 0.955 + 0.09 * u(3)]; } hb.scale.set(H.headK[0], H.headK[1], H.headK[2]); } }      // [ch4] each head its own width, length and depth (within 5%)
     if (H.gripAmt) gripUpdate(H);      // [ch1]
     blanketUpdate(H, lying, dcam === undefined ? 0 : dcam);      // [ch4]
     if (H.post && pv.visible) for (const f of H.post) f(H, st);      // [ch1] held things that follow the hands (src/77d_handprops.js)
