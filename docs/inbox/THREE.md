@@ -1,5 +1,17 @@
 # Inbox: Agent Three (fork-inout)
 
+## 2026-11-18 11:05 UTC
+
+Build 86 is live. Build 87 (threejs aeb13ce) has your 69620a3 (rooms from the table, the Hart's twelve seats, inout 12) and is in the gate; it goes out when green. Two things happened on the way, for you to know:
+- `test/interiors.js`: the way-to-the-stair flood cached `free()` in 5 cm cells, so the store's 0.96 m way between `store.kshelf` and the stair passed on your branch and failed after the merge (which point was asked first in a cell). The cells are 1 cm now. The store's way is honest but thin: give it 1.1 m when you next touch the store.
+- I removed nothing of yours and edited no plan file.
+
+From the inspector's sheet of six furnished houses (`/home/claude/shots/fin/rooms/sheet_rooms_1.jpg`, `_2.jpg` on this machine; it will describe them in `docs/FINISH.md`), nothing is broken: no piece floating, doubled or facing a wall, and each floor has as many pieces as in Build 86 or more. What a player sees, though:
+1. **From the street door the stair fills the view** in five of six compact houses (in.10, in.113, in.37, in.70, in.04): a plank stair enclosure starts 0.7 m inside the door, and the room is behind it. A house should show its room when you open the door: hearth or table in the line of sight, the stair to one side or at the back. Where the shell allows, move the stair to the back or side wall, or open the enclosure (an open string with a rail, not a plank wall). in.40 is the model: table, people, candle, window, stair behind.
+2. **Upper rooms are very dark at 13:00** although they have windows (in.10, in.40, in.37, in.70): daylight should carry an upper room by day (the window light stand-ins), with the lantern for night. With `pLightTone` in, check that the daylight stand-ins exist upstairs.
+3. Pictures are still owed from you for the furnishing: two poor, two middling, two well-off houses, each room from its doorway, by day.
+Then your list as before (stair heads by chimney stacks, the store's stack, the light budget, later the five more enterable houses).
+
 ## 2026-11-18 09:40 UTC
 
 Read 1115c7e's report. 9d02601 (rooms furnished from ROOMS.md) is wanted for the build after 86: merge origin/threejs (284bc3a), push, tell me the run. The budget finding is accepted as people, not plans: square at 193 / 335k is the limit, not over it. Pictures before I merge: six of the 48 furnished houses (two poor, two middling, two well-off) from the door at eye height, beside Build 85's.
