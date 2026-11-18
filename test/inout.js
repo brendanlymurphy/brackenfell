@@ -91,8 +91,16 @@ for (const h of houses) {
   const B0 = bb(0) || { x0: 0, x1: 0, z0: 0, z1: 0, w: 0, d: 0, area: 0 }, cx0 = (B0.x0 + B0.x1) / 2;
   const facing = wl => wl.ax === 'x' ? (wl.ns < 0 ? 'front' : 'back') : (wl.ns < 0 ? 'left' : 'right');
   const kx = B0.w ? s.w / B0.w : 1, kz = B0.d ? s.d / B0.d : 1, alongIn = (wl, pos) => wl.ax === 'x' ? (pos - cx0) * kx : (pos - B0.z0) * kz;      /* the plan's wall scaled to the shell's */
-  const iWin = P.windows.map(w => ({ wall: facing(w.wall), lv: w.k, along: alongIn(w.wall, w.pos), room: w.room && w.room.id })).filter(w => { const r = P.rooms[w.room]; return !(r && isYard(r)); });
-  const iDoor = P.doors.filter(d => d.b === null && d.wall).map(d => ({ wall: facing(d.wall), lv: d.k, along: alongIn(d.wall, d.pos), room: d.a }));
+  // a window inside, carried onto the shell: plan -> the cell -> the house's site (the cell is the house moved away from the town), its offset from the plan's middle scaled to the shell
+  const Mc = c.Mx && c.Ms ? new THREE.Matrix4().fromArray(c.Mx).multiply(new THREE.Matrix4().fromArray(c.Ms).invert()) : null;
+  const toSite = (x, z) => { const q = P.w2(x, 0, z); if (!Mc) return local(s, q[0], q[2]); _v.set(q[0], q[1], q[2]).applyMatrix4(Mc); return local(s, _v.x, _v.z); };
+  const pc = toSite((B0.x0 + B0.x1) / 2, (B0.z0 + B0.z1) / 2), px = toSite((B0.x0 + B0.x1) / 2 + 1, (B0.z0 + B0.z1) / 2), alongU = Math.abs(px[0] - pc[0]) > 0.5;
+  const ku = s.w / (alongU ? B0.w : B0.d), kv = s.d / (alongU ? B0.d : B0.w);
+  const onShell = w => { const x = w.wall.ax === 'x' ? w.pos : w.wall.c, z = w.wall.ax === 'x' ? w.wall.c : w.pos, l = toSite(x, z), u = (l[0] - pc[0]) * ku, v = (l[1] - pc[1]) * kv;
+    const ds = { front: Math.abs(v + s.d / 2), back: Math.abs(v - s.d / 2), left: Math.abs(u + s.w / 2), right: Math.abs(u - s.w / 2) }; let wn = 'front'; for (const k of WN) if (ds[k] < ds[wn]) wn = k;
+    return { wall: wn, along: wn === 'front' || wn === 'back' ? u : v + s.d / 2 }; };
+  const iWin = P.windows.map(w => { const o = onShell(w); return { wall: o.wall, lv: w.k, along: o.along, room: w.room && w.room.id }; }).filter(w => { const r = P.rooms[w.room]; return !(r && isYard(r)); });
+  const iDoor = P.doors.filter(d => d.b === null && d.wall).map(d => { const o = onShell({ wall: d.wall, pos: d.pos }); return { wall: o.wall, lv: d.k, along: o.along, room: d.a }; });
   row.in = { levels: lvs, lofts: lofts.length, up: up.length, cellar: lvs.some(k => k < 0), w: B0.w, d: B0.d, area: r1(B0.area), yards: rooms.filter(isYard).map(r => r.id), win: iWin.length, doors: iDoor, per: lvs.map(k => { const b = bb(k); return b ? [k, b.w, b.d, r1(b.area)] : [k, 0, 0, 0]; }) };
   // ── compare ──
   // 1 storeys

@@ -9,15 +9,15 @@ Cannot tell: whether a window that matches by count also looks the same size and
 
 | | |
 |---|---|
-| Buildings / failing at least one of the five checks | 57 / **50** |
-| 1. Storeys shown outside differ from levels above ground inside | **14** (outside shows more: 4; inside holds more: 10) |
+| Buildings / failing at least one of the five checks | 57 / **47** |
+| 1. Storeys shown outside differ from levels above ground inside | **11** (outside shows more: 1; inside holds more: 10) |
 | 2. A floor is more than 1.5 times the shell's area | **19** (ground floor area over shell area: least 1.26, median 1.48, worst 4.46) |
 | 3. Upper doors outside / with no door inside on that wall and level | 5 / **0** |
 | ... balconies outside / with no door onto them | 5 / **0** |
 | ... upper doors inside that open onto nothing outside | **0** |
-| 4. Windows outside / inside | 377 / 530 |
-| ... difference summed per wall and level / outside windows with an inside window in the same place | **275** / 239 of 377 |
-| ... buildings whose windows do not all match | **49** |
+| 4. Windows outside / inside | 377 / 534 |
+| ... difference summed per wall and level / outside windows with an inside window in the same place | **275** / 261 of 377 |
+| ... buildings whose windows do not all match | **45** |
 | 5. Cellars inside / with nothing outside that shows one | 9 / **9** |
 
 ## Every building
@@ -34,17 +34,17 @@ Windows by wall (F front, B back, L left, R right seen from inside the front doo
 | `herbalist` | Maren’s Cottage | 1 | 1 | 3.1 | 6.6 x 5.6 | 8.5 x 6.5 | 1.49 |  |  |  |  | 4 / 4 | 3 | F 0:1/1; B 0:1/1; L 0:1/1; R 0:1/1 |  |  | w |
 | `guardhouse` | Warden’s Lodge | 2 | 2 | 6.1 | 7.2 x 5.6 | 8.5 x 7 | 1.48 | front L1 | front L1 | front L1 |  | 7 / 4 | 4 | F 0:1/1 1:1/1; B 0:1/1 1:1/1; L 1:1/0; R 0:1/0 1:1/0 |  |  | w |
 | `weaver` | Riverside Cottage | 2 | 2 | 6.1 | 7.6 x 6 | 9 x 7.5 | 1.48 |  |  |  |  | 8 / 8 | 6 | F 0:1/1 1:1/1; B 0:2/2 1:1/1; L 1:1/1; R 0:1/1 1:1/1 |  |  | w |
-| `chapel` | Chapel of the Dawn | 1 | 1 | 4.6 | 14 x 8 | 10 x 16 | 1.43 |  |  |  |  | 8 / 8 | 0 | F 0:4/0; B 0:4/0; L 0:0/4; R 0:0/4 | yes |  | w c |
-| `mill` | Dunn’s Mill | 2 | 2 | 6.1 | 7.4 x 6.4 | 10 x 12.5 | 1.94 |  |  |  |  | 8 / 15 | 0 | F 0:2/2 1:1/1; B 0:0/1 1:1/1; L 0:1/2 1:1/2; R 0:1/4 1:1/2 |  |  | f w |
+| `chapel` | Chapel of the Dawn | 1 | 1 | 4.6 | 14 x 8 | 10 x 16 | 1.43 |  |  |  |  | 8 / 8 | 8 | F 0:4/4; B 0:4/4 | yes |  | c |
+| `mill` | Dunn’s Mill | 2 | 2 | 6.1 | 7.4 x 6.4 | 10 x 12.5 | 1.94 |  |  |  |  | 8 / 15 | 4 | F 0:2/4 1:1/3; B 0:0/2 1:1/0; L 0:1/2 1:1/0; R 0:1/1 1:1/3 |  |  | f w |
 | `farm` | Fairweather Farm | 1 | 2 | 3.1 | 8 x 6 | 12 x 13 | 3.25 |  |  |  |  | 3 / 23 | 1 | F 0:1/2 1:0/2; B 0:2/2 1:0/2; L 0:0/4 1:0/3; R 0:0/4 1:0/4 |  |  | s f w |
 | `hunter` | Wren’s Cabin | 1 | 1 | 3.1 | 6.2 x 5.2 | 7 x 8 | 1.74 |  |  |  |  | 2 / 7 | 0 | F 0:1/1; B 0:1/2; L 0:0/2; R 0:0/2 |  |  | f w |
-| `fisher` | Fisher’s Hut | 1 | 2 | 3.1 | 5.2 x 4.6 | 8 x 8 | 2.68 |  |  |  |  | 1 / 14 | 1 | F 0:1/2 1:0/2; B 0:0/2 1:0/2; L 0:0/2 1:0/1; R 0:0/2 1:0/1 |  |  | s f w |
+| `fisher` | Fisher’s Hut | 1 | 2 | 3.1 | 5.2 x 4.6 | 8 x 8 | 2.68 |  |  |  |  | 1 / 14 | 1 | F 0:1/2; B 0:0/2 1:0/2; L 0:0/2 1:0/2; R 0:0/2 1:0/2 |  |  | s f w |
 | `draper` | Lindqvist’s Draper | 2 | 2 | 6.1 | 6.4 x 5.6 | 7.5 x 7 | 1.46 | front L1 | front L1 | front L1 |  | 7 / 5 | 4 | F 0:2/2; B 1:1/1; L 0:1/0 1:1/0; R 0:1/1 1:1/1 | yes |  | w c |
-| `shop.n2` | Shop | 3 | 2 | 8.8 | 4 x 4 | 5.5 x 4 | 1.38 |  |  |  |  | 3 / 2 | 2 | F 0:1/1 1:1/1 2:1/0 |  |  | s w |
+| `shop.n2` | Shop | 3 | 3 | 8.8 | 4 x 4 | 5.5 x 4 | 1.38 |  |  |  |  | 3 / 3 | 3 | F 0:1/1 1:1/1 2:1/1 |  |  |  |
 | `shop.n3` | Shop | 2 | 2 | 5.8 | 6 x 4 | 6.5 x 5.5 | 1.49 | front L1 | front L1 | front L1 |  | 2 / 2 | 2 | F 0:2/2 |  |  |  |
-| `shop.n4` | Shop | 3 | 2 | 8.8 | 4 x 4 | 5.5 x 4 | 1.38 |  |  |  |  | 3 / 2 | 2 | F 0:1/1 1:1/1 2:1/0 |  |  | s w |
+| `shop.n4` | Shop | 3 | 3 | 8.8 | 4 x 4 | 5.5 x 4 | 1.38 |  |  |  |  | 3 / 3 | 3 | F 0:1/1 1:1/1 2:1/1 |  |  |  |
 | `shop.s0` | Shop | 2 | 2 | 5.8 | 4 x 4 | 5.5 x 4 | 1.38 |  |  |  |  | 2 / 2 | 2 | F 0:1/1 1:1/1 |  |  |  |
-| `shop.s1` | Shop | 3 | 2 | 8.8 | 6 x 4 | 6.5 x 5.5 | 1.49 | front L1 | front L1 | front L1 |  | 4 / 2 | 2 | F 0:2/2 2:2/0 |  |  | s w |
+| `shop.s1` | Shop | 3 | 3 | 8.8 | 6 x 4 | 6.5 x 5.5 | 1.49 | front L1 | front L1 | front L1 |  | 4 / 4 | 4 | F 0:2/2 2:2/2 |  |  |  |
 | `shop.s2` | Shop | 2 | 2 | 5.8 | 6 x 4 | 6.5 x 5.5 | 1.49 |  |  |  |  | 3 / 3 | 3 | F 0:2/2 1:1/1 |  |  |  |
 | `in.02` | Cooper’s House | 1 | 1+loft | 3 | 6.4 x 5.2 | 7.5 x 6.5 | 1.46 |  |  |  |  | 4 / 4 | 4 | F 0:1/1; B 0:2/2; R 0:1/1 |  |  |  |
 | `in.04` | Fletcher’s House | 2 | 2 | 6 | 6.4 x 5.8 | 7.5 x 7 | 1.41 |  |  |  |  | 12 / 7 | 5 | F 0:1/1 1:3/3; B 0:2/0 1:1/0; L 0:1/0 1:1/1; R 0:2/1 1:1/1 |  |  | w |
@@ -58,16 +58,16 @@ Windows by wall (F front, B back, L left, R right seen from inside the front doo
 | `in.21` | Dyer’s House | 2 | 2 | 6 | 6.4 x 5 | 8 x 6 | 1.5 |  |  |  |  | 10 / 10 | 8 | F 0:1/1 1:3/3; B 0:2/2 1:1/1; L 1:1/1; R 0:1/1 1:1/1 |  |  | w |
 | `in.23` | Widow Hale’s House | 1 | 1 | 3 | 5 x 5 | 7 x 8 | 2.24 |  |  |  |  | 6 / 7 | 4 | F 0:0/1; B 0:3/2; L 0:1/2; R 0:2/2 |  |  | f w |
 | `in.33` | Merchant’s House | 2+r | 2 | 6 | 7.6 x 5 | 9.5 x 6 | 1.5 |  |  |  |  | 11 / 10 | 8 | F 0:1/1 1:2/2 roof:1/0; B 0:2/2 1:2/2; L 1:1/1; R 0:1/1 1:1/1 | yes |  | s w c |
-| `in.34` | Wren Cottage | 1 | 2 | 3 | 7.6 x 6.2 | 9 x 12 | 2.29 |  |  |  |  | 5 / 22 | 2 | F 0:1/2 1:0/3; B 0:2/2 1:0/3; L 0:1/4 1:0/2; R 0:1/4 1:0/2 |  |  | s f w |
-| `in.36` | Mason’s House | 2 | 2 | 6 | 7 x 5 | 10 x 12.5 | 2.16 |  |  |  |  | 14 / 16 | 4 | F 0:1/2 1:2/1; B 0:3/2 1:3/1; L 0:1/4 1:1/2; R 0:2/2 1:1/2 |  |  | f w |
+| `in.34` | Wren Cottage | 1 | 2 | 3 | 7.6 x 6.2 | 9 x 12 | 2.29 |  |  |  |  | 5 / 22 | 2 | F 0:1/2 1:0/1; B 0:2/2 1:0/3; L 0:1/4 1:0/3; R 0:1/4 1:0/3 |  |  | s f w |
+| `in.36` | Mason’s House | 2 | 2 | 6 | 7 x 5 | 10 x 12.5 | 2.16 |  |  |  |  | 14 / 16 | 6 | F 0:1/4 1:2/0; B 0:3/1 1:3/3; L 0:1/4 1:1/3; R 0:2/1 1:1/0 |  |  | f w |
 | `in.37` | Cutler’s House | 1 | 2 | 3 | 7 x 5.6 | 6 x 14 | 2.14 |  |  |  |  | 6 / 22 | 2 | F 0:1/0 1:0/2; B 0:2/2 1:0/2; L 0:1/4 1:0/4; R 0:2/4 1:0/4 | yes |  | s f w c |
-| `in.38` | Marsh House | 2 | 2 | 6 | 7 x 4.4 | 8 x 12.5 | 3.25 |  |  |  |  | 13 / 20 | 5 | F 0:1/2 1:2/2; B 0:2/2 1:3/2; L 0:1/4 1:1/2; R 0:2/4 1:1/2 |  |  | f w |
+| `in.38` | Marsh House | 2 | 2 | 6 | 7 x 4.4 | 8 x 12.5 | 3.25 |  |  |  |  | 13 / 20 | 7 | F 0:1/2 1:2/0; B 0:2/2 1:3/2; L 0:1/4 1:1/3; R 0:2/4 1:1/3 |  |  | f w |
 | `in.40` | Scribe’s House | 1 | 1+loft | 3 | 5.4 x 4.4 | 6 x 5.5 | 1.39 |  |  |  |  | 6 / 4 | 4 | F 0:1/1; B 0:3/2; R 0:2/1 |  |  | w |
 | `in.44` | Cobbler’s House | 2 | 2 | 6 | 5 x 5.2 | 5.5 x 7 | 1.48 |  |  |  |  | 9 / 8 | 8 | F 1:3/2; B 0:2/2 1:1/1; L 1:1/1; R 0:1/1 1:1/1 |  |  | w |
 | `in.45` | Tinker’s House | 1 | 1+loft | 3 | 5.6 x 5.8 | 6.5 x 7 | 1.4 |  |  |  |  | 4 / 4 | 4 | F 0:1/1; B 0:2/2; R 0:1/1 |  |  |  |
-| `in.51` | Basketmaker’s House | 2 | 2 | 6 | 5 x 5.2 | 6 x 8 | 1.85 |  |  |  |  | 11 / 12 | 4 | F 1:3/2; B 0:3/2 1:1/2; L 0:1/2 1:1/1; R 0:1/2 1:1/1 |  |  | f w |
-| `in.60` | Garrick’s House | 1 | 2 | 3 | 5 x 5.2 | 6 x 8 | 1.85 |  |  |  |  | 6 / 12 | 3 | F 1:0/2; B 0:3/2 1:0/2; L 0:1/2 1:0/1; R 0:2/2 1:0/1 |  |  | s f w |
-| `in.65` | Ropemaker’s House | 2 | 2 | 6 | 5.6 x 4.4 | 10 x 12.5 | 3.73 |  |  |  |  | 10 / 15 | 4 | F 0:1/2 1:3/1; B 0:2/1 1:1/1; L 0:0/2 1:1/2; R 0:1/4 1:1/2 |  |  | f w |
+| `in.51` | Basketmaker’s House | 2 | 2 | 6 | 5 x 5.2 | 6 x 8 | 1.85 |  |  |  |  | 11 / 12 | 2 | F 1:3/0; B 0:3/2 1:1/2; L 0:1/2 1:1/2; R 0:1/2 1:1/2 |  |  | f w |
+| `in.60` | Garrick’s House | 1 | 2 | 3 | 5 x 5.2 | 6 x 8 | 1.85 |  |  |  |  | 6 / 12 | 3 | B 0:3/2 1:0/2; L 0:1/2 1:0/2; R 0:2/2 1:0/2 |  |  | s f w |
+| `in.65` | Ropemaker’s House | 2 | 2 | 6 | 5.6 x 4.4 | 10 x 12.5 | 3.73 |  |  |  |  | 10 / 15 | 5 | F 0:1/2 1:3/0; B 0:2/1 1:1/3; L 0:0/2 1:1/0; R 0:1/4 1:1/3 |  |  | f w |
 | `in.66` | Saddler’s House | 1 | 1+loft | 3 | 8.04 x 4.6 | 10 x 5.5 | 1.49 |  |  |  |  | 4 / 3 | 3 | F 0:1/1; B 0:2/2; R 0:1/0 |  |  | w |
 | `in.67` | Bram’s House | 2 | 2 | 6 | 5.6 x 4.6 | 6 x 6 | 1.4 |  |  |  |  | 10 / 9 | 9 | F 0:1/1 1:3/3; B 0:2/2 1:1/1; L 1:1/0; R 0:1/1 1:1/1 |  |  | w |
 | `in.70` | Tailor’s House | 1 | 1+loft | 3 | 5.6 x 5 | 6 x 7 | 1.5 |  |  |  |  | 4 / 3 | 3 | F 0:1/1; B 0:2/2; R 0:1/0 |  |  | w |
@@ -79,11 +79,11 @@ Windows by wall (F front, B back, L left, R right seen from inside the front doo
 | `in.93` | Shepherd’s House | 1 | 1 | 3 | 8.040000000000003 x 4.6 | 7 x 7 | 1.32 |  |  |  |  | 4 / 7 | 2 | F 0:1/1; B 0:2/2; L 0:0/2; R 0:1/2 |  |  | w |
 | `in.94` | Pell House | 2 | 2 | 6 | 6.2 x 4.6 | 7 x 6 | 1.47 |  |  |  |  | 10 / 9 | 9 | F 0:1/1 1:3/3; B 0:2/2 1:1/1; L 1:1/0; R 0:1/1 1:1/1 |  |  | w |
 | `in.111` | Butcher’s House | 1 | 2 | 3 | 5 x 5 | 8 x 12 | 3.84 |  |  |  |  | 5 / 24 | 4 | F 0:0/2 1:0/2; B 0:3/2 1:0/2; L 0:1/4 1:0/4; R 0:1/4 1:0/4 | yes |  | s f w c |
-| `in.113` | Carpenter’s House | 2 | 2 | 6 | 7 x 5 | 10 x 12.5 | 2.63 |  |  |  |  | 14 / 15 | 3 | F 0:1/2 1:2/1; B 0:3/1 1:3/1; L 0:1/4 1:1/2; R 0:2/2 1:1/2 |  |  | f w |
+| `in.113` | Carpenter’s House | 2 | 2 | 6 | 7 x 5 | 10 x 12.5 | 2.63 |  |  |  |  | 14 / 15 | 6 | F 0:1/2 1:2/0; B 0:3/1 1:3/3; L 0:1/4 1:1/3; R 0:2/2 1:1/0 |  |  | f w |
 | `in.115` | Brewer’s House | 1 | 2 | 3 | 7 x 5 | 12 x 13 | 4.46 |  |  |  |  | 7 / 23 | 4 | F 0:1/2 1:0/2; B 0:3/2 1:0/2; L 0:1/4 1:0/3; R 0:2/4 1:0/4 |  |  | s f w |
 | `in.116` | Glover’s House | 2 | 2 | 6 | 4.6 x 6.2 | 5.5 x 7.5 | 1.45 |  |  |  |  | 8 / 8 | 6 | F 1:2/2; B 0:2/2 1:1/1; L 1:1/1; R 0:1/1 1:1/1 |  |  | w |
 | `high.a` | Highfold: the Reeve’s House | 1 | 1 | 3.1 | 6.4 x 5.2 | 8 x 8 | 1.92 |  |  |  |  | 3 / 8 | 3 | F 0:1/2; B 0:1/2; L 0:0/2; R 0:1/2 |  |  | f w |
-| `high.c` | Highfold: the Shepherd’s House | 1 | 2 | 3.1 | 6 x 5 | 9 x 12 | 3.6 |  |  |  |  | 2 / 22 | 2 | F 0:1/2 1:0/3; B 0:1/2 1:0/3; L 0:0/4 1:0/2; R 0:0/4 1:0/2 |  |  | s f w |
+| `high.c` | Highfold: the Shepherd’s House | 1 | 2 | 3.1 | 6 x 5 | 9 x 12 | 3.6 |  |  |  |  | 2 / 22 | 2 | F 0:1/2 1:0/1; B 0:1/2 1:0/3; L 0:0/4 1:0/3; R 0:0/4 1:0/3 |  |  | s f w |
 
 ## For the outside worker
 

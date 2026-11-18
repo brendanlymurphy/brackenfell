@@ -328,7 +328,7 @@ function hCompact(P, c, F) {
   let up1, up2 = null;
   if (two && !single) { up1 = pRoom(P, 1, shop ? 'upfront' : 'solar', 'bedroom', X0, 0, X1, Zp, F.fin(1)); up2 = pRoom(P, 1, shop ? 'upback' : 'loft', 'bedroom', X0, Zp, X1, D, F.fin(1)); }
   else up1 = pRoom(P, 1, two ? 'chamber' : 'loft', 'bedroom', X0, 0, X1, D, F.fin(1));
-  if (three) { pLevel(P, 2, P.lv[1].y + H_UP + PW.SLAB, 2.3, { loft: true }); pRoom(P, 2, 'loft', 'store', X0, 0, X1, D, F.fin(1)); }
+  if (three) { pLevel(P, 2, P.lv[1].y + H_UP + PW.SLAB, 2.4, { loft: true }); pRoom(P, 2, 'loft', 'store', X0, 0, X1, D, F.fin(1)); }
   if (cellarOK) { const a = rr(X0, Xs); pRoom(P, -1, 'cellar', 'cellar', a[0], Zp, a[1], D, { floor: 'stone', win: false }); }
   pDoor(P, front.id, null, 0, 0); P.clear.push({ x0: -0.8, x1: 0.8, z0: 0, z1: 2.4, k: 0, kind: 'path', room: front });
   if (!single) { pDoor(P, front.id, left.id, M(X0 + 0.8), Zp); pDoor(P, front.id, right.id, M(X1 - 0.8), Zp); }
