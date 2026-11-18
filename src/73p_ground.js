@@ -11,7 +11,7 @@ const GROUND = {
     { id: 'orchard.nw', kind: 'orchard', x0: -63, z0: -55, x1: -48, z1: -26 },
     { id: 'orchard.ne', kind: 'orchard', x0: 36, z0: -59, x1: 52, z1: -45 },
     { id: 'green.sw', kind: 'green', x: -37, z: 54, r: 8 },
-    { id: 'drying.sw', kind: 'drying green', x0: -29, z0: 44, x1: -18, z1: 50 }
+    { id: 'drying.sw', kind: 'drying green', earth: 1, x0: -29, z0: 44, x1: -18, z1: 50 }
   ],
   beds: [      // [x0, z0, x1, z1, bed axis]: strips 2.4 m of bed and 0.6 m of path across the short side
     [-58, 58, -44, 74, 'x'], [-30, 56, -8, 75, 'x'], [14, 58, 38, 76, 'x'], [36, -43, 52, -7, 'x'], [40, 14, 52, 75, 'x']
@@ -30,7 +30,7 @@ function groundFill(da, db, Rz, half) {
       const x = i / sc - half, z = j / sc - half; let keep = false;
       let inside = false, dE = 1e9; { const E = GROUND.edge; for (let a = 0, b = E.length - 1; a < E.length; b = a++) { const xa = E[a][0], za = E[a][1], xb = E[b][0], zb = E[b][1]; if ((za > z) !== (zb > z) && x < (xb - xa) * (z - za) / (zb - za) + xa) inside = !inside; const vx = xb - xa, vz = zb - za, t = Math.max(0, Math.min(1, ((x - xa) * vx + (z - za) * vz) / (vx * vx + vz * vz || 1))), d = Math.hypot(x - xa - vx * t, z - za - vz * t); if (d < dE) dE = d; } }
       if (!inside) continue; const wEdge = Math.min(1, dE / 3), fade = _grVn(x * 1.3 + 40, z * 1.3) < wEdge + 0.1;      // soft, ragged fringe where the town meets the turf outside the edge
-      for (const p of GROUND.places) { if (p.r !== undefined ? Math.hypot(x - p.x, z - p.z) < p.r - 0.8 + _grVn(x * 1.7 + 11, z * 1.7) * 2.2 + _grVn(x * 4.3, z * 4.3 + 7) * 0.8 : (x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1)) { keep = true; break; } }
+      for (const p of GROUND.places) { if (p.earth) continue; if (p.r !== undefined ? Math.hypot(x - p.x, z - p.z) < p.r - 0.8 + _grVn(x * 1.7 + 11, z * 1.7) * 2.2 + _grVn(x * 4.3, z * 4.3 + 7) * 0.8 : (x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1)) { keep = true; break; } }
       if (keep) { for (const p of GROUND.places) if (p.kind === 'orchard' && x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1) { const n = _grVn(x * 0.9, z * 0.9); if (n < 0.34) da[k] = Math.max(da[k], 150); } continue; }
       let bed = null; for (const b of GROUND.beds) if (inR(x, z, [b[0], b[1], b[2], b[3]])) { bed = b; break; }
       if (bed) { const u = (z - bed[1]) / 3.0, f = u - Math.floor(u); if (f < 0.8 && x > bed[0] + 0.6 && x < bed[2] - 0.6 && z > bed[1] + 0.6 && z < bed[3] - 0.6) { if (fade) { db[k] = Math.max(db[k], 235); (GROUND.soil || (GROUND.soil = new Set())).add((Math.round(x) + 400) * 2000 + Math.round(z) + 400); } }      /* beds are bare tilled soil (the 'bare' mask); the field mask would stand wheat on them */ else da[k] = Math.max(da[k], 215 * (fade ? 1 : 0.3)); continue; }
@@ -62,7 +62,7 @@ function buildGround(bucket) {
           if (!planted) continue;
           if (kind === 'beans') { if (Math.round((x - b[0]) / 1.5) % 2 === 0) { const cz = zs + 1.2, cy = gy(x + 0.75, cz); m.mat(MAT.TIMBER, [0.5, 0.4, 0.28], 0.5); for (let q = 0; q < 3; q++) { const a = q * 2.09 + 0.4; m.beam([x + 0.75 + Math.cos(a) * 0.45, cy, cz + Math.sin(a) * 0.45], [x + 0.75, cy + 1.9, cz], 0.018, 0.018); }
             for (let q = 0; q < 3; q++) K(m, 'Prop_Vine2', x + 0.75, cy + 0.3, cz, 0.55 - q * 0.03, _grGn(x, zs) * 6 + q * 2.09, -0.85); } }
-          else for (const zr of [zs + 0.6, zs + 1.8]) for (let q = 0; q < 4; q++) { const px = x + 0.2 + q * 0.37, pz = zr + (_grGn(px * 9, zr * 9) - 0.5) * 0.08, sc = (kind === 'greens' ? 0.5 : 0.36) * (0.85 + _grGn(px * 5, pz * 5) * 0.3), a = _grGn(px, pz) * 6; K(m, 'Prop_Vine4', px, gy(px, pz) + 0.05, pz, sc, a, -0.95); K(m, 'Prop_Vine4', px, gy(px, pz) + 0.05, pz, sc * 0.9, a + 3.14, -0.95); }
+          else for (const zr of [zs + 0.3, zs + 0.9, zs + 1.5, zs + 2.1]) for (let q = 0; q < 3; q++) { const px = x + 0.25 + q * 0.5, pz = zr + (_grGn(px * 9, zr * 9) - 0.5) * 0.08, sc = (kind === 'greens' ? 0.5 : 0.36) * (0.7 + _grGn(px * 5, pz * 5) * 0.7), a = _grGn(px, pz) * 6; K(m, 'Prop_Vine4', px, gy(px, pz) + 0.05, pz, sc, a, -0.95); K(m, 'Prop_Vine4', px, gy(px, pz) + 0.05, pz, sc * 0.9, a + 3.14, -0.95); }
         }
       }
       for (let zs = b[1] + 0.6; zs + 2.4 < b[3] - 0.3; zs += 3.0) { const x = b[0] + 0.25, z = zs + 2.7; if (!_grSoil(x + 1, zs + 1.2)) continue; const m = bk(x, z), y = gy(x, z); K(m, 'rusted_spade_01', b[0] + 1.2, gy(b[0] + 1.2, zs + 2.2) - 0.35, zs + 2.2, 1, 0.5, 0.12); K(m, 'wooden_bucket_01', x, y, z, 1, 1.1); K(m, 'wicker_basket_02', x + 0.6, gy(x + 0.6, z), z + 0.2, 1.3, 2.4); K(m, 'wooden_barrels_01_a', x - 0.6, gy(x - 0.6, z - 0.2), z - 0.2, 1, 0); addCircleCollider(m, x - 0.6, z - 0.2, 0.35, y, y + 0.9); break; }
@@ -86,11 +86,24 @@ function buildGround(bucket) {
       World.yardTrees.push([p.x, p.z, 'oak', 0.9]);
       for (const [a, y] of [[0.5, 0.2], [3.6, 0.2]]) { const x = p.x + Math.cos(a) * 2.3, z = p.z + Math.sin(a) * 2.3, m = bucket(x, z); m.push().T(x, gy(x, z), z).RY(-(a + Math.PI / 2)); Props.bench(m, 1.7); m.pop(); }
       const sx = p.x + Math.cos(0.5) * 2.3 + 0.1, sz = p.z + Math.sin(0.5) * 2.3 + 1.0; World.spots['green.bench'] = { p: [sx, gy(sx, sz), sz], yaw: Math.atan2(p.x - sx, -(p.z - sz)), zone: 0, sit: true };
-    } else if (p.kind === 'drying green') {
-      const m = bucket((p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2); const cx = (p.x0 + p.x1) / 2;
-      for (const z of [p.z0 + 2.0, p.z0 + 4.0]) { const g0 = gy(p.x0 + 1, z), g1 = gy(p.x1 - 1, z); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); for (const x of [p.x0 + 0.8, cx, p.x1 - 0.8]) { const g = gy(x, z); m.beam([x, g - 0.1, z], [x, g + 2.0, z], 0.1, 0.1); addCircleCollider(m, x, z, 0.12, g, g + 2); }
-        m.mat(MAT.PLAIN, [0.7, 0.68, 0.62], 0.5); m.beam([p.x0 + 0.8, g0 + 1.92, z], [p.x1 - 0.8, g1 + 1.92, z], 0.025, 0.025);
-        for (let k = 0; k < 6; k++) { const x = p.x0 + 1.5 + k * 1.5, g = gy(x, z); m.mat(MAT.CLOTH, [[0.74, 0.72, 0.66], [0.6, 0.55, 0.46], [0.7, 0.68, 0.62], [0.5, 0.52, 0.58], [0.72, 0.7, 0.64], [0.62, 0.5, 0.42]][k], 0.5); m.quad2([x, g + 1.9, z + 0.02], [x - 0.02, g + 1.15, z + 0.03], [x + 0.6, g + 1.15, z - 0.03], [x + 0.6, g + 1.9, z - 0.02]); } }
+    } else if (p.kind === 'drying green') {      /* [fx3] washing: the rope sags between the props; shirts, a sheet folded over the line, hose, a smock, small cloths: different widths and lengths, none white */
+      const m = bucket((p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2), cx = (p.x0 + p.x1) / 2, xa = p.x0 + 0.8, xb = p.x1 - 0.8, TIMc = [0.42, 0.34, 0.25];
+      const COL = [[0.62, 0.58, 0.48], [0.5, 0.42, 0.33], [0.36, 0.42, 0.5], [0.56, 0.5, 0.4], [0.46, 0.34, 0.28], [0.4, 0.44, 0.36], [0.6, 0.55, 0.5], [0.3, 0.34, 0.42]];
+      for (const z of [p.z0 + 2.0, p.z0 + 4.0]) {
+        m.mat(MAT.TIMBER, TIMc, 0.5); for (const x of [xa, cx, xb]) { const g = gy(x, z); m.beam([x, g - 0.1, z], [x, g + 2.05, z], 0.07, 0.07); addCircleCollider(m, x, z, 0.1, g, g + 2); m.beam([x - 0.18, g + 1.95, z], [x + 0.18, g + 2.05, z], 0.05, 0.05); }
+        const ry = x => { const s0 = x < cx, a = s0 ? xa : cx, b = s0 ? cx : xb, u = (x - a) / (b - a); return gy(x, z) + 1.94 - 0.3 * Math.sin(Math.PI * Math.min(1, Math.max(0, u))); };
+        m.mat(MAT.PLAIN, [0.5, 0.44, 0.34], 0.5); for (let k = 0; k < 20; k++) { const x0 = xa + (xb - xa) * k / 20, x1 = xa + (xb - xa) * (k + 1) / 20; m.beam([x0, ry(x0), z], [x1, ry(x1), z], 0.02, 0.02); }
+        const lo = (x, y, w, len, c, sway) => { m.mat(MAT.CLOTH, c, 0.5); const yt0 = ry(x), yt1 = ry(x + w); m.quad2([x, yt0, z + 0.01], [x + sway * 0.3, yt0 - len * 0.95, z + 0.04], [x + w + sway, yt1 - len, z - 0.03], [x + w, yt1, z - 0.01]); };
+        let x = p.x0 + 1.3; let kind = 0;
+        while (x < xb - 0.9) {
+          const c = COL[Math.floor(R() * COL.length)], t = Math.floor(R() * 5), sw = (R() - 0.5) * 0.12;
+          if (t === 0) { const w = 0.5 + R() * 0.1; lo(x, 0, w, 0.85 + R() * 0.15, c, sw); lo(x - 0.34, 0, 0.3, 0.55, c, sw * 2); lo(x + w + 0.04, 0, 0.3, 0.5, c, -sw * 2); x += w + 0.5; }      // shirt with sleeves
+          else if (t === 1) { const w = 1.0 + R() * 0.2; lo(x, 0, w, 0.95, c, sw); lo(x + 0.04, 0, w - 0.08, 0.7, [c[0] * 0.92, c[1] * 0.92, c[2] * 0.92], -sw); x += w + 0.3; }      // a sheet folded over the line, the far half shorter
+          else if (t === 2) { lo(x, 0, 0.14, 0.95, c, sw); lo(x + 0.3, 0, 0.14, 0.9, c, -sw); lo(x, 0, 0.44, 0.1, c, 0); x += 0.8; }      // hose
+          else if (t === 3) { const w = 0.62; m.mat(MAT.CLOTH, c, 0.5); const yt0 = ry(x), yt1 = ry(x + w); m.quad2([x, yt0, z + 0.01], [x - 0.1, yt0 - 1.08, z + 0.04], [x + w + 0.1 + sw, yt1 - 1.1, z - 0.03], [x + w, yt1, z - 0.01]); x += w + 0.45; }      // smock, wider at the hem
+          else { const w = 0.35 + R() * 0.2; lo(x, 0, w, 0.32 + R() * 0.15, c, sw); x += w + 0.25; }      // small cloth
+        }
+      }
     }
   }
 }
