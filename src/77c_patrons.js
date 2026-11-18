@@ -17,11 +17,11 @@ function npcClaim(n, name) {
     for (const o in NPC_CLAIMS) { if (NPC_CLAIMS[o] === n.id) continue; const r = World.spots[o]; if (r && Math.abs(r.p[1] - q.p[1]) < 1.2 && Math.hypot(r.p[0] - q.p[0], r.p[2] - q.p[2]) < 0.7) return true; }
     return false;
   };
-  for (let k = 0; k < 20; k++) {       /* [apart] 20 places, in three rings: with nine, a tenth person was given the spot itself and stood in whoever had it */
+  for (let k = 0; k < 32; k++) {       /* [fin] 32 places (a fourth ring at 3.1 m) since a place without floor is now skipped; [apart] 20 places, in three rings: with nine, a tenth person was given the spot itself and stood in whoever had it */
     const cand = k ? base + '#' + k : base;
     if (NPC_CLAIMS[cand] && NPC_CLAIMS[cand] !== n.id) continue;
     if (k && !World.spots[cand]) {          // a ring of standing places round the spot, none inside a wall
-      const a = k * 2.4 + base.length, rr = 0.85 * (1 + (k > 12 ? 1.6 : k > 4 ? 0.8 : 0)), x = spB.p[0] + Math.cos(a) * rr, z = spB.p[2] + Math.sin(a) * rr;
+      const a = k * 2.4 + base.length, rr = 0.85 * (1 + (k > 20 ? 2.65 : k > 12 ? 1.6 : k > 4 ? 0.8 : 0)), x = spB.p[0] + Math.cos(a) * rr, z = spB.p[2] + Math.sin(a) * rr;
       if (World.blockedAt && World.blockedAt(x, z, 0.3)) continue;
       if (World.groundAt && Math.abs(World.groundAt(x, z, spB.p[1] + 1) - spB.p[1]) > 0.5) continue;          // [fin] a standing place needs the floor under it (a ring point past a thin back wall was in the void)
       World.spots[cand] = Object.assign({}, spB, { p: [x, spB.p[1], z] }); delete World.spots[cand].sit; delete World.spots[cand].lie;
