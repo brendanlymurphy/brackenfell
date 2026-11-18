@@ -139,11 +139,27 @@ for (const file of process.argv.slice(2)) {
       const covered = v => { let bd = 1e9, bt = null, bb = null, bq = null; for (const t of S) { const [q, bc] = closest(v, t.a, t.b, t.c), d = len(sub(v, q)); if (d < bd) { bd = d; bt = t; bb = bc; bq = q; } }
         if (bd > 0.08) return false; for (let k = 0; k < 3; k++) if (bb[k] < 1e-6 && bt.open[k]) return false;
         return dot(sub(v, bq), bt.n) < 0.05; };
+      const LONG = shell[0].p.getAttribute('POSITION').getMin([])[1] < bone.calf_l[1] - 0.1;      // under an ankle-length skirt the legs go too, down to mid shin: seated or crouching they came through the cloth as patches of skin
       for (const x of prims) { if (!/^base(@|$)/.test(x.name)) continue; const pos = x.p.getAttribute('POSITION'), ia = x.p.getIndices(), ix = ia.getArray(), n = pos.getCount(), cov = new Uint8Array(n);
-        for (let i = 0; i < n; i++) { const [e, g] = wOf(x, i); let leg = 0, keep = 0; for (let k = 0; k < 4; k++) { if (LEG.test(J[e[k]])) leg += g[k]; if (/^(head|hand|thumb|index|middle|ring|pinky)/.test(J[e[k]])) keep += g[k]; if (J[e[k]] === 'neck_01') keep += g[k] * 2; } const v = pos.getElement(i, []); cov[i] = leg < 0.5 && keep < 0.5 && covered(pos.getElement(i, [])) ? 1 : 0; }
+        for (let i = 0; i < n; i++) { const [e, g] = wOf(x, i); let leg = 0, keep = 0; for (let k = 0; k < 4; k++) { if (LEG.test(J[e[k]])) leg += g[k]; if (/^(head|hand|thumb|index|middle|ring|pinky)/.test(J[e[k]])) keep += g[k]; if (J[e[k]] === 'neck_01') keep += g[k] * 2; } const v = pos.getElement(i, []); cov[i] = (LONG && leg >= 0.5 && v[1] > bone.calf_l[1] - 0.14) || (leg < 0.5 && keep < 0.5 && covered(v)) ? 1 : 0; }
         const out = []; for (let t = 0; t < ix.length; t += 3) if (!(cov[ix[t]] && cov[ix[t + 1]] && cov[ix[t + 2]])) out.push(ix[t], ix[t + 1], ix[t + 2]);
         if (out.length < ix.length) { x.p.setIndices(doc.createAccessor().setType('SCALAR').setArray(new ix.constructor(out)).setBuffer(ia.getBuffer())); log.push(x.name + ' under the kirtle -' + (ix.length - out.length) / 3); } } } }
 
+  // ── 3b. the skirt of the kirtle sits and crouches ──
+  // garb.py gave every skirt vertex the weights of the nearest leg vertices. A vertex that stands 15 cm in front of the thigh then swings 15 cm ABOVE the thigh when the thigh
+  // turns forward to sit: the lap rose into a dome to the chest, and in a crouch the skirt opened like a tent. New weights below the hips, by where the vertex is:
+  // left or right leg by its side (blended across the middle, so the front panel goes with both), thigh above the knee and shin below it, and for cloth that stands
+  // in front of the thigh a share on the hips just large enough that it lies ON the thigh when seated (9 cm above the joint) and not above it. Nothing follows the feet.
+  { const TL = bone.thigh_l, TR = bone.thigh_r, CL = bone.calf_l, jn = n => J.indexOf(n), jP = jn('pelvis'), jTL = jn('thigh_l'), jTR = jn('thigh_r'), jCL = jn('calf_l'), jCR = jn('calf_r');
+    if (TL && TR && CL && jTL >= 0 && jCL >= 0) { const hipY = (TL[1] + TR[1]) / 2, kneeY = CL[1], sideL = Math.sign(TL[0] - TR[0]) || 1, tz = (TL[2] + TR[2]) / 2;
+      for (const x of prims) { if (!/^w_kirtle(@|$)/.test(x.name)) continue; const pos = x.p.getAttribute('POSITION'), n = pos.getCount(), list = []; let changed = 0;
+        for (let i = 0; i < n; i++) { const v = pos.getElement(i, []), [e, g] = wOf(x, i), old = new Map(); for (let k = 0; k < 4; k++) if (g[k] > 0 && e[k] !== NI) old.set(e[k], (old.get(e[k]) || 0) + g[k]);
+          let arm = 0; for (const [jx, w] of old) if (ARM.test(J[jx])) arm += w; const low = sm(hipY + 0.02, hipY - 0.09, v[1]) * (arm > 0.3 ? 0 : 1); if (low <= 0) { list.push(old); continue; }
+          const sL = sm(-0.075, 0.075, v[0] * sideL), cf = sm(kneeY + 0.05, kneeY - 0.07, v[1]), L = Math.max(0.02, hipY - v[1]), st = v[2] - tz;
+          const al = st > 0.09 ? Math.max(0.4, Math.min(1, (0.09 + L) / (st + L))) : 1, th = al * (1 - cf) + 0, ca = cf, pe = (1 - al) * (1 - cf);
+          const nw = new Map([[jTL, th * sL], [jTR, th * (1 - sL)], [jCL, ca * sL], [jCR, ca * (1 - sL)], [jP, pe]]), mp = new Map();
+          for (const [jx, w] of old) mp.set(jx, w * (1 - low)); for (const [jx, w] of nw) mp.set(jx, (mp.get(jx) || 0) + w * low); list.push(mp); changed++; }
+        if (changed) { setW(x, list); log.push(x.name + ' skirt ' + changed); } } } }
   // ── 4. what lies on a garment moves with it and stays outside it ──
   // Apron, straps, belt, pouch and tabard took their weights from the nearest body vertices, the kirtle from its own rule: seated, the
   // skirt went one way and the apron on it another (a crumpled pale sheet on the lap, the belt a lump behind). Each of their vertices
