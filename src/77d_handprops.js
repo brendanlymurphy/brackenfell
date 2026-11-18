@@ -43,7 +43,8 @@ function hpGeo(kind) {
     for (const pr of kp.prims) for (let i = 0; i < pr.n; i++) if (pr.pos[i * 3 + 1] < kp.min[1] + hgt * 0.15) { ax += pr.pos[i * 3]; az += pr.pos[i * 3 + 2]; na++; } ax /= na || 1; az /= na || 1;
     for (const pr of kp.prims) for (let i = 0; i < pr.n; i++) if (pr.pos[i * 3 + 1] < kp.min[1] + hgt * 0.15) r = Math.max(r, Math.hypot(pr.pos[i * 3] - ax, pr.pos[i * 3 + 2] - az));
     const hx = (kp.min[0] + kp.max[0]) / 2 - ax, hz = (kp.min[2] + kp.max[2]) / 2 - az, turn = Math.atan2(hx, hz), M = new T.Matrix4().makeTranslation(0, 0, r * sc * 1.05).multiply(new T.Matrix4().makeRotationY(-turn)).multiply(new T.Matrix4().makeScale(sc, sc, sc)).multiply(new T.Matrix4().makeTranslation(-ax, -(kp.min[1] + hgt * 0.5), -az));
-        for (const pr of kp.prims) { const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(Float32Array.from(pr.pos), 3)); g.setAttribute('normal', new T.BufferAttribute(Float32Array.from(pr.nrm), 3)); g.setIndex(new T.BufferAttribute(Uint32Array.from(pr.idx), 1)); P.push([g, M, /metal|iron|steel/i.test(pr.mat) ? IR : [0.24, 0.155, 0.08], /metal|iron|steel/i.test(pr.mat) ? MI : MW]); }
+        for (const pr of kp.prims) { const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(Float32Array.from(pr.pos), 3)); g.setAttribute('normal', new T.BufferAttribute(Float32Array.from(pr.nrm), 3)); g.setIndex(new T.BufferAttribute(Uint32Array.from(pr.idx), 1)); const met = /metal|iron|steel/i.test(pr.mat); if (met) { g.dispose(); continue; }      // the kit's hoops are broken rings that fought the staves (pale zig-zags, then gaps): a plain turned wooden tankard
+      P.push([g, M, [0.24, 0.155, 0.08], MW]); }
   }
   else if (kind === 'flute') P = [[new T.CylinderGeometry(0.0095, 0.0095, 0.42, 8), X(0, 0.1, 0), WL, MW], [new T.CylinderGeometry(0.0105, 0.0105, 0.02, 8), X(0, 0.30, 0), DK, MW]];
   else return null;
@@ -74,9 +75,26 @@ function hpPlace(mesh, o, y, z) {      // origin o, long axis y, front z (z made
 // [ch4] one true size whatever the body: a prop on a hand bone would take the person's girth and height (each body is scaled a few per cent on each axis); divide it out
 const _hps = new THREE.Vector3();
 function hpTrue(mesh) { mesh.scale.set(1, 1, 1); mesh.parent.getWorldScale(_hps); const q = mesh.quaternion, ax = new THREE.Vector3(1, 0, 0).applyQuaternion(q), ay = new THREE.Vector3(0, 1, 0).applyQuaternion(q), az = new THREE.Vector3(0, 0, 1).applyQuaternion(q), k = v => 1 / Math.max(1e-3, Math.hypot(v.x * _hps.x, v.y * _hps.y, v.z * _hps.z)); mesh.scale.set(k(ax), k(ay), k(az)); }
+// [ch4] the lute's strap when it is slung: a leather band from the neck end, over the left shoulder, across the chest to the right hip and round to the tail of the bowl.
+// A ribbon of 18 segments rebuilt each frame from the bones while it is shown (only near: the post functions run for visible people).
+function hpStrap(H, lute) {
+  const T = THREE; let m = H._strap; if (!m) { const g = new T.BufferGeometry(), n = 19; g.setAttribute('position', new T.BufferAttribute(new Float32Array(n * 2 * 3), 3)); g.setAttribute('normal', new T.BufferAttribute(new Float32Array(n * 2 * 3), 3));
+    const col = new Float32Array(n * 2 * 3), mr = new Float32Array(n * 2 * 2); for (let i = 0; i < n * 2; i++) { const t = 0.85 + 0.15 * Math.sin(i * 2.1); col.set([0.075 * t, 0.048 * t, 0.03 * t], i * 3); mr.set([0, 0.75], i * 2); } g.setAttribute('color', new T.BufferAttribute(col, 3)); g.setAttribute('mr', new T.BufferAttribute(mr, 2));
+    const ix = []; for (let i = 0; i < n - 1; i++) ix.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2); g.setIndex(ix);
+    m = H._strap = new T.Mesh(g, lute.material); m.material.side = T.DoubleSide; m.frustumCulled = false; m.layers.mask = lute.layers.mask; m.name = 'prop:strap'; H.pivot.add(m); }
+  const f = hpFrame(H), k = H.root.scale.y || 1, wd = (H.wide || 1), u1 = hpLocal(H, H.root.getObjectByName('upperarm_l'), new T.Vector3()), u2 = hpLocal(H, H.root.getObjectByName('upperarm_r'), new T.Vector3()), ua = u1.clone().sub(f.sp).dot(f.R) < u2.clone().sub(f.sp).dot(f.R) ? u1 : u2, nk = hpLocal(H, H.root.getObjectByName('neck_01'), new T.Vector3()), cl = nk.clone().lerp(ua, 0.55), P = [];      // the top of the shoulder on the neck's side (-R): between the neck and the head of the upper arm (the clavicle bone starts at the breastbone)
+  lute.updateMatrix(); const L = (x, y, z) => new T.Vector3(x, y, z).applyMatrix4(lute.matrix);
+  P.push(L(0, 0.27, -0.03), cl.clone().addScaledVector(f.F, -0.06 * wd).addScaledVector(f.U, 0.035 * k), cl.clone().addScaledVector(f.F, 0.07 * wd).addScaledVector(f.U, 0.0 * k), cl.clone().addScaledVector(f.F, 0.15 * wd).addScaledVector(f.U, -0.12 * k).addScaledVector(f.R, 0.06 * k),
+    f.sp.clone().addScaledVector(f.F, 0.175 * wd).addScaledVector(f.R, 0.03 * k).addScaledVector(f.U, -0.05 * k), f.pel.clone().addScaledVector(f.F, 0.15 * wd).addScaledVector(f.R, 0.14 * k).addScaledVector(f.U, 0.13 * k),
+    f.pel.clone().addScaledVector(f.R, 0.21 * k * wd).addScaledVector(f.U, 0.11 * k), L(0.05, -0.26, -0.035));
+  const cv = new T.CatmullRomCurve3(P, false, 'centripetal'), pos = m.geometry.attributes.position, nor = m.geometry.attributes.normal, n = pos.count / 2, q = new T.Vector3(), tg = new T.Vector3(), out = new T.Vector3(), w = new T.Vector3(), c0 = f.sp;
+  for (let i = 0; i < n; i++) { const u = i / (n - 1); cv.getPointAt(u, q); cv.getTangentAt(u, tg); out.set(q.x - c0.x, 0, q.z - c0.z).normalize(); w.crossVectors(tg, out).normalize().multiplyScalar(0.016); pos.setXYZ(i * 2, q.x + w.x, q.y + w.y, q.z + w.z); pos.setXYZ(i * 2 + 1, q.x - w.x, q.y - w.y, q.z - w.z); nor.setXYZ(i * 2, out.x, out.y, out.z); nor.setXYZ(i * 2 + 1, out.x, out.y, out.z); }
+  pos.needsUpdate = true; nor.needsUpdate = true; m.geometry.computeBoundingSphere(); m.visible = true;
+}
 function hpLute(mesh) { const T = THREE, y = new T.Vector3(), z = new T.Vector3(), o = new T.Vector3(), tR = new T.Vector3(), tL = new T.Vector3(), bx = new T.Vector3(), by = new T.Vector3(), bz = new T.Vector3(), mq = new T.Matrix4(), qL = new T.Quaternion(), qR = new T.Quaternion(); let wPlay = 0;
   // [ch4] The lute is set against the body and the hands go to it (Chars.reach). Hung between the two animated hands it went through the belly: the clip is a guitar's, and a lute's bowl is 0.15 m deep.
   return (H, st) => {
+  if (H._strap) H._strap.visible = false;
   if (H.animNow === 'lie') { mesh.visible = false; mesh.userData.holding = false; Chars.reach(H, 'R', null); Chars.reach(H, 'L', null); Chars.grip(H, 'L', 0); Chars.grip(H, 'R', 0); return; }      // by the bed, not on his back in it
   const f = hpFrame(H), play = H.animNow === 'lute' && !H.talkNow, k = H.root.scale.y || 1; wPlay = play ? 1 : 0;
   if (play) {      // the bowl on the belly a little to the player's right, the neck up to the left at 20 degrees and a little forward, the soundboard turned up 12 degrees
@@ -93,7 +111,7 @@ function hpLute(mesh) { const T = THREE, y = new T.Vector3(), z = new T.Vector3(
   } else {      // slung on the back by its strap: the bowl against the back, the neck up over the left shoulder, the soundboard outward
     Chars.reach(H, 'R', null); Chars.reach(H, 'L', null);
     y.copy(f.U).multiplyScalar(0.93).addScaledVector(f.R, -0.34).normalize(); z.copy(f.F).negate();
-    hpPlace(mesh, o.copy(f.sp).addScaledVector(f.F, -(0.105 * k * (H.wide || 1) + 0.158)).addScaledVector(f.U, -0.16 * k).addScaledVector(f.R, 0.05 * k), y, z); mesh.userData.holding = false; Chars.grip(H, 'L', 0); Chars.grip(H, 'R', 0);
+    hpPlace(mesh, o.copy(f.sp).addScaledVector(f.F, -(0.105 * k * (H.wide || 1) + 0.158)).addScaledVector(f.U, -0.16 * k).addScaledVector(f.R, 0.05 * k), y, z); mesh.userData.holding = false; Chars.grip(H, 'L', 0); Chars.grip(H, 'R', 0); mesh.scale.setScalar(1); hpStrap(H, mesh);
   }
   mesh.userData.grip = [0.0, 0.33, 0.0]; mesh.userData.hand = 'L'; mesh.scale.setScalar(1); mesh.visible = true;
 }; }
