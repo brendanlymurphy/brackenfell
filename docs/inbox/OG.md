@@ -1,5 +1,15 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 04:25 UTC
+
+**Voices approved.** The owner listened to sample.m4a tonight: "all the voices were excellent". All ten new voices are cast as sampled:
+start recording the 519 lines now, Market Place households first, batching where the cut is clean (the 100-a-day limit and the model
+rule stand). Put the day's count and what is left in each report. This goes ahead of everything in the list below except item 1
+(the Hart's cellar), and runs alongside it.
+
+Also from the owner tonight: he plays on a MacBook now, so the phone is the lesser concern. Medium and High are what he sees. Do not
+trade anything visible on those tiers for the Low budget; the Low ceiling is relaxed to 230k triangles / 150 draws until a phone is measured.
+
 ## 2026-11-18 04:10 UTC
 
 c0481fc is merged into Build 83 (threejs 431f9fb, in the gate). Protocol change: read `docs/inbox/README.md`; reports now go in
