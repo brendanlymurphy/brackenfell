@@ -10,7 +10,7 @@ const ROOFS = [];       // every generated roof (for test/town.js: slope sample 
 const NO_DOOR = new Set(['in.39']);      // [fx3] a shell has no door at all (the audit counted 74 black dead doors): windows and shutters; the houses to be made enterable get a door with their interior (list: in.41, in.06, in.81, in.89, in.32 have yard households)
 const INFS = { batch: null, proxies: [], shells: [], lan: null, built: false, box: [1e9, 1e9, -1e9, -1e9], nChim: 0 };
 const LOWQ = () => R.qName === 'low';      // [fx3] (top level: R is the renderer here; inside houses R is a local rng)
-const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof', INF_SL = 'MI_Slate_Roof', INF_TH = 'MI_Thatch_Roof', INF_SS = 'MI_StoneSlate_Roof', INF_CT = 'MI_ClayTile_Roof', INF_L = 'MI_Plaster_Lime', INF_R = 'MI_Rubble_Wall';      // [fx2] the three roof coverings: wood shingle, stone slate, thatch (shellStyle in 72c_infill picks one per building)
+const INF_T = 'MI_Plaster_Planks', INF_S = 'MI_Shingle_Roof', INF_SL = 'MI_Slate_Roof', INF_TH = 'MI_Thatch_Roof', INF_SS = 'MI_StoneSlate_Roof', INF_SV = 'MI_ShingleSilver_Roof', INF_CT = 'MI_ClayTile_Roof', INF_L = 'MI_Plaster_Lime', INF_R = 'MI_Rubble_Wall';      // [fx2] the three roof coverings: wood shingle, stone slate, thatch (shellStyle in 72c_infill picks one per building)
 function infBatch() {
   if (!INFS.batch && kitReady()) { const b = INFS.batch = Kit.batch({ name: 'infill', cell: 48, off: 2040, far: true }), add = b.add; b.add = (n, x, o) => { if (!Kit.far[n] && /^gen_/.test(n)) Kit.far[n] = []; return add(n, x, Object.assign({ cast: false }, o || {})); }; }       // one mesh per material per 48 m block; each block has a light copy (walls, roof, chimney) for beyond houseFar metres; small generated pieces have none       // nothing in the batch casts: one mesh per material, not two
   return INFS.batch;
@@ -29,6 +29,7 @@ async function infillMaterials() {
   const ok1 = await mk(INF_T, 'MI_Plaster', 'MI_Planks', { gain: 1.0, nScale: 1.0, moss: 0, uvScale: [2.2, 2.2] });      // Build 42: grain was a metre wide on a 2 m panel
   const ok2 = await mk(INF_S, 'MI_RoundTiles', 'MI_Shingle', { gain: 2.3, nScale: 1.0, moss: 0.6 });
   await mk(INF_CT, 'MI_RoundTiles', 'MI_RoundTiles', { gain: 1.25, nScale: 1.0, moss: 0.5 }); await mk(INF_SL, 'MI_RoundTiles', 'MI_Slate', { gain: 3.2, nScale: 1.0, moss: 0.4 }); await mk(INF_TH, 'MI_RoundTiles', 'MI_Thatch', { gain: 1.0, nScale: 1.0, moss: 0.3 }); await mk(INF_SS, 'MI_RoundTiles', 'MI_StoneSlate', { gain: 1.5, nScale: 1.0, moss: 0.4 });      // [fx2]
+  if (Kit.defs[INF_S]) Kit.defs[INF_SV] = Object.assign({}, Kit.defs[INF_S], { name: INF_SV, gain: 1.05 });      // silvered shingle: the shared roof gain of 2.3 blew the texture out to pale blotches
   if (Kit.defs.MI_UnevenBrick) Kit.defs[INF_B] = Object.assign({}, Kit.defs.MI_UnevenBrick, { name: INF_B, doubleSided: true });
   if (Kit.defs[INF_T]) Kit.defs[INF_T].doubleSided = true;
   await mk(INF_R, 'MI_UnevenBrick', 'MI_Rubble', { gain: 1.0, nScale: 1.0, moss: 0.3, doubleSided: true });      // [fx2] rubble / dry-stone wall for retaining and yard walls

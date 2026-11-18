@@ -42,9 +42,9 @@ for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].s
 const SHELL_TONES = {      // [fx2] roofs must read as different coverings from above: cut slate (cool dark blue-grey), stone slate (pale, lichened), thatch (warm grey-brown), shingle (silvered wood); tints above 1 lift the dark scanned albedos
   slate: [[0.9, 0.98, 1.15], [0.78, 0.86, 1.02], [1.0, 1.05, 1.18], [0.84, 0.92, 1.1]],      // [fx3] lighter: the first set read near-black from above
   tile: [[1.0, 0.72, 0.6], [0.88, 0.62, 0.52], [1.08, 0.8, 0.64], [0.8, 0.58, 0.5]],
-  stoneslate: [[1.5, 1.5, 1.36], [1.3, 1.32, 1.2], [1.62, 1.55, 1.38], [1.4, 1.42, 1.3]],
+  stoneslate: [[0.62, 0.6, 0.52], [0.54, 0.54, 0.49], [0.68, 0.65, 0.57], [0.58, 0.57, 0.52]],
   thatch: [[1.7, 1.42, 0.98], [1.5, 1.26, 0.88], [1.85, 1.58, 1.08]],
-  shingle: [[1.3, 1.27, 1.2], [1.12, 1.1, 1.04], [1.42, 1.38, 1.3]],
+  shingle: [[0.95, 0.88, 0.76], [0.8, 0.76, 0.68], [1.05, 0.97, 0.84]],
 };
 const SHELL_FORMS = {      // chance per house of each added form; the districts that read as crowded and working get the most
   wharfside: { outshut: 0.5, stair: 0.4, stack: 0.35, rack: 0.5, vent: 0.14 },
@@ -93,7 +93,7 @@ function shellStyle(site, spec) {
   // [fx3] a dominant covering and one or two minority ones per district, picked by the house's own hash (wealth and age show in which)
   let kind = O.kind; if (!kind) { const q = R(); kind = D.kind; if (D.mix) { let a = 0; for (const [k, pr] of D.mix) { a += pr; if (q < a) { kind = k; break; } } } else if (D.alt && q < 0.4) kind = D.alt; }
   if (kind === 'slate' && dn === 'chapelgate') kind = 'stoneslate';
-  const RK = { slate: [INF_SL, 3.6, 0.14], stoneslate: [INF_SL, 4.0, 0.14], thatch: [INF_TH, 1.6, 0.36], shingle: [INF_S, 1.25, 0.1], tile: [INF_S, 2.0, 0.12] }[kind] || [INF_S, 1.25, 0.1], tones = SHELL_TONES[kind], r = (a, b) => a + (b - a) * R();
+  const RK = { slate: [INF_SL, 3.6, 0.14], stoneslate: [INF_SS, 4.0, 0.14], thatch: [INF_TH, 1.6, 0.36], shingle: [INF_SV, 1.25, 0.1], tile: [INF_S, 2.0, 0.12] }[kind] || [INF_S, 1.25, 0.1], tones = SHELL_TONES[kind], r = (a, b) => a + (b - a) * R();
   const out = { dist: dn, kind, pitch: O.pitch || D.pitch[(R() * D.pitch.length) | 0], tint: tones[(O.tone !== undefined ? O.tone : (R() * tones.length) | 0) % tones.length], sag: O.sag !== undefined ? O.sag : r(D.sag[0], D.sag[1]), ov: O.ov || r(D.ov[0], D.ov[1]) };
   out.mat = RK[0]; out.ts = RK[1]; out.thick = RK[2]; out.thatch = kind === 'thatch'; out.patch = R();
   out.tint = out.tint.map(v => Math.min(2, v * (0.94 + R() * 0.1)));
