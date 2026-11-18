@@ -104,6 +104,9 @@ function buildWalls(bucket) {
     { const ye = Y + 2.8, yr = ye + 1.2, pA = P(ug - TW - 0.5, V0 - 0.6), pB = P(ug + TW + 0.5, V1 + 0.6), m = M((pA[0] + pB[0]) / 2, (pA[1] + pB[1]) / 2);
       const vm = (V0 + V1) / 2, f = (u, v, y) => { const p = P(u, v); return [p[0], y, p[1]]; };
       m.mat(MAT.SHINGLE, [0.5, 0.45, 0.4], 0.5); m.quad2(f(ug - TW - 0.5, V0 - 0.6, ye), f(ug + TW + 0.5, V0 - 0.6, ye), f(ug + TW + 0.5, vm, yr), f(ug - TW - 0.5, vm, yr)); m.quad2(f(ug - TW - 0.5, vm, yr), f(ug + TW + 0.5, vm, yr), f(ug + TW + 0.5, V1 + 0.6, ye), f(ug - TW - 0.5, V1 + 0.6, ye));
+      /* [fx3] the roof's two ends closed: a plank gable under each, the boards hung from a bargeboard (nothing open to the sky under the shingles) */
+      for (const uu of [ug - TW - 0.5, ug + TW + 0.5]) { const a = f(uu, V0 - 0.6, ye), b = f(uu, V1 + 0.6, ye), c = f(uu, vm, yr); m.mat(MAT.PLANKS, [0.38, 0.31, 0.23], 0.6); m.poly([a, b, c]); m.poly([c, b, a]);
+        K.beam([a[0], ye - 0.02, a[2]], [c[0], yr + 0.02, c[2]], 0.08, 0.14); K.beam([b[0], ye - 0.02, b[2]], [c[0], yr + 0.02, c[2]], 0.08, 0.14); }
       const e1 = f(ug - TW - 0.5, vm, yr), e2 = f(ug + TW + 0.5, vm, yr); K.beam([e1[0], yr + 0.02, e1[2]], [e2[0], yr + 0.02, e2[2]], 0.16, 0.14);
       for (const u of [ug - TW + 0.15, ug + TW - 0.15]) for (const v of [V0 + 0.2, V1 - 0.2]) { const p = P(u, v); void p; }
       for (const v of [V0 + 0.2, V1 - 0.2]) { const p = P(ug - TW + 0.15, v), q = P(ug + TW - 0.15, v); K.beam([p[0], ye, p[1]], [q[0], ye, q[1]], 0.18, 0.2); }
@@ -112,6 +115,10 @@ function buildWalls(bucket) {
       rl(a0 + 0.3, b1 - 0.3, V0 + 0.2);                                  // the outer rail (the palisade's own line continues on both sides)
       rl(a0 + 0.3, a0 + 2.2, V1 - 0.2);                                  // inner rail on the side away from the stair
       rl(a0 + 0.3, ug - 0.5, V1 - 0.2); }
+    /* [fx3] a ladder at each end of the wall walk, on the town side, from the ground to a metre above the deck: two rails, rungs every 0.3 m, leaning on the deck's inner edge */
+    for (const uE of [ug - 8, ug + 10]) { if (uE < u0 + 0.8 || uE > u1 - 0.8) continue; const top = yAt(uE) + 0.9, pt = P(uE, 1.8), pb = P(uE, 2.5), gB = gy(pb[0], pb[1]), nU = axis === 'x' ? [1, 0] : [0, 1], wd = 0.26;
+      for (const sd of [-1, 1]) K.beam([pb[0] + nU[0] * wd * sd, gB, pb[1] + nU[1] * wd * sd], [pt[0] + nU[0] * wd * sd, top, pt[1] + nU[1] * wd * sd], 0.06, 0.1);
+      for (let y = 0.3; y < top - gB - 0.1; y += 0.3) { const t = y / (top - gB), q = [pb[0] + (pt[0] - pb[0]) * t, gB + y, pb[1] + (pt[1] - pb[1]) * t]; K.beam([q[0] - nU[0] * wd, q[1], q[2] - nU[1] * wd], [q[0] + nU[0] * wd, q[1], q[2] + nU[1] * wd], 0.04, 0.04); } }
     // torches: iron brackets fixed to the pier faces at head height (a plate on the stone, an arm, a cup)
     for (const sd of [-1, 1]) for (const f of [-1, 1]) { const u = ug + sd * 2.6, v = f < 0 ? V0 : V1, pf = P(u, v + f * 0.3), yh = gy(...P(u, v + f * 0.4)) + 1.85;
       bx(MAT.METAL, [0.14, 0.12, 0.1], 0.5, u - 0.06, yh - 0.1, v + (f < 0 ? -0.03 : 0), u + 0.06, yh + 0.2, v + (f < 0 ? 0 : 0.03), 0);
