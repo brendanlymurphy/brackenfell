@@ -21,7 +21,11 @@ function hpGeo(kind) {
     P = []; const R = 9, pr = prof();
     for (let i = 0; i < R; i++) { const a0 = Math.PI / 2 + i * Math.PI / R; P.push([new T.LatheGeometry(pr, 3, a0, Math.PI / R), X(0, 0, 0, 0, 0, 0, 1, 1, 0.94), i % 2 ? [0.30, 0.18, 0.085] : [0.21, 0.12, 0.055], MW]); }      // [ch4] 0.15 deep: it was 0.075, a pan
     const sh = new T.Shape(); pr.forEach((v, i) => i ? sh.lineTo(v.x, v.y) : sh.moveTo(v.x, v.y)); for (let i = pr.length - 1; i >= 0; i--) sh.lineTo(-pr[i].x, pr[i].y);
-    P.push([new T.ShapeGeometry(sh), X(0, 0, 0.0006, 0, 0, 0, 1.0, 1.0, 1), DK, MW], [new T.ShapeGeometry(sh), X(0, -0.0006, 0.0018, 0, 0, 0, 0.965, 0.975, 1), [0.34, 0.245, 0.135], MW]);      // the soundboard, aged spruce inside a dark edge band
+    P.push([new T.ShapeGeometry(sh), X(0, 0, 0.0006, 0, 0, 0, 1.0, 1.0, 1), DK, MW]);      // the dark edge band, and on it the soundboard: aged spruce in 26 strips of grain, each its own tone, no two neighbours alike
+    { const NS = 26, hw = yy => { const u = Math.max(0, Math.min(1, (yy + 0.27) / 0.48)); return Math.max(0.0005, 0.16 * Math.pow(Math.sin(Math.PI * Math.pow(u, 0.8)), 0.75) * (1 - 0.35 * u) + 0.03 * Math.pow(u, 4)) * 0.965; };
+      for (let i = 0; i < NS; i++) { const g = new T.BufferGeometry(), pp = [], ix = [], RW = 16; for (let j = 0; j <= RW; j++) { const yy = -0.268 + 0.474 * j / RW, w = hw(yy); pp.push((i / NS * 2 - 1) * w, yy, 0, ((i + 1) / NS * 2 - 1) * w, yy, 0); if (j < RW) { const a0 = j * 2; ix.push(a0, a0 + 1, a0 + 3, a0, a0 + 3, a0 + 2); } }
+        g.setAttribute('position', new T.BufferAttribute(new Float32Array(pp), 3)); g.setIndex(ix); g.computeVertexNormals(); const h = Math.sin(i * 12.9898) * 43758.5453, t = 0.86 + 0.24 * (h - Math.floor(h)) - (i % 5 === 0 ? 0.10 : 0), ed = 1 - 0.18 * Math.pow(Math.abs(i / (NS - 1) * 2 - 1), 3);
+        P.push([g, X(0, 0, 0.0018), [0.33 * t * ed, 0.235 * t * ed, 0.125 * t * ed], MW]); } }
     P.push([new T.CircleGeometry(0.036, 14), X(0, -0.03, 0.0028), DK, MW], [new T.RingGeometry(0.036, 0.043, 14), X(0, -0.03, 0.0032), [0.30, 0.19, 0.09], MW]);      // the rose
     P.push([new T.BoxGeometry(0.11, 0.014, 0.012), X(0, -0.17, 0.008), DK, MW]);                                                    // the bridge
     P.push([new T.BoxGeometry(0.048, 0.30, 0.022), X(0, 0.31, 0.011), WD, MW], [new T.BoxGeometry(0.040, 0.26, 0.006), X(0, 0.31, 0.025), DK, MW]);      // neck and fingerboard
@@ -33,7 +37,14 @@ function hpGeo(kind) {
   else if (kind === 'spear') P = [hpWood(1.9, 0.0145, 0.012, -0.95, WD, 6), [new T.ConeGeometry(0.028, 0.24, 6), X(0, 1.07, 0, 0, 0, 0, 1, 1, 0.45), IR, MI], [new T.CylinderGeometry(0.019, 0.019, 0.05, 6), X(0, 0.96, 0), IR, MI]];
   else if (kind === 'staff') P = [hpWood(1.65, 0.021, 0.017, -0.8, WD, 7), [new T.SphereGeometry(0.036, 8, 6), X(0, 0.87, 0), WL, MW]];
   else if (kind === 'rod') P = [hpWood(2.0, 0.015, 0.004, -0.1, WL, 5)];
-  else if (kind === 'mug') P = [[new T.CylinderGeometry(0.040, 0.034, 0.095, 12), X(0, 0.02, 0), CL, MW], [new T.TorusGeometry(0.03, 0.006, 5, 8, Math.PI), X(0.04, 0.02, 0, 0, 0, -Math.PI / 2), CL, MW], [new T.CylinderGeometry(0.036, 0.036, 0.006, 12), X(0, 0.066, 0), [0.40, 0.20, 0.07], MW]];
+  else if (kind === 'mug') {      // [ch4] the kit's own tankard (a turned cup with a handle), not a cylinder: its form at 0.11 m, the handle turned away from the palm, the wall of the cup at the origin
+    const kp = typeof Kit !== 'undefined' && Kit.pieces && Kit.pieces.Mug; if (!kp) return null; P = [];
+    const hgt = kp.max[1] - kp.min[1], sc = 0.11 / hgt; let ax = 0, az = 0, na = 0, r = 0;
+    for (const pr of kp.prims) for (let i = 0; i < pr.n; i++) if (pr.pos[i * 3 + 1] < kp.min[1] + hgt * 0.15) { ax += pr.pos[i * 3]; az += pr.pos[i * 3 + 2]; na++; } ax /= na || 1; az /= na || 1;
+    for (const pr of kp.prims) for (let i = 0; i < pr.n; i++) if (pr.pos[i * 3 + 1] < kp.min[1] + hgt * 0.15) r = Math.max(r, Math.hypot(pr.pos[i * 3] - ax, pr.pos[i * 3 + 2] - az));
+    const hx = (kp.min[0] + kp.max[0]) / 2 - ax, hz = (kp.min[2] + kp.max[2]) / 2 - az, turn = Math.atan2(hx, hz), M = new T.Matrix4().makeTranslation(0, 0, r * sc * 1.05).multiply(new T.Matrix4().makeRotationY(-turn)).multiply(new T.Matrix4().makeScale(sc, sc, sc)).multiply(new T.Matrix4().makeTranslation(-ax, -(kp.min[1] + hgt * 0.5), -az));
+        for (const pr of kp.prims) { const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(Float32Array.from(pr.pos), 3)); g.setAttribute('normal', new T.BufferAttribute(Float32Array.from(pr.nrm), 3)); g.setIndex(new T.BufferAttribute(Uint32Array.from(pr.idx), 1)); P.push([g, M, /metal|iron|steel/i.test(pr.mat) ? IR : [0.24, 0.155, 0.08], /metal|iron|steel/i.test(pr.mat) ? MI : MW]); }
+  }
   else if (kind === 'flute') P = [[new T.CylinderGeometry(0.0095, 0.0095, 0.42, 8), X(0, 0.1, 0), WL, MW], [new T.CylinderGeometry(0.0105, 0.0105, 0.02, 8), X(0, 0.30, 0), DK, MW]];
   else return null;
   const g = RPG.merge(P); g.computeBoundingBox(); HP.cache[kind] = g; return g;
@@ -43,7 +54,7 @@ function hpKinds(def) {
   const k = [];
   if (def.prop && ['lute', 'hammer', 'spear', 'staff', 'rod'].includes(def.prop)) k.push(def.prop);
   if (def.id === 'osric' || def.id === 'greta') k.push('mug');
-  if (/^pat\d/.test(def.id)) k.push(def.id === 'pat4' ? 'flute' : 'mug');
+  if (typeof CAST_HART !== 'undefined' && CAST_HART.includes(def.id)) k.push('mug');      // [ch4] the Hart's evening table (the old regulars pat1..7 are gone and their mugs went with them)
   return k;
 }
 // ── placing a prop from the hands (pivot-local space; the person's own right / up / forward from the shoulders) ──
@@ -98,18 +109,27 @@ function hpPole(mesh, tilt, always) { return (H) => {      // a spear, staff or 
   if (held) o.copy(f.pR).addScaledVector(f.F, 0.01); else { o.copy(f.pel).addScaledVector(f.R, 0.3).addScaledVector(f.F, 0.06); o.y = 0.95; y.set(0, 1, 0); }      // grounded beside the body
   hpPlace(mesh, o, y, f.F.clone()); mesh.scale.setScalar(1); mesh.userData.grip = [0, 0, 0]; mesh.userData.hand = 'R';
 }; }
+// [ch4] A mug: upright in the right fist, the arm brought to it (Chars.reach): on the table in front of a seated drinker, at the waist of someone carrying it. The innkeeper and the maid
+// carry one while they stand or walk (not bent over their work); a guest of the Hart has one only while seated there. Nobody holds one in bed.
+function hpMug(mesh, npc, staff) { const T = THREE, t = new T.Vector3(), X0 = new T.Vector3(), mq = new T.Matrix4(), q = new T.Quaternion(), pq = new T.Quaternion();
+  return (H) => { const seated = H.animNow === 'sit', on = staff ? (H.animNow === 'idle' || H.animNow === 'walk') : seated && typeof npc.at === 'string' && /^inn\./.test(npc.at);
+    mesh.visible = on; mesh.userData.holding = on; if (!on) { Chars.reach(H, 'R', null); Chars.grip(H, 'R', 0); return; }
+    const f = hpFrame(H), k = H.root.scale.y || 1; t.copy(f.pel).addScaledVector(f.F, (seated ? 0.36 : 0.27) * k).addScaledVector(f.U, (seated ? 0.31 : 0.16) * k).addScaledVector(f.R, 0.17 * k); H.pivot.localToWorld(t);
+    mq.makeBasis(X0.copy(f.U).negate(), f.F, f.R); q.setFromRotationMatrix(mq); H.pivot.getWorldQuaternion(pq); q.premultiply(pq);      // knuckles upright, fingers forward, palm to the left: the cup stands in the fist
+    Chars.reach(H, 'R', t, q); Chars.grip(H, 'R', 0.95); mesh.scale.setScalar(1 / Math.max(1e-3, H.root.scale.y)); mesh.userData.grip = [0, 0, 0]; mesh.userData.hand = 'R'; }; }
 function npcHandProp(npc) {
   const ch = npc.ch; if (!ch || typeof RPG === 'undefined' || !RPG.merge) return;
   for (const kind of hpKinds(npc.def)) {
     const g = hpGeo(kind); if (!g) continue;
     const mesh = new THREE.Mesh(g, RPG.gearMat ? RPG.gearMat(ch.uZone, ch.uLight) : RPG.litMat(ch.uZone, ch.uLight, 0.55)); mesh.layers.set(1); mesh.castShadow = false; mesh.name = 'prop:' + kind; mesh.frustumCulled = false;
-    mesh.userData = { kind, holding: true, grip: [0, 0, 0], hand: 'R', len: HP_SIZE[kind] };
+    mesh.userData = { kind, holding: true, grip: [0, 0, 0], hand: 'R', len: HP_SIZE[kind] }; if (kind === 'mug') { mesh.material.side = THREE.DoubleSide; }      // [ch4] the kit's cup is modelled to be seen from both sides (its inside is the back of its outside)
     ch.pivot.add(mesh); (ch.post = ch.post || []);
     if (kind === 'lute') ch.post.push(hpLute(mesh));
     else if (kind === 'hammer') ch.post.push(hpHammer(mesh));
     else if (kind === 'spear') ch.post.push(hpPole(mesh, 0, false));
     else if (kind === 'staff') ch.post.push(hpPole(mesh, 0.05, true));
     else if (kind === 'rod') ch.post.push(hpPole(mesh, 0.7, true));
+    else if (kind === 'mug') { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); ch.post.push(hpMug(mesh, npc, npc.def.id === 'osric' || npc.def.id === 'greta')); }
     else { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos);
       ch.post.push(H => { mesh.scale.setScalar(1 / Math.max(1e-3, H.root.scale.y)); Chars.grip(H, 'R', HP.GRIP.curl); }); }
     npc.props = (npc.props || []).concat([mesh]);

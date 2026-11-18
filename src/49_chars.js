@@ -761,7 +761,7 @@ const Chars = (() => {
   // [ch1] Fingers close round a held thing: C.grip(H, 'R', 0..1) while that hand holds something. Applied after the mixer each frame (the mixer only rewrites a joint
   // when its animated value changed, so the previous frame's curl is taken out first, as the head look does).
   const FING = ['index', 'middle', 'ring', 'pinky'], CURL = [0.95, 1.15, 0.85], GRIP_SIGN = { R: -1, L: -1 };
-  C.grip = function (H, side, amt) { (H.gripAmt = H.gripAmt || { R: 0, L: 0 })[side] = amt; };
+  C.grip = function (H, side, amt) { (H.gripAmt = H.gripAmt || { R: 0, L: 0 })[side] = amt; if (H.gripFlip === undefined) H.gripFlip = /^f_/.test(H.body); };      // [ch4] the women's finger joints turn the other way: with one sign for all, a woman's fingers bent back from what she held
   // [ch4] An arm reaches a point: two-joint solve on upper arm and forearm so the wrist is at `target` (world), the hand turned to `handQ` (world) if given; `w` 0..1 blends from the
   // animation. Call every frame while reaching, after the mixer (a prop's post function does); C.reach(H, side, null) lets go. The instrument is set against the body and the hands
   // go to it, not the other way round: an instrument hung between two animated hands went through the player's belly. Same bookkeeping as the finger curl (see above).
@@ -792,7 +792,7 @@ const Chars = (() => {
       if (!G[side]) { G[side] = []; for (const f of FING) for (let j = 1; j <= 3; j++) { const b = H.root.getObjectByName(f + '_0' + j + sfx); if (b) G[side].push({ b, j, base: new THREE.Quaternion(), mine: new THREE.Quaternion(), on: false }); } }
       for (const g of G[side]) {
         if (g.on && g.b.quaternion.equals(g.mine)) g.b.quaternion.copy(g.base); else g.base.copy(g.b.quaternion); g.on = false;
-        if (amt > 0.001) { e.set(GRIP_SIGN[side] * CURL[g.j - 1] * amt * (g.j === 1 ? 0.8 : 1), 0, 0); q.setFromEuler(e); g.b.quaternion.multiply(q); g.mine.copy(g.b.quaternion); g.on = true; }
+        if (amt > 0.001) { e.set((H.gripFlip ? -1 : 1) * GRIP_SIGN[side] * CURL[g.j - 1] * amt * (g.j === 1 ? 0.8 : 1), 0, 0); q.setFromEuler(e); g.b.quaternion.multiply(q); g.mine.copy(g.b.quaternion); g.on = true; }
       }
     }
   }
