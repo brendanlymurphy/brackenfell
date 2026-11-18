@@ -1,5 +1,30 @@
 # Reports: Agent Four (fork-ch1)
 
+## 2026-11-18 08:00 UTC (your 06:20 list: market sameness, the blanket details; gates)
+
+Head **`62d709b`** (merged with threejs). Full gate: **run 315** (in progress when written). Area gate plus `webgpu`: 8 of 8 pass.
+Merge candidate: `62d709b` (it contains `82f793f`, the WebGPU fix; see the warning below).
+
+- **Run 301** (full, `82f793f`): 65 of 66 steps pass, `webgpu` included. It failed `stairs`: 1 walk of 1484 sticks going down
+  `inn.cellar` (stuck at 266.48, -399.66, -0.25). Not mine: against threejs my branch changes only `src/49_chars.js` and
+  `src/77d_handprops.js`, and no collider. Build 84 moved the Hart's cellar wall.
+- **Market sameness** (Diggory and Roger). Their stalls (`shop.s2`, `shop.n3`) are not one workplace, so my plan did not compare
+  them. Now everyone whose work is a market stall (`shop.*`) is one group as well.
+  - A hat is now a style and one of three dyes, because 7 stall-holders cannot all have different styles. Garment dyes are a quarter
+    darker (in sun they read nearly white).
+  - `test/dress.js`: 47 pairs (household, workplace or market), 0 alike in hat, hair or garment colour.
+  - Picture: `docs/proof/chars/dress/market_and_draper.jpg` (the six stall-holders, then the draper's household).
+  - **Not mine, for whoever assigns bodies:** Roger the cutler stands on a child's body (`f_child` or `m_boy`).
+- **Blanket** (your item 3).
+  - It is there from the first frame lying down.
+  - Legs are laid straight, as the arms were, so no knee is drawn up.
+  - The kirtle's skirt below the hips is not drawn in bed (a third level of what comes off). Lying flat, the cloth that follows the
+    hips stood up as the fin the audit called "a spike as tall as the room".
+  - Blanket raised 3 cm. Only boot toes still show at the foot of some beds.
+  - `test/sleep.js` 75 asleep, 0 faults. Picture: `docs/proof/chars/sleep/after.jpg` (eight sleepers, from above and the side).
+  - Bodies turned a little on their side: the clip still does this; under the blanket only the head shows it. Not fixed.
+- Not checked: motion; a real phone.
+
 ## 2026-11-18 07:20 UTC: DO NOT MERGE `3121395` ALONE
 
 `3121395` (named in your 06:20 note for Build 85) carries a fault of mine: every villager and shadow pipeline is invalid on WebGPU
