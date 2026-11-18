@@ -132,7 +132,7 @@ function shellDress(c, b, frames, MS, o) {
   if (any) put(front, g);
   // [fx3] a cellar the inside shows must be seen outside: a plank hatch in a timber coaming, or a barred grating let into the ground at the foot of the wall, on a free stretch of a side or the back
   { const CEL = { inn: 'hatch', elder: 'grate', chapel: 'grate', draper: 'hatch', 'in.33': 'grate', 'in.37': 'hatch' }[site.id];
-    if (CEL) {
+    if (CEL && !(TEST && TEST.nocel)) {
       const others = SITES.filter(s5 => s5 !== site && s5.w), probe = (wn, u, z) => { const Wd = WALLS[wn], s0 = Wd.start(w, d), q = siteToWorld(site, s0[0] + Wd.u[0] * u + Wd.n[0] * z, s0[2] + Wd.u[2] * u + Wd.n[2] * z); return !others.some(o => { const l = worldToSite(o, q[0], q[1]); return Math.abs(l[0]) < o.w / 2 + 0.6 && Math.abs(l[1]) < o.d / 2 + 0.6; }); };
       let pick = null;
       for (const wn of ['back', 'right', 'left']) { const Lw = L(wn), exC = (openings[wn] || []).map(q => [q.u0, q.u1]); if (Lw < 3.2) continue;
@@ -207,14 +207,14 @@ function shellDress(c, b, frames, MS, o) {
       if (RF() < 0.7) { const hy = Math.min(yRidge - 0.5, 4.6); g6.beam(W_, [cu, hy, 0.0], [cu, hy, 1.25], 0.09, [0.24, 0.2, 0.16]); g6.beam(W_, [cu, hy, 0.15], [cu, hy - 0.5, 0.9], 0.05, [0.22, 0.18, 0.14]); g6.beam(W_, [cu, hy - 0.05, 1.18], [cu, hy - 1.7, 1.18], 0.015, [0.5, 0.45, 0.35]); g6.box(W_, cu - 0.05, hy - 1.9, 1.13, cu + 0.05, hy - 1.7, 1.23, [0.3, 0.3, 0.3]); }      // the hoist: a beam, a brace, a rope and a hook
       put(wn, g6); used.stair = wn; break; }
     // 3: a big stone stack outside a gable end
-    if (RF() < FM.stack) for (const wn of ['left', 'right']) {
+    if (RF() < FM.stack && !(TEST && TEST.nostack)) for (const wn of ['left', 'right']) {
       const Lw = L(wn); if (used.stair === wn || used.outshut === wn || (infNeighbour && infNeighbour(site, wn === 'right') > 0) || !free(wn, Lw * 0.5 - 0.6, Lw * 0.5 + 0.6, 0.9)) continue;
       const g7 = GP(), cu = Lw * (0.4 + RF() * 0.2), top = yRidge + 0.55, sc = (SSt.stoneTint || [0.8, 0.8, 0.8]).map((v, i) => v * 0.42 * [1, 0.95, 0.88][i]), uvS = [0, 0, 0.5, 1.4];      // [fx2] weathered stone, texture at stone scale (the stretched default read as a pale strip)
       g7.box(INF_B, cu - 0.5, -0.3, -0.02, cu + 0.5, 1.1, 0.75, sc, uvS); g7.box(INF_B, cu - 0.44, 1.1, -0.02, cu + 0.44, Ytop + 0.2, 0.66, sc, uvS); g7.box(INF_B, cu - 0.34, Ytop + 0.2, -0.02, cu + 0.34, top - 0.5, 0.5, sc, uvS); g7.box(INF_B, cu - 0.34, top - 0.5, -0.02, cu + 0.34, top, 0.5, sc.map(v => v * 0.55), uvS); g7.box(INF_B, cu - 0.44, top, -0.06, cu + 0.44, top + 0.1, 0.56, sc.map(v => v * 0.8), [0, 0, 0.3, 0.3]);      // a stack with set-offs and a sooted flue under a coping slab
       g7.box(INF_B, cu - 0.2, top + 0.1, 0.06, cu + 0.2, top + 0.34, 0.4, sc.map(v => v * 0.45), [0, 0, 0.2, 0.2]); g7.box(INF_B, cu - 0.12, top + 0.1, 0.14, cu + 0.12, top + 0.34, 0.32, [0.03, 0.03, 0.03], [0, 0, 0.1, 0.1]);      // the pot and its dark mouth
       put(wn, g7); used.stack = wn; break; }
     // 4: a drying rack for nets in the front yard, away from the door
-    if (RF() < FM.rack) { const Lf2 = L(front), uc = dc > Lf2 / 2 ? 0.5 : Lf2 - 2.9, ok = free(front, uc, uc + 2.4, 1.9); if (ok) { const g8 = GP(), WD = [0.3, 0.24, 0.18], NT = [0.3, 0.26, 0.19];
+    if (RF() < FM.rack && !(TEST && TEST.norack)) { const Lf2 = L(front), uc = dc > Lf2 / 2 ? 0.5 : Lf2 - 2.9, ok = free(front, uc, uc + 2.4, 1.9); if (ok) { const g8 = GP(), WD = [0.3, 0.24, 0.18], NT = [0.3, 0.26, 0.19];
       const pole = (A, B, r, c) => { const d3 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], dl = Math.hypot(d3[0], d3[1], d3[2]) || 1, f = d3.map(v => v / dl), ref = Math.abs(f[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0], e1 = [f[1] * ref[2] - f[2] * ref[1], f[2] * ref[0] - f[0] * ref[2], f[0] * ref[1] - f[1] * ref[0]], l1 = Math.hypot(...e1), u1 = e1.map(v => v / l1 * r), e2 = [f[1] * u1[2] - f[2] * u1[1], f[2] * u1[0] - f[0] * u1[2], f[0] * u1[1] - f[1] * u1[0]], l2 = Math.hypot(...e2), u2 = e2.map(v => v / l2 * r);
         for (let i = 0; i < 7; i++) { const a0 = i / 7 * TAU, a1 = (i + 1) / 7 * TAU, o0 = [u1[0] * Math.cos(a0) + u2[0] * Math.sin(a0), u1[1] * Math.cos(a0) + u2[1] * Math.sin(a0), u1[2] * Math.cos(a0) + u2[2] * Math.sin(a0)], o1 = [u1[0] * Math.cos(a1) + u2[0] * Math.sin(a1), u1[1] * Math.cos(a1) + u2[1] * Math.sin(a1), u1[2] * Math.cos(a1) + u2[2] * Math.sin(a1)]; g8.quad(W_, [A[0] + o0[0], A[1] + o0[1], A[2] + o0[2]], [A[0] + o1[0], A[1] + o1[1], A[2] + o1[2]], [B[0] + o1[0], B[1] + o1[1], B[2] + o1[2]], [B[0] + o0[0], B[1] + o0[1], B[2] + o0[2]], c, GPU.wood); } };
       for (const u of [uc, uc + 2.4]) pole([u, 0, 1.6], [u, 2.0, 1.6], 0.045, WD); pole([uc - 0.1, 1.97, 1.6], [uc + 2.5, 1.97, 1.6], 0.035, WD); pole([uc - 0.1, 1.3, 1.6], [uc + 2.5, 1.3, 1.6], 0.028, WD);
