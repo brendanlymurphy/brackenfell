@@ -603,47 +603,47 @@
   {
    "speaker": "rowan",
    "text": "Three weeks now without the bread. They will be counting.",
-   "where": "82c_secrets.js:112"
+   "where": "82c_secrets.js:114"
   },
   {
    "speaker": "greta",
    "text": "There is a stranger in town. Strangers ask about barred doors.",
-   "where": "82c_secrets.js:112"
+   "where": "82c_secrets.js:114"
   },
   {
    "speaker": "rowan",
    "text": "Then Hale is closer than I would like. Say nothing in the Hart.",
-   "where": "82c_secrets.js:112"
+   "where": "82c_secrets.js:114"
   },
   {
    "speaker": "greta",
    "text": "And if they go down?",
-   "where": "82c_secrets.js:112"
+   "where": "82c_secrets.js:114"
   },
   {
    "speaker": "rowan",
    "text": "Then they find what Corwin found. Go, before the watch comes round.",
-   "where": "82c_secrets.js:112"
+   "where": "82c_secrets.js:114"
   },
   {
    "speaker": "greta",
    "text": "The house on the south lane? Nobody’s lived there in years. Pass the salt, love, and don’t ask me twice.",
-   "where": "82c_secrets.js:138"
+   "where": "82c_secrets.js:140"
   },
   {
    "speaker": "marta",
    "text": "Oh, that. I sell nothing to that house and I take nothing from it. Will you be wanting candles?",
-   "where": "82c_secrets.js:138"
+   "where": "82c_secrets.js:140"
   },
   {
    "speaker": "finn",
    "text": "Don’t look at the shutters. My father said never to look at the shutters.",
-   "where": "82c_secrets.js:138"
+   "where": "82c_secrets.js:140"
   },
   {
    "speaker": "aldous",
    "text": "There are houses the Dawn will not name, child. That is one. Leave it to her.",
-   "where": "82c_secrets.js:138"
+   "where": "82c_secrets.js:140"
   },
   {
    "speaker": "brandt",
@@ -798,37 +798,37 @@
   {
    "speaker": "greta",
    "text": "I’ll not charge you for the stew this once, love. Don’t make it a habit.",
-   "where": "94d_act2.js:80"
+   "where": "94d_act2.js:83"
   },
   {
    "speaker": "greta",
    "text": "The Hart’s never been so full. People want to be near other people, after.",
-   "where": "94d_act2.js:81"
+   "where": "94d_act2.js:84"
   },
   {
    "speaker": "hale",
    "text": "The count is kept and the gate is quiet. I’ll sleep tonight with the key out of my hand.",
-   "where": "94d_act2.js:82"
+   "where": "94d_act2.js:85"
   },
   {
    "speaker": "hale",
    "text": "I’ve left the old door unbarred. Nothing in it wants out now.",
-   "where": "94d_act2.js:83"
+   "where": "94d_act2.js:86"
   },
   {
    "speaker": "brandt",
    "text": "Silver for a blade? Aye, I’ll work it now. It’s only metal again.",
-   "where": "94d_act2.js:84"
+   "where": "94d_act2.js:87"
   },
   {
    "speaker": "finn",
    "text": "Nobody’s come out of the lake since. I check every morning.",
-   "where": "94d_act2.js:85"
+   "where": "94d_act2.js:88"
   },
   {
    "speaker": "greta",
    "text": "The cellar? Down the stair by the door, love, behind the rail. Take a candle, the steps are steep.",
-   "where": "94e_hartdoor.js:44"
+   "where": "94e_hartdoor.js:52"
   },
   {
    "speaker": "godwin",
@@ -4559,12 +4559,12 @@
   },
   {
    "speaker": "-",
-   "where": "94d_act2.js:115",
+   "where": "94d_act2.js:118",
    "raw": "'Three loaves, and you have ' + bread + '. The Hart has stew and Marta has loaves, and nobody here is going anywhere.'"
   },
   {
    "speaker": "-",
-   "where": "94d_act2.js:117",
+   "where": "94d_act2.js:120",
    "raw": "'Twelve stand in a row at the water’s edge, and not one of them breathes. The slab before them is bare. The old loaves on it are green and the candle ends are c"
   }
  ],

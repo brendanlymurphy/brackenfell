@@ -2,6 +2,42 @@
 
 Newest first. Times UTC.
 
+## 2026-11-18, the 09:40 inbox
+
+**At the top: `hartdoor` fails on this branch until the inspector's move is in, by design.** It now asserts that the fresh brick faces true
+east, and `World.hartWall` (published by `dressInn`, 72e) is still the cellar's +x wall, which faces 270 degrees (west). The -x wall can
+take the door: the cellar stair (plan x -2.6 to 1.4, z 6.7 to 7.8) and the doorway to the vault (on the z = 8 wall) are elsewhere; only
+casks stand along it. With `hartWall` published on the -x wall (plan x -6.8, z 4.05, simulated in the page), the whole walk passes: brick at
+90 degrees true, named, opened once told, through the tunnel and back. Nothing of mine needs to change when it moves.
+
+Gate: the quick gate is running on `e8f573b` (results to follow in this entry).
+
+1. **The compass reads true indoors.** A cell is built in its house's own frame: the door inside, turned by the site's yaw about the cell's
+   origin, lands on the door outside with 0.00 m error in all 57 cells. So the heading inside plus the site's yaw is the heading in the
+   town. `Cells.trueYaw()` (94f) gives it; the compass's points (85_ui) and the map's arrow (86_map) add it (marked `[cast]` lines);
+   discovered places on the compass are measured from the house's outside door when you are in. Quest marks were already right relative
+   to you (both ends in the cell's frame). In the Hart (site yaw 180) the plan's -x is truly east. `test/pointers.js` checks the frame in
+   every cell and the turn inside and out.
+   - The Hart's brick: everything of mine follows `World.hartWall` wherever it is published (prompt, doorway, both portals, the landing,
+     the compass); without it, `HART.find` now picks whichever cellar wall is truly east, not the plan's x1. `test/hartdoor.js` faces the
+     wall wherever it is, walks round the cellar floor to it (straight across from the stair foot leads back up the stair, which runs along
+     x), and asserts east within 20 degrees.
+2. **Quest marks.** Inside a building the mark already pointed at a target in the same building (`Cells.mapTarget`) and at the door for
+   anything elsewhere; the chapel and the Hart had targets that were outside (fixed earlier). New: out of doors a mark on a building's
+   middle (the crypt quest on the chapel, main stages 2, 7, 8, 9 on the Hart) pointed at the roof; it now points at the door that leads
+   in. Audit of every quest and stage: none is on a building's middle any more and none is far off; `test/pointers.js` keeps it so.
+3. **Roger Hask is not on a child's body.** In the running game he is `m_hunter` at scale 1 at every hour (checked 9, 11, 14, 16 h; the
+   body comes from his voice M). The child in Agent Four's market picture (`docs/proof/chars/dress/market_and_draper.jpg` on fork-ch1) is
+   Lettice Sele, 14, who minds the bookstall: voice G, so `f_child`, as the table says. `test/cast.js` now checks the drawn body against
+   the age (nobody over 15 on `m_boy`/`f_child`, nobody under 13 on a grown body; Tobin and Pip as children): 77 pass.
+   - **Decision for you:** at 14 Lettice is drawn 1.34 m tall (the child scale tops out at 0.78 of 1.72 m); Tom at 13 is 1.31 m. Real
+     children of that age are nearer 1.50 to 1.60 m. Either give 13 and 14 the youth bodies at 0.9 (as a YM under 17 already is), or
+     raise the child scale for them. I have changed nothing.
+4. **Voices: under way.** One request now carries all of one character's missing lines (`--batch 12`); a pilot of Tilly's ten in one
+   request cut cleanly (0.06 to 0.10 s per character, every piece). 510 lines were missing in 63 speakers: 63 requests if every batch
+   cuts. Running now; the count follows here when it ends.
+   - Not heard by anyone: only the owner's ear counts. The cut checks are lengths, not listening.
+
 ## 2026-11-18, the 09:10 inbox
 
 Gate: quick passes locally on `475ffc7` except the medium budget, re-accepted in `fef5c4c` (square 195 draws, alley 199; more people out of doors).
