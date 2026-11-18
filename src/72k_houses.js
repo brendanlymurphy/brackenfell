@@ -362,7 +362,7 @@ function hCompact(P, c, F) {
   const bedRooms = [up1, up2, hall ? right : null].filter(Boolean), first = up2 || up1;
   dressBedroom(P, first, { beds: castBeds(P.id, ['bed']), bedRooms: bedRooms.filter(r => r !== first), blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth > 0, table: F.wealth > 0, chest: true });
   for (const r of bedRooms) if (r !== first) pPiece(P, r, 'wooden_candlestick', { near: pCentre(r), lit: 3.5, soft: true, opt: { lowOk: true } });
-  if (cellarOK) { const cel = P.rooms.cellar; dressCellar(P, cel, { barrels: 2, crates: 2, rows: false }); hCellarChest(P, cel, F); }
+  if (cellarOK) { const cel = P.rooms.cellar; hCellarChest(P, cel, F); dressCellar(P, cel, { barrels: 1, crates: 1, rows: false }); }      /* the chest first: it is what the cellar is for */
   hMemo(P, F);
   if (!hh && !small) P.err.push('no hearth fits');      /* a one-room shop on a 4 m front has no fire of its own (a brazier, the baker's oven next door) */
 }
@@ -371,3 +371,5 @@ function hCompact(P, c, F) {
 for (const id of ['in.02', 'in.04', 'in.07', 'in.08', 'in.10', 'in.12', 'in.13', 'in.15', 'in.21', 'in.40', 'in.44', 'in.74', 'in.90', 'in.94', 'in.116']) INOUT_FIT.add(id);
 // the six alley shops: shop below, chamber above (their third storey waits for a corner stair: docs/reports/THREE.md)
 for (const id of ['shop.n2', 'shop.n3', 'shop.n4', 'shop.s0', 'shop.s1', 'shop.s2']) INOUT_FIT.add(id);
+// Chapelgate
+for (const id of ['in.33', 'in.45', 'in.66', 'in.67', 'in.70', 'in.77', 'in.82']) INOUT_FIT.add(id);

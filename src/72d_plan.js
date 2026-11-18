@@ -72,7 +72,7 @@ function pLayout(P) {
     if (!wl) { P.err.push('window ' + w.face + ' L' + w.k + ' at ' + w.pos + ' is on no outside wall'); continue; }
     if (wl.open.some(o => Math.abs(o.pos - w.pos) < o.hw + 0.95)) { (P.winClash = P.winClash || []).push(w); continue; }      /* two openings the shell draws too close to stand at both: one inside, the clash reported (test/inout.js) */
     const room = [...wl.rooms].map(id => P.rooms[id]).find(r => wl.ax === 'x' ? w.pos >= r.x0 && w.pos <= r.x1 : w.pos >= r.z0 && w.pos <= r.z1);
-    wl.open.push({ type: 'win', pos: w.pos, hw: 0.8, kind: w.kind || 'Wide_Flat', glass: null }); P.windows.push({ wall: wl, pos: w.pos, kind: w.kind || 'Wide_Flat', k: wl.k, room });
+    const gl = room && room.glass ? room.glass[P.windows.length % room.glass.length] : null; wl.open.push({ type: 'win', pos: w.pos, hw: 0.8, kind: w.kind || 'Wide_Flat', glass: gl }); P.windows.push({ wall: wl, pos: w.pos, kind: w.kind || 'Wide_Flat', k: wl.k, room });
   }
   for (const wl of P.walls) {
     if (P.wins || !wl.ext || wl.k < 0) continue;
