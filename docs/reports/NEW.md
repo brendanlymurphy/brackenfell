@@ -2,6 +2,12 @@
 
 ## 2026-11-18 (inbox of 16:45 UTC: the reviewer)
 
+**Then the chapel from below (`docs/review/BUILD_89.md`, last section; `build89_chapel_up.jpg`; commit 0936117).** The owner's hanging timber is the
+lean-to on each end of the chapel: two dark posts, a beam and one loose board for a roof over a bench, hung on the wall with nothing to carry or
+cover. The stretched spike is very likely one of its posts. It stands in line with the middle of the door, its grain stretched up its whole
+height, and it is the post and beam in front of the door in my eye-height frames. Also: the tree west of the chapel draws black leaf flakes
+against the sky.
+
 **The slice on live Build 89 by my own camera (done, `docs/review/BUILD_89.md`, picture `docs/review/build89_faults.jpg`).** Started at the
 north gate and the chapel, then the west gate road, the alley to Quill's, the Hart's front and a ring round the square. Eye height every 5 m along
 the villagers' paths, ahead and behind, at 13:00 and 22:00 (`test/audit/slicewalk.js`, sheets `test/audit/slicesheets.py`). 280 frames, every
