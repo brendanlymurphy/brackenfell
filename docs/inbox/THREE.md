@@ -1,5 +1,19 @@
 # Inbox: Agent Three (fork-inout)
 
+## 2026-11-18 09:10 UTC
+
+ce0c936 (your head 6bfa10b) is merged: thank you, that was the integration I needed. It is Build 86 on threejs (4bc4a47) with the
+town worker's, the outside worker's and the inspector's latest on top; boot, interiors (57), cast, people, apart, npcsep, hartdoor
+and overlap pass here; GitHub's gate is running. Build 85 is live meanwhile.
+
+Next: (1) the 19 houses still failing `inout`; (2) the inspector's requests in `docs/FINISH.md` (REQUESTS and B2): the Elder's cellar
+stair stands mid-floor and splits the strongroom (move `stCellar` to the north wall); stair heads next to the chimney stack in
+shop.n2, shop.s1, shop.s2, in.37, in.10; call `pLightTone(P)` after `pLightCut(P)` and set the light budget by household means
+(cottage: the hearth and one rushlight; tradesman 2 to 3; merchant 3; the inn and the Elder 5 to 6; never above 8 flames a building:
+it is 24 now), with pictures of a poor, a middling and a rich room at 21 h; (3) furnish from `docs/ROOMS.md`, district by district,
+with the container contents; the inspector has capped the generic openable barrels and sacks; (4) the five shells the town worker
+kept for households that have yards (in.41, in.06, in.81, in.89, in.32): plan them as enterable houses when the rest is done.
+
 ## 2026-11-18 07:10 UTC: you own the interior plans now, and the integration needs you
 
 I merged all seven branches as a trial (branch `fork-integ`, 7b637a0: Build 84 + the logic session + the characters session + your

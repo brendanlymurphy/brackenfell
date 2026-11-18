@@ -64,16 +64,22 @@ function plotsCompute() {
 }
 /* [fx3] a gate keeps a clear lane: from 0.8 m to 3.4 m inside it, 0.85 m either side, nothing solid. laneFree tests a lane (x,z the gate, dx,dz the way in) against the colliders built since the plots began;
    pickGate returns the position along the wall nearest the wanted one whose lane is free (the trade is built first, then the gate is cut where it can be walked through). */
-function laneFree(x, z, dx, dz, c0) {
+/* pieces drawn without a collider that stood within 1.3 m of a gate (test/openings.js lists them): a gate is not cut within 1.4 m of one */
+const GATE_AVOID = [[-40.6, -51.1], [-33.6, -14.6], [1.3, -60.2], [-29.3, -35.7], [18.4, -16.4], [9.1, 6.3], [-18.1, -15.2], [35.9, 36.8], [-36.8, -18.6], [-9.8, -17.1], [23.5, -45.7], [-40.4, -43.1]];
+function laneFree(x, z, dx, dz, c0, noAvoid) {
   const px = -dz, pz = dx;
-  for (let i = c0 || 0; i < World.colliders.length; i++) { const c = World.colliders[i]; if (!isFinite(c.x) || c.y1 - c.y0 < 0.3) continue; if (Math.abs(c.x - x) > 6 || Math.abs(c.z - z) > 6) continue;
-    for (let t = 0.7; t <= 3.5; t += 0.35) for (let a = -0.9; a <= 0.91; a += 0.3) { const wx = x + dx * t + px * a, wz = z + dz * t + pz * a;
+  if (!noAvoid) for (const a of GATE_AVOID) if (Math.hypot(a[0] - x, a[1] - z) < 1.4) return false;
+  for (let i = 0; i < World.colliders.length; i++) { const c = World.colliders[i]; if (!isFinite(c.x) || c.y1 - c.y0 < 0.3) continue; if (Math.abs(c.x - x) > 6 || Math.abs(c.z - z) > 6) continue;
+    for (let t = -1.3; t <= 3.5; t += 0.35) for (let a = -0.9; a <= 0.91; a += 0.3) { const wx = x + dx * t + px * a, wz = z + dz * t + pz * a;
+      if (t > 0 && i < (c0 || 0)) continue;      /* inside the lane only what the plots built; the 1.3 m in front of the gap counts every collider (a neighbour's wall) */
       if (c.r !== undefined) { if (Math.hypot(wx - c.x, wz - c.z) < c.r + 0.1) return false; } else { const u = (wx - c.x) * c.ax + (wz - c.z) * c.az, v = (wx - c.x) * c.bx + (wz - c.z) * c.bz; if (Math.abs(u) < c.hx + 0.1 && Math.abs(v) < c.hz + 0.1) return false; } } }
   return true;
 }
 function pickGate(want, lo, hi, at, dx, dz, c0) {
   if (hi < lo) return want; const cands = []; for (let v = lo; v <= hi + 1e-6; v += 0.25) cands.push(v); cands.sort((a, b) => Math.abs(a - want) - Math.abs(b - want));
-  for (const v of cands) { const q = at(v); if (laneFree(q[0], q[1], dx, dz, c0)) return v; } return want;
+  for (const v of cands) { const q = at(v); if (laneFree(q[0], q[1], dx, dz, c0)) return v; }
+  let best = want, bd = -1; for (const v of cands) { const q = at(v); if (!laneFree(q[0], q[1], dx, dz, c0, true)) continue; const d = Math.min(9, ...GATE_AVOID.map(a => Math.hypot(a[0] - q[0], a[1] - q[1]))); if (d > bd) { bd = d; best = v; } }
+  return best;
 }
 function buildPlots(bucket) {
   if (TEST && TEST.plots === 0) return; World.plotC0 = World.colliders.length;
@@ -359,7 +365,7 @@ function buildWestgate(bucket) {
 
 /* [fx3] the west edge of the town: the gate is the only way in. Palisade for the stretch beside the gate, then a bank with a hedge on it and a ditch outside, following the ground north to the north wall and south down the town's flank.
    A road that crosses the line leaves a gap with two gate posts. The ditch is painted by the terrain (WEST_EDGE). */
-const WEST_EDGE = { n: [[-62, -8.15], [-62, -15], [-64, -19.5], [-65, -26], [-63, -38], [-58, -49], [-47, -56], [-33, -58.5], [-30, -58.7]], s: [[-62, -2.25], [-62, 5], [-63.5, 9.5], [-65, 16], [-63, 30], [-59, 44], [-52, 56], [-44, 66], [-37, 72.5], [-32, 76.5]], ne: [[8, -58.7], [30, -60.5], [52, -60], [72.7, -57], [72.7, -46.5]], pal: 2 };
+const WEST_EDGE = { n: [[-62, -8.15], [-62, -15], [-64, -19.5], [-65, -26], [-63, -38], [-58, -49], [-47, -56], [-33, -58.5], [-30, -58.7]], s: [[-62, -2.25], [-62, 5], [-63.5, 9.5], [-65, 16], [-63, 30], [-59, 44], [-52, 56], [-44, 66], [-37, 72.5], [-32, 76.5], [-38, 78.4], [-44, 80.5], [-48, 82]], ne: [[8, -58.7], [30, -60.5], [52, -60], [72.7, -57], [72.7, -46.5]], pal: 2 };
 function buildWestEdge(bucket) {
   if (TEST && TEST.plots === 0) return;
   const gy = (x, z) => Terrain.y(x, z), bucket0 = bucket;
@@ -380,7 +386,7 @@ function buildWestEdge(bucket) {
 }
 
 /* [fx3] where the audit's deleted shells stood, each footprint is the neighbour's yard: a low stone wall on four sides with a gate on the old front, the trade of the yard inside (garden, wood, hens, hives, washing), and a fruit tree in the orchards. Decisions per id are in YARDS. */
-const YARDS = { 'in.42': ['dyer'], 'in.43': ['garden'], 'in.46': ['woodyard'], 'in.64': ['hens'], 'in.71': ['garden', 'oak'], 'in.73': ['hives'], 'in.97': ['hens', 'oak'], 'in.103': ['hens'], 'in.117': ['woodyard'], 'in.118': ['garden'], 'in.119': ['hens'], 'in.128': ['hives', 'oak'], 'in.130': ['garden', 'oak'], 'in.48': ['hives'], 'in.11': ['woodyard'], 'in.76': ['hens', 'oak'], 'in.47': ['hens', 'oak'] };
+const YARDS = { 'in.42': ['dyer'], 'in.43': ['garden'], 'in.88': ['garden', 'oak'], 'in.18': ['garden'], 'in.46': ['woodyard'], 'in.64': ['hens'], 'in.71': ['garden', 'oak'], 'in.73': ['hives'], 'in.97': ['hens', 'oak'], 'in.103': ['hens'], 'in.117': ['woodyard'], 'in.118': ['garden'], 'in.119': ['hens'], 'in.128': ['hives', 'oak'], 'in.130': ['garden', 'oak'], 'in.48': ['hives'], 'in.11': ['woodyard'], 'in.76': ['hens', 'oak'], 'in.47': ['hens', 'oak'] };
 function buildYards(bucket) {
   { const raw = bucket; bucket = (x, z) => { const m = raw(3e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 400; m.lowDist = 22; return m; }; }      // [fx3] 44 m cells of their own, on Low drawn out to 36 m
   if (TEST && TEST.plots === 0) return; if (!PLACE.deletedSites) return;
@@ -396,6 +402,6 @@ function buildYards(bucket) {
       m.push().T(cx, g, cz).RY(-ang); m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.4); m.box(-L / 2, 0, -t, L / 2, 1.0 + R() * 0.12, t, 4); m.mat(MAT.STONE, [tone * 1.1, tone * 1.06, tone], 1.4); m.box(-L / 2 - 0.02, 1.0, -t - 0.04, L / 2 + 0.02, 1.12, t + 0.04, 4); addBoxCollider(m, -L / 2 + 0.25, -t, L / 2 - 0.25, t, 0, 1.1); m.pop(); };
     const inw = (() => { const a = W(0, -hd), b = W(0, -hd + 1); return [b[0] - a[0], b[1] - a[1]]; })(), gl = pickGate(0, -hw + 1.2, hw - 1.2, v => W(v, -hd), inw[0], inw[1], World.plotC0 || 0);
     { const gq = W(gl, -hd), g2 = W(gl, -hd - 1); (World.openings = World.openings || []).push({ kind: 'yardgate', x: gq[0], z: gq[1], dx: g2[0] - gq[0], dz: g2[1] - gq[1], w: 1.7 }); }
-    const gw = 0.85; seg(-hw, -hd, gl - gw, -hd); seg(gl + gw, -hd, hw, -hd); seg(hw, -hd, hw, hd); seg(hw, hd, -hw, hd); seg(-hw, hd, -hw, -hd);
+    const gw = 1.15; seg(-hw, -hd, gl - gw, -hd); seg(gl + gw, -hd, hw, -hd); seg(hw, -hd, hw, hd); seg(hw, hd, -hw, hd); seg(-hw, hd, -hw, -hd);
     for (const sx of [gl - gw, gl + gw]) { const q = W(sx, -hd); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); m.cbox(q[0], gy(q[0], q[1]) - 0.1, q[1], 0.2, 1.5, 0.2, 0); }}
 }

@@ -8,7 +8,7 @@ return JSON.stringify({ by, bell: !!World.bell });`;
 const run = opt => { const o = execFileSync('node', ['test/shot.mjs', '--opt', opt, '--do', js], { encoding: 'utf8', timeout: 400000 }); const m = o.match(/-> "(.*)" \d+ms/s); return JSON.parse(JSON.parse('"' + m[1] + '"')); };
 const A = run('plans=0'), B = run('plans=all'); let bad = 0;
 for (const b in A.by) { if (b === 'outdoors') continue; const ia = new Set(A.by[b].i || []), ib = new Set((B.by[b] || {}).i || []), sa = new Set(A.by[b].s || []), sb = new Set((B.by[b] || {}).s || []);
-  const mi = [...ia].filter(x => !ib.has(x)), ms = [...sa].filter(x => !sb.has(x) && !/\.(up|cellar|stairs[UV]?)\d?$/.test(x));
+  const mi = [...ia].filter(x => !ib.has(x) && !(x.startsWith('chest:') && ib.has('cont:cont.' + x.slice(6)))),      /* [inout] a chest that became a story container (82c_secrets.js: one prompt per chest) is still there */ ms = [...sa].filter(x => !sb.has(x) && !/\.(up|cellar|stairs[UV]?)\d?$/.test(x));
   if (mi.length || ms.length) { bad++; console.log(b + ': missing interacts [' + mi.join(', ') + '] spots [' + ms.join(', ') + ']'); } }
 if (!A.bell || !B.bell) { bad++; console.log('World.bell missing'); }
 console.log(bad ? bad + ' buildings lose something' : 'parity ok'); process.exit(bad ? 1 : 0);

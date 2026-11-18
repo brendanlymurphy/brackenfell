@@ -5,6 +5,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms)), dt = 1 / 30, fails = []
 const fx = (c, m) => { if (!c) fails.push(m); };
 const idle = async () => { for (let i = 0; i < 400 && Cells.busy; i++) await sleep(50); game.step(2, dt); };
 const gcount = () => Object.values(S.items).reduce((a, b) => a + b, 0) + S.gold;
+if (typeof OWN !== 'undefined') OWN.off = true;       /* [cast] this tests theft, not trespass: it works inside houses at three in the morning, where the owners would show it the door */
 Env.dayLength = 0; Env.hour = 12; S.flags.bed = 1; game.step(2, dt); Env.hour = 3; npcSnapAll(); game.step(1, dt);       // everyone in bed, so nothing so far is theft
 log.push('stats ' + JSON.stringify(IX.stats));
 fx(IX.stats.cont >= 40, 'few containers: ' + IX.stats.cont); fx(IX.stats.loose >= 15, 'few loose things: ' + IX.stats.loose); fx(IX.stats.seat >= 15, 'few seats: ' + IX.stats.seat); fx(IX.stats.books >= 5, 'few letters: ' + IX.stats.books);
