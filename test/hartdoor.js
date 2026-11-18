@@ -6,16 +6,29 @@ const bad = [], dt = 1 / 30, I = Input, log = []; Env.dayLength = 0; Weather.set
 const press = c => { I.keys[c] = true; }, lift = c => { I.keys[c] = false; };
 const walkTo = (x, y, z, tol, max) => { let best = 1e9, still = 0; for (let i = 0; i < (max || 900); i++) { const P = Player.pos, d = Math.hypot(x - P[0], z - P[2]); if (d < (tol || 0.45) && (y === undefined || Math.abs(P[1] - y) < 0.9)) { lift('KeyW'); return true; }
     const want = Math.atan2(x - P[0], -(z - P[2])); Player.yaw += angDiff(want, Player.yaw) * 0.5; Player.pitch = 0; press('KeyW'); game.step(1, dt); if (d < best - 0.02) { best = d; still = 0; } else if (++still > 120) break; } lift('KeyW'); return false; };
+// a player's own way across a floor: a 0.25 m grid round the furniture (the collision grid) and away from drops (a stairwell), walked by the keys. Not the
+// villagers' graph: its links cut through tables (planNav bends them round stairwells only).
+const gridWalk = goal => { const P0 = Player.pos.slice(), y = P0[1], S = 0.25, R = 12, solidAt = (x, z) => { const l = Col.grid.get(Math.floor(x / Col.cell) * 4096 + Math.floor(z / Col.cell)); if (!l) return false; const q = [x, 0, z]; for (const c of l) { if (c.y1 !== undefined && (c.y1 < y + 0.3 || c.y0 > y + 1.7)) continue; q[0] = x; q[2] = z; if (colPush(q, 0.3, c)) return true; } return false; }, ok = (x, z) => !solidAt(x, z) && Math.abs(World.groundAt(x, z, y + 0.6) - y) < 0.3,          /* World.blockedAt ignores height: inside a cell it counts the floors and ceilings */ key = (i, j) => i + ',' + j;
+  const gi = Math.round((goal[0] - P0[0]) / S), gj = Math.round((goal[2] - P0[2]) / S), prev = new Map([[key(0, 0), null]]), q = [[0, 0]]; let found = false;
+  while (q.length && !found) { const [i, j] = q.shift(); for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) { const a = i + di, b = j + dj, k2 = key(a, b); if (prev.has(k2) || Math.abs(a * S) > R || Math.abs(b * S) > R) continue; const x = P0[0] + a * S, z = P0[2] + b * S; if (!ok(x, z) && !(Math.abs(a - gi) <= 1 && Math.abs(b - gj) <= 1)) continue; prev.set(k2, [i, j]); if (a === gi && b === gj) { found = true; break; } q.push([a, b]); } }
+  if (!found) return 'no way across the floor (round the furniture) from the door to the stair head';
+  const path = []; let c = [gi, gj]; while (c) { path.unshift(c); c = prev.get(key(c[0], c[1])); }
+  for (let n = 2; n < path.length; n += 2) { const [a, b] = path[Math.min(n, path.length - 1)]; if (!walkTo(P0[0] + a * S, undefined, P0[2] + b * S, 0.3, 300)) return 'stuck at ' + Player.pos.map(v => v.toFixed(1)).join(', ') + ' on the way round the furniture'; }
+  return null; };
 const walkPath = (from, to) => { const p = navPath(from, to); if (!p) return 'no way on the villagers\' graph'; for (const k of p.slice(1)) { const n = Nav.nodes[k]; if (Nav.portal[k] !== undefined && Nav.portal[Nav.portal[k]] === k && Math.hypot(n[0] - Player.pos[0], n[2] - Player.pos[2]) > 30) return null; if (!walkTo(n[0], n[1], n[2], 0.5)) return 'stuck at ' + Player.pos.map(v => v.toFixed(1)).join(', ') + ' short of ' + n.map(v => v.toFixed(1)).join(', '); } return null; };
 game.enter('inn'); game.step(5, dt); const c = Cells.by.inn, f = HART.at; if (!f) throw new Error('HARTDOOR FAIL the Hart has no cellar in its plan');
 // 1. from the front door down to the cellar, on foot
 const start = Player.pos.slice(); log.push('door ' + start.map(v => v.toFixed(1)));
+let first = null, nd = 1e9; for (const k in World.spots) { const sp = World.spots[k]; if (!k.startsWith('inn.') || sp.k !== 0 || sp.sit || sp.lie || Nav.spot[k] === undefined) continue; const d = Math.hypot(sp.p[0] - start[0], sp.p[2] - start[2]); if (d > 0.8 && d < nd) { nd = d; first = k; } }       /* the nearest standing place in the common room, a step in from the door */
+const nearest = first ? Nav.spot[first] : 0;       /* the walk itself starts at the door (gridWalk) */
 // the stair the plan built (not the villagers' graph, which joins the two floors by a step straight through the common-room floor): its head, then down it
 const P = World.houses.inn.plan, st = P.stairs.find(q => q.k0 < 0 && q.k1 === 0) || P.stairs.find(q => q.k1 === 0); if (!st) bad.push('the Hart has no stair to its cellar');
 else { const lo = st.low, along = st.axis === 'x', mid = along ? (lo.z0 + lo.z1) / 2 : (lo.x0 + lo.x1) / 2, top = st.dir > 0 ? (along ? lo.x1 : lo.z1) : (along ? lo.x0 : lo.z0), bot = st.dir > 0 ? (along ? lo.x0 : lo.z0) : (along ? lo.x1 : lo.z1), sg = st.dir > 0 ? 1 : -1;
   const at = (u, k, h) => P.w2(along ? u : mid, P.lv[k].y + (h || 0), along ? mid : u), head = at(top + sg * 0.9, 0), foot = at(bot - sg * 0.9, st.k0);
   log.push('stair head ' + head.map(v => v.toFixed(1)) + ' foot ' + foot.map(v => v.toFixed(1)));
-  if (!walkTo(head[0], head[1], head[2], 0.4)) bad.push('could not walk from the door to the head of the cellar stair: stopped at ' + Player.pos.map(v => v.toFixed(1)).join(', '));
+  // the way round the furniture is the villagers' own, from the place by the door to the top of the stair (the plan's 'cellar1'), then straight on to the head
+  { const r = gridWalk(head); if (r) bad.push('from the door to the head of the cellar stair: ' + r); }
+  if (!bad.length && !walkTo(head[0], head[1], head[2], 0.4)) bad.push('could not walk from the door to the head of the cellar stair: stopped at ' + Player.pos.map(v => v.toFixed(1)).join(', '));
   else if (!walkTo(foot[0], foot[1], foot[2], 0.5)) bad.push('could not walk down the cellar stair: stopped at ' + Player.pos.map(v => v.toFixed(1)).join(', ')); else log.push('in the cellar at ' + Player.pos.map(v => v.toFixed(1))); }
 if (Player.pos[1] > f.prop[1] + 0.8) bad.push('not down in the cellar (feet at ' + Player.pos[1].toFixed(2) + ', cellar floor ' + f.prop[1].toFixed(2) + ')');
 // 2. to the east wall, and the prompt there
