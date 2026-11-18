@@ -28,6 +28,16 @@ Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
   compact houses the chimney stack upstairs left a 0.45 m squeeze into the back room; the fire is now placed where its stack leaves
   a 0.9 m way past it (2f023fd). Left: the store's stack1, upstairs chests and beds in in.04, in.33, in.40, in.60, in.82, in.113,
   the draper's dip, shop.s2's bench, an in.37 cellar crate. Next: those, the stair heads beside chimney stacks, then the light budget.
+- **Light budget (item 2), a2a2d89.** `pFlameBudget(P)` after `pLightCut(P)`: by the house's tier in ROOMS.md, a poor house keeps
+  its hearth and one light, a tradesman's or merchant's house three, the Hart, the Elder and the chapel six, never above eight
+  flames; cellars, vaults and the crypt are served first (the story sends the player down). A flame not kept stands unlit: its
+  emitter and its point light go (a window's daylight stays). Wall torches draw their flame, so they are capped where placed
+  instead: a room's first torch always, more only up to three (Hart, Elder, chapel) or two. 155 flames in the 57 buildings now
+  (ROOMS.md aims at about 105; the Hart had 44 light sources and 9 torches, now 3 lanterns and 3 torches). `pLightTone(P)` is
+  called when it exists: it is on `fork-fin`, not yet on threejs. Pictures at 21 h: `docs/proof/inout/light/poor_21h.png`
+  (in.13), `middling_21h.png` (in.02), `rich_21h.png` (the Elder's hall), `inn_21h.png`. The poor room still reads fairly
+  warm from its hearth; the tone will dim it further. The stair heads beside chimney stacks: none left in the shops, in.10 or
+  in.37 (the refit moved them); the store, mill and draper have a stack 0.65 to 0.9 m to the side of the head, not in front.
 - **Gate here on b7bc077:** boot, stairs, npcsep, interact, interiors (57), parity, cast, scenes, hartdoor, inout (12), apart,
   people all pass.
 - **Not verified headless:** how the moved windows look from inside against furniture at arm's length; frame rate.
