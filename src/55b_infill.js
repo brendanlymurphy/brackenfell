@@ -251,6 +251,7 @@ const PLACE = { poly: [[-19.6, -17.3], [-7.6, -17.3], [14.7, -17.3], [20.3, -16.
     const h = INF.byId[id] || { placedOnly: true }, st = SITE[id]; if (!st) continue;
     h.x = st.x = x; h.z = st.z = z; h.yaw = st.yaw = yaw; h.placed = true;
   }
+  { const h = INF.byId['in.13'], st = SITE['in.13']; if (h && st) { h.z = st.z = h.z - 0.55; } }      /* [fx3] in.12 / in.13: the slot between them was 1.37 m, too narrow to walk and too wide to be a wall; moved 0.55 m so it is a 1.9 m passage (BLUEPRINT 2.3) */
   /* [fx3] gables to the street: these houses are turned so the short wall is the front and the ridge runs away from the street (w and d swapped; the front line stays where it was, the house grows backwards) */
   PLACE.gabled = [];
   for (const id of ['in.08', 'in.116', 'in.15']) {
@@ -295,7 +296,10 @@ const KEEP = {
     for (const id in INF.LN) { const L = INF.LN[id]; if (id === 'crag' || id === 'hunter' || id === 'fisher') { if (INF.dist(L, x, z)[0] < this.ROAD * 0.5 + r * 0.5) return id; continue; } if (INF.dist(L, x, z)[0] < this.ROAD + r * 0.6) return id; }
     return null;
   },
-  hit(x, z, r) { r = r || 0.3; return this.inStrip(x, z, r) || this.onRoad(x, z, r) || null; },
+  /* [fx3] plot and yard gates whose front had street dress or kit trim within 1.3 m (test/openings.js): nothing small is set down within 1.6 m of them. Gate positions are fixed by the deterministic plots pass. */
+  GATES: [[-40.4, -50.8], [-33.4, -13.4], [2.3, -59.1], [-28.2, -35.9], [10.3, 6.7], [18.0, -15.8], [-17.7, -15.8], [-36.8, -19.5], [34.5, 37.5], [-10.1, -15.8], [24.4, -44.6], [-37.4, -43.1]],
+  onGate(x, z, r) { for (const g of this.GATES) if (Math.hypot(g[0] - x, g[1] - z) < 1.6 + r * 0.5) return 'gate'; return null; },
+  hit(x, z, r) { r = r || 0.3; return this.inStrip(x, z, r) || this.onRoad(x, z, r) || this.onGate(x, z, r) || null; },
   slide(x, z, r) {        // the nearest clear spot to (x, z) within 3 m (sideways along the strip or the road first), or the point itself when it is already clear or nothing is
     if (!this.hit(x, z, r)) return [x, z];
     for (let d = 0.35; d <= 3.2; d += 0.35) for (let k = 0; k < 16; k++) { const a = k / 16 * TAU, px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d; if (!this.hit(px, pz, r)) return [px, pz]; }

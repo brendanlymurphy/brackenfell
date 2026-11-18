@@ -161,3 +161,14 @@ Ten houses (inn, smithy, store = Quill's, draper, in.10 baker's, in.13 and in.40
 - in.10 12 h and 20 h: Avice and Tilly sit at the new shop table (1.8,1.3) and (1.2,2.7); Godwin lies in the upback bed both hours (PEOPLE.md: asleep 10-14; asleep at 20 h is early, logic session to check).
 - Schedule problems for the logic session (not furniture): mill empty at 12 h and 20 h (Osric Dunn is at the Hart at 20 h; at 12 h nobody in the mill, where is he?); guardhouse empty at 20 h (Hale and Ivo at the Hart) and Ivo asleep in the barracks bed at 12 h; store (Quill's) empty at 20 h (Marta at the Hart, shop closed: fine if the door is barred); Hart at 12 h holds only Greta; chapel has one person at both hours; smithy 12 h only Brandt, 20 h only Tobin (living room mealbench).
 - [ ] T1 (sev 3) Chapel cot (picture shots/fin/beds/cot_0.jpg): the cot sits against the sacristy west wall under a hook rail, clear of the window and with a way round; mattress and pillow still render near white under the sacristy light even after Props.bed mattress was dimmed 22 percent (70_props.js bed, line 61): look for another bed draw or the cloth gain in MI_Trim_Cloth.
+
+## ELDER STRONGROOM (audit view 714.40,-401.38,8.85)
+- [x] SR1 (sev 2) That camera is at plan (3.5, y -1.7, 11.5): inside the cellar stair run (stCellar x 1.30..5.26, z 10.37..11.63, treads reach y -1.75 at x 3.5), so the view is the stair's solid plank side. Not a shelf. Pictures shots/fin/bars/sr0.jpg and sr3_sheet.jpg (from the floor, eye 1.6 m: the stair side fills the view looking north; the shelves along z 13.4 stand against the wall, crates and sacks 0.6 m with ways between).
+- [ ] SR2 (sev 2) The real fault is the layout: a closed 1.6 m high stair body stands mid-floor in a 6.6 x 4.6 m strongroom and splits it. Request below.
+
+## REQUESTS FOR THE INTERIORS SESSION
+- elder (72h_trades.js): move pStair stCellar (x 1.3, z 11.0, axis x) against the north wall, z about 9.95, and move the d66-69bn benches (z 9.2..9.65) to the west wall or drop two; the strongroom then reads as a room with a stair along one wall, not a stair in the middle. See SR2.
+- inn (72e_plans.js): keep the Hart bar at a.x1 - 2.3 (lane to the east wall at least 1.8 m), the stairs test needs it.
+- shop.n2, shop.n3, shop.n4, shop.s0, shop.s1, shop.s2, in.10, in.37, in.111: the upstairs stair head stands against the chimney stack (hearth width): narrow the hearth by 0.3 m or turn the stair head.
+- store (72h_trades.js): kshelf at the cellar foot blocks stUp: move it 0.9 m along the wall.
+- elder hightable, herbalist chamber meal table, in.33 chamber, in.115 parlour table: table cuts off a seat or a stair foot at 0.9 m (test/interiors.js prints the ways); shift the table 0.5 m or drop one seat.

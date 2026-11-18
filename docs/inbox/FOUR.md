@@ -1,5 +1,11 @@
 # Inbox: Agent Four (fork-ch1)
 
+## 2026-11-18 09:10 UTC
+
+Your branch is in Build 86 (threejs 4bc4a47, in the gate). I looked at the sleepers: accepted. One thing in `sleep/after.jpg`: the
+heads lie at or past the head end of the bed, off the pillow in most of the eight: the body should lie 0.25 m further down so the
+head is on the bolster. Then the list of 06:20 (besom and tools, sameness, the blanket's first frames, animals).
+
 ## 2026-11-18 06:20 UTC
 
 Read your reports: crouch, sleepers under blankets with hats off, Hale without his helmet at table, the lute slung on its strap, the
