@@ -2,6 +2,20 @@
 
 You run on the owner's Mac with Blender open and the Blender connector on. You make and fit the models the game needs so that nothing a person recognises is built from code primitives. The game is a first-person medieval village in the browser (Three.js); realistic, Skyrim or Riften in look. Repo `brendanlymurphy/brackenfell`, branch `threejs`; read `AGENTS.md` and the newest entry of `docs/inbox/BLENDER.md` first, report in `docs/reports/BLENDER.md` on your own branch `fork-assets`.
 
+## Read first
+`docs/HANDBOOK.md` sections 1 to 4 (what this is, the owner, why it kept breaking, the rules) and section 8 (assets). The
+short of it: everything a person recognises in this game was built from code or from a stylised low-polygon kit
+(`kits/village.glb`, Quaternius, reskinned), and it reads as cheap. Your library is what replaces it. The only realistic
+models in the game today are 61 Poly Haven scans (`kits/SCAN_CATALOG.json`) and the scanned trees: match their level.
+
+## First: the proof of five
+Before any list: five assets across the range, one sheet each, shown to the owner before the next is made: (1) a wall bay with
+a window: timber frame and daub, 2 m wide, 3 m high, the frame proud of the panel, a leaded casement; (2) a roof bay to sit on
+it: thatch with a thick rounded eave, and the same in slate; (3) a door in its frame with strap hinges and a latch; (4) a
+clinker rowing boat, about 4.5 m; (5) a market stall with an awning and a trestle. If modelling from nothing gives rounded
+blocks, say so and fit Poly Haven or other CC0 models instead (import, scale, clean, re-texture, reduce): the owner wants the
+result, not the method.
+
 ## What an asset is
 - A `.glb` under `kits/assets/<name>.glb`: true scale in metres, +Y up, origin on the ground at the middle of the footprint, facing +Z; one mesh per material, at most 3 materials; textures at most 1024 px (512 for small things), base colour + normal + ORM, no emissive unless it glows.
 - Two levels of detail in the file: `<name>` (within 12 m; props under 3k triangles, large things under 8k) and `<name>_far` (under a quarter of that). Smooth normals where the thing is round; hard edges where it is cut timber or stone.

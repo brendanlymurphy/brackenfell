@@ -1,6 +1,6 @@
 # Where things stand and what is next (written 18 Nov 2026, about 17:00 UTC, when everything was stopped)
 
-Read this first when anything starts again. The day's full log is `docs/log/2026-11-18_coordinator.md`.
+Read `docs/HANDBOOK.md` first (written at the stop: the rules, the lessons, the plan); this file is the exact state of every branch at that moment. The day's full log is `docs/log/2026-11-18_coordinator.md`.
 
 ## State
 - **Live:** Build 89 (`main` 997710c), verified.
@@ -13,7 +13,7 @@ Read this first when anything starts again. The day's full log is `docs/log/2026
 Days of work and every build still had something broken that a person sees in two minutes. The cause is not missing knowledge. (1) Nearly everything recognisable was built from code by sessions that never see it; (2) placement is rules, and rules collide; (3) the owner was the only one who played: tests check what someone thought of; (4) all 57 buildings were made enterable (231 rooms); (5) several sessions changed overlapping files in parallel, so merges broke things (five builds on 18 Nov, three needed a second run).
 
 ## The plan the owner chose
-1. **One handbook.** Every rule and lesson in one file (`docs/HANDBOOK.md`, to be written first; sources: `AGENTS.md`, `docs/briefs/*`, `docs/FINISH.md`, `docs/SCORE.md`, `docs/ROOMS.md`, `docs/PEOPLE.md`, `docs/INOUT.md`, `docs/audit/*`, the inbox files, this log). Every session reads that and nothing else.
+1. **One handbook.** Every rule and lesson in one file (`docs/HANDBOOK.md`: written; sources: `AGENTS.md`, `docs/briefs/*`, `docs/FINISH.md`, `docs/SCORE.md`, `docs/ROOMS.md`, `docs/PEOPLE.md`, `docs/INOUT.md`, `docs/audit/*`, the inbox files, this log). Every session reads that and nothing else.
 2. **An asset library made in Blender.** The owner sets up Blender 5.1+ with Blender Lab's connector in Claude Desktop and starts a Blender session with `docs/briefs/AGENT_BLENDER.md` (asset format, the bar, a first list). **Prove it first:** five assets across the range (a house front, a roof, a door, the boat, a market stall) as rendered sheets for the owner's eye. If they pass, scale to a planned list by category (building kit, props, plants, food, tools). If they do not, fit scanned and CC0 models in Blender instead: same pipeline.
 3. **A village becomes data before a second one is built.** One session owns the engine and makes a settlement a folder (site, plots, buildings picked from the kit, people); nobody else edits the engine.
 4. **Then one small village per agent** (forest, mountain, a third): 8 to 12 buildings, 4 to 6 enterable, built only from the library and the handbook, each in its own folder.
@@ -28,3 +28,7 @@ Nothing living or recognisable from primitives; a thing that cannot pass at arm'
 
 ## Not verified by anyone
 Anything audible (nobody has listened to the 275 new lines), motion and flicker, a real device.
+
+## Added after the stop was called
+- `docs/HANDBOOK.md`, `CLAUDE.md` (points to it), `docs/SRC_MAP.md` (every source file with its own description).
+- The two cameras are on `threejs` now, copied from `fork-fin`: `test/roomviews.mjs` (+ `roomviews_sheet.py`, `roomviews_table.py`) works and was run over all 57 buildings; `test/walkviews.mjs` (+ `walkviews_sheet.py`) was written minutes before the stop and has **not** been run: treat it as a draft. `docs/FINISH.md` on `threejs` is the inspector's latest, with the room table at its end.

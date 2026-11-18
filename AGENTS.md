@@ -1,4 +1,9 @@
-# Brackenfell: start here (for any AI or person joining the work)
+# Brackenfell: the command reference (build, gate, publishing, voices, the owner's feedback build by build)
+
+> **Start with `docs/HANDBOOK.md`**, then `docs/NEXT.md`. This file was the onboarding until 18 November 2026; it is kept as the
+> detailed reference for the commands below. Where the two disagree, the handbook is right. Stale here: the voice count (529 of
+> 774 lines are recorded on `threejs`), "every building enterable" (the owner now wants small villages with locked doors), and
+> the order of work (see the handbook, section 5).
 
 A first-person medieval village RPG that runs in a phone or laptop browser. One player, personal project. Live at
 https://brendanlymurphy.github.io/brackenfell/. Development happens on `threejs`; `main` is what is published.
