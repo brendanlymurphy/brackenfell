@@ -6,10 +6,11 @@
 const TOP = window.__opTop || 30, ops = [];
 const unit = (x, z) => { const l = Math.hypot(x, z) || 1; return [x / l, z / l]; };
 for (const d of World.doors) { if (!d.c || !d.out) continue; if (d.cell && d.side !== 'out') continue; const n = unit(d.out[0] - d.c[0], d.out[2] - d.c[2]); ops.push({ kind: 'door ' + ((d.site && d.site.id) || '?'), x: d.c[0], z: d.c[2], dx: n[0], dz: n[1], w: Math.min(d.w || 1, 1.4), both: false }); }
+if (typeof Feel !== 'undefined' && Feel.START) { const F = Feel.START, yw = F.yaw * Math.PI / 180; ops.push({ kind: 'spawn', x: F.x, z: F.z, dx: Math.sin(yw), dz: -Math.cos(yw), w: 8.7, reach: 6, from: -4 }); }      // the first view of every game: clear for 6 m ahead and 4 m either side
 for (const o of World.openings || []) ops.push(Object.assign({ both: true }, o));
 const gyAt = (x, z) => Terrain.y(x, z), hits = new Map(), add = (o, what) => { const k = o.kind + '@' + o.x.toFixed(1) + ',' + o.z.toFixed(1); const e = hits.get(k) || { o, what: new Set() }; e.what.add(what); hits.set(k, e); };
-const prism = ops.map(o => { const hw = Math.max(0.15, o.w / 2 - 0.35), px = -o.dz, pz = o.dx, g = gyAt(o.x, o.z); return Object.assign({}, o, { hw, px, pz, g, d0: 0.2, d1: 3, dm: o.both ? -3 : 0.2, r: 3.6 + hw }); });
-const inside = (p, x, y, z) => { const rx = x - p.x, rz = z - p.z, along = rx * p.dx + rz * p.dz, across = rx * p.px + rz * p.pz; if (Math.abs(across) > p.hw) return false; const ok = (along >= 0.8 && along <= 3) || (p.both && along <= -0.8 && along >= -3); return ok && y > p.g + 0.25 && y < p.g + 2.0; };
+const prism = ops.map(o => { const hw = Math.max(0.15, o.w / 2 - 0.35), px = -o.dz, pz = o.dx, g = gyAt(o.x, o.z); return Object.assign({}, o, { hw, px, pz, g, d0: 0.2, d1: 3, dm: o.both ? -3 : 0.2, r: (o.reach || 3) + 4.6 + hw }); });
+const inside = (p, x, y, z) => { const rx = x - p.x, rz = z - p.z, along = rx * p.dx + rz * p.dz, across = rx * p.px + rz * p.pz; if (Math.abs(across) > p.hw) return false; const ok = (along >= (p.from === undefined ? 0.8 : p.from) && along <= (p.reach || 3)) || (p.both && along <= -0.8 && along >= -3); return ok && y > p.g + 0.25 && y < p.g + 2.0; };
 let nTri = 0; const A = [0, 0, 0], B = [0, 0, 0], C = [0, 0, 0];
 SC.scene.traverse(o => {
   if (!o.isMesh || o.isInstancedMesh || !o.geometry || !o.geometry.attributes.position) return; if (o.userData && (o.userData.character || o.userData.sky)) return;
