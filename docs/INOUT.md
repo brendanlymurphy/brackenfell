@@ -10,14 +10,14 @@ Cannot tell: whether a window that matches by count also looks the same size and
 | | |
 |---|---|
 | Buildings / failing at least one of the five checks | 57 / **21** |
-| 1. Storeys shown outside differ from levels above ground inside | **2** (outside shows more: 1; inside holds more: 1) |
+| 1. Storeys shown outside differ from levels above ground inside | **1** (outside shows more: 1; inside holds more: 0) |
 | 2. A floor is more than 1.5 times the shell's area | **0** (ground floor area over shell area: least 1.26, median 1.46, worst 1.5) |
 | 3. Upper doors outside / with no door inside on that wall and level | 5 / **0** |
 | ... balconies outside / with no door onto them | 5 / **0** |
 | ... upper doors inside that open onto nothing outside | **0** |
 | 4. Windows outside / inside (outside: not counting 23 that open into the house next door) | 355 / 318 |
-| ... difference summed per wall and level / outside windows with an inside window in the same place | **43** / 308 of 355 |
-| ... buildings whose windows do not all match | **19** |
+| ... difference summed per wall and level / outside windows with an inside window in the same place | **41** / 309 of 355 |
+| ... buildings whose windows do not all match | **18** |
 | 5. Cellars inside / with nothing outside that shows one | 7 / **6** |
 
 ## Every building
@@ -27,7 +27,7 @@ Windows by wall (F front, B back, L left, R right seen from inside the front doo
 
 | id | name | storeys out | levels in | eave m | shell | plan | area x | upper doors out | balconies | upper doors in | unserved | windows out / in | same place | windows by wall and level | cellar | sign | fails |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `inn` | The Honeyed Hart | 1+r | 2 | 3.7 | 15 x 9.6 | 14 x 13 | 1.26 |  |  |  |  | 7 / 7 | 6 | F 0:4/4 1:0/1 roof:1/0; B 0:1/1; R 0:1/1 | yes |  | w c |
+| `inn` | The Honeyed Hart | 1+r | 2 | 3.7 | 15 x 9.6 | 14 x 13 | 1.26 |  |  |  |  | 7 / 7 | 7 | F 0:4/4 1:1/1; B 0:1/1; R 0:1/1 | yes |  | c |
 | `smithy` | Brandt’s Forge | 1 | 1+loft | 3.1 | 9.5 x 7 | 12 x 8 | 1.44 |  |  |  |  | 3 / 3 | 3 | F 0:1/1; B 0:1/1; R 0:1/1 |  |  |  |
 | `store` | Quill’s Sundries | 2 | 2 | 6.1 | 8.4 x 6.6 | 10 x 8 | 1.44 | front L1 | front L1 | front L1 |  | 9 / 9 | 9 | F 0:1/1 1:1/1; B 0:2/2 1:1/1; L 0:1/1 1:1/1; R 0:1/1 1:1/1 | yes | 1 |  |
 | `elder` | Rowan’s Cottage | 2 | 2 | 6.1 | 7.2 x 5.6 | 8.5 x 7 | 1.48 |  |  |  |  | 9 / 8 | 8 | F 0:1/1 1:1/1; B 0:1/1 1:2/1; L 0:1/1 1:1/1; R 0:1/1 1:1/1 | yes |  | w c |
@@ -50,14 +50,14 @@ Windows by wall (F front, B back, L left, R right seen from inside the front doo
 | `in.04` | Fletcher’s House | 2 | 2 | 6 | 6.4 x 5.8 | 7.5 x 7 | 1.41 |  |  |  |  | 9 / 7 | 7 | F 0:1/1 1:3/3; L 0:1/0 1:1/1; R 0:2/1 1:1/1 |  |  | w |
 | `in.07` | Potter’s House | 1 | 1+loft | 3 | 5.4 x 5 | 6 x 6.5 | 1.44 |  |  |  |  | 3 / 3 | 3 | F 0:1/1; B 0:2/2 |  |  |  |
 | `in.08` | Alder House | 2 | 2 | 6 | 5.6 x 6 | 7 x 7 | 1.46 |  |  |  |  | 7 / 7 | 7 | F 0:1/1 1:3/3; B 0:2/2 1:1/1 |  |  |  |
-| `in.10` | Baker’s House | 1 | 2 | 3 | 5.4 x 5 | 6 x 6.5 | 1.44 |  |  |  |  | 3 / 3 | 2 | F 0:1/1; B 0:2/2 |  |  | s w |
+| `in.10` | Baker’s House | 1 | 1+loft | 3 | 5.4 x 5 | 6 x 6.5 | 1.44 |  |  |  |  | 3 / 3 | 2 | F 0:1/1; B 0:2/2 |  |  | w |
 | `in.12` | Hobb’s Cottage | 2 | 2 | 6 | 6 x 5 | 7.5 x 6 | 1.5 |  |  |  |  | 10 / 10 | 10 | F 0:1/1 1:3/3; B 0:2/2 1:1/1; L 1:1/1; R 0:1/1 1:1/1 |  |  |  |
 | `in.13` | Tanner’s House | 1 | 1+loft | 3 | 6 x 5.6 | 7 x 7 | 1.46 |  |  |  |  | 4 / 4 | 4 | F 0:1/1; B 0:2/2; R 0:1/1 |  |  |  |
 | `in.15` | Grocer’s House | 2 | 2 | 6 | 5.6 x 6 | 7 x 7 | 1.46 |  |  |  |  | 10 / 10 | 10 | F 0:1/1 1:3/3; B 0:2/2 1:1/1; L 1:1/1; R 0:1/1 1:1/1 |  |  |  |
 | `in.20` | Chandler’s House | 1 | 1+loft | 3 | 6 x 4.4 | 6.5 x 6 | 1.48 |  |  |  |  | 6 / 4 | 4 | F 0:1/1; B 0:2/2; L 0:1/0; R 0:2/1 |  |  | w |
 | `in.21` | Dyer’s House | 2 | 2 | 6 | 6.4 x 5 | 8 x 6 | 1.5 |  |  |  |  | 10 / 10 | 10 | F 0:1/1 1:3/3; B 0:2/2 1:1/1; L 1:1/1; R 0:1/1 1:1/1 |  |  |  |
 | `in.23` | Widow Hale’s House | 1 | 1+loft | 3 | 5 x 5 | 5.5 x 6.5 | 1.43 |  |  |  |  | 6 / 3 | 3 | B 0:3/2; L 0:1/0; R 0:2/1 |  |  | w |
-| `in.33` | Merchant’s House | 2+r | 2 | 6 | 7.6 x 5 | 9.5 x 6 | 1.5 |  |  |  |  | 11 / 10 | 10 | F 0:1/1 1:2/2 roof:1/0; B 0:2/2 1:2/2; L 1:1/1; R 0:1/1 1:1/1 | yes |  | s w c |
+| `in.33` | Merchant’s House | 2+r | 2 | 6 | 7.6 x 5 | 9.5 x 6 | 1.5 |  |  |  |  | 11 / 10 | 10 | F 0:1/1 1:2/2 2:1/0; B 0:2/2 1:2/2; L 1:1/1; R 0:1/1 1:1/1 | yes |  | s w c |
 | `in.34` | Wren Cottage | 1 | 1+loft | 3 | 7.6 x 6.2 | 9 x 7.5 | 1.43 |  |  |  |  | 5 / 4 | 4 | F 0:1/1; B 0:2/2; L 0:1/0; R 0:1/1 |  |  | w |
 | `in.36` | Mason’s House | 2 | 2 | 6 | 7 x 5 | 8.5 x 6 | 1.46 |  |  |  |  | 14 / 10 | 10 | F 0:1/1 1:2/2; B 0:3/2 1:3/2; L 0:1/0 1:1/1; R 0:2/1 1:1/1 |  |  | w |
 | `in.37` | Cutler’s House | 1 | 1+loft | 3 | 7 x 5.6 | 9 x 6.5 | 1.49 |  |  |  |  | 6 / 4 | 3 | F 0:1/1; B 0:2/2; L 0:1/0; R 0:2/1 | yes |  | w c |
@@ -122,7 +122,7 @@ Only buildings whose plan already takes its windows from the shell.
 | `in.02` | Cooper’s House | loft (level 1): back wall, middle |
 | `in.04` | Fletcher’s House | pantry (level 0): back wall, 1.3 m from the middle toward the left wall; chamber (level 0): back wall, 1.9 m from the middle toward the right wall; loft (level 1): back wall, middle |
 | `in.07` | Potter’s House | loft (level 1): left wall, 2.5 m back from the front wall |
-| `in.10` | Baker’s House | upfront (level 1): left wall, 1.3 m back from the front wall; upback (level 1): back wall, middle |
+| `in.10` | Baker’s House | loft (level 1): left wall, 2.5 m back from the front wall |
 | `in.13` | Tanner’s House | loft (level 1): left wall, 2.8 m back from the front wall |
 | `in.20` | Chandler’s House | loft (level 1): back wall, middle |
 | `in.23` | Widow Hale’s House | loft (level 1): left wall, 2.5 m back from the front wall |
@@ -159,7 +159,7 @@ Only buildings whose plan already takes its windows from the shell.
 | `in.04` | Fletcher’s House | back wall, 1.3 m from the middle toward the left wall, level 0: opens into `in.08`; back wall, 1.4 m from the middle toward the right wall, level 0: opens into `in.08`; back wall, middle, level 1: opens into `in.08` |
 | `in.07` | Potter’s House | right wall, 1.6 m back from the front wall, level 0: opens into `in.08` |
 | `in.08` | Alder House | right wall, 2.1 m back from the front wall, level 0: opens into `in.04`; left wall, 3 m back from the front wall, level 1: opens into `in.07`; right wall, 3 m back from the front wall, level 1: opens into `in.04` |
-| `in.10` | Baker’s House | left wall, 4.5 m back from the front wall, level 0: opens into `smithy`; right wall, 3.5 m back from the front wall, level 1: opens into `guardhouse`; right wall, 1.6 m back from the front wall, level 0: opens into `guardhouse` |
+| `in.10` | Baker’s House | right wall, 1.6 m back from the front wall, level 0: opens into `guardhouse` |
 | `in.66` | Saddler’s House | right wall, 1.4 m back from the front wall, level 0: opens into `in.67` |
 | `in.67` | Bram’s House | left wall, 2.3 m back from the front wall, level 1: opens into `in.66` |
 | `in.70` | Tailor’s House | right wall, 1.6 m back from the front wall, level 0: opens into `in.69` |

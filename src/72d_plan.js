@@ -610,8 +610,8 @@ const SHELL_ALL = [];
 if (typeof Kit !== 'undefined' && Kit.batch && !Kit.batch.__inoutAll) { const kb0 = Kit.batch; Kit.batch = function (o) { const B = kb0.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_WoodDark_Half/.test(name)) SHELL_ALL.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; }; Kit.batch.__inoutAll = 1; }
 function shellOpenings(c) {
   { const A = typeof ALLEY_SHOPS !== 'undefined' && ALLEY_SHOPS.find(q => q.id === c.site.id && q.layout); if (A) return alleyOpenings(A, c); }
-  let rec = SHELL_REC[c.site.id] || [];
-  if (!rec.some(r => !/^gen_/.test(r.name))) { const st = c.xsite || c.site, hw = c.w / 2 + 1.3, hd = c.d / 2 + 1.3; rec = rec.concat(SHELL_ALL.filter(r => { const e = r.M.elements, l = worldToSite(st, e[12], e[14]); return Math.abs(l[0]) < hw && Math.abs(l[1]) < hd && Math.abs(e[13] - (c.xFloorY !== undefined ? c.xFloorY : st.y || 0)) < 14; })); }
+  let rec = SHELL_REC[c.site.id] || [];      /* (a footprint search over every placed piece caught the next house's windows: the alley, which needed it, has its own rule) */
+  if (false && !rec.some(r => !/^gen_/.test(r.name))) { const st = c.xsite || c.site, hw = c.w / 2 + 1.3, hd = c.d / 2 + 1.3; rec = rec.concat(SHELL_ALL.filter(r => { const e = r.M.elements, l = worldToSite(st, e[12], e[14]); return Math.abs(l[0]) < hw && Math.abs(l[1]) < hd && Math.abs(e[13] - (c.xFloorY !== undefined ? c.xFloorY : st.y || 0)) < 14; })); }
   const inv = new THREE.Matrix4().fromArray(c.Mx).invert(), v = new THREE.Vector3(), w = c.w, d = c.d, H = c.H, raw = [];
   const glass = [];      /* windows drawn in generated pieces (an end wall's face, a dormer, a gable): each upright glass quad, as a box */
   for (const r of rec) { if (!/^gen_/.test(r.name)) continue; const p = Kit.pieces[r.name]; if (!p) continue;

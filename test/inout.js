@@ -82,6 +82,7 @@ for (const h of houses) {
   for (const f of merged) { const fb = f.wall === 'front' || f.wall === 'back', nl = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] }[f.wall], lu = fb ? f.along : nl[0] * (s.w / 2 + 0.5), lv = fb ? nl[1] * (s.d / 2 + 0.5) : f.along - s.d / 2, c0 = Math.cos(s.yaw), n0 = Math.sin(s.yaw), wx = s.x + lu * c0 - lv * n0, wz = s.z + lu * n0 + lv * c0; f.blocked = sites.concat(Object.values(SITE)).find(o => o !== s && o.w && o.yaw !== undefined && depthIn(o, wx, wz) > 0.05) || null; }      /* a window that opens into the next house is the outside's to remove: counted apart */
   const oBlk = merged.filter(f => f.kind === 'win' && f.blocked), oWin = merged.filter(f => f.kind === 'win' && !f.blocked), oDoor = merged.filter(f => f.kind === 'door'), oBalc = merged.filter(f => f.kind === 'balc');
   const roofWin = oWin.filter(f => f.lv === 'roof').length, shown = wallSt + (roofWin ? 1 : 0);
+  for (const f of merged) if (f.lv === 'roof') f.lv = wallSt;      /* a window above the eaves lights the storey in the roof: the one above the walls */
   const jetty = typeof shellJetty === 'function' ? shellJetty(s, st) : 0;
   // ── inside ──
   const P = c.planDone || c.plan || (h.cell.ctx && (h.cell.ctx.planDone || h.cell.ctx.plan));
