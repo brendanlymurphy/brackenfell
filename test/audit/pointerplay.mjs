@@ -1,4 +1,4 @@
-// [audit] (pointerplay.mjs: following pointers by input; scenario by name: --run hart) The first ten minutes as a new player, by input: W and a look delta each frame (as test/walkbot.mjs does), the E key and clicks as real events.
+// [audit] (pointerplay.mjs: following pointers by input: --cases list.json) The first ten minutes as a new player, by input: W and a look delta each frame (as test/walkbot.mjs does), the E key and clicks as real events.
 // Takes a picture at each thing met and writes shots/audit/firstten.json (the timeline). usage: node test/audit/firstten.mjs [--size 844x390]
 import { chromium, CHROME } from '../pw.mjs'; import http from 'node:http'; import fs from 'node:fs';
 const A = process.argv.slice(2), size = (A.includes('--size') ? A[A.indexOf('--size') + 1] : '844x390').split('x').map(Number);
@@ -47,14 +47,18 @@ const talkTo = async (id, tag, note) => { for (let k = 0; k < 8; k++) { const mv
 const useThing = async (re, tag, note) => { const t = await ev(r => AUDFT.thing(r), re); if (!t) { T.push({ pic: '', note: 'no such thing: ' + re }); return false; } await ev(q => AUDFT.go(q.p[0], q.p[2], 1.6), t); for (let n = 0; n < 15; n++) { const s = await ev(() => AUDFT.state()); if (s.prompt) break; await ev(q => { for (let i = 0; i < 6; i++) AUDFT.tick({ KeyW: Math.hypot(q.p[0] - Player.pos[0], q.p[2] - Player.pos[2]) > 1.0 }, 0, 0); AUDFT.face(q.p[0], q.p[2], q.p[1]); }, t); } await shot(tag, note); await pressE(); await ev(() => AUDFT.idle(1)); await shot(tag + '_after', 'after E'); const s = await ev(() => AUDFT.state()); if (s.talk) await talkThrough(tag); await ev(() => { if (UI.reader) closeReader(); }); return true; };
 const watch = async (secs, tag, note) => { for (const d of [0, 120, 120]) { await ev(dd => AUDFT.turn(dd), d); await ev(sx => AUDFT.idle(sx / 3), secs); await shot(tag, note); } };
 
-// scenario: the Hart's cellar, as the pointers send a player
-const innT = await ev(() => { const P = Cells.by.inn.ctx.planDone || Cells.by.inn.ctx.plan; return Array.from(P.T).slice(12, 15); });
-const L = (x, y, z) => [innT[0] + x, innT[1] + y, innT[2] + z];
-await step('to the Hart', async () => { const h = await ev(() => AUDFT.house('inn')); await ev(q => AUDFT.go(q.out[0], q.out[2], 0.9), h); await ev(q => AUDFT.face(q.c[0], q.c[2], q.c[1]), h); await pressE(); await ev(() => AUDFT.idle(1.5)); await shot('hart_hall', 'inside the Hart, the common room'); });
-await step('stair head', async () => { const top = L(5.6, 0, 1.0); await ev(q => AUDFT.go(q[0], q[2], 1.2, q[1]), top); await ev(q => AUDFT.face(q[0], q[2], q[1] - 1.5), L(2.0, 0, 1.0)); await shot('hart_stair_head', 'where the hall has its way down to the cellar (stair stCellar)'); });
-await step('down', async () => { const wall = [266.4, -402.9, 4.6]; const log = await ev(q => AUDFT.go(q[0], q[2], 1.3, q[1]), wall); await ev(q => AUDFT.face(268.5, q[2], q[1] + 1.4), wall); await shot('cellar_east_wall', 'the east cellar wall, the place Rowan names: ' + log.slice(-1)); await pressE(); await shot('cellar_east_wall_E', 'pressed E with only the pointer'); });
-await step('look round', async () => { for (const d of [90, 90, 90]) { await ev(dd => AUDFT.turn(dd), d); await shot('cellar_round', 'the rest of the cellar'); } await ev(() => AUDFT.turn(90)); });
-await step('told', async () => { await ev(() => { S.flags.act2 = 1; S.flags.hear_hartledger = 1; AUDFT.idle(0.5); }); await ev(() => AUDFT.face(268.5, 4.6, -401.5)); await shot('cellar_told', 'the same wall once Rowan has told the player (flags act2, hear_hartledger set by the test)'); await pressE(); await ev(() => AUDFT.idle(1)); await shot('cellar_told_E', 'pressed E'); await ev(() => { if (UI.reader) closeReader(); AUDFT.idle(0.5); }); await shot('cellar_after', 'after the bricks'); await pressE(); await ev(() => AUDFT.idle(2)); await shot('cellar_door_E', 'E at the smugglers’ door'); });
-
+// scenarios: --cases file.json, a list of { tag, text, x, y, z, cell?, enter?: building id to enter first, flags?: {..} } played in order:
+// walk there by input from where the last one ended, face it, picture, press E, picture
+const CASES = JSON.parse(fs.readFileSync(A[A.indexOf('--cases') + 1], 'utf8'));
+for (const c of CASES) await step(c.tag, async () => {
+  if (c.flags) await ev(f => { Object.assign(S.flags, f); }, c.flags);
+  await ev(() => { if (World.cell) { game.leave(); AUDFT.idle(0.5); } if (UI.talk) endTalk(); if (UI.reader) closeReader(); });
+  if (c.enter) { const h = await ev(id => AUDFT.house(id), c.enter); if (h) { await ev(q => AUDFT.go(q.out[0], q.out[2], 0.9), h); await ev(q => AUDFT.face(q.c[0], q.c[2], q.c[1]), h); for (let n = 0; n < 20; n++) { const s0 = await ev(() => AUDFT.state()); if (/^Enter/.test(s0.prompt)) break; await ev(q => { AUDFT.tick({ KeyW: true }, 0, 0); AUDFT.face(q.c[0], q.c[2], q.c[1]); }, h); } await pressE(); await ev(() => AUDFT.idle(1.5)); } }
+  const log = await ev(q => AUDFT.go(q.x, q.z, 1.6, q.y), c); await ev(q => AUDFT.face(q.x, q.z, q.y), c);
+  for (let n = 0; n < 12; n++) { const s0 = await ev(() => AUDFT.state()); if (s0.prompt) break; await ev(q => { for (let i = 0; i < 5; i++) AUDFT.tick({ KeyW: Math.hypot(q.x - Player.pos[0], q.z - Player.pos[2]) > 1.2 }, 0, 0); AUDFT.face(q.x, q.z, q.y); }, c); }
+  const d = await ev(q => +Math.hypot(q.x - Player.pos[0], q.z - Player.pos[2]).toFixed(1), c);
+  await shot(c.tag, c.text + ' | walk: ' + log.slice(-1) + ' | ended ' + d + ' m from it'); await pressE(); await ev(() => AUDFT.idle(0.8)); await shot(c.tag + '_E', 'after E');
+  const s = await ev(() => AUDFT.state()); if (s.talk) { await ev(() => endTalk()); } await ev(() => { if (UI.reader) closeReader(); });
+});
 fs.writeFileSync(root + 'shots/audit/pointerplay.json', JSON.stringify({ timeline: T, toasts: await ev(() => AUDFT.toasts) }, null, 1));
 await browser.close(); srv.close(); process.exit(0);
