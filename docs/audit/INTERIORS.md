@@ -128,3 +128,14 @@ Empty cells are 0. "area x shell" is ground floor inside divided by the footprin
 | `high.a` | Highfold: the Reeve’s House | 1.9 | 1 | 1 | 22 | 4 | 4 | 3 |  |  |  |  |  |  |  |  |  |  | 1 | 1 | 6 |
 | `high.c` | Highfold: the Shepherd’s House | 3.6 | 4 | 2 | 54 | 13 | 11 | 10 |  |  |  |  |  |  | 1 |  |  |  | 3 | 1 | 17 |
 | **all** | | | **235** | **126** | **2904** | **873** | **653** | **613** | **0** | **0** | **0** | **0** | **38** | **38** | **68** | **2** | **1** | **0** | **109** | **56** | **1033** |
+
+## Exact views for the inspector (asked for after Build 81; re-taken on Build 83)
+
+Both come from `test/audit/backface.js` in rooms mode (the middle of every room, eye at 1.55 m, pitch -4). To look:
+`game.enter('<cell>'); game.step(4, 1/30); game.shot(x, y, z, yaw, -4, 13)`. Pictures from Build 83: `inspector_views_b83.jpg`.
+The cells have not moved between Build 77 and 83 (same plan origin), so the coordinates hold for both.
+
+| What | Cell | x | y (eye) | z | yaw | Room (plan coordinates) | On Build 83 |
+|---|---|---|---|---|---|---|---|
+| The Elder's strongroom: most of the view is the back of a plank sheet | `elder` | 714.40 | -401.38 | 8.85 | 45 | `strongroom`, level -1, x 0 to 7, z 9 to 14 from the plan origin (710.90, -399.68, -2.65): world x 710.9 to 717.9, z 6.35 to 11.35 | **Still there.** At yaw 45 the whole picture is planks a hand's breadth from the eye: the camera, standing in the middle of the room, is inside or against a shelving unit (`painted_wooden_shelves` or `wooden_bookshelf_worn`) that stands in the middle of the floor. At yaw 225 the shelves along the wall look right. A player stepping into the middle of the strongroom walks into it. |
+| The guardhouse cells: large pale blue-grey flat panes across the room | `guardhouse` | 1007.90 | -398.13 | 5.85 | 45 | `cells`, level 0, x -6 to 0, z 6 to 11 from (1010.90, -399.68, -2.65): world x 1004.9 to 1010.9, z 3.35 to 8.35 | **Not reproduced.** At the same view the picture shows a dark post, a plastered wall with a bar holder, and the stone wall; no panes. At yaw 225: a window, a sword and a barrel. Either it was fixed between Build 77 and 83, or it showed only in the Build 77 frame (the panes were in the normal picture then, `backface_rooms.jpg` number 3). Nearby glass: `Window_Wide_Flat1` at (1004.79, 5.85) on the west wall and `Window_Wide_Round1` at (1006.40, 8.46) and (1009.40, 8.46) on the north wall. |
