@@ -39,9 +39,10 @@ for (const id of ['inn', 'smithy', 'chapel']) if (KIT_STYLE[id]) KIT_STYLE[id].s
 // [fx2] ── roof of every shell: covering, pitch, tone, sag and eaves, by district and by building (docs/TOWNPLAN.md section 3) ──
 // The generated roof used one texture (weathered wood shingle) at one pitch whatever the spec said ('thatch' was never drawn). Now: stone slate in the Market Place and Chapelgate,
 // thatch in Westgate and Wharfside, wood shingle at the river; each building takes its own pitch, tone, ridge sag and overhang out of its district's range, by a hash of its id.
+const SHELL_TONES_OLD = { stoneslate: [[1.5, 1.5, 1.36], [1.3, 1.32, 1.2], [1.62, 1.55, 1.38], [1.4, 1.42, 1.3]], shingle: [[1.3, 1.27, 1.2], [1.12, 1.1, 1.04], [1.42, 1.38, 1.3]] };
 const SHELL_TONES = {      // [fx2] roofs must read as different coverings from above: cut slate (cool dark blue-grey), stone slate (pale, lichened), thatch (warm grey-brown), shingle (silvered wood); tints above 1 lift the dark scanned albedos
   slate: [[0.9, 0.98, 1.15], [0.78, 0.86, 1.02], [1.0, 1.05, 1.18], [0.84, 0.92, 1.1]],      // [fx3] lighter: the first set read near-black from above
-  tile: [[1.0, 0.72, 0.6], [0.88, 0.62, 0.52], [1.08, 0.8, 0.64], [0.8, 0.58, 0.5]],
+  tile: [[0.82, 0.62, 0.52], [0.72, 0.54, 0.46], [0.9, 0.7, 0.56], [0.66, 0.5, 0.44]],
   stoneslate: [[0.8, 0.78, 0.68], [0.7, 0.7, 0.64], [0.88, 0.84, 0.74], [0.75, 0.74, 0.67]],
   thatch: [[1.7, 1.42, 0.98], [1.5, 1.26, 0.88], [1.85, 1.58, 1.08]],
   shingle: [[0.95, 0.88, 0.76], [0.8, 0.76, 0.68], [1.05, 0.97, 0.84]],
@@ -93,7 +94,7 @@ function shellStyle(site, spec) {
   // [fx3] a dominant covering and one or two minority ones per district, picked by the house's own hash (wealth and age show in which)
   let kind = O.kind; if (!kind) { const q = R(); kind = D.kind; if (D.mix) { let a = 0; for (const [k, pr] of D.mix) { a += pr; if (q < a) { kind = k; break; } } } else if (D.alt && q < 0.4) kind = D.alt; }
   if (kind === 'slate' && dn === 'chapelgate') kind = 'stoneslate';
-  const RK = { slate: [INF_SL, 3.6, 0.14], stoneslate: [INF_SS, 4.0, 0.14], thatch: [INF_TH, 1.6, 0.36], shingle: [INF_SV, 1.25, 0.1], tile: [INF_S, 2.0, 0.12] }[kind] || [INF_S, 1.25, 0.1], tones = SHELL_TONES[kind], r = (a, b) => a + (b - a) * R();
+  const OLDR = TEST && TEST.oldroof, RK = { slate: [INF_SL, 3.6, 0.14], stoneslate: [OLDR ? INF_SL : INF_SS, 4.0, 0.14], thatch: [INF_TH, 1.6, 0.36], shingle: [OLDR ? INF_S : INF_SV, 1.25, 0.1], tile: [OLDR ? INF_S : INF_CT, 2.0, 0.12] }[kind] || [INF_S, 1.25, 0.1], tones = (OLDR && SHELL_TONES_OLD[kind]) || SHELL_TONES[kind], r = (a, b) => a + (b - a) * R();
   const out = { dist: dn, kind, pitch: O.pitch || D.pitch[(R() * D.pitch.length) | 0], tint: tones[(O.tone !== undefined ? O.tone : (R() * tones.length) | 0) % tones.length], sag: O.sag !== undefined ? O.sag : r(D.sag[0], D.sag[1]), ov: O.ov || r(D.ov[0], D.ov[1]) };
   out.mat = RK[0]; out.ts = RK[1]; out.thick = RK[2]; out.thatch = kind === 'thatch'; out.patch = R();
   out.tint = out.tint.map(v => Math.min(2, v * (0.94 + R() * 0.1)));

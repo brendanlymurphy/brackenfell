@@ -272,12 +272,16 @@ function buildWharfBoards(bucket) {
 
 // a split fish hung by the tail from a rail: a flat body in two quads and a forked tail, silver gone to brown (nothing living is built from balls)
 function wFish(m, x, y, z, ux, uz, len, col) { if (TEST && TEST.nofish) return;
-  const ul = Math.hypot(ux, uz) || 1; ux /= ul; uz /= ul; const L = len || 0.38, w = L * 0.11, P = (a, h) => [x + ux * a, y - h, z + uz * a];
-  m.mat(MAT.CLOTH, col || [0.4, 0.4, 0.38], 0.5);
-  m.quad2(P(-w * 0.5, 0), P(-w * 0.2, L * 0.2), P(w * 0.2, L * 0.2), P(w * 0.5, 0));
-  m.quad2(P(-w * 0.2, L * 0.2), P(-w, L * 0.45), P(w, L * 0.45), P(w * 0.2, L * 0.2));
-  m.quad2(P(-w, L * 0.45), P(-w * 0.15, L), P(w * 0.15, L), P(w, L * 0.45));
-  m.mat(MAT.CLOTH, [0.22, 0.2, 0.18], 0.5); m.quad2(P(-w * 0.8, -0.1), P(-w * 0.3, 0), P(w * 0.4, 0), P(w * 0.8, -0.1));
+  const ul = Math.hypot(ux, uz) || 1; ux /= ul; uz /= ul; const L0 = len || 0.38;
+  for (const [o, k, cu] of [[-0.05, 1, 0.012], [0.05, 0.88, -0.016]]) {
+    const L = L0 * k, w = L * 0.11, P = (a, h) => [x + ux * (a + o + cu * h / L), y - h, z + uz * (a + o + cu * h / L)];
+    m.mat(MAT.CLOTH, col || [0.2, 0.17, 0.12], 0.5);
+    m.quad2(P(-w * 0.5, 0), P(-w * 0.2, L * 0.2), P(w * 0.2, L * 0.2), P(w * 0.5, 0));
+    m.quad2(P(-w * 0.2, L * 0.2), P(-w, L * 0.45), P(w, L * 0.45), P(w * 0.2, L * 0.2));
+    m.quad2(P(-w, L * 0.45), P(-w * 0.15, L), P(w * 0.15, L), P(w, L * 0.45));
+    m.mat(MAT.CLOTH, [0.1, 0.09, 0.07], 0.5); m.quad2(P(-w * 0.8, -0.1), P(-w * 0.3, 0), P(w * 0.4, 0), P(w * 0.8, -0.1));
+    m.mat(MAT.CLOTH, [0.12, 0.1, 0.08], 0.5); m.quad2(P(-w * 0.05, L * 0.24), P(-w * 0.05, L * 0.9), P(w * 0.5, L * 0.9), P(w * 0.5, L * 0.24));
+  }
 }
 // a fishing net hung from a line: thin strands and cross cords with open meshes between them (a sheet of cloth read as a board), irregular at the hem, sagging
 function wStrandNet(m, A, B, drop, R) { if (TEST && TEST.nonet) return;
