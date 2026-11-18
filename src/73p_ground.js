@@ -41,7 +41,11 @@ function buildGround(bucket) {
   if (TEST && TEST.plots === 0) return; const R = rng(7771), gy = (x, z) => Terrain.y(x, z);
   World.places = GROUND.places; World.yardTrees = World.yardTrees || [];
   for (const p of GROUND.places) {
-    if (p.kind === 'orchard') { const nx = Math.max(2, Math.round((p.x1 - p.x0) / 5.2)), nz = Math.max(2, Math.round((p.z1 - p.z0) / 5.2)); for (let a = 0; a < nx; a++) for (let b = 0; b < nz; b++) { const x = p.x0 + (a + 0.5) * (p.x1 - p.x0) / nx + (R() - 0.5) * 0.8, z = p.z0 + (b + 0.5) * (p.z1 - p.z0) / nz + (R() - 0.5) * 0.8; World.yardTrees.push([x, z, 'oak', 0.5 + R() * 0.12]); } }
+    if (p.kind === 'orchard') {      /* [fx3] loose rows 5.5 to 7 m apart, never a grid: each tree jittered, a few gaps; the good broadleaf models (birch and oak) at 0.55 to 0.85 so the trunks are short and the crowns round */
+      const dx = 6.2, dz = 6.0; let row = 0;
+      for (let z = p.z0 + 3; z < p.z1 - 1.5; z += dz + (R() - 0.5) * 1.4, row++) for (let x = p.x0 + 2.8 + (row % 2) * 2.4; x < p.x1 - 1.5; x += dx + (R() - 0.5) * 1.6) {
+        if (R() < 0.14) continue; const tx = x + (R() - 0.5) * 2.2, tz = z + (R() - 0.5) * 2.4;
+        if (R() < 0.04) continue; World.yardTrees.push([tx, tz, 'oak', 0.6 + R() * 0.2]); } }
     else if (p.kind === 'green') {
       World.yardTrees.push([p.x, p.z, 'oak', 0.9]);
       for (const [a, y] of [[0.5, 0.2], [3.6, 0.2]]) { const x = p.x + Math.cos(a) * 2.3, z = p.z + Math.sin(a) * 2.3, m = bucket(x, z); m.push().T(x, gy(x, z), z).RY(-(a + Math.PI / 2)); Props.bench(m, 1.7); m.pop(); }
