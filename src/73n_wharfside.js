@@ -304,19 +304,18 @@ function wTuft(m, x, y, z, h, n, col, R) { if (TEST && TEST.nonet) return;
 // a clinker rowing boat built as a boat is: a keel, a stem and a sternpost, lapped strakes lofted over 15 stations, ribs and a gunwale, thwarts and a floor; `up` turns it keel to the sky
 // a boat begun: the boatwright's yard when nothing is finished. Two X-frame trestles with a top rail, the keel laid on them with the stem and sternpost scarfed on, a few pairs of ribs standing, a small stack of planks, shavings on the ground. All squared or round oak, weathered (not black).
 function wharfBoatBegun(m, x, z, g, ang, len) { if (TEST && TEST.nohull) return;
-  const c = Math.cos(ang), sn = Math.sin(ang), P = (a, b, h) => [x + a * c - b * sn, g + h, z + a * sn + b * c], K = 0.62, OAK = [0.85, 0.68, 0.48], OAK2 = [0.72, 0.58, 0.41], hl = len / 2;
+  const c = Math.cos(ang), sn = Math.sin(ang), P = (a, b, h) => [x + a * c - b * sn, g + h, z + a * sn + b * c], K = 0.7, KB = K + 0.14, OAK = [0.85, 0.68, 0.48], OAK2 = [0.72, 0.58, 0.41], hl = len / 2;
   m.mat(MAT.TIMBER, OAK2, 0.5);
-  for (const a of [-hl * 0.5, hl * 0.5]) { m.beam(P(a, -0.4, 0.0), P(a, 0.4, K - 0.04), 0.045, 0.045); m.beam(P(a, 0.4, 0.0), P(a, -0.4, K - 0.04), 0.045, 0.045); m.beam(P(a, -0.5, K - 0.03), P(a, 0.5, K - 0.03), 0.05, 0.05); }
+  for (const a of [-hl * 0.5, hl * 0.5]) { m.beam(P(a, -0.42, 0.05), P(a, 0.42, K - 0.06), 0.10, 0.10); m.beam(P(a, 0.42, 0.05), P(a, -0.42, K - 0.06), 0.10, 0.10); m.beam(P(a, -0.55, K), P(a, 0.55, K), 0.12, 0.12); }
   m.mat(MAT.TIMBER, OAK, 0.5);
-  m.beam(P(-hl, 0, K + 0.05), P(hl, 0, K + 0.05), 0.06, 0.06);
-  m.beam(P(hl, 0, K + 0.04), P(hl + 0.14, 0, K + 0.4), 0.04, 0.036); m.beam(P(hl + 0.14, 0, K + 0.4), P(hl + 0.22, 0, K + 0.82), 0.036, 0.03);
-  m.beam(P(-hl, 0, K + 0.04), P(-hl - 0.08, 0, K + 0.4), 0.04, 0.036); m.beam(P(-hl - 0.08, 0, K + 0.4), P(-hl - 0.1, 0, K + 0.74), 0.036, 0.03);
+  m.beam(P(-hl, 0, KB), P(hl, 0, KB), 0.12, 0.18);
+  m.beam(P(hl, 0, KB), P(hl + 0.2, 0, KB + 0.42), 0.12, 0.16); m.beam(P(hl + 0.2, 0, KB + 0.42), P(hl + 0.3, 0, KB + 0.86), 0.12, 0.14);
+  m.beam(P(-hl, 0, KB), P(-hl - 0.1, 0, KB + 0.42), 0.12, 0.16); m.beam(P(-hl - 0.1, 0, KB + 0.42), P(-hl - 0.13, 0, KB + 0.8), 0.12, 0.14);
   for (const t of [-0.45, -0.15, 0.15, 0.45]) { const a = t * len * 0.9, e = Math.sqrt(Math.max(0.2, 1 - Math.pow(Math.abs(t) * 2.0, 2))), w = 0.42 * e;
-    for (const sg of [-1, 1]) { m.beam(P(a, 0, K + 0.06), P(a, sg * w * 0.62, K + 0.2), 0.04, 0.038); m.beam(P(a, sg * w * 0.62, K + 0.2), P(a, sg * w * 0.98, K + 0.5), 0.038, 0.034); m.beam(P(a, sg * w * 0.98, K + 0.5), P(a, sg * w * 1.1, K + 0.78), 0.034, 0.03); } }
-  m.beam(P(-hl * 0.8, 0.05, K + 0.52), P(hl * 0.8, 0.05, K + 0.52), 0.02, 0.02);
+    for (const sg of [-1, 1]) { m.beam(P(a, sg * 0.05, KB + 0.09), P(a, sg * w * 0.62, KB + 0.24), 0.06, 0.08); m.beam(P(a, sg * w * 0.62, KB + 0.24), P(a, sg * w * 0.98, KB + 0.54), 0.06, 0.08); m.beam(P(a, sg * w * 0.98, KB + 0.54), P(a, sg * w * 1.1, KB + 0.82), 0.06, 0.08); } }
   m.mat(MAT.PLANKS, [0.46, 0.38, 0.27], 0.5);
-  for (let i = 0; i < 5; i++) { const q0 = P(-0.6, 1.0 + i * 0.0, 0.1 + i * 0.045), q1 = P(0.6, 1.0, 0.1 + i * 0.045); m.box(Math.min(q0[0], q1[0]) - 0.04, q0[1] - 0.02, Math.min(q0[2], q1[2]) - 0.04, Math.max(q0[0], q1[0]) + 0.04, q0[1] + 0.02, Math.max(q0[2], q1[2]) + 0.04); }
-  m.mat(MAT.TIMBER, OAK2, 0.5); for (const a of [-0.5, 0.5]) { const q = P(a, 1.0, 0); m.box(q[0] - 0.05, g, q[2] - 0.05, q[0] + 0.05, g + 0.1, q[2] + 0.05); }
+  for (let i = 0; i < 5; i++) m.beam(P(-0.7, 1.1, 0.11 + i * 0.026), P(0.7, 1.1, 0.11 + i * 0.026), 0.22, 0.025);
+  m.mat(MAT.TIMBER, OAK2, 0.5); for (const a of [-0.5, 0.5]) m.beam(P(a, 1.0, 0.05), P(a, 1.2, 0.05), 0.10, 0.10);
   m.mat(MAT.PLAIN, [0.3, 0.25, 0.17]);
   for (let i = 0; i < 9; i++) { const a = (i / 9 * 2 - 1) * hl * 0.9, b = ((i * 37) % 11 - 5) * 0.09, q = P(a, b, 0.012), r = 0.05 + (i % 3) * 0.02; m.quad2([q[0] - r, q[1], q[2] - r * 0.5], [q[0] - r, q[1], q[2] + r * 0.5], [q[0] + r, q[1], q[2] + r * 0.5], [q[0] + r, q[1], q[2] - r * 0.5]); }
 }
