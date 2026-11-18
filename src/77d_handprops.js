@@ -175,8 +175,38 @@ const HP_TRADE = [[/tailor|draper|glover/, 'shears'], [/cobbler|saddler|harness/
   [/cooper|boatwright|wheelwright|mason/, 'mallet'], [/woodcutter/, 'axe'], [/dyer|vats|alewife|brews|laundress/, 'paddle'], [/baker|bakehouse/, 'scraper'], [/apothecary/, 'pestle'], [/tinker|mends pans/, 'tinhammer'], [/net|weaver/, 'shuttle']];
 const HP_WHO = { marta: 'pestle', hilda: 'shuttle', brandt: 'tongs', bram: 'sickle', edda: 'sickle', wren: 'knife' };
 function hpTool(def) { if (HP_WHO[def.id]) return HP_WHO[def.id]; const c = typeof CAST !== 'undefined' && CAST.find ? CAST.find(x => x.id === def.id) : null, t = c && c.trade || ''; for (const [re, k] of HP_TRADE) if (re.test(t)) return k; return null; }
-function hpWork(mesh, anim) { return (H) => { const on = H.animNow === anim && !H.talkNow && (H.lodLevel || 0) <= 1;      // a hand tool is not drawn beyond the middle weight (a draw call each)
- mesh.visible = on; mesh.userData.holding = on; Chars.grip(H, 'R', on ? HP.GRIP.curl : 0); if (on) hpTrue(mesh); }; }
+// [ch4] Where a tool is put down: at its owner's place of work (the schedule's work spot), on the nearest table or bench top within 1.6 m (a collision box whose top is
+// 0.55 to 1.05 m above that floor, no longer than 3 m and long enough for the tool), lying flat along it; else, for a long tool, leaning against the nearest wall there (a box
+// over 1.8 m); else on the floor beside the place.
+// Found once per person. While it lies there it belongs to the world, not the person: it stays when they walk away and is drawn like any other thing in the room.
+function hpRestPlace(npc, mesh) {
+  if (npc._toolRest !== undefined) return npc._toolRest; npc._toolRest = null;
+  const cnt = {}; for (const r of npc.def.sched || []) if (r[2] === 'work') cnt[r[1]] = (cnt[r[1]] || 0) + 1; const key = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0], sp = key && World.spots[key]; if (!sp || typeof Col === 'undefined') return null;      // the place they work most
+  const p = sp.p, fy = p[1], T = THREE, bb = mesh.geometry.boundingBox, cs = Col.cell, len = bb.max.y - bb.min.y, small = len < 0.36, cands = []; let best = null, bd = 1e9, wall = null, wd = 1e9;
+  for (let gx = Math.floor((p[0] - 2) / cs); gx <= Math.floor((p[0] + 2) / cs); gx++) for (let gz = Math.floor((p[2] - 2) / cs); gz <= Math.floor((p[2] + 2) / cs); gz++) for (const c of Col.grid.get(gx * 4096 + gz) || []) {
+    if (c.r !== undefined || c.off) continue; const top = c.y1 - fy; if (c.y0 - fy > 0.4) continue; const dx = p[0] - c.x, dz = p[2] - c.z, lx = dx * c.ax + dz * c.az, lz = dx * c.bx + dz * c.bz, qx = Math.max(-c.hx, Math.min(c.hx, lx)), qz = Math.max(-c.hz, Math.min(c.hz, lz)), d = Math.hypot(lx - qx, lz - qz);
+    if (top > 0.55 && top < (small ? 1.25 : 1.05) && Math.max(c.hx, c.hz) < 1.5 && Math.min(c.hx, c.hz) > 0.12 && Math.max(c.hx, c.hz) * 2 > len * 0.75 && d < 1.6) { cands.push({ c, qx, qz, d }); if (d < bd) { bd = d; best = { c, qx, qz }; } }      // long enough to hold it (a paddle balanced on a sack); a small tool may lie on a loom beam or a high shelf
+    else if (top > 1.8 && d < 1.6 && d < wd) { wd = d; wall = { c, qx, qz, lx, lz }; } }
+  // the collision box says where a table stands, not always how high its top is drawn: a ray down at the middle and both ends of the tool must meet the same flat top there
+  if (best && typeof SC !== 'undefined' && SC.scene) { const rc = new T.Raycaster(), down = new T.Vector3(0, -1, 0); best = null;
+    for (const cd of cands.sort((a, b) => a.d - b.d).slice(0, 4)) { const { c } = cd, along = c.hx > c.hz ? new T.Vector3(c.ax, 0, c.az) : new T.Vector3(c.bx, 0, c.bz), m = 0.06, ux = Math.max(-c.hx + m, Math.min(c.hx - m, cd.qx * 0.75)), uz = Math.max(-c.hz + m, Math.min(c.hz - m, cd.qz * 0.75)), mid = new T.Vector3(c.x + ux * c.ax + uz * c.bx, 0, c.z + ux * c.az + uz * c.bz);
+      rc.set(new T.Vector3(mid.x, fy + 1.4, mid.z), down); rc.far = 1.3; rc.layers.enableAll(); const h = rc.intersectObject(SC.scene, true).find(x => x.object !== mesh && !(x.object.name || '').startsWith('villager') && !(x.object.name || '').startsWith('prop:') && x.object.visible !== false), top = h ? h.point.y : -1e9;
+      const y = h ? top : c.y1;      // a ray that meets nothing (furniture drawn in batches does not answer it) leaves the box's own top
+      if (y - fy > 0.5 && y - fy < (small ? 1.3 : 1.1)) return npc._toolRest = { o: new T.Vector3(mid.x, y + 0.004, mid.z), y: along.normalize(), z: new T.Vector3(0, 1, 0), lift: -Math.min(bb.min.z, bb.min.x) }; } }
+  if (best) { const { c } = best, m = 0.06, ux = Math.max(-c.hx + m, Math.min(c.hx - m, best.qx * 0.75)), uz = Math.max(-c.hz + m, Math.min(c.hz - m, best.qz * 0.75)), along = c.hx > c.hz ? new T.Vector3(c.ax, 0, c.az) : new T.Vector3(c.bx, 0, c.bz);
+    const o = new T.Vector3(c.x + ux * c.ax + uz * c.bx, c.y1 + 0.004, c.z + ux * c.az + uz * c.bz); return npc._toolRest = { o, y: along.normalize(), z: new T.Vector3(0, 1, 0), lift: -Math.min(bb.min.z, bb.min.x) }; }
+  if (wall && !small) { const { c } = wall, n = new T.Vector3((wall.lx - wall.qx) * c.ax + (wall.lz - wall.qz) * c.bx, 0, (wall.lx - wall.qx) * c.az + (wall.lz - wall.qz) * c.bz); if (n.lengthSq() < 1e-6) n.set(p[0] - c.x, 0, p[2] - c.z); n.normalize();
+    const face = new T.Vector3(c.x + wall.qx * c.ax + wall.qz * c.bx, fy, c.z + wall.qx * c.az + wall.qz * c.bz), y = new T.Vector3(0, 1, 0).addScaledVector(n, -0.22).normalize(), o = face.clone().addScaledVector(n, 0.03 + len * 0.22).addScaledVector(y, -bb.min.y); o.y = fy - bb.min.y * y.y + 0.005;
+    return npc._toolRest = { o, y, z: n, lift: 0 }; }
+  const yaw = sp.yaw || 0, r = new T.Vector3(Math.cos(yaw), 0, Math.sin(yaw)); return npc._toolRest = { o: new T.Vector3(p[0] + r.x * 0.45, fy + 0.012, p[2] + r.z * 0.45), y: r, z: new T.Vector3(0, 1, 0), lift: 0.01 };
+}
+function hpWork(mesh, anim, npc) { return (H) => { const on = H.animNow === anim && !H.talkNow;
+  if (on) { if (mesh.parent !== H.bones.handR) { H.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); }
+    mesh.visible = (H.lodLevel || 0) <= 1; mesh.userData.holding = true; Chars.grip(H, 'R', HP.GRIP.curl); hpTrue(mesh); mesh.frustumCulled = false; return; }      // a hand tool is not drawn beyond the middle weight (a draw call each)
+  mesh.userData.holding = false; Chars.grip(H, 'R', 0); const R = npc && hpRestPlace(npc, mesh);
+  if (!R) { mesh.visible = false; return; }
+  if (mesh.parent !== H.pivot.parent) { H.pivot.parent.add(mesh); mesh.scale.set(1, 1, 1); hpPlace(mesh, R.o.clone().addScaledVector(R.z, R.lift || 0), R.y.clone(), R.z.clone()); mesh.frustumCulled = true; mesh.geometry.computeBoundingSphere(); mesh.updateMatrixWorld(true); }
+  mesh.visible = true; }; }
 // the besom: twig tips on the floor 0.78 m in front of the feet, a little to the right, swaying side to side; the handle rises to 0.34 m in front of the chest and both hands are brought
 // to it (right at the hip, left 0.37 m above at the chest). The sweeping stance is a standing one (49_chars.js 'sweep'): the old crouching dig tented every skirt.
 function hpBesom(mesh) { const T = THREE, fp = new T.Vector3(), y = new T.Vector3(), z = new T.Vector3(), o = new T.Vector3(), t = new T.Vector3(), q = new T.Vector3(); return (H) => { const on = H.animNow === 'sweep' && !H.talkNow && (H.lodLevel || 0) <= 2; mesh.visible = on; mesh.userData.holding = on;
@@ -200,7 +230,7 @@ function npcHandProp(npc) {
     else if (kind === 'staff') ch.post.push(hpPole(mesh, 0.05, true));
     else if (kind === 'rod') ch.post.push(hpPole(mesh, 0.7, true, 'fish'));
     else if (kind === 'besom') ch.post.push(hpBesom(mesh));
-    else if (HP_SIZE[kind] && !['lute', 'hammer', 'spear', 'staff', 'rod', 'mug', 'flute'].includes(kind)) { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); ch.post.push(hpWork(mesh, 'work')); }
+    else if (HP_SIZE[kind] && !['lute', 'hammer', 'spear', 'staff', 'rod', 'mug', 'flute'].includes(kind)) { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); ch.post.push(hpWork(mesh, 'work', npc)); }
     else if (kind === 'mug') { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); ch.post.push(hpMug(mesh, npc, npc.def.id === 'osric' || npc.def.id === 'greta')); }
     else { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos);
       ch.post.push(H => { mesh.scale.setScalar(1 / Math.max(1e-3, H.root.scale.y)); Chars.grip(H, 'R', HP.GRIP.curl); }); }

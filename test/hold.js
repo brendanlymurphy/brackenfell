@@ -15,6 +15,7 @@ for (const n of NPCS) { if (!n.props || !n.props.length || !n.ch) continue; out.
     for (let k = 0; k < 10; k++) { game.step(4, 0.05); n.talking = talk; const H = n.ch; H.pivot.updateMatrixWorld(true); out.checks++;
       const wp = nm => H.root.getObjectByName(nm).getWorldPosition(new V()), tag0 = n.id + ' ' + n.anim + (talk ? '+talk' : '') + ' at ' + h.toFixed(1);
       for (const m of n.props) { const u = m.userData, tag = tag0 + ' ' + u.kind; if (!m.visible) continue; m.updateWorldMatrix(true, false);
+        let onBody = false; for (let o = m.parent; o; o = o.parent) if (o === H.pivot) onBody = true; if (!onBody) continue;      // put down at the work place: it belongs to the room
         if (n.anim === 'lie') fail(tag + ': shown while lying in bed');
         const bb = m.geometry.boundingBox, sz = bb.getSize(new V()), ws = m.getWorldScale(new V()), long = Math.max(sz.x * ws.x, sz.y * ws.y, sz.z * ws.z);
         if (Math.abs(ws.x - 1) > 0.03 || Math.abs(ws.y - 1) > 0.03 || Math.abs(ws.z - 1) > 0.03) fail(tag + ': drawn at scale ' + ws.toArray().map(v => v.toFixed(2)).join('/') + ', not its true size');
