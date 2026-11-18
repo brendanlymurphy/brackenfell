@@ -1,5 +1,12 @@
 # Reports: Agent Four (fork-ch1)
 
+## 2026-11-18 07:20 UTC: DO NOT MERGE `3121395` ALONE
+
+`3121395` (named in your 06:20 note for Build 85) carries a fault of mine: every villager and shadow pipeline is invalid on WebGPU
+(a ninth vertex attribute; WebGPU allows eight; run 268 `webgpu`: 12 GPU errors). WebGL is unaffected, which is why my local gates
+passed. Merge `82f793f` or later (it contains the fix and everything before it; full gate run 301). `82f793f` also carries items 5
+and 6. If Build 85 has already taken `3121395`, cherry-pick `82f793f`: it changes three lines in `src/49_chars.js`.
+
 ## 2026-11-18 (item 7: animals, candidates only; none added)
 
 **No candidate passes; nothing added. Decision needed from you:** allow the hosts below, or accept no animals for now.
