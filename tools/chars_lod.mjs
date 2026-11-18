@@ -52,7 +52,7 @@ for (const file of files) {
       if (wt) { wt.getElement(i, e); att.set(e, i * 9 + 5); }
     }
     const W = x.kind === 'hair' ? [0.2, 0.2, 0.2, 0.5, 0.5, 0.3, 0.3, 0.3, 0.3] : [0.5, 0.5, 0.5, 1, 1, 0.6, 0.6, 0.6, 0.6];
-    let [out] = target >= x.n ? [idx] : MeshoptSimplifier.simplifyWithAttributes(idx, pos, 3, att, 9, W, null, Math.round(target) * 3, 0.5, []);
+    let [out] = target >= x.n ? [idx] : MeshoptSimplifier.simplifyWithAttributes(idx, pos, 3, att, 9, W, null, Math.round(target) * 3, 0.5, /^w_(kirtle|sleeve)/.test(x.mesh.getName()) ? ['LockBorder'] : []);
     // a new primitive with only the vertices that are left
     const remap = new Map(), keep = []; for (const v of out) if (!remap.has(v)) { remap.set(v, keep.length); keep.push(v); }
     const np = doc.createPrimitive().setMaterial(prim.getMaterial()).setMode(prim.getMode());
