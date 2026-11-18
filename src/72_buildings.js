@@ -127,7 +127,7 @@ const HOUSES = {
   store: {
     H: 2.6, walls: 'timber', roof: 'shingle', roofCol: [0.82, 0.62, 0.5], ceiling: true, plaster: [1, 0.95, 0.82], shutter: [0.25, 0.38, 0.55],
     doors: [{ wall: 'front', pos: -1.9 }],
-    windows: [{ wall: 'front', pos: 1.3, w: 1.5, shutters: false }, { wall: 'left', pos: 0.3 }, { wall: 'right', pos: -0.6 }, { wall: 'back', pos: -2.9, w: 0.7 }],
+    windows: [{ wall: 'front', pos: 1.3, w: 1.5, shutters: false }, { wall: 'left', pos: 0.3 }, { wall: 'right', pos: -0.6 }, { wall: 'back', pos: -2.9, w: 0.7 }, { wall: 'back', pos: 1.3, w: 0.9 }],
     interior(c) {
       const m = c.int, R = c.R, B = bounds(c);
       m.mat(MAT.PLANKS, COL.woodDark); m.box(-1.2, 0.02, -0.5, 2.0, 0.98, 0.05); m.mat(MAT.PLANKS, COL.wood); m.box(-1.3, 0.98, -0.6, 2.1, 1.05, 0.15);       // (shorter and further forward than it was: the stair to the upper floor runs along the back wall)
