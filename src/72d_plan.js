@@ -804,9 +804,10 @@ function pReach(P) {
     grid.set(kk, ok); return ok; };
   const wide = (k, x, z) => { for (const [dx, dz] of [[0, 0], [0.42, 0], [-0.42, 0], [0, 0.42], [0, -0.42], [0.3, 0.3], [-0.3, 0.3], [0.3, -0.3], [-0.3, -0.3]]) if (!free(k, x + dx, z + dz)) return false; return true; };
   const push = (k, x, z) => { const kk = key(k, Math.round(x / st), Math.round(z / st)); if (seen.has(kk) || !wide(k, x, z)) return; seen.add(kk); q.push([k, x, z]); };
+  const pushNear = (k, x, z) => { for (const [dx, dz] of [[0, 0], [0, -0.15], [0, 0.15], [-0.15, 0], [0.15, 0], [0, -0.3], [0, 0.3], [-0.3, 0], [0.3, 0]]) push(k, x + dx, z + dz); };      /* [inout] a stair end 2 cm too near a wall for the 0.42 m probe still leads on */
   const e = P.doors.find(d => d.b === null && !d.upper); if (e) push(0, e.x, e.z + 0.9);
   for (let n = 0; n < q.length && n < 80000; n++) { const [k, x, z] = q[n]; for (const [dx, dz] of [[st, 0], [-st, 0], [0, st], [0, -st]]) push(k, x + dx, z + dz);
-    for (const s of P.stairs) { if (s.k0 === k && Math.hypot(x - s.lowPt[0], z - s.lowPt[1]) < 0.4) push(s.k1, s.highPt[0], s.highPt[1]); if (s.k1 === k && Math.hypot(x - s.highPt[0], z - s.highPt[1]) < 0.4) push(s.k0, s.lowPt[0], s.lowPt[1]); } }
+    for (const s of P.stairs) { if (s.k0 === k && Math.hypot(x - s.lowPt[0], z - s.lowPt[1]) < 0.4) pushNear(s.k1, s.highPt[0], s.highPt[1]); if (s.k1 === k && Math.hypot(x - s.highPt[0], z - s.highPt[1]) < 0.4) pushNear(s.k0, s.lowPt[0], s.lowPt[1]); } }
   return (k, x, z, r) => { r = r || 0.3; for (let dx = -r; dx <= r + 0.01; dx += st) for (let dz = -r; dz <= r + 0.01; dz += st) if (seen.has(key(k, Math.round((x + dx) / st), Math.round((z + dz) / st)))) return true; return false; };
 }
 // [inout] the floor below a stair's head stays clear of anything that rises through it (a fire's stack, a pier): call after pLayout, before the hearths
