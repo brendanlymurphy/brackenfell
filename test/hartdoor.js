@@ -15,7 +15,10 @@ const P = World.houses.inn.plan, st = P.stairs.find(q => q.k0 < 0 && q.k1 === 0)
 else { const lo = st.low, along = st.axis === 'x', mid = along ? (lo.z0 + lo.z1) / 2 : (lo.x0 + lo.x1) / 2, top = st.dir > 0 ? (along ? lo.x1 : lo.z1) : (along ? lo.x0 : lo.z0), bot = st.dir > 0 ? (along ? lo.x0 : lo.z0) : (along ? lo.x1 : lo.z1), sg = st.dir > 0 ? 1 : -1;
   const at = (u, k, h) => P.w2(along ? u : mid, P.lv[k].y + (h || 0), along ? mid : u), head = at(top + sg * 0.9, 0), foot = at(bot - sg * 0.9, st.k0);
   log.push('stair head ' + head.map(v => v.toFixed(1)) + ' foot ' + foot.map(v => v.toFixed(1)));
-  if (!walkTo(head[0], head[1], head[2], 0.4)) bad.push('could not walk from the door to the head of the cellar stair: stopped at ' + Player.pos.map(v => v.toFixed(1)).join(', '));
+  { const cd = P.doors.find(d => d.cellarDoor); if (cd) {      /* [inout] the stair is behind a door in the common room's back wall (inbox, 2026-11-18): through it first, by the villagers' own way to the top of the stair */
+      const wp = [[cd.x * 0.5, 2.0], [cd.x, cd.z - 0.9], [cd.x, cd.z + 0.9]];
+      for (const [x, z] of wp) { const w = P.w2(x, 0.02, z); if (!walkTo(w[0], w[1], w[2], 0.45)) { bad.push('could not walk from the door to the cellar door: stopped at ' + Player.pos.map(v => v.toFixed(1)).join(', ') + ' short of local ' + x.toFixed(1) + ',' + z.toFixed(1)); break; } } } }
+  if (!bad.length && !walkTo(head[0], head[1], head[2], 0.4)) bad.push('could not walk from the door to the head of the cellar stair: stopped at ' + Player.pos.map(v => v.toFixed(1)).join(', '));
   else if (!walkTo(foot[0], foot[1], foot[2], 0.5)) bad.push('could not walk down the cellar stair: stopped at ' + Player.pos.map(v => v.toFixed(1)).join(', ')); else log.push('in the cellar at ' + Player.pos.map(v => v.toFixed(1))); }
 if (Player.pos[1] > f.prop[1] + 0.8) bad.push('not down in the cellar (feet at ' + Player.pos[1].toFixed(2) + ', cellar floor ' + f.prop[1].toFixed(2) + ')');
 // 2. to the east wall, and the prompt there

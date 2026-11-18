@@ -42,7 +42,7 @@ PLANS.store = (P, c, info) => {
   // the shell's own openings: every window where the shell has one, and the door over the street door opens onto the balcony
   const SHL = pShellWins(P, c, { x0: X0, z0: 0, x1: X1, z1: D }, (f, pos) => f.wall === 'back' && f.lv === 1 ? pos - 0.5 : pos);      /* the loft's back window stands clear of the stair well */
   const bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd) pUpperDoor(P, P.rooms.parlour, bd, Math.round(SHL.pos(bd) * 4) / 4);
-  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: -1.2, z: 4.2, width: 1.0, tread: 0.2 });
+  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: -1.05, z: 4.2, width: 1.0, tread: 0.2 });      /* 1.2 m clear at its foot */
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: 2.2, z: 7.15, width: 1.0, tread: 0.22 });
   pLayout(P); pBalconies(P, c);
   const shop = P.rooms.shop, stock = P.rooms.stock, keeper = P.rooms.keeper, solar = P.rooms.solar, attic = P.rooms.attic, parlour = P.rooms.parlour, cellar = P.rooms.cellar;
@@ -50,7 +50,7 @@ PLANS.store = (P, c, info) => {
   const hh = pHearth(P, keeper, 'e', 1.0, { cauldron: true, size: 0.4, at: 5.85 }); P.hall = { room: keeper, hh };
   if (hh) { pPier(P, -1, hh); pPier(P, 1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); }
   // the shop: the counter faces the street door, the keeper's aisle and the cellar flight behind it, wares up both side walls
-  const ct = pPut(P, shop, id + '.counter', 5.0, 1.9, 0, 3.6, 0.8, 0.84, pdCounter(3.6, c, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple', 'bottle', 'candle'], 8), { surface: true, noClear: true, lowOk: true });
+  const ct = pPut(P, shop, id + '.counter', 5.6, 1.8, 0, 3.0, 0.8, 0.84, pdCounter(3.0, c, ['jug', 'bowl', 'cheese', 'loaf', 'pot', 'apple', 'bottle', 'candle'], 8), { surface: true, noClear: true, lowOk: true });
   if (ct) { pSpot(P, 'counter', ct.cx + 0.3, ct.cz + 0.8, PI, { k: 0 }); pSpot(P, 'front', ct.cx - 0.3, ct.cz - 0.85, 0, { k: 0 }); }
   pShelfRun(P, shop, 'w', 0.5, 3.2, ['bowl', 'jug', 'pot', 'cheese', 'bottle'], { id: 'side' });
   pShelfRun(P, shop, 's', 5.3, 7.4, ['pot', 'cheese', 'bowl', 'loaf'], { id: 'back' }); pShelfRun(P, shop, 's', 2.2, 3.9, ['bottle', 'jug', 'bowl', 'pot'], { id: 'back' });
@@ -67,7 +67,7 @@ PLANS.store = (P, c, info) => {
   pStock(P, stock, { crates: 2, sacks: 3, barrels: 2, near: [-1.6, 7.2], nearS: [-0.4, 7.3] });
   PD.dense(P, stock, { pool: ['hooks', 'sacks', 'torch'], corner: ['sacks', 'cask'], mid: { kinds: ['sacks'], max: 1 } }); pLamp(P, stock, -1.0, 6.5);
   // the keeper's kitchen: the fire on the end wall, a table between the door and the stair
-  const kt = pDining(P, keeper, 1.5, 0.75, { near: [3.2, 5.9], id: 'meal', n: 2 }); if (kt) { kt.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); }
+  const kt = pDining(P, keeper, 1.5, 0.75, { near: [4.6, 7.0], id: 'meal', n: 2 });      /* clear of the way to the stair */ if (kt) { kt.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0)); }
   pAgainst(P, keeper, 'n', id + '.kshelf', 1.6, 0.34, 1.8, +1, pdShelf(1.6, 1.8, 3, stockFill(c, ['pot', 'bowl', 'jug', 'cheese', 'loaf'])), { at: 2.0 });
   pWalls(P, keeper, ['Peg_Rack', 'Shelf_Simple', 'Torch_Metal']); pLamp(P, keeper, 3.4, 5.9);
   // upstairs: the counting room over the door (ledgers, the strongbox, the way onto the balcony), Marta's chamber, the stock loft
@@ -99,7 +99,7 @@ PLANS.smithy = (P, c, info) => {      /* [inout] the shell on the Market Place: 
   pRoom(P, 1, 'loft', 'bedroom', X0, 0, Xp, D);
   pDoor(P, 'forge', null, 0, 0); pDoor(P, 'forge', 'living', Xp, 4.3); pDoor(P, 'forge', 'coalstore', Xp + 1.2, Zp);
   pShellWins(P, c, B);
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: X0 + 0.85, z: 1.2, width: 0.9, tread: 0.2 });
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: X0 + 0.85, z: 1.45, width: 0.9, tread: 0.2 });      /* 1.2 m clear at its foot */
   pLayout(P);
   const forge = P.rooms.forge, living = P.rooms.living, cs = P.rooms.coalstore, loft = P.rooms.loft, m = c.int;
   // the forge stands on the far wall straight ahead of the street door: the first thing seen is its glow, the anvil before it and the smith between them
@@ -146,16 +146,16 @@ PLANS.smithy = (P, c, info) => {      /* [inout] the shell on the Market Place: 
 
 // ── the elder's hall: a long, high hall with a great fireplace on the east wall, a high table on a dais at the far end, a long table down the middle, trophies and banners; the study to the west; a stair hall with the way up to the bedchamber and down to the strongroom ──
 PLANS.elder = (P, c, info) => {      /* [inout] the shell: 7.2 x 5.6 m, two storeys over a strongroom; 9 x 6.5 inside. Rowan lives alone in what was his father's manor hall */
-  const R = P.R, id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Xs = X0 + 3, H0 = 2.75; P.dims = { W: B.W, D, Dh: D };
+  const R = P.R, id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Xs = X0 + 2.5, H0 = 2.75; P.dims = { W: B.W, D, Dh: D };
   pLevel(P, -1, -(2.4 + PW.SLAB), 2.4); pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
   pRoom(P, 0, 'study', 'study', X0, 0, Xs, D); pRoom(P, 0, 'hall', 'hall', Xs, 0, X1, D, { floor: 'stone' });
   pRoom(P, 1, 'chamber', 'bedroom', X0, 0, Xs, D); pRoom(P, 1, 'solar', 'bedroom', Xs, 0, X1, D);
   pRoom(P, -1, 'strongroom', 'cellar', X0, 0, Xs, D, { floor: 'stone', win: false });
   pDoor(P, 'hall', null, 0, 0); pDoor(P, 'hall', 'study', Xs, 1.6); pDoor(P, 'solar', 'chamber', Xs, 1.6);
   pShellWins(P, c, B);
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: -1, x: X1 - 1.3, z: D - 0.75, width: 0.9, tread: 0.18 });
-  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: -1, x: X0 + 0.75, z: D - 1.4, width: 0.9, tread: 0.2 });
-  pLayout(P);
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: -1, x: X1 - 1.5, z: D - 0.75, width: 0.9, tread: 0.18 });      /* 1.2 m clear at its foot */
+  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: -1, x: X0 + 0.75, z: D - 1.45, width: 0.9, tread: 0.2 });
+  pLayout(P); pKeepStairHeads(P);
   const hall = P.rooms.hall, study = P.rooms.study, ch = P.rooms.chamber, solar = P.rooms.solar, sr = P.rooms.strongroom;
   // the hall: the fire on the gable wall, his father's buckler over it; the long table with the Elder's chair at its head; the empty bread baskets by the door
   let hh = null; for (const [sd, at_] of [['e', 4.3], ['e', 4.6], ['w', 3.6], ['w', 4.4]]) if ((hh = pHearth(P, hall, sd, 1.6, { cauldron: false, size: 0.6, at: at_, r: 10, c: [3.6, 1.8, 0.65], rug: [0.4, 0.14, 0.12] }))) break; P.hall = { room: hall, hh }; if (hh) { pPier(P, 1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); pKitWall(P, hall, hh.side, hh.pz - 1.5, 'Shield_Wooden') || pKitWall(P, hall, hh.side, hh.pz + 1.5, 'Shield_Wooden'); }      /* his father's buckler beside the chimney breast */

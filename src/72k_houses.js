@@ -255,7 +255,7 @@ PLANS.weaver = (P, c, info) => {
   pDoor(P, 'work', null, 0, 0); pDoor(P, 'work', 'living', X1 - 2.6, Zp); pDoor(P, 'loft', 'woolstore', X1 - 2.6, Zp);
   pShellWins(P, c, B);
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.5, z: D - 0.65, width: 0.9, tread: 0.19 });
-  pLayout(P);
+  pLayout(P); pKeepStairHeads(P);
   const work = P.rooms.work, living = P.rooms.living, ws = P.rooms.woolstore, loft = P.rooms.loft;
   hTrade(P, c, work, F); pPiece(P, work, 'wooden_lantern_01', { side: ['n', 's'], lit: 6, soft: true, opt: { lowOk: true } });
   for (let i = 0; i < 3; i++) pPiece(P, work, 'wicker_basket_02', { side: ['s', 'n'], at: X0 + 0.6 + i * 0.5, sc: 1.6, soft: true, id: 'yarn' + i });
@@ -281,9 +281,9 @@ PLANS.draper = (P, c, info) => {
   pDoor(P, 'shop', null, 0, 0); pDoor(P, 'shop', 'back', X1 - 1.0, Zp); pDoor(P, 'upfront', 'upback', X1 - 1.0, Zp);
   const SHL = pShellWins(P, c, B);
   const bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd) pUpperDoor(P, P.rooms.upfront, bd, Math.round(SHL.pos(bd) * 4) / 4);
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.4, z: D - 0.6, width: 0.9, tread: 0.19 });
-  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: X0 + 1.2, z: Zp + 0.65, width: 0.9, tread: 0.2 });
-  pLayout(P); pBalconies(P, c);
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.45, z: D - 0.6, width: 0.9, tread: 0.18 });
+  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: X0 + 1.45, z: Zp + 0.65, width: 0.9, tread: 0.2 });      /* 1.2 m clear at both ends */
+  pLayout(P); pKeepStairHeads(P); pBalconies(P, c);
   const shop = P.rooms.shop, back = P.rooms.back, uf = P.rooms.upfront, ub = P.rooms.upback, cel = P.rooms.cellar;
   hTrade(P, c, shop, F); if (!P.counter) for (const ln of [3.0, 2.4, 1.8]) if (cnt(P, shop, F, ln, ['folded', 'bolt', 'spools'], 'draper')) break;
   if (!P.spots.counter && P.counter) { const ct = P.counter; pSpot(P, 'counter', ct.cx, ct.cz + 0.8, PI, { k: 0 }); }
@@ -291,7 +291,7 @@ PLANS.draper = (P, c, info) => {
   for (const x of [X0 + 1.4, X1 - 1.4]) pPiece(P, shop, 'brass_candleholders_c', { near: [x, Zp - 0.5], lit: 5, soft: true, opt: { lowOk: true } });
   const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, id + '.mat', e.x, 1.1, 0, 1.8, 1.2, 0.02, pdRug(1.8, 1.2, F.rug), { flat: true, noClear: true });
   // the back room: the fire, the table and two chairs, the cabinet with the accounts, the CandleStick_Stand
-  let hh = null; for (const [sd, a] of [['e', Zp + 1.6], ['e', Zp + 1.2], ['s', X1 - 1.4]]) if ((hh = pHearth(P, back, sd, 1.3, { cauldron: true, size: 0.4, at: a }))) break;
+  let hh = null; for (const [sd, a] of [['e', Zp + 1.6], ['e', Zp + 1.2], ['e', Zp + 0.9], ['e', Zp + 2.0], ['s', X1 - 0.9], ['w', Zp + 1.5]]) for (const wd of [1.3, 1.1]) if (!hh && (hh = pHearth(P, back, sd, wd, { cauldron: true, size: 0.4, at: a, allow: sd === 's' ? ['path'] : undefined }))) break;      /* against the back wall the fire may stand beside the room's way across */
   P.hall = { room: back, hh }; if (hh) { pPier(P, 1, hh); pPier(P, -1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); }
   const dn = pDining(P, back, 1.2, 0.75, { near: [X1 - 2.4, Zp + 1.5], id: 'meal', n: 2 }); if (dn) dn.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0));
   pPiece(P, back, 'CandleStick_Stand', { near: [X1 - 0.6, D - 0.6], lit: 6, sc: 0.8 });
@@ -313,7 +313,7 @@ PLANS.draper = (P, c, info) => {
 // the schedules and docs/ROOMS.md still find them. Dressed with kit pieces by name and the trade's set; no filler.
 const INOUT_FIT = new Set();          // the houses that use it (district by district)
 function hCompact(P, c, F) {
-  const small = c.w * c.d < 30, sW = Math.max(5.5, Math.ceil(c.w * 1.05 * 2) / 2), B = small ? pFitBox(c, { W: sW, D: Math.max(4, Math.floor(c.w * c.d * 1.5 / sW * 2) / 2) }) : pFitBox(c), X0 = B.x0, X1 = B.x1, W = B.W, D = B.D, id = P.id, R = F.R, st = c.spec.kitStyle || {}, fam = F.fam;      /* a small shell: a floor 5.5 m wide so a straight stair fits along its back wall */
+  const small = c.w * c.d < 30, sW = Math.max(6, Math.ceil(c.w * 1.05 * 2) / 2),      /* 6 m: a stair with 1.2 m clear at both ends */ B = small ? pFitBox(c, { W: sW, D: Math.max(4, Math.floor(c.w * c.d * 1.5 / sW * 2) / 2) }) : pFitBox(c), X0 = B.x0, X1 = B.x1, W = B.W, D = B.D, id = P.id, R = F.R, st = c.spec.kitStyle || {}, fam = F.fam;      /* a small shell: a floor 5.5 m wide so a straight stair fits along its back wall */
   const two = !!st.up || shellOpenings(c).some(f => f.lv >= 1 && f.kind !== 'floor'), three = shellOpenings(c).some(f => f.lv >= 2 && f.kind === 'win' && !f.blocked) && two;      /* a third storey the shell shows on a one-room house: a loft under the roof, by a ladder (inbox, Build 85) */      /* the alley's facades draw their upper storeys themselves: the shell's openings say how many there are */
   const H0 = W < 6.5 ? 2.6 : clamp(F.H0, 2.6, 2.8), nSt = Math.ceil((H0 + PW.SLAB) / 0.19), single = D < 6;
   // the partitions keep clear of the shell's windows: a wall never meets the outside wall in the middle of a window (the window would have to move off its place)
@@ -322,10 +322,10 @@ function hCompact(P, c, F) {
   const clearOf = (v, list) => list.reduce((m, q) => Math.min(m, Math.abs(q - v)), 9);
   let Zp = single ? D : clamp(Math.round(D * 0.55 * 2) / 2, 3.5, D - 2.5);
   if (!single) { let best = Zp, bs = -1; for (let z = 3.5; z <= D - 2.5 + 1e-6; z += 0.5) { const sc = Math.min(clearOf(z, sideZ), 1.2) * 10 - Math.abs(z - D * 0.55); if (sc > bs) { bs = sc; best = z; } } Zp = best; }
-  const shop = fam === 'shopfront', work = fam === 'workshop' || fam === 'crosspassage', hall = !shop && !work, cellarOK = !single && (shop || fam === 'merchant') && (F.wealth > 0 || F.trade === 'butcher') && W >= 7.5;
+  const shop = fam === 'shopfront', work = fam === 'workshop' || fam === 'crosspassage', hall = !shop && !work, cellarOK = !single && (shop || fam === 'merchant') && (F.wealth > 0 || F.trade === 'butcher') && W >= 8.5;
   const mir = hHash(id + '|cmir') < 0.5, M = x => mir ? X0 + X1 - x : x, rr = (a, b) => [Math.min(M(a), M(b)), Math.max(M(a), M(b))];      /* house by house the arrangement is mirrored: the stair, the store and the kitchen change sides */
   const split = [0.45, 0.5, 0.55][(hHash(id + '|csplit') * 3) | 0], mirX = x => mir ? X0 + X1 - x : x;
-  let Xs = cellarOK ? X0 + 5.5 : X0 + Math.max(3, Math.min(W - 3, Math.round(W * split * 2) / 2));
+  let Xs = cellarOK ? X0 + 6 : X0 + Math.max(3, Math.min(W - 3, Math.round(W * split * 2) / 2));
   if (!cellarOK && W >= 6) { let best = Xs, bs = -1; for (let x = X0 + 3; x <= X1 - 3 + 1e-6; x += 0.5) { const sc = Math.min(clearOf(mirX(x), backX), 1.2) * 10 - Math.abs(x - Xs); if (sc > bs) { bs = sc; best = x; } } Xs = best; }
   P.dims = { W, D, Dh: Zp }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP, two ? {} : { loft: true }); if (cellarOK) pLevel(P, -1, -(2.4 + PW.SLAB), 2.4);
   const nm = shop ? ['shop', 'back', 'store'] : work ? ['work', 'living', 'store'] : single ? ['room'] : ['hall', 'chamber', 'pantry'];
@@ -341,9 +341,9 @@ function hCompact(P, c, F) {
   if (!single) { pDoor(P, front.id, left.id, M(X0 + 0.8), Zp); pDoor(P, front.id, right.id, M(X1 - 0.8), Zp); }
   if (up2) pDoor(P, up1.id, up2.id, M(X1 - 0.8), Zp);
   const SHL = pShellWins(P, c, B), bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd && P.lv[1]) pUpperDoor(P, up1, bd, Math.round(SHL.pos(bd) * 4) / 4);      /* an upper door the shell shows opens from the front room upstairs */
-  const lat = single ? D - 0.6 : Zp - 0.6, p0 = X0 + (W < 6.5 ? 1.3 : 1.5), tread = clamp(Math.floor((X1 - 0.6 - 0.8 - 0.35 - p0) / nSt * 100) / 100, 0.18, 0.23);      /* a longer stair where it fits: its well is then long enough to jump down */      /* narrow houses get a steeper stair, as they had */
+  const lat = single ? D - 0.6 : Zp - 0.6, p0 = X0 + 1.45,      /* 1.2 m clear at the foot */ tread = clamp(Math.floor((X1 - 1.45 - p0) / nSt * 100) / 100, 0.18, 0.23);      /* and at the head */      /* a longer stair where it fits: its well is then long enough to jump down */      /* narrow houses get a steeper stair, as they had */
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: mir ? -1 : 1, x: M(p0), z: lat, width: 0.9, tread, holeX: 0.5 });
-  if (cellarOK) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: mir ? -1 : 1, x: M(X0 + 1.2), z: D - 0.6, width: 0.9, tread: 0.2 });
+  if (cellarOK) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: mir ? -1 : 1, x: M(X0 + 1.45), z: D - 0.6, width: 0.9, tread: 0.2 });
   pLayout(P); pBalconies(P, c);
   let lad = null; if (three) { for (const sdL of mir ? ['e', 'w'] : ['w', 'e']) for (const z of [1.2, 1.6, D - 1.6, D / 2]) if (!lad) lad = pLadder(P, 1, sdL, z); if (!lad) P.err.push('no ladder to the loft'); }
   for (const q of P.stairs) { const h = q.high || q.low, x0 = Math.min(q.p1, q.p1 + q.dir * 1.4), x1 = Math.max(q.p1, q.p1 + q.dir * 1.4); P.clear.push(q.axis === 'x' ? { x0, x1, z0: q.lat - 0.6, z1: q.lat + 0.6, k: q.k0, kind: 'stair' } : { x0: q.lat - 0.6, x1: q.lat + 0.6, z0: x0, z1: x1, k: q.k0, kind: 'stair' }); }      /* the floor below a stair head stays clear of a fire: its chimney stack would stand at the top of the stair */
@@ -368,7 +368,7 @@ function hCompact(P, c, F) {
   pPiece(P, eat, 'painted_wooden_cabinet', { side: ['n', 's', 'w', 'e'], top: F.wealth > 0 ? [[lite, 0.3, 0, 1, 0, true]] : [] });
   if (F.wealth === 0) pPiece(P, eat, 'wooden_candlestick', { near: dn ? [dn.x, dn.z] : pCentre(eat), lit: 3.5, soft: true, opt: { lowOk: true } });
   // the store or pantry: shelves and what is kept
-  if (left && left !== eat) { pPiece(P, left, 'painted_wooden_shelves', { side: ['w', 's', 'n'], sc: 1.5, top: [['ceramic_pot', 0, 0, 0.6, 0]] }); pPiece(P, left, 'Barrel', { side: ['s', 'w'] }); pStock(P, left, { sacks: work || shop ? 2 : 1, near: pCentre(left) }); }
+  if (left && left !== eat && !cellarOK) { pPiece(P, left, 'painted_wooden_shelves', { side: ['w', 's', 'n'], sc: 1.5, top: [['ceramic_pot', 0, 0, 0.6, 0]] }); pPiece(P, left, 'Barrel', { side: ['s', 'w'] }); pStock(P, left, { sacks: work || shop ? 2 : 1, near: pCentre(left) }); }
   if (right && right !== eat && hall) pPiece(P, right, 'classicnightstand_01', { side: ['e', 's', 'w'], top: [['wooden_candlestick', 0, 0, 1, 0, true]] });
   // beds: one per sleeper, upstairs first; the chamber below in a hall house
   const bedRooms = [up1, up2, hall ? right : null].filter(Boolean), first = up2 || up1;

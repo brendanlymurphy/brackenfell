@@ -326,7 +326,7 @@ function planHouse(P, c, info) {
   // the stairs: cellar -> hall along the west wall (toward +z), hall -> loft along the east wall (toward +z)
   const tr = 0.22;
   const fl = !!info.flank;
-  pStair(P, cw ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 0.6, z: Dh - 1.0, width: 1.0, tread: tr } : fl ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: x0 + 0.95, z: 1.3, width: 1.0, tread: tr });
+  pStair(P, cw ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: -1, x: 1.4, z: Dh - 1.0, width: 1.0, tread: tr }      /* its head by the cellar door: the well does not stand across the way to it */ : fl ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: x0 + 0.95, z: 1.3, width: 1.0, tread: tr });
   if (up) {
     pStair(P, fl ? { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: -1, x: -1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: x1 - 0.95, z: 1.3, width: 1.0, tread: tr });
     if (fl) { pRoom(P, 1, 'loft', 'gallery', x0, 0, 0, D); pRoom(P, 1, 'chamber1', 'bedroom', 0, 0, x1, Dh); pRoom(P, 1, 'chamber2', 'bedroom', 0, Dh, x1, D); pDoor(P, 'loft', 'chamber1', 0, 3.5); pDoor(P, 'loft', 'chamber2', 0, Dh + 1.5); }
@@ -334,6 +334,7 @@ function planHouse(P, c, info) {
   }
   if (info.shellWins && typeof pShellWins === 'function') pShellWins(P, c, { x0, z0: 0, x1, z1: D });      /* [inout] the windows the shell shows, and no others */
   pLayout(P);
+  if (cw) pLamp(P, P.rooms.passage, x1 - 2.0, Dh - 1.0);      /* [inout] the passage behind the common room: one lantern */
   if (info.inn) P.clear.push({ x0: x1 - 3.0, x1: x1, z0: Dh - 2.4, z1: Dh, k: -1, kind: 'path' });      /* [inout] the corner of the Hart's cellar where the bricked arch opens (94d_act2.js door.tunnel.in): nothing stands in front of it */
   // ground floor
   const hall0 = hall, hh = pHearth(P, hall, 's', info.inn ? 2.4 : 1.7, { cauldron: true, at: 0 });
@@ -426,9 +427,10 @@ function planBuild(c) {
   zi.site = Object.assign({}, c.site, { x: ctr[0], z: ctr[2], yaw: P.yaw }); zi.hw = W / 2; zi.hd = D / 2; zi.y0 = dd.sill[1] - 3.6; zi.y1 = dd.sill[1] + 7; zi.slope = 0; zi.H = H_GROUND;
   if (P.hearths && P.hearths[0]) { const h = P.hearths[0], hp = P.w2(h.x, 0, h.z); zi.hearth = [hp[0], hp[2], h.wid]; }
   if (P.c && P.c.int) pBase(P, P.c.int);          // [fx2] nothing drawn after the plan starts from a leaked transform
-  PD.topup(P);             // [fx2] rooms that measured placement left thin get a second fill
+  // [inout] no second fill: every house is refitted and furnished room by room (no filler; the top-up stood a cabinet in a stair well)
   pSpotsClear(P);          // [fx2] nobody stands inside a counter, chair or cabinet
   pCullHidden(P, P.c.int);   // [fx2] faces against the wall, floor and ceiling that nobody sees
+  pEnsure(P);      /* [inout] the invariants the schedules rely on: work, fire1 beside home, enough seats */
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
   const home = P.spots.home || P.spots.sit || Object.values(P.spots)[0];
   P.fallbacks = [];      /* [fin] spots the plan could not place: the interiors test lists them with the house id */
@@ -500,4 +502,33 @@ function dressKind(P, c, room, hh, info) {
   const e = P.doors.find(d => d.b === null); if (e) pSconce(P, room, 'n', e.x + 1.5) || pSconce(P, room, 'n', e.x - 1.5);
   if (hh) pLamp(P, room, 0, 3.2); else pLamp(P, room, 0, 3.0);
   pFree(P, room, id + '.rug', 2.2, 1.5, 0.02, 0.1, pdRug(2.2, 1.5, [0.4, 0.26, 0.2]), { flat: true, noClear: true, near: [0, 4.2] });
+}
+
+// [inout] what every lived-in house keeps (coordinator, 2026-11-18; checked by test/interiors.js): a `work` place of its own, `fire1` beside `home` and not on it,
+// and max(4, household) seats at distinct places. Added only where the plan has not made them; a stool is a real kit stool, sat on.
+function pEnsure(P) {
+  const sleepers = typeof castSleepers === 'function' ? castSleepers(P.id) : 0; if (!sleepers) return;
+  const ground = Object.values(P.rooms).filter(r => r.k === 0 && r.kind !== 'yard' && r.kind !== 'corridor').sort((a, b) => (b.x1 - b.x0) * (b.z1 - b.z0) - (a.x1 - a.x0) * (a.z1 - a.z0));
+  const main = (P.hall && P.hall.room && P.hall.room.k === 0) ? P.hall.room : ground[0]; if (!main) return;
+  const hh = P.hall && P.hall.hh, rooms = [main].concat(ground.filter(r => r !== main));
+  const freeAt = (room, x, z, w) => pFit(P, room, rectOf(x, z, w, w), { h: 1.8, lowOk: true, noClear: true }) && !P.clear.some(q => q.k === room.k && (q.kind === 'stair' || q.kind === 'door') && rOv(rectOf(x, z, w, w), q, 0.01));      /* a person may stand on a path, not in a doorway or at a stair's end */
+  if (!P.spots.home) for (const [x, z] of pCands(main, pCentre(main))) if (freeAt(main, x, z, 0.7)) { pSpot(P, 'home', x, z, 0, { k: main.k }); break; }      /* a house with no fire (the chapel): its people's place is the middle of its main room */
+  const home = P.spots.home;
+  const faceTo = (x, z, t) => Math.atan2(t[0] - x, -(t[1] - z));
+  if (!P.spots.work) { const room = home ? (pRoomAt(P, home.k || 0, home.x, home.z) || main) : main, c0 = pCentre(room); for (const [x, z] of pCands(room, home ? [home.x + 1.2, home.z] : c0)) if ((!home || Math.hypot(x - home.x, z - home.z) >= 1.0) && freeAt(room, x, z, 0.7)) { pSpot(P, 'work', x, z, faceTo(x, z, c0), { k: room.k }); break; } }
+  if (home && (!P.spots.fire1 || Math.hypot(P.spots.fire1.x - home.x, P.spots.fire1.z - home.z) < 0.5)) { const room = pRoomAt(P, home.k || 0, home.x, home.z) || main, tgt = hh ? [hh.px, hh.pz] : [home.x, home.z];
+    let done = false; for (const r of [0.9, 1.2, 1.6, 2.0, 2.6, 3.2]) { for (let a = 0; a < 16 && !done; a++) { const x = home.x + Math.cos(a * PI / 8) * r, z = home.z + Math.sin(a * PI / 8) * r; const rm = pRoomAt(P, room.k, x, z); if (rm && freeAt(rm, x, z, 0.5)) { pSpot(P, 'fire1', x, z, faceTo(x, z, tgt), { k: room.k }); done = true; } } if (done) break; } }
+  const seats = () => { const out = []; for (const n in P.spots) if (/^(sit|seat\d+)$/.test(n)) { const s = P.spots[n]; if (!out.some(o => (o.k || 0) === (s.k || 0) && Math.hypot(o.x - s.x, o.z - s.z) < 0.4)) out.push(s); } return out; };
+  // a seat no 0.9 m way reaches (a bench between a table and a wall) is not one: its name goes to a stool where a way reaches
+  let reach = pReach(P); const gone = []; for (const nm of Object.keys(P.spots)) if (/^(sit|seat\d+)$/.test(nm)) { const s = P.spots[nm]; if (!reach(s.k || 0, s.x, s.z, 0.65)) { gone.push(nm); delete P.spots[nm]; } }
+  const want = Math.max(4, sleepers); let n = 1, guard = 0;
+  const stoolDraw = m => kp(m, 'painted_wooden_stool', 0, 0, 0, 1, 0);
+  while (seats().length < want && guard++ < 14) {
+    let placed = null;
+    for (const room of rooms) { if (placed) break; const tbl = P.items.find(it => it.k === room.k && /table|meal|long|desk/.test(it.id || '') && it.x0 >= room.x0 - 0.1 && it.x1 <= room.x1 + 0.1 && it.z0 >= room.z0 - 0.1 && it.z1 <= room.z1 + 0.1), near = tbl ? [(tbl.x0 + tbl.x1) / 2, (tbl.z0 + tbl.z1) / 2] : home && pRoomAt(P, 0, home.x, home.z) === room ? [home.x, home.z] : pCentre(room);
+      for (const [x, z] of pCands(room, near)) { if (Math.hypot(x - near[0], z - near[1]) > 3.5) break; if (!reach(room.k, x, z, 0.65) || seats().some(o => Math.hypot(o.x - x, o.z - z) < 0.45)) continue; const it = pPut(P, room, P.id + '.seatstool' + P.items.length, x, z, 0, 0.42, 0.42, 0.46, stoolDraw, { lowOk: true }); if (it) { placed = { it, near, room }; break; } } }
+    if (!placed) break;
+    const nm = gone.length ? gone.shift() : (() => { if (!P.spots.sit) return 'sit'; while (P.spots['seat' + n]) n++; return 'seat' + n; })();
+    pSit(P, nm, placed.it.cx, placed.it.cz, faceTo(placed.it.cx, placed.it.cz, placed.near), placed.room.k); reach = pReach(P);
+  }
 }

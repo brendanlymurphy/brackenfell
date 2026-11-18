@@ -49,7 +49,7 @@ PLANS.guardhouse = (P, c, info) => {      /* [inout] the shell: 7.2 x 5.6 m, two
   const SHL = pShellWins(P, c, B);
   const bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd) pUpperDoor(P, P.rooms.barracks, bd, Math.round(SHL.pos(bd) * 4) / 4);
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.7, z: Zp - 0.65, width: 0.9, tread: 0.22 });
-  pLayout(P); pBalconies(P, c);
+  pLayout(P); pKeepStairHeads(P); pBalconies(P, c);
   const guard = P.rooms.guard, cells = P.rooms.cells, arm = P.rooms.armoury, bar = P.rooms.barracks;
   // the guard room: the fire on the gable wall, the table with the roster, a weapon stand, two cloaks on the pegs, Hugh Alder's arrows still tied
   let hh = null; for (const [sd, a] of [['e', 1.9], ['e', 2.4], ['w', 1.6]]) if ((hh = pHearth(P, guard, sd, 1.5, { cauldron: true, size: 0.45, at: a }))) break;

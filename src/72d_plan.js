@@ -266,6 +266,7 @@ function pWallSlot(P, room, side, w, d, o) {
   let lo = (hor ? a.x0 : a.z0) + w / 2, hi = (hor ? a.x1 : a.z1) - w / 2;
   if (rel) { lo = hor ? a.x0 - rel.x0 : a.z0 - rel.z0; hi = hor ? a.x1 - rel.x1 : a.z1 - rel.z1; }
   for (let t = lo; t <= hi + 1e-6; t += 0.25) pts.push(t);
+  if (hi > lo && Math.abs(pts[pts.length - 1] - hi) > 1e-3) pts.push(hi);      /* [inout] the far end of the wall too: a 25 cm step can pass over the one place that fits */
   const want = o.at === 'end' ? hi : o.at === 'mid' || o.at === undefined ? (lo + hi) / 2 : o.at === 'start' ? lo : o.at;
   pts.sort((p, q) => Math.abs(p - want) - Math.abs(q - want));
   let nth = o.nth || 0;
@@ -734,3 +735,21 @@ function pLadder(P, k0, side, z) {
   World.interact.push({ kind: 'portal', id: 'ladder.' + cid + '.down', p: pt, r: 1.5, zone: P.zone, cell: cid, label: 'Climb down', dest: dn, side: 'in', ladder: true });
   const l = { k0, k1: k0 + 1, a, b, trap, side, z }; (P.ladders = P.ladders || []).push(l); return l;
 }
+// [inout] where a body of 0.9 m can walk from the street door (the interiors test asks the same): returns reach(k, x, z, r) = a walkable place within r of (x, z) on level k.
+// Benches, stools and chests below 0.52 m are sat on or stepped round, not walls; stairs join their levels at their foot and head.
+function pReach(P) {
+  const st = 0.15, grid = new Map(), seen = new Set(), q = [], key = (k, i, j) => k * 1e8 + (i + 5000) * 1e4 + (j + 5000);
+  const free = (k, x, z) => { const kk = 'f' + key(k, Math.floor(x / 0.05), Math.floor(z / 0.05));      /* a 5 cm cache, as the test's */ if (grid.has(kk)) return grid.get(kk);
+    let ok = Object.values(P.rooms).some(r => r.k === k && x > r.in.x0 && x < r.in.x1 && z > r.in.z0 && z < r.in.z1) || P.doors.some(d => d.k === k && d.wall && (d.wall.ax === 'x' ? Math.abs(x - d.x) < d.w / 2 && Math.abs(z - d.z) < 0.35 : Math.abs(z - d.z) < d.w / 2 && Math.abs(x - d.x) < 0.35));
+    if (ok) for (const it of P.items) if (it.k === k && !/^(rug|flat|hang|wall|clear|light|hole)$/.test(it.kind || '') && x > it.x0 && x < it.x1 && z > it.z0 && z < it.z1 && !(it.h !== undefined && it.h < 0.52 && it.kind !== 'stair')) { ok = false; break; }
+    if (ok) for (const h of P.holes) if (h.k === k && x > h.r.x0 && x < h.r.x1 && z > h.r.z0 && z < h.r.z1) { ok = false; break; }
+    grid.set(kk, ok); return ok; };
+  const wide = (k, x, z) => { for (const [dx, dz] of [[0, 0], [0.42, 0], [-0.42, 0], [0, 0.42], [0, -0.42], [0.3, 0.3], [-0.3, 0.3], [0.3, -0.3], [-0.3, -0.3]]) if (!free(k, x + dx, z + dz)) return false; return true; };
+  const push = (k, x, z) => { const kk = key(k, Math.round(x / st), Math.round(z / st)); if (seen.has(kk) || !wide(k, x, z)) return; seen.add(kk); q.push([k, x, z]); };
+  const e = P.doors.find(d => d.b === null && !d.upper); if (e) push(0, e.x, e.z + 0.9);
+  for (let n = 0; n < q.length && n < 80000; n++) { const [k, x, z] = q[n]; for (const [dx, dz] of [[st, 0], [-st, 0], [0, st], [0, -st]]) push(k, x + dx, z + dz);
+    for (const s of P.stairs) { if (s.k0 === k && Math.hypot(x - s.lowPt[0], z - s.lowPt[1]) < 0.4) push(s.k1, s.highPt[0], s.highPt[1]); if (s.k1 === k && Math.hypot(x - s.highPt[0], z - s.highPt[1]) < 0.4) push(s.k0, s.lowPt[0], s.lowPt[1]); } }
+  return (k, x, z, r) => { r = r || 0.3; for (let dx = -r; dx <= r + 0.01; dx += st) for (let dz = -r; dz <= r + 0.01; dz += st) if (seen.has(key(k, Math.round((x + dx) / st), Math.round((z + dz) / st)))) return true; return false; };
+}
+// [inout] the floor below a stair's head stays clear of anything that rises through it (a fire's stack, a pier): call after pLayout, before the hearths
+function pKeepStairHeads(P) { for (const q of P.stairs) { const x0 = Math.min(q.p1, q.p1 + q.dir * 1.4), x1 = Math.max(q.p1, q.p1 + q.dir * 1.4); P.clear.push(q.axis === 'x' ? { x0, x1, z0: q.lat - 0.6, z1: q.lat + 0.6, k: q.k0, kind: 'stair' } : { x0: q.lat - 0.6, x1: q.lat + 0.6, z0: x0, z1: x1, k: q.k0, kind: 'stair' }); } }
