@@ -290,6 +290,7 @@ function planHouse(P, c, info) {
     if (fl) { pRoom(P, 1, 'loft', 'gallery', x0, 0, 0, D); pRoom(P, 1, 'chamber1', 'bedroom', 0, 0, x1, Dh); pRoom(P, 1, 'chamber2', 'bedroom', 0, Dh, x1, D); pDoor(P, 'loft', 'chamber1', 0, 3.5); pDoor(P, 'loft', 'chamber2', 0, Dh + 1.5); }
     else { pRoom(P, 1, 'loft', 'bedroom', 0, 0, x1, D); pRoom(P, 1, 'chamber1', 'bedroom', x0, 0, 0, Dh); pRoom(P, 1, 'chamber2', 'bedroom', x0, Dh, 0, D); pDoor(P, 'loft', 'chamber1', 0, 2.5); pDoor(P, 'loft', 'chamber2', 0, Dh + 1.5); }
   }
+  if (info.shellWins && typeof pShellWins === 'function') pShellWins(P, c, { x0, z0: 0, x1, z1: D });      /* [inout] the windows the shell shows, and no others */
   pLayout(P);
   // ground floor
   const hall0 = hall, hh = pHearth(P, hall, 's', info.inn ? 2.4 : 1.7, { cauldron: true, at: 0 });
@@ -392,7 +393,7 @@ function planBuild(c) {
   if (typeof Bake !== 'undefined') Bake.interior(P);          // [l1] 72m_bake.js: contact pools under furniture, window data for the window light
   c.planDone = P; return P;
 }
-const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: { kind: 'study' }, guardhouse: { kind: 'guard' },  inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true } };
+const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: { kind: 'study' }, guardhouse: { kind: 'guard' },  inn: { inn: true, W: 14, D: 13, Dh: 8, H0: 3.2, up: true, flank: true, shellWins: true } };
 // the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
 function dressInn(P, c, room, hh) {
   const R = P.R, a = room.in; P.hall = { room, hh };

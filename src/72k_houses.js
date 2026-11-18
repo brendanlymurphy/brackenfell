@@ -242,3 +242,64 @@ if (typeof HOUSES !== 'undefined' && typeof ALLEY_SHOPS !== 'undefined') {
   const WK = { weaver: { trade: 'weaver', fam: 'workshop', wealth: 1 }, draper: { trade: 'draper', fam: 'shopfront', wealth: 2 }, mill: { trade: 'miller', fam: 'workshop', wealth: 1 }, hunter: { trade: 'hunter', fam: 'cottage', wealth: 0 }, fisher: { trade: 'fisher', fam: 'cottage', wealth: 0 }, farm: { trade: 'farmer', fam: 'crosspassage', wealth: 1 } };
   for (const id in WK) if (typeof SITE !== 'undefined' && SITE[id] && HOUSES[id]) { HDESC[id] = WK[id]; PLANS[id] = hBuild; PLAN_SHIP[id] = 1; }
 }
+
+// ───────── [inout] the Market Place's working houses refitted to their shells (one and a half times the shell's floor, its windows, its doors) ─────────
+// They keep their trade set (HT, 72l_hobjects.js) and are dressed room by room from docs/ROOMS.md; no filler (hFinish is not called).
+const hInout = (P, c, desc) => { HDESC[P.id] = Object.assign({}, HDESC[P.id] || {}, desc); const F = hCtx(P, c); P.fam = F; return F; };
+// Riverside Cottage: Hilda and Pip. 7.6 x 6 m, two storeys: the loom room across the front, the kitchen behind, upstairs their beds and the wool store
+PLANS.weaver = (P, c, info) => {
+  const F = hInout(P, c, { trade: 'weaver', fam: 'workshop', wealth: 1 }), id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Zp = 4, H0 = 2.75; P.dims = { W: B.W, D, Dh: Zp };
+  pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
+  pRoom(P, 0, 'work', 'hall', X0, 0, X1, Zp, F.fin(0, { floor: 'wood' })); pRoom(P, 0, 'living', 'hall', X0, Zp, X1, D, F.fin(0, { floor: 'stone', tint: F.tint2 }));
+  pRoom(P, 1, 'woolstore', 'store', X0, 0, X1, Zp, F.fin(1)); pRoom(P, 1, 'loft', 'bedroom', X0, Zp, X1, D, F.fin(1));
+  pDoor(P, 'work', null, 0, 0); pDoor(P, 'work', 'living', X1 - 2.6, Zp); pDoor(P, 'loft', 'woolstore', X1 - 2.6, Zp);
+  pShellWins(P, c, B);
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.5, z: D - 0.65, width: 0.9, tread: 0.19 });
+  pLayout(P);
+  const work = P.rooms.work, living = P.rooms.living, ws = P.rooms.woolstore, loft = P.rooms.loft;
+  hTrade(P, c, work, F); pPiece(P, work, 'wooden_lantern_01', { side: ['n', 's'], lit: 6, soft: true, opt: { lowOk: true } });
+  for (let i = 0; i < 3; i++) pPiece(P, work, 'wicker_basket_02', { side: ['s', 'n'], at: X0 + 0.6 + i * 0.5, sc: 1.6, soft: true, id: 'yarn' + i });
+  const e = P.doors.find(d => d.b === null); if (e) pPut(P, work, id + '.mat', e.x, 1.1, 0, 1.8, 1.2, 0.02, pdRug(1.8, 1.2, F.rug), { flat: true, noClear: true });
+  // the kitchen: the fire on the gable, the table with two stools, Pip's slate
+  let hh = null; for (const [sd, a] of [['e', Zp + 1.7], ['e', Zp + 2.0], ['s', X1 - 1.4], ['w', Zp + 1.5]]) if ((hh = pHearth(P, living, sd, 1.3, { cauldron: true, size: 0.45, at: a }))) break;
+  P.hall = { room: living, hh }; if (hh) { pPier(P, 1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); }
+  const dn = pDining(P, living, 1.4, 0.75, { near: [X1 - 3.3, Zp + 1.4], id: 'meal', n: 2, items: ['bowl', 'bowl', 'loaf'] }); if (dn) dn.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0));
+  pPiece(P, living, 'painted_wooden_cabinet', { side: ['n', 's'], at: X0 + 1.0 });
+  // upstairs: the wool and the cloth waiting for Lindqvist; Hilda's bed and Pip's, one chest, a man's hat on the peg nobody mentions
+  pStock(P, ws, { sacks: 3, near: [X0 + 1.5, 2.0] }); pPiece(P, ws, 'painted_wooden_table', { near: [X1 - 2.2, 2.0], sc: 0.75, top: [] });
+  dressBedroom(P, loft, { beds: castBeds(P.id, ['bed', 'bed2']), bedRooms: [ws], blanket: F.blanket, loot: hLoot(F), bedInteract: true, chest: true });
+  pKitWall(P, loft, 'n', X1 - 3.0, 'Peg_Rack'); pPiece(P, loft, 'wooden_candlestick', { near: [X1 - 2.0, D - 1.2], lit: 4, soft: true, opt: { lowOk: true } });
+  if (!hh) P.err.push('no hearth fits in the kitchen');
+};
+// Lindqvist's Draper: Anselm and Sabina. 6.4 x 5.6 m, two storeys, a cellar, the balcony over the shop door: the shop, the back room; Sabina's room with the balcony door, Anselm's behind
+PLANS.draper = (P, c, info) => {
+  const F = hInout(P, c, { trade: 'draper', fam: 'shopfront', wealth: 2 }), id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Zp = 3.5, H0 = 2.75; P.dims = { W: B.W, D, Dh: Zp };
+  pLevel(P, -1, -(2.3 + PW.SLAB), 2.3); pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
+  pRoom(P, 0, 'shop', 'shop', X0, 0, X1, Zp, F.fin(0, { floor: 'wood' })); pRoom(P, 0, 'back', 'hall', X0, Zp, X1, D, F.fin(0, { floor: 'wood', tint: F.tint2 }));
+  pRoom(P, 1, 'upfront', 'bedroom', X0, 0, X1, Zp, F.fin(1)); pRoom(P, 1, 'upback', 'bedroom', X0, Zp, X1, D, F.fin(1));
+  pRoom(P, -1, 'cellar', 'cellar', X0, Zp, X1, D, { floor: 'stone', win: false });
+  pDoor(P, 'shop', null, 0, 0); pDoor(P, 'shop', 'back', X1 - 1.0, Zp); pDoor(P, 'upfront', 'upback', X1 - 1.0, Zp);
+  const SHL = pShellWins(P, c, B);
+  const bd = SHL.list.find(f => f.kind === 'door' && f.lv === 1); if (bd) pUpperDoor(P, P.rooms.upfront, bd, Math.round(SHL.pos(bd) * 4) / 4);
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: X0 + 1.4, z: D - 0.6, width: 0.9, tread: 0.19 });
+  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: X0 + 1.2, z: Zp + 0.65, width: 0.9, tread: 0.2 });
+  pLayout(P); pBalconies(P, c);
+  const shop = P.rooms.shop, back = P.rooms.back, uf = P.rooms.upfront, ub = P.rooms.upback, cel = P.rooms.cellar;
+  hTrade(P, c, shop, F);
+  if (!P.spots.ledger) { const ct = P.counter; pInteract(P, ct ? ct.cx : 0, 1.0, ct ? ct.cz : 2.0, { kind: 'read', id: 'draper.ledger', title: 'The draper’s ledger' }, 0); }
+  for (const x of [X0 + 1.4, X1 - 1.4]) pPiece(P, shop, 'brass_candleholders_c', { near: [x, Zp - 0.5], lit: 5, soft: true, opt: { lowOk: true } });
+  const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, id + '.mat', e.x, 1.1, 0, 1.8, 1.2, 0.02, pdRug(1.8, 1.2, F.rug), { flat: true, noClear: true });
+  // the back room: the fire, the table and two chairs, the cabinet with the accounts, the CandleStick_Stand
+  let hh = null; for (const [sd, a] of [['e', Zp + 1.6], ['e', Zp + 1.2], ['s', X1 - 1.4]]) if ((hh = pHearth(P, back, sd, 1.3, { cauldron: true, size: 0.4, at: a }))) break;
+  P.hall = { room: back, hh }; if (hh) { pPier(P, 1, hh); pPier(P, -1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); }
+  const dn = pDining(P, back, 1.2, 0.75, { near: [X1 - 2.4, Zp + 1.5], id: 'meal', n: 2 }); if (dn) dn.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], 0));
+  pPiece(P, back, 'CandleStick_Stand', { near: [X1 - 0.6, D - 0.6], lit: 6, sc: 0.8 });
+  // upstairs: Sabina's room over the shop (the dress form, the door onto the balcony), Anselm's behind (the rocker at the window)
+  dressBedroom(P, uf, { beds: ['bed2'], chestId: 'chest2', chest: false, blanket: F.blanket, table: false }); pPiece(P, uf, 'Dummy', { side: ['w', 'e'] }); pPiece(P, uf, 'classicnightstand_01', { side: ['w', 'e', 'n'], top: [['wooden_candlestick', 0, 0, 1, 0, true]] });
+  dressBedroom(P, ub, { beds: ['bed'], blanket: F.blanket, loot: LOOT.draper, bedInteract: true, chest: true }); pPiece(P, ub, 'rockingchair_01', { side: ['e', 'w'], turn: PI });
+  pPiece(P, ub, 'wooden_candlestick', { near: [X1 - 1.4, D - 1.0], lit: 4, soft: true, opt: { lowOk: true } });
+  // the cellar: wool in crates among cedar shavings, one cask
+  for (let i = 0; i < 4; i++) pPiece(P, cel, 'Crate_Wooden', { side: ['s', 'e'], at: X1 - 0.6 - i * 0.95, id: 'wool' + i }); pPiece(P, cel, 'wine_barrel_01', { side: ['e', 's'] });
+  pTorch(P, cel, 'n', X1 - 1.2, 1.6, 5) || pTorch(P, cel, 'e', Zp + 1.5, 1.6, 5);
+  if (!hh) P.err.push('no hearth fits in the back room');
+};
