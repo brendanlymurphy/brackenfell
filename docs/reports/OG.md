@@ -2,6 +2,24 @@
 
 Newest first. Times UTC.
 
+## 2026-11-18, the 09:10 inbox
+
+Merged `origin/threejs` (Build 86). Conflicts: the plan file (took the interiors session's), `77e_households.js` (kept mine: it has your
+one-seat fix plus distinct standing places), `test/hartdoor.js` (both: through the new cellar door first, then a player's own way round the
+furniture to the stair head), the budget file (yours).
+
+- **`mine` is deterministic now.** Caught the failure: "the Foreman did not show his pattern" (no `b_charge`). The test sometimes killed him
+  before he charged. Also the seed was used up during loading (assets arrive in any order), so the fight differed run to run even with
+  `seed=7`. Now: the seed is set again after the foes load, the test does not cut the Foreman down before he has shown his slam and his
+  charge (or a minute has passed), and the failure message puts the reasons first (the gate's log cut them off). Six runs, six passes.
+- **Re-homed after the removed shells:** Jasper out by the west gate in the morning and at his own axe block after noon; Tamsin at the hive
+  yard (in.32) and her own skeps by her door; Idony at her own hens (the new in.12 yard); Giles at the tannery yard; Wilmot at the new dye
+  yard (in.06); Felice at home. No yard that is gone is named any more.
+- **Scene 7 plays:** the town worker built butts behind the guardhouse, so on every seventh day Hugh and Hale shoot there from about four
+  to five, and the scene is heard. All 12 scenes pass.
+- **The Hart in the evening:** the new Hart has fewer evening seats; the two of scene 10 are seated first, and anyone left over stands at
+  the bar in a place of their own (two had stood in one).
+
 ## 2026-11-18, after the 07:10 inbox: wilds, the market cross, the well
 
 - **`wilds` was failing on this branch after the merge** ("to hamlet: stuck"), not every time. Two causes. (1) The new stepped market
