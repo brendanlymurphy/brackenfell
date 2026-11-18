@@ -733,6 +733,14 @@ function pBalconies(P, c) {
     d.balcony = { out: outD, in: inD, floor: fl };
   }
 }
+
+// [fin] light by household: called by planBuild after pLightCut (request to the interiors session, docs/FINISH.md). A cottage keeps its hearth and one rushlight, low and amber; a tradesman's lights are a little stronger; the merchant, the inn and the great houses keep full strength and the warmest colour. Daylight stand-ins are left alone.
+function pLightTone(P) {
+  const id = P.id, tier = /^(in|hunter|fisher|farm)\b/.test(id) ? 0 : /^(inn|elder|high\.|store|chapel)/.test(id) ? 2 : 1, K = [[0.72, 0.8], [0.9, 0.95], [1, 1.05]][tier];
+  for (const l of World.lights) { if (l.zone !== P.zone || l.kind === 'daylight' || l.kind === 'dual' || !l.c) continue; l.r *= K[0]; l.c = [l.c[0] * K[1], l.c[1] * K[1] * (tier === 0 ? 0.92 : 1), l.c[2] * K[1] * (tier === 0 ? 0.8 : 1)]; if (tier === 0 && l.kind === 'fire' && l.r < 9 && P.hearths && P.hearths.length) l.r *= 0.9; }
+  P.lightTier = tier;
+}
+
 // [inout] the plan's ground rectangle for a shell: W x D on the 0.5 m grid, as near 1.5 times the shell's area as the grid allows without passing it, the shell's own
 // proportion, and laid so that the street door (plan x = 0) stands where the shell has it. Returns { x0, z0, x1, z1, W, D, sx, sz }.
 function pFitBox(c, o) {
