@@ -3,18 +3,18 @@
 // Wildlife and weather are particles put through the air system's `put` (75b_air.js): raptors, crows, ducks, fish rings, butterflies, moths, fireflies, mist, leaves.
 const WF = { list: [], ready: false, acc: 0 };
 const WF_DEFS = [
-  { id: 'bram', place: 'lumber', at: [4.4, -3.4], yaw: 0.6, anim: 'work', name: 'a woodcutter', say: ['Mind the sleds, they run on their own.', 'Axe is on the block if you need one. Bring it back.'] },
-  { id: 'ivo', place: 'blind', at: [2.6, 2.6], yaw: 2.6, anim: 'idle', name: 'a hunter', say: ['Quiet. The does come at dusk.', 'You walk like a bell. Stand still a while.'] },
-  { id: 'hilda', place: 'bee', at: [1.4, 0.2], yaw: 0.3, anim: 'idle', name: 'a beekeeper', say: ['Slow hands, and they will not mind you.', 'The sunwort is for Maren, I expect. Take it.'] },
-  { id: 'finn', place: 'fishing', at: [-1.2, 3.6], yaw: 2.9, anim: 'fish', name: 'a fisherman', say: ['Nothing biting. There never is when someone watches.', 'The smoked trout is fair pay for a hand with the nets.'] },
-  { id: 'rowan', place: 'hermit', at: [4.2, 7.2], yaw: -0.8, anim: 'idle', name: 'the hermit', say: ['I am not hiding. The valley is simply loud.', 'Take the bogbean if you must. It grows back.'] },
-  { id: 'osric', place: 'hamlet', at: [-3.2, 2.4], yaw: 1.2, anim: 'idle', name: 'a shepherd', say: ['Highfold has four doors and one opinion.', 'The wedding is on. Everyone is at the Reeve’s.'] },
+  { id: 'wild_bram', body: 'm_hunter', female: false, dress: false, tint: { tunic: [0.7, 1.2, 0.8] }, skin: 'brown', hair: 'black', place: 'lumber', at: [4.4, -3.4], yaw: 0.6, anim: 'work', name: 'a woodcutter', say: ['Mind the sleds, they run on their own.', 'Axe is on the block if you need one. Bring it back.'] },
+  { id: 'wild_ivo', body: 'm_youth', female: false, dress: false, tint: { tunic: [0.9, 1.1, 0.7] }, skin: 'tan', hair: 'brown', place: 'blind', at: [2.6, 2.6], yaw: 2.6, anim: 'idle', name: 'a hunter', say: ['Quiet. The does come at dusk.', 'You walk like a bell. Stand still a while.'] },
+  { id: 'wild_hilda', body: 'f_farmer', female: true, dress: true, tint: { tunic: [1.5, 1.3, 0.7], skirt: [1.1, 1.0, 0.8] }, skin: 'fair', hair: 'blond', place: 'bee', at: [1.4, 0.2], yaw: 0.3, anim: 'idle', name: 'a beekeeper', say: ['Slow hands, and they will not mind you.', 'The sunwort is for Maren, I expect. Take it.'] },
+  { id: 'wild_finn', body: 'm_farmer', female: false, dress: false, tint: { tunic: [0.8, 1.0, 1.4] }, skin: 'rosy', hair: 'grey', place: 'fishing', at: [-1.2, 3.6], yaw: 2.9, anim: 'fish', name: 'a fisherman', say: ['Nothing biting. There never is when someone watches.', 'The smoked trout is fair pay for a hand with the nets.'] },
+  { id: 'wild_rowan', body: 'm_fisher', female: false, dress: false, tint: { tunic: [0.7, 0.7, 0.7], pants: [0.7, 0.7, 0.7] }, skin: 'tan', hair: 'grey', place: 'hermit', at: [4.2, 7.2], yaw: -0.8, anim: 'idle', name: 'the hermit', say: ['I am not hiding. The valley is simply loud.', 'Take the bogbean if you must. It grows back.'] },
+  { id: 'wild_osric', body: 'm_hunter', female: false, dress: false, tint: { tunic: [1.4, 1.2, 0.8] }, skin: 'fair', hair: 'auburn', place: 'hamlet', at: [-3.2, 2.4], yaw: 1.2, anim: 'idle', name: 'a shepherd', say: ['Highfold has four doors and one opinion.', 'The wedding is on. Everyone is at the Reeve’s.'] },
 ];
 function wildsLifeBuild() {
   if (!G.chars || !Chars.ready || (TEST && TEST.amb === 0) || (R.q && R.qName === 'low')) return;
   for (const def of WF_DEFS) {
     const p = WILDS.P[def.place]; if (!p) continue; let ch = null;
-    try { ch = Chars.spawn({ id: def.id }); ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('wild folk ' + def.id + ': ' + (e && e.message || e)); continue; }
+    try { ch = Chars.spawn(def);       /* [cast] A29: their own body, colours and hair, not a named villager's (the hermit was a second Rowan) */ ch.pivot.traverse(o => { o.layers.set(1); }); } catch (e) { console.warn('wild folk ' + def.id + ': ' + (e && e.message || e)); continue; }
     const q = siteToWorld(p, def.at[0], def.at[1]); let pos = [q[0], World.groundY(q[0], q[1]), q[1]];
     if (def.place === 'fishing' && p.jetty) pos = [p.jetty.end[0], p.jetty.end[1], p.jetty.end[2]];
     Chars.update(ch, { pos, yaw: def.yaw, anim: 'idle', scale: 1, zone: 0, light: 1, visible: false, cast: false, look: [0, 0], speed: 0 }, 0);

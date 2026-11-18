@@ -14,7 +14,7 @@ Object.assign(ITEMS, {
   stonecrop: ['Stonecrop', 'A fleshy little plant from the hilltop stones.'],
 });
 QUESTS.tea = { name: 'Maren’s Three-Herb Tea', stages: ['Gather bogbean (the pool in the north), sunwort (the bee meadow) and stonecrop (the standing stones)', 'Bring the herbs to Maren'] };
-QUESTS.brother = { name: 'What Became of Corwin', stages: ['Find what happened to Corwin: the old mine lies in the south-west cliffs', 'Bring Corwin’s cap to Elder Rowan'] };
+QUESTS.brother = { name: 'What Became of Corwin', stages: ['Find what happened to Corwin: the old mine lies in the north-west cliffs, up past the chapel', 'Bring Corwin’s cap to Elder Rowan'] };
 QORDER.push('tea', 'brother');
 const TEA = ['bogbean', 'sunwort', 'stonecrop'];
 const wildPick = id => World.pickups.find(p => p.item === id && !p.gone);
@@ -56,6 +56,6 @@ const _rowan = TALK.rowan;
 TALK.rowan = function () {
   if (qAt('brother') !== 99 && has('corwincap')) return node('Where did you… that is Corwin’s cap. Hob’s brother went down the old mine after silver, a good while back. So. It is the end of a long hope. Thank you for bringing it home rather than leaving it to the damp.', [['I am sorry, Elder.', () => { give('corwincap', -1); gold(60); if (qAt('brother') < 0) qStart('brother', 1); qDone('brother'); return null; }, 1]]);
   const n = _rowan();
-  if (qAt('brother') < 0 && qAt('welcome') >= 0 && n && n.o) n.o.unshift(['Do you know of a man called Corwin?', () => node('Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.', [['I’ll look into it.', () => { qStart('brother'); return null; }, 1], bye]), 1]);
+  if (qAt('brother') < 0 && qAt('welcome') >= 0 && n && n.o) n.o.unshift(['Do you know of a man called Corwin?', () => node('Corwin the miner. He went into the old workings north-west of here, up under the cliffs past the chapel, after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.', [['I’ll look into it.', () => { qStart('brother'); return null; }, 1], bye]), 1]);
   return n;
 };

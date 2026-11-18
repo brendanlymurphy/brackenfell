@@ -82,6 +82,10 @@ def new_mesh(name, verts, faces, fit, slot, mat, colors=None, group_override=Non
         for (co, idx, dist) in fit.kd.find_n(Vector(v.co), 4):
             k = 1.0 / (dist + 0.01)
             for bn, bw in fit.src[idx].items(): w[bn] = w.get(bn, 0) + bw * k
+        if not w:                                          # [ch4] the four nearest had no weights at all: the exporter would bind the vertex to "neutral_bone", which never moves (metre-long shards when the body sits). Look further.
+            for (co, idx, dist) in fit.kd.find_n(Vector(v.co), 48):
+                if fit.src[idx]:
+                    w = dict(fit.src[idx]); break
         if group_override: w = {group_override: 1.0}
         top = sorted(w.items(), key=lambda t: -t[1])[:4]; tot = sum(x[1] for x in top) or 1
         for bn, bw in top:
@@ -122,6 +126,7 @@ HEAD = {   # style: (front, side, back elevation of the lower edge in degrees; f
     'kerchief': dict(cut=(14, -4, -48), face=180, t=0.007, slot='linen', roll=0.0, tails=True),
     'straw':    dict(cut=(6, 6, 6), face=180, t=0.016, slot='straw', brim=0.12, droop=0.03),
     'kettle':   dict(cut=(4, 4, 4), face=180, t=0.012, slot='metal', brim=0.055, droop=0.025),
+    'hood':     dict(cut=(8, -52, -58), face=60, t=0.011, slot='hat', roll=0.0),
     'feather':  dict(cut=(14, 2, -18), face=180, t=0.012, slot='hat', roll=0.012, feather=True),
 }
 
@@ -148,7 +153,7 @@ def head_piece(fit, style, mat, name='w_hat'):
             al = math.pi / 2 + (ac - math.pi / 2) * (k / K)
             d = sph(th, al); r = fit.outer(c, d, fit.bvh_head, 0.5)
             R[k, i] = r if r is not None else (R[k - 1, i] if k else 0.1); AL[k, i] = al
-    R = blur(R, True, 2) if style not in ('coif',) else blur(R, True, 1)
+    R = blur(R, True, 2) if style not in ('coif', 'hood') else blur(R, True, 1)
     R = np.maximum(R, 0.0)
     t = P['t']
     V, Fc, COL = [], [], []
@@ -251,8 +256,6 @@ def belt_piece(fit, mat, width=0.038, buckle=True):
     nleather = len(V); R0 = ring_radii(fit, (0, yc), z, N); metal = []
     if buckle:
         r = R0[0] + 0.010; b0 = _box(V, Fc, 0, yc - r, z, 0.017, 0.004, width * 0.5 + 0.004); metal = range(b0, b0 + 8)
-        b1 = len(V); V += [Vector((0.006, yc - R0[0] - 0.008, z - 0.01)), Vector((0.026, yc - R0[0] - 0.008, z - 0.01)), Vector((0.03, yc - R0[0] - 0.014, z - 0.24)), Vector((0.012, yc - R0[0] - 0.014, z - 0.25))]
-        Fc += [(b1, b1 + 1, b1 + 2), (b1, b1 + 2, b1 + 3)]
     cols = [(1.0, 1.0, 0.0, SLOT['metal' if i in metal else 'leather'] / 12.0) for i in range(len(V))]
     return new_mesh('w_belt', V, Fc, fit, 0, mat, cols)
 
@@ -303,7 +306,7 @@ def surface_y(fit, x, z, front=True, bvh=None):
     o = Vector((x, -0.7 if front else 0.7, z)); h = bvh.ray_cast(o, Vector((0, 1 if front else -1, 0)), 1.4)
     return h[0].y if h[0] is not None else None
 
-def apron_piece(fit, mat, z_top=None, z_hem=None, hw_top=0.13, slot='apron', name='w_apron', straps=True, back=False, hw_hem=None, stand=0.035):
+def apron_piece(fit, mat, z_top=None, z_hem=None, hw_top=0.13, slot='apron', name='w_apron', straps=True, back=False, hw_hem=None, stand=0.035, wscale=0.98):
     sp = fit.bone('spine_03'); neck = fit.bone('neck_01')
     z_top = z_top if z_top is not None else sp.z + (neck.z - sp.z) * 0.15 + 0.06
     knee = fit.bone('calf_l')
@@ -311,7 +314,7 @@ def apron_piece(fit, mat, z_top=None, z_hem=None, hw_top=0.13, slot='apron', nam
     pel = fit.bone('pelvis'); zw = pel.z + 0.1
     yc, hwb = torso_centre(fit, zw)
     nx, nz = 9, 14; V, Fc, C = [], [], []
-    hw_w = hwb * 0.98
+    hw_w = hwb * wscale
     hw_hem = hw_hem or (hw_w + 0.05)
     for j in range(nz):
         f = j / (nz - 1); z = z_top + (z_hem - z_top) * f
@@ -322,7 +325,7 @@ def apron_piece(fit, mat, z_top=None, z_hem=None, hw_top=0.13, slot='apron', nam
             x = hw * (i / (nx - 1) * 2 - 1)
             y = surface_y(fit, max(-0.3, min(0.3, x)) * 0.9, z, not back)
             if y is None: y = yc + (-1 if not back else 1) * 0.1
-            drape = (stand * (max(0, zw - z) / max(zw - z_hem, 1e-3)) ** 1.2 + 0.010) * (1 if back else -1)
+            drape = (stand * (max(0, zw - z) / max(zw - z_hem, 1e-3)) ** 1.2 + 0.016) * (1 if back else -1)
             ripple = 0.006 * math.sin(x * 36 + z * 5) * (1 if z < zw else 0.3) * (1 if back else -1)
             sag = 0.012 * (1 - (2 * i / (nx - 1) - 1) ** 2) * (1 if back else -1) * (max(0, zw - z) / max(zw - z_hem, 1e-3))      # hangs out in the middle
             V.append(Vector((x, y + drape + ripple + sag, z)))
@@ -411,7 +414,7 @@ def bake_colors(fit, objs, ao_dist=0.09, rays=10, trim=0.035, clean=None):
             kd = kdtree.KDTree(len(bnd))
             for i, vi in enumerate(sorted(bnd)): kd.insert(mw @ me.vertices[vi].co, i)
             kd.balance()
-        is_cloth = o.name.split('.')[-1] not in ('', ) and (o.name.startswith(('w_kirtle', 'w_sleeve')) or 'rehman' in o.name or 'toigo' in o.name or 'donitz' in o.name or 'wdg' in o.name or 'culturalibre' in o.name) and 'hood' not in o.name
+        is_cloth = o.name.split('.')[-1] not in ('', ) and (o.name.startswith(('w_kirtle', 'w_sleeve', 'w_apron')) or 'rehman' in o.name or 'toigo' in o.name or 'donitz' in o.name or 'wdg' in o.name or 'culturalibre' in o.name) and 'hood' not in o.name
         ca = me.color_attributes.get('Col') or me.color_attributes.new('Col', 'BYTE_COLOR', 'POINT')
         for v in me.vertices:
             co = mw @ v.co; n = (nm @ v.normal).normalized()
@@ -430,12 +433,13 @@ def bake_colors(fit, objs, ao_dist=0.09, rays=10, trim=0.035, clean=None):
             tr = 0.0
             if kd is not None and is_cloth:
                 _, _, dist = kd.find(co); tr = max(0.0, 1.0 - dist / trim)
+            if o.name.startswith('w_sleeve'): ao = max(ao, 0.88)      # the sleeve sits against the kirtle: no dark shoulder patch
             ca.data[v.index].color = (ao, g, tr, ca.data[v.index].color[3] if o.name.startswith('w_') else 0.0)
     return True
 
 
 # ───────────────────────── kirtle / tunic: a shell grown from the body ─────────────────────────
-def kirtle_pieces(fit, mat, hem='ankle', sleeve='long', slot='wool', flare=0.17, folds=0.012, name='w_kirtle'):
+def kirtle_pieces(fit, mat, hem='ankle', sleeve='long', slot='wool', flare=0.17, folds=0.02, name='w_kirtle'):
     """Neck-to-hem garment from rays cast at the torso and legs: fitted over chest and waist, widening over the hips into a skirt with folds that
     ends at the ankle (kirtle, smock) or the knee (tunic); with sleeves to the wrist as tubes along the arms. Returns [body piece, left sleeve, right sleeve]."""
     neck = fit.bone('neck_01'); pel = fit.bone('pelvis'); foot = fit.bone('foot_l'); knee = fit.bone('calf_l')
@@ -460,8 +464,8 @@ def kirtle_pieces(fit, mat, hem='ankle', sleeve='long', slot='wool', flare=0.17,
             rprev[i] = rb; r = rb
             if z < z_hip:
                 r = rb + flare * (t ** 1.25) * (0.7 + 0.3 * abs(math.cos(th)))
-                r += folds * math.sin(th * 7.0 + z * 4.0) * min(1.0, t * 3.0)
-            V.append(Vector((d.x * r, yc + d.y * r, z - (0.02 * abs(math.sin(th * 2)) * t if z < z_hip else 0.0))))
+                r += folds * (math.sin(th * 7.0 + z * 4.0) + 0.5 * math.sin(th * 11.0 - z * 6.0)) * min(1.0, t * 3.0)
+            V.append(Vector((d.x * r, yc + d.y * r, z - ((0.045 * abs(math.sin(th * 2 + 0.6)) + 0.02 * math.sin(th * 5 + 1.3)) * t ** 1.5 if z < z_hip else 0.0))))
     Fc += grid_faces(N, len(zs), True, flip=False)
     body = new_mesh(name, V, Fc, fit, 0, mat, [(1.0, 1.0, 1.0, SLOT[slot] / 12.0)] * len(V))
     out = [body]
@@ -483,13 +487,17 @@ def wardrobe(fit, mat, spec):
         o = None
         if w == 'belt': o = belt_piece(fit, mat)
         elif w == 'pouch': o = pouch_piece(fit, mat, knife=spec.get('knife', False))
+        elif w == 'hat:hood':                              # hood with a short shoulder cape (chaperon)
+            out.append(head_piece(fit, 'hood', mat)); o = cloak_piece(fit, mat, slot='hat', z_top=fit.bone('neck_01').z - 0.01, z_hem=fit.bone('neck_01').z - 0.27, flare=0.05, folds=0.012, name='w_hat_hood_cape')
         elif w.startswith('hat:'): o = head_piece(fit, w[4:], mat)
         elif w == 'apron': o = apron_piece(fit, mat)
+        elif w == 'apron_half': o = apron_piece(fit, mat, z_top=waist(fit)[0] + 0.02, z_hem=fit.bone('calf_l').z + 0.02, hw_top=torso_centre(fit, waist(fit)[0])[1] * 0.98, name='w_apron_half', stand=0.03)
+        elif w == 'apron_long': o = apron_piece(fit, mat, z_hem=fit.bone('foot_l').z + 0.2, hw_top=0.085, hw_hem=None, name='w_apron_long', wscale=0.72, stand=0.03)
         elif w == 'straps': o = strap_piece(fit, mat)
         elif w == 'cloak': o = cloak_piece(fit, mat, flare=0.09)
         elif w == 'tabard': out += tabard_pieces(fit, mat); continue
         elif w.startswith('kirtle'):                     # 'kirtle:ankle:long' | 'kirtle:knee:long'
-            q = w.split(':'); out += kirtle_pieces(fit, mat, hem=q[1] if len(q) > 1 else 'ankle', sleeve=q[2] if len(q) > 2 else 'long', flare=0.09 if spec['macro']['age'] < 0.3 else 0.17); fit.add_clothes(out); continue
+            q = w.split(':'); out += kirtle_pieces(fit, mat, hem=q[1] if len(q) > 1 else 'ankle', sleeve=q[2] if len(q) > 2 else 'long', flare=0.09 if spec['macro']['age'] < 0.3 else 0.06 if q[1:2] == ['knee'] else 0.17); fit.add_clothes(out); continue
         elif w == 'cuffs':
             for s in ('l', 'r'): out.append(tube_piece(fit, mat, 'w_cuff' + s.upper(), 'lowerarm_' + s, 0.0, 1.0, 0.005, auto=True))
             continue
