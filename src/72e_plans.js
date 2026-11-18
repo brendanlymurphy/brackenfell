@@ -344,6 +344,7 @@ function planHouse(P, c, info) {
     const zc = (cel.in.z0 + cel.in.z1) / 2, x1 = cel.in.x1, y0 = P.lv[-1] ? P.lv[-1].y : -2.52;
     P.clear.push({ x0: x1 - 1.5, x1: x1, z0: zc - 0.75, z1: zc + 0.75, k: -1, kind: 'secret', room: cel });
     const wp = P.w2(x1, y0, zc); World.hartWall = { p: [wp[0], wp[1], wp[2]], inW: P.w2(x1 - 1.2, y0, zc) };
+    { const m = P.c.int; m.m1 = P.zone; m.ao = INT_AO; m.mat(MAT.PLAIN, [0.004, 0.004, 0.004], 1); const xq = x1 - 0.02; m.quad([xq, y0 + 0.02, zc + 0.5], [xq, y0 + 1.92, zc + 0.5], [xq, y0 + 1.92, zc - 0.5], [xq, y0 + 0.02, zc - 0.5]); }      /* the dark behind the brick patch (97d door): drawn with the room so it is as dark as the room's own black, covered by the patch until the bricks are out */
   }
   dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
   if (up) {
@@ -441,6 +442,11 @@ const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: 
 // the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
 function dressInn(P, c, room, hh) {
   const R = P.R, a = room.in; P.hall = { room, hh };
+  { const sc = P.stairs.find(q => q.id === 'stCellar'); if (sc) {      /* [fin] the way down reads as a cellar stair from across the room: a lantern on a bracket at the stair head and a board with a chalked barrel mark beside it */
+    const hx = sc.highPt ? sc.highPt[0] : a.x1 - 1.0, ux = Math.min(a.x1 - 0.6, Math.max(a.x0 + 0.6, hx));
+    for (const du of [0, -0.4, 0.4, -0.8, 0.8, -1.2, 1.2]) if (pTorch(P, room, 'n', ux + du, 1.95, 7.5)) break;
+    for (const du of [-1.15, -1.6, 0.9, -2.0, 1.3, -0.6, 0.5]) if (pHang(P, room, 'n', Math.min(a.x1 - 0.4, Math.max(a.x0 + 0.4, ux + du)), 0.6, 1.5, 2.05, m => { m.mat(MAT.METAL, COL.black); m.box(-0.2, 0.52, 0.0, 0.2, 0.55, 0.12); m.box(-0.2, 0.2, 0.0, -0.17, 0.55, 0.04); m.box(0.17, 0.2, 0.0, 0.2, 0.55, 0.04); m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.26, 0.0, 0.04, 0.26, 0.36, 0.07); m.mat(MAT.PLAIN, [0.9, 0.86, 0.78]); m.box(-0.18, 0.165, 0.07, 0.18, 0.195, 0.078); m.box(-0.015, 0.04, 0.07, 0.015, 0.32, 0.078); m.box(-0.14, 0.06, 0.07, 0.14, 0.09, 0.078); m.box(-0.14, 0.27, 0.07, 0.14, 0.30, 0.078); }, P.id + '.cellarboard', {})) break;
+  } }
   let bar = null;
   for (const [bl, bz] of [[3.8, 4.8], [3.0, 4.2], [2.4, 4.0]]) { bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, bz, PI / 2, bl, 0.7, 1.05, m => { Props.table(m, bl, 0.7, 1.05); Props.clutter(m, R, -bl / 2 + 0.2, bl / 2 - 0.2, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true }); if (bar) break; }          // [fin] the east wall's windows (at 2 and 6 m) left no 3.8 m run for the counter, so no bar existed and Greta's bar spot fell back to the door: a shorter counter between the windows
   if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); P.bar = bar;
