@@ -313,7 +313,6 @@ function infShell(B, h, lo) {
   if (jetty) for (let k = 1; k < fl; k++) {       // the overhanging storey rests on a deep joist beam along the front, with brackets under it
     const g = GP(); g.box(INF_T, -w / 2, -0.3, -d / 2 - 0.62, w / 2, 0.02, -d / 2 + 0.1, [0.68, 0.6, 0.52]); g.box(INF_T, -w / 2 - 0.05, -0.34, -d / 2 - 0.58, w / 2 + 0.05, -0.28, -d / 2 - 0.3, [0.5, 0.44, 0.38]);
     for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * mF; g.beam(INF_T, [x, -0.7, -d / 2 - 0.5], [x, -0.3, -d / 2 + 0.02], 0.1, [0.52, 0.46, 0.4]); }
-    if (!LOWQ()) for (let i = 0; i < nF; i++) { const x = -w / 2 + (i + 0.5) * mF; g.box(INF_T, x - 0.06, -0.27, -d / 2 - 0.66, x + 0.06, -0.06, -d / 2 - 0.62, [0.4, 0.34, 0.28]); }      // [fx3] J3: the joist ends show on the bressumer's face
     B.add(g.make('gen_joist_' + (_gn++)), KH.xf(MS, 0, k * H, 0, 1, 0), OUT);
   }
   // ── roof: generated shingles; ridge parallel to the street (eaves to the street) or gable to the street ──
