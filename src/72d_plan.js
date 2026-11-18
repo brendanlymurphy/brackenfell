@@ -70,9 +70,9 @@ function pLayout(P) {
     const face = wl => wl.ax === 'x' ? (wl.ns < 0 ? 'front' : 'back') : (wl.ns < 0 ? 'left' : 'right');
     const wl = P.walls.find(q => q.ext && q.k === w.k && face(q) === w.face && w.pos - 0.8 >= q.a - 1e-6 && w.pos + 0.8 <= q.b + 1e-6);
     if (!wl) { P.err.push('window ' + w.face + ' L' + w.k + ' at ' + w.pos + ' is on no outside wall'); continue; }
-    if (wl.open.some(o => Math.abs(o.pos - w.pos) < o.hw + 1.0)) { P.err.push('window ' + w.face + ' L' + w.k + ' at ' + w.pos + ' runs into another opening'); continue; }
+    if (wl.open.some(o => Math.abs(o.pos - w.pos) < o.hw + 0.95)) { (P.winClash = P.winClash || []).push(w); continue; }      /* two openings the shell draws too close to stand at both: one inside, the clash reported (test/inout.js) */
     const room = [...wl.rooms].map(id => P.rooms[id]).find(r => wl.ax === 'x' ? w.pos >= r.x0 && w.pos <= r.x1 : w.pos >= r.z0 && w.pos <= r.z1);
-    wl.open.push({ type: 'win', pos: w.pos, hw: 0.8, kind: w.kind || 'Wide_Flat', glass: null }); P.windows.push({ wall: wl, pos: w.pos, kind: w.kind || 'Wide_Flat', k: wl.k, room });
+    const gl = room && room.glass ? room.glass[P.windows.length % room.glass.length] : null; wl.open.push({ type: 'win', pos: w.pos, hw: 0.8, kind: w.kind || 'Wide_Flat', glass: gl }); P.windows.push({ wall: wl, pos: w.pos, kind: w.kind || 'Wide_Flat', k: wl.k, room });
   }
   for (const wl of P.walls) {
     if (P.wins || !wl.ext || wl.k < 0) continue;
@@ -125,7 +125,7 @@ function pStairGeom(P, s) {
   const rect = (a, b, la, lb) => ax === 'x' ? { x0: Math.min(a, b), x1: Math.max(a, b), z0: la, z1: lb } : { x0: la, x1: lb, z0: Math.min(a, b), z1: Math.max(a, b) };
   s.p0 = p0; s.p1 = p1; s.lat = lat; s.hw = hw;
   s.low = rect(p0, p1, lat - hw, lat + hw); s.high = s.low;
-  s.hole = rect(p0 - d * 0.8, p1, lat - hw - 0.1, lat + hw + 0.1);        // the opening in the slab of the level above: the whole run
+  s.hole = rect(p0 - d * (0.8 + (s.holeX || 0)), p1, lat - hw - 0.1, lat + hw + 0.1);      /* [inout] holeX: a longer well over the foot of a steep stair, so a jump down it clears the slab */        // the opening in the slab of the level above: the whole run
   s.lowPt = ax === 'x' ? [p0 - d * 0.7, lat] : [lat, p0 - d * 0.7];       // where one stands to start up
   s.highPt = ax === 'x' ? [p1 + d * 0.8, lat] : [lat, p1 + d * 0.8];      // where one stands when arrived
   P.holes.push({ k: s.k1, r: s.hole, stair: s });
@@ -144,6 +144,33 @@ function pFit(P, room, r, o) {
   for (const it of P.items) if (it.k === k && P_SOLID[it.kind] && rOv(r, it, 0.015)) return false;
   if (!o.noClear) for (const z of P.clear) if (z.k === k && rOv(r, z, 0.01) && !(o.allow && o.allow.includes(z.kind))) return false;
   if (h > 0.85 && !o.lowOk) for (const w of P.windows) if (w.k === k && w.room === room) { const z = pWinZone(w); if (rOv(r, z, 0.01)) return false; }
+  return true;
+}
+// [fin] a 0.9 m way (0.45 m clear of every solid item, 0.3 m of the walls) from the room's first door to the other doors, the stair feet, the hearth front and every seat of the room.
+// pFlood floods the room's floor on a 0.2 m grid with the extra rectangles standing in it; pGuardOk says a new solid item cuts none of them off that were reachable before.
+function pFlood(P, room, extra) {
+  const a = room.in, k = room.k, HW = 0.45, st = 0.2, nx = Math.ceil((a.x1 - a.x0) / st) + 1, nz = Math.ceil((a.z1 - a.z0) / st) + 1;
+  const ds = P.doors.filter(d => d.k === k && (d.a === room.id || d.b === room.id)).map(d => [Math.min(a.x1 - 0.3, Math.max(a.x0 + 0.3, d.x)), Math.min(a.z1 - 0.3, Math.max(a.z0 + 0.3, d.z))]);
+  const tg = ds.slice(1).map(p => [p[0], p[1], 0.5]);
+  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt) tg.push([pt[0], pt[1], 1.2]); }
+  const hh = P.hall && P.hall.room === room && P.hall.hh; if (hh && hh.front) tg.push([hh.front[0], hh.front[1], 0.5]);
+  for (const n in P.spots) { const sp = P.spots[n]; if (sp.k === k && (sp.sit || /^(sit|seat\d)$/.test(n)) && sp.x > a.x0 && sp.x < a.x1 && sp.z > a.z0 && sp.z < a.z1) tg.push([sp.x, sp.z, 0.85]); }
+  if (!ds.length) return { tg, hit: tg.map(() => true) };
+  const obs = P.items.filter(i => i.k === k && P_SOLID[i.kind] && (i.kind !== 'floor' || i.h === undefined || i.h > 0.25)).concat(extra || []);
+  const free = (x, z) => { if (x < a.x0 + 0.45 || x > a.x1 - 0.45 || z < a.z0 + 0.45 || z > a.z1 - 0.45) return false; for (const o of obs) { const dx = Math.max(o.x0 - x, 0, x - o.x1), dz = Math.max(o.z0 - z, 0, z - o.z1); if (dx * dx + dz * dz < HW * HW) return false; } return true; };
+  const seen = new Uint8Array(nx * nz), q = [];
+  const put = (i, j) => { if (i < 0 || j < 0 || i >= nx || j >= nz || seen[i * nz + j]) return; if (!free(a.x0 + i * st, a.z0 + j * st)) return; seen[i * nz + j] = 1; q.push(i, j); };
+  { const i0 = Math.round((ds[0][0] - a.x0) / st), j0 = Math.round((ds[0][1] - a.z0) / st); for (let r = 0; r <= 4; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) put(i0 + di, j0 + dj); }
+  for (let h = 0; h < q.length; h += 2) { const i = q[h], j = q[h + 1]; put(i + 1, j); put(i - 1, j); put(i, j + 1); put(i, j - 1); }
+  const near = (x, z, r) => { const n = Math.ceil(r / st), i0 = Math.round((x - a.x0) / st), j0 = Math.round((z - a.z0) / st); for (let di = -n; di <= n; di++) for (let dj = -n; dj <= n; dj++) { const i = i0 + di, j = j0 + dj; if (i >= 0 && j >= 0 && i < nx && j < nz && seen[i * nz + j] && Math.hypot(di, dj) * st <= r) return true; } return false; };
+  return { tg, hit: tg.map(t => near(t[0], t[1], t[2])) };
+}
+function pGuardOk(P, room, r) {
+  if (P._noGuard) return true;
+  const key = room.id + '|' + P.items.length + '|' + Object.keys(P.spots).length + '|' + P.doors.length + '|' + P.stairs.length;
+  if (!P._gb || P._gb.key !== key) P._gb = { key, f: pFlood(P, room, null) };
+  const af = pFlood(P, room, [r]);
+  for (let i = 0; i < P._gb.f.hit.length; i++) if (P._gb.f.hit[i] && !af.hit[i]) return false;
   return true;
 }
 // the floor in front of a window that tall furniture must leave free
@@ -245,6 +272,7 @@ function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   o = o || {}; let r = pFoot(cx, cz, w, d, rot); if (TEST && TEST.nomeasure) o = Object.assign({}, o, { nomeasure: true, _hon: null });
   const hon = o._hon; if (hon && hon.rel) r = { x0: Math.min(r.x0, cx + hon.rel.x0), x1: Math.max(r.x1, cx + hon.rel.x1), z0: Math.min(r.z0, cz + hon.rel.z0), z1: Math.max(r.z1, cz + hon.rel.z1) };
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
+  if (h > 0.3 && !o.flat && !o.noGuard && !pGuardOk(P, room, r)) { P.guarded = (P.guarded || 0) + 1; return null; }      /* [fin] nothing tall goes where it would cut a door, stair foot, hearth front or seat off */
   if (hon && hon.rel && pBoxOK(P, room, { min: [r.x0, P.lv[room.k].y + 0.1, r.z0], max: [r.x1, P.lv[room.k].y + h, r.z1] }, o, o.flat)) return null;
   const L = P.lv[room.k], m = P.c.int; pBase(P, m); const sn = pSnap(P, m), t0 = m.ni, rc = pRecBegin(true), flat = !!o.flat;
   at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); pRecEnd(rc, m, t0); pFixStack(P, m, sn, name);
@@ -256,7 +284,7 @@ function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
     r = { x0: Math.max(b.min[0], room.in.x0), x1: Math.min(b.max[0], room.in.x1), z0: Math.max(b.min[2], room.in.z0), z1: Math.min(b.max[2], room.in.z1) };          // the recorded footprint is what it really occupies
   }
   pCommitKit(m, rc); (m.own = m.own || []).push([t0, m.ni, name]);
-  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, hh: b ? Math.max(h, b.max[1] - L.y) : h, bx: b || null, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back }); it.rec = rc; rc.t1 = m.ni;
+  const it = pOcc(P, room.k, r, o.flat ? 'rug' : 'floor', name, { h, hh: b ? Math.max(h, b.max[1] - L.y) : h, bx: b || null, room: room.id, rot, cx, cz, w, d, y0: L.y + (o.lift || 0), lift: o.lift || 0, top: o.surface ? h : 0, back: o.back, allow: o.allow }); it.rec = rc; rc.t1 = m.ni;
   if (o.flat) it.kind = 'rug'; return it;
 }
 // along a wall of the room, w wide (along the wall) and d deep; o.at: 'start' | 'end' | 'mid' | a coordinate along the wall to be near. Tries every 0.25 m.
@@ -266,6 +294,7 @@ function pWallSlot(P, room, side, w, d, o) {
   let lo = (hor ? a.x0 : a.z0) + w / 2, hi = (hor ? a.x1 : a.z1) - w / 2;
   if (rel) { lo = hor ? a.x0 - rel.x0 : a.z0 - rel.z0; hi = hor ? a.x1 - rel.x1 : a.z1 - rel.z1; }
   for (let t = lo; t <= hi + 1e-6; t += 0.25) pts.push(t);
+  if (hi > lo && Math.abs(pts[pts.length - 1] - hi) > 1e-3) pts.push(hi);      /* [inout] the far end of the wall too: a 25 cm step can pass over the one place that fits */
   const want = o.at === 'end' ? hi : o.at === 'mid' || o.at === undefined ? (lo + hi) / 2 : o.at === 'start' ? lo : o.at;
   pts.sort((p, q) => Math.abs(p - want) - Math.abs(q - want));
   let nth = o.nth || 0;
@@ -420,7 +449,7 @@ function pWallEmit(P, wl, B, IN) {
       emit(m, 1.15, () => { m.mat(MAT.PLAIN, [0.55, 0.66, 0.38]); bx(y0, y0 + 0.9); m.mat(MAT.PLAIN, [0.78, 0.88, 0.96]); bx(y0 + 0.9, y0 + 2.2); });
       pLight(P, hor ? q : wl.c - ns * 0.9, 1.5 * sy, hor ? wl.c - ns * 0.9 : q, 5.2, [1.7, 1.62, 1.4], 'daylight', wl.k);
     }
-    else if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); if (sp.o.d.upper && Kit.pieces.Door_1_Flat) B.add('Door_1_Flat', KH.xf(F, sp.s - 0.54 * S[0], 0, -0.05, S), INW);   /* [inout] the leaf of a balcony door: the shell hangs the same one outside (71_kithouse.js) */ }
+    else if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); if (sp.o.d.upper && Kit.pieces.Door_1_Flat) B.add('Door_1_Flat', KH.xf(F, sp.s - 0.54 * S[0], 0, -0.05, S), INW); if (sp.o.d.cellarDoor && Kit.pieces.Door_1_Flat) B.add('Door_1_Flat', KH.xf(F, sp.s - 0.54 * S[0], 0, -0.05, S, -1.35), INW);      /* [inout] the Hart's cellar door, a real leaf standing open into the passage */   /* [inout] the leaf of a balcony door: the shell hangs the same one outside (71_kithouse.js) */ }
     else {
       const tbl = { Wide_Flat: ['_Window_Wide_Flat', 'Window_Wide_Flat1'], Thin_Round: ['_Window_Thin_Round', 'Window_Thin_Round1'], Wide_Round: ['_Window_Wide_Round', 'Window_Wide_Round1'] }[sp.o.kind] || ['_Window_Wide_Flat', 'Window_Wide_Flat1'];
       const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];
@@ -505,18 +534,48 @@ function planNav(P, add, link, doorNode) {
   // such a link is bent round the blocking rectangle through the nearest clear corner
   const blockers = k => P.holes.filter(h => h.k === k).map(h => h.r).concat(P.items.filter(i => i.k === k && i.kind === 'stair'));
   const hit = (k, a, b) => { const bl = blockers(k), n = Math.max(2, Math.ceil(Math.hypot(a[0] - b[0], a[1] - b[1]) / 0.15)); for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); for (const r of bl) if (x > r.x0 + 0.02 && x < r.x1 - 0.02 && z > r.z0 + 0.02 && z < r.z1 - 0.02) return true; } return false; };
+  // [fin] villagers walk the free floor: per level a grid (0.2 m) of points where a person of 0.3 m radius fits (inside a room, clear of every solid item, stairwell and stair, doorways open), a way is the shortest run on that grid pulled straight where the line stays free
+  const gridOf = {};
+  const navGrid = (k, HW) => {
+    const gk = k + ':' + HW; if (gridOf[gk]) return gridOf[gk];
+    const rooms = Object.values(P.rooms).filter(r => r.k === k), st = 0.2;
+    const obs = P.items.filter(i => i.k === k && P_SOLID[i.kind] && i.kind !== 'rug' && (i.kind !== 'floor' || i.h === undefined || i.h > 0.25)).concat(P.holes.filter(h => h.k === k).map(h => h.r));
+    const dp = P.doors.filter(d => d.k === k);
+    let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const r of rooms) { x0 = Math.min(x0, r.in.x0); z0 = Math.min(z0, r.in.z0); x1 = Math.max(x1, r.in.x1); z1 = Math.max(z1, r.in.z1); }
+    const nx = Math.max(1, Math.ceil((x1 - x0) / st) + 1), nz = Math.max(1, Math.ceil((z1 - z0) / st) + 1);
+    const hw = HW;
+    const free = (x, z) => {
+      let ok = false; for (const d of dp) if (Math.abs(x - d.x) < 0.5 && Math.abs(z - d.z) < 0.5) { ok = true; break; }
+      if (!ok) for (const r of rooms) if (x > r.in.x0 + 0.25 && x < r.in.x1 - 0.25 && z > r.in.z0 + 0.25 && z < r.in.z1 - 0.25) { ok = true; break; }
+      if (!ok) return false;
+      for (const o of obs) { const dx = Math.max(o.x0 - x, 0, x - o.x1), dz = Math.max(o.z0 - z, 0, z - o.z1); if (dx * dx + dz * dz < hw * hw) return false; }
+      return true;
+    };
+    const g = new Uint8Array(nx * nz); for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) g[i * nz + j] = free(x0 + i * st, z0 + j * st) ? 1 : 0;
+    return gridOf[gk] = { x0, z0, nx, nz, st, g, free };
+  };
+  const route = (k, pa, pb) => { for (const hw of [0.3, 0.2, 0.1]) { const w = route1(k, pa, pb, hw); if (w) return w; } return null; };
+  const route1 = (k, pa, pb, hw) => {
+    const G = navGrid(k, hw), clear = (u, v) => { const n = Math.max(1, Math.ceil(Math.hypot(u[0] - v[0], u[1] - v[1]) / 0.1)); for (let i = 0; i <= n; i++) { const x = lerp(u[0], v[0], i / n), z = lerp(u[1], v[1], i / n); if (Math.hypot(x - pa[0], z - pa[1]) < 0.7 || Math.hypot(x - pb[0], z - pb[1]) < 0.7) continue; if (!G.free(x, z)) return false; } return true; };
+    if (clear(pa, pb)) return [];
+    const cell = p => [Math.round((p[0] - G.x0) / G.st), Math.round((p[1] - G.z0) / G.st)];
+    const snap = p => { const c = cell(p); let best = null; for (let r = 0; r <= 8; r++) { for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) { if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue; const i = c[0] + di, j = c[1] + dj; if (i < 0 || j < 0 || i >= G.nx || j >= G.nz || !G.g[i * G.nz + j]) continue; const d = Math.hypot(di, dj); if (!best || d < best.d) best = { i, j, d }; } if (best && r >= Math.ceil(best.d)) break; } return best; };
+    const sa = snap(pa), sb = snap(pb); if (!sa || !sb) return null;
+    const prev = new Int32Array(G.nx * G.nz).fill(-2), q = [sa.i * G.nz + sa.j]; prev[q[0]] = -1; const goal = sb.i * G.nz + sb.j;
+    for (let h = 0; h < q.length && prev[goal] === -2; h++) { const c = q[h], i = (c / G.nz) | 0, j = c - i * G.nz; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= G.nx || b >= G.nz) continue; const n = a * G.nz + b; if (prev[n] !== -2 || !G.g[n]) continue; prev[n] = c; q.push(n); } }
+    if (prev[goal] === -2) return null;
+    const cells = []; for (let c = goal; c !== -1; c = prev[c]) { const i = (c / G.nz) | 0; cells.push([G.x0 + i * G.st, G.z0 + (c - i * G.nz) * G.st]); } cells.reverse();
+    const pts = [pa].concat(cells, [pb]), out = []; let at = 0;
+    while (at < pts.length - 1) { let nxt = at + 1; for (let m = pts.length - 1; m > at + 1; m--) if (clear(pts[at], pts[m])) { nxt = m; break; } if (nxt < pts.length - 1) out.push(pts[nxt]); at = nxt; }
+    return out;
+  };
   const linkSafe = (k, na, pa, nb, pb) => {
-    if (!hit(k, pa, pb)) { link(na, nb); return; }
-    const L = P.lv[k], cands = []; for (const r of blockers(k)) { const g = 0.7; for (const x of [r.x0 - g, r.x1 + g]) for (const z of [r.z0 - g, r.z1 + g]) cands.push([x, z]); }
-    cands.sort((u, v) => Math.hypot(u[0] - pa[0], u[1] - pa[1]) + Math.hypot(u[0] - pb[0], u[1] - pb[1]) - Math.hypot(v[0] - pa[0], v[1] - pa[1]) - Math.hypot(v[0] - pb[0], v[1] - pb[1]));
-    for (const c of cands) { if (pRoomAt(P, k, c[0], c[1]) && !hit(k, pa, c) && !hit(k, c, pb)) { const nc = add(...P.w2(c[0], L.y + 0.02, c[1])); link(na, nc); link(nc, nb); return; } }
-    for (const c of cands) for (const d of cands) if (c !== d && pRoomAt(P, k, c[0], c[1]) && pRoomAt(P, k, d[0], d[1]) && !hit(k, pa, c) && !hit(k, c, d) && !hit(k, d, pb)) { const n1 = add(...P.w2(c[0], L.y + 0.02, c[1])), n2 = add(...P.w2(d[0], L.y + 0.02, d[1])); link(na, n1); link(n1, n2); link(n2, nb); return; }
-    link(na, nb);
+    const L = P.lv[k], way = route(k, pa, pb); if (!way) { link(na, nb); return; }
+    let cur = na; for (const w of way) { const n = add(...P.w2(w[0], L.y + 0.02, w[1])); link(cur, n); cur = n; } link(cur, nb);
   };
   const hubAt = {};
   for (const id in P.rooms) {
-    const r = P.rooms[id], L = P.lv[r.k]; let p = pCentre(r); const bl = blockers(r.k), inB = q => bl.some(b => q[0] > b.x0 - 0.3 && q[0] < b.x1 + 0.3 && q[1] > b.z0 - 0.3 && q[1] < b.z1 + 0.3);
-    if (inB(p)) { let best = null; for (let x = r.in.x0 + 0.5; x < r.in.x1 - 0.4; x += 0.5) for (let z = r.in.z0 + 0.5; z < r.in.z1 - 0.4; z += 0.5) if (!inB([x, z]) && (!best || Math.hypot(x - p[0], z - p[1]) < best.d)) best = { x, z, d: Math.hypot(x - p[0], z - p[1]) }; if (best) p = [best.x, best.z]; }
+    const r = P.rooms[id], L = P.lv[r.k]; let p = pCentre(r); { const G = navGrid(r.k, 0.3); if (!G.free(p[0], p[1])) { let best = null; for (let x = r.in.x0 + 0.4; x < r.in.x1 - 0.3; x += 0.2) for (let z = r.in.z0 + 0.4; z < r.in.z1 - 0.3; z += 0.2) if (G.free(x, z) && (!best || Math.hypot(x - p[0], z - p[1]) < best.d)) best = { x, z, d: Math.hypot(x - p[0], z - p[1]) }; if (best) p = [best.x, best.z]; } }
     hubAt[id] = p; hub[id] = add(...P.w2(p[0], L.y + 0.02, p[1]));
   }
   for (const d of P.doors) {
@@ -547,7 +606,7 @@ function planValidate(P) {
   for (const a of items) {
     if (a.kind === 'floor') {
       const room = P.rooms[a.room]; if (!room || !rIn(a, room.in)) out.push(a.id + ' is not inside its room');
-      for (const z of P.clear) if (z.k === a.k && rOv(a, z, 0.02)) out.push(a.id + ' stands in a ' + z.kind + ' clearance');
+      for (const z of P.clear) if (z.k === a.k && rOv(a, z, 0.02) && !(a.allow && a.allow.includes(z.kind))) out.push(a.id + ' stands in a ' + z.kind + ' clearance');      /* [inout] an item placed where it was allowed (a stool on a room's way, checked by the way flood) */
       if ((a.h || 0) > 0.85) for (const w of P.windows) if (w.k === a.k && w.room === room && rOv(a, pWinZone(w), 0.02)) out.push(a.id + ' stands in front of a window');
       for (const h of P.holes) if (h.k === a.k && rOv(a, h.r, 0.01)) out.push(a.id + ' stands in a stairwell');
       if (Math.abs((a.y0 || 0) - (P.lv[a.k].y + (a.lift || 0))) > 0.001) out.push(a.id + ' is not on the floor');
@@ -575,6 +634,7 @@ function planValidate(P) {
   while (todo.length) {
     const id = todo.pop();
     for (const d of P.rooms[id].doors) { const o = d.a === id ? d.b : d.a; if (o && !seen.has(o)) { seen.add(o); todo.push(o); } }
+    for (const l of (P.ladders || [])) { const ra = pRoomAt(P, l.k0, l.a[0], l.a[1]), rb = pRoomAt(P, l.k1, l.b[0], l.b[1]); if (ra && rb) for (const [p, q] of [[ra, rb], [rb, ra]]) if (p.id === id && !seen.has(q.id)) { seen.add(q.id); todo.push(q.id); } }      /* [inout] a ladder to a loft */
     for (const s of P.stairs) { const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]); if (ra && rb) { if (ra.id === id && !seen.has(rb.id)) { seen.add(rb.id); todo.push(rb.id); } if (rb.id === id && !seen.has(ra.id)) { seen.add(ra.id); todo.push(ra.id); } } }
   }
   for (const id in P.rooms) if (!seen.has(id)) out.push('room ' + id + ' cannot be reached from the street door');
@@ -597,20 +657,41 @@ if (TEST && TEST.audit) { const _iw = infWalls; infWalls = function (B, MS, o) {
 // in the house's own frame (front wall at -z; `u` = metres from the middle of the house on the front and back, from the front wall on the sides).
 const SHELL_REC = {};
 { const _ks = kitShell; kitShell = function (c) {
+  if (typeof infKitWalls === 'function' && !infKitWalls.__inout) { const _iw = infKitWalls; infKitWalls = function (cc, b, MS, frames, zone, sy, R, pass) { const r = _iw.apply(this, arguments); return r; }; infKitWalls.__inout = 1;
+    const _w = infWalls; infWalls = function (B, MS, o) { if (SHELL_CUR && SHELL_CUR.pass !== 'int' && o && o.plan) SHELL_GEN[SHELL_CUR.id] = { w: o.w, d: o.d, fl: o.fl, H: o.H || 3, plan: JSON.parse(JSON.stringify(o.plan)) }; return _w.apply(this, arguments); }; }
+  SHELL_CUR = { id: c.site.id, pass: 'ext' };
   const kb = Kit.batch, rec = SHELL_REC[c.site.id] = [];
-  Kit.batch = function (o) { const B = kb.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_/.test(name)) rec.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; };
-  try { return _ks.apply(this, arguments); } finally { Kit.batch = kb; } }; }
+  Kit.batch = function (o) { const B = kb.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_|^gen_(dress|dormer|cross|fbox)_/.test(name)) rec.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; };
+  try { return _ks.apply(this, arguments); } finally { Kit.batch = kb; SHELL_CUR = null; } }; }
+let SHELL_CUR = null; const SHELL_GEN = {};      /* [inout] the openings a generated wall (73d_infill.js infWalls) was built from, by house */
+// every window, door, balcony and floor piece placed out of doors, wherever it is drawn (the alley's facades are drawn by 73b_alley.js, not by kitShell)
+const SHELL_ALL = [];
+if (typeof Kit !== 'undefined' && Kit.batch && !Kit.batch.__inoutAll) { const kb0 = Kit.batch; Kit.batch = function (o) { const B = kb0.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_WoodDark_Half/.test(name)) SHELL_ALL.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; }; Kit.batch.__inoutAll = 1; }
 function shellOpenings(c) {
-  const rec = SHELL_REC[c.site.id] || [], inv = new THREE.Matrix4().fromArray(c.Mx).invert(), v = new THREE.Vector3(), w = c.w, d = c.d, H = c.H, raw = [];
-  for (const r of rec) {
-    const p = Kit.pieces[r.name]; if (!p) continue; let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
-    for (let i = 0; i < 8; i++) { v.set(i & 1 ? p.max[0] : p.min[0], i & 2 ? p.max[1] : p.min[1], i & 4 ? p.max[2] : p.min[2]).applyMatrix4(r.M).applyMatrix4(inv); mn = [Math.min(mn[0], v.x), Math.min(mn[1], v.y), Math.min(mn[2], v.z)]; mx = [Math.max(mx[0], v.x), Math.max(mx[1], v.y), Math.max(mx[2], v.z)]; }
+  { const A = typeof ALLEY_SHOPS !== 'undefined' && ALLEY_SHOPS.find(q => q.id === c.site.id && q.layout); if (A) return alleyOpenings(A, c); }
+  let rec = SHELL_REC[c.site.id] || [];      /* (a footprint search over every placed piece caught the next house's windows: the alley, which needed it, has its own rule) */
+  if (false && !rec.some(r => !/^gen_/.test(r.name))) { const st = c.xsite || c.site, hw = c.w / 2 + 1.3, hd = c.d / 2 + 1.3; rec = rec.concat(SHELL_ALL.filter(r => { const e = r.M.elements, l = worldToSite(st, e[12], e[14]); return Math.abs(l[0]) < hw && Math.abs(l[1]) < hd && Math.abs(e[13] - (c.xFloorY !== undefined ? c.xFloorY : st.y || 0)) < 14; })); }
+  const inv = new THREE.Matrix4().fromArray(c.Mx).invert(), v = new THREE.Vector3(), w = c.w, d = c.d, H = c.H, raw = [];
+  const glass = [];      /* windows drawn in generated pieces (an end wall's face, a dormer, a gable): each upright glass quad, as a box */
+  for (const r of rec) { if (!/^gen_/.test(r.name)) continue; const p = Kit.pieces[r.name]; if (!p) continue;
+    for (const q of p.prims) { if (!/Glass/.test(q.mat && (q.mat.name || q.mat))) continue; const ps = q.pos, ix = q.idx; if (!ps || !ix) continue;
+      for (let i = 0; i + 5 < ix.length; i += 6) { let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9]; for (const vi of [ix[i], ix[i + 1], ix[i + 2], ix[i + 5]]) { v.set(ps[vi * 3], ps[vi * 3 + 1], ps[vi * 3 + 2]).applyMatrix4(r.M).applyMatrix4(inv); mn = [Math.min(mn[0], v.x), Math.min(mn[1], v.y), Math.min(mn[2], v.z)]; mx = [Math.max(mx[0], v.x), Math.max(mx[1], v.y), Math.max(mx[2], v.z)]; }
+        if (mx[1] - mn[1] > 0.3) glass.push({ name: 'Window_gen', mn, mx }); } } }
+  for (const r of rec.filter(q => !/^gen_/.test(q.name)).concat(glass)) {
+    const p = r.mn ? { min: [0, 0, 0], max: [0, 0, 0] } : Kit.pieces[r.name]; if (!p) continue; let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+    if (r.mn) { mn = r.mn; mx = r.mx; } else for (let i = 0; i < 8; i++) { v.set(i & 1 ? p.max[0] : p.min[0], i & 2 ? p.max[1] : p.min[1], i & 4 ? p.max[2] : p.min[2]).applyMatrix4(r.M).applyMatrix4(inv); mn = [Math.min(mn[0], v.x), Math.min(mn[1], v.y), Math.min(mn[2], v.z)]; mx = [Math.max(mx[0], v.x), Math.max(mx[1], v.y), Math.max(mx[2], v.z)]; }
     const x = (mn[0] + mx[0]) / 2, z = (mn[2] + mx[2]) / 2, ds = { front: Math.abs(z + d / 2), back: Math.abs(z - d / 2), left: Math.abs(x + w / 2), right: Math.abs(x - w / 2) }; let wall = 'front'; for (const k in ds) if (ds[k] < ds[wall]) wall = k;
     const kind = /^Window_/.test(r.name) ? 'win' : /^Balcony_/.test(r.name) ? 'balc' : /^Floor_/.test(r.name) ? 'floor' : 'door', fb = wall === 'front' || wall === 'back';
     raw.push({ name: r.name, y1: mx[1], kind, wall, u: fb ? x : z + d / 2, u0: fb ? mn[0] : mn[2] + d / 2, u1: fb ? mx[0] : mx[2] + d / 2, y: (mn[1] + mx[1]) / 2, y0: mn[1], out: fb ? Math.max(Math.abs(mn[2]), Math.abs(mx[2])) - d / 2 : Math.max(Math.abs(mn[0]), Math.abs(mx[0])) - w / 2, win: /Thin_Round/.test(r.name) ? 'Thin_Round' : /Wide_Round/.test(r.name) ? 'Wide_Round' : 'Wide_Flat' });
   }
+  { const g = SHELL_GEN[c.site.id]; if (g) for (let k = 0; k < g.plan.length; k++) for (const wn of ['front', 'back', 'left', 'right']) for (const o of ((g.plan[k] || {})[wn] || [])) {      /* the generated walls' own openings */
+      const uc = (o.u0 + o.u1) / 2, fb = wn === 'front' || wn === 'back', u = wn === 'front' ? g.w / 2 - uc : wn === 'back' ? -g.w / 2 + uc : wn === 'left' ? uc : g.d - uc, y0 = k * g.H + o.v0, y1 = k * g.H + o.v1;
+      raw.push({ name: o.door ? 'DoorFrame_gen' : 'Window_gen', kind: o.door ? 'door' : 'win', wall: wn, u, u0: u - (o.u1 - o.u0) / 2, u1: u + (o.u1 - o.u0) / 2, y: (y0 + y1) / 2, y0, y1, out: 0, win: (o.u1 - o.u0) < 0.8 ? 'Thin_Round' : 'Wide_Flat' }); } }
   const out = [];      // frame and leaf, the two corners of one balcony: one thing
   for (const f of raw) { const m = out.find(g => g.kind === f.kind && g.wall === f.wall && Math.abs(g.u - f.u) < (f.kind === 'balc' || f.kind === 'floor' ? 2.6 : 0.7) && Math.abs(g.y - f.y) < 1.2); if (m) { if (f.kind === 'balc' || f.kind === 'floor') { m.y1 = Math.max(m.y1, f.y1); m.u0 = Math.min(m.u0, f.u0); m.u1 = Math.max(m.u1, f.u1); m.u = (m.u0 + m.u1) / 2; m.out = Math.max(m.out, f.out); } else if (/^DoorFrame/.test(f.name || '')) m.u = f.u; m.y0 = Math.min(m.y0, f.y0); } else out.push(f); }
+  { const M = new THREE.Matrix4().fromArray(c.Mx), nrm = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] };      /* a window or door that opens into the house standing against this wall is not one */
+    for (const f of out) { const fb = f.wall === 'front' || f.wall === 'back', n = nrm[f.wall], lx = fb ? f.u : n[0] * (w / 2 + 0.5), lz = fb ? n[1] * (d / 2 + 0.5) : f.u - d / 2; v.set(lx, 1, lz).applyMatrix4(M);
+      for (const st of Object.values(typeof SITE !== 'undefined' ? SITE : {})) { if (!st || st.x === undefined || st.yaw === undefined || st === c.site || st === c.xsite || !st.w || st.id === c.site.id) continue; const l = worldToSite(st, v.x, v.z); if (Math.abs(l[0]) < st.w / 2 - 0.05 && Math.abs(l[1]) < st.d / 2 - 0.05) { f.blocked = st.id; break; } } } }
   for (const f of out) f.lv = f.kind === 'win' ? (f.y < H ? 0 : 1 + Math.floor((f.y - H) / 3)) : (f.y0 < 1.6 ? 0 : Math.max(1, Math.round((f.y0 - H) / 3) + 1));
   return out;
 }
@@ -619,7 +700,7 @@ function shellOpenings(c) {
 function pShellWins(P, c, box, keep) {
   const sx = (box.x1 - box.x0) / c.w, sz = (box.z1 - box.z0) / c.d, cx = (box.x0 + box.x1) / 2; P.wins = []; P.shell = { box, sx, sz, cx, list: shellOpenings(c) };
   P.shell.pos = f => f.wall === 'front' || f.wall === 'back' ? cx + f.u * sx : box.z0 + f.u * sz;
-  for (const f of P.shell.list) { if (f.kind !== 'win' || !P.lv[f.lv]) continue; let pos = Math.round(P.shell.pos(f) * 4) / 4; if (keep) { const r = keep(f, pos); if (r === false) continue; if (typeof r === 'number') pos = r; } P.wins.push({ k: f.lv, face: f.wall, pos, kind: f.win }); }
+  for (const f of P.shell.list) { if (f.kind !== 'win' || !P.lv[f.lv]) continue; if (f.blocked) { (P.blockedWins = P.blockedWins || []).push(f); continue; } let pos = Math.round(P.shell.pos(f) * 4) / 4; pos = pWinSnap(P, f, pos); if (keep) { const r = keep(f, pos); if (r === false) continue; if (typeof r === 'number') pos = r; } P.wins.push({ k: f.lv, face: f.wall, pos, kind: f.win }); }
   return P.shell;
 }
 // An upper door the shell shows (f, from shellOpenings) becomes a door of the room behind it: call before pLayout. pBalconies() after it makes the way through: the
@@ -635,12 +716,12 @@ function pBalconies(P, c) {
     const nrm = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] }[f.wall], fb = f.wall === 'front' || f.wall === 'back', half = fb ? c.d / 2 : c.w / 2;
     const fl = (P.shell ? P.shell.list : shellOpenings(c)).find(g => g.kind === 'floor' && g.wall === f.wall && g.lv === f.lv && f.u > g.u0 - 0.3 && f.u < g.u1 + 0.3) || (P.shell ? P.shell.list : []).find(g => g.kind === 'balc' && g.wall === f.wall);
     if (!fl) { P.err.push('upper door on the ' + f.wall + ' has no balcony outside'); continue; }
-    const yT = fl.kind === 'floor' ? fl.y1 : c.H + 0.06, out = Math.max(0.8, fl.out), loc = (u, o) => fb ? [u, nrm[1] * (half + o)] : [nrm[0] * (half + o), u - c.d / 2];
-    const st = loc(f.u, Math.min(0.6, out * 0.55)), dc = loc(f.u, 0.05), wS = m4.tp(c.Mx, [st[0], yT, st[1]]), wD = m4.tp(c.Mx, [dc[0], yT, dc[1]]);
+    const yT = fl.kind === 'floor' ? fl.y1 : c.H + 0.06, wo = fl.wallOff || 0, out = Math.max(wo + 0.8, fl.out), loc = (u, o) => fb ? [u, nrm[1] * (half + o)] : [nrm[0] * (half + o), u - c.d / 2];      /* wallOff: an upper storey that juts over the street (the alley) */
+    const st = loc(f.u, wo + Math.min(0.6, (out - wo) * 0.55)), dc = loc(f.u, wo + 0.05), wS = m4.tp(c.Mx, [st[0], yT, st[1]]), wD = m4.tp(c.Mx, [dc[0], yT, dc[1]]);
     // the balcony out of doors: a floor and three rails
-    const a = loc(fl.u0, 0), b = loc(fl.u1, out); addFloor(mm, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), yT);
+    const a = loc(fl.u0, wo), b = loc(fl.u1, out); addFloor(mm, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), yT);
     const rail = (p, q) => addBoxCollider(mm, Math.min(p[0], q[0]) - 0.06, Math.min(p[1], q[1]) - 0.06, Math.max(p[0], q[0]) + 0.06, Math.max(p[1], q[1]) + 0.06, yT - 0.1, yT + 1.15);
-    rail(loc(fl.u0, out), loc(fl.u1, out)); rail(loc(fl.u0, 0.1), loc(fl.u0, out)); rail(loc(fl.u1, 0.1), loc(fl.u1, out));
+    rail(loc(fl.u0, out), loc(fl.u1, out)); rail(loc(fl.u0, wo + 0.1), loc(fl.u0, out)); rail(loc(fl.u1, wo + 0.1), loc(fl.u1, out));
     // the two ends of the way through
     const ix = hor ? d.x : d.x + inn * 0.9, iz = hor ? d.z + inn * 0.9 : d.z, pin = P.w2(ix, L.y + 0.03, iz), pdr = P.w2(d.x, L.y + 0.03, d.z);
     const outD = { p: wS, yaw: yawTo(wD, wS), cell: null, name: 'The balcony of ' + c.site.name }, inD = { p: pin, yaw: yawTo(pdr, pin), cell: cid, name: c.site.name };
@@ -649,3 +730,84 @@ function pBalconies(P, c) {
     d.balcony = { out: outD, in: inD, floor: fl };
   }
 }
+// [inout] the plan's ground rectangle for a shell: W x D on the 0.5 m grid, as near 1.5 times the shell's area as the grid allows without passing it, the shell's own
+// proportion, and laid so that the street door (plan x = 0) stands where the shell has it. Returns { x0, z0, x1, z1, W, D, sx, sz }.
+function pFitBox(c, o) {
+  o = o || {}; const cap = (o.cap || 1.5) * c.w * c.d, k = Math.sqrt(o.cap || 1.5); let best = null;
+  for (let W = Math.max(4, Math.floor(c.w * k * 2 + 1) / 2); W >= c.w; W -= 0.5) for (let D = Math.max(4, Math.floor(c.d * k * 2 + 1) / 2); D >= c.d; D -= 0.5) { if (W * D > cap + 1e-6) continue; const sc = W * D - 40 * Math.abs(W / D - c.w / c.d); if (!best || sc > best.sc) best = { W, D, sc }; }
+  const W = o.W || best.W, D = o.D || best.D, door = shellOpenings(c).find(f => f.kind === 'door' && f.lv === 0 && f.wall === 'front'), du = door ? door.u : (c.site.doorPos || 0);
+  const x0 = Math.round((-W / 2 - du * W / c.w) * 2) / 2; return { x0, z0: 0, x1: x0 + W, z1: D, W, D, sx: W / c.w, sz: D / c.d };
+}
+// [inout] a kit piece by name as a piece of furniture (docs/ROOMS.md names them): its footprint is its own box; back to a wall (o.side, sides in order of preference,
+// o.at along it) or free on the floor near o.near; o.turn turns the piece about its own middle (PI where its front is its -z), o.sc scales it, o.top = [[piece, x, z, sc, ry]..] stands things on it
+function pPiece(P, room, name, o) {
+  o = o || {}; const p = Kit.pieces[name]; if (!p) { (P.missing = P.missing || []).push(name); return null; }
+  const sc = o.sc || 1, turn = o.turn || 0, q = Math.abs(Math.sin(turn)) > 0.7, bw = (p.max[0] - p.min[0]) * sc, bd = (p.max[2] - p.min[2]) * sc, w = q ? bd : bw, d = q ? bw : bd, h = (p.max[1] - p.min[1]) * sc, cx = (p.min[0] + p.max[0]) / 2 * sc, cz = (p.min[2] + p.max[2]) / 2 * sc;
+  const draw = m => { at(m, 0, 0, 0, turn, () => { if (o.lit) kitLit(m, name, -cx, -p.min[1] * sc, -cz, sc, 0, { r: o.lit === true ? 5.5 : o.lit, c: [2.2, 1.35, 0.6], kind: 'candle' }); else kp(m, name, -cx, -p.min[1] * sc, -cz, sc, 0); }); for (const t of (o.top || [])) { const tp = Kit.pieces[t[0]]; if (!tp) continue; const ts = t[3] || 1; if (t[5]) kitLit(m, t[0], t[1], h - tp.min[1] * ts, t[2], ts, t[4] || 0, { r: 5.5, c: [2.2, 1.35, 0.6], kind: 'candle' }); else kp(m, t[0], t[1], h - tp.min[1] * ts, t[2], ts, t[4] || 0); } if (h > 0.3 && !o.soft) addBoxCollider(m, -w / 2, -d / 2, w / 2, d / 2, 0, Math.min(h, 2)); };
+  const id = P.id + '.' + (o.id || name) + '_' + P.items.length, opt = Object.assign({ lowOk: h <= 0.6 }, o.opt || {}); if (o.at !== undefined) opt.at = o.at;
+  let r = null; for (const sd of [].concat(o.side || [])) { r = pAgainst(P, room, sd, id, w, d, h, -1, draw, opt); if (r) break; }
+  if (!r && (o.near || !o.side)) r = pFree(P, room, id, w, d, h, o.rot || 0, draw, Object.assign({ near: o.near || pCentre(room) }, opt));
+  if (!r) (P.unplaced = P.unplaced || []).push(room.id + ':' + name); else if (o.lit || (o.top || []).some(t => t[5])) P.lightIn[room.id] = 1;
+  return r;
+}
+// [inout] a window keeps clear of the room's corners and of a partition that meets the outside wall: moved along the wall into the room it falls in, at most 1 m
+function pWinSnap(P, f, pos) {
+  const fb = f.wall === 'front' || f.wall === 'back', rs = Object.values(P.rooms).filter(r => r.k === f.lv && (fb ? (f.wall === 'front' ? Math.abs(r.z0 - P.shell.box.z0) < 0.6 : Math.abs(r.z1 - P.shell.box.z1) < 0.6) : (f.wall === 'left' ? Math.abs(r.x0 - P.shell.box.x0) < 0.6 : Math.abs(r.x1 - P.shell.box.x1) < 0.6)));
+  const lo = r => fb ? r.x0 : r.z0, hi = r => fb ? r.x1 : r.z1, r = rs.find(q => pos >= lo(q) && pos <= hi(q)) || rs.sort((a, b) => Math.min(Math.abs(pos - lo(a)), Math.abs(pos - hi(a))) - Math.min(Math.abs(pos - lo(b)), Math.abs(pos - hi(b))))[0]; if (!r) return pos;
+  const a = lo(r) + 1.15, b = hi(r) - 1.15; if (a > b) return Math.round((lo(r) + hi(r)) * 2) / 4; const q = Math.min(b, Math.max(a, pos)); return Math.abs(q - pos) <= 0.55 ? Math.round(q * 4) / 4 : pos;      /* at most half a metre: further and the window inside is not the window outside */
+}
+// [inout] an alley shop's front as 73b_alley.js draws it (the facade is drawn after the plans are built, so it is read from the same rule): the ground storey's bays
+// from `layout` (W window, D door), each upper storey a window on every other bay, a balcony door in the middle bay of the first floor where `balcony` is set
+function alleyOpenings(a, c) {
+  const w = a.w, n = Math.round(w / 2), H = 3, out = [];
+  for (let k = 0; k < (a.floors || 2); k++) for (let i = 0; i < n; i++) {
+    const uc = i * 2 + 1, x = w / 2 - uc, ch = a.layout[Math.min(i, a.layout.length - 1)];
+    if (k === 0) out.push(ch === 'D' ? { kind: 'door', wall: 'front', u: x, u0: x - 0.55, u1: x + 0.55, y: 1.1, y0: 0, y1: 2.2, lv: 0, out: 0, name: 'DoorFrame_alley' } : { kind: 'win', wall: 'front', u: x, u0: x - 0.6, u1: x + 0.6, y: 1.7, y0: 1.0, y1: 2.4, lv: 0, out: 0, win: 'Wide_Flat', name: 'Window_alley' });
+    else if (a.balcony && k === 1 && i === (n >> 1)) { out.push({ kind: 'door', wall: 'front', u: x, u0: x - 0.55, u1: x + 0.55, y: k * H + 1.1, y0: k * H, y1: k * H + 2.2, lv: 1, out: 0, name: 'DoorFrame_alley' }); out.push({ kind: 'floor', wall: 'front', u: x, u0: x - 2.1, u1: x + 2.1, y: k * H, y0: k * H - 0.14, y1: k * H + 0.04, lv: 1, out: 1.6, wallOff: 0.5, name: 'gen_balc' }); }
+    else if ((i + k) % 2 === 0) out.push({ kind: 'win', wall: 'front', u: x, u0: x - 0.6, u1: x + 0.6, y: k * H + 1.7, y0: k * H + 1.0, y1: k * H + 2.4, lv: k, out: 0, win: 'Wide_Flat', name: 'Window_alley' });
+  }
+  return out;
+}
+
+// [inout] a ladder through a trap door from level k0 to the loft above (k0 + 1): against the wall `side` ('w' or 'e') of the room below, `z` along that wall.
+// Drawn by inoutLadder / inoutTrap (71b_storeys.js); the opening is a hole in the loft's floor; climbed by a prompt at either end (a portal inside the cell).
+function pLadder(P, k0, side, z) {
+  const L0 = P.lv[k0], L1 = P.lv[k0 + 1], below = Object.values(P.rooms).find(r => r.k === k0 && z > r.z0 && z < r.z1 && (side === 'w' ? true : true)); if (!L0 || !L1 || !below) return null;
+  const sg = side === 'w' ? 1 : -1, xw = side === 'w' ? below.in.x0 : below.in.x1, h = L1.y - L0.y, lean = h / Math.tan(75 * PI / 180), tw = 0.9, td = 0.8;
+  const trap = side === 'w' ? { x0: xw, x1: xw + tw, z0: z - td / 2, z1: z + td / 2 } : { x0: xw - tw, x1: xw, z0: z - td / 2, z1: z + td / 2 };
+  const foot = xw + sg * (0.12 + lean), a = [xw + sg * (lean + 0.75), z], b = [xw + sg * (tw + 0.6), z];
+  const lr = { x0: Math.min(xw, foot + sg * 0.1) - 0.05, x1: Math.max(xw, foot + sg * 0.1) + 0.05, z0: z - 0.4, z1: z + 0.4 }, above = pRoomAt(P, k0 + 1, b[0], b[1]);
+  if (!above || !pRoomAt(P, k0, a[0], a[1]) || z - 0.6 < below.in.z0 || z + 0.6 > below.in.z1) return null;
+  if (P.items.some(it => (it.k === k0 && rOv(it, lr)) || (it.k === k0 + 1 && rOv(it, rGrow(trap, 0.3))))) return null;      /* not over a stair well, not into furniture or a stack */
+  if (P.clear.some(q => q.k === k0 && q.kind !== 'stair' && rOv(q, lr))) return null;      /* not across a doorway */
+  P.holes.push({ k: k0 + 1, r: trap }); P.occ(k0 + 1, trap, 'hole', P.id + '.trap');
+  P.occ(k0, { x0: Math.min(xw, foot + sg * 0.1), x1: Math.max(xw, foot + sg * 0.1), z0: z - 0.35, z1: z + 0.35 }, 'stair', P.id + '.ladder');
+  P.clear.push({ x0: Math.min(a[0], foot) - 0.4, x1: Math.max(a[0], foot) + 0.4, z0: z - 0.5, z1: z + 0.5, k: k0, kind: 'stair' }, { x0: Math.min(b[0], trap.x0) - 0.1, x1: Math.max(b[0], trap.x1) + 0.4, z0: z - 0.6, z1: z + 0.6, k: k0 + 1, kind: 'stair' });
+  const m = P.c.int; m.m1 = P.zone; m.ao = INT_AO;
+  at(m, foot, L0.y + 0.02, z, side === 'w' ? 0 : PI, () => inoutLadder(m, h + 0.02));
+  at(m, side === 'w' ? xw : xw, L1.y + 0.02, z, side === 'w' ? 0 : PI, () => inoutTrap(m, tw, td));
+  const yaw = (p, q) => Math.atan2(q[0] - p[0], -(q[1] - p[1])), cid = P.c.cell ? P.c.cell.id : P.id, nm = P.c.site.name;
+  const up = { p: P.w2(b[0], L1.y + 0.03, b[1]), yaw: P.yaw + (side === 'w' ? -PI / 2 : PI / 2), cell: cid, name: nm }, dn = { p: P.w2(a[0], L0.y + 0.03, a[1]), yaw: P.yaw + (side === 'w' ? -PI / 2 : PI / 2), cell: cid, name: nm };
+  const pf = P.w2(foot, L0.y + 1.2, z), pt = P.w2(xw + sg * 0.45, L1.y + 0.6, z);
+  World.interact.push({ kind: 'portal', id: 'ladder.' + cid + '.up', p: pf, r: 1.5, zone: P.zone, cell: cid, label: 'Climb the ladder', dest: up, side: 'in', ladder: true });
+  World.interact.push({ kind: 'portal', id: 'ladder.' + cid + '.down', p: pt, r: 1.5, zone: P.zone, cell: cid, label: 'Climb down', dest: dn, side: 'in', ladder: true });
+  const l = { k0, k1: k0 + 1, a, b, trap, side, z }; (P.ladders = P.ladders || []).push(l); return l;
+}
+// [inout] where a body of 0.9 m can walk from the street door (the interiors test asks the same): returns reach(k, x, z, r) = a walkable place within r of (x, z) on level k.
+// Benches, stools and chests below 0.52 m are sat on or stepped round, not walls; stairs join their levels at their foot and head.
+function pReach(P) {
+  const st = 0.15, grid = new Map(), seen = new Set(), q = [], key = (k, i, j) => k * 1e8 + (i + 5000) * 1e4 + (j + 5000);
+  const free = (k, x, z) => { const kk = 'f' + key(k, Math.floor(x / 0.05), Math.floor(z / 0.05));      /* a 5 cm cache, as the test's */ if (grid.has(kk)) return grid.get(kk);
+    let ok = Object.values(P.rooms).some(r => r.k === k && x > r.in.x0 && x < r.in.x1 && z > r.in.z0 && z < r.in.z1) || P.doors.some(d => d.k === k && d.wall && (d.wall.ax === 'x' ? Math.abs(x - d.x) < d.w / 2 && Math.abs(z - d.z) < 0.35 : Math.abs(z - d.z) < d.w / 2 && Math.abs(x - d.x) < 0.35));
+    if (ok) for (const it of P.items) if (it.k === k && !/^(rug|flat|hang|wall|clear|light|hole)$/.test(it.kind || '') && x > it.x0 && x < it.x1 && z > it.z0 && z < it.z1 && !(it.h !== undefined && it.h < 0.52 && it.kind !== 'stair')) { ok = false; break; }
+    if (ok) for (const h of P.holes) if (h.k === k && x > h.r.x0 && x < h.r.x1 && z > h.r.z0 && z < h.r.z1) { ok = false; break; }
+    grid.set(kk, ok); return ok; };
+  const wide = (k, x, z) => { for (const [dx, dz] of [[0, 0], [0.42, 0], [-0.42, 0], [0, 0.42], [0, -0.42], [0.3, 0.3], [-0.3, 0.3], [0.3, -0.3], [-0.3, -0.3]]) if (!free(k, x + dx, z + dz)) return false; return true; };
+  const push = (k, x, z) => { const kk = key(k, Math.round(x / st), Math.round(z / st)); if (seen.has(kk) || !wide(k, x, z)) return; seen.add(kk); q.push([k, x, z]); };
+  const e = P.doors.find(d => d.b === null && !d.upper); if (e) push(0, e.x, e.z + 0.9);
+  for (let n = 0; n < q.length && n < 80000; n++) { const [k, x, z] = q[n]; for (const [dx, dz] of [[st, 0], [-st, 0], [0, st], [0, -st]]) push(k, x + dx, z + dz);
+    for (const s of P.stairs) { if (s.k0 === k && Math.hypot(x - s.lowPt[0], z - s.lowPt[1]) < 0.4) push(s.k1, s.highPt[0], s.highPt[1]); if (s.k1 === k && Math.hypot(x - s.highPt[0], z - s.highPt[1]) < 0.4) push(s.k0, s.lowPt[0], s.lowPt[1]); } }
+  return (k, x, z, r) => { r = r || 0.3; for (let dx = -r; dx <= r + 0.01; dx += st) for (let dz = -r; dz <= r + 0.01; dz += st) if (seen.has(key(k, Math.round((x + dx) / st), Math.round((z + dz) / st)))) return true; return false; };
+}
+// [inout] the floor below a stair's head stays clear of anything that rises through it (a fire's stack, a pier): call after pLayout, before the hearths
+function pKeepStairHeads(P) { for (const q of P.stairs) { const x0 = Math.min(q.p1, q.p1 + q.dir * 1.4), x1 = Math.max(q.p1, q.p1 + q.dir * 1.4); P.clear.push(q.axis === 'x' ? { x0, x1, z0: q.lat - 0.6, z1: q.lat + 0.6, k: q.k0, kind: 'stair' } : { x0: q.lat - 0.6, x1: q.lat + 0.6, z0: x0, z1: x1, k: q.k0, kind: 'stair' }); } }

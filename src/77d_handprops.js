@@ -6,7 +6,7 @@
 //     and slung on the back when he is not playing; the hammer hangs from the belt unless it is being swung; the spear stands grounded beside the body unless it is held.
 // mesh.userData = { kind, holding, grip: [x,y,z] the point of the prop that must be in the hand (test/hold.js), hand: 'R'|'L', len: longest side in metres }.
 const HP = { cache: {}, GRIP: { rot: [0, 0, Math.PI / 2], pos: [0, 0.07, -0.015], curl: 0.75 } };
-const HP_SIZE = { lute: 0.8, hammer: 0.4, spear: 2.3, staff: 1.8, rod: 2.2, mug: 0.14, flute: 0.45 };      // longest side allowed, metres (test/hold.js)
+const HP_SIZE = { lute: 0.8, hammer: 0.4, spear: 2.3, staff: 1.8, rod: 2.2, mug: 0.14, flute: 0.45, besom: 1.55, shears: 0.26, awl: 0.17, knife: 0.3, cleaver: 0.32, mallet: 0.34, axe: 0.72, paddle: 0.8, scraper: 0.16, pestle: 0.2, tinhammer: 0.3, shuttle: 0.24, sickle: 0.48, tongs: 0.52 };      // longest side allowed, metres (test/hold.js)
 function hpWood(len, r0, r1, y0, col, seg) {      // a tapered shaft, lathe-turned
   const T = THREE, pts = []; for (let i = 0; i <= 6; i++) { const t = i / 6; pts.push(new T.Vector2(r0 + (r1 - r0) * t + (i === 0 || i === 6 ? -0.0015 : 0), y0 + len * t)); }
   return [new T.LatheGeometry(pts, seg || 8), null, col, [0, 0.78]];
@@ -43,18 +43,45 @@ function hpGeo(kind) {
     for (const pr of kp.prims) for (let i = 0; i < pr.n; i++) if (pr.pos[i * 3 + 1] < kp.min[1] + hgt * 0.15) { ax += pr.pos[i * 3]; az += pr.pos[i * 3 + 2]; na++; } ax /= na || 1; az /= na || 1;
     for (const pr of kp.prims) for (let i = 0; i < pr.n; i++) if (pr.pos[i * 3 + 1] < kp.min[1] + hgt * 0.15) r = Math.max(r, Math.hypot(pr.pos[i * 3] - ax, pr.pos[i * 3 + 2] - az));
     const hx = (kp.min[0] + kp.max[0]) / 2 - ax, hz = (kp.min[2] + kp.max[2]) / 2 - az, turn = Math.atan2(hx, hz), M = new T.Matrix4().makeTranslation(0, 0, r * sc * 1.05).multiply(new T.Matrix4().makeRotationY(-turn)).multiply(new T.Matrix4().makeScale(sc, sc, sc)).multiply(new T.Matrix4().makeTranslation(-ax, -(kp.min[1] + hgt * 0.5), -az));
-        for (const pr of kp.prims) { const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(Float32Array.from(pr.pos), 3)); g.setAttribute('normal', new T.BufferAttribute(Float32Array.from(pr.nrm), 3)); g.setIndex(new T.BufferAttribute(Uint32Array.from(pr.idx), 1)); P.push([g, M, /metal|iron|steel/i.test(pr.mat) ? IR : [0.24, 0.155, 0.08], /metal|iron|steel/i.test(pr.mat) ? MI : MW]); }
+        for (const pr of kp.prims) { const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(Float32Array.from(pr.pos), 3)); g.setAttribute('normal', new T.BufferAttribute(Float32Array.from(pr.nrm), 3)); g.setIndex(new T.BufferAttribute(Uint32Array.from(pr.idx), 1)); const met = /metal|iron|steel/i.test(pr.mat); if (met) { g.dispose(); continue; }      // the kit's hoops are broken rings that fought the staves (pale zig-zags, then gaps): a plain turned wooden tankard
+      P.push([g, M, [0.24, 0.155, 0.08], MW]); }
   }
+  // [ch4] a besom: an ash handle 1.4 m and a head of birch twigs bound twice, flaring to 0.24 m at the tips. Origin at the hand, the twigs toward +y.
+  else if (kind === 'besom') { P = [hpWood(1.08, 0.0145, 0.017, -0.38, WL)]; const tw = [0.33, 0.25, 0.12];
+    for (let i = 0; i < 42; i++) { const a = i * 2.39996, rr = Math.sqrt((i + 0.5) / 42), x0 = Math.cos(a) * rr * 0.022, z0 = Math.sin(a) * rr * 0.022, x1 = Math.cos(a) * rr * 0.12 * (0.8 + 0.3 * Math.sin(i * 3.1)), z1 = Math.sin(a) * rr * 0.05, l = 0.42 + 0.05 * Math.sin(i * 1.7);
+      const g = new T.CylinderGeometry(0.0012, 0.0028, l, 3, 1), dx = x1 - x0, dz = z1 - z0, tilt = Math.atan2(Math.hypot(dx, dz), l); const M = new T.Matrix4().makeTranslation((x0 + x1) / 2, 0.69 + l / 2, (z0 + z1) / 2).multiply(new T.Matrix4().makeRotationAxis(new T.Vector3(dz, 0, -dx).normalize(), tilt)); P.push([g, M, tw.map(v => v * (0.75 + 0.4 * ((i * 7) % 5) / 5)), MW]); }
+    P.push([new T.CylinderGeometry(0.03, 0.03, 0.03, 10, 1, true), X(0, 0.75, 0), [0.30, 0.22, 0.12], MW], [new T.CylinderGeometry(0.042, 0.042, 0.025, 10, 1, true), X(0, 0.86, 0, 0, 0, 0, 1.35, 1, 0.75), [0.30, 0.22, 0.12], MW]); }
+  // trade tools, true size; origin where the fist closes on the handle, the working end toward +y
+  else if (kind === 'shears') { const bl = () => { const sh = new T.Shape(); sh.moveTo(-0.004, 0); sh.lineTo(0.006, 0); sh.lineTo(0.002, 0.15); sh.lineTo(-0.003, 0.14); sh.closePath(); return new T.ExtrudeGeometry(sh, { depth: 0.003, bevelEnabled: false }); };
+    P = [[bl(), X(0.004, 0.08, -0.004, 0, 0, -0.06), IR, MI], [bl(), X(-0.004, 0.08, 0.001, 0, 0, 0.06), IR, MI], [new T.TorusGeometry(0.018, 0.0035, 5, 12), X(0, 0.055, 0), IR, MI], [new T.BoxGeometry(0.012, 0.03, 0.006), X(0, 0.075, 0), IR, MI], [new T.BoxGeometry(0.01, 0.07, 0.005), X(0.012, 0.02, 0, 0, 0, 0.15), IR, MI], [new T.BoxGeometry(0.01, 0.07, 0.005), X(-0.012, 0.02, 0, 0, 0, -0.15), IR, MI]]; }
+  else if (kind === 'awl') P = [[new T.LatheGeometry([[0.001, -0.045], [0.012, -0.04], [0.015, -0.01], [0.013, 0.025], [0.008, 0.035], [0.001, 0.036]].map(v => new T.Vector2(v[0], v[1])), 8), null, WD, MW], [new T.ConeGeometry(0.0022, 0.075, 5), X(0, 0.072, 0), IR, MI]];
+  else if (kind === 'knife' || kind === 'cleaver') { const cl = kind === 'cleaver', sh = new T.Shape(); if (cl) { sh.moveTo(-0.004, 0); sh.lineTo(0.07, 0); sh.lineTo(0.075, 0.17); sh.lineTo(-0.004, 0.17); } else { sh.moveTo(-0.003, 0); sh.lineTo(0.016, 0); sh.quadraticCurveTo(0.018, 0.1, 0.0, 0.15); sh.lineTo(-0.003, 0.12); } sh.closePath();
+    P = [[new T.ExtrudeGeometry(sh, { depth: cl ? 0.004 : 0.0025, bevelEnabled: false }), X(cl ? -0.006 : -0.004, 0.06, -0.0015), IR, MI], hpWood(cl ? 0.13 : 0.1, 0.012, 0.014, -0.07, DK), [new T.CylinderGeometry(0.003, 0.003, 0.03, 5), X(0, 0.0, 0, 0, 0, Math.PI / 2), IR, MI]]; }
+  else if (kind === 'mallet') P = [hpWood(0.26, 0.012, 0.014, -0.1, WD), [new T.CylinderGeometry(0.038, 0.04, 0.12, 10), X(0, 0.19, 0, 0, 0, Math.PI / 2), WL, MW], [new T.TorusGeometry(0.039, 0.004, 4, 10), X(0.055, 0.19, 0, 0, Math.PI / 2, 0), IR, MI], [new T.TorusGeometry(0.039, 0.004, 4, 10), X(-0.055, 0.19, 0, 0, Math.PI / 2, 0), IR, MI]];
+  else if (kind === 'axe') { const hd = new T.Shape(); hd.moveTo(0, -0.02); hd.lineTo(0.05, -0.035); hd.quadraticCurveTo(0.14, -0.06, 0.15, 0.0); hd.quadraticCurveTo(0.14, 0.07, 0.05, 0.04); hd.lineTo(0, 0.028); hd.lineTo(-0.035, 0.02); hd.lineTo(-0.035, -0.02); hd.closePath();
+    P = [hpWood(0.7, 0.016, 0.019, -0.12, WD), [new T.ExtrudeGeometry(hd, { depth: 0.02, bevelEnabled: true, bevelSize: 0.003, bevelThickness: 0.004, bevelSegments: 1 }), X(0, 0.53, -0.01), IR, MI]]; }
+  else if (kind === 'paddle') P = [hpWood(0.56, 0.014, 0.016, -0.12, WL), [new T.BoxGeometry(0.09, 0.22, 0.016), X(0, 0.55, 0), WL, MW]];
+  else if (kind === 'scraper') { const sh = new T.Shape(); sh.moveTo(-0.06, 0.01); sh.lineTo(0.06, 0.01); sh.lineTo(0.065, 0.1); sh.lineTo(-0.065, 0.1); sh.closePath(); P = [[new T.ExtrudeGeometry(sh, { depth: 0.0015, bevelEnabled: false }), X(0, 0.0, 0), IR, MI], [new T.CylinderGeometry(0.012, 0.012, 0.13, 8), X(0, 0.0, 0.004, 0, 0, Math.PI / 2), WD, MW]]; }
+  else if (kind === 'pestle') P = [[new T.LatheGeometry([[0.001, -0.06], [0.012, -0.055], [0.014, 0.02], [0.022, 0.1], [0.024, 0.12], [0.015, 0.14], [0.001, 0.142]].map(v => new T.Vector2(v[0], v[1])), 10), null, [0.45, 0.43, 0.40], [0, 0.9]]];
+  else if (kind === 'tinhammer') P = [hpWood(0.25, 0.010, 0.012, -0.08, WD), [new T.CylinderGeometry(0.011, 0.014, 0.1, 8), X(0, 0.17, 0, 0, 0, Math.PI / 2), IR, MI]];
+  else if (kind === 'shuttle') { const sh = new T.Shape(); sh.moveTo(0, -0.11); sh.quadraticCurveTo(0.018, -0.05, 0.016, 0.0); sh.lineTo(0.016, 0.07); sh.quadraticCurveTo(0.012, 0.11, 0, 0.12); sh.quadraticCurveTo(-0.012, 0.11, -0.016, 0.07); sh.lineTo(-0.016, 0.0); sh.quadraticCurveTo(-0.018, -0.05, 0, -0.11);
+    P = [[new T.ExtrudeGeometry(sh, { depth: 0.004, bevelEnabled: false }), X(0, 0.06, -0.002), WL, MW], [new T.CylinderGeometry(0.009, 0.009, 0.1, 6), X(0, 0.05, 0), [0.55, 0.50, 0.38], [0, 0.95]]]; }
+  else if (kind === 'sickle') { const C = new T.EllipseCurve(0.06, 0.13, 0.11, 0.13, Math.PI * 1.05, Math.PI * 0.15, true), pts = C.getPoints(14), sh = new T.Shape(); pts.forEach((p2, i) => i ? sh.lineTo(p2.x, p2.y) : sh.moveTo(p2.x, p2.y)); for (let i = pts.length - 1; i >= 0; i--) { const p2 = pts[i], k = i / (pts.length - 1); sh.lineTo(0.06 + (p2.x - 0.06) * (0.84 + 0.12 * k), 0.13 + (p2.y - 0.13) * (0.84 + 0.12 * k)); }
+    P = [hpWood(0.12, 0.012, 0.014, -0.06, DK), [new T.ExtrudeGeometry(sh, { depth: 0.002, bevelEnabled: false }), X(-0.05, 0.03, -0.001), IR, MI]]; }
+  else if (kind === 'tongs') P = [[new T.BoxGeometry(0.008, 0.42, 0.008), X(0.008, 0.1, 0, 0, 0, -0.03), IR, MI], [new T.BoxGeometry(0.008, 0.42, 0.008), X(-0.008, 0.1, 0, 0, 0, 0.03), IR, MI], [new T.CylinderGeometry(0.008, 0.008, 0.025, 6), X(0, 0.27, 0, Math.PI / 2, 0, 0), IR, MI], [new T.BoxGeometry(0.03, 0.06, 0.012), X(0, 0.33, 0), IR, MI]];
   else if (kind === 'flute') P = [[new T.CylinderGeometry(0.0095, 0.0095, 0.42, 8), X(0, 0.1, 0), WL, MW], [new T.CylinderGeometry(0.0105, 0.0105, 0.02, 8), X(0, 0.30, 0), DK, MW]];
   else return null;
-  const g = RPG.merge(P); g.computeBoundingBox(); HP.cache[kind] = g; return g;
+  const g = RPG.merge(P); if (kind === 'besom') g.applyMatrix4(new T.Matrix4().makeRotationX(Math.PI));      // [ch4] the twigs toward the ground from the fist
+  g.computeBoundingBox(); HP.cache[kind] = g; return g;
 }
 // the props each person carries (def.prop from the schedules table, plus the regulars' mugs and flute)
 function hpKinds(def) {
   const k = [];
   if (def.prop && ['lute', 'hammer', 'spear', 'staff', 'rod'].includes(def.prop)) k.push(def.prop);
   if (def.id === 'osric' || def.id === 'greta') k.push('mug');
-  if (typeof CAST_HART !== 'undefined' && CAST_HART.includes(def.id)) k.push('mug');      // [ch4] the Hart's evening table (the old regulars pat1..7 are gone and their mugs went with them)
+  if (typeof CAST_HART !== 'undefined' && CAST_HART.includes(def.id)) k.push('mug');
+  if ((def.sched || []).some(r => r[2] === 'sweep')) k.push('besom');      // [ch4]
+  { const t = (def.sched || []).some(r => r[2] === 'work') ? hpTool(def) : null; if (t && !k.includes(t)) k.push(t); }      // [ch4] the Hart's evening table (the old regulars pat1..7 are gone and their mugs went with them)
   return k;
 }
 // ── placing a prop from the hands (pivot-local space; the person's own right / up / forward from the shoulders) ──
@@ -74,9 +101,26 @@ function hpPlace(mesh, o, y, z) {      // origin o, long axis y, front z (z made
 // [ch4] one true size whatever the body: a prop on a hand bone would take the person's girth and height (each body is scaled a few per cent on each axis); divide it out
 const _hps = new THREE.Vector3();
 function hpTrue(mesh) { mesh.scale.set(1, 1, 1); mesh.parent.getWorldScale(_hps); const q = mesh.quaternion, ax = new THREE.Vector3(1, 0, 0).applyQuaternion(q), ay = new THREE.Vector3(0, 1, 0).applyQuaternion(q), az = new THREE.Vector3(0, 0, 1).applyQuaternion(q), k = v => 1 / Math.max(1e-3, Math.hypot(v.x * _hps.x, v.y * _hps.y, v.z * _hps.z)); mesh.scale.set(k(ax), k(ay), k(az)); }
+// [ch4] the lute's strap when it is slung: a leather band from the neck end, over the left shoulder, across the chest to the right hip and round to the tail of the bowl.
+// A ribbon of 18 segments rebuilt each frame from the bones while it is shown (only near: the post functions run for visible people).
+function hpStrap(H, lute) {
+  const T = THREE; let m = H._strap; if (!m) { const g = new T.BufferGeometry(), n = 19; g.setAttribute('position', new T.BufferAttribute(new Float32Array(n * 2 * 3), 3)); g.setAttribute('normal', new T.BufferAttribute(new Float32Array(n * 2 * 3), 3));
+    const col = new Float32Array(n * 2 * 3), mr = new Float32Array(n * 2 * 2); for (let i = 0; i < n * 2; i++) { const t = 0.85 + 0.15 * Math.sin(i * 2.1); col.set([0.075 * t, 0.048 * t, 0.03 * t], i * 3); mr.set([0, 0.75], i * 2); } g.setAttribute('color', new T.BufferAttribute(col, 3)); g.setAttribute('mr', new T.BufferAttribute(mr, 2));
+    const ix = []; for (let i = 0; i < n - 1; i++) ix.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2); g.setIndex(ix);
+    m = H._strap = new T.Mesh(g, lute.material); m.material.side = T.DoubleSide; m.frustumCulled = false; m.layers.mask = lute.layers.mask; m.name = 'prop:strap'; H.pivot.add(m); }
+  const f = hpFrame(H), k = H.root.scale.y || 1, wd = (H.wide || 1), u1 = hpLocal(H, H.root.getObjectByName('upperarm_l'), new T.Vector3()), u2 = hpLocal(H, H.root.getObjectByName('upperarm_r'), new T.Vector3()), ua = u1.clone().sub(f.sp).dot(f.R) < u2.clone().sub(f.sp).dot(f.R) ? u1 : u2, nk = hpLocal(H, H.root.getObjectByName('neck_01'), new T.Vector3()), cl = nk.clone().lerp(ua, 0.55), P = [];      // the top of the shoulder on the neck's side (-R): between the neck and the head of the upper arm (the clavicle bone starts at the breastbone)
+  lute.updateMatrix(); const L = (x, y, z) => new T.Vector3(x, y, z).applyMatrix4(lute.matrix);
+  P.push(L(0, 0.27, -0.03), cl.clone().addScaledVector(f.F, -0.06 * wd).addScaledVector(f.U, 0.035 * k), cl.clone().addScaledVector(f.F, 0.07 * wd).addScaledVector(f.U, 0.0 * k), cl.clone().addScaledVector(f.F, 0.15 * wd).addScaledVector(f.U, -0.12 * k).addScaledVector(f.R, 0.06 * k),
+    f.sp.clone().addScaledVector(f.F, 0.175 * wd).addScaledVector(f.R, 0.03 * k).addScaledVector(f.U, -0.05 * k), f.pel.clone().addScaledVector(f.F, 0.15 * wd).addScaledVector(f.R, 0.14 * k).addScaledVector(f.U, 0.13 * k),
+    f.pel.clone().addScaledVector(f.R, 0.21 * k * wd).addScaledVector(f.U, 0.11 * k), L(0.05, -0.26, -0.035));
+  const cv = new T.CatmullRomCurve3(P, false, 'centripetal'), pos = m.geometry.attributes.position, nor = m.geometry.attributes.normal, n = pos.count / 2, q = new T.Vector3(), tg = new T.Vector3(), out = new T.Vector3(), w = new T.Vector3(), c0 = f.sp;
+  for (let i = 0; i < n; i++) { const u = i / (n - 1); cv.getPointAt(u, q); cv.getTangentAt(u, tg); out.set(q.x - c0.x, 0, q.z - c0.z).normalize(); w.crossVectors(tg, out).normalize().multiplyScalar(0.016); pos.setXYZ(i * 2, q.x + w.x, q.y + w.y, q.z + w.z); pos.setXYZ(i * 2 + 1, q.x - w.x, q.y - w.y, q.z - w.z); nor.setXYZ(i * 2, out.x, out.y, out.z); nor.setXYZ(i * 2 + 1, out.x, out.y, out.z); }
+  pos.needsUpdate = true; nor.needsUpdate = true; m.geometry.computeBoundingSphere(); m.visible = true;
+}
 function hpLute(mesh) { const T = THREE, y = new T.Vector3(), z = new T.Vector3(), o = new T.Vector3(), tR = new T.Vector3(), tL = new T.Vector3(), bx = new T.Vector3(), by = new T.Vector3(), bz = new T.Vector3(), mq = new T.Matrix4(), qL = new T.Quaternion(), qR = new T.Quaternion(); let wPlay = 0;
   // [ch4] The lute is set against the body and the hands go to it (Chars.reach). Hung between the two animated hands it went through the belly: the clip is a guitar's, and a lute's bowl is 0.15 m deep.
   return (H, st) => {
+  if (H._strap) H._strap.visible = false;
   if (H.animNow === 'lie') { mesh.visible = false; mesh.userData.holding = false; Chars.reach(H, 'R', null); Chars.reach(H, 'L', null); Chars.grip(H, 'L', 0); Chars.grip(H, 'R', 0); return; }      // by the bed, not on his back in it
   const f = hpFrame(H), play = H.animNow === 'lute' && !H.talkNow, k = H.root.scale.y || 1; wPlay = play ? 1 : 0;
   if (play) {      // the bowl on the belly a little to the player's right, the neck up to the left at 20 degrees and a little forward, the soundboard turned up 12 degrees
@@ -93,7 +137,7 @@ function hpLute(mesh) { const T = THREE, y = new T.Vector3(), z = new T.Vector3(
   } else {      // slung on the back by its strap: the bowl against the back, the neck up over the left shoulder, the soundboard outward
     Chars.reach(H, 'R', null); Chars.reach(H, 'L', null);
     y.copy(f.U).multiplyScalar(0.93).addScaledVector(f.R, -0.34).normalize(); z.copy(f.F).negate();
-    hpPlace(mesh, o.copy(f.sp).addScaledVector(f.F, -(0.105 * k * (H.wide || 1) + 0.158)).addScaledVector(f.U, -0.16 * k).addScaledVector(f.R, 0.05 * k), y, z); mesh.userData.holding = false; Chars.grip(H, 'L', 0); Chars.grip(H, 'R', 0);
+    hpPlace(mesh, o.copy(f.sp).addScaledVector(f.F, -(0.105 * k * (H.wide || 1) + 0.158)).addScaledVector(f.U, -0.16 * k).addScaledVector(f.R, 0.05 * k), y, z); mesh.userData.holding = false; Chars.grip(H, 'L', 0); Chars.grip(H, 'R', 0); mesh.scale.setScalar(1); hpStrap(H, mesh);
   }
   mesh.userData.grip = [0.0, 0.33, 0.0]; mesh.userData.hand = 'L'; mesh.scale.setScalar(1); mesh.visible = true;
 }; }
@@ -125,6 +169,22 @@ function hpMug(mesh, npc, staff) { const T = THREE, t = new T.Vector3(), X0 = ne
     const f = hpFrame(H), k = H.root.scale.y || 1; t.copy(f.pel).addScaledVector(f.F, (seated ? 0.36 : 0.27) * k).addScaledVector(f.U, (seated ? 0.31 : 0.16) * k).addScaledVector(f.R, 0.17 * k); H.pivot.localToWorld(t);
     mq.makeBasis(X0.copy(f.U).negate(), f.F, f.R); q.setFromRotationMatrix(mq); H.pivot.getWorldQuaternion(pq); q.premultiply(pq);      // knuckles upright, fingers forward, palm to the left: the cup stands in the fist
     Chars.reach(H, 'R', t, q); Chars.grip(H, 'R', 0.95); hpTrue(mesh); mesh.userData.grip = [0, 0, 0]; mesh.userData.hand = 'R'; }; }
+// [ch4] one tool per person who works with their hands, by their trade (CAST), and for the story people by who they are; nobody's hand is empty at the bench
+const HP_TRADE = [[/tailor|draper|glover/, 'shears'], [/cobbler|saddler|harness/, 'awl'], [/butcher|the block/, 'cleaver'], [/fletcher|fletching|cutler|grinder|basket|tanner|shaves hoops/, 'knife'],
+  [/cooper|boatwright|wheelwright|mason/, 'mallet'], [/woodcutter/, 'axe'], [/dyer|vats|alewife|brews|laundress/, 'paddle'], [/baker|bakehouse/, 'scraper'], [/apothecary/, 'pestle'], [/tinker|mends pans/, 'tinhammer'], [/net|weaver/, 'shuttle']];
+const HP_WHO = { marta: 'pestle', hilda: 'shuttle', brandt: 'tongs', bram: 'sickle', edda: 'sickle', wren: 'knife' };
+function hpTool(def) { if (HP_WHO[def.id]) return HP_WHO[def.id]; const c = typeof CAST !== 'undefined' && CAST.find ? CAST.find(x => x.id === def.id) : null, t = c && c.trade || ''; for (const [re, k] of HP_TRADE) if (re.test(t)) return k; return null; }
+function hpWork(mesh, anim) { return (H) => { const on = H.animNow === anim && !H.talkNow; mesh.visible = on; mesh.userData.holding = on; Chars.grip(H, 'R', on ? HP.GRIP.curl : 0); if (on) hpTrue(mesh); }; }
+// the besom: twig tips on the floor 0.78 m in front of the feet, a little to the right, swaying side to side; the handle rises to 0.34 m in front of the chest and both hands are brought
+// to it (right at the hip, left 0.37 m above at the chest). The sweeping stance is a standing one (49_chars.js 'sweep'): the old crouching dig tented every skirt.
+function hpBesom(mesh) { const T = THREE, fp = new T.Vector3(), y = new T.Vector3(), z = new T.Vector3(), o = new T.Vector3(), t = new T.Vector3(), q = new T.Vector3(); return (H) => { const on = H.animNow === 'sweep' && !H.talkNow; mesh.visible = on; mesh.userData.holding = on;
+  if (!on) { Chars.grip(H, 'R', 0); Chars.grip(H, 'L', 0); Chars.reach(H, 'L', null); Chars.reach(H, 'R', null); return; }
+  if (mesh.parent !== H.pivot) H.pivot.add(mesh); mesh.scale.setScalar(1); const f = hpFrame(H), k = H.root.scale.y || 1, tm = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000 + H.seed % 5, sw = Math.sin(tm * 1.9);
+  fp.copy(f.pel).addScaledVector(f.F, 0.82 * k).addScaledVector(f.R, 0.12 * k + 0.16 * sw); fp.y = 0.02;
+  const top = f.sp.clone().addScaledVector(f.F, 0.34 * k).addScaledVector(f.R, 0.06 * k); y.subVectors(top, fp).normalize(); z.copy(f.F).negate();
+  o.copy(fp).addScaledVector(y, 1.1); hpPlace(mesh, o, y, z); mesh.updateMatrixWorld(true);
+  const lowR = H.pivot.localToWorld(q.copy(o).addScaledVector(y, -0.2)), hiL = H.pivot.localToWorld(t.copy(o).addScaledVector(y, 0.17));
+  Chars.reach(H, 'R', lowR.clone()); Chars.reach(H, 'L', hiL.clone()); Chars.grip(H, 'R', HP.GRIP.curl); Chars.grip(H, 'L', HP.GRIP.curl); mesh.userData.grip = [0, -0.2, 0]; mesh.userData.hand = 'R'; }; }
 function npcHandProp(npc) {
   const ch = npc.ch; if (!ch || typeof RPG === 'undefined' || !RPG.merge) return;
   for (const kind of hpKinds(npc.def)) {
@@ -137,6 +197,8 @@ function npcHandProp(npc) {
     else if (kind === 'spear') ch.post.push(hpPole(mesh, 0, false));
     else if (kind === 'staff') ch.post.push(hpPole(mesh, 0.05, true));
     else if (kind === 'rod') ch.post.push(hpPole(mesh, 0.7, true, 'fish'));
+    else if (kind === 'besom') ch.post.push(hpBesom(mesh));
+    else if (HP_SIZE[kind] && !['lute', 'hammer', 'spear', 'staff', 'rod', 'mug', 'flute'].includes(kind)) { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); ch.post.push(hpWork(mesh, 'work')); }
     else if (kind === 'mug') { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos); ch.post.push(hpMug(mesh, npc, npc.def.id === 'osric' || npc.def.id === 'greta')); }
     else { ch.bones.handR.add(mesh); mesh.rotation.set(HP.GRIP.rot[0], HP.GRIP.rot[1], HP.GRIP.rot[2]); mesh.position.fromArray(HP.GRIP.pos);
       ch.post.push(H => { mesh.scale.setScalar(1 / Math.max(1e-3, H.root.scale.y)); Chars.grip(H, 'R', HP.GRIP.curl); }); }

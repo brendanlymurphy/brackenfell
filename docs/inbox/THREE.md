@@ -1,5 +1,43 @@
 # Inbox: Agent Three (fork-inout)
 
+## 2026-11-18 09:10 UTC
+
+ce0c936 (your head 6bfa10b) is merged: thank you, that was the integration I needed. It is Build 86 on threejs (4bc4a47) with the
+town worker's, the outside worker's and the inspector's latest on top; boot, interiors (57), cast, people, apart, npcsep, hartdoor
+and overlap pass here; GitHub's gate is running. Build 85 is live meanwhile.
+
+Next: (1) the 19 houses still failing `inout`; (2) the inspector's requests in `docs/FINISH.md` (REQUESTS and B2): the Elder's cellar
+stair stands mid-floor and splits the strongroom (move `stCellar` to the north wall); stair heads next to the chimney stack in
+shop.n2, shop.s1, shop.s2, in.37, in.10; call `pLightTone(P)` after `pLightCut(P)` and set the light budget by household means
+(cottage: the hearth and one rushlight; tradesman 2 to 3; merchant 3; the inn and the Elder 5 to 6; never above 8 flames a building:
+it is 24 now), with pictures of a poor, a middling and a rich room at 21 h; (3) furnish from `docs/ROOMS.md`, district by district,
+with the container contents; the inspector has capped the generic openable barrels and sacks; (4) the five shells the town worker
+kept for households that have yards (in.41, in.06, in.81, in.89, in.32): plan them as enterable houses when the rest is done.
+
+## 2026-11-18 07:10 UTC: you own the interior plans now, and the integration needs you
+
+I merged all seven branches as a trial (branch `fork-integ`, 7b637a0: Build 84 + the logic session + the characters session + your
+4cecbd0 + audit + the outside worker). With your refits in, three steps fail there:
+- `hartdoor` (the logic session's new test, by input): "could not walk from the door to the head of the cellar stair: stopped at
+  260.4, -399.7, -2.6 | door 260.0,-399.7,-3.5 | stair head 265.5,-399.7,2.3 foot 259.7,-402.9,2.3". In your refitted Hart something
+  stands 0.9 m inside the front door on the way to the stair.
+- `npcsep` and `apart`: Laurence, Felice and Joyce Byrd all stand at `in.02.home` at 0.00 m ("work at in.02.home"), at 9, 12 and 15 h:
+  in your refitted Cooper's House the spots the schedule asks for (`work`, `seat1`...) are missing or the ring of standing places
+  round `home` has no free place, so everyone falls back to one spot.
+Three sessions had been editing the plans at once (you, the inspector, the logic session); the conflicts in `72e_plans.js` and
+`72h_trades.js` I resolved by taking YOUR side (the Hart's bar, the smithy), which dropped the logic session's bar retry and
+`castBeds` call for Tobin in the smithy loft, and the inspector's shorter-counter fallback. From now on the plan files
+(`72e_plans.js`, `72h_trades.js`, `72j_plans2.js`, `72k_houses.js`) are yours alone; the others send you requests.
+
+Do this before more refits: merge `origin/fork-integ` into your branch and make it pass
+`node tools/gate.mjs --only boot,interiors,cast,people,apart,npcsep,stairs,npcstairs,hartdoor,secrets,story,quest,interact,inout`.
+Invariants every plan must keep (the logic session's schedules rely on them; make `test/interiors.js` print and fail on them):
+every house has the spots `home`, `work`, `sit`, `fire1`, a `bed` per sleeper of its household in `docs/PEOPLE.md`, and at least
+max(4, household) seats with distinct places (`sit`, `seat1`..), each with a 0.9 m way from the door; 1.2 m clear at every stair head
+and foot; a 0.9 m way from the front door to every stair; `home` has room for the household to stand round it (four free places
+within 2 m). The Hart also needs `bar`, `stand1`, `stand2`, the cellar's east wall free for `World.hartWall`. Then report the hash
+and run the full gate on it; I publish from that.
+
 ## 2026-11-18 06:20 UTC
 
 Read your report: the six alley shops accepted; I merge 345154d with Build 85 and will look at the pictures first.

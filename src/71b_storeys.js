@@ -202,3 +202,21 @@ function innGallery(c) {
   c.interact(5.0, Hf + 0.9, -3.9, { kind: 'read', id: 'inn.note', title: 'A note on the table', text: 'Traveller — the bed by the window is yours for as long as you stay. Breakfast when the cock crows, ale when the sun sets. — G.', r: 1.5 });
   return S;
 }
+
+// [inout] a ladder to a loft through a trap door (coordinator, Build 85: lofts under the roof are reached this way; villagers do not use them).
+// Drawn in its own frame: the foot at (0, 0, 0) on the floor below, leaning back toward -x to the trap's edge at height h; 75 degrees from the floor.
+// Two square stiles, round rungs every 0.28 m, the stiles running 0.9 m above the trap so a hand has something to take; the framed trap and its lid propped open.
+function inoutLadder(m, h, wid) {
+  wid = wid || 0.5; const lean = h / Math.tan(75 * PI / 180), top = h + 0.9, ang = Math.atan2(lean, h), len = top / Math.cos(ang);
+  m.mat(MAT.TIMBER, COL.wood, 0.7);
+  for (const sz of [-wid / 2, wid / 2]) { m.push().T(0, 0, sz); m.RZ(ang); m.box(-0.03, 0, -0.025, 0.03, len, 0.025); m.pop(); }
+  m.mat(MAT.TIMBER, COL.woodDark, 0.7);
+  for (let y = 0.28; y < top - 0.1; y += 0.28) { const x = -lean * (y / h); m.push().T(x, y, 0); m.RX(PI / 2); m.cyl(0, -wid / 2, 0, 0.018, 0.018, wid, 6, 0); m.pop(); }
+}
+// the trap in the floor above: a frame round the opening (w along x, d along z) and the lid standing open on its hinge at the -x edge
+function inoutTrap(m, w, d) {
+  m.mat(MAT.TIMBER, COL.timberDark, 0.7);
+  m.box(-0.06, -0.1, -d / 2 - 0.06, w + 0.06, 0.02, -d / 2); m.box(-0.06, -0.1, d / 2, w + 0.06, 0.02, d / 2 + 0.06);
+  m.box(-0.06, -0.1, -d / 2, 0, 0.02, d / 2); m.box(w, -0.1, -d / 2, w + 0.06, 0.02, d / 2);
+  m.mat(MAT.PLANKS, COL.wood, 0.7); m.push().T(0, 0.02, 0); m.RZ(-1.2); m.box(0, -0.04, -d / 2 + 0.02, w - 0.04, 0, d / 2 - 0.02); m.mat(MAT.METAL, COL.black); m.box(w * 0.4, -0.05, -0.04, w * 0.55, -0.04, 0.04); m.pop();
+}
