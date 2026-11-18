@@ -149,7 +149,11 @@ function dressHall(P, room, o) {
   const side = o.hearth || 's', hh = o.hh !== undefined ? o.hh : pHearth(P, room, side, o.hw || 1.7, { cauldron: true, at: o.hearthAt });
   P.hall = { room, hh };
   const near = hh ? hh.front.slice() : pCentre(room); near[0] += o.dx || 0; near[1] += o.dz === undefined ? (side === 's' ? -1.8 : 0) : o.dz;
-  const dn = pDining(P, room, o.len || 2.0, 0.9, { near, items: o.items, n: 4 });
+  let dn = pDining(P, room, o.len || 2.0, 0.9, { near, items: o.items, n: 4 });
+  // [cast] the back room of a shop and the floor of a workshop are small: the table for four did not fit and the household ate standing (no seat anchors).
+  // A smaller table then, and failing that a bench against a wall: somewhere for the people of the house to sit to their meal.
+  if (!dn) dn = pDining(P, room, 1.3, 0.75, { near, items: (o.items || []).slice(0, 3), n: 2 }) || pDining(P, room, 1.0, 0.7, { near, items: (o.items || []).slice(0, 2), n: 2 });
+  if (!dn) for (const sd of ['e', 'w', 'n', 's']) { const bn = pAgainst(P, room, sd, P.id + '.mealbench', 1.3, 0.42, 0.46, +1, pdBench(1.3), {}); if (bn) { const yw = { n: PI, s: 0, w: PI / 2, e: -PI / 2 }[sd], al = sd === 'n' || sd === 's'; [-0.33, 0.33].forEach((q, i) => pSit(P, i ? 'seat' + i : 'sit', bn.cx + (al ? q : 0), bn.cz + (al ? 0 : q), yw, k)); break; } }
   if (dn) {
     dn.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], k));
     pPut(P, room, P.id + '.rug', dn.x, dn.z, 0, dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, 0.02, pdRug(dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, o.rug || DYE.red), { flat: true, noClear: true });
