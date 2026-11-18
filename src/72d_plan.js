@@ -70,7 +70,7 @@ function pLayout(P) {
     const face = wl => wl.ax === 'x' ? (wl.ns < 0 ? 'front' : 'back') : (wl.ns < 0 ? 'left' : 'right');
     const wl = P.walls.find(q => q.ext && q.k === w.k && face(q) === w.face && w.pos - 0.8 >= q.a - 1e-6 && w.pos + 0.8 <= q.b + 1e-6);
     if (!wl) { P.err.push('window ' + w.face + ' L' + w.k + ' at ' + w.pos + ' is on no outside wall'); continue; }
-    if (wl.open.some(o => Math.abs(o.pos - w.pos) < o.hw + 1.0)) { P.err.push('window ' + w.face + ' L' + w.k + ' at ' + w.pos + ' runs into another opening'); continue; }
+    if (wl.open.some(o => Math.abs(o.pos - w.pos) < o.hw + 1.0)) { (P.winClash = P.winClash || []).push(w); continue; }      /* two openings the shell draws too close to stand at both: one inside, the clash reported (test/inout.js) */
     const room = [...wl.rooms].map(id => P.rooms[id]).find(r => wl.ax === 'x' ? w.pos >= r.x0 && w.pos <= r.x1 : w.pos >= r.z0 && w.pos <= r.z1);
     wl.open.push({ type: 'win', pos: w.pos, hw: 0.8, kind: w.kind || 'Wide_Flat', glass: null }); P.windows.push({ wall: wl, pos: w.pos, kind: w.kind || 'Wide_Flat', k: wl.k, room });
   }
@@ -598,13 +598,18 @@ if (TEST && TEST.audit) { const _iw = infWalls; infWalls = function (B, MS, o) {
 const SHELL_REC = {};
 { const _ks = kitShell; kitShell = function (c) {
   const kb = Kit.batch, rec = SHELL_REC[c.site.id] = [];
-  Kit.batch = function (o) { const B = kb.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_/.test(name)) rec.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; };
+  Kit.batch = function (o) { const B = kb.call(Kit, o), ad = B.add; B.add = function (name, xf, oo) { if (!(oo && oo.zone) && /^Window_|^Door_\d|^DoorFrame_|^Balcony_|^Floor_|^gen_(dress|dormer|cross|fbox)_/.test(name)) rec.push({ name, M: Kit.matrix(xf).clone() }); return ad.apply(this, arguments); }; return B; };
   try { return _ks.apply(this, arguments); } finally { Kit.batch = kb; } }; }
 function shellOpenings(c) {
   const rec = SHELL_REC[c.site.id] || [], inv = new THREE.Matrix4().fromArray(c.Mx).invert(), v = new THREE.Vector3(), w = c.w, d = c.d, H = c.H, raw = [];
-  for (const r of rec) {
-    const p = Kit.pieces[r.name]; if (!p) continue; let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
-    for (let i = 0; i < 8; i++) { v.set(i & 1 ? p.max[0] : p.min[0], i & 2 ? p.max[1] : p.min[1], i & 4 ? p.max[2] : p.min[2]).applyMatrix4(r.M).applyMatrix4(inv); mn = [Math.min(mn[0], v.x), Math.min(mn[1], v.y), Math.min(mn[2], v.z)]; mx = [Math.max(mx[0], v.x), Math.max(mx[1], v.y), Math.max(mx[2], v.z)]; }
+  const glass = [];      /* windows drawn in generated pieces (an end wall's face, a dormer, a gable): each upright glass quad, as a box */
+  for (const r of rec) { if (!/^gen_/.test(r.name)) continue; const p = Kit.pieces[r.name]; if (!p) continue;
+    for (const q of p.prims) { if (!/Glass/.test(q.mat && (q.mat.name || q.mat))) continue; const ps = q.pos, ix = q.idx; if (!ps || !ix) continue;
+      for (let i = 0; i + 5 < ix.length; i += 6) { let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9]; for (const vi of [ix[i], ix[i + 1], ix[i + 2], ix[i + 5]]) { v.set(ps[vi * 3], ps[vi * 3 + 1], ps[vi * 3 + 2]).applyMatrix4(r.M).applyMatrix4(inv); mn = [Math.min(mn[0], v.x), Math.min(mn[1], v.y), Math.min(mn[2], v.z)]; mx = [Math.max(mx[0], v.x), Math.max(mx[1], v.y), Math.max(mx[2], v.z)]; }
+        if (mx[1] - mn[1] > 0.3) glass.push({ name: 'Window_gen', mn, mx }); } } }
+  for (const r of rec.filter(q => !/^gen_/.test(q.name)).concat(glass)) {
+    const p = r.mn ? { min: [0, 0, 0], max: [0, 0, 0] } : Kit.pieces[r.name]; if (!p) continue; let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+    if (r.mn) { mn = r.mn; mx = r.mx; } else for (let i = 0; i < 8; i++) { v.set(i & 1 ? p.max[0] : p.min[0], i & 2 ? p.max[1] : p.min[1], i & 4 ? p.max[2] : p.min[2]).applyMatrix4(r.M).applyMatrix4(inv); mn = [Math.min(mn[0], v.x), Math.min(mn[1], v.y), Math.min(mn[2], v.z)]; mx = [Math.max(mx[0], v.x), Math.max(mx[1], v.y), Math.max(mx[2], v.z)]; }
     const x = (mn[0] + mx[0]) / 2, z = (mn[2] + mx[2]) / 2, ds = { front: Math.abs(z + d / 2), back: Math.abs(z - d / 2), left: Math.abs(x + w / 2), right: Math.abs(x - w / 2) }; let wall = 'front'; for (const k in ds) if (ds[k] < ds[wall]) wall = k;
     const kind = /^Window_/.test(r.name) ? 'win' : /^Balcony_/.test(r.name) ? 'balc' : /^Floor_/.test(r.name) ? 'floor' : 'door', fb = wall === 'front' || wall === 'back';
     raw.push({ name: r.name, y1: mx[1], kind, wall, u: fb ? x : z + d / 2, u0: fb ? mn[0] : mn[2] + d / 2, u1: fb ? mx[0] : mx[2] + d / 2, y: (mn[1] + mx[1]) / 2, y0: mn[1], out: fb ? Math.max(Math.abs(mn[2]), Math.abs(mx[2])) - d / 2 : Math.max(Math.abs(mn[0]), Math.abs(mx[0])) - w / 2, win: /Thin_Round/.test(r.name) ? 'Thin_Round' : /Wide_Round/.test(r.name) ? 'Wide_Round' : 'Wide_Flat' });

@@ -124,6 +124,7 @@ for (const h of houses) {
     const mid = wn === 'back' || wn === 'front' ? ((c0.x0 + c0.x1) / 2 - cx0) * kx : ((c0.z0 + c0.z1) / 2 - B0.z0) * kz;
     row.cellarWhere = wn ? sideTxt(wn, mid) + (wn === 'front' ? ': a grating at the foot of the wall' : ': a hatch with two leaves against the wall, or three steps down to a low door') : 'the cellar touches no outside wall of the plan: a grating in the yard or none';
   }
+  if (P.winClash && P.winClash.length) row.clash = P.winClash.map(w => w.face + ' wall, level ' + w.k + ': two openings drawn less than 1 m apart; one is kept inside');
   if (P.blockedWins && P.blockedWins.length) row.blocked = P.blockedWins.map(f => sideTxt(f.wall, f.wall === 'front' || f.wall === 'back' ? f.u : f.u) + ', level ' + f.lv + ': opens into `' + f.blocked + '`');
   if (P.wins) {
     row.needWin = [];
@@ -175,6 +176,8 @@ for (const r of rows) if (r.cellarWhere) md += `| \`${r.id}\` | ${r.name} | ${r.
 md += `\n### Rooms with an outside wall and no window in the shell\n\nOnly buildings whose plan already takes its windows from the shell.\n\n| id | name | room: where a window is wanted |\n|---|---|---|\n`;
 for (const r of rows) if (r.needWin && r.needWin.length) md += `| \`${r.id}\` | ${r.name} | ${r.needWin.join('; ')} |\n`;
 md += `\n### Windows on the shell that open into the house next door (left out inside; remove them outside)\n\n| id | name | where |\n|---|---|---|\n`;
+md += `\n### Openings drawn on top of one another\n\n| id | name | where |\n|---|---|---|\n`;
+for (const r of rows) if (r.clash) md += `| \`${r.id}\` | ${r.name} | ${r.clash.join('; ')} |\n`;
 for (const r of rows) if (r.blocked) md += `| \`${r.id}\` | ${r.name} | ${r.blocked.join('; ')} |\n`;
 const line = T.failing ? 'inout FAIL ' + T.failing : 'inout PASS';
 if (typeof window.__write === 'function') { await window.__write('docs/INOUT.md', md); await window.__write('shots/inout.json', JSON.stringify({ totals: T, rows }, null, 1)); }
