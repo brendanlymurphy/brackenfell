@@ -1,5 +1,14 @@
 # Reports from Agent New (fork-audit), newest first
 
+## 2026-11-18 (inbox of 15:45 UTC), working on the live build (Build 88, built from origin/main)
+
+**1. Pointers replayed (done).** `docs/audit/POINTERS.md`, new dated section at the top; pictures `docs/audit/pointer_b88_*.jpg`. The Hart's
+cellar works from the front door by held keys only: down the stair, round its foot, "Look at the fresh brick" with only the pointer,
+"Pull at the fresh brick" once told, then the smugglers' door into the tunnel. Stage 7, 8 and 9 marks and the crypt marks inside the chapel
+are fixed. Tobin's note says east now and the stone works from the wall foot. Wren's frostcap is north-west of the gate. Changed but still
+not right: the boat-house doors now answer honestly (locked, keys with Wenn) and Wenn has no key; the "Hidden Yard" is still a name with no
+place. The cellar corner is nearly black in daylight.
+
 ## 2026-11-18 (inbox of 04:10 UTC)
 
 Branch `fork-audit`. No file under `src/` is touched. Headless throughout: nothing heard, nothing seen in motion, no phone.

@@ -1,4 +1,29 @@
-# Pointers: every text or mark that sends the player somewhere (Build 83)
+# Pointers: every text or mark that sends the player somewhere
+
+## 2026-11-18: the high and medium findings replayed on the live build (Build 88)
+
+Built from `origin/main` (Build 88). Played by input with `test/audit/hart_play.mjs` (the Hart, from the title screen and the front door by
+held keys only, no help) and `test/audit/pointerplay.mjs --cases test/audit/pointer_cases_b88.json` (the rest; each walk started on the street
+about 12 m from the target). Quest marks measured with `test/audit/marks.js`. Pictures: `pointer_b88_hart.jpg`, `pointer_b88_others.jpg`,
+`pointer_b88_stone.jpg`. Headless: nothing heard, nothing seen in motion.
+
+| Pointer | Build 83 | Build 88 | Verdict |
+|---|---|---|---|
+| The Hart's fresh brick, from the front door, only the pointer | Behind the cellar wall, inside the ground; no prompt | In through the front door, along the common room to the stair head (at the hall's north side, by the rail), down the stair, round its foot, to the bricked doorway on the cellar's east wall: prompt "Look at the fresh brick", E: "Newer brick than the rest. Just a wall, unless you know what is behind it." Compass at the wall reads between NE and E. | **Fixed** |
+| The same, once told | No prompt | "Pull at the fresh brick": the note "Behind the bricks", the strongbox key, 2 silver, 40 gold, "A secret of Brackenfell: 1 of 9". Then "Go down by the smugglers' door": E takes the player into the tunnel (cell `mine`). | **Fixed** |
+| Quest stage 7 mark inside the Hart | The front door | The cellar stair head, 7 m away | **Fixed** |
+| Stages 8 and 9 mark from the square | 1.1 km SSE at nothing | The Hart's front door, 13 m north: the way down | **Fixed** (stage 9, "Decide what is owed at the Bread Cave", also points at the Hart, not at the shore cleft that is the other way in; acceptable) |
+| Crypt stages 0 to 2 and main stage 2 inside the chapel | The chapel door, every stage | The sacristy chest (12 m), the crypt gate (11 m), the reliquary (7 m) | **Fixed** |
+| The boat-house doors | Drawn only | "Knock on the boat-house door": "Nobody answers. It is locked, and the keys are with Old Wenn at the boatyard." Wenn still gives no key. | **Changed**: honest now, still a dead end |
+| Tobin's stone | "West of the plaque"; 4.5 m east of it | The note now says "east of the plaque". From the foot of the terrace wall the prompt "Push the crooked stone" shows within about 1 m. The bot, sent on the villagers' paths, stood on top of the terrace above the stone and got nothing: a player who follows the path, not the wall foot, can miss it. | **Fixed**, with that caveat |
+| The Hidden Yard | Not built | Still not built. The sack's place is now a small yard with a well, a bench and a stool ("Somebody comes here to be alone"); the sack's prompt reads "Look in the grass by the fence". The text still names "the Hidden Yard", which no sign or map names. | **Changed**, name still unfindable |
+| The Bread Cave | Worked; 24 m from the water | Works: "Go into the cave", E enters; on entering, "The Bread Cave. Twelve stand in a row, and none of them breathes." Still on a hillock, not by the water. | Works |
+| Wren's frostcap "north-west of the gate" | Due north, outside the palisade | `frostcap1` moved to (-70.3, -17.5): north-west of the west gate, outside it. The bot stopped 6 m short of it. | **Fixed** |
+
+One more thing seen: the cellar is almost black at the bricked doorway in daylight (`pointer_b88_hart.jpg`, pictures 5 to 9); the prompt is the
+only sign anything is there.
+
+## Build 83: the first audit
 
 The owner, after playing: "all these things point to a door in the Hart that doesn't even exist, like there is no cellar door". This audits
 every pointer: each spoken line, note, sign, board, quest stage, journal entry, rumour and compass or map mark that names a place or a thing.

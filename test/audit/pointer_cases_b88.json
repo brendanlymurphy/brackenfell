@@ -1,0 +1,10 @@
+[
+ { "tag": "r01_hart_pointer_only", "text": "Main quest stage 7, with only the pointer: from the Hart's front door to 'the east cellar wall, newer brick than the rest'", "id": "sec.wall", "enter": "inn", "quest": ["main", 7] },
+ { "tag": "r02_hart_told", "text": "The same, once told (hear_hartledger, act2): pull the brick, then the smugglers' door", "id": "sec.wall", "enter": "inn", "quest": ["main", 7], "flags": { "act2": 1, "hear_hartledger": 1 }, "again": "door.tunnel.in" },
+ { "tag": "r06_boathouse", "text": "The boatwright's board: 'The doors under the quay are the boat-houses: knock first, the keys are with Old Wenn'", "x": 11.6, "y": 0.6, "z": 74.9 },
+ { "tag": "r07_west_of_plaque", "text": "Tobin's box: 'the stone with the crooked mortar, west of the plaque' (stood west of the plaque)", "x": -27.0, "y": 1.3, "z": 15.3 },
+ { "tag": "r07b_stone", "text": "The loose stone itself", "id": "sec.stone", "flags": { "sec_bell": 1 } },
+ { "tag": "r08_hidden_yard", "text": "'She went to ground in the Hidden Yard. Something is wedged under the well-lip.'", "id": "sec.magpie" },
+ { "tag": "r09_bread_cave", "text": "'THE BREAD CAVE. West shore, past the reeds, under the grey rock'", "id": "door.cave.in", "flags": { "act2": 1, "sec_wall": 1 } },
+ { "tag": "r10_frostcap", "text": "Wren: 'Forest edge, north-west of the gate'", "id": "frostcap1" }
+]

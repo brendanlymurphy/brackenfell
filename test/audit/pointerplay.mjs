@@ -2,7 +2,7 @@
 // Takes a picture at each thing met and writes shots/audit/firstten.json (the timeline). usage: node test/audit/firstten.mjs [--size 844x390]
 import { chromium, CHROME } from '../pw.mjs'; import http from 'node:http'; import fs from 'node:fs';
 const A = process.argv.slice(2), size = (A.includes('--size') ? A[A.indexOf('--size') + 1] : '844x390').split('x').map(Number);
-const root = new URL('../../', import.meta.url).pathname, OUT = root + 'shots/audit/pp2/'; fs.mkdirSync(OUT, { recursive: true });
+const root = new URL('../../', import.meta.url).pathname, OUT = root + 'shots/audit/' + (A.includes('--out') ? A[A.indexOf('--out') + 1] : 'pp3') + '/'; fs.mkdirSync(OUT, { recursive: true });
 const TYPES = { html: 'text/html', js: 'text/javascript', png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', glb: 'model/gltf-binary', json: 'application/json', css: 'text/css', m4a: 'audio/mp4' };
 const port = 9700 + Math.floor(Math.random() * 200);
 const srv = http.createServer((q, s) => { try { const u = decodeURIComponent(q.url.split('?')[0]); const f = root + (u.endsWith('/') ? u.slice(1) + 'index.html' : u.slice(1)); const b = fs.readFileSync(f); s.writeHead(200, { 'content-type': TYPES[f.split('.').pop()] || 'application/octet-stream' }); s.end(b); } catch (e) { s.writeHead(404); s.end('nf'); } }).listen(port);
@@ -52,6 +52,7 @@ const watch = async (secs, tag, note) => { for (const d of [0, 120, 120]) { awai
 const CASES = JSON.parse(fs.readFileSync(A[A.indexOf('--cases') + 1], 'utf8'));
 for (const c of CASES) await step(c.tag, async () => {
   if (c.flags) await ev(f => { Object.assign(S.flags, f); }, c.flags);
+  if (c.id) { const q = await ev(id => { const it = World.interact.find(i => i.id === id); return it ? it.p.slice() : null; }, c.id); if (!q) { T.push({ pic: '', note: c.tag + ': no interact with id ' + c.id }); return; } c.x = q[0]; c.y = q[1]; c.z = q[2]; }
   if (c.quest) await ev(q => { S.q[q[0]] = { stage: q[1], done: false, t: Date.now() }; if (typeof uiObjective === 'function') uiObjective(); }, c.quest);
   await ev(() => { if (World.cell) { game.leave(); AUDFT.idle(0.5); } if (UI.talk) endTalk(); if (UI.reader) closeReader(); });
   if (c.enter) { const h = await ev(id => AUDFT.house(id), c.enter); if (h) { await ev(q => AUDFT.go(q.out[0], q.out[2], 0.9), h); await ev(q => AUDFT.face(q.c[0], q.c[2], q.c[1]), h); for (let n = 0; n < 20; n++) { const s0 = await ev(() => AUDFT.state()); if (/^Enter/.test(s0.prompt)) break; await ev(q => { AUDFT.tick({ KeyW: true }, 0, 0); AUDFT.face(q.c[0], q.c[2], q.c[1]); }, h); } await pressE(); await ev(() => AUDFT.idle(1.5)); } }
@@ -61,6 +62,7 @@ for (const c of CASES) await step(c.tag, async () => {
   const d = await ev(q => +Math.hypot(q.x - Player.pos[0], q.z - Player.pos[2]).toFixed(1), c);
   await shot(c.tag, c.text + ' | walk: ' + log.slice(-1) + ' | ended ' + d + ' m from it'); await pressE(); await ev(() => AUDFT.idle(0.8)); await shot(c.tag + '_E', 'after E');
   const s = await ev(() => AUDFT.state()); if (s.talk) { await ev(() => endTalk()); } await ev(() => { if (UI.reader) closeReader(); });
+  if (c.again) { const q = await ev(id => { const it = World.interact.find(i => i.id === id); return it ? it.p.slice() : null; }, c.again); if (q) { await ev(p => AUDFT.face(p[0], p[2], p[1]), q); await ev(() => AUDFT.idle(0.5)); await shot(c.tag + '_then', 'facing ' + c.again); await pressE(); await ev(() => AUDFT.idle(2)); await shot(c.tag + '_then_E', 'after E at ' + c.again); } }
 });
-fs.writeFileSync(root + 'shots/audit/pointerplay.json', JSON.stringify({ timeline: T, toasts: await ev(() => AUDFT.toasts) }, null, 1));
+fs.writeFileSync(root + 'shots/audit/' + (A.includes('--out') ? A[A.indexOf('--out') + 1] : 'pp3') + '.json', JSON.stringify({ timeline: T, toasts: await ev(() => AUDFT.toasts) }, null, 1));
 await browser.close(); srv.close(); process.exit(0);
