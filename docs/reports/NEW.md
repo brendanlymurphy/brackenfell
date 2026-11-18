@@ -25,4 +25,11 @@ including `in.39`, the first door inside the gate.
 in the fireplace; Diggory and Roger at the stalls are the same person; the drowned man lies alone with no prompt; the sword is out for ten
 minutes; the first day lasts ten minutes.
 
-**2. Pointers: in progress next.**
+**2. Pointers: in progress.** The Hart's cellar first, played by input (commit 19ecc48, pictures `docs/audit/pointer_hart_cellar.jpg`,
+`pointer_hart_play.jpg`): the owner is right. The stair down to the cellar exists. But the "fresh brick" and the smugglers' door are placed at
+(266.5, -402.2, 4.6), which is **1.25 m behind the cellar's back wall, inside the earth**: the cellar room ends at z 3.35. From inside the cellar
+that place is a plain wall with a shelf of sacks in front of it, in the dark. The brick panel exists and is seen only from behind (camera
+inside the rock). The prompt works through the wall only within 2.2 m; the bot, stopped 2.1 m away by a cask and sacks, got none, before or
+after the story flags. Rowan's line says "the east cellar wall"; it is the south wall's east end. Fix (for whoever owns `82c_secrets.js` and
+`94d_act2.js`): move the brick and the door to z 3.35 (the wall's face), clear the cask and sacks in front, and light that corner. The full
+pointer list is being extracted now.
