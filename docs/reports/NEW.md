@@ -27,6 +27,11 @@ call empty from the door: `high.c` hall, `elder` solar, `in.08` solar, `in.111` 
 `in.113` work (the boatwright's shows no boat). Ten emptiest houses a player is most likely to enter: Scribe's, Baker's, Fletcher's, the Forge's
 back rooms, the Hart upstairs, the Mill, Ferrin's, the Pottery, the Bookstall, the Draper.
 
+**5. The edge on Build 88 (done, `docs/audit/EDGE.md`, dated section; `edge_b88.jpg`).** Two dry ways in that are not gates. The south-west
+one is still open: the palisade now turns and runs further south but ends short of the lake, so the shore path at about (-45 to -30, 82.6) goes
+round it. New: the south-east. The east-bank palisade stops north of the mill, the bank south of it is open meadow to the lake, and the mill's
+footbridge (z 13.4) crosses into town with no gate.
+
 **6. Sound (done, `docs/audit/VOICE_LENGTHS.md`).** The 529 recordings are only on `fork-cull` (main and threejs have 254); measured from
 there with ffmpeg. Median 12.6 characters per second of speech. To listen to first: the 20 fastest (Tobin 19.8, Greta 19.4 and 18.9, Alison,
 Alaric) and the 20 slowest (mostly two-word barks read with long gaps: Finn's "Shh. Fish." 3.2); 3 clips with more than 0.5 s of silence at an

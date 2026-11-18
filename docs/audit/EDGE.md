@@ -1,4 +1,20 @@
-# The new town edge and yards against the blueprint (Build 83)
+# The town edge and yards against the blueprint
+
+## 2026-11-18: ways in that are not a gate, on the live build (Build 88)
+
+`python3 test/audit/edge_ways.py shots/audit/world_b88.json shots/audit/water_b88.json --shut 66,2.4`: every gate the game lists shut (the
+west gate's three posts) and the east bridge's gatehouse shut by hand, water deeper than 0.5 m a barrier, a flat flood from six points outside to
+the square. Pictures `edge_b88.jpg` (from above and at eye height). Water depths read in the game with `World.waterAt`.
+
+| Way in | Build 83 | Build 88 | Picture |
+|---|---|---|---|
+| South-west, round the palisade's end by the lake | Open at (-31 to -40, 74 to 79) | **Still open.** The palisade now turns a corner and runs further south, but it still ends short of the water: the walk goes south outside it along x -48.6 to z 82.6, east along the dry shore (-45 to -30, 82.6) and in at (-29.6, 78.4). 282 m from outside the west gate (the gate itself is about 106 m). At eye height there is also a gap with a shrub where two runs of the palisade meet (`edge_b88.jpg`, bottom right). | sw_above, sw_eye |
+| South-east, round the east-bank palisade and over the mill's footbridge | Not found (the east looked closed) | **Open.** The palisade on the river's east bank stops north of the mill; south of it the bank is open meadow down to the lake. The walk comes from the south-east, north along the east bank (62.6, 57.6 to 17.6, all dry) and crosses the river by the mill's footbridge at z 13.4 into the town: no gate on that bridge. 179 m from (110, 60). | se_above, se_eye, se_bridge |
+| North, the farm road, the lake front | | Closed on dry land (the north road and the farm need the gates; the lake front is water) | |
+
+Fix: carry the south-west run into the water or end it at a gate; put a gate on the mill footbridge or close the east bank down to the lake.
+
+## Build 83
 
 Measured on `threejs` at Build 83 (the log palisade round the town). Scripts: `test/audit/rules.py` (via `score.mjs`),
 `test/audit/edge_shots.js`, `test/audit/water.js`, `test/audit/lawn.js` and `lawn.py`. Pictures: `edge83_sheet.jpg` (the edge from above on
