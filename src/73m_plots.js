@@ -63,7 +63,6 @@ function plotsCompute() {
 }
 function buildPlots(bucket) {
   if (TEST && TEST.plots === 0) return; World.plotC0 = World.colliders.length;
-  { const raw = bucket; bucket = (x, z) => { const m = raw(3e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 400; m.lowDist = 36; return m; }; }      // [fx3] plot walls and trade sit in 44 m cells of their own, drawn out to 60 m on Low
   const P = plotsCompute(), R = rng(8831), gy = (x, z) => Terrain.y(x, z);
   const W = 0.3, H = 1.1;
   const wcol = (m, x0, z0, x1, z1, y0, y1) => {      /* a wall's collider is left out where a prop already stands in its line (the prop is solid itself): two solids never overlap */
