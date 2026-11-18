@@ -125,11 +125,33 @@ function pCands(room, near, step) {
 function pLaneOk(P, room, b, sg, rot, bl) {
   const lw = 0.9, bd = 0.23, o = { h: 0.5, noClear: true }, side = rot ? rectOf(b[0] + sg * (bd + lw / 2), b[1], lw, bl) : rectOf(b[0], b[1] + sg * (bd + lw / 2), bl, lw);
   if (pFit(P, room, side, o)) return true;
-  for (const e of [-1, 1]) { const en = rot ? rectOf(b[0], b[1] + e * (bl / 2 + lw / 2), 0.9, lw) : rectOf(b[0] + e * (bl / 2 + lw / 2), b[1], lw, 0.9); if (pFit(P, room, en, o)) return true; }
+  for (const e of [-1, 1]) { const en = rot ? rectOf(b[0], b[1] + e * (bl / 2 + lw / 2), 1.2, lw) : rectOf(b[0] + e * (bl / 2 + lw / 2), b[1], lw, 1.2); if (pFit(P, room, en, o)) return true; }
   return false;
+}
+// [fin] with the extra rectangles standing in the room, a 0.9 m wide way (0.45 m clear of every solid item, 0.3 m of the walls) must still run from the room's doors to every seat given, the hearth front and each stair foot in the room
+function pConnOk(P, room, extra, seats) {
+  const a = room.in, k = room.k, HW = 0.45, st = 0.15, nx = Math.ceil((a.x1 - a.x0) / st) + 1, nz = Math.ceil((a.z1 - a.z0) / st) + 1;
+  const seeds = []; for (const d of P.doors) if (d.k === k && (d.a === room.id || d.b === room.id)) seeds.push([Math.min(a.x1 - 0.3, Math.max(a.x0 + 0.3, d.x)), Math.min(a.z1 - 0.3, Math.max(a.z0 + 0.3, d.z))]);
+  if (!seeds.length) return true;
+  const obs = P.items.filter(i => i.k === k && P_SOLID[i.kind] && (i.kind !== 'floor' || i.h === undefined || i.h > 0.25)).concat(extra);
+  const free = (x, z) => { if (x < a.x0 + 0.3 || x > a.x1 - 0.3 || z < a.z0 + 0.3 || z > a.z1 - 0.3) return false; for (const o of obs) { const dx = Math.max(o.x0 - x, 0, x - o.x1), dz = Math.max(o.z0 - z, 0, z - o.z1); if (dx * dx + dz * dz < HW * HW) return false; } return true; };
+  const seen = new Uint8Array(nx * nz), q = [];
+  const put = (i, j) => { if (i < 0 || j < 0 || i >= nx || j >= nz || seen[i * nz + j]) return; if (!free(a.x0 + i * st, a.z0 + j * st)) return; seen[i * nz + j] = 1; q.push(i, j); };
+  for (const [sx, sz] of seeds) { const i0 = Math.round((sx - a.x0) / st), j0 = Math.round((sz - a.z0) / st); for (let r = 0; r <= 5; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) put(i0 + di, j0 + dj); }
+  if (!q.length) return true;
+  for (let h = 0; h < q.length; h += 2) { const i = q[h], j = q[h + 1]; put(i + 1, j); put(i - 1, j); put(i, j + 1); put(i, j - 1); }
+  const near = (x, z, r) => { const n = Math.ceil(r / st); const i0 = Math.round((x - a.x0) / st), j0 = Math.round((z - a.z0) / st); for (let di = -n; di <= n; di++) for (let dj = -n; dj <= n; dj++) { const i = i0 + di, j = j0 + dj; if (i >= 0 && j >= 0 && i < nx && j < nz && seen[i * nz + j] && Math.hypot(di, dj) * st <= r) return true; } return false; };
+  for (const s of seats) if (!near(s[0], s[1], 0.85)) return false;
+  const hh = P.hall && P.hall.room === room && P.hall.hh; if (hh && hh.front && !near(hh.front[0], hh.front[1], 0.5)) return false;
+  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt && !near(pt[0], pt[1], 0.5)) return false; }
+  return true;
 }
 // a dining table with a bench on each long side: returns { x, z, seats: [[x, z, yaw]] } or null
 function pDining(P, room, len, wid, opt) {
+  opt = opt || {}; if (opt.strictOnly || opt.loose) return pDin(P, room, len, wid, opt);
+  return pDin(P, room, len, wid, opt) || pDin(P, room, len, wid, Object.assign({}, opt, { loose: true }));      /* [fin] a table with a 0.9 m way round it when there is one, else as before */
+}
+function pDin(P, room, len, wid, opt) {
   opt = opt || {}; const c = P.c, items = opt.items || ['mug', 'plate', 'bowl', 'candle', 'loaf'], pts = pCands(room, opt.near);
   for (const rot of opt.rots || [0, PI / 2]) {
     const tw = rot ? wid : len, td = rot ? len : wid;
@@ -139,7 +161,8 @@ function pDining(P, room, len, wid, opt) {
       const bs = [-1, 1].map(sg => rot ? [tx + sg * (wid / 2 + 0.34), tz] : [tx, tz + sg * (wid / 2 + 0.34)]);
       const brs = bs.map(b => rot ? rectOf(b[0], b[1], 0.46, len * 0.9) : rectOf(b[0], b[1], len * 0.9, 0.46));
       if (!brs.every(r => pFit(P, room, r, { h: 0.46 })) || (opt.sideRoom && !brs.every(r => true))) continue;
-      if (!bs.every((b, i) => pLaneOk(P, room, b, i ? 1 : -1, rot, len * 0.9))) continue;      /* [fin] a 0.9 m way to every seat: beside the bench or past one end */
+      if (!opt.loose && !bs.every((b, i) => pLaneOk(P, room, b, i ? 1 : -1, rot, len * 0.9))) continue;      /* [fin] a 0.9 m way to every seat: beside the bench or past one end */
+      { const sp = []; bs.forEach((b, i) => { for (const q of [-0.5, 0.5]) sp.push(rot ? [b[0], tz + q * len * 0.5] : [tx + q * len * 0.5, b[1]]); }); if (!opt.loose && !pConnOk(P, room, [tr, ...brs], sp)) continue; }      /* [fin] the table never cuts a seat, the hearth or a stair off */
       const t = pPut(P, room, P.id + '.' + (opt.id || 'table'), tx, tz, 0, tw, td, 0.78, m => { m.push(); if (rot) m.RY(rot); pdTable(len, wid, items, opt.n || 3, c)(m); m.pop(); }, { surface: true });
       if (!t) continue;
       const seats = [];
@@ -157,11 +180,19 @@ function dressHall(P, room, o) {
   const side = o.hearth || 's', hh = o.hh !== undefined ? o.hh : pHearth(P, room, side, o.hw || 1.7, { cauldron: true, at: o.hearthAt });
   P.hall = { room, hh };
   const near = hh ? hh.front.slice() : pCentre(room); near[0] += o.dx || 0; near[1] += o.dz === undefined ? (side === 's' ? -1.8 : 0) : o.dz;
-  let dn = pDining(P, room, o.len || 2.0, 0.9, { near, items: o.items, n: 4 });
+  let dn = pDining(P, room, o.len || 2.0, 0.9, { near, items: o.items, n: 4, strictOnly: true });
   // [cast] the back room of a shop and the floor of a workshop are small: the table for four did not fit and the household ate standing (no seat anchors).
   // A smaller table then, and failing that a bench against a wall: somewhere for the people of the house to sit to their meal.
-  if (!dn) dn = pDining(P, room, 1.3, 0.75, { near, items: (o.items || []).slice(0, 3), n: 2 }) || pDining(P, room, 1.0, 0.7, { near, items: (o.items || []).slice(0, 2), n: 2 });
-  if (!dn) for (const sd of ['e', 'w', 'n', 's']) { const bn = pAgainst(P, room, sd, P.id + '.mealbench', 1.3, 0.42, 0.46, +1, pdBench(1.3), {}); if (bn) { const yw = { n: PI, s: 0, w: PI / 2, e: -PI / 2 }[sd], al = sd === 'n' || sd === 's'; [-0.33, 0.33].forEach((q, i) => pSit(P, i ? 'seat' + i : 'sit', bn.cx + (al ? q : 0), bn.cz + (al ? 0 : q), yw, k)); break; } }
+  if (!dn) dn = pDining(P, room, 1.3, 0.75, { near, items: (o.items || []).slice(0, 3), n: 2, strictOnly: true }) || pDining(P, room, 1.0, 0.7, { near, items: (o.items || []).slice(0, 2), n: 2, strictOnly: true });
+  if (!dn && o.alt) { const al = o.alt, nr = pCentre(al); dn = pDining(P, al, 1.8, 0.85, { near: nr, id: 'meal', n: 3, items: o.items, strictOnly: true }) || pDining(P, al, 1.3, 0.75, { near: nr, id: 'meal', n: 2, items: (o.items || []).slice(0, 3), strictOnly: true }); if (dn) { dn.seats.forEach((st, i) => pSit(P, i ? 'seat' + i : 'sit', st[0], st[1], st[2], al.k)); pLamp(P, al, dn.x, dn.z); dn = null; o = Object.assign({}, o, { _alt: 1 }); } }      /* [fin] a back room too tight for a table with a 0.9 m way round it: the household eats in the shop */
+  if (!dn && !o._alt) {      /* [fin] a bench against a wall: the first side that leaves a 0.9 m way to both seats; when none does, the first side that takes it */
+    let first = null;
+    for (const sd of ['e', 'w', 'n', 's']) { const sn = pSnap(P, P.c.int), n0 = P.items.length, bn = pAgainst(P, room, sd, P.id + '.mealbench', 1.3, 0.42, 0.46, +1, pdBench(1.3), {}); if (!bn) continue; const yw = { n: PI, s: 0, w: PI / 2, e: -PI / 2 }[sd], al = sd === 'n' || sd === 's', sp = [-0.33, 0.33].map(q => [bn.cx + (al ? q : 0), bn.cz + (al ? 0 : q), yw]);
+      if (pConnOk(P, room, [], sp) || (!first && sd === 's')) { sp.forEach((q, i) => pSit(P, i ? 'seat' + i : 'sit', q[0], q[1], q[2], k)); first = 1; break; }
+      pUndo(P, P.c.int, sn); P.items.length = n0; if (!first) first = { sd }; }
+    if (first && first !== 1) { const sd = first.sd, bn = pAgainst(P, room, sd, P.id + '.mealbench', 1.3, 0.42, 0.46, +1, pdBench(1.3), {}); if (bn) { const yw = { n: PI, s: 0, w: PI / 2, e: -PI / 2 }[sd], al = sd === 'n' || sd === 's'; [-0.33, 0.33].forEach((q, i) => pSit(P, i ? 'seat' + i : 'sit', bn.cx + (al ? q : 0), bn.cz + (al ? 0 : q), yw, k)); } }
+  }
+  if (!dn && !o._alt && !P.spots.sit) dn = pDining(P, room, 1.3, 0.75, { near, items: (o.items || []).slice(0, 3), n: 2, loose: true }) || pDining(P, room, 1.0, 0.7, { near, items: (o.items || []).slice(0, 2), n: 2, loose: true });      /* [fin] last resort: a household with no seat at all */
   if (dn) {
     dn.seats.forEach((s, i) => pSit(P, i ? 'seat' + i : 'sit', s[0], s[1], s[2], k));
     pPut(P, room, P.id + '.rug', dn.x, dn.z, 0, dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, 0.02, pdRug(dn.rot ? 1.6 : 2.2, dn.rot ? 2.2 : 1.6, o.rug || DYE.red), { flat: true, noClear: true });
