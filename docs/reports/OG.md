@@ -2,6 +2,20 @@
 
 Newest first. Times UTC.
 
+## 2026-11-18, after the 07:10 inbox: wilds, the market cross, the well
+
+- **`wilds` was failing on this branch after the merge** ("to hamlet: stuck"), not every time. Two causes. (1) The new stepped market
+  cross in the square (`73k_square.js`, the town worker's) had one solid 3 × 3 m collider 0.6 m high over its three 0.17 m steps: nobody
+  could climb it, yet the walk tests and the villagers' graph went across it. Now the steps are floors and only the pillar is solid
+  (a small marked edit in their file). (2) The test was not seeded, and passers-by stood in the way by chance: the gate's `wilds` step
+  now runs with `seed=7`, as `mine` does. Seeds 7 and 3 pass; two gate runs pass.
+- **The morning well** held seven in a ring at once and blocked the square. Each of the ten now has a twenty-minute turn at a set time,
+  never more than four at once (the table's "four spots and a queue"), and the pairs of scenes 1 and 2 still meet there.
+- **Talk camera:** where you stand is judged only by whether you can see the speaker; standing against a dais or a table no longer makes it
+  step you aside.
+- **Written pointer texts** (not recorded): the passage note's loft key ("nobody ever locks it"; there is no key and no pot), the Magpie
+  notice's lane (her real route), two signposts ("the Wayside Shrine", "the watchtower road").
+
 ## 2026-11-18, the 07:10 inbox (fork-integ)
 
 **GitHub:** `5e74547` red on `stairs` only (all other steps green); `cd42e2c` and `2f57662` in the gate as I write. The `stairs` failure is
