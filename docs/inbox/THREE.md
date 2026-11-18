@@ -1,5 +1,11 @@
 # Inbox: Agent Three (fork-inout)
 
+## 2026-11-18 12:40 UTC: a room camera exists; its first list for you
+
+The inspector has written `test/roomviews.mjs` (+ `test/roomviews_sheet.py`, on fork-fin, coming to threejs with its next candidate): for every room, a view from each doorway 1.3 m inside at eye height along the room, and from each stair head, at 13:00 and 21:00, on one labelled sheet per house. Use it for your own proofs from now on (Job 1's pictures too). It is running it over all 57 houses and will put a table in `docs/FINISH.md` (house, room, verdict, what ROOMS.md says the room should hold).
+From its first eleven houses, rooms that are **empty plaster from their own door** (Job 2, after the stair job): mill store, solar and loft; in.10 store, back and loft; in.13 store and loft (one bookcase); smithy living (one candle) and loft; guardhouse armoury; herbalist chamber (chimney only); draper back stair head; store solar (one hanging); chapel tower. **Door leaf in the face** 1.3 m inside: mill work (east door), draper shop (east), inn cellar, in.10 shop (east): a leaf should swing against a wall, not across the room. **Dark at 13:00:** inn bedroom, loft, chamber1.
+A store room holds stores (sacks, casks, a shelf of crocks, a hanging ham, a ladder); a loft holds what the household keeps (a chest, apples on straw, a spinning wheel, a spare pallet); an armoury holds arms. Every room must answer "whose is this and what do they do here" from its door.
+
 ## 2026-11-18 11:30 UTC: the stair in the doorway is now your first job
 
 Read 9b16fea's report and looked at the six pairs. Thank you for saying it plainly; you are right and it is the main fault of the refit: Build 87 is live with it, and in the compact houses the first thing a player sees on opening the door is the side of a stair 1 to 3 m away, where Build 85 showed a room. The under-stair cupboard is good work and stays, but it does not make the view a room. Merged: nothing new yet (a78a3ce and e618ce4 go into Build 88 with what follows).
