@@ -166,7 +166,7 @@ HFAM.shopfront = (P, c, F) => {
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: F.X(W / 2 - 0.95), z: Dh + 1.25, width: 0.9, tread: 0.2 });
   if (cellar) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: F.X(-(W / 2 - 0.95)), z: Dh + 1.25, width: 0.9, tread: 0.2 });
   pLayout(P);
-  const hh = P.id === 'in.10' ? pHearth(P, back, 's', 1.6, { cauldron: true, at: F.X(0.3), size: 0.45 }) : pHearth(P, back, 's', 1.8, { cauldron: true, at: F.X(-0.2), size: 0.45 });      /* [fin] the hearth leans away from the cellar stair so one arriving from below can walk out */ if (hh) { pPier(P, 1, hh); if (cellar) pPier(P, -1, hh); }
+  const hh = pHearth(P, back, 's', 1.6, { cauldron: true, at: F.X(-(W / 2 - 0.95)) > 0 ? -0.9 : 0.3, size: 0.45 });      /* [fin] the hearth leans away from the cellar stair so one arriving from below can walk out */ if (hh) { pPier(P, 1, hh); if (cellar) pPier(P, -1, hh); }
   P.hall = { room: back, hh }; if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
   hTrade(P, c, shop, F); if (!P.counter) for (const ln of [2.6, 2.0, 1.6]) if (cnt(P, shop, F, ln, ['bottle', 'jar', 'bowl', 'candle'], 'k')) break;          // [c5] every shop has a counter for its keeper to stand behind
   const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, P.id + '.mat', e.x, 1.4, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, F.rug), { flat: true, noClear: true });
