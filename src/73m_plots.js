@@ -71,7 +71,7 @@ function buildPlots(bucket) {
     addBoxCollider(m, x0, z0, x1, z1, y0, y1); };
   const stone = (m, ax, az, bx, bz, h, tone) => {      // a low rubble wall segment with a rounded coping
     const L = Math.hypot(bx - ax, bz - az); if (L < 0.2) return; const cx = (ax + bx) / 2, cz = (az + bz) / 2, ang = Math.atan2(bz - az, bx - ax), g = Math.min(gy(ax, az), gy(bx, bz), gy(cx, cz)) - 0.15;
-    m.push().T(cx, g, cz).RY(-ang); m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.4); m.box(-L / 2, 0, -W / 2, L / 2, h + 0.15 - 0.06 * R(), W / 2, 4); m.pop();
+    m.push().T(cx, g, cz).RY(-ang); m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.4); m.box(-L / 2, 0, -W / 2, L / 2, h + 0.15 - 0.06 * R(), W / 2, 4); if (L > 1.2) for (const e of [-1, 1]) { m.mat(MAT.STONE, [tone * 1.08, tone * 1.04, tone * 0.98], 1.4); m.box(e * (L / 2 - 0.19) - 0.19, 0, -0.2, e * (L / 2 - 0.19) + 0.19, h + 0.3, 0.2, 0); } m.pop();      /* [fx3] a wall ends in a pier, never on a bare cut face (C3) */
     { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.15, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.15; wcol(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + h); }
   };
   const fence = (m, ax, az, bx, bz) => {      // posts and two rails
@@ -84,7 +84,14 @@ function buildPlots(bucket) {
   };
   const slab = (m, ax, az, bx, bz, h, mat, col, th) => {      /* a board fence or a woven hurdle: one solid leaf on the line, posts at the ends */
     const L = Math.hypot(bx - ax, bz - az); if (L < 0.2) return; const cx = (ax + bx) / 2, cz = (az + bz) / 2, ang = Math.atan2(bz - az, bx - ax), g = Math.min(gy(ax, az), gy(bx, bz), gy(cx, cz)) - 0.05;
-    m.push().T(cx, g, cz).RY(-ang); m.mat(mat, col, 1.0); m.box(-L / 2, 0, -th / 2, L / 2, h, th / 2, 4); m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5); for (let k = 0; k <= Math.max(1, Math.round(L / 3.0)); k++) { const px = -L / 2 + L * k / Math.max(1, Math.round(L / 3.0)); m.box(px - 0.06, -0.1, -th / 2 - 0.03, px + 0.06, h + 0.15, th / 2 + 0.03, 4); } m.pop();
+    /* [fx3] never a sheet: posts set in the ground every 2.4 m at most, a top rail and a bottom rail pegged to them, and then boards one by one with a gap between (a board fence), or withies woven in and out of stakes (a hurdle) */
+    m.push().T(cx, g, cz).RY(-ang); const nP = Math.max(1, Math.ceil(L / 2.4)); m.mat(MAT.TIMBER, [0.26, 0.2, 0.15], 0.5);
+    for (let k = 0; k <= nP; k++) { const px = -L / 2 + L * k / nP; m.box(px - 0.065, -0.25, -0.065, px + 0.065, h + 0.12, 0.065, 0); }
+    if (mat === MAT.PLANKS) { m.box(-L / 2, h - 0.22, th / 2 + 0.02, L / 2, h - 0.1, th / 2 + 0.07, 4); m.box(-L / 2, 0.22, th / 2 + 0.02, L / 2, 0.34, th / 2 + 0.07, 4);
+      const bw = 0.2, gap = 0.045, n = Math.max(2, Math.floor((L - 0.1) / (bw + gap))); for (let k = 0; k < n; k++) { const x = -L / 2 + 0.07 + (k + 0.5) * (L - 0.14) / n, hh = h - 0.04 - ((k * 7 + 3) % 5) * 0.025; m.mat(MAT.PLANKS, [col[0] * (0.92 + ((k * 13) % 7) * 0.025), col[1] * (0.92 + ((k * 5) % 7) * 0.02), col[2]], 1.0); m.box(x - bw / 2, 0.02, -th / 2, x + bw / 2, hh, th / 2, 0); } }
+    else { m.mat(MAT.THATCH, [0.5, 0.4, 0.24], 0.6); for (let r = 0; r < 5; r++) { const y = 0.2 + r * (h - 0.35) / 4; m.beam([-L / 2 + 0.05, y, (r % 2 ? 1 : -1) * 0.035], [L / 2 - 0.05, y + 0.03, (r % 2 ? -1 : 1) * 0.035], 0.05, 0.07); }
+      m.mat(MAT.TIMBER, [0.34, 0.26, 0.17], 0.5); const nS = Math.max(2, Math.floor(L / 0.32)); for (let k = 0; k <= nS; k++) { const x = -L / 2 + L * k / nS; m.beam([x, -0.1, 0.0], [x, h - 0.02 - (k % 3) * 0.04, 0.0], 0.05, 0.05); } }
+    m.pop();
     { const ex = Math.abs(Math.cos(ang)) * L / 2 + Math.abs(Math.sin(ang)) * 0.08, ez = Math.abs(Math.sin(ang)) * L / 2 + Math.abs(Math.cos(ang)) * 0.08; wcol(m, cx - ex, cz - ez, cx + ex, cz + ez, g, g + h); }
   };
   const STYLES = ['stone', 'fence', 'board', 'hurdle'];
@@ -350,7 +357,7 @@ function buildWestEdge(bucket) {
       let run = null; const flush = () => { if (run && Math.hypot(run[1][0] - run[0][0], run[1][1] - run[0][1]) > 1.5) { const A = [run[0][0] - nx * 0.8, run[0][1] - nz * 0.8], B = [run[1][0] - nx * 0.8, run[1][1] - nz * 0.8], m = bucket((A[0] + B[0]) / 2, (A[1] + B[1]) / 2); earthBank(m, A, B, 0.6, 0.4, [0.5, 0.5, 0.38]); } run = null; };
       for (let k = 0; k < n; k++) { const t0 = k / n, t1 = (k + 1) / n, A = [a[0] + dx * t0, a[1] + dz * t0], B = [a[0] + dx * t1, a[1] + dz * t1], cx = (A[0] + B[0]) / 2, cz = (A[1] + B[1]) / 2, m = bucket(cx, cz);
         if (roadNear(A, B)) { flush(); (World.edgeGaps = World.edgeGaps || []).push([+cx.toFixed(1), +cz.toFixed(1)]); for (const e of [A, B]) { const g = gy(e[0], e[1]); m.mat(MAT.BARK, [0.45, 0.39, 0.31], 1.0); m.tube([[e[0], g - 0.3, e[1]], [e[0], g + 2.9, e[1]], [e[0], g + 3.3, e[1]]], [0.22, 0.2, 0.03], 8, true); } continue; }
-        const gA = gy(A[0], A[1]), gB = gy(B[0], B[1]); logRow((lv, x, z) => logCell(bucket0, lv, x, z), A, B, t => gA + (gB - gA) * t + 2.5, [nx, nz], i * 7 + k);
+        const gA = gy(A[0], A[1]), gB = gy(B[0], B[1]); logRow((lv, x, z) => logCell(bucket0, lv, x, z), A, B, t => Math.max(gA + (gB - gA) * t, 0.5) + 2.5, [nx, nz], i * 7 + k);      /* [fx3] over a stream the tops stay level with the banks (the logs stand in the bed: a stake weir with the water running through the gaps), no dip in the line */
         const l = Math.hypot(B[0] - A[0], B[1] - A[1]), an = Math.atan2(B[1] - A[1], B[0] - A[0]), g = Math.min(gA, gB, gy(cx, cz)); m.push().T(cx, g - 0.2, cz).RY(-an); addBoxCollider(m, -l / 2, -0.2, l / 2, 0.2, 0, 2.6); World.colliders[World.colliders.length - 1].keep = 1; m.pop();
         if (!run) run = [A, B]; else run[1] = B; }
       flush(); } }
