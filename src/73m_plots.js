@@ -365,7 +365,7 @@ function buildWestgate(bucket) {
 
 /* [fx3] the west edge of the town: the gate is the only way in. Palisade for the stretch beside the gate, then a bank with a hedge on it and a ditch outside, following the ground north to the north wall and south down the town's flank.
    A road that crosses the line leaves a gap with two gate posts. The ditch is painted by the terrain (WEST_EDGE). */
-const WEST_EDGE = { n: [[-62, -8.15], [-62, -15], [-64, -19.5], [-65, -26], [-63, -38], [-58, -49], [-47, -56], [-33, -58.5], [-30, -58.7]], s: [[-62, -2.25], [-62, 5], [-63.5, 9.5], [-65, 16], [-63, 30], [-59, 44], [-52, 56], [-44, 66], [-37, 72.5], [-32, 76.5]], ne: [[8, -58.7], [30, -60.5], [52, -60], [72.7, -57], [72.7, -46.5]], pal: 2 };
+const WEST_EDGE = { n: [[-62, -8.15], [-62, -15], [-64, -19.5], [-65, -26], [-63, -38], [-58, -49], [-47, -56], [-33, -58.5], [-30, -58.7]], s: [[-62, -2.25], [-62, 5], [-63.5, 9.5], [-65, 16], [-63, 30], [-59, 44], [-52, 56], [-44, 66], [-37, 72.5], [-32, 76.5], [-38, 78.4], [-44, 80.5], [-48, 82]], ne: [[8, -58.7], [30, -60.5], [52, -60], [72.7, -57], [72.7, -46.5]], pal: 2 };
 function buildWestEdge(bucket) {
   if (TEST && TEST.plots === 0) return;
   const gy = (x, z) => Terrain.y(x, z), bucket0 = bucket;

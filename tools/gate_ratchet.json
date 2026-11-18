@@ -1,0 +1,15 @@
+{
+ "openings": {
+  "blocked": 57
+ },
+ "inout": {
+  "failing": 19
+ },
+ "geom": {
+  "stretch": 39,
+  "open": 186,
+  "sheets": 6,
+  "kitOpen": 698,
+  "kitSheets": 878
+ }
+}

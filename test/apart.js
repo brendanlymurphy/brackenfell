@@ -15,6 +15,7 @@ for (let h = 4.5; h < 28.6; h += 1 / 1800) { Env.hour = h % 24; npcUpdate(dt, fa
   for (const k of run.keys()) if (!live.has(k)) run.delete(k); }
 const rows = [...found.values()].sort((a, b) => b.secs - a.secs), eps = rows.reduce((s, f) => s + f.n, 0), line = f => f.a + ' and ' + f.b + ': ' + f.n + ' times, ' + Math.round(f.secs) + ' s in all, as near as ' + f.min.toFixed(2) + ' m; first at ' + f.first.h + ' h, ' + f.first.cell + ' ' + f.first.p + ' (' + f.first.what + ')';
 const where = {}; for (const f of rows) { const k = f.first.cell === 'outdoors' ? 'outdoors' : 'indoors'; where[k] = (where[k] || 0) + 1; }
+if (NPCS.length < 60) throw new Error('APART FAIL only ' + NPCS.length + ' villagers: the cast did not load, nothing was checked');       /* [cast] never pass on nothing */
 if (window.__apartAll) return JSON.stringify({ people: NPCS.length + amb.length, steps, pairs: rows.length, episodes: eps, where, rows: rows.map(line) });
 if (rows.length) throw new Error('APART FAIL ' + rows.length + ' pairs of people stood in one another (' + eps + ' times in the day; ' + JSON.stringify(where) + '): ' + JSON.stringify(rows.slice(0, 8).map(line)));
 return 'apart PASS ' + (NPCS.length + amb.length) + ' people, a whole day at 1/30 s (' + steps + ' steps): no two within ' + NEAR + ' m for more than ' + HOLD + ' s';

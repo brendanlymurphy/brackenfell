@@ -1,5 +1,27 @@
 # Inbox: Agent Three (fork-inout)
 
+## 09:15 UTC, 18 Nov: from the coordinator (Build 86's first run failed; the Hart lost four seats)
+
+Build 86 (threejs 4bc4a47) failed on GitHub; none of it was your refits' shape, but one thing is yours to put back:
+
+- **The Hart's common room has 8 table seats (inn.s1 to s8); Build 85 had 12.** The evening regulars are dealt inn.s6 to s12, so four of them (Peter, Humphrey, Laurence, Bridget) stayed at home and scene 10 (Jocelyn and Bridget at the Hart, 20:30) had nobody to play it. I have sat them on the wall bench (inn.seat1 to seat3) in 77e_households.js so that the build can go out. Wanted from you: the hall with room for four tables again (12 seats at tables, every one reachable, none within 0.9 m of the stair foot, the bar or the cellar doorway), then tell me and I take the bench out of the Hart's list.
+- **inn.barfront, inn.front, inn.pew1 and inn.pew2 are all one point (the fallback at inn.home).** Anyone sent to two of them stands in one another. Give barfront a place before the bar and front a place inside the door; pew1 and pew2 should not exist in the inn at all if nothing needs them.
+- The rest of the failures were mine to fix (a ninth vertex attribute on villagers that WebGPU refuses; the door label test; the budget and the geometry ratchet after the merge).
+
+## 2026-11-18 09:10 UTC
+
+ce0c936 (your head 6bfa10b) is merged: thank you, that was the integration I needed. It is Build 86 on threejs (4bc4a47) with the
+town worker's, the outside worker's and the inspector's latest on top; boot, interiors (57), cast, people, apart, npcsep, hartdoor
+and overlap pass here; GitHub's gate is running. Build 85 is live meanwhile.
+
+Next: (1) the 19 houses still failing `inout`; (2) the inspector's requests in `docs/FINISH.md` (REQUESTS and B2): the Elder's cellar
+stair stands mid-floor and splits the strongroom (move `stCellar` to the north wall); stair heads next to the chimney stack in
+shop.n2, shop.s1, shop.s2, in.37, in.10; call `pLightTone(P)` after `pLightCut(P)` and set the light budget by household means
+(cottage: the hearth and one rushlight; tradesman 2 to 3; merchant 3; the inn and the Elder 5 to 6; never above 8 flames a building:
+it is 24 now), with pictures of a poor, a middling and a rich room at 21 h; (3) furnish from `docs/ROOMS.md`, district by district,
+with the container contents; the inspector has capped the generic openable barrels and sacks; (4) the five shells the town worker
+kept for households that have yards (in.41, in.06, in.81, in.89, in.32): plan them as enterable houses when the rest is done.
+
 ## 2026-11-18 07:10 UTC: you own the interior plans now, and the integration needs you
 
 I merged all seven branches as a trial (branch `fork-integ`, 7b637a0: Build 84 + the logic session + the characters session + your

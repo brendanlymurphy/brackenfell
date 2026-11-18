@@ -79,20 +79,30 @@ for (const h of houses) {
   const wallSt = 1 + Math.max(0, Math.floor((eave - H + 0.5) / 3));      // the ground storey is as high as the building's own H (a chapel's 4.5 m wall is one storey), each further 3 m of wall is one more
   const lvOut = f => f.kind === 'win' ? (f.y > eave - 0.2 ? 'roof' : f.y < H ? 0 : Math.min(wallSt - 1, 1 + Math.floor((f.y - H) / 3))) : (f.y0 < 1.6 ? 0 : f.y0 > eave - 0.4 ? 'roof' : Math.max(1, Math.round((f.y0 - H) / 3) + 1));
   for (const f of merged) f.lv = lvOut(f);
-  const oWin = merged.filter(f => f.kind === 'win'), oDoor = merged.filter(f => f.kind === 'door'), oBalc = merged.filter(f => f.kind === 'balc');
+  for (const f of merged) { const fb = f.wall === 'front' || f.wall === 'back', nl = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] }[f.wall], lu = fb ? f.along : nl[0] * (s.w / 2 + 0.5), lv = fb ? nl[1] * (s.d / 2 + 0.5) : f.along - s.d / 2, c0 = Math.cos(s.yaw), n0 = Math.sin(s.yaw), wx = s.x + lu * c0 - lv * n0, wz = s.z + lu * n0 + lv * c0; f.blocked = sites.concat(Object.values(SITE)).find(o => o !== s && o.w && o.yaw !== undefined && depthIn(o, wx, wz) > 0.05) || null; }      /* a window that opens into the next house is the outside's to remove: counted apart */
+  const oBlk = merged.filter(f => f.kind === 'win' && f.blocked), oWin = merged.filter(f => f.kind === 'win' && !f.blocked), oDoor = merged.filter(f => f.kind === 'door'), oBalc = merged.filter(f => f.kind === 'balc');
   const roofWin = oWin.filter(f => f.lv === 'roof').length, shown = wallSt + (roofWin ? 1 : 0);
+  for (const f of merged) if (f.lv === 'roof') f.lv = wallSt;      /* a window above the eaves lights the storey in the roof: the one above the walls */
   const jetty = typeof shellJetty === 'function' ? shellJetty(s, st) : 0;
   // ── inside ──
   const P = c.planDone || c.plan || (h.cell.ctx && (h.cell.ctx.planDone || h.cell.ctx.plan));
-  const row = { id: s.id, name: s.name, out: { w: s.w, d: s.d, eave: r1(eave), wallSt, roofWin, shown, jetty: r1(jetty), win: oWin.length, upDoors: oDoor.filter(f => f.lv !== 0), doors0: oDoor.filter(f => f.lv === 0).length, balc: oBalc, signs, list: merged.map(f => [f.kind, f.wall, f.lv, r1(f.along), r1(f.y), f.src, f.n].join(' ')) }, fails: [] };
+  const row = { id: s.id, name: s.name, out: { w: s.w, d: s.d, eave: r1(eave), wallSt, roofWin, shown, jetty: r1(jetty), win: oWin.length, blockedWin: oBlk.length, upDoors: oDoor.filter(f => f.lv !== 0), doors0: oDoor.filter(f => f.lv === 0).length, balc: oBalc, signs, list: merged.map(f => [f.kind, f.wall, f.lv, r1(f.along), r1(f.y), f.src, f.n].join(' ')) }, fails: [] };
   if (!P) { row.noPlan = true; row.fails.push('no plan'); rows.push(row); continue; }
-  const lvs = Object.values(P.lv).map(l => l.k).sort((a, b) => a - b), lofts = lvs.filter(k => k > 0 && P.lv[k].loft), up = lvs.filter(k => k >= 0 && !P.lv[k].loft), rooms = Object.values(P.rooms), isYard = r => /yard|garden|court/.test(r.kind || '') || r.open === true || r.roof === false;
+  const lvs = Object.values(P.lv).map(l => l.k).sort((a, b) => a - b), solid = lvs.filter(k => k >= 0 && !(k > 0 && P.lv[k].loft)), lofts = lvs.filter(k => k > 0 && P.lv[k].loft && !(P.windows.some(w => w.k === k) && shown > solid.length)), up = lvs.filter(k => k >= 0 && !lofts.includes(k)),      /* a loft is that storey only where the outside shows the storey and its windows light the loft */      /* a loft lit by the shell's own windows is that storey */ rooms = Object.values(P.rooms), isYard = r => /yard|garden|court/.test(r.kind || '') || r.open === true || r.roof === false;
   const bb = k => { const rs = rooms.filter(r => r.k === k && !isYard(r)); if (!rs.length) return null; const x0 = Math.min(...rs.map(r => r.x0)), x1 = Math.max(...rs.map(r => r.x1)), z0 = Math.min(...rs.map(r => r.z0)), z1 = Math.max(...rs.map(r => r.z1)); return { x0, x1, z0, z1, w: x1 - x0, d: z1 - z0, area: rs.reduce((a, r) => a + (r.x1 - r.x0) * (r.z1 - r.z0), 0) }; };
   const B0 = bb(0) || { x0: 0, x1: 0, z0: 0, z1: 0, w: 0, d: 0, area: 0 }, cx0 = (B0.x0 + B0.x1) / 2;
   const facing = wl => wl.ax === 'x' ? (wl.ns < 0 ? 'front' : 'back') : (wl.ns < 0 ? 'left' : 'right');
   const kx = B0.w ? s.w / B0.w : 1, kz = B0.d ? s.d / B0.d : 1, alongIn = (wl, pos) => wl.ax === 'x' ? (pos - cx0) * kx : (pos - B0.z0) * kz;      /* the plan's wall scaled to the shell's */
-  const iWin = P.windows.map(w => ({ wall: facing(w.wall), lv: w.k, along: alongIn(w.wall, w.pos), room: w.room && w.room.id })).filter(w => { const r = P.rooms[w.room]; return !(r && isYard(r)); });
-  const iDoor = P.doors.filter(d => d.b === null && d.wall).map(d => ({ wall: facing(d.wall), lv: d.k, along: alongIn(d.wall, d.pos), room: d.a }));
+  // a window inside, carried onto the shell: plan -> the cell -> the house's site (the cell is the house moved away from the town), its offset from the plan's middle scaled to the shell
+  const Mc = c.Mx && c.Ms ? new THREE.Matrix4().fromArray(c.Mx).multiply(new THREE.Matrix4().fromArray(c.Ms).invert()) : null;
+  const toSite = (x, z) => { const q = P.w2(x, 0, z); if (!Mc) return local(s, q[0], q[2]); _v.set(q[0], q[1], q[2]).applyMatrix4(Mc); return local(s, _v.x, _v.z); };
+  const pc = toSite((B0.x0 + B0.x1) / 2, (B0.z0 + B0.z1) / 2), px = toSite((B0.x0 + B0.x1) / 2 + 1, (B0.z0 + B0.z1) / 2), alongU = Math.abs(px[0] - pc[0]) > 0.5;
+  const ku = s.w / (alongU ? B0.w : B0.d), kv = s.d / (alongU ? B0.d : B0.w);
+  const onShell = w => { const x = w.wall.ax === 'x' ? w.pos : w.wall.c, z = w.wall.ax === 'x' ? w.wall.c : w.pos, l = toSite(x, z), u = (l[0] - pc[0]) * ku, v = (l[1] - pc[1]) * kv;
+    const ds = { front: Math.abs(v + s.d / 2), back: Math.abs(v - s.d / 2), left: Math.abs(u + s.w / 2), right: Math.abs(u - s.w / 2) }; let wn = 'front'; for (const k of WN) if (ds[k] < ds[wn]) wn = k;
+    return { wall: wn, along: wn === 'front' || wn === 'back' ? u : v + s.d / 2 }; };
+  const iWin = P.windows.map(w => { const o = onShell(w); return { wall: o.wall, lv: w.k, along: o.along, room: w.room && w.room.id }; }).filter(w => { const r = P.rooms[w.room]; return !(r && isYard(r)); });
+  const iDoor = P.doors.filter(d => d.b === null && d.wall).map(d => { const o = onShell({ wall: d.wall, pos: d.pos }); return { wall: o.wall, lv: d.k, along: o.along, room: d.a }; });
   row.in = { levels: lvs, lofts: lofts.length, up: up.length, cellar: lvs.some(k => k < 0), w: B0.w, d: B0.d, area: r1(B0.area), yards: rooms.filter(isYard).map(r => r.id), win: iWin.length, doors: iDoor, per: lvs.map(k => { const b = bb(k); return b ? [k, b.w, b.d, r1(b.area)] : [k, 0, 0, 0]; }) };
   // ── compare ──
   // 1 storeys
@@ -124,6 +134,8 @@ for (const h of houses) {
     const mid = wn === 'back' || wn === 'front' ? ((c0.x0 + c0.x1) / 2 - cx0) * kx : ((c0.z0 + c0.z1) / 2 - B0.z0) * kz;
     row.cellarWhere = wn ? sideTxt(wn, mid) + (wn === 'front' ? ': a grating at the foot of the wall' : ': a hatch with two leaves against the wall, or three steps down to a low door') : 'the cellar touches no outside wall of the plan: a grating in the yard or none';
   }
+  if (P.winClash && P.winClash.length) row.clash = P.winClash.map(w => w.face + ' wall, level ' + w.k + ': two openings drawn less than 1 m apart; one is kept inside');
+  if (P.blockedWins && P.blockedWins.length) row.blocked = P.blockedWins.map(f => sideTxt(f.wall, f.wall === 'front' || f.wall === 'back' ? f.u : f.u) + ', level ' + f.lv + ': opens into `' + f.blocked + '`');
   if (P.wins) {
     row.needWin = [];
     for (const r of rooms) { if (r.k < 0 || isYard(r) || P.windows.some(w => w.room === r)) continue;
@@ -141,7 +153,7 @@ const T = {
   storeys: cnt(r => r.storeys && !r.storeys.ok), storeysOutMore: cnt(r => r.storeys && r.storeys.out > r.storeys.in), storeysInMore: cnt(r => r.storeys && r.storeys.in > r.storeys.out),
   footprint: cnt(r => r.foot && !r.foot.ok), ratioMed: med, ratioMax: ratios[ratios.length - 1], ratioMin: ratios[0],
   upDoorsOut: sum(r => r.updoor && r.updoor.out), upDoorsUnserved: sum(r => r.updoor && r.updoor.unserved), balconies: sum(r => r.updoor && r.updoor.balc), balconiesUnserved: sum(r => r.updoor && r.updoor.balcUnserved), upDoorsInOnly: sum(r => r.updoor && r.updoor.inOnly), upDoorBuildings: cnt(r => r.updoor && !r.updoor.ok),
-  winOut: sum(r => r.out.win), winIn: sum(r => r.in && r.in.win), winDiff: sum(r => r.windows && r.windows.diff), winSame: sum(r => r.windows && r.windows.same), winBuildings: cnt(r => r.windows && !r.windows.ok),
+  winBlocked: sum(r => r.out.blockedWin), winOut: sum(r => r.out.win), winIn: sum(r => r.in && r.in.win), winDiff: sum(r => r.windows && r.windows.diff), winSame: sum(r => r.windows && r.windows.same), winBuildings: cnt(r => r.windows && !r.windows.ok),
   cellars: cnt(r => r.in && r.in.cellar), cellarsNoSign: cnt(r => r.cellar && !r.cellar.ok),
 };
 const cellsTxt = r => WN.map(wn => { const ks = Object.keys(r.windows.cells).filter(k => k.startsWith(wn + '|')).sort(); return ks.length ? wn[0].toUpperCase() + ' ' + ks.map(k => k.split('|')[1] + ':' + r.windows.cells[k].join('/')).join(' ') : null; }).filter(Boolean).join('; ');
@@ -157,7 +169,7 @@ md += `| 2. A floor is more than 1.5 times the shell's area | **${T.footprint}**
 md += `| 3. Upper doors outside / with no door inside on that wall and level | ${T.upDoorsOut} / **${T.upDoorsUnserved}** |\n`;
 md += `| ... balconies outside / with no door onto them | ${T.balconies} / **${T.balconiesUnserved}** |\n`;
 md += `| ... upper doors inside that open onto nothing outside | **${T.upDoorsInOnly}** |\n`;
-md += `| 4. Windows outside / inside | ${T.winOut} / ${T.winIn} |\n`;
+md += `| 4. Windows outside / inside (outside: not counting ${T.winBlocked} that open into the house next door) | ${T.winOut} / ${T.winIn} |\n`;
 md += `| ... difference summed per wall and level / outside windows with an inside window in the same place | **${T.winDiff}** / ${T.winSame} of ${T.winOut} |\n`;
 md += `| ... buildings whose windows do not all match | **${T.winBuildings}** |\n`;
 md += `| 5. Cellars inside / with nothing outside that shows one | ${T.cellars} / **${T.cellarsNoSign}** |\n\n`;
@@ -173,6 +185,10 @@ md += `\n## For the outside worker\n\nSides as in \`WALLS\` (71_house.js): front
 for (const r of rows) if (r.cellarWhere) md += `| \`${r.id}\` | ${r.name} | ${r.cellarWhere} |\n`;
 md += `\n### Rooms with an outside wall and no window in the shell\n\nOnly buildings whose plan already takes its windows from the shell.\n\n| id | name | room: where a window is wanted |\n|---|---|---|\n`;
 for (const r of rows) if (r.needWin && r.needWin.length) md += `| \`${r.id}\` | ${r.name} | ${r.needWin.join('; ')} |\n`;
+md += `\n### Windows on the shell that open into the house next door (left out inside; remove them outside)\n\n| id | name | where |\n|---|---|---|\n`;
+md += `\n### Openings drawn on top of one another\n\n| id | name | where |\n|---|---|---|\n`;
+for (const r of rows) if (r.clash) md += `| \`${r.id}\` | ${r.name} | ${r.clash.join('; ')} |\n`;
+for (const r of rows) if (r.blocked) md += `| \`${r.id}\` | ${r.name} | ${r.blocked.join('; ')} |\n`;
 const line = T.failing ? 'inout FAIL ' + T.failing : 'inout PASS';
 if (typeof window.__write === 'function') { await window.__write('docs/INOUT.md', md); await window.__write('shots/inout.json', JSON.stringify({ totals: T, rows }, null, 1)); }
 console.log('[audit] ' + line + ' ' + JSON.stringify(T));

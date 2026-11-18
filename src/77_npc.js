@@ -165,7 +165,7 @@ function buildNPCs() {
 // place every villager where the clock says they should be
 function npcSnapAll() { if (typeof npcClaimReset === 'function') npcClaimReset(); for (const n of NPCS) { const row = npcRow(n), sp0 = Array.isArray(row[1]) ? row[1][0] : row[1], sp = typeof npcClaim === 'function' ? npcClaim(n, sp0) : sp0; npcArrive(n, sp, row[2]); n.goal = sp; } }
 function npcRow(n) {
-  const sc = n.override || n.def.sched; let h = Env.hour; if (h < sc[0][0]) h += 24;
+  const sc = n.override || (n.def.schedIf && n.def.schedIf()) || n.def.sched; let h = Env.hour; if (h < sc[0][0]) h += 24;       /* [cast] schedIf: a day that depends on the story (the chapel at dawn once the bell rings) */
   let row = sc[sc.length - 1]; for (const r of sc) if (r[0] <= h) row = r;
   if (!n.override && npcRaining() && NPC_IDLE[row[2]] && npcOutdoors(row[1])) { const sh = npcShelter(n); if (sh) return sh; }
   return row;
