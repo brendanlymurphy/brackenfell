@@ -55,7 +55,7 @@ PD.sacks = (R) => m => { const cols = [[0.46, 0.39, 0.27], [0.4, 0.35, 0.26], [0
 PD.stack = (R) => m => { Props.woodpile(m, 3, 4, 0.7); };          // [fx2] 3 columns = 0.55 m deep (5 drew 0.91 m into a 0.5 m slot)
 // cloaks, aprons and a hat on pegs over a rail (hung on a wall: see the frame note in PD.fill)
 PD.hooks = (R, w) => (m, hh) => {
-  m.mat(MAT.TIMBER, COL.woodDark); m.box(-w / 2, 0.0, -0.05, w / 2, 0.09, 0);
+  m.mat(MAT.PLANKS, COL.wood, 0.5); m.box(-w / 2, 0.0, -0.055, w / 2, 0.09, 0); m.mat(MAT.PLANKS, COL.woodDark, 0.5); m.box(-w / 2 - 0.015, -0.01, -0.065, -w / 2, 0.1, 0.0); m.box(w / 2, -0.01, -0.065, w / 2 + 0.015, 0.1, 0.0); m.box(-w / 2, 0.035, -0.062, w / 2, 0.055, -0.055);
   const n = Math.max(2, Math.floor(w / 0.32)); let cloaks = 0;
   const cols = [[0.2, 0.11, 0.09], [0.12, 0.14, 0.17], [0.27, 0.21, 0.11], [0.3, 0.27, 0.22], [0.15, 0.18, 0.11], [0.22, 0.18, 0.13], [0.14, 0.12, 0.11]];
   for (let i = 0; i < n; i++) {
