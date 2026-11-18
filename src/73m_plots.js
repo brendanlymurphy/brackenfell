@@ -22,7 +22,8 @@ function plotsCompute() {
   _PLOTS = [];
   const byId = id => SITES.find(s => s.id === id), T0 = (typeof TERRACE !== 'undefined' && TERRACE) || null;
   const blocked = (x, z, pad, self) => {
-    for (const s of SITES) { if (s === self || !s.w || s.id === 'tower') continue; const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + pad * 0.3 + (s.porch || 0) && Math.abs(l[1]) < s.d / 2 + pad * 0.3) return true; }
+    for (const s of SITES) { if (s === self || !s.w || s.id === 'tower') continue; const l = worldToSite(s, x, z); if (Math.abs(l[0]) < s.w / 2 + pad * 0.3 + (s.porch || 0) && Math.abs(l[1]) < s.d / 2 + pad * 0.3) return true;
+      if (s !== self && Math.abs(l[0]) < s.w / 2 + 0.2 && l[1] < -s.d / 2 + 0.01 && l[1] > -s.d / 2 - 3.4) return true; }      /* [fx3] a yard never covers the ground in front of another house's door: 3.4 m clear (BLUEPRINT 2.3) */
     for (const r of Roads) if (r.line.dist(x, z, r.w / 2 + 1) < r.w / 2 + 0.1) return true;
     if (placeW(x, z, 0.01) >= 1) return true;
     if (x > 4.6 && x < 11.3 && z > 16.4 && z < 21.2) return true;      /* the bell tower's stair (73i_walls.js) */
@@ -60,6 +61,19 @@ function plotsCompute() {
     });
   }
   return _PLOTS;
+}
+/* [fx3] a gate keeps a clear lane: from 0.8 m to 3.4 m inside it, 0.85 m either side, nothing solid. laneFree tests a lane (x,z the gate, dx,dz the way in) against the colliders built since the plots began;
+   pickGate returns the position along the wall nearest the wanted one whose lane is free (the trade is built first, then the gate is cut where it can be walked through). */
+function laneFree(x, z, dx, dz, c0) {
+  const px = -dz, pz = dx;
+  for (let i = c0 || 0; i < World.colliders.length; i++) { const c = World.colliders[i]; if (!isFinite(c.x) || c.y1 - c.y0 < 0.3) continue; if (Math.abs(c.x - x) > 6 || Math.abs(c.z - z) > 6) continue;
+    for (let t = 0.7; t <= 3.5; t += 0.35) for (let a = -0.9; a <= 0.91; a += 0.3) { const wx = x + dx * t + px * a, wz = z + dz * t + pz * a;
+      if (c.r !== undefined) { if (Math.hypot(wx - c.x, wz - c.z) < c.r + 0.1) return false; } else { const u = (wx - c.x) * c.ax + (wz - c.z) * c.az, v = (wx - c.x) * c.bx + (wz - c.z) * c.bz; if (Math.abs(u) < c.hx + 0.1 && Math.abs(v) < c.hz + 0.1) return false; } } }
+  return true;
+}
+function pickGate(want, lo, hi, at, dx, dz, c0) {
+  if (hi < lo) return want; const cands = []; for (let v = lo; v <= hi + 1e-6; v += 0.25) cands.push(v); cands.sort((a, b) => Math.abs(a - want) - Math.abs(b - want));
+  for (const v of cands) { const q = at(v); if (laneFree(q[0], q[1], dx, dz, c0)) return v; } return want;
 }
 function buildPlots(bucket) {
   if (TEST && TEST.plots === 0) return; World.plotC0 = World.colliders.length;
@@ -132,18 +146,20 @@ function buildPlots(bucket) {
   };
   for (const p of P) { R.seed(idSeed("plot" + p.id));      // [fx3] seeded from the house: removing another house leaves this plot as it was
     if (p.axis === 'x') {      /* walls on the party lines, a back wall with a gate, the work kept in a lean-to against the house's back (frame of the house) */
-      const m = bucket((p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2), tone = 0.44 + R() * 0.06, xw = p.wall, xh = p.bx > 0 ? p.x0 : p.x1, zc = (p.z0 + p.z1) / 2, gz = zc + (R() - 0.5) * 2, gw = 1.3;
+      const m = bucket((p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2), tone = 0.44 + R() * 0.06, xw = p.wall, xh = p.bx > 0 ? p.x0 : p.x1, zc = (p.z0 + p.z1) / 2, gw = 1.3;
+      localTrade(m, p, gy, R, flat, addBoxCollider, addCircleCollider);
+      const gz = pickGate(zc + (R() - 0.5) * 2, p.z0 + 1.0, p.z1 - 1.0, v => [xw, v], -p.bx, 0, World.plotC0);
       stone(m, xw, p.z0 + 0.15, xw, gz - gw / 2, H - 0.1, tone); stone(m, xw, gz + gw / 2, xw, p.z1 - 0.15, H - 0.1, tone);
       (World.openings = World.openings || []).push({ kind: 'plotgate', x: xw, z: gz, dx: 1, dz: 0, w: gw });
       for (const zs of [gz - gw / 2, gz + gw / 2]) { m.mat(MAT.STONE, [tone * 1.1, tone * 1.05, tone], 1.4); m.cbox(xw, gy(xw, zs) - 0.1, zs, 0.4, 1.6, 0.4, 0); }
       for (const zs of [p.z0, p.z1]) stone(m, xh, zs, xw - p.bx * 0.15, zs, H * 0.92, tone);
-      localTrade(m, p, gy, R, flat, addBoxCollider, addCircleCollider);
       continue;
     }
     const wd = p.x1 - p.x0, dp = Math.abs(p.wall - (p.bz > 0 ? p.z0 : p.z1)), cx = (p.x0 + p.x1) / 2, zFront = p.bz > 0 ? p.z0 : p.z1, tone = 0.42 + R() * 0.1, styleI = ((Math.abs(p.house.x * 3.1 + p.house.z) | 0) + P.indexOf(p)) % 4;
     const m = bucket(cx, (p.z0 + p.z1) / 2), h = H - 0.15 * R(), style = STYLES[styleI], seg = (m2, ax, az, bx, bz, hh) => style === 'stone' ? stone(m2, ax, az, bx, bz, hh, tone) : style === 'fence' ? fence(m2, ax, az, bx, bz) : style === 'board' ? slab(m2, ax, az, bx, bz, 1.55, MAT.PLANKS, [0.52 + R() * 0.06, 0.42, 0.31], 0.1) : slab(m2, ax, az, bx, bz, 1.15, MAT.THATCH, [0.46, 0.37, 0.2], 0.14);
     const gate = (a, b, gx, gw) => { /* a wall along x from a to b with a gap [gx-gw/2, gx+gw/2] */ };
-    const zw = p.wall, gx = cx + (R() - 0.5) * (wd - 2.4), gw = 1.2; (World.openings = World.openings || []).push({ kind: 'plotgate', x: gx, z: zw, dx: 0, dz: 1, w: gw });
+    if (!(TEST && TEST.plots === 2) && true) trade(p, m, cx, zFront + p.bz * 0.01, 1, 0, wd, dp);
+    const zw = p.wall, gw = 1.2, gx = pickGate(cx + (R() - 0.5) * (wd - 2.4), p.x0 + 1.0, p.x1 - 1.0, v => [v, zw], 0, -p.bz, World.plotC0); (World.openings = World.openings || []).push({ kind: 'plotgate', x: gx, z: zw, dx: 0, dz: 1, w: gw });
     seg(m, p.x0 + 0.15, zw, gx - gw / 2, zw, h), seg(m, gx + gw / 2, zw, p.x1 - 0.15, zw, h);
     for (const sx of [gx - gw / 2, gx + gw / 2]) { m.mat(MAT.STONE, [tone * 1.1, tone * 1.05, tone], 1.4); m.cbox(sx, gy(sx, zw) - 0.1, zw, 0.4, 1.6, 0.4, 0); }
     { const gz = zw, g0 = gy(gx, gz); m.mat(MAT.STONE, [0.5, 0.47, 0.42], 1.2); m.box(gx - 0.6, g0 - 0.02, gz - 0.28, gx + 0.6, g0 + 0.1, gz + 0.28, 4);      /* a doorstep worn in the gap */
@@ -154,7 +170,6 @@ function buildPlots(bucket) {
       if (sx === p.x0 && P.some(q => q !== p && q.row === p.row && Math.abs(q.x1 - p.x0) < 0.06 && Math.abs(q.bz - p.bz) < 1e-6)) continue;      /* a party wall is built once */
       seg(m, sx, zh, sx, zw - p.bz * 0.15, h * 0.92);
     }
-    if (!(TEST && TEST.plots === 2) && true) trade(p, m, cx, zFront + p.bz * 0.01, 1, 0, wd, dp);
     p.gate = [gx, zw];
   }
 }
@@ -379,7 +394,8 @@ function buildYards(bucket) {
       /* a yard wall is left out wherever something solid already stands on its line (a house, a neighbour's wall, a prop): two solids never overlap */
       for (let k = 0, n = Math.ceil(L / 0.4); k <= n; k++) { const x = A[0] + (B[0] - A[0]) * k / n, z = A[1] + (B[1] - A[1]) * k / n; for (let q = 0; q < n0; q++) { const c = World.colliders[q]; if (c.y0 > gy(x, z) + 1.1 || c.y1 < gy(x, z) + 0.1) continue; if (c.r !== undefined) { if (Math.hypot(x - c.x, z - c.z) < c.r + 0.35) return; } else { const u = (x - c.x) * c.ax + (z - c.z) * c.az, v = (x - c.x) * c.bx + (z - c.z) * c.bz; if (Math.abs(u) < c.hx + 0.35 && Math.abs(v) < c.hz + 0.35) return; } } } const cx = (A[0] + B[0]) / 2, cz = (A[1] + B[1]) / 2, ang = Math.atan2(B[1] - A[1], B[0] - A[0]), g = Math.min(gy(A[0], A[1]), gy(B[0], B[1]), gy(cx, cz)) - 0.12, t = 0.26 + R() * 0.04, tone = 0.46 + R() * 0.06;
       m.push().T(cx, g, cz).RY(-ang); m.mat(MAT.STONE, [tone, tone * 0.97, tone * 0.92], 1.4); m.box(-L / 2, 0, -t, L / 2, 1.0 + R() * 0.12, t, 4); m.mat(MAT.STONE, [tone * 1.1, tone * 1.06, tone], 1.4); m.box(-L / 2 - 0.02, 1.0, -t - 0.04, L / 2 + 0.02, 1.12, t + 0.04, 4); addBoxCollider(m, -L / 2 + 0.25, -t, L / 2 - 0.25, t, 0, 1.1); m.pop(); };
-    { const gq = W(0, -hd), g2 = W(0, -hd - 1); (World.openings = World.openings || []).push({ kind: 'yardgate', x: gq[0], z: gq[1], dx: g2[0] - gq[0], dz: g2[1] - gq[1], w: 1.7 }); }
-    const gw = 0.85; seg(-hw, -hd, -gw, -hd); seg(gw, -hd, hw, -hd); seg(hw, -hd, hw, hd); seg(hw, hd, -hw, hd); seg(-hw, hd, -hw, -hd);
-    for (const sx of [-gw, gw]) { const q = W(sx, -hd); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); m.cbox(q[0], gy(q[0], q[1]) - 0.1, q[1], 0.2, 1.5, 0.2, 0); }}
+    const inw = (() => { const a = W(0, -hd), b = W(0, -hd + 1); return [b[0] - a[0], b[1] - a[1]]; })(), gl = pickGate(0, -hw + 1.2, hw - 1.2, v => W(v, -hd), inw[0], inw[1], World.plotC0 || 0);
+    { const gq = W(gl, -hd), g2 = W(gl, -hd - 1); (World.openings = World.openings || []).push({ kind: 'yardgate', x: gq[0], z: gq[1], dx: g2[0] - gq[0], dz: g2[1] - gq[1], w: 1.7 }); }
+    const gw = 0.85; seg(-hw, -hd, gl - gw, -hd); seg(gl + gw, -hd, hw, -hd); seg(hw, -hd, hw, hd); seg(hw, hd, -hw, hd); seg(-hw, hd, -hw, -hd);
+    for (const sx of [gl - gw, gl + gw]) { const q = W(sx, -hd); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); m.cbox(q[0], gy(q[0], q[1]) - 0.1, q[1], 0.2, 1.5, 0.2, 0); }}
 }
