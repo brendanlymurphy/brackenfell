@@ -5,6 +5,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms)), dt = 1 / 30, fails = []
 const fx = (c, m) => { if (!c) fails.push(m); };
 const idle = async () => { for (let i = 0; i < 400 && Cells.busy; i++) await sleep(50); game.step(2, dt); };
 const gcount = () => Object.values(S.items).reduce((a, b) => a + b, 0) + S.gold;
+if (typeof OWN !== 'undefined') OWN.off = true;       /* [cast] this tests theft, not trespass: it works inside houses at three in the morning, where the owners would show it the door */
 Env.dayLength = 0; Env.hour = 12; S.flags.bed = 1; game.step(2, dt); Env.hour = 3; npcSnapAll(); game.step(1, dt);       // everyone in bed, so nothing so far is theft
 log.push('stats ' + JSON.stringify(IX.stats));
 fx(IX.stats.cont >= 40, 'few containers: ' + IX.stats.cont); fx(IX.stats.loose >= 15, 'few loose things: ' + IX.stats.loose); fx(IX.stats.seat >= 15, 'few seats: ' + IX.stats.seat); fx(IX.stats.books >= 5, 'few letters: ' + IX.stats.books);
@@ -26,7 +27,7 @@ if (bk) { game.enter(bk.cell); await idle(); Player.pos = [bk.p[0], bk.p[1] - 0.
 ixWitness = __w;
 // ── theft: an awake person sees it; the guard comes; a night in the cell; out through the door ──
 { const lo2 = IX.loose.find(o => o.kind === 'loose' && !o.gone && o.owner); game.enter(lo2.cell); await idle(); Player.pos = [lo2.p[0], lo2.p[1] - 0.9, lo2.p[2] + 0.4];
-  const w = NPC.marta === ixGuard() ? NPC.greta : NPC.marta; w.anim = 'idle'; w.pos = [Player.pos[0] + 2, Player.pos[1], Player.pos[2]];
+  const w = NPC.marta === ixGuard() ? NPC.greta : NPC.marta; w.anim = 'idle'; for (const [dx, dz] of [[2, 0], [-2, 0], [0, 2], [0, -2], [1.4, 1.4], [-1.4, 1.4], [1.4, -1.4], [-1.4, -1.4]]) { w.pos = [Player.pos[0] + dx, Player.pos[1], Player.pos[2] + dz]; if (ixSees(w)) break; }       /* [cast] a place where the witness can see: 2 m east was behind the Hart's bar once the bar moved to fit */
   interactUse(lo2); fx(S.crime && S.crime.pending && S.crime.fine > 0, 'taking in front of someone was not a crime'); fx(has(lo2.item) || lo2.item === 'gold', 'did not get the item');
   S.crime.t = 0; ixTick(0.1); for (let i = 0; i < 900 && !UI.talk; i++) { game.step(6, dt); await sleep(50); } game.step(3, dt);       /* [gate] waits for the guard, up to 45 s of real time on a slow machine (was 10 s: the fade is real time) */
   fx(UI.talk && ['hale', 'ivo'].includes(UI.talk.id), 'the guard did not come to talk (' + (UI.talk && UI.talk.id) + ')');

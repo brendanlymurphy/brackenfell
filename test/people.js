@@ -35,6 +35,7 @@ const table = Object.keys(rows).map(id => { const H = rows[id].h, parts = []; le
 { const used = new Set(); for (const n of NPCS) for (const r of n.def.sched) for (const sp of [].concat(r[1])) used.add(sp); for (const k in World.spots) if (World.spots[k].yardOf && !k.includes('#') /* a second person's standing place beside a yard is not a yard */ && !used.has(k)) flags.push('nobody ever works in the yard ' + k + ' (' + World.spots[k].trade + ')'); }
 const KNOWN = /^(Tobin|Brother Aldous) sleeps/;       /* open: neither has a bed in his building (docs/LOGIC.md) */
 const bad = flags.filter(f => !KNOWN.test(f));
+if (NPCS.length < 60) bad.push('only ' + NPCS.length + ' villagers: the cast did not load');
 if (window.__peopleFull) return { n: NPCS.length, flags, table };
 if (bad.length) throw new Error('PEOPLE FAIL ' + bad.length + ': ' + JSON.stringify(bad.slice(0, 6)));
 return 'people PASS ' + NPCS.length + ' people, every one with a bed, a day and an evening; open: ' + flags.filter(f => KNOWN.test(f)).length;

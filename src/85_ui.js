@@ -73,7 +73,7 @@ function loadSettings() {
   UI.pref.reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   try {
     const j = JSON.parse(localStorage.getItem('brackenfell.set') || 'null'); if (!j) return applyPrefs();
-    if (j.q) game.qualitySetting = j.q; Input.sens = j.sens || 1; Audio2.vol = j.vol === undefined ? 0.8 : j.vol; Audio2.musicVol = j.music === undefined ? 0.6 : j.music; Input.invertY = !!j.inv; game.showFps = !!j.fps; if (j.flow !== undefined) Env.dayLength = j.flow;
+    if (j.q) game.qualitySetting = j.q; Input.sens = j.sens || 1; Audio2.vol = j.vol === undefined ? 0.8 : j.vol; Audio2.musicVol = j.music === undefined ? 0.6 : j.music; Input.invertY = !!j.inv; game.showFps = !!j.fps; if (j.flow !== undefined) Env.dayLength = j.flow === 1200 ? 2400 : j.flow;       /* [cast] 1200 was the old default, saved by everyone who never chose: it becomes the new default, 40 minutes */
     for (const k of ['lefty', 'btn', 'ts', 'hc', 'reduce', 'hold']) if (j[k] !== undefined) UI.pref[k] = j[k];
     if (j.x && typeof j.x === 'object') UI.extra = j.x;
   } catch (e) { }

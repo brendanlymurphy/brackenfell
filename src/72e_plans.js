@@ -209,9 +209,9 @@ function dressHall(P, room, o) {
   pWalls(P, room, o.walls || ['Torch_Metal', 'paint', 'paint', 'rack', 'paint', 'Peg_Rack']);
 }
 function pBarrelCorner(P, room, sd) { return pAgainst(P, room, sd, P.id + '.barrel', 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: 'end' }); }
-// [cast] a bed for a sleeper the plan had no bed for: against a wall of one of the rooms given, a full bed first, then a narrow one, then a cot; never under a window
+// [cast] a bed for a sleeper the plan had no bed for: against a wall of one of the rooms given, a full bed first, then a narrow one, then a cot; under a window only when no blank wall has room
 function castBedIn(P, rooms, nm, name, col, fur, at) {
-  for (const room of rooms) { if (!room) continue; for (const [w, d] of [[1.06, 2.1], [0.9, 1.9], [0.8, 1.7]]) for (const sd of ['e', 'w', 'n', 's']) { const it = pAgainst(P, room, sd, name, w, d, 0.95, -1, pdBed(w - 0.16, col, fur), at !== undefined ? { at } : {}); if (it) { pBedSpot(P, nm, it.cx, it.cz, rotBack(sd, -1), room.k); return it; } } }
+  for (const room of rooms) { if (!room) continue; for (const low of [false, true]) for (const [w, d] of [[1.06, 2.1], [0.9, 1.9], [0.8, 1.7]]) for (const sd of ['e', 'w', 'n', 's']) { const it = pAgainst(P, room, sd, name, w, d, 0.95, -1, pdBed(w - 0.16, col, fur), Object.assign(low ? { lowOk: true } : {}, at !== undefined ? { at } : {}));       /* a blank wall first; then low under a window (coordinator, Build 83: a bed may stand under a window) */ if (it) { pBedSpot(P, nm, it.cx, it.cz, rotBack(sd, -1), room.k); return it; } } }
   return null;
 }
 function dressBedroom(P, room, o) {
@@ -441,11 +441,15 @@ const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: 
 // the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
 function dressInn(P, c, room, hh) {
   const R = P.R, a = room.in; P.hall = { room, hh };
-  let bar = null;
-  for (const [bl, bz] of [[3.8, 4.8], [3.0, 4.2], [2.4, 4.0]]) { bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, bz, PI / 2, bl, 0.7, 1.05, m => { Props.table(m, bl, 0.7, 1.05); Props.clutter(m, R, -bl / 2 + 0.2, bl / 2 - 0.2, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true }); if (bar) break; }          // [fin] the east wall's windows (at 2 and 6 m) left no 3.8 m run for the counter, so no bar existed and Greta's bar spot fell back to the door: a shorter counter between the windows
+  const barAt = (x, z, L) => pPut(P, room, P.id + '.bar', x, z, PI / 2, L, 0.7, 1.05, m => { Props.table(m, L, 0.7, 1.05); Props.clutter(m, R, -L / 2 + 0.2, L / 2 - 0.2, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
+  let bar = barAt(a.x1 - 1.7, 4.8, 3.8);
+  /* [cast] FIRSTTEN 12: the counter did not fit where it was asked for (Build 83's Hart), so there was no bar, the 'bar' place fell back to the floor in front of the
+     hearth and Greta kept the inn standing in the fireplace with her back to the room. Try along the east wall, then a shorter counter. */
+  for (const L of [3.8, 3.2, 2.6]) for (const dx of [1.7, 1.5, 1.9, 2.1]) for (const z of [4.8, 4.2, 5.4, 3.6, 3.0]) { if (bar) break; bar = barAt(a.x1 - dx, z, L); }
+  if (!bar) P.err.push('no room for the bar in the Hart');
   if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); P.bar = bar;
     pHang(P, room, 'e', bar.cz, 3.0, 1.45, 2.7, (m) => Props.shelf(m, 3.0, 1.2, 3, 0.3, (i, y) => Props.clutter(m, R, -1.3, 1.3, y, 0, ['bottle', 'bottle', 'mug', 'jug', 'bottle'], 6, c)), P.id + '.backshelf', {});
-    for (let i = 0; i < 2; i++) pPut(P, room, P.id + '.keg' + i, a.x1 - 0.5, bar.cz - 0.6 + i * 1.2, 0, 0.9, 0.9, 1.0, PD.cask(0.9, 0.32), { lowOk: true });          // [fin] a short counter between the windows: two kegs behind it, not in front of a window
+    for (let i = 0, n = 0; i < 6 && n < 3; i++) if (pAgainst(P, room, 'e', P.id + '.keg' + n, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: bar.cz + [-1.4, 0, 1.4, -2.1, 2.1, 0.7][i], lowOk: false })) n++;       /* [cast] the bar moved along the wall (its first place did not fit): kegs where a window is not */
     pLamp(P, room, bar.cx + 0.2, bar.cz); }
   let n = 0;
   let nTab = 0; for (const nr of [[-4.2, 3.65], [1.6, 3.65], [-4.6, 6.7], [-2.0, 6.2], [2.5, 6.6], [-0.5, 6.0], [3.4, 6.7]]) { if (nTab >= 3) break;          // [fin] two rows clear of the stairs and the cellar hole, the third by the west wall: the old spots left 0.2 m between the benches of two tables and no way to four of the seats

@@ -16,5 +16,6 @@ for (const id in World.houses) {
 }
 { let nf = 0, nh = 0; const fl = []; for (const id in World.houses) { const P = World.houses[id].plan; if (!P || (only && !only.includes(id))) continue; nh++; const w = (P.fallbacks || []).filter(n => n.endsWith('*')); if (w.length) { nf++; fl.push(id + ' ' + w.join(',')); } } console.log('spot fallbacks of spots a schedule wants: ' + nf + ' of ' + nh + ' houses'); for (let i = 0; i < fl.length; i += 12) console.log(fl.slice(i, i + 12).join('; ')); }
 console.log(rows.join('\n'));
+{ const want = Cells.list.filter(c => World.houses[c.id]).length; if (!only && rows.length < want) bad.push('checked ' + rows.length + ' buildings of ' + want + ': the plans were not built, so nothing was checked');       /* [cast] the step passed on GitHub having checked none (the coordinator, Build 83) */ }
 if (bad.length) throw new Error(bad.length + ' interior problems:\n' + bad.join('\n'));
 return 'interiors ok: ' + rows.length + ' buildings';
