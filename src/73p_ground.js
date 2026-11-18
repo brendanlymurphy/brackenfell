@@ -118,3 +118,9 @@ function buildGround(bucket) {
     }
   }
 }
+
+/* [fx3] a leafy plant for a bed: two kit leaf cards leaning out (Prop_Vine4), never a ball; nothing when the kit is not loaded */
+function gLeaf(m, x, y, z, s, a) {
+  if (typeof kitReady !== 'function' || !kitReady() || typeof kplace !== 'function') return;
+  for (const da of [0, 3.14]) { const P = kplace(m, 'Prop_Vine4', x, y, z, s, a + da); if (P) { P.M.multiply(new THREE.Matrix4().makeRotationX(-0.95)); kadd(m, P, { cast: false }); } }
+}
