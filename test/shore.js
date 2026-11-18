@@ -1,13 +1,15 @@
-// the outline of a water mesh is never visible. Every boundary edge of every water mesh (lake sheet, river ribbon) is checked: where the ground under the edge is more than 5 cm below the water,
-// the vertex must have faded to nothing (tint alpha under 4 %), else the sheet ends in a visible straight line over ground. Run: node test/ev.mjs --opt audit=1 "$(cat test/shore.js)"; prints {edges, fails, worst:[...]}.
-const out = { edges: 0, fails: 0, worst: [], meshes: 0 };
-const AM = window.__AUDIT_MESH || [];      // kept by the audit option (meshes are freed after upload)
-for (const pk of World.packs) for (const it of pk.items || []) {
-  if (it.kind !== 'water') continue; const m = AM.find(q => q.ni === it.count && q.ni > 0 && q.f && Math.abs(q.f[1] - Math.round(q.f[1] * 100) / 100) < 1e-3); if (!m) continue; out.meshes++;
-  const key = v => Math.round(m.f[v * 8] * 20) + ',' + Math.round(m.f[v * 8 + 2] * 20), count = new Map();
-  for (let i = 0; i < m.ni; i += 3) for (let k = 0; k < 3; k++) { const a = m.idx[i + k], b = m.idx[i + (k + 1) % 3], ka = key(a), kb = key(b), e = ka < kb ? ka + '|' + kb : kb + '|' + ka, r = count.get(e); if (r) r.n++; else count.set(e, { n: 1, a, b }); }
-  for (const r of count.values()) { if (r.n !== 1) continue; out.edges++;
-    for (const v of [r.a, r.b]) { const x = m.f[v * 8], y = m.f[v * 8 + 1], z = m.f[v * 8 + 2], g = Terrain.y(x, z), depth = y - g, alpha = m.u8[v * 32 + 27] / 255;
-      if (depth > 0.05 && alpha > 0.04) { out.fails++; (out.pos = out.pos || {})[Math.round(x / 10) * 10 + "," + Math.round(z / 10) * 10] = ((out.pos || {})[Math.round(x / 10) * 10 + "," + Math.round(z / 10) * 10] || 0) + 1; if (out.worst.length < 12) out.worst.push(pk.label + " " + [+x.toFixed(1), +z.toFixed(1), +depth.toFixed(2), +alpha.toFixed(2)].join(' ')); } } }
-}
-return out;
+// The town is entered by its gates only. A 0.4 m flood fill of what a walker can stand on, from the game's start (outside the west palisade), with the town's gates (west, north, east) walled off, must not reach the inside of the town
+// (the green, the square, the wharf); lake bed deeper than 0.3 m is water, not a way. Anything it reaches is a way in round the palisade: along the shore, over a low bank, through a gap. usage: node test/shot.mjs --opt webgl=1 --opt quality=low --do "$(cat test/shore.js)"  prints "shore PASS" or "shore FAIL".
+const par = new Map(), STEP = 0.4, R0 = 140, S = [-84, -6.5], seen = new Map(), key = (i, j) => (i + 4096) * 8192 + (j + 4096), q = [];
+const freeAt = (x, y, z) => { const p = [x, y, z]; colResolve(p, 0.32, y, y + 1.75); return Math.hypot(p[0] - x, p[2] - z) < 0.03; };
+const GATES = (World.openings || []).filter(o => /^(westgate|towngate)/.test(o.kind)), gate = (x, z) => GATES.some(o => Math.hypot(x - o.x, z - o.z) < 4.5);
+const y0 = World.groundAt(S[0], S[1], 8); seen.set(key(0, 0), y0); q.push([0, 0, y0]); const hit = [];
+const INSIDE = [['the green', -37, 54], ['the square', 0, -2], ['the wharf quay', 14, 79], ['Chapelgate', -30, -30], ['the east cluster', 40, -25]];
+let first = {};
+while (q.length) { const [i, j, y] = q.pop(), x = S[0] + i * STEP, z = S[1] + j * STEP;
+  for (const [nm, ix, iz] of INSIDE) if (!first[nm] && Math.hypot(x - ix, z - iz) < 1.2) first[nm] = [x, z].map(v => +v.toFixed(1));
+  for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = i + di, b = j + dj, nx = S[0] + a * STEP, nz = S[1] + b * STEP; if (Math.hypot(nx - S[0], nz - S[1]) > R0 || gate(nx, nz)) continue; const k = key(a, b); if (seen.has(k)) continue; const ny = World.groundAt(nx, nz, y + 1.0); if (!isFinite(ny) || Math.abs(ny - y) > 0.35 || (Terrain.y(nx, nz) < LAKE.y - 0.3 && Math.hypot(nx - LAKE.x, nz - LAKE.z) < 120)) { seen.set(k, null); continue; } seen.set(k, ny); if (freeAt(nx, ny, nz)) q.push([a, b, ny]); par.set(k, key(i, j)); } }
+const reached = Object.keys(first);
+if (window.__shorePath) { }
+let route = ''; if (reached.length) { let k = key(Math.round((first['the green'][0] - S[0]) / STEP), Math.round((first['the green'][1] - S[1]) / STEP)), n = 0; const pts = []; while (k !== undefined && n++ < 4000) { const i = Math.floor(k / 8192) - 4096, j = (k % 8192) - 4096; pts.push([S[0] + i * STEP, S[1] + j * STEP]); k = par.get(k); } route = pts.filter((p, t) => t % 40 === 0).map(p => p.map(v => v.toFixed(0)).join(',')).join(' > '); }
+return (reached.length ? 'shore FAIL ' + reached.length : 'shore PASS') + ' ' + JSON.stringify({ reached: first, flood: seen.size, route });
