@@ -43,8 +43,9 @@ Merged `origin/threejs` (Build 89) first: no conflict.
    link radius applies to its bench alone, and the hunter's yard detour is a fact of the town.
 6. **`mine`, `bot-soak`:** both passed in every threejs run since Build 86 (aeb13ce, 5ca78ee, 997710c, and the failed b56755e and
    3b991ca, which failed elsewhere). The re-homed people hold (`cast`: everyone is sent only to places that exist).
-   - b56755e failed `bot-play` once: "the hatbox in the shut house did not open" (`cont.in.23.chest`); the next run passed. Being looked
-     at next (it is in the secrets scenario, after the story's checkpoints).
+   - b56755e failed `bot-play` once: "the hatbox in the shut house did not open" (`cont.in.23.chest`). Already answered by your Build 88
+     line in `82c_secrets.js` (the hatbox beyond the bed in that loft, reach 1.9 m at 2.06 m; now 2.5 m); the way round the bed is the
+     interiors session's. Nothing of mine.
 
 ## 2026-11-18, the 09:40 inbox
 
