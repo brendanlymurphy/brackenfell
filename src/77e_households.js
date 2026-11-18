@@ -77,7 +77,7 @@ function householdDefs() {
       for (const q of CAST) { if (q.age < 15 || q.id === 'godwin' || CAST_OUT[q.id] || yardBy[q.id]) continue; const hp = at(q.home); if (!hp) continue; const d = Math.hypot(hp[0] - yp[0], hp[1] - yp[2]); if (d < bd) { bd = d; best = q; } }
       if (best && bd < 60) { yardBy[best.id] = sp; taken.add(sp); } } }
   // [coordinator, FIRSTTEN 17] the drowned man lay alone on the wharf: nobody by the bier. Places round it, facing it, a body's length back from the boards
-  if (typeof BODY !== 'undefined') { const B = BODY, ring = [['bier.finn', 1.9, 0.2], ['bier.a', 2.3, 2.1], ['bier.b', 2.4, -2.2], ['bier.c', 2.2, 3.4], ['bier.guard', 2.6, Math.PI]];
+  if (typeof BODY !== 'undefined') { const B = BODY, ring = [['bier.finn', 1.9, 0.2], ['bier.a', 2.3, 2.1], ['bier.b', 2.4, -2.2], ['bier.c', 2.2, 3.4], ['bier.guard', 2.7, -1.1]];
     for (const [nm, r, a] of ring) { const x = B[0] + Math.sin(a) * r, z = B[2] - Math.cos(a) * r, y = World.groundAt(x, z, 4); if (y < -50) continue; S_[nm] = { p: [x, y, z], yaw: Math.atan2(B[0] - x, -(B[2] - z)), zone: 0 }; } }
   for (const id in STORY_BIER) { const d = NPC_DEFS.find(q => q.id === id); if (d) bierDay(d, STORY_BIER[id]); }
   for (const p of CAST) {

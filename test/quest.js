@@ -15,6 +15,7 @@ talk('maren', 0); log.push('herbs ' + qAt('herbs') + ' gold ' + S.gold);
 talk('aldous', 0); talk('marta', 0); log.push('bell ' + qAt('bell') + ' rope ' + has('rope') + ' gold ' + S.gold);
 talk('aldous', 0); log.push('bell ' + qAt('bell'));
 use('bell'); log.push('bell ' + qAt('bell'));
+Env.hour = 10; npcSnapAll();       /* [cast] the test reached Rowan at 07:54, in bed till eight: a sleeper is not talked to now */
 talk('rowan', 0); log.push('fire ' + qAt('fire'));
 use('chapel.book'); closeReader(); use('tower.chest'); use('inn.bed'); await sleep(1600); log.push('slept hour ' + Env.hour.toFixed(1));
 use('bonfire'); await sleep(1700);
