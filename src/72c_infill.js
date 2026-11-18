@@ -80,10 +80,10 @@ const SHELL = {         // per-building overrides (kind, pitch, tone index, sag,
   weaver: { wall: [0.85, 0.82, 0.78], ground: 'plaster', pitch: 58 },
   draper: { lime: 'dun', ground: 'plaster', pitch: 56 },
   // [fx3] Wharfside, one treatment per house (docs/PEOPLE.md: who lives there and what they can afford): tarred boards, wide silvered boards with a patched panel, limewash, a stone ground storey, daub between posts
-  'in.111': { wall: [0.34, 0.32, 0.3], treat: 'tar', ground: 'plaster' }, 'in.113': { wall: [1.3, 1.2, 1.05], treat: 'wide', ground: 'plaster' }, 'in.115': { lime: 'cream', treat: 'lime', ground: 'plaster' },
+  'in.111': { wall: [0.46, 0.43, 0.4], treat: 'tar', ground: 'plaster' }, 'in.113': { wall: [1.3, 1.2, 1.05], treat: 'wide', ground: 'plaster' }, 'in.115': { lime: 'cream', treat: 'lime', ground: 'plaster' },
   'in.20': { wall: [0.74, 0.72, 0.68], ground: 'stone' }, 'in.23': { lime: 'ochre', treat: 'wattle', frame: 1, ground: 'plaster' }, 'in.34': { lime: 'grey', treat: 'lime', ground: 'plaster' },
   'in.36': { wall: [1.2, 1.12, 1.0], ground: 'stone', stoneMat: 'MI_Rubble_Wall', treat: 'wide' }, 'in.37': { lime: 'dun', treat: 'wattle', frame: 2, ground: 'plaster' }, 'in.38': { wall: [1.4, 1.42, 1.44], treat: 'wide', ground: 'plaster' },
-  'in.51': { lime: 'bone', ground: 'stone' }, 'in.60': { wall: [0.3, 0.29, 0.28], treat: 'tar', ground: 'plaster' },
+  'in.51': { lime: 'bone', ground: 'stone' }, 'in.60': { wall: [0.42, 0.4, 0.38], treat: 'tar', ground: 'plaster' },
   'shop.n2': { wall: [1, 1, 1], pitch: 61 }, 'shop.s0': { lime: 'dun', pitch: 57 }, 'shop.s1': { wall: [0.78, 0.76, 0.74], ground: 'stone', pitch: 53 },
 };
 const _shellMemo = {};
@@ -214,8 +214,13 @@ function shellDress(c, b, frames, MS, o) {
       g7.box(INF_B, cu - 0.2, top + 0.1, 0.06, cu + 0.2, top + 0.34, 0.4, sc.map(v => v * 0.45), [0, 0, 0.2, 0.2]); g7.box(INF_B, cu - 0.12, top + 0.1, 0.14, cu + 0.12, top + 0.34, 0.32, [0.03, 0.03, 0.03], [0, 0, 0.1, 0.1]);      // the pot and its dark mouth
       put(wn, g7); used.stack = wn; break; }
     // 4: a drying rack for nets in the front yard, away from the door
-    if (RF() < FM.rack) { const Lf2 = L(front), uc = dc > Lf2 / 2 ? 0.5 : Lf2 - 2.9, ok = free(front, uc, uc + 2.4, 1.9); if (ok) { const g8 = GP(); for (const u of [uc, uc + 2.4]) g8.beam(W_, [u, 0, 1.6], [u, 2.0, 1.6], 0.07, [0.3, 0.24, 0.18]); g8.beam(W_, [uc - 0.1, 1.95, 1.6], [uc + 2.5, 1.95, 1.6], 0.05, [0.3, 0.24, 0.18]); g8.beam(W_, [uc - 0.1, 1.25, 1.6], [uc + 2.5, 1.25, 1.6], 0.04, [0.3, 0.24, 0.18]);
-      g8.quad(W_, [uc + 0.1, 1.9, 1.6], [uc + 2.3, 1.9, 1.6], [uc + 2.2, 0.95, 1.63], [uc + 0.2, 0.95, 1.63], [0.34, 0.31, 0.26], [0, 0, 6, 3], true); g8.quad(W_, [uc + 0.2, 0.95, 1.63], [uc + 2.2, 0.95, 1.63], [uc + 2.0, 0.55, 1.58], [uc + 0.4, 0.55, 1.58], [0.3, 0.27, 0.23], [0, 0, 5, 1], true);      // a net hung over the pole
+    if (RF() < FM.rack) { const Lf2 = L(front), uc = dc > Lf2 / 2 ? 0.5 : Lf2 - 2.9, ok = free(front, uc, uc + 2.4, 1.9); if (ok) { const g8 = GP(), WD = [0.3, 0.24, 0.18], NT = [0.3, 0.26, 0.19];
+      const pole = (A, B, r, c) => { const d3 = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], dl = Math.hypot(d3[0], d3[1], d3[2]) || 1, f = d3.map(v => v / dl), ref = Math.abs(f[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0], e1 = [f[1] * ref[2] - f[2] * ref[1], f[2] * ref[0] - f[0] * ref[2], f[0] * ref[1] - f[1] * ref[0]], l1 = Math.hypot(...e1), u1 = e1.map(v => v / l1 * r), e2 = [f[1] * u1[2] - f[2] * u1[1], f[2] * u1[0] - f[0] * u1[2], f[0] * u1[1] - f[1] * u1[0]], l2 = Math.hypot(...e2), u2 = e2.map(v => v / l2 * r);
+        for (let i = 0; i < 7; i++) { const a0 = i / 7 * TAU, a1 = (i + 1) / 7 * TAU, o0 = [u1[0] * Math.cos(a0) + u2[0] * Math.sin(a0), u1[1] * Math.cos(a0) + u2[1] * Math.sin(a0), u1[2] * Math.cos(a0) + u2[2] * Math.sin(a0)], o1 = [u1[0] * Math.cos(a1) + u2[0] * Math.sin(a1), u1[1] * Math.cos(a1) + u2[1] * Math.sin(a1), u1[2] * Math.cos(a1) + u2[2] * Math.sin(a1)]; g8.quad(W_, [A[0] + o0[0], A[1] + o0[1], A[2] + o0[2]], [A[0] + o1[0], A[1] + o1[1], A[2] + o1[2]], [B[0] + o1[0], B[1] + o1[1], B[2] + o1[2]], [B[0] + o0[0], B[1] + o0[1], B[2] + o0[2]], c, GPU.wood); } };
+      for (const u of [uc, uc + 2.4]) pole([u, 0, 1.6], [u, 2.0, 1.6], 0.045, WD); pole([uc - 0.1, 1.97, 1.6], [uc + 2.5, 1.97, 1.6], 0.035, WD); pole([uc - 0.1, 1.3, 1.6], [uc + 2.5, 1.3, 1.6], 0.028, WD);
+      for (let i = 0; i < 11; i++) { const u = uc + 0.12 + i * 0.21, len = 0.55 + ((i * 7) % 5) * 0.1; g8.beam(W_, [u, 1.95, 1.6], [u + 0.02, 1.95 - len, 1.62], 0.011, NT); }
+      for (const y of [1.65, 1.35]) g8.beam(W_, [uc + 0.1, y, 1.62], [uc + 2.3, y - 0.05, 1.62], 0.008, NT);
+      for (let i = 0; i < 6; i++) g8.box(W_, uc + 0.2 + i * 0.4, 1.9, 1.57, uc + 0.27 + i * 0.4, 1.97, 1.63, [0.42, 0.36, 0.25]);
       put(front, g8); } }
     // 5: a smoke louvre on the ridge
     if (RF() < FM.vent) { const gv = GP(), uu = Lf * (0.35 + RF() * 0.3); gv.box(W_, uu - 0.4, yRidge - 0.05, -d / 2 - 0.22, uu + 0.4, yRidge + 0.5, -d / 2 + 0.22, [0.22, 0.18, 0.14]); for (let k2 = 0; k2 < 3; k2++) gv.box(W_, uu - 0.45, yRidge + 0.05 + k2 * 0.15, -d / 2 - 0.27, uu + 0.45, yRidge + 0.09 + k2 * 0.15, -d / 2 + 0.27, [0.3, 0.25, 0.2]); gv.box(W_, uu - 0.5, yRidge + 0.5, -d / 2 - 0.3, uu + 0.5, yRidge + 0.58, -d / 2 + 0.3, [0.26, 0.21, 0.17]); put(front, gv); }

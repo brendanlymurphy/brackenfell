@@ -50,7 +50,7 @@ const infTimber = name => /^(Wall_Plaster|Roof_Front_Brick)/.test(name) ? infT(n
 // bay posts and belt rails. About 700 triangles for a two-storey house, in 4 materials (the kit's 2 m panels with their window pieces cost 3-4 thousand).
 // o: w d fl H stone tint jetty R lo; plan[k][wall] = [{ u0, u1, v0, v1, door, shutter }] (u along the wall as WALLS defines it, v above the storey's floor);
 // skip[wall] = storeys of a neighbour against that side wall (those storeys get no wall); optsOf(k) = batch options for storey k
-const INF_B = 'MI_Stone_DS';
+const INF_B = 'MI_Stone_DS', INF_BUNTING = false;
 function infWalls(B, MS, o) {
   const w = o.w, d = o.d, fl = o.fl, H = o.H || 3, sh = o.jetty ? (typeof o.jetty === 'number' ? o.jetty : 0.5) : 0, lo = !!o.lo, DK = [0.17, 0.14, 0.11], SC = [[0.3, 0.38, 0.28], [0.42, 0.2, 0.16], [0.22, 0.3, 0.4], [0.36, 0.31, 0.22]];
   const R = o.R || rng(3);
@@ -358,7 +358,7 @@ function infillAttach() {
   if (!INFS.batch || !SC.scene || INFS.built) return; INFS.built = true;
   const B = INFS.batch, lowQ = (R.qName === 'low');
   for (const h of INFS.shells) { try { infShell(B, h, lowQ && h.tier === 1); } catch (e) { console.warn('infill shell ' + h.id + ': ' + (e && e.message || e)); } }
-  if (!lowQ) {       // pennant ropes across the lanes, between houses that face each other
+  if (!lowQ && INF_BUNTING) {       // pennant ropes across the lanes (off: no feast is in the story, the lanes stay bare; the Market Place alley keeps its own), between houses that face each other
     const hs = INF.houses, used = new Set(), cols = [[0.46, 0.25, 0.21], [0.56, 0.46, 0.26], [0.27, 0.33, 0.29], [0.5, 0.46, 0.38], [0.42, 0.22, 0.2]].map(c => c.map(v => v * 0.25)), I = new THREE.Matrix4(), rr = rng(606); let nr = 0;
     const front = h => { const p = siteToWorld(h, (rr() - 0.5) * h.w * 0.3, -h.d / 2 - (h.jetty ? 0.58 : 0.14)); return [p[0], site0(h) + (h.floors >= 2 ? 3.75 : 2.9), p[1]]; };
     const site0 = h => SITE[h.id].y;
