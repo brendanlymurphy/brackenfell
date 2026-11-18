@@ -403,7 +403,7 @@ function buildWharfHouses(bucket) {
     const wy = (lx, lz) => { const q = siteToWorld(s, lx, lz); return Terrain.y(q[0], q[1]) - g0; };
     const fz = -d / 2, os = dp > 0 ? -1 : 1, xo = os * w * 0.27;
     m.push().T(s.x, g0, s.z).RY(-s.yaw);
-    const bx = (x0, y0, z0, x1, y1, z1, mat, col, sk) => { m.mat(mat, col, 0.5); m.box(x0, y0, z0, x1, y1, z1, sk === undefined ? 4 : sk); };
+    const bx = (x0, y0, z0, x1, y1, z1, mat, col) => { m.mat(mat, col, 0.5); m.box(x0, y0, z0, x1, y1, z1); };      // closed boxes: no open edge anywhere (test/geom.js)
     const col = (lx, lz, r, h) => addCircleCollider(m, lx, lz, r, wy(lx, lz) - 0.2, wy(lx, lz) - 0.2 + h + 0.2);
     // the plinth: stone courses or a tarred sill, round the front and both sides
     const pc = sp.plinth === 'tar' ? [0.1, 0.09, 0.08] : sp.tone, pm = sp.plinth === 'tar' ? MAT.PLAIN : MAT.STONE;
