@@ -2,6 +2,22 @@
 
 ## 2026-11-18 (inbox of 16:15 UTC)
 
+**Leftover from 06:20, item 4: the quest stages played by following the mark (done, `docs/audit/QUESTWALK.md`, picture `questwalk_b89.jpg`).**
+The game has 37 stages, not 38. All 37 were walked in order on the live Build 89, each from where the last one ended. The walker used held keys only: no
+teleport, no items or flags given. The walker needed four rounds of fixes first; the first runs' failures were all the bot's. Result: the mark leads to
+the place with the right prompt on 21; to an honestly shut door on 5 (the mine without its key; Maren's and Marta's doors barred at night with a
+good message); the game's fault on 4; the bot's fault on 6 (stuck behind the Hart's bar with Greta or Brandt in the gap, and after being knocked
+out at the outlaws' camp; the links out of both places walk fine by input); 1 not established. Faults, worst first:
+1. **"Discovered · undefined"**: Build 89's four new ground places (`orchard.nw`, `orchard.ne`, `green.sw`, `drying.sw`) have no name, and three have
+   no centre or radius, so the discovery check (`85_ui.js:203`) never skips them and the banner reads "undefined" (seen at the fire pit).
+2. **Marks inside a building point through the floor or ceiling**: crypt 1 and 2 at the gate and reliquary below the nave, not the way down;
+   bell 1 at Aldous asleep 3.8 m overhead. The Hart's stair-head mark (stages 7 to 9) is right and shows how.
+3. **The bier**: the path graph's only link to it climbs the quay's 1 m wall from the beach. A player cannot climb it, and the mark leads to the
+   foot of the wall, 6 m from the body.
+4. **Osric stands in the Hart's front door at 22:00**: the prompt there is "Talk Osric", not "Leave".
+5. Optional: at night the objective could say the shop or house opens in the morning.
+Not checked: fighting, anything behind a lock, whether the conversations advance the stage, anything heard or in motion.
+
 **Leftover from 06:20, item 3: look-alikes (done, `docs/audit/LOOKALIKES.md`, picture `lookalikes_b89.jpg`).** 17 body models for 77 people;
 48 pairs on the same body stand within 25 m of each other at some hour; 14 differ in at most one of skin, hair, hat. Miles Ashdown and Peter
 Marsh differ only in shade, side by side in the Hart every evening. Clearest in the pictures: Ned Thorne and Tom Arden on the school bench are
