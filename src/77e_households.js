@@ -65,7 +65,7 @@ function householdDefs() {
     const first = (CAST_FIRST[work] ? CAST_FIRST[work] === id : CAST.find(q => (q.work || q.home) === work) === p);          // the first named at a workplace has its counter or bench; the next works beside (the yard, the floor)
     const spot = keeps && first ? work + '.counter' : first && bench ? bench : keeps ? at(work, 'sit') : (work === home && yard && !first ? yard : (bench && !first ? at(work, 'home') : bench || (first && has(work + '.counter') ? work + '.counter' : at(work, 'home'))));
     const wAnim = spot.endsWith('.counter') ? 'idle' : keeps && !first ? 'work' : CAST_SWEEP[id] ? 'sweep' : 'work';
-    const wake = (old ? 6.9 : 6.1) + H(id, 'w') * 0.6, up = (child ? 20.3 : old ? 20.9 : 21.6) + H(id, 'u') * 0.8, noon = 12.1 + J(id, 'n', 0.25), out = CAST_OUT[id];
+    const wake = (old ? 6.9 : 6.1) + H(id, 'w') * 0.6, up = (child ? 20.3 : old ? 20.9 : 21.6) + H(id, 'u') * 0.8, noon = 12.1 + J(id, 'n', 0.25), out = CAST_OUT[id] && (o => { const ok = o.filter(sp => sp && World.spots[sp]); return o.map(sp => !sp || World.spots[sp] ? sp : (ok[0] || '')); })(CAST_OUT[id]);       /* [coordinator] a yard that has gone with its house (the town worker removes empty shells: in.46 went) falls back to the person's other place, not to a spot that does not exist */
     let day;
     if (id === 'godwin') day = [[2.5, at(home, 'work'), 'work'], [9.2, meal, sitA], [10, bed, 'lie'], [14, at(home, 'counter'), 'idle'], [17.5, yard || meal, yard ? 'work' : sitA]];          // the baker bakes at night and sleeps from ten to two
     else if (child) { const sc = CAST_SCHOOL.indexOf(id), pl = PLAY[(H(id, 'p') * PLAY.length) | 0], pl2 = PLAY[((H(id, 'p') * PLAY.length | 0) + 3) % PLAY.length];
