@@ -218,6 +218,11 @@ function hpBesom(mesh) { const T = THREE, fp = new T.Vector3(), y = new T.Vector
   o.copy(fp).addScaledVector(y, 1.1); hpPlace(mesh, o, y, z); mesh.updateMatrixWorld(true);
   // each hand to the handle where it passes nearest that shoulder (the right a hand's width lower, the left at it): every body reaches it, whatever its build
   const shR = hpLocal(H, H.root.getObjectByName('upperarm_r'), new T.Vector3()), shL = hpLocal(H, H.root.getObjectByName('upperarm_l'), new T.Vector3());
+  // if the handle passes beyond an arm's reach of either shoulder, slide the whole besom toward the body (along the ground) until it does not
+  const armLen = s => { const u = H.root.getObjectByName('upperarm_' + s), l = H.root.getObjectByName('lowerarm_' + s), hd = H.root.getObjectByName('hand_' + s); const a = u.getWorldPosition(new T.Vector3()), b = l.getWorldPosition(new T.Vector3()), c = hd.getWorldPosition(new T.Vector3()); return a.distanceTo(b) + b.distanceTo(c); };
+  for (const [sh, L] of [[shR, armLen('r')], [shL, armLen('l')]]) { const t0 = Math.max(-0.6, Math.min(0.3, sh.clone().sub(o).dot(y))), np = o.clone().addScaledVector(y, t0), d = np.distanceTo(sh), lim = L * 0.86;
+    if (d > lim) { const mv = sh.clone().sub(np).setY(0); const k2 = Math.min(1, (d - lim) / Math.max(0.01, mv.length())); mv.multiplyScalar(k2 * 1.05); o.add(mv); fp.add(mv); } }
+  hpPlace(mesh, o, y, z); mesh.updateMatrixWorld(true);
   const along = P => Math.max(-0.6, Math.min(0.3, P.clone().sub(o).dot(y))), tR = along(shR) - 0.12, tL = Math.min(0.32, Math.max(tR + 0.3, along(shL) + 0.02));
   const lowR = H.pivot.localToWorld(q.copy(o).addScaledVector(y, tR)), hiL = H.pivot.localToWorld(t.copy(o).addScaledVector(y, tL));
   Chars.reach(H, 'R', lowR.clone()); Chars.reach(H, 'L', hiL.clone()); Chars.grip(H, 'R', HP.GRIP.curl); Chars.grip(H, 'L', HP.GRIP.curl); mesh.userData.grip = [0, tR, 0]; mesh.userData.hand = 'R'; }; }
