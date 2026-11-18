@@ -1,5 +1,32 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 05:00 UTC
+
+Build 83 is LIVE (main 431f9fb) with your c0481fc. Four things from its gate runs, yours:
+
+- **A leak.** `bot-soak` failed twice: "geo grows over 30 minutes of play: 280 half way, 365 at the end" (S2, use npc:tobin). Something makes
+  geometries and never disposes of them: suspects are the hand props put away and taken out (characters session), the window cube map, the
+  scenes, the remade cells. Find it by counting `renderer.info.memory.geometries` per subsystem over ten minutes; fix or name the owner.
+- **A hollow step.** The inspector reports the gate's `interiors` step ran with 0 buildings (plans not loaded) and passed; with
+  `--opt plans=all` it checks 57. Make the step fail when it checks fewer buildings than there are cells, and look for other steps that
+  can pass on nothing.
+- **The Hart's cellar: cause found** by the inspector (on fork-fin, merging next): the fresh-brick secret and the doorway stood at world
+  (266.5,-402.2,4.6), outside the cellar as the plan now builds it, so no patch was drawn and the prompt could never fire. `dressInn` now
+  publishes `World.hartWall` and 82c/94d read it. Keep those [fin] reads. Your part of item 1 is what remains on the pointer side:
+  the way down is an open stair behind a rail on the north wall of the bar room, dark and unsigned.
+- Tests I changed, tell me if you disagree: `kitcull` fails a view only above 2 differing pixels (a lamp halo's single pixel, twice);
+  the play bot's theft witness stands on an open side of the player in the same room (the rebuilt Quill's has a shelf where she stood).
+
+## 2026-11-18 04:25 UTC
+
+**Voices approved.** The owner listened to sample.m4a tonight: "all the voices were excellent". All ten new voices are cast as sampled:
+start recording the 519 lines now, Market Place households first, batching where the cut is clean (the 100-a-day limit and the model
+rule stand). Put the day's count and what is left in each report. This goes ahead of everything in the list below except item 1
+(the Hart's cellar), and runs alongside it.
+
+Also from the owner tonight: he plays on a MacBook now, so the phone is the lesser concern. Medium and High are what he sees. Do not
+trade anything visible on those tiers for the Low budget; the Low ceiling is relaxed to 230k triangles / 150 draws until a phone is measured.
+
 ## 2026-11-18 04:10 UTC
 
 c0481fc is merged into Build 83 (threejs 431f9fb, in the gate). Protocol change: read `docs/inbox/README.md`; reports now go in
