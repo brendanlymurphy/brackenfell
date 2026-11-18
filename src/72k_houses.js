@@ -317,7 +317,7 @@ function hCompact(P, c, F) {
   const two = !!st.up || shellOpenings(c).some(f => f.lv >= 1 && f.kind !== 'floor'), three = shellOpenings(c).some(f => f.lv >= 2 && f.kind === 'win') && D < 6;      /* a third storey the shell shows on a one-room house: a loft under the roof, by a ladder (inbox, Build 85) */      /* the alley's facades draw their upper storeys themselves: the shell's openings say how many there are */
   const H0 = W < 6.5 ? 2.6 : clamp(F.H0, 2.6, 2.8), nSt = Math.ceil((H0 + PW.SLAB) / 0.19), single = D < 6;
   const Zp = single ? D : clamp(Math.round(D * 0.55 * 2) / 2, 3.5, D - 2.5);
-  const shop = fam === 'shopfront', work = fam === 'workshop', hall = !shop && !work, cellarOK = !single && (shop || fam === 'merchant') && (F.wealth > 0 || F.trade === 'butcher') && W >= 7.5;
+  const shop = fam === 'shopfront', work = fam === 'workshop' || fam === 'crosspassage', hall = !shop && !work, cellarOK = !single && (shop || fam === 'merchant') && (F.wealth > 0 || F.trade === 'butcher') && W >= 7.5;
   const mir = hHash(id + '|cmir') < 0.5, M = x => mir ? X0 + X1 - x : x, rr = (a, b) => [Math.min(M(a), M(b)), Math.max(M(a), M(b))];      /* house by house the arrangement is mirrored: the stair, the store and the kitchen change sides */
   const split = [0.45, 0.5, 0.55][(hHash(id + '|csplit') * 3) | 0], Xs = cellarOK ? X0 + 5.5 : X0 + Math.max(3, Math.min(W - 3, Math.round(W * split * 2) / 2));
   P.dims = { W, D, Dh: Zp }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP, two ? {} : { loft: true }); if (cellarOK) pLevel(P, -1, -(2.4 + PW.SLAB), 2.4);
@@ -379,3 +379,7 @@ for (const id of ['in.02', 'in.04', 'in.07', 'in.08', 'in.10', 'in.12', 'in.13',
 for (const id of ['shop.n2', 'shop.n3', 'shop.n4', 'shop.s0', 'shop.s1', 'shop.s2']) INOUT_FIT.add(id);
 // Chapelgate
 for (const id of ['in.33', 'in.45', 'in.66', 'in.67', 'in.70', 'in.77', 'in.82']) INOUT_FIT.add(id);
+// Wharfside and Highfold
+for (const id of ['in.20', 'in.23', 'in.34', 'in.36', 'in.37', 'in.38', 'in.51', 'in.60', 'in.111', 'in.113', 'in.115', 'hunter', 'fisher', 'high.a', 'high.c']) INOUT_FIT.add(id);
+// Riverside and Westgate
+for (const id of ['mill', 'farm', 'in.65', 'in.75', 'in.93']) INOUT_FIT.add(id);
