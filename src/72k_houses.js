@@ -312,6 +312,25 @@ PLANS.draper = (P, c, info) => {
 // chamber; one storey: a loft under the rafters); a cellar only where the back room is wide enough for its stair. Room names are the families' own, so the cast,
 // the schedules and docs/ROOMS.md still find them. Dressed with kit pieces by name and the trade's set; no filler.
 const INOUT_FIT = new Set();          // the houses that use it (district by district)
+// [inout] the side of a stair that the front door looks at is the first thing seen on coming in: its tall end is an under-stair cupboard (a ledged plank door,
+// strap hinges, a latch), with a peg rail beside it where the stair is high enough to stand under. Drawn on the stair's side, nothing on the floor.
+function hUnderStair(P, q) {
+  if (!q || q.axis !== 'x' || q.k0 !== 0 || !q.run) return; const L = P.lv[0], m = P.c.int, d = q.dir, zf = q.lat - q.hw - 0.005;
+  const hAt = x => q.rise * Math.max(0, Math.min(1, (x - q.p0) * d / q.run)), dc = q.p1 - d * 0.55;
+  if (hAt(dc - d * 0.4) < 1.95) return;
+  pBase(P, m);
+  at(m, dc, L.y + 0.02, zf, 0, () => {
+    m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.41, 0, -0.05, -0.35, 1.93, 0); m.box(0.35, 0, -0.05, 0.41, 1.93, 0); m.box(-0.41, 1.87, -0.05, 0.41, 1.93, 0);
+    m.mat(MAT.PLANKS, COL.wood); for (let i = 0; i < 5; i++) m.box(-0.35 + i * 0.14 + 0.003, 0.01, -0.035, -0.35 + (i + 1) * 0.14 - 0.003, 1.86, -0.008);
+    m.box(-0.33, 0.28, -0.055, 0.33, 0.38, -0.035); m.box(-0.33, 1.46, -0.055, 0.33, 1.56, -0.035); m.beam([-0.27, 0.38, -0.045], [0.27, 1.46, -0.045], 0.07, 0.02);
+    m.mat(MAT.METAL, COL.black); for (const y of [0.31, 1.49]) m.box(-0.37, y, -0.062, -0.02, y + 0.045, -0.055); m.box(0.22, 0.93, -0.068, 0.3, 1.01, -0.055); m.box(0.25, 0.86, -0.075, 0.27, 0.93, -0.068);
+  });
+  const rc = dc - d * 1.0; if (hAt(rc - d * 0.45) < 1.62) return;
+  at(m, rc, L.y + 0.02, zf, 0, () => {
+    m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.42, 1.48, -0.03, 0.42, 1.57, 0); for (const px of [-0.28, 0, 0.28]) m.box(px - 0.015, 1.51, -0.12, px + 0.015, 1.54, -0.03);
+    if (Kit.pieces.Bag) kp(m, 'Bag', -0.28, 0.98, -0.13, 0.85, 0);
+  });
+}
 function hCompact(P, c, F) {
   const small = c.w * c.d < 30, sW = Math.max(6, Math.ceil(c.w * 1.05 * 2) / 2),      /* 6 m: a stair with 1.2 m clear at both ends */ B = small ? pFitBox(c, { W: sW, D: Math.max(4, Math.floor(c.w * c.d * 1.5 / sW * 2) / 2) }) : pFitBox(c), X0 = B.x0, X1 = B.x1, W = B.W, D = B.D, id = P.id, R = F.R, st = c.spec.kitStyle || {}, fam = F.fam;      /* a small shell: a floor 5.5 m wide so a straight stair fits along its back wall */
   const two = !!st.up || shellOpenings(c).some(f => f.lv >= 1 && f.kind !== 'floor'), three = shellOpenings(c).some(f => f.lv >= 2 && f.kind === 'win' && !f.blocked) && two;      /* a third storey the shell shows on a one-room house: a loft under the roof, by a ladder (inbox, Build 85) */      /* the alley's facades draw their upper storeys themselves: the shell's openings say how many there are */
@@ -344,7 +363,7 @@ function hCompact(P, c, F) {
   const lat = single ? D - 0.6 : Zp - 0.6, p0 = X0 + 1.45,      /* 1.2 m clear at the foot */ tread = clamp(Math.floor((X1 - 1.45 - p0) / nSt * 100) / 100, 0.18, 0.23);      /* and at the head */      /* a longer stair where it fits: its well is then long enough to jump down */      /* narrow houses get a steeper stair, as they had */
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: mir ? -1 : 1, x: M(p0), z: lat, width: 0.9, tread, holeX: 0.5 });
   if (cellarOK) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: mir ? -1 : 1, x: M(X0 + 1.45), z: D - 0.6, width: 0.9, tread: 0.2 });
-  pLayout(P); pBalconies(P, c);
+  pLayout(P); pBalconies(P, c); hUnderStair(P, P.stairs.find(q => q.id === 'stUp'));
   let lad = null; if (three) { for (const sdL of mir ? ['e', 'w'] : ['w', 'e']) for (const z of [1.2, 1.6, D - 1.6, D / 2]) if (!lad) lad = pLadder(P, 1, sdL, z); if (!lad) P.err.push('no ladder to the loft'); }
   for (const q of P.stairs) { const h = q.high || q.low, x0 = Math.min(q.p1, q.p1 + q.dir * 1.4), x1 = Math.max(q.p1, q.p1 + q.dir * 1.4); P.clear.push(q.axis === 'x' ? { x0, x1, z0: q.lat - 0.6, z1: q.lat + 0.6, k: q.k0, kind: 'stair' } : { x0: q.lat - 0.6, x1: q.lat + 0.6, z0: x0, z1: x1, k: q.k0, kind: 'stair' }); }      /* the floor below a stair head stays clear of a fire: its chimney stack would stand at the top of the stair */
   // the fire: in the kitchen or the chamber behind, else in the front room's end wall
