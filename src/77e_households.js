@@ -55,6 +55,11 @@ function householdDefs() {
   const PLAY = ['square.bench2', 'alley.s', 'gallery.top', 'terrace.view', 'north.top', 'east.top', 'alley.n', 'passage.mid'].filter(has);
   // every yard of a house of the table is somebody's for an hour of the day: one of the people of that house or shop, before it opens (after it shuts for those at the well at dawn)
   const yardBy = {}; for (const sp in S_) { const b = S_[sp].yardOf; if (!b || !sp.endsWith('.yard') || Object.values(CAST_TASK).includes(sp)) continue; const c = CAST.filter(q => (q.home === b || q.work === b) && q.age >= 15 && q.id !== 'godwin' && !CAST_OUT[q.id]); const free = c.filter(q => !yardBy[q.id]); if (free.length) yardBy[(free.find(q => q.work === b && q.home !== b) || free[free.length - 1]).id] = sp; }
+  /* [coordinator, Build 83] a yard whose own house has nobody of the table (the Warden's Lodge: Hale and Ivo are story people) goes to the nearest grown neighbour who has no yard, so no yard stands unworked all day */
+  { const taken = new Set(Object.values(yardBy)), at = id => { const h = World.houses[id]; return h && h.site ? [h.site.x, h.site.z] : null; };
+    for (const sp in S_) { const b = S_[sp].yardOf; if (!b || !sp.endsWith('.yard') || Object.values(CAST_TASK).includes(sp) || taken.has(sp)) continue; const yp = S_[sp].p; let best = null, bd = 1e9;
+      for (const q of CAST) { if (q.age < 15 || q.id === 'godwin' || CAST_OUT[q.id] || yardBy[q.id]) continue; const hp = at(q.home); if (!hp) continue; const d = Math.hypot(hp[0] - yp[0], hp[1] - yp[2]); if (d < bd) { bd = d; best = q; } }
+      if (best && bd < 60) { yardBy[best.id] = sp; taken.add(sp); } } }
   for (const p of CAST) {
     const home = p.home, work = p.work || home; if (!World.houses[home] || !World.houses[home].plan) { console.warn('cast: ' + p.name + ' has no house ' + home); continue; }
     const k = nth[home] = (nth[home] === undefined ? 0 : nth[home] + 1), bed = bedOf(home, p.id); if (!bed) console.warn('cast: no bed for ' + p.name + ' in ' + home);
