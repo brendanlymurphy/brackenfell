@@ -93,13 +93,11 @@ function dLogPile(R, k) {      // split firewood stacked against a wall: rows of
   for (let j = 0; j < rr; j++) for (let i = 0; i < rr + 2 - j; i++) dLog2(g, (i - (rr + 1 - j) / 2) * r * 2.05 + R.s() * 0.008, r + j * r * 1.8, R.s() * 0.02, len, r * (0.9 + R() * 0.2), dscale(c0, 0.85 + R() * 0.3));
   return g.make(key);
 }
-function dLog2(g, x, y, z, len, r, col) { if (TEST && TEST.nologs) return;      // log along Z, 10-sided; the end grain is grey-tan with a darker core and a bark rim, and some logs stand out of line
-  const n = 8, zo = (Math.abs(Math.sin(x * 91 + y * 57)) < 0.2 ? 0.07 : 0) * Math.sign(Math.sin(x * 13 + 1)), q = (a, zz, k) => [x + Math.cos(a) * r * (k || 1), y + Math.sin(a) * r * (k || 1), z + zz + zo];
-  const bark = dscale(col, 0.62), tan = [0.36, 0.31, 0.24], core = [0.27, 0.22, 0.16];
+function dLog2(g, x, y, z, len, r, col) {      // log along Z, 6-sided; the end grain is grey-tan (not the bright cream of the bark's texture) and some logs stand out of line
+  if (TEST && TEST.nologs) return;
+  const n = 6, zo = (Math.abs(Math.sin(x * 91 + y * 57)) < 0.2 ? 0.07 : 0) * Math.sign(Math.sin(x * 13 + 1)), q = (a, zz) => [x + Math.cos(a) * r, y + Math.sin(a) * r, z + zz + zo];
   for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU; g.quad(DRW, q(a1, -len / 2), q(a1, len / 2), q(a0, len / 2), q(a0, -len / 2), col, DRU.wood); }
-  for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU;
-    g.quad(DRW, q(a1, len / 2 + 0.001), q(a0, len / 2 + 0.001), q(a0, len / 2 + 0.001, 0.82), q(a1, len / 2 + 0.001, 0.82), bark, DRU.wood);
-    g.tri(DRW, [x, y, z + len / 2 + 0.003 + zo], q(a1, len / 2 + 0.003, 0.82), q(a0, len / 2 + 0.003, 0.82), core, DRU.wood); }
+  for (let i = 0; i < n; i++) { const a0 = i / n * TAU, a1 = (i + 1) / n * TAU; g.tri(DRW, [x, y, z + len / 2 + zo], q(a1, len / 2), q(a0, len / 2), [0.3, 0.25, 0.19], DRU.wood); }
 }
 function dLadder(R, k, h) {      // wall piece: origin at the wall, +z out; leans against the wall with its foot 0.5 m out
   const key = 'dr_ladder' + k; if (Kit.pieces[key]) return key;
