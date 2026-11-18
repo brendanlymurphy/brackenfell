@@ -12,6 +12,7 @@ casks stand along it. With `hartWall` published on the -x wall (plan x -6.8, z 4
 
 Gate: quick on `e8f573b`, 19 of 21 pass. `hartdoor` fails on the bearing only (above). `budget-medium` was over the file taken from threejs
 (alley 199 draws against 193; square 195 against 192; lake 171 against 168: the cast out of doors) and is re-accepted at these figures.
+GitHub `gate` on `83e8d54`: every step passes except `hartdoor`, the bearing only (5 of 6 jobs green).
 
 1. **The compass reads true indoors.** A cell is built in its house's own frame: the door inside, turned by the site's yaw about the cell's
    origin, lands on the door outside with 0.00 m error in all 57 cells. So the heading inside plus the site's yaw is the heading in the
