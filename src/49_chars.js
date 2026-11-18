@@ -319,9 +319,14 @@ const Chars = (() => {
     g.setAttribute('position', new BA(new Float32Array(P), 3)); g.setAttribute('uv', new BA(new Float32Array(UV), 2)); g.setAttribute('skinIndex', new BA(si, 4)); g.setAttribute('skinWeight', new BA(sw, 4)); g.setIndex(new BA(new Uint16Array(IX), 1)); g.computeVertexNormals();
     return g;
   }
+  // [ch4] Taking things off without a second body: every vertex knows whether it is a hat (1: cap, hood and its cape, straw hat, kettle hat, feathered hat; a coif or a kerchief stays
+  // on, women slept in them) or an outer garment (2: cloak, apron, tabard, straps, belt, pouch). H.uShed is how much is off: 0 nothing, 1 the hat (indoors at table), 2 hat and outer
+  // garments (in bed). The material discards what is off. C.shed(H, level) sets it from outside (a schedule row); left alone, update() sets it from what the person is doing.
+  const SHED_OF = p => /^w_hat_(cap|hood|straw|kettle|feather)/.test(p) ? 1 : /^w_(cloak|apron|tabard|straps|belt|pouch)/.test(p) ? 2 : 0;
+  C.shed = function (H, level) { H.shedOverride = level === null || level === undefined ? undefined : level; };
   function mergedGeometry(S, body, parts, matName, names, lod, acc) {
     const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|' + lod : '') + (acc && names ? '|' + (acc.hat || '') + (acc.belt ? 'b' : '') + (acc.pouch ? 'p' : '') : ''); let g = S.geo.get(key); if (g !== undefined) return g;
-    const src = [], mids = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts[lod] || {} : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); }
+    const src = [], mids = [], sheds = []; for (const p of parts) for (const m of (lod ? S.bodies[body].lodParts[lod] || {} : S.bodies[body].parts)[p] || []) if (!matName || m.material.name === matName) { src.push(m.geometry); mids.push(names ? names.indexOf(m.material.name) : 0); sheds.push(SHED_OF(p)); }
     if (!src.length) { S.geo.set(key, null); return null; }
     // Behind the lips: a small dark card on the head joint, so an opening mouth shows a mouth and not the street behind the head.
     // Its texture coordinate (2, 2) is what the material reads as "inside of the mouth". Only the two close-up weights carry it.
@@ -343,6 +348,7 @@ const Chars = (() => {
       g.setAttribute(name, new THREE.BufferAttribute(arr, size));
     }
     if (names) { const mid = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; mid.fill(mids[i], o, o + c); o += c; }); g.setAttribute('mid', new THREE.BufferAttribute(mid, 1)); }
+    if (names) { const sh = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; sh.fill(sheds[i] || 0, o, o + c); o += c; }); g.setAttribute('shed', new THREE.BufferAttribute(sh, 1)); }      // [ch4] which garment a vertex belongs to, for taking it off (SHED_OF)
     let io = 0, base = 0; for (const s of src) { const c = s.attributes.position.count; if (s.index) for (let i = 0; i < s.index.count; i++) idx[io++] = s.index.getX(i) + base; else for (let i = 0; i < c; i++) idx[io++] = i + base; base += c; }
     g.setIndex(new THREE.BufferAttribute(idx, 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.6);
     S.geo.set(key, g); return g;
@@ -453,7 +459,8 @@ const Chars = (() => {
       albedo = albedo.mul(float(1).sub(TSL.clamp(occ.mul(0.6), 0, 0.42).mul(face)));      // [ch1] softer: no mask across the brow
       rough = rough.sub(TSL.clamp(spec, 0, 1).mul(face).mul(0.38));
     }
-    m.colorNode = Fn(() => { If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
+    const shedA = attribute('shed', 'float');      // [ch4] what is taken off is not drawn
+    m.colorNode = Fn(() => { If(shedA.greaterThan(0.5).and(shedA.lessThan(H.uShed.add(0.5))), () => { Discard(); }); If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
     else if (weaveN) m.normalNode = normalView.add(weaveN).normalize();      // [ch1]
@@ -560,7 +567,7 @@ const Chars = (() => {
     const cfg = S.cfg, look = cfg.look ? cfg.look(def) : {}, body = S.bodies[look.body] ? look.body : Object.keys(S.bodies)[0], B = S.bodies[body];
     const root = cloneBones(B.armature), byName = {}; root.traverse(o => { byName[o.name] = o; });
     const skeleton = new THREE.Skeleton(B.skel.bones.map(b => byName[b.name]), B.skel.boneInverses);
-    const H = { def, set: S, body, root, pivot: new THREE.Group(), skeleton, uVis: [0, 1, 2, 3, 4].map(() => uniform(new THREE.Vector4())), visK: uniform(1), visW: new Float32Array(20), uZone: uniform(0), uLight: uniform(1), uMouth: uniform(0), uBlink: uniform(0), uPupil: uniform(0.05), uGaze: uniform(new THREE.Vector2()), uHead: uniform(new THREE.Matrix3()), bones: {}, actions: {}, cur: null, curName: '', seed: 0, mats: [], meshes: [] };
+    const H = { def, set: S, body, root, pivot: new THREE.Group(), skeleton, uVis: [0, 1, 2, 3, 4].map(() => uniform(new THREE.Vector4())), visK: uniform(1), visW: new Float32Array(20), uZone: uniform(0), uLight: uniform(1), uShed: uniform(0), uMouth: uniform(0), uBlink: uniform(0), uPupil: uniform(0.05), uGaze: uniform(new THREE.Vector2()), uHead: uniform(new THREE.Matrix3()), bones: {}, actions: {}, cur: null, curName: '', seed: 0, mats: [], meshes: [] };
     for (let i = 0, id = String(def.id || C.list.length); i < id.length; i++) H.seed = (H.seed * 31 + id.charCodeAt(i)) >>> 0;
     { const u1 = ((H.seed >>> 3) % 97) / 97, u2 = ((H.seed >>> 9) % 89) / 89, kid = /child|boy|girl/.test(body); H.wide = kid ? 1 : 0.93 + 0.15 * u1; H.tall = kid ? 1 : 0.965 + 0.07 * u2; }      // [ch1]
     const parts = (look.parts || Object.keys(B.parts)).filter(p => B.parts[p] && (!/^w_/.test(p) || (cfg.wears && cfg.wears(look, p)))).sort(), names = new Set(), hasWear = parts.some(p => /^w_/.test(p));
@@ -769,6 +776,32 @@ const Chars = (() => {
   // go to it, not the other way round: an instrument hung between two animated hands went through the player's belly. Same bookkeeping as the finger curl (see above).
   const IKB = { R: ['upperarm_r', 'lowerarm_r', 'hand_r'], L: ['upperarm_l', 'lowerarm_l', 'hand_l'] }, _ik = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), u: new THREE.Vector3(), v: new THREE.Vector3(), n: new THREE.Vector3(), q: new THREE.Quaternion(), p: new THREE.Quaternion(), r: new THREE.Quaternion() };
   const ikTurn = (bone, qW) => { bone.parent.getWorldQuaternion(_ik.p); _ik.r.copy(_ik.p).invert().multiply(qW).multiply(_ik.p); bone.quaternion.premultiply(_ik.r); bone.updateWorldMatrix(false, true); };
+  // [ch4] A blanket over a sleeper: a woollen sheet laid over the body from the shoulders to past the feet, its height taken from the body itself (the highest point of the
+  // posed body under each part of it, 4 cm above), smoothed, and falling over the sides. Built once when the person lies down and is near (within 30 m), kept while they lie,
+  // dropped when they get up. In the pivot's own space, so it follows the person's place and turn. Colour from the house's wools, by the person.
+  const BLK = { N: 22, M: 13, wide: 0.86 }, _bv = new THREE.Vector3();
+  function blanketUpdate(H, lying, dcam) {
+    if (!lying) { if (H.blanket) { H.pivot.remove(H.blanket); H.blanket.geometry.dispose(); H.blanket = null; } return; }
+    if (H.blanket || dcam > 30 || typeof RPG === 'undefined' || !RPG.litMat) return;
+    const m = H.meshes[0]; if (!m) return; H.pivot.updateMatrixWorld(true); H.root.updateMatrixWorld(true); H.skeleton.update();
+    const toL = new THREE.Matrix4().copy(H.pivot.matrixWorld).invert(), bp = n => { const b = H.root.getObjectByName(n); return b ? b.getWorldPosition(new THREE.Vector3()).applyMatrix4(toL) : null; };
+    const head = bp('head'), neck = bp('neck_01'), fl = bp('foot_l'), fr = bp('foot_r'); if (!head || !neck || !fl || !fr) return;
+    const feet = fl.clone().add(fr).multiplyScalar(0.5), ax = new THREE.Vector3(neck.x - feet.x, 0, neck.z - feet.z); const L0 = ax.length(); if (L0 < 0.8) return; ax.normalize();
+    const side = new THREE.Vector3(-ax.z, 0, ax.x), g = m.geometry, n = g.attributes.position.count, shed = g.attributes.shed, P = [];
+    let ymin = 1e9; for (let i = 0; i < n; i += 2) { if (shed && shed.getX(i) > 0.5) continue; m.getVertexPosition(i, _bv); _bv.applyMatrix4(m.matrixWorld).applyMatrix4(toL); P.push(_bv.x, _bv.y, _bv.z); if (_bv.y < ymin) ymin = _bv.y; }
+    const N = BLK.N, M = BLK.M, len = L0 + 0.18, top = neck.clone().addScaledVector(ax, -0.1), H2 = new Float32Array((N + 1) * (M + 1)).fill(-1e9);
+    for (let k = 0; k < P.length; k += 3) { const dx = P[k] - top.x, dz = P[k + 2] - top.z, u = -(dx * ax.x + dz * ax.z) / len, w = (dx * side.x + dz * side.z) / BLK.wide + 0.5; if (u < -0.04 || u > 1.04 || w < -0.04 || w > 1.04) continue;
+      const i = Math.round(u * N), j = Math.round(w * M); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const ii = i + a, jj = j + b; if (ii < 0 || ii > N || jj < 0 || jj > M) continue; const q = ii * (M + 1) + jj; if (P[k + 1] > H2[q]) H2[q] = P[k + 1]; } }
+    const bed = ymin - 0.01; for (let q = 0; q < H2.length; q++) if (H2[q] < bed) H2[q] = bed;
+    for (let pass = 0; pass < 3; pass++) { const c = H2.slice(); for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { let s2 = 0, wsum = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const ii = i + a, jj = j + b; if (ii < 0 || ii > N || jj < 0 || jj > M) continue; const ww = a || b ? 1 : 2; s2 += c[ii * (M + 1) + jj] * ww; wsum += ww; } H2[i * (M + 1) + j] = Math.max(c[i * (M + 1) + j], s2 / wsum); } }
+    const pos = [], col = [], idx = [], wool = H.blanketCol || [0.30, 0.25, 0.19];
+    for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { const u = i / N, w = j / M, edge = Math.min(w, 1 - w), drop = Math.max(0, 0.12 - edge) / 0.12, y = H2[i * (M + 1) + j] + 0.04 - drop * drop * 0.22, x = top.x - ax.x * u * len + side.x * (w - 0.5) * BLK.wide * (1 + drop * 0.08), z = top.z - ax.z * u * len + side.z * (w - 0.5) * BLK.wide * (1 + drop * 0.08);
+      pos.push(x, y, z); const t = 0.88 + 0.12 * Math.sin(i * 1.7 + j * 0.9) * Math.sin(j * 2.3), stripe = (i % 9 === 1 || i % 9 === 2) ? 0.82 : 1; col.push(wool[0] * t * stripe, wool[1] * t * stripe, wool[2] * t * stripe); }
+    for (let i = 0; i < N; i++) for (let j = 0; j < M; j++) { const a = i * (M + 1) + j, b = a + 1, c = a + M + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+    const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); bg.setIndex(idx); bg.computeVertexNormals(); bg.computeBoundingSphere();
+    if (!C.blanketMat) C.blanketMat = new Map(); let mat = C.blanketMat.get(H.uZone); if (!mat) { mat = RPG.litMat(H.uZone, H.uLight, 0.95); mat.side = THREE.DoubleSide; }
+    const bm = new THREE.Mesh(bg, RPG.litMat(H.uZone, H.uLight, 0.95)); bm.material.side = THREE.DoubleSide; bm.name = 'blanket'; bm.layers.mask = H.meshes[0].layers.mask; bm.castShadow = false; bm.receiveShadow = true; H.pivot.add(bm); H.blanket = bm;
+  }
   C.reach = function (H, side, target, handQ, w) {
     const S = H.ikS || (H.ikS = {}), s = S[side] || (S[side] = IKB[side].map(n => ({ b: H.root.getObjectByName(n), base: new THREE.Quaternion(), mine: new THREE.Quaternion(), on: false }))), I = _ik;
     if (s.some(g => !g.b)) return false;
@@ -829,6 +862,7 @@ const Chars = (() => {
       pv.rotation.y = th; pv.position.set(x, y, z);
     }
     H.animNow = base; H.talkNow = !!st.talking;      // [ch1]
+    H.uShed.value = H.shedOverride !== undefined ? H.shedOverride : base === 'lie' ? 2 : base === 'sit' && st.zone ? 1 : 0;      // [ch4] in bed: hat and outer garments off; at table indoors: the hat off
     lodUpdate(H, dcam, st.cast === undefined ? !!H.cast : st.cast); H.cast = st.cast === undefined ? H.cast : st.cast;
     H.uZone.value = st.zone || 0; H.uLight.value = st.light === undefined ? 1 : st.light;
     if (cfg.face && dcam < 14) faceUpdate(H, st, dt, dcam);
@@ -843,6 +877,7 @@ const Chars = (() => {
       [nb, hb].forEach((b, i) => { if (b) { L[i].mine.copy(b.quaternion); L[i].on = true; } });
     }
     if (H.gripAmt) gripUpdate(H);      // [ch1]
+    blanketUpdate(H, lying, dcam === undefined ? 0 : dcam);      // [ch4]
     if (H.post && pv.visible) for (const f of H.post) f(H, st);      // [ch1] held things that follow the hands (src/77d_handprops.js)
   };
   return C;
