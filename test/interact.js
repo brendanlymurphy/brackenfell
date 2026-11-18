@@ -26,7 +26,7 @@ if (bk) { game.enter(bk.cell); await idle(); Player.pos = [bk.p[0], bk.p[1] - 0.
 ixWitness = __w;
 // ── theft: an awake person sees it; the guard comes; a night in the cell; out through the door ──
 { const lo2 = IX.loose.find(o => o.kind === 'loose' && !o.gone && o.owner); game.enter(lo2.cell); await idle(); Player.pos = [lo2.p[0], lo2.p[1] - 0.9, lo2.p[2] + 0.4];
-  const w = NPC.marta === ixGuard() ? NPC.greta : NPC.marta; w.anim = 'idle'; w.pos = [Player.pos[0] + 2, Player.pos[1], Player.pos[2]];
+  const w = NPC.marta === ixGuard() ? NPC.greta : NPC.marta; w.anim = 'idle'; w.pos = [Player.pos[0] + 2, Player.pos[1], Player.pos[2]]; for (const o of [[2, 0], [-2, 0], [0, 2], [0, -2], [1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) { w.pos = [Player.pos[0] + o[0], Player.pos[1], Player.pos[2] + o[1]]; if (ixWitness()) break; }       /* [coordinator, Build 84] the witness stands where she can see: 2 m east is behind a shelf in the rebuilt Quill's */
   interactUse(lo2); fx(S.crime && S.crime.pending && S.crime.fine > 0, 'taking in front of someone was not a crime'); fx(has(lo2.item) || lo2.item === 'gold', 'did not get the item');
   S.crime.t = 0; ixTick(0.1); for (let i = 0; i < 900 && !UI.talk; i++) { game.step(6, dt); await sleep(50); } game.step(3, dt);       /* [gate] waits for the guard, up to 45 s of real time on a slow machine (was 10 s: the fade is real time) */
   fx(UI.talk && ['hale', 'ivo'].includes(UI.talk.id), 'the guard did not come to talk (' + (UI.talk && UI.talk.id) + ')');
