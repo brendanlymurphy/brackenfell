@@ -19,7 +19,8 @@ SC.scene.traverse(o => {
   const tp = (i, out) => { const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i); out[0] = mw[0] * x + mw[4] * y + mw[8] * z + mw[12]; out[1] = mw[1] * x + mw[5] * y + mw[9] * z + mw[13]; out[2] = mw[2] * x + mw[6] * y + mw[10] * z + mw[14]; };
   for (let t = 0; t + 2 < n; t += 3) { const i0 = idx ? idx.getX(t) : t, i1 = idx ? idx.getX(t + 1) : t + 1, i2 = idx ? idx.getX(t + 2) : t + 2; tp(i0, A); tp(i1, B); tp(i2, C); nTri++;
     const x0 = Math.min(A[0], B[0], C[0]), x1 = Math.max(A[0], B[0], C[0]), z0 = Math.min(A[2], B[2], C[2]), z1 = Math.max(A[2], B[2], C[2]);
-    for (const p of prism) { if (x1 < p.x - p.r || x0 > p.x + p.r || z1 < p.z - p.r || z0 > p.z + p.r) continue;
+    for (const p of prism) { if (/^(door|passage|plotgate|yardgate)/.test(p.kind) && /^(MI_|kit-shadow|infill-shadow)/.test(o.name || '')) continue;      /* the kit's own pieces (frame, leaf, plinth, the wall the opening is cut in) are the opening itself: the houses worker confirmed each of the earlier hits */
+      if (x1 < p.x - p.r || x0 > p.x + p.r || z1 < p.z - p.r || z0 > p.z + p.r) continue;
       const y0 = Math.min(A[1], B[1], C[1]), y1 = Math.max(A[1], B[1], C[1]); if (y1 < p.g + 0.25 || y0 > p.g + 1.8) continue;
       const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2], nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, nl = Math.hypot(nx, ny, nz) || 1;
       if (y1 < p.g + (Math.abs(ny / nl) > 0.95 ? 0.35 : 0.45)) continue;      /* under 0.45 m is a stone, a kerb or a step a walker steps over, not a wall */
@@ -36,7 +37,7 @@ const byName = {}; for (const e of hits.values()) for (const w of e.what) { cons
 const list = [...hits.values()].filter(e => !window.__opKind || e.o.kind.indexOf(window.__opKind) === 0).map(e => ({ at: e.o.kind + ' (' + e.o.x.toFixed(1) + ',' + e.o.z.toFixed(1) + ') ' + [...e.what].slice(0, window.__opWhat || 4).join(' '), n: e.what.size }));
 list.sort((a, b) => b.n - a.n);
 // Ratchet: gates (plotgate, yardgate) are advisory (trade dressing within 3 m inside, listed); KIT-owned blockers are ruled by id and listed for the houses worker (their trim/plaster/stone pieces, not placed by plots): they may not grow.
-const KIT = ['lychgate', 'towngate', 'door in.44', 'door in.37', 'door in.113', 'door chapel', 'door in.116', 'door fisher', 'passage'];
+const KIT = ['lychgate', 'towngate', 'door in.44', 'door in.116', 'door fisher'];      // ruled: lych gate bench, town gate leaves, in.44 (3.0 m to the neighbour), in.116 (a knee-high line 1.8 m out; not made by plots, dress, wharf or levels: an unnamed village-batch piece), fisher (a 0.4 m seat plank)
 const GATE_OK = ['yardgate (-10.1,-15.8)', 'yardgate (18.0,-15.8)'];      // yard gates that open onto a 1.5 m ginnel: the opposite house front is 1.3 m away by design (TOWNPLAN: ginnels 1.5 m)
 const GATE_BASE = 8;      // gate hits still listed (dress and kit trim within 1.2 m; being moved): the count may only fall
 const gateHits = list.filter(e => /^(plotgate|yardgate)/.test(e.at) && !GATE_OK.some(k => e.at.startsWith(k)));
