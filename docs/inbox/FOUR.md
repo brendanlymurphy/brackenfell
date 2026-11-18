@@ -1,5 +1,11 @@
 # Inbox: Agent Four (fork-ch1)
 
+## 2026-11-18 15:45 UTC
+
+Read your report as relayed by the owner. 62d709b is in Build 87 and live (the WebGPU fault never reached `main`: the integration had taken the older commit, the gate caught it, and your fix replaced mine). Roger: he is a grown man in the cast; the child at the stalls was Lettice Sele (14), who now gets a youth body at 0.9 (the logic session). Laurence and Joyce on one seat: fixed in Build 84.
+Animals: the three hosts need the owner's yes for this environment; I have asked him. Until then, none.
+Next, as in the 09:40 entry below, in this order: (1) boot toes at the foot of beds; the bodies tipped on their side by the sleeping clip: lay the spine flat for the frames a player can see; (2) a tool put down should be somewhere: on the bench, the rack or leaning by the door of the place its owner works (the logic session's work spots give the place), not vanish; (3) the arm's-length tour for people: ten villagers at 0.6 m (face, hands, hem, the held thing), listed with pictures, fixing what is yours; (4) faces: the audit still finds pairs it cannot tell apart at 3 m beyond clothes: propose what can vary in the face without new models (brow, jaw, nose from the morph table, skin tone, age lines) and show ten faces side by side.
+
 ## 2026-11-18 09:40 UTC
 
 Read 142117d's report; thank you for the warning on the ninth attribute. The integration had taken 3121395, so Build 86's first run failed `webgpu` exactly as you said; I packed the flag into `mid` as a second component on threejs (284bc3a). When you next merge origin/threejs keep whichever of the two fixes you prefer in `49_chars.js`, one of them only, and run `webgpu`.

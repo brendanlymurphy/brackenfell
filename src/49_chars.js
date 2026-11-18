@@ -10,6 +10,30 @@
 //   Chars.remove(h)
 //
 // Game conventions kept: feet at pos, yaw 0 faces -Z and grows clockwise seen from above, animation names as in 77_npc.js.
+// [ch4] The dress plan (docs/WARDROBE.md): for the cast (CAST, from docs/PEOPLE.md), each person's hat, hair colour and the colour of their main garment, chosen in turn
+// (by id) so that nobody shares any of the three with anyone already dressed in their household (CAST home) or their workplace (CAST work). Hats from what the body can wear
+// (women: kerchief, coif, bare-headed; men: hood, cap, bare-headed, straw for outdoor trades). Hair colours are multipliers on the hair texture; garment colours are plant dyes.
+// A story person's own hat, hair or colour (NPC_DEFS hat / hair / top) is kept and counts as taken.
+const DRESS_HATCOL = [[0.30, 0.25, 0.19], [0.22, 0.24, 0.27], [0.38, 0.35, 0.29]], DRESS_HAT = { f: ['kerchief', 'coif', null], m: ['hood', 'cap', null] }, DRESS_HAIR = [[1, 1, 1], [0.55, 0.5, 0.46], [1.25, 0.95, 0.72], [0.75, 0.62, 0.52], [1.35, 1.2, 0.95], [1.15, 0.78, 0.55], [0.4, 0.37, 0.35]];
+const DRESS_WOOL = [[0.30, 0.27, 0.21], [0.24, 0.26, 0.28], [0.33, 0.29, 0.21], [0.26, 0.25, 0.20], [0.30, 0.22, 0.18], [0.22, 0.24, 0.20], [0.35, 0.33, 0.28], [0.20, 0.19, 0.18]].map(c => c.map(v => v * 0.72));      // in sun the plain values read nearly white
+let _dressPlan = null;
+function dressPlan() {
+  if (_dressPlan) return _dressPlan; const P = {}; if (typeof CAST === 'undefined' || !CAST.length || typeof NPC_DEFS === 'undefined') return P; _dressPlan = P;
+  const used = {}, take = (g, k, v) => { const key = g + '|' + k; (used[key] = used[key] || new Set()).add(JSON.stringify(v)); }, taken = (gs, k, v) => gs.some(g => used[g + '|' + k] && used[g + '|' + k].has(JSON.stringify(v)));
+  const hs = id => { let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+  for (const c of CAST.slice().sort((a, b) => a.id.localeCompare(b.id))) {      // groups: household, workplace, and 'market' for the stall-holders, who stand together
+    const def = NPC_DEFS.find(d => d.id === c.id) || {}, body = def.body || '', fem = /^f_/.test(body) || !!def.female, gs = [c.home, c.work, /^shop\./.test(c.work || '') ? 'market' : null].filter(Boolean), h = hs(c.id), out = P[c.id] = { age: c.age };
+    const pick = (k, opts, own) => { if (own !== undefined) { out[k] = own; gs.forEach(g => take(g, k, own)); return; } for (let i = 0; i < opts.length; i++) { const v = opts[(h + i) % opts.length]; if (!taken(gs, k, v)) { out[k] = v; gs.forEach(g => take(g, k, v)); return; } } out[k] = opts[h % opts.length]; };
+    const hats = fem ? DRESS_HAT.f.slice() : DRESS_HAT.m.concat(/shepherd|woodcut|boat|beekeep|net|rope/.test(c.trade || '') ? ['straw'] : []);
+    const withCol = l => [].concat(...l.map(x => x ? DRESS_HATCOL.map((c, i) => x + ':' + i) : [null]));      // a hat is a style and one of three dyes: two caps of different cloth are different hats
+    pick('hat', withCol(/child|girl/.test(body) ? ['coif', null] : hats), def.hat !== undefined ? (def.hat === 'hood' && fem ? 'kerchief' : def.hat) : undefined);
+    if (typeof out.hat === 'string' && out.hat.includes(':')) { const [st, ci] = out.hat.split(':'); out.hat = st; out.hatCol = DRESS_HATCOL[+ci]; out.hatKey = st + ':' + ci; }
+    const own = !def.cast;      // the cast's hair and top colours are generic (tools/cast.mjs); a story person's are their own
+    pick('hair', DRESS_HAIR, own && def.hair ? def.hair : undefined); pick('wool', DRESS_WOOL, own && def.top ? def.top : undefined);
+    if (own && def.hair) delete out.hair; if (own && def.top) delete out.wool;
+  }
+  return P;
+}
 const Chars = (() => {
   const { vec2, vec3, vec4, float, uniform, texture, uv, positionWorld, normalWorld, materialColor, normalMap, Fn } = TSL;
   const SETS = {};
@@ -168,8 +192,11 @@ const Chars = (() => {
           WC.wool = mute(WC.wool); WC.cloak = mute(WC.cloak); if (wear.hat === 'hood' || wear.hat === 'cap') WC.hat = mute(WC.hat);
           WC.apron = body === 'm_smith' ? [0.17, 0.105, 0.06] : [[0.29, 0.27, 0.23], [0.33, 0.29, 0.20], [0.26, 0.21, 0.15]][Math.floor(r(8) * 3)].map(v => v * (0.92 + 0.08 * r(13)));      // [ch4] unbleached hemp and tow, not white (in sun the old values read as a flat white sheet); the smith's is leather
         }
+        const DP = dressPlan()[def.id];      // [ch4] people who live or work together differ in hat, hair colour and the colour of the main garment (docs/WARDROBE.md)
+        if (DP && !def.hat && !guard) { wear.hat = DP.hat || null; if (DP.hatCol) { if (wear.hat === 'kerchief' || wear.hat === 'coif') WC.linen = DP.hatCol.map(v => v * 1.25); else WC.hat = DP.hatCol; } } if (DP && DP.wool && (def.cast || !def.top)) WC.wool = DP.wool;
         wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
-        return { body, fit: FIT[body] || 1, hairGrey: { f_elder: 0.96, m_elder: 0.92, m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 }[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
+        const hairT = DP && DP.hair && (def.cast || !def.hair) ? { hair: DP.hair } : null, ageGrey = DP && DP.age ? (DP.age >= 62 ? 0.85 : DP.age >= 52 ? 0.45 : 0) : 0;
+        return { body, fit: FIT[body] || 1, hairGrey: Math.max(ageGrey, ({ f_elder: 0.96, m_elder: 0.92 })[body] || 0) || ({ m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 })[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, hairT, TINT[def.id], def.tint), dye, acc };
       },
     });
   }
@@ -321,8 +348,8 @@ const Chars = (() => {
   }
   // [ch4] Taking things off without a second body: every vertex knows whether it is a hat (1: cap, hood and its cape, straw hat, kettle hat, feathered hat; a coif or a kerchief stays
   // on, women slept in them) or an outer garment (2: cloak, apron, tabard, straps, belt, pouch). H.uShed is how much is off: 0 nothing, 1 the hat (indoors at table), 2 hat and outer
-  // garments (in bed). The material discards what is off. C.shed(H, level) sets it from outside (a schedule row); left alone, update() sets it from what the person is doing.
-  const SHED_OF = p => /^w_hat_(cap|hood|straw|kettle|feather)/.test(p) ? 1 : /^w_(cloak|apron|tabard|straps|belt|pouch)/.test(p) ? 2 : 0;
+  // garments, 3 also the kirtle's skirt (in bed, under the blanket). The material discards what is off. C.shed(H, level) sets it from outside (a schedule row); left alone, update() sets it from what the person is doing.
+  const SHED_OF = p => /^w_hat_(cap|hood|straw|kettle|feather)/.test(p) ? 1 : /^w_(cloak|apron|tabard|straps|belt|pouch)/.test(p) ? 2 : /^w_kirtle$/.test(p) ? 3 : 0;      // 3: only the skirt's vertices are tagged (below)
   C.shed = function (H, level) { H.shedOverride = level === null || level === undefined ? undefined : level; };
   function mergedGeometry(S, body, parts, matName, names, lod, acc) {
     const key = body + '|' + (matName || '*') + '|' + parts.join(',') + (lod ? '|' + lod : '') + (acc && names ? '|' + (acc.hat || '') + (acc.belt ? 'b' : '') + (acc.pouch ? 'p' : '') : ''); let g = S.geo.get(key); if (g !== undefined) return g;
@@ -347,7 +374,11 @@ const Chars = (() => {
       for (const s of src) { const a = s.attributes[name], c = s.attributes.position.count; for (let v = 0; v < c; v++) for (let k = 0; k < size; k++) arr[o++] = a ? (a.itemSize > k ? a.getComponent(v, k) : 1) : ATTR_DEF[name] ? ATTR_DEF[name][k] : 0; }
       g.setAttribute(name, new THREE.BufferAttribute(arr, size));
     }
-    if (names) { const mid = new Float32Array(nv * 2); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; for (let v = 0; v < c; v++) { mid[o++] = mids[i]; mid[o++] = sheds[i] || 0; } }); g.setAttribute('mid', new THREE.BufferAttribute(mid, 2)); }      // x: which of the pack's materials; y [ch4]: which garment a vertex belongs to, for taking it off (SHED_OF). One attribute, not two: with a ninth vertex buffer WebGPU refuses the whole villager (the limit is 8) [coordinator, Build 86]
+    if (names) { const mid = new Float32Array(nv); let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; mid.fill(mids[i], o, o + c); o += c; }); g.setAttribute('mid', new THREE.BufferAttribute(mid, 1)); }
+    if (names) { const vid = g.attributes._vid; let o = 0; src.forEach((s, i) => { const c = s.attributes.position.count; if (sheds[i] && sheds[i] < 3 && vid) for (let v = o; v < o + c; v++) if (vid.array[v] < 0.5) vid.array[v] = -sheds[i]; o += c; }); }
+    // [ch4] the skirt of the kirtle below the hips is level 3 (off in bed, under the blanket): lying flat, the cloth that follows the hips stood up as a fin as tall as the room
+    if (names && g.attributes._vid && S.bodies[body].skel) { const vid = g.attributes._vid, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, bn = S.bodies[body].skel.bones.map(b => b.name), LEGB = /^(thigh|calf|foot|ball)_/; let o = 0;
+      src.forEach((s, i) => { const c = s.attributes.position.count; if (sheds[i] === 3) for (let v = o; v < o + c; v++) { let leg = 0; for (let k = 0; k < 4; k++) if (LEGB.test(bn[si.getComponent(v, k)] || '')) leg += sw.getComponent(v, k); if (leg > 0.3 && vid.array[v] < 0.5) vid.array[v] = -3; } o += c; }); }      // [ch4] which garment a vertex belongs to, for taking it off (SHED_OF): a negative _vid (garments carry no face-morph column; WebGPU allows 8 vertex buffers, a new attribute was the 9th)
     let io = 0, base = 0; for (const s of src) { const c = s.attributes.position.count; if (s.index) for (let i = 0; i < s.index.count; i++) idx[io++] = s.index.getX(i) + base; else for (let i = 0; i < c; i++) idx[io++] = i + base; base += c; }
     g.setIndex(new THREE.BufferAttribute(idx, 1)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.6);
     S.geo.set(key, g); return g;
@@ -382,7 +413,7 @@ const Chars = (() => {
   function makeMergedMaterial(S, H, names, look, srcOf) {
     const { attribute, abs, Discard, If, frontFacing, normalView, clamp } = TSL;
     const m = new THREE.MeshStandardNodeMaterial(); m.name = 'villager'; m.side = THREE.DoubleSide; m.metalness = 0;
-    const midA = attribute('mid', 'vec2'), mid = midA.x, U = uv(), N = normalWorld.normalize();
+    const mid = attribute('mid', 'float'), U = uv(), N = normalWorld.normalize();
     let weaveN = null, mouthW = float(0), albedo = vec3(0, 0, 0), rough = float(0), nrm = null, nw = float(0), one = float(0), eyeW = float(0), skinW = float(0), hairW = float(0), cut = float(0), alpha = float(1), warm = vec3(0, 0, 0), anyAlpha = false, anyWarm = false, anyEye = false, skinI = -1, clothW = float(0), trimW = float(0), anyTrim = false;
     const F = S.cfg.face || null, UE = F ? U.add(H.uGaze) : U;          // the eye texture is read a little off-centre: that is how the eyes move
     names.forEach((mn, i) => {
@@ -458,7 +489,7 @@ const Chars = (() => {
       albedo = albedo.mul(float(1).sub(TSL.clamp(occ.mul(0.6), 0, 0.42).mul(face)));      // [ch1] softer: no mask across the brow
       rough = rough.sub(TSL.clamp(spec, 0, 1).mul(face).mul(0.38));
     }
-    const shedA = midA.y;      // [ch4] what is taken off is not drawn
+    const shedA = TSL.max(attribute('_vid', 'float').negate(), 0);      // [ch4] what is taken off is not drawn (the tag is a negative _vid)
     m.colorNode = Fn(() => { If(shedA.greaterThan(0.5).and(shedA.lessThan(H.uShed.add(0.5))), () => { Discard(); }); If(frontFacing.not().and(one.greaterThan(0.5)), () => { Discard(); }); if (anyAlpha) If(alpha.lessThan(cut), () => { Discard(); }); return vec4(albedo, 1); })();      // skin and eyes are one-sided, cloth and hair are not
     m.roughnessNode = rough;
     if (nrm) m.normalNode = nrm.add(normalView.mul(float(1).sub(nw))).normalize();
@@ -773,7 +804,7 @@ const Chars = (() => {
   // [ch4] An arm reaches a point: two-joint solve on upper arm and forearm so the wrist is at `target` (world), the hand turned to `handQ` (world) if given; `w` 0..1 blends from the
   // animation. Call every frame while reaching, after the mixer (a prop's post function does); C.reach(H, side, null) lets go. The instrument is set against the body and the hands
   // go to it, not the other way round: an instrument hung between two animated hands went through the player's belly. Same bookkeeping as the finger curl (see above).
-  const IKB = { R: ['upperarm_r', 'lowerarm_r', 'hand_r'], L: ['upperarm_l', 'lowerarm_l', 'hand_l'] }, _ik = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), u: new THREE.Vector3(), v: new THREE.Vector3(), n: new THREE.Vector3(), q: new THREE.Quaternion(), p: new THREE.Quaternion(), r: new THREE.Quaternion() };
+  const IKB = { R: ['upperarm_r', 'lowerarm_r', 'hand_r'], L: ['upperarm_l', 'lowerarm_l', 'hand_l'], FR: ['thigh_r', 'calf_r', 'foot_r'], FL: ['thigh_l', 'calf_l', 'foot_l'] }, _ik = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), u: new THREE.Vector3(), v: new THREE.Vector3(), n: new THREE.Vector3(), q: new THREE.Quaternion(), p: new THREE.Quaternion(), r: new THREE.Quaternion() };
   const ikTurn = (bone, qW) => { bone.parent.getWorldQuaternion(_ik.p); _ik.r.copy(_ik.p).invert().multiply(qW).multiply(_ik.p); bone.quaternion.premultiply(_ik.r); bone.updateWorldMatrix(false, true); };
   // [ch4] A blanket over a sleeper: a woollen sheet laid over the body from the shoulders to past the feet, its height taken from the body itself (the highest point of the
   // posed body under each part of it, 4 cm above), smoothed, and falling over the sides. Built once when the person lies down and is near (within 30 m), kept while they lie,
@@ -781,12 +812,12 @@ const Chars = (() => {
   const BLK = { N: 22, M: 13, wide: 0.86 }, _bv = new THREE.Vector3();
   function blanketUpdate(H, lying, dcam) {
     if (!lying) { H.lieFrames = 0; if (H.blanket) { H.pivot.remove(H.blanket); H.blanket.geometry.dispose(); H.blanket = null; } return; }
-    H.lieFrames = (H.lieFrames || 0) + 1; if (H.blanket || dcam > 30 || H.lieFrames < 2 || typeof RPG === 'undefined' || !RPG.litMat) return;      // a few frames in: the lying pose has settled
+    H.lieFrames = (H.lieFrames || 0) + 1; if (H.blanket || dcam > 30 || H.lieFrames < 1 || typeof RPG === 'undefined' || !RPG.litMat) return;      // a few frames in: the lying pose has settled
     const m = H.meshes[0]; if (!m) return; H.pivot.updateMatrixWorld(true); H.root.updateMatrixWorld(true); H.skeleton.update();
     const toL = new THREE.Matrix4().copy(H.pivot.matrixWorld).invert(), bp = n => { const b = H.root.getObjectByName(n); return b ? b.getWorldPosition(new THREE.Vector3()).applyMatrix4(toL) : null; };
     const head = bp('head'), neck = bp('neck_01'), fl = bp('foot_l'), fr = bp('foot_r'); if (!head || !neck || !fl || !fr) return;
     const feet = fl.clone().add(fr).multiplyScalar(0.5), ax = new THREE.Vector3(neck.x - feet.x, 0, neck.z - feet.z); const L0 = ax.length(); if (L0 < 0.8) return; ax.normalize();
-    const side = new THREE.Vector3(-ax.z, 0, ax.x), g = m.geometry, n = g.attributes.position.count, shed = g.attributes.mid && g.attributes.mid.itemSize > 1 ? g.attributes.mid : null, P = [];
+    const side = new THREE.Vector3(-ax.z, 0, ax.x), g = m.geometry, n = g.attributes.position.count, shed = { getX: i => Math.max(0, -(g.attributes._vid ? g.attributes._vid.getX(i) : 0)) }, P = [];
     // the blanket's form is a sleeper's, not the posed mesh's (a skirt or a cape that stands up in the lying clip would tent it): bed level from the hips, then a profile along the
     // body (shoulders 0.17 m, chest 0.2, hips 0.19, thighs 0.15, knees 0.13, shins 0.1, feet 0.16 for the toes), rounded across and falling over the sides of the bed
     const pel = bp('pelvis'); if (!pel) return; const bed = pel.y - 0.11, N = BLK.N, M = BLK.M, len = L0 + 0.2, top = neck.clone().addScaledVector(ax, -0.1), PROF = [[0, 0.15], [0.12, 0.2], [0.3, 0.19], [0.45, 0.16], [0.62, 0.13], [0.85, 0.1], [0.95, 0.16], [1, 0.13]];
@@ -794,14 +825,14 @@ const Chars = (() => {
     const H2 = new Float32Array((N + 1) * (M + 1)); for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { const u = i / N, w = j / M, c = Math.abs(w - 0.5) * 2, hump = Math.max(0, 1 - c * c * 1.15); H2[i * (M + 1) + j] = bed + prof(u) * hump + 0.006 * Math.sin(i * 1.3 + j * 0.7); }
     // and over the body as it lies (trunk, legs and the clothes on them; not the arms, head or anything taken off), at most 0.34 m above the bed: a body on its side or a knee
     // drawn up raises it, a skirt or cape standing up in the clip cannot tent it
-    { const si = g.attributes.skinIndex, sw = g.attributes.skinWeight, bones = H.skeleton.bones, armB = /^(upperarm|lowerarm|hand|thumb|index|middle|ring|pinky)_|^head$|^neck/, cap = bed + 0.34, MH = new Float32Array(H2.length).fill(-1e9);
-      for (let i = 0; i < n; i += 2) { if (shed && shed.getY(i) > 0.5) continue; if (armB.test(bones[si.getX(i)].name) && sw.getX(i) > 0.5) continue; m.getVertexPosition(i, _bv); _bv.applyMatrix4(m.matrixWorld).applyMatrix4(toL);
+    { const si = g.attributes.skinIndex, sw = g.attributes.skinWeight, bones = H.skeleton.bones, armB = /^(upperarm|lowerarm|hand|thumb|index|middle|ring|pinky)_|^head$|^neck/, cap = bed + 0.34, MH = new Float32Array(H2.length).fill(-1e9), capAt = u => Math.min(cap, bed + prof(u) + 0.07);      // a knee drawn up by the clip lifts the cloth only a little
+      for (let i = 0; i < n; i += 2) { if (shed && shed.getX(i) > 0.5) continue; if (armB.test(bones[si.getX(i)].name) && sw.getX(i) > 0.5) continue; m.getVertexPosition(i, _bv); _bv.applyMatrix4(m.matrixWorld).applyMatrix4(toL);
         const dx = _bv.x - top.x, dz = _bv.z - top.z, u = -(dx * ax.x + dz * ax.z) / len, w = (dx * side.x + dz * side.z) / BLK.wide + 0.5; if (u < -0.04 || u > 1.04 || w < -0.04 || w > 1.04) continue;
-        const ii = Math.round(u * N), jj = Math.round(w * M); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const p2 = ii + a, q2 = jj + b; if (p2 < 0 || p2 > N || q2 < 0 || q2 > M) continue; const q = p2 * (M + 1) + q2; MH[q] = Math.max(MH[q], Math.min(cap, _bv.y + 0.035)); } }
+        const ii = Math.round(u * N), jj = Math.round(w * M); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const p2 = ii + a, q2 = jj + b; if (p2 < 0 || p2 > N || q2 < 0 || q2 > M) continue; const q = p2 * (M + 1) + q2; MH[q] = Math.max(MH[q], Math.min(capAt(p2 / N), _bv.y + 0.035)); } }
       for (let pass = 0; pass < 2; pass++) { const c = MH.slice(); for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { let mx = c[i * (M + 1) + j], s2 = 0, k2 = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const p2 = i + a, q2 = j + b; if (p2 < 0 || p2 > N || q2 < 0 || q2 > M || c[p2 * (M + 1) + q2] < -1e8) continue; s2 += c[p2 * (M + 1) + q2]; k2++; } if (k2) MH[i * (M + 1) + j] = Math.max(mx, s2 / k2); } }
       for (let q = 0; q < H2.length; q++) H2[q] = Math.max(H2[q], MH[q]); }
     const WOOLS = [[0.085, 0.07, 0.055], [0.10, 0.085, 0.065], [0.065, 0.062, 0.058], [0.095, 0.065, 0.045], [0.075, 0.08, 0.07]], pos = [], col = [], idx = [], wool = H.blanketCol || WOOLS[H.seed % WOOLS.length];      // undyed and walnut-dyed wools
-    for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { const u = i / N, w = j / M, edge = Math.min(w, 1 - w), drop = Math.max(0, 0.12 - edge) / 0.12, y = H2[i * (M + 1) + j] + 0.02 - drop * drop * 0.2, x = top.x - ax.x * u * len + side.x * (w - 0.5) * BLK.wide * (1 + drop * 0.08), z = top.z - ax.z * u * len + side.z * (w - 0.5) * BLK.wide * (1 + drop * 0.08);
+    for (let i = 0; i <= N; i++) for (let j = 0; j <= M; j++) { const u = i / N, w = j / M, edge = Math.min(w, 1 - w), drop = Math.max(0, 0.12 - edge) / 0.12, y = H2[i * (M + 1) + j] + 0.05 - drop * drop * 0.2, x = top.x - ax.x * u * len + side.x * (w - 0.5) * BLK.wide * (1 + drop * 0.08), z = top.z - ax.z * u * len + side.z * (w - 0.5) * BLK.wide * (1 + drop * 0.08);
       pos.push(x, y, z); const t = 0.88 + 0.12 * Math.sin(i * 1.7 + j * 0.9) * Math.sin(j * 2.3), stripe = (i % 9 === 1 || i % 9 === 2) ? 0.82 : 1; col.push(wool[0] * t * stripe, wool[1] * t * stripe, wool[2] * t * stripe); }
     for (let i = 0; i < N; i++) for (let j = 0; j < M; j++) { const a = i * (M + 1) + j, b = a + 1, c = a + M + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
     const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); bg.setIndex(idx); bg.computeVertexNormals(); bg.computeBoundingSphere();
@@ -811,7 +842,7 @@ const Chars = (() => {
   // [ch4] In bed the arms lie along the body under the blanket, the hands beside the hips (the sleeping clip has one arm up beside the head, and in some bodies straight up).
   const _sa = { p: new THREE.Vector3(), l: new THREE.Vector3(), r: new THREE.Vector3(), f: new THREE.Vector3(), n: new THREE.Vector3(), t: new THREE.Vector3() };
   function sleepArms(H, lying) {
-    if (!lying) { if (H.sleptArms) { C.reach(H, 'R', null); C.reach(H, 'L', null); H.sleptArms = false; } return; }
+    if (!lying) { if (H.sleptArms) { C.reach(H, 'R', null); C.reach(H, 'L', null); C.reach(H, 'FR', null); C.reach(H, 'FL', null); H.sleptArms = false; } return; }
     const g = n => H.root.getObjectByName(n), pel = g('pelvis'), tl = g('thigh_l'), tr = g('thigh_r'), nk = g('neck_01'); if (!pel || !tl || !tr || !nk) return;
     pel.getWorldPosition(_sa.p); tl.getWorldPosition(_sa.l); tr.getWorldPosition(_sa.r); nk.getWorldPosition(_sa.n); _sa.f.subVectors(_sa.p, _sa.n).normalize();      // f: toward the feet
     for (const [side, hip] of [['L', _sa.l], ['R', _sa.r]]) { const ua = g(side === 'L' ? 'upperarm_l' : 'upperarm_r'), la = g(side === 'L' ? 'lowerarm_l' : 'lowerarm_r'), hd = g(side === 'L' ? 'hand_l' : 'hand_r'); if (!ua || !la || !hd) continue;
@@ -819,6 +850,10 @@ const Chars = (() => {
       const out = _sa.t.subVectors(hip, _sa.p); out.addScaledVector(_sa.f, -out.dot(_sa.f)).setY(0).normalize();      // straight out to this side, square to the body's length
       const aim = _sa.p.clone().addScaledVector(out, 0.2).addScaledVector(_sa.f, 0.1); aim.y = S0.y - 0.03; const dir = aim.sub(S0).normalize();      // the arm lies straight along the side, the hand by the hip
       C.reach(H, side, S0.clone().addScaledVector(dir, reachL * 0.97)); }
+    // and the legs lie straight, a hand's width apart: the sleeping clip draws a knee up, and the skirt over it stood up through the blanket
+    for (const [side, hip] of [['FL', _sa.l], ['FR', _sa.r]]) { const th = g(side === 'FL' ? 'thigh_l' : 'thigh_r'), ca = g(side === 'FL' ? 'calf_l' : 'calf_r'), ft = g(side === 'FL' ? 'foot_l' : 'foot_r'); if (!th || !ca || !ft) continue;
+      const T0 = th.getWorldPosition(new THREE.Vector3()), C0 = ca.getWorldPosition(new THREE.Vector3()), L = T0.distanceTo(C0) + C0.distanceTo(ft.getWorldPosition(new THREE.Vector3())), out = _sa.t.subVectors(hip, _sa.p); out.addScaledVector(_sa.f, -out.dot(_sa.f)).setY(0).normalize();
+      const dir = _sa.f.clone().setY(0).normalize().addScaledVector(out, 0.04).normalize(); C.reach(H, side, T0.clone().addScaledVector(dir, L * 0.985)); }
     H.sleptArms = true;
   }
   C.reach = function (H, side, target, handQ, w) {
@@ -881,7 +916,7 @@ const Chars = (() => {
       pv.rotation.y = th; pv.position.set(x, y, z);
     }
     H.animNow = base; H.talkNow = !!st.talking;      // [ch1]
-    H.uShed.value = H.shedOverride !== undefined ? H.shedOverride : base === 'lie' ? 2 : base === 'sit' && st.zone ? 1 : 0;      // [ch4] in bed: hat and outer garments off; at table indoors: the hat off
+    H.uShed.value = H.shedOverride !== undefined ? H.shedOverride : base === 'lie' ? 3 : base === 'sit' && st.zone ? 1 : 0;      // [ch4] in bed: hat and outer garments off; at table indoors: the hat off
     lodUpdate(H, dcam, st.cast === undefined ? !!H.cast : st.cast); H.cast = st.cast === undefined ? H.cast : st.cast;
     H.uZone.value = st.zone || 0; H.uLight.value = st.light === undefined ? 1 : st.light;
     if (cfg.face && dcam < 14) faceUpdate(H, st, dt, dcam);

@@ -1,5 +1,20 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 15:45 UTC
+
+Read your report as relayed by the owner. Build 88 is live with everything of yours up to 83e8d54, and `hartdoor` passes: the inspector moved `World.hartWall` to the cellar's -x wall as you described. Decisions and next:
+1. **Lettice (14) and Tom (13):** youth bodies at 0.9 scale (`f_maid` for Lettice, `m_youth` for Tom), about 1.5 m. The child bodies are for under 12. Add the bound to `test/cast.js` (13 to 15: a youth body at 0.88 to 0.95).
+2. **Voices:** 529 of 774 noted, and thank you for pulling the 36 doubtful takes. Tomorrow's 245: whole-character requests only where the cut can be verified (your new refusal), otherwise one line per request for the characters with the most lines first, the story's speakers before the cast's barks. Put in your report the list of characters who are now complete, so that the owner knows whom to go and listen to.
+3. **Two walkers at one door** (Marta and Bridget in the Hart's doorway at closing; I moved Marta's leaving to 21.8 in `77_npc.js`): the nearer goes through, the other waits a step back; then her hour can go back to 22.2.
+4. **Greta stands in the fireplace** (the audit's first ten minutes) and **the drowned man has no prompt**: both yours.
+5. The town worker added a marked `[fx3]` block in `77_npc.js` joining the new green's bench to the walking graph (note in `docs/FINISH.md`): keep it or do it your way.
+6. `mine` and `bot-soak` deterministic, and the people re-homed from removed shells, as before.
+
+## 2026-11-18 11:30 UTC
+
+Build 87 is live (main aeb13ce) with your 83e8d54: the compass true indoors, the brick on the Hart's truly east wall (the inspector moved `World.hartWall`; `hartdoor` passes on the pair), the market cross, the well in turns, the quest marks, Roger's body. In `77_npc.js` I moved Marta's leaving the Hart from 22.2 to 21.8: with Bridget back at the Hart the two met in the doorway at closing (`apart`: 0.36 m for just over a second, both walking to the one portal). The real cure is yours: two walkers bound for the same door should go through one after the other (the nearer goes, the other waits a step back); then put Marta's hour back if you like.
+Voices: carry on within the day's hundred; tell me when the manifest has them, and which characters are complete, so that the owner can be told what he can now hear.
+
 ## 2026-11-18 09:40 UTC
 
 Read e830f9e's report. The market cross, the well in turns, seeded `wilds`, the talk camera, the pointer texts: all taken for the build after 86.

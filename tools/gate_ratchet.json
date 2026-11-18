@@ -3,13 +3,13 @@
   "blocked": 57
  },
  "inout": {
-  "failing": 19
+  "failing": 12
  },
  "geom": {
   "stretch": 39,
   "open": 186,
   "sheets": 6,
   "kitOpen": 698,
-  "kitSheets": 878
+  "kitSheets": 842
  }
 }

@@ -2,6 +2,92 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (11:30): 284bc3a merged; the six pictures; AL4/AL5; ways at 6
+
+**Hashes:** 826685a (origin/threejs 284bc3a merged; `--quick` passed here, 19 steps; pushed, its gate runs on the push),
+then a78a3ce (cloth) and e618ce4 (under-stair cupboard, pictures), pushed with this report.
+
+- **Ways across furniture: 6** (limit 10) after the merge, with the stack fix of 2f023fd. Left: the store's upper stack, the
+  draper's dye tub, shop.s2's bench, a bed in in.33, a table in in.40, a chest in in.82.
+- **AL4, the draper's cloth:** a bolt is now cloth wound on a board: a roll that swells a little, its ends showing the wound
+  layers and the board's edge, a loose end hanging down one side (the old tube was open at one end). Folded cloth has a rounded
+  fold at the front and a crease under the next piece. `docs/proof/inout/arm/draper_bolts.png`.
+- **AL5, the chapel:** the hangings (`PD.tapestry`, used in every house) were a flat box; now cloth hung from an iron rod with
+  finials, in pleats that catch the light, with a stitched hem and loops over the rod. The north wall's "flat olive plank wall"
+  is the chapel's street door leaf seen from inside (`docs/proof/inout/arm/chapel_wall_n.png`): pale, olive and flat; the door
+  leaf is not drawn in my files (the cell's door). I did not find an ochre strip on the south wall besides the hangings; if it
+  is something else, a position would help. `geom` ratchet: kitSheets 878 -> 842, accepted.
+- **The six pictures, from the door at eye height, noon, beside Build 85** (`docs/proof/inout/rooms/<id>_now.png` and
+  `<id>_b85.png`; villagers standing within 2.6 m of the camera moved out of the way): poor in.13, in.90; middling in.02, in.12;
+  well-off in.33, shop.s1. **They do not flatter the refit, and you should see that before merging.** Build 85's rooms were 2 to
+  6 times their shells and filled densely; the refitted ones are the shell's size (1.5 times at most), and in the compact plan
+  the stair runs along the partition straight across from the front door, so in in.12, in.13 and in.33 the first thing seen is
+  the side of the stair at 1 to 3 m. I gave that side an under-stair cupboard (ledged door, strap hinges, latch) and, where the
+  stair is high enough, a peg rail (e618ce4); it reads as built, not as a bare board wall, but the view into the room is still
+  short. shop.s1 in Build 85 was a long room of book shelves; now it is a smaller hall with a table, stools, a candle stand and
+  the fire. My recommendation: merge for inside = outside and the furnishing, and let me next (a) turn the stair along the side
+  wall in houses deep enough for it (front room 4.5 m or more), so the door looks into the room, and (b) raise the ROOMS.md
+  furnishing where a room shows less than Build 85 did. Your call.
+- **Not verified headless:** the cloth and hangings in motion and at an angle in firelight; frame rate.
+
+## 2026-11-18 (09:50): Build 86 merged in, run 333 green, inout 19 -> 12
+
+**Hashes:** 1115c7e (Build 86 merged into fork-inout; full gate **run 333: success**), then b7bc077 (pushed with this report; its gate runs on the push).
+
+- **Run 322 (ce0c936) answered.** `scenes` failed only on my branch: the Hart's common room lost a table to the passage, so it had
+  8 table seats and Bridget, the tenth evening drinker, went home. Wall settles and two hearth stools now give `inn.s1`..`inn.s12`
+  (1115c7e). The other run-322 failures came with `fork-integ` and are gone in Build 86: budget (villagers at the stalls), webgpu,
+  geom, the in.15 cell label.
+- **Inout, item 1: 19 -> 12** (ratchet accepted at 12). (a) The windows Build 86 gave blank walls (`gen_dress` glass) are drawn
+  after the shell pass, so the plans never saw them: `shellOpenings` now reads generated glass from every placed piece and keeps a
+  pane when it sits on this house's own walls. (b) Where the shell draws two windows 1.5 m apart (the plan needs 1.75 m between
+  centres), the second moves up to 0.6 m along the wall. (c) The mill's door is on the shell's side wall, so its plan is turned 90°
+  against the shell and its windows went on the wrong walls; they are now carried round (`pShellTurn`). The mill passes.
+- **What is left of the 12 is outside work, for the outside worker:**
+  - Six cellars with no hatch, grating or steps outside: inn, elder, chapel, draper, in.33, in.37 (places as reported before).
+  - Eight walls where a Build 86 window stands 0.7 to 1.0 m (centre to centre) from a window the wall already had: two such
+    windows cannot both exist inside (and look doubled outside: `docs/proof/inout/outside/in40_back_pair.png`). Move or drop the
+    added one: elder back upper (0 vs -0.9), in.36 back ground (0.6 vs 1.4) and upper (0 vs -0.9), in.37 right (2.7 vs 1.9),
+    in.38 back upper, in.40 back (-0.4 vs -1.3), in.51 back (-0.3 vs -1.3), in.113 back ground and upper, in.115 back (-0.6 vs -1.3).
+    Numbers are metres along the wall from its middle (front/back) or from the front (sides), as in `docs/INOUT.md`.
+  - in.33: the dormer reading (open since step 3).
+- **Inspector's requests (item 2), first part.** The Elder's cellar stair already runs along the strongroom's west wall since my
+  refit (the request describes the old plan). `test/rooms_people.js` (ways across furniture): 15 -> 10, at its limit. In seven
+  compact houses the chimney stack upstairs left a 0.45 m squeeze into the back room; the fire is now placed where its stack leaves
+  a 0.9 m way past it (2f023fd). Left: the store's stack1, upstairs chests and beds in in.04, in.33, in.40, in.60, in.82, in.113,
+  the draper's dip, shop.s2's bench, an in.37 cellar crate. Next: those, the stair heads beside chimney stacks, then the light budget.
+- **Light budget (item 2), a2a2d89.** `pFlameBudget(P)` after `pLightCut(P)`: by the house's tier in ROOMS.md, a poor house keeps
+  its hearth and one light, a tradesman's or merchant's house three, the Hart, the Elder and the chapel six, never above eight
+  flames; cellars, vaults and the crypt are served first (the story sends the player down). A flame not kept stands unlit: its
+  emitter and its point light go (a window's daylight stays). Wall torches draw their flame, so they are capped where placed
+  instead: a room's first torch always, more only up to three (Hart, Elder, chapel) or two. 155 flames in the 57 buildings now
+  (ROOMS.md aims at about 105; the Hart had 44 light sources and 9 torches, now 3 lanterns and 3 torches). `pLightTone(P)` is
+  called when it exists: it is on `fork-fin`, not yet on threejs. Pictures at 21 h: `docs/proof/inout/light/poor_21h.png`
+  (in.13), `middling_21h.png` (in.02), `rich_21h.png` (the Elder's hall), `inn_21h.png`. The poor room still reads fairly
+  warm from its hearth; the tone will dim it further. The stair heads beside chimney stacks: none left in the shops, in.10 or
+  in.37 (the refit moved them); the store, mill and draper have a stack 0.65 to 0.9 m to the side of the head, not in front.
+- **Gate here on b7bc077:** boot, stairs, npcsep, interact, interiors (57), parity, cast, scenes, hartdoor, inout (12), apart,
+  people all pass.
+- **Not verified headless:** how the moved windows look from inside against furniture at arm's length; frame rate.
+
+## 2026-11-18 (morning, latest): furnished from ROOMS.md; one budget finding
+
+**Hash:** 9d02601 (after the merge candidate ce0c936; not pushed until run 322 on ce0c936 is done, since a push cancels it).
+
+- **ROOMS.md, item 2.** `tools/rooms_data.mjs` turns the tables into `src/72n_rooms.js`; the compact plan (48 houses) places each
+  room's named kit pieces in the room its row names (tall ones against a wall, hanging ones hung, tables free if no wall is left),
+  then the row's light (candlestick, branched candles, candle stand, lantern, torch). The generic cabinet, shelves and barrel are
+  gone. 218 pieces placed; 122 found no room (mostly second tables, sacks and chairs in rooms the trade set already fills). Named
+  with no kit piece: as the list at the end of ROOMS.md, plus `gen_paint`. Not done: the "only here" line of each room and
+  container contents, which need pieces or story text; the nine designed plans (inn, smithy, store, elder, herbalist, guardhouse,
+  weaver, draper, chapel) were furnished by hand earlier.
+- **Local gate on 9d02601:** the 17 of your list pass; `budget-medium` fails: square 193 / 335k against an accepted 186 / 329k.
+  Clean threejs here: 179 / 318k. By category the whole difference is **characters** (20 draws in the camera pass and 20 in the near
+  shadow, against 14 and 14): at ten in the morning eight more villagers browse the market stalls on this branch (Barnaby and Ursel
+  Crane, Basilia Wold, Emmet Sele, Mercy Garrick, Roger Hask, Tilly Hobb, Ulric Ferrin). Houses and kit are equal within 2k
+  triangles. Plans do not say where people are at ten; the routines came in with `fork-integ` (the logic session's). Either the
+  budget is accepted with them (`--accept-budget`) or the routines spread people out; not mine to choose.
+
 ## 2026-11-18 (morning, later): merge candidate ce0c936, your list passes
 
 **Merge candidate: ce0c936** (`origin/fork-integ` and `origin/threejs` Build 85 merged in). On this machine your list passes, all 17:

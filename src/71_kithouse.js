@@ -29,6 +29,9 @@ async function kitBoot(progress) {
 }
 // pieces and material tweaks made once the packs are in: stained-glass clones of the arched windows, tints for the scanned pieces that photograph wrong
 function kitFixups() {
+  // [fin] the mattress and pillow of the scanned bed (vertices inside the frame, 0.34 to 0.95 m up) read white: their vertices carry an unbleached-linen colour, the frame and posts keep the wood
+  { const q = Kit.pieces.gothicbed_01 && Kit.pieces.gothicbed_01.prims[0]; if (q && !q.col) { q.col = new Float32Array(q.n * 3).fill(1); for (let i = 0; i < q.n; i++) { const x = q.pos[i * 3], y = q.pos[i * 3 + 1], z = q.pos[i * 3 + 2]; if (Math.abs(x) < 0.67 && Math.abs(z) < 0.97 && y > 0.34 && y < 0.95) { q.col[i * 3] = 0.5; q.col[i * 3 + 1] = 0.41; q.col[i * 3 + 2] = 0.27; } } } }
+  for (const nm of ['Barrel_Apples', 'FarmCrate_Apple']) { const pc = Kit.pieces[nm], q = pc && pc.prims.find(r => r.mat && (r.mat.name || r.mat) === 'MI_Trim_Props'); if (q && q.col && q.col[0] < 0.5) { for (let i = 0; i < q.n; i++) { q.col[i * 3] = 0.8; q.col[i * 3 + 1] = 0.2; q.col[i * 3 + 2] = 0.1; } } }
   for (const n of ['ceramic_vase_02', 'ceramic_vase_04', 'ceramic_pot']) if (Kit.defs[n]) { Kit.defs[n].gain = 0.5; Kit.defs[n].color = [0.7, 0.46, 0.31]; }       // [fx1] scanned glazed pots photographed white in the sun: now read as earthenware
   for (const n of ['rock_moss_set_01', 'rock_moss_set_02']) if (Kit.defs[n]) { Kit.defs[n].gain = 2.0; Kit.defs[n].sat = 0.85; }       // scanned rocks photograph dark
   for (const n of ['Window_Wide_Flat1', 'Window_Wide_Round1', 'Window_Thin_Round1']) { const p = Kit.pieces[n]; if (p) Kit.pieces[n + '_Open'] = Object.assign({}, p, { name: n + '_Open', prims: p.prims.filter(q => q.mat !== 'MI_WindowGlass') }); }       // the frame without the pane: upstairs windows you can look out of

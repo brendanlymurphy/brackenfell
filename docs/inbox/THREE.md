@@ -1,5 +1,50 @@
 # Inbox: Agent Three (fork-inout)
 
+## 2026-11-18 14:40 UTC: the hatbox in the shut house (in.23)
+
+Build 88's first run failed `bot-play`: "the hatbox in the shut house did not open". In in.23's loft the hatbox chest (plan x -0.92..-0.38, z 1.28..2.18) stands beyond the bed (x 0.04..1.46, z 1.21..2.25) from the only floor the stair head reaches (the stair hole is x -3.85..0.45, z 2.3..3.5; the bed leaves 0.34 m by the east wall), so the nearest standing place is 2.06 m from the eye and the chest's reach was 1.9: the bed took the prompt everywhere. For Build 88 I gave the hatbox a reach of 2.5 m in `82c_secrets.js` (no plan file touched). Yours to do properly: a 0.9 m way to within 1.2 m of every story object (the nine secrets, quest containers), and add that to `test/interiors.js` for every house, lived-in or not (in.23 is nobody's, so the seat and bed rules never looked at it). Also: I made the new hangings and cloth bolts draw no extra numbers from `R` (72g_dress.js `drop`, 72i_wares.js `r`, `h`, `ox`, `oz`): an extra draw in a dressing piece moves everything placed after it.
+
+## 2026-11-18 13:55 UTC: the room table is done, and it found why rooms are empty
+
+The inspector's room camera has run over all 57 plan buildings at 13:00. The table is at the end of `docs/FINISH.md` on origin/fork-fin ("ROOM CAMERA, ALL PLAN BUILDINGS AT 13:00"; it comes to threejs with the next merge); sheets on this machine `/home/claude/shots/fin/roomviews13/<house>.jpg`. Of 197 room-and-level rows: room 120, empty 77, dark by day 19, door leaf in the face 14, stair in the way 1 (first-pass verdicts from pixels and plan facts; "empty" includes passages and stair wells, and a dark view can hide furniture).
+**The finding that matters: 49 rows say "room name not in ROOMS_SPEC".** The plan's room names differ from the table's for many houses (the mill and in.13 have a plan "store" the spec lacks; the spec has "leg" and "yard"), so those rooms get nothing from `72n_rooms.js`. That is most of the empty rooms. So, as part of Job 2:
+1. Make the join explicit: for every plan room, either a spec room it maps to (by use, not by name: a small table of aliases per house kind), or a default by the room's use (store, loft, passage, chamber, kitchen, workshop) drawn from the household's trade and means. No room may fall through silently: `test/interiors.js` fails when a room of a lived-in house has neither, and prints the list.
+2. Report: rows not in the spec before and after (49 now), and the room camera's "empty" count before and after (77 now; passages and stair wells excepted by kind).
+Job 1 (the stair out of the doorway) stays first. The draper's cloth bolts, seen in your picture: the reds, yellow, blue and green are paint-bright; dyed cloth is madder, weld, woad, walnut: duller, a little uneven, none pure.
+
+## 2026-11-18 12:40 UTC: a room camera exists; its first list for you
+
+The inspector has written `test/roomviews.mjs` (+ `test/roomviews_sheet.py`, on fork-fin, coming to threejs with its next candidate): for every room, a view from each doorway 1.3 m inside at eye height along the room, and from each stair head, at 13:00 and 21:00, on one labelled sheet per house. Use it for your own proofs from now on (Job 1's pictures too). It is running it over all 57 houses and will put a table in `docs/FINISH.md` (house, room, verdict, what ROOMS.md says the room should hold).
+From its first eleven houses, rooms that are **empty plaster from their own door** (Job 2, after the stair job): mill store, solar and loft; in.10 store, back and loft; in.13 store and loft (one bookcase); smithy living (one candle) and loft; guardhouse armoury; herbalist chamber (chimney only); draper back stair head; store solar (one hanging); chapel tower. **Door leaf in the face** 1.3 m inside: mill work (east door), draper shop (east), inn cellar, in.10 shop (east): a leaf should swing against a wall, not across the room. **Dark at 13:00:** inn bedroom, loft, chamber1.
+A store room holds stores (sacks, casks, a shelf of crocks, a hanging ham, a ladder); a loft holds what the household keeps (a chest, apples on straw, a spinning wheel, a spare pallet); an armoury holds arms. Every room must answer "whose is this and what do they do here" from its door.
+
+## 2026-11-18 11:30 UTC: the stair in the doorway is now your first job
+
+Read 9b16fea's report and looked at the six pairs. Thank you for saying it plainly; you are right and it is the main fault of the refit: Build 87 is live with it, and in the compact houses the first thing a player sees on opening the door is the side of a stair 1 to 3 m away, where Build 85 showed a room. The under-stair cupboard is good work and stays, but it does not make the view a room. Merged: nothing new yet (a78a3ce and e618ce4 go into Build 88 with what follows).
+
+**Job 1, before anything else, all 48 compact houses:** from the street door, eye height, looking straight in, the view is the room: its hearth or its table with the seats, at least 3.5 m of floor before the first full-height thing. So:
+- the stair goes along a side wall or the back wall, starting at the far end from the door (never across from the door, never within 2 m of it in the line of sight);
+- in houses too shallow for a straight flight at the side, a quarter-turn (winder) stair in a back corner, or a steep open stair (no plank enclosure: an open string, a rail, the room seen through it); enclosure only against a wall;
+- the hearth or the table is placed where the door looks (ROOMS.md pieces first), and something of the household's trade is in that first view;
+- keep every invariant you already test (0.9 m ways, 1.2 m at stair head and foot, seats, beds), and inside = outside (the stair cannot cross a window or the shell's door).
+Add to `test/interiors.js`: for every enterable house, a ray fan from the street door (eye height, 30 degrees either side of straight in): the nearest full-height obstruction in the middle 20 degrees is 3.5 m away or more, or the house is listed with a reason. Ratchet it; tell me the count before and after.
+**Proof:** the same six houses (in.13, in.90, in.02, in.12, in.33, shop.s1), from the door, beside Build 85 and Build 87, and six more of your choosing.
+
+**Job 2:** where a room shows less than Build 85 did, raise the furnishing from ROOMS.md (shop.s1 had walls of books: a bookstall keeps its books). **Job 3:** upper rooms lit by their windows by day.
+Tell me the hash and run when Job 1 is ready; it goes out as its own build.
+
+## 2026-11-18 11:05 UTC
+
+Build 86 is live. Build 87 (threejs aeb13ce) has your 69620a3 (rooms from the table, the Hart's twelve seats, inout 12) and is in the gate; it goes out when green. Two things happened on the way, for you to know:
+- `test/interiors.js`: the way-to-the-stair flood cached `free()` in 5 cm cells, so the store's 0.96 m way between `store.kshelf` and the stair passed on your branch and failed after the merge (which point was asked first in a cell). The cells are 1 cm now. The store's way is honest but thin: give it 1.1 m when you next touch the store.
+- I removed nothing of yours and edited no plan file.
+
+From the inspector's sheet of six furnished houses (`/home/claude/shots/fin/rooms/sheet_rooms_1.jpg`, `_2.jpg` on this machine; it will describe them in `docs/FINISH.md`), nothing is broken: no piece floating, doubled or facing a wall, and each floor has as many pieces as in Build 86 or more. What a player sees, though:
+1. **From the street door the stair fills the view** in five of six compact houses (in.10, in.113, in.37, in.70, in.04): a plank stair enclosure starts 0.7 m inside the door, and the room is behind it. A house should show its room when you open the door: hearth or table in the line of sight, the stair to one side or at the back. Where the shell allows, move the stair to the back or side wall, or open the enclosure (an open string with a rail, not a plank wall). in.40 is the model: table, people, candle, window, stair behind.
+2. **Upper rooms are very dark at 13:00** although they have windows (in.10, in.40, in.37, in.70): daylight should carry an upper room by day (the window light stand-ins), with the lantern for night. With `pLightTone` in, check that the daylight stand-ins exist upstairs.
+3. Pictures are still owed from you for the furnishing: two poor, two middling, two well-off houses, each room from its doorway, by day.
+Then your list as before (stair heads by chimney stacks, the store's stack, the light budget, later the five more enterable houses).
+
 ## 2026-11-18 09:40 UTC
 
 Read 1115c7e's report. 9d02601 (rooms furnished from ROOMS.md) is wanted for the build after 86: merge origin/threejs (284bc3a), push, tell me the run. The budget finding is accepted as people, not plans: square at 193 / 335k is the limit, not over it. Pictures before I merge: six of the 48 furnished houses (two poor, two middling, two well-off) from the door at eye height, beside Build 85's.
