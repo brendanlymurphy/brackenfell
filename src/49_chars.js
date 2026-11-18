@@ -164,7 +164,7 @@ const Chars = (() => {
         if (wear.kirtle) {      // [ch1] dyes: woad grey-blue and madder, never bright; aprons undyed grey-cream linen
           const mute = c => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => l + (v - l) * 0.28).map(v => Math.min(0.62, v)); };
           WC.wool = mute(WC.wool); WC.cloak = mute(WC.cloak); if (wear.hat === 'hood' || wear.hat === 'cap') WC.hat = mute(WC.hat);
-          WC.apron = [[0.40, 0.39, 0.36], [0.47, 0.43, 0.33], [0.36, 0.30, 0.22]][Math.floor(r(8) * 3)].map(v => v * (0.92 + 0.08 * r(13)));
+          WC.apron = body === 'm_smith' ? [0.17, 0.105, 0.06] : [[0.29, 0.27, 0.23], [0.33, 0.29, 0.20], [0.26, 0.21, 0.15]][Math.floor(r(8) * 3)].map(v => v * (0.92 + 0.08 * r(13)));      // [ch4] unbleached hemp and tow, not white (in sun the old values read as a flat white sheet); the smith's is leather
         }
         wear.col = ['leather', 'hat', 'metal', 'apron', 'cloak', 'tabard', 'linen', 'strap', 'straw', 'wool', 'teeth', 'tongue'].map(k => WC[k]);
         return { body, fit: FIT[body] || 1, hairGrey: { f_elder: 0.96, m_elder: 0.92, m_fisher: 0.6, m_innkeeper: 0.25, m_hunter: 0.2, m_smith: 0.12, m_guard: 0.1 }[body] || (def.hair === 'white' ? 0.95 : def.hair === 'grey' ? 0.7 : 0), wear, tint: Object.assign({ skin: SKIN_T[body] || SKIN_T.light }, TINT[def.id], def.tint), dye, acc };
@@ -762,6 +762,29 @@ const Chars = (() => {
   // when its animated value changed, so the previous frame's curl is taken out first, as the head look does).
   const FING = ['index', 'middle', 'ring', 'pinky'], CURL = [0.95, 1.15, 0.85], GRIP_SIGN = { R: -1, L: -1 };
   C.grip = function (H, side, amt) { (H.gripAmt = H.gripAmt || { R: 0, L: 0 })[side] = amt; };
+  // [ch4] An arm reaches a point: two-joint solve on upper arm and forearm so the wrist is at `target` (world), the hand turned to `handQ` (world) if given; `w` 0..1 blends from the
+  // animation. Call every frame while reaching, after the mixer (a prop's post function does); C.reach(H, side, null) lets go. The instrument is set against the body and the hands
+  // go to it, not the other way round: an instrument hung between two animated hands went through the player's belly. Same bookkeeping as the finger curl (see above).
+  const IKB = { R: ['upperarm_r', 'lowerarm_r', 'hand_r'], L: ['upperarm_l', 'lowerarm_l', 'hand_l'] }, _ik = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), u: new THREE.Vector3(), v: new THREE.Vector3(), n: new THREE.Vector3(), q: new THREE.Quaternion(), p: new THREE.Quaternion(), r: new THREE.Quaternion() };
+  const ikTurn = (bone, qW) => { bone.parent.getWorldQuaternion(_ik.p); _ik.r.copy(_ik.p).invert().multiply(qW).multiply(_ik.p); bone.quaternion.premultiply(_ik.r); bone.updateWorldMatrix(false, true); };
+  C.reach = function (H, side, target, handQ, w) {
+    const S = H.ikS || (H.ikS = {}), s = S[side] || (S[side] = IKB[side].map(n => ({ b: H.root.getObjectByName(n), base: new THREE.Quaternion(), mine: new THREE.Quaternion(), on: false }))), I = _ik;
+    if (s.some(g => !g.b)) return false;
+    for (const g of s) { if (g.on && g.b.quaternion.equals(g.mine)) g.b.quaternion.copy(g.base); else g.base.copy(g.b.quaternion); g.on = false; }
+    if (!target) return true;
+    const ua = s[0].b, la = s[1].b, hd = s[2].b; ua.updateWorldMatrix(true, true);
+    for (let it = 0; it < 3; it++) {
+      ua.getWorldPosition(I.a); la.getWorldPosition(I.b); hd.getWorldPosition(I.c);
+      const l1 = I.a.distanceTo(I.b), l2 = I.b.distanceTo(I.c), d = Math.max(Math.abs(l1 - l2) + 0.01, Math.min(l1 + l2 - 0.004, I.a.distanceTo(target)));
+      I.u.subVectors(I.c, I.b).normalize(); I.v.subVectors(I.a, I.b).normalize(); const cur = Math.acos(Math.max(-1, Math.min(1, I.u.dot(I.v)))), want = Math.acos(Math.max(-1, Math.min(1, (l1 * l1 + l2 * l2 - d * d) / (2 * l1 * l2))));
+      I.n.crossVectors(I.u, I.v); if (I.n.lengthSq() < 1e-8) I.n.set(0, 0, 1).applyQuaternion(la.getWorldQuaternion(I.q)); I.n.normalize();
+      ikTurn(la, I.q.setFromAxisAngle(I.n, cur - want));
+      hd.getWorldPosition(I.c); I.u.subVectors(I.c, I.a).normalize(); I.v.subVectors(target, I.a).normalize(); ikTurn(ua, I.q.setFromUnitVectors(I.u, I.v));
+    }
+    if (handQ) { hd.parent.getWorldQuaternion(I.p); hd.quaternion.copy(I.p.invert().multiply(handQ)); }
+    for (const g of s) { if (w !== undefined && w < 1) g.b.quaternion.copy(I.q.copy(g.base).slerp(g.b.quaternion, Math.max(0, w))); g.mine.copy(g.b.quaternion); g.on = true; }
+    ua.updateWorldMatrix(false, true); return true;
+  };
   function gripUpdate(H) {
     const G = H.gripS || (H.gripS = { R: null, L: null }), q = new THREE.Quaternion(), e = new THREE.Euler();
     for (const side of ['R', 'L']) {

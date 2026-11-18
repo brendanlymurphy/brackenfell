@@ -1,6 +1,7 @@
 // Repairs the wardrobe of finished character GLBs without Blender [ch4]. Safe to run again; rewrites the files in place.
 //   node tools/humans/reskin.mjs chars/real/[fmo]_*.glb        then: node tools/assets_pack.mjs --only chars
-// Step 3 deletes triangles: to change its rule, start again from the files as post.mjs and chars_lod.mjs wrote them (commit e1c351a has them).
+// Step 3 deletes triangles: to change its rule, start again from the files as post.mjs and chars_lod.mjs wrote them (commit e1c351a has them:
+//   git restore --source e1c351a --worktree -- chars/real     and never 'git checkout e1c351a -- chars/real', which also stages them).
 // 1. Unweighted vertices. garb.py takes a garment vertex's weights from the four nearest body vertices; where those have none the
 //    exporter binds the vertex to "neutral_bone", which never moves: the vertex stays at standing height while the body sits and its
 //    triangles become metre-long shards. Such a vertex gets the weights of the nearest weighted vertex of its own mesh.
@@ -146,21 +147,22 @@ for (const file of process.argv.slice(2)) {
   // ── 4. what lies on a garment moves with it and stays outside it ──
   // Apron, straps, belt, pouch and tabard took their weights from the nearest body vertices, the kirtle from its own rule: seated, the
   // skirt went one way and the apron on it another (a crumpled pale sheet on the lap, the belt a lump behind). Each of their vertices
-  // now carries the weights of the point it lies on: of the kirtle, or on a body without one of the tunic, robe and hose. Apron, straps
-  // and tabard are then moved straight out from the body's axis until corners, edge middles and face centres are 14 mm clear of what
+  // now carries the weights of the point it lies on: of the kirtle, or on a body without one of the tunic, robe and hose. Apron
+  // and tabard (not the straps: over the top of a shoulder 'straight out' is sideways, and a strap stood off like a wire) are then moved straight out from the body's axis until corners, edge middles and face centres are 14 mm clear of what
   // is under them (the holes in Hale's tabard and in the aprons were the garment underneath coming through a coarse sheet).
   // Each lighter copy (@mid, @lod) is fitted to the copy of the garment at its own weight: a coarse apron fitted to the full kirtle cut through the coarse one.
   for (const SUF of ['', '@mid', '@lod', '@far']) { const lvl = n => (/@\w+$/.exec(n) || [''])[0] === SUF, kir = prims.filter(x => x.name === 'w_kirtle' + SUF), under = kir.length ? kir : prims.filter(x => lvl(x.name) && !/^w_/.test(x.name) && !/brow|low-poly|teeth|tongue|boot|shoe/i.test(x.name) && !['hair', 'eye', 'brow'].includes((x.p.getMaterial().getExtras() || {}).kind)), K = [];
     for (const x of under) { const pos = x.p.getAttribute('POSITION'), ix = x.p.getIndices().getArray(), P = [], W = [], arm = [];
       for (let i = 0; i < pos.getCount(); i++) { P.push(pos.getElement(i, [])); const [e, g] = wOf(x, i), mp = new Map(); let a = 0; for (let k = 0; k < 4; k++) if (g[k] > 0 && e[k] !== NI) { mp.set(e[k], (mp.get(e[k]) || 0) + g[k]); if (ARM.test(J[e[k]]) || J[e[k]] === 'head') a += g[k]; } W.push(mp); arm.push(a); }
       for (let t = 0; t < ix.length; t += 3) { if (!kir.length && (arm[ix[t]] > 0.35 || arm[ix[t + 1]] > 0.35 || arm[ix[t + 2]] > 0.35)) continue; K.push({ a: P[ix[t]], b: P[ix[t + 1]], c: P[ix[t + 2]], w: [W[ix[t]], W[ix[t + 1]], W[ix[t + 2]]] }); } }
-    const zc = bone.pelvis[2];
+    const zc = bone.pelvis[2], KB = K.slice();      // the apron also clears the belt and its buckle (the buckle came through the apron front as a small pale square)
+    for (const x of prims.filter(q => q.name === 'w_belt' + SUF)) { const pos = x.p.getAttribute('POSITION'), ix = x.p.getIndices().getArray(), P = []; for (let i = 0; i < pos.getCount(); i++) P.push(pos.getElement(i, [])); for (let t = 0; t < ix.length; t += 3) KB.push({ a: P[ix[t]], b: P[ix[t + 1]], c: P[ix[t + 2]] }); }
     if (K.length) for (const x of prims) { if (!/^w_(apron|straps|belt|pouch|tabard)/.test(x.name) || !lvl(x.name)) continue; const pos = x.p.getAttribute('POSITION'), n = pos.getCount(), P = [];
       for (let i = 0; i < n; i++) P.push(pos.getElement(i, []));
-      if (/^w_(apron|straps|tabard)/.test(x.name)) { const ix = x.p.getIndices().getArray(); let moved = 0;
+      if (/^w_(apron|tabard)/.test(x.name)) { const ix = x.p.getIndices().getArray(); let moved = 0;
         for (let pass = 0; pass < 4; pass++) { const push = P.map(() => [0, 0, 0]);
           const sample = vs => { const v = [0, 1, 2].map(c => vs.reduce((s2, i) => s2 + P[i][c], 0) / vs.length), hx = v[0], hz = v[2] - zc, r = Math.hypot(hx, hz); if (r < 0.03) return; const d = [hx / r, 0, hz / r]; let best = -1;
-            for (const t of K) { const k = rayTri([0, v[1], zc], d, t.a, t.b, t.c); if (k > best && k < 0.7) best = k; } if (best < 0) return; const need = best + 0.014 - r; if (need > 0) for (const i of vs) if (need > push[i][2]) push[i] = [d[0] * need, d[2] * need, need]; };
+            for (const t of (/^w_apron/.test(x.name) ? KB : K)) { const k = rayTri([0, v[1], zc], d, t.a, t.b, t.c); if (k > best && k < 0.7) best = k; } if (best < 0) return; const need = best + 0.014 - r; if (need > 0) for (const i of vs) if (need > push[i][2]) push[i] = [d[0] * need, d[2] * need, need]; };
           for (let i = 0; i < n; i++) sample([i]); for (let t = 0; t < ix.length; t += 3) { const A = ix[t], B = ix[t + 1], C = ix[t + 2]; sample([A, B]); sample([B, C]); sample([C, A]); sample([A, B, C]); }
           let any = 0; push.forEach((q, i) => { if (q[2] > 1e-4) { P[i][0] += q[0]; P[i][2] += q[1]; any++; } }); moved += any; if (!any) break; }
         if (moved) { x.p.setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(P.flat())).setBuffer(pos.getBuffer())); log.push(x.name + ' moved out ' + moved); } }

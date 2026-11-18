@@ -19,13 +19,14 @@ function hpGeo(kind) {
     // pear-shaped bowl (0.32 wide, 0.48 long, 0.15 deep) of nine ribs, flat soundboard with a rose, bridge, neck with fingerboard, pegbox bent back, six strings
     const prof = n => { const a = []; for (let i = 0; i <= 10; i++) { const u = i / 10, r = 0.16 * Math.pow(Math.sin(Math.PI * Math.pow(u, 0.8)), 0.75) * (1 - 0.35 * u) + 0.03 * Math.pow(u, 4); a.push(new T.Vector2(Math.max(0.0005, r), -0.27 + 0.48 * u)); } return a; };
     P = []; const R = 9, pr = prof();
-    for (let i = 0; i < R; i++) { const a0 = Math.PI / 2 + i * Math.PI / R; P.push([new T.LatheGeometry(pr, 3, a0, Math.PI / R), X(0, 0, 0, 0, 0, 0, 1, 1, 0.47), i % 2 ? [0.36, 0.22, 0.10] : [0.26, 0.15, 0.07], MW]); }
+    for (let i = 0; i < R; i++) { const a0 = Math.PI / 2 + i * Math.PI / R; P.push([new T.LatheGeometry(pr, 3, a0, Math.PI / R), X(0, 0, 0, 0, 0, 0, 1, 1, 0.94), i % 2 ? [0.30, 0.18, 0.085] : [0.21, 0.12, 0.055], MW]); }      // [ch4] 0.15 deep: it was 0.075, a pan
     const sh = new T.Shape(); pr.forEach((v, i) => i ? sh.lineTo(v.x, v.y) : sh.moveTo(v.x, v.y)); for (let i = pr.length - 1; i >= 0; i--) sh.lineTo(-pr[i].x, pr[i].y);
-    P.push([new T.ShapeGeometry(sh), X(0, 0, 0.0015), [0.50, 0.36, 0.20], MW]);                                                   // the soundboard
+    P.push([new T.ShapeGeometry(sh), X(0, 0, 0.0006, 0, 0, 0, 1.0, 1.0, 1), DK, MW], [new T.ShapeGeometry(sh), X(0, -0.0006, 0.0018, 0, 0, 0, 0.965, 0.975, 1), [0.34, 0.245, 0.135], MW]);      // the soundboard, aged spruce inside a dark edge band
     P.push([new T.CircleGeometry(0.036, 14), X(0, -0.03, 0.0028), DK, MW], [new T.RingGeometry(0.036, 0.043, 14), X(0, -0.03, 0.0032), [0.30, 0.19, 0.09], MW]);      // the rose
     P.push([new T.BoxGeometry(0.11, 0.014, 0.012), X(0, -0.17, 0.008), DK, MW]);                                                    // the bridge
     P.push([new T.BoxGeometry(0.048, 0.30, 0.022), X(0, 0.31, 0.011), WD, MW], [new T.BoxGeometry(0.040, 0.26, 0.006), X(0, 0.31, 0.025), DK, MW]);      // neck and fingerboard
-    P.push([new T.BoxGeometry(0.06, 0.13, 0.026), X(0, 0.505, -0.03, -1.15, 0, 0), WD, MW]);                                         // the pegbox, bent back
+    P.push([new T.CylinderGeometry(0.017, 0.031, 0.15, 4, 1), X(0, 0.492, -0.052, -1.2, Math.PI / 4, 0, 1, 1, 0.55), WD, MW]);                    // the pegbox, bent back and tapering
+    for (let i = 0; i < 6; i++) { const u = 0.02 + i * 0.022, sd = i % 2 ? 1 : -1; P.push([new T.CylinderGeometry(0.0035, 0.0055, 0.05, 5), X(sd * 0.036, 0.468 + u * 0.36, -0.012 - u * 0.93, 0, 0, Math.PI / 2 * sd), DK, MW]); }      // six pegs, three a side
     for (let i = 0; i < 6; i++) { const x = -0.0105 + i * 0.0042; P.push([new T.BoxGeometry(0.0013, 0.62, 0.0013), X(x, 0.14, 0.029), [0.74, 0.70, 0.58], MW]); }
   }
   else if (kind === 'hammer') P = [hpWood(0.36, 0.0135, 0.0165, -0.14, WD), [new T.BoxGeometry(0.07, 0.040, 0.034), X(0, 0.225, 0), IR, MI], [new T.BoxGeometry(0.030, 0.048, 0.044), X(0.048, 0.225, 0), IR, MI], [new T.BoxGeometry(0.045, 0.026, 0.026), X(-0.052, 0.225, 0), IR, MI]];
@@ -59,16 +60,27 @@ function hpPlace(mesh, o, y, z) {      // origin o, long axis y, front z (z made
   z.addScaledVector(y, -z.dot(y)).normalize(); const x = _hv.c.crossVectors(y, z).normalize();
   _hv.m.makeBasis(x, y, z); mesh.quaternion.setFromRotationMatrix(_hv.m); mesh.position.copy(o);
 }
-function hpLute(mesh) { return (H) => {
-  const f = hpFrame(H), play = H.animNow === 'lute' && !H.talkNow, y = new THREE.Vector3(), z = new THREE.Vector3(), o = new THREE.Vector3();
-  if (play) {      // the right hand over the strings (at y = -0.12 on the soundboard), the left round the neck
-    y.subVectors(f.pL, f.pR).normalize(); z.copy(f.F); hpPlace(mesh, o.copy(f.pR).addScaledVector(y, 0.12).addScaledVector(z, -0.045), y, z);
-    mesh.userData.holding = true; Chars.grip(H, 'L', 0.55); Chars.grip(H, 'R', 0.25);
-  } else {      // slung on the back by its strap, neck up over the left shoulder, soundboard outward
-    y.copy(f.U).multiplyScalar(0.93).addScaledVector(f.R, 0.34).normalize(); z.copy(f.F).negate();
-    hpPlace(mesh, o.copy(f.sp).addScaledVector(f.F, -0.15).addScaledVector(f.U, -0.2).addScaledVector(f.R, -0.04), y, z); mesh.userData.holding = false; Chars.grip(H, 'L', 0); Chars.grip(H, 'R', 0);
+function hpLute(mesh) { const T = THREE, y = new T.Vector3(), z = new T.Vector3(), o = new T.Vector3(), tR = new T.Vector3(), tL = new T.Vector3(), bx = new T.Vector3(), by = new T.Vector3(), bz = new T.Vector3(), mq = new T.Matrix4(), qL = new T.Quaternion(), qR = new T.Quaternion(); let wPlay = 0;
+  // [ch4] The lute is set against the body and the hands go to it (Chars.reach). Hung between the two animated hands it went through the belly: the clip is a guitar's, and a lute's bowl is 0.15 m deep.
+  return (H, st) => {
+  const f = hpFrame(H), play = H.animNow === 'lute' && !H.talkNow, k = H.root.scale.y || 1; wPlay = play ? 1 : 0;
+  if (play) {      // the bowl on the belly a little to the player's right, the neck up to the left at 20 degrees and a little forward, the soundboard turned up 12 degrees
+    y.copy(f.R).multiplyScalar(-0.93).addScaledVector(f.U, 0.33).addScaledVector(f.F, 0.14).normalize(); z.copy(f.F).multiplyScalar(0.978).addScaledVector(f.U, 0.21);
+    hpPlace(mesh, o.copy(f.pel).addScaledVector(f.U, 0.21 * k).addScaledVector(f.R, 0.035 * k).addScaledVector(f.F, 0.118 * k * (H.wide || 1) + 0.158), y, z); mesh.scale.setScalar(1); mesh.updateMatrixWorld(true);
+    const t = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000 + (H.seed % 7), strum = Math.sin(t * 5.3) * 0.5 + Math.sin(t * 2.1) * 0.5;
+    // right wrist over the lower edge of the bowl, fingers at the strings between rose and bridge, brushing across them; left wrist under the neck, fingers over the fingerboard
+    mesh.localToWorld(tR.set(0.075 + 0.012 * strum, -0.125, 0.05)); mesh.localToWorld(tL.set(0.062, 0.33 + 0.02 * Math.sin(t * 0.7), -0.022));
+    mesh.matrixWorld.extractBasis(bx, by, bz); bx.normalize(); by.normalize(); bz.normalize();
+    // hand frames (x along the knuckles, y along the fingers, -z out of the palm): left palm to the back of the neck, fingers up across it; right palm to the soundboard, fingers up the strings toward the rose
+    mq.makeBasis(by.clone().negate(), bx.clone().negate(), bz.clone().negate()); qL.setFromRotationMatrix(mq);
+    mq.makeBasis(by.clone().multiplyScalar(1), bx.clone().negate().lerp(by, 0.25).normalize(), bz.clone()); { const X0 = new T.Vector3(), Y0 = new T.Vector3(), Z0 = new T.Vector3(); mq.extractBasis(X0, Y0, Z0); Z0.copy(bz).negate(); X0.crossVectors(Y0, Z0).normalize(); Z0.crossVectors(X0, Y0).normalize(); mq.makeBasis(X0, Y0, Z0); } qR.setFromRotationMatrix(mq);
+    Chars.reach(H, 'R', tR, qR); Chars.reach(H, 'L', tL, qL); mesh.userData.holding = true; Chars.grip(H, 'L', 0.6); Chars.grip(H, 'R', 0.3);
+  } else {      // slung on the back by its strap: the bowl against the back, the neck up over the left shoulder, the soundboard outward
+    Chars.reach(H, 'R', null); Chars.reach(H, 'L', null);
+    y.copy(f.U).multiplyScalar(0.93).addScaledVector(f.R, -0.34).normalize(); z.copy(f.F).negate();
+    hpPlace(mesh, o.copy(f.sp).addScaledVector(f.F, -(0.105 * k * (H.wide || 1) + 0.158)).addScaledVector(f.U, -0.16 * k).addScaledVector(f.R, 0.05 * k), y, z); mesh.userData.holding = false; Chars.grip(H, 'L', 0); Chars.grip(H, 'R', 0);
   }
-  mesh.userData.grip = [0, 0.31, 0.02]; mesh.userData.hand = 'L'; mesh.scale.setScalar(1); mesh.visible = true;
+  mesh.userData.grip = [0.0, 0.33, 0.0]; mesh.userData.hand = 'L'; mesh.scale.setScalar(1); mesh.visible = true;
 }; }
 function hpHammer(mesh) { return (H) => {
   const swing = H.animNow === 'hammer' && !H.talkNow, f = hpFrame(H);
