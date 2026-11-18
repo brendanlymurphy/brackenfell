@@ -359,7 +359,15 @@ function planHouse(P, c, info) {
     const zc = (cel.in.z0 + cel.in.z1) / 2, x1 = cel.in.x0, y0 = P.lv[-1] ? P.lv[-1].y : -2.52;      /* [fin] the patch is on the cellar's plan -x wall: the compass reads true indoors and the Hart's site is turned, so that wall faces true east */
     P.clear.push({ x0: x1, x1: x1 + 1.5, z0: zc - 0.75, z1: zc + 0.75, k: -1, kind: 'secret', room: cel });
     const wp = P.w2(x1, y0, zc); World.hartWall = { p: [wp[0], wp[1], wp[2]], inW: P.w2(x1 + 1.2, y0, zc), into: 1 };
-    { const m = P.c.int; m.m1 = P.zone; m.ao = INT_AO; m.mat(MAT.PLAIN, [0.004, 0.004, 0.004], 1); const xq = x1 + 0.02; m.quad([xq, y0 + 0.02, zc - 0.5], [xq, y0 + 1.92, zc - 0.5], [xq, y0 + 1.92, zc + 0.5], [xq, y0 + 0.02, zc + 0.5]); }      /* the dark behind the brick patch (97d door): drawn with the room so it is as dark as the room's own black, covered by the patch until the bricks are out */
+    { const m = P.c.int, Hc = P.lv[-1] ? (P.lv[-1].H || 2.4) : 2.4, top = Math.min(1.9, Hc - 0.35), xa = x1;      /* [fin] a doorway someone bricked up, built into the cellar's wall with the room (lit like it): stone jambs 0.25 m wide and 5 cm proud, a timber lintel, the new brick (the story prop, 82c_secrets.js, 3 cm back from the jambs) filling it, mortar smears on the jambs, sand and two spare bricks on the floor. The loose brick (story prop, 82c_secrets.js) is 1 cm proud of it. */
+      m.m1 = P.zone; m.ao = INT_AO;
+      m.mat(MAT.STONE, [0.86, 0.84, 0.8], 0.7); for (const sg of [-1, 1]) m.box(xa, y0, sg < 0 ? zc - 0.75 : zc + 0.5, xa + 0.05, y0 + top, sg < 0 ? zc - 0.5 : zc + 0.75, 1 | 4);
+      m.mat(MAT.TIMBER, COL.timberDark, 0.8); m.box(xa, y0 + top, zc - 0.8, xa + 0.09, y0 + top + 0.2, zc + 0.8, 1 | 4);
+      m.mat(MAT.PLAIN, [0.004, 0.004, 0.004], 1); { const xq = xa + 0.01; m.quad([xq, y0 + 0.02, zc - 0.5], [xq, y0 + top, zc - 0.5], [xq, y0 + top, zc + 0.5], [xq, y0 + 0.02, zc + 0.5]); }      /* the dark behind the story patch, exactly the opening, covered by it until the bricks are out */
+      m.mat(MAT.PLAIN, [0.62, 0.58, 0.5], 0.5); for (const [sz, sy] of [[-0.58, 0.4], [0.62, 0.9], [-0.66, 1.4], [0.56, 1.55], [-0.6, 1.0]]) m.box(xa + 0.05, y0 + sy, zc + sz - 0.05, xa + 0.058, y0 + sy + 0.05, zc + sz + 0.05, 1 | 4);
+      m.mat(MAT.PLAIN, [0.5, 0.42, 0.3], 0.5); m.box(xa + 0.05, y0 + 0.002, zc - 0.5, xa + 0.6, y0 + 0.014, zc + 0.55, 1 | 4);
+      m.mat(MAT.PLAIN, [0.46, 0.23, 0.15], 0.5); m.box(xa + 0.28, y0 + 0.014, zc - 0.3, xa + 0.5, y0 + 0.079, zc - 0.2, 4); m.box(xa + 0.45, y0 + 0.014, zc + 0.12, xa + 0.67, y0 + 0.079, zc + 0.22, 4);
+    }
   }
   dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
   if (up) {

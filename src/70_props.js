@@ -49,7 +49,7 @@ function glazeLathe(m, prof0, n, col, o) { o = o || {}; const prof = _chaikin(_c
   return latheG(m, prof, n, 1, (k, t, a) => { const hl = _hl(a, 0.07, 0.12) * 0.22 + _hl(a, 0.2, 0.12) * 0.07; if (t < foot) return [col[0] * 0.66 + 0.02, col[1] * 0.64 + 0.02, col[2] * 0.6 + 0.02]; const lip = k === prof.length - 1 ? 0.72 : 1, g = (0.9 + 0.16 * t) * lip; return [col[0] * g + hl * 0.8, col[1] * g * 0.99 + hl * 0.8, col[2] * g * 0.97 + hl * 0.78]; }); }
 // glass: thin, dark where it is thick, a pale rim, a bright sliver of highlight
 function glassLathe(m, prof, n, col) { m.mat(MAT.PLAIN, col);
-  return latheG(m, prof, n, 1, (k, t, a) => { const hl = _hl(a, 0.045, 0.1) * 0.55 + _hl(a, 0.16, 0.1) * 0.1, rim = k === prof.length - 1 ? 0.3 : 0, e = 0.62 + 0.25 * Math.sin(t * Math.PI); return [col[0] * e + hl + rim, col[1] * e + hl + rim, col[2] * e + hl + rim]; }); }
+  return latheG(m, prof, n, 1, (k, t, a) => { const hl = _hl(a, 0.1, 0.1) * 0.3 + _hl(a, 0.24, 0.1) * 0.08, rim = k === prof.length - 1 ? 0.3 : 0, e = 0.62 + 0.25 * Math.sin(t * Math.PI); return [col[0] * e + hl + rim, col[1] * e + hl + rim, col[2] * e + hl + rim]; }); }
 const Props = {
   table(m, len, wid, h) {
     h = h || 0.76; m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2, h - 0.06, -wid / 2, len / 2, h, wid / 2);
@@ -114,7 +114,7 @@ const Props = {
   sack(m, s, col) { s = s || 0.3; m.mat(MAT.CLOTH, col || COL.wool, 0.6); m.lathe([[0.001, 0], [s * 0.82, s * 0.03], [s * 1.0, s * 0.45], [s * 0.92, s * 1.05], [s * 0.58, s * 1.5], [s * 0.26, s * 1.68]], 10, 2); m.cyl(0, s * 1.6, 0, s * 0.2, s * 0.26, s * 0.26, 6, 2); m.mat(MAT.CLOTH, [0.2, 0.15, 0.1], 0.6); m.cyl(0, s * 1.58, 0, s * 0.3, s * 0.3, s * 0.05, 8, 2); },   // [fx2] a slumped sack with a tied neck, not a ball
   pot(m, s, col) { s = s || 0.14; glazeLathe(m, [[s * 0.5, 0], [s * 0.62, s * 0.12], [s, s * 0.7], [s * 0.9, s * 1.5], [s * 0.55, s * 1.9], [s * 0.7, s * 2.1], [s * 0.74, s * 2.14]], 16, col || COL.clay); },
   jug(m, col) { const c = col || [0.50, 0.33, 0.22]; glazeLathe(m, [[0.04, 0], [0.05, 0.01], [0.075, 0.03], [0.088, 0.09], [0.07, 0.17], [0.038, 0.215], [0.046, 0.25], [0.05, 0.262]], 16, c); m.mat(MAT.PLAIN, [c[0] * 0.6, c[1] * 0.6, c[2] * 0.6]); m.disc(0, 0.255, 0, 0.034, 8, 1); m.mat(MAT.PLAIN, c); m.beam([0.05, 0.215, 0], [0.105, 0.17, 0], 0.016, 0.016); m.beam([0.105, 0.17, 0], [0.085, 0.09, 0], 0.016, 0.016); },
-  bottle(m, col) { glassLathe(m, [[0.035, 0], [0.04, 0.02], [0.04, 0.14], [0.014, 0.20], [0.014, 0.25], [0.017, 0.262]], 14, col || COL.glass); m.mat(MAT.PLANKS, [0.55, 0.42, 0.28], 0.3); m.cyl(0, 0.24, 0, 0.012, 0.014, 0.04, 8, 2); },
+  bottle(m, col) { glassLathe(m, [[0.035, 0], [0.04, 0.02], [0.04, 0.14], [0.014, 0.20], [0.014, 0.25], [0.017, 0.262]], 20, col || COL.glass); m.mat(MAT.PLANKS, [0.55, 0.42, 0.28], 0.3); m.cyl(0, 0.24, 0, 0.012, 0.014, 0.04, 8, 2); },
   mug(m) { m.mat(MAT.PLANKS, COL.wood, 0.3); m.lathe([[0.045, 0], [0.05, 0.12]], 8, 1); m.mat(MAT.PLAIN, [0.3, 0.2, 0.1]); m.disc(0, 0.10, 0, 0.044, 8, 1); m.mat(MAT.METAL, COL.iron); m.lathe([[0.052, 0.09], [0.052, 0.105]], 8, 0); },
   plate(m, col) { m.mat(MAT.PLAIN, col || [0.72, 0.60, 0.42]); m.lathe([[0.07, 0], [0.12, 0.018]], 10, 1); m.disc(0, 0.004, 0, 0.07, 10, 1); },
   bowl(m, col) { glazeLathe(m, [[0.04, 0], [0.05, 0.01], [0.09, 0.05], [0.10, 0.07], [0.098, 0.073]], 16, col || [0.60, 0.42, 0.26], { foot: 0.16 }); m.mat(MAT.PLAIN, (col || [0.60, 0.42, 0.26]).map(v => v * 0.85)); m.disc(0, 0.045, 0, 0.085, 14, 1); },
