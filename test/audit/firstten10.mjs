@@ -2,7 +2,7 @@
 // Takes a picture at each thing met and writes shots/audit/firstten.json (the timeline). usage: node test/audit/firstten.mjs [--size 844x390]
 import { chromium, CHROME } from '../pw.mjs'; import http from 'node:http'; import fs from 'node:fs';
 const A = process.argv.slice(2), size = (A.includes('--size') ? A[A.indexOf('--size') + 1] : '844x390').split('x').map(Number);
-const root = new URL('../../', import.meta.url).pathname, OUT = root + 'shots/audit/ft10b/'; fs.mkdirSync(OUT, { recursive: true });
+const root = new URL('../../', import.meta.url).pathname, OUT = root + 'shots/audit/' + (process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : 'ft10b') + '/'; fs.mkdirSync(OUT, { recursive: true });
 const TYPES = { html: 'text/html', js: 'text/javascript', png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', glb: 'model/gltf-binary', json: 'application/json', css: 'text/css', m4a: 'audio/mp4' };
 const port = 9700 + Math.floor(Math.random() * 200);
 const srv = http.createServer((q, s) => { try { const u = decodeURIComponent(q.url.split('?')[0]); const f = root + (u.endsWith('/') ? u.slice(1) + 'index.html' : u.slice(1)); const b = fs.readFileSync(f); s.writeHead(200, { 'content-type': TYPES[f.split('.').pop()] || 'application/octet-stream' }); s.end(b); } catch (e) { s.writeHead(404); s.end('nf'); } }).listen(port);
@@ -58,5 +58,5 @@ await step('house', async () => { const h = await ev(() => AUDFT.house('in.12'))
 await step('wharf', async () => { await ev(() => AUDFT.go(2, 45, 2.5)); await shot('wharf_street', 'Wharf Street'); await useThing('^wharf\\.body', 'body', 'the drowned man'); const s = await ev(() => AUDFT.nearestStranger()); if (s) await talkTo(s.id, 'wharf_person', 'someone at the wharf: ' + s.name); await talkTo('finn', 'finn', 'Finn, who found him'); });
 await step('maren', () => talkTo('maren', 'maren', 'Old Maren, as the story says next'));
 await step('until ten', async () => { for (let k = 0; k < 6; k++) { const s = await ev(() => AUDFT.state()); if (s.t >= 600) break; await ev(() => AUDFT.go(0, -2, 2)); await watch(25, 'square_late', 'back in the square, later'); } });
-fs.writeFileSync(root + 'shots/audit/firstten10.json', JSON.stringify({ timeline: T, toasts: await ev(() => AUDFT.toasts), consoleWarnings: [...new Set(errs)].slice(0, 20) }, null, 1));
+fs.writeFileSync(root + 'shots/audit/' + (process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : 'firstten10') + '.json', JSON.stringify({ timeline: T, toasts: await ev(() => AUDFT.toasts), consoleWarnings: [...new Set(errs)].slice(0, 20) }, null, 1));
 await browser.close(); srv.close(); process.exit(0);

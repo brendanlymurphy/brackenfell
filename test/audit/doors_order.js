@@ -1,0 +1,4 @@
+// [audit] the enterable doors in the order a new player meets them walking from the west gate along the main street to the square and on to the bridge
+const route = [[-60, -5], [-40, -7], [-20, -6], [0, -4], [20, 0], [45, 2]]; const out = [];
+for (const h of Object.values(World.houses)) { const d = [].concat(h.xdoor || [])[0]; if (!d || !h.cell) continue; let best = 1e9, along = 0, acc = 0; for (let i = 0; i < route.length - 1; i++) { const [ax, az] = route[i], [bx, bz] = route[i + 1], L = Math.hypot(bx - ax, bz - az), t = Math.max(0, Math.min(1, ((d.out[0] - ax) * (bx - ax) + (d.out[2] - az) * (bz - az)) / (L * L))), px = ax + (bx - ax) * t, pz = az + (bz - az) * t, dist = Math.hypot(d.out[0] - px, d.out[2] - pz); if (dist < best) { best = dist; along = acc + t * L; } acc += L; } if (best < 14) out.push({ id: h.site.id, name: h.site.name, along: +along.toFixed(1), off: +best.toFixed(1) }); }
+return out.sort((a, b) => a.along - b.along).slice(0, 10);

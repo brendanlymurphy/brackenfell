@@ -9,6 +9,12 @@ are fixed. Tobin's note says east now and the stone works from the wall foot. Wr
 not right: the boat-house doors now answer honestly (locked, keys with Wenn) and Wenn has no key; the "Hidden Yard" is still a name with no
 place. The cellar corner is nearly black in daylight.
 
+**6. Sound (done, `docs/audit/VOICE_LENGTHS.md`).** The 529 recordings are only on `fork-cull` (main and threejs have 254); measured from
+there with ffmpeg. Median 12.6 characters per second of speech. To listen to first: the 20 fastest (Tobin 19.8, Greta 19.4 and 18.9, Alison,
+Alaric) and the 20 slowest (mostly two-word barks read with long gaps: Finn's "Shh. Fish." 3.2); 3 clips with more than 0.5 s of silence at an
+end (all Godwin: 1.61 s at the end of his greeting, 1.28 s and 1.06 s at the start of two others); 6 lines with a pause over 1.5 s inside
+(Aldous 2.68 s in the bell-rope line); 2 clips under 0.6 s (Randal "What then?" 0.56 s, Wren "Hm." 0.47 s). Nobody listened.
+
 ## 2026-11-18 (inbox of 04:10 UTC)
 
 Branch `fork-audit`. No file under `src/` is touched. Headless throughout: nothing heard, nothing seen in motion, no phone.

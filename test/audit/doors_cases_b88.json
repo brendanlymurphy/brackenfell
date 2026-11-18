@@ -1,0 +1,62 @@
+[
+ {
+  "tag": "d01_in65",
+  "text": "door 1 from the gate: Ropemaker\u2019s House (in.65), first view on entering",
+  "enter": "in.65",
+  "justLook": true
+ },
+ {
+  "tag": "d02_in75",
+  "text": "door 2 from the gate: Ferrin\u2019s House (in.75), first view on entering",
+  "enter": "in.75",
+  "justLook": true
+ },
+ {
+  "tag": "d03_in40",
+  "text": "door 3 from the gate: Scribe\u2019s House (in.40), first view on entering",
+  "enter": "in.40",
+  "justLook": true
+ },
+ {
+  "tag": "d04_guardhouse",
+  "text": "door 4 from the gate: Warden\u2019s Lodge (guardhouse), first view on entering",
+  "enter": "guardhouse",
+  "justLook": true
+ },
+ {
+  "tag": "d05_in07",
+  "text": "door 5 from the gate: Potter\u2019s House (in.07), first view on entering",
+  "enter": "in.07",
+  "justLook": true
+ },
+ {
+  "tag": "d06_in10",
+  "text": "door 6 from the gate: Baker\u2019s House (in.10), first view on entering",
+  "enter": "in.10",
+  "justLook": true
+ },
+ {
+  "tag": "d07_in08",
+  "text": "door 7 from the gate: Alder House (in.08), first view on entering",
+  "enter": "in.08",
+  "justLook": true
+ },
+ {
+  "tag": "d08_smithy",
+  "text": "door 8 from the gate: Brandt\u2019s Forge (smithy), first view on entering",
+  "enter": "smithy",
+  "justLook": true
+ },
+ {
+  "tag": "d09_in04",
+  "text": "door 9 from the gate: Fletcher\u2019s House (in.04), first view on entering",
+  "enter": "in.04",
+  "justLook": true
+ },
+ {
+  "tag": "d10_inn",
+  "text": "door 10 from the gate: The Honeyed Hart (inn), first view on entering",
+  "enter": "inn",
+  "justLook": true
+ }
+]
