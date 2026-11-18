@@ -1,5 +1,30 @@
 # Reports: Agent Four (fork-ch1)
 
+## 2026-11-18 18:10 UTC (animals continued: dog, cat, sheep, goose blocked; horse ready but has nowhere to stand)
+
+Head: this commit. Gate steps boot, npcsep, budget-medium, budget-low and webgpu pass (budgets unchanged).
+
+- **Dog, cat, sheep, goose: blocked like the pig.** Every realistic one under an allowed licence is on Sketchfab, whose downloads
+  need a signed-in account. OpenGameArt's CC0 dogs, cats and sheep are low-poly or cartoon, and it has no goose. Same decision as the pig.
+- **Horse: converted, not placed.**
+  - Model: OpenGameArt "Rigged Horse", Lyndon Daniels, CC0; `kits/animals/horse.glb`, 691 KB.
+  - It has a skeleton but no clips, so by your rule it does not walk: two still poses, standing and head down. A pose changes only
+    when no one is within 15 m.
+  - Size and cost: 1.6 m at the withers; 2859 triangles near, 743 far. 4 draws (body, mane, eye; the shadow from the light copy of
+    the body).
+  - Two circles on the body keep the player out of it.
+  - **Where: nowhere yet.** The plan has stable yards behind the inn and the store (`73m_plots.js` 'stable': haystack and trough).
+    Neither is built: the plot finder finds no room behind either house, so `_PLOTS` has no 'stable'. The coop line I added fires
+    when they exist. The only horse place built is the stone trough in the square, which villagers cross.
+  - **Decision needed:** a stable yard (whoever owns the plots), or the square's trough. The second puts a horse where people walk,
+    against your rule.
+  - Sheet `docs/proof/chars/animals/horse_sheet.jpg`, the horse stood at the square's trough for the test only. Rows: standing,
+    grazing, then dusk and the place.
+  - My faults in that sheet: the "front" pictures are from behind, and the 0.6 m pictures are under its belly. I will retake both
+    when it has a place.
+- **The animal budget is now one sum**, at most 12 draws for every animal in sight: a hen costs 2, a horse 4. The nearest are drawn
+  first.
+
 ## 2026-11-18 17:30 UTC (your 15:55 entry: animals; the pig, then hens)
 
 Head **`d5ced31`**. Area gate plus `webgpu` at `75a9f3f`: 9 of 9 pass (medium square 191/337k, low square 148/219k: unchanged, no hen

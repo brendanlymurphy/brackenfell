@@ -8,6 +8,8 @@ Placed by `src/78_animals.js`.
 |---|---|---|---|---|---|---|---|
 | `kits/animals/hen.glb` | hen | Chicken (animated), `chicken_0.zip` (`chickenV2.blend`, `textures/UV-Texture.png`, `textures/ChickenNorm.png`) | Čestmír Dammer (made for the Kelgar project); the colour texture is derived from photos by Rick Hoppmann (the archive's `license.txt`) | https://opengameart.org/content/chicken-animated | CC0 (page and `license.txt`) | 2026-11-18 | Exported from Blender 5.3 to glTF, scaled to 0.40 m at the comb; the sculpt-reference cylinder, camera and lamps removed; the three parts (body, comb, eyes) joined into one mesh on the one atlas; textures to WebP 1024; a 650-triangle copy for distance; clips kept: Walk, Idle1, Idle2, Stand, Pecking1, Eating (Dying, BeginPecking, EndPecking, StopPecking, Pecking2/3 and the 1186-frame Idle dropped). |
 
+| `kits/animals/horse.glb` (not placed in the town yet: no stable yard is built) | horse, draught | "Rigged Horse", `riggedHorse.blend` (textures packed in it) | Lyndon Daniels | https://opengameart.org/content/rigged-horse | CC0 (page) | 2026-11-18 | Mane, tail and eyes bound to the skeleton (weights from the body); two still poses baked (standing; head down 80 degrees at the trough); scaled to 1.6 m at the withers; reduced to 2859 triangles per pose and 743 for the light copy; textures to WebP 1024; mane as cut-out. |
+
 ## Looked at and not taken
 
 | Animal | Where | Why not |
@@ -16,5 +18,4 @@ Placed by `src/78_animals.js`.
 | pig | OpenGameArt "Pig", "Low Poly Pig", Quaternius farm pack (CC0) | cartoon or low-poly look |
 | pig | Poly Haven | none: its animals are statues and a rat |
 | sheep | OpenGameArt "Sheep" (CC0) | cartoon; "Sheep (rigged, textured and animated)" is CC-BY-SA, not allowed |
-| horse | OpenGameArt "Rigged Horse" (Lyndon Daniels, CC0) | realistic, rigged: a candidate for later (order: ox and horse last) |
 | cow | OpenGameArt "Realtime Rancher's 3D Model Pack" (Lyndon Daniels, CC0) | realistic, not rigged: a candidate for later (stills) |

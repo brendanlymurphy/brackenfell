@@ -3,14 +3,17 @@
 // Where: World.henRuns (filled by the hen coops in 73m_plots.js: one marked line each). An animal walks, pecks and stands within a small yard in front of its coop
 // (K.yard around a point K.off in front of it), its feet on World.groundAt; at night it is in the coop (not drawn). The light copy is drawn beyond ANI.near; nothing is drawn beyond ANI.far.
 // At most ANI.maxDrawn animals are drawn at once (the nearest), so all animals together stay within the budget (12 draws).
-const ANI = { kinds: { hen: { file: 'kits/animals/hen.glb', walk: 'Walk', idle: ['Idle1', 'Idle2', 'Stand'], feed: ['Pecking1', 'Pecking2', 'Eating'], speed: 0.16, per: 3, yard: 1.0, off: 1.6 } },
-  near: 12, far: 40, maxDrawn: 6, list: [], ready: false, data: {} };
+const ANI = { kinds: { horse: { file: 'kits/animals/horse.glb', still: true, poses: ['stand', 'graze'], per: 1, draws: 4, block: [[0, -0.75, 0.32], [0, 0.45, 0.36]] }, hen: { file: 'kits/animals/hen.glb', walk: 'Walk', idle: ['Idle1', 'Idle2', 'Stand'], feed: ['Pecking1', 'Pecking2', 'Eating'], speed: 0.16, per: 3, yard: 1.0, off: 1.6, draws: 2 } },
+  near: 12, far: 40, maxDraws: 12, list: [], ready: false, data: {} };      // maxDraws: what all animals in sight may cost together (a hen 2: body and shadow; a horse 4)
 World.henRuns = World.henRuns || [];
 // a coop records where it stands and which way its yard opens: [x, ground y, z, yaw of the yard's direction]
 function animalPen(kind, x, y, z, yaw) { const k = kind + 'Runs'; (World[k] = World[k] || []).push([x, y, z, yaw || 0]); }
 
 async function animalsLoad() {
   for (const kind in ANI.kinds) { const K = ANI.kinds[kind];
+    if (K.still) { try { const g = await T3X.gltf().loadAsync(K.file), P = {}; g.scene.updateMatrixWorld(true);
+        g.scene.traverse(o => { if (!o.isMesh) return; const key = (o.parent && /^horse_|^\w+_/.test(o.parent.name) && !/^Scene$/.test(o.parent.name) ? o.parent.name : o.name).replace(/^\w+?_/, ''); const mm = o.material; o.material = animalMat(mm.map, mm.normalMap, mm.alphaTest > 0 || mm.transparent); (P[key] = P[key] || []).push(o); });
+        ANI.data[kind] = { poses: P }; } catch (e) { console.warn('animal ' + kind + ' unavailable: ' + (e && e.message || e)); } continue; }
     try { const g = await T3X.gltf().loadAsync(K.file); const src = g.scene; src.updateMatrixWorld(true);
       const near = [], far = []; src.traverse(o => { if (o.isSkinnedMesh) (/@far$/.test(o.name) ? far : near).push(o); });
       const tex = near[0] && near[0].material && near[0].material.map, nrm = near[0] && near[0].material && near[0].material.normalMap;
@@ -18,17 +21,24 @@ async function animalsLoad() {
     } catch (e) { console.warn('animal ' + kind + ' unavailable: ' + (e && e.message || e)); } }
 }
 // lit like the villagers' cloth: the texture, the sky and sun of the place (SH.hemi), lanterns near by; a soft sheen, no plastic shine
-function animalMat(tex, nrm) {
+function animalMat(tex, nrm, cut) {
   const { texture, uv, normalWorld, positionWorld, float, uniform } = TSL, m = new THREE.MeshStandardNodeMaterial(); m.roughness = 0.88; m.metalness = 0;
   const zone = uniform(0), light = uniform(1), alb = tex ? texture(tex, uv()).rgb : TSL.vec3(0.4, 0.3, 0.2);
   if (tex) { tex.colorSpace = THREE.SRGBColorSpace; } if (nrm) m.normalMap = nrm;
   m.colorNode = alb; m.emissiveNode = alb.mul(SH.hemi(normalWorld.normalize(), light, zone).add(SH.pointLights(positionWorld, normalWorld.normalize(), zone, float(0.25)))).mul(0.85);
+  if (cut && tex) { m.opacityNode = texture(tex, uv()).a; m.alphaTest = 0.5; m.side = THREE.DoubleSide; }      // mane and tail: cut-out strands
   m.userData.zone = zone; m.userData.light = light; return m;
 }
 function animalsAttach() {
   (async () => { await animalsLoad(); let seed = 7;
     const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     for (const kind in ANI.kinds) { const D = ANI.data[kind]; if (!D) continue; const K = ANI.kinds[kind];
+      if (K.still) { for (const pen of World[kind + 'Runs'] || []) animalAddStill(kind, pen, rnd); continue; }
+      if (false) { for (const pen of []) { const rig = new THREE.Group(), meshes = {};
+          for (const key in D.poses) { const g = new THREE.Group(); for (const o of D.poses[key]) { const c = new THREE.Mesh(o.geometry, o.material); c.applyMatrix4(o.matrixWorld); c.layers.set(1); c.castShadow = false; c.receiveShadow = true; c.frustumCulled = false; g.add(c); } g.visible = false; rig.add(g); meshes[key] = g; }
+          // the shadow from the light copy of the body only (one draw)
+          const A = { kind, K, pen, rig, meshes, pose: K.poses[Math.floor(rnd() * K.poses.length)], x: pen[0], z: pen[2], yaw: pen[3], still: true, t: 30 + rnd() * 60 };
+          rig.visible = false; SC.scene.add(rig); ANI.list.push(A); } continue; }
       for (const pen of World[kind + 'Runs'] || []) for (let i = 0; i < K.per; i++) {
         const rig = T3X.SkeletonUtils.clone(D.scene); let near = null, far = null; rig.traverse(o => { if (o.isSkinnedMesh) { o.material = D.mat; o.frustumCulled = false; o.castShadow = true; o.receiveShadow = true; o.layers.set(1); if (/@far$/.test(o.name)) far = o; else near = o; } });
         const mixer = new THREE.AnimationMixer(rig), act = {}; for (const c of D.clips) act[c.name] = mixer.clipAction(c);
@@ -42,15 +52,26 @@ function animalFree(x, z, pen) { if (World.blockedAt && World.blockedAt(x, z, 0.
   const g = World.groundAt(x, z, pen[1] + 1.0); return isFinite(g) && Math.abs(g - pen[1]) < 0.45; }
 function animalPick(A) { const K = A.K, cx = A.pen[0] + Math.sin(A.pen[3]) * K.off, cz = A.pen[2] - Math.cos(A.pen[3]) * K.off;
   for (let i = 0; i < 12; i++) { const a = Math.random() * Math.PI * 2, r = K.yard * Math.sqrt(Math.random()), x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; if (animalFree(x, z, A.pen)) return [x, z]; } return null; }
+// a still animal (no clips): its poses as meshes, one shown; the shadow from the light copy of the body
+function animalAddStill(kind, pen, rnd) { const D = ANI.data[kind], K = ANI.kinds[kind]; if (!D) return null; rnd = rnd || Math.random; const rig = new THREE.Group(), meshes = {};
+  for (const key in D.poses) { const g = new THREE.Group(); for (const o of D.poses[key]) { const c = new THREE.Mesh(o.geometry, o.material); c.applyMatrix4(o.matrixWorld); c.layers.set(1); c.castShadow = false; c.receiveShadow = true; c.frustumCulled = false; g.add(c); } g.visible = false; rig.add(g); meshes[key] = g; }
+  const A = { kind, K, pen, rig, meshes, pose: K.poses[Math.floor(rnd() * K.poses.length)], x: pen[0], z: pen[2], yaw: pen[3], still: true, t: 30 + rnd() * 60 };
+  rig.visible = false; SC.scene.add(rig); ANI.list.push(A); return A; }
 function animalPlay(A, name) { if (A.cur === name || !A.act[name]) return; const n = A.act[name]; n.reset().play(); if (A.cur && A.act[A.cur]) A.act[A.cur].crossFadeTo(n, 0.3, false); A.cur = name; }
 const _anCam = new THREE.Vector3();
 function animalsUpdate(dt, eye) {
   if (!ANI.ready || !ANI.list.length || World.indoor) { for (const A of ANI.list) A.rig.visible = false; return; }
   const night = Env.hour >= 20.5 || Env.hour < 5.5;
   for (const A of ANI.list) A.d = Math.hypot(A.x - eye[0], A.z - eye[2]);
-  const order = ANI.list.slice().sort((p, q) => p.d - q.d), drawn = new Set(order.slice(0, ANI.maxDrawn).filter(A => A.d < ANI.far));
+  const order = ANI.list.slice().sort((p, q) => p.d - q.d), drawn = new Set(); let cost = 0; for (const A of order) { if (A.d >= ANI.far) break; if (cost + A.K.draws > ANI.maxDraws) continue; cost += A.K.draws; drawn.add(A); }
   for (const A of ANI.list) {
-    const show = !night && drawn.has(A); A.rig.visible = show; if (!show) continue; const K = A.K;
+    const show = (A.still || !night) && drawn.has(A); A.rig.visible = show;
+    if (A.K.block && A.d < 6) for (const [bx, bz, br] of A.K.block) { const c = Math.cos(A.yaw), sn = Math.sin(A.yaw); Col.dyn.push({ x: A.x + bx * c + bz * sn, z: A.z - bx * sn + bz * c, r: br, y0: A.pen[1], y1: A.pen[1] + 1.6 }); }      // a horse is in the way
+    if (A.still) { A.t -= dt; if (A.t <= 0 && A.d > 15) { A.pose = A.K.poses[(A.K.poses.indexOf(A.pose) + 1) % A.K.poses.length]; A.t = 40 + Math.random() * 80; }      // a new pose only where nobody near sees it change
+      if (!show) continue; const nearOn = A.d < ANI.near; for (const key in A.meshes) A.meshes[key].visible = key === A.pose + (nearOn ? '' : '@far');
+      const sh = A.meshes[A.pose + '@far']; if (sh) { if (!sh.visible) sh.visible = true; for (const c of sh.children) { const body = /body/.test(c.material.name || '') || c === sh.children[0]; c.castShadow = body; if (nearOn) c.layers.set(body ? ((typeof Chars !== 'undefined' && Chars.LOD && Chars.LOD.shadowLayer) || 1) : 31); else c.layers.set(1); } }
+      const gy = World.groundAt(A.x, A.z, A.pen[1] + 1.0); A.rig.position.set(A.x, isFinite(gy) ? gy : A.pen[1], A.z); A.rig.rotation.y = A.yaw; continue; }
+    if (!show) continue; const K = A.K;
     A.t -= dt;
     if (A.state === 'walk') { const dx = A.tx - A.x, dz = A.tz - A.z, L = Math.hypot(dx, dz); if (L < 0.05) { A.state = Math.random() < 0.6 ? 'feed' : 'idle'; A.t = 2 + Math.random() * 4; }
       else { const want = Math.atan2(dx, dz), dy = ((want - A.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI; A.yaw += Math.max(-dt * 3, Math.min(dt * 3, dy)); if (Math.abs(dy) < 0.6) { const s = Math.min(L, K.speed * dt), nx = A.x + Math.sin(A.yaw) * s, nz = A.z + Math.cos(A.yaw) * s; if (animalFree(nx, nz, A.pen)) { A.x = nx; A.z = nz; } else { A.state = 'idle'; A.t = 1 + Math.random() * 2; } } } }
