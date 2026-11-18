@@ -17,6 +17,7 @@ const GROUND = {
     [-58, 58, -44, 74, 'x'], [-30, 56, -8, 75, 'x'], [14, 58, 38, 76, 'x'], [36, -43, 52, -7, 'x'], [40, 14, 52, 75, 'x']
   ]
 };
+const _grSoil = (x, z) => !!(GROUND.soil && GROUND.soil.has((Math.round(x) + 400) * 2000 + Math.round(z) + 400));
 const _grGn = (i, j) => { let h = (i * 374761393 + j * 668265263) | 0; h = (h ^ (h >> 13)) * 1274126177 | 0; return ((h ^ (h >> 16)) >>> 0) / 4294967296; };
 const _grVn = (x, z) => { const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j, s = t => t * t * (3 - 2 * t); const a = _grGn(i, j), b = _grGn(i + 1, j), c = _grGn(i, j + 1), d = _grGn(i + 1, j + 1); return a + (b - a) * s(fx) + (c - a) * s(fz) + (a - b - c + d) * s(fx) * s(fz); };
 function groundFill(da, db, Rz, half) {
@@ -29,10 +30,10 @@ function groundFill(da, db, Rz, half) {
       const x = i / sc - half, z = j / sc - half; let keep = false;
       let inside = false, dE = 1e9; { const E = GROUND.edge; for (let a = 0, b = E.length - 1; a < E.length; b = a++) { const xa = E[a][0], za = E[a][1], xb = E[b][0], zb = E[b][1]; if ((za > z) !== (zb > z) && x < (xb - xa) * (z - za) / (zb - za) + xa) inside = !inside; const vx = xb - xa, vz = zb - za, t = Math.max(0, Math.min(1, ((x - xa) * vx + (z - za) * vz) / (vx * vx + vz * vz || 1))), d = Math.hypot(x - xa - vx * t, z - za - vz * t); if (d < dE) dE = d; } }
       if (!inside) continue; const wEdge = Math.min(1, dE / 3), fade = _grVn(x * 1.3 + 40, z * 1.3) < wEdge + 0.1;      // soft, ragged fringe where the town meets the turf outside the edge
-      for (const p of GROUND.places) { if (p.r !== undefined ? Math.hypot(x - p.x, z - p.z) < p.r : (x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1)) { keep = true; break; } }
+      for (const p of GROUND.places) { if (p.r !== undefined ? Math.hypot(x - p.x, z - p.z) < p.r - 0.8 + _grVn(x * 1.7 + 11, z * 1.7) * 2.2 + _grVn(x * 4.3, z * 4.3 + 7) * 0.8 : (x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1)) { keep = true; break; } }
       if (keep) { for (const p of GROUND.places) if (p.kind === 'orchard' && x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1) { const n = _grVn(x * 0.9, z * 0.9); if (n < 0.34) da[k] = Math.max(da[k], 150); } continue; }
       let bed = null; for (const b of GROUND.beds) if (inR(x, z, [b[0], b[1], b[2], b[3]])) { bed = b; break; }
-      if (bed) { const u = (z - bed[1]) / 3.0, f = u - Math.floor(u); if (f < 0.8 && x > bed[0] + 0.6 && x < bed[2] - 0.6 && z > bed[1] + 0.6 && z < bed[3] - 0.6) { if (fade) db[k] = Math.max(db[k], 235); }      /* beds are bare tilled soil (the 'bare' mask); the field mask would stand wheat on them */ else da[k] = Math.max(da[k], 215 * (fade ? 1 : 0.3)); continue; }
+      if (bed) { const u = (z - bed[1]) / 3.0, f = u - Math.floor(u); if (f < 0.8 && x > bed[0] + 0.6 && x < bed[2] - 0.6 && z > bed[1] + 0.6 && z < bed[3] - 0.6) { if (fade) { db[k] = Math.max(db[k], 235); (GROUND.soil || (GROUND.soil = new Set())).add((Math.round(x) + 400) * 2000 + Math.round(z) + 400); } }      /* beds are bare tilled soil (the 'bare' mask); the field mask would stand wheat on them */ else da[k] = Math.max(da[k], 215 * (fade ? 1 : 0.3)); continue; }
       const n = _grVn(x * 0.7, z * 0.7); da[k] = Math.max(da[k], fade ? (n < 0.14 ? 120 : 175 + n * 70) : 90);      // trodden earth with a few tufts left
     }
   }
@@ -40,12 +41,47 @@ function groundFill(da, db, Rz, half) {
 function buildGround(bucket) {
   if (TEST && TEST.plots === 0) return; const R = rng(7771), gy = (x, z) => Terrain.y(x, z);
   World.places = GROUND.places; World.yardTrees = World.yardTrees || [];
+  /* [fx3] allotments: the painted soil gets ridges 8 cm high with a dark trough, board edging, bean poles with vines, rows of greens, a spade, a bucket and a water butt (kit pieces only) */
+  if (GROUND.soil && typeof kplace === 'function') {
+    const raw = bucket, bk = (x, z) => { const m = raw(4e6 + Math.floor(x / 30) * 80, Math.floor(z / 30) * 80); m.maxDist = 60; m.lowDist = 24; m.noShadow = true; return m; };
+    const K = (m, n, x, y, z, sc, ry, tilt) => { if (typeof scanOn !== 'function' || !kitReady()) return; const P = kplace(m, n, x, y, z, sc, ry); if (!P) return;  if (tilt) P.M.multiply(new THREE.Matrix4().makeRotationX(tilt)); kadd(m, P, /^Prop_Vine/.test(n) ? { cast: false } : undefined); };
+    const RIDGE = [0.3, 0.22, 0.15], TOP = [0.38, 0.29, 0.2], TROUGH = [0.13, 0.095, 0.07], BOARD = [0.5, 0.42, 0.31];
+    for (const b of GROUND.beds) {
+      for (let zs = b[1] + 0.6; zs + 2.4 < b[3] - 0.3; zs += 3.0) {
+        const H = _grGn(Math.round(b[0]), Math.round(zs)), planted = H < 0.6, kind = H < 0.2 ? 'beans' : H < 0.4 ? 'greens' : 'greens2';
+        for (let x = b[0] + 0.6; x + 1.5 <= b[2] - 0.6; x += 1.5) {
+          if (!(_grSoil(x, zs + 0.3) && _grSoil(x + 1.5, zs + 0.3) && _grSoil(x, zs + 2.1) && _grSoil(x + 1.5, zs + 2.1) && _grSoil(x + 0.75, zs + 1.2))) continue;
+          const m = bk(x, zs); World._allot = (World._allot || 0) + 1;
+          for (let r = 0; r < 4; r++) {
+            const zr = zs + 0.3 + r * 0.6, ya = gy(x, zr), yb = gy(x + 1.5, zr), w = 0.27, h = 0.08;
+            m.mat(MAT.MUD, RIDGE, 0.5); m.quad2([x, ya, zr - w], [x, ya + h, zr], [x + 1.5, yb + h, zr], [x + 1.5, yb, zr - w]);
+            m.mat(MAT.MUD, TOP, 0.5); m.quad2([x, ya + h, zr], [x, ya, zr + w], [x + 1.5, yb, zr + w], [x + 1.5, yb + h, zr]);
+            if (r < 3) { m.mat(MAT.MUD, TROUGH, 0.5); const zt = zr + 0.3; m.quad2([x, gy(x, zt) + 0.015, zt - 0.06], [x, gy(x, zt) + 0.015, zt + 0.06], [x + 1.5, gy(x + 1.5, zt) + 0.015, zt + 0.06], [x + 1.5, gy(x + 1.5, zt) + 0.015, zt - 0.06]); }
+          }
+          m.mat(MAT.TIMBER, BOARD, 0.5); for (const zz of [zs - 0.04, zs + 2.44]) m.beam([x, gy(x, zz) + 0.05, zz], [x + 1.5, gy(x + 1.5, zz) + 0.05, zz], 0.03, 0.1);
+          if (!planted) continue;
+          if (kind === 'beans') { if (Math.round((x - b[0]) / 1.5) % 2 === 0) { const cz = zs + 1.2, cy = gy(x + 0.75, cz); m.mat(MAT.TIMBER, [0.5, 0.4, 0.28], 0.5); for (let q = 0; q < 3; q++) { const a = q * 2.09 + 0.4; m.beam([x + 0.75 + Math.cos(a) * 0.45, cy, cz + Math.sin(a) * 0.45], [x + 0.75, cy + 1.9, cz], 0.018, 0.018); }
+            for (let q = 0; q < 3; q++) K(m, 'Prop_Vine2', x + 0.75, cy + 0.3, cz, 0.55 - q * 0.03, _grGn(x, zs) * 6 + q * 2.09, -0.85); } }
+          else for (const zr of [zs + 0.6, zs + 1.8]) for (let q = 0; q < 4; q++) { const px = x + 0.2 + q * 0.37, pz = zr + (_grGn(px * 9, zr * 9) - 0.5) * 0.08, sc = (kind === 'greens' ? 0.5 : 0.36) * (0.85 + _grGn(px * 5, pz * 5) * 0.3), a = _grGn(px, pz) * 6; K(m, 'Prop_Vine4', px, gy(px, pz) + 0.05, pz, sc, a, -0.95); K(m, 'Prop_Vine4', px, gy(px, pz) + 0.05, pz, sc * 0.9, a + 3.14, -0.95); }
+        }
+      }
+      for (let zs = b[1] + 0.6; zs + 2.4 < b[3] - 0.3; zs += 3.0) { const x = b[0] + 0.25, z = zs + 2.7; if (!_grSoil(x + 1, zs + 1.2)) continue; const m = bk(x, z), y = gy(x, z); K(m, 'rusted_spade_01', b[0] + 1.2, gy(b[0] + 1.2, zs + 2.2) - 0.35, zs + 2.2, 1, 0.5, 0.12); K(m, 'wooden_bucket_01', x, y, z, 1, 1.1); K(m, 'wicker_basket_02', x + 0.6, gy(x + 0.6, z), z + 0.2, 1.3, 2.4); K(m, 'wooden_barrels_01_a', x - 0.6, gy(x - 0.6, z - 0.2), z - 0.2, 1, 0); addCircleCollider(m, x - 0.6, z - 0.2, 0.35, y, y + 0.9); break; }
+    }
+  }
   for (const p of GROUND.places) {
-    if (p.kind === 'orchard') {      /* [fx3] loose rows 5.5 to 7 m apart, never a grid: each tree jittered, a few gaps; the good broadleaf models (birch and oak) at 0.55 to 0.85 so the trunks are short and the crowns round */
-      const dx = 6.2, dz = 6.0; let row = 0;
+    if (p.kind === 'orchard') {      /* [fx3] loose rows 5.5 to 7 m apart, never a grid: each tree jittered, a few gaps, one dead stump, a ladder and a basket under one tree */
+      const dx = 6.2, dz = 6.0, T = []; let row = 0, stump = null;
       for (let z = p.z0 + 3; z < p.z1 - 1.5; z += dz + (R() - 0.5) * 1.4, row++) for (let x = p.x0 + 2.8 + (row % 2) * 2.4; x < p.x1 - 1.5; x += dx + (R() - 0.5) * 1.6) {
-        if (R() < 0.14) continue; const tx = x + (R() - 0.5) * 2.2, tz = z + (R() - 0.5) * 2.4;
-        if (R() < 0.04) continue; World.yardTrees.push([tx, tz, 'oak', 0.6 + R() * 0.2]); } }
+        const tx = x + (R() - 0.5) * 2.2, tz = z + (R() - 0.5) * 2.4;
+        if (R() < 0.16) { if (!stump && R() < 0.5) stump = [tx, tz]; continue; }
+        T.push([tx, tz]); World.yardTrees.push([tx, tz, 'oak', 0.6 + R() * 0.2]); }
+      const m = bucket(p.x0 + 4, p.z0 + 4), K = (n, x, y, z, sc, ry, tilt) => { if (typeof kplace !== 'function' || typeof scanOn !== 'function' || !scanOn()) return; const P = kplace(m, n, x, y, z, sc, ry); if (!P) return; if (tilt) P.M.multiply(new THREE.Matrix4().makeRotationX(tilt)); kadd(m, P); };
+      if (stump) K('tree_stump_01', stump[0], gy(stump[0], stump[1]) - 0.04, stump[1], 0.55, R() * 6);
+      const t = T[Math.min(T.length - 1, 4)]; if (t) {
+        const lx = t[0] + 0.55, lz = t[1] + 0.35; K('wooden_ladder', lx, gy(lx, lz), lz, 1.7, Math.atan2(-0.55, -0.35) + Math.PI, -0.22);
+        K('wicker_basket_02', t[0] - 0.7, gy(t[0] - 0.7, t[1] + 0.9), t[1] + 0.9, 1.5, 0.8);
+        for (let k = 0; k < 6; k++) { const a = R() * 6.28, r = 0.6 + R() * 1.2, ax = t[0] + Math.cos(a) * r, az = t[1] + Math.sin(a) * r; K('food_apple_01', ax, gy(ax, az), az, 1.5, R() * 6); } }
+      for (let k = 0; k < 14; k++) { const x = p.x0 + 2 + R() * (p.x1 - p.x0 - 4), z = p.z0 + 2 + R() * (p.z1 - p.z0 - 4); K('weed_plant_02_a', x, gy(x, z), z, 1.6 + R() * 1.0, R() * 6); } }
     else if (p.kind === 'green') {
       World.yardTrees.push([p.x, p.z, 'oak', 0.9]);
       for (const [a, y] of [[0.5, 0.2], [3.6, 0.2]]) { const x = p.x + Math.cos(a) * 2.3, z = p.z + Math.sin(a) * 2.3, m = bucket(x, z); m.push().T(x, gy(x, z), z).RY(-(a + Math.PI / 2)); Props.bench(m, 1.7); m.pop(); }
