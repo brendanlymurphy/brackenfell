@@ -110,8 +110,21 @@ PD.ware = {
   tall: (m, R) => { glassLathe(m, [[0.01, 0], [0.04, 0.01], [0.042, 0.2], [0.02, 0.27], [0.02, 0.31], [0.025, 0.322]], 20, R.pick(GL)); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(0, 0.315, 0, 0.02, 0.02, 0.035, 6, 2); },
   jar: (m, R) => { glazeLathe(m, [[0.01, 0], [0.07, 0.01], [0.075, 0.02], [0.09, 0.08], [0.07, 0.15], [0.05, 0.17], [0.056, 0.178]], 16, R.pick([[0.5, 0.37, 0.26], [0.5, 0.42, 0.3], [0.3, 0.3, 0.32], [0.62, 0.55, 0.4]])); m.mat(MAT.CLOTH, [0.6, 0.55, 0.42], 0.5); m.cyl(0, 0.17, 0, 0.055, 0.055, 0.025, 12, 2); },
   demijohn: (m, R) => { m.mat(MAT.THATCH, [0.75, 0.62, 0.4], 0.5); m.lathe([[0.01, 0], [0.1, 0.02], [0.13, 0.12], [0.1, 0.24], [0.04, 0.3], [0.035, 0.36]], 14, 1); m.mat(MAT.PLANKS, COL.woodDark); m.cyl(0, 0.35, 0, 0.035, 0.035, 0.04, 6, 2); },
-  bolt: (m, R) => { { const q = R.pick([DYE.red, DYE.blue, DYE.green, DYE.yellow, DYE.cream, DYE.grey, DYE.brown]), v = 0.88 + R.s() * 0.24; m.mat(MAT.CLOTH, [q[0] * v, q[1] * v, q[2] * v], 0.5); }; m.push().T(0, 0.075, 0).RX(PI / 2); m.lathe([[0.075, -0.15], [0.075, 0.15]], 14, 2); m.pop(); },
-  folded: (m, R) => { let y = 0; for (let i = 0; i < 4; i++) { m.mat(MAT.CLOTH, R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple, [0.7, 0.62, 0.45], [0.55, 0.5, 0.42]]), 0.5); m.box(-0.14, y, -0.1, 0.14 - R() * 0.02, y + 0.035, 0.1); y += 0.035; } },
+  bolt: (m, R) => {      /* [inout] AL4: a bolt is cloth wound on a flat board: a roll that swells a little in the middle, its ends showing the wound layers round the board, the loose end hanging down one side */
+    const q = R.pick([DYE.red, DYE.blue, DYE.green, DYE.yellow, DYE.cream, DYE.grey, DYE.brown]), v = 0.88 + R.s() * 0.24, col = [q[0] * v, q[1] * v, q[2] * v], dk = col.map(c => c * 0.8), lt = col.map(c => c * 0.9), r = 0.068 + R() * 0.012;
+    m.push().T(0, r, 0).RX(PI / 2);
+    m.mat(MAT.CLOTH, col, 0.55); m.lathe([[r - 0.006, -0.15], [r - 0.001, -0.135], [r, -0.06], [r + 0.002, 0], [r, 0.06], [r - 0.001, 0.135], [r - 0.006, 0.15]], 12, 0);
+    for (const sg of [-1, 1]) { const y = sg * 0.15; m.mat(MAT.CLOTH, dk, 0.7); m.disc(0, y, 0, r - 0.006, 12, sg); m.mat(MAT.CLOTH, lt, 0.6); m.disc(0, y + sg * 0.001, 0, r * 0.72, 12, sg); }
+    m.mat(MAT.PLANKS, COL.wood); m.box(-r * 0.62, -0.157, -0.011, r * 0.62, 0.157, 0.011);      /* the board core, its edges just out of the ends */
+    m.pop();
+    m.mat(MAT.CLOTH, col, 0.55); m.push().T(r * 0.98, r * 0.55, 0).RZ(-0.12); m.box(0, -r * 0.55 + 0.004, -0.13, 0.006, r * 0.45, 0.13); m.pop();      /* the loose end */
+  },
+  folded: (m, R) => { let y = 0; for (let i = 0; i < 4; i++) {      /* [inout] AL4: each cloth folded over: a rounded fold at the front, the crease between layers, no two lying square on one another */
+    const col = R.pick([DYE.red, DYE.blue, DYE.green, DYE.purple, [0.7, 0.62, 0.45], [0.55, 0.5, 0.42]]), dk = col.map(c => c * 0.6), h = 0.03 + R() * 0.01, ox = R.s() * 0.012, oz = R.s() * 0.01, x1 = 0.14 - R() * 0.02;
+    m.mat(MAT.CLOTH, col, 0.5); m.box(-0.14 + ox, y, -0.1 + oz, x1 + ox, y + h, 0.085 + oz);
+    m.push().T(ox, y + h / 2, 0.085 + oz).RZ(PI / 2); m.lathe([[h / 2, -0.14], [h / 2, x1]], 6, 3); m.pop();      /* the fold */
+    m.mat(MAT.CLOTH, dk, 0.7); m.box(-0.13 + ox, y + h - 0.002, 0.08 + oz, x1 - 0.01 + ox, y + h + 0.001, 0.1 + oz);      /* the crease under the next */
+    y += h; } },
   sack: (m, R) => Props.sack(m, 0.13 + R() * 0.05, R.pick([[0.7, 0.62, 0.45], [0.6, 0.55, 0.42], [0.5, 0.45, 0.32]])),
   box: (m, R) => { m.mat(MAT.PLANKS, COL.wood); m.box(-0.12, 0, -0.08, 0.12, 0.1, 0.08); m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.125, 0.1, -0.085, 0.125, 0.115, 0.085); m.mat(MAT.METAL, COL.black); m.box(-0.01, 0.07, 0.078, 0.01, 0.105, 0.088); },
   candles: (m, R) => { m.mat(MAT.PLAIN, COL.wax); for (let i = 0; i < 5; i++) m.cyl(-0.06 + i * 0.03, 0, R.s() * 0.02, 0.011, 0.011, 0.2 + R() * 0.05, 5, 2); m.mat(MAT.CLOTH, COL.leather, 0.5); m.box(-0.08, 0.06, -0.025, 0.08, 0.075, 0.03); },
