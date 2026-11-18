@@ -19,9 +19,12 @@ TP.oven = (P, room, lit) => m => {
   addBoxCollider(m, -0.95, -0.65, 0.95, 0.8, 0, 2);
 };
 TP.vat = (col, r, h) => m => {
-  r = r || 0.55; h = h || 0.72; m.mat(MAT.PLANKS, COL.woodDark, 0.5); m.lathe([[r * 0.9, 0], [r, h * 0.45], [r * 0.96, h], [r * 0.9, h]], 18, 0);
-  m.mat(MAT.PLAIN, col.map(v => v * 0.75)); m.disc(0, h - 0.09, 0, r * 0.9, 18, 1);      // [fin] the dye itself, in its own colour (it was a black disc), a pale scum ring on it and a rim of wood
-  m.mat(MAT.PLAIN, col.map(v => Math.min(1, v * 1.1 + 0.12))); m.lathe([[r * 0.8, h - 0.088], [r * 0.9, h - 0.088]], 18, 1);
+  r = r || 0.55; h = h || 0.72; m.mat(MAT.PLANKS, COL.woodDark, 0.5);
+  { const w = COL.woodDark, dk = col.map(v => v * 0.5), mix = (u, k) => [w[0] + (dk[0] - w[0]) * u, w[1] + (dk[1] - w[1]) * u, w[2] + (dk[2] - w[2]) * u];      // [fin] the staves darkened by the dye up to the splash line: stained from 0.3 m below the surface, solid above the liquid
+    latheG(m, [[r * 0.9, 0], [r, h * 0.45], [r * 0.97, h - 0.32], [r * 0.965, h - 0.2], [r * 0.962, h - 0.09], [r * 0.96, h - 0.06], [r * 0.96, h], [r * 0.9, h]], 18, 0, (k, t, a) => k < 2 ? w : k === 2 ? mix(0.15, 0) : k === 3 ? mix(0.45, 0) : k === 4 ? mix(0.8, 0) : k === 5 ? mix(0.9, 0) : [w[0] * 1.12, w[1] * 1.12, w[2] * 1.12]); }
+  m.mat(MAT.PLAIN, col.map(v => v * 0.75)); m.disc(0, h - 0.09, 0, r * 0.9, 18, 1);      // [fin] the dye itself, in its own colour (it was a black disc), a darker meniscus where it climbs the staves and a pale scum ring
+  m.mat(MAT.PLAIN, col.map(v => v * 0.45)); m.lathe([[r * 0.9, h - 0.09], [r * 0.955, h - 0.075]], 18, 0);
+  m.mat(MAT.PLAIN, col.map(v => Math.min(1, v * 1.1 + 0.12))); m.lathe([[r * 0.7, h - 0.088], [r * 0.82, h - 0.088]], 18, 1);
   m.mat(MAT.PLANKS, COL.wood); m.lathe([[r * 0.96, h - 0.015], [r * 1.02, h - 0.015], [r * 1.02, h + 0.02], [r * 0.9, h + 0.02]], 18, 0);
   m.mat(MAT.METAL, COL.iron); for (const t of [0.15, 0.55, 0.93]) { const rr = r * (0.9 + 0.1 * Math.sin(t * PI * 0.9)) + 0.008; m.lathe([[rr, h * t - 0.02], [rr, h * t + 0.02]], 12, 0); }
   m.mat(MAT.TIMBER, COL.wood); m.beam([r * 0.5, h + 0.55, 0.05], [r * 0.1, h - 0.15, 0], 0.035, 0.035);
