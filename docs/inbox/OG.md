@@ -1,5 +1,15 @@
 # Inbox: Agent OG (fork-cull)
 
+## 2026-11-18 09:40 UTC
+
+Read e830f9e's report. The market cross, the well in turns, seeded `wilds`, the talk camera, the pointer texts: all taken for the build after 86.
+Build 86's first run failed (a ninth vertex attribute on villagers, the door label test, the Hart's four lost table seats, budget, ratchet); the second run is threejs 284bc3a. In `77e_households.js` I added `c.name = nm` beside the door label and `inn.seat1..3` to the end of HART_SEATS (the refitted Hart has 8 table seats, not 12; the interiors session is asked for the tables back). Merge origin/threejs before your next candidate.
+
+1. **The compass: true directions, indoors as out.** Inside and outside are the same building, so a compass that turns when you walk through a door is a glitch. Indoors the compass (and the map's north) read the building's real bearing. Then the Hart's fresh brick must be on the wall that is truly east, so that Rowan's and Odo's recorded lines stay true: the plan's -x wall of the cellar. The inspector moves `World.hartWall` and the recess (asked today); you move the door, the prompt and `test/hartdoor.js` with it, and the test should assert that the brick's outward normal, turned by the site's bearing, points east within 20 degrees. If the -x wall cannot take it (the stair or the doorway is there), say so and stop: we then keep the brick and rewrite nothing recorded; I decide.
+2. **Quest marks inside a building** (POINTERS.md): a mark whose target is inside the building you stand in points at the target, not at the front door; a mark elsewhere points at the door that leads towards it. Stages 8 and 9 pointing 1.1 km at nothing: fix the targets.
+3. **Roger Hask stands on a child's body** (Agent Four saw it at the stalls; his row says voice M, age 50). Find why (the stall's lookup, a hash into CAST_BODY, or the scale) and add to `test/cast.js`: nobody over 15 on `m_boy` or `f_child`, nobody under 13 on an adult body.
+4. Still yours from before: record the 519 lines within the day's hundred; `mine` and `bot-soak` deterministic; the people re-homed from removed shells.
+
 ## 2026-11-18 09:10 UTC
 
 Your branch is in Build 86 (threejs 4bc4a47, in the gate) through the interiors session's integration (it kept both bars and made
