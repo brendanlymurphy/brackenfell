@@ -139,7 +139,7 @@ function kitShellPass(c, pass) {
         if (st.balcony === wn && n >= 3 && k === mid) {
           add(F, 'Wall_Plaster_Door_Flat', uc, H, -0.015, S, UP); add(F, 'DoorFrame_Flat_WoodDark', uc, H, 0, S, EXT); add(F, 'Door_1_Flat', uc - 0.54 * sx, H, -0.05, S, EXT);
           add(F, 'Balcony_Simple_Corner', uc + sx, H, 0, S, EXT); add(F, 'Balcony_Simple_Corner', uc - sx, H, 0, [-sx, 1, 1], EXT);
-          add(F, 'Floor_WoodDark_Half3', uc - sx, H, 1, S, EXT); add(F, 'Floor_WoodDark_Half3', uc + sx, H, 1, S, EXT);
+          add(F, 'Floor_WoodDark_Half3', uc - sx, H, 1, S, EXT); add(F, 'Floor_WoodDark_Half3', uc + sx, H, 1, S, EXT); add(F, 'Balcony_Simple_Straight', uc - sx, H, 0, S, EXT); add(F, 'Balcony_Simple_Straight', uc + sx, H, 0, S, EXT);
           for (const sg of [-1, 1]) add(F, 'Roof_Support2', uc + sg * 1.7 * sx, H - 0.74, 0.02, 1, EXT);
         } else if (n > 1 && k === 0) add(F, 'Wall_Plaster_Straight_L', uc, H, -0.015, S, UP);
         else if (n > 1 && k === n - 1) add(F, 'Wall_Plaster_Straight_R', uc, H, -0.015, S, UP);
@@ -179,6 +179,14 @@ function kitShellPass(c, pass) {
   if (X) for (const wn in WALLS) for (const o of openings[wn]) if (o.door) {
     ext.push(); m4.mul(ext.m, ext.m, wbs[wn]); ext.dirty = true;
     outer(); ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(o.u0 - 0.35, -0.5, 0, o.u1 + 0.35, -0.02, 0.5); ext.box(o.u0 - 0.2, -0.5, 0.5, o.u1 + 0.2, -0.17, 0.95);
+    ext.pop();
+  }
+  const HATCH = { store: { wn: 'back', along: 0 } }[site.id];      // [fx3] a cellar the inside shows is a hatch outside: two timber leaves lean against the wall over a stone kerb
+  if (X && HATCH && !site.infill) {
+    const L = WALLS[HATCH.wn].len(w, d), u = L / 2;
+    ext.push(); m4.mul(ext.m, ext.m, wbs[HATCH.wn]); ext.dirty = true; outer();
+    ext.mat(MAT.STONE, [0.62, 0.6, 0.55], 0.8); ext.box(u - 0.95, -0.02, 0.02, u + 0.95, 0.18, 0.16); ext.box(u - 0.95, -0.02, 0.16, u - 0.83, 0.18, 1.05); ext.box(u + 0.83, -0.02, 0.16, u + 0.95, 0.18, 1.05);
+    for (const sg of [-1, 1]) { ext.push().T(u + sg * 0.41, 0.16, 1.0).RX(-0.86); ext.mat(MAT.PLANKS, [0.3, 0.24, 0.18], 0.8); ext.box(-0.39, 0, -0.035, 0.39, 1.15, 0.035, 4); ext.mat(MAT.METAL, [0.14, 0.14, 0.14], 0.4); ext.box(-0.37, 0.18, 0.03, 0.37, 0.24, 0.045, 4); ext.box(-0.37, 0.8, 0.03, 0.37, 0.86, 0.045, 4); ext.pop(); }
     ext.pop();
   }
   const e = 0.16;          // the kit walls are thinner than the generated ones: reach to their inner face
