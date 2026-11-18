@@ -136,3 +136,8 @@ Good in this district: the churchyard (stones, yew-like trees, wall), the chapel
 - [ ] M1 (sev 2) Large dark plank house walls with no window, door, post or trim, one flat texture from eave to plinth, at 4 to 8 m from a lit street: sheet m19_1 tiles 1, 6 and 10 (market_*_y0_19 east of x 18). Source: the back and side wall of the infill houses, src/72c_infill.js / 73d_infill.js (houses worker): needs a door or window, a lean-to or a stack on every blank wall over 4 m.
 - [ ] M2 (sev 3) Stone close-ups at wall feet fill the frame with one stretched texture (m19_0 tiles 2 and 6): same texture-scale fault as C2. Source: wall texture UV scale in the plot or terrace walls (73f_levels.js / 73i_walls.js, planner).
 Good at dusk: lit doors with lanterns, lit leaded windows, the stalls' warm light and the cobbles reading well; no black holes and no sky gaps seen.
+
+## CLOTH CHECK (fin, 10 h): views from the square, 72 shots yaw 0/90/180/270, sheets /home/claude/shots/fin/sheets_m19/cloth_0.jpg and cloth_1.jpg (sun and shade both present in them)
+- [x] CL0 Checked: stall awnings (straw, dull blue, grey, striped), stall covers, cloth bolts on counters, banner pennants, hanging cloth under the gallery: in sun all read as dull wool/linen, not saturated; in shade they stay dark but keep their hue. No grey-teal slabs seen in these views.
+- [ ] CL1 (sev 3) Washing on a line reads as two flat white blurry rectangles with no fold or sag, brighter than anything near it (sun): market_-14_-2_y0_10.jpg, sheet cloth_1 tile 9. Source: the washing builder in src/73c_dress.js (dLogCloth / washing: needs a sag, a hem and an off-white tone; mine, next).
+- Not checked: awnings in deep shade at 10 h (no stall lies fully in shade in these points) and any view at night.
