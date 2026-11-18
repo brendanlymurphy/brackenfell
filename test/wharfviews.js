@@ -37,12 +37,12 @@ for (const id of IDS) {
   const nx = Math.sin(s.yaw), nz = -Math.cos(s.yaw), ux = Math.cos(s.yaw), uz = Math.sin(s.yaw), dp = s.doorPos !== undefined ? s.doorPos : 0.9;
   const door = siteToWorld(s, dp, -s.d / 2), back = siteToWorld(s, 0, s.d / 2), gD = Terrain.y(door[0], door[1]);
   const shoot = (tag, tx, tz, ty, sx, sz, dist, sgn, alsoSwap) => {
-    const D = dist > 4 ? [dist, dist - 0.8, dist + 0.8, dist - 1.6, dist + 1.6, dist - 2.4, dist + 2.4] : [dist, dist + 0.4, dist + 0.8, dist - 0.4];
-    for (const kk of [1, 0.75, 0.5]) for (const d of D) for (const lat of [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7, 8, -8]) {
+    const D = dist > 4 ? [dist, dist - 0.8, dist + 0.8, dist - 1.6, dist + 1.6, dist - 2.4, dist + 2.4, dist + 3.6, dist + 4.8, dist + 6] : [dist, dist + 0.4, dist + 0.8, dist - 0.4];
+    for (const useLos of [true, false]) for (const kk of [1, 0.75, 0.5]) for (const d of D) for (const lat of [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7, 8, -8, 9, -9, 10, -10, 12, -12]) {
       const x = tx + sx * d * sgn + (-sz) * lat * 0.8, z = tz + sz * d * sgn + sx * lat * 0.8, gy = Terrain.y(x, z);
-      if (!clear(x, z, gy, kk) || !los(x, z, gy, tx, tz, s)) continue;
+      if (!clear(x, z, gy, kk) || (useLos && !los(x, z, gy, tx, tz, s))) continue;
       const dx = tx - x, dz = tz - z, yaw = Math.atan2(dx, -dz), pitch = Math.atan2(ty - (gy + 1.6), hyp(dx, dz)) * 180 / Math.PI;
-      out.push({ n: tag + '.' + id, x: +x.toFixed(2), y: +(gy + 1.6).toFixed(2), z: +z.toFixed(2), yaw: +(yaw * 180 / Math.PI).toFixed(1), pitch: +pitch.toFixed(1), h: [13], dist: +hyp(dx, dz).toFixed(1), lat, k: kk }); return;
+      out.push({ n: tag + '.' + id, x: +x.toFixed(2), y: +(gy + 1.6).toFixed(2), z: +z.toFixed(2), yaw: +(yaw * 180 / Math.PI).toFixed(1), pitch: +pitch.toFixed(1), h: [13], dist: +hyp(dx, dz).toFixed(1), lat, k: kk, los: useLos }); return;
     }
     out.push({ n: tag + '.' + id, fail: 1 });
   };
