@@ -159,7 +159,7 @@ function buildNPCs() {
   const hmItem = World.skinPack.add(hm), herbItem = World.skinPack.add(herb);
   const pick = (id, item, p, label, itemId, glow) => { const obj = addSkinned(item, { c: p, r: 0.6, zone: 0, kind: 'pickup' }); R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256); const it = { kind: 'pickup', id, item: itemId, p: [p[0], p[1] + 0.2, p[2]], r: 1.9, zone: 0, obj, label }; World.interact.push(it); World.pickups.push(it); if (glow) { it.em = { type: 'herb', p, zone: 0 }; World.emitters.push(it.em); } };
   pick('hammer', hmItem, World.pickupSpot.hammer, 'Take the hammer', 'hammer');
-  [[-3.5, 93.5], [-57, -47], [45, -57], [5.5, -91], [84, -42], [-46, 63], [12, -98], [-30, 40]].forEach((p, i) => pick('frostcap' + i, herbItem, [p[0], World.groundY(p[0], p[1]), p[1]], 'Pick frostcap', 'frostcap', true));
+  [[-3.5, 93.5], [-70.3, -17.5] /* [cast] Wren's 'forest edge, north-west of the gate' (recorded): it was at (-57, -47), due north and behind the palisade */, [45, -57], [5.5, -91], [84, -42], [-46, 63], [12, -98], [-30, 40]].forEach((p, i) => pick('frostcap' + i, herbItem, [p[0], World.groundY(p[0], p[1]), p[1]], 'Pick frostcap', 'frostcap', true));
 }
 
 // place every villager where the clock says they should be
