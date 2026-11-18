@@ -181,13 +181,13 @@ function kitShellPass(c, pass) {
     outer(); ext.mat(MAT.STONE, [0.9, 0.9, 0.9], 0.8); ext.box(o.u0 - 0.35, -0.5, 0, o.u1 + 0.35, -0.02, 0.5); ext.box(o.u0 - 0.2, -0.5, 0.5, o.u1 + 0.2, -0.17, 0.95);
     ext.pop();
   }
-  const HATCH = { store: { wn: 'back', along: 0 } }[site.id];      // [fx3] a cellar the inside shows is a hatch outside: two timber leaves lean against the wall over a stone kerb
-  if (X && HATCH && !site.infill) {
-    const L = WALLS[HATCH.wn].len(w, d), u = L / 2;
-    ext.push(); m4.mul(ext.m, ext.m, wbs[HATCH.wn]); ext.dirty = true; outer();
-    ext.mat(MAT.STONE, [0.62, 0.6, 0.55], 0.8); ext.box(u - 0.95, -0.02, 0.02, u + 0.95, 0.18, 0.16); ext.box(u - 0.95, -0.02, 0.16, u - 0.83, 0.18, 1.05); ext.box(u + 0.83, -0.02, 0.16, u + 0.95, 0.18, 1.05);
-    for (const sg of [-1, 1]) { ext.push().T(u + sg * 0.41, 0.16, 1.0).RX(-0.86); ext.mat(MAT.PLANKS, [0.3, 0.24, 0.18], 0.8); ext.box(-0.39, 0, -0.035, 0.39, 1.15, 0.035, 4); ext.mat(MAT.METAL, [0.14, 0.14, 0.14], 0.4); ext.box(-0.37, 0.18, 0.03, 0.37, 0.24, 0.045, 4); ext.box(-0.37, 0.8, 0.03, 0.37, 0.86, 0.045, 4); ext.pop(); }
-    ext.pop();
+  const HATCH = { store: { wn: 'back', along: 0 } }[site.id];      // [fx3] a cellar the inside shows is a hatch outside: a piece named gen_hatch_*: a timber coaming and two plank leaves leaning on the wall
+  if (X && HATCH && !site.infill && typeof GP === 'function') {
+    const L = WALLS[HATCH.wn].len(w, d), g = GP(), M_ = 'MI_WoodTrim', DK = [0.55, 0.5, 0.45];
+    g.box(M_, -0.95, 0, 0.02, 0.95, 0.2, 0.16, DK); g.box(M_, -0.95, 0, 0.16, -0.83, 0.2, 1.05, DK); g.box(M_, 0.83, 0, 0.16, 0.95, 0.2, 1.05, DK);
+    for (const sg of [-1, 1]) for (const k of [-0.3, -0.1, 0.1, 0.3]) g.beam(M_, [sg * 0.41 + k, 0.2, 1.0], [sg * 0.41 + k, 1.0, 0.17], 0.095, [0.7, 0.66, 0.62]);
+    const nm = g.make('gen_hatch_' + (_gn++));
+    c.kb.add(nm, KH.xf(frames[HATCH.wn], L / 2, 0, 0, 1, 0), EXT);
   }
   const e = 0.16;          // the kit walls are thinner than the generated ones: reach to their inner face
   if (st.up) c.needUpper = true;           // a second storey: its floor, with the stairwell, is built by the building (upperFloor in 71b_storeys.js)
