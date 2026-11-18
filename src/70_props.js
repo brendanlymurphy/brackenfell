@@ -92,9 +92,9 @@ const Props = {
     if (!noCol) addBoxCollider(m, -s / 2, -s / 2, s / 2, s / 2, 0, s);
   },
   sack(m, s, col) { s = s || 0.3; m.mat(MAT.CLOTH, col || COL.wool, 0.6); m.lathe([[0.001, 0], [s * 0.82, s * 0.03], [s * 1.0, s * 0.45], [s * 0.92, s * 1.05], [s * 0.58, s * 1.5], [s * 0.26, s * 1.68]], 10, 2); m.cyl(0, s * 1.6, 0, s * 0.2, s * 0.26, s * 0.26, 6, 2); m.mat(MAT.CLOTH, [0.2, 0.15, 0.1], 0.6); m.cyl(0, s * 1.58, 0, s * 0.3, s * 0.3, s * 0.05, 8, 2); },   // [fx2] a slumped sack with a tied neck, not a ball
-  pot(m, s, col) { s = s || 0.14; m.mat(MAT.PLAIN, col || COL.clay); m.lathe([[s * 0.5, 0], [s, s * 0.7], [s * 0.9, s * 1.5], [s * 0.55, s * 1.9], [s * 0.7, s * 2.1]], 8, 1); },
+  pot(m, s, col) { s = s || 0.14; m.mat(MAT.PLAIN, col || COL.clay); m.lathe([[s * 0.5, 0], [s, s * 0.7], [s * 0.9, s * 1.5], [s * 0.55, s * 1.9], [s * 0.7, s * 2.1]], 12, 1); },
   jug(m, col) { const c = col || [0.50, 0.33, 0.22]; m.mat(MAT.PLAIN, c); m.lathe([[0.04, 0], [0.075, 0.03], [0.088, 0.09], [0.07, 0.17], [0.038, 0.215], [0.046, 0.25], [0.05, 0.262]], 9, 1); m.mat(MAT.PLAIN, [c[0] * 0.6, c[1] * 0.6, c[2] * 0.6]); m.disc(0, 0.255, 0, 0.034, 8, 1); m.mat(MAT.PLAIN, c); m.beam([0.05, 0.215, 0], [0.105, 0.17, 0], 0.016, 0.016); m.beam([0.105, 0.17, 0], [0.085, 0.09, 0], 0.016, 0.016); },
-  bottle(m, col) { m.mat(MAT.PLAIN, col || COL.glass); m.lathe([[0.035, 0], [0.04, 0.02], [0.04, 0.14], [0.014, 0.20], [0.014, 0.27]], 7, 3); },
+  bottle(m, col) { m.mat(MAT.PLAIN, col || COL.glass); m.lathe([[0.035, 0], [0.04, 0.02], [0.04, 0.14], [0.014, 0.20], [0.014, 0.27]], 12, 3); },
   mug(m) { m.mat(MAT.PLANKS, COL.wood, 0.3); m.lathe([[0.045, 0], [0.05, 0.12]], 8, 1); m.mat(MAT.PLAIN, [0.3, 0.2, 0.1]); m.disc(0, 0.10, 0, 0.044, 8, 1); m.mat(MAT.METAL, COL.iron); m.lathe([[0.052, 0.09], [0.052, 0.105]], 8, 0); },
   plate(m, col) { m.mat(MAT.PLAIN, col || [0.72, 0.60, 0.42]); m.lathe([[0.07, 0], [0.12, 0.018]], 10, 1); m.disc(0, 0.004, 0, 0.07, 10, 1); },
   bowl(m, col) { m.mat(MAT.PLAIN, col || [0.60, 0.42, 0.26]); m.lathe([[0.04, 0], [0.09, 0.05], [0.10, 0.07]], 9, 1); m.disc(0, 0.045, 0, 0.085, 9, 1); },

@@ -19,8 +19,10 @@ TP.oven = (P, room, lit) => m => {
   addBoxCollider(m, -0.95, -0.65, 0.95, 0.8, 0, 2);
 };
 TP.vat = (col, r, h) => m => {
-  r = r || 0.55; h = h || 0.72; m.mat(MAT.PLANKS, COL.woodDark, 0.5); m.lathe([[r * 0.9, 0], [r, h * 0.45], [r * 0.96, h]], 12, 0);
-  m.mat(MAT.METAL, col.map(v => v * 0.4)); m.disc(0, h - 0.07, 0, r * 0.92, 12, 1);      // [c5] a dark surface with a sheen
+  r = r || 0.55; h = h || 0.72; m.mat(MAT.PLANKS, COL.woodDark, 0.5); m.lathe([[r * 0.9, 0], [r, h * 0.45], [r * 0.96, h], [r * 0.9, h]], 18, 0);
+  m.mat(MAT.PLAIN, col.map(v => v * 0.75)); m.disc(0, h - 0.09, 0, r * 0.9, 18, 1);      // [fin] the dye itself, in its own colour (it was a black disc), a pale scum ring on it and a rim of wood
+  m.mat(MAT.PLAIN, col.map(v => Math.min(1, v * 1.1 + 0.12))); m.lathe([[r * 0.8, h - 0.088], [r * 0.9, h - 0.088]], 18, 1);
+  m.mat(MAT.PLANKS, COL.wood); m.lathe([[r * 0.96, h - 0.015], [r * 1.02, h - 0.015], [r * 1.02, h + 0.02], [r * 0.9, h + 0.02]], 18, 0);
   m.mat(MAT.METAL, COL.iron); for (const t of [0.15, 0.55, 0.93]) { const rr = r * (0.9 + 0.1 * Math.sin(t * PI * 0.9)) + 0.008; m.lathe([[rr, h * t - 0.02], [rr, h * t + 0.02]], 12, 0); }
   m.mat(MAT.TIMBER, COL.wood); m.beam([r * 0.5, h + 0.55, 0.05], [r * 0.1, h - 0.15, 0], 0.035, 0.035);
   addCircleCollider(m, 0, 0, r, 0, h);
