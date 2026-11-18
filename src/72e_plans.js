@@ -448,10 +448,11 @@ function dressInn(P, c, room, hh) {
     for (let i = 0; i < 2; i++) pPut(P, room, P.id + '.keg' + i, a.x1 - 0.5, bar.cz - 0.6 + i * 1.2, 0, 0.9, 0.9, 1.0, PD.cask(0.9, 0.32), { lowOk: true });          // [fin] a short counter between the windows: two kegs behind it, not in front of a window
     pLamp(P, room, bar.cx + 0.2, bar.cz); }
   let n = 0;
-  for (const nr of [[-4.2, 3.65], [1.6, 3.65], [-4.6, 6.7]]) {          // [fin] two rows clear of the stairs and the cellar hole, the third by the west wall: the old spots left 0.2 m between the benches of two tables and no way to four of the seats
-    const dn = pDining(P, room, 2.4, 0.9, { near: nr, id: 'table' + n, n: 4, items: ['mug', 'plate', 'bowl', 'candle', 'loaf', 'mug'] });
-    if (dn) { for (const s of dn.seats) pSit(P, 's' + (++n), s[0], s[1], s[2], 0); pLamp(P, room, dn.x, dn.z); n = Math.max(n, 0); }
+  let nTab = 0; for (const nr of [[-4.2, 3.65], [1.6, 3.65], [-4.6, 6.7], [-2.0, 6.2], [2.5, 6.6], [-0.5, 6.0], [3.4, 6.7]]) { if (nTab >= 3) break;          // [fin] two rows clear of the stairs and the cellar hole, the third by the west wall: the old spots left 0.2 m between the benches of two tables and no way to four of the seats
+    const dn = pDining(P, room, 2.4, 0.9, { near: nr, id: 'table' + n, n: 4, items: ['mug', 'plate', 'bowl', 'candle', 'loaf', 'mug'], strictOnly: true });
+    if (dn) { nTab++; for (const s of dn.seats) pSit(P, 's' + (++n), s[0], s[1], s[2], 0); pLamp(P, room, dn.x, dn.z); n = Math.max(n, 0); }
   }
+  if (nTab < 3) for (const nr of [[-2.0, 6.2], [3.0, 6.4], [-4.4, 6.6], [0.5, 6.2]]) { const dn = pDining(P, room, 1.6, 0.8, { near: nr, id: 'table' + n, n: 3, items: ['mug', 'plate', 'bowl', 'candle'], strictOnly: true }); if (dn) { nTab++; for (const s of dn.seats) pSit(P, 's' + (++n), s[0], s[1], s[2], 0); pLamp(P, room, dn.x, dn.z); break; } }
   if (hh) {
     pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
     const st = pPut(P, room, P.id + '.firestool', hh.front[0] + 1.6, hh.front[1] - 0.2, 0, 0.4, 0.4, 0.46, pdStool, {});
