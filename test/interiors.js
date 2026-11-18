@@ -1,7 +1,7 @@
 // Interiors: every planned house is validated (no overlaps, nothing in door swings, on stairs or in stairwells, nothing floating, every room reachable, lit),
 // then the player is stood in every room and walked a step; every container is opened by script. Prints violations per building; throws if any.
 // usage: node test/shot.mjs --opt plans=all --do "$(cat test/interiors.js)"   (window.__only = [...] limits the buildings); node test/parity.mjs checks nothing the old interiors registered is lost
-const dt = 1 / 30, bad = [], rows = [], only = window.__only, WAYS_MAX = 9999;
+const dt = 1 / 30, bad = [], rows = [], only = window.__only, WAYS_MAX = 19;
 for (const id in World.houses) {
   const h = World.houses[id]; if (!h.plan || (only && !only.includes(id))) continue;
   const P = h.plan, v = planValidate(P); rows.push(id + ': ' + Object.keys(P.rooms).length + ' rooms, ' + P.items.length + ' items, ' + v.length + ' violations');

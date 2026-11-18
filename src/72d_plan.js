@@ -152,7 +152,7 @@ function pFlood(P, room, extra) {
   const a = room.in, k = room.k, HW = 0.45, st = 0.2, nx = Math.ceil((a.x1 - a.x0) / st) + 1, nz = Math.ceil((a.z1 - a.z0) / st) + 1;
   const ds = P.doors.filter(d => d.k === k && (d.a === room.id || d.b === room.id)).map(d => [Math.min(a.x1 - 0.3, Math.max(a.x0 + 0.3, d.x)), Math.min(a.z1 - 0.3, Math.max(a.z0 + 0.3, d.z))]);
   const tg = ds.slice(1).map(p => [p[0], p[1], 0.5]);
-  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt) tg.push([pt[0], pt[1], 0.95]); }
+  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt) tg.push([pt[0], pt[1], 1.2]); }
   const hh = P.hall && P.hall.room === room && P.hall.hh; if (hh && hh.front) tg.push([hh.front[0], hh.front[1], 0.5]);
   for (const n in P.spots) { const sp = P.spots[n]; if (sp.k === k && (sp.sit || /^(sit|seat\d)$/.test(n)) && sp.x > a.x0 && sp.x < a.x1 && sp.z > a.z0 && sp.z < a.z1) tg.push([sp.x, sp.z, 0.85]); }
   if (!ds.length) return { tg, hit: tg.map(() => true) };

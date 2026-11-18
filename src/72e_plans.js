@@ -143,7 +143,7 @@ function pConnOk(P, room, extra, seats) {
   const near = (x, z, r) => { const n = Math.ceil(r / st); const i0 = Math.round((x - a.x0) / st), j0 = Math.round((z - a.z0) / st); for (let di = -n; di <= n; di++) for (let dj = -n; dj <= n; dj++) { const i = i0 + di, j = j0 + dj; if (i >= 0 && j >= 0 && i < nx && j < nz && seen[i * nz + j] && Math.hypot(di, dj) * st <= r) return true; } return false; };
   for (const s of seats) if (!near(s[0], s[1], 0.85)) return false;
   const hh = P.hall && P.hall.room === room && P.hall.hh; if (hh && hh.front && !near(hh.front[0], hh.front[1], 0.5)) return false;
-  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt && !near(pt[0], pt[1], 0.95)) return false; }
+  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt && !near(pt[0], pt[1], 1.2)) return false; }
   return true;
 }
 // a dining table with a bench on each long side: returns { x, z, seats: [[x, z, yaw]] } or null
