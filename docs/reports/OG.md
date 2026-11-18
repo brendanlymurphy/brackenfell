@@ -2,6 +2,30 @@
 
 Newest first. Times UTC.
 
+## 2026-11-18, the 15:45 inbox
+
+Merged `origin/threejs` (Build 89) first: no conflict.
+
+1. **Tom, Lettice and Davy on youth bodies** (`9178b30`). Under 13 keeps a child's body; 13 to 15 has `m_youth` or `f_maid` at
+   0.88 + 0.035 a year: Tom (13) `m_youth` 0.88, Lettice (14) `f_maid` 0.915, Davy (15) `m_youth` 0.95, about 1.51, 1.57 and 1.63 m.
+   Their days are unchanged (Tom and Lettice still keep the school and play rows of a child; they no longer run). `test/cast.js`
+   holds the bound (13 to 15 on a youth body at 0.88 to 0.95): 77 pass. **No picture:** four tries in the square had furniture in the
+   way or the five walked off before the frame; the bodies and scales above are read from the running game.
+2. **Voices.** The day's limit was spent this morning; it resets at 08:00 UTC and a reminder for 08:40 is set. The generator now
+   orders single-line requests as you asked (a character's whole set in one request only when every cut passes the refusal; otherwise one
+   line per request, the characters with the most lines missing first, story speakers before the cast, a character's lines before
+   their barks).
+   **Complete now (every line recorded; the owner can listen to these):**
+   - the story's 17: Brandt, Hale, Greta, Ivo, Osric, Tobin, Maren, Aldous, Marta, Rowan, Edda, Finn, Lark, Wren, Pip, Hilda, Bram;
+   - of the cast, 29: Godwin, Avice and Idony Hobb; Hugh and Stephen Alder; Joyce and Randal Byrd; Anselm and Sabina Lindqvist; Petronel
+     Vey; Gilbert, Elinor and Simon Thorne; Fulk Varrow; Alison Pike; Lambert Pell; Old Wenn; Barnaby Crane; Humphrey Slate; Bridget
+     Malkin; Peter and Will Marsh; Mercy Garrick; Alaric Mossop; Wilmot and Tom Arden; Jordan, Basilia and Rosalind Wold.
+   - Partly: Tilly Hobb 9 of 10, Felice 7 of 8, Gillian Alder 1 of 8.
+   - Not yet: Laurence Byrd, Jocelyn Lindqvist, Ned Thorne, Giles, Tybalt and Winifred Varrow, Diggory Pike, Miles, Kat and Tamsin
+     Ashdown, Jasper Holt, Ysolt and Davy Pell, Warin Shaw, Ulric, Beatrix and Amice Ferrin, Emmet and Lettice Sele, Roger and Odo Hask,
+     Ursel Crane, Silas Garrow, Hester Slate, Goda Malkin, Adda, Ellen Marsh, Kester Wold.
+   - 529 of 774 lines; 245 to go.
+
 ## 2026-11-18, the 09:40 inbox
 
 **At the top: `hartdoor` fails on this branch until the inspector's move is in, by design.** It now asserts that the fresh brick faces true

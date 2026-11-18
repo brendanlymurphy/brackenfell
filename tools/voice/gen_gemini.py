@@ -154,6 +154,14 @@ if batch > 1:            # first pass: missing lines, character by character, se
             if not got: print('%s: batch of %d could not be cut cleanly, falling back to single lines' % (sp, len(grp)), flush=True); continue
             for p, part in zip(grp, got[0]): dst = os.path.join(out, fname(p)); tmp = dst + '.part.m4a'; encode(part, got[1], tmp); os.replace(tmp, dst)
             print('%s: %d lines in one request' % (sp, len(grp)), flush=True)
+# [cast] coordinator, 15:45: one line per request goes first to the characters with the most lines still missing, the story's speakers (a voice of
+# their own in cast_gemini.json) before the cast, and a character's lines before their barks; so the day's hundred finishes whole characters
+def _fn(p):
+    c = who(p); return hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'
+_left = {}
+for p in todo:
+    if not os.path.exists(os.path.join(out, _fn(p))): _left[p['speaker']] = _left.get(p['speaker'], 0) + 1
+todo = sorted(todo, key=lambda p: (p['speaker'] not in cast, p['kind'] != 'line', -_left.get(p['speaker'], 0), p['speaker']))
 for p in todo:
     c = who(p)
     name = hashlib.sha1('|'.join([p['speaker'], 'gemini', c['voice'], c['direction'], style, p['say']]).encode()).hexdigest()[:14] + '.m4a'; dst = os.path.join(out, name); keep.add(name)
