@@ -533,18 +533,48 @@ function planNav(P, add, link, doorNode) {
   // such a link is bent round the blocking rectangle through the nearest clear corner
   const blockers = k => P.holes.filter(h => h.k === k).map(h => h.r).concat(P.items.filter(i => i.k === k && i.kind === 'stair'));
   const hit = (k, a, b) => { const bl = blockers(k), n = Math.max(2, Math.ceil(Math.hypot(a[0] - b[0], a[1] - b[1]) / 0.15)); for (let i = 0; i <= n; i++) { const x = lerp(a[0], b[0], i / n), z = lerp(a[1], b[1], i / n); for (const r of bl) if (x > r.x0 + 0.02 && x < r.x1 - 0.02 && z > r.z0 + 0.02 && z < r.z1 - 0.02) return true; } return false; };
+  // [fin] villagers walk the free floor: per level a grid (0.2 m) of points where a person of 0.3 m radius fits (inside a room, clear of every solid item, stairwell and stair, doorways open), a way is the shortest run on that grid pulled straight where the line stays free
+  const gridOf = {};
+  const navGrid = (k, HW) => {
+    const gk = k + ':' + HW; if (gridOf[gk]) return gridOf[gk];
+    const rooms = Object.values(P.rooms).filter(r => r.k === k), st = 0.2;
+    const obs = P.items.filter(i => i.k === k && P_SOLID[i.kind] && i.kind !== 'rug' && (i.kind !== 'floor' || i.h === undefined || i.h > 0.25)).concat(P.holes.filter(h => h.k === k).map(h => h.r));
+    const dp = P.doors.filter(d => d.k === k);
+    let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const r of rooms) { x0 = Math.min(x0, r.in.x0); z0 = Math.min(z0, r.in.z0); x1 = Math.max(x1, r.in.x1); z1 = Math.max(z1, r.in.z1); }
+    const nx = Math.max(1, Math.ceil((x1 - x0) / st) + 1), nz = Math.max(1, Math.ceil((z1 - z0) / st) + 1);
+    const hw = HW;
+    const free = (x, z) => {
+      let ok = false; for (const d of dp) if (Math.abs(x - d.x) < 0.5 && Math.abs(z - d.z) < 0.5) { ok = true; break; }
+      if (!ok) for (const r of rooms) if (x > r.in.x0 + 0.25 && x < r.in.x1 - 0.25 && z > r.in.z0 + 0.25 && z < r.in.z1 - 0.25) { ok = true; break; }
+      if (!ok) return false;
+      for (const o of obs) { const dx = Math.max(o.x0 - x, 0, x - o.x1), dz = Math.max(o.z0 - z, 0, z - o.z1); if (dx * dx + dz * dz < hw * hw) return false; }
+      return true;
+    };
+    const g = new Uint8Array(nx * nz); for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) g[i * nz + j] = free(x0 + i * st, z0 + j * st) ? 1 : 0;
+    return gridOf[gk] = { x0, z0, nx, nz, st, g, free };
+  };
+  const route = (k, pa, pb) => { for (const hw of [0.3, 0.2, 0.1]) { const w = route1(k, pa, pb, hw); if (w) return w; } return null; };
+  const route1 = (k, pa, pb, hw) => {
+    const G = navGrid(k, hw), clear = (u, v) => { const n = Math.max(1, Math.ceil(Math.hypot(u[0] - v[0], u[1] - v[1]) / 0.1)); for (let i = 0; i <= n; i++) { const x = lerp(u[0], v[0], i / n), z = lerp(u[1], v[1], i / n); if (Math.hypot(x - pa[0], z - pa[1]) < 0.7 || Math.hypot(x - pb[0], z - pb[1]) < 0.7) continue; if (!G.free(x, z)) return false; } return true; };
+    if (clear(pa, pb)) return [];
+    const cell = p => [Math.round((p[0] - G.x0) / G.st), Math.round((p[1] - G.z0) / G.st)];
+    const snap = p => { const c = cell(p); let best = null; for (let r = 0; r <= 8; r++) { for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) { if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue; const i = c[0] + di, j = c[1] + dj; if (i < 0 || j < 0 || i >= G.nx || j >= G.nz || !G.g[i * G.nz + j]) continue; const d = Math.hypot(di, dj); if (!best || d < best.d) best = { i, j, d }; } if (best && r >= Math.ceil(best.d)) break; } return best; };
+    const sa = snap(pa), sb = snap(pb); if (!sa || !sb) return null;
+    const prev = new Int32Array(G.nx * G.nz).fill(-2), q = [sa.i * G.nz + sa.j]; prev[q[0]] = -1; const goal = sb.i * G.nz + sb.j;
+    for (let h = 0; h < q.length && prev[goal] === -2; h++) { const c = q[h], i = (c / G.nz) | 0, j = c - i * G.nz; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= G.nx || b >= G.nz) continue; const n = a * G.nz + b; if (prev[n] !== -2 || !G.g[n]) continue; prev[n] = c; q.push(n); } }
+    if (prev[goal] === -2) return null;
+    const cells = []; for (let c = goal; c !== -1; c = prev[c]) { const i = (c / G.nz) | 0; cells.push([G.x0 + i * G.st, G.z0 + (c - i * G.nz) * G.st]); } cells.reverse();
+    const pts = [pa].concat(cells, [pb]), out = []; let at = 0;
+    while (at < pts.length - 1) { let nxt = at + 1; for (let m = pts.length - 1; m > at + 1; m--) if (clear(pts[at], pts[m])) { nxt = m; break; } if (nxt < pts.length - 1) out.push(pts[nxt]); at = nxt; }
+    return out;
+  };
   const linkSafe = (k, na, pa, nb, pb) => {
-    if (!hit(k, pa, pb)) { link(na, nb); return; }
-    const L = P.lv[k], cands = []; for (const r of blockers(k)) { const g = 0.7; for (const x of [r.x0 - g, r.x1 + g]) for (const z of [r.z0 - g, r.z1 + g]) cands.push([x, z]); }
-    cands.sort((u, v) => Math.hypot(u[0] - pa[0], u[1] - pa[1]) + Math.hypot(u[0] - pb[0], u[1] - pb[1]) - Math.hypot(v[0] - pa[0], v[1] - pa[1]) - Math.hypot(v[0] - pb[0], v[1] - pb[1]));
-    for (const c of cands) { if (pRoomAt(P, k, c[0], c[1]) && !hit(k, pa, c) && !hit(k, c, pb)) { const nc = add(...P.w2(c[0], L.y + 0.02, c[1])); link(na, nc); link(nc, nb); return; } }
-    for (const c of cands) for (const d of cands) if (c !== d && pRoomAt(P, k, c[0], c[1]) && pRoomAt(P, k, d[0], d[1]) && !hit(k, pa, c) && !hit(k, c, d) && !hit(k, d, pb)) { const n1 = add(...P.w2(c[0], L.y + 0.02, c[1])), n2 = add(...P.w2(d[0], L.y + 0.02, d[1])); link(na, n1); link(n1, n2); link(n2, nb); return; }
-    link(na, nb);
+    const L = P.lv[k], way = route(k, pa, pb); if (!way) { link(na, nb); return; }
+    let cur = na; for (const w of way) { const n = add(...P.w2(w[0], L.y + 0.02, w[1])); link(cur, n); cur = n; } link(cur, nb);
   };
   const hubAt = {};
   for (const id in P.rooms) {
-    const r = P.rooms[id], L = P.lv[r.k]; let p = pCentre(r); const bl = blockers(r.k), inB = q => bl.some(b => q[0] > b.x0 - 0.3 && q[0] < b.x1 + 0.3 && q[1] > b.z0 - 0.3 && q[1] < b.z1 + 0.3);
-    if (inB(p)) { let best = null; for (let x = r.in.x0 + 0.5; x < r.in.x1 - 0.4; x += 0.5) for (let z = r.in.z0 + 0.5; z < r.in.z1 - 0.4; z += 0.5) if (!inB([x, z]) && (!best || Math.hypot(x - p[0], z - p[1]) < best.d)) best = { x, z, d: Math.hypot(x - p[0], z - p[1]) }; if (best) p = [best.x, best.z]; }
+    const r = P.rooms[id], L = P.lv[r.k]; let p = pCentre(r); { const G = navGrid(r.k, 0.3); if (!G.free(p[0], p[1])) { let best = null; for (let x = r.in.x0 + 0.4; x < r.in.x1 - 0.3; x += 0.2) for (let z = r.in.z0 + 0.4; z < r.in.z1 - 0.3; z += 0.2) if (G.free(x, z) && (!best || Math.hypot(x - p[0], z - p[1]) < best.d)) best = { x, z, d: Math.hypot(x - p[0], z - p[1]) }; if (best) p = [best.x, best.z]; } }
     hubAt[id] = p; hub[id] = add(...P.w2(p[0], L.y + 0.02, p[1]));
   }
   for (const d of P.doors) {
