@@ -1,0 +1,7 @@
+// [audit] is (21.7, 1.8, -59.3) a place a player cannot walk out of? Put the player there, hold W for 3 s in each of 8 directions (and jump once), record how far they get
+const out = { start: null, tries: [] }; const p0 = [21.7, 1.8, -59.3];
+Cells.teleport({ p: p0.slice(), yaw: 0 }); game.step(10, 1 / 30); out.start = Player.pos.map(v => +v.toFixed(2)); out.ground = +World.groundAt(p0[0], p0[2], 10).toFixed(2);
+for (let a = 0; a < 360; a += 45) { Cells.teleport({ p: out.start.slice(), yaw: a * Math.PI / 180 }); game.step(3, 1 / 30); const s = Player.pos.slice(); for (let k = 0; k < 90; k++) { Input.keys = { KeyW: true, Space: k === 30 }; game.step(1, 1 / 30); } Input.keys = {}; game.step(3, 1 / 30); out.tries.push([a, +Math.hypot(Player.pos[0] - s[0], Player.pos[2] - s[2]).toFixed(2), Player.pos.map(v => +v.toFixed(1))]); }
+Cells.teleport({ p: out.start.slice(), yaw: Math.PI }); game.step(3, 1 / 30); game.shot(out.start[0], out.start[1] + 1.6, out.start[2], 180, -10, 13); await __snap('trap_view'); game.shot(out.start[0] + 4, out.start[1] + 8, out.start[2] + 6, 330, -45, 13); await __snap('trap_above');
+out.cols = World.colliders.filter(c => Math.hypot(c.x - p0[0], c.z - p0[2]) < 3).map(c => c.r !== undefined ? ['r', +c.x.toFixed(1), +c.z.toFixed(1), +c.r.toFixed(2), +c.y0.toFixed(1), +c.y1.toFixed(1)] : ['b', +c.x.toFixed(1), +c.z.toFixed(1), +c.hx.toFixed(2), +c.hz.toFixed(2), +c.y0.toFixed(1), +c.y1.toFixed(1)]);
+return out;
