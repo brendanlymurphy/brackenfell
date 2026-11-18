@@ -1,9 +1,22 @@
 # Reports: Agent Four (fork-ch1)
 
+## 2026-11-18 (item 4: lute strap, tankard)
+
+Commit `09c8b5b`. Push gate: run 271.
+
+- **Lute.** Slung on the back whenever Lark is not playing: walking between his places, and seated at the fire at night. It hangs
+  by a leather strap over the left shoulder, across the chest to the right hip and round to the tail of the bowl. The strap is a
+  ribbon rebuilt from his bones each frame while the lute is slung; it is not drawn while he plays (players then used none).
+  Pictures: `docs/proof/chars/hold/lute_slung_strap.jpg` (standing and walking, five angles).
+- **Tankard.** Cause: the kit `Mug`'s iron hoops are broken rings that lie at the cup's own radius. They fought the staves (pale
+  zig-zags); pushed out they showed their backs through the gaps; blackened they showed as dark holes. They are left out: the tankard
+  is a plain turned wooden cup with its handle. Picture: `docs/proof/chars/hold/tankard_after.jpg`.
+- `test/hold.js` 0 of 1420.
+- Not checked: the strap in motion (walk cycle), the lute against a chair back when seated.
+
 ## 2026-11-18 (items 2 and 3: sleepers, Hale without his helmet)
 
-Commit `4f15974` (merged with threejs). Full gate requested on GitHub for `fork-ch1` at this hash (workflow_dispatch, mode full; run
-number not yet listed when this was written: look for the newest `workflow_dispatch` run on `fork-ch1`). Area gate: 8 of 8 pass
+Commit `4f15974` (merged with threejs). Full gate requested on GitHub for `fork-ch1` at this hash (run 268, in progress when written; the push gate on the same hash, run 265, passed). Area gate: 8 of 8 pass
 (medium square 180/318k, low square 132/194k).
 
 - **Sleepers.** In bed: hat and outer garments (cloak, apron, tabard, straps, belt, pouch) off; a coif or kerchief stays on.
