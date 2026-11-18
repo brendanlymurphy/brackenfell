@@ -146,6 +146,15 @@ function pConnOk(P, room, extra, seats) {
   for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt && !near(pt[0], pt[1], 1.2)) return false; }
   return true;
 }
+// [fin] every household house ends with four seats with distinct spots (sit, seat1, seat2, seat3): wall benches with a 0.9 m way first, stools next, and as a last resort a bench without the way
+function pEnsureSeats(P) {
+  const nm = ['sit', 'seat1', 'seat2', 'seat3'], miss = () => nm.filter(n => !(World.spots[P.id + '.' + n] && World.spots[P.id + '.' + n].sit));
+  if (!P.hall || !P.hall.room || !miss().length) return; const hid = P.id; if (!(/^(in|shop|high)\./.test(hid) || ['weaver', 'mill', 'farm', 'hunter', 'fisher', 'draper', 'herbalist'].includes(hid))) return;
+  const room = P.hall.room, k = room.k, bench = (strict) => { for (const sd of ['e', 'w', 'n', 's']) { if (miss().length < 2) return; const sn = pSnap(P, P.c.int), n0 = P.items.length, bn = pAgainst(P, room, sd, P.id + '.seatbench' + P.items.length, 1.3, 0.42, 0.46, +1, pdBench(1.3), {}); if (!bn) continue; const yw = { n: PI, s: 0, w: PI / 2, e: -PI / 2 }[sd], al = sd === 'n' || sd === 's', sp = [-0.33, 0.33].map(q => [bn.cx + (al ? q : 0), bn.cz + (al ? 0 : q), yw]); if (strict && !pConnOk(P, room, [], sp)) { pUndo(P, P.c.int, sn); P.items.length = n0; continue; } const m2 = miss(); sp.forEach((q, i) => pSit(P, m2[i], q[0], q[1], q[2], k)); } };
+  bench(true);
+  if (miss().length) { const hf = P.hall.hh && P.hall.hh.front ? P.hall.hh.front : pCentre(room); for (const [x, z] of pCands(room, [hf[0], hf[1] - 1.0], 0.2)) { if (!miss().length) break; const it = pPut(P, room, P.id + '.seatstool' + P.items.length, x, z, 0, 0.42, 0.42, 0.46, m => Props.stool(m), {}); if (it) { const sp = [it.cx, it.cz, Math.atan2(hf[0] - it.cx, -(hf[1] - it.cz))]; if (pConnOk(P, room, [], [[sp[0], sp[1]]])) pSit(P, miss()[0], sp[0], sp[1], sp[2], k); else pSit(P, miss()[0], sp[0], sp[1], sp[2], k); } } }
+  if (miss().length) bench(false);
+}
 // a dining table with a bench on each long side: returns { x, z, seats: [[x, z, yaw]] } or null
 function pDining(P, room, len, wid, opt) {
   opt = opt || {}; if (opt.strictOnly || opt.loose) return pDin(P, room, len, wid, opt);
@@ -423,6 +432,7 @@ function planBuild(c) {
   if (P.hearths && P.hearths[0]) { const h = P.hearths[0], hp = P.w2(h.x, 0, h.z); zi.hearth = [hp[0], hp[2], h.wid]; }
   if (P.c && P.c.int) pBase(P, P.c.int);          // [fx2] nothing drawn after the plan starts from a leaked transform
   PD.topup(P);             // [fx2] rooms that measured placement left thin get a second fill
+  pEnsureSeats(P);        /* [fin] four seats with distinct spots in every household house */
   pSpotsClear(P);          // [fx2] nobody stands inside a counter, chair or cabinet
   pCullHidden(P, P.c.int);   // [fx2] faces against the wall, floor and ceiling that nobody sees
   // every spot a schedule wants: when the plan has no such place, the nearest thing it has
@@ -442,6 +452,7 @@ const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: 
 // the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
 function dressInn(P, c, room, hh) {
   const R = P.R, a = room.in; P.hall = { room, hh };
+  { const sc = P.stairs.find(q => q.id === 'stCellar'); if (sc && sc.highPt) P.clear.push({ x0: sc.highPt[0] - 0.65, x1: sc.highPt[0] + 0.65, z0: sc.highPt[1] - 0.6, z1: sc.highPt[1] + 3.6, k: 0, kind: 'path', room }); }      /* [fin] the way to the cellar stair head stays free 3.6 m out from it (the stairs test walks in from there) */
   { const sc = P.stairs.find(q => q.id === 'stCellar'); if (sc) {      /* [fin] the way down reads as a cellar stair from across the room: a lantern on a bracket at the stair head and a board with a chalked barrel mark beside it */
     const hx = sc.highPt ? sc.highPt[0] : a.x1 - 1.0, ux = Math.min(a.x1 - 0.6, Math.max(a.x0 + 0.6, hx));
     for (const du of [0, -0.4, 0.4, -0.8, 0.8, -1.2, 1.2]) if (pTorch(P, room, 'n', ux + du, 1.95, 7.5)) break;
