@@ -2,6 +2,46 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (night): Chapelgate
+
+**Hash:** the commit that adds this entry. Decisions still open: the stair seen from the door (Market Place infill entry) and the
+alley shops' third storey (alley entry).
+
+### What changed
+
+- `chapel`: 10 x 16 inside a 14 x 8 shell (1.43; was 18 x 12, out of line with the shell). The shell's door is in its gable end,
+  so the nave runs 12.5 m from the door to the altar; the sacristy (Aldous's cot, the chest with the crypt key, the crypt stair) and
+  the bell chamber (bell, rope, `bell`) are behind the altar wall; the crypt is under the nave behind its gate; the eight stained
+  lancets are where the shell has them. `chapel.book`, `chapel.sacristy`, `chapel.relic`, `chapel.gate`, `bell` all kept; story,
+  secrets, quest and the story bot pass. The old west tower room is gone: the shell shows no tower.
+- `in.33 in.45 in.66 in.67 in.70 in.77 in.82`: the compact plan. `in.33` (the merchant's) keeps a cellar.
+- All compact houses: the stair well is 0.5 m longer at the foot (a jump down it hit the slab), a fire never stands under a stair
+  head (its stack blocked the top of `in.33`'s stair), and the second place by the fire is its own spot (two Varrows stood in one).
+
+### Counts (`test/inout.js`, all 57)
+
+passing 7 (was 6), plan over 1.5 times 19 (was 26), storeys differ 14, windows inside 530 (outside 377, 239 in the same place),
+cellars with no sign 9. The chapel's windows count 8 / 8 but "0 in the same place": the test compares walls by the plan's own
+front, which for a building entered at its gable end is the shell's side. The test needs the plan's walls turned to the shell's
+before it compares; next on my list (it is a test fault, not a plan fault: see `docs/proof/inout/chapel/front.jpg` against
+`level0.jpg`). `in.33` shows two storeys and a dormer: its roof space is not a room yet.
+
+### Gate (this machine, 28 refitted houses)
+
+interiors, stairs (all, by input), people, apart, npcstairs, cast, story, secrets, quest, parity, cells (chapel and the seven),
+bot-story, embers, overlap pass.
+
+### Pictures
+
+`docs/proof/inout/chapel/` (front, crypt, nave from the door), `docs/proof/inout/in.33 ... in.82/`. The chapel nave reads well. The
+houses: same as the Market Place infill, the stair is the first thing seen and the rooms are dark (light tier 0 and 1).
+
+### Outside list, Chapelgate
+
+1. `chapel`: cellar (crypt) sign: none needed if the crypt is entered only from inside; say if you want a grating.
+2. `in.33`: cellar sign, back wall; the dormer has no room behind it.
+3. Per house, windows into neighbours and rooms wanting a window: `docs/INOUT.md`, For the outside worker.
+
 ## 2026-11-18 (later still): the six alley shops
 
 **Decision needed: the third storey of `shop.n2`, `shop.n4`, `shop.s1`.** A 24 m2 floor cannot take two straight flights (each 2.7 to
