@@ -420,7 +420,7 @@ function pWallEmit(P, wl, B, IN) {
       emit(m, 1.15, () => { m.mat(MAT.PLAIN, [0.55, 0.66, 0.38]); bx(y0, y0 + 0.9); m.mat(MAT.PLAIN, [0.78, 0.88, 0.96]); bx(y0 + 0.9, y0 + 2.2); });
       pLight(P, hor ? q : wl.c - ns * 0.9, 1.5 * sy, hor ? wl.c - ns * 0.9 : q, 5.2, [1.7, 1.62, 1.4], 'daylight', wl.k);
     }
-    else if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); if (sp.o.d.upper && Kit.pieces.Door_1_Flat) B.add('Door_1_Flat', KH.xf(F, sp.s - 0.54 * S[0], 0, -0.05, S), INW);   /* [inout] the leaf of a balcony door: the shell hangs the same one outside (71_kithouse.js) */ }
+    else if (sp.o.type === 'door') { add(G + '_Door_Flat', sp.s, S); add('DoorFrame_Flat_WoodDark', sp.s, S); if (sp.o.d.upper && Kit.pieces.Door_1_Flat) B.add('Door_1_Flat', KH.xf(F, sp.s - 0.54 * S[0], 0, -0.05, S), INW); if (sp.o.d.cellarDoor && Kit.pieces.Door_1_Flat) B.add('Door_1_Flat', KH.xf(F, sp.s - 0.54 * S[0], 0, -0.05, S, -1.35), INW);      /* [inout] the Hart's cellar door, a real leaf standing open into the passage */   /* [inout] the leaf of a balcony door: the shell hangs the same one outside (71_kithouse.js) */ }
     else {
       const tbl = { Wide_Flat: ['_Window_Wide_Flat', 'Window_Wide_Flat1'], Thin_Round: ['_Window_Thin_Round', 'Window_Thin_Round1'], Wide_Round: ['_Window_Wide_Round', 'Window_Wide_Round1'] }[sp.o.kind] || ['_Window_Wide_Flat', 'Window_Wide_Flat1'];
       const st = sp.o.glass && Kit.pieces[tbl[1] + '_Stained'];

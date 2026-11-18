@@ -285,7 +285,8 @@ PLANS.draper = (P, c, info) => {
   pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: X0 + 1.2, z: Zp + 0.65, width: 0.9, tread: 0.2 });
   pLayout(P); pBalconies(P, c);
   const shop = P.rooms.shop, back = P.rooms.back, uf = P.rooms.upfront, ub = P.rooms.upback, cel = P.rooms.cellar;
-  hTrade(P, c, shop, F); if (!P.spots.counter && P.counter) { const ct = P.counter; pSpot(P, 'counter', ct.cx, ct.cz + 0.8, PI, { k: 0 }); }
+  hTrade(P, c, shop, F); if (!P.counter) for (const ln of [3.0, 2.4, 1.8]) if (cnt(P, shop, F, ln, ['folded', 'bolt', 'spools'], 'draper')) break;
+  if (!P.spots.counter && P.counter) { const ct = P.counter; pSpot(P, 'counter', ct.cx, ct.cz + 0.8, PI, { k: 0 }); }
   if (!P.spots.ledger) { const ct = P.counter; pInteract(P, ct ? ct.cx : 0, 1.0, ct ? ct.cz : 2.0, { kind: 'read', id: 'draper.ledger', title: 'The draper’s ledger' }, 0); }
   for (const x of [X0 + 1.4, X1 - 1.4]) pPiece(P, shop, 'brass_candleholders_c', { near: [x, Zp - 0.5], lit: 5, soft: true, opt: { lowOk: true } });
   const e = P.doors.find(d => d.b === null); if (e) pPut(P, shop, id + '.mat', e.x, 1.1, 0, 1.8, 1.2, 0.02, pdRug(1.8, 1.2, F.rug), { flat: true, noClear: true });

@@ -100,7 +100,7 @@ PLANS.herbalist = (P, c, info) => {      /* [inout] the shell: 6.6 x 5.6 m, one 
   // her chamber: the bed, the rocker turned to the fire, the chest with the child's shoe
   dressBedroom(P, ch, { beds: castBeds(P.id, ['bed']), loot: [['gold', 5]], bedInteract: true, table: false });
   let lh = null; for (const [sd, a] of [['e', 4.0], ['e', 5.4], ['n', X1 - 1.2]]) if ((lh = pHearth(P, ch, sd, 1.2, { cauldron: false, size: 0.35, at: a }))) break;
-  if (lh) { pPiece(P, ch, 'rockingchair_01', { near: [lh.front[0] - 0.3, lh.front[1]], turn: PI / 2, id: 'rocker', soft: true });      /* she sits in it: no collider */ pSit(P, 'sit', lh.front[0] - 0.3, lh.front[1], PI / 2, 0); }
+  if (lh) { const rk = pPiece(P, ch, 'rockingchair_01', { near: [lh.front[0] - 0.3, lh.front[1]], turn: PI / 2, id: 'rocker', soft: true });      /* she sits in it: no collider */ if (rk) pSit(P, 'sit', rk.cx, rk.cz, PI / 2, 0); }
   if (!hh) P.err.push('no hearth fits in the stillroom');
 };
 
