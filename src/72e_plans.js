@@ -396,13 +396,14 @@ const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: 
 // the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
 function dressInn(P, c, room, hh) {
   const R = P.R, a = room.in; P.hall = { room, hh };
-  const bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, 4.8, PI / 2, 3.8, 0.7, 1.05, m => { Props.table(m, 3.8, 0.7, 1.05); Props.clutter(m, R, -1.7, 1.7, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true });
+  let bar = null;
+  for (const [bl, bz] of [[3.8, 4.8], [3.0, 4.2], [2.4, 4.0]]) { bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, bz, PI / 2, bl, 0.7, 1.05, m => { Props.table(m, bl, 0.7, 1.05); Props.clutter(m, R, -bl / 2 + 0.2, bl / 2 - 0.2, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true }); if (bar) break; }          // [fin] the east wall's windows (at 2 and 6 m) left no 3.8 m run for the counter, so no bar existed and Greta's bar spot fell back to the door: a shorter counter between the windows
   if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); P.bar = bar;
     pHang(P, room, 'e', bar.cz, 3.0, 1.45, 2.7, (m) => Props.shelf(m, 3.0, 1.2, 3, 0.3, (i, y) => Props.clutter(m, R, -1.3, 1.3, y, 0, ['bottle', 'bottle', 'mug', 'jug', 'bottle'], 6, c)), P.id + '.backshelf', {});
-    for (let i = 0; i < 3; i++) pAgainst(P, room, 'e', P.id + '.keg' + i, 0.9, 0.9, 1.0, 0, PD.cask(0.9, 0.32), { at: bar.cz - 1.4 + i * 1.4, lowOk: true });
+    for (let i = 0; i < 2; i++) pPut(P, room, P.id + '.keg' + i, a.x1 - 0.5, bar.cz - 0.6 + i * 1.2, 0, 0.9, 0.9, 1.0, PD.cask(0.9, 0.32), { lowOk: true });          // [fin] a short counter between the windows: two kegs behind it, not in front of a window
     pLamp(P, room, bar.cx + 0.2, bar.cz); }
   let n = 0;
-  for (const nr of [[-4.2, 5.0], [-0.5, 5.6], [-4.4, 2.8]]) {
+  for (const nr of [[-4.2, 3.65], [1.6, 3.65], [-4.6, 6.7]]) {          // [fin] two rows clear of the stairs and the cellar hole, the third by the west wall: the old spots left 0.2 m between the benches of two tables and no way to four of the seats
     const dn = pDining(P, room, 2.4, 0.9, { near: nr, id: 'table' + n, n: 4, items: ['mug', 'plate', 'bowl', 'candle', 'loaf', 'mug'] });
     if (dn) { for (const s of dn.seats) pSit(P, 's' + (++n), s[0], s[1], s[2], 0); pLamp(P, room, dn.x, dn.z); n = Math.max(n, 0); }
   }
