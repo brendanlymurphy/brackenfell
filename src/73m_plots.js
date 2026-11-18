@@ -380,7 +380,7 @@ function buildWestEdge(bucket) {
 }
 
 /* [fx3] where the audit's deleted shells stood, each footprint is the neighbour's yard: a low stone wall on four sides with a gate on the old front, the trade of the yard inside (garden, wood, hens, hives, washing), and a fruit tree in the orchards. Decisions per id are in YARDS. */
-const YARDS = { 'in.42': ['dyer'], 'in.43': ['garden'], 'in.46': ['woodyard'], 'in.64': ['hens'], 'in.71': ['garden', 'oak'], 'in.73': ['hives'], 'in.97': ['hens', 'oak'], 'in.103': ['hens'], 'in.117': ['woodyard'], 'in.118': ['garden'], 'in.119': ['hens'], 'in.128': ['hives', 'oak'], 'in.130': ['garden', 'oak'], 'in.48': ['hives'], 'in.11': ['woodyard'], 'in.76': ['hens', 'oak'], 'in.47': ['hens', 'oak'] };
+const YARDS = { 'in.42': ['dyer'], 'in.43': ['garden'], 'in.88': ['garden', 'oak'], 'in.18': ['garden'], 'in.46': ['woodyard'], 'in.64': ['hens'], 'in.71': ['garden', 'oak'], 'in.73': ['hives'], 'in.97': ['hens', 'oak'], 'in.103': ['hens'], 'in.117': ['woodyard'], 'in.118': ['garden'], 'in.119': ['hens'], 'in.128': ['hives', 'oak'], 'in.130': ['garden', 'oak'], 'in.48': ['hives'], 'in.11': ['woodyard'], 'in.76': ['hens', 'oak'], 'in.47': ['hens', 'oak'] };
 function buildYards(bucket) {
   { const raw = bucket; bucket = (x, z) => { const m = raw(3e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 400; m.lowDist = 22; return m; }; }      // [fx3] 44 m cells of their own, on Low drawn out to 36 m
   if (TEST && TEST.plots === 0) return; if (!PLACE.deletedSites) return;
