@@ -286,11 +286,11 @@ function wFish(m, x, y, z, ux, uz, len, col) { if (TEST && TEST.nofish) return;
 }
 // a fishing net hung from a line: thin strands and cross cords with open meshes between them (a sheet of cloth read as a board), irregular at the hem, sagging
 function wStrandNet(m, A, B, drop, R) { if (TEST && TEST.nonet) return;
-  const rr = R || (() => 0.5), L = Math.hypot(B[0] - A[0], B[2] - A[2]), n = Math.max(3, Math.ceil(L / 0.2)), pts = [], ux = (B[0] - A[0]) / (L || 1), uz = (B[2] - A[2]) / (L || 1), w = 0.006;
+  const rr = R || (() => 0.5), L = Math.hypot(B[0] - A[0], B[2] - A[2]), n = Math.max(3, Math.ceil(L / 0.3)), pts = [], ux = (B[0] - A[0]) / (L || 1), uz = (B[2] - A[2]) / (L || 1), w = 0.006;
   m.mat(MAT.CLOTH, [0.55, 0.5, 0.38], 0.5);
   for (let i = 0; i <= n; i++) { const t = i / n, x = A[0] + (B[0] - A[0]) * t, z = A[2] + (B[2] - A[2]) * t, y0 = A[1] + (B[1] - A[1]) * t, hem = drop * (0.72 + 0.28 * rr()) * (1 - 0.12 * Math.sin(t * Math.PI));
     pts.push([x, y0, z, hem]); m.quad2([x - ux * w, y0, z - uz * w], [x - ux * w, y0 - hem, z - uz * w], [x + ux * w, y0 - hem, z + uz * w], [x + ux * w, y0, z + uz * w]); }
-  for (const f of [0.3, 0.6, 0.88]) for (let i = 0; i < n; i++) { const a = pts[i], b = pts[i + 1]; if (a[3] * f > Math.min(a[3], b[3]) * 0.96) continue; m.quad2([a[0], a[1] - a[3] * f + 0.006, a[2]], [a[0], a[1] - a[3] * f - 0.006, a[2]], [b[0], b[1] - b[3] * f - 0.006, b[2]], [b[0], b[1] - b[3] * f + 0.006, b[2]]); }
+  for (const f of [0.4, 0.8]) for (let i = 0; i < n; i++) { const a = pts[i], b = pts[i + 1]; if (a[3] * f > Math.min(a[3], b[3]) * 0.96) continue; m.quad2([a[0], a[1] - a[3] * f + 0.006, a[2]], [a[0], a[1] - a[3] * f - 0.006, a[2]], [b[0], b[1] - b[3] * f - 0.006, b[2]], [b[0], b[1] - b[3] * f + 0.006, b[2]]); }
 }
 // a heap of net or a coil of rope: loose folds of cloth lying at different tilts, and a few turns of rope on top
 function wNetHeap(m, x, y, z, r, R) { if (TEST && TEST.nonet) return;
@@ -308,7 +308,7 @@ function wTuft(m, x, y, z, h, n, col, R) { if (TEST && TEST.nonet) return;
 }
 // a clinker rowing boat built as a boat is: a keel, a stem and a sternpost, lapped strakes lofted over 15 stations, ribs and a gunwale, thwarts and a floor; `up` turns it keel to the sky
 function wharfHull(m, x, z, y0, ang, len, beam, depth, up) { if (TEST && TEST.nohull) return;
-  const c = Math.cos(ang), sn = Math.sin(ang), N = 8, S = 4, sg = up ? -1 : 1, st = [];
+  const c = Math.cos(ang), sn = Math.sin(ang), N = 6, S = 4, sg = up ? -1 : 1, st = [];
   const P = (a, b, h) => [x + a * c - b * sn, y0 + sg * h, z + a * sn + b * c];
   for (let i = 0; i <= N; i++) { const t = i / N * 2 - 1, at = Math.abs(t), w = beam * Math.pow(Math.max(0.0, 1 - Math.pow(at, 2.3)), 0.62) + 0.015, sheer = depth * (0.78 + 0.34 * at * at) + 0.05 * at * at * at * at; st.push({ a: t * len / 2, w, sheer, k: 0.06 * (1 - at * at) }); }
   const f = (q, kk, side) => { const u = kk / S, h = q.k + (q.sheer - q.k) * u, wd = q.w * (0.16 + 0.84 * Math.pow(u, 0.8)); return P(q.a, side * wd, h); };
