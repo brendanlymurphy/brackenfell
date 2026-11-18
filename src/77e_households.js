@@ -28,7 +28,7 @@ const CAST_BODY = { OM: ['m_elder'], M: ['m_farmer', 'm_fisher', 'm_hunter'], YM
 // who is where at the hours the table fixes (section 7): the well at dawn, school, the Hart in the evening
 const CAST_WELL = ['avice', 'hester', 'kat', 'winifred', 'ysolt', 'gillian', 'ellen', 'felice', 'amice', 'ned'], WELL_T = { ysolt: 6.45, gillian: 6.6, felice: 6.75, avice: 6.95, hester: 6.95, ned: 7.15, ellen: 7.25, amice: 7.3, kat: 7.55, winifred: 7.55 }, wellT = id => WELL_T[id] || 6.5,          /* [cast] a turn at the well each, twenty minutes long, at set times so the pairs of scenes 1 and 2 meet there and never more than four at once, as the table's 'four spots and a queue' (seven in a ring at once blocked the square) */
   CAST_SCHOOL = ['ned', 'amice', 'will', 'tom', 'lettice'];
-const CAST_HART = ['stephen', 'silas', 'miles', 'jasper', 'diggory', 'jocelyn', 'peter', 'humphrey', 'laurence', 'bridget'];
+const CAST_HART = ['jocelyn', 'bridget', 'stephen', 'silas', 'miles', 'jasper', 'diggory', 'peter', 'humphrey', 'laurence'];          /* the two of scene 10 first: when the Hart has fewer seats the last go without (Build 86) */
 // the few who sweep (the audit counted 57 of 80 with a broom in their day): the widow's step, the Reeve's house after the wedding, a shop floor at closing
 // calls paid at a fixed hour, where the table's passing scenes (section 6; 82e_scenes.js) need two people in one place: [from, place, until]
 const CAST_VISIT = { giles: [8.8, 'shop.s0.fire1', 9.5], elinor: [9.8, 'shop.s2.fire1', 10.5], miles: [10.8, 'smithy.fire1', 11.5], petronel: [11.8, 'shop.n2.fire1', 12.5], goda: [19.3, 'inn.stand1', 20.05], stephen: [[12.1, 'inn.s8', 12.9, 'sit'], [19.3, 'guardhouse.fire1', 20.0]],
@@ -41,6 +41,12 @@ const CAST_EVE = { randal: 'wharf.view', wilmot: 'bridge.west' };          // an
 // [coordinator, FIRSTTEN 17] until the dead man's tally has been read (S.flags.pell), people of the wharf come and stand by his bier for an hour or two, and Finn,
 // who pulled him out, keeps by it through the day; Ivo comes down in the afternoon to keep them back. [from, until, place]
 const CAST_BIER = { peter: [9.0, 10.8, 'bier.a'], hester: [10.6, 12.0, 'bier.b'], ellen: [13.4, 15.2, 'bier.a'], mercy: [15.0, 16.8, 'bier.c'], humphrey: [16.6, 17.8, 'bier.b'] }, STORY_BIER = { finn: [9.0, 15.4, 'bier.finn'], ivo: [14.2, 17.2, 'bier.guard'] };
+const CAST_BUTTS = { place: null, day: () => (((typeof RPG !== 'undefined' && RPG.st && RPG.st().day) || 0) % 7) === 6 };
+function buttsDay(d, w) {
+  const sp = CAST_BUTTS.place; if (!sp) return; const sc = d.sched, at = h => { let r = sc[sc.length - 1]; for (const q of sc) if (q[0] <= h) r = q; return r; }, back = at(w[1]);
+  const alt = sc.filter(r => r[0] < w[0] || r[0] >= w[1]).concat([[w[0], sp, 'idle'], [w[1], back[1], back[2]]]).sort((a, b) => a[0] - b[0]), prev = d.schedIf;
+  d.schedIf = () => (CAST_BUTTS.day() ? alt : null) || (prev ? prev() : null);
+}
 function bierDay(d, w) {
   if (!World.spots[w[2]]) return; const sc = d.sched, at = h => { let r = sc[sc.length - 1]; for (const q of sc) if (q[0] <= h) r = q; return r; }, back = at(w[1]);
   const alt = sc.filter(r => r[0] < w[0] || r[0] >= w[1]).concat([[w[0], w[2], 'idle'], [w[1], back[1], back[2]]]).sort((a, b) => a[0] - b[0]), prev = d.schedIf;
@@ -52,8 +58,10 @@ const CAST_HOST = { diggory: 1, randal: 1, alaric: 1 };          // at their own
 const CAST_FIRST = { draper: 'sabina' };          // who has the counter where the table says so against the order of the rows (Anselm is in the back room)
 const CAST_SWEEP = { mercy: 1, basilia: 1, ursel: 1, hester: 1 };
 // work that is done out of doors, by trade: [morning place, afternoon place] (places of the town that exist; '' = at home)
-const CAST_OUT = { anselm: ['', 'square.bench2'], jordan: ['high.a.step', ''], kester: ['high.c.step', 'high.a.step'], basilia: ['stall1', ''], warin: ['gate.post2', 'hunter.yard'], davy: ['hunter.yard', 'gate.post2'], jasper: ['in.11.yard', 'in.46.yard'], peter: ['dock.end', 'wharf.view'], tamsin: ['in.32.yard', 'in.89.yard', 'in.48.yard'], silas: ['', 'belltower.bottom'], gilbert: ['', 'passage.lane'], ysolt: ['', 'gallery.bottom'],
-  idony: ['in.12.yard', 'in.47.yard'], giles: ['', 'in.88.yard'], felice: ['', 'in.18.yard'], gillian: ['', 'in.41.yard'], kat: ['', 'in.81.yard'], wilmot: ['', 'in.42.yard'] };
+const CAST_OUT = { anselm: ['', 'square.bench2'], jordan: ['high.a.step', ''], kester: ['high.c.step', 'high.a.step'], basilia: ['stall1', ''], warin: ['gate.post2', 'hunter.yard'], davy: ['hunter.yard', 'gate.post2'],
+  /* [cast] Build 86: the town worker removed the empty shells and redid the yards by docs/YARDS.md, so these are the yards that are left, or the person's own door */
+  jasper: ['gate.post2', 'in.90.step'], peter: ['dock.end', 'wharf.view'], tamsin: ['in.32.yard', 'in.82.step'], silas: ['', 'belltower.bottom'], gilbert: ['', 'passage.lane'], ysolt: ['', 'gallery.bottom'],
+  idony: ['in.12.yard', ''], giles: ['', 'in.13.yard'], gillian: ['', 'in.41.yard'], kat: ['', 'in.81.yard'], wilmot: ['', 'in.06.yard'] };
 // [cast] the yards of Build 72 behind houses that are only shells (73m_plots.js) are worked by the person of the table whose trade is that yard's: the beekeeper has
 // the hives, the woodcutter the woodyards, the dyer and her boy the dye yard, the old woman who keeps hens the hen run. A child's task after school:
 const CAST_TASK = { ned: 'in.15.yard', tom: 'in.21.work', amice: 'in.75.yard', will: 'dock.end' };
@@ -75,7 +83,7 @@ function householdDefs() {
   // The name the plan was chosen by (site.name) stays; what is shown at the door and on the door's tag is the title.
   for (const id in CAST_PLACES) { const h = World.houses[id], nm = CAST_PLACES[id].name; if (!h || !h.site || !nm) continue; h.site.title = nm; const c = typeof Cells !== 'undefined' && Cells.by[id]; if (c) { if (c.portalOut) c.portalOut.label = 'Enter ' + nm; if (c.enter) c.enter.name = nm; } }
   // a doorstep: the place just outside one's own door (Lambert Pell on his step, the people of Highfold in front of their houses)
-  for (const id of ['in.94', 'high.a', 'high.c']) { const h = World.houses[id], d = h && (h.xdoor || h.door); if (!d || !d.out || !d.c) continue; const dx = d.out[0] - d.c[0], dz = d.out[2] - d.c[2], l = Math.hypot(dx, dz) || 1, x = d.out[0] + dx / l * 0.9 + dz / l * 1.1, z = d.out[2] + dz / l * 0.9 - dx / l * 1.1; World.spots[id + '.step'] = { p: [x, World.groundY(x, z), z], yaw: Math.atan2(dx, -dz), zone: 0 }; }
+  for (const id of ['in.94', 'high.a', 'high.c', 'in.90', 'in.82']) {          /* and Jasper's axe block, Tamsin's skeps by her door */ const h = World.houses[id], d = h && (h.xdoor || h.door); if (!d || !d.out || !d.c) continue; const dx = d.out[0] - d.c[0], dz = d.out[2] - d.c[2], l = Math.hypot(dx, dz) || 1, x = d.out[0] + dx / l * 0.9 + dz / l * 1.1, z = d.out[2] + dz / l * 0.9 - dx / l * 1.1; World.spots[id + '.step'] = { p: [x, World.groundY(x, z), z], yaw: Math.atan2(dx, -dz), zone: 0 }; }
   const S_ = World.spots, has = sp => !!S_[sp], H = (id, k) => hHash(id + '|' + k), J = (id, k, a) => (H(id, k) - 0.5) * 2 * a;
   const beds = {}, nth = {};          // beds handed out per house; a person's place in the household (0 = the first named)
   const bedOf = (home, id) => { const all = ['bed', 'bed2', 'bed3', 'bed4'].map(b => home + '.' + b).filter(b => has(b) && S_[b].lie && !CAST_TAKEN.has(b)); const k = beds[home] = (beds[home] || 0); beds[home]++; return all[k] || null; };
@@ -96,7 +104,10 @@ function householdDefs() {
   // [coordinator, FIRSTTEN 17] the drowned man lay alone on the wharf: nobody by the bier. Places round it, facing it, a body's length back from the boards
   if (typeof BODY !== 'undefined') { const B = BODY, ring = [['bier.finn', 1.9, 0.2], ['bier.a', 2.3, 2.1], ['bier.b', 2.4, -2.2], ['bier.c', 2.2, 3.4], ['bier.guard', 2.7, -1.1]];
     for (const [nm, r, a] of ring) { const x = B[0] + Math.sin(a) * r, z = B[2] - Math.cos(a) * r, y = World.groundAt(x, z, 4); if (y < -50) continue; S_[nm] = { p: [x, y, z], yaw: Math.atan2(B[0] - x, -(B[2] - z)), zone: 0 }; } }
+  // [cast] scene 7: the butts behind the guardhouse (built by the town worker, Build 86). Every seventh day Hugh Alder and Warden Hale shoot there from four to five.
+  CAST_BUTTS.place = has('guardhouse.yard') ? 'guardhouse.yard' : null;
   for (const id in STORY_BIER) { const d = NPC_DEFS.find(q => q.id === id); if (d) bierDay(d, STORY_BIER[id]); }
+  { const d = NPC_DEFS.find(q => q.id === 'hale'); if (d) buttsDay(d, [15.9, 17.0]); }
   /* [cast] no two of a household are given one place to stand (fork-integ, Build 85: the cooper's plan had no bench and two seats, and all three Byrds worked
      and ate at 'in.02.home'; a plan's missing places are made at its 'home', so different names can be one spot). Each standing place a person is given is
      at least 0.8 m from every other already given in that building; if the wanted one is taken, the nearest free place the building has. */
@@ -129,13 +140,14 @@ function householdDefs() {
       if (out && out[2] && has(out[2])) late.push([16.6, out[2], 'work']);
       day = well.concat([am], shop, shop.length ? [[errT + 1.4 + J(id, 'b', 0.1), spot, wAnim]] : [], [[noon, meal, sitA], pm], late, keeps && first && town ? [[18.05 + (airN % 3) * 0.1, AIR[airN++ % AIR.length] || mk('air'), 'idle']] : has(CAST_EVE[id]) ? [[18.05, CAST_EVE[id], 'idle']] : [[18.1 + J(id, 'h', 0.2), meal, sitA]]); }          /* whoever keeps a counter all day takes the air when the shop is shut */
     if (yardBy[id] && !day.some(r => r[1] === yardBy[id])) day.push(CAST_WELL.includes(id) ? [16.9, yardBy[id], 'work'] : [6.9, yardBy[id], 'work'], CAST_WELL.includes(id) ? [18.1, meal, sitA] : [8.05, spot, wAnim]);
-    let eve = CAST_HART.includes(id) && HART_SEATS[hart] ? [[19.1 + (hart % 5) * 0.12, HART_SEATS[hart], S_[HART_SEATS[hart++]].sit ? 'sit' : 'idle']] : [[19.2 + J(id, 'v', 0.2), meal, sitA]];
+    let eve = CAST_HART.includes(id) ? (HART_SEATS[hart] ? [[19.1 + (hart % 5) * 0.12, HART_SEATS[hart], S_[HART_SEATS[hart++]].sit ? 'sit' : 'idle']] : [[19.1 + (hart++ % 5) * 0.12, standAt('inn', has('inn.barfront') ? 'inn.barfront' : 'inn.home'), 'idle']]) : [[19.2 + J(id, 'v', 0.2), meal, sitA]];          /* no seat left: standing at the bar (claims give each a place of their own) */
     let rows = day.concat(id === 'godwin' ? [] : eve).sort((a, b) => a[0] - b[0]);
     for (const vis of CAST_VISIT[id] ? (Array.isArray(CAST_VISIT[id][0]) ? CAST_VISIT[id] : [CAST_VISIT[id]]) : []) if (has(vis[1])) { const before = rows.filter(r => r[0] <= vis[0]).pop() || [0, meal, sitA]; rows = rows.filter(r => r[0] <= vis[0] || r[0] >= vis[2]).concat([[vis[0], vis[1], vis[3] || 'idle'], [vis[2], before[1], before[2]]]).sort((a, b) => a[0] - b[0]); const ev = rows.filter(r => eve.includes(r) || (r[0] >= 19 && r[0] < 22)); day = rows.filter(r => !ev.includes(r)); eve.length = 0; for (const r of ev.length ? ev : [[19.2, meal, sitA]]) eve.push(r); }
     const sched = (id === 'godwin' ? [] : [[wake, meal, sitA]]).concat(day, id === 'godwin' ? [[20.2, at(home, 'fire1'), 'idle'], [21.4, meal, sitA]] : eve.concat([[eve.slice().sort((a, b) => a[0] - b[0]).pop()[1].startsWith('inn.') ? 22 + H(id, 'l') * 0.4 : up, bed || meal, bed ? 'lie' : sitA]])).filter(r => r && r[1]).sort((a, b) => a[0] - b[0]);
     const tn = HH_TINT[(H(id, 't') * 8) | 0], bodies = CAST_BODY[p.voice] || CAST_BODY.M, body = bodies[(H(id, 'b') * bodies.length) | 0];
     NPC_DEFS.push({ id, name: p.name, body, cast: p, tint: { tunic: tn, robe: tn, skirt: HH_TINT[(H(id, 'q') * 8) | 0], pants: [1.1, 1.0, 0.9] }, skin: HH_SKIN[(H(id, 'k') * 6) | 0], hair: p.age >= 55 ? (p.age >= 68 ? 'white' : 'grey') : HH_HAIR[(H(id, 'h') * 7) | 0],
       top: [0.4, 0.36, 0.3], legs: [0.3, 0.26, 0.22], female: fem, dress: fem, scale: child ? Math.min(0.8, 0.53 + p.age * 0.018) : p.voice === 'YM' && p.age < 17 ? 0.9 : undefined, run: child || undefined, sched, house: home, bed });
+    if (id === 'hugh') buttsDay(NPC_DEFS[NPC_DEFS.length - 1], [15.8, 17.0]);
     if (CAST_BIER[id]) bierDay(NPC_DEFS[NPC_DEFS.length - 1], CAST_BIER[id]);
     // [coordinator, Build 83] a day may depend on the story: once the bell rings again these six are at the chapel at dawn (npcRow asks schedIf before the plain day)
     if (CAST_CHAPEL.includes(id) && has('chapel.nave')) { const dawn = [[5.5 + CAST_CHAPEL.indexOf(id) * 0.04, 'chapel.nave', 'pray']].concat(sched.filter(r => r[0] >= 6.7 || r[0] < 5.4)).sort((a, b) => a[0] - b[0]), d = NPC_DEFS[NPC_DEFS.length - 1]; if (!dawn.some(r => r[0] > 6.6 && r[0] < 7.3)) dawn.push([6.75, meal, sitA]), dawn.sort((a, b) => a[0] - b[0]); d.schedIf = () => (typeof qAt === 'function' && qAt('bell') === 99 ? dawn : null); }
