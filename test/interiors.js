@@ -22,7 +22,7 @@ for (const id in World.houses) {
 { const SOLIDK = k => !/^(rug|flat|hang|wall|clear|light)$/.test(k || '');
   for (const id in World.houses) { const H = World.houses[id], P = H.plan; if (!P || (only && !only.includes(id))) continue;
     const S = P.spots || {}, sleepers = typeof castSleepers === 'function' ? castSleepers(id) : 0, lived = sleepers > 0;
-    const grid = {}, cell = 0.05, key = (k, i, j) => k + ':' + i + ':' + j;      /* 5 cm: a coarser cache took the wall band for the floor beside it */
+    const grid = {}, cell = 0.01, key = (k, i, j) => k + ':' + i + ':' + j;      /* 1 cm [coordinator, Build 87]: at 5 cm a 0.96 m way (the store, shelf to stair) passed or failed by which point was asked first in a cell; a coarser cache took the wall band for the floor beside it */
     const free = (k, x, z) => { const kk = key(k, Math.floor(x / cell), Math.floor(z / cell)); if (kk in grid) return grid[kk]; let ok = Object.values(P.rooms).some(r => r.k === k && x > r.in.x0 && x < r.in.x1 && z > r.in.z0 && z < r.in.z1) || P.doors.some(d => d.k === k && d.wall && (d.wall.ax === 'x' ? Math.abs(x - d.x) < d.w / 2 && Math.abs(z - d.z) < 0.35 : Math.abs(z - d.z) < d.w / 2 && Math.abs(x - d.x) < 0.35));
       if (ok) for (const it of P.items) if (it.k === k && SOLIDK(it.kind) && it.kind !== 'hole' && x > it.x0 && x < it.x1 && z > it.z0 && z < it.z1 && !(it.h !== undefined && it.h < 0.52 && it.kind !== 'stair'))      /* a bench or stool is sat on, not walked round */ { ok = false; break; }
       if (ok) for (const h of P.holes) if (h.k === k && x > h.r.x0 && x < h.r.x1 && z > h.r.z0 && z < h.r.z1) { ok = false; break; }
