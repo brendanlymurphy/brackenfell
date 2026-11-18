@@ -181,7 +181,7 @@ for (const file of process.argv.slice(2)) {
       if (/^w_(apron|tabard)/.test(x.name)) { const ix = x.p.getIndices().getArray(); let moved = 0;
         for (let pass = 0; pass < 4; pass++) { const push = P.map(() => [0, 0, 0]);
           const sample = vs => { const v = [0, 1, 2].map(c => vs.reduce((s2, i) => s2 + P[i][c], 0) / vs.length), hx = v[0], hz = v[2] - zc, r = Math.hypot(hx, hz); if (r < 0.03) return; const d = [hx / r, 0, hz / r]; let best = -1;
-            for (const t of (/^w_apron/.test(x.name) ? KB : K)) { const k = rayTri([0, v[1], zc], d, t.a, t.b, t.c); if (k > best && k < 0.7) best = k; } if (best < 0) return; const need = best + 0.014 - r; if (need > 0) for (const i of vs) if (need > push[i][2]) push[i] = [d[0] * need, d[2] * need, need]; };
+            for (const t of (/^w_apron/.test(x.name) ? KB : K)) { const k = rayTri([0, v[1], zc], d, t.a, t.b, t.c); if (k > best && k < 0.7) best = k; } if (best < 0) return; const need = best + (/^w_apron/.test(x.name) ? 0.02 : 0.014) - r; if (need > 0) for (const i of vs) if (need > push[i][2]) push[i] = [d[0] * need, d[2] * need, need]; };
           for (let i = 0; i < n; i++) sample([i]); for (let t = 0; t < ix.length; t += 3) { const A = ix[t], B = ix[t + 1], C = ix[t + 2]; sample([A, B]); sample([B, C]); sample([C, A]); sample([A, B, C]); }
           let any = 0; push.forEach((q, i) => { if (q[2] > 1e-4) { P[i][0] += q[0]; P[i][2] += q[1]; any++; } }); moved += any; if (!any) break; }
         if (moved) { x.p.setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(P.flat())).setBuffer(pos.getBuffer())); log.push(x.name + ' moved out ' + moved); } }
