@@ -695,7 +695,7 @@ function pPiece(P, room, name, o) {
 function pWinSnap(P, f, pos) {
   const fb = f.wall === 'front' || f.wall === 'back', rs = Object.values(P.rooms).filter(r => r.k === f.lv && (fb ? (f.wall === 'front' ? Math.abs(r.z0 - P.shell.box.z0) < 0.6 : Math.abs(r.z1 - P.shell.box.z1) < 0.6) : (f.wall === 'left' ? Math.abs(r.x0 - P.shell.box.x0) < 0.6 : Math.abs(r.x1 - P.shell.box.x1) < 0.6)));
   const lo = r => fb ? r.x0 : r.z0, hi = r => fb ? r.x1 : r.z1, r = rs.find(q => pos >= lo(q) && pos <= hi(q)) || rs.sort((a, b) => Math.min(Math.abs(pos - lo(a)), Math.abs(pos - hi(a))) - Math.min(Math.abs(pos - lo(b)), Math.abs(pos - hi(b))))[0]; if (!r) return pos;
-  const a = lo(r) + 1.15, b = hi(r) - 1.15; if (a > b) return Math.round((lo(r) + hi(r)) * 2) / 4; const q = Math.min(b, Math.max(a, pos)); return Math.abs(q - pos) <= 1.0 ? Math.round(q * 4) / 4 : pos;
+  const a = lo(r) + 1.15, b = hi(r) - 1.15; if (a > b) return Math.round((lo(r) + hi(r)) * 2) / 4; const q = Math.min(b, Math.max(a, pos)); return Math.abs(q - pos) <= 0.55 ? Math.round(q * 4) / 4 : pos;      /* at most half a metre: further and the window inside is not the window outside */
 }
 // [inout] an alley shop's front as 73b_alley.js draws it (the facade is drawn after the plans are built, so it is read from the same rule): the ground storey's bays
 // from `layout` (W window, D door), each upper storey a window on every other bay, a balcony door in the middle bay of the first floor where `balcony` is set
@@ -717,6 +717,10 @@ function pLadder(P, k0, side, z) {
   const sg = side === 'w' ? 1 : -1, xw = side === 'w' ? below.in.x0 : below.in.x1, h = L1.y - L0.y, lean = h / Math.tan(75 * PI / 180), tw = 0.9, td = 0.8;
   const trap = side === 'w' ? { x0: xw, x1: xw + tw, z0: z - td / 2, z1: z + td / 2 } : { x0: xw - tw, x1: xw, z0: z - td / 2, z1: z + td / 2 };
   const foot = xw + sg * (0.12 + lean), a = [xw + sg * (lean + 0.75), z], b = [xw + sg * (tw + 0.6), z];
+  const lr = { x0: Math.min(xw, foot + sg * 0.1) - 0.05, x1: Math.max(xw, foot + sg * 0.1) + 0.05, z0: z - 0.4, z1: z + 0.4 }, above = pRoomAt(P, k0 + 1, b[0], b[1]);
+  if (!above || !pRoomAt(P, k0, a[0], a[1]) || z - 0.6 < below.in.z0 || z + 0.6 > below.in.z1) return null;
+  if (P.items.some(it => (it.k === k0 && rOv(it, lr)) || (it.k === k0 + 1 && rOv(it, rGrow(trap, 0.3))))) return null;      /* not over a stair well, not into furniture or a stack */
+  if (P.clear.some(q => q.k === k0 && q.kind !== 'stair' && rOv(q, lr))) return null;      /* not across a doorway */
   P.holes.push({ k: k0 + 1, r: trap }); P.occ(k0 + 1, trap, 'hole', P.id + '.trap');
   P.occ(k0, { x0: Math.min(xw, foot + sg * 0.1), x1: Math.max(xw, foot + sg * 0.1), z0: z - 0.35, z1: z + 0.35 }, 'stair', P.id + '.ladder');
   P.clear.push({ x0: Math.min(a[0], foot) - 0.4, x1: Math.max(a[0], foot) + 0.4, z0: z - 0.5, z1: z + 0.5, k: k0, kind: 'stair' }, { x0: Math.min(b[0], trap.x0) - 0.1, x1: Math.max(b[0], trap.x1) + 0.4, z0: z - 0.6, z1: z + 0.6, k: k0 + 1, kind: 'stair' });

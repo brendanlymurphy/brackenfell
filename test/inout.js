@@ -79,14 +79,15 @@ for (const h of houses) {
   const wallSt = 1 + Math.max(0, Math.floor((eave - H + 0.5) / 3));      // the ground storey is as high as the building's own H (a chapel's 4.5 m wall is one storey), each further 3 m of wall is one more
   const lvOut = f => f.kind === 'win' ? (f.y > eave - 0.2 ? 'roof' : f.y < H ? 0 : Math.min(wallSt - 1, 1 + Math.floor((f.y - H) / 3))) : (f.y0 < 1.6 ? 0 : f.y0 > eave - 0.4 ? 'roof' : Math.max(1, Math.round((f.y0 - H) / 3) + 1));
   for (const f of merged) f.lv = lvOut(f);
-  const oWin = merged.filter(f => f.kind === 'win'), oDoor = merged.filter(f => f.kind === 'door'), oBalc = merged.filter(f => f.kind === 'balc');
+  for (const f of merged) { const fb = f.wall === 'front' || f.wall === 'back', nl = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] }[f.wall], lu = fb ? f.along : nl[0] * (s.w / 2 + 0.5), lv = fb ? nl[1] * (s.d / 2 + 0.5) : f.along - s.d / 2, c0 = Math.cos(s.yaw), n0 = Math.sin(s.yaw), wx = s.x + lu * c0 - lv * n0, wz = s.z + lu * n0 + lv * c0; f.blocked = sites.concat(Object.values(SITE)).find(o => o !== s && o.w && o.yaw !== undefined && depthIn(o, wx, wz) > 0.05) || null; }      /* a window that opens into the next house is the outside's to remove: counted apart */
+  const oBlk = merged.filter(f => f.kind === 'win' && f.blocked), oWin = merged.filter(f => f.kind === 'win' && !f.blocked), oDoor = merged.filter(f => f.kind === 'door'), oBalc = merged.filter(f => f.kind === 'balc');
   const roofWin = oWin.filter(f => f.lv === 'roof').length, shown = wallSt + (roofWin ? 1 : 0);
   const jetty = typeof shellJetty === 'function' ? shellJetty(s, st) : 0;
   // ── inside ──
   const P = c.planDone || c.plan || (h.cell.ctx && (h.cell.ctx.planDone || h.cell.ctx.plan));
-  const row = { id: s.id, name: s.name, out: { w: s.w, d: s.d, eave: r1(eave), wallSt, roofWin, shown, jetty: r1(jetty), win: oWin.length, upDoors: oDoor.filter(f => f.lv !== 0), doors0: oDoor.filter(f => f.lv === 0).length, balc: oBalc, signs, list: merged.map(f => [f.kind, f.wall, f.lv, r1(f.along), r1(f.y), f.src, f.n].join(' ')) }, fails: [] };
+  const row = { id: s.id, name: s.name, out: { w: s.w, d: s.d, eave: r1(eave), wallSt, roofWin, shown, jetty: r1(jetty), win: oWin.length, blockedWin: oBlk.length, upDoors: oDoor.filter(f => f.lv !== 0), doors0: oDoor.filter(f => f.lv === 0).length, balc: oBalc, signs, list: merged.map(f => [f.kind, f.wall, f.lv, r1(f.along), r1(f.y), f.src, f.n].join(' ')) }, fails: [] };
   if (!P) { row.noPlan = true; row.fails.push('no plan'); rows.push(row); continue; }
-  const lvs = Object.values(P.lv).map(l => l.k).sort((a, b) => a - b), lofts = lvs.filter(k => k > 0 && P.lv[k].loft && !P.windows.some(w => w.k === k)), up = lvs.filter(k => k >= 0 && !lofts.includes(k)),      /* a loft lit by the shell's own windows is that storey */ rooms = Object.values(P.rooms), isYard = r => /yard|garden|court/.test(r.kind || '') || r.open === true || r.roof === false;
+  const lvs = Object.values(P.lv).map(l => l.k).sort((a, b) => a - b), solid = lvs.filter(k => k >= 0 && !(k > 0 && P.lv[k].loft)), lofts = lvs.filter(k => k > 0 && P.lv[k].loft && !(P.windows.some(w => w.k === k) && shown > solid.length)), up = lvs.filter(k => k >= 0 && !lofts.includes(k)),      /* a loft is that storey only where the outside shows the storey and its windows light the loft */      /* a loft lit by the shell's own windows is that storey */ rooms = Object.values(P.rooms), isYard = r => /yard|garden|court/.test(r.kind || '') || r.open === true || r.roof === false;
   const bb = k => { const rs = rooms.filter(r => r.k === k && !isYard(r)); if (!rs.length) return null; const x0 = Math.min(...rs.map(r => r.x0)), x1 = Math.max(...rs.map(r => r.x1)), z0 = Math.min(...rs.map(r => r.z0)), z1 = Math.max(...rs.map(r => r.z1)); return { x0, x1, z0, z1, w: x1 - x0, d: z1 - z0, area: rs.reduce((a, r) => a + (r.x1 - r.x0) * (r.z1 - r.z0), 0) }; };
   const B0 = bb(0) || { x0: 0, x1: 0, z0: 0, z1: 0, w: 0, d: 0, area: 0 }, cx0 = (B0.x0 + B0.x1) / 2;
   const facing = wl => wl.ax === 'x' ? (wl.ns < 0 ? 'front' : 'back') : (wl.ns < 0 ? 'left' : 'right');
@@ -151,7 +152,7 @@ const T = {
   storeys: cnt(r => r.storeys && !r.storeys.ok), storeysOutMore: cnt(r => r.storeys && r.storeys.out > r.storeys.in), storeysInMore: cnt(r => r.storeys && r.storeys.in > r.storeys.out),
   footprint: cnt(r => r.foot && !r.foot.ok), ratioMed: med, ratioMax: ratios[ratios.length - 1], ratioMin: ratios[0],
   upDoorsOut: sum(r => r.updoor && r.updoor.out), upDoorsUnserved: sum(r => r.updoor && r.updoor.unserved), balconies: sum(r => r.updoor && r.updoor.balc), balconiesUnserved: sum(r => r.updoor && r.updoor.balcUnserved), upDoorsInOnly: sum(r => r.updoor && r.updoor.inOnly), upDoorBuildings: cnt(r => r.updoor && !r.updoor.ok),
-  winOut: sum(r => r.out.win), winIn: sum(r => r.in && r.in.win), winDiff: sum(r => r.windows && r.windows.diff), winSame: sum(r => r.windows && r.windows.same), winBuildings: cnt(r => r.windows && !r.windows.ok),
+  winBlocked: sum(r => r.out.blockedWin), winOut: sum(r => r.out.win), winIn: sum(r => r.in && r.in.win), winDiff: sum(r => r.windows && r.windows.diff), winSame: sum(r => r.windows && r.windows.same), winBuildings: cnt(r => r.windows && !r.windows.ok),
   cellars: cnt(r => r.in && r.in.cellar), cellarsNoSign: cnt(r => r.cellar && !r.cellar.ok),
 };
 const cellsTxt = r => WN.map(wn => { const ks = Object.keys(r.windows.cells).filter(k => k.startsWith(wn + '|')).sort(); return ks.length ? wn[0].toUpperCase() + ' ' + ks.map(k => k.split('|')[1] + ':' + r.windows.cells[k].join('/')).join(' ') : null; }).filter(Boolean).join('; ');
@@ -167,7 +168,7 @@ md += `| 2. A floor is more than 1.5 times the shell's area | **${T.footprint}**
 md += `| 3. Upper doors outside / with no door inside on that wall and level | ${T.upDoorsOut} / **${T.upDoorsUnserved}** |\n`;
 md += `| ... balconies outside / with no door onto them | ${T.balconies} / **${T.balconiesUnserved}** |\n`;
 md += `| ... upper doors inside that open onto nothing outside | **${T.upDoorsInOnly}** |\n`;
-md += `| 4. Windows outside / inside | ${T.winOut} / ${T.winIn} |\n`;
+md += `| 4. Windows outside / inside (outside: not counting ${T.winBlocked} that open into the house next door) | ${T.winOut} / ${T.winIn} |\n`;
 md += `| ... difference summed per wall and level / outside windows with an inside window in the same place | **${T.winDiff}** / ${T.winSame} of ${T.winOut} |\n`;
 md += `| ... buildings whose windows do not all match | **${T.winBuildings}** |\n`;
 md += `| 5. Cellars inside / with nothing outside that shows one | ${T.cellars} / **${T.cellarsNoSign}** |\n\n`;

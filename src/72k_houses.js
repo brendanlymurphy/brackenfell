@@ -314,12 +314,19 @@ PLANS.draper = (P, c, info) => {
 const INOUT_FIT = new Set();          // the houses that use it (district by district)
 function hCompact(P, c, F) {
   const small = c.w * c.d < 30, sW = Math.max(5.5, Math.ceil(c.w * 1.05 * 2) / 2), B = small ? pFitBox(c, { W: sW, D: Math.max(4, Math.floor(c.w * c.d * 1.5 / sW * 2) / 2) }) : pFitBox(c), X0 = B.x0, X1 = B.x1, W = B.W, D = B.D, id = P.id, R = F.R, st = c.spec.kitStyle || {}, fam = F.fam;      /* a small shell: a floor 5.5 m wide so a straight stair fits along its back wall */
-  const two = !!st.up || shellOpenings(c).some(f => f.lv >= 1 && f.kind !== 'floor'), three = shellOpenings(c).some(f => f.lv >= 2 && f.kind === 'win') && D < 6;      /* a third storey the shell shows on a one-room house: a loft under the roof, by a ladder (inbox, Build 85) */      /* the alley's facades draw their upper storeys themselves: the shell's openings say how many there are */
+  const two = !!st.up || shellOpenings(c).some(f => f.lv >= 1 && f.kind !== 'floor'), three = shellOpenings(c).some(f => f.lv >= 2 && f.kind === 'win' && !f.blocked) && two;      /* a third storey the shell shows on a one-room house: a loft under the roof, by a ladder (inbox, Build 85) */      /* the alley's facades draw their upper storeys themselves: the shell's openings say how many there are */
   const H0 = W < 6.5 ? 2.6 : clamp(F.H0, 2.6, 2.8), nSt = Math.ceil((H0 + PW.SLAB) / 0.19), single = D < 6;
-  const Zp = single ? D : clamp(Math.round(D * 0.55 * 2) / 2, 3.5, D - 2.5);
+  // the partitions keep clear of the shell's windows: a wall never meets the outside wall in the middle of a window (the window would have to move off its place)
+  const SO = shellOpenings(c).filter(f => f.kind === 'win' && !f.blocked), sx = W / c.w, sz = D / c.d, cxB = (X0 + X1) / 2;
+  const sideZ = SO.filter(f => f.wall === 'left' || f.wall === 'right').map(f => f.u * sz), backX = SO.filter(f => f.wall === 'back' || f.wall === 'front').map(f => cxB + f.u * sx);
+  const clearOf = (v, list) => list.reduce((m, q) => Math.min(m, Math.abs(q - v)), 9);
+  let Zp = single ? D : clamp(Math.round(D * 0.55 * 2) / 2, 3.5, D - 2.5);
+  if (!single) { let best = Zp, bs = -1; for (let z = 3.5; z <= D - 2.5 + 1e-6; z += 0.5) { const sc = Math.min(clearOf(z, sideZ), 1.2) * 10 - Math.abs(z - D * 0.55); if (sc > bs) { bs = sc; best = z; } } Zp = best; }
   const shop = fam === 'shopfront', work = fam === 'workshop' || fam === 'crosspassage', hall = !shop && !work, cellarOK = !single && (shop || fam === 'merchant') && (F.wealth > 0 || F.trade === 'butcher') && W >= 7.5;
   const mir = hHash(id + '|cmir') < 0.5, M = x => mir ? X0 + X1 - x : x, rr = (a, b) => [Math.min(M(a), M(b)), Math.max(M(a), M(b))];      /* house by house the arrangement is mirrored: the stair, the store and the kitchen change sides */
-  const split = [0.45, 0.5, 0.55][(hHash(id + '|csplit') * 3) | 0], Xs = cellarOK ? X0 + 5.5 : X0 + Math.max(3, Math.min(W - 3, Math.round(W * split * 2) / 2));
+  const split = [0.45, 0.5, 0.55][(hHash(id + '|csplit') * 3) | 0], mirX = x => mir ? X0 + X1 - x : x;
+  let Xs = cellarOK ? X0 + 5.5 : X0 + Math.max(3, Math.min(W - 3, Math.round(W * split * 2) / 2));
+  if (!cellarOK && W >= 6) { let best = Xs, bs = -1; for (let x = X0 + 3; x <= X1 - 3 + 1e-6; x += 0.5) { const sc = Math.min(clearOf(mirX(x), backX), 1.2) * 10 - Math.abs(x - Xs); if (sc > bs) { bs = sc; best = x; } } Xs = best; }
   P.dims = { W, D, Dh: Zp }; pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP, two ? {} : { loft: true }); if (cellarOK) pLevel(P, -1, -(2.4 + PW.SLAB), 2.4);
   const nm = shop ? ['shop', 'back', 'store'] : work ? ['work', 'living', 'store'] : single ? ['room'] : ['hall', 'chamber', 'pantry'];
   const front = pRoom(P, 0, nm[0], shop ? 'shop' : 'hall', X0, 0, X1, Zp, F.fin(0, shop && (F.trade === 'butcher' || F.trade === 'baker') ? { floor: 'stone' } : {}));
@@ -328,7 +335,7 @@ function hCompact(P, c, F) {
   let up1, up2 = null;
   if (two && !single) { up1 = pRoom(P, 1, shop ? 'upfront' : 'solar', 'bedroom', X0, 0, X1, Zp, F.fin(1)); up2 = pRoom(P, 1, shop ? 'upback' : 'loft', 'bedroom', X0, Zp, X1, D, F.fin(1)); }
   else up1 = pRoom(P, 1, two ? 'chamber' : 'loft', 'bedroom', X0, 0, X1, D, F.fin(1));
-  if (three) { pLevel(P, 2, P.lv[1].y + H_UP + PW.SLAB, 2.4, { loft: true }); pRoom(P, 2, 'loft', 'store', X0, 0, X1, D, F.fin(1)); }
+  if (three) { pLevel(P, 2, P.lv[1].y + H_UP + PW.SLAB, 2.4, { loft: true }); pRoom(P, 2, up1.id === 'loft' || (up2 && up2.id === 'loft') ? 'garret' : 'loft', 'store', X0, 0, X1, D, F.fin(1)); }
   if (cellarOK) { const a = rr(X0, Xs); pRoom(P, -1, 'cellar', 'cellar', a[0], Zp, a[1], D, { floor: 'stone', win: false }); }
   pDoor(P, front.id, null, 0, 0); P.clear.push({ x0: -0.8, x1: 0.8, z0: 0, z1: 2.4, k: 0, kind: 'path', room: front });
   if (!single) { pDoor(P, front.id, left.id, M(X0 + 0.8), Zp); pDoor(P, front.id, right.id, M(X1 - 0.8), Zp); }
@@ -338,7 +345,7 @@ function hCompact(P, c, F) {
   pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: mir ? -1 : 1, x: M(p0), z: lat, width: 0.9, tread, holeX: 0.5 });
   if (cellarOK) pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: mir ? -1 : 1, x: M(X0 + 1.2), z: D - 0.6, width: 0.9, tread: 0.2 });
   pLayout(P); pBalconies(P, c);
-  let lad = null; if (three) { const sdL = mir ? 'e' : 'w'; for (const z of [1.2, 1.6, D - 1.6]) if ((lad = pLadder(P, 1, sdL, z))) break; if (!lad) P.err.push('no ladder to the loft'); }
+  let lad = null; if (three) { for (const sdL of mir ? ['e', 'w'] : ['w', 'e']) for (const z of [1.2, 1.6, D - 1.6, D / 2]) if (!lad) lad = pLadder(P, 1, sdL, z); if (!lad) P.err.push('no ladder to the loft'); }
   for (const q of P.stairs) { const h = q.high || q.low, x0 = Math.min(q.p1, q.p1 + q.dir * 1.4), x1 = Math.max(q.p1, q.p1 + q.dir * 1.4); P.clear.push(q.axis === 'x' ? { x0, x1, z0: q.lat - 0.6, z1: q.lat + 0.6, k: q.k0, kind: 'stair' } : { x0: q.lat - 0.6, x1: q.lat + 0.6, z0: x0, z1: x1, k: q.k0, kind: 'stair' }); }      /* the floor below a stair head stays clear of a fire: its chimney stack would stand at the top of the stair */
   // the fire: in the kitchen or the chamber behind, else in the front room's end wall
   const fireRoom = single ? front : hall ? front : right; let hh = null;
@@ -367,9 +374,10 @@ function hCompact(P, c, F) {
   const bedRooms = [up1, up2, hall ? right : null].filter(Boolean), first = up2 || up1;
   dressBedroom(P, first, { beds: castBeds(P.id, ['bed']), bedRooms: bedRooms.filter(r => r !== first), blanket: F.blanket, loot: hLoot(F), bedInteract: true, fur: F.wealth > 0, table: F.wealth > 0, chest: true });
   for (const r of bedRooms) if (r !== first) pPiece(P, r, 'wooden_candlestick', { near: pCentre(r), lit: 3.5, soft: true, opt: { lowOk: true } });
-  if (three && P.rooms.loft && P.rooms.loft.k === 2) { const lo = P.rooms.loft; pStock(P, lo, { sacks: 3, crates: 2, near: [(lo.x0 + lo.x1) / 2 + (mir ? -1 : 1), (lo.z0 + lo.z1) / 2] }); pPiece(P, lo, 'treasure_chest', { side: ['s', 'n'] }); pPiece(P, lo, 'wooden_lantern_01', { near: [(lo.x0 + lo.x1) / 2, lo.z1 - 0.8], lit: 4.5, soft: true, opt: { lowOk: true } }); }      /* what the shop keeps under its roof */
+  const lo2 = Object.values(P.rooms).find(r => r.k === 2); if (three && lo2) { const lo = lo2; pStock(P, lo, { sacks: 3, crates: 2, near: [(lo.x0 + lo.x1) / 2 + (mir ? -1 : 1), (lo.z0 + lo.z1) / 2] }); pPiece(P, lo, 'treasure_chest', { side: ['s', 'n'] }); pPiece(P, lo, 'wooden_lantern_01', { near: [(lo.x0 + lo.x1) / 2, lo.z1 - 0.8], lit: 4.5, soft: true, opt: { lowOk: true } }); }      /* what the shop keeps under its roof */
   if (cellarOK) { const cel = P.rooms.cellar; hCellarChest(P, cel, F); dressCellar(P, cel, { barrels: 1, crates: 1, rows: false }); }      /* the chest first: it is what the cellar is for */
   hMemo(P, F);
+  for (const r of Object.values(P.rooms)) if (!P.lightIn[r.id]) pLamp(P, r, ...pCentre(r));      /* a room no window or candle lights gets one lantern (the validator asks for a light in every room) */
   if (!hh && !small) P.err.push('no hearth fits');      /* a one-room shop on a 4 m front has no fire of its own (a brazier, the baker's oven next door) */
 }
 { const _hb = hBuild; hBuild = function (P, c, info) { if (!INOUT_FIT.has(P.id)) return _hb(P, c, info); const F = hCtx(P, c); P.fam = F; hCompact(P, c, F); }; for (const id in PLANS) if (PLANS[id] === _hb) PLANS[id] = hBuild; }
