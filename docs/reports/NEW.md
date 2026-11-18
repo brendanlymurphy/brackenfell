@@ -9,6 +9,12 @@ are fixed. Tobin's note says east now and the stone works from the wall foot. Wr
 not right: the boat-house doors now answer honestly (locked, keys with Wenn) and Wenn has no key; the "Hidden Yard" is still a name with no
 place. The cellar corner is nearly black in daylight.
 
+**2. The first ten minutes on Build 88 (done, `docs/audit/FIRSTTEN10.md`, dated section).** Greta is behind a counter now, not in the
+fireplace; the sword is no longer drawn. The drowned man's prompt works from the quay deck but not from Wharf Street, where the walk ends a
+metre below the deck. Of the first ten doors from the gate, the stair fills or dominates the first view in 4 (`in.65`, `in.07`, `in.08`,
+`in.04`) and edges into 3 more; a resident stands in the doorway in 2 (`in.10`, `in.40`). The Cobbler's House door (`in.44`) cannot be
+reached closer than 4.2 m and shows no prompt.
+
 **6. Sound (done, `docs/audit/VOICE_LENGTHS.md`).** The 529 recordings are only on `fork-cull` (main and threejs have 254); measured from
 there with ffmpeg. Median 12.6 characters per second of speech. To listen to first: the 20 fastest (Tobin 19.8, Greta 19.4 and 18.9, Alison,
 Alaric) and the 20 slowest (mostly two-word barks read with long gaps: Finn's "Shh. Fish." 3.2); 3 clips with more than 0.5 s of silence at an

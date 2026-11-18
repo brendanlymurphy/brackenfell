@@ -1,0 +1,6 @@
+// [audit] can a player reach the drowned man's prompt: from 5 m out in eight directions, hold W looking at him for 5 s
+const ang = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b)), it = World.interact.find(i => i.id === 'wharf.body'), out = { body: it.p.map(v => +v.toFixed(2)), r: it.r, tries: [] };
+for (let a = 0; a < 360; a += 45) { const sx = it.p[0] + Math.sin(a * Math.PI / 180) * 5, sz = it.p[2] - Math.cos(a * Math.PI / 180) * 5, gy = World.groundAt(sx, sz, 5); if (World.waterAt(sx, sz) > gy) { out.tries.push([a, 'water']); continue; } Cells.teleport({ p: [sx, gy, sz], yaw: 0 }); game.step(3, 1 / 30);
+  let best = 99; for (let k = 0; k < 150 && UI.prompt !== it; k++) { const P = Player, want = Math.atan2(it.p[0] - P.pos[0], -(it.p[2] - P.pos[2])), dh = Math.hypot(it.p[0] - P.pos[0], it.p[2] - P.pos[2]), dy = it.p[1] - (P.pos[1] + P.eye); Input.keys = { KeyW: dh > 0.8 }; Input.lookX = Math.max(-0.2, Math.min(0.2, ang(want, P.yaw))); Input.lookY = Math.max(-0.1, Math.min(0.1, P.pitch - Math.atan2(dy, dh))); game.step(1, 1 / 30); best = Math.min(best, dh); }
+  Input.keys = {}; out.tries.push([a, +best.toFixed(2), UI.prompt === it ? 'prompt: ' + (UI.promptLab || '') : 'no prompt', Player.pos.map(v => +v.toFixed(1))]); if (a === 0 || UI.prompt === it) { game.draw(); await __snap('body_' + a); } }
+return out;

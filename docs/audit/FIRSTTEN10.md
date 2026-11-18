@@ -1,4 +1,44 @@
-# Ten minutes as a new player, waiting for people (Build 83)
+# Ten minutes as a new player
+
+## 2026-11-18: again on the live build (Build 88)
+
+Same patient bot (`test/audit/firstten10.mjs --out ft88`), plus `test/audit/doors_view.js` (the first ten doors from the gate), `door_reach.js`
+and `body_reach.js` (can a held-W approach reach the prompt). Pictures `firstten_b88.jpg`, `doors_first10_b88.jpg`, `firstten_b88_body_*.jpg`.
+
+| Question | Build 83 | Build 88 |
+|---|---|---|
+| Greta in the fireplace | Yes, three pictures | **Fixed.** She stands behind a counter with a window at her back (`firstten_b88.jpg` 3, 4, 5). |
+| The sword out | All ten minutes | **Fixed.** No blade in the Hart, at the stalls or in conversation; only the health bar shows. |
+| The drowned man without a prompt | No prompt | **Prompt works from the quay deck** ("Examine the body", reached from 5 of 8 sides). But the body lies on the raised quay: walking down Wharf Street the bot ends at (8.7, -1.0, 80.3), a metre below the deck's west edge, and from the street side (north) the prompt never comes (`firstten_b88_body_north.jpg`). Where the way up onto the quay is was not found by the bot; a player may have the same trouble. |
+| The square at 08:40 | 3 to 4 people | 0 to 3 in view |
+| The stalls at 10:30 | 4 to 7 | **Up to 14 in view**, 7 standing (`firstten_b88.jpg` 6) |
+
+### The first ten doors from the gate (`doors_first10_b88.jpg`; each picture after the fade, standing in the doorway)
+
+| # | Door | What fills the first view |
+|---|---|---|
+| 1 | Ropemaker's House (`in.65`) | **The stair**, across the left half; a doorway beyond |
+| 2 | Ferrin's House (`in.75`) | Dark: a doorway and a wall; a stair edge at the right |
+| 3 | Scribe's House (`in.40`) | A man standing in the doorway, close; the room with windows beyond |
+| 4 | Warden's Lodge | A doorway, a stone wall, the stair edge at the right |
+| 5 | The Pottery (`in.07`) | **The stair** across the whole view, and a person below it |
+| 6 | Baker's House (`in.10`) | **A head and shoulders filling half the view**: someone standing just inside the door; a stair beyond |
+| 7 | Alder House (`in.08`) | **The stair** on the left half, a door ahead |
+| 8 | Brandt's Forge | The forge fire and Brandt: a room |
+| 9 | Fletcher's House (`in.04`) | **The stair** fills the view |
+| 10 | The Honeyed Hart | The hearth, logs, a window: a room |
+
+So of the first ten doors a player meets, the stair fills or dominates the first view in **4** (`in.65`, `in.07`, `in.08`, `in.04`) and edges into
+3 more; a resident stands in the doorway in 2 (`in.10`, `in.40`); only the forge and the Hart open on a room. All ten doors can be reached
+and entered; the prompt shows at 2.7 m. One door that cannot: the Cobbler's House (`in.44`): the closest a player gets is 4.2 m and no prompt
+shows (`door_reach.js`).
+
+### Where the bot failed (not the game)
+
+The bot entered Hobb's Cottage's doorway while Alison Pike stood in it, pressed E, and was left in her conversation for the rest of the run, so
+the house, the wharf and Finn were not seen in this run; the doors and the body were redone with the separate checks above.
+
+## Build 83, waiting for people
 
 `test/audit/firstten10.mjs`: by input from the title screen, walking at a person's pace on the villagers' own paths. It waits for anyone
 who is walking to stop, steps up until the prompt names that person, picks the first question and then leaves the conversation, and stands
