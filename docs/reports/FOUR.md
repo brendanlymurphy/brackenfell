@@ -1,9 +1,29 @@
 # Reports: Agent Four (fork-ch1)
 
+## 2026-11-18 (item 7: animals, candidates only; none added)
+
+**No candidate passes; nothing added. Decision needed from you:** allow the hosts below, or accept no animals for now.
+
+The brief asks for realistic CC0 animals (pig, hen, goose, dog, cat, sheep, ox, horse) reachable from GitHub or npm. Searched GitHub
+code and repositories by file name and by topic.
+
+| Candidate | Licence | Why it fails |
+|---|---|---|
+| `ir-engine/ir-engine-assets-basic` `assets/animals/` Horse, Cow, Pig, Chicken | CPAL-1.0 (repository licence) | Not CC0. The files are Git LFS pointers, so not fetchable from raw GitHub. |
+| KhronosGroup `glTF-Sample-Assets` Fox | mesh CC0 (PixelMannen), rig and animation CC-BY 4.0 | Not wholly CC0; low-poly; a fox is not on the list. |
+| Quaternius farm animals, Kenney animal kits, Hubs avatars, `series-ai` critters | CC0 | Stylised or low-poly cartoon: the owner's rule rejects these. |
+| Poly Haven `horse_statue_01` | CC0 | A porcelain figurine, not an animal. |
+
+What would help: the session's network allows only GitHub and package registries, and `opengameart.org` failed to resolve. If you add
+`opengameart.org`, `polyhaven.com` and `sketchfab.com` to the environment, I can check:
+- OpenGameArt CC0 horse and cow entries (2K textures, said to be realistic; licence to verify);
+- Sketchfab models marked CC0 (scans exist, but each needs a login to download, so you would download them);
+- Smithsonian Open Access 3D (CC0; mostly specimens and skeletons).
+Until then, the rule (no living thing from primitives) leaves the town without animals, as it is now.
+
 ## 2026-11-18 (items 5 and 6: besom and trade tools; sameness. And a WebGPU fault of mine, fixed)
 
-Head `82f793f` (merged with threejs `bc1cac4`). Full gate requested at this hash (workflow_dispatch; number not yet listed when this
-was written). **Readings taken without a decision from you** (all easy to undo, all in `src/49_chars.js` / `src/77d_handprops.js`):
+Head `82f793f` (merged with threejs `bc1cac4`). Full gate at this hash: **run 301** (pending when written). Run 294, at `2187dd1`, was superseded before it started. **Readings taken without a decision from you** (all easy to undo, all in `src/49_chars.js` / `src/77d_handprops.js`):
 (a) the sweep motion is now `farm-watering` (standing), not `shovel-dig` (a crouch that tented every skirt); (b) "differ in one garment"
 is read as the colour of the main garment, not a different piece; (c) tools put down = not drawn (no bench or rack placement).
 
