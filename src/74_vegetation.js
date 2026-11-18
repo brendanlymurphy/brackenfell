@@ -79,10 +79,9 @@ function buildVegetation() {
   leafBlob(bushL, rng(5), 0, 0.55, 0, 0.75, 0.5, 0.75, 9, 0.62, [0.40, 0.55, 0.22], 0.3);
   /* [fx3] a hedge clump: an irregular dark inner mass of few larger leaves and bare twigs, then many small cards (4-7 cm after scale) in uneven layers, light at the top only where it is thin, the foot left open so stems show */
   const hedgeL = new Mesh(2048); hedgeL.mat(MAT.LEAVES, [1, 1, 1]);
-  { const hr = rng(8); leafBlob(hedgeL, hr, 0, 0.5, 0, 0.4, 0.32, 0.38, 14, 0.13, [0.17, 0.26, 0.10], 0.15);
-    leafBlob(hedgeL, hr, 0.05, 0.56, -0.03, 0.52, 0.4, 0.48, 84, 0.07, [0.34, 0.5, 0.18], 0.3);
-    leafBlob(hedgeL, hr, -0.1, 0.8, 0.05, 0.3, 0.2, 0.28, 18, 0.06, [0.42, 0.56, 0.22], 0.35);
-    hedgeL.mat(MAT.BARK, [0.34, 0.27, 0.19]); for (const [a, h2] of [[0.3, 0.3], [2.1, 0.26], [3.9, 0.32], [5.2, 0.24]]) hedgeL.tube([[Math.cos(a) * 0.05, -0.05, Math.sin(a) * 0.05], [Math.cos(a) * 0.1, h2 * 0.5, Math.sin(a) * 0.1], [Math.cos(a) * 0.15, h2, Math.sin(a) * 0.15]], [0.03, 0.022, 0.012], 4); }
+  { const hr = rng(8); leafBlob(hedgeL, hr, 0, 0.5, 0, 0.4, 0.32, 0.38, 6, 0.15, [0.17, 0.26, 0.10], 0.15);
+    leafBlob(hedgeL, hr, 0.05, 0.56, -0.03, 0.52, 0.4, 0.48, 30, 0.085, [0.34, 0.5, 0.18], 0.3);
+    leafBlob(hedgeL, hr, -0.1, 0.8, 0.05, 0.3, 0.2, 0.28, 6, 0.07, [0.42, 0.56, 0.22], 0.35); }
   // ── boulders ──
   // one boulder shape (vertex lod 3: the instance shader squashes it differently for every boulder), so boulders are one draw per cell, not three
   const rockAll = new Mesh(256);

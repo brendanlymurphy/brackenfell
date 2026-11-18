@@ -243,7 +243,7 @@ function buildChapelWay(bucket) {
       m.push().T(cx, g, cz).RY(-ang);
       if (sd < 0) { m.mat(MAT.STONE, [0.4, 0.38, 0.35], 1.4); m.box(-L / 2, 0, -0.25, L / 2, 1.15, 0.25, 4); }
       else { earthBank(m, [cx - Math.cos(ang) * L / 2, cz - Math.sin(ang) * L / 2], [cx + Math.cos(ang) * L / 2, cz + Math.sin(ang) * L / 2], 0.5, 0.35, null, { x: cx, z: cz, ang, y: g });
-        World.hedgeClumps = World.hedgeClumps || []; const nC = Math.round(L / 0.62); for (let c = 0; c < nC; c++) { if (R() < 0.12) continue; const u = -L / 2 + (c + 0.5) * L / nC + (R() - 0.5) * 0.3, v = (R() - 0.5) * 0.5, w = [cx + Math.cos(ang) * u - Math.sin(ang) * v, cz + Math.sin(ang) * u + Math.cos(ang) * v]; World.hedgeClumps.push([w[0], gy(w[0], w[1]) + 0.2, w[1], 1.0 + R() * 0.8, R() * 6.28, 0.1 + R() * 0.2, R()]); }
+        World.hedgeClumps = World.hedgeClumps || []; const nC = Math.round(L / 0.85); for (let c = 0; c < nC; c++) { if (R() < 0.12) continue; const u = -L / 2 + (c + 0.5) * L / nC + (R() - 0.5) * 0.3, v = (R() - 0.5) * 0.5, w = [cx + Math.cos(ang) * u - Math.sin(ang) * v, cz + Math.sin(ang) * u + Math.cos(ang) * v]; World.hedgeClumps.push([w[0], gy(w[0], w[1]) + 0.2, w[1], 1.0 + R() * 0.8, R() * 6.28, 0.1 + R() * 0.2, R()]); }
         if (i === 1 && sd > 0) World.hedgeSaplings = [[cx - 0.5, cz - 0.1], [cx + 1.2, cz + 0.3]]; }
       addBoxCollider(m, -L / 2 + 0.45, -0.3, L / 2 - 0.45, 0.3, 0, 1.3);
       m.pop(); }
@@ -311,7 +311,7 @@ function buildWestgate(bucket) {
   const X0 = -79, X1 = -106, gaps = { '-1': [[-90, -92], [-98.5, -100]], '1': [[-84.4, -86]] };
   for (const sd of [-1, 1]) {
     const inGap = x => (gaps[sd] || []).some(g => x <= g[0] + 0.3 && x >= g[1] - 0.3);
-    for (let x = X0; x > X1; x -= 0.6) { if ((gaps[sd] || []).some(g => x <= g[0] && x >= g[1])) continue; const z = rz(x) + sd * (3.5 + Math.sin(x * 0.21) * 0.25 + (R() - 0.5) * 0.3), g = gy(x, z); World.hedgeClumps.push([x + (R() - 0.5) * 0.3, g + 0.2, z, 0.9 + R() * 0.7 + (R() < 0.12 ? 0.5 : 0), R() * 6.28, 0.1 + R() * 0.2, R()]); }
+    for (let x = X0; x > X1; x -= 0.85) { if ((gaps[sd] || []).some(g => x <= g[0] && x >= g[1])) continue; const z = rz(x) + sd * (3.5 + Math.sin(x * 0.21) * 0.25 + (R() - 0.5) * 0.3), g = gy(x, z); World.hedgeClumps.push([x + (R() - 0.5) * 0.3, g + 0.2, z, 0.9 + R() * 0.7 + (R() < 0.12 ? 0.5 : 0), R() * 6.28, 0.1 + R() * 0.2, R()]); }
     let x = X0; for (const g of (gaps[sd] || []).slice().sort((a, b) => b[0] - a[0]).concat([[X1, X1]])) { const xa = x, xb = g[0]; if (xa - xb > 0.5) { const za = rz(xa) + sd * 3.5, zb = rz(xb) + sd * 3.5, cx = (xa + xb) / 2, cz = (za + zb) / 2, m = bucket(cx, cz), ang = Math.atan2(zb - za, xb - xa), L = Math.hypot(xb - xa, zb - za), gg = gy(cx, cz);
         m.push().T(cx, 0, cz).RY(-ang); earthBank(m, [cx - Math.cos(ang) * L / 2, cz - Math.sin(ang) * L / 2], [cx + Math.cos(ang) * L / 2, cz + Math.sin(ang) * L / 2], 0.5, 0.4, null, { x: cx, z: cz, ang, y: 0 }); addBoxCollider(m, -L / 2 + 0.1, -0.35, L / 2 - 0.1, 0.35, 0, 1.3); m.pop(); }
       x = g[1]; if (g[0] !== g[1]) { const gx = (g[0] + g[1]) / 2, gz = rz(gx) + sd * 3.5, m = bucket(gx, gz); m.mat(MAT.TIMBER, [0.3, 0.24, 0.18], 0.5); for (const px of [g[0] + 0.15, g[1] - 0.15]) { const pz = rz(px) + sd * 3.5; m.cbox(px, gy(px, pz) - 0.1, pz, 0.16, 1.5, 0.16, 0); } } }
@@ -337,7 +337,8 @@ function buildWestgate(bucket) {
 const WEST_EDGE = { n: [[-62, -8.15], [-62, -15], [-64, -19.5], [-65, -26], [-63, -38], [-58, -49], [-47, -56], [-33, -58.5], [-30, -58.7]], s: [[-62, -2.25], [-62, 5], [-63.5, 9.5], [-65, 16], [-63, 30], [-59, 44], [-52, 56], [-44, 66], [-37, 72.5], [-32, 76.5]], ne: [[8, -58.7], [30, -60.5], [52, -60], [72.7, -57], [72.7, -46.5]], pal: 2 };
 function buildWestEdge(bucket) {
   if (TEST && TEST.plots === 0) return;
-  const gy = (x, z) => Terrain.y(x, z);
+  const gy = (x, z) => Terrain.y(x, z), bucket0 = bucket;
+  bucket = (x, z) => { const m = bucket0(2e6 + Math.floor(x / 44) * 80, Math.floor(z / 44) * 80); m.maxDist = 60; m.noShadow = true; m.m1 = 0; m.m2 = 0; m.m3 = 0; m.ao = 1; m.grad = null; return m; };      // [fx3] 44 m cells of their own, hidden beyond 60 m and out of the shadow pass, like the town walls
   const segX = (p1, p2, p3, p4) => { const d = (p2[0] - p1[0]) * (p4[1] - p3[1]) - (p2[1] - p1[1]) * (p4[0] - p3[0]); if (Math.abs(d) < 1e-9) return false; const t = ((p3[0] - p1[0]) * (p4[1] - p3[1]) - (p3[1] - p1[1]) * (p4[0] - p3[0])) / d, u = ((p3[0] - p1[0]) * (p2[1] - p1[1]) - (p3[1] - p1[1]) * (p2[0] - p1[0])) / d; return t > -0.1 && t < 1.1 && u > -0.05 && u < 1.05; };
   const crossRoad = (A, B) => Roads.some(q => q.id !== 'main' && q.line.p.some((pt, i) => i && segX(A, B, q.line.p[i - 1], pt)));
   const roadNear = (A, B) => crossRoad(A, B) || (Math.abs((A[0] + B[0]) / 2 + 62) < 3 && Math.abs((A[1] + B[1]) / 2 + 5.2) < 2.6);

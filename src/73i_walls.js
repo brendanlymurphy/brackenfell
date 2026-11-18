@@ -8,14 +8,13 @@
 function logRow(mL, A, B, topFn, inside, seed) {
   const gy = (x, z) => Terrain.y(x, z), dx = B[0] - A[0], dz = B[1] - A[1], L = Math.hypot(dx, dz); if (L < 0.2) return; const ux = dx / L, uz = dz / L;
   const hs = (k, a) => Math.abs(Math.sin(k * a + seed * 1.37) * 43758.5453) % 1; let u = 0.02, n = 0;
-  while (u < L - 0.05) { const h1 = hs(u, 127.1), h2 = hs(u, 311.7), h3 = hs(u, 74.7), r = 0.1 + h1 * 0.04, c = u + r;
+  while (u < L - 0.05) { const h1 = hs(u, 127.1), h2 = hs(u, 311.7), h3 = hs(u, 74.7), r = 0.12 + h1 * 0.05, c = u + r;
     const bx = A[0] + ux * c + inside[0] * (h2 - 0.5) * 0.03, bz = A[1] + uz * c + inside[1] * (h2 - 0.5) * 0.03, gL = gy(bx, bz);
     if (h3 < 0.02 && n > 2) { const w0 = [bx - ux * 0.2, bz - uz * 0.2], w1 = [bx + ux * 0.2, bz + uz * 0.2]; mL.mat(MAT.TIMBER, [0.34, 0.28, 0.2], 0.5); for (const k of [0.4, 0.9, 1.4]) mL.tube([[w0[0], gL + k, w0[1]], [w1[0], gL + k + 0.03, w1[1]]], [0.028, 0.028], 5, true);
       for (const t2 of [-0.15, 0, 0.15]) mL.tube([[bx + ux * t2, gL - 0.3, bz + uz * t2], [bx + ux * t2, gL + 1.7, bz + uz * t2]], [0.03, 0.03], 5, true); u = c + 0.2; n++; continue; }
     const t = c / L, top = topFn(t) + (h1 - 0.5) * 0.45 - (h3 > 0.93 ? 0.2 : 0), lx = (h2 - 0.5) * 0.12, lz = (h1 - 0.5) * 0.07, sh = [bx + lx * 0.9, top - 0.34, bz + lz * 0.9], tip = [bx + lx, top, bz + lz], pale = h3 > 0.93 && h3 < 0.985;
     mL.mat(MAT.BARK, pale ? [0.7, 0.58, 0.42] : [0.5 + h1 * 0.1, 0.43 + h1 * 0.08, 0.35 + h1 * 0.06], 1.0);
-    mL.tube([[bx, gL - 0.3, bz], sh, tip], [r * 1.04, r * 0.97, 0.012], 8, true);
-    if (!pale) { mL.mat(MAT.MOSS, [0.26, 0.3, 0.19], 1.0); mL.tube([[bx, gL - 0.25, bz], [bx + lx * 0.15, gL + 0.35 + h2 * 0.2, bz + lz * 0.15]], [r * 1.07, r * 1.02], 8, false); }
+    mL.grad = [0.62, 1]; mL.tube([[bx, gL - 0.3, bz], sh, tip], [r * 1.04, r * 0.97, 0.012], 8, false); mL.grad = null;
     u = c + r - 0.02; n++; }
   // the riband: a squared pole pegged along the inside at 1.6 m, following the ground at its two ends
   { const o = 0.3, a0 = [A[0] + inside[0] * o, A[1] + inside[1] * o], b0 = [B[0] + inside[0] * o, B[1] + inside[1] * o]; mL.mat(MAT.TIMBER, [0.3, 0.25, 0.19], 0.6); mL.beam([a0[0], gy(A[0], A[1]) + 1.6, a0[1]], [b0[0], gy(B[0], B[1]) + 1.6, b0[1]], 0.07, 0.12); }
@@ -23,7 +22,7 @@ function logRow(mL, A, B, topFn, inside, seed) {
 function buildWalls(bucket) {
   if (TEST && TEST.levels === 0) return;
   const touch = new Map(), K = rtKit(bucket, touch), { M, col, box, beam, post, stair, dark, wood, gy } = K;
-  K.fine = true; K.maxDist = 85; K.noShadow = true;       // the palisades and gate towers are hidden beyond 150 m (their 30 m cells)
+  K.fine = true; K.maxDist = 70; K.noShadow = true;       // the palisades and gate towers are hidden beyond 150 m (their 30 m cells)
   const roadAt = (id, axis, v) => { const L = INF.LN[id].p; for (let i = 0; i < L.length - 1; i++) { const a = L[i], b = L[i + 1], k = axis === 'z' ? 1 : 0, o = axis === 'z' ? 0 : 1; if ((a[k] - v) * (b[k] - v) <= 0 && a[k] !== b[k]) return a[o] + (b[o] - a[o]) * (v - a[k]) / (b[k] - a[k]); } return null; };
   // a wall run. P maps (u along, v across: 0 outside, + inside) to the world; axis 'x' or 'z' is the world axis that u runs along
   const wallRun = (id, axis, c, sgn, u0, u1, ug, o) => {
