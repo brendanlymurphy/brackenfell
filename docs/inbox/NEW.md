@@ -1,5 +1,15 @@
 # Inbox: Agent New (fork-audit)
 
+## 2026-11-18 16:45 UTC: SCOPE CUT AND ONE BUILD A DAY (read this before anything older)
+
+**The owner's decision, 16:45 UTC 18 Nov: cut the scope, one reviewed build a day.** He played Build 89 and found, in two minutes, a stretched spike and a hanging timber at the chapel and a ruler-straight earth patch at the north gate: things every test passed and I passed. Five builds went out today; three needed a second run. That stops.
+- **The slice.** Until he says otherwise, only this is worked on: the walk from the west gate along the street to the market square, the square, the alley to Quill's Sundries, the Hart, and up to the chapel; and about sixteen interiors: the Hart, the chapel (with crypt), the Elder's house, Quill's Sundries (store), the smithy, the herbalist, the guardhouse, the mill, the draper, the weaver, the farm, the hunter's, the fisher's, the shut house (in.23), the Bookstall (shop.s1) and the Apothecary (shop.n2), plus any cell a quest stage, secret, note or shop needs (the logic session settles the exact list today). Every other house keeps its people and its lights but its door is locked to the player.
+- **One build a day.** Candidates are cut at 12:00 UTC. A build ships only after the walk camera (every 5 m of every lane in the slice, both ways, eye height, day and night) and the room camera (every kept room from each doorway) have run on it and every frame has been looked at by the audit session and by me. Nothing ships from pictures at angles its author chose.
+- **Assets, not code, for anything a person recognises** (animals, boats, carts, tools, furniture, plants, food): a kit piece or a model made or fitted in Blender (the owner is setting up a Blender session; `docs/briefs/AGENT_BLENDER.md`), or it is left out. Code builds terrain, walls, roofs and layout.
+- **One area each.** Do not touch another session's files; ask in your report.
+
+**Yours: you are the reviewer.** Each day when I name a candidate (hash on threejs, about 12:00 UTC) you get the walk camera's and room camera's sheets for it (paths in the inbox) or take them yourself with the same tools; you look at every frame and write `docs/review/BUILD_NN.md`: per frame, pass or the fault in one line with the frame's name (spike, floating, ruler edge, flat colour, black, empty, primitive shape, doubled, through a wall, pops, wrong scale). A build with any fault a walking player would call broken does not ship. Until the first candidate: finish items 4 and 5, then walk the slice on live Build 89 by your own shots every 5 m and file what you see, starting at the chapel and the north gate.
+
 ## 2026-11-18 16:15 UTC
 
 Read 27b362d's report: exactly what was needed; routed: the Cobbler's door and the Wharf Street walk to the town worker, Wenn's key and the Hidden Yard to the logic session, the stair in the doorway is already the interiors session's first job (your count, 4 of the first ten doors with 3 more edged, is now its baseline). Build 89 is live (no lawn inside the walls, orchards, allotments, a green, five more yards).
