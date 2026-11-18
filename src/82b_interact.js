@@ -41,6 +41,7 @@ IX.KINDS = [
   [/crate|apile|cspile|hamper|basket/, 'crate', 'Search the crates', 0, 0.8],
   [/shelf|ware|books|backshelf/, 'shelf', 'Look along the shelf', 0, 0.7],
 ];
+IX.FILLER = new Set(['barrel', 'sacks', 'crate']);
 IX.SEAT = /chair|stool|bench|pew|seat|sbench/;
 // letters and books. tags say where they may lie. 'feeds' sets a flag the rumours and the story read.
 IX.BOOKS = [
@@ -63,7 +64,7 @@ IX.BOOKS = [
   ['pip', 'Pip’s list', 'THINGS I KNOW. 1. Hale cries on the last day of the month. 2. The Elder talks to the lake. 3. There is a door in the Hart’s cellar that is not a cellar door.', ['home', 'inn'], 'cellar'],
   ['debt', 'A scrap with a smudge', 'Greta, I owe you three and six. Will pay when the silver’s in. — D. Pell.', ['inn', 'home'], 'pell'],
   ['cave', 'A map, drawn on a flour sack', 'THE BREAD CAVE. West shore, past the reeds, under the grey rock. Three knocks on the stone and set the pail down. Do not wait.', ['elder', 'home'], 'cave'],
-  ['bounty', 'A notice', 'WANTED: the thief called the Magpie, who takes only silver and only after dark. Last seen on the weavers’ lane. Five gold from the Warden.', ['guard', 'inn', 'store'], 'magpie'],
+  ['bounty', 'A notice', 'WANTED: the thief called the Magpie, who takes only silver and only after dark. Last seen at dusk on the road from the square to the Cutler’s House. Five gold from the Warden.' /* [cast] POINTERS.md: no lane has that name; this is her route */, ['guard', 'inn', 'store'], 'magpie'],
 ];
 IX.READ = {};
 // ── helpers ──
@@ -103,18 +104,23 @@ function ixScan() {
   for (const c of Cells.list) {
     const P = c.ctx && (c.ctx.planDone || c.ctx.plan); if (!P || !P.items || !P.w2) continue;
     const trade = ixTrade(c), wealth = ixWealth(c), table = IX.LOOT[trade] || IX.LOOT.home, owner = c.id, name = c.name;
-    const surf = [];
+    const surf = [], fill = [];
     for (const it of P.items) {
       if (it.kind !== 'floor' && it.kind !== 'rug') continue; const id = String(it.id || '');
       if (it.kind === 'floor') {
         const L = P.lv[it.k] || P.lv[0], y0 = it.y0 !== undefined ? it.y0 : L.y;
         if (IX.SEAT.test(id) && it.h <= 1.1) { const p = P.w2(it.cx, y0 + (it.h || 0.45), it.cz); const s = { kind: 'seat', id: 'seat.' + id, p, r: 1.8, zone: P.zone, cell: c.id, yaw: (it.rot || 0) + P.yaw, h: it.h || 0.45 }; IX.seat.push(s); World.interact.push(s); IX.stats.seat++; continue; }
-        const k = IX.KINDS.find(k => k[0].test(id)); if (k && !used.has(id)) { used.add(id); const rnd = ixRng(ixHash(id)); const p = P.w2(it.cx, y0 + Math.min(it.h || 0.6, 1.2) * 0.7, it.cz);
+        const k = IX.KINDS.find(k => k[0].test(id)); if (k && !used.has(id) && IX.FILLER.has(k[1]) && !it.named) { used.add(id); fill.push({ it, k, id, y0 }); } else if (k && !used.has(id)) { used.add(id); const rnd = ixRng(ixHash(id)); const p = P.w2(it.cx, y0 + Math.min(it.h || 0.6, 1.2) * 0.7, it.cz);
           const o = { kind: 'cont', id: 'cont.' + id, ck: k[1], verb: k[2], p, r: 1.9, zone: P.zone, cell: c.id, owner, ownerName: name, locked: rnd() < k[3] * (trade === 'guard' || trade === 'elder' ? 1.5 : 1), loot: ixRoll(table, rnd, k[4], wealth) };
           IX.cont.push(o); World.interact.push(o); IX.stats.cont++; }
         if (it.top > 0.5 && it.w && it.d) surf.push({ it, y: y0 + it.top });
       }
     }
+    // [fin] barrels, sacks and crates are stock and filler: a building keeps a few of them openable (the ones with the lowest hash), the rest are only furniture. Chests, cupboards and shelves are always openable.
+    fill.sort((a, b) => ixHash(a.id) - ixHash(b.id));
+    for (const f of fill.slice(0, /^(store|inn|mill|farm)$/.test(trade) ? 6 : 3)) { const it = f.it, k = f.k, id = f.id, rnd = ixRng(ixHash(id)); const p = P.w2(it.cx, f.y0 + Math.min(it.h || 0.6, 1.2) * 0.7, it.cz);
+      const o = { kind: 'cont', id: 'cont.' + id, ck: k[1], verb: k[2], p, r: 1.9, zone: P.zone, cell: c.id, owner, ownerName: name, locked: false, loot: ixRoll(table, rnd, k[4], wealth) };
+      IX.cont.push(o); World.interact.push(o); IX.stats.cont++; }
     // loose things on the tables and counters: at most four per interior, one of them a letter or book when the pool has one for this trade
     const rnd = ixRng(ixHash('loose.' + c.id)); const slots = surf.sort(() => rnd() - 0.5).slice(0, 4); let n = 0;
     const pool = IX.BOOKS.filter(b => b[3].includes(trade === 'smith' ? 'smith' : trade === 'herb' ? 'herb' : trade === 'chapel' ? 'chapel' : trade === 'guard' ? 'guard' : trade === 'inn' ? 'inn' : trade === 'store' ? 'store' : trade === 'elder' ? 'elder' : 'home'));

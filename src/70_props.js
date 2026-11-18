@@ -30,6 +30,26 @@ const emit = (m, k, fn) => { const a = m.m2, b = m.m3; m.m2 = a | 2; m.m3 = clam
 const at = (m, x, y, z, rot, fn) => { m.push().T(x, y, z); if (rot) m.RY(rot); const d = m.st.length; fn(); if (m.st.length !== d) pushPopWarn(m, 'at'); m.pop(); };
 const pushPopWarn = (m, who) => { if (!pushPopWarn.n) pushPopWarn.n = 0; if (pushPopWarn.n++ < 4) console.warn('[fx1] unbalanced push/pop inside ' + who + ' (a builder popped or pushed once too often: whatever it drew next landed at the wrong place)'); };          // [fx1]
 
+// [fin] glazed pottery and glass by vertex colour (a plan mesh has no per-vertex roughness: indoors every surface is floored at 0.8): a lathe whose colour is a function of the ring (k, height 0..1) and the way round (a 0..1)
+function latheG(m, prof, n, caps, colFn) {
+  const np = prof.length, circ = TAU * Math.max(...prof.map(q => q[0])), uo = m.rnd() * 3, vo = m.rnd() * 3, y0 = prof[0][1], H = Math.max(1e-4, prof[np - 1][1] - y0); let len = 0; const acc = [0];
+  for (let k = 1; k < np; k++) { len += Math.hypot(prof[k][0] - prof[k - 1][0], prof[k][1] - prof[k - 1][1]); acc.push(len); }
+  m.grid(n, np - 1, (i, j) => {
+    const k = np - 1 - j, a = -i / n * TAU, q = prof[k], pa = prof[Math.max(k - 1, 0)], pb = prof[Math.min(k + 1, np - 1)], tr = pb[0] - pa[0], ty = pb[1] - pa[1], c = Math.cos(a), sn = Math.sin(a), cc = colFn(k, (q[1] - y0) / H, i / n);
+    m.cr = Math.max(0, Math.min(255, cc[0] * 255)) | 0; m.cg = Math.max(0, Math.min(255, cc[1] * 255)) | 0; m.cb = Math.max(0, Math.min(255, cc[2] * 255)) | 0;
+    return m.vert(q[0] * c, q[1], q[0] * sn, ty * c, -tr, ty * sn, uo + i / n * circ / m.tile, vo + (len - acc[k]) / m.tile);
+  });
+  caps = caps | 0; if (caps & 2) m.disc(0, prof[np - 1][1], 0, prof[np - 1][0], n, 1); if (caps & 1) m.disc(0, prof[0][1], 0, prof[0][0], n, -1);
+  return m;
+}
+const _hl = (a, w, g) => Math.exp(-Math.pow(((a - g + 1.5) % 1) - 0.5, 2) / (w * w));      // a bump round the circumference, centred on a = g
+// glazed body: unglazed darker foot, a glaze that lightens a little up the shoulder, a darker turned lip, a soft highlight down one side
+const _chaikin = pr => { const o = [pr[0]]; for (let i = 0; i < pr.length - 1; i++) { const a = pr[i], b = pr[i + 1]; o.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]); } o.push(pr[pr.length - 1]); return o; };
+function glazeLathe(m, prof0, n, col, o) { o = o || {}; const prof = _chaikin(_chaikin(prof0)), foot = o.foot === undefined ? 0.12 : o.foot; m.mat(MAT.PLAIN, col);
+  return latheG(m, prof, n, 1, (k, t, a) => { const hl = _hl(a, 0.07, 0.12) * 0.22 + _hl(a, 0.2, 0.12) * 0.07; if (t < foot) return [col[0] * 0.66 + 0.02, col[1] * 0.64 + 0.02, col[2] * 0.6 + 0.02]; const lip = k === prof.length - 1 ? 0.72 : 1, g = (0.9 + 0.16 * t) * lip; return [col[0] * g + hl * 0.8, col[1] * g * 0.99 + hl * 0.8, col[2] * g * 0.97 + hl * 0.78]; }); }
+// glass: thin, dark where it is thick, a pale rim, a bright sliver of highlight
+function glassLathe(m, prof, n, col) { m.mat(MAT.PLAIN, col);
+  return latheG(m, prof, n, 1, (k, t, a) => { const hl = _hl(a, 0.045, 0.1) * 0.55 + _hl(a, 0.16, 0.1) * 0.1, rim = k === prof.length - 1 ? 0.3 : 0, e = 0.62 + 0.25 * Math.sin(t * Math.PI); return [col[0] * e + hl + rim, col[1] * e + hl + rim, col[2] * e + hl + rim]; }); }
 const Props = {
   table(m, len, wid, h) {
     h = h || 0.76; m.mat(MAT.PLANKS, COL.wood); m.box(-len / 2, h - 0.06, -wid / 2, len / 2, h, wid / 2);
@@ -92,12 +112,12 @@ const Props = {
     if (!noCol) addBoxCollider(m, -s / 2, -s / 2, s / 2, s / 2, 0, s);
   },
   sack(m, s, col) { s = s || 0.3; m.mat(MAT.CLOTH, col || COL.wool, 0.6); m.lathe([[0.001, 0], [s * 0.82, s * 0.03], [s * 1.0, s * 0.45], [s * 0.92, s * 1.05], [s * 0.58, s * 1.5], [s * 0.26, s * 1.68]], 10, 2); m.cyl(0, s * 1.6, 0, s * 0.2, s * 0.26, s * 0.26, 6, 2); m.mat(MAT.CLOTH, [0.2, 0.15, 0.1], 0.6); m.cyl(0, s * 1.58, 0, s * 0.3, s * 0.3, s * 0.05, 8, 2); },   // [fx2] a slumped sack with a tied neck, not a ball
-  pot(m, s, col) { s = s || 0.14; m.mat(MAT.PLAIN, col || COL.clay); m.lathe([[s * 0.5, 0], [s, s * 0.7], [s * 0.9, s * 1.5], [s * 0.55, s * 1.9], [s * 0.7, s * 2.1]], 8, 1); },
-  jug(m, col) { const c = col || [0.50, 0.33, 0.22]; m.mat(MAT.PLAIN, c); m.lathe([[0.04, 0], [0.075, 0.03], [0.088, 0.09], [0.07, 0.17], [0.038, 0.215], [0.046, 0.25], [0.05, 0.262]], 9, 1); m.mat(MAT.PLAIN, [c[0] * 0.6, c[1] * 0.6, c[2] * 0.6]); m.disc(0, 0.255, 0, 0.034, 8, 1); m.mat(MAT.PLAIN, c); m.beam([0.05, 0.215, 0], [0.105, 0.17, 0], 0.016, 0.016); m.beam([0.105, 0.17, 0], [0.085, 0.09, 0], 0.016, 0.016); },
-  bottle(m, col) { m.mat(MAT.PLAIN, col || COL.glass); m.lathe([[0.035, 0], [0.04, 0.02], [0.04, 0.14], [0.014, 0.20], [0.014, 0.27]], 7, 3); },
+  pot(m, s, col) { s = s || 0.14; glazeLathe(m, [[s * 0.5, 0], [s * 0.62, s * 0.12], [s, s * 0.7], [s * 0.9, s * 1.5], [s * 0.55, s * 1.9], [s * 0.7, s * 2.1], [s * 0.74, s * 2.14]], 16, col || COL.clay); },
+  jug(m, col) { const c = col || [0.50, 0.33, 0.22]; glazeLathe(m, [[0.04, 0], [0.05, 0.01], [0.075, 0.03], [0.088, 0.09], [0.07, 0.17], [0.038, 0.215], [0.046, 0.25], [0.05, 0.262]], 16, c); m.mat(MAT.PLAIN, [c[0] * 0.6, c[1] * 0.6, c[2] * 0.6]); m.disc(0, 0.255, 0, 0.034, 8, 1); m.mat(MAT.PLAIN, c); m.beam([0.05, 0.215, 0], [0.105, 0.17, 0], 0.016, 0.016); m.beam([0.105, 0.17, 0], [0.085, 0.09, 0], 0.016, 0.016); },
+  bottle(m, col) { glassLathe(m, [[0.035, 0], [0.04, 0.02], [0.04, 0.14], [0.014, 0.20], [0.014, 0.25], [0.017, 0.262]], 14, col || COL.glass); m.mat(MAT.PLANKS, [0.55, 0.42, 0.28], 0.3); m.cyl(0, 0.24, 0, 0.012, 0.014, 0.04, 8, 2); },
   mug(m) { m.mat(MAT.PLANKS, COL.wood, 0.3); m.lathe([[0.045, 0], [0.05, 0.12]], 8, 1); m.mat(MAT.PLAIN, [0.3, 0.2, 0.1]); m.disc(0, 0.10, 0, 0.044, 8, 1); m.mat(MAT.METAL, COL.iron); m.lathe([[0.052, 0.09], [0.052, 0.105]], 8, 0); },
   plate(m, col) { m.mat(MAT.PLAIN, col || [0.72, 0.60, 0.42]); m.lathe([[0.07, 0], [0.12, 0.018]], 10, 1); m.disc(0, 0.004, 0, 0.07, 10, 1); },
-  bowl(m, col) { m.mat(MAT.PLAIN, col || [0.60, 0.42, 0.26]); m.lathe([[0.04, 0], [0.09, 0.05], [0.10, 0.07]], 9, 1); m.disc(0, 0.045, 0, 0.085, 9, 1); },
+  bowl(m, col) { glazeLathe(m, [[0.04, 0], [0.05, 0.01], [0.09, 0.05], [0.10, 0.07], [0.098, 0.073]], 16, col || [0.60, 0.42, 0.26], { foot: 0.16 }); m.mat(MAT.PLAIN, (col || [0.60, 0.42, 0.26]).map(v => v * 0.85)); m.disc(0, 0.045, 0, 0.085, 14, 1); },
   loaf(m) { m.mat(MAT.PLAIN, [0.52, 0.36, 0.19]); m.ball(0, 0.045, 0, 0.13, 0.055, 0.08, 9, 5); m.mat(MAT.PLAIN, [0.72, 0.58, 0.36]); for (const x of [-0.06, 0, 0.06]) m.beam([x - 0.02, 0.098, -0.04], [x + 0.02, 0.098, 0.04], 0.01, 0.008); },
   cheese(m) { m.mat(MAT.PLAIN, [0.58, 0.46, 0.24]); m.cyl(0, 0, 0, 0.12, 0.12, 0.07, 10, 2); m.mat(MAT.PLAIN, [0.66, 0.54, 0.32]); m.box(0.0, 0.0, -0.12, 0.12, 0.07, 0.0, 1 | 4 | 8 | 16); },
   apple(m, col) { const c = col || COL.apple; m.mat(MAT.PLAIN, [c[0] * 0.85, c[1] * 0.85, c[2] * 0.85]); m.ball(0, 0.04, 0, 0.042, 0.037, 0.042, 7, 4); m.mat(MAT.PLAIN, [0.22, 0.14, 0.07]); m.beam([0, 0.072, 0], [0.004, 0.092, 0], 0.003, 0.003); },

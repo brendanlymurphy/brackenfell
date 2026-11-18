@@ -2,6 +2,54 @@
 
 Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
+## 2026-11-18 (09:50): Build 86 merged in, run 333 green, inout 19 -> 12
+
+**Hashes:** 1115c7e (Build 86 merged into fork-inout; full gate **run 333: success**), then b7bc077 (pushed with this report; its gate runs on the push).
+
+- **Run 322 (ce0c936) answered.** `scenes` failed only on my branch: the Hart's common room lost a table to the passage, so it had
+  8 table seats and Bridget, the tenth evening drinker, went home. Wall settles and two hearth stools now give `inn.s1`..`inn.s12`
+  (1115c7e). The other run-322 failures came with `fork-integ` and are gone in Build 86: budget (villagers at the stalls), webgpu,
+  geom, the in.15 cell label.
+- **Inout, item 1: 19 -> 12** (ratchet accepted at 12). (a) The windows Build 86 gave blank walls (`gen_dress` glass) are drawn
+  after the shell pass, so the plans never saw them: `shellOpenings` now reads generated glass from every placed piece and keeps a
+  pane when it sits on this house's own walls. (b) Where the shell draws two windows 1.5 m apart (the plan needs 1.75 m between
+  centres), the second moves up to 0.6 m along the wall. (c) The mill's door is on the shell's side wall, so its plan is turned 90°
+  against the shell and its windows went on the wrong walls; they are now carried round (`pShellTurn`). The mill passes.
+- **What is left of the 12 is outside work, for the outside worker:**
+  - Six cellars with no hatch, grating or steps outside: inn, elder, chapel, draper, in.33, in.37 (places as reported before).
+  - Eight walls where a Build 86 window stands 0.7 to 1.0 m (centre to centre) from a window the wall already had: two such
+    windows cannot both exist inside (and look doubled outside: `docs/proof/inout/outside/in40_back_pair.png`). Move or drop the
+    added one: elder back upper (0 vs -0.9), in.36 back ground (0.6 vs 1.4) and upper (0 vs -0.9), in.37 right (2.7 vs 1.9),
+    in.38 back upper, in.40 back (-0.4 vs -1.3), in.51 back (-0.3 vs -1.3), in.113 back ground and upper, in.115 back (-0.6 vs -1.3).
+    Numbers are metres along the wall from its middle (front/back) or from the front (sides), as in `docs/INOUT.md`.
+  - in.33: the dormer reading (open since step 3).
+- **Inspector's requests (item 2), first part.** The Elder's cellar stair already runs along the strongroom's west wall since my
+  refit (the request describes the old plan). `test/rooms_people.js` (ways across furniture): 15 -> 10, at its limit. In seven
+  compact houses the chimney stack upstairs left a 0.45 m squeeze into the back room; the fire is now placed where its stack leaves
+  a 0.9 m way past it (2f023fd). Left: the store's stack1, upstairs chests and beds in in.04, in.33, in.40, in.60, in.82, in.113,
+  the draper's dip, shop.s2's bench, an in.37 cellar crate. Next: those, the stair heads beside chimney stacks, then the light budget.
+- **Gate here on b7bc077:** boot, stairs, npcsep, interact, interiors (57), parity, cast, scenes, hartdoor, inout (12), apart,
+  people all pass.
+- **Not verified headless:** how the moved windows look from inside against furniture at arm's length; frame rate.
+
+## 2026-11-18 (morning, latest): furnished from ROOMS.md; one budget finding
+
+**Hash:** 9d02601 (after the merge candidate ce0c936; not pushed until run 322 on ce0c936 is done, since a push cancels it).
+
+- **ROOMS.md, item 2.** `tools/rooms_data.mjs` turns the tables into `src/72n_rooms.js`; the compact plan (48 houses) places each
+  room's named kit pieces in the room its row names (tall ones against a wall, hanging ones hung, tables free if no wall is left),
+  then the row's light (candlestick, branched candles, candle stand, lantern, torch). The generic cabinet, shelves and barrel are
+  gone. 218 pieces placed; 122 found no room (mostly second tables, sacks and chairs in rooms the trade set already fills). Named
+  with no kit piece: as the list at the end of ROOMS.md, plus `gen_paint`. Not done: the "only here" line of each room and
+  container contents, which need pieces or story text; the nine designed plans (inn, smithy, store, elder, herbalist, guardhouse,
+  weaver, draper, chapel) were furnished by hand earlier.
+- **Local gate on 9d02601:** the 17 of your list pass; `budget-medium` fails: square 193 / 335k against an accepted 186 / 329k.
+  Clean threejs here: 179 / 318k. By category the whole difference is **characters** (20 draws in the camera pass and 20 in the near
+  shadow, against 14 and 14): at ten in the morning eight more villagers browse the market stalls on this branch (Barnaby and Ursel
+  Crane, Basilia Wold, Emmet Sele, Mercy Garrick, Roger Hask, Tilly Hobb, Ulric Ferrin). Houses and kit are equal within 2k
+  triangles. Plans do not say where people are at ten; the routines came in with `fork-integ` (the logic session's). Either the
+  budget is accepted with them (`--accept-budget`) or the routines spread people out; not mine to choose.
+
 ## 2026-11-18 (morning, later): merge candidate ce0c936, your list passes
 
 **Merge candidate: ce0c936** (`origin/fork-integ` and `origin/threejs` Build 85 merged in). On this machine your list passes, all 17:

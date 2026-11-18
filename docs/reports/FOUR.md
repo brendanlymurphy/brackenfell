@@ -1,5 +1,94 @@
 # Reports: Agent Four (fork-ch1)
 
+## 2026-11-18 08:00 UTC (your 06:20 list: market sameness, the blanket details; gates)
+
+Head **`62d709b`** (merged with threejs). Full gate: **run 315** (in progress when written). Area gate plus `webgpu`: 8 of 8 pass.
+Merge candidate: `62d709b` (it contains `82f793f`, the WebGPU fix; see the warning below).
+
+- **Run 301** (full, `82f793f`): 65 of 66 steps pass, `webgpu` included. It failed `stairs`: 1 walk of 1484 sticks going down
+  `inn.cellar` (stuck at 266.48, -399.66, -0.25). Not mine: against threejs my branch changes only `src/49_chars.js` and
+  `src/77d_handprops.js`, and no collider. Build 84 moved the Hart's cellar wall.
+- **Market sameness** (Diggory and Roger). Their stalls (`shop.s2`, `shop.n3`) are not one workplace, so my plan did not compare
+  them. Now everyone whose work is a market stall (`shop.*`) is one group as well.
+  - A hat is now a style and one of three dyes, because 7 stall-holders cannot all have different styles. Garment dyes are a quarter
+    darker (in sun they read nearly white).
+  - `test/dress.js`: 47 pairs (household, workplace or market), 0 alike in hat, hair or garment colour.
+  - Picture: `docs/proof/chars/dress/market_and_draper.jpg` (the six stall-holders, then the draper's household).
+  - **Not mine, for whoever assigns bodies:** Roger the cutler stands on a child's body (`f_child` or `m_boy`).
+- **Blanket** (your item 3).
+  - It is there from the first frame lying down.
+  - Legs are laid straight, as the arms were, so no knee is drawn up.
+  - The kirtle's skirt below the hips is not drawn in bed (a third level of what comes off). Lying flat, the cloth that follows the
+    hips stood up as the fin the audit called "a spike as tall as the room".
+  - Blanket raised 3 cm. Only boot toes still show at the foot of some beds.
+  - `test/sleep.js` 75 asleep, 0 faults. Picture: `docs/proof/chars/sleep/after.jpg` (eight sleepers, from above and the side).
+  - Bodies turned a little on their side: the clip still does this; under the blanket only the head shows it. Not fixed.
+- Not checked: motion; a real phone.
+
+## 2026-11-18 07:20 UTC: DO NOT MERGE `3121395` ALONE
+
+`3121395` (named in your 06:20 note for Build 85) carries a fault of mine: every villager and shadow pipeline is invalid on WebGPU
+(a ninth vertex attribute; WebGPU allows eight; run 268 `webgpu`: 12 GPU errors). WebGL is unaffected, which is why my local gates
+passed. Merge `82f793f` or later (it contains the fix and everything before it; full gate run 301). `82f793f` also carries items 5
+and 6. If Build 85 has already taken `3121395`, cherry-pick `82f793f`: it changes three lines in `src/49_chars.js`.
+
+## 2026-11-18 (item 7: animals, candidates only; none added)
+
+**No candidate passes; nothing added. Decision needed from you:** allow the hosts below, or accept no animals for now.
+
+The brief asks for realistic CC0 animals (pig, hen, goose, dog, cat, sheep, ox, horse) reachable from GitHub or npm. Searched GitHub
+code and repositories by file name and by topic.
+
+| Candidate | Licence | Why it fails |
+|---|---|---|
+| `ir-engine/ir-engine-assets-basic` `assets/animals/` Horse, Cow, Pig, Chicken | CPAL-1.0 (repository licence) | Not CC0. The files are Git LFS pointers, so not fetchable from raw GitHub. |
+| KhronosGroup `glTF-Sample-Assets` Fox | mesh CC0 (PixelMannen), rig and animation CC-BY 4.0 | Not wholly CC0; low-poly; a fox is not on the list. |
+| Quaternius farm animals, Kenney animal kits, Hubs avatars, `series-ai` critters | CC0 | Stylised or low-poly cartoon: the owner's rule rejects these. |
+| Poly Haven `horse_statue_01` | CC0 | A porcelain figurine, not an animal. |
+
+What would help: the session's network allows only GitHub and package registries, and `opengameart.org` failed to resolve. If you add
+`opengameart.org`, `polyhaven.com` and `sketchfab.com` to the environment, I can check:
+- OpenGameArt CC0 horse and cow entries (2K textures, said to be realistic; licence to verify);
+- Sketchfab models marked CC0 (scans exist, but each needs a login to download, so you would download them);
+- Smithsonian Open Access 3D (CC0; mostly specimens and skeletons).
+Until then, the rule (no living thing from primitives) leaves the town without animals, as it is now.
+
+## 2026-11-18 (items 5 and 6: besom and trade tools; sameness. And a WebGPU fault of mine, fixed)
+
+Head `82f793f` (merged with threejs `bc1cac4`). Full gate at this hash: **run 301** (pending when written). Run 294, at `2187dd1`, was superseded before it started. **Readings taken without a decision from you** (all easy to undo, all in `src/49_chars.js` / `src/77d_handprops.js`):
+(a) the sweep motion is now `farm-watering` (standing), not `shovel-dig` (a crouch that tented every skirt); (b) "differ in one garment"
+is read as the colour of the main garment, not a different piece; (c) tools put down = not drawn (no bench or rack placement).
+
+- **WebGPU, mine, fixed.** Run 268 (full gate for items 2 and 3) failed `webgpu` with 12 GPU errors.
+  - Cause: my garment tag for taking clothes off was a ninth vertex attribute; WebGPU allows eight, so every villager and shadow
+    pipeline was invalid. WebGL did not mind, so my local gates passed.
+  - Fix: the tag now rides in `_vid` as a negative number (garments never carry a face-morph column). `webgpu` step passes locally.
+  - **Do not merge `4f15974` to `2187dd1` without `82f793f`.**
+- **Besom.** For the four sweepers: ash handle and a head of birch twigs bound twice, held in both hands in front of the body. The
+  twig tips sweep side to side on the floor 0.8 m ahead, in a standing stance. Picture: `docs/proof/chars/hold/besom_sweep.jpg`.
+- **Trade tools.** One true-size tool per working person, by `CAST` trade, held only while working: shears, awl, knife, cleaver,
+  mallet, axe, paddle, dough scraper, pestle, tinker's hammer, netting shuttle, sickle, tongs. Story people: Marta pestle, Hilda
+  shuttle, Brandt tongs, Bram and Edda sickle, Wren knife.
+  - People with no tool: counter keepers, the scribe, merchants, shepherds, the potter, the beekeeper, the Reeve.
+  - Tools are not drawn beyond the middle level of detail; they had cost 2 to 4 draw calls in the budget views.
+  - Picture: `docs/proof/chars/hold/trade_tools.jpg`. Hilda's shuttle is too small to see at 1 m; most tools are held across the
+    fist, horizontal, as the work clip's hand hangs.
+- `test/hold.js`: 0 of 4480 (50 people with something in hand). One fault along the way was mine: a besom edit moved Brandt's
+  hammer grip 20 cm off his palm (`d86986e` restores it).
+- **Sameness** (`dressPlan` in `src/49_chars.js`, `docs/WARDROBE.md`). The cast is dressed in id order; each person takes the first
+  hat, hair colour and garment colour that nobody already dressed in their household or workplace has.
+  - `test/dress.js` (new): 32 pairs who live or work together; before 32 shared a hair colour and 25 a garment colour, now 0 share
+    hat, hair or garment colour.
+  - Town spread: 7 hair colours, 8 garment colours; 11 caps, 11 hoods, 11 coifs, 9 kerchiefs, 18 bare-headed. Hair greys by age.
+  - Picture: `docs/proof/chars/dress/households.jpg` (six households and workplaces side by side).
+  - Still: bodies are 12 for 60 people (no Blender here: a new hair style or face needs a new body); two fair hair shades are close;
+    in sun the garment colours all read pale.
+- Area gate at `2187dd1`: boot, quest, story, parity, people, budget-medium (square 179/318k) and budget-low pass.
+- **`npcsep` fails, not mine:** Laurence and Joyce both sit at `in.02.sit` at 7:00 and 18:30. That comes from the household
+  schedules; none of `src/77e_households.js`, `src/77_npc.js` or `src/54b_castrules.js` differs from threejs on my branch.
+- Not checked: motion (sweep, strum, the tools in the work clip), a real phone.
+- Next: item 7, animals (candidates only).
+
 ## 2026-11-18 (item 4: lute strap, tankard)
 
 Commit `09c8b5b`. Push gate: run 271.
@@ -16,7 +105,7 @@ Commit `09c8b5b`. Push gate: run 271.
 
 ## 2026-11-18 (items 2 and 3: sleepers, Hale without his helmet)
 
-Commit `4f15974` (merged with threejs). Full gate requested on GitHub for `fork-ch1` at this hash (run 268, in progress when written; the push gate on the same hash, run 265, passed). Area gate: 8 of 8 pass
+Commit `4f15974` (merged with threejs). Full gate requested on GitHub for `fork-ch1` at this hash (run 268: FAILED webgpu, my fault, fixed in `82f793f`, see above; the push gate on the same hash, run 265, passed). Area gate: 8 of 8 pass
 (medium square 180/318k, low square 132/194k).
 
 - **Sleepers.** In bed: hat and outer garments (cloak, apron, tabard, straps, belt, pouch) off; a coif or kerchief stays on.

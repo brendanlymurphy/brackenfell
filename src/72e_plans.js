@@ -356,10 +356,10 @@ function planHouse(P, c, info) {
   let kh = null;
   if (info.inn) { kh = pHearth(P, store, 'w', 1.6, { cauldron: true, size: 0.4, at: 'mid' }); if (kh) { pPier(P, -1, kh); if (up) pPier(P, 1, kh); } dressInn(P, c, hall, hh); dressKitchen(P, store, { hh: kh }); PD.rack(P, store, -3.5, 10.4, 2.4, 0, ['pot', 'herb', 'ham', 'herb', 'garlic']); } else if (KIT_DRESS[P.id] && info.kind) { dressKind(P, c, hall, hh, info); dressStore(P, store); } else { dressHall(P, hall, { hh }); dressStore(P, store); } dressBedroom(P, bed0, { beds: need.has('bed2') && !up ? ['bed', 'bed2'] : ['bed'], loot: LOOT[P.id], bedSides: info.inn ? ['s', 'e', 'w', 'n'] : undefined, bedAt: info.inn ? 'mid' : undefined });
   if (info.inn) {      /* [fin] HART CELLAR: the east wall of the cellar keeps a 1.5 m x 1.5 m floor free of casks, crates and shelves in front of the fresh-brick patch (story secret 'wall', 94d doorway); the world position is published for them */
-    const zc = (cel.in.z0 + cel.in.z1) / 2, x1 = cel.in.x1, y0 = P.lv[-1] ? P.lv[-1].y : -2.52;
-    P.clear.push({ x0: x1 - 1.5, x1: x1, z0: zc - 0.75, z1: zc + 0.75, k: -1, kind: 'secret', room: cel });
-    const wp = P.w2(x1, y0, zc); World.hartWall = { p: [wp[0], wp[1], wp[2]], inW: P.w2(x1 - 1.2, y0, zc) };
-    { const m = P.c.int; m.m1 = P.zone; m.ao = INT_AO; m.mat(MAT.PLAIN, [0.004, 0.004, 0.004], 1); const xq = x1 - 0.02; m.quad([xq, y0 + 0.02, zc + 0.5], [xq, y0 + 1.92, zc + 0.5], [xq, y0 + 1.92, zc - 0.5], [xq, y0 + 0.02, zc - 0.5]); }      /* the dark behind the brick patch (97d door): drawn with the room so it is as dark as the room's own black, covered by the patch until the bricks are out */
+    const zc = (cel.in.z0 + cel.in.z1) / 2, x1 = cel.in.x0, y0 = P.lv[-1] ? P.lv[-1].y : -2.52;      /* [fin] the patch is on the cellar's plan -x wall: the compass reads true indoors and the Hart's site is turned, so that wall faces true east */
+    P.clear.push({ x0: x1, x1: x1 + 1.5, z0: zc - 0.75, z1: zc + 0.75, k: -1, kind: 'secret', room: cel });
+    const wp = P.w2(x1, y0, zc); World.hartWall = { p: [wp[0], wp[1], wp[2]], inW: P.w2(x1 + 1.2, y0, zc), into: 1 };
+    { const m = P.c.int; m.m1 = P.zone; m.ao = INT_AO; m.mat(MAT.PLAIN, [0.004, 0.004, 0.004], 1); const xq = x1 + 0.02; m.quad([xq, y0 + 0.02, zc - 0.5], [xq, y0 + 1.92, zc - 0.5], [xq, y0 + 1.92, zc + 0.5], [xq, y0 + 0.02, zc + 0.5]); }      /* the dark behind the brick patch (97d door): drawn with the room so it is as dark as the room's own black, covered by the patch until the bricks are out */
   }
   dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
   if (up) {
@@ -476,6 +476,15 @@ function dressInn(P, c, room, hh) {
     if (dn) { nTab++; for (const s of dn.seats) pSit(P, 's' + (++n), s[0], s[1], s[2], 0); pLamp(P, room, dn.x, dn.z); n = Math.max(n, 0); }
   }
   if (nTab < 3) for (const nr of [[-2.0, 6.2], [3.0, 6.4], [-4.4, 6.6], [0.5, 6.2]]) { const dn = pDining(P, room, 1.6, 0.8, { near: nr, id: 'table' + n, n: 3, items: ['mug', 'plate', 'bowl', 'candle'], strictOnly: true }); if (dn) { nTab++; for (const s of dn.seats) pSit(P, 's' + (++n), s[0], s[1], s[2], 0); pLamp(P, room, dn.x, dn.z); break; } }
+  for (const sd of ['w', 's', 'n', 'e', 'w', 's', 'n', 'e']) { if (n >= 12) break;      /* [inout] the common room is shallower now the passage runs behind it: settles along the walls until it seats the twelve the evening routines deal out (inn.s1..s12) */
+    const sn = pSnap(P, P.c.int), n0 = P.items.length, bn = pAgainst(P, room, sd, P.id + '.wallbench' + n, 1.4, 0.42, 0.46, +1, pdBench(1.4), {}); if (!bn) continue;
+    const yw = { n: PI, s: 0, w: PI / 2, e: -PI / 2 }[sd], al = sd === 'n' || sd === 's', sp = [-0.35, 0.35].map(q => [bn.cx + (al ? q : 0), bn.cz + (al ? 0 : q), yw]);
+    if (!pConnOk(P, room, [], sp)) { pUndo(P, P.c.int, sn); P.items.length = n0; continue; }
+    for (const q of sp) if (n < 12) pSit(P, 's' + (++n), q[0], q[1], q[2], 0); }
+  if (n < 12 && hh) for (const [x, z] of pCands(room, [hh.front[0], hh.front[1] - 0.6], 0.2)) { if (n >= 12) break;      /* [inout] then stools round the hearth */
+    const sn = pSnap(P, P.c.int), n0 = P.items.length, it = pPut(P, room, P.id + '.hstool' + n, x, z, 0, 0.42, 0.42, 0.46, m => Props.stool(m), {}); if (!it) continue;
+    const sp = [it.cx, it.cz, Math.atan2(hh.px - it.cx, -(hh.pz - it.cz))]; if (!pConnOk(P, room, [], [sp]) || Object.values(P.spots).some(o => (o.k || 0) === 0 && Math.hypot(o.x - it.cx, o.z - it.cz) < 1.0) || Math.hypot(it.cx - hh.front[0], it.cz - hh.front[1]) < 1.0 || Math.hypot(it.cx - hh.front[0] - 1.6, it.cz - hh.front[1] + 0.2) < 0.8 || Math.hypot(it.cx - hh.front[0] + 1.7, it.cz - hh.front[1] + 0.3) < 0.8)      /* clear of the home spot, the fire stool and the bard's place */ { pUndo(P, P.c.int, sn); P.items.length = n0; continue; }
+    pSit(P, 's' + (++n), sp[0], sp[1], sp[2], 0); }
   if (hh) {
     pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
     const st = pPut(P, room, P.id + '.firestool', hh.front[0] + 1.6, hh.front[1] - 0.2, 0, 0.4, 0.4, 0.46, pdStool, {});

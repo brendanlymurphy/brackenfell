@@ -126,6 +126,7 @@ for (const id in World.houses) {
 }
 Input.keys = {}; Input.joy = null;
 const summary = { stairs: World.stairs.map(s => s.id), runs: rows.length, ok: rows.filter(r => r.ok).length, maxDy: Math.max(...rows.map(r => r.maxDy || 0)), fails: fails.slice(0, 6).map(q => q.slice(0, 160)), nfails: fails.length };
+if (!World.stairs || World.stairs.length < 5) fails.push('only ' + (World.stairs ? World.stairs.length : 0) + ' staircases in the village: nothing was walked');       /* [cast] never pass on nothing */
 if (fails.length && window.__trace) return { summary, fails };
 if (fails.length) throw new Error('STAIRS FAIL ' + JSON.stringify(summary));
 return 'stairs PASS ' + JSON.stringify(summary);

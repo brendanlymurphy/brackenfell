@@ -2,6 +2,7 @@
 // springs and can be cut. Run: node test/shot.mjs --opt webgl=1 --opt quality=medium --opt play=1 --do "$(cat test/mine.js)"
 const log = [], fails = [], fx = (c, m) => { if (!c) fails.push(m); }, K = Input.keys, r = RPG.st(), dt = 1 / 30, sleep = ms => new Promise(q => setTimeout(q, ms));
 game.step(1, dt); await Foes.loading; const mc = Cells.by.mine, O = mc.origin, FY = mc.floorY; fx(mc && MINE.built, 'no mine');
+{ let a = 7 >>> 0; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }       /* [cast] the seed again, after the foes have loaded: loading draws a different number of random numbers each time (assets arrive in any order), so a seed set before boot left the fight to chance (MINE FAIL twice on Build 85) */
 Env.hour = 12; S.flags.bed = 1; qStart('welcome'); qDone('welcome'); S.items.lantern = 1; MINE_S().oil = 600; S.items.potion = 9;
 const inMine = (x, z, yaw) => { Cells.teleport({ p: [O[0] + x, FY + 0.1, O[2] + z], yaw: (yaw || 0) * Math.PI / 180, cell: 'mine' }); game.step(3, dt); };
 const mf = Foes.list.filter(f => f.camp.cell === 'mine'); fx(mf.length === MINE.SPAWN.length, 'mine foes ' + mf.length); log.push('mine foes ' + mf.map(f => f.kind).join(','));
@@ -20,7 +21,7 @@ async function fight(f, maxS, startAt) {
     const P = Player, dx = f.pos[0] - P.pos[0], dz = f.pos[2] - P.pos[2], d = Math.hypot(dx, dz), want = Math.atan2(dx, -dz); let dy = want - P.yaw; while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
     P.yaw += Math.max(-0.12, Math.min(0.12, dy)); Input.keys.KeyW = d > 2.0;
     const incoming = Foes.list.some(g => g.alive && g.state === 'attack' && g.atk && !g.atk.done && Math.hypot(g.pos[0] - P.pos[0], g.pos[2] - P.pos[2]) < 3.2 && g.t > 0.12);
-    RPG.in.block = incoming && r.sta > 14; RPG.in.atk = d < 2.6 && !RPG.in.block && (i % 14) < 9; r.sta = Math.max(r.sta, 40);
+    RPG.in.block = incoming && r.sta > 14; const shown = f.kind !== 'foreman' || (seen.has('b_slam') && seen.has('b_charge')) || i > 30 * 60; RPG.in.atk = shown && d < 2.6 && !RPG.in.block && (i % 14) < 9;          /* [cast] the Foreman is not cut down before he has shown his slam and his charge (he sometimes fell first, and the pattern check failed by chance: MINE FAIL on Build 85) */ r.sta = Math.max(r.sta, 40);
     if (r.hp < 45) r.hp = 100; game.step(1, dt); hpMin = Math.min(hpMin, r.hp); seen.add(f.state);
   }
   RPG.in.atk = false; RPG.in.block = false; Input.keys = {};
@@ -37,5 +38,5 @@ await fight(mf.find(f => f.kind === 'foreman'), 200, [8, 60, 270]);
 fx(seen.has('b_slam') && seen.has('b_charge') && seen.has('b_stun'), 'the Foreman did not show his pattern: ' + [...seen].join(','));
 const fm = mf.find(f => f.kind === 'foreman'); const loot = World.interact.find(i => i.foe === fm); fx(loot && loot.loot.some(l => l[0] === 'foremankey'), 'the Foreman dropped no key');
 log.push('foreman states ' + [...seen].filter(s => /^b_/.test(s)).join(','));
-if (fails.length) throw new Error('MINE FAIL ' + JSON.stringify({ log, fails: fails.slice(0, 20).map(x => String(x).slice(0, 200)) }));
+if (fails.length) throw new Error('MINE FAIL ' + JSON.stringify({ fails: fails.slice(0, 20).map(x => String(x).slice(0, 200)), log }));       /* [cast] the reasons first: the gate's log cuts a long message, and on Build 85 it cut them off */
 return 'mine PASS ' + JSON.stringify(log);

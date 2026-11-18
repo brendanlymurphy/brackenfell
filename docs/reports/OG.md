@@ -2,6 +2,209 @@
 
 Newest first. Times UTC.
 
+## 2026-11-18, the 09:40 inbox
+
+**At the top: `hartdoor` fails on this branch until the inspector's move is in, by design.** It now asserts that the fresh brick faces true
+east, and `World.hartWall` (published by `dressInn`, 72e) is still the cellar's +x wall, which faces 270 degrees (west). The -x wall can
+take the door: the cellar stair (plan x -2.6 to 1.4, z 6.7 to 7.8) and the doorway to the vault (on the z = 8 wall) are elsewhere; only
+casks stand along it. With `hartWall` published on the -x wall (plan x -6.8, z 4.05, simulated in the page), the whole walk passes: brick at
+90 degrees true, named, opened once told, through the tunnel and back. Nothing of mine needs to change when it moves.
+
+Gate: quick on `e8f573b`, 19 of 21 pass. `hartdoor` fails on the bearing only (above). `budget-medium` was over the file taken from threejs
+(alley 199 draws against 193; square 195 against 192; lake 171 against 168: the cast out of doors) and is re-accepted at these figures.
+
+1. **The compass reads true indoors.** A cell is built in its house's own frame: the door inside, turned by the site's yaw about the cell's
+   origin, lands on the door outside with 0.00 m error in all 57 cells. So the heading inside plus the site's yaw is the heading in the
+   town. `Cells.trueYaw()` (94f) gives it; the compass's points (85_ui) and the map's arrow (86_map) add it (marked `[cast]` lines);
+   discovered places on the compass are measured from the house's outside door when you are in. Quest marks were already right relative
+   to you (both ends in the cell's frame). In the Hart (site yaw 180) the plan's -x is truly east. `test/pointers.js` checks the frame in
+   every cell and the turn inside and out.
+   - The Hart's brick: everything of mine follows `World.hartWall` wherever it is published (prompt, doorway, both portals, the landing,
+     the compass); without it, `HART.find` now picks whichever cellar wall is truly east, not the plan's x1. `test/hartdoor.js` faces the
+     wall wherever it is, walks round the cellar floor to it (straight across from the stair foot leads back up the stair, which runs along
+     x), and asserts east within 20 degrees.
+2. **Quest marks.** Inside a building the mark already pointed at a target in the same building (`Cells.mapTarget`) and at the door for
+   anything elsewhere; the chapel and the Hart had targets that were outside (fixed earlier). New: out of doors a mark on a building's
+   middle (the crypt quest on the chapel, main stages 2, 7, 8, 9 on the Hart) pointed at the roof; it now points at the door that leads
+   in. Audit of every quest and stage: none is on a building's middle any more and none is far off; `test/pointers.js` keeps it so.
+3. **Roger Hask is not on a child's body.** In the running game he is `m_hunter` at scale 1 at every hour (checked 9, 11, 14, 16 h; the
+   body comes from his voice M). The child in Agent Four's market picture (`docs/proof/chars/dress/market_and_draper.jpg` on fork-ch1) is
+   Lettice Sele, 14, who minds the bookstall: voice G, so `f_child`, as the table says. `test/cast.js` now checks the drawn body against
+   the age (nobody over 15 on `m_boy`/`f_child`, nobody under 13 on a grown body; Tobin and Pip as children): 77 pass.
+   - **Decision for you:** at 14 Lettice is drawn 1.34 m tall (the child scale tops out at 0.78 of 1.72 m); Tom at 13 is 1.31 m. Real
+     children of that age are nearer 1.50 to 1.60 m. Either give 13 and 14 the youth bodies at 0.9 (as a YM under 17 already is), or
+     raise the child scale for them. I have changed nothing.
+4. **Voices: under way.** One request now carries all of one character's missing lines (`--batch 12`); a pilot of Tilly's ten in one
+   request cut cleanly (0.06 to 0.10 s per character, every piece). 510 lines were missing in 63 speakers: 63 requests if every batch
+   cuts. Running now; the count follows here when it ends.
+   - Not heard by anyone: only the owner's ear counts. The cut checks are lengths, not listening.
+
+## 2026-11-18, the 09:10 inbox
+
+Gate: quick passes locally on `475ffc7` except the medium budget, re-accepted in `fef5c4c` (square 195 draws, alley 199; more people out of doors).
+**Low is over its 140 / 200k target in three views** (square 150 / 217k, alley 147 / 205k, lake 123 / 205k; it was 136 / 198k in the square
+before the merge). The part I added is people (37 villagers in the square view); the rest came with Build 86. Needs whoever owns Low.
+
+Merged `origin/threejs` (Build 86). Conflicts: the plan file (took the interiors session's), `77e_households.js` (kept mine: it has your
+one-seat fix plus distinct standing places), `test/hartdoor.js` (both: through the new cellar door first, then a player's own way round the
+furniture to the stair head), the budget file (yours).
+
+- **`mine` is deterministic now.** Caught the failure: "the Foreman did not show his pattern" (no `b_charge`). The test sometimes killed him
+  before he charged. Also the seed was used up during loading (assets arrive in any order), so the fight differed run to run even with
+  `seed=7`. Now: the seed is set again after the foes load, the test does not cut the Foreman down before he has shown his slam and his
+  charge (or a minute has passed), and the failure message puts the reasons first (the gate's log cut them off). Six runs, six passes.
+- **Re-homed after the removed shells:** Jasper out by the west gate in the morning and at his own axe block after noon; Tamsin at the hive
+  yard (in.32) and her own skeps by her door; Idony at her own hens (the new in.12 yard); Giles at the tannery yard; Wilmot at the new dye
+  yard (in.06); Felice at home. No yard that is gone is named any more.
+- **Scene 7 plays:** the town worker built butts behind the guardhouse, so on every seventh day Hugh and Hale shoot there from about four
+  to five, and the scene is heard. All 12 scenes pass.
+- **The Hart in the evening:** the new Hart has fewer evening seats; the two of scene 10 are seated first, and anyone left over stands at
+  the bar in a place of their own (two had stood in one).
+
+## 2026-11-18, after the 07:10 inbox: wilds, the market cross, the well
+
+- **`wilds` was failing on this branch after the merge** ("to hamlet: stuck"), not every time. Two causes. (1) The new stepped market
+  cross in the square (`73k_square.js`, the town worker's) had one solid 3 × 3 m collider 0.6 m high over its three 0.17 m steps: nobody
+  could climb it, yet the walk tests and the villagers' graph went across it. Now the steps are floors and only the pillar is solid
+  (a small marked edit in their file). (2) The test was not seeded, and passers-by stood in the way by chance: the gate's `wilds` step
+  now runs with `seed=7`, as `mine` does. Seeds 7 and 3 pass; two gate runs pass.
+- **The morning well** held seven in a ring at once and blocked the square. Each of the ten now has a twenty-minute turn at a set time,
+  never more than four at once (the table's "four spots and a queue"), and the pairs of scenes 1 and 2 still meet there.
+- **Talk camera:** where you stand is judged only by whether you can see the speaker; standing against a dais or a table no longer makes it
+  step you aside.
+- **Written pointer texts** (not recorded): the passage note's loft key ("nobody ever locks it"; there is no key and no pot), the Magpie
+  notice's lane (her real route), two signposts ("the Wayside Shrine", "the watchtower road").
+
+## 2026-11-18, the 07:10 inbox (fork-integ)
+
+**GitHub:** `5e74547` red on `stairs` only (all other steps green); `cd42e2c` and `2f57662` in the gate as I write. The `stairs` failure is
+the single walk "inn.cellar down stick-half from (266.2, −399.7, −0.5)": a start point 3.2 m from the cellar stair's head that falls between
+the Hart's counter (the interiors session's `dressInn`, counter at x 265.1, z −1.75 to 2.05) and the east wall, where the walk snags at
+once. It came with the merge of `threejs`; on this branch before the merge it passed. For the interiors session (or the test: a start
+point behind a counter is not a place a player comes down a stair from).
+
+**Also changed since the last entry:** three cast lines that pointed at nothing (Emmet's ledger and pay roll, Ellen's "Humphrey's stall"),
+none recorded (`2f57662`).
+
+**Not mine, from POINTERS.md, needs a decision:** inside a building the compass uses the building's own frame; the Hart's site is turned
+180 degrees, so inside it the compass reads south as you walk in northwards. Rowan's recorded "the east cellar wall" and Odo's "east wall"
+are east only on that turned compass: the brick (on the plan's +x wall) faces true west. Either the compass stays as it is (my reading,
+easiest to undo, nothing changed), or it is set to true directions and the brick moves to the plan's −x wall (then the inspector's recess
+moves too).
+
+I checked out `fork-integ` (7b637a0) in a scratch worktree and ran the three failing steps there, with my files copied in. Nothing pushed
+to it.
+
+**`apart` and `npcsep` (the Byrds).** On fork-integ the cooper's plan has two seats, no bench, and every place it names (`home`, `fire1`,
+`stand2`, `front`, `pew1` ...) at one point, because a plan's missing places are all made at its `home`. Your `k < seats.length` fix was
+not enough: all three Byrds worked and ate at that one point. Now (`77e_households.js`, my file) no two of a household are given standing
+places closer than 0.8 m. When every place the plan names is taken, one is made on the plan with `pSpot` (read-only use of the plan
+functions) at the nearest free point of that floor, 0.8 m off the walls, facing the room. Stair ends, pews, door and `front` places are
+never used for this. With that file on fork-integ, `apart`, `npcsep` and `people` pass; on this branch too.
+
+**`hartdoor`.** On fork-integ there is no way across the Hart's floor from the front door to the cellar stair's head: a floor map with a
+height-aware collision test shows the head (x 264.5 to 266, z 2.0 to 2.5, the stair now at the back wall) boxed in. A solid line runs across
+z 0.5 to 1.5 from x 255.5 to 267, with one gap at x 256 that leads to the stairwell's west end, not its head; beyond z 3.0 a strip at
+x 266 leads nowhere. **For the interiors session:** open the way to the stair head from the bar room (the rail or counter across z 0.5 to 1.5
+near x 264 to 266). The check now finds a player's own way round the furniture on a 0.25 m floor grid, not the villagers' graph, so it
+fails only when a player truly cannot get there.
+
+**Requests for the plan files (now the interiors session's), each held by a test:**
+- A bar in the Hart that always exists (my retry is gone); held by `people` (Greta at her bar, not the hearth) and `hartdoor`.
+- A bed for every sleeper (`castBeds` / `castBedIn`: 10 extra beds, Tobin's in the forge loft); held by `cast` (77 beds, one sleeper each,
+  in their own house).
+- Seats: a household eats at its own table where the room allows; held by `apart`/`people` (now passes without seats, by standing).
+- Distinct standing places in a workshop or back room (a bench, a counter, a hearth) rather than everything at `home`.
+
+**Found:** `World.blockedAt` ignores height (it tests at y = 0), so inside a cell it counts the floors and ceilings as solid and reports
+nearly everything blocked. Anything that uses it indoors is wrong. Callers: `77_npc.js` passers-by, `77c_patrons.js`, `73k_square.js`
+(all outdoors, so fine today). My talk camera's step aside (`87_feel.js`) used it, so indoors it never stepped you clear of a shelf: now height-aware.
+
+Gate: quick 20 of 21 locally on this head; `stairs` is the one inherited from `threejs`.
+
+## 2026-11-18, the 06:20 inbox
+
+Gate: quick 20 of 21 locally on the head; `stairs` fails, the same single walk as on `threejs` 2cc9ae6 (the Hart's cellar stair at half stick from (266.2, −399.7, −0.5)): not from this branch, it came with the merge.
+
+Merged `origin/threejs` (Build 84). Conflicts: `tools/gate_budget.json` (took yours, then re-accepted) and the Hart's bar in `72e_plans.js`
+(we both fixed the missing counter; I took the inspector's version).
+
+**1. The Hart door is one mechanism.** `94e_hartdoor.js` places the brick, the doorway, both portals and the landing from `World.hartWall`
+when it exists (its `inW` point gives the inward direction), from the plan otherwise. Checked in the page: source `hartWall`, one
+`sec.wall`, one `door.tunnel.in`, one `door.tunnel.out`. `hartdoor` passes.
+
+**2. Pointers (POINTERS.md), all in `src/94f_pointers.js` plus small marked lines, gate step `pointers` (quick):**
+- In the chapel the crypt quest's mark points at the sacristy chest, the crypt gate and the reliquary in turn (main stage 2 too, by what
+  you hold); it pointed at the chapel door.
+- Stages 8 and 9: out of doors, at the Hart (the way in), or at the cave's cleft once the tunnel has been walked; in the Hart, at the stair
+  head then the brick. They pointed 1.1 km SSE.
+- The Hart's back door ("Go in by the kitchen door", into the kitchen) and cellar hatch ("Go down the cellar hatch", to the cellar, barred
+  22 to 6) work. Back door at (3.0, 0.1, −27.8), hatch at (−1.5, 1.1, −28.4). Both give their prompt to a player who walks up and looks.
+- Boat-house doors: "Knock on the boat-house door"; nobody answers, the keys are with Old Wenn (as the board says, and as Wenn and Joyce now
+  say in the cast). Not a way in: they stay shut.
+- Tobin's note says east of the plaque (it is a written note, not recorded); the stone is 4.5 m east.
+- Wren's frostcap (recorded line "forest edge, north-west of the gate") moved from (−57, −47) to (−70.3, −17.5): outside the west gate,
+  north-west of it.
+- The Hidden Yard: still not built (no lane has that role). Until it is, the Magpie's message reads "She went to ground behind the
+  Cutler's House" and the sack's prompt "Look in the grass by the fence" (there is no well there; I looked). When `hiddenyard` exists the
+  old text comes back.
+- Not done from POINTERS.md (not in your list): the compass inside the Hart being turned 180 degrees, "the weavers' lane", the rusted cellar
+  key, the loft key under the pot, Emmet's ledger and pay roll, the burial stone, the signposts, Maren's directions.
+
+**3. The tour:** who is in each building now (whole-day probe):
+| | 10:30 | 12:18 | 15:18 | 20:12 |
+|---|---|---|---|---|
+| The Hart | Greta | Greta + 5 diners | Greta | 15 |
+| Chapel | Aldous, Felice | Aldous | Aldous, Idony | Aldous |
+| Mill | (Osric at the door) | Osric | Osric | Osric |
+| Guardhouse | Ivo asleep | Ivo at dinner | (both out) | Ivo at supper |
+| Baker's | Godwin asleep | Godwin asleep | Godwin asleep | Godwin, Avice, Tilly |
+| Quill's | Marta | Marta | Marta | Marta |
+Godwin now bakes from 01:00 and sleeps 09:42 to 15:36. Hale keeps the gate till 20:24 while Ivo eats. Scene 9 moved to Ivo's supper in the
+guardhouse at 19:30 (it clashed with scene 10).
+
+**4. `planNav`:** give it to the inspector. Fine by me.
+
+**Found on the way:** after Build 84's plans the cooper's has fewer seats than people and two Byrds sat on one seat (that is your `apart`
+failure on `threejs` 2cc9ae6). Now one seat each, the rest stand by the hearth. `threejs` 2cc9ae6 also fails `interact` (the moved bar
+hides the witness; fixed in my `test/interact.js`), `npcsep` (passes here), `stairs` (one walk of 1,486: the Hart's cellar stair at half
+stick, from (266.2, −399.7, −0.5); geometry, the inspector's; also red here) and the bot's "hatbox in the shut house" (not yet looked at).
+
+## 2026-11-18, the 05:00 inbox and item 5
+
+Decision taken without an answer (easiest to undo): when `World.hartWall` (fork-fin) arrives, my `94e_hartdoor.js` moves nothing and
+only keeps the pointers; until then it places the brick itself. Either way the gate step `hartdoor` walks it.
+
+**The "leak" is not a leak.** I counted every geometry made after a warm-up, with where it was made, over ten minutes of the soak's own
+play (wander, doors, talk, sword): **0 made**, 0 undisposed, while `renderer.info.memory.geometries` rose 250 to 295. That count rises when
+a geometry that already exists is drawn for the first time (a face up close, a nearer level of detail, a lamp at night), and the soak's
+random walk reached new places after half time. So: the soak now warms up (every place and door it will use, once) and wanders the places in
+turn, and it fails on **geometries made after the warm-up and never disposed** (`geoKept`), reporting the renderer's count beside it. Local
+run before this last change: pass, drawn 306 to 363 over 30 minutes; with the new measure: in the commit's GitHub run.
+
+**Steps that could pass on nothing** now fail instead: `interiors` (checked fewer buildings than there are house cells), `owners` (under
+40 houses with people), `embers` (under 8 interiors with a fire), `apart` and `people` (under 60 villagers). Others I read and that already
+fail on nothing: `cast`, `memory`, `scenes`, `view`, `hartdoor`, `bridge`, `water` (they count what they found and need it).
+Not yet read for this: `stairs`, `npcstairs`, `routes`, `parity`, `overlap`, `cells`.
+
+**Ratchets** (`tools/gate_ratchet.json`, `--accept-ratchet`), today's counts: `openings` 57 blocked doorways, `inout` 57 buildings that differ
+inside from outside, `geom` stretch 38, open 169, sheets 6 in the generated meshes and, new, the house shells and every kit piece out of
+doors (3,137 placed): 692 places with open edges, 878 one-quad parts. `docs/GEOMETRY.md` has the shell section; the worst rows are generated
+roofs whose plank undersides are a single 35.8 m2 quad (`gen_roof_3` over x ±7.5, z −22) and generated walls with open tops
+(`gen_walls_381` at 11.1, 0.6, −34.3). For the town worker.
+
+**The Hart, pointer side** (your 05:00 note): the compass points at the head of the cellar stair while you are on the common-room floor and
+at the brick once you are below; Greta has a new line as a remark ("The cellar? Down the stair by the door, love, behind the rail. Take a
+candle, the steps are steep."), text until recorded. Still for the inspector: no light at the stair head or foot; the rail is the only sign.
+
+**Door leaves the player must open:** one, the crypt gate (`pGate`, used once, chapel). Every other hinged leaf is a house door, and those are
+portals used with E, not walked through. Nothing else to fix.
+
+**`mine`:** already runs with a fixed seed (`seed=7`) and passed every run I looked at. **`bot-soak`:** see above.
+
+**Your test changes:** fine by me (kitcull's 2-pixel allowance; the witness on an open side). I had made the same witness fix in
+`test/interact.js` (a place where she can see, 2 m east was behind the moved bar).
+
 ## 2026-11-18, item 1: the door in the Hart that is not there
 
 Commit: the one that carries this entry (message begins "The door in the Hart's cellar exists again"). Gate step `hartdoor` (quick), bug 30 in `docs/BUGS.md`.
