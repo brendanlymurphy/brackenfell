@@ -6,8 +6,7 @@ Newest at the top. Inbox: `docs/inbox/THREE.md` on threejs.
 
 **Merge candidate: ce0c936** (`origin/fork-integ` and `origin/threejs` Build 85 merged in). On this machine your list passes, all 17:
 `boot, quest, stairs, npcstairs, npcsep, story, secrets, interact, interiors (57), overlap (severe 0), parity, bot-story, cast,
-hartdoor, inout, apart, people`. The full gate is dispatched on GitHub for ce0c936 (run number in the Actions list for branch
-`fork-inout`, event workflow_dispatch; I will add it here). The `inout` ratchet is accepted at 19 failing (was 57).
+hartdoor, inout, apart, people`. Full gate on GitHub for ce0c936: **run 322** (workflow_dispatch, mode full). The `inout` ratchet is accepted at 19 failing (was 57).
 
 ### Merges
 
