@@ -134,17 +134,26 @@ function pConnOk(P, room, extra, seats) {
   const seeds = []; for (const d of P.doors) if (d.k === k && (d.a === room.id || d.b === room.id)) seeds.push([Math.min(a.x1 - 0.3, Math.max(a.x0 + 0.3, d.x)), Math.min(a.z1 - 0.3, Math.max(a.z0 + 0.3, d.z))]);
   if (!seeds.length) return true;
   const obs = P.items.filter(i => i.k === k && P_SOLID[i.kind] && (i.kind !== 'floor' || i.h === undefined || i.h > 0.25)).concat(extra);
-  const free = (x, z) => { if (x < a.x0 + 0.3 || x > a.x1 - 0.3 || z < a.z0 + 0.3 || z > a.z1 - 0.3) return false; for (const o of obs) { const dx = Math.max(o.x0 - x, 0, x - o.x1), dz = Math.max(o.z0 - z, 0, z - o.z1); if (dx * dx + dz * dz < HW * HW) return false; } return true; };
+  const free = (x, z) => { if (x < a.x0 + 0.45 || x > a.x1 - 0.45 || z < a.z0 + 0.45 || z > a.z1 - 0.45) return false; for (const o of obs) { const dx = Math.max(o.x0 - x, 0, x - o.x1), dz = Math.max(o.z0 - z, 0, z - o.z1); if (dx * dx + dz * dz < HW * HW) return false; } return true; };
   const seen = new Uint8Array(nx * nz), q = [];
   const put = (i, j) => { if (i < 0 || j < 0 || i >= nx || j >= nz || seen[i * nz + j]) return; if (!free(a.x0 + i * st, a.z0 + j * st)) return; seen[i * nz + j] = 1; q.push(i, j); };
-  for (const [sx, sz] of seeds) { const i0 = Math.round((sx - a.x0) / st), j0 = Math.round((sz - a.z0) / st); for (let r = 0; r <= 5; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) put(i0 + di, j0 + dj); }
+  for (const [sx, sz] of seeds) { const i0 = Math.round((sx - a.x0) / st), j0 = Math.round((sz - a.z0) / st); for (let r = 0; r <= 7; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) put(i0 + di, j0 + dj); }
   if (!q.length) return true;
   for (let h = 0; h < q.length; h += 2) { const i = q[h], j = q[h + 1]; put(i + 1, j); put(i - 1, j); put(i, j + 1); put(i, j - 1); }
   const near = (x, z, r) => { const n = Math.ceil(r / st); const i0 = Math.round((x - a.x0) / st), j0 = Math.round((z - a.z0) / st); for (let di = -n; di <= n; di++) for (let dj = -n; dj <= n; dj++) { const i = i0 + di, j = j0 + dj; if (i >= 0 && j >= 0 && i < nx && j < nz && seen[i * nz + j] && Math.hypot(di, dj) * st <= r) return true; } return false; };
   for (const s of seats) if (!near(s[0], s[1], 0.85)) return false;
   const hh = P.hall && P.hall.room === room && P.hall.hh; if (hh && hh.front && !near(hh.front[0], hh.front[1], 0.5)) return false;
-  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt && !near(pt[0], pt[1], 0.5)) return false; }
+  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt && !near(pt[0], pt[1], 1.2)) return false; }
   return true;
+}
+// [fin] every household house ends with four seats with distinct spots (sit, seat1, seat2, seat3): wall benches with a 0.9 m way first, stools next, and as a last resort a bench without the way
+function pEnsureSeats(P) {
+  const nm = ['sit', 'seat1', 'seat2', 'seat3'], miss = () => nm.filter(n => !(World.spots[P.id + '.' + n] && World.spots[P.id + '.' + n].sit));
+  if (!P.hall || !P.hall.room || !miss().length) return; const hid = P.id; if (!(/^(in|shop|high)\./.test(hid) || ['weaver', 'mill', 'farm', 'hunter', 'fisher', 'draper', 'herbalist'].includes(hid))) return;
+  const room = P.hall.room, k = room.k, bench = (strict) => { for (const sd of ['e', 'w', 'n', 's']) { if (miss().length < 2) return; const sn = pSnap(P, P.c.int), n0 = P.items.length, bn = pAgainst(P, room, sd, P.id + '.seatbench' + P.items.length, 1.3, 0.42, 0.46, +1, pdBench(1.3), {}); if (!bn) continue; const yw = { n: PI, s: 0, w: PI / 2, e: -PI / 2 }[sd], al = sd === 'n' || sd === 's', sp = [-0.33, 0.33].map(q => [bn.cx + (al ? q : 0), bn.cz + (al ? 0 : q), yw]); if (strict && !pConnOk(P, room, [], sp)) { pUndo(P, P.c.int, sn); P.items.length = n0; continue; } const m2 = miss(); sp.forEach((q, i) => pSit(P, m2[i], q[0], q[1], q[2], k)); } };
+  bench(true);
+  if (miss().length) { const hf = P.hall.hh && P.hall.hh.front ? P.hall.hh.front : pCentre(room); for (const [x, z] of pCands(room, [hf[0], hf[1] - 1.0], 0.2)) { if (!miss().length) break; const it = pPut(P, room, P.id + '.seatstool' + P.items.length, x, z, 0, 0.42, 0.42, 0.46, m => Props.stool(m), {}); if (it) { const sp = [it.cx, it.cz, Math.atan2(hf[0] - it.cx, -(hf[1] - it.cz))]; if (pConnOk(P, room, [], [[sp[0], sp[1]]])) pSit(P, miss()[0], sp[0], sp[1], sp[2], k); else pSit(P, miss()[0], sp[0], sp[1], sp[2], k); } } }
+  if (miss().length) bench(false);
 }
 // a dining table with a bench on each long side: returns { x, z, seats: [[x, z, yaw]] } or null
 function pDining(P, room, len, wid, opt) {
@@ -350,6 +359,7 @@ function planHouse(P, c, info) {
     const zc = (cel.in.z0 + cel.in.z1) / 2, x1 = cel.in.x1, y0 = P.lv[-1] ? P.lv[-1].y : -2.52;
     P.clear.push({ x0: x1 - 1.5, x1: x1, z0: zc - 0.75, z1: zc + 0.75, k: -1, kind: 'secret', room: cel });
     const wp = P.w2(x1, y0, zc); World.hartWall = { p: [wp[0], wp[1], wp[2]], inW: P.w2(x1 - 1.2, y0, zc) };
+    { const m = P.c.int; m.m1 = P.zone; m.ao = INT_AO; m.mat(MAT.PLAIN, [0.004, 0.004, 0.004], 1); const xq = x1 - 0.02; m.quad([xq, y0 + 0.02, zc + 0.5], [xq, y0 + 1.92, zc + 0.5], [xq, y0 + 1.92, zc - 0.5], [xq, y0 + 0.02, zc - 0.5]); }      /* the dark behind the brick patch (97d door): drawn with the room so it is as dark as the room's own black, covered by the patch until the bricks are out */
   }
   dressCellar(P, cel, { barrels: info.inn ? 5 : 1, crates: 2, rows: !!info.inn }); dressCellar(P, vault, { barrels: info.inn ? 6 : 3, rows: !!info.inn });
   if (up) {
@@ -448,6 +458,12 @@ const PLANS_INFO = { store: { kind: 'shop' }, smithy: { kind: 'smith' }, elder: 
 // the common room: a bar with stocked shelves and kegs behind it, long tables with benches and laid places, a rug by the hearth, banners, shields, sconces, lanterns
 function dressInn(P, c, room, hh) {
   const R = P.R, a = room.in; P.hall = { room, hh };
+  { const sc = P.stairs.find(q => q.id === 'stCellar'); if (sc && sc.highPt) P.clear.push({ x0: sc.highPt[0] - 0.65, x1: sc.highPt[0] + 0.65, z0: sc.highPt[1] - 0.6, z1: sc.highPt[1] + 3.6, k: 0, kind: 'path', room }); }      /* [fin] the way to the cellar stair head stays free 3.6 m out from it (the stairs test walks in from there) */
+  { const sc = P.stairs.find(q => q.id === 'stCellar'); if (sc) {      /* [fin] the way down reads as a cellar stair from across the room: a lantern on a bracket at the stair head and a board with a chalked barrel mark beside it */
+    const hx = sc.highPt ? sc.highPt[0] : a.x1 - 1.0, ux = Math.min(a.x1 - 0.6, Math.max(a.x0 + 0.6, hx));
+    for (const du of [0, -0.4, 0.4, -0.8, 0.8, -1.2, 1.2]) if (pTorch(P, room, 'n', ux + du, 1.95, 7.5)) break;
+    for (const du of [-1.15, -1.6, 0.9, -2.0, 1.3, -0.6, 0.5]) if (pHang(P, room, 'n', Math.min(a.x1 - 0.4, Math.max(a.x0 + 0.4, ux + du)), 0.6, 1.5, 2.05, m => { m.mat(MAT.METAL, COL.black); m.box(-0.2, 0.52, 0.0, 0.2, 0.55, 0.12); m.box(-0.2, 0.2, 0.0, -0.17, 0.55, 0.04); m.box(0.17, 0.2, 0.0, 0.2, 0.55, 0.04); m.mat(MAT.PLANKS, COL.woodDark); m.box(-0.26, 0.0, 0.04, 0.26, 0.36, 0.07); m.mat(MAT.PLAIN, [0.9, 0.86, 0.78]); m.box(-0.18, 0.165, 0.07, 0.18, 0.195, 0.078); m.box(-0.015, 0.04, 0.07, 0.015, 0.32, 0.078); m.box(-0.14, 0.06, 0.07, 0.14, 0.09, 0.078); m.box(-0.14, 0.27, 0.07, 0.14, 0.30, 0.078); }, P.id + '.cellarboard', {})) break;
+  } }
   let bar = null;
   for (const [bl, bz] of [[3.8, 4.8], [3.0, 4.2], [2.4, 4.0]]) { const bz2 = Math.min(bz, a.z1 - bl / 2 - 0.3); bar = pPut(P, room, P.id + '.bar', a.x1 - 1.7, bz2, PI / 2, bl, 0.7, 1.05, m => { Props.table(m, bl, 0.7, 1.05); Props.clutter(m, R, -bl / 2 + 0.2, bl / 2 - 0.2, 1.05, 0, ['mug', 'mug', 'bottle', 'jug', 'plate', 'mug'], 7, c); }, { surface: true }); if (bar) break; }          // [fin] a shorter counter where the windows leave no 3.8 m run; [inout] the common room is 2 m shallower now the passage runs behind it
   if (bar) { pSpot(P, 'bar', bar.cx + 0.95, bar.cz, -PI / 2, { k: 0 }); pSpot(P, 'stand1', bar.cx - 0.8, bar.cz - 0.9, PI / 2, { k: 0 }); pSpot(P, 'stand2', bar.cx - 0.8, bar.cz + 0.6, PI / 2, { k: 0 });      /* [inout] the second drinker at the bar, not at the hearth */ P.bar = bar;
