@@ -622,7 +622,7 @@ function shellOpenings(c) {
 function pShellWins(P, c, box, keep) {
   const sx = (box.x1 - box.x0) / c.w, sz = (box.z1 - box.z0) / c.d, cx = (box.x0 + box.x1) / 2; P.wins = []; P.shell = { box, sx, sz, cx, list: shellOpenings(c) };
   P.shell.pos = f => f.wall === 'front' || f.wall === 'back' ? cx + f.u * sx : box.z0 + f.u * sz;
-  for (const f of P.shell.list) { if (f.kind !== 'win' || !P.lv[f.lv]) continue; if (f.blocked) { (P.blockedWins = P.blockedWins || []).push(f); continue; } let pos = Math.round(P.shell.pos(f) * 4) / 4; if (keep) { const r = keep(f, pos); if (r === false) continue; if (typeof r === 'number') pos = r; } P.wins.push({ k: f.lv, face: f.wall, pos, kind: f.win }); }
+  for (const f of P.shell.list) { if (f.kind !== 'win' || !P.lv[f.lv]) continue; if (f.blocked) { (P.blockedWins = P.blockedWins || []).push(f); continue; } let pos = Math.round(P.shell.pos(f) * 4) / 4; pos = pWinSnap(P, f, pos); if (keep) { const r = keep(f, pos); if (r === false) continue; if (typeof r === 'number') pos = r; } P.wins.push({ k: f.lv, face: f.wall, pos, kind: f.win }); }
   return P.shell;
 }
 // An upper door the shell shows (f, from shellOpenings) becomes a door of the room behind it: call before pLayout. pBalconies() after it makes the way through: the
@@ -671,4 +671,10 @@ function pPiece(P, room, name, o) {
   if (!r && (o.near || !o.side)) r = pFree(P, room, id, w, d, h, o.rot || 0, draw, Object.assign({ near: o.near || pCentre(room) }, opt));
   if (!r) (P.unplaced = P.unplaced || []).push(room.id + ':' + name); else if (o.lit || (o.top || []).some(t => t[5])) P.lightIn[room.id] = 1;
   return r;
+}
+// [inout] a window keeps clear of the room's corners and of a partition that meets the outside wall: moved along the wall into the room it falls in, at most 1 m
+function pWinSnap(P, f, pos) {
+  const fb = f.wall === 'front' || f.wall === 'back', rs = Object.values(P.rooms).filter(r => r.k === f.lv && (fb ? (f.wall === 'front' ? Math.abs(r.z0 - P.shell.box.z0) < 0.6 : Math.abs(r.z1 - P.shell.box.z1) < 0.6) : (f.wall === 'left' ? Math.abs(r.x0 - P.shell.box.x0) < 0.6 : Math.abs(r.x1 - P.shell.box.x1) < 0.6)));
+  const lo = r => fb ? r.x0 : r.z0, hi = r => fb ? r.x1 : r.z1, r = rs.find(q => pos >= lo(q) && pos <= hi(q)) || rs.sort((a, b) => Math.min(Math.abs(pos - lo(a)), Math.abs(pos - hi(a))) - Math.min(Math.abs(pos - lo(b)), Math.abs(pos - hi(b))))[0]; if (!r) return pos;
+  const a = lo(r) + 1.15, b = hi(r) - 1.15; if (a > b) return Math.round((lo(r) + hi(r)) * 2) / 4; const q = Math.min(b, Math.max(a, pos)); return Math.abs(q - pos) <= 1.0 ? Math.round(q * 4) / 4 : pos;
 }

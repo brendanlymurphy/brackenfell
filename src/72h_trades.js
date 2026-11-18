@@ -138,56 +138,46 @@ PLANS.smithy = (P, c, info) => {      /* [inout] the shell on the Market Place: 
   dressBedroom(P, loft, { bedH: 0.85, beds: castBeds(P.id, ['bed']), bedRooms: [P.rooms.living, P.rooms.forge, P.rooms.coalstore], loot: [['gold', 8]], bedInteract: true });
   pPiece(P, loft, 'painted_wooden_stool', { near: [X0 + 3.4, 6.2], top: [['wooden_candlestick', 0, 0, 1, 0, true]] }); pKitWall(P, loft, 's', X0 + 2.6, 'Peg_Rack');
   // the store behind the forge: charcoal, bar iron, the spade
-  pFree(P, cs, id + '.cscoal', 1.4, 0.9, 0.6, 0, PD.coalHeap(R), { near: [X1 - 1.4, 7.0], lowOk: true });
+  pFree(P, cs, id + '.cscoal', 1.4, 0.9, 0.6, 0, PD.coalHeap(R), { near: [X1 - 1.4, 7.0], lowOk: true }); pTorch(P, cs, 'n', Xp + 3.2, 1.6, 4.5) || pTorch(P, cs, 'e', 6.7, 1.6, 4.5);      /* the validator wants a light; ROOMS.md says none: one torch at the door, no more */
   for (let i = 0; i < 3; i++) pPiece(P, cs, 'Bag', { side: 's', at: Xp + 3.2 + i * 0.75, id: 'bag' + i });
   pPiece(P, cs, 'Crate_Wooden', { side: 's', at: Xp + 1.0 }); for (let i = 0; i < 2; i++) pFree(P, cs, id + '.csiron' + i, 1.0, 0.4, 0.3, 0, pdIron, { near: [Xp + 2.2, 6.2], lowOk: true });
   if (!hh) P.err.push('no forge fits');
 };
 
 // ── the elder's hall: a long, high hall with a great fireplace on the east wall, a high table on a dais at the far end, a long table down the middle, trophies and banners; the study to the west; a stair hall with the way up to the bedchamber and down to the strongroom ──
-PLANS.elder = (P, c, info) => {
-  const R = P.R, id = P.id; P.dims = { W: 14, D: 14, Dh: 9 };
-  pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, 3.8); pLevel(P, 1, 3.8 + PW.SLAB, H_UP);
-  pRoom(P, 0, 'hall', 'hall', -7, 0, 7, 9, { floor: 'stone' }); pRoom(P, 0, 'study', 'study', -7, 9, 0, 14); pRoom(P, 0, 'stairhall', 'corridor', 0, 9, 7, 14);
-  pRoom(P, 1, 'chamber', 'bedroom', 0, 9, 7, 14, { skipWin: ['x9'] }); pRoom(P, 1, 'solar', 'bedroom', -7, 9, 0, 14, { skipWin: ['x9'] });
-  pRoom(P, -1, 'strongroom', 'cellar', 0, 9, 7, 14, { floor: 'stone', win: false });
-  pDoor(P, 'hall', null, 0, 0); pDoor(P, 'hall', 'stairhall', 3.5, 9); pDoor(P, 'hall', 'study', -3.5, 9); pDoor(P, 'chamber', 'solar', 0, 11.5);
-  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 1.3, z: 11.0, width: 1.0, tread: 0.22 });
-  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: 1, x: 1.5, z: 13.3, width: 1.0, tread: 0.19 });
+PLANS.elder = (P, c, info) => {      /* [inout] the shell: 7.2 x 5.6 m, two storeys over a strongroom; 9 x 6.5 inside. Rowan lives alone in what was his father's manor hall */
+  const R = P.R, id = P.id, B = pFitBox(c), X0 = B.x0, X1 = B.x1, D = B.D, Xs = X0 + 3, H0 = 2.75; P.dims = { W: B.W, D, Dh: D };
+  pLevel(P, -1, -(2.3 + PW.SLAB), 2.3); pLevel(P, 0, 0, H0); pLevel(P, 1, H0 + PW.SLAB, H_UP);
+  pRoom(P, 0, 'study', 'study', X0, 0, Xs, D); pRoom(P, 0, 'hall', 'hall', Xs, 0, X1, D, { floor: 'stone' });
+  pRoom(P, 1, 'chamber', 'bedroom', X0, 0, Xs, D); pRoom(P, 1, 'solar', 'bedroom', Xs, 0, X1, D);
+  pRoom(P, -1, 'strongroom', 'cellar', X0, 0, Xs, D, { floor: 'stone', win: false });
+  pDoor(P, 'hall', null, 0, 0); pDoor(P, 'hall', 'study', Xs, 1.6); pDoor(P, 'solar', 'chamber', Xs, 1.6);
+  pShellWins(P, c, B);
+  pStair(P, { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: -1, x: X1 - 1.3, z: D - 0.75, width: 0.9, tread: 0.18 });
+  pStair(P, { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: -1, x: X0 + 0.75, z: D - 1.4, width: 0.9, tread: 0.2 });
   pLayout(P);
-  const hall = P.rooms.hall, study = P.rooms.study, sh = P.rooms.stairhall, ch = P.rooms.chamber, solar = P.rooms.solar, sr = P.rooms.strongroom;
-  // the great fireplace on the long east wall, the stack goes up beside the chamber
-  const hh = pHearth(P, hall, 'e', 2.6, { cauldron: false, size: 0.8, at: 4.2, r: 11, c: [3.8, 1.9, 0.7], rug: [0.4, 0.14, 0.12] }); P.hall = { room: hall, hh };
-  if (hh) pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 });
-  // the dais and high table across the far south end
-  { const m = c.int, L0 = P.lv[0]; m.m1 = P.zone; m.ao = INT_AO;
-    pPut(P, hall, id + '.dais', 0, 7.7, 0, 9.0, 2.1, 0.2, mm => { mm.mat(MAT.PLANKS, COL.woodDark); mm.box(-4.5, 0, -1.05, 4.5, 0.2, 1.05); }, { flat: true, noClear: true });
-    addFloor(m, -4.5, 6.65, 4.5, 8.75, L0.y + 0.22); }
-  const ht = pPut(P, hall, id + '.hightable', 0, 8.0, 0, 5.2, 0.9, 0.78, m => { Props.table(m, 5.2, 0.9, 0.78); Props.clutter(m, c.R, -2.4, 2.4, 0.78, 0, ['plate', 'mug', 'bowl', 'candle', 'loaf', 'mug', 'jug'], 8, c); }, { surface: true, noClear: true, lift: 0.2 });
-  if (ht) { for (let i = 0; i < 4; i++) pPut(P, hall, id + '.hchair' + i, -1.9 + i * 1.27, 8.75, PI, 0.5, 0.5, 0.95, pdChair, { lowOk: true, noClear: true, lift: 0.2 }); pSit(P, 'sit', 0.0, 8.75, PI, 0); pSpot(P, 'dais', 0, 6.7, 0, { k: 0 }); }
-  const dn = pDining(P, hall, 3.8, 1.0, { near: [-1.2, 3.6], id: 'long', n: 6, items: ['mug', 'plate', 'bowl', 'candle', 'loaf', 'jug'], rots: [PI / 2] });
-  if (dn) { dn.seats.forEach((st, i) => pSit(P, i ? 'seat' + i : 'sit2', st[0], st[1], st[2], 0)); pLamp(P, hall, dn.x, dn.z - 1.2); pLamp(P, hall, dn.x, dn.z + 1.2); }
-  pWalls(P, hall, ['Banner_1_Cloth', 'Shield_Wooden', 'Banner_2_Cloth', 'kite_shield', 'Sword_Bronze', 'Banner_1_Cloth', 'Shield_Wooden', 'Torch_Metal', 'Banner_2_Cloth', 'Torch_Metal']);
-  for (let i = 0; i < 4; i++) pHang(P, hall, 'w', 2.2 + i * 2.0, 1.0, 1.5, 2.5, m => { m.mat(MAT.TIMBER, COL.woodDark); m.box(-0.4, 0.05, -0.06, 0.4, 0.95, -0.02); at(m, 0, 0.35, -0.04, 0, () => antlers(m)); }, id + '.trophy' + i, { pivot: 1.5 });
-  PD.dense(P, hall, { pool: ['tapestry', 'hooks', 'cabinet', 'paint', 'shelf', 'cask', 'sconce', 'rack'], corner: ['broom', 'cask', 'stack'], mid: { kinds: ['rug'], max: 1 } });
-  const e = P.doors.find(d => d.b === null); if (e) pPut(P, hall, id + '.mat', e.x, 1.6, 0, 3.0, 1.8, 0.02, pdRug(3.0, 1.8, [0.3, 0.12, 0.1]), { flat: true, noClear: true });
-  // the study: desk with the chronicle, bookcases, a globe-sized lectern, a settle
-  const dk = pFree(P, study, id + '.desk', 1.8, 0.85, 0.8, 0, pdTable(1.8, 0.85, ['book', 'candle', 'book', 'mug', 'book'], 5, c), { near: [-3.5, 11.5], surface: true });
-  if (dk) { pSpot(P, 'desk', dk.cx, dk.cz + 0.85, PI, { k: 0 }); pSpot(P, 'study', dk.cx, dk.cz + 0.85, PI, { k: 0 }); pPut(P, study, id + '.deskchair', dk.cx, dk.cz + 0.8, PI, 0.5, 0.5, 0.95, pdChair, { lowOk: true }); }
-  pShelfRun(P, study, 'w', 9.2, 13.8, null, { id: 'bk', books: true, lv: 5 }); pShelfRun(P, study, 's', -6.8, -0.2, null, { id: 'bks', books: true, lv: 5 });
-  pKitFloor(P, study, 'n', 'Bookcase_2', { n: 'n', at: 'end' }); pKitFloor(P, study, 'n', 'BookStand', { n: 'bs', at: 'start' }) || pKitFloor(P, study, 's', 'CandleStick_Stand', { n: 's' });
-  PD.dense(P, study, { pool: ['books', 'tapestry', 'paint', 'hooks', 'sconce'], corner: ['broom', 'stack'], mid: { kinds: ['rug'], max: 1 } }); pLamp(P, study, -3.5, 11.5);
-  // stair hall: lantern, chests, cloaks; the chamber and solar above
-  PD.dense(P, sh, { pool: ['hooks', 'cabinet', 'paint', 'sconce', 'tapestry'], corner: ['broom', 'sacks'], middle: false }); pLamp(P, sh, 4.5, 12.2);
-  dressBedroom(P, ch, { beds: ['bed'], loot: [['gold', 10]], bedInteract: true, table: true, fur: true }); PD.dense(P, ch, { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'sconce', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-  dressBedroom(P, solar, { beds: [], chestId: 'chest2', chest: false }); pShelfRun(P, solar, 'w', 9.2, 13.8, null, { id: 'sol', books: true, lv: 4 });
-  PD.dense(P, solar, { pool: ['books', 'tapestry', 'paint', 'cabinet', 'sconce'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-  // the strongroom below: strongbox, shelves of deeds and plate, locked chests
-  const sb = pAgainst(P, sr, 'e', id + '.strongbox', 1.1, 0.6, 0.8, +1, pdChest, { lowOk: true, at: 11.5 }); if (sb) pInteract(P, sb.cx, 0.5, sb.cz, { kind: 'chest', id: 'elder.strongbox', loot: [['gold', 30], ['potion', 1]], r: 1.8 }, -1);
-  pShelfRun(P, sr, 's', 0.2, 6.8, ['pot', 'bowl', 'bottle'], { id: 'sr', lv: 3 }); pFree(P, sr, id + '.srchest', 0.85, 0.5, 0.58, 0.4, pdChest, { near: [5.8, 13.2], lowOk: true }); pStock(P, sr, { crates: 3, sacks: 2, barrels: 1, near: [3.5, 12.6] });
-  PD.dense(P, sr, { pool: ['shelf', 'cabinet', 'sacks', 'torch'], corner: ['sacks', 'stack'], mid: { kinds: ['sacks'], max: 1, min: 0.8 } });
-  for (const rid of ['strongroom']) if (!P.lightIn[rid]) pTorch(P, P.rooms[rid], 'n', 3.5, 1.7, 7) || pTorch(P, P.rooms[rid], 's', 3.5, 1.7, 7);
-  if (!hh) P.err.push('no great fireplace fits');
+  const hall = P.rooms.hall, study = P.rooms.study, ch = P.rooms.chamber, solar = P.rooms.solar, sr = P.rooms.strongroom;
+  // the hall: the fire on the gable wall, his father's buckler over it; the long table with the Elder's chair at its head; the empty bread baskets by the door
+  let hh = null; for (const [sd, at_] of [['e', 4.3], ['e', 4.6], ['w', 3.6], ['w', 4.4]]) if ((hh = pHearth(P, hall, sd, 1.6, { cauldron: false, size: 0.6, at: at_, r: 10, c: [3.6, 1.8, 0.65], rug: [0.4, 0.14, 0.12] }))) break; P.hall = { room: hall, hh }; if (hh) { pPier(P, 1, hh); pSpot(P, 'home', hh.front[0], hh.front[1], Math.atan2(hh.px - hh.front[0], -(hh.pz - hh.front[1])), { k: 0 }); pKitWall(P, hall, hh.side, hh.pz - 1.5, 'Shield_Wooden') || pKitWall(P, hall, hh.side, hh.pz + 1.5, 'Shield_Wooden'); }      /* his father's buckler beside the chimney breast */
+  const dn = pDining(P, hall, 2.2, 0.9, { near: [Xs + 2.4, 2.7], id: 'long', n: 5, items: ['plate', 'mug', 'candle', 'loaf', 'jug'], rots: [PI / 2] });
+  if (dn) { dn.seats.forEach((st, i) => pSit(P, i ? 'seat' + i : 'sit2', st[0], st[1], st[2], 0)); pPiece(P, hall, 'painted_wooden_chair_01', { near: [dn.x, dn.z + 1.55], turn: PI, id: 'elderchair' }); pSit(P, 'sit', dn.x, dn.z + 1.55, PI, 0); }
+  for (let i = 0; i < 3; i++) pPiece(P, hall, 'wicker_basket_02', { side: ['n', 'e'], at: X1 - 0.5 - i * 0.6, sc: 1.6, soft: true, id: 'breadbasket' + i });
+  pPiece(P, hall, 'painted_wooden_cabinet', { side: ['n', 'w'], at: Xs + 1.3, id: 'sideboard', top: [['brass_candleholders_c', -0.3, 0, 1, 0, true], ['brass_candleholders_c', 0.3, 0, 1, 0, true]] });
+  pKitWall(P, hall, 'w', 4.6, 'Peg_Rack'); pPiece(P, hall, 'wooden_bucket_02', { near: [Xs + 0.6, 4.3], sc: 0.7, id: 'boots', soft: true });
+  const e = P.doors.find(d => d.b === null); if (e) pPut(P, hall, id + '.mat', e.x, 1.2, 0, 2.2, 1.4, 0.02, pdRug(2.2, 1.4, [0.3, 0.12, 0.1]), { flat: true, noClear: true });
+  // the study: the desk with the levy roll open, the worn bookcase, the lectern
+  const dk = pFree(P, study, id + '.desk', 1.6, 0.8, 0.8, PI / 2, pdTable(1.6, 0.8, ['book', 'candle', 'book', 'mug'], 4, c), { near: [X0 + 1.9, 2.0], surface: true });
+  if (dk) { pSpot(P, 'desk', dk.cx - 0.8, dk.cz, PI / 2, { k: 0 }); pSpot(P, 'study', dk.cx - 0.8, dk.cz, PI / 2, { k: 0 }); pSpot(P, 'book', dk.cx - 0.8, dk.cz, PI / 2, { k: 0 }); }
+  pPiece(P, study, 'wooden_bookshelf_worn', { side: ['n', 's', 'e'], sc: 0.9 }); pPiece(P, study, 'BookStand', { near: [X0 + 2.2, 0.8] }); pPiece(P, study, 'CandleStick_Stand', { near: [X0 + 2.4, 3.6], lit: 6 });
+  // upstairs: his chamber (one pillow slept on), the solar nobody uses, the rocker turned to the window that looks at Pell House
+  dressBedroom(P, ch, { beds: ['bed'], loot: [['gold', 10]], bedInteract: true, table: false, fur: true, chest: false });
+  pPiece(P, ch, 'classicnightstand_01', { side: ['e', 'w'], top: [['wooden_candlestick', 0, 0, 1, 0, true]] }); pPiece(P, ch, 'gothiccabinet_01', { side: ['n', 's', 'w'], sc: 0.75 });
+  pPiece(P, solar, 'rockingchair_01', { near: [X1 - 1.2, 1.0], turn: PI }); pPiece(P, solar, 'painted_wooden_table', { near: [Xs + 3.0, 3.6], sc: 0.8, soft: false });
+  // the strongroom: the town's silver and the founders' agreement, ledgers, twelve tokens on a nail and one nail empty
+  const sb = pAgainst(P, sr, 'e', id + '.strongbox', 1.1, 0.6, 0.8, +1, pdChest, { lowOk: true, at: 3.0 }); if (sb) pInteract(P, sb.cx, 0.5, sb.cz, { kind: 'chest', id: 'elder.strongbox', loot: [['gold', 30], ['potion', 1]], r: 1.8 }, -1);
+  pPiece(P, sr, 'treasure_chest', { side: ['n', 'e'], at: X0 + 2.0 }); pPiece(P, sr, 'painted_wooden_shelves', { side: ['e', 'n'], sc: 1.5, at: 1.2 });
+  pTorch(P, sr, 's', X0 + 1.9, 1.7, 6) || pTorch(P, sr, 'n', X0 + 1.9, 1.7, 6);
+  if (!hh) P.err.push('no fireplace fits');
 };
 
 // ── ship list: a building is added only when its plan above is designed, dressed, lit and validated ──
