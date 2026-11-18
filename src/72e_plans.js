@@ -323,11 +323,11 @@ function planHouse(P, c, info) {
   const W = info.W || stepTo(c.w * 1.35, 8, 11), D = info.D || stepTo(c.d * 1.6, 10, 12), Dh = info.Dh || 7, H0 = info.H0 || H_GROUND, x0 = -W / 2, x1 = W / 2;
   P.dims = { W, D, Dh };
   pLevel(P, -1, -(H_CELLAR + PW.SLAB), H_CELLAR); pLevel(P, 0, 0, H0); if (up) pLevel(P, 1, H0 + PW.SLAB, H_UP);
-  const cw = !!info.cellarway, hall = pRoom(P, 0, 'hall', info.inn ? 'common' : 'hall', x0, 0, x1, cw ? Dh - 2 : Dh), store = pRoom(P, 0, 'store', info.inn ? 'kitchen' : 'store', x0, Dh, 0, D), bed0 = pRoom(P, 0, 'bedroom', info.inn ? 'keeper' : 'bedroom', 0, Dh, x1, D);
+  const cw = !!info.cellarway, hall = pRoom(P, 0, 'hall', info.inn ? 'common' : 'hall', x0, 0, x1, cw ? Dh - 2.5 : Dh), store = pRoom(P, 0, 'store', info.inn ? 'kitchen' : 'store', x0, Dh, 0, D), bed0 = pRoom(P, 0, 'bedroom', info.inn ? 'keeper' : 'bedroom', 0, Dh, x1, D);
   pDoor(P, 'hall', null, 0, 0);
   if (cw) {      /* [inout] the Hart: the owner found nothing that read as a cellar door. Now a door in the back wall of the common room opens on the passage behind it (the cross passage of an inn), and the cellar stair goes down from there; the kitchen and the keeper's room open off the same passage */
-    pRoom(P, 0, 'passage', 'corridor', x0, Dh - 2, x1, Dh, { win: false, floor: 'stone' });
-    pDoor(P, 'hall', 'passage', x0 / 2, Dh - 2, { cellarDoor: true }); pDoor(P, 'passage', 'store', x0 / 2, Dh); pDoor(P, 'passage', 'bedroom', x1 - 0.9, Dh);
+    pRoom(P, 0, 'passage', 'corridor', x0, Dh - 2.5, x1, Dh, { win: false, floor: 'stone' });      /* 2.5 m: the stair well along its back wall leaves a way past it to the keeper's door */
+    pDoor(P, 'hall', 'passage', x0 / 2, Dh - 2.5, { cellarDoor: true }); pDoor(P, 'passage', 'store', x0 / 2, Dh); pDoor(P, 'passage', 'bedroom', x1 - 0.9, Dh);
   } else { pDoor(P, 'hall', 'store', x0 / 2, Dh); pDoor(P, 'hall', 'bedroom', x1 / 2, Dh); }
   // cellar: under the hall (the stair arrives here) and under the store
   const cel = pRoom(P, -1, 'cellar', 'cellar', x0, 0, x1, Dh, { floor: 'stone', win: false }), vault = pRoom(P, -1, 'vault', 'cellar', x0, Dh, 0, D, { floor: 'stone', win: false });
@@ -335,7 +335,7 @@ function planHouse(P, c, info) {
   // the stairs: cellar -> hall along the west wall (toward +z), hall -> loft along the east wall (toward +z)
   const tr = 0.22;
   const fl = !!info.flank;
-  pStair(P, cw ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: -1, x: 1.4, z: Dh - 1.0, width: 1.0, tread: tr }      /* its head by the cellar door: the well does not stand across the way to it */ : fl ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: x0 + 0.95, z: 1.3, width: 1.0, tread: tr });
+  pStair(P, cw ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: -1, x: 1.4, z: Dh - 0.75, width: 1.0, tread: tr }      /* its head by the cellar door: the well does not stand across the way to it */ : fl ? { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'x', dir: 1, x: 1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stCellar', name: 'cellar', k0: -1, k1: 0, axis: 'z', dir: 1, x: x0 + 0.95, z: 1.3, width: 1.0, tread: tr });
   if (up) {
     pStair(P, fl ? { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'x', dir: -1, x: -1.4, z: 1.0, width: 1.0, tread: tr } : { id: 'stUp', name: 'up', k0: 0, k1: 1, axis: 'z', dir: 1, x: x1 - 0.95, z: 1.3, width: 1.0, tread: tr });
     if (fl) { pRoom(P, 1, 'loft', 'gallery', x0, 0, 0, D); pRoom(P, 1, 'chamber1', 'bedroom', 0, 0, x1, Dh); pRoom(P, 1, 'chamber2', 'bedroom', 0, Dh, x1, D); pDoor(P, 'loft', 'chamber1', 0, 3.5); pDoor(P, 'loft', 'chamber2', 0, Dh + 1.5); }
@@ -523,10 +523,10 @@ function dressKind(P, c, room, hh, info) {
 // [inout] what every lived-in house keeps (coordinator, 2026-11-18; checked by test/interiors.js): a `work` place of its own, `fire1` beside `home` and not on it,
 // and max(4, household) seats at distinct places. Added only where the plan has not made them; a stool is a real kit stool, sat on.
 function pEnsure(P) {
-  const sleepers = typeof castSleepers === 'function' ? castSleepers(P.id) : 0; if (!sleepers) return;
+  const sleepers = typeof castSleepers === 'function' ? castSleepers(P.id) : 0, house = /^(in|shop|high)\./.test(P.id) || ['weaver', 'mill', 'farm', 'hunter', 'fisher', 'draper', 'herbalist'].includes(P.id); if (!sleepers && !house) return;      /* a shop nobody sleeps in still seats four (the inspector's rule) */
   const ground = Object.values(P.rooms).filter(r => r.k === 0 && r.kind !== 'yard' && r.kind !== 'corridor').sort((a, b) => (b.x1 - b.x0) * (b.z1 - b.z0) - (a.x1 - a.x0) * (a.z1 - a.z0));
   const main = (P.hall && P.hall.room && P.hall.room.k === 0) ? P.hall.room : ground[0]; if (!main) return;
-  const hh = P.hall && P.hall.hh, rooms = [main].concat(ground.filter(r => r !== main));
+  const hh = P.hall && P.hall.hh, rooms = [main].concat(ground.filter(r => r !== main), Object.values(P.rooms).filter(r => r.k === 1 && r.kind !== 'corridor'));      /* seats upstairs too when the ground floor is full (a stool by the bed in a loft) */
   const freeAt = (room, x, z, w) => pFit(P, room, rectOf(x, z, w, w), { h: 1.8, lowOk: true, noClear: true }) && !P.clear.some(q => q.k === room.k && (q.kind === 'stair' || q.kind === 'door') && rOv(rectOf(x, z, w, w), q, 0.01));      /* a person may stand on a path, not in a doorway or at a stair's end */
   if (!P.spots.home) for (const [x, z] of pCands(main, pCentre(main))) if (freeAt(main, x, z, 0.7)) { pSpot(P, 'home', x, z, 0, { k: main.k }); break; }      /* a house with no fire (the chapel): its people's place is the middle of its main room */
   const home = P.spots.home;
@@ -537,12 +537,16 @@ function pEnsure(P) {
   const seats = () => { const out = []; for (const n in P.spots) if (/^(sit|seat\d+)$/.test(n)) { const s = P.spots[n]; if (!out.some(o => (o.k || 0) === (s.k || 0) && Math.hypot(o.x - s.x, o.z - s.z) < 0.4)) out.push(s); } return out; };
   // a seat no 0.9 m way reaches (a bench between a table and a wall) is not one: its name goes to a stool where a way reaches
   let reach = pReach(P); const gone = []; for (const nm of Object.keys(P.spots)) if (/^(sit|seat\d+)$/.test(nm)) { const s = P.spots[nm]; if (!reach(s.k || 0, s.x, s.z, 0.65)) { gone.push(nm); delete P.spots[nm]; } }
+  if (typeof pFlood === 'function') for (const room of Object.values(P.rooms)) { const f = pFlood(P, room, null); f.tg.forEach((t, i) => { if (f.hit[i] || t[2] !== 0.85) return; for (const nm of Object.keys(P.spots)) { const s = P.spots[nm]; if (/^(sit|seat\d+)$/.test(nm) && Math.abs(s.x - t[0]) < 1e-6 && Math.abs(s.z - t[1]) < 1e-6) { gone.push(nm); delete P.spots[nm]; } } }); }      /* and none the inspector's room check finds cut off */
   const want = Math.max(4, sleepers); let n = 1, guard = 0;
   const stoolDraw = m => kp(m, 'painted_wooden_stool', 0, 0, 0, 1, 0);
   while (seats().length < want && guard++ < 14) {
     let placed = null;
     for (const room of rooms) { if (placed) break; const tbl = P.items.find(it => it.k === room.k && /table|meal|long|desk/.test(it.id || '') && it.x0 >= room.x0 - 0.1 && it.x1 <= room.x1 + 0.1 && it.z0 >= room.z0 - 0.1 && it.z1 <= room.z1 + 0.1), near = tbl ? [(tbl.x0 + tbl.x1) / 2, (tbl.z0 + tbl.z1) / 2] : home && pRoomAt(P, 0, home.x, home.z) === room ? [home.x, home.z] : pCentre(room);
-      for (const [x, z] of pCands(room, near)) { if (Math.hypot(x - near[0], z - near[1]) > 3.5) break; if (!reach(room.k, x, z, 0.65) || seats().some(o => Math.hypot(o.x - x, o.z - z) < 0.45)) continue; const it = pPut(P, room, P.id + '.seatstool' + P.items.length, x, z, 0, 0.42, 0.42, 0.46, stoolDraw, { lowOk: true }); if (it) { placed = { it, near, room }; break; } } }
+      const cut0 = typeof pFlood === 'function' ? pFlood(P, room, null).hit.filter(h => !h).length : 0;
+      for (const [x, z] of pCands(room, near)) { if (Math.hypot(x - near[0], z - near[1]) > 6) break; if (!reach(room.k, x, z, 0.65) || seats().some(o => Math.hypot(o.x - x, o.z - z) < 0.45)) continue;
+        if (typeof pFlood === 'function') { P.spots.__probe = { x, z, k: room.k, sit: 0.46 }; const f = pFlood(P, room, [{ x0: x - 0.21, x1: x + 0.21, z0: z - 0.21, z1: z + 0.21 }]), pi = f.tg.findIndex(t => Math.abs(t[0] - x) < 1e-6 && Math.abs(t[1] - z) < 1e-6); delete P.spots.__probe; if (pi < 0 || !f.hit[pi] || f.hit.filter(h => !h).length > cut0) continue; }      /* the inspector's way check (pFlood): the stool is reached and cuts no other way */
+        const it = pPut(P, room, P.id + '.seatstool' + P.items.length, x, z, 0, 0.42, 0.42, 0.46, stoolDraw, { lowOk: true, allow: ['path'], noGuard: true });      /* on a room's way across only where the way check above says nothing is cut */ if (it) { placed = { it, near, room }; break; } } }
     if (!placed) break;
     const nm = gone.length ? gone.shift() : (() => { if (!P.spots.sit) return 'sit'; while (P.spots['seat' + n]) n++; return 'seat' + n; })();
     pSit(P, nm, placed.it.cx, placed.it.cz, faceTo(placed.it.cx, placed.it.cz, placed.near), placed.room.k); reach = pReach(P);
