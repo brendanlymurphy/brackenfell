@@ -228,3 +228,243 @@ What the eye gets first, per room (R = reads as someone's room; E = empty plaste
 - guardhouse: guard W E-ish then R from E (hearth, stair); cells R (bars, stone); armoury E; barracks R (window, table).
 - herbalist: shop R (table, bottles, hanging herbs); workroom E-ish (window wall); chamber E (chimney only).
 Empty from the door: mill store, mill solar, in.10 store and back, in.13 store, smithy living, guardhouse armoury, herbalist chamber, draper back stairhead. Leaf in the face at 1.3 m: mill work E, draper shop E, inn cellar, in.10 shop E.
+
+## ROOM CAMERA, ALL PLAN BUILDINGS AT 13:00 (hand-over table for the interiors session)
+Made with `node test/roomviews.mjs ... ` (HOURS=13) and `python3 test/roomviews_table.py /tmp/rv13`; sheets: /home/claude/shots/fin/roomviews13/<house>.jpg (13:00 tiles, labelled). 57 buildings, one row per room and level. Verdicts are a first pass from pixels and plan facts (rules in the header of test/roomviews_table.py): "room" when any doorway or stair-head view reads as a furnished room, else the first view's verdict. Known limits: "empty" includes rooms with no floor item over 0.3 m by design (passages, yards, stairwells) and rooms where the furniture stands out of frame; a dark view can hide furniture; the leaf test is by colour. Check a flagged row on its sheet before acting. Where a plan room name is not in ROOMS_SPEC (src/72n_rooms.js) the row says so and lists the spec's rooms: the names differ for many houses (e.g. mill and in.13 have a plan room "store" the spec lacks), so those rooms were furnished from nothing.
+counts: room 120, empty 77, dark by day 19, leaf in the face 14, stair in the way 1
+
+| house | room | level | verdict | views | floor items | ROOMS_SPEC says it should hold |
+|---|---|---|---|---|---|---|
+| chapel | nave | L0 | room | room/room/room | 32 |  |
+| chapel | sacristy | L0 | empty | empty/empty | 6 | sacristy and his cell: painted_wooden_table x1, Book_5 x3, Peg_Rack x1; only here: the Sexton's ledger open at a page he has turned to many times |
+| chapel | tower | L0 | empty | empty | 4 | bell tower foot: wooden_ladder x1; only here: the old rotted rope coiled in the corner |
+| chapel | vault | L-1 | leaf in the face | leaf in the face | 3 |  |
+| chapel | crypt | L-1 | room | room | 9 |  |
+| draper | shop | L0 | room | room/room | 12 |  |
+| draper | back | L0 | empty | empty/empty | 0 | back room: painted_wooden_table x1, painted_wooden_chair_01 x2, Cauldron x1, gothiccabinet_01 x1; hearth; only here: Anselm's grandfather's pack frame on the wall |
+| draper | upfront | L1 | empty | empty/empty | 5 | Sabina's room: gothicbed_01 x1, classicnightstand_01 x1, painted_wooden_cabinet x1, Dummy x1; only here: a ribbon counting Lark's unpaid winters: two knots |
+| draper | upback | L1 | room | room/room | 4 |  |
+| elder | study | L0 | room | stair in the way/room | 4 |  |
+| elder | hall | L0 | room | room/room | 9 |  |
+| elder | chamber | L1 | room | room | 5 |  |
+| elder | solar | L1 | room | room/room | 2 |  |
+| farm | work | L0 | room | room/stair in the way/stair in the way | 8 |  |
+| farm | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: hall = farm kitchen, service = dairy, passage = cross passage, buttery = buttery, parlour = parlour, solar = her room, landing = landing, chamber = the men's room, empty) |
+| farm | living | L0 | room | room | 4 |  |
+| farm | loft | L1 | dark by day | dark by day | 5 |  |
+| fisher | room | L0 | room | room | 5 |  |
+| fisher | loft | L1 | dark by day | dark by day | 3 |  |
+| guardhouse | guard | L0 | room | room/stair in the way/stair in the way | 7 |  |
+| guardhouse | cells | L0 | room | room | 3 |  |
+| guardhouse | armoury | L0 | empty | empty | 3 | armoury: WeaponStand x2, Shield_Wooden x3, kite_shield x1, Crate_Wooden x1; only here: the first Warden's kettle hat on a shelf, dented |
+| guardhouse | barracks | L1 | room | room/room | 7 |  |
+| herbalist | shop | L0 | room | room/room | 6 |  |
+| herbalist | workroom | L0 | room | room/room | 5 |  |
+| herbalist | chamber | L0 | room | room | 5 |  |
+| high.a | hall | L0 | empty | empty/stair in the way/stair in the way | 1 | room name not in ROOMS_SPEC (it lists: room = the Reeve's one room) |
+| high.a | pantry | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: room = the Reeve's one room) |
+| high.a | chamber | L0 | room | room | 4 |  |
+| high.a | loft | L1 | dark by day | dark by day | 4 |  |
+| high.c | hall | L0 | room | room/stair in the way/stair in the way | 4 |  |
+| high.c | pantry | L0 | leaf in the face | leaf in the face | 2 |  |
+| high.c | chamber | L0 | leaf in the face | leaf in the face | 2 |  |
+| high.c | loft | L1 | dark by day | dark by day | 5 |  |
+| hunter | hall | L0 | room | room/stair in the way/stair in the way | 3 |  |
+| hunter | pantry | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: room = one room) |
+| hunter | chamber | L0 | room | room | 4 |  |
+| hunter | loft | L1 | dark by day | dark by day | 3 |  |
+| in.02 | work | L0 | room | room/stair in the way/stair in the way | 8 |  |
+| in.02 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: work = cooperage, leg = hoop store, living = kitchen, yard = yard, loft = loft) |
+| in.02 | living | L0 | room | room | 4 |  |
+| in.02 | loft | L1 | empty | empty | 6 | loft: gothicbed_01 x1, treasure_chest x1; only here: Joyce's seven notches on the beam, one a year |
+| in.04 | hall | L0 | room | room/stair in the way/leaf in the face | 9 |  |
+| in.04 | pantry | L0 | empty | empty | 1 | shaft store: Crate_Wooden x1; only here: Wren's order tied with red |
+| in.04 | chamber | L0 | empty | empty | 0 | glue room: Cauldron x1; hearth; only here: the smell: nobody eats here |
+| in.04 | solar | L1 | room | stair in the way/room | 1 |  |
+| in.04 | loft | L1 | empty | empty | 4 | room name not in ROOMS_SPEC (it lists: hall = fletcher's shop, pantry = shaft store, chamber = glue room, solar = bow loft) |
+| in.07 | work | L0 | room | room/stair in the way/stair in the way | 7 |  |
+| in.07 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: work = the Pottery, living = damp room, yard = kiln yard, loft = pattern loft) |
+| in.07 | living | L0 | room | room | 4 |  |
+| in.07 | loft | L1 | empty | empty | 5 | pattern loft: painted_wooden_table x1; only here: the bowl |
+| in.08 | hall | L0 | leaf in the face | leaf in the face/leaf in the face/stair in the way | 5 |  |
+| in.08 | pantry | L0 | empty | empty | 4 | pantry: painted_wooden_shelves x1, ceramic_pot x2, Barrel x1; only here: a covered dish she takes to Stephen forty paces away |
+| in.08 | chamber | L0 | room | room | 1 |  |
+| in.08 | solar | L1 | room | stair in the way/room | 1 |  |
+| in.08 | loft | L1 | room | room | 5 |  |
+| in.10 | shop | L0 | room | room/stair in the way/stair in the way | 8 |  |
+| in.10 | store | L0 | empty | empty | 2 | room name not in ROOMS_SPEC (it lists: shop = bakehouse, back = kitchen, upfront = Godwin and Avice's room, upback = Tilly's room, cellar = cellar) |
+| in.10 | back | L0 | empty | empty | 2 | kitchen: woodentable_01 x1, painted_wooden_stool x3, painted_wooden_shelves x1; only here: his chair set where he can hear the bell |
+| in.10 | loft | L1 | empty | empty | 8 | room name not in ROOMS_SPEC (it lists: shop = bakehouse, back = kitchen, upfront = Godwin and Avice's room, upback = Tilly's room, cellar = cellar) |
+| in.111 | shop | L0 | room | room/stair in the way/leaf in the face | 6 |  |
+| in.111 | store | L0 | leaf in the face | leaf in the face | 1 |  |
+| in.111 | back | L0 | room | room | 2 |  |
+| in.111 | loft | L1 | dark by day | dark by day | 5 |  |
+| in.113 | work | L0 | room | room/stair in the way/stair in the way | 8 |  |
+| in.113 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: work = boat shed, living = kitchen, yard = slip, loft = the locked loft) |
+| in.113 | living | L0 | room | room | 2 |  |
+| in.113 | solar | L1 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: work = boat shed, living = kitchen, yard = slip, loft = the locked loft) |
+| in.113 | loft | L1 | room | room | 5 |  |
+| in.115 | work | L0 | room | room/stair in the way/stair in the way | 8 |  |
+| in.115 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: hall = ale room, service = brewhouse, passage = cross passage, buttery = buttery, parlour = parlour, solar = Goda's room, landing = landing, chamber = Bridget's room) |
+| in.115 | living | L0 | room | room | 4 |  |
+| in.115 | loft | L1 | dark by day | dark by day | 7 |  |
+| in.116 | shop | L0 | leaf in the face | leaf in the face/stair in the way/leaf in the face | 7 |  |
+| in.116 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: shop = glover's, back = kitchen, upfront = her room, upback = skin room, cellar = cellar) |
+| in.116 | back | L0 | room | room | 1 |  |
+| in.116 | upfront | L1 | empty | empty/empty | 0 | her room: gothicbed_01 x1, gothiccabinet_01 x1; only here: her husband's gloves, his last pair, on the stand |
+| in.116 | upback | L1 | room | room | 4 |  |
+| in.12 | hall | L0 | leaf in the face | leaf in the face/leaf in the face/leaf in the face | 6 |  |
+| in.12 | pantry | L0 | empty | empty | 2 | pantry: Barrel x1, wicker_basket_02 x2, ceramic_pot x1; only here: a hen that is not supposed to be indoors |
+| in.12 | chamber | L0 | room | room | 1 |  |
+| in.12 | solar | L1 | empty | empty/empty | 0 | upper room, shut: ; only here: she has not climbed the stair in six years |
+| in.12 | loft | L1 | room | room | 4 |  |
+| in.13 | work | L0 | room | room/stair in the way/leaf in the face | 15 |  |
+| in.13 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: work = tannery, leg = bark store, living = kitchen, yard = yard, loft = loft) |
+| in.13 | living | L0 | room | room | 1 |  |
+| in.13 | loft | L1 | empty | empty | 4 | loft: gothicbed_01 x2, treasure_chest x1; only here: a cake of Marta's soap, worn to a sliver |
+| in.15 | shop | L0 | room | room/stair in the way/stair in the way | 10 |  |
+| in.15 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: shop = grocer's, back = counting corner, upfront = dry store, upback = Hamo the carter's old room, cellar = cellar) |
+| in.15 | back | L0 | room | room | 4 |  |
+| in.15 | upfront | L1 | room | stair in the way/room | 5 |  |
+| in.15 | upback | L1 | room | room | 4 |  |
+| in.20 | shop | L0 | room | room/stair in the way/leaf in the face | 6 |  |
+| in.20 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: shop = ship chandler's, back = dipping room, upfront = their room, upback = cordage loft, cellar = cellar) |
+| in.20 | back | L0 | room | room | 2 |  |
+| in.20 | loft | L1 | dark by day | dark by day | 5 |  |
+| in.21 | work | L0 | room | room/stair in the way/stair in the way | 10 |  |
+| in.21 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: work = dye house, living = kitchen, yard = yard, loft = loft) |
+| in.21 | living | L0 | room | room | 1 |  |
+| in.21 | solar | L1 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: work = dye house, living = kitchen, yard = yard, loft = loft) |
+| in.21 | loft | L1 | room | room | 5 |  |
+| in.23 | hall | L0 | room | room/stair in the way/leaf in the face | 3 |  |
+| in.23 | pantry | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: room = one room, shut up) |
+| in.23 | chamber | L0 | room | room | 2 |  |
+| in.23 | loft | L1 | dark by day | dark by day | 3 |  |
+| in.33 | hall | L0 | leaf in the face | leaf in the face/stair in the way/stair in the way | 9 |  |
+| in.33 | pantry | L0 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: hall = hall, counting = counting room, stairhall = stair hall, chamber = their room, solar = guest room, cellar = cellar) |
+| in.33 | chamber | L0 | room | room | 7 |  |
+| in.33 | solar | L1 | room | stair in the way/room | 2 |  |
+| in.33 | loft | L1 | room | room | 5 |  |
+| in.34 | hall | L0 | room | room/stair in the way/stair in the way | 3 |  |
+| in.34 | pantry | L0 | empty | empty | 5 | pantry: painted_wooden_shelves x1, Bottle_1 x4; only here: he eats at the Hart |
+| in.34 | chamber | L0 | room | room | 5 |  |
+| in.34 | loft | L1 | dark by day | dark by day | 4 |  |
+| in.36 | work | L0 | room | room/stair in the way/stair in the way | 8 |  |
+| in.36 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: work = mason's shop, leg = stone store, living = kitchen, yard = yard, loft = loft) |
+| in.36 | living | L0 | room | room | 5 |  |
+| in.36 | solar | L1 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: work = mason's shop, leg = stone store, living = kitchen, yard = yard, loft = loft) |
+| in.36 | loft | L1 | room | room | 4 |  |
+| in.37 | shop | L0 | room | room/stair in the way/stair in the way | 8 |  |
+| in.37 | store | L0 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: shop = grinding shed, back = kitchen, upfront = Roger's room, upback = Odo's room, cellar = cellar) |
+| in.37 | back | L0 | room | room | 2 |  |
+| in.37 | loft | L1 | empty | empty | 6 | room name not in ROOMS_SPEC (it lists: shop = grinding shed, back = kitchen, upfront = Roger's room, upback = Odo's room, cellar = cellar) |
+| in.38 | room | L0 | room | room | 7 |  |
+| in.38 | chamber | L1 | room | room | 6 |  |
+| in.40 | room | L0 | empty | empty | 7 | room name not in ROOMS_SPEC (it lists: hall = schoolroom, pantry = muniment room, chamber = Emmet's room, solar = Lettice's room) |
+| in.40 | loft | L1 | dark by day | dark by day | 9 |  |
+| in.44 | shop | L0 | room | room/stair in the way/leaf in the face | 8 |  |
+| in.44 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: shop = cobbler's, back = kitchen, upfront = his room, upback = leather store, cellar = cellar) |
+| in.44 | back | L0 | room | room | 1 |  |
+| in.44 | upfront | L1 | empty | empty/empty | 0 | his room: gothicbed_01 x1, treasure_chest x1; only here: a pair of dancing shoes he made for nobody yet |
+| in.44 | upback | L1 | room | room | 4 |  |
+| in.45 | shop | L0 | room | room/stair in the way/leaf in the face | 3 |  |
+| in.45 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: shop = mending room, back = kitchen, upfront = their room, upback = empty, cellar = cellar) |
+| in.45 | back | L0 | room | room | 5 |  |
+| in.45 | loft | L1 | dark by day | dark by day | 4 |  |
+| in.51 | hall | L0 | room | room/leaf in the face/leaf in the face | 4 |  |
+| in.51 | pantry | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: room = workroom, loft = loft) |
+| in.51 | chamber | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: room = workroom, loft = loft) |
+| in.51 | solar | L1 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: room = workroom, loft = loft) |
+| in.51 | loft | L1 | room | room | 3 |  |
+| in.60 | hall | L0 | room | room/stair in the way/leaf in the face | 5 |  |
+| in.60 | pantry | L0 | room | room | 1 |  |
+| in.60 | chamber | L0 | leaf in the face | leaf in the face | 1 |  |
+| in.60 | loft | L1 | empty | empty | 4 | loft: gothicbed_01 x1; only here: a boy's knife with G cut in the handle |
+| in.65 | work | L0 | room | room/stair in the way/leaf in the face | 4 |  |
+| in.65 | store | L0 | empty | empty | 2 | room name not in ROOMS_SPEC (it lists: work = rope walk, living = hackling room, yard = the long walk, loft = rope loft) |
+| in.65 | living | L0 | room | room | 1 |  |
+| in.65 | solar | L1 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: work = rope walk, living = hackling room, yard = the long walk, loft = rope loft) |
+| in.65 | loft | L1 | leaf in the face | leaf in the face | 3 |  |
+| in.66 | work | L0 | room | room | 13 |  |
+| in.66 | loft | L1 | dark by day | dark by day | 5 |  |
+| in.67 | hall | L0 | room | room/stair in the way/leaf in the face | 4 |  |
+| in.67 | pantry | L0 | leaf in the face | leaf in the face | 1 |  |
+| in.67 | chamber | L0 | room | room | 1 |  |
+| in.67 | solar | L1 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: room = one room) |
+| in.67 | loft | L1 | room | room | 4 |  |
+| in.70 | shop | L0 | room | room/stair in the way/stair in the way | 5 |  |
+| in.70 | store | L0 | room | room | 3 |  |
+| in.70 | back | L0 | room | room | 2 |  |
+| in.70 | loft | L1 | empty | empty | 5 | room name not in ROOMS_SPEC (it lists: shop = tailor's, back = kitchen, upfront = fitting room, upback = his room, cellar = cellar) |
+| in.74 | hall | L0 | leaf in the face | leaf in the face/stair in the way/leaf in the face | 7 |  |
+| in.74 | pantry | L0 | empty | empty | 2 | pantry: Bag x1, ceramic_pot x1; only here: what the store could not sell |
+| in.74 | chamber | L0 | room | room | 1 |  |
+| in.74 | solar | L1 | empty | empty/empty | 0 | Ned's room: ; only here: a tally of races against Pip: he is losing |
+| in.74 | loft | L1 | room | room | 5 |  |
+| in.75 | hall | L0 | room | room/stair in the way/leaf in the face | 4 |  |
+| in.75 | pantry | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: room = one room, curtained in two) |
+| in.75 | chamber | L0 | room | room | 2 |  |
+| in.75 | loft | L1 | empty | empty | 6 | room name not in ROOMS_SPEC (it lists: room = one room, curtained in two) |
+| in.77 | work | L0 | room | room/leaf in the face/leaf in the face | 9 |  |
+| in.77 | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: work = wheelwright's shop, living = kitchen, yard = tyring yard, loft = loft) |
+| in.77 | living | L0 | room | room | 2 |  |
+| in.77 | solar | L1 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: work = wheelwright's shop, living = kitchen, yard = tyring yard, loft = loft) |
+| in.77 | loft | L1 | room | room | 6 |  |
+| in.82 | hall | L0 | room | room/stair in the way/stair in the way | 5 |  |
+| in.82 | pantry | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: room = one room) |
+| in.82 | chamber | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: room = one room) |
+| in.82 | loft | L1 | empty | empty | 4 | room name not in ROOMS_SPEC (it lists: room = one room) |
+| in.90 | hall | L0 | leaf in the face | leaf in the face/stair in the way/leaf in the face | 4 |  |
+| in.90 | pantry | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: room = one room, loft = loft) |
+| in.90 | chamber | L0 | room | room | 5 |  |
+| in.90 | solar | L1 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: room = one room, loft = loft) |
+| in.90 | loft | L1 | room | room | 3 |  |
+| in.93 | room | L0 | room | room | 4 |  |
+| in.93 | loft | L1 | dark by day | dark by day | 3 |  |
+| in.94 | hall | L0 | room | room/stair in the way/leaf in the face | 8 |  |
+| in.94 | pantry | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: room = kitchen and wash house, loft = loft) |
+| in.94 | chamber | L0 | room | room | 1 |  |
+| in.94 | solar | L1 | room | stair in the way/room | 1 |  |
+| in.94 | loft | L1 | room | room | 5 |  |
+| inn | hall | L0 | room | stair in the way/room | 25 |  |
+| inn | store | L0 | room | room | 14 |  |
+| inn | bedroom | L0 | dark by day | dark by day | 11 |  |
+| inn | passage | L0 | empty | empty/empty/empty/empty | 0 | room name not in ROOMS_SPEC (it lists: hall = common room, store = kitchen, bedroom = Greta's room, cellar = ale cellar, vault = cold store, loft = gallery, chamber1 = the traveller's room, chamber2 = Lark's room) |
+| inn | cellar | L-1 | stair in the way | stair in the way | 22 |  |
+| inn | vault | L-1 | room | room | 16 |  |
+| inn | loft | L1 | empty | empty/dark by day/dark by day | 11 | gallery: woodentable_01 x2, painted_wooden_stool x4; only here: a chess_set left mid-game on the end table |
+| inn | chamber1 | L1 | empty | empty | 16 | the traveller's room: gothicbed_01 x1, classicnightstand_01 x1, treasure_chest x1, wooden_bucket_02 x1, ceramic_vase_04 x1; only here: Greta's note on the table (exists) |
+| inn | chamber2 | L1 | dark by day | dark by day | 13 |  |
+| mill | work | L0 | room | room/stair in the way/stair in the way | 11 |  |
+| mill | store | L0 | empty | empty | 0 | room name not in ROOMS_SPEC (it lists: work = mill floor, living = kitchen, yard = yard, loft = loft) |
+| mill | living | L0 | room | room | 6 |  |
+| mill | solar | L1 | empty | empty/empty | 0 | room name not in ROOMS_SPEC (it lists: work = mill floor, living = kitchen, yard = yard, loft = loft) |
+| mill | loft | L1 | empty | empty | 4 | loft: gothicbed_01 x1, treasure_chest x1, Peg_Rack x1; only here: ear plugs of wool on the nightstand |
+| shop.n2 | shop | L0 | room | room | 9 |  |
+| shop.n2 | chamber | L1 | room | room | 6 |  |
+| shop.n3 | shop | L0 | room | room | 10 |  |
+| shop.n3 | chamber | L1 | dark by day | dark by day/dark by day | 6 |  |
+| shop.n4 | shop | L0 | empty | empty | 12 | Salt and Spice: gen_counter x1, painted_wooden_shelves x1; only here: a painted pepper pod for a sign, inside out of the rain |
+| shop.n4 | chamber | L1 | room | room | 9 |  |
+| shop.s0 | shop | L0 | room | room | 9 |  |
+| shop.s0 | chamber | L1 | room | room | 8 |  |
+| shop.s1 | shop | L0 | empty | empty | 10 | the Bookstall: gen_counter x1, wooden_bookshelf_worn x2, BookStand x1, Book_5 x1; only here: a reading stool worn smooth |
+| shop.s1 | chamber | L1 | empty | empty/dark by day | 7 | room name not in ROOMS_SPEC (it lists: shop = the Bookstall, back = binding room, upfront = map room, upback = Lettice's corner, cellar = cellar) |
+| shop.s2 | shop | L0 | empty | empty | 8 | the Tinker's Stall: gen_counter x1, brass_pan_01 x4; only here: a list of who told him what, in his own shorthand |
+| shop.s2 | chamber | L1 | room | room | 5 |  |
+| smithy | forge | L0 | room | room/room/room | 5 |  |
+| smithy | living | L0 | dark by day | dark by day | 4 |  |
+| smithy | coalstore | L0 | empty | empty | 5 | charcoal and iron: Bag x3, Crate_Wooden x1, rusted_spade_01 x1; only here: Tobin's wooden sword and a pot-lid shield hidden behind the sacks |
+| smithy | loft | L1 | dark by day | dark by day | 5 |  |
+| store | shop | L0 | room | room/stair in the way/room | 13 |  |
+| store | stock | L0 | room | room | 4 |  |
+| store | keeper | L0 | room | stair in the way/room | 3 |  |
+| store | parlour | L1 | room | room/room | 5 |  |
+| store | solar | L1 | empty | empty | 4 | bedroom: gothicbed_01 x1, classicnightstand_01 x1, gothiccabinet_01 x1, ornate_mirror_01 x1; only here: the day book: every sale in Brackenfell for eleven years |
+| store | attic | L1 | room | stair in the way/stair in the way/room | 4 |  |
+| weaver | work | L0 | room | room/room | 11 |  |
+| weaver | living | L0 | leaf in the face | leaf in the face | 5 |  |
+| weaver | woolstore | L1 | empty | empty | 5 | room name not in ROOMS_SPEC (it lists: work = loom room, living = kitchen, yard = yard, loft = loft) |
+| weaver | loft | L1 | room | room/room | 3 |  |
+
+

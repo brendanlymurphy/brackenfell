@@ -16,7 +16,7 @@ def verdict(path, v):
     w = int(W * 0.18); lw, rw, mw = wood(a[:, :w]), wood(a[:, W - w:]), wood(a[:, W // 3: 2 * W // 3])
     sd = max(L[:, :w].std(), L[:, W - w:].std())
     if max(lw, rw) > 0.6 and mw < 0.3 and sd > 14: return 'leaf in the face'
-    if v.get('stair'): return 'stair in the way'
+    if v.get('stair') and v.get('what') == 'door': return 'stair in the way'
     gy, gx = np.gradient(L)
     if v['items'] == 0 or (np.hypot(gx, gy) > 12).mean() < 0.025: return 'empty'
     return 'room'
@@ -31,7 +31,7 @@ for id in ids:
         spec = (S.get(id, {}).get('rooms', {}).get(room) or {})
         hold = ''
         if ver == 'empty':
-            hold = (spec.get('use', '?') + ': ' + ', '.join(f'{n} x{c}' for n, c in spec.get('furn', [])) + ('; hearth' if spec.get('hearth') else '') + ('; only here: ' + spec['only'] if spec.get('only') else '')) if spec else 'not in ROOMS_SPEC'
+            hold = (spec.get('use', '?') + ': ' + ', '.join(f'{n} x{c}' for n, c in spec.get('furn', [])) + ('; hearth' if spec.get('hearth') else '') + ('; only here: ' + spec['only'] if spec.get('only') else '')) if spec else 'room name not in ROOMS_SPEC (it lists: ' + ', '.join(f"{k} = {r['use']}" for k, r in S.get(id, {}).get('rooms', {}).items()) + ')'
         rows.append((id, room, k, ver, hold, lst[0][1].get('items', 0), '/'.join(vs)))
 print('| house | room | level | verdict | views | floor items | ROOMS_SPEC says it should hold |'); print('|---|---|---|---|---|---|---|')
 for r in rows: print(f'| {r[0]} | {r[1]} | L{r[2]} | {r[3]} | {r[6]} | {r[5]} | {r[4]} |')
