@@ -146,6 +146,33 @@ function pFit(P, room, r, o) {
   if (h > 0.85 && !o.lowOk) for (const w of P.windows) if (w.k === k && w.room === room) { const z = pWinZone(w); if (rOv(r, z, 0.01)) return false; }
   return true;
 }
+// [fin] a 0.9 m way (0.45 m clear of every solid item, 0.3 m of the walls) from the room's first door to the other doors, the stair feet, the hearth front and every seat of the room.
+// pFlood floods the room's floor on a 0.2 m grid with the extra rectangles standing in it; pGuardOk says a new solid item cuts none of them off that were reachable before.
+function pFlood(P, room, extra) {
+  const a = room.in, k = room.k, HW = 0.45, st = 0.2, nx = Math.ceil((a.x1 - a.x0) / st) + 1, nz = Math.ceil((a.z1 - a.z0) / st) + 1;
+  const ds = P.doors.filter(d => d.k === k && (d.a === room.id || d.b === room.id)).map(d => [Math.min(a.x1 - 0.3, Math.max(a.x0 + 0.3, d.x)), Math.min(a.z1 - 0.3, Math.max(a.z0 + 0.3, d.z))]);
+  const tg = ds.slice(1).map(p => [p[0], p[1], 0.5]);
+  for (const s of P.stairs) { const pt = s.k0 === k && rOv(s.low, rGrow(a, 0.1)) ? s.lowPt : s.k1 === k && rOv(s.high, rGrow(a, 0.1)) ? s.highPt : null; if (pt) tg.push([pt[0], pt[1], 1.2]); }
+  const hh = P.hall && P.hall.room === room && P.hall.hh; if (hh && hh.front) tg.push([hh.front[0], hh.front[1], 0.5]);
+  for (const n in P.spots) { const sp = P.spots[n]; if (sp.k === k && (sp.sit || /^(sit|seat\d)$/.test(n)) && sp.x > a.x0 && sp.x < a.x1 && sp.z > a.z0 && sp.z < a.z1) tg.push([sp.x, sp.z, 0.85]); }
+  if (!ds.length) return { tg, hit: tg.map(() => true) };
+  const obs = P.items.filter(i => i.k === k && P_SOLID[i.kind] && (i.kind !== 'floor' || i.h === undefined || i.h > 0.25)).concat(extra || []);
+  const free = (x, z) => { if (x < a.x0 + 0.45 || x > a.x1 - 0.45 || z < a.z0 + 0.45 || z > a.z1 - 0.45) return false; for (const o of obs) { const dx = Math.max(o.x0 - x, 0, x - o.x1), dz = Math.max(o.z0 - z, 0, z - o.z1); if (dx * dx + dz * dz < HW * HW) return false; } return true; };
+  const seen = new Uint8Array(nx * nz), q = [];
+  const put = (i, j) => { if (i < 0 || j < 0 || i >= nx || j >= nz || seen[i * nz + j]) return; if (!free(a.x0 + i * st, a.z0 + j * st)) return; seen[i * nz + j] = 1; q.push(i, j); };
+  { const i0 = Math.round((ds[0][0] - a.x0) / st), j0 = Math.round((ds[0][1] - a.z0) / st); for (let r = 0; r <= 4; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) put(i0 + di, j0 + dj); }
+  for (let h = 0; h < q.length; h += 2) { const i = q[h], j = q[h + 1]; put(i + 1, j); put(i - 1, j); put(i, j + 1); put(i, j - 1); }
+  const near = (x, z, r) => { const n = Math.ceil(r / st), i0 = Math.round((x - a.x0) / st), j0 = Math.round((z - a.z0) / st); for (let di = -n; di <= n; di++) for (let dj = -n; dj <= n; dj++) { const i = i0 + di, j = j0 + dj; if (i >= 0 && j >= 0 && i < nx && j < nz && seen[i * nz + j] && Math.hypot(di, dj) * st <= r) return true; } return false; };
+  return { tg, hit: tg.map(t => near(t[0], t[1], t[2])) };
+}
+function pGuardOk(P, room, r) {
+  if (P._noGuard) return true;
+  const key = room.id + '|' + P.items.length + '|' + Object.keys(P.spots).length + '|' + P.doors.length + '|' + P.stairs.length;
+  if (!P._gb || P._gb.key !== key) P._gb = { key, f: pFlood(P, room, null) };
+  const af = pFlood(P, room, [r]);
+  for (let i = 0; i < P._gb.f.hit.length; i++) if (P._gb.f.hit[i] && !af.hit[i]) return false;
+  return true;
+}
 // the floor in front of a window that tall furniture must leave free
 function pWinZone(w) {
   const wl = w.wall, ns = wl.ns, depth = 0.55, hw = 0.95;
@@ -245,6 +272,7 @@ function pPut(P, room, name, cx, cz, rot, w, d, h, draw, o) {
   o = o || {}; let r = pFoot(cx, cz, w, d, rot); if (TEST && TEST.nomeasure) o = Object.assign({}, o, { nomeasure: true, _hon: null });
   const hon = o._hon; if (hon && hon.rel) r = { x0: Math.min(r.x0, cx + hon.rel.x0), x1: Math.max(r.x1, cx + hon.rel.x1), z0: Math.min(r.z0, cz + hon.rel.z0), z1: Math.max(r.z1, cz + hon.rel.z1) };
   if (!pFit(P, room, r, Object.assign({ h }, o))) return null;
+  if (h > 0.3 && !o.flat && !o.noGuard && !pGuardOk(P, room, r)) { P.guarded = (P.guarded || 0) + 1; return null; }      /* [fin] nothing tall goes where it would cut a door, stair foot, hearth front or seat off */
   if (hon && hon.rel && pBoxOK(P, room, { min: [r.x0, P.lv[room.k].y + 0.1, r.z0], max: [r.x1, P.lv[room.k].y + h, r.z1] }, o, o.flat)) return null;
   const L = P.lv[room.k], m = P.c.int; pBase(P, m); const sn = pSnap(P, m), t0 = m.ni, rc = pRecBegin(true), flat = !!o.flat;
   at(m, cx, L.y + 0.02 + (o.lift || 0), cz, rot, () => draw(m)); pRecEnd(rc, m, t0); pFixStack(P, m, sn, name);
