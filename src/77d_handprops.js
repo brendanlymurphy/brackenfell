@@ -213,7 +213,8 @@ function hpBesom(mesh) { const T = THREE, fp = new T.Vector3(), y = new T.Vector
   if (!on) { Chars.grip(H, 'R', 0); Chars.grip(H, 'L', 0); Chars.reach(H, 'L', null); Chars.reach(H, 'R', null); return; }
   if (mesh.parent !== H.pivot) H.pivot.add(mesh); mesh.scale.setScalar(1); const f = hpFrame(H), k = H.root.scale.y || 1, tm = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000 + H.seed % 5, sw = Math.sin(tm * 1.9);
   fp.copy(f.pel).addScaledVector(f.F, 0.82 * k).addScaledVector(f.R, 0.12 * k + 0.16 * sw); fp.y = 0.02;
-  const top = f.sp.clone().addScaledVector(f.F, 0.36 * k * (H.wide || 1) + 0.03).addScaledVector(f.R, 0.08 * k);      // clear of a broad chest y.subVectors(top, fp).normalize(); z.copy(f.F).negate();
+  // the handle top in front of the chest, clear of a broad one
+  const top = f.sp.clone().addScaledVector(f.F, 0.36 * k * (H.wide || 1) + 0.03).addScaledVector(f.R, 0.08 * k); y.subVectors(top, fp).normalize(); z.copy(f.F).negate();
   o.copy(fp).addScaledVector(y, 1.1); hpPlace(mesh, o, y, z); mesh.updateMatrixWorld(true);
   const lowR = H.pivot.localToWorld(q.copy(o).addScaledVector(y, -0.2)), hiL = H.pivot.localToWorld(t.copy(o).addScaledVector(y, 0.17));
   Chars.reach(H, 'R', lowR.clone()); Chars.reach(H, 'L', hiL.clone()); Chars.grip(H, 'R', HP.GRIP.curl); Chars.grip(H, 'L', HP.GRIP.curl); mesh.userData.grip = [0, -0.2, 0]; mesh.userData.hand = 'R'; }; }

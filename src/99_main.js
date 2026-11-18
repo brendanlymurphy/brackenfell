@@ -112,6 +112,7 @@ function tick(dt) {
   for (const n of NPCS) { chars.push(n.pos); if (n.anim !== 'lie' && Math.abs(n.pos[0] - pp[0]) < 4 && Math.abs(n.pos[2] - pp[2]) < 4) Col.dyn.push({ x: n.pos[0], z: n.pos[2], r: 0.27 * n.scale, y0: n.pos[1] - 0.3, y1: n.pos[1] + 1.7 }); }
   if (game.playing) { playerUpdate(dt); Feel.post(dt); } else attractCamera(game.time);
   npcUpdate(dt, game.playing ? pp : R.cam.pos);
+  if (typeof animalsUpdate === 'function') animalsUpdate(dt, game.playing ? pp : R.cam.pos);      // [ch4]
   updateDynamics(dt, chars);
   World.bonfire = !!S.flags.fire && (Env.hour > 19 || Env.hour < 2);
   if (World.festival && Env.hour > 23.4 && Env.hour < 23.9) { World.festival = false; for (const n of NPCS) n.override = null; }
@@ -227,6 +228,7 @@ async function warmShaders() {
     if (typeof infillAttach === 'function') infillAttach();
   if (typeof dressAttach === 'function') dressAttach();
     if (typeof wildsAttach === 'function') wildsAttach();
+    if (typeof animalsAttach === 'function') animalsAttach();      // [ch4] hens in their runs (78_animals.js)
     festivalClear();
     if (TEST && TEST.hour !== undefined) Env.hour = TEST.hour;
     npcSnapAll(); uiInit(); inputInit2(G.canvas, $('touch'));
