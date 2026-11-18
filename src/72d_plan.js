@@ -575,6 +575,7 @@ function planValidate(P) {
   while (todo.length) {
     const id = todo.pop();
     for (const d of P.rooms[id].doors) { const o = d.a === id ? d.b : d.a; if (o && !seen.has(o)) { seen.add(o); todo.push(o); } }
+    for (const l of (P.ladders || [])) { const ra = pRoomAt(P, l.k0, l.a[0], l.a[1]), rb = pRoomAt(P, l.k1, l.b[0], l.b[1]); if (ra && rb) for (const [p, q] of [[ra, rb], [rb, ra]]) if (p.id === id && !seen.has(q.id)) { seen.add(q.id); todo.push(q.id); } }      /* [inout] a ladder to a loft */
     for (const s of P.stairs) { const ra = pRoomAt(P, s.k0, s.lowPt[0], s.lowPt[1]), rb = pRoomAt(P, s.k1, s.highPt[0], s.highPt[1]); if (ra && rb) { if (ra.id === id && !seen.has(rb.id)) { seen.add(rb.id); todo.push(rb.id); } if (rb.id === id && !seen.has(ra.id)) { seen.add(ra.id); todo.push(ra.id); } } }
   }
   for (const id in P.rooms) if (!seen.has(id)) out.push('room ' + id + ' cannot be reached from the street door');
@@ -707,4 +708,25 @@ function alleyOpenings(a, c) {
     else if ((i + k) % 2 === 0) out.push({ kind: 'win', wall: 'front', u: x, u0: x - 0.6, u1: x + 0.6, y: k * H + 1.7, y0: k * H + 1.0, y1: k * H + 2.4, lv: k, out: 0, win: 'Wide_Flat', name: 'Window_alley' });
   }
   return out;
+}
+
+// [inout] a ladder through a trap door from level k0 to the loft above (k0 + 1): against the wall `side` ('w' or 'e') of the room below, `z` along that wall.
+// Drawn by inoutLadder / inoutTrap (71b_storeys.js); the opening is a hole in the loft's floor; climbed by a prompt at either end (a portal inside the cell).
+function pLadder(P, k0, side, z) {
+  const L0 = P.lv[k0], L1 = P.lv[k0 + 1], below = Object.values(P.rooms).find(r => r.k === k0 && z > r.z0 && z < r.z1 && (side === 'w' ? true : true)); if (!L0 || !L1 || !below) return null;
+  const sg = side === 'w' ? 1 : -1, xw = side === 'w' ? below.in.x0 : below.in.x1, h = L1.y - L0.y, lean = h / Math.tan(75 * PI / 180), tw = 0.9, td = 0.8;
+  const trap = side === 'w' ? { x0: xw, x1: xw + tw, z0: z - td / 2, z1: z + td / 2 } : { x0: xw - tw, x1: xw, z0: z - td / 2, z1: z + td / 2 };
+  const foot = xw + sg * (0.12 + lean), a = [xw + sg * (lean + 0.75), z], b = [xw + sg * (tw + 0.6), z];
+  P.holes.push({ k: k0 + 1, r: trap }); P.occ(k0 + 1, trap, 'hole', P.id + '.trap');
+  P.occ(k0, { x0: Math.min(xw, foot + sg * 0.1), x1: Math.max(xw, foot + sg * 0.1), z0: z - 0.35, z1: z + 0.35 }, 'stair', P.id + '.ladder');
+  P.clear.push({ x0: Math.min(a[0], foot) - 0.4, x1: Math.max(a[0], foot) + 0.4, z0: z - 0.5, z1: z + 0.5, k: k0, kind: 'stair' }, { x0: Math.min(b[0], trap.x0) - 0.1, x1: Math.max(b[0], trap.x1) + 0.4, z0: z - 0.6, z1: z + 0.6, k: k0 + 1, kind: 'stair' });
+  const m = P.c.int; m.m1 = P.zone; m.ao = INT_AO;
+  at(m, foot, L0.y + 0.02, z, side === 'w' ? 0 : PI, () => inoutLadder(m, h + 0.02));
+  at(m, side === 'w' ? xw : xw, L1.y + 0.02, z, side === 'w' ? 0 : PI, () => inoutTrap(m, tw, td));
+  const yaw = (p, q) => Math.atan2(q[0] - p[0], -(q[1] - p[1])), cid = P.c.cell ? P.c.cell.id : P.id, nm = P.c.site.name;
+  const up = { p: P.w2(b[0], L1.y + 0.03, b[1]), yaw: P.yaw + (side === 'w' ? -PI / 2 : PI / 2), cell: cid, name: nm }, dn = { p: P.w2(a[0], L0.y + 0.03, a[1]), yaw: P.yaw + (side === 'w' ? -PI / 2 : PI / 2), cell: cid, name: nm };
+  const pf = P.w2(foot, L0.y + 1.2, z), pt = P.w2(xw + sg * 0.45, L1.y + 0.6, z);
+  World.interact.push({ kind: 'portal', id: 'ladder.' + cid + '.up', p: pf, r: 1.5, zone: P.zone, cell: cid, label: 'Climb the ladder', dest: up, side: 'in', ladder: true });
+  World.interact.push({ kind: 'portal', id: 'ladder.' + cid + '.down', p: pt, r: 1.5, zone: P.zone, cell: cid, label: 'Climb down', dest: dn, side: 'in', ladder: true });
+  const l = { k0, k1: k0 + 1, a, b, trap, side, z }; (P.ladders = P.ladders || []).push(l); return l;
 }
