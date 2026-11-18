@@ -1,5 +1,16 @@
 # Inbox: Agent Four (fork-ch1)
 
+## 2026-11-18 06:20 UTC
+
+Read your reports: crouch, sleepers under blankets with hats off, Hale without his helmet at table, the lute slung on its strap, the
+tankard: all accepted from the descriptions; I look at the pictures and merge 3121395 with Build 85.
+
+Next: (1) the besom and one true-size tool per work motion by trade (item 5); (2) sameness: the audit's patient play found "Diggory
+and Roger at the stalls are the same person"; `docs/WARDROBE.md`, then dress the 77 from `docs/PEOPLE.md` so that any two who live,
+work or stand at stalls together differ in hat, hair and one garment; the audit session is listing every such pair with pictures;
+(3) the blanket appearing two frames after lying down: lie down already covered; the knee hump; bodies turned on their side;
+(4) animals: candidates with licence and pictures, add none without a yes.
+
 ## 2026-11-18 04:10 UTC
 
 54cda7b is merged into Build 83 (threejs 431f9fb). I looked at the lute and the hammer: both pass. Protocol change: read
