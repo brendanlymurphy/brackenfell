@@ -142,7 +142,7 @@ PLANS.smithy = (P, c, info) => {
   const lh = pHearth(P, living, 'e', 1.6, { cauldron: true, size: 0.4, at: 4.5 }); if (lh) pPier(P, 1, lh);
   dressKitchen(P, living, { hh: lh }); const lt = pDining(P, living, 1.8, 0.85, { near: [4.0, 1.2], id: 'meal', n: 3 }); if (lt) lt.seats.forEach((st, i) => pSit(P, i ? 'seat' + i : 'sit', st[0], st[1], st[2], 0));
   PD.dense(P, living, { pool: ['cupboard', 'hooks', 'paint', 'tapestry', 'sconce', 'cabinet'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
-  dressBedroom(P, loft, { beds: castBeds(P.id, ['bed']) /* [cast] Tobin's bed in the forge loft */, loot: [['gold', 8]], bedInteract: true, table: true }); PD.dense(P, loft, { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'sconce'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
+  dressBedroom(P, loft, { beds: castBeds(P.id, ['bed']) /* [cast] Tobin's bed in the forge loft */, bedRooms: [P.rooms.living, P.rooms.forge, P.rooms.coalstore], loot: [['gold', 8]], bedInteract: true, table: true }); PD.dense(P, loft, { pool: ['cupboard', 'hooks', 'tapestry', 'paint', 'sconce'], corner: ['broom', 'sacks'], mid: { kinds: ['rug'], max: 1 } });
   // the store behind the forge: coal, iron, billets, crates, a ladder
   for (let i = 0; i < 2; i++) pFree(P, cs, id + '.cscoal' + i, 1.4, 0.9, 0.6, 0, PD.coalHeap(R), { near: [-5.5 + i * 2.2, 9.2], lowOk: true });
   for (let i = 0; i < 3; i++) pFree(P, cs, id + '.csiron' + i, 1.0, 0.4, 0.3, 0, pdIron, { near: [-1.5, 11], lowOk: true });

@@ -1093,15 +1093,15 @@
    "src": "81_wilds_story.js"
   },
   {
-   "key": "vc0whz8hcz",
+   "key": "ttj8rmzdxw",
    "speaker": "rowan",
    "kind": "line",
-   "text": "Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
-   "say": "Corwin the miner. He went into the old workings south-west of here after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
+   "text": "Corwin the miner. He went into the old workings north-west of here, up under the cliffs past the chapel, after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
+   "say": "Corwin the miner. He went into the old workings north-west of here, up under the cliffs past the chapel, after silver; his brother Hob was the last to see him. The Warden barred the door afterwards. If you come across anything of his, I would be glad of it.",
    "voice": "bm_fable:0.5+bm_george:0.5",
    "speed": 0.92,
    "pitch": 0,
-   "file": "612b4e0aaaeaca.m4a",
+   "file": "47c0213904c8ab.m4a",
    "src": "81_wilds_story.js"
   },
   {
@@ -1177,15 +1177,15 @@
    "src": "82_story.js"
   },
   {
-   "key": "z23l80zuho",
+   "key": "1uuld9gvxez",
    "speaker": "maren",
    "kind": "line",
-   "text": "The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
-   "say": "The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
+   "text": "The door in the north-west cliffs, up past the chapel. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
+   "say": "The door in the north-west cliffs, up past the chapel. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.",
    "voice": "bf_isabella",
    "speed": 0.93,
    "pitch": 0,
-   "file": "2a338a713008bc.m4a",
+   "file": "5f0a34c67d81a1.m4a",
    "src": "82_story.js"
   },
   {
@@ -7541,15 +7541,15 @@
    "note": "Aged 58; basketmaker."
   },
   {
-   "key": "1m4sl0xt6ff",
+   "key": "28gny3vn2qh",
    "speaker": "peter",
    "kind": "line",
-   "text": "Across the lake, or along it? A penny either way. I do not go to the north shore.",
-   "say": "Across the lake, or along it? A penny either way. I do not go to the north shore.",
+   "text": "The boat is not for hire today, the caulking is wet. And I do not go to the west shore, wet or dry.",
+   "say": "The boat is not for hire today, the caulking is wet. And I do not go to the west shore, wet or dry.",
    "voice": "v.M2",
    "speed": 1,
    "pitch": 0,
-   "file": "45515179dd4d95.m4a",
+   "file": "b7e152f2c3d73d.m4a",
    "src": "99_cast",
    "as": "v.M2",
    "note": "Aged 37; boatman."
@@ -7611,15 +7611,15 @@
    "note": "Aged 37; boatman."
   },
   {
-   "key": "t9bdv9gn",
+   "key": "wmgmxjryap",
    "speaker": "peter",
    "kind": "line",
-   "text": "Not the north shore.",
-   "say": "Not the north shore.",
+   "text": "Not the west shore.",
+   "say": "Not the west shore.",
    "voice": "v.M2",
    "speed": 1,
    "pitch": 0,
-   "file": "3b188fa2cbfac4.m4a",
+   "file": "055a40139f9238.m4a",
    "src": "99_cast",
    "as": "v.M2",
    "note": "Aged 37; boatman."

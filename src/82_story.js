@@ -12,7 +12,7 @@ QUESTS.main = { name: 'The Quiet Under Brackenfell', stages: [
   'Go to the wharf: a dead man lies on a bier there',
   'Show Old Maren the miner’s tally token',
   'Find the Sexton’s mine key in the crypt under the chapel',
-  'Unlock the Old Mine in the south-west cliffs and go down',
+  'Unlock the Old Mine in the north-west cliffs, up past the chapel, and go down',
   'Find what became of Corwin in the deep workings',
   'Take Corwin’s journal to Warden Hale',
   'Ask Elder Rowan what has been left at the lake',
@@ -109,7 +109,7 @@ TALK.hale = function () {
 TALK.haleJournal = () => node('That’s Corwin’s hand. Alive, then, or he was. Let me see.\n\nBread. Fifty years of bread, in a cave on the shore. I barred that door and told myself it was to keep them out.', [['What did you know?', () => node('That something went wrong below, before I wore this helmet. That Rowan went out to the shore every dawn and never said why. I didn’t ask. A man can keep a gate for thirty years that way.', [['What now?', () => { S.flags.act1 = 1; mainSync(); toast('<b>Act one ends.</b> The way on is under the Honeyed Hart.'); save(); return node('Not here. Rowan knows the way to the lake cave; he’s walked it with a pail more mornings than I’ve slept. Go and ask him, and don’t let him tell you it’s nothing.'); }, 1]])], ['Keep it. I’ll find Rowan.', () => { S.flags.act1 = 1; mainSync(); save(); return null; }, 1]]);
 const marenPell = () => node('Brass, and a number. OM fourteen: the Old Mine, Dunstan Pell. He dug under Corwin, a good while back.', [['He wasn’t drowned.', marenDry]]);
 const marenDry = () => node('No. Dry as a bone inside and thin as a rake: he walked a long way on nothing, in the dark. That’s no lake’s work.', [['Where did he come from?', marenDoor, 1]]);
-const marenDoor = () => { S.flags.pell = 1; S.flags.sawBody = 1; mainStart(); mainSync(); save(); return node('The door in the south-west cliffs. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.'); };
+const marenDoor = () => { S.flags.pell = 1; S.flags.sawBody = 1; mainStart(); mainSync(); save(); return node('The door in the north-west cliffs, up past the chapel. Hale barred it, but the Sexton kept the key, and old Sextons keep everything. Look in the crypt under the chapel.'); };
 addOpt('maren', n => has('tally') && !S.flags.pell ? ['I found this on a dead man at the wharf.', marenPell, 1] : null, true);
 addOpt('aldous', n => S.flags.pell && !has('minekey') && !S.flags.mineOpen ? ['The Sexton’s key. Where is it kept?', () => node('There’s a vestment chest in the sacristy that I’ve never had the heart to open. The Sexton’s things are in it. The crypt gate under the nave has a lock to match.')] : null);
 addOpt('finn', n => (qAt('main') >= 0 || S.flags.sawBody) && !S.flags.act1 ? ['The man you found.', () => { return node('First light, face down in the reeds. The lake gives drowned men back swollen. This one was thin as a rake and dry as kindling. Whatever he was, he walked to the water; he didn’t fall in.'); }] : null);
