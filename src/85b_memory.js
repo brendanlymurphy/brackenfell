@@ -1,0 +1,2 @@
+// [cast] every line shown in the dialogue is noted against the person speaking (82a_memory.js): the one place all talk passes through
+{ const _show = showNode; showNode = function (n) { if (n && n.t && UI.talk && UI.talk.id && typeof Memory !== 'undefined') { try { for (const part of String(n.t).split('\n\n')) Memory.hear(UI.talk.id, part); Memory.hear(UI.talk.id, n.t); } catch (e) { } } return _show.apply(this, arguments); }; }
