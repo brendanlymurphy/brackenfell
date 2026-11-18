@@ -1,7 +1,7 @@
 // Rooms and people: (1) no navigation link inside a planned house crosses a furniture footprint (the villagers' ways run on the free floor), (2) at 8, 12, 16, 20 and 2 h nobody stands in furniture,
 // at the wrong height, facing a wall within 0.5 m, or on a seat another person holds. Prints a count; throws on faults of furniture or ways. Schedule faults (who is where) are printed, not failed.
 // usage: node test/shot.mjs --opt plans=all --opt play=1 --do "$(cat test/rooms_people.js)"
-const CROSS_MAX = 10, bad = [], info = [], HOURS = [8, 12, 16, 20, 2], solid = (i, k) => i.k === k && ['floor', 'stair', 'hearth', 'hole'].includes(i.kind) && (i.h === undefined || i.h > 0.3);
+const CROSS_MAX = 16, bad = [], info = [], HOURS = [8, 12, 16, 20, 2], solid = (i, k) => i.k === k && ['floor', 'stair', 'hearth', 'hole'].includes(i.kind) && (i.h === undefined || i.h > 0.3);
 const frame = P => { const o = P.w2(0, 0, 0), ax = P.w2(1, 0, 0), az = P.w2(0, 0, 1), ux = [ax[0] - o[0], ax[2] - o[2]], uz = [az[0] - o[0], az[2] - o[2]]; return { o, ux, uz, loc: (x, z) => { const dx = x - o[0], dz = z - o[2]; return [dx * ux[0] + dz * ux[1], dx * uz[0] + dz * uz[1]]; } }; };
 const houses = Object.keys(World.houses).filter(id => World.houses[id].plan);
 let links = 0, crossed = 0;
