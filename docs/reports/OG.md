@@ -36,7 +36,17 @@ Gate: quick on `e8f573b`, 19 of 21 pass. `hartdoor` fails on the bearing only (a
      raise the child scale for them. I have changed nothing.
 4. **Voices: under way.** One request now carries all of one character's missing lines (`--batch 12`); a pilot of Tilly's ten in one
    request cut cleanly (0.06 to 0.10 s per character, every piece). 510 lines were missing in 63 speakers: 63 requests if every batch
-   cuts. Running now; the count follows here when it ends.
+   cuts. **529 of 774 lines have audio now (was 254).** The day's limit
+   stopped it. 38 batches cut cleanly; 32 did not and fell back to one line per request, which spent the rest of the day. A connection
+   dropped once mid-run; the generator now retries that.
+   - **Six takes and four characters taken out again (36 files), until tomorrow:** two clipped files (Tilly, Felice) and every new
+     take of Kat, Beatrix, Ned and Hester. Each of those four had a piece whose length cannot be its text (Hester's 95 characters in
+     2.65 s, Ned's 18 in 0.64 s, Kat's "Winifred! Noon!" over 5 s, Beatrix's "Careful. Careful!" nearly 5 s), so a cut probably landed
+     wrong, and a wrong cut shifts its neighbours. The batch check now also refuses any piece of 14 or more characters outside
+     0.045 to 0.2 s a character; all four batches would have been refused. `voices`, `voice_game`, `voice_parts`, `audio_game` pass;
+     `extract.mjs` prints no UNATTRIBUTED.
+   - 245 lines remain (subtitles until made): about 40 requests at the cut rate seen today. Tomorrow's run:
+     `python3 -I tools/voice/gen_gemini.py tools/voice/plan.json tools/voice/cast_gemini.json audio/voice --batch 12`, then `--have`.
    - Not heard by anyone: only the owner's ear counts. The cut checks are lengths, not listening.
 
 ## 2026-11-18, the 09:10 inbox

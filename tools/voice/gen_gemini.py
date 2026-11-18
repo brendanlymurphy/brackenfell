@@ -72,6 +72,7 @@ def tts_batch(says, voice, direction):
     rate = [len(t) / max(0.2, float(np.sum(np.abs(p) > max(np.abs(x).max() * 0.02, 1e-4))) / sr) for t, p in zip(says, parts)]            # characters per second of actual sound
     med = sorted(rate)[len(rate) // 2]
     if any(r < med * 0.45 or r > med * 2.2 for r in rate): return None            # a piece far too long or short for its text: a cut landed inside a line, or lines ran together
+    if any(len(t) >= 14 and not (0.045 <= 1 / r <= 0.2) for t, r in zip(says, rate)): return None      # [cast] and a piece must be speech at a speaking pace: 0.028 s a character (half a line) and 0.35 (a bark of 15 characters over 5 s) got through the band above, in batches of 8 to 10
     return parts, sr
 
 def encode(x, sr, dst):
