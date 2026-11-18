@@ -170,9 +170,9 @@ function dressHall(P, room, o) {
   pWalls(P, room, o.walls || ['Torch_Metal', 'paint', 'paint', 'rack', 'paint', 'Peg_Rack']);
 }
 function pBarrelCorner(P, room, sd) { return pAgainst(P, room, sd, P.id + '.barrel', 0.66, 0.66, 0.9, 0, pdBarrel(0.33, 0.9), { at: 'end' }); }
-// [cast] a bed for a sleeper the plan had no bed for: against a wall of one of the rooms given, a full bed first, then a narrow one, then a cot; never under a window
+// [cast] a bed for a sleeper the plan had no bed for: against a wall of one of the rooms given, a full bed first, then a narrow one, then a cot; under a window only when no blank wall has room
 function castBedIn(P, rooms, nm, name, col, fur, at) {
-  for (const room of rooms) { if (!room) continue; for (const [w, d] of [[1.06, 2.1], [0.9, 1.9], [0.8, 1.7]]) for (const sd of ['e', 'w', 'n', 's']) { const it = pAgainst(P, room, sd, name, w, d, 0.95, -1, pdBed(w - 0.16, col, fur), at !== undefined ? { at } : {}); if (it) { pBedSpot(P, nm, it.cx, it.cz, rotBack(sd, -1), room.k); return it; } } }
+  for (const room of rooms) { if (!room) continue; for (const low of [false, true]) for (const [w, d] of [[1.06, 2.1], [0.9, 1.9], [0.8, 1.7]]) for (const sd of ['e', 'w', 'n', 's']) { const it = pAgainst(P, room, sd, name, w, d, 0.95, -1, pdBed(w - 0.16, col, fur), Object.assign(low ? { lowOk: true } : {}, at !== undefined ? { at } : {}));       /* a blank wall first; then low under a window (coordinator, Build 83: a bed may stand under a window) */ if (it) { pBedSpot(P, nm, it.cx, it.cz, rotBack(sd, -1), room.k); return it; } } }
   return null;
 }
 function dressBedroom(P, room, o) {

@@ -130,7 +130,7 @@ Mark.draw = () => {
     let n = 0; const cand = [];
     for (const d of World.doors) { if (!d.site || d.site.facade || d.site.alleyRow && !d.site.name) continue; const dx = d.c[0] - e[0], dz = d.c[2] - e[2], dist = hyp(dx, dz); if (dist > 10 || dist < 1.2) continue; if (front(d.c[0], d.c[1], d.c[2]) < 0.55) continue; cand.push([dist, d]); }
     cand.sort((a, b) => a[0] - b[0]);
-    for (const [dist, d] of cand) { if (n >= 2) break; const s = Mark.at(d.c[0], d.c[1] + 1.35, d.c[2]); if (!s) continue; n++; c.globalAlpha = 1; Mark.tag(c, s[0], s[1], d.site.name, false); c.globalAlpha = 1; Mark.drawn = true; }
+    for (const [dist, d] of cand) { if (n >= 2) break; const s = Mark.at(d.c[0], d.c[1] + 1.35, d.c[2]); if (!s) continue; n++; c.globalAlpha = 1; Mark.tag(c, s[0], s[1], d.site.title || d.site.name /* [cast] the table's name for the house */, false); c.globalAlpha = 1; Mark.drawn = true; }
   }
   // 3. a faint glint on what can be taken
   const list = UI.glintList || (UI.glintList = []), now = performance.now();
