@@ -4,6 +4,8 @@ Newest first. Times UTC.
 
 ## 2026-11-18, the 06:20 inbox
 
+Gate: quick 20 of 21 locally on the head; `stairs` fails, the same single walk as on `threejs` 2cc9ae6 (the Hart's cellar stair at half stick from (266.2, −399.7, −0.5)): not from this branch, it came with the merge.
+
 Merged `origin/threejs` (Build 84). Conflicts: `tools/gate_budget.json` (took yours, then re-accepted) and the Hart's bar in `72e_plans.js`
 (we both fixed the missing counter; I took the inspector's version).
 
