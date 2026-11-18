@@ -2,7 +2,7 @@
      orchard      fruit trees in rows with the ground trodden under them (NW corner behind Chapelgate; the north-east corner by the river)
      green        a village green with an oak, two benches, and a worn ring: where the old people sit in the afternoon (spot green.bench)
      drying green posts and lines with linen, on mown turf: Wharfside's washing
-     allotment    kitchen-garden strips (field ground, beds 2.4 m, paths between) by the river and behind the wharf rows
+     allotment    kitchen-garden strips (tilled soil, beds 2.4 m, paths between) by the river and behind the wharf rows
      earth        everything else open: trodden earth, worn into paths, a few tufts left
    groundFill(da, db, Rz, half) paints this into the terrain's splat map where the ground is still unpainted (called by 60_terrain.js); buildGround(bucket) stands the posts, benches and trees; test/lawn.js measures the result (World.places are exempt: they have a use). */
 const GROUND = {
@@ -32,7 +32,7 @@ function groundFill(da, db, Rz, half) {
       for (const p of GROUND.places) { if (p.r !== undefined ? Math.hypot(x - p.x, z - p.z) < p.r : (x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1)) { keep = true; break; } }
       if (keep) { for (const p of GROUND.places) if (p.kind === 'orchard' && x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1) { const n = _grVn(x * 0.9, z * 0.9); if (n < 0.34) da[k] = Math.max(da[k], 150); } continue; }
       let bed = null; for (const b of GROUND.beds) if (inR(x, z, [b[0], b[1], b[2], b[3]])) { bed = b; break; }
-      if (bed) { const u = (z - bed[1]) / 3.0, f = u - Math.floor(u); if (f < 0.8 && x > bed[0] + 0.6 && x < bed[2] - 0.6 && z > bed[1] + 0.6 && z < bed[3] - 0.6) { if (fade) da[k + 2] = Math.max(da[k + 2], 235); } else da[k] = Math.max(da[k], 215 * (fade ? 1 : 0.3)); continue; }
+      if (bed) { const u = (z - bed[1]) / 3.0, f = u - Math.floor(u); if (f < 0.8 && x > bed[0] + 0.6 && x < bed[2] - 0.6 && z > bed[1] + 0.6 && z < bed[3] - 0.6) { if (fade) db[k] = Math.max(db[k], 235); }      /* beds are bare tilled soil (the 'bare' mask); the field mask would stand wheat on them */ else da[k] = Math.max(da[k], 215 * (fade ? 1 : 0.3)); continue; }
       const n = _grVn(x * 0.7, z * 0.7); da[k] = Math.max(da[k], fade ? (n < 0.14 ? 120 : 175 + n * 70) : 90);      // trodden earth with a few tufts left
     }
   }
