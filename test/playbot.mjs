@@ -372,6 +372,10 @@ SC.logic = async () => {
   { const sv = ckLoad('bread'); if (!sv || !await resume(sv, 'checkpoint bread')) return; where = 'logic: after the bread ending';
     const m = await ev(() => { delete S.flags.hear_meeting; const M = SEC.meet; if (!M) return null; game.tp(M.x + 8, null, M.z); BOT.day(23.6); BOT.step(120); return { st: M.st, vis: !!M.a.visible }; }); if (m) expect(m.st === 'off' && !m.vis, 'the cloaked pair still meet behind the chapel after the matter is settled'); await ev(() => { Foes.calm(true); });
     await ev(() => { BOT.day(12); S.flags.freeStew = 0; S.gold = 10; }); if (await use('npc:greta')) { const o = await opts(); if (o.some(t => /bowl of stew/.test(t))) { await pick(/bowl of stew/); expect((await st()).gold === 10, 'Greta charged for the stew she said was on the house'); await leaveTalk(); await use('npc:greta'); await pick(/bowl of stew/); expect((await st()).gold === 7, 'the second bowl was not 3 gold'); } await leaveTalk(); } }
+    // [cast] houses are somebody's (82f_owners.js): by the door itself, at night and at noon
+    where = 'owners: a house at night'; { await ev(() => { if (World.cell) game.leave(); BOT.day(23.2); delete S.items.lockpick; S.heard = {}; }); const i = await ev(() => World.interact.indexOf(Cells.by['in.02'].portalOut));
+      await use('#' + i); await ev(() => BOT.settle(120)); expect(!(await st()).cell, 'walked into the Cooper’s House at eleven at night');
+      await ev(() => BOT.day(12)); await use('#' + i); for (let k = 0; k < 80 && !(await st()).cell; k++) await page.waitForTimeout(50); await ev(() => BOT.settle(200)); expect((await st()).cell === 'in.02', 'the Cooper’s House is shut at noon'); await ev(() => { if (World.cell) game.leave(); }); }
 };
 SC.death = async () => {
   const sv = ckLoad('first'); if (!sv) return console.log('   run story first'); if (!await resume(sv, 'checkpoint first')) return; await ev(() => { BOT.day(12); S.gold = 100; save(); });
