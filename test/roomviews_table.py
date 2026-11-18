@@ -11,9 +11,11 @@ S = json.loads(re.search(r'const ROOMS_SPEC = (\{.*\});?\s*$', t).group(1))
 def verdict(path, v):
     a = np.asarray(Image.open(path).convert('RGB')).astype(float); H, W, _ = a.shape; L = a.mean(2)
     if L.mean() < 30: return 'dark by day'
+    if v['items'] == 0: return 'empty'
     def wood(b): r, g, bl = b[..., 0], b[..., 1], b[..., 2]; return ((r > g) & (g > bl) & (r - bl > 40) & (b.mean(2) > 50) & (b.mean(2) < 170)).mean()
     w = int(W * 0.18); lw, rw, mw = wood(a[:, :w]), wood(a[:, W - w:]), wood(a[:, W // 3: 2 * W // 3])
-    if max(lw, rw) > 0.6 and mw < 0.3: return 'leaf in the face'
+    sd = max(L[:, :w].std(), L[:, W - w:].std())
+    if max(lw, rw) > 0.6 and mw < 0.3 and sd > 14: return 'leaf in the face'
     if v.get('stair'): return 'stair in the way'
     gy, gx = np.gradient(L)
     if v['items'] == 0 or (np.hypot(gx, gy) > 12).mean() < 0.025: return 'empty'
