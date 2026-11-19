@@ -518,132 +518,132 @@
   {
    "speaker": "hale",
    "text": "Good. That’s the end of it. This time.",
-   "where": "82b_interact.js:211"
+   "where": "82b_interact.js:217"
   },
   {
    "speaker": "hale",
    "text": "You haven’t the coin. Then it’s the cell. Come on.",
-   "where": "82b_interact.js:212"
+   "where": "82b_interact.js:218"
   },
   {
    "speaker": "hale",
    "text": "Paid. Keep your hands in your pockets in future.",
-   "where": "82b_interact.js:212"
+   "where": "82b_interact.js:218"
   },
   {
    "speaker": "hale",
    "text": "There’s no cell to hold you. Go on, then.",
-   "where": "82b_interact.js:220"
+   "where": "82b_interact.js:226"
   },
   {
    "speaker": "greta",
    "text": "Eat it while it’s hot. I don’t do cold.",
-   "where": "82b_interact.js:254"
+   "where": "82b_interact.js:260"
   },
   {
    "speaker": "greta",
    "text": "Three gold, love. Your purse says otherwise.",
-   "where": "82b_interact.js:254"
+   "where": "82b_interact.js:260"
   },
   {
    "speaker": "greta",
    "text": "Four gold, love, and I’ll not haggle with a purse that light.",
-   "where": "82b_interact.js:255"
+   "where": "82b_interact.js:261"
   },
   {
    "speaker": "greta",
    "text": "Up the stairs, the bed by the window. Sleep till you’re done.",
-   "where": "82b_interact.js:255"
+   "where": "82b_interact.js:261"
   },
   {
    "speaker": "hale",
    "text": "That’s a fine blade. Don’t draw it in my square.",
-   "where": "82b_interact.js:265"
+   "where": "82b_interact.js:271"
   },
   {
    "speaker": "brandt",
    "text": "Good. It sits well in your hand. My work.",
-   "where": "82b_interact.js:266"
+   "where": "82b_interact.js:272"
   },
   {
    "speaker": "brandt",
    "text": "Where did you get that? Those are my grandfather’s dies, fifty years back. Old Mine steel.",
-   "where": "82b_interact.js:267"
+   "where": "82b_interact.js:273"
   },
   {
    "speaker": "maren",
    "text": "You’re bleeding on my floor. Sit.",
-   "where": "82b_interact.js:268"
+   "where": "82b_interact.js:274"
   },
   {
    "speaker": "greta",
    "text": "Off down a hole, love? I’ll keep the bed made.",
-   "where": "82b_interact.js:269"
+   "where": "82b_interact.js:275"
   },
   {
    "speaker": "marta",
    "text": "Odd thing to carry. I’ll not ask.",
-   "where": "82b_interact.js:270"
+   "where": "82b_interact.js:276"
   },
   {
    "speaker": "aldous",
    "text": "The Dawn keep you. You look as though you have seen the dead.",
-   "where": "82b_interact.js:271"
+   "where": "82b_interact.js:277"
   },
   {
    "speaker": "finn",
    "text": "Still thinking about that man, aren’t you. So am I.",
-   "where": "82b_interact.js:272"
+   "where": "82b_interact.js:278"
   },
   {
    "speaker": "ivo",
    "text": "A lantern by day. Either you’re lost, or you’re going somewhere I’d not.",
-   "where": "82b_interact.js:273"
+   "where": "82b_interact.js:279"
   },
   {
    "speaker": "rowan",
    "text": "Three weeks now without the bread. They will be counting.",
-   "where": "82c_secrets.js:114"
+   "where": "82c_secrets.js:116"
   },
   {
    "speaker": "greta",
    "text": "There is a stranger in town. Strangers ask about barred doors.",
-   "where": "82c_secrets.js:114"
+   "where": "82c_secrets.js:116"
   },
   {
    "speaker": "rowan",
    "text": "Then Hale is closer than I would like. Say nothing in the Hart.",
-   "where": "82c_secrets.js:114"
+   "where": "82c_secrets.js:116"
   },
   {
    "speaker": "greta",
    "text": "And if they go down?",
-   "where": "82c_secrets.js:114"
+   "where": "82c_secrets.js:116"
   },
   {
    "speaker": "rowan",
    "text": "Then they find what Corwin found. Go, before the watch comes round.",
-   "where": "82c_secrets.js:114"
+   "where": "82c_secrets.js:116"
   },
   {
    "speaker": "greta",
    "text": "The house on the south lane? Nobody’s lived there in years. Pass the salt, love, and don’t ask me twice.",
-   "where": "82c_secrets.js:140"
+   "where": "82c_secrets.js:142"
   },
   {
    "speaker": "marta",
    "text": "Oh, that. I sell nothing to that house and I take nothing from it. Will you be wanting candles?",
-   "where": "82c_secrets.js:140"
+   "where": "82c_secrets.js:142"
   },
   {
    "speaker": "finn",
    "text": "Don’t look at the shutters. My father said never to look at the shutters.",
-   "where": "82c_secrets.js:140"
+   "where": "82c_secrets.js:142"
   },
   {
    "speaker": "aldous",
    "text": "There are houses the Dawn will not name, child. That is one. Leave it to her.",
-   "where": "82c_secrets.js:140"
+   "where": "82c_secrets.js:142"
   },
   {
    "speaker": "brandt",
@@ -4458,22 +4458,22 @@
   {
    "speaker": "ivo",
    "text": "Good. That’s the end of it. This time.",
-   "where": "82b_interact.js:211"
+   "where": "82b_interact.js:217"
   },
   {
    "speaker": "ivo",
    "text": "You haven’t the coin. Then it’s the cell. Come on.",
-   "where": "82b_interact.js:212"
+   "where": "82b_interact.js:218"
   },
   {
    "speaker": "ivo",
    "text": "Paid. Keep your hands in your pockets in future.",
-   "where": "82b_interact.js:212"
+   "where": "82b_interact.js:218"
   },
   {
    "speaker": "ivo",
    "text": "There’s no cell to hold you. Go on, then.",
-   "where": "82b_interact.js:220"
+   "where": "82b_interact.js:226"
   },
   {
    "speaker": "marta",
@@ -4509,7 +4509,7 @@
   },
   {
    "speaker": "",
-   "where": "82b_interact.js:214",
+   "where": "82b_interact.js:220",
    "raw": "'Hold. That’s theft, in front of a witness, and I’ll not have it in my town. The fine is ' + fine + ' gold, or you hand it back, or you sleep in the cell and th"
   },
   {
