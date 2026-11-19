@@ -28,7 +28,16 @@ Gate: quick running on `6cf364e` (result to follow here).
      The play bot's sweep skips locked houses; theft and the witness use a kept house; the night scenario uses the Draper's.
      The walk bot goes through kept interiors only.
    - Not seen by me: the bot's full run on this (GitHub runs it).
-2. **Voices.** The run began at 08:41 with the generator's new order. Still running; the count follows here.
+2. **Voices.** The run began at 08:41 with the generator's new order. **570 of 774 lines have audio (was 529).** The day's limit came at 70 requests, not 100.
+   None of 29 whole-character batches passed the new cut check, so every batch fell back and 41 lines came one per request.
+   Tomorrow's run goes line by line from the start (reminder set for 08:40 UTC). `check.mjs` passes and `extract.mjs`
+   prints no UNATTRIBUTED.
+   - **Complete since yesterday** (the owner can listen to these): Giles Varrow, Diggory Pike, Hester Slate, Goda Malkin. With
+     yesterday's that is the story's 17 and 33 of the cast.
+   - Partly recorded: Tilly 9 of 10, Felice 7 of 8, Gillian 1 of 8, Jocelyn 1 of 10.
+   - None yet (23): Laurence, Ned, Tybalt, Winifred, Miles, Kat, Tamsin, Jasper, Ysolt, Davy, Warin, Ulric, Beatrix, Amice,
+     Emmet, Lettice, Roger, Odo, Ursel, Silas, Adda, Ellen, Kester. 204 lines; three more days at this rate.
+   - Nobody has heard these; only the owner's ear counts.
 3. **The 16:15 entry**, read against the scope cut:
    - The boat-house doors and Wenn's key, and the "Hidden Yard": the wharf and Washing Lane are outside the slice, so they are
      left as they are until you say. The boat-house doors are not in the slice's walk.
