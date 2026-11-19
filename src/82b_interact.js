@@ -128,7 +128,7 @@ function ixScan() {
       const it = sl.it, lx = it.cx + (rnd() - 0.5) * Math.max(0.2, it.w * 0.5), lz = it.cz + (rnd() - 0.5) * Math.max(0.2, it.d * 0.5), p = P.w2(lx, sl.y + 0.01, lz);
       const id = 'loose.' + c.id + '.' + (n++);
       let rec;
-      if (n === 1 && pool.length) { const b = pool[(ixHash(c.id) >>> 3) % pool.length]; if (!IX.READ[b[0]] || rnd() < 0.2) { IX.READ[b[0]] = id; rec = { kind: 'read', mesh: rnd() < 0.5 ? 'book' : 'letter', id: 'book.' + b[0], book: b, title: b[1], text: b[2], feeds: b[4] }; IX.stats.books++; } }
+      if (n === 1 && pool.length && !(typeof SLICE !== 'undefined' && SLICE.locked(c.id))) {          /* [cast] letters and books lie only where the player can go (the slice, 82f_owners.js) */ const b = pool[(ixHash(c.id) >>> 3) % pool.length]; if (!IX.READ[b[0]] || rnd() < 0.2) { IX.READ[b[0]] = id; rec = { kind: 'read', mesh: rnd() < 0.5 ? 'book' : 'letter', id: 'book.' + b[0], book: b, title: b[1], text: b[2], feeds: b[4] }; IX.stats.books++; } }
       if (!rec) { const row = IX.PUT[(rnd() * IX.PUT.length) | 0]; rec = { kind: 'loose', mesh: row[0], item: row[1], qty: row[2] ? 1 + ((rnd() * row[2]) | 0) : 1, id }; }
       const mi = IX.mesh(rec.mesh), obj = addSkinned(mi, { c: p, r: 0.5, zone: P.zone, kind: 'pickup', cell: c.id });
       R.boneData.set(m4.translate(m4.create(), p[0], p[1], p[2]), obj.slot * 256);

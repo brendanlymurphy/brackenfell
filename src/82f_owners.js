@@ -21,6 +21,20 @@ function ownApplyLocks() {
     c.portalOut.lock = () => { if (OWN.off || !OWN.night(c.id) || OWN.friend(c.id)) return null; const who = OWN.keepers(c.id)[0];
       return ixLockTry({ hard: 0.5, msg: OWN.shop(c.id) ? 'Shut. ' + OWN.name(who) + ' opens at eight.' : 'Barred for the night. This is ' + OWN.name(who) + '’s door.' }); }; }
 }
+// ── The slice (the owner, 18 Nov 16:45: cut the scope; docs/SLICE.md has the reason for every cell) ──
+// [cast] Only these interiors are open to the player: the sixteen of the slice (the walk from the west gate to the square, the alley to Quill's, the Hart, the
+// chapel), and the mine, which the main story enters by the Hart's cellar. Every quest stage at every hour, every secret indoors, every trade and the board
+// point only into these (test/slice.js derives it again from the running game). Every other house keeps its people and its lights; its door is locked to the
+// player: "Locked.", no pick opens it, and nothing of it is offered (a back door or hatch into it is locked the same). game.enter (tests) is not a door.
+const SLICE = { keep: new Set(['inn', 'chapel', 'elder', 'store', 'smithy', 'herbalist', 'guardhouse', 'mill', 'draper', 'weaver', 'farm', 'hunter', 'fisher', 'in.23', 'shop.s1', 'shop.n2', 'mine']) };
+SLICE.locked = id => !!id && !SLICE.keep.has(id) && !!(Cells.by && Cells.by[id]);
+SLICE.MSG = 'Locked.';
+SLICE.apply = function () {
+  for (const it of World.interact) { if (it.kind !== 'portal' || it.side !== 'out' || !it.dest || !SLICE.locked(it.dest.cell)) continue; it.lock = () => SLICE.MSG; it.sliceLocked = true; }
+};
+{ const _a = ixApplyLocks; ixApplyLocks = function () { const r = _a.apply(this, arguments); SLICE.apply(); return r; }; }
+// a lock that is only "Locked." offers no pick (ixLockTry is never asked)
+{ const _lab = interactLabel; interactLabel = function (it) { if (it && it.sliceLocked) return 'Locked'; return _lab.apply(this, arguments); }; }
 // a bed in somebody's house
 { const _use = interactUse; interactUse = function (it) { const c = World.cell; if (it && it.kind === 'bed' && c && OWN.owned(c.id)) { const who = (OWN.of[c.id] || OWN.keepers(c.id))[0]; toast('This is ' + OWN.name(who) + '’s bed. Greta at the Hart lets rooms.'); return; } return _use.apply(this, arguments); }; }
 // coming in: a word by day, a challenge at night
