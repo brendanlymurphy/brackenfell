@@ -1,7 +1,7 @@
 // Interiors: every planned house is validated (no overlaps, nothing in door swings, on stairs or in stairwells, nothing floating, every room reachable, lit),
 // then the player is stood in every room and walked a step; every container is opened by script. Prints violations per building; throws if any.
 // usage: node test/shot.mjs --opt plans=all --do "$(cat test/interiors.js)"   (window.__only = [...] limits the buildings); node test/parity.mjs checks nothing the old interiors registered is lost
-const dt = 1 / 30, bad = [], rows = [], only = window.__only, WAYS_MAX = 19;
+const dt = 1 / 30, bad = [], rows = [], only = window.__only || (typeof SLICE !== 'undefined' ? [...SLICE.keep] : null), WAYS_MAX = 19;          /* [cast] the slice (82f_owners.js): only the interiors the player can enter */
 for (const id in World.houses) {
   const h = World.houses[id]; if (!h.plan || (only && !only.includes(id))) continue;
   const P = h.plan, v = planValidate(P); rows.push(id + ': ' + Object.keys(P.rooms).length + ' rooms, ' + P.items.length + ' items, ' + v.length + ' violations');
@@ -51,6 +51,6 @@ for (const id in World.houses) {
 { let n = 0; const sh = []; for (const id in World.houses) { const P = World.houses[id].plan; if (!P || (only && !only.includes(id))) continue; if (!(/^(in|shop|high)\./.test(id) || ['weaver', 'mill', 'farm', 'hunter', 'fisher', 'draper', 'herbalist'].includes(id))) continue; n++; const sp = ['sit', 'seat1', 'seat2', 'seat3'].map(k => World.spots[id + '.' + k]).filter(q => q && q.sit), d = new Set(sp.map(q => q.p[0].toFixed(1) + ',' + q.p[2].toFixed(1))).size; if (sp.length < 4 || d < 4) sh.push(id + ' ' + sp.length + ' seats, ' + d + ' distinct'); }
   console.log('seats: ' + (n - sh.length) + ' of ' + n + ' household houses have four distinct seats' + (sh.length ? '; short: ' + sh.join('; ') : '')); if (sh.length) bad.push('houses with fewer than four distinct seats: ' + sh.join('; ')); }
 console.log(rows.join('\n'));
-{ const want = Cells.list.filter(c => World.houses[c.id]).length; if (!only && rows.length < want) bad.push('checked ' + rows.length + ' buildings of ' + want + ': the plans were not built, so nothing was checked');       /* [cast] the step passed on GitHub having checked none (the coordinator, Build 83) */ }
+{ const want = Cells.list.filter(c => World.houses[c.id] && World.houses[c.id].plan && (!only || only.includes(c.id))).length; if ((!window.__only) && rows.length < want) bad.push('checked ' + rows.length + ' buildings of ' + want + ': the plans were not built, so nothing was checked');       /* [cast] the step passed on GitHub having checked none (the coordinator, Build 83) */ }
 if (bad.length) throw new Error(bad.length + ' interior problems:\n' + bad.join('\n'));
 return 'interiors ok: ' + rows.length + ' buildings';

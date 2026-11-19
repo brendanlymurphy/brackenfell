@@ -33,7 +33,7 @@ function genQuads(name) {
 const _v = new THREE.Vector3();
 const boxOf = (name, M) => { const p = Kit.pieces[name]; if (!p || !p.min) return null; let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9]; for (let i = 0; i < 8; i++) { _v.set(i & 1 ? p.max[0] : p.min[0], i & 2 ? p.max[1] : p.min[1], i & 4 ? p.max[2] : p.min[2]).applyMatrix4(M); mn = [Math.min(mn[0], _v.x), Math.min(mn[1], _v.y), Math.min(mn[2], _v.z)]; mx = [Math.max(mx[0], _v.x), Math.max(mx[1], _v.y), Math.max(mx[2], _v.z)]; } return { mn, mx }; };
 const isWin = n => /^Window_/.test(n), isDoor = n => /^Door_\d|^DoorFrame_/.test(n), isBalc = n => /^Balcony_|^gen_balc_/.test(n), isWall = n => /^(T_)?Wall_|^gen_walls_/.test(n), isSign = n => /hatch|grat|cellar|trapdoor/i.test(n);
-const houses = Object.values(World.houses).filter(h => h.cell);
+const houses = Object.values(World.houses).filter(h => h.cell && !(typeof SLICE !== 'undefined' && SLICE.locked(h.cell.id || h.cell)));          /* [cast] the slice: only the houses the player can enter */
 const sites = houses.map(h => h.site);
 const local = (s, x, z) => { const dx = x - s.x, dz = z - s.z, c = Math.cos(s.yaw), n = Math.sin(s.yaw); return [dx * c + dz * n, -dx * n + dz * c]; };
 const depthIn = (s, x, z) => { const [u, v] = local(s, x, z); return Math.min(s.w / 2 - Math.abs(u), s.d / 2 - Math.abs(v)); };      // > 0 inside the footprint
