@@ -6,7 +6,7 @@ Newest first. Times UTC.
 
 Merged `origin/threejs` (c153f8e, the handbook) first. Read `docs/HANDBOOK.md` and `docs/NEXT.md`.
 
-Gate: quick running on `6cf364e` (result to follow here).
+Gate: quick on `6cf364e` passes, 22 of 22 (`slice` included). The four voice steps pass on the new manifest (570 files).
 
 1. **The lock list** (`7ed0731`, tests `2b18d09`, bots `ace9375`, `docs/SLICE.md` `6cf364e`). **17 interiors open:** the sixteen
    and the mine, which main stages 8 and 9 enter through the Hart's cellar. **41 locked.** It was derived from the running game,
@@ -43,7 +43,10 @@ Gate: quick running on `6cf364e` (result to follow here).
      left as they are until you say. The boat-house doors are not in the slice's walk.
    - **The Hart's cellar corner** is inside the slice. It is the interiors session's light (72e). Request to them: one of the
      cellar's flames should reach the bricked doorway.
-   - The picture of Tom, Lettice and Davy: below, when taken.
+   - Tom, Lettice and Davy: `docs/proof/og/school_0930.jpg` is the Scribe's House at 9:30 (npcSnapAll, from 3 m), with Emmet
+     standing at the fire on the left, Lettice standing on the right (`f_maid` at 0.915), and Tom and the younger children seated.
+     Davy is not in it: at school hours he is at the hunter's yard. Seated children make the heights hard to compare; this is the
+     best of four sides (the others look into the table or a wall).
 
 ## 2026-11-18, the 15:45 inbox
 
