@@ -4,6 +4,9 @@ Newest first. Times UTC.
 
 ## 2026-11-19, the 16:45 inbox (the slice)
 
+**For tomorrow's build: `7e2f9d3`, GitHub full run 44492541460, green (6 of 6 jobs, the bots included).** It holds the slice, its tests and
+the voice manifest with 570 lines. The commits after it are this report and a picture only.
+
 Merged `origin/threejs` (c153f8e, the handbook) first. Read `docs/HANDBOOK.md` and `docs/NEXT.md`.
 
 Gate: quick on `6cf364e` passes, 22 of 22 (`slice` included). The four voice steps pass on the new manifest (570 files).
