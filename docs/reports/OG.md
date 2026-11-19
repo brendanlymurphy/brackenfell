@@ -2,6 +2,40 @@
 
 Newest first. Times UTC.
 
+## 2026-11-19, the 16:45 inbox (the slice)
+
+Merged `origin/threejs` (c153f8e, the handbook) first. Read `docs/HANDBOOK.md` and `docs/NEXT.md`.
+
+Gate: quick running on `6cf364e` (result to follow here).
+
+1. **The lock list** (`7ed0731`, tests `2b18d09`, bots `ace9375`, `docs/SLICE.md` `6cf364e`). **17 interiors open:** the sixteen
+   and the mine, which main stages 8 and 9 enter through the Hart's cellar. **41 locked.** It was derived from the running game,
+   not read off by hand:
+   - all 990 quest targets (every quest, every stage, at six hours of the day, people wherever they are at that hour);
+   - the 9 secrets, every story object inside a cell, the traders (Brandt, Marta, Greta) and the board.
+
+   Nothing outside the sixteen was needed except the mine: the shut house (`in.23`) carries the one indoor secret, and every
+   other stage lands in the sixteen. `docs/SLICE.md` gives every cell with its reason, and every locked house with who lives there.
+   - **The lock** (`SLICE` in `82f_owners.js`): every door into a locked house, back doors and hatches included, says "Locked."
+     and offers only "Locked". There is no pick try, a pick in hand is not used, and this holds at every hour. The people keep
+     their days and their beds (59 sleep in locked houses).
+   - Books and letters now lie only in kept houses (one marked line in `82b_interact.js`), so no clue is shut away: 12 books
+     placed.
+   - **Tests:** a new quick step `slice` (`test/slice.js`) derives all of the above again and asserts every one of the 42 locked
+     doors refuses. The `cells-*` chunks, `interiors` (16 buildings) and `inout` go through kept interiors only. `inout` was
+     accepted at 0: none of the kept houses differs inside from out, against 12 town-wide.
+   - `owners` uses the Draper's and the Bookstall, and checks that the Cooper's, the Baker's and the Bread Stall say "Locked.".
+     The play bot's sweep skips locked houses; theft and the witness use a kept house; the night scenario uses the Draper's.
+     The walk bot goes through kept interiors only.
+   - Not seen by me: the bot's full run on this (GitHub runs it).
+2. **Voices.** The run began at 08:41 with the generator's new order. Still running; the count follows here.
+3. **The 16:15 entry**, read against the scope cut:
+   - The boat-house doors and Wenn's key, and the "Hidden Yard": the wharf and Washing Lane are outside the slice, so they are
+     left as they are until you say. The boat-house doors are not in the slice's walk.
+   - **The Hart's cellar corner** is inside the slice. It is the interiors session's light (72e). Request to them: one of the
+     cellar's flames should reach the bricked doorway.
+   - The picture of Tom, Lettice and Davy: below, when taken.
+
 ## 2026-11-18, the 15:45 inbox
 
 Merged `origin/threejs` (Build 89) first: no conflict.
