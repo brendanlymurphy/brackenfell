@@ -2,6 +2,18 @@
 
 Newest first. Times UTC.
 
+## 2026-11-20, voices
+
+No new inbox entry. Took in `origin/threejs` (no change). **638 of 774 lines have audio (was 570):** 68 requests today, one line each,
+every one used. `8b3722e`. `check.mjs` passes; `voices`, `voice_game`, `voice_parts` and `audio_game` pass; `extract.mjs` prints no
+UNATTRIBUTED.
+- **Complete today** (the owner can listen to these): Jocelyn Lindqvist, Winifred Varrow, Miles Ashdown, Kat Ashdown, Ysolt Pell,
+  Beatrix Ferrin, Adda the Rushworker. Now: the story's 17 and 40 of the cast.
+- Partly recorded: Tilly 9 of 10, Gillian 1 of 8, Felice 7 of 8, Davy 3 of 8.
+- None yet (16): Laurence, Ned, Tybalt, Tamsin, Jasper, Warin, Ulric, Amice, Emmet, Lettice, Roger, Odo, Ursel, Silas, Ellen, Kester.
+  136 lines: two more days (the next run is set for 08:40 UTC tomorrow).
+- Nobody has heard these; only the owner's ear counts.
+
 ## 2026-11-19, the 16:45 inbox (the slice)
 
 **For tomorrow's build: `7e2f9d3`, GitHub full run 44492541460, green (6 of 6 jobs, the bots included).** It holds the slice, its tests and
