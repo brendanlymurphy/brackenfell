@@ -2,6 +2,16 @@
 
 Newest first. Times UTC.
 
+## 2026-11-21, voices
+
+No new inbox entry; nothing new on `threejs`. **706 of 774 lines have audio (was 638):** 68 requests, one line each. `7f794a8`.
+`check.mjs` passes; `voices`, `voice_game`, `voice_parts` and `audio_game` pass; `extract.mjs` prints no UNATTRIBUTED.
+- **Complete today** (the owner can listen to these): Laurence Byrd, Jasper Holt, Emmet Sele, Roger Hask, Odo Hask, Silas Garrow,
+  Ellen Marsh, Kester Wold. Now: the story's 17 and 48 of the cast.
+- Partly recorded: Tilly 9 of 10, Gillian 1 of 8, Felice 7 of 8, Tamsin 4 of 8, Davy 3 of 8.
+- None yet (7): Ned, Tybalt, Warin, Ulric, Amice, Lettice, Ursel. 68 lines: tomorrow's run (08:40 UTC) should finish them.
+- Nobody has heard these; only the owner's ear counts.
+
 ## 2026-11-20, voices
 
 No new inbox entry. Took in `origin/threejs` (no change). **638 of 774 lines have audio (was 570):** 68 requests today, one line each,
