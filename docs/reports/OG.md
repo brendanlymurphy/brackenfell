@@ -2,6 +2,17 @@
 
 Newest first. Times UTC.
 
+## 2026-11-22, voices: ALL 774 LINES HAVE AUDIO
+
+No new inbox entry; nothing new on `threejs`. **Every one of the 774 planned lines now has a recording** (`1ce200d`): the last 68 today,
+one per request. One of them clipped (Lettice: "You may read standing up for as long as you like. If you sit down, you have to buy
+it.") and was asked for again; the new take passes. `check.mjs` passes **without** `--allow-missing` (774 of 774, 81 minutes, 36.3 MB);
+`voices`, `voice_game`, `voice_parts` and `audio_game` pass; `extract.mjs` prints no UNATTRIBUTED. No further run is set.
+- **Complete today** (the owner can listen to these): Tilly Hobb, Gillian Alder, Felice Byrd, Tamsin Ashdown, Davy Pell, Ned Thorne,
+  Tybalt Varrow, Warin Shaw, Ulric Ferrin, Amice Ferrin, Lettice Sele, Ursel Crane. That is everyone: the story's 17 and all 60 of the
+  cast.
+- Nobody has heard these; only the owner's ear counts. Build 90's voices went in at 570; this branch brings the rest when you take it.
+
 ## 2026-11-21, voices
 
 No new inbox entry; nothing new on `threejs`. **706 of 774 lines have audio (was 638):** 68 requests, one line each. `7f794a8`.
