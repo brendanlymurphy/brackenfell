@@ -11,7 +11,7 @@ it.") and was asked for again; the new take passes. `check.mjs` passes **without
 - **Complete today** (the owner can listen to these): Tilly Hobb, Gillian Alder, Felice Byrd, Tamsin Ashdown, Davy Pell, Ned Thorne,
   Tybalt Varrow, Warin Shaw, Ulric Ferrin, Amice Ferrin, Lettice Sele, Ursel Crane. That is everyone: the story's 17 and all 60 of the
   cast.
-- Nobody has heard these; only the owner's ear counts. Build 90's voices went in at 570; this branch brings the rest when you take it.
+- Nobody has heard these; only the owner's ear counts. The candidate `7e2f9d3` carried 570; this branch's head brings all 774 when you take it.
 
 ## 2026-11-21, voices
 
